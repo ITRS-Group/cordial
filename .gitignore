@@ -13,4 +13,4 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
-libraries/libemailgo/libemail.h
+libraries/libemail/libemail.h
