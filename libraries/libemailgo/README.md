@@ -16,7 +16,7 @@ If you do not download a ready compiled binary then you can build from source.
 You must have Go 1.17 or later installed as well as `make` and any other tools required by the CGo toolchain.
 
 ```
-git clone https://github.com/ITRS-Group/cordial.git
+git clone https://github.com/itrs-group/cordial.git
 cd cordial/libraries/libemailgo
 make
 ```
