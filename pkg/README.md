@@ -4,8 +4,6 @@ This set of packages provides a wrapper around low-level XML-RPC calls to send d
 
 The code is still very much in the early stages of development and the API may change at any time. Feedback, via Issues, and Pull requests are welcome but without any guarentees if I'll have time to do them.
 
-The package import path is rooted at vanity URL `wonderland.org/geneos` which currently resolves to https://github.com/pgalbavy/geneos 
-
 The documentation for the underlying API is here:
 
 https://docs.itrsgroup.com/docs/geneos/current/Netprobe/api/xml-rpc-api.html
