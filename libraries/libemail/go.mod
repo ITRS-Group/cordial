@@ -1,4 +1,4 @@
-module github.com/ITRS-Group/cordial/libraries/libemail
+module github.com/itrs-group/cordial/libraries/libemail
 
 go 1.17
 
