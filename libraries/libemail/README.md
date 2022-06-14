@@ -17,7 +17,7 @@ You must have Go 1.17 or later installed as well as `make` and any other tools r
 
 ```
 git clone https://github.com/itrs-group/cordial.git
-cd cordial/libraries/libemailgo
+cd cordial/libraries/libemail
 make
 ```
 
