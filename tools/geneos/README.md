@@ -63,7 +63,7 @@ To build from source you have Go 1.17+ installed:
 #### One line installation
 
 ```bash
-go install wonderland.org/geneos/cmd/geneos@latest
+go install github.com/itrs-group/cordial/tools/geneos@latest
 ```
 
 Make sure that the `geneos` program is in your normal `PATH` - or that $HOME/go/bin is if you used the method above - to make things simpler.
