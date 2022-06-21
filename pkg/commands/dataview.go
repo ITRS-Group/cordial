@@ -68,6 +68,7 @@ type Fetch struct {
 // no Scope is given then only Values are requested. If more than one
 // Scope is given then only the first is used.
 func (c *Connection) Snapshot(target *xpath.XPath, scope ...Scope) (dataview *Dataview, err error) {
+	// override endpoint for snapshots
 	const endpoint = "/rest/snapshot/dataview"
 	s := Scope{Value: true}
 	if len(scope) > 0 {
