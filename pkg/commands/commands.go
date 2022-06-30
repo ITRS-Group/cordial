@@ -34,6 +34,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
@@ -43,7 +44,7 @@ import (
 
 // A Command is made up of a Name, a Target and optional Args
 type Command struct {
-	Name   string `json:"command"`
+	Name   string `json:"command,omitempty"`
 	Target string `json:"target"`
 	Args   *Args  `json:"args,omitempty"`
 }
@@ -71,17 +72,68 @@ type Connection struct {
 	Password           string
 	SSO                SSOAuth
 	InsecureSkipVerify bool
+	rrurls             []*url.URL
+	ping               *func(*Connection) bool
 }
 
 const endpoint = "/rest/runCommand"
 
 // Set-up a Gateway REST command connection
-func Dial(u *url.URL, options ...CommandOptions) (c *Connection, err error) {
+func DialGateway(u *url.URL, options ...CommandOptions) (c *Connection, err error) {
 	c = &Connection{
 		BaseURL: u,
 	}
 	evalOptions(c, options...)
 	return
+}
+
+// Round-Robin / random dialer. Given a slice of URLs, randomise and
+// then try each one in turn until there is a response using the
+// liveness ping function. If there is an existing connection configured
+// then that is re-tested first before moving onto next URL
+//
+// all endpoints are given the same options
+func DialGateways(urls []*url.URL, options ...CommandOptions) (c *Connection, err error) {
+	c = &Connection{
+		rrurls: urls,
+	}
+	evalOptions(c, options...)
+	err = c.Redial()
+	return
+}
+
+// Redial the connection, finding the next working endpooint using the liveness ping() function
+// given
+func (c *Connection) Redial() (err error) {
+	// test existing connection, use default func if not overridden
+	ping := func(*Connection) bool {
+		cr, err := c.Do("rest/gatewayinfo/timezone", &Command{})
+		if err != nil {
+			return false
+		}
+		return cr.Status != "error"
+	}
+	if c.ping != nil {
+		ping = *c.ping
+	}
+	if c.BaseURL != nil && ping(c) {
+		return nil
+	}
+
+	// shuffle list of connections
+	rand.Shuffle(len(c.rrurls), func(i, j int) {
+		c.rrurls[i], c.rrurls[j] = c.rrurls[j], c.rrurls[i]
+
+	})
+
+	// loop through, pick the first valid endpoint
+	for _, u := range c.rrurls {
+		c.BaseURL = u
+		if ping(c) {
+			return nil
+		}
+	}
+	return fmt.Errorf("no server responding")
 }
 
 // execute a command, return the http response
