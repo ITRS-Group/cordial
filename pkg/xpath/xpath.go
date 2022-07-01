@@ -42,6 +42,7 @@ managedEntities are currently handled in anyway.
 package xpath
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -107,21 +108,33 @@ func New() (x *XPath) {
 }
 
 // return an xpath populated to the dataview, with name dv
-func NewDataviewPath(dv string) (x *XPath) {
+// if no name is passed, create a wildcard dataview path
+func NewDataviewPath(name string) (x *XPath) {
+	dataview := &Dataview{}
+	if name != "" {
+		dataview.Name = name
+	}
+
 	x = &XPath{
-		Gateway: &Gateway{},
-		Probe:   &Probe{},
-		Entity:  &Entity{},
-		Sampler: &Sampler{},
-		Dataview: &Dataview{
-			Name: dv,
-		},
+		Gateway:  &Gateway{},
+		Probe:    &Probe{},
+		Entity:   &Entity{},
+		Sampler:  &Sampler{},
+		Dataview: dataview,
 	}
 	return
 }
 
 // return an xpath populated to the table cell identifies by row and column
 func NewTableCellPath(row, column string) (x *XPath) {
+	r := &Row{}
+	if row != "" {
+		r.Name = row
+	}
+	c := &Column{}
+	if column != "" {
+		c.Name = column
+	}
 	x = &XPath{
 		Gateway:  &Gateway{},
 		Probe:    &Probe{},
@@ -129,27 +142,25 @@ func NewTableCellPath(row, column string) (x *XPath) {
 		Sampler:  &Sampler{},
 		Dataview: &Dataview{},
 		Rows:     true,
-		Row: &Row{
-			Name: row,
-		},
-		Column: &Column{
-			Name: column,
-		},
+		Row:      r,
+		Column:   c,
 	}
 	return
 }
 
 // return an xpath populated to the headline cell, identified by headline
-func NewHeadlinePath(headline string) (x *XPath) {
+func NewHeadlinePath(name string) (x *XPath) {
+	headline := &Headline{}
+	if name != "" {
+		headline.Name = name
+	}
 	x = &XPath{
 		Gateway:  &Gateway{},
 		Probe:    &Probe{},
 		Entity:   &Entity{},
 		Sampler:  &Sampler{},
 		Dataview: &Dataview{},
-		Headline: &Headline{
-			Name: headline,
-		},
+		Headline: headline,
 	}
 	return
 }
@@ -265,6 +276,20 @@ func (x *XPath) String() (path string) {
 			path += fmt.Sprintf("/cell[(@name=%q)]", x.Headline.Name)
 		}
 	}
+	return
+}
+
+func (x XPath) MarshalJSON() ([]byte, error) {
+	return json.Marshal(x.String())
+}
+
+func (x *XPath) UnmarshalJSON(b []byte) (err error) {
+	var s string
+	if err = json.Unmarshal(b, &s); err != nil {
+		return
+	}
+	nx, err := Parse(s)
+	*x = *nx
 	return
 }
 
