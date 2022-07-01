@@ -52,18 +52,6 @@ type Dataview struct {
 	Columns          []string                       `json:"-"`
 }
 
-type Scope struct {
-	Value          bool `json:"value,omitempty"`
-	Severity       bool `json:"severity,omitempty"`
-	Snooze         bool `json:"snooze,omitempty"`
-	UserAssignment bool `json:"user-assignment,omitempty"`
-}
-
-type Fetch struct {
-	Target string `json:"target"`
-	Scope  Scope  `json:"scope,omitempty"`
-}
-
 // Return the snapshot of the Dataview target with an option Scope. If
 // no Scope is given then only Values are requested. If more than one
 // Scope is given then only the first is used.
@@ -74,8 +62,8 @@ func (c *Connection) Snapshot(target *xpath.XPath, scope ...Scope) (dataview *Da
 	if len(scope) > 0 {
 		s = scope[0]
 	}
-	cr, err := c.Do(endpoint, Fetch{
-		Target: target.String(),
+	cr, err := c.Do(endpoint, &Command{
+		Target: target,
 		Scope:  s,
 	})
 	if err != nil {
