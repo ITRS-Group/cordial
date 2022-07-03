@@ -2,16 +2,16 @@ package commands
 
 import "fmt"
 
-type CommandOptions func(*Connection)
+type Options func(*Connection)
 
-func evalOptions(c *Connection, options ...CommandOptions) {
+func evalOptions(c *Connection, options ...Options) {
 	for _, opt := range options {
 		opt(c)
 	}
 }
 
 // configure basic authentication on the connection, given a username and password
-func SetBasicAuth(username, password string) CommandOptions {
+func SetBasicAuth(username, password string) Options {
 	return func(c *Connection) {
 		c.AuthType = Basic
 		c.Username = username
@@ -20,7 +20,7 @@ func SetBasicAuth(username, password string) CommandOptions {
 }
 
 // allow unverified connections over TLS to the gateway
-func AllowInsecureCertificates(opt bool) CommandOptions {
+func AllowInsecureCertificates(opt bool) Options {
 	return func(c *Connection) {
 		c.InsecureSkipVerify = opt
 	}
@@ -28,7 +28,7 @@ func AllowInsecureCertificates(opt bool) CommandOptions {
 
 // override the ping() function used to test the availability of
 // the gateway when used with DialGateways() and Redial()
-func Ping(ping func(*Connection) error) CommandOptions {
+func Ping(ping func(*Connection) error) Options {
 	return func(c *Connection) {
 		c.ping = &ping
 	}
