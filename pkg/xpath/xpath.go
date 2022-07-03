@@ -45,6 +45,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 )
@@ -101,68 +102,209 @@ type Column struct {
 	Name string `json:"name,omitempty"`
 }
 
-// return a new XPath
-func New() (x *XPath) {
-	x = &XPath{}
-	return
+// return an XPath to the level of the element passed,
+// which can be populated with fields.
+func NewXPathTo(element interface{}) *XPath {
+	x := &XPath{}
+	return x.PathTo(element)
 }
 
 // return an xpath populated to the dataview, with name dv
 // if no name is passed, create a wildcard dataview path
 func NewDataviewPath(name string) (x *XPath) {
-	dataview := &Dataview{}
-	if name != "" {
-		dataview.Name = name
-	}
-
-	x = &XPath{
-		Gateway:  &Gateway{},
-		Probe:    &Probe{},
-		Entity:   &Entity{},
-		Sampler:  &Sampler{},
-		Dataview: dataview,
-	}
+	x = NewXPathTo(&Dataview{Name: name})
 	return
 }
 
 // return an xpath populated to the table cell identifies by row and column
 func NewTableCellPath(row, column string) (x *XPath) {
-	r := &Row{}
-	if row != "" {
-		r.Name = row
-	}
-	c := &Column{}
-	if column != "" {
-		c.Name = column
-	}
-	x = &XPath{
-		Gateway:  &Gateway{},
-		Probe:    &Probe{},
-		Entity:   &Entity{},
-		Sampler:  &Sampler{},
-		Dataview: &Dataview{},
-		Rows:     true,
-		Row:      r,
-		Column:   c,
-	}
+	x = NewXPathTo(&Column{Name: column})
+	x.Rows = true
+	x.Row = &Row{Name: row}
 	return
 }
 
 // return an xpath populated to the headline cell, identified by headline
 func NewHeadlinePath(name string) (x *XPath) {
-	headline := &Headline{}
-	if name != "" {
-		headline.Name = name
-	}
-	x = &XPath{
-		Gateway:  &Gateway{},
-		Probe:    &Probe{},
-		Entity:   &Entity{},
-		Sampler:  &Sampler{},
-		Dataview: &Dataview{},
-		Headline: headline,
-	}
+	x = NewXPathTo(&Headline{Name: name})
 	return
+}
+
+// given an element type, return a new XPath to that
+// element, removing lower level elements or adding
+// empty elements to the level required. If the XPath
+// does not contain an element of the type given then
+// use the argument (which can include populated fields),
+// but if empty then any existing element will be left
+// as-is and not cleaned.
+//
+// e.g.
+//    x := x.PathTo(&Dataview{})
+//    y := xpath.PathTo(&Headline{Name: "headlineName"})
+//
+func (x *XPath) PathTo(element interface{}) *XPath {
+	// copy the xpath
+	var nx XPath
+
+	// skip through any pointers
+	for reflect.ValueOf(element).Kind() == reflect.Ptr {
+		element = reflect.Indirect(reflect.ValueOf(element)).Interface()
+	}
+
+	// set the element, remove others
+	switch e := element.(type) {
+	case Gateway:
+		nx = XPath{
+			Gateway: &e,
+		}
+	case Probe:
+		nx = XPath{
+			Gateway: x.Gateway,
+			Probe:   &e,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &Gateway{}
+		}
+	case Entity:
+		nx = XPath{
+			Gateway: x.Gateway,
+			Probe:   x.Probe,
+			Entity:  &e,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &Gateway{}
+		}
+		if nx.Probe == nil {
+			nx.Probe = &Probe{}
+		}
+	case Sampler:
+		nx = XPath{
+			Gateway: nx.Gateway,
+			Probe:   nx.Probe,
+			Entity:  nx.Entity,
+			Sampler: &e,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &Gateway{}
+		}
+		if nx.Probe == nil {
+			nx.Probe = &Probe{}
+		}
+		if nx.Entity == nil {
+			nx.Entity = &Entity{
+				Attributes: make(map[string]string),
+			}
+		}
+	case Dataview:
+		nx = XPath{
+			Gateway:  nx.Gateway,
+			Probe:    nx.Probe,
+			Entity:   nx.Entity,
+			Sampler:  nx.Sampler,
+			Dataview: &e,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &Gateway{}
+		}
+		if nx.Probe == nil {
+			nx.Probe = &Probe{}
+		}
+		if nx.Entity == nil {
+			nx.Entity = &Entity{
+				Attributes: make(map[string]string),
+			}
+		}
+		if nx.Sampler == nil {
+			nx.Sampler = &Sampler{}
+		}
+	case Headline:
+		nx = XPath{
+			Gateway:  nx.Gateway,
+			Probe:    nx.Probe,
+			Entity:   nx.Entity,
+			Sampler:  nx.Sampler,
+			Dataview: nx.Dataview,
+			Rows:     false,
+			Headline: &e,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &Gateway{}
+		}
+		if nx.Probe == nil {
+			nx.Probe = &Probe{}
+		}
+		if nx.Entity == nil {
+			nx.Entity = &Entity{
+				Attributes: make(map[string]string),
+			}
+		}
+		if nx.Sampler == nil {
+			nx.Sampler = &Sampler{}
+		}
+		if nx.Dataview == nil {
+			nx.Dataview = &Dataview{}
+		}
+	case Row:
+		nx = XPath{
+			Gateway:  nx.Gateway,
+			Probe:    nx.Probe,
+			Entity:   nx.Entity,
+			Sampler:  nx.Sampler,
+			Dataview: nx.Dataview,
+			Rows:     true,
+			Row:      &e,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &Gateway{}
+		}
+		if nx.Probe == nil {
+			nx.Probe = &Probe{}
+		}
+		if nx.Entity == nil {
+			nx.Entity = &Entity{
+				Attributes: make(map[string]string),
+			}
+		}
+		if nx.Sampler == nil {
+			nx.Sampler = &Sampler{}
+		}
+		if nx.Dataview == nil {
+			nx.Dataview = &Dataview{}
+		}
+	case Column:
+		nx = XPath{
+			Gateway:  nx.Gateway,
+			Probe:    nx.Probe,
+			Entity:   nx.Entity,
+			Sampler:  nx.Sampler,
+			Dataview: nx.Dataview,
+			Rows:     true,
+			Row:      nx.Row,
+			Column:   &e,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &Gateway{}
+		}
+		if nx.Probe == nil {
+			nx.Probe = &Probe{}
+		}
+		if nx.Entity == nil {
+			nx.Entity = &Entity{
+				Attributes: make(map[string]string),
+			}
+		}
+		if nx.Sampler == nil {
+			nx.Sampler = &Sampler{}
+		}
+		if nx.Dataview == nil {
+			nx.Dataview = &Dataview{}
+		}
+		if nx.Row == nil {
+			nx.Row = &Row{}
+		}
+	}
+
+	return &nx
 }
 
 // return true is the XPath appears to be empty
@@ -170,6 +312,7 @@ func (x *XPath) IsEmpty() bool {
 	return x.Gateway == nil
 }
 
+// do we need setters? validation?
 func (x *XPath) SetGatewayName(gateway string) {
 	x.Gateway = &Gateway{Name: gateway}
 }
@@ -279,26 +422,12 @@ func (x *XPath) String() (path string) {
 	return
 }
 
-func (x XPath) MarshalJSON() ([]byte, error) {
-	return json.Marshal(x.String())
-}
-
-func (x *XPath) UnmarshalJSON(b []byte) (err error) {
-	var s string
-	if err = json.Unmarshal(b, &s); err != nil {
-		return
-	}
-	nx, err := Parse(s)
-	*x = *nx
-	return
-}
-
-// parse a string into a Geneos XPath structure or return an error
-// very simplistic and hardwired to geneos absolute xpaths
-// no support for embedded separators
-func Parse(s string) (x *XPath, err error) {
-	x = New()
-	parts := SplitWithEscaping(s, '/', '\\')
+// parse an absolute xpath as a string into a Geneos XPath structure or
+// return an error very simplistic and hardwired to geneos absolute
+// xpaths with no support for embedded separators
+func ParseAbs(s string) (x *XPath, err error) {
+	x = &XPath{}
+	parts := splitWithEscaping(s, '/', '\\')
 
 	// walk through path backwards, dropping through each case
 	switch p := len(parts); p {
@@ -414,7 +543,26 @@ func Parse(s string) (x *XPath, err error) {
 	}
 }
 
-func SplitWithEscaping(s string, separator, escape byte) []string {
+// return Xpath as a string
+func (x XPath) MarshalJSON() ([]byte, error) {
+	return json.Marshal(x.String())
+}
+
+// return an xpath parsed from a string
+func (x *XPath) UnmarshalJSON(b []byte) (err error) {
+	var s string
+	if err = json.Unmarshal(b, &s); err != nil {
+		return
+	}
+	nx, err := ParseAbs(s)
+	*x = *nx
+	return
+}
+
+// split a string on separator (byte) except when separator is escaped
+// by the escape byte given. typical usage is for when an xpath element
+// has an escaped '/'
+func splitWithEscaping(s string, separator, escape byte) []string {
 	var token []byte
 	var tokens []string
 	for i := 0; i < len(s); i++ {
