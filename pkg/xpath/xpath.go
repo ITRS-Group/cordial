@@ -104,21 +104,21 @@ type Column struct {
 
 // return an XPath to the level of the element passed,
 // which can be populated with fields.
-func NewXPathTo(element interface{}) *XPath {
+func New(element interface{}) *XPath {
 	x := &XPath{}
-	return x.ResolvePathTo(element)
+	return x.ResolveTo(element)
 }
 
 // return an xpath populated to the dataview, with name dv
 // if no name is passed, create a wildcard dataview path
 func NewDataviewPath(name string) (x *XPath) {
-	x = NewXPathTo(&Dataview{Name: name})
+	x = New(&Dataview{Name: name})
 	return
 }
 
 // return an xpath populated to the table cell identifies by row and column
 func NewTableCellPath(row, column string) (x *XPath) {
-	x = NewXPathTo(&Column{Name: column})
+	x = New(&Column{Name: column})
 	x.Rows = true
 	x.Row = &Row{Name: row}
 	return
@@ -126,7 +126,7 @@ func NewTableCellPath(row, column string) (x *XPath) {
 
 // return an xpath populated to the headline cell, identified by headline
 func NewHeadlinePath(name string) (x *XPath) {
-	x = NewXPathTo(&Headline{Name: name})
+	x = New(&Headline{Name: name})
 	return
 }
 
@@ -139,10 +139,10 @@ func NewHeadlinePath(name string) (x *XPath) {
 // as-is and not cleaned.
 //
 // e.g.
-//    x := x.ResolvePathTo(&Dataview{})
-//    y := xpath.ResolvePathTo(&Headline{Name: "headlineName"})
+//    x := x.ResolveTo(&Dataview{})
+//    y := xpath.ResolveTo(&Headline{Name: "headlineName"})
 //
-func (x *XPath) ResolvePathTo(element interface{}) *XPath {
+func (x *XPath) ResolveTo(element interface{}) *XPath {
 	// copy the xpath
 	var nx XPath
 
@@ -179,9 +179,9 @@ func (x *XPath) ResolvePathTo(element interface{}) *XPath {
 		}
 	case Sampler:
 		nx = XPath{
-			Gateway: nx.Gateway,
-			Probe:   nx.Probe,
-			Entity:  nx.Entity,
+			Gateway: x.Gateway,
+			Probe:   x.Probe,
+			Entity:  x.Entity,
 			Sampler: &e,
 		}
 		if nx.Gateway == nil {
@@ -197,10 +197,10 @@ func (x *XPath) ResolvePathTo(element interface{}) *XPath {
 		}
 	case Dataview:
 		nx = XPath{
-			Gateway:  nx.Gateway,
-			Probe:    nx.Probe,
-			Entity:   nx.Entity,
-			Sampler:  nx.Sampler,
+			Gateway:  x.Gateway,
+			Probe:    x.Probe,
+			Entity:   x.Entity,
+			Sampler:  x.Sampler,
 			Dataview: &e,
 		}
 		if nx.Gateway == nil {
@@ -219,11 +219,11 @@ func (x *XPath) ResolvePathTo(element interface{}) *XPath {
 		}
 	case Headline:
 		nx = XPath{
-			Gateway:  nx.Gateway,
-			Probe:    nx.Probe,
-			Entity:   nx.Entity,
-			Sampler:  nx.Sampler,
-			Dataview: nx.Dataview,
+			Gateway:  x.Gateway,
+			Probe:    x.Probe,
+			Entity:   x.Entity,
+			Sampler:  x.Sampler,
+			Dataview: x.Dataview,
 			Rows:     false,
 			Headline: &e,
 		}
@@ -246,11 +246,11 @@ func (x *XPath) ResolvePathTo(element interface{}) *XPath {
 		}
 	case Row:
 		nx = XPath{
-			Gateway:  nx.Gateway,
-			Probe:    nx.Probe,
-			Entity:   nx.Entity,
-			Sampler:  nx.Sampler,
-			Dataview: nx.Dataview,
+			Gateway:  x.Gateway,
+			Probe:    x.Probe,
+			Entity:   x.Entity,
+			Sampler:  x.Sampler,
+			Dataview: x.Dataview,
 			Rows:     true,
 			Row:      &e,
 		}
@@ -273,13 +273,13 @@ func (x *XPath) ResolvePathTo(element interface{}) *XPath {
 		}
 	case Column:
 		nx = XPath{
-			Gateway:  nx.Gateway,
-			Probe:    nx.Probe,
-			Entity:   nx.Entity,
-			Sampler:  nx.Sampler,
-			Dataview: nx.Dataview,
+			Gateway:  x.Gateway,
+			Probe:    x.Probe,
+			Entity:   x.Entity,
+			Sampler:  x.Sampler,
+			Dataview: x.Dataview,
 			Rows:     true,
-			Row:      nx.Row,
+			Row:      x.Row,
 			Column:   &e,
 		}
 		if nx.Gateway == nil {
