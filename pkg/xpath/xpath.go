@@ -82,8 +82,8 @@ type Entity struct {
 }
 
 type Sampler struct {
-	Name string `json:"name,omitempty"`
-	Type string `json:"type,omitempty"`
+	Name string  `json:"name,omitempty"`
+	Type *string `json:"type,omitempty"`
 }
 
 type Dataview struct {
@@ -382,8 +382,8 @@ func (x *XPath) String() (path string) {
 	if x.Sampler.Name != "" {
 		path += fmt.Sprintf("[(@name=%q)]", x.Sampler.Name)
 	}
-	if x.Sampler.Name != "" {
-		path += fmt.Sprintf("[(@type=%q)]", x.Sampler.Type)
+	if x.Sampler.Type != nil {
+		path += fmt.Sprintf("[(@type=%q)]", *x.Sampler.Type)
 	}
 
 	if x.Dataview == nil {
@@ -437,15 +437,18 @@ func ParseAbs(s string) (x *XPath, err error) {
 			err = ErrInvalidPath
 			return
 		}
-		x.Column = &Column{Name: getAttr(parts[p-1], "column")}
+		column, _ := getAttr(parts[p-1], "column")
+		x.Column = &Column{Name: column}
 		p--
 		fallthrough
 	case 10:
 		if strings.HasPrefix(parts[p-1], "row") {
 			x.Rows = true
-			x.Row = &Row{Name: getAttr(parts[p-1], "name")}
+			row, _ := getAttr(parts[p-1], "name")
+			x.Row = &Row{Name: row}
 		} else if strings.HasPrefix(parts[p-1], "cell") {
-			x.Headline = &Headline{Name: getAttr(parts[p-1], "name")}
+			headline, _ := getAttr(parts[p-1], "name")
+			x.Headline = &Headline{Name: headline}
 		} else {
 			err = ErrInvalidPath
 			return
@@ -469,7 +472,8 @@ func ParseAbs(s string) (x *XPath, err error) {
 			err = ErrInvalidPath
 			return
 		}
-		x.Dataview = &Dataview{Name: getAttr(parts[p-1], "name")}
+		dataview, _ := getAttr(parts[p-1], "name")
+		x.Dataview = &Dataview{Name: dataview}
 		p--
 		fallthrough
 	case 7:
@@ -478,9 +482,14 @@ func ParseAbs(s string) (x *XPath, err error) {
 			err = ErrInvalidPath
 			return
 		}
+		var tp *string
+		if t, ok := getAttr(parts[p-1], "type"); ok {
+			tp = &t
+		}
+		name, _ := getAttr(parts[p-1], "name")
 		x.Sampler = &Sampler{
-			Name: getAttr(parts[p-1], "name"),
-			Type: getAttr(parts[p-1], "type"),
+			Name: name,
+			Type: tp,
 		}
 		p--
 		fallthrough
@@ -490,8 +499,9 @@ func ParseAbs(s string) (x *XPath, err error) {
 			err = ErrInvalidPath
 			return
 		}
+		entity, _ := getAttr(parts[p-1], "name")
 		x.Entity = &Entity{
-			Name:       getAttr(parts[p-1], "name"),
+			Name:       entity,
 			Attributes: getAttributes(parts[p-1]),
 		}
 		p--
@@ -502,7 +512,8 @@ func ParseAbs(s string) (x *XPath, err error) {
 			err = ErrInvalidPath
 			return
 		}
-		x.Probe = &Probe{Name: getAttr(parts[p-1], "name")}
+		probe, _ := getAttr(parts[p-1], "name")
+		x.Probe = &Probe{Name: probe}
 		p--
 		fallthrough
 	case 4:
@@ -519,7 +530,8 @@ func ParseAbs(s string) (x *XPath, err error) {
 			err = ErrInvalidPath
 			return
 		}
-		x.Gateway = &Gateway{Name: getAttr(parts[p-1], "name")}
+		gateway, _ := getAttr(parts[p-1], "name")
+		x.Gateway = &Gateway{Name: gateway}
 		p--
 		fallthrough
 	case 2:
@@ -582,11 +594,15 @@ func splitWithEscaping(s string, separator, escape byte) []string {
 
 // extract the value of an attribute from the xpath component in the form
 // [(@attr="value")] - this just uses a regexp and applies to validation
-func getAttr(s string, attr string) (v string) {
+func getAttr(s string, attr string) (v string, ok bool) {
 	attrRE := regexp.MustCompile(fmt.Sprintf(`\[\(@%s="(.*?)\\{0}?"\)\]`, attr))
 	m := attrRE.FindStringSubmatch(s)
+	if m == nil {
+		return
+	}
 	if len(m) > 1 {
 		v = m[1]
+		ok = true
 	}
 	return
 }
