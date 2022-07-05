@@ -106,7 +106,7 @@ type Column struct {
 // which can be populated with fields.
 func NewXPathTo(element interface{}) *XPath {
 	x := &XPath{}
-	return x.PathTo(element)
+	return x.ResolvePathTo(element)
 }
 
 // return an xpath populated to the dataview, with name dv
@@ -139,10 +139,10 @@ func NewHeadlinePath(name string) (x *XPath) {
 // as-is and not cleaned.
 //
 // e.g.
-//    x := x.PathTo(&Dataview{})
-//    y := xpath.PathTo(&Headline{Name: "headlineName"})
+//    x := x.ResolvePathTo(&Dataview{})
+//    y := xpath.ResolvePathTo(&Headline{Name: "headlineName"})
 //
-func (x *XPath) PathTo(element interface{}) *XPath {
+func (x *XPath) ResolvePathTo(element interface{}) *XPath {
 	// copy the xpath
 	var nx XPath
 
