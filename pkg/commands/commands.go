@@ -44,25 +44,39 @@ import (
 
 // A Command is made up of a Name, a Target and optional Args
 type Command struct {
-	Name   string `json:"command,omitempty"`
-	Target string `json:"target"`
-	Args   *Args  `json:"args,omitempty"`
+	Name   string       `json:"command,omitempty"`
+	Target *xpath.XPath `json:"target"`
+	Args   *Args        `json:"args,omitempty"`
+	Scope  Scope        `json:"scope,omitempty"`
+	Limit  int          `json:"limit,omitempty"`
+}
+
+type Scope struct {
+	Value          bool `json:"value,omitempty"`
+	Severity       bool `json:"severity,omitempty"`
+	Snooze         bool `json:"snooze,omitempty"`
+	UserAssignment bool `json:"user-assignment,omitempty"`
 }
 
 type CommandsResponseRaw struct {
+	Target     *xpath.XPath        `json:"target"`
 	MimeType   []map[string]string `json:"mimetype"`
 	Status     string              `json:"status"`
 	StreamData []map[string]string `json:"streamdata"`
-	Dataview   *Dataview           `json:"dataview`
-	XPaths     []string            `json:"xpaths`
+	Dataview   *Dataview           `json:"dataview"` // for snapshots only
+	XPaths     []string            `json:"xpaths"`
 }
 
 type CommandsResponse struct {
-	MimeType   map[string]string   `json:"mimetype"`
-	Status     string              `json:"status"`
-	StreamData map[string][]string `json:"streamdata"`
-	Dataview   *Dataview           `json:"dataview"`
-	XPaths     []string            `json:"xpaths"`
+	Target         *xpath.XPath      `json:"target"`
+	MimeType       map[string]string `json:"mimetype"`
+	Status         string            `json:"status"`
+	Stdout         string            `json:"stdout"`
+	StdoutMimeType string            `json:"stdout_mimetype"`
+	Stderr         string            `json:"stderr"`
+	ExecLog        string            `json:"execLog"`
+	Dataview       *Dataview         `json:"dataview"` // for snapshots only
+	XPaths         []string          `json:"xpaths"`
 }
 
 type Connection struct {
@@ -73,27 +87,38 @@ type Connection struct {
 	SSO                SSOAuth
 	InsecureSkipVerify bool
 	rrurls             []*url.URL
-	ping               *func(*Connection) bool
+	ping               *func(*Connection) error
 }
 
+type GeneosRESTError struct {
+	Error string `json:"error"`
+}
+
+// the default endpoint for normal commands
 const endpoint = "/rest/runCommand"
 
-// Set-up a Gateway REST command connection
-func DialGateway(u *url.URL, options ...CommandOptions) (c *Connection, err error) {
+// Connect to a Geneos gateway on the given URL and check the connection.
+// The connection is checked by trying a lightweight REST command (fetch
+// gateway timezone and time) and if an error is returned then the connection
+// should not be reused.
+//
+// Options can be given to set authentication, ignore unverifiable certificates
+// and to override the default "ping" to check the gateway connection
+func DialGateway(u *url.URL, options ...Options) (c *Connection, err error) {
 	c = &Connection{
-		BaseURL: u,
+		rrurls: []*url.URL{u},
 	}
 	evalOptions(c, options...)
+	err = c.Redial()
 	return
 }
 
-// Round-Robin / random dialer. Given a slice of URLs, randomise and
-// then try each one in turn until there is a response using the
-// liveness ping function. If there is an existing connection configured
-// then that is re-tested first before moving onto next URL
+// Connect to a Geneos gateway given a slice of URLs. This is to support
+// standby pairs. Each URL is checked in a random order and the first working
+// one is returned. If all URLs fail the check then an error is returned.
 //
-// all endpoints are given the same options
-func DialGateways(urls []*url.URL, options ...CommandOptions) (c *Connection, err error) {
+// Options are the same as for DialGateway()
+func DialGateways(urls []*url.URL, options ...Options) (c *Connection, err error) {
 	c = &Connection{
 		rrurls: urls,
 	}
@@ -102,21 +127,27 @@ func DialGateways(urls []*url.URL, options ...CommandOptions) (c *Connection, er
 	return
 }
 
-// Redial the connection, finding the next working endpooint using the liveness ping() function
-// given
+// Redial the connection, finding the next working endpoint using either the default
+// ping function or the one provided when the connection was originally dialled.
+//
+// An aggregated error is returned if all endpoints fail the connection test.
 func (c *Connection) Redial() (err error) {
 	// test existing connection, use default func if not overridden
-	ping := func(*Connection) bool {
-		cr, err := c.Do("rest/gatewayinfo/timezone", &Command{})
+	ping := func(*Connection) error {
+		cr, err := c.Do("/rest/gatewayinfo/timezone", &Command{})
 		if err != nil {
-			return false
+			return fmt.Errorf("%w - %s: %v", err, cr.Status, cr.Stderr)
 		}
-		return cr.Status != "error"
+		if cr.Status == "error" {
+			return fmt.Errorf("%s: %v", cr.Status, cr.Stderr)
+		}
+		return nil
 	}
+
 	if c.ping != nil {
 		ping = *c.ping
 	}
-	if c.BaseURL != nil && ping(c) {
+	if c.BaseURL != nil && ping(c) == nil {
 		return nil
 	}
 
@@ -127,17 +158,20 @@ func (c *Connection) Redial() (err error) {
 	})
 
 	// loop through, pick the first valid endpoint
+	// save all the errors in case no gateway is valid
+	errs := ""
 	for _, u := range c.rrurls {
 		c.BaseURL = u
-		if ping(c) {
+		if err = ping(c); err == nil {
 			return nil
 		}
+		errs += fmt.Sprintf("%s responded: %q\n", u, err)
 	}
-	return fmt.Errorf("no server responding")
+	return fmt.Errorf(errs)
 }
 
 // execute a command, return the http response
-func (c *Connection) Do(endpoint string, command interface{}) (cr CommandsResponse, err error) {
+func (c *Connection) Do(endpoint string, command *Command) (cr CommandsResponse, err error) {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: c.InsecureSkipVerify},
 	}
@@ -171,31 +205,44 @@ func (c *Connection) Do(endpoint string, command interface{}) (cr CommandsRespon
 	if err != nil {
 		return
 	}
-	if resp.StatusCode > 299 && resp.StatusCode != 400 {
+	b, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		var geneosError GeneosRESTError
+		if err = json.Unmarshal(b, &geneosError); err != nil {
+			geneosError.Error = fmt.Sprintf("unknown error (%s)", string(b))
+		}
+		cr.Status = "error"
+		cr.Stderr = geneosError.Error
 		err = fmt.Errorf(resp.Status)
 		return
 	}
-	b, _ := io.ReadAll(resp.Body)
+
 	var raw CommandsResponseRaw
 	if err = json.Unmarshal(b, &raw); err != nil {
-		err = fmt.Errorf("%w", err)
+		err = fmt.Errorf("cannot unmarshal response: %w", err)
 		return
 	}
-	resp.Body.Close()
+	raw.Target = command.Target
+
 	cr = CookResponse(raw)
 	if cr.Status == "error" {
-		err = fmt.Errorf("%s: %v", cr.Status, cr.StreamData["stderr"])
+		err = fmt.Errorf("%s: %v", cr.Status, cr.Stderr)
 		return
 	}
 	return
 }
 
-// Convert a raw response into a slightly more structured one where the interleaved
-// stream messages are merged, in order, into slices for each stream
+// Convert a raw response into a structured one where the interleaved
+// stream messages are concatenated into strings for each stream
 func CookResponse(raw CommandsResponseRaw) (cr CommandsResponse) {
-	cr.Status = raw.Status
-	cr.Dataview = raw.Dataview
-	cr.XPaths = raw.XPaths
+	cr = CommandsResponse{
+		Status:   raw.Status,
+		Dataview: raw.Dataview,
+		XPaths:   raw.XPaths,
+		Target:   raw.Target,
+	}
 
 	for _, m := range raw.MimeType {
 		cr.MimeType = make(map[string]string)
@@ -203,75 +250,81 @@ func CookResponse(raw CommandsResponseRaw) (cr CommandsResponse) {
 			cr.MimeType[k] = v
 		}
 	}
-	cr.StreamData = make(map[string][]string)
+
 	for _, s := range raw.StreamData {
 		for k, v := range s {
-			if _, ok := cr.StreamData[k]; !ok {
-				cr.StreamData[k] = []string{}
+			switch k {
+			case "stdout":
+				cr.Stdout += strings.TrimSpace(v) + "\n"
+			case "stderr":
+				cr.Stderr += strings.TrimSpace(v) + "\n"
+			case "execLog":
+				cr.ExecLog += strings.TrimSpace(v) + "\n"
+			default:
+				panic(fmt.Sprintf("unknown response stream %q", k))
 			}
-			cr.StreamData[k] = append(cr.StreamData[k], strings.TrimSpace(v))
 		}
 	}
 	return
 }
 
-// run a command against exactly one valid target, returning stdout,
-// stderr and execlog where applicable
-func (c *Connection) RunCommand(name string, target *xpath.XPath, options ...ArgOptions) (stdout, stderr, execlog string, err error) {
+// run a command against exactly one valid target, returning the response
+func (c *Connection) RunCommand(name string, target *xpath.XPath, options ...ArgOptions) (cr CommandsResponse, err error) {
 	args := &Args{}
 	evalArgOptions(args, options...)
-	targets := c.CommandTargets(name, target)
+	targets, err := c.CommandTargets(name, target)
+	if err != nil {
+		return
+	}
 	if len(targets) != 1 {
 		err = fmt.Errorf("target does not match exactly one data item")
 		return
 	}
 	command := &Command{
 		Name:   name,
-		Target: target.String(),
+		Target: target,
 		Args:   args,
 	}
-	cr, err := c.Do(endpoint, command)
-	if err != nil {
-		return
-	}
-	stdout = strings.Join(cr.StreamData["stdout"], "\n")
-	stderr = strings.Join(cr.StreamData["stderr"], "\n")
-	execlog = strings.Join(cr.StreamData["execlog"], "\n")
-	return
+	return c.Do(endpoint, command)
 }
 
 // run command against all matching data items, returning stdout,
 // stderr and execlog (concatenated) where applicable
-func (c *Connection) RunCommandAll(name string, target *xpath.XPath, options ...ArgOptions) (stdout, stderr, execlog map[string]string, err error) {
+func (c *Connection) RunCommandAll(name string, target *xpath.XPath, options ...ArgOptions) (crs []CommandsResponse, err error) {
 	args := &Args{}
 	evalArgOptions(args, options...)
-	targets := c.CommandTargets(name, target)
-	stdout = map[string]string{}
-	stderr = map[string]string{}
-	execlog = map[string]string{}
+	targets, err := c.CommandTargets(name, target)
+	if err != nil {
+		return
+	}
+	if len(targets) == 0 {
+		err = fmt.Errorf("no matches")
+	}
+	crs = []CommandsResponse{}
 
 	for _, t := range targets {
 		command := &Command{
 			Name:   name,
-			Target: t.String(),
+			Target: t,
 			Args:   args,
 		}
 		cr, err := c.Do(endpoint, command)
+		crs = append(crs, cr)
 		if err != nil {
 			continue
 		}
-		stdout[t.String()] = strings.Join(cr.StreamData["stdout"], "\n")
-		stderr[t.String()] = strings.Join(cr.StreamData["stderr"], "\n")
-		execlog[t.String()] = strings.Join(cr.StreamData["execlog"], "\n")
 	}
 	return
 }
 
-func (c *Connection) CommandTargets(name string, target *xpath.XPath) (matches []*xpath.XPath) {
-	const endpoint = "/rest/xpaths/commandTargets"
+func (c *Connection) Match(target *xpath.XPath, limit int) (matches []*xpath.XPath, err error) {
+	const endpoint = "/rest/xpaths/match"
+	if limit < 1 {
+		limit = 100
+	}
 	command := &Command{
-		Target: target.String(),
-		Name:   name,
+		Target: target,
+		Limit:  limit,
 	}
 	cr, err := c.Do(endpoint, command)
 	if err != nil {
@@ -279,7 +332,7 @@ func (c *Connection) CommandTargets(name string, target *xpath.XPath) (matches [
 		// return
 	}
 	for _, p := range cr.XPaths {
-		x, err := xpath.Parse(p)
+		x, err := xpath.ParseAbs(p)
 		if err != nil {
 			panic(err)
 			// continue
@@ -289,31 +342,24 @@ func (c *Connection) CommandTargets(name string, target *xpath.XPath) (matches [
 	return
 }
 
-// test commands to work out kinks in args and returns
-
-func (c *Connection) SnoozeManual(target *xpath.XPath, info string) (err error) {
-	if target.IsGateway() || target.IsProbe() || target.IsEntity() {
-		_, _, _, err = c.RunCommandAll("/SNOOZE:manual", target, Arg(1, info))
-		return
+func (c *Connection) CommandTargets(name string, target *xpath.XPath) (matches []*xpath.XPath, err error) {
+	const endpoint = "/rest/xpaths/commandTargets"
+	command := &Command{
+		Target: target,
+		Name:   name,
 	}
-	if target.IsSampler() || target.IsHeadline() || target.IsTableCell() || target.IsDataview() {
-		_, _, _, err = c.RunCommandAll("/SNOOZE:manualAllMe", target, Arg(1, info), Arg(5, "this"))
+	cr, err := c.Do(endpoint, command)
+	if err != nil {
+		panic(err)
+		// return
 	}
-	return
-}
-
-func (c *Connection) Unsnooze(target *xpath.XPath, info string) (err error) {
-	if target.IsGateway() || target.IsProbe() || target.IsEntity() {
-		_, _, _, err = c.RunCommandAll("/SNOOZE:unsnooze", target, Arg(1, info))
-		return
+	for _, p := range cr.XPaths {
+		x, err := xpath.ParseAbs(p)
+		if err != nil {
+			panic(err)
+			// continue
+		}
+		matches = append(matches, x)
 	}
-	if target.Rows || target.Headline != nil || target.Sampler != nil {
-		_, _, _, err = c.RunCommandAll("/SNOOZE:unsnoozeAllMe", target, Arg(1, "this"), Arg(2, info))
-	}
-	return
-}
-
-func (c *Connection) SnoozeInfo(target *xpath.XPath) (info map[string]string, err error) {
-	info, _, _, err = c.RunCommandAll("/SNOOZE:info", target)
 	return
 }
