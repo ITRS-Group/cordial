@@ -48,6 +48,7 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 var ErrInvalidPath = errors.New("invalid Geneos XPath")
@@ -422,12 +423,59 @@ func (x *XPath) String() (path string) {
 	return
 }
 
-// parse an absolute xpath as a string into a Geneos XPath structure or
-// return an error very simplistic and hardwired to geneos absolute
-// xpaths with no support for embedded separators
-func ParseAbs(s string) (x *XPath, err error) {
-	x = &XPath{}
+// Parse takes an absolute Geneos XPath and returns an XPath structure.
+//
+// A leading double slash, e.g. //probe[(@name="myprobe")], results in
+// preceeding levels being filled-in and further processing continuing
+// from there. Because of the general purpose nature of the function
+// only levels down to //rows and //headlines are supported. If you need
+// a general path to a cell then you must use either //rows/row/cell or
+// //headlines/cell to ensure the returned path uses the correct
+// structure.
+//
+// Full wildcards, e.g. `//*`, are not supported as it is not possible
+// to determine the terminating level.
+//
+// Support for predicates is limited. Currently all components
+// understand "name", e.g. //probe[(@name="probeName")], while
+// "managedEntity" supports multiple "attribute" predicates and table
+// cells (under "rows/row/cell") support "column" (which is used instead
+// of "name").
+func Parse(s string) (xpath *XPath, err error) {
+	xpath = &XPath{}
+
 	parts := splitWithEscaping(s, '/', '\\')
+
+	// if the path is wildcarded, find the first level and prefix the parts[] with
+	// the higher levels
+	if strings.HasPrefix(s, "//") {
+		f := strings.FieldsFunc(s, func(r rune) bool { return !unicode.IsLetter(r) })
+		if len(f) == 0 {
+			err = ErrInvalidPath
+			return
+		}
+		parts = parts[2:]
+		switch f[0] {
+		case "gateway":
+			// simple case
+			parts[1] = "geneos"
+		case "rows", "headlines":
+			parts = append([]string{"dataview"}, parts...)
+			fallthrough
+		case "dataview":
+			parts = append([]string{"sampler"}, parts...)
+			fallthrough
+		case "sampler":
+			parts = append([]string{"managedEntity"}, parts...)
+			fallthrough
+		case "managedEntity":
+			parts = append([]string{"probe"}, parts...)
+			fallthrough
+		case "probe":
+			parts = append([]string{"", "geneos", "gateway", "directory"}, parts...)
+
+		}
+	}
 
 	// walk through path backwards, dropping through each case
 	switch p := len(parts); p {
@@ -438,17 +486,17 @@ func ParseAbs(s string) (x *XPath, err error) {
 			return
 		}
 		column, _ := getAttr(parts[p-1], "column")
-		x.Column = &Column{Name: column}
+		xpath.Column = &Column{Name: column}
 		p--
 		fallthrough
 	case 10:
 		if strings.HasPrefix(parts[p-1], "row") {
-			x.Rows = true
+			xpath.Rows = true
 			row, _ := getAttr(parts[p-1], "name")
-			x.Row = &Row{Name: row}
+			xpath.Row = &Row{Name: row}
 		} else if strings.HasPrefix(parts[p-1], "cell") {
 			headline, _ := getAttr(parts[p-1], "name")
-			x.Headline = &Headline{Name: headline}
+			xpath.Headline = &Headline{Name: headline}
 		} else {
 			err = ErrInvalidPath
 			return
@@ -473,7 +521,7 @@ func ParseAbs(s string) (x *XPath, err error) {
 			return
 		}
 		dataview, _ := getAttr(parts[p-1], "name")
-		x.Dataview = &Dataview{Name: dataview}
+		xpath.Dataview = &Dataview{Name: dataview}
 		p--
 		fallthrough
 	case 7:
@@ -487,7 +535,7 @@ func ParseAbs(s string) (x *XPath, err error) {
 			tp = &t
 		}
 		name, _ := getAttr(parts[p-1], "name")
-		x.Sampler = &Sampler{
+		xpath.Sampler = &Sampler{
 			Name: name,
 			Type: tp,
 		}
@@ -500,7 +548,7 @@ func ParseAbs(s string) (x *XPath, err error) {
 			return
 		}
 		entity, _ := getAttr(parts[p-1], "name")
-		x.Entity = &Entity{
+		xpath.Entity = &Entity{
 			Name:       entity,
 			Attributes: getAttributes(parts[p-1]),
 		}
@@ -513,7 +561,7 @@ func ParseAbs(s string) (x *XPath, err error) {
 			return
 		}
 		probe, _ := getAttr(parts[p-1], "name")
-		x.Probe = &Probe{Name: probe}
+		xpath.Probe = &Probe{Name: probe}
 		p--
 		fallthrough
 	case 4:
@@ -531,7 +579,7 @@ func ParseAbs(s string) (x *XPath, err error) {
 			return
 		}
 		gateway, _ := getAttr(parts[p-1], "name")
-		x.Gateway = &Gateway{Name: gateway}
+		xpath.Gateway = &Gateway{Name: gateway}
 		p--
 		fallthrough
 	case 2:
@@ -566,7 +614,7 @@ func (x *XPath) UnmarshalJSON(b []byte) (err error) {
 	if err = json.Unmarshal(b, &s); err != nil {
 		return
 	}
-	nx, err := ParseAbs(s)
+	nx, err := Parse(s)
 	*x = *nx
 	return
 }
