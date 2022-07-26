@@ -84,6 +84,14 @@ func (c *Config) SetDefault(s string, i interface{}) {
 	c.v.SetDefault(s, i)
 }
 
+func Set(s string, i interface{}) {
+	globalConfig.Set(s, i)
+}
+
+func (c *Config) Set(s string, i interface{}) {
+	c.v.Set(s, i)
+}
+
 func GetStringSlice(s string, confmap ...map[string]string) []string {
 	return globalConfig.GetStringSlice(s, confmap...)
 }

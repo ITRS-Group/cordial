@@ -228,7 +228,7 @@ func (c *Connection) Do(endpoint string, command *Command) (cr CommandsResponse,
 	}
 	raw.Target = command.Target
 
-	cr = CookResponse(raw)
+	cr = cookResponse(raw)
 	if cr.Status == "error" {
 		err = fmt.Errorf("%s: %v", cr.Status, cr.Stderr)
 		return
@@ -238,7 +238,7 @@ func (c *Connection) Do(endpoint string, command *Command) (cr CommandsResponse,
 
 // Convert a raw response into a structured one where the interleaved
 // stream messages are concatenated into strings for each stream
-func CookResponse(raw CommandsResponseRaw) (cr CommandsResponse) {
+func cookResponse(raw CommandsResponseRaw) (cr CommandsResponse) {
 	cr = CommandsResponse{
 		Status:   raw.Status,
 		Dataview: raw.Dataview,
