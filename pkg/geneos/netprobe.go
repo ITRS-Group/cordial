@@ -1,4 +1,4 @@
-package config
+package geneos
 
 import "encoding/xml"
 
