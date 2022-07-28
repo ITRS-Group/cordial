@@ -150,12 +150,12 @@ func (c *Config) ExpandString(input string, confmap map[string]string) (value st
 				return strings.TrimSpace(c.v.GetString(s))
 			}
 			if len(confmap) == 0 {
-				return strings.TrimSpace(os.Getenv(s))
+				return strings.TrimSpace(mapEnv(s))
 			}
 			return strings.TrimSpace(confmap[s])
 		}
 		if strings.HasPrefix(s, "env:") {
-			return strings.TrimSpace(os.Getenv(strings.TrimPrefix(s, "env:")))
+			return strings.TrimSpace(mapEnv(strings.TrimPrefix(s, "env:")))
 		}
 		if strings.HasPrefix(s, "file:") {
 			path := strings.TrimPrefix(s, "file:")
@@ -184,5 +184,22 @@ func (c *Config) ExpandString(input string, confmap map[string]string) (value st
 
 		return
 	})
+	return
+}
+
+// mapEnv is for special case mappings of environment variables across
+// platforms. If a settings is not found via os.GetEnv() then defaults
+// can be substituted. Currently only HOME is supported for Windows.
+func mapEnv(e string) (s string) {
+	if s = os.Getenv(e); s != "" {
+		return
+	}
+	switch e {
+	case "HOME":
+		h, err := os.UserHomeDir()
+		if err == nil {
+			s = h
+		}
+	}
 	return
 }
