@@ -138,7 +138,7 @@ func (c *Connection) Redial() (err error) {
 	ping := func(*Connection) error {
 		cr, err := c.Do("/rest/gatewayinfo/timezone", &Command{})
 		if err != nil {
-			return fmt.Errorf("%w - %s: %v", err, cr.Status, cr.Stderr)
+			return err
 		}
 		if cr.Status == "error" {
 			return fmt.Errorf("%s: %v", cr.Status, cr.Stderr)
@@ -161,15 +161,15 @@ func (c *Connection) Redial() (err error) {
 
 	// loop through, pick the first valid endpoint
 	// save all the errors in case no gateway is valid
-	errs := ""
+	errs := []string{}
 	for _, u := range c.rrurls {
 		c.BaseURL = u
 		if err = ping(c); err == nil {
 			return nil
 		}
-		errs += fmt.Sprintf("%s (connecting to %q)\n", err, u)
+		errs = append(errs, fmt.Sprintf("gateway %q: %s", u, err))
 	}
-	return fmt.Errorf(errs)
+	return fmt.Errorf(strings.Join(errs, "\n"))
 }
 
 // execute a command, return the http response
