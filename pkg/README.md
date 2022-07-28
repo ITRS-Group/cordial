@@ -1,20 +1,61 @@
-# XML-RPC API Go bindings
+# Cordial Packages
 
-This set of packages provides a wrapper around low-level XML-RPC calls to send data to a Geneos Netprobe.
+Cordial packages include a number of Go language interfaces to Geneos.
 
-The code is still very much in the early stages of development and the API may change at any time. Feedback, via Issues, and Pull requests are welcome but without any guarentees if I'll have time to do them.
+## commands
 
-The documentation for the underlying API is here:
+The [commands](commands) package provides access to the Geneos Gateway REST Command API.
 
-https://docs.itrsgroup.com/docs/geneos/current/Netprobe/api/xml-rpc-api.html
+## config
 
-While direct mappings from golang to the API are available in the [xmlrpc](geneos/pkg/xmlrpc) package most users will want to look at the higher-level [samplers](geneos/pkg/samplers) and [streams](geneos/pkg/streams) packages that try to implement an easier to use high-level interface.
+The [config](config) package provides a wrapper around [viper](https://pkg.go.dev/github.com/spf13/viper)
+
+## logger
+
+There is a basic logging interface to allow for common logging formats. To use import the [logger](geneos/pkg/logger) package and then make local copies of the Loggers, like this:
+
+```go
+import (
+	"github.com/itrs-group/cordial/pkg/logger"
+)
+
+func init() {
+	logger.EnableDebugLog()
+}
+
+var (
+	Logger      = logger.Logger
+	DebugLogger = logger.DebugLogger
+	ErrorLogger = logger.ErrorLogger
+)
+```
+
+Then all of the normal _log_ package methods will work.
+
+The `DebugLogger` is turned off by default and can be enabled using `logger.EnableDebugLog()` and then disabled again using `logger.DisableDebugLog()`. As Loggers are copies of the ones in the logger package the DebugLogger can be enabled or disabled per package. 
+
+For this reason you may want to provide exported package methods to turn debug logging on and off from the calling program.
+
+## XML-RPC API
+
+These packages wrap the original SOAP XML-RPC API interface:
+
+* [plugins](plugins)
+* [samplers](samplers)
+* [streams](streams)
+* [xmlrpc](xmlrpc)
+
+The code is still very much in development and the API will evolve with releases. Feedback, via Issues, and Pull requests are welcome but without any guarantees if I'll have time to do them.
+
+The documentation for the underlying API is here: [XML-RPC API](https://docs.itrsgroup.com/docs/geneos/current/Netprobe/api/xml-rpc-api.html)
+
+While direct mappings from golang to the API are available in the [xmlrpc](xmlrpc) package most users will want to look at the higher-level [samplers](samplers) and [streams](streams) packages that try to implement an easier to use high-level interface.
 
 ## Examples of use
 
-The [example](geneos/example) package directory contains a number of simple implmentations of common plugin types that show how to use the different types of data update methods.
+The [example](example) package directory contains a number of simple implementations of common plugin types that show how to use the different types of data update methods.
 
-The [example/generic](geneos/example/geneic) directory is described in further detail below. It uses this method to deliver updates:
+The [example/generic](example/generic) directory is described in further detail below. It uses this method to deliver updates:
 
 ```go
 func (s Samplers) UpdateTableFromSlice(rowdata interface{}) error
@@ -223,57 +264,31 @@ Finally `Start()` the sampler by passing a `sync.WaitGroup` that you can later `
 
 ```
 
-## Logging
-
-There is a basic logging interface to allow for common logging formats for any plugins. To use import the [logger](geneos/pkg/logger) package and then make local copies of the Loggers, like this:
-
-```go
-import (
-...
-	"github.com/itrs-group/cordial/pkg/logger"
-)
-
-func init() {
-	logger.EnableDebugLog()
-}
-
-var (
-	Logger      = logger.Logger
-	DebugLogger = logger.DebugLogger
-	ErrorLogger = logger.ErrorLogger
-)
-```
-
-Then all of the normal _log_ package methods will work.
-
-The `DebugLogger` is turned off by default and can be enabled using `logger.EnableDebugLog()` and then disabled again using `logger.DisableDebugLog()`. As Loggers are copies of the ones in the logger package the DebugLogger can be enabled or disabled per package. 
-
-For this reason you may want to provide exported package methods to turn debug logging on and off from the calling program.
-
 ## Streams
 
 Basic support for [streams](geneos/pkg/streams) are included. Streams must be predefined in the Geneos configuration and sending messages to a non-existent stream name results in an error.
 
 ```go
 import (
-	"github.com/itrs-group/cordial/pkg/streams"
+ "github.com/itrs-group/cordial/pkg/streams"
 )
 ```
 
 ```go
 func main() {
 ...
-	streamsampler := "streams"
-	sp, err := streams.Sampler(fmt.Sprintf("http://%s:%v/xmlrpc", hostname, port), entityname, streamsampler)
-	if err != nil {
-		log.Fatal(err)
-	}
+  streamsampler := "streams"
+  sp, err := streams.Sampler(fmt.Sprintf("http://%s:%v/xmlrpc", hostname, port), entityname, streamsampler)
+  if err != nil {
+    log.Fatal(err)
+  }
 
-	err := sp.WriteMessage("teststream", time.Now().String()+" this is a test")
-	if err != nil {
-		log.Fatal(err)
-		break
-	}
+  err := sp.WriteMessage("teststream", time.Now().String()+" this is a test")
+  if err != nil {
+    log.Fatal(err)
+    break
+  }
+}
 ```
 
 For convenience the _streams_ package also acts as an _io.Writer_ and _io.StringWriter_ and so will respond to normal Go `Write()` and `WriteString()` calls. You must however call `SetStreamName()` before trying to write messages this way. There is no validation of data content or length.
@@ -294,10 +309,9 @@ You can change the stream name as often as you want, but it will be easier to cr
 
 Note that the sampler name is always different to the normal dataview destination as the plugin on the Geneos side must be an _api-streams_ one. Also there is no `Close()` method. At the moment there is no direct support for heartbeats.
 
+### Secure Connections
 
-## Secure Connections
-
-The packages support secure connections through the normal Golang http.Client but it is quite common for individual Netprobe instances to run with self-signed certificates so there is a method to allow unverified certificates and this must be called immediately after getting the new _sampler_ or _stream_ like this:
+The XML-RPC API packages support secure connections through the normal Go http.Client but it is quite common for individual Netprobe instances to run with self-signed certificates so there is a method to allow unverified certificates and this must be called immediately after getting the new _sampler_ or _stream_ like this:
 
 ```go
 	url := fmt.Sprintf("https://%s:%v/xmlrpc", hostname, port)
