@@ -10,7 +10,7 @@ Order of fields in structs is important, otherwise the Gateway validation
 will warn of wrong ordering
 */
 
-package config
+package geneos
 
 import (
 	"encoding/xml"
