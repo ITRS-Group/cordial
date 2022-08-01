@@ -1,18 +1,21 @@
 package config
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/spf13/viper"
 )
 
-// The Config type acts as a container for local/extended viper instances
+// Config embeds Viper and also exposes the config type used
 type Config struct {
-	v *viper.Viper
+	viper.Viper
+	Type string
+	v    *viper.Viper
 }
 
 var globalConfig *Config
@@ -40,56 +43,9 @@ func GetConfig() *Config {
 	return globalConfig
 }
 
-func GetViper() *viper.Viper {
-	return globalConfig.v
-}
-
-func (c *Config) GetViper() *viper.Viper {
-	return c.v
-}
-
-func (c *Config) SetViper(v *viper.Viper) {
-	c.v = v
-}
-
-func GetInt(s string) int {
-	return globalConfig.GetInt(s)
-}
-
-func (c *Config) GetInt(s string) int {
-	return c.v.GetInt(s)
-}
-
-func GetBool(s string) bool {
-	return globalConfig.GetBool(s)
-}
-
-func (c *Config) GetBool(s string) bool {
-	return c.v.GetBool(s)
-}
-
-func GetDuration(s string) time.Duration {
-	return globalConfig.GetDuration(s)
-}
-
-func (c *Config) GetDuration(s string) time.Duration {
-	return c.v.GetDuration(s)
-}
-
-func SetDefault(s string, i interface{}) {
-	globalConfig.SetDefault(s, i)
-}
-
-func (c *Config) SetDefault(s string, i interface{}) {
-	c.v.SetDefault(s, i)
-}
-
-func Set(s string, i interface{}) {
-	globalConfig.Set(s, i)
-}
-
-func (c *Config) Set(s string, i interface{}) {
-	c.v.Set(s, i)
+func New() *Config {
+	v := viper.New()
+	return &Config{v: v}
 }
 
 func GetStringSlice(s string, confmap ...map[string]string) []string {
@@ -131,7 +87,7 @@ func (c *Config) GetStringMapString(s string, confmap ...map[string]string) (m m
 //		url - read the contents of the url, which can be a local file, as below:
 //			${file://path/to/file} - read the entire contents of the file, trim whitespace
 //			${https://host/path} - fetch the remote contents, trim whitespace. "http:" also supported.
-//		${env:VARNAME} - replace with the contents of the environment varaible VARNAME, trim whitespace
+//		${env:VARNAME} - replace with the contents of the environment variable VARNAME, trim whitespace
 //		${path.to.config} - and var containing a '.' will be looked up in global viper config space - this is NOT recursive
 //		${name} - replace with the contents of confmap["name"] - trim whitespace
 //
@@ -201,5 +157,93 @@ func mapEnv(e string) (s string) {
 			s = h
 		}
 	}
+	return
+}
+
+// LoadConfig loads configuration files from internal defaults, external
+// defaults and the given configuration file. The configuration file can
+// be passed as an option. Each layer is only loaded once, if given.
+// Internal defaults are passed as a []byte intended to be loaded from
+// an embedded file. External defaults and the main configuration file
+// are passed as ordered slices of strings. The first match is loaded.
+//
+//		LoadConfig("geneos")
+//
+//		//go:embed somefile.json
+//		var myDefaults []byte
+//		LoadConfig("geneos", config.SetDefaults(myDefaults, "json"), )
+//
+// Options can be passed to change the default behaviour and to pass any
+// embedded defaults or an existing viper.
+//
+// for defaults see:
+// https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+// ... find windows equiv
+func LoadConfig(configName string, options ...Options) (c *Config) {
+	opts := &configOptions{}
+	evalOptions(configName, opts, options...)
+
+	if opts.useglobal {
+		c = globalConfig
+	} else {
+		c = New()
+	}
+
+	internalDefaults := make(map[string]interface{})
+	if len(opts.defaults) > 0 {
+		defaults := viper.New()
+		buf := bytes.NewBuffer(opts.defaults)
+		defaults.SetConfigType(opts.defaultsFormat)
+		// ignore errors
+		defaults.ReadConfig(buf)
+		internalDefaults = defaults.AllSettings()
+	}
+
+	defaults := viper.New()
+	for k, v := range internalDefaults {
+		defaults.SetDefault(k, v)
+	}
+
+	confDirs := opts.configDirs
+
+	if !opts.ignoreworkingdir {
+		confDirs = append(confDirs, ".")
+	}
+	if !opts.ignoreuserconfdir {
+		userConfDir, err := os.UserConfigDir()
+		if err == nil {
+			confDirs = append(confDirs, filepath.Join(userConfDir, opts.appname))
+		}
+	}
+	systemConfDir := "/etc"
+	if !opts.ignoresystemdir {
+		confDirs = append(confDirs, filepath.Join(systemConfDir, opts.appname))
+	}
+
+	if len(confDirs) > 0 {
+		for _, d := range confDirs {
+			defaults.AddConfigPath(d)
+		}
+
+		defaults.SetConfigName(configName + ".defaults")
+		defaults.ReadInConfig()
+		defaultSettings := defaults.AllSettings()
+
+		for k, v := range defaultSettings {
+			c.v.SetDefault(k, v)
+		}
+	}
+
+	if opts.configFile != "" {
+		c.v.SetConfigFile(opts.configFile)
+		c.v.ReadInConfig()
+	} else if len(confDirs) > 0 {
+		for _, d := range confDirs {
+			c.v.AddConfigPath(d)
+		}
+		c.v.SetConfigName(configName)
+		c.v.ReadInConfig()
+	}
+
 	return
 }
