@@ -52,10 +52,10 @@ func init() {
 }
 
 func revertInstance(c geneos.Instance, params []string) (err error) {
-	// if *.rc file exists, remove rc.orig+JSON, continue
+	// if *.rc file exists, remove rc.orig+new, continue
 	if _, err := c.Host().Stat(instance.ConfigPathWithExt(c, "rc")); err == nil {
 		// ignore errors
-		if c.Host().Remove(instance.ConfigPathWithExt(c, "rc.orig")) == nil || c.Host().Remove(instance.ConfigPathWithExt(c, "json")) == nil {
+		if c.Host().Remove(instance.ConfigPathWithExt(c, "rc.orig")) == nil || c.Host().Remove(instance.ConfigPathWithExt(c, instance.ConfigType)) == nil {
 			logDebug.Println(c, "removed extra config file(s)")
 		}
 		return err
@@ -65,7 +65,7 @@ func revertInstance(c geneos.Instance, params []string) (err error) {
 		return
 	}
 
-	if err = c.Host().Remove(instance.ConfigPathWithExt(c, "json")); err != nil {
+	if err = c.Host().Remove(instance.ConfigPathWithExt(c, instance.ConfigType)); err != nil {
 		return
 	}
 

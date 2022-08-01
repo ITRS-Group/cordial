@@ -19,6 +19,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+var ConfigType = "json"
+
 type ExtraConfigValues struct {
 	Includes   IncludeValues
 	Gateways   GatewayValues
@@ -221,7 +223,7 @@ func ConfigPathWithExt(c geneos.Instance, extension string) (path string) {
 //
 // delete any aliases fields before writing
 func WriteConfig(c geneos.Instance) (err error) {
-	file := ConfigPathWithExt(c, "json")
+	file := ConfigPathWithExt(c, ConfigType)
 	if err = c.Host().MkdirAll(filepath.Dir(file), 0775); err != nil {
 		logError.Println(err)
 	}
@@ -243,7 +245,7 @@ func WriteConfig(c geneos.Instance) (err error) {
 }
 
 func WriteConfigValues(c geneos.Instance, values map[string]interface{}) error {
-	file := ConfigPathWithExt(c, "json")
+	file := ConfigPathWithExt(c, ConfigType)
 	nv := viper.New()
 	for k, v := range values {
 		nv.Set(k, v)
@@ -261,7 +263,7 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) error {
 func ReadConfig(c geneos.Instance) (err error) {
 	c.V().AddConfigPath(c.Home())
 	c.V().SetConfigName(c.Type().String())
-	c.V().SetConfigType("json")
+	c.V().SetConfigType(ConfigType)
 	if c.Host() != host.LOCAL {
 		client, err := c.Host().DialSFTP()
 		if err != nil {
@@ -290,8 +292,8 @@ func Migrate(c geneos.Instance) (err error) {
 		return nil
 	}
 
-	// if .json exists, return
-	if _, err = c.Host().Stat(ConfigPathWithExt(c, "json")); err == nil {
+	// if new file exists, return
+	if _, err = c.Host().Stat(ConfigPathWithExt(c, ConfigType)); err == nil {
 		return nil
 	}
 

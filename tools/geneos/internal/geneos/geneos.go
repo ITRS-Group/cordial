@@ -22,8 +22,12 @@ var (
 const RootCAFile = "rootCA"
 const SigningCertFile = "geneos"
 const DisableExtension = "disabled"
-const GlobalConfigPath = "/etc/geneos/geneos.json"
-const UserConfigFile = "geneos.json"
+
+var ConfigFileName = "geneos"
+var UserConfigFile = "geneos.json"
+var ConfigFileType = "json"
+var GlobalConfigDir = "/etc/geneos"
+var GlobalConfigPath = filepath.Join(GlobalConfigDir, UserConfigFile)
 
 // initialise a Geneos environment.
 //

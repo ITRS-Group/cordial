@@ -106,9 +106,10 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 
 // XXX muddled - fix
 func writeConfigParams(filename string, params []string) (err error) {
-	vp := viper.New()
-	vp.SetConfigFile(filename)
-	vp.ReadInConfig()
+	vp := readConfigFile(filename)
+	// vp := viper.New()
+	// vp.SetConfigFile(filename)
+	// vp.ReadInConfig()
 
 	// change here
 	for _, set := range params {
