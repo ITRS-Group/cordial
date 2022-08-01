@@ -3,11 +3,11 @@ package netprobe
 import (
 	"sync"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/viper"
 )
 
 var Netprobe = geneos.Component{
@@ -72,7 +72,7 @@ func New(name string) geneos.Instance {
 		}
 	}
 	c := &Netprobes{}
-	c.Conf = viper.New()
+	c.Conf = config.New()
 	c.InstanceHost = r
 	// c.root = r.V().GetString("geneos")
 	c.Component = &Netprobe
@@ -129,11 +129,11 @@ func (n *Netprobes) Loaded() bool {
 	return n.ConfigLoaded
 }
 
-func (n *Netprobes) V() *viper.Viper {
+func (n *Netprobes) V() *config.Config {
 	return n.Conf
 }
 
-func (n *Netprobes) SetConf(v *viper.Viper) {
+func (n *Netprobes) SetConf(v *config.Config) {
 	n.Conf = v
 }
 

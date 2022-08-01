@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
-	"github.com/spf13/viper"
 )
 
 func ImportFile(h *host.Host, home string, user string, source string, options ...geneos.GeneosOptions) (filename string, err error) {
@@ -137,7 +137,7 @@ func ImportCommons(r *host.Host, ct *geneos.Component, common string, params []s
 
 	dir := r.GeneosJoinPath(ct.String(), common)
 	for _, source := range params {
-		if filename, err = ImportFile(r, dir, viper.GetString("defaultuser"), source); err != nil {
+		if filename, err = ImportFile(r, dir, config.GetString("defaultuser"), source); err != nil {
 			return
 		}
 	}

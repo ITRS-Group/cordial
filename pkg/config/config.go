@@ -20,8 +20,7 @@ type Config struct {
 var global *Config
 
 func init() {
-	v := viper.New()
-	global = &Config{Viper: v}
+	global = &Config{Viper: viper.New()}
 }
 
 // Returns the configuration item as a string with ExpandString() applied,
@@ -44,8 +43,15 @@ func GetConfig() *Config {
 }
 
 func New() *Config {
-	v := viper.New()
-	return &Config{Viper: v}
+	return &Config{Viper: viper.New()}
+}
+
+func Sub(key string) *Config {
+	return &Config{Viper: viper.Sub(key)}
+}
+
+func (c *Config) Sub(key string) *Config {
+	return &Config{Viper: c.Viper.Sub(key)}
 }
 
 func GetStringSlice(s string, confmap ...map[string]string) []string {

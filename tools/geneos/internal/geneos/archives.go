@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/spf13/viper"
 )
 
 // locate and return an open archive for the host and component given
@@ -302,13 +302,13 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 
 		logDebug.Println("nexus url:", source)
 
-		if viper.GetString("download.username") != "" {
+		if config.GetString("download.username") != "" {
 			var req *http.Request
 			client := &http.Client{}
 			if req, err = http.NewRequest("GET", source, nil); err != nil {
 				logError.Fatalln(err)
 			}
-			req.SetBasicAuth(viper.GetString("download.username"), viper.GetString("download.password"))
+			req.SetBasicAuth(config.GetString("download.username"), config.GetString("download.password"))
 			if resp, err = client.Do(req); err != nil {
 				logError.Fatalln(err)
 			}
@@ -319,7 +319,7 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 		}
 
 	default:
-		baseurl := viper.GetString("download.url")
+		baseurl := config.GetString("download.url")
 		downloadURL, _ := url.Parse(baseurl)
 		realpath, _ := url.Parse(ct.DownloadBase.Resources)
 		v := url.Values{}
@@ -358,8 +358,8 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 		// only use auth if required - but save auth for potential reuse below
 		var auth_body []byte
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
-			if viper.GetString("download.username") != "" {
-				da := downloadauth{viper.GetString("download.username"), viper.GetString("download.password")}
+			if config.GetString("download.username") != "" {
+				da := downloadauth{config.GetString("download.username"), config.GetString("download.password")}
 				auth_body, err = json.Marshal(da)
 				if err != nil {
 					logError.Fatalln(err)

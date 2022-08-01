@@ -15,17 +15,17 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/spf13/viper"
 )
 
 // The Instance type is the common data shared by all instance / component types
 type Instance struct {
 	geneos.Instance `json:"-"`
 	L               *sync.RWMutex     `json:"-"`
-	Conf            *viper.Viper      `json:"-"`
+	Conf            *config.Config    `json:"-"`
 	InstanceHost    *host.Host        `json:"-"`
 	Component       *geneos.Component `json:"-"`
 	ConfigLoaded    bool              `json:"-"`
@@ -119,7 +119,7 @@ func ReservedName(in string) (ok bool) {
 		logDebug.Println("matches a reserved word")
 		return true
 	}
-	if viper.GetString("reservednames") != "" {
+	if config.GetString("reservednames") != "" {
 		list := strings.Split(in, ",")
 		for _, n := range list {
 			if strings.EqualFold(in, strings.TrimSpace(n)) {
@@ -391,7 +391,7 @@ func GetPorts(r *host.Host) (ports map[uint16]*geneos.Component) {
 // not concurrency safe at this time
 //
 func NextPort(r *host.Host, ct *geneos.Component) uint16 {
-	from := viper.GetString(ct.PortRange)
+	from := config.GetString(ct.PortRange)
 	used := GetPorts(r)
 	ps := strings.Split(from, ",")
 	for _, p := range ps {

@@ -27,8 +27,8 @@ import (
 	"os/user"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -107,7 +107,7 @@ func commandAdd(ct *geneos.Component, extras instance.ExtraConfigValues, args []
 	}
 
 	if utils.IsSuperuser() {
-		username = viper.GetString("defaultuser")
+		username = config.GetString("defaultuser")
 	} else {
 		u, _ := user.Current()
 		username = u.Username

@@ -13,11 +13,11 @@ package fileagent
 import (
 	"sync"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/viper"
 )
 
 var FileAgent = geneos.Component{
@@ -83,7 +83,7 @@ func New(name string) geneos.Instance {
 		}
 	}
 	c := &FileAgents{}
-	c.Conf = viper.New()
+	c.Conf = config.New()
 	c.InstanceHost = r
 	// c.root = r.V().GetString("geneos")
 	c.Component = &FileAgent
@@ -140,11 +140,11 @@ func (n *FileAgents) Loaded() bool {
 	return n.ConfigLoaded
 }
 
-func (n *FileAgents) V() *viper.Viper {
+func (n *FileAgents) V() *config.Config {
 	return n.Conf
 }
 
-func (n *FileAgents) SetConf(v *viper.Viper) {
+func (n *FileAgents) SetConf(v *config.Config) {
 	n.Conf = v
 }
 

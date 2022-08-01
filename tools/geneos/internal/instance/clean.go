@@ -3,8 +3,8 @@ package instance
 import (
 	"os"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/spf13/viper"
 )
 
 func Clean(c geneos.Instance, options ...geneos.GeneosOptions) (err error) {
@@ -12,8 +12,8 @@ func Clean(c geneos.Instance, options ...geneos.GeneosOptions) (err error) {
 
 	opts := geneos.EvalOptions(options...)
 
-	cleanlist := viper.GetString(c.Type().CleanList)
-	purgelist := viper.GetString(c.Type().PurgeList)
+	cleanlist := config.GetString(c.Type().CleanList)
+	purgelist := config.GetString(c.Type().PurgeList)
 
 	if !opts.Restart() {
 		if cleanlist != "" {

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/spf13/viper"
+	"github.com/itrs-group/cordial/pkg/config"
 	"golang.org/x/term"
 )
 
@@ -19,7 +19,7 @@ func GetIDs(username string) (uid, gid int, gids []int, err error) {
 	uid, gid = math.MaxUint32, math.MaxUint32
 
 	if username == "" {
-		username = viper.GetString("defaultuser")
+		username = config.GetString("defaultuser")
 	}
 
 	u, err := user.Lookup(username)
