@@ -55,8 +55,8 @@ to prevent visibility in casual viewing.`,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
-	RunE: func(cmd *cobra.Command, origargs []string) (err error) {
-		if len(origargs) == 0 {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		if len(args) == 0 {
 			// running config
 			rc := viper.AllSettings()
 			j, _ := json.MarshalIndent(rc, "", "    ")
@@ -64,8 +64,8 @@ to prevent visibility in casual viewing.`,
 			log.Println(string(j))
 			return nil
 		}
-		ct, args, params := cmdArgsParams(cmd)
-		return commandShow(ct, args, params)
+
+		return commandShow(cmdArgsParams(cmd))
 	},
 }
 
