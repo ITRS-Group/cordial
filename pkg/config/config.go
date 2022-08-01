@@ -1,3 +1,24 @@
+/*
+Copyright © 2022 ITRS Group
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
 package config
 
 import (
@@ -95,7 +116,7 @@ func (c *Config) GetStringMapString(s string, confmap ...map[string]string) (m m
 //			${https://host/path} - fetch the remote contents, trim whitespace. "http:" also supported.
 //		${env:VARNAME} - replace with the contents of the environment variable VARNAME, trim whitespace
 //		${path.to.config} - and var containing a '.' will be looked up in global viper config space - this is NOT recursive
-//		${name} - replace with the contents of confmap["name"] - trim whitespace
+//		${name} - replace with the contents of confmap["name"] - trim whitespace - if confmap is empty then try the environment
 //
 // While the form $var is also supported but may be ambiguous and is not
 // recommended.
@@ -106,7 +127,8 @@ func (c *Config) GetStringMapString(s string, confmap ...map[string]string) (m m
 //
 func (c *Config) ExpandString(input string, confmap map[string]string) (value string) {
 	value = os.Expand(input, func(s string) (r string) {
-		if !strings.Contains(s, ":") {
+		switch {
+		case !strings.Contains(s, ":"):
 			if strings.Contains(s, ".") {
 				// this call to GetString() must NOT be recursive
 				return strings.TrimSpace(c.Viper.GetString(s))
@@ -115,11 +137,9 @@ func (c *Config) ExpandString(input string, confmap map[string]string) (value st
 				return strings.TrimSpace(mapEnv(s))
 			}
 			return strings.TrimSpace(confmap[s])
-		}
-		if strings.HasPrefix(s, "env:") {
+		case strings.HasPrefix(s, "env:"):
 			return strings.TrimSpace(mapEnv(strings.TrimPrefix(s, "env:")))
-		}
-		if strings.HasPrefix(s, "file:") {
+		case strings.HasPrefix(s, "file:"):
 			path := strings.TrimPrefix(s, "file:")
 			if strings.HasPrefix(path, "~/") {
 				home, _ := os.UserHomeDir()
@@ -130,8 +150,7 @@ func (c *Config) ExpandString(input string, confmap map[string]string) (value st
 				return
 			}
 			return strings.TrimSpace(string(b))
-		}
-		if strings.HasPrefix(s, "http:") || strings.HasPrefix(s, "https:") {
+		case strings.HasPrefix(s, "http:"), strings.HasPrefix(s, "https:"):
 			resp, err := http.Get(s)
 			if err != nil {
 				return
