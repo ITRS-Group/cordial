@@ -10,11 +10,11 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/viper"
 	"golang.org/x/crypto/pbkdf2"
 )
 
@@ -111,7 +111,7 @@ func New(name string) geneos.Instance {
 		}
 	}
 	g := &Gateways{}
-	g.Conf = viper.New()
+	g.Conf = config.New()
 	g.Component = &Gateway
 	g.InstanceHost = h
 	if err := instance.SetDefaults(g, local); err != nil {
@@ -167,11 +167,11 @@ func (g *Gateways) Loaded() bool {
 	return g.ConfigLoaded
 }
 
-func (g *Gateways) V() *viper.Viper {
+func (g *Gateways) V() *config.Config {
 	return g.Conf
 }
 
-func (g *Gateways) SetConf(v *viper.Viper) {
+func (g *Gateways) SetConf(v *config.Config) {
 	g.Conf = v
 }
 

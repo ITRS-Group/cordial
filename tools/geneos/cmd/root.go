@@ -28,15 +28,14 @@ import (
 	"io/ioutil"
 	"os"
 	"os/user"
-	"path/filepath"
 	"strings"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // give these more convenient names and also shadow the std log
@@ -153,79 +152,37 @@ func initConfig() {
 		logger.EnableDebugLog()
 	}
 
+	oldConfDir, _ := os.UserConfigDir()
+
+	cf := config.LoadConfig("geneos", config.SetConfigFile(cfgFile), config.UseGlobal(), config.AddConfigDirs(oldConfDir))
 	// support old set-ups
-	viper.BindEnv("geneos", "ITRS_HOME")
+	cf.BindEnv("geneos", "ITRS_HOME")
 
 	// auto env variables must be prefixed "ITRS_"
-	viper.SetEnvPrefix("ITRS")
+	cf.SetEnvPrefix("ITRS")
 	replacer := strings.NewReplacer(".", "_")
-	viper.SetEnvKeyReplacer(replacer)
-	viper.AutomaticEnv()
+	cf.SetEnvKeyReplacer(replacer)
+	cf.AutomaticEnv()
 
 	u, _ := user.Current()
-	viper.SetDefault("defaultuser", u.Username)
-
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-		if err := viper.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-				logError.Fatalf("configuration file %q not found or not readable", cfgFile)
-			} else {
-				logError.Fatalln("error reading configuration file:", err)
-			}
-		}
-	} else {
-		// Search config in home directory with name "geneos" (without extension).
-		viper.AddConfigPath(geneos.GlobalConfigDir)
-		viper.SetConfigName(geneos.ConfigFileName)
-		viper.ReadInConfig()
-
-		ext := filepath.Ext(viper.ConfigFileUsed())
-		if ext != "" {
-			logDebug.Println("global config file type", ext)
-			geneos.ConfigFileType = ext[1:]
-		}
-		vp := viper.New()
-		userConfDir, err := os.UserConfigDir()
-		if err != nil {
-			logError.Fatalln(err)
-		}
-		vp.AddConfigPath(userConfDir)
-		vp.SetConfigName(geneos.ConfigFileName)
-		vp.SetConfigType(geneos.ConfigFileType)
-
-		if err := vp.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-				logError.Fatalln("configuration file not found or not readable")
-			} else {
-				logError.Fatalln("error reading configuration file:", err)
-			}
-		}
-		ext = filepath.Ext(vp.ConfigFileUsed())
-		if ext != "" {
-			log.Println("config file type", ext)
-		}
-
-		viper.MergeConfigMap(vp.AllSettings())
-	}
+	cf.SetDefault("defaultuser", u.Username)
 
 	// manual alias+remove as the viper.RegisterAlias doesn't work as expected
-	if viper.IsSet("itrshome") {
-		if !viper.IsSet("geneos") {
-			viper.Set("geneos", viper.GetString("itrshome"))
+	if cf.IsSet("itrshome") {
+		if !cf.IsSet("geneos") {
+			cf.Set("geneos", cf.GetString("itrshome"))
 		}
-		viper.Set("itrshome", nil)
+		cf.Set("itrshome", nil)
 	}
 
 	if username != "" {
-		viper.Set("download.username", username)
+		cf.Set("download.username", username)
 	}
 
 	if passwordFile != "" {
-		viper.Set("download.password", utils.ReadPasswordFile(passwordFile))
+		cf.Set("download.password", utils.ReadPasswordFile(passwordFile))
 	} else if username != "" {
-		viper.Set("download.password", utils.ReadPasswordPrompt())
+		cf.Set("download.password", utils.ReadPasswordPrompt())
 		// only ask once
 		// passwordPrompt = false
 	}
