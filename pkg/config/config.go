@@ -108,41 +108,60 @@ func (c *Config) GetStringMapString(s string, confmap ...map[string]string) (m m
 	return m
 }
 
-// ExpandString returns it's input with any occurrences of the form
-// ${name} or $name substituted using [os.Expand] for the formats
-// in the order given below:
+// ExpandString() returns input with any occurrences of the form
+// ${name} or $name substituted using [os.Expand] for the supported
+// formats in the order given below:
 //
-//      * ${path.to.config}
-//      Any name containing one or more dots '.' will be looked up in the
-//      running configuration (which can include existing settings outside
-//      of any configuration file being read by the caller)
-//      * ${name}
-//      'name' will be substituted with the corresponding value from the map
-//      'confmap'. If 'confmap' is empty (as opposed to a name not being found)
-//      then name is looked up from the environment, as below
-//      * ${env:name}
-//      'name' with be substituted with the contents of the environment
-//		variable of the same name.
-//      * ${file://path/to/file} or ${file:~/path/to/file}
-//      The contents of the referenced file will be read-in when the
-//      configuration is loaded. Multiline files are used as-is so this
-//		can, for example, be used to read PEM certificate files or keys.
-//		As a change to a real file url, if the first '/' is replaced with
-//		a tilde '~' then the path is relative to the home directory of
-//		the user running the process.
-//      * ${https://host/path} or ${http://host/path}
-//      The contents of the URL are fetched and used similarly as for
-//		local files above.
+//	* '${path.to.config}'
+//	  Any name containing one or more dots '.' will be looked up in the
+//	  running configuration (which can include existing settings outside
+//	  of any configuration file being read by the caller)
+//	* '${name}'
+//	  'name' will be substituted with the corresponding value from the map
+//	  'confmap'. If 'confmap' is empty (as opposed to the key 'name'
+//	  not being found) then name is looked up from the environment,
+//	  as below
+//	* '${env:name}'
+//	  'name' with be substituted with the contents of the environment
+//	  variable of the same name.
+//	* '${file://path/to/file}' or '${file:~/path/to/file}'
+//	  The contents of the referenced file will be read-in when the
+//	  configuration is loaded. Multiline files are used as-is so this
+//	  can, for example, be used to read PEM certificate files or keys.
+//	  As a change to a real file url, if the first '/' is replaced with
+//	  a tilde '~' then the path is relative to the home directory of
+//	  the user running the process.
+//	* '${https://host/path}' or '${http://host/path}'
+//	  The contents of the URL are fetched and used similarly as for
+//	  local files above. The URL is passed to [http.Get] and supports
+//	  any embedded Basic Authentication and other features from
+//	  that function.
 //
 // The form $name is also supported, as per [os.Expand] but may be
 // ambiguous and is not recommended.
 //
-// Expansion is not recursive. For each substitution any leading and
-// trailing whitespace are removed.
+// Expansion is not recursive. Configuration values are read and stored
+// as literals and are expanded each time they are used. For each
+// substitution any leading and trailing whitespace are removed.
+// As external sources through file or http(s) URLs are fetched each
+// time they are used there may be a performance impact as well as the
+// value unexpectedly changing during a process lifetime.
 //
 // Any errors (particularly from substitutions from external files or
 // remote URLs) may result in an empty or corrupt string being returned.
 // Error returns are intentionally discarded.
+//
+// It is not currently possible to escape the syntax supported by
+// [os.Expand] and if it is necessary to have a configuration value
+// be of the form '${name}' or '$name' then set an otherwise unused item
+// to the value and refer to it using the dotted syntax, e.g. for YAML
+//
+//  config:
+//    real: ${config.temp}
+//    temp: "${unchanged}"
+//
+// In the above a reference to ${config.real} will return the literal
+// string ${unchanged}
 //
 func (c *Config) ExpandString(input string, confmap map[string]string) (value string) {
 	value = os.Expand(input, func(s string) (r string) {
