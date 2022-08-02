@@ -73,10 +73,10 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 	// var t *template.Template
 
 	t := template.New("").Funcs(fnmap).Option("missingkey=zero")
-	if t, err = t.ParseGlob(c.Host().GeneosJoinPath(c.Type().String(), "templates", "*")); err != nil {
+	if t, err = t.ParseGlob(c.Host().Filepath(c.Type(), "templates", "*")); err != nil {
 		t = template.New(name).Funcs(fnmap).Option("missingkey=zero")
 		// if there are no templates, use internal as a fallback
-		log.Printf("No templates found in %s, using internal defaults", c.Host().GeneosJoinPath(c.Type().String(), "templates"))
+		log.Printf("No templates found in %s, using internal defaults", c.Host().Filepath(c.Type(), "templates"))
 		t = template.Must(t.Parse(string(defaultTemplate)))
 	}
 
@@ -332,7 +332,7 @@ func Migrate(c geneos.Instance) (err error) {
 	}
 
 	// back-up .rc
-	if err = c.Host().Rename(ComponentFilepath(c, "rc"), ComponentFilepath(c, "rc.orig")); err != nil {
+	if err = c.Host().Rename(ComponentFilepath(c, "rc"), ComponentFilepath(c, "rc", "orig")); err != nil {
 		logError.Println("failed to rename old config:", err)
 	}
 

@@ -188,6 +188,6 @@ func MakeComponentDirs(h *host.Host, ct *Component) (err error) {
 // Return the base directory for a Component
 // ct cannot be None
 func (ct *Component) ComponentDir(h *host.Host) string {
-	p := h.GeneosJoinPath(ct.String(), ct.String()+"s")
+	p := h.Filepath(ct, ct.String()+"s")
 	return p
 }
