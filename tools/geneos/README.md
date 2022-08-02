@@ -216,7 +216,7 @@ sudo -E -u geneos geneos install gateway
 
 ## Environment Settings
 
-The `geneos` program uses the packages [Cobra](cobra.dev) and [Viper](https://github.com/spf13/viper) to provide the command syntax and configuration management. There is full support for Viper's layered configuration for non-instance settings, which means you can override global and user settings with environment variables prefixed `ITRS_`, e.g. `ITRS_DOWNLOAD_USERNAME` overrides `download.username`
+The `geneos` program uses the packages [Cobra](cobra.dev) and [Viper](https://github.com/spf13/viper) (the latter via a wrapper package) to provide the command syntax and configuration management. There is full support for Viper's layered configuration for non-instance settings, which means you can override global and user settings with environment variables prefixed `ITRS_`, e.g. `ITRS_DOWNLOAD_USERNAME` overrides `download.username`
 
 ## Instance Settings
 
