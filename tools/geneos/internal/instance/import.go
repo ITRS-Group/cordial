@@ -135,7 +135,7 @@ func ImportCommons(r *host.Host, ct *geneos.Component, common string, params []s
 		logError.Fatalln("no file/url provided")
 	}
 
-	dir := r.GeneosJoinPath(ct.String(), common)
+	dir := r.Filepath(ct, common)
 	for _, source := range params {
 		if filename, err = ImportFile(r, dir, config.GetString("defaultuser"), source); err != nil {
 			return

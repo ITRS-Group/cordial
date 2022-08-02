@@ -55,7 +55,7 @@ func revertInstance(c geneos.Instance, params []string) (err error) {
 	// if *.rc file exists, remove rc.orig+new, continue
 	if _, err := c.Host().Stat(instance.ComponentFilepath(c, "rc")); err == nil {
 		// ignore errors
-		if c.Host().Remove(instance.ComponentFilepath(c, "rc", ".orig")) == nil || c.Host().Remove(instance.ComponentFilepath(c)) == nil {
+		if c.Host().Remove(instance.ComponentFilepath(c, "rc", "orig")) == nil || c.Host().Remove(instance.ComponentFilepath(c)) == nil {
 			logDebug.Println(c, "removed extra config file(s)")
 		}
 		return err

@@ -33,7 +33,7 @@ func OpenComponentArchive(ct *Component, options ...GeneosOptions) (body io.Read
 
 	if opts.local {
 		// archive directory is local only
-		archiveDir := host.LOCAL.GeneosJoinPath("packages", "downloads")
+		archiveDir := host.LOCAL.Filepath("packages", "downloads")
 		filename = latest(host.LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
 			logDebug.Println(v.Name(), ct.String())
 			switch ct.String() {
@@ -154,7 +154,7 @@ func Unarchive(r *host.Host, ct *Component, filename string, gz io.Reader, optio
 		}
 	}
 
-	basedir := r.GeneosJoinPath("packages", ct.String(), version)
+	basedir := r.Filepath("packages", ct, version)
 	logDebug.Println(basedir)
 	if _, err = r.Stat(basedir); err == nil {
 		// something is already using that dir
