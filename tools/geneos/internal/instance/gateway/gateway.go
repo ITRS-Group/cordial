@@ -349,6 +349,6 @@ func createAESKeyFile(c geneos.Instance) (err error) {
 	if err = c.Host().WriteFile(instance.ComponentFilepath(c, "aes"), []byte(fmt.Sprintf("salt=%X\nkey=%X\niv =%X\n", salt, key, iv)), 0600); err != nil {
 		return
 	}
-	c.V().Set("aesfile", c.Type().String()+".aes")
+	c.GetConfig().Set("aesfile", c.Type().String()+".aes")
 	return
 }

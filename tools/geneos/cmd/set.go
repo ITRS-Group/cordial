@@ -89,7 +89,7 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 			logError.Printf("ignoring %q %s", arg, ErrInvalidArgs)
 			continue
 		}
-		c.V().Set(s[0], s[1])
+		c.GetConfig().Set(s[0], s[1])
 	}
 
 	// now loop through the collected results and write out
