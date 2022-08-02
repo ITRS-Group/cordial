@@ -66,7 +66,7 @@ func disableInstance(c geneos.Instance, params []string) (err error) {
 		return
 	}
 
-	disablePath := instance.ConfigPathWithExt(c, geneos.DisableExtension)
+	disablePath := instance.ComponentFilepath(c, geneos.DisableExtension)
 
 	h := c.Host()
 

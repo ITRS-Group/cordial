@@ -139,11 +139,11 @@ func LoadConfig(c geneos.Instance) (err error) {
 //
 // No processing of shell variables. should there be?
 func readRCConfig(c geneos.Instance) (err error) {
-	rcdata, err := c.Host().ReadFile(ConfigPathWithExt(c, "rc"))
+	rcdata, err := c.Host().ReadFile(ComponentFilepath(c, "rc"))
 	if err != nil {
 		return
 	}
-	logDebug.Printf("loading config from %q", ConfigPathWithExt(c, "rc"))
+	logDebug.Printf("loading config from %q", ComponentFilepath(c, "rc"))
 
 	confs := make(map[string]string)
 
@@ -210,8 +210,30 @@ func evalOldVars(c geneos.Instance, in string) (out string) {
 	return
 }
 
-func ConfigPathWithExt(c geneos.Instance, extension string) (path string) {
-	return filepath.Join(c.Home(), c.Type().String()+"."+extension)
+// ComponentFilepath() returns an absolute path to a file named for the
+// component type of the instance with any extensions joined using ".", e.g.
+// is c is a netprobe instance then
+//
+//		path := instance.ComponentPath(c, "xml", "orig")
+//
+// will return /path/to/netprobe/netprobe.xml.orig
+//
+// If no extensions are passed then the default us to add an extension of the
+// instance.ConfigType, which defaults to "json", e.g. using the same instance
+// as above:
+//
+//		path := instance.ComponentPath(c)
+//
+// will return /path/to/netprobe/netprobe.json
+//
+func ComponentFilepath(c geneos.Instance, extensions ...string) (path string) {
+	filename := []string{c.Type().String()}
+	if len(extensions) > 0 {
+		filename = append(filename, extensions...)
+	} else {
+		filename = append(filename, ConfigType)
+	}
+	return filepath.Join(c.Home(), strings.Join(filename, "."))
 }
 
 // write out an instance configuration file.
@@ -223,7 +245,7 @@ func ConfigPathWithExt(c geneos.Instance, extension string) (path string) {
 //
 // delete any aliases fields before writing
 func WriteConfig(c geneos.Instance) (err error) {
-	file := ConfigPathWithExt(c, ConfigType)
+	file := ComponentFilepath(c)
 	if err = c.Host().MkdirAll(filepath.Dir(file), 0775); err != nil {
 		logError.Println(err)
 	}
@@ -245,7 +267,7 @@ func WriteConfig(c geneos.Instance) (err error) {
 }
 
 func WriteConfigValues(c geneos.Instance, values map[string]interface{}) error {
-	file := ConfigPathWithExt(c, ConfigType)
+	file := ComponentFilepath(c)
 	nv := config.New()
 	for k, v := range values {
 		nv.Set(k, v)
@@ -288,12 +310,12 @@ func ReadConfig(c geneos.Instance) (err error) {
 // migrate config from .rc to .json, but check first
 func Migrate(c geneos.Instance) (err error) {
 	// if no .rc, return
-	if _, err = c.Host().Stat(ConfigPathWithExt(c, "rc")); errors.Is(err, fs.ErrNotExist) {
+	if _, err = c.Host().Stat(ComponentFilepath(c, "rc")); errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}
 
 	// if new file exists, return
-	if _, err = c.Host().Stat(ConfigPathWithExt(c, ConfigType)); err == nil {
+	if _, err = c.Host().Stat(ComponentFilepath(c)); err == nil {
 		return nil
 	}
 
@@ -304,7 +326,7 @@ func Migrate(c geneos.Instance) (err error) {
 	}
 
 	// back-up .rc
-	if err = c.Host().Rename(ConfigPathWithExt(c, "rc"), ConfigPathWithExt(c, "rc.orig")); err != nil {
+	if err = c.Host().Rename(ComponentFilepath(c, "rc"), ComponentFilepath(c, "rc.orig")); err != nil {
 		logError.Println("failed to rename old config:", err)
 	}
 
