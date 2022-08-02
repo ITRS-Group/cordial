@@ -23,44 +23,19 @@ package settings
 
 import (
 	"log"
-	"os"
 
-	"github.com/spf13/viper"
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 // This function and module is designed to provide a single setting repo to enable all ITRS API replated applications to share a standard base.
 func GetConfig(conffile string, prefix string) Settings {
-	// Initialize Viper interface
-	v := viper.New()
-	v.SetConfigType("yaml")
-
-	if conffile != "" {
-		v.SetConfigFile(conffile)
-	} else {
-		// Specify Path and Name of the config file
-		v.AddConfigPath(".")
-		if confdir, err := os.UserConfigDir(); err == nil {
-			v.AddConfigPath(confdir)
-		}
-		v.AddConfigPath("/etc/itrs/")
-		v.SetConfigName(prefix + ".yaml")
-	}
-
-	// Read the config file
-	if err := v.ReadInConfig(); err != nil {
-		log.Fatalf("Error reading config file: %s", err)
-	}
-
-	for _, key := range v.AllKeys() {
-		val := v.GetString(key)
-		v.Set(key, os.ExpandEnv(val))
-	}
+	vc := config.LoadConfig(prefix, config.SetAppName("itrs"), config.SetConfigFile(conffile))
 
 	// Initialize the "Example" struct
 	var c Settings
 
 	// Unmarshal the viper interface into the example struct
-	err := v.Unmarshal(&c)
+	err := vc.Unmarshal(&c)
 	if err != nil {
 		log.Fatalf("unable to decode into struct, %v", err)
 	}
