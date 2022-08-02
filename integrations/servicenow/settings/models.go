@@ -23,15 +23,15 @@ package settings
 
 type Settings struct {
 	API struct {
-		Host   string `yaml:"Host"`
-		Port   int    `yaml:"Port"`
-		APIKey string `yaml:"APIKey"`
+		Host   string
+		Port   int
+		APIKey string
 		TLS    struct {
-			Enabled     bool   `yaml:"Enabled"`
-			Certificate string `yaml:"Certificate"`
-			Key         string `yaml:"Key"`
-		} `yaml:"TLS"`
-	} `yaml:"API"`
+			Enabled     bool
+			Certificate string
+			Key         string
+		}
+	}
 	ServiceNow struct {
 		Instance              string
 		Username              string
@@ -46,5 +46,5 @@ type Settings struct {
 		IncidentDefaults      map[string]string
 		IncidentStates        map[int][]string
 		IncidentStateDefaults map[string]map[string]string
-	} `yaml:"ServiceNow"`
+	}
 }
