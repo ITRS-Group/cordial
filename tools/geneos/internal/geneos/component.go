@@ -35,6 +35,8 @@ type Component struct {
 }
 
 type Instance interface {
+	GetConfig() *config.Config
+
 	// getters and setters
 	Name() string
 	Home() string
@@ -47,7 +49,6 @@ type Instance interface {
 	Load() error
 	Unload() error
 	Loaded() bool
-	V() *config.Config
 	SetConf(*config.Config)
 
 	// actions

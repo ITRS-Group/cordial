@@ -114,7 +114,7 @@ func importInstance(c geneos.Instance, params []string) (err error) {
 	}
 
 	for _, source := range params {
-		if _, err = instance.ImportFile(c.Host(), c.Home(), c.V().GetString("user"), source); err != nil {
+		if _, err = instance.ImportFile(c.Host(), c.Home(), c.GetConfig().GetString("user"), source); err != nil {
 			return
 		}
 	}

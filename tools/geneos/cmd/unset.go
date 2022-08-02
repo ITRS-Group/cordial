@@ -83,7 +83,7 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 
 	changed, err = unsetMaps(c)
 
-	s := c.V().AllSettings()
+	s := c.GetConfig().AllSettings()
 
 	if len(unsetCmdKeys) > 0 {
 		for _, k := range unsetCmdKeys {
@@ -145,18 +145,18 @@ func unsetMaps(c geneos.Instance) (changed bool, err error) {
 }
 
 func unsetMap(c geneos.Instance, items unsetCmdValues, key string) (changed bool) {
-	x := c.V().GetStringMapString(key)
+	x := c.GetConfig().GetStringMapString(key)
 	for _, k := range items {
 		delete(x, k)
 		changed = true
 	}
-	c.V().Set(key, x)
+	c.GetConfig().Set(key, x)
 	return
 }
 
 func unsetSlice(c geneos.Instance, items []string, key string, cmp func(string, string) bool) (changed bool) {
 	newvals := []string{}
-	vals := c.V().GetStringSlice(key)
+	vals := c.GetConfig().GetStringSlice(key)
 OUTER:
 	for _, t := range vals {
 		for _, v := range items {
@@ -167,7 +167,7 @@ OUTER:
 		}
 		newvals = append(newvals, t)
 	}
-	c.V().Set(key, newvals)
+	c.GetConfig().Set(key, newvals)
 	return
 }
 

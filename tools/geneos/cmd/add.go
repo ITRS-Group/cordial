@@ -129,7 +129,7 @@ func commandAdd(ct *geneos.Component, extras instance.ExtraConfigValues, args []
 	}
 
 	if addCmdBase != "active_prod" {
-		c.V().Set("version", addCmdBase)
+		c.GetConfig().Set("version", addCmdBase)
 	}
 	instance.SetExtendedValues(c, extras)
 	if err = instance.WriteConfig(c); err != nil {
@@ -140,7 +140,7 @@ func commandAdd(ct *geneos.Component, extras instance.ExtraConfigValues, args []
 	// reload config as instance data is not updated by Add() as an interface value
 	c.Unload()
 	c.Load()
-	log.Printf("%s added, port %d\n", c, c.V().GetInt("port"))
+	log.Printf("%s added, port %d\n", c, c.GetConfig().GetInt("port"))
 
 	if addCmdStart || addCmdLogs {
 		if err = instance.Start(c); err != nil {
