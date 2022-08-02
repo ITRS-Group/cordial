@@ -585,7 +585,7 @@ func BuildCmd(c geneos.Instance) (cmd *exec.Cmd, env []string) {
 }
 
 func IsDisabled(c geneos.Instance) bool {
-	d := ConfigPathWithExt(c, geneos.DisableExtension)
+	d := ComponentFilepath(c, geneos.DisableExtension)
 	if f, err := c.Host().Stat(d); err == nil && f.St.Mode().IsRegular() {
 		return true
 	}
