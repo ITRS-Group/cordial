@@ -122,15 +122,14 @@ func (c *Config) GetStringMapString(s string, confmap ...map[string]string) (m m
 //	  not being found) then name is looked up from the environment,
 //	  as below
 //	* '${env:name}'
-//	  'name' with be substituted with the contents of the environment
+//	  'name' will be substituted with the contents of the environment
 //	  variable of the same name.
 //	* '${file://path/to/file}' or '${file:~/path/to/file}'
-//	  The contents of the referenced file will be read-in when the
-//	  configuration is loaded. Multiline files are used as-is so this
-//	  can, for example, be used to read PEM certificate files or keys.
-//	  As a change to a real file url, if the first '/' is replaced with
-//	  a tilde '~' then the path is relative to the home directory of
-//	  the user running the process.
+//	  The contents of the referenced file will be read. Multiline
+//	  files are used as-is so this can, for example, be used to read
+//	  PEM certificate files or keys. As an enhancement to a conventional
+//	  file url, if the first '/' is replaced with a tilde '~' then the
+//	  path is relative to the home directory of the user running the process.
 //	* '${https://host/path}' or '${http://host/path}'
 //	  The contents of the URL are fetched and used similarly as for
 //	  local files above. The URL is passed to [http.Get] and supports
@@ -143,9 +142,9 @@ func (c *Config) GetStringMapString(s string, confmap ...map[string]string) (m m
 // Expansion is not recursive. Configuration values are read and stored
 // as literals and are expanded each time they are used. For each
 // substitution any leading and trailing whitespace are removed.
-// As external sources through file or http(s) URLs are fetched each
-// time they are used there may be a performance impact as well as the
-// value unexpectedly changing during a process lifetime.
+// External sources are fetched each time they are used and so there
+// may be a performance impact as well as the value unexpectedly
+// changing during a process lifetime.
 //
 // Any errors (particularly from substitutions from external files or
 // remote URLs) may result in an empty or corrupt string being returned.
