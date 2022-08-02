@@ -79,7 +79,7 @@ Both components load their configuration from a YAML file. Unless passed a path 
 
 Both components share a common YAML configuration format but can, and should, have their own configurations as some parameters are only used by one component or the other.
 
-The values in the YAML configuration may include environment variables in the for `${NAME}` or `$name` and are passed to the Go [`os.ExpandEnv()`](https://pkg.go.dev/os#ExpandEnv) function for processing. This allows for passwords and secrets to be supplied in the starting environment rather than either in the configuration file (or an external passwrod file).
+The values in the YAML configuration are processed by the [config](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config) package and support a variety of expansion options through the [config.ExpandString()](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString) function
 
 If the two binaries are used with their names as supplied than the configuration files will be `snow_router.yaml` and `snow_client.yaml`. If, for example, you rename the CLI client to `client` then it will try to load `client.yaml` instead, and so on.
 
