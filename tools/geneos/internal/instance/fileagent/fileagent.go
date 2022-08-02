@@ -85,7 +85,6 @@ func New(name string) geneos.Instance {
 	c := &FileAgents{}
 	c.Conf = config.New()
 	c.InstanceHost = r
-	// c.root = r.V().GetString("geneos")
 	c.Component = &FileAgent
 	if err := instance.SetDefaults(c, local); err != nil {
 		logger.Error.Fatalln(c, "setDefaults():", err)
@@ -102,11 +101,11 @@ func (n *FileAgents) Type() *geneos.Component {
 }
 
 func (n *FileAgents) Name() string {
-	return n.V().GetString("name")
+	return n.GetConfig().GetString("name")
 }
 
 func (n *FileAgents) Home() string {
-	return n.V().GetString("home")
+	return n.GetConfig().GetString("home")
 }
 
 func (n *FileAgents) Prefix() string {
@@ -140,7 +139,7 @@ func (n *FileAgents) Loaded() bool {
 	return n.ConfigLoaded
 }
 
-func (n *FileAgents) V() *config.Config {
+func (n *FileAgents) GetConfig() *config.Config {
 	return n.Conf
 }
 
@@ -152,8 +151,8 @@ func (n *FileAgents) Add(username string, tmpl string, port uint16) (err error) 
 	if port == 0 {
 		port = instance.NextPort(n.Host(), &FileAgent)
 	}
-	n.V().Set("port", port)
-	n.V().Set("user", username)
+	n.GetConfig().Set("port", port)
+	n.GetConfig().Set("user", username)
 
 	if err = instance.WriteConfig(n); err != nil {
 		logger.Error.Fatalln(err)
@@ -174,7 +173,7 @@ func (c *FileAgents) Command() (args, env []string) {
 	logFile := instance.LogFile(c)
 	args = []string{
 		c.Name(),
-		"-port", c.V().GetString("port"),
+		"-port", c.GetConfig().GetString("port"),
 	}
 	env = append(env, "LOG_FILENAME="+logFile)
 
