@@ -204,26 +204,23 @@ func AllHosts() (hs []*Host) {
 }
 
 func ReadConfigFile() {
-	var hs *config.Config
-
 	h := config.New()
 	h.SetConfigFile(UserHostsFilePath())
 	h.ReadInConfig()
-	if h.InConfig("hosts") {
-		hs = h.Sub("hosts")
-	}
 
 	// recreate empty
 	hosts = sync.Map{}
-	// LOCAL = New(LOCALHOST)
-	// ALL = New(ALLHOSTS)
 
-	if hs != nil {
-		for n, h := range hs.AllSettings() {
-			v := config.New()
-			v.MergeConfigMap(h.(map[string]interface{}))
-			hosts.Store(n, &Host{v, true, nil})
+	for n, h := range h.GetStringMap("hosts") {
+		v := config.New()
+		switch m := h.(type) {
+		case map[string]interface{}:
+			v.MergeConfigMap(m)
+		default:
+			logDebug.Printf("hosts value not a map[string]interface{} but a %T", h)
+			continue
 		}
+		hosts.Store(n, &Host{v, true, nil})
 	}
 }
 
