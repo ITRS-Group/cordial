@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package commands
 
 import (
@@ -64,18 +65,19 @@ func Timeout(timeout time.Duration) Options {
 	}
 }
 
-type Args map[string]string
+type Args func(*CommandArgs)
 
-type ArgOptions func(*Args)
-
-func evalArgOptions(args *Args, options ...ArgOptions) {
+func evalArgOptions(args *CommandArgs, options ...Args) {
 	for _, opt := range options {
 		opt(args)
 	}
 }
 
-func Arg(index int, value string) ArgOptions {
-	return func(a *Args) {
+// Arg is a positional argument passed to a Geneos REST command. Use
+// multiple Arg() options to [RunCommand] or [RunCommandAll] to set the
+// required values.
+func Arg(index int, value string) Args {
+	return func(a *CommandArgs) {
 		(*a)[fmt.Sprint(index)] = value
 	}
 }

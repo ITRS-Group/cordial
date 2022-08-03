@@ -20,13 +20,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-Dataview Snapshot Support
-
-Only valid in GA5.14 and above
-
-In GA5.14.x the first column name is not exported and set to "rowname"
-*/
 package commands
 
 import (
@@ -37,6 +30,8 @@ import (
 	"github.com/itrs-group/cordial/pkg/xpath"
 )
 
+// DataItem is a Geneos data item and normally represents a headline or
+// table cell.
 type DataItem struct {
 	Value    string `json:"value,omitempty"`
 	Severity string `json:"severity,omitempty"`
@@ -44,6 +39,11 @@ type DataItem struct {
 	Assigned bool   `json:"assigned,omitempty"`
 }
 
+// Dataview represents the contents of a Geneos dataview as returned by
+// [Snapshot]. The Columns field is an ordered slice of column names
+// obtained from the ordered JSON data returned from the REST endpoint
+// to allow the Table field to be iterated over in the same order as the
+// Geneos dataview table.
 type Dataview struct {
 	SampleTime       time.Time                      `json:"sample-time,omitempty"`
 	Snoozed          bool                           `json:"snoozed,omitempty"`
@@ -53,9 +53,17 @@ type Dataview struct {
 	Columns          []string                       `json:"-"`
 }
 
-// Return the snapshot of the Dataview target with an option Scope. If
-// no Scope is given then only Values are requested. If more than one
-// Scope is given then only the first is used.
+// Snapshot fetches the contents of the dataview identified by the
+// target. Only values are fetched unless an optional scope is passed,
+// which can then request severity, snooze and user assignment
+// information. If the underlying REST call fails then the error is
+// returned along with any Stderr output.
+//
+// Snapshot support is only available in Geneos GA5.14 and above
+// Gateways and requires the REST command API to be enabled.
+//
+// In GA5.14.x the first column name is not exported and is set to
+// "rowname"
 func (c *Connection) Snapshot(target *xpath.XPath, scope ...Scope) (dataview *Dataview, err error) {
 	// override endpoint for snapshots
 	const endpoint = "/rest/snapshot/dataview"
