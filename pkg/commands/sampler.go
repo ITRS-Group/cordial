@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package commands
 
 import (
@@ -30,6 +31,6 @@ func (c *Connection) SampleNow(target *xpath.XPath) (err error) {
 	return
 }
 
-func (c *Connection) LastSampleInfo(target *xpath.XPath) (crs []CommandsResponse, err error) {
+func (c *Connection) LastSampleInfo(target *xpath.XPath) (crs []CommandResponse, err error) {
 	return c.RunCommandAll("/PLUGIN:lastSampleInfo", target)
 }
