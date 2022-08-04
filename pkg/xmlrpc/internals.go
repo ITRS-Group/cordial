@@ -26,7 +26,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
 )
 
 type methodCall struct {
@@ -105,6 +105,8 @@ func (c Client) post(method string, args ...interface{}) (result methodResponse,
 			params = append(params, methodScalar{Scalar: methodInt{Value: int32(a)}})
 		case int32:
 			params = append(params, methodScalar{Scalar: methodInt{Value: a}})
+		case float64:
+			params = append(params, methodScalar{Scalar: methodDouble{Value: a}})
 		case bool:
 			v := 0
 			if a {
@@ -148,7 +150,7 @@ func (c Client) post(method string, args ...interface{}) (result methodResponse,
 	}
 
 	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return
 	}
