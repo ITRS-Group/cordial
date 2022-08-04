@@ -2,10 +2,15 @@ module github.com/itrs-group/cordial
 
 go 1.17
 
-require github.com/spf13/viper v1.12.0
+require (
+	github.com/StackExchange/wmi v1.2.1
+	github.com/mackerelio/go-osstat v0.2.2
+	github.com/spf13/viper v1.12.0
+)
 
 require (
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
+	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
