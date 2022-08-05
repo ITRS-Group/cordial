@@ -112,7 +112,6 @@ func showInstance(c geneos.Instance, params []string) (err error) {
 }
 
 // XXX redact passwords - any field matching some regexp ?
-//
 var red1 = regexp.MustCompile(`"(.*((?i)pass|password|secret))": "(.*)"`)
 var red2 = regexp.MustCompile(`"(.*((?i)pass|password|secret))=(.*)"`)
 
