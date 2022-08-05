@@ -32,6 +32,7 @@ The two types of path handled are for headline or table cells, which
 have the form:
 
 /geneos/gateway/directory/probe/managedEntity/sampler/dataview/ ...
+
 	... headlines/cell or ... rows/row/cell
 
 Each component except "geneos", "directory", "headlines" and "rows" can
@@ -140,9 +141,9 @@ func NewHeadlinePath(name string) (x *XPath) {
 // as-is and not cleaned.
 //
 // e.g.
-//    x := x.ResolveTo(&Dataview{})
-//    y := xpath.ResolveTo(&Headline{Name: "headlineName"})
 //
+//	x := x.ResolveTo(&Dataview{})
+//	y := xpath.ResolveTo(&Headline{Name: "headlineName"})
 func (x *XPath) ResolveTo(element interface{}) *XPath {
 	// copy the xpath
 	var nx XPath

@@ -35,6 +35,7 @@
 # cobra-cli add show
 # cobra-cli add showUser -p showCmd
 # cobra-cli add showGlobal -p showCmd
+# cobra-cli add snapshot
 # cobra-cli add start
 # cobra-cli add stop
 # cobra-cli add tls
