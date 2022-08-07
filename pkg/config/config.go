@@ -24,6 +24,7 @@ package config
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -232,7 +233,7 @@ func mapEnv(e string) (s string) {
 // for defaults see:
 // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 // ... find windows equiv
-func LoadConfig(configName string, options ...Options) (c *Config) {
+func LoadConfig(configName string, options ...Options) (c *Config, err error) {
 	opts := &configOptions{}
 	evalOptions(configName, opts, options...)
 
@@ -280,6 +281,14 @@ func LoadConfig(configName string, options ...Options) (c *Config) {
 
 		defaults.SetConfigName(configName + ".defaults")
 		defaults.ReadInConfig()
+		if err = defaults.ReadInConfig(); err != nil {
+			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+				// not found is fine
+				err = nil
+			} else {
+				return c, fmt.Errorf("default config: %w", err)
+			}
+		}
 		defaultSettings := defaults.AllSettings()
 
 		for k, v := range defaultSettings {
@@ -289,13 +298,27 @@ func LoadConfig(configName string, options ...Options) (c *Config) {
 
 	if opts.configFile != "" {
 		c.Viper.SetConfigFile(opts.configFile)
-		c.Viper.ReadInConfig()
+		if err = c.Viper.ReadInConfig(); err != nil {
+			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+				// not found is fine
+				err = nil
+			} else {
+				return c, fmt.Errorf("reading %s: %w", opts.configFile, err)
+			}
+		}
 	} else if len(confDirs) > 0 {
 		for _, d := range confDirs {
 			c.Viper.AddConfigPath(d)
 		}
 		c.Viper.SetConfigName(configName)
-		c.Viper.ReadInConfig()
+		if err = c.Viper.ReadInConfig(); err != nil {
+			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+				// not found is fine
+				err = nil
+			} else {
+				return c, fmt.Errorf("reading %s: %w", c.Viper.ConfigFileUsed(), err)
+			}
+		}
 	}
 
 	return

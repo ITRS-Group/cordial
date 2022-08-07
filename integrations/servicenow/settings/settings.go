@@ -30,13 +30,16 @@ import (
 
 // This function and module is designed to provide a single setting repo to enable all ITRS API replated applications to share a standard base.
 func GetConfig(conffile string, prefix string) Settings {
-	vc := config.LoadConfig(prefix, config.SetAppName("itrs"), config.SetConfigFile(conffile))
+	vc, err := config.LoadConfig(prefix, config.SetAppName("itrs"), config.SetConfigFile(conffile))
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	// Initialize the "Example" struct
 	var c Settings
 
 	// Unmarshal the viper interface into the example struct
-	err := vc.Unmarshal(&c)
+	err = vc.Unmarshal(&c)
 	if err != nil {
 		log.Fatalf("unable to decode into struct, %v", err)
 	}
