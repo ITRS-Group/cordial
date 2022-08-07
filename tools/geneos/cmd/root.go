@@ -154,7 +154,10 @@ func initConfig() {
 
 	oldConfDir, _ := os.UserConfigDir()
 
-	cf := config.LoadConfig("geneos", config.SetConfigFile(cfgFile), config.UseGlobal(), config.AddConfigDirs(oldConfDir))
+	cf, err := config.LoadConfig("geneos", config.SetConfigFile(cfgFile), config.UseGlobal(), config.AddConfigDirs(oldConfDir))
+	if err != nil {
+		log.Fatalln(err)
+	}
 	// support old set-ups
 	cf.BindEnv("geneos", "ITRS_HOME")
 
