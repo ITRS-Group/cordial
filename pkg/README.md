@@ -318,12 +318,12 @@ Note that the sampler name is always different to the normal dataview destinatio
 The XML-RPC API packages support secure connections through the normal Go http.Client but it is quite common for individual Netprobe instances to run with self-signed certificates so there is a method to allow unverified certificates and this must be called immediately after getting the new _sampler_ or _stream_ like this:
 
 ```go
-	url := fmt.Sprintf("https://%s:%v/xmlrpc", hostname, port)
-	p, err := plugins.Sampler(url, entityname, samplername)
-	if err != nil {
-		log.Fatal(err)
-	}
-	p.AllowUnverifiedCertificates()
+  u := &url.URL{Scheme: "https", Host: fmt.Sprintf("%s:%d", hostname, port), Path: "/xmlrpc"}
+  p, err := plugins.Sampler(u, entityname, samplername)
+  if err != nil {
+    log.Fatal(err)
+  }
+  p.InsecureSkipVerify()
 ```
 
 Once allowed there is no way to turn this off until you create a new object. The setting is per _sampler_ or _stream_ so it can be on and off separately in the case where your program may send data to multiple Netprobes.
