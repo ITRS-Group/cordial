@@ -44,6 +44,7 @@ are passed to the API in the correct format for the call.
 */
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -54,6 +55,9 @@ All methods have value receivers. This is intentional as none of the calls mutat
 
 // requires split view and group names
 func (c Client) createView(entity string, sampler string, view string, group string) (err error) {
+	if view == group {
+		return fmt.Errorf("viewName must not be the same as groupName (%q == %q)", view, group)
+	}
 	method := strings.Join([]string{entity, sampler, "createView"}, ".")
 	return c.callMethod(method, view, group)
 }

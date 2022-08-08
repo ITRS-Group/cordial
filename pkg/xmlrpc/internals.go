@@ -143,7 +143,7 @@ func (c Client) post(method string, args ...interface{}) (result methodResponse,
 	}
 
 	body := bytes.NewReader(output)
-	resp, err := c.Post(c.URL(), "text/xml", body)
+	resp, err := c.Post(c.String(), "text/xml", body)
 	if err != nil {
 		logError.Print(err)
 		return

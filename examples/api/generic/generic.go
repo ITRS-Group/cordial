@@ -36,6 +36,8 @@ func New(s plugins.Connection, name string, group string) (*GenericSampler, erro
 func (g *GenericSampler) InitSampler() error {
 	logDebug.Println("called")
 	example, err := g.Parameter("EXAMPLE")
+	longparameter, err := g.Parameter("DIRS")
+	log.Printf("long param len: %d\n%s", len(longparameter), longparameter)
 	if err != nil {
 		logError.Println(err)
 		return nil

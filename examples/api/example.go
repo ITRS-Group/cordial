@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/url"
 	"sync"
 	"time"
 
@@ -47,12 +48,13 @@ func main() {
 	}
 
 	// connect to netprobe
-	url := fmt.Sprintf("https://%s:%v/xmlrpc", hostname, port)
-	p, err := plugins.Sampler(url, entityname, samplername)
+	// url := fmt.Sprintf("https://%s:%v/xmlrpc", hostname, port)
+	u := &url.URL{Scheme: "https", Host: fmt.Sprintf("%s:%d", hostname, port), Path: "/xmlrpc"}
+	p, err := plugins.Sampler(u, entityname, samplername)
 	if err != nil {
 		log.Fatal(err)
 	}
-	p.AllowUnverifiedCertificates()
+	p.InsecureSkipVerify()
 
 	m, err := memory.New(p, "memory", "SYSTEM")
 	if err != nil {
@@ -90,11 +92,11 @@ func main() {
 	// powerwall.Start(&wg)
 
 	streamssampler := "streams"
-	sp, err := streams.Sampler(fmt.Sprintf("https://%s:%v/xmlrpc", hostname, port), entityname, streamssampler)
+	sp, err := streams.Sampler(u, entityname, streamssampler)
 	if err != nil {
 		log.Fatal(err)
 	}
-	sp.AllowUnverifiedCertificates()
+	sp.InsecureSkipVerify()
 
 	wg.Add(1)
 	sp.SetStreamName("teststream")
