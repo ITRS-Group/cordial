@@ -277,6 +277,21 @@ type Parameter struct {
 	Value SingleLineStringVar `xml:"value"`
 }
 
+type APIStreamsSampler struct {
+	XMLName    xml.Name   `xml:"sampler"`
+	Name       string     `xml:"name,attr"`
+	Comment    string     `xml:",comment"`
+	Group      string     `xml:"var-group>data"`
+	Interval   *DataOrVar `xml:"sampleInterval,omitempty"`
+	Streams    *Streams   `xml:"plugin>api-streams>streams"`
+	CreateView *DataOrVar `xml:"plugin>api-streams>createView"`
+}
+
+type Streams struct {
+	XMLName xml.Name              `xml:"streams"`
+	Stream  []SingleLineStringVar `xml:"stream"`
+}
+
 type Dataview struct {
 	XMLName   xml.Name `xml:"dataview"`
 	Name      string   `xml:"name,attr"`
