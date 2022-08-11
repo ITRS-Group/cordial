@@ -56,7 +56,6 @@ func (c Client) String() string {
 func (c Client) Connected() bool {
 	res, err := c.gatewayConnected()
 	if err != nil {
-		logError.Print(err)
 		return false
 	}
 	return res

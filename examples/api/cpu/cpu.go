@@ -24,7 +24,7 @@ type CPUSampler struct {
 	cpustats cpustat
 }
 
-func New(s plugins.Connection, name string, group string) (*CPUSampler, error) {
+func New(s *plugins.Connection, name string, group string) (*CPUSampler, error) {
 	logDebug.Println("called")
 	c := new(CPUSampler)
 	c.Plugins = c

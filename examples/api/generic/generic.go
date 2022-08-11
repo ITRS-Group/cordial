@@ -27,7 +27,7 @@ type GenericSampler struct {
 	localdata string
 }
 
-func New(s plugins.Connection, name string, group string) (*GenericSampler, error) {
+func New(s *plugins.Connection, name string, group string) (*GenericSampler, error) {
 	c := new(GenericSampler)
 	c.Plugins = c
 	return c, c.New(s, name, group)
