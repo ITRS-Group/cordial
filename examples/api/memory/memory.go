@@ -23,7 +23,7 @@ type MemorySampler struct {
 	samplers.Samplers
 }
 
-func New(p plugins.Connection, name string, group string) (*MemorySampler, error) {
+func New(p *plugins.Connection, name string, group string) (*MemorySampler, error) {
 	m := new(MemorySampler)
 	m.Plugins = m
 	return m, m.New(p, name, group)
