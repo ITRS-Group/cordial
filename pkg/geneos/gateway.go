@@ -136,7 +136,7 @@ type GatewaySQLSampler struct {
 	XMLName   xml.Name          `xml:"sampler"`
 	Name      string            `xml:"name,attr"`
 	Comment   string            `xml:",comment"`
-	Group     string            `xml:"var-group>data"`
+	Group     string            `xml:"var-group>data,omitempty"`
 	Interval  *DataOrVar        `xml:"sampleInterval,omitempty"`
 	Setup     string            `xml:"plugin>Gateway-sql>setupSql>sql>data"`
 	Tables    []GatewaySQLTable `xml:"plugin>Gateway-sql>tables>xpath"`
@@ -167,7 +167,7 @@ type FTMSampler struct {
 	XMLName                    xml.Name   `xml:"sampler"`
 	Name                       string     `xml:"name,attr"`
 	Comment                    string     `xml:",comment"`
-	Group                      string     `xml:"var-group>data"`
+	Group                      string     `xml:"var-group>data,omitempty"`
 	Interval                   *DataOrVar `xml:"sampleInterval,omitempty"`
 	Files                      []FTMFile  `xml:"plugin>ftm>files>file"`
 	ConsistentDateStamps       bool       `xml:"plugin>ftm>consistentDateStamps>data,omitempty"`
@@ -211,7 +211,7 @@ type SQLToolkitSampler struct {
 	XMLName    xml.Name     `xml:"sampler"`
 	Name       string       `xml:"name,attr"`
 	Comment    string       `xml:",comment"`
-	Group      string       `xml:"var-group>data"`
+	Group      string       `xml:"var-group>data,omitempty"`
 	Interval   *DataOrVar   `xml:"sampleInterval,omitempty"`
 	Queries    []Query      `xml:"plugin>sql-toolkit>queries>query"`
 	Connection DBConnection `xml:"plugin>sql-toolkit>connection"`
@@ -252,7 +252,7 @@ type ToolkitSampler struct {
 	XMLName              xml.Name              `xml:"sampler"`
 	Name                 string                `xml:"name,attr"`
 	Comment              string                `xml:",comment"`
-	Group                string                `xml:"var-group>data"`
+	Group                string                `xml:"var-group>data,omitempty"`
 	Interval             *DataOrVar            `xml:"sampleInterval,omitempty"`
 	SamplerScript        string                `xml:"plugin>toolkit>samplerScript>data"`
 	EnvironmentVariables []EnvironmentVariable `xml:"plugin>toolkit>environmentVariables>variable"`
@@ -267,7 +267,7 @@ type APISampler struct {
 	XMLName     xml.Name             `xml:"sampler"`
 	Name        string               `xml:"name,attr"`
 	Comment     string               `xml:",comment"`
-	Group       string               `xml:"var-group>data"`
+	Group       string               `xml:"var-group>data,omitempty"`
 	Interval    *DataOrVar           `xml:"sampleInterval,omitempty"`
 	Parameters  []Parameter          `xml:"plugin>api>parameters>parameter"`
 	SummaryView *SingleLineStringVar `xml:"plugin>api>showSummaryView>always>viewName,omitempty"`
@@ -282,7 +282,7 @@ type APIStreamsSampler struct {
 	XMLName    xml.Name   `xml:"sampler"`
 	Name       string     `xml:"name,attr"`
 	Comment    string     `xml:",comment"`
-	Group      string     `xml:"var-group>data"`
+	Group      string     `xml:"var-group>data,omitempty"`
 	Interval   *DataOrVar `xml:"sampleInterval,omitempty"`
 	Streams    *Streams   `xml:"plugin>api-streams>streams"`
 	CreateView *DataOrVar `xml:"plugin>api-streams>createView"`
