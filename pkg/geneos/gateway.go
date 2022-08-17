@@ -132,63 +132,68 @@ type Samplers struct {
 	} `xml:"samplerGroup"`
 }
 
+// The Sampler type is the common parts of all samplers
+type Sampler struct {
+	XMLName  xml.Name          `xml:"sampler"`
+	Name     string            `xml:"name,attr"`
+	Comment  string            `xml:",comment"`
+	Group    *SingleLineString `xml:"var-group,omitempty"`
+	Interval *DataOrVar        `xml:"sampleInterval,omitempty"`
+}
+
+type SamplerPostfix struct {
+	Dataviews []Dataview `xml:"dataviews>dataview,omitempty"`
+}
+
 type GatewaySQLSampler struct {
-	XMLName   xml.Name          `xml:"sampler"`
-	Name      string            `xml:"name,attr"`
-	Comment   string            `xml:",comment"`
-	Group     string            `xml:"var-group>data,omitempty"`
-	Interval  *DataOrVar        `xml:"sampleInterval,omitempty"`
-	Setup     string            `xml:"plugin>Gateway-sql>setupSql>sql>data"`
-	Tables    []GatewaySQLTable `xml:"plugin>Gateway-sql>tables>xpath"`
-	Views     []View            `xml:"plugin>Gateway-sql>views>view"`
-	Dataviews []Dataview        `xml:"dataviews>dataview,omitempty"`
+	Sampler
+	Setup  *SingleLineString `xml:"plugin>Gateway-sql>setupSql>sql"`
+	Tables []GatewaySQLTable `xml:"plugin>Gateway-sql>tables>xpath"`
+	Views  []GWSQLView       `xml:"plugin>Gateway-sql>views>view"`
+	SamplerPostfix
 }
 
 type GatewaySQLTable struct {
-	XMLName xml.Name `xml:"xpath"`
-	Name    string   `xml:"tableName>data"`
-	XPaths  []string `xml:"xpaths>xpath"`
-	Columns []Column `xml:"columns>column"`
+	XMLName xml.Name          `xml:"xpath"`
+	Name    *SingleLineString `xml:"tableName"`
+	XPaths  []string          `xml:"xpaths>xpath"`
+	Columns []GWSQLColumn     `xml:"columns>column"`
 }
 
-type Column struct {
-	Name  string `xml:"name>data"`
-	XPath string `xml:"xpath"`
-	Type  string `xml:"type"`
+type GWSQLColumn struct {
+	Name  *SingleLineString `xml:"name"`
+	XPath string            `xml:"xpath"`
+	Type  string            `xml:"type"`
 }
 
-type View struct {
-	XMLName  xml.Name            `xml:"view"`
-	ViewName SingleLineStringVar `xml:"name"`
-	SQL      string              `xml:"sql>data"`
+type GWSQLView struct {
+	XMLName  xml.Name          `xml:"view"`
+	ViewName *SingleLineString `xml:"name"`
+	SQL      *SingleLineString `xml:"sql"`
 }
 
 type FTMSampler struct {
-	XMLName                    xml.Name   `xml:"sampler"`
-	Name                       string     `xml:"name,attr"`
-	Comment                    string     `xml:",comment"`
-	Group                      string     `xml:"var-group>data,omitempty"`
-	Interval                   *DataOrVar `xml:"sampleInterval,omitempty"`
+	Sampler
 	Files                      []FTMFile  `xml:"plugin>ftm>files>file"`
-	ConsistentDateStamps       bool       `xml:"plugin>ftm>consistentDateStamps>data,omitempty"`
-	DisplayTimeInISO8601Format bool       `xml:"plugin>ftm>displayTimeInIso8601Format>data,omitempty"`
-	ShowActualFilename         bool       `xml:"plugin>ftm>showActualFilename>data,omitempty"`
+	ConsistentDateStamps       *DataOrVar `xml:"plugin>ftm>consistentDateStamps,omitempty"`
+	DisplayTimeInISO8601Format *DataOrVar `xml:"plugin>ftm>displayTimeInIso8601Format,omitempty"`
+	ShowActualFilename         *DataOrVar `xml:"plugin>ftm>showActualFilename,omitempty"`
 	DelayUnit                  string     `xml:"plugin>ftm>delayUnit"`
 	SizeUnit                   string     `xml:"plugin>ftm>sizeUnit"`
-	Dataviews                  []Dataview `xml:"dataviews>dataview,omitempty"`
+	SamplerPostfix
 }
 
 type FTMFile struct {
 	XMLName         xml.Name            `xml:"file"`
-	Path            string              `xml:"path>data"`
+	Path            *SingleLineString   `xml:"path"`
 	AdditionalPaths *FTMAdditionalPaths `xml:"additionalPaths,omitempty"`
-	ExpectedArrival string              `xml:"expectedArrival>data"`
+	ExpectedArrival *DataOrVar          `xml:"expectedArrival,omitempty"`
 	ExpectedPeriod  *struct {
 		Period string `xml:",innerxml"`
 	} `xml:"expectedPeriod,omitempty"`
-	TZOffset         string      `xml:"tzOffset>data"`
-	MonitoringPeriod interface{} `xml:"monitoringPeriod"`
-	Alias            string      `xml:"alias>data"`
+	TZOffset         *DataOrVar        `xml:"tzOffset,omitempty"`
+	MonitoringPeriod interface{}       `xml:"monitoringPeriod"`
+	Alias            *SingleLineString `xml:"alias"`
 }
 
 type MonitoringPeriodAlias struct {
@@ -196,30 +201,23 @@ type MonitoringPeriodAlias struct {
 }
 
 type MonitoringPeriodStart struct {
-	PeriodStart string `xml:"periodStart>data"`
+	PeriodStart *DataOrVar `xml:"periodStart,omitempty"`
 }
 
 type FTMAdditionalPaths struct {
-	Paths []FTMAdditionalPath `xml:"additionalPath"`
-}
-
-type FTMAdditionalPath struct {
-	Path string `xml:"data"`
+	Paths []*SingleLineString `xml:"additionalPath"`
 }
 
 type SQLToolkitSampler struct {
-	XMLName    xml.Name     `xml:"sampler"`
-	Name       string       `xml:"name,attr"`
-	Comment    string       `xml:",comment"`
-	Group      string       `xml:"var-group>data,omitempty"`
-	Interval   *DataOrVar   `xml:"sampleInterval,omitempty"`
+	Sampler
 	Queries    []Query      `xml:"plugin>sql-toolkit>queries>query"`
 	Connection DBConnection `xml:"plugin>sql-toolkit>connection"`
+	SamplerPostfix
 }
 
 type Query struct {
-	Name string              `xml:"name>data"`
-	SQL  SingleLineStringVar `xml:"sql"`
+	Name *SingleLineString `xml:"name"`
+	SQL  *SingleLineString `xml:"sql"`
 }
 
 type DBConnection struct {
@@ -228,7 +226,7 @@ type DBConnection struct {
 	Sybase                    *Sybase    `xml:"database>sybase,omitempty"`
 	UsernameVar               VarRef     `xml:"var-userName>var"`
 	PasswordVar               VarRef     `xml:"password>var"`
-	CloseConnectionAfterQuery bool       `xml:"closeConnectionAfterQuery>data"`
+	CloseConnectionAfterQuery *DataOrVar `xml:"closeConnectionAfterQuery,omitempty"`
 }
 
 type MySQL struct {
@@ -249,48 +247,39 @@ type Sybase struct {
 }
 
 type ToolkitSampler struct {
-	XMLName              xml.Name              `xml:"sampler"`
-	Name                 string                `xml:"name,attr"`
-	Comment              string                `xml:",comment"`
-	Group                string                `xml:"var-group>data,omitempty"`
-	Interval             *DataOrVar            `xml:"sampleInterval,omitempty"`
-	SamplerScript        string                `xml:"plugin>toolkit>samplerScript>data"`
+	Sampler
+	SamplerScript        *SingleLineString     `xml:"plugin>toolkit>samplerScript"`
 	EnvironmentVariables []EnvironmentVariable `xml:"plugin>toolkit>environmentVariables>variable"`
+	SamplerPostfix
 }
 
 type EnvironmentVariable struct {
-	Name  string              `xml:"name"`
-	Value SingleLineStringVar `xml:"value"`
+	Name  string            `xml:"name"`
+	Value *SingleLineString `xml:"value"`
 }
 
 type APISampler struct {
-	XMLName     xml.Name             `xml:"sampler"`
-	Name        string               `xml:"name,attr"`
-	Comment     string               `xml:",comment"`
-	Group       string               `xml:"var-group>data,omitempty"`
-	Interval    *DataOrVar           `xml:"sampleInterval,omitempty"`
-	Parameters  []Parameter          `xml:"plugin>api>parameters>parameter"`
-	SummaryView *SingleLineStringVar `xml:"plugin>api>showSummaryView>always>viewName,omitempty"`
+	Sampler
+	Parameters  []Parameter       `xml:"plugin>api>parameters>parameter"`
+	SummaryView *SingleLineString `xml:"plugin>api>showSummaryView>always>viewName,omitempty"`
+	SamplerPostfix
 }
 
 type Parameter struct {
-	Name  string              `xml:"name"`
-	Value SingleLineStringVar `xml:"value"`
+	Name  string            `xml:"name"`
+	Value *SingleLineString `xml:"value"`
 }
 
 type APIStreamsSampler struct {
-	XMLName    xml.Name   `xml:"sampler"`
-	Name       string     `xml:"name,attr"`
-	Comment    string     `xml:",comment"`
-	Group      string     `xml:"var-group>data,omitempty"`
-	Interval   *DataOrVar `xml:"sampleInterval,omitempty"`
+	Sampler
 	Streams    *Streams   `xml:"plugin>api-streams>streams"`
-	CreateView *DataOrVar `xml:"plugin>api-streams>createView"`
+	CreateView *DataOrVar `xml:"plugin>api-streams>createView,omitempty"`
+	SamplerPostfix
 }
 
 type Streams struct {
-	XMLName xml.Name              `xml:"streams"`
-	Stream  []SingleLineStringVar `xml:"stream"`
+	XMLName xml.Name            `xml:"streams"`
+	Stream  []*SingleLineString `xml:"stream"`
 }
 
 type Dataview struct {
@@ -300,12 +289,15 @@ type Dataview struct {
 }
 
 type DataviewAdditions struct {
-	XMLName   xml.Name           `xml:"additions"`
-	Headlines []DataviewHeadline `xml:"var-headlines>data,omitempty"`
+	XMLName   xml.Name   `xml:"additions"`
+	Headlines *DataOrVar `xml:"var-headlines,omitempty"`
+	Columns   *DataOrVar `xml:"var-columns,omitempty"`
+	Rows      *DataOrVar `xml:"var-rows,omitempty"`
 }
 
-type DataviewHeadline struct {
-	Name string `xml:"headline>data,omitempty"`
+type DataviewAddition struct {
+	XMLName xml.Name          `xml:"data"`
+	Name    *SingleLineString `xml:"headline,omitempty"`
 }
 
 type Rules struct {
