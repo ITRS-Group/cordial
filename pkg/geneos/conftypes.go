@@ -46,7 +46,6 @@ type Vars struct {
 // pointers. e.g.
 //
 //	macro := geneos.Macro{InsecureGatewayPort: &geneos.EmptyStruct{}}
-//
 type Macro struct {
 	InsecureGatewayPort *EmptyStruct `xml:"insecureGatewayPort,omitempty"`
 	GatewayName         *EmptyStruct `xml:"gatewayName,omitempty"`
@@ -66,24 +65,24 @@ type StringList struct {
 	Strings []string `xml:"string"`
 }
 
-type VarRef struct {
+type Variable struct {
 	Name string `xml:"ref,attr"`
 }
 
 // A SingleLineString is a container for a single line string that
 // can be made up of static text and variable references. Use like this:
 //
-//  type MyContainer struct {
-//      XMLName  xml.Name             `xml:"mycontainer`
-//      VarField *SingleLineString `xml:"fieldname"`
-//  }
+//	type MyContainer struct {
+//	    XMLName  xml.Name          `xml:"mycontainer"`
+//	    VarField *SingleLineString `xml:"fieldname"`
+//	}
 //
-//  func blah() {
-//      x := MyContainer{
-//          VarField: geneos.SingleLineString("hello $(var) world!")
-//      }
-//      ...
-//  }
+//	func blah() {
+//	    x := MyContainer{
+//	        VarField: geneos.SingleLineString("hello $(var) world!")
+//	    }
+//	    ...
+//	}
 type SingleLineString struct {
 	Parts []interface{}
 }
@@ -125,20 +124,20 @@ type Data struct {
 	Data    string   `xml:",chardata"`
 }
 
-// DataOrVar is a struct that contains either a Var or a Data type depending
+// Value is a struct that contains either a Var or a Data type depending
 // on the usage.
-type DataOrVar struct {
+type Value struct {
 	Parts []interface{}
 }
 
-// NewDataOrVar takes a string argument and removes leading and trailing
-// spaces. If the string is of the form "$(var)" then returns a pointer
-// to a VarData struct containing a Var{} or if a non-empty string
-// returns a Data{}. If the string is empty then a nil pointer is
-// returned. This allows `xml:",omixempty"`` to leave out VarData fields
-// that contain no data.
-func NewDataOrVar(in interface{}) (n *DataOrVar) {
-	n = &DataOrVar{}
+// NewValue takes an argument and if a string removes leading and
+// trailing spaces. If the string is of the form "$(var)" then returns a
+// pointer to a VarData struct containing a Var{} or if a non-empty
+// string returns a Data{}. If the string is empty then a nil pointer is
+// returned. Any other value is copied as is. This allows
+// `xml:",omixempty"“ to leave out VarData fields that contain no data.
+func NewValue(in interface{}) (n *Value) {
+	n = &Value{}
 	switch s := in.(type) {
 	case string:
 		s = strings.TrimSpace(s)
