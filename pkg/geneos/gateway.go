@@ -70,15 +70,10 @@ type ManagedEntity struct {
 	} `xml:"probe"`
 	Attributes []Attribute `xml:",omitempty"`
 	AddTypes   struct {
-		XMLName xml.Name  `xml:"addTypes"`
-		Types   []TypeRef `xml:",omitempty"`
+		XMLName xml.Name    `xml:"addTypes"`
+		Types   []Reference `xml:"type,omitempty"`
 	}
 	Vars []Vars `xml:",omitempty"`
-}
-
-type TypeRef struct {
-	XMLName xml.Name `xml:"type"`
-	Name    string   `xml:"ref,attr"`
 }
 
 type Attribute struct {
@@ -97,11 +92,11 @@ type Types struct {
 }
 
 type Type struct {
-	XMLName      xml.Name   `xml:"type"`
-	Name         string     `xml:"name,attr"`
-	Environments []Variable `xml:"environment,omitempty"`
-	Vars         []Vars     `xml:",omitempty"`
-	Samplers     []Variable `xml:"sampler,omitempty"`
+	XMLName      xml.Name    `xml:"type"`
+	Name         string      `xml:"name,attr"`
+	Environments []Reference `xml:"environment,omitempty"`
+	Vars         []Vars      `xml:",omitempty"`
+	Samplers     []Reference `xml:"sampler,omitempty"`
 }
 
 type Environments struct {
@@ -133,17 +128,19 @@ type Samplers struct {
 	Samplers []Sampler `xml:",omitempty"`
 }
 
+// A Sampler is a Geneos Sampler structure. The Plugin field should be
+// populated with a pointer to a Plugin struct of the wanted type.
 type Sampler struct {
-	XMLName  xml.Name          `xml:"sampler"`
-	Name     string            `xml:"name,attr"`
-	Comment  string            `xml:",comment"`
-	Group    *SingleLineString `xml:"var-group,omitempty"`
-	Interval *Value            `xml:"sampleInterval,omitempty"`
-
-	Plugin interface{} `xml:"plugin"`
-
-	Dataviews []Dataview `xml:"dataviews>dataview,omitempty"`
+	XMLName   xml.Name          `xml:"sampler"`
+	Name      string            `xml:"name,attr"`
+	Comment   string            `xml:",comment"`
+	Group     *SingleLineString `xml:"var-group,omitempty"`
+	Interval  *Value            `xml:"sampleInterval,omitempty"`
+	Plugin    interface{}       `xml:"plugin"`
+	Dataviews []Dataview        `xml:"dataviews>dataview,omitempty"`
 }
+
+// Gateway-SQL
 
 type GatewaySQLPlugin struct {
 	Setup  *SingleLineString `xml:"Gateway-sql>setupSql>sql"`
@@ -169,6 +166,8 @@ type GWSQLView struct {
 	ViewName *SingleLineString `xml:"name"`
 	SQL      *SingleLineString `xml:"sql"`
 }
+
+// FTM
 
 type FTMPlugin struct {
 	Files                      []FTMFile `xml:"ftm>files>file"`
@@ -203,6 +202,58 @@ type MonitoringPeriodStart struct {
 type FTMAdditionalPaths struct {
 	Paths []*SingleLineString `xml:"additionalPath"`
 }
+
+// FKM
+
+type FKMPlugin struct {
+	Display *FKMDisplay `xml:"display,omitempty"`
+	Files   []FKMFile
+}
+
+type FKMDisplay struct {
+	TriggerMode string `xml:"triggerMode,omitempty"`
+}
+
+type FKMFile struct {
+	Filename             *Value `xml:"source>filename,omitempty"`
+	Stream               *Value `xml:"source>stream,omitempty"`
+	Tables               []FKMTable
+	ClearTime            *Value `xml:"clearTime"`
+	DefaultKeyClkearTime *Value `xml:"defaultKeyClearTime"`
+	Rewind               *Value `xml:"rewind"`
+	Alias                *Value `xml:"alias"`
+}
+
+type FKMTable struct {
+	XMLName  xml.Name `xml:"table"`
+	Severity string   `xml:"severity"`
+	KeyTable FKMKeys
+}
+
+type FKMKeys struct {
+	Keys []interface{}
+}
+
+type FKMIgnoreKey struct {
+	XMLName xml.Name `xml:"ignoreKey"`
+	Match   FKMMatch `xml:"match"`
+	// ActiveTime
+}
+
+type FKMKey struct {
+	XMLName  xml.Name `xml:"key"`
+	SetKey   FKMMatch
+	ClearKey FKMMatch
+	Message  *Value
+	Severity string
+}
+
+type FKMMatch struct {
+	SearchString *Value `xml:"searchString"`
+	Rules        string `xml:"rules,omitempty"`
+}
+
+// SQL Toolkit
 
 type SQLToolkitPlugin struct {
 	Queries    []Query      `xml:"sql-toolkit>queries>query"`
@@ -250,6 +301,8 @@ type EnvironmentVariable struct {
 	Value *SingleLineString `xml:"value"`
 }
 
+// API Plugin
+
 type APIPlugin struct {
 	Parameters  []Parameter       `xml:"api>parameters>parameter"`
 	SummaryView *SingleLineString `xml:"api>showSummaryView>always>viewName,omitempty"`
@@ -259,6 +312,8 @@ type Parameter struct {
 	Name  string            `xml:"name"`
 	Value *SingleLineString `xml:"value"`
 }
+
+// API Streams Plugin
 
 type APIStreamsPlugin struct {
 	Streams    *Streams `xml:"api-streams>streams"`
@@ -271,7 +326,6 @@ type Streams struct {
 }
 
 type Dataview struct {
-	// XMLName   xml.Name `xml:"dataview"`
 	Name      string `xml:"name,attr"`
 	Additions DataviewAdditions
 }
@@ -287,6 +341,8 @@ type DataviewAddition struct {
 	XMLName xml.Name          `xml:"data"`
 	Name    *SingleLineString `xml:"headline,omitempty"`
 }
+
+// Rules
 
 type Rules struct {
 	XMLName    xml.Name `xml:"rules"`
