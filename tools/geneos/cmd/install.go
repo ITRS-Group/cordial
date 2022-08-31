@@ -95,7 +95,7 @@ var installCmdBase, installCmdHost, installCmdOverride, installCmdVersion string
 //
 func commandInstall(ct *geneos.Component, args, params []string) (err error) {
 	if ct == nil && len(args) == 0 && installCmdLocal {
-		log.Println("install -l (local) flag with no component or file/url")
+		log.Println("install -L (local) flag with no component or file/url")
 		return nil
 	}
 
@@ -108,7 +108,7 @@ func commandInstall(ct *geneos.Component, args, params []string) (err error) {
 	if ct != nil || len(args) == 0 {
 		logDebug.Printf("installing %q version of %s to %s host(s)", installCmdVersion, ct, installCmdHost)
 
-		options := []geneos.GeneosOptions{geneos.Version(installCmdVersion), geneos.Basename(installCmdBase), geneos.Force(installCmdUpdate)}
+		options := []geneos.GeneosOptions{geneos.Version(installCmdVersion), geneos.Basename(installCmdBase), geneos.Force(installCmdUpdate), geneos.OverrideVersion(installCmdOverride)}
 		if installCmdNexus {
 			options = append(options, geneos.UseNexus())
 			if installCmdSnapshot {
@@ -121,7 +121,7 @@ func commandInstall(ct *geneos.Component, args, params []string) (err error) {
 	// work through command line args and try to install them using the naming format
 	// of standard downloads - fix versioning
 	for _, file := range args {
-		options := []geneos.GeneosOptions{geneos.Filename(file)}
+		options := []geneos.GeneosOptions{geneos.Filename(file), geneos.Basename(installCmdBase), geneos.Force(installCmdUpdate), geneos.OverrideVersion(installCmdOverride)}
 		if err = install(ct, installCmdHost, options...); err != nil {
 			return err
 		}
