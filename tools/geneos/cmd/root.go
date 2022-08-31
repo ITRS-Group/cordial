@@ -181,7 +181,7 @@ func initConfig() {
 
 	if passwordFile != "" {
 		cf.Set("download.password", utils.ReadPasswordFile(passwordFile))
-	} else if username != "" {
+	} else if cf.GetString("download.username") != "" {
 		cf.Set("download.password", utils.ReadPasswordPrompt())
 		// only ask once
 		// passwordPrompt = false
