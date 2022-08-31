@@ -1,0 +1,50 @@
+API:
+  Host: 0.0.0.0
+  Port: 3000
+  APIKey: RANDOMAPIKEY
+
+ServiceNow:
+  Instance: dev107331
+  Username: ${SERVICENOW_USERNAME}
+  # Password: ${SERVICENOW_PASSWORD}
+  PasswordFile: ~/.snowpw
+  ClientID: ${SERVICENOW_CLIENTID}
+  ClientSecret: ${SERVICENOW_CLIENTSECRET}
+  SearchType: simple
+  QueryResponseFields: number,sys_id,cmdb_ci.name,short_description,description,correlation_id,opened_by,state
+  IncidentTable: incident
+  IncidentStates:
+    0: Create
+    1: [ New, Update ]
+    2: Update
+    3: Hold
+    4: Hold
+    5: Hold
+    6: Resolved
+  IncidentStateDefaults:
+    Create:
+      assignment_group: something
+      contact_type: email
+      impact: 3
+      urgency: 3
+      category: hardware
+      state: 1
+      watch_list: ""
+      caller_id: admin
+      short_description: must exist
+      description: long description here
+    Update:
+      assignment_group: somethingelse
+      contact_type: email
+      impact: 3
+      urgency: 3
+      category: hardware
+      state: 2
+      caller_id: admin
+      work_notes: long description here
+      short_description: ""  # delete / never update
+    Resolved:
+      short_description: ""
+      caller_id: admin
+      state: 1
+
