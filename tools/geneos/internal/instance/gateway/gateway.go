@@ -129,11 +129,11 @@ func (g *Gateways) Type() *geneos.Component {
 }
 
 func (g *Gateways) Name() string {
-	return g.V().GetString("name")
+	return g.GetConfig().GetString("name")
 }
 
 func (g *Gateways) Home() string {
-	return g.V().GetString("home")
+	return g.GetConfig().GetString("home")
 }
 
 func (g *Gateways) Prefix() string {
@@ -167,7 +167,7 @@ func (g *Gateways) Loaded() bool {
 	return g.ConfigLoaded
 }
 
-func (g *Gateways) V() *config.Config {
+func (g *Gateways) GetConfig() *config.Config {
 	return g.Conf
 }
 
@@ -179,17 +179,17 @@ func (g *Gateways) Add(username string, template string, port uint16) (err error
 	if port == 0 {
 		port = instance.NextPort(g.InstanceHost, &Gateway)
 	}
-	g.V().Set("port", port)
-	g.V().Set("user", username)
-	g.V().Set("config.rebuild", "initial")
+	g.GetConfig().Set("port", port)
+	g.GetConfig().Set("user", username)
+	g.GetConfig().Set("config.rebuild", "initial")
 
-	g.V().SetDefault("config.template", GatewayDefaultTemplate)
+	g.GetConfig().SetDefault("config.template", GatewayDefaultTemplate)
 	if template != "" {
 		filename, _ := instance.ImportCommons(g.Host(), g.Type(), "templates", []string{template})
-		g.V().Set("config.template", filename)
+		g.GetConfig().Set("config.template", filename)
 	}
 
-	g.V().Set("includes", make(map[int]string))
+	g.GetConfig().Set("includes", make(map[int]string))
 
 	// try to save config early
 	if err = instance.WriteConfig(g); err != nil {
@@ -218,7 +218,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 		return
 	}
 
-	configrebuild := g.V().GetString("config.rebuild")
+	configrebuild := g.GetConfig().GetString("config.rebuild")
 
 	if configrebuild == "never" {
 		return
@@ -230,32 +230,32 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 
 	// recheck check certs/keys
 	var changed bool
-	secure := g.V().GetString("certificate") != "" && g.V().GetString("privatekey") != ""
+	secure := g.GetConfig().GetString("certificate") != "" && g.GetConfig().GetString("privatekey") != ""
 
 	// if we have certs then connect to Licd securely
-	if secure && g.V().GetString("licdsecure") != "true" {
-		g.V().Set("licdsecure", "true")
+	if secure && g.GetConfig().GetString("licdsecure") != "true" {
+		g.GetConfig().Set("licdsecure", "true")
 		changed = true
-	} else if !secure && g.V().GetString("licdsecure") == "true" {
-		g.V().Set("licdsecure", "false")
+	} else if !secure && g.GetConfig().GetString("licdsecure") == "true" {
+		g.GetConfig().Set("licdsecure", "false")
 		changed = true
 	}
 
 	// use getPorts() to check valid change, else go up one
 	ports := instance.GetPorts(g.Host())
 	nextport := instance.NextPort(g.Host(), &Gateway)
-	if secure && g.V().GetInt64("port") == 7039 {
+	if secure && g.GetConfig().GetInt64("port") == 7039 {
 		if _, ok := ports[7038]; !ok {
-			g.V().Set("port", 7038)
+			g.GetConfig().Set("port", 7038)
 		} else {
-			g.V().Set("port", nextport)
+			g.GetConfig().Set("port", nextport)
 		}
 		changed = true
-	} else if !secure && g.V().GetInt64("port") == 7038 {
+	} else if !secure && g.GetConfig().GetInt64("port") == 7038 {
 		if _, ok := ports[7039]; !ok {
-			g.V().Set("port", 7039)
+			g.GetConfig().Set("port", 7039)
 		} else {
-			g.V().Set("port", nextport)
+			g.GetConfig().Set("port", nextport)
 		}
 		changed = true
 	}
@@ -266,7 +266,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 		}
 	}
 
-	return instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "gateway.setup.xml"), g.V().GetString("config.template"), GatewayTemplate)
+	return instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "gateway.setup.xml"), g.GetConfig().GetString("config.template"), GatewayTemplate)
 }
 
 func (g *Gateways) Command() (args, env []string) {
@@ -276,11 +276,11 @@ func (g *Gateways) Command() (args, env []string) {
 	args = []string{
 		g.Name(),
 		"-resources-dir",
-		filepath.Join(g.V().GetString("install"), g.V().GetString("version"), "resources"),
+		filepath.Join(g.GetConfig().GetString("install"), g.GetConfig().GetString("version"), "resources"),
 		"-log",
 		instance.LogFile(g),
 		"-setup",
-		filepath.Join(g.V().GetString("home"), "gateway.setup.xml"),
+		filepath.Join(g.GetConfig().GetString("home"), "gateway.setup.xml"),
 		// enable stats by default
 		"-stats",
 	}
@@ -290,33 +290,33 @@ func (g *Gateways) Command() (args, env []string) {
 	// if underlying ... { }
 	// "-gateway-name",
 
-	if g.V().GetString("gatewayname") != g.Name() {
-		args = append([]string{g.V().GetString("gatewayname")}, args...)
+	if g.GetConfig().GetString("gatewayname") != g.Name() {
+		args = append([]string{g.GetConfig().GetString("gatewayname")}, args...)
 	}
 
-	args = append([]string{"-port", fmt.Sprint(g.V().GetString("port"))}, args...)
+	args = append([]string{"-port", fmt.Sprint(g.GetConfig().GetString("port"))}, args...)
 
-	if g.V().GetString("licdhost") != "" {
-		args = append(args, "-licd-host", g.V().GetString("licdhost"))
+	if g.GetConfig().GetString("licdhost") != "" {
+		args = append(args, "-licd-host", g.GetConfig().GetString("licdhost"))
 	}
 
-	if g.V().GetInt64("licdport") != 0 {
-		args = append(args, "-licd-port", fmt.Sprint(g.V().GetString("licdport")))
+	if g.GetConfig().GetInt64("licdport") != 0 {
+		args = append(args, "-licd-port", fmt.Sprint(g.GetConfig().GetString("licdport")))
 	}
 
-	if g.V().GetString("certificate") != "" {
-		if g.V().GetString("licdsecure") == "" || g.V().GetString("licdsecure") != "false" {
+	if g.GetConfig().GetString("certificate") != "" {
+		if g.GetConfig().GetString("licdsecure") == "" || g.GetConfig().GetString("licdsecure") != "false" {
 			args = append(args, "-licd-secure")
 		}
-		args = append(args, "-ssl-certificate", g.V().GetString("certificate"))
+		args = append(args, "-ssl-certificate", g.GetConfig().GetString("certificate"))
 		chainfile := g.Host().GeneosJoinPath("tls", "chain.pem")
 		args = append(args, "-ssl-certificate-chain", chainfile)
-	} else if g.V().GetString("licdsecure") != "" && g.V().GetString("licdsecure") == "true" {
+	} else if g.GetConfig().GetString("licdsecure") != "" && g.GetConfig().GetString("licdsecure") == "true" {
 		args = append(args, "-licd-secure")
 	}
 
-	if g.V().GetString("privatekey") != "" {
-		args = append(args, "-ssl-certificate-key", g.V().GetString("privatekey"))
+	if g.GetConfig().GetString("privatekey") != "" {
+		args = append(args, "-ssl-certificate-key", g.GetConfig().GetString("privatekey"))
 	}
 
 	// if c.GateAES != "" {

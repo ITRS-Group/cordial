@@ -74,7 +74,6 @@ func New(name string) geneos.Instance {
 	c := &Netprobes{}
 	c.Conf = config.New()
 	c.InstanceHost = r
-	// c.root = r.V().GetString("geneos")
 	c.Component = &Netprobe
 	if err := instance.SetDefaults(c, local); err != nil {
 		logger.Error.Fatalln(c, "setDefaults():", err)
@@ -91,11 +90,11 @@ func (n *Netprobes) Type() *geneos.Component {
 }
 
 func (n *Netprobes) Name() string {
-	return n.V().GetString("name")
+	return n.GetConfig().GetString("name")
 }
 
 func (n *Netprobes) Home() string {
-	return n.V().GetString("home")
+	return n.GetConfig().GetString("home")
 }
 
 func (n *Netprobes) Prefix() string {
@@ -129,7 +128,7 @@ func (n *Netprobes) Loaded() bool {
 	return n.ConfigLoaded
 }
 
-func (n *Netprobes) V() *config.Config {
+func (n *Netprobes) GetConfig() *config.Config {
 	return n.Conf
 }
 
@@ -141,8 +140,8 @@ func (n *Netprobes) Add(username string, tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(n.Host(), &Netprobe)
 	}
-	n.V().Set("port", port)
-	n.V().Set("user", username)
+	n.GetConfig().Set("port", port)
+	n.GetConfig().Set("user", username)
 
 	if err = instance.WriteConfig(n); err != nil {
 		return
@@ -167,16 +166,16 @@ func (n *Netprobes) Command() (args, env []string) {
 	logFile := instance.LogFile(n)
 	args = []string{
 		n.Name(),
-		"-port", n.V().GetString("port"),
+		"-port", n.GetConfig().GetString("port"),
 	}
 	env = append(env, "LOG_FILENAME="+logFile)
 
-	if n.V().GetString("certificate") != "" {
-		args = append(args, "-secure", "-ssl-certificate", n.V().GetString("certificate"))
+	if n.GetConfig().GetString("certificate") != "" {
+		args = append(args, "-secure", "-ssl-certificate", n.GetConfig().GetString("certificate"))
 	}
 
-	if n.V().GetString("privatekey") != "" {
-		args = append(args, "-ssl-certificate-key", n.V().GetString("privatekey"))
+	if n.GetConfig().GetString("privatekey") != "" {
+		args = append(args, "-ssl-certificate-key", n.GetConfig().GetString("privatekey"))
 	}
 
 	return

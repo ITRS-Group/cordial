@@ -75,7 +75,6 @@ func New(name string) geneos.Instance {
 	c := &Licds{}
 	c.Conf = config.New()
 	c.InstanceHost = r
-	// c.root = r.V().GetString("geneos")
 	c.Component = &Licd
 	if err := instance.SetDefaults(c, local); err != nil {
 		logger.Error.Fatalln(c, "setDefaults():", err)
@@ -92,11 +91,11 @@ func (l *Licds) Type() *geneos.Component {
 }
 
 func (l *Licds) Name() string {
-	return l.V().GetString("name")
+	return l.GetConfig().GetString("name")
 }
 
 func (l *Licds) Home() string {
-	return l.V().GetString("home")
+	return l.GetConfig().GetString("home")
 }
 
 func (l *Licds) Prefix() string {
@@ -130,7 +129,7 @@ func (l *Licds) Loaded() bool {
 	return l.ConfigLoaded
 }
 
-func (l *Licds) V() *config.Config {
+func (l *Licds) GetConfig() *config.Config {
 	return l.Conf
 }
 
@@ -142,8 +141,8 @@ func (l *Licds) Add(username string, tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(l.InstanceHost, &Licd)
 	}
-	l.V().Set("port", port)
-	l.V().Set("user", username)
+	l.GetConfig().Set("port", port)
+	l.GetConfig().Set("user", username)
 
 	if err = instance.WriteConfig(l); err != nil {
 		logger.Error.Fatalln(err)
@@ -163,16 +162,16 @@ func (l *Licds) Add(username string, tmpl string, port uint16) (err error) {
 func (l *Licds) Command() (args, env []string) {
 	args = []string{
 		l.Name(),
-		"-port", l.V().GetString("port"),
+		"-port", l.GetConfig().GetString("port"),
 		"-log", instance.LogFile(l),
 	}
 
-	if l.V().GetString("certificate") != "" {
-		args = append(args, "-secure", "-ssl-certificate", l.V().GetString("certificate"))
+	if l.GetConfig().GetString("certificate") != "" {
+		args = append(args, "-secure", "-ssl-certificate", l.GetConfig().GetString("certificate"))
 	}
 
-	if l.V().GetString("privatekey") != "" {
-		args = append(args, "-ssl-certificate-key", l.V().GetString("privatekey"))
+	if l.GetConfig().GetString("privatekey") != "" {
+		args = append(args, "-ssl-certificate-key", l.GetConfig().GetString("privatekey"))
 	}
 
 	return
