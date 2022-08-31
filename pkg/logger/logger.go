@@ -109,6 +109,7 @@ func (g GeneosLogger) Write(p []byte) (n int, err error) {
 				fnName = fn.Name()
 			}
 		}
+		fnName = filepath.Base(fnName)
 		fnName = strings.TrimPrefix(fnName, "main.")
 
 		line = fmt.Sprintf("%s%s():%d %s", prefix, fnName, ln, p)
