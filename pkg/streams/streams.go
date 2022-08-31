@@ -48,17 +48,17 @@ type Stream struct {
 	name string
 }
 
-// Sampler - wrap calls to xmlrpc
-func Sampler(url *url.URL, entityName string, samplerName string) (s Stream, err error) {
-	logDebug.Printf("called")
-	sampler, err := xmlrpc.NewClient(url).Sampler(entityName, samplerName)
-	s = Stream{}
-	s.Sampler = sampler
+// Open a stream for writing. `stream` is an optional stream name and
+// additional arguments are ignored. If no stream name is supplied then
+// the sampler name is used for the stream name.
+func Open(url *url.URL, entity, sampler string, stream ...string) (s *Stream, err error) {
+	name := sampler
+	if len(stream) > 0 {
+		name = stream[0]
+	}
+	smpl, err := xmlrpc.NewClient(url).Sampler(entity, sampler)
+	s = &Stream{name: name, Sampler: smpl}
 	return
-}
-
-func (s *Stream) SetStreamName(name string) {
-	s.name = name
 }
 
 func (s Stream) Write(data []byte) (n int, err error) {

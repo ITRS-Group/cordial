@@ -27,7 +27,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/xmlrpc"
 )
 
@@ -43,16 +42,8 @@ type Connection struct {
 	xmlrpc.Sampler
 }
 
-var (
-	log      = logger.Log
-	logDebug = logger.Debug
-	logError = logger.Error
-)
-
-// wrap calls to xmlrpc
-func Sampler(url *url.URL, entityName string, samplerName string) (s Connection, err error) {
-	logDebug.Printf("called")
+func Open(url *url.URL, entityName string, samplerName string) (s *Connection, err error) {
 	sampler, err := xmlrpc.NewClient(url).Sampler(entityName, samplerName)
-	s = Connection{sampler}
+	s = &Connection{sampler}
 	return
 }
