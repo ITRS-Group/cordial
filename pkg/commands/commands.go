@@ -43,23 +43,25 @@ import (
 
 // A Command is made up of a Name, a Target and optional Args
 type Command struct {
-	Name   string            `json:"command"`
-	Target string            `json:"target"`
-	Args   map[string]string `json:"args,omitempty"`
+	Name   string `json:"command"`
+	Target string `json:"target"`
+	Args   *Args  `json:"args,omitempty"`
 }
 
 type CommandsResponseRaw struct {
-	MimeType   []map[string]string `json:"mimetype,omitempty"`
-	Status     string              `json:"status,omitempty"`
-	StreamData []map[string]string `json:"streamdata,omitempty"`
-	Dataview   *Dataview           `json:"dataview,omitempty`
+	MimeType   []map[string]string `json:"mimetype"`
+	Status     string              `json:"status"`
+	StreamData []map[string]string `json:"streamdata"`
+	Dataview   *Dataview           `json:"dataview`
+	XPaths     []string            `json:"xpaths`
 }
 
 type CommandsResponse struct {
-	MimeType   map[string]string   `json:"mimetype,omitempty"`
-	Status     string              `json:"status,omitempty"`
-	StreamData map[string][]string `json:"streamdata,omitempty"`
+	MimeType   map[string]string   `json:"mimetype"`
+	Status     string              `json:"status"`
+	StreamData map[string][]string `json:"streamdata"`
 	Dataview   *Dataview           `json:"dataview"`
+	XPaths     []string            `json:"xpaths"`
 }
 
 type Connection struct {
@@ -70,6 +72,8 @@ type Connection struct {
 	SSO                SSOAuth
 	InsecureSkipVerify bool
 }
+
+const endpoint = "/rest/runCommand"
 
 // Set-up a Gateway REST command connection
 func Dial(u *url.URL, options ...CommandOptions) (c *Connection, err error) {
@@ -139,6 +143,7 @@ func (c *Connection) Do(endpoint string, command interface{}) (cr CommandsRespon
 func CookResponse(raw CommandsResponseRaw) (cr CommandsResponse) {
 	cr.Status = raw.Status
 	cr.Dataview = raw.Dataview
+	cr.XPaths = raw.XPaths
 
 	for _, m := range raw.MimeType {
 		cr.MimeType = make(map[string]string)
@@ -158,50 +163,105 @@ func CookResponse(raw CommandsResponseRaw) (cr CommandsResponse) {
 	return
 }
 
-func (c *Connection) SnoozeManual(target *xpath.XPath, info string) (err error) {
-	const endpoint = "/rest/runCommand"
+// run a command against exactly one valid target, returning stdout,
+// stderr and execlog where applicable
+func (c *Connection) RunCommand(name string, target *xpath.XPath, options ...ArgOptions) (stdout, stderr, execlog string, err error) {
+	args := &Args{}
+	evalArgOptions(args, options...)
+	targets := c.CommandTargets(name, target)
+	if len(targets) != 1 {
+		err = fmt.Errorf("target does not match exactly one data item")
+		return
+	}
+	command := &Command{
+		Name:   name,
+		Target: target.String(),
+		Args:   args,
+	}
+	cr, err := c.Do(endpoint, command)
+	if err != nil {
+		return
+	}
+	stdout = strings.Join(cr.StreamData["stdout"], "\n")
+	stderr = strings.Join(cr.StreamData["stderr"], "\n")
+	execlog = strings.Join(cr.StreamData["execlog"], "\n")
+	return
+}
+
+// run command against all matching data items, returning stdout,
+// stderr and execlog (concatenated) where applicable
+func (c *Connection) RunCommandAll(name string, target *xpath.XPath, options ...ArgOptions) (stdout, stderr, execlog map[string]string, err error) {
+	args := &Args{}
+	evalArgOptions(args, options...)
+	targets := c.CommandTargets(name, target)
+	stdout = map[string]string{}
+	stderr = map[string]string{}
+	execlog = map[string]string{}
+
+	for _, t := range targets {
+		command := &Command{
+			Name:   name,
+			Target: t.String(),
+			Args:   args,
+		}
+		cr, err := c.Do(endpoint, command)
+		if err != nil {
+			continue
+		}
+		stdout[t.String()] = strings.Join(cr.StreamData["stdout"], "\n")
+		stderr[t.String()] = strings.Join(cr.StreamData["stderr"], "\n")
+		execlog[t.String()] = strings.Join(cr.StreamData["execlog"], "\n")
+	}
+	return
+}
+
+func (c *Connection) CommandTargets(name string, target *xpath.XPath) (matches []*xpath.XPath) {
+	const endpoint = "/rest/xpaths/commandTargets"
 	command := &Command{
 		Target: target.String(),
-		Args:   map[string]string{"1": info},
+		Name:   name,
 	}
-	if target.IsGateway() || target.IsProbe() || target.IsEntity() {
-		command.Name = "/SNOOZE:manual"
-	} else if target.IsSampler() || target.IsHeadline() || target.IsTableCell() || target.IsDataview() {
-		command.Name = "/SNOOZE:manualAllMe"
-		command.Args["5"] = "this"
+	cr, err := c.Do(endpoint, command)
+	if err != nil {
+		panic(err)
+		// return
 	}
-	if target.IsDataview() {
-		fmt.Println("target is dataview", target.String())
+	for _, p := range cr.XPaths {
+		x, err := xpath.Parse(p)
+		if err != nil {
+			panic(err)
+			// continue
+		}
+		matches = append(matches, x)
 	}
-	_, err = c.Do(endpoint, command)
+	return
+}
 
+// test commands to work out kinks in args and returns
+
+func (c *Connection) SnoozeManual(target *xpath.XPath, info string) (err error) {
+	if target.IsGateway() || target.IsProbe() || target.IsEntity() {
+		_, _, _, err = c.RunCommandAll("/SNOOZE:manual", target, Arg(1, info))
+		return
+	}
+	if target.IsSampler() || target.IsHeadline() || target.IsTableCell() || target.IsDataview() {
+		_, _, _, err = c.RunCommandAll("/SNOOZE:manualAllMe", target, Arg(1, info), Arg(5, "this"))
+	}
 	return
 }
 
 func (c *Connection) Unsnooze(target *xpath.XPath, info string) (err error) {
-	const endpoint = "/rest/runCommand"
-	command := &Command{
-		Target: target.String(),
-	}
 	if target.IsGateway() || target.IsProbe() || target.IsEntity() {
-		command.Name = "/SNOOZE:unsnooze"
-		command.Args = map[string]string{"1": info}
+		_, _, _, err = c.RunCommandAll("/SNOOZE:unsnooze", target, Arg(1, info))
+		return
 	}
 	if target.Rows || target.Headline != nil || target.Sampler != nil {
-		command.Name = "/SNOOZE:unsnoozeAllMe"
-		command.Args = map[string]string{"1": "this", "2": info}
+		_, _, _, err = c.RunCommandAll("/SNOOZE:unsnoozeAllMe", target, Arg(1, "this"), Arg(2, info))
 	}
-	_, err = c.Do(endpoint, command)
 	return
 }
 
-func (c *Connection) SnoozeInfo(target *xpath.XPath) (info string, err error) {
-	const endpoint = "/rest/runCommand"
-	command := &Command{
-		Name:   "/SNOOZE:info",
-		Target: target.String(),
-	}
-	cr, err := c.Do(endpoint, command)
-	info = strings.Join(cr.StreamData["stdout"], "\n")
+func (c *Connection) SnoozeInfo(target *xpath.XPath) (info map[string]string, err error) {
+	info, _, _, err = c.RunCommandAll("/SNOOZE:info", target)
 	return
 }
