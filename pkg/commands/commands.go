@@ -38,6 +38,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/itrs-group/cordial/pkg/xpath"
 )
@@ -86,6 +87,7 @@ type Connection struct {
 	Password           string
 	SSO                SSOAuth
 	InsecureSkipVerify bool
+	Timeout            time.Duration
 	rrurls             []*url.URL
 	ping               *func(*Connection) error
 }
@@ -165,7 +167,7 @@ func (c *Connection) Redial() (err error) {
 		if err = ping(c); err == nil {
 			return nil
 		}
-		errs += fmt.Sprintf("%s responded: %q\n", u, err)
+		errs += fmt.Sprintf("%s (connecting to %q)\n", err, u)
 	}
 	return fmt.Errorf(errs)
 }
@@ -175,7 +177,7 @@ func (c *Connection) Do(endpoint string, command *Command) (cr CommandsResponse,
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: c.InsecureSkipVerify},
 	}
-	client := &http.Client{Transport: tr}
+	client := &http.Client{Transport: tr, Timeout: c.Timeout}
 
 	r, err := url.Parse(endpoint)
 	if err != nil {
@@ -332,7 +334,7 @@ func (c *Connection) Match(target *xpath.XPath, limit int) (matches []*xpath.XPa
 		// return
 	}
 	for _, p := range cr.XPaths {
-		x, err := xpath.ParseAbs(p)
+		x, err := xpath.Parse(p)
 		if err != nil {
 			panic(err)
 			// continue
@@ -354,7 +356,7 @@ func (c *Connection) CommandTargets(name string, target *xpath.XPath) (matches [
 		// return
 	}
 	for _, p := range cr.XPaths {
-		x, err := xpath.ParseAbs(p)
+		x, err := xpath.Parse(p)
 		if err != nil {
 			panic(err)
 			// continue

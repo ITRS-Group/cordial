@@ -1,6 +1,9 @@
 package commands
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type Options func(*Connection)
 
@@ -31,6 +34,12 @@ func AllowInsecureCertificates(opt bool) Options {
 func Ping(ping func(*Connection) error) Options {
 	return func(c *Connection) {
 		c.ping = &ping
+	}
+}
+
+func Timeout(timeout time.Duration) Options {
+	return func(c *Connection) {
+		c.Timeout = timeout
 	}
 }
 
