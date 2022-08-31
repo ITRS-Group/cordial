@@ -89,14 +89,14 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 	defer out.Close()
 
 	// m := make(map[string]string)
-	m := c.V().AllSettings()
+	m := c.GetConfig().AllSettings()
 	// viper insists this is a float64, manually override
-	m["port"] = uint16(c.V().GetUint("port"))
+	m["port"] = uint16(c.GetConfig().GetUint("port"))
 	// set high level defaults
 	m["root"] = c.Host().GetString("geneos")
 	m["name"] = c.Name()
 	// XXX remove aliases ??
-	for _, k := range c.V().AllKeys() {
+	for _, k := range c.GetConfig().AllKeys() {
 		if _, ok := c.Type().Aliases[k]; ok {
 			delete(m, k)
 		}
@@ -170,12 +170,12 @@ func readRCConfig(c geneos.Instance) (err error) {
 		}
 		lk := strings.ToLower(k)
 		if lk == "binary" {
-			c.V().Set(k, v)
+			c.GetConfig().Set(k, v)
 			continue
 		}
 		if strings.HasPrefix(lk, c.Prefix()) {
 			nk := c.Type().Aliases[lk]
-			c.V().Set(nk, v)
+			c.GetConfig().Set(nk, v)
 		} else {
 			// set env var
 			env = append(env, fmt.Sprintf("%s=%s", k, v))
@@ -183,7 +183,7 @@ func readRCConfig(c geneos.Instance) (err error) {
 	}
 
 	if len(env) > 0 {
-		c.V().Set("Env", env)
+		c.GetConfig().Set("Env", env)
 	}
 	return
 }
@@ -201,8 +201,8 @@ func evalOldVars(c geneos.Instance, in string) (out string) {
 	}
 
 	// replace resulting keys with values
-	for _, k := range c.V().AllKeys() {
-		out = strings.ReplaceAll(out, "${"+k+"}", c.V().GetString(k))
+	for _, k := range c.GetConfig().AllKeys() {
+		out = strings.ReplaceAll(out, "${"+k+"}", c.GetConfig().GetString(k))
 	}
 
 	// finally expand env vars
@@ -250,9 +250,9 @@ func WriteConfig(c geneos.Instance) (err error) {
 		logError.Println(err)
 	}
 	nv := config.New()
-	for _, k := range c.V().AllKeys() {
+	for _, k := range c.GetConfig().AllKeys() {
 		if _, ok := c.Type().Aliases[k]; !ok {
-			nv.Set(k, c.V().Get(k))
+			nv.Set(k, c.GetConfig().Get(k))
 		}
 	}
 	if c.Host() != host.LOCAL {
@@ -283,26 +283,26 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) error {
 }
 
 func ReadConfig(c geneos.Instance) (err error) {
-	c.V().AddConfigPath(c.Home())
-	c.V().SetConfigName(c.Type().String())
-	c.V().SetConfigType(ConfigType)
+	c.GetConfig().AddConfigPath(c.Home())
+	c.GetConfig().SetConfigName(c.Type().String())
+	c.GetConfig().SetConfigType(ConfigType)
 	if c.Host() != host.LOCAL {
 		client, err := c.Host().DialSFTP()
 		if err != nil {
 			logError.Printf("connection to %s failed", c.Host())
 			return err
 		}
-		c.V().SetFs(sftpfs.New(client))
+		c.GetConfig().SetFs(sftpfs.New(client))
 	}
-	err = c.V().MergeInConfig()
+	err = c.GetConfig().MergeInConfig()
 
 	// aliases have to be set AFTER loading from file (https://github.com/spf13/viper/issues/560)
 	for a, k := range c.Type().Aliases {
 		// logger.Debug.Printf("register %q as alias for %q", k, v)
-		c.V().RegisterAlias(a, k)
+		c.GetConfig().RegisterAlias(a, k)
 	}
 	if err == nil {
-		logDebug.Printf("config loaded for %s from %q", c, c.V().ConfigFileUsed())
+		logDebug.Printf("config loaded for %s from %q", c, c.GetConfig().ConfigFileUsed())
 	}
 	return
 }
@@ -343,7 +343,7 @@ var textJoinFuncs = template.FuncMap{"join": filepath.Join}
 // struct tags.
 func SetDefaults(c geneos.Instance, name string) (err error) {
 	aliases := c.Type().Aliases
-	c.V().SetDefault("name", name)
+	c.GetConfig().SetDefault("name", name)
 	if c.Type().Defaults != nil {
 		// set bootstrap values used by templates
 		root := c.Host().GetString("geneos")
@@ -356,11 +356,11 @@ func SetDefaults(c geneos.Instance, name string) (err error) {
 				logError.Println(c, "parse error:", v)
 				return err
 			}
-			if c.V() == nil {
+			if c.GetConfig() == nil {
 				logError.Println("no config found")
 			}
 			// add a bootstrap for 'root'
-			settings := c.V().AllSettings()
+			settings := c.GetConfig().AllSettings()
 			settings["root"] = root
 			if err = val.Execute(&b, settings); err != nil {
 				log.Println(c, "cannot set defaults:", v)
@@ -373,7 +373,7 @@ func SetDefaults(c geneos.Instance, name string) (err error) {
 					k = nk
 				}
 			}
-			c.V().SetDefault(k, b.String())
+			c.GetConfig().SetDefault(k, b.String())
 		}
 	}
 
@@ -403,27 +403,27 @@ func SetExtendedValues(c geneos.Instance, x ExtraConfigValues) (changed bool) {
 	}
 
 	if len(x.Gateways) > 0 {
-		gateways := c.V().GetStringMapString("gateways")
+		gateways := c.GetConfig().GetStringMapString("gateways")
 		for k, v := range x.Gateways {
 			gateways[k] = v
 		}
-		c.V().Set("gateways", gateways)
+		c.GetConfig().Set("gateways", gateways)
 	}
 
 	if len(x.Includes) > 0 {
-		incs := c.V().GetStringMapString("includes")
+		incs := c.GetConfig().GetStringMapString("includes")
 		for k, v := range x.Includes {
 			incs[k] = v
 		}
-		c.V().Set("includes", incs)
+		c.GetConfig().Set("includes", incs)
 	}
 
 	if len(x.Variables) > 0 {
-		vars := c.V().GetStringMapString("variables")
+		vars := c.GetConfig().GetStringMapString("variables")
 		for k, v := range x.Variables {
 			vars[k] = v
 		}
-		c.V().Set("variables", vars)
+		c.GetConfig().Set("variables", vars)
 	}
 
 	return
@@ -437,10 +437,10 @@ func setSlice(c geneos.Instance, items []string, setting string, key func(string
 	}
 
 	newvals := []string{}
-	vals := c.V().GetStringSlice(setting)
+	vals := c.GetConfig().GetStringSlice(setting)
 
 	if len(vals) == 0 {
-		c.V().Set(setting, items)
+		c.GetConfig().Set(setting, items)
 		changed = true
 		return
 	}
@@ -468,7 +468,7 @@ func setSlice(c geneos.Instance, items []string, setting string, key func(string
 
 	// check old values against map, copy those that do not exist
 
-	c.V().Set(setting, newvals)
+	c.GetConfig().Set(setting, newvals)
 	return
 }
 

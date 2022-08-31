@@ -130,22 +130,22 @@ func CopyInstance(ct *geneos.Component, srcname, dstname string, remove bool) (e
 	}(src.String(), src.Host(), src.Home(), dst)
 
 	// update *Home manually, as it's not just the prefix
-	realdst.V().Set("home", filepath.Join(dst.Type().ComponentDir(dr), ds))
+	realdst.GetConfig().Set("home", filepath.Join(dst.Type().ComponentDir(dr), ds))
 	// dst.Unload()
 
 	// fetch a new port if hosts are different and port is already used
 	if src.Host() != dr {
-		srcport := src.V().GetInt64("port")
+		srcport := src.GetConfig().GetInt64("port")
 		dstports := GetPorts(dr)
 		if _, ok := dstports[uint16(srcport)]; ok {
 			dstport := NextPort(dr, dst.Type())
-			realdst.V().Set("port", fmt.Sprint(dstport))
+			realdst.GetConfig().Set("port", fmt.Sprint(dstport))
 		}
 	}
 
 	// update any component name only if the same as the instance name
-	if src.V().GetString("name") == srcname {
-		realdst.V().Set("name", dstname)
+	if src.GetConfig().GetString("name") == srcname {
+		realdst.GetConfig().Set("name", dstname)
 	}
 
 	// config changes don't matter until writing config succeeds

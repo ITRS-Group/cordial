@@ -22,7 +22,7 @@ func Start(c geneos.Instance) (err error) {
 		return geneos.ErrDisabled
 	}
 
-	binary := c.V().GetString("program")
+	binary := c.GetConfig().GetString("program")
 	if _, err = c.Host().Stat(binary); err != nil {
 		return fmt.Errorf("%q %w", binary, err)
 	}
@@ -32,12 +32,12 @@ func Start(c geneos.Instance) (err error) {
 		return fmt.Errorf("buildCommand returned nil")
 	}
 
-	if !utils.CanControl(c.V().GetString("user")) {
+	if !utils.CanControl(c.GetConfig().GetString("user")) {
 		return os.ErrPermission
 	}
 
 	// set underlying user for child proc
-	username := c.V().GetString("user")
+	username := c.GetConfig().GetString("user")
 	errfile := ComponentFilepath(c, "txt")
 
 	if c.Host() != host.LOCAL {

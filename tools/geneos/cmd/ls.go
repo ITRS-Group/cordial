@@ -95,7 +95,7 @@ func lsInstancePlain(c geneos.Instance, params []string) (err error) {
 		suffix = "*"
 	}
 	base, underlying, _ := instance.Version(c)
-	fmt.Fprintf(lsTabWriter, "%s\t%s\t%s\t%d\t%s:%s\t%s\n", c.Type(), c.Name()+suffix, c.Host(), c.V().GetInt("port"), base, underlying, c.Home())
+	fmt.Fprintf(lsTabWriter, "%s\t%s\t%s\t%d\t%s:%s\t%s\n", c.Type(), c.Name()+suffix, c.Host(), c.GetConfig().GetInt("port"), base, underlying, c.Home())
 	return
 }
 
@@ -105,7 +105,7 @@ func lsInstanceCSV(c geneos.Instance, params []string) (err error) {
 		dis = "Y"
 	}
 	base, underlying, _ := instance.Version(c)
-	csvWriter.Write([]string{c.Type().String(), c.Name(), dis, c.Host().String(), fmt.Sprint(c.V().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	csvWriter.Write([]string{c.Type().String(), c.Name(), dis, c.Host().String(), fmt.Sprint(c.GetConfig().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 	return
 }
 
@@ -125,6 +125,6 @@ func lsInstanceJSON(c geneos.Instance, params []string) (err error) {
 		dis = "Y"
 	}
 	base, underlying, _ := instance.Version(c)
-	jsonEncoder.Encode(lsType{c.Type().String(), c.Name(), dis, c.Host().String(), c.V().GetInt64("port"), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	jsonEncoder.Encode(lsType{c.Type().String(), c.Name(), dis, c.Host().String(), c.GetConfig().GetInt64("port"), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 	return
 }
