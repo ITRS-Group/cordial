@@ -28,6 +28,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/logger"
@@ -152,9 +153,11 @@ func initConfig() {
 		logger.EnableDebugLog()
 	}
 
-	viper.SetEnvPrefix("ITRS")
+	// support old set-ups
 	viper.BindEnv("geneos", "ITRS_HOME")
 
+	// auto env variables must be prefixed "ITRS_"
+	viper.SetEnvPrefix("ITRS")
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
 	viper.AutomaticEnv()
@@ -165,15 +168,46 @@ func initConfig() {
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
-		viper.ReadInConfig()
+		if err := viper.ReadInConfig(); err != nil {
+			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+				logError.Fatalf("configuration file %q not found or not readable", cfgFile)
+			} else {
+				logError.Fatalln("error reading configuration file:", err)
+			}
+		}
 	} else {
 		// Search config in home directory with name "geneos" (without extension).
-		viper.SetConfigFile(geneos.GlobalConfigPath)
+		viper.AddConfigPath(geneos.GlobalConfigDir)
+		viper.SetConfigName(geneos.ConfigFileName)
 		viper.ReadInConfig()
 
-		// merge in home config
-		viper.SetConfigFile(geneos.UserConfigFilePath())
-		viper.MergeInConfig()
+		ext := filepath.Ext(viper.ConfigFileUsed())
+		if ext != "" {
+			logDebug.Println("global config file type", ext)
+			geneos.ConfigFileType = ext[1:]
+		}
+		vp := viper.New()
+		userConfDir, err := os.UserConfigDir()
+		if err != nil {
+			logError.Fatalln(err)
+		}
+		vp.AddConfigPath(userConfDir)
+		vp.SetConfigName(geneos.ConfigFileName)
+		vp.SetConfigType(geneos.ConfigFileType)
+
+		if err := vp.ReadInConfig(); err != nil {
+			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+				logError.Fatalln("configuration file not found or not readable")
+			} else {
+				logError.Fatalln("error reading configuration file:", err)
+			}
+		}
+		ext = filepath.Ext(vp.ConfigFileUsed())
+		if ext != "" {
+			log.Println("config file type", ext)
+		}
+
+		viper.MergeConfigMap(vp.AllSettings())
 	}
 
 	// manual alias+remove as the viper.RegisterAlias doesn't work as expected
