@@ -65,8 +65,8 @@ type StringList struct {
 	Strings []string `xml:"string"`
 }
 
-type Variable struct {
-	Name string `xml:"ref,attr"`
+type Reference struct {
+	Ref string `xml:"ref,attr"`
 }
 
 // A SingleLineString is a container for a single line string that
@@ -124,8 +124,8 @@ type Data struct {
 	Data    string   `xml:",chardata"`
 }
 
-// Value is a struct that contains either a Var or a Data type depending
-// on the usage.
+// A Value can contain multiple parts. In the most basic and common form
+// it is a mix of text (as "data") and variables
 type Value struct {
 	Parts []interface{}
 }
