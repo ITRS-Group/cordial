@@ -24,7 +24,6 @@ import (
 // any args with '=' are treated as parameters
 //
 // a bare argument with a '@' prefix means all instance of type on a host
-//
 func parseArgs(cmd *cobra.Command, rawargs []string) {
 	var wild bool
 	var newnames []string
@@ -61,7 +60,9 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 
 	logDebug.Println("rawargs, params", rawargs, params)
 
-	a["ct"] = "none"
+	if _, ok := a["ct"]; !ok {
+		a["ct"] = ""
+	}
 	jsonargs, _ := json.Marshal(params)
 	a["params"] = string(jsonargs)
 
@@ -74,18 +75,28 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 			a["args"] = string(jsonargs)
 			return
 		}
-		a["ct"] = rawargs[0]
+		if a["ct"] == "" {
+			a["ct"] = rawargs[0]
+		}
 		args = rawargs[1:]
 	} else {
+		defaultComponent := a["ct"]
+		if defaultComponent == "" && len(rawargs) > 0 {
+			defaultComponent = rawargs[0]
+		}
 		// work through wildcard options
 		if len(rawargs) == 0 {
 			// nothing
-		} else if ct = geneos.ParseComponentName(rawargs[0]); ct == nil {
+		} else if ct = geneos.ParseComponentName(defaultComponent); ct == nil {
 			// first arg is not a known type, so treat the rest as instance names
 			args = rawargs
 		} else {
-			a["ct"] = rawargs[0]
-			args = rawargs[1:]
+			if a["ct"] == "" {
+				a["ct"] = rawargs[0]
+				args = rawargs[1:]
+			} else {
+				args = rawargs
+			}
 		}
 
 		if len(args) == 0 {
@@ -201,7 +212,7 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 }
 
 func cmdArgs(cmd *cobra.Command) (ct *geneos.Component, args []string) {
-	logDebug.Println("ct", cmd.Annotations["ct"], ct)
+	logDebug.Println("ct", cmd.Annotations, ct)
 	ct = geneos.ParseComponentName(cmd.Annotations["ct"])
 	if err := json.Unmarshal([]byte(cmd.Annotations["args"]), &args); err != nil {
 		logDebug.Println(err)

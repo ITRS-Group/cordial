@@ -45,6 +45,8 @@ type DataItem struct {
 // to allow the Table field to be iterated over in the same order as the
 // Geneos dataview table.
 type Dataview struct {
+	Name             string                         `json:"name"`
+	XPath            *xpath.XPath                   `json:"xpath"`
 	SampleTime       time.Time                      `json:"sample-time,omitempty"`
 	Snoozed          bool                           `json:"snoozed,omitempty"`
 	SnoozedAncestors bool                           `json:"snoozed-ancestors,omitempty"`
@@ -103,8 +105,12 @@ func (c *Connection) Snapshot(target *xpath.XPath, scope ...Scope) (dataview *Da
 		dataview.Columns = append(dataview.Columns, k)
 	}
 	sort.Strings(dataview.Columns)
+
 	// XXX until the first column is supplied, prepend a constant
 	dataview.Columns = append([]string{"rowname"}, dataview.Columns...)
+
+	dataview.Name = target.Dataview.Name
+	dataview.XPath = target
 
 	return
 }
