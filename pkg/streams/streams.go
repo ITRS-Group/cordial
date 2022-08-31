@@ -57,12 +57,13 @@ func (s Stream) Write(data []byte) (n int, err error) {
 	if s.name == "" {
 		return 0, fmt.Errorf("streamname not set")
 	}
+	// set written length before trimming
+	n = len(data)
 	data = bytes.TrimSpace(data)
 	err = s.WriteMessage(s.name, string(data))
 	if err != nil {
 		return 0, err
 	}
-	n = len(data)
 	return
 }
 
@@ -71,11 +72,12 @@ func (s Stream) WriteString(data string) (n int, err error) {
 	if s.name == "" {
 		return 0, fmt.Errorf("streamname not set")
 	}
+	// set written length before trimming
+	n = len(data)
 	data = strings.TrimSpace(data)
 	err = s.WriteMessage(s.name, data)
 	if err != nil {
 		return 0, err
 	}
-	n = len(data)
 	return
 }
