@@ -166,7 +166,7 @@ type FTMFile struct {
 		Period string `xml:",innerxml"`
 	} `xml:"expectedPeriod,omitempty"`
 	TZOffset         string      `xml:"tzOffset>data"`
-	MonitoringPeriod interface{} `xml:"monioringPeriod"`
+	MonitoringPeriod interface{} `xml:"monitoringPeriod"`
 	Alias            string      `xml:"alias>data"`
 }
 
