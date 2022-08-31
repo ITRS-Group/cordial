@@ -109,11 +109,11 @@ func (w *Webservers) Type() *geneos.Component {
 }
 
 func (w *Webservers) Name() string {
-	return w.V().GetString("name")
+	return w.GetConfig().GetString("name")
 }
 
 func (w *Webservers) Home() string {
-	return w.V().GetString("home")
+	return w.GetConfig().GetString("home")
 }
 
 func (w *Webservers) Prefix() string {
@@ -147,7 +147,7 @@ func (w *Webservers) Loaded() bool {
 	return w.ConfigLoaded
 }
 
-func (w *Webservers) V() *config.Config {
+func (w *Webservers) GetConfig() *config.Config {
 	return w.Conf
 }
 
@@ -156,8 +156,8 @@ func (w *Webservers) SetConf(v *config.Config) {
 }
 
 func (w *Webservers) Add(username string, tmpl string, port uint16) (err error) {
-	w.V().Set("port", instance.NextPort(w.InstanceHost, &Webserver))
-	w.V().Set("user", username)
+	w.GetConfig().Set("port", instance.NextPort(w.InstanceHost, &Webserver))
+	w.GetConfig().Set("user", username)
 
 	if err = instance.WriteConfig(w); err != nil {
 		return
@@ -173,7 +173,7 @@ func (w *Webservers) Add(username string, tmpl string, port uint16) (err error) 
 	// copy default configs - use existing import routines?
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
-	configSrc := filepath.Join(w.V().GetString("install"), w.V().GetString("version"), "config")
+	configSrc := filepath.Join(w.GetConfig().GetString("install"), w.GetConfig().GetString("version"), "config")
 	if err = os.Chdir(configSrc); err != nil {
 		return
 	}
@@ -183,7 +183,7 @@ func (w *Webservers) Add(username string, tmpl string, port uint16) (err error) 
 	}
 
 	for _, source := range webserverFiles {
-		if _, err = instance.ImportFile(w.Host(), w.Home(), w.V().GetString("user"), source); err != nil {
+		if _, err = instance.ImportFile(w.Host(), w.Home(), w.GetConfig().GetString("user"), source); err != nil {
 			return
 		}
 	}
@@ -196,12 +196,12 @@ func (w *Webservers) Rebuild(initial bool) error {
 }
 
 func (w *Webservers) Command() (args, env []string) {
-	WebsBase := filepath.Join(w.V().GetString("install"), w.V().GetString("version"))
+	WebsBase := filepath.Join(w.GetConfig().GetString("install"), w.GetConfig().GetString("version"))
 	home := w.Home()
 	args = []string{
 		// "-Duser.home=" + c.WebsHome,
 		"-XX:+UseConcMarkSweepGC",
-		"-Xmx" + w.V().GetString("websxmx"),
+		"-Xmx" + w.GetConfig().GetString("websxmx"),
 		"-server",
 		"-Djava.io.tmpdir=" + home + "/webapps",
 		"-Djava.awt.headless=true",
@@ -209,7 +209,7 @@ func (w *Webservers) Command() (args, env []string) {
 		"-Dcom.itrsgroup.configuration.file=" + home + "/config/config.xml",
 		// "-Dcom.itrsgroup.dashboard.dir=<Path to dashboards directory>",
 		"-Dcom.itrsgroup.dashboard.resources.dir=" + WebsBase + "/resources",
-		"-Djava.library.path=" + w.V().GetString("libpath"),
+		"-Djava.library.path=" + w.GetConfig().GetString("libpath"),
 		"-Dlog4j2.configurationFile=file:" + home + "/config/log4j2.properties",
 		"-Dworking.directory=" + home,
 		"-Dcom.itrsgroup.legacy.database.maxconnections=100",
@@ -223,7 +223,7 @@ func (w *Webservers) Command() (args, env []string) {
 		"-XX:HeapDumpPath=/tmp",
 		"-jar", WebsBase + "/geneos-web-server.jar",
 		"-dir", WebsBase + "/webapps",
-		"-port", w.V().GetString("port"),
+		"-port", w.GetConfig().GetString("port"),
 		// "-ssl true",
 		"-maxThreads 254",
 		// "-log", LogFile(c),

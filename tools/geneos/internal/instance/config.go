@@ -226,14 +226,20 @@ func evalOldVars(c geneos.Instance, in string) (out string) {
 //
 // will return /path/to/netprobe/netprobe.json
 //
-func ComponentFilepath(c geneos.Instance, extensions ...string) (path string) {
-	filename := []string{c.Type().String()}
+func ComponentFilepath(c geneos.Instance, extensions ...string) string {
+	return filepath.Join(c.Home(), ComponentFilename(c, extensions...))
+}
+
+// ComponentFilename() returns the filename for the component named by
+// the instance similarly to ComponentFilepath
+func ComponentFilename(c geneos.Instance, extensions ...string) string {
+	parts := []string{c.Type().String()}
 	if len(extensions) > 0 {
-		filename = append(filename, extensions...)
+		parts = append(parts, extensions...)
 	} else {
-		filename = append(filename, ConfigType)
+		parts = append(parts, ConfigType)
 	}
-	return filepath.Join(c.Home(), strings.Join(filename, "."))
+	return strings.Join(parts, ".")
 }
 
 // write out an instance configuration file.
