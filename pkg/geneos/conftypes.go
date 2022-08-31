@@ -1,4 +1,4 @@
-package config
+package geneos
 
 import (
 	"encoding/xml"
@@ -23,7 +23,7 @@ type Vars struct {
 // initialise one field to an empty struct, the rest must be nil
 // pointers. e.g.
 //
-//	macro := config.Macro{InsecureGatewayPort: &config.EmptyStruct{}}
+//	macro := geneos.Macro{InsecureGatewayPort: &geneos.EmptyStruct{}}
 //
 type Macro struct {
 	InsecureGatewayPort *EmptyStruct `xml:"insecureGatewayPort,omitempty"`
