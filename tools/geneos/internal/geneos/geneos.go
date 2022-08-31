@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -50,7 +50,7 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 		// default or error
 	}
 
-	// dir must first not exist (or be empty) and then be createable
+	// dir must first not exist (or be empty) and then be creatable
 	//
 	// maybe check that the entire list of registered directories are
 	// either directories or do not exist
@@ -76,17 +76,17 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 	}
 
 	if r == host.LOCAL {
-		viper.Set("geneos", opts.homedir)
-		viper.Set("defaultuser", opts.username)
+		config.GetConfig().Set("geneos", opts.homedir)
+		config.GetConfig().Set("defaultuser", opts.username)
 
 		if utils.IsSuperuser() {
-			if err = host.LOCAL.WriteConfigFile(GlobalConfigPath, "root", 0664, viper.AllSettings()); err != nil {
+			if err = host.LOCAL.WriteConfigFile(GlobalConfigPath, "root", 0664, config.GetConfig().AllSettings()); err != nil {
 				logError.Fatalln("cannot write global config", err)
 			}
 		} else {
 			userConfFile := UserConfigFilePath()
 
-			if err = host.LOCAL.WriteConfigFile(userConfFile, opts.username, 0664, viper.AllSettings()); err != nil {
+			if err = host.LOCAL.WriteConfigFile(userConfFile, opts.username, 0664, config.GetConfig().AllSettings()); err != nil {
 				return err
 			}
 		}

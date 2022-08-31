@@ -24,10 +24,10 @@ package cmd
 import (
 	"strings"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // setCmd represents the set command
@@ -107,9 +107,6 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 // XXX muddled - fix
 func writeConfigParams(filename string, params []string) (err error) {
 	vp := readConfigFile(filename)
-	// vp := viper.New()
-	// vp.SetConfigFile(filename)
-	// vp.ReadInConfig()
 
 	// change here
 	for _, set := range params {
@@ -133,8 +130,8 @@ func writeConfigParams(filename string, params []string) (err error) {
 	return vp.WriteConfig()
 }
 
-func readConfigFile(path string) (v *viper.Viper) {
-	v = viper.New()
+func readConfigFile(path string) (v *config.Config) {
+	v = config.New()
 	v.SetConfigFile(path)
 	v.ReadInConfig()
 	return

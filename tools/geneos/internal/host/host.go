@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/spf13/viper"
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 const UserHostFile = "geneos-hosts.json"
@@ -19,8 +19,7 @@ const ALLHOSTS = "all"
 var LOCAL, ALL *Host
 
 type Host struct {
-	// use a viper to store config
-	*viper.Viper
+	*config.Config
 
 	// loaded from config or just an instance?
 	// always true for LOCALHOST and ALLHOSTS
@@ -46,31 +45,31 @@ func Init() {
 
 // return the absolute path to the local Geneos installation
 func Geneos() string {
-	home := viper.GetString("geneos")
+	home := config.GetString("geneos")
 	if home == "" {
 		// fallback to support breaking change
-		return viper.GetString("itrshome")
+		return config.GetString("itrshome")
 	}
 	return home
 }
 
 // interface method set
 
-// XXX new needs the top level viper and passes back a Sub()
+// XXX new needs the top level config and passes back a Sub()
 func Get(name string) (c *Host) {
 	switch name {
 	case LOCALHOST:
 		if LOCAL != nil {
 			return LOCAL
 		}
-		c = &Host{viper.New(), true, nil}
+		c = &Host{config.New(), true, nil}
 		c.Set("name", LOCALHOST)
 		c.GetOSReleaseEnv()
 	case ALLHOSTS:
 		if ALL != nil {
 			return ALL
 		}
-		c = &Host{viper.New(), true, nil}
+		c = &Host{config.New(), true, nil}
 		c.Set("name", ALLHOSTS)
 	default:
 		r, ok := hosts.Load(name)
@@ -81,7 +80,7 @@ func Get(name string) (c *Host) {
 			}
 		}
 		// or bootstrap, but NOT save a new one
-		c = &Host{viper.New(), false, nil}
+		c = &Host{config.New(), false, nil}
 		c.Set("name", name)
 		hosts.Store(name, c)
 	}
@@ -191,9 +190,9 @@ func AllHosts() (hs []*Host) {
 }
 
 func ReadConfigFile() {
-	var hs *viper.Viper
+	var hs *config.Config
 
-	h := viper.New()
+	h := config.New()
 	h.SetConfigFile(UserHostsFilePath())
 	h.ReadInConfig()
 	if h.InConfig("hosts") {
@@ -207,7 +206,7 @@ func ReadConfigFile() {
 
 	if hs != nil {
 		for n, h := range hs.AllSettings() {
-			v := viper.New()
+			v := config.New()
 			v.MergeConfigMap(h.(map[string]interface{}))
 			hosts.Store(n, &Host{v, true, nil})
 		}
@@ -215,7 +214,7 @@ func ReadConfigFile() {
 }
 
 func WriteConfigFile() error {
-	n := viper.New()
+	n := config.New()
 
 	hosts.Range(func(k, v interface{}) bool {
 		name := k.(string)

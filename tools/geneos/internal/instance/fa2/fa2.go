@@ -3,11 +3,11 @@ package fa2
 import (
 	"sync"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/viper"
 )
 
 var FA2 = geneos.Component{
@@ -73,7 +73,7 @@ func New(name string) geneos.Instance {
 		}
 	}
 	c := &FA2s{}
-	c.Conf = viper.New()
+	c.Conf = config.New()
 	c.InstanceHost = r
 	// c.root = r.V().GetString("geneos")
 	c.Component = &FA2
@@ -130,11 +130,11 @@ func (n *FA2s) Loaded() bool {
 	return n.ConfigLoaded
 }
 
-func (n *FA2s) V() *viper.Viper {
+func (n *FA2s) V() *config.Config {
 	return n.Conf
 }
 
-func (n *FA2s) SetConf(v *viper.Viper) {
+func (n *FA2s) SetConf(v *config.Config) {
 	n.Conf = v
 }
 

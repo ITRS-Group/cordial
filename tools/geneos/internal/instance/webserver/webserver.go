@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/viper"
 )
 
 var Webserver = geneos.Component{
@@ -76,7 +76,7 @@ func New(name string) geneos.Instance {
 		}
 	}
 	c := &Webservers{}
-	c.Conf = viper.New()
+	c.Conf = config.New()
 	c.InstanceHost = r
 	c.Component = &Webserver
 	if err := instance.SetDefaults(c, local); err != nil {
@@ -147,11 +147,11 @@ func (w *Webservers) Loaded() bool {
 	return w.ConfigLoaded
 }
 
-func (w *Webservers) V() *viper.Viper {
+func (w *Webservers) V() *config.Config {
 	return w.Conf
 }
 
-func (w *Webservers) SetConf(v *viper.Viper) {
+func (w *Webservers) SetConf(v *config.Config) {
 	w.Conf = v
 }
 

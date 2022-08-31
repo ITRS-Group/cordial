@@ -13,14 +13,14 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/spf13/viper"
 )
 
 const defaultURL = "https://resources.itrsgroup.com/download/latest/"
 
 func init() {
-	viper.SetDefault("download.url", defaultURL)
+	config.GetConfig().SetDefault("download.url", defaultURL)
 }
 
 // how to split an archive name into type and version
@@ -102,13 +102,13 @@ func OpenLocalFileOrURL(source string) (from io.ReadCloser, filename string, err
 		}
 		// only use auth if required
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
-			if viper.GetString("download.username") != "" {
+			if config.GetString("download.username") != "" {
 				var req *http.Request
 				client := &http.Client{}
 				if req, err = http.NewRequest("GET", u.String(), nil); err != nil {
 					logError.Fatalln(err)
 				}
-				req.SetBasicAuth(viper.GetString("download.username"), viper.GetString("download.password"))
+				req.SetBasicAuth(config.GetString("download.username"), config.GetString("download.password"))
 				if resp, err = client.Do(req); err != nil {
 					logError.Fatalln(err)
 				}
