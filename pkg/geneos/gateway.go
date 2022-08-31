@@ -131,13 +131,14 @@ type Samplers struct {
 // A Sampler is a Geneos Sampler structure. The Plugin field should be
 // populated with a pointer to a Plugin struct of the wanted type.
 type Sampler struct {
-	XMLName   xml.Name          `xml:"sampler"`
-	Name      string            `xml:"name,attr"`
-	Comment   string            `xml:",comment"`
-	Group     *SingleLineString `xml:"var-group,omitempty"`
-	Interval  *Value            `xml:"sampleInterval,omitempty"`
-	Plugin    interface{}       `xml:"plugin"`
-	Dataviews *[]Dataview       `xml:"dataviews>dataview,omitempty"`
+	XMLName         xml.Name          `xml:"sampler"`
+	Name            string            `xml:"name,attr"`
+	Comment         string            `xml:",comment"`
+	Group           *SingleLineString `xml:"var-group,omitempty"`
+	Interval        *Value            `xml:"sampleInterval,omitempty"`
+	SampleOnStartup bool              `xml:"sampleOnStartup"`
+	Plugin          interface{}       `xml:"plugin"`
+	Dataviews       *[]Dataview       `xml:"dataviews>dataview,omitempty"`
 }
 
 // FTM
