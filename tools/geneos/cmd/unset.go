@@ -75,6 +75,8 @@ func commandUnset(ct *geneos.Component, args []string) error {
 	return instance.ForAll(ct, unsetInstance, args, []string{})
 }
 
+var warned bool
+
 func unsetInstance(c geneos.Instance, params []string) (err error) {
 	var changed bool
 	logDebug.Println("c", c, "params", params)
@@ -89,14 +91,19 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 			changed = true
 		}
 	}
-	if changed {
-		if err = instance.Migrate(c); err != nil {
-			logError.Fatalln("cannot migrate existing .rc config to set values in new .json configration file:", err)
-		}
 
-		if err = instance.WriteConfigValues(c, s); err != nil {
-			logError.Fatalln(err)
-		}
+	if !changed && !warned {
+		log.Println("nothing unset. perhaps you forgot to use -k -KEY or one of the other options?")
+		warned = true
+		return
+	}
+
+	if err = instance.Migrate(c); err != nil {
+		logError.Fatalln("cannot migrate existing .rc config to set values in new .json configration file:", err)
+	}
+
+	if err = instance.WriteConfigValues(c, s); err != nil {
+		logError.Fatalln(err)
 	}
 
 	return
