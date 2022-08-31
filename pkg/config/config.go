@@ -108,22 +108,41 @@ func (c *Config) GetStringMapString(s string, confmap ...map[string]string) (m m
 	return m
 }
 
-// Return a string that has all contents of the form ${var} or $var
-// expanded according to the following rules:
+// ExpandString returns it's input with any occurrences of the form
+// ${name} or $name substituted using [os.Expand] for the formats
+// in the order given below:
 //
-//		url - read the contents of the url, which can be a local file, as below:
-//			${file://path/to/file} - read the entire contents of the file, trim whitespace
-//			${https://host/path} - fetch the remote contents, trim whitespace. "http:" also supported.
-//		${env:VARNAME} - replace with the contents of the environment variable VARNAME, trim whitespace
-//		${path.to.config} - and var containing a '.' will be looked up in global viper config space - this is NOT recursive
-//		${name} - replace with the contents of confmap["name"] - trim whitespace - if confmap is empty then try the environment
+//      * ${path.to.config}
+//      Any name containing one or more dots '.' will be looked up in the
+//      running configuration (which can include existing settings outside
+//      of any configuration file being read by the caller)
+//      * ${name}
+//      'name' will be substituted with the corresponding value from the map
+//      'confmap'. If 'confmap' is empty (as opposed to a name not being found)
+//      then name is looked up from the environment, as below
+//      * ${env:name}
+//      'name' with be substituted with the contents of the environment
+//		variable of the same name.
+//      * ${file://path/to/file} or ${file:~/path/to/file}
+//      The contents of the referenced file will be read-in when the
+//      configuration is loaded. Multiline files are used as-is so this
+//		can, for example, be used to read PEM certificate files or keys.
+//		As a change to a real file url, if the first '/' is replaced with
+//		a tilde '~' then the path is relative to the home directory of
+//		the user running the process.
+//      * ${https://host/path} or ${http://host/path}
+//      The contents of the URL are fetched and used similarly as for
+//		local files above.
 //
-// While the form $var is also supported but may be ambiguous and is not
-// recommended.
+// The form $name is also supported, as per [os.Expand] but may be
+// ambiguous and is not recommended.
 //
-// If confmap is not given then environment variables are used directly.
+// Expansion is not recursive. For each substitution any leading and
+// trailing whitespace are removed.
 //
-// Any errors result in an empty string being returned.
+// Any errors (particularly from substitutions from external files or
+// remote URLs) may result in an empty or corrupt string being returned.
+// Error returns are intentionally discarded.
 //
 func (c *Config) ExpandString(input string, confmap map[string]string) (value string) {
 	value = os.Expand(input, func(s string) (r string) {
