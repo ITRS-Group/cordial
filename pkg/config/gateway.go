@@ -1,5 +1,5 @@
 /*
-Geneos configuration data model, sparsly populated
+Geneos configuration data model, sparsely populated
 
 As the requirements for the various configuration items increases, just
 add more to these structs
@@ -14,7 +14,6 @@ package config
 
 import (
 	"encoding/xml"
-	"strings"
 	"time"
 )
 
@@ -116,7 +115,7 @@ type GatewaySQLSampler struct {
 	Name      string            `xml:"name,attr"`
 	Comment   string            `xml:",comment"`
 	Group     string            `xml:"var-group>data"`
-	Interval  *VarData          `xml:"sampleInterval,omitempty"`
+	Interval  *DataOrVar        `xml:"sampleInterval,omitempty"`
 	Setup     string            `xml:"plugin>Gateway-sql>setupSql>sql>data"`
 	Tables    []GatewaySQLTable `xml:"plugin>Gateway-sql>tables>xpath"`
 	Views     []View            `xml:"plugin>Gateway-sql>views>view"`
@@ -137,9 +136,9 @@ type Column struct {
 }
 
 type View struct {
-	XMLName  xml.Name         `xml:"view"`
-	ViewName SingleLineString `xml:"name"`
-	SQL      string           `xml:"sql>data"`
+	XMLName  xml.Name            `xml:"view"`
+	ViewName SingleLineStringVar `xml:"name"`
+	SQL      string              `xml:"sql>data"`
 }
 
 type FTMSampler struct {
@@ -147,7 +146,7 @@ type FTMSampler struct {
 	Name                       string     `xml:"name,attr"`
 	Comment                    string     `xml:",comment"`
 	Group                      string     `xml:"var-group>data"`
-	Interval                   *VarData   `xml:"sampleInterval,omitempty"`
+	Interval                   *DataOrVar `xml:"sampleInterval,omitempty"`
 	Files                      []FTMFile  `xml:"plugin>ftm>files>file"`
 	ConsistentDateStamps       bool       `xml:"plugin>ftm>consistentDateStamps>data,omitempty"`
 	DisplayTimeInISO8601Format bool       `xml:"plugin>ftm>displayTimeInIso8601Format>data,omitempty"`
@@ -191,14 +190,14 @@ type SQLToolkitSampler struct {
 	Name       string       `xml:"name,attr"`
 	Comment    string       `xml:",comment"`
 	Group      string       `xml:"var-group>data"`
-	Interval   *VarData     `xml:"sampleInterval,omitempty"`
+	Interval   *DataOrVar   `xml:"sampleInterval,omitempty"`
 	Queries    []Query      `xml:"plugin>sql-toolkit>queries>query"`
 	Connection DBConnection `xml:"plugin>sql-toolkit>connection"`
 }
 
 type Query struct {
-	Name string           `xml:"name>data"`
-	SQL  SingleLineString `xml:"sql"`
+	Name string              `xml:"name>data"`
+	SQL  SingleLineStringVar `xml:"sql"`
 }
 
 type DBConnection struct {
@@ -232,14 +231,14 @@ type ToolkitSampler struct {
 	Name                 string                `xml:"name,attr"`
 	Comment              string                `xml:",comment"`
 	Group                string                `xml:"var-group>data"`
-	Interval             *VarData              `xml:"sampleInterval,omitempty"`
+	Interval             *DataOrVar            `xml:"sampleInterval,omitempty"`
 	SamplerScript        string                `xml:"plugin>toolkit>samplerScript>data"`
 	EnvironmentVariables []EnvironmentVariable `xml:"plugin>toolkit>environmentVariables>variable"`
 }
 
 type EnvironmentVariable struct {
-	Name  string           `xml:"name"`
-	Value SingleLineString `xml:"value"`
+	Name  string              `xml:"name"`
+	Value SingleLineStringVar `xml:"value"`
 }
 
 type Dataview struct {
@@ -275,119 +274,4 @@ type Rule struct {
 	Priority     int      `xml:"priority"`
 	Ifs          []interface{}
 	Transactions []interface{}
-}
-
-// type Transaction struct {
-
-// }
-
-type Vars struct {
-	XMLName    xml.Name       `xml:"var"`
-	Name       string         `xml:"name,attr"`
-	Macro      *VarMacro      `xml:"macro,omitempty"`
-	String     string         `xml:"string,omitempty"`
-	StringList *VarStringList `xml:"stringList,omitempty"`
-}
-
-// these have to be pointers for the ",omitempty" logic to work.
-// only ever initialise one field to an empty struct.
-type VarMacro struct {
-	ManagedEntitiesName *Macro `xml:"managedEntityName,omitempty"`
-	InsecureGatewayPort *Macro `xml:"insecureGatewayPort,omitempty"`
-}
-
-type VarStringList struct {
-	Strings []string `xml:"string"`
-}
-
-type Macro struct{}
-
-type VarRef struct {
-	Name string `xml:"ref,attr"`
-}
-
-type Var struct {
-	XMLName xml.Name `xml:"var"`
-	Var     string   `xml:"ref,attr"`
-}
-
-type Data struct {
-	XMLName xml.Name `xml:"data"`
-	Data    string   `xml:",chardata"`
-}
-
-// A container for a single line string that can be made up of static text
-// and variable references. Use like this:
-//
-//	type MyContainer struct {
-//		XMLName  xml.Name         `xml:"mycontainer`
-//		VarField SingleLineString `xml:"fieldname"`
-//	}
-//
-//	func blah() {
-//		x := MyContainer{
-//			VarField: geneos.NewSingleLineString(geneos.Data{Data: "hello"}, geneos.Var{Var: "world"}, geneos.Data{Data: "!"})
-//		}
-//		...
-//	}
-type SingleLineString struct {
-	Parts []interface{}
-}
-
-func NewSingleLineString(parts ...interface{}) (s SingleLineString) {
-	s.Parts = append([]interface{}{}, parts...)
-	return
-}
-
-// ExpandSingleLineString take a plain string and locates any Geneos style
-// variables of the form $(var) - not these are parenthesis and not brackets -
-// and splits the string into Data and Var parts as required so that this can be
-// used directly in the XML encodings
-func ExpandSingleLineString(in string) (s SingleLineString) {
-	for i := 0; i < len(in); i++ {
-		st := strings.Index(in[i:], "$(")
-		if st == -1 {
-			s.Parts = append(s.Parts, Data{Data: in[i:]})
-			return
-		}
-		if st > 0 {
-			s.Parts = append(s.Parts, Data{Data: in[i : i+st]})
-		}
-		en := strings.Index(in[i+st+2:], ")")
-		if en == -1 {
-			s.Parts = append(s.Parts, Var{Var: in[i+st+2:]})
-			return
-		}
-		s.Parts = append(s.Parts, Var{Var: in[i+st+2 : i+st+2+en]})
-		i += st + 2 + en
-	}
-
-	return
-}
-
-// VarData is a struct that contains either a Var or a Data type depending
-// on the usage.
-type VarData struct {
-	Part interface{}
-}
-
-// NewVarData takes a string argument and removes leading and trailing
-// spaces. If the string is of the form "$(var)" then returns a pointer
-// to a VarData struct containing a Var{} or if a non-empty string
-// returns a Data{}. If the string is empty then a nil pointer is
-// returned. This allows `xml:",omixempty"`` to leave out VarData fields
-// that contain no data.
-func NewVarData(s string) (n *VarData) {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return
-	}
-	n = &VarData{}
-	if strings.HasPrefix(s, "$(") && strings.HasSuffix(s, ")") {
-		n.Part = Var{Var: s[2 : len(s)-1]}
-	} else {
-		n.Part = Data{Data: s}
-	}
-
-	return
 }
