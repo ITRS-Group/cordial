@@ -28,7 +28,7 @@ func AllowInsecureCertificates(opt bool) CommandOptions {
 
 // override the ping() function used to test the availability of
 // the gateway when used with DialGateways() and Redial()
-func Ping(ping func(*Connection) bool) CommandOptions {
+func Ping(ping func(*Connection) error) CommandOptions {
 	return func(c *Connection) {
 		c.ping = &ping
 	}
