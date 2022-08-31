@@ -264,12 +264,13 @@ type EnvironmentVariable struct {
 }
 
 type APISampler struct {
-	XMLName    xml.Name    `xml:"sampler"`
-	Name       string      `xml:"name,attr"`
-	Comment    string      `xml:",comment"`
-	Group      string      `xml:"var-group>data"`
-	Interval   *DataOrVar  `xml:"sampleInterval,omitempty"`
-	Parameters []Parameter `xml:"plugin>api>parameters>parameter"`
+	XMLName     xml.Name             `xml:"sampler"`
+	Name        string               `xml:"name,attr"`
+	Comment     string               `xml:",comment"`
+	Group       string               `xml:"var-group>data"`
+	Interval    *DataOrVar           `xml:"sampleInterval,omitempty"`
+	Parameters  []Parameter          `xml:"plugin>api>parameters>parameter"`
+	SummaryView *SingleLineStringVar `xml:"plugin>api>showSummaryView>always>viewName,omitempty"`
 }
 
 type Parameter struct {
