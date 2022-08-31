@@ -27,18 +27,7 @@ import (
 	"io"
 	"net/url"
 
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/xmlrpc"
-)
-
-func init() {
-	// logger.EnableDebugLog()
-}
-
-var (
-	log      = logger.Log
-	logDebug = logger.Debug
-	logError = logger.Error
 )
 
 type Stream struct {

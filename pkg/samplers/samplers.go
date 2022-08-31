@@ -31,19 +31,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/plugins"
 	"github.com/itrs-group/cordial/pkg/xmlrpc"
-)
-
-func init() {
-	// logger.EnableDebugLog()
-}
-
-var (
-	log      = logger.Log
-	logDebug = logger.Debug
-	logError = logger.Error
 )
 
 type SamplerInstance interface {
@@ -104,19 +93,17 @@ func (p *Samplers) initSamplerInternal() error {
 	if v, ok := interface{}(p.Plugins).(interface{ InitSampler() error }); ok {
 		return v.InitSampler()
 	}
-	log.Print("no InitSampler() found in plugin")
-	return nil
+	return fmt.Errorf("no InitSampler() found in plugin")
 }
 
 func (p *Samplers) doSampleInterval() error {
 	if v, ok := interface{}(p.Plugins).(interface{ DoSample() error }); ok {
 		return v.DoSample()
 	}
-	log.Print("no DoSample() found in plugin")
-	return nil
+	return fmt.Errorf("no DoSample() found in plugin")
 }
 
-func (s *Samplers) New(p plugins.Connection, name string, group string) error {
+func (s *Samplers) New(p *plugins.Connection, name string, group string) error {
 	s.name, s.group = name, group
 	return s.initDataviews(p)
 }
@@ -153,7 +140,7 @@ func (p Samplers) SortColumn() string {
 	return p.sortcolumn
 }
 
-func (s *Samplers) initDataviews(p plugins.Connection) (err error) {
+func (s *Samplers) initDataviews(p *plugins.Connection) (err error) {
 	d, err := p.NewDataview(s.group, s.name)
 	if err != nil {
 		return
@@ -167,8 +154,7 @@ func (p *Samplers) Start(wg *sync.WaitGroup) (err error) {
 		err = fmt.Errorf("Start(): Dataview not defined")
 		return
 	}
-	err = p.initSamplerInternal()
-	if err != nil {
+	if err = p.initSamplerInternal(); err != nil {
 		return
 	}
 	wg.Add(1)
@@ -183,8 +169,6 @@ func (p *Samplers) Start(wg *sync.WaitGroup) (err error) {
 			}
 		}
 		wg.Done()
-		log.Printf("sampler %q exiting\n", p)
-
 	}()
 	return
 }
@@ -229,7 +213,6 @@ func (s Samplers) ColumnInfo(rowdata interface{}) (cols Columns,
 		if tags, ok := rt.Field(i).Tag.Lookup("column"); ok {
 			column, err = parseTags(fieldname, tags)
 			if err != nil {
-				logDebug.Println("cannot parse tags:", err)
 				return
 			}
 			// check for already set values and error
