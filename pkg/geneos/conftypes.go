@@ -70,34 +70,30 @@ type VarRef struct {
 	Name string `xml:"ref,attr"`
 }
 
-// A container for a single line string that can be made up of static text
-// and variable references. Use like this:
+// A SingleLineString is a container for a single line string that
+// can be made up of static text and variable references. Use like this:
 //
-//	type MyContainer struct {
-//		XMLName  xml.Name         `xml:"mycontainer`
-//		VarField SingleLineStringVar `xml:"fieldname"`
-//	}
+//  type MyContainer struct {
+//      XMLName  xml.Name             `xml:"mycontainer`
+//      VarField *SingleLineString `xml:"fieldname"`
+//  }
 //
-//	func blah() {
-//		x := MyContainer{
-//			VarField: geneos.NewSingleLineString(geneos.Data{Data: "hello"}, geneos.Var{Var: "world"}, geneos.Data{Data: "!"})
-//		}
-//		...
-//	}
-type SingleLineStringVar struct {
+//  func blah() {
+//      x := MyContainer{
+//          VarField: geneos.SingleLineString("hello $(var) world!")
+//      }
+//      ...
+//  }
+type SingleLineString struct {
 	Parts []interface{}
 }
 
-func NewSingleLineStringVar(parts ...interface{}) (s SingleLineStringVar) {
-	s.Parts = append([]interface{}{}, parts...)
-	return
-}
-
-// ExpandSingleLineStringVar take a plain string and locates any Geneos style
+// NewSingleLineString take a plain string and locates any Geneos style
 // variables of the form $(var) - note these are parenthesis and not brackets -
 // and splits the string into Data and Var parts as required so that this can be
-// used directly in the XML encodings
-func ExpandSingleLineStringVar(in string) (s SingleLineStringVar) {
+// used directly in the XML encodings.
+func NewSingleLineString(in string) (s *SingleLineString) {
+	s = &SingleLineString{}
 	for i := 0; i < len(in); i++ {
 		st := strings.Index(in[i:], "$(")
 		if st == -1 {
@@ -132,7 +128,7 @@ type Data struct {
 // DataOrVar is a struct that contains either a Var or a Data type depending
 // on the usage.
 type DataOrVar struct {
-	Part interface{}
+	Parts []interface{}
 }
 
 // NewDataOrVar takes a string argument and removes leading and trailing
@@ -141,16 +137,21 @@ type DataOrVar struct {
 // returns a Data{}. If the string is empty then a nil pointer is
 // returned. This allows `xml:",omixempty"`` to leave out VarData fields
 // that contain no data.
-func NewDataOrVar(s string) (n *DataOrVar) {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return
-	}
+func NewDataOrVar(in interface{}) (n *DataOrVar) {
 	n = &DataOrVar{}
-	if strings.HasPrefix(s, "$(") && strings.HasSuffix(s, ")") {
-		n.Part = Var{Var: s[2 : len(s)-1]}
-	} else {
-		n.Part = Data{Data: s}
+	switch s := in.(type) {
+	case string:
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return nil
+		}
+		if strings.HasPrefix(s, "$(") && strings.HasSuffix(s, ")") {
+			n.Parts = append(n.Parts, Var{Var: s[2 : len(s)-1]})
+		} else {
+			n.Parts = append(n.Parts, Data{Data: s})
+		}
+	default:
+		n.Parts = append(n.Parts, in)
 	}
 
 	return
