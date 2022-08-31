@@ -13,47 +13,47 @@ import (
 
 // Config embeds Viper and also exposes the config type used
 type Config struct {
-	viper.Viper
+	*viper.Viper
 	Type string
-	v    *viper.Viper
 }
 
-var globalConfig *Config
+var global *Config
 
 func init() {
-	globalConfig = &Config{v: viper.GetViper()}
+	v := viper.New()
+	global = &Config{Viper: v}
 }
 
 // Returns the configuration item as a string with ExpandString() applied,
 // passing the first "confmap" if given
 func GetString(s string, confmap ...map[string]string) string {
-	return globalConfig.GetString(s, confmap...)
+	return global.GetString(s, confmap...)
 }
 
 // Returns the configuration item as a string with ExpandString() applied,
 // passing the first "confmap" if given
 func (c *Config) GetString(s string, confmap ...map[string]string) string {
 	if len(confmap) > 0 {
-		return c.ExpandString(c.v.GetString(s), confmap[0])
+		return c.ExpandString(c.Viper.GetString(s), confmap[0])
 	}
-	return c.ExpandString(c.v.GetString(s), nil)
+	return c.ExpandString(c.Viper.GetString(s), nil)
 }
 
 func GetConfig() *Config {
-	return globalConfig
+	return global
 }
 
 func New() *Config {
 	v := viper.New()
-	return &Config{v: v}
+	return &Config{Viper: v}
 }
 
 func GetStringSlice(s string, confmap ...map[string]string) []string {
-	return globalConfig.GetStringSlice(s, confmap...)
+	return global.GetStringSlice(s, confmap...)
 }
 
 func (c *Config) GetStringSlice(s string, confmap ...map[string]string) (slice []string) {
-	r := c.v.GetStringSlice(s)
+	r := c.Viper.GetStringSlice(s)
 	for _, n := range r {
 		if len(confmap) > 0 {
 			slice = append(slice, c.ExpandString(n, confmap[0]))
@@ -65,13 +65,13 @@ func (c *Config) GetStringSlice(s string, confmap ...map[string]string) (slice [
 }
 
 func GetStringMapString(s string, confmap ...map[string]string) map[string]string {
-	return globalConfig.GetStringMapString(s, confmap...)
+	return global.GetStringMapString(s, confmap...)
 }
 
 func (c *Config) GetStringMapString(s string, confmap ...map[string]string) (m map[string]string) {
 	var cfmap map[string]string
 	m = make(map[string]string)
-	r := c.v.GetStringMapString(s)
+	r := c.Viper.GetStringMapString(s)
 	if len(confmap) > 0 {
 		cfmap = confmap[0]
 	}
@@ -103,7 +103,7 @@ func (c *Config) ExpandString(input string, confmap map[string]string) (value st
 		if !strings.Contains(s, ":") {
 			if strings.Contains(s, ".") {
 				// this call to GetString() must NOT be recursive
-				return strings.TrimSpace(c.v.GetString(s))
+				return strings.TrimSpace(c.Viper.GetString(s))
 			}
 			if len(confmap) == 0 {
 				return strings.TrimSpace(mapEnv(s))
@@ -184,7 +184,7 @@ func LoadConfig(configName string, options ...Options) (c *Config) {
 	evalOptions(configName, opts, options...)
 
 	if opts.useglobal {
-		c = globalConfig
+		c = global
 	} else {
 		c = New()
 	}
@@ -230,19 +230,19 @@ func LoadConfig(configName string, options ...Options) (c *Config) {
 		defaultSettings := defaults.AllSettings()
 
 		for k, v := range defaultSettings {
-			c.v.SetDefault(k, v)
+			c.Viper.SetDefault(k, v)
 		}
 	}
 
 	if opts.configFile != "" {
-		c.v.SetConfigFile(opts.configFile)
-		c.v.ReadInConfig()
+		c.Viper.SetConfigFile(opts.configFile)
+		c.Viper.ReadInConfig()
 	} else if len(confDirs) > 0 {
 		for _, d := range confDirs {
-			c.v.AddConfigPath(d)
+			c.Viper.AddConfigPath(d)
 		}
-		c.v.SetConfigName(configName)
-		c.v.ReadInConfig()
+		c.Viper.SetConfigName(configName)
+		c.Viper.ReadInConfig()
 	}
 
 	return
