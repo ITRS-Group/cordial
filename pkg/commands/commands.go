@@ -297,6 +297,9 @@ func (c *Connection) RunCommandAll(name string, target *xpath.XPath, options ...
 	if err != nil {
 		return
 	}
+	if len(targets) == 0 {
+		err = fmt.Errorf("no matches")
+	}
 	crs = []CommandsResponse{}
 
 	for _, t := range targets {
