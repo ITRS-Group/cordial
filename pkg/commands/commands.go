@@ -68,14 +68,15 @@ type CommandsResponseRaw struct {
 }
 
 type CommandsResponse struct {
-	Target   *xpath.XPath      `json:"target"`
-	MimeType map[string]string `json:"mimetype"`
-	Status   string            `json:"status"`
-	Stdout   string            `json:"stdout"`
-	Stderr   string            `json:"stderr"`
-	ExecLog  string            `json:"execLog"`
-	Dataview *Dataview         `json:"dataview"` // for snapshots only
-	XPaths   []string          `json:"xpaths"`
+	Target         *xpath.XPath      `json:"target"`
+	MimeType       map[string]string `json:"mimetype"`
+	Status         string            `json:"status"`
+	Stdout         string            `json:"stdout"`
+	StdoutMimeType string            `json:"stdout_mimetype"`
+	Stderr         string            `json:"stderr"`
+	ExecLog        string            `json:"execLog"`
+	Dataview       *Dataview         `json:"dataview"` // for snapshots only
+	XPaths         []string          `json:"xpaths"`
 }
 
 type Connection struct {
@@ -89,10 +90,21 @@ type Connection struct {
 	ping               *func(*Connection) error
 }
 
+type GeneosRESTError struct {
+	Error string `json:"error"`
+}
+
+// the default endpoint for normal commands
 const endpoint = "/rest/runCommand"
 
-// Set-up a Gateway REST command connection
-func DialGateway(u *url.URL, options ...CommandOptions) (c *Connection, err error) {
+// Connect to a Geneos gateway on the given URL and check the connection.
+// The connection is checked by trying a lightweight REST command (fetch
+// gateway timezone and time) and if an error is returned then the connection
+// should not be reused.
+//
+// Options can be given to set authentication, ignore unverifiable certificates
+// and to override the default "ping" to check the gateway connection
+func DialGateway(u *url.URL, options ...Options) (c *Connection, err error) {
 	c = &Connection{
 		rrurls: []*url.URL{u},
 	}
@@ -101,13 +113,12 @@ func DialGateway(u *url.URL, options ...CommandOptions) (c *Connection, err erro
 	return
 }
 
-// Round-Robin / random dialer. Given a slice of URLs, randomise and
-// then try each one in turn until there is a response using the
-// liveness ping function. If there is an existing connection configured
-// then that is re-tested first before moving onto next URL
+// Connect to a Geneos gateway given a slice of URLs. This is to support
+// standby pairs. Each URL is checked in a random order and the first working
+// one is returned. If all URLs fail the check then an error is returned.
 //
-// all endpoints are given the same options
-func DialGateways(urls []*url.URL, options ...CommandOptions) (c *Connection, err error) {
+// Options are the same as for DialGateway()
+func DialGateways(urls []*url.URL, options ...Options) (c *Connection, err error) {
 	c = &Connection{
 		rrurls: urls,
 	}
@@ -116,8 +127,10 @@ func DialGateways(urls []*url.URL, options ...CommandOptions) (c *Connection, er
 	return
 }
 
-// Redial the connection, finding the next working endpooint using the liveness ping() function
-// given
+// Redial the connection, finding the next working endpoint using either the default
+// ping function or the one provided when the connection was originally dialled.
+//
+// An aggregated error is returned if all endpoints fail the connection test.
 func (c *Connection) Redial() (err error) {
 	// test existing connection, use default func if not overridden
 	ping := func(*Connection) error {
@@ -155,10 +168,6 @@ func (c *Connection) Redial() (err error) {
 		errs += fmt.Sprintf("%s responded: %q\n", u, err)
 	}
 	return fmt.Errorf(errs)
-}
-
-type GeneosRESTError struct {
-	Error string `json:"error"`
 }
 
 // execute a command, return the http response
@@ -225,8 +234,8 @@ func (c *Connection) Do(endpoint string, command *Command) (cr CommandsResponse,
 	return
 }
 
-// Convert a raw response into a slightly more structured one where the interleaved
-// stream messages are merged, in order, into slices for each stream
+// Convert a raw response into a structured one where the interleaved
+// stream messages are concatenated into strings for each stream
 func CookResponse(raw CommandsResponseRaw) (cr CommandsResponse) {
 	cr = CommandsResponse{
 		Status:   raw.Status,
@@ -320,7 +329,7 @@ func (c *Connection) Match(target *xpath.XPath, limit int) (matches []*xpath.XPa
 		// return
 	}
 	for _, p := range cr.XPaths {
-		x, err := xpath.Parse(p)
+		x, err := xpath.ParseAbs(p)
 		if err != nil {
 			panic(err)
 			// continue
@@ -342,41 +351,12 @@ func (c *Connection) CommandTargets(name string, target *xpath.XPath) (matches [
 		// return
 	}
 	for _, p := range cr.XPaths {
-		x, err := xpath.Parse(p)
+		x, err := xpath.ParseAbs(p)
 		if err != nil {
 			panic(err)
 			// continue
 		}
 		matches = append(matches, x)
 	}
-	return
-}
-
-// test commands to work out kinks in args and returns
-
-func (c *Connection) SnoozeManual(target *xpath.XPath, info string) (err error) {
-	if target.IsGateway() || target.IsProbe() || target.IsEntity() {
-		_, err = c.RunCommandAll("/SNOOZE:manual", target, Arg(1, info))
-		return
-	}
-	if target.IsSampler() || target.IsHeadline() || target.IsTableCell() || target.IsDataview() {
-		_, err = c.RunCommandAll("/SNOOZE:manualAllMe", target, Arg(1, info), Arg(5, "this"))
-	}
-	return
-}
-
-func (c *Connection) Unsnooze(target *xpath.XPath, info string) (err error) {
-	if target.IsGateway() || target.IsProbe() || target.IsEntity() {
-		_, err = c.RunCommandAll("/SNOOZE:unsnooze", target, Arg(1, info))
-		return
-	}
-	if target.Rows || target.Headline != nil || target.Sampler != nil {
-		_, err = c.RunCommandAll("/SNOOZE:unsnoozeAllMe", target, Arg(1, "this"), Arg(2, info))
-	}
-	return
-}
-
-func (c *Connection) SnoozeInfo(target *xpath.XPath) (crs []CommandsResponse, err error) {
-	crs, err = c.RunCommandAll("/SNOOZE:info", target)
 	return
 }
