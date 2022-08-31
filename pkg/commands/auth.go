@@ -20,18 +20,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-Provide authentication for REST commands. Currently only None and
-Basic supported.
-
-TODO:
-+ krb5 support using https://github.com/jcmturner/gokrb5/v8/...
-
-*/
 package commands
 
 import "net/http"
 
+// Authentication types. SSO is not currently implemented.
 const (
 	None = iota
 	Basic
