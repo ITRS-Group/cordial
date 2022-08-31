@@ -27,18 +27,55 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
-	"strconv"
 )
 
-type valueArray struct {
-	String string
-	Int    int
-	Array  interface{}
+type methodCall struct {
+	XMLName xml.Name     `xml:"methodCall"`
+	Name    string       `xml:"methodName"`
+	Params  methodParams `xml:"params,omitempty"`
 }
 
-type methodCall struct {
-	Name   string
-	Values []valueArray
+type methodParams struct {
+	Params []interface{}
+}
+
+type methodScalar struct {
+	XMLName xml.Name `xml:"param"`
+	Scalar  interface{}
+}
+
+type methodArray struct {
+	XMLName xml.Name `xml:"param"`
+	Array   interface{}
+}
+
+type methodArrayData struct {
+	XMLName xml.Name     `xml:"value"`
+	Data    []methodData `xml:"array>data"`
+}
+
+type methodData struct {
+	Value interface{}
+}
+
+type methodString struct {
+	XMLName xml.Name `xml:"value"`
+	Value   string   `xml:"string"`
+}
+
+type methodInt struct {
+	XMLName xml.Name `xml:"value"`
+	Value   int32    `xml:"int"`
+}
+
+type methodBool struct {
+	XMLName xml.Name `xml:"value"`
+	Value   int      `xml:"boolean"`
+}
+
+type methodDouble struct {
+	XMLName xml.Name `xml:"value"`
+	Value   float64  `xml:"double"`
 }
 
 type members struct {
@@ -55,11 +92,50 @@ type methodResponse struct {
 	Fault        []members `xml:"fault>value>struct>member"`
 }
 
-func (c Client) post(data methodCall) (result methodResponse, err error) {
-	// use a custom marshal function as the standard XML ones, even
-	// with customer marshallers are almost impossible to control in
-	// a way that works consistently. xml.Unmarshal() still works fine.
-	output, err := marshal(data)
+func (c Client) post(method string, args ...interface{}) (result methodResponse, err error) {
+	data := &methodCall{Name: method}
+
+	params := []interface{}{}
+
+	for _, arg := range args {
+		switch a := arg.(type) {
+		case string:
+			params = append(params, methodScalar{Scalar: methodString{Value: a}})
+		case int:
+			params = append(params, methodScalar{Scalar: methodInt{Value: int32(a)}})
+		case int32:
+			params = append(params, methodScalar{Scalar: methodInt{Value: a}})
+		case bool:
+			v := 0
+			if a {
+				v = 1
+			}
+			params = append(params, methodScalar{Scalar: methodBool{Value: v}})
+		case []string:
+			strings := []interface{}{}
+			for _, s := range a {
+				strings = append(strings, methodString{Value: s})
+			}
+			params = append(params, methodArray{Array: methodArrayData{Data: []methodData{{Value: strings}}}})
+		case [][]string:
+			stringstrings := []interface{}{}
+			for _, ss := range a {
+				strings := []interface{}{}
+				for _, s := range ss {
+					strings = append(strings, methodString{Value: s})
+				}
+				stringstrings = append(stringstrings, methodArrayData{Data: []methodData{{Value: strings}}})
+			}
+			params = append(params, methodArray{Array: methodArrayData{Data: []methodData{{Value: stringstrings}}}})
+
+		default:
+			logError.Printf("unsupported type %T", a)
+		}
+	}
+
+	data.Params = methodParams{Params: params}
+
+	output, err := xml.MarshalIndent(data, "", "    ")
 	if err != nil {
 		return
 	}
@@ -88,10 +164,8 @@ func (c Client) post(data methodCall) (result methodResponse, err error) {
 	return
 }
 
-func (c Client) methodBoolWithArgs(method string, args []valueArray) (result bool, err error) {
-	req := methodCall{Name: method, Values: args}
-
-	res, err := c.post(req)
+func (c Client) callMethodBool(method string, args ...interface{}) (result bool, err error) {
+	res, err := c.post(method, args...)
 	if err != nil {
 		return
 	}
@@ -99,21 +173,8 @@ func (c Client) methodBoolWithArgs(method string, args []valueArray) (result boo
 	return
 }
 
-func (c Client) methodBoolNoArgs(method string) (result bool, err error) {
-	req := methodCall{Name: method}
-
-	res, err := c.post(req)
-	if err != nil {
-		return
-	}
-	result = res.Boolean
-	return
-}
-
-func (c Client) methodIntNoArgs(method string) (result int, err error) {
-	req := methodCall{Name: method}
-
-	res, err := c.post(req)
+func (c Client) callMethodInt(method string, args ...interface{}) (result int, err error) {
+	res, err := c.post(method, args...)
 	if err != nil {
 		return
 	}
@@ -121,21 +182,8 @@ func (c Client) methodIntNoArgs(method string) (result int, err error) {
 	return
 }
 
-func (c Client) methodIntWithArgs(method string, args []valueArray) (result int, err error) {
-	req := methodCall{Name: method, Values: args}
-
-	res, err := c.post(req)
-	if err != nil {
-		return
-	}
-	result = res.Int
-	return
-}
-
-func (c Client) methodStringWithArgs(method string, args []valueArray) (result string, err error) {
-	req := methodCall{Name: method, Values: args}
-
-	res, err := c.post(req)
+func (c Client) callMethodString(method string, args ...interface{}) (result string, err error) {
+	res, err := c.post(method, args...)
 	if err != nil {
 		return
 	}
@@ -143,10 +191,8 @@ func (c Client) methodStringWithArgs(method string, args []valueArray) (result s
 	return result, err
 }
 
-func (c Client) methodStringsNoArgs(method string) (strings []string, err error) {
-	req := methodCall{Name: method}
-
-	result, err := c.post(req)
+func (c Client) callMethodStringSlice(method string, args ...interface{}) (strings []string, err error) {
+	result, err := c.post(method, args...)
 	if err != nil {
 		return
 	}
@@ -154,73 +200,7 @@ func (c Client) methodStringsNoArgs(method string) (strings []string, err error)
 	return
 }
 
-func (c Client) methodStringsWithArgs(method string, args []valueArray) (strings []string, err error) {
-	req := methodCall{Name: method, Values: args}
-
-	result, err := c.post(req)
-	if err != nil {
-		return
-	}
-	strings = result.SliceStrings
+func (c Client) callMethod(method string, args ...interface{}) (err error) {
+	_, err = c.post(method, args...)
 	return
-}
-
-func (c Client) methodWithArgs(method string, args []valueArray) (err error) {
-	req := methodCall{Name: method, Values: args}
-
-	_, err = c.post(req)
-	return
-}
-
-func (c Client) methodNoArgs(method string) (err error) {
-	req := methodCall{Name: method}
-
-	_, err = c.post(req)
-	return
-}
-
-func marshal(c methodCall) ([]byte, error) {
-	var err error
-	var data = "<methodCall><methodName>" + c.Name + "</methodName>"
-	if len(c.Values) > 0 {
-		data += "<params>"
-		for _, a := range c.Values {
-			data += "<param><value>"
-			if a.String != "" {
-				data += "<string>" + a.String + "</string>"
-			} else if a.Int != 0 {
-				// the only call that passes an Int is a duration in seconds,
-				// which must be greater than zero, hence this is valid
-				data += "<int>" + strconv.Itoa(a.Int) + "</int>"
-			} else if a.Array != nil {
-				data += "<array><data>"
-				switch a.Array.(type) {
-				case []string:
-					as := a.Array.([]string)
-					for _, s := range as {
-						data += "<value><string>" + s + "</string></value>"
-					}
-				case [][]string:
-					ass := a.Array.([][]string)
-					for _, s1 := range ass {
-						data += "<value><array><data>"
-						for _, s2 := range s1 {
-							data += "<value><string>" + s2 + "</string></value>"
-
-						}
-						data += "</data></array></value>"
-
-					}
-				default:
-					err = fmt.Errorf("unknown type in args")
-				}
-
-				data += "</data></array>"
-			}
-			data += "</value></param>"
-		}
-		data += "</params>"
-	}
-	data += "</methodCall>"
-	return []byte(data), err
 }

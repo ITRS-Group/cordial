@@ -7,13 +7,13 @@ import (
 )
 
 func init() {
-	// logger.EnableDebugLog()
+	logger.EnableDebugLog()
 }
 
 var (
-	log      = logger.Logger
-	logDebug = logger.DebugLogger
-	logError = logger.ErrorLogger
+	log      = logger.Log
+	logDebug = logger.Debug
+	logError = logger.Error
 )
 
 type GenericData struct {
@@ -34,8 +34,10 @@ func New(s plugins.Connection, name string, group string) (*GenericSampler, erro
 }
 
 func (g *GenericSampler) InitSampler() error {
+	logDebug.Println("called")
 	example, err := g.Parameter("EXAMPLE")
 	if err != nil {
+		logError.Println(err)
 		return nil
 	}
 	g.localdata = example
@@ -48,6 +50,7 @@ func (g *GenericSampler) InitSampler() error {
 }
 
 func (p *GenericSampler) DoSample() error {
+	logDebug.Print("called")
 	var rowdata = []GenericData{
 		{"row4", "data1", "data2"},
 		{"row2", "data1", "data2"},
