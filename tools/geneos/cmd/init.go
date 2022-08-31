@@ -151,7 +151,7 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 
 	// rewrite local templates and exit
 	if initCmdTemplates {
-		gatewayTemplates := host.LOCAL.GeneosJoinPath(gateway.Gateway.String(), "templates")
+		gatewayTemplates := host.LOCAL.Filepath(gateway.Gateway, "templates")
 		host.LOCAL.MkdirAll(gatewayTemplates, 0775)
 		tmpl := gateway.GatewayTemplate
 		if initCmdGatewayTemplate != "" {
@@ -170,7 +170,7 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 		}
 		log.Println("gateway instance template written to", filepath.Join(gatewayTemplates, gateway.GatewayInstanceTemplate))
 
-		sanTemplates := host.LOCAL.GeneosJoinPath(san.San.String(), "templates")
+		sanTemplates := host.LOCAL.Filepath(san.San, "templates")
 		host.LOCAL.MkdirAll(sanTemplates, 0775)
 		tmpl = san.SanTemplate
 		if initCmdSANTemplate != "" {
@@ -269,7 +269,7 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 		if tmpl, err = geneos.ReadLocalFileOrURL(initCmdGatewayTemplate); err != nil {
 			return
 		}
-		if err := host.LOCAL.WriteFile(host.LOCAL.GeneosJoinPath(gateway.Gateway.String(), "templates", gateway.GatewayDefaultTemplate), tmpl, 0664); err != nil {
+		if err := host.LOCAL.WriteFile(host.LOCAL.Filepath(gateway.Gateway, "templates", gateway.GatewayDefaultTemplate), tmpl, 0664); err != nil {
 			logError.Fatalln(err)
 		}
 	}
@@ -279,7 +279,7 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 		if tmpl, err = geneos.ReadLocalFileOrURL(initCmdSANTemplate); err != nil {
 			return
 		}
-		if err = host.LOCAL.WriteFile(host.LOCAL.GeneosJoinPath(san.San.String(), "templates", san.SanDefaultTemplate), tmpl, 0664); err != nil {
+		if err = host.LOCAL.WriteFile(host.LOCAL.Filepath(san.San, "templates", san.SanDefaultTemplate), tmpl, 0664); err != nil {
 			return
 		}
 	}

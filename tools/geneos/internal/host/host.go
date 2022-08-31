@@ -159,14 +159,28 @@ func Match(h string) (r []*Host) {
 	}
 }
 
-// return an absolute path anchored in the root directory of the remote host
-// this can also be LOCAL
-func (h *Host) GeneosJoinPath(paths ...string) string {
+// Filepath returns an absolute path relative to the Geneos installation
+// directory. Each argument is used as a path component and are joined
+// using filepath.Join(). Each part can be a plain string or a type with
+// a String() method - non-string types are rendered using fmt.Sprint()
+// without further error checking.
+func (h *Host) Filepath(parts ...interface{}) string {
+	strParts := []string{}
+
 	if h == nil {
 		logError.Fatalln("host is nil")
 	}
 
-	return filepath.Join(append([]string{h.GetString("geneos")}, paths...)...)
+	for _, p := range parts {
+		switch s := p.(type) {
+		case string:
+			strParts = append(strParts, s)
+		default:
+			strParts = append(strParts, fmt.Sprint(s))
+		}
+	}
+
+	return filepath.Join(append([]string{h.GetString("geneos")}, strParts...)...)
 }
 
 func (h *Host) FullName(name string) string {
