@@ -140,33 +140,6 @@ type Sampler struct {
 	Dataviews *[]Dataview       `xml:"dataviews>dataview,omitempty"`
 }
 
-// Gateway-SQL
-
-type GatewaySQLPlugin struct {
-	Setup  *SingleLineString `xml:"Gateway-sql>setupSql>sql"`
-	Tables []GatewaySQLTable `xml:"Gateway-sql>tables>xpath"`
-	Views  []GWSQLView       `xml:"Gateway-sql>views>view"`
-}
-
-type GatewaySQLTable struct {
-	XMLName xml.Name          `xml:"xpath"`
-	Name    *SingleLineString `xml:"tableName"`
-	XPaths  []string          `xml:"xpaths>xpath"`
-	Columns []GWSQLColumn     `xml:"columns>column"`
-}
-
-type GWSQLColumn struct {
-	Name  *SingleLineString `xml:"name"`
-	XPath string            `xml:"xpath"`
-	Type  string            `xml:"type"`
-}
-
-type GWSQLView struct {
-	XMLName  xml.Name          `xml:"view"`
-	ViewName *SingleLineString `xml:"name"`
-	SQL      *SingleLineString `xml:"sql"`
-}
-
 // FTM
 
 type FTMPlugin struct {
