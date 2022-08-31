@@ -10,7 +10,7 @@ Unless the file format is given to LoadConfig() then all the viper formats are s
 
 ## Expansion of values
 
-The methods below are overridden to add extra expansion of the values given:
+The following package functions and type methods are overridden to add expansion of embedded strings of the form `${name}` and `$name`:
 
 * `GetString()`
 * `GetStringSlice()`
@@ -25,3 +25,5 @@ The string values are passed to `ExpandString()` which supports the following em
 * `${http://path}` or `${https://path}` - the contents of the remote URL are fetched and substituted as for files above. If the URL includes standard `username@password` then these may/should be used as basic authentication as per Go [net/url](https://pkg.go.dev/net.url) and [net/http](https://pkg.go.dev/net/http) packages.
 
 The replacement methods also take an optional argument called a confmap (configuration map) which is a `map[string]string` and this when expanding a value containing `${name}` and confmap is not empty then these values are used and environment variables are not interpolated.
+
+
