@@ -30,6 +30,7 @@ In GA5.14.x the first column name is not exported and set to "rowname"
 package commands
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -52,18 +53,6 @@ type Dataview struct {
 	Columns          []string                       `json:"-"`
 }
 
-type Scope struct {
-	Value          bool `json:"value,omitempty"`
-	Severity       bool `json:"severity,omitempty"`
-	Snooze         bool `json:"snooze,omitempty"`
-	UserAssignment bool `json:"user-assignment,omitempty"`
-}
-
-type Fetch struct {
-	Target string `json:"target"`
-	Scope  Scope  `json:"scope,omitempty"`
-}
-
 // Return the snapshot of the Dataview target with an option Scope. If
 // no Scope is given then only Values are requested. If more than one
 // Scope is given then only the first is used.
@@ -74,29 +63,40 @@ func (c *Connection) Snapshot(target *xpath.XPath, scope ...Scope) (dataview *Da
 	if len(scope) > 0 {
 		s = scope[0]
 	}
-	cr, err := c.Do(endpoint, Fetch{
-		Target: target.String(),
+	cr, err := c.Do(endpoint, &Command{
+		Target: target,
 		Scope:  s,
 	})
 	if err != nil {
+		if cr.Stderr != "" {
+			err = fmt.Errorf("%w (%s)", err, cr.Stderr)
+		}
 		return
 	}
 
-	if cr.Dataview != nil {
-		dataview = cr.Dataview
-		var row map[string]DataItem
-		for k := range dataview.Table {
-			row = dataview.Table[k]
-			break
+	// no error but no dataview?
+	if cr.Dataview == nil {
+		dataview = &Dataview{
+			Headlines: map[string]DataItem{},
+			Table:     map[string]map[string]DataItem{},
+			Columns:   []string{},
 		}
-
-		for k := range row {
-			dataview.Columns = append(dataview.Columns, k)
-		}
-		sort.Strings(dataview.Columns)
-		// XXX until the first column is supplied, prepend a constant
-		dataview.Columns = append([]string{"rowname"}, dataview.Columns...)
+		return
 	}
+
+	dataview = cr.Dataview
+	var row map[string]DataItem
+	for k := range dataview.Table {
+		row = dataview.Table[k]
+		break
+	}
+
+	for k := range row {
+		dataview.Columns = append(dataview.Columns, k)
+	}
+	sort.Strings(dataview.Columns)
+	// XXX until the first column is supplied, prepend a constant
+	dataview.Columns = append([]string{"rowname"}, dataview.Columns...)
 
 	return
 }
