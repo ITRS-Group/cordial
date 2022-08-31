@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<netprobe
+	compatibility="1"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA2011.2-110303/netprobe.xsd">
+	<selfAnnounce>
+		<enabled>true</enabled>
+		<retryInterval>60</retryInterval>
+		<requireReverseConnection>true</requireReverseConnection>
+		<probeName>{{.sanname}}</probeName>
+		<managedEntities>
+			<managedEntity>
+				<name>{{.sanname}}</name>
+				{{if .attributes -}}
+				<attributes>
+					{{range $key, $value := .attributes -}}
+					<attribute name="{{nameOf $value "="}}">{{valueOf $value "="}}</attribute>
+					{{end}}
+				</attributes>
+				{{- end}}
+				{{if .variables -}}
+				<variables>
+					{{range $key, $value := .variables -}}
+					<var name="{{$key}}">
+						<{{nameOf $value ":"}}>{{valueOf $value ":"}}</{{nameOf $value ":"}}>
+					</var>
+					{{end}}
+				</variables>
+				{{- end}}
+				{{if .types -}}
+				<types>
+					{{range .types -}}<type>{{.}}</type>
+					{{end}}
+				</types>
+				{{- end}}
+			</managedEntity>
+		</managedEntities>
+		<gateways>
+			{{- with $data := . }}
+			{{range $key, $value := $data.gateways -}}<gateway>
+				<hostname>{{$key}}</hostname>
+				<port>{{$value}}</port>
+				<secure>{{if $data.certificate}}true{{else}}false{{end}}</secure>
+			</gateway>
+			{{else -}}<gateway>
+				<hostname>localhost</hostname>
+				<port>{{if $data.certificate}}7038{{else}}7039{{end}}</port>
+				<secure>{{if $data.certificate}}true{{else}}false{{end}}</secure>
+			</gateway>
+		{{end -}}{{end -}}</gateways>
+	</selfAnnounce>
+</netprobe>

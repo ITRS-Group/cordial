@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA5.10.1-211027/gateway.xsd">
+	<includes>
+		<priority>1</priority>
+		<include>
+			<priority>9876</priority>
+			<required>false</required>
+			<location>instance.setup.xml</location>
+		</include>
+		{{range $key, $value := .includes -}}
+		<include>
+			<priority>{{$key}}</priority>
+			<required>true</required>
+			<location>{{$value}}</location>
+		</include>
+		{{end -}}
+	</includes>
+	<authentication>
+		<authenticateUsers>true</authenticateUsers>
+		<users>
+			<user name="generic">
+	<fullName>Catch All User</fullName>
+	<genericUser>true</genericUser>
+	<allowLogin>true</allowLogin>
+	<allowSystemAuth>true</allowSystemAuth>
+	<roleProperties>
+		<roleProperty>Administrators</roleProperty>
+	</roleProperties>
+			</user>
+		</users>
+		<roles>
+			<role name="Administrators">
+	<roleProperties>
+		<roleProperty>Administrators</roleProperty>
+	</roleProperties>
+			</role>
+		</roles>
+	</authentication>
+	<selfAnnouncingProbes>
+		<enabled>true</enabled>
+		<disconnectedProbeTimeout>3600</disconnectedProbeTimeout>
+	</selfAnnouncingProbes>
+	<operatingEnvironment>
+		<gatewayName>{{.gatewayname}}</gatewayName>
+		<listenPorts>
+		{{- if .certificate}}
+			{{if eq .port 7039 -}}
+			<secure>7038</secure>
+			<insecure>7039</insecure>
+			{{- else -}}
+			<secure>{{.port}}</secure>
+			{{- end}}
+		{{- else}}
+			<insecure>{{.port}}</insecure>
+		{{- end}}
+		</listenPorts>
+		<var name="gatewayName">
+			<macro>
+				<gatewayName></gatewayName>
+			</macro>
+		</var>
+		<var name="insecureGatewayPort">
+			<macro>
+				<insecureGatewayPort></insecureGatewayPort>
+			</macro>
+		</var>
+		<var name="managedEntityName">
+			<macro>
+				<managedEntityName></managedEntityName>
+			</macro>
+		</var>
+		<var name="netprobeHost">
+			<macro>
+				<netprobeHost></netprobeHost>
+			</macro>
+		</var>
+		<var name="netprobeName">
+			<macro>
+				<netprobeName></netprobeName>
+			</macro>
+		</var>
+		<var name="netprobePort">
+			<macro>
+				<netprobePort></netprobePort>
+			</macro>
+		</var>
+		<var name="samplerName">
+			<macro>
+				<samplerName></samplerName>
+			</macro>
+		</var>
+		<var name="secureGatewayPort">
+			<macro>
+				<secureGatewayPort></secureGatewayPort>
+			</macro>
+		</var>
+		<writeStatsToFile>
+			<filename>{{.home}}/stats.xml</filename>
+			<enablePeriodicWrite>true</enablePeriodicWrite>
+			<writeInterval>5</writeInterval>
+		</writeStatsToFile>
+	</operatingEnvironment>
+</gateway>
