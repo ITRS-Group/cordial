@@ -23,9 +23,11 @@ THE SOFTWARE.
 package streams
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/url"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/xmlrpc"
 )
@@ -50,10 +52,12 @@ func Open(url *url.URL, entity, sampler string, stream ...string) (s *Stream, er
 	return
 }
 
+// Write data bytes to stream. Whitespace is trimmed.
 func (s Stream) Write(data []byte) (n int, err error) {
 	if s.name == "" {
 		return 0, fmt.Errorf("streamname not set")
 	}
+	data = bytes.TrimSpace(data)
 	err = s.WriteMessage(s.name, string(data))
 	if err != nil {
 		return 0, err
@@ -62,10 +66,12 @@ func (s Stream) Write(data []byte) (n int, err error) {
 	return
 }
 
+// Write string to stream. Whitespace is trimmed.
 func (s Stream) WriteString(data string) (n int, err error) {
 	if s.name == "" {
 		return 0, fmt.Errorf("streamname not set")
 	}
+	data = strings.TrimSpace(data)
 	err = s.WriteMessage(s.name, data)
 	if err != nil {
 		return 0, err
