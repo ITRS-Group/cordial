@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package commands
 
 import "github.com/itrs-group/cordial/pkg/xpath"
@@ -47,7 +48,7 @@ func (c *Connection) Unsnooze(target *xpath.XPath, info string) (err error) {
 	return
 }
 
-func (c *Connection) SnoozeInfo(target *xpath.XPath) (crs []CommandsResponse, err error) {
+func (c *Connection) SnoozeInfo(target *xpath.XPath) (crs []CommandResponse, err error) {
 	crs, err = c.RunCommandAll("/SNOOZE:info", target)
 	return
 }
