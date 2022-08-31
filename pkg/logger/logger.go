@@ -80,12 +80,28 @@ func init() {
 	DisableDebugLog()
 }
 
+func refresh() {
+	Log = log.New(Logger, "", 0)
+	Debug = log.New(DebugLogger, "", 0)
+	Error = log.New(ErrorLogger, "", 0)
+}
+
 func EnableDebugLog() {
 	Debug.SetOutput(DebugLogger)
 }
 
 func DisableDebugLog() {
 	Debug.SetOutput(ioutil.Discard)
+}
+
+func (g *GeneosLogger) EnablePrefix() {
+	g.ShowPrefix = true
+	refresh()
+}
+
+func (g *GeneosLogger) DisablePrefix() {
+	g.ShowPrefix = false
+	refresh()
 }
 
 func (g GeneosLogger) Write(p []byte) (n int, err error) {
