@@ -117,7 +117,6 @@ func (p *Samplers) doSampleInterval() error {
 }
 
 func (s *Samplers) New(p plugins.Connection, name string, group string) error {
-	logDebug.Print("called")
 	s.name, s.group = name, group
 	return s.initDataviews(p)
 }
@@ -211,7 +210,6 @@ defined in detail. More docs to follow.
 
 The input is a type or an zero-ed struct as this method only checks the struct
 tags and doesn't care about the data
-
 */
 func (s Samplers) ColumnInfo(rowdata interface{}) (cols Columns,
 	columnnames []string, sorting string, err error) {
@@ -231,6 +229,7 @@ func (s Samplers) ColumnInfo(rowdata interface{}) (cols Columns,
 		if tags, ok := rt.Field(i).Tag.Lookup("column"); ok {
 			column, err = parseTags(fieldname, tags)
 			if err != nil {
+				logDebug.Println("cannot parse tags:", err)
 				return
 			}
 			// check for already set values and error
@@ -308,7 +307,6 @@ func (s Samplers) RowsFromMap(rowdata interface{}) (rows [][]string, err error) 
 UpdateTableFromSlice - Given an ordered slice of structs of data the
 method renders a simple table of data as defined in the Columns
 part of Samplers
-
 */
 func (s Samplers) UpdateTableFromSlice(rowdata interface{}) error {
 	table, _ := s.RowsFromSlice(rowdata)
@@ -322,7 +320,7 @@ func (s Samplers) RowsFromSlice(rowdata interface{}) (rows [][]string, err error
 
 	rd := reflect.Indirect(reflect.ValueOf(rowdata))
 	if rd.Kind() != reflect.Slice {
-		err = fmt.Errorf("non Slice passed")
+		err = fmt.Errorf("non slice passed")
 		return
 	}
 
@@ -354,12 +352,14 @@ func (s *Samplers) UpdateTableFromMapDelta(newdata, olddata interface{}, interva
 	return s.UpdateTable(s.ColumnNames(), table...)
 }
 
-// RowsFromMapDelta takes two sets of data and calculates the difference between them.
-// Only numeric data is changed, any non-numeric fields are left
-// unchanges and taken from newrowdata only. If an interval is supplied (non-zero) then that is used as
-// a scaling value otherwise the straight numeric difference is calculated
+// RowsFromMapDelta takes two sets of data and calculates the difference
+// between them. Only numeric data is changed, any non-numeric fields
+// are left unchanged and taken from newrowdata only. If an interval is
+// supplied (non-zero) then that is used as a scaling value otherwise
+// the straight numeric difference is calculated
 //
-// This is for data like sets of counters that are absolute values over time
+// This is for data like sets of counters that are absolute values over
+// time
 func (s Samplers) RowsFromMapDelta(newrowdata, oldrowdata interface{},
 	interval time.Duration) (rows [][]string, err error) {
 

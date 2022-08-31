@@ -63,7 +63,7 @@ func (s Sampler) SamplerName() string {
 }
 
 // Parameter - Get a parameter from the Geneos sampler config as a string
-// It would not be difficult to add numberic and other type getters
+// It would not be difficult to add numeric and other type getters
 func (s Sampler) Parameter(name string) (string, error) {
 	logDebug.Print("called")
 

@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // Dataview struct encapsulates the Sampler it belongs to and adds the
@@ -156,7 +157,8 @@ func (d Dataview) RowNames() (rownames []string, err error) {
 	return
 }
 
-func (d Dataview) RowNamesOlderThan(unixtime int64) (rownames []string, err error) {
+func (d Dataview) RowNamesOlderThan(datetime time.Time) (rownames []string, err error) {
+	unixtime := datetime.Unix()
 	rownames, err = d.getRowNamesOlderThan(d.EntityName(), d.SamplerName(), d.dataviewName, unixtime)
 	if err != nil {
 		logError.Print(err)

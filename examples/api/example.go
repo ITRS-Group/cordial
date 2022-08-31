@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	// logger.EnableDebugLog()
+	logger.EnableDebugLog()
 }
 
 var (
@@ -84,10 +84,10 @@ func main() {
 	g.SetInterval(interval)
 	g.Start(&wg)
 
-	powerwall, err := NewPW(p, "PW Meters", "Powerwall")
-	defer powerwall.Close()
-	powerwall.SetInterval(interval)
-	powerwall.Start(&wg)
+	// powerwall, err := NewPW(p, "PW Meters", "Powerwall")
+	// defer powerwall.Close()
+	// powerwall.SetInterval(interval)
+	// powerwall.Start(&wg)
 
 	streamssampler := "streams"
 	sp, err := streams.Sampler(fmt.Sprintf("https://%s:%v/xmlrpc", hostname, port), entityname, streamssampler)
