@@ -2,6 +2,12 @@
 
 ## Introduction
 
+This Geneos to Service Now integration provides a way for you to create or update incidents in Service Now from your Geneos gateway(s). The selection of the components to raise incidents against, the user and the mappings of Geneos data to specific fields in Service Now are all configurable.
+
+The binaries provided are for linux-amd64 as this is the standard architecture suported by the Geneos Gateway, however there should be no restriction on platform if you build from source.
+
+There are no specific prerequisites to use this integration beyond the two programs and their respective configuration files.
+
 ## Components
 
 There are two primary components of the integration. The router (`snow_router`) and the client CLI (`snow_client`).
