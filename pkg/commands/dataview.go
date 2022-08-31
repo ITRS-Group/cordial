@@ -30,6 +30,7 @@ In GA5.14.x the first column name is not exported and set to "rowname"
 package commands
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -67,24 +68,35 @@ func (c *Connection) Snapshot(target *xpath.XPath, scope ...Scope) (dataview *Da
 		Scope:  s,
 	})
 	if err != nil {
+		if cr.Stderr != "" {
+			err = fmt.Errorf("%w (%s)", err, cr.Stderr)
+		}
 		return
 	}
 
-	if cr.Dataview != nil {
-		dataview = cr.Dataview
-		var row map[string]DataItem
-		for k := range dataview.Table {
-			row = dataview.Table[k]
-			break
+	// no error but no dataview?
+	if cr.Dataview == nil {
+		dataview = &Dataview{
+			Headlines: map[string]DataItem{},
+			Table:     map[string]map[string]DataItem{},
+			Columns:   []string{},
 		}
-
-		for k := range row {
-			dataview.Columns = append(dataview.Columns, k)
-		}
-		sort.Strings(dataview.Columns)
-		// XXX until the first column is supplied, prepend a constant
-		dataview.Columns = append([]string{"rowname"}, dataview.Columns...)
+		return
 	}
+
+	dataview = cr.Dataview
+	var row map[string]DataItem
+	for k := range dataview.Table {
+		row = dataview.Table[k]
+		break
+	}
+
+	for k := range row {
+		dataview.Columns = append(dataview.Columns, k)
+	}
+	sort.Strings(dataview.Columns)
+	// XXX until the first column is supplied, prepend a constant
+	dataview.Columns = append([]string{"rowname"}, dataview.Columns...)
 
 	return
 }
