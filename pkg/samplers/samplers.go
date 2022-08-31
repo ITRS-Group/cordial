@@ -154,7 +154,7 @@ func (p Samplers) SortColumn() string {
 }
 
 func (s *Samplers) initDataviews(p plugins.Connection) (err error) {
-	d, err := p.NewDataview(s.name, s.group)
+	d, err := p.NewDataview(s.group, s.name)
 	if err != nil {
 		return
 	}
@@ -163,7 +163,7 @@ func (s *Samplers) initDataviews(p plugins.Connection) (err error) {
 }
 
 func (p *Samplers) Start(wg *sync.WaitGroup) (err error) {
-	if !p.IsValid() {
+	if !p.Exists() {
 		err = fmt.Errorf("Start(): Dataview not defined")
 		return
 	}
@@ -190,7 +190,7 @@ func (p *Samplers) Start(wg *sync.WaitGroup) (err error) {
 }
 
 func (s *Samplers) Close() error {
-	if !s.IsValid() {
+	if !s.Exists() {
 		return nil
 	}
 	return s.Dataview.Close()
