@@ -112,7 +112,7 @@ type EnvironmentGroup struct {
 }
 
 type Environment struct {
-	XMLName      xml.Name      `xml:"environment,omitempty"`
+	XMLName      xml.Name      `xml:"environment"`
 	Name         string        `xml:"name,attr"`
 	Environments []Environment `xml:"environment,omitempty"`
 	Vars         []Vars
@@ -137,7 +137,7 @@ type Sampler struct {
 	Group     *SingleLineString `xml:"var-group,omitempty"`
 	Interval  *Value            `xml:"sampleInterval,omitempty"`
 	Plugin    interface{}       `xml:"plugin"`
-	Dataviews []Dataview        `xml:"dataviews>dataview,omitempty"`
+	Dataviews *[]Dataview       `xml:"dataviews>dataview,omitempty"`
 }
 
 // Gateway-SQL
@@ -206,8 +206,8 @@ type FTMAdditionalPaths struct {
 // FKM
 
 type FKMPlugin struct {
-	Display *FKMDisplay `xml:"display,omitempty"`
-	Files   []FKMFile
+	Display *FKMDisplay `xml:"fkm>display,omitempty"`
+	Files   []FKMFile   `xml:"fkm>files>file,omitempty"`
 }
 
 type FKMDisplay struct {
@@ -215,23 +215,35 @@ type FKMDisplay struct {
 }
 
 type FKMFile struct {
-	Filename             *Value `xml:"source>filename,omitempty"`
-	Stream               *Value `xml:"source>stream,omitempty"`
-	Tables               []FKMTable
-	ClearTime            *Value `xml:"clearTime"`
-	DefaultKeyClkearTime *Value `xml:"defaultKeyClearTime"`
-	Rewind               *Value `xml:"rewind"`
-	Alias                *Value `xml:"alias"`
+	XMLName             xml.Name          `xml:"file"`
+	Filename            *SingleLineString `xml:"source>filename,omitempty"`
+	Stream              *SingleLineString `xml:"source>stream,omitempty"`
+	Tables              []FKMTable        `xml:"tables>table,omitempty"`
+	ClearTime           *Value            `xml:"clearTime"`
+	DefaultKeyClearTime *Value            `xml:"defaultKeyClearTime"`
+	Rewind              *Value            `xml:"rewind"`
+	Alias               *Value            `xml:"alias"`
 }
 
 type FKMTable struct {
 	XMLName  xml.Name `xml:"table"`
 	Severity string   `xml:"severity"`
-	KeyTable FKMKeys
+	KeyTable *Value   `xml:"keyTable"`
+}
+
+type FKMKeyTable struct {
+	XMLName xml.Name `xml:"fkmTable"`
+	Name    string   `xml:"ref,attr"`
+}
+
+type FKMKeyData struct {
+	XMLName xml.Name `xml:"data"`
+	Keys    FKMKeys
 }
 
 type FKMKeys struct {
-	Keys []interface{}
+	XMLName xml.Name `xml:"keys"`
+	Keys    []interface{}
 }
 
 type FKMIgnoreKey struct {
@@ -241,11 +253,17 @@ type FKMIgnoreKey struct {
 }
 
 type FKMKey struct {
-	XMLName  xml.Name `xml:"key"`
-	SetKey   FKMMatch
-	ClearKey FKMMatch
-	Message  *Value
-	Severity string
+	XMLName  xml.Name  `xml:"key"`
+	SetKey   FKMSetKey `xml:"setKey"`
+	ClearKey *FKMMatch `xml:"clearKey,omitempty"`
+	Message  *Value    `xml:"message,omitempty"`
+	Severity string    `xml:"severity,omitempty"`
+}
+
+type FKMSetKey struct {
+	Match        *FKMMatch `xml:"match,omitempty"`
+	NotUpdatedIn *Value    `xml:"notUpdatedIn>timePeriodInSeconds,omitempty"`
+	Updated      string    `xml:"updated,omitempty"`
 }
 
 type FKMMatch struct {
@@ -293,7 +311,7 @@ type Sybase struct {
 
 type ToolkitPlugin struct {
 	SamplerScript        *SingleLineString     `xml:"toolkit>samplerScript"`
-	EnvironmentVariables []EnvironmentVariable `xml:"toolkit>environmentVariables>variable"`
+	EnvironmentVariables *[]EnvironmentVariable `xml:"toolkit>environmentVariables>variable"`
 }
 
 type EnvironmentVariable struct {
