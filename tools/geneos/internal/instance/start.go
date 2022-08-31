@@ -38,7 +38,7 @@ func Start(c geneos.Instance) (err error) {
 
 	// set underlying user for child proc
 	username := c.V().GetString("user")
-	errfile := ConfigPathWithExt(c, "txt")
+	errfile := ComponentFilepath(c, "txt")
 
 	if c.Host() != host.LOCAL {
 		r := c.Host()
