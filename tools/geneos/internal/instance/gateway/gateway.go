@@ -93,10 +93,10 @@ func Init(r *host.Host, ct *geneos.Component) {
 	if err := geneos.MakeComponentDirs(r, ct); err != nil {
 		logger.Error.Fatalln(err)
 	}
-	if err := r.WriteFile(r.GeneosJoinPath("gateway", "templates", GatewayDefaultTemplate), GatewayTemplate, 0664); err != nil {
+	if err := r.WriteFile(r.Filepath("gateway", "templates", GatewayDefaultTemplate), GatewayTemplate, 0664); err != nil {
 		logger.Error.Fatalln(err)
 	}
-	if err := r.WriteFile(r.GeneosJoinPath("gateway", "templates", GatewayInstanceTemplate), InstanceTemplate, 0664); err != nil {
+	if err := r.WriteFile(r.Filepath("gateway", "templates", GatewayInstanceTemplate), InstanceTemplate, 0664); err != nil {
 		logger.Error.Fatalln(err)
 	}
 }
@@ -309,7 +309,7 @@ func (g *Gateways) Command() (args, env []string) {
 			args = append(args, "-licd-secure")
 		}
 		args = append(args, "-ssl-certificate", g.GetConfig().GetString("certificate"))
-		chainfile := g.Host().GeneosJoinPath("tls", "chain.pem")
+		chainfile := g.Host().Filepath("tls", "chain.pem")
 		args = append(args, "-ssl-certificate-chain", chainfile)
 	} else if g.GetConfig().GetString("licdsecure") != "" && g.GetConfig().GetString("licdsecure") == "true" {
 		args = append(args, "-licd-secure")
@@ -349,6 +349,6 @@ func createAESKeyFile(c geneos.Instance) (err error) {
 	if err = c.Host().WriteFile(instance.ComponentFilepath(c, "aes"), []byte(fmt.Sprintf("salt=%X\nkey=%X\niv =%X\n", salt, key, iv)), 0600); err != nil {
 		return
 	}
-	c.GetConfig().Set("aesfile", c.Type().String()+".aes")
+	c.GetConfig().Set("aesfile", instance.ComponentFilename(c, "aes"))
 	return
 }

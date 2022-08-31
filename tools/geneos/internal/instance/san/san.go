@@ -78,7 +78,7 @@ func Init(r *host.Host, ct *geneos.Component) {
 	if err := geneos.MakeComponentDirs(r, ct); err != nil {
 		logger.Error.Fatalln(err)
 	}
-	if err := r.WriteFile(r.GeneosJoinPath(ct.String(), "templates", SanDefaultTemplate), SanTemplate, 0664); err != nil {
+	if err := r.WriteFile(r.Filepath(ct, "templates", SanDefaultTemplate), SanTemplate, 0664); err != nil {
 		logger.Error.Fatalln(err)
 	}
 }
