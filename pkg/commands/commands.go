@@ -208,7 +208,7 @@ func (c *Connection) Do(endpoint string, command *Command) (cr CommandsResponse,
 	b, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
-	if resp.StatusCode > 299 && resp.StatusCode != 400 {
+	if resp.StatusCode > 299 {
 		var geneosError GeneosRESTError
 		if err = json.Unmarshal(b, &geneosError); err != nil {
 			geneosError.Error = fmt.Sprintf("unknown error (%s)", string(b))
