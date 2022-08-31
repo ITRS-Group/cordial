@@ -25,6 +25,7 @@ package streams
 import (
 	"fmt"
 	"io"
+	"net/url"
 
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/xmlrpc"
@@ -48,9 +49,9 @@ type Stream struct {
 }
 
 // Sampler - wrap calls to xmlrpc
-func Sampler(url string, entityName string, samplerName string) (s Stream, err error) {
+func Sampler(url *url.URL, entityName string, samplerName string) (s Stream, err error) {
 	logDebug.Printf("called")
-	sampler, err := xmlrpc.NewClient(url, entityName, samplerName)
+	sampler, err := xmlrpc.NewClient(url).Sampler(entityName, samplerName)
 	s = Stream{}
 	s.Sampler = sampler
 	return
