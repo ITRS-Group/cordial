@@ -10,6 +10,10 @@ The [commands](commands) package provides access to the Geneos Gateway REST Comm
 
 The [config](config) package provides a wrapper around [viper](https://pkg.go.dev/github.com/spf13/viper)
 
+## geneos
+
+The [geneos](geneos) package provides a data model for Geneos XML configurations, both Gateway and Netprobe. It is only partially complete at this stage and is being extended as demand requires.
+
 ## logger
 
 There is a basic logging interface to allow for common logging formats. To use import the [logger](geneos/pkg/logger) package and then make local copies of the Loggers, like this:
