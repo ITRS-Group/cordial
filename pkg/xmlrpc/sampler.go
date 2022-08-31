@@ -34,10 +34,8 @@ type Sampler struct {
 }
 
 func (s *Sampler) Exists() bool {
-	logDebug.Print("called")
 	res, err := s.samplerExists(s.entityName, s.samplerName)
 	if err != nil {
-		logError.Print(err)
 		return false
 	}
 	return res
@@ -95,8 +93,7 @@ of column names followed by each row only contains the first N columns each.
 */
 func (s Sampler) NewDataview(groupName string, viewName string, args ...[]string) (d *Dataview, err error) {
 	if !s.Exists() {
-		err = fmt.Errorf("sampler %q doesn't exist", s)
-		logError.Print(err)
+		err = fmt.Errorf("sampler %q does not exist", s)
 		return
 	}
 
@@ -109,7 +106,6 @@ func (s Sampler) NewDataview(groupName string, viewName string, args ...[]string
 	}
 	err = d.createView(s.entityName, s.samplerName, viewName, groupName)
 	if err != nil {
-		logError.Fatal(err)
 		return
 	}
 
