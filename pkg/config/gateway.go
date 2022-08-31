@@ -116,7 +116,7 @@ type GatewaySQLSampler struct {
 	Name      string            `xml:"name,attr"`
 	Comment   string            `xml:",comment"`
 	Group     string            `xml:"var-group>data"`
-	Interval  VarData           `xml:"sampleInterval,omitempty"`
+	Interval  *VarData          `xml:"sampleInterval,omitempty"`
 	Setup     string            `xml:"plugin>Gateway-sql>setupSql>sql>data"`
 	Tables    []GatewaySQLTable `xml:"plugin>Gateway-sql>tables>xpath"`
 	Views     []View            `xml:"plugin>Gateway-sql>views>view"`
@@ -147,7 +147,7 @@ type FTMSampler struct {
 	Name                       string     `xml:"name,attr"`
 	Comment                    string     `xml:",comment"`
 	Group                      string     `xml:"var-group>data"`
-	Interval                   VarData    `xml:"sampleInterval,omitempty"`
+	Interval                   *VarData   `xml:"sampleInterval,omitempty"`
 	Files                      []FTMFile  `xml:"plugin>ftm>files>file"`
 	ConsistentDateStamps       bool       `xml:"plugin>ftm>consistentDateStamps>data,omitempty"`
 	DisplayTimeInISO8601Format bool       `xml:"plugin>ftm>displayTimeInIso8601Format>data,omitempty"`
@@ -191,7 +191,7 @@ type SQLToolkitSampler struct {
 	Name       string       `xml:"name,attr"`
 	Comment    string       `xml:",comment"`
 	Group      string       `xml:"var-group>data"`
-	Interval   VarData      `xml:"sampleInterval,omitempty"`
+	Interval   *VarData     `xml:"sampleInterval,omitempty"`
 	Queries    []Query      `xml:"plugin>sql-toolkit>queries>query"`
 	Connection DBConnection `xml:"plugin>sql-toolkit>connection"`
 }
@@ -232,7 +232,7 @@ type ToolkitSampler struct {
 	Name                 string                `xml:"name,attr"`
 	Comment              string                `xml:",comment"`
 	Group                string                `xml:"var-group>data"`
-	Interval             VarData               `xml:"sampleInterval,omitempty"`
+	Interval             *VarData              `xml:"sampleInterval,omitempty"`
 	SamplerScript        string                `xml:"plugin>toolkit>samplerScript>data"`
 	EnvironmentVariables []EnvironmentVariable `xml:"plugin>toolkit>environmentVariables>variable"`
 }
@@ -365,12 +365,24 @@ func ExpandSingleLineString(in string) (s SingleLineString) {
 	return
 }
 
+// VarData is a struct that contains either a Var or a Data type depending
+// on the usage.
 type VarData struct {
 	Part interface{}
 }
 
-func NewVarData(s string) (n VarData) {
+// NewVarData takes a string argument and removes leading and trailing
+// spaces. If the string is of the form "$(var)" then returns a pointer
+// to a VarData struct containing a Var{} or if a non-empty string
+// returns a Data{}. If the string is empty then a nil pointer is
+// returned. This allows `xml:",omixempty"`` to leave out VarData fields
+// that contain no data.
+func NewVarData(s string) (n *VarData) {
 	s = strings.TrimSpace(s)
+	if s == "" {
+		return
+	}
+	n = &VarData{}
 	if strings.HasPrefix(s, "$(") && strings.HasSuffix(s, ")") {
 		n.Part = Var{Var: s[2 : len(s)-1]}
 	} else {
