@@ -24,7 +24,6 @@ THE SOFTWARE.
 Support for Geneos Gateway REST Commands
 
 Based on https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#REST_Service
-
 */
 package commands
 
@@ -43,15 +42,20 @@ import (
 	"github.com/itrs-group/cordial/pkg/xpath"
 )
 
-// A Command is made up of a Name, a Target and optional Args
+// Command is the wrapper for a Geneos REST Command
 type Command struct {
 	Name   string       `json:"command,omitempty"`
 	Target *xpath.XPath `json:"target"`
-	Args   *Args        `json:"args,omitempty"`
+	Args   *CommandArgs `json:"args,omitempty"`
 	Scope  Scope        `json:"scope,omitempty"`
 	Limit  int          `json:"limit,omitempty"`
 }
 
+// CommandArgs is a map of argument indices to values
+type CommandArgs map[string]string
+
+// A Scope selects which properties the REST dataview snaptshot command
+// returns.
 type Scope struct {
 	Value          bool `json:"value,omitempty"`
 	Severity       bool `json:"severity,omitempty"`
@@ -59,7 +63,9 @@ type Scope struct {
 	UserAssignment bool `json:"user-assignment,omitempty"`
 }
 
-type CommandsResponseRaw struct {
+// A CommandResponseRaw holds the raw response to a REST command. In
+// general callers will only receive and use [CommandResponse]
+type CommandResponseRaw struct {
 	Target     *xpath.XPath        `json:"target"`
 	MimeType   []map[string]string `json:"mimetype"`
 	Status     string              `json:"status"`
@@ -68,7 +74,9 @@ type CommandsResponseRaw struct {
 	XPaths     []string            `json:"xpaths"`
 }
 
-type CommandsResponse struct {
+// A CommandResponse holds the response from a REST command. The fields
+// with values will depends on the command called.
+type CommandResponse struct {
 	Target         *xpath.XPath      `json:"target"`
 	MimeType       map[string]string `json:"mimetype"`
 	Status         string            `json:"status"`
@@ -80,6 +88,8 @@ type CommandsResponse struct {
 	XPaths         []string          `json:"xpaths"`
 }
 
+// A Connection defines the REST command connection details to a Geneos
+// Gateway.
 type Connection struct {
 	BaseURL            *url.URL
 	AuthType           int
@@ -172,8 +182,8 @@ func (c *Connection) Redial() (err error) {
 	return fmt.Errorf(strings.Join(errs, "\n"))
 }
 
-// execute a command, return the http response
-func (c *Connection) Do(endpoint string, command *Command) (cr CommandsResponse, err error) {
+// Do executes command on the REST endpoint, return the http response
+func (c *Connection) Do(endpoint string, command *Command) (response CommandResponse, err error) {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: c.InsecureSkipVerify},
 	}
@@ -198,9 +208,9 @@ func (c *Connection) Do(endpoint string, command *Command) (cr CommandsResponse,
 	case Basic:
 		req.SetBasicAuth(c.Username, c.Password)
 	case SSO:
-		//
+		// XXX
 	default:
-		//
+		// No auth
 	}
 
 	resp, err := client.Do(req)
@@ -215,22 +225,22 @@ func (c *Connection) Do(endpoint string, command *Command) (cr CommandsResponse,
 		if err = json.Unmarshal(b, &geneosError); err != nil {
 			geneosError.Error = fmt.Sprintf("unknown error (%s)", string(b))
 		}
-		cr.Status = "error"
-		cr.Stderr = geneosError.Error
+		response.Status = "error"
+		response.Stderr = geneosError.Error
 		err = fmt.Errorf(resp.Status)
 		return
 	}
 
-	var raw CommandsResponseRaw
+	var raw CommandResponseRaw
 	if err = json.Unmarshal(b, &raw); err != nil {
 		err = fmt.Errorf("cannot unmarshal response: %w", err)
 		return
 	}
 	raw.Target = command.Target
 
-	cr = cookResponse(raw)
-	if cr.Status == "error" {
-		err = fmt.Errorf("%s: %v", cr.Status, cr.Stderr)
+	response = cookResponse(raw)
+	if response.Status == "error" {
+		err = fmt.Errorf("%s: %v", response.Status, response.Stderr)
 		return
 	}
 	return
@@ -238,8 +248,8 @@ func (c *Connection) Do(endpoint string, command *Command) (cr CommandsResponse,
 
 // Convert a raw response into a structured one where the interleaved
 // stream messages are concatenated into strings for each stream
-func cookResponse(raw CommandsResponseRaw) (cr CommandsResponse) {
-	cr = CommandsResponse{
+func cookResponse(raw CommandResponseRaw) (cr CommandResponse) {
+	cr = CommandResponse{
 		Status:   raw.Status,
 		Dataview: raw.Dataview,
 		XPaths:   raw.XPaths,
@@ -270,11 +280,11 @@ func cookResponse(raw CommandsResponseRaw) (cr CommandsResponse) {
 	return
 }
 
-// run a command against exactly one valid target, returning the response
-func (c *Connection) RunCommand(name string, target *xpath.XPath, options ...ArgOptions) (cr CommandsResponse, err error) {
-	args := &Args{}
-	evalArgOptions(args, options...)
-	targets, err := c.CommandTargets(name, target)
+// RunCommand runs command against exactly one target, returning the response
+func (c *Connection) RunCommand(command string, target *xpath.XPath, args ...Args) (response CommandResponse, err error) {
+	arguments := &CommandArgs{}
+	evalArgOptions(arguments, args...)
+	targets, err := c.CommandTargets(command, target)
 	if err != nil {
 		return
 	}
@@ -282,36 +292,35 @@ func (c *Connection) RunCommand(name string, target *xpath.XPath, options ...Arg
 		err = fmt.Errorf("target does not match exactly one data item")
 		return
 	}
-	command := &Command{
-		Name:   name,
+	return c.Do(endpoint, &Command{
+		Name:   command,
 		Target: target,
-		Args:   args,
-	}
-	return c.Do(endpoint, command)
+		Args:   arguments,
+	})
 }
 
-// run command against all matching data items, returning stdout,
-// stderr and execlog (concatenated) where applicable
-func (c *Connection) RunCommandAll(name string, target *xpath.XPath, options ...ArgOptions) (crs []CommandsResponse, err error) {
-	args := &Args{}
-	evalArgOptions(args, options...)
-	targets, err := c.CommandTargets(name, target)
+// RunCommands runs command against all matching data items, returning
+// separately concatenated stdout, stderr and execlog when returned by
+// the underlying command
+func (c *Connection) RunCommandAll(command string, target *xpath.XPath, args ...Args) (responses []CommandResponse, err error) {
+	arguments := &CommandArgs{}
+	evalArgOptions(arguments, args...)
+	targets, err := c.CommandTargets(command, target)
 	if err != nil {
 		return
 	}
 	if len(targets) == 0 {
 		err = fmt.Errorf("no matches")
 	}
-	crs = []CommandsResponse{}
+	responses = []CommandResponse{}
 
 	for _, t := range targets {
-		command := &Command{
-			Name:   name,
+		cr, err := c.Do(endpoint, &Command{
+			Name:   command,
 			Target: t,
-			Args:   args,
-		}
-		cr, err := c.Do(endpoint, command)
-		crs = append(crs, cr)
+			Args:   arguments,
+		})
+		responses = append(responses, cr)
 		if err != nil {
 			continue
 		}
@@ -319,6 +328,9 @@ func (c *Connection) RunCommandAll(name string, target *xpath.XPath, options ...
 	return
 }
 
+// Match returns a slice of all matching XPaths for the target up to
+// limit items. If limit is less than 1 then the default limit of 100 is
+// used.
 func (c *Connection) Match(target *xpath.XPath, limit int) (matches []*xpath.XPath, err error) {
 	const endpoint = "/rest/xpaths/match"
 	if limit < 1 {
@@ -344,13 +356,14 @@ func (c *Connection) Match(target *xpath.XPath, limit int) (matches []*xpath.XPa
 	return
 }
 
-func (c *Connection) CommandTargets(name string, target *xpath.XPath) (matches []*xpath.XPath, err error) {
+// CommandTargets returns a slice of all XPaths that support the command
+// for the given target.
+func (c *Connection) CommandTargets(command string, target *xpath.XPath) (matches []*xpath.XPath, err error) {
 	const endpoint = "/rest/xpaths/commandTargets"
-	command := &Command{
+	cr, err := c.Do(endpoint, &Command{
 		Target: target,
-		Name:   name,
-	}
-	cr, err := c.Do(endpoint, command)
+		Name:   command,
+	})
 	if err != nil {
 		panic(err)
 		// return
