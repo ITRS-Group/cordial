@@ -50,7 +50,7 @@ func (s Sampler) String() string {
 // It would not be difficult to add numeric and other type getters
 func (s Sampler) Parameter(name string) (string, error) {
 	if !s.Exists() {
-		err := fmt.Errorf("Parameter(): sampler doesn't exist")
+		err := fmt.Errorf("sampler %q doesn't exist", s)
 		return "", err
 	}
 	return s.getParameter(s.entityName, s.samplerName, name)
