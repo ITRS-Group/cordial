@@ -203,74 +203,6 @@ type FTMAdditionalPaths struct {
 	Paths []*SingleLineString `xml:"additionalPath"`
 }
 
-// FKM
-
-type FKMPlugin struct {
-	Display *FKMDisplay `xml:"fkm>display,omitempty"`
-	Files   []FKMFile   `xml:"fkm>files>file,omitempty"`
-}
-
-type FKMDisplay struct {
-	TriggerMode string `xml:"triggerMode,omitempty"`
-}
-
-type FKMFile struct {
-	XMLName             xml.Name          `xml:"file"`
-	Filename            *SingleLineString `xml:"source>filename,omitempty"`
-	Stream              *SingleLineString `xml:"source>stream,omitempty"`
-	Tables              []FKMTable        `xml:"tables>table,omitempty"`
-	ClearTime           *Value            `xml:"clearTime"`
-	DefaultKeyClearTime *Value            `xml:"defaultKeyClearTime"`
-	Rewind              *Value            `xml:"rewind"`
-	Alias               *Value            `xml:"alias"`
-}
-
-type FKMTable struct {
-	XMLName  xml.Name `xml:"table"`
-	Severity string   `xml:"severity"`
-	KeyTable *Value   `xml:"keyTable"`
-}
-
-type FKMKeyTable struct {
-	XMLName xml.Name `xml:"fkmTable"`
-	Name    string   `xml:"ref,attr"`
-}
-
-type FKMKeyData struct {
-	XMLName xml.Name `xml:"data"`
-	Keys    FKMKeys
-}
-
-type FKMKeys struct {
-	XMLName xml.Name `xml:"keys"`
-	Keys    []interface{}
-}
-
-type FKMIgnoreKey struct {
-	XMLName xml.Name `xml:"ignoreKey"`
-	Match   FKMMatch `xml:"match"`
-	// ActiveTime
-}
-
-type FKMKey struct {
-	XMLName  xml.Name  `xml:"key"`
-	SetKey   FKMSetKey `xml:"setKey"`
-	ClearKey *FKMMatch `xml:"clearKey,omitempty"`
-	Message  *Value    `xml:"message,omitempty"`
-	Severity string    `xml:"severity,omitempty"`
-}
-
-type FKMSetKey struct {
-	Match        *FKMMatch `xml:"match,omitempty"`
-	NotUpdatedIn *Value    `xml:"notUpdatedIn>timePeriodInSeconds,omitempty"`
-	Updated      string    `xml:"updated,omitempty"`
-}
-
-type FKMMatch struct {
-	SearchString *Value `xml:"searchString"`
-	Rules        string `xml:"rules,omitempty"`
-}
-
 // SQL Toolkit
 
 type SQLToolkitPlugin struct {
@@ -310,7 +242,7 @@ type Sybase struct {
 }
 
 type ToolkitPlugin struct {
-	SamplerScript        *SingleLineString     `xml:"toolkit>samplerScript"`
+	SamplerScript        *SingleLineString      `xml:"toolkit>samplerScript"`
 	EnvironmentVariables *[]EnvironmentVariable `xml:"toolkit>environmentVariables>variable"`
 }
 
