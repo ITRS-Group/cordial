@@ -39,8 +39,8 @@ First, import the necessary packages
 package generic
 
 import (
-	"wonderland.org/geneos/pkg/plugins"
-	"wonderland.org/geneos/pkg/sampler"
+	"github.com/itrs-group/cordial/pkg/plugins"
+	"github.com/itrs-group/cordial/pkg/sampler"
 )
 ```
 
@@ -136,7 +136,7 @@ import (
 	"time"
 
 	"github.com/StackExchange/wmi"
-	"wonderland.org/geneos/pkg/samplers"
+	"github.com/itrs-group/cordial/pkg/samplers"
 )
 
 // Win32_PerfRawData_PerfOS_Processor must be exported along with all it's
@@ -187,8 +187,8 @@ package main
 
 import (
 ...
-	"wonderland.org/geneos/pkg/plugins"
-	"wonderland.org/geneos/pkg/streams"
+	"github.com/itrs-group/cordial/pkg/plugins"
+	"github.com/itrs-group/cordial/pkg/streams"
 
 	"example/generic"			// this will depend on how you name it
 )
@@ -230,7 +230,7 @@ There is a basic logging interface to allow for common logging formats for any p
 ```go
 import (
 ...
-	"wonderland.org/geneos/pkg/logger"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 func init() {
@@ -256,7 +256,7 @@ Basic support for [streams](geneos/pkg/streams) are included. Streams must be pr
 
 ```go
 import (
-	"wonderland.org/geneos/pkg/streams"
+	"github.com/itrs-group/cordial/pkg/streams"
 )
 ```
 
