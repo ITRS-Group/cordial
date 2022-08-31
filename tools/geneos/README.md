@@ -1,8 +1,8 @@
 # `geneos` management tool
 
-| :warning: Breaking Changes v1.1+ |
+| :warning: Breaking Changes |
 |:--|
-| v1.1 is an almost complete rewrite of the `geneos` program and there **will** be breaking changes. Most of these will be command line flags, options, configuration file contents and support for old, obscure options. The trigger for many of these changes is the move to use well-known and mature packages for configuration handling (viper) and command line options (cobra) as well as the untangling of internal spaghetti code which made calls in and out of multiple layers of functionality. I have attempted to update this documentation to match the new functionality and to also highlight known changes for you, but it is highly probable that some things have been missed. |
+| This is an almost complete rewrite of the `geneos` program originally available from wonderland.org/geneos and there are breaking changes if you used any version from there up to v1.0.2. Most of these will be command line flags, options, configuration file contents and support for old, obscure options. The trigger for many of these changes is the move to use well-known and mature packages for configuration handling (viper) and command line options (cobra) as well as the untangling of internal spaghetti code which made calls in and out of multiple layers of functionality. I have attempted to update this documentation to match the new functionality and to also highlight known changes for you, but it is highly probable that some things have been missed. |
 
 The `geneos` program will help you manage your Geneos environment on Linux.
 
