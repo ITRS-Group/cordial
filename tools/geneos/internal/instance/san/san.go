@@ -5,13 +5,13 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/fa2"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
-	"github.com/spf13/viper"
 )
 
 var San = geneos.Component{
@@ -95,7 +95,7 @@ func New(name string) geneos.Instance {
 		}
 	}
 	c := &Sans{}
-	c.Conf = viper.New()
+	c.Conf = config.New()
 	c.InstanceHost = r
 	// c.root = r.V().GetString("geneos")
 	c.Component = &San
@@ -156,11 +156,11 @@ func (s *Sans) Loaded() bool {
 	return s.ConfigLoaded
 }
 
-func (s *Sans) V() *viper.Viper {
+func (s *Sans) V() *config.Config {
 	return s.Conf
 }
 
-func (s *Sans) SetConf(v *viper.Viper) {
+func (s *Sans) SetConf(v *config.Config) {
 	s.Conf = v
 }
 

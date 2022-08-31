@@ -3,9 +3,9 @@ package geneos
 import (
 	"path/filepath"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/spf13/viper"
 )
 
 // definitions and access methods for the generic component types
@@ -47,8 +47,8 @@ type Instance interface {
 	Load() error
 	Unload() error
 	Loaded() bool
-	V() *viper.Viper
-	SetConf(*viper.Viper)
+	V() *config.Config
+	SetConf(*config.Config)
 
 	// actions
 	Add(string, string, uint16) error
@@ -134,7 +134,7 @@ func RegisterComponent(ct *Component, n func(string) Instance) {
 	components[ct.Name] = ct
 	ct.RegisterDirs(ct.Directories)
 	for k, v := range ct.GlobalSettings {
-		viper.SetDefault(k, v)
+		config.GetConfig().SetDefault(k, v)
 	}
 }
 

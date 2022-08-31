@@ -25,10 +25,10 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // addHostCmd represents the addHost command
@@ -93,7 +93,7 @@ func addHost(h *host.Host, sshurl *url.URL) (err error) {
 
 	h.SetDefault("hostname", sshurl.Hostname())
 	h.SetDefault("port", 22)
-	h.SetDefault("username", viper.GetString("defaultuser"))
+	h.SetDefault("username", config.GetString("defaultuser"))
 	// XXX default to remote user's home dir, not local
 	h.SetDefault("geneos", host.Geneos())
 

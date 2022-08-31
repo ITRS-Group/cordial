@@ -3,11 +3,11 @@ package licd
 import (
 	"sync"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/viper"
 )
 
 var Licd = geneos.Component{
@@ -73,7 +73,7 @@ func New(name string) geneos.Instance {
 		}
 	}
 	c := &Licds{}
-	c.Conf = viper.New()
+	c.Conf = config.New()
 	c.InstanceHost = r
 	// c.root = r.V().GetString("geneos")
 	c.Component = &Licd
@@ -130,11 +130,11 @@ func (l *Licds) Loaded() bool {
 	return l.ConfigLoaded
 }
 
-func (l *Licds) V() *viper.Viper {
+func (l *Licds) V() *config.Config {
 	return l.Conf
 }
 
-func (l *Licds) SetConf(v *viper.Viper) {
+func (l *Licds) SetConf(v *config.Config) {
 	l.Conf = v
 }
 

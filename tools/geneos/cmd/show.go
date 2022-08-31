@@ -25,10 +25,10 @@ import (
 	"encoding/json"
 	"regexp"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // showCmd represents the show command
@@ -58,7 +58,7 @@ to prevent visibility in casual viewing.`,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		if len(args) == 0 {
 			// running config
-			rc := viper.AllSettings()
+			rc := config.GetConfig().AllSettings()
 			j, _ := json.MarshalIndent(rc, "", "    ")
 			j = opaqueJSONSecrets(j)
 			log.Println(string(j))
@@ -92,7 +92,7 @@ func showInstance(c geneos.Instance, params []string) (err error) {
 	var buffer []byte
 
 	// remove aliases
-	nv := viper.New()
+	nv := config.New()
 	for _, k := range c.V().AllKeys() {
 		if _, ok := c.Type().Aliases[k]; !ok {
 			nv.Set(k, c.V().Get(k))

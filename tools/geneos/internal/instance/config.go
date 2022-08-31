@@ -13,10 +13,10 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/spf13/afero/sftpfs"
-	"github.com/spf13/viper"
 )
 
 var ConfigType = "json"
@@ -227,7 +227,7 @@ func WriteConfig(c geneos.Instance) (err error) {
 	if err = c.Host().MkdirAll(filepath.Dir(file), 0775); err != nil {
 		logError.Println(err)
 	}
-	nv := viper.New()
+	nv := config.New()
 	for _, k := range c.V().AllKeys() {
 		if _, ok := c.Type().Aliases[k]; !ok {
 			nv.Set(k, c.V().Get(k))
@@ -246,7 +246,7 @@ func WriteConfig(c geneos.Instance) (err error) {
 
 func WriteConfigValues(c geneos.Instance, values map[string]interface{}) error {
 	file := ConfigPathWithExt(c, ConfigType)
-	nv := viper.New()
+	nv := config.New()
 	for k, v := range values {
 		nv.Set(k, v)
 	}
@@ -335,7 +335,7 @@ func SetDefaults(c geneos.Instance, name string) (err error) {
 				return err
 			}
 			if c.V() == nil {
-				logError.Println("no viper found")
+				logError.Println("no config found")
 			}
 			// add a bootstrap for 'root'
 			settings := c.V().AllSettings()
