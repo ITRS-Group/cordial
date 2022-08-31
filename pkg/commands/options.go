@@ -10,6 +10,7 @@ func evalOptions(c *Connection, options ...CommandOptions) {
 	}
 }
 
+// configure basic authentication on the connection, given a username and password
 func SetBasicAuth(username, password string) CommandOptions {
 	return func(c *Connection) {
 		c.AuthType = Basic
@@ -18,9 +19,18 @@ func SetBasicAuth(username, password string) CommandOptions {
 	}
 }
 
+// allow unverified connections over TLS to the gateway
 func AllowInsecureCertificates(opt bool) CommandOptions {
 	return func(c *Connection) {
 		c.InsecureSkipVerify = opt
+	}
+}
+
+// override the ping() function used to test the availability of
+// the gateway when used with DialGateways() and Redial()
+func Ping(ping func(*Connection) bool) CommandOptions {
+	return func(c *Connection) {
+		c.ping = &ping
 	}
 }
 
