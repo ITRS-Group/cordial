@@ -263,6 +263,20 @@ type EnvironmentVariable struct {
 	Value SingleLineStringVar `xml:"value"`
 }
 
+type APISampler struct {
+	XMLName    xml.Name    `xml:"sampler"`
+	Name       string      `xml:"name,attr"`
+	Comment    string      `xml:",comment"`
+	Group      string      `xml:"var-group>data"`
+	Interval   *DataOrVar  `xml:"sampleInterval,omitempty"`
+	Parameters []Parameter `xml:"plugin>api>parameters>parameter"`
+}
+
+type Parameter struct {
+	Name  string              `xml:"name"`
+	Value SingleLineStringVar `xml:"value"`
+}
+
 type Dataview struct {
 	XMLName   xml.Name `xml:"dataview"`
 	Name      string   `xml:"name,attr"`
