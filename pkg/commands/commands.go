@@ -36,6 +36,8 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -328,12 +330,16 @@ func (c *Connection) RunCommandAll(command string, target *xpath.XPath, args ...
 	return
 }
 
+var limitRE = regexp.MustCompile(`matches at least (\d+) items`)
+
 // Match returns a slice of all matching XPaths for the target up to
-// limit items. If limit is less than 1 then the default limit of 100 is
-// used.
+// limit items. If limit is 0 then first a match is tried with the
+// default limit of 100 and if that fails with an error hinting at the
+// approximate number of matches, then retry with twice this vaule. If
+// limit is less than 0 then the default limit of 100 is used.
 func (c *Connection) Match(target *xpath.XPath, limit int) (matches []*xpath.XPath, err error) {
 	const endpoint = "/rest/xpaths/match"
-	if limit < 1 {
+	if limit < 0 {
 		limit = 100
 	}
 	command := &Command{
@@ -342,14 +348,27 @@ func (c *Connection) Match(target *xpath.XPath, limit int) (matches []*xpath.XPa
 	}
 	cr, err := c.Do(endpoint, command)
 	if err != nil {
-		panic(err)
-		// return
+		if limit == 0 {
+			// try again with twice the limit in the error returned
+			lims := limitRE.FindStringSubmatch(cr.Stderr)
+			if len(lims) > 0 {
+				newlimit, _ := strconv.Atoi(lims[1])
+				command.Limit = newlimit * 2
+				cr, err = c.Do(endpoint, command)
+				if err != nil {
+					err = fmt.Errorf("%w: %s", err, cr.Stderr)
+					return
+				}
+			}
+		} else {
+			err = fmt.Errorf("%w: %s", err, cr.Stderr)
+			return
+		}
 	}
 	for _, p := range cr.XPaths {
 		x, err := xpath.Parse(p)
 		if err != nil {
-			panic(err)
-			// continue
+			continue
 		}
 		matches = append(matches, x)
 	}
@@ -365,14 +384,13 @@ func (c *Connection) CommandTargets(command string, target *xpath.XPath) (matche
 		Name:   command,
 	})
 	if err != nil {
-		panic(err)
-		// return
+		err = fmt.Errorf("%w: %s", err, cr.Stderr)
+		return
 	}
 	for _, p := range cr.XPaths {
 		x, err := xpath.Parse(p)
 		if err != nil {
-			panic(err)
-			// continue
+			continue
 		}
 		matches = append(matches, x)
 	}

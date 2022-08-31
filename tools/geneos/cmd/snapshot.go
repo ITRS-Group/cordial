@@ -26,8 +26,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/commands"
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/xpath"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -54,7 +56,8 @@ what data to request and authentication.`,
 	},
 }
 
-var values, severities, snoozes, userAssignments bool
+var values, severities, snoozes, userAssignments, xpathsonly bool
+var maxitems int
 
 func init() {
 	rootCmd.AddCommand(snapshotCmd)
@@ -64,9 +67,13 @@ func init() {
 	snapshotCmd.Flags().BoolVarP(&severities, "severity", "S", false, "Request cell severities")
 	snapshotCmd.Flags().BoolVarP(&snoozes, "snooze", "Z", false, "Request cell snooze info")
 	snapshotCmd.Flags().BoolVarP(&userAssignments, "userassignment", "U", false, "Request cell user assignment info")
+
+	snapshotCmd.Flags().IntVarP(&maxitems, "limit", "l", 0, "limit matching items to display. default is unlimited. results unsorted.")
+	snapshotCmd.Flags().BoolVarP(&xpathsonly, "xpaths", "x", false, "just show matching xpaths")
 }
 
 func snapshotInstance(c geneos.Instance, params []string) (err error) {
+	dvs := []string{}
 	logDebug.Println("snapshot on", c)
 	for _, path := range params {
 		x, err := xpath.Parse(path)
@@ -74,28 +81,38 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 			logError.Printf("%s: %q", err, path)
 			continue
 		}
+		logDebug.Println("dialling", gatewayURL(c))
+		gw, err := commands.DialGateway(gatewayURL(c),
+			commands.AllowInsecureCertificates(true),
+			commands.SetBasicAuth(config.GetString("download.username"), config.GetString("download.password")))
+		if err != nil {
+			return err
+		}
 		d := x.ResolveTo(&xpath.Dataview{})
-		log.Println("dataview:", d)
-		conn, err := commands.DialGateway(gatewayURL(c), commands.AllowInsecureCertificates(true), commands.SetBasicAuth("test", "abc123"))
+		logDebug.Println("matching xpath", d)
+		views, err := gw.Match(d, 0)
 		if err != nil {
-			logError.Println(err)
 			return err
 		}
-		views, err := conn.Match(d, 0)
-		if err != nil {
-			logError.Println(err)
-			return err
+		if maxitems > 0 && len(views) > maxitems {
+			views = views[0:maxitems]
 		}
-		for _, view := range views {
-			data, err := conn.Snapshot(view)
-			if err != nil {
-				logError.Println(err)
-				return err
+		if xpathsonly {
+			for _, x := range views {
+				dvs = append(dvs, fmt.Sprintf("%q", x))
 			}
-			j, _ := json.MarshalIndent(data, "", "    ")
-			log.Printf("data: %s", string(j))
+		} else {
+			for _, view := range views {
+				data, err := gw.Snapshot(view)
+				if err != nil {
+					return err
+				}
+				j, _ := json.MarshalIndent(data, "    ", "    ")
+				dvs = append(dvs, string(j))
+			}
 		}
 	}
+	log.Printf("[\n    %s\n]\n", strings.Join(dvs, ",\n    "))
 	return
 }
 

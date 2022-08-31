@@ -132,18 +132,17 @@ func NewHeadlinePath(name string) (x *XPath) {
 	return
 }
 
-// given an element type, return a new XPath to that
-// element, removing lower level elements or adding
-// empty elements to the level required. If the XPath
-// does not contain an element of the type given then
-// use the argument (which can include populated fields),
-// but if empty then any existing element will be left
-// as-is and not cleaned.
+// ResolveTo will, given an element type, return a new XPath to that
+// element, removing lower level elements or adding empty elements to
+// the level required. If the XPath does not contain an element of the
+// type given then use the argument (which can include populated
+// fields), but if empty then any existing element will be left as-is
+// and not cleaned.
 //
 // e.g.
 //
-//	x := x.ResolveTo(&Dataview{})
-//	y := xpath.ResolveTo(&Headline{Name: "headlineName"})
+//  x := x.ResolveTo(&Dataview{})
+//  y := xpath.ResolveTo(&Headline{Name: "headlineName"})
 func (x *XPath) ResolveTo(element interface{}) *XPath {
 	// copy the xpath
 	var nx XPath
@@ -157,21 +156,27 @@ func (x *XPath) ResolveTo(element interface{}) *XPath {
 	switch e := element.(type) {
 	case Gateway:
 		nx = XPath{
-			Gateway: &e,
+			Gateway: x.Gateway,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &e
 		}
 	case Probe:
 		nx = XPath{
 			Gateway: x.Gateway,
-			Probe:   &e,
+			Probe:   x.Probe,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &Gateway{}
+		}
+		if nx.Probe == nil {
+			nx.Probe = &e
 		}
 	case Entity:
 		nx = XPath{
 			Gateway: x.Gateway,
 			Probe:   x.Probe,
-			Entity:  &e,
+			Entity:  x.Entity,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &Gateway{}
@@ -179,12 +184,18 @@ func (x *XPath) ResolveTo(element interface{}) *XPath {
 		if nx.Probe == nil {
 			nx.Probe = &Probe{}
 		}
+		if nx.Entity == nil {
+			if e.Attributes == nil {
+				e.Attributes = make(map[string]string)
+			}
+			nx.Entity = &e
+		}
 	case Sampler:
 		nx = XPath{
 			Gateway: x.Gateway,
 			Probe:   x.Probe,
 			Entity:  x.Entity,
-			Sampler: &e,
+			Sampler: x.Sampler,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &Gateway{}
@@ -197,13 +208,16 @@ func (x *XPath) ResolveTo(element interface{}) *XPath {
 				Attributes: make(map[string]string),
 			}
 		}
+		if nx.Sampler == nil {
+			nx.Sampler = &e
+		}
 	case Dataview:
 		nx = XPath{
 			Gateway:  x.Gateway,
 			Probe:    x.Probe,
 			Entity:   x.Entity,
 			Sampler:  x.Sampler,
-			Dataview: &e,
+			Dataview: x.Dataview,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &Gateway{}
@@ -218,6 +232,9 @@ func (x *XPath) ResolveTo(element interface{}) *XPath {
 		}
 		if nx.Sampler == nil {
 			nx.Sampler = &Sampler{}
+		}
+		if nx.Dataview == nil {
+			nx.Dataview = &e
 		}
 	case Headline:
 		nx = XPath{
@@ -227,7 +244,7 @@ func (x *XPath) ResolveTo(element interface{}) *XPath {
 			Sampler:  x.Sampler,
 			Dataview: x.Dataview,
 			Rows:     false,
-			Headline: &e,
+			Headline: x.Headline,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &Gateway{}
@@ -245,6 +262,9 @@ func (x *XPath) ResolveTo(element interface{}) *XPath {
 		}
 		if nx.Dataview == nil {
 			nx.Dataview = &Dataview{}
+		}
+		if nx.Headline == nil {
+			nx.Headline = &e
 		}
 	case Row:
 		nx = XPath{
@@ -254,7 +274,7 @@ func (x *XPath) ResolveTo(element interface{}) *XPath {
 			Sampler:  x.Sampler,
 			Dataview: x.Dataview,
 			Rows:     true,
-			Row:      &e,
+			Row:      x.Row,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &Gateway{}
@@ -272,6 +292,9 @@ func (x *XPath) ResolveTo(element interface{}) *XPath {
 		}
 		if nx.Dataview == nil {
 			nx.Dataview = &Dataview{}
+		}
+		if nx.Row == nil {
+			nx.Row = &e
 		}
 	case Column:
 		nx = XPath{
@@ -282,7 +305,7 @@ func (x *XPath) ResolveTo(element interface{}) *XPath {
 			Dataview: x.Dataview,
 			Rows:     true,
 			Row:      x.Row,
-			Column:   &e,
+			Column:   x.Column,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &Gateway{}
@@ -303,6 +326,9 @@ func (x *XPath) ResolveTo(element interface{}) *XPath {
 		}
 		if nx.Row == nil {
 			nx.Row = &Row{}
+		}
+		if nx.Column == nil {
+			nx.Column = &e
 		}
 	}
 
