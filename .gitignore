@@ -22,3 +22,4 @@ integrations/servicenow/snow_client/snow_client
 integrations/servicenow/snow_client/snow_client.yaml
 examples/commands
 examples/xpath
+libraries/libemail/libemail
