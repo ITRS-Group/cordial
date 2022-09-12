@@ -43,8 +43,6 @@ func debug(conf EMailConfig) (debug bool) {
 	return
 }
 
-//
-//
 func setupMail(conf EMailConfig) (m *mail.Message, err error) {
 	m = mail.NewMessage()
 
@@ -82,18 +80,16 @@ func setupMail(conf EMailConfig) (m *mail.Message, err error) {
 	return
 }
 
-//
 // Set-up a Dialer using the _SMTP_* parameters
 //
 // All the parameters in the official docs are supported and have the same
 // defaults
 //
 // Additional parameters are
-// * _SMTP_TLS - default / force / none (case insenstive)
+// * _SMTP_TLS - default / force / none (case insensitive)
 // * _SMTP_USERNAME - if defined authentication attempted
 // * _SMTP_PASSWORD_FILE - plain text password in external file
 // * XXX - _SMTP_REFERENCE - override the SMTP Reference header for conversations / threading
-//
 func dialServer(conf EMailConfig) (d *mail.Dialer, err error) {
 	server := getWithDefault("_SMTP_SERVER", conf, "localhost")
 	port := getWithDefaultInt("_SMTP_PORT", conf, 25)
@@ -183,11 +179,9 @@ func getWithDefaultInt(key string, conf EMailConfig, def int) int {
 	return def
 }
 
-//
 // The Geneos libemail supports an optional text name per address and also the info type,
 // if given, must match "email" or "e-mail" (case insensitive). If either names or info types
 // are given they MUST have the same number of members otherwise it's a fatal error
-//
 func addAddresses(m *mail.Message, conf EMailConfig, header string) error {
 	upperHeader := strings.ToUpper(header)
 	addrs := splitCommaTrimSpace(conf[fmt.Sprintf("_%s", upperHeader)])
@@ -230,8 +224,8 @@ func splitCommaTrimSpace(s string) []string {
 		return []string{}
 	}
 	fields := strings.Split(s, ",")
-	for _, field := range fields {
-		strings.TrimSpace(field)
+	for i, field := range fields {
+		fields[i] = strings.TrimSpace(field)
 	}
 	return fields
 }
