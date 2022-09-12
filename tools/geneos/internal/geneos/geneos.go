@@ -132,7 +132,7 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 }
 
 // read a local configuration file without the need for a host
-// connection, primarily for boostrapping
+// connection, primarily for bootstrapping
 func ReadLocalConfigFile(file string, config interface{}) (err error) {
 	jsonFile, err := os.ReadFile(file)
 	if err != nil {
