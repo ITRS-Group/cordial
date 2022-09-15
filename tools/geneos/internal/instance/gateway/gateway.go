@@ -1,8 +1,6 @@
 package gateway
 
 import (
-	"crypto/rand"
-	"crypto/sha1"
 	_ "embed"
 	"fmt"
 	"log"
@@ -15,7 +13,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"golang.org/x/crypto/pbkdf2"
 )
 
 var Gateway = geneos.Component{
@@ -333,22 +330,20 @@ func (g *Gateways) Reload(params []string) (err error) {
 // create a gateway key file for secure passwords as per
 // https://docs.itrsgroup.com/docs/geneos/4.8.0/Gateway_Reference_Guide/gateway_secure_passwords.htm
 func createAESKeyFile(c geneos.Instance) (err error) {
-	rp := make([]byte, 20)
-	salt := make([]byte, 10)
-	if _, err = rand.Read(rp); err != nil {
-		return
-	}
-	if _, err = rand.Read(salt); err != nil {
+	a, err := config.NewAESValues()
+	if err != nil {
 		return
 	}
 
-	md := pbkdf2.Key(rp, salt, 10000, 48, sha1.New)
-	key := md[:32]
-	iv := md[32:]
-
-	if err = c.Host().WriteFile(instance.ComponentFilepath(c, "aes"), []byte(fmt.Sprintf("salt=%X\nkey=%X\niv =%X\n", salt, key, iv)), 0600); err != nil {
+	w, err := c.Host().Create(instance.ComponentFilepath(c, "aes"), 0600)
+	if err != nil {
 		return
 	}
+	defer w.Close()
+	if err = a.WriteAESValues(w); err != nil {
+		return
+	}
+
 	c.GetConfig().Set("aesfile", instance.ComponentFilename(c, "aes"))
 	return
 }
