@@ -27,45 +27,48 @@ type AESValues struct {
 // https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm
 
 // NewAESValues returns a new AESValues structure or an error
-func NewAESValues() (aes AESValues, err error) {
+func NewAESValues() (a AESValues, err error) {
 	rp := make([]byte, 20)
 	salt := make([]byte, 10)
+
+	// generate the key and IV separately
+
 	if _, err = rand.Read(rp); err != nil {
 		return
 	}
 	if _, err = rand.Read(salt); err != nil {
 		return
 	}
+	a.Key = pbkdf2.Key(rp, salt, 10000, 32, sha1.New)
 
-	md := pbkdf2.Key(rp, salt, 10000, 48, sha1.New)
-	aes.Key = md[:32]
-	aes.IV = md[32:]
+	if _, err = rand.Read(rp); err != nil {
+		return
+	}
+	if _, err = rand.Read(salt); err != nil {
+		return
+	}
+	a.IV = pbkdf2.Key(rp, salt, 10000, aes.BlockSize, sha1.New)
 
 	return
 }
 
 // WriteAESValues writes the AESValues structure to the io.Writer. Each
 // fields acts as if it were being marshalled with an ",omitempty" tag.
-func (aes AESValues) WriteAESValues(w io.Writer) (err error) {
-	if len(aes.Key) > 0 {
-		_, err = fmt.Fprintf(w, "key=%X\n", aes.Key)
-		if err != nil {
-			return
-		}
+func (a AESValues) WriteAESValues(w io.Writer) (err error) {
+	if len(a.Key) != 32 || len(a.IV) != aes.BlockSize {
+		return fmt.Errorf("invalid AES values")
 	}
-	if len(aes.IV) > 0 {
-		// space intentional to match native output
-		_, err = fmt.Fprintf(w, "iv =%X\n", aes.IV)
-		if err != nil {
-			return
-		}
+	// space intentional to match native OpenSSL output
+	_, err = fmt.Fprintf(w, "key=%X\niv =%X\n", a.Key, a.IV)
+	if err != nil {
+		return
 	}
 
 	return
 }
 
 // ReadAESValues consumes the io.Reader passed and extracts the salt, key and IV
-func ReadAESValues(r io.Reader) (aes AESValues, err error) {
+func ReadAESValues(r io.Reader) (a AESValues, err error) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -80,16 +83,18 @@ func ReadAESValues(r io.Reader) (aes AESValues, err error) {
 		key, value := strings.TrimSpace(s[0]), strings.TrimSpace(s[1])
 		switch key {
 		case "salt":
-			// aes.Salt, _ = hex.DecodeString(value)
 			// ignore
 		case "key":
-			aes.Key, _ = hex.DecodeString(value)
+			a.Key, _ = hex.DecodeString(value)
 		case "iv":
-			aes.IV, _ = hex.DecodeString(value)
+			a.IV, _ = hex.DecodeString(value)
 		default:
 			err = fmt.Errorf("unknown entry in file: %q", key)
 			return
 		}
+	}
+	if len(a.Key) != 32 || len(a.IV) != aes.BlockSize {
+		return AESValues{}, fmt.Errorf("invalid AES values")
 	}
 	return
 }
@@ -98,6 +103,10 @@ func (a AESValues) EncodeAES(in []byte) (out []byte, err error) {
 	block, err := aes.NewCipher(a.Key)
 	if err != nil {
 		err = fmt.Errorf("invalid key: %w", err)
+		return
+	}
+	if len(a.IV) != aes.BlockSize {
+		err = fmt.Errorf("IV is not the same length as the block size")
 		return
 	}
 
@@ -136,11 +145,19 @@ func (a AESValues) DecodeAES(in []byte) (out []byte, err error) {
 		err = fmt.Errorf("input is not a multiple of the block size")
 		return
 	}
+	if len(a.IV) != aes.BlockSize {
+		err = fmt.Errorf("IV is not the same length as the block size")
+		return
+	}
 	mode := cipher.NewCBCDecrypter(block, a.IV)
 	mode.CryptBlocks(text, text)
 
 	// remove padding as per RFC5246
 	paddingLength := int(text[len(text)-1])
+	if paddingLength == 0 || paddingLength > aes.BlockSize {
+		err = fmt.Errorf("invalid padding size")
+		return
+	}
 	text = text[0 : len(text)-paddingLength]
 	out = text
 	return
