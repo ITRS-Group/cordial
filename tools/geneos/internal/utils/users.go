@@ -53,10 +53,8 @@ func IsSuperuser() bool {
 	return false
 }
 
-//
 // set-up the Cmd to set uid, gid and groups of the username given
 // Note: does not change stdout etc. which is done later
-//
 func SetUser(cmd *exec.Cmd, username string) (err error) {
 	uid, gid, gids, err := GetIDs(username)
 	if err != nil {
@@ -100,7 +98,6 @@ func SetUser(cmd *exec.Cmd, username string) (err error) {
 //
 // this does not however change the user to match anything, so starting a
 // process still requires a seteuid type change
-//
 func CanControl(username string) bool {
 	if IsSuperuser() {
 		return true
@@ -129,8 +126,12 @@ func CanControl(username string) bool {
 	return username == uc.Username
 }
 
-func ReadPasswordPrompt() string {
-	fmt.Printf("Password: ")
+func ReadPasswordPrompt(prompt ...string) string {
+	if len(prompt) == 0 {
+		fmt.Printf("Password: ")
+	} else {
+		fmt.Printf("%s: ", strings.Join(prompt, " "))
+	}
 	pw, err := term.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		log.Fatalln("Error getting password:", err)
