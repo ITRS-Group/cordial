@@ -106,24 +106,28 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 // ${name} or $name substituted using [os.Expand] for the supported
 // formats in the order given below:
 //
-//   - '${path.to.config}'
-//     Any name containing one or more dots '.' will be looked up in the
+//  1. "${path.to.config}"
+//     Any name containing one or more dots "." will be looked up in the
 //     running configuration (which can include existing settings outside
 //     of any configuration file being read by the caller)
-//   - '${name}'
-//     'name' will be substituted with the corresponding value from the map
-//     'values'. If 'values' is empty (as opposed to the key 'name'
+//
+//  2. "${name}"
+//     "name" will be substituted with the corresponding value from the map
+//     "values". If "values" is empty (as opposed to the key "name"
 //     not being found) then name is looked up as an environment variable
-//   - '${env:name}'
-//     'name' will be substituted with the contents of the environment
+//
+//  3. "${env:name}"
+//     "name" will be substituted with the contents of the environment
 //     variable of the same name.
-//   - '${file://path/to/file}' or '${file:~/path/to/file}'
+//
+//  4. "${file://path/to/file}" or "${file:~/path/to/file}"
 //     The contents of the referenced file will be read. Multiline
 //     files are used as-is so this can, for example, be used to read
 //     PEM certificate files or keys. As an enhancement to a conventional
-//     file url, if the first '/' is replaced with a tilde '~' then the
+//     file url, if the first "/" is replaced with a tilde "~" then the
 //     path is relative to the home directory of the user running the process.
-//   - '${https://host/path}' or '${http://host/path}'
+//
+//  4. "${https://host/path}" or "${http://host/path}"
 //     The contents of the URL are fetched and used similarly as for
 //     local files above. The URL is passed to [http.Get] and supports
 //     any embedded Basic Authentication and other features from
@@ -145,7 +149,7 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 //
 // It is not currently possible to escape the syntax supported by
 // [os.Expand] and if it is necessary to have a configuration value
-// be of the form '${name}' or '$name' then set an otherwise unused item
+// be of the form "${name}" or "$name" then set an otherwise unused item
 // to the value and refer to it using the dotted syntax, e.g. for YAML
 //
 //	config:
