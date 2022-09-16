@@ -98,9 +98,9 @@ func New(name string) geneos.Instance {
 	c.Conf = config.New()
 	c.InstanceHost = r
 	c.Component = &San
-	c.GetConfig().SetDefault("santype", "netprobe")
+	c.Config().SetDefault("santype", "netprobe")
 	if ct != nil {
-		c.GetConfig().SetDefault("santype", ct.Name)
+		c.Config().SetDefault("santype", ct.Name)
 	}
 	if err := instance.SetDefaults(c, local); err != nil {
 		logger.Error.Fatalln(c, "setDefaults():", err)
@@ -117,11 +117,11 @@ func (s *Sans) Type() *geneos.Component {
 }
 
 func (s *Sans) Name() string {
-	return s.GetConfig().GetString("name")
+	return s.Config().GetString("name")
 }
 
 func (s *Sans) Home() string {
-	return s.GetConfig().GetString("home")
+	return s.Config().GetString("home")
 }
 
 func (s *Sans) Prefix() string {
@@ -155,7 +155,7 @@ func (s *Sans) Loaded() bool {
 	return s.ConfigLoaded
 }
 
-func (s *Sans) GetConfig() *config.Config {
+func (s *Sans) Config() *config.Config {
 	return s.Conf
 }
 
@@ -167,21 +167,21 @@ func (s *Sans) Add(username string, template string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(s.InstanceHost, &San)
 	}
-	s.GetConfig().Set("port", port)
-	s.GetConfig().Set("user", username)
-	s.GetConfig().Set("config.rebuild", "always")
-	s.GetConfig().Set("config.template", SanDefaultTemplate)
-	s.GetConfig().SetDefault("config.template", SanDefaultTemplate)
+	s.Config().Set("port", port)
+	s.Config().Set("user", username)
+	s.Config().Set("config.rebuild", "always")
+	s.Config().Set("config.template", SanDefaultTemplate)
+	s.Config().SetDefault("config.template", SanDefaultTemplate)
 
 	if template != "" {
 		filename, _ := instance.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
-		s.GetConfig().Set("config.template", filename)
+		s.Config().Set("config.template", filename)
 	}
 
-	s.GetConfig().Set("types", []string{})
-	s.GetConfig().Set("attributes", make(map[string]string))
-	s.GetConfig().Set("variables", make(map[string]string))
-	s.GetConfig().Set("gateways", make(map[string]string))
+	s.Config().Set("types", []string{})
+	s.Config().Set("attributes", make(map[string]string))
+	s.Config().Set("variables", make(map[string]string))
+	s.Config().Set("gateways", make(map[string]string))
 
 	if err = instance.WriteConfig(s); err != nil {
 		return
@@ -203,7 +203,7 @@ func (s *Sans) Add(username string, template string, port uint16) (err error) {
 //
 // we do a dance if there is a change in TLS setup and we use default ports
 func (s *Sans) Rebuild(initial bool) (err error) {
-	configrebuild := s.GetConfig().GetString("config.rebuild")
+	configrebuild := s.Config().GetString("config.rebuild")
 	if configrebuild == "never" {
 		return
 	}
@@ -214,8 +214,8 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 
 	// recheck check certs/keys
 	var changed bool
-	secure := s.GetConfig().GetString("certificate") != "" && s.GetConfig().GetString("privatekey") != ""
-	gws := s.GetConfig().GetStringMapString("gateways")
+	secure := s.Config().GetString("certificate") != "" && s.Config().GetString("privatekey") != ""
+	gws := s.Config().GetStringMapString("gateways")
 	for gw := range gws {
 		port := gws[gw]
 		if secure && port == "7039" {
@@ -228,12 +228,12 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 		gws[gw] = port
 	}
 	if changed {
-		s.GetConfig().Set("gateways", gws)
+		s.Config().Set("gateways", gws)
 		if err := instance.WriteConfig(s); err != nil {
 			return err
 		}
 	}
-	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), s.GetConfig().GetString("config.template"), SanTemplate)
+	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), s.Config().GetString("config.template"), SanTemplate)
 }
 
 func (s *Sans) Command() (args, env []string) {
@@ -241,7 +241,7 @@ func (s *Sans) Command() (args, env []string) {
 	args = []string{
 		s.Name(),
 		"-listenip", "none",
-		"-port", s.GetConfig().GetString("port"),
+		"-port", s.Config().GetString("port"),
 		"-setup", "netprobe.setup.xml",
 		"-setup-interval", "300",
 	}
@@ -249,12 +249,12 @@ func (s *Sans) Command() (args, env []string) {
 	// add environment variables to use in setup file substitution
 	env = append(env, "LOG_FILENAME="+logFile)
 
-	if s.GetConfig().GetString("certificate") != "" {
-		args = append(args, "-secure", "-ssl-certificate", s.GetConfig().GetString("certificate"))
+	if s.Config().GetString("certificate") != "" {
+		args = append(args, "-secure", "-ssl-certificate", s.Config().GetString("certificate"))
 	}
 
-	if s.GetConfig().GetString("privatekey") != "" {
-		args = append(args, "-ssl-certificate-key", s.GetConfig().GetString("privatekey"))
+	if s.Config().GetString("privatekey") != "" {
+		args = append(args, "-ssl-certificate-key", s.Config().GetString("privatekey"))
 	}
 
 	return

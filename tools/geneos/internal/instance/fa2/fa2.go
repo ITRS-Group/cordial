@@ -91,11 +91,11 @@ func (n *FA2s) Type() *geneos.Component {
 }
 
 func (n *FA2s) Name() string {
-	return n.GetConfig().GetString("name")
+	return n.Config().GetString("name")
 }
 
 func (n *FA2s) Home() string {
-	return n.GetConfig().GetString("home")
+	return n.Config().GetString("home")
 }
 
 func (n *FA2s) Prefix() string {
@@ -129,7 +129,7 @@ func (n *FA2s) Loaded() bool {
 	return n.ConfigLoaded
 }
 
-func (n *FA2s) GetConfig() *config.Config {
+func (n *FA2s) Config() *config.Config {
 	return n.Conf
 }
 
@@ -141,8 +141,8 @@ func (n *FA2s) Add(username string, tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(n.InstanceHost, &FA2)
 	}
-	n.GetConfig().Set("port", port)
-	n.GetConfig().Set("user", username)
+	n.Config().Set("port", port)
+	n.Config().Set("user", username)
 
 	if err = instance.WriteConfig(n); err != nil {
 		return
@@ -163,16 +163,16 @@ func (n *FA2s) Command() (args, env []string) {
 	logFile := instance.LogFile(n)
 	args = []string{
 		n.Name(),
-		"-port", n.GetConfig().GetString("port"),
+		"-port", n.Config().GetString("port"),
 	}
 	env = append(env, "LOG_FILENAME="+logFile)
 
-	if n.GetConfig().GetString("certificate") != "" {
-		args = append(args, "-secure", "-ssl-certificate", n.GetConfig().GetString("certificate"))
+	if n.Config().GetString("certificate") != "" {
+		args = append(args, "-secure", "-ssl-certificate", n.Config().GetString("certificate"))
 	}
 
-	if n.GetConfig().GetString("privatekey") != "" {
-		args = append(args, "-ssl-certificate-key", n.GetConfig().GetString("privatekey"))
+	if n.Config().GetString("privatekey") != "" {
+		args = append(args, "-ssl-certificate-key", n.Config().GetString("privatekey"))
 	}
 
 	return

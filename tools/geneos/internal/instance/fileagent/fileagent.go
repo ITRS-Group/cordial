@@ -101,11 +101,11 @@ func (n *FileAgents) Type() *geneos.Component {
 }
 
 func (n *FileAgents) Name() string {
-	return n.GetConfig().GetString("name")
+	return n.Config().GetString("name")
 }
 
 func (n *FileAgents) Home() string {
-	return n.GetConfig().GetString("home")
+	return n.Config().GetString("home")
 }
 
 func (n *FileAgents) Prefix() string {
@@ -139,7 +139,7 @@ func (n *FileAgents) Loaded() bool {
 	return n.ConfigLoaded
 }
 
-func (n *FileAgents) GetConfig() *config.Config {
+func (n *FileAgents) Config() *config.Config {
 	return n.Conf
 }
 
@@ -151,8 +151,8 @@ func (n *FileAgents) Add(username string, tmpl string, port uint16) (err error) 
 	if port == 0 {
 		port = instance.NextPort(n.Host(), &FileAgent)
 	}
-	n.GetConfig().Set("port", port)
-	n.GetConfig().Set("user", username)
+	n.Config().Set("port", port)
+	n.Config().Set("user", username)
 
 	if err = instance.WriteConfig(n); err != nil {
 		logger.Error.Fatalln(err)
@@ -173,7 +173,7 @@ func (c *FileAgents) Command() (args, env []string) {
 	logFile := instance.LogFile(c)
 	args = []string{
 		c.Name(),
-		"-port", c.GetConfig().GetString("port"),
+		"-port", c.Config().GetString("port"),
 	}
 	env = append(env, "LOG_FILENAME="+logFile)
 

@@ -64,7 +64,7 @@ func aesLSCommand(ct *geneos.Component, args []string, params []string) (err err
 }
 
 func aesLSInstance(c geneos.Instance, params []string) (err error) {
-	aesfile := c.GetConfig().GetString("aesfile")
+	aesfile := c.Config().GetString("keyfile")
 	if aesfile == "" {
 		return
 	}
