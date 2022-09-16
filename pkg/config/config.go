@@ -154,7 +154,7 @@ func (c *Config) GetStringMapString(s string, confmap ...map[string]string) (m m
 //
 // In the above a reference to ${config.real} will return the literal
 // string ${unchanged}
-func (c *Config) ExpandString(input string, confmap map[string]string) (value string) {
+func (c *Config) ExpandString(input string, values map[string]string) (value string) {
 	value = os.Expand(input, func(s string) (r string) {
 		switch {
 		case !strings.Contains(s, ":"):
@@ -162,10 +162,10 @@ func (c *Config) ExpandString(input string, confmap map[string]string) (value st
 				// this call to GetString() must NOT be recursive
 				return strings.TrimSpace(c.Viper.GetString(s))
 			}
-			if len(confmap) == 0 {
+			if len(values) == 0 {
 				return strings.TrimSpace(mapEnv(s))
 			}
-			return strings.TrimSpace(confmap[s])
+			return strings.TrimSpace(values[s])
 		case strings.HasPrefix(s, "env:"):
 			return strings.TrimSpace(mapEnv(strings.TrimPrefix(s, "env:")))
 		case strings.HasPrefix(s, "file:"):
