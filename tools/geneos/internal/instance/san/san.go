@@ -214,7 +214,7 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 
 	// recheck check certs/keys
 	var changed bool
-	secure := s.Config().GetString("certificate") != "" && s.Config().GetString("privatekey") != ""
+	secure := instance.Filename(s, "certificate") != "" && instance.Filename(s, "privatekey") != ""
 	gws := s.Config().GetStringMapString("gateways")
 	for gw := range gws {
 		port := gws[gw]
@@ -233,7 +233,7 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 			return err
 		}
 	}
-	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), s.Config().GetString("config.template"), SanTemplate)
+	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), instance.Filename(s, "config.template"), SanTemplate)
 }
 
 func (s *Sans) Command() (args, env []string) {
@@ -245,17 +245,10 @@ func (s *Sans) Command() (args, env []string) {
 		"-setup", "netprobe.setup.xml",
 		"-setup-interval", "300",
 	}
+	args = append(args, instance.SetSecureArgs(s)...)
 
 	// add environment variables to use in setup file substitution
 	env = append(env, "LOG_FILENAME="+logFile)
-
-	if s.Config().GetString("certificate") != "" {
-		args = append(args, "-secure", "-ssl-certificate", s.Config().GetString("certificate"))
-	}
-
-	if s.Config().GetString("privatekey") != "" {
-		args = append(args, "-ssl-certificate-key", s.Config().GetString("privatekey"))
-	}
 
 	return
 }

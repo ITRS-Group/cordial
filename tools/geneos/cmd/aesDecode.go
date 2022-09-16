@@ -24,7 +24,6 @@ package cmd
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -106,15 +105,13 @@ func init() {
 
 func aesDecodeInstance(c geneos.Instance, params []string) (err error) {
 	if c.Type() != &gateway.Gateway {
-		return nil
+		return
 	}
-	aesfile := c.Config().GetString("keyfile")
-	if aesfile == "" {
-		return nil
+	path := instance.Filepath(c, "keyfile")
+	if path == "" {
+		return
 	}
-	aespath := filepath.Join(c.Home(), aesfile)
-
-	r, err := c.Host().Open(aespath)
+	r, err := c.Host().Open(path)
 	if err != nil {
 		return
 	}

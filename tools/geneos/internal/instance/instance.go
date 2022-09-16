@@ -566,7 +566,7 @@ func SplitName(in string, defaultHost *host.Host) (ct *geneos.Component, name st
 // for an instance and returns an exec.Cmd, almost ready for execution. Callers
 // will add more details such as working directories, user and group etc.
 func BuildCmd(c geneos.Instance) (cmd *exec.Cmd, env []string) {
-	binary := c.Config().GetString("program")
+	binary := Filepath(c, "program")
 
 	args, env := c.Command()
 

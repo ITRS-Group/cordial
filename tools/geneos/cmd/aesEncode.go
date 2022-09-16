@@ -23,8 +23,6 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"path/filepath"
-
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -99,13 +97,12 @@ func aesEncodeInstance(c geneos.Instance, params []string) (err error) {
 	if c.Type() != &gateway.Gateway {
 		return nil
 	}
-	aesfile := c.Config().GetString("keyfile")
-	if aesfile == "" {
-		return nil
+	keyfile := instance.Filepath(c, "keyfile")
+	if keyfile == "" {
+		return
 	}
-	aespath := filepath.Join(c.Home(), aesfile)
 
-	r, err := c.Host().Open(aespath)
+	r, err := c.Host().Open(keyfile)
 	if err != nil {
 		return
 	}

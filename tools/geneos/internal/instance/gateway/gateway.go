@@ -37,7 +37,8 @@ var Gateway = geneos.Component{
 		"gatelibs":  "libpaths",
 		"gatecert":  "certificate",
 		"gatekey":   "privatekey",
-		"gateaes":   "aesfile",
+		"gateaes":   "keyfile",
+		"aesfile":   "keyfile",
 		"gatename":  "gatewayname",
 		"gatelich":  "licdhost",
 		"gatelicp":  "licdport",
@@ -126,10 +127,16 @@ func (g *Gateways) Type() *geneos.Component {
 }
 
 func (g *Gateways) Name() string {
+	if g.Config() == nil {
+		return ""
+	}
 	return g.Config().GetString("name")
 }
 
 func (g *Gateways) Home() string {
+	if g.Config() == nil {
+		return ""
+	}
 	return g.Config().GetString("home")
 }
 
@@ -227,7 +234,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 
 	// recheck check certs/keys
 	var changed bool
-	secure := g.Config().GetString("certificate") != "" && g.Config().GetString("privatekey") != ""
+	secure := instance.Filename(g, "certificate") != "" && instance.Filename(g, "privatekey") != ""
 
 	// if we have certs then connect to Licd securely
 	if secure && g.Config().GetString("licdsecure") != "true" {
@@ -263,7 +270,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 		}
 	}
 
-	return instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "gateway.setup.xml"), g.Config().GetString("config.template"), GatewayTemplate)
+	return instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "gateway.setup.xml"), instance.Filename(g, "config.template"), GatewayTemplate)
 }
 
 func (g *Gateways) Command() (args, env []string) {
@@ -301,25 +308,20 @@ func (g *Gateways) Command() (args, env []string) {
 		args = append(args, "-licd-port", fmt.Sprint(g.Config().GetString("licdport")))
 	}
 
-	if g.Config().GetString("certificate") != "" {
-		if g.Config().GetString("licdsecure") == "" || g.Config().GetString("licdsecure") != "false" {
+	args = append(args, instance.SetSecureArgs(g)...)
+
+	licdsecure := g.Config().GetString("licdsecure")
+	if instance.Filename(g, "certificate") != "" {
+		if licdsecure == "" || licdsecure != "false" {
 			args = append(args, "-licd-secure")
 		}
-		args = append(args, "-ssl-certificate", g.Config().GetString("certificate"))
-		chainfile := g.Host().Filepath("tls", "chain.pem")
-		args = append(args, "-ssl-certificate-chain", chainfile)
-	} else if g.Config().GetString("licdsecure") != "" && g.Config().GetString("licdsecure") == "true" {
+	} else if licdsecure != "" && licdsecure == "true" {
 		args = append(args, "-licd-secure")
 	}
 
-	privatekey := g.Config().GetString("privatekey")
-	if privatekey != "" {
-		args = append(args, "-ssl-certificate-key", privatekey)
-	}
-
-	// if c.GateAES != "" {
-	// 	args = append(args, "-key-file", c.GateAES)
-	// }
+	keyfile := instance.Filepath(g, "keyfile")
+	if keyfile != "" {
+		args = append(args, "-key-file", keyfile)
 	}
 
 	return
@@ -346,6 +348,6 @@ func createAESKeyFile(c geneos.Instance) (err error) {
 		return
 	}
 
-	c.GetConfig().Set("aesfile", instance.ComponentFilename(c, "aes"))
+	c.Config().Set("keyfile", instance.ComponentFilename(c, "aes"))
 	return
 }

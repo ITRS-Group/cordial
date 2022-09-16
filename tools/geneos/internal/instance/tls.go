@@ -128,10 +128,10 @@ func ReadCert(c geneos.Instance) (cert *x509.Certificate, err error) {
 		return nil, geneos.ErrInvalidArgs
 	}
 
-	if c.Config().GetString("certificate") == "" {
+	if Filename(c, "certificate") == "" {
 		return nil, os.ErrNotExist
 	}
-	return c.Host().ReadCert(Abs(c, c.Config().GetString("certificate")))
+	return c.Host().ReadCert(Filepath(c, "certificate"))
 }
 
 // read the instance RSA private key
