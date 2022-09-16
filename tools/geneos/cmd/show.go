@@ -93,9 +93,9 @@ func showInstance(c geneos.Instance, params []string) (err error) {
 
 	// remove aliases
 	nv := config.New()
-	for _, k := range c.GetConfig().AllKeys() {
+	for _, k := range c.Config().AllKeys() {
 		if _, ok := c.Type().Aliases[k]; !ok {
-			nv.Set(k, c.GetConfig().Get(k))
+			nv.Set(k, c.Config().Get(k))
 		}
 	}
 

@@ -166,14 +166,7 @@ func (l *Licds) Command() (args, env []string) {
 		"-log", instance.LogFile(l),
 	}
 
-	if l.Config().GetString("certificate") != "" {
-		args = append(args, "-secure", "-ssl-certificate", l.Config().GetString("certificate"))
-	}
-
-	if l.Config().GetString("privatekey") != "" {
-		args = append(args, "-ssl-certificate-key", l.Config().GetString("privatekey"))
-	}
-
+	args = append(args, instance.SetSecureArgs(l)...)
 	return
 }
 

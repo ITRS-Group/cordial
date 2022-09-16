@@ -239,6 +239,76 @@ func ComponentFilename(c geneos.Instance, extensions ...string) string {
 	return strings.Join(parts, ".")
 }
 
+// Filepath returns the full path to the file named by the configuration
+// item given in 'name'. If the configuration item is already an
+// absolute path then it is returned as-is, otherwise it is joined with
+// the home directory of the instance and returned. No indication is
+// given if the path is a valid local one or on a remote host.
+func Filepath(c geneos.Instance, name string) string {
+	if c.Config() == nil {
+		return ""
+	}
+	filename := c.Config().GetString(name)
+	if filename == "" {
+		return ""
+	}
+
+	if filepath.IsAbs(filename) {
+		return filename
+	}
+
+	return filepath.Join(c.Home(), filename)
+}
+
+// Filename returns the basename of the file named by the configuration
+// item given in 'name'. Returns an empty string if the configuration
+// item doesn't exist or is not set.
+func Filename(c geneos.Instance, name string) (filename string) {
+	if c.Config() == nil {
+		return
+	}
+	return filepath.Base(c.Config().GetString(name))
+}
+
+// Filenames returns the basename of the files named by the
+// configuration items given in 'names'. Returns an empty slice if the
+// instance is not valid or empty strings for each name if the
+// configuration item doesn't exist or is not set.
+func Filenames(c geneos.Instance, names ...string) (filenames []string) {
+	if c.Config() == nil {
+		return
+	}
+	for _, name := range names {
+		filenames = append(filenames, filepath.Base(c.Config().GetString(name)))
+	}
+	return
+}
+
+// SetSecureArgs returns a slice of arguments to enable secure
+// connections if the correct configuration values are set. These
+// command line options are common to all core Geneos components except
+// the gateway, which is special-cased
+func SetSecureArgs(c geneos.Instance) (args []string) {
+	files := Filenames(c, "certificate", "privatekey")
+	if len(files) == 0 {
+		return
+	}
+	if files[0] != "" {
+		if c.Type().String() != "gateway" {
+			args = append(args, "-secure")
+		}
+		args = append(args, "-ssl-certificate", files[0])
+	}
+	if files[1] != "" {
+		args = append(args, "-ssl-certificate-key", files[1])
+	}
+	chainfile := c.Host().Filepath("tls", "chain.pem")
+	if chainfile != "" {
+		args = append(args, "-ssl-certificate-chain", chainfile)
+	}
+	return
+}
+
 // write out an instance configuration file.
 // XXX check if existing config is an .rc file and if so rename it after
 // successful write to match migrate

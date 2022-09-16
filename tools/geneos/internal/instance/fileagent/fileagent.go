@@ -177,14 +177,6 @@ func (c *FileAgents) Command() (args, env []string) {
 	}
 	env = append(env, "LOG_FILENAME="+logFile)
 
-	// if c.FACert != "" {
-	// 	args = append(args, "-secure", "-ssl-certificate", c.FACert)
-	// }
-
-	// if c.FAKey != "" {
-	// 	args = append(args, "-ssl-certificate-key", c.FAKey)
-	// }
-
 	return
 }
 

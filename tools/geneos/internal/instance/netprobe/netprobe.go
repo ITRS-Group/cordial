@@ -168,15 +168,9 @@ func (n *Netprobes) Command() (args, env []string) {
 		n.Name(),
 		"-port", n.Config().GetString("port"),
 	}
+	args = append(args, instance.SetSecureArgs(n)...)
+
 	env = append(env, "LOG_FILENAME="+logFile)
-
-	if n.Config().GetString("certificate") != "" {
-		args = append(args, "-secure", "-ssl-certificate", n.Config().GetString("certificate"))
-	}
-
-	if n.Config().GetString("privatekey") != "" {
-		args = append(args, "-ssl-certificate-key", n.Config().GetString("privatekey"))
-	}
 
 	return
 }
