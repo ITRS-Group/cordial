@@ -91,11 +91,11 @@ func (l *Licds) Type() *geneos.Component {
 }
 
 func (l *Licds) Name() string {
-	return l.GetConfig().GetString("name")
+	return l.Config().GetString("name")
 }
 
 func (l *Licds) Home() string {
-	return l.GetConfig().GetString("home")
+	return l.Config().GetString("home")
 }
 
 func (l *Licds) Prefix() string {
@@ -129,7 +129,7 @@ func (l *Licds) Loaded() bool {
 	return l.ConfigLoaded
 }
 
-func (l *Licds) GetConfig() *config.Config {
+func (l *Licds) Config() *config.Config {
 	return l.Conf
 }
 
@@ -141,8 +141,8 @@ func (l *Licds) Add(username string, tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(l.InstanceHost, &Licd)
 	}
-	l.GetConfig().Set("port", port)
-	l.GetConfig().Set("user", username)
+	l.Config().Set("port", port)
+	l.Config().Set("user", username)
 
 	if err = instance.WriteConfig(l); err != nil {
 		logger.Error.Fatalln(err)
@@ -162,16 +162,16 @@ func (l *Licds) Add(username string, tmpl string, port uint16) (err error) {
 func (l *Licds) Command() (args, env []string) {
 	args = []string{
 		l.Name(),
-		"-port", l.GetConfig().GetString("port"),
+		"-port", l.Config().GetString("port"),
 		"-log", instance.LogFile(l),
 	}
 
-	if l.GetConfig().GetString("certificate") != "" {
-		args = append(args, "-secure", "-ssl-certificate", l.GetConfig().GetString("certificate"))
+	if l.Config().GetString("certificate") != "" {
+		args = append(args, "-secure", "-ssl-certificate", l.Config().GetString("certificate"))
 	}
 
-	if l.GetConfig().GetString("privatekey") != "" {
-		args = append(args, "-ssl-certificate-key", l.GetConfig().GetString("privatekey"))
+	if l.Config().GetString("privatekey") != "" {
+		args = append(args, "-ssl-certificate-key", l.Config().GetString("privatekey"))
 	}
 
 	return

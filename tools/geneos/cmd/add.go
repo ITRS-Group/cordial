@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
@@ -94,7 +95,6 @@ var addCmdExtras = instance.ExtraConfigValues{
 // Add an instance
 //
 // XXX argument validation is minimal
-//
 func commandAdd(ct *geneos.Component, extras instance.ExtraConfigValues, args []string) (err error) {
 	var username string
 
@@ -129,7 +129,7 @@ func commandAdd(ct *geneos.Component, extras instance.ExtraConfigValues, args []
 	}
 
 	if addCmdBase != "active_prod" {
-		c.GetConfig().Set("version", addCmdBase)
+		c.Config().Set("version", addCmdBase)
 	}
 	instance.SetExtendedValues(c, extras)
 	if err = instance.WriteConfig(c); err != nil {
@@ -140,7 +140,7 @@ func commandAdd(ct *geneos.Component, extras instance.ExtraConfigValues, args []
 	// reload config as instance data is not updated by Add() as an interface value
 	c.Unload()
 	c.Load()
-	log.Printf("%s added, port %d\n", c, c.GetConfig().GetInt("port"))
+	log.Printf("%s added, port %d\n", c, c.Config().GetInt("port"))
 
 	if addCmdStart || addCmdLogs {
 		if err = instance.Start(c); err != nil {

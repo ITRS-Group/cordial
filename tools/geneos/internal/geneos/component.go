@@ -35,7 +35,7 @@ type Component struct {
 }
 
 type Instance interface {
-	GetConfig() *config.Config
+	Config() *config.Config
 
 	// getters and setters
 	Name() string

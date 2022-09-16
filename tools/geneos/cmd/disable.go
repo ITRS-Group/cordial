@@ -57,7 +57,7 @@ func disableInstance(c geneos.Instance, params []string) (err error) {
 		return nil
 	}
 
-	uid, gid, _, err := utils.GetIDs(c.GetConfig().GetString("user"))
+	uid, gid, _, err := utils.GetIDs(c.Config().GetString("user"))
 	if err != nil {
 		return
 	}

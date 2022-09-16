@@ -108,7 +108,7 @@ func aesDecodeInstance(c geneos.Instance, params []string) (err error) {
 	if c.Type() != &gateway.Gateway {
 		return nil
 	}
-	aesfile := c.GetConfig().GetString("aesfile")
+	aesfile := c.Config().GetString("keyfile")
 	if aesfile == "" {
 		return nil
 	}
