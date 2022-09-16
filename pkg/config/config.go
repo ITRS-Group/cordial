@@ -47,16 +47,16 @@ func init() {
 }
 
 // Returns the configuration item as a string with ExpandString() applied,
-// passing the first "confmap" if given
-func GetString(s string, confmap ...map[string]string) string {
-	return global.GetString(s, confmap...)
+// passing the first "values" if given
+func GetString(s string, values ...map[string]string) string {
+	return global.GetString(s, values...)
 }
 
 // Returns the configuration item as a string with ExpandString() applied,
-// passing the first "confmap" if given
-func (c *Config) GetString(s string, confmap ...map[string]string) string {
-	if len(confmap) > 0 {
-		return c.ExpandString(c.Viper.GetString(s), confmap[0])
+// passing the first "values" if given
+func (c *Config) GetString(s string, values ...map[string]string) string {
+	if len(values) > 0 {
+		return c.ExpandString(c.Viper.GetString(s), values[0])
 	}
 	return c.ExpandString(c.Viper.GetString(s), nil)
 }
@@ -69,15 +69,15 @@ func New() *Config {
 	return &Config{Viper: viper.New()}
 }
 
-func GetStringSlice(s string, confmap ...map[string]string) []string {
-	return global.GetStringSlice(s, confmap...)
+func GetStringSlice(s string, values ...map[string]string) []string {
+	return global.GetStringSlice(s, values...)
 }
 
-func (c *Config) GetStringSlice(s string, confmap ...map[string]string) (slice []string) {
+func (c *Config) GetStringSlice(s string, values ...map[string]string) (slice []string) {
 	r := c.Viper.GetStringSlice(s)
 	for _, n := range r {
-		if len(confmap) > 0 {
-			slice = append(slice, c.ExpandString(n, confmap[0]))
+		if len(values) > 0 {
+			slice = append(slice, c.ExpandString(n, values[0]))
 		} else {
 			slice = append(slice, c.ExpandString(n, nil))
 		}
@@ -85,16 +85,16 @@ func (c *Config) GetStringSlice(s string, confmap ...map[string]string) (slice [
 	return
 }
 
-func GetStringMapString(s string, confmap ...map[string]string) map[string]string {
-	return global.GetStringMapString(s, confmap...)
+func GetStringMapString(s string, values ...map[string]string) map[string]string {
+	return global.GetStringMapString(s, values...)
 }
 
-func (c *Config) GetStringMapString(s string, confmap ...map[string]string) (m map[string]string) {
+func (c *Config) GetStringMapString(s string, values ...map[string]string) (m map[string]string) {
 	var cfmap map[string]string
 	m = make(map[string]string)
 	r := c.Viper.GetStringMapString(s)
-	if len(confmap) > 0 {
-		cfmap = confmap[0]
+	if len(values) > 0 {
+		cfmap = values[0]
 	}
 	for k, v := range r {
 		m[k] = c.ExpandString(v, cfmap)
@@ -112,7 +112,7 @@ func (c *Config) GetStringMapString(s string, confmap ...map[string]string) (m m
 //     of any configuration file being read by the caller)
 //   - '${name}'
 //     'name' will be substituted with the corresponding value from the map
-//     'confmap'. If 'confmap' is empty (as opposed to the key 'name'
+//     'values'. If 'values' is empty (as opposed to the key 'name'
 //     not being found) then name is looked up as an environment variable
 //   - '${env:name}'
 //     'name' will be substituted with the contents of the environment
