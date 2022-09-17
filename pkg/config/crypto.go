@@ -10,7 +10,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"os"
 	"strings"
+	"unicode/utf8"
 
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -67,7 +69,19 @@ func (a AESValues) WriteAESValues(w io.Writer) (err error) {
 	return
 }
 
-// ReadAESValues consumes the io.Reader passed and extracts the salt, key and IV
+// ReadAESValuesFile returns an AESValues struct populated with the
+// contents of the file passed as path.
+func ReadAESValuesFile(path string) (a AESValues, err error) {
+	r, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer r.Close()
+	return ReadAESValues(r)
+}
+
+// ReadAESValues returns an AESValues struct populated with the contents
+// read from r. The caller must close the Reader on return.
 func ReadAESValues(r io.Reader) (a AESValues, err error) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
@@ -152,6 +166,11 @@ func (a AESValues) DecodeAES(in []byte) (out []byte, err error) {
 	mode := cipher.NewCBCDecrypter(block, a.IV)
 	mode.CryptBlocks(text, text)
 
+	if len(text) == 0 {
+		err = fmt.Errorf("decode failed")
+		return
+	}
+
 	// remove padding as per RFC5246
 	paddingLength := int(text[len(text)-1])
 	if paddingLength == 0 || paddingLength > aes.BlockSize {
@@ -159,6 +178,10 @@ func (a AESValues) DecodeAES(in []byte) (out []byte, err error) {
 		return
 	}
 	text = text[0 : len(text)-paddingLength]
+	if !utf8.Valid(text) {
+		err = fmt.Errorf("decoded test not valid UTF-8")
+		return
+	}
 	out = text
 	return
 }
