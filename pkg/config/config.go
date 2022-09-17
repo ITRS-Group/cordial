@@ -102,19 +102,19 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 	return m
 }
 
-// ExpandString() returns input with any occurrences of the form
-// ${name} or $name substituted using [os.Expand] for the supported
-// formats in the order given below:
+// ExpandString() returns input with any occurrences of the form ${name}
+// or $name substituted using [os.Expand] for the supported formats in
+// the order given below:
 //
 //  1. "${path.to.config}"
 //     Any name containing one or more dots "." will be looked up in the
 //     running configuration (which can include existing settings outside
-//     of any configuration file being read by the caller)
+//     of any configuration file being read by the caller).
 //
 //  2. "${name}"
 //     "name" will be substituted with the corresponding value from the map
 //     "values". If "values" is empty (as opposed to the key "name"
-//     not being found) then name is looked up as an environment variable
+//     not being found) then name is looked up as an environment variable.
 //
 //  3. "${env:name}"
 //     "name" will be substituted with the contents of the environment
@@ -122,35 +122,58 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 //
 //  4. "${file://path/to/file}" or "${file:~/path/to/file}"
 //     The contents of the referenced file will be read. Multiline
-//     files are used as-is so this can, for example, be used to read
-//     PEM certificate files or keys. As an enhancement to a conventional
+//     files are used as-is; this can, for example, be used to read
+//     PEM certificate files or keys. As an enhancement to a standard
 //     file url, if the first "/" is replaced with a tilde "~" then the
 //     path is relative to the home directory of the user running the process.
 //
-//  4. "${https://host/path}" or "${http://host/path}"
+//  5. "${https://host/path}" or "${http://host/path}"
 //     The contents of the URL are fetched and used similarly as for
 //     local files above. The URL is passed to [http.Get] and supports
 //     any embedded Basic Authentication and other features from
 //     that function.
 //
-// The form $name is also supported, as per [os.Expand] but may be
+//  6. "${enc:keyfile[|keyfile...]:encodedvalue}"
+//     The item "encodedvalue" is an AES256 ciphertext in Geneos format
+//     - or a reference to one - which will be decoded using the key
+//     file(s) given. Each "keyfile" must be one of either an absolute
+//     path, a path relative to the working directory of the program, or
+//     if prefixed with "~/" then relative to the home directory of the
+//     user running the program. The first valid decode (see below) is
+//     returned.
+//
+//     The "encodedvalue" must be either prefixed "+encs+" to align with
+//     Geneos or will otherwise be looked up using the forms of any of
+//     the other references above without the surrounding
+//     dollar-brackets "${...}".
+//
+//     To minimise (but not eliminate) false decodes in some
+//     circumstances, if passed the wrong key file, the decoded value is
+//     only returned if it is a valid UTF-8 string as per [utf8.Valid].
+//
+//     Examples:
+//
+//     - password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
+//     - password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
+//
+// The form "$name" is also supported, as per [os.Expand] but may be
 // ambiguous and is not recommended.
 //
 // Expansion is not recursive. Configuration values are read and stored
 // as literals and are expanded each time they are used. For each
 // substitution any leading and trailing whitespace are removed.
-// External sources are fetched each time they are used and so there
-// may be a performance impact as well as the value unexpectedly
-// changing during a process lifetime.
+// External sources are fetched each time they are used and so there may
+// be a performance impact as well as the value unexpectedly changing
+// during a process lifetime.
 //
 // Any errors (particularly from substitutions from external files or
 // remote URLs) may result in an empty or corrupt string being returned.
 // Error returns are intentionally discarded.
 //
 // It is not currently possible to escape the syntax supported by
-// [os.Expand] and if it is necessary to have a configuration value
-// be of the form "${name}" or "$name" then set an otherwise unused item
-// to the value and refer to it using the dotted syntax, e.g. for YAML
+// [os.Expand] and if it is necessary to have a configuration value be
+// of the form "${name}" or "$name" then set an otherwise unused item to
+// the value and refer to it using the dotted syntax, e.g. for YAML
 //
 //	config:
 //	  real: ${config.temp}
@@ -160,44 +183,80 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 // string ${unchanged}
 func (c *Config) ExpandString(input string, values map[string]string) (value string) {
 	value = os.Expand(input, func(s string) (r string) {
-		switch {
-		case !strings.Contains(s, ":"):
-			if strings.Contains(s, ".") {
-				// this call to GetString() must NOT be recursive
-				return strings.TrimSpace(c.Viper.GetString(s))
-			}
-			if len(values) == 0 {
-				return strings.TrimSpace(mapEnv(s))
-			}
-			return strings.TrimSpace(values[s])
-		case strings.HasPrefix(s, "env:"):
-			return strings.TrimSpace(mapEnv(strings.TrimPrefix(s, "env:")))
-		case strings.HasPrefix(s, "file:"):
-			path := strings.TrimPrefix(s, "file:")
-			if strings.HasPrefix(path, "~/") {
-				home, _ := os.UserHomeDir()
-				path = strings.Replace(path, "~", home, 1)
-			}
-			b, err := os.ReadFile(path)
-			if err != nil {
-				return
-			}
-			return strings.TrimSpace(string(b))
-		case strings.HasPrefix(s, "http:"), strings.HasPrefix(s, "https:"):
-			resp, err := http.Get(s)
-			if err != nil {
-				return
-			}
-			defer resp.Body.Close()
-			b, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return
-			}
-			return strings.TrimSpace(string(b))
+		if strings.HasPrefix(s, "enc:") {
+			return c.expandEncodedString(s[4:], values)
 		}
-
-		return
+		return c.expandString(s, values)
 	})
+	return
+}
+
+func (c *Config) expandEncodedString(s string, values map[string]string) (value string) {
+	p := strings.SplitN(s, ":", 2)
+	if len(p) != 2 {
+		return ""
+	}
+	keyfiles, encodedValue := p[0], p[1]
+
+	if !strings.HasPrefix(encodedValue, "+encs+") {
+		encodedValue = c.expandString(encodedValue, values)
+	}
+	if encodedValue == "" {
+		return
+	}
+	encodedValue = strings.TrimPrefix(encodedValue, "+encs+")
+
+	for _, keyfile := range strings.Split(keyfiles, "|") {
+		a, err := ReadAESValuesFile(keyfile)
+		if err != nil {
+			continue
+		}
+		p, err := a.DecodeAESString(encodedValue)
+		if err != nil {
+			continue
+		}
+		return p
+	}
+	return ""
+}
+
+func (c *Config) expandString(s string, values map[string]string) (value string) {
+	switch {
+	case !strings.Contains(s, ":"):
+		if strings.Contains(s, ".") {
+			// this call to GetString() must NOT be recursive
+			return strings.TrimSpace(c.Viper.GetString(s))
+		}
+		if len(values) == 0 {
+			return strings.TrimSpace(mapEnv(s))
+		}
+		return strings.TrimSpace(values[s])
+	case strings.HasPrefix(s, "env:"):
+		return strings.TrimSpace(mapEnv(strings.TrimPrefix(s, "env:")))
+	case strings.HasPrefix(s, "file:"):
+		path := strings.TrimPrefix(s, "file:")
+		if strings.HasPrefix(path, "~/") {
+			home, _ := os.UserHomeDir()
+			path = strings.Replace(path, "~", home, 1)
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return
+		}
+		return strings.TrimSpace(string(b))
+	case strings.HasPrefix(s, "http:"), strings.HasPrefix(s, "https:"):
+		resp, err := http.Get(s)
+		if err != nil {
+			return
+		}
+		defer resp.Body.Close()
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return
+		}
+		return strings.TrimSpace(string(b))
+	}
+
 	return
 }
 
