@@ -28,7 +28,7 @@ func OpenComponentArchive(ct *Component, options ...GeneosOptions) (body io.Read
 	opts := EvalOptions(options...)
 
 	if opts.filename != "" {
-		return OpenLocalFileOrURL(opts.filename)
+		return OpenLocalFileOrURL(opts.filename, options...)
 	}
 
 	if opts.local {
@@ -302,13 +302,13 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 
 		logDebug.Println("nexus url:", source)
 
-		if config.GetString("download.username") != "" {
+		if opts.username != "" {
 			var req *http.Request
 			client := &http.Client{}
 			if req, err = http.NewRequest("GET", source, nil); err != nil {
 				logError.Fatalln(err)
 			}
-			req.SetBasicAuth(config.GetString("download.username"), config.GetString("download.password"))
+			req.SetBasicAuth(opts.username, opts.password)
 			if resp, err = client.Do(req); err != nil {
 				logError.Fatalln(err)
 			}
@@ -358,8 +358,8 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 		// only use auth if required - but save auth for potential reuse below
 		var auth_body []byte
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
-			if config.GetString("download.username") != "" {
-				da := downloadauth{config.GetString("download.username"), config.GetString("download.password")}
+			if opts.username != "" {
+				da := downloadauth{opts.username, opts.password}
 				auth_body, err = json.Marshal(da)
 				if err != nil {
 					logError.Fatalln(err)

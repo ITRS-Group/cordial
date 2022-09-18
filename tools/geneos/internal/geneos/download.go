@@ -86,8 +86,9 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 	return
 }
 
-//
-func OpenLocalFileOrURL(source string) (from io.ReadCloser, filename string, err error) {
+func OpenLocalFileOrURL(source string, options ...GeneosOptions) (from io.ReadCloser, filename string, err error) {
+	opts := EvalOptions(options...)
+
 	u, err := url.Parse(source)
 	if err != nil {
 		return
@@ -102,13 +103,13 @@ func OpenLocalFileOrURL(source string) (from io.ReadCloser, filename string, err
 		}
 		// only use auth if required
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
-			if config.GetString("download.username") != "" {
+			if opts.username != "" {
 				var req *http.Request
 				client := &http.Client{}
 				if req, err = http.NewRequest("GET", u.String(), nil); err != nil {
 					logError.Fatalln(err)
 				}
-				req.SetBasicAuth(config.GetString("download.username"), config.GetString("download.password"))
+				req.SetBasicAuth(opts.username, opts.password)
 				if resp, err = client.Do(req); err != nil {
 					logError.Fatalln(err)
 				}

@@ -77,7 +77,7 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 
 	if r == host.LOCAL {
 		config.GetConfig().Set("geneos", opts.homedir)
-		config.GetConfig().Set("defaultuser", opts.username)
+		config.GetConfig().Set("defaultuser", opts.localusername)
 
 		if utils.IsSuperuser() {
 			if err = host.LOCAL.WriteConfigFile(GlobalConfigPath, "root", 0664, config.GetConfig().AllSettings()); err != nil {
@@ -86,7 +86,7 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 		} else {
 			userConfFile := UserConfigFilePath()
 
-			if err = host.LOCAL.WriteConfigFile(userConfFile, opts.username, 0664, config.GetConfig().AllSettings()); err != nil {
+			if err = host.LOCAL.WriteConfigFile(userConfFile, opts.localusername, 0664, config.GetConfig().AllSettings()); err != nil {
 				return err
 			}
 		}
@@ -97,7 +97,7 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 	host.LOCAL = host.Get(host.LOCALHOST)
 
 	if utils.IsSuperuser() {
-		uid, gid, _, err = utils.GetIDs(opts.username)
+		uid, gid, _, err = utils.GetIDs(opts.localusername)
 		if err != nil {
 			// do something
 		}
