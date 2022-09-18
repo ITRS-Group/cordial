@@ -4,7 +4,7 @@
 
 This Geneos to Service Now integration provides a way for you to create or update incidents in Service Now from your Geneos gateway(s). The selection of the components to raise incidents against, the user and the mappings of Geneos data to specific fields in Service Now are all configurable.
 
-The binaries provided are for linux-amd64 as this is the standard architecture suported by the Geneos Gateway, however there should be no restriction on platform if you build from source.
+The binaries provided are for linux-amd64 as this is the standard architecture supported by the Geneos Gateway, however there should be no restriction on platform if you build from source.
 
 There are no specific prerequisites to use this integration beyond the two programs and their respective configuration files.
 
@@ -94,7 +94,7 @@ API:
 ServiceNow:
   Instance: instancename
   Username: ${SERVICENOW_USERNAME}
-  Password: ${SERVICENOW_PASSWORD}
+  Password: ${enc:~/.keyfile:env:SERVICENOW_PASSWORD}
   # PasswordFile: ~/.snowpw
   ClientID: ${SERVICENOW_CLIENTID}
   ClientSecret: ${SERVICENOW_CLIENTSECRET}
@@ -197,9 +197,10 @@ Note: All values that are intended to be passed to Service Now as a field are un
   * `Username` **Router Only**
     The Service Now API username.
   * `Password` **Router Only**
-    A cleartext password for the user above. This takes precendence over `PasswordFile` below. Please again note that all fields can be passed as environment variables (`${VARIABLE}` etc.) so it is not necessary to store the password in the configuration file.
-  * `PasswordFile` **Router Only**
+    A cleartext password for the user above. This takes precedence over `PasswordFile` below. 
+  * `PasswordFile` **Router Only** **Deprecated**
     A path to a file containing the plain text password for the user above. This file should be protected with Linux permissions 0600 to prevent unauthorised access. If a tilde (`~`) is the first character then the path is relative to the user home directory. e.g. `~/.snowpw`
+    This setting has been deprecated in favour of full support for value expansion via [config.ExpandString()](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString) which supports Geneos formatted AES256 encoded passwords.
   * `ClientID` **Router Only**
   * `ClientSecret` **Router Only**
     If these configuration values are supplied then the router will use a 2-legged OAuth2 flow to obtain a token and auto refresh token. This requires OAuth to be configured and enabled in your Service Now instance. OAuth is not attempted if the instance name contains a dot (`.`) which hints that you are using a non-SaaS/cloud instance.
@@ -225,6 +226,10 @@ Note: All values that are intended to be passed to Service Now as a field are un
     A list of numeric `state` values that map to named set(s) of defaults (defined by `IncidentStateDefaults` below) to apply to incidents depending on the `state` of the incident after initial lookup. `0` (zero) is used when no active incident match is found.
   * `IncidentStateDefaults` **Router Only**
     A list of named defaults to apply to the incident depending on the `state` match above. These are in the form `field: value`. 
+
+### Configuration Security and other features
+
+All plain values in the configuration support string expansion according to the function [ExpandString](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString). 
 
 ### Service Now Incident Field Processing
 
