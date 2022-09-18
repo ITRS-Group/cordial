@@ -35,9 +35,16 @@ import (
 
 // aesDecodeCmd represents the aesDecode command
 var aesDecodeCmd = &cobra.Command{
-	Use:                   "decode [-k KEYFILE] [-p KEYFILE] [-P PASSWORD] [-s SOURCE] [TYPE] [NAME]",
-	Short:                 "Decode an AES256 encoded password",
-	Long:                  `Decode an AES256 encoded password given a keyfile (or previous keyfile). If no keyfiles are explicitly provided then all matching instances are checked for configured keyfiles and each one tried. An error is only returned if all attempts to decode fail. If the given password has a prefix of '+encs+' it is removed. If both -P and -s options are given then the -P argsument is used. To read a password from STDIN use '-s -'.`,
+	Use:   "decode [-k KEYFILE] [-p KEYFILE] [-P PASSWORD] [-s SOURCE] [TYPE] [NAME]",
+	Short: "Decode an AES256 encoded password",
+	Long: `Decode an AES256 encoded password given a keyfile (or previous
+keyfile). If no keyfiles are explicitly provided then all matching
+instances are checked for configured keyfiles and each one tried. An
+error is only returned if all attempts to decode fail. If the given
+password has a prefix of '+encs+' it is removed. If both -P and -s
+options are given then the -P argsument is used. To read a password
+from STDIN use '-s -'.`,
+
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{

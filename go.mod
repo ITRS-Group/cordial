@@ -6,6 +6,7 @@ require (
 	github.com/StackExchange/wmi v1.2.1
 	github.com/mackerelio/go-osstat v0.2.2
 	github.com/spf13/viper v1.12.0
+	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 	gopkg.in/mail.v2 v2.3.1
 )
 

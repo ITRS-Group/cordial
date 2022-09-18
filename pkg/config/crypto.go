@@ -9,6 +9,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"os"
 	"strings"
@@ -110,6 +111,25 @@ func ReadAESValues(r io.Reader) (a AESValues, err error) {
 	if len(a.Key) != 32 || len(a.IV) != aes.BlockSize {
 		return AESValues{}, fmt.Errorf("invalid AES values")
 	}
+	return
+}
+
+func ChecksumFile(path string) (c uint32, err error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	c = crc32.ChecksumIEEE(b)
+	return
+}
+
+func Checksum(r io.Reader) (c uint32, err error) {
+	b := bytes.Buffer{}
+	_, err = b.ReadFrom(r)
+	if err != nil {
+		return
+	}
+	c = crc32.ChecksumIEEE(b.Bytes())
 	return
 }
 
