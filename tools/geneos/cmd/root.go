@@ -23,7 +23,6 @@ THE SOFTWARE.
 package cmd
 
 import (
-	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -32,6 +31,7 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/cordial"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
@@ -52,9 +52,6 @@ var (
 	ErrNotSupported error = errors.New("not supported")
 )
 
-//go:embed VERSION
-var VERSION string
-
 var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
@@ -67,7 +64,7 @@ template based configuration files for SANs and new gateways.`,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations:           make(map[string]string),
-	Version:               VERSION,
+	Version:               cordial.VERSION,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		// check initialisation
 		geneosdir := host.Geneos()
