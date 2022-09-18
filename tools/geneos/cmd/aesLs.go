@@ -24,10 +24,10 @@ package cmd
 
 import (
 	"fmt"
-	"path/filepath"
 	"text/tabwriter"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
@@ -57,22 +57,32 @@ var aesLSTabWriter *tabwriter.Writer
 
 func aesLSCommand(ct *geneos.Component, args []string, params []string) (err error) {
 	aesLSTabWriter = tabwriter.NewWriter(log.Writer(), 3, 8, 2, ' ', 0)
-	fmt.Fprintf(aesLSTabWriter, "Type\tName\tHost\tKey-File\tHome\tModTime\n")
+	fmt.Fprintf(aesLSTabWriter, "Type\tName\tHost\tKey-File\tCRC32\tModTime\n")
 	err = instance.ForAll(ct, aesLSInstance, args, params)
 	aesLSTabWriter.Flush()
 	return
 }
 
 func aesLSInstance(c geneos.Instance, params []string) (err error) {
-	aesfile := c.Config().GetString("keyfile")
-	if aesfile == "" {
+	path := instance.Filepath(c, "keyfile")
+	if path == "" {
 		return
 	}
-	s, err := c.Host().Stat(filepath.Join(c.Home(), aesfile))
+	s, err := c.Host().Stat(path)
 	if err != nil {
 		return
 	}
 	mtime := time.Unix(s.Mtime, 0)
-	fmt.Fprintf(aesLSTabWriter, "%s\t%s\t%s\t%s\t%s\t%s\n", c.Type(), c.Name(), c.Host(), aesfile, c.Home(), mtime.Format(time.RFC3339))
+
+	r, err := c.Host().Open(instance.Filepath(c, "keyfile"))
+	if err != nil {
+		return
+	}
+	defer r.Close()
+	crc, err := config.Checksum(r)
+	if err != nil {
+		return
+	}
+	fmt.Fprintf(aesLSTabWriter, "%s\t%s\t%s\t%s\t%08X\t%s\n", c.Type(), c.Name(), c.Host(), path, crc, mtime.Format(time.RFC3339))
 	return
 }
