@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -107,6 +108,8 @@ func init() {
 	initCmd.Flags().BoolVarP(&initCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires auth.")
 	initCmd.Flags().BoolVarP(&initCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
 	initCmd.Flags().StringVarP(&initCmdVersion, "version", "V", "latest", "Download matching version, defaults to latest. Doesn't work for EL8 archives.")
+	initCmd.Flags().StringVarP(&initCmdUsername, "username", "u", "", "Username for downloads. Defaults to configuration value download.username")
+	initCmd.Flags().StringVarP(&initCmdPwFile, "pwfile", "P", "", "")
 
 	initCmd.Flags().StringVarP(&initCmdGatewayTemplate, "gatewaytemplate", "w", "", "A gateway template file")
 	initCmd.Flags().StringVarP(&initCmdSANTemplate, "santemplate", "s", "", "A san template file")
@@ -124,6 +127,8 @@ func init() {
 var initCmdAll string
 var initCmdLogs, initCmdMakeCerts, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
 var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdVersion string
+var initCmdUsername, initCmdPassword, initCmdPwFile string
+
 var initCmdExtras = instance.ExtraConfigValues{
 	Includes:   instance.IncludeValues{},
 	Gateways:   instance.GatewayValues{},
@@ -133,14 +138,12 @@ var initCmdExtras = instance.ExtraConfigValues{
 	Types:      instance.StringSliceValues{},
 }
 
-//
 // initialise a geneos installation
 //
 // if no directory given and not running as root and the last component of the user's
 // home directory is NOT "geneos" then create a directory "geneos", else
 //
 // XXX Call any registered initialiser funcs from components
-//
 func commandInit(ct *geneos.Component, args []string, params []string) (err error) {
 	logDebug.Println(ct, args, params)
 	// none of the arguments can be a reserved type
@@ -260,7 +263,7 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 		}
 	}
 
-	if err = geneos.Init(host.LOCAL, geneos.Force(initCmdForce), geneos.Homedir(root), geneos.Username(username)); err != nil {
+	if err = geneos.Init(host.LOCAL, geneos.Force(initCmdForce), geneos.Homedir(root), geneos.LocalUsername(username)); err != nil {
 		logError.Fatalln(err)
 	}
 
@@ -307,6 +310,25 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 		if initCmdSnapshot {
 			options = append(options, geneos.UseSnapshots())
 		}
+	}
+
+	// download authentication
+	if initCmdUsername == "" {
+		initCmdUsername = config.GetString("download.username")
+	}
+
+	if initCmdPwFile != "" {
+		initCmdPassword = utils.ReadPasswordFile(initCmdPwFile)
+	} else {
+		initCmdPassword = config.GetString("download.password")
+	}
+
+	if initCmdUsername != "" && initCmdPassword == "" {
+		initCmdPassword = utils.ReadPasswordPrompt()
+	}
+
+	if initCmdUsername != "" {
+		options = append(options, geneos.Username(initCmdUsername), geneos.Password(initCmdPassword))
 	}
 
 	// create a demo environment

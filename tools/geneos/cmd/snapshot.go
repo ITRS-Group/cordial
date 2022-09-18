@@ -34,6 +34,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
+	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -52,12 +53,28 @@ what data to request and authentication.`,
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := cmdArgsParams(cmd)
+
+		if snapshotCmdUsername == "" {
+			snapshotCmdUsername = config.GetString("snapshot.username")
+		}
+
+		if snapshotCmdPwFile != "" {
+			snapshotCmdPassword = utils.ReadPasswordFile(snapshotCmdPwFile)
+		} else {
+			snapshotCmdPassword = config.GetString("snapshot.password")
+		}
+
+		if snapshotCmdUsername != "" && snapshotCmdPassword == "" {
+			snapshotCmdPassword = utils.ReadPasswordPrompt()
+		}
+
 		return instance.ForAll(ct, snapshotInstance, args, params)
 	},
 }
 
 var values, severities, snoozes, userAssignments, xpathsonly bool
 var maxitems int
+var snapshotCmdUsername, snapshotCmdPassword, snapshotCmdPwFile string
 
 func init() {
 	rootCmd.AddCommand(snapshotCmd)
@@ -67,6 +84,9 @@ func init() {
 	snapshotCmd.Flags().BoolVarP(&severities, "severity", "S", false, "Request cell severities")
 	snapshotCmd.Flags().BoolVarP(&snoozes, "snooze", "Z", false, "Request cell snooze info")
 	snapshotCmd.Flags().BoolVarP(&userAssignments, "userassignment", "U", false, "Request cell user assignment info")
+
+	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username for snaptshot, defaults to configuration value in snapshot.username")
+	snapshotCmd.Flags().StringVarP(&snapshotCmdPwFile, "pwfile", "P", "", "Password file to read for snapshots, defaults to configuration value in snapshot.password or otherwise prompts")
 
 	snapshotCmd.Flags().IntVarP(&maxitems, "limit", "l", 0, "limit matching items to display. default is unlimited. results unsorted.")
 	snapshotCmd.Flags().BoolVarP(&xpathsonly, "xpaths", "x", false, "just show matching xpaths")
@@ -84,7 +104,7 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 		logDebug.Println("dialling", gatewayURL(c))
 		gw, err := commands.DialGateway(gatewayURL(c),
 			commands.AllowInsecureCertificates(true),
-			commands.SetBasicAuth(config.GetString("download.username"), config.GetString("download.password")))
+			commands.SetBasicAuth(snapshotCmdUsername, snapshotCmdPassword))
 		if err != nil {
 			return err
 		}

@@ -1,20 +1,21 @@
 package geneos
 
 type Options struct {
-	override     string
-	local        bool
-	nosave       bool
-	overwrite    bool
-	restart      bool
-	basename     string
-	homedir      string
-	version      string
-	username     string
-	password     string
-	platform_id  string
-	downloadbase string
-	downloadtype string
-	filename     string
+	override      string
+	local         bool
+	nosave        bool
+	overwrite     bool
+	restart       bool
+	basename      string
+	homedir       string
+	version       string
+	localusername string
+	username      string
+	password      string
+	platform_id   string
+	downloadbase  string
+	downloadtype  string
+	filename      string
 }
 
 type GeneosOptions func(*Options)
@@ -65,6 +66,10 @@ func Basename(b string) GeneosOptions {
 
 func Homedir(h string) GeneosOptions {
 	return func(d *Options) { d.homedir = h }
+}
+
+func LocalUsername(u string) GeneosOptions {
+	return func(d *Options) { d.localusername = u }
 }
 
 func Username(u string) GeneosOptions {

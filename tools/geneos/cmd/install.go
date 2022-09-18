@@ -22,8 +22,10 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -82,6 +84,8 @@ func init() {
 	installCmd.Flags().BoolVarP(&installCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires auth.")
 	installCmd.Flags().BoolVarP(&installCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
 	installCmd.Flags().StringVarP(&installCmdVersion, "version", "V", "latest", "Download this version, defaults to latest. Doesn't work for EL8 archives.")
+	installCmd.Flags().StringVarP(&installCmdUsername, "username", "u", "", "Username for downloads, defaults to configuration value in download.username")
+	installCmd.Flags().StringVarP(&installCmdPwFile, "pwfile", "P", "", "Password file to read for downloads, defaults to configuration value in download.password or otherwise prompts")
 
 	installCmd.Flags().BoolVarP(&installCmdUpdate, "update", "U", false, "Update the base directory symlink")
 	installCmd.Flags().StringVarP(&installCmdOverride, "override", "T", "", "Override (set) the TYPE:VERSION for archive files with non-standard names")
@@ -89,14 +93,26 @@ func init() {
 }
 
 var installCmdLocal, installCmdNoSave, installCmdUpdate, installCmdNexus, installCmdSnapshot bool
-var installCmdBase, installCmdHost, installCmdOverride, installCmdVersion string
+var installCmdBase, installCmdHost, installCmdOverride, installCmdVersion, installCmdUsername, installCmdPassword, installCmdPwFile string
 
-//
-//
 func commandInstall(ct *geneos.Component, args, params []string) (err error) {
 	if ct == nil && len(args) == 0 && installCmdLocal {
 		log.Println("install -L (local) flag with no component or file/url")
 		return nil
+	}
+
+	if installCmdUsername == "" {
+		installCmdUsername = config.GetString("download.username")
+	}
+
+	if installCmdPwFile != "" {
+		installCmdPassword = utils.ReadPasswordFile(installCmdPwFile)
+	} else {
+		installCmdPassword = config.GetString("download.password")
+	}
+
+	if installCmdUsername != "" && installCmdPassword == "" {
+		installCmdPassword = utils.ReadPasswordPrompt()
 	}
 
 	// if we have a component on the command line then use an archive in packages/downloads
@@ -108,7 +124,7 @@ func commandInstall(ct *geneos.Component, args, params []string) (err error) {
 	if ct != nil || len(args) == 0 {
 		logDebug.Printf("installing %q version of %s to %s host(s)", installCmdVersion, ct, installCmdHost)
 
-		options := []geneos.GeneosOptions{geneos.Version(installCmdVersion), geneos.Basename(installCmdBase), geneos.Force(installCmdUpdate), geneos.OverrideVersion(installCmdOverride)}
+		options := []geneos.GeneosOptions{geneos.Version(installCmdVersion), geneos.Basename(installCmdBase), geneos.Force(installCmdUpdate), geneos.OverrideVersion(installCmdOverride), geneos.Username(installCmdUsername), geneos.Password(installCmdPassword)}
 		if installCmdNexus {
 			options = append(options, geneos.UseNexus())
 			if installCmdSnapshot {
