@@ -25,6 +25,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -110,7 +111,7 @@ func importInstance(c geneos.Instance, params []string) (err error) {
 	}
 
 	if len(params) == 0 {
-		logError.Fatalln("no file/url provided")
+		log.Fatal().Msg("no file/url provided")
 	}
 
 	for _, source := range params {

@@ -27,6 +27,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -79,14 +80,14 @@ func commandSet(ct *geneos.Component, args, params []string) error {
 }
 
 func setInstance(c geneos.Instance, params []string) (err error) {
-	logDebug.Println("c", c, "params", params)
+	log.Debug().Msgf("c %s params %v", c, params)
 
 	instance.SetExtendedValues(c, setCmdExtras)
 
 	for _, arg := range params {
 		s := strings.SplitN(arg, "=", 2)
 		if len(s) != 2 {
-			logError.Printf("ignoring %q %s", arg, ErrInvalidArgs)
+			log.Error().Msgf("ignoring %q %s", arg, ErrInvalidArgs)
 			continue
 		}
 		c.Config().Set(s[0], s[1])
@@ -94,11 +95,11 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 
 	// now loop through the collected results and write out
 	if err = instance.Migrate(c); err != nil {
-		logError.Fatalln("cannot migrate existing .rc config to set values in new .json configuration file:", err)
+		log.Fatal().Err(err).Msg("cannot migrate existing .rc config to set values in new .json configuration file")
 	}
 
 	if err = instance.WriteConfig(c); err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	return

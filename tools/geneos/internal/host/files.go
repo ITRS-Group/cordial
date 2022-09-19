@@ -16,20 +16,12 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/pkg/sftp"
+	"github.com/rs/zerolog/log"
 )
 
 // file handling
-
-// give these more convenient names and also shadow the std log
-// package for normal logging
-var (
-	log      = logger.Log
-	logDebug = logger.Debug
-	logError = logger.Error
-)
 
 var (
 	ErrInvalidArgs  = fmt.Errorf("invalid argument")
@@ -144,12 +136,12 @@ func CopyAll(srcHost *Host, srcDir string, dstHost *Host, dstDir string) (err er
 		filesystem := os.DirFS(srcDir)
 		fs.WalkDir(filesystem, ".", func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				logError.Println(err)
+				log.Error().Err(err).Msg("")
 				return nil
 			}
 			fi, err := d.Info()
 			if err != nil {
-				logError.Println(err)
+				log.Error().Err(err).Msg("")
 				return nil
 			}
 			dstPath := filepath.Join(dstDir, path)
@@ -167,14 +159,14 @@ func CopyAll(srcHost *Host, srcDir string, dstHost *Host, dstDir string) (err er
 	w := s.Walk(srcDir)
 	for w.Step() {
 		if w.Err() != nil {
-			logError.Println(w.Path(), err)
+			log.Error().Err(err).Msg(w.Path())
 			continue
 		}
 		fi := w.Stat()
 		srcPath := w.Path()
 		dstPath := filepath.Join(dstDir, strings.TrimPrefix(w.Path(), srcDir))
 		if err = copyDirEntry(fi, srcHost, srcPath, dstHost, dstPath); err != nil {
-			logError.Println(err)
+			log.Error().Err(err).Msg("")
 			continue
 		}
 	}
@@ -186,7 +178,7 @@ func copyDirEntry(fi fs.FileInfo, srcHost *Host, srcPath string, dstHost *Host, 
 	case fi.IsDir():
 		ds, err := srcHost.Stat(srcPath)
 		if err != nil {
-			logError.Println(err)
+			log.Error().Err(err).Msg("")
 			return err
 		}
 		if err = dstHost.MkdirAll(dstPath, ds.St.Mode()); err != nil {
@@ -543,7 +535,7 @@ func (h *Host) CreateTempFile(path string, perms fs.FileMode) (f io.WriteCloser,
 func CleanRelativePath(path string) (clean string, err error) {
 	clean = filepath.Clean(path)
 	if filepath.IsAbs(clean) || strings.HasPrefix(clean, "../") {
-		logDebug.Printf("path %q must be relative and descending only", clean)
+		log.Debug().Msgf("path %q must be relative and descending only", clean)
 		return "", ErrInvalidArgs
 	}
 
@@ -572,7 +564,7 @@ func (r *Host) ReadKey(path string) (key *rsa.PrivateKey, err error) {
 
 // write a private key as PEM to path. sets file permissions to 0600 (before umask)
 func (r *Host) WriteKey(path string, key *rsa.PrivateKey) (err error) {
-	logDebug.Println("write key to", path)
+	log.Debug().Msgf("write key to %s", path)
 	keyPEM := pem.EncodeToMemory(&pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
@@ -602,7 +594,7 @@ func (r *Host) ReadCert(path string) (cert *x509.Certificate, err error) {
 
 // write cert as PEM to path
 func (r *Host) WriteCert(path string, cert *x509.Certificate) (err error) {
-	logDebug.Println("write cert to", path)
+	log.Debug().Msgf("write cert to %s", path)
 	certPEM := pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: cert.Raw,
@@ -613,7 +605,7 @@ func (r *Host) WriteCert(path string, cert *x509.Certificate) (err error) {
 
 // concatenate certs and write to path
 func (r *Host) WriteCerts(path string, certs ...*x509.Certificate) (err error) {
-	logDebug.Println("write certs to", path)
+	log.Debug().Msgf("write certs to %s", path)
 	var certsPEM []byte
 	for _, cert := range certs {
 		if cert == nil {

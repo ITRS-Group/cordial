@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
@@ -46,7 +48,7 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 
 	opts := EvalOptions(options...)
 	if opts.homedir == "" {
-		logError.Fatalln("homedir not set")
+		log.Fatal().Msg("homedir not set")
 		// default or error
 	}
 
@@ -56,21 +58,21 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 	// either directories or do not exist
 	if _, err := r.Stat(opts.homedir); err != nil {
 		if err = r.MkdirAll(opts.homedir, 0775); err != nil {
-			logError.Fatalln(err)
+			log.Fatal().Err(err).Msg("")
 		}
 	} else if !opts.overwrite {
 		// check empty
 		dirs, err := r.ReadDir(opts.homedir)
 		if err != nil {
-			logError.Fatalln(err)
+			log.Fatal().Err(err).Msg("")
 		}
 		for _, entry := range dirs {
 			if !strings.HasPrefix(entry.Name(), ".") {
 				if r != host.LOCAL {
-					logDebug.Println("remote directories exist, exiting init")
+					log.Debug().Msg("remote directories exist, exiting init")
 					return nil
 				}
-				logError.Fatalf("target directory %q exists and is not empty", opts.homedir)
+				log.Fatal().Msgf("target directory %q exists and is not empty", opts.homedir)
 			}
 		}
 	}
@@ -81,7 +83,7 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 
 		if utils.IsSuperuser() {
 			if err = host.LOCAL.WriteConfigFile(GlobalConfigPath, "root", 0664, config.GetConfig().AllSettings()); err != nil {
-				logError.Fatalln("cannot write global config", err)
+				log.Fatal().Err(err).Msg("cannot write global config")
 			}
 		} else {
 			userConfFile := UserConfigFilePath()
@@ -102,7 +104,7 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 			// do something
 		}
 		if err = host.LOCAL.Chown(opts.homedir, uid, gid); err != nil {
-			logError.Fatalln(err)
+			log.Fatal().Err(err).Msg("")
 		}
 	}
 
@@ -145,7 +147,7 @@ func ReadLocalConfigFile(file string, config interface{}) (err error) {
 func UserConfigFilePath() string {
 	userConfDir, err := os.UserConfigDir()
 	if err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	return filepath.Join(userConfDir, UserConfigFile)
 }

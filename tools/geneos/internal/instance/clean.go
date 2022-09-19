@@ -3,6 +3,8 @@ package instance
 import (
 	"os"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -18,7 +20,7 @@ func Clean(c geneos.Instance, options ...geneos.GeneosOptions) (err error) {
 	if !opts.Restart() {
 		if cleanlist != "" {
 			if err = RemovePaths(c, cleanlist); err == nil {
-				logDebug.Println(c, "cleaned")
+				log.Debug().Msgf("%s cleaned", c)
 			}
 		}
 		return
@@ -42,7 +44,7 @@ func Clean(c geneos.Instance, options ...geneos.GeneosOptions) (err error) {
 			return
 		}
 	}
-	logDebug.Println(c, "fully cleaned")
+	log.Debug().Msgf("%s fully cleaned", c)
 	if stopped {
 		err = Start(c)
 	}

@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -33,7 +35,7 @@ func readSSHkeys(homedir string) (signers []ssh.Signer) {
 		if err != nil {
 			continue
 		}
-		logDebug.Println("loaded private key from", path)
+		log.Debug().Msgf("loaded private key from %s", path)
 		signers = append(signers, signer)
 	}
 	return
@@ -48,14 +50,14 @@ func sshConnect(dest, user string) (client *ssh.Client, err error) {
 
 	homedir, err = os.UserHomeDir()
 	if err != nil {
-		logError.Fatalln(err)
+		return
 	}
 
 	if khCallback == nil {
 		k := filepath.Join(homedir, userSSHdir, "known_hosts")
 		khCallback, err = knownhosts.New(k)
 		if err != nil {
-			logDebug.Println("cannot load ssh known_hosts file, ssh will not be available.")
+			log.Debug().Msg("cannot load ssh known_hosts file, ssh will not be available.")
 			return
 		}
 	}
@@ -65,7 +67,7 @@ func sshConnect(dest, user string) (client *ssh.Client, err error) {
 		if socket != "" {
 			sshAgent, err := net.Dial("unix", socket)
 			if err != nil {
-				log.Printf("Failed to open SSH_AUTH_SOCK: %v", err)
+				log.Error().Msgf("Failed to open SSH_AUTH_SOCK: %v", err)
 			} else {
 				agentClient = agent.NewClient(sshAgent)
 			}
@@ -108,7 +110,7 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 			h.failed = err
 			return
 		}
-		logDebug.Println("host opened", h.GetString("name"), dest, user)
+		log.Debug().Msgf("host opened %s %s %s", h.GetString("name"), dest, user)
 		sshSessions.Store(user+"@"+dest, s)
 	}
 	return
@@ -148,7 +150,7 @@ func (h *Host) DialSFTP() (f *sftp.Client, err error) {
 			h.failed = err
 			return
 		}
-		logDebug.Println("remote opened", h.GetString("name"))
+		log.Debug().Msgf("remote opened %s", h.GetString("name"))
 		sftpSessions.Store(user+"@"+dest, f)
 	}
 	return

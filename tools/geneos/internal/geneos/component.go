@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/rs/zerolog/log"
 )
 
 // definitions and access methods for the generic component types
@@ -57,12 +57,6 @@ type Instance interface {
 	Reload(params []string) (err error)
 	Rebuild(bool) error
 }
-
-var (
-	log      = logger.Log
-	logDebug = logger.Debug
-	logError = logger.Error
-)
 
 var Root Component = Component{
 	Name:             "none",
@@ -168,7 +162,7 @@ func ParseComponentName(component string) *Component {
 func MakeComponentDirs(h *host.Host, ct *Component) (err error) {
 	var name string
 	if h == host.ALL {
-		logError.Fatalln("called with all hosts")
+		log.Fatal().Msg("called with all hosts")
 	}
 	if ct == nil {
 		name = "none"
@@ -177,7 +171,7 @@ func MakeComponentDirs(h *host.Host, ct *Component) (err error) {
 	}
 	for _, d := range initDirs[name] {
 		dir := filepath.Join(h.GetString("geneos"), d)
-		logDebug.Println("mkdirall", dir)
+		log.Debug().Msgf("mkdirall %s", dir)
 		if err = h.MkdirAll(dir, 0775); err != nil {
 			return
 		}

@@ -64,18 +64,18 @@ var lsHostCmdJSON, lsHostCmdCSV, lsHostCmdIndent bool
 func commandLSHost(ct *geneos.Component, args []string, params []string) (err error) {
 	switch {
 	case lsHostCmdJSON:
-		jsonEncoder = json.NewEncoder(log.Writer())
+		jsonEncoder = json.NewEncoder(os.Stdout)
 		if lsHostCmdIndent {
 			jsonEncoder.SetIndent("", "    ")
 		}
 		err = loopHosts(lsInstanceJSONHosts)
 	case lsHostCmdCSV:
-		csvWriter = csv.NewWriter(log.Writer())
+		csvWriter = csv.NewWriter(os.Stdout)
 		csvWriter.Write([]string{"Type", "Name", "Disabled", "Username", "Hostname", "Port", "Directory"})
 		err = loopHosts(lsInstanceCSVHosts)
 		csvWriter.Flush()
 	default:
-		lsTabWriter = tabwriter.NewWriter(log.Writer(), 3, 8, 2, ' ', 0)
+		lsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintf(lsTabWriter, "Name\tUsername\tHostname\tPort\tDirectory\n")
 		err = loopHosts(lsInstancePlainHosts)
 		lsTabWriter.Flush()

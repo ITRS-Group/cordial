@@ -24,6 +24,8 @@ package cmd
 import (
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
@@ -79,7 +81,7 @@ var warned bool
 
 func unsetInstance(c geneos.Instance, params []string) (err error) {
 	var changed bool
-	logDebug.Println("c", c, "params", params)
+	log.Debug().Msgf("c %s params %v", c, params)
 
 	changed, err = unsetMaps(c)
 
@@ -106,17 +108,17 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 	}
 
 	if !changed && !warned {
-		log.Println("nothing unset. perhaps you forgot to use -k -KEY or one of the other options?")
+		log.Error().Msg("nothing unset. perhaps you forgot to use -k -KEY or one of the other options?")
 		warned = true
 		return
 	}
 
 	if err = instance.Migrate(c); err != nil {
-		logError.Fatalln("cannot migrate existing .rc config to set values in new .json configration file:", err)
+		log.Fatal().Err(err).Msg("cannot migrate existing .rc config to set values in new .json configration file")
 	}
 
 	if err = instance.WriteConfigValues(c, s); err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	return

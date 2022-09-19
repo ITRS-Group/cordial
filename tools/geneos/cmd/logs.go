@@ -24,6 +24,7 @@ package cmd
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -31,6 +32,8 @@ import (
 	"sync"
 	"time"
 	"unicode"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -83,11 +86,11 @@ var tails *sync.Map
 func commandLogs(ct *geneos.Component, args []string, params []string) (err error) {
 	// validate options
 	if logCmdMatch != "" && logCmdIgnore != "" {
-		logError.Fatalln("Only one of -g or -v can be given")
+		log.Fatal().Msg("Only one of -g or -v can be given")
 	}
 
 	if logCmdCat && logCmdFollow {
-		logError.Fatalln("Only one of -c or -f can be given")
+		log.Fatal().Msg("Only one of -c or -f can be given")
 	}
 
 	// if we have match or exclude with other defaults, then turn on logcat
@@ -112,7 +115,7 @@ func followLog(c geneos.Instance) (err error) {
 	done := make(chan bool)
 	tails = watchLogs()
 	if err = logFollowInstance(c, nil); err != nil {
-		log.Println(err)
+		log.Error().Err(err).Msg("")
 	}
 	<-done
 	return
@@ -122,7 +125,7 @@ func followLogs(ct *geneos.Component, args, params []string) (err error) {
 	done := make(chan bool)
 	tails = watchLogs()
 	if err = instance.ForAll(ct, logFollowInstance, args, params); err != nil {
-		log.Println(err)
+		log.Error().Err(err).Msg("")
 	}
 	<-done
 	return
@@ -138,9 +141,9 @@ func outHeader(c geneos.Instance) {
 		return
 	}
 	if lastout != nil {
-		log.Println()
+		fmt.Println()
 	}
-	log.Printf("==> %s %s <==\n", c, logfile)
+	fmt.Printf("==> %s %s <==\n", c, logfile)
 	lastout = c
 }
 
@@ -150,7 +153,7 @@ func logTailInstance(c geneos.Instance, params []string) (err error) {
 	st, err := c.Host().Stat(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			log.Printf("===> %s log file not found <===", c)
+			fmt.Printf("===> %s log file not found <===", c)
 			return nil
 		}
 		return
@@ -163,7 +166,7 @@ func logTailInstance(c geneos.Instance, params []string) (err error) {
 
 	text, err := tailLines(f, st.St.Size(), logCmdLines)
 	if err != nil && !errors.Is(err, io.EOF) {
-		log.Println(err)
+		log.Error().Err(err).Msg("")
 	}
 	if len(text) != 0 {
 		filterOutput(c, strings.NewReader(text+"\n"))
@@ -192,7 +195,7 @@ func tailLines(f io.ReadSeekCloser, end int64, linecount int) (text string, err 
 		f.Seek((i-1)*chunk, io.SeekStart)
 		n, err := f.Read(buf)
 		if err != nil && !errors.Is(err, io.EOF) {
-			logError.Fatalln(err)
+			log.Fatal().Err(err).Msg("")
 		}
 		buffer := string(buf[:n])
 
@@ -228,7 +231,7 @@ func filterOutput(c geneos.Instance, reader io.ReadSeeker) (sz int64) {
 			line := scanner.Text()
 			if strings.Contains(line, logCmdMatch) {
 				outHeader(c)
-				log.Println(line)
+				log.Error().Msg(line)
 			}
 		}
 	case logCmdIgnore != "":
@@ -237,15 +240,14 @@ func filterOutput(c geneos.Instance, reader io.ReadSeeker) (sz int64) {
 			line := scanner.Text()
 			if !strings.Contains(line, logCmdIgnore) {
 				outHeader(c)
-				log.Println(line)
+				log.Error().Msg(line)
 			}
 		}
 	default:
 		outHeader(c)
-		if _, err := io.Copy(log.Writer(), reader); err != nil {
-			log.Println(err)
+		if _, err := io.Copy(os.Stdout, reader); err != nil {
+			log.Error().Err(err).Msg("")
 		}
-		//log.Println()
 	}
 	sz, _ = reader.Seek(0, io.SeekCurrent)
 	return
@@ -257,7 +259,7 @@ func logCatInstance(c geneos.Instance, _ []string) (err error) {
 	lines, err := c.Host().Open(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			log.Printf("===> %s log file not found <===", c)
+			fmt.Printf("===> %s log file not found <===", c)
 			return nil
 		}
 		return
@@ -282,7 +284,7 @@ func logFollowInstance(c geneos.Instance, _ []string) (err error) {
 		if !errors.Is(err, fs.ErrNotExist) {
 			return
 		}
-		log.Printf("===> %s log file not found <===", c)
+		fmt.Printf("===> %s log file not found <===", c)
 	} else {
 		// output up to this point
 		st, _ := c.Host().Stat(logfile)
@@ -294,7 +296,7 @@ func logFollowInstance(c geneos.Instance, _ []string) (err error) {
 
 		tails.Store(c, &files{f, st.St.Size()})
 	}
-	logDebug.Println("watching", logfile)
+	log.Debug().Msgf("watching %s", logfile)
 
 	return nil
 }
@@ -344,7 +346,7 @@ func watchLogs() (tails *sync.Map) {
 
 				// open new file, read to the end, return
 				if tail.f, err = c.Host().Open(logfile); err != nil {
-					log.Println("cannot (re)open", err)
+					log.Error().Err(err).Msg("cannot (re)open")
 				}
 				tail.p = copyFromFile(c)
 				tails.Store(key, tail)
@@ -362,7 +364,7 @@ func copyFromFile(c geneos.Instance) (sz int64) {
 		sz = tail.p
 		if tail.f != nil {
 			logfile := instance.LogFile(c)
-			logDebug.Println("tail", logfile)
+			log.Debug().Msgf("tail %s", logfile)
 			sz = filterOutput(c, tail.f)
 		}
 	}

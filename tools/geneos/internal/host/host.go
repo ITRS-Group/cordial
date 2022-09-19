@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/rs/zerolog/log"
 )
 
 const UserHostFile = "geneos-hosts.json"
@@ -168,7 +169,7 @@ func (h *Host) Filepath(parts ...interface{}) string {
 	strParts := []string{}
 
 	if h == nil {
-		logError.Fatalln("host is nil")
+		h = LOCAL
 	}
 
 	for _, p := range parts {
@@ -217,7 +218,7 @@ func ReadConfigFile() {
 		case map[string]interface{}:
 			v.MergeConfigMap(m)
 		default:
-			logDebug.Printf("hosts value not a map[string]interface{} but a %T", h)
+			log.Debug().Msgf("hosts value not a map[string]interface{} but a %T", h)
 			continue
 		}
 		hosts.Store(n, &Host{v, true, nil})
@@ -240,9 +241,6 @@ func WriteConfigFile() error {
 }
 
 func UserHostsFilePath() string {
-	userConfDir, err := os.UserConfigDir()
-	if err != nil {
-		logError.Fatalln(err)
-	}
+	userConfDir, _ := os.UserConfigDir()
 	return filepath.Join(userConfDir, UserHostFile)
 }

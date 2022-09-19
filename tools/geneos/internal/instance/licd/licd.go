@@ -3,8 +3,9 @@ package licd
 import (
 	"sync"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -77,7 +78,7 @@ func New(name string) geneos.Instance {
 	c.InstanceHost = r
 	c.Component = &Licd
 	if err := instance.SetDefaults(c, local); err != nil {
-		logger.Error.Fatalln(c, "setDefaults():", err)
+		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
 	}
 	licds.Store(r.FullName(local), c)
 	return c
@@ -145,7 +146,7 @@ func (l *Licds) Add(username string, tmpl string, port uint16) (err error) {
 	l.Config().Set("user", username)
 
 	if err = instance.WriteConfig(l); err != nil {
-		logger.Error.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	// check tls config, create certs if found

@@ -24,6 +24,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"text/tabwriter"
 	"time"
 
@@ -56,7 +57,7 @@ func init() {
 var aesLSTabWriter *tabwriter.Writer
 
 func aesLSCommand(ct *geneos.Component, args []string, params []string) (err error) {
-	aesLSTabWriter = tabwriter.NewWriter(log.Writer(), 3, 8, 2, ' ', 0)
+	aesLSTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 	fmt.Fprintf(aesLSTabWriter, "Type\tName\tHost\tKey-File\tCRC32\tModTime\n")
 	err = instance.ForAll(ct, aesLSInstance, args, params)
 	aesLSTabWriter.Flush()

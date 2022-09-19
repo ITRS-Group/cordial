@@ -23,6 +23,8 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -71,7 +73,7 @@ var aesEncodeCmd = &cobra.Command{
 			if err != nil {
 				panic(err)
 			}
-			log.Printf("encoded: +encs+%s\n", e)
+			fmt.Printf("encoded: +encs+%s\n", e)
 			return nil
 		}
 
@@ -115,6 +117,6 @@ func aesEncodeInstance(c geneos.Instance, params []string) (err error) {
 	if err != nil {
 		return
 	}
-	log.Printf("%s: +encs+%s\n", c, e)
+	fmt.Printf("%s: +encs+%s\n", c, e)
 	return nil
 }

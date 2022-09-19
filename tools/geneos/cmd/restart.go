@@ -27,6 +27,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -63,7 +64,7 @@ var restartCmdAll, restartCmdKill, restartCmdLogs bool
 
 func commandRestart(ct *geneos.Component, args []string, params []string) (err error) {
 	if err = instance.ForAll(ct, restartInstance, args, params); err != nil {
-		logDebug.Println(err)
+		log.Debug().Err(err).Msg("")
 		return
 	}
 

@@ -13,6 +13,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
@@ -74,14 +76,14 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 	if t, err = t.ParseGlob(c.Host().Filepath(c.Type(), "templates", "*")); err != nil {
 		t = template.New(name).Funcs(fnmap).Option("missingkey=zero")
 		// if there are no templates, use internal as a fallback
-		log.Printf("No templates found in %s, using internal defaults", c.Host().Filepath(c.Type(), "templates"))
+		log.Warn().Msgf("No templates found in %s, using internal defaults", c.Host().Filepath(c.Type(), "templates"))
 		t = template.Must(t.Parse(string(defaultTemplate)))
 	}
 
 	// XXX backup old file - use same scheme as writeConfigFile()
 
 	if out, err = c.Host().Create(path, 0660); err != nil {
-		log.Printf("Cannot create configuration file for %s %s", c, path)
+		log.Warn().Msgf("Cannot create configuration file for %s %s", c, path)
 		return err
 	}
 	defer out.Close()
@@ -99,10 +101,10 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 			delete(m, k)
 		}
 	}
-	logDebug.Printf("template data: %#v", m)
+	log.Debug().Msgf("template data: %#v", m)
 
 	if err = t.ExecuteTemplate(out, name, m); err != nil {
-		log.Println("Cannot create configuration from template(s):", err)
+		log.Error().Err(err).Msg("Cannot create configuration from template(s)")
 		return err
 	}
 
@@ -141,7 +143,7 @@ func readRCConfig(c geneos.Instance) (err error) {
 	if err != nil {
 		return
 	}
-	logDebug.Printf("loading config from %q", ComponentFilepath(c, "rc"))
+	log.Debug().Msgf("loading config from %q", ComponentFilepath(c, "rc"))
 
 	confs := make(map[string]string)
 
@@ -320,7 +322,7 @@ func SetSecureArgs(c geneos.Instance) (args []string) {
 func WriteConfig(c geneos.Instance) (err error) {
 	file := ComponentFilepath(c)
 	if err = c.Host().MkdirAll(filepath.Dir(file), 0775); err != nil {
-		logError.Println(err)
+		log.Error().Err(err).Msg("")
 	}
 	nv := config.New()
 	for _, k := range c.Config().AllKeys() {
@@ -331,11 +333,11 @@ func WriteConfig(c geneos.Instance) (err error) {
 	if c.Host() != host.LOCAL {
 		client, err := c.Host().DialSFTP()
 		if err != nil {
-			logError.Println(err)
+			log.Error().Err(err).Msg("")
 		}
 		nv.SetFs(sftpfs.New(client))
 	}
-	logDebug.Printf("writing config for %s as %q", c, file)
+	log.Debug().Msgf("writing config for %s as %q", c, file)
 	return nv.WriteConfigAs(file)
 }
 
@@ -348,7 +350,7 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) error {
 	if c.Host() != host.LOCAL {
 		client, err := c.Host().DialSFTP()
 		if err != nil {
-			logError.Println(err)
+			log.Error().Err(err).Msg("")
 		}
 		nv.SetFs(sftpfs.New(client))
 	}
@@ -362,7 +364,7 @@ func ReadConfig(c geneos.Instance) (err error) {
 	if c.Host() != host.LOCAL {
 		client, err := c.Host().DialSFTP()
 		if err != nil {
-			logError.Printf("connection to %s failed", c.Host())
+			log.Error().Msgf("connection to %s failed", c.Host())
 			return err
 		}
 		c.Config().SetFs(sftpfs.New(client))
@@ -371,11 +373,10 @@ func ReadConfig(c geneos.Instance) (err error) {
 
 	// aliases have to be set AFTER loading from file (https://github.com/spf13/viper/issues/560)
 	for a, k := range c.Type().Aliases {
-		// logger.Debug.Printf("register %q as alias for %q", k, v)
 		c.Config().RegisterAlias(a, k)
 	}
 	if err == nil {
-		logDebug.Printf("config loaded for %s from %q", c, c.Config().ConfigFileUsed())
+		log.Debug().Msgf("config loaded for %s from %q", c, c.Config().ConfigFileUsed())
 	}
 	return
 }
@@ -394,16 +395,16 @@ func Migrate(c geneos.Instance) (err error) {
 
 	// write new .json
 	if err = WriteConfig(c); err != nil {
-		logError.Println("failed to write config file:", err)
+		log.Error().Err(err).Msg("failed to write config file")
 		return
 	}
 
 	// back-up .rc
 	if err = c.Host().Rename(ComponentFilepath(c, "rc"), ComponentFilepath(c, "rc", "orig")); err != nil {
-		logError.Println("failed to rename old config:", err)
+		log.Error().Err(err).Msg("failed to rename old config")
 	}
 
-	logDebug.Printf("migrated %s to JSON config", c)
+	log.Debug().Msgf("migrated %s to JSON config", c)
 	return
 }
 
@@ -426,17 +427,17 @@ func SetDefaults(c geneos.Instance, name string) (err error) {
 			k, v := p[0], p[1]
 			val, err := template.New(k).Funcs(textJoinFuncs).Parse(v)
 			if err != nil {
-				logError.Println(c, "parse error:", v)
+				log.Error().Err(err).Msgf("%s parse error: %s", c, v)
 				return err
 			}
 			if c.Config() == nil {
-				logError.Println("no config found")
+				log.Error().Err(err).Msg("no config found")
 			}
 			// add a bootstrap for 'root'
 			settings := c.Config().AllSettings()
 			settings["root"] = root
 			if err = val.Execute(&b, settings); err != nil {
-				log.Println(c, "cannot set defaults:", v)
+				log.Error().Msgf("%s cannot set defaults: %s", c, v)
 				return err
 			}
 			// if default is an alias, resolve it here
@@ -559,7 +560,7 @@ func (i *IncludeValues) Set(value string) error {
 		val = e[1]
 	} else {
 		// XXX check two values and first is a number
-		logDebug.Println("second value missing after ':', using default", val)
+		log.Debug().Msgf("second value missing after ':', using default %s", val)
 	}
 	(*i)[e[0]] = val
 	return nil
@@ -583,7 +584,7 @@ func (i *GatewayValues) Set(value string) error {
 		val = e[1]
 	} else {
 		// XXX check two values and first is a number
-		logDebug.Println("second value missing after ':', using default", val)
+		log.Debug().Msgf("second value missing after ':', using default %s", val)
 	}
 	(*i)[e[0]] = val
 	return nil
@@ -646,7 +647,7 @@ func (i *VarValues) Set(value string) error {
 		"externalConfigFile": "",
 	}
 	if _, ok := validtypes[t]; !ok {
-		logError.Printf("invalid type %q for variable", t)
+		log.Error().Msgf("invalid type %q for variable", t)
 		return geneos.ErrInvalidArgs
 	}
 	val := t + ":" + v

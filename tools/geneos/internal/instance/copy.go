@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
@@ -17,7 +19,7 @@ func CopyInstance(ct *geneos.Component, srcname, dstname string, remove bool) (e
 		return fmt.Errorf("source and destination must have different names and/or locations")
 	}
 
-	logDebug.Println(ct, srcname, dstname)
+	log.Debug().Msgf("%s %s %s", ct, srcname, dstname)
 
 	// move/copy all instances from host
 	// destination must also be a host and different and exist
@@ -48,7 +50,7 @@ func CopyInstance(ct *geneos.Component, srcname, dstname string, remove bool) (e
 	if ct == nil {
 		for _, t := range geneos.RealComponents() {
 			if err = CopyInstance(t, srcname, dstname, remove); err != nil {
-				logDebug.Println(err)
+				log.Debug().Err(err).Msg("")
 				continue
 			}
 		}
@@ -71,7 +73,7 @@ func CopyInstance(ct *geneos.Component, srcname, dstname string, remove bool) (e
 
 	dst, err := Get(ct, dstname)
 	if err != nil {
-		logDebug.Println(err)
+		log.Debug().Err(err).Msg("")
 	}
 	if dst.Loaded() {
 		return fmt.Errorf("%s already exists", dst)
@@ -103,7 +105,7 @@ func CopyInstance(ct *geneos.Component, srcname, dstname string, remove bool) (e
 	realdst := dst
 	b, _ := json.Marshal(src)
 	if err = json.Unmarshal(b, &realdst); err != nil {
-		logError.Println(err)
+		log.Error().Err(err).Msg("")
 	}
 
 	// move directory
@@ -116,15 +118,15 @@ func CopyInstance(ct *geneos.Component, srcname, dstname string, remove bool) (e
 		if done {
 			if remove {
 				// once we are done, try to delete old instance
-				logDebug.Println("removing old instance", srcname)
+				log.Debug().Msgf("removing old instance %s", srcname)
 				srcrem.RemoveAll(srchome)
-				log.Println(srcname, "moved to", dst)
+				fmt.Println(srcname, "moved to", dst)
 			} else {
-				log.Println(srcname, "copied to", dstname)
+				fmt.Println(srcname, "copied to", dstname)
 			}
 		} else {
 			// remove new instance
-			logDebug.Println("removing new instance", dst)
+			log.Debug().Msgf("removing new instance %s", dst)
 			dst.Host().RemoveAll(dst.Home())
 		}
 	}(src.String(), src.Host(), src.Home(), dst)
@@ -150,13 +152,13 @@ func CopyInstance(ct *geneos.Component, srcname, dstname string, remove bool) (e
 
 	// config changes don't matter until writing config succeeds
 	if err = WriteConfig(realdst); err != nil {
-		logDebug.Println(err)
+		log.Debug().Err(err).Msg("")
 		return
 	}
 
 	// src.Unload()
 	if err = realdst.Rebuild(false); err != nil && err != geneos.ErrNotSupported {
-		logDebug.Println(err)
+		log.Debug().Err(err).Msg("")
 		return
 	}
 

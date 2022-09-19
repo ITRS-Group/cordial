@@ -83,7 +83,7 @@ from STDIN use '-s -'.`,
 			if err != nil {
 				continue
 			}
-			log.Printf("decoded: %s\n", e)
+			fmt.Printf("decoded: %s\n", e)
 			return nil
 		}
 
@@ -131,6 +131,6 @@ func aesDecodeInstance(c geneos.Instance, params []string) (err error) {
 	if err != nil {
 		return nil
 	}
-	log.Printf("%s: %q\n", c, e)
+	fmt.Printf("%s: %q\n", c, e)
 	return nil
 }

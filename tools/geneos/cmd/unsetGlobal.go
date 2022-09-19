@@ -24,6 +24,7 @@ package cmd
 import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -65,7 +66,7 @@ OUTER:
 	}
 
 	if changed {
-		logDebug.Println(orig.AllSettings())
+		log.Debug().Msgf("%v", orig.AllSettings())
 		new.SetConfigFile(geneos.GlobalConfigPath)
 		return new.WriteConfig()
 	}

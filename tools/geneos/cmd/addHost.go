@@ -29,6 +29,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -55,7 +56,7 @@ var addHostCmd = &cobra.Command{
 			h = host.Get(args[0])
 			if len(args) > 1 {
 				if sshurl, err = url.Parse(args[1]); err != nil {
-					logError.Printf("invalid ssh url %q", args[1])
+					log.Error().Msgf("invalid ssh url %q", args[1])
 					return geneos.ErrInvalidArgs
 				}
 			} else {
@@ -124,7 +125,7 @@ func addHost(h *host.Host, sshurl *url.URL) (err error) {
 
 	host.Add(h)
 	if err = host.WriteConfigFile(); err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if addHostCmdInit {

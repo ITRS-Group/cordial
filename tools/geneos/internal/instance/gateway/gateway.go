@@ -3,13 +3,13 @@ package gateway
 import (
 	_ "embed"
 	"fmt"
-	"log"
 	"path/filepath"
 	"sync"
 	"syscall"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -89,13 +89,13 @@ func init() {
 func Init(r *host.Host, ct *geneos.Component) {
 	// copy default template to directory
 	if err := geneos.MakeComponentDirs(r, ct); err != nil {
-		logger.Error.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	if err := r.WriteFile(r.Filepath("gateway", "templates", GatewayDefaultTemplate), GatewayTemplate, 0664); err != nil {
-		logger.Error.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	if err := r.WriteFile(r.Filepath("gateway", "templates", GatewayInstanceTemplate), InstanceTemplate, 0664); err != nil {
-		logger.Error.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 }
 
@@ -113,7 +113,7 @@ func New(name string) geneos.Instance {
 	g.Component = &Gateway
 	g.InstanceHost = h
 	if err := instance.SetDefaults(g, local); err != nil {
-		logger.Error.Fatalln(g, "setDefaults():", err)
+		log.Fatal().Err(err).Msgf("%s setDefaults()")
 	}
 	gateways.Store(h.FullName(local), g)
 	return g
@@ -197,7 +197,7 @@ func (g *Gateways) Add(username string, template string, port uint16) (err error
 
 	// try to save config early
 	if err = instance.WriteConfig(g); err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 		return
 	}
 
