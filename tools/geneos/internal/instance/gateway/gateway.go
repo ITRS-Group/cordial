@@ -319,9 +319,17 @@ func (g *Gateways) Command() (args, env []string) {
 		args = append(args, "-licd-secure")
 	}
 
-	keyfile := instance.Filepath(g, "keyfile")
-	if keyfile != "" {
-		args = append(args, "-key-file", keyfile)
+	if g.Config().GetBool("usekeyfile") {
+		keyfile := instance.Filepath(g, "keyfile")
+		if keyfile != "" {
+			args = append(args, "-key-file", keyfile)
+		}
+
+		prevkeyfile := instance.Filepath(g, "prevkeyfile")
+		if keyfile != "" {
+			args = append(args, "-previous-key-file", prevkeyfile)
+		}
+
 	}
 
 	return
