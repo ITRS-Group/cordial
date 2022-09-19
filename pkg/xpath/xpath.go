@@ -141,8 +141,8 @@ func NewHeadlinePath(name string) (x *XPath) {
 //
 // e.g.
 //
-//  x := x.ResolveTo(&Dataview{})
-//  y := xpath.ResolveTo(&Headline{Name: "headlineName"})
+//	x := x.ResolveTo(&Dataview{})
+//	y := xpath.ResolveTo(&Headline{Name: "headlineName"})
 func (x *XPath) ResolveTo(element interface{}) *XPath {
 	// copy the xpath
 	var nx XPath
@@ -453,7 +453,7 @@ func (x *XPath) String() (path string) {
 // Parse takes an absolute Geneos XPath and returns an XPath structure.
 //
 // A leading double slash, e.g. //probe[(@name="myprobe")], results in
-// preceeding levels being filled-in and further processing continuing
+// preceding levels being filled-in and further processing continuing
 // from there. Because of the general purpose nature of the function
 // only levels down to //rows and //headlines are supported. If you need
 // a general path to a cell then you must use either //rows/row/cell or
@@ -473,7 +473,7 @@ func Parse(s string) (xpath *XPath, err error) {
 
 	parts := splitWithEscaping(s, '/', '\\')
 
-	// if the path is wildcarded, find the first level and prefix the parts[] with
+	// if the path is a wildcard, find the first level and prefix the parts[] with
 	// the higher levels
 	if strings.HasPrefix(s, "//") {
 		f := strings.FieldsFunc(s, func(r rune) bool { return !unicode.IsLetter(r) })
@@ -485,7 +485,7 @@ func Parse(s string) (xpath *XPath, err error) {
 		switch f[0] {
 		case "gateway":
 			// simple case
-			parts[1] = "geneos"
+			parts = []string{"geneos", "gateway"}
 		case "rows", "headlines":
 			parts = append([]string{"dataview"}, parts...)
 			fallthrough
