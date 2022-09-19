@@ -92,8 +92,49 @@ func (h *Host) WriteConfigFile(file string, username string, perms fs.FileMode, 
 	return h.Rename(fn, file)
 }
 
-// move a directory, between any combination of local or remote locations
-//
+// CopyFile copies a file between any combination of local or remote
+// locations. Destination can be a directory or a file. Parent
+// directories will be created. Any existing file will be overwritten.
+func CopyFile(srcHost *Host, srcPath string, dstHost *Host, dstPath string) (err error) {
+	if srcHost == ALL || dstHost == ALL {
+		return ErrInvalidArgs
+	}
+
+	ss, err := srcHost.Stat(srcPath)
+	if err != nil {
+		return err
+	}
+	if ss.St.IsDir() {
+		return fs.ErrInvalid
+	}
+
+	sf, err := srcHost.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer sf.Close()
+
+	ds, err := dstHost.Stat(dstPath)
+	if err == nil {
+		if ds.St.IsDir() {
+			dstPath = filepath.Join(dstPath, filepath.Base(srcPath))
+		}
+	} else {
+		dstHost.MkdirAll(filepath.Dir(dstPath), 0775)
+	}
+
+	df, err := dstHost.Create(dstPath, ss.St.Mode())
+	if err != nil {
+		return err
+	}
+	defer df.Close()
+	if _, err = io.Copy(df, sf); err != nil {
+		return err
+	}
+	return
+}
+
+// CopyAll copies a directory between any combination of local or remote locations
 func CopyAll(srcHost *Host, srcDir string, dstHost *Host, dstDir string) (err error) {
 	if srcHost == ALL || dstHost == ALL {
 		return ErrInvalidArgs
