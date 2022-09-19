@@ -88,8 +88,8 @@ func init() {
 	aesCmd.AddCommand(aesEncodeCmd)
 
 	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdAESFILE, "keyfile", "k", "", "Main AES key file to use")
-	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdString, "password", "s", "", "Password string to use")
-	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdSource, "source", "S", "", "Source for password to use")
+	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdString, "password", "p", "", "Password string to use")
+	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdSource, "source", "s", "", "Source for password to use")
 	aesEncodeCmd.Flags().SortFlags = false
 }
 

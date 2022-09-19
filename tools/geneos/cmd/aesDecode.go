@@ -103,9 +103,9 @@ func init() {
 	aesCmd.AddCommand(aesDecodeCmd)
 
 	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdAESFILE, "keyfile", "k", "", "Main AES key file to use")
-	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPrevAESFILE, "previous", "p", "", "Previous AES key file to use")
-	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPassword, "password", "s", "", "Password to decode")
-	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdSource, "source", "S", "", "Source for password to use")
+	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPrevAESFILE, "previous", "v", "", "Previous AES key file to use")
+	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPassword, "password", "p", "", "Password to decode")
+	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdSource, "source", "s", "", "Source for password to use")
 	aesDecodeCmd.Flags().SortFlags = false
 
 }
