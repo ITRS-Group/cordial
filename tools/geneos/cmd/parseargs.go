@@ -11,7 +11,7 @@ import (
 )
 
 // given a list of args (after command has been seen), check if first
-// arg is a component type and depdup the names. A name of "all" will
+// arg is a component type and de-dup the names. A name of "all" will
 // will override the rest and result in a lookup being done
 //
 // args with an '=' should be checked and only allowed if there are names?
@@ -58,7 +58,7 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 	}
 	rawargs = rawargs[:n]
 
-	logDebug.Println("rawargs, params", rawargs, params)
+	logDebug.Println("rawargs, params, ct", rawargs, params, a["ct"])
 
 	if _, ok := a["ct"]; !ok {
 		a["ct"] = ""
@@ -85,9 +85,10 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 			defaultComponent = rawargs[0]
 		}
 		// work through wildcard options
-		if len(rawargs) == 0 {
-			// nothing
-		} else if ct = geneos.ParseComponentName(defaultComponent); ct == nil {
+		// if len(rawargs) == 0 {
+		// 	// nothing
+		// } else
+		if ct = geneos.ParseComponentName(defaultComponent); ct == nil {
 			// first arg is not a known type, so treat the rest as instance names
 			args = rawargs
 		} else {
@@ -98,6 +99,8 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 				args = rawargs
 			}
 		}
+
+		logDebug.Println("ct:", ct)
 
 		if len(args) == 0 {
 			// no args means all instances
