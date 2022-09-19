@@ -624,6 +624,41 @@ Import a file into an instance working directory, from local file, url or stdin 
 
 Like other commands that write to the file system is can safely be run as root as the destination directory and file will be changed to be owned by either the instance or the default user, with the caveat that any intermediate directories above the destination sub-directory (e.g. the first two in `my/long/path`) will be owned by root.
 
+## Secure Passwords
+
+The `geneos aes` commands provide tools to manage Geneos AES256 key files as [documented here](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm)
+
+In addition to the functionality built-in to Geneos as described in the Gateway documentation these encoded password can also be included in configuration files so that plain text passwords and other credentials are not visible to users.
+
+* `geneos aes ls`
+  List configured key-files in Geneos components. The CRC32 column is provided as a visual aid to human users to identify common key-files.
+  
+  Note: If a key-file is configured then the component - currently only Gateways - are started with the key-file on the command line. This may cause start-up issues if the key-file has just been added or changed and your Gateway is earlier than GA5.14.0 or there is an existing `cache/` directory in the Gateway working directory. To resolve this you may have to remove the `cache/` directory (use the `geneos clean` command with the `-F` full-clean option) or start the Gateway with a `-skip-cache` option which can be set with `geneos set -k options=-skip-cache` and so on.
+
+* `geneos aes encode [-k KEYFILE] [-p STRING] [-s SOURCE] [TYPE] [NAME]`
+
+  Encode a plain text password using the key-file given or the key-files configured for any matching instances. If instances share the same key-file then the same output will be generated for each. If neither a string or a source path is given then the user is prompted to enter a password. The SOURCE can be a local file or a URL.
+
+* `geneos aes decode [-k KEYFILE] [-v KEYFILE] [-p PASSWORD] [-s SOURCE] [TYPE] [NAME]`
+
+  Decode the encoded text using the given key-file or previous key-file, if given on the command line or using the key-files for matching instances. The first valid UTF-8 decoded text is output and further processing stops. The encoded text can be prefixed with the Geneos `+encs+` text, which will be removed if present. The SOURCE can be a local file or a URL.
+
+* `geneos aes new -k PATH -S [TYPE] [NAME]`
+
+  Create a new key-file. With no arguments a new file is created in the current directory called `keyfile.aes`. If the set option (`-S`) is provided then the keyfile is copied to the `gateway/gateway_shared/keyfiles` directory with a (hopefully) unique name (the CRC32 of the file plus `.aes`), synced to remote hosts and all matching instances have their key-file parameters set to use this file. Unlike `geneos aes sync` below, only the new key-file is copied to the shared location.
+
+* `geneos aes update`
+
+  Update the existing key-file in use by rotating the currently configured key-file to previous-key-file. Required GA6.x.
+
+  * Not yet implemented.
+
+* `geneos aes sync`
+
+  Sync local key-file(s) to remote hosts.
+
+  * Not yet implemented.
+
 ## TLS Operations
 
 The `geneos tls` command provides a number of subcommands to create and manage certificates and instance configurations for encrypted connections.
@@ -676,9 +711,15 @@ If files are locally downloaded then this can either be a `file://` style URL or
 
 * `download.username`
   `download.password`
-These specify the username and password to use when downloading packages. They can also be set as the environment variables:
+  These specify the username and password to use when downloading packages. They can also be set as the environment variables, but the environment variables are not subject to expansion and so cannot contain Geneos encoded passwords (see below):
   * `ITRS_DOWNLOAD_USERNAME`
   * `ITRS_DOWNLOAD_PASSWORD`
+
+* `snapshot.username`
+  `snapshot.password`
+  Similarly to the above, these specify the username and password to use when taking dataview snapshots. They can also be set as the environment variables, with the same restrictions as above:
+  * `ITRS_SNAPSHOT_USERNAME`
+  * `ITRS_SNAPSHOT_PASSWORD`
 
 * `defaultuser`
 Principally used when running with elevated privilege (setuid or `sudo`) and a suitable username is not defined in instance configurations or for file ownership of shared directories.
