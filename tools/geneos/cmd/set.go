@@ -94,7 +94,7 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 
 	// now loop through the collected results and write out
 	if err = instance.Migrate(c); err != nil {
-		logError.Fatalln("cannot migrate existing .rc config to set values in new .json configration file:", err)
+		logError.Fatalln("cannot migrate existing .rc config to set values in new .json configuration file:", err)
 	}
 
 	if err = instance.WriteConfig(c); err != nil {
