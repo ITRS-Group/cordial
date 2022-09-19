@@ -207,6 +207,10 @@ func (c *Config) expandEncodedString(s string, values map[string]string) (value 
 	encodedValue = strings.TrimPrefix(encodedValue, "+encs+")
 
 	for _, keyfile := range strings.Split(keyfiles, "|") {
+		if strings.HasPrefix(keyfile, "~/") {
+			home, _ := os.UserHomeDir()
+			keyfile = strings.Replace(keyfile, "~", home, 1)
+		}
 		a, err := ReadAESValuesFile(keyfile)
 		if err != nil {
 			continue
