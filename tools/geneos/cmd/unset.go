@@ -87,8 +87,21 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 
 	if len(unsetCmdKeys) > 0 {
 		for _, k := range unsetCmdKeys {
-			delete(s, k)
-			changed = true
+			// delete one level of maps
+			if strings.Contains(k, ".") {
+				p := strings.SplitN(k, ".", 2)
+				switch x := s[p[0]].(type) {
+				case map[string]interface{}:
+					delete(x, p[1])
+					s[p[0]] = x
+					changed = true
+				default:
+					//
+				}
+			} else {
+				delete(s, k)
+				changed = true
+			}
 		}
 	}
 
@@ -150,7 +163,9 @@ func unsetMap(c geneos.Instance, items unsetCmdValues, key string) (changed bool
 		delete(x, k)
 		changed = true
 	}
-	c.Config().Set(key, x)
+	if changed {
+		c.Config().Set(key, x)
+	}
 	return
 }
 
