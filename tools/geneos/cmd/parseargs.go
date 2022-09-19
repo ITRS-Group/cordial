@@ -100,8 +100,6 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 			}
 		}
 
-		logDebug.Println("ct:", ct)
-
 		if len(args) == 0 {
 			// no args means all instances
 			wild = true
