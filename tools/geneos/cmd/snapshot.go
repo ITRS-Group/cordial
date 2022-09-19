@@ -40,11 +40,16 @@ import (
 
 // snapshotCmd represents the snapshot command
 var snapshotCmd = &cobra.Command{
-	Use:   "snapshot [gateway] [NAME] XPATH [XPATH...]",
+	Use:   "snapshot [FLAGS] [gateway] [NAME] XPATH [XPATH...]",
 	Short: "Capture a snapshot of each matching dataview",
 	Long: `Using the Dataview Snapshot REST endpoint in GA5.14+ Gateways,
 capture each dataview matching to given XPATH(s). Options to select
-what data to request and authentication.`,
+what data to request and authentication.
+
+Authentication details are taken from the instance configuration
+'snapshot.username' and 'snapshot.password' parameters. If either is
+unset then they are taken from the command line or the user or global
+configuration parameters of the same names - in that order.`,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
@@ -53,6 +58,9 @@ what data to request and authentication.`,
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := cmdArgsParams(cmd)
+		if len(params) == 0 {
+			return fmt.Errorf("no dataview xpath(s) supplied")
+		}
 
 		if snapshotCmdUsername == "" {
 			snapshotCmdUsername = config.GetString("snapshot.username")
@@ -68,6 +76,8 @@ what data to request and authentication.`,
 			snapshotCmdPassword = utils.ReadPasswordPrompt()
 		}
 
+		// at this point snapshotCmdUsername/Password contain global or
+		// command line values. These can be overridden per-instance.
 		return instance.ForAll(ct, snapshotInstance, args, params)
 	},
 }
@@ -101,10 +111,21 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 			logError.Printf("%s: %q", err, path)
 			continue
 		}
+
+		// always use auth details in per-instance config, but if not
+		// given use those from the command line or user/global config
+		username, password := c.Config().GetString("snapshot.username"), c.Config().GetString("snapshot.password")
+		if username == "" {
+			username = snapshotCmdUsername
+		}
+		if password == "" {
+			password = snapshotCmdPassword
+		}
+
 		logDebug.Println("dialling", gatewayURL(c))
 		gw, err := commands.DialGateway(gatewayURL(c),
 			commands.AllowInsecureCertificates(true),
-			commands.SetBasicAuth(snapshotCmdUsername, snapshotCmdPassword))
+			commands.SetBasicAuth(username, password))
 		if err != nil {
 			return err
 		}
@@ -132,7 +153,9 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 			}
 		}
 	}
-	log.Printf("[\n    %s\n]\n", strings.Join(dvs, ",\n    "))
+	if len(dvs) > 0 {
+		log.Printf("[\n    %s\n]\n", strings.Join(dvs, ",\n    "))
+	}
 	return
 }
 
