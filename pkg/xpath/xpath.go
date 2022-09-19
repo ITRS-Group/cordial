@@ -485,7 +485,7 @@ func Parse(s string) (xpath *XPath, err error) {
 		switch f[0] {
 		case "gateway":
 			// simple case
-			parts = []string{"geneos", "gateway"}
+			parts = []string{"", "geneos", "gateway"}
 		case "rows", "headlines":
 			parts = append([]string{"dataview"}, parts...)
 			fallthrough
