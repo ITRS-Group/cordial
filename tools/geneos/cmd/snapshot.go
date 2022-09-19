@@ -35,6 +35,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -104,11 +105,11 @@ func init() {
 
 func snapshotInstance(c geneos.Instance, params []string) (err error) {
 	dvs := []string{}
-	logDebug.Println("snapshot on", c)
+	log.Debug().Msgf("snapshot on %s", c)
 	for _, path := range params {
 		x, err := xpath.Parse(path)
 		if err != nil {
-			logError.Printf("%s: %q", err, path)
+			log.Error().Msgf("%s: %q", err, path)
 			continue
 		}
 
@@ -122,7 +123,7 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 			password = snapshotCmdPassword
 		}
 
-		logDebug.Println("dialling", gatewayURL(c))
+		log.Debug().Msgf("dialling %s", gatewayURL(c))
 		gw, err := commands.DialGateway(gatewayURL(c),
 			commands.AllowInsecureCertificates(true),
 			commands.SetBasicAuth(username, password))
@@ -130,7 +131,7 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 			return err
 		}
 		d := x.ResolveTo(&xpath.Dataview{})
-		logDebug.Println("matching xpath", d)
+		log.Debug().Msgf("matching xpath %s", d)
 		views, err := gw.Match(d, 0)
 		if err != nil {
 			return err
@@ -154,7 +155,7 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 		}
 	}
 	if len(dvs) > 0 {
-		log.Printf("[\n    %s\n]\n", strings.Join(dvs, ",\n    "))
+		fmt.Printf("[\n    %s\n]\n", strings.Join(dvs, ",\n    "))
 	}
 	return
 }

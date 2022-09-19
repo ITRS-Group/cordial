@@ -22,6 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -82,7 +83,7 @@ func TLSSync() (err error) {
 			return
 		}
 
-		log.Println("Updated chain.pem on", r.String())
+		fmt.Println("Updated chain.pem on", r.String())
 	}
 	return
 }

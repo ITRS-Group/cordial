@@ -79,16 +79,16 @@ type psType struct {
 func commandPS(ct *geneos.Component, args []string, params []string) (err error) {
 	switch {
 	case psCmdJSON:
-		jsonEncoder = json.NewEncoder(log.Writer())
+		jsonEncoder = json.NewEncoder(os.Stdout)
 		//jsonEncoder.SetIndent("", "    ")
 		err = instance.ForAll(ct, psInstanceJSON, args, params)
 	case psCmdCSV:
-		csvWriter = csv.NewWriter(log.Writer())
+		csvWriter = csv.NewWriter(os.Stdout)
 		csvWriter.Write([]string{"Type", "Name", "Host", "PID", "User", "Group", "Starttime", "Version", "Home"})
 		err = instance.ForAll(ct, psInstanceCSV, args, params)
 		csvWriter.Flush()
 	default:
-		psTabWriter = tabwriter.NewWriter(log.Writer(), 3, 8, 2, ' ', 0)
+		psTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\n")
 		err = instance.ForAll(ct, psInstancePlain, args, params)
 		psTabWriter.Flush()

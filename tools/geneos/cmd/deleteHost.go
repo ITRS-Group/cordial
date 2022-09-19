@@ -22,9 +22,12 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -72,7 +75,7 @@ func commandDeleteHost(_ *geneos.Component, args []string, params []string) (err
 	for _, hostname := range args {
 		h := host.Get(hostname)
 		if !h.Exists() {
-			logError.Printf("%q is not a known host", hostname)
+			log.Error().Msgf("%q is not a known host", hostname)
 			return
 		}
 		hosts = append(hosts, h)
@@ -94,10 +97,10 @@ func commandDeleteHost(_ *geneos.Component, args []string, params []string) (err
 						if err = c.Host().RemoveAll(c.Home()); err != nil {
 							return
 						}
-						log.Printf("%s deleted %s:%s", c, c.Host().String(), c.Home())
+						fmt.Printf("%s deleted %s:%s", c, c.Host().String(), c.Home())
 						c.Unload()
 					} else {
-						log.Printf("not deleting %q as it is not disabled and no --force flag given", c)
+						fmt.Printf("not deleting %q as it is not disabled and no --force flag given", c)
 						return geneos.ErrInvalidArgs
 					}
 				}
@@ -109,7 +112,7 @@ func commandDeleteHost(_ *geneos.Component, args []string, params []string) (err
 		// 	return
 		// }
 		host.Delete(h)
-		log.Printf("%q deleted", h)
+		fmt.Printf("%q deleted", h)
 	}
 	host.WriteConfigFile()
 

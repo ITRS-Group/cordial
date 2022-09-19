@@ -16,9 +16,9 @@ import (
 	"syscall"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/rs/zerolog/log"
 )
 
 // The Instance type is the common data shared by all instance / component types
@@ -31,12 +31,6 @@ type Instance struct {
 	ConfigLoaded    bool              `json:"-"`
 	Env             []string          `json:",omitempty"`
 }
-
-var (
-	log      = logger.Log
-	logDebug = logger.Debug
-	logError = logger.Error
-)
 
 // locate a process instance
 //
@@ -113,16 +107,16 @@ func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime int64
 
 // separate reserved words and invalid syntax
 func ReservedName(in string) (ok bool) {
-	logDebug.Printf("checking %q", in)
+	log.Debug().Msgf("checking %q", in)
 	if geneos.ParseComponentName(in) != nil {
-		logDebug.Println("matches a reserved word")
+		log.Debug().Msg("matches a reserved word")
 		return true
 	}
 	if config.GetString("reservednames") != "" {
 		list := strings.Split(in, ",")
 		for _, n := range list {
 			if strings.EqualFold(in, strings.TrimSpace(n)) {
-				logDebug.Println("matches a user defined reserved name")
+				log.Debug().Msg("matches a user defined reserved name")
 				return true
 			}
 		}
@@ -141,7 +135,7 @@ var validStringRE = regexp.MustCompile(`^\w[\w-]?[:@\.\w -]*$`)
 func ValidInstanceName(in string) (ok bool) {
 	ok = validStringRE.MatchString(in)
 	if !ok {
-		logDebug.Println("no rexexp match:", in)
+		log.Debug().Msgf("no rexexp match: %s", in)
 	}
 	return
 }
@@ -174,10 +168,10 @@ func RemovePaths(c geneos.Instance, paths string) (err error) {
 		}
 		for _, f := range m {
 			if err = c.Host().RemoveAll(f); err != nil {
-				logError.Println(err)
+				log.Error().Err(err).Msg("")
 				continue
 			}
-			log.Printf("removed %s", c.Host().Path(f))
+			fmt.Printf("removed %s", c.Host().Path(f))
 		}
 	}
 	return
@@ -207,29 +201,29 @@ func Signal(c geneos.Instance, signal syscall.Signal) (err error) {
 	if c.Host() == host.LOCAL {
 		proc, _ := os.FindProcess(pid)
 		if err = proc.Signal(signal); err != nil && !errors.Is(err, syscall.EEXIST) {
-			log.Printf("%s FAILED to send a signal %d: %s", c, signal, err)
+			log.Warn().Msgf("%s FAILED to send a signal %d: %s", c, signal, err)
 			return
 		}
-		logDebug.Printf("%s sent a signal %d", c, signal)
+		log.Debug().Msgf("%s sent a signal %d", c, signal)
 		return nil
 	}
 
 	rem, err := c.Host().Dial()
 	if err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	sess, err := rem.NewSession()
 	if err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	output, err := sess.CombinedOutput(fmt.Sprintf("kill -s %d %d", signal, pid))
 	sess.Close()
 	if err != nil {
-		log.Printf("%s FAILED to send signal %d: %s %q", c, signal, err, output)
+		log.Warn().Msgf("%s FAILED to send signal %d: %s %q", c, signal, err, output)
 		return
 	}
-	logDebug.Printf("%s sent a signal %d", c, signal)
+	log.Debug().Msgf("%s sent a signal %d", c, signal)
 	return nil
 }
 
@@ -288,7 +282,7 @@ func Match(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
 	_, local, r := SplitName(name, host.ALL)
 	if !r.Exists() {
-		logDebug.Printf("host %s not loaded", r)
+		log.Debug().Msgf("host %s not loaded", r)
 		return
 	}
 
@@ -305,7 +299,7 @@ func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
 		if filepath.Base(ldir) == local {
 			i, err := Get(ct, name)
 			if err != nil {
-				log.Println(err)
+				log.Error().Err(err).Msg("")
 				continue
 			}
 			c = append(c, i)
@@ -350,12 +344,12 @@ func MatchKeyValue(h *host.Host, ct *geneos.Component, key, value string) (confs
 // returns a map
 func GetPorts(r *host.Host) (ports map[uint16]*geneos.Component) {
 	if r == host.ALL {
-		logError.Fatalln("getports() call with all hosts")
+		log.Fatal().Msg("getports() call with all hosts")
 	}
 	ports = make(map[uint16]*geneos.Component)
 	for _, c := range GetAll(r, nil) {
 		if !c.Loaded() {
-			log.Println("cannot load configuration for", c)
+			log.Error().Msgf("cannot load configuration for %s", c)
 			continue
 		}
 		if port := c.Config().GetInt("port"); port != 0 {
@@ -477,7 +471,7 @@ func Version(c geneos.Instance) (base string, underlying string, err error) {
 // try to use go routines here - mutexes required
 func ForAll(ct *geneos.Component, fn func(geneos.Instance, []string) error, args []string, params []string) (err error) {
 	n := 0
-	logDebug.Println("args, params", args, params)
+	log.Debug().Msgf("args %v, params %v", args, params)
 	// if args is empty, get all matching instances this allows internal
 	// calls with an empty arg list without having to do the parsargs()
 	// dance
@@ -487,13 +481,13 @@ func ForAll(ct *geneos.Component, fn func(geneos.Instance, []string) error, args
 	for _, name := range args {
 		cs := MatchAll(ct, name)
 		if len(cs) == 0 {
-			log.Println("no match for", name)
+			log.Error().Msgf("no match for %s", name)
 			continue
 		}
 		n++
 		for _, c := range cs {
 			if err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
-				log.Println(c, err)
+				log.Error().Err(err).Msgf("%s", c)
 			}
 		}
 	}
@@ -513,7 +507,7 @@ func AllNames(h *host.Host, ct *geneos.Component) (names []string) {
 		for _, r := range host.AllHosts() {
 			names = append(names, AllNames(r, ct)...)
 		}
-		logDebug.Println("names:", names)
+		log.Debug().Msgf("names: %s", names)
 		return
 	}
 

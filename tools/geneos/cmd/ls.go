@@ -67,18 +67,18 @@ var jsonEncoder *json.Encoder
 func commandLS(ct *geneos.Component, args []string, params []string) (err error) {
 	switch {
 	case lsCmdJSON:
-		jsonEncoder = json.NewEncoder(log.Writer())
+		jsonEncoder = json.NewEncoder(os.Stdout)
 		if lsCmdIndent {
 			jsonEncoder.SetIndent("", "    ")
 		}
 		err = instance.ForAll(ct, lsInstanceJSON, args, params)
 	case lsCmdCSV:
-		csvWriter = csv.NewWriter(log.Writer())
+		csvWriter = csv.NewWriter(os.Stdout)
 		csvWriter.Write([]string{"Type", "Name", "Disabled", "Host", "Port", "Version", "Home"})
 		err = instance.ForAll(ct, lsInstanceCSV, args, params)
 		csvWriter.Flush()
 	default:
-		lsTabWriter = tabwriter.NewWriter(log.Writer(), 3, 8, 2, ' ', 0)
+		lsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintf(lsTabWriter, "Type\tName\tHost\tPort\tVersion\tHome\n")
 		err = instance.ForAll(ct, lsInstancePlain, args, params)
 		lsTabWriter.Flush()

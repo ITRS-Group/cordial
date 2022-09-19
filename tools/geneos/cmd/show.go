@@ -23,6 +23,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"regexp"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -61,7 +62,7 @@ to prevent visibility in casual viewing.`,
 			rc := config.GetConfig().AllSettings()
 			j, _ := json.MarshalIndent(rc, "", "    ")
 			j = opaqueJSONSecrets(j)
-			log.Println(string(j))
+			fmt.Println(string(j))
 			return nil
 		}
 
@@ -106,7 +107,7 @@ func showInstance(c geneos.Instance, params []string) (err error) {
 		return
 	}
 	buffer = opaqueJSONSecrets(buffer)
-	log.Printf("%s\n", string(buffer))
+	fmt.Println(string(buffer))
 
 	return
 }

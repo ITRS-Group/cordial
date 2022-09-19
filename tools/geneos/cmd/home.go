@@ -25,6 +25,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -59,7 +60,7 @@ func init() {
 
 func commandHome(ct *geneos.Component, args []string, params []string) error {
 	if ct == nil && len(args) == 0 {
-		log.Println(host.Geneos())
+		log.Error().Msg(host.Geneos())
 		return nil
 	}
 
@@ -71,10 +72,10 @@ func commandHome(ct *geneos.Component, args []string, params []string) error {
 	}
 
 	if len(i) == 0 {
-		log.Println(host.Geneos())
+		log.Error().Msg(host.Geneos())
 		return nil
 	}
 
-	log.Println(i[0].Home())
+	log.Error().Msg(i[0].Home())
 	return nil
 }

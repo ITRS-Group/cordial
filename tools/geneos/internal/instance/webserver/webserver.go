@@ -5,8 +5,9 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -80,7 +81,7 @@ func New(name string) geneos.Instance {
 	c.InstanceHost = r
 	c.Component = &Webserver
 	if err := instance.SetDefaults(c, local); err != nil {
-		logger.Error.Fatalln(c, "setDefaults():", err)
+		log.Fatal().Err(err).Msgf("%s setDefaults()")
 	}
 	webservers.Store(r.FullName(local), c)
 	return c

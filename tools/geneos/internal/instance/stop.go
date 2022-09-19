@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/rs/zerolog/log"
 )
 
 func Stop(c geneos.Instance, force bool) (err error) {
@@ -29,7 +30,7 @@ func Stop(c geneos.Instance, force bool) (err error) {
 		}
 
 		if _, err = GetPID(c); err == os.ErrProcessDone {
-			log.Println(c, "stopped")
+			log.Error().Msgf("%s stopped", c)
 			return nil
 		}
 	}
@@ -41,7 +42,7 @@ func Stop(c geneos.Instance, force bool) (err error) {
 	time.Sleep(250 * time.Millisecond)
 	_, err = GetPID(c)
 	if err == os.ErrProcessDone {
-		log.Println(c, "killed")
+		log.Error().Msgf("%s killed", c)
 		return nil
 	}
 	return

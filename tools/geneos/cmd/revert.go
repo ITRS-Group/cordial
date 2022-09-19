@@ -24,6 +24,7 @@ package cmd
 import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -56,7 +57,7 @@ func revertInstance(c geneos.Instance, params []string) (err error) {
 	if _, err := c.Host().Stat(instance.ComponentFilepath(c, "rc")); err == nil {
 		// ignore errors
 		if c.Host().Remove(instance.ComponentFilepath(c, "rc", "orig")) == nil || c.Host().Remove(instance.ComponentFilepath(c)) == nil {
-			logDebug.Println(c, "removed extra config file(s)")
+			log.Debug().Msgf("%s removed extra config file(s)", c)
 		}
 		return err
 	}
@@ -69,6 +70,6 @@ func revertInstance(c geneos.Instance, params []string) (err error) {
 		return
 	}
 
-	logDebug.Println(c, "reverted to RC config")
+	log.Debug().Msgf("%s reverted to RC config", c)
 	return nil
 }

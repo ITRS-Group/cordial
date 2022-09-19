@@ -11,10 +11,12 @@ package fileagent
 //
 
 import (
+	"log"
 	"sync"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -87,7 +89,7 @@ func New(name string) geneos.Instance {
 	c.InstanceHost = r
 	c.Component = &FileAgent
 	if err := instance.SetDefaults(c, local); err != nil {
-		logger.Error.Fatalln(c, "setDefaults():", err)
+		log.Fatal().Err(err).Msgf("%s setDefaults()")
 	}
 	fileagents.Store(r.FullName(local), c)
 	return c
@@ -155,7 +157,7 @@ func (n *FileAgents) Add(username string, tmpl string, port uint16) (err error) 
 	n.Config().Set("user", username)
 
 	if err = instance.WriteConfig(n); err != nil {
-		logger.Error.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	// check tls config, create certs if found

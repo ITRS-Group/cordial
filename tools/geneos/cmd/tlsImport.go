@@ -32,6 +32,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -68,7 +69,7 @@ func init() {
 //
 // no support for instance certs (yet)
 func TLSImport(sources ...string) (err error) {
-	logDebug.Println(sources)
+	log.Debug().Msgf("%v", sources)
 	tlsPath := filepath.Join(host.Geneos(), "tls")
 	err = host.LOCAL.MkdirAll(tlsPath, 0755)
 	if err != nil {
@@ -83,9 +84,9 @@ func TLSImport(sources ...string) (err error) {
 	var f []byte
 
 	for _, source := range sources {
-		logDebug.Println("importing", source)
+		log.Debug().Msgf("importing %s", source)
 		if f, err = geneos.ReadLocalFileOrURL(source); err != nil {
-			logError.Println(err)
+			log.Error().Err(err).Msg("")
 			err = nil
 			continue
 		}
@@ -131,7 +132,7 @@ func TLSImport(sources ...string) (err error) {
 		}
 		i, err := matchKey(cert, keys)
 		if err != nil {
-			logDebug.Println("cert: no matching key found, ignoring", cert.Subject.String())
+			log.Debug().Msgf("cert: no matching key found, ignoring %s", cert.Subject.String())
 			continue
 		}
 
@@ -146,11 +147,11 @@ func TLSImport(sources ...string) (err error) {
 		if err = host.LOCAL.WriteCert(filepath.Join(tlsPath, prefix+".pem"), cert); err != nil {
 			return err
 		}
-		log.Printf("imported %s certificate to %q", title, filepath.Join(tlsPath, prefix+".pem"))
+		fmt.Printf("imported %s certificate to %q", title, filepath.Join(tlsPath, prefix+".pem"))
 		if err = host.LOCAL.WriteKey(filepath.Join(tlsPath, prefix+".key"), key); err != nil {
 			return err
 		}
-		log.Printf("imported %s RSA private key to %q", title, filepath.Join(tlsPath, prefix+".pem"))
+		fmt.Printf("imported %s RSA private key to %q", title, filepath.Join(tlsPath, prefix+".pem"))
 	}
 
 	return

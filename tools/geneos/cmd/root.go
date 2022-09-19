@@ -25,25 +25,18 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/user"
 	"strings"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/cordial"
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/spf13/cobra"
-)
-
-// give these more convenient names and also shadow the std log
-// package for normal logging
-var (
-	log      = logger.Log
-	logDebug = logger.Debug
-	logError = logger.Error
 )
 
 var (
@@ -136,16 +129,18 @@ func init() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if quiet {
-		log.SetOutput(io.Discard)
+		zerolog.SetGlobalLevel(zerolog.Disabled)
 	} else if debug {
-		logger.EnableDebugLog()
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
 	oldConfDir, _ := os.UserConfigDir()
 
 	cf, err := config.LoadConfig("geneos", config.SetConfigFile(cfgFile), config.UseGlobal(), config.AddConfigDirs(oldConfDir))
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	// support old set-ups
 	cf.BindEnv("geneos", "ITRS_HOME")

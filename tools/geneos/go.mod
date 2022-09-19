@@ -7,6 +7,7 @@ go 1.17
 require (
 	github.com/itrs-group/cordial v0.0.0-00010101000000-000000000000
 	github.com/pkg/sftp v1.13.5
+	github.com/rs/zerolog v1.28.0
 	github.com/spf13/afero v1.8.2
 	github.com/spf13/cobra v1.4.0
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
@@ -20,6 +21,8 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect

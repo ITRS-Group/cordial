@@ -26,6 +26,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -97,7 +98,7 @@ var installCmdBase, installCmdHost, installCmdOverride, installCmdVersion, insta
 
 func commandInstall(ct *geneos.Component, args, params []string) (err error) {
 	if ct == nil && len(args) == 0 && installCmdLocal {
-		log.Println("install -L (local) flag with no component or file/url")
+		log.Error().Msg("install -L (local) flag with no component or file/url")
 		return nil
 	}
 
@@ -122,7 +123,7 @@ func commandInstall(ct *geneos.Component, args, params []string) (err error) {
 	// overrides do not work in this case as the version and type have to be part of the
 	// archive file name
 	if ct != nil || len(args) == 0 {
-		logDebug.Printf("installing %q version of %s to %s host(s)", installCmdVersion, ct, installCmdHost)
+		log.Debug().Msgf("installing %q version of %s to %s host(s)", installCmdVersion, ct, installCmdHost)
 
 		options := []geneos.GeneosOptions{geneos.Version(installCmdVersion), geneos.Basename(installCmdBase), geneos.Force(installCmdUpdate), geneos.OverrideVersion(installCmdOverride), geneos.Username(installCmdUsername), geneos.Password(installCmdPassword)}
 		if installCmdNexus {
@@ -151,7 +152,7 @@ func install(ct *geneos.Component, target string, options ...geneos.GeneosOption
 			return err
 		}
 		if err = geneos.Install(h, ct, options...); err != nil {
-			logError.Println(err)
+			log.Error().Err(err).Msg("")
 			continue
 		}
 	}

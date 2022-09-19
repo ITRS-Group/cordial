@@ -27,6 +27,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
@@ -68,7 +70,7 @@ var aesNewCmd = &cobra.Command{
 		crc, err := config.Checksum(f)
 		f.Close()
 		crcStr := fmt.Sprintf("%0X", crc)
-		log.Println("created, checksum", crcStr)
+		log.Error().Msgf("created, checksum %s", crcStr)
 
 		if aesNewCmdSetSync {
 			ct, args, _ := cmdArgsParams(cmd)
@@ -77,7 +79,7 @@ var aesNewCmd = &cobra.Command{
 			aesNewCmdKeyfile, _ = filepath.Abs(aesNewCmdKeyfile)
 
 			for _, h := range host.AllHosts() {
-				logDebug.Println("copying to host", h)
+				log.Debug().Msgf("copying to host %s", h)
 				if ct == nil {
 					for _, ct := range []*geneos.Component{&gateway.Gateway, &netprobe.Netprobe} {
 						host.CopyFile(host.LOCAL, aesNewCmdKeyfile, h, h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcStr+".aes"))
@@ -117,11 +119,11 @@ func aesNewSetInstance(c geneos.Instance, params []string) (err error) {
 
 	// now loop through the collected results and write out
 	if err = instance.Migrate(c); err != nil {
-		logError.Fatalln("cannot migrate existing .rc config to set values in new .json configuration file:", err)
+		log.Fatal().Err(err).Msg("cannot migrate existing .rc config to set values in new .json configuration file")
 	}
 
 	if err = instance.WriteConfig(c); err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	return
