@@ -2,12 +2,12 @@ package instance
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"syscall"
 	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/rs/zerolog/log"
 )
 
 func Stop(c geneos.Instance, force bool) (err error) {
@@ -30,7 +30,7 @@ func Stop(c geneos.Instance, force bool) (err error) {
 		}
 
 		if _, err = GetPID(c); err == os.ErrProcessDone {
-			log.Error().Msgf("%s stopped", c)
+			fmt.Printf("%s stopped\n", c)
 			return nil
 		}
 	}
@@ -42,7 +42,7 @@ func Stop(c geneos.Instance, force bool) (err error) {
 	time.Sleep(250 * time.Millisecond)
 	_, err = GetPID(c)
 	if err == os.ErrProcessDone {
-		log.Error().Msgf("%s killed", c)
+		fmt.Printf("%s killed\n", c)
 		return nil
 	}
 	return

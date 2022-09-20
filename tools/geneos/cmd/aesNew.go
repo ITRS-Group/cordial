@@ -70,7 +70,7 @@ var aesNewCmd = &cobra.Command{
 		crc, err := config.Checksum(f)
 		f.Close()
 		crcStr := fmt.Sprintf("%0X", crc)
-		log.Error().Msgf("created, checksum %s", crcStr)
+		fmt.Printf("created, checksum %s\n", crcStr)
 
 		if aesNewCmdSetSync {
 			ct, args, _ := cmdArgsParams(cmd)

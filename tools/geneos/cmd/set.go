@@ -87,7 +87,7 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 	for _, arg := range params {
 		s := strings.SplitN(arg, "=", 2)
 		if len(s) != 2 {
-			log.Error().Msgf("ignoring %q %s", arg, ErrInvalidArgs)
+			log.Error().Err(ErrInvalidArgs).Msgf("ignoring %q", arg)
 			continue
 		}
 		c.Config().Set(s[0], s[1])
