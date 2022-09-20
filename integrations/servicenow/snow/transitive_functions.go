@@ -31,6 +31,7 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/integrations/servicenow/settings"
+	"github.com/itrs-group/cordial/pkg/config"
 	"golang.org/x/oauth2/clientcredentials"
 )
 
@@ -44,7 +45,7 @@ func InitializeConnection(cf settings.Settings, password string) *Connection {
 		params.Set("password", password)
 		conf := &clientcredentials.Config{
 			ClientID:       cf.ServiceNow.ClientID,
-			ClientSecret:   cf.ServiceNow.ClientSecret,
+			ClientSecret:   config.GetConfig().ExpandString(cf.ServiceNow.ClientSecret, nil),
 			EndpointParams: params,
 			TokenURL:       "https://" + cf.ServiceNow.Instance + ".service-now.com/oauth_token.do",
 		}
