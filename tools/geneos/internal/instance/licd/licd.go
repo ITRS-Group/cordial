@@ -92,10 +92,16 @@ func (l *Licds) Type() *geneos.Component {
 }
 
 func (l *Licds) Name() string {
+	if l.Config() == nil {
+		return ""
+	}
 	return l.Config().GetString("name")
 }
 
 func (l *Licds) Home() string {
+	if l.Config() == nil {
+		return ""
+	}
 	return l.Config().GetString("home")
 }
 

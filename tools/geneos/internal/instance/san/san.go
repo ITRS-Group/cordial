@@ -118,10 +118,16 @@ func (s *Sans) Type() *geneos.Component {
 }
 
 func (s *Sans) Name() string {
+	if s.Config() == nil {
+		return ""
+	}
 	return s.Config().GetString("name")
 }
 
 func (s *Sans) Home() string {
+	if s.Config() == nil {
+		return ""
+	}
 	return s.Config().GetString("home")
 }
 
