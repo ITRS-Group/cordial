@@ -92,10 +92,16 @@ func (n *FA2s) Type() *geneos.Component {
 }
 
 func (n *FA2s) Name() string {
+	if n.Config() == nil {
+		return ""
+	}
 	return n.Config().GetString("name")
 }
 
 func (n *FA2s) Home() string {
+	if n.Config() == nil {
+		return ""
+	}
 	return n.Config().GetString("home")
 }
 

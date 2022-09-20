@@ -110,10 +110,16 @@ func (w *Webservers) Type() *geneos.Component {
 }
 
 func (w *Webservers) Name() string {
+	if w.Config() == nil {
+		return ""
+	}
 	return w.Config().GetString("name")
 }
 
 func (w *Webservers) Home() string {
+	if w.Config() == nil {
+		return ""
+	}
 	return w.Config().GetString("home")
 }
 

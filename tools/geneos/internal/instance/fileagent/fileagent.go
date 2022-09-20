@@ -103,10 +103,16 @@ func (n *FileAgents) Type() *geneos.Component {
 }
 
 func (n *FileAgents) Name() string {
+	if n.Config() == nil {
+		return ""
+	}
 	return n.Config().GetString("name")
 }
 
 func (n *FileAgents) Home() string {
+	if n.Config() == nil {
+		return ""
+	}
 	return n.Config().GetString("home")
 }
 

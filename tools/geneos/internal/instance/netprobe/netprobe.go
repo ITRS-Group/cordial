@@ -91,10 +91,16 @@ func (n *Netprobes) Type() *geneos.Component {
 }
 
 func (n *Netprobes) Name() string {
+	if n.Config() == nil {
+		return ""
+	}
 	return n.Config().GetString("name")
 }
 
 func (n *Netprobes) Home() string {
+	if n.Config() == nil {
+		return ""
+	}
 	return n.Config().GetString("home")
 }
 
