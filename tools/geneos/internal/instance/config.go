@@ -269,7 +269,12 @@ func Filename(c geneos.Instance, name string) (filename string) {
 	if c.Config() == nil {
 		return
 	}
-	return filepath.Base(c.Config().GetString(name))
+	// return empty and not a "."
+	filename = filepath.Base(c.Config().GetString(name))
+	if filename == "." {
+		filename = ""
+	}
+	return
 }
 
 // Filenames returns the basename of the files named by the
@@ -281,7 +286,12 @@ func Filenames(c geneos.Instance, names ...string) (filenames []string) {
 		return
 	}
 	for _, name := range names {
-		filenames = append(filenames, filepath.Base(c.Config().GetString(name)))
+		filename := filepath.Base(c.Config().GetString(name))
+		// return empty and not a "."
+		if filename == "." {
+			filename = ""
+		}
+		filenames = append(filenames, filename)
 	}
 	return
 }
@@ -304,8 +314,10 @@ func SetSecureArgs(c geneos.Instance) (args []string) {
 	if files[1] != "" {
 		args = append(args, "-ssl-certificate-key", files[1])
 	}
+
 	chainfile := c.Host().Filepath("tls", "chain.pem")
-	if chainfile != "" {
+	s, err := c.Host().Stat(chainfile)
+	if err == nil && !s.St.IsDir() {
 		args = append(args, "-ssl-certificate-chain", chainfile)
 	}
 	return

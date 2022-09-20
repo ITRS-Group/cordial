@@ -147,11 +147,11 @@ func TLSImport(sources ...string) (err error) {
 		if err = host.LOCAL.WriteCert(filepath.Join(tlsPath, prefix+".pem"), cert); err != nil {
 			return err
 		}
-		fmt.Printf("imported %s certificate to %q", title, filepath.Join(tlsPath, prefix+".pem"))
+		fmt.Printf("imported %s certificate to %q\n", title, filepath.Join(tlsPath, prefix+".pem"))
 		if err = host.LOCAL.WriteKey(filepath.Join(tlsPath, prefix+".key"), key); err != nil {
 			return err
 		}
-		fmt.Printf("imported %s RSA private key to %q", title, filepath.Join(tlsPath, prefix+".pem"))
+		fmt.Printf("imported %s RSA private key to %q\n", title, filepath.Join(tlsPath, prefix+".pem"))
 	}
 
 	return

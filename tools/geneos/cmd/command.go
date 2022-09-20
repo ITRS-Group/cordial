@@ -53,7 +53,7 @@ func init() {
 }
 
 func commandInstance(c geneos.Instance, params []string) (err error) {
-	fmt.Printf("=== %s ===", c)
+	fmt.Printf("=== %s ===\n", c)
 	cmd, env := instance.BuildCmd(c)
 	if cmd != nil {
 		fmt.Println("command line:")

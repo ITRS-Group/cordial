@@ -97,10 +97,10 @@ func commandDeleteHost(_ *geneos.Component, args []string, params []string) (err
 						if err = c.Host().RemoveAll(c.Home()); err != nil {
 							return
 						}
-						fmt.Printf("%s deleted %s:%s", c, c.Host().String(), c.Home())
+						fmt.Printf("%s deleted %s:%s\n", c, c.Host().String(), c.Home())
 						c.Unload()
 					} else {
-						fmt.Printf("not deleting %q as it is not disabled and no --force flag given", c)
+						fmt.Printf("not deleting %q as it is not disabled and no --force flag given\n", c)
 						return geneos.ErrInvalidArgs
 					}
 				}
@@ -112,7 +112,7 @@ func commandDeleteHost(_ *geneos.Component, args []string, params []string) (err
 		// 	return
 		// }
 		host.Delete(h)
-		fmt.Printf("%q deleted", h)
+		fmt.Printf("%q deleted\n", h)
 	}
 	host.WriteConfigFile()
 

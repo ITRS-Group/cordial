@@ -96,7 +96,7 @@ func OpenComponentArchive(ct *Component, options ...GeneosOptions) (body io.Read
 	if err != nil {
 		return
 	}
-	fmt.Printf("downloading %s package version %q to %s", ct, opts.version, archivePath)
+	fmt.Printf("downloading %s package version %q to %s\n", ct, opts.version, archivePath)
 	t1 := time.Now()
 	if _, err = io.Copy(w, resp.Body); err != nil {
 		return
@@ -108,7 +108,7 @@ func OpenComponentArchive(ct *Component, options ...GeneosOptions) (body io.Read
 	if dr > 0 {
 		bps = float64(b) / dr
 	}
-	fmt.Printf("downloaded %d bytes in %.3f seconds (%.0f bytes/sec)", b, dr, bps)
+	fmt.Printf("downloaded %d bytes in %.3f seconds (%.0f bytes/sec)\n", b, dr, bps)
 	if _, err = w.Seek(0, 0); err != nil {
 		return
 	}

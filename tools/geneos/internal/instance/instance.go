@@ -171,7 +171,7 @@ func RemovePaths(c geneos.Instance, paths string) (err error) {
 				log.Error().Err(err).Msg("")
 				continue
 			}
-			fmt.Printf("removed %s", c.Host().Path(f))
+			fmt.Printf("removed %s\n", c.Host().Path(f))
 		}
 	}
 	return
@@ -373,7 +373,7 @@ func GetPorts(r *host.Host) (ports map[uint16]*geneos.Component) {
 
 // given a range, find the first unused port
 //
-// range is comma or two-dot seperated list of
+// range is comma or two-dot separated list of
 // single number, e.g. "7036"
 // min-max inclusive range, e.g. "7036-8036"
 // start- open ended range, e.g. "7041-"

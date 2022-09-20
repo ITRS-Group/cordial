@@ -167,13 +167,13 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 		if err := host.LOCAL.WriteFile(filepath.Join(gatewayTemplates, gateway.GatewayDefaultTemplate), tmpl, 0664); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
-		log.Error().Msgf("gateway template written to %s", filepath.Join(gatewayTemplates, gateway.GatewayDefaultTemplate))
+		fmt.Printf("gateway template written to %s\n", filepath.Join(gatewayTemplates, gateway.GatewayDefaultTemplate))
 
 		tmpl = gateway.InstanceTemplate
 		if err := host.LOCAL.WriteFile(filepath.Join(gatewayTemplates, gateway.GatewayInstanceTemplate), tmpl, 0664); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
-		log.Error().Msgf("gateway instance template written to %s", filepath.Join(gatewayTemplates, gateway.GatewayInstanceTemplate))
+		fmt.Printf("gateway instance template written to %s\n", filepath.Join(gatewayTemplates, gateway.GatewayInstanceTemplate))
 
 		sanTemplates := host.LOCAL.Filepath(san.San, "templates")
 		host.LOCAL.MkdirAll(sanTemplates, 0775)
@@ -186,7 +186,7 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 		if err := host.LOCAL.WriteFile(filepath.Join(sanTemplates, san.SanDefaultTemplate), tmpl, 0664); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
-		log.Error().Msgf("san template written to %s", filepath.Join(sanTemplates, san.SanDefaultTemplate))
+		fmt.Printf("san template written to %s\n", filepath.Join(sanTemplates, san.SanDefaultTemplate))
 
 		return
 	}

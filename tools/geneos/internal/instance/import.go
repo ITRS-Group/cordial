@@ -124,7 +124,7 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 	if _, err = io.Copy(cf, from); err != nil {
 		return
 	}
-	fmt.Printf("imported %q to %s:%s", source, h.String(), destfile)
+	fmt.Printf("imported %q to %s:%s\n", source, h.String(), destfile)
 	return
 }
 
