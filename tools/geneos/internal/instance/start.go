@@ -15,7 +15,7 @@ import (
 func Start(c geneos.Instance) (err error) {
 	pid, err := GetPID(c)
 	if err == nil {
-		log.Error().Msgf("%s already running with PID %d", c, pid)
+		fmt.Printf("%s already running with PID %d\n", c, pid)
 		return
 	}
 
@@ -86,7 +86,7 @@ func Start(c geneos.Instance) (err error) {
 		if err != nil {
 			return err
 		}
-		log.Error().Msgf("%s started with PID %d", c, pid)
+		fmt.Printf("%s started with PID %d\n", c, pid)
 		return nil
 	}
 
@@ -120,7 +120,7 @@ func Start(c geneos.Instance) (err error) {
 	if err = cmd.Start(); err != nil {
 		return
 	}
-	log.Error().Msgf("%s started with PID %d", c, cmd.Process.Pid)
+	fmt.Printf("%s started with PID %d\n", c, cmd.Process.Pid)
 	if cmd.Process != nil {
 		// detach from control
 		cmd.Process.Release()
