@@ -38,6 +38,7 @@ import (
 
 	"github.com/itrs-group/cordial/integrations/servicenow/settings"
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 var cf settings.Settings
@@ -147,7 +148,7 @@ func InitializeConnection() *snow.Connection {
 		return snowConnection
 	}
 
-	pw = []byte(cf.ServiceNow.Password)
+	pw = []byte(config.GetConfig().ExpandString(cf.ServiceNow.Password, nil))
 	if len(pw) == 0 {
 		if strings.HasPrefix(cf.ServiceNow.PasswordFile, "~/") {
 			home, _ := os.UserHomeDir()
