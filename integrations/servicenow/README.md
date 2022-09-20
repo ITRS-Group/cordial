@@ -97,7 +97,7 @@ ServiceNow:
   Password: ${enc:~/.keyfile:env:SERVICENOW_PASSWORD}
   # PasswordFile: ~/.snowpw
   ClientID: ${SERVICENOW_CLIENTID}
-  ClientSecret: ${SERVICENOW_CLIENTSECRET}
+  ClientSecret: ${enc:~/.keyfile:+encs+6680A7836122519CE44EEE1BA9152900}
   SearchType: simple
   QueryResponseFields: number,sys_id,cmdb_ci.name,short_description,description,correlation_id,opened_by,state
   IncidentTable: incident
@@ -183,12 +183,13 @@ Note: All values that are intended to be passed to Service Now as a field are un
       If this is set to `true` (no quotes) then the router will load a certificate and key from the locations given below and start a TLS (https) listener, otherwise the router uses plain HTTP.
     * `Certificate`
       The path to a server certificate bundle file. The underlying Go documentation says:
-      
+
       ```text
       If the certificate is signed by a certificate authority,
       the certFile should be the concatenation of the server's
       certificate, any intermediates, and the CA's certificate.
       ```
+
     * `Key`
       The path to a TLS private key file.
 * `ServiceNow`
@@ -197,13 +198,14 @@ Note: All values that are intended to be passed to Service Now as a field are un
   * `Username` **Router Only**
     The Service Now API username.
   * `Password` **Router Only**
-    A cleartext password for the user above. This takes precedence over `PasswordFile` below. 
-  * `PasswordFile` **Router Only** **Deprecated**
+    A password for the user above. This takes precedence over `PasswordFile` below. Passwords can be encoded using Geneos style `+encs+...` AES256 values. The format is documented in [config.ExpandString()](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString). Keyfiles and encoded strings can be created either using the details in the [Secure Passwords](https://docs.itrsgroup.com/docs/geneos/6.0.0/Gateway_Reference_Guide/gateway_secure_passwords.htm) documentation or by using the [`geneos`](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos) tool's `aes` commands.
+  * `PasswordFile` **Router Only** - **Deprecated**
     A path to a file containing the plain text password for the user above. This file should be protected with Linux permissions 0600 to prevent unauthorised access. If a tilde (`~`) is the first character then the path is relative to the user home directory. e.g. `~/.snowpw`
-    This setting has been deprecated in favour of full support for value expansion via [config.ExpandString()](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString) which supports Geneos formatted AES256 encoded passwords.
+    This setting has been deprecated in favour of encoded value expansion for `Password` above.
   * `ClientID` **Router Only**
   * `ClientSecret` **Router Only**
-    If these configuration values are supplied then the router will use a 2-legged OAuth2 flow to obtain a token and auto refresh token. This requires OAuth to be configured and enabled in your Service Now instance. OAuth is not attempted if the instance name contains a dot (`.`) which hints that you are using a non-SaaS/cloud instance.
+    If these configuration values are supplied then the router will use a 2-legged OAuth2 flow to obtain a token and auto refresh token. This requires OAuth to be configured and enabled in your Service Now instance. OAuth is not attempted if the instance name contains a dot (`.`) which indicates that you are using a non-SaaS/cloud instance.
+    `ClientSecret` can be encoded like `Password` above.
     See the following document for more information:
     * <https://docs.servicenow.com/bundle/rome-platform-administration/page/administer/security/task/t_SettingUpOAuth.html>
     Note: You must still supply a suitable username and password as documented in the following:
