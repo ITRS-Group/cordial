@@ -73,7 +73,7 @@ func deleteInstance(c geneos.Instance, params []string) (err error) {
 		if err = c.Host().RemoveAll(c.Home()); err != nil {
 			return
 		}
-		fmt.Printf("%s deleted %s:%s", c, c.Host().String(), c.Home())
+		fmt.Printf("%s deleted %s:%s\n", c, c.Host().String(), c.Home())
 		c.Unload()
 		return nil
 	}

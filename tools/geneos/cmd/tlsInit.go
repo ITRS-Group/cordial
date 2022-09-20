@@ -25,6 +25,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -120,7 +121,7 @@ func newRootCA(dir string) (err error) {
 	if err = host.LOCAL.WriteKey(rootKeyPath, key); err != nil {
 		return
 	}
-	log.Error().Msgf("CA certificate created for %s", geneos.RootCAFile)
+	fmt.Printf("CA certificate created for %s\n", geneos.RootCAFile)
 
 	return
 }
@@ -173,7 +174,7 @@ func newIntrCA(dir string) (err error) {
 		return
 	}
 
-	log.Error().Msgf("Signing certificate created for %s", geneos.SigningCertFile)
+	fmt.Printf("Signing certificate created for %s\n", geneos.SigningCertFile)
 
 	return
 }

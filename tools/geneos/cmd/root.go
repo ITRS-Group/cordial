@@ -27,6 +27,8 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -39,6 +41,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/spf13/cobra"
 )
+
+const pkgname = "cordial"
 
 var (
 	ErrInvalidArgs  error = errors.New("invalid arguments")
@@ -129,11 +133,27 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
+		fnName := "UNKNOWN"
+		fn := runtime.FuncForPC(pc)
+		if fn != nil {
+			fnName = fn.Name()
+		}
+		fnName = filepath.Base(fnName)
+		// fnName = strings.TrimPrefix(fnName, "main.")
+
+		s := strings.SplitAfterN(file, pkgname+"/", 2)
+		if len(s) == 2 {
+			file = s[1]
+		}
+		return fmt.Sprintf("%s:%d %s()", file, line, fnName)
+	}
+
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339, NoColor: true,
 		FormatLevel: func(i interface{}) string {
 			return strings.ToUpper(fmt.Sprintf("%s:", i))
 		},
-	})
+	}).With().Caller().Logger()
 	if quiet {
 		zerolog.SetGlobalLevel(zerolog.Disabled)
 	} else if debug {

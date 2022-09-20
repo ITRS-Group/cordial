@@ -153,7 +153,7 @@ func logTailInstance(c geneos.Instance, params []string) (err error) {
 	st, err := c.Host().Stat(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			fmt.Printf("===> %s log file not found <===", c)
+			fmt.Printf("===> %s log file not found <===\n", c)
 			return nil
 		}
 		return
@@ -231,7 +231,7 @@ func filterOutput(c geneos.Instance, reader io.ReadSeeker) (sz int64) {
 			line := scanner.Text()
 			if strings.Contains(line, logCmdMatch) {
 				outHeader(c)
-				log.Error().Msg(line)
+				fmt.Println(line)
 			}
 		}
 	case logCmdIgnore != "":
@@ -240,7 +240,7 @@ func filterOutput(c geneos.Instance, reader io.ReadSeeker) (sz int64) {
 			line := scanner.Text()
 			if !strings.Contains(line, logCmdIgnore) {
 				outHeader(c)
-				log.Error().Msg(line)
+				fmt.Println(line)
 			}
 		}
 	default:
@@ -259,7 +259,7 @@ func logCatInstance(c geneos.Instance, _ []string) (err error) {
 	lines, err := c.Host().Open(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			fmt.Printf("===> %s log file not found <===", c)
+			fmt.Printf("===> %s log file not found <===\n", c)
 			return nil
 		}
 		return
@@ -284,7 +284,7 @@ func logFollowInstance(c geneos.Instance, _ []string) (err error) {
 		if !errors.Is(err, fs.ErrNotExist) {
 			return
 		}
-		fmt.Printf("===> %s log file not found <===", c)
+		fmt.Printf("===> %s log file not found <===\n", c)
 	} else {
 		// output up to this point
 		st, _ := c.Host().Stat(logfile)
