@@ -50,7 +50,7 @@ func CreateIncident(sys_id string, incident Incident) (incident_number string, e
 	if err != nil {
 		fmt.Println(err)
 	}
-	result, err = s.POST(postbytes, "", "number", "", "", "").QueryTableSingle(cf.ServiceNow.IncidentTable)
+	result, err = s.POST(postbytes, "", "number", "", "", "").QueryTableSingle(vc.GetString("servicenow.incidenttable"))
 	if err != nil {
 		return
 	} else {

@@ -36,7 +36,7 @@ func GetAllIncidents(c echo.Context) (err error) {
 	var user string
 	err = echo.QueryParamsBinder(c).String("user", &user).BindError()
 	if err != nil || user == "" {
-		user = cf.ServiceNow.Username
+		user = vc.GetString("servicenow.username")
 	}
 	// real basic validation of user
 	if !userRE.MatchString(user) {
@@ -49,10 +49,9 @@ func GetAllIncidents(c echo.Context) (err error) {
 		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("user %q not found in sys_user (and needed for lookup)", user))
 	}
 
-	// q := fmt.Sprintf(`stateNOT IN%s^opened_by=%s`, cf.ServiceNow.IncidentStates.Closed, u["sys_id"])
 	q := fmt.Sprintf(`active=true^opened_by=%s`, u["sys_id"])
 
-	l, _ := s.GET("", cf.ServiceNow.QueryResponseFields, "", q, "").QueryTable(cf.ServiceNow.IncidentTable)
+	l, _ := s.GET("", vc.GetString("servicenow.queryresponsefields"), "", q, "").QueryTable(vc.GetString("servicenow.incidenttable"))
 
 	return c.JSON(200, l)
 }

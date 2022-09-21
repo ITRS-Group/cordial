@@ -151,10 +151,10 @@ ServiceNow:
   GeneosSeverityMap:
     CRITICAL: impact=1,urgency=1
     WARNING: impact=3,urgency=3
-    OK: state=6,close_code="Closed/Resolved by Caller"
+    OK: state=6,close_code="Closed/Resolved by Caller",close_notes="Resolved"
     3: impact=1,urgency=1
     2: impact=3,urgency=3
-    1: state=6,close_code="Closed/Resolved by Caller"
+    1: state=6,close_code="Closed/Resolved by Caller",close_notes="Resolved"
   IncidentDefaults:
     assignment_group: group1
     incident_type: event
