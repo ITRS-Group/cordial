@@ -24,17 +24,16 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -51,8 +50,8 @@ func main() {
 	var conffile string
 	var err error
 
-	flag.StringVar(&conffile, "conf", "", "Optional path to configuration file")
-	flag.Parse()
+	pflag.StringVarP(&conffile, "conf", "c", "", "Optional path to configuration file")
+	pflag.Parse()
 
 	execname := filepath.Base(os.Args[0])
 	vc, err = config.LoadConfig(execname, config.SetAppName("itrs"), config.SetConfigFile(conffile))
@@ -131,7 +130,7 @@ func main() {
 
 	i := fmt.Sprintf("%s:%d", vc.GetString("api.host"), vc.GetInt("api.port"))
 
-	_ = InitializeConnection()
+	InitializeConnection()
 
 	// firing up the server
 	if !vc.GetBool("api.tls.enabled") {
@@ -144,28 +143,11 @@ func main() {
 var snowConnection *snow.Connection
 
 func InitializeConnection() *snow.Connection {
-	// get password from a file
-	var pw []byte
-	var err error
 	if snowConnection != nil {
 		return snowConnection
 	}
 
-	pw = []byte(vc.GetString("servicenow.password"))
-	if len(pw) == 0 {
-		var passwordfile = vc.GetString("servicenow.passwordfile")
-		if len(passwordfile) == 0 {
-			log.Fatalln("no password or password file configured")
-		}
-		if strings.HasPrefix(passwordfile, "~/") {
-			home, _ := os.UserHomeDir()
-			passwordfile = strings.Replace(passwordfile, "~", home, 1)
-		}
-		if pw, err = os.ReadFile(passwordfile); err != nil {
-			log.Fatalf("cannot read password from file %q", passwordfile)
-		}
-	}
-	snowConnection = snow.InitializeConnection(vc, strings.TrimSpace(string(pw)))
+	snowConnection = snow.InitializeConnection(vc)
 	return snowConnection
 }
 

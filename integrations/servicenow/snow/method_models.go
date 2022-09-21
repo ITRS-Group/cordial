@@ -38,6 +38,6 @@ type RequestTransitive struct {
 	Connection
 	Payload []byte
 	Method  string
-	Parms   url.Values
+	Params  url.Values
 	SysID   string
 }
