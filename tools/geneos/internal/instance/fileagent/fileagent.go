@@ -11,7 +11,6 @@ package fileagent
 //
 
 import (
-	"log"
 	"sync"
 
 	"github.com/rs/zerolog/log"
