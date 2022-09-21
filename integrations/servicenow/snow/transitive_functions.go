@@ -30,32 +30,31 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/itrs-group/cordial/integrations/servicenow/settings"
 	"github.com/itrs-group/cordial/pkg/config"
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-func InitializeConnection(cf settings.Settings, password string) *Connection {
+func InitializeConnection(vc *config.Config, password string) *Connection {
 	var client *http.Client = http.DefaultClient
 
-	if cf.ServiceNow.ClientID != "" && cf.ServiceNow.ClientSecret != "" && !strings.Contains(cf.ServiceNow.Instance, ".") {
+	if vc.GetString("servicenow.clientid") != "" && vc.GetString("servicenow.clientsecret") != "" && !strings.Contains(vc.GetString("servicenow.instance"), ".") {
 		params := make(url.Values)
 		params.Set("grant_type", "password")
-		params.Set("username", cf.ServiceNow.Username)
+		params.Set("username", vc.GetString("servicenow.username"))
 		params.Set("password", password)
 		conf := &clientcredentials.Config{
-			ClientID:       cf.ServiceNow.ClientID,
-			ClientSecret:   config.GetConfig().ExpandString(cf.ServiceNow.ClientSecret, nil),
+			ClientID:       vc.GetString("servicenow.clientid"),
+			ClientSecret:   vc.GetString("servicenow.clientsecret"),
 			EndpointParams: params,
-			TokenURL:       "https://" + cf.ServiceNow.Instance + ".service-now.com/oauth_token.do",
+			TokenURL:       "https://" + vc.GetString("servicenow.instance") + ".service-now.com/oauth_token.do",
 		}
 
 		client = conf.Client(context.Background())
 	}
 	return &Connection{
 		client,
-		cf.ServiceNow.Instance,
-		cf.ServiceNow.Username,
+		vc.GetString("servicenow.instance"),
+		vc.GetString("servicenow.username"),
 		password,
 	}
 }
