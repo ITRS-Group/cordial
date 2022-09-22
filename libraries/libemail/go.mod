@@ -1,5 +1,7 @@
 module github.com/itrs-group/cordial/libraries/libemail
 
+replace github.com/itrs-group/cordial => ../../
+
 go 1.17
 
 require github.com/go-mail/mail/v2 v2.3.0
