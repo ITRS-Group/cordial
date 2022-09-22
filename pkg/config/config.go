@@ -103,37 +103,11 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 }
 
 // ExpandString() returns input with any occurrences of the form ${name}
-// or $name substituted using [os.Expand] for the supported formats in
-// the order given below:
+// or $name substituted using [os.Expand] for the supported format types
+// in the order given below:
 //
-//  1. "${path.to.config}"
-//     Any name containing one or more dots "." will be looked up in the
-//     running configuration (which can include existing settings outside
-//     of any configuration file being read by the caller).
+//  1. "${enc:keyfile[|keyfile...]:encodedvalue}"
 //
-//  2. "${name}"
-//     "name" will be substituted with the corresponding value from the map
-//     "values". If "values" is empty (as opposed to the key "name"
-//     not being found) then name is looked up as an environment variable.
-//
-//  3. "${env:name}"
-//     "name" will be substituted with the contents of the environment
-//     variable of the same name.
-//
-//  4. "${file://path/to/file}" or "${file:~/path/to/file}"
-//     The contents of the referenced file will be read. Multiline
-//     files are used as-is; this can, for example, be used to read
-//     PEM certificate files or keys. As an enhancement to a standard
-//     file url, if the first "/" is replaced with a tilde "~" then the
-//     path is relative to the home directory of the user running the process.
-//
-//  5. "${https://host/path}" or "${http://host/path}"
-//     The contents of the URL are fetched and used similarly as for
-//     local files above. The URL is passed to [http.Get] and supports
-//     any embedded Basic Authentication and other features from
-//     that function.
-//
-//  6. "${enc:keyfile[|keyfile...]:encodedvalue}"
 //     The item "encodedvalue" is an AES256 ciphertext in Geneos format
 //     - or a reference to one - which will be decoded using the key
 //     file(s) given. Each "keyfile" must be one of either an absolute
@@ -144,17 +118,52 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 //
 //     The "encodedvalue" must be either prefixed "+encs+" to align with
 //     Geneos or will otherwise be looked up using the forms of any of
-//     the other references above without the surrounding
+//     the other references below, but without the surrounding
 //     dollar-brackets "${...}".
 //
-//     To minimise (but not eliminate) false decodes in some
-//     circumstances, if passed the wrong key file, the decoded value is
+//     To minimise (but not eliminate) false decodes that occur in some
+//     circumstances when using the wrong key file, the decoded value is
 //     only returned if it is a valid UTF-8 string as per [utf8.Valid].
 //
 //     Examples:
 //
-//     - password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
-//     - password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
+//     * password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
+//     * password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
+//
+//  2. "${path.to.config}"
+//
+//     Any value containing one or more dots "." will be looked-up in
+//     the existing configuration that the method is called on. The
+//     configuration is not changed and values are resolved each time
+//     ExpandString() is called. No locking of the configuration is
+//     done.
+//
+//  3. "${name}"
+//
+//     "name" will be substituted with the corresponding value from the
+//     map "values". If 'values' is empty (as opposed to the key "name"
+//     not being found) then name is looked up as an environment
+//     variable, see below.
+//
+//  4. "${env:name}"
+//
+//     "name" will be substituted with the contents of the environment
+//     variable of the same name.
+//
+//  5. "${file://path/to/file}" or "${file:~/path/to/file}"
+//
+//     The contents of the referenced file will be read. Multiline
+//     files are used as-is; this can, for example, be used to read
+//     PEM certificate files or keys. As an enhancement to a standard
+//     file url, if the first "/" is replaced with a tilde "~" then the
+//     path is relative to the home directory of the user running the process.
+//
+//  6. "${https://host/path}" or "${http://host/path}"
+//
+//     The contents of the URL are fetched and used similarly as for
+//     local files above. The URL is passed to [http.Get] and supports
+//     any embedded Basic Authentication and other features from
+//     that function.
 //
 // The form "$name" is also supported, as per [os.Expand] but may be
 // ambiguous and is not recommended.
