@@ -22,6 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
@@ -49,56 +50,108 @@ var aesNewCmd = &cobra.Command{
 		"wildcard": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		if _, err := os.Stat(aesNewCmdKeyfile); err == nil {
-			return fs.ErrExist
-		}
-		f, err := os.OpenFile(aesNewCmdKeyfile, os.O_RDWR|os.O_CREATE, 0600)
-		if err != nil {
-			return
-		}
+		var buf bytes.Buffer
+		var crc uint32
+
 		a, err := config.NewAESValues()
 		if err != nil {
-			f.Close()
 			return
 		}
-		err = a.WriteAESValues(f)
+		err = a.WriteAESValues(&buf)
 		if err != nil {
-			f.Close()
 			return
 		}
-		f.Seek(0, 0)
-		crc, err := config.Checksum(f)
-		f.Close()
-		crcStr := fmt.Sprintf("%0X", crc)
-		fmt.Printf("created, checksum %s\n", crcStr)
+
+		// write keyfile to STDOUT unless told otherwise
+		w := os.Stdout
+
+		if aesNewCmdKeyfile != "" {
+			if _, err := os.Stat(aesNewCmdKeyfile); err == nil {
+				return fs.ErrExist
+			}
+			w, err = os.OpenFile(aesNewCmdKeyfile, os.O_RDWR|os.O_CREATE, 0600)
+			if err != nil {
+				return
+			}
+			defer w.Close()
+		}
+
+		k := buf.Bytes()
+		_, err = w.Write(k)
+		if err != nil {
+			return
+		}
+
+		r := bytes.NewReader(k)
+
+		crc, err = config.Checksum(r)
+		if err != nil {
+			return
+		}
+		crcstr := fmt.Sprintf("%08X", crc)
+
+		if aesNewCmdKeyfile != "" {
+			fmt.Printf("%s created, checksum %s\n", aesNewCmdKeyfile, crcstr)
+		}
 
 		if aesNewCmdSetSync {
+			var keyfile string
+
 			ct, args, _ := cmdArgsParams(cmd)
-
-			// sync first
-			aesNewCmdKeyfile, _ = filepath.Abs(aesNewCmdKeyfile)
-
-			for _, h := range host.AllHosts() {
-				log.Debug().Msgf("copying to host %s", h)
-				if ct == nil {
-					for _, ct := range []*geneos.Component{&gateway.Gateway, &netprobe.Netprobe} {
-						host.CopyFile(host.LOCAL, aesNewCmdKeyfile, h, h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcStr+".aes"))
-					}
-				} else {
-					host.CopyFile(host.LOCAL, aesNewCmdKeyfile, h, h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcStr+".aes"))
-				}
-			}
-
-			// set configs - only Gateways
 			if ct == nil {
-				ct = &gateway.Gateway
-			}
-			if ct != &gateway.Gateway {
-				return geneos.ErrInvalidArgs
-			}
+				for _, ct := range []*geneos.Component{&gateway.Gateway, &netprobe.Netprobe} {
+					if aesNewCmdKeyfile == "" {
+						keyfile = host.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
+						log.Debug().Msgf("writing %d bytes of %q to keyfile %q", len(k), string(k), keyfile)
+						if err = os.WriteFile(keyfile, k, 0600); err != nil {
+							log.Error().Err(err).Msg("")
+							return
+						}
+					} else {
+						keyfile, _ = filepath.Abs(aesNewCmdKeyfile)
+					}
 
-			params := []string{crcStr + ".aes"}
-			return instance.ForAll(ct, aesNewSetInstance, args, params)
+					for _, h := range host.RemoteHosts() {
+						log.Debug().Msgf("copying to host %s", h)
+						host.CopyFile(host.LOCAL, keyfile, h, h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes"))
+					}
+					// set configs - only Gateways
+					if ct == nil {
+						ct = &gateway.Gateway
+					}
+					if ct != &gateway.Gateway {
+						return geneos.ErrInvalidArgs
+					}
+
+					params := []string{crcstr + ".aes"}
+					err = instance.ForAll(ct, aesNewSetInstance, args, params)
+					if err != nil {
+						return
+					}
+				}
+			} else {
+				if aesNewCmdKeyfile == "" {
+					keyfile = host.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
+					os.WriteFile(keyfile, k, 0600)
+				} else {
+					keyfile, _ = filepath.Abs(aesNewCmdKeyfile)
+				}
+				for _, h := range host.RemoteHosts() {
+					log.Debug().Msgf("copying to host %s", h)
+					host.CopyFile(host.LOCAL, keyfile, h, h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes"))
+				}
+				// set configs - only Gateways
+				if ct == nil {
+					ct = &gateway.Gateway
+				}
+				if ct != &gateway.Gateway {
+					return geneos.ErrInvalidArgs
+				}
+
+				params := []string{crcstr + ".aes"}
+				return instance.ForAll(ct, aesNewSetInstance, args, params)
+
+			}
 		}
 		return
 	},
@@ -110,7 +163,7 @@ var aesNewCmdSetSync bool
 func init() {
 	aesCmd.AddCommand(aesNewCmd)
 
-	aesNewCmd.Flags().StringVarP(&aesNewCmdKeyfile, "keyfile", "k", "keyfile.aes", "Key file to create")
+	aesNewCmd.Flags().StringVarP(&aesNewCmdKeyfile, "keyfile", "k", "", "Optional key file to create, defaults to STDOUT")
 	aesNewCmd.Flags().BoolVarP(&aesNewCmdSetSync, "set", "S", false, "Set instances to use this keyfile. Remote hosts have keyfile synced.")
 }
 

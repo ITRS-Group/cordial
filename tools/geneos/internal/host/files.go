@@ -425,24 +425,23 @@ func (h *Host) Glob(pattern string) (paths []string, err error) {
 	}
 }
 
-func (h *Host) WriteFile(path string, b []byte, perm os.FileMode) (err error) {
-	switch h.GetString("name") {
-	case LOCALHOST:
-		return os.WriteFile(path, b, perm)
-	default:
-		var s *sftp.Client
-		if s, err = h.DialSFTP(); err != nil {
-			return
-		}
-		var f *sftp.File
-		if f, err = s.Create(path); err != nil {
-			return
-		}
-		defer f.Close()
-		f.Chmod(perm)
-		_, err = f.Write(b)
+func (h *Host) WriteFile(name string, data []byte, perm os.FileMode) (err error) {
+	var s *sftp.Client
+	var f *sftp.File
+
+	if h == LOCAL {
+		return os.WriteFile(name, data, perm)
+	}
+	if s, err = h.DialSFTP(); err != nil {
 		return
 	}
+	if f, err = s.Create(name); err != nil {
+		return
+	}
+	defer f.Close()
+	f.Chmod(perm)
+	_, err = f.Write(data)
+	return
 }
 
 func (h *Host) ReadFile(name string) (b []byte, err error) {
