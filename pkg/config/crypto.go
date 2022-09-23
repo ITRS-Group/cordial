@@ -55,19 +55,29 @@ func NewAESValues() (a AESValues, err error) {
 	return
 }
 
+// String method for AESValues
+func (a AESValues) String() string {
+	if len(a.Key) != 32 || len(a.IV) != aes.BlockSize {
+		return ""
+	}
+	// space intentional to match native OpenSSL output
+	return fmt.Sprintf("key=%X\niv =%X\n", a.Key, a.IV)
+}
+
 // WriteAESValues writes the AESValues structure to the io.Writer. Each
 // fields acts as if it were being marshalled with an ",omitempty" tag.
-func (a AESValues) WriteAESValues(w io.Writer) (err error) {
+func (a AESValues) WriteAESValues(w io.Writer) error {
 	if len(a.Key) != 32 || len(a.IV) != aes.BlockSize {
 		return fmt.Errorf("invalid AES values")
 	}
-	// space intentional to match native OpenSSL output
-	_, err = fmt.Fprintf(w, "key=%X\niv =%X\n", a.Key, a.IV)
-	if err != nil {
-		return
+	s := a.String()
+	if s != "" {
+		if _, err := fmt.Fprint(w, a); err != nil {
+			return err
+		}
 	}
 
-	return
+	return nil
 }
 
 // ReadAESValuesFile returns an AESValues struct populated with the
@@ -130,6 +140,11 @@ func Checksum(r io.Reader) (c uint32, err error) {
 		return
 	}
 	c = crc32.ChecksumIEEE(b.Bytes())
+	return
+}
+
+func ChecksumString(in string) (c uint32, err error) {
+	c = crc32.ChecksumIEEE([]byte(in))
 	return
 }
 

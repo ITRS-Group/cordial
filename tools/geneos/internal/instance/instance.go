@@ -472,8 +472,8 @@ func Version(c geneos.Instance) (base string, underlying string, err error) {
 func ForAll(ct *geneos.Component, fn func(geneos.Instance, []string) error, args []string, params []string) (err error) {
 	n := 0
 	log.Debug().Msgf("args %v, params %v", args, params)
-	// if args is empty, get all matching instances this allows internal
-	// calls with an empty arg list without having to do the parsargs()
+	// if args is empty, get all matching instances. this allows internal
+	// calls with an empty arg list without having to do the parseArgs()
 	// dance
 	if len(args) == 0 {
 		args = AllNames(host.ALL, ct)

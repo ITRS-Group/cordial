@@ -22,7 +22,6 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
@@ -50,41 +49,23 @@ var aesNewCmd = &cobra.Command{
 		"wildcard": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		var buf bytes.Buffer
 		var crc uint32
 
 		a, err := config.NewAESValues()
 		if err != nil {
 			return
 		}
-		err = a.WriteAESValues(&buf)
-		if err != nil {
-			return
-		}
-
-		// write keyfile to STDOUT unless told otherwise
-		w := os.Stdout
 
 		if aesNewCmdKeyfile != "" {
 			if _, err := os.Stat(aesNewCmdKeyfile); err == nil {
 				return fs.ErrExist
 			}
-			w, err = os.OpenFile(aesNewCmdKeyfile, os.O_RDWR|os.O_CREATE, 0600)
-			if err != nil {
-				return
-			}
-			defer w.Close()
+			os.WriteFile(aesNewCmdKeyfile, []byte(a.String()), 0600)
+		} else if !aesNewCmdSetSync {
+			fmt.Print(a)
 		}
 
-		k := buf.Bytes()
-		_, err = w.Write(k)
-		if err != nil {
-			return
-		}
-
-		r := bytes.NewReader(k)
-
-		crc, err = config.Checksum(r)
+		crc, err = config.ChecksumString(a.String())
 		if err != nil {
 			return
 		}
@@ -97,60 +78,68 @@ var aesNewCmd = &cobra.Command{
 		if aesNewCmdSetSync {
 			var keyfile string
 
+			if aesNewCmdKeyfile == "" {
+				fmt.Printf("saving keyfile with checksum %s\n", crcstr)
+			}
+
 			ct, args, _ := cmdArgsParams(cmd)
 			if ct == nil {
 				for _, ct := range []*geneos.Component{&gateway.Gateway, &netprobe.Netprobe} {
-					if aesNewCmdKeyfile == "" {
-						keyfile = host.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
-						log.Debug().Msgf("writing %d bytes of %q to keyfile %q", len(k), string(k), keyfile)
-						if err = os.WriteFile(keyfile, k, 0600); err != nil {
-							log.Error().Err(err).Msg("")
+					if aesNewCmdKeyfile != "" {
+						aesNewCmdKeyfile, _ = filepath.Abs(aesNewCmdKeyfile)
+						if err = os.WriteFile(aesNewCmdKeyfile, []byte(a.String()), 0600); err != nil {
 							return
 						}
-					} else {
-						keyfile, _ = filepath.Abs(aesNewCmdKeyfile)
+					}
+
+					keyfile = host.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
+					if keyfile != aesNewCmdKeyfile {
+						if err = os.WriteFile(keyfile, []byte(a.String()), 0600); err != nil {
+							return
+						}
 					}
 
 					for _, h := range host.RemoteHosts() {
 						log.Debug().Msgf("copying to host %s", h)
 						host.CopyFile(host.LOCAL, keyfile, h, h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes"))
 					}
-					// set configs - only Gateways
-					if ct == nil {
-						ct = &gateway.Gateway
-					}
+
+					// set configs only on Gateways for now
 					if ct != &gateway.Gateway {
-						return geneos.ErrInvalidArgs
+						continue
 					}
 
 					params := []string{crcstr + ".aes"}
-					err = instance.ForAll(ct, aesNewSetInstance, args, params)
-					if err != nil {
+					if err = instance.ForAll(ct, aesNewSetInstance, args, params); err != nil {
 						return
 					}
 				}
 			} else {
-				if aesNewCmdKeyfile == "" {
-					keyfile = host.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
-					os.WriteFile(keyfile, k, 0600)
-				} else {
-					keyfile, _ = filepath.Abs(aesNewCmdKeyfile)
+				if aesNewCmdKeyfile != "" {
+					aesNewCmdKeyfile, _ = filepath.Abs(aesNewCmdKeyfile)
+					if err = os.WriteFile(aesNewCmdKeyfile, []byte(a.String()), 0600); err != nil {
+						return
+					}
 				}
+				keyfile = host.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
+				if keyfile != aesNewCmdKeyfile {
+					if err = os.WriteFile(keyfile, []byte(a.String()), 0600); err != nil {
+						return
+					}
+				}
+
 				for _, h := range host.RemoteHosts() {
 					log.Debug().Msgf("copying to host %s", h)
 					host.CopyFile(host.LOCAL, keyfile, h, h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes"))
 				}
-				// set configs - only Gateways
-				if ct == nil {
-					ct = &gateway.Gateway
-				}
+
+				// set configs only on Gateways for now
 				if ct != &gateway.Gateway {
-					return geneos.ErrInvalidArgs
+					return
 				}
 
 				params := []string{crcstr + ".aes"}
 				return instance.ForAll(ct, aesNewSetInstance, args, params)
-
 			}
 		}
 		return
