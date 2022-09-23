@@ -35,14 +35,25 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 	"github.com/spf13/cobra"
 )
 
 // aesNewCmd represents the aesNew command
 var aesNewCmd = &cobra.Command{
-	Use:                   "new",
-	Short:                 "Create a new AES key file",
-	Long:                  ``,
+	Use:   "new [-k FILE] [-S] [TYPE] [NAME]",
+	Short: "Create a new key file",
+	Long: `Create a new key file. Written to STDOUT by default, but can be
+written to a file with the '-k FILE' option.
+
+If the flag '-S' is given then the new key file is applied (synced)
+to the shared directory, using the CRC32 as the file base name, for
+all matching types, currently limited to Gateway and Netprobe types,
+including SANs for use by Toolkit 'Secure Environment Variables' and
+so on. Additionally, when using the '-S' flag all matching Gateway
+instances have the keyfile path added to the configuration and any
+existing keyfile path is moved to 'prevkeyfile' to support GA6.x key
+file maintenance.`,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
@@ -84,19 +95,23 @@ var aesNewCmd = &cobra.Command{
 
 			ct, args, _ := cmdArgsParams(cmd)
 			if ct == nil {
-				for _, ct := range []*geneos.Component{&gateway.Gateway, &netprobe.Netprobe} {
+				for _, ct := range []*geneos.Component{&gateway.Gateway, &netprobe.Netprobe, &san.San} {
 					if aesNewCmdKeyfile != "" {
 						aesNewCmdKeyfile, _ = filepath.Abs(aesNewCmdKeyfile)
 						if err = os.WriteFile(aesNewCmdKeyfile, []byte(a.String()), 0600); err != nil {
 							return
 						}
+						fmt.Println("keyfile saved in", aesNewCmdKeyfile)
 					}
 
+					os.MkdirAll(host.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles"), 0700)
 					keyfile = host.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
 					if keyfile != aesNewCmdKeyfile {
 						if err = os.WriteFile(keyfile, []byte(a.String()), 0600); err != nil {
 							return
 						}
+						fmt.Println("keyfile saved in", keyfile)
+
 					}
 
 					for _, h := range host.RemoteHosts() {
@@ -120,12 +135,16 @@ var aesNewCmd = &cobra.Command{
 					if err = os.WriteFile(aesNewCmdKeyfile, []byte(a.String()), 0600); err != nil {
 						return
 					}
+					fmt.Println("keyfile saved in", aesNewCmdKeyfile)
 				}
+
+				os.MkdirAll(host.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles"), 0700)
 				keyfile = host.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
 				if keyfile != aesNewCmdKeyfile {
 					if err = os.WriteFile(keyfile, []byte(a.String()), 0600); err != nil {
 						return
 					}
+					fmt.Println("keyfile saved in", keyfile)
 				}
 
 				for _, h := range host.RemoteHosts() {
@@ -157,9 +176,16 @@ func init() {
 }
 
 func aesNewSetInstance(c geneos.Instance, params []string) (err error) {
+	var rolled bool
+	// roll old file
+	p := c.Config().GetString("keyfile")
+	if p != "" {
+		c.Config().Set("prevkeyfile", p)
+		rolled = true
+	}
 	c.Config().Set("keyfile", c.Host().Filepath(c.Type(), c.Type().String()+"_shared", "keyfiles", params[0]))
 
-	// now loop through the collected results and write out
+	// in case the configuration in in old format
 	if err = instance.Migrate(c); err != nil {
 		log.Fatal().Err(err).Msg("cannot migrate existing .rc config to set values in new .json configuration file")
 	}
@@ -168,5 +194,11 @@ func aesNewSetInstance(c geneos.Instance, params []string) (err error) {
 		log.Fatal().Err(err).Msg("")
 	}
 
+	fmt.Printf("%s keyfile %s set", c, params[0])
+	if rolled {
+		fmt.Printf(", existing keyfile moved to prevkeyfile\n")
+	} else {
+		fmt.Println()
+	}
 	return
 }
