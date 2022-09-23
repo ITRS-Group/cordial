@@ -191,8 +191,16 @@ func (h *Host) FullName(name string) string {
 	return name + "@" + h.String()
 }
 
+// AllHosts returns a slice of all hosts, including LOCAL
 func AllHosts() (hs []*Host) {
 	hs = []*Host{LOCAL}
+	hs = append(hs, RemoteHosts()...)
+	return
+}
+
+// RemoteHosts returns a slice of al valid remote hosts
+func RemoteHosts() (hs []*Host) {
+	hs = []*Host{}
 
 	hosts.Range(func(k, v interface{}) bool {
 		h := Get(k.(string))

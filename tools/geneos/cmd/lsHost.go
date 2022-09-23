@@ -87,10 +87,7 @@ func commandLSHost(ct *geneos.Component, args []string, params []string) (err er
 }
 
 func loopHosts(fn func(*host.Host) error) error {
-	for _, h := range host.AllHosts() {
-		if h == host.LOCAL {
-			continue
-		}
+	for _, h := range host.RemoteHosts() {
 		fn(h)
 	}
 	return nil

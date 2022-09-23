@@ -481,7 +481,7 @@ func ForAll(ct *geneos.Component, fn func(geneos.Instance, []string) error, args
 	for _, name := range args {
 		cs := MatchAll(ct, name)
 		if len(cs) == 0 {
-			log.Error().Msgf("no match for %s", name)
+			log.Debug().Msgf("no match for %s", name)
 			continue
 		}
 		n++
