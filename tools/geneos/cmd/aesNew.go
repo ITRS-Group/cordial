@@ -41,7 +41,7 @@ import (
 
 // aesNewCmd represents the aesNew command
 var aesNewCmd = &cobra.Command{
-	Use:   "new [-k FILE] [-S] [TYPE] [NAME]",
+	Use:   "new [-k FILE] [-S] [TYPE] [NAME...]",
 	Short: "Create a new key file",
 	Long: `Create a new key file. Written to STDOUT by default, but can be
 written to a file with the '-k FILE' option.
