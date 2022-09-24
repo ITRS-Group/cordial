@@ -44,24 +44,19 @@ var aesLsCmd = &cobra.Command{
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	Run: func(cmd *cobra.Command, _ []string) {
 		ct, args, params := cmdArgsParams(cmd)
-		return aesLSCommand(ct, args, params)
+		aesLSTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+		fmt.Fprintf(aesLSTabWriter, "Type\tName\tHost\tKey-File\tCRC32\tModTime\n")
+		instance.ForAll(ct, aesLSInstance, args, params)
+		aesLSTabWriter.Flush()
 	},
-}
-
-func init() {
-	aesCmd.AddCommand(aesLsCmd)
 }
 
 var aesLSTabWriter *tabwriter.Writer
 
-func aesLSCommand(ct *geneos.Component, args []string, params []string) (err error) {
-	aesLSTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-	fmt.Fprintf(aesLSTabWriter, "Type\tName\tHost\tKey-File\tCRC32\tModTime\n")
-	err = instance.ForAll(ct, aesLSInstance, args, params)
-	aesLSTabWriter.Flush()
-	return
+func init() {
+	aesCmd.AddCommand(aesLsCmd)
 }
 
 func aesLSInstance(c geneos.Instance, params []string) (err error) {
