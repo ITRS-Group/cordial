@@ -69,29 +69,19 @@ template based configuration files for SANs and new gateways.`,
 			// only allow init through
 			if cmd != initCmd && cmd != setUserCmd && cmd != setGlobalCmd {
 				cmd.SetUsageTemplate(" ")
-				return fmt.Errorf("%s", `Installation directory is not set.
+				return fmt.Errorf("%s", `Geneos installation directory not set.
 
-You can fix this by doing one of the following:
+Use one of the following to fix this:
 
-1. Create a new Geneos environment:
-
-	$ geneos init
-
-	or, if not in your home directory:
-
-	$ geneos init /path/to/geneos
-
-2. Set the ITRS_HOME environment:
-
-	$ export ITRS_HOME=/path/to/geneos
-
-3. Set the Geneos path in your user's configuration file:
-
+For an existing installation:
 	$ geneos set user geneos=/path/to/geneos
 
-3. Set the Geneos path in the global configuration file (usually as root):
+To initialise a new installation:
+	$ geneos init /path/to/geneos
 
-	# echo '{ "Geneos": "/path/to/geneos" }' > `+geneos.GlobalConfigPath)
+For temporary usage:
+	$ export ITRS_HOME=/path/to/geneos
+`)
 			}
 		}
 
