@@ -13,8 +13,6 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
@@ -101,7 +99,7 @@ func OpenLocalFileOrURL(source string, options ...GeneosOptions) (from io.ReadCl
 		var resp *http.Response
 		resp, err = http.Get(u.String())
 		if err != nil {
-			log.Fatal().Err(err).Msg("")
+			return
 		}
 		// only use auth if required
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
@@ -109,11 +107,11 @@ func OpenLocalFileOrURL(source string, options ...GeneosOptions) (from io.ReadCl
 				var req *http.Request
 				client := &http.Client{}
 				if req, err = http.NewRequest("GET", u.String(), nil); err != nil {
-					log.Fatal().Err(err).Msg("")
+					return
 				}
 				req.SetBasicAuth(opts.username, opts.password)
 				if resp, err = client.Do(req); err != nil {
-					log.Fatal().Err(err).Msg("")
+					return
 				}
 			}
 		}
