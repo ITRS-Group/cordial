@@ -1,10 +1,10 @@
 # To Do list
 
-
 ## `geneos` tool
 
 (unordered)
 
+* Split 'init' common and sub-sub-commands, as it's too complicated
 * When 'moving' a gateway, update licd connection details
   * Also, keep port(s) unchanged where possible
 * TLS sync should copy root CA
