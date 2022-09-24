@@ -133,6 +133,16 @@ func ChecksumFile(path string) (c uint32, err error) {
 	return
 }
 
+// Checksum returns the CRC32 checksum of the AESValue it is called on.
+func (a *AESValues) Checksum() (c uint32, err error) {
+	if a == nil {
+		err = os.ErrInvalid
+		return
+	}
+	c = crc32.ChecksumIEEE([]byte(a.String()))
+	return
+}
+
 func Checksum(r io.Reader) (c uint32, err error) {
 	b := bytes.Buffer{}
 	_, err = b.ReadFrom(r)
