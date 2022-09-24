@@ -29,6 +29,9 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -67,38 +70,36 @@ Currently only Gateways and Netprobes (and SANs) are supported.`,
 		if aesUpdateCmdKeyfile != "" {
 			f, _, err := geneos.OpenLocalFileOrURL(aesUpdateCmdKeyfile)
 			if err != nil {
-				//
+				panic(err)
 			}
 			defer f.Close()
 			a, err := config.ReadAESValues(f)
 			if err != nil {
-				//
+				panic(err)
 			}
 			crc, err := a.Checksum()
 			if err != nil {
-				//
+				panic(err)
 			}
 			crcstr := fmt.Sprintf("%08X", crc)
 
 			// at this point we have an AESValue struct and a CRC to use as a test
-			for _, h := range host.AllHosts() {
-				if ct == nil {
-					//
-				}
-				path := h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
-				if _, err := h.Stat(path); err == nil {
-					// something exists
-
-				}
-				w, err := h.Create(path, 0600)
-				if err != nil {
-					//
-				}
-				if err = a.WriteAESValues(w); err != nil {
+			for _, ct := range ct.Range(&gateway.Gateway, &netprobe.Netprobe, &san.San) {
+				for _, h := range host.AllHosts() {
+					path := h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
+					if _, err := h.Stat(path); err == nil {
+						panic(err)
+					}
+					w, err := h.Create(path, 0600)
+					if err != nil {
+						panic(err)
+					}
+					if err = a.WriteAESValues(w); err != nil {
+						w.Close()
+						panic(err)
+					}
 					w.Close()
-					//
 				}
-				w.Close()
 			}
 			params = []string{crcstr}
 		}
@@ -114,7 +115,9 @@ Currently only Gateways and Netprobes (and SANs) are supported.`,
 			return nil
 		}
 
-		return instance.ForAll(ct, aesUpdateAESInstance, args, params)
+		// params[0] is the CRC
+		instance.ForAll(ct, aesUpdateAESInstance, args, params)
+		return nil
 	},
 }
 
