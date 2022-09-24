@@ -142,16 +142,11 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 						wild = true
 						log.Debug().Msgf("checking host %s for %s", rem.String(), local)
 						name := local + "@" + rem.String()
-						if ct == nil {
-							for _, cr := range geneos.RealComponents() {
-								if i, err := instance.Get(cr, name); err == nil && i.Loaded() {
-									nargs = append(nargs, name)
-									matched = true
-								}
+						for _, ct := range ct.Range(geneos.RealComponents()...) {
+							if i, err := instance.Get(ct, name); err == nil && i.Loaded() {
+								nargs = append(nargs, name)
+								matched = true
 							}
-						} else if i, err := instance.Get(ct, name); err == nil && i.Loaded() {
-							nargs = append(nargs, name)
-							matched = true
 						}
 					}
 					if !matched && instance.ValidInstanceName(arg) {

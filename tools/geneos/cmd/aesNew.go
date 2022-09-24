@@ -94,42 +94,7 @@ file maintenance.`,
 			}
 
 			ct, args, _ := cmdArgsParams(cmd)
-			if ct == nil {
-				for _, ct := range []*geneos.Component{&gateway.Gateway, &netprobe.Netprobe, &san.San} {
-					if aesNewCmdKeyfile != "" {
-						aesNewCmdKeyfile, _ = filepath.Abs(aesNewCmdKeyfile)
-						if err = os.WriteFile(aesNewCmdKeyfile, []byte(a.String()), 0600); err != nil {
-							return
-						}
-						fmt.Println("keyfile saved in", aesNewCmdKeyfile)
-					}
-
-					os.MkdirAll(host.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles"), 0700)
-					keyfile = host.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
-					if keyfile != aesNewCmdKeyfile {
-						if err = os.WriteFile(keyfile, []byte(a.String()), 0600); err != nil {
-							return
-						}
-						fmt.Println("keyfile saved in", keyfile)
-
-					}
-
-					for _, h := range host.RemoteHosts() {
-						log.Debug().Msgf("copying to host %s", h)
-						host.CopyFile(host.LOCAL, keyfile, h, h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes"))
-					}
-
-					// set configs only on Gateways for now
-					if ct != &gateway.Gateway {
-						continue
-					}
-
-					params := []string{crcstr + ".aes"}
-					if err = instance.ForAll(ct, aesNewSetInstance, args, params); err != nil {
-						return
-					}
-				}
-			} else {
+			for _, ct := range ct.Range(&gateway.Gateway, &netprobe.Netprobe, &san.San) {
 				if aesNewCmdKeyfile != "" {
 					aesNewCmdKeyfile, _ = filepath.Abs(aesNewCmdKeyfile)
 					if err = os.WriteFile(aesNewCmdKeyfile, []byte(a.String()), 0600); err != nil {
@@ -145,6 +110,7 @@ file maintenance.`,
 						return
 					}
 					fmt.Println("keyfile saved in", keyfile)
+
 				}
 
 				for _, h := range host.RemoteHosts() {
@@ -154,11 +120,13 @@ file maintenance.`,
 
 				// set configs only on Gateways for now
 				if ct != &gateway.Gateway {
-					return
+					continue
 				}
 
 				params := []string{crcstr + ".aes"}
-				return instance.ForAll(ct, aesNewSetInstance, args, params)
+				if err = instance.ForAll(ct, aesNewSetInstance, args, params); err != nil {
+					continue
+				}
 			}
 		}
 		return
