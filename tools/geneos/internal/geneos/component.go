@@ -185,3 +185,16 @@ func (ct *Component) ComponentDir(h *host.Host) string {
 	p := h.Filepath(ct, ct.String()+"s")
 	return p
 }
+
+// Range will either return just the specific component it is called on,
+// or if that is nil than the list of component types passed as args.
+//
+// This is a convenience to avoid a double layer of if and range in
+// callers than want to work on specific component types.
+func (ct *Component) Range(cts ...*Component) []*Component {
+	if ct != nil {
+		return []*Component{ct}
+	}
+
+	return cts
+}
