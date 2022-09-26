@@ -103,8 +103,8 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 }
 
 // ExpandString() returns input with any occurrences of the form ${name}
-// or $name substituted using [os.Expand] for the supported format types
-// in the order given below:
+// interpolated using [os.Expand] for the supported format types in the
+// order given below:
 //
 //  1. "${enc:keyfile[|keyfile...]:encodedvalue}"
 //
@@ -165,8 +165,7 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 //     any embedded Basic Authentication and other features from
 //     that function.
 //
-// The form "$name" is also supported, as per [os.Expand] but may be
-// ambiguous and is not recommended.
+// The form "$name" is NOT supported, unlike [os.Expand].
 //
 // Expansion is not recursive. Configuration values are read and stored
 // as literals and are expanded each time they are used. For each
@@ -179,19 +178,19 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 // remote URLs) may result in an empty or corrupt string being returned.
 // Error returns are intentionally discarded.
 //
-// It is not currently possible to escape the syntax supported by
-// [os.Expand] and if it is necessary to have a configuration value be
-// of the form "${name}" or "$name" then set an otherwise unused item to
-// the value and refer to it using the dotted syntax, e.g. for YAML
+// It is not currently possible to escape the syntax supported by Expand
+// and if it is necessary to have a configuration value be a literal of
+// the form "${name}" then set an otherwise unused item to the value and
+// refer to it using the dotted syntax, e.g. for YAML
 //
 //	config:
 //	  real: ${config.temp}
 //	  temp: "${unchanged}"
 //
 // In the above a reference to ${config.real} will return the literal
-// string ${unchanged}
+// string ${unchanged} as there is no recursive lookups.
 func (c *Config) ExpandString(input string, values map[string]string) (value string) {
-	value = os.Expand(input, func(s string) (r string) {
+	value = expand(input, func(s string) (r string) {
 		if strings.HasPrefix(s, "enc:") {
 			return c.expandEncodedString(s[4:], values)
 		}
@@ -398,4 +397,80 @@ func LoadConfig(configName string, options ...Options) (c *Config, err error) {
 	}
 
 	return
+}
+
+// the below is copied from the Go source but modified to NOT support
+// $val, only ${val}
+//
+// Copyright 2010 The Go Authors. All rights reserved. Use of this
+// source code is governed by a BSD-style license that can be found in
+// the LICENSE file.
+//
+// expand replaces ${var} in the string based on the mapping function.
+func expand(s string, mapping func(string) string) string {
+	var buf []byte
+	// ${} is all ASCII, so bytes are fine for this operation.
+	i := 0
+	for j := 0; j < len(s); j++ {
+		if s[j] == '$' && j+1 < len(s) {
+			if buf == nil {
+				buf = make([]byte, 0, 2*len(s))
+			}
+			buf = append(buf, s[i:j]...)
+			name, w := getShellName(s[j+1:])
+			if name == "" && w > 0 {
+				// Encountered invalid syntax; eat the
+				// characters.
+			} else if name == "" {
+				// Valid syntax, but $ was not followed by a
+				// name. Leave the dollar character untouched.
+				buf = append(buf, s[j])
+			} else {
+				buf = append(buf, mapping(name)...)
+			}
+			j += w
+			i = j + 1
+		}
+	}
+	if buf == nil {
+		return s
+	}
+	return string(buf) + s[i:]
+}
+
+// isShellSpecialVar reports whether the character identifies a special
+// shell variable such as $*.
+func isShellSpecialVar(c uint8) bool {
+	switch c {
+	case '*', '#', '$', '@', '!', '?', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		return true
+	}
+	return false
+}
+
+// getShellName returns the name that begins the string and the number of bytes
+// consumed to extract it. If the name is enclosed in {}, it's part of a ${}
+// expansion and two more bytes are needed than the length of the name.
+//
+// CHANGE: return if string does not start with an opening bracket
+func getShellName(s string) (string, int) {
+	if s[0] != '{' {
+		// skip
+		return "", 0
+	}
+
+	if len(s) > 2 && isShellSpecialVar(s[1]) && s[2] == '}' {
+		return s[1:2], 3
+	}
+
+	// Scan to closing brace
+	for i := 1; i < len(s); i++ {
+		if s[i] == '}' {
+			if i == 1 {
+				return "", 2 // Bad syntax; eat "${}"
+			}
+			return s[1:i], i + 1
+		}
+	}
+	return "", 1 // Bad syntax; eat "${"
 }
