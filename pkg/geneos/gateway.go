@@ -144,16 +144,14 @@ type Sampler struct {
 // FTM
 
 type FTMPlugin struct {
-	Files                      []FTMFile              `xml:"ftm>files>file"`
-	FtmHolidaysVars            *FTMHolidaysVars       `xml:"ftm>holidaysVar>holiday>var,omitempty"`
-	FtmHolidaysValues          *FTMHolidaysValues     `xml:"ftm>holidaysVrs>holiday,omitempty"`
-	FtmHolidaysAsWeekdays      *FTMHolidaysAsWeekdays `xml:"ftm>holidaysVar>day,omitempty"`
-	FtmMonitoredDays           *FTMMonitoredDays      `xml:"ftm>monitoredDays,omitempty"`
-	ConsistentDateStamps       *Value                 `xml:"ftm>consistentDateStamps,omitempty"`
-	DisplayTimeInISO8601Format *Value                 `xml:"ftm>displayTimeInIso8601Format,omitempty"`
-	ShowActualFilename         *Value                 `xml:"ftm>showActualFilename,omitempty"`
-	DelayUnit                  string                 `xml:"ftm>delayUnit"`
-	SizeUnit                   string                 `xml:"ftm>sizeUnit"`
+	Files                      []FTMFile        `xml:"ftm>files>file"`
+	Holidays                   *FTMHolidaysVars `xml:"ftm>holidaysVar,omitempty"`
+	MonitoredDays              *FTMWeekdays     `xml:"ftm>monitoredDays,omitempty"`
+	ConsistentDateStamps       *Value           `xml:"ftm>consistentDateStamps,omitempty"`
+	DisplayTimeInISO8601Format *Value           `xml:"ftm>displayTimeInIso8601Format,omitempty"`
+	ShowActualFilename         *Value           `xml:"ftm>showActualFilename,omitempty"`
+	DelayUnit                  string           `xml:"ftm>delayUnit"`
+	SizeUnit                   string           `xml:"ftm>sizeUnit"`
 }
 
 type FTMFile struct {
@@ -182,31 +180,19 @@ type FTMAdditionalPaths struct {
 }
 
 type FTMHolidaysVars struct {
-	HolidaysVar []string `xml:"ref,attr,omitempty"`
+	XMLName xml.Name            `xml:"holidaysVar"`
+	Holiday []*SingleLineString `xml:"holiday,omitempty"`
+	Day     *FTMWeekdays        `xml:"day,omitempty"`
 }
 
-type FTMHolidaysValues struct {
-	HolidaysValues []string `xml:"data,omitempty"`
-}
-
-type FTMHolidaysAsWeekdays struct {
-	Monday    bool `xml:"monday,omitempty"`
-	Tuesday   bool `xml:"tuesday,omitempty"`
-	Wednesday bool `xml:"wednesday,omitempty"`
-	Thursday  bool `xml:"thursday,omitempty"`
-	Friday    bool `xml:"friday,omitempty"`
-	Saturday  bool `xml:"saturday,omitempty"`
-	Sunday    bool `xml:"sunday,omitempty"`
-}
-
-type FTMMonitoredDays struct {
-	Monday    bool `xml:"monday,omitempty"`
-	Tuesday   bool `xml:"tuesday,omitempty"`
-	Wednesday bool `xml:"wednesday,omitempty"`
-	Thursday  bool `xml:"thursday,omitempty"`
-	Friday    bool `xml:"friday,omitempty"`
-	Saturday  bool `xml:"saturday,omitempty"`
-	Sunday    bool `xml:"sunday,omitempty"`
+type FTMWeekdays struct {
+	Monday    bool `xml:"monday"`
+	Tuesday   bool `xml:"tuesday"`
+	Wednesday bool `xml:"wednesday"`
+	Thursday  bool `xml:"thursday"`
+	Friday    bool `xml:"friday"`
+	Saturday  bool `xml:"saturday"`
+	Sunday    bool `xml:"sunday"`
 }
 
 // SQL Toolkit
