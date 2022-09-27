@@ -13,7 +13,6 @@
 # cobra-cli add aesEncode -p aesCmd
 # cobra-cli add aesLs -p aesCmd
 # cobra-cli add aesNew -p aesCmd
-# cobra-cli add aesSync -p aesCmd
 # cobra-cli add aesUpdate -p aesCmd
 # cobra-cli add clean
 # cobra-cli add command
