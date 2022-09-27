@@ -25,7 +25,7 @@ This repo contains a set of interrelated programs, integrations, libraries and p
 
 #### Fixes found during testing
 
-* Removed support for `$var` format expansion, not it's `${var}` only. This prevents configuration issues when, for example, plain text passwords contain dollar signs. The documented workaround if you need to include literal `${` in a configuration value still applies.
+* Removed support for `$var` format expansion, now it's `${var}` only. This prevents configuration issues when, for example, plain text passwords contain dollar signs. The documented workaround if you need to include literal `${` in a configuration value still applies.
 
 #### Additional features and improvements
 
