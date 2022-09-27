@@ -21,7 +21,20 @@ This repo contains a set of interrelated programs, integrations, libraries and p
 
 ## ChangeLog
 
-### Version v1.2.0
+### Version v1.2.0-rc2 - 2022/09/26
+
+#### Fixes found during testing
+
+* Removed support for `$var` format expansion, not it's `${var}` only. This prevents configuration issues when, for example, plain text passwords contain dollar signs. The documented workaround if you need to include literal `${` in a configuration value still applies.
+
+#### Additional features and improvements
+
+* Added command `geneos aes update`. This may still be renamed before final release to `geneos aes import` depending on feedback.
+* Improvements to `geneos aes new`
+* Improvements, clarification to package and function documentation
+* Code clean-up and refactor to make some internals more understandable and to remove code duplication
+
+### Version v1.2.0-rc1 - 2022/09/21
 
 #### Breaking Changes
 
@@ -46,6 +59,6 @@ There are quite a lot of changes to the various components and packages since th
 * Logging changes
   * The logging in `tools/geneos` has been migrated to `zerolog` from the internal `logger` for a more flexible package. This will be further rolled-out to other parts of the repo in time.
 
-### Version v1.0.0
+### Version v1.0.0 - 2022/06/14
 
 Initial Release
