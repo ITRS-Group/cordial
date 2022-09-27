@@ -31,14 +31,15 @@ import (
 // be set at a time. This list is not complete, much like many of the
 // configuration settings.
 type Vars struct {
-	XMLName    xml.Name    `xml:"var"`
-	Name       string      `xml:"name,attr"`
-	Boolean    *bool       `xml:"boolean,omitempty"`
-	Double     *float64    `xml:"double,omitempty"`
-	Integer    *int64      `xml:"integer,omitempty"`
-	String     string      `xml:"string,omitempty"`
-	StringList *StringList `xml:"stringList,omitempty"`
-	Macro      *Macro      `xml:"macro,omitempty"`
+	XMLName       xml.Name       `xml:"var"`
+	Name          string         `xml:"name,attr"`
+	Boolean       *bool          `xml:"boolean,omitempty"`
+	Double        *float64       `xml:"double,omitempty"`
+	Integer       *int64         `xml:"integer,omitempty"`
+	String        string         `xml:"string,omitempty"`
+	StringList    *StringList    `xml:"stringList,omitempty"`
+	NameValueList *NameValueList `xml:"nameValueList,omitempty"`
+	Macro         *Macro         `xml:"macro,omitempty"`
 }
 
 // Macro is a container for the various macro variable types. Only
@@ -63,6 +64,15 @@ type EmptyStruct struct{}
 
 type StringList struct {
 	Strings []string `xml:"string"`
+}
+
+type NameValueList struct {
+	NameValues []NameValue `xml:"item,omitempty"`
+}
+
+type NameValue struct {
+	Name  string `xml:"name"`
+	Value string `xml:"value"`
 }
 
 type Reference struct {
