@@ -1,5 +1,25 @@
 # Change Log
 
+## Version v1.2.1-rc1 - 2022/09/28
+
+### Fixes
+
+* `geneos` instance configuration files now have expansion applied to string-like values. This means, for example, that changing the `version` of an instance from `active_prod` will correctly be reflected in the executable path and library paths. Previously these needed to be manually changed. Please note that existing instance configuration files will NOT be updated and will require editing. You can go from:
+
+      "program": ".../packages/gateway/active_prod/gateway2.linux_64",
+
+  to
+
+      "program": "${config:install}/${config:version}/${config:binary}",
+
+For a complete list of supported expansions see `ExpandString()` in the [`config`](../../pkg/config) package.
+
+### Additional features and improvements
+
+* `ExpandString()` was enhanced to add a `config:` prefix so that configurations with a flat structure, i.e. no "." in names, could be referenced.
+* To support the changes above in instance configurations a new method was added - `ExpandAllSettings()` - and the `geneos show` command enhanced to display both expanded and raw configurations via the new `--raw` flag.
+* Additional configuration item support in the [`geneos`](../../pkg/geneos) package
+
 ## Version v1.2.0-rc2 - 2022/09/26
 
 ### Fixes found during testing
