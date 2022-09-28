@@ -218,15 +218,15 @@ The `geneos` program uses the packages [Cobra](cobra.dev) and [Viper](https://gi
 
 Each instance has a configuration file. This is the most basic expression of an instance. New instances that you create will have a configuration file named after the component type plus the extension `.json`. Older instances which you have adopted from older control scripts will have a configuration file with the extension `.rc`
 
-### Historical Configuration Files
+### Legacy Configuration Files
 
-Historical (legacy) `.rc` files have lines, ignoring comments, of form
+Historical (legacy) `.rc` files have a simple format of the form
 
 ```bash
 GatePort=1234
 ```
 
-Where the prefix (`Gate`) also encodes the component type and the suffix (`Port`) is the setting. Any lines that do not contain the prefix are treated as environment variables and are evaluated and passed to the program on start.
+Where the prefix (`Gate`) also encodes the component type and the suffix (`Port`) is the setting. Any lines that do not contain the prefix are treated as environment variables and are evaluated and passed to the program on start. Lines that contain environment variables like `${HOME}` will be expanded at run time. If the configuration is migrated, either through an explicit `geneos migrate` command or if a setting is changes through `geneos set` or similar then the value of the environment variable will be carried over and continue to be expanded at run-time. The `geneos show` command can be passed a `--raw` flag to show the unexpanded values, if any.
 
 While the `geneos` program can parse and understand the legacy `.rc` files above it will never update them, instead migrating them to their modern `.json` versions either when required or when explicitly told to using the `migrate` command.
 
@@ -587,6 +587,10 @@ Show log(s) for matching instances. Flags allow for follow etc.
   Show the running configuration or, if `global` or `user` is supplied then the respective on-disk configuration files. Passwords are simplistically redacted.
 
   The instance specific `show` command is described below.
+
+* `geneos show [-r] [TYPE] [VALUES...]`
+
+  Show the configuration for matching instances.
 
 * `geneos set [global|user] KEY=VALUE...`
 
