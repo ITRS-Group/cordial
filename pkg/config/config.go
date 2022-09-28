@@ -130,10 +130,12 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 //     * password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
 //     * password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
 //
-//  2. "${path.to.config}"
+//  2. "${conf:key}" or "${path.to.config}"
 //
-//     Any value containing one or more dots "." will be looked-up in
-//     the existing configuration that the method is called on. The
+//     Fetch the "key" configuration value (for single layered
+//     configurations, where a sub-level dot is not possible) or if any
+//     value containing one or more dots "." will be looked-up in the
+//     existing configuration that the method is called on. The
 //     configuration is not changed and values are resolved each time
 //     ExpandString() is called. No locking of the configuration is
 //     done.
@@ -234,8 +236,11 @@ func (c *Config) expandEncodedString(s string, values map[string]string) (value 
 
 func (c *Config) expandString(s string, values map[string]string) (value string) {
 	switch {
+	case strings.HasPrefix(s, "conf:"):
+		fallthrough
 	case !strings.Contains(s, ":"):
-		if strings.Contains(s, ".") {
+		if strings.HasPrefix(s, "conf:") || strings.Contains(s, ".") {
+			s = strings.TrimPrefix(s, "conf:")
 			// this call to GetString() must NOT be recursive
 			return strings.TrimSpace(c.Viper.GetString(s))
 		}
