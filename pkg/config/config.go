@@ -55,10 +55,7 @@ func GetString(s string, values ...map[string]string) string {
 // Returns the configuration item as a string with ExpandString() applied,
 // passing the first "values" if given
 func (c *Config) GetString(s string, values ...map[string]string) string {
-	if len(values) > 0 {
-		return c.ExpandString(c.Viper.GetString(s), values[0])
-	}
-	return c.ExpandString(c.Viper.GetString(s), nil)
+	return c.ExpandString(c.Viper.GetString(s), values...)
 }
 
 func GetConfig() *Config {
@@ -76,11 +73,7 @@ func GetStringSlice(s string, values ...map[string]string) []string {
 func (c *Config) GetStringSlice(s string, values ...map[string]string) (slice []string) {
 	r := c.Viper.GetStringSlice(s)
 	for _, n := range r {
-		if len(values) > 0 {
-			slice = append(slice, c.ExpandString(n, values[0]))
-		} else {
-			slice = append(slice, c.ExpandString(n, nil))
-		}
+		slice = append(slice, c.ExpandString(n, values...))
 	}
 	return
 }
@@ -140,12 +133,13 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 //     ExpandString() is called. No locking of the configuration is
 //     done.
 //
-//  3. "${name}"
+//  3. "${key}"
 //
-//     "name" will be substituted with the corresponding value from the
-//     map "values". If 'values' is empty (as opposed to the key "name"
-//     not being found) then name is looked up as an environment
-//     variable, see below.
+//     "key" will be substituted with the value of the first matching
+//     key from the maps "values...", checked in order. If no "values"
+//     are given (as opposed to the key not being found in any of the
+//     "values" maps) then name is looked up as an environment variable,
+//     see below.
 //
 //  4. "${env:name}"
 //
@@ -191,17 +185,43 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 //
 // In the above a reference to ${config.real} will return the literal
 // string ${unchanged} as there is no recursive lookups.
-func (c *Config) ExpandString(input string, values map[string]string) (value string) {
+func (c *Config) ExpandString(input string, values ...map[string]string) (value string) {
 	value = expand(input, func(s string) (r string) {
 		if strings.HasPrefix(s, "enc:") {
-			return c.expandEncodedString(s[4:], values)
+			return c.expandEncodedString(s[4:], values...)
 		}
-		return c.expandString(s, values)
+		return c.expandString(s, values...)
 	})
 	return
 }
 
-func (c *Config) expandEncodedString(s string, values map[string]string) (value string) {
+// ExpandAllSettings returns all the settings from c applying
+// ExpandString() to all string values and all string slice values.
+// "values" maps are passed to ExpandString as-is.
+// Futher types may be added over time.
+func (c *Config) ExpandAllSettings(values ...map[string]string) (all map[string]interface{}) {
+	as := c.AllSettings()
+	all = make(map[string]interface{}, len(as))
+
+	for k, v := range as {
+		switch ev := v.(type) {
+		case string:
+			all[k] = c.ExpandString(ev, values...)
+		case []string:
+			ns := []string{}
+			for _, s := range ev {
+				ns = append(ns, c.ExpandString(s, values...))
+			}
+			all[k] = ns
+		default:
+			all[k] = ev
+		}
+	}
+	return
+
+}
+
+func (c *Config) expandEncodedString(s string, values ...map[string]string) (value string) {
 	p := strings.SplitN(s, ":", 2)
 	if len(p) != 2 {
 		return ""
@@ -209,7 +229,7 @@ func (c *Config) expandEncodedString(s string, values map[string]string) (value 
 	keyfiles, encodedValue := p[0], p[1]
 
 	if !strings.HasPrefix(encodedValue, "+encs+") {
-		encodedValue = c.expandString(encodedValue, values)
+		encodedValue = c.expandString(encodedValue, values...)
 	}
 	if encodedValue == "" {
 		return
@@ -234,7 +254,7 @@ func (c *Config) expandEncodedString(s string, values map[string]string) (value 
 	return ""
 }
 
-func (c *Config) expandString(s string, values map[string]string) (value string) {
+func (c *Config) expandString(s string, values ...map[string]string) (value string) {
 	switch {
 	case strings.HasPrefix(s, "config:"):
 		fallthrough
@@ -244,10 +264,17 @@ func (c *Config) expandString(s string, values map[string]string) (value string)
 			// this call to GetString() must NOT be recursive
 			return strings.TrimSpace(c.Viper.GetString(s))
 		}
+		// only lookup env if there are no values maps, NOT if lookups
+		// fail in any given maps
 		if len(values) == 0 {
 			return strings.TrimSpace(mapEnv(s))
 		}
-		return strings.TrimSpace(values[s])
+		for _, v := range values {
+			if n, ok := v[s]; ok {
+				return strings.TrimSpace(n)
+			}
+		}
+		return ""
 	case strings.HasPrefix(s, "env:"):
 		return strings.TrimSpace(mapEnv(strings.TrimPrefix(s, "env:")))
 	case strings.HasPrefix(s, "file:"):
