@@ -70,9 +70,12 @@ to prevent visibility in casual viewing.`,
 	},
 }
 
+var showCmdRaw bool
+
 func init() {
 	rootCmd.AddCommand(showCmd)
 
+	showCmd.Flags().BoolVarP(&showCmdRaw, "raw", "r", false, "Show raw (unexpanded) configuration values")
 	showCmd.Flags().SortFlags = false
 }
 
@@ -101,7 +104,11 @@ func showInstance(c geneos.Instance, params []string) (err error) {
 	}
 
 	// XXX wrap in location and type
-	cf := &showCmdConfig{Name: c.Name(), Host: c.Host().String(), Type: c.Type().String(), Config: nv.AllSettings()}
+	as := nv.ExpandAllSettings()
+	if showCmdRaw {
+		as = nv.AllSettings()
+	}
+	cf := &showCmdConfig{Name: c.Name(), Host: c.Host().String(), Type: c.Type().String(), Config: as}
 
 	if buffer, err = json.MarshalIndent(cf, "", "    "); err != nil {
 		return
