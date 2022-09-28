@@ -9,7 +9,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"text/template"
 
@@ -165,14 +164,12 @@ func readRCConfig(c geneos.Instance) (err error) {
 
 	var env []string
 	for k, v := range confs {
-		if strings.Contains(v, "${") {
-			v = evalOldVars(c, v)
-		}
 		lk := strings.ToLower(k)
 		if lk == "binary" {
 			c.Config().Set(k, v)
 			continue
 		}
+
 		if strings.HasPrefix(lk, c.Prefix()) {
 			nk := c.Type().Aliases[lk]
 			c.Config().Set(nk, v)
@@ -185,28 +182,6 @@ func readRCConfig(c geneos.Instance) (err error) {
 	if len(env) > 0 {
 		c.Config().Set("Env", env)
 	}
-	return
-}
-
-// first expand against viper, then env
-func evalOldVars(c geneos.Instance, in string) (out string) {
-	out = in
-
-	// replace aliases in output with kew keys
-	for k, v := range c.Type().Aliases {
-		// aliases are hardcoded, they will compile
-		// we could cache these, but it's probably not worth it
-		re := regexp.MustCompile(`(?i)\$\{` + k + `\}`)
-		out = re.ReplaceAllString(out, `$${`+v+"}")
-	}
-
-	// replace resulting keys with values
-	for _, k := range c.Config().AllKeys() {
-		out = strings.ReplaceAll(out, "${"+k+"}", c.Config().GetString(k))
-	}
-
-	// finally expand env vars
-	out = os.ExpandEnv(out)
 	return
 }
 
