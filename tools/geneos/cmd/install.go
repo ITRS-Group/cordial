@@ -138,7 +138,7 @@ func commandInstall(ct *geneos.Component, args, params []string) (err error) {
 	// work through command line args and try to install them using the naming format
 	// of standard downloads - fix versioning
 	for _, file := range args {
-		options := []geneos.GeneosOptions{geneos.Filename(file), geneos.Basename(installCmdBase), geneos.Force(installCmdUpdate), geneos.OverrideVersion(installCmdOverride)}
+		options := []geneos.GeneosOptions{geneos.Filename(file), geneos.Basename(installCmdBase), geneos.Force(installCmdUpdate), geneos.OverrideVersion(installCmdOverride), geneos.Username(installCmdUsername), geneos.Password(installCmdPassword)}
 		if err = install(ct, installCmdHost, options...); err != nil {
 			return err
 		}

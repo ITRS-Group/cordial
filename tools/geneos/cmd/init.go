@@ -369,7 +369,7 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 			sanname = sanname + "@" + r.String()
 		}
 		s = []string{sanname}
-		commandInstall(&san.San, e, e)
+		install(&san.San, host.LOCALHOST, options...)
 		commandAdd(&san.San, initCmdExtras, s)
 		commandStart(nil, initCmdLogs, e, e)
 		commandPS(nil, e, e)
@@ -387,17 +387,19 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 		}
 		name := []string{initCmdName}
 		localhost := []string{"localhost@" + r.String()}
-		commandInstall(&licd.Licd, e, e)
+
+		install(&licd.Licd, host.LOCALHOST, options...)
+		install(&gateway.Gateway, host.LOCALHOST, options...)
+		install(&san.San, host.LOCALHOST, options...)
+		install(&webserver.Webserver, host.LOCALHOST, options...)
+
 		commandAdd(&licd.Licd, initCmdExtras, name)
 		commandImport(&licd.Licd, name, []string{"geneos.lic=" + initCmdAll})
-		commandInstall(&gateway.Gateway, e, e)
 		commandAdd(&gateway.Gateway, initCmdExtras, name)
-		commandInstall(&san.San, e, e)
 		if len(initCmdExtras.Gateways) == 0 {
 			initCmdExtras.Gateways.Set("localhost")
 		}
 		commandAdd(&san.San, initCmdExtras, localhost)
-		commandInstall(&webserver.Webserver, e, e)
 		commandAdd(&webserver.Webserver, initCmdExtras, name)
 		commandStart(nil, initCmdLogs, e, e)
 		commandPS(nil, e, e)
