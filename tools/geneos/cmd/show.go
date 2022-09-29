@@ -59,7 +59,10 @@ to prevent visibility in casual viewing.`,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		if len(args) == 0 {
 			// running config
-			rc := config.GetConfig().AllSettings()
+			rc := config.GetConfig().ExpandAllSettings()
+			if showCmdRaw {
+				rc = config.GetConfig().AllSettings()
+			}
 			j, _ := json.MarshalIndent(rc, "", "    ")
 			j = opaqueJSONSecrets(j)
 			fmt.Println(string(j))
