@@ -25,6 +25,10 @@ package snow
 import (
 	"net/http"
 	"net/url"
+	"regexp"
+
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/labstack/echo/v4"
 )
 
 type Connection struct {
@@ -41,3 +45,11 @@ type RequestTransitive struct {
 	Params  url.Values
 	SysID   string
 }
+
+type RouterContext struct {
+	echo.Context
+	Conf *config.Config
+}
+
+// not a complete test, but just filter characters *allowed*
+var userRE = regexp.MustCompile(`^[\w\.@ ]+$`)

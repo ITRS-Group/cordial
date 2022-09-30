@@ -1,0 +1,230 @@
+/*
+Copyright © 2022 NAME HERE <EMAIL ADDRESS>
+*/
+package cmd
+
+import (
+	"bytes"
+	"crypto/sha1"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+
+	"github.com/itrs-group/cordial/integrations/servicenow/snow"
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/spf13/cobra"
+)
+
+// incidentCmd represents the incident command
+var incidentCmd = &cobra.Command{
+	Use:   "incident",
+	Short: "Raise or update an incident",
+	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+		if (text == "" && rawtext == "") || search == "" {
+			fmt.Println("Either --search or one of --text / --rawtext is required.")
+			fmt.Println(cmd.Usage())
+			os.Exit(1)
+		}
+		incident(args)
+	},
+}
+
+var conffile, short, text, rawtext, search, severity, id, rawid string
+var update_only bool
+
+func init() {
+	rootCmd.AddCommand(incidentCmd)
+
+	incidentCmd.Flags().StringVarP(&conffile, "conf", "c", "", "Optional path to configuration file")
+	incidentCmd.Flags().StringVarP(&short, "short", "s", "", "short description")
+	incidentCmd.Flags().StringVarP(&text, "text", "t", "", "Textual note. Long desceription for new incidents, Work Note for updates.")
+	incidentCmd.Flags().StringVar(&rawtext, "rawtext", "", "Raw textual note, not unquoted. Long desceription for new incidents, Work Note for updates.")
+	incidentCmd.Flags().StringVarP(&id, "id", "i", "", "Correlation ID. The value is hashed to a 20 byte hex string.")
+	incidentCmd.Flags().StringVar(&rawid, "rawid", "", "Raw Correlation ID. The value is passed as is and must be a valid string.")
+	incidentCmd.Flags().StringVarP(&search, "search", "f", "", "sysID search: '[TABLE:]FIELD=VALUE', TABLE defaults to 'cmdb_ci'. REQUIRED")
+	incidentCmd.Flags().StringVarP(&severity, "severity", "S", "3", "Geneos severity. Maps depending on configuration settings.")
+	incidentCmd.Flags().BoolVarP(&update_only, "updateonly", "U", false, "If set no incident creation will be done")
+}
+
+func incident(args []string) {
+
+	execname := filepath.Base(os.Args[0])
+	vc, err := config.LoadConfig(execname, config.SetAppName("itrs"), config.SetConfigFile(conffile))
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// fill in minimal defaults - also get defaults from config
+	incident := make(snow.Incident)
+	if short != "" {
+		incident["short_description"] = short
+	}
+	if id != "" && rawid != "" {
+		log.Fatalln("only one of -id or -rawid can be given")
+	}
+
+	if id != "" {
+		id := fmt.Sprintf("%x", sha1.Sum([]byte(id)))
+		incident["correlation_id"] = id
+	} else if rawid != "" {
+		incident["correlation_id"] = rawid
+	}
+
+	if rawtext != "" {
+		text = rawtext
+	} else {
+		str, err := strconv.Unquote(`"` + text + `"`)
+		if err == nil {
+			text = str
+		} else {
+			fmt.Println("error unquoting text:", err)
+		}
+	}
+	incident["text"] = text
+	incident["search"] = search
+	if update_only {
+		incident["update_only"] = "true"
+	}
+
+	// parse key value pairs as fields for the request
+	// for now ignore everything else
+	// no lookups (yet)
+	for _, arg := range args {
+		s := strings.SplitN(arg, "=", 2)
+		if len(s) != 2 {
+			continue
+		}
+		if s[1] == "" {
+			delete(incident, s[0])
+		} else {
+			incident[s[0]] = s[1]
+		}
+	}
+
+	// map severity
+	mapSeverity(severity, incident, vc.GetStringMapString("servicenow.geneosseveritymap"))
+
+	// and read defaults for any unset fields
+	configDefaults(incident, vc.GetStringMapString("servicenow.incidentdefaults"))
+
+	requestBody, err := json.Marshal(incident)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	var server string
+
+	if vc.GetBool("api.tls.enabled") {
+		server = fmt.Sprintf("https://%s:%d", vc.GetString("api.host"), vc.GetInt("api.port"))
+	} else {
+		server = fmt.Sprintf("http://%s:%d", vc.GetString("api.host"), vc.GetInt("api.port"))
+	}
+
+	u, err := url.Parse(server)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	u.Path = "/api/v1/incident"
+
+	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(requestBody))
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	bearer := fmt.Sprintf("Bearer %s", vc.GetString("api.apikey"))
+
+	req.Header.Add("Authorization", bearer)
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	if resp.StatusCode > 299 {
+		log.Fatalln(resp.Status, string(body))
+	}
+
+	var result map[string]string
+
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	if result["message"] != "" {
+		log.Fatalln(result["message"])
+	}
+
+	if result["action"] == "Failed" {
+		log.Fatalf("%s to create event for %s\n", result["action"], result["host"])
+	}
+
+	log.Printf("%s %s %s\n", result["event_type"], result["number"], result["action"])
+
+}
+
+// loop through config IncidentDefaults.AllIncidents and set any fields not already set
+//
+// an empty value means delete any value passed - e.g. short_description in an update
+func configDefaults(incident snow.Incident, defaults map[string]string) {
+	for k, v := range defaults {
+		if _, ok := incident[k]; !ok {
+			// trim spaces and surrounding quotes before unquoting embedded escapes
+			str, err := strconv.Unquote(`"` + strings.Trim(v, `"`) + `"`)
+			if err == nil {
+				v = str
+			}
+			incident[k] = v
+		} else if v == "" {
+			delete(incident, k)
+		}
+	}
+}
+
+func mapSeverity(severity string, incident snow.Incident, severities map[string]string) {
+	mapping, ok := severities[strings.ToLower(severity)]
+	if !ok {
+		// do nothing, but log
+		log.Printf("no mapping found for severity %q", severity)
+		return
+	}
+	fields := strings.Split(mapping, ",")
+	for _, field := range fields {
+		// strip spaces from each field
+		field = strings.TrimSpace(field)
+		s := strings.SplitN(field, "=", 2)
+		if len(s) != 2 {
+			log.Printf("invalid mapping %q", field)
+			continue
+		}
+
+		if s[1] == "" {
+			delete(incident, s[0])
+			continue
+		}
+
+		// remove any enclosing quotes and then "unquote" by forcing double quotes around value
+		str, err := strconv.Unquote(`"` + strings.Trim(s[1], `"`) + `"`)
+		if err == nil {
+			s[1] = str
+		}
+		incident[s[0]] = s[1]
+	}
+}
