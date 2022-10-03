@@ -43,7 +43,6 @@ var update_only bool
 func init() {
 	rootCmd.AddCommand(incidentCmd)
 
-	incidentCmd.Flags().StringVarP(&conffile, "conf", "c", "", "Optional path to configuration file")
 	incidentCmd.Flags().StringVarP(&short, "short", "s", "", "short description")
 	incidentCmd.Flags().StringVarP(&text, "text", "t", "", "Textual note. Long desceription for new incidents, Work Note for updates.")
 	incidentCmd.Flags().StringVar(&rawtext, "rawtext", "", "Raw textual note, not unquoted. Long desceription for new incidents, Work Note for updates.")
