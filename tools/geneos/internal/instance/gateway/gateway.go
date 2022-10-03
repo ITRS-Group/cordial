@@ -149,7 +149,7 @@ func (g *Gateways) Host() *host.Host {
 }
 
 func (g *Gateways) String() string {
-	return g.Type().String() + ":" + g.Name() + "@" + g.Host().String()
+	return instance.DisplayName(g)
 }
 
 func (g *Gateways) Load() (err error) {

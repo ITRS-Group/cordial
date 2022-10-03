@@ -24,6 +24,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -36,11 +37,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// aesUpdateCmd represents the 'aes update' command
-var aesUpdateCmd = &cobra.Command{
-	Use:   "update [-N] [-k FILE|URL|-] [-C CRC] [TYPE] [NAME...]",
-	Short: "Update AES key file",
-	Long: `Update AES key file for matching instances. Either a path or URL to a
+// aesImportCmd represents the 'aes import' command
+var aesImportCmd = &cobra.Command{
+	Use:   "import [-N] [-k FILE|URL|-] [-C CRC] [TYPE] [NAME...]",
+	Short: "Import AES key file",
+	Long: `Import AES key file for matching instances. Either a path or URL to a
 keyfile or the CRC of an existing keyfile in the component's shared
 directory must be given. If a path or URL is given then the keyfile
 is saved to the component shared directories and the configuration
@@ -67,47 +68,54 @@ Currently only Gateways and Netprobes (and SANs) are supported.`,
 		var params []string
 
 		// first copy any file from source to shared dir(s) unless it exists
-		if aesUpdateCmdKeyfile != "" {
-			f, _, err := geneos.OpenLocalFileOrURL(aesUpdateCmdKeyfile)
-			if err != nil {
-				panic(err)
-			}
-			defer f.Close()
-			a, err := config.ReadAESValues(f)
-			if err != nil {
-				panic(err)
-			}
-			crc, err := a.Checksum()
-			if err != nil {
-				panic(err)
-			}
-			crcstr := fmt.Sprintf("%08X", crc)
-
-			// at this point we have an AESValue struct and a CRC to use as a test
-			for _, ct := range ct.Range(&gateway.Gateway, &netprobe.Netprobe, &san.San) {
-				for _, h := range host.AllHosts() {
-					path := h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
-					if _, err := h.Stat(path); err == nil {
-						panic(err)
-					}
-					w, err := h.Create(path, 0600)
-					if err != nil {
-						panic(err)
-					}
-					if err = a.WriteAESValues(w); err != nil {
-						w.Close()
-						panic(err)
-					}
-					w.Close()
-				}
-			}
-			params = []string{crcstr}
+		f, _, err := geneos.OpenLocalFileOrURL(aesImportCmdKeyfile)
+		if err != nil {
+			return err
 		}
+		defer f.Close()
+		a, err := config.ReadAESValues(f)
+		if err != nil {
+			return err
+		}
+		crc, err := a.Checksum()
+		if err != nil {
+			return err
+		}
+		crcstr := fmt.Sprintf("%08X", crc)
 
-		if len(params) == 0 && aesUpdateCmdCRC != "" {
+		// at this point we have an AESValue struct and a CRC to use as a test
+		// create 'keyfiles' directory as required
+		for _, ct := range ct.Range(&gateway.Gateway, &netprobe.Netprobe, &san.San) {
+			for _, h := range host.AllHosts() {
+				path := h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
+				if err := h.MkdirAll(filepath.Dir(path), 0700); err != nil {
+					log.Error().Err(err).Msgf("host %s, component %s", h, ct)
+					continue
+				}
+				if _, err := h.Stat(path); err == nil {
+					log.Error().Msgf("keyfile already exists. host %s, component %s", h, ct)
+					continue
+				}
+				w, err := h.Create(path, 0600)
+				if err != nil {
+					log.Error().Err(err).Msgf("host %s, component %s", h, ct)
+					continue
+				}
+				// don't defer file close here, it's a loop over multiple files
+				if err = a.WriteAESValues(w); err != nil {
+					w.Close()
+					log.Error().Err(err).Msgf("host %s, component %s", h, ct)
+					continue
+				}
+				w.Close()
+			}
+		}
+		params = []string{crcstr}
+
+		if len(params) == 0 && aesImportCmdCRC != "" {
 			// no file saved above and we have a CRC on the command line
 			// we don't check anything now, just use the CRC as given
-			params = []string{aesUpdateCmdCRC}
+			params = []string{aesImportCmdCRC}
 		}
 
 		if len(params) == 0 {
@@ -116,34 +124,51 @@ Currently only Gateways and Netprobes (and SANs) are supported.`,
 		}
 
 		// params[0] is the CRC
-		instance.ForAll(ct, aesUpdateAESInstance, args, params)
+		instance.ForAll(ct, aesImportAESInstance, args, params)
 		return nil
 	},
 }
 
-var aesUpdateCmdKeyfile, aesUpdateCmdCRC string
-var aesUpdateCmdNoRoll bool
+var aesImportCmdKeyfile, aesImportCmdCRC string
+var aesImportCmdNoRoll bool
 
 func init() {
-	aesCmd.AddCommand(aesUpdateCmd)
+	aesCmd.AddCommand(aesImportCmd)
 
-	aesUpdateCmd.Flags().StringVarP(&aesUpdateCmdKeyfile, "keyfile", "k", "", "Keyfile to use.")
-	aesUpdateCmd.Flags().StringVarP(&aesUpdateCmdCRC, "crc", "C", "", "CRC of keyfile to use.")
-	aesUpdateCmd.Flags().BoolVarP(&aesUpdateCmdNoRoll, "noroll", "N", false, "Do not roll any existing keyfile to previous keyfile setting")
+	defKeyFile := geneos.UserConfigFilePaths("keyfile.aes")[0]
+	aesImportCmd.Flags().StringVarP(&aesImportCmdKeyfile, "keyfile", "k", defKeyFile, "Keyfile to use")
+	aesImportCmd.Flags().StringVarP(&aesImportCmdCRC, "crc", "C", "", "CRC of keyfile to use.")
+	aesImportCmd.Flags().BoolVarP(&aesImportCmdNoRoll, "noroll", "N", false, "Do not roll any existing keyfile to previous keyfile setting")
 }
 
-func aesUpdateAESInstance(c geneos.Instance, params []string) (err error) {
+func aesImportAESInstance(c geneos.Instance, params []string) (err error) {
 	var rolled bool
 
+	path := c.Host().Filepath(c.Type(), c.Type().String()+"_shared", "keyfiles", params[0])
+
 	// roll old file
-	if !aesUpdateCmdNoRoll {
+	if !aesImportCmdNoRoll {
 		p := c.Config().GetString("keyfile")
 		if p != "" {
-			c.Config().Set("prevkeyfile", p)
-			rolled = true
+			if p == path {
+				fmt.Printf("%s: new and existing keyfile have same CRC. Not updating.", c)
+			} else {
+				c.Config().Set("keyfile", path)
+				fmt.Printf("%s keyfile %s set", c, params[0])
+				c.Config().Set("prevkeyfile", p)
+				rolled = true
+			}
 		}
+	} else {
+		c.Config().Set("keyfile", path)
+		fmt.Printf("%s keyfile %s set", c, params[0])
 	}
-	c.Config().Set("keyfile", c.Host().Filepath(c.Type(), c.Type().String()+"_shared", "keyfiles", params[0]))
+
+	if rolled {
+		fmt.Printf(", existing keyfile moved to prevkeyfile\n")
+	} else {
+		fmt.Println()
+	}
 
 	// in case the configuration in in old format
 	if err = instance.Migrate(c); err != nil {
@@ -154,11 +179,5 @@ func aesUpdateAESInstance(c geneos.Instance, params []string) (err error) {
 		log.Fatal().Err(err).Msg("")
 	}
 
-	fmt.Printf("%s keyfile %s set", c, params[0])
-	if rolled {
-		fmt.Printf(", existing keyfile moved to prevkeyfile\n")
-	} else {
-		fmt.Println()
-	}
 	return
 }

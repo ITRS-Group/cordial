@@ -113,7 +113,7 @@ func (n *Netprobes) Host() *host.Host {
 }
 
 func (n *Netprobes) String() string {
-	return n.Type().String() + ":" + n.Name() + "@" + n.Host().String()
+	return instance.DisplayName(n)
 }
 
 func (n *Netprobes) Load() (err error) {

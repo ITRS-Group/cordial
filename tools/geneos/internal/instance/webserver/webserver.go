@@ -132,7 +132,7 @@ func (w *Webservers) Host() *host.Host {
 }
 
 func (w *Webservers) String() string {
-	return w.Type().String() + ":" + w.Name() + "@" + w.Host().String()
+	return instance.DisplayName(w)
 }
 
 func (w *Webservers) Load() (err error) {

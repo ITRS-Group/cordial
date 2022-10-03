@@ -49,8 +49,9 @@ written to a file with the '-k FILE' option.
 If the flag '-S' is given then the new key file is applied (synced)
 to the shared directory, using the CRC32 as the file base name, for
 all matching types, currently limited to Gateway and Netprobe types,
-including SANs for use by Toolkit 'Secure Environment Variables' and
-so on. Additionally, when using the '-S' flag all matching Gateway
+including SANs for use by Toolkit 'Secure Environment Variables'.
+
+Additionally, when using the '-S' flag all matching Gateway
 instances have the keyfile path added to the configuration and any
 existing keyfile path is moved to 'prevkeyfile' to support GA6.x key
 file maintenance.`,
