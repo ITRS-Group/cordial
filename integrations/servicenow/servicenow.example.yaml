@@ -1,17 +1,32 @@
 API:
-  Host: 0.0.0.0
+  Host: localhost
   Port: 3000
   APIKey: RANDOMAPIKEY
 
 ServiceNow:
-  Instance: dev107331
-  Username: ${SERVICENOW_USERNAME}
-  # Password: ${SERVICENOW_PASSWORD}
-  PasswordFile: ~/.snowpw
-  ClientID: ${SERVICENOW_CLIENTID}
-  ClientSecret: ${SERVICENOW_CLIENTSECRET}
+  Instance: devXXXXX
+  Username: admin
+  Password: ${enc:~/.keyfile.aes:+encs+FD9242D3BDB49CF13FC9E76E3906BDC3}
+  # ClientID: ${SERVICENOW_CLIENTID}
+  # ClientSecret: ${SERVICENOW_CLIENTSECRET}
   SearchType: simple
   QueryResponseFields: number,sys_id,cmdb_ci.name,short_description,description,correlation_id,opened_by,state
+  GeneosSeverityMap:
+    CRITICAL: impact=1,urgency=1
+    WARNING: impact=3,urgency=3
+    OK: state=6,close_code="Closed/Resolved by Caller",close_notes="Resolved"
+    3: impact=1,urgency=1
+    2: impact=3,urgency=3
+    1: state=6,close_code="Closed/Resolved by Caller",close_notes="Resolved"
+  IncidentDefaults:
+    default_cmdb_ci: 03a9e40d3790200044e0bfc8bcbe5d6c
+    assignment_group: group1
+    incident_type: event
+    impact: 3
+    urgency: 3
+    category: hardware
+    contact_type: email
+    caller_id: admin
   IncidentTable: incident
   IncidentStates:
     0: Create

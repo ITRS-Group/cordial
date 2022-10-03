@@ -38,7 +38,6 @@ var daemon bool
 func init() {
 	rootCmd.AddCommand(routerCmd)
 
-	routerCmd.Flags().StringVarP(&conffile, "conf", "c", "", "Optional path to configuration file")
 	routerCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Daemonise the router process")
 }
 
