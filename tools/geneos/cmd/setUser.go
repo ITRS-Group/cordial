@@ -55,5 +55,5 @@ func commandSetUser(ct *geneos.Component, args, params []string) (err error) {
 	if err = os.MkdirAll(userConfDir, 0775); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
-	return writeConfigParams(geneos.UserConfigFilePath(), params)
+	return writeConfigParams(geneos.UserConfigFilePaths()[0], params)
 }

@@ -102,8 +102,11 @@ var aesDecodeCmdAESFILE, aesDecodeCmdPrevAESFILE, aesDecodeCmdPassword, aesDecod
 func init() {
 	aesCmd.AddCommand(aesDecodeCmd)
 
-	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdAESFILE, "keyfile", "k", "", "Main AES key file to use")
-	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPrevAESFILE, "previous", "v", "", "Previous AES key file to use")
+	// userconf, _ := os.UserConfigDir()
+	defKeyFile := geneos.UserConfigFilePaths("keyfile.aes")[0]
+	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdAESFILE, "keyfile", "k", defKeyFile, "Main AES key file to use")
+	defPrevKeyFile := geneos.UserConfigFilePaths("prevkeyfile.aes")[0]
+	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPrevAESFILE, "previous", "v", defPrevKeyFile, "Previous AES key file to use")
 	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPassword, "password", "p", "", "Password to decode")
 	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdSource, "source", "s", "", "Source for password to use")
 	aesDecodeCmd.Flags().SortFlags = false

@@ -114,7 +114,7 @@ func (l *Licds) Host() *host.Host {
 }
 
 func (l *Licds) String() string {
-	return l.Type().String() + ":" + l.Name() + "@" + l.Host().String()
+	return instance.DisplayName(l)
 }
 
 func (l *Licds) Load() (err error) {
