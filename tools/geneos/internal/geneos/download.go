@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
@@ -86,6 +87,20 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 	return
 }
 
+// OpenLocalFileOrURL returns an io.ReadCloser and the base filename for
+// the given source. The source can be a https: or http: URL or a path
+// to a file or '-' for STDIN.
+//
+// URLs are Parsed and fetched with the Go standard http.Get function
+// and therefore support proxies and basic authentication as provided by
+// the http package.
+//
+// If the file path begins '~/' then it is relative to the home
+// directory of the calling user, otherwise it is opened relative to the
+// working directory of the process.
+//
+// If any stage fails then err is returned with the appropriate kind of
+// error.
 func OpenLocalFileOrURL(source string, options ...GeneosOptions) (from io.ReadCloser, filename string, err error) {
 	opts := EvalOptions(options...)
 
@@ -126,6 +141,11 @@ func OpenLocalFileOrURL(source string, options ...GeneosOptions) (from io.ReadCl
 		from = os.Stdin
 		filename = "STDIN"
 	default:
+		if strings.HasPrefix(source, "~/") {
+			home, _ := os.UserHomeDir()
+			source = fmt.Sprintf("%s/%s", home, strings.TrimPrefix(source, "~/"))
+		}
+		source, _ = filepath.Abs(source)
 		from, err = os.Open(source)
 		filename = filepath.Base(source)
 	}
