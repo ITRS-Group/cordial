@@ -51,7 +51,7 @@ func init() {
 
 func commandUnsetUser(ct *geneos.Component, args, params []string) error {
 	var changed bool
-	orig := readConfigFile(geneos.UserConfigFilePath())
+	orig := readConfigFile(geneos.UserConfigFilePaths()...)
 	new := config.New()
 
 OUTER:
@@ -67,7 +67,7 @@ OUTER:
 
 	if changed {
 		log.Debug().Msgf("%v", orig.AllSettings())
-		new.SetConfigFile(geneos.UserConfigFilePath())
+		new.SetConfigFile(geneos.UserConfigFilePaths()[0])
 		return new.WriteConfig()
 	}
 	return nil

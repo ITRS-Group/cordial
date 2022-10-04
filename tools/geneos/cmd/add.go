@@ -35,6 +35,9 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
@@ -71,7 +74,8 @@ func init() {
 	addCmd.Flags().StringVarP(&addCmdBase, "base", "b", "active_prod", "select the base version for the instance, default active_prod")
 	addCmd.Flags().Uint16VarP(&addCmdPort, "port", "p", 0, "override the default port selection")
 
-	// addCmd.Flags().StringVarP(&addCmdKeyfile, "keyfile", "k", "", "use an existing keyfile")
+	addCmd.Flags().StringVarP(&addCmdKeyfile, "keyfile", "k", "", "use an external keyfile for AES256 encoding")
+	addCmd.Flags().StringVarP(&addCmdKeyfileCRC, "crc", "C", "", "use a keyfile (in the component shared directory) with CRC for AES256 encoding")
 
 	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", "(all components) Add an environment variable in the format NAME=VALUE")
 	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
@@ -83,7 +87,7 @@ func init() {
 	addCmd.Flags().SortFlags = false
 }
 
-var addCmdTemplate, addCmdBase, addCmdKeyfile string
+var addCmdTemplate, addCmdBase, addCmdKeyfile, addCmdKeyfileCRC string
 var addCmdStart, addCmdLogs bool
 var addCmdPort uint16
 
@@ -134,6 +138,14 @@ func commandAdd(ct *geneos.Component, extras instance.ExtraConfigValues, args []
 
 	if addCmdBase != "active_prod" {
 		c.Config().Set("version", addCmdBase)
+	}
+
+	if ct == &gateway.Gateway || ct == &netprobe.Netprobe || ct == &san.San {
+		if addCmdKeyfileCRC != "" {
+			c.Config().Set("keyfile", c.Host().Filepath(ct, ct.String()+"_shared", "keyfiles", addCmdKeyfileCRC+".aes"))
+		} else if addCmdKeyfile != "" {
+			c.Config().Set("keyfile", addCmdKeyfile)
+		}
 	}
 	instance.SetExtendedValues(c, extras)
 	if err = instance.WriteConfig(c); err != nil {

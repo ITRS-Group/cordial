@@ -59,13 +59,17 @@ func commandShowUser(ct *geneos.Component, args, params []string) (err error) {
 	var c interface{}
 	var buffer []byte
 
-	geneos.ReadLocalConfigFile(geneos.UserConfigFilePath(), &c)
+	paths := geneos.UserConfigFilePaths()
+	for _, path := range paths {
+		if err = geneos.ReadLocalConfigFile(path, &c); err == nil {
+			break
+		}
+	}
 
 	if buffer, err = json.MarshalIndent(c, "", "    "); err != nil {
 		return
 	}
-	j := opaqueJSONSecrets(buffer)
-	fmt.Println(string(j))
+	fmt.Println(string(buffer))
 
 	return
 }

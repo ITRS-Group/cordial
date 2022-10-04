@@ -124,7 +124,7 @@ func (n *FileAgents) Host() *host.Host {
 }
 
 func (n *FileAgents) String() string {
-	return n.Type().String() + ":" + n.Name() + "@" + n.Host().String()
+	return instance.DisplayName(n)
 }
 
 func (n *FileAgents) Load() (err error) {

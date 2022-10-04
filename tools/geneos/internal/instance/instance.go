@@ -32,6 +32,13 @@ type Instance struct {
 	Env             []string          `json:",omitempty"`
 }
 
+func DisplayName(c geneos.Instance) string {
+	if c.Host() == host.LOCAL {
+		return fmt.Sprintf("%s %s", c.Type(), c.Name())
+	}
+	return fmt.Sprintf("%s %s@%s", c.Type(), c.Name(), c.Host())
+}
+
 // locate a process instance
 //
 // the component type must be part of the basename of the executable and
