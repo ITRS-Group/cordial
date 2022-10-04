@@ -5,7 +5,7 @@ replace github.com/itrs-group/cordial => ../../
 go 1.17
 
 require (
-	github.com/itrs-group/cordial v1.0.0
+	github.com/itrs-group/cordial v1.2.1-rc2
 	github.com/labstack/echo/v4 v4.9.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1
@@ -31,7 +31,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.1 // indirect
 	golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be // indirect
-	golang.org/x/net v0.0.0-20220927171203-f486391704dc // indirect
+	golang.org/x/net v0.0.0-20221002022538-bcab6841153b // indirect
 	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
