@@ -30,21 +30,27 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
 // aesDecodeCmd represents the aesDecode command
 var aesDecodeCmd = &cobra.Command{
-	Use:   "decode [-k KEYFILE] [-p KEYFILE] [-P PASSWORD] [-s SOURCE] [TYPE] [NAME]",
+	Use:   "decode [-e STRING] [-k KEYFILE] [-p KEYFILE] [-P PASSWORD] [-s SOURCE] [TYPE] [NAME]",
 	Short: "Decode an AES256 encoded value",
-	Long: `Decode an AES256 encoded value given a keyfile (or previous
-keyfile). If no keyfiles are explicitly provided then all matching
-instances are checked for configured keyfiles and each one tried or
-the default keyfile paths are tried. An error is only returned if all
-attempts to decode fail. If the given password has a prefix of
-'+encs+' it is removed. If both -P and -s options are given then the
--P argument is used. To read a password from STDIN use '-s -'.`,
+	Long: `Decode an AES256 encoded value.
 
+If an expandable string is given with the '-e' option it must be of
+the form '${enc:...}' and is then decoded using the keyfile and
+ciphertext in the value. Other options are ignored.
+	
+Given a keyfile (or previous keyfile). If no keyfiles are explicitly
+provided then all matching instances are checked for configured
+keyfiles and each one tried or the default keyfile paths are tried.
+An error is only returned if all attempts to decode fail. If the
+given password has a prefix of '+encs+' it is removed. If both -P and
+-s options are given then the -P argument is used. To read a password
+from STDIN use '-s -'.`,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
@@ -52,6 +58,15 @@ attempts to decode fail. If the given password has a prefix of
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		var ciphertext string
+
+		if strings.HasPrefix(aesDecodeCmdExpandString, "${enc:") {
+			fmt.Println(config.GetConfig().ExpandString(aesDecodeCmdExpandString))
+			return nil
+		}
+
+		if aesDecodeCmdExpandString != "" {
+			return fmt.Errorf("%w: expandable string must be of the form '${enc:keyfile:ciphertext}'", ErrInvalidArgs)
+		}
 
 		if aesDecodeCmdPassword != "" {
 			ciphertext = strings.TrimPrefix(aesDecodeCmdPassword, "+encs+")
@@ -69,7 +84,7 @@ attempts to decode fail. If the given password has a prefix of
 			if k == "" {
 				continue
 			}
-			// encode using  specific file
+			// decode using specific file
 			r, _, err := geneos.OpenLocalFileOrURL(k)
 			if err != nil {
 				continue
@@ -87,7 +102,7 @@ attempts to decode fail. If the given password has a prefix of
 			return nil
 		}
 
-		if aesDecodeCmdAESFILE != "" || aesDecodeCmdPrevAESFILE != "" {
+		if aesDecodeCmdAESFILE != defKeyFile || aesDecodeCmdPrevAESFILE != defPrevKeyFile {
 			return fmt.Errorf("decode failed with key file(s) provided")
 		}
 
@@ -97,18 +112,16 @@ attempts to decode fail. If the given password has a prefix of
 	},
 }
 
-var aesDecodeCmdAESFILE, aesDecodeCmdPrevAESFILE, aesDecodeCmdPassword, aesDecodeCmdSource string
+var aesDecodeCmdAESFILE, aesDecodeCmdPrevAESFILE, aesDecodeCmdPassword, aesDecodeCmdSource, aesDecodeCmdExpandString string
+var defKeyFile, defPrevKeyFile string
 
 func init() {
 	aesCmd.AddCommand(aesDecodeCmd)
 
-	// home, _ := os.UserHomeDir()
-	defKeyFile := geneos.UserConfigFilePaths("keyfile.aes")[0]
-	// if strings.HasPrefix(defKeyFile, home) {
-	// 	defKeyFile
-	// }
+	defKeyFile = geneos.UserConfigFilePaths("keyfile.aes")[0]
+	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdExpandString, "expand", "e", "", "A string in ExpandString format (including '${...}') to decode")
 	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdAESFILE, "keyfile", "k", defKeyFile, "Main AES key file to use")
-	defPrevKeyFile := geneos.UserConfigFilePaths("prevkeyfile.aes")[0]
+	defPrevKeyFile = geneos.UserConfigFilePaths("prevkeyfile.aes")[0]
 	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPrevAESFILE, "previous", "v", defPrevKeyFile, "Previous AES key file to use")
 	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPassword, "password", "p", "", "Password to decode")
 	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdSource, "source", "s", "", "Source for password to use")
@@ -117,6 +130,7 @@ func init() {
 }
 
 func aesDecodeInstance(c geneos.Instance, params []string) (err error) {
+	log.Debug().Msgf("trying to decode for instance %s", c)
 	if c.Type() != &gateway.Gateway {
 		return
 	}
