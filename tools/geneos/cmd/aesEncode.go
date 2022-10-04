@@ -24,6 +24,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -35,15 +37,20 @@ import (
 
 // aesEncodeCmd represents the aesEncode command
 var aesEncodeCmd = &cobra.Command{
-	Use:                   "encode [-k KEYFILE] [-P STRING] [-s SOURCEPATH] [TYPE] [NAME]",
-	Short:                 "Encode a password using a Geneos AES file",
-	Long:                  `Encode a password (or any other string) using the AES file for a Geneos Gateway. By default the user is prompted to enter a password but can provide a string or URL with the -p option. If TYPE and NAME are given then the key files are checked for those instances. If multiple instances match then the given password is encoded for each key file found.`,
+	Use:   "encode [-k KEYFILE] [-P STRING] [-s SOURCEPATH] [-e] [TYPE] [NAME]",
+	Short: "Encode a password using a Geneos AES file",
+	Long: `Encode a password (or any other string) using the keyfile for a
+Geneos Gateway. By default the user is prompted to enter a password
+but can provide a string or URL with the -p option. If TYPE and NAME
+are given then the key files are checked for those instances. If
+multiple instances match then the given password is encoded for each
+keyfile found.`,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, origargs []string) error {
 		var plaintext string
 
 		if aesEncodeCmdString != "" {
@@ -51,29 +58,39 @@ var aesEncodeCmd = &cobra.Command{
 		} else if aesEncodeCmdSource != "" {
 			b, err := geneos.ReadLocalFileOrURL(aesEncodeCmdSource)
 			if err != nil {
-				panic(err)
+				return err
 			}
 			plaintext = string(b)
 		} else {
 			plaintext = utils.ReadPasswordPrompt()
 		}
 
-		if aesEncodeCmdAESFILE != "" {
-			// encode using  specific file
+		if len(origargs) == 0 {
+			// encode using specific file
 			r, _, err := geneos.OpenLocalFileOrURL(aesEncodeCmdAESFILE)
 			if err != nil {
-				panic(err)
+				return err
 			}
 			defer r.Close()
 			a, err := config.ReadAESValues(r)
 			if err != nil {
-				panic(err)
+				return err
 			}
 			e, err := a.EncodeAESString(plaintext)
 			if err != nil {
-				panic(err)
+				return err
 			}
-			fmt.Printf("encoded: +encs+%s\n", e)
+
+			if !aesEncodeCmdExpandable {
+				fmt.Printf("+encs+%s\n", e)
+				return nil
+			}
+
+			home, _ := os.UserHomeDir()
+			if strings.HasPrefix(aesEncodeCmdAESFILE, home) {
+				aesEncodeCmdAESFILE = "~" + strings.TrimPrefix(aesEncodeCmdAESFILE, home)
+			}
+			fmt.Printf("${enc:%s:+encs+%s}\n", aesEncodeCmdAESFILE, e)
 			return nil
 		}
 
@@ -85,13 +102,19 @@ var aesEncodeCmd = &cobra.Command{
 }
 
 var aesEncodeCmdAESFILE, aesEncodeCmdString, aesEncodeCmdSource string
+var aesEncodeCmdExpandable bool
+
+var aesEncodeDefaultKeyfile string
 
 func init() {
 	aesCmd.AddCommand(aesEncodeCmd)
 
-	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdAESFILE, "keyfile", "k", "", "Main AES key file to use")
+	aesEncodeDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
+
+	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdAESFILE, "keyfile", "k", aesEncodeDefaultKeyfile, "Main AES key file to use")
 	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdString, "password", "p", "", "Password string to use")
 	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdSource, "source", "s", "", "Source for password to use")
+	aesEncodeCmd.Flags().BoolVarP(&aesEncodeCmdExpandable, "expandable", "e", false, "Output in ExpandString format")
 	aesEncodeCmd.Flags().SortFlags = false
 }
 
@@ -117,6 +140,15 @@ func aesEncodeInstance(c geneos.Instance, params []string) (err error) {
 	if err != nil {
 		return
 	}
-	fmt.Printf("%s: +encs+%s\n", c, e)
+
+	if !aesEncodeCmdExpandable {
+		fmt.Printf("%s: +encs+%s\n", c, e)
+		return nil
+	}
+	home, _ := os.UserHomeDir()
+	if strings.HasPrefix(keyfile, home) {
+		keyfile = "~" + strings.TrimPrefix(keyfile, home)
+	}
+	fmt.Printf("%s: ${enc:%s:+encs+%s}\n", c, keyfile, e)
 	return nil
 }

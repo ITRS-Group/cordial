@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
 
 	"github.com/rs/zerolog/log"
 
@@ -41,16 +40,17 @@ import (
 
 // aesNewCmd represents the aesNew command
 var aesNewCmd = &cobra.Command{
-	Use:   "new [-k FILE] [-S] [TYPE] [NAME...]",
+	Use:   "new [-k FILE] [-I] [TYPE] [NAME...]",
 	Short: "Create a new key file",
 	Long: `Create a new key file. Written to STDOUT by default, but can be
 written to a file with the '-k FILE' option.
 
-If the flag '-S' is given then the new key file is applied (synced)
-to the shared directory, using the CRC32 as the file base name, for
-all matching types, currently limited to Gateway and Netprobe types,
-including SANs for use by Toolkit 'Secure Environment Variables' and
-so on. Additionally, when using the '-S' flag all matching Gateway
+If the flag '-I' is given then the new key file is imported to the
+shared directories of matching components, using '[CRC32].aes' as the
+file base name. Currently limited to Gateway and Netprobe types,
+including SANs for use by Toolkit 'Secure Environment Variables'.
+
+Additionally, when using the '-I' flag all matching Gateway
 instances have the keyfile path added to the configuration and any
 existing keyfile path is moved to 'prevkeyfile' to support GA6.x key
 file maintenance.`,
@@ -72,7 +72,7 @@ file maintenance.`,
 				return fs.ErrExist
 			}
 			os.WriteFile(aesNewCmdKeyfile, []byte(a.String()), 0600)
-		} else if !aesNewCmdSetSync {
+		} else if !aesNewCmdImport {
 			fmt.Print(a)
 		}
 
@@ -86,61 +86,46 @@ file maintenance.`,
 			fmt.Printf("%s created, checksum %s\n", aesNewCmdKeyfile, crcstr)
 		}
 
-		if aesNewCmdSetSync {
-			var keyfile string
-
+		if aesNewCmdImport {
 			if aesNewCmdKeyfile == "" {
 				fmt.Printf("saving keyfile with checksum %s\n", crcstr)
 			}
 
 			ct, args, _ := cmdArgsParams(cmd)
+			h := host.Get(aesNewCmdHostname)
+
 			for _, ct := range ct.Range(&gateway.Gateway, &netprobe.Netprobe, &san.San) {
-				if aesNewCmdKeyfile != "" {
-					aesNewCmdKeyfile, _ = filepath.Abs(aesNewCmdKeyfile)
-					if err = os.WriteFile(aesNewCmdKeyfile, []byte(a.String()), 0600); err != nil {
-						return
-					}
-					fmt.Println("keyfile saved in", aesNewCmdKeyfile)
-				}
-
-				os.MkdirAll(host.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles"), 0700)
-				keyfile = host.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
-				if keyfile != aesNewCmdKeyfile {
-					if err = os.WriteFile(keyfile, []byte(a.String()), 0600); err != nil {
-						return
-					}
-					fmt.Println("keyfile saved in", keyfile)
-
-				}
-
-				for _, h := range host.RemoteHosts() {
-					log.Debug().Msgf("copying to host %s", h)
-					host.CopyFile(host.LOCAL, keyfile, h, h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes"))
-				}
-
-				// set configs only on Gateways for now
-				if ct != &gateway.Gateway {
-					continue
-				}
-
-				params := []string{crcstr + ".aes"}
-				if err = instance.ForAll(ct, aesNewSetInstance, args, params); err != nil {
-					continue
+				for _, h := range h.Range(host.AllHosts()...) {
+					aesImportSave(ct, h, &a)
 				}
 			}
+
+			if ct == nil {
+				ct = &gateway.Gateway
+			}
+
+			// set configs only on Gateways for now
+			if ct != &gateway.Gateway {
+				return
+			}
+
+			params := []string{crcstr + ".aes"}
+			return instance.ForAll(ct, aesNewSetInstance, args, params)
 		}
 		return
 	},
 }
 
-var aesNewCmdKeyfile string
-var aesNewCmdSetSync bool
+var aesNewCmdKeyfile, aesNewCmdHostname string
+var aesNewCmdImport bool
 
 func init() {
 	aesCmd.AddCommand(aesNewCmd)
 
 	aesNewCmd.Flags().StringVarP(&aesNewCmdKeyfile, "keyfile", "k", "", "Optional key file to create, defaults to STDOUT")
-	aesNewCmd.Flags().BoolVarP(&aesNewCmdSetSync, "set", "S", false, "Set instances to use this keyfile. Remote hosts have keyfile synced.")
+	aesNewCmd.Flags().BoolVarP(&aesNewCmdImport, "import", "I", false, "Import the keyfile to components and set on matching instances.")
+	aesNewCmd.Flags().StringVarP(&aesNewCmdHostname, "host", "H", "", "Import only to named host, default is all")
+
 }
 
 func aesNewSetInstance(c geneos.Instance, params []string) (err error) {

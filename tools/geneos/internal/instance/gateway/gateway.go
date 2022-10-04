@@ -54,7 +54,7 @@ var Gateway = geneos.Component{
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=gateway.log`,
 		`port=7039`,
-		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:/usr/lib64}}`,
+		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:/usr/lib64`,
 		`gatewayname={{.name}}`,
 	},
 	GlobalSettings: map[string]string{
@@ -149,7 +149,7 @@ func (g *Gateways) Host() *host.Host {
 }
 
 func (g *Gateways) String() string {
-	return g.Type().String() + ":" + g.Name() + "@" + g.Host().String()
+	return instance.DisplayName(g)
 }
 
 func (g *Gateways) Load() (err error) {

@@ -140,7 +140,7 @@ func (s *Sans) Host() *host.Host {
 }
 
 func (s *Sans) String() string {
-	return s.Type().String() + ":" + s.Name() + "@" + s.Host().String()
+	return instance.DisplayName(s)
 }
 
 func (s *Sans) Load() (err error) {

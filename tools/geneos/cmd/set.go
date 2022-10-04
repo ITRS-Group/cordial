@@ -131,9 +131,11 @@ func writeConfigParams(filename string, params []string) (err error) {
 	return vp.WriteConfig()
 }
 
-func readConfigFile(path string) (v *config.Config) {
+func readConfigFile(paths ...string) (v *config.Config) {
 	v = config.New()
-	v.SetConfigFile(path)
+	for _, path := range paths {
+		v.SetConfigFile(path)
+	}
 	v.ReadInConfig()
 	return
 }

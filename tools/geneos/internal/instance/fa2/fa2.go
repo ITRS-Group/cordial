@@ -114,7 +114,7 @@ func (n *FA2s) Host() *host.Host {
 }
 
 func (n *FA2s) String() string {
-	return n.Type().String() + ":" + n.Name() + "@" + n.Host().String()
+	return instance.DisplayName(n)
 }
 
 func (n *FA2s) Load() (err error) {

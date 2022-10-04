@@ -63,7 +63,6 @@ func commandShowGlobal(ct *geneos.Component, args, params []string) (err error) 
 	if buffer, err = json.MarshalIndent(c, "", "    "); err != nil {
 		return
 	}
-	j := opaqueJSONSecrets(buffer)
-	fmt.Println(string(j))
+	fmt.Println(string(buffer))
 	return
 }

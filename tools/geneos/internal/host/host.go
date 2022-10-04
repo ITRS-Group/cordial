@@ -56,9 +56,17 @@ func Geneos() string {
 
 // interface method set
 
+// Get returns a pointer to Host value. If passed an empty name, returns
+// nil. If passed the special values LOCALHOST or ALL then it will
+// return the respective special values LOCAL or ALL. Otherwise it tries
+// to lookup an existing host with the given name to return or
+// initialises a new value to return. This may not be a=n existing host.
+//
 // XXX new needs the top level config and passes back a Sub()
 func Get(name string) (c *Host) {
 	switch name {
+	case "":
+		return nil
 	case LOCALHOST:
 		if LOCAL != nil {
 			return LOCAL
@@ -149,14 +157,37 @@ func (h *Host) GetOSReleaseEnv() (err error) {
 	return
 }
 
-// returns a slice of all matching Hosts. used mainly for range loops
-// where the host could be specific or 'all'
+// Match returns a slice of all matching Hosts. Intended for use in
+// range loops where the host could be specific or 'all'. If passed
+// an empty string then returns an empty slice.
 func Match(h string) (r []*Host) {
 	switch h {
+	case "":
+		return []*Host{}
 	case ALLHOSTS:
 		return AllHosts()
 	default:
 		return []*Host{Get(h)}
+	}
+}
+
+// Range will either return just the specific host it is called on, or
+// if that is nil than the list of all hosts passed as args. If no args
+// are passed and h is nil then all hosts are returned.
+//
+// This is a convenience to avoid a double layer of if and range in
+// callers than want to work on specific component types.
+func (h *Host) Range(hosts ...*Host) []*Host {
+	switch h {
+	case nil:
+		if len(hosts) == 0 {
+			return AllHosts()
+		}
+		return hosts
+	case ALL:
+		return AllHosts()
+	default:
+		return []*Host{h}
 	}
 }
 

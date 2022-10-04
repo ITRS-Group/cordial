@@ -670,9 +670,9 @@ Please note that if `geneos home` returns an empty string because of an error th
 
 #### Configuration Commands
 
-* `geneos add [TYPE] NAME [NAME...]`
+* `geneos add [FLAGS] [TYPE] NAME [NAME...]`
 
-  Add a new Geneos component configuration.
+  Add a new Geneos instance. Like the `geneos init` command this command has a large number of flags to support a wide variety of requirements.
 
 * `geneos migrate [TYPE] [NAME...]`
 
@@ -726,35 +726,35 @@ Please note that if `geneos home` returns an empty string because of an error th
 
 ## Secure Passwords
 
-The `geneos aes` commands provide tools to manage Geneos AES256 key files as [documented here](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm)
+The `geneos aes` commands provide tools to manage Geneos AES256 key files as [documented here](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm).
 
 In addition to the functionality built-in to Geneos as described in the Gateway documentation these encoded password can also be included in configuration files so that plain text passwords and other credentials are not visible to users.
 
-* `geneos aes ls`
+* `geneos aes new [-k KEYFILE] [-I] [TYPE] [NAME]`
 
-  List configured key-files in Geneos components. The CRC32 column is provided as a visual aid to human users to identify common key-files.
+  Create a new keyfile. With no arguments a new keyfile printed on STDOUT. If the import option (`-I`) is given then the keyfile is copied to the component keyfile directory (e.g. `gateway/gateway_shared/keyfiles`) with a name made of the CRC32 checksum of the file and an `.aes` extension. The file is also copied to remote hosts and all matching instances have their keyfile parameters set to use this file. Any instances with an existing keyfile setting have that moved to `prevkeyfile`.
+
+* `geneos aes ls [-c] [-j [-i]] [TYPE] [NAME]`
+
+  List configured keyfiles in Geneos instances. The CRC32 column is provided as a visual aid to human users to identify common keyfiles.
   
-  Note: If a key-file is configured then the component - currently only Gateways - are started with the key-file on the command line. This may cause start-up issues if the key-file has just been added or changed and your Gateway is earlier than GA5.14.0 or there is an existing `cache/` directory in the Gateway working directory. To resolve this you may have to remove the `cache/` directory (use the `geneos clean` command with the `-F` full-clean option) or start the Gateway with a `-skip-cache` option which can be set with `geneos set -k options=-skip-cache` and so on.
+  Note: If a keyfile is configured then the component - currently only Gateways - are started with the keyfile on the command line. This may cause start-up issues if the keyfile has just been added or changed and your Gateway is earlier than GA5.14.0 or there is an existing `cache/` directory in the Gateway working directory. To resolve this you may have to remove the `cache/` directory (use the `geneos clean` command with the `-F` full-clean option) or start the Gateway with a `-skip-cache` option which can be set with `geneos set -k options=-skip-cache` and so on.
 
-* `geneos aes encode [-k KEYFILE] [-p STRING] [-s SOURCE] [TYPE] [NAME]`
+* `geneos aes encode [-k KEYFILE] [-p PASSWORD] [-s SOURCE] [-e] [TYPE] [NAME]`
 
-  Encode a plain text password using the key-file given or the key-files configured for any matching instances. If instances share the same key-file then the same output will be generated for each. If neither a string or a source path is given then the user is prompted to enter a password. The SOURCE can be a local file or a URL.
+  Encode a plain text PASSWORD or SOURCE using the keyfile given or the keyfiles configured for all matching instances or the user's default keyfile. If instances share the same keyfile then the same output will be generated for each. If neither a string or a source path is given then the user is prompted to enter a password. The SOURCE can be a local file or a URL. The `-e` option set the output to be in "expandable" form, which includes the path to the keyfile used, ready for copying directly into configuration files that support ExpandString() values.
 
-* `geneos aes decode [-k KEYFILE] [-v KEYFILE] [-p PASSWORD] [-s SOURCE] [TYPE] [NAME]`
+* `geneos aes decode [-e STRING] [-k KEYFILE] [-v KEYFILE] [-p PASSWORD] [-s SOURCE] [TYPE] [NAME]`
 
-  Decode the encoded text using the given key-file or previous key-file, if given on the command line or using the key-files for matching instances. The first valid UTF-8 decoded text is output and further processing stops. The encoded text can be prefixed with the Geneos `+encs+` text, which will be removed if present. The SOURCE can be a local file or a URL.
+  Decode the ExpandString format STRING (with embedded keyfile path) or the encoded PASSWORD or the SOURCE using the provided keyfile (or previous keyfile) or using the keyfiles for matching instances or the user's default keyfile. The first valid UTF-8 decoded text is output and further processing stops. The encoded text can be prefixed with the Geneos `+encs+` text, which will be removed if present. The SOURCE can be a local file or a URL.
 
-* `geneos aes new -k PATH -S [TYPE] [NAME]`
+* `geneos aes import [-k FILE|URL|-] [-H host] [TYPE] [NAME...]`
 
-  Create a new key-file. With no arguments a new file is created in the current directory called `keyfile.aes`. If the set option (`-S`) is provided then the keyfile is copied to the `gateway/gateway_shared/keyfiles` directory with a (hopefully) unique name (the CRC32 of the file plus `.aes`), synced to remote hosts and all matching instances have their key-file parameters set to use this file. Unlike `geneos aes sync` below, only the new key-file is copied to the shared location.
+  Import a keyfile
 
-* `geneos aes update` - **Not yet implemented**
+* `geneos aes set [-k FILE|URL|-] [-C CRC32] [-N] [TYPE] [NAME...]`
 
-  Update the existing key-file in use by rotating the currently configured key-file to previous-key-file. Requires GA6.x.
-
-* `geneos aes sync` - **Not yet implemented**
-
-  Sync local key-file(s) to remote hosts.
+  Update the existing keyfile in use by rotating the currently configured keyfile to previous-keyfile. Requires GA6.x.
 
 ## TLS Operations
 
