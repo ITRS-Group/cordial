@@ -22,4 +22,4 @@ THE SOFTWARE.
 
 package cordial
 
-const VERSION = "v1.2.1-rc1"
+const VERSION = "v1.2.1-rc2"
