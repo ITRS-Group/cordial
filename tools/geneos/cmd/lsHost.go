@@ -61,14 +61,28 @@ func init() {
 
 var lsHostCmdJSON, lsHostCmdCSV, lsHostCmdIndent bool
 
+type lsHostCmdType struct {
+	Name      string
+	Username  string
+	Hostname  string
+	Port      int64
+	Directory string
+}
+
+var lsHostCmdEntries []lsHostCmdType
+
 func commandLSHost(ct *geneos.Component, args []string, params []string) (err error) {
 	switch {
 	case lsHostCmdJSON:
-		jsonEncoder = json.NewEncoder(os.Stdout)
-		if lsHostCmdIndent {
-			jsonEncoder.SetIndent("", "    ")
-		}
+		lsHostCmdEntries = []lsHostCmdType{}
 		err = loopHosts(lsInstanceJSONHosts)
+		var b []byte
+		if lsHostCmdIndent {
+			b, _ = json.MarshalIndent(lsHostCmdEntries, "", "    ")
+		} else {
+			b, _ = json.Marshal(lsHostCmdEntries)
+		}
+		fmt.Println(string(b))
 	case lsHostCmdCSV:
 		csvWriter = csv.NewWriter(os.Stdout)
 		csvWriter.Write([]string{"Type", "Name", "Disabled", "Username", "Hostname", "Port", "Directory"})
@@ -103,15 +117,7 @@ func lsInstanceCSVHosts(h *host.Host) (err error) {
 	return
 }
 
-type lsTypeHosts struct {
-	Name      string
-	Username  string
-	Hostname  string
-	Port      int64
-	Directory string
-}
-
 func lsInstanceJSONHosts(h *host.Host) (err error) {
-	jsonEncoder.Encode(lsTypeHosts{h.String(), h.GetString("username"), h.GetString("hostname"), h.GetInt64("port"), h.GetString("geneos")})
+	lsHostCmdEntries = append(lsHostCmdEntries, lsHostCmdType{h.String(), h.GetString("username"), h.GetString("hostname"), h.GetInt64("port"), h.GetString("geneos")})
 	return
 }
