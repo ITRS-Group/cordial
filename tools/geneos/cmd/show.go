@@ -24,7 +24,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -64,7 +63,6 @@ to prevent visibility in casual viewing.`,
 				rc = config.GetConfig().AllSettings()
 			}
 			j, _ := json.MarshalIndent(rc, "", "    ")
-			j = opaqueJSONSecrets(j)
 			fmt.Println(string(j))
 			return nil
 		}
@@ -116,19 +114,7 @@ func showInstance(c geneos.Instance, params []string) (err error) {
 	if buffer, err = json.MarshalIndent(cf, "", "    "); err != nil {
 		return
 	}
-	buffer = opaqueJSONSecrets(buffer)
 	fmt.Println(string(buffer))
 
 	return
-}
-
-// XXX redact passwords - any field matching some regexp ?
-var red1 = regexp.MustCompile(`"(.*((?i)pass|password|secret))": "(.*)"`)
-var red2 = regexp.MustCompile(`"(.*((?i)pass|password|secret))=(.*)"`)
-
-func opaqueJSONSecrets(j []byte) []byte {
-	// simple redact - and left field with "Pass" in it gets the right replaced
-	j = red1.ReplaceAll(j, []byte(`"$1": "********"`))
-	j = red2.ReplaceAll(j, []byte(`"$1=********"`))
-	return j
 }
