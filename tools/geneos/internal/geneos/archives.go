@@ -35,9 +35,12 @@ func OpenComponentArchive(ct *Component, options ...GeneosOptions) (body io.Read
 
 	if opts.local {
 		// archive directory is local only
+		if opts.version == "latest" {
+			opts.version = ""
+		}
 		archiveDir := host.LOCAL.Filepath("packages", "downloads")
 		filename = latest(host.LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
-			log.Debug().Msgf("%s %s", v.Name(), ct.String())
+			log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
 			switch ct.String() {
 			case "webserver":
 				return !strings.Contains(v.Name(), "web-server")
