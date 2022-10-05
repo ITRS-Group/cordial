@@ -87,14 +87,10 @@ func GetStringMapString(s string, values ...map[string]string) map[string]string
 }
 
 func (c *Config) GetStringMapString(s string, values ...map[string]string) (m map[string]string) {
-	var cfmap map[string]string
 	m = make(map[string]string)
 	r := c.Viper.GetStringMapString(s)
-	if len(values) > 0 {
-		cfmap = values[0]
-	}
 	for k, v := range r {
-		m[k] = c.ExpandString(v, cfmap)
+		m[k] = c.ExpandString(v, values...)
 	}
 	return m
 }
