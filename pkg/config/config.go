@@ -66,6 +66,10 @@ func New() *Config {
 	return &Config{Viper: viper.New()}
 }
 
+func (c *Config) Sub(key string) *Config {
+	return &Config{Viper: c.Viper.Sub(key)}
+}
+
 func GetStringSlice(s string, values ...map[string]string) []string {
 	return global.GetStringSlice(s, values...)
 }
