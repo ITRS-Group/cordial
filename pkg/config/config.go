@@ -332,7 +332,7 @@ func mapEnv(e string) (s string) {
 //
 //	//go:embed somefile.json
 //	var myDefaults []byte
-//	LoadConfig("geneos", config.SetDefaults(myDefaults, "json"), )
+//	LoadConfig("geneos", config.SetDefaults(myDefaults, "json"), config.SetConfigFIle(configPath))
 //
 // Options can be passed to change the default behaviour and to pass any
 // embedded defaults or an existing viper.

@@ -1,0 +1,32 @@
+pagerduty:
+  authtoken: ""
+  routingkey: ${PAGERDUTY_INTEGRATION_KEY}
+  # map geneos severity (name) to valid PD severity (value)
+  # the names are case-insensitive, so geneos severity "critical" is the same as "CRITICAL"
+  #
+  # the special value "resolve" is used to resolve and event and not trigger
+  #
+  # the only native PD severities are 'info', 'warning', 'error' and 'critical' and are case sensitive
+  severity-map:
+    0: info
+    UNDEFINED: info
+    1: resolve
+    OK: resolve
+    2: warning
+    WARNING: warning
+    3: critical
+    CRITICAL: critical
+  event:
+    # the default dedup key is the full xpath to the data item
+    dedup-key: "${_VARIABLEPATH}"
+    payload:
+      summary: ${_RULE} Triggered
+      source: ${_MANAGED_ENTITY}
+      severity: ${_SEVERITY}
+      timestamp: ${_ALERT_TIME}
+      component: ${_NETPROBE_HOST}
+      group: ${_SAMPLER_GROUP}
+      class: ${_SAMPLER}
+      details:
+        variable: ${_VARIABLE}
+        value: ${_VALUE}
