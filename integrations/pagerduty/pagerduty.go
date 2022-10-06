@@ -37,56 +37,48 @@ package main
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
 	"github.com/PagerDuty/go-pagerduty"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog"
+	"github.com/itrs-group/cordial/pkg/cordial"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/pflag"
 )
 
 var configFile string
-var assignFlag, unassignFlag, resolveFlag bool
+var assignFlag, resolveFlag, listServices bool
 
 func init() {
 	pflag.StringVarP(&configFile, "conf", "c", "", "Override configuration file path")
-	pflag.BoolVarP(&assignFlag, "assign", "A", false, "Geneos user-assignment triggered")
-	pflag.BoolVarP(&unassignFlag, "unassign", "U", false, "Geneos user-unassignment triggered")
+	pflag.BoolVarP(&assignFlag, "assign", "A", false, "Geneos user-assignment action")
 	pflag.BoolVarP(&resolveFlag, "resolve", "R", false, "Override and resolve")
+	pflag.BoolVar(&listServices, "services", false, "List known services")
 
-	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
-		fnName := "UNKNOWN"
-		fn := runtime.FuncForPC(pc)
-		if fn != nil {
-			fnName = fn.Name()
-		}
-		fnName = filepath.Base(fnName)
-		// fnName = strings.TrimPrefix(fnName, "main.")
-
-		s := strings.SplitAfterN(file, "pagerduty"+"/", 2)
-		if len(s) == 2 {
-			file = s[1]
-		}
-		return fmt.Sprintf("%s:%d %s()", file, line, fnName)
-	}
-
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339, NoColor: true,
-		FormatLevel: func(i interface{}) string {
-			return strings.ToUpper(fmt.Sprintf("%s:", i))
-		},
-	}).With().Caller().Logger()
+	cordial.LogInit("pagerduty")
 }
 
 //go:embed pagerduty.defaults.yaml
 var defaults []byte
 
+type Link struct {
+	Href string `json:"href"`
+	Text string `json:"text,omitempty"`
+}
+
+type Image struct {
+	Src  string `json:"src"`
+	Href string `json:"href,omitempty"`
+	Alt  string `json:"alt,omitempty"`
+}
+
 func main() {
+	var action string
+
 	pflag.Parse()
 
 	cf, err := config.LoadConfig("pagerduty", config.SetDefaults(defaults, "yaml"), config.SetConfigFile(configFile))
@@ -95,6 +87,20 @@ func main() {
 	}
 
 	client := pagerduty.NewClient(cf.GetString("pagerduty.authtoken"))
+
+	if listServices {
+		opts := pagerduty.ListServiceOptions{
+			Total: true,
+		}
+		l, err := client.ListServicesPaginated(context.Background(), opts)
+		if err != nil {
+			log.Fatal().Err(err).Msgf("")
+		}
+		s, _ := json.MarshalIndent(l, "", "    ")
+		fmt.Println(string(s))
+		os.Exit(0)
+	}
+
 	routing_key := cf.GetString("pagerduty.routingkey")
 
 	payload := cf.Sub("pagerduty.event.payload")
@@ -113,31 +119,37 @@ func main() {
 		}
 	}
 
-	// if details is empty then dump the whole environment
 	details := payload.GetStringMapString("details")
-	if len(details) == 0 {
+	if cf.GetBool("pagerduty.send-env") {
 		for _, e := range os.Environ() {
 			s := strings.SplitN(e, "=", 2)
 			details[s[0]] = s[1]
 		}
 	}
 
+	alertType := strings.ToLower(cf.GetString("pagerduty.alert-type"))
 	severityMap := cf.Sub("pagerduty.severity-map")
 	severity := severityMap.GetString(payload.GetString("severity"))
 
-	alertType := os.Getenv("_ALERT_TYPE")
-
-	var action string
 	switch {
-	case resolveFlag, severity == "resolve", alertType == "Clear":
+	case resolveFlag, severity == "ok", alertType == "clear":
 		action = "resolve"
 		severity = "info"
-	case alertType == "Suspend":
+	case assignFlag, alertType == "suspend":
 		action = "acknowledge"
 		severity = "info"
 	default:
 		action = "trigger"
 	}
+
+	links := []interface{}{}
+	for _, l := range strings.Split(cf.GetString("pagerduty.event.links"), "\n") {
+		if l != "" {
+			links = append(links, Link{Href: l})
+		}
+	}
+
+	images := []interface{}{}
 
 	v2event := pagerduty.V2Event{
 		RoutingKey: routing_key,
@@ -150,8 +162,12 @@ func main() {
 			Class:     payload.GetString("class"),
 			Details:   details,
 		},
-		DedupKey: cf.GetString("pagerduty.event.dedup-key"),
-		Action:   action,
+		DedupKey:  cf.GetString("pagerduty.event.dedup-key"),
+		Client:    cf.GetString("pagerduty.event.client"),
+		ClientURL: cf.GetString("pagerduty.event.client_url"),
+		Action:    action,
+		Links:     links,
+		Images:    images,
 	}
 
 	_, err = client.ManageEventWithContext(context.Background(), &v2event)

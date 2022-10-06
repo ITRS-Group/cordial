@@ -1,24 +1,27 @@
 pagerduty:
   authtoken: ""
   routingkey: ${PAGERDUTY_INTEGRATION_KEY}
-  # map geneos severity (name) to valid PD severity (value)
-  # the names are case-insensitive, so geneos severity "critical" is the same as "CRITICAL"
-  #
-  # the special value "resolve" is used to resolve and event and not trigger
-  #
-  # the only native PD severities are 'info', 'warning', 'error' and 'critical' and are case sensitive
+  alert-type: ${_ALERT_TYPE}
   severity-map:
+    # map geneos severity (name) to valid PD severity (value)
+    # the names are case-insensitive, so geneos severity "critical" is the same as "CRITICAL"
+    #
+    # the special value "ok" is used to resolve and event and not send a trigger
+    #
+    # the only native PD severities are 'info', 'warning', 'error' and 'critical' and are case sensitive
     0: info
     UNDEFINED: info
-    1: resolve
-    OK: resolve
+    1: ok
+    OK: ok
     2: warning
     WARNING: warning
     3: critical
     CRITICAL: critical
   event:
     # the default dedup key is the full xpath to the data item
-    dedup-key: "${_VARIABLEPATH}"
+    dedup-key: ${_VARIABLEPATH}
+    client: "ITRS Geneos"
+    client_url: "https://www.itrsgroup.com"
     payload:
       summary: ${_RULE} Triggered
       source: ${_MANAGED_ENTITY}
@@ -27,6 +30,13 @@ pagerduty:
       component: ${_NETPROBE_HOST}
       group: ${_SAMPLER_GROUP}
       class: ${_SAMPLER}
-      details:
-        variable: ${_VARIABLE}
-        value: ${_VALUE}
+      # details is a map of customer values to send with the event
+      # details:
+      #   variable: ${_VARIABLE}
+      #   value: ${_VALUE}
+    links: ${_KBA_URLS}
+    images:
+  # should we send the entire environment in the details/custom_fileds?
+  # this is primarily for debug and testing. environment variables will
+  # overwrite details of the same name set above
+  send-env: false
