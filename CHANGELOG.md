@@ -6,7 +6,7 @@
 
 * `geneos` command fixes:
   * Fixed `init` download credential handling
-  * Fixes JSON output formay from `ls` commands
+  * Fixes JSON output format from `ls` commands
   * Local-only installs now work again (including default "latest" support)
 
 * Security
