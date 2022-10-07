@@ -23,6 +23,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/spf13/cobra"
@@ -62,7 +63,6 @@ func commandShowGlobal(ct *geneos.Component, args, params []string) (err error) 
 	if buffer, err = json.MarshalIndent(c, "", "    "); err != nil {
 		return
 	}
-	j := opaqueJSONSecrets(buffer)
-	log.Printf("%s\n", string(j))
+	fmt.Println(string(buffer))
 	return
 }

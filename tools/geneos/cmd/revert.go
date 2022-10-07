@@ -24,6 +24,7 @@ package cmd
 import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -52,23 +53,23 @@ func init() {
 }
 
 func revertInstance(c geneos.Instance, params []string) (err error) {
-	// if *.rc file exists, remove rc.orig+JSON, continue
-	if _, err := c.Host().Stat(instance.ConfigPathWithExt(c, "rc")); err == nil {
+	// if *.rc file exists, remove rc.orig+new, continue
+	if _, err := c.Host().Stat(instance.ComponentFilepath(c, "rc")); err == nil {
 		// ignore errors
-		if c.Host().Remove(instance.ConfigPathWithExt(c, "rc.orig")) == nil || c.Host().Remove(instance.ConfigPathWithExt(c, "json")) == nil {
-			logDebug.Println(c, "removed extra config file(s)")
+		if c.Host().Remove(instance.ComponentFilepath(c, "rc", "orig")) == nil || c.Host().Remove(instance.ComponentFilepath(c)) == nil {
+			log.Debug().Msgf("%s removed extra config file(s)", c)
 		}
 		return err
 	}
 
-	if err = c.Host().Rename(instance.ConfigPathWithExt(c, "rc.orig"), instance.ConfigPathWithExt(c, "rc")); err != nil {
+	if err = c.Host().Rename(instance.ComponentFilepath(c, "rc", "orig"), instance.ComponentFilepath(c, "rc")); err != nil {
 		return
 	}
 
-	if err = c.Host().Remove(instance.ConfigPathWithExt(c, "json")); err != nil {
+	if err = c.Host().Remove(instance.ComponentFilepath(c)); err != nil {
 		return
 	}
 
-	logDebug.Println(c, "reverted to RC config")
+	log.Debug().Msgf("%s reverted to RC config", c)
 	return nil
 }

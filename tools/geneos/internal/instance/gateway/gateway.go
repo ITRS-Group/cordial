@@ -1,21 +1,18 @@
 package gateway
 
 import (
-	"crypto/rand"
-	"crypto/sha1"
 	_ "embed"
 	"fmt"
-	"log"
 	"path/filepath"
 	"sync"
 	"syscall"
 
-	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/rs/zerolog/log"
+
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/viper"
-	"golang.org/x/crypto/pbkdf2"
 )
 
 var Gateway = geneos.Component{
@@ -40,7 +37,8 @@ var Gateway = geneos.Component{
 		"gatelibs":  "libpaths",
 		"gatecert":  "certificate",
 		"gatekey":   "privatekey",
-		"gateaes":   "aesfile",
+		"gateaes":   "keyfile",
+		"aesfile":   "keyfile",
 		"gatename":  "gatewayname",
 		"gatelich":  "licdhost",
 		"gatelicp":  "licdport",
@@ -49,15 +47,15 @@ var Gateway = geneos.Component{
 		"gateopts":  "options",
 	},
 	Defaults: []string{
-		"binary=gateway2.linux_64",
-		"home={{join .root \"gateway\" \"gateways\" .name}}",
-		"install={{join .root \"packages\" \"gateway\"}}",
-		"version=active_prod",
-		"program={{join .install .version .binary}}",
-		"logfile=gateway.log",
-		"port=7039",
-		"libpaths={{join .install .version \"lib64\"}}:/usr/lib64",
-		"gatewayname={{.name}}",
+		`binary=gateway2.linux_64`,
+		`home={{join .root "gateway" "gateways" .name}}`,
+		`install={{join .root "packages" "gateway"}}`,
+		`version=active_prod`,
+		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
+		`logfile=gateway.log`,
+		`port=7039`,
+		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:/usr/lib64`,
+		`gatewayname={{.name}}`,
 	},
 	GlobalSettings: map[string]string{
 		"GatewayPortRange": "7039,7100-",
@@ -91,13 +89,13 @@ func init() {
 func Init(r *host.Host, ct *geneos.Component) {
 	// copy default template to directory
 	if err := geneos.MakeComponentDirs(r, ct); err != nil {
-		logger.Error.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
-	if err := r.WriteFile(r.GeneosJoinPath("gateway", "templates", GatewayDefaultTemplate), GatewayTemplate, 0664); err != nil {
-		logger.Error.Fatalln(err)
+	if err := r.WriteFile(r.Filepath("gateway", "templates", GatewayDefaultTemplate), GatewayTemplate, 0664); err != nil {
+		log.Fatal().Err(err).Msg("")
 	}
-	if err := r.WriteFile(r.GeneosJoinPath("gateway", "templates", GatewayInstanceTemplate), InstanceTemplate, 0664); err != nil {
-		logger.Error.Fatalln(err)
+	if err := r.WriteFile(r.Filepath("gateway", "templates", GatewayInstanceTemplate), InstanceTemplate, 0664); err != nil {
+		log.Fatal().Err(err).Msg("")
 	}
 }
 
@@ -111,11 +109,11 @@ func New(name string) geneos.Instance {
 		}
 	}
 	g := &Gateways{}
-	g.Conf = viper.New()
+	g.Conf = config.New()
 	g.Component = &Gateway
 	g.InstanceHost = h
 	if err := instance.SetDefaults(g, local); err != nil {
-		logger.Error.Fatalln(g, "setDefaults():", err)
+		log.Fatal().Err(err).Msgf("%s setDefaults()")
 	}
 	gateways.Store(h.FullName(local), g)
 	return g
@@ -129,11 +127,17 @@ func (g *Gateways) Type() *geneos.Component {
 }
 
 func (g *Gateways) Name() string {
-	return g.V().GetString("name")
+	if g.Config() == nil {
+		return ""
+	}
+	return g.Config().GetString("name")
 }
 
 func (g *Gateways) Home() string {
-	return g.V().GetString("home")
+	if g.Config() == nil {
+		return ""
+	}
+	return g.Config().GetString("home")
 }
 
 func (g *Gateways) Prefix() string {
@@ -145,7 +149,7 @@ func (g *Gateways) Host() *host.Host {
 }
 
 func (g *Gateways) String() string {
-	return g.Type().String() + ":" + g.Name() + "@" + g.Host().String()
+	return instance.DisplayName(g)
 }
 
 func (g *Gateways) Load() (err error) {
@@ -167,11 +171,11 @@ func (g *Gateways) Loaded() bool {
 	return g.ConfigLoaded
 }
 
-func (g *Gateways) V() *viper.Viper {
+func (g *Gateways) Config() *config.Config {
 	return g.Conf
 }
 
-func (g *Gateways) SetConf(v *viper.Viper) {
+func (g *Gateways) SetConf(v *config.Config) {
 	g.Conf = v
 }
 
@@ -179,21 +183,21 @@ func (g *Gateways) Add(username string, template string, port uint16) (err error
 	if port == 0 {
 		port = instance.NextPort(g.InstanceHost, &Gateway)
 	}
-	g.V().Set("port", port)
-	g.V().Set("user", username)
-	g.V().Set("config.rebuild", "initial")
+	g.Config().Set("port", port)
+	g.Config().Set("user", username)
+	g.Config().Set("config.rebuild", "initial")
 
-	g.V().SetDefault("config.template", GatewayDefaultTemplate)
+	g.Config().SetDefault("config.template", GatewayDefaultTemplate)
 	if template != "" {
 		filename, _ := instance.ImportCommons(g.Host(), g.Type(), "templates", []string{template})
-		g.V().Set("config.template", filename)
+		g.Config().Set("config.template", filename)
 	}
 
-	g.V().Set("includes", make(map[int]string))
+	g.Config().Set("includes", make(map[int]string))
 
 	// try to save config early
 	if err = instance.WriteConfig(g); err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 		return
 	}
 
@@ -218,7 +222,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 		return
 	}
 
-	configrebuild := g.V().GetString("config.rebuild")
+	configrebuild := g.Config().GetString("config.rebuild")
 
 	if configrebuild == "never" {
 		return
@@ -230,32 +234,32 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 
 	// recheck check certs/keys
 	var changed bool
-	secure := g.V().GetString("certificate") != "" && g.V().GetString("privatekey") != ""
+	secure := instance.Filename(g, "certificate") != "" && instance.Filename(g, "privatekey") != ""
 
 	// if we have certs then connect to Licd securely
-	if secure && g.V().GetString("licdsecure") != "true" {
-		g.V().Set("licdsecure", "true")
+	if secure && g.Config().GetString("licdsecure") != "true" {
+		g.Config().Set("licdsecure", "true")
 		changed = true
-	} else if !secure && g.V().GetString("licdsecure") == "true" {
-		g.V().Set("licdsecure", "false")
+	} else if !secure && g.Config().GetString("licdsecure") == "true" {
+		g.Config().Set("licdsecure", "false")
 		changed = true
 	}
 
 	// use getPorts() to check valid change, else go up one
 	ports := instance.GetPorts(g.Host())
 	nextport := instance.NextPort(g.Host(), &Gateway)
-	if secure && g.V().GetInt64("port") == 7039 {
+	if secure && g.Config().GetInt64("port") == 7039 {
 		if _, ok := ports[7038]; !ok {
-			g.V().Set("port", 7038)
+			g.Config().Set("port", 7038)
 		} else {
-			g.V().Set("port", nextport)
+			g.Config().Set("port", nextport)
 		}
 		changed = true
-	} else if !secure && g.V().GetInt64("port") == 7038 {
+	} else if !secure && g.Config().GetInt64("port") == 7038 {
 		if _, ok := ports[7039]; !ok {
-			g.V().Set("port", 7039)
+			g.Config().Set("port", 7039)
 		} else {
-			g.V().Set("port", nextport)
+			g.Config().Set("port", nextport)
 		}
 		changed = true
 	}
@@ -266,7 +270,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 		}
 	}
 
-	return instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "gateway.setup.xml"), g.V().GetString("config.template"), GatewayTemplate)
+	return instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "gateway.setup.xml"), instance.Filename(g, "config.template"), GatewayTemplate)
 }
 
 func (g *Gateways) Command() (args, env []string) {
@@ -276,11 +280,11 @@ func (g *Gateways) Command() (args, env []string) {
 	args = []string{
 		g.Name(),
 		"-resources-dir",
-		filepath.Join(g.V().GetString("install"), g.V().GetString("version"), "resources"),
+		filepath.Join(g.Config().GetString("install"), g.Config().GetString("version"), "resources"),
 		"-log",
 		instance.LogFile(g),
 		"-setup",
-		filepath.Join(g.V().GetString("home"), "gateway.setup.xml"),
+		filepath.Join(g.Config().GetString("home"), "gateway.setup.xml"),
 		// enable stats by default
 		"-stats",
 	}
@@ -290,38 +294,43 @@ func (g *Gateways) Command() (args, env []string) {
 	// if underlying ... { }
 	// "-gateway-name",
 
-	if g.V().GetString("gatewayname") != g.Name() {
-		args = append([]string{g.V().GetString("gatewayname")}, args...)
+	if g.Config().GetString("gatewayname") != g.Name() {
+		args = append([]string{g.Config().GetString("gatewayname")}, args...)
 	}
 
-	args = append([]string{"-port", fmt.Sprint(g.V().GetString("port"))}, args...)
+	args = append([]string{"-port", fmt.Sprint(g.Config().GetString("port"))}, args...)
 
-	if g.V().GetString("licdhost") != "" {
-		args = append(args, "-licd-host", g.V().GetString("licdhost"))
+	if g.Config().GetString("licdhost") != "" {
+		args = append(args, "-licd-host", g.Config().GetString("licdhost"))
 	}
 
-	if g.V().GetInt64("licdport") != 0 {
-		args = append(args, "-licd-port", fmt.Sprint(g.V().GetString("licdport")))
+	if g.Config().GetInt64("licdport") != 0 {
+		args = append(args, "-licd-port", fmt.Sprint(g.Config().GetString("licdport")))
 	}
 
-	if g.V().GetString("certificate") != "" {
-		if g.V().GetString("licdsecure") == "" || g.V().GetString("licdsecure") != "false" {
+	args = append(args, instance.SetSecureArgs(g)...)
+
+	licdsecure := g.Config().GetString("licdsecure")
+	if instance.Filename(g, "certificate") != "" {
+		if licdsecure == "" || licdsecure != "false" {
 			args = append(args, "-licd-secure")
 		}
-		args = append(args, "-ssl-certificate", g.V().GetString("certificate"))
-		chainfile := g.Host().GeneosJoinPath("tls", "chain.pem")
-		args = append(args, "-ssl-certificate-chain", chainfile)
-	} else if g.V().GetString("licdsecure") != "" && g.V().GetString("licdsecure") == "true" {
+	} else if licdsecure != "" && licdsecure == "true" {
 		args = append(args, "-licd-secure")
 	}
 
-	if g.V().GetString("privatekey") != "" {
-		args = append(args, "-ssl-certificate-key", g.V().GetString("privatekey"))
-	}
+	if g.Config().GetBool("usekeyfile") {
+		keyfile := instance.Filepath(g, "keyfile")
+		if keyfile != "" {
+			args = append(args, "-key-file", keyfile)
+		}
 
-	// if c.GateAES != "" {
-	// 	args = append(args, "-key-file", c.GateAES)
-	// }
+		prevkeyfile := instance.Filepath(g, "prevkeyfile")
+		if keyfile != "" {
+			args = append(args, "-previous-key-file", prevkeyfile)
+		}
+
+	}
 
 	return
 }
@@ -333,22 +342,20 @@ func (g *Gateways) Reload(params []string) (err error) {
 // create a gateway key file for secure passwords as per
 // https://docs.itrsgroup.com/docs/geneos/4.8.0/Gateway_Reference_Guide/gateway_secure_passwords.htm
 func createAESKeyFile(c geneos.Instance) (err error) {
-	rp := make([]byte, 20)
-	salt := make([]byte, 10)
-	if _, err = rand.Read(rp); err != nil {
-		return
-	}
-	if _, err = rand.Read(salt); err != nil {
+	a, err := config.NewAESValues()
+	if err != nil {
 		return
 	}
 
-	md := pbkdf2.Key(rp, salt, 10000, 48, sha1.New)
-	key := md[:32]
-	iv := md[32:]
-
-	if err = c.Host().WriteFile(instance.ConfigPathWithExt(c, "aes"), []byte(fmt.Sprintf("salt=%X\nkey=%X\niv =%X\n", salt, key, iv)), 0600); err != nil {
+	w, err := c.Host().Create(instance.ComponentFilepath(c, "aes"), 0600)
+	if err != nil {
 		return
 	}
-	c.V().Set("aesfile", c.Type().String()+".aes")
+	defer w.Close()
+	if err = a.WriteAESValues(w); err != nil {
+		return
+	}
+
+	c.Config().Set("keyfile", instance.ComponentFilename(c, "aes"))
 	return
 }

@@ -19,19 +19,25 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os/user"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
@@ -68,6 +74,9 @@ func init() {
 	addCmd.Flags().StringVarP(&addCmdBase, "base", "b", "active_prod", "select the base version for the instance, default active_prod")
 	addCmd.Flags().Uint16VarP(&addCmdPort, "port", "p", 0, "override the default port selection")
 
+	addCmd.Flags().StringVarP(&addCmdKeyfile, "keyfile", "k", "", "use an external keyfile for AES256 encoding")
+	addCmd.Flags().StringVarP(&addCmdKeyfileCRC, "crc", "C", "", "use a keyfile (in the component shared directory) with CRC for AES256 encoding")
+
 	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", "(all components) Add an environment variable in the format NAME=VALUE")
 	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
 	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME:PORT")
@@ -78,7 +87,7 @@ func init() {
 	addCmd.Flags().SortFlags = false
 }
 
-var addCmdTemplate, addCmdBase string
+var addCmdTemplate, addCmdBase, addCmdKeyfile, addCmdKeyfileCRC string
 var addCmdStart, addCmdLogs bool
 var addCmdPort uint16
 
@@ -94,7 +103,6 @@ var addCmdExtras = instance.ExtraConfigValues{
 // Add an instance
 //
 // XXX argument validation is minimal
-//
 func commandAdd(ct *geneos.Component, extras instance.ExtraConfigValues, args []string) (err error) {
 	var username string
 
@@ -107,7 +115,7 @@ func commandAdd(ct *geneos.Component, extras instance.ExtraConfigValues, args []
 	}
 
 	if utils.IsSuperuser() {
-		username = viper.GetString("defaultuser")
+		username = config.GetString("defaultuser")
 	} else {
 		u, _ := user.Current()
 		username = u.Username
@@ -120,16 +128,24 @@ func commandAdd(ct *geneos.Component, extras instance.ExtraConfigValues, args []
 
 	// check if instance already exists
 	if c.Loaded() {
-		log.Println(c, "already exists")
+		log.Error().Msgf("%s already exists", c)
 		return
 	}
 
 	if err = c.Add(username, addCmdTemplate, addCmdPort); err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if addCmdBase != "active_prod" {
-		c.V().Set("version", addCmdBase)
+		c.Config().Set("version", addCmdBase)
+	}
+
+	if ct == &gateway.Gateway || ct == &netprobe.Netprobe || ct == &san.San {
+		if addCmdKeyfileCRC != "" {
+			c.Config().Set("keyfile", c.Host().Filepath(ct, ct.String()+"_shared", "keyfiles", addCmdKeyfileCRC+".aes"))
+		} else if addCmdKeyfile != "" {
+			c.Config().Set("keyfile", addCmdKeyfile)
+		}
 	}
 	instance.SetExtendedValues(c, extras)
 	if err = instance.WriteConfig(c); err != nil {
@@ -140,7 +156,7 @@ func commandAdd(ct *geneos.Component, extras instance.ExtraConfigValues, args []
 	// reload config as instance data is not updated by Add() as an interface value
 	c.Unload()
 	c.Load()
-	log.Printf("%s added, port %d\n", c, c.V().GetInt("port"))
+	fmt.Printf("%s added, port %d\n", c, c.Config().GetInt("port"))
 
 	if addCmdStart || addCmdLogs {
 		if err = instance.Start(c); err != nil {

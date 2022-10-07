@@ -13,11 +13,12 @@ package fileagent
 import (
 	"sync"
 
-	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/rs/zerolog/log"
+
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/viper"
 )
 
 var FileAgent = geneos.Component{
@@ -45,14 +46,14 @@ var FileAgent = geneos.Component{
 		"faopts":    "options",
 	},
 	Defaults: []string{
-		"binary=agent.linux_64",
-		"fahome={{join .root \"fileagent\" \"fileagents\" .name}}",
-		"fabins={{join .root \"packages\" \"fileagent\"}}",
-		"fabase=active_prod",
-		"faexec={{join .fabins .fabase .binary}}",
-		"falogf=fileagent.log",
-		"faport=7030",
-		"falibs={{join .fabins .fabase \"lib64\"}}:{{join .fabins .fabase}}",
+		`binary=agent.linux_64`,
+		`home={{join .root "fileagent" "fileagents" .name}}`,
+		`install={{join .root "packages" "fileagent"}}`,
+		`version=active_prod`,
+		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
+		`logfile=fileagent.log`,
+		`port=7030`,
+		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 	},
 	GlobalSettings: map[string]string{
 		"FAPortRange": "7030,7100-",
@@ -83,12 +84,11 @@ func New(name string) geneos.Instance {
 		}
 	}
 	c := &FileAgents{}
-	c.Conf = viper.New()
+	c.Conf = config.New()
 	c.InstanceHost = r
-	// c.root = r.V().GetString("geneos")
 	c.Component = &FileAgent
 	if err := instance.SetDefaults(c, local); err != nil {
-		logger.Error.Fatalln(c, "setDefaults():", err)
+		log.Fatal().Err(err).Msgf("%s setDefaults()")
 	}
 	fileagents.Store(r.FullName(local), c)
 	return c
@@ -102,11 +102,17 @@ func (n *FileAgents) Type() *geneos.Component {
 }
 
 func (n *FileAgents) Name() string {
-	return n.V().GetString("name")
+	if n.Config() == nil {
+		return ""
+	}
+	return n.Config().GetString("name")
 }
 
 func (n *FileAgents) Home() string {
-	return n.V().GetString("home")
+	if n.Config() == nil {
+		return ""
+	}
+	return n.Config().GetString("home")
 }
 
 func (n *FileAgents) Prefix() string {
@@ -118,7 +124,7 @@ func (n *FileAgents) Host() *host.Host {
 }
 
 func (n *FileAgents) String() string {
-	return n.Type().String() + ":" + n.Name() + "@" + n.Host().String()
+	return instance.DisplayName(n)
 }
 
 func (n *FileAgents) Load() (err error) {
@@ -140,11 +146,11 @@ func (n *FileAgents) Loaded() bool {
 	return n.ConfigLoaded
 }
 
-func (n *FileAgents) V() *viper.Viper {
+func (n *FileAgents) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *FileAgents) SetConf(v *viper.Viper) {
+func (n *FileAgents) SetConf(v *config.Config) {
 	n.Conf = v
 }
 
@@ -152,11 +158,11 @@ func (n *FileAgents) Add(username string, tmpl string, port uint16) (err error) 
 	if port == 0 {
 		port = instance.NextPort(n.Host(), &FileAgent)
 	}
-	n.V().Set("port", port)
-	n.V().Set("user", username)
+	n.Config().Set("port", port)
+	n.Config().Set("user", username)
 
 	if err = instance.WriteConfig(n); err != nil {
-		logger.Error.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	// check tls config, create certs if found
@@ -174,17 +180,9 @@ func (c *FileAgents) Command() (args, env []string) {
 	logFile := instance.LogFile(c)
 	args = []string{
 		c.Name(),
-		"-port", c.V().GetString("port"),
+		"-port", c.Config().GetString("port"),
 	}
 	env = append(env, "LOG_FILENAME="+logFile)
-
-	// if c.FACert != "" {
-	// 	args = append(args, "-secure", "-ssl-certificate", c.FACert)
-	// }
-
-	// if c.FAKey != "" {
-	// 	args = append(args, "-ssl-certificate-key", c.FAKey)
-	// }
 
 	return
 }

@@ -19,27 +19,27 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/spf13/pflag"
 
-	"github.com/itrs-group/cordial/integrations/servicenow/settings"
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
-var cf settings.Settings
+var vc *config.Config
 
 type Incident map[string]string
 
@@ -48,12 +48,16 @@ var userRE = regexp.MustCompile(`^[\w\.@ ]+$`)
 
 func main() {
 	var conffile string
-	flag.StringVar(&conffile, "conf", "", "Optional path to configuration file")
-	flag.Parse()
+	var err error
+
+	pflag.StringVarP(&conffile, "conf", "c", "", "Optional path to configuration file")
+	pflag.Parse()
 
 	execname := filepath.Base(os.Args[0])
-	cf = settings.GetConfig(conffile, execname)
-
+	vc, err = config.LoadConfig(execname, config.SetAppName("itrs"), config.SetConfigFile(conffile))
+	if err != nil {
+		log.Fatalln(err)
+	}
 	// Initialization of go-echo server
 	e := echo.New()
 
@@ -62,7 +66,7 @@ func main() {
 
 	e.Use(Timestamp())
 
-	name := cf.ServiceNow.Instance
+	name := vc.GetString("servicenow.instance")
 	e.Use(middleware.BodyDump(func(c echo.Context, reqBody, resBody []byte) {
 		var reqMethod string
 		var resStatus int
@@ -110,7 +114,7 @@ func main() {
 	}))
 
 	e.Use(middleware.KeyAuth(func(key string, c echo.Context) (bool, error) {
-		return key == cf.API.APIKey, nil
+		return key == vc.GetString("api.apikey"), nil
 	}))
 
 	// list of endpoint routes
@@ -124,39 +128,26 @@ func main() {
 	// Put Endpoints
 	v1route.POST("/incident", AcceptEvent)
 
-	i := fmt.Sprintf("%s:%d", cf.API.Host, cf.API.Port)
+	i := fmt.Sprintf("%s:%d", vc.GetString("api.host"), vc.GetInt("api.port"))
 
-	_ = InitializeConnection()
+	InitializeConnection()
 
 	// firing up the server
-	if !cf.API.TLS.Enabled {
+	if !vc.GetBool("api.tls.enabled") {
 		e.Logger.Fatal(e.Start(i))
-	} else if cf.API.TLS.Enabled {
-		e.Logger.Fatal(e.StartTLS(i, cf.API.TLS.Certificate, cf.API.TLS.Key))
+	} else if vc.GetBool("api.tls.enabled") {
+		e.Logger.Fatal(e.StartTLS(i, vc.GetString("api.tls.certificate"), vc.GetString("api.tls.key")))
 	}
 }
 
 var snowConnection *snow.Connection
 
 func InitializeConnection() *snow.Connection {
-	// get password from a file
-	var pw []byte
-	var err error
 	if snowConnection != nil {
 		return snowConnection
 	}
 
-	pw = []byte(cf.ServiceNow.Password)
-	if len(pw) == 0 {
-		if strings.HasPrefix(cf.ServiceNow.PasswordFile, "~/") {
-			home, _ := os.UserHomeDir()
-			cf.ServiceNow.PasswordFile = strings.Replace(cf.ServiceNow.PasswordFile, "~", home, 1)
-		}
-		if pw, err = os.ReadFile(cf.ServiceNow.PasswordFile); err != nil {
-			log.Fatalf("cannot read password from file %q", cf.ServiceNow.PasswordFile)
-		}
-	}
-	snowConnection = snow.InitializeConnection(cf, strings.TrimSpace(string(pw)))
+	snowConnection = snow.InitializeConnection(vc)
 	return snowConnection
 }
 

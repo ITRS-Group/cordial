@@ -24,7 +24,7 @@ type PowerwallSampler struct {
 	pwurl string
 }
 
-func NewPW(s plugins.Connection, name string, group string) (*PowerwallSampler, error) {
+func NewPW(s *plugins.Connection, name string, group string) (*PowerwallSampler, error) {
 	c := new(PowerwallSampler)
 	c.Plugins = c
 	return c, c.New(s, name, group)

@@ -19,16 +19,18 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
 	"fmt"
 	"net/url"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // addHostCmd represents the addHost command
@@ -54,7 +56,7 @@ var addHostCmd = &cobra.Command{
 			h = host.Get(args[0])
 			if len(args) > 1 {
 				if sshurl, err = url.Parse(args[1]); err != nil {
-					logError.Printf("invalid ssh url %q", args[1])
+					log.Error().Msgf("invalid ssh url %q", args[1])
 					return geneos.ErrInvalidArgs
 				}
 			} else {
@@ -93,7 +95,7 @@ func addHost(h *host.Host, sshurl *url.URL) (err error) {
 
 	h.SetDefault("hostname", sshurl.Hostname())
 	h.SetDefault("port", 22)
-	h.SetDefault("username", viper.GetString("defaultuser"))
+	h.SetDefault("username", config.GetString("defaultuser"))
 	// XXX default to remote user's home dir, not local
 	h.SetDefault("geneos", host.Geneos())
 
@@ -123,14 +125,14 @@ func addHost(h *host.Host, sshurl *url.URL) (err error) {
 
 	host.Add(h)
 	if err = host.WriteConfigFile(); err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if addHostCmdInit {
 		// initialise the remote directory structure, but perhaps ignore errors
 		// as we may simply be adding an existing installation
 
-		if err = geneos.Init(h, geneos.Force(true), geneos.Username(h.GetString("username")), geneos.Homedir(h.GetString("geneos"))); err != nil {
+		if err = geneos.Init(h, geneos.Force(true), geneos.LocalUsername(h.GetString("username")), geneos.Homedir(h.GetString("geneos"))); err != nil {
 			return
 		}
 	}

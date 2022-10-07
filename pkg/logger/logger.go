@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package logger
 
 import (
@@ -28,7 +29,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime" // placeholder
+	"runtime"
 	"strings"
 	"time"
 )
@@ -80,12 +81,28 @@ func init() {
 	DisableDebugLog()
 }
 
+func refresh() {
+	Log = log.New(Logger, "", 0)
+	Debug = log.New(DebugLogger, "", 0)
+	Error = log.New(ErrorLogger, "", 0)
+}
+
 func EnableDebugLog() {
 	Debug.SetOutput(DebugLogger)
 }
 
 func DisableDebugLog() {
 	Debug.SetOutput(ioutil.Discard)
+}
+
+func (g *GeneosLogger) EnablePrefix() {
+	g.ShowPrefix = true
+	refresh()
+}
+
+func (g *GeneosLogger) DisablePrefix() {
+	g.ShowPrefix = false
+	refresh()
 }
 
 func (g GeneosLogger) Write(p []byte) (n int, err error) {
@@ -109,6 +126,7 @@ func (g GeneosLogger) Write(p []byte) (n int, err error) {
 				fnName = fn.Name()
 			}
 		}
+		fnName = filepath.Base(fnName)
 		fnName = strings.TrimPrefix(fnName, "main.")
 
 		line = fmt.Sprintf("%s%s():%d %s", prefix, fnName, ln, p)

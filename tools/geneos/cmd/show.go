@@ -23,12 +23,12 @@ package cmd
 
 import (
 	"encoding/json"
-	"regexp"
+	"fmt"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // showCmd represents the show command
@@ -55,23 +55,28 @@ to prevent visibility in casual viewing.`,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
-	RunE: func(cmd *cobra.Command, origargs []string) (err error) {
-		if len(origargs) == 0 {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		if len(args) == 0 {
 			// running config
-			rc := viper.AllSettings()
+			rc := config.GetConfig().ExpandAllSettings()
+			if showCmdRaw {
+				rc = config.GetConfig().AllSettings()
+			}
 			j, _ := json.MarshalIndent(rc, "", "    ")
-			j = opaqueJSONSecrets(j)
-			log.Println(string(j))
+			fmt.Println(string(j))
 			return nil
 		}
-		ct, args, params := cmdArgsParams(cmd)
-		return commandShow(ct, args, params)
+
+		return commandShow(cmdArgsParams(cmd))
 	},
 }
+
+var showCmdRaw bool
 
 func init() {
 	rootCmd.AddCommand(showCmd)
 
+	showCmd.Flags().BoolVarP(&showCmdRaw, "raw", "r", false, "Show raw (unexpanded) configuration values")
 	showCmd.Flags().SortFlags = false
 }
 
@@ -92,33 +97,24 @@ func showInstance(c geneos.Instance, params []string) (err error) {
 	var buffer []byte
 
 	// remove aliases
-	nv := viper.New()
-	for _, k := range c.V().AllKeys() {
+	nv := config.New()
+	for _, k := range c.Config().AllKeys() {
 		if _, ok := c.Type().Aliases[k]; !ok {
-			nv.Set(k, c.V().Get(k))
+			nv.Set(k, c.Config().Get(k))
 		}
 	}
 
 	// XXX wrap in location and type
-	cf := &showCmdConfig{Name: c.Name(), Host: c.Host().String(), Type: c.Type().String(), Config: nv.AllSettings()}
+	as := nv.ExpandAllSettings()
+	if showCmdRaw {
+		as = nv.AllSettings()
+	}
+	cf := &showCmdConfig{Name: c.Name(), Host: c.Host().String(), Type: c.Type().String(), Config: as}
 
 	if buffer, err = json.MarshalIndent(cf, "", "    "); err != nil {
 		return
 	}
-	buffer = opaqueJSONSecrets(buffer)
-	log.Printf("%s\n", string(buffer))
+	fmt.Println(string(buffer))
 
 	return
-}
-
-// XXX redact passwords - any field matching some regexp ?
-//
-var red1 = regexp.MustCompile(`"(.*((?i)pass|password|secret))": "(.*)"`)
-var red2 = regexp.MustCompile(`"(.*((?i)pass|password|secret))=(.*)"`)
-
-func opaqueJSONSecrets(j []byte) []byte {
-	// simple redact - and left field with "Pass" in it gets the right replaced
-	j = red1.ReplaceAll(j, []byte(`"$1": "********"`))
-	j = red2.ReplaceAll(j, []byte(`"$1=********"`))
-	return j
 }

@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package snow
 
 import (
@@ -56,12 +57,14 @@ func (t RequestTransitive) QueryTable(table string) (i ResultsArray, err error) 
 	resp, err := t.Client.Do(req)
 	if err != nil {
 		fmt.Printf("Error %s\n", err)
+		return
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Printf("Error %s\n", err)
+		return
 	}
 
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
@@ -69,6 +72,7 @@ func (t RequestTransitive) QueryTable(table string) (i ResultsArray, err error) 
 		err = json.Unmarshal(body, &r)
 		if err != nil {
 			fmt.Printf("Error %s %s\n", err, string(body))
+			return
 		}
 		i = r["result"]
 	} else {

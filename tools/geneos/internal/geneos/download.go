@@ -12,15 +12,16 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/spf13/viper"
 )
 
 const defaultURL = "https://resources.itrsgroup.com/download/latest/"
 
 func init() {
-	viper.SetDefault("download.url", defaultURL)
+	config.GetConfig().SetDefault("download.url", defaultURL)
 }
 
 // how to split an archive name into type and version
@@ -86,8 +87,23 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 	return
 }
 
+// OpenLocalFileOrURL returns an io.ReadCloser and the base filename for
+// the given source. The source can be a https: or http: URL or a path
+// to a file or '-' for STDIN.
 //
-func OpenLocalFileOrURL(source string) (from io.ReadCloser, filename string, err error) {
+// URLs are Parsed and fetched with the Go standard http.Get function
+// and therefore support proxies and basic authentication as provided by
+// the http package.
+//
+// If the file path begins '~/' then it is relative to the home
+// directory of the calling user, otherwise it is opened relative to the
+// working directory of the process.
+//
+// If any stage fails then err is returned with the appropriate kind of
+// error.
+func OpenLocalFileOrURL(source string, options ...GeneosOptions) (from io.ReadCloser, filename string, err error) {
+	opts := EvalOptions(options...)
+
 	u, err := url.Parse(source)
 	if err != nil {
 		return
@@ -98,19 +114,19 @@ func OpenLocalFileOrURL(source string) (from io.ReadCloser, filename string, err
 		var resp *http.Response
 		resp, err = http.Get(u.String())
 		if err != nil {
-			logError.Fatalln(err)
+			return
 		}
 		// only use auth if required
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
-			if viper.GetString("download.username") != "" {
+			if opts.username != "" {
 				var req *http.Request
 				client := &http.Client{}
 				if req, err = http.NewRequest("GET", u.String(), nil); err != nil {
-					logError.Fatalln(err)
+					return
 				}
-				req.SetBasicAuth(viper.GetString("download.username"), viper.GetString("download.password"))
+				req.SetBasicAuth(opts.username, opts.password)
 				if resp, err = client.Do(req); err != nil {
-					logError.Fatalln(err)
+					return
 				}
 			}
 		}
@@ -125,6 +141,11 @@ func OpenLocalFileOrURL(source string) (from io.ReadCloser, filename string, err
 		from = os.Stdin
 		filename = "STDIN"
 	default:
+		if strings.HasPrefix(source, "~/") {
+			home, _ := os.UserHomeDir()
+			source = fmt.Sprintf("%s/%s", home, strings.TrimPrefix(source, "~/"))
+		}
+		source, _ = filepath.Abs(source)
 		from, err = os.Open(source)
 		filename = filepath.Base(source)
 	}

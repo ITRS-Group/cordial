@@ -22,9 +22,10 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // unsetGlobalCmd represents the unsetGlobal command
@@ -51,7 +52,7 @@ func init() {
 func commandUnsetGlobal(ct *geneos.Component, args, params []string) error {
 	var changed bool
 	orig := readConfigFile(geneos.GlobalConfigPath)
-	new := viper.New()
+	new := config.New()
 
 OUTER:
 	for _, k := range orig.AllKeys() {
@@ -65,7 +66,7 @@ OUTER:
 	}
 
 	if changed {
-		logDebug.Println(orig.AllSettings())
+		log.Debug().Msgf("%v", orig.AllSettings())
 		new.SetConfigFile(geneos.GlobalConfigPath)
 		return new.WriteConfig()
 	}

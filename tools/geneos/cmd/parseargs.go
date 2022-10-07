@@ -7,11 +7,12 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
 // given a list of args (after command has been seen), check if first
-// arg is a component type and depdup the names. A name of "all" will
+// arg is a component type and de-dup the names. A name of "all" will
 // will override the rest and result in a lookup being done
 //
 // args with an '=' should be checked and only allowed if there are names?
@@ -24,7 +25,6 @@ import (
 // any args with '=' are treated as parameters
 //
 // a bare argument with a '@' prefix means all instance of type on a host
-//
 func parseArgs(cmd *cobra.Command, rawargs []string) {
 	var wild bool
 	var newnames []string
@@ -43,7 +43,7 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 		return
 	}
 
-	logDebug.Println("rawargs:", rawargs)
+	log.Debug().Msgf("rawargs: %s", rawargs)
 
 	// filter in place - pull out all args containing '=' into params
 	// after rebuild this should only apply to 'import'
@@ -59,9 +59,11 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 	}
 	rawargs = rawargs[:n]
 
-	logDebug.Println("rawargs, params", rawargs, params)
+	log.Debug().Msgf("rawargs %v, params %v, ct %s", rawargs, params, a["ct"])
 
-	a["ct"] = "none"
+	if _, ok := a["ct"]; !ok {
+		a["ct"] = ""
+	}
 	jsonargs, _ := json.Marshal(params)
 	a["params"] = string(jsonargs)
 
@@ -74,18 +76,29 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 			a["args"] = string(jsonargs)
 			return
 		}
-		a["ct"] = rawargs[0]
+		if a["ct"] == "" {
+			a["ct"] = rawargs[0]
+		}
 		args = rawargs[1:]
 	} else {
+		defaultComponent := a["ct"]
+		if defaultComponent == "" && len(rawargs) > 0 {
+			defaultComponent = rawargs[0]
+		}
 		// work through wildcard options
-		if len(rawargs) == 0 {
-			// nothing
-		} else if ct = geneos.ParseComponentName(rawargs[0]); ct == nil {
+		// if len(rawargs) == 0 {
+		// 	// nothing
+		// } else
+		if ct = geneos.ParseComponentName(defaultComponent); ct == nil {
 			// first arg is not a known type, so treat the rest as instance names
 			args = rawargs
 		} else {
-			a["ct"] = rawargs[0]
-			args = rawargs[1:]
+			if a["ct"] == "" {
+				a["ct"] = rawargs[0]
+				args = rawargs[1:]
+			} else {
+				args = rawargs
+			}
 		}
 
 		if len(args) == 0 {
@@ -101,20 +114,20 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 			for _, arg := range args {
 				// check if not valid first and leave unchanged, skip
 				if !(strings.HasPrefix(arg, "@") || instance.ValidInstanceName(arg)) {
-					logDebug.Println("leaving unchanged:", arg)
+					log.Debug().Msgf("leaving unchanged: %s", arg)
 					nargs = append(nargs, arg)
 					continue
 				}
 				_, local, r := instance.SplitName(arg, host.ALL)
 				if !r.Exists() {
-					logDebug.Println(arg, "- host not found")
+					log.Debug().Msgf("%s - host not found", arg)
 					// we have tried to match something and it may result in an empty list
 					// so don't re-process
 					wild = true
 					continue
 				}
 
-				logDebug.Println("split", arg, "into:", local, r.String())
+				log.Debug().Msgf("split %s into: %s %s", arg, local, r.String())
 				if local == "" {
 					// only a '@host' in arg
 					if r.Exists() {
@@ -127,24 +140,19 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 					var matched bool
 					for _, rem := range host.AllHosts() {
 						wild = true
-						logDebug.Printf("checking host %s for %s", rem.String(), local)
+						log.Debug().Msgf("checking host %s for %s", rem.String(), local)
 						name := local + "@" + rem.String()
-						if ct == nil {
-							for _, cr := range geneos.RealComponents() {
-								if i, err := instance.Get(cr, name); err == nil && i.Loaded() {
-									nargs = append(nargs, name)
-									matched = true
-								}
+						for _, ct := range ct.Range(geneos.RealComponents()...) {
+							if i, err := instance.Get(ct, name); err == nil && i.Loaded() {
+								nargs = append(nargs, name)
+								matched = true
 							}
-						} else if i, err := instance.Get(ct, name); err == nil && i.Loaded() {
-							nargs = append(nargs, name)
-							matched = true
 						}
 					}
 					if !matched && instance.ValidInstanceName(arg) {
 						// move the unknown unchanged - file or url - arg so it can later be pushed to params
 						// do not set 'wild' though?
-						logDebug.Println(arg, "not found, saving to params")
+						log.Debug().Msgf("%s not found, saving to params", arg)
 						nargs = append(nargs, arg)
 					}
 				} else {
@@ -157,7 +165,7 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 		}
 	}
 
-	logDebug.Println("ct, args, params", ct, args, params)
+	log.Debug().Msgf("ct %s, args %v, params %v", ct, args, params)
 
 	m := make(map[string]bool, len(args))
 	// traditional loop because we can't modify args in a loop to skip
@@ -165,7 +173,7 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 		name := args[i]
 		// filter name here
 		if !wild && instance.ReservedName(name) {
-			logError.Fatalf("%q is reserved name", name)
+			log.Fatal().Msgf("%q is reserved name", name)
 		}
 		// move unknown args to params
 		if !instance.ValidInstanceName(name) {
@@ -197,14 +205,14 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 		a["args"] = string(jsonargs)
 	}
 
-	logDebug.Println("ct, args, params", ct, args, params)
+	log.Debug().Msgf("ct %s, args %v, params %v", ct, args, params)
 }
 
 func cmdArgs(cmd *cobra.Command) (ct *geneos.Component, args []string) {
-	logDebug.Println("ct", cmd.Annotations["ct"], ct)
+	log.Debug().Msgf("%s %v", cmd.Annotations, ct)
 	ct = geneos.ParseComponentName(cmd.Annotations["ct"])
 	if err := json.Unmarshal([]byte(cmd.Annotations["args"]), &args); err != nil {
-		logDebug.Println(err)
+		log.Debug().Err(err).Msg("")
 	}
 	return
 }
@@ -212,7 +220,7 @@ func cmdArgs(cmd *cobra.Command) (ct *geneos.Component, args []string) {
 func cmdArgsParams(cmd *cobra.Command) (ct *geneos.Component, args, params []string) {
 	ct, args = cmdArgs(cmd)
 	if err := json.Unmarshal([]byte(cmd.Annotations["params"]), &params); err != nil {
-		logDebug.Println(err)
+		log.Debug().Err(err).Msg("")
 	}
 	return
 }

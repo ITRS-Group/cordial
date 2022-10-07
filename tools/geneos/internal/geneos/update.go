@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/rs/zerolog/log"
 )
 
 // check selected version exists first
@@ -16,7 +17,7 @@ func Update(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
 	if ct == nil {
 		for _, t := range RealComponents() {
 			if err = Update(h, t, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
-				logError.Println(err)
+				log.Error().Err(err).Msg("")
 			}
 		}
 		return nil
@@ -37,7 +38,7 @@ func Update(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
 	if ct.RelatedTypes != nil {
 		for _, rct := range ct.RelatedTypes {
 			if err = Update(h, rct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
-				logError.Println(err)
+				log.Error().Err(err).Msg("")
 			}
 		}
 		return nil
@@ -46,7 +47,7 @@ func Update(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
 	if h == host.ALL {
 		for _, h := range host.AllHosts() {
 			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
-				logError.Println(err)
+				log.Error().Err(err).Msg("")
 			}
 		}
 		return
@@ -54,9 +55,9 @@ func Update(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
 
 	// from here hosts and component types are specific
 
-	logDebug.Printf("checking and updating %s on %s %q to %q", ct, h, opts.basename, opts.version)
+	log.Debug().Msgf("checking and updating %s on %s %q to %q", ct, h, opts.basename, opts.version)
 
-	basedir := h.GeneosJoinPath("packages", ct.String())
+	basedir := h.Filepath("packages", ct)
 	basepath := filepath.Join(basedir, opts.basename)
 
 	if opts.version == "latest" {
@@ -72,7 +73,7 @@ func Update(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
 	// does the version directory exist?
 	existing, err := h.Readlink(basepath)
 	if err != nil {
-		logDebug.Println("cannot read link for existing version", basepath)
+		log.Debug().Msgf("cannot read link for existing version %s", basepath)
 	}
 
 	// before removing existing link, check there is something to link to
@@ -95,6 +96,6 @@ func Update(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
 	if err = h.Symlink(opts.version, basepath); err != nil {
 		return err
 	}
-	log.Println(ct, h.Path(basepath), "updated to", opts.version)
+	fmt.Println(ct, h.Path(basepath), "updated to", opts.version)
 	return nil
 }

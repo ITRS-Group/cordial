@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	// logger.EnableDebugLog()
+	logger.EnableDebugLog()
 }
 
 var (
@@ -23,7 +23,7 @@ type ProcessSampler struct {
 	samplers.Samplers
 }
 
-func New(s plugins.Connection, name string, group string) (*ProcessSampler, error) {
+func New(s *plugins.Connection, name string, group string) (*ProcessSampler, error) {
 	c := new(ProcessSampler)
 	c.Plugins = c
 	return c, c.New(s, name, group)

@@ -14,4 +14,4 @@ TEXT="Geneos time: ${_ALERT_CREATED}\nGateway: ${_GATEWAY}\nManaged Entity: ${_M
 SEARCH="name=${_NETPROBE_HOST}"
 # SEARCH="sys_id=${UUID}"
 
-${SNOW_CLIENT_BINARY} -short "${SHORT}" -search "${SEARCH}" -text "${TEXT}" -id "${ID:-$_MANAGED_ENTITY}" -severity "${_SEVERITY}" category="${COMPONENT:-Hardware}"
+${SNOW_CLIENT_BINARY} --short "${SHORT}" --search "${SEARCH}" --text "${TEXT}" --id "${ID:-$_MANAGED_ENTITY}" --severity "${_SEVERITY}" category="${COMPONENT:-Hardware}"

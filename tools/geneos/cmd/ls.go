@@ -64,21 +64,37 @@ var lsTabWriter *tabwriter.Writer
 var csvWriter *csv.Writer
 var jsonEncoder *json.Encoder
 
+type lsCmdType struct {
+	Type     string
+	Name     string
+	Disabled string
+	Host     string
+	Port     int64
+	Version  string
+	Home     string
+}
+
+var lsCmdEntries []lsCmdType
+
 func commandLS(ct *geneos.Component, args []string, params []string) (err error) {
 	switch {
 	case lsCmdJSON:
-		jsonEncoder = json.NewEncoder(log.Writer())
-		if lsCmdIndent {
-			jsonEncoder.SetIndent("", "    ")
-		}
+		lsCmdEntries = []lsCmdType{}
 		err = instance.ForAll(ct, lsInstanceJSON, args, params)
+		var b []byte
+		if lsCmdIndent {
+			b, _ = json.MarshalIndent(lsCmdEntries, "", "    ")
+		} else {
+			b, _ = json.Marshal(lsCmdEntries)
+		}
+		fmt.Println(string(b))
 	case lsCmdCSV:
-		csvWriter = csv.NewWriter(log.Writer())
+		csvWriter = csv.NewWriter(os.Stdout)
 		csvWriter.Write([]string{"Type", "Name", "Disabled", "Host", "Port", "Version", "Home"})
 		err = instance.ForAll(ct, lsInstanceCSV, args, params)
 		csvWriter.Flush()
 	default:
-		lsTabWriter = tabwriter.NewWriter(log.Writer(), 3, 8, 2, ' ', 0)
+		lsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintf(lsTabWriter, "Type\tName\tHost\tPort\tVersion\tHome\n")
 		err = instance.ForAll(ct, lsInstancePlain, args, params)
 		lsTabWriter.Flush()
@@ -95,7 +111,7 @@ func lsInstancePlain(c geneos.Instance, params []string) (err error) {
 		suffix = "*"
 	}
 	base, underlying, _ := instance.Version(c)
-	fmt.Fprintf(lsTabWriter, "%s\t%s\t%s\t%d\t%s:%s\t%s\n", c.Type(), c.Name()+suffix, c.Host(), c.V().GetInt("port"), base, underlying, c.Home())
+	fmt.Fprintf(lsTabWriter, "%s\t%s\t%s\t%d\t%s:%s\t%s\n", c.Type(), c.Name()+suffix, c.Host(), c.Config().GetInt("port"), base, underlying, c.Home())
 	return
 }
 
@@ -105,18 +121,8 @@ func lsInstanceCSV(c geneos.Instance, params []string) (err error) {
 		dis = "Y"
 	}
 	base, underlying, _ := instance.Version(c)
-	csvWriter.Write([]string{c.Type().String(), c.Name(), dis, c.Host().String(), fmt.Sprint(c.V().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	csvWriter.Write([]string{c.Type().String(), c.Name(), dis, c.Host().String(), fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 	return
-}
-
-type lsType struct {
-	Type     string
-	Name     string
-	Disabled string
-	Host     string
-	Port     int64
-	Version  string
-	Home     string
 }
 
 func lsInstanceJSON(c geneos.Instance, params []string) (err error) {
@@ -125,6 +131,6 @@ func lsInstanceJSON(c geneos.Instance, params []string) (err error) {
 		dis = "Y"
 	}
 	base, underlying, _ := instance.Version(c)
-	jsonEncoder.Encode(lsType{c.Type().String(), c.Name(), dis, c.Host().String(), c.V().GetInt64("port"), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	lsCmdEntries = append(lsCmdEntries, lsCmdType{c.Type().String(), c.Name(), dis, c.Host().String(), c.Config().GetInt64("port"), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 	return
 }

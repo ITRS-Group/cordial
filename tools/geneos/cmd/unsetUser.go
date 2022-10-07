@@ -22,9 +22,10 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // unsetUserCmd represents the unsetUser command
@@ -50,8 +51,8 @@ func init() {
 
 func commandUnsetUser(ct *geneos.Component, args, params []string) error {
 	var changed bool
-	orig := readConfigFile(geneos.UserConfigFilePath())
-	new := viper.New()
+	orig := readConfigFile(geneos.UserConfigFilePaths()...)
+	new := config.New()
 
 OUTER:
 	for _, k := range orig.AllKeys() {
@@ -65,8 +66,8 @@ OUTER:
 	}
 
 	if changed {
-		logDebug.Println(orig.AllSettings())
-		new.SetConfigFile(geneos.UserConfigFilePath())
+		log.Debug().Msgf("%v", orig.AllSettings())
+		new.SetConfigFile(geneos.UserConfigFilePaths()[0])
 		return new.WriteConfig()
 	}
 	return nil

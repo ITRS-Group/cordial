@@ -25,8 +25,11 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"fmt"
 	"path/filepath"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
@@ -66,15 +69,15 @@ func TLSInit() (err error) {
 	// directory permissions do not need to be restrictive
 	err = host.LOCAL.MkdirAll(tlsPath, 0775)
 	if err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if err := newRootCA(tlsPath); err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if err := newIntrCA(tlsPath); err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	return TLSSync()
@@ -87,7 +90,7 @@ func newRootCA(dir string) (err error) {
 	rootKeyPath := filepath.Join(dir, geneos.RootCAFile+".key")
 
 	if _, err = instance.ReadRootCert(); err == nil {
-		log.Println(geneos.RootCAFile, "already exists")
+		log.Error().Msgf("%s already exists", geneos.RootCAFile)
 		return
 	}
 	serial, err := rand.Prime(rand.Reader, 64)
@@ -118,7 +121,7 @@ func newRootCA(dir string) (err error) {
 	if err = host.LOCAL.WriteKey(rootKeyPath, key); err != nil {
 		return
 	}
-	log.Println("CA certificate created for", geneos.RootCAFile)
+	fmt.Printf("CA certificate created for %s\n", geneos.RootCAFile)
 
 	return
 }
@@ -129,7 +132,7 @@ func newIntrCA(dir string) (err error) {
 	intrKeyPath := filepath.Join(dir, geneos.SigningCertFile+".key")
 
 	if _, err = instance.ReadSigningCert(); err == nil {
-		log.Println(geneos.SigningCertFile, "already exists")
+		log.Error().Msgf("%s already exists", geneos.SigningCertFile)
 		return
 	}
 
@@ -171,7 +174,7 @@ func newIntrCA(dir string) (err error) {
 		return
 	}
 
-	log.Println("Signing certificate created for", geneos.SigningCertFile)
+	fmt.Printf("Signing certificate created for %s\n", geneos.SigningCertFile)
 
 	return
 }

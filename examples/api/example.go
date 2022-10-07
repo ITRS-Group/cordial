@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/url"
 	"sync"
 	"time"
 
@@ -17,7 +18,7 @@ import (
 )
 
 func init() {
-	// logger.EnableDebugLog()
+	logger.EnableDebugLog()
 }
 
 var (
@@ -47,12 +48,13 @@ func main() {
 	}
 
 	// connect to netprobe
-	url := fmt.Sprintf("https://%s:%v/xmlrpc", hostname, port)
-	p, err := plugins.Sampler(url, entityname, samplername)
+	// url := fmt.Sprintf("https://%s:%v/xmlrpc", hostname, port)
+	u := &url.URL{Scheme: "https", Host: fmt.Sprintf("%s:%d", hostname, port), Path: "/xmlrpc"}
+	p, err := plugins.Open(u, entityname, samplername)
 	if err != nil {
 		log.Fatal(err)
 	}
-	p.AllowUnverifiedCertificates()
+	p.InsecureSkipVerify()
 
 	m, err := memory.New(p, "memory", "SYSTEM")
 	if err != nil {
@@ -84,28 +86,25 @@ func main() {
 	g.SetInterval(interval)
 	g.Start(&wg)
 
-	powerwall, err := NewPW(p, "PW Meters", "Powerwall")
-	defer powerwall.Close()
-	powerwall.SetInterval(interval)
-	powerwall.Start(&wg)
+	// powerwall, err := NewPW(p, "PW Meters", "Powerwall")
+	// defer powerwall.Close()
+	// powerwall.SetInterval(interval)
+	// powerwall.Start(&wg)
 
 	streamssampler := "streams"
-	sp, err := streams.Sampler(fmt.Sprintf("https://%s:%v/xmlrpc", hostname, port), entityname, streamssampler)
+	sp, err := streams.Open(u, entityname, streamssampler, "teststream")
 	if err != nil {
 		log.Fatal(err)
 	}
-	sp.AllowUnverifiedCertificates()
+	sp.InsecureSkipVerify()
 
 	wg.Add(1)
-	sp.SetStreamName("teststream")
 	go func() {
 		tick := time.NewTicker(5 * time.Second)
 		defer tick.Stop()
 		for {
 			<-tick.C
-			// err := sp.WriteMessage("teststream", time.Now().String()+" this is a test")
-
-			_, err := sp.WriteString(time.Now().String() + " this is a test")
+			fmt.Fprintln(sp, time.Now().String(), "this is a test")
 			if err != nil {
 				log.Fatal(err)
 				break

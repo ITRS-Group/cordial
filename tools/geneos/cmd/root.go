@@ -19,40 +19,32 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
-	_ "embed"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"strings"
 
-	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-// give these more convenient names and also shadow the std log
-// package for normal logging
-var (
-	log      = logger.Log
-	logDebug = logger.Debug
-	logError = logger.Error
-)
+const pkgname = "cordial"
 
 var (
 	ErrInvalidArgs  error = errors.New("invalid arguments")
 	ErrNotSupported error = errors.New("not supported")
 )
-
-//go:embed VERSION
-var VERSION string
 
 var cfgFile string
 
@@ -66,7 +58,7 @@ template based configuration files for SANs and new gateways.`,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations:           make(map[string]string),
-	Version:               VERSION,
+	Version:               cordial.VERSION,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		// check initialisation
 		geneosdir := host.Geneos()
@@ -74,29 +66,19 @@ template based configuration files for SANs and new gateways.`,
 			// only allow init through
 			if cmd != initCmd && cmd != setUserCmd && cmd != setGlobalCmd {
 				cmd.SetUsageTemplate(" ")
-				return fmt.Errorf("%s", `Installation directory is not set.
+				return fmt.Errorf("%s", `Geneos installation directory not set.
 
-You can fix this by doing one of the following:
+Use one of the following to fix this:
 
-1. Create a new Geneos environment:
-
-	$ geneos init
-
-	or, if not in your home directory:
-
-	$ geneos init /path/to/geneos
-
-2. Set the ITRS_HOME environment:
-
-	$ export ITRS_HOME=/path/to/geneos
-
-3. Set the Geneos path in your user's configuration file:
-
+For an existing installation:
 	$ geneos set user geneos=/path/to/geneos
 
-3. Set the Geneos path in the global configuration file (usually as root):
+To initialise a new installation:
+	$ geneos init /path/to/geneos
 
-	# echo '{ "Geneos": "/path/to/geneos" }' > `+geneos.GlobalConfigPath)
+For temporary usage:
+	$ export ITRS_HOME=/path/to/geneos
+`)
 			}
 		}
 
@@ -132,68 +114,46 @@ func init() {
 	rootCmd.PersistentFlags().MarkHidden("debug")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
 
-	rootCmd.PersistentFlags().StringVarP(&username, "username", "u", "", "username for downloads")
-	// rootCmd.PersistentFlags().BoolVarP(&passwordPrompt, "password", "p", false, "prompt for a password, only valid for downloads and in conjunction with -u")
-	rootCmd.PersistentFlags().StringVarP(&passwordFile, "pwfile", "P", "", "path to password file, only valid for downloads and in conjunction with -u")
-
 	rootCmd.PersistentFlags().SortFlags = false
 	rootCmd.Flags().SortFlags = false
 }
 
-var username, passwordFile string
-
-// var passwordPrompt bool
-
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	cordial.LogInit(pkgname)
+
 	if quiet {
-		log.SetOutput(ioutil.Discard)
+		zerolog.SetGlobalLevel(zerolog.Disabled)
 	} else if debug {
-		logger.EnableDebugLog()
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-	viper.SetEnvPrefix("ITRS")
-	viper.BindEnv("geneos", "ITRS_HOME")
+	oldConfDir, _ := os.UserConfigDir()
 
+	cf, err := config.LoadConfig("geneos", config.SetConfigFile(cfgFile), config.UseGlobal(), config.AddConfigDirs(oldConfDir))
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+	// support old set-ups
+	cf.BindEnv("geneos", "ITRS_HOME")
+
+	// auto env variables must be prefixed "ITRS_"
+	cf.SetEnvPrefix("ITRS")
 	replacer := strings.NewReplacer(".", "_")
-	viper.SetEnvKeyReplacer(replacer)
-	viper.AutomaticEnv()
+	cf.SetEnvKeyReplacer(replacer)
+	cf.AutomaticEnv()
 
 	u, _ := user.Current()
-	viper.SetDefault("defaultuser", u.Username)
-
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-		viper.ReadInConfig()
-	} else {
-		// Search config in home directory with name "geneos" (without extension).
-		viper.SetConfigFile(geneos.GlobalConfigPath)
-		viper.ReadInConfig()
-
-		// merge in home config
-		viper.SetConfigFile(geneos.UserConfigFilePath())
-		viper.MergeInConfig()
-	}
+	cf.SetDefault("defaultuser", u.Username)
 
 	// manual alias+remove as the viper.RegisterAlias doesn't work as expected
-	if viper.IsSet("itrshome") {
-		if !viper.IsSet("geneos") {
-			viper.Set("geneos", viper.GetString("itrshome"))
+	if cf.IsSet("itrshome") {
+		if !cf.IsSet("geneos") {
+			cf.Set("geneos", cf.GetString("itrshome"))
 		}
-		viper.Set("itrshome", nil)
-	}
-
-	if username != "" {
-		viper.Set("download.username", username)
-	}
-
-	if passwordFile != "" {
-		viper.Set("download.password", utils.ReadPasswordFile(passwordFile))
-	} else if username != "" {
-		viper.Set("download.password", utils.ReadPasswordPrompt())
-		// only ask once
-		// passwordPrompt = false
+		cf.Set("itrshome", nil)
 	}
 
 	// initialise after config loaded

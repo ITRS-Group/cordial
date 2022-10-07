@@ -8,6 +8,12 @@
 # cobra-cli init
 # cobra-cli add add
 # cobra-cli add addHost -p addCmd
+# cobra-cli add aes
+# cobra-cli add aesDecode -p aesCmd
+# cobra-cli add aesEncode -p aesCmd
+# cobra-cli add aesLs -p aesCmd
+# cobra-cli add aesNew -p aesCmd
+# cobra-cli add aesUpdate -p aesCmd
 # cobra-cli add clean
 # cobra-cli add command
 # cobra-cli add copy
@@ -35,6 +41,7 @@
 # cobra-cli add show
 # cobra-cli add showUser -p showCmd
 # cobra-cli add showGlobal -p showCmd
+# cobra-cli add snapshot
 # cobra-cli add start
 # cobra-cli add stop
 # cobra-cli add tls

@@ -16,8 +16,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/spf13/viper"
 )
 
 // locate and return an open archive for the host and component given
@@ -28,14 +30,17 @@ func OpenComponentArchive(ct *Component, options ...GeneosOptions) (body io.Read
 	opts := EvalOptions(options...)
 
 	if opts.filename != "" {
-		return OpenLocalFileOrURL(opts.filename)
+		return OpenLocalFileOrURL(opts.filename, options...)
 	}
 
 	if opts.local {
 		// archive directory is local only
-		archiveDir := host.LOCAL.GeneosJoinPath("packages", "downloads")
+		if opts.version == "latest" {
+			opts.version = ""
+		}
+		archiveDir := host.LOCAL.Filepath("packages", "downloads")
 		filename = latest(host.LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
-			logDebug.Println(v.Name(), ct.String())
+			log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
 			switch ct.String() {
 			case "webserver":
 				return !strings.Contains(v.Name(), "web-server")
@@ -70,7 +75,7 @@ func OpenComponentArchive(ct *Component, options ...GeneosOptions) (body io.Read
 	s, err := host.LOCAL.Stat(archivePath)
 	if err == nil && s.St.Size() == resp.ContentLength {
 		if f, err := host.LOCAL.Open(archivePath); err == nil {
-			logDebug.Println("not downloading, file already exists:", archivePath)
+			log.Debug().Msgf("not downloading, file already exists: %s", archivePath)
 			resp.Body.Close()
 			return f, filename, nil
 		}
@@ -94,7 +99,7 @@ func OpenComponentArchive(ct *Component, options ...GeneosOptions) (body io.Read
 	if err != nil {
 		return
 	}
-	log.Printf("downloading %s package version %q to %s", ct, opts.version, archivePath)
+	fmt.Printf("downloading %s package version %q to %s\n", ct, opts.version, archivePath)
 	t1 := time.Now()
 	if _, err = io.Copy(w, resp.Body); err != nil {
 		return
@@ -106,7 +111,7 @@ func OpenComponentArchive(ct *Component, options ...GeneosOptions) (body io.Read
 	if dr > 0 {
 		bps = float64(b) / dr
 	}
-	log.Printf("downloaded %d bytes in %.3f seconds (%.0f bytes/sec)", b, dr, bps)
+	fmt.Printf("downloaded %d bytes in %.3f seconds (%.0f bytes/sec)\n", b, dr, bps)
 	if _, err = w.Seek(0, 0); err != nil {
 		return
 	}
@@ -135,7 +140,7 @@ func Unarchive(r *host.Host, ct *Component, filename string, gz io.Reader, optio
 			break
 		default:
 			// mismatch
-			logDebug.Printf("component type and archive mismatch: %q is not a %q", filename, ct)
+			log.Debug().Msgf("component type and archive mismatch: %q is not a %q", filename, ct)
 			return
 		}
 	} else {
@@ -154,8 +159,8 @@ func Unarchive(r *host.Host, ct *Component, filename string, gz io.Reader, optio
 		}
 	}
 
-	basedir := r.GeneosJoinPath("packages", ct.String(), version)
-	logDebug.Println(basedir)
+	basedir := r.Filepath("packages", ct, version)
+	log.Debug().Msg(basedir)
 	if _, err = r.Stat(basedir); err == nil {
 		// something is already using that dir
 		// XXX - option to delete and overwrite?
@@ -210,7 +215,7 @@ func Unarchive(r *host.Host, ct *Component, filename string, gz io.Reader, optio
 			continue
 		}
 		if name, err = host.CleanRelativePath(name); err != nil {
-			logError.Fatalln(err)
+			log.Fatal().Err(err).Msg("")
 		}
 		fullpath := filepath.Join(basedir, name)
 		switch hdr.Typeflag {
@@ -231,7 +236,7 @@ func Unarchive(r *host.Host, ct *Component, filename string, gz io.Reader, optio
 				return err
 			}
 			if n != hdr.Size {
-				log.Println("lengths different:", hdr.Size, n)
+				log.Error().Msgf("lengths different: %s %d", hdr.Size, n)
 			}
 			out.Close()
 
@@ -242,19 +247,19 @@ func Unarchive(r *host.Host, ct *Component, filename string, gz io.Reader, optio
 
 		case tar.TypeSymlink, tar.TypeGNULongLink:
 			if filepath.IsAbs(hdr.Linkname) {
-				logError.Fatalln("archive contains absolute symlink target")
+				log.Fatal().Msg("archive contains absolute symlink target")
 			}
 			if _, err = r.Stat(fullpath); err != nil {
 				if err = r.Symlink(hdr.Linkname, fullpath); err != nil {
-					logError.Fatalln(err)
+					log.Fatal().Err(err).Msg("")
 				}
 			}
 
 		default:
-			log.Printf("unsupported file type %c\n", hdr.Typeflag)
+			log.Warn().Msgf("unsupported file type %c\n", hdr.Typeflag)
 		}
 	}
-	log.Printf("installed %q to %q\n", filename, r.Path(basedir))
+	fmt.Printf("installed %q to %q\n", filename, r.Path(basedir))
 	options = append(options, Version(version))
 	return Update(r, ct, options...)
 }
@@ -300,26 +305,26 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 		downloadURL.RawQuery = v.Encode()
 		source = downloadURL.String()
 
-		logDebug.Println("nexus url:", source)
+		log.Debug().Msgf("nexus url: %s", source)
 
-		if viper.GetString("download.username") != "" {
+		if opts.username != "" {
 			var req *http.Request
 			client := &http.Client{}
 			if req, err = http.NewRequest("GET", source, nil); err != nil {
-				logError.Fatalln(err)
+				log.Fatal().Err(err).Msg("")
 			}
-			req.SetBasicAuth(viper.GetString("download.username"), viper.GetString("download.password"))
+			req.SetBasicAuth(opts.username, opts.password)
 			if resp, err = client.Do(req); err != nil {
-				logError.Fatalln(err)
+				log.Fatal().Err(err).Msg("")
 			}
 		} else {
 			if resp, err = http.Get(source); err != nil {
-				logError.Fatalln(err)
+				log.Fatal().Err(err).Msg("")
 			}
 		}
 
 	default:
-		baseurl := viper.GetString("download.url")
+		baseurl := config.GetString("download.url")
 		downloadURL, _ := url.Parse(baseurl)
 		realpath, _ := url.Parse(ct.DownloadBase.Resources)
 		v := url.Values{}
@@ -327,7 +332,7 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 		v.Set("os", "linux")
 		if opts.version != "latest" {
 			if platform != "" {
-				log.Fatalf("cannot download specific version for this platform (%q) - please download manually", platform)
+				log.Fatal().Msgf("cannot download specific version for this platform (%q) - please download manually", platform)
 			}
 			v.Set("title", opts.version)
 		} else if platform != "" {
@@ -337,10 +342,10 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 		realpath.RawQuery = v.Encode()
 		source = downloadURL.ResolveReference(realpath).String()
 
-		logDebug.Println("source url:", source)
+		log.Debug().Msgf("source url: %s", source)
 
 		if resp, err = http.Get(source); err != nil {
-			logError.Fatalln(err)
+			log.Fatal().Err(err).Msg("")
 		}
 
 		if resp.StatusCode == 404 && platform != "" {
@@ -349,25 +354,25 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 			realpath.RawQuery = v.Encode()
 			source = downloadURL.ResolveReference(realpath).String()
 
-			logDebug.Printf("platform download failed, retry source url: %q", source)
+			log.Debug().Msgf("platform download failed, retry source url: %q", source)
 			if resp, err = http.Get(source); err != nil {
-				logError.Fatalln(err)
+				log.Fatal().Err(err).Msg("")
 			}
 		}
 
 		// only use auth if required - but save auth for potential reuse below
 		var auth_body []byte
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
-			if viper.GetString("download.username") != "" {
-				da := downloadauth{viper.GetString("download.username"), viper.GetString("download.password")}
+			if opts.username != "" {
+				da := downloadauth{opts.username, opts.password}
 				auth_body, err = json.Marshal(da)
 				if err != nil {
-					logError.Fatalln(err)
+					log.Fatal().Err(err).Msg("")
 				}
 				ba := auth_body
 				auth_reader := bytes.NewBuffer(ba)
 				if resp, err = http.Post(source, "application/json", auth_reader); err != nil {
-					logError.Fatalln(err)
+					log.Fatal().Err(err).Msg("")
 				}
 			}
 		}
@@ -379,10 +384,10 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 			realpath.RawQuery = v.Encode()
 			source = downloadURL.ResolveReference(realpath).String()
 
-			logDebug.Printf("platform download failed, retry source url: %q", source)
+			log.Debug().Msgf("platform download failed, retry source url: %q", source)
 			auth_reader := bytes.NewBuffer(auth_body)
 			if resp, err = http.Post(source, "application/json", auth_reader); err != nil {
-				logError.Fatalln(err)
+				log.Fatal().Err(err).Msg("")
 			}
 		}
 	}
@@ -398,7 +403,7 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 		return
 	}
 
-	logDebug.Printf("download check for %s versions %q returned %s (%d bytes)", ct, opts.version, filename, resp.ContentLength)
+	log.Debug().Msgf("download check for %s versions %q returned %s (%d bytes)", ct, opts.version, filename, resp.ContentLength)
 	return
 }
 
@@ -424,7 +429,7 @@ func latest(r *host.Host, dir, filter string, fn func(os.DirEntry) bool) (latest
 
 	filterRE, err := regexp.Compile(filter)
 	if err != nil {
-		logDebug.Printf("invalid filter regexp %q", filter)
+		log.Debug().Msgf("invalid filter regexp %q", filter)
 	}
 	for n := 0; n < len(dirs); n++ {
 		if !filterRE.MatchString(dirs[n].Name()) {
@@ -442,7 +447,7 @@ func latest(r *host.Host, dir, filter string, fn func(os.DirEntry) bool) (latest
 		d := strings.TrimPrefix(v.Name(), "GA")
 		x := versRE.FindString(d)
 		if x == "" {
-			logDebug.Println(d, "does not match a valid directory pattern")
+			log.Debug().Msgf("%s does not match a valid directory pattern", d)
 			continue
 		}
 		s := strings.SplitN(x, ".", 3)

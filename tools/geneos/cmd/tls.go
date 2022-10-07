@@ -36,9 +36,9 @@ chain to all other hosts.`,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations:           make(map[string]string),
-	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Usage()
-	},
+	// Run: func(cmd *cobra.Command, args []string) {
+	// 	cmd.Usage()
+	// },
 }
 
 func init() {

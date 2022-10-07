@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package main
 
 import (
@@ -45,7 +46,7 @@ func UpdateIncident(incident_id string, incident Incident) (incident_number stri
 	}
 
 	s := InitializeConnection()
-	result, err = s.PUT(postbytes, "", "number", "", "", incident_id).QueryTableSingle(cf.ServiceNow.IncidentTable)
+	result, err = s.PUT(postbytes, "", "number", "", "", incident_id).QueryTableSingle(vc.GetString("servicenow.incidenttable"))
 	if err != nil {
 		return
 	} else {

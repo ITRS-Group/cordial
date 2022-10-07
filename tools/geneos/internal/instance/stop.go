@@ -2,6 +2,7 @@ package instance
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"syscall"
 	"time"
@@ -29,7 +30,7 @@ func Stop(c geneos.Instance, force bool) (err error) {
 		}
 
 		if _, err = GetPID(c); err == os.ErrProcessDone {
-			log.Println(c, "stopped")
+			fmt.Printf("%s stopped\n", c)
 			return nil
 		}
 	}
@@ -41,7 +42,7 @@ func Stop(c geneos.Instance, force bool) (err error) {
 	time.Sleep(250 * time.Millisecond)
 	_, err = GetPID(c)
 	if err == os.ErrProcessDone {
-		log.Println(c, "killed")
+		fmt.Printf("%s killed\n", c)
 		return nil
 	}
 	return

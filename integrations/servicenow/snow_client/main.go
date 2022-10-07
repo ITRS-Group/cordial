@@ -19,15 +19,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package main
 
 import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/json"
-	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -36,7 +36,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/itrs-group/cordial/integrations/servicenow/settings"
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/spf13/pflag"
 )
 
 type Incident map[string]string
@@ -45,24 +46,27 @@ func main() {
 	var conffile, short, text, rawtext, search, severity, id, rawid string
 	var update_only bool
 
-	flag.StringVar(&conffile, "conf", "", "Optional path to configuration file")
-	flag.StringVar(&short, "short", "", "short description")
-	flag.StringVar(&text, "text", "", "Textual note. Long desceription for new incidents, Work Note for updates.")
-	flag.StringVar(&rawtext, "rawtext", "", "Raw textual note, not unquoted. Long desceription for new incidents, Work Note for updates.")
-	flag.StringVar(&id, "id", "", "Correlation ID. The value is hashed to a 20 byte hex string.")
-	flag.StringVar(&rawid, "rawid", "", "Raw Correlation ID. The value is passed as is and must be a valid string.")
-	flag.StringVar(&search, "search", "", "sysID search: '[TABLE:]FIELD=VALUE', TABLE defaults to 'cmdb_ci'. REQUIRED")
-	flag.StringVar(&severity, "severity", "3", "Geneos severity. Maps depending on configuration settings.")
-	flag.BoolVar(&update_only, "updateonly", false, "If set no incident creation will be done")
+	pflag.StringVarP(&conffile, "conf", "c", "", "Optional path to configuration file")
+	pflag.StringVarP(&short, "short", "s", "", "short description")
+	pflag.StringVarP(&text, "text", "t", "", "Textual note. Long desceription for new incidents, Work Note for updates.")
+	pflag.StringVar(&rawtext, "rawtext", "", "Raw textual note, not unquoted. Long desceription for new incidents, Work Note for updates.")
+	pflag.StringVarP(&id, "id", "i", "", "Correlation ID. The value is hashed to a 20 byte hex string.")
+	pflag.StringVar(&rawid, "rawid", "", "Raw Correlation ID. The value is passed as is and must be a valid string.")
+	pflag.StringVarP(&search, "search", "f", "", "sysID search: '[TABLE:]FIELD=VALUE', TABLE defaults to 'cmdb_ci'. REQUIRED")
+	pflag.StringVarP(&severity, "severity", "S", "3", "Geneos severity. Maps depending on configuration settings.")
+	pflag.BoolVarP(&update_only, "updateonly", "U", false, "If set no incident creation will be done")
 
-	flag.Parse()
+	pflag.Parse()
 	if (text == "" && rawtext == "") || search == "" {
-		flag.PrintDefaults()
+		pflag.PrintDefaults()
 		os.Exit(1)
 	}
 
 	execname := filepath.Base(os.Args[0])
-	cf := settings.GetConfig(conffile, execname)
+	vc, err := config.LoadConfig(execname, config.SetAppName("itrs"), config.SetConfigFile(conffile))
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	// fill in minimal defaults - also get defaults from config
 	incident := make(Incident)
@@ -99,7 +103,7 @@ func main() {
 	// parse key value pairs as fields for the request
 	// for now ignore everything else
 	// no lookups (yet)
-	for _, arg := range flag.Args() {
+	for _, arg := range pflag.Args() {
 		s := strings.SplitN(arg, "=", 2)
 		if len(s) != 2 {
 			continue
@@ -112,10 +116,10 @@ func main() {
 	}
 
 	// map severity
-	mapSeverity(severity, incident, cf.ServiceNow.GeneosSeverityMap)
+	mapSeverity(severity, incident, vc.GetStringMapString("servicenow.geneosseveritymap"))
 
 	// and read defaults for any unset fields
-	configDefaults(incident, cf)
+	configDefaults(incident, vc.GetStringMapString("servicenow.incidentdefaults"))
 
 	requestBody, err := json.Marshal(incident)
 	if err != nil {
@@ -124,10 +128,10 @@ func main() {
 
 	var server string
 
-	if cf.API.TLS.Enabled {
-		server = fmt.Sprintf("https://%s:%d", cf.API.Host, cf.API.Port)
+	if vc.GetBool("api.tls.enabled") {
+		server = fmt.Sprintf("https://%s:%d", vc.GetString("api.host"), vc.GetInt("api.port"))
 	} else {
-		server = fmt.Sprintf("http://%s:%d", cf.API.Host, cf.API.Port)
+		server = fmt.Sprintf("http://%s:%d", vc.GetString("api.host"), vc.GetInt("api.port"))
 	}
 
 	u, err := url.Parse(server)
@@ -142,7 +146,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	bearer := fmt.Sprintf("Bearer %s", cf.API.APIKey)
+	bearer := fmt.Sprintf("Bearer %s", vc.GetString("api.apikey"))
 
 	req.Header.Add("Authorization", bearer)
 
@@ -154,7 +158,7 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -185,9 +189,7 @@ func main() {
 // loop through config IncidentDefaults.AllIncidents and set any fields not already set
 //
 // an empty value means delete any value passed - e.g. short_description in an update
-func configDefaults(incident Incident, cf settings.Settings) {
-	defaults := cf.ServiceNow.IncidentDefaults
-
+func configDefaults(incident Incident, defaults map[string]string) {
 	for k, v := range defaults {
 		if _, ok := incident[k]; !ok {
 			// trim spaces and surrounding quotes before unquoting embedded escapes
