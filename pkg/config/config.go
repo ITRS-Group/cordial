@@ -95,9 +95,10 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 	return m
 }
 
-// ExpandString() returns input with any occurrences of the form ${name}
-// interpolated using [os.Expand] for the supported format types in the
-// order given below:
+// ExpandString() returns the input with all occurrences of the form
+// ${name} replaced using an [os.Expand]-like function (but without
+// support for bare names) for the formats (in the order of priority)
+// below:
 //
 //  1. "${enc:keyfile[|keyfile...]:encodedvalue}"
 //
@@ -114,32 +115,35 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 //     the other references below, but without the surrounding
 //     dollar-brackets "${...}".
 //
-//     To minimise (but not eliminate) false decodes that occur in some
-//     circumstances when using the wrong key file, the decoded value is
-//     only returned if it is a valid UTF-8 string as per [utf8.Valid].
+//     To minimise (but not wholly eliminate) any false-positive decodes
+//     that occur in some circumstances when using the wrong key file,
+//     the decoded value is only returned if it is a valid UTF-8 string
+//     as per [utf8.Valid].
 //
 //     Examples:
 //
 //     * password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
 //     * password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
+//     * password: ${enc:~/.config/geneos/keyfile1.aes:env:app.password}
+//     * password: ${enc:~/.keyfile.aes:env:config:mySecret}
 //
 //  2. "${config:key}" or "${path.to.config}"
 //
 //     Fetch the "key" configuration value (for single layered
-//     configurations, where a sub-level dot is not possible) or if any
+//     configurations, where a sub-level dot cannot be used) or if any
 //     value containing one or more dots "." will be looked-up in the
 //     existing configuration that the method is called on. The
-//     configuration is not changed and values are resolved each time
-//     ExpandString() is called. No locking of the configuration is
-//     done.
+//     underlying configuration is not changed and values are resolved
+//     each time ExpandString() is called. No locking of the
+//     configuration is done.
 //
 //  3. "${key}"
 //
 //     "key" will be substituted with the value of the first matching
-//     key from the maps "values...", checked in order. If no "values"
-//     are given (as opposed to the key not being found in any of the
-//     "values" maps) then name is looked up as an environment variable,
-//     see below.
+//     key from the maps "values...", in the order passed to the
+//     function. If no "values" are passed (as opposed to the key not
+//     being found in any of the maps) then name is looked up
+//     as an environment variable, as 4. below.
 //
 //  4. "${env:name}"
 //
@@ -150,18 +154,24 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 //
 //     The contents of the referenced file will be read. Multiline
 //     files are used as-is; this can, for example, be used to read
-//     PEM certificate files or keys. As an enhancement to a standard
+//     PEM certificate files or keys. As an addition to a standard
 //     file url, if the first "/" is replaced with a tilde "~" then the
 //     path is relative to the home directory of the user running the process.
+//
+//     Examples:
+//
+//     * certfile ${file://etc/ssl/cert.pem}
+//     * template: ${file:~/templates/autogen.gotmpl}
 //
 //  6. "${https://host/path}" or "${http://host/path}"
 //
 //     The contents of the URL are fetched and used similarly as for
 //     local files above. The URL is passed to [http.Get] and supports
-//     any embedded Basic Authentication and other features from
+//     proxies, embedded Basic Authentication and other features from
 //     that function.
 //
-// The form "$name" is NOT supported, unlike [os.Expand].
+// The bare form "$name" is NOT supported, unlike [os.Expand] as this
+// can unexpectedly match values containing valid literal dollar signs.
 //
 // Expansion is not recursive. Configuration values are read and stored
 // as literals and are expanded each time they are used. For each
@@ -172,16 +182,19 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 //
 // Any errors (particularly from substitutions from external files or
 // remote URLs) may result in an empty or corrupt string being returned.
-// Error returns are intentionally discarded.
+// Error returns are intentionally discarded and an empty string
+// substituted. Where a value contains multiple expandable items
+// processing will continue even after an error for one of them.
 //
-// It is not currently possible to escape the syntax supported by Expand
-// and if it is necessary to have a configuration value be a literal of
-// the form "${name}" then set an otherwise unused item to the value and
-// refer to it using the dotted syntax, e.g. for YAML
+// It is not currently possible to escape the syntax supported by
+// ExpandString and if it is necessary to have a configuration value be
+// a literal of the form "${name}" then you can set an otherwise unused
+// item to the value and refer to it using the dotted syntax, e.g. for
+// YAML
 //
 //	config:
-//	  real: ${config.temp}
-//	  temp: "${unchanged}"
+//	  real: ${config.literal}
+//	  literal: "${unchanged}"
 //
 // In the above a reference to ${config.real} will return the literal
 // string ${unchanged} as there is no recursive lookups.
