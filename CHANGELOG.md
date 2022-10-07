@@ -1,6 +1,6 @@
 # Change Log
 
-## Version v1.2.1-rc2 - 2022/10/07
+## Version v1.2.1-rc3 - 2022/10/07
 
 ### Fixes
 
