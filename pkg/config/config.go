@@ -150,13 +150,14 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 //     "name" will be substituted with the contents of the environment
 //     variable of the same name.
 //
-//  5. "${file://path/to/file}" or "${file:~/path/to/file}"
+//  5. "${~/file} or "${/path/to/file}"" or "${file://path/to/file}" or "${file:~/path/to/file}"
 //
-//     The contents of the referenced file will be read. Multiline
-//     files are used as-is; this can, for example, be used to read
-//     PEM certificate files or keys. As an addition to a standard
-//     file url, if the first "/" is replaced with a tilde "~" then the
-//     path is relative to the home directory of the user running the process.
+//     The contents of the referenced file will be read. Multiline files
+//     are used as-is; this can, for example, be used to read PEM
+//     certificate files or keys. If the path is prefixed with "~/" (or
+//     as an addition to a standard file url, if the first "/" is
+//     replaced with a tilde "~") then the path is relative to the home
+//     directory of the user running the process.
 //
 //     Examples:
 //
@@ -290,7 +291,7 @@ func (c *Config) expandString(s string, values ...map[string]string) (value stri
 		return ""
 	case strings.HasPrefix(s, "env:"):
 		return strings.TrimSpace(mapEnv(strings.TrimPrefix(s, "env:")))
-	case strings.HasPrefix(s, "file:"):
+	case strings.HasPrefix(s, "~/"), strings.HasPrefix(s, "/"), strings.HasPrefix(s, "file:"):
 		path := strings.TrimPrefix(s, "file:")
 		if strings.HasPrefix(path, "~/") {
 			home, _ := os.UserHomeDir()
