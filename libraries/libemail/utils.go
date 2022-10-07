@@ -32,6 +32,7 @@ import (
 	"unsafe"
 
 	"github.com/go-mail/mail/v2"
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 func debug(conf EMailConfig) (debug bool) {
@@ -111,15 +112,17 @@ func dialServer(conf EMailConfig) (d *mail.Dialer, err error) {
 	if ok {
 		// get the password from the file given or continue with
 		// an empty string
-		var password string
-		pwfile := getWithDefault("_SMTP_PASSWORD_FILE", conf, "")
-		if pwfile != "" {
-			password, err = readFileString(pwfile)
-			if err != nil {
-				return nil, err
+		password := config.GetConfig().ExpandString(getWithDefault("_SMTP_PASSWORD", conf, ""))
+		if password == "" {
+			pwfile := getWithDefault("_SMTP_PASSWORD_FILE", conf, "")
+			if pwfile != "" {
+				password, err = readFileString(pwfile)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
-		// the password can be empty at this point. this is valid, if dumb.
+		// the password can be empty at this point. this is valid, even if a bit dumb.
 
 		d = mail.NewDialer(server, port, username, password)
 	} else {
