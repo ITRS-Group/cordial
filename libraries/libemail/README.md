@@ -54,7 +54,7 @@ The following additional parameters are supported by the `SendMail` function:
 
 If `_SMTP_USERNAME` is set then authentication is attempted. As the Gateway writes all parameters to it's log file, the password should either be encoded using [ExpandString](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString) or placed in a file with restrictive permissions that can be read by the Gateway process. The `_SMTP_PASSWORD_FILE` is either and absolute path or a path to a file relative to the working directory of the Gateway. If defined then `_SMTP_PASSWORD` overrides the value in any file referenced by `_SMTP_PASSWORD_FILE`.
 
-To use an encoded password it must be in the format `${enc:KEYFILE:CIPHERTEXT}`. This is the format supported by [ExpandString](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString) and can be created using the [`geneos`](tools/geneos/README.md) program or manually by following the instructions in [Secure Passwords](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm). Assuming you have create a keyfile and saved it to `${HOME}/.config/geneos/keyfile.aes` then you can generate the value like this:
+To use an encoded password it must be in the format `${enc:KEYFILE:CIPHERTEXT}`. This is the format supported by [ExpandString](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString) and can be created using the [`geneos`](tools/geneos/README.md) program or manually by following the instructions in [Secure Passwords](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm). Assuming you have created a keyfile and saved it to the default location (e.g. `geneos aes new -k ~/.config/geneos/keyfile.aes`) then you can generate the value like this:
 
 ```bash
 $ geneos aes encode -e
@@ -63,6 +63,8 @@ ${enc:~/.config/geneos/keyfile.aes:+encs+02554ABDB5474D9FC604CAF63E50918C}
 ```
 
 Copy the entire output line to the value for `_SMTP_PASSWORD` and ensure that the keyfile is accessible to the Gateway process. You can copy the keyfile to a new location, such as the Gateway's working directory, but remember to update the path in the `${enc:...}` setting.
+
+Note: Another benefit of using ExpandString encoding is that the Gateway automatically redacts any string that starts `+encs+` in it's output, so all the log will show is (literally) `_SMTP_PASSWORD=${enc:~/.config/geneos/keyfile.aes:XXX}` which can serve as an extra layer of protection against casual viewing of the logs and configuration files.
 
 `_SMTP_TLS` can be one of `default`, `force` or `none` (case insensitive). `default` is to try TLS but fall back to plain text depending on the SMTP server.
 
