@@ -9,7 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/spf13/viper"
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/rs/zerolog/log"
 )
 
 const UserHostFile = "geneos-hosts.json"
@@ -19,8 +20,7 @@ const ALLHOSTS = "all"
 var LOCAL, ALL *Host
 
 type Host struct {
-	// use a viper to store config
-	*viper.Viper
+	*config.Config
 
 	// loaded from config or just an instance?
 	// always true for LOCALHOST and ALLHOSTS
@@ -46,31 +46,39 @@ func Init() {
 
 // return the absolute path to the local Geneos installation
 func Geneos() string {
-	home := viper.GetString("geneos")
+	home := config.GetString("geneos")
 	if home == "" {
 		// fallback to support breaking change
-		return viper.GetString("itrshome")
+		return config.GetString("itrshome")
 	}
 	return home
 }
 
 // interface method set
 
-// XXX new needs the top level viper and passes back a Sub()
+// Get returns a pointer to Host value. If passed an empty name, returns
+// nil. If passed the special values LOCALHOST or ALL then it will
+// return the respective special values LOCAL or ALL. Otherwise it tries
+// to lookup an existing host with the given name to return or
+// initialises a new value to return. This may not be a=n existing host.
+//
+// XXX new needs the top level config and passes back a Sub()
 func Get(name string) (c *Host) {
 	switch name {
+	case "":
+		return nil
 	case LOCALHOST:
 		if LOCAL != nil {
 			return LOCAL
 		}
-		c = &Host{viper.New(), true, nil}
+		c = &Host{config.New(), true, nil}
 		c.Set("name", LOCALHOST)
 		c.GetOSReleaseEnv()
 	case ALLHOSTS:
 		if ALL != nil {
 			return ALL
 		}
-		c = &Host{viper.New(), true, nil}
+		c = &Host{config.New(), true, nil}
 		c.Set("name", ALLHOSTS)
 	default:
 		r, ok := hosts.Load(name)
@@ -81,7 +89,7 @@ func Get(name string) (c *Host) {
 			}
 		}
 		// or bootstrap, but NOT save a new one
-		c = &Host{viper.New(), false, nil}
+		c = &Host{config.New(), false, nil}
 		c.Set("name", name)
 		hosts.Store(name, c)
 	}
@@ -149,10 +157,13 @@ func (h *Host) GetOSReleaseEnv() (err error) {
 	return
 }
 
-// returns a slice of all matching Hosts. used mainly for range loops
-// where the host could be specific or 'all'
+// Match returns a slice of all matching Hosts. Intended for use in
+// range loops where the host could be specific or 'all'. If passed
+// an empty string then returns an empty slice.
 func Match(h string) (r []*Host) {
 	switch h {
+	case "":
+		return []*Host{}
 	case ALLHOSTS:
 		return AllHosts()
 	default:
@@ -160,14 +171,48 @@ func Match(h string) (r []*Host) {
 	}
 }
 
-// return an absolute path anchored in the root directory of the remote host
-// this can also be LOCAL
-func (h *Host) GeneosJoinPath(paths ...string) string {
+// Range will either return just the specific host it is called on, or
+// if that is nil than the list of all hosts passed as args. If no args
+// are passed and h is nil then all hosts are returned.
+//
+// This is a convenience to avoid a double layer of if and range in
+// callers than want to work on specific component types.
+func (h *Host) Range(hosts ...*Host) []*Host {
+	switch h {
+	case nil:
+		if len(hosts) == 0 {
+			return AllHosts()
+		}
+		return hosts
+	case ALL:
+		return AllHosts()
+	default:
+		return []*Host{h}
+	}
+}
+
+// Filepath returns an absolute path relative to the Geneos installation
+// directory. Each argument is used as a path component and are joined
+// using filepath.Join(). Each part can be a plain string or a type with
+// a String() method - non-string types are rendered using fmt.Sprint()
+// without further error checking.
+func (h *Host) Filepath(parts ...interface{}) string {
+	strParts := []string{}
+
 	if h == nil {
-		logError.Fatalln("host is nil")
+		h = LOCAL
 	}
 
-	return filepath.Join(append([]string{h.GetString("geneos")}, paths...)...)
+	for _, p := range parts {
+		switch s := p.(type) {
+		case string:
+			strParts = append(strParts, s)
+		default:
+			strParts = append(strParts, fmt.Sprint(s))
+		}
+	}
+
+	return filepath.Join(append([]string{h.GetString("geneos")}, strParts...)...)
 }
 
 func (h *Host) FullName(name string) string {
@@ -177,8 +222,16 @@ func (h *Host) FullName(name string) string {
 	return name + "@" + h.String()
 }
 
+// AllHosts returns a slice of all hosts, including LOCAL
 func AllHosts() (hs []*Host) {
 	hs = []*Host{LOCAL}
+	hs = append(hs, RemoteHosts()...)
+	return
+}
+
+// RemoteHosts returns a slice of al valid remote hosts
+func RemoteHosts() (hs []*Host) {
+	hs = []*Host{}
 
 	hosts.Range(func(k, v interface{}) bool {
 		h := Get(k.(string))
@@ -191,31 +244,28 @@ func AllHosts() (hs []*Host) {
 }
 
 func ReadConfigFile() {
-	var hs *viper.Viper
-
-	h := viper.New()
+	h := config.New()
 	h.SetConfigFile(UserHostsFilePath())
 	h.ReadInConfig()
-	if h.InConfig("hosts") {
-		hs = h.Sub("hosts")
-	}
 
 	// recreate empty
 	hosts = sync.Map{}
-	// LOCAL = New(LOCALHOST)
-	// ALL = New(ALLHOSTS)
 
-	if hs != nil {
-		for n, h := range hs.AllSettings() {
-			v := viper.New()
-			v.MergeConfigMap(h.(map[string]interface{}))
-			hosts.Store(n, &Host{v, true, nil})
+	for n, h := range h.GetStringMap("hosts") {
+		v := config.New()
+		switch m := h.(type) {
+		case map[string]interface{}:
+			v.MergeConfigMap(m)
+		default:
+			log.Debug().Msgf("hosts value not a map[string]interface{} but a %T", h)
+			continue
 		}
+		hosts.Store(n, &Host{v, true, nil})
 	}
 }
 
 func WriteConfigFile() error {
-	n := viper.New()
+	n := config.New()
 
 	hosts.Range(func(k, v interface{}) bool {
 		name := k.(string)
@@ -230,9 +280,6 @@ func WriteConfigFile() error {
 }
 
 func UserHostsFilePath() string {
-	userConfDir, err := os.UserConfigDir()
-	if err != nil {
-		logError.Fatalln(err)
-	}
+	userConfDir, _ := os.UserConfigDir()
 	return filepath.Join(userConfDir, UserHostFile)
 }

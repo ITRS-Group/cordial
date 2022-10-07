@@ -24,6 +24,8 @@ package cmd
 import (
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
@@ -75,28 +77,48 @@ func commandUnset(ct *geneos.Component, args []string) error {
 	return instance.ForAll(ct, unsetInstance, args, []string{})
 }
 
+var warned bool
+
 func unsetInstance(c geneos.Instance, params []string) (err error) {
 	var changed bool
-	logDebug.Println("c", c, "params", params)
+	log.Debug().Msgf("c %s params %v", c, params)
 
 	changed, err = unsetMaps(c)
 
-	s := c.V().AllSettings()
+	s := c.Config().AllSettings()
 
 	if len(unsetCmdKeys) > 0 {
 		for _, k := range unsetCmdKeys {
-			delete(s, k)
-			changed = true
+			// delete one level of maps
+			if strings.Contains(k, ".") {
+				p := strings.SplitN(k, ".", 2)
+				switch x := s[p[0]].(type) {
+				case map[string]interface{}:
+					delete(x, p[1])
+					s[p[0]] = x
+					changed = true
+				default:
+					//
+				}
+			} else {
+				delete(s, k)
+				changed = true
+			}
 		}
 	}
-	if changed {
-		if err = instance.Migrate(c); err != nil {
-			logError.Fatalln("cannot migrate existing .rc config to set values in new .json configration file:", err)
-		}
 
-		if err = instance.WriteConfigValues(c, s); err != nil {
-			logError.Fatalln(err)
-		}
+	if !changed && !warned {
+		log.Error().Msg("nothing unset. perhaps you forgot to use -k -KEY or one of the other options?")
+		warned = true
+		return
+	}
+
+	if err = instance.Migrate(c); err != nil {
+		log.Fatal().Err(err).Msg("cannot migrate existing .rc config to set values in new .json configration file")
+	}
+
+	if err = instance.WriteConfigValues(c, s); err != nil {
+		log.Fatal().Err(err).Msg("")
 	}
 
 	return
@@ -138,18 +160,20 @@ func unsetMaps(c geneos.Instance) (changed bool, err error) {
 }
 
 func unsetMap(c geneos.Instance, items unsetCmdValues, key string) (changed bool) {
-	x := c.V().GetStringMapString(key)
+	x := c.Config().GetStringMapString(key)
 	for _, k := range items {
 		delete(x, k)
 		changed = true
 	}
-	c.V().Set(key, x)
+	if changed {
+		c.Config().Set(key, x)
+	}
 	return
 }
 
 func unsetSlice(c geneos.Instance, items []string, key string, cmp func(string, string) bool) (changed bool) {
 	newvals := []string{}
-	vals := c.V().GetStringSlice(key)
+	vals := c.Config().GetStringSlice(key)
 OUTER:
 	for _, t := range vals {
 		for _, v := range items {
@@ -160,7 +184,7 @@ OUTER:
 		}
 		newvals = append(newvals, t)
 	}
-	c.V().Set(key, newvals)
+	c.Config().Set(key, newvals)
 	return
 }
 

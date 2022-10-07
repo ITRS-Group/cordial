@@ -58,7 +58,7 @@ func init() {
 var enableCmdStart bool
 
 func enableInstance(c geneos.Instance, params []string) (err error) {
-	err = c.Host().Remove(instance.ConfigPathWithExt(c, geneos.DisableExtension))
+	err = c.Host().Remove(instance.ComponentFilepath(c, geneos.DisableExtension))
 	if (err == nil || errors.Is(err, os.ErrNotExist)) && enableCmdStart {
 		instance.Start(c)
 	}

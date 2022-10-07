@@ -11,6 +11,8 @@ import (
 )
 
 func (p *MemorySampler) DoSample() error {
+	logDebug.Print("called")
+
 	table := [][]string{
 		{"counter", "bytes"},
 	}

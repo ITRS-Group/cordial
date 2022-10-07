@@ -24,10 +24,11 @@ package cmd
 import (
 	"strings"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // setCmd represents the set command
@@ -79,26 +80,26 @@ func commandSet(ct *geneos.Component, args, params []string) error {
 }
 
 func setInstance(c geneos.Instance, params []string) (err error) {
-	logDebug.Println("c", c, "params", params)
+	log.Debug().Msgf("c %s params %v", c, params)
 
 	instance.SetExtendedValues(c, setCmdExtras)
 
 	for _, arg := range params {
 		s := strings.SplitN(arg, "=", 2)
 		if len(s) != 2 {
-			logError.Printf("ignoring %q %s", arg, ErrInvalidArgs)
+			log.Error().Err(ErrInvalidArgs).Msgf("ignoring %q", arg)
 			continue
 		}
-		c.V().Set(s[0], s[1])
+		c.Config().Set(s[0], s[1])
 	}
 
 	// now loop through the collected results and write out
 	if err = instance.Migrate(c); err != nil {
-		logError.Fatalln("cannot migrate existing .rc config to set values in new .json configration file:", err)
+		log.Fatal().Err(err).Msg("cannot migrate existing .rc config to set values in new .json configuration file")
 	}
 
 	if err = instance.WriteConfig(c); err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	return
@@ -106,9 +107,7 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 
 // XXX muddled - fix
 func writeConfigParams(filename string, params []string) (err error) {
-	vp := viper.New()
-	vp.SetConfigFile(filename)
-	vp.ReadInConfig()
+	vp := readConfigFile(filename)
 
 	// change here
 	for _, set := range params {
@@ -132,9 +131,11 @@ func writeConfigParams(filename string, params []string) (err error) {
 	return vp.WriteConfig()
 }
 
-func readConfigFile(path string) (v *viper.Viper) {
-	v = viper.New()
-	v.SetConfigFile(path)
+func readConfigFile(paths ...string) (v *config.Config) {
+	v = config.New()
+	for _, path := range paths {
+		v.SetConfigFile(path)
+	}
 	v.ReadInConfig()
 	return
 }

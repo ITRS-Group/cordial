@@ -19,13 +19,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package plugins
 
 import (
+	"net/url"
 	"sync"
 	"time"
 
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/xmlrpc"
 )
 
@@ -41,16 +42,8 @@ type Connection struct {
 	xmlrpc.Sampler
 }
 
-var (
-	log      = logger.Log
-	logDebug = logger.Debug
-	logError = logger.Error
-)
-
-// wrap calls to xmlrpc
-func Sampler(url string, entityName string, samplerName string) (s Connection, err error) {
-	logDebug.Printf("called")
-	sampler, err := xmlrpc.NewClient(url, entityName, samplerName)
-	s = Connection{sampler}
+func Open(url *url.URL, entityName string, samplerName string) (s *Connection, err error) {
+	sampler, err := xmlrpc.NewClient(url).Sampler(entityName, samplerName)
+	s = &Connection{sampler}
 	return
 }

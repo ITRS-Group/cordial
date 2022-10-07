@@ -3,11 +3,12 @@ package netprobe
 import (
 	"sync"
 
-	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/rs/zerolog/log"
+
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/viper"
 )
 
 var Netprobe = geneos.Component{
@@ -35,13 +36,13 @@ var Netprobe = geneos.Component{
 		"netpopts":  "options",
 	},
 	Defaults: []string{
-		"binary=netprobe.linux_64",
-		"home={{join .root \"netprobe\" \"netprobes\" .name}}",
-		"install={{join .root \"packages\" \"netprobe\"}}",
-		"version=active_prod",
-		"program={{join .install .version .binary}}",
-		"logfile=netprobe.log",
-		"libpaths={{join .install .version \"lib64\"}}:{{join .install .version}}",
+		`binary=netprobe.linux_64`,
+		`home={{join .root "netprobe" "netprobes" .name}}`,
+		`install={{join .root "packages" "netprobe"}}`,
+		`version=active_prod`,
+		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
+		`logfile=netprobe.log`,
+		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 	},
 	GlobalSettings: map[string]string{
 		"NetprobePortRange": "7036,7100-",
@@ -72,12 +73,11 @@ func New(name string) geneos.Instance {
 		}
 	}
 	c := &Netprobes{}
-	c.Conf = viper.New()
+	c.Conf = config.New()
 	c.InstanceHost = r
-	// c.root = r.V().GetString("geneos")
 	c.Component = &Netprobe
 	if err := instance.SetDefaults(c, local); err != nil {
-		logger.Error.Fatalln(c, "setDefaults():", err)
+		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
 	}
 	netprobes.Store(r.FullName(local), c)
 	return c
@@ -91,11 +91,17 @@ func (n *Netprobes) Type() *geneos.Component {
 }
 
 func (n *Netprobes) Name() string {
-	return n.V().GetString("name")
+	if n.Config() == nil {
+		return ""
+	}
+	return n.Config().GetString("name")
 }
 
 func (n *Netprobes) Home() string {
-	return n.V().GetString("home")
+	if n.Config() == nil {
+		return ""
+	}
+	return n.Config().GetString("home")
 }
 
 func (n *Netprobes) Prefix() string {
@@ -107,7 +113,7 @@ func (n *Netprobes) Host() *host.Host {
 }
 
 func (n *Netprobes) String() string {
-	return n.Type().String() + ":" + n.Name() + "@" + n.Host().String()
+	return instance.DisplayName(n)
 }
 
 func (n *Netprobes) Load() (err error) {
@@ -129,11 +135,11 @@ func (n *Netprobes) Loaded() bool {
 	return n.ConfigLoaded
 }
 
-func (n *Netprobes) V() *viper.Viper {
+func (n *Netprobes) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *Netprobes) SetConf(v *viper.Viper) {
+func (n *Netprobes) SetConf(v *config.Config) {
 	n.Conf = v
 }
 
@@ -141,8 +147,8 @@ func (n *Netprobes) Add(username string, tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(n.Host(), &Netprobe)
 	}
-	n.V().Set("port", port)
-	n.V().Set("user", username)
+	n.Config().Set("port", port)
+	n.Config().Set("user", username)
 
 	if err = instance.WriteConfig(n); err != nil {
 		return
@@ -167,17 +173,11 @@ func (n *Netprobes) Command() (args, env []string) {
 	logFile := instance.LogFile(n)
 	args = []string{
 		n.Name(),
-		"-port", n.V().GetString("port"),
+		"-port", n.Config().GetString("port"),
 	}
+	args = append(args, instance.SetSecureArgs(n)...)
+
 	env = append(env, "LOG_FILENAME="+logFile)
-
-	if n.V().GetString("certificate") != "" {
-		args = append(args, "-secure", "-ssl-certificate", n.V().GetString("certificate"))
-	}
-
-	if n.V().GetString("privatekey") != "" {
-		args = append(args, "-ssl-certificate-key", n.V().GetString("privatekey"))
-	}
 
 	return
 }

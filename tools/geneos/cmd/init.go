@@ -28,6 +28,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -107,6 +110,8 @@ func init() {
 	initCmd.Flags().BoolVarP(&initCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires auth.")
 	initCmd.Flags().BoolVarP(&initCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
 	initCmd.Flags().StringVarP(&initCmdVersion, "version", "V", "latest", "Download matching version, defaults to latest. Doesn't work for EL8 archives.")
+	initCmd.Flags().StringVarP(&initCmdUsername, "username", "u", "", "Username for downloads. Defaults to configuration value download.username")
+	initCmd.Flags().StringVarP(&initCmdPwFile, "pwfile", "P", "", "")
 
 	initCmd.Flags().StringVarP(&initCmdGatewayTemplate, "gatewaytemplate", "w", "", "A gateway template file")
 	initCmd.Flags().StringVarP(&initCmdSANTemplate, "santemplate", "s", "", "A san template file")
@@ -124,6 +129,8 @@ func init() {
 var initCmdAll string
 var initCmdLogs, initCmdMakeCerts, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
 var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdVersion string
+var initCmdUsername, initCmdPassword, initCmdPwFile string
+
 var initCmdExtras = instance.ExtraConfigValues{
 	Includes:   instance.IncludeValues{},
 	Gateways:   instance.GatewayValues{},
@@ -133,25 +140,23 @@ var initCmdExtras = instance.ExtraConfigValues{
 	Types:      instance.StringSliceValues{},
 }
 
-//
 // initialise a geneos installation
 //
 // if no directory given and not running as root and the last component of the user's
 // home directory is NOT "geneos" then create a directory "geneos", else
 //
 // XXX Call any registered initialiser funcs from components
-//
 func commandInit(ct *geneos.Component, args []string, params []string) (err error) {
-	logDebug.Println(ct, args, params)
+	log.Debug().Msgf("%s %v %v", ct, args, params)
 	// none of the arguments can be a reserved type
 	if ct != nil {
-		logError.Println(ErrInvalidArgs, ct)
+		log.Error().Err(ErrInvalidArgs).Msg(ct.String())
 		return ErrInvalidArgs
 	}
 
 	// rewrite local templates and exit
 	if initCmdTemplates {
-		gatewayTemplates := host.LOCAL.GeneosJoinPath(gateway.Gateway.String(), "templates")
+		gatewayTemplates := host.LOCAL.Filepath(gateway.Gateway, "templates")
 		host.LOCAL.MkdirAll(gatewayTemplates, 0775)
 		tmpl := gateway.GatewayTemplate
 		if initCmdGatewayTemplate != "" {
@@ -160,17 +165,17 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 			}
 		}
 		if err := host.LOCAL.WriteFile(filepath.Join(gatewayTemplates, gateway.GatewayDefaultTemplate), tmpl, 0664); err != nil {
-			logError.Fatalln(err)
+			log.Fatal().Err(err).Msg("")
 		}
-		log.Println("gateway template written to", filepath.Join(gatewayTemplates, gateway.GatewayDefaultTemplate))
+		fmt.Printf("gateway template written to %s\n", filepath.Join(gatewayTemplates, gateway.GatewayDefaultTemplate))
 
 		tmpl = gateway.InstanceTemplate
 		if err := host.LOCAL.WriteFile(filepath.Join(gatewayTemplates, gateway.GatewayInstanceTemplate), tmpl, 0664); err != nil {
-			logError.Fatalln(err)
+			log.Fatal().Err(err).Msg("")
 		}
-		log.Println("gateway instance template written to", filepath.Join(gatewayTemplates, gateway.GatewayInstanceTemplate))
+		fmt.Printf("gateway instance template written to %s\n", filepath.Join(gatewayTemplates, gateway.GatewayInstanceTemplate))
 
-		sanTemplates := host.LOCAL.GeneosJoinPath(san.San.String(), "templates")
+		sanTemplates := host.LOCAL.Filepath(san.San, "templates")
 		host.LOCAL.MkdirAll(sanTemplates, 0775)
 		tmpl = san.SanTemplate
 		if initCmdSANTemplate != "" {
@@ -179,9 +184,9 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 			}
 		}
 		if err := host.LOCAL.WriteFile(filepath.Join(sanTemplates, san.SanDefaultTemplate), tmpl, 0664); err != nil {
-			logError.Fatalln(err)
+			log.Fatal().Err(err).Msg("")
 		}
-		log.Println("san template written to", filepath.Join(sanTemplates, san.SanDefaultTemplate))
+		fmt.Printf("san template written to %s\n", filepath.Join(sanTemplates, san.SanDefaultTemplate))
 
 		return
 	}
@@ -201,7 +206,7 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 		return fmt.Errorf("%w: Only one of -A, -D, -S or -T can be given", ErrInvalidArgs)
 	}
 
-	logDebug.Println(args)
+	log.Debug().Msgf("%v", args)
 
 	// process args here
 
@@ -209,17 +214,17 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 
 	if utils.IsSuperuser() {
 		if len(args) == 0 {
-			logError.Fatalln("init requires a username when run as root")
+			log.Fatal().Msg("init requires a username when run as root")
 		}
 		username = args[0]
 
 		if err != nil {
-			logError.Fatalln("invalid user", username)
+			log.Fatal().Msgf("invalid user %s", username)
 		}
 		u, err := user.Lookup(username)
 		homedir = u.HomeDir
 		if err != nil {
-			logError.Fatalln("user lookup failed")
+			log.Fatal().Msg("user lookup failed")
 		}
 		if len(args) == 1 {
 			// If user's home dir doesn't end in "geneos" then create a
@@ -243,7 +248,7 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 		username = u.Username
 		homedir = u.HomeDir
 
-		logDebug.Println(len(args), args)
+		log.Debug().Msgf("%d %v", len(args), args)
 		switch len(args) {
 		case 0: // default home + geneos
 			root = homedir
@@ -252,16 +257,16 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 			}
 		case 1: // home = abs path
 			if !filepath.IsAbs(args[0]) {
-				logError.Fatalln("Home directory must be absolute path:", args[0])
+				log.Fatal().Msgf("Home directory must be absolute path: %s", args[0])
 			}
 			root = filepath.Clean(args[0])
 		default:
-			logError.Fatalln("too many args:", args, params)
+			log.Fatal().Msgf("too many args: %v %v", args, params)
 		}
 	}
 
-	if err = geneos.Init(host.LOCAL, geneos.Force(initCmdForce), geneos.Homedir(root), geneos.Username(username)); err != nil {
-		logError.Fatalln(err)
+	if err = geneos.Init(host.LOCAL, geneos.Force(initCmdForce), geneos.Homedir(root), geneos.LocalUsername(username)); err != nil {
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if initCmdGatewayTemplate != "" {
@@ -269,8 +274,8 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 		if tmpl, err = geneos.ReadLocalFileOrURL(initCmdGatewayTemplate); err != nil {
 			return
 		}
-		if err := host.LOCAL.WriteFile(host.LOCAL.GeneosJoinPath(gateway.Gateway.String(), "templates", gateway.GatewayDefaultTemplate), tmpl, 0664); err != nil {
-			logError.Fatalln(err)
+		if err := host.LOCAL.WriteFile(host.LOCAL.Filepath(gateway.Gateway, "templates", gateway.GatewayDefaultTemplate), tmpl, 0664); err != nil {
+			log.Fatal().Err(err).Msg("")
 		}
 	}
 
@@ -279,7 +284,7 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 		if tmpl, err = geneos.ReadLocalFileOrURL(initCmdSANTemplate); err != nil {
 			return
 		}
-		if err = host.LOCAL.WriteFile(host.LOCAL.GeneosJoinPath(san.San.String(), "templates", san.SanDefaultTemplate), tmpl, 0664); err != nil {
+		if err = host.LOCAL.WriteFile(host.LOCAL.Filepath(san.San, "templates", san.SanDefaultTemplate), tmpl, 0664); err != nil {
 			return
 		}
 	}
@@ -307,6 +312,25 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 		if initCmdSnapshot {
 			options = append(options, geneos.UseSnapshots())
 		}
+	}
+
+	// download authentication
+	if initCmdUsername == "" {
+		initCmdUsername = config.GetString("download.username")
+	}
+
+	if initCmdPwFile != "" {
+		initCmdPassword = utils.ReadPasswordFile(initCmdPwFile)
+	} else {
+		initCmdPassword = config.GetString("download.password")
+	}
+
+	if initCmdUsername != "" && initCmdPassword == "" {
+		initCmdPassword = utils.ReadPasswordPrompt()
+	}
+
+	if initCmdUsername != "" {
+		options = append(options, geneos.Username(initCmdUsername), geneos.Password(initCmdPassword))
 	}
 
 	// create a demo environment
@@ -345,7 +369,7 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 			sanname = sanname + "@" + r.String()
 		}
 		s = []string{sanname}
-		commandInstall(&san.San, e, e)
+		install(&san.San, host.LOCALHOST, options...)
 		commandAdd(&san.San, initCmdExtras, s)
 		commandStart(nil, initCmdLogs, e, e)
 		commandPS(nil, e, e)
@@ -363,17 +387,19 @@ func commandInit(ct *geneos.Component, args []string, params []string) (err erro
 		}
 		name := []string{initCmdName}
 		localhost := []string{"localhost@" + r.String()}
-		commandInstall(&licd.Licd, e, e)
+
+		install(&licd.Licd, host.LOCALHOST, options...)
+		install(&gateway.Gateway, host.LOCALHOST, options...)
+		install(&san.San, host.LOCALHOST, options...)
+		install(&webserver.Webserver, host.LOCALHOST, options...)
+
 		commandAdd(&licd.Licd, initCmdExtras, name)
 		commandImport(&licd.Licd, name, []string{"geneos.lic=" + initCmdAll})
-		commandInstall(&gateway.Gateway, e, e)
 		commandAdd(&gateway.Gateway, initCmdExtras, name)
-		commandInstall(&san.San, e, e)
 		if len(initCmdExtras.Gateways) == 0 {
 			initCmdExtras.Gateways.Set("localhost")
 		}
 		commandAdd(&san.San, initCmdExtras, localhost)
-		commandInstall(&webserver.Webserver, e, e)
 		commandAdd(&webserver.Webserver, initCmdExtras, name)
 		commandStart(nil, initCmdLogs, e, e)
 		commandPS(nil, e, e)

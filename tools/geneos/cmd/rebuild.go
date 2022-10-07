@@ -24,6 +24,7 @@ package cmd
 import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -57,7 +58,7 @@ func rebuildInstance(c geneos.Instance, params []string) (err error) {
 	if err = c.Rebuild(rebuildCmdForce); err != nil {
 		return
 	}
-	logDebug.Println(c, "configuration rebuilt (if supported)")
+	log.Debug().Msgf("%s configuration rebuilt (if supported)", c)
 	if !rebuildCmdReload {
 		return
 	}

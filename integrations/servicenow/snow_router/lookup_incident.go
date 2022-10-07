@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package main
 
 import (
@@ -35,7 +36,7 @@ func LookupIncident(cmdb_ci_id string, correlation_id string) (incident_id strin
 	s := InitializeConnection()
 
 	q := fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s", cmdb_ci_id, correlation_id)
-	results, err := s.GET("", "sys_id,short_description,state", "", q, "").QueryTableDetail(cf.ServiceNow.IncidentTable)
+	results, err := s.GET("", "sys_id,short_description,state", "", q, "").QueryTableDetail(vc.GetString("servicenow.incidenttable"))
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("lookup incident: %s", err))
 		return

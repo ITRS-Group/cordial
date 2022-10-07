@@ -2,16 +2,19 @@ package instance
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
-	"github.com/spf13/viper"
 )
 
 func ImportFile(h *host.Host, home string, user string, source string, options ...geneos.GeneosOptions) (filename string, err error) {
@@ -40,11 +43,11 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 		if len(splitsource) > 1 {
 			// do some basic validation on user-supplied destination
 			if splitsource[0] == "" {
-				logError.Fatalln("dest path empty")
+				log.Fatal().Msg("dest path empty")
 			}
 			destfile, err = host.CleanRelativePath(splitsource[0])
 			if err != nil {
-				logError.Fatalln("dest path must be relative to (and in) instance directory")
+				log.Fatal().Msg("dest path must be relative to (and in) instance directory")
 			}
 			// if the destination exists is it a directory?
 			if s, err := h.Stat(filepath.Join(home, destfile)); err == nil {
@@ -55,14 +58,14 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 			}
 			source = splitsource[1]
 			if source == "" {
-				logError.Fatalln("no source defined")
+				log.Fatal().Msg("no source defined")
 			}
 		}
 	}
 
 	from, filename, err = geneos.OpenLocalFileOrURL(source)
 	if err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	defer from.Close()
 
@@ -78,7 +81,7 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 	if _, err := h.Stat(filepath.Dir(destfile)); err != nil {
 		err = h.MkdirAll(filepath.Dir(destfile), 0775)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
-			logError.Fatalln(err)
+			log.Fatal().Err(err).Msg("")
 		}
 		// if created by root, chown the last directory element
 		if err == nil && utils.IsSuperuser() {
@@ -91,7 +94,7 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 	// xxx - wrong way around. create tmp first, move over later
 	if s, err := h.Stat(destfile); err == nil {
 		if !s.St.Mode().IsRegular() {
-			logError.Fatalln("dest exists and is not a plain file")
+			log.Fatal().Msg("dest exists and is not a plain file")
 		}
 		datetime := time.Now().UTC().Format("20060102150405")
 		backuppath = destfile + "." + datetime + ".old"
@@ -121,7 +124,7 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 	if _, err = io.Copy(cf, from); err != nil {
 		return
 	}
-	log.Printf("imported %q to %s:%s", source, h.String(), destfile)
+	fmt.Printf("imported %q to %s:%s\n", source, h.String(), destfile)
 	return
 }
 
@@ -132,12 +135,12 @@ func ImportCommons(r *host.Host, ct *geneos.Component, common string, params []s
 	}
 
 	if len(params) == 0 {
-		logError.Fatalln("no file/url provided")
+		log.Fatal().Msg("no file/url provided")
 	}
 
-	dir := r.GeneosJoinPath(ct.String(), common)
+	dir := r.Filepath(ct, common)
 	for _, source := range params {
-		if filename, err = ImportFile(r, dir, viper.GetString("defaultuser"), source); err != nil {
+		if filename, err = ImportFile(r, dir, config.GetString("defaultuser"), source); err != nil {
 			return
 		}
 	}

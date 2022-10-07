@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package snow
 
 import (
@@ -47,7 +48,7 @@ func (c Connection) POST(payload []byte, limit string, fields string, offset str
 		Connection: c,
 		Method:     "POST",
 		Payload:    payload,
-		Parms:      parameters,
+		Params:     parameters,
 		SysID:      sysID,
 	}
 	return
@@ -74,7 +75,7 @@ func (c Connection) GET(limit string, fields string, offset string, query string
 	t = RequestTransitive{
 		Connection: c,
 		Method:     "GET",
-		Parms:      parameters,
+		Params:     parameters,
 		SysID:      sysID,
 	}
 	return
@@ -102,7 +103,7 @@ func (c Connection) PUT(payload []byte, limit string, fields string, offset stri
 		Connection: c,
 		Method:     "PUT",
 		Payload:    payload,
-		Parms:      parameters,
+		Params:     parameters,
 		SysID:      sysID,
 	}
 	return

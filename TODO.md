@@ -1,10 +1,13 @@
 # To Do list
 
-
 ## `geneos` tool
 
 (unordered)
 
+* Split 'init' common and sub-sub-commands, as it's too complicated
+* When 'moving' a gateway, update licd connection details
+  * Also, keep port(s) unchanged where possible
+* TLS sync should copy root CA
 * Positive confirmations of all commands unless quiet mode - PARTIAL
   * Should be an 'action taken' return from commands for output
   * create a seperate "verbose" logger and work through output to choose
@@ -47,9 +50,6 @@
 ### XML-RPC API
 
 * Reconnection support
-* Clean up error handling
-* Clean up logging, remove unnecessary debug printfs 
 * Look at contexts
 * Heartbeat support by default
 * Add higher level methods to update small sets of data, e.g. rows
-* REST Command API support

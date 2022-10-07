@@ -104,7 +104,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 
 	switch {
 	case tlsCmdJSON:
-		jsonEncoder = json.NewEncoder(log.Writer())
+		jsonEncoder = json.NewEncoder(os.Stdout)
 		if tlsCmdIndent {
 			jsonEncoder.SetIndent("", "    ")
 		}
@@ -132,7 +132,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 		}
 		err = instance.ForAll(ct, lsInstanceCertJSON, args, params)
 	case tlsCmdCSV:
-		csvWriter = csv.NewWriter(log.Writer())
+		csvWriter = csv.NewWriter(os.Stdout)
 		csvWriter.Write([]string{
 			"Type",
 			"Name",
@@ -166,7 +166,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 		err = instance.ForAll(ct, lsInstanceCertCSV, args, params)
 		csvWriter.Flush()
 	default:
-		lsTabWriter = tabwriter.NewWriter(log.Writer(), 3, 8, 2, ' ', 0)
+		lsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintf(lsTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\n")
 		if tlsCmdAll {
 			if rootCert != nil {
@@ -192,7 +192,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 
 	switch {
 	case tlsCmdJSON:
-		jsonEncoder = json.NewEncoder(log.Writer())
+		jsonEncoder = json.NewEncoder(os.Stdout)
 		if tlsCmdIndent {
 			jsonEncoder.SetIndent("", "    ")
 		}
@@ -228,7 +228,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 		}
 		err = instance.ForAll(ct, lsInstanceCertJSON, args, params)
 	case tlsCmdCSV:
-		csvWriter = csv.NewWriter(log.Writer())
+		csvWriter = csv.NewWriter(os.Stdout)
 		csvWriter.Write([]string{
 			"Type",
 			"Name",
@@ -274,7 +274,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 		err = instance.ForAll(ct, lsInstanceCertCSV, args, params)
 		csvWriter.Flush()
 	default:
-		lsTabWriter = tabwriter.NewWriter(log.Writer(), 3, 8, 2, ' ', 0)
+		lsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintf(lsTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tIssuer\tSubjAltNames\tIPs\tFingerprint\n")
 		if tlsCmdAll {
 			if rootCert != nil {

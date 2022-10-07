@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package samplers
 
 import (
@@ -30,19 +31,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/plugins"
 	"github.com/itrs-group/cordial/pkg/xmlrpc"
-)
-
-func init() {
-	// logger.EnableDebugLog()
-}
-
-var (
-	log      = logger.Log
-	logDebug = logger.Debug
-	logError = logger.Error
 )
 
 type SamplerInstance interface {
@@ -103,20 +93,17 @@ func (p *Samplers) initSamplerInternal() error {
 	if v, ok := interface{}(p.Plugins).(interface{ InitSampler() error }); ok {
 		return v.InitSampler()
 	}
-	log.Print("no InitSampler() found in plugin")
-	return nil
+	return fmt.Errorf("no InitSampler() found in plugin")
 }
 
 func (p *Samplers) doSampleInterval() error {
 	if v, ok := interface{}(p.Plugins).(interface{ DoSample() error }); ok {
 		return v.DoSample()
 	}
-	log.Print("no DoSample() found in plugin")
-	return nil
+	return fmt.Errorf("no DoSample() found in plugin")
 }
 
-func (s *Samplers) New(p plugins.Connection, name string, group string) error {
-	logDebug.Print("called")
+func (s *Samplers) New(p *plugins.Connection, name string, group string) error {
 	s.name, s.group = name, group
 	return s.initDataviews(p)
 }
@@ -153,8 +140,8 @@ func (p Samplers) SortColumn() string {
 	return p.sortcolumn
 }
 
-func (s *Samplers) initDataviews(p plugins.Connection) (err error) {
-	d, err := p.NewDataview(s.name, s.group)
+func (s *Samplers) initDataviews(p *plugins.Connection) (err error) {
+	d, err := p.NewDataview(s.group, s.name)
 	if err != nil {
 		return
 	}
@@ -163,12 +150,11 @@ func (s *Samplers) initDataviews(p plugins.Connection) (err error) {
 }
 
 func (p *Samplers) Start(wg *sync.WaitGroup) (err error) {
-	if !p.IsValid() {
+	if !p.Exists() {
 		err = fmt.Errorf("Start(): Dataview not defined")
 		return
 	}
-	err = p.initSamplerInternal()
-	if err != nil {
+	if err = p.initSamplerInternal(); err != nil {
 		return
 	}
 	wg.Add(1)
@@ -183,14 +169,12 @@ func (p *Samplers) Start(wg *sync.WaitGroup) (err error) {
 			}
 		}
 		wg.Done()
-		log.Printf("sampler %q exiting\n", p)
-
 	}()
 	return
 }
 
 func (s *Samplers) Close() error {
-	if !s.IsValid() {
+	if !s.Exists() {
 		return nil
 	}
 	return s.Dataview.Close()
@@ -210,7 +194,6 @@ defined in detail. More docs to follow.
 
 The input is a type or an zero-ed struct as this method only checks the struct
 tags and doesn't care about the data
-
 */
 func (s Samplers) ColumnInfo(rowdata interface{}) (cols Columns,
 	columnnames []string, sorting string, err error) {
@@ -307,7 +290,6 @@ func (s Samplers) RowsFromMap(rowdata interface{}) (rows [][]string, err error) 
 UpdateTableFromSlice - Given an ordered slice of structs of data the
 method renders a simple table of data as defined in the Columns
 part of Samplers
-
 */
 func (s Samplers) UpdateTableFromSlice(rowdata interface{}) error {
 	table, _ := s.RowsFromSlice(rowdata)
@@ -321,7 +303,7 @@ func (s Samplers) RowsFromSlice(rowdata interface{}) (rows [][]string, err error
 
 	rd := reflect.Indirect(reflect.ValueOf(rowdata))
 	if rd.Kind() != reflect.Slice {
-		err = fmt.Errorf("non Slice passed")
+		err = fmt.Errorf("non slice passed")
 		return
 	}
 
@@ -353,12 +335,14 @@ func (s *Samplers) UpdateTableFromMapDelta(newdata, olddata interface{}, interva
 	return s.UpdateTable(s.ColumnNames(), table...)
 }
 
-// RowsFromMapDelta takes two sets of data and calculates the difference between them.
-// Only numeric data is changed, any non-numeric fields are left
-// unchanges and taken from newrowdata only. If an interval is supplied (non-zero) then that is used as
-// a scaling value otherwise the straight numeric difference is calculated
+// RowsFromMapDelta takes two sets of data and calculates the difference
+// between them. Only numeric data is changed, any non-numeric fields
+// are left unchanged and taken from newrowdata only. If an interval is
+// supplied (non-zero) then that is used as a scaling value otherwise
+// the straight numeric difference is calculated
 //
-// This is for data like sets of counters that are absolute values over time
+// This is for data like sets of counters that are absolute values over
+// time
 func (s Samplers) RowsFromMapDelta(newrowdata, oldrowdata interface{},
 	interval time.Duration) (rows [][]string, err error) {
 

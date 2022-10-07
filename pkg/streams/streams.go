@@ -19,24 +19,17 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package streams
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"net/url"
+	"strings"
 
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/xmlrpc"
-)
-
-func init() {
-	// logger.EnableDebugLog()
-}
-
-var (
-	log      = logger.Log
-	logDebug = logger.Debug
-	logError = logger.Error
 )
 
 type Stream struct {
@@ -46,39 +39,45 @@ type Stream struct {
 	name string
 }
 
-// Sampler - wrap calls to xmlrpc
-func Sampler(url string, entityName string, samplerName string) (s Stream, err error) {
-	logDebug.Printf("called")
-	sampler, err := xmlrpc.NewClient(url, entityName, samplerName)
-	s = Stream{}
-	s.Sampler = sampler
+// Open a stream for writing. `stream` is an optional stream name and
+// additional arguments are ignored. If no stream name is supplied then
+// the sampler name is used for the stream name.
+func Open(url *url.URL, entity, sampler string, stream ...string) (s *Stream, err error) {
+	name := sampler
+	if len(stream) > 0 {
+		name = stream[0]
+	}
+	smpl, err := xmlrpc.NewClient(url).Sampler(entity, sampler)
+	s = &Stream{name: name, Sampler: smpl}
 	return
 }
 
-func (s *Stream) SetStreamName(name string) {
-	s.name = name
-}
-
+// Write data bytes to stream. Whitespace is trimmed.
 func (s Stream) Write(data []byte) (n int, err error) {
 	if s.name == "" {
 		return 0, fmt.Errorf("streamname not set")
 	}
+	// set written length before trimming
+	n = len(data)
+	data = bytes.TrimSpace(data)
 	err = s.WriteMessage(s.name, string(data))
 	if err != nil {
 		return 0, err
 	}
-	n = len(data)
 	return
 }
 
+// Write string to stream. Whitespace is trimmed.
 func (s Stream) WriteString(data string) (n int, err error) {
 	if s.name == "" {
 		return 0, fmt.Errorf("streamname not set")
 	}
+	// set written length before trimming
+	n = len(data)
+	data = strings.TrimSpace(data)
 	err = s.WriteMessage(s.name, data)
 	if err != nil {
 		return 0, err
 	}
-	n = len(data)
 	return
 }

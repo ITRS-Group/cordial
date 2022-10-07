@@ -19,42 +19,73 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package snow
 
 import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
-	"github.com/itrs-group/cordial/integrations/servicenow/settings"
+	"github.com/itrs-group/cordial/pkg/config"
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-func InitializeConnection(cf settings.Settings, password string) *Connection {
-	var client *http.Client = http.DefaultClient
+func InitializeConnection(vc *config.Config) *Connection {
+	var err error
 
-	if cf.ServiceNow.ClientID != "" && cf.ServiceNow.ClientSecret != "" && !strings.Contains(cf.ServiceNow.Instance, ".") {
+	pw := []byte(vc.GetString("servicenow.password"))
+	// XXX - deprecated. Use above with expansion options
+	if len(pw) == 0 {
+		var passwordfile = vc.GetString("servicenow.passwordfile")
+		if len(passwordfile) == 0 {
+			log.Fatalln("no password or password file configured")
+		}
+		if strings.HasPrefix(passwordfile, "~/") {
+			home, _ := os.UserHomeDir()
+			passwordfile = strings.Replace(passwordfile, "~", home, 1)
+		}
+		if pw, err = os.ReadFile(passwordfile); err != nil {
+			log.Fatalf("cannot read password from file %q", passwordfile)
+		}
+	}
+	password := strings.TrimSpace(string(pw))
+
+	username := vc.GetString("servicenow.username")
+	clientid := vc.GetString("servicenow.clientid")
+	clientsecret := vc.GetString("servicenow.clientsecret")
+	instance := vc.GetString("servicenow.instance")
+
+	if clientid != "" && clientsecret != "" && !strings.Contains(instance, ".") {
 		params := make(url.Values)
 		params.Set("grant_type", "password")
-		params.Set("username", cf.ServiceNow.Username)
+		params.Set("username", username)
 		params.Set("password", password)
+
 		conf := &clientcredentials.Config{
-			ClientID:       cf.ServiceNow.ClientID,
-			ClientSecret:   cf.ServiceNow.ClientSecret,
+			ClientID:       clientid,
+			ClientSecret:   clientsecret,
 			EndpointParams: params,
-			TokenURL:       "https://" + cf.ServiceNow.Instance + ".service-now.com/oauth_token.do",
+			TokenURL:       "https://" + instance + ".service-now.com/oauth_token.do",
 		}
 
-		client = conf.Client(context.Background())
+		// with OAuth we don't need to store the username and password
+		return &Connection{
+			Client:   conf.Client(context.Background()),
+			Instance: instance,
+		}
 	}
+
 	return &Connection{
-		client,
-		cf.ServiceNow.Instance,
-		cf.ServiceNow.Username,
-		password,
+		Client:   http.DefaultClient,
+		Instance: instance,
+		Username: username,
+		Password: password,
 	}
 }
 
@@ -74,7 +105,7 @@ func AssembleRequest(t RequestTransitive, table string) (req *http.Request) {
 		Url.Path += "/api/now/v2/table/" + table
 	}
 
-	z := t.Parms.Encode()
+	z := t.Params.Encode()
 	z = strings.ReplaceAll(z, "+", "%20") // XXX ?
 
 	Url.RawQuery = z

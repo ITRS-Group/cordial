@@ -1,3 +1,25 @@
+/*
+Copyright © 2022 ITRS Group
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
 package main
 
 import "C"
@@ -10,6 +32,7 @@ import (
 	"unsafe"
 
 	"github.com/go-mail/mail/v2"
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 func debug(conf EMailConfig) (debug bool) {
@@ -21,8 +44,6 @@ func debug(conf EMailConfig) (debug bool) {
 	return
 }
 
-//
-//
 func setupMail(conf EMailConfig) (m *mail.Message, err error) {
 	m = mail.NewMessage()
 
@@ -60,18 +81,16 @@ func setupMail(conf EMailConfig) (m *mail.Message, err error) {
 	return
 }
 
-//
 // Set-up a Dialer using the _SMTP_* parameters
 //
 // All the parameters in the official docs are supported and have the same
 // defaults
 //
 // Additional parameters are
-// * _SMTP_TLS - default / force / none (case insenstive)
+// * _SMTP_TLS - default / force / none (case insensitive)
 // * _SMTP_USERNAME - if defined authentication attempted
 // * _SMTP_PASSWORD_FILE - plain text password in external file
 // * XXX - _SMTP_REFERENCE - override the SMTP Reference header for conversations / threading
-//
 func dialServer(conf EMailConfig) (d *mail.Dialer, err error) {
 	server := getWithDefault("_SMTP_SERVER", conf, "localhost")
 	port := getWithDefaultInt("_SMTP_PORT", conf, 25)
@@ -93,15 +112,17 @@ func dialServer(conf EMailConfig) (d *mail.Dialer, err error) {
 	if ok {
 		// get the password from the file given or continue with
 		// an empty string
-		var password string
-		pwfile := getWithDefault("_SMTP_PASSWORD_FILE", conf, "")
-		if pwfile != "" {
-			password, err = readFileString(pwfile)
-			if err != nil {
-				return nil, err
+		password := config.GetConfig().ExpandString(getWithDefault("_SMTP_PASSWORD", conf, ""))
+		if password == "" {
+			pwfile := getWithDefault("_SMTP_PASSWORD_FILE", conf, "")
+			if pwfile != "" {
+				password, err = readFileString(pwfile)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
-		// the password can be empty at this point. this is valid, if dumb.
+		// the password can be empty at this point. this is valid, even if a bit dumb.
 
 		d = mail.NewDialer(server, port, username, password)
 	} else {
@@ -161,11 +182,9 @@ func getWithDefaultInt(key string, conf EMailConfig, def int) int {
 	return def
 }
 
-//
 // The Geneos libemail supports an optional text name per address and also the info type,
 // if given, must match "email" or "e-mail" (case insensitive). If either names or info types
 // are given they MUST have the same number of members otherwise it's a fatal error
-//
 func addAddresses(m *mail.Message, conf EMailConfig, header string) error {
 	upperHeader := strings.ToUpper(header)
 	addrs := splitCommaTrimSpace(conf[fmt.Sprintf("_%s", upperHeader)])
@@ -208,8 +227,8 @@ func splitCommaTrimSpace(s string) []string {
 		return []string{}
 	}
 	fields := strings.Split(s, ",")
-	for _, field := range fields {
-		strings.TrimSpace(field)
+	for i, field := range fields {
+		fields[i] = strings.TrimSpace(field)
 	}
 	return fields
 }

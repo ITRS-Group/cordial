@@ -22,8 +22,11 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -70,11 +73,11 @@ func deleteInstance(c geneos.Instance, params []string) (err error) {
 		if err = c.Host().RemoveAll(c.Home()); err != nil {
 			return
 		}
-		log.Printf("%s deleted %s:%s", c, c.Host().String(), c.Home())
+		fmt.Printf("%s deleted %s:%s\n", c, c.Host().String(), c.Home())
 		c.Unload()
 		return nil
 	}
 
-	log.Println(c, "must use -F or instance must be be disabled before delete")
+	log.Error().Msgf("%s must use -F or instance must be be disabled before delete", c)
 	return nil
 }

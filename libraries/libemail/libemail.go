@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package main
 
 import "C"
@@ -134,15 +135,15 @@ func SendMail(n C.int, args **C.char) C.int {
 	return 0
 }
 
-// substitue placeholder of the form %(XXX) for the value of XXX or empty and
+var replARgsRE = regexp.MustCompile(`%\([^\)]*\)`)
+
+// substitute placeholder of the form %(XXX) for the value of XXX or empty and
 // return the result as a new string
 func replArgs(format string, conf EMailConfig) string {
-	re := regexp.MustCompile(`%\([^\)]*\)`)
-	result := re.ReplaceAllStringFunc(format, func(key string) string {
+	result := replARgsRE.ReplaceAllStringFunc(format, func(key string) string {
 		// strip containing "%(...)" - as we are here, the regexp must have matched OK
-		// so no further check required
-		key = key[2 : len(key)-1]
-		return conf[key]
+		// so no further check required. No match returns empty string.
+		return conf[key[2:len(key)-1]]
 	})
 
 	return result

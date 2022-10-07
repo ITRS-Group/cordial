@@ -25,6 +25,7 @@ import (
 	"os"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -52,7 +53,7 @@ func init() {
 func commandSetUser(ct *geneos.Component, args, params []string) (err error) {
 	userConfDir, _ := os.UserConfigDir()
 	if err = os.MkdirAll(userConfDir, 0775); err != nil {
-		logError.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
-	return writeConfigParams(geneos.UserConfigFilePath(), params)
+	return writeConfigParams(geneos.UserConfigFilePaths()[0], params)
 }

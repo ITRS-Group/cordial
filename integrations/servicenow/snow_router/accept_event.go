@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package main
 
 import (
@@ -54,7 +55,7 @@ func AcceptEvent(c echo.Context) (err error) {
 				return echo.NewHTTPError(http.StatusNotFound, "must supply either a default_cmdb_ci or a sys_id search parameter")
 			}
 		} else {
-			if cf.ServiceNow.SearchType == "simple" {
+			if vc.GetString("servicenow.searchtype") == "simple" {
 				if cmdb_ci_id, sys_class_name, err = LookupSysIDSimple("cmdb_ci", search, incident["default_cmdb_ci"]); err != nil {
 					return
 				}
@@ -66,7 +67,7 @@ func AcceptEvent(c echo.Context) (err error) {
 		}
 	}
 
-	_ = sys_class_name
+	_ = sys_class_name // unused for now
 
 	if cmdb_ci_id == "" {
 		incident["action"] = "Failed"
@@ -92,17 +93,17 @@ func AcceptEvent(c echo.Context) (err error) {
 	}
 
 	// look up state mappings for defaults for 'state' - this is a list of strings
-	for sk, sv := range cf.ServiceNow.IncidentStates {
-		if state == sk {
+	for sk, sv := range vc.GetStringMapStringSlice("servicenow.incidentstates") {
+		if fmt.Sprint(state) == sk {
 			for _, si := range sv {
 				// trim spaces as YAML comma lists leave spaces in
 				si = strings.ToLower(strings.TrimSpace(si))
-				configDefaults(incident, cf.ServiceNow.IncidentStateDefaults[si])
+				configDefaults(incident, vc.GetStringMapString("servicenow.incidentstatedefaults."+si))
 			}
 		}
 	}
 
-	user := cf.ServiceNow.Username
+	user := vc.GetString("servicenow.username")
 	if _, ok := incident["caller_id"]; ok {
 		user = incident["caller_id"]
 	}

@@ -22,6 +22,8 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
@@ -51,17 +53,17 @@ func init() {
 }
 
 func commandInstance(c geneos.Instance, params []string) (err error) {
-	log.Printf("=== %s ===", c)
+	fmt.Printf("=== %s ===\n", c)
 	cmd, env := instance.BuildCmd(c)
 	if cmd != nil {
-		log.Println("command line:")
-		log.Println("\t", cmd.String())
-		log.Println()
-		log.Println("environment:")
+		fmt.Println("command line:")
+		fmt.Println("\t", cmd.String())
+		fmt.Println()
+		fmt.Println("environment:")
 		for _, e := range env {
-			log.Println("\t", e)
+			fmt.Println("\t", e)
 		}
-		log.Println()
+		fmt.Println()
 	}
 	return
 }

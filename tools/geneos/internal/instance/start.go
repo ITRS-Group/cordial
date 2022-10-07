@@ -9,12 +9,13 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
+	"github.com/rs/zerolog/log"
 )
 
 func Start(c geneos.Instance) (err error) {
 	pid, err := GetPID(c)
 	if err == nil {
-		log.Println(c, "already running with PID", pid)
+		fmt.Printf("%s already running with PID %d\n", c, pid)
 		return
 	}
 
@@ -22,7 +23,7 @@ func Start(c geneos.Instance) (err error) {
 		return geneos.ErrDisabled
 	}
 
-	binary := c.V().GetString("program")
+	binary := c.Config().GetString("program")
 	if _, err = c.Host().Stat(binary); err != nil {
 		return fmt.Errorf("%q %w", binary, err)
 	}
@@ -32,13 +33,13 @@ func Start(c geneos.Instance) (err error) {
 		return fmt.Errorf("buildCommand returned nil")
 	}
 
-	if !utils.CanControl(c.V().GetString("user")) {
+	if !utils.CanControl(c.Config().GetString("user")) {
 		return os.ErrPermission
 	}
 
 	// set underlying user for child proc
-	username := c.V().GetString("user")
-	errfile := ConfigPathWithExt(c, "txt")
+	username := c.Config().GetString("user")
+	errfile := ComponentFilepath(c, "txt")
 
 	if c.Host() != host.LOCAL {
 		r := c.Host()
@@ -85,7 +86,7 @@ func Start(c geneos.Instance) (err error) {
 		if err != nil {
 			return err
 		}
-		log.Println(c, "started with PID", pid)
+		fmt.Printf("%s started with PID %d\n", c, pid)
 		return nil
 	}
 
@@ -104,7 +105,7 @@ func Start(c geneos.Instance) (err error) {
 	// if we've set-up privs at all, set the redirection output file to the same
 	if cmd.SysProcAttr != nil && cmd.SysProcAttr.Credential != nil {
 		if err = out.Chown(int(cmd.SysProcAttr.Credential.Uid), int(cmd.SysProcAttr.Credential.Gid)); err != nil {
-			log.Println("chown:", err)
+			log.Error().Err(err).Msg("chown")
 		}
 	}
 	cmd.Stdout = out
@@ -119,7 +120,7 @@ func Start(c geneos.Instance) (err error) {
 	if err = cmd.Start(); err != nil {
 		return
 	}
-	log.Println(c, "started with PID", cmd.Process.Pid)
+	fmt.Printf("%s started with PID %d\n", c, cmd.Process.Pid)
 	if cmd.Process != nil {
 		// detach from control
 		cmd.Process.Release()

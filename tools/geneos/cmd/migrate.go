@@ -24,6 +24,7 @@ package cmd
 import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -52,7 +53,7 @@ func init() {
 
 func migrateInstance(c geneos.Instance, params []string) (err error) {
 	if err = instance.Migrate(c); err != nil {
-		log.Println(c, "cannot migrate configuration", err)
+		log.Error().Err(err).Msgf("%s cannot migrate configuration", c)
 	}
 	return
 }

@@ -113,7 +113,7 @@ func renewInstanceCert(c geneos.Instance, _ []string) (err error) {
 		}
 	}
 
-	log.Printf("certificate renewed for %s (expires %s)", c, expires)
+	fmt.Printf("certificate renewed for %s (expires %s)\n", c, expires)
 
 	return
 }

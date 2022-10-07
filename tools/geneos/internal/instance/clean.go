@@ -3,8 +3,10 @@ package instance
 import (
 	"os"
 
+	"github.com/rs/zerolog/log"
+
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/spf13/viper"
 )
 
 func Clean(c geneos.Instance, options ...geneos.GeneosOptions) (err error) {
@@ -12,13 +14,13 @@ func Clean(c geneos.Instance, options ...geneos.GeneosOptions) (err error) {
 
 	opts := geneos.EvalOptions(options...)
 
-	cleanlist := viper.GetString(c.Type().CleanList)
-	purgelist := viper.GetString(c.Type().PurgeList)
+	cleanlist := config.GetString(c.Type().CleanList)
+	purgelist := config.GetString(c.Type().PurgeList)
 
 	if !opts.Restart() {
 		if cleanlist != "" {
 			if err = RemovePaths(c, cleanlist); err == nil {
-				logDebug.Println(c, "cleaned")
+				log.Debug().Msgf("%s cleaned", c)
 			}
 		}
 		return
@@ -42,7 +44,7 @@ func Clean(c geneos.Instance, options ...geneos.GeneosOptions) (err error) {
 			return
 		}
 	}
-	logDebug.Println(c, "fully cleaned")
+	log.Debug().Msgf("%s fully cleaned", c)
 	if stopped {
 		err = Start(c)
 	}

@@ -3,11 +3,12 @@ package licd
 import (
 	"sync"
 
-	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/rs/zerolog/log"
+
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/viper"
 )
 
 var Licd = geneos.Component{
@@ -35,14 +36,14 @@ var Licd = geneos.Component{
 		"licdopts":  "options",
 	},
 	Defaults: []string{
-		"binary=licd.linux_64",
-		"home={{join .root \"licd\" \"licds\" .name}}",
-		"install={{join .root \"packages\" \"licd\"}}",
-		"version=active_prod",
-		"program={{join .install .version .binary}}",
-		"logfile=licd.log",
-		"port=7041",
-		"libpaths={{join .install .version \"lib64\"}}",
+		`binary=licd.linux_64`,
+		`home={{join .root "licd" "licds" .name}}`,
+		`install={{join .root "packages" "licd"}}`,
+		`version=active_prod`,
+		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
+		`logfile=licd.log`,
+		`port=7041`,
+		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}`,
 	},
 	GlobalSettings: map[string]string{
 		"LicdPortRange": "7041,7100-",
@@ -73,12 +74,11 @@ func New(name string) geneos.Instance {
 		}
 	}
 	c := &Licds{}
-	c.Conf = viper.New()
+	c.Conf = config.New()
 	c.InstanceHost = r
-	// c.root = r.V().GetString("geneos")
 	c.Component = &Licd
 	if err := instance.SetDefaults(c, local); err != nil {
-		logger.Error.Fatalln(c, "setDefaults():", err)
+		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
 	}
 	licds.Store(r.FullName(local), c)
 	return c
@@ -92,11 +92,17 @@ func (l *Licds) Type() *geneos.Component {
 }
 
 func (l *Licds) Name() string {
-	return l.V().GetString("name")
+	if l.Config() == nil {
+		return ""
+	}
+	return l.Config().GetString("name")
 }
 
 func (l *Licds) Home() string {
-	return l.V().GetString("home")
+	if l.Config() == nil {
+		return ""
+	}
+	return l.Config().GetString("home")
 }
 
 func (l *Licds) Prefix() string {
@@ -108,7 +114,7 @@ func (l *Licds) Host() *host.Host {
 }
 
 func (l *Licds) String() string {
-	return l.Type().String() + ":" + l.Name() + "@" + l.Host().String()
+	return instance.DisplayName(l)
 }
 
 func (l *Licds) Load() (err error) {
@@ -130,11 +136,11 @@ func (l *Licds) Loaded() bool {
 	return l.ConfigLoaded
 }
 
-func (l *Licds) V() *viper.Viper {
+func (l *Licds) Config() *config.Config {
 	return l.Conf
 }
 
-func (l *Licds) SetConf(v *viper.Viper) {
+func (l *Licds) SetConf(v *config.Config) {
 	l.Conf = v
 }
 
@@ -142,11 +148,11 @@ func (l *Licds) Add(username string, tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(l.InstanceHost, &Licd)
 	}
-	l.V().Set("port", port)
-	l.V().Set("user", username)
+	l.Config().Set("port", port)
+	l.Config().Set("user", username)
 
 	if err = instance.WriteConfig(l); err != nil {
-		logger.Error.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	// check tls config, create certs if found
@@ -163,18 +169,11 @@ func (l *Licds) Add(username string, tmpl string, port uint16) (err error) {
 func (l *Licds) Command() (args, env []string) {
 	args = []string{
 		l.Name(),
-		"-port", l.V().GetString("port"),
+		"-port", l.Config().GetString("port"),
 		"-log", instance.LogFile(l),
 	}
 
-	if l.V().GetString("certificate") != "" {
-		args = append(args, "-secure", "-ssl-certificate", l.V().GetString("certificate"))
-	}
-
-	if l.V().GetString("privatekey") != "" {
-		args = append(args, "-ssl-certificate-key", l.V().GetString("privatekey"))
-	}
-
+	args = append(args, instance.SetSecureArgs(l)...)
 	return
 }
 
