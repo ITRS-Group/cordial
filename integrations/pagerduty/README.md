@@ -15,6 +15,4 @@ The integration takes it settings from the following, in order of priority from 
 3. External Defaults File
 4. Internal Defaults
 
-Geneos passes alert information to external programs and scripts using environment variables. These are used by the configuration options to build a Pagerduty Event in PD-CEF format.
-
-
+Geneos passes alert information to external programs and scripts using environment variables. These are used by the configuration options to build a Pagerduty Event in [PD-CEF](https://support.pagerduty.com/docs/pd-cef) format.
