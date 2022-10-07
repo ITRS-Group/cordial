@@ -46,34 +46,43 @@ func init() {
 	global = &Config{Viper: viper.New()}
 }
 
-// Returns the configuration item as a string with ExpandString() applied,
-// passing the first "values" if given
+// GetString functions like [viper.GetString] but additionally calls
+// [ExpandString] with the configuration value, passing any "values" maps
 func GetString(s string, values ...map[string]string) string {
 	return global.GetString(s, values...)
 }
 
-// Returns the configuration item as a string with ExpandString() applied,
-// passing the first "values" if given
+// GetString functions like [viper.GetString] on a Config instance, but
+// additionally calls [ExpandString] with the configuration value, passing
+// any "values" maps
 func (c *Config) GetString(s string, values ...map[string]string) string {
 	return c.ExpandString(c.Viper.GetString(s), values...)
 }
 
+// GetConfig returns the global Config instance
 func GetConfig() *Config {
 	return global
 }
 
+// New returns a Config instance initialised with a new viper instance
 func New() *Config {
 	return &Config{Viper: viper.New()}
 }
 
+// Sub returns a Config instance for the sub-key passed
 func (c *Config) Sub(key string) *Config {
 	return &Config{Viper: c.Viper.Sub(key)}
 }
 
+// GetStringSlice functions like [viper.GetStringSlice] but additionally calls
+// [ExpandString] on each element of the slice, passing any "values" maps
 func GetStringSlice(s string, values ...map[string]string) []string {
 	return global.GetStringSlice(s, values...)
 }
 
+// GetStringSlice functions like [viper.GetStringSlice] on a Config
+// instance but additionally calls [ExpandString] on each element of the
+// slice, passing any "values" maps
 func (c *Config) GetStringSlice(s string, values ...map[string]string) (slice []string) {
 	r := c.Viper.GetStringSlice(s)
 	for _, n := range r {
@@ -82,10 +91,15 @@ func (c *Config) GetStringSlice(s string, values ...map[string]string) (slice []
 	return
 }
 
+// GetStringMapString functions like [viper.GetStringMapString] but additionally calls
+// [ExpandString] on each value element of the map, passing any "values" maps
 func GetStringMapString(s string, values ...map[string]string) map[string]string {
 	return global.GetStringMapString(s, values...)
 }
 
+// GetStringMapString functions like [viper.GetStringMapString] on a
+// Config instance but additionally calls [ExpandString] on each value
+// element of the map, passing any "values" maps
 func (c *Config) GetStringMapString(s string, values ...map[string]string) (m map[string]string) {
 	m = make(map[string]string)
 	r := c.Viper.GetStringMapString(s)
@@ -211,8 +225,8 @@ func (c *Config) ExpandString(input string, values ...map[string]string) (value 
 
 // ExpandAllSettings returns all the settings from c applying
 // ExpandString() to all string values and all string slice values.
-// "values" maps are passed to ExpandString as-is.
-// Futher types may be added over time.
+// "values" maps are passed to ExpandString as-is. Further types may be
+// added over time.
 func (c *Config) ExpandAllSettings(values ...map[string]string) (all map[string]interface{}) {
 	as := c.AllSettings()
 	all = make(map[string]interface{}, len(as))
