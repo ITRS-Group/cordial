@@ -2,7 +2,7 @@
 
 * Current Version: v1.2.1-rc3 - 2022/10/07
 
-This repo contains a set of interrelated programs, integrations, libraries and packages for Geneos principally written in Go.
+Cordial comprises a set of interrelated programs, integrations, libraries and packages for Geneos, principally written in Go.
 
 * [`geneos` Manager Program](tools/geneos/)
 * [ServiceNow Incident Integration](integrations/servicenow/)
