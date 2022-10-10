@@ -25,3 +25,4 @@ examples/xpath
 libraries/libemail/libemail
 examples/api/api
 cordial.code-workspace
+tools/geneos/docs/docs
