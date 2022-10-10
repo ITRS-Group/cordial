@@ -20,6 +20,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+/*
+Package config adds support for value expansion over viper based configurations.
+
+A number of the most common access methods from viper are replaced with local versions that add support for [Config.ExpandString].
+Additionally, there are a number of functions to simplify programs including [LoadConfig].
+*/
 package config
 
 import (
@@ -114,76 +120,76 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 // support for bare names) for the formats (in the order of priority)
 // below:
 //
-//  1. "${enc:keyfile[|keyfile...]:encodedvalue}"
+//	${enc:keyfile[|keyfile...]:encodedvalue}
 //
-//     The item "encodedvalue" is an AES256 ciphertext in Geneos format
-//     - or a reference to one - which will be decoded using the key
-//     file(s) given. Each "keyfile" must be one of either an absolute
-//     path, a path relative to the working directory of the program, or
-//     if prefixed with "~/" then relative to the home directory of the
-//     user running the program. The first valid decode (see below) is
-//     returned.
+//	   The item "encodedvalue" is an AES256 ciphertext in Geneos format
+//	   - or a reference to one - which will be decoded using the key
+//	   file(s) given. Each "keyfile" must be one of either an absolute
+//	   path, a path relative to the working directory of the program, or
+//	   if prefixed with "~/" then relative to the home directory of the
+//	   user running the program. The first valid decode (see below) is
+//	   returned.
 //
-//     The "encodedvalue" must be either prefixed "+encs+" to align with
-//     Geneos or will otherwise be looked up using the forms of any of
-//     the other references below, but without the surrounding
-//     dollar-brackets "${...}".
+//	   The "encodedvalue" must be either prefixed "+encs+" to align with
+//	   Geneos or will otherwise be looked up using the forms of any of
+//	   the other references below, but without the surrounding
+//	   dollar-brackets "${...}".
 //
-//     To minimise (but not wholly eliminate) any false-positive decodes
-//     that occur in some circumstances when using the wrong key file,
-//     the decoded value is only returned if it is a valid UTF-8 string
-//     as per [utf8.Valid].
+//	   To minimise (but not wholly eliminate) any false-positive decodes
+//	   that occur in some circumstances when using the wrong key file,
+//	   the decoded value is only returned if it is a valid UTF-8 string
+//	   as per [utf8.Valid].
 //
-//     Examples:
+//	   Examples:
 //
-//     * password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
-//     * password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
-//     * password: ${enc:~/.config/geneos/keyfile1.aes:env:app.password}
-//     * password: ${enc:~/.keyfile.aes:env:config:mySecret}
+//	   * password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
+//	   * password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
+//	   * password: ${enc:~/.config/geneos/keyfile1.aes:env:app.password}
+//	   * password: ${enc:~/.keyfile.aes:env:config:mySecret}
 //
-//  2. "${config:key}" or "${path.to.config}"
+//	${config:key} or ${path.to.config}
 //
-//     Fetch the "key" configuration value (for single layered
-//     configurations, where a sub-level dot cannot be used) or if any
-//     value containing one or more dots "." will be looked-up in the
-//     existing configuration that the method is called on. The
-//     underlying configuration is not changed and values are resolved
-//     each time ExpandString() is called. No locking of the
-//     configuration is done.
+//	   Fetch the "key" configuration value (for single layered
+//	   configurations, where a sub-level dot cannot be used) or if any
+//	   value containing one or more dots "." will be looked-up in the
+//	   existing configuration that the method is called on. The
+//	   underlying configuration is not changed and values are resolved
+//	   each time ExpandString() is called. No locking of the
+//	   configuration is done.
 //
-//  3. "${key}"
+//	 ${key}
 //
-//     "key" will be substituted with the value of the first matching
-//     key from the maps "values...", in the order passed to the
-//     function. If no "values" are passed (as opposed to the key not
-//     being found in any of the maps) then name is looked up
-//     as an environment variable, as 4. below.
+//	   "key" will be substituted with the value of the first matching
+//	   key from the maps "values...", in the order passed to the
+//	   function. If no "values" are passed (as opposed to the key not
+//	   being found in any of the maps) then name is looked up
+//	   as an environment variable, as 4. below.
 //
-//  4. "${env:name}"
+//	 ${env:name}
 //
-//     "name" will be substituted with the contents of the environment
-//     variable of the same name.
+//	   "name" will be substituted with the contents of the environment
+//	   variable of the same name.
 //
-//  5. "${~/file} or "${/path/to/file}"" or "${file://path/to/file}" or "${file:~/path/to/file}"
+//	 ${~/file} or ${/path/to/file} or ${file://path/to/file} or ${file:~/path/to/file}
 //
-//     The contents of the referenced file will be read. Multiline files
-//     are used as-is; this can, for example, be used to read PEM
-//     certificate files or keys. If the path is prefixed with "~/" (or
-//     as an addition to a standard file url, if the first "/" is
-//     replaced with a tilde "~") then the path is relative to the home
-//     directory of the user running the process.
+//	   The contents of the referenced file will be read. Multiline files
+//	   are used as-is; this can, for example, be used to read PEM
+//	   certificate files or keys. If the path is prefixed with "~/" (or
+//	   as an addition to a standard file url, if the first "/" is
+//	   replaced with a tilde "~") then the path is relative to the home
+//	   directory of the user running the process.
 //
-//     Examples:
+//	   Examples:
 //
-//     * certfile ${file://etc/ssl/cert.pem}
-//     * template: ${file:~/templates/autogen.gotmpl}
+//	   * certfile ${file://etc/ssl/cert.pem}
+//	   * template: ${file:~/templates/autogen.gotmpl}
 //
-//  6. "${https://host/path}" or "${http://host/path}"
+//	 ${https://host/path} or ${http://host/path}
 //
-//     The contents of the URL are fetched and used similarly as for
-//     local files above. The URL is passed to [http.Get] and supports
-//     proxies, embedded Basic Authentication and other features from
-//     that function.
+//	   The contents of the URL are fetched and used similarly as for
+//	   local files above. The URL is passed to [http.Get] and supports
+//	   proxies, embedded Basic Authentication and other features from
+//	   that function.
 //
 // The bare form "$name" is NOT supported, unlike [os.Expand] as this
 // can unexpectedly match values containing valid literal dollar signs.
