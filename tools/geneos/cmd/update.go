@@ -82,17 +82,19 @@ geneos update netprobe 5.13.2
 func init() {
 	rootCmd.AddCommand(updateCmd)
 
+	updateCmd.Flags().StringVarP(&cmdUpdateVersion, "version", "V", "latest", "Update to this version, defaults to latest")
+
 	updateCmd.Flags().StringVarP(&cmdUpdateBase, "base", "b", "active_prod", "Base name for the symlink, defaults to active_prod")
 	updateCmd.Flags().StringVarP(&cmdUpdateHost, "host", "H", string(host.ALLHOSTS), "Apply only on remote host. \"all\" (the default) means all remote hosts and locally")
 	updateCmd.Flags().BoolVarP(&cmdUpdateRestart, "restart", "R", false, "Restart all instances that may have an update applied")
 	updateCmd.Flags().SortFlags = false
 }
 
-var cmdUpdateBase, cmdUpdateHost string
+var cmdUpdateBase, cmdUpdateHost, cmdUpdateVersion string
 var cmdUpdateRestart bool
 
 func commandUpdate(ct *geneos.Component, args []string, params []string) (err error) {
-	version := "latest"
+	version := cmdUpdateVersion
 	if len(args) > 0 {
 		version = args[0]
 	}

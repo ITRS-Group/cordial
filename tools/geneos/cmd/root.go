@@ -59,6 +59,7 @@ template based configuration files for SANs and new gateways.`,
 	DisableFlagsInUseLine: true,
 	Annotations:           make(map[string]string),
 	Version:               cordial.VERSION,
+	DisableAutoGenTag:     true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		// check initialisation
 		geneosdir := host.Geneos()
