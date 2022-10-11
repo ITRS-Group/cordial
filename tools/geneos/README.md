@@ -482,7 +482,9 @@ Available Commands:
 
 #### General Command Flags & Arguments
 
-`geneos [FLAG...] COMMAND [FLAG...] [TYPE] [NAME...] [PARAM...]`
+```bash
+geneos [FLAG...] COMMAND [FLAG...] [TYPE] [NAME...] [PARAM...]
+```
 
 Where:
 
@@ -494,8 +496,10 @@ Where:
 
 In general, with the exception of `COMMAND` and `TYPE`, all parameters can be in any order as they are filtered into their types for most commands. Some commands require arguments in an exact order. For example, these have the same meaning:
 
-`geneos ls -c gateway one two three`
-`geneos ls gateway one -c two three`
+```bash
+geneos ls -c gateway one two three
+geneos ls gateway one -c two three
+```
 
 Reserved instance names are case-insensitive. So, for example, "gateway", "Gateway" and "GATEWAY" are all reserved.
 

@@ -11,6 +11,10 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# archives
+*.tar.gz
+*.zip
+
 # Dependency directories (remove the comment below to include it)
 # vendor/
 libraries/libemail/libemail.h
@@ -27,3 +31,5 @@ libraries/libemail/libemail
 examples/api/api
 cordial.code-workspace
 integrations/servicenow/servicenow.yaml
+integrations/pagerduty/pagerduty
+tools/geneos/docs/docs

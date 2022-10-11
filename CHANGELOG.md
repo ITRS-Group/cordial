@@ -1,5 +1,34 @@
 # Change Log
 
+## Version v1.2.1 - 2022/10/11
+
+Final release after numerous small fixes.
+
+## Version v1.2.1-rc3 - 2022/10/07
+
+### Fixes
+
+* `geneos` command fixes:
+  * Fixed `init` download credential handling
+  * Fixes JSON output format from `ls` commands
+  * Local-only installs now work again (including default "latest" support)
+
+* Security
+  * Updated Labstack Echo to 4.9.0 to address security advisory [CVE-2022-40083](https://nvd.nist.gov/vuln/detail/CVE-2022-40083). To best of our knowledge this particular set of features was never used in this package.
+
+### Additional features and improvements
+
+* `geneos` command improvements:
+  * Added `--raw` to `show` to not output expanded configuration values
+  * Many improvements and changes to the new `aes` sub-commands. Please see [documentation](tools/geneos/README.md) for details
+  * Removed built-in opaquing of credentials in output in favour of new `${enc:...}` support
+
+* `libemail.so` gets direct passwords back, with ExpandString support. See [documentation](libraries/libemail/README.md) for details
+
+* General package improvements
+  * Enhanced `OpenLocalFileOrURL` to support `~/` paths
+  * Enhanced `ExpandString` to support direct file paths and updates package docs further
+
 ## Version v1.2.1-rc1 - 2022/09/28
 
 ### Fixes

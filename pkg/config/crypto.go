@@ -19,15 +19,12 @@ import (
 )
 
 // An AESValues structure contains the values required to create a
-// Geneos Gateway AES key files and also the encode and decode AES
-// passwords in the configuration
+// Geneos Gateway AES key file and then to encode and decode AES
+// passwords in configurations
 type AESValues struct {
 	Key []byte
 	IV  []byte
 }
-
-// create a gateway key file for secure passwords as per
-// https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm
 
 // NewAESValues returns a new AESValues structure or an error
 func NewAESValues() (a AESValues, err error) {
@@ -56,6 +53,10 @@ func NewAESValues() (a AESValues, err error) {
 }
 
 // String method for AESValues
+//
+// The output is in the format for suitable for use as a gateway key
+// file for secure passwords as described in:
+// https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm
 func (a AESValues) String() string {
 	if len(a.Key) != 32 || len(a.IV) != aes.BlockSize {
 		return ""
