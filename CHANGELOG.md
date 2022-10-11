@@ -1,5 +1,9 @@
 # Change Log
 
+## Version v1.2.1 - 2022/10/11
+
+Final release after numerous small fixes.
+
 ## Version v1.2.1-rc3 - 2022/10/07
 
 ### Fixes
