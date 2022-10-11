@@ -42,7 +42,10 @@ COPY --from=build /app/cordial/VERSION /
 COPY --from=build /app/cordial/tools/geneos/geneos /bin
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/
 COPY --from=build /app/cordial/integrations/servicenow/snow_client/snow_client /cordial/
+COPY --from=build /app/cordial/integrations/servicenow/snow_client/snow_client.example.yaml /cordial/
+COPY --from=build /app/cordial/integrations/servicenow/snow_client/ticket.sh /cordial/
 COPY --from=build /app/cordial/integrations/servicenow/snow_router/snow_router /cordial/
+COPY --from=build /app/cordial/integrations/servicenow/snow_router/snow_router.example.yaml /cordial/
 COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/
 RUN mv /cordial /cordial-$(cat /VERSION)
 WORKDIR /
