@@ -36,8 +36,14 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
+var cachedConnection *Connection
+
 func InitializeConnection(vc *config.Config) *Connection {
 	var err error
+
+	if cachedConnection != nil {
+		return cachedConnection
+	}
 
 	pw := []byte(vc.GetString("servicenow.password"))
 	// XXX - deprecated. Use above with expansion options
@@ -75,18 +81,20 @@ func InitializeConnection(vc *config.Config) *Connection {
 		}
 
 		// with OAuth we don't need to store the username and password
-		return &Connection{
+		cachedConnection = &Connection{
 			Client:   conf.Client(context.Background()),
 			Instance: instance,
 		}
+		return cachedConnection
 	}
 
-	return &Connection{
+	cachedConnection = &Connection{
 		Client:   http.DefaultClient,
 		Instance: instance,
 		Username: username,
 		Password: password,
 	}
+	return cachedConnection
 }
 
 func AssembleRequest(t RequestTransitive, table string) (req *http.Request) {

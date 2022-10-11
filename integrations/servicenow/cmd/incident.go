@@ -1,26 +1,7 @@
 /*
-Copyright © 2022 ITRS Group
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 */
-
-package main
+package cmd
 
 import (
 	"bytes"
@@ -36,31 +17,43 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/spf13/pflag"
+	"github.com/spf13/cobra"
 )
 
-type Incident map[string]string
+// incidentCmd represents the incident command
+var incidentCmd = &cobra.Command{
+	Use:   "incident",
+	Short: "Raise or update an incident",
+	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+		if (text == "" && rawtext == "") || search == "" {
+			fmt.Println("Either --search or one of --text / --rawtext is required.")
+			fmt.Println(cmd.Usage())
+			os.Exit(1)
+		}
+		incident(args)
+	},
+}
 
-func main() {
-	var conffile, short, text, rawtext, search, severity, id, rawid string
-	var update_only bool
+var conffile, short, text, rawtext, search, severity, id, rawid string
+var update_only bool
 
-	pflag.StringVarP(&conffile, "conf", "c", "", "Optional path to configuration file")
-	pflag.StringVarP(&short, "short", "s", "", "short description")
-	pflag.StringVarP(&text, "text", "t", "", "Textual note. Long desceription for new incidents, Work Note for updates.")
-	pflag.StringVar(&rawtext, "rawtext", "", "Raw textual note, not unquoted. Long desceription for new incidents, Work Note for updates.")
-	pflag.StringVarP(&id, "id", "i", "", "Correlation ID. The value is hashed to a 20 byte hex string.")
-	pflag.StringVar(&rawid, "rawid", "", "Raw Correlation ID. The value is passed as is and must be a valid string.")
-	pflag.StringVarP(&search, "search", "f", "", "sysID search: '[TABLE:]FIELD=VALUE', TABLE defaults to 'cmdb_ci'. REQUIRED")
-	pflag.StringVarP(&severity, "severity", "S", "3", "Geneos severity. Maps depending on configuration settings.")
-	pflag.BoolVarP(&update_only, "updateonly", "U", false, "If set no incident creation will be done")
+func init() {
+	rootCmd.AddCommand(incidentCmd)
 
-	pflag.Parse()
-	if (text == "" && rawtext == "") || search == "" {
-		pflag.PrintDefaults()
-		os.Exit(1)
-	}
+	incidentCmd.Flags().StringVarP(&short, "short", "s", "", "short description")
+	incidentCmd.Flags().StringVarP(&text, "text", "t", "", "Textual note. Long desceription for new incidents, Work Note for updates.")
+	incidentCmd.Flags().StringVar(&rawtext, "rawtext", "", "Raw textual note, not unquoted. Long desceription for new incidents, Work Note for updates.")
+	incidentCmd.Flags().StringVarP(&id, "id", "i", "", "Correlation ID. The value is hashed to a 20 byte hex string.")
+	incidentCmd.Flags().StringVar(&rawid, "rawid", "", "Raw Correlation ID. The value is passed as is and must be a valid string.")
+	incidentCmd.Flags().StringVarP(&search, "search", "f", "", "sysID search: '[TABLE:]FIELD=VALUE', TABLE defaults to 'cmdb_ci'. REQUIRED")
+	incidentCmd.Flags().StringVarP(&severity, "severity", "S", "3", "Geneos severity. Maps depending on configuration settings.")
+	incidentCmd.Flags().BoolVarP(&update_only, "updateonly", "U", false, "If set no incident creation will be done")
+}
+
+func incident(args []string) {
 
 	execname := filepath.Base(os.Args[0])
 	vc, err := config.LoadConfig(execname, config.SetAppName("itrs"), config.SetConfigFile(conffile))
@@ -69,7 +62,7 @@ func main() {
 	}
 
 	// fill in minimal defaults - also get defaults from config
-	incident := make(Incident)
+	incident := make(snow.Incident)
 	if short != "" {
 		incident["short_description"] = short
 	}
@@ -103,7 +96,7 @@ func main() {
 	// parse key value pairs as fields for the request
 	// for now ignore everything else
 	// no lookups (yet)
-	for _, arg := range pflag.Args() {
+	for _, arg := range args {
 		s := strings.SplitN(arg, "=", 2)
 		if len(s) != 2 {
 			continue
@@ -189,7 +182,7 @@ func main() {
 // loop through config IncidentDefaults.AllIncidents and set any fields not already set
 //
 // an empty value means delete any value passed - e.g. short_description in an update
-func configDefaults(incident Incident, defaults map[string]string) {
+func configDefaults(incident snow.Incident, defaults map[string]string) {
 	for k, v := range defaults {
 		if _, ok := incident[k]; !ok {
 			// trim spaces and surrounding quotes before unquoting embedded escapes
@@ -204,7 +197,7 @@ func configDefaults(incident Incident, defaults map[string]string) {
 	}
 }
 
-func mapSeverity(severity string, incident Incident, severities map[string]string) {
+func mapSeverity(severity string, incident snow.Incident, severities map[string]string) {
 	mapping, ok := severities[strings.ToLower(severity)]
 	if !ok {
 		// do nothing, but log

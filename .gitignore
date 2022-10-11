@@ -24,10 +24,12 @@ integrations/servicenow/snow_router/snow_router
 integrations/servicenow/snow_router/snow_router.yaml
 integrations/servicenow/snow_client/snow_client
 integrations/servicenow/snow_client/snow_client.yaml
+integrations/servicenow/servicenow
 examples/commands
 examples/xpath
 libraries/libemail/libemail
 examples/api/api
 cordial.code-workspace
+integrations/servicenow/servicenow.yaml
 integrations/pagerduty/pagerduty
 tools/geneos/docs/docs

@@ -19,39 +19,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-
 package main
 
-import (
-	"encoding/json"
-	"net/http"
+import "github.com/itrs-group/cordial/integrations/servicenow/cmd"
 
-	"github.com/itrs-group/cordial/integrations/servicenow/snow"
-	"github.com/labstack/echo/v4"
-)
-
-func UpdateIncident(incident_id string, incident Incident) (incident_number string, err error) {
-	var postbytes []byte
-	var result snow.ResultDetail
-
-	// this has to bypass default settings in caller
-	if incident["text"] != "" {
-		incident["work_notes"] = incident["text"]
-		delete(incident, "text")
-	}
-
-	postbytes, err = json.Marshal(incident)
-	if err != nil {
-		err = echo.NewHTTPError(http.StatusInternalServerError, err)
-	}
-
-	s := InitializeConnection()
-	result, err = s.PUT(postbytes, "", "number", "", "", incident_id).QueryTableSingle(vc.GetString("servicenow.incidenttable"))
-	if err != nil {
-		return
-	} else {
-		incident_number = result["number"]
-	}
-
-	return
+func main() {
+	cmd.Execute()
 }

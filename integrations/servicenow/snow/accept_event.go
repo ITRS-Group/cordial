@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package main
+package snow
 
 import (
 	"encoding/json"
@@ -33,6 +33,9 @@ import (
 )
 
 func AcceptEvent(c echo.Context) (err error) {
+	cc := c.(*RouterContext)
+	vc := cc.Conf
+
 	var incident Incident
 	var ok bool
 	var cmdb_ci_id, sys_class_name string
@@ -46,7 +49,7 @@ func AcceptEvent(c echo.Context) (err error) {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	s := InitializeConnection()
+	s := InitializeConnection(vc)
 
 	if cmdb_ci_id, ok = incident["sys_id"]; !ok {
 		var search string
@@ -56,11 +59,11 @@ func AcceptEvent(c echo.Context) (err error) {
 			}
 		} else {
 			if vc.GetString("servicenow.searchtype") == "simple" {
-				if cmdb_ci_id, sys_class_name, err = LookupSysIDSimple("cmdb_ci", search, incident["default_cmdb_ci"]); err != nil {
+				if cmdb_ci_id, sys_class_name, err = LookupSysIDSimple(vc, "cmdb_ci", search, incident["default_cmdb_ci"]); err != nil {
 					return
 				}
 			} else {
-				if cmdb_ci_id, sys_class_name, err = LookupSysID("cmdb_ci", search, incident["default_cmdb_ci"]); err != nil {
+				if cmdb_ci_id, sys_class_name, err = LookupSysID(vc, "cmdb_ci", search, incident["default_cmdb_ci"]); err != nil {
 					return
 				}
 			}
@@ -79,7 +82,7 @@ func AcceptEvent(c echo.Context) (err error) {
 
 	response := make(map[string]string)
 
-	incident_id, short_description, state, err := LookupIncident(cmdb_ci_id, correlation_id)
+	incident_id, short_description, state, err := LookupIncident(vc, cmdb_ci_id, correlation_id)
 	if err != nil {
 		return
 	}
@@ -121,7 +124,7 @@ func AcceptEvent(c echo.Context) (err error) {
 	incident["caller_id"] = u["sys_id"]
 
 	if incident_id != "" {
-		incidentID, err := UpdateIncident(incident_id, incident)
+		incidentID, err := UpdateIncident(vc, incident_id, incident)
 		if err != nil {
 			return err
 		}
@@ -136,7 +139,7 @@ func AcceptEvent(c echo.Context) (err error) {
 		return echo.NewHTTPError(http.StatusAccepted, "No Incident Created. 'update only' option set.")
 	} else {
 		incident["correlation_id"] = correlation_id
-		incidentID, err := CreateIncident(cmdb_ci_id, incident)
+		incidentID, err := CreateIncident(vc, cmdb_ci_id, incident)
 		if err != nil {
 			return err
 		}
