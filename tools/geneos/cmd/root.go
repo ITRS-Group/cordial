@@ -55,10 +55,13 @@ var rootCmd = &cobra.Command{
 	Long: `Control your Geneos environment. With 'geneos' you can initialise
 a new installation, add and remove components, control processes and build
 template based configuration files for SANs and new gateways.`,
+	Example: `$ geneos start
+$ geneos ps`,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations:           make(map[string]string),
 	Version:               cordial.VERSION,
+	DisableAutoGenTag:     true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		// check initialisation
 		geneosdir := host.Geneos()
