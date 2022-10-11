@@ -29,4 +29,5 @@ examples/xpath
 libraries/libemail/libemail
 examples/api/api
 cordial.code-workspace
+integrations/pagerduty/pagerduty
 tools/geneos/docs/docs
