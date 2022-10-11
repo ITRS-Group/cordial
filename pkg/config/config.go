@@ -20,6 +20,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+/*
+Package config adds support for value expansion over viper based configurations.
+
+A number of the most common access methods from viper are replaced with local versions that add support for [Config.ExpandString].
+Additionally, there are a number of functions to simplify programs including [LoadConfig].
+*/
 package config
 
 import (
@@ -46,30 +52,43 @@ func init() {
 	global = &Config{Viper: viper.New()}
 }
 
-// Returns the configuration item as a string with ExpandString() applied,
-// passing the first "values" if given
+// GetString functions like [viper.GetString] but additionally calls
+// [ExpandString] with the configuration value, passing any "values" maps
 func GetString(s string, values ...map[string]string) string {
 	return global.GetString(s, values...)
 }
 
-// Returns the configuration item as a string with ExpandString() applied,
-// passing the first "values" if given
+// GetString functions like [viper.GetString] on a Config instance, but
+// additionally calls [ExpandString] with the configuration value, passing
+// any "values" maps
 func (c *Config) GetString(s string, values ...map[string]string) string {
 	return c.ExpandString(c.Viper.GetString(s), values...)
 }
 
+// GetConfig returns the global Config instance
 func GetConfig() *Config {
 	return global
 }
 
+// New returns a Config instance initialised with a new viper instance
 func New() *Config {
 	return &Config{Viper: viper.New()}
 }
 
+// Sub returns a Config instance for the sub-key passed
+func (c *Config) Sub(key string) *Config {
+	return &Config{Viper: c.Viper.Sub(key)}
+}
+
+// GetStringSlice functions like [viper.GetStringSlice] but additionally calls
+// [ExpandString] on each element of the slice, passing any "values" maps
 func GetStringSlice(s string, values ...map[string]string) []string {
 	return global.GetStringSlice(s, values...)
 }
 
+// GetStringSlice functions like [viper.GetStringSlice] on a Config
+// instance but additionally calls [ExpandString] on each element of the
+// slice, passing any "values" maps
 func (c *Config) GetStringSlice(s string, values ...map[string]string) (slice []string) {
 	r := c.Viper.GetStringSlice(s)
 	for _, n := range r {
@@ -78,90 +97,102 @@ func (c *Config) GetStringSlice(s string, values ...map[string]string) (slice []
 	return
 }
 
+// GetStringMapString functions like [viper.GetStringMapString] but additionally calls
+// [ExpandString] on each value element of the map, passing any "values" maps
 func GetStringMapString(s string, values ...map[string]string) map[string]string {
 	return global.GetStringMapString(s, values...)
 }
 
+// GetStringMapString functions like [viper.GetStringMapString] on a
+// Config instance but additionally calls [ExpandString] on each value
+// element of the map, passing any "values" maps
 func (c *Config) GetStringMapString(s string, values ...map[string]string) (m map[string]string) {
-	var cfmap map[string]string
 	m = make(map[string]string)
 	r := c.Viper.GetStringMapString(s)
-	if len(values) > 0 {
-		cfmap = values[0]
-	}
 	for k, v := range r {
-		m[k] = c.ExpandString(v, cfmap)
+		m[k] = c.ExpandString(v, values...)
 	}
 	return m
 }
 
-// ExpandString() returns input with any occurrences of the form ${name}
-// interpolated using [os.Expand] for the supported format types in the
-// order given below:
+// ExpandString() returns the input with all occurrences of the form
+// ${name} replaced using an [os.Expand]-like function (but without
+// support for bare names) for the formats (in the order of priority)
+// below:
 //
-//  1. "${enc:keyfile[|keyfile...]:encodedvalue}"
+//	${enc:keyfile[|keyfile...]:encodedvalue}
 //
-//     The item "encodedvalue" is an AES256 ciphertext in Geneos format
-//     - or a reference to one - which will be decoded using the key
-//     file(s) given. Each "keyfile" must be one of either an absolute
-//     path, a path relative to the working directory of the program, or
-//     if prefixed with "~/" then relative to the home directory of the
-//     user running the program. The first valid decode (see below) is
-//     returned.
+//	   The item "encodedvalue" is an AES256 ciphertext in Geneos format
+//	   - or a reference to one - which will be decoded using the key
+//	   file(s) given. Each "keyfile" must be one of either an absolute
+//	   path, a path relative to the working directory of the program, or
+//	   if prefixed with "~/" then relative to the home directory of the
+//	   user running the program. The first valid decode (see below) is
+//	   returned.
 //
-//     The "encodedvalue" must be either prefixed "+encs+" to align with
-//     Geneos or will otherwise be looked up using the forms of any of
-//     the other references below, but without the surrounding
-//     dollar-brackets "${...}".
+//	   The "encodedvalue" must be either prefixed "+encs+" to align with
+//	   Geneos or will otherwise be looked up using the forms of any of
+//	   the other references below, but without the surrounding
+//	   dollar-brackets "${...}".
 //
-//     To minimise (but not eliminate) false decodes that occur in some
-//     circumstances when using the wrong key file, the decoded value is
-//     only returned if it is a valid UTF-8 string as per [utf8.Valid].
+//	   To minimise (but not wholly eliminate) any false-positive decodes
+//	   that occur in some circumstances when using the wrong key file,
+//	   the decoded value is only returned if it is a valid UTF-8 string
+//	   as per [utf8.Valid].
 //
-//     Examples:
+//	   Examples:
 //
-//     * password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
-//     * password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
+//	   * password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
+//	   * password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
+//	   * password: ${enc:~/.config/geneos/keyfile1.aes:env:app.password}
+//	   * password: ${enc:~/.keyfile.aes:env:config:mySecret}
 //
-//  2. "${config:key}" or "${path.to.config}"
+//	${config:key} or ${path.to.config}
 //
-//     Fetch the "key" configuration value (for single layered
-//     configurations, where a sub-level dot is not possible) or if any
-//     value containing one or more dots "." will be looked-up in the
-//     existing configuration that the method is called on. The
-//     configuration is not changed and values are resolved each time
-//     ExpandString() is called. No locking of the configuration is
-//     done.
+//	   Fetch the "key" configuration value (for single layered
+//	   configurations, where a sub-level dot cannot be used) or if any
+//	   value containing one or more dots "." will be looked-up in the
+//	   existing configuration that the method is called on. The
+//	   underlying configuration is not changed and values are resolved
+//	   each time ExpandString() is called. No locking of the
+//	   configuration is done.
 //
-//  3. "${key}"
+//	 ${key}
 //
-//     "key" will be substituted with the value of the first matching
-//     key from the maps "values...", checked in order. If no "values"
-//     are given (as opposed to the key not being found in any of the
-//     "values" maps) then name is looked up as an environment variable,
-//     see below.
+//	   "key" will be substituted with the value of the first matching
+//	   key from the maps "values...", in the order passed to the
+//	   function. If no "values" are passed (as opposed to the key not
+//	   being found in any of the maps) then name is looked up
+//	   as an environment variable, as 4. below.
 //
-//  4. "${env:name}"
+//	 ${env:name}
 //
-//     "name" will be substituted with the contents of the environment
-//     variable of the same name.
+//	   "name" will be substituted with the contents of the environment
+//	   variable of the same name.
 //
-//  5. "${file://path/to/file}" or "${file:~/path/to/file}"
+//	 ${~/file} or ${/path/to/file} or ${file://path/to/file} or ${file:~/path/to/file}
 //
-//     The contents of the referenced file will be read. Multiline
-//     files are used as-is; this can, for example, be used to read
-//     PEM certificate files or keys. As an enhancement to a standard
-//     file url, if the first "/" is replaced with a tilde "~" then the
-//     path is relative to the home directory of the user running the process.
+//	   The contents of the referenced file will be read. Multiline files
+//	   are used as-is; this can, for example, be used to read PEM
+//	   certificate files or keys. If the path is prefixed with "~/" (or
+//	   as an addition to a standard file url, if the first "/" is
+//	   replaced with a tilde "~") then the path is relative to the home
+//	   directory of the user running the process.
 //
-//  6. "${https://host/path}" or "${http://host/path}"
+//	   Examples:
 //
-//     The contents of the URL are fetched and used similarly as for
-//     local files above. The URL is passed to [http.Get] and supports
-//     any embedded Basic Authentication and other features from
-//     that function.
+//	   * certfile ${file://etc/ssl/cert.pem}
+//	   * template: ${file:~/templates/autogen.gotmpl}
 //
-// The form "$name" is NOT supported, unlike [os.Expand].
+//	 ${https://host/path} or ${http://host/path}
+//
+//	   The contents of the URL are fetched and used similarly as for
+//	   local files above. The URL is passed to [http.Get] and supports
+//	   proxies, embedded Basic Authentication and other features from
+//	   that function.
+//
+// The bare form "$name" is NOT supported, unlike [os.Expand] as this
+// can unexpectedly match values containing valid literal dollar signs.
 //
 // Expansion is not recursive. Configuration values are read and stored
 // as literals and are expanded each time they are used. For each
@@ -172,16 +203,19 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 //
 // Any errors (particularly from substitutions from external files or
 // remote URLs) may result in an empty or corrupt string being returned.
-// Error returns are intentionally discarded.
+// Error returns are intentionally discarded and an empty string
+// substituted. Where a value contains multiple expandable items
+// processing will continue even after an error for one of them.
 //
-// It is not currently possible to escape the syntax supported by Expand
-// and if it is necessary to have a configuration value be a literal of
-// the form "${name}" then set an otherwise unused item to the value and
-// refer to it using the dotted syntax, e.g. for YAML
+// It is not currently possible to escape the syntax supported by
+// ExpandString and if it is necessary to have a configuration value be
+// a literal of the form "${name}" then you can set an otherwise unused
+// item to the value and refer to it using the dotted syntax, e.g. for
+// YAML
 //
 //	config:
-//	  real: ${config.temp}
-//	  temp: "${unchanged}"
+//	  real: ${config.literal}
+//	  literal: "${unchanged}"
 //
 // In the above a reference to ${config.real} will return the literal
 // string ${unchanged} as there is no recursive lookups.
@@ -197,8 +231,8 @@ func (c *Config) ExpandString(input string, values ...map[string]string) (value 
 
 // ExpandAllSettings returns all the settings from c applying
 // ExpandString() to all string values and all string slice values.
-// "values" maps are passed to ExpandString as-is.
-// Futher types may be added over time.
+// "values" maps are passed to ExpandString as-is. Further types may be
+// added over time.
 func (c *Config) ExpandAllSettings(values ...map[string]string) (all map[string]interface{}) {
 	as := c.AllSettings()
 	all = make(map[string]interface{}, len(as))
@@ -277,7 +311,7 @@ func (c *Config) expandString(s string, values ...map[string]string) (value stri
 		return ""
 	case strings.HasPrefix(s, "env:"):
 		return strings.TrimSpace(mapEnv(strings.TrimPrefix(s, "env:")))
-	case strings.HasPrefix(s, "file:"):
+	case strings.HasPrefix(s, "~/"), strings.HasPrefix(s, "/"), strings.HasPrefix(s, "file:"):
 		path := strings.TrimPrefix(s, "file:")
 		if strings.HasPrefix(path, "~/") {
 			home, _ := os.UserHomeDir()
@@ -332,7 +366,7 @@ func mapEnv(e string) (s string) {
 //
 //	//go:embed somefile.json
 //	var myDefaults []byte
-//	LoadConfig("geneos", config.SetDefaults(myDefaults, "json"), )
+//	LoadConfig("geneos", config.SetDefaults(myDefaults, "json"), config.SetConfigFIle(configPath))
 //
 // Options can be passed to change the default behaviour and to pass any
 // embedded defaults or an existing viper.

@@ -17,4 +17,3 @@ The following package functions and type methods are overridden to add expansion
 * [`GetStringMapString`](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#GetStringMapString)
 
 The string values are passed to [`ExpandString`](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString) which supports a range of data substitutions.
-

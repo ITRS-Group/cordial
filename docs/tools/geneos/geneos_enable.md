@@ -1,0 +1,32 @@
+## geneos enable
+
+Enable instances. Only previously disabled instances are started
+
+### Synopsis
+
+Mark any matching instances as enabled and if the -S flag is given
+then start the instance. Only those instances that were disabled are started
+when the -S flag is used.
+
+```
+geneos enable [-S] [TYPE] [NAME...]
+```
+
+### Options
+
+```
+  -S, --start   Start enabled instances
+  -h, --help    help for enable
+```
+
+### Options inherited from parent commands
+
+```
+  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -q, --quiet           quiet mode
+```
+
+### SEE ALSO
+
+* [geneos](geneos.md)	 - Control your Geneos environment
+
