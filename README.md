@@ -1,11 +1,12 @@
 # cordial
 
-* Current Version: v1.2.1 - 2022/10/11
+* Current Version: v1.3.0-dev - 2022/10/11
 
 Cordial comprises a set of interrelated programs, integrations, libraries and packages for Geneos, principally written in Go.
 
 * [`geneos` Manager Program](tools/geneos/)
 * [ServiceNow Incident Integration](integrations/servicenow/)
+* [PagerDuty Integration](integrations/pagerduty/)
 * [Enhanced `libemail`](libraries/libemail/)
 * Go Packages
   * `commands`
