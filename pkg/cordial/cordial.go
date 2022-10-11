@@ -34,7 +34,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const VERSION = "v1.2.1"
+const VERSION = "v1.3.0-dev"
 
 func LogInit(prefix string) {
 	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {

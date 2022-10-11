@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SNOW_CLIENT_BINARY=${HOME}/bin/snow
+SNOW_CLIENT_BINARY=${HOME}/bin/servicenow
 
 if [ "${_PLUGINNAME}" = "FKM" ]
 then

@@ -1,5 +1,14 @@
 # Change Log
 
+## Version v1.3.0-dev - 2022/10/11
+
+Work in progress
+
+## Changes
+
+* PagerDuty integration
+* Merged ServiceNow integration, single binary build
+
 ## Version v1.2.1 - 2022/10/11
 
 Final release after numerous small fixes.

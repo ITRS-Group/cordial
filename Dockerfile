@@ -23,11 +23,11 @@ WORKDIR /app/cordial/tools/geneos
 RUN go mod tidy
 RUN go clean
 RUN go build
-WORKDIR /app/cordial/integrations/servicenow/snow_client
+WORKDIR /app/cordial/integrations/servicenow
 RUN go mod tidy
 RUN go clean
 RUN go build
-WORKDIR /app/cordial/integrations/servicenow/snow_router
+WORKDIR /app/cordial/integrations/pagerduty
 RUN go mod tidy
 RUN go clean
 RUN go build
@@ -41,11 +41,11 @@ RUN apt update && apt install -y fontconfig zip
 COPY --from=build /app/cordial/VERSION /
 COPY --from=build /app/cordial/tools/geneos/geneos /bin
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/
-COPY --from=build /app/cordial/integrations/servicenow/snow_client/snow_client /cordial/
-COPY --from=build /app/cordial/integrations/servicenow/snow_client/snow_client.example.yaml /cordial/
-COPY --from=build /app/cordial/integrations/servicenow/snow_client/ticket.sh /cordial/
-COPY --from=build /app/cordial/integrations/servicenow/snow_router/snow_router /cordial/
-COPY --from=build /app/cordial/integrations/servicenow/snow_router/snow_router.example.yaml /cordial/
+COPY --from=build /app/cordial/integrations/servicenow/servicenow /cordial/
+COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /cordial/
+COPY --from=build /app/cordial/integrations/servicenow/ticket.sh /cordial/
+COPY --from=build /app/cordial/integrations/pagerduty/pagerduty /cordial/
+COPY --from=build /app/cordial/integrations/pagerduty/pagerduty.defaults.yaml /cordial/
 COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/
 RUN mv /cordial /cordial-$(cat /VERSION)
 WORKDIR /
