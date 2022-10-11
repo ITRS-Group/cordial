@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package main
+package snow
 
 import (
 	"fmt"
@@ -28,12 +28,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/itrs-group/cordial/integrations/servicenow/snow"
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/labstack/echo/v4"
 )
 
-func LookupIncident(cmdb_ci_id string, correlation_id string) (incident_id string, short_description string, state int, err error) {
-	s := InitializeConnection()
+func LookupIncident(vc *config.Config, cmdb_ci_id string, correlation_id string) (incident_id string, short_description string, state int, err error) {
+	s := InitializeConnection(vc)
 
 	q := fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s", cmdb_ci_id, correlation_id)
 	results, err := s.GET("", "sys_id,short_description,state", "", q, "").QueryTableDetail(vc.GetString("servicenow.incidenttable"))
@@ -50,11 +50,11 @@ func LookupIncident(cmdb_ci_id string, correlation_id string) (incident_id strin
 	return
 }
 
-func LookupSysIDSimple(table, search, cmdb_ci_default string) (sys_id, sys_class_name string, err error) {
+func LookupSysIDSimple(vc *config.Config, table, search, cmdb_ci_default string) (sys_id, sys_class_name string, err error) {
 	var field, value string
 	var ok bool
 
-	s := InitializeConnection()
+	s := InitializeConnection(vc)
 
 	s1 := strings.SplitN(search, ":", 2)
 	if len(s1) > 1 {
@@ -69,7 +69,7 @@ func LookupSysIDSimple(table, search, cmdb_ci_default string) (sys_id, sys_class
 	field = s2[0]
 	value = s2[1]
 
-	var r snow.ResultDetail
+	var r ResultDetail
 
 	if r, err = s.GET("", "name,sys_id,sys_class_name", "", field+"="+value, "").QueryTableDetail(table); err != nil {
 		err = echo.NewHTTPError(http.StatusNotFound, err)
@@ -88,10 +88,10 @@ func LookupSysIDSimple(table, search, cmdb_ci_default string) (sys_id, sys_class
 	return
 }
 
-func LookupSysID(table, search, cmdb_ci_default string) (sys_id, sys_class_name string, err error) {
+func LookupSysID(vc *config.Config, table, search, cmdb_ci_default string) (sys_id, sys_class_name string, err error) {
 	var ok bool
 
-	s := InitializeConnection()
+	s := InitializeConnection(vc)
 
 	s1 := strings.SplitN(search, ":", 2)
 	if len(s1) == 2 {
@@ -99,7 +99,7 @@ func LookupSysID(table, search, cmdb_ci_default string) (sys_id, sys_class_name 
 		search = s1[1]
 	}
 
-	var r snow.ResultDetail
+	var r ResultDetail
 
 	if r, err = s.GET("", "name,sys_id,sys_class_name", "", search, "").QueryTableDetail(table); err != nil {
 		err = echo.NewHTTPError(http.StatusNotFound, err)

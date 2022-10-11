@@ -12,15 +12,14 @@ import (
 // while the referenced binary can change). The function passed as
 // processArgs is called with any further arguments passed to it as
 // parameters and can be used to remove flags that triggered the
-// daemonization in the first place. A helper function - [RemoveArgs] -
+// daemonisation in the first place. A helper function - [RemoveArgs] -
 // is available to do this.
 //
 // If successful the function never returns and the child process PID is
 // written to writepid, which can be io.Discard if not required. On
 // failure the function does return with an error.
 //
-//   process.Daemon(os.Stdout, process.RemoveArgs, "-D", "--daemon")
-//
+//	process.Daemon(os.Stdout, process.RemoveArgs, "-D", "--daemon")
 func Daemon(writepid io.Writer, processArgs func([]string, ...string) []string, args ...string) (err error) {
 	bin, err := os.Executable()
 	if err != nil {
@@ -54,8 +53,8 @@ func Daemon(writepid io.Writer, processArgs func([]string, ...string) []string, 
 }
 
 // RemoveArgs is a helper function for Daemon(). Daemon calls the
-// function with os.Args[1;] as origargs and removes any arguments
-// matching members of the slice remove and returns newargs. Only bare
+// function with os.Args[1;] as in and removes any arguments
+// matching members of the slice remove and returns out. Only bare
 // arguments are removed and no pattern matching or adjacent values are
 // removed. If this is required then pass your own function with the
 // same signature.

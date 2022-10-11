@@ -20,23 +20,25 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package main
+package snow
 
 import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/itrs-group/cordial/integrations/servicenow/snow"
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
-func CreateIncident(sys_id string, incident Incident) (incident_number string, err error) {
+type Incident map[string]string
+
+func CreateIncident(vc *config.Config, sys_id string, incident Incident) (incident_number string, err error) {
 	// var ok bool
 	var postbytes []byte
-	var result snow.ResultDetail
+	var result ResultDetail
 	// var stateid string
 
 	// Initialize ServiceNow Connection
-	s := InitializeConnection()
+	s := InitializeConnection(vc)
 
 	incident["cmdb_ci"] = sys_id
 

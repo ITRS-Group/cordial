@@ -23,33 +23,38 @@ THE SOFTWARE.
 package snow
 
 import (
+	"fmt"
 	"net/http"
-	"net/url"
-	"regexp"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/labstack/echo/v4"
 )
 
-type Connection struct {
-	Client   *http.Client
-	Instance string
-	Username string
-	Password string
-}
+// This is to get a list of all OPEN incidents opened by the service user
+func GetAllIncidents(c echo.Context) (err error) {
+	cc := c.(*RouterContext)
+	vc := cc.Conf
 
-type RequestTransitive struct {
-	Connection
-	Payload []byte
-	Method  string
-	Params  url.Values
-	SysID   string
-}
+	defer c.Request().Body.Close()
 
-type RouterContext struct {
-	echo.Context
-	Conf *config.Config
-}
+	var user string
+	err = echo.QueryParamsBinder(c).String("user", &user).BindError()
+	if err != nil || user == "" {
+		user = vc.GetString("servicenow.username")
+	}
+	// real basic validation of user
+	if !userRE.MatchString(user) {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("username %q supplied is invalid", user))
+	}
 
-// not a complete test, but just filter characters *allowed*
-var userRE = regexp.MustCompile(`^[\w\.@ ]+$`)
+	s := InitializeConnection(vc)
+	u, err := s.GET("1", "sys_id", "", "user_name="+user, "").QueryTableDetail("sys_user")
+	if err != nil || len(u) == 0 {
+		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("user %q not found in sys_user (and needed for lookup)", user))
+	}
+
+	q := fmt.Sprintf(`active=true^opened_by=%s`, u["sys_id"])
+
+	l, _ := s.GET("", vc.GetString("servicenow.queryresponsefields"), "", q, "").QueryTable(vc.GetString("servicenow.incidenttable"))
+
+	return c.JSON(200, l)
+}

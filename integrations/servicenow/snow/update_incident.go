@@ -20,38 +20,38 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package main
+package snow
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/labstack/echo/v4"
 )
 
-// This is to get a list of all OPEN incidents opened by the service user
-func GetAllIncidents(c echo.Context) (err error) {
-	defer c.Request().Body.Close()
+func UpdateIncident(vc *config.Config, incident_id string, incident Incident) (incident_number string, err error) {
+	var postbytes []byte
+	var result ResultDetail
 
-	var user string
-	err = echo.QueryParamsBinder(c).String("user", &user).BindError()
-	if err != nil || user == "" {
-		user = vc.GetString("servicenow.username")
-	}
-	// real basic validation of user
-	if !userRE.MatchString(user) {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("username %q supplied is invalid", user))
+	// this has to bypass default settings in caller
+	if incident["text"] != "" {
+		incident["work_notes"] = incident["text"]
+		delete(incident, "text")
 	}
 
-	s := InitializeConnection()
-	u, err := s.GET("1", "sys_id", "", "user_name="+user, "").QueryTableDetail("sys_user")
-	if err != nil || len(u) == 0 {
-		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("user %q not found in sys_user (and needed for lookup)", user))
+	postbytes, err = json.Marshal(incident)
+	if err != nil {
+		err = echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	q := fmt.Sprintf(`active=true^opened_by=%s`, u["sys_id"])
+	s := InitializeConnection(vc)
+	result, err = s.PUT(postbytes, "", "number", "", "", incident_id).QueryTableSingle(vc.GetString("servicenow.incidenttable"))
+	if err != nil {
+		return
+	} else {
+		incident_number = result["number"]
+	}
 
-	l, _ := s.GET("", vc.GetString("servicenow.queryresponsefields"), "", q, "").QueryTable(vc.GetString("servicenow.incidenttable"))
-
-	return c.JSON(200, l)
+	return
 }
