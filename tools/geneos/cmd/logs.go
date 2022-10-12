@@ -164,7 +164,7 @@ func logTailInstance(c geneos.Instance, params []string) (err error) {
 	}
 	defer f.Close()
 
-	text, err := tailLines(f, st.St.Size(), logCmdLines)
+	text, err := tailLines(f, st.Size(), logCmdLines)
 	if err != nil && !errors.Is(err, io.EOF) {
 		log.Error().Err(err).Msg("")
 	}
@@ -288,13 +288,13 @@ func logFollowInstance(c geneos.Instance, _ []string) (err error) {
 	} else {
 		// output up to this point
 		st, _ := c.Host().Stat(logfile)
-		text, _ := tailLines(f, st.St.Size(), logCmdLines)
+		text, _ := tailLines(f, st.Size(), logCmdLines)
 
 		if len(text) != 0 {
 			filterOutput(c, strings.NewReader(text+"\n"))
 		}
 
-		tails.Store(c, &files{f, st.St.Size()})
+		tails.Store(c, &files{f, st.Size()})
 	}
 	log.Debug().Msgf("watching %s", logfile)
 
@@ -323,7 +323,7 @@ func watchLogs() (tails *sync.Map) {
 				if err != nil {
 					return true
 				}
-				newsize := st.St.Size()
+				newsize := st.Size()
 
 				if newsize == oldsize {
 					return true

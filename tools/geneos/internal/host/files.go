@@ -96,7 +96,7 @@ func CopyFile(srcHost *Host, srcPath string, dstHost *Host, dstPath string) (err
 	if err != nil {
 		return err
 	}
-	if ss.St.IsDir() {
+	if ss.IsDir() {
 		return fs.ErrInvalid
 	}
 
@@ -108,14 +108,14 @@ func CopyFile(srcHost *Host, srcPath string, dstHost *Host, dstPath string) (err
 
 	ds, err := dstHost.Stat(dstPath)
 	if err == nil {
-		if ds.St.IsDir() {
+		if ds.IsDir() {
 			dstPath = filepath.Join(dstPath, filepath.Base(srcPath))
 		}
 	} else {
 		dstHost.MkdirAll(filepath.Dir(dstPath), 0775)
 	}
 
-	df, err := dstHost.Create(dstPath, ss.St.Mode())
+	df, err := dstHost.Create(dstPath, ss.Mode())
 	if err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func copyDirEntry(fi fs.FileInfo, srcHost *Host, srcPath string, dstHost *Host, 
 			log.Error().Err(err).Msg("")
 			return err
 		}
-		if err = dstHost.MkdirAll(dstPath, ds.St.Mode()); err != nil {
+		if err = dstHost.MkdirAll(dstPath, ds.Mode()); err != nil {
 			return err
 		}
 	case fi.Mode()&fs.ModeSymlink != 0:
@@ -202,7 +202,7 @@ func copyDirEntry(fi fs.FileInfo, srcHost *Host, srcPath string, dstHost *Host, 
 			return err
 		}
 		defer sf.Close()
-		df, err := dstHost.Create(dstPath, ss.St.Mode())
+		df, err := dstHost.Create(dstPath, ss.Mode())
 		if err != nil {
 			return err
 		}
@@ -362,8 +362,23 @@ type FileStat struct {
 	Mtime int64
 }
 
-// stat() a file and normalise common values
-func (h *Host) Stat(name string) (s FileStat, err error) {
+// Stat wraps the os.Stat and sftp.Stat functions
+func (h *Host) Stat(name string) (f fs.FileInfo, err error) {
+	switch h.GetString("name") {
+	case LOCALHOST:
+		return os.Stat(name)
+	default:
+		var sf *sftp.Client
+		if sf, err = h.DialSFTP(); err != nil {
+			return
+		}
+		return sf.Stat(name)
+	}
+}
+
+// StatX returns extended Stat info. Needs to be deprecated to support
+// non LInux platforms
+func (h *Host) StatX(name string) (s FileStat, err error) {
 	switch h.GetString("name") {
 	case LOCALHOST:
 		if s.St, err = os.Stat(name); err != nil {
@@ -387,29 +402,18 @@ func (h *Host) Stat(name string) (s FileStat, err error) {
 	return
 }
 
-// lstat() a file and normalise common values
-func (h *Host) Lstat(name string) (s FileStat, err error) {
+// Lstat wraps the os.Lstat and sftp.Lstat functions
+func (h *Host) Lstat(name string) (f fs.FileInfo, err error) {
 	switch h.GetString("name") {
 	case LOCALHOST:
-		if s.St, err = os.Lstat(name); err != nil {
-			return
-		}
-		s.Uid = s.St.Sys().(*syscall.Stat_t).Uid
-		s.Gid = s.St.Sys().(*syscall.Stat_t).Gid
-		s.Mtime = s.St.Sys().(*syscall.Stat_t).Mtim.Sec
+		return os.Lstat(name)
 	default:
 		var sf *sftp.Client
 		if sf, err = h.DialSFTP(); err != nil {
 			return
 		}
-		if s.St, err = sf.Lstat(name); err != nil {
-			return
-		}
-		s.Uid = s.St.Sys().(*sftp.FileStat).UID
-		s.Gid = s.St.Sys().(*sftp.FileStat).GID
-		s.Mtime = int64(s.St.Sys().(*sftp.FileStat).Mtime)
+		return sf.Lstat(name)
 	}
-	return
 }
 
 func (h *Host) Glob(pattern string) (paths []string, err error) {

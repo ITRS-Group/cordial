@@ -106,7 +106,7 @@ func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime int64
 	pid, err = GetPID(c)
 	if err == nil {
 		var s host.FileStat
-		s, err = c.Host().Stat(fmt.Sprintf("/proc/%d", pid))
+		s, err = c.Host().StatX(fmt.Sprintf("/proc/%d", pid))
 		return pid, s.Uid, s.Gid, s.Mtime, err
 	}
 	return 0, 0, 0, 0, os.ErrProcessDone
@@ -453,14 +453,14 @@ func Version(c geneos.Instance) (base string, underlying string, err error) {
 	base = c.Config().GetString("version")
 	underlying = base
 	for {
+		var st fs.FileInfo
 		basepath := filepath.Join(basedir, underlying)
-		var st host.FileStat
 		st, err = c.Host().Lstat(basepath)
 		if err != nil {
 			underlying = "unknown"
 			return
 		}
-		if st.St.Mode()&fs.ModeSymlink != 0 {
+		if st.Mode()&fs.ModeSymlink != 0 {
 			underlying, err = c.Host().Readlink(basepath)
 			if err != nil {
 				underlying = "unknown"
@@ -583,7 +583,7 @@ func BuildCmd(c geneos.Instance) (cmd *exec.Cmd, env []string) {
 
 func IsDisabled(c geneos.Instance) bool {
 	d := ComponentFilepath(c, geneos.DisableExtension)
-	if f, err := c.Host().Stat(d); err == nil && f.St.Mode().IsRegular() {
+	if f, err := c.Host().Stat(d); err == nil && f.Mode().IsRegular() {
 		return true
 	}
 	return false

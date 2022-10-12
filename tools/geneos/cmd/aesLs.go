@@ -110,7 +110,6 @@ func aesLSInstance(c geneos.Instance, params []string) (err error) {
 	if err != nil {
 		return
 	}
-	mtime := time.Unix(s.Mtime, 0)
 
 	r, err := c.Host().Open(instance.Filepath(c, "keyfile"))
 	if err != nil {
@@ -121,7 +120,7 @@ func aesLSInstance(c geneos.Instance, params []string) (err error) {
 	if err != nil {
 		return
 	}
-	fmt.Fprintf(aesLSTabWriter, "%s\t%s\t%s\t%s\t%08X\t%s\n", c.Type(), c.Name(), c.Host(), path, crc, mtime.Format(time.RFC3339))
+	fmt.Fprintf(aesLSTabWriter, "%s\t%s\t%s\t%s\t%08X\t%s\n", c.Type(), c.Name(), c.Host(), path, crc, s.ModTime().Format(time.RFC3339))
 	return
 }
 
@@ -134,7 +133,6 @@ func aesLSInstanceCSV(c geneos.Instance, params []string) (err error) {
 	if err != nil {
 		return
 	}
-	mtime := time.Unix(s.Mtime, 0)
 
 	r, err := c.Host().Open(instance.Filepath(c, "keyfile"))
 	if err != nil {
@@ -146,7 +144,7 @@ func aesLSInstanceCSV(c geneos.Instance, params []string) (err error) {
 		return
 	}
 	crcstr := fmt.Sprintf("%08X", crc)
-	csvWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), path, crcstr, mtime.Format(time.RFC3339)})
+	csvWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), path, crcstr, s.ModTime().Format(time.RFC3339)})
 	return
 }
 
@@ -159,7 +157,6 @@ func aesLSInstanceJSON(c geneos.Instance, params []string) (err error) {
 	if err != nil {
 		return
 	}
-	mtime := time.Unix(s.Mtime, 0)
 
 	r, err := c.Host().Open(instance.Filepath(c, "keyfile"))
 	if err != nil {
@@ -171,6 +168,6 @@ func aesLSInstanceJSON(c geneos.Instance, params []string) (err error) {
 		return
 	}
 	crcstr := fmt.Sprintf("%08X", crc)
-	aesLsCmdEntries = append(aesLsCmdEntries, aesLsCmdType{c.Type().String(), c.Name(), c.Host().String(), path, crcstr, mtime.Format(time.RFC3339)})
+	aesLsCmdEntries = append(aesLsCmdEntries, aesLsCmdType{c.Type().String(), c.Name(), c.Host().String(), path, crcstr, s.ModTime().Format(time.RFC3339)})
 	return
 }
