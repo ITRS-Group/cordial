@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -131,27 +132,31 @@ func (h *Host) Path(path string) string {
 
 func (h *Host) GetOSReleaseEnv() (err error) {
 	osinfo := make(map[string]string)
-	f, err := h.ReadFile("/etc/os-release")
-	if err != nil {
-		if f, err = h.ReadFile("/usr/lib/os-release"); err != nil {
-			return fmt.Errorf("cannot open /etc/os-release or /usr/lib/os-release")
+	switch runtime.GOOS {
+	case "windows":
+	default:
+		f, err := h.ReadFile("/etc/os-release")
+		if err != nil {
+			if f, err = h.ReadFile("/usr/lib/os-release"); err != nil {
+				return fmt.Errorf("cannot open /etc/os-release or /usr/lib/os-release")
+			}
 		}
-	}
 
-	releaseFile := bytes.NewBuffer(f)
-	scanner := bufio.NewScanner(releaseFile)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if len(line) == 0 || strings.HasPrefix(line, "#") {
-			continue
+		releaseFile := bytes.NewBuffer(f)
+		scanner := bufio.NewScanner(releaseFile)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if len(line) == 0 || strings.HasPrefix(line, "#") {
+				continue
+			}
+			s := strings.SplitN(line, "=", 2)
+			if len(s) != 2 {
+				return ErrInvalidArgs
+			}
+			key, value := s[0], s[1]
+			value = strings.Trim(value, "\"")
+			osinfo[key] = value
 		}
-		s := strings.SplitN(line, "=", 2)
-		if len(s) != 2 {
-			return ErrInvalidArgs
-		}
-		key, value := s[0], s[1]
-		value = strings.Trim(value, "\"")
-		osinfo[key] = value
 	}
 	h.Set("osinfo", osinfo)
 	return
@@ -235,6 +240,9 @@ func RemoteHosts() (hs []*Host) {
 
 	hosts.Range(func(k, v interface{}) bool {
 		h := Get(k.(string))
+		if h.Failed() {
+			log.Debug().Err(h.failed).Msg("")
+		}
 		if !h.Failed() {
 			hs = append(hs, h)
 		}
@@ -251,16 +259,16 @@ func ReadHostConfigFile() {
 	// recreate empty
 	hosts = sync.Map{}
 
-	for n, h := range h.GetStringMap("hosts") {
+	for name, host := range h.GetStringMap("hosts") {
 		v := config.New()
-		switch m := h.(type) {
+		switch m := host.(type) {
 		case map[string]interface{}:
 			v.MergeConfigMap(m)
 		default:
-			log.Debug().Msgf("hosts value not a map[string]interface{} but a %T", h)
+			log.Debug().Msgf("hosts value not a map[string]interface{} but a %T", host)
 			continue
 		}
-		hosts.Store(n, &Host{v, true, nil})
+		hosts.Store(name, &Host{v, true, nil})
 	}
 }
 

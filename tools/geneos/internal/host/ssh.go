@@ -1,7 +1,6 @@
 package host
 
 import (
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,7 +44,7 @@ func sshConnect(dest, user string) (client *ssh.Client, err error) {
 	var khCallback ssh.HostKeyCallback
 	var authmethods []ssh.AuthMethod
 	var signers []ssh.Signer
-	var agentClient agent.ExtendedAgent
+	var agentClient agent.ExtendedAgent // XXX this should be package global?
 	var homedir string
 
 	homedir, err = os.UserHomeDir()
@@ -63,15 +62,7 @@ func sshConnect(dest, user string) (client *ssh.Client, err error) {
 	}
 
 	if agentClient == nil {
-		socket := os.Getenv("SSH_AUTH_SOCK")
-		if socket != "" {
-			sshAgent, err := net.Dial("unix", socket)
-			if err != nil {
-				log.Error().Msgf("Failed to open SSH_AUTH_SOCK: %v", err)
-			} else {
-				agentClient = agent.NewClient(sshAgent)
-			}
-		}
+		agentClient = sshConnectAgent()
 	}
 
 	if signers == nil {
