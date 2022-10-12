@@ -73,7 +73,7 @@ func OpenComponentArchive(ct *Component, options ...GeneosOptions) (body io.Read
 	host.LOCAL.MkdirAll(archiveDir, 0775)
 	archivePath := filepath.Join(archiveDir, filename)
 	s, err := host.LOCAL.Stat(archivePath)
-	if err == nil && s.St.Size() == resp.ContentLength {
+	if err == nil && s.Size() == resp.ContentLength {
 		if f, err := host.LOCAL.Open(archivePath); err == nil {
 			log.Debug().Msgf("not downloading, file already exists: %s", archivePath)
 			resp.Body.Close()

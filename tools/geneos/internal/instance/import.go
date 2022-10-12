@@ -51,7 +51,7 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 			}
 			// if the destination exists is it a directory?
 			if s, err := h.Stat(filepath.Join(home, destfile)); err == nil {
-				if s.St.IsDir() {
+				if s.IsDir() {
 					destdir = filepath.Join(home, destfile)
 					destfile = ""
 				}
@@ -93,7 +93,7 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 
 	// xxx - wrong way around. create tmp first, move over later
 	if s, err := h.Stat(destfile); err == nil {
-		if !s.St.Mode().IsRegular() {
+		if !s.Mode().IsRegular() {
 			log.Fatal().Msg("dest exists and is not a plain file")
 		}
 		datetime := time.Now().UTC().Format("20060102150405")

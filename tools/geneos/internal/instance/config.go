@@ -292,7 +292,7 @@ func SetSecureArgs(c geneos.Instance) (args []string) {
 
 	chainfile := c.Host().Filepath("tls", "chain.pem")
 	s, err := c.Host().Stat(chainfile)
-	if err == nil && !s.St.IsDir() {
+	if err == nil && !s.IsDir() {
 		args = append(args, "-ssl-certificate-chain", chainfile)
 	}
 	return
