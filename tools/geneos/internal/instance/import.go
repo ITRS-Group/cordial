@@ -78,14 +78,14 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 
 	// check to containing directory, as destfile above may be a
 	// relative path under destdir and not just a filename
-	if _, err := h.Stat(filepath.Dir(destfile)); err != nil {
-		err = h.MkdirAll(filepath.Dir(destfile), 0775)
+	if _, err := h.Stat(utils.Dir(destfile)); err != nil {
+		err = h.MkdirAll(utils.Dir(destfile), 0775)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
 			log.Fatal().Err(err).Msg("")
 		}
 		// if created by root, chown the last directory element
 		if err == nil && utils.IsSuperuser() {
-			if err = h.Chown(filepath.Dir(destfile), uid, gid); err != nil {
+			if err = h.Chown(utils.Dir(destfile), uid, gid); err != nil {
 				return filename, err
 			}
 		}

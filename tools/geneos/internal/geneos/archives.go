@@ -20,6 +20,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 // locate and return an open archive for the host and component given
@@ -217,11 +218,11 @@ func Unarchive(r *host.Host, ct *Component, filename string, gz io.Reader, optio
 		if name, err = host.CleanRelativePath(name); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
-		fullpath := filepath.Join(basedir, name)
+		fullpath := utils.JoinSlash(basedir, name)
 		switch hdr.Typeflag {
 		case tar.TypeReg:
 			// check (and created) containing directories - account for munged tar files
-			dir := filepath.Dir(fullpath)
+			dir := utils.Dir(fullpath)
 			if err = r.MkdirAll(dir, 0775); err != nil {
 				return
 			}

@@ -24,7 +24,6 @@ package cmd
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -32,6 +31,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
+	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -117,7 +117,7 @@ func aesImportSave(ct *geneos.Component, h *host.Host, a *config.AESValues) (err
 		return nil
 	}
 	// speculative mkdirall; no error if it already exists
-	if err := h.MkdirAll(filepath.Dir(path), 0700); err != nil {
+	if err := h.MkdirAll(utils.Dir(path), 0700); err != nil {
 		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
 		return err
 	}

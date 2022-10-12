@@ -39,6 +39,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/rs/zerolog/log"
 )
 
@@ -102,7 +103,7 @@ func Abs(c geneos.Instance, file string) (path string) {
 	if filepath.IsAbs(path) {
 		return
 	}
-	return filepath.Join(c.Home(), path)
+	return utils.JoinSlash(c.Home(), path)
 }
 
 // given a pathlist (typically ':') seperated list of paths, remove all
@@ -117,7 +118,7 @@ func RemovePaths(c geneos.Instance, paths string) (err error) {
 			return fmt.Errorf("%s %w", p, err)
 		}
 		// glob here
-		m, err := c.Host().Glob(filepath.Join(c.Home(), p))
+		m, err := c.Host().Glob(utils.JoinSlash(c.Home(), p))
 		if err != nil {
 			return err
 		}
@@ -141,9 +142,9 @@ func LogFile(c geneos.Instance) (logfile string) {
 	case filepath.IsAbs(logd):
 		logfile = logd
 	default:
-		logfile = filepath.Join(c.Home(), logd)
+		logfile = utils.JoinSlash(c.Home(), logd)
 	}
-	logfile = filepath.Join(logfile, c.Config().GetString("logfile"))
+	logfile = utils.JoinSlash(logfile, c.Config().GetString("logfile"))
 	return
 }
 
@@ -402,7 +403,7 @@ func Version(c geneos.Instance) (base string, underlying string, err error) {
 	underlying = base
 	for {
 		var st fs.FileInfo
-		basepath := filepath.Join(basedir, underlying)
+		basepath := utils.JoinSlash(basedir, underlying)
 		st, err = c.Host().Lstat(basepath)
 		if err != nil {
 			underlying = "unknown"
