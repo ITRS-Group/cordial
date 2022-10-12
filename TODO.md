@@ -4,7 +4,11 @@
 
 (unordered)
 
+* Windows build, in stages:
+  * Initially for remote management (ssh etc)
+  * Add netprobe support, services?
 * Split 'init' common and sub-sub-commands, as it's too complicated
+* Add a 'selfupdate' like, but simpler than, rclone
 * When 'moving' a gateway, update licd connection details
   * Also, keep port(s) unchanged where possible
 * TLS sync should copy root CA
@@ -28,14 +32,11 @@
 * web dashboard - mostly done, better port numbers and tls to do
 * Support gateway2.gci format files
 * Add a 'clone' command (rename without delete) - for backup gateways etc.
-  * do both "mv" and "cp" working across remotes - tree walk needed
   * reset configs / clean etc.
 * Redo template support, primarily for SANs but also gateways
   * document changes
-* Stopping a remote (also for disable, delete, rename etc.) also means stopping all instances on it
 * Update docs to include configuration file rebuilds, gateway includes etc.
 * Look at 'sudo' support for remotes
-* Review all log*.Fatal* calls
 * web interface
   * first pass review configs
   * second to edit
@@ -43,7 +44,7 @@
 * move/copy - need to update ports when moving to another remote or copying to same remote
 * explore gRPC and other options over ssh for remotes (required daemon mode)
 * add socket and open file details to ls (ala lsof) - perhaps a "details" command or an option to "show" ?
-  * /proc/N/fd/* links and also /proc/net/tcp and udp etc.
+  * /proc/N/fd/* links
 
 ## Other
 
