@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"sync"
-	"syscall"
 
 	"github.com/rs/zerolog/log"
 
@@ -333,10 +332,6 @@ func (g *Gateways) Command() (args, env []string) {
 	}
 
 	return
-}
-
-func (g *Gateways) Reload(params []string) (err error) {
-	return instance.Signal(g, syscall.SIGUSR1)
 }
 
 // create a gateway key file for secure passwords as per

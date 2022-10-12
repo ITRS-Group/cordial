@@ -1,7 +1,28 @@
+/*
+Copyright © 2022 ITRS Group
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
 package instance
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -37,79 +58,6 @@ func DisplayName(c geneos.Instance) string {
 		return fmt.Sprintf("%s %s", c.Type(), c.Name())
 	}
 	return fmt.Sprintf("%s %s@%s", c.Type(), c.Name(), c.Host())
-}
-
-// locate a process instance
-//
-// the component type must be part of the basename of the executable and
-// the component name must be on the command line as an exact and
-// standalone args
-//
-// walk the /proc directory (local or remote) and find the matching pid
-// this is subject to races, but not much we can do
-func GetPID(c geneos.Instance) (pid int, err error) {
-	var pids []int
-	binary := c.Config().GetString("binary")
-
-	// safe to ignore error as it can only be bad pattern,
-	// which means no matches to range over
-	dirs, _ := c.Host().Glob("/proc/[0-9]*")
-
-	for _, dir := range dirs {
-		p, _ := strconv.Atoi(filepath.Base(dir))
-		pids = append(pids, p)
-	}
-
-	sort.Ints(pids)
-
-	var data []byte
-	for _, pid = range pids {
-		if data, err = c.Host().ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid)); err != nil {
-			// process may disappear by this point, ignore error
-			continue
-		}
-		args := bytes.Split(data, []byte("\000"))
-		execfile := filepath.Base(string(args[0]))
-		switch c.Type() {
-		case geneos.ParseComponentName("webserver"):
-			var wdOK, jarOK bool
-			if execfile != "java" {
-				continue
-			}
-			for _, arg := range args[1:] {
-				if string(arg) == "-Dworking.directory="+c.Home() {
-					wdOK = true
-				}
-				if strings.HasSuffix(string(arg), "geneos-web-server.jar") {
-					jarOK = true
-				}
-				if wdOK && jarOK {
-					return
-				}
-			}
-		default:
-			if strings.HasPrefix(execfile, binary) {
-				for _, arg := range args[1:] {
-					// very simplistic - we look for a bare arg that matches the instance name
-					if string(arg) == c.Name() {
-						// found
-						return
-					}
-				}
-			}
-		}
-	}
-	return 0, os.ErrProcessDone
-}
-
-func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime int64, err error) {
-	pid, err = GetPID(c)
-	if err == nil {
-		var s host.FileStat
-		s, err = c.Host().StatX(fmt.Sprintf("/proc/%d", pid))
-		return pid, s.Uid, s.Gid, s.Mtime, err
-	}
-	return 0, 0, 0, 0, os.ErrProcessDone
 }
 
 // separate reserved words and invalid syntax

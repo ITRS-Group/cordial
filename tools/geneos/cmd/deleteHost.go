@@ -114,7 +114,7 @@ func commandDeleteHost(_ *geneos.Component, args []string, params []string) (err
 		host.Delete(h)
 		fmt.Printf("%q deleted\n", h)
 	}
-	host.WriteConfigFile()
+	host.WriteHostConfigFile()
 
 	return nil
 }

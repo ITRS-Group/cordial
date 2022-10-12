@@ -1,10 +1,8 @@
 package host
 
 import (
-	"bytes"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -12,11 +10,8 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"syscall"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/pkg/sftp"
 	"github.com/rs/zerolog/log"
 )
@@ -27,62 +22,6 @@ var (
 	ErrInvalidArgs  = fmt.Errorf("invalid argument")
 	ErrNotSupported = fmt.Errorf("not supported")
 )
-
-// try to be atomic, lots of edge cases, UNIX/Linux only
-// we know the size of config structs is typically small, so just marshal
-// in memory
-func (h *Host) WriteConfigFile(file string, username string, perms fs.FileMode, config interface{}) (err error) {
-	j, err := json.MarshalIndent(config, "", "    ")
-	if err != nil {
-		return
-	}
-
-	uid, gid := -1, -1
-	if utils.IsSuperuser() {
-		if username == "" {
-			// try $SUDO_UID etc.
-			sudoUID := os.Getenv("SUDO_UID")
-			sudoGID := os.Getenv("SUDO_GID")
-
-			if sudoUID != "" && sudoGID != "" {
-				if uid, err = strconv.Atoi(sudoUID); err != nil {
-					uid = -1
-				}
-
-				if gid, err = strconv.Atoi(sudoGID); err != nil {
-					gid = -1
-				}
-			}
-		} else {
-			uid, gid, _, _ = utils.GetIDs(username)
-		}
-	}
-
-	dir := filepath.Dir(file)
-	// try to ensure directory exists
-	if err = h.MkdirAll(dir, 0775); err != nil {
-		return
-	}
-	// change final directory ownership
-	_ = h.Chown(dir, uid, gid)
-
-	buffer := bytes.NewBuffer(j)
-	f, fn, err := h.CreateTempFile(file, perms)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if err = h.Chown(fn, uid, gid); err != nil {
-		h.Remove(fn)
-	}
-
-	if _, err = io.Copy(f, buffer); err != nil {
-		return err
-	}
-
-	return h.Rename(fn, file)
-}
 
 // CopyFile copies a file between any combination of local or remote
 // locations. Destination can be a directory or a file. Parent
@@ -374,32 +313,6 @@ func (h *Host) Stat(name string) (f fs.FileInfo, err error) {
 		}
 		return sf.Stat(name)
 	}
-}
-
-// StatX returns extended Stat info. Needs to be deprecated to support
-// non LInux platforms
-func (h *Host) StatX(name string) (s FileStat, err error) {
-	switch h.GetString("name") {
-	case LOCALHOST:
-		if s.St, err = os.Stat(name); err != nil {
-			return
-		}
-		s.Uid = s.St.Sys().(*syscall.Stat_t).Uid
-		s.Gid = s.St.Sys().(*syscall.Stat_t).Gid
-		s.Mtime = s.St.Sys().(*syscall.Stat_t).Mtim.Sec
-	default:
-		var sf *sftp.Client
-		if sf, err = h.DialSFTP(); err != nil {
-			return
-		}
-		if s.St, err = sf.Stat(name); err != nil {
-			return
-		}
-		s.Uid = s.St.Sys().(*sftp.FileStat).UID
-		s.Gid = s.St.Sys().(*sftp.FileStat).GID
-		s.Mtime = int64(s.St.Sys().(*sftp.FileStat).Mtime)
-	}
-	return
 }
 
 // Lstat wraps the os.Lstat and sftp.Lstat functions
