@@ -124,7 +124,7 @@ func addHost(h *host.Host, sshurl *url.URL) (err error) {
 	}
 
 	host.Add(h)
-	if err = host.WriteConfigFile(); err != nil {
+	if err = host.WriteHostConfigFile(); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 

@@ -23,6 +23,7 @@ WORKDIR /app/cordial/tools/geneos
 RUN go mod tidy
 RUN go clean
 RUN go build
+RUN GOOS=windows go build
 WORKDIR /app/cordial/integrations/servicenow
 RUN go mod tidy
 RUN go clean
@@ -41,6 +42,7 @@ RUN apt update && apt install -y fontconfig zip
 COPY --from=build /app/cordial/VERSION /
 COPY --from=build /app/cordial/tools/geneos/geneos /bin
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/
+COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/
 COPY --from=build /app/cordial/integrations/servicenow/servicenow /cordial/
 COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /cordial/
 COPY --from=build /app/cordial/integrations/servicenow/ticket.sh /cordial/

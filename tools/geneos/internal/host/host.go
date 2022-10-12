@@ -41,7 +41,7 @@ var hosts sync.Map
 func Init() {
 	LOCAL = Get(LOCALHOST)
 	ALL = Get(ALLHOSTS)
-	ReadConfigFile()
+	ReadHostConfigFile()
 }
 
 // return the absolute path to the local Geneos installation
@@ -243,7 +243,7 @@ func RemoteHosts() (hs []*Host) {
 	return
 }
 
-func ReadConfigFile() {
+func ReadHostConfigFile() {
 	h := config.New()
 	h.SetConfigFile(UserHostsFilePath())
 	h.ReadInConfig()
@@ -264,7 +264,7 @@ func ReadConfigFile() {
 	}
 }
 
-func WriteConfigFile() error {
+func WriteHostConfigFile() error {
 	n := config.New()
 
 	hosts.Range(func(k, v interface{}) bool {
