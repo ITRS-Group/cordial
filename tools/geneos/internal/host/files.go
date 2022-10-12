@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/pkg/sftp"
 	"github.com/rs/zerolog/log"
 )
@@ -48,10 +49,10 @@ func CopyFile(srcHost *Host, srcPath string, dstHost *Host, dstPath string) (err
 	ds, err := dstHost.Stat(dstPath)
 	if err == nil {
 		if ds.IsDir() {
-			dstPath = filepath.Join(dstPath, filepath.Base(srcPath))
+			dstPath = utils.JoinSlash(dstPath, filepath.Base(srcPath))
 		}
 	} else {
-		dstHost.MkdirAll(filepath.Dir(dstPath), 0775)
+		dstHost.MkdirAll(utils.Dir(dstPath), 0775)
 	}
 
 	df, err := dstHost.Create(dstPath, ss.Mode())
@@ -83,8 +84,8 @@ func CopyAll(srcHost *Host, srcDir string, dstHost *Host, dstDir string) (err er
 				log.Error().Err(err).Msg("")
 				return nil
 			}
-			dstPath := filepath.Join(dstDir, path)
-			srcPath := filepath.Join(srcDir, path)
+			dstPath := utils.JoinSlash(dstDir, path)
+			srcPath := utils.JoinSlash(srcDir, path)
 			return copyDirEntry(fi, srcHost, srcPath, dstHost, dstPath)
 		})
 		return
@@ -103,7 +104,7 @@ func CopyAll(srcHost *Host, srcDir string, dstHost *Host, dstDir string) (err er
 		}
 		fi := w.Stat()
 		srcPath := w.Path()
-		dstPath := filepath.Join(dstDir, strings.TrimPrefix(w.Path(), srcDir))
+		dstPath := utils.JoinSlash(dstDir, strings.TrimPrefix(w.Path(), srcDir))
 		if err = copyDirEntry(fi, srcHost, srcPath, dstHost, dstPath); err != nil {
 			log.Error().Err(err).Msg("")
 			continue

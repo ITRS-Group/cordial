@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os/user"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -119,6 +120,11 @@ func commandAdd(ct *geneos.Component, extras instance.ExtraConfigValues, args []
 	} else {
 		u, _ := user.Current()
 		username = u.Username
+		// strip domain in case we are running on windows
+		i := strings.Index(username, "\\")
+		if i != -1 && len(username) >= i {
+			username = username[i+1:]
+		}
 	}
 
 	c, err := instance.Get(ct, name)

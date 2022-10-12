@@ -17,6 +17,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/spf13/afero/sftpfs"
 )
 
@@ -60,7 +61,7 @@ func first(d ...interface{}) string {
 
 var fnmap template.FuncMap = template.FuncMap{
 	"first":   first,
-	"join":    filepath.Join,
+	"join":    utils.JoinSlash,
 	"nameOf":  nameOf,
 	"valueOf": valueOf,
 }
@@ -201,7 +202,7 @@ func readRCConfig(c geneos.Instance) (err error) {
 //
 // will return /path/to/netprobe/netprobe.json
 func ComponentFilepath(c geneos.Instance, extensions ...string) string {
-	return filepath.Join(c.Home(), ComponentFilename(c, extensions...))
+	return utils.JoinSlash(c.Home(), ComponentFilename(c, extensions...))
 }
 
 // ComponentFilename() returns the filename for the component named by
@@ -234,7 +235,7 @@ func Filepath(c geneos.Instance, name string) string {
 		return filename
 	}
 
-	return filepath.Join(c.Home(), filename)
+	return utils.JoinSlash(c.Home(), filename)
 }
 
 // Filename returns the basename of the file named by the configuration
@@ -308,7 +309,7 @@ func SetSecureArgs(c geneos.Instance) (args []string) {
 // delete any aliases fields before writing
 func WriteConfig(c geneos.Instance) (err error) {
 	file := ComponentFilepath(c)
-	if err = c.Host().MkdirAll(filepath.Dir(file), 0775); err != nil {
+	if err = c.Host().MkdirAll(utils.Dir(file), 0775); err != nil {
 		log.Error().Err(err).Msg("")
 	}
 	nv := config.New()
@@ -345,9 +346,7 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) error {
 }
 
 func ReadConfig(c geneos.Instance) (err error) {
-	c.Config().AddConfigPath(c.Home())
-	c.Config().SetConfigName(c.Type().String())
-	c.Config().SetConfigType(ConfigType)
+	c.Config().SetConfigFile(ComponentFilepath(c, ConfigType))
 	if c.Host() != host.LOCAL {
 		client, err := c.Host().DialSFTP()
 		if err != nil {
@@ -356,7 +355,12 @@ func ReadConfig(c geneos.Instance) (err error) {
 		}
 		c.Config().SetFs(sftpfs.New(client))
 	}
+	// we ignore this error as failing to load a config file may be
+	// legitimate
 	err = c.Config().MergeInConfig()
+	if err != nil {
+		log.Debug().Err(err).Msg("")
+	}
 
 	// aliases have to be set AFTER loading from file (https://github.com/spf13/viper/issues/560)
 	for a, k := range c.Type().Aliases {
@@ -396,7 +400,7 @@ func Migrate(c geneos.Instance) (err error) {
 }
 
 // a template function to support "{{join .X .Y}}"
-var textJoinFuncs = template.FuncMap{"join": filepath.Join}
+var textJoinFuncs = template.FuncMap{"join": utils.JoinSlash}
 
 // SetDefaults() is a common function called by component factory
 // functions to iterate over the component specific instance

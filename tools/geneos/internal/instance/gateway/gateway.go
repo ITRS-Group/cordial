@@ -12,6 +12,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 var Gateway = geneos.Component{
@@ -179,20 +180,22 @@ func (g *Gateways) SetConf(v *config.Config) {
 }
 
 func (g *Gateways) Add(username string, template string, port uint16) (err error) {
+	cf := g.Config()
+
 	if port == 0 {
 		port = instance.NextPort(g.InstanceHost, &Gateway)
 	}
-	g.Config().Set("port", port)
-	g.Config().Set("user", username)
-	g.Config().Set("config.rebuild", "initial")
+	cf.Set("port", port)
+	cf.Set("user", username)
+	cf.Set("config.rebuild", "initial")
 
-	g.Config().SetDefault("config.template", GatewayDefaultTemplate)
+	cf.SetDefault("config.template", GatewayDefaultTemplate)
 	if template != "" {
 		filename, _ := instance.ImportCommons(g.Host(), g.Type(), "templates", []string{template})
-		g.Config().Set("config.template", filename)
+		cf.Set("config.template", filename)
 	}
 
-	g.Config().Set("includes", make(map[int]string))
+	cf.Set("includes", make(map[int]string))
 
 	// try to save config early
 	if err = instance.WriteConfig(g); err != nil {
@@ -215,13 +218,15 @@ func (g *Gateways) Add(username string, template string, port uint16) (err error
 }
 
 func (g *Gateways) Rebuild(initial bool) (err error) {
+	cf := g.Config()
+
 	// always rebuild an instance template
 	err = instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "instance.setup.xml"), GatewayInstanceTemplate, InstanceTemplate)
 	if err != nil {
 		return
 	}
 
-	configrebuild := g.Config().GetString("config.rebuild")
+	configrebuild := cf.GetString("config.rebuild")
 
 	if configrebuild == "never" {
 		return
@@ -236,29 +241,29 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	secure := instance.Filename(g, "certificate") != "" && instance.Filename(g, "privatekey") != ""
 
 	// if we have certs then connect to Licd securely
-	if secure && g.Config().GetString("licdsecure") != "true" {
-		g.Config().Set("licdsecure", "true")
+	if secure && cf.GetString("licdsecure") != "true" {
+		cf.Set("licdsecure", "true")
 		changed = true
-	} else if !secure && g.Config().GetString("licdsecure") == "true" {
-		g.Config().Set("licdsecure", "false")
+	} else if !secure && cf.GetString("licdsecure") == "true" {
+		cf.Set("licdsecure", "false")
 		changed = true
 	}
 
 	// use getPorts() to check valid change, else go up one
 	ports := instance.GetPorts(g.Host())
 	nextport := instance.NextPort(g.Host(), &Gateway)
-	if secure && g.Config().GetInt64("port") == 7039 {
+	if secure && cf.GetInt64("port") == 7039 {
 		if _, ok := ports[7038]; !ok {
-			g.Config().Set("port", 7038)
+			cf.Set("port", 7038)
 		} else {
-			g.Config().Set("port", nextport)
+			cf.Set("port", nextport)
 		}
 		changed = true
-	} else if !secure && g.Config().GetInt64("port") == 7038 {
+	} else if !secure && cf.GetInt64("port") == 7038 {
 		if _, ok := ports[7039]; !ok {
-			g.Config().Set("port", 7039)
+			cf.Set("port", 7039)
 		} else {
-			g.Config().Set("port", nextport)
+			cf.Set("port", nextport)
 		}
 		changed = true
 	}
@@ -273,17 +278,19 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 }
 
 func (g *Gateways) Command() (args, env []string) {
+	cf := g.Config()
+
 	// get opts from
 	// from https://docs.itrsgroup.com/docs/geneos/5.10.0/Gateway_Reference_Guide/gateway_installation_guide.html#Gateway_command_line_options
 	//
 	args = []string{
 		g.Name(),
 		"-resources-dir",
-		filepath.Join(g.Config().GetString("install"), g.Config().GetString("version"), "resources"),
+		utils.JoinSlash(cf.GetString("install"), cf.GetString("version"), "resources"),
 		"-log",
 		instance.LogFile(g),
 		"-setup",
-		filepath.Join(g.Config().GetString("home"), "gateway.setup.xml"),
+		utils.JoinSlash(cf.GetString("home"), "gateway.setup.xml"),
 		// enable stats by default
 		"-stats",
 	}
@@ -293,23 +300,23 @@ func (g *Gateways) Command() (args, env []string) {
 	// if underlying ... { }
 	// "-gateway-name",
 
-	if g.Config().GetString("gatewayname") != g.Name() {
-		args = append([]string{g.Config().GetString("gatewayname")}, args...)
+	if cf.GetString("gatewayname") != g.Name() {
+		args = append([]string{cf.GetString("gatewayname")}, args...)
 	}
 
-	args = append([]string{"-port", fmt.Sprint(g.Config().GetString("port"))}, args...)
+	args = append([]string{"-port", fmt.Sprint(cf.GetString("port"))}, args...)
 
-	if g.Config().GetString("licdhost") != "" {
-		args = append(args, "-licd-host", g.Config().GetString("licdhost"))
+	if cf.GetString("licdhost") != "" {
+		args = append(args, "-licd-host", cf.GetString("licdhost"))
 	}
 
-	if g.Config().GetInt64("licdport") != 0 {
-		args = append(args, "-licd-port", fmt.Sprint(g.Config().GetString("licdport")))
+	if cf.GetInt64("licdport") != 0 {
+		args = append(args, "-licd-port", fmt.Sprint(cf.GetString("licdport")))
 	}
 
 	args = append(args, instance.SetSecureArgs(g)...)
 
-	licdsecure := g.Config().GetString("licdsecure")
+	licdsecure := cf.GetString("licdsecure")
 	if instance.Filename(g, "certificate") != "" {
 		if licdsecure == "" || licdsecure != "false" {
 			args = append(args, "-licd-secure")
@@ -318,7 +325,7 @@ func (g *Gateways) Command() (args, env []string) {
 		args = append(args, "-licd-secure")
 	}
 
-	if g.Config().GetBool("usekeyfile") {
+	if cf.GetBool("usekeyfile") {
 		keyfile := instance.Filepath(g, "keyfile")
 		if keyfile != "" {
 			args = append(args, "-key-file", keyfile)

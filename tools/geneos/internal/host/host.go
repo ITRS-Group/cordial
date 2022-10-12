@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/rs/zerolog/log"
 )
 
@@ -217,7 +218,7 @@ func (h *Host) Filepath(parts ...interface{}) string {
 		}
 	}
 
-	return filepath.Join(append([]string{h.GetString("geneos")}, strParts...)...)
+	return utils.JoinSlash(append([]string{h.GetString("geneos")}, strParts...)...)
 }
 
 func (h *Host) FullName(name string) string {
