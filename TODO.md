@@ -4,6 +4,7 @@
 
 (unordered)
 
+* aes encode - ask for password prompt verification
 * Windows build, in stages:
   * Initially for remote management (ssh etc)
   * Add netprobe support, services?
@@ -45,6 +46,12 @@
 * explore gRPC and other options over ssh for remotes (required daemon mode)
 * add socket and open file details to ls (ala lsof) - perhaps a "details" command or an option to "show" ?
   * /proc/N/fd/* links
+
+## libemail.so
+
+* fix image attachments (0-many, cid links by name)
+* allow empty text template
+* attach dataview snapshot as html table
 
 ## Other
 
