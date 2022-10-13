@@ -21,10 +21,12 @@ THE SOFTWARE.
 */
 
 /*
-Package config adds support for value expansion over viper based configurations.
+Package config adds support for value expansion over viper based
+configurations.
 
-A number of the most common access methods from viper are replaced with local versions that add support for [Config.ExpandString].
-Additionally, there are a number of functions to simplify programs including [LoadConfig].
+A number of the most common access methods from viper are replaced with
+local versions that add support for [ExpandString]. Additionally, there
+are a number of functions to simplify programs including [LoadConfig].
 */
 package config
 
@@ -115,10 +117,11 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 	return m
 }
 
-// ExpandString() returns the input with all occurrences of the form
+// ExpandString returns the input with all occurrences of the form
 // ${name} replaced using an [os.Expand]-like function (but without
 // support for bare names) for the formats (in the order of priority)
-// below:
+// below. It operates on the global config instance, referencing any
+// other configuration values in the global package context.
 //
 //	${enc:keyfile[|keyfile...]:encodedvalue}
 //
@@ -144,8 +147,8 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 //
 //	   * password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
 //	   * password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
-//	   * password: ${enc:~/.config/geneos/keyfile1.aes:env:app.password}
-//	   * password: ${enc:~/.keyfile.aes:env:config:mySecret}
+//	   * password: ${enc:~/.config/geneos/keyfile1.aes:app.password}
+//	   * password: ${enc:~/.keyfile.aes:config:mySecret}
 //
 //	${config:key} or ${path.to.config}
 //
@@ -219,6 +222,12 @@ func (c *Config) GetStringMapString(s string, values ...map[string]string) (m ma
 //
 // In the above a reference to ${config.real} will return the literal
 // string ${unchanged} as there is no recursive lookups.
+func ExpandString(input string, values ...map[string]string) (value string) {
+	return global.ExpandString(input, values...)
+}
+
+// ExpandString works just like the package level [ExpandString] but on
+// a specific config instance.
 func (c *Config) ExpandString(input string, values ...map[string]string) (value string) {
 	value = expand(input, func(s string) (r string) {
 		if strings.HasPrefix(s, "enc:") {
