@@ -57,6 +57,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
 	rootCmd.PersistentFlags().MarkHidden("debug")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
+	rootCmd.PersistentFlags().MarkHidden("quiet")
 
 	// this doesn't work as expected, define sort = false in each command
 	// rootCmd.PersistentFlags().SortFlags = false

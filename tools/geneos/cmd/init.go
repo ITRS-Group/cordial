@@ -76,14 +76,15 @@ func init() {
 	initCmd.Flags().StringVarP(&initCmdImportCert, "importcert", "c", "", "signing certificate file with optional embedded private key")
 	initCmd.Flags().StringVarP(&initCmdImportKey, "importkey", "k", "", "signing private key file")
 
-	initCmd.PersistentFlags().BoolVarP(&initCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires auth.")
-	initCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
+	initCmd.PersistentFlags().BoolVarP(&initCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires ITRS internal credentials")
+	initCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots. Requires -N")
+
 	initCmd.PersistentFlags().StringVarP(&initCmdVersion, "version", "V", "latest", "Download matching version, defaults to latest. Doesn't work for EL8 archives.")
-	initCmd.PersistentFlags().StringVarP(&initCmdUsername, "username", "u", "", "Username for downloads. Defaults to configuration value download.username")
+	initCmd.PersistentFlags().StringVarP(&initCmdUsername, "username", "u", "", "Username for downloads. Defaults to configuration value `download.username`")
 
 	// we now prompt for passwords if not in config, so hide this old flag
 	initCmd.PersistentFlags().StringVarP(&initCmdPwFile, "pwfile", "P", "", "")
-	initCmd.Flags().MarkHidden("pwfile")
+	initCmd.PersistentFlags().MarkHidden("pwfile")
 
 	initCmd.Flags().StringVarP(&initCmdGatewayTemplate, "gatewaytemplate", "w", "", "A gateway template file")
 	initCmd.Flags().StringVarP(&initCmdSANTemplate, "santemplate", "s", "", "A san template file")
