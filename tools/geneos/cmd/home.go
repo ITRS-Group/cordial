@@ -19,10 +19,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
@@ -30,53 +32,52 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func init() {
+	rootCmd.AddCommand(homeCmd)
+
+	// homeCmd.Flags().SortFlags = false
+}
+
 // homeCmd represents the home command
 var homeCmd = &cobra.Command{
-	Use:   "home [TYPE] [NAME]",
+	Use:   "home [flags] [TYPE] [NAME]",
 	Short: "Print the home directory of the first instance or the Geneos home dir",
-	Long: `Output the home directory of the first matching instance or local
-installation or the remote on stdout. This is intended for scripting,
-e.g.
+	Long: strings.ReplaceAll(`
+Output the home directory of the first matching instance or local
+installation or the remote on stdout. This is intended for scripting.
 
-	cd $(geneos home)
-	cd $(geneos home gateway example1)
-		
-No errors are logged. An error, for example no matching instance found, result in the Geneos
-root directory being printed.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+No errors are logged. An error, for example no matching instance
+found, result in the Geneos root directory being printed.
+`, "|", "`"),
+	Example: strings.ReplaceAll(`
+cd $(geneos home)
+cd $(geneos home gateway example1)
+cat $(geneos home gateway example2)/gateway.txt
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandHome(ct, args, params)
+		ct, args, _ := cmdArgsParams(cmd)
+		if ct == nil && len(args) == 0 {
+			fmt.Println(host.Geneos())
+			return nil
+		}
+
+		var i []geneos.Instance
+		if len(args) == 0 {
+			i = instance.GetAll(host.LOCAL, ct)
+		} else {
+			i = instance.MatchAll(ct, args[0])
+		}
+
+		if len(i) == 0 {
+			fmt.Println(host.Geneos())
+			return nil
+		}
+
+		fmt.Println(i[0].Home())
+		return nil
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(homeCmd)
-	homeCmd.Flags().SortFlags = false
-}
-
-func commandHome(ct *geneos.Component, args []string, params []string) error {
-	if ct == nil && len(args) == 0 {
-		fmt.Println(host.Geneos())
-		return nil
-	}
-
-	var i []geneos.Instance
-	if len(args) == 0 {
-		i = instance.GetAll(host.LOCAL, ct)
-	} else {
-		i = instance.MatchAll(ct, args[0])
-	}
-
-	if len(i) == 0 {
-		fmt.Println(host.Geneos())
-		return nil
-	}
-
-	fmt.Println(i[0].Home())
-	return nil
 }

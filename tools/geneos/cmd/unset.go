@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
@@ -31,39 +32,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// unsetCmd represents the unset command
-var unsetCmd = &cobra.Command{
-	Use:   "unset [FLAGS] [TYPE] [NAME...]",
-	Short: "Unset a configuration value",
-	Long: `Unset a configuration value.
-	
-This command has been added to remove the confusing negation syntax in set`,
-	Example: `
-geneos unset gateway GW1 -k aesfile
-geneos unset san -g Gateway1
-`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations: map[string]string{
-		"wildcard": "true",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args := cmdArgs(cmd)
-		return commandUnset(ct, args)
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(unsetCmd)
-	unsetCmd.Flags().VarP(&unsetCmdKeys, "key", "k", "Unset a configuration key item")
-	unsetCmd.Flags().VarP(&unsetCmdEnvs, "env", "e", "Remove an environment variable of NAME")
-	unsetCmd.Flags().VarP(&unsetCmdIncludes, "include", "i", "Remove an include file in the format PRIORITY")
-	unsetCmd.Flags().VarP(&unsetCmdGateways, "gateway", "g", "Remove gateway NAME")
-	unsetCmd.Flags().VarP(&unsetCmdAttributes, "attribute", "a", "Remove an attribute of NAME")
-	unsetCmd.Flags().VarP(&unsetCmdTypes, "type", "t", "Remove the type NAME")
-	unsetCmd.Flags().VarP(&unsetCmdVariables, "variable", "v", "Remove a variable of NAME")
-	unsetCmd.Flags().SortFlags = false
-}
+var unsetCmdWarned bool
 
 var unsetCmdKeys = unsetCmdValues{}
 var unsetCmdIncludes = unsetCmdValues{}
@@ -73,11 +42,44 @@ var unsetCmdEnvs = unsetCmdValues{}
 var unsetCmdVariables = unsetCmdValues{}
 var unsetCmdTypes = unsetCmdValues{}
 
-func commandUnset(ct *geneos.Component, args []string) error {
-	return instance.ForAll(ct, unsetInstance, args, []string{})
+func init() {
+	rootCmd.AddCommand(unsetCmd)
+
+	unsetCmd.Flags().VarP(&unsetCmdKeys, "key", "k", "Unset a configuration key item")
+	unsetCmd.Flags().VarP(&unsetCmdEnvs, "env", "e", "Remove an environment variable of NAME")
+	unsetCmd.Flags().VarP(&unsetCmdIncludes, "include", "i", "Remove an include file in the format PRIORITY")
+	unsetCmd.Flags().VarP(&unsetCmdGateways, "gateway", "g", "Remove gateway NAME")
+	unsetCmd.Flags().VarP(&unsetCmdAttributes, "attribute", "a", "Remove an attribute of NAME")
+	unsetCmd.Flags().VarP(&unsetCmdTypes, "type", "t", "Remove the type NAME")
+	unsetCmd.Flags().VarP(&unsetCmdVariables, "variable", "v", "Remove a variable of NAME")
+
+	unsetCmd.Flags().SortFlags = false
 }
 
-var warned bool
+// unsetCmd represents the unset command
+var unsetCmd = &cobra.Command{
+	Use:   "unset [FLAGS] [TYPE] [NAME...]",
+	Short: "Unset a configuration value",
+	Long: strings.ReplaceAll(`
+Unset a configuration value.
+	
+This command has been added to remove the confusing negation syntax
+in the |set| command
+`, "|", "`"),
+	Example: strings.ReplaceAll(`
+geneos unset gateway GW1 -k aesfile
+geneos unset san -g Gateway1
+`, "|", "`"),
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Annotations: map[string]string{
+		"wildcard": "true",
+	},
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		ct, args := cmdArgs(cmd)
+		return instance.ForAll(ct, unsetInstance, args, []string{})
+	},
+}
 
 func unsetInstance(c geneos.Instance, params []string) (err error) {
 	var changed bool
@@ -107,9 +109,9 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 		}
 	}
 
-	if !changed && !warned {
+	if !changed && !unsetCmdWarned {
 		log.Error().Msg("nothing unset. perhaps you forgot to use -k -KEY or one of the other options?")
-		warned = true
+		unsetCmdWarned = true
 		return
 	}
 

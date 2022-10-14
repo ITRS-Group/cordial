@@ -19,11 +19,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -31,11 +33,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// showCmd represents the show command
+type showCmdConfig struct {
+	Name   string      `json:"name,omitempty"`
+	Host   string      `json:"host,omitempty"`
+	Type   string      `json:"type,omitempty"`
+	Config interface{} `json:"config,omitempty"`
+}
+
+var showCmdRaw bool
+
+func init() {
+	rootCmd.AddCommand(showCmd)
+
+	showCmd.Flags().BoolVarP(&showCmdRaw, "raw", "r", false, "Show raw (unexpanded) configuration values")
+
+	showCmd.Flags().SortFlags = false
+}
+
 var showCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Show runtime, global, user or instance configuration is JSON format",
-	Long: `Show the runtime or instance configuration. The loaded
+	Long: strings.ReplaceAll(`
+Show the runtime or instance configuration. The loaded
 global or user configurations can be seen through the show global
 and show user sub-commands, respectively.
 
@@ -49,9 +68,9 @@ regardless of the instance using a legacy .rc file or a native JSON
 configuration.
 
 Passwords and secrets are redacted in a very simplistic manner simply
-to prevent visibility in casual viewing.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+to prevent visibility in casual viewing.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -67,30 +86,9 @@ to prevent visibility in casual viewing.`,
 			return nil
 		}
 
-		return commandShow(cmdArgsParams(cmd))
+		ct, args, params := cmdArgsParams(cmd)
+		return instance.ForAll(ct, showInstance, args, params)
 	},
-}
-
-var showCmdRaw bool
-
-func init() {
-	rootCmd.AddCommand(showCmd)
-
-	showCmd.Flags().BoolVarP(&showCmdRaw, "raw", "r", false, "Show raw (unexpanded) configuration values")
-	showCmd.Flags().SortFlags = false
-}
-
-// var showCmdYAML bool
-
-func commandShow(ct *geneos.Component, args []string, params []string) (err error) {
-	return instance.ForAll(ct, showInstance, args, params)
-}
-
-type showCmdConfig struct {
-	Name   string      `json:"name,omitempty"`
-	Host   string      `json:"host,omitempty"`
-	Type   string      `json:"type,omitempty"`
-	Config interface{} `json:"config,omitempty"`
 }
 
 func showInstance(c geneos.Instance, params []string) (err error) {

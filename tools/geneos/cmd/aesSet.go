@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -38,28 +39,40 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// aesSetCmd represents the 'aes set' command
+var aesSetCmdKeyfile, aesSetCmdCRC string
+var aesSetCmdNoRoll bool
+
+func init() {
+	aesCmd.AddCommand(aesSetCmd)
+
+	defKeyFile := geneos.UserConfigFilePaths("keyfile.aes")[0]
+	aesSetCmd.Flags().StringVarP(&aesSetCmdKeyfile, "keyfile", "k", defKeyFile, "Keyfile to use")
+	aesSetCmd.Flags().StringVarP(&aesSetCmdCRC, "crc", "C", "", "CRC of keyfile to use.")
+	aesSetCmd.Flags().BoolVarP(&aesSetCmdNoRoll, "noroll", "N", false, "Do not roll any existing keyfile to previous keyfile setting")
+}
+
 var aesSetCmd = &cobra.Command{
-	Use:   "set [-N] [-k FILE|URL|-] [-C CRC] [TYPE] [NAME...]",
-	Short: "Set (and import) keyfile for instances",
-	Long: `Set keyfile for matching instances. Either a path or URL to a
+	Use:   "set [flags] [TYPE] [NAME...]",
+	Short: "Set keyfile for instances",
+	Long: strings.ReplaceAll(`
+Set keyfile for matching instances. Either a path or URL to a
 keyfile or the CRC of an existing keyfile in the component's shared
 directory must be given. If a path or URL is given then the keyfile
 is saved to the component shared directories and the configuration
-set to reference that path. Unless the '-N' flag is given any
+set to reference that path. Unless the |-N| flag is given any
 existing keyfile path is copied to a 'prevkeyfile' setting to support
 key file updating in Geneos GA6.x.
 
-If the '-C' flag is used and it identifies an existing keyfile in the
+If the |-C| flag is used and it identifies an existing keyfile in the
 component keyfile directory then that is used for matching instances.
 
-The argument given with the '-k' flag can be a local file (including
-a prefix of '~/' to represent the home directory), a URL or a dash
-'-' for STDIN.
+The argument given with the |-k| flag can be a local file (including
+a prefix of |~/| to represent the home directory), a URL or a dash
+|-| for STDIN.
 
-Currently only Gateways and Netprobes (and SANs) are supported.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+Currently only Gateways and Netprobes (and SANs) are supported.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -112,18 +125,6 @@ Currently only Gateways and Netprobes (and SANs) are supported.`,
 		instance.ForAll(ct, aesSetAESInstance, args, params)
 		return nil
 	},
-}
-
-var aesSetCmdKeyfile, aesSetCmdCRC string
-var aesSetCmdNoRoll bool
-
-func init() {
-	aesCmd.AddCommand(aesSetCmd)
-
-	defKeyFile := geneos.UserConfigFilePaths("keyfile.aes")[0]
-	aesSetCmd.Flags().StringVarP(&aesSetCmdKeyfile, "keyfile", "k", defKeyFile, "Keyfile to use")
-	aesSetCmd.Flags().StringVarP(&aesSetCmdCRC, "crc", "C", "", "CRC of keyfile to use.")
-	aesSetCmd.Flags().BoolVarP(&aesSetCmdNoRoll, "noroll", "N", false, "Do not roll any existing keyfile to previous keyfile setting")
 }
 
 func aesSetAESInstance(c geneos.Instance, params []string) (err error) {

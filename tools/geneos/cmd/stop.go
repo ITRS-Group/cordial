@@ -19,25 +19,38 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
+	"strings"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
 
-// stopCmd represents the stop command
+var stopCmdKill bool
+
+func init() {
+	rootCmd.AddCommand(stopCmd)
+
+	stopCmd.Flags().BoolVarP(&stopCmdKill, "kill", "K", false, "Force immediate stop by sending an immediate SIGKILL")
+
+	stopCmd.Flags().SortFlags = false
+}
+
 var stopCmd = &cobra.Command{
-	Use:   "stop [-K] [TYPE] [NAME...]",
+	Use:   "stop [flags] [TYPE] [NAME...]",
 	Short: "Stop instances",
-	Long: `Stop one or more matching instances. Unless the -K
+	Long: strings.ReplaceAll(`
+Stop one or more matching instances. Unless the -K
 flag is given, a SIGTERM is sent and if the instance is
 still running after a few seconds then a SIGKILL is sent. If the
--K flag is given the instance(s) are immediately terminated with
-a SIGKILL.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+|-K| flag is given the instance(s) are immediately terminated with
+a |SIGKILL|.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -46,15 +59,6 @@ a SIGKILL.`,
 		return instance.ForAll(ct, stopInstance, args, params)
 	},
 }
-
-func init() {
-	rootCmd.AddCommand(stopCmd)
-
-	stopCmd.Flags().BoolVarP(&stopCmdKill, "kill", "K", false, "Force immediate stop by sending an immediate SIGKILL")
-	stopCmd.Flags().SortFlags = false
-}
-
-var stopCmdKill bool
 
 func stopInstance(c geneos.Instance, params []string) error {
 	return instance.Stop(c, stopCmdKill)

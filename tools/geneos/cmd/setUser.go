@@ -19,41 +19,38 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
 	"os"
+	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-// setUserCmd represents the setUser command
+func init() {
+	setCmd.AddCommand(setUserCmd)
+
+	// setUserCmd.Flags().SortFlags = false
+}
+
 var setUserCmd = &cobra.Command{
-	Use:                   "user KEY=VALUE...",
-	Short:                 "Set user configuration parameters",
-	Long:                  ``,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+	Use:          "user KEY=VALUE...",
+	Short:        "Set user configuration parameters",
+	Long:         strings.ReplaceAll(``, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandSetUser(ct, args, params)
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		_, _, params := cmdArgsParams(cmd)
+		userConfDir, _ := os.UserConfigDir()
+		if err = os.MkdirAll(userConfDir, 0775); err != nil {
+			log.Fatal().Err(err).Msg("")
+		}
+		return writeConfigParams(geneos.UserConfigFilePaths()[0], params)
 	},
-}
-
-func init() {
-	setCmd.AddCommand(setUserCmd)
-	setUserCmd.Flags().SortFlags = false
-}
-
-func commandSetUser(ct *geneos.Component, args, params []string) (err error) {
-	userConfDir, _ := os.UserConfigDir()
-	if err = os.MkdirAll(userConfDir, 0775); err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-	return writeConfigParams(geneos.UserConfigFilePaths()[0], params)
 }

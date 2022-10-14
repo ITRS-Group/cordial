@@ -19,21 +19,30 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
+	"strings"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
 
-// tlsNewCmd represents the tlsNew command
+func init() {
+	tlsCmd.AddCommand(tlsNewCmd)
+
+	// tlsNewCmd.Flags().SortFlags = false
+}
+
 var tlsNewCmd = &cobra.Command{
-	Use:                   "new",
-	Short:                 "Create new certificates",
-	Long:                  `Create new certificates for instances.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+	Use:   "new [TYPE] [NAME...]",
+	Short: "Create new certificates",
+	Long: strings.ReplaceAll(`
+Create new certificates for instances.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -41,11 +50,6 @@ var tlsNewCmd = &cobra.Command{
 		ct, args, params := cmdArgsParams(cmd)
 		return instance.ForAll(ct, newInstanceCert, args, params)
 	},
-}
-
-func init() {
-	tlsCmd.AddCommand(tlsNewCmd)
-	tlsNewCmd.Flags().SortFlags = false
 }
 
 func newInstanceCert(c geneos.Instance, _ []string) (err error) {

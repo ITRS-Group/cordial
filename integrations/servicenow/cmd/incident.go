@@ -1,6 +1,25 @@
 /*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
+Copyright © 2022 ITRS Group
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 */
+
 package cmd
 
 import (
@@ -22,21 +41,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// incidentCmd represents the incident command
-var incidentCmd = &cobra.Command{
-	Use:   "incident",
-	Short: "Raise or update an incident",
-	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		if (text == "" && rawtext == "") || search == "" {
-			fmt.Println("Either --search or one of --text / --rawtext is required.")
-			fmt.Println(cmd.Usage())
-			os.Exit(1)
-		}
-		incident(args)
-	},
-}
-
 var conffile, short, text, rawtext, search, severity, id, rawid string
 var update_only bool
 
@@ -51,6 +55,25 @@ func init() {
 	incidentCmd.Flags().StringVarP(&search, "search", "f", "", "sysID search: '[TABLE:]FIELD=VALUE', TABLE defaults to 'cmdb_ci'. REQUIRED")
 	incidentCmd.Flags().StringVarP(&severity, "severity", "S", "3", "Geneos severity. Maps depending on configuration settings.")
 	incidentCmd.Flags().BoolVarP(&update_only, "updateonly", "U", false, "If set no incident creation will be done")
+
+	incidentCmd.Flags().SortFlags = false
+}
+
+var incidentCmd = &cobra.Command{
+	Use:   "incident",
+	Short: "Raise or update an incident",
+	Long: strings.ReplaceAll(`
+
+`, "|", "`"),
+	SilenceUsage: true,
+	Run: func(cmd *cobra.Command, args []string) {
+		if (text == "" && rawtext == "") || search == "" {
+			fmt.Println("Either --search or one of --text / --rawtext is required.")
+			fmt.Println(cmd.Usage())
+			os.Exit(1)
+		}
+		incident(args)
+	},
 }
 
 func incident(args []string) {

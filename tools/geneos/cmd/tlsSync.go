@@ -19,48 +19,52 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
 
+func init() {
+	tlsCmd.AddCommand(tlsSyncCmd)
+
+	// tlsSyncCmd.Flags().SortFlags = false
+}
+
 // tlsSyncCmd represents the tlsSync command
 var tlsSyncCmd = &cobra.Command{
 	Use:   "sync",
 	Short: "Sync remote hosts certificate chain files",
-	Long: `Create a chain.pem file made up of the root and signing
+	Long: strings.ReplaceAll(`
+Create a chain.pem file made up of the root and signing
 certificates and then copy them to all remote hosts. This can
 then be used to verify connections from components.
 
 The root certificate is optional, b ut the signing certificate must
-exist.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+exist.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		return TLSSync()
+		return tlsSync()
 	},
-}
-
-func init() {
-	tlsCmd.AddCommand(tlsSyncCmd)
-	tlsSyncCmd.Flags().SortFlags = false
 }
 
 // if there is a local tls/chain.pem file then copy it to all hosts
 // overwriting any existing versions
 //
 // XXX Should we do more with certpools ?
-func TLSSync() (err error) {
+func tlsSync() (err error) {
 	rootCert, err := instance.ReadRootCert()
 	if err != nil {
 		rootCert = nil

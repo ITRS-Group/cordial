@@ -19,11 +19,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
 	"errors"
 	"os"
+	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -31,17 +33,29 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// restartCmd represents the restart command
+func init() {
+	rootCmd.AddCommand(restartCmd)
+
+	restartCmd.Flags().BoolVarP(&restartCmdAll, "all", "a", false, "Start all matcheing instances, not just those already running")
+	restartCmd.Flags().BoolVarP(&restartCmdKill, "kill", "K", false, "Force stop by sending an immediate SIGKILL")
+	restartCmd.Flags().BoolVarP(&restartCmdLogs, "log", "l", false, "Run 'logs -f' after starting instance(s)")
+
+	restartCmd.Flags().SortFlags = false
+}
+
+var restartCmdAll, restartCmdKill, restartCmdLogs bool
+
 var restartCmd = &cobra.Command{
-	Use:   "restart [-a] [-K] [-l] [TYPE] [NAME...]",
+	Use:   "restart [flags] [TYPE] [NAME...]",
 	Short: "Restart instances",
-	Long: `Restart the matching instances. This is identical to running 'geneos
-stop' followed by 'geneos start' except if the -a flag is given then
-all matching instances are started regardless of whether they were
-stopped by the command. The command also accepts the same flags as
-both start and stop.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+	Long: strings.ReplaceAll(`
+Restart the matching instances. This is identical to running |geneos
+stop| followed by |geneos start| except if the |-a| flag is given
+then all matching instances are started regardless of whether they
+were stopped by the command. The command also accepts the same flags
+as both start and stop.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -50,17 +64,6 @@ both start and stop.`,
 		return commandRestart(ct, args, params)
 	},
 }
-
-func init() {
-	rootCmd.AddCommand(restartCmd)
-
-	restartCmd.Flags().BoolVarP(&restartCmdAll, "all", "a", false, "Start all matcheing instances, not just those already running")
-	restartCmd.Flags().BoolVarP(&restartCmdKill, "kill", "K", false, "Force stop by sending an immediate SIGKILL")
-	restartCmd.Flags().BoolVarP(&restartCmdLogs, "log", "l", false, "Run 'logs -f' after starting instance(s)")
-	restartCmd.Flags().SortFlags = false
-}
-
-var restartCmdAll, restartCmdKill, restartCmdLogs bool
 
 func commandRestart(ct *geneos.Component, args []string, params []string) (err error) {
 	if err = instance.ForAll(ct, restartInstance, args, params); err != nil {

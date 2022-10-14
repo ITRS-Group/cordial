@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
@@ -42,53 +43,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// initCmd represents the init command
-var initCmd = &cobra.Command{
-	Use:   "init [FLAGS] [USERNAME] [DIRECTORY] [PARAMS]",
-	Short: "Initialise a Geneos installation",
-	Long: `Initialise a Geneos installation by creating the directory
-hierarchy and user configuration file, with the USERNAME and
-DIRECTORY if supplied. DIRECTORY must be an absolute path and
-this is used to distinguish it from USERNAME.
+var initCmdAll string
+var initCmdLogs, initCmdMakeCerts, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
+var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdVersion string
+var initCmdUsername, initCmdPassword, initCmdPwFile string
 
-DIRECTORY defaults to ${HOME}/geneos for the selected user unless
-the last component of ${HOME} is 'geneos' in which case the home
-directory is used. e.g. if the user is 'geneos' and the home
-directory is '/opt/geneos' then that is used, but if it were a
-user 'itrs' which a home directory of '/home/itrs' then the
-directory 'home/itrs/geneos' would be used. This only applies
-when no DIRECTORY is explicitly supplied.
-
-When DIRECTORY is given it must be an absolute path and the
-parent directory must be writable by the user - either running
-the command or given as USERNAME.
-
-DIRECTORY, whether explicit or implied, must not exist or be
-empty of all except "dot" files and directories.
-
-When run with superuser privileges a USERNAME must be supplied
-and only the configuration file for that user is created. e.g.:
-
-	sudo geneos init geneos /opt/itrs
-
-When USERNAME is supplied then the command must either be run
-with superuser privileges or be run by the same user.
-
-Any PARAMS provided are passed to the 'add' command called for
-components created.`,
-	Example: `geneos init # basic set-up and user config file
-geneos init -D -u email@example.com # create a demo environment, requires password
-geneos init -S -n mysan -g Gateway1 -t App1Mon -a REGION=EMEA # install and run a SAN
-`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations: map[string]string{
-		"wildcard": "false",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandInit(ct, args, params)
-	},
+var initCmdExtras = instance.ExtraConfigValues{
+	Includes:   instance.IncludeValues{},
+	Gateways:   instance.GatewayValues{},
+	Attributes: instance.StringSliceValues{},
+	Envs:       instance.StringSliceValues{},
+	Variables:  instance.VarValues{},
+	Types:      instance.StringSliceValues{},
 }
 
 func init() {
@@ -126,285 +92,323 @@ func init() {
 	initCmd.Flags().SortFlags = false
 }
 
-var initCmdAll string
-var initCmdLogs, initCmdMakeCerts, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
-var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdVersion string
-var initCmdUsername, initCmdPassword, initCmdPwFile string
+var initCmd = &cobra.Command{
+	Use:   "init [flags] [USERNAME] [DIRECTORY] [PARAMS]",
+	Short: "Initialise a Geneos installation",
+	Long: strings.ReplaceAll(`
+Initialise a Geneos installation by creating the directory
+hierarchy and user configuration file, with the USERNAME and
+DIRECTORY if supplied. DIRECTORY must be an absolute path and
+this is used to distinguish it from USERNAME.
 
-var initCmdExtras = instance.ExtraConfigValues{
-	Includes:   instance.IncludeValues{},
-	Gateways:   instance.GatewayValues{},
-	Attributes: instance.StringSliceValues{},
-	Envs:       instance.StringSliceValues{},
-	Variables:  instance.VarValues{},
-	Types:      instance.StringSliceValues{},
-}
+**Note**: This command has too many options and flags and will be
+replaced by a number of sub-commands that will narrow down the flags
+and options required. Backward compatibility will be maintained as
+much as possible but top-level |init| flags may be hidden from usage
+messages.
 
-// initialise a geneos installation
-//
-// if no directory given and not running as root and the last component of the user's
-// home directory is NOT "geneos" then create a directory "geneos", else
-//
-// XXX Call any registered initialiser funcs from components
-func commandInit(ct *geneos.Component, args []string, params []string) (err error) {
-	log.Debug().Msgf("%s %v %v", ct, args, params)
-	// none of the arguments can be a reserved type
-	if ct != nil {
-		log.Error().Err(ErrInvalidArgs).Msg(ct.String())
-		return ErrInvalidArgs
-	}
+DIRECTORY defaults to |${HOME}/geneos| for the selected user unless
+the last component of |${HOME}| is |geneos| in which case the home
+directory is used. e.g. if the user is |geneos| and the home
+directory is |/opt/geneos| then that is used, but if it were a
+user |itrs| which a home directory of |/home/itrs| then the
+directory |/home/itrs/geneos| would be used. This only applies
+when no DIRECTORY is explicitly supplied.
 
-	// rewrite local templates and exit
-	if initCmdTemplates {
-		gatewayTemplates := host.LOCAL.Filepath(gateway.Gateway, "templates")
-		host.LOCAL.MkdirAll(gatewayTemplates, 0775)
-		tmpl := gateway.GatewayTemplate
+When DIRECTORY is given it must be an absolute path and the
+parent directory must be writable by the user - either running
+the command or given as USERNAME.
+
+DIRECTORY, whether explicit or implied, must not exist or be
+empty of all except "dot" files and directories.
+
+When run with superuser privileges a USERNAME must be supplied
+and only the configuration file for that user is created. e.g.:
+
+	sudo geneos init geneos /opt/itrs
+
+When USERNAME is supplied then the command must either be run
+with superuser privileges or be run by the same user.
+
+Any PARAMS provided are passed to the 'add' command called for
+components created.
+`, "|", "`"),
+	Example: strings.ReplaceAll(`
+geneos init # basic set-up and user config file
+geneos init -D -u email@example.com # create a demo environment, requires password
+geneos init -S -n mysan -g Gateway1 -t App1Mon -a REGION=EMEA # install and run a SAN
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard": "false",
+	},
+	// initialise a geneos installation
+	//
+	// if no directory given and not running as root and the last component of the user's
+	// home directory is NOT "geneos" then create a directory "geneos", else
+	//
+	// XXX Call any registered initialiser funcs from components
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		ct, args, params := cmdArgsParams(cmd)
+		log.Debug().Msgf("%s %v %v", ct, args, params)
+		// none of the arguments can be a reserved type
+		if ct != nil {
+			log.Error().Err(ErrInvalidArgs).Msg(ct.String())
+			return ErrInvalidArgs
+		}
+
+		// rewrite local templates and exit
+		if initCmdTemplates {
+			gatewayTemplates := host.LOCAL.Filepath(gateway.Gateway, "templates")
+			host.LOCAL.MkdirAll(gatewayTemplates, 0775)
+			tmpl := gateway.GatewayTemplate
+			if initCmdGatewayTemplate != "" {
+				if tmpl, err = geneos.ReadLocalFileOrURL(initCmdGatewayTemplate); err != nil {
+					return
+				}
+			}
+			if err := host.LOCAL.WriteFile(filepath.Join(gatewayTemplates, gateway.GatewayDefaultTemplate), tmpl, 0664); err != nil {
+				log.Fatal().Err(err).Msg("")
+			}
+			fmt.Printf("gateway template written to %s\n", filepath.Join(gatewayTemplates, gateway.GatewayDefaultTemplate))
+
+			tmpl = gateway.InstanceTemplate
+			if err := host.LOCAL.WriteFile(filepath.Join(gatewayTemplates, gateway.GatewayInstanceTemplate), tmpl, 0664); err != nil {
+				log.Fatal().Err(err).Msg("")
+			}
+			fmt.Printf("gateway instance template written to %s\n", filepath.Join(gatewayTemplates, gateway.GatewayInstanceTemplate))
+
+			sanTemplates := host.LOCAL.Filepath(san.San, "templates")
+			host.LOCAL.MkdirAll(sanTemplates, 0775)
+			tmpl = san.SanTemplate
+			if initCmdSANTemplate != "" {
+				if tmpl, err = geneos.ReadLocalFileOrURL(initCmdSANTemplate); err != nil {
+					return
+				}
+			}
+			if err := host.LOCAL.WriteFile(filepath.Join(sanTemplates, san.SanDefaultTemplate), tmpl, 0664); err != nil {
+				log.Fatal().Err(err).Msg("")
+			}
+			fmt.Printf("san template written to %s\n", filepath.Join(sanTemplates, san.SanDefaultTemplate))
+
+			return
+		}
+
+		flagcount := 0
+		for _, b := range []bool{initCmdDemo, initCmdTemplates, initCmdSAN} {
+			if b {
+				flagcount++
+			}
+		}
+
+		if initCmdAll != "" {
+			flagcount++
+		}
+
+		if flagcount > 1 {
+			return fmt.Errorf("%w: Only one of -A, -D, -S or -T can be given", ErrInvalidArgs)
+		}
+
+		log.Debug().Msgf("%v", args)
+
+		// process args here
+
+		var username, homedir, root string
+
+		if utils.IsSuperuser() {
+			if len(args) == 0 {
+				log.Fatal().Msg("init requires a username when run as root")
+			}
+			username = args[0]
+
+			if err != nil {
+				log.Fatal().Msgf("invalid user %s", username)
+			}
+			u, err := user.Lookup(username)
+			homedir = u.HomeDir
+			if err != nil {
+				log.Fatal().Msg("user lookup failed")
+			}
+			if len(args) == 1 {
+				// If user's home dir doesn't end in "geneos" then create a
+				// directory "geneos" else use the home directory directly
+				root = homedir
+				if filepath.Base(homedir) != "geneos" {
+					root = filepath.Join(homedir, "geneos")
+				}
+			} else {
+				// must be an absolute path or relative to given user's home
+				root = args[1]
+				if !strings.HasPrefix(root, "/") {
+					root = homedir
+					if filepath.Base(homedir) != "geneos" {
+						root = filepath.Join(homedir, root)
+					}
+				}
+			}
+		} else {
+			u, _ := user.Current()
+			username = u.Username
+			homedir = u.HomeDir
+
+			log.Debug().Msgf("%d %v", len(args), args)
+			switch len(args) {
+			case 0: // default home + geneos
+				root = homedir
+				if filepath.Base(homedir) != "geneos" {
+					root = filepath.Join(homedir, "geneos")
+				}
+			case 1: // home = abs path
+				if !filepath.IsAbs(args[0]) {
+					log.Fatal().Msgf("Home directory must be absolute path: %s", args[0])
+				}
+				root = filepath.Clean(args[0])
+			default:
+				log.Fatal().Msgf("too many args: %v %v", args, params)
+			}
+		}
+
+		if err = geneos.Init(host.LOCAL, geneos.Force(initCmdForce), geneos.Homedir(root), geneos.LocalUsername(username)); err != nil {
+			log.Fatal().Err(err).Msg("")
+		}
+
 		if initCmdGatewayTemplate != "" {
+			var tmpl []byte
 			if tmpl, err = geneos.ReadLocalFileOrURL(initCmdGatewayTemplate); err != nil {
 				return
 			}
+			if err := host.LOCAL.WriteFile(host.LOCAL.Filepath(gateway.Gateway, "templates", gateway.GatewayDefaultTemplate), tmpl, 0664); err != nil {
+				log.Fatal().Err(err).Msg("")
+			}
 		}
-		if err := host.LOCAL.WriteFile(filepath.Join(gatewayTemplates, gateway.GatewayDefaultTemplate), tmpl, 0664); err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
-		fmt.Printf("gateway template written to %s\n", filepath.Join(gatewayTemplates, gateway.GatewayDefaultTemplate))
 
-		tmpl = gateway.InstanceTemplate
-		if err := host.LOCAL.WriteFile(filepath.Join(gatewayTemplates, gateway.GatewayInstanceTemplate), tmpl, 0664); err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
-		fmt.Printf("gateway instance template written to %s\n", filepath.Join(gatewayTemplates, gateway.GatewayInstanceTemplate))
-
-		sanTemplates := host.LOCAL.Filepath(san.San, "templates")
-		host.LOCAL.MkdirAll(sanTemplates, 0775)
-		tmpl = san.SanTemplate
 		if initCmdSANTemplate != "" {
+			var tmpl []byte
 			if tmpl, err = geneos.ReadLocalFileOrURL(initCmdSANTemplate); err != nil {
 				return
 			}
-		}
-		if err := host.LOCAL.WriteFile(filepath.Join(sanTemplates, san.SanDefaultTemplate), tmpl, 0664); err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
-		fmt.Printf("san template written to %s\n", filepath.Join(sanTemplates, san.SanDefaultTemplate))
-
-		return
-	}
-
-	flagcount := 0
-	for _, b := range []bool{initCmdDemo, initCmdTemplates, initCmdSAN} {
-		if b {
-			flagcount++
-		}
-	}
-
-	if initCmdAll != "" {
-		flagcount++
-	}
-
-	if flagcount > 1 {
-		return fmt.Errorf("%w: Only one of -A, -D, -S or -T can be given", ErrInvalidArgs)
-	}
-
-	log.Debug().Msgf("%v", args)
-
-	// process args here
-
-	var username, homedir, root string
-
-	if utils.IsSuperuser() {
-		if len(args) == 0 {
-			log.Fatal().Msg("init requires a username when run as root")
-		}
-		username = args[0]
-
-		if err != nil {
-			log.Fatal().Msgf("invalid user %s", username)
-		}
-		u, err := user.Lookup(username)
-		homedir = u.HomeDir
-		if err != nil {
-			log.Fatal().Msg("user lookup failed")
-		}
-		if len(args) == 1 {
-			// If user's home dir doesn't end in "geneos" then create a
-			// directory "geneos" else use the home directory directly
-			root = homedir
-			if filepath.Base(homedir) != "geneos" {
-				root = filepath.Join(homedir, "geneos")
+			if err = host.LOCAL.WriteFile(host.LOCAL.Filepath(san.San, "templates", san.SanDefaultTemplate), tmpl, 0664); err != nil {
+				return
 			}
+		}
+
+		if initCmdMakeCerts {
+			tlsInit()
 		} else {
-			// must be an absolute path or relative to given user's home
-			root = args[1]
-			if !strings.HasPrefix(root, "/") {
-				root = homedir
-				if filepath.Base(homedir) != "geneos" {
-					root = filepath.Join(homedir, root)
+			// both options can import arbitrary PEM files, fix this
+			if initCmdImportCert != "" {
+				tlsImport(initCmdImportCert)
+			}
+
+			if initCmdImportKey != "" {
+				tlsImport(initCmdImportKey)
+			}
+		}
+
+		r := host.LOCAL
+		e := []string{}
+		// rem := []string{"@" + r.String()}
+
+		options := []geneos.GeneosOptions{geneos.Version(initCmdVersion), geneos.Basename("active_prod")}
+		if initCmdNexus {
+			options = append(options, geneos.UseNexus())
+			if initCmdSnapshot {
+				options = append(options, geneos.UseSnapshots())
+			}
+		}
+
+		// download authentication
+		if initCmdUsername == "" {
+			initCmdUsername = config.GetString("download.username")
+		}
+
+		if initCmdPwFile != "" {
+			initCmdPassword = utils.ReadPasswordFile(initCmdPwFile)
+		} else {
+			initCmdPassword = config.GetString("download.password")
+		}
+
+		if initCmdUsername != "" && initCmdPassword == "" {
+			initCmdPassword = utils.ReadPasswordPrompt()
+		}
+
+		if initCmdUsername != "" {
+			options = append(options, geneos.Username(initCmdUsername), geneos.Password(initCmdPassword))
+		}
+
+		// create a demo environment
+		if initCmdDemo {
+			g := []string{"Demo Gateway@" + r.String()}
+			localhost := []string{"localhost@" + r.String()}
+			w := []string{"demo@" + r.String()}
+
+			install(&gateway.Gateway, host.LOCALHOST, options...)
+			install(&san.San, host.LOCALHOST, options...)
+			install(&webserver.Webserver, host.LOCALHOST, options...)
+
+			add(&gateway.Gateway, initCmdExtras, g)
+			set(&gateway.Gateway, g, []string{"GateOpts=-demo"})
+			if len(initCmdExtras.Gateways) == 0 {
+				initCmdExtras.Gateways.Set("localhost")
+			}
+			add(&san.San, initCmdExtras, localhost)
+			add(&webserver.Webserver, initCmdExtras, w)
+
+			start(nil, initCmdLogs, e, e)
+			commandPS(nil, e, e)
+			return
+		}
+
+		if initCmdSAN {
+			var sanname string
+			var s []string
+
+			if initCmdName != "" {
+				sanname = initCmdName
+			} else {
+				sanname, _ = os.Hostname()
+			}
+			if r != host.LOCAL {
+				sanname = sanname + "@" + r.String()
+			}
+			s = []string{sanname}
+			install(&san.San, host.LOCALHOST, options...)
+			add(&san.San, initCmdExtras, s)
+			start(nil, initCmdLogs, e, e)
+			commandPS(nil, e, e)
+
+			return nil
+		}
+
+		// create a basic environment with license file
+		if initCmdAll != "" {
+			if initCmdName == "" {
+				initCmdName, err = os.Hostname()
+				if err != nil {
+					return err
 				}
 			}
-		}
-	} else {
-		u, _ := user.Current()
-		username = u.Username
-		homedir = u.HomeDir
+			name := []string{initCmdName}
+			localhost := []string{"localhost@" + r.String()}
 
-		log.Debug().Msgf("%d %v", len(args), args)
-		switch len(args) {
-		case 0: // default home + geneos
-			root = homedir
-			if filepath.Base(homedir) != "geneos" {
-				root = filepath.Join(homedir, "geneos")
+			install(&licd.Licd, host.LOCALHOST, options...)
+			install(&gateway.Gateway, host.LOCALHOST, options...)
+			install(&san.San, host.LOCALHOST, options...)
+			install(&webserver.Webserver, host.LOCALHOST, options...)
+
+			add(&licd.Licd, initCmdExtras, name)
+			commandImport(&licd.Licd, name, []string{"geneos.lic=" + initCmdAll})
+			add(&gateway.Gateway, initCmdExtras, name)
+			if len(initCmdExtras.Gateways) == 0 {
+				initCmdExtras.Gateways.Set("localhost")
 			}
-		case 1: // home = abs path
-			if !filepath.IsAbs(args[0]) {
-				log.Fatal().Msgf("Home directory must be absolute path: %s", args[0])
-			}
-			root = filepath.Clean(args[0])
-		default:
-			log.Fatal().Msgf("too many args: %v %v", args, params)
-		}
-	}
-
-	if err = geneos.Init(host.LOCAL, geneos.Force(initCmdForce), geneos.Homedir(root), geneos.LocalUsername(username)); err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
-	if initCmdGatewayTemplate != "" {
-		var tmpl []byte
-		if tmpl, err = geneos.ReadLocalFileOrURL(initCmdGatewayTemplate); err != nil {
-			return
-		}
-		if err := host.LOCAL.WriteFile(host.LOCAL.Filepath(gateway.Gateway, "templates", gateway.GatewayDefaultTemplate), tmpl, 0664); err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
-	}
-
-	if initCmdSANTemplate != "" {
-		var tmpl []byte
-		if tmpl, err = geneos.ReadLocalFileOrURL(initCmdSANTemplate); err != nil {
-			return
-		}
-		if err = host.LOCAL.WriteFile(host.LOCAL.Filepath(san.San, "templates", san.SanDefaultTemplate), tmpl, 0664); err != nil {
-			return
-		}
-	}
-
-	if initCmdMakeCerts {
-		TLSInit()
-	} else {
-		// both options can import arbitrary PEM files, fix this
-		if initCmdImportCert != "" {
-			TLSImport(initCmdImportCert)
+			add(&san.San, initCmdExtras, localhost)
+			add(&webserver.Webserver, initCmdExtras, name)
+			start(nil, initCmdLogs, e, e)
+			commandPS(nil, e, e)
+			return nil
 		}
 
-		if initCmdImportKey != "" {
-			TLSImport(initCmdImportKey)
-		}
-	}
-
-	r := host.LOCAL
-	e := []string{}
-	// rem := []string{"@" + r.String()}
-
-	options := []geneos.GeneosOptions{geneos.Version(initCmdVersion), geneos.Basename("active_prod")}
-	if initCmdNexus {
-		options = append(options, geneos.UseNexus())
-		if initCmdSnapshot {
-			options = append(options, geneos.UseSnapshots())
-		}
-	}
-
-	// download authentication
-	if initCmdUsername == "" {
-		initCmdUsername = config.GetString("download.username")
-	}
-
-	if initCmdPwFile != "" {
-		initCmdPassword = utils.ReadPasswordFile(initCmdPwFile)
-	} else {
-		initCmdPassword = config.GetString("download.password")
-	}
-
-	if initCmdUsername != "" && initCmdPassword == "" {
-		initCmdPassword = utils.ReadPasswordPrompt()
-	}
-
-	if initCmdUsername != "" {
-		options = append(options, geneos.Username(initCmdUsername), geneos.Password(initCmdPassword))
-	}
-
-	// create a demo environment
-	if initCmdDemo {
-		g := []string{"Demo Gateway@" + r.String()}
-		localhost := []string{"localhost@" + r.String()}
-		w := []string{"demo@" + r.String()}
-
-		install(&gateway.Gateway, host.LOCALHOST, options...)
-		install(&san.San, host.LOCALHOST, options...)
-		install(&webserver.Webserver, host.LOCALHOST, options...)
-
-		commandAdd(&gateway.Gateway, initCmdExtras, g)
-		commandSet(&gateway.Gateway, g, []string{"GateOpts=-demo"})
-		if len(initCmdExtras.Gateways) == 0 {
-			initCmdExtras.Gateways.Set("localhost")
-		}
-		commandAdd(&san.San, initCmdExtras, localhost)
-		commandAdd(&webserver.Webserver, initCmdExtras, w)
-
-		commandStart(nil, initCmdLogs, e, e)
-		commandPS(nil, e, e)
 		return
-	}
-
-	if initCmdSAN {
-		var sanname string
-		var s []string
-
-		if initCmdName != "" {
-			sanname = initCmdName
-		} else {
-			sanname, _ = os.Hostname()
-		}
-		if r != host.LOCAL {
-			sanname = sanname + "@" + r.String()
-		}
-		s = []string{sanname}
-		install(&san.San, host.LOCALHOST, options...)
-		commandAdd(&san.San, initCmdExtras, s)
-		commandStart(nil, initCmdLogs, e, e)
-		commandPS(nil, e, e)
-
-		return nil
-	}
-
-	// create a basic environment with license file
-	if initCmdAll != "" {
-		if initCmdName == "" {
-			initCmdName, err = os.Hostname()
-			if err != nil {
-				return err
-			}
-		}
-		name := []string{initCmdName}
-		localhost := []string{"localhost@" + r.String()}
-
-		install(&licd.Licd, host.LOCALHOST, options...)
-		install(&gateway.Gateway, host.LOCALHOST, options...)
-		install(&san.San, host.LOCALHOST, options...)
-		install(&webserver.Webserver, host.LOCALHOST, options...)
-
-		commandAdd(&licd.Licd, initCmdExtras, name)
-		commandImport(&licd.Licd, name, []string{"geneos.lic=" + initCmdAll})
-		commandAdd(&gateway.Gateway, initCmdExtras, name)
-		if len(initCmdExtras.Gateways) == 0 {
-			initCmdExtras.Gateways.Set("localhost")
-		}
-		commandAdd(&san.San, initCmdExtras, localhost)
-		commandAdd(&webserver.Webserver, initCmdExtras, name)
-		commandStart(nil, initCmdLogs, e, e)
-		commandPS(nil, e, e)
-		return nil
-	}
-
-	return
+	},
 }

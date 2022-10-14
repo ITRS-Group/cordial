@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
@@ -26,40 +27,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/spf13/cobra"
 )
-
-// lsHostCmd represents the lsRemote command
-var lsHostCmd = &cobra.Command{
-	Use:                   "host [-c|-j [-i]] [TYPE] [NAME...]",
-	Aliases:               []string{"hosts", "remote", "remotes"},
-	Short:                 "List hosts, optionally in CSV or JSON format",
-	Long:                  `List the matching remote hosts.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations: map[string]string{
-		"wildcard": "false",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandLSHost(ct, args, params)
-	},
-}
-
-func init() {
-	lsCmd.AddCommand(lsHostCmd)
-
-	lsHostCmd.PersistentFlags().BoolVarP(&lsHostCmdJSON, "json", "j", false, "Output JSON")
-	lsHostCmd.PersistentFlags().BoolVarP(&lsHostCmdIndent, "pretty", "i", false, "Indent / pretty print JSON")
-	lsHostCmd.PersistentFlags().BoolVarP(&lsHostCmdCSV, "csv", "c", false, "Output CSV")
-	lsHostCmd.Flags().SortFlags = false
-}
-
-var lsHostCmdJSON, lsHostCmdCSV, lsHostCmdIndent bool
 
 type lsHostCmdType struct {
 	Name      string
@@ -71,33 +44,52 @@ type lsHostCmdType struct {
 
 var lsHostCmdEntries []lsHostCmdType
 
-func commandLSHost(ct *geneos.Component, args []string, params []string) (err error) {
-	switch {
-	case lsHostCmdJSON:
-		lsHostCmdEntries = []lsHostCmdType{}
-		err = loopHosts(lsInstanceJSONHosts)
-		var b []byte
-		if lsHostCmdIndent {
-			b, _ = json.MarshalIndent(lsHostCmdEntries, "", "    ")
-		} else {
-			b, _ = json.Marshal(lsHostCmdEntries)
+func init() {
+	lsCmd.AddCommand(lsHostCmd)
+
+	lsHostCmd.Flags().SortFlags = false
+}
+
+var lsHostCmd = &cobra.Command{
+	Use:     "host [flags] [TYPE] [NAME...]",
+	Aliases: []string{"hosts", "remote", "remotes"},
+	Short:   "List hosts, optionally in CSV or JSON format",
+	Long: strings.ReplaceAll(`
+List the matching remote hosts.
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard": "false",
+	},
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		// ct, args, params := cmdArgsParams(cmd)
+		switch {
+		case lsCmdJSON:
+			lsHostCmdEntries = []lsHostCmdType{}
+			err = loopHosts(lsInstanceJSONHosts)
+			var b []byte
+			if lsCmdIndent {
+				b, _ = json.MarshalIndent(lsHostCmdEntries, "", "    ")
+			} else {
+				b, _ = json.Marshal(lsHostCmdEntries)
+			}
+			fmt.Println(string(b))
+		case lsCmdCSV:
+			csvWriter = csv.NewWriter(os.Stdout)
+			csvWriter.Write([]string{"Type", "Name", "Disabled", "Username", "Hostname", "Port", "Directory"})
+			err = loopHosts(lsInstanceCSVHosts)
+			csvWriter.Flush()
+		default:
+			lsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+			fmt.Fprintf(lsTabWriter, "Name\tUsername\tHostname\tPort\tDirectory\n")
+			err = loopHosts(lsInstancePlainHosts)
+			lsTabWriter.Flush()
 		}
-		fmt.Println(string(b))
-	case lsHostCmdCSV:
-		csvWriter = csv.NewWriter(os.Stdout)
-		csvWriter.Write([]string{"Type", "Name", "Disabled", "Username", "Hostname", "Port", "Directory"})
-		err = loopHosts(lsInstanceCSVHosts)
-		csvWriter.Flush()
-	default:
-		lsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-		fmt.Fprintf(lsTabWriter, "Name\tUsername\tHostname\tPort\tDirectory\n")
-		err = loopHosts(lsInstancePlainHosts)
-		lsTabWriter.Flush()
-	}
-	if err == os.ErrNotExist {
-		err = nil
-	}
-	return
+		if err == os.ErrNotExist {
+			err = nil
+		}
+		return
+	},
 }
 
 func loopHosts(fn func(*host.Host) error) error {

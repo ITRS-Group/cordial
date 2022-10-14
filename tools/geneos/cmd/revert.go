@@ -19,25 +19,34 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
+	"strings"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-// revertCmd represents the revert command
+func init() {
+	rootCmd.AddCommand(revertCmd)
+
+	// revertCmd.Flags().SortFlags = false
+}
+
 var revertCmd = &cobra.Command{
 	Use:   "revert [TYPE] [NAME...]",
 	Short: "Revert migration of .rc files from backups",
-	Long: `Revert migration of legacy .rc files to JSON if the .rc.orig backup
+	Long: strings.ReplaceAll(`
+Revert migration of legacy .rc files to JSON if the .rc.orig backup
 file still exists. Any changes to the instance configuration since
 initial migration will be lost as the contents of the .rc file is
-never changed.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+never changed.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -45,11 +54,6 @@ never changed.`,
 		ct, args, params := cmdArgsParams(cmd)
 		return instance.ForAll(ct, revertInstance, args, params)
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(revertCmd)
-	revertCmd.Flags().SortFlags = false
 }
 
 func revertInstance(c geneos.Instance, params []string) (err error) {

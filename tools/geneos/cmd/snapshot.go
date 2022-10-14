@@ -39,20 +39,43 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var snapshotCmdValues, snapshotCmdSeverities, snapshotCmdSnoozes, snapshotCmdUserAssignments, snapshotCmdXpathsonly bool
+var snapshotCmdMaxitems int
+var snapshotCmdUsername, snapshotCmdPassword, snapshotCmdPwFile string
+
+func init() {
+	rootCmd.AddCommand(snapshotCmd)
+
+	snapshotCmd.Flags().SortFlags = false
+	snapshotCmd.Flags().BoolVarP(&snapshotCmdValues, "value", "V", true, "Request cell values")
+	snapshotCmd.Flags().BoolVarP(&snapshotCmdSeverities, "severity", "S", false, "Request cell severities")
+	snapshotCmd.Flags().BoolVarP(&snapshotCmdSnoozes, "snooze", "Z", false, "Request cell snooze info")
+	snapshotCmd.Flags().BoolVarP(&snapshotCmdUserAssignments, "userassignment", "U", false, "Request cell user assignment info")
+
+	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username for snaptshot, defaults to configuration value in snapshot.username")
+	snapshotCmd.Flags().StringVarP(&snapshotCmdPwFile, "pwfile", "P", "", "Password file to read for snapshots, defaults to configuration value in snapshot.password or otherwise prompts")
+
+	snapshotCmd.Flags().IntVarP(&snapshotCmdMaxitems, "limit", "l", 0, "limit matching items to display. default is unlimited. results unsorted.")
+	snapshotCmd.Flags().BoolVarP(&snapshotCmdXpathsonly, "xpaths", "x", false, "just show matching xpaths")
+
+	snapshotCmd.Flags().SortFlags = false
+}
+
 // snapshotCmd represents the snapshot command
 var snapshotCmd = &cobra.Command{
-	Use:   "snapshot [FLAGS] [gateway] [NAME] XPATH [XPATH...]",
+	Use:   "snapshot [flags] [gateway] [NAME] XPATH...",
 	Short: "Capture a snapshot of each matching dataview",
-	Long: `Using the Dataview Snapshot REST endpoint in GA5.14+ Gateways,
+	Long: strings.ReplaceAll(`
+Using the Dataview Snapshot REST endpoint in GA5.14+ Gateways,
 capture each dataview matching to given XPATH(s). Options to select
 what data to request and authentication.
 
 Authentication details are taken from the instance configuration
-'snapshot.username' and 'snapshot.password' parameters. If either is
+|snapshot.username| and |snapshot.password| parameters. If either is
 unset then they are taken from the command line or the user or global
-configuration parameters of the same names - in that order.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+configuration parameters of the same names - in that order.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"ct":       "gateway",
 		"wildcard": "true",
@@ -81,26 +104,6 @@ configuration parameters of the same names - in that order.`,
 		// command line values. These can be overridden per-instance.
 		return instance.ForAll(ct, snapshotInstance, args, params)
 	},
-}
-
-var values, severities, snoozes, userAssignments, xpathsonly bool
-var maxitems int
-var snapshotCmdUsername, snapshotCmdPassword, snapshotCmdPwFile string
-
-func init() {
-	rootCmd.AddCommand(snapshotCmd)
-
-	snapshotCmd.Flags().SortFlags = false
-	snapshotCmd.Flags().BoolVarP(&values, "value", "V", true, "Request cell values")
-	snapshotCmd.Flags().BoolVarP(&severities, "severity", "S", false, "Request cell severities")
-	snapshotCmd.Flags().BoolVarP(&snoozes, "snooze", "Z", false, "Request cell snooze info")
-	snapshotCmd.Flags().BoolVarP(&userAssignments, "userassignment", "U", false, "Request cell user assignment info")
-
-	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username for snaptshot, defaults to configuration value in snapshot.username")
-	snapshotCmd.Flags().StringVarP(&snapshotCmdPwFile, "pwfile", "P", "", "Password file to read for snapshots, defaults to configuration value in snapshot.password or otherwise prompts")
-
-	snapshotCmd.Flags().IntVarP(&maxitems, "limit", "l", 0, "limit matching items to display. default is unlimited. results unsorted.")
-	snapshotCmd.Flags().BoolVarP(&xpathsonly, "xpaths", "x", false, "just show matching xpaths")
 }
 
 func snapshotInstance(c geneos.Instance, params []string) (err error) {
@@ -136,10 +139,10 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 		if err != nil {
 			return err
 		}
-		if maxitems > 0 && len(views) > maxitems {
-			views = views[0:maxitems]
+		if snapshotCmdMaxitems > 0 && len(views) > snapshotCmdMaxitems {
+			views = views[0:snapshotCmdMaxitems]
 		}
-		if xpathsonly {
+		if snapshotCmdXpathsonly {
 			for _, x := range views {
 				dvs = append(dvs, fmt.Sprintf("%q", x))
 			}

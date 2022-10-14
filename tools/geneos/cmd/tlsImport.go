@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
@@ -29,6 +30,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
@@ -40,13 +42,14 @@ import (
 var tlsImportCmd = &cobra.Command{
 	Use:   "import",
 	Short: "Import root and signing certificates",
-	Long: `Import non-instance certificates. A root certificate is
-one where the subject is the same as the issuer. All other
-certificates are imported as signing certs. Only the last one, if
-multiple are given, is used. Private keys must be supplied,
-either as individual files on in the certificate files and cannot
-be password protected. Only certificates with matching private
-keys are imported.`,
+	Long: strings.ReplaceAll(`
+Import non-instance certificates. A root certificate is one where the
+subject is the same as the issuer. All other certificates are
+imported as signing certs. Only the last one, if multiple are given,
+is used. Private keys must be supplied, either as individual files on
+in the certificate files and cannot be password protected. Only
+certificates with matching private keys are imported.
+`, "|", "`"),
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
@@ -54,7 +57,7 @@ keys are imported.`,
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		_, args, _ := cmdArgsParams(cmd)
-		return TLSImport(args...)
+		return tlsImport(args...)
 	},
 }
 
@@ -68,7 +71,7 @@ func init() {
 // a root cert is one where subject == issuer
 //
 // no support for instance certs (yet)
-func TLSImport(sources ...string) (err error) {
+func tlsImport(sources ...string) (err error) {
 	log.Debug().Msgf("%v", sources)
 	tlsPath := filepath.Join(host.Geneos(), "tls")
 	err = host.LOCAL.MkdirAll(tlsPath, 0755)

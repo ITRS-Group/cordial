@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
@@ -26,43 +27,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
-
-// lsCmd represents the ls command
-var lsCmd = &cobra.Command{
-	Use:                   "ls [-c|-j [-i]] [TYPE] [NAME...]",
-	Short:                 "List instances, optionally in CSV or JSON format",
-	Long:                  `List the matching instances and their component type.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations: map[string]string{
-		"wildcard": "true",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandLS(ct, args, params)
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(lsCmd)
-
-	lsCmd.PersistentFlags().BoolVarP(&lsCmdJSON, "json", "j", false, "Output JSON")
-	lsCmd.PersistentFlags().BoolVarP(&lsCmdIndent, "pretty", "i", false, "Indent / pretty print JSON")
-	lsCmd.PersistentFlags().BoolVarP(&lsCmdCSV, "csv", "c", false, "Output CSV")
-	lsCmd.Flags().SortFlags = false
-}
-
-var lsCmdJSON, lsCmdCSV, lsCmdIndent bool
-
-var lsTabWriter *tabwriter.Writer
-var csvWriter *csv.Writer
-var jsonEncoder *json.Encoder
 
 type lsCmdType struct {
 	Type     string
@@ -76,33 +47,61 @@ type lsCmdType struct {
 
 var lsCmdEntries []lsCmdType
 
-func commandLS(ct *geneos.Component, args []string, params []string) (err error) {
-	switch {
-	case lsCmdJSON:
-		lsCmdEntries = []lsCmdType{}
-		err = instance.ForAll(ct, lsInstanceJSON, args, params)
-		var b []byte
-		if lsCmdIndent {
-			b, _ = json.MarshalIndent(lsCmdEntries, "", "    ")
-		} else {
-			b, _ = json.Marshal(lsCmdEntries)
+var lsCmdJSON, lsCmdCSV, lsCmdIndent bool
+
+var lsTabWriter *tabwriter.Writer
+var csvWriter *csv.Writer
+var jsonEncoder *json.Encoder
+
+func init() {
+	rootCmd.AddCommand(lsCmd)
+
+	lsCmd.PersistentFlags().BoolVarP(&lsCmdJSON, "json", "j", false, "Output JSON")
+	lsCmd.PersistentFlags().BoolVarP(&lsCmdIndent, "pretty", "i", false, "Indent (pretty print) JSON")
+	lsCmd.PersistentFlags().BoolVarP(&lsCmdCSV, "csv", "c", false, "Output CSV")
+
+	lsCmd.Flags().SortFlags = false
+}
+
+var lsCmd = &cobra.Command{
+	Use:   "ls [flags] [TYPE] [NAME...]",
+	Short: "List instances, optionally in CSV or JSON format",
+	Long: strings.ReplaceAll(`
+List the matching instances and details.
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard": "true",
+	},
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		ct, args, params := cmdArgsParams(cmd)
+		switch {
+		case lsCmdJSON:
+			lsCmdEntries = []lsCmdType{}
+			err = instance.ForAll(ct, lsInstanceJSON, args, params)
+			var b []byte
+			if lsCmdIndent {
+				b, _ = json.MarshalIndent(lsCmdEntries, "", "    ")
+			} else {
+				b, _ = json.Marshal(lsCmdEntries)
+			}
+			fmt.Println(string(b))
+		case lsCmdCSV:
+			csvWriter = csv.NewWriter(os.Stdout)
+			csvWriter.Write([]string{"Type", "Name", "Disabled", "Host", "Port", "Version", "Home"})
+			err = instance.ForAll(ct, lsInstanceCSV, args, params)
+			csvWriter.Flush()
+		default:
+			lsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+			fmt.Fprintf(lsTabWriter, "Type\tName\tHost\tPort\tVersion\tHome\n")
+			err = instance.ForAll(ct, lsInstancePlain, args, params)
+			lsTabWriter.Flush()
 		}
-		fmt.Println(string(b))
-	case lsCmdCSV:
-		csvWriter = csv.NewWriter(os.Stdout)
-		csvWriter.Write([]string{"Type", "Name", "Disabled", "Host", "Port", "Version", "Home"})
-		err = instance.ForAll(ct, lsInstanceCSV, args, params)
-		csvWriter.Flush()
-	default:
-		lsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-		fmt.Fprintf(lsTabWriter, "Type\tName\tHost\tPort\tVersion\tHome\n")
-		err = instance.ForAll(ct, lsInstancePlain, args, params)
-		lsTabWriter.Flush()
-	}
-	if err == os.ErrNotExist {
-		err = nil
-	}
-	return
+		if err == os.ErrNotExist {
+			err = nil
+		}
+		return
+	},
 }
 
 func lsInstancePlain(c geneos.Instance, params []string) (err error) {

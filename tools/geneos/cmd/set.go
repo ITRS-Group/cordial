@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
@@ -31,29 +32,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// setCmd represents the set command
-var setCmd = &cobra.Command{
-	Use:   "set [FLAGS] [TYPE] [NAME...] KEY=VALUE [KEY=VALUE...]",
-	Short: "Set instance configuration parameters",
-	Long: `Set configuration item values in global, user, or for a specific
-instance.
-
-To set "special" items, such as Environment variables or Attributes you should
-now use the specific flags and not the old special syntax.
-
-The "set" command does not rebuild any configuration files for instances.
-Use "rebuild" to do this.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations: map[string]string{
-		"wildcard": "true",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandSet(ct, args, params)
-	},
-}
-
 func init() {
 	rootCmd.AddCommand(setCmd)
 
@@ -63,6 +41,7 @@ func init() {
 	setCmd.Flags().VarP(&setCmdExtras.Attributes, "attribute", "a", "(sans) Add an attribute in the format NAME=VALUE")
 	setCmd.Flags().VarP(&setCmdExtras.Types, "type", "t", "(sans) Add a type NAME")
 	setCmd.Flags().VarP(&setCmdExtras.Variables, "variable", "v", "(sans) Add a variable in the format [TYPE:]NAME=VALUE")
+
 	setCmd.Flags().SortFlags = false
 }
 
@@ -75,7 +54,30 @@ var setCmdExtras = instance.ExtraConfigValues{
 	Types:      instance.StringSliceValues{},
 }
 
-func commandSet(ct *geneos.Component, args, params []string) error {
+var setCmd = &cobra.Command{
+	Use:   "set [FLAGS] [TYPE] [NAME...] KEY=VALUE [KEY=VALUE...]",
+	Short: "Set instance configuration parameters",
+	Long: strings.ReplaceAll(`
+Set configuration item values in global, user, or for a specific
+instance.
+
+To set "special" items, such as Environment variables or Attributes you should
+now use the specific flags and not the old special syntax.
+
+The "set" command does not rebuild any configuration files for instances.
+Use "rebuild" to do this.
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard": "true",
+	},
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		ct, args, params := cmdArgsParams(cmd)
+		return set(ct, args, params)
+	},
+}
+
+func set(ct *geneos.Component, args, params []string) error {
 	return instance.ForAll(ct, setInstance, args, params)
 }
 

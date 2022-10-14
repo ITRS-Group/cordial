@@ -19,56 +19,56 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
+	"strings"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-// unsetGlobalCmd represents the unsetGlobal command
+func init() {
+	unsetCmd.AddCommand(unsetGlobalCmd)
+
+	// unsetGlobalCmd.Flags().SortFlags = false
+}
+
 var unsetGlobalCmd = &cobra.Command{
-	Use:                   "global",
-	Short:                 "",
-	Long:                  ``,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+	Use:   "global",
+	Short: "Unset a global parameter",
+	Long: strings.ReplaceAll(`
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandUnsetGlobal(ct, args, params)
-	},
-}
+		var changed bool
 
-func init() {
-	unsetCmd.AddCommand(unsetGlobalCmd)
-	unsetGlobalCmd.Flags().SortFlags = false
-}
+		_, args := cmdArgs(cmd)
+		orig := readConfigFile(geneos.GlobalConfigPath)
+		new := config.New()
 
-func commandUnsetGlobal(ct *geneos.Component, args, params []string) error {
-	var changed bool
-	orig := readConfigFile(geneos.GlobalConfigPath)
-	new := config.New()
-
-OUTER:
-	for _, k := range orig.AllKeys() {
-		for _, a := range args {
-			if k == a {
-				changed = true
-				continue OUTER
+	OUTER:
+		for _, k := range orig.AllKeys() {
+			for _, a := range args {
+				if k == a {
+					changed = true
+					continue OUTER
+				}
 			}
+			new.Set(k, orig.Get(k))
 		}
-		new.Set(k, orig.Get(k))
-	}
 
-	if changed {
-		log.Debug().Msgf("%v", orig.AllSettings())
-		new.SetConfigFile(geneos.GlobalConfigPath)
-		return new.WriteConfig()
-	}
-	return nil
+		if changed {
+			log.Debug().Msgf("%v", orig.AllSettings())
+			new.SetConfigFile(geneos.GlobalConfigPath)
+			return new.WriteConfig()
+		}
+		return nil
+	},
 }

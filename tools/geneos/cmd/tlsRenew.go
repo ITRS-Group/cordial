@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
@@ -28,6 +29,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -36,15 +38,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// tlsRenewCmd represents the tlsRenew command
+func init() {
+	tlsCmd.AddCommand(tlsRenewCmd)
+
+	// tlsRenewCmd.Flags().SortFlags = false
+}
+
 var tlsRenewCmd = &cobra.Command{
-	Use:   "renew",
+	Use:   "renew [TYPE] [NAME...]",
 	Short: "Renew instance certificates",
-	Long: `Renew instance certificates. All matching instances have a new
+	Long: strings.ReplaceAll(`
+Renew instance certificates. All matching instances have a new
 certificate issued using the current signing certificate but the
-private key file is left unchanged if it exists.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+private key file is left unchanged if it exists.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -52,11 +60,6 @@ private key file is left unchanged if it exists.`,
 		ct, args, params := cmdArgsParams(cmd)
 		return instance.ForAll(ct, renewInstanceCert, args, params)
 	},
-}
-
-func init() {
-	tlsCmd.AddCommand(tlsRenewCmd)
-	tlsRenewCmd.Flags().SortFlags = false
 }
 
 // renew an instance certificate, use private key if it exists

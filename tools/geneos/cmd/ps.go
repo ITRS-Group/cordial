@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
@@ -27,6 +28,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -34,35 +36,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
-
-// psCmd represents the ps command
-var psCmd = &cobra.Command{
-	Use:                   "ps [-c|-j [-i]] [TYPE] [NAMES...]",
-	Short:                 "List process information for instances, optionally in CSV or JSON format",
-	Long:                  `Show the status of the matching instances.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations: map[string]string{
-		"wildcard": "true",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandPS(ct, args, params)
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(psCmd)
-
-	psCmd.PersistentFlags().BoolVarP(&psCmdJSON, "json", "j", false, "Output JSON")
-	psCmd.PersistentFlags().BoolVarP(&psCmdIndent, "pretty", "i", false, "Indent / pretty print JSON")
-	psCmd.PersistentFlags().BoolVarP(&psCmdCSV, "csv", "c", false, "Output CSV")
-	psCmd.Flags().SortFlags = false
-}
-
-var psCmdJSON, psCmdIndent, psCmdCSV bool
-
-var psTabWriter *tabwriter.Writer
 
 type psType struct {
 	Type      string
@@ -74,6 +47,36 @@ type psType struct {
 	Starttime string
 	Version   string
 	Home      string
+}
+
+var psCmdJSON, psCmdIndent, psCmdCSV bool
+
+var psTabWriter *tabwriter.Writer
+
+func init() {
+	rootCmd.AddCommand(psCmd)
+
+	psCmd.Flags().BoolVarP(&psCmdJSON, "json", "j", false, "Output JSON")
+	psCmd.Flags().BoolVarP(&psCmdIndent, "pretty", "i", false, "Indent / pretty print JSON")
+	psCmd.Flags().BoolVarP(&psCmdCSV, "csv", "c", false, "Output CSV")
+
+	psCmd.Flags().SortFlags = false
+}
+
+var psCmd = &cobra.Command{
+	Use:   "ps [flags] [TYPE] [NAMES...]",
+	Short: "List process information for instances, optionally in CSV or JSON format",
+	Long: strings.ReplaceAll(`
+Show the status of the matching instances.
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard": "true",
+	},
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		ct, args, params := cmdArgsParams(cmd)
+		return commandPS(ct, args, params)
+	},
 }
 
 func commandPS(ct *geneos.Component, args []string, params []string) (err error) {

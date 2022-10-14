@@ -19,20 +19,28 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"strings"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
 
-// moveCmd represents the move command
+func init() {
+	rootCmd.AddCommand(moveCmd)
+
+	// moveCmd.Flags().SortFlags = false
+}
+
 var moveCmd = &cobra.Command{
 	Use:     "move [TYPE] SOURCE DESTINATION",
-	Aliases: []string{"mv"},
+	Aliases: []string{"mv", "rename"},
 	Short:   "Move (or rename) instances",
-	Long: `Move (or rename) instances. As any existing legacy .rc
+	Long: strings.ReplaceAll(`
+Move (or rename) instances. As any existing legacy .rc
 file is never changed, this will migrate the instance from .rc to
 JSON. The instance is stopped and restarted after the instance is
 moved. It is an error to try to move an instance to one that already
@@ -41,29 +49,20 @@ exists with the same name.
 If the component support Rebuild then this is run after the move but
 before the restart. This allows SANs to be updated as expected.
 
-Moving across hosts is supported.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+Moving across hosts is supported.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandMove(ct, args, params)
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		ct, args, _ := cmdArgsParams(cmd)
+		// XXX add more wildcard support - src = @host for all instances, auto
+		// component type loops etc.
+		if len(args) != 2 {
+			return ErrInvalidArgs
+		}
+
+		return instance.CopyInstance(ct, args[0], args[1], true)
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(moveCmd)
-	moveCmd.Flags().SortFlags = false
-}
-
-// XXX add more wildcard support - src = @host for all instances, auto
-// component type loops etc.
-func commandMove(ct *geneos.Component, args []string, params []string) (err error) {
-	if len(args) != 2 {
-		return ErrInvalidArgs
-	}
-
-	return instance.CopyInstance(ct, args[0], args[1], true)
 }

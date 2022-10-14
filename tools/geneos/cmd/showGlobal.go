@@ -19,50 +19,49 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/spf13/cobra"
 )
 
-// showGlobalCmd represents the showGlobal command
+func init() {
+	showCmd.AddCommand(showGlobalCmd)
+
+	// showGlobalCmd.Flags().SortFlags = false
+}
+
 var showGlobalCmd = &cobra.Command{
 	Use:   "global",
 	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
+	Long: strings.ReplaceAll(`
+A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
 
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+to quickly create a Cobra application.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandShowGlobal(ct, args, params)
-	},
-}
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		// ct, args, params := cmdArgsParams(cmd)
+		var c interface{}
+		var buffer []byte
 
-func init() {
-	showCmd.AddCommand(showGlobalCmd)
-	showGlobalCmd.Flags().SortFlags = false
-}
-
-func commandShowGlobal(ct *geneos.Component, args, params []string) (err error) {
-	var c interface{}
-	var buffer []byte
-
-	geneos.ReadLocalConfigFile(geneos.GlobalConfigPath, &c)
-	if buffer, err = json.MarshalIndent(c, "", "    "); err != nil {
+		geneos.ReadLocalConfigFile(geneos.GlobalConfigPath, &c)
+		if buffer, err = json.MarshalIndent(c, "", "    "); err != nil {
+			return
+		}
+		fmt.Println(string(buffer))
 		return
-	}
-	fmt.Println(string(buffer))
-	return
+	},
 }

@@ -19,32 +19,18 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
+	"strings"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
 
-// startCmd represents the start command
-var startCmd = &cobra.Command{
-	Use:   "start [-l] [TYPE] [NAME...]",
-	Short: "Start instances",
-	Long: `Start one or more matching instances. All instances are run in
-the background and STDOUT and STDERR are redirected to a '.txt' file
-in the instance directory. You can watch the resulting logs files with the
--l flag.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations: map[string]string{
-		"wildcard": "true",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandStart(ct, startCmdLogs, args, params)
-	},
-}
+var startCmdLogs bool
 
 func init() {
 	rootCmd.AddCommand(startCmd)
@@ -53,9 +39,26 @@ func init() {
 	startCmd.Flags().SortFlags = false
 }
 
-var startCmdLogs bool
+var startCmd = &cobra.Command{
+	Use:   "start [flags] [TYPE] [NAME...]",
+	Short: "Start instances",
+	Long: strings.ReplaceAll(`
+Start one or more matching instances. All instances are run in
+the background and STDOUT and STDERR are redirected to a |.txt| file
+in the instance directory. You can watch the resulting logs files with the
+|-l| flag.
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard": "true",
+	},
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		ct, args, params := cmdArgsParams(cmd)
+		return start(ct, startCmdLogs, args, params)
+	},
+}
 
-func commandStart(ct *geneos.Component, watchlogs bool, args []string, params []string) (err error) {
+func start(ct *geneos.Component, watchlogs bool, args []string, params []string) (err error) {
 	if err = instance.ForAll(ct, func(c geneos.Instance, _ []string) error {
 		return instance.Start(c)
 	}, args, params); err != nil {

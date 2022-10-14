@@ -19,22 +19,30 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
+	"strings"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
 
-// reloadCmd represents the reload command
+func init() {
+	rootCmd.AddCommand(reloadCmd)
+
+	// reloadCmd.Flags().SortFlags = false
+}
+
 var reloadCmd = &cobra.Command{
 	Use:   "reload [TYPE] [NAME...]",
 	Short: "Reload instance configuration, where supported",
-	Long: `Signal the matching instances to reload their configurations,
-depending on the component TYPE.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+	Long: strings.ReplaceAll(`
+Signal the matching instances to reload their configurations, depending on the component TYPE.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -42,11 +50,6 @@ depending on the component TYPE.`,
 		ct, args, params := cmdArgsParams(cmd)
 		return instance.ForAll(ct, reloadInstance, args, params)
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(reloadCmd)
-	reloadCmd.Flags().SortFlags = false
 }
 
 func reloadInstance(c geneos.Instance, params []string) (err error) {

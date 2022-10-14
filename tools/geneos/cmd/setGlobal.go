@@ -19,34 +19,33 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
+	"strings"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/spf13/cobra"
 )
 
-// setGlobalCmd represents the setGlobal command
+func init() {
+	setCmd.AddCommand(setGlobalCmd)
+
+	// setGlobalCmd.Flags().SortFlags = false
+}
+
 var setGlobalCmd = &cobra.Command{
 	Use:                   "global KEY=VALUE...",
 	Short:                 "Set global configuration parameters",
-	Long:                  ``,
+	Long:                  strings.ReplaceAll(``, "|", "`"),
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandSetGlobal(ct, args, params)
+		_, _, params := cmdArgsParams(cmd)
+		return writeConfigParams(geneos.GlobalConfigPath, params)
 	},
-}
-
-func init() {
-	setCmd.AddCommand(setGlobalCmd)
-	setGlobalCmd.Flags().SortFlags = false
-}
-
-func commandSetGlobal(ct *geneos.Component, args, params []string) error {
-	return writeConfigParams(geneos.GlobalConfigPath, params)
 }

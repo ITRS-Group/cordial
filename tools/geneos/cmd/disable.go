@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
@@ -31,13 +32,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// disableCmd represents the disable command
+func init() {
+	rootCmd.AddCommand(disableCmd)
+	// disableCmd.Flags().SortFlags = false
+}
+
 var disableCmd = &cobra.Command{
-	Use:                   "disable [TYPE] [NAME...]",
-	Short:                 "Stop and disable instances",
-	Long:                  `Mark any matching instances as disabled. The instances are also stopped.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+	Use:          "disable [TYPE] [NAME...]",
+	Short:        "Stop and disable instances",
+	Long:         `Mark any matching instances as disabled. The instances are also stopped.`,
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -45,11 +49,6 @@ var disableCmd = &cobra.Command{
 		ct, args, params := cmdArgsParams(cmd)
 		return instance.ForAll(ct, disableInstance, args, params)
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(disableCmd)
-	disableCmd.Flags().SortFlags = false
 }
 
 func disableInstance(c geneos.Instance, params []string) (err error) {
