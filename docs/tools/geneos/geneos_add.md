@@ -4,22 +4,26 @@ Add a new instance
 
 ### Synopsis
 
+
 Add a new instance of a component TYPE with the name NAME. The
 details will depends on the TYPE.
 	
 Gateways and SANs are given a configuration file based on the templates
 configured.
 
+
 ```
-geneos add [FLAGS] TYPE NAME
+geneos add [flags] TYPE NAME
 ```
 
 ### Examples
 
 ```
+
 geneos add gateway EXAMPLE1
-geneos add san server1 -S -g GW1 -g GW2 -t "Infrastructure Defaults" -t "App1" -a COMPONENT=APP1
-geneos add netprobe infraprobe12 -S -l
+geneos add san server1 --start -g GW1 -g GW2 -t "Infrastructure Defaults" -t "App1" -a COMPONENT=APP1
+geneos add netprobe infraprobe12 --start --log
+
 ```
 
 ### Options

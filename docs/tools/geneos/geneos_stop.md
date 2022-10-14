@@ -4,14 +4,16 @@ Stop instances
 
 ### Synopsis
 
+
 Stop one or more matching instances. Unless the -K
 flag is given, a SIGTERM is sent and if the instance is
 still running after a few seconds then a SIGKILL is sent. If the
--K flag is given the instance(s) are immediately terminated with
-a SIGKILL.
+`-K` flag is given the instance(s) are immediately terminated with
+a `SIGKILL`.
+
 
 ```
-geneos stop [-K] [TYPE] [NAME...]
+geneos stop [flags] [TYPE] [NAME...]
 ```
 
 ### Options

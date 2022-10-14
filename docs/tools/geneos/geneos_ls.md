@@ -4,10 +4,12 @@ List instances, optionally in CSV or JSON format
 
 ### Synopsis
 
-List the matching instances and their component type.
+
+List the matching instances and details.
+
 
 ```
-geneos ls [-c|-j [-i]] [TYPE] [NAME...]
+geneos ls [flags] [TYPE] [NAME...]
 ```
 
 ### Options
@@ -15,7 +17,7 @@ geneos ls [-c|-j [-i]] [TYPE] [NAME...]
 ```
   -c, --csv      Output CSV
   -j, --json     Output JSON
-  -i, --pretty   Indent / pretty print JSON
+  -i, --pretty   Indent (pretty print) JSON
   -h, --help     help for ls
 ```
 

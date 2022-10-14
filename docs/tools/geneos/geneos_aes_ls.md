@@ -4,10 +4,12 @@ List configured AES key files
 
 ### Synopsis
 
+
 List configured AES key files
 
+
 ```
-geneos aes ls [TYPE] [NAME]
+geneos aes ls [flags] [TYPE] [NAME...]
 ```
 
 ### Options

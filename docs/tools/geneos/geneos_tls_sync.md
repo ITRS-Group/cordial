@@ -4,6 +4,7 @@ Sync remote hosts certificate chain files
 
 ### Synopsis
 
+
 Create a chain.pem file made up of the root and signing
 certificates and then copy them to all remote hosts. This can
 then be used to verify connections from components.
@@ -11,8 +12,9 @@ then be used to verify connections from components.
 The root certificate is optional, b ut the signing certificate must
 exist.
 
+
 ```
-geneos tls sync
+geneos tls sync [flags]
 ```
 
 ### Options

@@ -1,9 +1,14 @@
 ## geneos unset user
 
+Unset a user parameter
+
+### Synopsis
+
+
 
 
 ```
-geneos unset user
+geneos unset user [flags]
 ```
 
 ### Options

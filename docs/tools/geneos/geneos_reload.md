@@ -4,11 +4,12 @@ Reload instance configuration, where supported
 
 ### Synopsis
 
-Signal the matching instances to reload their configurations,
-depending on the component TYPE.
+
+Signal the matching instances to reload their configurations, depending on the component TYPE.
+
 
 ```
-geneos reload [TYPE] [NAME...]
+geneos reload [TYPE] [NAME...] [flags]
 ```
 
 ### Options

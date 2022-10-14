@@ -4,6 +4,7 @@ Show runtime, global, user or instance configuration is JSON format
 
 ### Synopsis
 
+
 Show the runtime or instance configuration. The loaded
 global or user configurations can be seen through the show global
 and show user sub-commands, respectively.
@@ -20,8 +21,9 @@ configuration.
 Passwords and secrets are redacted in a very simplistic manner simply
 to prevent visibility in casual viewing.
 
+
 ```
-geneos show
+geneos show [flags]
 ```
 
 ### Options

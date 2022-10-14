@@ -4,6 +4,7 @@ Set instance configuration parameters
 
 ### Synopsis
 
+
 Set configuration item values in global, user, or for a specific
 instance.
 
@@ -13,8 +14,9 @@ now use the specific flags and not the old special syntax.
 The "set" command does not rebuild any configuration files for instances.
 Use "rebuild" to do this.
 
+
 ```
-geneos set [FLAGS] [TYPE] [NAME...] KEY=VALUE [KEY=VALUE...]
+geneos set [FLAGS] [TYPE] [NAME...] KEY=VALUE [KEY=VALUE...] [flags]
 ```
 
 ### Options

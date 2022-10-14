@@ -4,21 +4,23 @@ Create a new key file
 
 ### Synopsis
 
+
 Create a new key file. Written to STDOUT by default, but can be
-written to a file with the '-k FILE' option.
+written to a file with the `-k FILE` option.
 
-If the flag '-I' is given then the new key file is imported to the
-shared directories of matching components, using '[CRC32].aes' as the
+If the flag `-I` is given then the new key file is imported to the
+shared directories of matching components, using `[CRC32].aes` as the
 file base name. Currently limited to Gateway and Netprobe types,
-including SANs for use by Toolkit 'Secure Environment Variables'.
+including SANs, for use by Toolkit Secure Environment Variables.
 
-Additionally, when using the '-I' flag all matching Gateway
-instances have the keyfile path added to the configuration and any
-existing keyfile path is moved to 'prevkeyfile' to support GA6.x key
-file maintenance.
+Additionally, when using the `-I` flag all matching Gateway instances
+have the keyfile path added to the configuration and any existing
+keyfile path is moved to 'prevkeyfile' to support GA6.x key file
+rolling.
+
 
 ```
-geneos aes new [-k FILE] [-I] [TYPE] [NAME...]
+geneos aes new [flags] [TYPE] [NAME...]
 ```
 
 ### Options

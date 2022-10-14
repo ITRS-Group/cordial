@@ -4,10 +4,12 @@ Create new certificates
 
 ### Synopsis
 
+
 Create new certificates for instances.
 
+
 ```
-geneos tls new
+geneos tls new [TYPE] [NAME...] [flags]
 ```
 
 ### Options

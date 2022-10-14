@@ -4,32 +4,36 @@ Clean-up instance directories
 
 ### Synopsis
 
+
 Clean-up instance directories, also restarting instances if doing a
-'purge' clean. The patterns of files and directories that are cleaned
-up are set in the global configuration as "TYPECleanList" and
-"TYPEPurgeList" and can be seen vis the show command, and changes
-using set. The format is a PathListSeperator (typicallally a colon)
-separated list of globs.
+full clean using `-F`. The patterns of files and directories that are
+cleaned up are set in the global configuration as `[TYPE]CleanList`
+and `[TYPE]PurgeList` and can be seen using the `geneos show`
+command, and changed using `geneos set`. The format is a
+PathListSeperator (typically a colon) separated list of file globs.
+
 
 ```
-geneos clean [-F] [TYPE] [NAME...]
+geneos clean [flags] [TYPE] [NAME...]
 ```
 
 ### Examples
 
 ```
+
 # delete old logs and config file backups without affecting running instance
 geneos clean gateway Gateway1
 # stop all netprobes and remove all non-essential files from working directories,
 # then restart
-geneos clean --purge netprobe
+geneos clean --full netprobe
+
 ```
 
 ### Options
 
 ```
-  -F, --purge   Perform a full clean. Removes more files than basic clean and restarts instances
-  -h, --help    help for clean
+  -F, --full   Perform a full clean. Removes more files than basic clean and restarts instances
+  -h, --help   help for clean
 ```
 
 ### Options inherited from parent commands

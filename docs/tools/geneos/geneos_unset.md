@@ -4,9 +4,12 @@ Unset a configuration value
 
 ### Synopsis
 
+
 Unset a configuration value.
 	
-This command has been added to remove the confusing negation syntax in set
+This command has been added to remove the confusing negation syntax
+in the `set` command
+
 
 ```
 geneos unset [FLAGS] [TYPE] [NAME...]
@@ -44,6 +47,6 @@ geneos unset san -g Gateway1
 ### SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-* [geneos unset global](geneos_unset_global.md)	 - 
-* [geneos unset user](geneos_unset_user.md)	 - 
+* [geneos unset global](geneos_unset_global.md)	 - Unset a global parameter
+* [geneos unset user](geneos_unset_user.md)	 - Unset a user parameter
 

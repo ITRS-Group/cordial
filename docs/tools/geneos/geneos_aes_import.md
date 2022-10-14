@@ -4,6 +4,7 @@ Import shared keyfiles for components
 
 ### Synopsis
 
+
 Import keyfiles to component shared directories.
 
 The argument given with the '-k' flag can be a local file (including
@@ -21,16 +22,17 @@ limit to a specific host.
 Instance names can be given to indirectly identify the component
 type.
 
+
 ```
-geneos aes import [-k FILE|URL|-] [-H host] [TYPE] [NAME...]
+geneos aes import [flags] [TYPE] [NAME...]
 ```
 
 ### Options
 
 ```
-  -h, --help             help for import
-  -H, --host string      Import only to named host, default is all
   -k, --keyfile string   Keyfile to use (default "/home/peter/.config/geneos/keyfile.aes")
+  -H, --host string      Import only to named host, default is all
+  -h, --help             help for import
 ```
 
 ### Options inherited from parent commands

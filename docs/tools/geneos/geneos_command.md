@@ -4,12 +4,13 @@ Show command line and environment for launching instances
 
 ### Synopsis
 
-Show the command line for the matching instances
-along with any environment variables explicitly set for
-execution.
+
+Show the command line for the matching instances along with any
+environment variables explicitly set for execution.
+
 
 ```
-geneos command [TYPE] [NAME...]
+geneos command [TYPE] [NAME...] [flags]
 ```
 
 ### Options

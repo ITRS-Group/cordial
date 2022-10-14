@@ -1,15 +1,17 @@
 ## geneos migrate
 
-Migrate legacy .rc configuration to new .json format
+Migrate legacy .rc configuration to new formats
 
 ### Synopsis
 
+
 Migrate any legacy .rc configuration files to JSON format and
 rename the .rc file to .rc.orig. The entries in the new configuration
-take on the generic labels and are not a direct conversion.
+take on the new labels and are not a direct conversion.
+
 
 ```
-geneos migrate [TYPE] [NAME...]
+geneos migrate [TYPE] [NAME...] [flags]
 ```
 
 ### Options

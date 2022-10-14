@@ -4,18 +4,20 @@ List process information for instances, optionally in CSV or JSON format
 
 ### Synopsis
 
+
 Show the status of the matching instances.
 
+
 ```
-geneos ps [-c|-j [-i]] [TYPE] [NAMES...]
+geneos ps [flags] [TYPE] [NAMES...]
 ```
 
 ### Options
 
 ```
-  -c, --csv      Output CSV
   -j, --json     Output JSON
   -i, --pretty   Indent / pretty print JSON
+  -c, --csv      Output CSV
   -h, --help     help for ps
 ```
 

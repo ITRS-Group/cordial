@@ -3,7 +3,7 @@
 Set user configuration parameters
 
 ```
-geneos set user KEY=VALUE...
+geneos set user KEY=VALUE... [flags]
 ```
 
 ### Options
