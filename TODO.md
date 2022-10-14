@@ -4,7 +4,6 @@
 
 (unordered)
 
-* aes encode - ask for password prompt verification
 * Windows build, in stages:
   * Initially for remote management (ssh etc)
   * Add netprobe support, services?
