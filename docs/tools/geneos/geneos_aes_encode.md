@@ -24,7 +24,7 @@ geneos aes encode [flags] [TYPE] [NAME...]
   -p, --password string   Password string to use
   -s, --source string     Source for password to use
   -e, --expandable        Output in ExpandString format
-  -o, --once              One prompt for password once. For scripts injecting passwords on stdin
+  -o, --once              Only prompt for password once. For scripts injecting passwords on stdin
   -h, --help              help for encode
 ```
 
