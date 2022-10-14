@@ -1,8 +1,9 @@
 ## geneos install
 
-Install files from downloaded Geneos packages. Intended for sites without Internet access
+Install (remote or local) Geneos packages
 
 ### Synopsis
+
 
 Installs files from FILE(s) in to the packages/ directory. The filename(s) must of of the form:
 
@@ -26,15 +27,19 @@ Use the update command to explicitly change the base link after installation.
 Use the -b flag to change the base link name from the default 'active_prod'. This also
 applies when using -U.
 
-"geneos install gateway"
-"geneos install fa2 5.5 -U"
-"geneos install netprobe -b active_dev -U"
-"geneos update gateway -b active_prod"
-
-
 
 ```
-geneos install [-b BASENAME] [-l] [-n] [-H HOST] [-U] [-T TYPE:VERSION] [TYPE] | FILE|URL [FILE|URL...] | [VERSION | FILTER]
+geneos install [flags] [TYPE] | FILE|URL... | [VERSION | FILTER]
+```
+
+### Examples
+
+```
+
+geneos install gateway
+geneos install fa2 5.5 -U
+geneos install netprobe -b active_dev -U
+
 ```
 
 ### Options

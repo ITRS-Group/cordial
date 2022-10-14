@@ -4,10 +4,12 @@ Rebuild instance configuration files
 
 ### Synopsis
 
+
 Rebuild instance configuration files based on current templates and instance configuration values.
 
+
 ```
-geneos rebuild [-F] [-r] [TYPE] [NAME...]
+geneos rebuild [flags] [TYPE] [NAME...]
 ```
 
 ### Options

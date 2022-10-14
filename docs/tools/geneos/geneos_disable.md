@@ -7,7 +7,7 @@ Stop and disable instances
 Mark any matching instances as disabled. The instances are also stopped.
 
 ```
-geneos disable [TYPE] [NAME...]
+geneos disable [TYPE] [NAME...] [flags]
 ```
 
 ### Options

@@ -4,6 +4,7 @@ Move (or rename) instances
 
 ### Synopsis
 
+
 Move (or rename) instances. As any existing legacy .rc
 file is never changed, this will migrate the instance from .rc to
 JSON. The instance is stopped and restarted after the instance is
@@ -15,8 +16,9 @@ before the restart. This allows SANs to be updated as expected.
 
 Moving across hosts is supported.
 
+
 ```
-geneos move [TYPE] SOURCE DESTINATION
+geneos move [TYPE] SOURCE DESTINATION [flags]
 ```
 
 ### Options

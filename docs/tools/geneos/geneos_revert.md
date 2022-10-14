@@ -4,13 +4,15 @@ Revert migration of .rc files from backups
 
 ### Synopsis
 
+
 Revert migration of legacy .rc files to JSON if the .rc.orig backup
 file still exists. Any changes to the instance configuration since
 initial migration will be lost as the contents of the .rc file is
 never changed.
 
+
 ```
-geneos revert [TYPE] [NAME...]
+geneos revert [TYPE] [NAME...] [flags]
 ```
 
 ### Options

@@ -1,33 +1,49 @@
 ## geneos import
 
-Import file(s) to an instance or a common directory
+Import files to an instance or a common directory
 
 ### Synopsis
 
-Import file(s) to the instance or common directory. This can be used
-to add configuration or license files or scripts for gateways and
-netprobes to run. The SOURCE can be a local path or a url or a '-'
-for stdin. DEST is local pathname ending in either a filename or a
-directory. Is the SRC is '-' then a DEST must be provided. If DEST
-includes a path then it must be relative and cannot contain '..'.
-Examples:
 
-	geneos import gateway example1 https://example.com/myfiles/gateway.setup.xml
-	geneos import licd example2 geneos.lic=license.txt
-	geneos import netprobe example3 scripts/=myscript.sh
-	geneos import san localhost ./netprobe.setup.xml
-	geneos import gateway -c shared common_include.xml
+Import one or more files to matching instance directories, or with
+`--common` flag to a component shared directory. This can be used to
+add configuration or license files or scripts for gateways and
+netprobes to run. The SOURCE can be a local path, a URL or a `-` for
+stdin. PATH is local pathname ending in either a filename or a
+directory separator. Is SOURCE is `-` then a destination PATH must be
+given. If PATH includes a directory separator then it must be
+relative to the instance directory and cannot contain a parent
+reference `..`.
 
-To distinguish SOURCE from an instance name a bare filename in the
-current directory MUST be prefixed with './'. A file in a directory
-(relative or absolute) or a URL are seen as invalid instance names
-and become paths automatically. Directories are created as required.
+Only the base filename of SOURCE is used and if SOURCE contains
+parent directories these are stripped and if required should be
+provided in PATH.
+
+**Note**: To distinguish a SOURCE from an instance NAME any file in
+the current directory (without a `PATH=` prefix) **MUST** be prefixed
+with `./`. Any SOURCE that is not a valid instance name is treated as
+SOURCE and no immediate error is raised. Directories are created as required.
 If run as root, directories and files ownership is set to the user in
-the instance configuration or the default user. Currently only one
-file can be imported at a time.
+the instance configuration or the default user.
+
+Currently only files can be imported and if the SOURCE is a directory
+then this is an error.
+
 
 ```
-geneos import [TYPE] [FLAGS | NAME [NAME...]] [DEST=]SOURCE [[DEST=]SOURCE...]
+geneos import [flags] [TYPE] [NAME...] [PATH=]SOURCE...
+```
+
+### Examples
+
+```
+
+geneos import gateway example1 https://example.com/myfiles/gateway.setup.xml
+geneos import licd example2 geneos.lic=license.txt
+geneos import netprobe example3 scripts/=myscript.sh
+geneos import san localhost ./netprobe.setup.xml
+geneos import gateway -c shared common_include.xml
+
 ```
 
 ### Options

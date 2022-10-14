@@ -4,10 +4,12 @@ Add a remote host
 
 ### Synopsis
 
+
 Add a remote host for integration with other commands.
 
+
 ```
-geneos add host [-I] [NAME] [SSHURL]
+geneos add host [flags] [NAME] [SSHURL]
 ```
 
 ### Options

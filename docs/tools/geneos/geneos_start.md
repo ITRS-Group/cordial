@@ -4,13 +4,15 @@ Start instances
 
 ### Synopsis
 
+
 Start one or more matching instances. All instances are run in
-the background and STDOUT and STDERR are redirected to a '.txt' file
+the background and STDOUT and STDERR are redirected to a `.txt` file
 in the instance directory. You can watch the resulting logs files with the
--l flag.
+`-l` flag.
+
 
 ```
-geneos start [-l] [TYPE] [NAME...]
+geneos start [flags] [TYPE] [NAME...]
 ```
 
 ### Options

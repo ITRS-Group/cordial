@@ -4,17 +4,19 @@ Capture a snapshot of each matching dataview
 
 ### Synopsis
 
+
 Using the Dataview Snapshot REST endpoint in GA5.14+ Gateways,
 capture each dataview matching to given XPATH(s). Options to select
 what data to request and authentication.
 
 Authentication details are taken from the instance configuration
-'snapshot.username' and 'snapshot.password' parameters. If either is
+`snapshot.username` and `snapshot.password` parameters. If either is
 unset then they are taken from the command line or the user or global
 configuration parameters of the same names - in that order.
 
+
 ```
-geneos snapshot [FLAGS] [gateway] [NAME] XPATH [XPATH...]
+geneos snapshot [flags] [gateway] [NAME] XPATH...
 ```
 
 ### Options

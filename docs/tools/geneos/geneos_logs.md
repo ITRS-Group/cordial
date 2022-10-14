@@ -4,14 +4,18 @@ Show log(s) for instances
 
 ### Synopsis
 
+
 Show log(s) for instances. The default is to show the last 10 lines
-for each matching instance. If either -g or -v are given without -f
-to follow live logs, then -c to search the whole log is implied.
+for each matching instance. If either `-g` or `-v` are given without
+`-f` to follow live logs, then `-c` to search the whole log is
+implied.
 	
-When more than one instance matches each output block is prefixed by instance details.
+When more than one instance matches each output block is prefixed by
+instance details.
+
 
 ```
-geneos logs [FLAGS] [TYPE] [NAME...]
+geneos logs [flags] [TYPE] [NAME...]
 ```
 
 ### Options

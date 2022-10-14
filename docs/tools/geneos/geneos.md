@@ -4,9 +4,20 @@ Control your Geneos environment
 
 ### Synopsis
 
+
 Control your Geneos environment. With 'geneos' you can initialise
 a new installation, add and remove components, control processes and build
 template based configuration files for SANs and new gateways.
+
+
+### Examples
+
+```
+
+$ geneos start
+$ geneos ps
+
+```
 
 ### Options
 
@@ -25,14 +36,14 @@ template based configuration files for SANs and new gateways.
 * [geneos copy](geneos_copy.md)	 - Copy instances
 * [geneos delete](geneos_delete.md)	 - Delete an instance. Instance must be stopped
 * [geneos disable](geneos_disable.md)	 - Stop and disable instances
-* [geneos enable](geneos_enable.md)	 - Enable instances. Only previously disabled instances are started
+* [geneos enable](geneos_enable.md)	 - Enable instances
 * [geneos home](geneos_home.md)	 - Print the home directory of the first instance or the Geneos home dir
-* [geneos import](geneos_import.md)	 - Import file(s) to an instance or a common directory
+* [geneos import](geneos_import.md)	 - Import files to an instance or a common directory
 * [geneos init](geneos_init.md)	 - Initialise a Geneos installation
-* [geneos install](geneos_install.md)	 - Install files from downloaded Geneos packages. Intended for sites without Internet access
+* [geneos install](geneos_install.md)	 - Install (remote or local) Geneos packages
 * [geneos logs](geneos_logs.md)	 - Show log(s) for instances
 * [geneos ls](geneos_ls.md)	 - List instances, optionally in CSV or JSON format
-* [geneos migrate](geneos_migrate.md)	 - Migrate legacy .rc configuration to new .json format
+* [geneos migrate](geneos_migrate.md)	 - Migrate legacy .rc configuration to new formats
 * [geneos move](geneos_move.md)	 - Move (or rename) instances
 * [geneos ps](geneos_ps.md)	 - List process information for instances, optionally in CSV or JSON format
 * [geneos rebuild](geneos_rebuild.md)	 - Rebuild instance configuration files
@@ -46,5 +57,5 @@ template based configuration files for SANs and new gateways.
 * [geneos stop](geneos_stop.md)	 - Stop instances
 * [geneos tls](geneos_tls.md)	 - Manage certificates for secure connections
 * [geneos unset](geneos_unset.md)	 - Unset a configuration value
-* [geneos update](geneos_update.md)	 - Update the active version of Geneos software
+* [geneos update](geneos_update.md)	 - Update the active version of Geneos packages
 

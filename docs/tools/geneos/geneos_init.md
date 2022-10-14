@@ -4,17 +4,24 @@ Initialise a Geneos installation
 
 ### Synopsis
 
+
 Initialise a Geneos installation by creating the directory
 hierarchy and user configuration file, with the USERNAME and
 DIRECTORY if supplied. DIRECTORY must be an absolute path and
 this is used to distinguish it from USERNAME.
 
-DIRECTORY defaults to ${HOME}/geneos for the selected user unless
-the last component of ${HOME} is 'geneos' in which case the home
-directory is used. e.g. if the user is 'geneos' and the home
-directory is '/opt/geneos' then that is used, but if it were a
-user 'itrs' which a home directory of '/home/itrs' then the
-directory 'home/itrs/geneos' would be used. This only applies
+**Note**: This command has too many options and flags and will be
+replaced by a number of sub-commands that will narrow down the flags
+and options required. Backward compatibility will be maintained as
+much as possible but top-level `init` flags may be hidden from usage
+messages.
+
+DIRECTORY defaults to `${HOME}/geneos` for the selected user unless
+the last component of `${HOME}` is `geneos` in which case the home
+directory is used. e.g. if the user is `geneos` and the home
+directory is `/opt/geneos` then that is used, but if it were a
+user `itrs` which a home directory of `/home/itrs` then the
+directory `/home/itrs/geneos` would be used. This only applies
 when no DIRECTORY is explicitly supplied.
 
 When DIRECTORY is given it must be an absolute path and the
@@ -35,13 +42,15 @@ with superuser privileges or be run by the same user.
 Any PARAMS provided are passed to the 'add' command called for
 components created.
 
+
 ```
-geneos init [FLAGS] [USERNAME] [DIRECTORY] [PARAMS]
+geneos init [flags] [USERNAME] [DIRECTORY] [PARAMS]
 ```
 
 ### Examples
 
 ```
+
 geneos init # basic set-up and user config file
 geneos init -D -u email@example.com # create a demo environment, requires password
 geneos init -S -n mysan -g Gateway1 -t App1Mon -a REGION=EMEA # install and run a SAN

@@ -1,9 +1,14 @@
 ## geneos unset global
 
+Unset a global parameter
+
+### Synopsis
+
+
 
 
 ```
-geneos unset global
+geneos unset global [flags]
 ```
 
 ### Options
