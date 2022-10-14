@@ -60,21 +60,8 @@ geneos init -S -n mysan -g Gateway1 -t App1Mon -a REGION=EMEA # install and run 
 ### Options
 
 ```
-  -A, --all string                    Perform initialisation steps using given license file and start instances
-  -D, --demo                          Perform initialisation steps for a demo setup and start instances
-  -S, --san                           Create a SAN and start SAN
-  -C, --makecerts                     Create default certificates for TLS support
-  -l, --log                           Run 'logs -f' after starting instance(s)
-  -F, --force                         Be forceful, ignore existing directories.
-  -n, --name string                   Use the given name for instances and configurations instead of the hostname
   -c, --importcert string             signing certificate file with optional embedded private key
   -k, --importkey string              signing private key file
-  -T, --writetemplates                Overwrite/create templates from embedded (for version upgrades)
-  -N, --nexus                         Download from nexus.itrsgroup.com. Requires auth.
-  -p, --snapshots                     Download from nexus snapshots (pre-releases), not releases. Requires -N
-  -V, --version string                Download matching version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
-  -u, --username string               Username for downloads. Defaults to configuration value download.username
-  -P, --pwfile string                 
   -w, --gatewaytemplate string        A gateway template file
   -s, --santemplate string            A san template file
   -e, --env NAME                      (all components) Add an environment variable in the format NAME=VALUE
@@ -83,6 +70,15 @@ geneos init -S -n mysan -g Gateway1 -t App1Mon -a REGION=EMEA # install and run 
   -a, --attribute NAME                (sans) Add an attribute in the format NAME=VALUE
   -t, --type NAME                     (sans) Add a gateway in the format NAME:PORT
   -v, --variable [TYPE:]NAME=VALUE    (sans) Add a variable in the format [TYPE:]NAME=VALUE
+  -C, --makecerts                     Create default certificates for TLS support
+  -l, --log                           Run 'logs -f' after starting instance(s)
+  -F, --force                         Be forceful, ignore existing directories.
+  -n, --name string                   Use the given name for instances and configurations instead of the hostname
+  -N, --nexus                         Download from nexus.itrsgroup.com. Requires auth.
+  -p, --snapshots                     Download from nexus snapshots (pre-releases), not releases. Requires -N
+  -V, --version string                Download matching version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
+  -u, --username string               Username for downloads. Defaults to configuration value download.username
+  -P, --pwfile string                 
   -h, --help                          help for init
 ```
 
@@ -96,4 +92,8 @@ geneos init -S -n mysan -g Gateway1 -t App1Mon -a REGION=EMEA # install and run 
 ### SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
+* [geneos init all](geneos_init_all.md)	 - Initialise a complete Geneos environment
+* [geneos init demo](geneos_init_demo.md)	 - Initialise a Geneos Demo environment
+* [geneos init san](geneos_init_san.md)	 - Initialise a Geneos SAN (Self-Announcing Netprobe) environment
+* [geneos init template](geneos_init_template.md)	 - Initialise or overwrite templates
 

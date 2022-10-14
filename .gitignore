@@ -32,4 +32,4 @@ examples/api/api
 cordial.code-workspace
 integrations/servicenow/servicenow.yaml
 integrations/pagerduty/pagerduty
-tools/geneos/docs/docs
+docs/docs

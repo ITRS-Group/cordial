@@ -5,9 +5,10 @@ Control your Geneos environment
 ### Synopsis
 
 
-Control your Geneos environment. With 'geneos' you can initialise
-a new installation, add and remove components, control processes and build
-template based configuration files for SANs and new gateways.
+Manage and control your Geneos environment. With `geneos` you can
+initialise a new installation, add and remove components, control
+processes and build template based configuration files for SANs and
+// new gateways.?
 
 
 ### Examples
@@ -58,4 +59,5 @@ $ geneos ps
 * [geneos tls](geneos_tls.md)	 - Manage certificates for secure connections
 * [geneos unset](geneos_unset.md)	 - Unset a configuration value
 * [geneos update](geneos_update.md)	 - Update the active version of Geneos packages
+* [geneos version](geneos_version.md)	 - Show program version details
 

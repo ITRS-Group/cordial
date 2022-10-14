@@ -62,6 +62,10 @@ func Execute() {
 	}
 }
 
+func RootCmd() *cobra.Command {
+	return rootCmd
+}
+
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if cfgFile != "" {
