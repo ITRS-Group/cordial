@@ -68,9 +68,10 @@ var rootCmd = &cobra.Command{
 	Use:   "geneos",
 	Short: "Control your Geneos environment",
 	Long: strings.ReplaceAll(`
-Control your Geneos environment. With 'geneos' you can initialise
-a new installation, add and remove components, control processes and build
-template based configuration files for SANs and new gateways.
+Manage and control your Geneos environment. With |geneos| you can
+initialise a new installation, add and remove components, control
+processes and build template based configuration files for SANs and
+// new gateways.?
 `, "|", "`"),
 	Example: strings.ReplaceAll(`
 $ geneos start
@@ -85,7 +86,7 @@ $ geneos ps
 		geneosdir := host.Geneos()
 		if geneosdir == "" {
 			// only allow init through
-			if cmd != initCmd && cmd != setUserCmd && cmd != setGlobalCmd {
+			if cmd != initCmd && cmd.Parent() != initCmd && cmd != setUserCmd && cmd != setGlobalCmd {
 				cmd.SetUsageTemplate(" ")
 				return fmt.Errorf("%s", `Geneos installation directory not set.
 

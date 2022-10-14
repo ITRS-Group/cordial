@@ -24,6 +24,10 @@
 # cobra-cli add home
 # cobra-cli add import
 # cobra-cli add init
+# cobra-cli add initAll -p initCmd
+# cobra-cli add initDemo -p initCmd
+# cobra-cli add initSan -p initCmd
+# cobra-cli add initTemplates -p initCmd
 # cobra-cli add install
 # cobra-cli add logs
 # cobra-cli add ls
@@ -55,4 +59,5 @@
 # cobra-cli add unsetUser -p unsetCmd
 # cobra-cli add unsetGlobal -p unsetCmd
 # cobra-cli add update
+# cobra-cli add version
 
