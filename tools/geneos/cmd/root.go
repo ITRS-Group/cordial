@@ -48,20 +48,38 @@ var (
 
 var cfgFile string
 
+var debug, quiet bool
+
+func init() {
+	cobra.OnInitialize(initConfig)
+
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/geneos.json, "+geneos.GlobalConfigPath+")")
+	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	rootCmd.PersistentFlags().MarkHidden("debug")
+	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
+
+	// this doesn't work as expected, define sort = false in each command
+	// rootCmd.PersistentFlags().SortFlags = false
+	rootCmd.Flags().SortFlags = false
+}
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "geneos",
 	Short: "Control your Geneos environment",
-	Long: `Control your Geneos environment. With 'geneos' you can initialise
+	Long: strings.ReplaceAll(`
+Control your Geneos environment. With 'geneos' you can initialise
 a new installation, add and remove components, control processes and build
-template based configuration files for SANs and new gateways.`,
-	Example: `$ geneos start
-$ geneos ps`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations:           make(map[string]string),
-	Version:               cordial.VERSION,
-	DisableAutoGenTag:     true,
+template based configuration files for SANs and new gateways.
+`, "|", "`"),
+	Example: strings.ReplaceAll(`
+$ geneos start
+$ geneos ps
+`, "|", "`"),
+	SilenceUsage:      true,
+	Annotations:       make(map[string]string),
+	Version:           cordial.VERSION,
+	DisableAutoGenTag: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		// check initialisation
 		geneosdir := host.Geneos()
@@ -101,24 +119,6 @@ func Execute() {
 
 func RootCmd() *cobra.Command {
 	return rootCmd
-}
-
-var debug, quiet bool
-
-func init() {
-	cobra.OnInitialize(initConfig)
-
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/geneos.json, "+geneos.GlobalConfigPath+")")
-	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	rootCmd.PersistentFlags().MarkHidden("debug")
-	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
-
-	rootCmd.PersistentFlags().SortFlags = false
-	rootCmd.Flags().SortFlags = false
 }
 
 // initConfig reads in config file and ENV variables if set.

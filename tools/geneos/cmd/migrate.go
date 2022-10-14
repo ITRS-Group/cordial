@@ -19,24 +19,33 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
+	"strings"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-// migrateCmd represents the migrate command
+func init() {
+	rootCmd.AddCommand(migrateCmd)
+
+	// migrateCmd.Flags().SortFlags = false
+}
+
 var migrateCmd = &cobra.Command{
 	Use:   "migrate [TYPE] [NAME...]",
-	Short: "Migrate legacy .rc configuration to new .json format",
-	Long: `Migrate any legacy .rc configuration files to JSON format and
+	Short: "Migrate legacy .rc configuration to new formats",
+	Long: strings.ReplaceAll(`
+Migrate any legacy .rc configuration files to JSON format and
 rename the .rc file to .rc.orig. The entries in the new configuration
-take on the generic labels and are not a direct conversion.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+take on the new labels and are not a direct conversion.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -44,11 +53,6 @@ take on the generic labels and are not a direct conversion.`,
 		ct, args, params := cmdArgsParams(cmd)
 		return instance.ForAll(ct, migrateInstance, args, params)
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(migrateCmd)
-	migrateCmd.Flags().SortFlags = false
 }
 
 func migrateInstance(c geneos.Instance, params []string) (err error) {

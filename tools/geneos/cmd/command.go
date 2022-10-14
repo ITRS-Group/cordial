@@ -19,25 +19,32 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
 
-// commandCmd represents the command command
+func init() {
+	rootCmd.AddCommand(commandCmd)
+
+	// commandCmd.Flags().SortFlags = false
+}
+
 var commandCmd = &cobra.Command{
 	Use:   "command [TYPE] [NAME...]",
 	Short: "Show command line and environment for launching instances",
-	Long: `Show the command line for the matching instances
-along with any environment variables explicitly set for
-execution.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+	Long: strings.ReplaceAll(`
+Show the command line for the matching instances along with any
+environment variables explicitly set for execution.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -45,11 +52,6 @@ execution.`,
 		ct, args, params := cmdArgsParams(cmd)
 		return instance.ForAll(ct, commandInstance, args, params)
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(commandCmd)
-	commandCmd.Flags().SortFlags = false
 }
 
 func commandInstance(c geneos.Instance, params []string) (err error) {

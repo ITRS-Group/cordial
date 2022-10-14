@@ -19,9 +19,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
+	"strings"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -29,33 +32,53 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// importCmd represents the import command
+var importCmdCommon, importCmdHostname string
+
+func init() {
+	rootCmd.AddCommand(importCmd)
+
+	importCmd.Flags().StringVarP(&importCmdCommon, "common", "c", "", "Import into a common directory instead of matching instances.	For example, if TYPE is 'gateway' and NAME is 'shared' then this common directory is 'gateway/gateway_shared'")
+	importCmd.Flags().StringVarP(&importCmdHostname, "host", "H", "all", "Import only to named host, default is all")
+
+	importCmd.Flags().SortFlags = false
+}
+
 var importCmd = &cobra.Command{
-	Use:   "import [TYPE] [FLAGS | NAME [NAME...]] [DEST=]SOURCE [[DEST=]SOURCE...]",
-	Short: "Import file(s) to an instance or a common directory",
-	Long: `Import file(s) to the instance or common directory. This can be used
-to add configuration or license files or scripts for gateways and
-netprobes to run. The SOURCE can be a local path or a url or a '-'
-for stdin. DEST is local pathname ending in either a filename or a
-directory. Is the SRC is '-' then a DEST must be provided. If DEST
-includes a path then it must be relative and cannot contain '..'.
-Examples:
+	Use:   "import [flags] [TYPE] [NAME...] [PATH=]SOURCE...",
+	Short: "Import files to an instance or a common directory",
+	Long: strings.ReplaceAll(`
+Import one or more files to matching instance directories, or with
+|--common| flag to a component shared directory. This can be used to
+add configuration or license files or scripts for gateways and
+netprobes to run. The SOURCE can be a local path, a URL or a |-| for
+stdin. PATH is local pathname ending in either a filename or a
+directory separator. Is SOURCE is |-| then a destination PATH must be
+given. If PATH includes a directory separator then it must be
+relative to the instance directory and cannot contain a parent
+reference |..|.
 
-	geneos import gateway example1 https://example.com/myfiles/gateway.setup.xml
-	geneos import licd example2 geneos.lic=license.txt
-	geneos import netprobe example3 scripts/=myscript.sh
-	geneos import san localhost ./netprobe.setup.xml
-	geneos import gateway -c shared common_include.xml
+Only the base filename of SOURCE is used and if SOURCE contains
+parent directories these are stripped and if required should be
+provided in PATH.
 
-To distinguish SOURCE from an instance name a bare filename in the
-current directory MUST be prefixed with './'. A file in a directory
-(relative or absolute) or a URL are seen as invalid instance names
-and become paths automatically. Directories are created as required.
+**Note**: To distinguish a SOURCE from an instance NAME any file in
+the current directory (without a |PATH=| prefix) **MUST** be prefixed
+with |./|. Any SOURCE that is not a valid instance name is treated as
+SOURCE and no immediate error is raised. Directories are created as required.
 If run as root, directories and files ownership is set to the user in
-the instance configuration or the default user. Currently only one
-file can be imported at a time.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+the instance configuration or the default user.
+
+Currently only files can be imported and if the SOURCE is a directory
+then this is an error.
+`, "|", "`"),
+	Example: strings.ReplaceAll(`
+geneos import gateway example1 https://example.com/myfiles/gateway.setup.xml
+geneos import licd example2 geneos.lic=license.txt
+geneos import netprobe example3 scripts/=myscript.sh
+geneos import san localhost ./netprobe.setup.xml
+geneos import gateway -c shared common_include.xml
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -64,16 +87,6 @@ file can be imported at a time.`,
 		return commandImport(ct, args, params)
 	},
 }
-
-func init() {
-	rootCmd.AddCommand(importCmd)
-
-	importCmd.Flags().StringVarP(&importCmdCommon, "common", "c", "", "Import into a common directory instead of matching instances.	For example, if TYPE is 'gateway' and NAME is 'shared' then this common directory is 'gateway/gateway_shared'")
-	importCmd.Flags().StringVarP(&importCmdHostname, "host", "H", "all", "Import only to named host, default is all")
-	importCmd.Flags().SortFlags = false
-}
-
-var importCmdCommon, importCmdHostname string
 
 // add a file to an instance, from local or URL
 // overwrites without asking - use case is license files, setup files etc.

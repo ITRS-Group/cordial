@@ -19,11 +19,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -35,16 +37,20 @@ var vc *config.Config
 
 var cfgFile string
 
-// rootCmd represents the base command when called without any subcommands
+func init() {
+	cobra.OnInitialize(initConfig)
+
+	rootCmd.PersistentFlags().StringVarP(&conffile, "conf", "c", "", "config file (default is $HOME/.servicenow.yaml)")
+
+	rootCmd.Flags().SortFlags = false
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "servicenow",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Geneos to ServiceNow integration",
+	Long: strings.ReplaceAll(`
+`, "|", "`"),
+	SilenceUsage: true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -54,16 +60,6 @@ func Execute() {
 	if err != nil {
 		os.Exit(1)
 	}
-}
-
-func init() {
-	cobra.OnInitialize(initConfig)
-
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	rootCmd.PersistentFlags().StringVarP(&conffile, "conf", "c", "", "config file (default is $HOME/.servicenow.yaml)")
 }
 
 // initConfig reads in config file and ENV variables if set.

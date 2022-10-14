@@ -25,6 +25,7 @@ package cmd
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -33,15 +34,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// addHostCmd represents the addHost command
+var addHostCmdInit bool
+
+func init() {
+	addCmd.AddCommand(addHostCmd)
+
+	addHostCmd.Flags().BoolVarP(&addHostCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
+	addHostCmd.Flags().SortFlags = false
+}
+
 var addHostCmd = &cobra.Command{
-	Use:                   "host [-I] [NAME] [SSHURL]",
-	Aliases:               []string{"remote"},
-	Short:                 "Add a remote host",
-	Long:                  `Add a remote host for integration with other commands.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Args:                  cobra.RangeArgs(1, 2),
+	Use:     "host [flags] [NAME] [SSHURL]",
+	Aliases: []string{"remote"},
+	Short:   "Add a remote host",
+	Long: strings.ReplaceAll(`
+Add a remote host for integration with other commands.
+`, "|", "`"),
+	SilenceUsage: true,
+	Args:         cobra.RangeArgs(1, 2),
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
@@ -70,15 +80,6 @@ var addHostCmd = &cobra.Command{
 		return addHost(h, sshurl)
 	},
 }
-
-func init() {
-	addCmd.AddCommand(addHostCmd)
-
-	addHostCmd.Flags().BoolVarP(&addHostCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
-	addHostCmd.Flags().SortFlags = false
-}
-
-var addHostCmdInit bool
 
 func addHost(h *host.Host, sshurl *url.URL) (err error) {
 	if h.Exists() {

@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -36,13 +37,36 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// aesLsCmd represents the aesLs command
+var aesLSTabWriter *tabwriter.Writer
+var aesLsCmdCSV, aesLsCmdJSON, aesLsCmdIndent bool
+
+type aesLsCmdType struct {
+	Type    string
+	Name    string
+	Host    string
+	Keyfile string
+	CRC32   string
+	Modtime string
+}
+
+var aesLsCmdEntries []aesLsCmdType
+
+func init() {
+	aesCmd.AddCommand(aesLsCmd)
+
+	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdJSON, "json", "j", false, "Output JSON")
+	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdIndent, "pretty", "i", false, "Indent / pretty print JSON")
+	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdCSV, "csv", "c", false, "Output CSV")
+	aesLsCmd.Flags().SortFlags = false
+}
+
 var aesLsCmd = &cobra.Command{
-	Use:                   "ls [TYPE] [NAME]",
-	Short:                 "List configured AES key files",
-	Long:                  `List configured AES key files`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+	Use:   "ls [flags] [TYPE] [NAME...]",
+	Short: "List configured AES key files",
+	Long: strings.ReplaceAll(`
+List configured AES key files
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -76,29 +100,6 @@ var aesLsCmd = &cobra.Command{
 		}
 		return
 	},
-}
-
-var aesLSTabWriter *tabwriter.Writer
-var aesLsCmdCSV, aesLsCmdJSON, aesLsCmdIndent bool
-
-type aesLsCmdType struct {
-	Type    string
-	Name    string
-	Host    string
-	Keyfile string
-	CRC32   string
-	Modtime string
-}
-
-var aesLsCmdEntries []aesLsCmdType
-
-func init() {
-	aesCmd.AddCommand(aesLsCmd)
-
-	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdJSON, "json", "j", false, "Output JSON")
-	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdIndent, "pretty", "i", false, "Indent / pretty print JSON")
-	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdCSV, "csv", "c", false, "Output CSV")
-	aesLsCmd.Flags().SortFlags = false
 }
 
 func aesLSInstance(c geneos.Instance, params []string) (err error) {

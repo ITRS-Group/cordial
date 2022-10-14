@@ -24,6 +24,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -36,11 +37,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// aesImportCmd represents the 'aes import' command
+var aesImportCmdKeyfile, aesImportCmdHostname string
+
+func init() {
+	aesCmd.AddCommand(aesImportCmd)
+
+	defKeyFile := geneos.UserConfigFilePaths("keyfile.aes")[0]
+	aesImportCmd.Flags().StringVarP(&aesImportCmdKeyfile, "keyfile", "k", defKeyFile, "Keyfile to use")
+	aesImportCmd.Flags().StringVarP(&aesImportCmdHostname, "host", "H", "", "Import only to named host, default is all")
+	aesImportCmd.Flags().SortFlags = false
+
+}
+
 var aesImportCmd = &cobra.Command{
-	Use:   "import [-k FILE|URL|-] [-H host] [TYPE] [NAME...]",
+	Use:   "import [flags] [TYPE] [NAME...]",
 	Short: "Import shared keyfiles for components",
-	Long: `Import keyfiles to component shared directories.
+	Long: strings.ReplaceAll(`
+Import keyfiles to component shared directories.
 
 The argument given with the '-k' flag can be a local file (including
 a prefix of '~/' to represent the home directory), a URL or a dash
@@ -55,9 +68,9 @@ Keyfiles are imported to all configured hosts unless '-H' is used to
 limit to a specific host.
 
 Instance names can be given to indirectly identify the component
-type.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+type.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -87,16 +100,6 @@ type.`,
 
 		return nil
 	},
-}
-
-var aesImportCmdKeyfile, aesImportCmdHostname string
-
-func init() {
-	aesCmd.AddCommand(aesImportCmd)
-
-	defKeyFile := geneos.UserConfigFilePaths("keyfile.aes")[0]
-	aesImportCmd.Flags().StringVarP(&aesImportCmdKeyfile, "keyfile", "k", defKeyFile, "Keyfile to use")
-	aesImportCmd.Flags().StringVarP(&aesImportCmdHostname, "host", "H", "", "Import only to named host, default is all")
 }
 
 func aesImportSave(ct *geneos.Component, h *host.Host, a *config.AESValues) (err error) {

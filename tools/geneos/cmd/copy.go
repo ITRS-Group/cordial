@@ -19,20 +19,28 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"strings"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
 
-// copyCmd represents the copy command
+func init() {
+	rootCmd.AddCommand(copyCmd)
+
+	// copyCmd.Flags().SortFlags = false
+}
+
 var copyCmd = &cobra.Command{
 	Use:     "copy [TYPE] SOURCE DESTINATION",
 	Aliases: []string{"cp"},
 	Short:   "Copy instances",
-	Long: `Copy instances. As any existing legacy .rc file is never changed,
+	Long: strings.ReplaceAll(`
+Copy instances. As any existing legacy .rc file is never changed,
 this will migrate the instance from .rc to JSON. The instance is
 stopped and restarted after the instance is moved. It is an error to
 try to copy an instance to one that already exists with the same
@@ -41,32 +49,18 @@ name.
 If the component support Rebuild then this is run after the move but
 before the restart. This allows SANs to be updated as expected.
 
-Moving across hosts is supported.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+Moving across hosts is supported.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandCopy(ct, args, params)
+		ct, args, _ := cmdArgsParams(cmd)
+		if len(args) != 2 {
+			return ErrInvalidArgs
+		}
+
+		return instance.CopyInstance(ct, args[0], args[1], false)
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(copyCmd)
-	copyCmd.Flags().SortFlags = false
-
-}
-
-// use case:
-// gateway standby instance copy
-// distribute common config netprobe across multiple hosts
-// also create hosts as required?
-func commandCopy(ct *geneos.Component, args []string, params []string) (err error) {
-	if len(args) != 2 {
-		return ErrInvalidArgs
-	}
-
-	return instance.CopyInstance(ct, args[0], args[1], false)
 }

@@ -19,28 +19,31 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
 )
 
-// tlsCmd represents the tls command
+func init() {
+	rootCmd.AddCommand(tlsCmd)
+
+	// tlsCmd.Flags().SortFlags = false
+}
+
 var tlsCmd = &cobra.Command{
 	Use:   "tls",
 	Short: "Manage certificates for secure connections",
-	Long: `Manage certificates for secure communications.
+	Long: strings.ReplaceAll(`
+Manage certificates for [Geneos Secure Communications](https://docs.itrsgroup.com/docs/geneos/current/SSL/ssl_ug.html).
+
 Sub-commands allow for initialisation, create and renewal of
 certificates as well as listing details and copying a certificate
-chain to all other hosts.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations:           make(map[string]string),
-	// Run: func(cmd *cobra.Command, args []string) {
-	// 	cmd.Usage()
-	// },
-}
-
-func init() {
-	rootCmd.AddCommand(tlsCmd)
+chain to all other hosts.
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations:  make(map[string]string),
 }

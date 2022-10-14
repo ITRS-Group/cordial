@@ -42,28 +42,17 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
-// addCmd represents the add command
-var addCmd = &cobra.Command{
-	Use:   "add [FLAGS] TYPE NAME",
-	Short: "Add a new instance",
-	Long: `Add a new instance of a component TYPE with the name NAME. The
-details will depends on the TYPE.
-	
-Gateways and SANs are given a configuration file based on the templates
-configured.`,
-	Example: `geneos add gateway EXAMPLE1
-geneos add san server1 -S -g GW1 -g GW2 -t "Infrastructure Defaults" -t "App1" -a COMPONENT=APP1
-geneos add netprobe infraprobe12 -S -l`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations: map[string]string{
-		"wildcard": "false",
-	},
-	Args: cobra.ExactArgs(2),
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args := cmdArgs(cmd)
-		return commandAdd(ct, addCmdExtras, args)
-	},
+var addCmdTemplate, addCmdBase, addCmdKeyfile, addCmdKeyfileCRC string
+var addCmdStart, addCmdLogs bool
+var addCmdPort uint16
+
+var addCmdExtras = instance.ExtraConfigValues{
+	Includes:   instance.IncludeValues{},
+	Gateways:   instance.GatewayValues{},
+	Attributes: instance.StringSliceValues{},
+	Envs:       instance.StringSliceValues{},
+	Variables:  instance.VarValues{},
+	Types:      instance.StringSliceValues{},
 }
 
 func init() {
@@ -88,23 +77,36 @@ func init() {
 	addCmd.Flags().SortFlags = false
 }
 
-var addCmdTemplate, addCmdBase, addCmdKeyfile, addCmdKeyfileCRC string
-var addCmdStart, addCmdLogs bool
-var addCmdPort uint16
-
-var addCmdExtras = instance.ExtraConfigValues{
-	Includes:   instance.IncludeValues{},
-	Gateways:   instance.GatewayValues{},
-	Attributes: instance.StringSliceValues{},
-	Envs:       instance.StringSliceValues{},
-	Variables:  instance.VarValues{},
-	Types:      instance.StringSliceValues{},
+var addCmd = &cobra.Command{
+	Use:   "add [flags] TYPE NAME",
+	Short: "Add a new instance",
+	Long: strings.ReplaceAll(`
+Add a new instance of a component TYPE with the name NAME. The
+details will depends on the TYPE.
+	
+Gateways and SANs are given a configuration file based on the templates
+configured.
+`, "|", "`"),
+	Example: `
+geneos add gateway EXAMPLE1
+geneos add san server1 --start -g GW1 -g GW2 -t "Infrastructure Defaults" -t "App1" -a COMPONENT=APP1
+geneos add netprobe infraprobe12 --start --log
+`,
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard": "false",
+	},
+	Args: cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		ct, args := cmdArgs(cmd)
+		return add(ct, addCmdExtras, args)
+	},
 }
 
-// Add an instance
+// add an instance
 //
-// XXX argument validation is minimal
-func commandAdd(ct *geneos.Component, extras instance.ExtraConfigValues, args []string) (err error) {
+// this is also called from the init command code
+func add(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, args []string) (err error) {
 	var username string
 
 	// check validity and reserved words here
@@ -153,7 +155,7 @@ func commandAdd(ct *geneos.Component, extras instance.ExtraConfigValues, args []
 			c.Config().Set("keyfile", addCmdKeyfile)
 		}
 	}
-	instance.SetExtendedValues(c, extras)
+	instance.SetExtendedValues(c, addCmdExtras)
 	if err = instance.WriteConfig(c); err != nil {
 		return
 	}

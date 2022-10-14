@@ -19,31 +19,45 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
+	"strings"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
 
-// cleanCmd represents the clean command
+func init() {
+	rootCmd.AddCommand(cleanCmd)
+
+	cleanCmd.Flags().BoolVarP(&cleanCmdFull, "full", "F", false, "Perform a full clean. Removes more files than basic clean and restarts instances")
+	cleanCmd.Flags().SortFlags = false
+}
+
+var cleanCmdFull bool
+
 var cleanCmd = &cobra.Command{
-	Use:   "clean [-F] [TYPE] [NAME...]",
+	Use:   "clean [flags] [TYPE] [NAME...]",
 	Short: "Clean-up instance directories",
-	Long: `Clean-up instance directories, also restarting instances if doing a
-'purge' clean. The patterns of files and directories that are cleaned
-up are set in the global configuration as "TYPECleanList" and
-"TYPEPurgeList" and can be seen vis the show command, and changes
-using set. The format is a PathListSeperator (typicallally a colon)
-separated list of globs.`,
-	Example: `# delete old logs and config file backups without affecting running instance
+	Long: strings.ReplaceAll(`
+Clean-up instance directories, also restarting instances if doing a
+full clean using |-F|. The patterns of files and directories that are
+cleaned up are set in the global configuration as |[TYPE]CleanList|
+and |[TYPE]PurgeList| and can be seen using the |geneos show|
+command, and changed using |geneos set|. The format is a
+PathListSeperator (typically a colon) separated list of file globs.
+`, "|", "`"),
+	Example: strings.ReplaceAll(`
+# delete old logs and config file backups without affecting running instance
 geneos clean gateway Gateway1
 # stop all netprobes and remove all non-essential files from working directories,
 # then restart
-geneos clean --purge netprobe`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+geneos clean --full netprobe
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -53,15 +67,6 @@ geneos clean --purge netprobe`,
 	},
 }
 
-func init() {
-	rootCmd.AddCommand(cleanCmd)
-
-	cleanCmd.Flags().BoolVarP(&cleanCmdPurge, "purge", "F", false, "Perform a full clean. Removes more files than basic clean and restarts instances")
-	cleanCmd.Flags().SortFlags = false
-}
-
-var cleanCmdPurge bool
-
 func cleanInstance(c geneos.Instance, params []string) (err error) {
-	return instance.Clean(c, geneos.Restart(cleanCmdPurge))
+	return instance.Clean(c, geneos.Restart(cleanCmdFull))
 }

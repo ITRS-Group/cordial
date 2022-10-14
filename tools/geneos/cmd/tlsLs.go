@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
@@ -28,6 +29,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -36,45 +38,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
-
-// tlsLsCmd represents the tlsLs command
-var tlsLsCmd = &cobra.Command{
-	Use:   "ls",
-	Short: "List certificates",
-	Long: `List certificates and their details. The root and signing
-certs are only shown in the -a flag is given. A list with more
-details can be seen with the -l flag, otherwise options are the
-same as for the main ls command.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations: map[string]string{
-		"wildcard": "true",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandTLSLs(ct, args, params)
-	},
-}
-
-func init() {
-	tlsCmd.AddCommand(tlsLsCmd)
-
-	tlsLsCmd.Flags().BoolVarP(&tlsCmdAll, "all", "a", false, "Show all certs, including global and signing certs")
-	tlsLsCmd.Flags().BoolVarP(&tlsCmdJSON, "json", "j", false, "Output JSON")
-	tlsLsCmd.Flags().BoolVarP(&tlsCmdLong, "long", "l", false, "Long output")
-	tlsLsCmd.Flags().BoolVarP(&tlsCmdIndent, "pretty", "i", false, "Indent / pretty print JSON")
-	tlsLsCmd.Flags().BoolVarP(&tlsCmdCSV, "csv", "c", false, "Output CSV")
-	tlsLsCmd.Flags().SortFlags = false
-}
-
-var tlsCmdAll, tlsCmdCSV, tlsCmdJSON, tlsCmdIndent, tlsCmdLong bool
-
-func commandTLSLs(ct *geneos.Component, args []string, params []string) (err error) {
-	if tlsCmdLong {
-		return listCertsLongCommand(ct, args, params)
-	}
-	return listCertsCommand(ct, args, params)
-}
 
 type lsCertType struct {
 	Type       string
@@ -96,6 +59,42 @@ type lsCertLongType struct {
 	SubAltNames []string
 	IPs         []net.IP
 	Signature   string
+}
+
+var tlsCmdAll, tlsCmdCSV, tlsCmdJSON, tlsCmdIndent, tlsCmdLong bool
+
+func init() {
+	tlsCmd.AddCommand(tlsLsCmd)
+
+	tlsLsCmd.Flags().BoolVarP(&tlsCmdAll, "all", "a", false, "Show all certs, including global and signing certs")
+	tlsLsCmd.Flags().BoolVarP(&tlsCmdJSON, "json", "j", false, "Output JSON")
+	tlsLsCmd.Flags().BoolVarP(&tlsCmdLong, "long", "l", false, "Long output")
+	tlsLsCmd.Flags().BoolVarP(&tlsCmdIndent, "pretty", "i", false, "Indent / pretty print JSON")
+	tlsLsCmd.Flags().BoolVarP(&tlsCmdCSV, "csv", "c", false, "Output CSV")
+
+	tlsLsCmd.Flags().SortFlags = false
+}
+
+var tlsLsCmd = &cobra.Command{
+	Use:   "ls [flags] [TYPE] [NAME...]",
+	Short: "List certificates",
+	Long: strings.ReplaceAll(`
+List certificates and their details. The root and signing
+certs are only shown in the |-a| flag is given. A list with more
+details can be seen with the |-l| flag, otherwise options are the
+same as for the main ls command.
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard": "true",
+	},
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		ct, args, params := cmdArgsParams(cmd)
+		if tlsCmdLong {
+			return listCertsLongCommand(ct, args, params)
+		}
+		return listCertsCommand(ct, args, params)
+	},
 }
 
 func listCertsCommand(ct *geneos.Component, args []string, params []string) (err error) {

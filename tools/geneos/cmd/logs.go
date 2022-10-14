@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
@@ -40,37 +41,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// logsCmd represents the logs command
-var logsCmd = &cobra.Command{
-	Use:   "logs [FLAGS] [TYPE] [NAME...]",
-	Short: "Show log(s) for instances",
-	Long: `Show log(s) for instances. The default is to show the last 10 lines
-for each matching instance. If either -g or -v are given without -f
-to follow live logs, then -c to search the whole log is implied.
-	
-When more than one instance matches each output block is prefixed by instance details.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations: map[string]string{
-		"wildcard": "true",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandLogs(ct, args, params)
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(logsCmd)
-
-	logsCmd.Flags().IntVarP(&logCmdLines, "lines", "n", 10, "Lines to tail")
-	logsCmd.Flags().BoolVarP(&logCmdFollow, "follow", "f", false, "Follow file")
-	logsCmd.Flags().BoolVarP(&logCmdCat, "cat", "c", false, "Cat whole file")
-	logsCmd.Flags().StringVarP(&logCmdMatch, "match", "g", "", "Match lines with STRING")
-	logsCmd.Flags().StringVarP(&logCmdIgnore, "ignore", "v", "", "Match lines without STRING")
-	logsCmd.Flags().SortFlags = false
-}
-
 var logCmdLines int
 var logCmdFollow, logCmdCat bool
 var logCmdMatch, logCmdIgnore string
@@ -83,32 +53,62 @@ type files struct {
 // global watchers for logs
 var tails *sync.Map
 
-func commandLogs(ct *geneos.Component, args []string, params []string) (err error) {
-	// validate options
-	if logCmdMatch != "" && logCmdIgnore != "" {
-		log.Fatal().Msg("Only one of -g or -v can be given")
-	}
+func init() {
+	rootCmd.AddCommand(logsCmd)
 
-	if logCmdCat && logCmdFollow {
-		log.Fatal().Msg("Only one of -c or -f can be given")
-	}
+	logsCmd.Flags().IntVarP(&logCmdLines, "lines", "n", 10, "Lines to tail")
+	logsCmd.Flags().BoolVarP(&logCmdFollow, "follow", "f", false, "Follow file")
+	logsCmd.Flags().BoolVarP(&logCmdCat, "cat", "c", false, "Cat whole file")
+	logsCmd.Flags().StringVarP(&logCmdMatch, "match", "g", "", "Match lines with STRING")
+	logsCmd.Flags().StringVarP(&logCmdIgnore, "ignore", "v", "", "Match lines without STRING")
 
-	// if we have match or exclude with other defaults, then turn on logcat
-	if (logCmdMatch != "" || logCmdIgnore != "") && !logCmdFollow {
-		logCmdCat = true
-	}
+	logsCmd.Flags().SortFlags = false
+}
 
-	switch {
-	case logCmdCat:
-		err = instance.ForAll(ct, logCatInstance, args, params)
-	case logCmdFollow:
-		// never returns
-		err = followLogs(ct, args, params)
-	default:
-		err = instance.ForAll(ct, logTailInstance, args, params)
-	}
+var logsCmd = &cobra.Command{
+	Use:   "logs [flags] [TYPE] [NAME...]",
+	Short: "Show log(s) for instances",
+	Long: strings.ReplaceAll(`
+Show log(s) for instances. The default is to show the last 10 lines
+for each matching instance. If either |-g| or |-v| are given without
+|-f| to follow live logs, then |-c| to search the whole log is
+implied.
+	
+When more than one instance matches each output block is prefixed by
+instance details.
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard": "true",
+	},
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		ct, args, params := cmdArgsParams(cmd)
+		// validate options
+		if logCmdMatch != "" && logCmdIgnore != "" {
+			log.Fatal().Msg("Only one of -g or -v can be given")
+		}
 
-	return
+		if logCmdCat && logCmdFollow {
+			log.Fatal().Msg("Only one of -c or -f can be given")
+		}
+
+		// if we have match or exclude with other defaults, then turn on logcat
+		if (logCmdMatch != "" || logCmdIgnore != "") && !logCmdFollow {
+			logCmdCat = true
+		}
+
+		switch {
+		case logCmdCat:
+			err = instance.ForAll(ct, logCatInstance, args, params)
+		case logCmdFollow:
+			// never returns
+			err = followLogs(ct, args, params)
+		default:
+			err = instance.ForAll(ct, logTailInstance, args, params)
+		}
+
+		return
+	},
 }
 
 func followLog(c geneos.Instance) (err error) {

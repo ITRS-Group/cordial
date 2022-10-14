@@ -19,30 +19,19 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
+	"strings"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-// rebuildCmd represents the rebuild command
-var rebuildCmd = &cobra.Command{
-	Use:                   "rebuild [-F] [-r] [TYPE] [NAME...]",
-	Short:                 "Rebuild instance configuration files",
-	Long:                  `Rebuild instance configuration files based on current templates and instance configuration values.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations: map[string]string{
-		"wildcard": "true",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return instance.ForAll(ct, rebuildInstance, args, params)
-	},
-}
+var rebuildCmdForce, rebuildCmdReload bool
 
 func init() {
 	rootCmd.AddCommand(rebuildCmd)
@@ -52,7 +41,21 @@ func init() {
 	rebuildCmd.Flags().SortFlags = false
 }
 
-var rebuildCmdForce, rebuildCmdReload bool
+var rebuildCmd = &cobra.Command{
+	Use:   "rebuild [flags] [TYPE] [NAME...]",
+	Short: "Rebuild instance configuration files",
+	Long: strings.ReplaceAll(`
+Rebuild instance configuration files based on current templates and instance configuration values.
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard": "true",
+	},
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		ct, args, params := cmdArgsParams(cmd)
+		return instance.ForAll(ct, rebuildInstance, args, params)
+	},
+}
 
 func rebuildInstance(c geneos.Instance, params []string) (err error) {
 	if err = c.Rebuild(rebuildCmdForce); err != nil {

@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
@@ -27,6 +28,7 @@ import (
 	"crypto/x509/pkix"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -37,34 +39,36 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// tlsInitCmd represents the tlsInit command
-var tlsInitCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Initialise the TLS environment",
-	Long: `Initialise the TLS environment by creating a self-signed
-root certificate to act as a CA and a signing certificate signed
-by the root. Any instances will have certificates created for
-them but configurations will not be rebuilt.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations: map[string]string{
-		"wildcard": "false",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		// _, _, params := processArgsParams(cmd)
-		return TLSInit()
-	},
-}
-
 func init() {
 	tlsCmd.AddCommand(tlsInitCmd)
 	tlsInitCmd.Flags().SortFlags = false
 }
 
+var tlsInitCmd = &cobra.Command{
+	Use:   "init",
+	Short: "Initialise the TLS environment",
+	Long: strings.ReplaceAll(`Initialise the TLS environment by creating a self-signed
+root certificate to act as a CA and a signing certificate signed
+by the root. Any instances will have certificates created for
+them but configurations will not be rebuilt.
+`, "|", "`"),
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Annotations: map[string]string{
+		"wildcard": "false",
+	},
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		// _, _, params := processArgsParams(cmd)
+		return tlsInit()
+	},
+}
+
 // create the tls/ directory in Geneos and a CA / DCA as required
 //
 // later options to allow import of a DCA
-func TLSInit() (err error) {
+//
+// This is also called from `init`
+func tlsInit() (err error) {
 	tlsPath := filepath.Join(host.Geneos(), "tls")
 	// directory permissions do not need to be restrictive
 	err = host.LOCAL.MkdirAll(tlsPath, 0775)
@@ -80,7 +84,7 @@ func TLSInit() (err error) {
 		log.Fatal().Err(err).Msg("")
 	}
 
-	return TLSSync()
+	return tlsSync()
 }
 
 func newRootCA(dir string) (err error) {

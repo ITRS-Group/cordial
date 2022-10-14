@@ -19,12 +19,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 
@@ -38,24 +40,36 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// aesNewCmd represents the aesNew command
+var aesNewCmdKeyfile, aesNewCmdHostname string
+var aesNewCmdImport bool
+
+func init() {
+	aesCmd.AddCommand(aesNewCmd)
+
+	aesNewCmd.Flags().StringVarP(&aesNewCmdKeyfile, "keyfile", "k", "", "Optional key file to create, defaults to STDOUT")
+	aesNewCmd.Flags().BoolVarP(&aesNewCmdImport, "import", "I", false, "Import the keyfile to components and set on matching instances.")
+	aesNewCmd.Flags().StringVarP(&aesNewCmdHostname, "host", "H", "", "Import only to named host, default is all")
+
+}
+
 var aesNewCmd = &cobra.Command{
-	Use:   "new [-k FILE] [-I] [TYPE] [NAME...]",
+	Use:   "new [flags] [TYPE] [NAME...]",
 	Short: "Create a new key file",
-	Long: `Create a new key file. Written to STDOUT by default, but can be
-written to a file with the '-k FILE' option.
+	Long: strings.ReplaceAll(`
+Create a new key file. Written to STDOUT by default, but can be
+written to a file with the |-k FILE| option.
 
-If the flag '-I' is given then the new key file is imported to the
-shared directories of matching components, using '[CRC32].aes' as the
+If the flag |-I| is given then the new key file is imported to the
+shared directories of matching components, using |[CRC32].aes| as the
 file base name. Currently limited to Gateway and Netprobe types,
-including SANs for use by Toolkit 'Secure Environment Variables'.
+including SANs, for use by Toolkit Secure Environment Variables.
 
-Additionally, when using the '-I' flag all matching Gateway
-instances have the keyfile path added to the configuration and any
-existing keyfile path is moved to 'prevkeyfile' to support GA6.x key
-file maintenance.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+Additionally, when using the |-I| flag all matching Gateway instances
+have the keyfile path added to the configuration and any existing
+keyfile path is moved to 'prevkeyfile' to support GA6.x key file
+rolling.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -114,18 +128,6 @@ file maintenance.`,
 		}
 		return
 	},
-}
-
-var aesNewCmdKeyfile, aesNewCmdHostname string
-var aesNewCmdImport bool
-
-func init() {
-	aesCmd.AddCommand(aesNewCmd)
-
-	aesNewCmd.Flags().StringVarP(&aesNewCmdKeyfile, "keyfile", "k", "", "Optional key file to create, defaults to STDOUT")
-	aesNewCmd.Flags().BoolVarP(&aesNewCmdImport, "import", "I", false, "Import the keyfile to components and set on matching instances.")
-	aesNewCmd.Flags().StringVarP(&aesNewCmdHostname, "host", "H", "", "Import only to named host, default is all")
-
 }
 
 func aesNewSetInstance(c geneos.Instance, params []string) (err error) {

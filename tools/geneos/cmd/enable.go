@@ -19,26 +19,38 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
 	"errors"
 	"os"
+	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
 
-// enableCmd represents the enable command
+func init() {
+	rootCmd.AddCommand(enableCmd)
+
+	enableCmd.Flags().BoolVarP(&enableCmdStart, "start", "S", false, "Start enabled instances")
+
+	enableCmd.Flags().SortFlags = false
+}
+
+var enableCmdStart bool
+
 var enableCmd = &cobra.Command{
-	Use:   "enable [-S] [TYPE] [NAME...]",
-	Short: "Enable instances. Only previously disabled instances are started",
-	Long: `Mark any matching instances as enabled and if the -S flag is given
+	Use:   "enable [flags] [TYPE] [NAME...]",
+	Short: "Enable instances",
+	Long: strings.ReplaceAll(`
+Mark any matching instances as enabled and if the |-S| flag is given
 then start the instance. Only those instances that were disabled are started
-when the -S flag is used.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+when the |-S| flag is used.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -47,15 +59,6 @@ when the -S flag is used.`,
 		return instance.ForAll(ct, enableInstance, args, params)
 	},
 }
-
-func init() {
-	rootCmd.AddCommand(enableCmd)
-
-	enableCmd.Flags().BoolVarP(&enableCmdStart, "start", "S", false, "Start enabled instances")
-	enableCmd.Flags().SortFlags = false
-}
-
-var enableCmdStart bool
 
 func enableInstance(c geneos.Instance, params []string) (err error) {
 	err = c.Host().Remove(instance.ComponentFilepath(c, geneos.DisableExtension))

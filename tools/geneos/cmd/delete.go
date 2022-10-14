@@ -19,10 +19,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -30,18 +32,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// deleteCmd represents the delete command
+var deleteCmdForce bool
+
+func init() {
+	rootCmd.AddCommand(deleteCmd)
+
+	deleteCmd.Flags().BoolVarP(&deleteCmdForce, "force", "F", false, "Force delete of instances")
+
+	deleteCmd.Flags().SortFlags = false
+}
+
 var deleteCmd = &cobra.Command{
-	Use:     "delete [-F] [TYPE] [NAME...]",
+	Use:     "delete [flags] [TYPE] [NAME...]",
 	Aliases: []string{"rm"},
 	Short:   "Delete an instance. Instance must be stopped",
-	Long: `Delete the matching instances. This will only work on
+	Long: strings.ReplaceAll(`
+Delete the matching instances. This will only work on
 instances that are disabled to prevent accidental deletion. The
 instance directory is removed without being backed-up. The user
 running the command must have the appropriate permissions and a
-partial deletion cannot be protected against.`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+partial deletion cannot be protected against.
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
@@ -50,15 +62,6 @@ partial deletion cannot be protected against.`,
 		return instance.ForAll(ct, deleteInstance, args, params)
 	},
 }
-
-func init() {
-	rootCmd.AddCommand(deleteCmd)
-
-	deleteCmd.Flags().BoolVarP(&deleteCmdForce, "force", "F", false, "Force delete of instances")
-	deleteCmd.Flags().SortFlags = false
-}
-
-var deleteCmdForce bool
 
 func deleteInstance(c geneos.Instance, params []string) (err error) {
 	if deleteCmdForce {

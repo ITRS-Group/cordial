@@ -19,56 +19,56 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package cmd
 
 import (
+	"strings"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-// unsetUserCmd represents the unsetUser command
+func init() {
+	unsetCmd.AddCommand(unsetUserCmd)
+
+	// unsetUserCmd.Flags().SortFlags = false
+}
+
 var unsetUserCmd = &cobra.Command{
-	Use:                   "user",
-	Short:                 "",
-	Long:                  ``,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+	Use:   "user",
+	Short: "Unset a user parameter",
+	Long: strings.ReplaceAll(`
+`, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandUnsetUser(ct, args, params)
-	},
-}
+		var changed bool
 
-func init() {
-	unsetCmd.AddCommand(unsetUserCmd)
-	unsetUserCmd.Flags().SortFlags = false
-}
+		_, args := cmdArgs(cmd)
+		orig := readConfigFile(geneos.UserConfigFilePaths()...)
+		new := config.New()
 
-func commandUnsetUser(ct *geneos.Component, args, params []string) error {
-	var changed bool
-	orig := readConfigFile(geneos.UserConfigFilePaths()...)
-	new := config.New()
-
-OUTER:
-	for _, k := range orig.AllKeys() {
-		for _, a := range args {
-			if k == a {
-				changed = true
-				continue OUTER
+	OUTER:
+		for _, k := range orig.AllKeys() {
+			for _, a := range args {
+				if k == a {
+					changed = true
+					continue OUTER
+				}
 			}
+			new.Set(k, orig.Get(k))
 		}
-		new.Set(k, orig.Get(k))
-	}
 
-	if changed {
-		log.Debug().Msgf("%v", orig.AllSettings())
-		new.SetConfigFile(geneos.UserConfigFilePaths()[0])
-		return new.WriteConfig()
-	}
-	return nil
+		if changed {
+			log.Debug().Msgf("%v", orig.AllSettings())
+			new.SetConfigFile(geneos.UserConfigFilePaths()[0])
+			return new.WriteConfig()
+		}
+		return nil
+	},
 }

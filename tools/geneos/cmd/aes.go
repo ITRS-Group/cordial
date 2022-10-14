@@ -23,22 +23,23 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
 )
 
-// aesCmd represents the aes command
-var aesCmd = &cobra.Command{
-	Use:                   "aes",
-	Short:                 "Manage Gateway AES key files",
-	Long:                  `Manage Gateway AES key files for password encoding and decoding`,
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations:           make(map[string]string),
-	// Run: func(cmd *cobra.Command, args []string) {
-	// 	cmd.Usage()
-	// },
-}
-
 func init() {
 	rootCmd.AddCommand(aesCmd)
+	// aesCmd.Flags().SortFlags = false
+
+}
+
+var aesCmd = &cobra.Command{
+	Use:   "aes",
+	Short: "Manage Gateway AES key files",
+	Long: strings.ReplaceAll(`
+Manage Gateway AES key files for password encoding and decoding
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations:  make(map[string]string),
 }
