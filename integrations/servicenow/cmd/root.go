@@ -50,7 +50,8 @@ var rootCmd = &cobra.Command{
 	Short: "Geneos to ServiceNow integration",
 	Long: strings.ReplaceAll(`
 `, "|", "`"),
-	SilenceUsage: true,
+	DisableAutoGenTag: true,
+	SilenceUsage:      true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
