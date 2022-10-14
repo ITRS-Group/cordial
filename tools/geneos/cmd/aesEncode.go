@@ -62,7 +62,23 @@ keyfile found.`,
 			}
 			plaintext = string(b)
 		} else {
-			plaintext = utils.ReadPasswordPrompt()
+			if aesEncodeCmdAskOnce {
+				plaintext = utils.ReadPasswordPrompt()
+			} else {
+				var match bool
+				for i := 0; i < 3; i++ {
+					plaintext = utils.ReadPasswordPrompt()
+					plaintext2 := utils.ReadPasswordPrompt("Re-enter Password")
+					if plaintext == plaintext2 {
+						match = true
+						break
+					}
+					fmt.Println("Passwords do not match. Please try again.")
+				}
+				if !match {
+					return fmt.Errorf("Too many attempts, giving up.")
+				}
+			}
 		}
 
 		if len(origargs) == 0 {
@@ -102,7 +118,7 @@ keyfile found.`,
 }
 
 var aesEncodeCmdAESFILE, aesEncodeCmdString, aesEncodeCmdSource string
-var aesEncodeCmdExpandable bool
+var aesEncodeCmdExpandable, aesEncodeCmdAskOnce bool
 
 var aesEncodeDefaultKeyfile string
 
@@ -115,6 +131,7 @@ func init() {
 	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdString, "password", "p", "", "Password string to use")
 	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdSource, "source", "s", "", "Source for password to use")
 	aesEncodeCmd.Flags().BoolVarP(&aesEncodeCmdExpandable, "expandable", "e", false, "Output in ExpandString format")
+	aesEncodeCmd.Flags().BoolVarP(&aesEncodeCmdAskOnce, "once", "o", false, "One prompt for password once. For scripts injecting passwords on stdin")
 	aesEncodeCmd.Flags().SortFlags = false
 }
 
