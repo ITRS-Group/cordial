@@ -58,13 +58,13 @@ func init() {
 
 	// old flags, these are now sub-commands so hide them
 	initCmd.Flags().StringVarP(&initCmdAll, "all", "A", "", "Perform initialisation steps using given license file and start instances")
-	initCmd.Flags().MarkHidden("all")
+	initCmd.Flags().MarkDeprecated("all", "please use `geneos init all -l PATH ...`")
 	initCmd.Flags().BoolVarP(&initCmdDemo, "demo", "D", false, "Perform initialisation steps for a demo setup and start instances")
-	initCmd.Flags().MarkHidden("demo")
+	initCmd.Flags().MarkDeprecated("demo", "please use `geneos init demo`")
 	initCmd.Flags().BoolVarP(&initCmdSAN, "san", "S", false, "Create a SAN and start SAN")
-	initCmd.Flags().MarkHidden("san")
+	initCmd.Flags().MarkDeprecated("san", "please use `geneos init san`")
 	initCmd.Flags().BoolVarP(&initCmdTemplates, "writetemplates", "T", false, "Overwrite/create templates from embedded (for version upgrades)")
-	initCmd.Flags().MarkHidden("writetemplates")
+	initCmd.Flags().MarkDeprecated("writetemplates", "please use `geneos init templates`")
 
 	initCmd.MarkFlagsMutuallyExclusive("all", "demo", "san", "writetemplates")
 
@@ -171,7 +171,6 @@ geneos init -S -n mysan -g Gateway1 -t App1Mon -a REGION=EMEA # install and run 
 			return err
 		}
 
-		// rewrite local templates and exit
 		if initCmdTemplates {
 			return initTemplates(host.LOCAL)
 		}
@@ -193,6 +192,7 @@ geneos init -S -n mysan -g Gateway1 -t App1Mon -a REGION=EMEA # install and run 
 		}
 
 		if initCmdAll != "" {
+			initAllCmdLicenseFile = initCmdAll
 			return initAll(host.LOCAL, options...)
 		}
 

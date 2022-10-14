@@ -2,14 +2,15 @@
 
 ## Version v1.3.0-dev - 2022/10/11
 
-* integrations: Merge ServiceNow binaries into one
-* integrations: Add PagerDuty integration
-* tools/geneos: change internal remote Stat() API
-* tools/geneos: build on windows
-* tools/geneos: fix ssh-agent support on windows
-* tools/geneos: add local JoinSlash and Dir to use Linux paths on Windows builds
-* tools/geneos: add password verify to aes encode and a --once flag to override
+* tools/geneos: split over complex 'init' command into sub-commands
 * updated command usage information and reordered various internal function calls
+* tools/geneos: add password verify to aes encode and a --once flag to override
+* tools/geneos: add local JoinSlash and Dir to use Linux paths on Windows builds
+* tools/geneos: fix ssh-agent support on windows
+* tools/geneos: build on windows
+* integrations: Add PagerDuty integration
+* integrations: Merge ServiceNow binaries into one
+* tools/geneos: change internal remote Stat() API
 
 ## Changes
 

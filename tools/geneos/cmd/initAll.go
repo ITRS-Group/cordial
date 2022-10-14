@@ -34,11 +34,26 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/webserver"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
+
+var initAllCmdLicenseFile string
 
 func init() {
 	initCmd.AddCommand(initAllCmd)
 
+	initAllCmd.Flags().StringVarP(&initAllCmdLicenseFile, "licence", "L", "geneos.lic", "Path (or URL) to license file")
+	// initAllCmd.Flags().SetNormalizeFunc(initAllCmdNormalizeFunc)
+
+	initAllCmd.Flags().SortFlags = false
+}
+
+func initAllCmdNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	switch name {
+	case "license":
+		name = "licence"
+	}
+	return pflag.NormalizedName(name)
 }
 
 var initAllCmd = &cobra.Command{
@@ -90,13 +105,13 @@ func initAll(h *host.Host, options ...geneos.GeneosOptions) (err error) {
 	name := []string{initCmdName}
 	localhost := []string{"localhost@" + host.LOCALHOST}
 
-	install(&licd.Licd, host.Geneos(), options...)
+	install(&licd.Licd, h.String(), options...)
 	install(&gateway.Gateway, h.String(), options...)
 	install(&san.San, h.String(), options...)
 	install(&webserver.Webserver, h.String(), options...)
 
 	add(&licd.Licd, initCmdExtras, name)
-	commandImport(&licd.Licd, name, []string{"geneos.lic=" + initCmdAll})
+	commandImport(&licd.Licd, name, []string{"geneos.lic=" + initAllCmdLicenseFile})
 	add(&gateway.Gateway, initCmdExtras, name)
 	if len(initCmdExtras.Gateways) == 0 {
 		initCmdExtras.Gateways.Set("localhost")
