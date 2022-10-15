@@ -69,6 +69,10 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
 	rootCmd.PersistentFlags().MarkHidden("quiet")
 
+	// how to remove the help flag help text from the help output! Sigh...
+	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	rootCmd.PersistentFlags().MarkHidden("help")
+
 	// this doesn't work as expected, define sort = false in each command
 	// rootCmd.PersistentFlags().SortFlags = false
 	rootCmd.Flags().SortFlags = false
@@ -361,22 +365,6 @@ func (i *EnvValues) Set(value string) error {
 
 func (i *EnvValues) Type() string {
 	return "NAME=VALUE"
-}
-
-// generic - string slice
-type StringSliceValues []string
-
-func (i *StringSliceValues) String() string {
-	return ""
-}
-
-func (i *StringSliceValues) Set(value string) error {
-	*i = append(*i, value)
-	return nil
-}
-
-func (i *StringSliceValues) Type() string {
-	return "NAME"
 }
 
 // variables - [TYPE:]NAME=VALUE
