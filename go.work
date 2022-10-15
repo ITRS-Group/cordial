@@ -1,9 +1,0 @@
-go 1.18
-
-use .
-
-use ./tools/geneos
-
-use ./integrations/servicenow
-
-use ./libraries/libemail
