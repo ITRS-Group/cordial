@@ -75,7 +75,7 @@ keyfile found.
 		if aesEncodeCmdString != "" {
 			plaintext = aesEncodeCmdString
 		} else if aesEncodeCmdSource != "" {
-			b, err := geneos.ReadLocalFileOrURL(aesEncodeCmdSource)
+			b, err := geneos.ReadSource(aesEncodeCmdSource)
 			if err != nil {
 				return err
 			}
@@ -102,7 +102,7 @@ keyfile found.
 
 		if len(origargs) == 0 {
 			// encode using specific file
-			r, _, err := geneos.OpenLocalFileOrURL(aesEncodeCmdAESFILE)
+			r, _, err := geneos.OpenSource(aesEncodeCmdAESFILE)
 			if err != nil {
 				return err
 			}

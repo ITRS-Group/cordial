@@ -77,7 +77,7 @@ type.
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, _, _ := cmdArgsParams(cmd)
 
-		f, _, err := geneos.OpenLocalFileOrURL(aesImportCmdKeyfile)
+		f, _, err := geneos.OpenSource(aesImportCmdKeyfile)
 		if err != nil {
 			return err
 		}

@@ -63,25 +63,23 @@ var installCmd = &cobra.Command{
 	Long: strings.ReplaceAll(`
 Installs files from FILE(s) in to the packages/ directory. The filename(s) must of of the form:
 
-	geneos-TYPE-VERSION*.tar.gz
+	|geneos-TYPE-VERSION*.tar.gz|
 
 The directory for the package is created using the VERSION from the archive
-filename unless overridden by the -T and -V flags.
+filename unless overridden by the |-T| and |-V| flags.
 
 If a TYPE is given then the latest version from the packages/downloads
 directory for that TYPE is installed, otherwise it is treated as a
 normal file path. This is primarily for installing to remote locations.
 
-TODO:
-
-Install only changes creates a base link if one does not exist.
-To update an existing base link use the -U option. This stops any
-instance, updates the link and starts the instance up again.
+Install only changes a base link if one does not exist. To update an
+existing base link use the |-U| option. The |-U| options stops any instance,
+updates the link and starts the instance up again.
 
 Use the update command to explicitly change the base link after installation.
 
-Use the -b flag to change the base link name from the default 'active_prod'. This also
-applies when using -U.
+Use the |-b| flag to change the base link name from the default |active_prod|. This also
+applies when using |-U|.
 `, "|", "`"),
 	Example: strings.ReplaceAll(`
 geneos install gateway
@@ -114,7 +112,7 @@ geneos install netprobe -b active_dev -U
 		}
 
 		// if we have a component on the command line then use an archive in packages/downloads
-		// or download from official web site unless -l is given. version numbers checked.
+		// or download from official web site unless -L is given. version numbers checked.
 		// default to 'latest'
 		//
 		// overrides do not work in this case as the version and type have to be part of the
@@ -125,6 +123,7 @@ geneos install netprobe -b active_dev -U
 			options := []geneos.GeneosOptions{
 				geneos.Version(installCmdVersion),
 				geneos.Basename(installCmdBase),
+				geneos.NoSave(installCmdNoSave),
 				geneos.LocalOnly(installCmdLocal),
 				geneos.Force(installCmdUpdate),
 				geneos.OverrideVersion(installCmdOverride),
@@ -142,10 +141,11 @@ geneos install netprobe -b active_dev -U
 
 		// work through command line args and try to install them using the naming format
 		// of standard downloads - fix versioning
-		for _, file := range args {
+		for _, source := range args {
 			options := []geneos.GeneosOptions{
-				geneos.Filename(file),
+				geneos.Source(source),
 				geneos.Basename(installCmdBase),
+				geneos.NoSave(installCmdNoSave),
 				geneos.LocalOnly(installCmdLocal),
 				geneos.Force(installCmdUpdate),
 				geneos.OverrideVersion(installCmdOverride),

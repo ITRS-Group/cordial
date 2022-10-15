@@ -27,14 +27,14 @@ func init() {
 // how to split an archive name into type and version
 var archiveRE = regexp.MustCompile(`^geneos-(web-server|fixanalyser2-netprobe|file-agent|\w+)-([\w\.-]+?)[\.-]?linux`)
 
-func Install(r *host.Host, ct *Component, options ...GeneosOptions) (err error) {
-	if r == host.ALL {
+func Install(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
+	if h == host.ALL {
 		return ErrInvalidArgs
 	}
 
 	if ct == nil {
 		for _, t := range RealComponents() {
-			if err = Install(r, t, options...); err != nil {
+			if err = Install(h, t, options...); err != nil {
 				if errors.Is(err, fs.ErrExist) {
 					continue
 				}
@@ -44,17 +44,17 @@ func Install(r *host.Host, ct *Component, options ...GeneosOptions) (err error) 
 		return nil
 	}
 
-	osinfo := r.GetStringMapString("osinfo")
+	osinfo := h.GetStringMapString("osinfo")
 	if p, ok := osinfo["PLATFORM_ID"]; ok {
 		options = append(options, PlatformID(p))
 	}
-	reader, filename, err := OpenComponentArchive(ct, options...)
+	reader, filename, err := OpenArchive(ct, options...)
 	if err != nil {
 		return err
 	}
 	defer reader.Close()
 
-	if err = Unarchive(r, ct, filename, reader, options...); err != nil {
+	if err = Unarchive(h, ct, filename, reader, options...); err != nil {
 		if errors.Is(err, fs.ErrExist) {
 			return nil
 		}
@@ -63,6 +63,10 @@ func Install(r *host.Host, ct *Component, options ...GeneosOptions) (err error) 
 	return
 }
 
+// FilenameFromHTTPResp decodes and returns the filename from the
+// HTTP(S) request. It tried to extract the filename from the
+// COntent-Disposition header and if that fails returns the basename of
+// the URL Path.
 func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err error) {
 	cd, ok := resp.Header[http.CanonicalHeaderKey("content-disposition")]
 	if !ok && resp.Request.Response != nil {
@@ -87,21 +91,23 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 	return
 }
 
-// OpenLocalFileOrURL returns an io.ReadCloser and the base filename for
-// the given source. The source can be a https: or http: URL or a path
-// to a file or '-' for STDIN.
+// OpenSource returns an io.ReadCloser and the base filename for the
+// given source. The source can be a `https` or `http“ URL or a path to
+// a file or '-' for STDIN.
 //
-// URLs are Parsed and fetched with the Go standard http.Get function
-// and therefore support proxies and basic authentication as provided by
-// the http package.
+// URLs are Parsed and fetched with the `http.Get“ function and so
+// support proxies and basic authentication as supported by the http
+// package.
 //
-// If the file path begins '~/' then it is relative to the home
-// directory of the calling user, otherwise it is opened relative to the
-// working directory of the process.
+// As a special case, if the file path begins '~/' then it is relative
+// to the home directory of the calling user, otherwise it is opened
+// relative to the working directory of the process. If passed the
+// option `geneos.Homedir()“ then this is used instead of the calling
+// user's home directory
 //
 // If any stage fails then err is returned with the appropriate kind of
 // error.
-func OpenLocalFileOrURL(source string, options ...GeneosOptions) (from io.ReadCloser, filename string, err error) {
+func OpenSource(source string, options ...GeneosOptions) (from io.ReadCloser, filename string, err error) {
 	opts := EvalOptions(options...)
 
 	u, err := url.Parse(source)
@@ -142,8 +148,12 @@ func OpenLocalFileOrURL(source string, options ...GeneosOptions) (from io.ReadCl
 		filename = "STDIN"
 	default:
 		if strings.HasPrefix(source, "~/") {
-			home, _ := os.UserHomeDir()
-			source = fmt.Sprintf("%s/%s", home, strings.TrimPrefix(source, "~/"))
+			if opts.homedir != "" {
+				source = fmt.Sprintf("%s/%s", opts.homedir, strings.TrimPrefix(source, "~/"))
+			} else {
+				home, _ := os.UserHomeDir()
+				source = fmt.Sprintf("%s/%s", home, strings.TrimPrefix(source, "~/"))
+			}
 		}
 		source, _ = filepath.Abs(source)
 		from, err = os.Open(source)
@@ -152,9 +162,10 @@ func OpenLocalFileOrURL(source string, options ...GeneosOptions) (from io.ReadCl
 	return
 }
 
-func ReadLocalFileOrURL(source string) (b []byte, err error) {
+// ReadSource opens and reads the source passed
+func ReadSource(source string, options ...GeneosOptions) (b []byte, err error) {
 	var from io.ReadCloser
-	from, _, err = OpenLocalFileOrURL(source)
+	from, _, err = OpenSource(source, options...)
 	if err != nil {
 		return
 	}

@@ -63,7 +63,7 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 		}
 	}
 
-	from, filename, err = geneos.OpenLocalFileOrURL(source)
+	from, filename, err = geneos.OpenSource(source)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
