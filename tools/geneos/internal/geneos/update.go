@@ -87,7 +87,7 @@ func Update(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
 
 	if opts.restart {
 		// this cannot call 'instance' methods as that would be a dependency loop...
-
+		// XXX
 	}
 
 	if err = h.Remove(basepath); err != nil && !errors.Is(err, fs.ErrNotExist) {

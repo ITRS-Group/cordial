@@ -41,7 +41,7 @@ import (
 var initCmdAll string
 var initCmdLogs, initCmdMakeCerts, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
 var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdVersion string
-var initCmdUsername, initCmdPassword, initCmdPwFile string
+var initCmdDLUsername, initCmdDLPassword, initCmdPwFile string
 
 var initCmdExtras = ExtraConfigValues{
 	Includes:   IncludeValues{},
@@ -64,8 +64,21 @@ func init() {
 	initCmd.Flags().MarkDeprecated("san", "please use the `geneos init san` sub-command")
 	initCmd.Flags().BoolVarP(&initCmdTemplates, "writetemplates", "T", false, "Overwrite/create templates from embedded (for version upgrades)")
 	initCmd.Flags().MarkDeprecated("writetemplates", "please use `geneos init templates`")
-
 	initCmd.MarkFlagsMutuallyExclusive("all", "demo", "san", "writetemplates")
+
+	initCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
+	initCmd.Flags().MarkDeprecated("include", "please use the `geneos init all|demo|san` sub-commands")
+
+	initCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME:PORT. Repeat flag for more gateways.")
+	initCmd.Flags().MarkDeprecated("gateway", "please use the `geneos init san` sub-command")
+	initCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", "(sans) Add an attribute in the format NAME=VALUE")
+	initCmd.Flags().MarkDeprecated("attribute", "please use the `geneos init san` sub-command. Repeat flag for more attributes.")
+	initCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", "(sans) Add a type NAME. Repeat flag for more types")
+	initCmd.Flags().MarkDeprecated("type", "please use the `geneos init san` sub-command. Repeat flag for more types.")
+	initCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", "(sans) Add a variable in the format [TYPE:]NAME=VALUE")
+	initCmd.Flags().MarkDeprecated("variable", "please use the `geneos init san` sub-command")
+
+	// common flags, need checking
 
 	initCmd.PersistentFlags().BoolVarP(&initCmdMakeCerts, "makecerts", "C", false, "Create default certificates for TLS support")
 	initCmd.PersistentFlags().BoolVarP(&initCmdLogs, "log", "l", false, "Run 'logs -f' after starting instance(s)")
@@ -79,7 +92,7 @@ func init() {
 	initCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots. Requires -N")
 
 	initCmd.PersistentFlags().StringVarP(&initCmdVersion, "version", "V", "latest", "Download matching version, defaults to latest. Doesn't work for EL8 archives.")
-	initCmd.PersistentFlags().StringVarP(&initCmdUsername, "username", "u", "", "Username for downloads. Defaults to configuration value `download.username`")
+	initCmd.PersistentFlags().StringVarP(&initCmdDLUsername, "username", "u", "", "Username for downloads. Defaults to configuration value `download.username`")
 
 	// we now prompt for passwords if not in config, so hide this old flag
 	initCmd.PersistentFlags().StringVarP(&initCmdPwFile, "pwfile", "P", "", "")
@@ -89,18 +102,6 @@ func init() {
 	initCmd.PersistentFlags().StringVarP(&initCmdSANTemplate, "santemplate", "s", "", "A san template file")
 
 	initCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", "Add an environment variable in the format NAME=VALUE. Repeat flag for more variables.")
-
-	initCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
-	initCmd.Flags().MarkDeprecated("include", "please use the `geneos init all|demo|san` sub-commands")
-
-	initCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME:PORT. Repeat flag for more gateways.")
-	initCmd.Flags().MarkDeprecated("gateway", "please use the `geneos init san` sub-command")
-	initCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", "(sans) Add an attribute in the format NAME=VALUE")
-	initCmd.Flags().MarkDeprecated("attribute", "please use the `geneos init san` sub-command. Repeat flag for more attributes.")
-	initCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", "(sans) Add a type NAME. Repeat flag for more types")
-	initCmd.Flags().MarkDeprecated("type", "please use the `geneos init san` sub-command. Repeat flag for more types.")
-	initCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", "(sans) Add a variable in the format [TYPE:]NAME=VALUE")
-	initCmd.Flags().MarkDeprecated("variable", "please use the `geneos init san` sub-command")
 
 	initCmd.PersistentFlags().SortFlags = false
 	initCmd.Flags().SortFlags = false
@@ -210,7 +211,12 @@ geneos init -S -n mysan -g Gateway1 -t App1Mon -a REGION=EMEA # install and run 
 func initProcessArgs(args, params []string) (options []geneos.GeneosOptions, err error) {
 	var username, homedir, root string
 
-	options = []geneos.GeneosOptions{geneos.Version(initCmdVersion), geneos.Basename("active_prod"), geneos.Force(initCmdForce)}
+	options = []geneos.GeneosOptions{
+		geneos.Version(initCmdVersion),
+		geneos.Basename("active_prod"),
+		geneos.Force(initCmdForce),
+	}
+
 	if initCmdNexus {
 		options = append(options, geneos.UseNexus())
 		if initCmdSnapshot {
@@ -219,20 +225,20 @@ func initProcessArgs(args, params []string) (options []geneos.GeneosOptions, err
 	}
 
 	if utils.IsSuperuser() {
+		// if running as root then set the local username and default
+		// the homedir relative to that user
 		if len(args) == 0 {
 			log.Fatal().Msg("init requires a username when run as root")
 		}
 		username = args[0]
 		options = append(options, geneos.LocalUsername(username))
 
+		u, err := user.Lookup(username)
 		if err != nil {
 			log.Fatal().Msgf("invalid user %s", username)
 		}
-		u, err := user.Lookup(username)
 		homedir = u.HomeDir
-		if err != nil {
-			log.Fatal().Msg("user lookup failed")
-		}
+
 		if len(args) == 1 {
 			// If user's home dir doesn't end in "geneos" then create a
 			// directory "geneos" else use the home directory directly
@@ -254,9 +260,9 @@ func initProcessArgs(args, params []string) (options []geneos.GeneosOptions, err
 	} else {
 		u, _ := user.Current()
 		username = u.Username
-		options = append(options, geneos.LocalUsername(username))
-
 		homedir = u.HomeDir
+
+		options = append(options, geneos.LocalUsername(username))
 
 		log.Debug().Msgf("%d %v", len(args), args)
 		switch len(args) {
@@ -277,22 +283,22 @@ func initProcessArgs(args, params []string) (options []geneos.GeneosOptions, err
 	}
 
 	// download authentication
-	if initCmdUsername == "" {
-		initCmdUsername = config.GetString("download.username")
+	if initCmdDLUsername == "" {
+		initCmdDLUsername = config.GetString("download.username")
 	}
 
 	if initCmdPwFile != "" {
-		initCmdPassword = utils.ReadPasswordFile(initCmdPwFile)
+		initCmdDLPassword = utils.ReadPasswordFile(initCmdPwFile)
 	} else {
-		initCmdPassword = config.GetString("download.password")
+		initCmdDLPassword = config.GetString("download.password")
 	}
 
-	if initCmdUsername != "" && initCmdPassword == "" {
-		initCmdPassword = utils.ReadPasswordPrompt()
+	if initCmdDLUsername != "" && initCmdDLPassword == "" {
+		initCmdDLPassword = utils.ReadPasswordPrompt()
 	}
 
-	if initCmdUsername != "" {
-		options = append(options, geneos.Username(initCmdUsername), geneos.Password(initCmdPassword))
+	if initCmdDLUsername != "" {
+		options = append(options, geneos.Username(initCmdDLUsername), geneos.Password(initCmdDLPassword))
 	}
 
 	return
@@ -301,7 +307,7 @@ func initProcessArgs(args, params []string) (options []geneos.GeneosOptions, err
 func initMisc() (err error) {
 	if initCmdGatewayTemplate != "" {
 		var tmpl []byte
-		if tmpl, err = geneos.ReadLocalFileOrURL(initCmdGatewayTemplate); err != nil {
+		if tmpl, err = geneos.ReadSource(initCmdGatewayTemplate); err != nil {
 			return
 		}
 		if err := host.LOCAL.WriteFile(host.LOCAL.Filepath(gateway.Gateway, "templates", gateway.GatewayDefaultTemplate), tmpl, 0664); err != nil {
@@ -311,7 +317,7 @@ func initMisc() (err error) {
 
 	if initCmdSANTemplate != "" {
 		var tmpl []byte
-		if tmpl, err = geneos.ReadLocalFileOrURL(initCmdSANTemplate); err != nil {
+		if tmpl, err = geneos.ReadSource(initCmdSANTemplate); err != nil {
 			return
 		}
 		if err = host.LOCAL.WriteFile(host.LOCAL.Filepath(san.San, "templates", san.SanDefaultTemplate), tmpl, 0664); err != nil {

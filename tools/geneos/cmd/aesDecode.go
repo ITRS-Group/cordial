@@ -90,7 +90,7 @@ in the value. All other flags and arguments are ignored.
 		if aesDecodeCmdPassword != "" {
 			ciphertext = strings.TrimPrefix(aesDecodeCmdPassword, "+encs+")
 		} else if aesDecodeCmdSource != "" {
-			b, err := geneos.ReadLocalFileOrURL(aesDecodeCmdSource)
+			b, err := geneos.ReadSource(aesDecodeCmdSource)
 			if err != nil {
 				return err
 			}
@@ -104,7 +104,7 @@ in the value. All other flags and arguments are ignored.
 				continue
 			}
 			// decode using specific file
-			r, _, err := geneos.OpenLocalFileOrURL(k)
+			r, _, err := geneos.OpenSource(k)
 			if err != nil {
 				continue
 			}

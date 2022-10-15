@@ -23,15 +23,15 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
-// locate and return an open archive for the host and component given
-// archives must be local
-func OpenComponentArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, filename string, err error) {
+// OpenArchive locates and returns an io.ReadCloser for an archive for
+// the component given. TODO: Archives must currently be local.
+func OpenArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, filename string, err error) {
 	var resp *http.Response
 
 	opts := EvalOptions(options...)
 
-	if opts.filename != "" {
-		return OpenLocalFileOrURL(opts.filename, options...)
+	if opts.source != "" {
+		return OpenSource(opts.source, options...)
 	}
 
 	if opts.local {
@@ -120,7 +120,9 @@ func OpenComponentArchive(ct *Component, options ...GeneosOptions) (body io.Read
 	return
 }
 
-func Unarchive(r *host.Host, ct *Component, filename string, gz io.Reader, options ...GeneosOptions) (err error) {
+// Unarchive unpacks the gzipped, open archive passed as an io.Reader on
+// the host given for the component.
+func Unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, options ...GeneosOptions) (err error) {
 	var version string
 
 	opts := EvalOptions(options...)
@@ -160,14 +162,14 @@ func Unarchive(r *host.Host, ct *Component, filename string, gz io.Reader, optio
 		}
 	}
 
-	basedir := r.Filepath("packages", ct, version)
+	basedir := h.Filepath("packages", ct, version)
 	log.Debug().Msg(basedir)
-	if _, err = r.Stat(basedir); err == nil {
+	if _, err = h.Stat(basedir); err == nil {
 		// something is already using that dir
 		// XXX - option to delete and overwrite?
 		return
 	}
-	if err = r.MkdirAll(basedir, 0775); err != nil {
+	if err = h.MkdirAll(basedir, 0775); err != nil {
 		return
 	}
 
@@ -223,12 +225,12 @@ func Unarchive(r *host.Host, ct *Component, filename string, gz io.Reader, optio
 		case tar.TypeReg:
 			// check (and created) containing directories - account for munged tar files
 			dir := utils.Dir(fullpath)
-			if err = r.MkdirAll(dir, 0775); err != nil {
+			if err = h.MkdirAll(dir, 0775); err != nil {
 				return
 			}
 
 			var out io.WriteCloser
-			if out, err = r.Create(fullpath, hdr.FileInfo().Mode()); err != nil {
+			if out, err = h.Create(fullpath, hdr.FileInfo().Mode()); err != nil {
 				return err
 			}
 			n, err := io.Copy(out, tr)
@@ -242,7 +244,7 @@ func Unarchive(r *host.Host, ct *Component, filename string, gz io.Reader, optio
 			out.Close()
 
 		case tar.TypeDir:
-			if err = r.MkdirAll(fullpath, hdr.FileInfo().Mode()); err != nil {
+			if err = h.MkdirAll(fullpath, hdr.FileInfo().Mode()); err != nil {
 				return
 			}
 
@@ -250,8 +252,8 @@ func Unarchive(r *host.Host, ct *Component, filename string, gz io.Reader, optio
 			if filepath.IsAbs(hdr.Linkname) {
 				log.Fatal().Msg("archive contains absolute symlink target")
 			}
-			if _, err = r.Stat(fullpath); err != nil {
-				if err = r.Symlink(hdr.Linkname, fullpath); err != nil {
+			if _, err = h.Stat(fullpath); err != nil {
+				if err = h.Symlink(hdr.Linkname, fullpath); err != nil {
 					log.Fatal().Err(err).Msg("")
 				}
 			}
@@ -260,9 +262,9 @@ func Unarchive(r *host.Host, ct *Component, filename string, gz io.Reader, optio
 			log.Warn().Msgf("unsupported file type %c\n", hdr.Typeflag)
 		}
 	}
-	fmt.Printf("installed %q to %q\n", filename, r.Path(basedir))
+	fmt.Printf("installed %q to %q\n", filename, h.Path(basedir))
 	options = append(options, Version(version))
-	return Update(r, ct, options...)
+	return Update(h, ct, options...)
 }
 
 // locate and open the archive using the download conventions

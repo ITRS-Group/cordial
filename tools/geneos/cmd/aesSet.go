@@ -80,7 +80,7 @@ Currently only Gateways and Netprobes (and SANs) are supported.
 		ct, args, _ := cmdArgsParams(cmd)
 		var params []string
 
-		f, _, err := geneos.OpenLocalFileOrURL(aesSetCmdKeyfile)
+		f, _, err := geneos.OpenSource(aesSetCmdKeyfile)
 		if err != nil {
 			return err
 		}

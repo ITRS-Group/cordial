@@ -88,7 +88,7 @@ func tlsImport(sources ...string) (err error) {
 
 	for _, source := range sources {
 		log.Debug().Msgf("importing %s", source)
-		if f, err = geneos.ReadLocalFileOrURL(source); err != nil {
+		if f, err = geneos.ReadSource(source); err != nil {
 			log.Error().Err(err).Msg("")
 			err = nil
 			continue
