@@ -84,7 +84,7 @@ geneos import gateway -c shared common_include.xml
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := cmdArgsParams(cmd)
-		return commandImport(ct, args, params)
+		return importFiles(ct, args, params)
 	},
 }
 
@@ -93,7 +93,7 @@ geneos import gateway -c shared common_include.xml
 // backup / history track older files (date/time?)
 // no restart or reload of components?
 
-func commandImport(ct *geneos.Component, args []string, params []string) (err error) {
+func importFiles(ct *geneos.Component, args []string, params []string) (err error) {
 	if importCmdCommon != "" {
 		// ignore args, use ct & params
 		for _, r := range host.Match(importCmdHostname) {

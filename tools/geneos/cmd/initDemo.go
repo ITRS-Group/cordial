@@ -87,13 +87,13 @@ func initDemo(h *host.Host, options ...geneos.GeneosOptions) (err error) {
 	install(&san.San, host.LOCALHOST, options...)
 	install(&webserver.Webserver, host.LOCALHOST, options...)
 
-	add(&gateway.Gateway, initCmdExtras, g)
+	addInstance(&gateway.Gateway, initCmdExtras, g)
 	set(&gateway.Gateway, g, []string{"GateOpts=-demo"})
 	if len(initCmdExtras.Gateways) == 0 {
 		initCmdExtras.Gateways.Set("localhost")
 	}
-	add(&san.San, initCmdExtras, localhost)
-	add(&webserver.Webserver, initCmdExtras, w)
+	addInstance(&san.San, initCmdExtras, localhost)
+	addInstance(&webserver.Webserver, initCmdExtras, w)
 
 	start(nil, initCmdLogs, e, e)
 	commandPS(nil, e, e)

@@ -95,7 +95,7 @@ func initSan(h *host.Host, options ...geneos.GeneosOptions) (err error) {
 	}
 	s = []string{sanname}
 	install(&san.San, host.LOCALHOST, options...)
-	add(&san.San, initCmdExtras, s)
+	addInstance(&san.San, initCmdExtras, s)
 	start(nil, initCmdLogs, e, e)
 	commandPS(nil, e, e)
 	return nil
