@@ -45,13 +45,13 @@ func init() {
 	setCmd.Flags().SortFlags = false
 }
 
-var setCmdExtras = instance.ExtraConfigValues{
-	Includes:   instance.IncludeValues{},
-	Gateways:   instance.GatewayValues{},
-	Attributes: instance.StringSliceValues{},
-	Envs:       instance.StringSliceValues{},
-	Variables:  instance.VarValues{},
-	Types:      instance.StringSliceValues{},
+var setCmdExtras = ExtraConfigValues{
+	Includes:   IncludeValues{},
+	Gateways:   GatewayValues{},
+	Attributes: AttributeValues{},
+	Envs:       EnvValues{},
+	Variables:  VarValues{},
+	Types:      TypeValues{},
 }
 
 var setCmd = &cobra.Command{
@@ -84,7 +84,7 @@ func set(ct *geneos.Component, args, params []string) error {
 func setInstance(c geneos.Instance, params []string) (err error) {
 	log.Debug().Msgf("c %s params %v", c, params)
 
-	instance.SetExtendedValues(c, setCmdExtras)
+	SetExtendedValues(c, setCmdExtras)
 
 	for _, arg := range params {
 		s := strings.SplitN(arg, "=", 2)
