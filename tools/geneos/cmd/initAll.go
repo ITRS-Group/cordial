@@ -43,7 +43,9 @@ func init() {
 	initCmd.AddCommand(initAllCmd)
 
 	initAllCmd.Flags().StringVarP(&initAllCmdLicenseFile, "licence", "L", "geneos.lic", "Path (or URL) to license file")
-	// initAllCmd.Flags().SetNormalizeFunc(initAllCmdNormalizeFunc)
+	initAllCmd.Flags().SetNormalizeFunc(initAllCmdNormalizeFunc)
+
+	initAllCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
 
 	initAllCmd.Flags().SortFlags = false
 }

@@ -37,6 +37,10 @@ import (
 func init() {
 	initCmd.AddCommand(initDemoCmd)
 
+	initDemoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
+
+	initDemoCmd.Flags().SortFlags = false
+
 }
 
 var initDemoCmd = &cobra.Command{
