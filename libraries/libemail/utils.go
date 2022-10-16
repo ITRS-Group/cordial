@@ -112,7 +112,7 @@ func dialServer(conf EMailConfig) (d *mail.Dialer, err error) {
 	if ok {
 		// get the password from the file given or continue with
 		// an empty string
-		password := config.GetConfig().ExpandString(getWithDefault("_SMTP_PASSWORD", conf, ""))
+		password := config.ExpandString(getWithDefault("_SMTP_PASSWORD", conf, ""))
 		if password == "" {
 			pwfile := getWithDefault("_SMTP_PASSWORD_FILE", conf, "")
 			if pwfile != "" {

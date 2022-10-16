@@ -79,7 +79,7 @@ in the value. All other flags and arguments are ignored.
 
 		// XXX Allow -e to provide non-inline sources, e.g. stdin, file etc.
 		if strings.HasPrefix(aesDecodeCmdExpandString, "${enc:") {
-			fmt.Println(config.GetConfig().ExpandString(aesDecodeCmdExpandString))
+			fmt.Println(config.ExpandString(aesDecodeCmdExpandString))
 			return nil
 		}
 
