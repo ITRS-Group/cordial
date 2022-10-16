@@ -17,23 +17,20 @@ FROM golang AS build
 # or
 
 # The "clean" lines below are in case of running this in a working
-# directory with existing builds from outside the container
+# directory with existing builds from outside the container, which may
+# be from a different arch or environment
 COPY ./ /app/cordial
 WORKDIR /app/cordial/tools/geneos
 RUN go mod tidy
-RUN go clean
 RUN go build
 RUN GOOS=windows go build
 WORKDIR /app/cordial/integrations/servicenow
 RUN go mod tidy
-RUN go clean
 RUN go build
 WORKDIR /app/cordial/integrations/pagerduty
 RUN go mod tidy
-RUN go clean
 RUN go build
 WORKDIR /app/cordial/libraries/libemail
-RUN make clean
 RUN make
 
 FROM debian
