@@ -85,13 +85,13 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 	var changed bool
 	log.Debug().Msgf("c %s params %v", c, params)
 
-	changed, err = unsetMaps(c)
+	changed, err = unsetValues(c)
 
 	s := c.Config().AllSettings()
 
 	if len(unsetCmdKeys) > 0 {
 		for _, k := range unsetCmdKeys {
-			// delete one level of maps
+			// check and delete one level of maps
 			if strings.Contains(k, ".") {
 				p := strings.SplitN(k, ".", 2)
 				switch x := s[p[0]].(type) {
@@ -100,7 +100,7 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 					s[p[0]] = x
 					changed = true
 				default:
-					//
+					// nothing yet
 				}
 			} else {
 				delete(s, k)
@@ -110,13 +110,9 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 	}
 
 	if !changed && !unsetCmdWarned {
-		log.Error().Msg("nothing unset. perhaps you forgot to use -k -KEY or one of the other options?")
+		log.Error().Msg("nothing unset. perhaps you forgot to use -k KEY or one of the other options?")
 		unsetCmdWarned = true
 		return
-	}
-
-	if err = instance.Migrate(c); err != nil {
-		log.Fatal().Err(err).Msg("cannot migrate existing .rc config to set values in new .json configration file")
 	}
 
 	if err = instance.WriteConfigValues(c, s); err != nil {
@@ -127,7 +123,7 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 }
 
 // XXX abstract this for a general case
-func unsetMaps(c geneos.Instance) (changed bool, err error) {
+func unsetValues(c geneos.Instance) (changed bool, err error) {
 	if unsetMap(c, "gateways", unsetCmdGateways) {
 		changed = true
 	}
