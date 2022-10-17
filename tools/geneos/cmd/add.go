@@ -68,7 +68,7 @@ func init() {
 	addCmd.Flags().StringVarP(&addCmdKeyfileCRC, "crc", "C", "", "use a keyfile (in the component shared directory) with CRC for AES256 encoding")
 
 	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", "(all components) Add an environment variable in the format NAME=VALUE")
-	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
+	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format `PRIORITY:[PATH|URL]`")
 	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME:PORT")
 	addCmd.Flags().VarP(&addCmdExtras.Attributes, "attribute", "a", "(sans) Add an attribute in the format NAME=VALUE")
 	addCmd.Flags().VarP(&addCmdExtras.Types, "type", "t", "(sans) Add a gateway in the format NAME:PORT")

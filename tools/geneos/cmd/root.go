@@ -37,6 +37,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 const pkgname = "cordial"
@@ -72,6 +73,9 @@ func init() {
 	// how to remove the help flag help text from the help output! Sigh...
 	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
 	rootCmd.PersistentFlags().MarkHidden("help")
+
+	// catch common abbreviations and typos
+	rootCmd.PersistentFlags().SetNormalizeFunc(cmdNormalizeFunc)
 
 	// this doesn't work as expected, define sort = false in each command
 	// rootCmd.PersistentFlags().SortFlags = false
@@ -135,6 +139,19 @@ func Execute() {
 
 func RootCmd() *cobra.Command {
 	return rootCmd
+}
+
+// catch misspelling and abbreviations of common flags
+func cmdNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	switch name {
+	case "license":
+		name = "licence"
+	case "attr":
+		name = "attribute"
+	case "var":
+		name = "variable"
+	}
+	return pflag.NormalizedName(name)
 }
 
 // initConfig reads in config file and ENV variables if set.

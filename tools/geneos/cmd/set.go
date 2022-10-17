@@ -55,7 +55,7 @@ var setCmdExtras = ExtraConfigValues{
 }
 
 var setCmd = &cobra.Command{
-	Use:   "set [FLAGS] [TYPE] [NAME...] KEY=VALUE [KEY=VALUE...]",
+	Use:   "set [flags] [TYPE] [NAME...] [KEY=VALUE...]",
 	Short: "Set instance configuration parameters",
 	Long: strings.ReplaceAll(`
 Set configuration item values in global, user, or for a specific
