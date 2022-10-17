@@ -92,19 +92,18 @@ geneos import gateway -c shared common_include.xml
 // overwrites without asking - use case is license files, setup files etc.
 // backup / history track older files (date/time?)
 // no restart or reload of components?
-
-func importFiles(ct *geneos.Component, args []string, params []string) (err error) {
+func importFiles(ct *geneos.Component, args []string, sources []string) (err error) {
 	if importCmdCommon != "" {
 		// ignore args, use ct & params
 		for _, r := range host.Match(importCmdHostname) {
-			if _, err = instance.ImportCommons(r, ct, ct.String()+"_"+importCmdCommon, params); err != nil {
+			if _, err = instance.ImportCommons(r, ct, ct.String()+"_"+importCmdCommon, sources); err != nil {
 				return
 			}
 		}
 		return
 	}
 
-	return instance.ForAll(ct, importInstance, args, params)
+	return instance.ForAll(ct, importInstance, args, sources)
 }
 
 // args are instance [file...]
@@ -118,16 +117,16 @@ func importFiles(ct *geneos.Component, args []string, params []string) (err erro
 // 'geneos import netprobe example3 scripts/=myscript.sh'
 //
 // local directories are created
-func importInstance(c geneos.Instance, params []string) (err error) {
+func importInstance(c geneos.Instance, sources []string) (err error) {
 	if !c.Type().RealComponent {
 		return ErrNotSupported
 	}
 
-	if len(params) == 0 {
+	if len(sources) == 0 {
 		log.Fatal().Msg("no file/url provided")
 	}
 
-	for _, source := range params {
+	for _, source := range sources {
 		if _, err = instance.ImportFile(c.Host(), c.Home(), c.Config().GetString("user"), source); err != nil {
 			return
 		}

@@ -19,6 +19,7 @@ var (
 	ErrInvalidArgs  error = errors.New("invalid arguments")
 	ErrNotSupported error = errors.New("not supported")
 	ErrDisabled     error = errors.New("disabled")
+	ErrIsADirectory error = errors.New("is a directory")
 )
 
 const RootCAFile = "rootCA"

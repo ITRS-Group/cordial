@@ -108,50 +108,49 @@ func init() {
 }
 
 var initCmd = &cobra.Command{
-	Use:   "init [flags] [USERNAME] [DIRECTORY] [PARAMS]",
+	Use:   "init [flags] [USERNAME] [DIRECTORY]",
 	Short: "Initialise a Geneos installation",
 	Long: strings.ReplaceAll(`
-Initialise a Geneos installation by creating the directory
-hierarchy and user configuration file, with the USERNAME and
-DIRECTORY if supplied. DIRECTORY must be an absolute path and
-this is used to distinguish it from USERNAME.
+Initialise a Geneos installation by creating the directory hierarchy
+and user configuration file, with the USERNAME and DIRECTORY if
+supplied. DIRECTORY must be an absolute path and this is used to
+distinguish it from USERNAME.
 
-**Note**: This command has too many options and flags and will be
-replaced by a number of sub-commands that will narrow down the flags
-and options required. Backward compatibility will be maintained as
-much as possible but top-level |init| flags may be hidden from usage
-messages.
+**Note**: This command has too many flags and options and has been
+supplemented by a number of sub-commands that do more specific
+things. Backward compatibility will be maintained as much as possible
+but top-level |init| flags may be hidden from usage messages.
+
+Please see the sub-commands below for a more appropriate command.
 
 DIRECTORY defaults to |${HOME}/geneos| for the selected user unless
 the last component of |${HOME}| is |geneos| in which case the home
 directory is used. e.g. if the user is |geneos| and the home
-directory is |/opt/geneos| then that is used, but if it were a
-user |itrs| which a home directory of |/home/itrs| then the
-directory |/home/itrs/geneos| would be used. This only applies
-when no DIRECTORY is explicitly supplied.
+directory is |/opt/geneos| then that is used, but if it were a user
+|itrs| which a home directory of |/home/itrs| then the directory
+|/home/itrs/geneos| would be used. This only applies when no
+DIRECTORY is explicitly supplied.
 
-When DIRECTORY is given it must be an absolute path and the
-parent directory must be writable by the user - either running
-the command or given as USERNAME.
+When DIRECTORY is given it must be an absolute path and the parent
+directory must be writable by the user - either running the command
+or given as USERNAME.
 
-DIRECTORY, whether explicit or implied, must not exist or be
-empty of all except "dot" files and directories.
+DIRECTORY, whether explicit or implied, must either not exist or be
+empty except for "dot" files.
 
-When run with superuser privileges a USERNAME must be supplied
-and only the configuration file for that user is created. e.g.:
+When run with superuser privileges a USERNAME must be supplied and
+only the configuration file for that user is created. e.g.:
 
 	sudo geneos init geneos /opt/itrs
 
 When USERNAME is supplied then the command must either be run
 with superuser privileges or be run by the same user.
-
-Any PARAMS provided are passed to the 'add' command called for
-components created.
 `, "|", "`"),
 	Example: strings.ReplaceAll(`
-geneos init # basic set-up and user config file
-geneos init -D -u email@example.com # create a demo environment, requires password
-geneos init -S -n mysan -g Gateway1 -t App1Mon -a REGION=EMEA # install and run a SAN
+# creates an Geneos tree under home area
+geneos init
+# to create new directory as |geneos|
+sudo geneos init geneos /opt/itrs
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -162,17 +161,17 @@ geneos init -S -n mysan -g Gateway1 -t App1Mon -a REGION=EMEA # install and run 
 	// if no directory given and not running as root and the last component of the user's
 	// home directory is NOT "geneos" then create a directory "geneos", else
 	//
-	// XXX Call any registered initialiser funcs from components
+	// XXX Call any registered initializer funcs from components
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmdArgsParams(cmd)
-		log.Debug().Msgf("%s %v %v", ct, args, params)
+		ct, args := cmdArgs(cmd)
+		log.Debug().Msgf("%s %v", ct, args)
 		// none of the arguments can be a reserved type
 		if ct != nil {
 			log.Error().Err(ErrInvalidArgs).Msg(ct.String())
 			return ErrInvalidArgs
 		}
 
-		options, err := initProcessArgs(args, params)
+		options, err := initProcessArgs(args)
 		if err != nil {
 			return err
 		}
@@ -189,26 +188,23 @@ geneos init -S -n mysan -g Gateway1 -t App1Mon -a REGION=EMEA # install and run 
 			return
 		}
 
-		if initCmdDemo {
+		switch {
+		case initCmdDemo:
 			return initDemo(host.LOCAL, options...)
-		}
-
-		if initCmdSAN {
+		case initCmdSAN:
 			return initSan(host.LOCAL, options...)
-		}
-
-		if initCmdAll != "" {
+		case initCmdAll != "":
 			initAllCmdLicenseFile = initCmdAll
 			return initAll(host.LOCAL, options...)
+		default:
+			return
 		}
-
-		return
 	},
 }
 
 // initProcessArgs works through the parsed arguments and returns a
 // geneos.GeneosOptions slice to be passed to worker functions
-func initProcessArgs(args, params []string) (options []geneos.GeneosOptions, err error) {
+func initProcessArgs(args []string) (options []geneos.GeneosOptions, err error) {
 	var username, homedir, root string
 
 	options = []geneos.GeneosOptions{
@@ -277,7 +273,7 @@ func initProcessArgs(args, params []string) (options []geneos.GeneosOptions, err
 			}
 			root = filepath.Clean(args[0])
 		default:
-			log.Fatal().Msgf("too many args: %v %v", args, params)
+			log.Fatal().Msgf("too many args: %v", args)
 		}
 		options = append(options, geneos.Homedir(root))
 	}

@@ -30,32 +30,57 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/licd"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/webserver"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-var initAllCmdLicenseFile string
+var initAllCmdLicenseFile, initAllCmdArchive string
 
 func init() {
 	initCmd.AddCommand(initAllCmd)
 
 	initAllCmd.Flags().StringVarP(&initAllCmdLicenseFile, "licence", "L", "geneos.lic", "`Filepath or URL` to license file")
+	initAllCmd.MarkFlagRequired("licence")
+
+	initAllCmd.Flags().StringVarP(&initAllCmdArchive, "archive", "A", "", "`PATH or URL` to software archive to install")
+
+	initAllCmd.Flags().VarP(&initCmdExtras.Envs, "env", "e", "Add environment variables in the format NAME=VALUE. Repeat flag for more values.")
 	initAllCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
 
 	initAllCmd.Flags().SortFlags = false
 }
 
 var initAllCmd = &cobra.Command{
-	Use:   "all",
+	Use:   "all [flags] [USERNAME] [DIRECTORY]",
 	Short: "Initialise a more complete Geneos environment",
 	Long: strings.ReplaceAll(`
-Initialise a Geneos installation and download and install common components.
+Initialise a typical Geneos installation.
+
+This command installs a Gateway, Netprobe, Licence-Daemon and
+Webserver. A licence file is required and should be give using the
+|-L| flag. If a licence file is not available then use |-L /dev/null|
+which will create and empty |geneos.lic| file that can be overwritten
+later.
+
+In almost all cases authentication will be required to download the
+install packages and as this is a new Geneos installation it is
+unlikely that the download credentials are saved in a local config
+file, so use the |-u email@example.com| as appropriate.
+
+If packages are already downloaded locally then use the |-A| flag to
+refer to the directory contain the archives. They must be named in
+the same format as those downloaded from the main download website.
+If no version is given using the |-V| flag then the latest version of
+each component is installed.
+
 `, "|", "`"),
 	Example: strings.ReplaceAll(`
-geneos init all /opt/itrs
+geneos init all -L https://myserver/files/geneos.lic -u email@example.com
+geneos init all -L ~/geneos.lic -A ~/downloads /opt/itrs
+sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneos
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -69,7 +94,7 @@ geneos init all /opt/itrs
 			log.Error().Err(ErrInvalidArgs).Msg(ct.String())
 			return ErrInvalidArgs
 		}
-		options, err := initProcessArgs(args, params)
+		options, err := initProcessArgs(args)
 		if err != nil {
 			return
 		}
@@ -82,6 +107,7 @@ geneos init all /opt/itrs
 			return
 		}
 
+		options = append(options, geneos.Source(initAllCmdArchive))
 		return initAll(host.LOCAL, options...)
 	},
 }
@@ -95,22 +121,20 @@ func initAll(h *host.Host, options ...geneos.GeneosOptions) (err error) {
 			return err
 		}
 	}
-	name := []string{initCmdName}
-	localhost := []string{"localhost@" + host.LOCALHOST}
 
 	install(&licd.Licd, h.String(), options...)
 	install(&gateway.Gateway, h.String(), options...)
-	install(&san.San, h.String(), options...)
+	install(&netprobe.Netprobe, h.String(), options...)
 	install(&webserver.Webserver, h.String(), options...)
 
-	addInstance(&licd.Licd, initCmdExtras, name)
-	importFiles(&licd.Licd, name, []string{"geneos.lic=" + initAllCmdLicenseFile})
-	addInstance(&gateway.Gateway, initCmdExtras, name)
+	addInstance(&licd.Licd, initCmdExtras, initCmdName)
+	importFiles(&licd.Licd, []string{initCmdName}, []string{"geneos.lic=" + initAllCmdLicenseFile})
+	addInstance(&gateway.Gateway, initCmdExtras, initCmdName)
 	if len(initCmdExtras.Gateways) == 0 {
 		initCmdExtras.Gateways.Set("localhost")
 	}
-	addInstance(&san.San, initCmdExtras, localhost)
-	addInstance(&webserver.Webserver, initCmdExtras, name)
+	addInstance(&netprobe.Netprobe, initCmdExtras, "localhost@"+h.String())
+	addInstance(&webserver.Webserver, initCmdExtras, initCmdName)
 	start(nil, initCmdLogs, e, e)
 	commandPS(nil, e, e)
 	return nil
