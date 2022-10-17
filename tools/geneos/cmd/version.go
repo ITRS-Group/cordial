@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/itrs-group/cordial/pkg/cordial"
+	"github.com/itrs-group/cordial"
 	"github.com/spf13/cobra"
 )
 
