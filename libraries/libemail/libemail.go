@@ -84,11 +84,12 @@ func SendMail(n C.int, args **C.char) C.int {
 	// Subjects behave in the same way as formats."
 	//
 	// Note: "ThrottleSummary" is also mentioned later, but is the same as above
-	var format, subject string
+	var format string
+
+	subject := getWithDefault("_SUBJECT", conf, defaultSubject[_SUBJECT])
 
 	if _, ok := conf["_FORMAT"]; ok {
 		format = conf["_FORMAT"]
-		subject = getWithDefault("_SUBJECT", conf, defaultSubject[_SUBJECT])
 	} else if _, ok = conf["_ALERT"]; ok {
 		switch conf["_ALERT_TYPE"] {
 		case "Alert":
@@ -108,11 +109,9 @@ func SendMail(n C.int, args **C.char) C.int {
 			subject = getWithDefault("_SUMMARY_SUBJECT", conf, defaultSubject[_SUMMARY_SUBJECT])
 		default:
 			format = defaultFormat[_FORMAT]
-			subject = getWithDefault("_SUBJECT", conf, defaultSubject[_SUBJECT])
 		}
 	} else {
 		format = defaultFormat[_FORMAT]
-		subject = defaultSubject[_SUBJECT]
 	}
 
 	if !debug(conf) {
@@ -166,7 +165,7 @@ func GoSendMail(n C.int, args **C.char) C.int {
 	}
 
 	// The subject follows the same rules as the original SendMail function
-	subject := defaultSubject[_SUBJECT]
+	subject := getWithDefault("_SUBJECT", conf, defaultSubject[_SUBJECT])
 
 	// there is a default template that contains embedded tests for which type of
 	// alert, if any. This can be overridden with a template file or a template string
@@ -185,8 +184,6 @@ func GoSendMail(n C.int, args **C.char) C.int {
 			subject = getWithDefault("_RESUME_SUBJECT", conf, defaultSubject[_RESUME_SUBJECT])
 		case "ThrottleSummary":
 			subject = getWithDefault("_SUMMARY_SUBJECT", conf, defaultSubject[_SUMMARY_SUBJECT])
-		default:
-			subject = getWithDefault("_SUBJECT", conf, defaultSubject[_SUBJECT])
 		}
 	}
 
