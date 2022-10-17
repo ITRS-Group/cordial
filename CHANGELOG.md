@@ -2,6 +2,8 @@
 
 ## Version v1.3.0-dev - 2022/10/11
 
+* tools/geneos: allow remote operations without local directories
+* libemail: fix default _SUBJECT handling
 * tools/geneos: split over complex 'init' command into sub-commands
 * updated command usage information and reordered various internal function calls
 * tools/geneos: add password verify to aes encode and a --once flag to override
