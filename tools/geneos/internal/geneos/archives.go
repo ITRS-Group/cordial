@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -31,7 +32,13 @@ func OpenArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, f
 	opts := EvalOptions(options...)
 
 	if opts.source != "" {
-		return OpenSource(opts.source, options...)
+		body, filename, err = OpenSource(opts.source, options...)
+		if err == nil || !errors.Is(err, ErrIsADirectory) {
+			// if success or it's not a directory, return
+			return
+		}
+		log.Debug().Msg("source is a directory, setting local")
+		opts.local = true
 	}
 
 	if opts.local {
@@ -40,6 +47,9 @@ func OpenArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, f
 			opts.version = ""
 		}
 		archiveDir := host.LOCAL.Filepath("packages", "downloads")
+		if opts.source != "" {
+			archiveDir = opts.source
+		}
 		filename = latest(host.LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
 			log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
 			switch ct.String() {

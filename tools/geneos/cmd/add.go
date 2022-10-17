@@ -99,14 +99,14 @@ geneos add netprobe infraprobe12 --start --log
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args := cmdArgs(cmd)
-		return addInstance(ct, addCmdExtras, args)
+		return addInstance(ct, addCmdExtras, args...)
 	},
 }
 
 // addInstance an instance
 //
 // this is also called from the init command code
-func addInstance(ct *geneos.Component, addCmdExtras ExtraConfigValues, args []string) (err error) {
+func addInstance(ct *geneos.Component, addCmdExtras ExtraConfigValues, args ...string) (err error) {
 	var username string
 
 	// check validity and reserved words here

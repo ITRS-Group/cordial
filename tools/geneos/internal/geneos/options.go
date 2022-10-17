@@ -122,7 +122,9 @@ func UseSnapshots() GeneosOptions {
 }
 
 // Source is the source of the installation and overrides all other
-// settings include Local and download URLs.
+// settings include Local and download URLs. It can be a directory, in
+// which case that directory is searched for the appropriate archive
+// file(s)
 func Source(f string) GeneosOptions {
 	return func(d *Options) { d.source = f }
 }

@@ -52,7 +52,7 @@ func init() {
 }
 
 var initSanCmd = &cobra.Command{
-	Use:   "san",
+	Use:   "san [flags] [USERNAME] [DIRECTORY]",
 	Short: "Initialise a Geneos SAN (Self-Announcing Netprobe) environment",
 	Long: strings.ReplaceAll(`
 Install a Self-Announcing Netprobe (SAN) into a new Geneos install
@@ -93,7 +93,7 @@ multiple times.
 			log.Error().Err(ErrInvalidArgs).Msg(ct.String())
 			return ErrInvalidArgs
 		}
-		options, err := initProcessArgs(args, params)
+		options, err := initProcessArgs(args)
 		if err != nil {
 			return
 		}
@@ -122,7 +122,6 @@ multiple times.
 
 func initSan(h *host.Host, options ...geneos.GeneosOptions) (err error) {
 	var sanname string
-	var s []string
 
 	e := []string{}
 
@@ -134,9 +133,8 @@ func initSan(h *host.Host, options ...geneos.GeneosOptions) (err error) {
 	if h != host.LOCAL {
 		sanname = sanname + "@" + host.LOCALHOST
 	}
-	s = []string{sanname}
 	install(&san.San, host.LOCALHOST, options...)
-	addInstance(&san.San, initCmdExtras, s)
+	addInstance(&san.San, initCmdExtras, sanname)
 	start(nil, initCmdLogs, e, e)
 	commandPS(nil, e, e)
 	return nil

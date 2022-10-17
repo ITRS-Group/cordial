@@ -105,8 +105,9 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 // option `geneos.Homedir()“ then this is used instead of the calling
 // user's home directory
 //
-// If any stage fails then err is returned with the appropriate kind of
-// error.
+// If source is a path to a directory then `geneos.ErrIsADirectory` is
+// returned. If any other stage fails then err is returned from the
+// underlying package.
 func OpenSource(source string, options ...GeneosOptions) (from io.ReadCloser, filename string, err error) {
 	opts := EvalOptions(options...)
 
@@ -154,6 +155,14 @@ func OpenSource(source string, options ...GeneosOptions) (from io.ReadCloser, fi
 				home, _ := os.UserHomeDir()
 				source = fmt.Sprintf("%s/%s", home, strings.TrimPrefix(source, "~/"))
 			}
+		}
+		var s os.FileInfo
+		s, err = os.Stat(source)
+		if err != nil {
+			return nil, "", err
+		}
+		if s.IsDir() {
+			return nil, "", ErrIsADirectory
 		}
 		source, _ = filepath.Abs(source)
 		from, err = os.Open(source)

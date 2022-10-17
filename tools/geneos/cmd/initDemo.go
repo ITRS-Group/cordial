@@ -29,28 +29,51 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/webserver"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-var initDemoCmdSAN bool
+var initDemoCmdArchive string
 
 func init() {
 	initCmd.AddCommand(initDemoCmd)
 
-	initDemoCmd.Flags().BoolVarP(&initDemoCmdSAN, "san", "S", false, "Deploy a SAN instead of a standard Netprobe")
+	initDemoCmd.Flags().StringVarP(&initDemoCmdArchive, "archive", "A", "", "`PATH or URL` to software archive to install")
+
+	initDemoCmd.Flags().VarP(&initCmdExtras.Envs, "env", "e", "Add environment variables in the format NAME=VALUE. Repeat flag for more values.")
 	initDemoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
 
 	initDemoCmd.Flags().SortFlags = false
-
 }
 
 var initDemoCmd = &cobra.Command{
-	Use:   "demo",
+	Use:   "demo [flags] [USERNAME] [DIRECTORY]",
 	Short: "Initialise a Geneos Demo environment",
 	Long: strings.ReplaceAll(`
+Install a Demo environment into a new Geneos install directory
+layout.
+
+Without any flags the command installs the components in a directory
+called |geneos| under the user's home directory (unless the user's
+home directory ends in |geneos| in which case it uses that directly),
+downloads the latest release archives and creates a Gateway instance
+using the name |Demo| as required for Demo licensing, as Netprobe and
+a Webserver.
+
+In almost all cases authentication will be required to download the
+install packages and as this is a new Geneos installation it is
+unlikely that the download credentials are saved in a local config
+file, so use the |-u email@example.com| as appropriate.
+
+The initial configuration file for the Gateway is built from the
+default templates installed and located in |.../templates| but this
+can be overridden with the |-s| option. For the Gateway you can add
+include files using |-i PRIORITY:PATH| flag. This can be repeated
+multiple times.
+
+The |-e| flag adds environment variables to all instances created and
+so should only be used for common values, such as |TZ|.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -64,7 +87,7 @@ var initDemoCmd = &cobra.Command{
 			log.Error().Err(ErrInvalidArgs).Msg(ct.String())
 			return ErrInvalidArgs
 		}
-		options, err := initProcessArgs(args, params)
+		options, err := initProcessArgs(args)
 		if err != nil {
 			return
 		}
@@ -77,6 +100,7 @@ var initDemoCmd = &cobra.Command{
 			return
 		}
 
+		options = append(options, geneos.Source(initDemoCmdArchive))
 		return initDemo(host.LOCAL, options...)
 	},
 }
@@ -84,28 +108,18 @@ var initDemoCmd = &cobra.Command{
 func initDemo(h *host.Host, options ...geneos.GeneosOptions) (err error) {
 	e := []string{}
 	g := []string{"Demo Gateway@" + h.String()}
-	localhost := []string{"localhost@" + h.String()}
-	w := []string{"demo@" + h.String()}
 
 	install(&gateway.Gateway, host.LOCALHOST, options...)
-	if initDemoCmdSAN {
-		install(&san.San, host.LOCALHOST, options...)
-	} else {
-		install(&netprobe.Netprobe, host.LOCALHOST, options...)
-	}
+	install(&netprobe.Netprobe, host.LOCALHOST, options...)
 	install(&webserver.Webserver, host.LOCALHOST, options...)
 
-	addInstance(&gateway.Gateway, initCmdExtras, g)
-	set(&gateway.Gateway, g, []string{"GateOpts=-demo"})
+	addInstance(&gateway.Gateway, initCmdExtras, "Demo Gateway@"+h.String())
+	set(&gateway.Gateway, g, []string{"options=-demo"})
 	if len(initCmdExtras.Gateways) == 0 {
 		initCmdExtras.Gateways.Set("localhost")
 	}
-	if initDemoCmdSAN {
-		addInstance(&san.San, initCmdExtras, localhost)
-	} else {
-		addInstance(&netprobe.Netprobe, initCmdExtras, localhost)
-	}
-	addInstance(&webserver.Webserver, initCmdExtras, w)
+	addInstance(&netprobe.Netprobe, initCmdExtras, "localhost@"+h.String())
+	addInstance(&webserver.Webserver, initCmdExtras, "demo@"+h.String())
 
 	start(nil, initCmdLogs, e, e)
 	commandPS(nil, e, e)
