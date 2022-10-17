@@ -2,7 +2,7 @@ VERSION = $(file < VERSION)
 
 release:
 	docker build --tag cordial-build:$(VERSION) --target cordial-build .
-	docker build --tag cordial:$(VERSION) --target cordial-run .
+	docker build --tag cordial --tag cordial:$(VERSION) --target cordial-run .
 	docker create --name cordial-build-$(VERSION) cordial-build:$(VERSION)
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).tar.gz .
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).zip .
