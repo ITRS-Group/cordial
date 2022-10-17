@@ -199,7 +199,7 @@ func initConfig() {
 // Value types for multiple flags
 
 // XXX abstract this for a general case
-func SetExtendedValues(c geneos.Instance, x ExtraConfigValues) (changed bool) {
+func setExtendedValues(c geneos.Instance, x ExtraConfigValues) (changed bool) {
 	if setSlice(c, x.Attributes, "attributes", func(a string) string {
 		return strings.SplitN(a, "=", 2)[0]
 	}) {

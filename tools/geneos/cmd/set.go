@@ -84,7 +84,7 @@ func set(ct *geneos.Component, args, params []string) error {
 func setInstance(c geneos.Instance, params []string) (err error) {
 	log.Debug().Msgf("c %s params %v", c, params)
 
-	SetExtendedValues(c, setCmdExtras)
+	setExtendedValues(c, setCmdExtras)
 
 	for _, arg := range params {
 		s := strings.SplitN(arg, "=", 2)
