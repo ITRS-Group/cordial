@@ -23,6 +23,7 @@ THE SOFTWARE.
 package cordial
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -34,7 +35,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const VERSION = "v1.3.0-dev"
+//go:embed VERSION
+var VERSION string
 
 func LogInit(prefix string) {
 	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {

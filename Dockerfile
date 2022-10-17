@@ -10,6 +10,7 @@
 #
 
 FROM golang AS build
+LABEL stage=cordial-build
 # RUN mkdir /app
 # WORKDIR /app
 # RUN git clone https://github.com/ITRS-Group/cordial.git .
@@ -33,25 +34,36 @@ RUN go build
 WORKDIR /app/cordial/libraries/libemail
 RUN make
 
-FROM debian
+FROM debian AS cordial-build
+LABEL stage=cordial-build
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 RUN apt update && apt install -y fontconfig zip
 COPY --from=build /app/cordial/VERSION /
-COPY --from=build /app/cordial/tools/geneos/geneos /bin
-COPY --from=build /app/cordial/tools/geneos/geneos /cordial/
-COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/
-COPY --from=build /app/cordial/integrations/servicenow/servicenow /cordial/
-COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /cordial/
-COPY --from=build /app/cordial/integrations/servicenow/ticket.sh /cordial/
-COPY --from=build /app/cordial/integrations/pagerduty/pagerduty /cordial/
-COPY --from=build /app/cordial/integrations/pagerduty/pagerduty.defaults.yaml /cordial/
-COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/
+# COPY --from=build /app/cordial/tools/geneos/geneos /bin
+COPY --from=build /app/cordial/tools/geneos/geneos /app/cordial/tools/geneos/geneos.exe /app/cordial/integrations/servicenow/servicenow /app/cordial/integrations/servicenow/servicenow.example.yaml /app/cordial/integrations/servicenow/ticket.sh /app/cordial/integrations/pagerduty/pagerduty /app/cordial/integrations/pagerduty/pagerduty.defaults.yaml /app/cordial/libraries/libemail/libemail.so /cordial/
+# COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/
+# COPY --from=build /app/cordial/integrations/servicenow/servicenow /cordial/
+# COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /cordial/
+# COPY --from=build /app/cordial/integrations/servicenow/ticket.sh /cordial/
+# COPY --from=build /app/cordial/integrations/pagerduty/pagerduty /cordial/
+# COPY --from=build /app/cordial/integrations/pagerduty/pagerduty.defaults.yaml /cordial/
+# COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/
 RUN mv /cordial /cordial-$(cat /VERSION)
 WORKDIR /
-RUN tar czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION)
-RUN zip -r /cordial-$(cat /VERSION).zip cordial-$(cat /VERSION)
-RUN rm -r /cordial-$(cat /VERSION)
+RUN tar czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION) && zip -q -r /cordial-$(cat /VERSION).zip cordial-$(cat /VERSION) && rm -r /cordial-$(cat /VERSION)
 # and we get a test environment too
+# RUN useradd -ms /bin/bash geneos
+# WORKDIR /home/geneos
+# local package files can be copied in here
+# COPY archives packages/downloads
+# RUN chown -R geneos:geneos packages
+# USER geneos
+CMD [ "bash" ]
+
+FROM debian AS cordial-run
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+RUN apt update && apt install -y fontconfig
+COPY --from=build /app/cordial/tools/geneos/geneos /bin
 RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 # local package files can be copied in here

@@ -44,8 +44,8 @@ import (
 	"time"
 
 	"github.com/PagerDuty/go-pagerduty"
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/cordial"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/pflag"
 )
