@@ -28,15 +28,19 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/webserver"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
+var initDemoCmdSAN bool
+
 func init() {
 	initCmd.AddCommand(initDemoCmd)
 
+	initDemoCmd.Flags().BoolVarP(&initDemoCmdSAN, "san", "S", false, "Deploy a SAN instead of a standard Netprobe")
 	initDemoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
 
 	initDemoCmd.Flags().SortFlags = false
@@ -84,7 +88,11 @@ func initDemo(h *host.Host, options ...geneos.GeneosOptions) (err error) {
 	w := []string{"demo@" + h.String()}
 
 	install(&gateway.Gateway, host.LOCALHOST, options...)
-	install(&san.San, host.LOCALHOST, options...)
+	if initDemoCmdSAN {
+		install(&san.San, host.LOCALHOST, options...)
+	} else {
+		install(&netprobe.Netprobe, host.LOCALHOST, options...)
+	}
 	install(&webserver.Webserver, host.LOCALHOST, options...)
 
 	addInstance(&gateway.Gateway, initCmdExtras, g)
@@ -92,7 +100,11 @@ func initDemo(h *host.Host, options ...geneos.GeneosOptions) (err error) {
 	if len(initCmdExtras.Gateways) == 0 {
 		initCmdExtras.Gateways.Set("localhost")
 	}
-	addInstance(&san.San, initCmdExtras, localhost)
+	if initDemoCmdSAN {
+		addInstance(&san.San, initCmdExtras, localhost)
+	} else {
+		addInstance(&netprobe.Netprobe, initCmdExtras, localhost)
+	}
 	addInstance(&webserver.Webserver, initCmdExtras, w)
 
 	start(nil, initCmdLogs, e, e)
