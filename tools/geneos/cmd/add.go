@@ -155,7 +155,7 @@ func addInstance(ct *geneos.Component, addCmdExtras ExtraConfigValues, args []st
 			c.Config().Set("keyfile", addCmdKeyfile)
 		}
 	}
-	SetExtendedValues(c, addCmdExtras)
+	setExtendedValues(c, addCmdExtras)
 	if err = instance.WriteConfig(c); err != nil {
 		return
 	}
