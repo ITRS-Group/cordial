@@ -111,12 +111,7 @@ func LoadConfig(c geneos.Instance) (err error) {
 	if c.Host().Failed() {
 		return
 	}
-	if err = ReadConfig(c); err == nil {
-		return
-	}
-
-	err = readRCConfig(c)
-	if err != nil {
+	if err = ReadConfig(c); err != nil {
 		// generic error as no .json or .rc found
 		return fmt.Errorf("no configuration files for %s in %s: %w", c, c.Home(), os.ErrNotExist)
 	}
@@ -289,15 +284,22 @@ func SetSecureArgs(c geneos.Instance) (args []string) {
 	return
 }
 
-// write out an instance configuration file.
-// XXX check if existing config is an .rc file and if so rename it after
-// successful write to match migrate
-//
-// remote configuration files are supported using afero.Fs through
-// viper but rely on host.DialSFTP to dial and cache the client
-//
-// delete any aliases fields before writing
+// WriteConfig writes out the existing configuration for instance c.
 func WriteConfig(c geneos.Instance) (err error) {
+	// speculatively migrate the config, in case there is a legacy .rc
+	// file in place. Migrate() returns an error only for real errors
+	// and returns nil if there is no .rc file to migrate.
+	if err = Migrate(c); err != nil {
+		return
+	}
+	return writeConfig(c)
+}
+
+// writeConfig writes out the configuration for instance c without
+// trying migrating legacy files. It does this by copying all
+// non-aliased values to a new configuration structure as viper offers
+// no way to delete values.
+func writeConfig(c geneos.Instance) (err error) {
 	file := ComponentFilepath(c)
 	if err = c.Host().MkdirAll(utils.Dir(file), 0775); err != nil {
 		log.Error().Err(err).Msg("")
@@ -319,7 +321,16 @@ func WriteConfig(c geneos.Instance) (err error) {
 	return nv.WriteConfigAs(file)
 }
 
-func WriteConfigValues(c geneos.Instance, values map[string]interface{}) error {
+// WriteConfigValues writes values to the configuration file for
+// instance c. It does not merge values with the existing configuration
+// values.
+func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err error) {
+	// speculatively migrate the config, in case there is a legacy .rc
+	// file in place. Migrate() returns an error only for real errors
+	// and returns nil if there is no .rc file to migrate.
+	if err = Migrate(c); err != nil {
+		return
+	}
 	file := ComponentFilepath(c)
 	nv := config.New()
 	for k, v := range values {
@@ -335,6 +346,7 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) error {
 	return nv.WriteConfigAs(file)
 }
 
+// ReadConfig reads the instance configuration from the standard file.
 func ReadConfig(c geneos.Instance) (err error) {
 	c.Config().SetConfigFile(ComponentFilepath(c, ConfigType))
 	if c.Host() != host.LOCAL {
@@ -345,11 +357,12 @@ func ReadConfig(c geneos.Instance) (err error) {
 		}
 		c.Config().SetFs(sftpfs.New(client))
 	}
-	// we ignore this error as failing to load a config file may be
-	// legitimate
-	err = c.Config().MergeInConfig()
-	if err != nil {
-		log.Debug().Err(err).Msg("")
+
+	if err = c.Config().MergeInConfig(); err != nil {
+		// if load fails try a legacy .rc file before returning an error
+		if err = readRCConfig(c); err != nil {
+			return err
+		}
 	}
 
 	// aliases have to be set AFTER loading from file (https://github.com/spf13/viper/issues/560)
@@ -375,7 +388,7 @@ func Migrate(c geneos.Instance) (err error) {
 	}
 
 	// write new .json
-	if err = WriteConfig(c); err != nil {
+	if err = writeConfig(c); err != nil {
 		log.Error().Err(err).Msg("failed to write config file")
 		return
 	}

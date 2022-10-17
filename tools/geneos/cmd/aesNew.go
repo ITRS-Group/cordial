@@ -140,11 +140,6 @@ func aesNewSetInstance(c geneos.Instance, params []string) (err error) {
 	}
 	c.Config().Set("keyfile", c.Host().Filepath(c.Type(), c.Type().String()+"_shared", "keyfiles", params[0]))
 
-	// in case the configuration in in old format
-	if err = instance.Migrate(c); err != nil {
-		log.Fatal().Err(err).Msg("cannot migrate existing .rc config to set values in new .json configuration file")
-	}
-
 	if err = instance.WriteConfig(c); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}

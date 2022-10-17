@@ -156,11 +156,6 @@ func aesSetAESInstance(c geneos.Instance, params []string) (err error) {
 		fmt.Println(c)
 	}
 
-	// in case the configuration in in old format
-	if err = instance.Migrate(c); err != nil {
-		log.Fatal().Err(err).Msg("cannot migrate existing .rc config to set values in new .json configuration file")
-	}
-
 	if err = instance.WriteConfig(c); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}

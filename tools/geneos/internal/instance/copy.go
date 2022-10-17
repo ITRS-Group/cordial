@@ -61,6 +61,7 @@ func CopyInstance(ct *geneos.Component, srcname, dstname string, remove bool) (e
 	if err != nil {
 		return fmt.Errorf("%w: %q %q", err, ct, srcname)
 	}
+
 	if err = Migrate(src); err != nil {
 		return fmt.Errorf("%s %s cannot be migrated to new configuration format", ct, srcname)
 	}
