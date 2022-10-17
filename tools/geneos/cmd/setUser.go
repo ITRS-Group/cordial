@@ -38,9 +38,10 @@ func init() {
 }
 
 var setUserCmd = &cobra.Command{
-	Use:          "user KEY=VALUE...",
-	Short:        "Set user configuration parameters",
-	Long:         strings.ReplaceAll(``, "|", "`"),
+	Use:   "user [KEY=VALUE...]",
+	Short: "Set user configuration parameters",
+	Long: strings.ReplaceAll(`
+`, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "false",

@@ -46,19 +46,19 @@ func init() {
 	rootCmd.AddCommand(unsetCmd)
 
 	unsetCmd.Flags().VarP(&unsetCmdKeys, "key", "k", "Unset a configuration key item")
-	unsetCmd.Flags().VarP(&unsetCmdEnvs, "env", "e", "Remove an environment variable of NAME")
-	unsetCmd.Flags().VarP(&unsetCmdIncludes, "include", "i", "Remove an include file in the format PRIORITY")
-	unsetCmd.Flags().VarP(&unsetCmdGateways, "gateway", "g", "Remove gateway NAME")
-	unsetCmd.Flags().VarP(&unsetCmdAttributes, "attribute", "a", "Remove an attribute of NAME")
-	unsetCmd.Flags().VarP(&unsetCmdTypes, "type", "t", "Remove the type NAME")
-	unsetCmd.Flags().VarP(&unsetCmdVariables, "variable", "v", "Remove a variable of NAME")
+	unsetCmd.Flags().VarP(&unsetCmdEnvs, "env", "e", "Remove an environment variable `NAME`")
+	unsetCmd.Flags().VarP(&unsetCmdIncludes, "include", "i", "(gateways) Remove an include file with`PRIORITY`")
+	unsetCmd.Flags().VarP(&unsetCmdGateways, "gateway", "g", "(san) Remove the gateway `NAME`")
+	unsetCmd.Flags().VarP(&unsetCmdAttributes, "attribute", "a", "(san) Remove the attribute `NAME`")
+	unsetCmd.Flags().VarP(&unsetCmdTypes, "type", "t", "(san) Remove the type `NAME`")
+	unsetCmd.Flags().VarP(&unsetCmdVariables, "variable", "v", "(san) Remove the variable `NAME`")
 
 	unsetCmd.Flags().SortFlags = false
 }
 
 // unsetCmd represents the unset command
 var unsetCmd = &cobra.Command{
-	Use:   "unset [FLAGS] [TYPE] [NAME...]",
+	Use:   "unset [flags] [TYPE] [NAME...]",
 	Short: "Unset a configuration value",
 	Long: strings.ReplaceAll(`
 Unset a configuration value.

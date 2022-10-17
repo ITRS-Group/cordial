@@ -36,9 +36,10 @@ func init() {
 }
 
 var setGlobalCmd = &cobra.Command{
-	Use:                   "global KEY=VALUE...",
-	Short:                 "Set global configuration parameters",
-	Long:                  strings.ReplaceAll(``, "|", "`"),
+	Use:   "global [KEY=VALUE...]",
+	Short: "Set global configuration parameters",
+	Long: strings.ReplaceAll(`
+`, "|", "`"),
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{

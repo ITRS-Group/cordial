@@ -35,7 +35,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 var initAllCmdLicenseFile string
@@ -43,21 +42,10 @@ var initAllCmdLicenseFile string
 func init() {
 	initCmd.AddCommand(initAllCmd)
 
-	initAllCmd.Flags().StringVarP(&initAllCmdLicenseFile, "licence", "L", "geneos.lic", "Path (or URL) to license file")
-	initAllCmd.Flags().SetNormalizeFunc(initAllCmdNormalizeFunc)
-
+	initAllCmd.Flags().StringVarP(&initAllCmdLicenseFile, "licence", "L", "geneos.lic", "`Filepath or URL` to license file")
 	initAllCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
 
 	initAllCmd.Flags().SortFlags = false
-}
-
-// catch misspelling of the license/licence flag
-func initAllCmdNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
-	switch name {
-	case "license":
-		name = "licence"
-	}
-	return pflag.NormalizedName(name)
 }
 
 var initAllCmd = &cobra.Command{
