@@ -128,31 +128,31 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 
 // XXX abstract this for a general case
 func unsetMaps(c geneos.Instance) (changed bool, err error) {
-	if unsetMap(c, unsetCmdGateways, "gateways") {
+	if unsetMap(c, "gateways", unsetCmdGateways) {
 		changed = true
 	}
 
-	if unsetMap(c, unsetCmdIncludes, "includes") {
+	if unsetMap(c, "includes", unsetCmdIncludes) {
 		changed = true
 	}
 
-	if unsetMap(c, unsetCmdVariables, "variables") {
+	if unsetMap(c, "variables", unsetCmdVariables) {
 		changed = true
 	}
 
-	if unsetSlice(c, unsetCmdAttributes, "attributes", func(a, b string) bool {
+	if unsetSlice(c, "attributes", unsetCmdAttributes, func(a, b string) bool {
 		return strings.HasPrefix(a, b+"=")
 	}) {
 		changed = true
 	}
 
-	if unsetSlice(c, unsetCmdEnvs, "env", func(a, b string) bool {
+	if unsetSlice(c, "env", unsetCmdEnvs, func(a, b string) bool {
 		return strings.HasPrefix(a, b+"=")
 	}) {
 		changed = true
 	}
 
-	if unsetSlice(c, unsetCmdTypes, "types", func(a, b string) bool {
+	if unsetSlice(c, "types", unsetCmdTypes, func(a, b string) bool {
 		return a == b
 	}) {
 		changed = true
@@ -161,7 +161,7 @@ func unsetMaps(c geneos.Instance) (changed bool, err error) {
 	return
 }
 
-func unsetMap(c geneos.Instance, items unsetCmdValues, key string) (changed bool) {
+func unsetMap(c geneos.Instance, key string, items unsetCmdValues) (changed bool) {
 	x := c.Config().GetStringMapString(key)
 	for _, k := range items {
 		delete(x, k)
@@ -173,7 +173,7 @@ func unsetMap(c geneos.Instance, items unsetCmdValues, key string) (changed bool
 	return
 }
 
-func unsetSlice(c geneos.Instance, items []string, key string, cmp func(string, string) bool) (changed bool) {
+func unsetSlice(c geneos.Instance, key string, items []string, cmp func(string, string) bool) (changed bool) {
 	newvals := []string{}
 	vals := c.Config().GetStringSlice(key)
 OUTER:
