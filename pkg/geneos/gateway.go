@@ -51,14 +51,18 @@ type Gateway struct {
 }
 
 type ManagedEntities struct {
-	XMLName            xml.Name `xml:"managedEntities"`
-	ManagedEntityGroup struct {
-		XMLName    xml.Name        `xml:"managedEntityGroup"`
-		Name       string          `xml:"name,attr"`
-		Attributes []Attribute     `xml:",omitempty"`
-		Vars       []Vars          `xml:",omitempty"`
-		Entities   []ManagedEntity `xml:",omitempty"`
-	}
+	XMLName             xml.Name             `xml:"managedEntities"`
+	Entities            []ManagedEntity      `xml:",omitempty"`
+	ManagedEntityGroups []ManagedEntityGroup `xml:",omitempty"`
+}
+
+type ManagedEntityGroup struct {
+	XMLName             xml.Name             `xml:"managedEntityGroup"`
+	Name                string               `xml:"name,attr"`
+	Attributes          []Attribute          `xml:",omitempty"`
+	Vars                []Vars               `xml:",omitempty"`
+	Entities            []ManagedEntity      `xml:",omitempty"`
+	ManagedEntityGroups []ManagedEntityGroup `xml:",omitempty"`
 }
 
 type ManagedEntity struct {
