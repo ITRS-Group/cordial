@@ -68,12 +68,14 @@ type ManagedEntity struct {
 		Name     string         `xml:"ref,attr"`
 		Timezone *time.Location `xml:"-"`
 	} `xml:"probe"`
-	Attributes []Attribute `xml:",omitempty"`
-	AddTypes   struct {
+	Environment string      `xml:"environment,omitempty"`
+	Attributes  []Attribute `xml:",omitempty"`
+	AddTypes    struct {
 		XMLName xml.Name    `xml:"addTypes"`
 		Types   []Reference `xml:"type,omitempty"`
 	}
-	Vars []Vars `xml:",omitempty"`
+	Vars     []Vars      `xml:",omitempty"`
+	Samplers []Reference `xml:"sampler,omitempty"`
 }
 
 type Attribute struct {
