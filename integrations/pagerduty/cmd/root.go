@@ -88,6 +88,9 @@ var rootCmd = &cobra.Command{
 	Version:           cordial.VERSION,
 	DisableAutoGenTag: true,
 	SilenceUsage:      true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return sendEvent(Trigger)
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -135,7 +138,7 @@ func sendEvent(eventType eventType) (err error) {
 		}
 	}
 
-	details := payload.GetStringMapString("details")
+	details := payload.GetStringMap("details")
 	if cf.GetBool("pagerduty.send-env") {
 		for _, e := range os.Environ() {
 			s := strings.SplitN(e, "=", 2)
