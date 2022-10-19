@@ -125,13 +125,16 @@ type Environment struct {
 }
 
 type Samplers struct {
-	XMLName      xml.Name `xml:"samplers"`
-	SamplerGroup struct {
-		Name          string `xml:"name,attr"`
-		SamplerGroups []interface{}
-		Samplers      []Sampler
-	} `xml:"samplerGroup,omitempty"`
-	Samplers []Sampler `xml:",omitempty"`
+	XMLName       xml.Name       `xml:"samplers"`
+	Samplers      []Sampler      `xml:",omitempty"`
+	SamplerGroups []SamplerGroup `xml:",omitempty"`
+}
+
+type SamplerGroup struct {
+	XMLName       xml.Name       `xml:"samplerGroup"`
+	Name          string         `xml:"name,attr"`
+	Samplers      []Sampler      `xml:",omitempty"`
+	SamplerGroups []SamplerGroup `xml:",omitempty"`
 }
 
 // A Sampler is a Geneos Sampler structure. The Plugin field should be
