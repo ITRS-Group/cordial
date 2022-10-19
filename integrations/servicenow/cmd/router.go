@@ -25,17 +25,16 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"log"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/process"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -46,6 +45,7 @@ func init() {
 
 	routerCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Daemonise the router process")
 	routerCmd.Flags().SortFlags = false
+
 }
 
 // routerCmd represents the router command
@@ -74,10 +74,9 @@ func Timestamp() echo.MiddlewareFunc {
 func router() {
 	var err error
 
-	execname := filepath.Base(os.Args[0])
 	vc, err = config.LoadConfig(execname, config.SetAppName("itrs"), config.SetConfigFile(conffile))
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if daemon {

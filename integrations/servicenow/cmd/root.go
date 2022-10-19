@@ -25,24 +25,34 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var vc *config.Config
 
-var cfgFile string
+var cfgFile, execname string
 
 func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&conffile, "conf", "c", "", "config file (default is $HOME/.servicenow.yaml)")
 
+	// how to remove the help flag help text from the help output! Sigh...
+	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	rootCmd.PersistentFlags().MarkHidden("help")
+
 	rootCmd.Flags().SortFlags = false
+
+	execname = filepath.Base(os.Args[0])
+	cordial.LogInit(execname)
 }
 
 var rootCmd = &cobra.Command{
@@ -50,6 +60,10 @@ var rootCmd = &cobra.Command{
 	Short: "Geneos to ServiceNow integration",
 	Long: strings.ReplaceAll(`
 `, "|", "`"),
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
+	Version:           cordial.VERSION,
 	DisableAutoGenTag: true,
 	SilenceUsage:      true,
 }
