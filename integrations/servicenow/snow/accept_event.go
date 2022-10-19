@@ -44,8 +44,6 @@ func AcceptEvent(c echo.Context) (err error) {
 
 	err = json.NewDecoder(c.Request().Body).Decode(&incident)
 	if err != nil {
-		fmt.Printf("Failed reading the request body %s", err)
-
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 

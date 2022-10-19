@@ -23,7 +23,6 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,19 +30,19 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/rs/zerolog/log"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-var vc *config.Config
+var cf *config.Config
 
-var cfgFile, execname string
+var conffile, execname string
 
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVarP(&conffile, "conf", "c", "", "config file (default is $HOME/.servicenow.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&conffile, "conf", "c", "", "override config file")
 
 	// how to remove the help flag help text from the help output! Sigh...
 	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
@@ -83,26 +82,16 @@ func RootCmd() *cobra.Command {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
+	var err error
 
-		// Search config in home directory with name ".servicenow" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(".servicenow")
+	cf, err = config.LoadConfig(execname,
+		config.SetAppName("geneos"),
+		config.UseGlobal(),
+		config.SetConfigFile(conffile))
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to load configuration")
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-	}
 }
 
 var snowConnection *snow.Connection
@@ -112,6 +101,6 @@ func InitializeConnection() *snow.Connection {
 		return snowConnection
 	}
 
-	snowConnection = snow.InitializeConnection(vc)
+	snowConnection = snow.InitializeConnection(cf)
 	return snowConnection
 }

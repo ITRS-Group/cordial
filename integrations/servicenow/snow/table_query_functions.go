@@ -52,18 +52,19 @@ func (t RequestTransitive) QueryTableDetail(table string) (r ResultDetail, err e
 }
 
 func (t RequestTransitive) QueryTable(table string) (i ResultsArray, err error) {
-	req := AssembleRequest(t, table)
+	req, err := AssembleRequest(t, table)
+	if err != nil {
+		return
+	}
 
 	resp, err := t.Client.Do(req)
 	if err != nil {
-		fmt.Printf("Error %s\n", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("Error %s\n", err)
 		return
 	}
 
@@ -71,7 +72,6 @@ func (t RequestTransitive) QueryTable(table string) (i ResultsArray, err error) 
 		var r map[string]ResultsArray
 		err = json.Unmarshal(body, &r)
 		if err != nil {
-			fmt.Printf("Error %s %s\n", err, string(body))
 			return
 		}
 		i = r["result"]
@@ -89,7 +89,10 @@ func (t RequestTransitive) QueryTable(table string) (i ResultsArray, err error) 
 }
 
 func (t RequestTransitive) QueryTableSingle(table string) (i ResultDetail, err error) {
-	req := AssembleRequest(t, table)
+	req, err := AssembleRequest(t, table)
+	if err != nil {
+		return
+	}
 
 	resp, err := t.Client.Do(req)
 	if err != nil {

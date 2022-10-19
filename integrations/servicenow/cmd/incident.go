@@ -35,13 +35,12 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
-	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-var conffile, short, text, rawtext, search, severity, id, rawid string
+var short, text, rawtext, search, severity, id, rawid string
 var update_only bool
 
 func init() {
@@ -77,11 +76,6 @@ var incidentCmd = &cobra.Command{
 }
 
 func incident(args []string) {
-	vc, err := config.LoadConfig(execname, config.SetAppName("itrs"), config.SetConfigFile(conffile))
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
 	// fill in minimal defaults - also get defaults from config
 	incident := make(snow.Incident)
 	if short != "" {
@@ -130,10 +124,10 @@ func incident(args []string) {
 	}
 
 	// map severity
-	mapSeverity(severity, incident, vc.GetStringMapString("servicenow.geneosseveritymap"))
+	mapSeverity(severity, incident, cf.GetStringMapString("servicenow.geneosseveritymap"))
 
 	// and read defaults for any unset fields
-	configDefaults(incident, vc.GetStringMapString("servicenow.incidentdefaults"))
+	configDefaults(incident, cf.GetStringMapString("servicenow.incidentdefaults"))
 
 	requestBody, err := json.Marshal(incident)
 	if err != nil {
@@ -142,10 +136,10 @@ func incident(args []string) {
 
 	var server string
 
-	if vc.GetBool("api.tls.enabled") {
-		server = fmt.Sprintf("https://%s:%d", vc.GetString("api.host"), vc.GetInt("api.port"))
+	if cf.GetBool("api.tls.enabled") {
+		server = fmt.Sprintf("https://%s:%d", cf.GetString("api.host"), cf.GetInt("api.port"))
 	} else {
-		server = fmt.Sprintf("http://%s:%d", vc.GetString("api.host"), vc.GetInt("api.port"))
+		server = fmt.Sprintf("http://%s:%d", cf.GetString("api.host"), cf.GetInt("api.port"))
 	}
 
 	u, err := url.Parse(server)
@@ -160,7 +154,7 @@ func incident(args []string) {
 		log.Fatal().Err(err).Msg("")
 	}
 
-	bearer := fmt.Sprintf("Bearer %s", vc.GetString("api.apikey"))
+	bearer := fmt.Sprintf("Bearer %s", cf.GetString("api.apikey"))
 
 	req.Header.Add("Authorization", bearer)
 
