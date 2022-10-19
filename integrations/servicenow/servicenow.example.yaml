@@ -6,7 +6,7 @@ API:
 ServiceNow:
   Instance: devXXXXX
   Username: admin
-  Password: ${enc:~/.keyfile.aes:+encs+FD9242D3BDB49CF13FC9E76E3906BDC3}
+  Password: ${enc:keyfile:ciphertext}
   # ClientID: ${SERVICENOW_CLIENTID}
   # ClientSecret: ${SERVICENOW_CLIENTSECRET}
   SearchType: simple

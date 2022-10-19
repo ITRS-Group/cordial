@@ -25,7 +25,6 @@ package snow
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -46,6 +45,7 @@ func InitializeConnection(vc *config.Config) *Connection {
 	}
 
 	pw := []byte(vc.GetString("servicenow.password"))
+
 	// XXX - deprecated. Use above with expansion options
 	if len(pw) == 0 {
 		var passwordfile = vc.GetString("servicenow.passwordfile")
@@ -97,35 +97,35 @@ func InitializeConnection(vc *config.Config) *Connection {
 	return cachedConnection
 }
 
-func AssembleRequest(t RequestTransitive, table string) (req *http.Request) {
+func AssembleRequest(t RequestTransitive, table string) (req *http.Request, err error) {
 	host := t.Connection.Instance
 	if !strings.Contains(host, ".") {
 		host += ".service-now.com"
 	}
-	Url, err := url.Parse("https://" + host)
+	u, err := url.Parse("https://" + host)
 	if err != nil {
-		fmt.Printf("Error%s\n", err)
+		return
 	}
 
 	if t.SysID != "" {
-		Url.Path += "/api/now/v2/table/" + table + "/" + t.SysID
+		u.Path += "/api/now/v2/table/" + table + "/" + t.SysID
 	} else {
-		Url.Path += "/api/now/v2/table/" + table
+		u.Path += "/api/now/v2/table/" + table
 	}
 
 	z := t.Params.Encode()
 	z = strings.ReplaceAll(z, "+", "%20") // XXX ?
 
-	Url.RawQuery = z
+	u.RawQuery = z
 
 	payload := bytes.NewReader(t.Payload)
-	if req, err = http.NewRequest(t.Method, Url.String(), payload); err != nil {
-		fmt.Printf("Error %s\n", err)
+	if req, err = http.NewRequest(t.Method, u.String(), payload); err != nil {
+		return
 	}
 	if t.Connection.Client == http.DefaultClient {
 		req.SetBasicAuth(t.Connection.Username, t.Connection.Password)
 	}
 	req.Header.Add("Accept", "application/json")
 
-	return req
+	return
 }

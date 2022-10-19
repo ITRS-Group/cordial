@@ -24,7 +24,6 @@ package snow
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -32,10 +31,8 @@ import (
 type Incident map[string]string
 
 func CreateIncident(vc *config.Config, sys_id string, incident Incident) (incident_number string, err error) {
-	// var ok bool
 	var postbytes []byte
 	var result ResultDetail
-	// var stateid string
 
 	// Initialize ServiceNow Connection
 	s := InitializeConnection(vc)
@@ -50,7 +47,7 @@ func CreateIncident(vc *config.Config, sys_id string, incident Incident) (incide
 
 	postbytes, err = json.Marshal(incident)
 	if err != nil {
-		fmt.Println(err)
+		return
 	}
 	result, err = s.POST(postbytes, "", "number", "", "", "").QueryTableSingle(vc.GetString("servicenow.incidenttable"))
 	if err != nil {
