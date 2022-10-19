@@ -66,7 +66,7 @@ var configFile, execname string
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVarP(&configFile, "conf", "c", "", "config file (default is $HOME/.config/geneos/pagerduty.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&configFile, "conf", "c", "", "local config file")
 
 	// how to remove the help flag help text from the help output! Sigh...
 	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
@@ -105,7 +105,10 @@ var cf *config.Config
 func initConfig() {
 	var err error
 
-	cf, err = config.LoadConfig("pagerduty", config.SetDefaults(defaults, "yaml"), config.SetConfigFile(configFile))
+	cf, err = config.LoadConfig(execname,
+		config.SetAppName("geneos"),
+		config.SetDefaults(defaults, "yaml"),
+		config.SetConfigFile(configFile))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to load configuration")
 	}
@@ -123,8 +126,8 @@ func sendEvent(eventType eventType) (err error) {
 	if timestamp == "" {
 		timestamp = time.Now().Format(time.RFC3339)
 	} else {
-		// format
-		t, err := time.Parse("", timestamp)
+		// geneos timestamp format is Go ANSIC format
+		t, err := time.Parse(time.ANSIC, timestamp)
 		if err != nil {
 			timestamp = time.Now().Format(time.RFC3339)
 		} else {
