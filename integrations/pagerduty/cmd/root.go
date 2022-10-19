@@ -138,7 +138,7 @@ func sendEvent(eventType eventType) (err error) {
 		}
 	}
 
-	details := payload.GetStringMap("details")
+	details := payload.GetStringMapString("details")
 	if cf.GetBool("pagerduty.send-env") {
 		for _, e := range os.Environ() {
 			s := strings.SplitN(e, "=", 2)
