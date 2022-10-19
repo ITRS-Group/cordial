@@ -171,7 +171,10 @@ func initConfig() {
 
 	oldConfDir, _ := os.UserConfigDir()
 
-	cf, err := config.LoadConfig("geneos", config.SetConfigFile(cfgFile), config.UseGlobal(), config.AddConfigDirs(oldConfDir))
+	cf, err := config.LoadConfig("geneos",
+		config.SetConfigFile(cfgFile),
+		config.UseGlobal(),
+		config.AddConfigDirs(oldConfDir))
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
