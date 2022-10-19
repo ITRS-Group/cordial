@@ -97,7 +97,7 @@ The default configuration sets the following:
     * `group` - default `${_SAMPLER_GROUP}`
 
     * `details` - no default, but see `send-env` below
-      The details sub-section is used for the PD-CEF `Custom Details` values. Each entry under details is placed into the custom details section as-is.
+      The details sub-section is used for the PD-CEF `Custom Details` values. Each `name: value` under `details` is placed in the `Custom Details` field.
 
   * `links` and `images`
 
