@@ -58,6 +58,9 @@ var FA2 = geneos.Component{
 
 type FA2s instance.Instance
 
+// ensure that FA2s satisfies geneos.Instance interface
+var _ geneos.Instance = (*FA2s)(nil)
+
 func init() {
 	geneos.RegisterComponent(&FA2, New)
 }

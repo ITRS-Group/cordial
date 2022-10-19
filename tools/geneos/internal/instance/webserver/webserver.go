@@ -61,6 +61,9 @@ var Webserver = geneos.Component{
 
 type Webservers instance.Instance
 
+// ensure that Webservers satisfies geneos.Instance interface
+var _ geneos.Instance = (*Webservers)(nil)
+
 func init() {
 	geneos.RegisterComponent(&Webserver, New)
 }

@@ -73,6 +73,9 @@ var Gateway = geneos.Component{
 
 type Gateways instance.Instance
 
+// ensure that Gateways satisfies geneos.Instance interface
+var _ geneos.Instance = (*Gateways)(nil)
+
 //go:embed templates/gateway.setup.xml.gotmpl
 var GatewayTemplate []byte
 
