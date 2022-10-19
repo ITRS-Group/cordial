@@ -27,9 +27,9 @@ pagerduty:
       source: ${_MANAGED_ENTITY}
       severity: ${_SEVERITY}
       timestamp: ${_ALERT_TIME}
+      class: ${_SAMPLER}
       component: ${_NETPROBE_HOST}
       group: ${_SAMPLER_GROUP}
-      class: ${_SAMPLER}
       # details is a map of customer values to send with the event
       # details:
       #   variable: ${_VARIABLE}
