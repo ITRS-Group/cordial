@@ -367,15 +367,16 @@ func mapEnv(e string) (s string) {
 // LoadConfig loads configuration files from internal defaults, external
 // defaults and the given configuration file. The configuration file can
 // be passed as an option. Each layer is only loaded once, if given.
-// Internal defaults are passed as a []byte intended to be loaded from
-// an embedded file. External defaults and the main configuration file
-// are passed as ordered slices of strings. The first match is loaded.
+// Internal defaults are passed as a byte slice - this is typically
+// loaded from an embedded file but can be supplied from any source.
+// External defaults and the main configuration file are passed as
+// ordered slices of strings. The first match is loaded.
 //
 //	LoadConfig("geneos")
 //
 //	//go:embed somefile.json
 //	var myDefaults []byte
-//	LoadConfig("geneos", config.SetDefaults(myDefaults, "json"), config.SetConfigFIle(configPath))
+//	LoadConfig("geneos", config.SetDefaults(myDefaults, "json"), config.SetConfigFile(configPath))
 //
 // Options can be passed to change the default behaviour and to pass any
 // embedded defaults or an existing viper.

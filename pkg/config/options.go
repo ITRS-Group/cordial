@@ -61,8 +61,7 @@ func UseGlobal() Options {
 	}
 }
 
-// SetDefaults() takes a []byte slice and a format type to load embedded
-// defaults
+// SetDefaults() takes a []byte slice and a format type to set defaults
 func SetDefaults(defaults []byte, format string) Options {
 	return func(c *configOptions) {
 		c.defaults = defaults
@@ -71,9 +70,8 @@ func SetDefaults(defaults []byte, format string) Options {
 }
 
 // SetAppName() overrides to mapping of the configName to the
-// application name. Application name is used for the containing
-// directories, while configName is used for the files in those
-// directories.
+// application name. AppName is used for directories while configName is
+// used for the files in those directories.
 func SetAppName(name string) Options {
 	return func(c *configOptions) {
 		c.appname = name
@@ -92,6 +90,8 @@ func SetConfigFile(path string) Options {
 // AddConfigDirs() adds one or more directories to search for the
 // configuration and defaults files. Directories are searched in FIFO
 // order, so any directories given are checked before the built-in list.
+// This option can be given multiple times as each call only appends to
+// the list which has already bee initialised.
 func AddConfigDirs(paths ...string) Options {
 	return func(c *configOptions) {
 		c.configDirs = append(c.configDirs, paths...)
@@ -100,15 +100,16 @@ func AddConfigDirs(paths ...string) Options {
 
 // IgnoreWorkingDir() tells LoadConfig not to search the working
 // directory for configuration files. This should be used when the
-// caller may be running in an unknown location.
+// caller may be running in an unknown or untrusted location.
 func IgnoreWorkingDir() Options {
 	return func(c *configOptions) {
 		c.ignoreworkingdir = true
 	}
 }
 
-// IgnoreUserConfDir() tells LoadConfig() not to search in the user
-// config directory (OS defined as per Go os.UserConfDir())
+// IgnoreUserConfDir() tells LoadConfig() not to search under the user
+// config directory (The user config directory is as per Go
+// os.UserConfDir() and a sub-directory of AppName)
 func IgnoreUserConfDir() Options {
 	return func(c *configOptions) {
 		c.ignoreuserconfdir = true
@@ -117,7 +118,7 @@ func IgnoreUserConfDir() Options {
 
 // IgnoreSystemDir() tells LoadConfig() not to search in the system
 // configuration directory. This only applies on UNIX-like systems and
-// is normally /etc/[appName]
+// is normally /etc/[AppName]
 func IgnoreSystemDir() Options {
 	return func(c *configOptions) {
 		c.ignoresystemdir = true
