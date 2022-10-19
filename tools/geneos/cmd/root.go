@@ -96,8 +96,11 @@ processes and build template based configuration files for SANs and
 $ geneos start
 $ geneos ps
 `, "|", "`"),
-	SilenceUsage:      true,
-	Annotations:       make(map[string]string),
+	SilenceUsage: true,
+	Annotations:  make(map[string]string),
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
 	Version:           cordial.VERSION,
 	DisableAutoGenTag: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
