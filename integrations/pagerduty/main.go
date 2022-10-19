@@ -20,20 +20,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-// Standalone pagerduty integration executable
-//
-// Given a set of Geneos environment variables and a configuration file
-// send events to pagerduty using EventV2 API
-//
-// Some behaviours are hard-wired;
-//
-// Severity OK is a Resolved
-// Severity Warning or Critical is trigger
-// Other Severity is mapped to ?
-//
-// Snooze or Userassignment is an Acknowledge
 package main
 
-import (
-	_ "embed"
-)
+import "github.com/itrs-group/cordial/integrations/pagerduty/cmd"
+
+func main() {
+	cmd.Execute()
+}
