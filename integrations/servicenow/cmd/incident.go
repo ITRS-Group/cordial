@@ -28,16 +28,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
+
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -77,11 +77,9 @@ var incidentCmd = &cobra.Command{
 }
 
 func incident(args []string) {
-
-	execname := filepath.Base(os.Args[0])
 	vc, err := config.LoadConfig(execname, config.SetAppName("itrs"), config.SetConfigFile(conffile))
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	// fill in minimal defaults - also get defaults from config
@@ -90,7 +88,7 @@ func incident(args []string) {
 		incident["short_description"] = short
 	}
 	if id != "" && rawid != "" {
-		log.Fatalln("only one of -id or -rawid can be given")
+		log.Fatal().Msg("only one of -id or -rawid can be given")
 	}
 
 	if id != "" {
@@ -139,7 +137,7 @@ func incident(args []string) {
 
 	requestBody, err := json.Marshal(incident)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	var server string
@@ -152,14 +150,14 @@ func incident(args []string) {
 
 	u, err := url.Parse(server)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	u.Path = "/api/v1/incident"
 
 	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(requestBody))
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	bearer := fmt.Sprintf("Bearer %s", vc.GetString("api.apikey"))
@@ -170,32 +168,32 @@ func incident(args []string) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if resp.StatusCode > 299 {
-		log.Fatalln(resp.Status, string(body))
+		log.Fatal().Msgf("%s %s", resp.Status, string(body))
 	}
 
 	var result map[string]string
 
 	err = json.Unmarshal(body, &result)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if result["message"] != "" {
-		log.Fatalln(result["message"])
+		log.Fatal().Msg(result["message"])
 	}
 
 	if result["action"] == "Failed" {
-		log.Fatalf("%s to create event for %s\n", result["action"], result["host"])
+		log.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
 	}
 
 	log.Printf("%s %s %s\n", result["event_type"], result["number"], result["action"])
