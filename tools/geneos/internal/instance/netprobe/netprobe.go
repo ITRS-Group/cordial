@@ -57,6 +57,9 @@ var Netprobe = geneos.Component{
 
 type Netprobes instance.Instance
 
+// ensure that Netprobes satisfies geneos.Instance interface
+var _ geneos.Instance = (*Netprobes)(nil)
+
 func init() {
 	geneos.RegisterComponent(&Netprobe, New)
 }

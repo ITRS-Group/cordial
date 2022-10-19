@@ -68,6 +68,9 @@ var FileAgent = geneos.Component{
 
 type FileAgents instance.Instance
 
+// ensure that FileAgents satisfies geneos.Instance interface
+var _ geneos.Instance = (*FileAgents)(nil)
+
 func init() {
 	geneos.RegisterComponent(&FileAgent, New)
 }

@@ -65,6 +65,9 @@ var San = geneos.Component{
 
 type Sans instance.Instance
 
+// ensure that Sans satisfies geneos.Instance interface
+var _ geneos.Instance = (*Sans)(nil)
+
 //go:embed templates/netprobe.setup.xml.gotmpl
 var SanTemplate []byte
 

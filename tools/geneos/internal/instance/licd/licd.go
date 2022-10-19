@@ -58,6 +58,9 @@ var Licd = geneos.Component{
 
 type Licds instance.Instance
 
+// ensure that Licds satisfies geneos.Instance interface
+var _ geneos.Instance = (*Licds)(nil)
+
 func init() {
 	geneos.RegisterComponent(&Licd, New)
 }
