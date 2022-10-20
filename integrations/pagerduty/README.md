@@ -71,7 +71,7 @@ For `resolve` and `acknowledge` the severity is set to `info` regardless of othe
 
 The one choice that may need clarification is the selection of `acknowledge` events; From the Geneos side an Alert is suspended if the data item (or parent data item) is Snoozed or Assigned or if it becomes inactive (e.g. via an Active Time). These Geneos state changes roughly meet the criteria on the Pagerduty side for [Incident Statuses](https://support.pagerduty.com/docs/incidents) - i.e. once a Geneos data item is snoozed, assigned or inactive then it is either being worked on or not considered immediately significant. If you are using Alerts, as opposed to Actions or Commands, then these settings are reversed automatically when the item is un-snoozed.
 
-Automated assignment/unassignment events depends on the configuration in your Gateway under Authentication -> Advanced -> User Assignment.
+Automated assignment/un-assignment events depends on the configuration in your Gateway under Authentication -> Advanced -> User Assignment.
 
 ## Configuration Sources
 
@@ -91,7 +91,7 @@ Geneos passes alert information to external programs and scripts using environme
 
 See below for the meaning of the items in the configuration.
 
-### Configuration Logic
+### Configuration
 
 When run as either an Action from a Rule or an Effect from an Alert, Geneos sets a number of environment variables which can be used in the configuration to build custom Pagerduty values. The defaults given below (prefixed with an `_` underscore) are some of these. See the Geneos documentation for more details.
 
