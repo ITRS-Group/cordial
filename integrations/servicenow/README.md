@@ -1,32 +1,32 @@
-# ITRS Geneos to Service Now Incident Integration
+# ITRS Geneos to ServiceNow Incident Integration
 
-**Note**: In this release all long command-line options now require two dashes, i.e. `-conf` is now `--conf`. There are also short-form flags for many options.
+**Note**: All long format flags now require two dashes, i.e. `-conf` is now `--conf`. There are also short-form flags for many options.
+
+**Note 2**: The two binaries in previous releases have been merged into one and use sub-commands to direct requests. There may be references to the old split binary in this document.
 
 ## Introduction
 
-This Geneos to ServiceNow integration provides a way for you to create or update incidents in ServiceNow from your Geneos gateway(s). The selection of the components to raise incidents against, the user and the mappings of Geneos data to specific fields in Service Now are all configurable.
+This Geneos to ServiceNow integration provides a way for you to create or update incidents in ServiceNow from your Geneos Gateways. The selection of the ServiceNow components to raise incidents against, the user and the mappings of Geneos data to specific fields in ServiceNow are all configurable.
 
-The binaries provided are for linux-amd64 as this is the standard architecture supported by the Geneos Gateway, however there should be no restriction on platform if you build from source.
-
-There are no specific prerequisites to use this integration beyond the two programs and their respective configuration files.
+The binary provided is for `linux-amd64` as this is the standard architecture supported by the Geneos Gateway, however there should be no restriction on platform if you build from source.
 
 ## Components
 
-There are two primary components of the integration. The router (`snow_router`) and the client CLI (`snow_client`).
+There are two primary components of the integration; The router (`servicenow router`) and the incident trigger (`servicenow incident`).
 
-The router runs as a service and listens for connections on the configured TCP port. It supports one REST endpoint that can service two methods, GET and POST, on `/api/v1/incident`. Access control is via a shared token common to both configuration files.
+When run as a router it can run as a service and listens for connections on the configured TCP port. It supports one REST endpoint that can service two methods, GET and POST, on `/api/v1/incident`. Access control is via a simple shared token.
 
 Issuing a GET request fetches a list of active incidents for the user, which defaults to the Username in the router configuration. An alternative user can be give as a query parameter, e.g. `/api/v1/incident?user=fred`.
 
-Issuing a POST request takes the supplied JSON request body and after processing according to router configuration either updates or creates an incident. There is no support for specific RESTful POST and PUT methods for creation or updating, as the router searches for an existing incident and makes the decision on whether a new incident or an update should be issued to the Service Now system. 
+Issuing a POST request takes the supplied JSON request body and after processing according to router configuration either updates or creates an incident. There is no support for specific RESTful POST and PUT methods for creation or updating, as the router searches for an existing incident and makes the decision on whether a new incident or an update should be issued to the Service Now system.
 
-The `snow_client` client provides a CLI interface to deliver formatted calls to the router. The CLI client will normally be called from a wrapper scripts such as the `ticket.sh` example provided.
+When run as a non-router the program provides a CLI interface to deliver formatted calls to the router. This CLI will normally be called from a wrapper scripts such as the `ticket.sh` example provided.
 
-## Command Line Options
+## Command Line Flags
 
-### CLI Client
+### Incident Mode
 
-    snow_client
+    servicenow incident
         [-c | --conf FILE]
         [-s | --short SHORT]
         -t | --text TEXT | --rawtext TEXT
@@ -38,53 +38,79 @@ The `snow_client` client provides a CLI interface to deliver formatted calls to 
 
 The `--text` and `--search` flags are mandatory.
 
-#### Client Options
-
 * `--conf FILE` or `-c FILE`
+
   An optional path to a configuration file. This must be a YAML file. The default is described below.
+
 * `--short SHORT` or `-s SHORT`
+
   An optional `short_description` value, used for incident creation. In a typical configuration this is removed for incident updates to it is safe to supply this option even when you are not sure if this call will result in a new incident or an update.
+
 * `--text TEXT` or `-t TEXT` / `--rawtext TEXT`
+
   A REQUIRED text value to use in incident creation (as `description`) or incident update (as `work_notes`). Ensure that you have correctly quoted the text string for the shell you are using to ensure that it is passed as a single argument after the flag name.
   The argument passed to `--text` is processed by an `Unquote` function that converts embedded special characters, e.g. `\n` and '`\t`, into their well known real equivalents as well as removing extra quoting while the argument passed to `--rawtext` is left unchanged. `--rawtext` takes precendence over `-text` if both are supplied.
+
 * `--search QUERY` or `-f QUERY` (mnemonic: `f` for find)
+
   A REQUIRED query that is used to locate the `sys_id` of the CMDB item that the incident applies to. There are two types of query, defined by the route configuration, and are documented in detail below. In short, the typical format is `[TABLE:]FIELD=VALUE`, where the optional TABLE defaults to `cmdb_ci` and a typical query is `name=MyServerName`. As for `-text` above, you should ensure that you quote the QUERY so that any spaces or special characters are passed correctly by the shell as a single argument.
   If the search returns no result and a `default_cmdb_ci` has been supplied, either on the command line or as a field in the client `IncidentDefaults` part of the configuration file then this is used as a fallback. It cannot be specified in the router configuration as it is a required value to lookup incidents before the `IncidentStateDefaults` section of the route configuration is referenced.
   Note: If the search fails because of a syntax error then the ticket submission will return an error and not use any default value.
+
 * `--id CORRELATION` or `-i CORRELATION`
 * `--rawid RAW_CORRELATION`
+
   An optional correlation value used to match incidents. Only one of two flags can be used.
   The `-id` flag takes the value of CORRELATION and applies a one way hash function to generate a fixed length hexadecimal string which helps both limit the size of the field and also to opaque the underlying value passed to the integration. This value is then used when searching for an existing incident for the same CMDB item.
   The `--rawid` passes the value given without change to the integration and this is used when searching for an incident.
+
 * `--severity SEVERITY` or `-S SEVERITY` (note capital `S`)
+
   An optional, but recommended, value passed in from Geneos that maps the selection of zero or more fields to set (or remove) based on the configuration file's `GeneosSeverityMap` (see example below). Any text value is converted to lower case (e.g. `Critical` becomes `critical`) to match the way the YAML file is processed. You can also pass numeric values, which are simply used as their text equivalents.
+
 * `--updateonly` or `-U`
+
   If set then no new incident will be created and only existing incidents will be updated with the details given. An error is returned if no incident is found.
+
 * `key=value ...`
+
   After all flags are processed, the remaining command line arguments are treated as key/value pairs and, after configuration parameters are applied, passed as fields to the router and then to Service Now. This allows arbitrary incident fields to be set (but NOT removed, unlike configuration fields, below) by the caller.
 
 ### Router
 
-    snow_router [-c | --conf FILE]
+The router mode has fewer options:
 
-#### Router Options
+    servicenow router [-c | --conf FILE] [-D | --daemon]
 
 * `--conf FILE` or `-c FILE`
+
   An optional path to a configuration file. This must be a YAML file. The default is described below.
 
-## Configuring the router and the CLI client.
+* `--daemon` or `-D`
 
-Both components load their configuration from a YAML file. Unless passed a path using the `--conf` flag, both components look for a YAML file with the same name as the executable (with a `.yaml` extension) in the following locations:
+  Run as a background daemon. The process is detached from the session and no output is logged. Logging to a file will be added in a later release.
 
-* The current directory, e.g. `./`
-* The user configuration directory, typically `$HOME/.config`
-* A system-wide `/etc/itrs` directory
+## Configuration
 
-Both components share a common YAML configuration format but can, and should, have their own configurations as some parameters are only used by one component or the other.
+The integration consists of one executable, by default called `servicenow`, and a configuration file with the same name and a `.yaml` extension. If you rename the executable to suit your environment then note that the configuration files (mentioned below) also change to match. e.g. if you rename the executable `itrs-snow` then the configuration files will be `itrs-snow.yaml` etc.
 
-The values in the YAML configuration are handled by the [config](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config) package and support a variety of expansion options through the [config.ExpandString()](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString) function
+### Configuration Sources
 
-If the two binaries are used with their names as supplied than the configuration files will be `snow_router.yaml` and `snow_client.yaml`. If, for example, you rename the CLI client to `client` then it will try to load `client.yaml` instead, and so on.
+The integration takes it settings from the following, in order of priority from highest to lowest:
+
+1. Command line flags
+2. Configuration files (in the order below, first found 'wins' - they are not merged)
+
+      * `./servicenow.yaml`
+      * `${HOME}/.config/geneos/servicenow.yaml`
+      * `/etc/geneos/servicenow.yaml`
+
+3. External Defaults File (as above but named `servicenow.defaults.yaml` etc.)
+4. Internal Defaults
+
+The values in the configuration files are handled by the [config](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config) package and support a variety of expansion options through the [config.ExpandString()](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString) function
+
+The configuration for router and incident modes are independent but can share a single configuration file.
 
 ### Router configuration
 
@@ -172,7 +198,7 @@ ServiceNow:
 
 ### Configuration Items
 
-Note: All values that are intended to be passed to Service Now as a field are unquoted to allow the embedding of special characters unless otherwise mentioned.
+Note: All values that are intended to be passed to ServiceNow as a field are unquoted to allow the embedding of special characters unless otherwise noted.
 
 * `API`
 
@@ -202,11 +228,9 @@ Note: All values that are intended to be passed to Service Now as a field are un
 
       The path to a server certificate bundle file. The underlying Go documentation says:
 
-      ```text
-      If the certificate is signed by a certificate authority,
-      the certFile should be the concatenation of the server's
-      certificate, any intermediates, and the CA's certificate.
-      ```
+          If the certificate is signed by a certificate authority,
+          the certFile should be the concatenation of the server's
+          certificate, any intermediates, and the CA's certificate.
 
     * `Key`
 
@@ -279,9 +303,9 @@ Note: All values that are intended to be passed to Service Now as a field are un
 
     A list of named defaults to apply to the incident depending on the `state` match above. These are in the form `field: value`. 
 
-### Configuration Security and other features
+### Configuration Security
 
-All plain values in the configuration support string expansion according to the function [ExpandString](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString). 
+All plain values in the configuration support string expansion according to the function [ExpandString](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString).
 
 ### Service Now Incident Field Processing
 
@@ -289,7 +313,7 @@ Command line flags, field mappings and other settings are applied in the followi
 
 * CLI Client:
 
-  1. Command line flags for --short and --text
+  1. Command line flags for `--short` and `--text`
 
   2. Command line `key=value` pairs set incident fields, including earlier values above
 
@@ -320,7 +344,7 @@ A typical wrapper script might look like this:
 ```bash
 #!/bin/bash
 
-SNOW_CLIENT_BINARY=${HOME}/bin/snow_client
+SNOW_CLIENT_BINARY=${HOME}/bin/servicenow
 
 if [ "${_PLUGINNAME}" = "FKM" ]
 then
@@ -336,13 +360,13 @@ TEXT="Geneos time: ${_ALERT_CREATED}\nGateway: ${_GATEWAY}\nManaged Entity: ${_M
 # SEARCH="sys_id=${UUID}"
 SEARCH="name=${_NETPROBE_HOST}"
 
-${SNOW_CLIENT_BINARY} --short "${SHORT}" --search "${SEARCH}" --text "${TEXT}" \
+${SNOW_CLIENT_BINARY} incident --short "${SHORT}" --search "${SEARCH}" --text "${TEXT}" \
 -id "${ID:-$_MANAGED_ENTITY}" --severity "${_SEVERITY}" category="${COMPONENT:-Hardware}"
 ```
 
 In the above example we build a correlation ID, depending on the sampler type, from a number of Geneos XPath components, a SHORT and TEXT description and a SEARCH query. These are then passed into the client binary along with the Geneos severity value and one custom field.
 
-Note: The value passed to `--text` is passed through an `Unquote` routine and so can include escape sequences such as embedded newlines and tabs if required, while `--rawtext` is left unchanged.
+Note: The value passed to `--text` is passed through the [`strconv.Unquote`](https://pkg.go.dev/strconv#Unquote) function and so can include escape sequences such as embedded newlines and tabs if required, while `--rawtext` is left unchanged.
 
 The wrapper script will typically be called from a Geneos Action or Effect depending on your Geneos configuration. It is worth noting that Action and Effects export similar, but not identical, sets of environment variables to external programs. These are detailed in the technical reference documentation linked below:
 
@@ -355,24 +379,26 @@ The client to router connection is stateless and operates on a per invocation ba
 
 ## Use with HTTP(s) Proxies
 
-The integration uses the Go http (snow_client) and echo (snow_router) packages. Both support the use of proxies as documented here: [Go http `ProxyFromEnvironment`](https://pkg.go.dev/net/http#ProxyFromEnvironment). This applies to environment variables for both the client, for connection to the router, and the router, for connections to Service Now.
+The integration uses the Go http and Labstack's echo packages. Both support the use of proxies as documented here: [Go http `ProxyFromEnvironment`](https://pkg.go.dev/net/http#ProxyFromEnvironment). This applies to environment variables for both the client, for connection to the router, and the router, for connections to Service Now.
 
 ## Running the Router
 
 Once you have edited the configuration file, running the router is straightforward.
 
-### Option 1 - Execute in terminal.
+### Option 1 - Execute in terminal
 
 Simply execute the router binary. It will run in the foreground in your user's session and log to STDOUT.
 
-### Option 2 - Run as a SystemD Service.
+### Option 2 - Run as a SystemD Service
+
+**Note** This option has not been tested for a couple of minor release now. It will be validated (and changes made as required) in the next release.
 
 The router can be run as a SystemD service.
 
 ```ini
 [Unit]
-Description=ITRS Snow Router
-ConditionPathExists=/opt/itrs/snow_router
+Description=ITRS Geneos ServiceNow Router
+ConditionPathExists=/opt/itrs/servicenow
 After=network.target
 
 [Service]
@@ -386,7 +412,7 @@ RestartSec=10
 StartLimitIntervalSec=60
 
 WorkingDirectory=/opt/itrs
-ExecStart=/opt/itrs/snow_router
+ExecStart=/opt/itrs/servicenow router
 
 PermissionsStartOnly=true
 StandardOutput=syslog
@@ -397,27 +423,27 @@ SyslogIdentifier=snow_router
 WantedBy=multi-user.target
 ```
 
-Edit the above to suit your installation and then copy it to `/lib/systemd/system/snow_router.service`
+Edit the above to suit your installation and then copy it to `/lib/systemd/system/geneos-servicenow.service`
 
 You will need to edit the paths in several places (`ConditionPathExists`,`WorkingDirectory`,`ExecStart`) as well as change the `User` and `Group` to use values appropriate to your server and environment.
 
 Once the service file is configured and in place you must perform the following steps:
 
 1. `systemctl daemon-reload` This will restart the Systemd daemon so that it is aware of the new service.
-2. `systemctl start snow_router.service` - This will start the service
-3. `systemctl enable snow_router.service` - This will ensure that the service will survive a reboot.
-4. `systemctl status snow_router.service` - This lets you view the state of the service.
+2. `systemctl start geneos-servicenow.service` - This will start the service
+3. `systemctl enable geneos-servicenow.service` - This will ensure that the service will survive a reboot.
+4. `systemctl status geneos-servicenow.service` - This lets you view the state of the service.
 
 To view the logs of the service while running you can use journalctl. Executing the following will show you the logs.
 
-`journalctl -u snow_router.service`
+`journalctl -u geneos-servicenow.service`
 
 If you wish to view the logs in real time (tail -f) you can accomplish that with the following command.
 
-`journalctl -u snow_router.service -f`
+`journalctl -u geneos-servicenow.service -f`
 
 To view logs for a specific time range use the following.
 
-* `journalctl -u snow_router.service --since "1 hour ago"`
-* `journalctl -u snow_router.service --since "2 days ago"`
-* `journalctl -u snow_router.service --since "2020-06-26 23:15:00" --until "2020-06-26 23:20:00"`
+* `journalctl -u geneos-servicenow.service --since "1 hour ago"`
+* `journalctl -u geneos-servicenow.service --since "2 days ago"`
+* `journalctl -u geneos-servicenow.service --since "2020-06-26 23:15:00" --until "2020-06-26 23:20:00"`
