@@ -122,6 +122,7 @@ The default configuration sets the following:
   The Integration Key can be found under the Pagerduty Service -> Integrations tab (select the service under your instance: `https://XXX.pagerduty.com/service-directory`). You should either select the Geneos integration (if it exists in your list) or create a `Custom Event Transformer`. Click on the down arrow to reveal the Integration Key value.
 
 * `alert-type` - default: `${_ALERT_TYPE}`
+
   The `pagerduty.alert-type` is used (in the code above) to indicate a `clear` or `suspend`. Other values are ignored.
 
 * `severity-map` - default: see file `pagerduty.defaults.yaml`
@@ -179,7 +180,7 @@ The default configuration sets the following:
       The details sub-section is used for the PD-CEF `Custom Details` values. Each `name: value` under `details` is placed in the `Custom Details` field. If `send-env` is `true` below then these details are added after the environment and so may override environment variables of the same name.
 
   * `links` and `images` - defaults: `_KBA_URLS` and none.
-  
+
     A Pagerduty event payload can contain links and image references. While the default links are set to an Geneos Knowledge Base Articles defined on the data item, these values do not appear in the Pagerduty incident interface at this time.
 
 * `send-env` - default: `false`
