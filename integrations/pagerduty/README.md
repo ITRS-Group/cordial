@@ -98,6 +98,7 @@ When run as either an Action from a Rule or an Effect from an Alert, Geneos sets
 The default configuration sets the following:
 
 * `authtoken` - Required
+
   This is the API Key that grant Geneos access to Pagerduty. You will need to create one under the API Access Keys page of your Pagerduty instance - e.g. `https://XXX.pagerduty.com/api_keys`. To protect the key from casual viewing use the `${enc:}` format supported by `cordial` via the `geneos aes` commands. For example:
 
   ```bash
@@ -115,6 +116,7 @@ The default configuration sets the following:
   ```
 
 * `routingkey` - Required. Default take from environment variable `PAGERDUTY_INTEGRATION_KEY`
+
   The Pagerduty routing key that sends the event to a specific service. Each service in Pagerduty will have it's own routing key, so depending on how you have defined your Pagerduty services you may, for example, set this as an Geneos Attribute on a Managed Entity or Managed Entity Group, and then it is automatically set with the same name in the environment of the `pagerduty` program when run.
 
   The Integration Key can be found under the Pagerduty Service -> Integrations tab (select the service under your instance: `https://XXX.pagerduty.com/service-directory`). You should either select the Geneos integration (if it exists in your list) or create a `Custom Event Transformer`. Click on the down arrow to reveal the Integration Key value.
@@ -123,6 +125,7 @@ The default configuration sets the following:
   The `pagerduty.alert-type` is used (in the code above) to indicate a `clear` or `suspend`. Other values are ignored.
 
 * `severity-map` - default: see file `pagerduty.defaults.yaml`
+
   The configuration settings under `pagerduty.severity-map` maps Geneos severity values (on the left) to values in the PD-CEF list (`info`, `warning`, `error`, `critical`), recognised by Pagerduty with one exception; The value `ok` is used to indicate this is a resolution and should result in a `resolve` event being sent. In this case the PD-CEF severity is then internally set to `info`.
 
   The default is to map Geneos `critical` and `warning` to Pagerduty `critical` and `warning` levels and Geneos `ok` is treated as above.
@@ -130,9 +133,11 @@ The default configuration sets the following:
   To build more complex mapping logic, for example using the Pagerduty `error` level for some Geneos items, you can use multiple configuration files and refer to them at execution time using the `-c` flag.
 
 * `event`
+
   The `pagerduty.event` hierarchy sets the various values in the Pagerduty EventsV2 API.
 
   * `dedup-key` - default: `${_VARIABLEPATH}`
+
     The deduplication key is set to the full XPath of the data item that triggered the integration. Sometimes you will want to use other values such as a more general containing data item (the Managed Entity, for example) or a combination of Managed Entity Attributes and other values. You can combine input values by simple concatenation, however be aware of how YAML may treat special characters and if in doubt use quotes. e.g.
 
     ```yaml
@@ -140,6 +145,7 @@ The default configuration sets the following:
     ```
 
   * `client` & `client-url` - defaults: `ITRS Geneos` and `https://www.itrsgroup.com`
+
     The `client` and `client_url` values are shown in the Pagerduty incident as a link, the `client` being the displayed text (prefixed by `View in`) and the `client_url` the destination. These could be used, for example, to link to your internal knowledge base / wiki for a specific service. Remember that you can build these values in the configuration file from multiple environment variables and static text, e.g. if `COMPONENT` and `RUNBOOK` are Geneos Attributes set on a Managed Entity:
 
     ```yaml
@@ -149,6 +155,7 @@ The default configuration sets the following:
     ```
 
   * `payload`
+
     These fields represent the [Pagerduty Common Event Format](https://support.pagerduty.com/docs/pd-cef) - the way the YAML file is loaded means the names (on the left) are always treated as case insenstive, so `Summary`, `SUMMARY` and `summary` are all the same.
 
     * `summary` - default `${_RULE} Triggered`
@@ -158,6 +165,7 @@ The default configuration sets the following:
     * `severity` - default `${_SEVERITY}`
 
     * `timestamp` - default `${_ALERT_TIME}`
+
       The `timestamp` will reflect the time of the Geneos Alert, but at this time this value is not reflected in the Pagerduty incident raised.
 
     * `class` - default `${_SAMPLER}`
@@ -167,9 +175,11 @@ The default configuration sets the following:
     * `group` - default `${_SAMPLER_GROUP}`
 
     * `details` - no default, but see `send-env` below
+
       The details sub-section is used for the PD-CEF `Custom Details` values. Each `name: value` under `details` is placed in the `Custom Details` field. If `send-env` is `true` below then these details are added after the environment and so may override environment variables of the same name.
 
   * `links` and `images` - defaults: `_KBA_URLS` and none.
+  
     A Pagerduty event payload can contain links and image references. While the default links are set to an Geneos Knowledge Base Articles defined on the data item, these values do not appear in the Pagerduty incident interface at this time.
 
 * `send-env` - default: `false`
