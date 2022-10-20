@@ -33,3 +33,4 @@ cordial.code-workspace
 integrations/servicenow/servicenow.yaml
 integrations/pagerduty/pagerduty
 docs/docs
+.vscode
