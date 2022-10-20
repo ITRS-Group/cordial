@@ -1,10 +1,10 @@
 # ITRS Geneos to Pagerduty Event Integration
 
-This program allows you to send ITRS Geneos alerts to Pagerduty as Events which can, in turn, raise Incidents.
+This program allows you to send ITRS Geneos alerts to Pagerduty as Events which, in turn, raise or update Incidents.
 
 ## Getting Started
 
-You can either download a binary or build from source. The default configuration tries to transform Geneos Alert / Action values into a sensible mapping into a Pagerduty event. You will need to supply an authentication token and an integration ID.
+You can either download a binary or build from source. The default configuration transforms Geneos Alert or Rule & Action values into sensible mappings to a Pagerduty event. You will need to supply an authentication token and an integration key.
 
 The integration consists of one executable, by default called `pagerduty`, and a configuration file with the same name and a `.yaml` extension. If you rename the executable to suit your environment then note that the configuration files (mentioned below) also change to match. e.g. if you rename the executable `itrs-pd` then the configuration files will be `itrs-pd.yaml` etc.
 
