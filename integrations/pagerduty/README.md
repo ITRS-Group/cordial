@@ -98,7 +98,7 @@ When run as either an Action from a Rule or an Effect from an Alert, Geneos sets
 The default configuration sets the following:
 
 * `authtoken` - Required
-  This is the API Key that grant Geneos access to Pagerduty. You will need to create one under the API Access Keys page of your Pagerduty instance - e.g. `https://XXX.pagerduty.com/api_keys`. To protect the key for casual viewing your the `${enc:}` format supported by `cordial` via the `geneos aes` commands. For example:
+  This is the API Key that grant Geneos access to Pagerduty. You will need to create one under the API Access Keys page of your Pagerduty instance - e.g. `https://XXX.pagerduty.com/api_keys`. To protect the key from casual viewing use the `${enc:}` format supported by `cordial` via the `geneos aes` commands. For example:
 
   ```bash
   # unless already done, create an aes keyfile (this is save in ${HOME}/.config/geneos/keyfile.aes by default)
