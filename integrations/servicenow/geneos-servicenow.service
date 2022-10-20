@@ -1,9 +1,9 @@
 #
-# This needs updating
+# XXX This needs updating
 #
 [Unit]
-Description=ITRS Snow Router
-ConditionPathExists=/opt/itrs/snow_router
+Description=ITRS Geneos ServiceNow Incident Router
+ConditionPathExists=/opt/itrs/servicenow
 After=network.target
 
 [Service]
@@ -17,12 +17,12 @@ RestartSec=10
 StartLimitIntervalSec=60
 
 WorkingDirectory=/opt/itrs
-ExecStart=/opt/itrs/snow_router
+ExecStart=/opt/itrs/servicenow router
 
 PermissionsStartOnly=true
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=snow_router
+SyslogIdentifier=geneos-servicenow
 
 [Install]
 WantedBy=multi-user.target
