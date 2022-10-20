@@ -93,7 +93,7 @@ See below for the meaning of the items in the configuration.
 
 ### Configuration Logic
 
-All other behaviour is (should be) configurable. When run as either an Action from a Rule or an Effect from an Alert, Geneos sets a number of environment variables which can be used in the configuration to build custom Pagerduty values. The defaults given below (prefixed with an `_` underscore) are some of these. See the Geneos documentation for more details.
+When run as either an Action from a Rule or an Effect from an Alert, Geneos sets a number of environment variables which can be used in the configuration to build custom Pagerduty values. The defaults given below (prefixed with an `_` underscore) are some of these. See the Geneos documentation for more details.
 
 The default configuration sets the following:
 
