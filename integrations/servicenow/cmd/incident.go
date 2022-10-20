@@ -190,7 +190,7 @@ func incident(args []string) {
 		log.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
 	}
 
-	log.Printf("%s %s %s\n", result["event_type"], result["number"], result["action"])
+	fmt.Printf("%s %s %s\n", result["event_type"], result["number"], result["action"])
 
 }
 
