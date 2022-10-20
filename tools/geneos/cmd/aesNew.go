@@ -40,16 +40,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var aesNewCmdKeyfile, aesNewCmdHostname string
-var aesNewCmdImport bool
+var aesNewCmdKeyfile, aesNewCmdHostname, aesNewCmdBackupKeyfile string
+var aesNewCmdImport, aesNewCmdSaveDefault, aesNewCmdOverwriteKeyfile bool
+
+var aesNewDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
 
 func init() {
 	aesCmd.AddCommand(aesNewCmd)
 
-	aesNewCmd.Flags().StringVarP(&aesNewCmdKeyfile, "keyfile", "k", "", "Optional key file to create, defaults to STDOUT")
+	aesNewCmd.Flags().StringVarP(&aesNewCmdKeyfile, "keyfile", "k", "", "Optional key file to create, defaults to STDOUT. (Will NOT overwrite without -f)")
+	aesNewCmd.Flags().BoolVarP(&aesNewCmdSaveDefault, "default", "D", false, "Save as user default keyfile (will NOT overwrite without -f)")
+	aesNewCmd.Flags().StringVarP(&aesNewCmdBackupKeyfile, "backup", "b", ".old", "Backup existing keyfile with extension given")
+	aesNewCmd.Flags().BoolVarP(&aesNewCmdOverwriteKeyfile, "overwrite", "f", false, "Overwrite existing keyfile")
 	aesNewCmd.Flags().BoolVarP(&aesNewCmdImport, "import", "I", false, "Import the keyfile to components and set on matching instances.")
 	aesNewCmd.Flags().StringVarP(&aesNewCmdHostname, "host", "H", "", "Import only to named host, default is all")
 
+	aesNewCmd.MarkFlagsMutuallyExclusive("keyfile", "default")
 }
 
 var aesNewCmd = &cobra.Command{
@@ -81,9 +87,20 @@ rolling.
 			return
 		}
 
+		if aesNewCmdSaveDefault {
+			aesNewCmdKeyfile = aesNewDefaultKeyfile
+		}
+
 		if aesNewCmdKeyfile != "" {
-			if _, err := os.Stat(aesNewCmdKeyfile); err == nil {
-				return fs.ErrExist
+			if !aesNewCmdOverwriteKeyfile {
+				if _, err := os.Stat(aesNewCmdKeyfile); err == nil {
+					return fs.ErrExist
+				}
+			}
+			if aesNewCmdBackupKeyfile != "" {
+				if err = os.Rename(aesNewCmdKeyfile, aesNewCmdKeyfile+aesNewCmdBackupKeyfile); err != nil {
+					return fmt.Errorf("keyfile backup failed: %w", err)
+				}
 			}
 			os.WriteFile(aesNewCmdKeyfile, []byte(a.String()), 0600)
 		} else if !aesNewCmdImport {
