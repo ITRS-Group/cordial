@@ -76,7 +76,7 @@ The `--text` and `--search` flags are mandatory.
 
   After all flags are processed, the remaining command line arguments are treated as key/value pairs and, after configuration parameters are applied, passed as fields to the router and then to Service Now. This allows arbitrary incident fields to be set (but NOT removed, unlike configuration fields, below) by the caller.
 
-### Router
+### Router Mode
 
 The router mode has fewer options:
 
@@ -117,31 +117,31 @@ The configuration for router and incident modes are independent but can share a 
 Here is an example router configuration file.
 
 ```yaml
-API:
-  Host: 0.0.0.0
-  Port: 3000
-  APIKey: RANDOMAPIKEY
+api:
+  host: 0.0.0.0
+  port: 3000
+  apikey: RANDOMAPIKEY
 
-ServiceNow:
-  Instance: instancename
-  Username: ${SERVICENOW_USERNAME}
-  Password: ${enc:~/.keyfile:env:SERVICENOW_PASSWORD}
+servicenow:
+  instance: instancename
+  username: ${SERVICENOW_USERNAME}
+  password: ${enc:~/.keyfile:env:SERVICENOW_PASSWORD}
   # PasswordFile: ~/.snowpw
-  ClientID: ${SERVICENOW_CLIENTID}
-  ClientSecret: ${enc:~/.keyfile:+encs+6680A7836122519CE44EEE1BA9152900}
-  SearchType: simple
-  QueryResponseFields: number,sys_id,cmdb_ci.name,short_description,description,correlation_id,opened_by,state
-  IncidentTable: incident
-  IncidentStates:
-    0: Create
-    1: [ New, Update ]
-    2: Update
-    3: Hold
-    4: Hold
-    5: Hold
-    6: Resolved
-  IncidentStateDefaults:
-    Create:
+  clientid: ${SERVICENOW_CLIENTID}
+  clientsecret: ${enc:~/.keyfile:+encs+6680A7836122519CE44EEE1BA9152900}
+  searchtype: simple
+  queryresponsefields: number,sys_id,cmdb_ci.name,short_description,description,correlation_id,opened_by,state
+  incidenttable: incident
+  incidentstates:
+    0: create
+    1: [ new, update ]
+    2: update
+    3: hold
+    4: hold
+    5: hold
+    6: resolved
+  incidentstatedefaults:
+    create:
       assignment_group: something
       contact_type: email
       impact: 3
@@ -152,9 +152,9 @@ ServiceNow:
       caller_id: admin
       short_description: must exist
       description: default long description here
-    New:
+    new:
       someother: value
-    Update:
+    update:
       assignment_group: somethingelse
       contact_type: email
       impact: 3
@@ -164,7 +164,7 @@ ServiceNow:
       caller_id: admin
       work_notes: long description here
       short_description: ""  # delete / never update
-    Resolved:
+    resolved:
       short_description: ""
       caller_id: admin
       state: 1
@@ -173,20 +173,20 @@ ServiceNow:
 ### Client Config
 
 ```yaml
-API:
-  Host: localhost
-  Port: 3000
-  APIKey: RANDOMAPIKEY
+api:
+  host: localhost
+  port: 3000
+  apikey: RANDOMAPIKEY
 
-ServiceNow:
-  GeneosSeverityMap:
-    CRITICAL: impact=1,urgency=1
-    WARNING: impact=3,urgency=3
-    OK: state=6,close_code="Closed/Resolved by Caller",close_notes="Resolved"
+servicenow:
+  geneosseveritymap:
+    critical: impact=1,urgency=1
+    warning: impact=3,urgency=3
+    ok: state=6,close_code="Closed/Resolved by Caller",close_notes="Resolved"
     3: impact=1,urgency=1
     2: impact=3,urgency=3
     1: state=6,close_code="Closed/Resolved by Caller",close_notes="Resolved"
-  IncidentDefaults:
+  incidentdefaults:
     assignment_group: group1
     incident_type: event
     impact: 3
@@ -200,67 +200,69 @@ ServiceNow:
 
 Note: All values that are intended to be passed to ServiceNow as a field are unquoted to allow the embedding of special characters unless otherwise noted.
 
-* `API`
+* `api`
 
   Configuration of the router connection
 
-  * `Host`
+  * `host`
 
     * For the router this is an optional IP address to listen on. If not given than the router listens on all network interfaces (including localhost).
 
     * For the client this is the hostname or IP address of the router
 
-  * `Port`
+  * `port`
 
   The TCP port that the router listens on (and that the CLI client should connect to).
 
-  * `APIKey`
+  * `apikey`
 
     This can be any string, however a randomly generated key should be used. The router will only accept requests (GET or POST) if the client has the same Bearer token. This also applies to the GET API call to list all existing incidents.
 
-  * `TLS` **Router Only**
+  * `tls` **Router Only**
 
-    * `Enable`
+    The router can listen on a secure connection but for this to work you must supply a certificate and a private key. These can either be the path to a file or an embedded PEM value in the configuration file. The program will first try to decode the value and if that fails will try to load it from a file. Please see online YAML resources on how to format a multiline certificate or key as a value.
+
+    * `enable`
 
       If this is set to `true` (no quotes) then the router will load a certificate and key from the locations given below and start a TLS (https) listener, otherwise the router uses plain HTTP.
 
-    * `Certificate`
+    * `certificate`
 
-      The path to a server certificate bundle file. The underlying Go documentation says:
+      An embedded or a path to a server certificate bundle. The underlying Go documentation says:
 
           If the certificate is signed by a certificate authority,
           the certFile should be the concatenation of the server's
           certificate, any intermediates, and the CA's certificate.
 
-    * `Key`
+    * `key`
 
-      The path to a TLS private key file.
+      An embedded or a path to a TLS private key. The key file cannot be encrypted at this time.
 
-* `ServiceNow`
+* `servicenow`
 
-  * `Instance` **Router Only**
+  * `instance` **Router Only**
 
     The Service Now instance name. If the name does _not_ contain a dot (`.`) then it is suffixed with `.service-now.com` otherwise it is assumed to have a domain name (or be an IP address) and is used as is.
 
-  * `Username` **Router Only**
+  * `username` **Router Only**
 
     The Service Now API username. This, and a password, are required even if OAuth2 is configured. See the documentation links below.
 
-  * `Password` **Router Only**
+  * `password` **Router Only**
 
-    A password for the user above. This takes precedence over `PasswordFile` below. Passwords can be encoded using Geneos style `+encs+...` AES256 values. The format is documented in [config.ExpandString()](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString). Keyfiles and encoded strings can be created either using the details in the [Secure Passwords](https://docs.itrsgroup.com/docs/geneos/6.0.0/Gateway_Reference_Guide/gateway_secure_passwords.htm) documentation or by using the [`geneos`](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos) tool's `aes` commands.
+    A password for the user above. This takes precedence over `passwordfile` below. Passwords can be encoded using Geneos style `+encs+...` AES256 values. The format is documented in [config.ExpandString()](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString). Keyfiles and encoded strings can be created either using the details in the [Secure Passwords](https://docs.itrsgroup.com/docs/geneos/6.0.0/Gateway_Reference_Guide/gateway_secure_passwords.htm) documentation or by using the [`geneos`](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos) tool's `aes` commands.
 
-  * `PasswordFile` **Router Only** - **Deprecated**
+  * `passwordfile` **Router Only** - **Deprecated**
     A path to a file containing the plain text password for the user above. This file should be protected with Linux permissions 0600 to prevent unauthorised access. If a tilde (`~`) is the first character then the path is relative to the user home directory. e.g. `~/.snowpw`
-    This setting has been deprecated in favour of encoded value expansion for `Password` above.
+    This setting has been deprecated in favour of encoded value expansion for `password` above.
 
-  * `ClientID` **Router Only**
+  * `clientid` **Router Only**
 
-  * `ClientSecret` **Router Only**
+  * `clientsecret` **Router Only**
 
     If these configuration values are supplied then the router will use a 2-legged OAuth2 flow to obtain a token and auto refresh token. This requires OAuth to be configured and enabled in your Service Now instance. OAuth is not attempted if the instance name contains a dot (`.`) which indicates that you are using a non-SaaS/cloud instance.
 
-    `ClientSecret` can be encoded like `Password` above.
+    `clientsecret` can be encoded like `password` above.
 
     See the following document for more information:
 
@@ -270,19 +272,19 @@ Note: All values that are intended to be passed to ServiceNow as a field are unq
 
     * <https://docs.servicenow.com/bundle/rome-platform-administration/page/administer/security/reference/r_OAuthAPIRequestParameters.html>
 
-  * `SearchType` **Router Only**
+  * `searchtype` **Router Only**
     There are two search types for `cmdb_ci` table queries, `simple` and any other value. When using `simple` the query format is `[TABLE:]FIELD=VALUE`. The `TABLE` defaults to `cmdb_ci` if not supplied. `FIELD` and `VALUE` are partially validated by simply (hence the name) splitting on the first `=` found. No further validation of the contents of the two parameters is done.
-    Is the `SearchType` is not set to `simple` then the query is passed through as-is to the Service Now API.
+    Is the `searchtype` is not set to `simple` then the query is passed through as-is to the Service Now API.
 
-  * `QueryResponseFields` **Router Only**
+  * `queryresponsefields` **Router Only**
 
     A comma separated list of fields to return when calling the request-all-incident endpoint.
 
-  * `IncidentTable` **Router Only**
+  * `incidenttable` **Router Only**
 
     The `incident` table to use. Normally this is `incident` but there may be circumstances where there are multiple similar tables in their Service Now implementation. There is no way to change this at run-time and if support is required for multiple tables then you can run multiple routers listening on different ports.
 
-  * `GeneosSeverityStates` **Client only**
+  * `geneosseveritystates` **Client only**
 
     User-defined mapping from the `-severity` flag to field values to pass to the router. Each entry is of the form:
     `KEY: FIELD=VALUE[,...]`
@@ -291,17 +293,17 @@ Note: All values that are intended to be passed to ServiceNow as a field are unq
 
     The `FIELD=VALUE` list is a comma-separated list of key/value pairs for fields to pass to the router. These are case sensitive. Leading and trailing spaces are trimmed from each key/value pair.
 
-  * `IncidentDefaults` **Client Only**
+  * `incidentdefaults` **Client Only**
 
     These defaults are applied to any unset fields and passed to the router. Further details below
 
-  * `IncidentStates` **Router Only**
+  * `incidentstates` **Router Only**
 
-    A list of numeric `state` values that map to named set(s) of defaults (defined by `IncidentStateDefaults` below) to apply to incidents depending on the `state` of the incident after initial lookup. `0` (zero) is used when no active incident match is found.
+    A list of numeric `state` values that map to named set(s) of defaults (defined by `incidentstatedefaults` below) to apply to incidents depending on the `state` of the incident after initial lookup. `0` (zero) is used when no active incident match is found.
 
-  * `IncidentStateDefaults` **Router Only**
+  * `incidentstatedefaults` **Router Only**
 
-    A list of named defaults to apply to the incident depending on the `state` match above. These are in the form `field: value`. 
+    A list of named defaults to apply to the incident depending on the `state` match above. These are in the form `field: value`.
 
 ### Configuration Security
 
@@ -317,15 +319,15 @@ Command line flags, field mappings and other settings are applied in the followi
 
   2. Command line `key=value` pairs set incident fields, including earlier values above
 
-  3. The --severity flag feeds the `GeneosSeverityMap` in the client configuration which will overwrite and/or delete fields. A delete is done if passed an literal empty string, with quotes (`""`).
+  3. The --severity flag feeds the `geneosseveritymap` in the client configuration which will overwrite and/or delete fields. A delete is done if passed an literal empty string, with quotes (`""`).
 
-  4. Subsequent fields without values take defaults from the client `IncidentDefaults` configuration. As above, a literal empty string value (`""`) means delete any previously defined value.
+  4. Subsequent fields without values take defaults from the client `incidentdefaults` configuration. As above, a literal empty string value (`""`) means delete any previously defined value.
 
 * Router receives the fields from the client as above, and then:
 
-  1. After the incident lookup the value in the `state` field is used as a key in the `IncidentStates` configuration, where 0 (zero) means that no active incident was found.
+  1. After the incident lookup the value in the `state` field is used as a key in the `incidentstates` configuration, where 0 (zero) means that no active incident was found.
 
-  2. Fields without values take any defined default from the matching router configuration `IncidentStateDefaults` lists in the order they are listed in `IncidentStates`, but a literal empty string (`""`) means delete any previous value.
+  2. Fields without values take any defined default from the matching router configuration `incidentstatedefaults` lists in the order they are listed in `incidentstates`, but a literal empty string (`""`) means delete any previous value.
 
 Other built-in processing, which is necessary for the Service Now incident table API to work, include:
 
@@ -335,7 +337,7 @@ Other built-in processing, which is necessary for the Service Now incident table
 
   3. The `cmdb_ci` field is set to the `sys_id` value found for incident creation (updates use the incident `sys_id`).
 
-  4. If a field `update_only` is set to `true` (the literal word `true` as a string) then no new incident will be created. This has the same effect as using `-updateonly` on the client command line. This field can also be set in the client configuration file, e.g. for certain severity mappings, but on the router side can only be applied when `IncidentStates` = `0` (i.e. for new incidents) but can still be overridden by a client supplied `update_only` set to any non `true` value.
+  4. If a field `update_only` is set to `true` (the literal word `true` as a string) then no new incident will be created. This has the same effect as using `-updateonly` on the client command line. This field can also be set in the client configuration file, e.g. for certain severity mappings, but on the router side can only be applied when `incidentstates` = `0` (i.e. for new incidents) but can still be overridden by a client supplied `update_only` set to any non `true` value.
 
 ### Wrapper script configuration
 
@@ -397,7 +399,7 @@ The router can be run as a SystemD service.
 
 ```ini
 [Unit]
-Description=ITRS Geneos ServiceNow Router
+Description=ITRS Geneos ServiceNow Incident Router
 ConditionPathExists=/opt/itrs/servicenow
 After=network.target
 
@@ -417,7 +419,7 @@ ExecStart=/opt/itrs/servicenow router
 PermissionsStartOnly=true
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=snow_router
+SyslogIdentifier=geneos-servicenow
 
 [Install]
 WantedBy=multi-user.target

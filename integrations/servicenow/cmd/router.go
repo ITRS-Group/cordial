@@ -24,11 +24,13 @@ package cmd
 
 import (
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/process"
 
 	"github.com/labstack/echo/v4"
@@ -113,7 +115,24 @@ func router() {
 	if !cf.GetBool("api.tls.enabled") {
 		e.Logger.Fatal(e.Start(i))
 	} else if cf.GetBool("api.tls.enabled") {
-		e.Logger.Fatal(e.StartTLS(i, cf.GetString("api.tls.certificate"), cf.GetString("api.tls.key")))
+		var cert interface{}
+		certstr := config.GetString("api.tls.certificate")
+		certpem, _ := pem.Decode([]byte(certstr))
+		if certpem == nil {
+			cert = certstr
+		} else {
+			cert = []byte(certstr)
+		}
+
+		var key interface{}
+		keystr := config.GetString("api.tls.key")
+		keypem, _ := pem.Decode([]byte(keystr))
+		if keypem == nil {
+			key = keystr
+		} else {
+			key = []byte(keystr)
+		}
+		e.Logger.Fatal(e.StartTLS(i, cert, key))
 	}
 }
 
