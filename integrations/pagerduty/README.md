@@ -17,7 +17,7 @@ pagerduty:
 
 Save this as `.config/geneos/pagerduty.yaml` relative to the home directory of the user running the Geneos Gateway.
 
-In your Geneos Gateway create an Effect like this:
+In your Geneos Gateway create an Effect like this, changing the path to the binary as required:
 
 ```xml
 <effect name="Pagerduty Event">
