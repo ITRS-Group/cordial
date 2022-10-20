@@ -41,7 +41,7 @@ Note that the Gateway does not reload any shared libraries it has already loaded
 
 The official `libemail.so` is [documented here](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_rulesactionsalerts_tr.html#Libemail) and all of the parameters are supported.
 
-Note that if you are using this as a literal drop-in replacement you will need to restart the Gateway process to load the new library.
+Note that if you are using this as a literal drop-in replacement you may need to restart the Gateway process to load the new library, if the old one was already loaded from the same location.
 
 #### New features
 
@@ -49,7 +49,7 @@ The following additional parameters are supported by the `SendMail` function:
 
 * `_SMTP_USERNAME`
 * `_SMTP_PASSWORD`
-* `_SMTP_PASSWORD_FILE`
+* `_SMTP_PASSWORD_FILE` **Deprecated**
 * `_SMTP_TLS`
 
 If `_SMTP_USERNAME` is set then authentication is attempted. As the Gateway writes all parameters to it's log file, the password should either be encoded using [ExpandString](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString) or placed in a file with restrictive permissions that can be read by the Gateway process. The `_SMTP_PASSWORD_FILE` is either and absolute path or a path to a file relative to the working directory of the Gateway. If defined then `_SMTP_PASSWORD` overrides the value in any file referenced by `_SMTP_PASSWORD_FILE`.
@@ -57,6 +57,8 @@ If `_SMTP_USERNAME` is set then authentication is attempted. As the Gateway writ
 To use an encoded password it must be in the format `${enc:KEYFILE:CIPHERTEXT}`. This is the format supported by [ExpandString](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString) and can be created using the [`geneos`](/tools/geneos/README.md) program or manually by following the instructions in [Secure Passwords](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm). Assuming you have created a keyfile and saved it to the default location (e.g. `geneos aes new -k ~/.config/geneos/keyfile.aes`) then you can generate the value like this:
 
 ```bash
+# first, create a keyfile, if one does not exist
+$ geneos aes new -D
 $ geneos aes encode -e
 Password: [ENTER PASSWORD HERE]
 ${enc:~/.config/geneos/keyfile.aes:+encs+02554ABDB5474D9FC604CAF63E50918C}
@@ -79,19 +81,40 @@ This is a forward compatible function that accepts almost the standard parameter
 The following new parameters are used to support Go templates - both text and HTML:
 
 * `_TEMPLATE_TEXT`
-  Override the built-in text template. This is now a single block of configurable text and uses the power of Go templates to embed the logic to evaluate different Alert types that was previously performed in code and with multiple formats.
+
+  Override the built-in text template. This is now a single block of configurable text and uses Go templates to embed the logic to evaluate different Alert types that was previously performed in code and with multiple formats.
+
 * `_TEMPLATE_TEXT_FILE`
-  Override the build-in text template with the contents of the named file. This takes precendece over `_TEMPLATE_TEXT`
+
+  Override the build-in text template with the contents of the named file. This takes precedence over `_TEMPLATE_TEXT`
+
 * `_TEMPLATE_TEXT_ONLY`
+
   If this is set (to any value) then the function will send a text-only EMail and not process any HTML or CSS settings
+
 * `_TEMPLATE_HTML` and `_TEMPLATE_HTML_FILE`
+
   Similar to the above, these settings override the default HTML template. The default HTML template is almost identical to the text one except all parameter values are rendered in *bold*.
+
+* `_TEMPLATE_HTML_ONLY`
+
+  **Not yet implemented** This option will send HTML only email and avoids a multipart MIME message.
+
 * `_TEMPLATE_CSS` and `_TEMPLATE_CSS_FILE`
+
   Similar to the above, these settings override the default CSS template. The CSS template is included in the HTML template, whether default or user defined, using the following syntax and should be enclosed in `<style type="text/css>...</style>` tags:
-  > ```{{template "css"}}```
+
+  ```css
+  {{template "css"}}
+  ```
+
 * `_TEMPLATE_LOGO_FILE`
-  Override the default embedded logo, which is a Material notification icon. This should be a PNG file and is referenced in the HTML as
-  > ```<img src="cid:logo.png" />```
+
+  Override the default embedded logo, which is a Material notification icon. This should be a PNG file and is referenced in the HTML as:
+
+  ```html
+  <img src="cid:logo.png" />
+  ```
 
 Note: If you use any of the non-FILE settings then the Gateway will log the full template text in the log each time the `GoSendMail` function is invoked. This may result is very large log lines. It is suggested you use the `_FILE` suffixed settings for anything other than very simple templates.
 
@@ -102,6 +125,9 @@ In a future version it is expected that multiple files will be loadable using Go
 There is one built in `_DEBUG` parameter but you can also add your own to the template logic and `_TEMPLATE_DEBUG` has been included in the built-in templates to demonstrate this.
 
 * `_DEBUG`
+
   If set to `true` (case insentisive) prevents EMail meta parameters (e.g. `_FROM`, `_SMTP_SERVER` etc.) from being removed from the parameters passed to formats or templates. This includes the plain text password, if provided, so beware. You can then output these values in your custom formats and templates for review.
+
 * `_TEMPLATE_DEBUG`
+
   This example parameter outputs a text and HTML table of all parameters, unsorted, which may or may not include the EMail meta-parameters, depending on `_DEBUG` above. In the built-in templates this has to be either `TRUE` or `true` and will not work for `True`, for example.
