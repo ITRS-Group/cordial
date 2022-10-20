@@ -1,6 +1,6 @@
 # ITRS Geneos to Pagerduty Event Integration
 
-This program allows you to send ITRS Geneos alerts to Pagerduty as Events which, in turn, raise or update Incidents.
+This program sends ITRS Geneos Alerts as Pagerduty Events which, in turn, raise or update Incidents.
 
 ## Getting Started
 
