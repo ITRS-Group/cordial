@@ -14,17 +14,10 @@ them but configurations will not be rebuilt.
 geneos tls init
 ```
 
-### Options
-
-```
-  -h, --help   help for init
-```
-
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

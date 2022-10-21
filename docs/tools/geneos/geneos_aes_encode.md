@@ -25,14 +25,12 @@ geneos aes encode [flags] [TYPE] [NAME...]
   -s, --source string     Source for password to use
   -e, --expandable        Output in ExpandString format
   -o, --once              Only prompt for password once. For scripts injecting passwords on stdin
-  -h, --help              help for encode
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

@@ -18,14 +18,12 @@ geneos ps [flags] [TYPE] [NAMES...]
   -j, --json     Output JSON
   -i, --pretty   Indent / pretty print JSON
   -c, --csv      Output CSV
-  -h, --help     help for ps
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

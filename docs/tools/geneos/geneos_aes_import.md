@@ -32,14 +32,12 @@ geneos aes import [flags] [TYPE] [NAME...]
 ```
   -k, --keyfile string   Keyfile to use (default "/home/peter/.config/geneos/keyfile.aes")
   -H, --host string      Import only to named host, default is all
-  -h, --help             help for import
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

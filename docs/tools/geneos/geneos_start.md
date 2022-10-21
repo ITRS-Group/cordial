@@ -18,15 +18,13 @@ geneos start [flags] [TYPE] [NAME...]
 ### Options
 
 ```
-  -l, --log    Run 'logs -f' after starting instance(s)
-  -h, --help   help for start
+  -l, --log   Run 'logs -f' after starting instance(s)
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

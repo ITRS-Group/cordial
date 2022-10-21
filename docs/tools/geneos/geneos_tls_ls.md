@@ -23,14 +23,12 @@ geneos tls ls [flags] [TYPE] [NAME...]
   -l, --long     Long output
   -i, --pretty   Indent / pretty print JSON
   -c, --csv      Output CSV
-  -h, --help     help for ls
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

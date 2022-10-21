@@ -32,14 +32,12 @@ geneos aes decode [flags] [TYPE] [NAME...]
   -v, --previous string   Previous AES key file to use (default "/home/peter/.config/geneos/prevkeyfile.aes")
   -p, --password string   Password to decode
   -s, --source string     Source for password to use
-  -h, --help              help for decode
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

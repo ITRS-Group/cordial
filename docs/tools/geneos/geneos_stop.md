@@ -20,14 +20,12 @@ geneos stop [flags] [TYPE] [NAME...]
 
 ```
   -K, --kill   Force immediate stop by sending an immediate SIGKILL
-  -h, --help   help for stop
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

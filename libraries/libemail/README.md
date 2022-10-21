@@ -126,7 +126,7 @@ There is one built in `_DEBUG` parameter but you can also add your own to the te
 
 * `_DEBUG`
 
-  If set to `true` (case insentisive) prevents EMail meta parameters (e.g. `_FROM`, `_SMTP_SERVER` etc.) from being removed from the parameters passed to formats or templates. This includes the plain text password, if provided, so beware. You can then output these values in your custom formats and templates for review.
+  If set to `true` (case insensitive) prevents EMail meta parameters (e.g. `_FROM`, `_SMTP_SERVER` etc.) from being removed from the parameters passed to formats or templates. This includes the plain text password, if provided, so beware. You can then output these values in your custom formats and templates for review.
 
 * `_TEMPLATE_DEBUG`
 

@@ -18,14 +18,12 @@ geneos delete host [flags] NAME...
   -F, --force   Delete instances without checking if disabled
   -R, --all     Recursively delete all instances on the host before removing the host config
   -S, --stop    Stop all instances on the host before deleting the local entry
-  -h, --help    help for host
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

@@ -55,14 +55,12 @@ geneos update netprobe 5.13.2
   -b, --base string      Base name for the symlink, defaults to active_prod (default "active_prod")
   -H, --host string      Apply only on remote host. "all" (the default) means all remote hosts and locally (default "all")
   -R, --restart          Restart all instances that may have an update applied
-  -h, --help             help for update
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

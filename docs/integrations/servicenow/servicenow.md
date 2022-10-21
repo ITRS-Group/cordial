@@ -10,12 +10,11 @@ Geneos to ServiceNow integration
 ### Options
 
 ```
-  -c, --conf string   config file (default is $HOME/.servicenow.yaml)
-  -h, --help          help for servicenow
+  -c, --conf string   override config file
 ```
 
 ### SEE ALSO
 
-* [servicenow incident](servicenow_incident.md)	 - Raise or update an incident
+* [servicenow incident](servicenow_incident.md)	 - Raise or update a ServiceNow incident
 * [servicenow router](servicenow_router.md)	 - Run a ServiceNow integration router
 

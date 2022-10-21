@@ -51,14 +51,12 @@ geneos import gateway -c shared common_include.xml
 ```
   -c, --common string   Import into a common directory instead of matching instances.	For example, if TYPE is 'gateway' and NAME is 'shared' then this common directory is 'gateway/gateway_shared'
   -H, --host string     Import only to named host, default is all (default "all")
-  -h, --help            help for import
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

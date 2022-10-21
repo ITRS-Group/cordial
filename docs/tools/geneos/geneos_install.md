@@ -7,25 +7,23 @@ Install (remote or local) Geneos packages
 
 Installs files from FILE(s) in to the packages/ directory. The filename(s) must of of the form:
 
-	geneos-TYPE-VERSION*.tar.gz
+	`geneos-TYPE-VERSION*.tar.gz`
 
 The directory for the package is created using the VERSION from the archive
-filename unless overridden by the -T and -V flags.
+filename unless overridden by the `-T` and `-V` flags.
 
 If a TYPE is given then the latest version from the packages/downloads
 directory for that TYPE is installed, otherwise it is treated as a
 normal file path. This is primarily for installing to remote locations.
 
-TODO:
-
-Install only changes creates a base link if one does not exist.
-To update an existing base link use the -U option. This stops any
-instance, updates the link and starts the instance up again.
+Install only changes a base link if one does not exist. To update an
+existing base link use the `-U` option. The `-U` options stops any instance,
+updates the link and starts the instance up again.
 
 Use the update command to explicitly change the base link after installation.
 
-Use the -b flag to change the base link name from the default 'active_prod'. This also
-applies when using -U.
+Use the `-b` flag to change the base link name from the default `active_prod`. This also
+applies when using `-U`.
 
 
 ```
@@ -56,14 +54,12 @@ geneos install netprobe -b active_dev -U
   -P, --pwfile string     Password file to read for downloads, defaults to configuration value in download.password or otherwise prompts
   -U, --update            Update the base directory symlink
   -T, --override string   Override (set) the TYPE:VERSION for archive files with non-standard names
-  -h, --help              help for install
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

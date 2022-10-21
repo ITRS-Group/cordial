@@ -29,15 +29,13 @@ geneos show [flags]
 ### Options
 
 ```
-  -r, --raw    Show raw (unexpanded) configuration values
-  -h, --help   help for show
+  -r, --raw   Show raw (unexpanded) configuration values
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

@@ -30,14 +30,12 @@ geneos snapshot [flags] [gateway] [NAME] XPATH...
   -P, --pwfile string     Password file to read for snapshots, defaults to configuration value in snapshot.password or otherwise prompts
   -l, --limit int         limit matching items to display. default is unlimited. results unsorted.
   -x, --xpaths            just show matching xpaths
-  -h, --help              help for snapshot
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

@@ -61,6 +61,8 @@ const (
 	Resolve
 )
 
+var cf *config.Config
+
 var configFile, execname string
 
 func init() {
@@ -102,7 +104,9 @@ func Execute() {
 	}
 }
 
-var cf *config.Config
+func RootCmd() *cobra.Command {
+	return rootCmd
+}
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
