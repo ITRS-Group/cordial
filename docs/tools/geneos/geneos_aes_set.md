@@ -31,7 +31,6 @@ geneos aes set [flags] [TYPE] [NAME...]
 
 ```
   -C, --crc string       CRC of keyfile to use.
-  -h, --help             help for set
   -k, --keyfile string   Keyfile to use (default "/home/peter/.config/geneos/keyfile.aes")
   -N, --noroll           Do not roll any existing keyfile to previous keyfile setting
 ```
@@ -40,7 +39,6 @@ geneos aes set [flags] [TYPE] [NAME...]
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

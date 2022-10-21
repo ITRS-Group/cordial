@@ -60,8 +60,16 @@ func init() {
 
 var incidentCmd = &cobra.Command{
 	Use:   "incident",
-	Short: "Raise or update an incident",
+	Short: "Raise or update a ServiceNow incident",
 	Long: strings.ReplaceAll(`
+Raise or update a ServiceNow incident from ITRS Geneos.
+
+This command is the client-side of the ITRS Geneos to ServiceNow
+incident integration. The program takes command line flags, arguments
+and environment variables to create a submission to the router
+instance which is responsible for sending the request to the
+ServiceNow API.
+
 
 `, "|", "`"),
 	SilenceUsage: true,

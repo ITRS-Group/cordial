@@ -26,17 +26,18 @@ geneos aes new [flags] [TYPE] [NAME...]
 ### Options
 
 ```
-  -h, --help             help for new
+  -b, --backup string    Backup existing keyfile with extension given (default ".old")
+  -D, --default          Save as user default keyfile (will NOT overwrite without -f)
   -H, --host string      Import only to named host, default is all
   -I, --import           Import the keyfile to components and set on matching instances.
-  -k, --keyfile string   Optional key file to create, defaults to STDOUT
+  -k, --keyfile string   Optional key file to create, defaults to STDOUT. (Will NOT overwrite without -f)
+  -f, --overwrite        Overwrite existing keyfile
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

@@ -253,6 +253,7 @@ Note: All values that are intended to be passed to ServiceNow as a field are unq
     A password for the user above. This takes precedence over `passwordfile` below. Passwords can be encoded using Geneos style `+encs+...` AES256 values. The format is documented in [config.ExpandString()](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString). Keyfiles and encoded strings can be created either using the details in the [Secure Passwords](https://docs.itrsgroup.com/docs/geneos/6.0.0/Gateway_Reference_Guide/gateway_secure_passwords.htm) documentation or by using the [`geneos`](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos) tool's `aes` commands.
 
   * `passwordfile` **Router Only** - **Deprecated**
+
     A path to a file containing the plain text password for the user above. This file should be protected with Linux permissions 0600 to prevent unauthorised access. If a tilde (`~`) is the first character then the path is relative to the user home directory. e.g. `~/.snowpw`
     This setting has been deprecated in favour of encoded value expansion for `password` above.
 
@@ -273,6 +274,7 @@ Note: All values that are intended to be passed to ServiceNow as a field are unq
     * <https://docs.servicenow.com/bundle/rome-platform-administration/page/administer/security/reference/r_OAuthAPIRequestParameters.html>
 
   * `searchtype` **Router Only**
+  
     There are two search types for `cmdb_ci` table queries, `simple` and any other value. When using `simple` the query format is `[TABLE:]FIELD=VALUE`. The `TABLE` defaults to `cmdb_ci` if not supplied. `FIELD` and `VALUE` are partially validated by simply (hence the name) splitting on the first `=` found. No further validation of the contents of the two parameters is done.
     Is the `searchtype` is not set to `simple` then the query is passed through as-is to the Service Now API.
 

@@ -12,12 +12,6 @@ List the matching remote hosts.
 geneos ls host [flags] [TYPE] [NAME...]
 ```
 
-### Options
-
-```
-  -h, --help   help for host
-```
-
 ### Options inherited from parent commands
 
 ```
@@ -25,7 +19,6 @@ geneos ls host [flags] [TYPE] [NAME...]
   -c, --csv             Output CSV
   -j, --json            Output JSON
   -i, --pretty          Indent (pretty print) JSON
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

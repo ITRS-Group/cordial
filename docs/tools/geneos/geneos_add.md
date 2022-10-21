@@ -36,20 +36,18 @@ geneos add netprobe infraprobe12 --start --log
   -p, --port uint16                   override the default port selection
   -k, --keyfile string                use an external keyfile for AES256 encoding
   -C, --crc string                    use a keyfile (in the component shared directory) with CRC for AES256 encoding
-  -e, --env NAME                      (all components) Add an environment variable in the format NAME=VALUE
-  -i, --include PRIORITY:{URL|PATH}   (gateways) Add an include file in the format PRIORITY:PATH
+  -e, --env NAME=VALUE                (all components) Add an environment variable in the format NAME=VALUE
+  -i, --include PRIORITY:[PATH|URL]   (gateways) Add an include file in the format PRIORITY:[PATH|URL]
   -g, --gateway HOSTNAME:PORT         (sans) Add a gateway in the format NAME:PORT
-  -a, --attribute NAME                (sans) Add an attribute in the format NAME=VALUE
+  -a, --attribute NAME=VALUE          (sans) Add an attribute in the format NAME=VALUE
   -t, --type NAME                     (sans) Add a gateway in the format NAME:PORT
   -v, --variable [TYPE:]NAME=VALUE    (sans) Add a variable in the format [TYPE:]NAME=VALUE
-  -h, --help                          help for add
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

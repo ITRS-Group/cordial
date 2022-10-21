@@ -2,21 +2,19 @@
 
 Set global configuration parameters
 
-```
-geneos set global KEY=VALUE...
-```
+### Synopsis
 
-### Options
+
+
 
 ```
-  -h, --help   help for global
+geneos set global [KEY=VALUE...]
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

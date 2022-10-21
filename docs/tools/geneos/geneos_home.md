@@ -26,17 +26,10 @@ cat $(geneos home gateway example2)/gateway.txt
 
 ```
 
-### Options
-
-```
-  -h, --help   help for home
-```
-
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

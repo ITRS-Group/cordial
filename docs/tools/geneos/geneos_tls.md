@@ -12,17 +12,10 @@ certificates as well as listing details and copying a certificate
 chain to all other hosts.
 
 
-### Options
-
-```
-  -h, --help   help for tls
-```
-
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

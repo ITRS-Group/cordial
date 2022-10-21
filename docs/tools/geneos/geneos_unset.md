@@ -12,7 +12,7 @@ in the `set` command
 
 
 ```
-geneos unset [FLAGS] [TYPE] [NAME...]
+geneos unset [flags] [TYPE] [NAME...]
 ```
 
 ### Examples
@@ -27,21 +27,19 @@ geneos unset san -g Gateway1
 ### Options
 
 ```
-  -k, --key SETTING         Unset a configuration key item
-  -e, --env SETTING         Remove an environment variable of NAME
-  -i, --include SETTING     Remove an include file in the format PRIORITY
-  -g, --gateway SETTING     Remove gateway NAME
-  -a, --attribute SETTING   Remove an attribute of NAME
-  -t, --type SETTING        Remove the type NAME
-  -v, --variable SETTING    Remove a variable of NAME
-  -h, --help                help for unset
+  -k, --key SETTING        Unset a configuration key item
+  -e, --env NAME           Remove an environment variable NAME
+  -i, --include PRIORITY   (gateways) Remove an include file withPRIORITY
+  -g, --gateway NAME       (san) Remove the gateway NAME
+  -a, --attribute NAME     (san) Remove the attribute NAME
+  -t, --type NAME          (san) Remove the type NAME
+  -v, --variable NAME      (san) Remove the variable NAME
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

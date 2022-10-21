@@ -24,8 +24,6 @@ $ geneos ps
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
-  -h, --help            help for geneos
 ```
 
 ### SEE ALSO

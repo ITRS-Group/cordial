@@ -26,14 +26,12 @@ geneos logs [flags] [TYPE] [NAME...]
   -c, --cat             Cat whole file
   -g, --match string    Match lines with STRING
   -v, --ignore string   Match lines without STRING
-  -h, --help            help for logs
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO

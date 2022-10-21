@@ -22,14 +22,12 @@ geneos restart [flags] [TYPE] [NAME...]
   -a, --all    Start all matcheing instances, not just those already running
   -K, --kill   Force stop by sending an immediate SIGKILL
   -l, --log    Run 'logs -f' after starting instance(s)
-  -h, --help   help for restart
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -q, --quiet           quiet mode
 ```
 
 ### SEE ALSO
