@@ -69,6 +69,7 @@ var psCmd = &cobra.Command{
 	Long: strings.ReplaceAll(`
 Show the status of the matching instances.
 `, "|", "`"),
+	Aliases:      []string{"status"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",

@@ -77,6 +77,7 @@ implied.
 When more than one instance matches each output block is prefixed by
 instance details.
 `, "|", "`"),
+	Aliases:      []string{"log"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",

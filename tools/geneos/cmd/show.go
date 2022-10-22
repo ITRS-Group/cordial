@@ -70,6 +70,7 @@ configuration.
 Passwords and secrets are redacted in a very simplistic manner simply
 to prevent visibility in casual viewing.
 `, "|", "`"),
+	Aliases:      []string{"details"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
