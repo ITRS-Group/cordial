@@ -23,9 +23,47 @@ THE SOFTWARE.
 package main
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 func main() {
-	cmd.Execute()
+	execname := filepath.Base(os.Args[0])
+	if !strings.HasSuffix(execname, "ctl") {
+		cmd.Execute()
+		os.Exit(0)
+	}
+
+	// emulate core ctl commands
+	// fmt.Println("running as", execname)
+	ct := geneos.ParseComponentName(strings.TrimSuffix(execname, "ctl"))
+	if len(os.Args) > 1 {
+		name := os.Args[1]
+		switch name {
+		case "list":
+			os.Args = []string{execname, "ls", ct.String()}
+			cmd.Execute()
+		case "create":
+			fmt.Printf("create not support, please use 'geneos add %s ...'\n", ct)
+			os.Exit(1)
+		default:
+			if len(os.Args) > 2 {
+				function := os.Args[2]
+				switch function {
+				case "start", "stop", "restart", "command", "log", "details", "refresh", "status", "delete":
+					os.Args = []string{execname, function, ct.String(), name}
+					cmd.Execute()
+				default:
+					fmt.Printf("'%s' not supported\n", function)
+				}
+			} else {
+				fmt.Println("unknown command")
+			}
+		}
+	}
 }
