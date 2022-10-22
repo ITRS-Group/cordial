@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"os"
 	"os/user"
-	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -42,8 +41,6 @@ import (
 )
 
 const pkgname = "cordial"
-
-var execname string
 
 var (
 	ErrInvalidArgs  error = errors.New("invalid arguments")
@@ -83,8 +80,6 @@ func init() {
 	// this doesn't work as expected, define sort = false in each command
 	// rootCmd.PersistentFlags().SortFlags = false
 	rootCmd.Flags().SortFlags = false
-
-	execname = filepath.Base(os.Args[0])
 }
 
 // rootCmd represents the base command when called without any subcommands
