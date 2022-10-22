@@ -7,6 +7,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -101,8 +102,9 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 			}
 		}
 
-		if len(args) == 0 {
-			// no args means all instances
+		log.Debug().Msgf("args = %+v", args)
+		if len(args) == 0 || (len(args) == 1 && args[0] == "all") {
+			// no args also means all instances
 			wild = true
 			args = instance.AllNames(host.ALL, ct)
 		} else {
