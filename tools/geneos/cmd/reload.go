@@ -42,6 +42,7 @@ var reloadCmd = &cobra.Command{
 	Long: strings.ReplaceAll(`
 Signal the matching instances to reload their configurations, depending on the component TYPE.
 `, "|", "`"),
+	Aliases:      []string{"refresh"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",

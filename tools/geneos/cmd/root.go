@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -41,6 +42,8 @@ import (
 )
 
 const pkgname = "cordial"
+
+var execname string
 
 var (
 	ErrInvalidArgs  error = errors.New("invalid arguments")
@@ -80,6 +83,8 @@ func init() {
 	// this doesn't work as expected, define sort = false in each command
 	// rootCmd.PersistentFlags().SortFlags = false
 	rootCmd.Flags().SortFlags = false
+
+	execname = filepath.Base(os.Args[0])
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -101,14 +106,22 @@ $ geneos ps
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
-	Version:           cordial.VERSION,
-	DisableAutoGenTag: true,
+	Version:            cordial.VERSION,
+	DisableAutoGenTag:  true,
+	DisableSuggestions: true,
+	SilenceErrors:      true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		// check initialisation
 		geneosdir := host.Geneos()
 		if geneosdir == "" {
 			// commands that do not require geneos home to be set
-			if cmd != initCmd && cmd.Parent() != initCmd && cmd != setUserCmd && cmd != setGlobalCmd && cmd != addHostCmd && len(host.RemoteHosts()) == 0 {
+			if !(cmd == initCmd ||
+				cmd.Parent() == initCmd ||
+				cmd == setUserCmd ||
+				cmd == setGlobalCmd ||
+				cmd == addHostCmd ||
+				len(host.RemoteHosts()) > 0) {
+				// if cmd != rootCmd && cmd != initCmd && cmd.Parent() != initCmd && cmd != setUserCmd && cmd != setGlobalCmd && cmd != addHostCmd && len(host.RemoteHosts()) == 0 {
 				cmd.SetUsageTemplate(" ")
 				return fmt.Errorf("%s", `Geneos installation directory not set.
 
