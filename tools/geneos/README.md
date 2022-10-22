@@ -101,6 +101,20 @@ geneos show   # show the default configuration values
 
 None of these commands should have any side-effects but others will. These may not only start or stop processes but may also convert configuration files to JSON format without prompting. Old `.rc` files are backed-up with a `.rc.orig` extension and can be restored using the `revert` command.
 
+#### Legacy Command Emulation
+
+If you run the program with a name ending in `ctl`, either through a symlink or by copying the binary, then the legacy command syntax is emulated in a simplistic way. This will allow for users or automation scripts to continue working. The first half of the executable name is mapped to the component type, so for example:
+
+```bash
+ln -s geneos gatewayctl
+# this then runs ./geneos start gateway GW1
+./gatewayctl GW1 start
+
+ln -s geneos netprobectl
+# this then runs ./geneos list netprobe
+./netprobectl list
+```
+
 ### New Installation
 
 New installations are set-up through the `init` sub-command. In it's most basic form it will create the minimal directory hierarchy and your user-specific geneos.json file containing the path to the top-level directory that it initialised. The top-level directory, if not given on the command line, defaults to a directory `geneos` in your home directory *unless* the last part of your home directory is itself `geneos`, e.g. if your home directory is `/home/example` then the Geneos directory becomes `/home/example/geneos` but if it is `/opt/geneos` then that is used directly.
