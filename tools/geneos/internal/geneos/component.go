@@ -61,7 +61,7 @@ type Instance interface {
 var Root Component = Component{
 	Name:             "none",
 	RelatedTypes:     nil,
-	ComponentMatches: []string{"all", "any"},
+	ComponentMatches: []string{"any"},
 	RealComponent:    false,
 	DownloadBase:     DownloadBases{Resources: "", Nexus: ""},
 	GlobalSettings: map[string]string{
