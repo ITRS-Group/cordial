@@ -1,10 +1,17 @@
 # Change Log
 
-## Version v1.3.0-alpha - 2022/10/22
+## Version v1.3.0-beta - 2022/10/24
 
+## Changes
+
+* PagerDuty integration
+* Merged ServiceNow integration, single binary build
 * tools/geneos: add instance protection against stop (and related) or delete commands
 * tools/geneos: support legacy command through emulating `*ctl` named commands
 * tools/geneos: allow remote operations without local directories
+
+## Fixes
+
 * libemail: fix default _SUBJECT handling
 * tools/geneos: split over complex 'init' command into sub-commands
 * updated command usage information and reordered various internal function calls
@@ -13,13 +20,8 @@
 * tools/geneos: fix ssh-agent support on windows
 * tools/geneos: build on windows
 * integrations: Add PagerDuty integration
-* integrations: Merge ServiceNow binaries into one
+* Integrations: Merge ServiceNow binaries into one
 * tools/geneos: change internal remote Stat() API
-
-## Changes
-
-* PagerDuty integration
-* Merged ServiceNow integration, single binary build
 
 ## Version v1.2.1 - 2022/10/11
 
