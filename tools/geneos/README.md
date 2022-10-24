@@ -457,58 +457,79 @@ There are a number of special cases, these are detailed below.
 
 ### Commands
 
-The following commands are available:
+The following commands are available (click on each command for individual documentation):
 
-```txt
-Available Commands:
-  add         Add a new instance
-  aes         Manage Gateway AES key files
-  clean       Clean-up instance directories
-  command     Show command line and environment for launching instances
-  completion  Generate the autocompletion script for the specified shell
-  copy        Copy instances
-  delete      Delete an instance. Instance must be stopped
-  disable     Stop and disable instances
-  enable      Enable instances. Only previously disabled instances are started
-  help        Help about any command
-  home        Print the home directory of the first instance or the Geneos home dir
-  import      Import file(s) to an instance or a common directory
-  init        Initialise a Geneos installation
-  install     Install files from downloaded Geneos packages. Intended for sites without Internet access
-  logs        Show log(s) for instances
-  ls          List instances, optionally in CSV or JSON format
-  migrate     Migrate legacy .rc configuration to new .json format
-  move        Move (or rename) instances
-  ps          List process information for instances, optionally in CSV or JSON format
-  rebuild     Rebuild instance configuration files
-  reload      Reload instance configuration, where supported
-  restart     Restart instances
-  revert      Revert migration of .rc files from backups
-  set         Set instance configuration parameters
-  show        Show runtime, global, user or instance configuration is JSON format
-  snapshot    Capture a snapshot of each matching dataview
-  start       Start instances
-  stop        Stop instances
-  tls         Manage certificates for secure connections
-  unset       Unset a configuration value
-  update      Update the active version of Geneos software
-```
+* [`geneos add`](/docs/tools/geneos/geneos_add.md) - Add a new instance
+  * [`geneos add host`](/docs/tools/geneos/geneos_add_host.md) - Add a remote host
+* [`geneos aes`](/docs/tools/geneos/geneos_aes.md) - Manage Gateway AES key files
+  * [`geneos aes decode`](/docs/tools/geneos/geneos_aes_decode.md) - Decode a Geneos-format secure password
+  * [`geneos aes encode`](/docs/tools/geneos/geneos_aes_encode.md) - Encode a password using a Geneos AES file
+  * [`geneos aes import`](/docs/tools/geneos/geneos_aes_import.md) - Import shared keyfiles for components
+  * [`geneos aes ls`](/docs/tools/geneos/geneos_aes_ls.md) - List configured AES key files
+  * [`geneos aes new`](/docs/tools/geneos/geneos_aes_new.md) - Create a new key file
+  * [`geneos aes set`](/docs/tools/geneos/geneos_aes_set.md) - Set keyfile for instances
+* [`geneos clean`](/docs/tools/geneos/geneos_clean.md) - Clean-up instance directories
+* [`geneos command`](/docs/tools/geneos/geneos_command.md) - Show command line and environment for launching instances
+* [`geneos copy`](/docs/tools/geneos/geneos_copy.md) - Copy instances
+* [`geneos delete`](/docs/tools/geneos/geneos_delete.md) - Delete an instance. Instance must be stopped
+* [`geneos disable`](/docs/tools/geneos/geneos_disable.md) - Stop and disable instances
+* [`geneos enable`](/docs/tools/geneos/geneos_enable.md) - Enable instances
+* [`geneos home`](/docs/tools/geneos/geneos_home.md) - Print the home directory of the first instance or the Geneos home dir
+* [`geneos import`](/docs/tools/geneos/geneos_import.md) - Import files to an instance or a common directory
+* [`geneos init`](/docs/tools/geneos/geneos_init.md) - Initialise a Geneos installation
+  * [`geneos init all`](/docs/tools/geneos/geneos_init_all.md) - Initialise a more complete Geneos environment
+  * [`geneos init demo`](/docs/tools/geneos/geneos_init_demo.md) - Initialise a Geneos Demo environment
+  * [`geneos init san`](/docs/tools/geneos/geneos_init_san.md) - Initialise a Geneos SAN (Self-Announcing Netprobe) environment
+  * [`geneos init template`](/docs/tools/geneos/geneos_init_template.md) - Initialise or overwrite templates
+* [`geneos install`](/docs/tools/geneos/geneos_install.md) - Install (remote or local) Geneos packages
+* [`geneos logs`](/docs/tools/geneos/geneos_logs.md) - Show log(s) for instances
+* [`geneos ls`](/docs/tools/geneos/geneos_ls.md) - List instances, optionally in CSV or JSON format
+* [`geneos migrate`](/docs/tools/geneos/geneos_migrate.md) - Migrate legacy .rc configuration to new formats
+* [`geneos move`](/docs/tools/geneos/geneos_move.md) - Move (or rename) instances
+* [`geneos ps`](/docs/tools/geneos/geneos_ps.md) - List process information for instances, optionally in CSV or JSON format
+* [`geneos rebuild`](/docs/tools/geneos/geneos_rebuild.md) - Rebuild instance configuration files
+* [`geneos reload`](/docs/tools/geneos/geneos_reload.md) - Reload instance configuration, where supported
+* [`geneos restart`](/docs/tools/geneos/geneos_restart.md) - Restart instances
+* [`geneos revert`](/docs/tools/geneos/geneos_revert.md) - Revert migration of .rc files from backups
+* [`geneos set`](/docs/tools/geneos/geneos_set.md) - Set instance configuration parameters
+  * [`geneos set global`](/docs/tools/geneos/geneos_set_global.md) - Set global configuration parameters
+  * [`geneos set user`](/docs/tools/geneos/geneos_set_user.md) - Set user configuration parameters
+* [`geneos show`](/docs/tools/geneos/geneos_show.md) - Show runtime, global, user or instance configuration is JSON format
+  * [`geneos show global`](/docs/tools/geneos/geneos_show_global.md) - A brief description of your command
+  * [`geneos show user`](/docs/tools/geneos/geneos_show_user.md) - A brief description of your command
+* [`geneos snapshot`](/docs/tools/geneos/geneos_snapshot.md) - Capture a snapshot of each matching dataview
+* [`geneos start`](/docs/tools/geneos/geneos_start.md) - Start instances
+* [`geneos stop`](/docs/tools/geneos/geneos_stop.md) - Stop instances
+* [`geneos tls`](/docs/tools/geneos/geneos_tls.md) - Manage certificates for secure connections
+  * [`geneos tls import`](/docs/tools/geneos/geneos_tls_import.md) - Import root and signing certificates
+  * [`geneos tls init`](/docs/tools/geneos/geneos_tls_init.md) - Initialise the TLS environment
+  * [`geneos tls ls`](/docs/tools/geneos/geneos_tls_ls.md) - List certificates
+  * [`geneos tls new`](/docs/tools/geneos/geneos_tls_new.md) - Create new certificates
+  * [`geneos tls renew`](/docs/tools/geneos/geneos_tls_renew.md) - Renew instance certificates
+  * [`geneos tls sync`](/docs/tools/geneos/geneos_tls_sync.md) - Sync remote hosts certificate chain files
+* [`geneos unset`](/docs/tools/geneos/geneos_unset.md) - Unset a configuration value
+  * [`geneos unset global`](/docs/tools/geneos/geneos_unset_global.md) - Unset a global parameter
+  * [`geneos unset user`](/docs/tools/geneos/geneos_unset_user.md) - Unset a user parameter
+* [`geneos update`](/docs/tools/geneos/geneos_update.md) - Update the active version of Geneos packages
+* [`geneos version`](/docs/tools/geneos/geneos_version.md) - Show program version details
 
 #### General Command Flags & Arguments
 
 ```bash
-geneos [FLAG...] COMMAND [FLAG...] [TYPE] [NAME...] [PARAM...]
+geneos COMMAND [flags] [TYPE] [NAME...] [PARAM...]
 ```
 
 Where:
 
-* `FLAG` - Both general and command specific flags
 * `COMMAND` - one of the configured commands
+* `flags` - Both general and command specific flags
 * `TYPE` - the component type
 * `NAME` - one or more instance names, optionally including the remote server
 * `PARAM` - anything that isn't one of the above
 
-In general, with the exception of `COMMAND` and `TYPE`, all parameters can be in any order as they are filtered into their types for most commands. Some commands require arguments in an exact order. For example, these have the same meaning:
+In general, with the exception of `COMMAND` and `TYPE`, all parameters can be in any order as they are filtered into their types for most commands. Some commands require arguments in an exact order.
+
+As an example, these have the same meaning:
 
 ```bash
 geneos ls -c gateway one two three
@@ -526,221 +547,6 @@ There is a special format for adding SANs in the form `TYPE:NAME@REMOTE` where `
 In general all source file references support URLs, e.g. importing certificate and keys, license files, etc.
 
 The primary exception is for Gateway include files used in templated configurations. If these are given as URLs then they are used in the configuration as URLs.
-
-#### Global Commands
-
-* `geneos version`
-
-Show the current version of the `geneos` program, which should match the tag of the overall `geneos` package.
-
-* `geneos help`
-
-General help, initially a list of all the supported commands.
-
-* `geneos completion` - **Not yet implemented**
-
-Output completion configuration information for most shells.
-
-#### Instance Details
-
-* `geneos ls [TYPE] [NAME...]`
-
-Output a list of all configured instances. If a TYPE and/or NAME(s) are supplied then list those that match.
-
-* `geneos ps [TYPE] [NAME...]`
-
-Show details of running instances. This includes, where available, which TCP ports a process is listening on.
-
-* `geneos logs [-f | -n N | ...] [TYPE] [NAME...]`
-
-Show log(s) for matching instances. Flags allow for follow etc.
-
-#### Environment Commands
-
-* `geneos init [FLAGS] [USERNAME] [PATH] [PARAMS]`
-
-  The `init` command initialises a Geneos installation. It has many - perhaps too many - options. It is very likely that this command will change in the future to support multiple sub-commands to make the options more manageable.
-
-  The FLAGS are:
-
-  * `-A LICENSE` Initialise and start an `all` environment
-    Initialise the environment. This command creates a directory hierarchy and optionally installs Geneos software packages and also optionally creates instances and starts them.
-
-  * `-D` Initialise and start a demo environment
-
-  * `-S` Initialise and start a San. See the `-n` option below. Takes all the same PARAMS as for adding a San to specify template settings.
-
-  * `-C` Create a root and signing certificate and use these for all new instances
-
-  * `-l` Follow logs after starting any created instances (for `-A`, `-D` and `-S` above)
-
-  * `-F` Force initialisation, ignore existing files and directories in destination
-
-  * `-n NAME` Use the `NAME` for instances instead of the default hostname. This is especially useful for Sans and Gateways as the templates use this name to fill in various configuration item defaults
-
-  * `-c CERT` and/or `-k KEY` Import certificates and keys during initialisation. See `geneos tls import` for more details. When a valid signing certificate and key are imported then all subsequent new instances will have individual certificates and keys created.
-
-  * `-T` Rebuild the default templates using the embedded files. This is primarily to update templates when new versions of this program are release or if they have become corrupted
-
-  * `-N` Download from `nexus.itrsgroup.com` for testing. Only available to ITRS staff.
-
-  * `-p` Use the Nexus `snapshots` repository instead of the default `releases` when using `-N` above
-
-  * `-V` Version filter for downloads. Defaults to the latest version found.
-
-  * `-w FILE` A Gateway template file to use instead of the embedded one
-
-  * `-s FILE` A San template file to use instead of the embedded one
-
-  * `-e`, `-i`, `-g`, `-a`, `-t`, `-v` These options set environment, include, gateway. attribute, type and variable values and can be specified multiple times. The values are used as inputs to templates for Gateway and SAN instances.
-
-  * Only one of the `-T`, `-S`, `-D` or `-A` options are valid and only the `-T` option can be used for multiple calls to this command unless `-F` is also used.
-
-* `geneos tls`
-
-  TLS operations. See below.
-
-* `geneos show [global|user]`
-
-  Show the running configuration or, if `global` or `user` is supplied then the respective on-disk configuration files. Passwords are simplistically redacted.
-
-  The instance specific `show` command is described below.
-
-* `geneos show [-r] [TYPE] [VALUES...]`
-
-  Show the configuration for matching instances.
-
-* `geneos set [global|user] KEY=VALUE...`
-
-  Set a program-wide configuration option. The default is to update the `user` configuration file. If `global` is given then the user has to have appropriate privileges to write to the global config file (`/etc/geneos/geneos.json`). Multiple KEY=VALUE pairs can be given but only fields that are recognised are updated.
-
-* `geneos home [TYPE] [NAME]`
-
-  The `home` command outputs the home directory of the first matching instance, or `Geneos` if there is no match or no options passed to the command. This is useful for automation and shortcuts, e.g. in bash:
-
-  ```bash
-  cd $(geneos home netprobe example1)
-  ```
-
-Please note that if `geneos home` returns an empty string because of an error the cd command will take you to your home directory.
-
-#### Package Management Commands
-
-* `geneos install [FLAGS] [TYPE] [latest|VERSION|FILE|URL...]`
-
-  Download and install a release archive in the `packages` directory. If a symbolic link for the desired base version already exists it is not updated unless the `-U` flag is given.
-
-  The FLAGS are:
-
-  * `-b BASENAME` The base name of the installation symbolic link. Defaults to `active_prod`
-
-  * `-l` Local archives only
-
-  * `-n` No save of downloaded archives
-
-  * `-H HOST` Install only on remote HOST. HOST must be configured
-
-  * `-N` Use `nexus.itrsgroup.com` for downloads. Only available to ITRS staff
-
-  * `-p` Use the `snapshots` repository and not the default `releases` with `-N` above
-
-  * `-V` Version filter, installs latest matching version. Defaults to latest available version.
-
-  * `-U` Update base name link to installed version
-
-  * `-T TYPE:VERSION` Override the component type and version numbers to allow installation from files with generic names, for example `gateway.tgz`
-
-* `geneos update [TYPE] [VERSION]`
-
-  Update the component base binary symlink
-
-#### Control Commands
-
-* `geneos start [-l] [TYPE] [NAME...]`
-
-  Start a Geneos component. If no name is supplied or the special name `all` is given then all the matching Geneos components are started.
-
-* `geneos stop [-K] [TYPE] [NAME...]`
-
-  Like above, but stops the component(s)
-
-  * `-K` terminates forcefully - i.e. a SIGKILL is immediately sent
-
-* `geneos restart [-l] [TYPE] [NAME...]`
-
-  Restarts matching geneos components. Each component is stopped and started in sequence. If all components should be down before starting up again then use a combination of `start` and `stop` from above.
-
-* `geneos reload [TYPE] NAME [NAME...]`
-
-  Signal the component to reload it's configuration or restart as appropriate.
-
-* `geneos disable [TYPE] [NAME...]`
-
-  Stop and disable the selected components by placing a file in the working directory with a `.disable` extension
-
-* `geneos enable [TYPE] [NAME...]`
-
-  Remove the `.disable` lock file and start the selected components
-
-* `geneos clean [-F] [TYPE] [names]`
-
-  Clean up component directory. Optionally 'full' clean, with an instance restart.
-
-#### Configuration Commands
-
-* `geneos add [FLAGS] [TYPE] NAME [NAME...]`
-
-  Add a new Geneos instance. Like the `geneos init` command this command has a large number of flags to support a wide variety of requirements.
-
-* `geneos migrate [TYPE] [NAME...]`
-
-  Migrate legacy `.rc` files to `.json` and backup the original file with an `.orig` extension. This backup file can be used by the `revert` command, below, to restore the original `.rc` file(s)
-
-* `geneos revert [TYPE] [NAME...]`
-
-  Revert to the original configuration files, deleting the `.json` files. Note that the `.rc` files are never changed and any configuration changes to the `.json` configuration will not be retained.
-
-* `geneos rebuild [-n] [-F] [TYPE] [NAME...]`
-
-  Rebuild instance configuration, typically used for Self-Announcing Netprobes. By default it restarts any instances where the configuration has changed. Flags are:
-
-  * `-n` Do not restart instances
-  * `-f` Force rebuild for those instances that are marked `initial` only.
-
-* `geneos command [TYPE] [NAME...]`
-
-  Shows details of the full command used for the component and any extra environment variables found in the configuration.
-
-* `geneos move|copy [TYPE] source destination`
-
-  These commands move or copy instance(s), respectively. If the source and destination are on the same location/remote then `move` acts as a rename. If a destination is given as a bare remote, e.g. `@remotename` then the source instance name is kept. If both source and destination are remotes then all matching instances are moved or copied. If no TYPE is given then all matching instances will be acted on. If the destination is a different location/remote then the port number of the instance(s) may be updated to avoid clashing with existing instances. Because all changes require the writing of a new instance configuration file, all instances are migrated to new JSON configuration files if required.
-
-* `geneos delete [-F] component name`
-
-  Deletes the disabled component given. Only works on components that have been disabled beforehand, unless the `-F` (force) flag is supplied.
-
-* `geneos import [-c common] [-r host] [TYPE] [NAME] [file|url|-]...`
-
-  Import a file into an instance working directory, from local file, url or stdin and backup previous file. The file can also specify the destination name and sub-directory, which will be created if it does not exist. Examples of valid files are:
-
-  ```bash
-  geneos import gateway Example gateway.setup.xml
-  geneos import gateway Example https://server/files/gateway.setup.xml
-  geneos import gateway Example gateway.setup.xml=mygateway.setup.xml
-  geneos import gateway Example scripts/newscript.sh=myscript.sh
-  geneos import gateway Example scripts/=myscript.sh
-  cat someoutput | geneos import gateway Example config.json=-
-  ```
-
-  Like other commands that write to the file system, it can safely be run as root as the destination directory and file will be changed to be owned by either the instance or the default user, with the caveat that any intermediate directories created above the destination directory (e.g. the first two in `my/long/path`) will be owned by root.
-
-* `geneos snapshot [FLAGS] [TYPE] [NAME} XPATH [XPATH...]`
-
-  Snapshot one or more dataviews using the REST Commands API endpoint introduced in GA5.14. The TYPE, if given, must be `gateway`. Authentication to the Gateway is through a combination of command line flags and configuration parameters. If either of the parameters `snapshot.username` or `snapshot.password` is defined for the Gateway or globally then this is used as a default unless overridden on the command line by the `-u` and `-P` options. The user is only prompted for a password if it cannot be located in either of the previous places.
-
-  The output is in JSON format as an array of dataviews, where each dataview is in the format defined in the [Gateway documentation](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#fetch_dataviews). Flags to select which properties of data items are available: `-V`, `-S`, `-Z`, `-U` for value, severity, snooze and user-assignment respectively. If none is given then the default is to fetch values only.
-
-  To help capture diagnostic information the `-x` option can be used to capture matching xpaths without the dataview contents. `-l` can be used to limit the number of dataviews (or xpaths) but the limit is not applied in any defined order.
 
 ## Secure Passwords
 
