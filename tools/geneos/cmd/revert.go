@@ -23,6 +23,12 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"errors"
+	"fmt"
+	"io/fs"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -31,10 +37,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var revertCmdExecutables bool
+
 func init() {
 	rootCmd.AddCommand(revertCmd)
 
-	// revertCmd.Flags().SortFlags = false
+	revertCmd.Flags().BoolVarP(&revertCmdExecutables, "executables", "X", false, "Revert 'ctl' executables")
+	revertCmd.Flags().SortFlags = false
 }
 
 var revertCmd = &cobra.Command{
@@ -52,6 +61,9 @@ never changed.
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := cmdArgsParams(cmd)
+		if err := revertCommands(); err != nil {
+			log.Error().Err(err).Msg("reverting old executables failed")
+		}
 		return instance.ForAll(ct, revertInstance, args, params)
 	},
 }
@@ -67,13 +79,52 @@ func revertInstance(c geneos.Instance, params []string) (err error) {
 	}
 
 	if err = c.Host().Rename(instance.ComponentFilepath(c, "rc", "orig"), instance.ComponentFilepath(c, "rc")); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil
+		}
 		return
 	}
 
 	if err = c.Host().Remove(instance.ComponentFilepath(c)); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil
+		}
 		return
 	}
 
 	log.Debug().Msgf("%s reverted to RC config", c)
 	return nil
+}
+
+// search PATH for *ctl commands, and if they are links to 'geneos'
+// then try to revert them from .orig, permissions allowing
+func revertCommands() (err error) {
+	geneosExec, err := os.Executable()
+	if err != nil {
+		return
+	}
+
+	for _, ct := range geneos.RealComponents() {
+		path, err := exec.LookPath(ct.String() + "ctl")
+		if err != nil {
+			continue
+		}
+		realpath, err := filepath.EvalSymlinks(path)
+		if err != nil {
+			continue
+		}
+		if realpath != geneosExec {
+			fmt.Printf("%s is not a link to %s, skipping", path, geneosExec)
+			continue
+		}
+
+		if err = os.Remove(path); err != nil {
+			log.Fatal().Err(err).Msgf("cannot remove symlink %p, please take action to resolve", path)
+		}
+		if err = os.Rename(path+".orig", path); err != nil {
+			log.Fatal().Err(err).Msgf("cannot rename %s.orig, please take action to resolve", path)
+		}
+		fmt.Printf("%s reverted\n", path)
+	}
+	return
 }

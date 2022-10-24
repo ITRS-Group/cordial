@@ -23,6 +23,9 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -31,10 +34,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var migrateCmdExecutables bool
+
 func init() {
 	rootCmd.AddCommand(migrateCmd)
 
-	// migrateCmd.Flags().SortFlags = false
+	migrateCmd.Flags().BoolVarP(&migrateCmdExecutables, "executables", "X", false, "Migrate executables by symlinking to this binary")
+	migrateCmd.Flags().SortFlags = false
 }
 
 var migrateCmd = &cobra.Command{
@@ -51,6 +57,11 @@ take on the new labels and are not a direct conversion.
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := cmdArgsParams(cmd)
+		if migrateCmdExecutables {
+			if err := migrateCommands(); err != nil {
+				log.Error().Err(err).Msg("migrating old executables failed")
+			}
+		}
 		return instance.ForAll(ct, migrateInstance, args, params)
 	},
 }
@@ -58,6 +69,35 @@ take on the new labels and are not a direct conversion.
 func migrateInstance(c geneos.Instance, params []string) (err error) {
 	if err = instance.Migrate(c); err != nil {
 		log.Error().Err(err).Msgf("%s cannot migrate configuration", c)
+	}
+	return
+}
+
+// search PATH for *ctl commands, and if they are not links to 'geneos'
+// then update then, permissions allowing
+func migrateCommands() (err error) {
+	geneosExec, err := os.Executable()
+	if err != nil {
+		return
+	}
+
+	for _, ct := range geneos.RealComponents() {
+		path, err := exec.LookPath(ct.String() + "ctl")
+		if err != nil {
+			continue
+		}
+		if err = os.Rename(path, path+".orig"); err != nil {
+			fmt.Printf("cannot rename %q to .orig (skipping): %s\n", path, err)
+			continue
+		}
+		if err = os.Symlink(geneosExec, path); err != nil {
+			if err = os.Rename(path+".orig", path); err != nil {
+				log.Fatal().Err(err).Msgf("cannot restore %s after backup (to .orig), please fix manually", path)
+			}
+			fmt.Printf("cannot link %s to %s (skipping): %s", path, geneosExec, err)
+			continue
+		}
+		fmt.Printf("%s migrated\n", path)
 	}
 	return
 }
