@@ -1,7 +1,8 @@
 # Change Log
 
-## Version v1.3.0-dev - 2022/10/11
+## Version v1.3.0-alpha - 2022/10/22
 
+* tools/geneos: support legacy command through emulating `*ctl` named commands
 * tools/geneos: allow remote operations without local directories
 * libemail: fix default _SUBJECT handling
 * tools/geneos: split over complex 'init' command into sub-commands
