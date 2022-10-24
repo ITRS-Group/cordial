@@ -49,7 +49,7 @@ COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
 COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/bin/
 COPY --from=build /app/cordial/integrations/servicenow/servicenow /app/cordial/integrations/servicenow/ticket.sh /app/cordial/integrations/pagerduty/pagerduty /cordial/bin/
 COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/lib/
-COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /app/cordial/integrations/pagerduty/pagerduty.defaults.yaml /cordial/etc/geneos/
+COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /app/cordial/integrations/pagerduty/cmd/pagerduty.defaults.yaml /cordial/etc/geneos/
 RUN mv /cordial /cordial-$(cat /VERSION)
 WORKDIR /
 RUN tar czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION) && zip -q -r /cordial-$(cat /VERSION).zip cordial-$(cat /VERSION) && rm -r /cordial-$(cat /VERSION)
