@@ -81,7 +81,7 @@ Delete the local configuration referring to a remote host.
 			// stop and/or delete instances on host
 			if deleteHostCmdStop {
 				for _, c := range instance.GetAll(h, nil) {
-					if err = instance.Stop(c, false); err != nil {
+					if err = instance.Stop(c, deleteHostCmdForce, false); err != nil {
 						return
 					}
 					if deleteHostCmdRecurse {

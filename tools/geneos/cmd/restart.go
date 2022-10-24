@@ -33,17 +33,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var restartCmdAll, restartCmdKill, restartCmdForce, restartCmdLogs bool
+
 func init() {
 	rootCmd.AddCommand(restartCmd)
 
 	restartCmd.Flags().BoolVarP(&restartCmdAll, "all", "a", false, "Start all matching instances, not just those already running")
+	restartCmd.Flags().BoolVarP(&restartCmdForce, "force", "F", false, "Force restart of protected instances")
 	restartCmd.Flags().BoolVarP(&restartCmdKill, "kill", "K", false, "Force stop by sending an immediate SIGKILL")
 	restartCmd.Flags().BoolVarP(&restartCmdLogs, "log", "l", false, "Run 'logs -f' after starting instance(s)")
 
 	restartCmd.Flags().SortFlags = false
 }
-
-var restartCmdAll, restartCmdKill, restartCmdLogs bool
 
 var restartCmd = &cobra.Command{
 	Use:   "restart [flags] [TYPE] [NAME...]",
@@ -79,8 +80,8 @@ func commandRestart(ct *geneos.Component, args []string, params []string) (err e
 }
 
 func restartInstance(c geneos.Instance, params []string) (err error) {
-	err = instance.Stop(c, false)
-	if err == nil || (errors.Is(err, os.ErrProcessDone) && restartCmdAll) {
+	err = instance.Stop(c, restartCmdForce, false)
+	if err == nil || errors.Is(err, os.ErrProcessDone) || restartCmdAll {
 		return instance.Start(c)
 	}
 	return

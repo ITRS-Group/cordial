@@ -24,6 +24,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -33,17 +34,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cmdUpdateBase, cmdUpdateHost, cmdUpdateVersion string
-var cmdUpdateRestart bool
+var updateCmdBase, updateCmdHost, updateCmdVersion string
+var updateCmdForce, updateCmdRestart bool
 
 func init() {
 	rootCmd.AddCommand(updateCmd)
 
-	updateCmd.Flags().StringVarP(&cmdUpdateVersion, "version", "V", "latest", "Update to this version, defaults to latest")
+	updateCmd.Flags().StringVarP(&updateCmdVersion, "version", "V", "latest", "Update to this version, defaults to latest")
 
-	updateCmd.Flags().StringVarP(&cmdUpdateBase, "base", "b", "active_prod", "Base name for the symlink, defaults to active_prod")
-	updateCmd.Flags().StringVarP(&cmdUpdateHost, "host", "H", string(host.ALLHOSTS), "Apply only on remote host. \"all\" (the default) means all remote hosts and locally")
-	updateCmd.Flags().BoolVarP(&cmdUpdateRestart, "restart", "R", false, "Restart all instances that may have an update applied")
+	updateCmd.Flags().StringVarP(&updateCmdBase, "base", "b", "active_prod", "Base name for the symlink, defaults to active_prod")
+	updateCmd.Flags().StringVarP(&updateCmdHost, "host", "H", string(host.ALLHOSTS), "Apply only on remote host. \"all\" (the default) means all remote hosts and locally")
+	updateCmd.Flags().BoolVarP(&updateCmdForce, "force", "F", false, "Update all protected instances")
+	updateCmd.Flags().BoolVarP(&updateCmdRestart, "restart", "R", false, "Restart all instances that may have an update applied")
 
 	updateCmd.Flags().SortFlags = false
 }
@@ -92,16 +94,20 @@ geneos update netprobe 5.13.2
 	Args: cobra.RangeArgs(0, 2),
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args := cmdArgs(cmd)
-		version := cmdUpdateVersion
+		version := updateCmdVersion
+		cs := instance.MatchKeyValue(host.ALL, ct, "protected", "true")
+		if len(cs) > 0 && !updateCmdForce {
+			fmt.Println("There are one or more protected instances using the current version. Use `force` to override")
+		}
 		if len(args) > 0 {
 			version = args[0]
 		}
-		r := host.Get(cmdUpdateHost)
-		options := []geneos.GeneosOptions{geneos.Version(version), geneos.Basename(cmdUpdateBase), geneos.Force(true), geneos.Restart(cmdUpdateRestart)}
-		if cmdUpdateRestart {
-			cs := instance.MatchKeyValue(host.ALL, ct, "version", cmdUpdateBase)
+		r := host.Get(updateCmdHost)
+		options := []geneos.GeneosOptions{geneos.Version(version), geneos.Basename(updateCmdBase), geneos.Force(true), geneos.Restart(updateCmdRestart)}
+		if updateCmdRestart {
+			cs := instance.MatchKeyValue(host.ALL, ct, "version", updateCmdBase)
 			for _, c := range cs {
-				instance.Stop(c, false)
+				instance.Stop(c, updateCmdForce, false)
 				defer instance.Start(c)
 			}
 		}

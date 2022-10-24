@@ -48,7 +48,7 @@ full clean using |-F|. The patterns of files and directories that are
 cleaned up are set in the global configuration as |[TYPE]CleanList|
 and |[TYPE]PurgeList| and can be seen using the |geneos show|
 command, and changed using |geneos set|. The format is a
-PathListSeperator (typically a colon) separated list of file globs.
+PathListSeparator (typically a colon) separated list of file globs.
 `, "|", "`"),
 	Example: strings.ReplaceAll(`
 # delete old logs and config file backups without affecting running instance

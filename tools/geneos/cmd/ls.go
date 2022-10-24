@@ -36,13 +36,14 @@ import (
 )
 
 type lsCmdType struct {
-	Type     string
-	Name     string
-	Disabled string
-	Host     string
-	Port     int64
-	Version  string
-	Home     string
+	Type      string `json:"type,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Disabled  bool   `json:"disabled"`
+	Protected bool   `json:"protected"`
+	Host      string `json:"host,omitempty"`
+	Port      int64  `json:"port,omitempty"`
+	Version   string `json:"version,omitempty"`
+	Home      string `json:"home,omitempty"`
 }
 
 var lsCmdEntries []lsCmdType
@@ -88,7 +89,7 @@ List the matching instances and details.
 			fmt.Println(string(b))
 		case lsCmdCSV:
 			csvWriter = csv.NewWriter(os.Stdout)
-			csvWriter.Write([]string{"Type", "Name", "Disabled", "Host", "Port", "Version", "Home"})
+			csvWriter.Write([]string{"Type", "Name", "Disabled", "Protected", "Host", "Port", "Version", "Home"})
 			err = instance.ForAll(ct, lsInstanceCSV, args, params)
 			csvWriter.Flush()
 		default:
@@ -109,6 +110,9 @@ func lsInstancePlain(c geneos.Instance, params []string) (err error) {
 	if instance.IsDisabled(c) {
 		suffix = "*"
 	}
+	if instance.IsProtected(c) {
+		suffix += "+"
+	}
 	base, underlying, _ := instance.Version(c)
 	fmt.Fprintf(lsTabWriter, "%s\t%s\t%s\t%d\t%s:%s\t%s\n", c.Type(), c.Name()+suffix, c.Host(), c.Config().GetInt("port"), base, underlying, c.Home())
 	return
@@ -116,20 +120,20 @@ func lsInstancePlain(c geneos.Instance, params []string) (err error) {
 
 func lsInstanceCSV(c geneos.Instance, params []string) (err error) {
 	var dis string = "N"
+	var protected string = "N"
 	if instance.IsDisabled(c) {
 		dis = "Y"
 	}
+	if instance.IsProtected(c) {
+		protected = "Y"
+	}
 	base, underlying, _ := instance.Version(c)
-	csvWriter.Write([]string{c.Type().String(), c.Name(), dis, c.Host().String(), fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	csvWriter.Write([]string{c.Type().String(), c.Name(), dis, protected, c.Host().String(), fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 	return
 }
 
 func lsInstanceJSON(c geneos.Instance, params []string) (err error) {
-	var dis string = "N"
-	if instance.IsDisabled(c) {
-		dis = "Y"
-	}
 	base, underlying, _ := instance.Version(c)
-	lsCmdEntries = append(lsCmdEntries, lsCmdType{c.Type().String(), c.Name(), dis, c.Host().String(), c.Config().GetInt64("port"), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	lsCmdEntries = append(lsCmdEntries, lsCmdType{c.Type().String(), c.Name(), instance.IsDisabled(c), instance.IsProtected(c), c.Host().String(), c.Config().GetInt64("port"), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 	return
 }

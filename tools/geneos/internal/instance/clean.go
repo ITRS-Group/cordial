@@ -28,7 +28,7 @@ func Clean(c geneos.Instance, options ...geneos.GeneosOptions) (err error) {
 
 	if _, err = GetPID(c); err == os.ErrProcessDone {
 		stopped = false
-	} else if err = Stop(c, false); err != nil {
+	} else if err = Stop(c, true, false); err != nil {
 		return
 	} else {
 		stopped = true
