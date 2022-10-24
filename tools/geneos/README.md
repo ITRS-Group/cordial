@@ -4,18 +4,19 @@ The `geneos` program will help you manage your Geneos environment on Linux.
 
 ## Basic Features
 
-* Initialise a new installation in one command
+* Initialise a new installation with one command
 * Adopt an existing installation that uses older tools
 * Manage a group of servers with a single command
+* Create and manage Geneos compatible AES256 encoded passwords
 * Manage certificates for TLS connectivity between Geneos components
-* Configure the environment of components without editing files
+* Configure instance settings without editing files
 * Download and install Geneos software, update components
 * Simple bootstrapping of Self-Announcing Netprobes
 
 ## Aims
 
-* Keep it simple through the [Principle of least astonishment](https://en.wikipedia.org/wiki/Principle_of_least_astonishment)
 * Make your life easier; at least the part managing Geneos
+* Keep it simple through the [Principle of least astonishment](https://en.wikipedia.org/wiki/Principle_of_least_astonishment)
 * Help you use automation tools with Geneos
 
 ## Getting Started
