@@ -219,7 +219,7 @@ func (w *Webservers) Command() (args, env []string) {
 		"-Dcom.itrsgroup.configuration.file=" + home + "/config/config.xml",
 		// "-Dcom.itrsgroup.dashboard.dir=<Path to dashboards directory>",
 		"-Dcom.itrsgroup.dashboard.resources.dir=" + WebsBase + "/resources",
-		"-Djava.library.path=" + w.Config().GetString("libpath"),
+		"-Djava.library.path=" + w.Config().GetString("libpaths"),
 		"-Dlog4j2.configurationFile=file:" + home + "/config/log4j2.properties",
 		"-Dworking.directory=" + home,
 		"-Dcom.itrsgroup.legacy.database.maxconnections=100",
