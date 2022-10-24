@@ -18,28 +18,6 @@ The `geneos` program will help you manage your Geneos environment on Linux.
 * Make your life easier; at least the part managing Geneos
 * Help you use automation tools with Geneos
 
-## Concepts & Terminology
-
-Many of the terms used in this documentation and in the program itself assumes some familiarity with the Geneos suite of products and this is not always the case, so here are some starting points. Many of the key terms have been inherited from earlier systems.
-
-The specific types supported by this program are details in [Component Types](#component-types) below.
-
-### Geneos
-
-[Geneos](https://www.itrsgroup.com/products/geneos) is a suite of software products from [ITRS](https://www.itrsgroup.com/) that provide real-time visibility of I.T. infrastructure and trading environments. It uses a three-tier architecture to collect, process and present enriched data to administrators.
-
-### Components
-
-A *component* is a type of software package and associated data. Each component will typically be a software package from one of the three-tiers mentioned above but can also be a derivative, e.g. a Self-Announcing Netprobe is a component type that abstracts the special configuration of either a vanilla Netprobe or, for example, the Fix Analyser Netprobe.
-
-### Instances
-
-An *instance* is an independent copy of a component with a working directory, configuration and other persistent files. Instances share read-only package directories for the binaries and other files from the distribution for the specific version being used.
-
-### Hosts
-
-*Hosts* are the locations that components are installed and instantiated. There is always a *localhost*.
-
 ## Getting Started
 
 ### Download the binary
@@ -75,7 +53,110 @@ go build
 sudo mv geneos /usr/local/bin
 ```
 
-### Adopting An Existing Installation
+## Usage
+
+The general syntax is:
+
+`geneos COMMAND [FLAGS] [TYPE] [NAMES...]`
+
+There are a number of special cases, these are detailed below.
+
+### Legacy Command Emulation
+
+If you run the program with a name ending in `ctl`, either through a symlink or by copying the binary, then the legacy command syntax is emulated in a simplistic way. This will allow for users or automation scripts to continue working. The first half of the executable name is mapped to the component type, so for example:
+
+```bash
+ln -s geneos gatewayctl
+# this then runs ./geneos start gateway GW1
+./gatewayctl GW1 start
+
+ln -s geneos netprobectl
+# this then runs ./geneos list netprobe
+./netprobectl list
+```
+
+### Commands
+
+The following commands are available (click on each command for individual documentation):
+
+* [`geneos add`](/docs/tools/geneos/geneos_add.md) - Add a new instance
+  * [`geneos add host`](/docs/tools/geneos/geneos_add_host.md) - Add a remote host
+* [`geneos aes`](/docs/tools/geneos/geneos_aes.md) - Manage Gateway AES key files
+  * [`geneos aes decode`](/docs/tools/geneos/geneos_aes_decode.md) - Decode a Geneos-format secure password
+  * [`geneos aes encode`](/docs/tools/geneos/geneos_aes_encode.md) - Encode a password using a Geneos AES file
+  * [`geneos aes import`](/docs/tools/geneos/geneos_aes_import.md) - Import shared keyfiles for components
+  * [`geneos aes ls`](/docs/tools/geneos/geneos_aes_ls.md) - List configured AES key files
+  * [`geneos aes new`](/docs/tools/geneos/geneos_aes_new.md) - Create a new key file
+  * [`geneos aes set`](/docs/tools/geneos/geneos_aes_set.md) - Set keyfile for instances
+* [`geneos clean`](/docs/tools/geneos/geneos_clean.md) - Clean-up instance directories
+* [`geneos command`](/docs/tools/geneos/geneos_command.md) - Show command line and environment for launching instances
+* [`geneos copy`](/docs/tools/geneos/geneos_copy.md) - Copy instances
+* [`geneos delete`](/docs/tools/geneos/geneos_delete.md) - Delete an instance. Instance must be stopped
+* [`geneos disable`](/docs/tools/geneos/geneos_disable.md) - Stop and disable instances
+* [`geneos enable`](/docs/tools/geneos/geneos_enable.md) - Enable instances
+* [`geneos home`](/docs/tools/geneos/geneos_home.md) - Print the home directory of the first instance or the Geneos home dir
+* [`geneos import`](/docs/tools/geneos/geneos_import.md) - Import files to an instance or a common directory
+* [`geneos init`](/docs/tools/geneos/geneos_init.md) - Initialise a Geneos installation
+  * [`geneos init all`](/docs/tools/geneos/geneos_init_all.md) - Initialise a more complete Geneos environment
+  * [`geneos init demo`](/docs/tools/geneos/geneos_init_demo.md) - Initialise a Geneos Demo environment
+  * [`geneos init san`](/docs/tools/geneos/geneos_init_san.md) - Initialise a Geneos SAN (Self-Announcing Netprobe) environment
+  * [`geneos init template`](/docs/tools/geneos/geneos_init_template.md) - Initialise or overwrite templates
+* [`geneos install`](/docs/tools/geneos/geneos_install.md) - Install (remote or local) Geneos packages
+* [`geneos logs`](/docs/tools/geneos/geneos_logs.md) - Show log(s) for instances
+* [`geneos ls`](/docs/tools/geneos/geneos_ls.md) - List instances, optionally in CSV or JSON format
+* [`geneos migrate`](/docs/tools/geneos/geneos_migrate.md) - Migrate legacy .rc configuration to new formats
+* [`geneos move`](/docs/tools/geneos/geneos_move.md) - Move (or rename) instances
+* [`geneos ps`](/docs/tools/geneos/geneos_ps.md) - List process information for instances, optionally in CSV or JSON format
+* [`geneos rebuild`](/docs/tools/geneos/geneos_rebuild.md) - Rebuild instance configuration files
+* [`geneos reload`](/docs/tools/geneos/geneos_reload.md) - Reload instance configuration, where supported
+* [`geneos restart`](/docs/tools/geneos/geneos_restart.md) - Restart instances
+* [`geneos revert`](/docs/tools/geneos/geneos_revert.md) - Revert migration of .rc files from backups
+* [`geneos set`](/docs/tools/geneos/geneos_set.md) - Set instance configuration parameters
+  * [`geneos set global`](/docs/tools/geneos/geneos_set_global.md) - Set global configuration parameters
+  * [`geneos set user`](/docs/tools/geneos/geneos_set_user.md) - Set user configuration parameters
+* [`geneos show`](/docs/tools/geneos/geneos_show.md) - Show runtime, global, user or instance configuration is JSON format
+  * [`geneos show global`](/docs/tools/geneos/geneos_show_global.md) - A brief description of your command
+  * [`geneos show user`](/docs/tools/geneos/geneos_show_user.md) - A brief description of your command
+* [`geneos snapshot`](/docs/tools/geneos/geneos_snapshot.md) - Capture a snapshot of each matching dataview
+* [`geneos start`](/docs/tools/geneos/geneos_start.md) - Start instances
+* [`geneos stop`](/docs/tools/geneos/geneos_stop.md) - Stop instances
+* [`geneos tls`](/docs/tools/geneos/geneos_tls.md) - Manage certificates for secure connections
+  * [`geneos tls import`](/docs/tools/geneos/geneos_tls_import.md) - Import root and signing certificates
+  * [`geneos tls init`](/docs/tools/geneos/geneos_tls_init.md) - Initialise the TLS environment
+  * [`geneos tls ls`](/docs/tools/geneos/geneos_tls_ls.md) - List certificates
+  * [`geneos tls new`](/docs/tools/geneos/geneos_tls_new.md) - Create new certificates
+  * [`geneos tls renew`](/docs/tools/geneos/geneos_tls_renew.md) - Renew instance certificates
+  * [`geneos tls sync`](/docs/tools/geneos/geneos_tls_sync.md) - Sync remote hosts certificate chain files
+* [`geneos unset`](/docs/tools/geneos/geneos_unset.md) - Unset a configuration value
+  * [`geneos unset global`](/docs/tools/geneos/geneos_unset_global.md) - Unset a global parameter
+  * [`geneos unset user`](/docs/tools/geneos/geneos_unset_user.md) - Unset a user parameter
+* [`geneos update`](/docs/tools/geneos/geneos_update.md) - Update the active version of Geneos packages
+* [`geneos version`](/docs/tools/geneos/geneos_version.md) - Show program version details
+
+## Concepts & Terminology
+
+Many of the terms used in this documentation and in the program itself assumes some familiarity with the Geneos suite of products and this is not always the case, so here are some starting points. Many of the key terms have been inherited from earlier systems.
+
+The specific types supported by this program are details in [Component Types](#component-types) below.
+
+### Geneos
+
+[Geneos](https://www.itrsgroup.com/products/geneos) is a suite of software products from [ITRS](https://www.itrsgroup.com/) that provide real-time visibility of I.T. infrastructure and trading environments. It uses a three-tier architecture to collect, process and present enriched data to administrators.
+
+### Components
+
+A *component* is a type of software package and associated data. Each component will typically be a software package from one of the three-tiers mentioned above but can also be a derivative, e.g. a Self-Announcing Netprobe is a component type that abstracts the special configuration of either a vanilla Netprobe or, for example, the Fix Analyser Netprobe.
+
+### Instances
+
+An *instance* is an independent copy of a component with a working directory, configuration and other persistent files. Instances share read-only package directories for the binaries and other files from the distribution for the specific version being used.
+
+### Hosts
+
+*Hosts* are the locations that components are installed and instantiated. There is always a *localhost*.
+
+
+## Adopting An Existing Installation
 
 If you have an existing Geneos installation that you manage with the command like `gatewayctl`/`netprobectl`/etc. then you can use `geneos` to manage those once you have set the path to the Geneos installation.
 
@@ -101,27 +182,13 @@ geneos show   # show the default configuration values
 
 None of these commands should have any side-effects but others will. These may not only start or stop processes but may also convert configuration files to JSON format without prompting. Old `.rc` files are backed-up with a `.rc.orig` extension and can be restored using the `revert` command.
 
-#### Legacy Command Emulation
-
-If you run the program with a name ending in `ctl`, either through a symlink or by copying the binary, then the legacy command syntax is emulated in a simplistic way. This will allow for users or automation scripts to continue working. The first half of the executable name is mapped to the component type, so for example:
-
-```bash
-ln -s geneos gatewayctl
-# this then runs ./geneos start gateway GW1
-./gatewayctl GW1 start
-
-ln -s geneos netprobectl
-# this then runs ./geneos list netprobe
-./netprobectl list
-```
-
-### New Installation
+## New Installation
 
 New installations are set-up through the `init` sub-command. In it's most basic form it will create the minimal directory hierarchy and your user-specific geneos.json file containing the path to the top-level directory that it initialised. The top-level directory, if not given on the command line, defaults to a directory `geneos` in your home directory *unless* the last part of your home directory is itself `geneos`, e.g. if your home directory is `/home/example` then the Geneos directory becomes `/home/example/geneos` but if it is `/opt/geneos` then that is used directly.
 
 If the directory you are using is not empty then you must supply a `-F` flag for force using this directory.
 
-#### Demo Gateway
+### Demo Gateway
 
 You can set-up a Demo environment like this:
 
@@ -161,7 +228,7 @@ geneos start
 geneos ps
 ```
 
-#### Self-Announcing Netprobe
+### Self-Announcing Netprobe
 
 You can install a Self-Announcing Netprobe (SAN) in one line, like this:
 
@@ -175,7 +242,7 @@ This example will create a SAN with the name SAN123 connecting, using TLS, to ga
 
 Again, you can add authentication options for the downloads using `-u` and `-p`.
 
-#### Another Initial Environment
+### Another Initial Environment
 
 ```bash
 geneos init -A geneos.lic -u user@example.com
@@ -226,7 +293,7 @@ sudo -E -u geneos geneos install gateway
 
 ## Environment Settings
 
-The `geneos` program uses the packages [Cobra](cobra.dev) and [Viper](https://github.com/spf13/viper) (the latter via a wrapper package) to provide the command syntax and configuration management. There is full support for Viper's layered configuration for non-instance settings, which means you can override global and user settings with environment variables prefixed `ITRS_`, e.g. `ITRS_DOWNLOAD_USERNAME` overrides `download.username`
+The `geneos` program uses the packages [Cobra](https://cobra.dev) and [Viper](https://github.com/spf13/viper) (the latter via a wrapper package) to provide the command syntax and configuration management. There is full support for Viper's layered configuration for non-instance settings, which means you can override global and user settings with environment variables prefixed `ITRS_`, e.g. `ITRS_DOWNLOAD_USERNAME` overrides `download.username`
 
 ## Instance Settings
 
@@ -444,74 +511,6 @@ The remote connections over SSH mean there are limitations to the features avail
 1. Control over instance processes is done via shell commands and little error checking is done, so it is possible to cause damage and/or processes not to to start or stop as expected. Contributions of fixes are welcomed.
 
 2. All actions are taken as the user given in the SSH URL (which should NEVER be `root`) and so instances that are meant to run as other users cannot be controlled. Files and directories may not be available if the user does not have suitable permissions.
-
-## Usage
-
-CAUTION: Please note that the full list of commands and parameters is still changing at this time. This list below is mostly, but not completely, up-to-date.
-
-The general syntax is:
-
-`geneos COMMAND [FLAGS] [TYPE] [NAMES...]`
-
-There are a number of special cases, these are detailed below.
-
-### Commands
-
-The following commands are available (click on each command for individual documentation):
-
-* [`geneos add`](/docs/tools/geneos/geneos_add.md) - Add a new instance
-  * [`geneos add host`](/docs/tools/geneos/geneos_add_host.md) - Add a remote host
-* [`geneos aes`](/docs/tools/geneos/geneos_aes.md) - Manage Gateway AES key files
-  * [`geneos aes decode`](/docs/tools/geneos/geneos_aes_decode.md) - Decode a Geneos-format secure password
-  * [`geneos aes encode`](/docs/tools/geneos/geneos_aes_encode.md) - Encode a password using a Geneos AES file
-  * [`geneos aes import`](/docs/tools/geneos/geneos_aes_import.md) - Import shared keyfiles for components
-  * [`geneos aes ls`](/docs/tools/geneos/geneos_aes_ls.md) - List configured AES key files
-  * [`geneos aes new`](/docs/tools/geneos/geneos_aes_new.md) - Create a new key file
-  * [`geneos aes set`](/docs/tools/geneos/geneos_aes_set.md) - Set keyfile for instances
-* [`geneos clean`](/docs/tools/geneos/geneos_clean.md) - Clean-up instance directories
-* [`geneos command`](/docs/tools/geneos/geneos_command.md) - Show command line and environment for launching instances
-* [`geneos copy`](/docs/tools/geneos/geneos_copy.md) - Copy instances
-* [`geneos delete`](/docs/tools/geneos/geneos_delete.md) - Delete an instance. Instance must be stopped
-* [`geneos disable`](/docs/tools/geneos/geneos_disable.md) - Stop and disable instances
-* [`geneos enable`](/docs/tools/geneos/geneos_enable.md) - Enable instances
-* [`geneos home`](/docs/tools/geneos/geneos_home.md) - Print the home directory of the first instance or the Geneos home dir
-* [`geneos import`](/docs/tools/geneos/geneos_import.md) - Import files to an instance or a common directory
-* [`geneos init`](/docs/tools/geneos/geneos_init.md) - Initialise a Geneos installation
-  * [`geneos init all`](/docs/tools/geneos/geneos_init_all.md) - Initialise a more complete Geneos environment
-  * [`geneos init demo`](/docs/tools/geneos/geneos_init_demo.md) - Initialise a Geneos Demo environment
-  * [`geneos init san`](/docs/tools/geneos/geneos_init_san.md) - Initialise a Geneos SAN (Self-Announcing Netprobe) environment
-  * [`geneos init template`](/docs/tools/geneos/geneos_init_template.md) - Initialise or overwrite templates
-* [`geneos install`](/docs/tools/geneos/geneos_install.md) - Install (remote or local) Geneos packages
-* [`geneos logs`](/docs/tools/geneos/geneos_logs.md) - Show log(s) for instances
-* [`geneos ls`](/docs/tools/geneos/geneos_ls.md) - List instances, optionally in CSV or JSON format
-* [`geneos migrate`](/docs/tools/geneos/geneos_migrate.md) - Migrate legacy .rc configuration to new formats
-* [`geneos move`](/docs/tools/geneos/geneos_move.md) - Move (or rename) instances
-* [`geneos ps`](/docs/tools/geneos/geneos_ps.md) - List process information for instances, optionally in CSV or JSON format
-* [`geneos rebuild`](/docs/tools/geneos/geneos_rebuild.md) - Rebuild instance configuration files
-* [`geneos reload`](/docs/tools/geneos/geneos_reload.md) - Reload instance configuration, where supported
-* [`geneos restart`](/docs/tools/geneos/geneos_restart.md) - Restart instances
-* [`geneos revert`](/docs/tools/geneos/geneos_revert.md) - Revert migration of .rc files from backups
-* [`geneos set`](/docs/tools/geneos/geneos_set.md) - Set instance configuration parameters
-  * [`geneos set global`](/docs/tools/geneos/geneos_set_global.md) - Set global configuration parameters
-  * [`geneos set user`](/docs/tools/geneos/geneos_set_user.md) - Set user configuration parameters
-* [`geneos show`](/docs/tools/geneos/geneos_show.md) - Show runtime, global, user or instance configuration is JSON format
-  * [`geneos show global`](/docs/tools/geneos/geneos_show_global.md) - A brief description of your command
-  * [`geneos show user`](/docs/tools/geneos/geneos_show_user.md) - A brief description of your command
-* [`geneos snapshot`](/docs/tools/geneos/geneos_snapshot.md) - Capture a snapshot of each matching dataview
-* [`geneos start`](/docs/tools/geneos/geneos_start.md) - Start instances
-* [`geneos stop`](/docs/tools/geneos/geneos_stop.md) - Stop instances
-* [`geneos tls`](/docs/tools/geneos/geneos_tls.md) - Manage certificates for secure connections
-  * [`geneos tls import`](/docs/tools/geneos/geneos_tls_import.md) - Import root and signing certificates
-  * [`geneos tls init`](/docs/tools/geneos/geneos_tls_init.md) - Initialise the TLS environment
-  * [`geneos tls ls`](/docs/tools/geneos/geneos_tls_ls.md) - List certificates
-  * [`geneos tls new`](/docs/tools/geneos/geneos_tls_new.md) - Create new certificates
-  * [`geneos tls renew`](/docs/tools/geneos/geneos_tls_renew.md) - Renew instance certificates
-  * [`geneos tls sync`](/docs/tools/geneos/geneos_tls_sync.md) - Sync remote hosts certificate chain files
-* [`geneos unset`](/docs/tools/geneos/geneos_unset.md) - Unset a configuration value
-  * [`geneos unset global`](/docs/tools/geneos/geneos_unset_global.md) - Unset a global parameter
-  * [`geneos unset user`](/docs/tools/geneos/geneos_unset_user.md) - Unset a user parameter
-* [`geneos update`](/docs/tools/geneos/geneos_update.md) - Update the active version of Geneos packages
-* [`geneos version`](/docs/tools/geneos/geneos_version.md) - Show program version details
 
 #### General Command Flags & Arguments
 
