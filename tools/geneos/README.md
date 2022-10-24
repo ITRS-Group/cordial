@@ -55,15 +55,15 @@ sudo mv geneos /usr/local/bin
 
 ## Usage
 
-The general syntax is:
+For most commands the options are:
 
 `geneos COMMAND [FLAGS] [TYPE] [NAMES...]`
 
-There are a number of special cases, these are detailed below.
+A number of commands have special options and are documented in the individual pages linked below.
 
 ### Legacy Command Emulation
 
-If you run the program with a name ending in `ctl`, either through a symlink or by copying the binary, then the legacy command syntax is emulated in a simplistic way. This will allow for users or automation scripts to continue working. The first half of the executable name is mapped to the component type, so for example:
+If you run the program with a name ending in `ctl`, either through a symlink or by copying the binary, then the legacy command syntax is emulated in a simplistic way. This will allow for users or automation scripts to continue working in their environment and get used to the `geneos` command syntax gradually. The first half of the executable name is mapped to the component type, so for example:
 
 ```bash
 ln -s geneos gatewayctl
@@ -75,7 +75,11 @@ ln -s geneos netprobectl
 ./netprobectl list
 ```
 
-### Commands
+In general `TYPE + ctl NAME COMMAND` becomes `geneos COMMAND TYPE NAME`
+
+The word `all` instead of a specific instance name is supported as expected.
+
+### Available Commands
 
 The following commands are available (click on each command for individual documentation):
 
@@ -135,7 +139,7 @@ The following commands are available (click on each command for individual docum
 
 ## Concepts & Terminology
 
-Many of the terms used in this documentation and in the program itself assumes some familiarity with the Geneos suite of products and this is not always the case, so here are some starting points. Many of the key terms have been inherited from earlier systems.
+This documentation and the program itself assumes familiarity with the Geneos suite of products. Many of the key terms have been inherited from earlier systems.
 
 The specific types supported by this program are details in [Component Types](#component-types) below.
 
@@ -154,7 +158,6 @@ An *instance* is an independent copy of a component with a working directory, co
 ### Hosts
 
 *Hosts* are the locations that components are installed and instantiated. There is always a *localhost*.
-
 
 ## Adopting An Existing Installation
 
@@ -193,35 +196,29 @@ If the directory you are using is not empty then you must supply a `-F` flag for
 You can set-up a Demo environment like this:
 
 ```bash
-geneos init -D
+geneos init demo -i email@example.com
 ```
 
-If authentication is required to download the software archives then use these extra options:
+or, to script this, do:
 
 ```bash
-geneos init -D -u user@example.com
-```
-
-or
-
-```bash
-export ITRS_DOWNLOAD_USERNAME=user@example.com
+export ITRS_DOWNLOAD_USERNAME=email@example.com
 export ITRS_DOWNLOAD_PASSWORD=mysecret
-geneos init -D
+geneos init demo
 ```
 
 Here you should replace the email address with your own and the command will prompt you for your password. These are the login details you should have for the ITRS Resources website.
 
 The above command will create a directory structure, download software and configure a Gateway in 'Demo' mode plus a single Self-Announcing Netprobe and Webserver for dashboards. However, no further configuration is done, that's up to you!
 
-Behind the scenes the command does roughly this for you:
+Behind the scenes the command does (approximately) this for you:
 
 ```bash
 geneos init
 geneos install gateway -u ...
 geneos add gateway 'Demo Gateway'
 geneos install san -u ...
-geneos add san localhost -g localhost
+geneos add netprobe localhost -g localhost
 geneos install webserver -u ...
 geneos add webserver demo
 geneos start
@@ -233,19 +230,17 @@ geneos ps
 You can install a Self-Announcing Netprobe (SAN) in one line, like this:
 
 ```bash
-geneos init -S -n SAN123 -c /path/to/signingcertkey \
+geneos init san -n SAN123 -c /path/to/signingcertkey \
     -g gateway1 -g gateway2 -t Infrastructure -t App1 -t App2 \
-    -a ENVIRONMENT=Prod -a LOCATION=London -u user@example.com
+    -a ENVIRONMENT=Prod -a LOCATION=London -u email@example.com
 ```
 
 This example will create a SAN with the name SAN123 connecting, using TLS, to gateway1 and gateway2, using types and attributes as listed.
 
-Again, you can add authentication options for the downloads using `-u` and `-p`.
-
-### Another Initial Environment
+### A More Complete Initial Environment
 
 ```bash
-geneos init -A geneos.lic -u user@example.com
+geneos init all ./geneos.lic -u email@example.com
 ```
 
 does this (where HOSTNAME is, of course, replaced with the hostname of the server)
@@ -255,7 +250,7 @@ geneos init
 geneos install gateway -u ...
 geneos new gateway HOSTNAME
 geneos install san -u ...
-geneos new san HOSTNAME -g localhost
+geneos new netprobe HOSTNAME -g localhost
 geneos install licd -u ...
 geneos new licd HOSTNAME
 geneos install webserver -u ...
@@ -305,11 +300,12 @@ Historical (legacy) `.rc` files have a simple format of the form
 
 ```bash
 GatePort=1234
+GateUser=geneos
 ```
 
-Where the prefix (`Gate`) also encodes the component type and the suffix (`Port`) is the setting. Any lines that do not contain the prefix are treated as environment variables and are evaluated and passed to the program on start. Lines that contain environment variables like `${HOME}` will be expanded at run time. If the configuration is migrated, either through an explicit `geneos migrate` command or if a setting is changes through `geneos set` or similar then the value of the environment variable will be carried over and continue to be expanded at run-time. The `geneos show` command can be passed a `--raw` flag to show the unexpanded values, if any.
+Where the prefix (`Gate`) also encodes the component type and the suffix (e.g. `Port`) is the setting. Any lines that do not contain the prefix are treated as environment variables and are evaluated and passed to the program on start. Lines that contain environment variables like `${HOME}` will be expanded at run time. If the configuration is migrated, either through an explicit `geneos migrate` command or if a setting is changes through `geneos set` or similar then the value of the environment variable will be carried over and continue to be expanded at run-time. The `geneos show` command can be passed a `--raw` flag to show the unexpanded values, if any.
 
-While the `geneos` program can parse and understand the legacy `.rc` files above it will never update them, instead migrating them to their modern `.json` versions either when required or when explicitly told to using the `migrate` command.
+While the `geneos` program can parse and understand the legacy `.rc` files above it will never update them, instead migrating them to their `.json` equivalents either when required or when explicitly told to using the `migrate` command.
 
 ### JSON Configuration Files
 
@@ -385,6 +381,8 @@ The following component types (and their aliases) are supported:
 The first name, in bold, is also the directory name used for each type. These names are also reserved words and you cannot configure (or consistently manage) components with those names. This means that you cannot have a gateway called `gateway` or a probe called `probe`. If you do already have instances with these names then you will have to be careful migrating. See more below.
 
 Each component type is described below along with specific component options.
+
+**Note** This section is not yet complete, apologies.
 
 ### Type `gateway`
 
@@ -508,7 +506,7 @@ If you can log in to a remote Linux server using `ssh user@server` and not be pr
 
 The remote connections over SSH mean there are limitations to the features available on remote servers:
 
-1. Control over instance processes is done via shell commands and little error checking is done, so it is possible to cause damage and/or processes not to to start or stop as expected. Contributions of fixes are welcomed.
+1. Control over instance processes is done via shell commands and little error checking is done, so it is possible to cause damage and/or processes not to to start or stop as expected.
 
 2. All actions are taken as the user given in the SSH URL (which should NEVER be `root`) and so instances that are meant to run as other users cannot be controlled. Files and directories may not be available if the user does not have suitable permissions.
 
@@ -624,35 +622,43 @@ The root and signing certificates are only kept on the local server and the `tls
 ### General Configuration
 
 * `/etc/geneos/geneos.json` - Global options
-* `${HOME}/.config/geneos.json` - User options
+* `${HOME}/.config/geneos/geneos.json` - User options
 * Environment variables ITRS_option
 
 General options are loaded from the global config file first, then the user one and any environment variables override both files. The current options are:
 
 * `geneos`
+
 The home directory for all other commands. See [Directory Layout](#directory-layout) below. If set the environment variable ITRS_HOME overrides any settings in the files. This is to maintain backward compatibility with older tools. The default, if not set anywhere else, is the home directory of the user running the command or, if running as root, the home directory of the `geneos` or `itrs` users (in that order). (To be fully implemented)
 This value is also set by the environment variables `ITRS_HOME` or `ITRS_GENEOS`
 
 * `download.url`
+
 The base URL for downloads for automating installations. Not yet used.
 If files are locally downloaded then this can either be a `file://` style URL or a directory path.
 
 * `download.username`
   `download.password`
+
   These specify the username and password to use when downloading packages. They can also be set as the environment variables, but the environment variables are not subject to expansion and so cannot contain Geneos encoded passwords (see below):
+
   * `ITRS_DOWNLOAD_USERNAME`
   * `ITRS_DOWNLOAD_PASSWORD`
 
 * `snapshot.username`
   `snapshot.password`
+
   Similarly to the above, these specify the username and password to use when taking dataview snapshots. They can also be set as the environment variables, with the same restrictions as above:
+
   * `ITRS_SNAPSHOT_USERNAME`
   * `ITRS_SNAPSHOT_PASSWORD`
 
 * `defaultuser`
+
 Principally used when running with elevated privilege (setuid or `sudo`) and a suitable username is not defined in instance configurations or for file ownership of shared directories.
 
 * `GatewayPortRange` & `NetprobePortRange` & `LicdPortRange`
+
 ...
 
 ### Component Configuration
