@@ -36,7 +36,7 @@ import (
 func init() {
 	rootCmd.AddCommand(restartCmd)
 
-	restartCmd.Flags().BoolVarP(&restartCmdAll, "all", "a", false, "Start all matcheing instances, not just those already running")
+	restartCmd.Flags().BoolVarP(&restartCmdAll, "all", "a", false, "Start all matching instances, not just those already running")
 	restartCmd.Flags().BoolVarP(&restartCmdKill, "kill", "K", false, "Force stop by sending an immediate SIGKILL")
 	restartCmd.Flags().BoolVarP(&restartCmdLogs, "log", "l", false, "Run 'logs -f' after starting instance(s)")
 
