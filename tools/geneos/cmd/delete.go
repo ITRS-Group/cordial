@@ -28,7 +28,6 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -57,8 +56,9 @@ partial deletion cannot be protected against.
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, allargs []string) error {
 		ct, args, params := cmdArgsParams(cmd)
+
 		return instance.ForAll(ct, deleteInstance, args, params)
 	},
 }
@@ -66,7 +66,7 @@ partial deletion cannot be protected against.
 func deleteInstance(c geneos.Instance, params []string) (err error) {
 	if deleteCmdForce {
 		if c.Type().RealComponent {
-			if err = instance.Stop(c, false); err != nil {
+			if err = instance.Stop(c, true, false); err != nil {
 				return
 			}
 		}
@@ -81,6 +81,5 @@ func deleteInstance(c geneos.Instance, params []string) (err error) {
 		return nil
 	}
 
-	log.Error().Msgf("%s must use -F or instance must be be disabled before delete", c)
-	return nil
+	return fmt.Errorf("instance must be disabled or use '--force' before delete")
 }

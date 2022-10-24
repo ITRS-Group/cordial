@@ -23,6 +23,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"os"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -30,11 +31,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var stopCmdKill bool
+var stopCmdForce, stopCmdKill bool
 
 func init() {
 	rootCmd.AddCommand(stopCmd)
 
+	stopCmd.Flags().BoolVarP(&stopCmdForce, "force", "F", false, "Stop protected instances")
 	stopCmd.Flags().BoolVarP(&stopCmdKill, "kill", "K", false, "Force immediate stop by sending an immediate SIGKILL")
 
 	stopCmd.Flags().SortFlags = false
@@ -61,5 +63,9 @@ a |SIGKILL|.
 }
 
 func stopInstance(c geneos.Instance, params []string) error {
-	return instance.Stop(c, stopCmdKill)
+	_, err := instance.GetPID(c)
+	if err == os.ErrProcessDone {
+		return nil
+	}
+	return instance.Stop(c, stopCmdForce, stopCmdKill)
 }

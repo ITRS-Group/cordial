@@ -287,6 +287,20 @@ While adding the -E flags like this will work:
 sudo -E -u geneos geneos install gateway
 ```
 
+## Instance Protection
+
+Individual instances can be protected again being stopped or deleted by setting a `protected` configuration flag to `true`.
+
+```bash
+geneos set gateway IMPORTANT_GW protected=true
+```
+
+This also applies to almost any command that stops an instance, such as the more obvious ones like `restart` but also `disable` and others. The `copy` command, because it must be given the name for a source, does not check this setting. For most commands that do check the protection setting before running there is a `--force` flag to override the protection. The `delete` command already requires that an instance be disabled or called with the `--force` flag.
+
+If you run `geneos delete host HOSTNAME` with the `--stop` flag to stop instance on the remote host first, then the `protected` settings is also checked and the command will terminate on the first error. This does however mean that unprotected instances on that host may have been stopped in the meantime.
+
+The `update` command will not run if any protected instance is using the base symlink about to be updated.
+
 ## Environment Settings
 
 The `geneos` program uses the packages [Cobra](https://cobra.dev) and [Viper](https://github.com/spf13/viper) (the latter via a wrapper package) to provide the command syntax and configuration management. There is full support for Viper's layered configuration for non-instance settings, which means you can override global and user settings with environment variables prefixed `ITRS_`, e.g. `ITRS_DOWNLOAD_USERNAME` overrides `download.username`

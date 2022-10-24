@@ -32,8 +32,12 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-func Stop(c geneos.Instance, force bool) (err error) {
-	if !force {
+func Stop(c geneos.Instance, force, kill bool) (err error) {
+	if !force && c.Config().GetBool("protected") {
+		return fmt.Errorf("cannot stop a protected instance without '--force' or equivalent")
+	}
+
+	if !kill {
 		err = Signal(c, syscall.SIGTERM)
 		if err == os.ErrProcessDone {
 			return nil

@@ -25,6 +25,7 @@ package cmd
 import (
 	"errors"
 	"os"
+	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -32,15 +33,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var disableCmdForce bool
+
 func init() {
 	rootCmd.AddCommand(disableCmd)
-	// disableCmd.Flags().SortFlags = false
+
+	disableCmd.Flags().BoolVarP(&disableCmdForce, "force", "F", false, "force disable instances")
+	disableCmd.Flags().SortFlags = false
 }
 
 var disableCmd = &cobra.Command{
-	Use:          "disable [TYPE] [NAME...]",
-	Short:        "Stop and disable instances",
-	Long:         `Mark any matching instances as disabled. The instances are also stopped.`,
+	Use:   "disable [TYPE] [NAME...]",
+	Short: "Stop and disable instances",
+	Long: strings.ReplaceAll(`
+Mark any matching instances as disabled. The instances are also
+stopped.
+`, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
@@ -61,7 +69,7 @@ func disableInstance(c geneos.Instance, params []string) (err error) {
 		return
 	}
 
-	if err = instance.Stop(c, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
+	if err = instance.Stop(c, disableCmdForce, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
 		return
 	}
 

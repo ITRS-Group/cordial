@@ -56,9 +56,9 @@ type Instance struct {
 
 func DisplayName(c geneos.Instance) string {
 	if c.Host() == host.LOCAL {
-		return fmt.Sprintf("%s %s", c.Type(), c.Name())
+		return fmt.Sprintf("%s %q", c.Type(), c.Name())
 	}
-	return fmt.Sprintf("%s %s@%s", c.Type(), c.Name(), c.Host())
+	return fmt.Sprintf("%s \"%s@%s\"", c.Type(), c.Name(), c.Host())
 }
 
 // separate reserved words and invalid syntax
@@ -265,6 +265,8 @@ func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
 	return
 }
 
+// MatchKeyValue returns a slice of instances where the instance
+// configuration key matches the value given.
 func MatchKeyValue(h *host.Host, ct *geneos.Component, key, value string) (confs []geneos.Instance) {
 	if ct == nil {
 		for _, c := range geneos.RealComponents() {
@@ -443,7 +445,7 @@ func ForAll(ct *geneos.Component, fn func(geneos.Instance, []string) error, args
 		n++
 		for _, c := range cs {
 			if err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
-				log.Error().Err(err).Msgf("%s", c)
+				fmt.Printf("%s: %s\n", c, err)
 			}
 		}
 	}
@@ -536,4 +538,8 @@ func IsDisabled(c geneos.Instance) bool {
 		return true
 	}
 	return false
+}
+
+func IsProtected(c geneos.Instance) bool {
+	return c.Config().GetBool("protected")
 }

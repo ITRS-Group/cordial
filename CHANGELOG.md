@@ -2,6 +2,7 @@
 
 ## Version v1.3.0-alpha - 2022/10/22
 
+* tools/geneos: add instance protection against stop (and related) or delete commands
 * tools/geneos: support legacy command through emulating `*ctl` named commands
 * tools/geneos: allow remote operations without local directories
 * libemail: fix default _SUBJECT handling
