@@ -12,6 +12,7 @@
 
 ## Fixes
 
+* tools/geneos: fix logic around creating user default AES keyfiles and directory permissions
 * tools/geneos: round certificate expiry to midnight
 * tools/geneos: round tls remaining column to seconds correctly
 * tools/geneos: fix webserver command build typo. now webserver starts correctly

@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -92,17 +93,22 @@ rolling.
 		}
 
 		if aesNewCmdKeyfile != "" {
-			if !aesNewCmdOverwriteKeyfile {
-				if _, err := os.Stat(aesNewCmdKeyfile); err == nil {
+			if _, err := os.Stat(aesNewCmdKeyfile); err == nil {
+				if !aesNewCmdOverwriteKeyfile {
 					return fs.ErrExist
 				}
-			}
-			if aesNewCmdBackupKeyfile != "" {
-				if err = os.Rename(aesNewCmdKeyfile, aesNewCmdKeyfile+aesNewCmdBackupKeyfile); err != nil {
-					return fmt.Errorf("keyfile backup failed: %w", err)
+				if aesNewCmdBackupKeyfile != "" {
+					if err = os.Rename(aesNewCmdKeyfile, aesNewCmdKeyfile+aesNewCmdBackupKeyfile); err != nil {
+						return fmt.Errorf("keyfile backup failed: %w", err)
+					}
 				}
 			}
-			os.WriteFile(aesNewCmdKeyfile, []byte(a.String()), 0600)
+			if err = os.MkdirAll(filepath.Dir(aesNewCmdKeyfile), 0775); err != nil {
+				return fmt.Errorf("failed to create keyfile directory %q: %w", filepath.Dir(aesNewCmdKeyfile), err)
+			}
+			if err = os.WriteFile(aesNewCmdKeyfile, []byte(a.String()), 0600); err != nil {
+				return fmt.Errorf("failed to write keyfile to %q: %w", aesNewCmdKeyfile, err)
+			}
 		} else if !aesNewCmdImport {
 			fmt.Print(a)
 		}
@@ -141,7 +147,8 @@ rolling.
 			}
 
 			params := []string{crcstr + ".aes"}
-			return instance.ForAll(ct, aesNewSetInstance, args, params)
+			instance.ForAll(ct, aesNewSetInstance, args, params)
+			return
 		}
 		return
 	},

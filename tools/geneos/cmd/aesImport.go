@@ -119,8 +119,7 @@ func aesImportSave(ct *geneos.Component, h *host.Host, a *config.AESValues) (err
 		log.Debug().Msgf("keyfile already exists for host %s, component %s", h, ct)
 		return nil
 	}
-	// speculative mkdirall; no error if it already exists
-	if err := h.MkdirAll(utils.Dir(path), 0700); err != nil {
+	if err := h.MkdirAll(utils.Dir(path), 0775); err != nil {
 		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
 		return err
 	}
