@@ -58,7 +58,7 @@ func CreateCert(c geneos.Instance) (err error) {
 	if err != nil {
 		return
 	}
-	expires := time.Now().AddDate(1, 0, 0)
+	expires := time.Now().AddDate(1, 0, 0).Truncate(24 * time.Hour)
 	template := x509.Certificate{
 		SerialNumber: serial,
 		Subject: pkix.Name{
