@@ -1,6 +1,6 @@
 # Change Log
 
-## Version v1.3.0-beta - 2022/10/24
+## Version v1.3.0 - 2022/10/24
 
 ## Changes
 
@@ -12,6 +12,8 @@
 
 ## Fixes
 
+* tools/geneos: round tls remaining column to seconds correctly
+* tools/geneos: fix webserver command build typo. now webserver starts correctly
 * libemail: fix default _SUBJECT handling
 * tools/geneos: split over complex 'init' command into sub-commands
 * updated command usage information and reordered various internal function calls

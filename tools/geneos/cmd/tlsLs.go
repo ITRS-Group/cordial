@@ -113,7 +113,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 					"global",
 					geneos.RootCAFile,
 					string(host.LOCALHOST),
-					time.Duration(time.Until(rootCert.NotAfter).Seconds()),
+					time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
 					rootCert.NotAfter,
 					rootCert.Subject.CommonName,
 				})
@@ -123,7 +123,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 					"global",
 					geneos.SigningCertFile,
 					string(host.LOCALHOST),
-					time.Duration(time.Until(geneosCert.NotAfter).Seconds()),
+					time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
 					geneosCert.NotAfter,
 					geneosCert.Subject.CommonName,
 				})
@@ -201,7 +201,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 					"global",
 					geneos.RootCAFile,
 					string(host.LOCALHOST),
-					time.Duration(time.Until(rootCert.NotAfter).Seconds()),
+					time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
 					rootCert.NotAfter,
 					rootCert.Subject.CommonName,
 					rootCert.Issuer.CommonName,
@@ -215,7 +215,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 					"global",
 					geneos.SigningCertFile,
 					string(host.LOCALHOST),
-					time.Duration(time.Until(geneosCert.NotAfter).Seconds()),
+					time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
 					geneosCert.NotAfter,
 					geneosCert.Subject.CommonName,
 					geneosCert.Issuer.CommonName,
@@ -246,7 +246,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 					"global",
 					geneos.RootCAFile,
 					string(host.LOCALHOST),
-					fmt.Sprintf("%0f", time.Until(rootCert.NotAfter).Seconds()),
+					fmt.Sprintf("%.f", time.Until(rootCert.NotAfter).Seconds()),
 					rootCert.NotAfter.String(),
 					rootCert.Subject.CommonName,
 					rootCert.Issuer.CommonName,
@@ -260,7 +260,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 					"global",
 					geneos.SigningCertFile,
 					string(host.LOCALHOST),
-					fmt.Sprintf("%0f", time.Until(geneosCert.NotAfter).Seconds()),
+					fmt.Sprintf("%.f", time.Until(geneosCert.NotAfter).Seconds()),
 					geneosCert.NotAfter.String(),
 					geneosCert.Subject.CommonName,
 					geneosCert.Issuer.CommonName,
@@ -330,7 +330,7 @@ func lsInstanceCertCSV(c geneos.Instance, params []string) (err error) {
 		return
 	}
 	expires := cert.NotAfter
-	until := fmt.Sprintf("%0f", time.Until(expires).Seconds())
+	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
 	cols := []string{c.Type().String(), c.Name(), c.Host().String(), until, expires.String(), cert.Subject.CommonName}
 	if tlsCmdLong {
 		cols = append(cols, cert.Issuer.CommonName)
