@@ -104,7 +104,7 @@ $ geneos ps
 	Version:            cordial.VERSION,
 	DisableAutoGenTag:  true,
 	DisableSuggestions: true,
-	SilenceErrors:      true,
+	// SilenceErrors:      true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		// check initialisation
 		geneosdir := host.Geneos()
@@ -115,10 +115,12 @@ $ geneos ps
 				cmd == setUserCmd ||
 				cmd == setGlobalCmd ||
 				cmd == addHostCmd ||
+				cmd.Parent() == aesCmd ||
 				len(host.RemoteHosts()) > 0) {
 				// if cmd != rootCmd && cmd != initCmd && cmd.Parent() != initCmd && cmd != setUserCmd && cmd != setGlobalCmd && cmd != addHostCmd && len(host.RemoteHosts()) == 0 {
 				cmd.SetUsageTemplate(" ")
-				return fmt.Errorf("%s", `Geneos installation directory not set.
+				return fmt.Errorf("%s", strings.ReplaceAll(`
+Geneos installation directory not set.
 
 Use one of the following to fix this:
 
@@ -130,10 +132,9 @@ To initialise a new installation:
 
 For temporary usage:
 	$ export ITRS_HOME=/path/to/geneos
-`)
+`, "|", "`"))
 			}
 		}
-
 		parseArgs(cmd, args)
 		return
 	},
