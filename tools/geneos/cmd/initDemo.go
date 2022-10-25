@@ -115,9 +115,9 @@ func initDemo(h *host.Host, options ...geneos.GeneosOptions) (err error) {
 
 	addInstance(&gateway.Gateway, initCmdExtras, "Demo Gateway@"+h.String())
 	set(&gateway.Gateway, g, []string{"options=-demo"})
-	if len(initCmdExtras.Gateways) == 0 {
-		initCmdExtras.Gateways.Set("localhost")
-	}
+	// if len(initCmdExtras.Gateways) == 0 {
+	// 	initCmdExtras.Gateways.Set("localhost")
+	// }
 	addInstance(&netprobe.Netprobe, initCmdExtras, "localhost@"+h.String())
 	addInstance(&webserver.Webserver, initCmdExtras, "demo@"+h.String())
 

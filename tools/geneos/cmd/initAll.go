@@ -130,9 +130,9 @@ func initAll(h *host.Host, options ...geneos.GeneosOptions) (err error) {
 	addInstance(&licd.Licd, initCmdExtras, initCmdName)
 	importFiles(&licd.Licd, []string{initCmdName}, []string{"geneos.lic=" + initAllCmdLicenseFile})
 	addInstance(&gateway.Gateway, initCmdExtras, initCmdName)
-	if len(initCmdExtras.Gateways) == 0 {
-		initCmdExtras.Gateways.Set("localhost")
-	}
+	// if len(initCmdExtras.Gateways) == 0 {
+	// 	initCmdExtras.Gateways.Set("localhost")
+	// }
 	addInstance(&netprobe.Netprobe, initCmdExtras, "localhost@"+h.String())
 	addInstance(&webserver.Webserver, initCmdExtras, initCmdName)
 	start(nil, initCmdLogs, e, e)
