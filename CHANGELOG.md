@@ -1,6 +1,6 @@
 # Change Log
 
-## Version v1.3.0 - 2022/10/24
+## Version v1.3.0 - 2022/10/25
 
 ## Changes
 
