@@ -95,7 +95,7 @@ func CreateCert(c geneos.Instance) (err error) {
 		return
 	}
 
-	fmt.Printf("certificate created for %s (expires %s)\n", c, expires)
+	fmt.Printf("certificate created for %s (expires %s)\n", c, expires.UTC())
 
 	return
 }
