@@ -4,6 +4,7 @@
 
 (unordered)
 
+* tools/geneos: install -U does not work
 * Windows build, in stages:
   * Initially for remote management (ssh etc)
   * Add netprobe support, services?
