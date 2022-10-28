@@ -444,14 +444,17 @@ func latest(r *host.Host, dir, filter string, fn func(os.DirEntry) bool) (latest
 	if err != nil {
 		log.Debug().Msgf("invalid filter regexp %q", filter)
 	}
-	for n := 0; n < len(dirs); n++ {
-		if !filterRE.MatchString(dirs[n].Name()) {
-			dirs[n] = dirs[len(dirs)-1]
-			dirs = dirs[:len(dirs)-1]
+
+	newdirs := dirs[:0]
+	for _, d := range dirs {
+		if filterRE.MatchString(d.Name()) {
+			newdirs = append(newdirs, d)
 		}
 	}
+	dirs = newdirs
 
-	max := make([]int, 3)
+	max := []int{0, 0, 0}
+
 	for _, v := range dirs {
 		if fn(v) {
 			continue
@@ -463,29 +466,35 @@ func latest(r *host.Host, dir, filter string, fn func(os.DirEntry) bool) (latest
 			log.Debug().Msgf("%s does not match a valid directory pattern", d)
 			continue
 		}
+		log.Debug().Msgf("%s: checking version %q", dir, x)
 		s := strings.SplitN(x, ".", 3)
 
-		// make sure we have three levels, fill with 0
-		for len(s) < len(max) {
-			s = append(s, "0")
-		}
 		next := sliceAtoi(s)
 
-	OUTER:
-		for i := range max {
-			switch {
-			case next[i] < max[i]:
-				break OUTER
-			case next[i] > max[i]:
-				// do a final lexical scan for suffixes?
+		// unrolled loop is much simpler
+		switch {
+		case next[0] < max[0]:
+			continue
+		case next[0] > max[0]:
+			max = []int{next[0], 0, 0}
+		}
+
+		switch {
+		case next[1] < max[1]:
+			continue
+		case next[1] > max[1]:
+			max = []int{next[0], next[1], 0}
+		}
+
+		switch {
+		case next[2] < max[2]:
+			continue
+		case next[2] > max[2]:
+			max = []int{next[0], next[1], next[2]}
+			latest = v.Name()
+		default:
+			if v.Name() > latest {
 				latest = v.Name()
-				max[i] = next[i]
-			default:
-				// if equal and we are on last number, lexical comparison
-				// to pick up suffixes
-				if len(max) == i+1 && v.Name() > latest {
-					latest = v.Name()
-				}
 			}
 		}
 	}
