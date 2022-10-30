@@ -12,12 +12,12 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
+
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero/sftpfs"
 )
 
@@ -38,6 +38,7 @@ func valueOf(s string, sep string) string {
 	return ""
 }
 
+// first returns the first non-empty string argument
 func first(d ...interface{}) string {
 	for _, f := range d {
 		if s, ok := f.(string); ok {
@@ -152,12 +153,15 @@ func readRCConfig(c geneos.Instance) (err error) {
 	for k, v := range confs {
 		lk := strings.ToLower(k)
 		if lk == "binary" {
-			c.Config().Set(k, v)
+			c.Config().Set(lk, v)
 			continue
 		}
 
 		if strings.HasPrefix(lk, c.Prefix()) {
-			nk := c.Type().Aliases[lk]
+			nk, ok := c.Type().Aliases[lk]
+			if !ok {
+				nk = lk
+			}
 			c.Config().Set(nk, v)
 		} else {
 			// set env var
@@ -175,7 +179,7 @@ func readRCConfig(c geneos.Instance) (err error) {
 // component type of the instance with any extensions joined using ".", e.g.
 // is c is a netprobe instance then
 //
-//	path := instance.ComponentPath(c, "xml", "orig")
+//	path := instance.ComponentFilepath(c, "xml", "orig")
 //
 // will return /path/to/netprobe/netprobe.xml.orig
 //
