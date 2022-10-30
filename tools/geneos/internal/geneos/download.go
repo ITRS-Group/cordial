@@ -48,6 +48,9 @@ func Install(h *host.Host, ct *Component, options ...GeneosOptions) (err error) 
 	if p, ok := osinfo["PLATFORM_ID"]; ok {
 		options = append(options, PlatformID(p))
 	}
+
+	opts := EvalOptions(options...)
+
 	reader, filename, err := OpenArchive(ct, options...)
 	if err != nil {
 		return err
@@ -59,6 +62,10 @@ func Install(h *host.Host, ct *Component, options ...GeneosOptions) (err error) 
 			return nil
 		}
 		return err
+	}
+
+	if opts.doupdate {
+		Update(h, ct, options...)
 	}
 	return
 }

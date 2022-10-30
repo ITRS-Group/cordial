@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -81,13 +82,8 @@ func Update(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
 		return fmt.Errorf("%q version of %s on %s: %w", opts.version, ct, h, os.ErrNotExist)
 	}
 
-	if (existing != "" && !opts.overwrite) || existing == opts.version {
+	if (existing != "" && !opts.force) || existing == opts.version {
 		return nil
-	}
-
-	if opts.restart {
-		// this cannot call 'instance' methods as that would be a dependency loop...
-		// XXX
 	}
 
 	if err = h.Remove(basepath); err != nil && !errors.Is(err, fs.ErrNotExist) {
