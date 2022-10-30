@@ -23,17 +23,19 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-var installCmdLocal, installCmdNoSave, installCmdUpdate, installCmdNexus, installCmdSnapshot bool
+var installCmdLocal, installCmdNoSave, installCmdUpdate, installCmdNexus, installCmdSnapshot, installCmdUpdateForce bool
 var installCmdBase, installCmdHost, installCmdOverride, installCmdVersion, installCmdUsername, installCmdPassword, installCmdPwFile string
 
 func init() {
@@ -52,6 +54,7 @@ func init() {
 	installCmd.Flags().StringVarP(&installCmdPwFile, "pwfile", "P", "", "Password file to read for downloads, defaults to configuration value in download.password or otherwise prompts")
 
 	installCmd.Flags().BoolVarP(&installCmdUpdate, "update", "U", false, "Update the base directory symlink")
+	installCmd.Flags().BoolVarP(&installCmdUpdateForce, "force", "F", false, "Force update protecteced instances")
 	installCmd.Flags().StringVarP(&installCmdOverride, "override", "T", "", "Override (set) the TYPE:VERSION for archive files with non-standard names")
 
 	installCmd.Flags().SortFlags = false
@@ -97,6 +100,14 @@ geneos install netprobe -b active_dev -U
 			return nil
 		}
 
+		if installCmdUpdate {
+			cs := instance.MatchKeyValue(host.ALL, ct, "protected", "true")
+			if len(cs) > 0 && !installCmdUpdateForce {
+				fmt.Println("Will not update - there are one or more protected instances using the current version. Use `--force` to override")
+				return nil
+			}
+		}
+
 		if installCmdUsername == "" {
 			installCmdUsername = config.GetString("download.username")
 		}
@@ -109,6 +120,15 @@ geneos install netprobe -b active_dev -U
 
 		if installCmdUsername != "" && installCmdPassword == "" {
 			installCmdPassword = utils.ReadPasswordPrompt()
+		}
+
+		// if we are updating, then stop matching instances and defer start
+		if installCmdUpdate {
+			cs := instance.MatchKeyValue(host.ALL, ct, "version", installCmdBase)
+			for _, c := range cs {
+				instance.Stop(c, installCmdUpdateForce, false)
+				defer instance.Start(c)
+			}
 		}
 
 		// if we have a component on the command line then use an archive in packages/downloads
@@ -125,7 +145,8 @@ geneos install netprobe -b active_dev -U
 				geneos.Basename(installCmdBase),
 				geneos.NoSave(installCmdNoSave),
 				geneos.LocalOnly(installCmdLocal),
-				geneos.Force(installCmdUpdate),
+				geneos.DoUpdate(installCmdUpdate),
+				geneos.Force(installCmdUpdateForce),
 				geneos.OverrideVersion(installCmdOverride),
 				geneos.Username(installCmdUsername),
 				geneos.Password(installCmdPassword),
@@ -136,6 +157,7 @@ geneos install netprobe -b active_dev -U
 					options = append(options, geneos.UseSnapshots())
 				}
 			}
+
 			return install(ct, installCmdHost, options...)
 		}
 
@@ -147,7 +169,8 @@ geneos install netprobe -b active_dev -U
 				geneos.Basename(installCmdBase),
 				geneos.NoSave(installCmdNoSave),
 				geneos.LocalOnly(installCmdLocal),
-				geneos.Force(installCmdUpdate),
+				geneos.DoUpdate(installCmdUpdate),
+				geneos.Force(installCmdUpdateForce),
 				geneos.OverrideVersion(installCmdOverride),
 				geneos.Username(installCmdUsername),
 				geneos.Password(installCmdPassword),
@@ -165,6 +188,7 @@ func install(ct *geneos.Component, target string, options ...geneos.GeneosOption
 		if err = geneos.MakeComponentDirs(h, ct); err != nil {
 			return err
 		}
+
 		if err = geneos.Install(h, ct, options...); err != nil {
 			log.Error().Err(err).Msg("")
 			continue
