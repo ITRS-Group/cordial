@@ -37,11 +37,11 @@ Finally, using the default configuration, you will need to set a `PAGERDUTY_INTE
 
 ## How It Works
 
-There are very few hardwired rules in the integration and most behaviours can be changed in the configuration.
+There are very few hard-wired rules in the integration and most behaviours can be changed in the configuration file(s).
 
 Currently there is no support for suppressed (informational) alerts. These may be added in a future release.
 
-There is also not support for Change Events at this time. These may also be added in a future release.
+There is also no support for Change Events at this time. These may also be added in a future release.
 
 ### Built-in Logic
 
