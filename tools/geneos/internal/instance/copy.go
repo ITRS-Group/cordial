@@ -96,11 +96,11 @@ func CopyInstance(ct *geneos.Component, srcname, dstname string, remove bool) (e
 	}
 
 	// now a full clean
-	if err = Clean(src, geneos.Restart(true)); err != nil {
+	if err = Clean(src, geneos.Restart(!stopped)); err != nil {
 		return
 	}
 
-	_, ds, dr := SplitName(dstname, host.LOCAL)
+	_, ds, dh := SplitName(dstname, host.LOCAL)
 
 	// do a dance here to deep copy-ish the dst
 	realdst := dst
@@ -110,7 +110,7 @@ func CopyInstance(ct *geneos.Component, srcname, dstname string, remove bool) (e
 	}
 
 	// move directory
-	if err = host.CopyAll(src.Host(), src.Home(), dr, dst.Home()); err != nil {
+	if err = host.CopyAll(src.Host(), src.Home(), dh, dst.Home()); err != nil {
 		return
 	}
 
@@ -133,15 +133,15 @@ func CopyInstance(ct *geneos.Component, srcname, dstname string, remove bool) (e
 	}(src.String(), src.Host(), src.Home(), dst)
 
 	// update *Home manually, as it's not just the prefix
-	realdst.Config().Set("home", filepath.Join(dst.Type().ComponentDir(dr), ds))
+	realdst.Config().Set("home", filepath.Join(dst.Type().ComponentDir(dh), ds))
 	// dst.Unload()
 
 	// fetch a new port if hosts are different and port is already used
-	if src.Host() != dr {
+	if src.Host() != dh {
 		srcport := src.Config().GetInt64("port")
-		dstports := GetPorts(dr)
+		dstports := GetPorts(dh)
 		if _, ok := dstports[uint16(srcport)]; ok {
-			dstport := NextPort(dr, dst.Type())
+			dstport := NextPort(dh, dst.Type())
 			realdst.Config().Set("port", fmt.Sprint(dstport))
 		}
 	}
