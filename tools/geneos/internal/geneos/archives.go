@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -270,6 +271,19 @@ func Unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 
 		default:
 			log.Warn().Msgf("unsupported file type %c\n", hdr.Typeflag)
+		}
+	}
+
+	// if root, chown of created tree to default user
+	if h == host.LOCAL && utils.IsSuperuser() {
+		uid, gid, _, err := utils.GetIDs(h.GetString("username"))
+		if err == nil {
+			filepath.WalkDir(h.Path(basedir), func(path string, dir fs.DirEntry, err error) error {
+				if err == nil {
+					err = host.LOCAL.Chown(path, uid, gid)
+				}
+				return err
+			})
 		}
 	}
 	fmt.Printf("installed %q to %q\n", filename, h.Path(basedir))

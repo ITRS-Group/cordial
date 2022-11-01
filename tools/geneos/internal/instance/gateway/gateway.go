@@ -91,9 +91,6 @@ func init() {
 
 func Init(r *host.Host, ct *geneos.Component) {
 	// copy default template to directory
-	if err := geneos.MakeComponentDirs(r, ct); err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
 	if err := r.WriteFile(r.Filepath("gateway", "templates", GatewayDefaultTemplate), GatewayTemplate, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
