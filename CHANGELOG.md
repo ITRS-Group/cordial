@@ -1,7 +1,8 @@
 # Change Log
 
-## Version v1.4.0-dev - 2022/10/28
+## Version v1.4.0-dev - 2022/11/01
 
+* tools/geneos: skip failed permissions on /prox/*/fd - let 'ps' work for restricted processes
 * tools/geneos: fix update-during-install support, add --force flag for this too
 * tools/geneos: fix logic to match latest packages when major number changes
 * pkg/geneos: add EnvironmentRef and fix periodStartTime attribute
