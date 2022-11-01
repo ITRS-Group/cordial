@@ -1,5 +1,12 @@
 # Change Log
 
+## Version v1.3.1 - 2022/11/01
+
+* Fixes
+
+  * tools/geneos: chown files and directories creates when run as root
+  * tools/geneos: ensure plain 'init' creates all components dirs
+
 ## Version v1.3.0 - 2022/10/25
 
 ## Changes
