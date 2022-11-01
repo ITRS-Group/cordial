@@ -37,6 +37,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -164,7 +165,8 @@ func Files(c geneos.Instance) (links map[int]string) {
 	path := fmt.Sprintf("/proc/%d/fd", pid)
 	fds, err := c.Host().ReadDir(path)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		log.Debug().Err(err).Msg("")
+		return
 	}
 	for _, ent := range fds {
 		fd := ent.Name()
