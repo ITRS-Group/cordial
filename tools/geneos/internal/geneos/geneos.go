@@ -115,6 +115,15 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 		return
 	}
 
+	for _, c := range AllComponents() {
+		if err := MakeComponentDirs(host.LOCAL, c); err != nil {
+			continue
+		}
+		if c.Initialise != nil {
+			c.Initialise(host.LOCAL, c)
+		}
+	}
+
 	// if we've created directory paths as root, go through and change
 	// ownership to the tree
 	if utils.IsSuperuser() {
@@ -124,12 +133,6 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 			}
 			return err
 		})
-	}
-
-	for _, c := range AllComponents() {
-		if c.Initialise != nil {
-			c.Initialise(host.LOCAL, c)
-		}
 	}
 
 	return
