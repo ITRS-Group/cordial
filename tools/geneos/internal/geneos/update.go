@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -95,6 +97,12 @@ func Update(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
 	}
 	if err = h.Symlink(opts.version, basepath); err != nil {
 		return err
+	}
+	if h == host.LOCAL && utils.IsSuperuser() {
+		uid, gid, _, err := utils.GetIDs(h.GetString("username"))
+		if err == nil {
+			host.LOCAL.Lchown(basepath, uid, gid)
+		}
 	}
 	fmt.Println(ct, h.Path(basepath), "updated to", opts.version)
 	return nil

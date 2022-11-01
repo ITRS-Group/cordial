@@ -209,6 +209,20 @@ func (h *Host) Chown(name string, uid, gid int) (err error) {
 	}
 }
 
+// change the symlink ownership on local system, issue chown for remotes
+func (h *Host) Lchown(name string, uid, gid int) (err error) {
+	switch h.GetString("name") {
+	case LOCALHOST:
+		return os.Lchown(name, uid, gid)
+	default:
+		var s *sftp.Client
+		if s, err = h.DialSFTP(); err != nil {
+			return
+		}
+		return s.Chown(name, uid, gid)
+	}
+}
+
 func (h *Host) Create(path string, perms fs.FileMode) (out io.WriteCloser, err error) {
 	switch h.GetString("name") {
 	case LOCALHOST:
