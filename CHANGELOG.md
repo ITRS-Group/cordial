@@ -1,5 +1,12 @@
 # Change Log
 
+## Version v1.3.2 - 2022/11/02
+
+* Fixes
+
+  * tools/geneos: fix running as root (or via sudo) and creation of config directories and file ownerships
+  * tools/geneos: fix creation of full user config directories when running 'set user'
+
 ## Version v1.3.1 - 2022/11/01
 
 * Fixes
