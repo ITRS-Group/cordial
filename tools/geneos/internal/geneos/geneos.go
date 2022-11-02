@@ -83,16 +83,17 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 		config.GetConfig().Set("geneos", opts.homedir)
 		config.GetConfig().Set("defaultuser", opts.localusername)
 
+		userConfFile := UserConfigFilePaths()[0]
 		if utils.IsSuperuser() {
-			if err = host.WriteConfigFile(GlobalConfigPath, "root", 0664, config.GetConfig()); err != nil {
-				log.Fatal().Err(err).Msg("cannot write global config")
+			userConfDir, err := config.UserConfigDir(opts.localusername)
+			if err != nil {
+				log.Fatal().Err(err).Msg("")
 			}
-		} else {
-			userConfFile := UserConfigFilePaths()[0]
+			userConfFile = filepath.Join(userConfDir, ConfigSubdirName, UserConfigFile)
+		}
 
-			if err = host.WriteConfigFile(userConfFile, opts.localusername, 0664, config.GetConfig()); err != nil {
-				return err
-			}
+		if err = host.WriteConfigFile(userConfFile, opts.localusername, 0664, config.GetConfig()); err != nil {
+			return err
 		}
 	}
 

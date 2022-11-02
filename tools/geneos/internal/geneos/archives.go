@@ -26,7 +26,7 @@ import (
 )
 
 // OpenArchive locates and returns an io.ReadCloser for an archive for
-// the component given. TODO: Archives must currently be local.
+// the component given
 func OpenArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, filename string, err error) {
 	var resp *http.Response
 
@@ -128,6 +128,12 @@ func OpenArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, f
 		return
 	}
 	body = w
+
+	// chown package
+	if utils.IsSuperuser() {
+		uid, gid, _, _ := utils.GetIDs(opts.localusername)
+		w.Chown(uid, gid)
+	}
 	return
 }
 
@@ -267,6 +273,7 @@ func Unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 				if err = h.Symlink(hdr.Linkname, fullpath); err != nil {
 					log.Fatal().Err(err).Msg("")
 				}
+
 			}
 
 		default:
@@ -274,13 +281,13 @@ func Unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 		}
 	}
 
-	// if root, chown of created tree to default user
+	// if root, (l)chown of created tree to default user
 	if h == host.LOCAL && utils.IsSuperuser() {
 		uid, gid, _, err := utils.GetIDs(h.GetString("username"))
 		if err == nil {
 			filepath.WalkDir(h.Path(basedir), func(path string, dir fs.DirEntry, err error) error {
 				if err == nil {
-					err = host.LOCAL.Chown(path, uid, gid)
+					err = host.LOCAL.Lchown(path, uid, gid)
 				}
 				return err
 			})

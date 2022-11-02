@@ -4,7 +4,10 @@ import (
 	"path/filepath"
 
 	"github.com/itrs-group/cordial/pkg/config"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -174,6 +177,10 @@ func MakeComponentDirs(h *host.Host, ct *Component) (err error) {
 		log.Debug().Msgf("mkdirall %s", dir)
 		if err = h.MkdirAll(dir, 0775); err != nil {
 			return
+		}
+		if utils.IsSuperuser() {
+			uid, gid, _, _ := utils.GetIDs("")
+			h.Chown(dir, uid, gid)
 		}
 	}
 	return

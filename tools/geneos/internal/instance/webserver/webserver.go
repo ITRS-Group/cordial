@@ -8,9 +8,11 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 var Webserver = geneos.Component{
@@ -188,8 +190,13 @@ func (w *Webservers) Add(username string, tmpl string, port uint16) (err error) 
 		return
 	}
 
-	if err = w.Host().MkdirAll(filepath.Join(w.Home(), "webapps"), 0775); err != nil {
+	webappsdir := filepath.Join(w.Home(), "webapps")
+	if err = w.Host().MkdirAll(webappsdir, 0775); err != nil {
 		return
+	}
+	if utils.IsSuperuser() {
+		uid, gid, _, _ := utils.GetIDs("")
+		w.Host().Chown(webappsdir, uid, gid)
 	}
 
 	for _, source := range webserverFiles {

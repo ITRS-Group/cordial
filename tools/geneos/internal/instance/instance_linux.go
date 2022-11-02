@@ -170,7 +170,8 @@ func Files(c geneos.Instance) (links map[int]string) {
 		fd := ent.Name()
 		dest, err := c.Host().Readlink(utils.JoinSlash(path, fd))
 		if err != nil {
-			log.Fatal().Err(err).Msg("")
+			log.Debug().Err(err).Msg("")
+			continue
 		}
 		n, _ := strconv.Atoi(fd)
 		links[n] = dest
