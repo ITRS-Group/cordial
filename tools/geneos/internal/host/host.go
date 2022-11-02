@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -289,6 +288,6 @@ func WriteHostConfigFile() error {
 }
 
 func UserHostsFilePath() string {
-	userConfDir, _ := os.UserConfigDir()
+	userConfDir, _ := config.UserConfigDir()
 	return filepath.Join(userConfDir, UserHostFile)
 }

@@ -23,11 +23,9 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"os"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -48,10 +46,6 @@ var setUserCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		_, _, params := cmdArgsParams(cmd)
-		userConfDir, _ := os.UserConfigDir()
-		if err = os.MkdirAll(userConfDir, 0775); err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
 		return writeConfigParams(geneos.UserConfigFilePaths()[0], params)
 	},
 }

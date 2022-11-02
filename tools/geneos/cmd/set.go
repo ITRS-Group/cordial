@@ -26,8 +26,11 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -125,7 +128,7 @@ func writeConfigParams(filename string, params []string) (err error) {
 		vp.Set("itrshome", nil)
 	}
 
-	return vp.WriteConfig()
+	return host.WriteConfigFile(filename, "", 0664, vp)
 }
 
 func readConfigFile(paths ...string) (v *config.Config) {

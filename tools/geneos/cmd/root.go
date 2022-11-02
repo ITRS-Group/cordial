@@ -178,7 +178,7 @@ func initConfig() {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-	oldConfDir, _ := os.UserConfigDir()
+	oldConfDir, _ := config.UserConfigDir()
 
 	cf, err := config.LoadConfig("geneos",
 		config.SetConfigFile(cfgFile),
