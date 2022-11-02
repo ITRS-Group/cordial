@@ -415,7 +415,7 @@ func LoadConfig(configName string, options ...Options) (c *Config, err error) {
 		confDirs = append(confDirs, ".")
 	}
 	if !opts.ignoreuserconfdir {
-		userConfDir, err := os.UserConfigDir()
+		userConfDir, err := UserConfigDir()
 		if err == nil {
 			confDirs = append(confDirs, filepath.Join(userConfDir, opts.appname))
 		}

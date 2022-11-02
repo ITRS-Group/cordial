@@ -161,7 +161,7 @@ func ReadLocalConfigFile(file string, config interface{}) (err error) {
 // the future, the code can still look for older copies when the
 // preferred path is empty.
 func UserConfigFilePaths(bases ...string) (paths []string) {
-	userConfDir, err := os.UserConfigDir()
+	userConfDir, err := config.UserConfigDir()
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}

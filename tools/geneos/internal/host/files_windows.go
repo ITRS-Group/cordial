@@ -2,6 +2,8 @@ package host
 
 import (
 	"io/fs"
+	"os"
+	"path/filepath"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -12,6 +14,7 @@ func WriteConfigFile(file string, username string, perms fs.FileMode, conf *conf
 		cf.Set(k, v)
 	}
 	cf.SetConfigFile(file)
+	os.MkdirAll(filepath.Dir(file), 0755)
 	cf.WriteConfig()
 
 	return
