@@ -77,6 +77,10 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 		return err
 	}
 	defer out.Close()
+	if utils.IsSuperuser() {
+		uid, gid, _, _ := utils.GetIDs("")
+		c.Host().Chown(path, uid, gid)
+	}
 
 	// m := make(map[string]string)
 	m := c.Config().AllSettings()
@@ -304,6 +308,11 @@ func writeConfig(c geneos.Instance) (err error) {
 	if err = c.Host().MkdirAll(utils.Dir(file), 0775); err != nil {
 		log.Error().Err(err).Msg("")
 	}
+	if utils.IsSuperuser() {
+		uid, gid, _, _ := utils.GetIDs("")
+		c.Host().Chown(utils.Dir(file), uid, gid)
+	}
+
 	nv := config.New()
 	for _, k := range c.Config().AllKeys() {
 		if _, ok := c.Type().Aliases[k]; !ok {
@@ -318,7 +327,14 @@ func writeConfig(c geneos.Instance) (err error) {
 		nv.SetFs(sftpfs.New(client))
 	}
 	log.Debug().Msgf("writing config for %s as %q", c, file)
-	return nv.WriteConfigAs(file)
+	if err = nv.WriteConfigAs(file); err != nil {
+		return err
+	}
+	if utils.IsSuperuser() {
+		uid, gid, _, _ := utils.GetIDs("")
+		c.Host().Chown(file, uid, gid)
+	}
+	return
 }
 
 // WriteConfigValues writes values to the configuration file for
@@ -343,7 +359,14 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 		}
 		nv.SetFs(sftpfs.New(client))
 	}
-	return nv.WriteConfigAs(file)
+	if err = nv.WriteConfigAs(file); err != nil {
+		return err
+	}
+	if utils.IsSuperuser() {
+		uid, gid, _, _ := utils.GetIDs("")
+		c.Host().Chown(file, uid, gid)
+	}
+	return
 }
 
 // ReadConfig reads the instance configuration from the standard file.

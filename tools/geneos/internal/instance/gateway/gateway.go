@@ -357,6 +357,10 @@ func createAESKeyFile(c geneos.Instance) (err error) {
 	if err = a.WriteAESValues(w); err != nil {
 		return
 	}
+	if utils.IsSuperuser() {
+		uid, gid, _, _ := utils.GetIDs("")
+		c.Host().Chown(instance.ComponentFilepath(c, "aes"), uid, gid)
+	}
 
 	c.Config().Set("keyfile", instance.ComponentFilename(c, "aes"))
 	return

@@ -284,7 +284,16 @@ func WriteHostConfigFile() error {
 		return true
 	})
 
-	return n.WriteConfigAs(UserHostsFilePath())
+	// return n.WriteConfigAs(UserHostsFilePath())
+
+	if err := n.WriteConfigAs(UserHostsFilePath()); err != nil {
+		return err
+	}
+	if utils.IsSuperuser() {
+		uid, gid, _, _ := utils.GetIDs("")
+		LOCAL.Chown(UserHostsFilePath(), uid, gid)
+	}
+	return nil
 }
 
 func UserHostsFilePath() string {
