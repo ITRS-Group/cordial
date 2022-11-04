@@ -274,6 +274,7 @@ func MatchKeyValue(h *host.Host, ct *geneos.Component, key, value string) (confs
 		}
 		return
 	}
+
 	for _, name := range AllNames(h, ct) {
 		i, err := Get(ct, name)
 		if err != nil {
