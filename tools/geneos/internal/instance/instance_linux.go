@@ -164,7 +164,8 @@ func Files(c geneos.Instance) (links map[int]string) {
 	path := fmt.Sprintf("/proc/%d/fd", pid)
 	fds, err := c.Host().ReadDir(path)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		log.Debug().Err(err).Msg("")
+		return
 	}
 	for _, ent := range fds {
 		fd := ent.Name()

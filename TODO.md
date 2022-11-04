@@ -7,7 +7,6 @@
 * Windows build, in stages:
   * Initially for remote management (ssh etc)
   * Add netprobe support, services?
-* Split 'init' common and sub-sub-commands, as it's too complicated
 * Add a 'selfupdate' like, but simpler than, rclone
 * When 'moving' a gateway, update licd connection details
   * Also, keep port(s) unchanged where possible

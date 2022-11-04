@@ -31,6 +31,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 type showCmdConfig struct {
@@ -110,9 +111,17 @@ func showInstance(c geneos.Instance, params []string) (err error) {
 	}
 	cf := &showCmdConfig{Name: c.Name(), Host: c.Host().String(), Type: c.Type().String(), Config: as}
 
-	if buffer, err = json.MarshalIndent(cf, "", "    "); err != nil {
-		return
+	switch instance.ConfigFileType() {
+	case "json":
+		if buffer, err = json.MarshalIndent(cf, "", "    "); err != nil {
+			return
+		}
+	case "yaml":
+		if buffer, err = yaml.Marshal(cf); err != nil {
+			return
+		}
 	}
+
 	fmt.Println(string(buffer))
 
 	return

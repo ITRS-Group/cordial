@@ -3,7 +3,7 @@ package geneos
 type Options struct {
 	nosave        bool
 	local         bool
-	overwrite     bool
+	force         bool
 	override      string
 	restart       bool
 	version       string
@@ -16,6 +16,7 @@ type Options struct {
 	downloadbase  string
 	downloadtype  string
 	source        string
+	doupdate      bool
 }
 
 type GeneosOptions func(*Options)
@@ -44,7 +45,7 @@ func LocalOnly(l bool) GeneosOptions {
 
 // Force ignores existing directories or files
 func Force(o bool) GeneosOptions {
-	return func(d *Options) { d.overwrite = o }
+	return func(d *Options) { d.force = o }
 }
 
 // OverrideVersion forces a specific version to be used and failure if not available
@@ -127,4 +128,9 @@ func UseSnapshots() GeneosOptions {
 // file(s)
 func Source(f string) GeneosOptions {
 	return func(d *Options) { d.source = f }
+}
+
+// DoUpdate sets the option to also do an update after an install
+func DoUpdate(r bool) GeneosOptions {
+	return func(d *Options) { d.doupdate = r }
 }

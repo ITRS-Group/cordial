@@ -53,7 +53,7 @@ type MonitoringPeriodAlias struct {
 }
 
 type MonitoringPeriodStart struct {
-	PeriodStart *Value `xml:"periodStart,omitempty"`
+	PeriodStart *Value `xml:"periodStartTime,omitempty"`
 }
 
 type FTMAdditionalPaths struct {
