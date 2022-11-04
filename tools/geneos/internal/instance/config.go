@@ -12,16 +12,14 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
+
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero/sftpfs"
 )
-
-var ConfigType = "json"
 
 // return the KEY from "[TYPE:]KEY=VALUE"
 func nameOf(s string, sep string) string {
@@ -38,6 +36,7 @@ func valueOf(s string, sep string) string {
 	return ""
 }
 
+// first returns the first non-empty string argument
 func first(d ...interface{}) string {
 	for _, f := range d {
 		if s, ok := f.(string); ok {
@@ -156,12 +155,15 @@ func readRCConfig(c geneos.Instance) (err error) {
 	for k, v := range confs {
 		lk := strings.ToLower(k)
 		if lk == "binary" {
-			c.Config().Set(k, v)
+			c.Config().Set(lk, v)
 			continue
 		}
 
 		if strings.HasPrefix(lk, c.Prefix()) {
-			nk := c.Type().Aliases[lk]
+			nk, ok := c.Type().Aliases[lk]
+			if !ok {
+				nk = lk
+			}
 			c.Config().Set(nk, v)
 		} else {
 			// set env var
@@ -179,7 +181,7 @@ func readRCConfig(c geneos.Instance) (err error) {
 // component type of the instance with any extensions joined using ".", e.g.
 // is c is a netprobe instance then
 //
-//	path := instance.ComponentPath(c, "xml", "orig")
+//	path := instance.ComponentFilepath(c, "xml", "orig")
 //
 // will return /path/to/netprobe/netprobe.xml.orig
 //
@@ -201,7 +203,7 @@ func ComponentFilename(c geneos.Instance, extensions ...string) string {
 	if len(extensions) > 0 {
 		parts = append(parts, extensions...)
 	} else {
-		parts = append(parts, ConfigType)
+		parts = append(parts, ConfigFileType())
 	}
 	return strings.Join(parts, ".")
 }
@@ -369,9 +371,10 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 	return
 }
 
-// ReadConfig reads the instance configuration from the standard file.
+// ReadConfig reads the instance configuration from the standard file
+// for that instance type. First try the preferred file type and if that fails
+// loop through all types and if they all fail then try the legacy file.
 func ReadConfig(c geneos.Instance) (err error) {
-	c.Config().SetConfigFile(ComponentFilepath(c, ConfigType))
 	if c.Host() != host.LOCAL {
 		client, err := c.Host().DialSFTP()
 		if err != nil {
@@ -381,10 +384,22 @@ func ReadConfig(c geneos.Instance) (err error) {
 		c.Config().SetFs(sftpfs.New(client))
 	}
 
+	c.Config().SetConfigFile(ComponentFilepath(c, ConfigFileType()))
 	if err = c.Config().MergeInConfig(); err != nil {
-		// if load fails try a legacy .rc file before returning an error
-		if err = readRCConfig(c); err != nil {
-			return err
+		for _, t := range ConfigFileTypes() {
+			log.Debug().Msgf("%s: trying %q extension", c, t)
+			c.Config().SetConfigFile(ComponentFilepath(c, t))
+			if err = c.Config().MergeInConfig(); err == nil {
+				log.Debug().Msg("success!")
+				break
+			}
+		}
+
+		if err != nil {
+			// if load fails try a legacy .rc file before returning an error
+			if err = readRCConfig(c); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -469,4 +484,16 @@ func SetDefaults(c geneos.Instance, name string) (err error) {
 	}
 
 	return
+}
+
+func ConfigFileType() (conftype string) {
+	conftype = config.GetString("configtype")
+	if conftype == "" {
+		conftype = "json"
+	}
+	return
+}
+
+func ConfigFileTypes() []string {
+	return []string{"json", "yaml"}
 }
