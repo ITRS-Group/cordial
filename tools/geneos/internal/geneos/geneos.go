@@ -62,7 +62,7 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 		if err = r.MkdirAll(opts.homedir, 0775); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
-	} else if !opts.overwrite {
+	} else if !opts.force {
 		// check empty
 		dirs, err := r.ReadDir(opts.homedir)
 		if err != nil {

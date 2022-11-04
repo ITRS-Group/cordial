@@ -29,6 +29,7 @@ import "encoding/xml"
 type GatewaySQLPlugin struct {
 	Setup  *SingleLineString `xml:"Gateway-sql>setupSql>sql"`
 	Tables *GatewaySQLTables `xml:"Gateway-sql>tables"`
+	Sample *SingleLineString `xml:"Gateway-sql>sampleSql>sql"`
 	Views  []GWSQLView       `xml:"Gateway-sql>views>view"`
 }
 
