@@ -197,13 +197,18 @@ func (ct *Component) ComponentDir(h *host.Host) string {
 }
 
 // Range will either return just the specific component it is called on,
-// or if that is nil than the list of component types passed as args.
+// or if that is nil than the list of component types passed as args. If
+// no arguments are passed then all real components types are returned.
 //
 // This is a convenience to avoid a double layer of if and range in
 // callers than want to work on specific component types.
 func (ct *Component) Range(cts ...*Component) []*Component {
 	if ct != nil {
 		return []*Component{ct}
+	}
+
+	if len(cts) == 0 {
+		return RealComponents()
 	}
 
 	return cts
