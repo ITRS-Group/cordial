@@ -163,23 +163,26 @@ func ParseComponentName(component string) *Component {
 
 // create any missing component registered directories
 func MakeComponentDirs(h *host.Host, ct *Component) (err error) {
-	var name string
+	name := "none"
 	if h == host.ALL {
 		log.Fatal().Msg("called with all hosts")
 	}
-	if ct == nil {
-		name = "none"
-	} else {
+	if ct != nil {
 		name = ct.Name
 	}
+	geneos := h.GetString("geneos")
+	uid, gid := -1, -1
+	if utils.IsSuperuser() {
+		uid, gid, _, _ = utils.GetIDs("")
+	}
+
 	for _, d := range initDirs[name] {
-		dir := filepath.Join(h.GetString("geneos"), d)
+		dir := filepath.Join(geneos, d)
 		log.Debug().Msgf("mkdirall %s", dir)
 		if err = h.MkdirAll(dir, 0775); err != nil {
 			return
 		}
-		if utils.IsSuperuser() {
-			uid, gid, _, _ := utils.GetIDs("")
+		if uid != -1 && gid != -1 {
 			h.Chown(dir, uid, gid)
 		}
 	}
