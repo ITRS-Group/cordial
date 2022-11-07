@@ -1,15 +1,5 @@
 package fileagent
 
-// Use this file as a template to add a new geneos.
-//
-// Replace 'Name' with the camel-cased name of the component, e.g. Gateway
-// Replace 'name' with the display name of the component, e.g. gateway
-//
-// Plural instances of 'Names' / 'names' should be carried through, e.g. Gateways/gateways
-//
-// Leave InstanceName alone
-//
-
 import (
 	"sync"
 

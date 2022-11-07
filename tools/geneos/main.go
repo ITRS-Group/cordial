@@ -30,6 +30,14 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fa2"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fileagent"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/licd"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/webserver"
 )
 
 func main() {
