@@ -379,6 +379,8 @@ github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0/go.mod h1:8NvIoxWQoOIhqOTXgf
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
 github.com/gurkankaymak/hocon v1.2.9 h1:axRozHdu7xvwLAXJjqJzQEwkL197Zk1ftblXuaxQu/8=
 github.com/gurkankaymak/hocon v1.2.9/go.mod h1:dQCfhnuDKlLqAZRGhFTd81HkAfMx7STHv0w2JkJ6iq4=
+github.com/gurkankaymak/hocon v1.2.10 h1:+eK1kZb7yi0AHmMdKc/YHy3FykoArz7ghkT0bqoRUlA=
+github.com/gurkankaymak/hocon v1.2.10/go.mod h1:dQCfhnuDKlLqAZRGhFTd81HkAfMx7STHv0w2JkJ6iq4=
 github.com/hashicorp/consul/api v1.15.3/go.mod h1:/g/qgcoBcEXALCNZgRRisyTW0nY86++L0KbeAMXYCeY=
 github.com/hashicorp/consul/sdk v0.11.0/go.mod h1:yPkX5Q6CsxTFMjQQDJwzeNmUUF5NUGGbrDsv9wTb8cw=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
