@@ -30,7 +30,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var cfgFile, ssoCfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -60,6 +60,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "conf", "c", "", "config file (default is $HOME/.config/geneos/sso-diag.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&ssoCfgFile, "ssoconf", "s", "conf/sso-agent.conf", "sso-agent config file (default is conf/sso-agent.conf)")
 }
 
 // initConfig reads in config file and ENV variables if set.
