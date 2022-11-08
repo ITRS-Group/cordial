@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -33,7 +34,15 @@ var tlsConfig = &tls.Config{
 }
 
 func start() {
-	hc, err := hocon.ParseResource("test.conf")
+	// workaround issues in hocon package until fixed
+	var discardRE = regexp.MustCompile(`(?m)^\s*#.*$`)
+	b, err := os.ReadFile("test.conf")
+	if err != nil {
+		panic(err)
+	}
+	conffile := string(b)
+	conffile = discardRE.ReplaceAllString(conffile, "")
+	hc, err := hocon.ParseString(conffile)
 	if err != nil {
 		panic(err)
 	}
