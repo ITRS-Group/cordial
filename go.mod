@@ -8,11 +8,13 @@ require (
 	github.com/StackExchange/wmi v1.2.1
 	github.com/go-ldap/ldap/v3 v3.4.4
 	github.com/go-mail/mail/v2 v2.3.0
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gurkankaymak/hocon v1.2.10
 	github.com/jcmturner/goidentity/v6 v6.0.1
 	github.com/jcmturner/gokrb5/v8 v8.4.3
 	github.com/labstack/echo/v4 v4.9.1
 	github.com/mackerelio/go-osstat v0.2.3
+	github.com/pavlo-v-chernykh/keystore-go/v4 v4.4.0
 	github.com/pkg/sftp v1.13.1
 	github.com/rs/zerolog v1.28.0
 	github.com/spf13/afero v1.9.2
@@ -31,7 +33,6 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.4 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
