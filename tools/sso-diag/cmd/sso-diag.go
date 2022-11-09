@@ -81,6 +81,9 @@ func start() {
 		password = vc.GetString("ldap.password")
 	}
 
+	if realm == "" {
+		realm = cf.LibDefaults.DefaultRealm
+	}
 	c := client.NewWithPassword(username, realm, password, cf, client.DisablePAFXFAST(true))
 	err = c.Login()
 	if err != nil {
@@ -266,23 +269,28 @@ func testuserPage(w http.ResponseWriter, r *http.Request) {
 
 	l, err := ldap.DialURL(vc.GetString("ldap.location"), ldap.DialWithTLSConfig(tlsConfig))
 	if err != nil {
-		fmt.Fprint(w, err)
+		log.Error().Err(err).Msg("")
 		return
 	}
 
+	log.Printf("user: %s password: %s", vc.GetString("ldap.user"), vc.GetString("ldap.password"))
+
 	if err = l.Bind(vc.GetString("ldap.user"), vc.GetString("ldap.password")); err != nil {
-		fmt.Fprint(w, err)
+		log.Error().Err(err).Msg("")
 		return
 	}
 	fmt.Fprintln(w, "here")
 
-	search := ldap.NewSearchRequest("DC=GWH,DC=COM", ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf("(sAMAccountName=%s)", user), []string{"memberOf"}, []ldap.Control{})
+	search := ldap.NewSearchRequest(vc.GetString("ldap.base"), ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		fmt.Sprintf("(sAMAccountName=%s)", user), vc.GetStringSlice("ldap.fields.groups"), []ldap.Control{})
 
 	result, err := l.Search(search)
 	if err != nil {
-		fmt.Fprint(w, err)
+		log.Error().Err(err).Msg("")
 		return
+	}
+	if len(result.Referrals) > 0 {
+		log.Printf("referrals: %s", result.Referrals)
 	}
 	if len(result.Entries) > 0 {
 		for _, e := range result.Entries {
