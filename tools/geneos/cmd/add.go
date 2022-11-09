@@ -81,11 +81,18 @@ var addCmd = &cobra.Command{
 	Use:   "add [flags] TYPE NAME",
 	Short: "Add a new instance",
 	Long: strings.ReplaceAll(`
-Add a new instance of a component TYPE with the name NAME. The
-details will depends on the TYPE.
+Add a new instance of a component TYPE with the name NAME. The details
+associated with the newly created instance will depends on the TYPE.
+
+Upon creating a new instance, a |JSON| configuration file will be created
+to store the details of the instance.  The file is located at
+|<TYPE>/<TYPE>s/<instance_name>/<TYPE>.json|.
 	
 Gateways and SANs are given a configuration file based on the templates
 configured.
+
+**Note**: Details about the json configuration files can be found at
+[JSON Configuration Files](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos#json-configuration-files)
 `, "|", "`"),
 	Example: `
 geneos add gateway EXAMPLE1
