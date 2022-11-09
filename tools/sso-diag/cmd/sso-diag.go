@@ -139,28 +139,30 @@ func initServer(vc *config.Config, kt *keytab.Keytab, username string) {
 
 	i := fmt.Sprintf("%s:%d", vc.GetString("server.bind_address"), vc.GetInt("server.port"))
 
-	if !vc.GetBool("api.tls.enabled") {
+	if !vc.GetBool("server.enable_ssl") {
 		e.Logger.Fatal(e.Start(i))
-	} else if vc.GetBool("api.tls.enabled") {
-		var cert interface{}
-		certstr := config.GetString("api.tls.certificate")
-		certpem, _ := pem.Decode([]byte(certstr))
-		if certpem == nil {
-			cert = certstr
-		} else {
-			cert = []byte(certstr)
-		}
-
-		var key interface{}
-		keystr := config.GetString("api.tls.key")
-		keypem, _ := pem.Decode([]byte(keystr))
-		if keypem == nil {
-			key = keystr
-		} else {
-			key = []byte(keystr)
-		}
-		e.Logger.Fatal(e.StartTLS(i, cert, key))
 	}
+
+	// this doesn't work, get cert from keystore...
+	var cert interface{}
+	certstr := config.GetString("api.tls.certificate")
+	certpem, _ := pem.Decode([]byte(certstr))
+	if certpem == nil {
+		cert = certstr
+	} else {
+		cert = []byte(certstr)
+	}
+
+	var key interface{}
+	keystr := config.GetString("api.tls.key")
+	keypem, _ := pem.Decode([]byte(keystr))
+	if keypem == nil {
+		key = keystr
+	} else {
+		key = []byte(keystr)
+	}
+	e.Logger.Fatal(e.StartTLS(i, cert, key))
+
 }
 
 func loadSSOkey(cf *config.Config) *rsa.PrivateKey {
@@ -192,6 +194,10 @@ func loadSSOkey(cf *config.Config) *rsa.PrivateKey {
 		return r
 	}
 	return nil
+}
+
+func loadTLSCert(cf *config.Config) {
+
 }
 
 func statusPage(c echo.Context) error {
