@@ -34,15 +34,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-// var username = "geneossso"
-// var realm = "GWH.COM"
-// var spn = "HTTP/ec2-34-245-48-133.eu-west-1.compute.amazonaws.com"
-var ldapurl string
-
-var tlsConfig = &tls.Config{
-	InsecureSkipVerify: true,
-}
-
 // SplitUsername takes a name of the form 'domain\user' or 'user@domain'
 // and returns the two. realm will be empty of none found
 func SplitUsername(in string) (username, realm string) {
@@ -286,7 +277,9 @@ func testuserPage(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Authentication failed")
 	}
 
-	fmt.Fprintf(w, "dialing ldap on %s\n", ldapurl)
+	var tlsConfig = &tls.Config{
+		InsecureSkipVerify: true,
+	}
 
 	l, err := ldap.DialURL(vc.GetString("ldap.location"), ldap.DialWithTLSConfig(tlsConfig))
 	if err != nil {
