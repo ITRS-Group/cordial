@@ -1,17 +1,24 @@
 package cmd
 
 import (
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/rs/zerolog/log"
+
+	"github.com/pavlo-v-chernykh/keystore-go/v4"
 
 	"github.com/jcmturner/goidentity/v6"
 	"github.com/jcmturner/gokrb5/v8/client"
@@ -36,8 +43,6 @@ var tlsConfig = &tls.Config{
 	InsecureSkipVerify: true,
 }
 
-// curl -v --negotiate -u : "http://endpoint:8080/authorize?response_type=token&client_id=active_console&state=XXXXXX"
-
 // SplitUsername takes a name of the form 'domain\user' or 'user@domain'
 // and returns the two. realm will be empty of none found
 func SplitUsername(in string) (username, realm string) {
@@ -61,9 +66,10 @@ func start() {
 	vc.SetDefault("kerberos.krb5_conf", "krb5.conf")
 	// ... set default from a defaults map
 
+	ssoCfgFile := filepath.Join(confDir, "conf/sso-agent.conf")
 	err := vc.MergeHOCONFile(ssoCfgFile)
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	username, realm := SplitUsername(vc.GetString("kerberos.user"))
@@ -71,9 +77,13 @@ func start() {
 		username, realm = SplitUsername(vc.GetString("ldap.user"))
 	}
 
-	cf, err := krb5config.Load(vc.GetString("kerberos.krb5_conf"))
+	krb5conf := vc.GetString("kerberos.krb5_conf")
+	if !filepath.IsAbs(krb5conf) {
+		krb5conf = filepath.Join(confDir, krb5conf)
+	}
+	cf, err := krb5config.Load(krb5conf)
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	password := vc.GetString("kerberos.password")
@@ -81,31 +91,20 @@ func start() {
 		password = vc.GetString("ldap.password")
 	}
 
-	n, kdcs, err := cf.GetKDCs(realm, false)
-	if n == 0 || err != nil {
-		panic(err)
-	}
-	s := strings.SplitN(kdcs[len(kdcs)], ":", 2)
-	if len(s) != 2 {
-		panic("kdc in wrong format")
-	}
-	ldapurl = fmt.Sprintf("ldaps://%s", s[0])
-	fmt.Println("ldap url:", ldapurl)
-
 	c := client.NewWithPassword(username, realm, password, cf, client.DisablePAFXFAST(true))
 	err = c.Login()
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	// get the kvno from a tgt request
 	asreq, err := messages.NewASReqForTGT(c.Credentials.Domain(), c.Config, c.Credentials.CName())
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	asrep, err := c.ASExchange(c.Credentials.Domain(), asreq, 0)
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	serviceKVNO := asrep.EncPart.KVNO
 
@@ -116,23 +115,10 @@ func start() {
 	for _, e := range cf.LibDefaults.DefaultTktEnctypes {
 		if eid := etypeID.EtypeSupported(e); eid != 0 {
 			if err := kt.AddEntry(username, realm, password, time.Now(), uint8(serviceKVNO), eid); err != nil {
-				panic(err)
+				log.Fatal().Err(err).Msg("")
 			}
 		}
 	}
-
-	// w, err := os.Create("key.tab")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// kt.Write(w)
-	// w.Close()
-
-	// fmt.Println(kt.JSON())
-
-	// h := http.HandlerFunc(apphandler)
-	// http.Handle("/testuser", spnego.SPNEGOKRB5Authenticate(h, kt, service.KeytabPrincipal(username)))
-	// log.Fatal().Err(http.ListenAndServe(":8080", nil)).Msg("")
 
 	initServer(vc, kt, username)
 
@@ -146,55 +132,6 @@ func Timestamp() echo.MiddlewareFunc {
 			return next(c)
 		}
 	}
-}
-
-func bodyDumpLog(c echo.Context, reqBody, resBody []byte) {
-	var reqMethod string
-	var resStatus int
-
-	// request and response object
-	req := c.Request()
-	res := c.Response()
-	// rendering variables for response status and request method
-	resStatus = res.Status
-	reqMethod = req.Method
-
-	// print formatting the custom logger tailored for DEVELOPMENT environment
-	var result map[string]string
-	var message string
-
-	if err := json.Unmarshal(resBody, &result); err == nil {
-		if result["message"] != "" {
-			message = result["message"]
-		} else if result["action"] == "Failed" {
-			message = fmt.Sprintf("Failed to create event for %s", result["host"])
-		} else {
-			message = fmt.Sprintf("%s %s %s", result["event_type"], result["number"], result["action"])
-		}
-	}
-
-	bytes_in := req.Header.Get(echo.HeaderContentLength)
-	if bytes_in == "" {
-		bytes_in = "0"
-	}
-	starttime := c.Get("starttime").(time.Time)
-	latency := time.Since(starttime)
-	latency = latency.Round(time.Millisecond)
-
-	fmt.Printf("%v %s %s %3d %s/%d %v %s %s %s %q\n",
-		time.Now().Format(time.RFC3339),     // TIMESTAMP for route access
-		vc.GetString("servicenow.instance"), // name of server (APP) with the environment
-		req.Proto,                           // protocol
-		resStatus,                           // response status
-		// stats here
-		bytes_in,
-		res.Size,
-		latency,
-		c.RealIP(), // client IP
-		reqMethod,  // request method
-		req.URL,    // request URI (path)
-		message,
-	)
 }
 
 func initServer(vc *config.Config, kt *keytab.Keytab, username string) {
@@ -213,26 +150,30 @@ func initServer(vc *config.Config, kt *keytab.Keytab, username string) {
 		}
 	})
 	e.Use(Timestamp())
-	e.Use(middleware.BodyDump(bodyDumpLog))
-	// e.Use(middleware.KeyAuth(func(key string, c echo.Context) (bool, error) {
-	// 	return key == vc.GetString("api.apikey"), nil
-	// }))
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogURI:    true,
+		LogStatus: true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			log.Info().
+				Str("URI", v.URI).
+				Int("status", v.Status).
+				Msg("request")
 
-	// list of endpoint routes
-	// APIRoute := e.Group("/api")
-	// grouping routes for version 1.0 API
-	// v1route := APIRoute.Group("/v1")
+			return nil
+		},
+	}))
 
-	// Get Endpoints
-	h := echo.WrapHandler(spnego.SPNEGOKRB5Authenticate(http.HandlerFunc(apphandler), kt, service.KeytabPrincipal(username)))
-	e.GET("/testuser", h)
+	e.GET("/status", statusPage)
 
-	// Put Endpoints
-	// v1route.POST("/incident", snow.AcceptEvent)
+	if vc.GetBool("server.enable_public_key_endpoint") {
+		e.GET("/public_key", publicKeyPage)
+	}
+
+	e.GET("/testuser", echo.WrapHandler(spnego.SPNEGOKRB5Authenticate(http.HandlerFunc(testuserPage), kt, service.KeytabPrincipal(username))))
+	e.GET("/authorize", echo.WrapHandler(spnego.SPNEGOKRB5Authenticate(http.HandlerFunc(authorizePage), kt, service.KeytabPrincipal(username))))
 
 	i := fmt.Sprintf("%s:%d", vc.GetString("server.bind_address"), vc.GetInt("server.port"))
 
-	// firing up the server
 	if !vc.GetBool("api.tls.enabled") {
 		e.Logger.Fatal(e.Start(i))
 	} else if vc.GetBool("api.tls.enabled") {
@@ -257,7 +198,70 @@ func initServer(vc *config.Config, kt *keytab.Keytab, username string) {
 	}
 }
 
-func apphandler(w http.ResponseWriter, r *http.Request) {
+func loadSSOkey(cf *config.Config) *rsa.PrivateKey {
+	ks := cf.GetString("server.key_store.location")
+	if !filepath.IsAbs(ks) {
+		ks = filepath.Join(confDir, ks)
+	}
+	pw := []byte(cf.GetString("server.key_store.password"))
+
+	f, err := os.Open(ks)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+	defer f.Close()
+	k := keystore.New()
+	if err := k.Load(f, pw); err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+	pk, err := k.GetPrivateKeyEntry("ssokey", pw)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
+	key, err := x509.ParsePKCS8PrivateKey(pk.PrivateKey)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+	if r, ok := key.(*rsa.PrivateKey); ok {
+		return r
+	}
+	return nil
+}
+
+func statusPage(c echo.Context) error {
+	return c.String(http.StatusOK, "status page")
+}
+
+func publicKeyPage(c echo.Context) error {
+	return nil
+}
+
+func authorizePage(w http.ResponseWriter, r *http.Request) {
+	// curl -v --negotiate -u : "http://endpoint:8080/authorize?response_type=token&client_id=active_console&state=XXXXXX"
+	q := r.URL.Query()
+	resp := q.Get("response_type")
+	if resp != "token" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	client_id := q.Get("client_id")
+	if client_id != "active_console" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	// state := q.Get("state")
+
+	// pk := loadSSOkey(vc)
+	// creds := goidentity.FromHTTPRequestContext(r)
+
+	// token := jwt.NewWithClaims(jwt.SigningMethodPS256.SigningMethodRSA, jwt.MapClaims{
+	// 	"": "xx",
+	// })
+
+}
+
+func testuserPage(w http.ResponseWriter, r *http.Request) {
 	var user string
 
 	w.Write([]byte("welcome!\n\n"))
@@ -284,7 +288,7 @@ func apphandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "dialing ldap on %s\n", ldapurl)
 
-	l, err := ldap.DialURL(ldapurl, ldap.DialWithTLSConfig(tlsConfig))
+	l, err := ldap.DialURL(vc.GetString("ldap.location"), ldap.DialWithTLSConfig(tlsConfig))
 	if err != nil {
 		fmt.Fprint(w, err)
 		return

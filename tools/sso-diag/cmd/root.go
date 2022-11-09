@@ -25,12 +25,14 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
+	"github.com/itrs-group/cordial"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var cfgFile, ssoCfgFile string
+var cfgFile, confDir string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -56,11 +58,16 @@ func Execute() {
 	}
 }
 
+var execname string
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "conf", "c", "", "config file (default is $HOME/.config/geneos/sso-diag.yaml)")
-	rootCmd.PersistentFlags().StringVarP(&ssoCfgFile, "ssoconf", "s", "conf/sso-agent.conf", "sso-agent config file (default is conf/sso-agent.conf)")
+	rootCmd.PersistentFlags().StringVarP(&confDir, "dir", "d", ".", "sso-agent directory for relative path resolution (default is ./)")
+
+	execname = filepath.Base(os.Args[0])
+	cordial.LogInit(execname)
 }
 
 // initConfig reads in config file and ENV variables if set.
