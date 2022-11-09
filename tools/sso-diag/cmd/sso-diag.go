@@ -30,7 +30,6 @@ import (
 	"github.com/jcmturner/gokrb5/v8/service"
 	"github.com/jcmturner/gokrb5/v8/spnego"
 
-	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
@@ -100,7 +99,6 @@ func start() {
 	serviceKVNO := asrep.EncPart.KVNO
 
 	// c.Diagnostics(os.Stdout)
-
 	kt := keytab.New()
 
 	for _, e := range cf.LibDefaults.DefaultTktEnctypes {
@@ -115,32 +113,8 @@ func start() {
 
 }
 
-// timestamp the start of the request
-func Timestamp() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			c.Set("starttime", time.Now())
-			return next(c)
-		}
-	}
-}
-
 func initServer(vc *config.Config, kt *keytab.Keytab, username string) {
-	// Initialization of go-echo server
 	e := echo.New()
-
-	e.HideBanner = true
-	e.HidePort = true
-
-	// pass configuration into handlers
-	// as per https://echo.labstack.com/guide/context/
-	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			cc := &snow.RouterContext{Context: c, Conf: vc}
-			return next(cc)
-		}
-	})
-	e.Use(Timestamp())
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 		LogURI:    true,
 		LogStatus: true,
@@ -156,7 +130,7 @@ func initServer(vc *config.Config, kt *keytab.Keytab, username string) {
 
 	e.GET("/status", statusPage)
 
-	if vc.GetBool("server.enable_public_key_endpoint") {
+	if vc.GetBool("server.key_store.enable_public_key_endpoint") {
 		e.GET("/public_key", publicKeyPage)
 	}
 
@@ -225,7 +199,16 @@ func statusPage(c echo.Context) error {
 }
 
 func publicKeyPage(c echo.Context) error {
-	return nil
+	key := loadSSOkey(vc)
+
+	var pubkey *rsa.PublicKey
+	pubkey = &key.PublicKey
+
+	keyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PUBLIC KEY",
+		Bytes: x509.MarshalPKCS1PublicKey(pubkey),
+	})
+	return c.String(http.StatusOK, string(keyPEM))
 }
 
 func authorizePage(w http.ResponseWriter, r *http.Request) {
