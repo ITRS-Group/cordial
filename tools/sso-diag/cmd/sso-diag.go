@@ -81,6 +81,9 @@ func start() {
 		password = vc.GetString("ldap.password")
 	}
 
+	if realm == "" {
+		realm = cf.LibDefaults.DefaultRealm
+	}
 	c := client.NewWithPassword(username, realm, password, cf, client.DisablePAFXFAST(true))
 	err = c.Login()
 	if err != nil {
@@ -244,18 +247,18 @@ func authorizePage(w http.ResponseWriter, r *http.Request) {
 func testuserPage(w http.ResponseWriter, r *http.Request) {
 	var user string
 
-	w.Write([]byte("welcome!\n\n"))
+	w.Write([]byte("Test User Diagnostics\n\n"))
 
 	// Get a goidentity credentials object from the request's context
 	creds := goidentity.FromHTTPRequestContext(r)
 
 	// Check if it indicates it is authenticated
 	if creds != nil && creds.Authenticated() {
-		fmt.Fprintf(w, "cred: %+v\n", creds)
+		log.Printf("cred: %+v\n", creds)
 		// Check for Active Directory attributes
 		if ADCreds, ok := creds.Attributes()[credentials.AttributeKeyADCredentials]; ok {
 			b, _ := json.MarshalIndent(ADCreds, "", "    ")
-			fmt.Fprintf(w, "creds: %s\n", b)
+			fmt.Fprintf(w, "creds: %s\n\n", b)
 			Creds := new(credentials.ADCredentials)
 			json.Unmarshal(b, Creds)
 			user = Creds.EffectiveName
@@ -272,27 +275,35 @@ func testuserPage(w http.ResponseWriter, r *http.Request) {
 
 	l, err := ldap.DialURL(vc.GetString("ldap.location"), ldap.DialWithTLSConfig(tlsConfig))
 	if err != nil {
-		fmt.Fprint(w, err)
+		log.Error().Err(err).Msg("")
 		return
 	}
 
 	if err = l.Bind(vc.GetString("ldap.user"), vc.GetString("ldap.password")); err != nil {
-		fmt.Fprint(w, err)
+		log.Error().Err(err).Msg("")
 		return
 	}
-	fmt.Fprintln(w, "here")
 
-	search := ldap.NewSearchRequest("DC=GWH,DC=COM", ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf("(sAMAccountName=%s)", user), []string{"memberOf"}, []ldap.Control{})
+	qf := vc.GetString("ldap.users.query_filter")
+	if qf == "" {
+		qf = fmt.Sprintf("(objectCategory=person)(objectClass=%s)", vc.GetString("ldap.users.class"))
+	}
+
+	query := fmt.Sprintf("(&%s(%s=%s))", qf, vc.GetString("ldap.fields.user"), user)
+	fmt.Fprintf(w, "LDAP Query: %s\n", query)
+	log.Printf("LDAP query: %s", query)
+	search := ldap.NewSearchRequest(vc.GetString("ldap.base"), ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		query, vc.GetStringSlice("ldap.fields"), []ldap.Control{})
 
 	result, err := l.Search(search)
 	if err != nil {
-		fmt.Fprint(w, err)
+		log.Error().Err(err).Msg("")
 		return
 	}
+
 	if len(result.Entries) > 0 {
 		for _, e := range result.Entries {
-			fmt.Fprintln(w, e.DN)
+			fmt.Fprintf(w, "\nDN: %s\n", e.DN)
 			for _, a := range e.Attributes {
 				b, _ := json.MarshalIndent(a, "  ", "    ")
 				fmt.Fprintf(w, "%s\n", string(b))

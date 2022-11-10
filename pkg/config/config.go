@@ -555,6 +555,7 @@ func getShellName(s string) (string, int) {
 }
 
 var discardRE = regexp.MustCompile(`(?m)^\s*#.*$`)
+var shrinkBackSlashRE = regexp.MustCompile(`(?m)\\\\`)
 
 // MergeHOCONConfig parses the HOCON configuration in conf and merges the
 // results into the cf *config.Config object
@@ -569,6 +570,7 @@ func (cf *Config) MergeHOCONConfig(conf string) (err error) {
 	vc.SetConfigType("json")
 
 	j, err := json.Marshal(hc.GetRoot())
+	j = shrinkBackSlashRE.ReplaceAll(j, []byte{'\\'})
 	if err != nil {
 		return
 	}
