@@ -104,6 +104,10 @@ component TYPE.  However the following properties are commonly used:
   component TYPE's binaries or the name of the symlink pointing to 
 that directory.
 For more details on instance properties, refer to [Instance Properties](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos#instance-properties).
+
+**Note**: In case for any instance you set a property that is not supported,
+that property will be written to the instance's |json| configuration file,
+but will not affect the instance.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
