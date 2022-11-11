@@ -686,6 +686,221 @@ If you want to change settings you should first `migrate` the configuration and 
 
 Note that execution mode (e.g. `GateMode`) is not supported and all components run in the background.
 
+#### `geneos` Configuration File
+
+This configuration file - in JSON format - should be found in the home directory of the user as `~/.config/geneos/geneos.json`.
+
+Structure of the default file is as follows.
+```
+{
+  "defaultuser": "itrs",
+  "download": {
+    "url": "https://resources.itrsgroup.com/download/latest/"
+  },
+  "fa2cleanlist": "*.old",
+  "fa2portrange": "7030,7100-",
+  "fa2purgelist": "fa2.log:fa2.txt:*.snooze:*.user_assignment",
+  "facleanlist": "*.old",
+  "faportrange": "7030,7100-",
+  "fapurgelist": "fileagent.log:fileagent.txt",
+  "gatewaycleanlist": "*.old:*.history",
+  "gatewayportrange": "7039,7100-",
+  "gatewaypurgelist": "gateway.log:gateway.txt:gateway.snooze:gateway.user_assignment:licences.cache:cache/:database/",
+  "geneos": "/opt/itrs",
+  "licdcleanlist": "*.old",
+  "licdportrange": "7041,7100-",
+  "licdpurgelist": "licd.log:licd.txt",
+  "netprobecleanlist": "*.old",
+  "netprobeportrange": "7036,7100-",
+  "netprobepurgelist": "netprobe.log:netprobe.txt:*.snooze:*.user_assignment",
+  "privatekeys": "id_rsa,id_ecdsa,id_ecdsa_sk,id_ed25519,id_ed25519_sk,id_dsa",
+  "reservednames": "",
+  "sancleanlist": "*.old",
+  "sanportrange": "7036,7100-",
+  "sanpurgelist": "san.log:san.txt:*.snooze:*.user_assignment",
+  "webservercleanlist": "*.old",
+  "webserverportrange": "8080,8100-",
+  "webserverpurgelist": "logs/*.log:webserver.txt"
+}
+```
+
+**Note**: This file should not require any changes, except for fields `*portrange` which may need to be adjusted based on the customer's environment.
+
+#### Host Configuration File
+
+This configuration file - in JSON format - should be found in the home directory of the user as `~/.config/geneos/geneos-hosts.json`.
+
+Structure of the default file is as follows.
+```
+{
+  "hosts": {
+    "psapac-dev-02": {
+      "geneos": "/opt/itrs",
+      "hostname": "172.123.456.789",
+      "name": "PsApac-Dev-02",
+      "osinfo": {
+        "ANSI_COLOR": "0;31",
+        "BUG_REPORT_URL": "https://bugzilla.redhat.com/",
+        "CPE_NAME": "cpe:/o:redhat:enterprise_linux:7.7:GA:server",
+        "HOME_URL": "https://www.redhat.com/",
+        "ID": "rhel",
+        "ID_LIKE": "fedora",
+        "NAME": "Red Hat Enterprise Linux Server",
+        "PRETTY_NAME": "Red Hat Enterprise Linux Server 7.7 (Maipo)",
+        "REDHAT_BUGZILLA_PRODUCT": "Red Hat Enterprise Linux 7",
+        "REDHAT_BUGZILLA_PRODUCT_VERSION": "7.7",
+        "REDHAT_SUPPORT_PRODUCT": "Red Hat Enterprise Linux",
+        "REDHAT_SUPPORT_PRODUCT_VERSION": "7.7",
+        "VARIANT": "Server",
+        "VARIANT_ID": "server",
+        "VERSION": "7.7 (Maipo)",
+        "VERSION_ID": "7.7"
+      },
+      "port": 22,
+      "username": "itrs"
+    }
+  }
+}
+```
+
+#### Instance Configuration File
+
+These configuration files - in JSON format -  should be found in sub-directories under the `geneos` base directory (typiocally `/opt/itrs`, `/opt/itrs/geneos` or `/opt/geneos`) as `GENEOS_BASE_DIRECTORY/TYPE/TYPEs/INSTANCE/TYPE.json`
+where:
+- `GENEOS_BASE_DIRECTORY` is the base directory for `geneos`.
+- `TYPE` is the component type (`licd`, `gateway`, `netprobe`, `san`, `fa2`, `fileagent` or `webservcer`).
+- `TYPEs` is the component type followed by the letter "s" (lowercase) to indicate a plural.
+- `INSTANCE` is the instance name.
+- `TYPE.json` is a the file name (e.g. `licd.json`, `gateway.json`, etc.).]
+
+Structure of the default file is as follows.
+- `licd`
+  ```
+  {
+    "binary": "licd.linux_64",
+    "home": "/opt/itrs/licd/licds/licd_test",
+    "install": "/opt/itrs/packages/licd",
+    "libpaths": "${config:install}/${config:version}/lib64",
+    "logfile": "licd.log",
+    "name": "licd_test",
+    "port": 7041,
+    "program": "${config:install}/${config:version}/${config:binary}",
+    "user": "itrs",
+    "version": "active_prod"
+  }
+  ```
+- `gateway`
+  ```
+  {
+    "binary": "gateway2.linux_64",
+    "config": {
+      "rebuild": "initial",
+      "template": "gateway.setup.xml.gotmpl"
+    },
+    "gatewayname": "gw_test",
+    "home": "/opt/itrs/gateway/gateways/gw_test",
+    "install": "/opt/itrs/packages/gateway",
+    "keyfile": "gateway.aes",
+    "libpaths": "${config:install}/${config:version}/lib64:/usr/lib64",
+    "logfile": "gateway.log",
+    "name": "gw_test",
+    "port": 7102,
+    "program": "${config:install}/${config:version}/${config:binary}",
+    "rubbish": "junk",
+    "user": "itrs",
+    "version": "active_prod"
+  }
+  ```
+- `netprobe`
+  ```
+  {
+    "binary": "netprobe.linux_64",
+    "home": "/opt/itrs/netprobe/netprobes/np_test",
+    "install": "/opt/itrs/packages/netprobe",
+    "libpaths": "${config:install}/${config:version}/lib64:${config:install}/${config:version}",
+    "logfile": "netprobe.log",
+    "name": "np_test",
+    "port": 7036,
+    "program": "${config:install}/${config:version}/${config:binary}",
+    "user": "itrs",
+    "version": "active_prod"
+  }
+  ```
+- `san`
+  ```
+  {
+    "attributes": {},
+    "binary": "netprobe.linux_64",
+    "config": {
+      "rebuild": "always",
+      "template": "netprobe.setup.xml.gotmpl"
+    },
+    "gateways": {
+      "gw_test": "7039"
+    },
+    "home": "/opt/itrs/san/sans/san_test",
+    "install": "/opt/itrs/packages/netprobe",
+    "libpaths": "${config:install}/${config:version}/lib64:${config:install}/${config:version}",
+    "logfile": "san.log",
+    "name": "san_test",
+    "port": 7100,
+    "program": "${config:install}/${config:version}/${config:binary}",
+    "sanname": "san_test",
+    "santype": "netprobe",
+    "types": [],
+    "user": "itrs",
+    "variables": {},
+    "version": "active_prod"
+  }
+  ```
+- `fa2`
+  ```
+  {
+    "binary": "fix-analyser2-netprobe.linux_64",
+    "home": "/opt/itrs/fa2/fa2s/fa2_test",
+    "install": "/opt/itrs/packages/fa2",
+    "libpaths": "${config:install}/${config:version}/lib64:${config:install}/${config:version}",
+    "logfile": "fa2.log",
+    "name": "fa2_test",
+    "port": 7030,
+    "program": "${config:install}/${config:version}/${config:binary}",
+    "user": "itrs",
+    "version": "active_prod"
+  }
+  ```
+- `fileagent`
+  ```
+  {
+    "binary": "agent.linux_64",
+    "home": "/opt/itrs/fileagent/fileagents/fileagent_test",
+    "install": "/opt/itrs/packages/fileagent",
+    "libpaths": "${config:install}/${config:version}/lib64:${config:install}/${config:version}",
+    "logfile": "fileagent.log",
+    "name": "fileagent_test",
+    "port": 7101,
+    "program": "${config:install}/${config:version}/${config:binary}",
+    "user": "itrs",
+    "version": "active_prod"
+  }
+  ```
+- `webserver`
+  ```
+  {
+    "home": "/opt/itrs/webserver/webservers/webserver_test",
+    "install": "/opt/itrs/packages/webserver",
+    "libpaths": "${config:install}/${config:version}/JRE/lib:${config:install}/${config:version}/lib64",
+    "logdir": "logs",
+    "logfile": "webdashboard.log",
+    "name": "webserver_test",
+    "port": 8080,
+    "program": "${config:install}/${config:version}/JRE/bin/java",
+    "user": "itrs",
+    "version": "active_prod",
+    "websxmx": "1024m"
+  }
+  ```
+
+
 ## Directory Layout
 
 The `geneos` configuration setting or the environment variable `ITRS_HOME` points to the base directory for all subsequent operations. The layout follows that of the original `gatewayctl` etc.

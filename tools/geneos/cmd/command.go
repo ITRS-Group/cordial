@@ -41,8 +41,9 @@ var commandCmd = &cobra.Command{
 	Use:   "command [TYPE] [NAME...]",
 	Short: "Show command line and environment for launching instances",
 	Long: strings.ReplaceAll(`
-Show the command line for the matching instances along with any
-environment variables explicitly set for execution.
+Show for each of the matching instances:
+- The command line,
+- The environment variables explicitly set for execution.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
