@@ -40,10 +40,10 @@ var GlobalConfigPath = filepath.Join(GlobalConfigDir, ConfigSubdirName, UserConf
 //
 // if the directory is not empty and 'noEmptyOK' is false then
 // nothing is changed
-func Init(r *host.Host, options ...GeneosOptions) (err error) {
+func Init(h *host.Host, options ...GeneosOptions) (err error) {
 	var uid, gid int
 
-	if r != host.LOCAL && utils.IsSuperuser() {
+	if h != host.LOCAL && utils.IsSuperuser() {
 		err = ErrNotSupported
 		return
 	}
@@ -58,19 +58,19 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 	//
 	// maybe check that the entire list of registered directories are
 	// either directories or do not exist
-	if _, err := r.Stat(opts.homedir); err != nil {
-		if err = r.MkdirAll(opts.homedir, 0775); err != nil {
+	if _, err := h.Stat(opts.homedir); err != nil {
+		if err = h.MkdirAll(opts.homedir, 0775); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 	} else if !opts.force {
 		// check empty
-		dirs, err := r.ReadDir(opts.homedir)
+		dirs, err := h.ReadDir(opts.homedir)
 		if err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 		for _, entry := range dirs {
 			if !strings.HasPrefix(entry.Name(), ".") {
-				if r != host.LOCAL {
+				if h != host.LOCAL {
 					log.Debug().Msg("remote directories exist, exiting init")
 					return nil
 				}
@@ -79,7 +79,7 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 		}
 	}
 
-	if r == host.LOCAL {
+	if h == host.LOCAL {
 		config.GetConfig().Set("geneos", opts.homedir)
 		config.GetConfig().Set("defaultuser", opts.localusername)
 
@@ -95,11 +95,12 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 		if err = host.WriteConfigFile(userConfFile, opts.localusername, 0664, config.GetConfig()); err != nil {
 			return err
 		}
-	}
 
-	// recreate host.LOCAL to load "geneos" and others
-	host.LOCAL = nil
-	host.LOCAL = host.Get(host.LOCALHOST)
+		// recreate host.LOCAL to load "geneos" and others
+		host.LOCAL = nil
+		host.LOCAL = host.Get(host.LOCALHOST)
+		h = host.LOCAL
+	}
 
 	if utils.IsSuperuser() {
 		uid, gid, _, err = utils.GetIDs(opts.localusername)
@@ -112,16 +113,16 @@ func Init(r *host.Host, options ...GeneosOptions) (err error) {
 	}
 
 	// it's not an error to try to re-create existing dirs
-	if err = MakeComponentDirs(host.LOCAL, nil); err != nil {
+	if err = MakeComponentDirs(h, nil); err != nil {
 		return
 	}
 
 	for _, c := range AllComponents() {
-		if err := MakeComponentDirs(host.LOCAL, c); err != nil {
+		if err := MakeComponentDirs(h, c); err != nil {
 			continue
 		}
 		if c.Initialise != nil {
-			c.Initialise(host.LOCAL, c)
+			c.Initialise(h, c)
 		}
 	}
 
