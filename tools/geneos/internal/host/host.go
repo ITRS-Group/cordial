@@ -3,7 +3,11 @@ package host
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -14,7 +18,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const UserHostFile = "geneos-hosts.json"
+const ConfigSubdirName = "geneos"
+const OldUserHostFile = "geneos-hosts.json"
+
+var UserHostFile = filepath.Join(ConfigSubdirName, "hosts.json")
+
 const LOCALHOST = "localhost"
 const ALLHOSTS = "all"
 
@@ -42,7 +50,7 @@ var hosts sync.Map
 func Init() {
 	LOCAL = Get(LOCALHOST)
 	ALL = Get(ALLHOSTS)
-	ReadHostConfigFile()
+	ReadConfig()
 }
 
 // return the absolute path to the local Geneos installation
@@ -251,10 +259,37 @@ func RemoteHosts() (hs []*Host) {
 	return
 }
 
-func ReadHostConfigFile() {
+// ReadConfig loads configuration entries from the default host
+// configuration file. If that fails, it tries the old location and
+// migrates that file to the new location if found.
+func ReadConfig() {
 	h := config.New()
 	h.SetConfigFile(UserHostsFilePath())
-	h.ReadInConfig()
+	if err := h.ReadInConfig(); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			// try old location
+			userConfDir, _ := config.UserConfigDir()
+			oldConfigFile := filepath.Join(userConfDir, OldUserHostFile)
+			if s, err := os.Stat(oldConfigFile); err == nil {
+				if !s.IsDir() {
+					if f, err := os.Open(oldConfigFile); err == nil {
+						defer f.Close()
+						if w, err := os.Create(UserHostsFilePath()); err == nil {
+							defer w.Close()
+							if _, err := io.Copy(w, f); err == nil {
+								f.Close()
+								w.Close()
+								os.Remove(oldConfigFile)
+								if err := h.ReadInConfig(); err != nil {
+									log.Debug().Err(err).Msg("old hosts file is unreadable, but still moved")
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 
 	// recreate empty
 	hosts = sync.Map{}
@@ -272,7 +307,7 @@ func ReadHostConfigFile() {
 	}
 }
 
-func WriteHostConfigFile() error {
+func WriteConfig() error {
 	n := config.New()
 
 	hosts.Range(func(k, v interface{}) bool {
@@ -283,8 +318,6 @@ func WriteHostConfigFile() error {
 		}
 		return true
 	})
-
-	// return n.WriteConfigAs(UserHostsFilePath())
 
 	if err := n.WriteConfigAs(UserHostsFilePath()); err != nil {
 		return err

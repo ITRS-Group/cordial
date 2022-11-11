@@ -106,7 +106,7 @@ Delete the local configuration referring to a remote host.
 			host.Delete(h)
 			fmt.Printf("%q deleted\n", h)
 		}
-		host.WriteHostConfigFile()
+		host.WriteConfig()
 
 		return nil
 	},
