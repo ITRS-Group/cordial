@@ -56,7 +56,13 @@ Moving across hosts is supported.
 		"wildcard": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args := cmdArgs(cmd)
+		ct, args, params := cmdArgsParams(cmd)
+		if len(args) == 0 && len(params) == 2 && strings.HasPrefix(params[0], "@") && strings.HasPrefix(params[1], "@") {
+			args = params
+		}
+		if len(args) == 1 && len(params) == 1 && strings.HasPrefix(params[0], "@") {
+			args = append(args, params[0])
+		}
 		if len(args) != 2 {
 			return ErrInvalidArgs
 		}
