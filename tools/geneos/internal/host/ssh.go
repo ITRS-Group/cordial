@@ -81,6 +81,17 @@ func sshConnect(dest, user string) (client *ssh.Client, err error) {
 		Auth:            authmethods,
 		HostKeyCallback: khCallback,
 		Timeout:         5 * time.Second,
+		HostKeyAlgorithms: []string{
+			ssh.KeyAlgoED25519, ssh.CertAlgoED25519v01,
+
+			ssh.CertSigAlgoRSASHA2512v01, ssh.CertSigAlgoRSASHA2256v01,
+			ssh.CertSigAlgoRSAv01, ssh.CertAlgoDSAv01, ssh.CertAlgoECDSA256v01,
+			ssh.CertAlgoECDSA384v01, ssh.CertAlgoECDSA521v01,
+
+			ssh.KeyAlgoECDSA256, ssh.KeyAlgoECDSA384, ssh.KeyAlgoECDSA521,
+			ssh.SigAlgoRSASHA2512, ssh.SigAlgoRSASHA2256,
+			ssh.SigAlgoRSA, ssh.KeyAlgoDSA,
+		},
 	}
 	return ssh.Dial("tcp", dest, config)
 }
@@ -96,8 +107,10 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 	if ok {
 		s = val.(*ssh.Client)
 	} else {
+		log.Debug().Msgf("ssh connect to %s as %s", dest, user)
 		s, err = sshConnect(dest, user)
 		if err != nil {
+			log.Debug().Err(err).Msg("")
 			h.failed = err
 			return
 		}
