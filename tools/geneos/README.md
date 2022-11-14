@@ -691,7 +691,8 @@ Note that execution mode (e.g. `GateMode`) is not supported and all components r
 This configuration file - in JSON format - should be found in the home directory of the user as `~/.config/geneos/geneos.json`.
 
 Structure of the default file is as follows.
-```
+
+```json
 {
   "defaultuser": "itrs",
   "download": {
@@ -731,7 +732,8 @@ Structure of the default file is as follows.
 This configuration file - in JSON format - should be found in the home directory of the user as `~/.config/geneos/geneos-hosts.json`.
 
 Structure of the default file is as follows.
-```
+
+```json
 {
   "hosts": {
     "psapac-dev-02": {
@@ -767,15 +769,18 @@ Structure of the default file is as follows.
 
 These configuration files - in JSON format -  should be found in sub-directories under the `geneos` base directory (typiocally `/opt/itrs`, `/opt/itrs/geneos` or `/opt/geneos`) as `GENEOS_BASE_DIRECTORY/TYPE/TYPEs/INSTANCE/TYPE.json`
 where:
-- `GENEOS_BASE_DIRECTORY` is the base directory for `geneos`.
-- `TYPE` is the component type (`licd`, `gateway`, `netprobe`, `san`, `fa2`, `fileagent` or `webservcer`).
-- `TYPEs` is the component type followed by the letter "s" (lowercase) to indicate a plural.
-- `INSTANCE` is the instance name.
-- `TYPE.json` is a the file name (e.g. `licd.json`, `gateway.json`, etc.).]
+
+* `GENEOS_BASE_DIRECTORY` is the base directory for `geneos`.
+* `TYPE` is the component type (`licd`, `gateway`, `netprobe`, `san`, `fa2`, `fileagent` or `webservcer`).
+* `TYPEs` is the component type followed by the letter "s" (lowercase) to indicate a plural.
+* `INSTANCE` is the instance name.
+* `TYPE.json` is a the file name (e.g. `licd.json`, `gateway.json`, etc.).]
 
 Structure of the default file is as follows.
-- `licd`
-  ```
+
+* `licd`
+
+  ```json
   {
     "binary": "licd.linux_64",
     "home": "/opt/itrs/licd/licds/licd_test",
@@ -789,8 +794,10 @@ Structure of the default file is as follows.
     "version": "active_prod"
   }
   ```
-- `gateway`
-  ```
+
+* `gateway`
+
+  ```json
   {
     "binary": "gateway2.linux_64",
     "config": {
@@ -811,8 +818,10 @@ Structure of the default file is as follows.
     "version": "active_prod"
   }
   ```
-- `netprobe`
-  ```
+
+* `netprobe`
+
+  ```json
   {
     "binary": "netprobe.linux_64",
     "home": "/opt/itrs/netprobe/netprobes/np_test",
@@ -826,8 +835,10 @@ Structure of the default file is as follows.
     "version": "active_prod"
   }
   ```
-- `san`
-  ```
+
+* `san`
+
+  ```json
   {
     "attributes": {},
     "binary": "netprobe.linux_64",
@@ -853,8 +864,10 @@ Structure of the default file is as follows.
     "version": "active_prod"
   }
   ```
-- `fa2`
-  ```
+
+* `fa2`
+
+  ```json
   {
     "binary": "fix-analyser2-netprobe.linux_64",
     "home": "/opt/itrs/fa2/fa2s/fa2_test",
@@ -868,8 +881,10 @@ Structure of the default file is as follows.
     "version": "active_prod"
   }
   ```
-- `fileagent`
-  ```
+
+* `fileagent`
+
+  ```json
   {
     "binary": "agent.linux_64",
     "home": "/opt/itrs/fileagent/fileagents/fileagent_test",
@@ -883,8 +898,10 @@ Structure of the default file is as follows.
     "version": "active_prod"
   }
   ```
-- `webserver`
-  ```
+
+* `webserver`
+
+  ```json
   {
     "home": "/opt/itrs/webserver/webservers/webserver_test",
     "install": "/opt/itrs/packages/webserver",
@@ -900,12 +917,13 @@ Structure of the default file is as follows.
   }
   ```
 
-
 ## Directory Layout
 
 The `geneos` configuration setting or the environment variable `ITRS_HOME` points to the base directory for all subsequent operations. The layout follows that of the original `gatewayctl` etc.
+
 Directory structure / hierarchy / layout is as follows:
-```
+
+```text
 /opt/itrs
 ├── fa2
 │   └── fa2s
@@ -953,49 +971,59 @@ Directory structure / hierarchy / layout is as follows:
 └── webserver
     └── webservers
         └── [webserver instance name]
-
 ```
-where:
-- `fa2/` (Fix Analyser) contains settings & instance data related to the `fa2` component type.
-  - `fa2/fa2s/` contains one sub-directory for each Fix Analyser instance named after the fa2 instance.
-    These sub-directory will be used as working directories for the corresponding instances.
-- `fileagent/` (File Agent for Fix Analyser) contains settings & instance data related to the `fileagent` component type.
-  - `fileagent/fileagents/` contains one sub-directory for each File Agent instance named after the file agent instance.
-    These sub-directory will be used as working directories for the corresponding instances.
-- `gateway/` contains settings & instance data related to the `gateway` component type.
-  - `gateway/gateway_config/` contains common Gateway configuration as include `XML` files.
-  - `gateway/gateways/` contains one sub-directory for each Gateway instance named after the gateway instance.
-    These sub-directories will be used as working directories for the corresponding gateway instances.
-  - `gateway/gateway_shared/` contains shared Gateway data such as include `XML` files or scritped tools.
-  - `gateway/templates/` contains Gateway configuration templates in the form of Golang XML templates.
-- `hosts/` contains configurations for supporting control of Geneos component instances running on remote hosts.
-- `licd/` (License Daemon) contains settings & instance data related to the `licd` component type.
-  - `licd/licds/` contains one sub-directory for each licd instance named after the licd instance.
-    This sub-directories will be used as working directories for the corresponding License Daemon (licd) instance.
-- `netprobe/` contains settings & instance data related to the `netprobe` component type.
-  - `netprobe/netprobes/` contains one sub-directory for each Netprobe instance named after the netprobe instance.
-    These sub-directories will be used as working directories for the corresponding netprobe instances.
-- `packages/` contains the Geneos binaries / software packages installed.
-  - `packages/downloads/` contains files downloaded from the ITRS download portal, or the file repository used.
-  - `packages/fa2/` contains one sub-directory for each version of Fix Analyser installed, as well as symlinks (e.g. `active_prod`) pointing to the current default version.
-    These sub-directory will contain the corresponding binaries.
-  - `packages/fileagent/` contains one sub-directory for each version of File Agent installed, as well as symlinks (e.g. `active_prod`) pointing to the current default version.
-    These sub-directory will contain the corresponding binaries.
-  - `packages/gateway/` contains one sub-directory for each version of Gateway installed, as well as a symlinks (e.g. `active_prod`) pointing to the current default version.  These sub-directory will contain the corresponding binaries.
-  - `packages/licd/` contains one sub-directory for each version of License Daemon (licd) installed, as well as a symlinks (e.g. `active_prod`) pointing to the current default version.
-    These sub-directory will contain the corresponding binaries.
-  - `packages/netprobe/` contains one sub-directory for each version of Netprobe installed, as well as a symlinks (e.g. `active_prod`) pointing to the current default version.
-    These sub-directory will contain the corresponding binaries.
-  - `packages/webserver/` contains one sub-directory for each version of Webserver (for web dashboards) installed, as well as a symlinks (e.g. `active_prod`) pointing to the current default version.
-    These sub-directory will contain the corresponding binaries.
-- `san/` (Self-Announcing Netprobe) contains settings & instance data related to the `san` component type.
-  - `san/sans/` contains one sub-directory for each Self-Announcing Netprobe instance named after the san instance.
-    These sub-directories will be used as working directories for the corresponding san instances.
-  - `san/templates/` contains Self-Announcing Netprobe configuration templates in the form of Golang XML templates.
-- `webserver/` (Webserver for web dashbaords) contains settings & instance data related to the `webserver` component type.
-  - `webserver/webservers/` contains one sub-directory for each Webserver instance named after the webserver instance.
-    These sub-directories will be used as working directories for the corresponding Webserver instances.
 
+where:
+
+* `fa2/` (Fix Analyser) contains settings & instance data related to the `fa2` component type.
+
+  * `fa2/fa2s/` contains one sub-directory for each Fix Analyser instance named after the fa2 instance.
+    These sub-directory will be used as working directories for the corresponding instances.
+
+* `fileagent/` (File Agent for Fix Analyser) contains settings & instance data related to the `fileagent` component type.
+
+  * `fileagent/fileagents/` contains one sub-directory for each File Agent instance named after the file agent instance.
+    These sub-directory will be used as working directories for the corresponding instances.
+
+* `gateway/` contains settings & instance data related to the `gateway` component type.
+
+  * `gateway/gateway_config/` contains common Gateway configuration as include `XML` files.
+  * `gateway/gateways/` contains one sub-directory for each Gateway instance named after the gateway instance.
+    These sub-directories will be used as working directories for the corresponding gateway instances.
+  * `gateway/gateway_shared/` contains shared Gateway data such as include `XML` files or scritped tools.
+  * `gateway/templates/` contains Gateway configuration templates in the form of Golang XML templates.
+
+* `hosts/` contains configurations for supporting control of Geneos component instances running on remote hosts.
+* `licd/` (License Daemon) contains settings & instance data related to the `licd` component type.
+  * `licd/licds/` contains one sub-directory for each licd instance named after the licd instance.
+    This sub-directories will be used as working directories for the corresponding License Daemon (licd) instance.
+
+* `netprobe/` contains settings & instance data related to the `netprobe` component type.
+  * `netprobe/netprobes/` contains one sub-directory for each Netprobe instance named after the netprobe instance.
+    These sub-directories will be used as working directories for the corresponding netprobe instances.
+
+* `packages/` contains the Geneos binaries / software packages installed.
+  * `packages/downloads/` contains files downloaded from the ITRS download portal, or the file repository used.
+  * `packages/fa2/` contains one sub-directory for each version of Fix Analyser installed, as well as symlinks (e.g. `active_prod`) pointing to the current default version.
+    These sub-directory will contain the corresponding binaries.
+  * `packages/fileagent/` contains one sub-directory for each version of File Agent installed, as well as symlinks (e.g. `active_prod`) pointing to the current default version.
+    These sub-directory will contain the corresponding binaries.
+  * `packages/gateway/` contains one sub-directory for each version of Gateway installed, as well as a symlinks (e.g. `active_prod`) pointing to the current default version.  These sub-directory will contain the corresponding binaries.
+  * `packages/licd/` contains one sub-directory for each version of License Daemon (licd) installed, as well as a symlinks (e.g. `active_prod`) pointing to the current default version.
+    These sub-directory will contain the corresponding binaries.
+  * `packages/netprobe/` contains one sub-directory for each version of Netprobe installed, as well as a symlinks (e.g. `active_prod`) pointing to the current default version.
+    These sub-directory will contain the corresponding binaries.
+  * `packages/webserver/` contains one sub-directory for each version of Webserver (for web dashboards) installed, as well as a symlinks (e.g. `active_prod`) pointing to the current default version.
+    These sub-directory will contain the corresponding binaries.
+
+* `san/` (Self-Announcing Netprobe) contains settings & instance data related to the `san` component type.
+  * `san/sans/` contains one sub-directory for each Self-Announcing Netprobe instance named after the san instance.
+    These sub-directories will be used as working directories for the corresponding san instances.
+  * `san/templates/` contains Self-Announcing Netprobe configuration templates in the form of Golang XML templates.
+
+* `webserver/` (Webserver for web dashbaords) contains settings & instance data related to the `webserver` component type.
+  * `webserver/webservers/` contains one sub-directory for each Webserver instance named after the webserver instance.
+    These sub-directories will be used as working directories for the corresponding Webserver instances.
 
 The `bin/` directory and the default `.rc` files are **ignored**.  Please be careful in case you have customised anything in `bin/`.
 
