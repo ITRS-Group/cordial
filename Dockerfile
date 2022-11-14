@@ -33,8 +33,10 @@ RUN go build --ldflags '-linkmode external -extldflags=-static'
 FROM centos:7 AS build-libs
 LABEL stage=cordial-build
 RUN yum install -y gcc make
-ADD https://go.dev/dl/go1.19.3.linux-amd64.tar.gz /tmp/
-RUN tar -C /usr/local -xzf /tmp/go1.19.3.linux-amd64.tar.gz
+ARG BUILDOS
+ARG BUILDARCH
+ADD https://go.dev/dl/go1.19.3.${BUILDOS}-${BUILDARCH}.tar.gz /tmp/
+RUN tar -C /usr/local -xzf /tmp/go1.19.3.${BUILDOS}-${BUILDARCH}.tar.gz
 ENV PATH=$PATH:/usr/local/go/bin
 COPY ./ /app/cordial
 WORKDIR /app/cordial/libraries/libemail
