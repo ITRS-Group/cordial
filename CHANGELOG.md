@@ -18,6 +18,10 @@
   * tools/geneos: begin implementation of support for YAML config files via 'configtype' user setting
   * pkg/geneos: add EnvironmentRef and fix periodStartTime attribute
 
+* Other
+
+  * tools/geneos: update README.md with more information about instance configuration files and their values (@gvastel)
+
 ## Version v1.3.2 - 2022/11/02
 
 * Fixes
