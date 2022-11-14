@@ -317,9 +317,10 @@ func writeConfig(c geneos.Instance) (err error) {
 
 	nv := config.New()
 	for _, k := range c.Config().AllKeys() {
-		if _, ok := c.Type().Aliases[k]; !ok {
-			nv.Set(k, c.Config().Get(k))
+		if _, ok := c.Type().Aliases[k]; ok {
+			continue
 		}
+		nv.Set(k, c.Config().Get(k))
 	}
 	if c.Host() != host.LOCAL {
 		client, err := c.Host().DialSFTP()
@@ -339,9 +340,9 @@ func writeConfig(c geneos.Instance) (err error) {
 	return
 }
 
-// WriteConfigValues writes values to the configuration file for
-// instance c. It does not merge values with the existing configuration
-// values.
+// WriteConfigValues writes the given values to the configuration file
+// for instance c. It does not merge values with the existing
+// configuration values.
 func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err error) {
 	// speculatively migrate the config, in case there is a legacy .rc
 	// file in place. Migrate() returns an error only for real errors
@@ -352,6 +353,10 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 	file := ComponentFilepath(c)
 	nv := config.New()
 	for k, v := range values {
+		// skip aliases
+		if _, ok := c.Type().Aliases[k]; ok {
+			continue
+		}
 		nv.Set(k, v)
 	}
 	if c.Host() != host.LOCAL {
@@ -496,4 +501,14 @@ func ConfigFileType() (conftype string) {
 
 func ConfigFileTypes() []string {
 	return []string{"json", "yaml"}
+}
+
+// DeleteSettingFromMap removes key from the map from and if it is
+// registered as an alias it also removes the key that alias refers to.
+func DeleteSettingFromMap(c geneos.Instance, from map[string]interface{}, key string) {
+	if a, ok := c.Type().Aliases[key]; ok {
+		// delete any setting this is an alias for, as well as the alias
+		delete(from, a)
+	}
+	delete(from, key)
 }

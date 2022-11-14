@@ -96,16 +96,17 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 				p := strings.SplitN(k, ".", 2)
 				switch x := s[p[0]].(type) {
 				case map[string]interface{}:
-					delete(x, p[1])
+					instance.DeleteSettingFromMap(c, x, p[1])
 					s[p[0]] = x
 					changed = true
 				default:
 					// nothing yet
 				}
-			} else {
-				delete(s, k)
-				changed = true
+				continue
 			}
+
+			instance.DeleteSettingFromMap(c, s, k)
+			changed = true
 		}
 	}
 
@@ -158,9 +159,9 @@ func unsetValues(c geneos.Instance) (changed bool, err error) {
 }
 
 func unsetMap(c geneos.Instance, key string, items unsetCmdValues) (changed bool) {
-	x := c.Config().GetStringMapString(key)
+	x := c.Config().GetStringMap(key)
 	for _, k := range items {
-		delete(x, k)
+		instance.DeleteSettingFromMap(c, x, k)
 		changed = true
 	}
 	if changed {
@@ -194,6 +195,8 @@ func (i *unsetCmdValues) String() string {
 }
 
 func (i *unsetCmdValues) Set(value string) error {
+	// discard any values accidentally passed with '=value'
+	value = strings.SplitN(value, "=", 2)[0]
 	*i = append(*i, value)
 	return nil
 }

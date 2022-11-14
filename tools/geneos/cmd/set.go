@@ -134,6 +134,8 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 			log.Error().Err(ErrInvalidArgs).Msgf("ignoring %q", arg)
 			continue
 		}
+		// you can set an alias here, the wrote functions do the
+		// translations
 		c.Config().Set(s[0], s[1])
 	}
 
