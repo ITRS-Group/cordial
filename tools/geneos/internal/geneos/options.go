@@ -6,6 +6,7 @@ type Options struct {
 	force         bool
 	override      string
 	restart       bool
+	fullclean     bool
 	version       string
 	basename      string
 	homedir       string
@@ -63,6 +64,18 @@ func Restart(r bool) GeneosOptions {
 // XXX Currently doesn't work.
 func (d *Options) Restart() bool {
 	return d.restart
+}
+
+// Restart sets the instances to be restarted around the update
+func FullClean(r bool) GeneosOptions {
+	return func(d *Options) { d.fullclean = r }
+}
+
+// Restart returns the value of the Restart option. This is a helper to
+// allow checking outside the cmd package.
+// XXX Currently doesn't work.
+func (d *Options) FullClean() bool {
+	return d.fullclean
 }
 
 // Version sets the desired version number, defaults to "latest" in most
