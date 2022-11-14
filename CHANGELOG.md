@@ -4,6 +4,8 @@
 
 * Fixes
 
+  * tools/geneos: better handling of instance config aliases when writing config files
+  * tools/geneos: fixes to unset to ignore values that may be passed in with keys to unset
   * tools/geneos: refactor CopyInstance() to preserve ports, other details
   * build: create static executables, using alpine, and a centos 7 compatible libemail.so
   * tools/geneos: add the beginnings of support for YAML instance config files. not enabled yet.
