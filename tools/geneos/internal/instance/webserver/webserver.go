@@ -38,6 +38,7 @@ var Webserver = geneos.Component{
 		"webskey":   "privatekey",
 		"websuser":  "user",
 		"websopts":  "options",
+		"websxmx":   "maxmem",
 	},
 	Defaults: []string{
 		`home={{join .root "webserver" "webservers" .name}}`,
@@ -48,7 +49,7 @@ var Webserver = geneos.Component{
 		`logfile=webdashboard.log`,
 		`port=8080`,
 		`libpaths={{join "${config:install}" "${config:version}" "JRE/lib"}}:{{join "${config:install}" "${config:version}" "lib64"}}`,
-		`websxmx=1024m`,
+		`maxmem=1024m`,
 	},
 	GlobalSettings: map[string]string{
 		"WebserverPortRange": "8080,8100-",
@@ -218,7 +219,7 @@ func (w *Webservers) Command() (args, env []string) {
 	args = []string{
 		// "-Duser.home=" + c.WebsHome,
 		"-XX:+UseConcMarkSweepGC",
-		"-Xmx" + w.Config().GetString("websxmx"),
+		"-Xmx" + w.Config().GetString("maxmem"),
 		"-server",
 		"-Djava.io.tmpdir=" + home + "/webapps",
 		"-Djava.awt.headless=true",
