@@ -59,23 +59,30 @@ var initAllCmd = &cobra.Command{
 	Long: strings.ReplaceAll(`
 Initialise a typical Geneos installation.
 
-This command installs a Gateway, Netprobe, Licence-Daemon and
-Webserver. A licence file is required and should be give using the
-|-L| flag. If a licence file is not available then use |-L /dev/null|
-which will create and empty |geneos.lic| file that can be overwritten
-later.
+This command initialises a Geneos installation by:
+- Creating the directory structure & user configuration file,
+- Installing software ackages for component types |gateway|, |licd|,
+  |netprobe| & |webserver|,
+- Creating an instance for each component type named after the hostname
+  (except for |netprobe| whose instance is named |localhost|)
+- Starting the created instances.
 
-In almost all cases authentication will be required to download the
-install packages and as this is a new Geneos installation it is
-unlikely that the download credentials are saved in a local config
-file, so use the |-u email@example.com| as appropriate.
+A license file is required and should be given using option |-L|.
+If a license file is not available, then use |-L /dev/null| which will
+create an empty |geneos.lc| file that can be overwritten later.
 
-If packages are already downloaded locally then use the |-A| flag to
-refer to the directory contain the archives. They must be named in
-the same format as those downloaded from the main download website.
-If no version is given using the |-V| flag then the latest version of
-each component is installed.
+Authentication will most-likely be required to download the installation
+software packages and, as this is a new Geneos installation, it is unlikely
+that the download credentials are saved in a local config file.
+Use option |-u email@example.com| to define the username for downloading
+software packages.
 
+If packages are already downloaded locally, use option |-A Path_To_Archive|
+to refer to the directory containing the package archives.  Package files
+must be named in the same format as those downloaded from the 
+[ITRS download portal](https://resources.itrsgroup.com/downloads).
+If no version is given using option |-V|, then the latest version of each
+component is installed.
 `, "|", "`"),
 	Example: strings.ReplaceAll(`
 geneos init all -L https://myserver/files/geneos.lic -u email@example.com
