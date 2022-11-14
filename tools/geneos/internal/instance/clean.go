@@ -17,7 +17,7 @@ func Clean(c geneos.Instance, options ...geneos.GeneosOptions) (err error) {
 	cleanlist := config.GetString(c.Type().CleanList)
 	purgelist := config.GetString(c.Type().PurgeList)
 
-	if !opts.Restart() {
+	if !opts.FullClean() {
 		if cleanlist != "" {
 			if err = RemovePaths(c, cleanlist); err == nil {
 				log.Debug().Msgf("%s cleaned", c)
