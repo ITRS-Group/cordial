@@ -4,6 +4,7 @@
 
 * Fixes
 
+  * tools/geneos: re-order SSH HostKeyAlgorithms so that, bizarrely, IP based remotes work
   * tools/geneos: better handling of instance config aliases when writing config files
   * tools/geneos: fixes to unset to ignore values that may be passed in with keys to unset
   * tools/geneos: refactor CopyInstance() to preserve ports, other details
