@@ -163,23 +163,26 @@ func ParseComponentName(component string) *Component {
 
 // create any missing component registered directories
 func MakeComponentDirs(h *host.Host, ct *Component) (err error) {
-	var name string
+	name := "none"
 	if h == host.ALL {
 		log.Fatal().Msg("called with all hosts")
 	}
-	if ct == nil {
-		name = "none"
-	} else {
+	if ct != nil {
 		name = ct.Name
 	}
+	geneos := h.GetString("geneos")
+	uid, gid := -1, -1
+	if utils.IsSuperuser() {
+		uid, gid, _, _ = utils.GetIDs("")
+	}
+
 	for _, d := range initDirs[name] {
-		dir := filepath.Join(h.GetString("geneos"), d)
+		dir := filepath.Join(geneos, d)
 		log.Debug().Msgf("mkdirall %s", dir)
 		if err = h.MkdirAll(dir, 0775); err != nil {
 			return
 		}
-		if utils.IsSuperuser() {
-			uid, gid, _, _ := utils.GetIDs("")
+		if uid != -1 && gid != -1 {
 			h.Chown(dir, uid, gid)
 		}
 	}
@@ -194,13 +197,18 @@ func (ct *Component) ComponentDir(h *host.Host) string {
 }
 
 // Range will either return just the specific component it is called on,
-// or if that is nil than the list of component types passed as args.
+// or if that is nil than the list of component types passed as args. If
+// no arguments are passed then all real components types are returned.
 //
 // This is a convenience to avoid a double layer of if and range in
 // callers than want to work on specific component types.
 func (ct *Component) Range(cts ...*Component) []*Component {
 	if ct != nil {
 		return []*Component{ct}
+	}
+
+	if len(cts) == 0 {
+		return RealComponents()
 	}
 
 	return cts

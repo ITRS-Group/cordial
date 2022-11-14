@@ -1,9 +1,14 @@
 # Change Log
 
-## Version v1.4.0-dev - 2022/11/02
+## Version v1.4.0-dev - 2022/11/12
 
 * Fixes
 
+  * tools/geneos: refactor CopyInstance() to preserve ports, other details
+  * build: create static executables, using alpine, and a centos 7 compatible libemail.so
+  * tools/geneos: add the beginnings of support for YAML instance config files. not enabled yet.
+  * tools/geneos: fix crash when importing to common directories of components without the component name
+  * tools/geneos: fix fileagent support by adding implicit imports with side-effects for all component packages
   * tools/geneos: skip failed permissions on /prox/*/fd - let 'ps' work for restricted processes
   * tools/geneos: fix update-during-install support, add --force flag for this too
   * tools/geneos: fix logic to match latest packages when major number changes

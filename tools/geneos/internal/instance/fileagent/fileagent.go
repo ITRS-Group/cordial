@@ -1,15 +1,5 @@
 package fileagent
 
-// Use this file as a template to add a new geneos.
-//
-// Replace 'Name' with the camel-cased name of the component, e.g. Gateway
-// Replace 'name' with the display name of the component, e.g. gateway
-//
-// Plural instances of 'Names' / 'names' should be carried through, e.g. Gateways/gateways
-//
-// Leave InstanceName alone
-//
-
 import (
 	"sync"
 
@@ -31,19 +21,26 @@ var FileAgent = geneos.Component{
 	CleanList:        "FACleanList",
 	PurgeList:        "FAPurgeList",
 	Aliases: map[string]string{
-		"binsuffix": "binary",
-		"fahome":    "home",
-		"fabins":    "install",
-		"fabase":    "version",
-		"faexec":    "program",
-		"falogd":    "logdir",
-		"falogf":    "logfile",
-		"faport":    "port",
-		"falibs":    "libpaths",
-		"facert":    "certificate",
-		"fakey":     "privatekey",
-		"fauser":    "user",
-		"faopts":    "options",
+		"binsuffix":  "binary",
+		"fahome":     "home",
+		"fabins":     "install",
+		"fagentbins": "install",
+		"fabase":     "version",
+		"fagentbase": "version",
+		"faexec":     "program",
+		"falogd":     "logdir",
+		"fagentlogd": "logdir",
+		"falogf":     "logfile",
+		"fagentlogf": "logfile",
+		"faport":     "port",
+		"fagentport": "port",
+		"falibs":     "libpaths",
+		"fagentlibs": "libpaths",
+		"facert":     "certificate",
+		"fakey":      "privatekey",
+		"fauser":     "user",
+		"faopts":     "options",
+		"fagentopts": "options",
 	},
 	Defaults: []string{
 		`binary=agent.linux_64`,
