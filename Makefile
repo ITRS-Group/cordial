@@ -1,4 +1,5 @@
 VERSION = $(file < VERSION)
+export DOCKER_BUILDKIT = 1
 
 release:
 	docker build --tag cordial-build:$(VERSION) --target cordial-build .
