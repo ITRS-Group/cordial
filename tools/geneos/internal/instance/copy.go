@@ -177,7 +177,7 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 	done = true
 
 	// now a full clean on the destination
-	if err = Clean(newdst); err != nil {
+	if err = Clean(newdst, geneos.FullClean(true)); err != nil {
 		return
 	}
 
