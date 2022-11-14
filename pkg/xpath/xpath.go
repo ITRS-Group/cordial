@@ -53,6 +53,7 @@ import (
 )
 
 var ErrInvalidPath = errors.New("invalid Geneos XPath")
+var ErrRelativePath = errors.New("unsupported relative Geneos XPath")
 
 // A Geneos Gateway XPath
 //
@@ -472,6 +473,12 @@ func Parse(s string) (xpath *XPath, err error) {
 	xpath = &XPath{}
 
 	parts := splitWithEscaping(s, '/', '\\')
+
+	// if the path is relative, handle it differently
+	if !strings.HasPrefix(s, "/") {
+		err = ErrRelativePath
+		return
+	}
 
 	// if the path is a wildcard, find the first level and prefix the parts[] with
 	// the higher levels
