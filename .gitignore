@@ -34,3 +34,4 @@ integrations/servicenow/servicenow.yaml
 integrations/pagerduty/pagerduty
 docs/docs
 .vscode
+tools/sso-diag/sso-diag

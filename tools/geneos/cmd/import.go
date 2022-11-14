@@ -23,6 +23,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -102,6 +103,9 @@ geneos import gateway -c shared common_include.xml
 func importFiles(ct *geneos.Component, args []string, sources []string) (err error) {
 	if importCmdCommon != "" {
 		// ignore args, use ct & params
+		if ct == nil {
+			return fmt.Errorf("component type must be specified for common/shared directory import")
+		}
 		for _, r := range host.Match(importCmdHostname) {
 			if _, err = instance.ImportCommons(r, ct, ct.String()+"_"+importCmdCommon, sources); err != nil {
 				return

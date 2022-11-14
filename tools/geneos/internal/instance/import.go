@@ -129,7 +129,7 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 }
 
 func ImportCommons(r *host.Host, ct *geneos.Component, common string, params []string) (filename string, err error) {
-	if !ct.RealComponent {
+	if ct == nil || !ct.RealComponent {
 		err = geneos.ErrNotSupported
 		return
 	}
