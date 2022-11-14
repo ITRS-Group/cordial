@@ -33,7 +33,7 @@ sudo mv geneos /usr/local/bin/
 
 ### Build from source
 
-To build from source you have Go 1.17+ installed:
+To build from source you must have Go 1.19 or later installed:
 
 #### One line installation
 
@@ -152,9 +152,11 @@ The specific types supported by this program are details in [Component Types](#c
 
 A *component* is a type of software package and associated data. Each component will typically be a software package from one of the three-tiers mentioned above but can also be a derivative, e.g. a Self-Announcing Netprobe is a component type that abstracts the special configuration of either a vanilla Netprobe or, for example, the Fix Analyser Netprobe.
 
+The supported component types are listed in [Component Types](#component-types).
+
 ### Instances
 
-An *instance* is an independent copy of a component with a working directory, configuration and other persistent files. Instances share read-only package directories for the binaries and other files from the distribution for the specific version being used.
+An *instance* is an independent copy of a component with a working directory (`<top-level directory>/<component>/<component>s/<instance name>`, e.g. `/opt/itrs/netprobe/netprobes/myNetprobe`), configuration and other persistent files. Instances share read-only package directories for the binaries and other files from the distribution for the specific version being used.
 
 ### Hosts
 
@@ -166,7 +168,7 @@ If you have an existing Geneos installation that you manage with the command lik
 
 | :warning: WARNING |
 |:----------------------------|
-| `geneos` ignores any changes to the global .rc files in your existing installation. You **must** check and adjust individual instance settings to duplicate settings. This can sometimes be very simple, for example if your `netprobectl.rc` files contains a line that sets `JAVA_HOME` then you can set this across all the Netprobes using `geneos set netprobe -e JAVA_HOME=/path/to/java`. More complex changes, such as library paths, will need careful consideration |
+| `geneos` ignores any changes to the global `.rc` files in your existing installation. You **must** check and adjust individual instance settings to duplicate settings. This can sometimes be very simple, for example if your `netprobectl.rc` files contains a line that sets `JAVA_HOME` then you can set this across all the Netprobes using `geneos set netprobe -e JAVA_HOME=/path/to/java`. More complex changes, such as library paths, will need careful consideration |
 
 You can use the environment variable `ITRS_HOME` pointing to the top-level directory of your installation or set the location in the (user or global) configuration file:
 
@@ -188,9 +190,9 @@ None of these commands should have any side-effects but others will. These may n
 
 ## New Installation
 
-New installations are set-up through the `init` sub-command. In it's most basic form it will create the minimal directory hierarchy and your user-specific geneos.json file containing the path to the top-level directory that it initialised. The top-level directory, if not given on the command line, defaults to a directory `geneos` in your home directory *unless* the last part of your home directory is itself `geneos`, e.g. if your home directory is `/home/example` then the Geneos directory becomes `/home/example/geneos` but if it is `/opt/geneos` then that is used directly.
+New installations are set-up through the `init` sub-command. In it's most basic form it will create the minimal directory hierarchy and your user-specific `geneos.json` file containing the path to the top-level directory that it initialised. The top-level directory, if not given on the command line, defaults to a directory `geneos` in your home directory *unless* the last part of your home directory is itself `geneos`, e.g. if your home directory is `/home/example` then the Geneos directory becomes `/home/example/geneos` but if it is `/opt/geneos` then that is used directly.
 
-If the directory you are using is not empty then you must supply a `-F` flag for force using this directory.
+If the directory you are using is not empty then you must supply a `-F` flag to  force the use of this directory.
 
 ### Demo Gateway
 
@@ -208,7 +210,7 @@ export ITRS_DOWNLOAD_PASSWORD=mysecret
 geneos init demo
 ```
 
-Here you should replace the email address with your own and the command will prompt you for your password. These are the login details you should have for the ITRS Resources website.
+Here you should replace the email address with your own and the command will prompt you for your password. These are the login details you should have for the [ITRS Resources website](https://resources.itrsgroup.com/).
 
 The above command will create a directory structure, download software and configure a Gateway in 'Demo' mode plus a single Self-Announcing Netprobe and Webserver for dashboards. However, no further configuration is done, that's up to you!
 
@@ -241,7 +243,7 @@ This example will create a SAN with the name SAN123 connecting, using TLS, to ga
 ### A More Complete Initial Environment
 
 ```bash
-geneos init all ./geneos.lic -u email@example.com
+geneos init all -L ./geneos.lic -u email@example.com
 ```
 
 does this (where HOSTNAME is, of course, replaced with the hostname of the server)
@@ -249,13 +251,13 @@ does this (where HOSTNAME is, of course, replaced with the hostname of the serve
 ```bash
 geneos init
 geneos install gateway -u ...
-geneos new gateway HOSTNAME
+geneos add gateway HOSTNAME
 geneos install san -u ...
-geneos new netprobe HOSTNAME -g localhost
+geneos add netprobe HOSTNAME -g localhost
 geneos install licd -u ...
-geneos new licd HOSTNAME
+geneos add licd localhost
 geneos install webserver -u ...
-geneos new webserver HOSTNAME
+geneos add webserver HOSTNAME
 geneos import licd HOSTNAME geneos.lic
 geneos start
 ```
@@ -684,33 +686,398 @@ If you want to change settings you should first `migrate` the configuration and 
 
 Note that execution mode (e.g. `GateMode`) is not supported and all components run in the background.
 
+#### `geneos` Configuration File
+
+This configuration file - in JSON format - should be found in the home directory of the user as `~/.config/geneos/geneos.json`.
+
+Structure of the default file is as follows.
+
+```json
+{
+  "defaultuser": "itrs",
+  "download": {
+    "url": "https://resources.itrsgroup.com/download/latest/"
+  },
+  "fa2cleanlist": "*.old",
+  "fa2portrange": "7030,7100-",
+  "fa2purgelist": "fa2.log:fa2.txt:*.snooze:*.user_assignment",
+  "facleanlist": "*.old",
+  "faportrange": "7030,7100-",
+  "fapurgelist": "fileagent.log:fileagent.txt",
+  "gatewaycleanlist": "*.old:*.history",
+  "gatewayportrange": "7039,7100-",
+  "gatewaypurgelist": "gateway.log:gateway.txt:gateway.snooze:gateway.user_assignment:licences.cache:cache/:database/",
+  "geneos": "/opt/itrs",
+  "licdcleanlist": "*.old",
+  "licdportrange": "7041,7100-",
+  "licdpurgelist": "licd.log:licd.txt",
+  "netprobecleanlist": "*.old",
+  "netprobeportrange": "7036,7100-",
+  "netprobepurgelist": "netprobe.log:netprobe.txt:*.snooze:*.user_assignment",
+  "privatekeys": "id_rsa,id_ecdsa,id_ecdsa_sk,id_ed25519,id_ed25519_sk,id_dsa",
+  "reservednames": "",
+  "sancleanlist": "*.old",
+  "sanportrange": "7036,7100-",
+  "sanpurgelist": "san.log:san.txt:*.snooze:*.user_assignment",
+  "webservercleanlist": "*.old",
+  "webserverportrange": "8080,8100-",
+  "webserverpurgelist": "logs/*.log:webserver.txt"
+}
+```
+
+**Note**: This file should not require any changes, except for fields `*portrange` which may need to be adjusted based on the customer's environment.
+
+#### Host Configuration File
+
+This configuration file - in JSON format - should be found in the home directory of the user as `~/.config/geneos/geneos-hosts.json`.
+
+Structure of the default file is as follows.
+
+```json
+{
+  "hosts": {
+    "psapac-dev-02": {
+      "geneos": "/opt/itrs",
+      "hostname": "172.123.456.789",
+      "name": "PsApac-Dev-02",
+      "osinfo": {
+        "ANSI_COLOR": "0;31",
+        "BUG_REPORT_URL": "https://bugzilla.redhat.com/",
+        "CPE_NAME": "cpe:/o:redhat:enterprise_linux:7.7:GA:server",
+        "HOME_URL": "https://www.redhat.com/",
+        "ID": "rhel",
+        "ID_LIKE": "fedora",
+        "NAME": "Red Hat Enterprise Linux Server",
+        "PRETTY_NAME": "Red Hat Enterprise Linux Server 7.7 (Maipo)",
+        "REDHAT_BUGZILLA_PRODUCT": "Red Hat Enterprise Linux 7",
+        "REDHAT_BUGZILLA_PRODUCT_VERSION": "7.7",
+        "REDHAT_SUPPORT_PRODUCT": "Red Hat Enterprise Linux",
+        "REDHAT_SUPPORT_PRODUCT_VERSION": "7.7",
+        "VARIANT": "Server",
+        "VARIANT_ID": "server",
+        "VERSION": "7.7 (Maipo)",
+        "VERSION_ID": "7.7"
+      },
+      "port": 22,
+      "username": "itrs"
+    }
+  }
+}
+```
+
+#### Instance Configuration File
+
+These configuration files - in JSON format -  should be found in sub-directories under the `geneos` base directory (typiocally `/opt/itrs`, `/opt/itrs/geneos` or `/opt/geneos`) as `GENEOS_BASE_DIRECTORY/TYPE/TYPEs/INSTANCE/TYPE.json`
+where:
+
+* `GENEOS_BASE_DIRECTORY` is the base directory for `geneos`.
+* `TYPE` is the component type (`licd`, `gateway`, `netprobe`, `san`, `fa2`, `fileagent` or `webservcer`).
+* `TYPEs` is the component type followed by the letter "s" (lowercase) to indicate a plural.
+* `INSTANCE` is the instance name.
+* `TYPE.json` is a the file name (e.g. `licd.json`, `gateway.json`, etc.).]
+
+Structure of the default file is as follows.
+
+* `licd`
+
+  ```json
+  {
+    "binary": "licd.linux_64",
+    "home": "/opt/itrs/licd/licds/licd_test",
+    "install": "/opt/itrs/packages/licd",
+    "libpaths": "${config:install}/${config:version}/lib64",
+    "logfile": "licd.log",
+    "name": "licd_test",
+    "port": 7041,
+    "program": "${config:install}/${config:version}/${config:binary}",
+    "user": "itrs",
+    "version": "active_prod"
+  }
+  ```
+
+* `gateway`
+
+  ```json
+  {
+    "binary": "gateway2.linux_64",
+    "config": {
+      "rebuild": "initial",
+      "template": "gateway.setup.xml.gotmpl"
+    },
+    "gatewayname": "gw_test",
+    "home": "/opt/itrs/gateway/gateways/gw_test",
+    "install": "/opt/itrs/packages/gateway",
+    "keyfile": "gateway.aes",
+    "libpaths": "${config:install}/${config:version}/lib64:/usr/lib64",
+    "logfile": "gateway.log",
+    "name": "gw_test",
+    "port": 7102,
+    "program": "${config:install}/${config:version}/${config:binary}",
+    "rubbish": "junk",
+    "user": "itrs",
+    "version": "active_prod"
+  }
+  ```
+
+* `netprobe`
+
+  ```json
+  {
+    "binary": "netprobe.linux_64",
+    "home": "/opt/itrs/netprobe/netprobes/np_test",
+    "install": "/opt/itrs/packages/netprobe",
+    "libpaths": "${config:install}/${config:version}/lib64:${config:install}/${config:version}",
+    "logfile": "netprobe.log",
+    "name": "np_test",
+    "port": 7036,
+    "program": "${config:install}/${config:version}/${config:binary}",
+    "user": "itrs",
+    "version": "active_prod"
+  }
+  ```
+
+* `san`
+
+  ```json
+  {
+    "attributes": {},
+    "binary": "netprobe.linux_64",
+    "config": {
+      "rebuild": "always",
+      "template": "netprobe.setup.xml.gotmpl"
+    },
+    "gateways": {
+      "gw_test": "7039"
+    },
+    "home": "/opt/itrs/san/sans/san_test",
+    "install": "/opt/itrs/packages/netprobe",
+    "libpaths": "${config:install}/${config:version}/lib64:${config:install}/${config:version}",
+    "logfile": "san.log",
+    "name": "san_test",
+    "port": 7100,
+    "program": "${config:install}/${config:version}/${config:binary}",
+    "sanname": "san_test",
+    "santype": "netprobe",
+    "types": [],
+    "user": "itrs",
+    "variables": {},
+    "version": "active_prod"
+  }
+  ```
+
+* `fa2`
+
+  ```json
+  {
+    "binary": "fix-analyser2-netprobe.linux_64",
+    "home": "/opt/itrs/fa2/fa2s/fa2_test",
+    "install": "/opt/itrs/packages/fa2",
+    "libpaths": "${config:install}/${config:version}/lib64:${config:install}/${config:version}",
+    "logfile": "fa2.log",
+    "name": "fa2_test",
+    "port": 7030,
+    "program": "${config:install}/${config:version}/${config:binary}",
+    "user": "itrs",
+    "version": "active_prod"
+  }
+  ```
+
+* `fileagent`
+
+  ```json
+  {
+    "binary": "agent.linux_64",
+    "home": "/opt/itrs/fileagent/fileagents/fileagent_test",
+    "install": "/opt/itrs/packages/fileagent",
+    "libpaths": "${config:install}/${config:version}/lib64:${config:install}/${config:version}",
+    "logfile": "fileagent.log",
+    "name": "fileagent_test",
+    "port": 7101,
+    "program": "${config:install}/${config:version}/${config:binary}",
+    "user": "itrs",
+    "version": "active_prod"
+  }
+  ```
+
+* `webserver`
+
+  ```json
+  {
+    "home": "/opt/itrs/webserver/webservers/webserver_test",
+    "install": "/opt/itrs/packages/webserver",
+    "libpaths": "${config:install}/${config:version}/JRE/lib:${config:install}/${config:version}/lib64",
+    "logdir": "logs",
+    "logfile": "webdashboard.log",
+    "name": "webserver_test",
+    "port": 8080,
+    "program": "${config:install}/${config:version}/JRE/bin/java",
+    "user": "itrs",
+    "version": "active_prod",
+    "websxmx": "1024m"
+  }
+  ```
+
 ## Directory Layout
 
-The `geneos` configuration setting or the environment variable `ITRS_HOME` points to the base directory for all subsequent operations. The layout follows that of the original `gatewayctl` etc. including:
+The `geneos` configuration setting or the environment variable `ITRS_HOME` points to the base directory for all subsequent operations. The layout follows that of the original `gatewayctl` etc.
+
+Directory structure / hierarchy / layout is as follows:
 
 ```text
-packages/
-  gateway/
-    [versions]/
-    active_prod -> [chosen version]
-  netprobe/
-  licd/
-gateway/
-netprobe/
-licd/
+/opt/itrs
+├── fa2
+│   └── fa2s
+├── fileagent
+│   └── fileagents
+├── gateway
+│   ├── gateway_config
+│   ├── gateways
+│   │   └── [gateway instance name]
+│   ├── gateway_shared
+│   └── templates
+│       ├── gateway-instance.setup.xml.gotmpl
+│       └── gateway.setup.xml.gotmpl
+├── hosts
+├── licd
+│   └── licds
+│       └── [licd instance name]
+├── netprobe
+│   └── netprobes
+│       └── [netprobe instance name]
+├── packages
+│   ├── downloads
+│   │   ├── geneos-gateway-6.0.0-linux-x64.tar.gz
+│   │   ├── geneos-licd-6.0.0-linux-x64.tar.gz
+│   │   ├── geneos-netprobe-6.0.2-linux-x64.tar.gz
+│   │   └── geneos-web-server-6.0.0-linux-x64.tar.gz
+│   ├── fa2
+│   ├── fileagent
+│   ├── gateway
+│   │   ├── 6.0.0
+│   │   └── active_prod -> 6.0.0
+│   ├── licd
+│   │   ├── 6.0.0
+│   │   └── active_prod -> 6.0.0
+│   ├── netprobe
+│   │   ├── 6.0.2
+│   │   └── active_prod -> 6.0.2
+│   └── webserver
+│       ├── 6.0.0
+│       └── active_prod -> 6.0.0
+├── san
+│   ├── sans
+│   └── templates
+│       └── netprobe.setup.xml.gotmpl
+└── webserver
+    └── webservers
+        └── [webserver instance name]
 ```
 
-The `bin/` directory and the default `.rc` files are **ignored** so be aware if you have customised anything in `bin/`.
+where:
 
-As a very quick recap, each component directory will have a subdirectory with the plural of the name (e.g. `gateway/gateways`) which will contain subdirectories, one per instance, and these act as the configuration and working directories for the individual processes. Taking an example gateway called `Gateway1` the path will be:
+* `fa2/` (Fix Analyser) contains settings & instance data related to the `fa2` component type.
 
-`${ITRS_HOME}/gateway/gateways/Gateway1`
+  * `fa2/fa2s/` contains one sub-directory for each Fix Analyser instance named after the fa2 instance.
+    These sub-directory will be used as working directories for the corresponding instances.
 
-This directory will be the working directory of the process and also contain an `.rc` configuration file as well as a `.txt` file to capture the `STDOUT` and `STDERR` of the process, like this:
+* `fileagent/` (File Agent for Fix Analyser) contains settings & instance data related to the `fileagent` component type.
 
-```bash
-gateway.rc
-gateway.txt
-```
+  * `fileagent/fileagents/` contains one sub-directory for each File Agent instance named after the file agent instance.
+    These sub-directory will be used as working directories for the corresponding instances.
+
+* `gateway/` contains settings & instance data related to the `gateway` component type.
+
+  * `gateway/gateway_config/` contains common Gateway configuration as include `XML` files.
+  * `gateway/gateways/` contains one sub-directory for each Gateway instance named after the gateway instance.
+    These sub-directories will be used as working directories for the corresponding gateway instances.
+  * `gateway/gateway_shared/` contains shared Gateway data such as include `XML` files or scritped tools.
+  * `gateway/templates/` contains Gateway configuration templates in the form of Golang XML templates.
+
+* `hosts/` contains configurations for supporting control of Geneos component instances running on remote hosts.
+* `licd/` (License Daemon) contains settings & instance data related to the `licd` component type.
+  * `licd/licds/` contains one sub-directory for each licd instance named after the licd instance.
+    This sub-directories will be used as working directories for the corresponding License Daemon (licd) instance.
+
+* `netprobe/` contains settings & instance data related to the `netprobe` component type.
+  * `netprobe/netprobes/` contains one sub-directory for each Netprobe instance named after the netprobe instance.
+    These sub-directories will be used as working directories for the corresponding netprobe instances.
+
+* `packages/` contains the Geneos binaries / software packages installed.
+  * `packages/downloads/` contains files downloaded from the ITRS download portal, or the file repository used.
+  * `packages/fa2/` contains one sub-directory for each version of Fix Analyser installed, as well as symlinks (e.g. `active_prod`) pointing to the current default version.
+    These sub-directory will contain the corresponding binaries.
+  * `packages/fileagent/` contains one sub-directory for each version of File Agent installed, as well as symlinks (e.g. `active_prod`) pointing to the current default version.
+    These sub-directory will contain the corresponding binaries.
+  * `packages/gateway/` contains one sub-directory for each version of Gateway installed, as well as a symlinks (e.g. `active_prod`) pointing to the current default version.  These sub-directory will contain the corresponding binaries.
+  * `packages/licd/` contains one sub-directory for each version of License Daemon (licd) installed, as well as a symlinks (e.g. `active_prod`) pointing to the current default version.
+    These sub-directory will contain the corresponding binaries.
+  * `packages/netprobe/` contains one sub-directory for each version of Netprobe installed, as well as a symlinks (e.g. `active_prod`) pointing to the current default version.
+    These sub-directory will contain the corresponding binaries.
+  * `packages/webserver/` contains one sub-directory for each version of Webserver (for web dashboards) installed, as well as a symlinks (e.g. `active_prod`) pointing to the current default version.
+    These sub-directory will contain the corresponding binaries.
+
+* `san/` (Self-Announcing Netprobe) contains settings & instance data related to the `san` component type.
+  * `san/sans/` contains one sub-directory for each Self-Announcing Netprobe instance named after the san instance.
+    These sub-directories will be used as working directories for the corresponding san instances.
+  * `san/templates/` contains Self-Announcing Netprobe configuration templates in the form of Golang XML templates.
+
+* `webserver/` (Webserver for web dashbaords) contains settings & instance data related to the `webserver` component type.
+  * `webserver/webservers/` contains one sub-directory for each Webserver instance named after the webserver instance.
+    These sub-directories will be used as working directories for the corresponding Webserver instances.
+
+The `bin/` directory and the default `.rc` files are **ignored**.  Please be careful in case you have customised anything in `bin/`.
+
+As a very quick recap, each component directory will have a subdirectory with the plural of the name (e.g. `gateway/gateways`) which will contain subdirectories, one per instance, and these act as the configuration and working directories for the individual processes. Taking an example gateway called `Gateway1` the path will be: `${ITRS_HOME}/gateway/gateways/Gateway1`.
+
+This directory will be the working directory of the process and also contain an `.rc` configuration file - if using the legacy scripts (e.g. `gatewayctl`) - or a `.json` configuration file - if using the `geneos` utility - as well as a `.txt` file to capture the `STDOUT` and `STDERR` of the process.
 
 There will also be an XML setup file and so on.
+
+## Instance Properties
+
+**Note**: This section is incomplete and remains as work-in-progress.
+
+| Property      | Previous Name | `licd`             | `gateway`          | `netprobe`         | `san`              | `fa2`              | `fileagent`        | `webserver`        | Description |
+| --------      | ------------- | ------             | ---------          | ----------         | -----              | -----              | -----------        | -----------        | ----------- |
+| `binary`      | `BinSuffix`   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Name of the binary file used to run the instance of the componenent TYPE. |
+| n/a           | `TYPERoot`    | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | Root directory for the TYPE. Ignored. |
+| n/a           | `TYPEMode`    | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | Process execution mode - baskground or foregbround. Ignored. |
+| `home`        | `TYPEHome`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Path to the instance's home directory, from where the instance component TYPE is started. |
+| `install`     | `TYPEBins`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Path to the directory where the binaries of the component TYPE are installed. |
+| `libpaths`    | `TYPELibs`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Library path(s) (separated by `:`) used by the instance of the component TYPE. |
+| `logdir`      | `TYPELogD`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Path to the dorectory where logs are to be written for the instance of the component TYPE. |
+| `logfile`     | `TYPELogF`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Name of the primary log file to be generated for the instance. |
+| `name`        | `TYPEName`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Name of the instance. |
+| `options`     | `TYPEOpts`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Additional command-line options to be used as part of the command line to start the instance of the component TYPE. |
+| `port`        | `TYPEport`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Listening port used by the instance. |
+| `program`     | `TYPEExec`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Absolute path to the binary file used to run the instance of the component TYPE. |
+| `user`        | `TYPEUser`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | User owning the instance. |
+| `version`     | `TYPEBase`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Version as either the name of the directory holding the component TYPE's binaries or the name of the symlink pointing to that directory. |
+| Gateway Specific: |
+| `gatewayname` | n/a *         | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Name of the gateway instance. This can be different to the instance name. |
+| `licdhost`    | `GateLicH`    | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Name of the host where the license daemon (licd) to be used by the gateway instance is hosted. |
+| `licdport`    | `GateLicP`    | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Port number of the license daemon (licd) to be used by the gateway instance. |
+| `licdsecure`  | `GateLicS` *  | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Flag indicating whether connection to licd is secured by TLS encryption. |
+| `keyfile`     | n/a           | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | External keyfile for AES 256 encoding. |
+| `prevkeyfile` | n/a           | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | External keyfile for AES 256 encoding. |
+| Webserver Specific: |
+| `maxmem`      | `WebsXmx`     | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :heavy_check_mark: | Java value for maximum memory for the Web Server (`-Xmx`) |
+| TLS Settings: |
+| `certificate` | `TYPECert` *  | :radio_button:     | :radio_button:     | :radio_button:     | :radio_button:     | :radio_button:     | :x:                | :radio_button:     | File containing a TLS certificate used for Geneos internal secure comms (TLS-encrypted). |
+| `privatekey`  | `TYPEKey` *   | :radio_button:     | :radio_button:     | :radio_button:     | :radio_button:     | :radio_button:     | :x:                | :radio_button:     | File containing the privatye key associated with the TLS certificate `certificate`, used for Geneos internal secure comms (TLS-encrypted). |
+
+Note: Settings in the `Previous Name`column with an `*` indicate those that were interim values during the development of the program and did not exist in the original `binutils` implementation.
+
+Key:
+
+| Checkmarks | `TYPE` labels in Pervious Name Column |
+| ------ | ------ |
+| :heavy_check_mark: - Supported and **required** | `gate` - Gateways |
+| :radio_button: - Supports and optional | `licd` - License Daemons |
+| :x: - Not support (and ignored) | `netp` - Netprobes |
+| | `webs` - Web servers |
+| | `FAgent` - File Agent |
+
+In addition to the above simple properties there are a number of properties that are lists of values and these values must be specific formats.
+
+* `env`
