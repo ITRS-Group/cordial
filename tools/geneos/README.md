@@ -33,7 +33,7 @@ sudo mv geneos /usr/local/bin/
 
 ### Build from source
 
-To build from source you have Go 1.17+ installed:
+To build from source you must have Go 1.19 or later installed:
 
 #### One line installation
 
@@ -1037,25 +1037,38 @@ There will also be an XML setup file and so on.
 
 **Note**: This section is incomplete and remains as work-in-progress.
 
-The following properties are supported.
-| Property      | `licd`             | `gateway`          | `netprobe`         | `san`              | `fa2`              | `fileagent`        | `webserver`        | Description |
-| --------      | ------             | ---------          | ----------         | -----              | -----              | -----------        | -----------        | ----------- |
-| `binary`      | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Name of the binary file used to run the instance of the componenent TYPE. |
-| `certificate` |                    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | File containing a TLS certificate used for Geneos internal secure comms (TLS-encrypted). |
-| `gatewayname` | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Name of the gateway instance. |
-| `home`        | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Path to the instance's home directory, from where the instance component TYPE is started. |
-| `install`     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Path to the directory where the binaries of the component TYPE are installed. |
-| `keyfile`     | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | External keyfile for AES 256 encoding. |
-| `libpaths`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Library path(s) (separated by ":") used by the instance of the component TYPE. |
-| `licdhost`    | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Name of the host where the license daemon (licd) to be used by the gateway instance is hosted. |
-| `licdport`    | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Port number of the license daemon (licd) to be used by the gateway instance. |
-| `licdsecure`  | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Flag indicating whether connection to licd is secured by TLS encryption. |
-| `logdir`      | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Path to the dorectory where logs are to be written for the instance of the component TYPE. |
-| `logfile`     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Name of the log file to be generated for the instance. |
-| `name`        | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Name of the instance. |
-| `options`     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  | Additional command-line options to be used as part of the command line to start the instance of the component TYPE. |
-| `port`        | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Listening port used by the instance. |
-| `privatekey`  |                    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | File containing the privatye key associated with the TLS certificate `certificate`, used for Geneos internal secure comms (TLS-encrypted). |
-| `program`     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Absolute path to the binary file used to run the instance of the component TYPE. |
-| `user`        | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | User owning the instance. |
-| `version`     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Version as either the name of the directory holding the component TYPE's binaries or the name of the symlink pointing to that directory. |
+
+| Property      | Previous Name | `licd`             | `gateway`          | `netprobe`         | `san`              | `fa2`              | `fileagent`        | `webserver`        | Description |
+| --------      | ------------- | ------             | ---------          | ----------         | -----              | -----              | -----------        | -----------        | ----------- |
+| `binary`      | `binsuffix` | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Name of the binary file used to run the instance of the componenent TYPE. |
+| `certificate` | n/a | :radio_button:     | :radio_button: | :radio_button: | :radio_button: | :radio_button: | :x: | :radio_button: | File containing a TLS certificate used for Geneos internal secure comms (TLS-encrypted). |
+| `gatewayname` | n/a | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Name of the gateway instance. This can be different to the instance name. |
+| `home`        | `TYPEhome` | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Path to the instance's home directory, from where the instance component TYPE is started. |
+| `install`     | `TYPEbins` | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Path to the directory where the binaries of the component TYPE are installed. |
+| `keyfile`     | n/a | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | External keyfile for AES 256 encoding. |
+| `libpaths`    | `TYPElibs` | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Library path(s) (separated by ":") used by the instance of the component TYPE. |
+| `licdhost`    | `licdhost` | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Name of the host where the license daemon (licd) to be used by the gateway instance is hosted. |
+| `licdport`    | `licdport` | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Port number of the license daemon (licd) to be used by the gateway instance. |
+| `licdsecure`  | n/a | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Flag indicating whether connection to licd is secured by TLS encryption. |
+| `logdir`      | `TYPElogd` | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Path to the dorectory where logs are to be written for the instance of the component TYPE. |
+| `logfile`     | `TYPElogf` | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Name of the primary log file to be generated for the instance. |
+| `name`        | n/a | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Name of the instance. |
+| `options`     | `TYPEopts` | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  | Additional command-line options to be used as part of the command line to start the instance of the component TYPE. |
+| `port`        | `TYPEport` | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Listening port used by the instance. |
+| `privatekey`  | n/a | :radio_button:     | :radio_button: | :radio_button: | :radio_button: | :radio_button: | :x: | :radio_button: | File containing the privatye key associated with the TLS certificate `certificate`, used for Geneos internal secure comms (TLS-encrypted). |
+| `program`     | `TYPEexec`| :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Absolute path to the binary file used to run the instance of the component TYPE. |
+| `user`        | `TYPEuser` | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | User owning the instance. |
+| `version`     | `TYPEbase` | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Version as either the name of the directory holding the component TYPE's binaries or the name of the symlink pointing to that directory. |
+
+Key:
+
+| Checkmarks | `TYPE` labels in Pervious Name Column |
+| ------ | ------ |
+| :heavy_check_mark: - Supported and **required** | `gate` - Gateways |
+| :radio_button: - Supports and optional | `licd` - License Daemons |
+| :x: - Not support (and ignored) | `netp` - Netprobes |
+| | `webs` - Web servers |
+
+In addition to the above simple properties there are a number of properties that are lists of values and these values must be specific formats.
+
+* `env`
