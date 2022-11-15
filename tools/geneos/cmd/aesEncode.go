@@ -38,8 +38,9 @@ import (
 
 var aesEncodeCmdAESFILE, aesEncodeCmdString, aesEncodeCmdSource string
 var aesEncodeCmdExpandable, aesEncodeCmdAskOnce bool
-
 var aesEncodeDefaultKeyfile string
+
+var plaintext []byte
 
 func init() {
 	aesCmd.AddCommand(aesEncodeCmd)
@@ -71,8 +72,6 @@ keyfile found.
 		"wildcard": "true",
 	},
 	RunE: func(cmd *cobra.Command, origargs []string) (err error) {
-		var plaintext []byte
-
 		if aesEncodeCmdString != "" {
 			plaintext = []byte(aesEncodeCmdString)
 		} else if aesEncodeCmdSource != "" {
@@ -111,7 +110,7 @@ keyfile found.
 			if err != nil {
 				return err
 			}
-			e, err := a.EncodeAES(plaintext)
+			e, err := a.EncodeAESBytes(plaintext)
 			if err != nil {
 				return err
 			}
@@ -130,9 +129,9 @@ keyfile found.
 		}
 
 		ct, args, _ := cmdArgsParams(cmd)
-		// override params ...
-		params := []string{string(plaintext)}
-		return instance.ForAll(ct, aesEncodeInstance, args, params)
+		err = instance.ForAll(ct, aesEncodeInstance, args, []string{})
+		plaintext = bytes.Repeat([]byte{0}, len(plaintext))
+		return
 	},
 }
 
@@ -154,7 +153,7 @@ func aesEncodeInstance(c geneos.Instance, params []string) (err error) {
 	if err != nil {
 		return
 	}
-	e, err := a.EncodeAESString(params[0])
+	e, err := a.EncodeAESBytes(plaintext)
 	if err != nil {
 		return
 	}
