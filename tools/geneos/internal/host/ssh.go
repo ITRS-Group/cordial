@@ -11,7 +11,6 @@ import (
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/knownhosts"
 )
 
@@ -40,11 +39,9 @@ func readSSHkeys(homedir string) (signers []ssh.Signer) {
 	return
 }
 
-func sshConnect(dest, user string) (client *ssh.Client, err error) {
+func sshConnect(dest, user, password string) (client *ssh.Client, err error) {
 	var khCallback ssh.HostKeyCallback
 	var authmethods []ssh.AuthMethod
-	var signers []ssh.Signer
-	var agentClient agent.ExtendedAgent // XXX this should be package global?
 	var homedir string
 
 	homedir, err = os.UserHomeDir()
@@ -61,19 +58,19 @@ func sshConnect(dest, user string) (client *ssh.Client, err error) {
 		}
 	}
 
-	if agentClient == nil {
-		agentClient = sshConnectAgent()
-	}
-
-	if signers == nil {
-		signers = readSSHkeys(homedir)
-	}
-
-	if agentClient != nil {
+	if agentClient := sshConnectAgent(); agentClient != nil {
 		authmethods = append(authmethods, ssh.PublicKeysCallback(agentClient.Signers))
+		log.Debug().Msg("added ssh agent to auth methods")
 	}
-	if signers == nil {
+
+	if signers := readSSHkeys(homedir); len(signers) > 0 {
 		authmethods = append(authmethods, ssh.PublicKeys(signers...))
+		log.Debug().Msgf("added %d private key(s) to auth methods", len(signers))
+	}
+
+	if password != "" {
+		authmethods = append(authmethods, ssh.Password(password))
+		log.Debug().Msg("added password to auth methods")
 	}
 
 	config := &ssh.ClientConfig{
@@ -82,15 +79,22 @@ func sshConnect(dest, user string) (client *ssh.Client, err error) {
 		HostKeyCallback: khCallback,
 		Timeout:         5 * time.Second,
 		HostKeyAlgorithms: []string{
-			ssh.KeyAlgoED25519, ssh.CertAlgoED25519v01,
-
-			ssh.CertSigAlgoRSASHA2512v01, ssh.CertSigAlgoRSASHA2256v01,
-			ssh.CertSigAlgoRSAv01, ssh.CertAlgoDSAv01, ssh.CertAlgoECDSA256v01,
-			ssh.CertAlgoECDSA384v01, ssh.CertAlgoECDSA521v01,
-
-			ssh.KeyAlgoECDSA256, ssh.KeyAlgoECDSA384, ssh.KeyAlgoECDSA521,
-			ssh.SigAlgoRSASHA2512, ssh.SigAlgoRSASHA2256,
-			ssh.SigAlgoRSA, ssh.KeyAlgoDSA,
+			ssh.KeyAlgoED25519,
+			ssh.CertAlgoED25519v01,
+			ssh.CertAlgoRSASHA512v01,
+			ssh.CertAlgoRSASHA256v01,
+			ssh.CertAlgoRSAv01,
+			ssh.CertAlgoDSAv01,
+			ssh.CertAlgoECDSA256v01,
+			ssh.CertAlgoECDSA384v01,
+			ssh.CertAlgoECDSA521v01,
+			ssh.KeyAlgoECDSA256,
+			ssh.KeyAlgoECDSA384,
+			ssh.KeyAlgoECDSA521,
+			ssh.KeyAlgoRSASHA512,
+			ssh.KeyAlgoRSASHA256,
+			ssh.KeyAlgoRSA,
+			ssh.KeyAlgoDSA,
 		},
 	}
 	return ssh.Dial("tcp", dest, config)
@@ -108,7 +112,7 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 		s = val.(*ssh.Client)
 	} else {
 		log.Debug().Msgf("ssh connect to %s as %s", dest, user)
-		s, err = sshConnect(dest, user)
+		s, err = sshConnect(dest, user, h.GetString("password"))
 		if err != nil {
 			log.Debug().Err(err).Msg("")
 			h.failed = err
