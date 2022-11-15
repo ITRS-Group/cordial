@@ -57,7 +57,7 @@ Delete the local configuration referring to a remote host.
 		"wildcard": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		_, args, _ := cmdArgsParams(cmd)
+		_, args := cmdArgs(cmd)
 		if len(args) == 0 {
 			return geneos.ErrInvalidArgs
 		}

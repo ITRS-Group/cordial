@@ -347,7 +347,7 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 			if req, err = http.NewRequest("GET", source, nil); err != nil {
 				log.Fatal().Err(err).Msg("")
 			}
-			req.SetBasicAuth(opts.username, opts.password)
+			req.SetBasicAuth(opts.username, string(opts.password))
 			if resp, err = client.Do(req); err != nil {
 				log.Fatal().Err(err).Msg("")
 			}
@@ -398,7 +398,7 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 		var auth_body []byte
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
 			if opts.username != "" {
-				da := downloadauth{opts.username, opts.password}
+				da := downloadauth{opts.username, string(opts.password)}
 				auth_body, err = json.Marshal(da)
 				if err != nil {
 					log.Fatal().Err(err).Msg("")

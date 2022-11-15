@@ -70,6 +70,20 @@ func (c *Config) GetString(s string, values ...map[string]string) string {
 	return c.ExpandString(c.Viper.GetString(s), values...)
 }
 
+// GetByteSlice functions like [viper.GetString] but additionally calls
+// [Expand] with the configuration value, passing any "values" maps and
+// returning a byte slice
+func GetByteSlice(s string, values ...map[string]string) []byte {
+	return global.GetByteSlice(s, values...)
+}
+
+// GetByteSlice functions like [viper.GetString] on a Config instance, but
+// additionally calls [Expand] with the configuration value, passing
+// any "values" maps and returning a byte slice
+func (c *Config) GetByteSlice(s string, values ...map[string]string) []byte {
+	return c.Expand(c.Viper.GetString(s), values...)
+}
+
 // GetConfig returns the global Config instance
 func GetConfig() *Config {
 	return global
@@ -241,6 +255,22 @@ func (c *Config) ExpandString(input string, values ...map[string]string) (value 
 	return
 }
 
+func Expand(input string, values ...map[string]string) (value []byte) {
+	return global.Expand(input, values...)
+}
+
+// ExpandString works just like the package level [ExpandString] but on
+// a specific config instance.
+func (c *Config) Expand(input string, values ...map[string]string) (value []byte) {
+	value = expandBytes([]byte(input), func(s []byte) (r []byte) {
+		if bytes.HasPrefix(s, []byte("enc:")) {
+			return c.expandEncodedBytes(s[4:], values...)
+		}
+		return []byte(c.expandString(string(s), values...))
+	})
+	return
+}
+
 // ExpandAllSettings returns all the settings from c applying
 // ExpandString() to all string values and all string slice values.
 // "values" maps are passed to ExpandString as-is. Further types may be
@@ -298,6 +328,39 @@ func (c *Config) expandEncodedString(s string, values ...map[string]string) (val
 		return p
 	}
 	return ""
+}
+
+func (c *Config) expandEncodedBytes(s []byte, values ...map[string]string) (value []byte) {
+	p := bytes.SplitN(s, []byte(":"), 2)
+	if len(p) != 2 {
+		return
+	}
+	keyfiles, encodedValue := p[0], p[1]
+
+	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
+		encodedValue = []byte(c.expandString(string(encodedValue), values...))
+	}
+	if len(encodedValue) == 0 {
+		return
+	}
+	encodedBytes := bytes.TrimPrefix([]byte(encodedValue), []byte("+encs+"))
+
+	for _, keyfile := range bytes.Split(keyfiles, []byte("|")) {
+		if bytes.HasPrefix(keyfile, []byte("~/")) {
+			home, _ := os.UserHomeDir()
+			keyfile = bytes.Replace(keyfile, []byte("~"), []byte(home), 1)
+		}
+		a, err := ReadAESValuesFile(string(keyfile))
+		if err != nil {
+			continue
+		}
+		p, err := a.DecodeAES(encodedBytes)
+		if err != nil {
+			continue
+		}
+		return p
+	}
+	return
 }
 
 func (c *Config) expandString(s string, values ...map[string]string) (value string) {
@@ -515,6 +578,37 @@ func expand(s string, mapping func(string) string) string {
 		return s
 	}
 	return string(buf) + s[i:]
+}
+
+func expandBytes(s []byte, mapping func([]byte) []byte) []byte {
+	var buf []byte
+	// ${} is all ASCII, so bytes are fine for this operation.
+	i := 0
+	for j := 0; j < len(s); j++ {
+		if s[j] == '$' && j+1 < len(s) {
+			if buf == nil {
+				buf = make([]byte, 0, 2*len(s))
+			}
+			buf = append(buf, s[i:j]...)
+			name, w := getShellName(string(s[j+1:]))
+			if name == "" && w > 0 {
+				// Encountered invalid syntax; eat the
+				// characters.
+			} else if name == "" {
+				// Valid syntax, but $ was not followed by a
+				// name. Leave the dollar character untouched.
+				buf = append(buf, s[j])
+			} else {
+				buf = append(buf, mapping([]byte(name))...)
+			}
+			j += w
+			i = j + 1
+		}
+	}
+	if buf == nil {
+		return s
+	}
+	return append(buf, s[i:]...)
 }
 
 // isShellSpecialVar reports whether the character identifies a special

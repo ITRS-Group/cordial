@@ -23,6 +23,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -69,17 +70,16 @@ keyfile found.
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
-	RunE: func(cmd *cobra.Command, origargs []string) error {
-		var plaintext string
+	RunE: func(cmd *cobra.Command, origargs []string) (err error) {
+		var plaintext []byte
 
 		if aesEncodeCmdString != "" {
-			plaintext = aesEncodeCmdString
+			plaintext = []byte(aesEncodeCmdString)
 		} else if aesEncodeCmdSource != "" {
-			b, err := geneos.ReadSource(aesEncodeCmdSource)
+			plaintext, err = geneos.ReadSource(aesEncodeCmdSource)
 			if err != nil {
-				return err
+				return
 			}
-			plaintext = string(b)
 		} else {
 			if aesEncodeCmdAskOnce {
 				plaintext = utils.ReadPasswordPrompt()
@@ -88,7 +88,7 @@ keyfile found.
 				for i := 0; i < 3; i++ {
 					plaintext = utils.ReadPasswordPrompt()
 					plaintext2 := utils.ReadPasswordPrompt("Re-enter Password")
-					if plaintext == plaintext2 {
+					if bytes.Equal(plaintext, plaintext2) {
 						match = true
 						break
 					}
@@ -111,7 +111,7 @@ keyfile found.
 			if err != nil {
 				return err
 			}
-			e, err := a.EncodeAESString(plaintext)
+			e, err := a.EncodeAES(plaintext)
 			if err != nil {
 				return err
 			}
@@ -131,7 +131,7 @@ keyfile found.
 
 		ct, args, _ := cmdArgsParams(cmd)
 		// override params ...
-		params := []string{plaintext}
+		params := []string{string(plaintext)}
 		return instance.ForAll(ct, aesEncodeInstance, args, params)
 	},
 }
