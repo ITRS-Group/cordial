@@ -4,6 +4,7 @@
 
 * Fixes
 
+  * tools/geneos: actually load SSH private key files, if available
   * tools/geneos: re-order SSH HostKeyAlgorithms so that, bizarrely, IP based remotes work
   * tools/geneos: better handling of instance config aliases when writing config files
   * tools/geneos: fixes to unset to ignore values that may be passed in with keys to unset
@@ -18,6 +19,8 @@
 
 * Changes
 
+  * tools/geneos: support embedded SSH passwords in hosts config, using new 'set host' sub-command
+  * tools/geneos: support additional SSH private key files per host via 'set host sshkeys=X,Y' sub-command
   * tools/geneos: begin implementation of support for YAML config files via 'configtype' user setting
   * pkg/geneos: add EnvironmentRef and fix periodStartTime attribute
 
