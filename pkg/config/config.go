@@ -255,12 +255,16 @@ func (c *Config) ExpandString(input string, values ...map[string]string) (value 
 	return
 }
 
+// Expand behaves like [ExpandString] but returns a byte slice.
+//
+// This should be used where the return value may contain sensitive data
+// and an immutable string cannot be destroyed after use.
 func Expand(input string, values ...map[string]string) (value []byte) {
 	return global.Expand(input, values...)
 }
 
-// ExpandString works just like the package level [ExpandString] but on
-// a specific config instance.
+// Expand behaves like the [ExpandString] method but returns a byte
+// slice.
 func (c *Config) Expand(input string, values ...map[string]string) (value []byte) {
 	value = expandBytes([]byte(input), func(s []byte) (r []byte) {
 		if bytes.HasPrefix(s, []byte("enc:")) {

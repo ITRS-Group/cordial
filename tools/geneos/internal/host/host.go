@@ -69,7 +69,7 @@ func Geneos() string {
 // nil. If passed the special values LOCALHOST or ALL then it will
 // return the respective special values LOCAL or ALL. Otherwise it tries
 // to lookup an existing host with the given name to return or
-// initialises a new value to return. This may not be a=n existing host.
+// initialises a new value to return. This may not be an existing host.
 //
 // XXX new needs the top level config and passes back a Sub()
 func Get(name string) (c *Host) {

@@ -158,7 +158,6 @@ func writeConfigParams(filename string, params []string) (err error) {
 		s := strings.SplitN(set, "=", 2)
 		k, v := s[0], s[1]
 		vp.Set(k, v)
-
 	}
 
 	// fix breaking change
