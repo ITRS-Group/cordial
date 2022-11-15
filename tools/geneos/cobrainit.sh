@@ -42,6 +42,7 @@
 # cobra-cli add set
 # cobra-cli add setUser -p setCmd
 # cobra-cli add setGlobal -p setCmd
+# cobra-cli add setHost -p setCmd
 # cobra-cli add show
 # cobra-cli add showUser -p showCmd
 # cobra-cli add showGlobal -p showCmd

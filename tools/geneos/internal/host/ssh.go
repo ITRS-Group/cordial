@@ -21,9 +21,14 @@ var sshSessions sync.Map
 var sftpSessions sync.Map
 
 // load any/all the known private keys with no passphrase
-func readSSHkeys(homedir string) (signers []ssh.Signer) {
-	for _, keyfile := range strings.Split(config.GetString("privateKeys"), ",") {
-		path := filepath.Join(homedir, userSSHdir, keyfile)
+func readSSHkeys(homedir string, morekeys ...string) (signers []ssh.Signer) {
+	files := strings.Split(config.GetString("privateKeys"), ",")
+	for i, f := range files {
+		files[i] = filepath.Join(homedir, userSSHdir, f)
+	}
+	files = append(files, morekeys...)
+
+	for _, path := range files {
 		log.Debug().Msgf("trying to read private key %s", path)
 		key, err := os.ReadFile(path)
 		if err != nil {
@@ -41,7 +46,7 @@ func readSSHkeys(homedir string) (signers []ssh.Signer) {
 	return
 }
 
-func sshConnect(dest, user, password string) (client *ssh.Client, err error) {
+func sshConnect(dest, user string, password []byte, keyfiles ...string) (client *ssh.Client, err error) {
 	var khCallback ssh.HostKeyCallback
 	var authmethods []ssh.AuthMethod
 	var homedir string
@@ -65,13 +70,13 @@ func sshConnect(dest, user, password string) (client *ssh.Client, err error) {
 		log.Debug().Msg("added ssh agent to auth methods")
 	}
 
-	if signers := readSSHkeys(homedir); len(signers) > 0 {
+	if signers := readSSHkeys(homedir, keyfiles...); len(signers) > 0 {
 		authmethods = append(authmethods, ssh.PublicKeys(signers...))
 		log.Debug().Msgf("added %d private key(s) to auth methods", len(signers))
 	}
 
-	if password != "" {
-		authmethods = append(authmethods, ssh.Password(password))
+	if len(password) > 0 {
+		authmethods = append(authmethods, ssh.Password(strings.TrimSpace(string(password))))
 		log.Debug().Msg("added password to auth methods")
 	}
 
@@ -114,7 +119,7 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 		s = val.(*ssh.Client)
 	} else {
 		log.Debug().Msgf("ssh connect to %s as %s", dest, user)
-		s, err = sshConnect(dest, user, h.GetString("password"))
+		s, err = sshConnect(dest, user, h.GetByteSlice("password"), strings.Split(h.GetString("sshkeys"), ",")...)
 		if err != nil {
 			log.Debug().Err(err).Msg("")
 			h.failed = err
