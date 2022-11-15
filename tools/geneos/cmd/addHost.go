@@ -134,6 +134,11 @@ func addHost(h *host.Host, sshurl *url.URL) (err error) {
 		h.Set("geneos", sshurl.Path)
 	}
 
+	if _, err := h.Dial(); err != nil {
+		log.Error().Err(err).Msg("cannot connect to remote host, not adding")
+		return err
+	}
+
 	// once we are bootstrapped, read os-release info and re-write config
 	if err = h.GetOSReleaseEnv(); err != nil {
 		return
