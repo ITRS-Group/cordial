@@ -34,7 +34,8 @@ import (
 )
 
 var installCmdLocal, installCmdNoSave, installCmdUpdate, installCmdNexus, installCmdSnapshot bool
-var installCmdBase, installCmdHost, installCmdOverride, installCmdVersion, installCmdUsername, installCmdPassword, installCmdPwFile string
+var installCmdBase, installCmdHost, installCmdOverride, installCmdVersion, installCmdUsername, installCmdPwFile string
+var installCmdPassword []byte
 
 func init() {
 	rootCmd.AddCommand(installCmd)
@@ -113,10 +114,10 @@ geneos install netprobe -b active_dev -U
 		if installCmdPwFile != "" {
 			installCmdPassword = utils.ReadPasswordFile(installCmdPwFile)
 		} else {
-			installCmdPassword = config.GetString("download.password")
+			installCmdPassword = config.GetByteSlice("download.password")
 		}
 
-		if installCmdUsername != "" && installCmdPassword == "" {
+		if installCmdUsername != "" && len(installCmdPassword) == 0 {
 			installCmdPassword = utils.ReadPasswordPrompt()
 		}
 

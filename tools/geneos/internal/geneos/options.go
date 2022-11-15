@@ -12,7 +12,7 @@ type Options struct {
 	homedir       string
 	localusername string
 	username      string
-	password      string
+	password      []byte
 	platform_id   string
 	downloadbase  string
 	downloadtype  string
@@ -111,7 +111,7 @@ func Username(u string) GeneosOptions {
 }
 
 // Password is the remote access password for downloads
-func Password(p string) GeneosOptions {
+func Password(p []byte) GeneosOptions {
 	return func(d *Options) { d.password = p }
 }
 

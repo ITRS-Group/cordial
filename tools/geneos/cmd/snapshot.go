@@ -41,7 +41,8 @@ import (
 
 var snapshotCmdValues, snapshotCmdSeverities, snapshotCmdSnoozes, snapshotCmdUserAssignments, snapshotCmdXpathsonly bool
 var snapshotCmdMaxitems int
-var snapshotCmdUsername, snapshotCmdPassword, snapshotCmdPwFile string
+var snapshotCmdUsername, snapshotCmdPwFile string
+var snapshotCmdPassword []byte
 
 func init() {
 	rootCmd.AddCommand(snapshotCmd)
@@ -110,10 +111,10 @@ not applied in any defined order.
 		if snapshotCmdPwFile != "" {
 			snapshotCmdPassword = utils.ReadPasswordFile(snapshotCmdPwFile)
 		} else {
-			snapshotCmdPassword = config.GetString("snapshot.password")
+			snapshotCmdPassword = config.GetByteSlice("snapshot.password")
 		}
 
-		if snapshotCmdUsername != "" && snapshotCmdPassword == "" {
+		if snapshotCmdUsername != "" && len(snapshotCmdPassword) == 0 {
 			snapshotCmdPassword = utils.ReadPasswordPrompt()
 		}
 
@@ -135,18 +136,18 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 
 		// always use auth details in per-instance config, but if not
 		// given use those from the command line or user/global config
-		username, password := c.Config().GetString("snapshot.username"), c.Config().GetString("snapshot.password")
+		username, password := c.Config().GetString("snapshot.username"), c.Config().GetByteSlice("snapshot.password")
 		if username == "" {
 			username = snapshotCmdUsername
 		}
-		if password == "" {
+		if len(password) == 0 {
 			password = snapshotCmdPassword
 		}
 
 		log.Debug().Msgf("dialling %s", gatewayURL(c))
 		gw, err := commands.DialGateway(gatewayURL(c),
 			commands.AllowInsecureCertificates(true),
-			commands.SetBasicAuth(username, password))
+			commands.SetBasicAuth(username, string(password)))
 		if err != nil {
 			return err
 		}

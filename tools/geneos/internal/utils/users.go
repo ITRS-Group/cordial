@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"math"
@@ -87,7 +88,7 @@ func CanControl(username string) bool {
 	return username == uc.Username
 }
 
-func ReadPasswordPrompt(prompt ...string) string {
+func ReadPasswordPrompt(prompt ...string) []byte {
 	if len(prompt) == 0 {
 		fmt.Printf("Password: ")
 	} else {
@@ -98,13 +99,13 @@ func ReadPasswordPrompt(prompt ...string) string {
 		log.Fatalln("Error getting password:", err)
 	}
 	fmt.Println()
-	return string(pw)
+	return bytes.TrimSpace(pw)
 }
 
-func ReadPasswordFile(path string) string {
+func ReadPasswordFile(path string) []byte {
 	pw, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatalln("Error reading password from file:", err)
 	}
-	return string(strings.TrimSpace(string(pw)))
+	return bytes.TrimSpace(pw)
 }

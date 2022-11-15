@@ -138,7 +138,7 @@ func OpenSource(source string, options ...GeneosOptions) (from io.ReadCloser, fi
 				if req, err = http.NewRequest("GET", u.String(), nil); err != nil {
 					return
 				}
-				req.SetBasicAuth(opts.username, opts.password)
+				req.SetBasicAuth(opts.username, string(opts.password))
 				if resp, err = client.Do(req); err != nil {
 					return
 				}

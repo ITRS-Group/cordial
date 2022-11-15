@@ -41,7 +41,8 @@ import (
 var initCmdAll string
 var initCmdLogs, initCmdMakeCerts, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
 var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdVersion string
-var initCmdDLUsername, initCmdDLPassword, initCmdPwFile string
+var initCmdDLUsername, initCmdPwFile string
+var initCmdDLPassword []byte
 
 var initCmdExtras = ExtraConfigValues{
 	Includes:   IncludeValues{},
@@ -282,10 +283,10 @@ func initProcessArgs(args []string) (options []geneos.GeneosOptions, err error) 
 	if initCmdPwFile != "" {
 		initCmdDLPassword = utils.ReadPasswordFile(initCmdPwFile)
 	} else {
-		initCmdDLPassword = config.GetString("download.password")
+		initCmdDLPassword = config.GetByteSlice("download.password")
 	}
 
-	if initCmdDLUsername != "" && initCmdDLPassword == "" {
+	if initCmdDLUsername != "" && len(initCmdDLPassword) == 0 {
 		initCmdDLPassword = utils.ReadPasswordPrompt()
 	}
 
