@@ -184,6 +184,17 @@ func (a AESValues) EncodeAES(in []byte) (out []byte, err error) {
 	return
 }
 
+func (a AESValues) EncodeAESBytes(in []byte) (out []byte, err error) {
+	text := []byte(in)
+	cipher, err := a.EncodeAES(text)
+	if err == nil {
+		out = make([]byte, len(cipher)*2)
+		hex.Encode(out, cipher)
+		out = bytes.ToUpper(out)
+	}
+	return
+}
+
 func (a AESValues) EncodeAESString(in string) (out string, err error) {
 	text := []byte(in)
 	cipher, err := a.EncodeAES(text)
