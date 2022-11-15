@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/rs/zerolog/log"
 
 	"github.com/pkg/sftp"
@@ -19,18 +20,19 @@ const userSSHdir = ".ssh"
 var sshSessions sync.Map
 var sftpSessions sync.Map
 
-var privateKeys = ""
-
 // load any/all the known private keys with no passphrase
 func readSSHkeys(homedir string) (signers []ssh.Signer) {
-	for _, keyfile := range strings.Split(privateKeys, ",") {
+	for _, keyfile := range strings.Split(config.GetString("privateKeys"), ",") {
 		path := filepath.Join(homedir, userSSHdir, keyfile)
+		log.Debug().Msgf("trying to read private key %s", path)
 		key, err := os.ReadFile(path)
 		if err != nil {
 			continue
 		}
+		log.Debug().Msg("read ok, parsing...")
 		signer, err := ssh.ParsePrivateKey(key)
 		if err != nil {
+			log.Debug().Err(err).Msg("")
 			continue
 		}
 		log.Debug().Msgf("loaded private key from %s", path)
