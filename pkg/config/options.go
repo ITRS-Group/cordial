@@ -23,15 +23,16 @@ THE SOFTWARE.
 package config
 
 type configOptions struct {
-	defaults          []byte
-	defaultsFormat    string
-	configFile        string
-	configDirs        []string
-	appname           string
-	ignoreworkingdir  bool
-	ignoreuserconfdir bool
-	ignoresystemdir   bool
-	useglobal         bool
+	defaults       []byte
+	defaultsFormat string
+	configFile     string
+	configDirs     []string
+	appname        string
+	workingdir     string
+	userconfdir    string
+	systemdir      string
+	useglobal      bool
+	merge          bool
 }
 
 type Options func(*configOptions)
@@ -39,6 +40,9 @@ type Options func(*configOptions)
 func evalOptions(configName string, c *configOptions, options ...Options) {
 	// init
 	c.configDirs = []string{}
+	c.workingdir = "."
+	c.systemdir = "/etc" // UNIX/Linux only!
+	c.userconfdir, _ = UserConfigDir()
 
 	for _, opt := range options {
 		opt(c)
@@ -54,14 +58,26 @@ func evalOptions(configName string, c *configOptions, options ...Options) {
 	}
 }
 
-// UseGlobal() uses the global config instead of creating a new instance.
+// UseGlobal() tells LoadConfig() to set values in the global config
+// instead of creating a new instance, and the global configuration
+// instance is returned.
 func UseGlobal() Options {
 	return func(c *configOptions) {
 		c.useglobal = true
 	}
 }
 
-// SetDefaults() takes a []byte slice and a format type to set defaults
+// SetDefaults() takes a []byte slice and a format type to set
+// configuration defaults. This can be used in conjunction with `embed`
+// to read a defaults file in the source tree to a byte slice and set
+// those, e.g.
+//
+//		//go:embed "defaults.yaml"
+//		var defaults []byte
+//	    ...
+//		c, err := config.LoadConfig("appname", config.SetDefaults(defaults, "yaml"))
+//
+// Similarly, the defaults could be loaded from a well known URL and so on.
 func SetDefaults(defaults []byte, format string) Options {
 	return func(c *configOptions) {
 		c.defaults = defaults
@@ -103,7 +119,7 @@ func AddConfigDirs(paths ...string) Options {
 // caller may be running in an unknown or untrusted location.
 func IgnoreWorkingDir() Options {
 	return func(c *configOptions) {
-		c.ignoreworkingdir = true
+		c.workingdir = ""
 	}
 }
 
@@ -112,7 +128,7 @@ func IgnoreWorkingDir() Options {
 // os.UserConfDir() and a sub-directory of AppName)
 func IgnoreUserConfDir() Options {
 	return func(c *configOptions) {
-		c.ignoreuserconfdir = true
+		c.userconfdir = ""
 	}
 }
 
@@ -121,6 +137,19 @@ func IgnoreUserConfDir() Options {
 // is normally /etc/[AppName]
 func IgnoreSystemDir() Options {
 	return func(c *configOptions) {
-		c.ignoresystemdir = true
+		c.systemdir = ""
+	}
+}
+
+// MergeSettings() change the default behaviour which loads the first
+// configuration file found, instead loading each configuration file
+// found in the directories given and merges the settings together.
+// Merging is done using [viper.MergeConfigMap] and should result in the
+// last definition of each configuration item being used.
+//
+// MergeSettings() applies to both default and main settings.
+func MergeSettings() Options {
+	return func(c *configOptions) {
+		c.merge = true
 	}
 }

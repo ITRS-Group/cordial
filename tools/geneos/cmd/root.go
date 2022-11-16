@@ -183,7 +183,9 @@ func initConfig() {
 	cf, err := config.LoadConfig("geneos",
 		config.SetConfigFile(cfgFile),
 		config.UseGlobal(),
-		config.AddConfigDirs(oldConfDir))
+		config.AddConfigDirs(oldConfDir),
+		config.MergeSettings(),
+	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
