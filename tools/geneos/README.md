@@ -640,7 +640,7 @@ The root and signing certificates are only kept on the local server and the `tls
 
 * `/etc/geneos/geneos.json` - Global options
 * `${HOME}/.config/geneos/geneos.json` - User options
-* Environment variables ITRS_option
+* Environment variables ITRS_`option` - where `.` is replaced by `_`, e.g. `ITRS_DOWNLOAD_USERNAME`
 
 General options are loaded from the global config file first, then the user one and any environment variables override both files. The current options are:
 
