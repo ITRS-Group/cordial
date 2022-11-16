@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
@@ -40,8 +41,8 @@ type Host struct {
 	//
 	// later, once we are long-running as a daemon then we can use
 	// some sort of retry mechanism, but not for now
-	// lastFailure time.Time
-	failed error
+	lastAttempt time.Time
+	failed      error
 }
 
 var hosts sync.Map
@@ -80,14 +81,14 @@ func Get(name string) (c *Host) {
 		if LOCAL != nil {
 			return LOCAL
 		}
-		c = &Host{config.New(), true, nil}
+		c = &Host{config.New(), true, time.Time{}, nil}
 		c.Set("name", LOCALHOST)
 		c.GetOSReleaseEnv()
 	case ALLHOSTS:
 		if ALL != nil {
 			return ALL
 		}
-		c = &Host{config.New(), true, nil}
+		c = &Host{config.New(), true, time.Time{}, nil}
 		c.Set("name", ALLHOSTS)
 	default:
 		r, ok := hosts.Load(name)
@@ -98,7 +99,7 @@ func Get(name string) (c *Host) {
 			}
 		}
 		// or bootstrap, but NOT save a new one
-		c = &Host{config.New(), false, nil}
+		c = &Host{config.New(), false, time.Time{}, nil}
 		c.Set("name", name)
 		hosts.Store(name, c)
 	}
@@ -120,6 +121,10 @@ func (h *Host) Exists() bool {
 }
 
 func (h *Host) Failed() bool {
+	// if the failure was a while back, try again (XXX crude)
+	if !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) > 5*time.Second {
+		return false
+	}
 	return h.failed != nil
 }
 
@@ -303,7 +308,7 @@ func ReadConfig() {
 			log.Debug().Msgf("hosts value not a map[string]interface{} but a %T", host)
 			continue
 		}
-		hosts.Store(name, &Host{v, true, nil})
+		hosts.Store(name, &Host{v, true, time.Time{}, nil})
 	}
 }
 
