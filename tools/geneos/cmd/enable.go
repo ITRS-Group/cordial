@@ -61,7 +61,11 @@ when the |-S| flag is used.
 }
 
 func enableInstance(c geneos.Instance, params []string) (err error) {
-	err = c.Host().Remove(instance.ComponentFilepath(c, geneos.DisableExtension))
+	disableFile := instance.ComponentFilepath(c, geneos.DisableExtension)
+	if _, err = c.Host().Stat(disableFile); err != nil {
+		return nil
+	}
+	err = c.Host().Remove(disableFile)
 	if (err == nil || errors.Is(err, os.ErrNotExist)) && enableCmdStart {
 		instance.Start(c)
 	}
