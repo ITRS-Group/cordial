@@ -34,7 +34,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -109,13 +108,13 @@ not applied in any defined order.
 		}
 
 		if snapshotCmdPwFile != "" {
-			snapshotCmdPassword = utils.ReadPasswordFile(snapshotCmdPwFile)
+			snapshotCmdPassword = config.ReadPasswordFile(snapshotCmdPwFile)
 		} else {
 			snapshotCmdPassword = config.GetByteSlice("snapshot.password")
 		}
 
 		if snapshotCmdUsername != "" && len(snapshotCmdPassword) == 0 {
-			snapshotCmdPassword = utils.ReadPasswordPrompt()
+			snapshotCmdPassword = config.ReadPasswordPrompt()
 		}
 
 		// at this point snapshotCmdUsername/Password contain global or

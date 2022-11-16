@@ -40,9 +40,12 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 
 	"github.com/gurkankaymak/hocon"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+	"golang.org/x/term"
 )
 
 // Config embeds Viper and also exposes the config type used
@@ -695,4 +698,44 @@ func ReadHOCONFile(path string) (cf *Config, err error) {
 	cf = New()
 	err = cf.MergeHOCONFile(path)
 	return
+}
+
+func ReadEncodePassword(keyfile string) (encpw string, err error) {
+	var plaintext []byte
+	var match bool
+	for i := 0; i < 3; i++ {
+		plaintext = ReadPasswordPrompt()
+		plaintext2 := ReadPasswordPrompt("Re-enter Password")
+		if bytes.Equal(plaintext, plaintext2) {
+			match = true
+			break
+		}
+		fmt.Println("Passwords do not match. Please try again.")
+	}
+	if !match {
+		return "", fmt.Errorf("too many attempts, giving up")
+	}
+	return EncodePassword(plaintext, keyfile)
+}
+
+func ReadPasswordPrompt(prompt ...string) []byte {
+	if len(prompt) == 0 {
+		fmt.Printf("Password: ")
+	} else {
+		fmt.Printf("%s: ", strings.Join(prompt, " "))
+	}
+	pw, err := term.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error getting password")
+	}
+	fmt.Println()
+	return bytes.TrimSpace(pw)
+}
+
+func ReadPasswordFile(path string) []byte {
+	pw, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error reading password from file")
+	}
+	return bytes.TrimSpace(pw)
 }

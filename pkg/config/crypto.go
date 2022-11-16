@@ -8,9 +8,11 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
+	"io/fs"
 	"os"
 	"strings"
 	"unicode/utf8"
@@ -249,5 +251,32 @@ func (a AESValues) DecodeAESString(in string) (out string, err error) {
 	if err == nil {
 		out = string(plain)
 	}
+	return
+}
+
+func EncodePassword(plaintext []byte, keyfile string) (encpw string, err error) {
+	r, err := os.Open(keyfile)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			err = fmt.Errorf("cannot open keyfile %q. You may need to create one using `geneos aes new -D`", keyfile)
+		}
+		return "", err
+	}
+	defer r.Close()
+	a, err := ReadAESValues(r)
+	if err != nil {
+		return "", err
+	}
+
+	e, err := a.EncodeAESBytes(plaintext)
+	if err != nil {
+		return "", err
+	}
+
+	home, _ := os.UserHomeDir()
+	if strings.HasPrefix(keyfile, home) {
+		keyfile = "~" + strings.TrimPrefix(keyfile, home)
+	}
+	encpw = fmt.Sprintf("${enc:%s:+encs+%s}", keyfile, e)
 	return
 }

@@ -34,12 +34,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var addHostCmdInit bool
+var addHostCmdInit, addHostCmdPrompt bool
+var addHostCmdPassword, addHostCmdKeyfile, addHostDefaultKeyfile string
 
 func init() {
 	addCmd.AddCommand(addHostCmd)
 
+	addHostDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
+
 	addHostCmd.Flags().BoolVarP(&addHostCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
+	addHostCmd.Flags().BoolVarP(&addHostCmdPrompt, "prompt", "p", false, "Prompt for password")
+	addHostCmd.Flags().StringVarP(&addHostCmdPassword, "password", "P", "", "Password")
+	addHostCmd.Flags().StringVarP(&addHostCmdKeyfile, "keyfile", "k", "", "Keyfile")
+
 	addHostCmd.Flags().SortFlags = false
 }
 
@@ -115,6 +122,25 @@ func addHost(h *host.Host, sshurl *url.URL) (err error) {
 	// XXX default to remote user's home dir, not local
 	h.SetDefault("geneos", host.Geneos())
 
+	password := ""
+	if addHostCmdKeyfile == "" {
+		addHostCmdKeyfile = addHostDefaultKeyfile
+	}
+
+	if addHostCmdPrompt {
+		if password, err = config.ReadEncodePassword(addHostCmdKeyfile); err != nil {
+			return
+		}
+	} else if addHostCmdPassword != "" {
+
+		if password, err = config.EncodePassword([]byte(addHostCmdPassword), addHostCmdKeyfile); err != nil {
+			return
+		}
+	}
+	if password != "" {
+		h.Set("password", password)
+	}
+
 	// now disassemble URL
 	if sshurl.Hostname() == "" {
 		h.Set("hostname", h.GetString("name"))
@@ -135,7 +161,7 @@ func addHost(h *host.Host, sshurl *url.URL) (err error) {
 	}
 
 	if _, err := h.Dial(); err != nil {
-		log.Error().Err(err).Msg("cannot connect to remote host, not adding")
+		log.Debug().Err(err).Msg("cannot connect to remote host, not adding.")
 		return err
 	}
 

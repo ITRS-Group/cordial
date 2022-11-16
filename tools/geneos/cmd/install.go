@@ -28,7 +28,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -112,13 +111,13 @@ geneos install netprobe -b active_dev -U
 		}
 
 		if installCmdPwFile != "" {
-			installCmdPassword = utils.ReadPasswordFile(installCmdPwFile)
+			installCmdPassword = config.ReadPasswordFile(installCmdPwFile)
 		} else {
 			installCmdPassword = config.GetByteSlice("download.password")
 		}
 
 		if installCmdUsername != "" && len(installCmdPassword) == 0 {
-			installCmdPassword = utils.ReadPasswordPrompt()
+			installCmdPassword = config.ReadPasswordPrompt()
 		}
 
 		// if we have a component on the command line then use an archive in packages/downloads
