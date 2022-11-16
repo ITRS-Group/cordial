@@ -463,7 +463,7 @@ func LoadConfig(configName string, options ...Options) (c *Config, err error) {
 	opts := &configOptions{}
 	evalOptions(configName, opts, options...)
 
-	if opts.useglobal {
+	if opts.setglobals {
 		c = global
 	} else {
 		c = New()
@@ -472,7 +472,7 @@ func LoadConfig(configName string, options ...Options) (c *Config, err error) {
 	defaults := viper.New()
 	internalDefaults := viper.New()
 
-	if len(opts.defaults) > 0 {
+	if opts.usedefaults && len(opts.defaults) > 0 {
 		buf := bytes.NewBuffer(opts.defaults)
 		internalDefaults.SetConfigType(opts.defaultsFormat)
 		// ignore errors ?
@@ -507,45 +507,47 @@ func LoadConfig(configName string, options ...Options) (c *Config, err error) {
 	}
 	log.Debug().Msgf("confDirs: %v", confDirs)
 
-	// search directories for defaults. we do this even if the config
-	// file itself is set using option SetConfigFile()
-	if opts.merge {
-		for _, dir := range confDirs {
-			d := viper.New()
-			d.AddConfigPath(dir)
-			d.SetConfigName(configName + ".defaults")
-			d.ReadInConfig()
-			if err = d.ReadInConfig(); err != nil {
+	if opts.usedefaults {
+		// search directories for defaults. we do this even if the config
+		// file itself is set using option SetConfigFile()
+		if opts.merge {
+			for _, dir := range confDirs {
+				d := viper.New()
+				d.AddConfigPath(dir)
+				d.SetConfigName(configName + ".defaults")
+				d.ReadInConfig()
+				if err = d.ReadInConfig(); err != nil {
+					if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
+						// not found is fine
+						continue
+					} else {
+						return c, fmt.Errorf("error reading defaults: %w", err)
+					}
+				}
+				for k, v := range d.AllSettings() {
+					defaults.SetDefault(k, v)
+				}
+			}
+		} else if len(confDirs) > 0 {
+			for _, dir := range confDirs {
+				defaults.AddConfigPath(dir)
+			}
+
+			defaults.SetConfigName(configName + ".defaults")
+			defaults.ReadInConfig()
+			if err = defaults.ReadInConfig(); err != nil {
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 					// not found is fine
-					continue
 				} else {
 					return c, fmt.Errorf("error reading defaults: %w", err)
 				}
 			}
-			for k, v := range d.AllSettings() {
-				defaults.SetDefault(k, v)
-			}
-		}
-	} else if len(confDirs) > 0 {
-		for _, dir := range confDirs {
-			defaults.AddConfigPath(dir)
 		}
 
-		defaults.SetConfigName(configName + ".defaults")
-		defaults.ReadInConfig()
-		if err = defaults.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
-				// not found is fine
-			} else {
-				return c, fmt.Errorf("error reading defaults: %w", err)
-			}
+		// set defaults in real config based on collected defaults
+		for k, v := range defaults.AllSettings() {
+			c.Viper.SetDefault(k, v)
 		}
-	}
-
-	// set defaults in real config based on collected defaults
-	for k, v := range defaults.AllSettings() {
-		c.Viper.SetDefault(k, v)
 	}
 
 	// fixed configuration file, skip directory search
