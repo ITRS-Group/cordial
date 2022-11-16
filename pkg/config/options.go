@@ -31,7 +31,8 @@ type configOptions struct {
 	workingdir     string
 	userconfdir    string
 	systemdir      string
-	useglobal      bool
+	setglobals     bool
+	usedefaults    bool
 	merge          bool
 }
 
@@ -43,6 +44,7 @@ func evalOptions(configName string, c *configOptions, options ...Options) {
 	c.workingdir = "."
 	c.systemdir = "/etc" // UNIX/Linux only!
 	c.userconfdir, _ = UserConfigDir()
+	c.usedefaults = true
 
 	for _, opt := range options {
 		opt(c)
@@ -58,12 +60,20 @@ func evalOptions(configName string, c *configOptions, options ...Options) {
 	}
 }
 
-// UseGlobal() tells LoadConfig() to set values in the global config
+// Global() tells LoadConfig() to set values in the global config
 // instead of creating a new instance, and the global configuration
 // instance is returned.
-func UseGlobal() Options {
+func Global() Options {
 	return func(c *configOptions) {
-		c.useglobal = true
+		c.setglobals = true
+	}
+}
+
+// UseDefaults() tells LoadConfig() to load defaults or not. The default
+// is true.
+func UseDefaults(b bool) Options {
+	return func(c *configOptions) {
+		c.usedefaults = b
 	}
 }
 

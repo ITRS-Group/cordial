@@ -86,7 +86,7 @@ func initConfig() {
 
 	cf, err = config.LoadConfig(execname,
 		config.SetAppName("geneos"),
-		config.UseGlobal(),
+		config.Global(),
 		config.SetConfigFile(conffile))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to load configuration")
