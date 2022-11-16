@@ -35,10 +35,12 @@ import (
 )
 
 type showCmdConfig struct {
-	Name   string      `json:"name,omitempty"`
-	Host   string      `json:"host,omitempty"`
-	Type   string      `json:"type,omitempty"`
-	Config interface{} `json:"config,omitempty"`
+	Name      string      `json:"name,omitempty"`
+	Host      string      `json:"host,omitempty"`
+	Type      string      `json:"type,omitempty"`
+	Disabled  bool        `json:"disabled"`
+	Protected bool        `json:"protected"`
+	Config    interface{} `json:"config,omitempty"`
 }
 
 var showCmdRaw bool
@@ -109,7 +111,14 @@ func showInstance(c geneos.Instance, params []string) (err error) {
 	if showCmdRaw {
 		as = nv.AllSettings()
 	}
-	cf := &showCmdConfig{Name: c.Name(), Host: c.Host().String(), Type: c.Type().String(), Config: as}
+	cf := &showCmdConfig{
+		Name:      c.Name(),
+		Host:      c.Host().String(),
+		Type:      c.Type().String(),
+		Disabled:  instance.IsDisabled(c),
+		Protected: instance.IsProtected(c),
+		Config:    as,
+	}
 
 	switch instance.ConfigFileType() {
 	case "json":
