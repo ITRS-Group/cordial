@@ -1,18 +1,12 @@
 package utils
 
 import (
-	"bytes"
-	"fmt"
-	"log"
 	"math"
 	"os"
 	"os/user"
 	"strconv"
-	"strings"
-	"syscall"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"golang.org/x/term"
 )
 
 func GetIDs(username string) (uid, gid int, gids []int, err error) {
@@ -86,26 +80,4 @@ func CanControl(username string) bool {
 
 	uc, _ := user.Current()
 	return username == uc.Username
-}
-
-func ReadPasswordPrompt(prompt ...string) []byte {
-	if len(prompt) == 0 {
-		fmt.Printf("Password: ")
-	} else {
-		fmt.Printf("%s: ", strings.Join(prompt, " "))
-	}
-	pw, err := term.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		log.Fatalln("Error getting password:", err)
-	}
-	fmt.Println()
-	return bytes.TrimSpace(pw)
-}
-
-func ReadPasswordFile(path string) []byte {
-	pw, err := os.ReadFile(path)
-	if err != nil {
-		log.Fatalln("Error reading password from file:", err)
-	}
-	return bytes.TrimSpace(pw)
 }

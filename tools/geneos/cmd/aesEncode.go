@@ -32,7 +32,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -81,12 +80,12 @@ keyfile found.
 			}
 		} else {
 			if aesEncodeCmdAskOnce {
-				plaintext = utils.ReadPasswordPrompt()
+				plaintext = config.ReadPasswordPrompt()
 			} else {
 				var match bool
 				for i := 0; i < 3; i++ {
-					plaintext = utils.ReadPasswordPrompt()
-					plaintext2 := utils.ReadPasswordPrompt("Re-enter Password")
+					plaintext = config.ReadPasswordPrompt()
+					plaintext2 := config.ReadPasswordPrompt("Re-enter Password")
 					if bytes.Equal(plaintext, plaintext2) {
 						match = true
 						break

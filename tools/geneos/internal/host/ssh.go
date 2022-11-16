@@ -26,7 +26,11 @@ func readSSHkeys(homedir string, morekeys ...string) (signers []ssh.Signer) {
 	for i, f := range files {
 		files[i] = filepath.Join(homedir, userSSHdir, f)
 	}
-	files = append(files, morekeys...)
+	for _, k := range morekeys {
+		if k != "" {
+			files = append(files, k)
+		}
+	}
 
 	for _, path := range files {
 		log.Debug().Msgf("trying to read private key %s", path)
@@ -34,7 +38,6 @@ func readSSHkeys(homedir string, morekeys ...string) (signers []ssh.Signer) {
 		if err != nil {
 			continue
 		}
-		log.Debug().Msg("read ok, parsing...")
 		signer, err := ssh.ParsePrivateKey(key)
 		if err != nil {
 			log.Debug().Err(err).Msg("")

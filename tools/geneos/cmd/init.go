@@ -281,13 +281,13 @@ func initProcessArgs(args []string) (options []geneos.GeneosOptions, err error) 
 	}
 
 	if initCmdPwFile != "" {
-		initCmdDLPassword = utils.ReadPasswordFile(initCmdPwFile)
+		initCmdDLPassword = config.ReadPasswordFile(initCmdPwFile)
 	} else {
 		initCmdDLPassword = config.GetByteSlice("download.password")
 	}
 
 	if initCmdDLUsername != "" && len(initCmdDLPassword) == 0 {
-		initCmdDLPassword = utils.ReadPasswordPrompt()
+		initCmdDLPassword = config.ReadPasswordPrompt()
 	}
 
 	if initCmdDLUsername != "" {

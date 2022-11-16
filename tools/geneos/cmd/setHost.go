@@ -23,9 +23,7 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"bytes"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -34,7 +32,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 var setHostCmdPrompt bool
@@ -48,6 +45,8 @@ func init() {
 	setHostCmd.Flags().BoolVarP(&setHostCmdPrompt, "prompt", "p", false, "Prompt for password")
 	setHostCmd.Flags().StringVarP(&setHostCmdPassword, "password", "P", "", "Password")
 	setHostCmd.Flags().StringVarP(&setHostCmdKeyfile, "keyfile", "k", "", "Keyfile")
+
+	setHostCmd.Flags().SortFlags = false
 }
 
 var setHostCmd = &cobra.Command{
@@ -88,11 +87,11 @@ Set options on remote host configurations.
 
 		// check for passwords
 		if setHostCmdPrompt {
-			if password, err = readPassword(); err != nil {
+			if password, err = config.ReadEncodePassword(setHostCmdKeyfile); err != nil {
 				return
 			}
 		} else if setHostCmdPassword != "" {
-			if password, err = encodePassword([]byte(setHostCmdPassword)); err != nil {
+			if password, err = config.EncodePassword([]byte(setHostCmdPassword), setHostCmdKeyfile); err != nil {
 				return
 			}
 		}
@@ -117,46 +116,4 @@ Set options on remote host configurations.
 		}
 		return
 	},
-}
-
-func encodePassword(plaintext []byte) (encpw string, err error) {
-	r, _, err := geneos.OpenSource(setHostCmdKeyfile)
-	if err != nil {
-		return "", err
-	}
-	defer r.Close()
-	a, err := config.ReadAESValues(r)
-	if err != nil {
-		return "", err
-	}
-
-	e, err := a.EncodeAESBytes(plaintext)
-	if err != nil {
-		return "", err
-	}
-
-	home, _ := os.UserHomeDir()
-	if strings.HasPrefix(setHostCmdKeyfile, home) {
-		setHostCmdKeyfile = "~" + strings.TrimPrefix(setHostCmdKeyfile, home)
-	}
-	encpw = fmt.Sprintf("${enc:%s:+encs+%s}", setHostCmdKeyfile, e)
-	return
-}
-
-func readPassword() (encpw string, err error) {
-	var plaintext []byte
-	var match bool
-	for i := 0; i < 3; i++ {
-		plaintext = utils.ReadPasswordPrompt()
-		plaintext2 := utils.ReadPasswordPrompt("Re-enter Password")
-		if bytes.Equal(plaintext, plaintext2) {
-			match = true
-			break
-		}
-		fmt.Println("Passwords do not match. Please try again.")
-	}
-	if !match {
-		return "", fmt.Errorf("too many attempts, giving up")
-	}
-	return encodePassword(plaintext)
 }
