@@ -21,7 +21,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Show program version details",
 	Long: strings.ReplaceAll(`
-Show program version details
+Show program version details.
 `, "|", "`"),
 	SilenceUsage: true,
 	Version:      cordial.VERSION,

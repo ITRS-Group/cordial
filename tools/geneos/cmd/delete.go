@@ -46,11 +46,16 @@ var deleteCmd = &cobra.Command{
 	Aliases: []string{"rm"},
 	Short:   "Delete an instance. Instance must be stopped",
 	Long: strings.ReplaceAll(`
-Delete the matching instances. This will only work on
-instances that are disabled to prevent accidental deletion. The
-instance directory is removed without being backed-up. The user
-running the command must have the appropriate permissions and a
-partial deletion cannot be protected against.
+Delete the matching instance(s).
+
+You can only delete instances which have been disabled.  This is to 
+prevent accidental deletion.
+Upon deleting an instance, the entire working directory for that instance
+will be removed without being backed-up.
+
+**Note**:  By using option |-F| (or |--force|), you may force the deletion
+of instances which are not disabled.  This should be used with caution as it
+may result in irrecoverable loss of data.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

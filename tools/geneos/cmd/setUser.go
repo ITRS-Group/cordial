@@ -39,6 +39,13 @@ var setUserCmd = &cobra.Command{
 	Use:   "user [KEY=VALUE...]",
 	Short: "Set user configuration parameters",
 	Long: strings.ReplaceAll(`
+Set user condifuration parameters.
+
+Parameters set using the |geneos set user| command will be written or
+updated in file |~/.config/geneos.json|.
+
+**Note**: In case you set a parameter that is not supported, that parameter
+will be written to the |json| configuration file, but will have any effect.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
