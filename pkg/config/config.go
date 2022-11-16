@@ -33,8 +33,10 @@ package config
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -467,85 +469,136 @@ func LoadConfig(configName string, options ...Options) (c *Config, err error) {
 		c = New()
 	}
 
-	internalDefaults := make(map[string]interface{})
+	defaults := viper.New()
+	internalDefaults := viper.New()
+
 	if len(opts.defaults) > 0 {
-		defaults := viper.New()
 		buf := bytes.NewBuffer(opts.defaults)
-		defaults.SetConfigType(opts.defaultsFormat)
-		// ignore errors
-		defaults.ReadConfig(buf)
-		internalDefaults = defaults.AllSettings()
+		internalDefaults.SetConfigType(opts.defaultsFormat)
+		// ignore errors ?
+		internalDefaults.ReadConfig(buf)
 	}
 
-	defaults := viper.New()
-	for k, v := range internalDefaults {
+	// now set any internal default values as real defaults, cannot use Merge here
+	for k, v := range internalDefaults.AllSettings() {
 		defaults.SetDefault(k, v)
 	}
 
 	confDirs := opts.configDirs
 
-	if !opts.ignoreworkingdir {
-		confDirs = append(confDirs, ".")
+	// add config directories in order - first match wins unless
+	// MergeSettings() option is used
+	if opts.workingdir != "" {
+		confDirs = append(confDirs, opts.workingdir)
 	}
-	if !opts.ignoreuserconfdir {
-		userConfDir, err := UserConfigDir()
-		if err == nil {
-			confDirs = append(confDirs, filepath.Join(userConfDir, opts.appname))
-		}
+	if opts.userconfdir != "" {
+		confDirs = append(confDirs, filepath.Join(opts.userconfdir, opts.appname))
 	}
-	systemConfDir := "/etc"
-	if !opts.ignoresystemdir {
-		confDirs = append(confDirs, filepath.Join(systemConfDir, opts.appname))
+	if opts.systemdir != "" {
+		confDirs = append(confDirs, filepath.Join(opts.systemdir, opts.appname))
 	}
 
-	if len(confDirs) > 0 {
-		for _, d := range confDirs {
-			defaults.AddConfigPath(d)
+	// if ew are merging, then we load in reverse order
+	if opts.merge {
+		for i := len(confDirs)/2 - 1; i >= 0; i-- {
+			opp := len(confDirs) - 1 - i
+			confDirs[i], confDirs[opp] = confDirs[opp], confDirs[i]
+		}
+	}
+	log.Debug().Msgf("confDirs: %v", confDirs)
+
+	// search directories for defaults. we do this even if the config
+	// file itself is set using option SetConfigFile()
+	if opts.merge {
+		for _, dir := range confDirs {
+			d := viper.New()
+			d.AddConfigPath(dir)
+			d.SetConfigName(configName + ".defaults")
+			d.ReadInConfig()
+			if err = d.ReadInConfig(); err != nil {
+				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
+					// not found is fine
+					continue
+				} else {
+					return c, fmt.Errorf("error reading defaults: %w", err)
+				}
+			}
+			for k, v := range d.AllSettings() {
+				defaults.SetDefault(k, v)
+			}
+		}
+	} else if len(confDirs) > 0 {
+		for _, dir := range confDirs {
+			defaults.AddConfigPath(dir)
 		}
 
 		defaults.SetConfigName(configName + ".defaults")
 		defaults.ReadInConfig()
 		if err = defaults.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 				// not found is fine
-				err = nil
 			} else {
-				return c, fmt.Errorf("default config: %w", err)
+				return c, fmt.Errorf("error reading defaults: %w", err)
 			}
-		}
-		defaultSettings := defaults.AllSettings()
-
-		for k, v := range defaultSettings {
-			c.Viper.SetDefault(k, v)
 		}
 	}
 
+	// set defaults in real config based on collected defaults
+	for k, v := range defaults.AllSettings() {
+		c.Viper.SetDefault(k, v)
+	}
+
+	// fixed configuration file, skip directory search
 	if opts.configFile != "" {
 		c.Viper.SetConfigFile(opts.configFile)
 		if err = c.Viper.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 				// not found is fine
-				err = nil
 			} else {
-				return c, fmt.Errorf("reading %s: %w", opts.configFile, err)
+				return c, fmt.Errorf("error reading config: %w", err)
 			}
 		}
-	} else if len(confDirs) > 0 {
-		for _, d := range confDirs {
-			c.Viper.AddConfigPath(d)
+		return c, nil
+	}
+
+	// load configuration files from given directories, in order
+
+	if opts.merge {
+		for _, dir := range confDirs {
+			d := viper.New()
+			d.AddConfigPath(dir)
+			d.SetConfigName(configName)
+			if err = d.ReadInConfig(); err != nil {
+				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
+					// not found is fine
+					continue
+				} else {
+					return c, fmt.Errorf("error reading config: %w", err)
+				}
+			}
+			log.Debug().Msgf("merging %+v into %+v", d.AllSettings(), c.Viper.AllSettings())
+			if err = c.Viper.MergeConfigMap(d.AllSettings()); err != nil {
+				log.Debug().Err(err).Msgf("merge of %s/%s failed, continuing.", dir, configName)
+			}
+		}
+		return c, nil
+	}
+
+	if len(confDirs) > 0 {
+		for _, dir := range confDirs {
+			c.Viper.AddConfigPath(dir)
 		}
 		c.Viper.SetConfigName(configName)
 		if err = c.Viper.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 				// not found is fine
-				err = nil
 			} else {
-				return c, fmt.Errorf("reading %s: %w", c.Viper.ConfigFileUsed(), err)
+				return c, fmt.Errorf("error reading config: %w", err)
 			}
 		}
 	}
 
-	return
+	return c, nil
 }
 
 // the below is copied from the Go source but modified to NOT support
