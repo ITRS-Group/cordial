@@ -126,6 +126,7 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 		if err != nil {
 			log.Debug().Err(err).Msg("")
 			h.failed = err
+			h.lastAttempt = time.Now()
 			return
 		}
 		log.Debug().Msgf("host opened %s %s %s", h.GetString("name"), dest, user)
@@ -162,10 +163,12 @@ func (h *Host) DialSFTP() (f *sftp.Client, err error) {
 		var s *ssh.Client
 		if s, err = h.Dial(); err != nil {
 			h.failed = err
+			h.lastAttempt = time.Now()
 			return
 		}
 		if f, err = sftp.NewClient(s); err != nil {
 			h.failed = err
+			h.lastAttempt = time.Now()
 			return
 		}
 		log.Debug().Msgf("remote opened %s", h.GetString("name"))
