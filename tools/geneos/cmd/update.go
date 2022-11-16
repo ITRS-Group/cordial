@@ -54,31 +54,25 @@ var updateCmd = &cobra.Command{
 	Use:   "update [flags] [TYPE] [VERSION]",
 	Short: "Update the active version of Geneos packages",
 	Long: strings.ReplaceAll(`
-Update the symlink from the default base name of the package to
-the best match for VERSION. The default base directory is |active_prod|
-and is normally linked to the latest version of a component type in the
-packages directory. VERSION can either be a semantic version style name or
-(the default if not given) |latest|.
+Update symlinks pointing to package versions.  These symlinks are used to
+easily identify versions to be used by instances.
+The default symlink name used is |active_prod|.  However the symlink name 
+can be changed using option |-b|.
 
-If TYPE is not supplied, all supported component types are updated to VERSION.
+The |geneos update| command will stop all instances matching the symlink 
+being updated, and restart them after the update is done.
 
-Update will stop all matching instances of the each type before
-updating the link and starting them up again, but only if the
-instance uses the same basename.
+If no TYPE is defined, all supported component types will be updated.
+If no VERSION is defined, the |latest| version will be used for the update.
 
-The matching of VERSION is based on directory names of the form:
-
-|[GA]X.Y.Z|
-
-Where X, Y, Z are each ordered in ascending numerical order. If a
-directory starts |GA| it will be selected over a directory with the
-same numerical versions. All other directories name formats will
-result in unexpected behaviour. If multiple installed versions
-match then the lexically latest match will be used. The chosen
-match may be much higher than that given on the command line as
-only installed packages are used in the search.
-
-If a basename for the symlink does not already exist it will be created,
+VERSION must be defined as |X.Y.Z| and is matched to directory names 
+|[GA]X.Y.Z|.
+**Note(s)**:
+- In case other directory name formats are used under the |packages| 
+  directory, this will result in unexpected behaviour.
+- In case myultiple installed versions match the VERSION as defined in the
+command-line, then the lexically latest match will be used.
+- If a basename for the symlink does not already exist it will be created,
 so it important to check the spelling carefully.
 `, "|", "`"),
 	Example: strings.ReplaceAll(`

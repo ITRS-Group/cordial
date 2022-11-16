@@ -46,9 +46,16 @@ var enableCmd = &cobra.Command{
 	Use:   "enable [flags] [TYPE] [NAME...]",
 	Short: "Enable instances",
 	Long: strings.ReplaceAll(`
-Mark any matching instances as enabled and if the |-S| flag is given
-then start the instance. Only those instances that were disabled are started
-when the |-S| flag is used.
+Mark any matching instances as enabled.
+Using option |-S| will also start the instance. When using option |-S|, 
+only those instances that were disabled are started.
+
+Enabling an instance will result in the file with extension |.disabled|
+in the instance's working directory to be removed.
+
+**Note**: Enabling an instance which is not disabled will do nothing and 
+have no impact.  However enabling an instance which is not disabled using
+option |-S| will start this instance.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

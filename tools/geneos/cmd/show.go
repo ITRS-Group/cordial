@@ -55,20 +55,22 @@ var showCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Show runtime, global, user or instance configuration is JSON format",
 	Long: strings.ReplaceAll(`
-Show the runtime or instance configuration. The loaded
-global or user configurations can be seen through the show global
-and show user sub-commands, respectively.
+Show the global runtime or instance configuration.
+The loaded global or user configurations can be seen using respectively
+|geneos show global| and |geneos show user| commands.
 
-With no arguments show the full runtime configuration that
-results from environment variables, loading built-in defaults and the
-global and user configurations.
+If no arguments are provided, the full runtime configuration will be shown.
+This configuration results from environment variables, loading built-in 
+defaults and the global and user configurations.
 
 If a component TYPE and/or instance NAME(s) are given then the
-configuration for those instances are output as JSON. This is
-regardless of the instance using a legacy .rc file or a native JSON
+configuration for the matching those instances is shown.
+This is regardless of the instance using a legacy .rc file or a native JSON
 configuration.
 
-Passwords and secrets are redacted in a very simplistic manner simply
+**Note**: 
+- All configurations are shown in |JSON| format.
+- Passwords and secrets are redacted in a very simplistic manner simply
 to prevent visibility in casual viewing.
 `, "|", "`"),
 	Aliases:      []string{"details"},

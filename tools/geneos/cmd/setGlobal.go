@@ -39,6 +39,13 @@ var setGlobalCmd = &cobra.Command{
 	Use:   "global [KEY=VALUE...]",
 	Short: "Set global configuration parameters",
 	Long: strings.ReplaceAll(`
+Set global configuration parameters.
+
+Parameters set using the |geneos set global| command will be written or
+updated in file |/etc/geneos/geneos.json|.  This requires |root| permissions.
+
+**Note**: In case you set a parameter that is not supported, that parameter
+will be written to the |json| configuration file, but will have any effect.
 `, "|", "`"),
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,

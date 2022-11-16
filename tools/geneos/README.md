@@ -1033,7 +1033,7 @@ This directory will be the working directory of the process and also contain an 
 
 There will also be an XML setup file and so on.
 
-## Instance Properties
+## Instance Parameters / Properties
 
 **Note**: This section is incomplete and remains as work-in-progress.
 

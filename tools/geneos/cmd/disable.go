@@ -46,8 +46,14 @@ var disableCmd = &cobra.Command{
 	Use:   "disable [TYPE] [NAME...]",
 	Short: "Stop and disable instances",
 	Long: strings.ReplaceAll(`
-Mark any matching instances as disabled. The instances are also
-stopped.
+Mark any matching instance(s) as disabled.
+In case any of the matching instances is running, it will get stopped.
+
+Disabling an instance will result in a file with extension |.disabled|
+being created in the instance's working directory
+(e.g. for netprobe instance |np_test| with geneos base directory as 
+|/opt/itrs|, file /opt/itrs/netprobe/netprobes/np_test/netprobe.disabled
+will be created).
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
