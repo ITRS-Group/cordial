@@ -128,12 +128,11 @@ func addHost(h *host.Host, sshurl *url.URL) (err error) {
 	}
 
 	if addHostCmdPrompt {
-		if password, err = config.ReadEncodePassword(addHostCmdKeyfile); err != nil {
+		if password, err = config.EncodePasswordPrompt(addHostCmdKeyfile, true); err != nil {
 			return
 		}
 	} else if addHostCmdPassword != "" {
-
-		if password, err = config.EncodePassword([]byte(addHostCmdPassword), addHostCmdKeyfile); err != nil {
+		if password, err = config.EncodeWithKeyfile([]byte(addHostCmdPassword), addHostCmdKeyfile, true); err != nil {
 			return
 		}
 	}
