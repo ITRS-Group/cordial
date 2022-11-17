@@ -63,18 +63,21 @@ var aesNewCmd = &cobra.Command{
 	Use:   "new [flags] [TYPE] [NAME...]",
 	Short: "Create a new key file",
 	Long: strings.ReplaceAll(`
-Create a new key file. Written to STDOUT by default, but can be
-written to a file with the |-k FILE| option.
+Create a new key file.
 
-If the flag |-I| is given then the new key file is imported to the
-shared directories of matching components, using |[CRC32].aes| as the
-file base name. Currently limited to Gateway and Netprobe types,
-including SANs, for use by Toolkit Secure Environment Variables.
+By default, the new key is Written to STDOUT.  You may use option 
+|-k FILE| to write the new key to a file.
 
-Additionally, when using the |-I| flag all matching Gateway instances
-have the keyfile path added to the configuration and any existing
-keyfile path is moved to 'prevkeyfile' to support GA6.x key file
-rolling.
+New keys can be imported into the shared directories of matching components
+(under |<BASE>/<TYPE>/<TYPE>_shared/keyfiles/<aes_filename>) by using 
+otion |-I|.
+Currently limited to component TYPE |gateway|, and |netprobe| & |san| (for 
+use by Toolkit Secure Environment Variables), this is done using |[CRC32].aes|
+as the file base name.
+
+**Note**: When using option |-I|, all matching Gateway instances have the 
+keyfile path added to their configuration and any preexisting keyfile path 
+is moved to 'prevkeyfile' to support GA6.x key file rolling.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

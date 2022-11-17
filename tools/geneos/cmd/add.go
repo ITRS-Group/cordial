@@ -82,7 +82,7 @@ var addCmd = &cobra.Command{
 	Short: "Add a new instance",
 	Long: strings.ReplaceAll(`
 Add a new instance of a component TYPE with the name NAME. The details
-associated with the newly created instance will depends on the TYPE.
+associated with the newly created instance will depend on the TYPE.
 
 Upon creating a new instance, a |JSON| configuration file will be created
 to store the details of the instance.  The file is located at

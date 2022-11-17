@@ -68,7 +68,11 @@ var lsCmd = &cobra.Command{
 	Use:   "ls [flags] [TYPE] [NAME...]",
 	Short: "List instances, optionally in CSV or JSON format",
 	Long: strings.ReplaceAll(`
-List the matching instances and details.
+List the matching instances together with summary details.
+
+**Note(s)**: 
+- If the name is followed by a '*' character, the instance is disabled.
+- If the name is followed by a '+' character, the instance is protected.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
