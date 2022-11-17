@@ -87,11 +87,11 @@ Set options on remote host configurations.
 
 		// check for passwords
 		if setHostCmdPrompt {
-			if password, err = config.ReadEncodePassword(setHostCmdKeyfile); err != nil {
+			if password, err = config.EncodePasswordPrompt(setHostCmdKeyfile, true); err != nil {
 				return
 			}
 		} else if setHostCmdPassword != "" {
-			if password, err = config.EncodePassword([]byte(setHostCmdPassword), setHostCmdKeyfile); err != nil {
+			if password, err = config.EncodeWithKeyfile([]byte(setHostCmdPassword), setHostCmdKeyfile, true); err != nil {
 				return
 			}
 		}
