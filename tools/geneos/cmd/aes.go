@@ -38,7 +38,7 @@ var aesCmd = &cobra.Command{
 	Use:   "aes",
 	Short: "Manage Gateway AES key files",
 	Long: strings.ReplaceAll(`
-Manage Gateway AES key files for password encoding and decoding
+Manage Gateway AES key files for password encoding and decoding.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations:  make(map[string]string),

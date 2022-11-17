@@ -62,13 +62,12 @@ keyfile is imported.
 
 If a TYPE is given then the key is only imported to that component
 type, otherwise the keyfile is imported to all supported components.
-Currently only Gateways and Netprobes (and SANs) are supported.
+Currently only Gateways and Netprobes (including SANs) are supported.
 
 Keyfiles are imported to all configured hosts unless '-H' is used to
 limit to a specific host.
 
-Instance names can be given to indirectly identify the component
-type.
+Instance names can be given to indirectly identify the component type.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

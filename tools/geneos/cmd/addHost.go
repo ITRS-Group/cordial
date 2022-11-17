@@ -55,14 +55,14 @@ The |geneos add host| command is formated as:
 where syntax for |SSHURL| is |ssh://[USER@]HOST[:PORT][/PATH]|
 with:
 - USER being the username to be used on the target host.
-  If USER is not defined, it will default to the current username.
+  If USER is not defined, it defaults to the current username.
 - PORT being the ssh port on the target host.
   In PORT is not defined, it defaults to port 22.
-- PATH is the geneos based directory used on the target host.
+- PATH is the geneos base directory used on the target host.
   If PATH is not defined, it defaults to the local geneos base directory
   path.
 
-**Note**: For details of how the remove commands work, refer to
+**Note**: For details of how the remote commands work, refer to
 [Remote Management](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos#remote-management).
 `, "|", "`"),
 	SilenceUsage: true,
