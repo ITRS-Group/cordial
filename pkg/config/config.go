@@ -754,24 +754,6 @@ func ReadHOCONFile(path string) (cf *Config, err error) {
 	return
 }
 
-func ReadEncodePassword(keyfile string) (encpw string, err error) {
-	var plaintext []byte
-	var match bool
-	for i := 0; i < 3; i++ {
-		plaintext = ReadPasswordPrompt()
-		plaintext2 := ReadPasswordPrompt("Re-enter Password")
-		if bytes.Equal(plaintext, plaintext2) {
-			match = true
-			break
-		}
-		fmt.Println("Passwords do not match. Please try again.")
-	}
-	if !match {
-		return "", fmt.Errorf("too many attempts, giving up")
-	}
-	return EncodePassword(plaintext, keyfile)
-}
-
 func ReadPasswordPrompt(prompt ...string) []byte {
 	if len(prompt) == 0 {
 		fmt.Printf("Password: ")

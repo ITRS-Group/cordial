@@ -8,11 +8,9 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
-	"io/fs"
 	"os"
 	"strings"
 	"unicode/utf8"
@@ -254,15 +252,43 @@ func (a AESValues) DecodeAESString(in string) (out string, err error) {
 	return
 }
 
-func EncodePassword(plaintext []byte, keyfile string) (encpw string, err error) {
-	r, err := os.Open(keyfile)
+// EncodeWithKey encodes the plaintext using the AES key read from the
+// file given. The encoded password is returned in `Geneos AES256`
+// format, with the `+encs+` prefix, unless expandable is set to true in
+// which case it is returned in a format that can be used with the
+// Expand function and includes a reference to the keyfile.
+//
+// If the keyfile is located under the user's configuration directory,
+// as defined by UserConfigDir, then the function will replace any home
+// directory prefix with `~/' to shorten the keyfile path.
+func EncodeWithKeyfile(plaintext []byte, keyfile string, expandable bool) (out string, err error) {
+	a, err := ReadAESValuesFile(keyfile)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			err = fmt.Errorf("cannot open keyfile %q. You may need to create one using `geneos aes new -D`", keyfile)
-		}
 		return "", err
 	}
-	defer r.Close()
+
+	e, err := a.EncodeAESBytes(plaintext)
+	if err != nil {
+		return "", err
+	}
+
+	if expandable {
+		home, _ := os.UserHomeDir()
+		cfdir, _ := UserConfigDir()
+		if strings.HasPrefix(keyfile, cfdir) {
+			keyfile = "~" + strings.TrimPrefix(keyfile, home)
+		}
+		out = fmt.Sprintf("${enc:%s:+encs+%s}", keyfile, e)
+	} else {
+		out = fmt.Sprintf("+encs+%s", e)
+	}
+	return
+}
+
+// EncodeWithKey encodes the plaintext using the AES key read from the
+// io.Reader given. The encoded password is returned in `Geneos AES256`
+// format, with the `+encs+` prefix.
+func EncodeWithKeyReader(plaintext []byte, r io.Reader) (out string, err error) {
 	a, err := ReadAESValues(r)
 	if err != nil {
 		return "", err
@@ -273,10 +299,37 @@ func EncodePassword(plaintext []byte, keyfile string) (encpw string, err error) 
 		return "", err
 	}
 
-	home, _ := os.UserHomeDir()
-	if strings.HasPrefix(keyfile, home) {
-		keyfile = "~" + strings.TrimPrefix(keyfile, home)
-	}
-	encpw = fmt.Sprintf("${enc:%s:+encs+%s}", keyfile, e)
+	out = fmt.Sprintf("+encs+%s", e)
 	return
+}
+
+// EncodeWithKey encodes the plaintext using the AES key in the byte
+// slice given. The encoded password is returned in `Geneos AES256`
+// format, with the `+encs+` prefix.
+func EncodeWithKey(plaintext []byte, key []byte) (out string, err error) {
+	r := bytes.NewReader(key)
+	return EncodeWithKeyReader(plaintext, r)
+}
+
+// EncodePasswordPrompt prompts the user for a password and again to
+// verify, offering up to three attempts until the password match. When
+// the two match the plaintext is encoded using the supplied keyfile. If
+// expandable is true then the encoded password is returned in a format
+// useable by the Expand function and includes a path to the keyfile.
+func EncodePasswordPrompt(keyfile string, expandable bool) (out string, err error) {
+	var plaintext []byte
+	var match bool
+	for i := 0; i < 3; i++ {
+		plaintext = ReadPasswordPrompt()
+		plaintext2 := ReadPasswordPrompt("Re-enter Password")
+		if bytes.Equal(plaintext, plaintext2) {
+			match = true
+			break
+		}
+		fmt.Println("Passwords do not match. Please try again.")
+	}
+	if !match {
+		return "", fmt.Errorf("too many attempts, giving up")
+	}
+	return EncodeWithKeyfile(plaintext, keyfile, expandable)
 }
