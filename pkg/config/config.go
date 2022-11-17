@@ -578,7 +578,6 @@ func LoadConfig(configName string, options ...Options) (c *Config, err error) {
 					return c, fmt.Errorf("error reading config: %w", err)
 				}
 			}
-			log.Debug().Msgf("merging %+v into %+v", d.AllSettings(), c.Viper.AllSettings())
 			if err = c.Viper.MergeConfigMap(d.AllSettings()); err != nil {
 				log.Debug().Err(err).Msgf("merge of %s/%s failed, continuing.", dir, configName)
 			}
