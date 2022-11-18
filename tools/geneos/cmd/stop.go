@@ -46,11 +46,11 @@ var stopCmd = &cobra.Command{
 	Use:   "stop [flags] [TYPE] [NAME...]",
 	Short: "Stop instances",
 	Long: strings.ReplaceAll(`
-Stop one or more matching instances. Unless the -K
-flag is given, a SIGTERM is sent and if the instance is
-still running after a few seconds then a SIGKILL is sent. If the
-|-K| flag is given the instance(s) are immediately terminated with
-a |SIGKILL|.
+Stop one or more matching instances.
+
+If option |-K| is used, instances will be stopped / terminated with a |SIGKILL|.
+Otherwise, a |SIGTERM|iis sent to stop the instances, and if the instance is
+still running after a few seconds then a SIGKILL is sent.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

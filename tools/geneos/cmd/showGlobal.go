@@ -41,8 +41,10 @@ var showGlobalCmd = &cobra.Command{
 	Use:   "global",
 	Short: "A brief description of your command",
 	Long: strings.ReplaceAll(`
-	Show / print the user configuration as found in file 
-	|/etc/geneos/geneos.json|.
+	Show / print the global configuration.
+	This configuration is as found in file |/etc/geneos/geneos.json|.
+
+	**Note**: All configurations are shown in |JSON| format.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

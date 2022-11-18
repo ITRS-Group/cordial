@@ -65,13 +65,13 @@ var aesNewCmd = &cobra.Command{
 	Long: strings.ReplaceAll(`
 Create a new key file.
 
-By default, the new key is Written to STDOUT.  You may use option 
+By default, the new key is written to STDOUT.  You may use option 
 |-k FILE| to write the new key to a file.
 
 New keys can be imported into the shared directories of matching components
-(under |<BASE>/<TYPE>/<TYPE>_shared/keyfiles/<aes_filename>) by using 
-otion |-I|.
-Currently limited to component TYPE |gateway|, and |netprobe| & |san| (for 
+(in directory |<geneos_base_directory>/<TYPE>/<TYPE>_shared/keyfiles|)
+by using option |-I|.
+Currently limited to component TYPE |gateway|, |netprobe| & |san| (for 
 use by Toolkit Secure Environment Variables), this is done using |[CRC32].aes|
 as the file base name.
 

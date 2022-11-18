@@ -54,6 +54,8 @@ delete other template files that may already exist.
 
 Use this command if you get missing template errors using the |add|
 command.
+
+**Note**:  Templates aply to component TYPE |gateway| & |san|.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

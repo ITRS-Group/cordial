@@ -69,13 +69,16 @@ var logsCmd = &cobra.Command{
 	Use:   "logs [flags] [TYPE] [NAME...]",
 	Short: "Show log(s) for instances",
 	Long: strings.ReplaceAll(`
-Show log(s) for instances. The default is to show the last 10 lines
-for each matching instance. If either |-g| or |-v| are given without
-|-f| to follow live logs, then |-c| to search the whole log is
-implied.
+Show log(s) for the matching instances.
+
+By default, only the last 10 lines will be printed for each of the 
+matching instances.
+
+If either option |-g| or option |-v| is used without |-f| to follow 
+live logs, then |-c| to search the whole log is implied.
 	
 When more than one instance matches each output block is prefixed by
-instance details.
+instance details (instance name & log file path).
 `, "|", "`"),
 	Aliases:      []string{"log"},
 	SilenceUsage: true,

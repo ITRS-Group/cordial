@@ -62,16 +62,16 @@ The loaded global or user configurations can be seen using respectively
 If no arguments are provided, the full runtime configuration will be shown.
 This configuration results from environment variables, loading built-in 
 defaults and the global and user configurations.
+It corresponds to files |/etc/geneos/geneos.json| (base / defaults) and
+|~/.config /geneos/geneos.json|.
 
 If a component TYPE and/or instance NAME(s) are given then the
-configuration for the matching those instances is shown.
-This is regardless of the instance using a legacy .rc file or a native JSON
-configuration.
+configuration for the matching instances is shown.
 
 **Note**: 
 - All configurations are shown in |JSON| format.
 - Passwords and secrets are redacted in a very simplistic manner simply
-to prevent visibility in casual viewing.
+  to prevent visibility in casual viewing.
 `, "|", "`"),
 	Aliases:      []string{"details"},
 	SilenceUsage: true,

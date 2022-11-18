@@ -53,21 +53,22 @@ var aesImportCmd = &cobra.Command{
 	Use:   "import [flags] [TYPE] [NAME...]",
 	Short: "Import shared keyfiles for components",
 	Long: strings.ReplaceAll(`
-Import keyfiles to component shared directories.
+Import keyfiles to the shared directory of the matching components.
 
-The argument given with the '-k' flag can be a local file (including
-a prefix of '~/' to represent the home directory), a URL or a dash
-'-' for STDIN. If no '-k' flag is given then the user's default
-keyfile is imported.
+The keyfile to import must be defined using:
+- Option |-k <keyfile_path>|, where <keyfile_path> can be a file path
+  or a URL
+- Option |k -| for the key to be read from STDIN.
+If no keyfiole is defined, the user's defaut keyfile (typically 
+|~/.config/geneos/keyfile.aes|) is imported.
 
-If a TYPE is given then the key is only imported to that component
-type, otherwise the keyfile is imported to all supported components.
-Currently only Gateways and Netprobes (including SANs) are supported.
+If TYPE or NAME is defined, the keyfile is imported only for the 
+corresponding component type.
+Otherwise, the keyfile is imported for all supported components
+(|gateway|, |netprobe| & |san|).
 
-Keyfiles are imported to all configured hosts unless '-H' is used to
-limit to a specific host.
-
-Instance names can be given to indirectly identify the component type.
+By default, keyfiles are imported to all configured hosts.
+To limit the import to a specific host, use option |-H|.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

@@ -56,13 +56,13 @@ layout.
 
 Without any flags the command installs the components in a directory
 called |geneos| under the user's home directory (unless the user's
-home directory ends in |geneos| in which case it uses that directly),
+home directory ends with |geneos|, in which case it uses that directly),
 downloads the latest release archives and creates a Gateway instance
-using the name |Demo| as required for Demo licensing, as Netprobe and
-a Webserver.
+using the name |Demo| as required for Demo licensing.  A Netprobe and
+a Webserver instance are also created.
 
 In almost all cases authentication will be required to download the
-install packages and as this is a new Geneos installation it is
+install packages and, as this is a new Geneos installation, it is
 unlikely that the download credentials are saved in a local config
 file, so use the |-u email@example.com| as appropriate.
 

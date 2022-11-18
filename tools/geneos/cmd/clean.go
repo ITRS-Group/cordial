@@ -55,8 +55,8 @@ directory of the targetted instances and restart the targetted instances.
 configuration file |geneos.json| as |[TYPE]CleanList|.
 Files removed by |geneos clean -F| or |geneos clean --full| are defined
 in the geneos main configuration file |geneos.json| as |[TYPE]PurgeList|.
-Both these lists are formatted as a PathListSeparator (typically a colon) 
-separated list of file globs.
+Both these lists are formatted as a PathListSeparator (typically a colon 
+":") separated list of file globs.
 `, "|", "`"),
 	Example: strings.ReplaceAll(`
 # Delete old logs and config file backups without affecting the running

@@ -54,7 +54,13 @@ var setHostCmd = &cobra.Command{
 	Use:   "host [flags] [NAME...] [KEY=VALUE...]",
 	Short: "Set remote host configuration value",
 	Long: strings.ReplaceAll(`
-Set options on remote host configurations.
+Set parameters in the remote host configurations.
+
+Parameters set using the |geneos set host| command will be written or 
+updated in file |~/.config/geneos/hosts.json|.
+
+**Note**: In case you set a parameter that is not supported, that parameter
+will be written to the |json| configuration file, but will have any effect.
 `, "|", "`"),
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,

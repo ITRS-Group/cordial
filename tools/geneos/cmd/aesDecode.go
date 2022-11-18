@@ -58,17 +58,22 @@ var aesDecodeCmd = &cobra.Command{
 	Long: strings.ReplaceAll(`
 Decode a Geneos-format secure password using the keyfile(s) given.
 
-If no keyfiles are provided then all matching instances are checked
-for configured keyfiles and each one tried or the default keyfile
-paths are tried. An error is only returned if all attempts to decode
-fail. The cipertext may contain the optional prefix |+encs+|. If both
-|-P| and |-s| options are given then the |-P| argument is used. To
-read a ciphertext from STDIN use |-s -|.
+If no keyfile is defined (option |-k|), keyfiles configured in matching
+gateway instances are used.  Should there be mulitple keyfiles, one 
+decoded string will be output for each keyfiles.
 
-If an |expandable| string is given with the |-e| option it must be of
-the form |${enc:...}| (be careful to single-quote this string when
-using a shell) and is then decoded using the keyfile and ciphertext
-in the value. All other flags and arguments are ignored.
+The cyphertext (encoded password) must be defined using:
+- Option |-p <password_to_decode>|
+  In this case, the <password_to_decode> can be prefixed by |+encs+|.
+- Option |-s <password file>|
+  In this case, the password found in <password_file> can be prefixed by
+  |+encs+|.
+- Option |-s -| to read a ciphertext from STDIN
+- Option |-e <expand_string>|
+  The syntax of <expand_string> is |${enc:keyfile:ciphertext}|, where
+  ciphertext must be prefixed by |+encs+|.
+  Be careful to single-quote this string when using a shell.
+  With this option, all other arguments & options will be ignored.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

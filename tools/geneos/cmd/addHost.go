@@ -57,8 +57,8 @@ with:
 - USER being the username to be used on the target host.
   If USER is not defined, it defaults to the current username.
 - PORT being the ssh port on the target host.
-  In PORT is not defined, it defaults to port 22.
-- PATH is the geneos base directory used on the target host.
+  If PORT is not defined, it defaults to port 22.
+- PATH being the geneos base directory used on the target host.
   If PATH is not defined, it defaults to the local geneos base directory
   path.
 

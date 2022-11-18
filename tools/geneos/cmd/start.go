@@ -43,10 +43,12 @@ var startCmd = &cobra.Command{
 	Use:   "start [flags] [TYPE] [NAME...]",
 	Short: "Start instances",
 	Long: strings.ReplaceAll(`
-Start one or more matching instances. All instances are run in
-the background and STDOUT and STDERR are redirected to a |.txt| file
-in the instance directory. You can watch the resulting logs files with the
-|-l| flag.
+Start one or more matching instances. 
+
+All instances are run in the background , with STDOUT and STDERR redirected 
+to a |.txt| file in the instance directory.
+
+You can watch the resulting logs files with option |-l|.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

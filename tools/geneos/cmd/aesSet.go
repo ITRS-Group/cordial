@@ -56,14 +56,17 @@ var aesSetCmd = &cobra.Command{
 	Short: "Set keyfile for instances",
 	Long: strings.ReplaceAll(`
 Set keyfile for matching instances.
-The keyfile must be identifies using either of the following:
-- A path or URL to a keyfile (option |-k|), or a dash |-| to signify STDIN
-  In this case, the the keyfile is saved to the component shared 
-  directories and the configuration set to reference that path.
-- The CRC of a keyfile in the component's shared directory
-(option |-C|)
 
-Unless option |-N| is used, any existing keyfile path is copied to 
+The keyfile must be defined using either of the following:
+- A path or URL to the keyfile (option |-k|), or a dash (option |-k -|) 
+  to signify that the key is read from STDIN.
+  In this case, the the keyfile is saved to the shared directory of the 
+  matching components and the configuration of the matching instances  is 
+  set to reference that path.
+- The CRC of a keyfile in the component's shared directory
+  (option |-C|)
+
+Unless option |-N| is used, any preexisting keyfile path is copied to 
 a 'prevkeyfile' setting to support key file updating in Geneos GA6.x.
 
 **Note**: Currently only Gateways and Netprobes (including SANs) are supported.

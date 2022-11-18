@@ -40,14 +40,16 @@ var copyCmd = &cobra.Command{
 	Aliases: []string{"cp"},
 	Short:   "Copy instances",
 	Long: strings.ReplaceAll(`
-Copy instances. As any existing legacy .rc file is never changed,
-this will migrate the instance from .rc to JSON. The instance is
-stopped and restarted after the instance is moved. It is an error to
-try to copy an instance to one that already exists with the same
-name.
+Copy instances.
 
-If the component support Rebuild then this is run after the move but
-before the restart. This allows SANs to be updated as expected.
+In case the source instance is running, it is not sopped.
+All configurations (|<TYPE>.json| file) from the source instance will be
+replicated in the destination instance with:
+- parameter |home| updated to the home directory of the destimation instance,
+- parameter |name| updated to the name of the destimation instance,
+- parameter |port| updated to an automatically assigned port number.
+  This may be changed using |geneos set|.
+Non essential files such as logs, cache, etc. will not be replicated.
 
 Moving across hosts is supported.
 `, "|", "`"),

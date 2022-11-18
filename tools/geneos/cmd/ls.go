@@ -69,10 +69,13 @@ var lsCmd = &cobra.Command{
 	Short: "List instances, optionally in CSV or JSON format",
 	Long: strings.ReplaceAll(`
 List the matching instances together with summary details.
+Details provided include type, name, host, port, version and home directory.
 
 **Note(s)**: 
 - If the name is followed by a '*' character, the instance is disabled.
 - If the name is followed by a '+' character, the instance is protected.
+- For definition of disabled & protected instances, refer to 
+  [Instance Protection](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos#instance-protection).
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

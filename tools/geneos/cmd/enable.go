@@ -54,8 +54,7 @@ Enabling an instance will result in the file with extension |.disabled|
 in the instance's working directory to be removed.
 
 **Note**: Enabling an instance which is not disabled will do nothing and 
-have no impact.  However enabling an instance which is not disabled using
-option |-S| will start this instance.
+have no impact.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
