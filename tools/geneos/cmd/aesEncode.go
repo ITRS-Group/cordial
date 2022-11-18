@@ -60,12 +60,13 @@ var aesEncodeCmd = &cobra.Command{
 	Use:   "encode [flags] [TYPE] [NAME...]",
 	Short: "Encode a password using a Geneos AES file",
 	Long: strings.ReplaceAll(`
-Encode a password (or any other string) using the keyfile for a
-Geneos Gateway. By default the user is prompted to enter a password
-but can provide a string or URL with the -p option. If TYPE and NAME
-are given then the key files are checked for those instances. If
-multiple instances match then the given password is encoded for each
-keyfile found.
+Encode a password (or any other string) using the keyfile.
+
+If no password (or any other string) is defined (option |-p|), the user
+is prompted to enter a password.
+If TYPE and NAME are defined, the keyfiles defined in the configuration of 
+the matching intances are used for encoding.  Should there be mulitple 
+keyfiles, one encoded string will be output for each keyfile.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

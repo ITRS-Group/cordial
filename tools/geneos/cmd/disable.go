@@ -52,7 +52,7 @@ In case any of the matching instances is running, it will get stopped.
 Disabling an instance will result in a file with extension |.disabled|
 being created in the instance's working directory
 (e.g. for netprobe instance |np_test| with geneos base directory as 
-|/opt/itrs|, file /opt/itrs/netprobe/netprobes/np_test/netprobe.disabled
+|/opt/itrs|, file |/opt/itrs/netprobe/netprobes/np_test/netprobe.disabled|
 will be created).
 `, "|", "`"),
 	SilenceUsage: true,

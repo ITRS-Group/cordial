@@ -86,7 +86,7 @@ associated with the newly created instance will depend on the TYPE.
 
 Upon creating a new instance, a |JSON| configuration file will be created
 to store the details of the instance.  The file is located at
-|<TYPE>/<TYPE>s/<instance_name>/<TYPE>.json|.
+|<geneos_base_directory>/<TYPE>/<TYPE>s/<instance_name>/<TYPE>.json|.
 	
 Gateways and SANs are given a configuration file based on the templates
 configured.

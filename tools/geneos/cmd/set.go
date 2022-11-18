@@ -78,9 +78,6 @@ including:
 The |geneos set| command does not rebuild any configuration files 
 for instances.  Use |geneos rebuild| for this.
 
-The "set" command does not rebuild any configuration files for instances.
-Use "rebuild" to do this.
-
 The parameters of a component instance may vary depending on the
 component TYPE.  For more details on instance parameters, refer to 
 [Instance Parameters / Properties](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos#instance-parameters--properties).

@@ -51,11 +51,12 @@ var restartCmd = &cobra.Command{
 	Use:   "restart [flags] [TYPE] [NAME...]",
 	Short: "Restart instances",
 	Long: strings.ReplaceAll(`
-Restart the matching instances. This is identical to running |geneos
-stop| followed by |geneos start| except if the |-a| flag is given
-then all matching instances are started regardless of whether they
-were stopped by the command. The command also accepts the same flags
-as both start and stop.
+Restart the matching instances.
+
+This is identical to running |geneos stop| followed by |geneos start|.
+If option |-a| is used, all matching instances are started regardless of
+whether they were stopped by the command or not.
+The command also accepts the same options as both start and stop.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

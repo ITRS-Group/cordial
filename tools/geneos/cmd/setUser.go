@@ -42,7 +42,7 @@ var setUserCmd = &cobra.Command{
 Set user configuration parameters.
 
 Parameters set using the |geneos set user| command will be written or
-updated in file |~/.config/geneos.json|.
+updated in file |~/.config/geneos/geneos.json|.
 
 **Note**: In case you set a parameter that is not supported, that parameter
 will be written to the |json| configuration file, but will have any effect.

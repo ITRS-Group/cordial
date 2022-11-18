@@ -61,14 +61,14 @@ Initialise a typical Geneos installation.
 
 This command initialises a Geneos installation by:
 - Creating the directory structure & user configuration file,
-- Installing software ackages for component types |gateway|, |licd|,
+- Installing software packages for component types |gateway|, |licd|,
   |netprobe| & |webserver|,
 - Creating an instance for each component type named after the hostname
   (except for |netprobe| whose instance is named |localhost|)
 - Starting the created instances.
 
 A license file is required and should be given using option |-L|.
-If a license file is not available, then use |-L /dev/null| which will
+If no license file is available, then use |-L /dev/null| which will
 create an empty |geneos.lc| file that can be overwritten later.
 
 Authentication will most-likely be required to download the installation

@@ -41,8 +41,10 @@ var showUserCmd = &cobra.Command{
 	Use:   "user",
 	Short: "A brief description of your command",
 	Long: strings.ReplaceAll(`
-Show / print the user configuration as found in file 
-|~/.config/geneos/geneos.json|.
+Show / print the user configuration.
+This configuration is as found in file |~/.config/geneos/geneos.json|.
+
+**Note**: All configurations are shown in |JSON| format.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

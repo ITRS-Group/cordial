@@ -55,7 +55,8 @@ var lsHostCmd = &cobra.Command{
 	Aliases: []string{"hosts", "remote", "remotes"},
 	Short:   "List hosts, optionally in CSV or JSON format",
 	Long: strings.ReplaceAll(`
-List the matching remote hosts.
+List the matching remote hosts with summary details.
+Details provided include name, username, hostname, port (SSH), home directory.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

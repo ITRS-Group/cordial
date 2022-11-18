@@ -113,34 +113,36 @@ var initCmd = &cobra.Command{
 	Short: "Initialise a Geneos installation",
 	Long: strings.ReplaceAll(`
 Initialise a Geneos installation by creating the directory hierarchy /
-structure and user configuration file, with the USERNAME and DIRECTORY 
+structure and user configuration file, with the USERNAME and DIRECTORY, 
 if supplied.
-- USERNAME refers ti the Linux username under which the |geneos| utility
+
+- USERNAME refers to the Linux username under which the |geneos| utility
   and all Geneos component instances will be run.
+  If underfined, USERNAME defaults to the user running the |geneos init| 
+  command.
 - DIRECTORY refers to the base / home directory under which all Geneos
   binaries, instances and working directories will be hosted.
   When specified in the |geneos init| command, DIRECTORY:
   - Must be defined as an absolute path.
     This syntax is used to distinguish it from USERNAME which is an
     optional parameter.
-	If undefined, |${HOME}/geneos| will be used, or |${HOME}| in case
-	the last component of |${HOME}| is equal to |geneos|.
   - Must have a parent directory that is writable by the user running 
     the |geneos init| command or by the specified USERNAME.
   - Must be a non-existing directory or an empty directory (except for
 	the "dot" files).
-	**Note**:  In case DIRECTORY is an existing directory, you can use option
-	|-F| to force the use of this directory.
+	**Note**:  In case DIRECTORY is an non-empty directory, you can use 
+	option |-F| to force the use of this directory.
+  If underfined, DIRECTORY defaults to |${HOME}/geneos| or |${HOME}| in case
+  the last component of |${HOME}| is equal to |geneos|.
 
 The generic command syntax is as follows.
 | geneos init [flags] [USERNAME] [DIRECTORY] |
 
-When run with superuser privileges a USERNAME must be supplied and
+When run with superuser privileges, a USERNAME must be supplied and
 only the configuration file for that user is created.
 | sudo geneos init geneos /opt/itrs |
 
-**Note**:
-- The geneos directory hierarchy / structure / layout is defined at
+**Note**: The geneos directory hierarchy / structure / layout is defined at
   [Directory Layout](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos#directory-layout).
 `, "|", "`"),
 	Example: strings.ReplaceAll(`

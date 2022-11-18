@@ -40,14 +40,16 @@ var moveCmd = &cobra.Command{
 	Aliases: []string{"mv", "rename"},
 	Short:   "Move (or rename) instances",
 	Long: strings.ReplaceAll(`
-Move (or rename) instances. As any existing legacy .rc
-file is never changed, this will migrate the instance from .rc to
-JSON. The instance is stopped and restarted after the instance is
-moved. It is an error to try to move an instance to one that already
-exists with the same name.
+Move (or rename) an instance. 
+
+Moving an instance will:
+- Stop the source instance,
+- Move / rename the source instance to the destimation instance,
+- Purge (|clean -F|) the destination instance,
+- Restart the destination instance.
 
 If the component support rebuilding a templated configuration then
-this is run after the move but before the restart. This allows SANs
+this is run after the move and before the restart. This allows SANs
 to be updated as expected.
 
 Moving across hosts is fully supported.

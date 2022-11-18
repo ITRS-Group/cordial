@@ -67,7 +67,8 @@ var psCmd = &cobra.Command{
 	Use:   "ps [flags] [TYPE] [NAMES...]",
 	Short: "List process information for instances, optionally in CSV or JSON format",
 	Long: strings.ReplaceAll(`
-Show the status of the matching instances.
+Show the status of the running matching instances.
+Details provided include type, name, host, process id, port, user, group, start time, version and home directory.
 `, "|", "`"),
 	Aliases:      []string{"status"},
 	SilenceUsage: true,

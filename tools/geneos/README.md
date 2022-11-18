@@ -119,6 +119,7 @@ The following commands are available (click on each command for individual docum
 * [`geneos revert`](/docs/tools/geneos/geneos_revert.md) - Revert migration of .rc files from backups
 * [`geneos set`](/docs/tools/geneos/geneos_set.md) - Set instance configuration parameters
   * [`geneos set global`](/docs/tools/geneos/geneos_set_global.md) - Set global configuration parameters
+  * [`geneos set host`](/docs/tools/geneos/geneos_set_host.md) - Set host configuration parameters
   * [`geneos set user`](/docs/tools/geneos/geneos_set_user.md) - Set user configuration parameters
 * [`geneos show`](/docs/tools/geneos/geneos_show.md) - Show runtime, global, user or instance configuration is JSON format
   * [`geneos show global`](/docs/tools/geneos/geneos_show_global.md) - A brief description of your command

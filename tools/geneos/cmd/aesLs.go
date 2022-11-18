@@ -64,10 +64,11 @@ var aesLsCmd = &cobra.Command{
 	Use:   "ls [flags] [TYPE] [NAME...]",
 	Short: "List configured AES key files",
 	Long: strings.ReplaceAll(`
-List configured AES key files.
+List AES keyfiles configured for instances (limited to component TYPE
+|gateway|, |netprobe| and |san|).
 
-The AES key files are associated with instances (|gateway| instances 
-to be precise) and typically carry the |.aes| file extension.
+The AES keyfiles configured for instances typically are found in the 
+shared directory of the component type and carry the |.aes| file extension.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
