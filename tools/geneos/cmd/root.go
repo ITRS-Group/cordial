@@ -135,8 +135,7 @@ For temporary usage:
 `, "|", "`"))
 			}
 		}
-		parseArgs(cmd, args)
-		return
+		return parseArgs(cmd, args)
 	},
 }
 
