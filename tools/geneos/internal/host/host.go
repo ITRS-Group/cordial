@@ -67,7 +67,7 @@ func Geneos() string {
 // interface method set
 
 // Get returns a pointer to Host value. If passed an empty name, returns
-// nil. If passed the special values LOCALHOST or ALL then it will
+// nil. If passed the special values LOCALHOST or ALLHOSTS then it will
 // return the respective special values LOCAL or ALL. Otherwise it tries
 // to lookup an existing host with the given name to return or
 // initialises a new value to return. This may not be an existing host.
@@ -147,6 +147,7 @@ func (h *Host) GetOSReleaseEnv() (err error) {
 	osinfo := make(map[string]string)
 	switch runtime.GOOS {
 	case "windows":
+		// XXX simulate values?
 	default:
 		f, err := h.ReadFile("/etc/os-release")
 		if err != nil {
@@ -299,7 +300,7 @@ func ReadConfig() {
 	// recreate empty
 	hosts = sync.Map{}
 
-	for name, host := range h.GetStringMap("hosts") {
+	for _, host := range h.GetStringMap("hosts") {
 		v := config.New()
 		switch m := host.(type) {
 		case map[string]interface{}:
@@ -308,8 +309,9 @@ func ReadConfig() {
 			log.Debug().Msgf("hosts value not a map[string]interface{} but a %T", host)
 			continue
 		}
-		hosts.Store(name, &Host{v, true, time.Time{}, nil})
+		hosts.Store(v.GetString("name"), &Host{v, true, time.Time{}, nil})
 	}
+	log.Debug().Msgf("loaded hosts: %#v", h.AllSettings())
 }
 
 func WriteConfig() error {
