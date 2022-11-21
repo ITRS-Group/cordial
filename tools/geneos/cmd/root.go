@@ -29,13 +29,13 @@ import (
 	"os/user"
 	"strings"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -62,6 +62,8 @@ type ExtraConfigValues struct {
 }
 
 func init() {
+	cordial.LogInit(pkgname)
+
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/geneos.json, "+geneos.GlobalConfigPath+")")
@@ -167,8 +169,6 @@ func cmdNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	cordial.LogInit(pkgname)
-
 	if quiet {
 		zerolog.SetGlobalLevel(zerolog.Disabled)
 	} else if debug {
@@ -437,7 +437,7 @@ func (i *VarValues) Set(value string) error {
 		"externalConfigFile": "",
 	}
 	if _, ok := validtypes[t]; !ok {
-		log.Error().Msgf("invalid type %q for variable", t)
+		log.Error().Msgf("invalid type %q for variable. valid types are 'string', 'integer', 'double', 'boolean', 'activeTime', 'externalConfigFile'", t)
 		return geneos.ErrInvalidArgs
 	}
 	val := t + ":" + v
