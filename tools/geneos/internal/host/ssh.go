@@ -115,8 +115,22 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 		err = h.failed
 		return
 	}
-	dest := h.GetString("hostname") + ":" + h.GetString("port")
 	user := h.GetString("username")
+	if user == "" {
+		log.Error().Msgf("username not set for remote %s", h)
+		return nil, ErrInvalidArgs
+	}
+	hostname := h.GetString("hostname")
+	port := h.GetString("port")
+	if hostname == "" {
+		log.Error().Msgf("hostname not set for remote %s", h)
+		return nil, ErrInvalidArgs
+	}
+	if port == "" {
+		port = "22"
+	}
+
+	dest := hostname + ":" + port
 	val, ok := sshSessions.Load(user + "@" + dest)
 	if ok {
 		s = val.(*ssh.Client)
