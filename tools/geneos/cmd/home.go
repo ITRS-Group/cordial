@@ -65,6 +65,11 @@ cat $(geneos home gateway example2)/gateway.txt
 			return nil
 		}
 
+		if ct != nil && len(args) == 0 {
+			fmt.Println(host.LOCAL.Filepath(ct))
+			return nil
+		}
+
 		var i []geneos.Instance
 		if len(args) == 0 {
 			i = instance.GetAll(host.LOCAL, ct)
