@@ -30,6 +30,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -133,7 +135,7 @@ in the value. All other flags and arguments are ignored.
 
 func aesDecodeInstance(c geneos.Instance, params []string) (err error) {
 	log.Debug().Msgf("trying to decode for instance %s", c)
-	if c.Type() != &gateway.Gateway {
+	if !(c.Type() == &gateway.Gateway || c.Type() == &netprobe.Netprobe || c.Type() == &san.San) {
 		return
 	}
 	path := instance.Filepath(c, "keyfile")
