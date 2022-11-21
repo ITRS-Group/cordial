@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -26,7 +27,7 @@ import (
 // any args with '=' are treated as parameters
 //
 // a bare argument with a '@' prefix means all instance of type on a host
-func parseArgs(cmd *cobra.Command, rawargs []string) {
+func parseArgs(cmd *cobra.Command, rawargs []string) (err error) {
 	var wild bool
 	var newnames []string
 
@@ -41,7 +42,7 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 	a["params"] = "[]"
 
 	if len(rawargs) == 0 && a["wildcard"] != "true" {
-		return
+		return nil
 	}
 
 	log.Debug().Msgf("rawargs: %s", rawargs)
@@ -70,7 +71,7 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 
 	if a["wildcard"] == "false" {
 		if len(rawargs) == 0 {
-			return
+			return nil
 		}
 		if ct = geneos.ParseComponentName(rawargs[0]); ct == nil {
 			jsonargs, _ := json.Marshal(rawargs)
@@ -125,8 +126,7 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 					log.Debug().Msgf("%s - host not found", arg)
 					// we have tried to match something and it may result in an empty list
 					// so don't re-process
-					wild = true
-					continue
+					return fmt.Errorf("host %q not found", r)
 				}
 
 				log.Debug().Msgf("split %s into: %s %s", arg, local, r.String())
@@ -208,6 +208,7 @@ func parseArgs(cmd *cobra.Command, rawargs []string) {
 	}
 
 	log.Debug().Msgf("ct %s, args %v, params %v", ct, args, params)
+	return
 }
 
 func cmdArgs(cmd *cobra.Command) (ct *geneos.Component, args []string) {
