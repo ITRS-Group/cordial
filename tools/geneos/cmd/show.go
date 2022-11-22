@@ -25,13 +25,13 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 type showCmdConfig struct {
@@ -54,7 +54,7 @@ func init() {
 }
 
 var showCmd = &cobra.Command{
-	Use:   "show",
+	Use:   "show [flags] [TYPE] [NAME...]",
 	Short: "Show runtime, global, user or instance configuration is JSON format",
 	Long: strings.ReplaceAll(`
 Show the runtime or instance configuration. The loaded
@@ -91,13 +91,20 @@ to prevent visibility in casual viewing.
 		}
 
 		ct, args, params := cmdArgsParams(cmd)
-		return instance.ForAll(ct, showInstance, args, params)
+		results, err := instance.ForAllWithResults(ct, showInstance, args, params)
+		if err != nil {
+			if err == os.ErrNotExist {
+				return fmt.Errorf("no matching instance found")
+			}
+			return
+		}
+		b, _ := json.MarshalIndent(results, "", "    ")
+		fmt.Println(string(b))
+		return
 	},
 }
 
-func showInstance(c geneos.Instance, params []string) (err error) {
-	var buffer []byte
-
+func showInstance(c geneos.Instance, params []string) (result interface{}, err error) {
 	// remove aliases
 	nv := config.New()
 	for _, k := range c.Config().AllKeys() {
@@ -120,18 +127,6 @@ func showInstance(c geneos.Instance, params []string) (err error) {
 		Config:    as,
 	}
 
-	switch instance.ConfigFileType() {
-	case "json":
-		if buffer, err = json.MarshalIndent(cf, "", "    "); err != nil {
-			return
-		}
-	case "yaml":
-		if buffer, err = yaml.Marshal(cf); err != nil {
-			return
-		}
-	}
-
-	fmt.Println(string(buffer))
-
+	result = cf
 	return
 }
