@@ -198,7 +198,13 @@ func initConfig() {
 	cf.AutomaticEnv()
 
 	u, _ := user.Current()
-	cf.SetDefault("defaultuser", u.Username)
+	username := u.Username
+	// strip domain in case we are running on windows
+	i := strings.Index(username, "\\")
+	if i != -1 && len(username) >= i {
+		username = username[i+1:]
+	}
+	cf.SetDefault("defaultuser", username)
 
 	// manual alias+remove as the viper.RegisterAlias doesn't work as expected
 	if cf.IsSet("itrshome") {
