@@ -30,6 +30,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -171,10 +172,13 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 	if h.String() != LOCALHOST {
 		s, err := h.Dial()
 		if err != nil {
-			panic(err)
+			return err
 		}
 		serverVersion = string(s.ServerVersion())
 		log.Debug().Msg(serverVersion)
+	} else {
+		home, _ := os.UserHomeDir()
+		h.Set("homedir", home)
 	}
 
 	if strings.Contains(strings.ToLower(serverVersion), "windows") {
@@ -208,6 +212,15 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 				osinfo["BUILD_ID"] = vers[len(vers)-1]
 			}
 		}
+		if h.String() != LOCALHOST {
+			output, err := h.Run(`cmd /c echo %USERPROFILE%`)
+			if err != nil {
+				log.Error().Err(err).Msg("")
+			} else {
+				dir := strings.TrimSpace(string(output))
+				h.Set("homedir", dir)
+			}
+		}
 	} else {
 		h.Set("os", "linux")
 		f, err := h.ReadFile("/etc/os-release")
@@ -231,6 +244,15 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			key, value := s[0], s[1]
 			value = strings.Trim(value, "\"")
 			osinfo[key] = value
+		}
+		if h.String() != LOCALHOST {
+			output, err := h.Run(`pwd`)
+			if err != nil {
+				log.Error().Err(err).Msg("")
+			} else {
+				dir := strings.TrimSpace(string(output))
+				h.Set("homedir", dir)
+			}
 		}
 	}
 	h.Set("osinfo", osinfo)
@@ -402,7 +424,13 @@ func UserHostsFilePath() string {
 	return filepath.Join(userConfDir, UserHostFile)
 }
 
-func (h *Host) Run(cmd string) (output []byte, err error) {
+func (h *Host) Run(name string, args ...string) (output []byte, err error) {
+	// at this point 'h' may not be set to LOCAL, test the name
+	if h.String() == LOCALHOST {
+		// run locally
+		cmd := exec.Command(name, args...)
+		return cmd.Output()
+	}
 	remote, err := h.Dial()
 	if err != nil {
 		return
@@ -411,5 +439,5 @@ func (h *Host) Run(cmd string) (output []byte, err error) {
 	if err != nil {
 		return
 	}
-	return session.Output(cmd)
+	return session.Output(name)
 }
