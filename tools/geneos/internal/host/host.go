@@ -31,7 +31,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -167,10 +166,49 @@ func (h *Host) Path(path string) string {
 
 func (h *Host) SetOSReleaseEnv() (err error) {
 	osinfo := make(map[string]string)
-	switch runtime.GOOS {
-	case "windows":
-		// XXX simulate values?
-	default:
+	var serverVersion string
+	if h.String() != LOCALHOST {
+		s, err := h.Dial()
+		if err != nil {
+			panic(err)
+		}
+		serverVersion = string(s.ServerVersion())
+		log.Debug().Msg(serverVersion)
+	}
+
+	if strings.Contains(strings.ToLower(serverVersion), "windows") {
+		// XXX simulate values? this also applies to "localhost"
+		osinfo["ID"] = "windows"
+		osinfo["OS"] = "windows"
+		output, _ := h.Run("systeminfo")
+		// if err == nil {
+		// 	log.Debug().Msg(string(output))
+		// }
+		l := bufio.NewScanner(bytes.NewBuffer(output))
+		for l.Scan() {
+			line := l.Text()
+			if strings.HasPrefix(line, " ") {
+				continue
+			}
+			s := strings.SplitN(line, ":", 2)
+			if len(s) < 2 {
+				continue
+			}
+			name := strings.TrimSpace(s[0])
+			val := strings.TrimSpace(s[1])
+			switch name {
+			case "OS Name":
+				osinfo["NAME"] = val
+				osinfo["PRETTY_NAME"] = val
+			case "OS Version":
+				osinfo["VERSION"] = val
+				vers := strings.Fields(val)
+				osinfo["VERSION_ID"] = vers[0]
+				osinfo["BUILD_ID"] = vers[len(vers)-1]
+			}
+		}
+	} else {
+		osinfo["OS"] = "linux"
 		f, err := h.ReadFile("/etc/os-release")
 		if err != nil {
 			if f, err = h.ReadFile("/usr/lib/os-release"); err != nil {
@@ -361,4 +399,16 @@ func WriteConfig() error {
 func UserHostsFilePath() string {
 	userConfDir, _ := config.UserConfigDir()
 	return filepath.Join(userConfDir, UserHostFile)
+}
+
+func (h *Host) Run(cmd string) (output []byte, err error) {
+	remote, err := h.Dial()
+	if err != nil {
+		return
+	}
+	session, err := remote.NewSession()
+	if err != nil {
+		return
+	}
+	return session.Output(cmd)
 }

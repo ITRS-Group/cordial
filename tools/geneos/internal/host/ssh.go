@@ -115,8 +115,8 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 		err = h.failed
 		return
 	}
-	user := h.GetString("username")
-	if user == "" {
+	username := h.GetString("username")
+	if username == "" {
 		log.Error().Msgf("username not set for remote %s", h)
 		return nil, ErrInvalidArgs
 	}
@@ -131,20 +131,20 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 	}
 
 	dest := hostname + ":" + port
-	val, ok := sshSessions.Load(user + "@" + dest)
+	val, ok := sshSessions.Load(username + "@" + dest)
 	if ok {
 		s = val.(*ssh.Client)
 	} else {
-		log.Debug().Msgf("ssh connect to %s as %s", dest, user)
-		s, err = sshConnect(dest, user, h.GetByteSlice("password"), strings.Split(h.GetString("sshkeys"), ",")...)
+		log.Debug().Msgf("ssh connect to %s as %s", dest, username)
+		s, err = sshConnect(dest, username, h.GetByteSlice("password"), strings.Split(h.GetString("sshkeys"), ",")...)
 		if err != nil {
 			log.Debug().Err(err).Msg("")
 			h.failed = err
 			h.lastAttempt = time.Now()
 			return
 		}
-		log.Debug().Msgf("host opened %s %s %s", h.GetString("name"), dest, user)
-		sshSessions.Store(user+"@"+dest, s)
+		log.Debug().Msgf("host opened %s %s %s", h.GetString("name"), dest, username)
+		sshSessions.Store(username+"@"+dest, s)
 	}
 	return
 }
