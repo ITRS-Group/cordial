@@ -23,12 +23,15 @@ THE SOFTWARE.
 package host
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -160,6 +163,39 @@ func (h *Host) Path(path string) string {
 		return path
 	}
 	return fmt.Sprintf("%s:%s", h, path)
+}
+
+func (h *Host) SetOSReleaseEnv() (err error) {
+	osinfo := make(map[string]string)
+	switch runtime.GOOS {
+	case "windows":
+		// XXX simulate values?
+	default:
+		f, err := h.ReadFile("/etc/os-release")
+		if err != nil {
+			if f, err = h.ReadFile("/usr/lib/os-release"); err != nil {
+				return fmt.Errorf("cannot open /etc/os-release or /usr/lib/os-release")
+			}
+		}
+
+		releaseFile := bytes.NewBuffer(f)
+		scanner := bufio.NewScanner(releaseFile)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if len(line) == 0 || strings.HasPrefix(line, "#") {
+				continue
+			}
+			s := strings.SplitN(line, "=", 2)
+			if len(s) != 2 {
+				return ErrInvalidArgs
+			}
+			key, value := s[0], s[1]
+			value = strings.Trim(value, "\"")
+			osinfo[key] = value
+		}
+	}
+	h.Set("osinfo", osinfo)
+	return
 }
 
 // Match returns a slice of all matching Hosts. Intended for use in
