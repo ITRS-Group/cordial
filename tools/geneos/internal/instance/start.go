@@ -80,6 +80,8 @@ func Start(c geneos.Instance) (err error) {
 		// with spaces (like "Demo Gateway")
 		//
 		// given this is sent to a shell, we can quote everything blindly ?
+		//
+		// note that cmd.Args hosts the command as Args[0], so no Path required
 		var cmdstr = ""
 		for _, a := range cmd.Args {
 			cmdstr = fmt.Sprintf("%s %q", cmdstr, a)
