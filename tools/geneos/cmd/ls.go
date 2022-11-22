@@ -46,8 +46,6 @@ type lsCmdType struct {
 	Home      string `json:"home,omitempty"`
 }
 
-var lsCmdEntries []lsCmdType
-
 var lsCmdJSON, lsCmdCSV, lsCmdIndent bool
 
 var lsTabWriter *tabwriter.Writer
@@ -78,13 +76,12 @@ List the matching instances and details.
 		ct, args, params := cmdArgsParams(cmd)
 		switch {
 		case lsCmdJSON:
-			lsCmdEntries = []lsCmdType{}
-			err = instance.ForAll(ct, lsInstanceJSON, args, params)
+			results, _ := instance.ForAllWithResults(ct, lsInstanceJSON, args, params)
 			var b []byte
 			if lsCmdIndent {
-				b, _ = json.MarshalIndent(lsCmdEntries, "", "    ")
+				b, _ = json.MarshalIndent(results, "", "    ")
 			} else {
-				b, _ = json.Marshal(lsCmdEntries)
+				b, _ = json.Marshal(results)
 			}
 			fmt.Println(string(b))
 		case lsCmdCSV:
@@ -132,8 +129,8 @@ func lsInstanceCSV(c geneos.Instance, params []string) (err error) {
 	return
 }
 
-func lsInstanceJSON(c geneos.Instance, params []string) (err error) {
+func lsInstanceJSON(c geneos.Instance, params []string) (result interface{}, err error) {
 	base, underlying, _ := instance.Version(c)
-	lsCmdEntries = append(lsCmdEntries, lsCmdType{c.Type().String(), c.Name(), instance.IsDisabled(c), instance.IsProtected(c), c.Host().String(), c.Config().GetInt64("port"), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	result = lsCmdType{c.Type().String(), c.Name(), instance.IsDisabled(c), instance.IsProtected(c), c.Host().String(), c.Config().GetInt64("port"), fmt.Sprintf("%s:%s", base, underlying), c.Home()}
 	return
 }

@@ -41,15 +41,13 @@ var aesLSTabWriter *tabwriter.Writer
 var aesLsCmdCSV, aesLsCmdJSON, aesLsCmdIndent bool
 
 type aesLsCmdType struct {
-	Type    string
-	Name    string
-	Host    string
-	Keyfile string
-	CRC32   string
-	Modtime string
+	Name    string `json:"name,omitempty"`
+	Type    string `json:"type,omitempty"`
+	Host    string `json:"host,omitempty"`
+	Keyfile string `json:"keyfile,omitempty"`
+	CRC32   string `json:"crc32,omitempty"`
+	Modtime string `json:"modtime,omitempty"`
 }
-
-var aesLsCmdEntries []aesLsCmdType
 
 func init() {
 	aesCmd.AddCommand(aesLsCmd)
@@ -75,13 +73,12 @@ List configured AES key files
 
 		switch {
 		case aesLsCmdJSON:
-			aesLsCmdEntries = []aesLsCmdType{}
-			err = instance.ForAll(ct, aesLSInstanceJSON, args, params)
+			results, _ := instance.ForAllWithResults(ct, aesLSInstanceJSON, args, params)
 			var b []byte
 			if aesLsCmdIndent {
-				b, _ = json.MarshalIndent(aesLsCmdEntries, "", "    ")
+				b, _ = json.MarshalIndent(results, "", "    ")
 			} else {
-				b, _ = json.Marshal(aesLsCmdEntries)
+				b, _ = json.Marshal(results)
 			}
 			fmt.Println(string(b))
 		case aesLsCmdCSV:
@@ -153,21 +150,37 @@ func aesLSInstanceCSV(c geneos.Instance, params []string) (err error) {
 	return
 }
 
-func aesLSInstanceJSON(c geneos.Instance, params []string) (err error) {
+func aesLSInstanceJSON(c geneos.Instance, params []string) (result interface{}, err error) {
 	path := instance.Filepath(c, "keyfile")
 	if path == "" {
 		return
 	}
 	s, err := c.Host().Stat(path)
 	if err != nil {
-		aesLsCmdEntries = append(aesLsCmdEntries, aesLsCmdType{c.Type().String(), c.Name(), c.Host().String(), path, "-", "-"})
-		return nil
+		err = nil
+		result = aesLsCmdType{
+			Name:    c.Name(),
+			Type:    c.Type().String(),
+			Host:    c.Host().String(),
+			Keyfile: path,
+			CRC32:   "-",
+			Modtime: "-",
+		}
+		return
 	}
 
 	r, err := c.Host().Open(instance.Filepath(c, "keyfile"))
 	if err != nil {
-		aesLsCmdEntries = append(aesLsCmdEntries, aesLsCmdType{c.Type().String(), c.Name(), c.Host().String(), path, "-", "-"})
-		return nil
+		err = nil
+		result = aesLsCmdType{
+			Name:    c.Name(),
+			Type:    c.Type().String(),
+			Host:    c.Host().String(),
+			Keyfile: path,
+			CRC32:   "-",
+			Modtime: "-",
+		}
+		return
 	}
 	defer r.Close()
 	crc, err := config.Checksum(r)
@@ -175,6 +188,13 @@ func aesLSInstanceJSON(c geneos.Instance, params []string) (err error) {
 		return
 	}
 	crcstr := fmt.Sprintf("%08X", crc)
-	aesLsCmdEntries = append(aesLsCmdEntries, aesLsCmdType{c.Type().String(), c.Name(), c.Host().String(), path, crcstr, s.ModTime().Format(time.RFC3339)})
+	result = aesLsCmdType{
+		Name:    c.Name(),
+		Type:    c.Type().String(),
+		Host:    c.Host().String(),
+		Keyfile: path,
+		CRC32:   crcstr,
+		Modtime: s.ModTime().Format(time.RFC3339),
+	}
 	return
 }
