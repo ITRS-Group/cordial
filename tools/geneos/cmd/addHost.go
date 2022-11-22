@@ -165,7 +165,7 @@ func addHost(h *host.Host, sshurl *url.URL) (err error) {
 	}
 
 	// once we are bootstrapped, read os-release info and re-write config
-	if err = h.GetOSReleaseEnv(); err != nil {
+	if err = h.SetOSReleaseEnv(); err != nil {
 		return
 	}
 
