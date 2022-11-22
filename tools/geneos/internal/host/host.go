@@ -31,6 +31,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -166,7 +167,7 @@ func (h *Host) Path(path string) string {
 
 func (h *Host) SetOSReleaseEnv() (err error) {
 	osinfo := make(map[string]string)
-	var serverVersion string
+	serverVersion := runtime.GOOS
 	if h.String() != LOCALHOST {
 		s, err := h.Dial()
 		if err != nil {
