@@ -117,7 +117,7 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 	}
 	username := h.GetString("username")
 	if username == "" {
-		log.Error().Msgf("username not set for remote %s", h)
+		log.Panic().Msgf("username not set for remote %s", h)
 		return nil, ErrInvalidArgs
 	}
 	hostname := h.GetString("hostname")

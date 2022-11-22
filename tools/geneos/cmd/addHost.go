@@ -25,6 +25,8 @@ package cmd
 import (
 	"fmt"
 	"net/url"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -153,12 +155,6 @@ func addHost(h *host.Host, sshurl *url.URL) (err error) {
 		h.Set("username", sshurl.User.Username())
 	}
 
-	if sshurl.Path != "" {
-		// XXX check and adopt local setting for remote user and/or remote global settings
-		// - only if ssh URL does not contain explicit path
-		h.Set("geneos", sshurl.Path)
-	}
-
 	if _, err := h.Dial(); err != nil {
 		log.Debug().Err(err).Msg("cannot connect to remote host, not adding.")
 		return err
@@ -167,6 +163,24 @@ func addHost(h *host.Host, sshurl *url.URL) (err error) {
 	// once we are bootstrapped, read os-release info and re-write config
 	if err = h.SetOSReleaseEnv(); err != nil {
 		return
+	}
+
+	if sshurl.Path != "" {
+		// XXX check and adopt local setting for remote user and/or remote global settings
+		// - only if ssh URL does not contain explicit path
+		h.Set("geneos", sshurl.Path)
+	} else if runtime.GOOS != h.GetString("os") {
+		homedir := h.GetString("homedir")
+		if filepath.Base(homedir) != "geneos" {
+			homedir = filepath.Join(homedir, "geneos")
+		}
+		switch h.GetString("os") {
+		case "windows":
+			homedir = filepath.FromSlash(homedir)
+		case "linux":
+			homedir = filepath.ToSlash(homedir)
+		}
+		h.Set("geneos", homedir)
 	}
 
 	host.Add(h)
