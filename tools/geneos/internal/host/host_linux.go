@@ -23,21 +23,42 @@ THE SOFTWARE.
 package host
 
 import (
-	"github.com/Microsoft/go-winio"
-	"github.com/rs/zerolog/log"
-	"golang.org/x/crypto/ssh/agent"
+	"bufio"
+	"bytes"
+	"fmt"
+	"runtime"
+	"strings"
 )
 
-func sshConnectAgent() (agentClient agent.ExtendedAgent) {
-	socket := `\\.\pipe\openssh-ssh-agent`
-	if socket != "" {
-		log.Debug().Msgf("connecting to agent on %s", socket)
-		sshAgent, err := winio.DialPipe(socket, nil)
+func (h *Host) SetOSReleaseEnv() (err error) {
+	osinfo := make(map[string]string)
+	switch runtime.GOOS {
+	case "windows":
+		// XXX simulate values?
+	default:
+		f, err := h.ReadFile("/etc/os-release")
 		if err != nil {
-			log.Error().Msgf("Failed to connect to ssh agent: %v", err)
-		} else {
-			agentClient = agent.NewClient(sshAgent)
+			if f, err = h.ReadFile("/usr/lib/os-release"); err != nil {
+				return fmt.Errorf("cannot open /etc/os-release or /usr/lib/os-release")
+			}
+		}
+
+		releaseFile := bytes.NewBuffer(f)
+		scanner := bufio.NewScanner(releaseFile)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if len(line) == 0 || strings.HasPrefix(line, "#") {
+				continue
+			}
+			s := strings.SplitN(line, "=", 2)
+			if len(s) != 2 {
+				return ErrInvalidArgs
+			}
+			key, value := s[0], s[1]
+			value = strings.Trim(value, "\"")
+			osinfo[key] = value
 		}
 	}
+	h.Set("osinfo", osinfo)
 	return
 }
