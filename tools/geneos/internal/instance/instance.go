@@ -427,9 +427,9 @@ func Version(c geneos.Instance) (base string, underlying string, err error) {
 	return
 }
 
-// given a component type and a slice of args, call the function for each arg
-//
-// try to use go routines here - mutexes required
+// ForAll calls the supplied function for each matching instance. It
+// prints any returned error on STDOUT and the only error returned is
+// os.ErrNotExist if there are no matching instances.
 func ForAll(ct *geneos.Component, fn func(geneos.Instance, []string) error, args []string, params []string) (err error) {
 	n := 0
 	log.Debug().Msgf("args %v, params %v", args, params)
@@ -456,6 +456,42 @@ func ForAll(ct *geneos.Component, fn func(geneos.Instance, []string) error, args
 		return os.ErrNotExist
 	}
 	return nil
+}
+
+// ForAllWithResults calls the given function for each matching instance
+// and gather the return values into a slice of interfaces for handling
+// upstream. Errors are printed on STDOUT for each call and the only
+// error returned ErrNotExist if there are no matches.
+func ForAllWithResults(ct *geneos.Component, fn func(geneos.Instance, []string) (interface{}, error), args []string, params []string) (results []interface{}, err error) {
+	n := 0
+	log.Debug().Msgf("args %v, params %v", args, params)
+	// if args is empty, get all matching instances. this allows internal
+	// calls with an empty arg list without having to do the parseArgs()
+	// dance
+	if len(args) == 0 {
+		args = AllNames(host.ALL, ct)
+	}
+	for _, name := range args {
+		var res interface{}
+		cs := MatchAll(ct, name)
+		if len(cs) == 0 {
+			log.Debug().Msgf("no match for %s", name)
+			continue
+		}
+		n++
+		for _, c := range cs {
+			if res, err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
+				fmt.Printf("%s: %s\n", c, err)
+			}
+			if res != nil {
+				results = append(results, res)
+			}
+		}
+	}
+	if n == 0 {
+		return nil, os.ErrNotExist
+	}
+	return results, nil
 }
 
 // Return a slice of all instance names for a given component. No
