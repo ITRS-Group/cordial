@@ -179,8 +179,8 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 
 	if strings.Contains(strings.ToLower(serverVersion), "windows") {
 		// XXX simulate values? this also applies to "localhost"
+		h.Set("os", "windows")
 		osinfo["ID"] = "windows"
-		osinfo["OS"] = "windows"
 		output, _ := h.Run("systeminfo")
 		// if err == nil {
 		// 	log.Debug().Msg(string(output))
@@ -209,7 +209,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			}
 		}
 	} else {
-		osinfo["OS"] = "linux"
+		h.Set("os", "linux")
 		f, err := h.ReadFile("/etc/os-release")
 		if err != nil {
 			if f, err = h.ReadFile("/usr/lib/os-release"); err != nil {
