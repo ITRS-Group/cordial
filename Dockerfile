@@ -39,8 +39,17 @@ ADD https://go.dev/dl/go1.19.3.${BUILDOS}-${BUILDARCH}.tar.gz /tmp/
 RUN tar -C /usr/local -xzf /tmp/go1.19.3.${BUILDOS}-${BUILDARCH}.tar.gz
 ENV PATH=$PATH:/usr/local/go/bin
 COPY ./ /app/cordial
+WORKDIR /app/cordial/tools/geneos
 WORKDIR /app/cordial/libraries/libemail
 RUN make
+
+FROM node AS build-docs
+LABEL stage=cordial-build
+COPY ./ /app/cordial
+WORKDIR /app/cordial/tools/geneos
+RUN apt update && apt install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2
+RUN npm install --global mdpdf
+RUN mdpdf README.md
 
 FROM alpine AS cordial-build
 LABEL stage=cordial-build
@@ -49,6 +58,7 @@ WORKDIR /app/cordial
 COPY --from=build /app/cordial/VERSION /
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
 COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/bin/
+COPY --from=build-docs /app/cordial/tools/geneos/README.* /cordial/doc/
 COPY --from=build /app/cordial/integrations/servicenow/servicenow /app/cordial/integrations/servicenow/ticket.sh /app/cordial/integrations/pagerduty/pagerduty /cordial/bin/
 COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /app/cordial/integrations/pagerduty/cmd/pagerduty.defaults.yaml /cordial/etc/geneos/
 COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /cordial/lib/
