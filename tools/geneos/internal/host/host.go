@@ -218,6 +218,8 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 				log.Error().Err(err).Msg("")
 			} else {
 				dir := strings.TrimSpace(string(output))
+				// tmp fix for ssh to windows
+				dir = strings.Trim(dir, `"`)
 				h.Set("homedir", dir)
 			}
 		}
