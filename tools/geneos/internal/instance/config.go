@@ -308,7 +308,8 @@ func WriteConfig(c geneos.Instance) (err error) {
 func writeConfig(c geneos.Instance) (err error) {
 	file := ComponentFilepath(c)
 	if err = c.Host().MkdirAll(utils.Dir(file), 0775); err != nil {
-		log.Error().Err(err).Msg("")
+		log.Debug().Err(err).Msg("")
+		return
 	}
 	if utils.IsSuperuser() {
 		uid, gid, _, _ := utils.GetIDs("")
@@ -325,7 +326,8 @@ func writeConfig(c geneos.Instance) (err error) {
 	if c.Host() != host.LOCAL {
 		client, err := c.Host().DialSFTP()
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			log.Debug().Err(err).Msg("")
+			return err
 		}
 		nv.SetFs(sftpfs.New(client))
 	}
@@ -362,7 +364,8 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 	if c.Host() != host.LOCAL {
 		client, err := c.Host().DialSFTP()
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			log.Debug().Err(err).Msg("")
+			return err
 		}
 		nv.SetFs(sftpfs.New(client))
 	}
