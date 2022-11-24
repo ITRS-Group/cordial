@@ -46,10 +46,17 @@ RUN make
 FROM node AS build-docs
 LABEL stage=cordial-build
 COPY ./ /app/cordial
-WORKDIR /app/cordial/tools/geneos
+WORKDIR /app/cordial/doc-output
 RUN apt update && apt install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2
 RUN npm install --global mdpdf
-RUN mdpdf README.md
+RUN mdpdf --border=15mm /app/cordial/tools/geneos/README.md geneos.pdf
+COPY ./tools/geneos/README.md geneos.md
+RUN mdpdf --border=15mm /app/cordial/integrations/servicenow/README.md servicenow.pdf
+COPY ./integrations/servicenow/README.md servicenow.md
+RUN mdpdf --border=15mm /app/cordial/integrations/pagerduty/README.md pagerduty.pdf
+COPY ./integrations/pagerduty/README.md pagerduty.md
+RUN mdpdf --border=15mm /app/cordial/libraries/libemail/README.md libemail.pdf
+COPY ./libraries/libemail/README.md libemail.md
 
 FROM alpine AS cordial-build
 LABEL stage=cordial-build
@@ -58,7 +65,7 @@ WORKDIR /app/cordial
 COPY --from=build /app/cordial/VERSION /
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
 COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/bin/
-COPY --from=build-docs /app/cordial/tools/geneos/README.* /cordial/doc/
+COPY --from=build-docs /app/cordial/doc-output /cordial/docs
 COPY --from=build /app/cordial/integrations/servicenow/servicenow /app/cordial/integrations/servicenow/ticket.sh /app/cordial/integrations/pagerduty/pagerduty /cordial/bin/
 COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /app/cordial/integrations/pagerduty/cmd/pagerduty.defaults.yaml /cordial/etc/geneos/
 COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /cordial/lib/
