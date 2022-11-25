@@ -40,9 +40,11 @@ import (
 
 // ExpandString returns the input with all occurrences of the form
 // ${name} replaced using an [os.Expand]-like function (but without
-// support for bare names) for the formats (in the order of priority)
-// below. It operates on the global config instance, referencing any
-// other configuration values in the global package context.
+// support for bare names) for the built-in and optional formats (in the
+// order of priority) below. The caller can use options to define
+// additional expansion functions based on a "prefix:", disabled
+// external lookups and also to pass in lookup tables referred to as
+// value maps.
 //
 //	${enc:keyfile[|keyfile...]:encodedvalue}
 //
@@ -94,6 +96,9 @@ import (
 //	   "name" will be substituted with the contents of the environment
 //	   variable of the same name.
 //
+//	 The prefixes below are optional and enabled by default. They can be
+//	 disabled using the option [config.NoExternalLookups]
+//
 //	 ${~/file} or ${/path/to/file} or ${file://path/to/file} or ${file:~/path/to/file}
 //
 //	   The contents of the referenced file will be read. Multiline files
@@ -114,6 +119,9 @@ import (
 //	   local files above. The URL is passed to [http.Get] and supports
 //	   proxies, embedded Basic Authentication and other features from
 //	   that function.
+//
+// Additional custom lookup prefixes can be added with the [config.ExpandFunc]
+// option.
 //
 // The bare form "$name" is NOT supported, unlike [os.Expand] as this
 // can unexpectedly match values containing valid literal dollar signs.
@@ -206,6 +214,7 @@ func (c *Config) ExpandAllSettings(options ...ExpandOptions) (all map[string]int
 }
 
 func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value string) {
+	s = strings.TrimPrefix(s, "enc:")
 	p := strings.SplitN(s, ":", 2)
 	if len(p) != 2 {
 		return ""
@@ -274,9 +283,17 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 func (c *Config) expandString(s string, options ...ExpandOptions) (value string) {
 	opts := evalExpandOptions(options...)
 	switch {
+	case strings.HasPrefix(s, "~/"), strings.HasPrefix(s, "/"):
+		// check if defaults disabled
+		if _, ok := opts.funcMaps["file"]; ok {
+			return fetchFile(s)
+		}
+		return ""
 	case strings.HasPrefix(s, "config:"):
 		fallthrough
 	case !strings.Contains(s, ":"):
+		// note fallthrough from above, hence the check for prefix with
+		// a "config:" in it.
 		if strings.HasPrefix(s, "config:") || strings.Contains(s, ".") {
 			s = strings.TrimPrefix(s, "config:")
 			// this call to GetString() must NOT be recursive
@@ -284,10 +301,10 @@ func (c *Config) expandString(s string, options ...ExpandOptions) (value string)
 		}
 		// only lookup env if there are no values maps, NOT if lookups
 		// fail in any given maps
-		if len(opts.valueMaps) == 0 {
+		if len(opts.lookupTables) == 0 {
 			return strings.TrimSpace(mapEnv(s))
 		}
-		for _, v := range opts.valueMaps {
+		for _, v := range opts.lookupTables {
 			if n, ok := v[s]; ok {
 				return strings.TrimSpace(n)
 			}
@@ -295,31 +312,44 @@ func (c *Config) expandString(s string, options ...ExpandOptions) (value string)
 		return ""
 	case strings.HasPrefix(s, "env:"):
 		return strings.TrimSpace(mapEnv(strings.TrimPrefix(s, "env:")))
-	case strings.HasPrefix(s, "~/"), strings.HasPrefix(s, "/"), strings.HasPrefix(s, "file:"):
-		path := strings.TrimPrefix(s, "file:")
-		if strings.HasPrefix(path, "~/") {
-			home, _ := os.UserHomeDir()
-			path = strings.Replace(path, "~", home, 1)
+	default:
+		// check for any registered functions and call that with the
+		// whole of the config string. there must be a ":" here, else
+		// the above test would have picked it up. it is up to the
+		// function called to trim whitespace, if required.
+		f := strings.SplitN(s, ":", 2)
+		if fn, ok := opts.funcMaps[f[0]]; ok {
+			return fn(s)
 		}
-		b, err := os.ReadFile(path)
-		if err != nil {
-			return
-		}
-		return strings.TrimSpace(string(b))
-	case strings.HasPrefix(s, "http:"), strings.HasPrefix(s, "https:"):
-		resp, err := http.Get(s)
-		if err != nil {
-			return
-		}
-		defer resp.Body.Close()
-		b, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return
-		}
-		return strings.TrimSpace(string(b))
 	}
 
 	return
+}
+
+func fetchURL(url string) string {
+	resp, err := http.Get(url)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(b))
+}
+
+func fetchFile(path string) string {
+	path = strings.TrimPrefix(path, "file:")
+	if strings.HasPrefix(path, "~/") {
+		home, _ := os.UserHomeDir()
+		path = strings.Replace(path, "~", home, 1)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(b))
 }
 
 // mapEnv is for special case mappings of environment variables across
