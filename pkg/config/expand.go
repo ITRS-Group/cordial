@@ -319,6 +319,9 @@ func (c *Config) expandString(s string, options ...ExpandOptions) (value string)
 		// function called to trim whitespace, if required.
 		f := strings.SplitN(s, ":", 2)
 		if fn, ok := opts.funcMaps[f[0]]; ok {
+			if opts.trimPrefix {
+				return fn(f[1])
+			}
 			return fn(s)
 		}
 	}

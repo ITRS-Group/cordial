@@ -26,6 +26,7 @@ type expandOptions struct {
 	lookupTables      []map[string]string
 	funcMaps          map[string]func(string) string
 	noDefaultFuncMaps bool
+	trimPrefix        bool
 }
 
 type ExpandOptions func(*expandOptions)
@@ -78,5 +79,17 @@ func ExpandPrefixed(prefix string, fn func(string) string) ExpandOptions {
 func NoExternalLookups() ExpandOptions {
 	return func(e *expandOptions) {
 		e.noDefaultFuncMaps = true
+	}
+}
+
+// TrimPrefix enables the removal of the prefix from the string passed
+// to expansion functions. If this is not set then URLs can be passed
+// as-is since the prefix is part of the URL. If set then URLs would
+// need the schema explicitly added after the prefix. Using this option
+// allows standard function like [strings.ToUpper] to be used without
+// additional wrappers.
+func TrimPrefix() ExpandOptions {
+	return func(e *expandOptions) {
+		e.trimPrefix = true
 	}
 }
