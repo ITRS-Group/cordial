@@ -62,29 +62,29 @@ func init() {
 
 // GetString functions like [viper.GetString] but additionally calls
 // [ExpandString] with the configuration value, passing any "values" maps
-func GetString(s string, values ...map[string]string) string {
-	return global.GetString(s, values...)
+func GetString(s string, options ...ExpandOptions) string {
+	return global.GetString(s, options...)
 }
 
 // GetString functions like [viper.GetString] on a Config instance, but
 // additionally calls [ExpandString] with the configuration value, passing
 // any "values" maps
-func (c *Config) GetString(s string, values ...map[string]string) string {
-	return c.ExpandString(c.Viper.GetString(s), values...)
+func (c *Config) GetString(s string, options ...ExpandOptions) string {
+	return c.ExpandString(c.Viper.GetString(s), options...)
 }
 
 // GetByteSlice functions like [viper.GetString] but additionally calls
 // [Expand] with the configuration value, passing any "values" maps and
 // returning a byte slice
-func GetByteSlice(s string, values ...map[string]string) []byte {
-	return global.GetByteSlice(s, values...)
+func GetByteSlice(s string, options ...ExpandOptions) []byte {
+	return global.GetByteSlice(s, options...)
 }
 
 // GetByteSlice functions like [viper.GetString] on a Config instance, but
 // additionally calls [Expand] with the configuration value, passing
 // any "values" maps and returning a byte slice
-func (c *Config) GetByteSlice(s string, values ...map[string]string) []byte {
-	return c.Expand(c.Viper.GetString(s), values...)
+func (c *Config) GetByteSlice(s string, options ...ExpandOptions) []byte {
+	return c.Expand(c.Viper.GetString(s), options...)
 }
 
 // GetConfig returns the global Config instance
@@ -104,35 +104,35 @@ func (c *Config) Sub(key string) *Config {
 
 // GetStringSlice functions like [viper.GetStringSlice] but additionally calls
 // [ExpandString] on each element of the slice, passing any "values" maps
-func GetStringSlice(s string, values ...map[string]string) []string {
-	return global.GetStringSlice(s, values...)
+func GetStringSlice(s string, options ...ExpandOptions) []string {
+	return global.GetStringSlice(s, options...)
 }
 
 // GetStringSlice functions like [viper.GetStringSlice] on a Config
 // instance but additionally calls [ExpandString] on each element of the
 // slice, passing any "values" maps
-func (c *Config) GetStringSlice(s string, values ...map[string]string) (slice []string) {
+func (c *Config) GetStringSlice(s string, options ...ExpandOptions) (slice []string) {
 	r := c.Viper.GetStringSlice(s)
 	for _, n := range r {
-		slice = append(slice, c.ExpandString(n, values...))
+		slice = append(slice, c.ExpandString(n, options...))
 	}
 	return
 }
 
 // GetStringMapString functions like [viper.GetStringMapString] but additionally calls
 // [ExpandString] on each value element of the map, passing any "values" maps
-func GetStringMapString(s string, values ...map[string]string) map[string]string {
-	return global.GetStringMapString(s, values...)
+func GetStringMapString(s string, options ...ExpandOptions) map[string]string {
+	return global.GetStringMapString(s, options...)
 }
 
 // GetStringMapString functions like [viper.GetStringMapString] on a
 // Config instance but additionally calls [ExpandString] on each value
 // element of the map, passing any "values" maps
-func (c *Config) GetStringMapString(s string, values ...map[string]string) (m map[string]string) {
+func (c *Config) GetStringMapString(s string, options ...ExpandOptions) (m map[string]string) {
 	m = make(map[string]string)
 	r := c.Viper.GetStringMapString(s)
 	for k, v := range r {
-		m[k] = c.ExpandString(v, values...)
+		m[k] = c.ExpandString(v, options...)
 	}
 	return m
 }
