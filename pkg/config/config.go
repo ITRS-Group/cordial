@@ -339,6 +339,7 @@ func expand(s string, mapping func(string) string) string {
 	return string(buf) + s[i:]
 }
 
+// as above but for byte slices directly
 func expandBytes(s []byte, mapping func([]byte) []byte) []byte {
 	var buf []byte
 	// ${} is all ASCII, so bytes are fine for this operation.
