@@ -143,18 +143,18 @@ import (
 //
 // In the above a reference to ${config.real} will return the literal
 // string ${unchanged} as there is no recursive lookups.
-func ExpandString(input string, values ...map[string]string) (value string) {
-	return global.ExpandString(input, values...)
+func ExpandString(input string, options ...ExpandOptions) (value string) {
+	return global.ExpandString(input, options...)
 }
 
 // ExpandString works just like the package level [ExpandString] but on
 // a specific config instance.
-func (c *Config) ExpandString(input string, values ...map[string]string) (value string) {
+func (c *Config) ExpandString(input string, options ...ExpandOptions) (value string) {
 	value = expand(input, func(s string) (r string) {
 		if strings.HasPrefix(s, "enc:") {
-			return c.expandEncodedString(s[4:], values...)
+			return c.expandEncodedString(s[4:], options...)
 		}
-		return c.expandString(s, values...)
+		return c.expandString(s, options...)
 	})
 	return
 }
@@ -163,18 +163,18 @@ func (c *Config) ExpandString(input string, values ...map[string]string) (value 
 //
 // This should be used where the return value may contain sensitive data
 // and an immutable string cannot be destroyed after use.
-func Expand(input string, values ...map[string]string) (value []byte) {
-	return global.Expand(input, values...)
+func Expand(input string, options ...ExpandOptions) (value []byte) {
+	return global.Expand(input, options...)
 }
 
 // Expand behaves like the [ExpandString] method but returns a byte
 // slice.
-func (c *Config) Expand(input string, values ...map[string]string) (value []byte) {
+func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
 	value = expandBytes([]byte(input), func(s []byte) (r []byte) {
 		if bytes.HasPrefix(s, []byte("enc:")) {
-			return c.expandEncodedBytes(s[4:], values...)
+			return c.expandEncodedBytes(s[4:], options...)
 		}
-		return []byte(c.expandString(string(s), values...))
+		return []byte(c.expandString(string(s), options...))
 	})
 	return
 }
@@ -183,18 +183,18 @@ func (c *Config) Expand(input string, values ...map[string]string) (value []byte
 // ExpandString() to all string values and all string slice values.
 // "values" maps are passed to ExpandString as-is. Further types may be
 // added over time.
-func (c *Config) ExpandAllSettings(values ...map[string]string) (all map[string]interface{}) {
+func (c *Config) ExpandAllSettings(options ...ExpandOptions) (all map[string]interface{}) {
 	as := c.AllSettings()
 	all = make(map[string]interface{}, len(as))
 
 	for k, v := range as {
 		switch ev := v.(type) {
 		case string:
-			all[k] = c.ExpandString(ev, values...)
+			all[k] = c.ExpandString(ev, options...)
 		case []string:
 			ns := []string{}
 			for _, s := range ev {
-				ns = append(ns, c.ExpandString(s, values...))
+				ns = append(ns, c.ExpandString(s, options...))
 			}
 			all[k] = ns
 		default:
@@ -205,7 +205,7 @@ func (c *Config) ExpandAllSettings(values ...map[string]string) (all map[string]
 
 }
 
-func (c *Config) expandEncodedString(s string, values ...map[string]string) (value string) {
+func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value string) {
 	p := strings.SplitN(s, ":", 2)
 	if len(p) != 2 {
 		return ""
@@ -213,7 +213,7 @@ func (c *Config) expandEncodedString(s string, values ...map[string]string) (val
 	keyfiles, encodedValue := p[0], p[1]
 
 	if !strings.HasPrefix(encodedValue, "+encs+") {
-		encodedValue = c.expandString(encodedValue, values...)
+		encodedValue = c.expandString(encodedValue, options...)
 	}
 	if encodedValue == "" {
 		return
@@ -238,7 +238,7 @@ func (c *Config) expandEncodedString(s string, values ...map[string]string) (val
 	return ""
 }
 
-func (c *Config) expandEncodedBytes(s []byte, values ...map[string]string) (value []byte) {
+func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value []byte) {
 	p := bytes.SplitN(s, []byte(":"), 2)
 	if len(p) != 2 {
 		return
@@ -246,7 +246,7 @@ func (c *Config) expandEncodedBytes(s []byte, values ...map[string]string) (valu
 	keyfiles, encodedValue := p[0], p[1]
 
 	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
-		encodedValue = []byte(c.expandString(string(encodedValue), values...))
+		encodedValue = []byte(c.expandString(string(encodedValue), options...))
 	}
 	if len(encodedValue) == 0 {
 		return
@@ -271,7 +271,8 @@ func (c *Config) expandEncodedBytes(s []byte, values ...map[string]string) (valu
 	return
 }
 
-func (c *Config) expandString(s string, values ...map[string]string) (value string) {
+func (c *Config) expandString(s string, options ...ExpandOptions) (value string) {
+	opts := evalExpandOptions(options...)
 	switch {
 	case strings.HasPrefix(s, "config:"):
 		fallthrough
@@ -283,10 +284,10 @@ func (c *Config) expandString(s string, values ...map[string]string) (value stri
 		}
 		// only lookup env if there are no values maps, NOT if lookups
 		// fail in any given maps
-		if len(values) == 0 {
+		if len(opts.valueMaps) == 0 {
 			return strings.TrimSpace(mapEnv(s))
 		}
-		for _, v := range values {
+		for _, v := range opts.valueMaps {
 			if n, ok := v[s]; ok {
 				return strings.TrimSpace(n)
 			}
