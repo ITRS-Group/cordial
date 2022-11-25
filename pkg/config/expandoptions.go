@@ -37,6 +37,7 @@ func evalExpandOptions(options ...ExpandOptions) (e *expandOptions) {
 		"https": fetchURL,
 		"file":  fetchFile,
 	}
+	e.funcMaps = map[string]func(string) string{}
 	for _, opt := range options {
 		opt(e)
 	}
