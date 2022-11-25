@@ -61,11 +61,13 @@ func LookupTable(values map[string]string) ExpandOptions {
 	}
 }
 
-// ExpandFunc defines a custom prefix to function mapping for expansion.
-// If the configuration prefix matches the one set then the function is
-// called with the contents of the expansion including the prefix (for
-// URLs) but stripped of the opening `${` and the closing `}`
-func ExpandFunc(prefix string, fn func(string) string) ExpandOptions {
+// ExpandPrefixed defines a custom mapping for the given prefix to an
+// expand-like function. The prefix should not include the terminating
+// ":". If the configuration prefix matches during expansion then the
+// function is called with the contents of the expansion including the
+// prefix (for URLs) but stripped of the opening `${` and the closing
+// `}`
+func ExpandPrefixed(prefix string, fn func(string) string) ExpandOptions {
 	return func(e *expandOptions) {
 		e.funcMaps[prefix] = fn
 	}
