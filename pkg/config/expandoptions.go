@@ -23,21 +23,57 @@ THE SOFTWARE.
 package config
 
 type expandOptions struct {
-	valueMaps []map[string]string
+	lookupTables      []map[string]string
+	funcMaps          map[string]func(string) string
+	noDefaultFuncMaps bool
 }
 
 type ExpandOptions func(*expandOptions)
 
 func evalExpandOptions(options ...ExpandOptions) (e *expandOptions) {
 	e = &expandOptions{}
+	defaultFuncMaps := map[string]func(string) string{
+		"http":  fetchURL,
+		"https": fetchURL,
+		"file":  fetchFile,
+	}
 	for _, opt := range options {
 		opt(e)
+	}
+	if !e.noDefaultFuncMaps {
+		for k, v := range e.funcMaps {
+			defaultFuncMaps[k] = v
+		}
+		e.funcMaps = defaultFuncMaps
 	}
 	return
 }
 
-func Values(values map[string]string) ExpandOptions {
+// LookupTable adds a lookup map to the Expand functions. When string
+// expansion is done to an plain word, e.g. `${item}`, then item is
+// checked in any tables passed, in order defined and first match wins,
+// to the function. If there are no maps defined then `item` is looked
+// up as an environment variable.
+func LookupTable(values map[string]string) ExpandOptions {
 	return func(e *expandOptions) {
-		e.valueMaps = append(e.valueMaps, values)
+		e.lookupTables = append(e.lookupTables, values)
+	}
+}
+
+// ExpandFunc defines a custom prefix to function mapping for expansion.
+// If the configuration prefix matches the one set then the function is
+// called with the contents of the expansion including the prefix (for
+// URLs) but stripped of the opening `${` and the closing `}`
+func ExpandFunc(prefix string, fn func(string) string) ExpandOptions {
+	return func(e *expandOptions) {
+		e.funcMaps[prefix] = fn
+	}
+}
+
+// NoExternalLookups disables the built-in expansion options that fetch
+// data from outside the program, such as URLs and file paths.
+func NoExternalLookups() ExpandOptions {
+	return func(e *expandOptions) {
+		e.noDefaultFuncMaps = true
 	}
 }
