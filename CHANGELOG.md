@@ -1,6 +1,6 @@
 # Change Log
 
-## Version v1.4.0-beta - 2022/11/24
+## Version v1.4.1-beta - 2022/11/25
 
 * Fixes
 
@@ -21,6 +21,7 @@
 
 * Changes
 
+  * pkg/config: API change: Add options to the config expansion functions rather than just lookup maps
   * tools/geneos: add SSH password support for remote hosts
   * tools/geneos: support embedded SSH passwords in hosts config, using new 'set host' sub-command
   * tools/geneos: support additional SSH private key files per host via 'set host sshkeys=X,Y' sub-command
