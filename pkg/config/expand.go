@@ -371,3 +371,111 @@ func mapEnv(e string) (s string) {
 	}
 	return
 }
+
+// the below is copied from the Go source but modified to NOT support
+// $val, only ${val}
+//
+// Copyright 2010 The Go Authors. All rights reserved. Use of this
+// source code is governed by a BSD-style license that can be found in
+// the LICENSE file.
+//
+// expand replaces ${var} in the string based on the mapping function.
+func expand(s string, mapping func(string) string) string {
+	var buf []byte
+	// ${} is all ASCII, so bytes are fine for this operation.
+	i := 0
+	for j := 0; j < len(s); j++ {
+		if s[j] == '$' && j+1 < len(s) {
+			if buf == nil {
+				buf = make([]byte, 0, 2*len(s))
+			}
+			buf = append(buf, s[i:j]...)
+			name, w := getShellName(s[j+1:])
+			if name == "" && w > 0 {
+				// Encountered invalid syntax; eat the
+				// characters.
+			} else if name == "" {
+				// Valid syntax, but $ was not followed by a
+				// name. Leave the dollar character untouched.
+				buf = append(buf, s[j])
+			} else {
+				buf = append(buf, mapping(name)...)
+			}
+			j += w
+			i = j + 1
+		}
+	}
+	if buf == nil {
+		return s
+	}
+	return string(buf) + s[i:]
+}
+
+// as above but for byte slices directly
+func expandBytes(s []byte, mapping func([]byte) []byte) []byte {
+	var buf []byte
+	// ${} is all ASCII, so bytes are fine for this operation.
+	i := 0
+	for j := 0; j < len(s); j++ {
+		if s[j] == '$' && j+1 < len(s) {
+			if buf == nil {
+				buf = make([]byte, 0, 2*len(s))
+			}
+			buf = append(buf, s[i:j]...)
+			name, w := getShellName(string(s[j+1:]))
+			if name == "" && w > 0 {
+				// Encountered invalid syntax; eat the
+				// characters.
+			} else if name == "" {
+				// Valid syntax, but $ was not followed by a
+				// name. Leave the dollar character untouched.
+				buf = append(buf, s[j])
+			} else {
+				buf = append(buf, mapping([]byte(name))...)
+			}
+			j += w
+			i = j + 1
+		}
+	}
+	if buf == nil {
+		return s
+	}
+	return append(buf, s[i:]...)
+}
+
+// isShellSpecialVar reports whether the character identifies a special
+// shell variable such as $*.
+func isShellSpecialVar(c uint8) bool {
+	switch c {
+	case '*', '#', '$', '@', '!', '?', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		return true
+	}
+	return false
+}
+
+// getShellName returns the name that begins the string and the number of bytes
+// consumed to extract it. If the name is enclosed in {}, it's part of a ${}
+// expansion and two more bytes are needed than the length of the name.
+//
+// CHANGE: return if string does not start with an opening bracket
+func getShellName(s string) (string, int) {
+	if s[0] != '{' {
+		// skip
+		return "", 0
+	}
+
+	if len(s) > 2 && isShellSpecialVar(s[1]) && s[2] == '}' {
+		return s[1:2], 3
+	}
+
+	// Scan to closing brace
+	for i := 1; i < len(s); i++ {
+		if s[i] == '}' {
+			if i == 1 {
+				return "", 2 // Bad syntax; eat "${}"
+			}
+			return s[1:i], i + 1
+		}
+	}
+	return "", 1 // Bad syntax; eat "${"
+}
