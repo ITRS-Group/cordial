@@ -189,8 +189,7 @@ func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
 
 // ExpandAllSettings returns all the settings from c applying
 // ExpandString() to all string values and all string slice values.
-// "values" maps are passed to ExpandString as-is. Further types may be
-// added over time.
+// Further types may be added over time.
 func (c *Config) ExpandAllSettings(options ...ExpandOptions) (all map[string]interface{}) {
 	as := c.AllSettings()
 	all = make(map[string]interface{}, len(as))
@@ -288,7 +287,7 @@ func (c *Config) expandString(s string, options ...ExpandOptions) (value string)
 		if _, ok := opts.funcMaps["file"]; ok {
 			return fetchFile(s)
 		}
-		return ""
+		return
 	case strings.HasPrefix(s, "config:"):
 		fallthrough
 	case !strings.Contains(s, ":"):
@@ -309,7 +308,7 @@ func (c *Config) expandString(s string, options ...ExpandOptions) (value string)
 				return strings.TrimSpace(n)
 			}
 		}
-		return ""
+		return
 	case strings.HasPrefix(s, "env:"):
 		return strings.TrimSpace(mapEnv(strings.TrimPrefix(s, "env:")))
 	default:
