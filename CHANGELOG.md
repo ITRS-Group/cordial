@@ -1,6 +1,6 @@
 # Change Log
 
-## Version v1.4.1-beta - 2022/11/25
+## Version v1.4.1-beta - 2022/11/28
 
 * Fixes
 
@@ -21,6 +21,7 @@
 
 * Changes
 
+  * pkg/config: Add an options `expr` prefix to expansion items which supports [github.com/maja42/goval] syntax
   * pkg/config: API change: Add options to the config expansion functions rather than just lookup maps
   * tools/geneos: add SSH password support for remote hosts
   * tools/geneos: support embedded SSH passwords in hosts config, using new 'set host' sub-command
