@@ -1,9 +1,11 @@
 # Change Log
 
-## Version v1.4.0-dev - 2022/11/12
+## Version v1.4.1-beta - 2022/11/25
 
 * Fixes
 
+  * tools/geneos: many fixes for logic around handling of remote hosts
+  * tools/geneos: fix remote host naming to be work with capitalisations
   * tools/geneos: actually load SSH private key files, if available
   * tools/geneos: re-order SSH HostKeyAlgorithms so that, bizarrely, IP based remotes work
   * tools/geneos: better handling of instance config aliases when writing config files
@@ -19,6 +21,8 @@
 
 * Changes
 
+  * pkg/config: API change: Add options to the config expansion functions rather than just lookup maps
+  * tools/geneos: add SSH password support for remote hosts
   * tools/geneos: support embedded SSH passwords in hosts config, using new 'set host' sub-command
   * tools/geneos: support additional SSH private key files per host via 'set host sshkeys=X,Y' sub-command
   * tools/geneos: begin implementation of support for YAML config files via 'configtype' user setting

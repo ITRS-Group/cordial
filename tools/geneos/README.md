@@ -926,48 +926,48 @@ Directory structure / hierarchy / layout is as follows:
 ```text
 /opt/itrs
 ├── fa2
-│   └── fa2s
+│   └── fa2s
 ├── fileagent
-│   └── fileagents
+│   └── fileagents
 ├── gateway
-│   ├── gateway_config
-│   ├── gateways
-│   │   └── [gateway instance name]
-│   ├── gateway_shared
-│   └── templates
-│       ├── gateway-instance.setup.xml.gotmpl
-│       └── gateway.setup.xml.gotmpl
+│   ├── gateway_config
+│   ├── gateways
+│   │   └── [gateway instance name]
+│   ├── gateway_shared
+│   └── templates
+│       ├── gateway-instance.setup.xml.gotmpl
+│       └── gateway.setup.xml.gotmpl
 ├── hosts
 ├── licd
-│   └── licds
-│       └── [licd instance name]
+│   └── licds
+│       └── [licd instance name]
 ├── netprobe
-│   └── netprobes
-│       └── [netprobe instance name]
+│   └── netprobes
+│       └── [netprobe instance name]
 ├── packages
-│   ├── downloads
-│   │   ├── geneos-gateway-6.0.0-linux-x64.tar.gz
-│   │   ├── geneos-licd-6.0.0-linux-x64.tar.gz
-│   │   ├── geneos-netprobe-6.0.2-linux-x64.tar.gz
-│   │   └── geneos-web-server-6.0.0-linux-x64.tar.gz
-│   ├── fa2
-│   ├── fileagent
-│   ├── gateway
-│   │   ├── 6.0.0
-│   │   └── active_prod -> 6.0.0
-│   ├── licd
-│   │   ├── 6.0.0
-│   │   └── active_prod -> 6.0.0
-│   ├── netprobe
-│   │   ├── 6.0.2
-│   │   └── active_prod -> 6.0.2
-│   └── webserver
-│       ├── 6.0.0
-│       └── active_prod -> 6.0.0
+│   ├── downloads
+│   │   ├── geneos-gateway-6.0.0-linux-x64.tar.gz
+│   │   ├── geneos-licd-6.0.0-linux-x64.tar.gz
+│   │   ├── geneos-netprobe-6.0.2-linux-x64.tar.gz
+│   │   └── geneos-web-server-6.0.0-linux-x64.tar.gz
+│   ├── fa2
+│   ├── fileagent
+│   ├── gateway
+│   │   ├── 6.0.0
+│   │   └── active_prod -> 6.0.0
+│   ├── licd
+│   │   ├── 6.0.0
+│   │   └── active_prod -> 6.0.0
+│   ├── netprobe
+│   │   ├── 6.0.2
+│   │   └── active_prod -> 6.0.2
+│   └── webserver
+│       ├── 6.0.0
+│       └── active_prod -> 6.0.0
 ├── san
-│   ├── sans
-│   └── templates
-│       └── netprobe.setup.xml.gotmpl
+│   ├── sans
+│   └── templates
+│       └── netprobe.setup.xml.gotmpl
 └── webserver
     └── webservers
         └── [webserver instance name]
