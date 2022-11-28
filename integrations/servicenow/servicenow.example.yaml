@@ -90,6 +90,8 @@ geneos:
 # with underscores will be used but then not sent to ServiceNow. All
 # other fields, after processing below, will be sent to ServiceNow.
 
+# https://developer.servicenow.com/dev.do#!/learn/learning-plans/quebec/servicenow_application_developer/app_store_learnv2_rest_quebec_more_about_query_parameters
+
 servicenow:
   instance: devxxxxx
   username: admin
@@ -111,14 +113,19 @@ servicenow:
       category: hardware
       contact_type: email
       caller_id: admin
+      state: 1
     states:
-      0: create
-      1: [ new, update ]
-      2: update
-      3: hold
-      4: hold
-      5: hold
-      6: resolved
+      - match: ${expr:_ALERT_TYPE == "Alert" && state == 0}
+        action: create
+        set: xxx
+      - search: ${expr:search(servicenow.incidents.table, "sys_id="+SYS_ID)}
+        filter:
+        action:  [ new, update ]
+      # 2: update
+      # 3: hold
+      # 4: hold
+      # 5: hold
+      # 6: resolved
     actions:
       create:
         assignment_group: something
