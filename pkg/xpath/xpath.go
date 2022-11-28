@@ -55,6 +55,21 @@ import (
 var ErrInvalidPath = errors.New("invalid Geneos XPath")
 var ErrRelativePath = errors.New("unsupported relative Geneos XPath")
 
+type XPathInterface interface {
+	String() string
+}
+
+const (
+	Gateway2 int = iota
+	Probe2
+	Entity2
+	Sampler2
+	Dataview2
+	Headline2
+	Row2
+	Column2
+)
+
 // A Geneos Gateway XPath
 //
 // Each field is a pointer, which if nil means the Xpath terminates at that point
@@ -71,8 +86,16 @@ type XPath struct {
 	Column   *Column   `json:"column,omitempty"`
 }
 
+type Empty struct {
+	// none
+}
+
 type Gateway struct {
 	Name string `json:"name,omitempty"`
+}
+
+func (g Gateway) String() string {
+	return fmt.Sprintf("gateway[(@name=%q)]", g.Name)
 }
 
 type Probe struct {
@@ -133,12 +156,256 @@ func NewHeadlinePath(name string) (x *XPath) {
 	return
 }
 
+// Element returns an empty struct of the type named by element and
+// true, including Empty{} for a black string. If the element name is
+// not valid then it returns an Empty{} struct and false.
+func Element(element string) (interface{}, bool) {
+	switch strings.ToLower(element) {
+	case "gateway":
+		return Gateway{}, true
+	case "probe":
+		return Probe{}, true
+	case "entity":
+		return Entity{}, true
+	case "sampler":
+		return Sampler{}, true
+	case "dataview":
+		return Dataview{}, true
+	case "headline":
+		return Headline{}, true
+	case "row":
+		return Row{}, true
+	case "column":
+		return Column{}, true
+	case "":
+		return Empty{}, true
+	default:
+		return Empty{}, false
+	}
+}
+
+// LastElement returns a type representing the lowest set level in the XPath
+func (xpath XPath) LastElement() (t interface{}) {
+	t = Empty{}
+	if xpath.Gateway == nil {
+		return
+	}
+	t = Gateway{}
+	if xpath.Probe == nil {
+		return
+	}
+	t = Probe{}
+	if xpath.Entity == nil {
+		return
+	}
+	t = Entity{}
+	if xpath.Sampler == nil {
+		return
+	}
+	t = Sampler{}
+	if xpath.Dataview == nil {
+		return
+	}
+	if xpath.Headline == nil {
+		return Headline{}
+	}
+	t = Dataview{}
+	if !xpath.Rows {
+		return
+	}
+	t = Row{}
+	if xpath.Column == nil {
+		return
+	}
+	return Column{}
+}
+
+// Depth returns the number of (useful) elements in the path. There is
+// no distinction between Headline and Row, so the caller should be
+// careful when using this in comparisons.
+func (path XPath) Depth() int {
+	l := path.LastElement()
+	switch l.(type) {
+	case Empty:
+		return 0
+	case Gateway:
+		return 1
+	case Probe:
+		return 2
+	case Entity:
+		return 3
+	case Sampler:
+		return 4
+	case Dataview:
+		return 5
+	case Headline, Row:
+		return 6
+	case Column:
+		return 7
+	}
+	return 0
+}
+
+// ResolveParent returns an XPath to the parent element of the type of
+// element. The values in element are ignored.
+func (x XPath) ResolveParent(element interface{}) *XPath {
+	// copy the xpath
+	var nx XPath
+
+	// skip through any pointers
+	for reflect.ValueOf(element).Kind() == reflect.Ptr {
+		element = reflect.Indirect(reflect.ValueOf(element)).Interface()
+	}
+
+	// set the element, remove others
+	switch element.(type) {
+	case Gateway:
+		nx = XPath{} // empty
+	case Probe:
+		nx = XPath{
+			Gateway: x.Gateway,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &Gateway{}
+		}
+	case Entity:
+		nx = XPath{
+			Gateway: x.Gateway,
+			Probe:   x.Probe,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &Gateway{}
+		}
+		if nx.Probe == nil {
+			nx.Probe = &Probe{}
+		}
+	case Sampler:
+		nx = XPath{
+			Gateway: x.Gateway,
+			Probe:   x.Probe,
+			Entity:  x.Entity,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &Gateway{}
+		}
+		if nx.Probe == nil {
+			nx.Probe = &Probe{}
+		}
+		if nx.Entity == nil {
+			nx.Entity = &Entity{
+				Attributes: make(map[string]string),
+			}
+		}
+	case Dataview:
+		nx = XPath{
+			Gateway: x.Gateway,
+			Probe:   x.Probe,
+			Entity:  x.Entity,
+			Sampler: x.Sampler,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &Gateway{}
+		}
+		if nx.Probe == nil {
+			nx.Probe = &Probe{}
+		}
+		if nx.Entity == nil {
+			nx.Entity = &Entity{
+				Attributes: make(map[string]string),
+			}
+		}
+		if nx.Sampler == nil {
+			nx.Sampler = &Sampler{}
+		}
+	case Headline:
+		nx = XPath{
+			Gateway:  x.Gateway,
+			Probe:    x.Probe,
+			Entity:   x.Entity,
+			Sampler:  x.Sampler,
+			Dataview: x.Dataview,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &Gateway{}
+		}
+		if nx.Probe == nil {
+			nx.Probe = &Probe{}
+		}
+		if nx.Entity == nil {
+			nx.Entity = &Entity{
+				Attributes: make(map[string]string),
+			}
+		}
+		if nx.Sampler == nil {
+			nx.Sampler = &Sampler{}
+		}
+		if nx.Dataview == nil {
+			nx.Dataview = &Dataview{}
+		}
+	case Row:
+		nx = XPath{
+			Gateway:  x.Gateway,
+			Probe:    x.Probe,
+			Entity:   x.Entity,
+			Sampler:  x.Sampler,
+			Dataview: x.Dataview,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &Gateway{}
+		}
+		if nx.Probe == nil {
+			nx.Probe = &Probe{}
+		}
+		if nx.Entity == nil {
+			nx.Entity = &Entity{
+				Attributes: make(map[string]string),
+			}
+		}
+		if nx.Sampler == nil {
+			nx.Sampler = &Sampler{}
+		}
+		if nx.Dataview == nil {
+			nx.Dataview = &Dataview{}
+		}
+	case Column:
+		nx = XPath{
+			Gateway:  x.Gateway,
+			Probe:    x.Probe,
+			Entity:   x.Entity,
+			Sampler:  x.Sampler,
+			Dataview: x.Dataview,
+			Rows:     true,
+			Row:      x.Row,
+		}
+		if nx.Gateway == nil {
+			nx.Gateway = &Gateway{}
+		}
+		if nx.Probe == nil {
+			nx.Probe = &Probe{}
+		}
+		if nx.Entity == nil {
+			nx.Entity = &Entity{
+				Attributes: make(map[string]string),
+			}
+		}
+		if nx.Sampler == nil {
+			nx.Sampler = &Sampler{}
+		}
+		if nx.Dataview == nil {
+			nx.Dataview = &Dataview{}
+		}
+		if nx.Row == nil {
+			nx.Row = &Row{}
+		}
+	}
+
+	return &nx
+}
+
 // ResolveTo will, given an element type, return a new XPath to that
 // element, removing lower level elements or adding empty elements to
-// the level required. If the XPath does not contain an element of the
-// type given then use the argument (which can include populated
-// fields), but if empty then any existing element will be left as-is
-// and not cleaned.
+// the level required. If the x does not contain an element of the type
+// given then use element to fill in that level.
 //
 // e.g.
 //
@@ -338,7 +605,10 @@ func (x *XPath) ResolveTo(element interface{}) *XPath {
 
 // return true is the XPath appears to be empty
 func (x *XPath) IsEmpty() bool {
-	return x.Gateway == nil
+	if _, ok := x.LastElement().(Empty); ok {
+		return true
+	}
+	return false
 }
 
 // do we need setters? validation?
@@ -347,31 +617,52 @@ func (x *XPath) SetGatewayName(gateway string) {
 }
 
 func (x *XPath) IsTableCell() bool {
-	return x.Rows && x.Row != nil && x.Column != nil
+	if _, ok := x.LastElement().(Column); ok {
+		return true
+	}
+	return false
 }
 
 func (x *XPath) IsHeadline() bool {
-	return x.Headline != nil && x.Row == nil
+	if _, ok := x.LastElement().(Headline); ok {
+		return true
+	}
+	return false
 }
 
 func (x *XPath) IsDataview() bool {
-	return x.Dataview != nil && x.Headline == nil && x.Row == nil
+	if _, ok := x.LastElement().(Dataview); ok {
+		return true
+	}
+	return false
 }
 
 func (x *XPath) IsSampler() bool {
-	return x.Sampler != nil && x.Dataview == nil
+	if _, ok := x.LastElement().(Sampler); ok {
+		return true
+	}
+	return false
 }
 
 func (x *XPath) IsEntity() bool {
-	return x.Entity != nil && x.Sampler == nil
+	if _, ok := x.LastElement().(Entity); ok {
+		return true
+	}
+	return false
 }
 
 func (x *XPath) IsProbe() bool {
-	return x.Probe != nil && x.Entity == nil
+	if _, ok := x.LastElement().(Probe); ok {
+		return true
+	}
+	return false
 }
 
 func (x *XPath) IsGateway() bool {
-	return x.Gateway != nil && x.Probe == nil
+	if _, ok := x.LastElement().(Gateway); ok {
+		return true
+	}
+	return false
 }
 
 // return a string representation of an XPath
@@ -451,6 +742,34 @@ func (x *XPath) String() (path string) {
 	return
 }
 
+// IsAbs returns true if path appears to be an absolute path. It does
+// not evaluate path to determine if it is a valid XPath.
+func IsAbs(path string) bool {
+	return strings.HasPrefix(path, "/")
+}
+
+// ParseRelative parses path as a string relative to root and returns an
+// XPath or an error.
+//
+// If the given string is an absolute XPath then it is parsed and
+// returned without reference to the root.
+//
+// Relative XPaths either start with a `./`, '../' or 'ancestor::'
+func ParseRelative(root *XPath, path string) (xpath *XPath, err error) {
+	if IsAbs(path) {
+		return Parse(path)
+	}
+	// rt := root.LastElement()
+	if strings.HasPrefix(path, "ancestor::") {
+		a := strings.TrimPrefix(path, "ancestor::")
+		a = strings.SplitN(a, "/", 2)[0]
+		if e, ok := Element(a); ok {
+			_ = root.ResolveParent(e)
+		}
+	}
+	return
+}
+
 // Parse takes an absolute Geneos XPath and returns an XPath structure.
 //
 // A leading double slash, e.g. //probe[(@name="myprobe")], results in
@@ -469,21 +788,21 @@ func (x *XPath) String() (path string) {
 // "managedEntity" supports multiple "attribute" predicates and table
 // cells (under "rows/row/cell") support "column" (which is used instead
 // of "name").
-func Parse(s string) (xpath *XPath, err error) {
+func Parse(path string) (xpath *XPath, err error) {
 	xpath = &XPath{}
 
-	parts := splitWithEscaping(s, '/', '\\')
+	parts := splitWithEscaping(path, '/', '\\')
 
 	// if the path is relative, handle it differently
-	if !strings.HasPrefix(s, "/") {
+	if !IsAbs(path) {
 		err = ErrRelativePath
 		return
 	}
 
 	// if the path is a wildcard, find the first level and prefix the parts[] with
 	// the higher levels
-	if strings.HasPrefix(s, "//") {
-		f := strings.FieldsFunc(s, func(r rune) bool { return !unicode.IsLetter(r) })
+	if strings.HasPrefix(path, "//") {
+		f := strings.FieldsFunc(path, func(r rune) bool { return !unicode.IsLetter(r) })
 		if len(f) == 0 {
 			err = ErrInvalidPath
 			return
