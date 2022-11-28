@@ -3,63 +3,146 @@ api:
   port: 3000
   apikey: RANDOMAPIKEY
 
+# New section "geneos" for inputs from Geneos
+geneos:
+  # A list of "maps" in YAML speak
+  #
+  # The "value" is the input from the outside and is subject to "expansion" as per
+  # https://pkg.go.dev/github.com/itrs-group/cordial@v1.4.1-beta/pkg/config#ExpandString
+  #
+  # The basic premise is to import environment variables
+  - value: ${_SEVERITY}
+    # The "priority" matches Geneos style small to large ordering in
+    # which to check the different input values. Any field set in a
+    # higher priority (Geneos low-number) group is not overridden later
+    # with some exceptions.
+    priority: 1
+    # A list of value mappings. Each matching value can set (or unset or
+    # append to) multiple fields. Special values start with an
+    # underscore and are currently:
+    #
+    #  _default - if this value is not empty and doesn't match any other mapping entry
+    #  _empty (or _blank ?) - sets these fields if the value is unset or empty
+    mapping:
+      _default:
+        # in field settings "${value}" is set to the actual value and to
+        # incorporate environment variables you MUST use
+        # "${env:_VARIABLE}" format. Other embedded items may be set
+        # too, e.g. "${name}" for the field name etc. See below for more ideas.
+        short_description: ${value} Alert
+      _empty:
+        # optional. do nothing
+      # In YAML there are references. This creates a reference to "critical" for re-use below
+      critical: &critical
+        impact: 1
+        urgency: 1
+      # This uses the reference to duplicate, and so keep sync-ed, the settings for "critical"
+      3: *critical
+      warning: &warning
+        impact: 3
+        urgency: 3
+      2: *warning
+      ok: &ok
+        state: 6
+        close_code: Closed/Resolved by Caller
+        close_notes: Resolved
+      1: *ok
+  - value: ${_ALERT_TYPE}
+    priority: 99
+    mapping:
+      alert:
+        # any "fields" with an underscore prefix are passed to the next
+        # stage but are never sent through to ServiceNow. This allows
+        # for settings to be passed on for evaluation but without
+        # overriding ServiceNow data fields.
+        _incident: new
+        state: 1
+        # Some ideas for special syntax values:
+        #
+        # Prefixing with '=' overrides earlier settings, regardless of
+        # priority
+        short_description: =New Alert
+      clear:
+        state: 6
+        # Underscore "_" or an empty quoted string "" deletes this
+        # field, not just sets it to empty. Overrides higher priority
+        # settings.
+        short_description: _
+        watch_list: ""
+      suspend:
+        state: 5
+        # Putting a regexp style "$" at the end of a string indicates
+        # this should be appended, without the "$" to the current value
+        short_description: "- Suffix Snooze Alert$"
+      resume:
+        # Using a regexp style carat "^" indicates this values should be
+        # a prefix to the current value, without the carat.
+        short_description: "^Prefix:"
+        state: 1
+      _empty:
+        # Perhaps filling in the "values" (see ExpandString docs) with
+        # all current fields could be used instead of above to reference
+        # existing values for fields?
+        short_description: "decorate ${short_description} with text"
+
+# looking at this linearly, as a top-down config, at this point we have
+# a "bag" of fields set to specific values. any fields that are prefixed
+# with underscores will be used but then not sent to ServiceNow. All
+# other fields, after processing below, will be sent to ServiceNow.
+
 servicenow:
   instance: devxxxxx
   username: admin
   password: ${enc:keyfile:ciphertext}
-  # ClientID: ${SERVICENOW_CLIENTID}
-  # ClientSecret: ${SERVICENOW_CLIENTSECRET}
+  # clientid: ${SERVICENOW_CLIENTID}
+  # clientsecret: ${SERVICENOW_CLIENTSECRET}
+  #
+  # searchtype - update to allow general searches anywhere, e.g. "$[search:table:field=value]"
   searchtype: simple
-  queryresponsefields: number,sys_id,cmdb_ci.name,short_description,description,correlation_id,opened_by,state
-  geneosseveritymap:
-    critical: impact=1,urgency=1
-    warning: impact=3,urgency=3
-    ok: state=6,close_code="Closed/Resolved by Caller",close_notes="Resolved"
-    3: impact=1,urgency=1
-    2: impact=3,urgency=3
-    1: state=6,close_code="Closed/Resolved by Caller",close_notes="Resolved"
-  incidentdefaults:
-    default_cmdb_ci: 03a9e40d3790200044e0bfc8bcbe5d6c
-    assignment_group: group1
-    incident_type: event
-    impact: 3
-    urgency: 3
-    category: hardware
-    contact_type: email
-    caller_id: admin
-  incidenttable: incident
-  incidentstates:
-    0: Create
-    1: [ New, Update ]
-    2: Update
-    3: Hold
-    4: Hold
-    5: Hold
-    6: Resolved
-  incidentstatedefaults:
-    create:
-      assignment_group: something
-      contact_type: email
+  queryresponsefields: [ number, sys_id, cmdb_ci.name, short_description, description, correlation_id, opened_by,state ]
+  incidents:
+    table: incident
+    defaults:
+      default_cmdb_ci: 03a9e40d3790200044e0bfc8bcbe5d6c
+      assignment_group: group1
+      incident_type: event
       impact: 3
       urgency: 3
       category: hardware
-      state: 1
-      watch_list: ""
-      caller_id: admin
-      short_description: must exist
-      description: long description here
-    update:
-      assignment_group: somethingelse
       contact_type: email
-      impact: 3
-      urgency: 3
-      category: hardware
-      state: 2
       caller_id: admin
-      work_notes: long description here
-      short_description: ""  # delete / never update
-    resolved:
-      short_description: ""
-      caller_id: admin
-      state: 1
+    states:
+      0: create
+      1: [ new, update ]
+      2: update
+      3: hold
+      4: hold
+      5: hold
+      6: resolved
+    actions:
+      create:
+        assignment_group: something
+        contact_type: email
+        impact: 3
+        urgency: 3
+        category: hardware
+        state: 1
+        watch_list: ""
+        caller_id: admin
+        short_description: must exist
+        description: long description here
+      update:
+        assignment_group: somethingelse
+        contact_type: email
+        impact: 3
+        urgency: 3
+        category: hardware
+        state: 2
+        caller_id: admin
+        work_notes: long description here
+        short_description: ""  # delete / never update
+      resolved:
+        short_description: ""
+        caller_id: admin
+        state: 1
 
