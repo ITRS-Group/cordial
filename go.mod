@@ -13,6 +13,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.3
 	github.com/labstack/echo/v4 v4.9.1
 	github.com/mackerelio/go-osstat v0.2.3
+	github.com/maja42/goval v1.3.1
 	github.com/pavlo-v-chernykh/keystore-go/v4 v4.4.0
 	github.com/pkg/sftp v1.13.1
 	github.com/rs/zerolog v1.28.0
