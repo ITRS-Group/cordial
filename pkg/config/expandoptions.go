@@ -23,32 +23,43 @@ THE SOFTWARE.
 package config
 
 type expandOptions struct {
-	lookupTables      []map[string]string
-	funcMaps          map[string]func(string) string
-	noDefaultFuncMaps bool
-	trimPrefix        bool
+	lookupTables     []map[string]string
+	funcMaps         map[string]func(*Config, string) string
+	externalFuncMaps bool
+	trimPrefix       bool
 }
 
 type ExpandOptions func(*expandOptions)
 
-func evalExpandOptions(options ...ExpandOptions) (e *expandOptions) {
+func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
 	e = &expandOptions{}
-	defaultFuncMaps := map[string]func(string) string{
+	defaultFuncMaps := map[string]func(*Config, string) string{
 		"http":  fetchURL,
 		"https": fetchURL,
 		"file":  fetchFile,
 	}
-	e.funcMaps = map[string]func(string) string{}
+	e.funcMaps = map[string]func(*Config, string) string{}
+	e.externalFuncMaps = true
+	for _, opt := range c.defaultExpandOptions {
+		opt(e)
+	}
 	for _, opt := range options {
 		opt(e)
 	}
-	if !e.noDefaultFuncMaps {
+	if e.externalFuncMaps {
 		for k, v := range e.funcMaps {
 			defaultFuncMaps[k] = v
 		}
 		e.funcMaps = defaultFuncMaps
 	}
 	return
+}
+
+// DefaultExpandOptions sets defaults to all subsequent calls to
+// functions that perform configuration expansion. These defaults can be
+// reset by calling DefaultExpandOptions with no arguments.
+func (c *Config) DefaultExpandOptions(options ...ExpandOptions) {
+	c.defaultExpandOptions = options
 }
 
 // LookupTable adds a lookup map to the Expand functions. When string
@@ -62,23 +73,24 @@ func LookupTable(values map[string]string) ExpandOptions {
 	}
 }
 
-// ExpandPrefixed defines a custom mapping for the given prefix to an
+// Prefix defines a custom mapping for the given prefix to an
 // expand-like function. The prefix should not include the terminating
 // ":". If the configuration prefix matches during expansion then the
-// function is called with the contents of the expansion including the
-// prefix (for URLs) but stripped of the opening `${` and the closing
-// `}`
-func ExpandPrefixed(prefix string, fn func(string) string) ExpandOptions {
+// function is called with the config data and the contents of the
+// expansion including the prefix (for URLs) but stripped of the opening
+// `${` and the closing `}`
+func Prefix(prefix string, fn func(*Config, string) string) ExpandOptions {
 	return func(e *expandOptions) {
 		e.funcMaps[prefix] = fn
 	}
 }
 
-// NoExternalLookups disables the built-in expansion options that fetch
-// data from outside the program, such as URLs and file paths.
-func NoExternalLookups() ExpandOptions {
+// ExternalLookups enables or disables the built-in expansion options
+// that fetch data from outside the program, such as URLs and file
+// paths. The default is true.
+func ExternalLookups(yes bool) ExpandOptions {
 	return func(e *expandOptions) {
-		e.noDefaultFuncMaps = true
+		e.externalFuncMaps = yes
 	}
 }
 

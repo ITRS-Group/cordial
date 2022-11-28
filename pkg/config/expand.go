@@ -280,12 +280,12 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 }
 
 func (c *Config) expandString(s string, options ...ExpandOptions) (value string) {
-	opts := evalExpandOptions(options...)
+	opts := evalExpandOptions(c, options...)
 	switch {
 	case strings.HasPrefix(s, "~/"), strings.HasPrefix(s, "/"):
 		// check if defaults disabled
 		if _, ok := opts.funcMaps["file"]; ok {
-			return fetchFile(s)
+			return fetchFile(c, s)
 		}
 		return
 	case strings.HasPrefix(s, "config:"):
@@ -319,16 +319,16 @@ func (c *Config) expandString(s string, options ...ExpandOptions) (value string)
 		f := strings.SplitN(s, ":", 2)
 		if fn, ok := opts.funcMaps[f[0]]; ok {
 			if opts.trimPrefix {
-				return fn(f[1])
+				return fn(c, f[1])
 			}
-			return fn(s)
+			return fn(c, s)
 		}
 	}
 
 	return
 }
 
-func fetchURL(url string) string {
+func fetchURL(cf *Config, url string) string {
 	resp, err := http.Get(url)
 	if err != nil {
 		return ""
@@ -341,7 +341,7 @@ func fetchURL(url string) string {
 	return strings.TrimSpace(string(b))
 }
 
-func fetchFile(path string) string {
+func fetchFile(cf *Config, path string) string {
 	path = strings.TrimPrefix(path, "file:")
 	if strings.HasPrefix(path, "~/") {
 		home, _ := os.UserHomeDir()

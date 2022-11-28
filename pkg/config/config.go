@@ -51,7 +51,8 @@ import (
 // Config embeds Viper and also exposes the config type used
 type Config struct {
 	*viper.Viper
-	Type string
+	Type                 string
+	defaultExpandOptions []ExpandOptions
 }
 
 var global *Config
