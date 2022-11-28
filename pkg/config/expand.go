@@ -32,10 +32,13 @@ package config
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/maja42/goval"
 )
 
 // ExpandString returns the input with all occurrences of the form
@@ -97,7 +100,8 @@ import (
 //	   variable of the same name.
 //
 //	 The prefixes below are optional and enabled by default. They can be
-//	 disabled using the option [config.NoExternalLookups]
+//	 enabled or disabled using the option [config.ExternalLookups()]
+//	 option. The are enabled by default.
 //
 //	 ${~/file} or ${/path/to/file} or ${file://path/to/file} or ${file:~/path/to/file}
 //
@@ -120,8 +124,18 @@ import (
 //	   proxies, embedded Basic Authentication and other features from
 //	   that function.
 //
-// Additional custom lookup prefixes can be added with the [config.ExpandFunc]
-// option.
+//	 The prefix below can be enabled with the [config.Expressions()] option.
+//
+//	 ${expr:EXPRESSION}
+//
+//	   EXPRESSION is evaluated using [github.com/maja42/goval]. Inside
+//	   the expression all configuration items are available as variables
+//	   with the top level map `env` set to the environment variables
+//	   available. All results are returned as strings. An empty string
+//	   may mean there was an error in evaluating the expression.
+//
+// Additional custom lookup prefixes can be added with the
+// [config.ExpandFunc] option.
 //
 // The bare form "$name" is NOT supported, unlike [os.Expand] as this
 // can unexpectedly match values containing valid literal dollar signs.
@@ -352,6 +366,22 @@ func fetchFile(cf *Config, path string) string {
 		return ""
 	}
 	return strings.TrimSpace(string(b))
+}
+
+func expr(cf *Config, expression string) string {
+	eval := goval.NewEvaluator()
+	vars := cf.AllSettings()
+	env := make(map[string]string)
+	for _, e := range os.Environ() {
+		s := strings.SplitN(e, "=", 2)
+		env[s[0]] = s[1]
+	}
+	vars["env"] = env
+	result, err := eval.Evaluate(expression, vars, nil)
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprint(result)
 }
 
 // mapEnv is for special case mappings of environment variables across

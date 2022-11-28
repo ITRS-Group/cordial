@@ -26,18 +26,20 @@ type expandOptions struct {
 	lookupTables     []map[string]string
 	funcMaps         map[string]func(*Config, string) string
 	externalFuncMaps bool
+	expressions      bool
 	trimPrefix       bool
 }
 
 type ExpandOptions func(*expandOptions)
 
+var defaultFuncMaps = map[string]func(*Config, string) string{
+	"http":  fetchURL,
+	"https": fetchURL,
+	"file":  fetchFile,
+}
+
 func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
 	e = &expandOptions{}
-	defaultFuncMaps := map[string]func(*Config, string) string{
-		"http":  fetchURL,
-		"https": fetchURL,
-		"file":  fetchFile,
-	}
 	e.funcMaps = map[string]func(*Config, string) string{}
 	e.externalFuncMaps = true
 	for _, opt := range c.defaultExpandOptions {
@@ -51,6 +53,9 @@ func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
 			defaultFuncMaps[k] = v
 		}
 		e.funcMaps = defaultFuncMaps
+	}
+	if e.expressions {
+		e.funcMaps["expr"] = expr
 	}
 	return
 }
@@ -91,6 +96,15 @@ func Prefix(prefix string, fn func(*Config, string) string) ExpandOptions {
 func ExternalLookups(yes bool) ExpandOptions {
 	return func(e *expandOptions) {
 		e.externalFuncMaps = yes
+	}
+}
+
+// Expressions enables or disables the built-in expansion for
+// expressions via the `github.com/maja42/goval` package. The default is
+// false.
+func Expressions(yes bool) ExpandOptions {
+	return func(e *expandOptions) {
+		e.expressions = yes
 	}
 }
 
