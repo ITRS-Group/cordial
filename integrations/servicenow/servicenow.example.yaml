@@ -5,7 +5,7 @@ api:
 
 # New section "geneos" for inputs from Geneos
 geneos:
-  # A list of "maps" in YAML speak
+  # A list of maps in YAML
   #
   # The "value" is the input from the outside and is subject to "expansion" as per
   # https://pkg.go.dev/github.com/itrs-group/cordial@v1.4.1-beta/pkg/config#ExpandString
@@ -114,18 +114,53 @@ servicenow:
       contact_type: email
       caller_id: admin
       state: 1
-    states:
+    checks:
+      # traverse checks in order, first match wins
+      #
+      # for each check:
+      #  1. run any searches and store results in "search.results". if
+      #     array of searches then store array of results. each search
+      #     can refer to earlier searches results. results are key/value
+      #     maps.
+      #  2. check all matches - multiple matches must be an array and
+      #     checked in order, first true match stops checks
+      #  3. if any match evaluates to true then set any fields and then
+      #     run action(s) - in order if array
+      #
+      # only "match" is required, but one of fields or actions must also
+      # be set for side-effects. if not, then matching will terminate
+      # the tests and no action will be taken.
+      #
+      # only fields defined here can be set to search result values,
+      # those in actions cannot (?)
       - match: ${expr:_ALERT_TYPE == "Alert" && state == 0}
+        fields:
+          category: something
         action: create
-        set: xxx
-      - search: ${expr:search(servicenow.incidents.table, "sys_id="+SYS_ID)}
-        filter:
+        # ${snow:...} evaluates the expression and saves it in the next
+        # `search.results` field as a map of field names. built-in
+        # function `search` does a call-out to the ServiceNow API for
+        # the result of the query. The args could be:
+        #  * search(table, query, resultfields)
+        #
+        # The results are a map[string]string where the key is the
+        # fields name
+        #
+        # We could reverse query and resultfields so that query is a
+        # variadic and all values are concatenated (without spaces) for
+        # simplicity, e.g
+        #  * search(table, `field1,field2`, `field=`, VALUE, `^field2=`,
+        #    OTHER)
+        #
+        # we can add other functions to do specific ServiceNow things
+      - search: [
+                  "${snow:search(`cmdb_ci`, `name=`+_NETPROBE_HOST, `cmdb_ci`)}",
+                  "${snow:search(servicenow.incidents.table, `active=true^cmdb_ci=`+search.results[0][cmdb_ci]+`^correlation_id=`+ID, `sys_id`)",
+                ]
+        match: ${expr:search.results[1][sys_id] == "blah"}
+        fields:
+          descriptions: the cmdb_id search returned ${search.result[0][sys_id]}
         action:  [ new, update ]
-      # 2: update
-      # 3: hold
-      # 4: hold
-      # 5: hold
-      # 6: resolved
     actions:
       create:
         assignment_group: something
