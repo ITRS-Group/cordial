@@ -4,7 +4,7 @@ api:
   apikey: RANDOMAPIKEY
 
 # New section "geneos" for inputs from Geneos
-geneos:
+itrs:
   # A list of maps in YAML
   #
   # The "value" is the input from the outside and is subject to "expansion" as per
@@ -135,7 +135,7 @@ servicenow:
       #
       # we can add other functions to do specific ServiceNow things
       cmdb_ci: ${snow:search("cmdb_ci", "name="+_NETPROBE_HOST, "cmdb_ci")}
-      sys_id: ${snow:search(servicenow.incidents.table, "active=true^cmdb_ci="+search.cmdb_ci[cmdb_ci]+"^correlation_id="+ID, "sys_id")
+      incident: ${snow:search(servicenow.incidents.table, "active=true^cmdb_ci="+search.cmdb_ci[cmdb_ci]+"^correlation_id="+ID, "sys_id,number")
     checks:
       # traverse checks in order, first match wins
       #
@@ -151,9 +151,14 @@ servicenow:
       #
       # only fields defined here can be set to search result values,
       # those in actions cannot (?)
+      - match: ${expr:_SEVERITY in [ "critical", "warning" ]}
+        action: xxx
+        fields:
+          value: ${search.incident[number]}
       - match: ${expr:_ALERT_TYPE == "Alert" && state == 0}
         fields:
           category: something
+          field: ${ENVIRONMENT}
         action: create
       - match: ${expr:search.sys_id[sys_id] == "blah"}
         fields:
