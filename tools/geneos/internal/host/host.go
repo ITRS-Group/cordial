@@ -295,7 +295,7 @@ func (h *Host) Range(hosts ...*Host) []*Host {
 	}
 }
 
-// Filepath returns an absolute path relative to the Geneos installation
+// Filepath returns an absolute path relative to the Geneos root
 // directory. Each argument is used as a path component and are joined
 // using filepath.Join(). Each part can be a plain string or a type with
 // a String() method - non-string types are rendered using fmt.Sprint()
