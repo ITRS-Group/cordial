@@ -53,16 +53,21 @@ func init() {
 	aesCmd.AddCommand(aesLsCmd)
 
 	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdJSON, "json", "j", false, "Output JSON")
-	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdIndent, "pretty", "i", false, "Indent / pretty print JSON")
+	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdIndent, "pretty", "i", false, "Output indented JSON")
 	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdCSV, "csv", "c", false, "Output CSV")
 	aesLsCmd.Flags().SortFlags = false
 }
 
 var aesLsCmd = &cobra.Command{
 	Use:   "ls [flags] [TYPE] [NAME...]",
-	Short: "List configured AES key files",
+	Short: "List configured keyfiles for instances",
 	Long: strings.ReplaceAll(`
-List configured AES key files
+For matching instances list configured keyfiles, their location in
+the filesystem and their CRC. 
+
+The default output is human readable columns but can be in CSV
+format using the |-c| flag or JSON with the |-j| or |-i| flags, the
+latter "pretty" formatting the output over multiple, indented lines
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -72,7 +77,7 @@ List configured AES key files
 		ct, args, params := cmdArgsParams(cmd)
 
 		switch {
-		case aesLsCmdJSON:
+		case aesLsCmdJSON, aesLsCmdIndent:
 			results, _ := instance.ForAllWithResults(ct, aesLSInstanceJSON, args, params)
 			var b []byte
 			if aesLsCmdIndent {

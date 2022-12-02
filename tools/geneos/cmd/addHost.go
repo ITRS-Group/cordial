@@ -57,23 +57,34 @@ var addHostCmd = &cobra.Command{
 	Aliases: []string{"remote"},
 	Short:   "Add a remote host",
 	Long: strings.ReplaceAll(`
-Add a remote host for integration with other commands.
+Add a remote host NAME for seamless control of your Geneos estate.
 
-The |geneos add host| command is formated as:
-|geneos add host [flags] [NAME] [SSHURL]|
-where syntax for |SSHURL| is |ssh://[USER@]HOST[:PORT][/PATH]|
-with:
-- USER being the username to be used on the target host.
-  If USER is not defined, it will default to the current username.
-- PORT being the ssh port on the target host.
-  In PORT is not defined, it defaults to port 22.
-- PATH is the geneos based directory used on the target host.
-  If PATH is not defined, it defaults to the local geneos base directory
-  path.
+One or both of NAME or SSHURL must be given. NAME is used as
+the default hostname if not SSHURL is given and, conversely, the
+hostname portion of the SSHURL is used if no NAME is supplied.
 
-**Note**: For details of how the remove commands work, refer to
-[Remote Management](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos#remote-management).
+The SSHURL extends the standard format by allowing a path to the
+root directory for the remote Geneos installation in the format:
+
+  ssh://[USER@]HOST[:PORT][/PATH]
+
+Where:
+
+* USER is the username to be used to connect to the target host. If
+  is not defined, it will default to the current username.
+* PORT is the ssh port used to connect to the target host. In not
+  defined, it defaults to 22.
+* HOST the hostname or IP address of the target host. Required.
+* PATH is the root Geneos directory used on the target host. If not
+  defined, it is set to the same as the local Geneos
+  root directory.
 `, "|", "`"),
+	Example: strings.ReplaceAll(`
+geneos add host server1
+geneos add host ssh://server2:50122
+geneos add host remote1 ssh://server.example.com/opt/geneos
+`, "|", "`"),
+
 	SilenceUsage: true,
 	Args:         cobra.RangeArgs(1, 2),
 	Annotations: map[string]string{

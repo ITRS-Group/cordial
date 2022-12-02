@@ -29,9 +29,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -44,7 +41,7 @@ func init() {
 
 	defKeyFile := geneos.UserConfigFilePaths("keyfile.aes")[0]
 	aesImportCmd.Flags().StringVarP(&aesImportCmdKeyfile, "keyfile", "k", defKeyFile, "Keyfile to use")
-	aesImportCmd.Flags().StringVarP(&aesImportCmdHostname, "host", "H", "", "Import only to named host, default is all")
+	aesImportCmd.Flags().StringVarP(&aesImportCmdHostname, "host", "H", "", "Import only to named `host`, default is all")
 	aesImportCmd.Flags().SortFlags = false
 
 }
@@ -53,18 +50,18 @@ var aesImportCmd = &cobra.Command{
 	Use:   "import [flags] [TYPE] [NAME...]",
 	Short: "Import shared keyfiles for components",
 	Long: strings.ReplaceAll(`
-Import keyfiles to component shared directories.
+Import keyfiles to component TYPE's shared directory.
 
-The argument given with the '-k' flag can be a local file (including
-a prefix of '~/' to represent the home directory), a URL or a dash
-'-' for STDIN. If no '-k' flag is given then the user's default
-keyfile is imported.
+The argument given with the |-k| flag can be a local file, which can have
+a prefix of |~/| to represent the user's home directory, a URL or a dash
+|-| for STDIN. If no |-k| flag is given then the user's default
+keyfile is imported, if found.
 
 If a TYPE is given then the key is only imported to that component
 type, otherwise the keyfile is imported to all supported components.
-Currently only Gateways and Netprobes (and SANs) are supported.
+Currently only Gateways and Netprobes (including SANs) are supported.
 
-Keyfiles are imported to all configured hosts unless '-H' is used to
+Keyfiles are imported to all configured hosts unless |-H| is used to
 limit to a specific host.
 
 Instance names can be given to indirectly identify the component
@@ -92,7 +89,7 @@ type.
 
 		// at this point we have an AESValue struct and a CRC to use as
 		// the filename base. create 'keyfiles' directory as required
-		for _, ct := range ct.Range(&gateway.Gateway, &netprobe.Netprobe, &san.San) {
+		for _, ct := range ct.Range(componentsWithKeyfiles...) {
 			for _, h := range h.Range(host.AllHosts()...) {
 				aesImportSave(ct, h, &a)
 			}

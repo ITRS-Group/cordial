@@ -36,8 +36,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 	"github.com/spf13/cobra"
 )
 
@@ -67,14 +65,15 @@ Create a new key file. Written to STDOUT by default, but can be
 written to a file with the |-k FILE| option.
 
 If the flag |-I| is given then the new key file is imported to the
-shared directories of matching components, using |[CRC32].aes| as the
-file base name. Currently limited to Gateway and Netprobe types,
-including SANs, for use by Toolkit Secure Environment Variables.
+shared directories of matching components, using |CRC32.aes| as the
+file base name, where CRC32 is an 8 digit hexadecimal checksum to
+help distinguish keyfiles. Currently limited to Gateway and Netprobe
+types, including SANs, for use by Toolkit Secure Environment
+Variables.
 
-Additionally, when using the |-I| flag all matching Gateway instances
-have the keyfile path added to the configuration and any existing
-keyfile path is moved to 'prevkeyfile' to support GA6.x key file
-rolling.
+Additionally, when using the |-I| flag any matching Gateway instances
+have any existing |keyfile| path setting moved to the |prevkeyfile|
+setting to support GA6.x key file rolling.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -131,7 +130,7 @@ rolling.
 			ct, args, _ := cmdArgsParams(cmd)
 			h := host.Get(aesNewCmdHostname)
 
-			for _, ct := range ct.Range(&gateway.Gateway, &netprobe.Netprobe, &san.San) {
+			for _, ct := range ct.Range(componentsWithKeyfiles...) {
 				for _, h := range h.Range(host.AllHosts()...) {
 					aesImportSave(ct, h, &a)
 				}

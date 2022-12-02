@@ -25,8 +25,14 @@ package cmd
 import (
 	"strings"
 
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 	"github.com/spf13/cobra"
 )
+
+var componentsWithKeyfiles = []*geneos.Component{&gateway.Gateway, &netprobe.Netprobe, &san.San}
 
 func init() {
 	rootCmd.AddCommand(aesCmd)
@@ -36,9 +42,9 @@ func init() {
 
 var aesCmd = &cobra.Command{
 	Use:   "aes",
-	Short: "Manage Gateway AES key files",
+	Short: "Manage Geneos compatible key files and encode/decode passwords",
 	Long: strings.ReplaceAll(`
-Manage Gateway AES key files for password encoding and decoding
+Manage Geneos compatible key files and encode/decode passwords
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations:  make(map[string]string),
