@@ -189,10 +189,22 @@ func MakeComponentDirs(h *host.Host, ct *Component) (err error) {
 	return
 }
 
-// Return the base directory for a Component
-// ct cannot be None
-func (ct *Component) ComponentDir(h *host.Host) string {
+// InstancesDir return the base directory for the instances of a
+// component
+func (ct *Component) InstancesDir(h *host.Host) string {
+	if ct == nil {
+		return ""
+	}
 	p := h.Filepath(ct, ct.String()+"s")
+	return p
+}
+
+// SharedDir return the shared directory for the component
+func (ct *Component) SharedDir(h *host.Host) string {
+	if ct == nil {
+		return ""
+	}
+	p := h.Filepath(ct, ct.String()+"_shared")
 	return p
 }
 
