@@ -90,13 +90,13 @@ in the value. All other flags and arguments are ignored.
 		}
 
 		if aesDecodeCmdPassword != "" {
-			ciphertext = strings.TrimPrefix(aesDecodeCmdPassword, "+encs+")
+			ciphertext = aesDecodeCmdPassword
 		} else if aesDecodeCmdSource != "" {
 			b, err := geneos.ReadSource(aesDecodeCmdSource)
 			if err != nil {
 				return err
 			}
-			ciphertext = strings.TrimPrefix(string(b), "+encs+")
+			ciphertext = string(b)
 		} else {
 			return geneos.ErrInvalidArgs
 		}

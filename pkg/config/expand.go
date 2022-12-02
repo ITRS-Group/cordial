@@ -240,7 +240,6 @@ func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value 
 	if encodedValue == "" {
 		return
 	}
-	encodedValue = strings.TrimPrefix(encodedValue, "+encs+")
 
 	for _, keyfile := range strings.Split(keyfiles, "|") {
 		if strings.HasPrefix(keyfile, "~/") {
@@ -273,7 +272,6 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 	if len(encodedValue) == 0 {
 		return
 	}
-	encodedBytes := bytes.TrimPrefix([]byte(encodedValue), []byte("+encs+"))
 
 	for _, keyfile := range bytes.Split(keyfiles, []byte("|")) {
 		if bytes.HasPrefix(keyfile, []byte("~/")) {
@@ -284,7 +282,7 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 		if err != nil {
 			continue
 		}
-		p, err := a.DecodeAES(encodedBytes)
+		p, err := a.DecodeAES(encodedValue)
 		if err != nil {
 			continue
 		}
