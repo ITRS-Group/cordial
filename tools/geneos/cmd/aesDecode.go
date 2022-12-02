@@ -56,16 +56,17 @@ func init() {
 
 var aesDecodeCmd = &cobra.Command{
 	Use:   "decode [flags] [TYPE] [NAME...]",
-	Short: "Decode a Geneos-format secure password",
+	Short: "Decode a password using a Geneos compatible keyfile",
 	Long: strings.ReplaceAll(`
-Decode a Geneos-format secure password using the keyfile(s) given.
+Decode a Geneos-format AES256 encoded password using the keyfile(s)
+given.
 
 If no keyfiles are provided then all matching instances are checked
 for configured keyfiles and each one tried or the default keyfile
 paths are tried. An error is only returned if all attempts to decode
-fail. The cipertext may contain the optional prefix |+encs+|. If both
-|-P| and |-s| options are given then the |-P| argument is used. To
-read a ciphertext from STDIN use |-s -|.
+fail. The ciphertext may contain the optional prefix |+encs+|. If
+both |-P| and |-s| options are given then the argument to the |-P|
+flag is used. To read a ciphertext from STDIN use |-s -|.
 
 If an |expandable| string is given with the |-e| option it must be of
 the form |${enc:...}| (be careful to single-quote this string when

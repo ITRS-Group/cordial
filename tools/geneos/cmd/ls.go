@@ -56,7 +56,7 @@ func init() {
 	rootCmd.AddCommand(lsCmd)
 
 	lsCmd.PersistentFlags().BoolVarP(&lsCmdJSON, "json", "j", false, "Output JSON")
-	lsCmd.PersistentFlags().BoolVarP(&lsCmdIndent, "pretty", "i", false, "Indent (pretty print) JSON")
+	lsCmd.PersistentFlags().BoolVarP(&lsCmdIndent, "pretty", "i", false, "Output indented JSON")
 	lsCmd.PersistentFlags().BoolVarP(&lsCmdCSV, "csv", "c", false, "Output CSV")
 
 	lsCmd.Flags().SortFlags = false
@@ -64,9 +64,13 @@ func init() {
 
 var lsCmd = &cobra.Command{
 	Use:   "ls [flags] [TYPE] [NAME...]",
-	Short: "List instances, optionally in CSV or JSON format",
+	Short: "List instances",
 	Long: strings.ReplaceAll(`
-List the matching instances and details.
+Matching instances are listed with details.
+
+The default output is intended for human viewing but can be in CSV
+format using the |-c| flag or JSON with the |-j| or |-i| flags, the
+latter "pretty" formatting the output over multiple, indented lines.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -75,7 +79,7 @@ List the matching instances and details.
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args, params := cmdArgsParams(cmd)
 		switch {
-		case lsCmdJSON:
+		case lsCmdJSON, lsCmdIndent:
 			results, _ := instance.ForAllWithResults(ct, lsInstanceJSON, args, params)
 			var b []byte
 			if lsCmdIndent {
