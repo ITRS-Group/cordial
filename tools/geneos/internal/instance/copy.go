@@ -135,7 +135,7 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 	}(src.String(), src.Host(), src.Home(), dst)
 
 	// update *Home manually, as it's not just the prefix
-	newdst.Config().Set("home", filepath.Join(dst.Type().ComponentDir(dHost), dName))
+	newdst.Config().Set("home", filepath.Join(dst.Type().InstancesDir(dHost), dName))
 
 	if src.Host() == dHost {
 		if !move {

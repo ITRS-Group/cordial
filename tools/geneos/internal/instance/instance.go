@@ -511,12 +511,12 @@ func AllNames(h *host.Host, ct *geneos.Component) (names []string) {
 	if ct == nil {
 		for _, t := range geneos.RealComponents() {
 			// ignore errors, we only care about any files found
-			d, _ := h.ReadDir(t.ComponentDir(h))
+			d, _ := h.ReadDir(t.InstancesDir(h))
 			files = append(files, d...)
 		}
 	} else {
 		// ignore errors, we only care about any files found
-		files, _ = h.ReadDir(ct.ComponentDir(h))
+		files, _ = h.ReadDir(ct.InstancesDir(h))
 	}
 
 	sort.Slice(files, func(i, j int) bool {
