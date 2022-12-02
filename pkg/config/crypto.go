@@ -204,7 +204,13 @@ func (a AESValues) EncodeAESString(in string) (out string, err error) {
 	return
 }
 
+// DecodeAES returns the decoded value of in bytes using the AESValues
+// given as the method receiver. Any prefix of "+encs+" is trimmed
+// before decode. If decoding fails out is empty and error will contain
+// the reason.
 func (a AESValues) DecodeAES(in []byte) (out []byte, err error) {
+	in = bytes.TrimPrefix(in, []byte("+encs+"))
+
 	text := make([]byte, hex.DecodedLen(len(in)))
 	hex.Decode(text, in)
 	block, err := aes.NewCipher(a.Key)
