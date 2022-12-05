@@ -399,30 +399,39 @@ func NextPort(r *host.Host, ct *geneos.Component) uint16 {
 	return 0
 }
 
-// return the base package name and the version it links to.
-// if not a link, then return the same
-// follow a limited number of links (10?)
-func Version(c geneos.Instance) (base string, underlying string, err error) {
+// Version returns the base package name and the version it links to. If
+// base is not a link, then symlink is returned the same as base. If
+// there are more than 10 levels of symlink then return symlink set to
+// "loop-detected" and err set to  syscall.ELOOP to prevent infinite
+// loops.
+func Version(c geneos.Instance) (base string, symlink string, err error) {
+	var st fs.FileInfo
+	var i int
+
 	basedir := c.Config().GetString("install")
 	base = c.Config().GetString("version")
-	underlying = base
-	for {
-		var st fs.FileInfo
-		basepath := utils.JoinSlash(basedir, underlying)
+	symlink = base
+
+	for i = 0; i < 10; i++ {
+		basepath := utils.JoinSlash(basedir, symlink)
 		st, err = c.Host().Lstat(basepath)
 		if err != nil {
-			underlying = "unknown"
+			symlink = "unknown"
 			return
 		}
 		if st.Mode()&fs.ModeSymlink != 0 {
-			underlying, err = c.Host().Readlink(basepath)
+			symlink, err = c.Host().Readlink(basepath)
 			if err != nil {
-				underlying = "unknown"
+				symlink = "unknown"
 				return
 			}
 		} else {
 			break
 		}
+	}
+	if i == 10 {
+		err = syscall.ELOOP
+		symlink = "loop-detected"
 	}
 	return
 }
