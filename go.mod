@@ -9,6 +9,7 @@ require (
 	github.com/go-ldap/ldap/v3 v3.4.4
 	github.com/go-mail/mail/v2 v2.3.0
 	github.com/gurkankaymak/hocon v1.2.10
+	github.com/hashicorp/go-version v1.6.0
 	github.com/jcmturner/goidentity/v6 v6.0.1
 	github.com/jcmturner/gokrb5/v8 v8.4.3
 	github.com/labstack/echo/v4 v4.9.1

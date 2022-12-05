@@ -14,16 +14,23 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
+	"sort"
 	"strings"
 	"time"
+	"unicode"
 
+	"github.com/hashicorp/go-version"
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
+
+type downloadauth struct {
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+}
 
 // OpenArchive locates and returns an io.ReadCloser for an archive for
 // the component given
@@ -427,7 +434,7 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 	}
 
 	if resp.StatusCode > 299 {
-		err = fmt.Errorf("cannot access %s package version %s: %s", ct, opts.version, resp.Status)
+		err = fmt.Errorf("cannot access %s package at %q version %s: %s", ct, source, opts.version, resp.Status)
 		resp.Body.Close()
 		return
 	}
@@ -441,20 +448,6 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 	return
 }
 
-type downloadauth struct {
-	Username string `json:"username,omitempty"`
-	Password string `json:"password,omitempty"`
-}
-
-var versRE = regexp.MustCompile(`(\d+(\.\d+){0,2})`)
-var anchoredVersRE = regexp.MustCompile(`^(\d+(\.\d+){0,2})$`)
-
-func MatchVersion(v string) bool {
-	return anchoredVersRE.MatchString(v)
-}
-
-// given a directory find the "latest" version of the form
-// [GA]M.N.P[-DATE] M, N, P are numbers, DATE is treated as a string
 func latest(r *host.Host, dir, filter string, fn func(os.DirEntry) bool) (latest string) {
 	dirs, err := r.ReadDir(dir)
 	if err != nil {
@@ -474,61 +467,37 @@ func latest(r *host.Host, dir, filter string, fn func(os.DirEntry) bool) (latest
 	}
 	dirs = newdirs
 
-	max := []int{0, 0, 0}
+	var versions []*version.Version
+	var originals = make(map[string]string, len(dirs)) // map processed to original entry
 
-	for _, v := range dirs {
-		if fn(v) {
+	for _, d := range dirs {
+		if fn(d) {
 			continue
 		}
-		// strip 'GA' prefix and get name
-		d := strings.TrimPrefix(v.Name(), "GA")
-		x := versRE.FindString(d)
-		if x == "" {
-			log.Debug().Msgf("%s does not match a valid directory pattern", d)
-			continue
+		n := d.Name()
+		v1p := strings.FieldsFunc(n, func(r rune) bool {
+			return !unicode.IsLetter(r)
+		})
+		originals[n] = n
+		if len(v1p) > 0 && v1p[0] != "" {
+			p := strings.TrimPrefix(n, v1p[0])
+			originals[p] = n
+			n = p
 		}
-		log.Debug().Msgf("%s: checking version %q", dir, x)
-		s := strings.SplitN(x, ".", 3)
-
-		next := sliceAtoi(s)
-
-		// unrolled loop is much simpler
-		switch {
-		case next[0] < max[0]:
-			continue
-		case next[0] > max[0]:
-			max = []int{next[0], 0, 0}
-		}
-
-		switch {
-		case next[1] < max[1]:
-			continue
-		case next[1] > max[1]:
-			max = []int{next[0], next[1], 0}
-		}
-
-		switch {
-		case next[2] < max[2]:
-			continue
-		case next[2] > max[2]:
-			max = []int{next[0], next[1], next[2]}
-			latest = v.Name()
-		default:
-			if v.Name() > latest {
-				latest = v.Name()
-			}
+		v1, err := version.NewVersion(n)
+		if err == nil { // valid version
+			versions = append(versions, v1)
 		}
 	}
-	return
+	if len(versions) == 0 {
+		return ""
+	}
+	sort.Sort(version.Collection(versions))
+	return originals[versions[len(versions)-1].Original()]
 }
 
-func sliceAtoi(s []string) (n []int) {
-	for _, x := range s {
-		i, err := strconv.Atoi(x)
-		if err != nil {
-			i = 0
-		}
-		n = append(n, i)
-	}
-	return
+var anchoredVersRE = regexp.MustCompile(`^(\d+(\.\d+){0,2})$`)
+
+func MatchVersion(v string) bool {
+	return anchoredVersRE.MatchString(v)
 }

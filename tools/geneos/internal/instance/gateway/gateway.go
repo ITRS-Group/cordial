@@ -295,6 +295,15 @@ func (g *Gateways) Command() (args, env []string) {
 		"-stats",
 	}
 
+	_, version, err := instance.Version(g)
+	if err == nil { // if we have a valid version test for additional features
+		switch {
+		case instance.CompareVersion(version, "6.0.0") >= 0:
+			log.Debug().Msg("version 6.0.0 or above, doing stuff")
+			// use keyfiles etc.
+		}
+
+	}
 	// check version
 	// base, underlying, _ := instance.Version(g)
 	// if underlying ... { }
