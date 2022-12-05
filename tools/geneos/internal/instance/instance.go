@@ -35,6 +35,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"unicode"
 
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -42,6 +43,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 
+	"github.com/hashicorp/go-version"
 	"github.com/rs/zerolog/log"
 )
 
@@ -436,6 +438,47 @@ func Version(c geneos.Instance) (base string, symlink string, err error) {
 	return
 }
 
+// CompareVersion takes two Geneos package versions and returns an int
+// that is 0 if they are identical, negative if version1 < version2 and
+// positive is version1 > version2. If the version is prefixed with non
+// numeric values then "GA" is always greater thn "RA" (general versus
+// restricted availability) for the same numeric version, otherwise a
+// lexical comparison is done on the prefixes.
+func CompareVersion(version1, version2 string) int {
+	v1p := strings.FieldsFunc(version1, func(r rune) bool {
+		return !unicode.IsLetter(r)
+	})
+	if len(v1p) == 0 {
+		v1p = []string{"GA"}
+	} else if v1p[0] == "" {
+		v1p[0] = "GA"
+	} else {
+		version1 = strings.TrimPrefix(version1, v1p[0])
+	}
+	v1, err := version.NewVersion(version1)
+	if err != nil {
+		panic(err)
+	}
+	v2p := strings.FieldsFunc(version2, func(r rune) bool {
+		return !unicode.IsLetter(r)
+	})
+	if len(v2p) == 0 {
+		v2p = []string{"GA"}
+	} else if v2p[0] == "" {
+		v2p[0] = "GA"
+	} else {
+		version2 = strings.TrimPrefix(version2, v2p[0])
+	}
+	v2, err := version.NewVersion(version2)
+	if err != nil {
+		panic(err)
+	}
+	if i := v1.Compare(v2); i != 0 {
+		return i
+	}
+	return strings.Compare(v1p[0], v2p[0])
+}
+
 // ForAll calls the supplied function for each matching instance. It
 // prints any returned error on STDOUT and the only error returned is
 // os.ErrNotExist if there are no matching instances.
@@ -543,10 +586,11 @@ func AllNames(h *host.Host, ct *geneos.Component) (names []string) {
 	return
 }
 
-// given an instance name in the format [TYPE:]NAME[@HOST] and a default
-// host, return a *geneos.Component for the TYPE if given, a string
-// for the NAME and a *host.Host - the latter being either from the name
-// or the default provided
+// SplitName returns the parts of an instance name given an instance
+// name in the format [TYPE:]NAME[@HOST] and a default host, return a
+// *geneos.Component for the TYPE if given, a string for the NAME and a
+// *host.Host - the latter being either from the name or the default
+// provided
 func SplitName(in string, defaultHost *host.Host) (ct *geneos.Component, name string, h *host.Host) {
 	h = defaultHost
 	parts := strings.SplitN(in, "@", 2)
@@ -562,7 +606,7 @@ func SplitName(in string, defaultHost *host.Host) (ct *geneos.Component, name st
 	return
 }
 
-// buildCmd gathers the path to the binary, arguments and any environment variables
+// BuildCmd gathers the path to the binary, arguments and any environment variables
 // for an instance and returns an exec.Cmd, almost ready for execution. Callers
 // will add more details such as working directories, user and group etc.
 func BuildCmd(c geneos.Instance) (cmd *exec.Cmd, env []string) {

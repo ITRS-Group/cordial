@@ -50,7 +50,7 @@ func Start(c geneos.Instance) (err error) {
 
 	cmd, env := BuildCmd(c)
 	if cmd == nil {
-		return fmt.Errorf("buildCommand returned nil")
+		return fmt.Errorf("BuildCmd() returned nil")
 	}
 
 	if !utils.CanControl(c.Config().GetString("user")) {
