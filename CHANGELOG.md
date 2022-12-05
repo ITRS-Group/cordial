@@ -31,6 +31,7 @@
 
 * Other
 
+  * tools/geneos: ongoing documentation and command help usage updates
   * tools/geneos: update README.md with more information about instance configuration files and their values (@gvastel)
 
 ## Version v1.3.2 - 2022/11/02

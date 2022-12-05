@@ -9,8 +9,6 @@
   * Add netprobe support, services?
 * Add a 'selfupdate' like, but simpler than, rclone
 * When 'moving' a gateway, update licd connection details
-  * Also, keep port(s) unchanged where possible
-* TLS sync should copy root CA
 * Positive confirmations of all commands unless quiet mode - PARTIAL
   * Should be an 'action taken' return from commands for output
   * create a seperate "verbose" logger and work through output to choose
@@ -20,6 +18,7 @@
 * Command line verbosity control - PARTIAL
 * TLS support
   * output chain.pem file / or to stdout for sharing
+  * TLS sync should copy root CA
 * Docker Compose file build from selection of components
 * check capabilities and not just setuid/root user
 * Run REST commands against gateways
@@ -30,8 +29,6 @@
 * centralised config
 * web dashboard - mostly done, better port numbers and tls to do
 * Support gateway2.gci format files
-* Add a 'clone' command (rename without delete) - for backup gateways etc.
-  * reset configs / clean etc.
 * Redo template support, primarily for SANs but also gateways
   * document changes
 * Update docs to include configuration file rebuilds, gateway includes etc.
@@ -40,9 +37,8 @@
   * first pass review configs
   * second to edit
   * use a REST interface
-* move/copy - need to update ports when moving to another remote or copying to same remote
 * explore gRPC and other options over ssh for remotes (required daemon mode)
-* add socket and open file details to ls (ala lsof) - perhaps a "details" command or an option to "show" ?
+* add socket and open file details to ps (ala lsof) - perhaps a "details" command or an option to "show" ?
   * /proc/N/fd/* links
 
 ## libemail.so

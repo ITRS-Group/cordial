@@ -10,7 +10,7 @@ Cordial comprises a set of interrelated programs, integrations, libraries and pa
 * [Enhanced `libemail`](libraries/libemail/)
 * Go Packages
   * `commands`
-    Geneos Gateway REST API Commands
+    Geneos Gateway REST API Commands including programmatic support for `snapshots` of dataviews
   * `config`
     Configuration file support, based on `viper` with local extensions
   * `geneos`

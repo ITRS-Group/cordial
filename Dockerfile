@@ -43,6 +43,11 @@ WORKDIR /app/cordial/tools/geneos
 WORKDIR /app/cordial/libraries/libemail
 RUN make
 
+#
+# Build PDF documentation using mdpdf. Like all Puppeteer based PDF
+# writers the support for relative links to files is broken, so
+# documents with links to other docs in the same repo will be wrong.
+#
 FROM node AS build-docs
 LABEL stage=cordial-build
 COPY ./ /app/cordial
@@ -58,6 +63,10 @@ COPY ./integrations/pagerduty/README.md pagerduty.md
 RUN mdpdf --border=15mm /app/cordial/libraries/libemail/README.md libemail.pdf
 COPY ./libraries/libemail/README.md libemail.md
 
+#
+# assemble files from previous stages into a .zip and .tar.gz ready from
+# extraction in the Makefile
+#
 FROM alpine AS cordial-build
 LABEL stage=cordial-build
 RUN apk add zip
@@ -74,6 +83,9 @@ WORKDIR /
 RUN tar czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION) && zip -q -r /cordial-$(cat /VERSION).zip cordial-$(cat /VERSION) && rm -r /cordial-$(cat /VERSION)
 CMD [ "bash" ]
 
+#
+# create a runnable test image
+#
 FROM debian AS cordial-run
 RUN apt update && apt install -y fontconfig ca-certificates
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
