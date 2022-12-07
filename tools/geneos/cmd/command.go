@@ -28,6 +28,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+
 	"github.com/spf13/cobra"
 )
 
@@ -41,9 +42,7 @@ var commandCmd = &cobra.Command{
 	Use:   "command [TYPE] [NAME...]",
 	Short: "Show command line and environment for launching instances",
 	Long: strings.ReplaceAll(`
-Show for each of the matching instances:
-- The command line,
-- The environment variables explicitly set for execution.
+Show for each of the matching instance the command line that would be used to run it as well as any environment variables.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
