@@ -61,6 +61,9 @@ func commandInstance(c geneos.Instance, params []string) (err error) {
 		fmt.Println("command line:")
 		fmt.Println("\t", cmd.String())
 		fmt.Println()
+		fmt.Println("working directory:")
+		fmt.Println("\t", c.Home())
+		fmt.Println()
 		fmt.Println("environment:")
 		for _, e := range env {
 			fmt.Println("\t", e)
