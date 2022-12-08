@@ -68,7 +68,7 @@ type Webservers instance.Instance
 var _ geneos.Instance = (*Webservers)(nil)
 
 func init() {
-	geneos.RegisterComponent(&Webserver, New)
+	Webserver.RegisterComponent(New)
 }
 
 var webservers sync.Map

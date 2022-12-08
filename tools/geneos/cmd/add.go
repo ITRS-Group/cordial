@@ -118,7 +118,7 @@ func addInstance(ct *geneos.Component, addCmdExtras ExtraConfigValues, args ...s
 	name := args[0]
 
 	_, _, rem := instance.SplitName(name, host.LOCAL)
-	if err = geneos.MakeComponentDirs(rem, ct); err != nil {
+	if err = ct.MakeComponentDirs(rem); err != nil {
 		return
 	}
 

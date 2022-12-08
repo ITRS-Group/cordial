@@ -125,10 +125,23 @@ func psInstancePlain(c geneos.Instance, params []string) (err error) {
 		groupname = g.Name
 	}
 	base, underlying, _ := instance.Version(c)
-	ports := instance.Ports(c)
+	ports := instance.TCPPorts(c)
 
 	fmt.Fprintf(psTabWriter, "%s\t%s\t%s\t%d\t%v\t%s\t%s\t%s\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), pid, ports, username, groupname, time.Unix(mtime, 0).Local().Format(time.RFC3339), base, underlying, c.Home())
 
+	// list open files (test code)
+	//
+	// files := instance.Files(c)
+	// fds := make([]int, len(files))
+	// i := 0
+	// for f := range files {
+	// 	fds[i] = f
+	// 	i++
+	// }
+	// sort.Ints(fds)
+	// for _, n := range fds {
+	// 	fmt.Fprintf(psTabWriter, "\t[%d]: %s\n", n, files[n])
+	// }
 	return
 }
 

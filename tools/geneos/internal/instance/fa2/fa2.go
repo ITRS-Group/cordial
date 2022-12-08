@@ -62,7 +62,7 @@ type FA2s instance.Instance
 var _ geneos.Instance = (*FA2s)(nil)
 
 func init() {
-	geneos.RegisterComponent(&FA2, New)
+	FA2.RegisterComponent(New)
 }
 
 var fa2s sync.Map
