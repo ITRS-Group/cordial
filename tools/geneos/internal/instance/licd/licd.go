@@ -62,7 +62,7 @@ type Licds instance.Instance
 var _ geneos.Instance = (*Licds)(nil)
 
 func init() {
-	geneos.RegisterComponent(&Licd, New)
+	Licd.RegisterComponent(New)
 }
 
 var licds sync.Map

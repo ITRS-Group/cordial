@@ -86,7 +86,7 @@ const GatewayDefaultTemplate = "gateway.setup.xml.gotmpl"
 const GatewayInstanceTemplate = "gateway-instance.setup.xml.gotmpl"
 
 func init() {
-	geneos.RegisterComponent(&Gateway, New)
+	Gateway.RegisterComponent(New)
 }
 
 func Init(r *host.Host, ct *geneos.Component) {

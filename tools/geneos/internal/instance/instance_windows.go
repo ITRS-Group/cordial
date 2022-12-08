@@ -37,11 +37,15 @@ func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime int64
 	return
 }
 
-func Ports(c geneos.Instance) (ports []int) {
+func TCPPorts(c geneos.Instance) (ports []int) {
 	return
 }
 
 func Files(c geneos.Instance) (links map[int]string) {
+	return
+}
+
+func Sockets(c geneos.Instance) (links map[int]string) {
 	return
 }
 

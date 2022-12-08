@@ -74,7 +74,7 @@ var SanTemplate []byte
 const SanDefaultTemplate = "netprobe.setup.xml.gotmpl"
 
 func init() {
-	geneos.RegisterComponent(&San, New)
+	San.RegisterComponent(New)
 }
 
 func Init(r *host.Host, ct *geneos.Component) {

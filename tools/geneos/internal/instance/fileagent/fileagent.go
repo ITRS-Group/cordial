@@ -69,7 +69,7 @@ type FileAgents instance.Instance
 var _ geneos.Instance = (*FileAgents)(nil)
 
 func init() {
-	geneos.RegisterComponent(&FileAgent, New)
+	FileAgent.RegisterComponent(New)
 }
 
 var fileagents sync.Map

@@ -40,14 +40,18 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// locate a process instance
+// GetPID returns the PID of the process running for the instance. If
+// not found then an err of os.ErrProcessDone is returned.
+//
+// The process is identified by checking the conventions used to start
+// Geneos processes.
 //
 // the component type must be part of the basename of the executable and
 // the component name must be on the command line as an exact and
 // standalone args
 //
-// walk the /proc directory (local or remote) and find the matching pid
-// this is subject to races, but not much we can do
+// walk the /proc directory (local or remote) and find the matching pid.
+// This is subject to races, but not much we can do
 func GetPID(c geneos.Instance) (pid int, err error) {
 	var pids []int
 	binary := c.Config().GetString("binary")
@@ -113,15 +117,25 @@ func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime int64
 	return 0, 0, 0, 0, os.ErrProcessDone
 }
 
-func Ports(c geneos.Instance) (ports []int) {
-	links := Files(c)
+// TCPPorts returns all TCP ports currently open for the process running as
+// the instance. An empty slice is returned if the process cannot be found.
+// The instance may be on a remote host.
+func TCPPorts(c geneos.Instance) (ports []int) {
+	_, err := GetPID(c)
+	if err != nil {
+		log.Debug().Err(err).Msg("")
+		return
+	}
+
+	sockets := Sockets(c)
+	if len(sockets) == 0 {
+		return
+	}
 
 	tcp, err := c.Host().Open("/proc/net/tcp")
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
-
-	// udp, _ := c.Host().ReadFile("/proc/net/udp")
 
 	tcpports := make(map[int]int)
 	scanner := bufio.NewScanner(tcp)
@@ -143,23 +157,25 @@ func Ports(c geneos.Instance) (ports []int) {
 		}
 	}
 
-	var inode int
-	for _, l := range links {
-		if n, err := fmt.Sscanf(l, "socket:[%d]", &inode); err == nil && n == 1 {
-			if port, ok := tcpports[inode]; ok {
-				ports = append(ports, port)
-				log.Debug().Msgf("process listening on %v", port)
-			}
+	for _, s := range sockets {
+		if port, ok := tcpports[s]; ok {
+			ports = append(ports, port)
+			log.Debug().Msgf("process listening on %v", port)
 		}
 	}
 	return
 }
 
+// Files returns a map[int]string of file descriptor to filepath for all
+// (real) open files for the process running as the instance. All paths
+// that are not absolute paths are ignored. An empty map is returned if
+// the process cannot be found.
 func Files(c geneos.Instance) (links map[int]string) {
 	links = make(map[int]string)
 	pid, err := GetPID(c)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		log.Debug().Err(err).Msg("")
+		return
 	}
 	path := fmt.Sprintf("/proc/%d/fd", pid)
 	fds, err := c.Host().ReadDir(path)
@@ -174,9 +190,45 @@ func Files(c geneos.Instance) (links map[int]string) {
 			log.Debug().Err(err).Msg("")
 			continue
 		}
+		if !filepath.IsAbs(dest) {
+			continue
+		}
 		n, _ := strconv.Atoi(fd)
 		links[n] = dest
 		log.Debug().Msgf("\tfd %s points to %q", fd, dest)
+	}
+	return
+}
+
+// Sockets returns a map[int]int of file descriptor to socket inode for all open
+// files for the process running as the instance. An empty map is
+// returned if the process cannot be found.
+func Sockets(c geneos.Instance) (links map[int]int) {
+	var inode int
+	links = make(map[int]int)
+	pid, err := GetPID(c)
+	if err != nil {
+		log.Debug().Err(err).Msg("")
+		return
+	}
+	path := fmt.Sprintf("/proc/%d/fd", pid)
+	fds, err := c.Host().ReadDir(path)
+	if err != nil {
+		log.Debug().Err(err).Msg("")
+		return
+	}
+	for _, ent := range fds {
+		fd := ent.Name()
+		dest, err := c.Host().Readlink(utils.JoinSlash(path, fd))
+		if err != nil {
+			log.Debug().Err(err).Msg("")
+			continue
+		}
+		if n, err := fmt.Sscanf(dest, "socket:[%d]", &inode); err == nil && n == 1 {
+			f, _ := strconv.Atoi(fd)
+			links[f] = inode
+			log.Debug().Msgf("\tfd %s points to socket %q", fd, inode)
+		}
 	}
 	return
 }

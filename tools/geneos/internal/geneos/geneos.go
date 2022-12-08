@@ -113,12 +113,12 @@ func Init(h *host.Host, options ...GeneosOptions) (err error) {
 	}
 
 	// it's not an error to try to re-create existing dirs
-	if err = MakeComponentDirs(h, nil); err != nil {
-		return
-	}
+	// if err = Root.MakeComponentDirs(h); err != nil {
+	// 	return
+	// }
 
 	for _, c := range AllComponents() {
-		if err := MakeComponentDirs(h, c); err != nil {
+		if err := c.MakeComponentDirs(h); err != nil {
 			continue
 		}
 		if c.Initialise != nil {

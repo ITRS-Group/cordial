@@ -61,7 +61,7 @@ type Netprobes instance.Instance
 var _ geneos.Instance = (*Netprobes)(nil)
 
 func init() {
-	geneos.RegisterComponent(&Netprobe, New)
+	Netprobe.RegisterComponent(New)
 }
 
 var netprobes sync.Map

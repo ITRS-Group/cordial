@@ -2,6 +2,7 @@ package geneos
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -96,7 +97,7 @@ var Root Component = Component{
 }
 
 func init() {
-	RegisterComponent(&Root, nil)
+	Root.RegisterComponent(nil)
 }
 
 type ComponentsMap map[string]*Component
@@ -105,6 +106,7 @@ type ComponentsMap map[string]*Component
 // this should actually become an Interface
 var components ComponentsMap = make(ComponentsMap)
 
+// AllComponents returns a slice of all registered components
 func AllComponents() (cts []*Component) {
 	for _, c := range components {
 		cts = append(cts, c)
@@ -123,12 +125,15 @@ func RealComponents() (cts []*Component) {
 	return
 }
 
-// register a component type
-//
-// the factory function is an arg to disguise init cycles
-// when you declare it in the struct in the caller
-func RegisterComponent(ct *Component, n func(string) Instance) {
-	ct.New = n
+// RegisterComponent adds the given Component ct to the internal list of
+// component types. The factory parameter is the Component's New()
+// function, which has to be passed in to avoid initialisation loops as
+// the function refers to the type being registered.
+func (ct *Component) RegisterComponent(factory func(string) Instance) {
+	if ct == nil {
+		return
+	}
+	ct.New = factory
 	components[ct.Name] = ct
 	ct.RegisterDirs(ct.Directories)
 	for k, v := range ct.GlobalSettings {
@@ -148,12 +153,14 @@ func (ct Component) String() (name string) {
 	return ct.Name
 }
 
-// return the component type by iterating over all the
-// names registered by components. case sensitive.
+// ParseComponentName returns the component type by iterating over all
+// the names registered by components and returning as soon as any value
+// matches. The comparison is case-insensitive. nil is returned if the
+// component does not match any known name.
 func ParseComponentName(component string) *Component {
 	for _, v := range components {
 		for _, m := range v.ComponentMatches {
-			if m == component {
+			if strings.EqualFold(m, component) {
 				return v
 			}
 		}
@@ -161,8 +168,7 @@ func ParseComponentName(component string) *Component {
 	return nil
 }
 
-// create any missing component registered directories
-func MakeComponentDirs(h *host.Host, ct *Component) (err error) {
+func (ct *Component) MakeComponentDirs(h *host.Host) (err error) {
 	name := "none"
 	if h == host.ALL {
 		log.Fatal().Msg("called with all hosts")
