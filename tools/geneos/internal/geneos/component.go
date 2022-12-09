@@ -84,7 +84,7 @@ var Root Component = Component{
 		// default is owner of Geneos
 		"defaultuser": "",
 
-		// Path List seperated additions to the reserved names list, over and above
+		// Path List separated additions to the reserved names list, over and above
 		// any words matched by ParseComponentName()
 		"reservednames": "",
 
@@ -106,7 +106,8 @@ type ComponentsMap map[string]*Component
 // this should actually become an Interface
 var components ComponentsMap = make(ComponentsMap)
 
-// AllComponents returns a slice of all registered components
+// AllComponents returns a slice of all registered components, include
+// the Root component type
 func AllComponents() (cts []*Component) {
 	for _, c := range components {
 		cts = append(cts, c)
@@ -114,8 +115,8 @@ func AllComponents() (cts []*Component) {
 	return
 }
 
-// currently supported real component types, for looping
-// (go doesn't allow const slices, a function is the workaround)
+// RealComponents returns a slice of all registered components that have
+// their `RealComponent` field set to true.
 func RealComponents() (cts []*Component) {
 	for _, c := range components {
 		if c.RealComponent {
@@ -168,6 +169,13 @@ func ParseComponentName(component string) *Component {
 	return nil
 }
 
+// MakeComponentDirs creates the directory structure for the component.
+// If ct is nil then the Root component type is used. If called as
+// superuser / root then the underlying user is used for the ownership
+// of the leaf directories. Non-leaf directories are left unchanged. If
+// there is an error creating the directory or updating the ownership
+// for superuser then this is immediate returned and the list of
+// directories may only be partially created.
 func (ct *Component) MakeComponentDirs(h *host.Host) (err error) {
 	name := "none"
 	if h == host.ALL {
@@ -189,7 +197,9 @@ func (ct *Component) MakeComponentDirs(h *host.Host) (err error) {
 			return
 		}
 		if uid != -1 && gid != -1 {
-			h.Chown(dir, uid, gid)
+			if err = h.Chown(dir, uid, gid); err != nil {
+				return
+			}
 		}
 	}
 	return
@@ -216,7 +226,8 @@ func (ct *Component) SharedDir(h *host.Host) string {
 
 // Range will either return just the specific component it is called on,
 // or if that is nil than the list of component types passed as args. If
-// no arguments are passed then all real components types are returned.
+// no arguments are passed then all `real` components types are
+// returned.
 //
 // This is a convenience to avoid a double layer of if and range in
 // callers than want to work on specific component types.
