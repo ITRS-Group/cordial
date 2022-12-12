@@ -1,3 +1,28 @@
+/*
+Copyright © 2022 ITRS Group
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
+// The `geneos` package provides internal features to manage a typical
+// `Best Practice` installation layout and the conventions that have
+// formed around that structure over many years.
 package geneos
 
 import (
@@ -8,11 +33,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
+
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -33,13 +58,13 @@ var ConfigSubdirName = "geneos"
 var UserConfigFile = "geneos.json"
 var GlobalConfigPath = filepath.Join(GlobalConfigDir, ConfigSubdirName, UserConfigFile)
 
-// initialise a Geneos environment.
+// Init initialises a Geneos environment.
 //
-// creates a directory hierarchy and calls the initialisation
-// functions for each component, for example to create templates
+// creates a directory hierarchy and calls the initialisation functions
+// for each component, for example to create templates
 //
-// if the directory is not empty and 'noEmptyOK' is false then
-// nothing is changed
+// if the directory is not empty and 'noEmptyOK' is false then nothing
+// is changed
 func Init(h *host.Host, options ...GeneosOptions) (err error) {
 	var uid, gid int
 
@@ -105,7 +130,7 @@ func Init(h *host.Host, options ...GeneosOptions) (err error) {
 	if utils.IsSuperuser() {
 		uid, gid, _, err = utils.GetIDs(opts.localusername)
 		if err != nil {
-			// do something
+			// XXX do something
 		}
 		if err = host.LOCAL.Chown(opts.homedir, uid, gid); err != nil {
 			log.Fatal().Err(err).Msg("")
@@ -140,8 +165,8 @@ func Init(h *host.Host, options ...GeneosOptions) (err error) {
 	return
 }
 
-// read a local configuration file without the need for a host
-// connection, primarily for bootstrapping
+// ReadLocalConfigFile reads a local configuration file without the need
+// for a host connection, primarily for bootstrapping
 func ReadLocalConfigFile(file string, config interface{}) (err error) {
 	jsonFile, err := os.ReadFile(file)
 	if err != nil {
@@ -155,9 +180,9 @@ func ReadLocalConfigFile(file string, config interface{}) (err error) {
 // UserConfigFilePaths returns a slice of all the possible file paths to
 // the user configuration file. If arguments are passed then they are
 // used, in-turn, as the base filename for each directory. If no
-// arguments are passed then the default filename is UserConfigFile. The
-// first element is the preferred file and the one that should be used
-// to write to.
+// arguments are passed then the default filename is taken from
+// `UserConfigFile`. The first element is the preferred file and the one
+// that should be used to write to.
 //
 // This function can be used to ensure that as the location changes in
 // the future, the code can still look for older copies when the
