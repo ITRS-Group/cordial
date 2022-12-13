@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/rs/zerolog/log"
 )
 
 func GetIDs(username string) (uid, gid int, gids []int, err error) {
@@ -78,6 +79,12 @@ func CanControl(username string) bool {
 		return true
 	}
 
-	uc, _ := user.Current()
-	return username == uc.Username
+	un := "nobody"
+	uc, err := user.Current()
+	if err != nil {
+		log.Error().Err(err).Msg("cannot get user details")
+	} else {
+		un = uc.Username
+	}
+	return username == un
 }
