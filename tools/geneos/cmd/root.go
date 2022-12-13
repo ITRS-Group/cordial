@@ -197,8 +197,13 @@ func initConfig() {
 	cf.SetEnvKeyReplacer(replacer)
 	cf.AutomaticEnv()
 
-	u, _ := user.Current()
-	username := u.Username
+	u, err := user.Current()
+	username := "nobody"
+	if err != nil {
+		log.Error().Err(err).Msg("cannot get user details")
+	} else {
+		username = u.Username
+	}
 	// strip domain in case we are running on windows
 	i := strings.Index(username, "\\")
 	if i != -1 && len(username) >= i {

@@ -251,10 +251,15 @@ func initProcessArgs(args []string) (options []geneos.GeneosOptions, err error) 
 		}
 		options = append(options, geneos.Homedir(root))
 	} else {
-		u, _ := user.Current()
-		username = u.Username
-		homedir = u.HomeDir
-
+		u, err := user.Current()
+		username = "nobody"
+		homedir = "/"
+		if err != nil {
+			log.Error().Err(err).Msg("cannot get user details")
+		} else {
+			username = u.Username
+			homedir = u.HomeDir
+		}
 		options = append(options, geneos.LocalUsername(username))
 
 		log.Debug().Msgf("%d %v", len(args), args)
