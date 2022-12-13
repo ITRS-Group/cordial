@@ -1,10 +1,10 @@
 # Change Log
 
-## Version v1.4.1-beta - 2022/11/28
+## Version v1.4.1-rc1 - 2022/12/12
 
 * Fixes
 
-  * tools/geneos: many fixes for logic around handling of remote hosts
+  * tools/geneos: numerous fixes for logic around handling of remote hosts
   * tools/geneos: fix remote host naming to be work with capitalisations
   * tools/geneos: actually load SSH private key files, if available
   * tools/geneos: re-order SSH HostKeyAlgorithms so that, bizarrely, IP based remotes work
@@ -15,12 +15,13 @@
   * tools/geneos: add the beginnings of support for YAML instance config files. not enabled yet.
   * tools/geneos: fix crash when importing to common directories of components without the component name
   * tools/geneos: fix fileagent support by adding implicit imports with side-effects for all component packages
-  * tools/geneos: skip failed permissions on /prox/*/fd - let 'ps' work for restricted processes
+  * tools/geneos: skip failed permissions on /proc/*/fd - let 'ps' work for restricted processes
   * tools/geneos: fix update-during-install support, add --force flag for this too
   * tools/geneos: fix logic to match latest packages when major number changes
 
 * Changes
 
+  * tools/geneos: clean-up various comments, refactor methods, add license/copyright notices to many files
   * pkg/config: Add an options `expr` prefix to expansion items which supports [github.com/maja42/goval] syntax
   * pkg/config: API change: Add options to the config expansion functions rather than just lookup maps
   * tools/geneos: add SSH password support for remote hosts
