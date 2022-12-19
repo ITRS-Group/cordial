@@ -412,12 +412,17 @@ func WriteConfig() error {
 		return true
 	})
 
-	if err := n.WriteConfigAs(UserHostsFilePath()); err != nil {
+	userhostfile := UserHostsFilePath()
+
+	if err := os.MkdirAll(filepath.Dir(userhostfile), 0775); err != nil {
+		return err
+	}
+	if err := n.WriteConfigAs(userhostfile); err != nil {
 		return err
 	}
 	if utils.IsSuperuser() {
 		uid, gid, _, _ := utils.GetIDs("")
-		LOCAL.Chown(UserHostsFilePath(), uid, gid)
+		LOCAL.Chown(userhostfile, uid, gid)
 	}
 	return nil
 }
