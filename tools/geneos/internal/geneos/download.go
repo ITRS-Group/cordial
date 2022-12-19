@@ -66,10 +66,7 @@ func Install(h *host.Host, ct *Component, options ...GeneosOptions) (err error) 
 		return nil
 	}
 
-	osinfo := h.GetStringMapString("osinfo")
-	if p, ok := osinfo["PLATFORM_ID"]; ok {
-		options = append(options, PlatformID(p))
-	}
+	options = append(options, PlatformID(h.GetString("osinfo.platform_id")))
 
 	opts := EvalOptions(options...)
 
