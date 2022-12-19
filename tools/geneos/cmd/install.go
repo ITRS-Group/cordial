@@ -23,6 +23,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -74,7 +75,7 @@ Installation will ...
   |packages/downloads|, unless the |-n| option is selected.
   In case a FILE or URL is specified, the FILE or URL will be used as the
   packages source and nothing will be written to |packages/downloads|.
-- Plase binaries for TYPE into |packages/<TYPE>/<version>|, where
+- Place binaries for TYPE into |packages/<TYPE>/<version>|, where
   <version> is the version number of the package and can be overridden by
   using option |-T|.
 - in case no symlink pointing to the default version exists, one will be
@@ -100,10 +101,16 @@ geneos install netprobe -b active_dev -U
 		"wildcard": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args, _ := cmdArgsParams(cmd)
+		ct, args, params := cmdArgsParams(cmd)
 		if ct == nil && len(args) == 0 && installCmdLocal {
 			log.Error().Msg("install -L (local) flag with no component or file/url")
 			return nil
+		}
+
+		for _, p := range params {
+			if strings.HasPrefix(p, "@") {
+				return fmt.Errorf("@HOST not valid here, perhaps you meant `-H HOST`?")
+			}
 		}
 
 		if installCmdUsername == "" {
