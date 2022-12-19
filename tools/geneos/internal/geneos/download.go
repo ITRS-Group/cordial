@@ -33,7 +33,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -45,9 +44,6 @@ const defaultURL = "https://resources.itrsgroup.com/download/latest/"
 func init() {
 	config.GetConfig().SetDefault("download.url", defaultURL)
 }
-
-// how to split an archive name into type and version
-var archiveRE = regexp.MustCompile(`^geneos-(web-server|fixanalyser2-netprobe|file-agent|\w+)-([\w\.-]+?)[\.-]?linux`)
 
 func Install(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
 	if h == host.ALL {
