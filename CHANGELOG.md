@@ -1,9 +1,10 @@
 # Change Log
 
-## Version v1.4.1-rc1 - 2022/12/12
+## Version v1.4.1 - 2022/12/19
 
 * Fixes
 
+  * tools/geneos: check return from user.Current() as it can fail (but shouldn't)
   * tools/geneos: numerous fixes for logic around handling of remote hosts
   * tools/geneos: fix remote host naming to be work with capitalisations
   * tools/geneos: actually load SSH private key files, if available
