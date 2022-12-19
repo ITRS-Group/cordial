@@ -105,7 +105,7 @@ geneos update netprobe 5.13.2
 		r := host.Get(updateCmdHost)
 		options := []geneos.GeneosOptions{geneos.Version(version), geneos.Basename(updateCmdBase), geneos.Force(true), geneos.Restart(updateCmdRestart)}
 		if updateCmdRestart {
-			cs := instance.MatchKeyValue(host.ALL, ct, "version", updateCmdBase)
+			cs := instance.MatchKeyValue(r, ct, "version", updateCmdBase)
 			for _, c := range cs {
 				instance.Stop(c, updateCmdForce, false)
 				defer instance.Start(c)
