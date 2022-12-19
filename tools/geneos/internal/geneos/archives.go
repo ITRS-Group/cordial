@@ -166,6 +166,9 @@ func OpenArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, f
 	return
 }
 
+// how to split an archive name into type and version
+var archiveRE = regexp.MustCompile(`^geneos-(web-server|fixanalyser2-netprobe|file-agent|\w+)-([\w\.-]+?)[\.-]?linux`)
+
 // Unarchive unpacks the gzipped, open archive passed as an io.Reader on
 // the host given for the component.
 func Unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, options ...GeneosOptions) (err error) {
@@ -180,7 +183,7 @@ func Unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 		}
 		version = parts[2]
 		// check the component in the filename
-		// special handling for Sans
+		// special handling for SANs
 		ctFromFile := ParseComponentName(parts[1])
 		switch ct.Name {
 		case "none", "san":
