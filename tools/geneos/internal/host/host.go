@@ -145,6 +145,9 @@ func (h *Host) Exists() bool {
 }
 
 func (h *Host) Failed() bool {
+	if h == nil {
+		return false
+	}
 	// if the failure was a while back, try again (XXX crude)
 	if !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) > 5*time.Second {
 		return false
@@ -407,6 +410,7 @@ func WriteConfig() error {
 		name := k.(string)
 		switch v := v.(type) {
 		case *Host:
+			name = strings.ReplaceAll(name, ".", "-")
 			n.Set("hosts."+name, v.AllSettings())
 		}
 		return true

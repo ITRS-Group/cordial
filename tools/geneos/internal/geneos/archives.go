@@ -182,6 +182,8 @@ func Unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 			return fmt.Errorf("%q: %w", filename, ErrInvalidArgs)
 		}
 		version = parts[2]
+		// XXX update version to change "-el8" or "+el8" as metadata (etc.)
+
 		// check the component in the filename
 		// special handling for SANs
 		ctFromFile := ParseComponentName(parts[1])
@@ -331,7 +333,6 @@ func Unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 }
 
 // locate and open the archive using the download conventions
-// XXX this is where we do nexus or resources or something else?
 func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filename string, resp *http.Response, err error) {
 	var source string
 
