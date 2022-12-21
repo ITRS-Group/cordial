@@ -400,7 +400,6 @@ func ReadConfig() {
 		}
 		hosts.Store(v.GetString("name"), &Host{v, true, time.Time{}, nil})
 	}
-	log.Debug().Msgf("loaded hosts: %#v", h.AllSettings())
 }
 
 func WriteConfig() error {
