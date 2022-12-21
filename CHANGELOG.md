@@ -1,5 +1,16 @@
 # Change Log
 
+## Version v1.4.2 - 2022/12/21
+
+* Fixes
+
+  * tools/geneos: fix `update` to only optional restart (`-R`) the component type given
+  * tools/geneos: check RHEL8 download in a case independent way - fixes remotes
+  * tools/geneos: create user config directory for remote hosts in case of old location for main config
+  * tools/geneos: `install` should error out is passed `@host` instead of `-H host`
+  * tools/geneos: ssh known hosts handling improved (for mixed IP / hostnames)
+  * tools/geneos: remote hosts with IP names are now renamed `A-B-C-D` to avoid issues with viper names
+
 ## Version v1.4.1 - 2022/12/19
 
 * Fixes
