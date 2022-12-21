@@ -18,6 +18,7 @@ require (
 	github.com/pavlo-v-chernykh/keystore-go/v4 v4.4.0
 	github.com/pkg/sftp v1.13.1
 	github.com/rs/zerolog v1.28.0
+	github.com/skeema/knownhosts v1.1.0
 	github.com/spf13/afero v1.9.2
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
