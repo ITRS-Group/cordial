@@ -80,7 +80,7 @@ func OpenArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, f
 		if opts.source != "" {
 			archiveDir = opts.source
 		}
-		filename = latest(host.LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
+		filename, err = latest(host.LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
 			log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
 			switch ct.String() {
 			case "webserver":
@@ -93,6 +93,9 @@ func OpenArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, f
 				return !strings.Contains(v.Name(), ct.String())
 			}
 		})
+		if err != nil {
+			log.Debug().Err(err).Msg("latest() returned err")
+		}
 		if filename == "" {
 			err = fmt.Errorf("local installation selected but no suitable file found for %s (%w)", ct, ErrInvalidArgs)
 			return
@@ -169,6 +172,10 @@ func OpenArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, f
 // how to split an archive name into type and version
 var archiveRE = regexp.MustCompile(`^geneos-(web-server|fixanalyser2-netprobe|file-agent|\w+)-([\w\.-]+?)[\.-]?linux`)
 
+var platformToMetaList = []string{
+	"el8",
+}
+
 // Unarchive unpacks the gzipped, open archive passed as an io.Reader on
 // the host given for the component.
 func Unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, options ...GeneosOptions) (err error) {
@@ -182,7 +189,12 @@ func Unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 			return fmt.Errorf("%q: %w", filename, ErrInvalidArgs)
 		}
 		version = parts[2]
-		// XXX update version to change "-el8" or "+el8" as metadata (etc.)
+		// replace '-' prefix of recognised platform suffixes with '+' so work with semver as metadata
+		for _, m := range platformToMetaList {
+			log.Debug().Msgf("checking %q", m)
+			version = strings.ReplaceAll(version, "-"+m, "+"+m)
+			log.Debug().Msgf("version: %q", version)
+		}
 
 		// check the component in the filename
 		// special handling for SANs
@@ -338,8 +350,7 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 
 	opts := EvalOptions(options...)
 
-	// XXX OS filter for EL8 here - to test
-	// cannot fetch partial versions for el8
+	// cannot fetch partial versions for el8 - restriction on download search interface
 	platform := ""
 	if opts.platform_id != "" {
 		s := strings.Split(opts.platform_id, ":")
@@ -474,13 +485,16 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 	return
 }
 
-func latest(r *host.Host, dir, filter string, fn func(os.DirEntry) bool) (latest string) {
+// return the latest directory based on semver. if there is metadata,
+// check for platform_id on host and remove non-platform from list
+// before sorting
+func latest(r *host.Host, dir, filter string, fn func(os.DirEntry) bool) (latest string, err error) {
 	dirs, err := r.ReadDir(dir)
 	if err != nil {
 		return
 	}
 
-	filterRE, err := regexp.Compile(filter)
+	filterRE, err := regexp.Compile("^" + regexp.QuoteMeta(filter))
 	if err != nil {
 		log.Debug().Msgf("invalid filter regexp %q", filter)
 	}
@@ -493,7 +507,7 @@ func latest(r *host.Host, dir, filter string, fn func(os.DirEntry) bool) (latest
 	}
 	dirs = newdirs
 
-	var versions []*version.Version
+	var versions = make(map[string]*version.Version)
 	var originals = make(map[string]string, len(dirs)) // map processed to original entry
 
 	for _, d := range dirs {
@@ -512,14 +526,21 @@ func latest(r *host.Host, dir, filter string, fn func(os.DirEntry) bool) (latest
 		}
 		v1, err := version.NewVersion(n)
 		if err == nil { // valid version
-			versions = append(versions, v1)
+			if v1.Metadata() != "" {
+				delete(versions, v1.Core().String())
+			}
+			versions[n] = v1
 		}
 	}
 	if len(versions) == 0 {
-		return ""
+		return "", nil
 	}
-	sort.Sort(version.Collection(versions))
-	return originals[versions[len(versions)-1].Original()]
+	vers := []*version.Version{}
+	for _, v := range versions {
+		vers = append(vers, v)
+	}
+	sort.Sort(version.Collection(vers))
+	return originals[vers[len(vers)-1].Original()], nil
 }
 
 var anchoredVersRE = regexp.MustCompile(`^(\d+(\.\d+){0,2})$`)
