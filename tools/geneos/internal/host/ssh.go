@@ -33,8 +33,8 @@ import (
 
 	"github.com/pkg/sftp"
 	"github.com/rs/zerolog/log"
+	"github.com/skeema/knownhosts"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 const userSSHdir = ".ssh"
@@ -72,7 +72,6 @@ func readSSHkeys(homedir string, morekeys ...string) (signers []ssh.Signer) {
 }
 
 func sshConnect(dest, user string, password []byte, keyfiles ...string) (client *ssh.Client, err error) {
-	var khCallback ssh.HostKeyCallback
 	var authmethods []ssh.AuthMethod
 	var homedir string
 
@@ -81,13 +80,11 @@ func sshConnect(dest, user string, password []byte, keyfiles ...string) (client 
 		return
 	}
 
-	if khCallback == nil {
-		k := filepath.Join(homedir, userSSHdir, "known_hosts")
-		khCallback, err = knownhosts.New(k)
-		if err != nil {
-			log.Debug().Msg("cannot load ssh known_hosts file, ssh will not be available.")
-			return
-		}
+	// XXX we need this because https://github.com/golang/go/issues/29286#issuecomment-1160958614
+	kh, err := knownhosts.New(filepath.Join(homedir, userSSHdir, "known_hosts"))
+	if err != nil {
+		log.Debug().Msg("cannot load ssh known_hosts file, ssh will not be available.")
+		return
 	}
 
 	if agentClient := sshConnectAgent(); agentClient != nil {
@@ -106,28 +103,11 @@ func sshConnect(dest, user string, password []byte, keyfiles ...string) (client 
 	}
 
 	config := &ssh.ClientConfig{
-		User:            user,
-		Auth:            authmethods,
-		HostKeyCallback: khCallback,
-		Timeout:         5 * time.Second,
-		HostKeyAlgorithms: []string{
-			ssh.KeyAlgoED25519,
-			ssh.CertAlgoED25519v01,
-			ssh.CertAlgoRSASHA512v01,
-			ssh.CertAlgoRSASHA256v01,
-			ssh.CertAlgoRSAv01,
-			ssh.CertAlgoDSAv01,
-			ssh.CertAlgoECDSA256v01,
-			ssh.CertAlgoECDSA384v01,
-			ssh.CertAlgoECDSA521v01,
-			ssh.KeyAlgoECDSA256,
-			ssh.KeyAlgoECDSA384,
-			ssh.KeyAlgoECDSA521,
-			ssh.KeyAlgoRSASHA512,
-			ssh.KeyAlgoRSASHA256,
-			ssh.KeyAlgoRSA,
-			ssh.KeyAlgoDSA,
-		},
+		User:              user,
+		Auth:              authmethods,
+		HostKeyCallback:   kh.HostKeyCallback(),
+		HostKeyAlgorithms: kh.HostKeyAlgorithms(dest),
+		Timeout:           5 * time.Second,
 	}
 	return ssh.Dial("tcp", dest, config)
 }
