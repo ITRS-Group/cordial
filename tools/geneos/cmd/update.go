@@ -93,16 +93,24 @@ geneos update netprobe 5.13.2
 	},
 	Args: cobra.RangeArgs(0, 2),
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args := cmdArgs(cmd)
+		ct, args, params := cmdArgsParams(cmd)
+
+		for _, p := range params {
+			if strings.HasPrefix(p, "@") {
+				return fmt.Errorf("@HOST not valid here, perhaps you meant `-H HOST`?")
+			}
+		}
+
+		r := host.Get(updateCmdHost)
+
 		version := updateCmdVersion
-		cs := instance.MatchKeyValue(host.ALL, ct, "protected", "true")
+		cs := instance.MatchKeyValue(r, ct, "protected", "true")
 		if len(cs) > 0 && !updateCmdForce {
 			fmt.Println("There are one or more protected instances using the current version. Use `--force` to override")
 		}
 		if len(args) > 0 {
 			version = args[0]
 		}
-		r := host.Get(updateCmdHost)
 		options := []geneos.GeneosOptions{geneos.Version(version), geneos.Basename(updateCmdBase), geneos.Force(true), geneos.Restart(updateCmdRestart)}
 		if updateCmdRestart {
 			cs := instance.MatchKeyValue(r, ct, "version", updateCmdBase)
