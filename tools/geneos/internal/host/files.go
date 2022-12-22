@@ -32,6 +32,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
@@ -439,6 +440,9 @@ func (h *Host) ReadDir(name string) (dirs []os.DirEntry, err error) {
 		if err != nil {
 			return nil, err
 		}
+		sort.Slice(f, func(i, j int) bool {
+			return f[i].Name() < f[j].Name()
+		})
 		for _, d := range f {
 			dirs = append(dirs, fs.FileInfoToDirEntry(d))
 		}
