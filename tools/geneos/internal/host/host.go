@@ -170,6 +170,9 @@ func (h *Host) Path(path string) string {
 	return fmt.Sprintf("%s:%s", h, path)
 }
 
+// SetOSReleaseEnv sets the `osinfo` configuration map to the values
+// from either `/etc/os-release` (or `/usr/lib/os-release`) on Linux or
+// simulates the values for Windows
 func (h *Host) SetOSReleaseEnv() (err error) {
 	osinfo := make(map[string]string)
 	serverVersion := runtime.GOOS
@@ -249,7 +252,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			}
 			key, value := s[0], s[1]
 			value = strings.Trim(value, "\"")
-			osinfo[key] = value
+			osinfo[strings.ToLower(key)] = value
 		}
 		if h.String() != LOCALHOST {
 			output, err := h.Run(`pwd`)
@@ -261,7 +264,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			}
 		}
 	}
-	h.Set("osinfo", osinfo)
+	h.SetStringMapString("osinfo", osinfo)
 	return
 }
 

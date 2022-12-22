@@ -19,6 +19,10 @@ The `geneos` program will help you manage your Geneos environment on Linux.
 * Keep it simple through the [Principle of least astonishment](https://en.wikipedia.org/wiki/Principle_of_least_astonishment)
 * Help you use automation tools with Geneos
 
+## Documentation Note
+
+Please note that this README file and the embedded usage documentation are not always fully up-to-date and there will be small, possibly annoying or confusing, differences between functionality and this documentation. The command help text listing available flags is however generated from the code itself and should be generally up-to-date, except in those cases where internal behaviour doesn't match the flag - once again apologies. As this is an OSS project contributions are more than welcome, but will probably involve reading code rather than correcting grammar and spelling.
+
 ## Getting Started
 
 ### Download the binary
@@ -741,22 +745,22 @@ Structure of the default file is as follows.
       "hostname": "172.123.456.789",
       "name": "PsApac-Dev-02",
       "osinfo": {
-        "ANSI_COLOR": "0;31",
-        "BUG_REPORT_URL": "https://bugzilla.redhat.com/",
-        "CPE_NAME": "cpe:/o:redhat:enterprise_linux:7.7:GA:server",
-        "HOME_URL": "https://www.redhat.com/",
-        "ID": "rhel",
-        "ID_LIKE": "fedora",
-        "NAME": "Red Hat Enterprise Linux Server",
-        "PRETTY_NAME": "Red Hat Enterprise Linux Server 7.7 (Maipo)",
-        "REDHAT_BUGZILLA_PRODUCT": "Red Hat Enterprise Linux 7",
-        "REDHAT_BUGZILLA_PRODUCT_VERSION": "7.7",
-        "REDHAT_SUPPORT_PRODUCT": "Red Hat Enterprise Linux",
-        "REDHAT_SUPPORT_PRODUCT_VERSION": "7.7",
-        "VARIANT": "Server",
-        "VARIANT_ID": "server",
-        "VERSION": "7.7 (Maipo)",
-        "VERSION_ID": "7.7"
+        "ansi_color": "0;31",
+        "bug_report_url": "https://bugzilla.redhat.com/",
+        "cpe_name": "cpe:/o:redhat:enterprise_linux:7.7:GA:server",
+        "home_url": "https://www.redhat.com/",
+        "id": "rhel",
+        "id_like": "fedora",
+        "name": "Red Hat Enterprise Linux Server",
+        "pretty_name": "Red Hat Enterprise Linux Server 7.7 (Maipo)",
+        "redhat_bugzilla_product": "Red Hat Enterprise Linux 7",
+        "redhat_bugzilla_product_version": "7.7",
+        "redhat_support_product": "Red Hat Enterprise Linux",
+        "redhat_support_product_version": "7.7",
+        "variant": "Server",
+        "variant_id": "server",
+        "version": "7.7 (Maipo)",
+        "version_id": "7.7"
       },
       "port": 22,
       "username": "itrs"
