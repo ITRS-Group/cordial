@@ -93,3 +93,11 @@ RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
 CMD [ "bash" ]
+
+FROM centos:centos8 AS cordial-run-el8
+# RUN apt update && apt install -y fontconfig ca-certificates
+COPY --from=build /app/cordial/tools/geneos/geneos /bin/
+RUN useradd -ms /bin/bash geneos
+WORKDIR /home/geneos
+USER geneos
+CMD [ "bash" ]

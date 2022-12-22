@@ -1,6 +1,6 @@
 # cordial
 
-* Current Version: v1.4.2 - 2022/12/21
+* Current Version: v1.4.3-dev - 2022/12/22
 
 Cordial comprises a set of interrelated programs, integrations, libraries and packages for Geneos, principally written in Go.
 

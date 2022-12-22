@@ -61,6 +61,32 @@ func init() {
 	global = &Config{Viper: viper.New()}
 }
 
+// SetMap iterates over a map[string]string and sets each key to the
+// value given. Viper's Set() doesn't support maps until the
+// configuration is written to and read back from a file.
+func (c *Config) SetStringMapString(m string, vals map[string]string) {
+	for k, v := range vals {
+		c.Set(m+"."+k, v)
+	}
+}
+
+// SetMap iterates over a map[string]string and sets each key to the
+// value given. Viper's Set() doesn't support maps until the
+// configuration is written to and read back from a file.
+func SetStringMapString(m string, vals map[string]string) {
+	global.SetStringMapString(m, vals)
+}
+
+// XXX maybe later
+// func (c *Config) Set(name string, value interface{}) {
+// 	switch v := value.(type) {
+// 	case string, int:
+// 		c.Viper.Set(name, v)
+// 	default:
+
+// 	}
+// }
+
 // GetString functions like [viper.GetString] but additionally calls
 // [ExpandString] with the configuration value, passing any "values" maps
 func GetString(s string, options ...ExpandOptions) string {
