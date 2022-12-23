@@ -733,7 +733,7 @@ Structure of the default file is as follows.
 
 #### Host Configuration File
 
-This configuration file - in JSON format - should be found in the home directory of the user as `~/.config/geneos/geneos-hosts.json`.
+This configuration file - in JSON format - should be found in the home directory of the user as `~/.config/geneos/hosts.json`.
 
 Structure of the default file is as follows.
 
