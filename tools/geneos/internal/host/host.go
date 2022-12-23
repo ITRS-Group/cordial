@@ -191,7 +191,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 	if strings.Contains(strings.ToLower(serverVersion), "windows") {
 		// XXX simulate values? this also applies to "localhost"
 		h.Set("os", "windows")
-		osinfo["ID"] = "windows"
+		osinfo["id"] = "windows"
 		output, _ := h.Run("systeminfo")
 		// if err == nil {
 		// 	log.Debug().Msg(string(output))
@@ -210,13 +210,13 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			val := strings.TrimSpace(s[1])
 			switch name {
 			case "OS Name":
-				osinfo["NAME"] = val
-				osinfo["PRETTY_NAME"] = val
+				osinfo["name"] = val
+				osinfo["pretty_name"] = val
 			case "OS Version":
-				osinfo["VERSION"] = val
+				osinfo["version"] = val
 				vers := strings.Fields(val)
-				osinfo["VERSION_ID"] = vers[0]
-				osinfo["BUILD_ID"] = vers[len(vers)-1]
+				osinfo["version_id"] = vers[0]
+				osinfo["build_id"] = vers[len(vers)-1]
 			}
 		}
 		if h.String() != LOCALHOST {
