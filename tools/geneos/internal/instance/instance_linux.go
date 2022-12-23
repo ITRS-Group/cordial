@@ -26,6 +26,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -166,23 +167,34 @@ func TCPPorts(c geneos.Instance) (ports []int) {
 	return
 }
 
-// Files returns a map[int]string of file descriptor to filepath for all
-// (real) open files for the process running as the instance. All paths
-// that are not absolute paths are ignored. An empty map is returned if
-// the process cannot be found.
-func Files(c geneos.Instance) (links map[int]string) {
-	links = make(map[int]string)
+type OpenFiles struct {
+	Path   string
+	Stat   fs.FileInfo
+	FD     string
+	FDMode fs.FileMode
+}
+
+// Files returns a map of file descriptor (int) to file details
+// (InstanceProcFiles) for all open, real, files for the process running
+// as the instance. All paths that are not absolute paths are ignored.
+// An empty map is returned if the process cannot be found.
+func Files(c geneos.Instance) (openfiles map[int]OpenFiles) {
+
 	pid, err := GetPID(c)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
 		return
 	}
+
 	path := fmt.Sprintf("/proc/%d/fd", pid)
 	fds, err := c.Host().ReadDir(path)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
 		return
 	}
+
+	openfiles = make(map[int]OpenFiles, len(fds))
+
 	for _, ent := range fds {
 		fd := ent.Name()
 		dest, err := c.Host().Readlink(utils.JoinSlash(path, fd))
@@ -194,7 +206,27 @@ func Files(c geneos.Instance) (links map[int]string) {
 			continue
 		}
 		n, _ := strconv.Atoi(fd)
-		links[n] = dest
+
+		fdPath := utils.JoinSlash(path, fd)
+		fdMode, err := c.Host().Lstat(fdPath)
+		if err != nil {
+			log.Debug().Err(err).Msg("skipping")
+			continue
+		}
+
+		s, err := c.Host().Stat(dest)
+		if err != nil {
+			log.Debug().Err(err).Msg("skipping")
+			continue
+		}
+
+		openfiles[n] = OpenFiles{
+			Path:   dest,
+			Stat:   s,
+			FD:     fdPath,
+			FDMode: fdMode.Mode(),
+		}
+
 		log.Debug().Msgf("\tfd %s points to %q", fd, dest)
 	}
 	return
