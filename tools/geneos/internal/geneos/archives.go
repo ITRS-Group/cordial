@@ -80,7 +80,7 @@ func OpenArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, f
 		if opts.source != "" {
 			archiveDir = opts.source
 		}
-		filename, err = latest(host.LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
+		filename, err = LatestRelease(host.LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
 			log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
 			switch ct.String() {
 			case "webserver":
@@ -485,23 +485,20 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 	return
 }
 
-// return the latest directory based on semver. if there is metadata,
+// LatestRelease returns the latest sub-directory in dir, on host r
+// based on semver. A prefix filter can be used to limit matches and a
+// filter function to further refine matches. If there is metadata,
 // check for platform_id on host and remove non-platform from list
 // before sorting
-func latest(r *host.Host, dir, filter string, fn func(os.DirEntry) bool) (latest string, err error) {
+func LatestRelease(r *host.Host, dir, prefix string, filter func(os.DirEntry) bool) (latest string, err error) {
 	dirs, err := r.ReadDir(dir)
 	if err != nil {
 		return
 	}
 
-	filterRE, err := regexp.Compile("^" + regexp.QuoteMeta(filter))
-	if err != nil {
-		log.Debug().Msgf("invalid filter regexp %q", filter)
-	}
-
 	newdirs := dirs[:0]
 	for _, d := range dirs {
-		if filterRE.MatchString(d.Name()) {
+		if strings.HasPrefix(d.Name(), prefix) {
 			newdirs = append(newdirs, d)
 		}
 	}
@@ -511,7 +508,7 @@ func latest(r *host.Host, dir, filter string, fn func(os.DirEntry) bool) (latest
 	var originals = make(map[string]string, len(dirs)) // map processed to original entry
 
 	for _, d := range dirs {
-		if fn(d) {
+		if filter(d) {
 			continue
 		}
 		n := d.Name()
