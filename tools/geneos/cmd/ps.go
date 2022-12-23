@@ -52,12 +52,14 @@ type psType struct {
 var psCmdJSON, psCmdIndent, psCmdCSV bool
 
 var psTabWriter *tabwriter.Writer
+var psCSVWriter *csv.Writer
+var psJSONEncoder *json.Encoder
 
 func init() {
 	rootCmd.AddCommand(psCmd)
 
 	psCmd.Flags().BoolVarP(&psCmdJSON, "json", "j", false, "Output JSON")
-	psCmd.Flags().BoolVarP(&psCmdIndent, "pretty", "i", false, "Indent / pretty print JSON")
+	psCmd.Flags().BoolVarP(&psCmdIndent, "pretty", "i", false, "Output indented JSON")
 	psCmd.Flags().BoolVarP(&psCmdCSV, "csv", "c", false, "Output CSV")
 
 	psCmd.Flags().SortFlags = false
@@ -82,15 +84,17 @@ Show the status of the matching instances.
 
 func commandPS(ct *geneos.Component, args []string, params []string) (err error) {
 	switch {
-	case psCmdJSON:
-		jsonEncoder = json.NewEncoder(os.Stdout)
-		//jsonEncoder.SetIndent("", "    ")
+	case psCmdJSON, psCmdIndent:
+		psJSONEncoder = json.NewEncoder(os.Stdout)
+		if psCmdIndent {
+			psJSONEncoder.SetIndent("", "    ")
+		}
 		err = instance.ForAll(ct, psInstanceJSON, args, params)
 	case psCmdCSV:
-		csvWriter = csv.NewWriter(os.Stdout)
-		csvWriter.Write([]string{"Type", "Name", "Host", "PID", "User", "Group", "Starttime", "Version", "Home"})
+		psCSVWriter = csv.NewWriter(os.Stdout)
+		psCSVWriter.Write([]string{"Type", "Name", "Host", "PID", "User", "Group", "Starttime", "Version", "Home"})
 		err = instance.ForAll(ct, psInstanceCSV, args, params)
-		csvWriter.Flush()
+		psCSVWriter.Flush()
 	default:
 		psTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\n")
@@ -167,7 +171,7 @@ func psInstanceCSV(c geneos.Instance, params []string) (err error) {
 		groupname = g.Name
 	}
 	base, underlying, _ := instance.Version(c)
-	csvWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, time.Unix(mtime, 0).Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	psCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, time.Unix(mtime, 0).Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 
 	return
 }
@@ -194,7 +198,7 @@ func psInstanceJSON(c geneos.Instance, params []string) (err error) {
 		groupname = g.Name
 	}
 	base, underlying, _ := instance.Version(c)
-	jsonEncoder.Encode(psType{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, time.Unix(mtime, 0).Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	psJSONEncoder.Encode(psType{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, time.Unix(mtime, 0).Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 
 	return
 }

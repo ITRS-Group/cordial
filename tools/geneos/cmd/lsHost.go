@@ -42,10 +42,18 @@ type lsHostCmdType struct {
 	Directory string
 }
 
+var lsHostCmdJSON, lsHostCmdIndent, lsHostCmdCSV bool
+
 var lsHostCmdEntries []lsHostCmdType
+
+var lsHostCSVWriter *csv.Writer
 
 func init() {
 	lsCmd.AddCommand(lsHostCmd)
+
+	lsHostCmd.Flags().BoolVarP(&lsHostCmdJSON, "json", "j", false, "Output JSON")
+	lsHostCmd.Flags().BoolVarP(&lsHostCmdIndent, "pretty", "i", false, "Output indented JSON")
+	lsHostCmd.Flags().BoolVarP(&lsHostCmdCSV, "csv", "c", false, "Output CSV")
 
 	lsHostCmd.Flags().SortFlags = false
 }
@@ -64,21 +72,21 @@ List the matching remote hosts.
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		// ct, args, params := cmdArgsParams(cmd)
 		switch {
-		case lsCmdJSON:
+		case lsHostCmdJSON, lsHostCmdIndent:
 			lsHostCmdEntries = []lsHostCmdType{}
 			err = loopHosts(lsInstanceJSONHosts)
 			var b []byte
-			if lsCmdIndent {
+			if lsHostCmdIndent {
 				b, _ = json.MarshalIndent(lsHostCmdEntries, "", "    ")
 			} else {
 				b, _ = json.Marshal(lsHostCmdEntries)
 			}
 			fmt.Println(string(b))
-		case lsCmdCSV:
-			csvWriter = csv.NewWriter(os.Stdout)
-			csvWriter.Write([]string{"Type", "Name", "Disabled", "Username", "Hostname", "Port", "Directory"})
+		case lsHostCmdCSV:
+			lsHostCSVWriter = csv.NewWriter(os.Stdout)
+			lsHostCSVWriter.Write([]string{"Type", "Name", "Disabled", "Username", "Hostname", "Port", "Directory"})
 			err = loopHosts(lsInstanceCSVHosts)
-			csvWriter.Flush()
+			lsHostCSVWriter.Flush()
 		default:
 			lsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(lsTabWriter, "Name\tUsername\tHostname\tPort\tDirectory\n")
@@ -105,7 +113,7 @@ func lsInstancePlainHosts(h *host.Host) (err error) {
 }
 
 func lsInstanceCSVHosts(h *host.Host) (err error) {
-	csvWriter.Write([]string{h.String(), h.GetString("username"), h.GetString("hostname"), fmt.Sprint(h.GetInt("port")), h.GetString("geneos")})
+	lsHostCSVWriter.Write([]string{h.String(), h.GetString("username"), h.GetString("hostname"), fmt.Sprint(h.GetInt("port")), h.GetString("geneos")})
 	return
 }
 

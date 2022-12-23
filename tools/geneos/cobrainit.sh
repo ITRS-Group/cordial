@@ -61,5 +61,6 @@
 # cobra-cli add unsetUser -p unsetCmd
 # cobra-cli add unsetGlobal -p unsetCmd
 # cobra-cli add update
+# cobra-cli add updateLs -p updateCmd
 # cobra-cli add version
 

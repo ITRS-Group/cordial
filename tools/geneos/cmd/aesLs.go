@@ -40,6 +40,8 @@ import (
 var aesLSTabWriter *tabwriter.Writer
 var aesLsCmdCSV, aesLsCmdJSON, aesLsCmdIndent bool
 
+var aesLsCSVWriter *csv.Writer
+
 type aesLsCmdType struct {
 	Name    string `json:"name,omitempty"`
 	Type    string `json:"type,omitempty"`
@@ -87,10 +89,10 @@ latter "pretty" formatting the output over multiple, indented lines
 			}
 			fmt.Println(string(b))
 		case aesLsCmdCSV:
-			csvWriter = csv.NewWriter(os.Stdout)
-			csvWriter.Write([]string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
+			aesLsCSVWriter = csv.NewWriter(os.Stdout)
+			aesLsCSVWriter.Write([]string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
 			err = instance.ForAll(ct, aesLSInstanceCSV, args, params)
-			csvWriter.Flush()
+			aesLsCSVWriter.Flush()
 		default:
 			aesLSTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(aesLSTabWriter, "Type\tName\tHost\tKeyfile\tCRC32\tModtime\n")
@@ -136,13 +138,13 @@ func aesLSInstanceCSV(c geneos.Instance, params []string) (err error) {
 	}
 	s, err := c.Host().Stat(path)
 	if err != nil {
-		csvWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), path, "-", "-"})
+		aesLsCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), path, "-", "-"})
 		return nil
 	}
 
 	r, err := c.Host().Open(instance.Filepath(c, "keyfile"))
 	if err != nil {
-		csvWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), path, "-", "-"})
+		aesLsCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), path, "-", "-"})
 		return nil
 	}
 	defer r.Close()
@@ -151,7 +153,7 @@ func aesLSInstanceCSV(c geneos.Instance, params []string) (err error) {
 		return
 	}
 	crcstr := fmt.Sprintf("%08X", crc)
-	csvWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), path, crcstr, s.ModTime().Format(time.RFC3339)})
+	aesLsCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), path, crcstr, s.ModTime().Format(time.RFC3339)})
 	return
 }
 
