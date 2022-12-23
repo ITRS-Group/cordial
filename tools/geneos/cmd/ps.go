@@ -28,12 +28,14 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"sort"
 	"strings"
 	"text/tabwriter"
 	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -49,7 +51,7 @@ type psType struct {
 	Home      string
 }
 
-var psCmdJSON, psCmdIndent, psCmdCSV bool
+var psCmdShowFiles, psCmdJSON, psCmdIndent, psCmdCSV bool
 
 var psTabWriter *tabwriter.Writer
 var psCSVWriter *csv.Writer
@@ -58,6 +60,7 @@ var psJSONEncoder *json.Encoder
 func init() {
 	rootCmd.AddCommand(psCmd)
 
+	psCmd.Flags().BoolVarP(&psCmdShowFiles, "files", "f", false, "Show open files")
 	psCmd.Flags().BoolVarP(&psCmdJSON, "json", "j", false, "Output JSON")
 	psCmd.Flags().BoolVarP(&psCmdIndent, "pretty", "i", false, "Output indented JSON")
 	psCmd.Flags().BoolVarP(&psCmdCSV, "csv", "c", false, "Output CSV")
@@ -133,19 +136,37 @@ func psInstancePlain(c geneos.Instance, params []string) (err error) {
 
 	fmt.Fprintf(psTabWriter, "%s\t%s\t%s\t%d\t%v\t%s\t%s\t%s\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), pid, ports, username, groupname, time.Unix(mtime, 0).Local().Format(time.RFC3339), base, underlying, c.Home())
 
-	// list open files (test code)
-	//
-	// files := instance.Files(c)
-	// fds := make([]int, len(files))
-	// i := 0
-	// for f := range files {
-	// 	fds[i] = f
-	// 	i++
-	// }
-	// sort.Ints(fds)
-	// for _, n := range fds {
-	// 	fmt.Fprintf(psTabWriter, "\t[%d]: %s\n", n, files[n])
-	// }
+	if psCmdShowFiles {
+		// list open files (test code)
+
+		instdir := c.Home()
+		files := instance.Files(c)
+		fds := make([]int, len(files))
+		i := 0
+		for f := range files {
+			fds[i] = f
+			i++
+		}
+		sort.Ints(fds)
+		for _, n := range fds {
+			fdPath := files[n].FD
+			perms := ""
+			p := files[n].FDMode & 0700
+			log.Debug().Msgf("%s perms %o", fdPath, p)
+			if p&0400 == 0400 {
+				perms += "r"
+			}
+			if p&0200 == 0200 {
+				perms += "w"
+			}
+
+			path := files[n].Path
+			if strings.HasPrefix(path, instdir) {
+				path = strings.Replace(path, instdir, ".", 1)
+			}
+			fmt.Fprintf(psTabWriter, "\t%d:%s (%d bytes) %s\n", n, perms, files[n].Stat.Size(), path)
+		}
+	}
 	return
 }
 
