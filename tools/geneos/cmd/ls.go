@@ -49,8 +49,7 @@ type lsCmdType struct {
 var lsCmdJSON, lsCmdCSV, lsCmdIndent bool
 
 var lsTabWriter *tabwriter.Writer
-var csvWriter *csv.Writer
-var jsonEncoder *json.Encoder
+var LsCSVWriter *csv.Writer
 
 func init() {
 	rootCmd.AddCommand(lsCmd)
@@ -89,10 +88,10 @@ latter "pretty" formatting the output over multiple, indented lines.
 			}
 			fmt.Println(string(b))
 		case lsCmdCSV:
-			csvWriter = csv.NewWriter(os.Stdout)
-			csvWriter.Write([]string{"Type", "Name", "Disabled", "Protected", "Host", "Port", "Version", "Home"})
+			LsCSVWriter = csv.NewWriter(os.Stdout)
+			LsCSVWriter.Write([]string{"Type", "Name", "Disabled", "Protected", "Host", "Port", "Version", "Home"})
 			err = instance.ForAll(ct, lsInstanceCSV, args, params)
-			csvWriter.Flush()
+			LsCSVWriter.Flush()
 		default:
 			lsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(lsTabWriter, "Type\tName\tHost\tPort\tVersion\tHome\n")
@@ -129,7 +128,7 @@ func lsInstanceCSV(c geneos.Instance, params []string) (err error) {
 		protected = "Y"
 	}
 	base, underlying, _ := instance.Version(c)
-	csvWriter.Write([]string{c.Type().String(), c.Name(), dis, protected, c.Host().String(), fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	LsCSVWriter.Write([]string{c.Type().String(), c.Name(), dis, protected, c.Host().String(), fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 	return
 }
 
