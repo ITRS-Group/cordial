@@ -25,6 +25,7 @@ package instance
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -118,10 +119,41 @@ func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime int64
 	return 0, 0, 0, 0, os.ErrProcessDone
 }
 
-// TCPPorts returns all TCP ports currently open for the process running as
-// the instance. An empty slice is returned if the process cannot be found.
-// The instance may be on a remote host.
-func TCPPorts(c geneos.Instance) (ports []int) {
+func allTCPListenPorts(c geneos.Instance, source string, ports map[int]int) (err error) {
+	tcp, err := c.Host().Open(source)
+	if err != nil {
+		return
+	}
+
+	scanner := bufio.NewScanner(tcp)
+	if scanner.Scan() {
+		// skip headers
+		_ = scanner.Text()
+		for scanner.Scan() {
+			line := scanner.Text()
+			fields := strings.Fields(line)
+			if len(fields) < 10 || fields[3] != "0A" {
+				break
+			}
+			s := strings.SplitN(fields[1], ":", 2)
+			if len(s) != 2 {
+				continue
+			}
+			port, err := strconv.ParseInt(s[1], 16, 32)
+			if err != nil {
+				continue
+			}
+			inode, _ := strconv.Atoi(fields[9])
+			ports[inode] = int(port)
+		}
+	}
+	return
+}
+
+// TCPListenPorts returns all TCP ports currently open for the process
+// running as the instance. An empty slice is returned if the process
+// cannot be found. The instance may be on a remote host.
+func TCPListenPorts(c geneos.Instance) (ports []int) {
 	_, err := GetPID(c)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
@@ -133,29 +165,13 @@ func TCPPorts(c geneos.Instance) (ports []int) {
 		return
 	}
 
-	tcp, err := c.Host().Open("/proc/net/tcp")
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
+	tcpports := make(map[int]int)
+	if err = allTCPListenPorts(c, "/proc/net/tcp", tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		log.Error().Err(err).Msg("continuing")
 	}
 
-	tcpports := make(map[int]int)
-	scanner := bufio.NewScanner(tcp)
-	if scanner.Scan() {
-		// skip headers
-		_ = scanner.Text()
-		for scanner.Scan() {
-			line := scanner.Text()
-			fields := strings.Fields(line)
-			if len(fields) < 10 || fields[3] != "0A" {
-				break
-			}
-			var ip [4]int
-			var port int
-			fmt.Sscanf(fields[1], "%2X%2X%2X%2X:%X", &ip[0], &ip[1], &ip[2], &ip[3], &port)
-			inode, _ := strconv.Atoi(fields[9])
-			log.Debug().Msgf("ip %v port %v inode %v", ip, port, inode)
-			tcpports[inode] = port
-		}
+	if err = allTCPListenPorts(c, "/proc/net/tcp6", tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		log.Error().Err(err).Msg("continuing")
 	}
 
 	for _, s := range sockets {
