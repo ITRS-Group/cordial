@@ -132,7 +132,7 @@ func psInstancePlain(c geneos.Instance, params []string) (err error) {
 		groupname = g.Name
 	}
 	base, underlying, _ := instance.Version(c)
-	ports := instance.TCPPorts(c)
+	ports := instance.TCPListenPorts(c)
 
 	fmt.Fprintf(psTabWriter, "%s\t%s\t%s\t%d\t%v\t%s\t%s\t%s\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), pid, ports, username, groupname, time.Unix(mtime, 0).Local().Format(time.RFC3339), base, underlying, c.Home())
 
