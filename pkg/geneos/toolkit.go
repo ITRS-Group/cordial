@@ -24,6 +24,7 @@ package geneos
 
 type ToolkitPlugin struct {
 	SamplerScript        *SingleLineString      `xml:"toolkit>samplerScript"`
+	SamplerTimeout       *Value                 `xml:"toolkit>scriptTimeout,omitempty"`
 	EnvironmentVariables *[]EnvironmentVariable `xml:"toolkit>environmentVariables>variable"`
 }
 
