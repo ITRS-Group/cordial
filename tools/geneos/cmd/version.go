@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	dbg "runtime/debug"
 	"strings"
 
 	"github.com/itrs-group/cordial"
@@ -29,6 +30,13 @@ Show program version details
 		"wildcard": "false",
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s version %s\n", rootCmd.Use, cmd.Version)
+		fmt.Printf("%s version %s\n", cmdName, cmd.Version)
+		if debug {
+			info, ok := dbg.ReadBuildInfo()
+			if ok {
+				fmt.Println("additional info:")
+				fmt.Println(info)
+			}
+		}
 	},
 }
