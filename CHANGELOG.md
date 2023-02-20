@@ -1,9 +1,10 @@
 # Change Log
 
-## Version v1.4.3-dev - 2022/12/22
+## Version v1.4.3-dev - 2023/01/20
 
 * Fixes
 
+  * tools/geneos: fix `ps` not showing open ports on systems with IPv6 enabled
   * tools/geneos: make `ls` and `ps` command flags more consistent
   * tools/geneos: add an -el8 runtime to docker images when built
   * tools/geneos: fix RHEL8/Centos8 download support for localhost using new SetStringMapString() method
@@ -13,6 +14,7 @@
 
 * Changes
 
+  * tools/geneos: add `-f` flag to `ps` command to show open files. formatting subject to change for now.
   * tools/geneos: add a `update ls` command to show available package versions
 
 ## Version v1.4.2 - 2022/12/21

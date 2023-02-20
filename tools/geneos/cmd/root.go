@@ -84,9 +84,11 @@ func init() {
 	rootCmd.Flags().SortFlags = false
 }
 
+const cmdName = "geneos"
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "geneos",
+	Use:   cmdName,
 	Short: "Control your Geneos environment",
 	Long: strings.ReplaceAll(`
 Manage and control your Geneos environment. With |geneos| you can
@@ -112,7 +114,8 @@ $ geneos ps
 		geneosdir := host.Geneos()
 		if geneosdir == "" {
 			// commands that do not require geneos home to be set
-			if !(cmd == initCmd ||
+			if !(cmd == versionCmd ||
+				cmd == initCmd ||
 				cmd.Parent() == initCmd ||
 				cmd == setUserCmd ||
 				cmd == setGlobalCmd ||

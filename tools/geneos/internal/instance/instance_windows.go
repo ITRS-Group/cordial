@@ -37,7 +37,7 @@ func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime int64
 	return
 }
 
-func TCPPorts(c geneos.Instance) (ports []int) {
+func TCPListenPorts(c geneos.Instance) (ports []int) {
 	return
 }
 
