@@ -49,6 +49,15 @@ var defaultSubject = []string{
 	"Geneos Alert Throttle Summary",
 }
 
+var defaultMsTeamsSubject = []string{
+	"Geneos Alert",
+	"Geneos Alert Fired",
+	"Geneos Alert Cancelled",
+	"Geneos Alert Suspended",
+	"Geneos Alert Resumed",
+	"Geneos Alert Throttle Summary",
+}
+
 var defaultFormat = []string{
 
 	`This is an automatically generated mail from Geneos Gateway: %(_GATEWAY)
