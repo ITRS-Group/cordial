@@ -98,7 +98,7 @@ func sshConnect(dest, user string, password []byte, keyfiles ...string) (client 
 	}
 
 	if len(password) > 0 {
-		authmethods = append(authmethods, ssh.Password(strings.TrimSpace(string(password))))
+		authmethods = append(authmethods, ssh.Password(string(password)))
 		log.Debug().Msg("added password to auth methods")
 	}
 
