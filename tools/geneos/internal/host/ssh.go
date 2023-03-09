@@ -77,6 +77,7 @@ func sshConnect(dest, user string, password []byte, keyfiles ...string) (client 
 
 	homedir, err = os.UserHomeDir()
 	if err != nil {
+		log.Debug().Msg("user has no home directory, ssh will not be available.")
 		return
 	}
 
@@ -112,6 +113,8 @@ func sshConnect(dest, user string, password []byte, keyfiles ...string) (client 
 	return ssh.Dial("tcp", dest, config)
 }
 
+// Dial connect to a remote host using ssh and returns an *ssh.Client on
+// success
 func (h *Host) Dial() (s *ssh.Client, err error) {
 	if h.failed != nil {
 		err = h.failed
@@ -119,7 +122,7 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 	}
 	username := h.GetString("username")
 	if username == "" {
-		log.Panic().Msgf("username not set for remote %s", h)
+		log.Error().Msgf("username not set for remote %s", h)
 		return nil, ErrInvalidArgs
 	}
 	hostname := h.GetString("hostname")
@@ -138,7 +141,9 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 		s = val.(*ssh.Client)
 	} else {
 		log.Debug().Msgf("ssh connect to %s as %s", dest, username)
-		s, err = sshConnect(dest, username, h.GetByteSlice("password"), strings.Split(h.GetString("sshkeys"), ",")...)
+		s, err =
+
+			sshConnect(dest, username, h.GetByteSlice("password"), strings.Split(h.GetString("sshkeys"), ",")...)
 		if err != nil {
 			log.Debug().Err(err).Msg("")
 			h.failed = err
@@ -164,7 +169,8 @@ func (h *Host) Close() {
 	}
 }
 
-// succeed or fatal
+// DialSFTP connects to the remote host using SSH and returns an
+// *sftp.Client is successful
 func (h *Host) DialSFTP() (f *sftp.Client, err error) {
 	if h.failed != nil {
 		err = h.failed
