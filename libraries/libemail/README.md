@@ -135,32 +135,40 @@ There is one built in `_DEBUG` parameter but you can also add your own to the te
 
   This example parameter outputs a text and HTML table of all parameters, unsorted, which may or may not include the EMail meta-parameters, depending on `_DEBUG` above. In the built-in templates this has to be either `TRUE` or `true` and will not work for `True`, for example.
 
-
 ## `GoSendToMsTeamsChannel` function
 
 This is a function that sends notification messages to one or multiple Microsoft Teams channels, using the incoming webhook API.
 A pre-requisite for using this function is to create an incoming webhook for each target channel in Microsoft Teams.  See following refs for details:
-  * https://docs.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook
-  * https://techcommunity.microsoft.com/t5/microsoft-365-pnp-blog/how-to-configure-and-use-incoming-webhooks-in-microsoft-teams/ba-p/2051118
-  * https://docs.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/connectors-using?tabs=cURL
+
+* <https://docs.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook>
+* <https://techcommunity.microsoft.com/t5/microsoft-365-pnp-blog/how-to-configure-and-use-incoming-webhooks-in-microsoft-teams/ba-p/2051118>
+* <https://docs.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/connectors-using?tabs=cURL>
 
 The following parameters are used to send messages to Microsoft Teams chanela with support for `Go` templates (both text & HTML):
+
 * `_TO`
-List of Microsoft Teams incoming webhook URLs, separated by `|` (pipe) character.
+
+  List of Microsoft Teams incoming webhook URLs, separated by `|` (pipe) character.
+
 * `_SUBJECT`
-Similar to the legacy parameter used by the `SendMail` function.
-This parameter supports both the `Go` template & the legacy Geneos formatting.
+
+  Similar to the legacy parameter used by the `SendMail` function. This parameter supports both the `Go` template & the legacy Geneos formatting.
+
 * `_TEMPLATE_HTML_FILE`
-Override the built-in template (default) with the contents of the `Go` HTML template file whose path is defined in this parameter.
-This takes precedence over `_TEMPLATE_HTML`, `_TEMPLATE_TEXT_FILE`, `_TEMPLATE_TEXT` & `_FORMAT`.
+
+  Override the built-in template (default) with the contents of the `Go` HTML template file whose path is defined in this parameter. This takes precedence over `_TEMPLATE_HTML`, `_TEMPLATE_TEXT_FILE`, `_TEMPLATE_TEXT` & `_FORMAT`.
+
 * `_TEMPLATE_HTML`
-Override the built-in template (default) with a single block of configurable text using a `Go` HTML template format.
-This takes precedence over `_TEMPLATE_TEXT_FILE`, `_TEMPLATE_TEXT` & `_FORMAT`.
+
+  Override the built-in template (default) with a single block of configurable text using a `Go` HTML template format. This takes precedence over `_TEMPLATE_TEXT_FILE`, `_TEMPLATE_TEXT` & `_FORMAT`.
+
 * `_TEMPLATE_TEXT_FILE`
-Override the built-in template (default) with the contents of the `Go` text template file whose path is defined in this parameter.
-This takes precedence over `_TEMPLATE_TEXT` & `_FORMAT`.
+  Override the built-in template (default) with the contents of the `Go` text template file whose path is defined in this parameter. This takes precedence over `_TEMPLATE_TEXT` & `_FORMAT`.
+
 * `_TEMPLATE_TEXT`
-Override the built-in template (default) with a single block of configurable text using a `Go` text template format.
-This takes precedence over `_FORMAT`.
+
+  Override the built-in template (default) with a single block of configurable text using a `Go` text template format. This takes precedence over `_FORMAT`.
+
 * `_FORMAT`
-Override the built-in template (default) with a single block of configurable text using either a `Go` template format or a Geneos legacy format.
+
+  Override the built-in template (default) with a single block of configurable text using either a `Go` template format or a Geneos legacy format.
