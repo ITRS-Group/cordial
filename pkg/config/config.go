@@ -39,6 +39,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -98,6 +99,46 @@ func GetString(s string, options ...ExpandOptions) string {
 // any "values" maps
 func (c *Config) GetString(s string, options ...ExpandOptions) string {
 	return c.ExpandString(c.Viper.GetString(s), options...)
+}
+
+// GetInt functions like [viper.GetInt] but additionally calls
+// [ExpandString] with the configuration value, passing any "values"
+// maps. If the conversion fails then the value returned will be the one
+// from [strconv.ParseInt] - typically 0 but can be the maximum integer
+// value
+func GetInt(s string, options ...ExpandOptions) int {
+	return global.GetInt(s, options...)
+}
+
+// GetInt functions like [viper.GetInt] on a Config instance, but
+// additionally calls [ExpandString] with the configuration value,
+// passing any "values" maps, before converting the result to an int. If
+// the conversion fails then the value returned will be the one from
+// [strconv.ParseInt] - typically 0 but can be the maximum integer value
+func (c *Config) GetInt(s string, options ...ExpandOptions) (i int) {
+	value := c.ExpandString(c.Viper.GetString(s), options...)
+	i, _ = strconv.Atoi(value)
+	return
+}
+
+// GetInt64 functions like [viper.GetInt] but additionally calls
+// [ExpandString] with the configuration value, passing any "values"
+// maps. If the conversion fails then the value returned will be the one
+// from [strconv.ParseInt] - typically 0 but can be the maximum integer
+// value
+func GetInt64(s string, options ...ExpandOptions) int64 {
+	return global.GetInt64(s, options...)
+}
+
+// GetInt64 functions like [viper.GetInt] on a Config instance, but
+// additionally calls [ExpandString] with the configuration value,
+// passing any "values" maps, before converting the result to an int. If
+// the conversion fails then the value returned will be the one from
+// [strconv.ParseInt] - typically 0 but can be the maximum integer value
+func (c *Config) GetInt64(s string, options ...ExpandOptions) (i int64) {
+	value := c.ExpandString(c.Viper.GetString(s), options...)
+	i, _ = strconv.ParseInt(value, 10, 64)
+	return
 }
 
 // GetByteSlice functions like [viper.GetString] but additionally calls

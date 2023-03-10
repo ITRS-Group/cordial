@@ -24,39 +24,48 @@ package config
 
 type expandOptions struct {
 	lookupTables     []map[string]string
-	funcMaps         map[string]func(*Config, string) string
+	funcMaps         map[string]func(*Config, string, bool) string
 	externalFuncMaps bool
 	expressions      bool
 	trimPrefix       bool
+	trimSpace        bool
+	defaultValue     any
 }
 
 type ExpandOptions func(*expandOptions)
 
-var defaultFuncMaps = map[string]func(*Config, string) string{
+var defaultFuncMaps = map[string]func(*Config, string, bool) string{
 	"http":  fetchURL,
 	"https": fetchURL,
 	"file":  fetchFile,
 }
 
 func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
-	e = &expandOptions{}
-	e.funcMaps = map[string]func(*Config, string) string{}
-	e.externalFuncMaps = true
+	e = &expandOptions{
+		funcMaps:         map[string]func(*Config, string, bool) string{},
+		externalFuncMaps: true,
+		trimSpace:        true,
+	}
+
 	for _, opt := range c.defaultExpandOptions {
 		opt(e)
 	}
+
 	for _, opt := range options {
 		opt(e)
 	}
+
 	if e.externalFuncMaps {
 		for k, v := range e.funcMaps {
 			defaultFuncMaps[k] = v
 		}
 		e.funcMaps = defaultFuncMaps
 	}
+
 	if e.expressions {
 		e.funcMaps["expr"] = expr
 	}
+
 	return
 }
 
@@ -67,11 +76,13 @@ func (c *Config) DefaultExpandOptions(options ...ExpandOptions) {
 	c.defaultExpandOptions = options
 }
 
-// LookupTable adds a lookup map to the Expand functions. When string
-// expansion is done to an plain word, e.g. `${item}`, then item is
-// checked in any tables passed, in order defined and first match wins,
-// to the function. If there are no maps defined then `item` is looked
-// up as an environment variable.
+// LookupTable adds a lookup map to the Expand functions. If there are
+// no maps defined then `${item}` is looked up as an environment
+// variable. When string expansion is done to a plain word, ie. without
+// a prefix, then `${item}` is looked up in each map, in the order the
+// LookupTable options are given, and first match, if any, wins. If
+// there is no match in any of the lookup maps then a nil value is
+// returned and the environment variables are not checked.
 func LookupTable(values map[string]string) ExpandOptions {
 	return func(e *expandOptions) {
 		e.lookupTables = append(e.lookupTables, values)
@@ -83,8 +94,8 @@ func LookupTable(values map[string]string) ExpandOptions {
 // ":". If the configuration prefix matches during expansion then the
 // function is called with the config data and the contents of the
 // expansion including the prefix (for URLs) but stripped of the opening
-// `${` and the closing `}`
-func Prefix(prefix string, fn func(*Config, string) string) ExpandOptions {
+// `${` and closing `}`
+func Prefix(prefix string, fn func(*Config, string, bool) string) ExpandOptions {
 	return func(e *expandOptions) {
 		e.funcMaps[prefix] = fn
 	}
@@ -117,5 +128,26 @@ func Expressions(yes bool) ExpandOptions {
 func TrimPrefix() ExpandOptions {
 	return func(e *expandOptions) {
 		e.trimPrefix = true
+	}
+}
+
+// TrimSpace enables the removal of leading and trailing spaces on all
+// values in an expansion. The default is `true`. If a default
+// value is given using the Default() then this is never trimmed.
+func TrimSpace(yes bool) ExpandOptions {
+	return func(e *expandOptions) {
+		e.trimSpace = yes
+	}
+}
+
+// Default sets a default value to be returned if the resulting
+// expansion of the whole config value is empty (after any optional
+// trimming of leading and trailing spaces). This includes cases where
+// external lookups fail or a configuration item is not found. If
+// TrimSpace is false and the returned value consists wholly of
+// whitespace then this is returned and not the default given here.
+func Default(value any) ExpandOptions {
+	return func(e *expandOptions) {
+		e.defaultValue = value
 	}
 }
