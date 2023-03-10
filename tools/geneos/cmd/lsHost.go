@@ -30,6 +30,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/spf13/cobra"
 )
@@ -108,16 +109,16 @@ func loopHosts(fn func(*host.Host) error) error {
 }
 
 func lsInstancePlainHosts(h *host.Host) (err error) {
-	fmt.Fprintf(lsTabWriter, "%s\t%s\t%s\t%d\t%s\n", h.GetString("name"), h.GetString("username"), h.GetString("hostname"), h.GetInt("port"), h.GetString("geneos"))
+	fmt.Fprintf(lsTabWriter, "%s\t%s\t%s\t%d\t%s\n", h.GetString("name"), h.GetString("username"), h.GetString("hostname"), h.GetInt("port", config.Default(22)), h.GetString("geneos"))
 	return
 }
 
 func lsInstanceCSVHosts(h *host.Host) (err error) {
-	lsHostCSVWriter.Write([]string{h.String(), h.GetString("username"), h.GetString("hostname"), fmt.Sprint(h.GetInt("port")), h.GetString("geneos")})
+	lsHostCSVWriter.Write([]string{h.String(), h.GetString("username"), h.GetString("hostname"), fmt.Sprint(h.GetInt("port"), config.Default(22)), h.GetString("geneos")})
 	return
 }
 
 func lsInstanceJSONHosts(h *host.Host) (err error) {
-	lsHostCmdEntries = append(lsHostCmdEntries, lsHostCmdType{h.String(), h.GetString("username"), h.GetString("hostname"), h.GetInt64("port"), h.GetString("geneos")})
+	lsHostCmdEntries = append(lsHostCmdEntries, lsHostCmdType{h.String(), h.GetString("username"), h.GetString("hostname"), h.GetInt64("port", config.Default(22)), h.GetString("geneos")})
 	return
 }

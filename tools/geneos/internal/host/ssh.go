@@ -113,8 +113,9 @@ func sshConnect(dest, user string, password []byte, keyfiles ...string) (client 
 	return ssh.Dial("tcp", dest, config)
 }
 
-// Dial connect to a remote host using ssh and returns an *ssh.Client on
-// success
+// Dial connects to a remote host using ssh and returns an *ssh.Client
+// on success. Each connection is cached and returned if found without
+// checking if it is still valid. To remove a session call Close()
 func (h *Host) Dial() (s *ssh.Client, err error) {
 	if h.failed != nil {
 		err = h.failed
@@ -126,13 +127,10 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 		return nil, ErrInvalidArgs
 	}
 	hostname := h.GetString("hostname")
-	port := h.GetString("port")
+	port := h.GetString("port", config.Default("22"))
 	if hostname == "" {
 		log.Error().Msgf("hostname not set for remote %s", h)
 		return nil, ErrInvalidArgs
-	}
-	if port == "" {
-		port = "22"
 	}
 
 	dest := hostname + ":" + port
@@ -159,7 +157,8 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 func (h *Host) Close() {
 	h.CloseSFTP()
 
-	dest := h.GetString("hostname") + ":" + h.GetString("port")
+	port := h.GetString("port", config.Default("22"))
+	dest := h.GetString("hostname") + ":" + port
 	user := h.GetString("username")
 	val, ok := sshSessions.Load(user + "@" + dest)
 	if ok {
@@ -182,13 +181,10 @@ func (h *Host) DialSFTP() (f *sftp.Client, err error) {
 		return nil, ErrInvalidArgs
 	}
 	hostname := h.GetString("hostname")
-	port := h.GetString("port")
+	port := h.GetString("port", config.Default("22"))
 	if hostname == "" {
 		log.Error().Msgf("hostname not set for remote %s", h)
 		return nil, ErrInvalidArgs
-	}
-	if port == "" {
-		port = "22"
 	}
 
 	dest := hostname + ":" + port
@@ -214,7 +210,8 @@ func (h *Host) DialSFTP() (f *sftp.Client, err error) {
 }
 
 func (h *Host) CloseSFTP() {
-	dest := h.GetString("hostname") + ":" + h.GetString("port")
+	port := h.GetString("port", config.Default("22"))
+	dest := h.GetString("hostname") + ":" + port
 	user := h.GetString("username")
 	val, ok := sftpSessions.Load(user + "@" + dest)
 	if ok {
