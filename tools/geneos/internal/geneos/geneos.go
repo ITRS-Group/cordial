@@ -58,13 +58,15 @@ var ConfigSubdirName = "geneos"
 var UserConfigFile = "geneos.json"
 var GlobalConfigPath = filepath.Join(GlobalConfigDir, ConfigSubdirName, UserConfigFile)
 
-// Init initialises a Geneos environment.
+// Init initialises a Geneos environment by creating a directory
+// structure and then it calls the initialisation functions for each
+// component type registered.
 //
-// creates a directory hierarchy and calls the initialisation functions
-// for each component, for example to create templates
+// If the directory is not empty and the Force() option is not passed
+// then nothing is changed
 //
-// if the directory is not empty and 'noEmptyOK' is false then nothing
-// is changed
+// When called on a remote host then the user running the command cannot
+// be super-user.
 func Init(h *host.Host, options ...GeneosOptions) (err error) {
 	var uid, gid int
 
