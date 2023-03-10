@@ -203,7 +203,10 @@ func addHost(h *host.Host, sshurl *url.URL) (err error) {
 		// initialise the remote directory structure, but perhaps ignore errors
 		// as we may simply be adding an existing installation
 
-		if err = geneos.Init(h, geneos.Force(true), geneos.LocalUsername(h.GetString("username")), geneos.Homedir(h.GetString("geneos"))); err != nil {
+		if err = geneos.Init(h,
+			geneos.Force(true),
+			geneos.LocalUsername(h.GetString("username")),
+			geneos.Homedir(h.GetString("geneos"))); err != nil {
 			return
 		}
 	}
