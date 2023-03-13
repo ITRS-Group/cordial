@@ -112,12 +112,12 @@ var initCmd = &cobra.Command{
 	Use:   "init [flags] [USERNAME] [DIRECTORY]",
 	Short: "Initialise a Geneos installation",
 	Long: strings.ReplaceAll(`
-Initialise a Geneos installation by creating the directory hierarchy /
-structure and user configuration file, with the USERNAME and DIRECTORY 
-if supplied.
-- USERNAME refers ti the Linux username under which the |geneos| utility
+Initialise a Geneos installation by creating the directory
+structure and user configuration file, with the optional username and directory.
+
+- |USERNAME| refers to the Linux username under which the |geneos| utility
   and all Geneos component instances will be run.
-- DIRECTORY refers to the base / home directory under which all Geneos
+- |DIRECTORY| refers to the base / home directory under which all Geneos
   binaries, instances and working directories will be hosted.
   When specified in the |geneos init| command, DIRECTORY:
   - Must be defined as an absolute path.
@@ -125,7 +125,7 @@ if supplied.
     optional parameter.
 	If undefined, |${HOME}/geneos| will be used, or |${HOME}| in case
 	the last component of |${HOME}| is equal to |geneos|.
-  - Must have a parent directory that is writable by the user running 
+  - Must have a parent directory that is writeable by the user running 
     the |geneos init| command or by the specified USERNAME.
   - Must be a non-existing directory or an empty directory (except for
 	the "dot" files).

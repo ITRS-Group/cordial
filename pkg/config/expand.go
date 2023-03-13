@@ -178,6 +178,17 @@ func (c *Config) ExpandString(input string, options ...ExpandOptions) (value str
 		}
 		return c.expandString(s, options...)
 	})
+
+	opts := evalExpandOptions(c, options...)
+
+	if opts.trimSpace {
+		value = strings.TrimSpace(value)
+	}
+
+	if value == "" {
+		value = fmt.Sprint(opts.defaultValue)
+	}
+
 	return
 }
 
@@ -291,13 +302,14 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 	return
 }
 
+// expandString does most of the core work for configuration expansion.
 func (c *Config) expandString(s string, options ...ExpandOptions) (value string) {
 	opts := evalExpandOptions(c, options...)
 	switch {
 	case strings.HasPrefix(s, "~/"), strings.HasPrefix(s, "/"):
 		// check if defaults disabled
 		if _, ok := opts.funcMaps["file"]; ok {
-			return fetchFile(c, s)
+			return fetchFile(c, s, opts.trimSpace)
 		}
 		return
 	case strings.HasPrefix(s, "config:"):
@@ -308,21 +320,40 @@ func (c *Config) expandString(s string, options ...ExpandOptions) (value string)
 		if strings.HasPrefix(s, "config:") || strings.Contains(s, ".") {
 			s = strings.TrimPrefix(s, "config:")
 			// this call to GetString() must NOT be recursive
-			return strings.TrimSpace(c.Viper.GetString(s))
+			value = c.Viper.GetString(s)
+			if opts.trimSpace {
+				value = strings.TrimSpace(value)
+			}
+			return
 		}
+
 		// only lookup env if there are no values maps, NOT if lookups
 		// fail in any given maps
 		if len(opts.lookupTables) == 0 {
-			return strings.TrimSpace(mapEnv(s))
+			value = mapEnv(s)
+			if opts.trimSpace {
+				value = strings.TrimSpace(value)
+			}
+			return
 		}
+
 		for _, v := range opts.lookupTables {
 			if n, ok := v[s]; ok {
-				return strings.TrimSpace(n)
+				value = n
+				if opts.trimSpace {
+					value = strings.TrimSpace(value)
+				}
+				return
 			}
 		}
+
 		return
 	case strings.HasPrefix(s, "env:"):
-		return strings.TrimSpace(mapEnv(strings.TrimPrefix(s, "env:")))
+		value = mapEnv(strings.TrimPrefix(s, "env:"))
+		if opts.trimSpace {
+			value = strings.TrimSpace(value)
+		}
+		return
 	default:
 		// check for any registered functions and call that with the
 		// whole of the config string. there must be a ":" here, else
@@ -331,16 +362,18 @@ func (c *Config) expandString(s string, options ...ExpandOptions) (value string)
 		f := strings.SplitN(s, ":", 2)
 		if fn, ok := opts.funcMaps[f[0]]; ok {
 			if opts.trimPrefix {
-				return fn(c, f[1])
+				value = fn(c, f[1], opts.trimSpace)
+			} else {
+				value = fn(c, s, opts.trimSpace)
 			}
-			return fn(c, s)
+			return
 		}
 	}
 
 	return
 }
 
-func fetchURL(cf *Config, url string) string {
+func fetchURL(cf *Config, url string, trim bool) string {
 	resp, err := http.Get(url)
 	if err != nil {
 		return ""
@@ -350,10 +383,13 @@ func fetchURL(cf *Config, url string) string {
 	if err != nil {
 		return ""
 	}
+	if !trim {
+		return string(b)
+	}
 	return strings.TrimSpace(string(b))
 }
 
-func fetchFile(cf *Config, path string) string {
+func fetchFile(cf *Config, path string, trim bool) string {
 	path = strings.TrimPrefix(path, "file:")
 	if strings.HasPrefix(path, "~/") {
 		home, _ := os.UserHomeDir()
@@ -363,10 +399,13 @@ func fetchFile(cf *Config, path string) string {
 	if err != nil {
 		return ""
 	}
+	if !trim {
+		return string(b)
+	}
 	return strings.TrimSpace(string(b))
 }
 
-func expr(cf *Config, expression string) string {
+func expr(cf *Config, expression string, trim bool) string {
 	eval := goval.NewEvaluator()
 	vars := cf.AllSettings()
 	env := make(map[string]string)
@@ -379,7 +418,10 @@ func expr(cf *Config, expression string) string {
 	if err != nil {
 		return ""
 	}
-	return fmt.Sprint(result)
+	if !trim {
+		return fmt.Sprint(result)
+	}
+	return strings.TrimSpace(fmt.Sprint(result))
 }
 
 // mapEnv is for special case mappings of environment variables across
