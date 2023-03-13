@@ -1,0 +1,104 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+</head>
+<body>
+
+<p>
+    This is an automatically generated notification message from Geneos Gateway: <b>{{._GATEWAY}}</b>
+</p>
+
+{{if eq ._ALERT_TYPE "Alert"}}
+
+<p>
+    Alert <b>{{._ALERT}}</b> is being fired because Geneos DataItem <b>{{._VARIABLE}}</b> in
+    dataview <b>{{._DATAVIEW}}</b> in Managed Entity <b>{{._MANAGED_ENTITY}}</b> is at
+    <b>{{._SEVERITY}}</b> severity.
+</p>
+
+{{else if eq ._ALERT_TYPE "Clear"}}
+
+<p>
+    Alert "<b>{{._ALERT}}</b>" is being cancelled because Geneos DataItem <b>{{._VARIABLE}}</b> in
+    dataview <b>{{._DATAVIEW}}</b> in Managed Entity <b>{{._MANAGED_ENTITY}}</b> is at
+    <b>{{._SEVERITY}}</b> severity.
+</p>
+
+{{else if eq ._ALERT_TYPE "Suspend"}}
+
+<p>
+    Alert "<b>{{._ALERT}}</b>" is being suspended because of: "<b>{{._SUSPEND_REASON}}</b>".
+    No notifications will be fired for this alert until it is resumed. If the alert is cancelled
+    before it is resumed no further notifications will be fired.
+</p>
+
+{{else if eq ._ALERT_TYPE "Resume"}}
+
+<p>
+    Alert "<b>{{._ALERT}}</b>" is being resumed because of: "<b>{{._RESUME_REASON}}</b>".
+    Geneos DataItem <b>{{._VARIABLE}}</b> in dataview <b>{{._DATAVIEW}}</b> in Managed Entity
+    <b>{{._MANAGED_ENTITY}}</b> is <b>{{._SEVERITY}}</b> severity.
+</p>
+
+{{else if eq ._ALERT_TYPE "Summary"}}
+
+<p>
+    Summary for alert throttle "<b>{{._THROTTLER}}</b>
+</p>
+
+<p>
+    <b>{{._VALUE}}</b> Alerts have been throttled in the last <b>{{._SUMMARY_PERIOD}}</b>, including:
+</p>
+
+<ul>
+<li>{{._DROPPED_ALERTS}}</li> Alert(s)
+<li>{{._DROPPED_CLEARS}}</li> Clear(s)
+<li>{{._DROPPED_SUSPENDS}}</li> Suspend(s)
+<li>{{._DROPPED_RESUMES}}</li> Resume(s)
+</ul>
+
+{{else}}
+
+<p>
+    Action "<b>{{._ACTION}}</b>" is being fired against Geneos DataItem <b>{{._VARIABLEPATH}}</b>
+</p>
+
+<p>
+    The dataitem value is "<b>{{._VALUE}}</b>" and its severity is <b>{{._SEVERITY}}</b>
+</p>
+
+{{end}}
+
+{{if eq ._ALERT_TYPE "Alert" "Clear" "Suspend" "Resume"}}
+
+<p>
+    The cell value is "<b>{{._VALUE}}</b>"
+</p>
+
+<p>
+    This Alert was created at <b>{{._ALERT_CREATED}}</b> and has been fired <b>{{._REPEATCOUNT}}</b> times.
+</p>
+
+<p>
+    The item's XPath is <b>{{._VARIABLEPATH}}</b>
+</p>
+
+{{if ._THROTTLER}}
+<p>
+    This alert is controlled by throttle: "<b>{{._THROTTLER}}</b>".
+</p>
+{{end}}
+
+{{end}}
+
+{{if eq ._TEMPLATE_DEBUG "true" "TRUE" }}
+Debug - parameters supplied:
+<table>
+{{range $key, $value := .}}
+<tr><th>{{- $key }}</th><td>{{$value}}</b></td></tr>
+{{end}}
+</table>
+{{end}}
+
+</body>
+</html>
