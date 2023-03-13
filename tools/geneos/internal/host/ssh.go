@@ -77,6 +77,7 @@ func sshConnect(dest, user string, password []byte, keyfiles ...string) (client 
 
 	homedir, err = os.UserHomeDir()
 	if err != nil {
+		log.Debug().Msg("user has no home directory, ssh will not be available.")
 		return
 	}
 
@@ -98,7 +99,7 @@ func sshConnect(dest, user string, password []byte, keyfiles ...string) (client 
 	}
 
 	if len(password) > 0 {
-		authmethods = append(authmethods, ssh.Password(strings.TrimSpace(string(password))))
+		authmethods = append(authmethods, ssh.Password(string(password)))
 		log.Debug().Msg("added password to auth methods")
 	}
 
@@ -112,6 +113,9 @@ func sshConnect(dest, user string, password []byte, keyfiles ...string) (client 
 	return ssh.Dial("tcp", dest, config)
 }
 
+// Dial connects to a remote host using ssh and returns an *ssh.Client
+// on success. Each connection is cached and returned if found without
+// checking if it is still valid. To remove a session call Close()
 func (h *Host) Dial() (s *ssh.Client, err error) {
 	if h.failed != nil {
 		err = h.failed
@@ -119,17 +123,14 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 	}
 	username := h.GetString("username")
 	if username == "" {
-		log.Panic().Msgf("username not set for remote %s", h)
+		log.Error().Msgf("username not set for remote %s", h)
 		return nil, ErrInvalidArgs
 	}
 	hostname := h.GetString("hostname")
-	port := h.GetString("port")
+	port := h.GetString("port", config.Default("22"))
 	if hostname == "" {
 		log.Error().Msgf("hostname not set for remote %s", h)
 		return nil, ErrInvalidArgs
-	}
-	if port == "" {
-		port = "22"
 	}
 
 	dest := hostname + ":" + port
@@ -138,7 +139,9 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 		s = val.(*ssh.Client)
 	} else {
 		log.Debug().Msgf("ssh connect to %s as %s", dest, username)
-		s, err = sshConnect(dest, username, h.GetByteSlice("password"), strings.Split(h.GetString("sshkeys"), ",")...)
+		s, err =
+
+			sshConnect(dest, username, h.GetByteSlice("password"), strings.Split(h.GetString("sshkeys"), ",")...)
 		if err != nil {
 			log.Debug().Err(err).Msg("")
 			h.failed = err
@@ -154,7 +157,8 @@ func (h *Host) Dial() (s *ssh.Client, err error) {
 func (h *Host) Close() {
 	h.CloseSFTP()
 
-	dest := h.GetString("hostname") + ":" + h.GetString("port")
+	port := h.GetString("port", config.Default("22"))
+	dest := h.GetString("hostname") + ":" + port
 	user := h.GetString("username")
 	val, ok := sshSessions.Load(user + "@" + dest)
 	if ok {
@@ -164,7 +168,8 @@ func (h *Host) Close() {
 	}
 }
 
-// succeed or fatal
+// DialSFTP connects to the remote host using SSH and returns an
+// *sftp.Client is successful
 func (h *Host) DialSFTP() (f *sftp.Client, err error) {
 	if h.failed != nil {
 		err = h.failed
@@ -176,13 +181,10 @@ func (h *Host) DialSFTP() (f *sftp.Client, err error) {
 		return nil, ErrInvalidArgs
 	}
 	hostname := h.GetString("hostname")
-	port := h.GetString("port")
+	port := h.GetString("port", config.Default("22"))
 	if hostname == "" {
 		log.Error().Msgf("hostname not set for remote %s", h)
 		return nil, ErrInvalidArgs
-	}
-	if port == "" {
-		port = "22"
 	}
 
 	dest := hostname + ":" + port
@@ -208,7 +210,8 @@ func (h *Host) DialSFTP() (f *sftp.Client, err error) {
 }
 
 func (h *Host) CloseSFTP() {
-	dest := h.GetString("hostname") + ":" + h.GetString("port")
+	port := h.GetString("port", config.Default("22"))
+	dest := h.GetString("hostname") + ":" + port
 	user := h.GetString("username")
 	val, ok := sftpSessions.Load(user + "@" + dest)
 	if ok {

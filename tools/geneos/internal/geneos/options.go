@@ -119,8 +119,8 @@ func Homedir(h string) GeneosOptions {
 	return func(d *Options) { d.homedir = h }
 }
 
-// LocalUsername is the user name of the user running the program, or if
-// running as root the default username that shiould be used. This is
+// LocalUsername sets the user name of the user running the program, or if
+// running as root the default username that should be used. This is
 // different to any remote username for executing commands on remote
 // hosts.
 func LocalUsername(u string) GeneosOptions {

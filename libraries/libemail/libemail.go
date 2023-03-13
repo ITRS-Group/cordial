@@ -26,12 +26,18 @@ import "C"
 import (
 	"bytes"
 	_ "embed"
+	"encoding/json"
+	"fmt"
 	htmltemplate "html/template"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"regexp"
+	"strconv"
+	"strings"
 	"text/template"
+	"time"
 
 	"github.com/go-mail/mail/v2"
 )
@@ -45,8 +51,29 @@ var defHTMLTemplate string
 //go:embed css.gotmpl
 var defCSSTemplate string
 
+//go:embed textmsteams.gotmpl
+var defMsTeamsTextTemplate string
+
+//go:embed htmlmsteams.gotmpl
+var defMsTeamsHTMLTemplate string
+
+//go:embed css.gotmpl
+var defMsTeamsCSSTemplate string
+
 //go:embed logo.png
 var logo []byte
+
+const msTeamsMessageCard = "MessageCard"
+const geneosThemecolor = "#46e1d7"
+const DefaultWebhookURLValidationPattern = `^https:\/\/(?:.*\.webhook|outlook)\.office(?:365)?\.com`
+const DefaultMsTeamsTimeout = 2000
+
+type msTeamsBasicTextNotifPostData struct {
+	Type       string `json:"@type"`
+	Title      string `json:"title,omitempty"`
+	Text       string `json:"text,omitempty"`
+	ThemeColor string `json:"themeColor,omitempty"`
+}
 
 // SendMail tries to duplicate the exact behaviour of libemail.so's SendMail function
 // but with the addition of more modern SMTP and TLS / authentication
@@ -84,9 +111,9 @@ func SendMail(n C.int, args **C.char) C.int {
 	// Subjects behave in the same way as formats."
 	//
 	// Note: "ThrottleSummary" is also mentioned later, but is the same as above
-	var format string
+	var format, subject string
 
-	subject := getWithDefault("_SUBJECT", conf, defaultSubject[_SUBJECT])
+	subject = getWithDefault("_SUBJECT", conf, defaultSubject[_SUBJECT])
 
 	if _, ok := conf["_FORMAT"]; ok {
 		format = conf["_FORMAT"]
@@ -134,12 +161,12 @@ func SendMail(n C.int, args **C.char) C.int {
 	return 0
 }
 
-var replARgsRE = regexp.MustCompile(`%\([^\)]*\)`)
+var replArgsRE = regexp.MustCompile(`%\([^\)]*\)`)
 
 // substitute placeholder of the form %(XXX) for the value of XXX or empty and
 // return the result as a new string
 func replArgs(format string, conf EMailConfig) string {
-	result := replARgsRE.ReplaceAllStringFunc(format, func(key string) string {
+	result := replArgsRE.ReplaceAllStringFunc(format, func(key string) string {
 		// strip containing "%(...)" - as we are here, the regexp must have matched OK
 		// so no further check required. No match returns empty string.
 		return conf[key[2:len(key)-1]]
@@ -317,3 +344,232 @@ func GoSendMail(n C.int, args **C.char) C.int {
 	}
 	return 0
 }
+
+//export GoSendToMsTeamsChannel
+func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
+	var msTeamsWebhooksValidity = make(map[string]bool)
+	var clientTimeout time.Duration
+
+	// Parse arguments
+	// ---------------
+	conf := parseArgs(n, args)
+
+	// Check validity of msTeams incoming webhooks
+	// -------------------------------------------
+	// Error if no webhooks defined
+	if _, ok := conf["_TO"]; !ok || len(conf["_TO"]) == 0 {
+		log.Println("ERR: No MsTeams webhooks defined in _TO. Abort GoSendToMsTeamsChannel().")
+		return 1
+	}
+	// Split webhooks, provided in _TO as a pipe ("|") separate list
+	msTeamsWebhooks := strings.Split(conf["_TO"], "|")
+	validityWebhooksCount := 0
+	// Browse through webhooks & check validity usng a regex match.
+	// Invalid webhooks are ignored.
+	regex, err := regexp.Compile(DefaultWebhookURLValidationPattern)
+	if err != nil {
+		log.Println("ERR: Cannot compile regex to validate msTeams webhooks. Abort GoSendToMsTeamsChannel().")
+		return 1
+	}
+	for i, s := range msTeamsWebhooks {
+		if match := regex.MatchString(s); !match {
+			log.Printf("WARN: msTeams weekhook #%d (%s) is not valid. Ignoring it.\n", i+1, s)
+			msTeamsWebhooksValidity[strings.TrimSpace(s)] = false
+		} else {
+			msTeamsWebhooksValidity[strings.TrimSpace(s)] = true
+			validityWebhooksCount++
+		}
+	}
+	// Error if no valid webhooks defined
+	if validityWebhooksCount == 0 {
+		log.Println("ERR: No valid msTeams webhooks defined in _TO. Abort GoSendToMsTeamsChannel().")
+		return 1
+	}
+
+	// Attempt at having a compatibility with the base / default Geneos e-mail formatting
+	var subject string
+	var header, body string
+
+	// Define the notification subject / title
+	// ---------------------------------------
+	subject = defaultMsTeamsSubject[_SUBJECT]
+	if _, ok := conf["_SUBJECT"]; ok && len(conf["_SUBJECT"]) != 0 {
+		subject = getWithDefault("_SUBJECT", conf, defaultMsTeamsSubject[_SUBJECT])
+	} else if _, ok = conf["_ALERT"]; ok {
+		switch conf["_ALERT_TYPE"] {
+		case "Alert":
+			subject = getWithDefault("_ALERT_SUBJECT", conf, defaultMsTeamsSubject[_ALERT_SUBJECT])
+		case "Clear":
+			subject = getWithDefault("_CLEAR_SUBJECT", conf, defaultMsTeamsSubject[_CLEAR_SUBJECT])
+		case "Suspend":
+			subject = getWithDefault("_SUSPEND_SUBJECT", conf, defaultMsTeamsSubject[_SUSPEND_SUBJECT])
+		case "Resume":
+			subject = getWithDefault("_RESUME_SUBJECT", conf, defaultMsTeamsSubject[_RESUME_SUBJECT])
+		case "ThrottleSummary":
+			subject = getWithDefault("_SUMMARY_SUBJECT", conf, defaultMsTeamsSubject[_SUMMARY_SUBJECT])
+		default:
+			subject = getWithDefault("_SUBJECT", conf, defaultMsTeamsSubject[_SUBJECT])
+		}
+	}
+
+	// Run to subject through text template to allow variable subject
+	subjtmpl := template.New("subject")
+	subjtmpl, err = subjtmpl.Parse(subject)
+	if err == nil {
+		var subjbuf bytes.Buffer
+		err = subjtmpl.Execute(&subjbuf, conf)
+		if err == nil {
+			subject = subjbuf.String()
+		}
+	}
+	header = replArgs(subject, conf)
+
+	// Define the notification text / body
+	// -----------------------------------
+	var htmltmpl *htmltemplate.Template
+	var texttmpl *template.Template
+	var textOnly, useHtmlTmpl bool
+	var htmlOutput, textOutput bytes.Buffer
+	var contents string
+	_, textOnly = conf["_TEMPLATE_TEXT_ONLY"]
+	useHtmlTmpl = false
+	// Identify the template to use and parse it
+	if _, ok := conf["_TEMPLATE_HTML_FILE"]; ok && len(conf["_TEMPLATE_HTML_FILE"]) != 0 {
+		// Use of HTML template file defined in _TEMPLATE_HTML_FILE
+		useHtmlTmpl = true
+		contents, err = readFileString(conf["_TEMPLATE_HTML_FILE"])
+		if err != nil {
+			log.Println("ERR: Error reading HTML Template file defined in _TEMPLATE_HTML_FILE. Abort GoSendToMsTeamsChannel().", err)
+			return 1
+		}
+		htmltmpl, err = htmltemplate.New("html").Parse(contents)
+		if err != nil {
+			log.Panicln("ERR: Error parsing template file defined in _TEMPLATE_HTML_FILE. Abort GoSendToMsTeamsChannel().", err)
+			return 1
+		}
+	} else if _, ok := conf["_TEMPLATE_HTML"]; ok && len(conf["_TEMPLATE_HTML"]) != 0 {
+		// Use manually defined HTML template found in _TEMPLATE_HTML
+		useHtmlTmpl = true
+		htmltmpl, err = htmltemplate.New("html").Parse(conf["_TEMPLATE_HTML"])
+		if err != nil {
+			log.Println("ERR: Error executing html template in _TO. Abort GoSendToMsTeamsChannel().", err)
+			return 1
+		}
+	} else if _, ok := conf["_TEMPLATE_TEXT_FILE"]; ok && len(conf["_TEMPLATE_TEXT_FILE"]) != 0 {
+		// Use of text template file defined in _TEMPLATE_TEXT_FILE
+		useHtmlTmpl = false
+		texttmpl, err = template.ParseFiles(conf["_TEMPLATE_TEXT_FILE"])
+		if err != nil {
+			log.Println("ERR: Error parsing text template file defined in _TEMPLATE_TEXT_FILE. Abort GoSendToMsTeamsChannel().", err)
+			return 1
+		}
+	} else if _, ok := conf["_TEMPLATE_TEXT"]; ok && len(conf["_TEMPLATE_TEXT"]) != 0 {
+		// Use manually defined text template found in _TEMPLATE_TEXT
+		useHtmlTmpl = false
+		texttmpl, err = template.New("text").Parse(conf["_TEMPLATE_TEXT"])
+		if err != nil {
+			log.Println("ERR: Error parsing text template defined in _TEMPLATE_TEXT. Abort GoSendToMsTeamsChannel().", err)
+			return 1
+		}
+	} else if _, ok := conf["_FORMAT"]; ok && len(conf["_FORMAT"]) != 0 {
+		// _FORMAT defined and interpreted as a html template
+		if textOnly {
+			useHtmlTmpl = false
+			texttmpl, err = template.New("text").Parse(conf["_FORMAT"])
+			if err != nil {
+				log.Println("ERR: Error parsing text template in _TO. Abort GoSendToMsTeamsChannel().", err)
+				return 1
+			}
+		} else {
+			useHtmlTmpl = true
+			htmltmpl, err = htmltemplate.New("html").Parse(conf["_FORMAT"])
+			if err != nil {
+				log.Println("ERR: Error parsing html template in _TO. Abort GoSendToMsTeamsChannel().", err)
+				return 1
+			}
+		}
+	} else if textOnly {
+		// Use default text template file
+		useHtmlTmpl = false
+		texttmpl, err = template.New("text").Parse(defMsTeamsTextTemplate)
+		if err != nil {
+			log.Println("ERR: Error parsing default text template. Abort GoSendToMsTeamsChannel().", err)
+			return 1
+		}
+	} else {
+		// Use default HTML template file
+		useHtmlTmpl = true
+		contents = defMsTeamsHTMLTemplate
+		htmltmpl, err = htmltemplate.New("html").Parse(contents)
+		if err != nil {
+			log.Println("ERR: Error persing default HTML template. Abort GoSendToMsTeamsChannel().", err)
+			return 1
+		}
+	}
+	// Execute the template & account for older/legacy inputs formats from Geneos
+	if useHtmlTmpl {
+		// Template used is HTML
+		err = htmltmpl.ExecuteTemplate(&htmlOutput, "html", conf)
+		if err != nil {
+			log.Println("ERR: Error executing HTML template. Abort GoSendToMsTeamsChannel().", err)
+			return 1
+		}
+		body = replArgs(htmlOutput.String(), conf)
+	} else {
+		// Template used is text
+		err = texttmpl.Execute(&textOutput, conf)
+		if err != nil {
+			log.Println("ERR: Error executing text template. Abort GoSendToMsTeamsChannel().", err)
+			return 1
+		}
+		body = replArgs(textOutput.String(), conf)
+	}
+
+	// Process MsTeams API call
+	// ------------------------
+	// Define POST data for REST API call
+	var postData msTeamsBasicTextNotifPostData
+	postData.Type = msTeamsMessageCard
+	postData.Title = header
+	postData.Text = body
+	postData.ThemeColor = geneosThemecolor
+
+	// Build JSON data
+	jsonValue, err := json.Marshal(postData)
+	if err != nil {
+		log.Println("ERR: Cannot generate JSON data for msTeams API. Abort GoSendToMsTeamsChannel().", err)
+		return 1
+	}
+	jsonBody := bytes.NewReader(jsonValue)
+
+	// Define timeout for RST API call
+	if timeout, err := strconv.Atoi(getWithDefault("_TIMEOUT", conf, fmt.Sprintf("%d", DefaultMsTeamsTimeout))); err != nil {
+		clientTimeout = DefaultMsTeamsTimeout * time.Millisecond
+	} else {
+		clientTimeout = time.Duration(timeout) * time.Millisecond
+	}
+
+	// Call REST API for each target msTeams Webhook
+	client := &http.Client{
+		Timeout: clientTimeout,
+	}
+	for k, v := range msTeamsWebhooksValidity {
+		if v {
+			// Webhook is valid, proceed with REST API call / HTTP POST command
+			request, err := http.NewRequest("POST", k, jsonBody)
+			if err != nil {
+				log.Printf("ERR: Cannot create HTTP POST request to msTeams on URL %s. Continue. %v", k, err)
+				continue
+			}
+			request.Header.Set("Content-Type", "application/json")
+			resp, err := client.Do(request)
+			if err != nil {
+				log.Printf("ERR: Cannot complete HTTP POST request to MsTeams (target %s). Continue. %v", k, err)
+			} else {
+				log.Printf("INFO: Message sent to %s, return code %d\n", k, resp.StatusCode)
+			}
+		}
+	}
+	log.Println("INFO: GoSendToMsTeamsChannel() completed.")
+	return 0
+} // End of GoSendToMsTeamsChannel()
