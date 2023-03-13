@@ -31,6 +31,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 
+	// each component type registers itself when imported here
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fa2"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fileagent"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
@@ -42,13 +43,15 @@ import (
 
 func main() {
 	execname := filepath.Base(os.Args[0])
+
+	// if the executable does not have a `ctl` suffix then execute the
+	// underlying code directly
 	if !strings.HasSuffix(execname, "ctl") {
 		cmd.Execute()
 		os.Exit(0)
 	}
 
-	// emulate core ctl commands
-	// fmt.Println("running as", execname)
+	// otherwise emulate core ctl commands
 	ct := geneos.ParseComponentName(strings.TrimSuffix(execname, "ctl"))
 	if len(os.Args) > 1 {
 		name := os.Args[1]
