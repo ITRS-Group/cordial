@@ -60,34 +60,32 @@ func evalOptions(configName string, c *configOptions, options ...Options) {
 	}
 }
 
-// Global() tells LoadConfig() to set values in the global config
-// instead of creating a new instance, and the global configuration
-// instance is returned.
+// Global tells [LoadConfig] to set values in the global configuration
+// structure instead of creating a new one. The global configuration is
+// returned by [LoadConfig].
 func Global() Options {
 	return func(c *configOptions) {
 		c.setglobals = true
 	}
 }
 
-// UseDefaults() tells LoadConfig() to load defaults or not. The default
-// is true.
+// UseDefaults tells [LoadConfig] whether to load defaults or not. The
+// default is true.
 func UseDefaults(b bool) Options {
 	return func(c *configOptions) {
 		c.usedefaults = b
 	}
 }
 
-// SetDefaults() takes a []byte slice and a format type to set
+// SetDefaults takes a []byte slice and a format type to set
 // configuration defaults. This can be used in conjunction with `embed`
-// to read a defaults file in the source tree to a byte slice and set
-// those, e.g.
+// to set embedded default configuration values so that a program can
+// function without a configuration file, e.g.
 //
-//		//go:embed "defaults.yaml"
-//		var defaults []byte
-//	    ...
-//		c, err := config.LoadConfig("appname", config.SetDefaults(defaults, "yaml"))
-//
-// Similarly, the defaults could be loaded from a well known URL and so on.
+//	//go:embed "defaults.yaml"
+//	var defaults []byte
+//	...
+//	c, err := config.LoadConfig("appname", config.SetDefaults(defaults, "yaml"))
 func SetDefaults(defaults []byte, format string) Options {
 	return func(c *configOptions) {
 		c.defaults = defaults
@@ -95,69 +93,72 @@ func SetDefaults(defaults []byte, format string) Options {
 	}
 }
 
-// SetAppName() overrides to mapping of the configName to the
-// application name. AppName is used for directories while configName is
-// used for the files in those directories.
+// SetAppName overrides to use of the [LoadConfig] `configName` argument
+// as the application name, `AppName`, which is used for sub-directories
+// while `configName“ is used as the prefix for files in those
+// directories.
 func SetAppName(name string) Options {
 	return func(c *configOptions) {
 		c.appname = name
 	}
 }
 
-// SetConfigFile() allows the caller to override the searching for a
-// config file in the given directories and instead loads only the given
-// file (after defaults are loaded as normal).
+// SetConfigFile forces [LoadConfig] to load only the configuration at
+// the given path. This path must include the file extension. Defaults
+// are still loaded using the normal directories unless [IgnoreDefaults]
+// is also passed as an option.
 func SetConfigFile(path string) Options {
 	return func(c *configOptions) {
 		c.configFile = path
 	}
 }
 
-// AddConfigDirs() adds one or more directories to search for the
-// configuration and defaults files. Directories are searched in FIFO
-// order, so any directories given are checked before the built-in list.
-// This option can be given multiple times as each call only appends to
-// the list which has already bee initialised.
+// AddConfigDirs adds one or more directories to search for the
+// configuration and defaults files. Directories are searched in order,
+// so any directories set with this option are checked before the
+// built-in list. This option can be given multiple times as each call
+// appends to the existing list..
 func AddConfigDirs(paths ...string) Options {
 	return func(c *configOptions) {
 		c.configDirs = append(c.configDirs, paths...)
 	}
 }
 
-// IgnoreWorkingDir() tells LoadConfig not to search the working
+// IgnoreWorkingDir tells [LoadConfig] not to search the working
 // directory for configuration files. This should be used when the
-// caller may be running in an unknown or untrusted location.
+// caller may be running from an unknown or untrusted location.
 func IgnoreWorkingDir() Options {
 	return func(c *configOptions) {
 		c.workingdir = ""
 	}
 }
 
-// IgnoreUserConfDir() tells LoadConfig() not to search under the user
-// config directory (The user config directory is as per Go
-// os.UserConfDir() and a sub-directory of AppName)
+// IgnoreUserConfDir tells [LoadConfig] not to search under the user
+// config directory (The user configuration directory is as per
+// [os.UserConfDir] and a sub-directory of AppName)
 func IgnoreUserConfDir() Options {
 	return func(c *configOptions) {
 		c.userconfdir = ""
 	}
 }
 
-// IgnoreSystemDir() tells LoadConfig() not to search in the system
+// IgnoreSystemDir tells LoadConfig() not to search in the system
 // configuration directory. This only applies on UNIX-like systems and
-// is normally /etc/[AppName]
+// is normally `/etc` and a sub-directory of AppName.
 func IgnoreSystemDir() Options {
 	return func(c *configOptions) {
 		c.systemdir = ""
 	}
 }
 
-// MergeSettings() change the default behaviour which loads the first
-// configuration file found, instead loading each configuration file
-// found in the directories given and merges the settings together.
-// Merging is done using [viper.MergeConfigMap] and should result in the
-// last definition of each configuration item being used.
+// MergeSettings change the default behaviour of [LoadConfig] which is
+// to load the first configuration file found, instead loading each
+// configuration file found and merges the settings together. Merging is
+// done using [viper.MergeConfigMap] and should result in the last
+// definition of each configuration item being used.
 //
-// MergeSettings() applies to both default and main settings.
+// MergeSettings applies to both default and main settings, but
+// separately.
 func MergeSettings() Options {
 	return func(c *configOptions) {
 		c.merge = true

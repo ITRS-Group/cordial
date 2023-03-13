@@ -206,12 +206,16 @@ func (c *Config) GetStringMapString(s string, options ...ExpandOptions) (m map[s
 }
 
 // LoadConfig loads configuration files from internal defaults, external
-// defaults and the given configuration file. The configuration file can
-// be passed as an option. Each layer is only loaded once, if given.
-// Internal defaults are passed as a byte slice - this is typically
-// loaded from an embedded file but can be supplied from any source.
-// External defaults and the main configuration file are passed as
-// ordered slices of strings. The first match is loaded.
+// defaults and the given configuration file(s). The configuration
+// file(s) can be passed as an option. Each layer is only loaded once,
+// if given. Internal defaults are passed as a byte slice - this is
+// typically loaded from an embedded file but can be supplied from any
+// source. External defaults, which have a `.defaults` suffix before the
+// file extension, and the main configuration file are passed as ordered
+// slices of strings. The first match is loaded unless the
+// MergeSettings() option is passed, in which case all defaults are
+// merged and then all non-defaults are merged in the order they were
+// given.
 //
 //	LoadConfig("geneos")
 //
@@ -224,7 +228,8 @@ func (c *Config) GetStringMapString(s string, options ...ExpandOptions) (m map[s
 //
 // for defaults see:
 // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-// ... find windows equiv
+//
+// TBD: windows equiv of above
 func LoadConfig(configName string, options ...Options) (c *Config, err error) {
 	opts := &configOptions{}
 	evalOptions(configName, opts, options...)
@@ -243,17 +248,21 @@ func LoadConfig(configName string, options ...Options) (c *Config, err error) {
 		internalDefaults.SetConfigType(opts.defaultsFormat)
 		// ignore errors ?
 		internalDefaults.ReadConfig(buf)
+
+		// now set any internal default values as real defaults, cannot use Merge here
+		for k, v := range internalDefaults.AllSettings() {
+			defaults.SetDefault(k, v)
+		}
 	}
 
-	// now set any internal default values as real defaults, cannot use Merge here
-	for k, v := range internalDefaults.AllSettings() {
-		defaults.SetDefault(k, v)
-	}
-
+	// concatenate config directories in order - first match wins below,
+	// unless MergeSettings() option is used. The order is:
+	//
+	// 1. Explicit directory arguments passed using the option AddConfigDirs()
+	// 2. The working directory unless the option IgnoreWorkingDir() is used
+	// 3. The user configuration directory plus `AppName`, unless IgnoreUserConfDir() is used
+	// 4. The system configuration directory plus `AppName`, unless IgnoreSystemDir() is used
 	confDirs := opts.configDirs
-
-	// add config directories in order - first match wins unless
-	// MergeSettings() option is used
 	if opts.workingdir != "" {
 		confDirs = append(confDirs, opts.workingdir)
 	}
@@ -264,7 +273,8 @@ func LoadConfig(configName string, options ...Options) (c *Config, err error) {
 		confDirs = append(confDirs, filepath.Join(opts.systemdir, opts.appname))
 	}
 
-	// if ew are merging, then we load in reverse order
+	// if we are merging, then we load in reverse order to ensure lower
+	// priorities are overwritten
 	if opts.merge {
 		for i := len(confDirs)/2 - 1; i >= 0; i-- {
 			opp := len(confDirs) - 1 - i
@@ -273,9 +283,10 @@ func LoadConfig(configName string, options ...Options) (c *Config, err error) {
 	}
 	log.Debug().Msgf("confDirs: %v", confDirs)
 
+	// search directories for defaults unless UseDefault(false) is
+	// used as an option to LoadConfig(). we do this even if the
+	// config file itself is set using option SetConfigFile()
 	if opts.usedefaults {
-		// search directories for defaults. we do this even if the config
-		// file itself is set using option SetConfigFile()
 		if opts.merge {
 			for _, dir := range confDirs {
 				d := viper.New()
@@ -310,7 +321,9 @@ func LoadConfig(configName string, options ...Options) (c *Config, err error) {
 			}
 		}
 
-		// set defaults in real config based on collected defaults
+		// set defaults in real config based on collected defaults,
+		// following viper behaviour if the same default is set multiple
+		// times.
 		for k, v := range defaults.AllSettings() {
 			c.Viper.SetDefault(k, v)
 		}

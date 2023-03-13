@@ -94,7 +94,7 @@ var rootCmd = &cobra.Command{
 Manage and control your Geneos environment. With |geneos| you can
 initialise a new installation, add and remove components, control
 processes and build template based configuration files for SANs and
-// new gateways.?
+more.
 `, "|", "`"),
 	Example: strings.ReplaceAll(`
 $ geneos start
@@ -113,16 +113,15 @@ $ geneos ps
 		// check initialisation
 		geneosdir := host.Geneos()
 		if geneosdir == "" {
-			// commands that do not require geneos home to be set
+			// commands that do not require geneos home to be set - make this a pair of slices to test
 			if !(cmd == versionCmd ||
 				cmd == initCmd ||
-				cmd.Parent() == initCmd ||
 				cmd == setUserCmd ||
 				cmd == setGlobalCmd ||
 				cmd == addHostCmd ||
+				cmd.Parent() == initCmd ||
 				cmd.Parent() == aesCmd ||
 				len(host.RemoteHosts()) > 0) {
-				// if cmd != rootCmd && cmd != initCmd && cmd.Parent() != initCmd && cmd != setUserCmd && cmd != setGlobalCmd && cmd != addHostCmd && len(host.RemoteHosts()) == 0 {
 				cmd.SetUsageTemplate(" ")
 				return fmt.Errorf("%s", strings.ReplaceAll(`
 Geneos installation directory not set.
@@ -180,6 +179,9 @@ func initConfig() {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
+	// `oldConfDir` is the original path to the user configuration,
+	// typically directly in `~/geneos`. The LoadConfig() function
+	// already looks in standardised user and global directories.
 	oldConfDir, _ := config.UserConfigDir()
 
 	cf, err := config.LoadConfig("geneos",
