@@ -71,7 +71,9 @@ type Host struct {
 
 var hosts sync.Map
 
-// this is called from cmd root
+// Init initialises the host settings and is only called from the root
+// command to set the initial values of host.LOCAL and host.ALL and
+// reads the host configuration file.
 func Init() {
 	LOCAL = Get(LOCALHOST)
 	ALL = Get(ALLHOSTS)
