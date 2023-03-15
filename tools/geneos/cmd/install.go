@@ -59,12 +59,12 @@ func init() {
 }
 
 var installCmd = &cobra.Command{
-	Use:   "install [flags] [TYPE] | FILE|URL... | [VERSION | FILTER]",
-	Short: "Install (remote or local) Geneos packages",
+	Use:   "install [flags] [TYPE] [FILE|URL...]",
+	Short: "Install Geneos releases",
 	Long: strings.ReplaceAll(`
 Installs Geneos software packages in the Geneos directory structure under
-directory |packages|.  The Geneos software packages will be sourced from
-the [ITRS Dowload portal](https://resources.itrsgroup.com/downloads) or,
+directory |packages|. The Geneos software packages will be sourced from
+the [ITRS Download portal](https://resources.itrsgroup.com/downloads) or,
 if specified as FILE or URL, a filename formatted as
 |geneos-TYPE-VERSION*.tar.gz|.
 
@@ -182,8 +182,7 @@ func install(ct *geneos.Component, target string, options ...geneos.GeneosOption
 			return err
 		}
 		if err = geneos.Install(h, ct, options...); err != nil {
-			log.Error().Err(err).Msg("")
-			continue
+			return
 		}
 	}
 	return

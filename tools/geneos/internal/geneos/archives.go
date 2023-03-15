@@ -54,9 +54,9 @@ type downloadauth struct {
 	Password string `json:"password,omitempty"`
 }
 
-// OpenArchive locates and returns an io.ReadCloser for an archive for
-// the component given
-func OpenArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, filename string, err error) {
+// openArchive locates and returns an io.ReadCloser for an archive for
+// the component ct. The source of the archive is given as an option.
+func openArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, filename string, err error) {
 	var resp *http.Response
 
 	opts := EvalOptions(options...)
@@ -109,7 +109,7 @@ func OpenArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, f
 		return
 	}
 
-	if filename, resp, err = checkArchive(host.LOCAL, ct, options...); err != nil {
+	if filename, resp, err = openRemoteArchive(ct, options...); err != nil {
 		return
 	}
 
@@ -119,16 +119,10 @@ func OpenArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, f
 	s, err := host.LOCAL.Stat(archivePath)
 	if err == nil && s.Size() == resp.ContentLength {
 		if f, err := host.LOCAL.Open(archivePath); err == nil {
-			log.Debug().Msgf("not downloading, file already exists: %s", archivePath)
+			log.Debug().Msgf("not downloading, file with same size already exists: %s", archivePath)
 			resp.Body.Close()
 			return f, filename, nil
 		}
-	}
-
-	if resp.StatusCode > 299 {
-		err = fmt.Errorf("cannot download %s package version %q: %s", ct, opts.version, resp.Status)
-		resp.Body.Close()
-		return
 	}
 
 	// transient download
@@ -176,9 +170,10 @@ var platformToMetaList = []string{
 	"el8",
 }
 
-// Unarchive unpacks the gzipped, open archive passed as an io.Reader on
-// the host given for the component.
-func Unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, options ...GeneosOptions) (err error) {
+// unarchive unpacks the gzipped, open archive passed as an io.Reader on
+// the host given for the component. If there is anm error then the
+// caller must close the io.Reader
+func unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, options ...GeneosOptions) (err error) {
 	var version string
 
 	opts := EvalOptions(options...)
@@ -281,7 +276,7 @@ func Unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 			continue
 		}
 		if name, err = host.CleanRelativePath(name); err != nil {
-			log.Fatal().Err(err).Msg("")
+			return
 		}
 		fullpath := utils.JoinSlash(basedir, name)
 		switch hdr.Typeflag {
@@ -313,11 +308,12 @@ func Unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 
 		case tar.TypeSymlink, tar.TypeGNULongLink:
 			if filepath.IsAbs(hdr.Linkname) {
-				log.Fatal().Msg("archive contains absolute symlink target")
+				err = fmt.Errorf("archive contains absolute symlink target")
+				return
 			}
 			if _, err = h.Stat(fullpath); err != nil {
 				if err = h.Symlink(hdr.Linkname, fullpath); err != nil {
-					log.Fatal().Err(err).Msg("")
+					return
 				}
 
 			}
@@ -344,8 +340,14 @@ func Unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 	return Update(h, ct, options...)
 }
 
-// locate and open the archive using the download conventions
-func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filename string, resp *http.Response, err error) {
+// openRemoteArchive locates and opens a remote software archive file
+// using the Geneos download conventions. It returns the underlying
+// filename and the archives as a http.Response object.
+//
+// GeneosOptions supported are PlatformID, UseNexus, UseSnapshots,
+// Version, Username and Password. PlatformID and Version cannot be set
+// at the same time.
+func openRemoteArchive(ct *Component, options ...GeneosOptions) (filename string, resp *http.Response, err error) {
 	var source string
 
 	opts := EvalOptions(options...)
@@ -389,15 +391,15 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 			var req *http.Request
 			client := &http.Client{}
 			if req, err = http.NewRequest("GET", source, nil); err != nil {
-				log.Fatal().Err(err).Msg("")
+				return
 			}
 			req.SetBasicAuth(opts.username, string(opts.password))
 			if resp, err = client.Do(req); err != nil {
-				log.Fatal().Err(err).Msg("")
+				return
 			}
 		} else {
 			if resp, err = http.Get(source); err != nil {
-				log.Fatal().Err(err).Msg("")
+				return
 			}
 		}
 
@@ -410,7 +412,9 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 		v.Set("os", "linux")
 		if opts.version != "latest" {
 			if platform != "" {
-				log.Fatal().Msgf("cannot download specific version for this platform (%q) - please download manually", platform)
+				log.Error().Msgf("cannot download specific version for this platform (%q) - please download manually", platform)
+				err = ErrInvalidArgs
+				return
 			}
 			v.Set("title", opts.version)
 		} else if platform != "" {
@@ -423,7 +427,7 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 		log.Debug().Msgf("source url: %s", source)
 
 		if resp, err = http.Get(source); err != nil {
-			log.Fatal().Err(err).Msg("")
+			return
 		}
 
 		if resp.StatusCode == 404 && platform != "" {
@@ -434,7 +438,7 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 
 			log.Debug().Msgf("platform download failed, retry source url: %q", source)
 			if resp, err = http.Get(source); err != nil {
-				log.Fatal().Err(err).Msg("")
+				return
 			}
 		}
 
@@ -445,12 +449,12 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 				da := downloadauth{opts.username, string(opts.password)}
 				auth_body, err = json.Marshal(da)
 				if err != nil {
-					log.Fatal().Err(err).Msg("")
+					return
 				}
 				ba := auth_body
 				auth_reader := bytes.NewBuffer(ba)
 				if resp, err = http.Post(source, "application/json", auth_reader); err != nil {
-					log.Fatal().Err(err).Msg("")
+					return
 				}
 			}
 		}
@@ -465,7 +469,7 @@ func checkArchive(r *host.Host, ct *Component, options ...GeneosOptions) (filena
 			log.Debug().Msgf("platform download failed, retry source url: %q", source)
 			auth_reader := bytes.NewBuffer(auth_body)
 			if resp, err = http.Post(source, "application/json", auth_reader); err != nil {
-				log.Fatal().Err(err).Msg("")
+				return
 			}
 		}
 	}

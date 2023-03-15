@@ -39,10 +39,9 @@ type packageDirDetails struct {
 func init() {
 	updateCmd.AddCommand(updateLsCmd)
 
-	updateLsCmd.Flags().StringVarP(&updateLsCmdHost, "host", "H", string(host.ALLHOSTS), "Apply only on remote host. \"all\" (the default) means all remote hosts and locally")
-
+	updateLsCmd.Flags().StringVarP(&updateLsCmdHost, "host", "H", string(host.ALLHOSTS),
+		`Apply only on remote host. "all" (the default) means all remote hosts and locally`)
 	updateLsCmd.Flags().BoolVarP(&updateLsCmdLocal, "local", "L", false, "Display local times")
-
 	updateLsCmd.Flags().BoolVarP(&updateLsCmdJSON, "json", "j", false, "Output JSON")
 	updateLsCmd.Flags().BoolVarP(&updateLsCmdIndent, "pretty", "i", false, "Output indented JSON")
 	updateLsCmd.Flags().BoolVarP(&updateLsCmdCSV, "csv", "c", false, "Output CSV")

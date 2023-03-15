@@ -45,6 +45,9 @@ func init() {
 	config.GetConfig().SetDefault("download.url", defaultURL)
 }
 
+// Install installs a Geneos software release. The host must be given
+// and call be 'all'. If a component type is passed in ct then only that
+// component release is installed.
 func Install(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
 	if h == host.ALL {
 		return ErrInvalidArgs
@@ -66,13 +69,13 @@ func Install(h *host.Host, ct *Component, options ...GeneosOptions) (err error) 
 
 	opts := EvalOptions(options...)
 
-	reader, filename, err := OpenArchive(ct, options...)
+	reader, filename, err := openArchive(ct, options...)
 	if err != nil {
 		return err
 	}
 	defer reader.Close()
 
-	if err = Unarchive(h, ct, filename, reader, options...); err != nil {
+	if err = unarchive(h, ct, filename, reader, options...); err != nil {
 		if errors.Is(err, fs.ErrExist) {
 			return nil
 		}
