@@ -86,7 +86,6 @@ type FKMKeys struct {
 // * any occurrence of non-alpha character (ignoring '.') - treat as regexp, "!" means ignore key
 // * "/i" - as a suffix of a regexp will force case insensitive matches
 // * plain string (see below) - Basic match
-//
 func NewFKMKeys(keys ...string) (out FKMKeys) {
 	for _, k := range keys {
 		out = out.Append(k)
