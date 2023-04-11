@@ -135,7 +135,7 @@ import (
 //	   may mean there was an error in evaluating the expression.
 //
 // Additional custom lookup prefixes can be added with the
-// [config.ExpandFunc] option.
+// [config.Prefix] option.
 //
 // The bare form "$name" is NOT supported, unlike [os.Expand] as this
 // can unexpectedly match values containing valid literal dollar signs.
