@@ -83,7 +83,7 @@ type Reference struct {
 // can be made up of static text and variable references. Use like this:
 //
 //	type MyContainer struct {
-//	    XMLName  xml.Name          `xml:"mycontainer"`
+//	    XMLName  xml.Name             `xml:"mycontainer"`
 //	    VarField *SingleLineString `xml:"fieldname"`
 //	}
 //
@@ -164,4 +164,14 @@ func NewValue(in interface{}) (n *Value) {
 	}
 
 	return
+}
+
+type Regex struct {
+	Regex string        `xml:"regex"`
+	Flags *[]RegexFlags `xml:"regexFlags,omitempty"`
+}
+
+type RegexFlags struct {
+	CaseInsensitive *bool `xml:"i,omitempty"`
+	DotMatchesAll   *bool `xml:"s,omitempty"`
 }

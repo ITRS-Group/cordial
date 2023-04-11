@@ -151,14 +151,16 @@ type SamplerGroup struct {
 // A Sampler is a Geneos Sampler structure. The Plugin field should be
 // populated with a pointer to a Plugin struct of the wanted type.
 type Sampler struct {
-	XMLName         xml.Name          `xml:"sampler"`
-	Name            string            `xml:"name,attr"`
-	Comment         string            `xml:",comment"`
-	Group           *SingleLineString `xml:"var-group,omitempty"`
-	Interval        *Value            `xml:"sampleInterval,omitempty"`
-	SampleOnStartup bool              `xml:"sampleOnStartup"`
-	Plugin          interface{}       `xml:"plugin"`
-	Dataviews       *[]Dataview       `xml:"dataviews>dataview,omitempty"`
+	XMLName                xml.Name                `xml:"sampler"`
+	Name                   string                  `xml:"name,attr"`
+	Comment                string                  `xml:",comment"`
+	Group                  *SingleLineString       `xml:"var-group,omitempty"`
+	Interval               *Value                  `xml:"sampleInterval,omitempty"`
+	SampleOnStartup        bool                    `xml:"sampleOnStartup"`
+	Plugin                 interface{}             `xml:"plugin"`
+	Dataviews              *[]Dataview             `xml:"dataviews>dataview,omitempty"`
+	Schemas                *Schemas                `xml:"schemas,omitempty"`
+	StandardisedFormatting *StandardisedFormatting `xml:"standardisedFormatting,omitempty"`
 }
 
 type Dataview struct {
@@ -176,4 +178,93 @@ type DataviewAdditions struct {
 type DataviewAddition struct {
 	XMLName xml.Name          `xml:"data"`
 	Name    *SingleLineString `xml:"headline,omitempty"`
+}
+
+type Schemas struct {
+	Dataviews *[]DataviewSchema `xml:"dataviews>dataviewSchema,omitempty"`
+}
+
+type DataviewSchema struct {
+	Dataview string `xml:"dataview,omitempty"`
+	Schema   Schema `xml:"schema>data"`
+}
+
+type Schema struct {
+	Headlines *[]SchemaTypedItem `xml:"headlines>headline,omitempty"`
+	Columns   *[]SchemaTypedItem `xml:"columns>column,omitempty"`
+	Pivot     bool               `xml:"pivot,omitempty"`
+	Publish   bool               `xml:"publish"`
+}
+
+type SchemaTypedItem struct {
+	Name     string         `xml:"name"`
+	String   *EmptyStruct   `xml:"string,omitempty"`
+	Boolean  *EmptyStruct   `xml:"boolean,omitempty"`
+	Float32  *UnitOfMeasure `xml:"float32,omitempty"`
+	Float64  *UnitOfMeasure `xml:"float64,omitempty"`
+	Int32    *UnitOfMeasure `xml:"int32,omitempty"`
+	Int64    *UnitOfMeasure `xml:"int64,omitempty"`
+	Date     *EmptyStruct   `xml:"date,omitempty"`
+	DateTime *EmptyStruct   `xml:"datetime,omitempty"`
+}
+
+type UOM string
+
+const (
+	None              UOM = ""
+	Percent           UOM = "percent"
+	Seconds           UOM = "seconds"
+	Milliseconds      UOM = "milliseconds"
+	Microseconds      UOM = "microseconds"
+	Nanoseconds       UOM = "nanoseconds"
+	Days              UOM = "days"
+	PerSecond         UOM = "per second"
+	Megahertz         UOM = "megahertz"
+	Bytes             UOM = "bytes"
+	Kibibytes         UOM = "kibibytes"
+	Mebibytes         UOM = "mebibytes"
+	Gibibytes         UOM = "gibibytes"
+	BytesPerSecond    UOM = "bytes per second"
+	Megabits          UOM = "megabits"
+	MegabitsPerSecond UOM = "megabits per second"
+)
+
+type UnitOfMeasure struct {
+	Unit UOM `xml:"unitOfMeasure"`
+}
+
+type StandardisedFormatting struct {
+	Dataviews *[]StandardisedFormattingDataview `xml:"dataviews>dataview,omitempty"`
+}
+
+type StandardisedFormattingDataview struct {
+	Name      string                            `xml:"name"` // do not omitempty
+	Variables *[]StandardisedFormattingVariable `xml:"variables>variable"`
+}
+
+type StandardisedFormattingVariable struct {
+	Type          StandardisedFormattingType          `xml:"type"`
+	Applicability StandardisedFormattingApplicability `xml:"applicability"`
+}
+
+type StandardisedFormattingType struct {
+	DateTime StandardisedFormattingDateTime `xml:"dateTime"`
+}
+
+type StandardisedFormattingDateTime struct {
+	Formats                   []string `xml:"formats>format,omitempty"`
+	Exceptions                []string `xml:"exceptions,omitempty"`
+	IgnoreErrorsIfFormatFails bool     `xml:"ignoreErrorsIfFormatsFail,omitempty"`
+	OverrideTimezone          string   `xml:"overrideTimezone,omitempty"`
+}
+
+type StandardisedFormattingApplicability struct {
+	Headlines *[]Regex                      `xml:"headlines>pattern,omitempty"`
+	Columns   *[]Regex                      `xml:"columns>pattern,omitempty"`
+	Cells     *[]StandardisedFormattingCell `xml:"cells>cell,omitempty"`
+}
+
+type StandardisedFormattingCell struct {
+	Row    string `xml:"row"`
+	Column string `xml:"column"`
 }
