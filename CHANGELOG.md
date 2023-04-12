@@ -4,7 +4,7 @@
 
 * Fixes
 
-  * New `DefaultValue` expand option should NOT itself default to `nil`
+  * New `Default` expand option should NOT itself default to `nil`
 
 ## Version v1.4.3 - 2023/04/12
 
