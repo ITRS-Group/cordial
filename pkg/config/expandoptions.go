@@ -74,6 +74,10 @@ func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
 		e.funcMaps["expr"] = expr
 	}
 
+	if e.defaultValue == nil {
+		e.defaultValue = ""
+	}
+
 	return
 }
 
