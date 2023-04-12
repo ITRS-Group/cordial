@@ -205,7 +205,7 @@ type SchemaTypedItem struct {
 	Int32    *UnitOfMeasure `xml:"int32,omitempty"`
 	Int64    *UnitOfMeasure `xml:"int64,omitempty"`
 	Date     *EmptyStruct   `xml:"date,omitempty"`
-	DateTime *EmptyStruct   `xml:"datetime,omitempty"`
+	DateTime *EmptyStruct   `xml:"dateTime,omitempty"`
 }
 
 type UOM string
