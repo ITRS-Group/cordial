@@ -1,6 +1,6 @@
 # Change Log
 
-## Version v1.4.3-dev - 2023/01/20
+## Version v1.4.3 - 2023/04/12
 
 * Fixes
 
@@ -16,6 +16,9 @@
 
   * tools/geneos: add `-f` flag to `ps` command to show open files. formatting subject to change for now.
   * tools/geneos: add a `update ls` command to show available package versions
+  * pkg/config: added more ExpandOptions and support more Get* functions such as GetInt
+  * pkg/geneos: added more Geneos XML config support, specifically Sampler Schemas and Standardised Formatting
+  * libraries/libemail: added initial msTeams notification function
 
 ## Version v1.4.2 - 2022/12/21
 

@@ -32,6 +32,14 @@ type expandOptions struct {
 	defaultValue     any
 }
 
+// ExpandOptions control the way configuration options undergo string
+// expansion through the underlying [ExpandString] functions.
+// ExpandOptions can be passed to any of the normal lookup functions
+// that are provided to override [viper] versions, such as [GetString].
+//
+// e.g.
+//
+//	s := config.GetString("config.value", ExternalLookups(false), LookupTable(configMap), Prefix("myconf", myFunc))
 type ExpandOptions func(*expandOptions)
 
 var defaultFuncMaps = map[string]func(*Config, string, bool) string{

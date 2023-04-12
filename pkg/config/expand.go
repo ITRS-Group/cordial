@@ -237,6 +237,16 @@ func (c *Config) ExpandAllSettings(options ...ExpandOptions) (all map[string]int
 
 }
 
+// expandEncodedString accepts input of the form:
+//
+//	[enc:]keyfile[,keyfile...]:[+encs+HEX|external]
+//
+// `enc:` is removed if passed. Each keyfile is tried until the first
+// that does not return a decoding error. `keyfile` may be prefixed `~/`
+// in which case the file is relative to the user's home directory. If
+// the encoded string is prefixed with `+encs+` (standard Geneos usage)
+// then it is used directly, otherwise the value is looked-up using the
+// normal conventions for external access, e.g. file or URL.
 func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value string) {
 	s = strings.TrimPrefix(s, "enc:")
 	p := strings.SplitN(s, ":", 2)
