@@ -23,10 +23,8 @@ THE SOFTWARE.
 package geneos
 
 import (
-	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"mime"
 	"net/http"
 	"net/url"
@@ -43,49 +41,6 @@ const defaultURL = "https://resources.itrsgroup.com/download/latest/"
 
 func init() {
 	config.GetConfig().SetDefault("download.url", defaultURL)
-}
-
-// Install installs a Geneos software release. The host must be given
-// and call be 'all'. If a component type is passed in ct then only that
-// component release is installed.
-func Install(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
-	if h == host.ALL {
-		return ErrInvalidArgs
-	}
-
-	if ct == nil {
-		for _, t := range RealComponents() {
-			if err = Install(h, t, options...); err != nil {
-				if errors.Is(err, fs.ErrExist) {
-					continue
-				}
-				return
-			}
-		}
-		return nil
-	}
-
-	options = append(options, PlatformID(h.GetString("osinfo.platform_id")))
-
-	opts := EvalOptions(options...)
-
-	reader, filename, err := openArchive(ct, options...)
-	if err != nil {
-		return err
-	}
-	defer reader.Close()
-
-	if err = unarchive(h, ct, filename, reader, options...); err != nil {
-		if errors.Is(err, fs.ErrExist) {
-			return nil
-		}
-		return err
-	}
-
-	if opts.doupdate {
-		Update(h, ct, options...)
-	}
-	return
 }
 
 // FilenameFromHTTPResp decodes and returns the filename from the
