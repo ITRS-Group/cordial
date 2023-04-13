@@ -36,12 +36,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
-	"unicode"
 
-	"github.com/hashicorp/go-version"
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -487,61 +484,6 @@ func openRemoteArchive(ct *Component, options ...GeneosOptions) (filename string
 
 	log.Debug().Msgf("download check for %s versions %q returned %s (%d bytes)", ct, opts.version, filename, resp.ContentLength)
 	return
-}
-
-// LatestRelease returns the latest sub-directory in dir, on host r
-// based on semver. A prefix filter can be used to limit matches and a
-// filter function to further refine matches. If there is metadata,
-// check for platform_id on host and remove non-platform from list
-// before sorting
-func LatestRelease(r *host.Host, dir, prefix string, filter func(os.DirEntry) bool) (latest string, err error) {
-	dirs, err := r.ReadDir(dir)
-	if err != nil {
-		return
-	}
-
-	newdirs := dirs[:0]
-	for _, d := range dirs {
-		if strings.HasPrefix(d.Name(), prefix) {
-			newdirs = append(newdirs, d)
-		}
-	}
-	dirs = newdirs
-
-	var versions = make(map[string]*version.Version)
-	var originals = make(map[string]string, len(dirs)) // map processed to original entry
-
-	for _, d := range dirs {
-		if filter(d) {
-			continue
-		}
-		n := d.Name()
-		v1p := strings.FieldsFunc(n, func(r rune) bool {
-			return !unicode.IsLetter(r)
-		})
-		originals[n] = n
-		if len(v1p) > 0 && v1p[0] != "" {
-			p := strings.TrimPrefix(n, v1p[0])
-			originals[p] = n
-			n = p
-		}
-		v1, err := version.NewVersion(n)
-		if err == nil { // valid version
-			if v1.Metadata() != "" {
-				delete(versions, v1.Core().String())
-			}
-			versions[n] = v1
-		}
-	}
-	if len(versions) == 0 {
-		return "", nil
-	}
-	vers := []*version.Version{}
-	for _, v := range versions {
-		vers = append(vers, v)
-	}
-	sort.Sort(version.Collection(vers))
-	return originals[vers[len(vers)-1].Original()], nil
 }
 
 var anchoredVersRE = regexp.MustCompile(`^(\d+(\.\d+){0,2})$`)

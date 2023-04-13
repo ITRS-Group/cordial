@@ -6,11 +6,8 @@ package cmd
 import (
 	"encoding/csv"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/fs"
 	"os"
-	"path/filepath"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -21,27 +18,16 @@ import (
 )
 
 var updateLsCmdHost string
-var updateLsCmdLocal, updateLsCmdJSON, updateLsCmdIndent, updateLsCmdCSV bool
+var updateLsCmdJSON, updateLsCmdIndent, updateLsCmdCSV bool
 
 var updateLsTabWriter *tabwriter.Writer
 var updateLsCSVWriter *csv.Writer
-
-type packageDirDetails struct {
-	Component string    `json:"Component"`
-	Host      string    `json:"Host"`
-	Version   string    `json:"Version"`
-	Latest    bool      `json:"Latest,string"`
-	Link      string    `json:"Link,omitempty"`
-	ModTime   time.Time `json:"LastModified"`
-	Path      string    `json:"Path"`
-}
 
 func init() {
 	updateCmd.AddCommand(updateLsCmd)
 
 	updateLsCmd.Flags().StringVarP(&updateLsCmdHost, "host", "H", string(host.ALLHOSTS),
 		`Apply only on remote host. "all" (the default) means all remote hosts and locally`)
-	updateLsCmd.Flags().BoolVarP(&updateLsCmdLocal, "local", "L", false, "Display local times")
 	updateLsCmd.Flags().BoolVarP(&updateLsCmdJSON, "json", "j", false, "Output JSON")
 	updateLsCmd.Flags().BoolVarP(&updateLsCmdIndent, "pretty", "i", false, "Output indented JSON")
 	updateLsCmd.Flags().BoolVarP(&updateLsCmdCSV, "csv", "c", false, "Output CSV")
@@ -57,9 +43,11 @@ List the packages for the matching TYPE or all component types if no
 TYPE is given. The |-H| flags restricts the check to a specific
 remote host.
 
-The |-L| flags shows directory times in the local time zone. This is
-not the default as the display may jump between summer and winter
-times between releases and give a confusing view.
+All timestamps are displayed in UTC to avoid filesystem confusion
+between local summer/winter times in some locales.
+
+Versions are listed in descending order for each component type, i.e.
+|latest| is always the first entry for each component.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -69,60 +57,20 @@ times between releases and give a confusing view.
 		ct, _ := cmdArgs(cmd)
 
 		h := host.Get(updateLsCmdHost)
-		versions := []packageDirDetails{}
+		versions := []geneos.PackageDetails{}
 
 		for _, h := range h.Range(host.AllHosts()...) {
-			for _, ct := range ct.Range(componentsWithKeyfiles...) {
-				basedir := h.Filepath("packages", ct)
-				ents, err := h.ReadDir(basedir)
-				if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			for _, ct := range ct.Range(geneos.RealComponents()...) {
+				v, err := geneos.GetPackages(h, ct)
+				if err != nil {
 					return err
 				}
-
-				var links = make(map[string]string)
-				for _, ent := range ents {
-					einfo, err := ent.Info()
-					if err != nil {
-						return err
+				// append in reverse order
+				for i := len(v) - 1; i >= 0; i-- {
+					if v[i].Link == "" {
+						v[i].Link = "-"
 					}
-					if einfo.Mode()&fs.ModeSymlink != 0 {
-						link, err := h.Readlink(filepath.Join(basedir, ent.Name()))
-						if err != nil {
-							return err
-						}
-						links[link] = ent.Name()
-					}
-				}
-
-				latest, _ := geneos.LatestRelease(h, basedir, "", func(d os.DirEntry) bool { // ignore error, empty is valid
-					return !d.IsDir()
-				})
-
-				for _, ent := range ents {
-					if ent.IsDir() {
-						einfo, err := ent.Info()
-						if err != nil {
-							return err
-						}
-						link := links[ent.Name()]
-						if link == "" {
-							link = "-"
-						}
-						mtime := einfo.ModTime().UTC()
-						if updateLsCmdLocal {
-							mtime = mtime.Local()
-						}
-						versions = append(versions, packageDirDetails{
-							Component: ct.String(),
-							Host:      h.String(),
-							Version:   ent.Name(),
-							Latest:    ent.Name() == latest,
-							Link:      link,
-							ModTime:   mtime,
-							Path:      filepath.Join(basedir, ent.Name()),
-						})
-
-					}
+					versions = append(versions, v[i])
 				}
 			}
 		}

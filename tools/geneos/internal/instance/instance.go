@@ -35,7 +35,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"unicode"
 
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -43,7 +42,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 
-	"github.com/hashicorp/go-version"
 	"github.com/rs/zerolog/log"
 )
 
@@ -401,30 +399,30 @@ func NextPort(r *host.Host, ct *geneos.Component) uint16 {
 	return 0
 }
 
-// Version returns the base package name and the version it links to. If
-// base is not a link, then symlink is returned the same as base. If
-// there are more than 10 levels of symlink then return symlink set to
-// "loop-detected" and err set to  syscall.ELOOP to prevent infinite
-// loops.
-func Version(c geneos.Instance) (base string, symlink string, err error) {
+// Version returns the base package name and the underlying package
+// version for the instance c. If base is not a link, then base is also
+// returned as the symlink. If there are more than 10 levels of symlink
+// then return symlink set to "loop-detected" and err set to
+// syscall.ELOOP to prevent infinite loops.
+func Version(c geneos.Instance) (base string, version string, err error) {
 	var st fs.FileInfo
 	var i int
 
 	basedir := c.Config().GetString("install")
 	base = c.Config().GetString("version")
-	symlink = base
+	version = base
 
 	for i = 0; i < 10; i++ {
-		basepath := utils.JoinSlash(basedir, symlink)
+		basepath := utils.JoinSlash(basedir, version)
 		st, err = c.Host().Lstat(basepath)
 		if err != nil {
-			symlink = "unknown"
+			version = "unknown"
 			return
 		}
 		if st.Mode()&fs.ModeSymlink != 0 {
-			symlink, err = c.Host().Readlink(basepath)
+			version, err = c.Host().Readlink(basepath)
 			if err != nil {
-				symlink = "unknown"
+				version = "unknown"
 				return
 			}
 		} else {
@@ -433,50 +431,9 @@ func Version(c geneos.Instance) (base string, symlink string, err error) {
 	}
 	if i == 10 {
 		err = syscall.ELOOP
-		symlink = "loop-detected"
+		version = "loop-detected"
 	}
 	return
-}
-
-// CompareVersion takes two Geneos package versions and returns an int
-// that is 0 if they are identical, negative if version1 < version2 and
-// positive is version1 > version2. If the version is prefixed with non
-// numeric values then "GA" is always greater thn "RA" (general versus
-// restricted availability) for the same numeric version, otherwise a
-// lexical comparison is done on the prefixes.
-func CompareVersion(version1, version2 string) int {
-	v1p := strings.FieldsFunc(version1, func(r rune) bool {
-		return !unicode.IsLetter(r)
-	})
-	if len(v1p) == 0 {
-		v1p = []string{"GA"}
-	} else if v1p[0] == "" {
-		v1p[0] = "GA"
-	} else {
-		version1 = strings.TrimPrefix(version1, v1p[0])
-	}
-	v1, err := version.NewVersion(version1)
-	if err != nil {
-		panic(err)
-	}
-	v2p := strings.FieldsFunc(version2, func(r rune) bool {
-		return !unicode.IsLetter(r)
-	})
-	if len(v2p) == 0 {
-		v2p = []string{"GA"}
-	} else if v2p[0] == "" {
-		v2p[0] = "GA"
-	} else {
-		version2 = strings.TrimPrefix(version2, v2p[0])
-	}
-	v2, err := version.NewVersion(version2)
-	if err != nil {
-		panic(err)
-	}
-	if i := v1.Compare(v2); i != 0 {
-		return i
-	}
-	return strings.Compare(v1p[0], v2p[0])
 }
 
 // ForAll calls the supplied function for each matching instance. It
