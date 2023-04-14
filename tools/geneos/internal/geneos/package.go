@@ -198,6 +198,44 @@ func GetVersions(r *host.Host, ct *Component) (versions map[string]*version.Vers
 	return
 }
 
+func AdjacentVersions(r *host.Host, ct *Component, current string) (prev string, next string, err error) {
+	if current == "" {
+		log.Debug().Msg("current version must be set, ignoring")
+		return
+	}
+	cv, err := version.NewVersion(current)
+	if err != nil {
+		log.Debug().Err(err).Msgf("unable to parse version '%s', ignoring", current)
+		return
+	}
+
+	versions, originals := GetVersions(r, ct)
+	if len(versions) == 0 {
+		return "", "", nil
+	}
+	prevVers := []*version.Version{}
+	for _, v := range versions {
+		if cv.GreaterThan(v) {
+			prevVers = append(prevVers, v)
+		}
+	}
+	sort.Sort(version.Collection(prevVers))
+	if len(prevVers) > 0 {
+		prev = originals[prevVers[len(prevVers)-1].Original()]
+	}
+	NextVers := []*version.Version{}
+	for _, v := range versions {
+		if cv.LessThan(v) {
+			NextVers = append(NextVers, v)
+		}
+	}
+	sort.Sort(version.Collection(NextVers))
+	if len(NextVers) > 0 {
+		next = originals[NextVers[0].Original()]
+	}
+	return
+}
+
 // PreviousVersion returns the latest installed package that is earlier than version current
 func PreviousVersion(r *host.Host, ct *Component, current string) (prev string, err error) {
 	if current == "" {
@@ -251,7 +289,7 @@ func NextVersion(r *host.Host, ct *Component, current string) (next string, err 
 	}
 	sort.Sort(version.Collection(vers))
 	if len(vers) > 0 {
-		next = originals[vers[len(vers)-1].Original()]
+		next = originals[vers[0].Original()]
 	}
 	return
 }
