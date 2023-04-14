@@ -33,6 +33,8 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/go-version"
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
 
@@ -124,7 +126,7 @@ func LatestRelease(r *host.Host, dir, prefix string, filter func(os.DirEntry) bo
 	var originals = make(map[string]string, len(dirs)) // map processed to original entry
 
 	for _, d := range dirs {
-		if filter(d) {
+		if filter != nil && filter(d) {
 			continue
 		}
 		n := d.Name()
@@ -154,6 +156,104 @@ func LatestRelease(r *host.Host, dir, prefix string, filter func(os.DirEntry) bo
 	}
 	sort.Sort(version.Collection(vers))
 	return originals[vers[len(vers)-1].Original()], nil
+}
+
+func GetVersions(r *host.Host, ct *Component) (versions map[string]*version.Version, originals map[string]string) {
+	dir := r.Filepath("packages", ct.String())
+	dirs, err := r.ReadDir(dir)
+	if err != nil {
+		return
+	}
+
+	newdirs := dirs[:0]
+	for _, d := range dirs {
+		if d.IsDir() { // only subdirs, ignore files and links
+			newdirs = append(newdirs, d)
+		}
+	}
+	dirs = newdirs
+
+	versions = make(map[string]*version.Version)
+	originals = make(map[string]string, len(dirs)) // map processed to original entry
+
+	for _, d := range dirs {
+		n := d.Name()
+		v1p := strings.FieldsFunc(n, func(r rune) bool {
+			return !unicode.IsLetter(r)
+		})
+		originals[n] = n
+		if len(v1p) > 0 && v1p[0] != "" {
+			p := strings.TrimPrefix(n, v1p[0])
+			originals[p] = n
+			n = p
+		}
+		v1, err := version.NewVersion(n)
+		if err == nil { // valid version
+			if v1.Metadata() != "" {
+				delete(versions, v1.Core().String())
+			}
+			versions[n] = v1
+		}
+	}
+	return
+}
+
+// PreviousVersion returns the latest installed package that is earlier than version current
+func PreviousVersion(r *host.Host, ct *Component, current string) (prev string, err error) {
+	if current == "" {
+		log.Debug().Msg("current version must be set, ignoring")
+		return
+	}
+	cv, err := version.NewVersion(current)
+	if err != nil {
+		log.Debug().Err(err).Msgf("unable to parse version '%s', ignoring", current)
+		return
+	}
+
+	versions, originals := GetVersions(r, ct)
+	if len(versions) == 0 {
+		return "", nil
+	}
+	vers := []*version.Version{}
+	for _, v := range versions {
+		if cv.GreaterThan(v) {
+			vers = append(vers, v)
+		}
+	}
+	sort.Sort(version.Collection(vers))
+	if len(vers) > 0 {
+		prev = originals[vers[len(vers)-1].Original()]
+	}
+	return
+}
+
+func NextVersion(r *host.Host, ct *Component, current string) (next string, err error) {
+	if current == "" {
+		log.Debug().Msg("current version must be set, ignoring")
+		return
+	}
+	cv, err := version.NewVersion(current)
+	if err != nil {
+		log.Debug().Err(err).Msgf("unable to parse version '%s', ignoring", current)
+		return
+	}
+
+	versions, originals := GetVersions(r, ct)
+	if len(versions) == 0 {
+		return "", nil
+	}
+
+	vers := []*version.Version{}
+	for _, v := range versions {
+		if cv.LessThan(v) {
+			vers = append(vers, v)
+		}
+	}
+	sort.Sort(version.Collection(vers))
+	if len(vers) > 0 {
+		next = originals[vers[len(vers)-1].Original()]
+	}
+	return
 }
 
 // CompareVersion takes two Geneos package versions and returns an int
@@ -206,8 +306,8 @@ func Install(h *host.Host, ct *Component, options ...GeneosOptions) (err error) 
 	}
 
 	if ct == nil {
-		for _, t := range RealComponents() {
-			if err = Install(h, t, options...); err != nil {
+		for _, ct := range RealComponents() {
+			if err = Install(h, ct, options...); err != nil {
 				if errors.Is(err, fs.ErrExist) {
 					continue
 				}
