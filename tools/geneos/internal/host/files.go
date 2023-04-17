@@ -180,16 +180,16 @@ func copyDirEntry(fi fs.FileInfo, srcHost *Host, srcPath string, dstHost *Host, 
 // shim methods that test Host and direct to ssh / sftp / os
 // at some point this should become interface based to allow other
 // remote protocols cleanly
-func (h *Host) Symlink(target, path string) (err error) {
+func (h *Host) Symlink(oldname, newname string) (err error) {
 	switch h.GetString("name") {
 	case LOCALHOST:
-		return os.Symlink(target, path)
+		return os.Symlink(oldname, newname)
 	default:
 		var s *sftp.Client
 		if s, err = h.DialSFTP(); err != nil {
 			return
 		}
-		return s.Symlink(target, path)
+		return s.Symlink(oldname, newname)
 	}
 }
 
