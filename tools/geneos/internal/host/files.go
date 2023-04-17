@@ -427,6 +427,8 @@ func (h *Host) ReadFile(name string) (b []byte, err error) {
 	}
 }
 
+// ReadDir reads the named directory and returns all its directory
+// entries sorted by name.
 func (h *Host) ReadDir(name string) (dirs []os.DirEntry, err error) {
 	switch h.GetString("name") {
 	case LOCALHOST:
