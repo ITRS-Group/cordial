@@ -57,19 +57,19 @@ Versions are listed in descending order for each component type, i.e.
 		ct, _ := cmdArgs(cmd)
 
 		h := host.Get(updateLsCmdHost)
-		versions := []geneos.PackageDetails{}
+		versions := []geneos.ReleaseDetails{}
 
 		for _, h := range h.Range(host.AllHosts()...) {
 			for _, ct := range ct.Range(geneos.RealComponents()...) {
-				v, err := geneos.GetPackages(h, ct)
+				v, err := geneos.GetReleases(h, ct)
 				if err != nil {
 					return err
 				}
 				// append in reverse order
 				for i := len(v) - 1; i >= 0; i-- {
-					if v[i].Link == "" {
-						v[i].Link = "-"
-					}
+					// if v[i].Links == "" {
+					// 	v[i].Links = "-"
+					// }
 					versions = append(versions, v[i])
 				}
 			}
@@ -89,20 +89,20 @@ Versions are listed in descending order for each component type, i.e.
 			fmt.Println(string(b))
 		case updateLsCmdCSV:
 			updateLsCSVWriter = csv.NewWriter(os.Stdout)
-			updateLsCSVWriter.Write([]string{"Component", "Host", "Version", "Latest", "Link", "LastModified", "Path"})
+			updateLsCSVWriter.Write([]string{"Component", "Host", "Version", "Latest", "Links", "LastModified", "Path"})
 			for _, d := range versions {
-				updateLsCSVWriter.Write([]string{d.Component, d.Host, d.Version, fmt.Sprintf("%v", d.Latest), d.Link, d.ModTime.Format(time.RFC3339), d.Path})
+				updateLsCSVWriter.Write([]string{d.Component, d.Host, d.Version, fmt.Sprintf("%v", d.Latest), strings.Join(d.Links, ", "), d.ModTime.Format(time.RFC3339), d.Path})
 			}
 			updateLsCSVWriter.Flush()
 		default:
 			updateLsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-			fmt.Fprintf(updateLsTabWriter, "Component\tHost\tVersion\tLink\tLastModified\tPath\n")
+			fmt.Fprintf(updateLsTabWriter, "Component\tHost\tVersion\tLinks\tLastModified\tPath\n")
 			for _, d := range versions {
 				name := d.Version
 				if d.Latest {
 					name = fmt.Sprintf("%s (latest)", d.Version)
 				}
-				fmt.Fprintf(updateLsTabWriter, "%s\t%s\t%s\t%s\t%s\t%s\n", d.Component, d.Host, name, d.Link, d.ModTime.Format(time.RFC3339), d.Path)
+				fmt.Fprintf(updateLsTabWriter, "%s\t%s\t%s\t%s\t%s\t%s\n", d.Component, d.Host, name, strings.Join(d.Links, ", "), d.ModTime.Format(time.RFC3339), d.Path)
 			}
 			updateLsTabWriter.Flush()
 		}
