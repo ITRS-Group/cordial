@@ -24,6 +24,7 @@ package geneos
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -48,13 +49,16 @@ type PackageDetails struct {
 	Path      string    `json:"Path"`
 }
 
-// GetPackages returns a slice if PackageDetails listing all the
-// directories on the given host's Geneos packages directory. Symlinks
+// GetPackages returns a slice of PackageDetails containing all the
+// directories Geneos packages directory on the given host. Symlinks
 // in the packages directory are matches to any targets and unmatched
 // symlinks are ignored.
 //
 // No validation is done on the contents, only that a directory exists.
 func GetPackages(h *host.Host, ct *Component) (versions []PackageDetails, err error) {
+	if !h.Exists() {
+		return nil, fmt.Errorf("host does not exist")
+	}
 	basedir := h.Filepath("packages", ct)
 	ents, err := h.ReadDir(basedir)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -97,7 +101,6 @@ func GetPackages(h *host.Host, ct *Component) (versions []PackageDetails, err er
 				ModTime:   mtime,
 				Path:      filepath.Join(basedir, ent.Name()),
 			})
-
 		}
 	}
 	return versions, nil

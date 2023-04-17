@@ -143,6 +143,9 @@ func Delete(h *Host) {
 }
 
 func (h *Host) Exists() bool {
+	if h == nil {
+		return false
+	}
 	return h.loaded
 }
 
