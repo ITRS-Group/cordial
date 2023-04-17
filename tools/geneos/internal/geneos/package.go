@@ -39,23 +39,39 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
 
-type PackageDetails struct {
+type ReleaseDetails struct {
 	Component string    `json:"Component"`
 	Host      string    `json:"Host"`
 	Version   string    `json:"Version"`
 	Latest    bool      `json:"Latest,string"`
-	Link      string    `json:"Link,omitempty"`
+	Links     []string  `json:"Links,omitempty"`
 	ModTime   time.Time `json:"LastModified"`
 	Path      string    `json:"Path"`
 }
 
-// GetPackages returns a slice of PackageDetails containing all the
-// directories Geneos packages directory on the given host. Symlinks
-// in the packages directory are matches to any targets and unmatched
+type Releases []ReleaseDetails
+
+func (r Releases) Len() int {
+	return len(r)
+}
+
+func (r Releases) Less(i, j int) bool {
+	vi, _ := version.NewVersion(r[i].Version)
+	vj, _ := version.NewVersion(r[j].Version)
+	return vi.LessThan(vj)
+}
+
+func (r Releases) Swap(i, j int) {
+	r[i], r[j] = r[j], r[i]
+}
+
+// GetReleases returns a slice of PackageDetails containing all the
+// directories Geneos packages directory on the given host. Symlinks in
+// the packages directory are matches to any targets and unmatched
 // symlinks are ignored.
 //
 // No validation is done on the contents, only that a directory exists.
-func GetPackages(h *host.Host, ct *Component) (versions []PackageDetails, err error) {
+func GetReleases(h *host.Host, ct *Component) (releases Releases, err error) {
 	if !h.Exists() {
 		return nil, fmt.Errorf("host does not exist")
 	}
@@ -65,18 +81,26 @@ func GetPackages(h *host.Host, ct *Component) (versions []PackageDetails, err er
 		return
 	}
 
-	var links = make(map[string]string)
+	var links = make(map[string][]string)
+
 	for _, ent := range ents {
 		einfo, err := ent.Info()
 		if err != nil {
-			return versions, err
+			// skip entries with errors
+			log.Debug().Err(err).Msg("skipping")
+			continue
 		}
 		if einfo.Mode()&fs.ModeSymlink != 0 {
 			link, err := h.Readlink(filepath.Join(basedir, ent.Name()))
 			if err != nil {
-				return versions, err
+				// skip entries with errors
+				log.Debug().Err(err).Msg("skipping")
+				continue
 			}
-			links[link] = ent.Name()
+			if len(links[link]) == 0 {
+				links[link] = []string{}
+			}
+			links[link] = append(links[link], ent.Name())
 		}
 	}
 
@@ -88,22 +112,27 @@ func GetPackages(h *host.Host, ct *Component) (versions []PackageDetails, err er
 		if ent.IsDir() {
 			einfo, err := ent.Info()
 			if err != nil {
-				return versions, err
+				// skip entries with errors
+				log.Debug().Err(err).Msg("skipping")
+				continue
 			}
-			link := links[ent.Name()]
+			links := links[ent.Name()]
 			mtime := einfo.ModTime().UTC()
-			versions = append(versions, PackageDetails{
+			releases = append(releases, ReleaseDetails{
 				Component: ct.String(),
 				Host:      h.String(),
 				Version:   ent.Name(),
 				Latest:    ent.Name() == latest,
-				Link:      link,
+				Links:     links,
 				ModTime:   mtime,
 				Path:      filepath.Join(basedir, ent.Name()),
 			})
 		}
 	}
-	return versions, nil
+
+	sort.Sort(releases)
+
+	return releases, nil
 }
 
 // LatestRelease returns the latest sub-directory in dir, on host r
@@ -126,7 +155,7 @@ func LatestRelease(r *host.Host, dir, prefix string, filter func(os.DirEntry) bo
 	dirs = newdirs
 
 	var versions = make(map[string]*version.Version)
-	var originals = make(map[string]string, len(dirs)) // map processed to original entry
+	var originals = make(map[string]string, len(dirs)) // map of processed to original entries
 
 	for _, d := range dirs {
 		if filter != nil && filter(d) {
@@ -161,7 +190,7 @@ func LatestRelease(r *host.Host, dir, prefix string, filter func(os.DirEntry) bo
 	return originals[vers[len(vers)-1].Original()], nil
 }
 
-func GetVersions(r *host.Host, ct *Component) (versions map[string]*version.Version, originals map[string]string) {
+func getVersions(r *host.Host, ct *Component) (versions map[string]*version.Version, originals map[string]string) {
 	dir := r.Filepath("packages", ct.String())
 	dirs, err := r.ReadDir(dir)
 	if err != nil {
@@ -212,7 +241,7 @@ func AdjacentVersions(r *host.Host, ct *Component, current string) (prev string,
 		return
 	}
 
-	versions, originals := GetVersions(r, ct)
+	versions, originals := getVersions(r, ct)
 	if len(versions) == 0 {
 		return "", "", nil
 	}
@@ -251,7 +280,7 @@ func PreviousVersion(r *host.Host, ct *Component, current string) (prev string, 
 		return
 	}
 
-	versions, originals := GetVersions(r, ct)
+	versions, originals := getVersions(r, ct)
 	if len(versions) == 0 {
 		return "", nil
 	}
@@ -279,7 +308,7 @@ func NextVersion(r *host.Host, ct *Component, current string) (next string, err 
 		return
 	}
 
-	versions, originals := GetVersions(r, ct)
+	versions, originals := getVersions(r, ct)
 	if len(versions) == 0 {
 		return "", nil
 	}
