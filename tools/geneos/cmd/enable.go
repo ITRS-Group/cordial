@@ -23,8 +23,6 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"errors"
-	"os"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -61,13 +59,5 @@ when the |-S| flag is used.
 }
 
 func enableInstance(c geneos.Instance, params []string) (err error) {
-	disableFile := instance.ComponentFilepath(c, geneos.DisableExtension)
-	if _, err = c.Host().Stat(disableFile); err != nil {
-		return nil
-	}
-	err = c.Host().Remove(disableFile)
-	if (err == nil || errors.Is(err, os.ErrNotExist)) && enableCmdStart {
-		instance.Start(c)
-	}
-	return nil
+	return instance.Enable(c)
 }

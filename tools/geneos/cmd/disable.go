@@ -29,7 +29,6 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -64,30 +63,9 @@ func disableInstance(c geneos.Instance, params []string) (err error) {
 		return nil
 	}
 
-	uid, gid, _, err := utils.GetIDs(c.Config().GetString("user"))
-	if err != nil {
-		return
-	}
-
 	if err = instance.Stop(c, disableCmdForce, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
 		return
 	}
 
-	disablePath := instance.ComponentFilepath(c, geneos.DisableExtension)
-
-	h := c.Host()
-
-	f, err := h.Create(disablePath, 0664)
-	if err != nil {
-		return err
-	}
-	f.Close()
-
-	if utils.IsSuperuser() {
-		if err = h.Chown(disablePath, uid, gid); err != nil {
-			h.Remove(disablePath)
-		}
-	}
-
-	return
+	return instance.Disable(c)
 }
