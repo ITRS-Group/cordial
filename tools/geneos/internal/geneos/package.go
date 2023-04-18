@@ -97,9 +97,6 @@ func GetReleases(h *host.Host, ct *Component) (releases Releases, err error) {
 				log.Debug().Err(err).Msg("skipping")
 				continue
 			}
-			if len(links[link]) == 0 {
-				links[link] = []string{}
-			}
 			links[link] = append(links[link], ent.Name())
 		}
 	}
@@ -135,11 +132,13 @@ func GetReleases(h *host.Host, ct *Component) (releases Releases, err error) {
 	return releases, nil
 }
 
-// LatestRelease returns the latest sub-directory in dir, on host r
-// based on semver. A prefix filter can be used to limit matches and a
-// filter function to further refine matches. If there is metadata,
-// check for platform_id on host and remove non-platform from list
-// before sorting
+// LatestRelease returns the latest release version named by a
+// sub-directory in dir, on host r based on semver. A prefix filter can
+// be used to limit matches and a filter function to further refine
+// matches.
+//
+// If there is semver metadata, check for platform_id on host and
+// remove any non-platform metadata from list before sorting
 func LatestRelease(r *host.Host, dir, prefix string, filter func(os.DirEntry) bool) (latest string, err error) {
 	dirs, err := r.ReadDir(dir)
 	if err != nil {
@@ -323,6 +322,40 @@ func NextVersion(r *host.Host, ct *Component, current string) (next string, err 
 	if len(vers) > 0 {
 		next = originals[vers[0].Original()]
 	}
+	return
+}
+
+// LatestVersion returns the name of the latest release for component
+// type ct on host h. The comparison is done using semantic versioning
+// and any metadata is ignored. An error is returned if there are
+// problems accessing the directories or parsing any names as semantic
+// versions.
+func LatestVersion(r *host.Host, ct *Component) (v string, err error) {
+	dir := r.Filepath("packages", ct.String())
+	dirs, err := r.ReadDir(dir)
+	if err != nil {
+		return
+	}
+
+	semver, _ := version.NewVersion("0.0.0")
+
+	for _, d := range dirs {
+		if !d.IsDir() {
+			continue
+		}
+		n := d.Name()
+
+		sv, err := version.NewVersion(n)
+		if err != nil {
+			return v, err
+		}
+		if sv.LessThan(semver) {
+			continue
+		}
+		semver = sv
+		v = semver.Original()
+	}
+
 	return
 }
 
