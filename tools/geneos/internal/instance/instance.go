@@ -581,6 +581,45 @@ func BuildCmd(c geneos.Instance) (cmd *exec.Cmd, env []string) {
 	return
 }
 
+// Disable the instance c. Does not try to stop a running instance and
+// returns an error if it is running.
+func Disable(c geneos.Instance) (err error) {
+	if _, err = GetPID(c); err != os.ErrProcessDone {
+		return fmt.Errorf("instance %s running", c)
+	}
+
+	uid, gid, _, err := utils.GetIDs(c.Config().GetString("user"))
+	if err != nil {
+		return
+	}
+
+	disablePath := ComponentFilepath(c, geneos.DisableExtension)
+
+	h := c.Host()
+
+	f, err := h.Create(disablePath, 0664)
+	if err != nil {
+		return err
+	}
+	f.Close()
+
+	if utils.IsSuperuser() {
+		if err = h.Chown(disablePath, uid, gid); err != nil {
+			h.Remove(disablePath)
+		}
+	}
+	return
+}
+
+// Enable removes the disabled flag, if any,m from instance c.
+func Enable(c geneos.Instance) (err error) {
+	disableFile := ComponentFilepath(c, geneos.DisableExtension)
+	if _, err = c.Host().Stat(disableFile); err != nil {
+		return nil
+	}
+	return c.Host().Remove(disableFile)
+}
+
 func IsDisabled(c geneos.Instance) bool {
 	d := ComponentFilepath(c, geneos.DisableExtension)
 	if f, err := c.Host().Stat(d); err == nil && f.Mode().IsRegular() {
