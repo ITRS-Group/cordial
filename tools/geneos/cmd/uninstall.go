@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -37,15 +38,13 @@ import (
 )
 
 var uninstallCmdHost, uninstallCmdVersion string
-var uninstallCmdAll, uninstallCmdForce, uninstallCmdDryRun, uninstallCmdRollback bool
+var uninstallCmdAll, uninstallCmdForce bool
 
 func init() {
 	rootCmd.AddCommand(uninstallCmd)
 
 	uninstallCmd.Flags().BoolVarP(&uninstallCmdAll, "all", "A", false, "Uninstall all releases, stopping and disabling running instances")
 	uninstallCmd.Flags().BoolVarP(&uninstallCmdForce, "force", "f", false, "Force uninstall, stopping instances using matching releases")
-	uninstallCmd.Flags().BoolVarP(&uninstallCmdDryRun, "dryrun", "n", false, "Dry run. Show actions but do nothing")
-	uninstallCmd.Flags().BoolVarP(&uninstallCmdRollback, "rollback", "R", false, "Rollback version, stopping instances using matching releases")
 	uninstallCmd.Flags().StringVarP(&uninstallCmdHost, "host", "H", string(host.ALLHOSTS), "Perform on a remote host. \"all\" means all hosts and locally")
 	uninstallCmd.Flags().StringVarP(&uninstallCmdVersion, "version", "V", "", "Uninstall a specific version")
 
@@ -68,15 +67,7 @@ disabled instances). Version wildcards are not yet supported.
 
 To remove releases that are in use by instances you must give the
 |--force| flag and this will first shutdown any running instance
-using that release and update base links and versions to "latest"
-unless to |--rollback| flag is used.
-
-If the flag |--rollback| is used then the command will first try to
-rollback to the previous release and restart any stopped instances,
-or if an earlier release is not installed then it will roll-forward
-to the next available release (and restart). Finally, if no other
-release is available then the instance will be disabled. Instances
-that were not already running are not started.
+using that release and update base links and versions to "latest".
 
 Any release that is referenced by a symlink (e.g. |active_prod|) will
 have the symlink updated as for instances above. This includes the
@@ -88,6 +79,9 @@ Additionally if the |-all| flag is passed then all releases for
 matching components are removed and all running instances stopped and
 disabled. This can be used to force a "clean install" of a component
 or before removal of a Geneos installation on a specific host.
+
+If no other release is available then the instance will be disabled.
+Instances that were not already running are not started.
 
 If a host is not selected with the |--host HOST| flags then the
 uninstall applies to all configured hosts. 
@@ -128,20 +122,30 @@ geneos uninstall --version 5.14.1
 					}
 				}
 
-				if uninstallCmdAll || uninstallCmdVersion != "" {
-					// ...
-				}
-
-				// default behaviour is to remove all releases except
-				// the latest.
-				//
 				// loop over all instances and remove versions from a
 				// list as they are found so we end up with a map
 				// containing only releases to be removed
+				//
+				// save a list of instances to restart as a map keys by
+				// version
+
+				restart := map[string][]geneos.Instance{}
+				stopped := []geneos.Instance{}
+
 				for _, c := range instance.GetAll(h, ct) {
+					if instance.IsDisabled(c) {
+						continue
+					}
 					_, version, err := instance.Version(c)
 					if err != nil {
+						log.Debug().Err(err).Msg("")
 						continue
+					}
+					if uninstallCmdForce {
+						if _, err := instance.GetPID(c); err != os.ErrProcessDone {
+							restart[version] = append(restart[version], c)
+						}
+						continue // leave on removals list, since we are stopping it
 					}
 					delete(removeReleases, version)
 				}
@@ -151,42 +155,37 @@ geneos uninstall --version 5.14.1
 				basedir := h.Filepath("packages", ct.String())
 
 				for version, release := range removeReleases {
+					for _, c := range restart[version] {
+						log.Debug().Msgf("stopping %s", c)
+						instance.Stop(c, true, false)
+						stopped = append(stopped, c)
+					}
 					releaseDir := filepath.Join(basedir, version)
 					if len(release.Links) != 0 {
-						previousVersion, nextVersion, _ := geneos.AdjacentVersions(h, ct, version)
-
-						if uninstallCmdRollback && previousVersion != "" {
-							if !uninstallCmdDryRun {
-								updateLinks(h, basedir, release, version, previousVersion)
-							}
-							delete(removeReleases, previousVersion)
-						} else if nextVersion != "" {
-							if !uninstallCmdDryRun {
-								updateLinks(h, basedir, release, version, nextVersion)
-							}
-							delete(removeReleases, nextVersion)
-						} else {
-							if !uninstallCmdDryRun {
-								for _, link := range release.Links {
-									linkpath := filepath.Join(basedir, link)
-									if err = h.Remove(linkpath); err != nil && !errors.Is(err, fs.ErrNotExist) {
-										log.Error().Err(err)
-										continue
-									}
-									fmt.Printf("removed unused link %s\n", link)
-								}
-							}
+						// update to latest version, remove all others
+						latest, err := geneos.LatestVersion(h, ct)
+						if err != nil {
+							log.Error().Err(err).Msg("")
+							continue
 						}
+						updateLinks(h, basedir, release, version, latest)
 					}
 
 					// remove the release
-					if !uninstallCmdDryRun {
-						if err = h.RemoveAll(releaseDir); err != nil {
-							log.Error().Err(err)
-							continue
-						}
+					if err = h.RemoveAll(releaseDir); err != nil {
+						log.Error().Err(err)
+						continue
 					}
 					fmt.Printf("removed %s release %s\n", ct, version)
+				}
+
+				// restart instances previously stopped, if possible
+				for _, c := range stopped {
+					if err := instance.Start(c); err != nil {
+						// if start fails, disable the instance
+						instance.Disable(c)
+						fmt.Printf("restart %s failed, disabling instance\n", c)
+					}
 				}
 			}
 		}
