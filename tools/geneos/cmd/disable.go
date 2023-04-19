@@ -24,6 +24,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -63,9 +64,18 @@ func disableInstance(c geneos.Instance, params []string) (err error) {
 		return nil
 	}
 
+	if instance.IsProtected(c) && !disableCmdForce {
+		fmt.Printf("%s protected. Use --force to override\n", c)
+		return
+	}
+
 	if err = instance.Stop(c, disableCmdForce, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
 		return
 	}
 
-	return instance.Disable(c)
+	if err = instance.Disable(c); err == nil {
+		fmt.Printf("%s disabled\n", c)
+	}
+
+	return
 }

@@ -23,6 +23,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -59,5 +60,8 @@ when the |-S| flag is used.
 }
 
 func enableInstance(c geneos.Instance, params []string) (err error) {
-	return instance.Enable(c)
+	if err = instance.Enable(c); err == nil {
+		fmt.Printf("%s enabled\n", c)
+	}
+	return
 }
