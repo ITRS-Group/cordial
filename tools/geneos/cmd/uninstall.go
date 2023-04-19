@@ -44,7 +44,7 @@ func init() {
 	rootCmd.AddCommand(uninstallCmd)
 
 	uninstallCmd.Flags().BoolVarP(&uninstallCmdAll, "all", "A", false, "Uninstall all releases, stopping and disabling running instances")
-	uninstallCmd.Flags().BoolVarP(&uninstallCmdForce, "force", "f", false, "Force uninstall, stopping instances using matching releases")
+	uninstallCmd.Flags().BoolVarP(&uninstallCmdForce, "force", "f", false, "Force uninstall, stopping protected instances first")
 	uninstallCmd.Flags().StringVarP(&uninstallCmdHost, "host", "H", string(host.ALLHOSTS), "Perform on a remote host. \"all\" means all hosts and locally")
 	uninstallCmd.Flags().StringVarP(&uninstallCmdVersion, "version", "V", "", "Uninstall a specific version")
 
@@ -57,31 +57,26 @@ var uninstallCmd = &cobra.Command{
 	Short: "Uninstall Geneos releases",
 	Long: strings.ReplaceAll(`
 Uninstall selected Geneos releases. By default all releases that are
-not used by any instance, including disabled instances, are removed
-with the exception of the "latest" release for each component type.
+not used by any enabled or running instance are removed with the
+exception of the "latest" release.
 
 If |TYPE| is given then only releases for that component are
-uninstalled. Similarly if |--version VERSION| is given then only that
-version is removed unless it is in use by an instance (including
-disabled instances). Version wildcards are not yet supported.
+considered. Similarly, if |--version VERSION| is given then only that
+version is removed. |VERSION| must be an exact match and multiple
+versions or version wildcards are not yet supported.
 
-To remove releases that are in use by instances you must give the
-|--force| flag and this will first shutdown any running instance
-using that release and update base links and versions to "latest".
+To remove releases that are in use by protected instances you must
+give the |--force| flag.
 
-Any release that is referenced by a symlink (e.g. |active_prod|) will
-have the symlink updated as for instances above. This includes the
-need to pass |--force| if there are running instances, but unlike
-instances that reference releases directly |--force| is not required
-if there is no running process using the symlinked release.
+For each release being removes any running instances will first be
+stopped and base links will be updated to point to the "latest"
+version (unless the |--all| flag is used). Any instances stopped will
+be restarted after all other actions are complete.
 
-Additionally if the |-all| flag is passed then all releases for
-matching components are removed and all running instances stopped and
-disabled. This can be used to force a "clean install" of a component
-or before removal of a Geneos installation on a specific host.
-
-If no other release is available then the instance will be disabled.
-Instances that were not already running are not started.
+If the |-all| flag is passed then all matching releases are removed
+and all running instances stopped and disabled. This can be used to
+force a "clean install" of a component or before removal of a Geneos
+installation on a specific host.
 
 If a host is not selected with the |--host HOST| flags then the
 uninstall applies to all configured hosts. 
@@ -102,22 +97,22 @@ geneos uninstall --version 5.14.1
 
 		for _, h := range h.Range(host.AllHosts()...) {
 			for _, ct := range ct.Range(geneos.RealComponents()...) {
-				removeReleases := map[string]geneos.ReleaseDetails{}
 				if ct.RelatedTypes != nil {
 					log.Debug().Msgf("skipping %s as has related types, remove those instead", ct)
 					continue
 				}
 
-				v, err := geneos.GetReleases(h, ct)
+				r, err := geneos.GetReleases(h, ct)
 				if err != nil {
 					return err
 				}
 
-				// save potential candidates for removal
-				for _, i := range v {
-					if uninstallCmdAll ||
-						(uninstallCmdVersion == "" && !i.Latest) ||
-						uninstallCmdVersion == i.Version {
+				// save candidates for removal
+				removeReleases := map[string]geneos.ReleaseDetails{}
+				for _, i := range r {
+					if uninstallCmdAll || // --all
+						(uninstallCmdVersion == "" && !i.Latest) || // default leave 'latest'
+						uninstallCmdVersion == i.Version { // specific --version
 						removeReleases[i.Version] = i
 					}
 				}
@@ -126,33 +121,37 @@ geneos uninstall --version 5.14.1
 				// list as they are found so we end up with a map
 				// containing only releases to be removed
 				//
-				// save a list of instances to restart as a map keys by
-				// version
-
+				// also save a list of instances to restart
 				restart := map[string][]geneos.Instance{}
-				stopped := []geneos.Instance{}
-
 				for _, c := range instance.GetAll(h, ct) {
 					if instance.IsDisabled(c) {
+						fmt.Printf("%s is disabled, not skipping\n", c)
 						continue
 					}
+
 					_, version, err := instance.Version(c)
 					if err != nil {
 						log.Debug().Err(err).Msg("")
 						continue
 					}
-					if uninstallCmdForce {
+
+					if instance.IsProtected(c) && !uninstallCmdForce {
+						fmt.Printf("%s is marked protected and uses version %s, skipping\n", c, version)
+					} else if !instance.IsProtected(c) || uninstallCmdForce {
 						if _, err := instance.GetPID(c); err != os.ErrProcessDone {
 							restart[version] = append(restart[version], c)
 						}
-						continue // leave on removals list, since we are stopping it
+						continue
 					}
+
+					// none of the above, remove from list
 					delete(removeReleases, version)
 				}
 
 				// directory that contains releases for this component
 				// on the selected host
 				basedir := h.Filepath("packages", ct.String())
+				stopped := []geneos.Instance{}
 
 				for version, release := range removeReleases {
 					for _, c := range restart[version] {
@@ -160,19 +159,25 @@ geneos uninstall --version 5.14.1
 						instance.Stop(c, true, false)
 						stopped = append(stopped, c)
 					}
-					releaseDir := filepath.Join(basedir, version)
 					if len(release.Links) != 0 {
-						// update to latest version, remove all others
-						latest, err := geneos.LatestVersion(h, ct)
-						if err != nil {
-							log.Error().Err(err).Msg("")
-							continue
+						if uninstallCmdAll {
+							// remove all links to this release if given --all flag
+							for _, l := range release.Links {
+								h.Remove(filepath.Join(basedir, l))
+							}
+						} else {
+							// update to latest version, remove all others
+							latest, err := geneos.LatestVersion(h, ct)
+							if err != nil {
+								log.Error().Err(err).Msg("")
+								continue
+							}
+							updateLinks(h, basedir, release, version, latest)
 						}
-						updateLinks(h, basedir, release, version, latest)
 					}
 
 					// remove the release
-					if err = h.RemoveAll(releaseDir); err != nil {
+					if err = h.RemoveAll(filepath.Join(basedir, version)); err != nil {
 						log.Error().Err(err)
 						continue
 					}
