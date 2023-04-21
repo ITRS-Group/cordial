@@ -24,7 +24,7 @@ package config
 
 type expandOptions struct {
 	lookupTables     []map[string]string
-	funcMaps         map[string]func(*Config, string, bool) string
+	funcMaps         map[string]func(*Config, string, bool) (string, error)
 	externalFuncMaps bool
 	expressions      bool
 	trimPrefix       bool
@@ -42,7 +42,7 @@ type expandOptions struct {
 //	s := config.GetString("config.value", ExternalLookups(false), LookupTable(configMap), Prefix("myconf", myFunc))
 type ExpandOptions func(*expandOptions)
 
-var defaultFuncMaps = map[string]func(*Config, string, bool) string{
+var defaultFuncMaps = map[string]func(*Config, string, bool) (string, error){
 	"http":  fetchURL,
 	"https": fetchURL,
 	"file":  fetchFile,
@@ -50,7 +50,7 @@ var defaultFuncMaps = map[string]func(*Config, string, bool) string{
 
 func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
 	e = &expandOptions{
-		funcMaps:         map[string]func(*Config, string, bool) string{},
+		funcMaps:         map[string]func(*Config, string, bool) (string, error){},
 		externalFuncMaps: true,
 		trimSpace:        true,
 	}
@@ -107,7 +107,7 @@ func LookupTable(values map[string]string) ExpandOptions {
 // function is called with the config data and the contents of the
 // expansion including the prefix (for URLs) but stripped of the opening
 // `${` and closing `}`
-func Prefix(prefix string, fn func(*Config, string, bool) string) ExpandOptions {
+func Prefix(prefix string, fn func(*Config, string, bool) (string, error)) ExpandOptions {
 	return func(e *expandOptions) {
 		e.funcMaps[prefix] = fn
 	}
