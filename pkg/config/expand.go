@@ -103,7 +103,7 @@ import (
 //	 enabled or disabled using the option [config.ExternalLookups()]
 //	 option. The are enabled by default.
 //
-//	 ${~/file} or ${/path/to/file} or ${file://path/to/file} or ${file:~/path/to/file}
+//	 ${.../path/to/file} or ${~/file} or ${file://path/to/file} or ${file:~/path/to/file}
 //
 //	   The contents of the referenced file will be read. Multiline files
 //	   are used as-is; this can, for example, be used to read PEM
@@ -112,10 +112,16 @@ import (
 //	   replaced with a tilde "~") then the path is relative to the home
 //	   directory of the user running the process.
 //
+//	   Any name that contains a `/` but not a `:` will be treated as a
+//	   file, if file reading is enabled. File paths can be absolute or
+//	   relative to the working directory (or relative to the home
+//	   directory, as above)
+//
 //	   Examples:
 //
-//	   * certfile ${file://etc/ssl/cert.pem}
+//	   * certfile: ${file://etc/ssl/cert.pem}
 //	   * template: ${file:~/templates/autogen.gotmpl}
+//	   * relative: ./file.txt
 //
 //	 ${https://host/path} or ${http://host/path}
 //
@@ -176,7 +182,8 @@ func (c *Config) ExpandString(input string, options ...ExpandOptions) (value str
 		if strings.HasPrefix(s, "enc:") {
 			return c.expandEncodedString(s[4:], options...)
 		}
-		return c.expandString(s, options...)
+		r, _ = c.ExpandRawString(s, options...)
+		return
 	})
 
 	opts := evalExpandOptions(c, options...)
@@ -207,7 +214,8 @@ func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
 		if bytes.HasPrefix(s, []byte("enc:")) {
 			return c.expandEncodedBytes(s[4:], options...)
 		}
-		return []byte(c.expandString(string(s), options...))
+		str, _ := c.ExpandRawString(string(s), options...)
+		return []byte(str)
 	})
 	return
 }
@@ -256,7 +264,7 @@ func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value 
 	keyfiles, encodedValue := p[0], p[1]
 
 	if !strings.HasPrefix(encodedValue, "+encs+") {
-		encodedValue = c.expandString(encodedValue, options...)
+		encodedValue, _ = c.ExpandRawString(encodedValue, options...)
 	}
 	if encodedValue == "" {
 		return
@@ -288,7 +296,8 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 	keyfiles, encodedValue := p[0], p[1]
 
 	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
-		encodedValue = []byte(c.expandString(string(encodedValue), options...))
+		str, _ := c.ExpandRawString(string(encodedValue), options...)
+		encodedValue = []byte(str)
 	}
 	if len(encodedValue) == 0 {
 		return
@@ -312,13 +321,21 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 	return
 }
 
-// expandString does most of the core work for configuration expansion.
-func (c *Config) expandString(s string, options ...ExpandOptions) (value string) {
+// ExpandRawString expands the string s using the same rules and options
+// as [ExpandString] but treats the whole of s as if it were wrapped in
+// '${...}'. The function does most of the core work for configuration
+// expansion but is also exported to let callers use it without the
+// syntactic sugar required for configuration values, allowing use
+// against command line flag values, for example.
+func (c *Config) ExpandRawString(s string, options ...ExpandOptions) (value string, err error) {
 	opts := evalExpandOptions(c, options...)
 	switch {
-	case strings.HasPrefix(s, "~/"), strings.HasPrefix(s, "/"):
+	case strings.Contains(s, "/") && !strings.Contains(s, ":"):
 		// check if defaults disabled
 		if _, ok := opts.funcMaps["file"]; ok {
+			if _, err = os.Stat(s); err != nil {
+				return
+			}
 			return fetchFile(c, s, opts.trimSpace)
 		}
 		return
@@ -372,9 +389,9 @@ func (c *Config) expandString(s string, options ...ExpandOptions) (value string)
 		f := strings.SplitN(s, ":", 2)
 		if fn, ok := opts.funcMaps[f[0]]; ok {
 			if opts.trimPrefix {
-				value = fn(c, f[1], opts.trimSpace)
+				value, err = fn(c, f[1], opts.trimSpace)
 			} else {
-				value = fn(c, s, opts.trimSpace)
+				value, err = fn(c, s, opts.trimSpace)
 			}
 			return
 		}
@@ -383,23 +400,25 @@ func (c *Config) expandString(s string, options ...ExpandOptions) (value string)
 	return
 }
 
-func fetchURL(cf *Config, url string, trim bool) string {
+func fetchURL(cf *Config, url string, trim bool) (s string, err error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		return ""
+		return
 	}
 	defer resp.Body.Close()
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return ""
+		return
 	}
 	if !trim {
-		return string(b)
+		s = string(b)
+	} else {
+		s = strings.TrimSpace(string(b))
 	}
-	return strings.TrimSpace(string(b))
+	return
 }
 
-func fetchFile(cf *Config, path string, trim bool) string {
+func fetchFile(cf *Config, path string, trim bool) (s string, err error) {
 	path = strings.TrimPrefix(path, "file:")
 	if strings.HasPrefix(path, "~/") {
 		home, _ := os.UserHomeDir()
@@ -407,15 +426,17 @@ func fetchFile(cf *Config, path string, trim bool) string {
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return ""
+		return
 	}
 	if !trim {
-		return string(b)
+		s = string(b)
+	} else {
+		s = strings.TrimSpace(string(b))
 	}
-	return strings.TrimSpace(string(b))
+	return
 }
 
-func expr(cf *Config, expression string, trim bool) string {
+func expr(cf *Config, expression string, trim bool) (s string, err error) {
 	eval := goval.NewEvaluator()
 	vars := cf.AllSettings()
 	env := make(map[string]string)
@@ -426,12 +447,14 @@ func expr(cf *Config, expression string, trim bool) string {
 	vars["env"] = env
 	result, err := eval.Evaluate(expression, vars, nil)
 	if err != nil {
-		return ""
+		return
 	}
 	if !trim {
-		return fmt.Sprint(result)
+		s = fmt.Sprint(result)
+	} else {
+		s = strings.TrimSpace(fmt.Sprint(result))
 	}
-	return strings.TrimSpace(fmt.Sprint(result))
+	return
 }
 
 // mapEnv is for special case mappings of environment variables across
