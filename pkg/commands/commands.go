@@ -335,7 +335,7 @@ var limitRE = regexp.MustCompile(`matches at least (\d+) items`)
 // Match returns a slice of all matching XPaths for the target up to
 // limit items. If limit is 0 then first a match is tried with the
 // default limit of 100 and if that fails with an error hinting at the
-// approximate number of matches, then retry with twice this vaule. If
+// approximate number of matches, then retry with twice this value. If
 // limit is less than 0 then the default limit of 100 is used.
 func (c *Connection) Match(target *xpath.XPath, limit int) (matches []*xpath.XPath, err error) {
 	const endpoint = "/rest/xpaths/match"
