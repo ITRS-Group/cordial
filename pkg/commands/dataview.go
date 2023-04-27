@@ -24,7 +24,6 @@ package commands
 
 import (
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/xpath"
@@ -56,10 +55,11 @@ type Dataview struct {
 }
 
 // Snapshot fetches the contents of the dataview identified by the
-// target. Only values are fetched unless an optional scope is passed,
-// which can then request severity, snooze and user assignment
+// target XPath. The target must match exactly one dataview. Only
+// headline and cell values are requested unless an optional scope is
+// passed, which can request severity, snooze and user assignment
 // information. If the underlying REST call fails then the error is
-// returned along with any Stderr output.
+// returned along with any stderr output.
 //
 // Snapshot support is only available in Geneos GA5.14 and above
 // Gateways and requires the REST command API to be enabled.
@@ -104,7 +104,6 @@ func (c *Connection) Snapshot(target *xpath.XPath, scope ...Scope) (dataview *Da
 	for k := range row {
 		dataview.Columns = append(dataview.Columns, k)
 	}
-	sort.Strings(dataview.Columns)
 
 	// XXX until the first column is supplied, prepend a constant
 	dataview.Columns = append([]string{"rowname"}, dataview.Columns...)
