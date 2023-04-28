@@ -318,7 +318,21 @@ func LatestVersion(r *host.Host, ct *Component, prefix string) (v string, err er
 // numeric values then "GA" is always greater thn "RA" (general versus
 // restricted availability) for the same numeric version, otherwise a
 // lexical comparison is done on the prefixes.
+//
+// If either version is empty or unparseable then the return value is
+// set to favour the other version - or 0 if both are empty strings.
 func CompareVersion(version1, version2 string) int {
+	// cope with empty versions
+	if version1 == "" && version2 == "" {
+		return 0
+	}
+	if version1 == "" {
+		return -1
+	}
+	if version2 == "" {
+		return 1
+	}
+
 	v1p := strings.FieldsFunc(version1, func(r rune) bool {
 		return !unicode.IsLetter(r)
 	})
@@ -331,7 +345,8 @@ func CompareVersion(version1, version2 string) int {
 	}
 	v1, err := version.NewVersion(version1)
 	if err != nil {
-		panic(err)
+		// if version1 is unparseable, treat version2 as greater
+		return 1
 	}
 	v2p := strings.FieldsFunc(version2, func(r rune) bool {
 		return !unicode.IsLetter(r)
@@ -345,7 +360,8 @@ func CompareVersion(version1, version2 string) int {
 	}
 	v2, err := version.NewVersion(version2)
 	if err != nil {
-		panic(err)
+		// if version2 is unparseable, treat version2 as greater
+		return -1
 	}
 	if i := v1.Compare(v2); i != 0 {
 		return i
