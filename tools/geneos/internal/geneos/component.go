@@ -58,6 +58,7 @@ type Component struct {
 	Defaults         []string // ordered list of key=value pairs
 	GlobalSettings   map[string]string
 	Directories      []string
+	GetPID           func(interface{}) (int, error) // if set, use this to get the PID of an instance
 }
 
 type Instance interface {
