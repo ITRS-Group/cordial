@@ -36,9 +36,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-version"
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -77,17 +79,17 @@ func openArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, f
 		if opts.source != "" {
 			archiveDir = opts.source
 		}
-		filename, err = LatestRelease(host.LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
+		filename, err = LatestArchive(host.LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
 			log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
 			switch ct.String() {
 			case "webserver":
-				return !strings.Contains(v.Name(), "web-server")
+				return strings.Contains(v.Name(), "web-server")
 			case "fa2":
-				return !strings.Contains(v.Name(), "fixanalyser2-netprobe")
+				return strings.Contains(v.Name(), "fixanalyser2-netprobe")
 			case "fileagent":
-				return !strings.Contains(v.Name(), "file-agent")
+				return strings.Contains(v.Name(), "file-agent")
 			default:
-				return !strings.Contains(v.Name(), ct.String())
+				return strings.Contains(v.Name(), ct.String())
 			}
 		})
 		if err != nil {
@@ -160,13 +162,6 @@ func openArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, f
 	return
 }
 
-// how to split an archive name into type and version
-var archiveRE = regexp.MustCompile(`^geneos-(web-server|fixanalyser2-netprobe|file-agent|\w+)-([\w\.-]+?)[\.-]?linux`)
-
-var platformToMetaList = []string{
-	"el8",
-}
-
 // unarchive unpacks the gzipped, open archive passed as an io.Reader on
 // the host given for the component. If there is anm error then the
 // caller must close the io.Reader
@@ -176,23 +171,13 @@ func unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 	opts := EvalOptions(options...)
 
 	if opts.override == "" {
-		parts := archiveRE.FindStringSubmatch(filename)
-		if len(parts) == 0 {
-			return fmt.Errorf("%q: %w", filename, ErrInvalidArgs)
-		}
-		version = parts[2]
-		// replace '-' prefix of recognised platform suffixes with '+' so work with semver as metadata
-		for _, m := range platformToMetaList {
-			log.Debug().Msgf("checking %q", m)
-			version = strings.ReplaceAll(version, "-"+m, "+"+m)
-			log.Debug().Msgf("version: %q", version)
-		}
-
+		var ctFromFile *Component
+		ctFromFile, version, err = FilenameToComponent(filename)
 		// check the component in the filename
 		// special handling for SANs
-		ctFromFile := ParseComponentName(parts[1])
 		switch ct.Name {
-		case "none", "san":
+		// XXX abstract this
+		case "none", "san", "ca3":
 			ct = ctFromFile
 		case ctFromFile.Name:
 			break
@@ -490,4 +475,85 @@ var anchoredVersRE = regexp.MustCompile(`^(\d+(\.\d+){0,2})$`)
 
 func MatchVersion(v string) bool {
 	return anchoredVersRE.MatchString(v)
+}
+
+// LatestArchive returns the latest archive file for component ct on
+// host r based on semver. A prefix filter can be used to limit matches
+// and a filter function to further refine matches.
+//
+// If there is semver metadata, check for platform_id on host and remove
+// any non-platform metadata from list before sorting
+func LatestArchive(r *host.Host, dir, filterString string, filterFunc func(os.DirEntry) bool) (latest string, err error) {
+	ents, err := r.ReadDir(dir)
+	if err != nil {
+		return
+	}
+
+	// remove (in place) all entries that do not contain 'filterString'
+	if filterString != "" {
+		i := 0
+		for _, d := range ents {
+			if strings.Contains(d.Name(), filterString) {
+				ents[i] = d
+				i++
+			}
+		}
+		ents = ents[:i]
+	}
+
+	var versions = make(map[string]*version.Version)
+	var originals = make(map[string]string, len(ents)) // map of processed names to original entries
+
+	for _, d := range ents {
+		// skip if fails filter function (when set)
+		if filterFunc != nil && !filterFunc(d) {
+			continue
+		}
+
+		n := d.Name()
+
+		// check if this is a valid release archive
+		ct, v, err := FilenameToComponent(n)
+		if err == nil {
+			log.Debug().Msgf("found archive of %s with version %s", ct, v)
+			nv, _ := version.NewVersion(v)
+			versions[n] = nv
+			originals[nv.Original()] = n
+			continue
+		}
+
+		// originals[n] = n
+
+		// // get the first non numeric part, remove it
+		// // this deals with "RA" vs "GA"
+		// v1p := strings.FieldsFunc(n, func(r rune) bool {
+		// 	return !unicode.IsLetter(r)
+		// })
+		// if len(v1p) > 0 && v1p[0] != "" {
+		// 	p := strings.TrimPrefix(n, v1p[0])
+		// 	originals[p] = n
+		// 	n = p
+		// }
+
+		// v1, err := version.NewVersion(n)
+		// if err == nil { // valid version
+		// 	if v1.Metadata() != "" {
+		// 		delete(versions, v1.Core().String())
+		// 	}
+		// 	versions[n] = v1
+		// }
+	}
+
+	if len(versions) == 0 {
+		return "", nil
+	}
+
+	// map to slice for sorting
+	vers := []*version.Version{}
+	for _, v := range versions {
+		vers = append(vers, v)
+	}
+	sort.Sort(version.Collection(vers))
+
+	return originals[vers[len(vers)-1].Original()], nil
 }

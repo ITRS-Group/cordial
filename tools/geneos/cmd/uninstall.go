@@ -167,7 +167,7 @@ geneos uninstall --version 5.14.1
 							}
 						} else {
 							// update to latest version, remove all others
-							latest, err := geneos.LatestVersion(h, ct)
+							latest, err := geneos.LatestVersion(h, ct, "")
 							if err != nil {
 								log.Error().Err(err).Msg("")
 								continue

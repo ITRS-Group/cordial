@@ -26,8 +26,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -38,6 +38,14 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
+
+// split an package archive name into type and version
+var archiveRE = regexp.MustCompile(`^geneos-(web-server|fixanalyser2-netprobe|file-agent|\w+)-([\w\.-]+?)[\.-]?linux`)
+
+// list of platform in release package names
+var platformToMetaList = []string{
+	"el8",
+}
 
 type ReleaseDetails struct {
 	Component string    `json:"Component"`
@@ -101,10 +109,7 @@ func GetReleases(h *host.Host, ct *Component) (releases Releases, err error) {
 		}
 	}
 
-	latest, _ := LatestRelease(h, basedir, "", func(d os.DirEntry) bool { // ignore error, empty is valid
-		return !d.IsDir()
-	})
-
+	latest, _ := LatestVersion(h, ct, "")
 	for _, ent := range ents {
 		if ent.IsDir() {
 			einfo, err := ent.Info()
@@ -132,82 +137,26 @@ func GetReleases(h *host.Host, ct *Component) (releases Releases, err error) {
 	return releases, nil
 }
 
-// LatestRelease returns the latest release version named by a
-// sub-directory in dir, on host r based on semver. A prefix filter can
-// be used to limit matches and a filter function to further refine
-// matches.
-//
-// If there is semver metadata, check for platform_id on host and
-// remove any non-platform metadata from list before sorting
-func LatestRelease(r *host.Host, dir, prefix string, filter func(os.DirEntry) bool) (latest string, err error) {
-	dirs, err := r.ReadDir(dir)
-	if err != nil {
-		return
-	}
-
-	newdirs := dirs[:0]
-	for _, d := range dirs {
-		if strings.HasPrefix(d.Name(), prefix) {
-			newdirs = append(newdirs, d)
-		}
-	}
-	dirs = newdirs
-
-	var versions = make(map[string]*version.Version)
-	var originals = make(map[string]string, len(dirs)) // map of processed to original entries
-
-	for _, d := range dirs {
-		if filter != nil && filter(d) {
-			continue
-		}
-		n := d.Name()
-		v1p := strings.FieldsFunc(n, func(r rune) bool {
-			return !unicode.IsLetter(r)
-		})
-		originals[n] = n
-		if len(v1p) > 0 && v1p[0] != "" {
-			p := strings.TrimPrefix(n, v1p[0])
-			originals[p] = n
-			n = p
-		}
-		v1, err := version.NewVersion(n)
-		if err == nil { // valid version
-			if v1.Metadata() != "" {
-				delete(versions, v1.Core().String())
-			}
-			versions[n] = v1
-		}
-	}
-	if len(versions) == 0 {
-		return "", nil
-	}
-	vers := []*version.Version{}
-	for _, v := range versions {
-		vers = append(vers, v)
-	}
-	sort.Sort(version.Collection(vers))
-	return originals[vers[len(vers)-1].Original()], nil
-}
-
 func getVersions(r *host.Host, ct *Component) (versions map[string]*version.Version, originals map[string]string) {
 	dir := r.Filepath("packages", ct.String())
-	dirs, err := r.ReadDir(dir)
+	ents, err := r.ReadDir(dir)
 	if err != nil {
 		return
 	}
 
-	newdirs := dirs[:0]
-	for _, d := range dirs {
-		if d.IsDir() { // only subdirs, ignore files and links
-			newdirs = append(newdirs, d)
+	i := 0
+	for _, d := range ents {
+		if d.IsDir() {
+			ents[i] = d
+			i++
 		}
 	}
-	dirs = newdirs
+	ents = ents[:i]
 
 	versions = make(map[string]*version.Version)
-	originals = make(map[string]string, len(dirs)) // map processed to original entry
+	originals = make(map[string]string, len(ents)) // map processed to original entry
 
-	for _, d := range dirs {
+	for _, d := range ents {
 		n := d.Name()
 		v1p := strings.FieldsFunc(n, func(r rune) bool {
 			return !unicode.IsLetter(r)
@@ -327,10 +276,10 @@ func NextVersion(r *host.Host, ct *Component, current string) (next string, err 
 
 // LatestVersion returns the name of the latest release for component
 // type ct on host h. The comparison is done using semantic versioning
-// and any metadata is ignored. An error is returned if there are
-// problems accessing the directories or parsing any names as semantic
-// versions.
-func LatestVersion(r *host.Host, ct *Component) (v string, err error) {
+// and any metadata is ignored. The matching is limited by the optional
+// prefix filter. An error is returned if there are problems accessing
+// the directories or parsing any names as semantic versions.
+func LatestVersion(r *host.Host, ct *Component, prefix string) (v string, err error) {
 	dir := r.Filepath("packages", ct.String())
 	dirs, err := r.ReadDir(dir)
 	if err != nil {
@@ -343,9 +292,13 @@ func LatestVersion(r *host.Host, ct *Component) (v string, err error) {
 		if !d.IsDir() {
 			continue
 		}
-		n := d.Name()
+		if prefix != "" {
+			if !strings.HasPrefix(d.Name(), prefix) {
+				continue
+			}
+		}
 
-		sv, err := version.NewVersion(n)
+		sv, err := version.NewVersion(d.Name())
 		if err != nil {
 			return v, err
 		}
@@ -440,5 +393,21 @@ func Install(h *host.Host, ct *Component, options ...GeneosOptions) (err error) 
 	if opts.doupdate {
 		Update(h, ct, options...)
 	}
+	return
+}
+
+func FilenameToComponent(filename string) (ct *Component, version string, err error) {
+	parts := archiveRE.FindStringSubmatch(filename)
+	if len(parts) != 3 {
+		err = fmt.Errorf("%q: %w", filename, ErrInvalidArgs)
+		return
+	}
+	version = parts[2]
+	// replace '-' prefix of recognised platform suffixes with '+' so work with semver as metadata
+	for _, m := range platformToMetaList {
+		version = strings.ReplaceAll(version, "-"+m, "+"+m)
+	}
+
+	ct = ParseComponentName(parts[1])
 	return
 }
