@@ -32,6 +32,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
@@ -44,14 +45,7 @@ var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, in
 var initCmdDLUsername, initCmdPwFile string
 var initCmdDLPassword []byte
 
-var initCmdExtras = ExtraConfigValues{
-	Includes:   IncludeValues{},
-	Gateways:   GatewayValues{},
-	Attributes: AttributeValues{},
-	Envs:       EnvValues{},
-	Variables:  VarValues{},
-	Types:      TypeValues{},
-}
+var initCmdExtras = instance.ExtraConfigValues{}
 
 func init() {
 	rootCmd.AddCommand(initCmd)
