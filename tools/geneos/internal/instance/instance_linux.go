@@ -55,6 +55,10 @@ import (
 // walk the /proc directory (local or remote) and find the matching pid.
 // This is subject to races, but not much we can do
 func GetPID(c geneos.Instance) (pid int, err error) {
+	if fn := c.Type().GetPID; fn != nil {
+		return fn(c)
+	}
+
 	var pids []int
 	binary := c.Config().GetString("binary")
 
@@ -77,31 +81,12 @@ func GetPID(c geneos.Instance) (pid int, err error) {
 		}
 		args := bytes.Split(data, []byte("\000"))
 		execfile := filepath.Base(string(args[0]))
-		switch c.Type() {
-		case geneos.ParseComponentName("webserver"):
-			var wdOK, jarOK bool
-			if execfile != "java" {
-				continue
-			}
+		if strings.HasPrefix(execfile, binary) {
 			for _, arg := range args[1:] {
-				if string(arg) == "-Dworking.directory="+c.Home() {
-					wdOK = true
-				}
-				if strings.HasSuffix(string(arg), "geneos-web-server.jar") {
-					jarOK = true
-				}
-				if wdOK && jarOK {
+				// very simplistic - we look for a bare arg that matches the instance name
+				if string(arg) == c.Name() {
+					// found
 					return
-				}
-			}
-		default:
-			if strings.HasPrefix(execfile, binary) {
-				for _, arg := range args[1:] {
-					// very simplistic - we look for a bare arg that matches the instance name
-					if string(arg) == c.Name() {
-						// found
-						return
-					}
 				}
 			}
 		}

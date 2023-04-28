@@ -82,6 +82,7 @@ var Webserver = geneos.Component{
 		"packages/webserver",
 		"webserver/webservers",
 	},
+	GetPID: webserverGetPID,
 }
 
 type Webservers instance.Instance
@@ -205,7 +206,7 @@ func (w *Webservers) Add(username string, tmpl string, port uint16) (err error) 
 		}
 	}
 
-	// copy default configs - use existing import routines?
+	// copy default configs
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
 	configSrc := filepath.Join(w.Config().GetString("install"), w.Config().GetString("version"), "config")
