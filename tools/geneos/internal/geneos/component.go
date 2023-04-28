@@ -126,12 +126,12 @@ type ComponentsMap map[string]*Component
 
 // slice of registered component types for indirect calls
 // this should actually become an Interface
-var components ComponentsMap = make(ComponentsMap)
+var registeredComponents ComponentsMap = make(ComponentsMap)
 
 // AllComponents returns a slice of all registered components, include
 // the Root component type
 func AllComponents() (cts []*Component) {
-	for _, c := range components {
+	for _, c := range registeredComponents {
 		cts = append(cts, c)
 	}
 	return
@@ -140,7 +140,7 @@ func AllComponents() (cts []*Component) {
 // RealComponents returns a slice of all registered components that have
 // their `RealComponent` field set to true.
 func RealComponents() (cts []*Component) {
-	for _, c := range components {
+	for _, c := range registeredComponents {
 		if c.RealComponent {
 			cts = append(cts, c)
 		}
@@ -157,7 +157,7 @@ func (ct *Component) RegisterComponent(factory func(string) Instance) {
 		return
 	}
 	ct.New = factory
-	components[ct.Name] = ct
+	registeredComponents[ct.Name] = ct
 	ct.RegisterDirs(ct.Directories)
 	for k, v := range ct.GlobalSettings {
 		config.GetConfig().SetDefault(k, v)
@@ -181,7 +181,7 @@ func (ct Component) String() (name string) {
 // matches. The comparison is case-insensitive. nil is returned if the
 // component does not match any known name.
 func ParseComponentName(component string) *Component {
-	for _, v := range components {
+	for _, v := range registeredComponents {
 		for _, m := range v.ComponentMatches {
 			if strings.EqualFold(m, component) {
 				return v
