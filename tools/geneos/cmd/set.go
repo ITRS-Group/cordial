@@ -48,14 +48,15 @@ func init() {
 	setCmd.Flags().SortFlags = false
 }
 
-var setCmdExtras = ExtraConfigValues{
-	Includes:   IncludeValues{},
-	Gateways:   GatewayValues{},
-	Attributes: AttributeValues{},
-	Envs:       EnvValues{},
-	Variables:  VarValues{},
-	Types:      TypeValues{},
-}
+var setCmdExtras = instance.ExtraConfigValues{}
+
+// 	Includes:   IncludeValues{},
+// 	Gateways:   GatewayValues{},
+// 	Attributes: AttributeValues{},
+// 	Envs:       EnvValues{},
+// 	Variables:  VarValues{},
+// 	Types:      TypeValues{},
+// }
 
 var setCmd = &cobra.Command{
 	Use:   "set [flags] [TYPE] [NAME...] [KEY=VALUE...]",
@@ -64,9 +65,9 @@ var setCmd = &cobra.Command{
 Set configuration item values in global (|geneos set global|), user 
 (|geneos set user|), or for a specific instance.
 
-The |geneos set| command allows for the definition of instrance properties,
+The |geneos set| command allows for the definition of instance properties,
 including:
-- environmet variables (option |-e|)
+- environment variables (option |-e|)
 - for gateways only
   - include files (option |-i|)
 - for self-announcing netprobes (san) only
@@ -84,11 +85,11 @@ now use the specific flags and not the old special syntax.
 The "set" command does not rebuild any configuration files for instances.
 Use "rebuild" to do this.
 
-The properties of a component instance may variy depending on the
+The properties of a component instance may vary depending on the
 component TYPE.  However the following properties are commonly used:
 - |binary| - Name of the binary file used to run the instance of the 
-  componenent TYPE.
-- |home| - Path to the instance's home directory, froom where the instance
+  component TYPE.
+- |home| - Path to the instance's home directory, from where the instance
   component TYPE is started.
 - |install| - Path to the directory where the binaries of the component 
   TYPE are installed.
@@ -98,7 +99,7 @@ component TYPE.  However the following properties are commonly used:
 - |name| - Name of the instance.
 - |port| - Listening port used by the instance.
 - |program| - Absolute path to the binary file used to run the instance 
-  of the componenent TYPE. 
+  of the component TYPE. 
 - |user| - User owning the instance.
 - |version| - Version as either the name of the directory holding the 
   component TYPE's binaries or the name of the symlink pointing to 
@@ -126,7 +127,7 @@ func set(ct *geneos.Component, args, params []string) error {
 func setInstance(c geneos.Instance, params []string) (err error) {
 	log.Debug().Msgf("c %s params %v", c, params)
 
-	setExtendedValues(c, setCmdExtras)
+	instance.SetExtendedValues(c, setCmdExtras)
 
 	for _, arg := range params {
 		s := strings.SplitN(arg, "=", 2)

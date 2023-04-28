@@ -46,14 +46,7 @@ var addCmdTemplate, addCmdBase, addCmdKeyfile, addCmdKeyfileCRC string
 var addCmdStart, addCmdLogs bool
 var addCmdPort uint16
 
-var addCmdExtras = ExtraConfigValues{
-	Includes:   IncludeValues{},
-	Gateways:   GatewayValues{},
-	Attributes: AttributeValues{},
-	Envs:       EnvValues{},
-	Variables:  VarValues{},
-	Types:      TypeValues{},
-}
+var addCmdExtras = instance.ExtraConfigValues{}
 
 func init() {
 	rootCmd.AddCommand(addCmd)
@@ -111,7 +104,7 @@ geneos add netprobe infraprobe12 --start --log
 // addInstance an instance
 //
 // this is also called from the init command code
-func addInstance(ct *geneos.Component, addCmdExtras ExtraConfigValues, args ...string) (err error) {
+func addInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, args ...string) (err error) {
 	var username string
 
 	// check validity and reserved words here
@@ -165,7 +158,7 @@ func addInstance(ct *geneos.Component, addCmdExtras ExtraConfigValues, args ...s
 			c.Config().Set("keyfile", addCmdKeyfile)
 		}
 	}
-	setExtendedValues(c, addCmdExtras)
+	instance.SetExtendedValues(c, addCmdExtras)
 	if err = instance.WriteConfig(c); err != nil {
 		return
 	}
