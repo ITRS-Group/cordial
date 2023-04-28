@@ -87,9 +87,10 @@ func Update(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
 	if opts.version == "latest" {
 		opts.version = ""
 	}
-	opts.version, err = LatestRelease(h, basedir, opts.version, func(d os.DirEntry) bool {
-		return !d.IsDir()
-	})
+	// opts.version, err = LatestArchive(h, basedir, opts.version, func(d os.DirEntry) bool {
+	// 	return d.IsDir()
+	// })
+	opts.version, err = LatestVersion(h, ct, opts.version)
 	if err != nil {
 		log.Debug().Err(err).Msg("latest() returned err")
 	}
