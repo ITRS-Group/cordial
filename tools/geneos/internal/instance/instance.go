@@ -575,7 +575,9 @@ func BuildCmd(c geneos.Instance) (cmd *exec.Cmd, env []string) {
 	args = append(args, opts...)
 	// XXX find common envs - JAVA_HOME etc.
 	env = append(env, c.Config().GetStringSlice("Env")...)
-	env = append(env, "LD_LIBRARY_PATH="+c.Config().GetString("libpaths"))
+	if c.Config().GetString("libpaths") != "" {
+		env = append(env, "LD_LIBRARY_PATH="+c.Config().GetString("libpaths"))
+	}
 	cmd = exec.Command(binary, args...)
 
 	return
