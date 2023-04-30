@@ -528,6 +528,15 @@ type ExtraConfigValues struct {
 
 // Value types for multiple flags
 
+func SetEnvs(c geneos.Instance, envs []string) (changed bool) {
+	if SetSlice(c, envs, "env", func(a string) string {
+		return strings.SplitN(a, "=", 2)[0]
+	}) {
+		changed = true
+	}
+	return
+}
+
 // XXX abstract this for a general case
 func SetExtendedValues(c geneos.Instance, x ExtraConfigValues) (changed bool) {
 	if SetSlice(c, x.Attributes, "attributes", func(a string) string {
@@ -536,11 +545,7 @@ func SetExtendedValues(c geneos.Instance, x ExtraConfigValues) (changed bool) {
 		changed = true
 	}
 
-	if SetSlice(c, x.Envs, "env", func(a string) string {
-		return strings.SplitN(a, "=", 2)[0]
-	}) {
-		changed = true
-	}
+	changed = SetEnvs(c, x.Envs)
 
 	if SetSlice(c, x.Types, "types", func(a string) string {
 		return a
@@ -762,4 +767,96 @@ func (i *VarValues) Set(value string) error {
 
 func (i *VarValues) Type() string {
 	return "[TYPE:]NAME=VALUE"
+}
+
+type UnsetConfigValues struct {
+	Keys       UnsetCmdValues
+	Includes   UnsetCmdValues
+	Gateways   UnsetCmdValues
+	Attributes UnsetCmdValues
+	Envs       UnsetCmdValues
+	Variables  UnsetCmdValues
+	Types      UnsetCmdValues
+}
+
+// XXX abstract this for a general case
+func UnsetValues(c geneos.Instance, x UnsetConfigValues) (changed bool, err error) {
+	if UnsetMap(c, "gateways", x.Gateways) {
+		changed = true
+	}
+
+	if UnsetMap(c, "includes", x.Includes) {
+		changed = true
+	}
+
+	if UnsetMap(c, "variables", x.Variables) {
+		changed = true
+	}
+
+	if UnsetSlice(c, "attributes", x.Attributes, func(a, b string) bool {
+		return strings.HasPrefix(a, b+"=")
+	}) {
+		changed = true
+	}
+
+	if UnsetSlice(c, "env", x.Envs, func(a, b string) bool {
+		return strings.HasPrefix(a, b+"=")
+	}) {
+		changed = true
+	}
+
+	if UnsetSlice(c, "types", x.Types, func(a, b string) bool {
+		return a == b
+	}) {
+		changed = true
+	}
+
+	return
+}
+
+func UnsetMap(c geneos.Instance, key string, items UnsetCmdValues) (changed bool) {
+	x := c.Config().GetStringMap(key)
+	for _, k := range items {
+		DeleteSettingFromMap(c, x, k)
+		changed = true
+	}
+	if changed {
+		c.Config().Set(key, x)
+	}
+	return
+}
+
+func UnsetSlice(c geneos.Instance, key string, items []string, cmp func(string, string) bool) (changed bool) {
+	newvals := []string{}
+	vals := c.Config().GetStringSlice(key)
+OUTER:
+	for _, t := range vals {
+		for _, v := range items {
+			if cmp(t, v) {
+				changed = true
+				continue OUTER
+			}
+		}
+		newvals = append(newvals, t)
+	}
+	c.Config().Set(key, newvals)
+	return
+}
+
+// unset Var flags take just the key, either a name or a priority for include files
+type UnsetCmdValues []string
+
+func (i *UnsetCmdValues) String() string {
+	return ""
+}
+
+func (i *UnsetCmdValues) Set(value string) error {
+	// discard any values accidentally passed with '=value'
+	value = strings.SplitN(value, "=", 2)[0]
+	*i = append(*i, value)
+	return nil
+}
+
+func (i *UnsetCmdValues) Type() string {
+	return "SETTING"
 }
