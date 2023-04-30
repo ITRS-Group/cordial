@@ -34,24 +34,18 @@ import (
 
 var unsetCmdWarned bool
 
-var unsetCmdKeys = unsetCmdValues{}
-var unsetCmdIncludes = unsetCmdValues{}
-var unsetCmdGateways = unsetCmdValues{}
-var unsetCmdAttributes = unsetCmdValues{}
-var unsetCmdEnvs = unsetCmdValues{}
-var unsetCmdVariables = unsetCmdValues{}
-var unsetCmdTypes = unsetCmdValues{}
+var unsetCmdValues = instance.UnsetConfigValues{}
 
 func init() {
 	rootCmd.AddCommand(unsetCmd)
 
-	unsetCmd.Flags().VarP(&unsetCmdKeys, "key", "k", "Unset a configuration key item")
-	unsetCmd.Flags().VarP(&unsetCmdEnvs, "env", "e", "Remove an environment variable `NAME`")
-	unsetCmd.Flags().VarP(&unsetCmdIncludes, "include", "i", "(gateways) Remove an include file with`PRIORITY`")
-	unsetCmd.Flags().VarP(&unsetCmdGateways, "gateway", "g", "(san) Remove the gateway `NAME`")
-	unsetCmd.Flags().VarP(&unsetCmdAttributes, "attribute", "a", "(san) Remove the attribute `NAME`")
-	unsetCmd.Flags().VarP(&unsetCmdTypes, "type", "t", "(san) Remove the type `NAME`")
-	unsetCmd.Flags().VarP(&unsetCmdVariables, "variable", "v", "(san) Remove the variable `NAME`")
+	unsetCmd.Flags().VarP(&unsetCmdValues.Keys, "key", "k", "Unset a configuration key item")
+	unsetCmd.Flags().VarP(&unsetCmdValues.Envs, "env", "e", "Remove an environment variable `NAME`")
+	unsetCmd.Flags().VarP(&unsetCmdValues.Includes, "include", "i", "(gateways) Remove an include file with`PRIORITY`")
+	unsetCmd.Flags().VarP(&unsetCmdValues.Gateways, "gateway", "g", "(san) Remove the gateway `NAME`")
+	unsetCmd.Flags().VarP(&unsetCmdValues.Attributes, "attribute", "a", "(san) Remove the attribute `NAME`")
+	unsetCmd.Flags().VarP(&unsetCmdValues.Types, "type", "t", "(san) Remove the type `NAME`")
+	unsetCmd.Flags().VarP(&unsetCmdValues.Variables, "variable", "v", "(san) Remove the variable `NAME`")
 
 	unsetCmd.Flags().SortFlags = false
 }
@@ -85,12 +79,12 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 	var changed bool
 	log.Debug().Msgf("c %s params %v", c, params)
 
-	changed, err = unsetValues(c)
+	changed, err = instance.UnsetValues(c, unsetCmdValues)
 
 	s := c.Config().AllSettings()
 
-	if len(unsetCmdKeys) > 0 {
-		for _, k := range unsetCmdKeys {
+	if len(unsetCmdValues.Keys) > 0 {
+		for _, k := range unsetCmdValues.Keys {
 			// check and delete one level of maps
 			if strings.Contains(k, ".") {
 				p := strings.SplitN(k, ".", 2)
@@ -121,86 +115,4 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 	}
 
 	return
-}
-
-// XXX abstract this for a general case
-func unsetValues(c geneos.Instance) (changed bool, err error) {
-	if unsetMap(c, "gateways", unsetCmdGateways) {
-		changed = true
-	}
-
-	if unsetMap(c, "includes", unsetCmdIncludes) {
-		changed = true
-	}
-
-	if unsetMap(c, "variables", unsetCmdVariables) {
-		changed = true
-	}
-
-	if unsetSlice(c, "attributes", unsetCmdAttributes, func(a, b string) bool {
-		return strings.HasPrefix(a, b+"=")
-	}) {
-		changed = true
-	}
-
-	if unsetSlice(c, "env", unsetCmdEnvs, func(a, b string) bool {
-		return strings.HasPrefix(a, b+"=")
-	}) {
-		changed = true
-	}
-
-	if unsetSlice(c, "types", unsetCmdTypes, func(a, b string) bool {
-		return a == b
-	}) {
-		changed = true
-	}
-
-	return
-}
-
-func unsetMap(c geneos.Instance, key string, items unsetCmdValues) (changed bool) {
-	x := c.Config().GetStringMap(key)
-	for _, k := range items {
-		instance.DeleteSettingFromMap(c, x, k)
-		changed = true
-	}
-	if changed {
-		c.Config().Set(key, x)
-	}
-	return
-}
-
-func unsetSlice(c geneos.Instance, key string, items []string, cmp func(string, string) bool) (changed bool) {
-	newvals := []string{}
-	vals := c.Config().GetStringSlice(key)
-OUTER:
-	for _, t := range vals {
-		for _, v := range items {
-			if cmp(t, v) {
-				changed = true
-				continue OUTER
-			}
-		}
-		newvals = append(newvals, t)
-	}
-	c.Config().Set(key, newvals)
-	return
-}
-
-// unset Var flags take just the key, either a name or a priority for include files
-type unsetCmdValues []string
-
-func (i *unsetCmdValues) String() string {
-	return ""
-}
-
-func (i *unsetCmdValues) Set(value string) error {
-	// discard any values accidentally passed with '=value'
-	value = strings.SplitN(value, "=", 2)[0]
-	*i = append(*i, value)
-	return nil
-}
-
-func (i *unsetCmdValues) Type() string {
-	return "SETTING"
 }
