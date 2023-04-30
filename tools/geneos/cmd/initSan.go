@@ -42,8 +42,6 @@ func init() {
 	initSanCmd.Flags().StringVarP(&initSanCmdVersion, "version", "V", "latest", "Download this `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
 	initSanCmd.Flags().StringVarP(&initSanCmdArchive, "archive", "A", "", "`PATH or URL` to software archive to install")
 	initSanCmd.Flags().StringVarP(&initSanCmdOverride, "override", "T", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
-
-	// initSanCmd.Flags().VarP(&initCmdExtras.Envs, "env", "e", "Add an environment variable in the format NAME=VALUE. Repeat flag for more values.")
 	initSanCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", "Add gateway in the format NAME:PORT. Repeat flag for more gateways.")
 	initSanCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", "Add an attribute in the format NAME=VALUE. Repeat flag for more attributes.")
 	initSanCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", "Add a type NAME. Repeat flag for more types.")
