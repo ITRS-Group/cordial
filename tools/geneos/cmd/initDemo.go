@@ -40,10 +40,7 @@ func init() {
 	initCmd.AddCommand(initDemoCmd)
 
 	initDemoCmd.Flags().StringVarP(&initDemoCmdArchive, "archive", "A", "", "`PATH or URL` to software archive to install")
-
-	// initDemoCmd.Flags().VarP(&initCmdExtras.Envs, "env", "e", "Add environment variables in the format NAME=VALUE. Repeat flag for more values.")
 	initDemoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
-
 	initDemoCmd.Flags().SortFlags = false
 }
 

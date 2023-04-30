@@ -46,8 +46,6 @@ func init() {
 	initAllCmd.MarkFlagRequired("licence")
 
 	initAllCmd.Flags().StringVarP(&initAllCmdArchive, "archive", "A", "", "`PATH or URL` to software archive to install")
-
-	// initAllCmd.Flags().VarP(&initCmdExtras.Envs, "env", "e", "Add environment variables in the format NAME=VALUE. Repeat flag for more values.")
 	initAllCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
 
 	initAllCmd.Flags().SortFlags = false
