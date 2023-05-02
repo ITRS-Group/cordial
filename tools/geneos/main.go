@@ -32,6 +32,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 
 	// each component type registers itself when imported here
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/ca3"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fa2"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fileagent"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
