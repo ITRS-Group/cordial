@@ -97,7 +97,7 @@ will not result in that file being copies to other hosts.
 		var a config.AESValues
 
 		if aesSetCmdCRC == "" {
-			f, _, err = geneos.OpenSource(aesSetCmdKeyfile)
+			f, _, err = geneos.Open(aesSetCmdKeyfile)
 			if err != nil {
 				return err
 			}
@@ -117,7 +117,7 @@ will not result in that file being copies to other hosts.
 				return fmt.Errorf("keyfile with CRC %q not found locally", aesSetCmdCRC)
 			}
 
-			f, _, err = geneos.OpenSource(path)
+			f, _, err = geneos.Open(path)
 			if err != nil {
 				return err
 			}

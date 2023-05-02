@@ -136,7 +136,7 @@ geneos install netprobe -b active_dev -U
 		if ct != nil || len(args) == 0 {
 			log.Debug().Msgf("installing %q version of %s to %s host(s)", installCmdVersion, ct, installCmdHost)
 
-			options := []geneos.GeneosOptions{
+			options := []geneos.Options{
 				geneos.Version(installCmdVersion),
 				geneos.Basename(installCmdBase),
 				geneos.NoSave(installCmdNoSave),
@@ -158,7 +158,7 @@ geneos install netprobe -b active_dev -U
 		// work through command line args and try to install them using the naming format
 		// of standard downloads - fix versioning
 		for _, source := range args {
-			options := []geneos.GeneosOptions{
+			options := []geneos.Options{
 				geneos.Source(source),
 				geneos.Basename(installCmdBase),
 				geneos.NoSave(installCmdNoSave),
@@ -176,7 +176,7 @@ geneos install netprobe -b active_dev -U
 	},
 }
 
-func install(ct *geneos.Component, target string, options ...geneos.GeneosOptions) (err error) {
+func install(ct *geneos.Component, target string, options ...geneos.Options) (err error) {
 	for _, h := range host.Match(target) {
 		if err = ct.MakeComponentDirs(h); err != nil {
 			return err

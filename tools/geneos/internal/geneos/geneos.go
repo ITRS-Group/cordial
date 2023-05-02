@@ -67,7 +67,7 @@ var GlobalConfigPath = filepath.Join(GlobalConfigDir, ConfigSubdirName, UserConf
 //
 // When called on a remote host then the user running the command cannot
 // be super-user.
-func Init(h *host.Host, options ...GeneosOptions) (err error) {
+func Init(h *host.Host, options ...Options) (err error) {
 	var uid, gid int
 
 	if h != host.LOCAL && utils.IsSuperuser() {

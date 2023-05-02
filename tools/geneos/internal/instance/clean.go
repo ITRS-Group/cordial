@@ -9,7 +9,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-func Clean(c geneos.Instance, options ...geneos.GeneosOptions) (err error) {
+func Clean(c geneos.Instance, options ...geneos.Options) (err error) {
 	var stopped bool
 
 	opts := geneos.EvalOptions(options...)

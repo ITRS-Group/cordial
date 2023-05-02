@@ -195,10 +195,10 @@ sudo geneos init geneos /opt/itrs
 
 // initProcessArgs works through the parsed arguments and returns a
 // geneos.GeneosOptions slice to be passed to worker functions
-func initProcessArgs(args []string) (options []geneos.GeneosOptions, err error) {
+func initProcessArgs(args []string) (options []geneos.Options, err error) {
 	var username, homedir, root string
 
-	options = []geneos.GeneosOptions{
+	options = []geneos.Options{
 		geneos.Version(initCmdVersion),
 		geneos.Basename("active_prod"),
 		geneos.Force(initCmdForce),
@@ -299,7 +299,7 @@ func initProcessArgs(args []string) (options []geneos.GeneosOptions, err error) 
 func initMisc() (err error) {
 	if initCmdGatewayTemplate != "" {
 		var tmpl []byte
-		if tmpl, err = geneos.ReadSource(initCmdGatewayTemplate); err != nil {
+		if tmpl, err = geneos.ReadFrom(initCmdGatewayTemplate); err != nil {
 			return
 		}
 		if err := host.LOCAL.WriteFile(host.LOCAL.Filepath(gateway.Gateway, "templates", gateway.GatewayDefaultTemplate), tmpl, 0664); err != nil {
@@ -309,7 +309,7 @@ func initMisc() (err error) {
 
 	if initCmdSANTemplate != "" {
 		var tmpl []byte
-		if tmpl, err = geneos.ReadSource(initCmdSANTemplate); err != nil {
+		if tmpl, err = geneos.ReadFrom(initCmdSANTemplate); err != nil {
 			return
 		}
 		if err = host.LOCAL.WriteFile(host.LOCAL.Filepath(san.San, "templates", san.SanDefaultTemplate), tmpl, 0664); err != nil {

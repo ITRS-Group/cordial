@@ -36,7 +36,7 @@ import (
 )
 
 // check selected version exists first
-func Update(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
+func Update(h *host.Host, ct *Component, options ...Options) (err error) {
 	opts := EvalOptions(options...)
 	if ct == nil {
 		for _, t := range RealComponents() {

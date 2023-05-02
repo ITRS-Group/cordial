@@ -76,7 +76,7 @@ match then the given password is encoded for each keyfile found.
 		if aesEncodeCmdString != "" {
 			plaintext = []byte(aesEncodeCmdString)
 		} else if aesEncodeCmdSource != "" {
-			plaintext, err = geneos.ReadSource(aesEncodeCmdSource)
+			plaintext, err = geneos.ReadFrom(aesEncodeCmdSource)
 			if err != nil {
 				return
 			}

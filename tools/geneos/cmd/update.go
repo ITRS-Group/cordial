@@ -111,7 +111,7 @@ geneos update netprobe 5.13.2
 		if len(args) > 0 {
 			version = args[0]
 		}
-		options := []geneos.GeneosOptions{geneos.Version(version), geneos.Basename(updateCmdBase), geneos.Force(true), geneos.Restart(updateCmdRestart)}
+		options := []geneos.Options{geneos.Version(version), geneos.Basename(updateCmdBase), geneos.Force(true), geneos.Restart(updateCmdRestart)}
 		if updateCmdRestart {
 			cs := instance.MatchKeyValue(r, ct, "version", updateCmdBase)
 			for _, c := range cs {

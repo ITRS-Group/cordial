@@ -22,7 +22,7 @@ THE SOFTWARE.
 
 package geneos
 
-type Options struct {
+type geneosOptions struct {
 	nosave        bool
 	local         bool
 	force         bool
@@ -42,11 +42,11 @@ type Options struct {
 	doupdate      bool
 }
 
-type GeneosOptions func(*Options)
+type Options func(*geneosOptions)
 
-func EvalOptions(options ...GeneosOptions) (d *Options) {
+func EvalOptions(options ...Options) (d *geneosOptions) {
 	// defaults
-	d = &Options{
+	d = &geneosOptions{
 		downloadbase: "releases",
 		downloadtype: "resources",
 	}
@@ -57,115 +57,113 @@ func EvalOptions(options ...GeneosOptions) (d *Options) {
 }
 
 // NoSave prevents downloads from being saved in the archive directory
-func NoSave(n bool) GeneosOptions {
-	return func(d *Options) { d.nosave = n }
+func NoSave(n bool) Options {
+	return func(d *geneosOptions) { d.nosave = n }
 }
 
 // LocalOnly stops downloads from external locations
-func LocalOnly(l bool) GeneosOptions {
-	return func(d *Options) { d.local = l }
+func LocalOnly(l bool) Options {
+	return func(d *geneosOptions) { d.local = l }
 }
 
 // Force ignores existing directories or files
-func Force(o bool) GeneosOptions {
-	return func(d *Options) { d.force = o }
+func Force(o bool) Options {
+	return func(d *geneosOptions) { d.force = o }
 }
 
 // OverrideVersion forces a specific version to be used and failure if not available
-func OverrideVersion(s string) GeneosOptions {
-	return func(d *Options) { d.override = s }
+func OverrideVersion(s string) Options {
+	return func(d *geneosOptions) { d.override = s }
 }
 
 // Restart sets the instances to be restarted around the update
-func Restart(r bool) GeneosOptions {
-	return func(d *Options) { d.restart = r }
+func Restart(r bool) Options {
+	return func(d *geneosOptions) { d.restart = r }
 }
 
 // Restart returns the value of the Restart option. This is a helper to
 // allow checking outside the cmd package.
 // XXX Currently doesn't work.
-func (d *Options) Restart() bool {
+func (d *geneosOptions) Restart() bool {
 	return d.restart
 }
 
-// Restart sets the instances to be restarted around the update
-func FullClean(r bool) GeneosOptions {
-	return func(d *Options) { d.fullclean = r }
+// FullClean the instance
+func FullClean(r bool) Options {
+	return func(d *geneosOptions) { d.fullclean = r }
 }
 
-// Restart returns the value of the Restart option. This is a helper to
-// allow checking outside the cmd package.
-// XXX Currently doesn't work.
-func (d *Options) FullClean() bool {
+// FullClean returns the current value
+func (d *geneosOptions) FullClean() bool {
 	return d.fullclean
 }
 
 // Version sets the desired version number, defaults to "latest" in most
 // cases. The version number is in the form `[GA]X.Y.Z` (or `RA` for
 // snapshots)
-func Version(v string) GeneosOptions {
-	return func(d *Options) { d.version = v }
+func Version(v string) Options {
+	return func(d *geneosOptions) { d.version = v }
 }
 
 // Basename sets the package binary basename, defaults to active_prod,
 // for symlinks for update.
-func Basename(b string) GeneosOptions {
-	return func(d *Options) { d.basename = b }
+func Basename(b string) Options {
+	return func(d *geneosOptions) { d.basename = b }
 }
 
 // Homedir sets the Geneos installation home directory (aka `geneos` in
 // the settings)
-func Homedir(h string) GeneosOptions {
-	return func(d *Options) { d.homedir = h }
+func Homedir(h string) Options {
+	return func(d *geneosOptions) { d.homedir = h }
 }
 
 // LocalUsername sets the user name of the user running the program, or if
 // running as root the default username that should be used. This is
 // different to any remote username for executing commands on remote
 // hosts.
-func LocalUsername(u string) GeneosOptions {
-	return func(d *Options) { d.localusername = u }
+func LocalUsername(u string) Options {
+	return func(d *geneosOptions) { d.localusername = u }
 }
 
 // Username is the remote access username for downloads
-func Username(u string) GeneosOptions {
-	return func(d *Options) { d.username = u }
+func Username(u string) Options {
+	return func(d *geneosOptions) { d.username = u }
 }
 
 // Password is the remote access password for downloads
-func Password(p []byte) GeneosOptions {
-	return func(d *Options) { d.password = p }
+func Password(p []byte) Options {
+	return func(d *geneosOptions) { d.password = p }
 }
 
-// PlauformID sets the (Linux) platform ID from the OS release info.
+// PlatformID sets the (Linux) platform ID from the OS release info.
 // Currently used to distinguish RHEL8 installs from others.
-func PlatformID(id string) GeneosOptions {
-	return func(d *Options) { d.platform_id = id }
+func PlatformID(id string) Options {
+	return func(d *geneosOptions) { d.platform_id = id }
 }
 
 // UseNexus sets the flag to use nexus.itrsgroup.com for internal
 // downloads instead of the default download URL in the settings. This
 // also influences the way the remote path is searched and build, not
 // just the base URL.
-func UseNexus() GeneosOptions {
-	return func(d *Options) { d.downloadtype = "nexus" }
+func UseNexus() Options {
+	return func(d *geneosOptions) { d.downloadtype = "nexus" }
 }
 
 // UseSnapshots set the flag to use Nexus Snapshots rather than
 // Releases.
-func UseSnapshots() GeneosOptions {
-	return func(d *Options) { d.downloadbase = "snapshots" }
+func UseSnapshots() Options {
+	return func(d *geneosOptions) { d.downloadbase = "snapshots" }
 }
 
 // Source is the source of the installation and overrides all other
 // settings include Local and download URLs. It can be a directory, in
 // which case that directory is searched for the appropriate archive
 // file(s)
-func Source(f string) GeneosOptions {
-	return func(d *Options) { d.source = f }
+func Source(f string) Options {
+	return func(d *geneosOptions) { d.source = f }
 }
 
 // DoUpdate sets the option to also do an update after an install
-func DoUpdate(r bool) GeneosOptions {
-	return func(d *Options) { d.doupdate = r }
+func DoUpdate(r bool) Options {
+	return func(d *geneosOptions) { d.doupdate = r }
 }

@@ -72,12 +72,12 @@ command.
 	},
 }
 
-func initTemplates(h *host.Host, options ...geneos.GeneosOptions) (err error) {
+func initTemplates(h *host.Host, options ...geneos.Options) (err error) {
 	gatewayTemplates := h.Filepath(gateway.Gateway, "templates")
 	h.MkdirAll(gatewayTemplates, 0775)
 	tmpl := gateway.GatewayTemplate
 	if initCmdGatewayTemplate != "" {
-		if tmpl, err = geneos.ReadSource(initCmdGatewayTemplate); err != nil {
+		if tmpl, err = geneos.ReadFrom(initCmdGatewayTemplate); err != nil {
 			return
 		}
 	}
@@ -96,7 +96,7 @@ func initTemplates(h *host.Host, options ...geneos.GeneosOptions) (err error) {
 	h.MkdirAll(sanTemplates, 0775)
 	tmpl = san.SanTemplate
 	if initCmdSANTemplate != "" {
-		if tmpl, err = geneos.ReadSource(initCmdSANTemplate); err != nil {
+		if tmpl, err = geneos.ReadFrom(initCmdSANTemplate); err != nil {
 			return
 		}
 	}
