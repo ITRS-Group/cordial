@@ -40,6 +40,7 @@ RUN tar -C /usr/local -xzf /tmp/go1.19.3.${BUILDOS}-${BUILDARCH}.tar.gz
 ENV PATH=$PATH:/usr/local/go/bin
 COPY ./ /app/cordial
 WORKDIR /app/cordial/tools/geneos
+RUN go build
 WORKDIR /app/cordial/libraries/libemail
 RUN make
 
@@ -77,6 +78,7 @@ COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/bin/
 COPY --from=build-docs /app/cordial/doc-output /cordial/docs
 COPY --from=build /app/cordial/integrations/servicenow/servicenow /app/cordial/integrations/servicenow/ticket.sh /app/cordial/integrations/pagerduty/pagerduty /cordial/bin/
 COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /app/cordial/integrations/pagerduty/cmd/pagerduty.defaults.yaml /cordial/etc/geneos/
+COPY --from=build-libs /app/cordial/tools/geneos/geneos /cordial/bin/geneos.centos7-x86_64
 COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /cordial/lib/
 RUN mv /cordial /cordial-$(cat /VERSION)
 WORKDIR /
