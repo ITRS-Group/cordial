@@ -55,13 +55,13 @@ type downloadauth struct {
 
 // openArchive locates and returns an io.ReadCloser for an archive for
 // the component ct. The source of the archive is given as an option.
-func openArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, filename string, err error) {
+func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filename string, err error) {
 	var resp *http.Response
 
 	opts := EvalOptions(options...)
 
 	if opts.source != "" {
-		body, filename, err = OpenSource(opts.source, options...)
+		body, filename, err = Open(opts.source, options...)
 		if err == nil || !errors.Is(err, ErrIsADirectory) {
 			// if success or it's not a directory, return
 			return
@@ -165,7 +165,7 @@ func openArchive(ct *Component, options ...GeneosOptions) (body io.ReadCloser, f
 // unarchive unpacks the gzipped, open archive passed as an io.Reader on
 // the host given for the component. If there is anm error then the
 // caller must close the io.Reader
-func unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, options ...GeneosOptions) (err error) {
+func unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, options ...Options) (err error) {
 	var version string
 
 	opts := EvalOptions(options...)
@@ -329,7 +329,7 @@ func unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 // GeneosOptions supported are PlatformID, UseNexus, UseSnapshots,
 // Version, Username and Password. PlatformID and Version cannot be set
 // at the same time.
-func openRemoteArchive(ct *Component, options ...GeneosOptions) (filename string, resp *http.Response, err error) {
+func openRemoteArchive(ct *Component, options ...Options) (filename string, resp *http.Response, err error) {
 	var source string
 
 	opts := EvalOptions(options...)

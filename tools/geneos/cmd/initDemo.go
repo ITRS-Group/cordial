@@ -105,7 +105,7 @@ influence the installation.
 	},
 }
 
-func initDemo(h *host.Host, options ...geneos.GeneosOptions) (err error) {
+func initDemo(h *host.Host, options ...geneos.Options) (err error) {
 	e := []string{}
 	g := []string{"Demo Gateway@" + h.String()}
 

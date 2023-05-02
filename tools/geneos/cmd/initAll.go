@@ -117,7 +117,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 	},
 }
 
-func initAll(h *host.Host, options ...geneos.GeneosOptions) (err error) {
+func initAll(h *host.Host, options ...geneos.Options) (err error) {
 	e := []string{}
 
 	if initCmdName == "" {

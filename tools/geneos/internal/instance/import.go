@@ -17,7 +17,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
-func ImportFile(h *host.Host, home string, user string, source string, options ...geneos.GeneosOptions) (filename string, err error) {
+func ImportFile(h *host.Host, home string, user string, source string, options ...geneos.Options) (filename string, err error) {
 	var backuppath string
 	var from io.ReadCloser
 
@@ -63,7 +63,7 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 		}
 	}
 
-	from, filename, err = geneos.OpenSource(source)
+	from, filename, err = geneos.Open(source)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}

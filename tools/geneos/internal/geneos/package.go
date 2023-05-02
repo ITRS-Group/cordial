@@ -370,9 +370,9 @@ func CompareVersion(version1, version2 string) int {
 }
 
 // Install installs a Geneos software release. The host must be given
-// and call be 'all'. If a component type is passed in ct then only that
+// and defaults to 'all'. If a component type is passed in ct then only that
 // component release is installed.
-func Install(h *host.Host, ct *Component, options ...GeneosOptions) (err error) {
+func Install(h *host.Host, ct *Component, options ...Options) (err error) {
 	if h == host.ALL {
 		return ErrInvalidArgs
 	}
@@ -392,6 +392,8 @@ func Install(h *host.Host, ct *Component, options ...GeneosOptions) (err error) 
 	options = append(options, PlatformID(h.GetString("osinfo.platform_id")))
 
 	opts := EvalOptions(options...)
+
+	// open and unarchive if given a tar.gz
 
 	reader, filename, err := openArchive(ct, options...)
 	if err != nil {

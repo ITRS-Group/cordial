@@ -93,7 +93,7 @@ in the value. All other flags and arguments are ignored.
 		if aesDecodeCmdPassword != "" {
 			ciphertext = aesDecodeCmdPassword
 		} else if aesDecodeCmdSource != "" {
-			b, err := geneos.ReadSource(aesDecodeCmdSource)
+			b, err := geneos.ReadFrom(aesDecodeCmdSource)
 			if err != nil {
 				return err
 			}
@@ -107,7 +107,7 @@ in the value. All other flags and arguments are ignored.
 				continue
 			}
 			// decode using specific file
-			r, _, err := geneos.OpenSource(k)
+			r, _, err := geneos.Open(k)
 			if err != nil {
 				continue
 			}

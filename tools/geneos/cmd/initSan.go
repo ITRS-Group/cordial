@@ -119,7 +119,7 @@ multiple times.
 	},
 }
 
-func initSan(h *host.Host, options ...geneos.GeneosOptions) (err error) {
+func initSan(h *host.Host, options ...geneos.Options) (err error) {
 	var sanname string
 
 	e := []string{}
