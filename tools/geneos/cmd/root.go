@@ -48,6 +48,7 @@ var (
 )
 
 var cfgFile string
+var UserKeyFile string
 
 var debug, quiet bool
 
@@ -56,28 +57,28 @@ func init() {
 
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/geneos.json, "+geneos.GlobalConfigPath+")")
-	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	rootCmd.PersistentFlags().MarkHidden("debug")
-	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
-	rootCmd.PersistentFlags().MarkHidden("quiet")
+	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/geneos.json, "+geneos.GlobalConfigPath+")")
+	RootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	RootCmd.PersistentFlags().MarkHidden("debug")
+	RootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
+	RootCmd.PersistentFlags().MarkHidden("quiet")
 
 	// how to remove the help flag help text from the help output! Sigh...
-	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	rootCmd.PersistentFlags().MarkHidden("help")
+	RootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	RootCmd.PersistentFlags().MarkHidden("help")
 
 	// catch common abbreviations and typos
-	rootCmd.PersistentFlags().SetNormalizeFunc(cmdNormalizeFunc)
+	RootCmd.PersistentFlags().SetNormalizeFunc(cmdNormalizeFunc)
 
 	// this doesn't work as expected, define sort = false in each command
-	// rootCmd.PersistentFlags().SortFlags = false
-	rootCmd.Flags().SortFlags = false
+	// RootCmd.PersistentFlags().SortFlags = false
+	RootCmd.Flags().SortFlags = false
 }
 
 const cmdName = "geneos"
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
+// RootCmd represents the base command when called without any subcommands
+var RootCmd = &cobra.Command{
 	Use:   cmdName,
 	Short: "Control your Geneos environment",
 	Long: strings.ReplaceAll(`
@@ -109,8 +110,8 @@ $ geneos ps
 				cmd == setUserCmd ||
 				cmd == setGlobalCmd ||
 				cmd == addHostCmd ||
-				cmd.Parent() == initCmd ||
-				cmd.Parent() == aesCmd ||
+				cmd.Parent().Name() == "init" ||
+				cmd.Parent().Name() == "aes" ||
 				len(host.RemoteHosts()) > 0) {
 				cmd.SetUsageTemplate(" ")
 				return fmt.Errorf("%s", strings.ReplaceAll(`
@@ -134,17 +135,17 @@ For temporary usage:
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+// This is called by main.main(). It only needs to happen once to the RootCmd.
 func Execute() {
-	err := rootCmd.Execute()
+	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }
 
-func RootCmd() *cobra.Command {
-	return rootCmd
-}
+// func RootCmd() *cobra.Command {
+// 	return RootCmd
+// }
 
 // catch misspelling and abbreviations of common flags
 func cmdNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
@@ -216,4 +217,30 @@ func initConfig() {
 
 	// initialise after config loaded
 	host.Init()
+}
+
+// RunE runs a command in a sub-package to avoid import loops. It is
+// named to align with the cobra struct member of the same name.
+//
+// The caller must have:
+//
+//	DisableFlagParsing: true,
+//
+// set in their command struct for flags to work. Then hook this
+// function like this in the command struct:
+//
+//	RunE: func(command *cobra.Command, args []string) (err error) {
+//	     return RunE(command.Root(), []string{"host", "ls"}, args)
+//	},
+func RunE(root *cobra.Command, path []string, args []string) (err error) {
+	alias, newargs, err := root.Find(append(path, args...))
+	if err != nil {
+		return
+	}
+	alias.ParseFlags(newargs)
+	// we have to explicitly test for the help flag for some reason
+	if t, _ := alias.Flags().GetBool("help"); t {
+		return alias.Help()
+	}
+	return alias.RunE(alias, alias.Flags().Args())
 }

@@ -80,7 +80,7 @@ influence the installation.
 		"wildcard": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		log.Debug().Msgf("%s %v %v", ct, args, params)
 		// none of the arguments can be a reserved type
 		if ct != nil {
@@ -96,7 +96,7 @@ influence the installation.
 			log.Fatal().Err(err).Msg("")
 		}
 
-		if err = initMisc(); err != nil {
+		if err = initMisc(cmd); err != nil {
 			return
 		}
 

@@ -45,7 +45,7 @@ var setUserCmd = &cobra.Command{
 		"wildcard": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		_, _, params := cmdArgsParams(cmd)
+		_, _, params := CmdArgsParams(cmd)
 		return writeConfigParams(geneos.UserConfigFilePaths()[0], params)
 	},
 }

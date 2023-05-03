@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 ITRS Group
+Copyright © 2023 ITRS Group
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,30 +23,38 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	setCmd.AddCommand(setGlobalCmd)
-
-	// setGlobalCmd.Flags().SortFlags = false
-}
-
-var setGlobalCmd = &cobra.Command{
-	Use:   "global [KEY=VALUE...]",
-	Short: "Set global configuration parameters",
+// loginCmd represents the login command
+var loginCmd = &cobra.Command{
+	Use:   "login",
+	Short: "Store credentials for software downloads",
 	Long: strings.ReplaceAll(`
 `, "|", "`"),
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		_, _, params := CmdArgsParams(cmd)
-		return writeConfigParams(geneos.GlobalConfigPath, params)
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("login called")
 	},
+}
+
+var loginCmdSiteURL, loginCmdUsername, loginCmdPassword, loginKeyfile string
+
+func init() {
+	RootCmd.AddCommand(loginCmd)
+
+	loginCmd.Flags().StringVarP(&loginCmdSiteURL, "url", "U", config.GetString("download.url"), `URL for download site for these credentials`)
+	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username for downloads, defaults to configuration value in download.username")
+	loginCmd.Flags().StringVarP(&loginCmdPassword, "password", "P", "", "Password for downloads, defaults to configuration value in download.password or otherwise prompts")
+	loginCmd.Flags().StringVarP(&loginKeyfile, "keyfile", "k", UserKeyFile, "Keyfile to use")
+
+	loginCmd.Flags().SortFlags = false
+
 }

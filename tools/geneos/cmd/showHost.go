@@ -23,69 +23,28 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"encoding/json"
-	"fmt"
 	"strings"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/spf13/cobra"
 )
 
-type showHostCmdConfig struct {
-	Name string `json:"name,omitempty"`
-	// Disabled  bool        `json:"disabled"`
-	// Protected bool        `json:"protected"`
-	Config interface{} `json:"config,omitempty"`
-}
-
 func init() {
 	showCmd.AddCommand(showHostCmd)
-
-	showHostCmd.Flags().SortFlags = false
 }
 
 // showHostCmd represents the showHost command
 var showHostCmd = &cobra.Command{
 	Use:   "host [flags] [NAME...]",
-	Short: "Show details of remote host configuration",
+	Short: "Alias for `show host`",
 	Long: strings.ReplaceAll(`
-Show details of remote host configurations. If no names are supplied
-then all configured hosts are shown.
-
-The output is always unprocessed, and so any values in |expandable|
-format are left as-is. This protects, for example, SSH passwords from
-being accidentally shown in clear text.
 `, "|", "`"),
 	Aliases:      []string{"hosts"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		var hosts []*host.Host
-
-		if len(args) == 0 {
-			hosts = host.RemoteHosts()
-		} else {
-			for _, a := range args {
-				h := host.Get(a)
-				if h != nil && h.Exists() {
-					hosts = append(hosts, h)
-				}
-			}
-		}
-
-		var confs []showHostCmdConfig
-
-		for _, h := range hosts {
-			confs = append(confs, showHostCmdConfig{
-				Name:   h.GetString("name"),
-				Config: h.AllSettings(),
-			})
-		}
-
-		b, _ := json.MarshalIndent(confs, "", "    ")
-		fmt.Println(string(b))
-		return
+	DisableFlagParsing: true,
+	RunE: func(command *cobra.Command, args []string) (err error) {
+		return RunE(command.Root(), []string{"host", "show"}, args)
 	},
 }

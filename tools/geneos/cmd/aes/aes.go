@@ -20,27 +20,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package aes
 
 import (
 	"strings"
 
+	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
-	"github.com/spf13/cobra"
 )
 
 var componentsWithKeyfiles = []*geneos.Component{&gateway.Gateway, &netprobe.Netprobe, &san.San}
 
 func init() {
-	rootCmd.AddCommand(aesCmd)
+	cmd.RootCmd.AddCommand(AesCmd)
 	// aesCmd.Flags().SortFlags = false
 
 }
 
-var aesCmd = &cobra.Command{
+var AesCmd = &cobra.Command{
 	Use:   "aes",
 	Short: "Manage Geneos compatible key files and encode/decode passwords",
 	Long: strings.ReplaceAll(`

@@ -34,7 +34,7 @@ import (
 var stopCmdForce, stopCmdKill bool
 
 func init() {
-	rootCmd.AddCommand(stopCmd)
+	RootCmd.AddCommand(stopCmd)
 
 	stopCmd.Flags().BoolVarP(&stopCmdForce, "force", "F", false, "Stop protected instances")
 	stopCmd.Flags().BoolVarP(&stopCmdKill, "kill", "K", false, "Force immediate stop by sending an immediate SIGKILL")
@@ -57,7 +57,7 @@ a |SIGKILL|.
 		"wildcard": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		return instance.ForAll(ct, stopInstance, args, params)
 	},
 }

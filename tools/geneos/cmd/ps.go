@@ -56,7 +56,7 @@ var psCSVWriter *csv.Writer
 var psJSONEncoder *json.Encoder
 
 func init() {
-	rootCmd.AddCommand(psCmd)
+	RootCmd.AddCommand(psCmd)
 
 	psCmd.Flags().BoolVarP(&psCmdShowFiles, "files", "f", false, "Show open files")
 	psCmd.Flags().BoolVarP(&psCmdJSON, "json", "j", false, "Output JSON")
@@ -78,7 +78,7 @@ Show the status of the matching instances.
 		"wildcard": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		return commandPS(ct, args, params)
 	},
 }

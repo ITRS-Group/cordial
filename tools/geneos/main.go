@@ -31,6 +31,12 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 
+	// import subsystems here for command registration
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/aes"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/host"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/package"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/tls"
+
 	// each component type registers itself when imported here
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/ca3"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fa2"

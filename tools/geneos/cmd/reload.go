@@ -31,7 +31,7 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(reloadCmd)
+	RootCmd.AddCommand(reloadCmd)
 
 	// reloadCmd.Flags().SortFlags = false
 }
@@ -48,7 +48,7 @@ Signal the matching instances to reload their configurations, depending on the c
 		"wildcard": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		return instance.ForAll(ct, reloadInstance, args, params)
 	},
 }

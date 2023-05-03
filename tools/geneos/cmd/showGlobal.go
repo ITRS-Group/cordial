@@ -53,7 +53,7 @@ to quickly create a Cobra application.
 		"wildcard": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		// ct, args, params := cmdArgsParams(cmd)
+		// ct, args, params := CmdArgsParams(cmd)
 		var c interface{}
 		var buffer []byte
 

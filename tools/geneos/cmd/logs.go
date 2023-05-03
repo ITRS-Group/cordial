@@ -54,7 +54,7 @@ type files struct {
 var tails *sync.Map
 
 func init() {
-	rootCmd.AddCommand(logsCmd)
+	RootCmd.AddCommand(logsCmd)
 
 	logsCmd.Flags().IntVarP(&logCmdLines, "lines", "n", 10, "Lines to tail")
 	logsCmd.Flags().BoolVarP(&logCmdFollow, "follow", "f", false, "Follow file")
@@ -83,7 +83,7 @@ instance details.
 		"wildcard": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		// validate options
 		if logCmdMatch != "" && logCmdIgnore != "" {
 			log.Fatal().Msg("Only one of -g or -v can be given")
@@ -188,7 +188,7 @@ func tailLines(f io.ReadSeekCloser, end int64, linecount int) (text string, err 
 	}
 	if linecount == 0 {
 		// seek to end and return
-		_, err = f.Seek(0, os.SEEK_END)
+		_, err = f.Seek(0, io.SeekEnd)
 		return
 	}
 

@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package tls
 
 import (
 	"crypto/rand"
@@ -57,7 +57,7 @@ them but configurations will not be rebuilt.
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+	RunE: func(command *cobra.Command, _ []string) (err error) {
 		// _, _, params := processArgsParams(cmd)
 		return tlsInit()
 	},

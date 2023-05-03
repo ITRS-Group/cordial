@@ -20,16 +20,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package tls
 
 import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
 func init() {
-	rootCmd.AddCommand(tlsCmd)
+	cmd.RootCmd.AddCommand(tlsCmd)
 
 	// tlsCmd.Flags().SortFlags = false
 }

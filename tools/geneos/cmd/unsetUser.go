@@ -49,7 +49,7 @@ var unsetUserCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		var changed bool
 
-		_, args := cmdArgs(cmd)
+		_, args := CmdArgs(cmd)
 		orig := readConfigFile(geneos.UserConfigFilePaths()...)
 		new := config.New()
 

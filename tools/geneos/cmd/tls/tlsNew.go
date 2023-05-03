@@ -20,14 +20,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package tls
 
 import (
 	"strings"
 
+	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -46,8 +48,8 @@ Create new certificates for instances.
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+	RunE: func(command *cobra.Command, _ []string) error {
+		ct, args, params := cmd.CmdArgsParams(command)
 		return instance.ForAll(ct, newInstanceCert, args, params)
 	},
 }

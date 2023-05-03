@@ -44,7 +44,7 @@ var snapshotCmdUsername, snapshotCmdPwFile string
 var snapshotCmdPassword []byte
 
 func init() {
-	rootCmd.AddCommand(snapshotCmd)
+	RootCmd.AddCommand(snapshotCmd)
 
 	snapshotCmd.Flags().SortFlags = false
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdValues, "value", "V", true, "Request cell values")
@@ -98,7 +98,7 @@ not applied in any defined order.
 		"wildcard": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		if len(params) == 0 {
 			return fmt.Errorf("no dataview xpath(s) supplied")
 		}
