@@ -36,7 +36,7 @@ import (
 var importCmdCommon, importCmdHostname string
 
 func init() {
-	rootCmd.AddCommand(importCmd)
+	RootCmd.AddCommand(importCmd)
 
 	importCmd.Flags().StringVarP(&importCmdCommon, "common", "c", "", "Import into a common directory instead of matching instances.	For example, if TYPE is 'gateway' and NAME is 'shared' then this common directory is 'gateway/gateway_shared'")
 	importCmd.Flags().StringVarP(&importCmdHostname, "host", "H", "all", "Import only to named host, default is all")
@@ -91,7 +91,7 @@ geneos import gateway -c shared common_include.xml
 		"wildcard": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		return importFiles(ct, args, params)
 	},
 }

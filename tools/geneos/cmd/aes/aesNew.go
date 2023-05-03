@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package aes
 
 import (
 	"fmt"
@@ -30,13 +30,14 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
-	"github.com/spf13/cobra"
 )
 
 var aesNewCmdKeyfile, aesNewCmdHostname, aesNewCmdBackupKeyfile string
@@ -45,7 +46,7 @@ var aesNewCmdImport, aesNewCmdSaveDefault, aesNewCmdOverwriteKeyfile bool
 var aesNewDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
 
 func init() {
-	aesCmd.AddCommand(aesNewCmd)
+	AesCmd.AddCommand(aesNewCmd)
 
 	aesNewCmd.Flags().StringVarP(&aesNewCmdKeyfile, "keyfile", "k", "", "Optional key file to create, defaults to STDOUT. (Will NOT overwrite without -f)")
 	aesNewCmd.Flags().BoolVarP(&aesNewCmdSaveDefault, "default", "D", false, "Save as user default keyfile (will NOT overwrite without -f)")
@@ -79,7 +80,7 @@ setting to support GA6.x key file rolling.
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var crc uint32
 
 		a, err := config.NewAESValues()
@@ -127,7 +128,7 @@ setting to support GA6.x key file rolling.
 				fmt.Printf("saving keyfile with checksum %s\n", crcstr)
 			}
 
-			ct, args, _ := cmdArgsParams(cmd)
+			ct, args, _ := cmd.CmdArgsParams(command)
 			h := host.Get(aesNewCmdHostname)
 
 			for _, ct := range ct.Range(componentsWithKeyfiles...) {

@@ -32,7 +32,7 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(cleanCmd)
+	RootCmd.AddCommand(cleanCmd)
 
 	cleanCmd.Flags().BoolVarP(&cleanCmdFull, "full", "F", false, "Perform a full clean. Removes more files than basic clean and restarts instances")
 	cleanCmd.Flags().SortFlags = false
@@ -72,7 +72,7 @@ geneos clean --full netprobe
 		"wildcard": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		return instance.ForAll(ct, cleanInstance, args, params)
 	},
 }

@@ -23,97 +23,28 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-
-	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
-
-var setHostCmdPrompt bool
-var setHostCmdPassword, setHostDefaultKeyfile, setHostCmdKeyfile string
 
 func init() {
 	setCmd.AddCommand(setHostCmd)
-
-	setHostDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
-
-	setHostCmd.Flags().BoolVarP(&setHostCmdPrompt, "prompt", "p", false, "Prompt for password")
-	setHostCmd.Flags().StringVarP(&setHostCmdPassword, "password", "P", "", "Password")
-	setHostCmd.Flags().StringVarP(&setHostCmdKeyfile, "keyfile", "k", "", "Keyfile")
-
-	setHostCmd.Flags().SortFlags = false
 }
 
 var setHostCmd = &cobra.Command{
 	Use:   "host [flags] [NAME...] [KEY=VALUE...]",
-	Short: "Set remote host configuration value",
+	Short: "Alias for 'host set'",
 	Long: strings.ReplaceAll(`
-Set options on remote host configurations.
+
 `, "|", "`"),
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		_, args, params := cmdArgsParams(cmd)
-		var password string
-		var hosts []*host.Host
-
-		if len(args) == 0 {
-			hosts = host.RemoteHosts()
-		} else {
-			for _, a := range args {
-				h := host.Get(a)
-				if h != nil && h.Exists() {
-					hosts = append(hosts, h)
-				}
-			}
-		}
-		if len(hosts) == 0 {
-			// nothing to do
-			fmt.Println("nothing to do")
-			return nil
-		}
-
-		if setHostCmdKeyfile == "" {
-			setHostCmdKeyfile = setHostDefaultKeyfile
-		}
-
-		// check for passwords
-		if setHostCmdPrompt {
-			if password, err = config.EncodePasswordPrompt(setHostCmdKeyfile, true); err != nil {
-				return
-			}
-		} else if setHostCmdPassword != "" {
-			if password, err = config.EncodeWithKeyfile([]byte(setHostCmdPassword), setHostCmdKeyfile, true); err != nil {
-				return
-			}
-		}
-
-		for _, h := range hosts {
-			for _, set := range params {
-				if !strings.Contains(set, "=") {
-					continue
-				}
-				s := strings.SplitN(set, "=", 2)
-				k, v := s[0], s[1]
-				h.Set(k, v)
-			}
-
-			if password != "" {
-				h.Set("password", password)
-			}
-		}
-
-		if err = host.WriteConfig(); err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
-		return
+	DisableFlagParsing: true,
+	RunE: func(command *cobra.Command, args []string) (err error) {
+		return RunE(command.Root(), []string{"host", "set"}, args)
 	},
 }

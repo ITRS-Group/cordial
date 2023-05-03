@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -36,7 +37,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
-	"github.com/spf13/cobra"
 )
 
 var initCmdAll string
@@ -48,7 +48,7 @@ var initCmdDLPassword []byte
 var initCmdExtras = instance.ExtraConfigValues{}
 
 func init() {
-	rootCmd.AddCommand(initCmd)
+	RootCmd.AddCommand(initCmd)
 
 	// old flags, these are now sub-commands so hide them
 	initCmd.Flags().StringVarP(&initCmdAll, "all", "A", "", "Perform initialisation steps using given license file and start instances")
@@ -154,7 +154,7 @@ sudo geneos init geneos /opt/itrs
 	//
 	// XXX Call any registered initializer funcs from components
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args := cmdArgs(cmd)
+		ct, args := CmdArgs(cmd)
 		log.Debug().Msgf("%s %v", ct, args)
 		// none of the arguments can be a reserved type
 		if ct != nil {
@@ -175,7 +175,7 @@ sudo geneos init geneos /opt/itrs
 			log.Fatal().Err(err).Msg("")
 		}
 
-		if err = initMisc(); err != nil {
+		if err = initMisc(cmd); err != nil {
 			return
 		}
 
@@ -296,7 +296,7 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 	return
 }
 
-func initMisc() (err error) {
+func initMisc(cmd *cobra.Command) (err error) {
 	if initCmdGatewayTemplate != "" {
 		var tmpl []byte
 		if tmpl, err = geneos.ReadFrom(initCmdGatewayTemplate); err != nil {
@@ -318,15 +318,15 @@ func initMisc() (err error) {
 	}
 
 	if initCmdMakeCerts {
-		tlsInit()
+		return RunE(cmd.Root(), []string{"tls", "init"}, []string{})
 	} else {
 		// both options can import arbitrary PEM files, fix this
 		if initCmdImportCert != "" {
-			tlsImport(initCmdImportCert)
+			RunE(cmd.Root(), []string{"tls", "import"}, []string{initCmdImportCert})
 		}
 
 		if initCmdImportKey != "" {
-			tlsImport(initCmdImportKey)
+			RunE(cmd.Root(), []string{"tls", "import"}, []string{initCmdImportKey})
 		}
 	}
 

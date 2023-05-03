@@ -33,7 +33,7 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(homeCmd)
+	RootCmd.AddCommand(homeCmd)
 
 	// homeCmd.Flags().SortFlags = false
 }
@@ -59,7 +59,7 @@ cat $(geneos home gateway example2)/gateway.txt
 		"wildcard": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, _ := cmdArgsParams(cmd)
+		ct, args, _ := CmdArgsParams(cmd)
 		if ct == nil && len(args) == 0 {
 			fmt.Println(host.Geneos())
 			return nil

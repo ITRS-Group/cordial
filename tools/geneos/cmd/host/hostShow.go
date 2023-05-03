@@ -20,32 +20,72 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package host
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
 
-func init() {
-	deleteCmd.AddCommand(deleteHostCmd)
+type hostShowCmdConfig struct {
+	Name string `json:"name,omitempty"`
+	// Disabled  bool        `json:"disabled"`
+	// Protected bool        `json:"protected"`
+	Config interface{} `json:"config,omitempty"`
 }
 
-var deleteHostCmd = &cobra.Command{
-	Use:     "host [flags] NAME...",
-	Aliases: []string{"hosts", "remote", "remotes"},
-	Short:   "Alias for `host delete`",
+func init() {
+	hostCmd.AddCommand(hostShowCmd)
+
+	hostShowCmd.Flags().SortFlags = false
+}
+
+// hostShowCmd represents the hostShow command
+var hostShowCmd = &cobra.Command{
+	Use:   "show [flags] [NAME...]",
+	Short: "Show details of remote host configuration",
 	Long: strings.ReplaceAll(`
-Alias for |host delete|. Please use |geneos host delete| in the
-future as this alias will be removed in an upcoming release.
+Show details of remote host configurations. If no names are supplied
+then all configured hosts are shown.
+
+The output is always unprocessed, and so any values in |expandable|
+format are left as-is. This protects, for example, SSH passwords from
+being accidentally shown in clear text.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
-		return RunE(command.Root(), []string{"host", "delete"}, args)
+		var hosts []*host.Host
+
+		if len(args) == 0 {
+			hosts = host.RemoteHosts()
+		} else {
+			for _, a := range args {
+				h := host.Get(a)
+				if h != nil && h.Exists() {
+					hosts = append(hosts, h)
+				}
+			}
+		}
+
+		var confs []hostShowCmdConfig
+
+		for _, h := range hosts {
+			confs = append(confs, hostShowCmdConfig{
+				Name:   h.GetString("name"),
+				Config: h.AllSettings(),
+			})
+		}
+
+		b, _ := json.MarshalIndent(confs, "", "    ")
+		fmt.Println(string(b))
+		return
 	},
 }

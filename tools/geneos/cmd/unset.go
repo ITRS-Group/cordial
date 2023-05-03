@@ -37,7 +37,7 @@ var unsetCmdWarned bool
 var unsetCmdValues = instance.UnsetConfigValues{}
 
 func init() {
-	rootCmd.AddCommand(unsetCmd)
+	RootCmd.AddCommand(unsetCmd)
 
 	unsetCmd.Flags().VarP(&unsetCmdValues.Keys, "key", "k", "Unset a configuration key item")
 	unsetCmd.Flags().VarP(&unsetCmdValues.Envs, "env", "e", "Remove an environment variable `NAME`")
@@ -70,7 +70,7 @@ geneos unset san -g Gateway1
 		"wildcard": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args := cmdArgs(cmd)
+		ct, args := CmdArgs(cmd)
 		return instance.ForAll(ct, unsetInstance, args, []string{})
 	},
 }

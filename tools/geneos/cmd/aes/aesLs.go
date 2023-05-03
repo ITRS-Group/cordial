@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package aes
 
 import (
 	"encoding/csv"
@@ -31,10 +31,12 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/cobra"
 )
 
 var aesLSTabWriter *tabwriter.Writer
@@ -52,7 +54,7 @@ type aesLsCmdType struct {
 }
 
 func init() {
-	aesCmd.AddCommand(aesLsCmd)
+	AesCmd.AddCommand(aesLsCmd)
 
 	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdJSON, "json", "j", false, "Output JSON")
 	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdIndent, "pretty", "i", false, "Output indented JSON")
@@ -75,8 +77,8 @@ latter "pretty" formatting the output over multiple, indented lines
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmdArgsParams(cmd)
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, args, params := cmd.CmdArgsParams(command)
 
 		switch {
 		case aesLsCmdJSON, aesLsCmdIndent:

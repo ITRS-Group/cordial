@@ -33,7 +33,7 @@ import (
 var startCmdLogs bool
 
 func init() {
-	rootCmd.AddCommand(startCmd)
+	RootCmd.AddCommand(startCmd)
 
 	startCmd.Flags().BoolVarP(&startCmdLogs, "log", "l", false, "Run 'logs -f' after starting instance(s)")
 	startCmd.Flags().SortFlags = false
@@ -53,7 +53,7 @@ in the instance directory. You can watch the resulting logs files with the
 		"wildcard": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		return start(ct, startCmdLogs, args, params)
 	},
 }

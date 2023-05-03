@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package tls
 
 import (
 	"bytes"
@@ -32,10 +32,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
 
 // tlsImportCmd represents the tlsImport command
@@ -55,8 +57,8 @@ certificates with matching private keys are imported.
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		_, args, _ := cmdArgsParams(cmd)
+	RunE: func(command *cobra.Command, _ []string) error {
+		_, args, _ := cmd.CmdArgsParams(command)
 		return tlsImport(args...)
 	},
 }

@@ -20,20 +20,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package aes
 
 import (
 	"bytes"
 	"fmt"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
-	"github.com/spf13/cobra"
 )
 
 var aesEncodeCmdAESFILE, aesEncodeCmdString, aesEncodeCmdSource string
@@ -44,7 +46,7 @@ var aesEncodeCmdExpandable, aesEncodeCmdAskOnce bool
 var plaintext []byte
 
 func init() {
-	aesCmd.AddCommand(aesEncodeCmd)
+	AesCmd.AddCommand(aesEncodeCmd)
 
 	// aesEncodeDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
 
@@ -72,7 +74,7 @@ match then the given password is encoded for each keyfile found.
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
-	RunE: func(cmd *cobra.Command, origargs []string) (err error) {
+	RunE: func(command *cobra.Command, origargs []string) (err error) {
 		if aesEncodeCmdString != "" {
 			plaintext = []byte(aesEncodeCmdString)
 		} else if aesEncodeCmdSource != "" {
@@ -110,7 +112,7 @@ match then the given password is encoded for each keyfile found.
 			return nil
 		}
 
-		ct, args := cmdArgs(cmd)
+		ct, args := cmd.CmdArgs(command)
 		err = instance.ForAll(ct, aesEncodeInstance, args, []string{})
 		plaintext = bytes.Repeat([]byte{0}, len(plaintext))
 		return

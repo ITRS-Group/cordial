@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 ITRS Group
+Copyright © 2023 ITRS Group
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,33 +20,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package pkg // "package" is a reserved word
 
 import (
-	"strings"
+	"fmt"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
-func init() {
-	setCmd.AddCommand(setGlobalCmd)
+// packageCmd represents the package command
+var packageCmd = &cobra.Command{
+	Use:   "package",
+	Short: "A brief description of your command",
+	Long: `A longer description that spans multiple lines and likely contains examples
+and usage of using your command. For example:
 
-	// setGlobalCmd.Flags().SortFlags = false
+Cobra is a CLI library for Go that empowers applications.
+This application is a tool to generate the needed files
+to quickly create a Cobra application.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("package called")
+	},
 }
 
-var setGlobalCmd = &cobra.Command{
-	Use:   "global [KEY=VALUE...]",
-	Short: "Set global configuration parameters",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
-	Annotations: map[string]string{
-		"wildcard": "false",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		_, _, params := CmdArgsParams(cmd)
-		return writeConfigParams(geneos.GlobalConfigPath, params)
-	},
+func init() {
+	cmd.RootCmd.AddCommand(packageCmd)
 }

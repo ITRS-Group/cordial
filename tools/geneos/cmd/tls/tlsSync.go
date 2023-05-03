@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package tls
 
 import (
 	"fmt"
@@ -55,7 +55,7 @@ exist.
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		return tlsSync()
 	},
 }

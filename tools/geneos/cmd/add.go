@@ -49,7 +49,7 @@ var addCmdPort uint16
 var addCmdExtras = instance.ExtraConfigValues{}
 
 func init() {
-	rootCmd.AddCommand(addCmd)
+	RootCmd.AddCommand(addCmd)
 
 	addCmd.Flags().StringVarP(&addCmdTemplate, "template", "T", "", "template file to use instead of default")
 	addCmd.Flags().BoolVarP(&addCmdStart, "start", "S", false, "Start new instance(s) after creation")
@@ -96,7 +96,7 @@ geneos add netprobe infraprobe12 --start --log
 	},
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args := cmdArgs(cmd)
+		ct, args := CmdArgs(cmd)
 		return addInstance(ct, addCmdExtras, args...)
 	},
 }

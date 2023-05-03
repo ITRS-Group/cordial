@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package pkg
 
 import (
 	"errors"
@@ -30,29 +30,31 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
-var uninstallCmdHost, uninstallCmdVersion string
-var uninstallCmdAll, uninstallCmdForce bool
+var packageUninstallCmdHost, packageUninstallCmdVersion string
+var packageUninstallCmdAll, packageUninstallCmdForce bool
 
 func init() {
-	rootCmd.AddCommand(uninstallCmd)
+	packageCmd.AddCommand(packageUninstallCmd)
 
-	uninstallCmd.Flags().BoolVarP(&uninstallCmdAll, "all", "A", false, "Uninstall all releases, stopping and disabling running instances")
-	uninstallCmd.Flags().BoolVarP(&uninstallCmdForce, "force", "f", false, "Force uninstall, stopping protected instances first")
-	uninstallCmd.Flags().StringVarP(&uninstallCmdHost, "host", "H", string(host.ALLHOSTS), "Perform on a remote host. \"all\" means all hosts and locally")
-	uninstallCmd.Flags().StringVarP(&uninstallCmdVersion, "version", "V", "", "Uninstall a specific version")
+	packageUninstallCmd.Flags().BoolVarP(&packageUninstallCmdAll, "all", "A", false, "Uninstall all releases, stopping and disabling running instances")
+	packageUninstallCmd.Flags().BoolVarP(&packageUninstallCmdForce, "force", "f", false, "Force uninstall, stopping protected instances first")
+	packageUninstallCmd.Flags().StringVarP(&packageUninstallCmdHost, "host", "H", string(host.ALLHOSTS), "Perform on a remote host. \"all\" means all hosts and locally")
+	packageUninstallCmd.Flags().StringVarP(&packageUninstallCmdVersion, "version", "V", "", "Uninstall a specific version")
 
-	uninstallCmd.Flags().SortFlags = false
+	packageUninstallCmd.Flags().SortFlags = false
 }
 
-// uninstallCmd represents the uninstall command
-var uninstallCmd = &cobra.Command{
+// packageUninstallCmd represents the uninstall command
+var packageUninstallCmd = &cobra.Command{
 	Use:   "uninstall [flags] [TYPE]",
 	Short: "Uninstall Geneos releases",
 	Long: strings.ReplaceAll(`
@@ -91,9 +93,9 @@ geneos uninstall --version 5.14.1
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, _ := cmdArgs(cmd)
-		h := host.Get(uninstallCmdHost)
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, _ := cmd.CmdArgs(command)
+		h := host.Get(packageUninstallCmdHost)
 
 		for _, h := range h.Range(host.AllHosts()...) {
 			for _, ct := range ct.Range(geneos.RealComponents()...) {
@@ -110,9 +112,9 @@ geneos uninstall --version 5.14.1
 				// save candidates for removal
 				removeReleases := map[string]geneos.ReleaseDetails{}
 				for _, i := range r {
-					if uninstallCmdAll || // --all
-						(uninstallCmdVersion == "" && !i.Latest) || // default leave 'latest'
-						uninstallCmdVersion == i.Version { // specific --version
+					if packageUninstallCmdAll || // --all
+						(packageUninstallCmdVersion == "" && !i.Latest) || // default leave 'latest'
+						packageUninstallCmdVersion == i.Version { // specific --version
 						removeReleases[i.Version] = i
 					}
 				}
@@ -135,9 +137,9 @@ geneos uninstall --version 5.14.1
 						continue
 					}
 
-					if instance.IsProtected(c) && !uninstallCmdForce {
+					if instance.IsProtected(c) && !packageUninstallCmdForce {
 						fmt.Printf("%s is marked protected and uses version %s, skipping\n", c, version)
-					} else if !instance.IsProtected(c) || uninstallCmdForce {
+					} else if !instance.IsProtected(c) || packageUninstallCmdForce {
 						if _, err := instance.GetPID(c); err != os.ErrProcessDone {
 							restart[version] = append(restart[version], c)
 						}
@@ -160,7 +162,7 @@ geneos uninstall --version 5.14.1
 						stopped = append(stopped, c)
 					}
 					if len(release.Links) != 0 {
-						if uninstallCmdAll {
+						if packageUninstallCmdAll {
 							// remove all links to this release if given --all flag
 							for _, l := range release.Links {
 								h.Remove(filepath.Join(basedir, l))

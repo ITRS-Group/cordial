@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 ITRS Group
+Copyright © 2023 ITRS Group
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,33 +20,30 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package host
 
 import (
 	"strings"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
-func init() {
-	setCmd.AddCommand(setGlobalCmd)
-
-	// setGlobalCmd.Flags().SortFlags = false
-}
-
-var setGlobalCmd = &cobra.Command{
-	Use:   "global [KEY=VALUE...]",
-	Short: "Set global configuration parameters",
+// hostCmd represents the host command
+var hostCmd = &cobra.Command{
+	Use:   "host",
+	Short: "Manage remote host settings",
 	Long: strings.ReplaceAll(`
+Manage remote host settings. Without a subcommand defaults to |ls| of hosts.
 `, "|", "`"),
-	SilenceUsage:          true,
-	DisableFlagsInUseLine: true,
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		_, _, params := CmdArgsParams(cmd)
-		return writeConfigParams(geneos.GlobalConfigPath, params)
-	},
+	RunE: hostLsCmd.RunE,
+}
+
+func init() {
+	cmd.RootCmd.AddCommand(hostCmd)
 }

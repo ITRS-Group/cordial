@@ -211,7 +211,7 @@ func parseArgs(cmd *cobra.Command, rawargs []string) (err error) {
 	return
 }
 
-func cmdArgs(cmd *cobra.Command) (ct *geneos.Component, args []string) {
+func CmdArgs(cmd *cobra.Command) (ct *geneos.Component, args []string) {
 	log.Debug().Msgf("%s %v", cmd.Annotations, ct)
 	ct = geneos.ParseComponentName(cmd.Annotations["ct"])
 	if err := json.Unmarshal([]byte(cmd.Annotations["args"]), &args); err != nil {
@@ -220,8 +220,8 @@ func cmdArgs(cmd *cobra.Command) (ct *geneos.Component, args []string) {
 	return
 }
 
-func cmdArgsParams(cmd *cobra.Command) (ct *geneos.Component, args, params []string) {
-	ct, args = cmdArgs(cmd)
+func CmdArgsParams(cmd *cobra.Command) (ct *geneos.Component, args, params []string) {
+	ct, args = CmdArgs(cmd)
 	if err := json.Unmarshal([]byte(cmd.Annotations["params"]), &params); err != nil {
 		log.Debug().Err(err).Msg("")
 	}

@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package aes
 
 import (
 	"errors"
@@ -29,19 +29,21 @@ import (
 	"io/fs"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 var aesSetCmdKeyfile, aesSetCmdCRC string
 var aesSetCmdNoRoll bool
 
 func init() {
-	aesCmd.AddCommand(aesSetCmd)
+	AesCmd.AddCommand(aesSetCmd)
 
 	defKeyFile := geneos.UserConfigFilePaths("keyfile.aes")[0]
 
@@ -89,8 +91,8 @@ will not result in that file being copies to other hosts.
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args := cmdArgs(cmd)
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, args := cmd.CmdArgs(command)
 
 		var crclist []string
 		var f io.ReadCloser

@@ -46,7 +46,7 @@ type showCmdConfig struct {
 var showCmdRaw bool
 
 func init() {
-	rootCmd.AddCommand(showCmd)
+	RootCmd.AddCommand(showCmd)
 
 	showCmd.Flags().BoolVarP(&showCmdRaw, "raw", "r", false, "Show raw (unexpanded) configuration values")
 
@@ -90,7 +90,7 @@ to prevent visibility in casual viewing.
 			return nil
 		}
 
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		results, err := instance.ForAllWithResults(ct, showInstance, args, params)
 		if err != nil {
 			if err == os.ErrNotExist {

@@ -20,24 +20,26 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package aes
 
 import (
 	"fmt"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 var aesImportCmdKeyfile, aesImportCmdHostname string
 
 func init() {
-	aesCmd.AddCommand(aesImportCmd)
+	AesCmd.AddCommand(aesImportCmd)
 
 	defKeyFile := geneos.UserConfigFilePaths("keyfile.aes")[0]
 	aesImportCmd.Flags().StringVarP(&aesImportCmdKeyfile, "keyfile", "k", defKeyFile, "Keyfile to use")
@@ -71,8 +73,8 @@ type.
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, _, _ := cmdArgsParams(cmd)
+	RunE: func(command *cobra.Command, _ []string) error {
+		ct, _, _ := cmd.CmdArgsParams(command)
 
 		f, _, err := geneos.Open(aesImportCmdKeyfile)
 		if err != nil {
@@ -101,7 +103,7 @@ type.
 
 func aesImportSave(ct *geneos.Component, h *host.Host, a *config.AESValues) (err error) {
 	if ct == nil || h == nil || a == nil {
-		return ErrInvalidArgs
+		return cmd.ErrInvalidArgs
 	}
 
 	crc, err := a.Checksum()

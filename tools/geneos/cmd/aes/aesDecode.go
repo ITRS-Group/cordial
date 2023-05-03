@@ -20,34 +20,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package aes
 
 import (
 	"fmt"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 var aesDecodeCmdAESFILE, aesDecodeCmdPrevAESFILE, aesDecodeCmdPassword, aesDecodeCmdSource, aesDecodeCmdExpandString string
-var defKeyFile, defPrevKeyFile string
+var aesPrevUserKeyFile string
 
 func init() {
-	aesCmd.AddCommand(aesDecodeCmd)
+	AesCmd.AddCommand(aesDecodeCmd)
 
-	defKeyFile = geneos.UserConfigFilePaths("keyfile.aes")[0]
-	defPrevKeyFile = geneos.UserConfigFilePaths("prevkeyfile.aes")[0]
+	cmd.UserKeyFile = geneos.UserConfigFilePaths("keyfile.aes")[0]
+	aesPrevUserKeyFile = geneos.UserConfigFilePaths("prevkeyfile.aes")[0]
 
 	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdExpandString, "expand", "e", "", "A string in ExpandString format (including '${...}') to decode")
-	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdAESFILE, "keyfile", "k", defKeyFile, "Main AES key file to use")
-	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPrevAESFILE, "previous", "v", defPrevKeyFile, "Previous AES key file to use")
+	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdAESFILE, "keyfile", "k", cmd.UserKeyFile, "Main AES key file to use")
+	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPrevAESFILE, "previous", "v", aesPrevUserKeyFile, "Previous AES key file to use")
 	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPassword, "password", "p", "", "Password to decode")
 	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdSource, "source", "s", "", "Source for password to use")
 
@@ -77,7 +79,7 @@ in the value. All other flags and arguments are ignored.
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		var ciphertext string
 
 		// XXX Allow -e to provide non-inline sources, e.g. stdin, file etc.
@@ -87,7 +89,7 @@ in the value. All other flags and arguments are ignored.
 		}
 
 		if aesDecodeCmdExpandString != "" {
-			return fmt.Errorf("%w: expandable string must be of the form '${enc:keyfile:ciphertext}'", ErrInvalidArgs)
+			return fmt.Errorf("%w: expandable string must be of the form '${enc:keyfile:ciphertext}'", cmd.ErrInvalidArgs)
 		}
 
 		if aesDecodeCmdPassword != "" {
@@ -124,11 +126,11 @@ in the value. All other flags and arguments are ignored.
 			return nil
 		}
 
-		if aesDecodeCmdAESFILE != defKeyFile || aesDecodeCmdPrevAESFILE != defPrevKeyFile {
+		if aesDecodeCmdAESFILE != cmd.UserKeyFile || aesDecodeCmdPrevAESFILE != aesPrevUserKeyFile {
 			return fmt.Errorf("decode failed with key file(s) provided")
 		}
 
-		ct, args, _ := cmdArgsParams(cmd)
+		ct, args, _ := cmd.CmdArgsParams(command)
 		params := []string{ciphertext}
 		return instance.ForAll(ct, aesDecodeInstance, args, params)
 	},

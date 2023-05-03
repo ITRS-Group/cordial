@@ -52,7 +52,7 @@ var lsTabWriter *tabwriter.Writer
 var LsCSVWriter *csv.Writer
 
 func init() {
-	rootCmd.AddCommand(lsCmd)
+	RootCmd.AddCommand(lsCmd)
 
 	lsCmd.PersistentFlags().BoolVarP(&lsCmdJSON, "json", "j", false, "Output JSON")
 	lsCmd.PersistentFlags().BoolVarP(&lsCmdIndent, "pretty", "i", false, "Output indented JSON")
@@ -76,7 +76,7 @@ latter "pretty" formatting the output over multiple, indented lines.
 		"wildcard": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		switch {
 		case lsCmdJSON, lsCmdIndent:
 			results, _ := instance.ForAllWithResults(ct, lsInstanceJSON, args, params)

@@ -34,7 +34,7 @@ import (
 var deleteCmdForce bool
 
 func init() {
-	rootCmd.AddCommand(deleteCmd)
+	RootCmd.AddCommand(deleteCmd)
 
 	deleteCmd.Flags().BoolVarP(&deleteCmdForce, "force", "F", false, "Force delete of instances")
 
@@ -57,7 +57,7 @@ and a partial deletion cannot be protected against.
 		"wildcard": "true",
 	},
 	RunE: func(cmd *cobra.Command, allargs []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 
 		return instance.ForAll(ct, deleteInstance, args, params)
 	},
