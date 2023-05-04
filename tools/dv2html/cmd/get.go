@@ -100,7 +100,6 @@ var getCmd = &cobra.Command{
 	Long: strings.ReplaceAll(`
 Get a Dataview from a Gateway and convert to HTML using a template and CSS.
 `, "|", "`"),
-	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var u *url.URL
 		var err error
@@ -136,9 +135,7 @@ Get a Dataview from a Gateway and convert to HTML using a template and CSS.
 		cf.SetDefault("html-template", getCmdHTML)
 
 		htmlTemplate := htmlDefaultTemplate
-		if h, err := cf.ExpandRawString(cf.GetString("html-template")); err != nil {
-			log.Fatal().Err(err).Msg("")
-		} else if h != "" {
+		if h := cf.GetString("html-template"); h != "" {
 			htmlTemplate = h
 		}
 
@@ -147,9 +144,11 @@ Get a Dataview from a Gateway and convert to HTML using a template and CSS.
 			log.Fatal().Err(err).Msg("")
 		}
 
+		cf.SetDefault("css-data", cssData)
+
 		tmplData := templateData{
 			CSSURL:    cf.GetString("css-url"),
-			CSSDATA:   cssData,
+			CSSDATA:   template.CSS(cf.GetString("css-data")),
 			Dataviews: []*commands.Dataview{},
 			Env:       make(map[string]string, len(os.Environ())),
 		}
@@ -157,6 +156,11 @@ Get a Dataview from a Gateway and convert to HTML using a template and CSS.
 		for _, e := range os.Environ() {
 			n := strings.SplitN(e, "=", 2)
 			tmplData.Env[n[0]] = n[1]
+		}
+
+		// get the variable XPath from environment if not on command line
+		if len(args) == 0 && cf.IsSet("_variablepath") {
+			args = []string{cf.GetString("_variablepath")}
 		}
 
 		for _, d := range args {
