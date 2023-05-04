@@ -26,7 +26,6 @@ import (
 	_ "embed"
 	"fmt"
 	"html/template"
-	"io"
 	"net/url"
 	"os"
 	"path"
@@ -34,7 +33,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/email"
 	"github.com/itrs-group/cordial/pkg/xpath"
 
 	"github.com/rs/zerolog/log"
@@ -46,7 +44,7 @@ var getCmdHeadlinesFilter, getCmdColumnFilter, getCmdRowFilter, getCmdOutput str
 
 var getCmdGatewayPort, getCmdMaxDataviews int
 
-var getCmdUseTLS, getCmdAllowInsecure, getCmdEMail bool
+var getCmdUseTLS, getCmdAllowInsecure bool
 
 func init() {
 	rootCmd.AddCommand(getCmd)
@@ -63,7 +61,6 @@ func init() {
 	getCmd.Flags().StringVarP(&getCmdGatewayPassword, "password", "p", "", "Gateway Password")
 
 	getCmd.Flags().StringVarP(&getCmdOutput, "output", "o", "", "output file. default stdout")
-	getCmd.Flags().BoolVarP(&getCmdEMail, "email", "E", false, "Send as Email using Geneos environment variables for email details")
 
 	getCmd.Flags().StringVar(&getCmdHeadlinesFilter, "headlines", "", "comma separated, ordered list of headlines to include. empty means all")
 	getCmd.Flags().StringVar(&getCmdColumnFilter, "columns", "", "comma separated, ordered list of columns to include. empty means all")
@@ -73,7 +70,6 @@ func init() {
 	getCmd.Flags().StringVar(&getCmdCSS, "css", "", "path to css file, file or URL")
 
 	getCmd.MarkFlagsMutuallyExclusive("url", "host")
-	getCmd.MarkFlagsMutuallyExclusive("output", "email")
 }
 
 // default html and css templates
@@ -255,35 +251,9 @@ Get a Dataview from a Gateway and convert to HTML using a template and CSS.
 				log.Fatal().Err(err).Msg("")
 			}
 			defer out.Close()
-		} else if getCmdEMail {
-			em := config.New()
-			em.Set("_SMTP_USERNAME", cf.GetString("email.username"))
-			em.Set("_SMTP_PASSWORD", cf.GetString("email.password", config.RawString()))
-			em.Set("_SMTP_SERVER", cf.GetString("email.smtp", config.Default("localhost")))
-			em.Set("_SMTP_PORT", cf.GetInt("email.port", config.Default(25)))
-			em.Set("_FROM", cf.GetString("email.from"))
-			em.Set("_TO", cf.GetString("email.to"))
-			// em.Set("_SUBJECT", "Test 1")
+		}
 
-			d, err := email.Dial(em)
-			if err != nil {
-				log.Fatal().Err(err).Msg("")
-			}
-
-			m, err := email.Envelope(em)
-			if err != nil {
-				log.Fatal().Err(err).Msg("")
-			}
-			m.SetHeader("Subject", "Dataview")
-			m.SetBodyWriter("text/html", func(w io.Writer) error {
-				return t.Execute(w, tmplData)
-			})
-
-			err = d.DialAndSend(m)
-			if err != nil {
-				log.Fatal().Err(err).Msg("")
-			}
-		} else if err = t.Execute(out, tmplData); err != nil {
+		if err = t.Execute(out, tmplData); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 	},
