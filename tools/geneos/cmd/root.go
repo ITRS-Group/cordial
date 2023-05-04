@@ -104,15 +104,16 @@ $ geneos ps
 		// check initialisation
 		geneosdir := host.Geneos()
 		if geneosdir == "" {
-			// commands that do not require geneos home to be set - make this a pair of slices to test
-			if !(cmd == versionCmd ||
-				cmd == initCmd ||
-				cmd == setUserCmd ||
-				cmd == setGlobalCmd ||
-				cmd == addHostCmd ||
-				cmd.Parent().Name() == "init" ||
-				cmd.Parent().Name() == "aes" ||
-				len(host.RemoteHosts()) > 0) {
+			// commands that do not require geneos home to be set - use
+			// a const/var to iterate over to test this
+			if !(!cmd.HasParent() &&
+				(cmd.Name() == "version" ||
+					cmd.Name() == "init")) ||
+				(cmd.Parent().Name() == "set" && (cmd.Name() == "user" || cmd.Name() == "global") ||
+					(cmd.Parent().Name() == "host") ||
+					cmd.Parent().Name() == "init" ||
+					cmd.Parent().Name() == "aes" ||
+					len(host.RemoteHosts()) > 0) {
 				cmd.SetUsageTemplate(" ")
 				return fmt.Errorf("%s", strings.ReplaceAll(`
 Geneos installation directory not set.
