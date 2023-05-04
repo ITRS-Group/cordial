@@ -24,6 +24,7 @@ package aes
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -43,8 +44,6 @@ var aesEncodeCmdExpandable, aesEncodeCmdAskOnce bool
 
 // var aesEncodeDefaultKeyfile string
 
-var plaintext []byte
-
 func init() {
 	AesCmd.AddCommand(aesEncodeCmd)
 
@@ -63,18 +62,19 @@ var aesEncodeCmd = &cobra.Command{
 	Use:   "encode [flags] [TYPE] [NAME...]",
 	Short: "Encode a password using a Geneos compatible keyfile",
 	Long: strings.ReplaceAll(`
-Encode a password (or any other string) using a Geneos compatible keyfile.
-
-By default the user is prompted to enter a password but can provide a
-string or URL with the |-p| option. If TYPE and NAME are given then
-the key files are checked for those instances. If multiple instances
-match then the given password is encoded for each keyfile found.
-`, "|", "`"),
+	Encode a password (or any other string) using a Geneos compatible keyfile.
+	
+	By default the user is prompted to enter a password but can provide a
+	string or URL with the |-p| option. If TYPE and NAME are given then
+	the key files are checked for those instances. If multiple instances
+	match then the given password is encoded for each keyfile found.
+	`, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
+		var plaintext []byte
 		if aesEncodeCmdString != "" {
 			plaintext = []byte(aesEncodeCmdString)
 		} else if aesEncodeCmdSource != "" {
@@ -113,8 +113,8 @@ match then the given password is encoded for each keyfile found.
 		}
 
 		ct, args := cmd.CmdArgs(command)
-		err = instance.ForAll(ct, aesEncodeInstance, args, []string{})
-		plaintext = bytes.Repeat([]byte{0}, len(plaintext))
+		err = instance.ForAll(ct, aesEncodeInstance, args, []string{base64.StdEncoding.EncodeToString(plaintext)})
+		// plaintext = bytes.Repeat([]byte{0}, len(plaintext)) // zero plaintext when done - not for now
 		return
 	},
 }
@@ -128,6 +128,7 @@ func aesEncodeInstance(c geneos.Instance, params []string) (err error) {
 		return
 	}
 
+	plaintext, _ := base64.StdEncoding.DecodeString(params[0])
 	e, err := config.EncodeWithKeyfile(plaintext, keyfile, aesEncodeCmdExpandable)
 	if err != nil {
 		return
