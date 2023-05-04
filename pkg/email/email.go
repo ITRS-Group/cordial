@@ -80,7 +80,7 @@ func Dial(conf *config.Config) (d *mail.Dialer, err error) {
 		username := conf.GetString("_SMTP_USERNAME")
 		// get the password from the file given or continue with
 		// an empty string
-		password := config.GetString("_SMTP_PASSWORD")
+		password := conf.GetString("_SMTP_PASSWORD")
 		// the password can be empty at this point. this is valid, even if a bit dumb.
 
 		d = mail.NewDialer(server, port, username, password)
