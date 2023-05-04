@@ -1,21 +1,16 @@
 ## geneos add host
 
-Add a remote host
+Alias for `host add`
 
 ### Synopsis
 
 
-Add a remote host for integration with other commands.
+Alias for `host add`. Please use `geneos host add` in the future as
+this alias will be removed in an upcoming release.
 
 
 ```
 geneos add host [flags] [NAME] [SSHURL]
-```
-
-### Options
-
-```
-  -I, --init   Initialise the remote host directories and component files
 ```
 
 ### Options inherited from parent commands

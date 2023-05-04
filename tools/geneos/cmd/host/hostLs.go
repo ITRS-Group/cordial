@@ -52,7 +52,7 @@ var hostLsTabWriter *tabwriter.Writer
 var hostLsCSVWriter *csv.Writer
 
 func init() {
-	hostCmd.AddCommand(hostLsCmd)
+	HostCmd.AddCommand(hostLsCmd)
 
 	hostLsCmd.Flags().BoolVarP(&hostLsCmdJSON, "json", "j", false, "Output JSON")
 	hostLsCmd.Flags().BoolVarP(&hostLsCmdIndent, "pretty", "i", false, "Output indented JSON")

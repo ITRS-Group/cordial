@@ -15,6 +15,12 @@ never changed.
 geneos revert [TYPE] [NAME...] [flags]
 ```
 
+### Options
+
+```
+  -X, --executables   Revert 'ctl' executables
+```
+
 ### Options inherited from parent commands
 
 ```

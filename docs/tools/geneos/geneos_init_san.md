@@ -42,7 +42,6 @@ geneos init san [flags] [USERNAME] [DIRECTORY]
   -V, --version VERSION              Download this VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
   -A, --archive PATH or URL          PATH or URL to software archive to install
   -T, --override [TYPE:]VERSION      Override the [TYPE:]VERSION for archive files with non-standard names
-  -e, --env NAME=VALUE               Add an environment variable in the format NAME=VALUE. Repeat flag for more values.
   -g, --gateway HOSTNAME:PORT        Add gateway in the format NAME:PORT. Repeat flag for more gateways.
   -a, --attribute NAME=VALUE         Add an attribute in the format NAME=VALUE. Repeat flag for more attributes.
   -t, --type NAME                    Add a type NAME. Repeat flag for more types.
@@ -53,6 +52,7 @@ geneos init san [flags] [USERNAME] [DIRECTORY]
 
 ```
   -G, --config string                config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -e, --env NAME=VALUE               Add an environment variable in the format NAME=VALUE. Repeat flag for more values.
   -F, --force                        Be forceful, ignore existing directories.
   -w, --gatewaytemplate string       A gateway template file
   -c, --importcert string            signing certificate file with optional embedded private key

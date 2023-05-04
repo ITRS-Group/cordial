@@ -6,10 +6,15 @@ Add a new instance
 
 
 Add a new instance of a component TYPE with the name NAME. The
-details will depends on the TYPE.
+details will depends on the component TYPE and are saved to a
+configuration file in the instance directory. The instance directory
+can be found using the `geneos home TYPE NAME` command.
+
+The default configuration file format and extension is `json`. There will
+be support for `yaml` in future releases for easier human editing.
 	
 Gateways and SANs are given a configuration file based on the templates
-configured.
+configured for the different components.
 
 
 ```
@@ -53,5 +58,5 @@ geneos add netprobe infraprobe12 --start --log
 ### SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-* [geneos add host](geneos_add_host.md)	 - Add a remote host
+* [geneos add host](geneos_add_host.md)	 - Alias for `host add`
 

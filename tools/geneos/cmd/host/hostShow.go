@@ -40,7 +40,7 @@ type hostShowCmdConfig struct {
 }
 
 func init() {
-	hostCmd.AddCommand(hostShowCmd)
+	HostCmd.AddCommand(hostShowCmd)
 
 	hostShowCmd.Flags().SortFlags = false
 }

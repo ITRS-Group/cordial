@@ -40,7 +40,7 @@ var packageUpdateCmdBase, packageUpdateCmdHost, packageUpdateCmdVersion string
 var packageUpdateCmdForce, packageUpdateCmdRestart bool
 
 func init() {
-	packageCmd.AddCommand(packageUpdateCmd)
+	PackageCmd.AddCommand(packageUpdateCmd)
 
 	packageUpdateCmd.Flags().StringVarP(&packageUpdateCmdVersion, "version", "V", "latest", "Update to this version, defaults to latest")
 

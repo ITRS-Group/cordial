@@ -1,4 +1,4 @@
-## geneos ls host
+## geneos host ls
 
 List hosts, optionally in CSV or JSON format
 
@@ -9,19 +9,24 @@ List the matching remote hosts.
 
 
 ```
-geneos ls host [flags] [TYPE] [NAME...]
+geneos host ls [flags] [TYPE] [NAME...]
+```
+
+### Options
+
+```
+  -j, --json     Output JSON
+  -i, --pretty   Output indented JSON
+  -c, --csv      Output CSV
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -c, --csv             Output CSV
-  -j, --json            Output JSON
-  -i, --pretty          Indent (pretty print) JSON
 ```
 
 ### SEE ALSO
 
-* [geneos ls](geneos_ls.md)	 - List instances, optionally in CSV or JSON format
+* [geneos host](geneos_host.md)	 - Manage remote host settings
 

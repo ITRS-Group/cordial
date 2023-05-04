@@ -30,8 +30,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
-// packageCmd represents the package command
-var packageCmd = &cobra.Command{
+// PackageCmd represents the package command
+var PackageCmd = &cobra.Command{
 	Use:   "package",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
@@ -46,5 +46,5 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	cmd.RootCmd.AddCommand(packageCmd)
+	cmd.RootCmd.AddCommand(PackageCmd)
 }

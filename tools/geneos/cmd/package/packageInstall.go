@@ -40,7 +40,7 @@ var packageInstallCmdBase, packageInstallCmdHost, packageInstallCmdOverride, pac
 var packageInstallCmdPassword []byte
 
 func init() {
-	packageCmd.AddCommand(packageInstallCmd)
+	PackageCmd.AddCommand(packageInstallCmd)
 
 	packageInstallCmd.Flags().StringVarP(&packageInstallCmdBase, "base", "b", "active_prod", "Override the base active_prod link name")
 

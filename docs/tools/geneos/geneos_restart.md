@@ -19,9 +19,10 @@ geneos restart [flags] [TYPE] [NAME...]
 ### Options
 
 ```
-  -a, --all    Start all matcheing instances, not just those already running
-  -K, --kill   Force stop by sending an immediate SIGKILL
-  -l, --log    Run 'logs -f' after starting instance(s)
+  -a, --all     Start all matching instances, not just those already running
+  -F, --force   Force restart of protected instances
+  -K, --kill    Force stop by sending an immediate SIGKILL
+  -l, --log     Run 'logs -f' after starting instance(s)
 ```
 
 ### Options inherited from parent commands

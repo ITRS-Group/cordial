@@ -42,7 +42,7 @@ var hostAddCmdInit, hostAddCmdPrompt bool
 var hostAddCmdPassword, hostAddCmdKeyfile, hostAddDefaultKeyfile string
 
 func init() {
-	hostCmd.AddCommand(hostAddCmd)
+	HostCmd.AddCommand(hostAddCmd)
 
 	hostAddDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
 

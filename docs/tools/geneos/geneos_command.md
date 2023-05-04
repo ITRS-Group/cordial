@@ -5,8 +5,7 @@ Show command line and environment for launching instances
 ### Synopsis
 
 
-Show the command line for the matching instances along with any
-environment variables explicitly set for execution.
+Show for each of the matching instance the command line that would be used to run it as well as any environment variables.
 
 
 ```

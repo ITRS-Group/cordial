@@ -1,23 +1,16 @@
 ## geneos delete host
 
-Delete a remote host configuration
+Alias for `host delete`
 
 ### Synopsis
 
 
-Delete the local configuration referring to a remote host.
+Alias for `host delete`. Please use `geneos host delete` in the
+future as this alias will be removed in an upcoming release.
 
 
 ```
 geneos delete host [flags] NAME...
-```
-
-### Options
-
-```
-  -F, --force   Delete instances without checking if disabled
-  -R, --all     Recursively delete all instances on the host before removing the host config
-  -S, --stop    Stop all instances on the host before deleting the local entry
 ```
 
 ### Options inherited from parent commands

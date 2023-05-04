@@ -15,8 +15,9 @@ geneos ps [flags] [TYPE] [NAMES...]
 ### Options
 
 ```
+  -f, --files    Show open files
   -j, --json     Output JSON
-  -i, --pretty   Indent / pretty print JSON
+  -i, --pretty   Output indented JSON
   -c, --csv      Output CSV
 ```
 

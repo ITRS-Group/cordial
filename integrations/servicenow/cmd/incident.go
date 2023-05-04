@@ -44,7 +44,7 @@ var short, text, rawtext, search, severity, id, rawid string
 var update_only bool
 
 func init() {
-	rootCmd.AddCommand(incidentCmd)
+	RootCmd.AddCommand(incidentCmd)
 
 	incidentCmd.Flags().StringVarP(&short, "short", "s", "", "short description")
 	incidentCmd.Flags().StringVarP(&text, "text", "t", "", "Textual note. Long desceription for new incidents, Work Note for updates.")

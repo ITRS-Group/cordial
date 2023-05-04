@@ -45,7 +45,7 @@ var packageLsTabWriter *tabwriter.Writer
 var packageLsCSVWriter *csv.Writer
 
 func init() {
-	packageCmd.AddCommand(packageLsCmd)
+	PackageCmd.AddCommand(packageLsCmd)
 
 	packageLsCmd.Flags().StringVarP(&packageLsCmdHost, "host", "H", string(host.ALLHOSTS),
 		`Apply only on remote host. "all" (the default) means all remote hosts and locally`)

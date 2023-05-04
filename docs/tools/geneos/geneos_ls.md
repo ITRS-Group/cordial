@@ -1,11 +1,15 @@
 ## geneos ls
 
-List instances, optionally in CSV or JSON format
+List instances
 
 ### Synopsis
 
 
-List the matching instances and details.
+Matching instances are listed with details.
+
+The default output is intended for human viewing but can be in CSV
+format using the `-c` flag or JSON with the `-j` or `-i` flags, the
+latter "pretty" formatting the output over multiple, indented lines.
 
 
 ```
@@ -17,7 +21,7 @@ geneos ls [flags] [TYPE] [NAME...]
 ```
   -c, --csv      Output CSV
   -j, --json     Output JSON
-  -i, --pretty   Indent (pretty print) JSON
+  -i, --pretty   Output indented JSON
 ```
 
 ### Options inherited from parent commands
@@ -29,5 +33,4 @@ geneos ls [flags] [TYPE] [NAME...]
 ### SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-* [geneos ls host](geneos_ls_host.md)	 - List hosts, optionally in CSV or JSON format
 
