@@ -26,6 +26,7 @@ import (
 	_ "embed"
 	"fmt"
 	"html/template"
+	"io"
 	"net/url"
 	"os"
 	"path"
@@ -33,6 +34,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/email"
 	"github.com/itrs-group/cordial/pkg/xpath"
 
 	"github.com/rs/zerolog/log"
@@ -249,9 +251,35 @@ Get a Dataview from a Gateway and convert to HTML using a template and CSS.
 				log.Fatal().Err(err).Msg("")
 			}
 			defer out.Close()
-		}
+		} else if getCmdEMail {
+			em := config.New()
+			em.Set("_SMTP_USERNAME", cf.GetString("email.username"))
+			em.Set("_SMTP_PASSWORD", cf.GetString("email.password", config.RawString()))
+			em.Set("_SMTP_SERVER", cf.GetString("email.smtp", config.Default("localhost")))
+			em.Set("_SMTP_PORT", cf.GetInt("email.port", config.Default(25)))
+			em.Set("_FROM", cf.GetString("email.from"))
+			em.Set("_TO", cf.GetString("email.to"))
+			// em.Set("_SUBJECT", "Test 1")
 
-		if err = t.Execute(out, tmplData); err != nil {
+			d, err := email.Dial(em)
+			if err != nil {
+				log.Fatal().Err(err).Msg("")
+			}
+
+			m, err := email.Envelope(em)
+			if err != nil {
+				log.Fatal().Err(err).Msg("")
+			}
+			m.SetHeader("Subject", "Dataview")
+			m.SetBodyWriter("text/html", func(w io.Writer) error {
+				return t.Execute(w, tmplData)
+			})
+
+			err = d.DialAndSend(m)
+			if err != nil {
+				log.Fatal().Err(err).Msg("")
+			}
+		} else if err = t.Execute(out, tmplData); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 	},
