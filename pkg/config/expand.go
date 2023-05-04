@@ -178,6 +178,14 @@ func ExpandString(input string, options ...ExpandOptions) (value string) {
 // ExpandString works just like the package level [ExpandString] but on
 // a specific config instance.
 func (c *Config) ExpandString(input string, options ...ExpandOptions) (value string) {
+	opts := evalExpandOptions(c, options...)
+	if opts.rawstring {
+		if input != "" {
+			return input
+		}
+		return fmt.Sprint(opts.defaultValue)
+	}
+
 	value = expand(input, func(s string) (r string) {
 		if strings.HasPrefix(s, "enc:") {
 			return c.expandEncodedString(s[4:], options...)
@@ -185,8 +193,6 @@ func (c *Config) ExpandString(input string, options ...ExpandOptions) (value str
 		r, _ = c.ExpandRawString(s, options...)
 		return
 	})
-
-	opts := evalExpandOptions(c, options...)
 
 	if opts.trimSpace {
 		value = strings.TrimSpace(value)

@@ -29,6 +29,7 @@ type expandOptions struct {
 	expressions      bool
 	trimPrefix       bool
 	trimSpace        bool
+	rawstring        bool
 	defaultValue     any
 }
 
@@ -86,6 +87,14 @@ func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
 // reset by calling DefaultExpandOptions with no arguments.
 func (c *Config) DefaultExpandOptions(options ...ExpandOptions) {
 	c.defaultExpandOptions = options
+}
+
+// RawString overrides all other options except Default and returns the value
+// (or the default) as-is with no expansion applied.
+func RawString() ExpandOptions {
+	return func(e *expandOptions) {
+		e.rawstring = true
+	}
 }
 
 // LookupTable adds a lookup map to the Expand functions. If there are
