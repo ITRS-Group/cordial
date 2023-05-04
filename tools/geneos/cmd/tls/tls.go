@@ -31,12 +31,12 @@ import (
 )
 
 func init() {
-	cmd.RootCmd.AddCommand(tlsCmd)
+	cmd.RootCmd.AddCommand(TLSCmd)
 
 	// tlsCmd.Flags().SortFlags = false
 }
 
-var tlsCmd = &cobra.Command{
+var TLSCmd = &cobra.Command{
 	Use:   "tls",
 	Short: "Manage certificates for secure connections",
 	Long: strings.ReplaceAll(`

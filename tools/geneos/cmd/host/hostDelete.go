@@ -38,7 +38,7 @@ import (
 var hostDeleteCmdForce, hostDeleteCmdRecurse, hostDeleteCmdStop bool
 
 func init() {
-	hostCmd.AddCommand(hostDeleteCmd)
+	HostCmd.AddCommand(hostDeleteCmd)
 
 	hostDeleteCmd.Flags().BoolVarP(&hostDeleteCmdForce, "force", "F", false, "Delete instances without checking if disabled")
 	hostDeleteCmd.Flags().BoolVarP(&hostDeleteCmdRecurse, "all", "R", false, "Recursively delete all instances on the host before removing the host config")

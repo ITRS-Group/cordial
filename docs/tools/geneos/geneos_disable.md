@@ -4,10 +4,19 @@ Stop and disable instances
 
 ### Synopsis
 
-Mark any matching instances as disabled. The instances are also stopped.
+
+Mark any matching instances as disabled. The instances are also
+stopped.
+
 
 ```
 geneos disable [TYPE] [NAME...] [flags]
+```
+
+### Options
+
+```
+  -F, --force   force disable instances
 ```
 
 ### Options inherited from parent commands

@@ -42,19 +42,19 @@ var conffile, execname string
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVarP(&conffile, "conf", "c", "", "override config file")
+	RootCmd.PersistentFlags().StringVarP(&conffile, "conf", "c", "", "override config file")
 
 	// how to remove the help flag help text from the help output! Sigh...
-	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	rootCmd.PersistentFlags().MarkHidden("help")
+	RootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	RootCmd.PersistentFlags().MarkHidden("help")
 
-	rootCmd.Flags().SortFlags = false
+	RootCmd.Flags().SortFlags = false
 
 	execname = filepath.Base(os.Args[0])
 	cordial.LogInit(execname)
 }
 
-var rootCmd = &cobra.Command{
+var RootCmd = &cobra.Command{
 	Use:   "servicenow",
 	Short: "Geneos to ServiceNow integration",
 	Long: strings.ReplaceAll(`
@@ -70,14 +70,10 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	err := rootCmd.Execute()
+	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
-}
-
-func RootCmd() *cobra.Command {
-	return rootCmd
 }
 
 // initConfig reads in config file and ENV variables if set.

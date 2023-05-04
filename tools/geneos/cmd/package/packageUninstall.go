@@ -43,7 +43,7 @@ var packageUninstallCmdHost, packageUninstallCmdVersion string
 var packageUninstallCmdAll, packageUninstallCmdForce bool
 
 func init() {
-	packageCmd.AddCommand(packageUninstallCmd)
+	PackageCmd.AddCommand(packageUninstallCmd)
 
 	packageUninstallCmd.Flags().BoolVarP(&packageUninstallCmdAll, "all", "A", false, "Uninstall all releases, stopping and disabling running instances")
 	packageUninstallCmd.Flags().BoolVarP(&packageUninstallCmdForce, "force", "f", false, "Force uninstall, stopping protected instances first")

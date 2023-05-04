@@ -30,8 +30,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
-// hostCmd represents the host command
-var hostCmd = &cobra.Command{
+// HostCmd represents the host command
+var HostCmd = &cobra.Command{
 	Use:   "host",
 	Short: "Manage remote host settings",
 	Long: strings.ReplaceAll(`
@@ -45,5 +45,5 @@ Manage remote host settings. Without a subcommand defaults to |ls| of hosts.
 }
 
 func init() {
-	cmd.RootCmd.AddCommand(hostCmd)
+	cmd.RootCmd.AddCommand(HostCmd)
 }

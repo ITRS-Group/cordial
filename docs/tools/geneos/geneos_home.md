@@ -5,8 +5,8 @@ Print the home directory of the first instance or the Geneos home dir
 ### Synopsis
 
 
-Output the home directory of the first matching instance or local
-installation or the remote on stdout. This is intended for scripting.
+Output the path of the home directory of the first matching instance
+or local installation or the remote on stdout. This is intended for scripting.
 
 No errors are logged. An error, for example no matching instance
 found, result in the Geneos root directory being printed.

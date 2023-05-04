@@ -14,6 +14,12 @@ take on the new labels and are not a direct conversion.
 geneos migrate [TYPE] [NAME...] [flags]
 ```
 
+### Options
+
+```
+  -X, --executables   Migrate executables by symlinking to this binary
+```
+
 ### Options inherited from parent commands
 
 ```
