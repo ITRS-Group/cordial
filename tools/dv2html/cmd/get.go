@@ -44,7 +44,7 @@ var getCmdHeadlinesFilter, getCmdColumnFilter, getCmdRowFilter, getCmdOutput str
 
 var getCmdGatewayPort, getCmdMaxDataviews int
 
-var getCmdUseTLS, getCmdAllowInsecure bool
+var getCmdUseTLS, getCmdAllowInsecure, getCmdEMail bool
 
 func init() {
 	rootCmd.AddCommand(getCmd)
@@ -61,6 +61,7 @@ func init() {
 	getCmd.Flags().StringVarP(&getCmdGatewayPassword, "password", "p", "", "Gateway Password")
 
 	getCmd.Flags().StringVarP(&getCmdOutput, "output", "o", "", "output file. default stdout")
+	getCmd.Flags().BoolVarP(&getCmdEMail, "email", "E", false, "Send as Email using Geneos environment variables for email details")
 
 	getCmd.Flags().StringVar(&getCmdHeadlinesFilter, "headlines", "", "comma separated, ordered list of headlines to include. empty means all")
 	getCmd.Flags().StringVar(&getCmdColumnFilter, "columns", "", "comma separated, ordered list of columns to include. empty means all")
@@ -70,6 +71,7 @@ func init() {
 	getCmd.Flags().StringVar(&getCmdCSS, "css", "", "path to css file, file or URL")
 
 	getCmd.MarkFlagsMutuallyExclusive("url", "host")
+	getCmd.MarkFlagsMutuallyExclusive("output", "email")
 }
 
 // default html and css templates
