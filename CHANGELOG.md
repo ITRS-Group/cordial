@@ -1,5 +1,37 @@
 # Change Log
 
+## Version v1.5.0-dev - 2023/05/04
+
+* Changes
+
+  * `tools/geneos`:
+
+    * Move `aes` and `tls` to their own directories as new "subsystems"
+    * Add `host` and `package` subsystems and  create aliases for
+      original commands, e.g.
+      * `add host` becomes `host add`
+      * `install` becomes `package install`
+      * etc.
+    * The new `package` subsystem command pulls all Geneos release
+      management into one place
+
+* Fixes
+
+  * `tools/geneos`:
+
+    * Version checking of local release archives was broken because of
+      overloading of a common function. This is now split and checking
+      should work once again.
+
+* To Do:
+
+  * `tools/geneos`:
+
+    * New `login` and `logout` functions for downloads need completing
+    * Primary README.md documentation needs full review and update for
+      new functionality
+    * Local storage of encrypted passwords for remote SSH access needs documenting
+
 ## Version v1.4.4 - 2023/04/12
 
 * Fixes
