@@ -43,7 +43,7 @@ import (
 var aesNewCmdKeyfile, aesNewCmdHostname, aesNewCmdBackupKeyfile string
 var aesNewCmdImport, aesNewCmdSaveDefault, aesNewCmdOverwriteKeyfile bool
 
-var aesNewDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
+var aesDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
 
 func init() {
 	AesCmd.AddCommand(aesNewCmd)
@@ -89,7 +89,7 @@ setting to support GA6.x key file rolling.
 		}
 
 		if aesNewCmdSaveDefault {
-			aesNewCmdKeyfile = aesNewDefaultKeyfile
+			aesNewCmdKeyfile = aesDefaultKeyfile
 		}
 
 		if aesNewCmdKeyfile != "" {
