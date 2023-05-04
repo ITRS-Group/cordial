@@ -15,6 +15,12 @@
     * The new `package` subsystem command pulls all Geneos release
       management into one place
 
+  * `tools/dv2html`:
+
+    * New program to capture Dataviews and convert them to HTML based on
+      a Golang template and CSS. Can be used to add Dataviews to email
+      and more.
+
 * Fixes
 
   * `tools/geneos`:
