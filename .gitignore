@@ -36,3 +36,4 @@ docs/docs
 .vscode
 tools/sso-diag/sso-diag
 tools/decode-aes256/decode-aes256
+tools/dv2html/dv2html
