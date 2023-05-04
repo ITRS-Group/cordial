@@ -70,10 +70,13 @@ directory or in the user's .config/dv2html directory)
 		if cf.GetBool("use-tls") {
 			u.Scheme = "https"
 		}
-		gw, err := commands.DialGateway(u, commands.SetBasicAuth(cf.GetString("username"), cf.GetString("password")), commands.AllowInsecureCertificates(cf.GetBool("allow-insecure")))
+		gw, err := commands.DialGateway(u,
+			commands.SetBasicAuth(cf.GetString("username"), cf.GetString("password")),
+			commands.AllowInsecureCertificates(cf.GetBool("allow-insecure")))
 		if err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
+
 		htmlTemplate := htmlDefaultTemplate
 		if h := cf.GetString("html-template"); h != "" {
 			htmlTemplate = h
@@ -118,13 +121,13 @@ directory or in the user's .config/dv2html directory)
 
 		em := config.New()
 		// set default from yaml file, can be overridden from Geneos
-		em.SetDefault("_SMTP_USERNAME", cf.GetString("email.username"))
-		em.SetDefault("_SMTP_PASSWORD", cf.GetString("email.password", config.RawString()))
-		em.SetDefault("_SMTP_SERVER", cf.GetString("email.smtp", config.Default("localhost")))
-		em.SetDefault("_SMTP_PORT", cf.GetInt("email.port", config.Default(25)))
-		em.SetDefault("_FROM", cf.GetString("email.from"))
-		em.SetDefault("_TO", cf.GetString("email.to"))
-		em.SetDefault("_SUBJECT", cf.GetString("email.subject", config.Default("Geneos Alert")))
+		em.SetDefault("_smtp_username", cf.GetString("email.username"))
+		em.SetDefault("_smtp_password", cf.GetString("email.password", config.RawString()))
+		em.SetDefault("_smtp_server", cf.GetString("email.smtp", config.Default("localhost")))
+		em.SetDefault("_smtp_port", cf.GetInt("email.port", config.Default(25)))
+		em.SetDefault("_from", cf.GetString("email.from"))
+		em.SetDefault("_to", cf.GetString("email.to"))
+		em.SetDefault("_subject", cf.GetString("email.subject", config.Default("Geneos Alert")))
 
 		for _, e := range os.Environ() {
 			n := strings.SplitN(e, "=", 2)
