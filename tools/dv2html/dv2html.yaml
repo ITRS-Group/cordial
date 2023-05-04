@@ -1,0 +1,7 @@
+username: readonly
+password: geneos
+
+use-tls: true
+allow-insecure: true
+
+port: 7038
