@@ -231,8 +231,7 @@ func (c *Config) GetStringMapString(s string, options ...ExpandOptions) (m map[s
 //
 // TBD: windows equiv of above
 func LoadConfig(configName string, options ...Options) (c *Config, err error) {
-	opts := &configOptions{}
-	evalOptions(configName, opts, options...)
+	opts := evalOptions(configName, options...)
 
 	if opts.setglobals {
 		c = global

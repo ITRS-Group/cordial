@@ -38,8 +38,9 @@ type configOptions struct {
 
 type Options func(*configOptions)
 
-func evalOptions(configName string, c *configOptions, options ...Options) {
+func evalOptions(configName string, options ...Options) (c *configOptions) {
 	// init
+	c = &configOptions{}
 	c.configDirs = []string{}
 	c.workingdir = "."
 	c.systemdir = "/etc" // UNIX/Linux only!
@@ -58,6 +59,8 @@ func evalOptions(configName string, c *configOptions, options ...Options) {
 	if c.appname == "" {
 		c.appname = configName
 	}
+
+	return
 }
 
 // Global tells [LoadConfig] to set values in the global configuration
