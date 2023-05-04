@@ -1,10 +1,10 @@
-all: libemail.so
+all: libalert.so
 
-SRCS=main.go formats.go libemail.go
+SRCS=main.go formats.go libalert.go
 
-libemail.so: $(SRCS) *.gotmpl *.png
+libalert.so: $(SRCS) *.gotmpl *.png
 	go build -buildmode c-shared -o $@ $(SRCS)
 
 clean:
-	rm -f libemail.h libemail.so
+	rm -f libalert.h libalert.so
 
