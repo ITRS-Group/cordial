@@ -1,6 +1,6 @@
 all: libemail.so
 
-SRCS=main.go formats.go utils.go libemail.go
+SRCS=main.go formats.go libemail.go
 
 libemail.so: $(SRCS) *.gotmpl *.png
 	go build -buildmode c-shared -o $@ $(SRCS)
