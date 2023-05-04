@@ -16,17 +16,17 @@ RUN apk add build-base
 # be from a different arch or environment
 COPY ./ /app/cordial
 WORKDIR /app/cordial/tools/geneos
-RUN go mod tidy
-RUN go clean
+# RUN go mod tidy
+# RUN go clean
 RUN go build --ldflags '-linkmode external -extldflags=-static'
 RUN GOOS=windows go build
 WORKDIR /app/cordial/integrations/servicenow
-RUN go mod tidy
-RUN go clean
+# RUN go mod tidy
+# RUN go clean
 RUN go build --ldflags '-linkmode external -extldflags=-static'
 WORKDIR /app/cordial/integrations/pagerduty
-RUN go mod tidy
-RUN go clean
+# RUN go mod tidy
+# RUN go clean
 RUN go build --ldflags '-linkmode external -extldflags=-static'
 
 # special centos7 build environment for shared libs
