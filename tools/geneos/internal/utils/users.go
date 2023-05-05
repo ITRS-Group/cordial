@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog/log"
 )
 
 func GetIDs(username string) (uid, gid int, gids []int, err error) {
@@ -46,45 +45,4 @@ func IsSuperuser() bool {
 		return true
 	}
 	return false
-}
-
-// check if the current user can do "something" with the selected component
-//
-// just check if running as root or if a username is specified in the config
-// that the current user matches.
-//
-// this does not however change the user to match anything, so starting a
-// process still requires a seteuid type change
-func CanControl(username string) bool {
-	if IsSuperuser() {
-		return true
-	}
-
-	if len(username) == 0 {
-		// assume the caller with try to set-up the correct user
-		return true
-	}
-
-	u, err := user.Lookup(username)
-	if err != nil {
-		// user not found, should fail
-		return false
-	}
-
-	uid, _ := strconv.Atoi(u.Uid)
-	if uid == os.Getuid() || uid == os.Geteuid() {
-		// if uid != euid then child proc may fail because
-		// of linux ld.so secure-execution discarding
-		// envs like LD_LIBRARY_PATH, account for this?
-		return true
-	}
-
-	un := "nobody"
-	uc, err := user.Current()
-	if err != nil {
-		log.Error().Err(err).Msg("cannot get user details")
-	} else {
-		un = uc.Username
-	}
-	return username == un
 }
