@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -45,7 +44,6 @@ on of the flags is set.
 
 		crc, created, err := config.CheckKeyfile(cmd.DefaultUserKeyfile, true)
 		if err != nil {
-			log.Fatal().Err(err).Msg("")
 			return
 		}
 		crcstr := fmt.Sprintf("%08X", crc)

@@ -24,9 +24,6 @@ package aes
 
 import (
 	"fmt"
-	"io/fs"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -43,7 +40,7 @@ import (
 var aesNewCmdKeyfile, aesNewCmdHostname, aesNewCmdBackupKeyfile string
 var aesNewCmdImport, aesNewCmdSaveDefault, aesNewCmdOverwriteKeyfile bool
 
-var aesDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
+// var aesDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
 
 func init() {
 	AesCmd.AddCommand(aesNewCmd)
@@ -93,35 +90,20 @@ setting to support GA6.x key file rolling.
 		}
 
 		if aesNewCmdKeyfile != "" {
-			if _, err := os.Stat(aesNewCmdKeyfile); err == nil {
-				if !aesNewCmdOverwriteKeyfile {
-					return fs.ErrExist
-				}
-				if aesNewCmdBackupKeyfile != "" {
-					if err = os.Rename(aesNewCmdKeyfile, aesNewCmdKeyfile+aesNewCmdBackupKeyfile); err != nil {
-						return fmt.Errorf("keyfile backup failed: %w", err)
-					}
-				}
+			if _, err = config.NewKeyfile(aesNewCmdKeyfile, aesNewCmdBackupKeyfile); err != nil {
+				return
 			}
-			if err = os.MkdirAll(filepath.Dir(aesNewCmdKeyfile), 0775); err != nil {
-				return fmt.Errorf("failed to create keyfile directory %q: %w", filepath.Dir(aesNewCmdKeyfile), err)
-			}
-			if err = os.WriteFile(aesNewCmdKeyfile, []byte(a.String()), 0600); err != nil {
-				return fmt.Errorf("failed to write keyfile to %q: %w", aesNewCmdKeyfile, err)
+			if a, err = config.ReadAESValuesFile(aesNewCmdKeyfile); err != nil {
+				return
 			}
 		} else if !aesNewCmdImport {
 			fmt.Print(a)
 		}
 
 		crc, err = config.ChecksumString(a.String())
-		if err != nil {
-			return
-		}
-		crcstr := fmt.Sprintf("%08X", crc)
 
-		if aesNewCmdKeyfile != "" {
-			fmt.Printf("%s created, checksum %s\n", aesNewCmdKeyfile, crcstr)
-		}
+		crcstr := fmt.Sprintf("%08X", crc)
+		fmt.Printf("%s created, checksum %s\n", aesNewCmdKeyfile, crcstr)
 
 		if aesNewCmdImport {
 			if aesNewCmdKeyfile == "" {
@@ -157,6 +139,7 @@ setting to support GA6.x key file rolling.
 func aesNewSetInstance(c geneos.Instance, params []string) (err error) {
 	var rolled bool
 	// roll old file
+	// XXX - check keyfile still exists, do not update if not
 	p := c.Config().GetString("keyfile")
 	if p != "" {
 		c.Config().Set("prevkeyfile", p)
