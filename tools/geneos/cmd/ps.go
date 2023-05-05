@@ -79,11 +79,11 @@ Show the status of the matching instances.
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := CmdArgsParams(cmd)
-		return commandPS(ct, args, params)
+		return CommandPS(ct, args, params)
 	},
 }
 
-func commandPS(ct *geneos.Component, args []string, params []string) (err error) {
+func CommandPS(ct *geneos.Component, args []string, params []string) (err error) {
 	switch {
 	case psCmdJSON, psCmdIndent:
 		psJSONEncoder = json.NewEncoder(os.Stdout)

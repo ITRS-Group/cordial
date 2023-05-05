@@ -54,11 +54,11 @@ in the instance directory. You can watch the resulting logs files with the
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := CmdArgsParams(cmd)
-		return start(ct, startCmdLogs, args, params)
+		return Start(ct, startCmdLogs, args, params)
 	},
 }
 
-func start(ct *geneos.Component, watchlogs bool, args []string, params []string) (err error) {
+func Start(ct *geneos.Component, watchlogs bool, args []string, params []string) (err error) {
 	if err = instance.ForAll(ct, func(c geneos.Instance, _ []string) error {
 		return instance.Start(c)
 	}, args, params); err != nil {

@@ -92,7 +92,7 @@ geneos import gateway -c shared common_include.xml
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := CmdArgsParams(cmd)
-		return importFiles(ct, args, params)
+		return ImportFiles(ct, args, params)
 	},
 }
 
@@ -100,7 +100,7 @@ geneos import gateway -c shared common_include.xml
 // overwrites without asking - use case is license files, setup files etc.
 // backup / history track older files (date/time?)
 // no restart or reload of components?
-func importFiles(ct *geneos.Component, args []string, sources []string) (err error) {
+func ImportFiles(ct *geneos.Component, args []string, sources []string) (err error) {
 	if importCmdCommon != "" {
 		// ignore args, use ct & params
 		if ct == nil {

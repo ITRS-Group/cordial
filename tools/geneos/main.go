@@ -34,6 +34,7 @@ import (
 	// import subsystems here for command registration
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/aes"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/host"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/init"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/package"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/tls"
 

@@ -26,35 +26,73 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/spf13/cobra"
 )
-
-// loginCmd represents the login command
-var loginCmd = &cobra.Command{
-	Use:   "login",
-	Short: "Store credentials for software downloads",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
-	SilenceUsage: true,
-	Annotations: map[string]string{
-		"wildcard": "false",
-	},
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("login called")
-	},
-}
 
 var loginCmdSiteURL, loginCmdUsername, loginCmdPassword, loginKeyfile string
 
 func init() {
 	RootCmd.AddCommand(loginCmd)
 
-	loginCmd.Flags().StringVarP(&loginCmdSiteURL, "url", "U", config.GetString("download.url"), `URL for download site for these credentials`)
-	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username for downloads, defaults to configuration value in download.username")
-	loginCmd.Flags().StringVarP(&loginCmdPassword, "password", "P", "", "Password for downloads, defaults to configuration value in download.password or otherwise prompts")
+	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username")
+	loginCmd.Flags().StringVarP(&loginCmdPassword, "password", "p", "", "Password")
 	loginCmd.Flags().StringVarP(&loginKeyfile, "keyfile", "k", UserKeyFile, "Keyfile to use")
 
 	loginCmd.Flags().SortFlags = false
 
+}
+
+// loginCmd represents the login command
+var loginCmd = &cobra.Command{
+	Use:   "login [flags] [URLPATTERN]",
+	Short: "Store credentials for software downloads",
+	Long: strings.ReplaceAll(`
+Prompt for and stored credentials for later use by commands.
+
+Typical use is for downloading release archives from the official ITRS web
+site.
+
+If not given |URLPATTERN| defaults to |itrsgroup.com|. When credentials are
+used, the destination is checked against all stored credentials and the
+longest match is selected.
+
+If no |-u USERNAME| is given then the user is prompted for a username.
+
+If no |-p PASSWORD| is given then the user is prompted for the password,
+which is not echoed, twice and it is only accepted if both instances match.
+
+The credentials are encrypted with the keyfile specified with |-k KEYFILE|
+and if not given then the user's default keyfile is used - and created if it
+does not exist. See |geneos aes new| for details.
+
+The credentials cannot be used without the keyfile and each set of
+credentials can use a separate keyfile.
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard": "false",
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		if loginCmdUsername == "" {
+			// prompt for username
+		}
+
+		if loginCmdPassword == "" {
+			// prompt for password
+		}
+
+		if loginKeyfile == "" {
+			// use default, create if none
+			loginKeyfile = DefaultUserKeyfile
+		}
+
+		if len(args) == 0 {
+			// default URL pattern
+		}
+
+		// enc, err := config.EncodePasswordPrompt(loginKeyfile, true)
+
+		// save
+		fmt.Println("login called")
+	},
 }

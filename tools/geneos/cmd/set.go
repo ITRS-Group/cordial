@@ -116,11 +116,11 @@ but will not affect the instance.
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := CmdArgsParams(cmd)
-		return set(ct, args, params)
+		return Set(ct, args, params)
 	},
 }
 
-func set(ct *geneos.Component, args, params []string) error {
+func Set(ct *geneos.Component, args, params []string) error {
 	return instance.ForAll(ct, setInstance, args, params)
 }
 

@@ -20,12 +20,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package init
 
 import (
 	"os"
 	"strings"
 
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
@@ -91,13 +92,13 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args, params := CmdArgsParams(cmd)
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, args, params := cmd.CmdArgsParams(command)
 		log.Debug().Msgf("%s %v %v", ct, args, params)
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			log.Error().Err(ErrInvalidArgs).Msg(ct.String())
-			return ErrInvalidArgs
+			log.Error().Err(cmd.ErrInvalidArgs).Msg(ct.String())
+			return cmd.ErrInvalidArgs
 		}
 		options, err := initProcessArgs(args)
 		if err != nil {
@@ -108,7 +109,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 			log.Fatal().Err(err).Msg("")
 		}
 
-		if err = initMisc(cmd); err != nil {
+		if err = initMisc(command); err != nil {
 			return
 		}
 
@@ -132,15 +133,15 @@ func initAll(h *host.Host, options ...geneos.Options) (err error) {
 	install(&netprobe.Netprobe, h.String(), options...)
 	install(&webserver.Webserver, h.String(), options...)
 
-	addInstance(&licd.Licd, initCmdExtras, initCmdName)
-	importFiles(&licd.Licd, []string{initCmdName}, []string{"geneos.lic=" + initAllCmdLicenseFile})
-	addInstance(&gateway.Gateway, initCmdExtras, initCmdName)
+	cmd.AddInstance(&licd.Licd, initCmdExtras, initCmdName)
+	cmd.ImportFiles(&licd.Licd, []string{initCmdName}, []string{"geneos.lic=" + initAllCmdLicenseFile})
+	cmd.AddInstance(&gateway.Gateway, initCmdExtras, initCmdName)
 	// if len(initCmdExtras.Gateways) == 0 {
 	// 	initCmdExtras.Gateways.Set("localhost")
 	// }
-	addInstance(&netprobe.Netprobe, initCmdExtras, "localhost@"+h.String())
-	addInstance(&webserver.Webserver, initCmdExtras, initCmdName)
-	start(nil, initCmdLogs, e, e)
-	commandPS(nil, e, e)
+	cmd.AddInstance(&netprobe.Netprobe, initCmdExtras, "localhost@"+h.String())
+	cmd.AddInstance(&webserver.Webserver, initCmdExtras, initCmdName)
+	cmd.Start(nil, initCmdLogs, e, e)
+	cmd.CommandPS(nil, e, e)
 	return nil
 }

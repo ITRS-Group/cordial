@@ -114,7 +114,7 @@ not applied in any defined order.
 		}
 
 		if snapshotCmdUsername != "" && len(snapshotCmdPassword) == 0 {
-			snapshotCmdPassword = config.ReadPasswordPrompt()
+			snapshotCmdPassword, _ = config.PasswordPrompt(false, 0)
 		}
 
 		// at this point snapshotCmdUsername/Password contain global or

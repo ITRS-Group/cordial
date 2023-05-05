@@ -20,12 +20,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package init
 
 import (
 	"os"
 	"strings"
 
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
@@ -84,13 +85,13 @@ multiple times.
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args, params := CmdArgsParams(cmd)
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, args, params := cmd.CmdArgsParams(command)
 		log.Debug().Msgf("%s %v %v", ct, args, params)
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			log.Error().Err(ErrInvalidArgs).Msg(ct.String())
-			return ErrInvalidArgs
+			log.Error().Err(cmd.ErrInvalidArgs).Msg(ct.String())
+			return cmd.ErrInvalidArgs
 		}
 		options, err := initProcessArgs(args)
 		if err != nil {
@@ -101,7 +102,7 @@ multiple times.
 			log.Fatal().Err(err).Msg("")
 		}
 
-		if err = initMisc(cmd); err != nil {
+		if err = initMisc(command); err != nil {
 			return
 		}
 
@@ -133,8 +134,8 @@ func initSan(h *host.Host, options ...geneos.Options) (err error) {
 		sanname = sanname + "@" + host.LOCALHOST
 	}
 	install(&san.San, host.LOCALHOST, options...)
-	addInstance(&san.San, initCmdExtras, sanname)
-	start(nil, initCmdLogs, e, e)
-	commandPS(nil, e, e)
+	cmd.AddInstance(&san.San, initCmdExtras, sanname)
+	cmd.Start(nil, initCmdLogs, e, e)
+	cmd.CommandPS(nil, e, e)
 	return nil
 }

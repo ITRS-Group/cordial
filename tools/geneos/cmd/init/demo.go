@@ -20,11 +20,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package init
 
 import (
 	"strings"
 
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
@@ -79,13 +80,13 @@ influence the installation.
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args, params := CmdArgsParams(cmd)
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, args, params := cmd.CmdArgsParams(command)
 		log.Debug().Msgf("%s %v %v", ct, args, params)
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			log.Error().Err(ErrInvalidArgs).Msg(ct.String())
-			return ErrInvalidArgs
+			log.Error().Err(cmd.ErrInvalidArgs).Msg(ct.String())
+			return cmd.ErrInvalidArgs
 		}
 		options, err := initProcessArgs(args)
 		if err != nil {
@@ -96,7 +97,7 @@ influence the installation.
 			log.Fatal().Err(err).Msg("")
 		}
 
-		if err = initMisc(cmd); err != nil {
+		if err = initMisc(command); err != nil {
 			return
 		}
 
@@ -113,15 +114,15 @@ func initDemo(h *host.Host, options ...geneos.Options) (err error) {
 	install(&netprobe.Netprobe, host.LOCALHOST, options...)
 	install(&webserver.Webserver, host.LOCALHOST, options...)
 
-	addInstance(&gateway.Gateway, initCmdExtras, "Demo Gateway@"+h.String())
-	set(&gateway.Gateway, g, []string{"options=-demo"})
+	cmd.AddInstance(&gateway.Gateway, initCmdExtras, "Demo Gateway@"+h.String())
+	cmd.Set(&gateway.Gateway, g, []string{"options=-demo"})
 	// if len(initCmdExtras.Gateways) == 0 {
 	// 	initCmdExtras.Gateways.Set("localhost")
 	// }
-	addInstance(&netprobe.Netprobe, initCmdExtras, "localhost@"+h.String())
-	addInstance(&webserver.Webserver, initCmdExtras, "demo@"+h.String())
+	cmd.AddInstance(&netprobe.Netprobe, initCmdExtras, "localhost@"+h.String())
+	cmd.AddInstance(&webserver.Webserver, initCmdExtras, "demo@"+h.String())
 
-	start(nil, initCmdLogs, e, e)
-	commandPS(nil, e, e)
+	cmd.Start(nil, initCmdLogs, e, e)
+	cmd.CommandPS(nil, e, e)
 	return
 }

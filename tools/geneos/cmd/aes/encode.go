@@ -23,7 +23,6 @@ THE SOFTWARE.
 package aes
 
 import (
-	"bytes"
 	"encoding/base64"
 	"fmt"
 	"strings"
@@ -42,12 +41,8 @@ import (
 var aesEncodeCmdAESFILE, aesEncodeCmdString, aesEncodeCmdSource string
 var aesEncodeCmdExpandable, aesEncodeCmdAskOnce bool
 
-// var aesEncodeDefaultKeyfile string
-
 func init() {
 	AesCmd.AddCommand(aesEncodeCmd)
-
-	// aesEncodeDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
 
 	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdAESFILE, "keyfile", "k", "", "Specific AES key file to use. Ignores matching instances")
 	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdString, "password", "p", "", "Password string to use")
@@ -83,22 +78,9 @@ var aesEncodeCmd = &cobra.Command{
 				return
 			}
 		} else {
-			if aesEncodeCmdAskOnce {
-				plaintext = config.ReadPasswordPrompt()
-			} else {
-				var match bool
-				for i := 0; i < 3; i++ {
-					plaintext = config.ReadPasswordPrompt()
-					plaintext2 := config.ReadPasswordPrompt("Re-enter Password")
-					if bytes.Equal(plaintext, plaintext2) {
-						match = true
-						break
-					}
-					fmt.Println("Passwords do not match. Please try again.")
-				}
-				if !match {
-					return fmt.Errorf("too many attempts, giving up")
-				}
+			plaintext, err = config.PasswordPrompt(!aesEncodeCmdAskOnce, 0)
+			if err != nil {
+				return
 			}
 		}
 

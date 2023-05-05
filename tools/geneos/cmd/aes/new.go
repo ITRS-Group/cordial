@@ -89,7 +89,7 @@ setting to support GA6.x key file rolling.
 		}
 
 		if aesNewCmdSaveDefault {
-			aesNewCmdKeyfile = aesDefaultKeyfile
+			aesNewCmdKeyfile = cmd.DefaultUserKeyfile
 		}
 
 		if aesNewCmdKeyfile != "" {

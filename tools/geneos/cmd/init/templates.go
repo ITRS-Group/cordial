@@ -20,13 +20,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package init
 
 import (
 	"fmt"
 	"path/filepath"
 	"strings"
 
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
@@ -59,13 +60,13 @@ command.
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args, params := CmdArgsParams(cmd)
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, args, params := cmd.CmdArgsParams(command)
 		log.Debug().Msgf("%s %v %v", ct, args, params)
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			log.Error().Err(ErrInvalidArgs).Msg(ct.String())
-			return ErrInvalidArgs
+			log.Error().Err(cmd.ErrInvalidArgs).Msg(ct.String())
+			return cmd.ErrInvalidArgs
 		}
 
 		return initTemplates(host.LOCAL)
