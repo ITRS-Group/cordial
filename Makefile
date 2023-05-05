@@ -3,8 +3,8 @@ export DOCKER_BUILDKIT = 1
 
 release:
 	docker build --tag cordial-build:$(VERSION) --target cordial-build .
-	docker build --tag cordial --tag cordial:$(VERSION) --target cordial-run .
 	docker build --tag cordial --tag cordial:$(VERSION)-el8 --target cordial-run-el8 .
+	docker build --tag cordial --tag cordial:$(VERSION) --target cordial-run .
 	docker create --name cordial-build-$(VERSION) cordial-build:$(VERSION)
 	mkdir -p releases/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).tar.gz releases/
