@@ -17,3 +17,5 @@ dv2html get --url https://mygateway.local:7038 -k --rows 'core*' --columns rowna
 ```
 
 HTML template, default or input
+
+Note that CSS support is limited in gmail clients (including GSuite domains) and you should adjust your template and CSS options accordingly. The option -i tries to inline the CSS but increases the size of the HTML.
