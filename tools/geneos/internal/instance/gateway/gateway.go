@@ -335,7 +335,9 @@ func (g *Gateways) Command() (args, env []string) {
 		args = append([]string{cf.GetString("gatewayname")}, args...)
 	}
 
-	args = append([]string{"-port", fmt.Sprint(cf.GetString("port"))}, args...)
+	if cf.IsSet("port") {
+		args = append([]string{"-port", fmt.Sprint(cf.GetString("port"))}, args...)
+	}
 
 	if cf.GetString("licdhost") != "" {
 		args = append(args, "-licd-host", cf.GetString("licdhost"))
