@@ -46,11 +46,11 @@ on of the flags is set.
 		if err != nil {
 			return
 		}
-		crcstr := fmt.Sprintf("%08X", crc)
 
 		if created {
-			fmt.Printf("%s created, checksum %s\n", cmd.DefaultUserKeyfile, crcstr)
+			fmt.Printf("%s created, checksum %08X\n", cmd.DefaultUserKeyfile, crc)
 		}
+
 		if aesPasswordCmdString != "" {
 			plaintext = []byte(aesPasswordCmdString)
 		} else if aesPasswordCmdSource != "" {

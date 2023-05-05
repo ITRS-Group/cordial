@@ -453,20 +453,20 @@ func PasswordPrompt(validate bool, maxtries int, prompt ...string) (pw []byte, e
 				fmt.Printf("%s: ", prompt[0])
 			}
 			pw1, err := term.ReadPassword(int(syscall.Stdin))
+			fmt.Println() // always move to new line even on error
 			if err != nil {
 				return pw, err
 			}
-			fmt.Println()
 			if len(prompt) == 0 {
 				fmt.Printf("Re-enter Password: ")
 			} else {
 				fmt.Printf("%s: ", prompt[0])
 			}
 			pw2, err := term.ReadPassword(int(syscall.Stdin))
+			fmt.Println() // always move to new line even on error
 			if err != nil {
 				return pw, err
 			}
-			fmt.Println()
 			if bytes.Equal(pw1, pw2) {
 				pw = pw1
 				match = true
@@ -485,10 +485,10 @@ func PasswordPrompt(validate bool, maxtries int, prompt ...string) (pw []byte, e
 			fmt.Printf("%s: ", strings.Join(prompt, " "))
 		}
 		pw, err = term.ReadPassword(int(syscall.Stdin))
+		fmt.Println() // always move to new line even on error
 		if err != nil {
 			return
 		}
-		fmt.Println()
 	}
 
 	pw = bytes.TrimSpace(pw)
