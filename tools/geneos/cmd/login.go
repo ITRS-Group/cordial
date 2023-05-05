@@ -24,9 +24,12 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var loginCmdSiteURL, loginCmdUsername, loginCmdPassword, loginKeyfile string
@@ -72,27 +75,46 @@ credentials can use a separate keyfile.
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		if loginCmdUsername == "" {
 			// prompt for username
+			oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+			if err != nil {
+				return err
+			}
+			t := term.NewTerminal(os.Stdin, "Username: ")
+			username, err := t.ReadLine()
+			if err != nil {
+				return err
+			}
+			term.Restore(int(os.Stdin.Fd()), oldState)
+			loginCmdUsername = string(username)
 		}
 
-		if loginCmdPassword == "" {
-			// prompt for password
-		}
-
+		var createKeyfile bool
 		if loginKeyfile == "" {
 			// use default, create if none
 			loginKeyfile = DefaultUserKeyfile
+			createKeyfile = true
+		}
+
+		if crc, created, err := config.CheckKeyfile(loginKeyfile, createKeyfile); err != nil {
+			return err
+		} else if created {
+			fmt.Printf("%s created, checksum %08X\n", loginKeyfile, crc)
+		}
+
+		var enc string
+		if loginCmdPassword == "" {
+			// prompt for password
+			enc, err = config.EncodePasswordPrompt(loginKeyfile, true)
 		}
 
 		if len(args) == 0 {
 			// default URL pattern
 		}
 
-		// enc, err := config.EncodePasswordPrompt(loginKeyfile, true)
-
-		// save
-		fmt.Println("login called")
+		fmt.Printf("username=%s, password=%s\n", loginCmdUsername, enc)
+		return
 	},
 }
