@@ -52,6 +52,8 @@ var UserKeyFile string
 
 var debug, quiet bool
 
+var DefaultUserKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
+
 func init() {
 	cordial.LogInit(pkgname)
 

@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package init
 
 import (
 	"os/user"
@@ -31,6 +31,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -48,7 +49,7 @@ var initCmdDLPassword []byte
 var initCmdExtras = instance.ExtraConfigValues{}
 
 func init() {
-	RootCmd.AddCommand(initCmd)
+	cmd.RootCmd.AddCommand(initCmd)
 
 	// old flags, these are now sub-commands so hide them
 	initCmd.Flags().StringVarP(&initCmdAll, "all", "A", "", "Perform initialisation steps using given license file and start instances")
@@ -153,13 +154,13 @@ sudo geneos init geneos /opt/itrs
 	// home directory is NOT "geneos" then create a directory "geneos", else
 	//
 	// XXX Call any registered initializer funcs from components
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args := CmdArgs(cmd)
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, args := cmd.CmdArgs(command)
 		log.Debug().Msgf("%s %v", ct, args)
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			log.Error().Err(ErrInvalidArgs).Msg(ct.String())
-			return ErrInvalidArgs
+			log.Error().Err(cmd.ErrInvalidArgs).Msg(ct.String())
+			return cmd.ErrInvalidArgs
 		}
 
 		options, err := initProcessArgs(args)
@@ -175,7 +176,7 @@ sudo geneos init geneos /opt/itrs
 			log.Fatal().Err(err).Msg("")
 		}
 
-		if err = initMisc(cmd); err != nil {
+		if err = initMisc(command); err != nil {
 			return
 		}
 
@@ -286,7 +287,7 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 	}
 
 	if initCmdDLUsername != "" && len(initCmdDLPassword) == 0 {
-		initCmdDLPassword = config.ReadPasswordPrompt()
+		initCmdDLPassword, _ = config.PasswordPrompt(false, 0)
 	}
 
 	if initCmdDLUsername != "" {
@@ -296,7 +297,7 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 	return
 }
 
-func initMisc(cmd *cobra.Command) (err error) {
+func initMisc(command *cobra.Command) (err error) {
 	if initCmdGatewayTemplate != "" {
 		var tmpl []byte
 		if tmpl, err = geneos.ReadFrom(initCmdGatewayTemplate); err != nil {
@@ -318,17 +319,30 @@ func initMisc(cmd *cobra.Command) (err error) {
 	}
 
 	if initCmdMakeCerts {
-		return RunE(cmd.Root(), []string{"tls", "init"}, []string{})
+		return cmd.RunE(command.Root(), []string{"tls", "init"}, []string{})
 	} else {
 		// both options can import arbitrary PEM files, fix this
 		if initCmdImportCert != "" {
-			RunE(cmd.Root(), []string{"tls", "import"}, []string{initCmdImportCert})
+			cmd.RunE(command.Root(), []string{"tls", "import"}, []string{initCmdImportCert})
 		}
 
 		if initCmdImportKey != "" {
-			RunE(cmd.Root(), []string{"tls", "import"}, []string{initCmdImportKey})
+			cmd.RunE(command.Root(), []string{"tls", "import"}, []string{initCmdImportKey})
 		}
 	}
 
+	return
+}
+
+// XXX this is a duplicate of the function in package/packageInstall.go
+func install(ct *geneos.Component, target string, options ...geneos.Options) (err error) {
+	for _, h := range host.Match(target) {
+		if err = ct.MakeComponentDirs(h); err != nil {
+			return err
+		}
+		if err = geneos.Install(h, ct, options...); err != nil {
+			return
+		}
+	}
 	return
 }

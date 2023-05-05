@@ -25,8 +25,6 @@ package cmd
 import (
 	"strings"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/spf13/cobra"
 )
 
@@ -147,19 +145,6 @@ var installCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		return RunE(command.Root(), []string{"package", "install"}, args)
 	},
-}
-
-// XXX this is a duplicate of the function in package/packageInstall.go
-func install(ct *geneos.Component, target string, options ...geneos.Options) (err error) {
-	for _, h := range host.Match(target) {
-		if err = ct.MakeComponentDirs(h); err != nil {
-			return err
-		}
-		if err = geneos.Install(h, ct, options...); err != nil {
-			return
-		}
-	}
-	return
 }
 
 var updateLsCmd = &cobra.Command{

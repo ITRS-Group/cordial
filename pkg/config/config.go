@@ -425,18 +425,74 @@ func ReadHOCONFile(path string) (cf *Config, err error) {
 	return
 }
 
-func ReadPasswordPrompt(prompt ...string) []byte {
-	if len(prompt) == 0 {
-		fmt.Printf("Password: ")
+// PasswordPrompt prompts the user for a password without echoing the input. This
+// is returned as a whitespace trimmed byte slice. If validate is true then the
+// user is prompted twice and the two instances checked for a match. Up to
+// maxtries attempts are allowed after which an error is returned.
+//
+// If prompt is given then it must either be one or two strings, depending on
+// validate being false or true respectively. The prompt(s) are suffixed with ":
+// " in both cases. The defaults are "Password" and "Re-enter Password".
+//
+// if maxtries is 0 then it is set to the default of 3
+func PasswordPrompt(validate bool, maxtries int, prompt ...string) (pw []byte, err error) {
+	if validate {
+		var match bool
+		if len(prompt) != 2 {
+			prompt = []string{}
+		}
+
+		if maxtries == 0 {
+			maxtries = 3
+		}
+
+		for i := 0; i < maxtries; i++ {
+			if len(prompt) == 0 {
+				fmt.Printf("Password: ")
+			} else {
+				fmt.Printf("%s: ", prompt[0])
+			}
+			pw1, err := term.ReadPassword(int(syscall.Stdin))
+			if err != nil {
+				return pw, err
+			}
+			fmt.Println()
+			if len(prompt) == 0 {
+				fmt.Printf("Re-enter Password: ")
+			} else {
+				fmt.Printf("%s: ", prompt[0])
+			}
+			pw2, err := term.ReadPassword(int(syscall.Stdin))
+			if err != nil {
+				return pw, err
+			}
+			fmt.Println()
+			if bytes.Equal(pw1, pw2) {
+				pw = pw1
+				match = true
+				break
+			}
+			fmt.Println("Passwords do not match. Please try again.")
+		}
+		if !match {
+			err = fmt.Errorf("too many attempts, giving up")
+			return
+		}
 	} else {
-		fmt.Printf("%s: ", strings.Join(prompt, " "))
+		if len(prompt) == 0 {
+			fmt.Printf("Password: ")
+		} else {
+			fmt.Printf("%s: ", strings.Join(prompt, " "))
+		}
+		pw, err = term.ReadPassword(int(syscall.Stdin))
+		if err != nil {
+			return
+		}
+		fmt.Println()
 	}
-	pw, err := term.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		log.Fatal().Err(err).Msg("Error getting password")
-	}
-	fmt.Println()
-	return bytes.TrimSpace(pw)
+
+	pw = bytes.TrimSpace(pw)
+	return
 }
 
 func ReadPasswordFile(path string) []byte {

@@ -8,10 +8,13 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"unicode/utf8"
 
@@ -258,6 +261,50 @@ func (a AESValues) DecodeAESString(in string) (out string, err error) {
 	return
 }
 
+// CheckKeyfile will return the CRC32 checksum of the keyfile at path.
+// If the file does not exist and create is true then a new ketfile will
+// be created along with any intermediate directories and the checksum
+// of the new file will be returned. On error the checksum is undefined
+// and err will be set appropriately. If create is true then directories
+// and a file may have been created even on error.
+func CheckKeyfile(path string, create bool) (crc32 uint32, created bool, err error) {
+	var a AESValues
+	if _, err = os.Stat(path); err != nil {
+		// only try to create if the error is a not exists
+		if errors.Is(err, fs.ErrNotExist) {
+			if !create {
+				return
+			}
+			if a, err = NewAESValues(); err != nil {
+				return
+			}
+			if err = os.MkdirAll(filepath.Dir(path), 0775); err != nil {
+				err = fmt.Errorf("failed to create keyfile directory %q: %w", filepath.Dir(path), err)
+				return
+			}
+			if err = os.WriteFile(path, []byte(a.String()), 0600); err != nil {
+				err = fmt.Errorf("failed to write keyfile to %q: %w", path, err)
+				return
+			}
+			created = true
+
+			crc32, err = ChecksumString(a.String())
+			if err != nil {
+				return
+			}
+		}
+		return
+	}
+
+	// read existing and return crc
+	a, err = ReadAESValuesFile(path)
+	if err != nil {
+		return
+	}
+	crc32, err = ChecksumString(a.String())
+	return
+}
+
 // EncodeWithKey encodes the plaintext using the AES key read from the
 // file given. The encoded password is returned in `Geneos AES256`
 // format, with the `+encs+` prefix, unless expandable is set to true in
@@ -323,19 +370,9 @@ func EncodeWithKey(plaintext []byte, key []byte) (out string, err error) {
 // expandable is true then the encoded password is returned in a format
 // useable by the Expand function and includes a path to the keyfile.
 func EncodePasswordPrompt(keyfile string, expandable bool) (out string, err error) {
-	var plaintext []byte
-	var match bool
-	for i := 0; i < 3; i++ {
-		plaintext = ReadPasswordPrompt()
-		plaintext2 := ReadPasswordPrompt("Re-enter Password")
-		if bytes.Equal(plaintext, plaintext2) {
-			match = true
-			break
-		}
-		fmt.Println("Passwords do not match. Please try again.")
-	}
-	if !match {
-		return "", fmt.Errorf("too many attempts, giving up")
+	plaintext, err := PasswordPrompt(true, 3)
+	if err != nil {
+		return
 	}
 	return EncodeWithKeyfile(plaintext, keyfile, expandable)
 }

@@ -4,16 +4,15 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package aes
 
 import (
-	"bytes"
 	"fmt"
-	"io/fs"
-	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 var aesPasswordCmdString, aesPasswordCmdSource string
@@ -41,33 +40,18 @@ on of the flags is set.
 	Annotations: map[string]string{
 		"wildcard": "false",
 	},
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
+	RunE: func(command *cobra.Command, args []string) (err error) {
 		var plaintext []byte
-		var match bool
 
-		// check for existing keyfile, create if none
-		if _, err := os.Stat(aesDefaultKeyfile); err != nil && err == fs.ErrNotExist {
-			a, err := config.NewAESValues()
-			if err != nil {
-				return err
-			}
-			if err = os.MkdirAll(filepath.Dir(aesDefaultKeyfile), 0775); err != nil {
-				return fmt.Errorf("failed to create keyfile directory %q: %w", filepath.Dir(aesDefaultKeyfile), err)
-			}
-			if err = os.WriteFile(aesDefaultKeyfile, []byte(a.String()), 0600); err != nil {
-				return fmt.Errorf("failed to write keyfile to %q: %w", aesDefaultKeyfile, err)
-			}
-			var crc uint32
+		crc, created, err := config.CheckKeyfile(cmd.DefaultUserKeyfile, true)
+		if err != nil {
+			log.Fatal().Err(err).Msg("")
+			return
+		}
+		crcstr := fmt.Sprintf("%08X", crc)
 
-			crc, err = config.ChecksumString(a.String())
-			if err != nil {
-				return err
-			}
-			crcstr := fmt.Sprintf("%08X", crc)
-
-			if aesNewCmdKeyfile != "" {
-				fmt.Printf("%s created, checksum %s\n", aesDefaultKeyfile, crcstr)
-			}
+		if created {
+			fmt.Printf("%s created, checksum %s\n", cmd.DefaultUserKeyfile, crcstr)
 		}
 		if aesPasswordCmdString != "" {
 			plaintext = []byte(aesPasswordCmdString)
@@ -77,20 +61,12 @@ on of the flags is set.
 				return
 			}
 		} else {
-			for i := 0; i < 3; i++ {
-				plaintext = config.ReadPasswordPrompt()
-				plaintext2 := config.ReadPasswordPrompt("Re-enter Password")
-				if bytes.Equal(plaintext, plaintext2) {
-					match = true
-					break
-				}
-				fmt.Println("Passwords do not match. Please try again.")
-			}
-			if !match {
-				return fmt.Errorf("too many attempts, giving up")
+			plaintext, err = config.PasswordPrompt(true, 3)
+			if err != nil {
+				return
 			}
 		}
-		e, err := config.EncodeWithKeyfile(plaintext, aesDefaultKeyfile, true)
+		e, err := config.EncodeWithKeyfile(plaintext, cmd.DefaultUserKeyfile, true)
 		if err != nil {
 			return err
 		}

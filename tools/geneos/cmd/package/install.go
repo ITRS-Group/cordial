@@ -126,7 +126,7 @@ geneos install netprobe -b active_dev -U
 		}
 
 		if packageInstallCmdUsername != "" && len(packageInstallCmdPassword) == 0 {
-			packageInstallCmdPassword = config.ReadPasswordPrompt()
+			packageInstallCmdPassword, _ = config.PasswordPrompt(false, 0)
 		}
 
 		// if we have a component on the command line then use an archive in packages/downloads

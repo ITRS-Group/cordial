@@ -64,7 +64,7 @@ func init() {
 	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format `PRIORITY:[PATH|URL]`")
 	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME:PORT")
 	addCmd.Flags().VarP(&addCmdExtras.Attributes, "attribute", "a", "(sans) Add an attribute in the format NAME=VALUE")
-	addCmd.Flags().VarP(&addCmdExtras.Types, "type", "t", "(sans) Add a gateway in the format NAME:PORT")
+	addCmd.Flags().VarP(&addCmdExtras.Types, "type", "t", "(sans) Add a type TYPE")
 	addCmd.Flags().VarP(&addCmdExtras.Variables, "variable", "v", "(sans) Add a variable in the format [TYPE:]NAME=VALUE")
 
 	addCmd.Flags().SortFlags = false
@@ -97,14 +97,14 @@ geneos add netprobe infraprobe12 --start --log
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args := CmdArgs(cmd)
-		return addInstance(ct, addCmdExtras, args...)
+		return AddInstance(ct, addCmdExtras, args...)
 	},
 }
 
-// addInstance an instance
+// AddInstance an instance
 //
 // this is also called from the init command code
-func addInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, args ...string) (err error) {
+func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, args ...string) (err error) {
 	var username string
 
 	// check validity and reserved words here
