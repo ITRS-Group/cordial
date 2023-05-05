@@ -261,6 +261,28 @@ func (a AESValues) DecodeAESString(in string) (out string, err error) {
 	return
 }
 
+// NewKeyfile will create a new keyfile at path. It will backup any
+// existing file with the suffix backup unless backup is an empty
+// string, in which case any existing file is overwritten.
+func NewKeyfile(path, backup string) (crc uint32, err error) {
+	if _, _, err = CheckKeyfile(path, false); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			// if is doesn't exist just try to create it
+			crc, _, err = CheckKeyfile(path, true)
+		}
+		return
+	}
+
+	if backup != "" {
+		if err = os.Rename(path, path+backup); err != nil {
+			err = fmt.Errorf("keyfile backup failed: %w", err)
+			return
+		}
+	}
+	crc, _, err = CheckKeyfile(path, true)
+	return
+}
+
 // CheckKeyfile will return the CRC32 checksum of the keyfile at path.
 // If the file does not exist and create is true then a new ketfile will
 // be created along with any intermediate directories and the checksum
