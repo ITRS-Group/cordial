@@ -53,10 +53,6 @@ func Start(c geneos.Instance) (err error) {
 		return fmt.Errorf("BuildCmd() returned nil")
 	}
 
-	// if !utils.CanControl(c.Config().GetString("user")) {
-	// 	return os.ErrPermission
-	// }
-
 	// set underlying user for child proc
 	username := c.Config().GetString("user")
 	errfile := ComponentFilepath(c, "txt")
