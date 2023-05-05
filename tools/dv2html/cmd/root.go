@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aymerick/douceur/inliner"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -43,6 +44,59 @@ import (
 	"github.com/itrs-group/cordial/pkg/email"
 	"github.com/itrs-group/cordial/pkg/xpath"
 )
+
+var cfgFile string
+var execname string
+var debug, quiet bool
+var inlineCSS bool
+
+func init() {
+	cobra.OnInitialize(initConfig)
+
+	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	rootCmd.PersistentFlags().BoolVarP(&inlineCSS, "inline-css", "i", false, "try to inline CSS for better mail client support")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2html.yaml)")
+
+	// how to remove the help flag help text from the help output! Sigh...
+	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	rootCmd.PersistentFlags().MarkHidden("help")
+
+	execname = filepath.Base(os.Args[0])
+	cordial.LogInit(execname)
+}
+
+func initConfig() {
+	if quiet {
+		zerolog.SetGlobalLevel(zerolog.Disabled)
+	} else if debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
+
+	if cfgFile != "" {
+		// Use config file from the flag.
+		viper.SetConfigFile(cfgFile)
+		viper.AutomaticEnv() // read in environment variables that match
+		// If a config file is found, read it in.
+		if err := viper.ReadInConfig(); err == nil {
+			fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		}
+	} else {
+		cf, err := config.LoadConfig(execname,
+			config.SetConfigFile(cfgFile),
+			config.Global(),
+			config.MergeSettings(),
+		)
+		if err != nil {
+			log.Fatal().Err(err).Msg("")
+		}
+
+		replacer := strings.NewReplacer(".", "_")
+		cf.SetEnvKeyReplacer(replacer)
+		cf.AutomaticEnv()
+	}
+}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -205,9 +259,20 @@ directory or in the user's .config/dv2html directory)
 			log.Fatal().Err(err).Msg("")
 		}
 		m.SetHeader("Subject", em.GetString("_subject"))
-		m.SetBodyWriter("text/html", func(w io.Writer) error {
-			return t.Execute(w, tmplData)
-		})
+
+		if inlineCSS {
+			var body strings.Builder
+			t.Execute(&body, tmplData)
+			inlined, err := inliner.Inline(body.String())
+			if err != nil {
+				log.Fatal().Err(err).Msg("")
+			}
+			m.SetBody("text/html", inlined)
+		} else {
+			m.SetBodyWriter("text/html", func(w io.Writer) error {
+				return t.Execute(w, tmplData)
+			})
+		}
 
 		err = d.DialAndSend(m)
 		if err != nil {
@@ -224,57 +289,5 @@ func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
-	}
-}
-
-var cfgFile string
-var execname string
-var debug, quiet bool
-
-func init() {
-	debug = true
-	cobra.OnInitialize(initConfig)
-
-	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2html.yaml)")
-
-	// how to remove the help flag help text from the help output! Sigh...
-	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	rootCmd.PersistentFlags().MarkHidden("help")
-
-	execname = filepath.Base(os.Args[0])
-	cordial.LogInit(execname)
-}
-
-func initConfig() {
-	if quiet {
-		zerolog.SetGlobalLevel(zerolog.Disabled)
-	} else if debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else {
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
-
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-		viper.AutomaticEnv() // read in environment variables that match
-		// If a config file is found, read it in.
-		if err := viper.ReadInConfig(); err == nil {
-			fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-		}
-	} else {
-		cf, err := config.LoadConfig(execname,
-			config.SetConfigFile(cfgFile),
-			config.Global(),
-			config.MergeSettings(),
-		)
-		if err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
-
-		replacer := strings.NewReplacer(".", "_")
-		cf.SetEnvKeyReplacer(replacer)
-		cf.AutomaticEnv()
 	}
 }
