@@ -42,7 +42,7 @@ on of the flags is set.
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var plaintext []byte
 
-		crc, created, err := config.CheckKeyfile(cmd.DefaultUserKeyfile, true)
+		crc, created, err := cmd.DefaultUserKeyfile.Check(true)
 		if err != nil {
 			return
 		}
@@ -59,12 +59,12 @@ on of the flags is set.
 				return
 			}
 		} else {
-			plaintext, err = config.PasswordPrompt(true, 3)
+			plaintext, err = config.ReadPasswordInput(true, 3)
 			if err != nil {
 				return
 			}
 		}
-		e, err := config.EncodeWithKeyfile(plaintext, cmd.DefaultUserKeyfile, true)
+		e, err := cmd.DefaultUserKeyfile.Encode(plaintext, true)
 		if err != nil {
 			return err
 		}

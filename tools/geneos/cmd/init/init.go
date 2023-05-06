@@ -23,6 +23,7 @@ THE SOFTWARE.
 package init
 
 import (
+	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -281,13 +282,15 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 	}
 
 	if initCmdPwFile != "" {
-		initCmdDLPassword = config.ReadPasswordFile(initCmdPwFile)
+		if initCmdDLPassword, err = os.ReadFile(initCmdPwFile); err != nil {
+			return
+		}
 	} else {
 		initCmdDLPassword = config.GetByteSlice("download.password")
 	}
 
 	if initCmdDLUsername != "" && len(initCmdDLPassword) == 0 {
-		initCmdDLPassword, _ = config.PasswordPrompt(false, 0)
+		initCmdDLPassword, _ = config.ReadPasswordInput(false, 0)
 	}
 
 	if initCmdDLUsername != "" {

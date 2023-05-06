@@ -20,14 +20,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-Package config adds support for value expansion over viper based
-configurations.
-
-A number of the most common access methods from viper are replaced with
-local versions that add support for [ExpandString]. Additionally, there
-are a number of functions to simplify programs including [LoadConfig].
-*/
 package config
 
 import (
@@ -43,33 +35,30 @@ import (
 
 // ExpandString returns the input with all occurrences of the form
 // ${name} replaced using an [os.Expand]-like function (but without
-// support for bare names) for the built-in and optional formats (in the
-// order of priority) below. The caller can use options to define
-// additional expansion functions based on a "prefix:", disabled
+// support for $name in the input) for the built-in and optional formats
+// (in the order of priority) below. The caller can use options to
+// define additional expansion functions based on a "prefix:", disabled
 // external lookups and also to pass in lookup tables referred to as
 // value maps.
 //
 //	${enc:keyfile[|keyfile...]:encodedvalue}
 //
-//	   The item "encodedvalue" is an AES256 ciphertext in Geneos format
-//	   - or a reference to one - which will be decoded using the key
-//	   file(s) given. Each "keyfile" must be one of either an absolute
-//	   path, a path relative to the working directory of the program, or
-//	   if prefixed with "~/" then relative to the home directory of the
-//	   user running the program. The first valid decode (see below) is
-//	   returned.
+//	  "encodedvalue" is an AES256 ciphertext in Geneos format - or, if
+//	  not prefixed with `+encs+` then it ss processed as an expandable
+//	  string itself and can be a reference to another configuration key
+//	  or a file or remote url containing one - which will be decoded
+//	  using the key file(s) given. Each "keyfile" must be one of either
+//	  an absolute path, a path relative to the working directory of the
+//	  program, or if prefixed with "~/" then relative to the home
+//	  directory of the user running the program. The first valid decode
+//	  (see below) is returned.
 //
-//	   The "encodedvalue" must be either prefixed "+encs+" to align with
-//	   Geneos or will otherwise be looked up using the forms of any of
-//	   the other references below, but without the surrounding
-//	   dollar-brackets "${...}".
+//	  To minimise (but not wholly eliminate) any false-positive decodes
+//	  that occur in some circumstances when using the wrong key file,
+//	  the decoded value is only returned if it is a valid UTF-8 string
+//	  as per [utf8.Valid].
 //
-//	   To minimise (but not wholly eliminate) any false-positive decodes
-//	   that occur in some circumstances when using the wrong key file,
-//	   the decoded value is only returned if it is a valid UTF-8 string
-//	   as per [utf8.Valid].
-//
-//	   Examples:
+//	  Examples:
 //
 //	   * password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
 //	   * password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
@@ -86,62 +75,62 @@ import (
 //	   each time ExpandString() is called. No locking of the
 //	   configuration is done.
 //
-//	 ${key}
+//	${key}
 //
-//	   "key" will be substituted with the value of the first matching
-//	   key from the maps "values...", in the order passed to the
-//	   function. If no "values" are passed (as opposed to the key not
-//	   being found in any of the maps) then name is looked up
-//	   as an environment variable, as 4. below.
+//	  "key" will be substituted with the value of the first matching key
+//	  from the tables set using config.LookupTable(), in the order passed
+//	  to the function. If no lookup tables are set (as opposed to the
+//	  key not being found in any of the tables) then name is looked up
+//	  as an environment variable, as below.
 //
-//	 ${env:name}
+//	${env:name}
 //
-//	   "name" will be substituted with the contents of the environment
-//	   variable of the same name.
+//	  "name" will be substituted with the contents of the environment
+//	  variable of the same name. If no environment variable with name
+//	  exists then the value returned is an empty string.
 //
-//	 The prefixes below are optional and enabled by default. They can be
-//	 enabled or disabled using the option [config.ExternalLookups()]
-//	 option. The are enabled by default.
+//	The additional prefixes below are enabled by default. They can be
+//	disabled using the config.ExternalLookups() option.
 //
-//	 ${.../path/to/file} or ${~/file} or ${file://path/to/file} or ${file:~/path/to/file}
+//	${.../path/to/file} or ${~/file} or ${file://path/to/file} or ${file:~/path/to/file}
 //
-//	   The contents of the referenced file will be read. Multiline files
-//	   are used as-is; this can, for example, be used to read PEM
-//	   certificate files or keys. If the path is prefixed with "~/" (or
-//	   as an addition to a standard file url, if the first "/" is
-//	   replaced with a tilde "~") then the path is relative to the home
-//	   directory of the user running the process.
+//	  The contents of the referenced file will be read. Multiline files
+//	  are used as-is; this can, for example, be used to read PEM
+//	  certificate files or keys. If the path is prefixed with "~/" (or
+//	  as an addition to a standard file url, if the first "/" is
+//	  replaced with a tilde "~") then the path is relative to the home
+//	  directory of the user running the process.
 //
-//	   Any name that contains a `/` but not a `:` will be treated as a
-//	   file, if file reading is enabled. File paths can be absolute or
-//	   relative to the working directory (or relative to the home
-//	   directory, as above)
+//	  Any name that contains a `/` but not a `:` will be treated as a
+//	  file, if file reading is enabled. File paths can be absolute or
+//	  relative to the working directory (or relative to the home
+//	  directory, as above)
 //
-//	   Examples:
+//	  Examples:
 //
-//	   * certfile: ${file://etc/ssl/cert.pem}
-//	   * template: ${file:~/templates/autogen.gotmpl}
-//	   * relative: ./file.txt
+//	  * certfile: ${file://etc/ssl/cert.pem}
+//	  * template: ${file:~/templates/autogen.gotmpl}
+//	  * relative: ${./file.txt}
 //
-//	 ${https://host/path} or ${http://host/path}
+//	${https://host/path} or ${http://host/path}
 //
-//	   The contents of the URL are fetched and used similarly as for
-//	   local files above. The URL is passed to [http.Get] and supports
-//	   proxies, embedded Basic Authentication and other features from
-//	   that function.
+//	  The contents of the URL are fetched and used similarly as for
+//	  local files above. The URL is passed to [http.Get] and supports
+//	  proxies, embedded Basic Authentication and other features from
+//	  that function.
 //
-//	 The prefix below can be enabled with the [config.Expressions()] option.
+//	The prefix below can be enabled with the config.Expressions() option.
 //
-//	 ${expr:EXPRESSION}
+//	${expr:EXPRESSION}
 //
-//	   EXPRESSION is evaluated using [github.com/maja42/goval]. Inside
-//	   the expression all configuration items are available as variables
-//	   with the top level map `env` set to the environment variables
-//	   available. All results are returned as strings. An empty string
-//	   may mean there was an error in evaluating the expression.
+//	  EXPRESSION is evaluated using https://github.com/maja42/goval. Inside
+//	  the expression all configuration items are available as variables
+//	  with the top level map `env` set to the environment variables
+//	  available. All results are returned as strings. An empty string
+//	  may mean there was an error in evaluating the expression.
 //
 // Additional custom lookup prefixes can be added with the
-// [config.Prefix] option.
+// config.Prefix() option.
 //
 // The bare form "$name" is NOT supported, unlike [os.Expand] as this
 // can unexpectedly match values containing valid literal dollar signs.
@@ -205,7 +194,7 @@ func (c *Config) ExpandString(input string, options ...ExpandOptions) (value str
 	return
 }
 
-// Expand behaves like [ExpandString] but returns a byte slice.
+// Expand behaves like ExpandString but returns a byte slice.
 //
 // This should be used where the return value may contain sensitive data
 // and an immutable string cannot be destroyed after use.
@@ -213,7 +202,7 @@ func Expand(input string, options ...ExpandOptions) (value []byte) {
 	return global.Expand(input, options...)
 }
 
-// Expand behaves like the [ExpandString] method but returns a byte
+// Expand behaves like the ExpandString method but returns a byte
 // slice.
 func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
 	value = expandBytes([]byte(input), func(s []byte) (r []byte) {
@@ -226,9 +215,10 @@ func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
 	return
 }
 
-// ExpandAllSettings returns all the settings from c applying
-// ExpandString() to all string values and all string slice values.
-// Further types may be added over time.
+// ExpandAllSettings returns all the settings from config structure c
+// applying ExpandString to all string values and all string slice
+// values. Non-string types are left unchanged. Further types, e.g. maps
+// of strings, may be added in future releases.
 func (c *Config) ExpandAllSettings(options ...ExpandOptions) (all map[string]interface{}) {
 	as := c.AllSettings()
 	all = make(map[string]interface{}, len(as))
@@ -276,16 +266,14 @@ func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value 
 		return
 	}
 
-	for _, keyfile := range strings.Split(keyfiles, "|") {
-		if strings.HasPrefix(keyfile, "~/") {
+	for _, k := range strings.Split(keyfiles, "|") {
+		if strings.HasPrefix(k, "~/") {
 			home, _ := os.UserHomeDir()
-			keyfile = strings.Replace(keyfile, "~", home, 1)
+			k = strings.Replace(k, "~", home, 1)
 		}
-		a, err := ReadAESValuesFile(keyfile)
-		if err != nil {
-			continue
-		}
-		p, err := a.DecodeAESString(encodedValue)
+
+		keyfile := KeyFile(k)
+		p, err := keyfile.DecodeString(encodedValue)
 		if err != nil {
 			continue
 		}
@@ -309,16 +297,13 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 		return
 	}
 
-	for _, keyfile := range bytes.Split(keyfiles, []byte("|")) {
-		if bytes.HasPrefix(keyfile, []byte("~/")) {
+	for _, k := range bytes.Split(keyfiles, []byte("|")) {
+		if bytes.HasPrefix(k, []byte("~/")) {
 			home, _ := os.UserHomeDir()
-			keyfile = bytes.Replace(keyfile, []byte("~"), []byte(home), 1)
+			k = bytes.Replace(k, []byte("~"), []byte(home), 1)
 		}
-		a, err := ReadAESValuesFile(string(keyfile))
-		if err != nil {
-			continue
-		}
-		p, err := a.DecodeAES(encodedValue)
+		keyfile := KeyFile(k)
+		p, err := keyfile.Decode(encodedValue)
 		if err != nil {
 			continue
 		}
@@ -330,9 +315,9 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 // ExpandRawString expands the string s using the same rules and options
 // as [ExpandString] but treats the whole of s as if it were wrapped in
 // '${...}'. The function does most of the core work for configuration
-// expansion but is also exported to let callers use it without the
-// syntactic sugar required for configuration values, allowing use
-// against command line flag values, for example.
+// expansion but is also exported for use without the decoration
+// required for configuration values, allowing use against command line
+// flag values, for example.
 func (c *Config) ExpandRawString(s string, options ...ExpandOptions) (value string, err error) {
 	opts := evalExpandOptions(c, options...)
 	switch {

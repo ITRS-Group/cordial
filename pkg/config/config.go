@@ -21,45 +21,53 @@ THE SOFTWARE.
 */
 
 /*
-Package config adds support for value expansion over viper based
-configurations.
-
-A number of the most common access methods from viper are replaced with
-local versions that add support for [ExpandString]. Additionally, there
-are a number of functions to simplify programs including [LoadConfig].
+This package adds local extensions to viper as well as supporting Geneos
+encryption key files and basic encryption and decryption.
 */
 package config
 
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/fs"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
 
 	"github.com/gurkankaymak/hocon"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"golang.org/x/term"
 )
 
-// Config embeds Viper and also exposes the config type used
+// Config embeds Viper
 type Config struct {
 	*viper.Viper
-	Type                 string
+	Type                 string // The type of configuration file loaded
 	defaultExpandOptions []ExpandOptions
 }
 
+// global is the default configuration container for non-method callers
 var global *Config
 
 func init() {
 	global = &Config{Viper: viper.New()}
+}
+
+// GetConfig returns the global Config instance
+func GetConfig() *Config {
+	return global
+}
+
+// New returns a Config instance initialised with a new viper instance
+func New() *Config {
+	return &Config{Viper: viper.New()}
+}
+
+// Sub returns a Config instance rooted at the key passed
+func (c *Config) Sub(key string) *Config {
+	return &Config{Viper: c.Viper.Sub(key)}
 }
 
 // SetMap iterates over a map[string]string and sets each key to the
@@ -77,16 +85,6 @@ func (c *Config) SetStringMapString(m string, vals map[string]string) {
 func SetStringMapString(m string, vals map[string]string) {
 	global.SetStringMapString(m, vals)
 }
-
-// XXX maybe later
-// func (c *Config) Set(name string, value interface{}) {
-// 	switch v := value.(type) {
-// 	case string, int:
-// 		c.Viper.Set(name, v)
-// 	default:
-
-// 	}
-// }
 
 // GetString functions like [viper.GetString] but additionally calls
 // [ExpandString] with the configuration value, passing any "values" maps
@@ -155,21 +153,6 @@ func (c *Config) GetByteSlice(s string, options ...ExpandOptions) []byte {
 	return c.Expand(c.Viper.GetString(s), options...)
 }
 
-// GetConfig returns the global Config instance
-func GetConfig() *Config {
-	return global
-}
-
-// New returns a Config instance initialised with a new viper instance
-func New() *Config {
-	return &Config{Viper: viper.New()}
-}
-
-// Sub returns a Config instance for the sub-key passed
-func (c *Config) Sub(key string) *Config {
-	return &Config{Viper: c.Viper.Sub(key)}
-}
-
 // GetStringSlice functions like [viper.GetStringSlice] but additionally calls
 // [ExpandString] on each element of the slice, passing any "values" maps
 func GetStringSlice(s string, options ...ExpandOptions) []string {
@@ -205,187 +188,12 @@ func (c *Config) GetStringMapString(s string, options ...ExpandOptions) (m map[s
 	return m
 }
 
-// LoadConfig loads configuration files from internal defaults, external
-// defaults and the given configuration file(s). The configuration
-// file(s) can be passed as an option. Each layer is only loaded once,
-// if given. Internal defaults are passed as a byte slice - this is
-// typically loaded from an embedded file but can be supplied from any
-// source. External defaults, which have a `.defaults` suffix before the
-// file extension, and the main configuration file are passed as ordered
-// slices of strings. The first match is loaded unless the
-// MergeSettings() option is passed, in which case all defaults are
-// merged and then all non-defaults are merged in the order they were
-// given.
-//
-//	LoadConfig("geneos")
-//
-//	//go:embed somefile.json
-//	var myDefaults []byte
-//	LoadConfig("geneos", config.SetDefaults(myDefaults, "json"), config.SetConfigFile(configPath))
-//
-// Options can be passed to change the default behaviour and to pass any
-// embedded defaults or an existing viper.
-//
-// for defaults see:
-// https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-//
-// TBD: windows equiv of above
-func LoadConfig(configName string, options ...Options) (c *Config, err error) {
-	opts := evalOptions(configName, options...)
-
-	if opts.setglobals {
-		c = global
-	} else {
-		c = New()
-	}
-
-	defaults := viper.New()
-	internalDefaults := viper.New()
-
-	if opts.usedefaults && len(opts.defaults) > 0 {
-		buf := bytes.NewBuffer(opts.defaults)
-		internalDefaults.SetConfigType(opts.defaultsFormat)
-		// ignore errors ?
-		internalDefaults.ReadConfig(buf)
-
-		// now set any internal default values as real defaults, cannot use Merge here
-		for k, v := range internalDefaults.AllSettings() {
-			defaults.SetDefault(k, v)
-		}
-	}
-
-	// concatenate config directories in order - first match wins below,
-	// unless MergeSettings() option is used. The order is:
-	//
-	// 1. Explicit directory arguments passed using the option AddConfigDirs()
-	// 2. The working directory unless the option IgnoreWorkingDir() is used
-	// 3. The user configuration directory plus `AppName`, unless IgnoreUserConfDir() is used
-	// 4. The system configuration directory plus `AppName`, unless IgnoreSystemDir() is used
-	confDirs := opts.configDirs
-	if opts.workingdir != "" {
-		confDirs = append(confDirs, opts.workingdir)
-	}
-	if opts.userconfdir != "" {
-		confDirs = append(confDirs, filepath.Join(opts.userconfdir, opts.appname))
-	}
-	if opts.systemdir != "" {
-		confDirs = append(confDirs, filepath.Join(opts.systemdir, opts.appname))
-	}
-
-	// if we are merging, then we load in reverse order to ensure lower
-	// priorities are overwritten
-	if opts.merge {
-		for i := len(confDirs)/2 - 1; i >= 0; i-- {
-			opp := len(confDirs) - 1 - i
-			confDirs[i], confDirs[opp] = confDirs[opp], confDirs[i]
-		}
-	}
-	log.Debug().Msgf("confDirs: %v", confDirs)
-
-	// search directories for defaults unless UseDefault(false) is
-	// used as an option to LoadConfig(). we do this even if the
-	// config file itself is set using option SetConfigFile()
-	if opts.usedefaults {
-		if opts.merge {
-			for _, dir := range confDirs {
-				d := viper.New()
-				d.AddConfigPath(dir)
-				d.SetConfigName(configName + ".defaults")
-				d.ReadInConfig()
-				if err = d.ReadInConfig(); err != nil {
-					if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
-						// not found is fine
-						continue
-					} else {
-						return c, fmt.Errorf("error reading defaults: %w", err)
-					}
-				}
-				for k, v := range d.AllSettings() {
-					defaults.SetDefault(k, v)
-				}
-			}
-		} else if len(confDirs) > 0 {
-			for _, dir := range confDirs {
-				defaults.AddConfigPath(dir)
-			}
-
-			defaults.SetConfigName(configName + ".defaults")
-			defaults.ReadInConfig()
-			if err = defaults.ReadInConfig(); err != nil {
-				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
-					// not found is fine
-				} else {
-					return c, fmt.Errorf("error reading defaults: %w", err)
-				}
-			}
-		}
-
-		// set defaults in real config based on collected defaults,
-		// following viper behaviour if the same default is set multiple
-		// times.
-		for k, v := range defaults.AllSettings() {
-			c.Viper.SetDefault(k, v)
-		}
-	}
-
-	// fixed configuration file, skip directory search
-	if opts.configFile != "" {
-		c.Viper.SetConfigFile(opts.configFile)
-		if err = c.Viper.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
-				// not found is fine
-			} else {
-				return c, fmt.Errorf("error reading config: %w", err)
-			}
-		}
-		return c, nil
-	}
-
-	// load configuration files from given directories, in order
-
-	if opts.merge {
-		for _, dir := range confDirs {
-			d := viper.New()
-			d.AddConfigPath(dir)
-			d.SetConfigName(configName)
-			if err = d.ReadInConfig(); err != nil {
-				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
-					// not found is fine
-					continue
-				} else {
-					return c, fmt.Errorf("error reading config: %w", err)
-				}
-			}
-			if err = c.Viper.MergeConfigMap(d.AllSettings()); err != nil {
-				log.Debug().Err(err).Msgf("merge of %s/%s failed, continuing.", dir, configName)
-			}
-		}
-		return c, nil
-	}
-
-	if len(confDirs) > 0 {
-		for _, dir := range confDirs {
-			c.Viper.AddConfigPath(dir)
-		}
-		c.Viper.SetConfigName(configName)
-		if err = c.Viper.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
-				// not found is fine
-			} else {
-				return c, fmt.Errorf("error reading config: %w", err)
-			}
-		}
-	}
-
-	return c, nil
-}
-
 var discardRE = regexp.MustCompile(`(?m)^\s*#.*$`)
 var shrinkBackSlashRE = regexp.MustCompile(`(?m)\\\\`)
 
 // MergeHOCONConfig parses the HOCON configuration in conf and merges the
 // results into the cf *config.Config object
-func (cf *Config) MergeHOCONConfig(conf string) (err error) {
+func (c *Config) MergeHOCONConfig(conf string) (err error) {
 	conf = discardRE.ReplaceAllString(conf, "")
 	hc, err := hocon.ParseString(conf)
 	if err != nil {
@@ -405,37 +213,55 @@ func (cf *Config) MergeHOCONConfig(conf string) (err error) {
 		return err
 	}
 
-	cf.MergeConfigMap(vc.AllSettings())
+	c.MergeConfigMap(vc.AllSettings())
 	return
 }
 
 // MergeHOCONFile reads a HOCON configuration file in path and
 // merges the settings into the cf *config.Config object
-func (cf *Config) MergeHOCONFile(path string) (err error) {
+func (c *Config) MergeHOCONFile(path string) (err error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return
 	}
-	return cf.MergeHOCONConfig(string(b))
+	return c.MergeHOCONConfig(string(b))
 }
 
-func ReadHOCONFile(path string) (cf *Config, err error) {
-	cf = New()
-	err = cf.MergeHOCONFile(path)
+// ReadHOCONFile loads a HOCON format configuration from file. To
+// control behaviour and options like config.Load() use
+// MergeHOCONConfig() or MergeHOCONFile() with an existing config.Config
+// structure.
+func ReadHOCONFile(file string) (c *Config, err error) {
+	c = New()
+	err = c.MergeHOCONFile(file)
 	return
 }
 
-// PasswordPrompt prompts the user for a password without echoing the input. This
-// is returned as a whitespace trimmed byte slice. If validate is true then the
-// user is prompted twice and the two instances checked for a match. Up to
-// maxtries attempts are allowed after which an error is returned.
+// ReadUserInput reads input from Stdin and returns the input unless
+// there is an error. The prompt is shown to the user as-is.
+func ReadUserInput(prompt string) (input string, err error) {
+	var oldState *term.State
+	// prompt for username
+	if oldState, err = term.MakeRaw(int(os.Stdin.Fd())); err != nil {
+		return
+	}
+	defer term.Restore(int(os.Stdin.Fd()), oldState)
+
+	t := term.NewTerminal(os.Stdin, prompt)
+	return t.ReadLine()
+}
+
+// ReadPasswordInput prompts the user for a password without echoing the
+// input. This is returned as a byte slice. If validate is true then the
+// user is prompted twice and the two instances checked for a match. Up
+// to maxtries attempts are allowed after which an error is returned. If
+// maxtries is 0 then a default of 3 attempts is set.
 //
-// If prompt is given then it must either be one or two strings, depending on
-// validate being false or true respectively. The prompt(s) are suffixed with ":
-// " in both cases. The defaults are "Password" and "Re-enter Password".
-//
-// if maxtries is 0 then it is set to the default of 3
-func PasswordPrompt(validate bool, maxtries int, prompt ...string) (pw []byte, err error) {
+// If prompt is given then it must either be one or two strings,
+// depending on validate being false or true respectively. The prompt(s)
+// are suffixed with ": " in both cases. The defaults are "Password" and
+// "Re-enter Password".
+func ReadPasswordInput(validate bool, maxtries int, prompt ...string) (pw []byte, err error) {
 	if validate {
 		var match bool
 		if len(prompt) != 2 {
@@ -491,14 +317,5 @@ func PasswordPrompt(validate bool, maxtries int, prompt ...string) (pw []byte, e
 		}
 	}
 
-	pw = bytes.TrimSpace(pw)
 	return
-}
-
-func ReadPasswordFile(path string) []byte {
-	pw, err := os.ReadFile(path)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Error reading password from file")
-	}
-	return bytes.TrimSpace(pw)
 }

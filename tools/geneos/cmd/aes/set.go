@@ -25,7 +25,6 @@ package aes
 import (
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"strings"
 
@@ -39,16 +38,16 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var aesSetCmdKeyfile, aesSetCmdCRC string
+var aesSetCmdKeyfile config.KeyFile
+var aesSetCmdCRC string
 var aesSetCmdNoRoll bool
 
 func init() {
 	AesCmd.AddCommand(aesSetCmd)
 
-	defKeyFile := geneos.UserConfigFilePaths("keyfile.aes")[0]
-
+	aesSetCmdKeyfile = cmd.DefaultUserKeyfile
 	aesSetCmd.Flags().StringVarP(&aesSetCmdCRC, "crc", "C", "", "CRC of existing component shared keyfile to use")
-	aesSetCmd.Flags().StringVarP(&aesSetCmdKeyfile, "keyfile", "k", defKeyFile, "Keyfile to import and use")
+	aesSetCmd.Flags().VarP(&aesSetCmdKeyfile, "keyfile", "k", "Keyfile to import and use")
 	aesSetCmd.Flags().BoolVarP(&aesSetCmdNoRoll, "noroll", "N", false, "Do not roll any existing keyfile to previous keyfile setting")
 }
 
@@ -95,14 +94,12 @@ will not result in that file being copies to other hosts.
 		ct, args := cmd.CmdArgs(command)
 
 		var crclist []string
-		var f io.ReadCloser
-		var a config.AESValues
+		var a config.KeyValues
+
+		var keyfile config.KeyFile
 
 		if aesSetCmdCRC == "" {
-			f, _, err = geneos.Open(aesSetCmdKeyfile)
-			if err != nil {
-				return err
-			}
+			keyfile = aesSetCmdKeyfile
 		} else {
 			// search for existing CRC in all shared dirs
 			var path string
@@ -118,19 +115,10 @@ will not result in that file being copies to other hosts.
 			if path == "" {
 				return fmt.Errorf("keyfile with CRC %q not found locally", aesSetCmdCRC)
 			}
-
-			f, _, err = geneos.Open(path)
-			if err != nil {
-				return err
-			}
+			keyfile = config.KeyFile(path)
 		}
-		defer f.Close()
 
-		a, err = config.ReadAESValues(f)
-		if err != nil {
-			return err
-		}
-		crc, err := a.Checksum()
+		crc, _, err := keyfile.Check(false)
 		if err != nil {
 			return err
 		}

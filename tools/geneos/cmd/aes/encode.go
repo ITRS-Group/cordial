@@ -38,13 +38,14 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 )
 
-var aesEncodeCmdAESFILE, aesEncodeCmdString, aesEncodeCmdSource string
+var aesEncodeCmdKeyfile config.KeyFile
+var aesEncodeCmdString, aesEncodeCmdSource string
 var aesEncodeCmdExpandable, aesEncodeCmdAskOnce bool
 
 func init() {
 	AesCmd.AddCommand(aesEncodeCmd)
 
-	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdAESFILE, "keyfile", "k", "", "Specific AES key file to use. Ignores matching instances")
+	aesEncodeCmd.Flags().VarP(&aesEncodeCmdKeyfile, "keyfile", "k", "Specific AES key file to use. Ignores matching instances")
 	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdString, "password", "p", "", "Password string to use")
 	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdSource, "source", "s", "", "Source for password to use")
 	aesEncodeCmd.Flags().BoolVarP(&aesEncodeCmdExpandable, "expandable", "e", false, "Output in ExpandString format")
@@ -78,15 +79,15 @@ var aesEncodeCmd = &cobra.Command{
 				return
 			}
 		} else {
-			plaintext, err = config.PasswordPrompt(!aesEncodeCmdAskOnce, 0)
+			plaintext, err = config.ReadPasswordInput(!aesEncodeCmdAskOnce, 0)
 			if err != nil {
 				return
 			}
 		}
 
-		if aesEncodeCmdAESFILE != "" {
+		if aesEncodeCmdKeyfile != "" {
 			// encode using specific file
-			e, err := config.EncodeWithKeyfile(plaintext, aesEncodeCmdAESFILE, aesEncodeCmdExpandable)
+			e, err := aesEncodeCmdKeyfile.Encode(plaintext, aesEncodeCmdExpandable)
 			if err != nil {
 				return err
 			}
@@ -105,13 +106,13 @@ func aesEncodeInstance(c geneos.Instance, params []string) (err error) {
 	if !(c.Type() == &gateway.Gateway || c.Type() == &netprobe.Netprobe || c.Type() == &san.San) {
 		return nil
 	}
-	keyfile := instance.Filepath(c, "keyfile")
+	keyfile := config.KeyFile(instance.Filepath(c, "keyfile"))
 	if keyfile == "" {
 		return
 	}
 
 	plaintext, _ := base64.StdEncoding.DecodeString(params[0])
-	e, err := config.EncodeWithKeyfile(plaintext, keyfile, aesEncodeCmdExpandable)
+	e, err := keyfile.Encode(plaintext, aesEncodeCmdExpandable)
 	if err != nil {
 		return
 	}

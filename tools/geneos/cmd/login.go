@@ -24,22 +24,24 @@ package cmd
 
 import (
 	"fmt"
-	"os"
+	"sort"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 )
 
-var loginCmdSiteURL, loginCmdUsername, loginCmdPassword, loginKeyfile string
+var loginCmdSiteURL, loginCmdUsername, loginCmdPassword string
+var loginKeyfile config.KeyFile
 
 func init() {
 	RootCmd.AddCommand(loginCmd)
 
+	loginKeyfile = UserKeyFile
 	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username")
 	loginCmd.Flags().StringVarP(&loginCmdPassword, "password", "p", "", "Password")
-	loginCmd.Flags().StringVarP(&loginKeyfile, "keyfile", "k", UserKeyFile, "Keyfile to use")
+	loginCmd.Flags().VarP(&loginKeyfile, "keyfile", "k", "Keyfile to use")
 
 	loginCmd.Flags().SortFlags = false
 
@@ -77,18 +79,9 @@ credentials can use a separate keyfile.
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		if loginCmdUsername == "" {
-			// prompt for username
-			oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
-			if err != nil {
-				return err
+			if loginCmdUsername, err = config.ReadUserInput("Username: "); err != nil {
+				return
 			}
-			t := term.NewTerminal(os.Stdin, "Username: ")
-			username, err := t.ReadLine()
-			if err != nil {
-				return err
-			}
-			term.Restore(int(os.Stdin.Fd()), oldState)
-			loginCmdUsername = string(username)
 		}
 
 		var createKeyfile bool
@@ -98,7 +91,7 @@ credentials can use a separate keyfile.
 			createKeyfile = true
 		}
 
-		if crc, created, err := config.CheckKeyfile(loginKeyfile, createKeyfile); err != nil {
+		if crc, created, err := loginKeyfile.Check(createKeyfile); err != nil {
 			return err
 		} else if created {
 			fmt.Printf("%s created, checksum %08X\n", loginKeyfile, crc)
@@ -107,14 +100,63 @@ credentials can use a separate keyfile.
 		var enc string
 		if loginCmdPassword == "" {
 			// prompt for password
-			enc, err = config.EncodePasswordPrompt(loginKeyfile, true)
+			enc, err = loginKeyfile.EncodePasswordInput(true)
 		}
 
-		if len(args) == 0 {
-			// default URL pattern
+		urlMatch := "itrsgroup.com"
+
+		// default URL pattern
+		if len(args) > 0 {
+			urlMatch = args[0]
 		}
 
 		fmt.Printf("username=%s, password=%s\n", loginCmdUsername, enc)
+		setCredentials(urlMatch, loginCmdUsername, enc)
+		log.Debug().Msgf("conf: %+v", config.GetConfig().AllSettings())
 		return
 	},
+}
+
+type auth struct {
+	Username string
+	Password string
+}
+
+// var creds map[string]auth
+
+func getCredentials(path string) (a auth) {
+	cf := config.GetConfig()
+	creds := cf.GetStringMap("credentials")
+	paths := []string{}
+	for k, _ := range creds {
+		if strings.Contains(path, k) {
+			paths = append(paths, k)
+		}
+	}
+	if len(paths) == 0 {
+		return
+	}
+	sort.Slice(paths, func(i, j int) bool {
+		return len(paths[i]) < len(paths[j])
+	})
+
+	log.Debug().Msgf("paths: %v", paths)
+	switch v := creds[paths[0]].(type) {
+	case auth:
+		return v
+	default:
+		return
+	}
+	return
+}
+
+func setCredentials(urlmatch, username, password string) {
+	cf := config.GetConfig()
+	creds := cf.GetStringMap("credentials")
+	a := auth{
+		Username: username,
+		Password: password,
+	}
+	creds[urlmatch] = a
+	cf.Set("credentials", creds)
 }

@@ -24,6 +24,7 @@ package pkg
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -120,13 +121,15 @@ geneos install netprobe -b active_dev -U
 		}
 
 		if packageInstallCmdPwFile != "" {
-			packageInstallCmdPassword = config.ReadPasswordFile(packageInstallCmdPwFile)
+			if packageInstallCmdPassword, err = os.ReadFile(packageInstallCmdPwFile); err != nil {
+				return
+			}
 		} else {
 			packageInstallCmdPassword = config.GetByteSlice("download.password")
 		}
 
 		if packageInstallCmdUsername != "" && len(packageInstallCmdPassword) == 0 {
-			packageInstallCmdPassword, _ = config.PasswordPrompt(false, 0)
+			packageInstallCmdPassword, _ = config.ReadPasswordInput(false, 0)
 		}
 
 		// if we have a component on the command line then use an archive in packages/downloads

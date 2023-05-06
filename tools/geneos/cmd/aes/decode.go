@@ -38,18 +38,21 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 )
 
-var aesDecodeCmdAESFILE, aesDecodeCmdPrevAESFILE, aesDecodeCmdPassword, aesDecodeCmdSource, aesDecodeCmdExpandString string
-var aesPrevUserKeyFile string
+var aesDecodeCmdAESFILE, aesDecodeCmdPrevAESFILE, aesPrevUserKeyFile config.KeyFile
+var aesDecodeCmdPassword, aesDecodeCmdSource, aesDecodeCmdExpandString string
 
 func init() {
 	AesCmd.AddCommand(aesDecodeCmd)
 
-	cmd.UserKeyFile = geneos.UserConfigFilePaths("keyfile.aes")[0]
-	aesPrevUserKeyFile = geneos.UserConfigFilePaths("prevkeyfile.aes")[0]
+	cmd.UserKeyFile = cmd.DefaultUserKeyfile
+	aesPrevUserKeyFile = config.KeyFile(geneos.UserConfigFilePaths("prevkeyfile.aes")[0])
+
+	aesDecodeCmdAESFILE = cmd.UserKeyFile
+	aesDecodeCmdPrevAESFILE = aesPrevUserKeyFile
 
 	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdExpandString, "expand", "e", "", "A string in ExpandString format (including '${...}') to decode")
-	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdAESFILE, "keyfile", "k", cmd.UserKeyFile, "Main AES key file to use")
-	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPrevAESFILE, "previous", "v", aesPrevUserKeyFile, "Previous AES key file to use")
+	aesDecodeCmd.Flags().VarP(&aesDecodeCmdAESFILE, "keyfile", "k", "Main AES key file to use")
+	aesDecodeCmd.Flags().VarP(&aesDecodeCmdPrevAESFILE, "previous", "v", "Previous AES key file to use")
 	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPassword, "password", "p", "", "Password to decode")
 	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdSource, "source", "s", "", "Source for password to use")
 
@@ -104,21 +107,12 @@ in the value. All other flags and arguments are ignored.
 			return geneos.ErrInvalidArgs
 		}
 
-		for _, k := range []string{aesDecodeCmdAESFILE, aesDecodeCmdPrevAESFILE} {
+		for _, k := range []config.KeyFile{aesDecodeCmdAESFILE, aesDecodeCmdPrevAESFILE} {
 			if k == "" {
 				continue
 			}
-			// decode using specific file
-			r, _, err := geneos.Open(k)
-			if err != nil {
-				continue
-			}
-			defer r.Close()
-			a, err := config.ReadAESValues(r)
-			if err != nil {
-				continue
-			}
-			e, err := a.DecodeAESString(ciphertext)
+
+			e, err := k.DecodeString(ciphertext)
 			if err != nil {
 				continue
 			}
@@ -150,11 +144,11 @@ func aesDecodeInstance(c geneos.Instance, params []string) (err error) {
 		return
 	}
 	defer r.Close()
-	a, err := config.ReadAESValues(r)
+	a, err := config.Read(r)
 	if err != nil {
 		return
 	}
-	e, err := a.DecodeAESString(params[0])
+	e, err := a.DecodeString(params[0])
 	if err != nil {
 		return nil
 	}
