@@ -83,9 +83,9 @@ func initConfig() {
 			fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 		}
 	} else {
-		cf, err := config.LoadConfig(execname,
+		cf, err := config.Load(execname,
 			config.SetConfigFile(cfgFile),
-			config.Global(),
+			config.SetGlobal(),
 			config.MergeSettings(),
 		)
 		if err != nil {

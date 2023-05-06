@@ -82,7 +82,7 @@ type.
 		}
 		defer f.Close()
 
-		a, err := config.ReadAESValues(f)
+		a, err := config.Read(f)
 		if err != nil {
 			return err
 		}
@@ -101,7 +101,7 @@ type.
 	},
 }
 
-func aesImportSave(ct *geneos.Component, h *host.Host, a *config.AESValues) (err error) {
+func aesImportSave(ct *geneos.Component, h *host.Host, a *config.KeyValues) (err error) {
 	if ct == nil || h == nil || a == nil {
 		return cmd.ErrInvalidArgs
 	}
@@ -129,7 +129,7 @@ func aesImportSave(ct *geneos.Component, h *host.Host, a *config.AESValues) (err
 	}
 	defer w.Close()
 
-	if err = a.WriteAESValues(w); err != nil {
+	if err = a.Write(w); err != nil {
 		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
 	}
 	return

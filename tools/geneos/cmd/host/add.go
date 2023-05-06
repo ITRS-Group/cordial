@@ -39,7 +39,8 @@ import (
 )
 
 var hostAddCmdInit, hostAddCmdPrompt bool
-var hostAddCmdPassword, hostAddCmdKeyfile, hostAddDefaultKeyfile string
+var hostAddCmdPassword, hostAddDefaultKeyfile string
+var hostAddCmdKeyfile config.KeyFile
 
 func init() {
 	HostCmd.AddCommand(hostAddCmd)
@@ -49,7 +50,7 @@ func init() {
 	hostAddCmd.Flags().BoolVarP(&hostAddCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
 	hostAddCmd.Flags().BoolVarP(&hostAddCmdPrompt, "prompt", "p", false, "Prompt for password")
 	hostAddCmd.Flags().StringVarP(&hostAddCmdPassword, "password", "P", "", "Password")
-	hostAddCmd.Flags().StringVarP(&hostAddCmdKeyfile, "keyfile", "k", "", "Keyfile")
+	hostAddCmd.Flags().VarP(&hostAddCmdKeyfile, "keyfile", "k", "Keyfile")
 
 	hostAddCmd.Flags().SortFlags = false
 }
@@ -140,15 +141,15 @@ func hostAdd(h *host.Host, sshurl *url.URL) (err error) {
 
 	password := ""
 	if hostAddCmdKeyfile == "" {
-		hostAddCmdKeyfile = hostAddDefaultKeyfile
+		hostAddCmdKeyfile = cmd.DefaultUserKeyfile
 	}
 
 	if hostAddCmdPrompt {
-		if password, err = config.EncodePasswordPrompt(hostAddCmdKeyfile, true); err != nil {
+		if password, err = hostAddCmdKeyfile.EncodePasswordInput(true); err != nil {
 			return
 		}
 	} else if hostAddCmdPassword != "" {
-		if password, err = config.EncodeWithKeyfile([]byte(hostAddCmdPassword), hostAddCmdKeyfile, true); err != nil {
+		if password, err = hostAddCmdKeyfile.EncodeString(hostAddCmdPassword, true); err != nil {
 			return
 		}
 	}

@@ -31,21 +31,19 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
 
 var hostSetCmdPrompt bool
-var hostSetCmdPassword, hostSetDefaultKeyfile, hostSetCmdKeyfile string
+var hostSetCmdPassword string
+var hostSetCmdKeyfile config.KeyFile
 
 func init() {
 	HostCmd.AddCommand(hostSetCmd)
 
-	hostSetDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
-
 	hostSetCmd.Flags().BoolVarP(&hostSetCmdPrompt, "prompt", "p", false, "Prompt for password")
 	hostSetCmd.Flags().StringVarP(&hostSetCmdPassword, "password", "P", "", "Password")
-	hostSetCmd.Flags().StringVarP(&hostSetCmdKeyfile, "keyfile", "k", "", "Keyfile")
+	hostSetCmd.Flags().VarP(&hostSetCmdKeyfile, "keyfile", "k", "Keyfile")
 
 	hostSetCmd.Flags().SortFlags = false
 }
@@ -83,16 +81,16 @@ Set options on remote host configurations.
 		}
 
 		if hostSetCmdKeyfile == "" {
-			hostSetCmdKeyfile = hostSetDefaultKeyfile
+			hostSetCmdKeyfile = cmd.DefaultUserKeyfile
 		}
 
 		// check for passwords
 		if hostSetCmdPrompt {
-			if password, err = config.EncodePasswordPrompt(hostSetCmdKeyfile, true); err != nil {
+			if password, err = hostSetCmdKeyfile.EncodePasswordInput(true); err != nil {
 				return
 			}
 		} else if hostSetCmdPassword != "" {
-			if password, err = config.EncodeWithKeyfile([]byte(hostSetCmdPassword), hostSetCmdKeyfile, true); err != nil {
+			if password, err = hostSetCmdKeyfile.EncodeString(hostSetCmdPassword, true); err != nil {
 				return
 			}
 		}

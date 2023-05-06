@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/commands"
@@ -97,7 +98,7 @@ not applied in any defined order.
 		"ct":       "gateway",
 		"wildcard": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args, params := CmdArgsParams(cmd)
 		if len(params) == 0 {
 			return fmt.Errorf("no dataview xpath(s) supplied")
@@ -108,13 +109,15 @@ not applied in any defined order.
 		}
 
 		if snapshotCmdPwFile != "" {
-			snapshotCmdPassword = config.ReadPasswordFile(snapshotCmdPwFile)
+			if snapshotCmdPassword, err = os.ReadFile(snapshotCmdPwFile); err != nil {
+				return
+			}
 		} else {
 			snapshotCmdPassword = config.GetByteSlice("snapshot.password")
 		}
 
 		if snapshotCmdUsername != "" && len(snapshotCmdPassword) == 0 {
-			snapshotCmdPassword, _ = config.PasswordPrompt(false, 0)
+			snapshotCmdPassword, _ = config.ReadPasswordInput(false, 0)
 		}
 
 		// at this point snapshotCmdUsername/Password contain global or

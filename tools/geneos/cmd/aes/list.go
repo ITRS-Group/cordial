@@ -121,7 +121,7 @@ func aesLSInstance(c geneos.Instance, params []string) (err error) {
 
 	r, err := c.Host().Open(path)
 	if err != nil {
-		fmt.Fprintf(aesLSTabWriter, "%s\t%s\t%s\t%s\t-\t-\n", c.Type(), c.Name(), c.Host(), path)
+		fmt.Fprintf(aesLSTabWriter, "%s\t%s\t%s\t%s\t-\t%s\n", c.Type(), c.Name(), c.Host(), path, s.ModTime().Format(time.RFC3339))
 		return nil
 	}
 	defer r.Close()
@@ -146,7 +146,7 @@ func aesLSInstanceCSV(c geneos.Instance, params []string) (err error) {
 
 	r, err := c.Host().Open(instance.Filepath(c, "keyfile"))
 	if err != nil {
-		aesLsCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), path, "-", "-"})
+		aesLsCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), path, "-", s.ModTime().Format(time.RFC3339)})
 		return nil
 	}
 	defer r.Close()
@@ -187,7 +187,7 @@ func aesLSInstanceJSON(c geneos.Instance, params []string) (result interface{}, 
 			Host:    c.Host().String(),
 			Keyfile: path,
 			CRC32:   "-",
-			Modtime: "-",
+			Modtime: s.ModTime().Format(time.RFC3339),
 		}
 		return
 	}

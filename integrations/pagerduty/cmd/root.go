@@ -112,7 +112,7 @@ func RootCmd2() *cobra.Command {
 func initConfig() {
 	var err error
 
-	cf, err = config.LoadConfig(execname,
+	cf, err = config.Load(execname,
 		config.SetAppName("geneos"),
 		config.SetDefaults(defaults, "yaml"),
 		config.SetConfigFile(configFile))

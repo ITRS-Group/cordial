@@ -37,7 +37,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 )
 
-var aesNewCmdKeyfile, aesNewCmdHostname, aesNewCmdBackupKeyfile string
+var aesNewCmdKeyfile config.KeyFile
+var aesNewCmdHostname, aesNewCmdBackupSuffix string
 var aesNewCmdImport, aesNewCmdSaveDefault, aesNewCmdOverwriteKeyfile bool
 
 // var aesDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
@@ -45,9 +46,9 @@ var aesNewCmdImport, aesNewCmdSaveDefault, aesNewCmdOverwriteKeyfile bool
 func init() {
 	AesCmd.AddCommand(aesNewCmd)
 
-	aesNewCmd.Flags().StringVarP(&aesNewCmdKeyfile, "keyfile", "k", "", "Optional key file to create, defaults to STDOUT. (Will NOT overwrite without -f)")
+	aesNewCmd.Flags().VarP(&aesNewCmdKeyfile, "keyfile", "k", "Optional key file to create, defaults to STDOUT. (Will NOT overwrite without -f)")
 	aesNewCmd.Flags().BoolVarP(&aesNewCmdSaveDefault, "default", "D", false, "Save as user default keyfile (will NOT overwrite without -f)")
-	aesNewCmd.Flags().StringVarP(&aesNewCmdBackupKeyfile, "backup", "b", ".old", "Backup existing keyfile with extension given")
+	aesNewCmd.Flags().StringVarP(&aesNewCmdBackupSuffix, "backup", "b", ".old", "Backup existing keyfile with extension given")
 	aesNewCmd.Flags().BoolVarP(&aesNewCmdOverwriteKeyfile, "overwrite", "f", false, "Overwrite existing keyfile")
 	aesNewCmd.Flags().BoolVarP(&aesNewCmdImport, "import", "I", false, "Import the keyfile to components and set on matching instances.")
 	aesNewCmd.Flags().StringVarP(&aesNewCmdHostname, "host", "H", "", "Import only to named host, default is all")
@@ -80,7 +81,7 @@ setting to support GA6.x key file rolling.
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var crc uint32
 
-		a, err := config.NewAESValues()
+		a, err := config.NewKeyValues()
 		if err != nil {
 			return
 		}
@@ -90,17 +91,17 @@ setting to support GA6.x key file rolling.
 		}
 
 		if aesNewCmdKeyfile != "" {
-			if _, err = config.NewKeyfile(aesNewCmdKeyfile, aesNewCmdBackupKeyfile); err != nil {
+			if _, err = aesNewCmdKeyfile.RollKeyfile(aesNewCmdBackupSuffix); err != nil {
 				return
 			}
-			if a, err = config.ReadAESValuesFile(aesNewCmdKeyfile); err != nil {
+			if a, err = aesNewCmdKeyfile.Read(); err != nil {
 				return
 			}
 		} else if !aesNewCmdImport {
 			fmt.Print(a)
 		}
 
-		crc, err = config.ChecksumString(a.String())
+		crc, err = a.Checksum()
 
 		crcstr := fmt.Sprintf("%08X", crc)
 		fmt.Printf("%s created, checksum %s\n", aesNewCmdKeyfile, crcstr)

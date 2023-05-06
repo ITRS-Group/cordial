@@ -48,11 +48,11 @@ var (
 )
 
 var cfgFile string
-var UserKeyFile string
+var UserKeyFile config.KeyFile
 
 var debug, quiet bool
 
-var DefaultUserKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
+var DefaultUserKeyfile = config.KeyFile(geneos.UserConfigFilePaths("keyfile.aes")[0])
 
 func init() {
 	cordial.LogInit(pkgname)
@@ -177,9 +177,9 @@ func initConfig() {
 	// already looks in standardised user and global directories.
 	oldConfDir, _ := config.UserConfigDir()
 
-	cf, err := config.LoadConfig("geneos",
+	cf, err := config.Load("geneos",
 		config.SetConfigFile(cfgFile),
-		config.Global(),
+		config.SetGlobal(),
 		config.AddConfigDirs(oldConfDir),
 		config.MergeSettings(),
 	)

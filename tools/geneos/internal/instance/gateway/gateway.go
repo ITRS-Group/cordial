@@ -377,7 +377,7 @@ func (g *Gateways) Command() (args, env []string) {
 // create a gateway key file for secure passwords as per
 // https://docs.itrsgroup.com/docs/geneos/4.8.0/Gateway_Reference_Guide/gateway_secure_passwords.htm
 func createAESKeyFile(c geneos.Instance) (err error) {
-	a, err := config.NewAESValues()
+	a, err := config.NewKeyValues()
 	if err != nil {
 		return
 	}
@@ -387,7 +387,7 @@ func createAESKeyFile(c geneos.Instance) (err error) {
 		return
 	}
 	defer w.Close()
-	if err = a.WriteAESValues(w); err != nil {
+	if err = a.Write(w); err != nil {
 		return
 	}
 	if utils.IsSuperuser() {
