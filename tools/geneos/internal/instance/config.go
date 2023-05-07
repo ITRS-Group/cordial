@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -50,13 +51,14 @@ func first(d ...interface{}) string {
 
 var fnmap template.FuncMap = template.FuncMap{
 	"first":   first,
-	"join":    utils.JoinSlash,
+	"join":    path.Join,
 	"nameOf":  nameOf,
 	"valueOf": valueOf,
 }
 
-// load templates from TYPE/templates/[tmpl]* and parse it using the instance data
-// write it out to a single file. If tmpl is empty, load all files
+// CreateConfigFromTemplate loads templates from TYPE/templates/[tmpl]* and
+// parse it using the instance data write it out to a single file. If tmpl is
+// empty, load all files
 func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defaultTemplate []byte) (err error) {
 	var out io.WriteCloser
 	// var t *template.Template
@@ -193,7 +195,7 @@ func readRCConfig(c geneos.Instance) (err error) {
 //
 // will return /path/to/netprobe/netprobe.json
 func ComponentFilepath(c geneos.Instance, extensions ...string) string {
-	return utils.JoinSlash(c.Home(), ComponentFilename(c, extensions...))
+	return path.Join(c.Home(), ComponentFilename(c, extensions...))
 }
 
 // ComponentFilename() returns the filename for the component named by
@@ -226,7 +228,7 @@ func Filepath(c geneos.Instance, name string) string {
 		return filename
 	}
 
-	return utils.JoinSlash(c.Home(), filename)
+	return path.Join(c.Home(), filename)
 }
 
 // Filename returns the basename of the file named by the configuration
@@ -449,7 +451,7 @@ func Migrate(c geneos.Instance) (err error) {
 }
 
 // a template function to support "{{join .X .Y}}"
-var textJoinFuncs = template.FuncMap{"join": utils.JoinSlash}
+var textJoinFuncs = template.FuncMap{"join": path.Join}
 
 // SetDefaults() is a common function called by component factory
 // functions to iterate over the component specific instance

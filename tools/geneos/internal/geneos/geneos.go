@@ -119,7 +119,7 @@ func Init(h *host.Host, options ...Options) (err error) {
 			userConfFile = filepath.Join(userConfDir, ConfigSubdirName, UserConfigFile)
 		}
 
-		if err = host.WriteConfigFile(userConfFile, opts.localusername, 0664, config.GetConfig()); err != nil {
+		if err = host.WriteConfigFile(config.GetConfig(), userConfFile, opts.localusername, 0664); err != nil {
 			return err
 		}
 
@@ -167,6 +167,13 @@ func Init(h *host.Host, options ...Options) (err error) {
 	return
 }
 
+// Root return the absolute path to the local Geneos installation. If
+// run on an older installation it may return the value from the legacy
+// configuration item `itrshome` if `geneos` is not set.
+func Root() string {
+	return config.GetString("geneos", config.Default(config.GetString("itrshome")))
+}
+
 // ReadLocalConfigFile reads a local configuration file without the need
 // for a host connection, primarily for bootstrapping
 func ReadLocalConfigFile(file string, config interface{}) (err error) {
@@ -204,4 +211,8 @@ func UserConfigFilePaths(bases ...string) (paths []string) {
 		paths = append(paths, filepath.Join(userConfDir, base))
 	}
 	return
+}
+
+func FirstUserConfigFile(dirs ...string) {
+
 }

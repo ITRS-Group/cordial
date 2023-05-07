@@ -31,6 +31,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -80,16 +81,6 @@ func Init() {
 	ReadConfig()
 }
 
-// return the absolute path to the local Geneos installation
-func Geneos() string {
-	home := config.GetString("geneos")
-	if home == "" {
-		// fallback to support breaking change
-		return config.GetString("itrshome")
-	}
-	return home
-}
-
 // interface method set
 
 // Get returns a pointer to Host value. If passed an empty name, returns
@@ -130,7 +121,7 @@ func Get(name string) (c *Host) {
 		hosts.Store(name, c)
 	}
 
-	c.Set("geneos", Geneos())
+	c.Set("geneos", config.GetString("geneos", config.Default(config.GetString("itrshome"))))
 	return
 }
 
@@ -328,7 +319,7 @@ func (h *Host) Filepath(parts ...interface{}) string {
 		}
 	}
 
-	return utils.JoinSlash(append([]string{h.GetString("geneos")}, strParts...)...)
+	return path.Join(append([]string{h.GetString("geneos")}, strParts...)...)
 }
 
 func (h *Host) FullName(name string) string {

@@ -61,7 +61,7 @@ cat $(geneos home gateway example2)/gateway.txt
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, _ := CmdArgsParams(cmd)
 		if ct == nil && len(args) == 0 {
-			fmt.Println(host.Geneos())
+			fmt.Println(geneos.Root())
 			return nil
 		}
 
@@ -78,7 +78,7 @@ cat $(geneos home gateway example2)/gateway.txt
 		}
 
 		if len(i) == 0 {
-			fmt.Println(host.Geneos())
+			fmt.Println(geneos.Root())
 			return nil
 		}
 

@@ -75,7 +75,7 @@ func init() {
 // no support for instance certs (yet)
 func tlsImport(sources ...string) (err error) {
 	log.Debug().Msgf("%v", sources)
-	tlsPath := filepath.Join(host.Geneos(), "tls")
+	tlsPath := filepath.Join(geneos.Root(), "tls")
 	err = host.LOCAL.MkdirAll(tlsPath, 0755)
 	if err != nil {
 		return

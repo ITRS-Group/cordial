@@ -69,7 +69,7 @@ them but configurations will not be rebuilt.
 //
 // This is also called from `init`
 func tlsInit() (err error) {
-	tlsPath := filepath.Join(host.Geneos(), "tls")
+	tlsPath := filepath.Join(geneos.Root(), "tls")
 	// directory permissions do not need to be restrictive
 	err = host.LOCAL.MkdirAll(tlsPath, 0775)
 	if err != nil {

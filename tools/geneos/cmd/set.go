@@ -148,8 +148,9 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 }
 
 // XXX muddled - fix
+// (only called from set user and set global)
 func writeConfigParams(filename string, params []string) (err error) {
-	vp := readConfigFile(filename)
+	vp, _ := config.Load("geneos", config.SetConfigFile(filename))
 
 	// change here
 	for _, set := range params {
@@ -169,14 +170,15 @@ func writeConfigParams(filename string, params []string) (err error) {
 		vp.Set("itrshome", nil)
 	}
 
-	return host.WriteConfigFile(filename, "", 0664, vp)
+	return host.WriteConfigFile(vp, filename, "", 0664)
 }
 
 func readConfigFile(paths ...string) (v *config.Config) {
-	v = config.New()
-	for _, path := range paths {
-		v.SetConfigFile(path)
-	}
-	v.ReadInConfig()
+	v, _ = config.Load("user", config.SetConfigFile(paths[0]))
+	// v = config.New()
+	// for _, path := range paths {
+	// 	v.SetConfigFile(path)
+	// }
+	// v.ReadInConfig()
 	return
 }

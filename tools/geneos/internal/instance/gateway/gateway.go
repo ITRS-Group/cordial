@@ -25,6 +25,7 @@ package gateway
 import (
 	_ "embed"
 	"fmt"
+	"path"
 	"path/filepath"
 	"sync"
 
@@ -308,11 +309,11 @@ func (g *Gateways) Command() (args, env []string) {
 	args = []string{
 		g.Name(),
 		"-resources-dir",
-		utils.JoinSlash(cf.GetString("install"), cf.GetString("version"), "resources"),
+		path.Join(cf.GetString("install"), cf.GetString("version"), "resources"),
 		"-log",
 		instance.LogFile(g),
 		"-setup",
-		utils.JoinSlash(cf.GetString("home"), "gateway.setup.xml"),
+		path.Join(cf.GetString("home"), "gateway.setup.xml"),
 		// enable stats by default
 		"-stats",
 	}
