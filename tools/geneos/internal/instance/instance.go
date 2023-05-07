@@ -156,33 +156,7 @@ func Signal(c geneos.Instance, signal syscall.Signal) (err error) {
 		return os.ErrProcessDone
 	}
 
-	if c.Host() == host.LOCAL {
-		proc, _ := os.FindProcess(pid)
-		if err = proc.Signal(signal); err != nil && !errors.Is(err, syscall.EEXIST) {
-			log.Warn().Msgf("%s FAILED to send a signal %d: %s", c, signal, err)
-			return
-		}
-		log.Debug().Msgf("%s sent a signal %d", c, signal)
-		return nil
-	}
-
-	rem, err := c.Host().Dial()
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-	sess, err := rem.NewSession()
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
-	output, err := sess.CombinedOutput(fmt.Sprintf("kill -s %d %d", signal, pid))
-	sess.Close()
-	if err != nil {
-		log.Warn().Msgf("%s FAILED to send signal %d: %s %q", c, signal, err, output)
-		return
-	}
-	log.Debug().Msgf("%s sent a signal %d", c, signal)
-	return nil
+	return c.Host().Signal(pid, signal)
 }
 
 // return an instance of component ct, loads the config.

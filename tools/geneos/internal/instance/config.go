@@ -15,11 +15,9 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/afero/sftpfs"
 )
 
 // return the KEY from "[TYPE:]KEY=VALUE"
@@ -325,14 +323,7 @@ func writeConfig(c geneos.Instance) (err error) {
 		}
 		nv.Set(k, c.Config().Get(k))
 	}
-	if c.Host() != host.LOCAL {
-		client, err := c.Host().DialSFTP()
-		if err != nil {
-			log.Debug().Err(err).Msg("")
-			return err
-		}
-		nv.SetFs(sftpfs.New(client))
-	}
+	nv.SetFs(c.Host().NewAferoFS())
 	log.Debug().Msgf("writing config for %s as %q", c, file)
 	if err = nv.WriteConfigAs(file); err != nil {
 		return err
@@ -363,14 +354,7 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 		}
 		nv.Set(k, v)
 	}
-	if c.Host() != host.LOCAL {
-		client, err := c.Host().DialSFTP()
-		if err != nil {
-			log.Debug().Err(err).Msg("")
-			return err
-		}
-		nv.SetFs(sftpfs.New(client))
-	}
+	nv.SetFs(c.Host().NewAferoFS())
 	if err = nv.WriteConfigAs(file); err != nil {
 		return err
 	}
@@ -385,14 +369,7 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 // for that instance type. First try the preferred file type and if that fails
 // loop through all types and if they all fail then try the legacy file.
 func ReadConfig(c geneos.Instance) (err error) {
-	if c.Host() != host.LOCAL {
-		client, err := c.Host().DialSFTP()
-		if err != nil {
-			log.Error().Msgf("connection to %s failed", c.Host())
-			return err
-		}
-		c.Config().SetFs(sftpfs.New(client))
-	}
+	c.Config().SetFs(c.Host().NewAferoFS())
 
 	c.Config().SetConfigFile(ComponentFilepath(c, ConfigFileType()))
 	if err = c.Config().MergeInConfig(); err != nil {

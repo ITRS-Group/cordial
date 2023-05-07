@@ -166,7 +166,7 @@ func hostAdd(h *host.Host, sshurl *url.URL) (err error) {
 		h.Set("username", sshurl.User.Username())
 	}
 
-	if _, err := h.Dial(); err != nil {
+	if !h.IsAvailable() {
 		log.Debug().Err(err).Msg("cannot connect to remote host, not adding.")
 		return err
 	}

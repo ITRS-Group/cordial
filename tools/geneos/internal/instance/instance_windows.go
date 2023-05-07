@@ -25,6 +25,7 @@ package instance
 import (
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -33,7 +34,7 @@ func GetPID(c geneos.Instance) (pid int, err error) {
 	return
 }
 
-func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime int64, err error) {
+func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime time.Time, err error) {
 	return
 }
 
