@@ -36,9 +36,9 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/rs/zerolog/log"
 )
 
@@ -94,14 +94,15 @@ func GetPID(c geneos.Instance) (pid int, err error) {
 	return 0, os.ErrProcessDone
 }
 
-func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime int64, err error) {
+func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime time.Time, err error) {
 	pid, err = GetPID(c)
 	if err == nil {
-		var s host.FileStat
-		s, err = c.Host().StatX(fmt.Sprintf("/proc/%d", pid))
-		return pid, s.Uid, s.Gid, s.Mtime, err
+		var st os.FileInfo
+		st, err = c.Host().Stat(fmt.Sprintf("/proc/%d", pid))
+		s := c.Host().GetFileOwner(st)
+		return pid, s.Uid, s.Gid, st.ModTime(), err
 	}
-	return 0, 0, 0, 0, os.ErrProcessDone
+	return 0, 0, 0, time.Time{}, os.ErrProcessDone
 }
 
 func allTCPListenPorts(c geneos.Instance, source string, ports map[int]int) (err error) {
