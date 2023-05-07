@@ -34,6 +34,12 @@ import (
 	"github.com/pkg/sftp"
 )
 
+// FileOwner is only available on Linux localhost
+type FileOwner struct {
+	Uid uint32
+	Gid uint32
+}
+
 func (h *Host) GetFileOwner(info fs.FileInfo) (s FileOwner) {
 	switch h.GetString("name") {
 	case LOCALHOST:

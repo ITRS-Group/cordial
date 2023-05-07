@@ -30,15 +30,14 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/remote"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 
 	"github.com/rs/zerolog/log"
@@ -55,6 +54,7 @@ const ALLHOSTS = "all"
 var LOCAL, ALL *Host
 
 type Host struct {
+	remote.Remote
 	*config.Config
 
 	// loaded from config or just an instance?
@@ -98,14 +98,14 @@ func Get(name string) (c *Host) {
 		if LOCAL != nil {
 			return LOCAL
 		}
-		c = &Host{config.New(), true, time.Time{}, nil}
+		c = &Host{remote.NewLocal(), config.New(), true, time.Time{}, nil}
 		c.Set("name", LOCALHOST)
 		c.SetOSReleaseEnv()
 	case ALLHOSTS:
 		if ALL != nil {
 			return ALL
 		}
-		c = &Host{config.New(), true, time.Time{}, nil}
+		c = &Host{remote.NewLocal(), config.New(), true, time.Time{}, nil}
 		c.Set("name", ALLHOSTS)
 	default:
 		r, ok := hosts.Load(name)
@@ -116,7 +116,7 @@ func Get(name string) (c *Host) {
 			}
 		}
 		// or bootstrap, but NOT save a new one
-		c = &Host{config.New(), false, time.Time{}, nil}
+		c = &Host{remote.NewSSHRemote(name), config.New(), false, time.Time{}, nil}
 		c.Set("name", name)
 		hosts.Store(name, c)
 	}
@@ -140,46 +140,13 @@ func (h *Host) Exists() bool {
 	return h.loaded
 }
 
-func (h *Host) Failed() bool {
-	if h == nil {
-		return false
-	}
-	// if the failure was a while back, try again (XXX crude)
-	if !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) > 5*time.Second {
-		return false
-	}
-	return h.failed != nil
-}
-
-func (h *Host) String() string {
-	if h.IsSet("name") {
-		return h.GetString("name")
-	}
-	return "unknown"
-}
-
-// return a string of the form "host:/path" for consistent use in output
-func (h *Host) Path(path string) string {
-	if h == LOCAL {
-		return path
-	}
-	return fmt.Sprintf("%s:%s", h, path)
-}
-
 // SetOSReleaseEnv sets the `osinfo` configuration map to the values
 // from either `/etc/os-release` (or `/usr/lib/os-release`) on Linux or
 // simulates the values for Windows
 func (h *Host) SetOSReleaseEnv() (err error) {
 	osinfo := make(map[string]string)
-	serverVersion := runtime.GOOS
-	if h.String() != LOCALHOST {
-		s, err := h.Dial()
-		if err != nil {
-			return err
-		}
-		serverVersion = string(s.ServerVersion())
-		log.Debug().Msg(serverVersion)
-	} else {
+	serverVersion := h.ServerVersion()
+	if h.IsLocal() {
 		home, _ := os.UserHomeDir()
 		h.Set("homedir", home)
 	}
@@ -244,14 +211,14 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			}
 			s := strings.SplitN(line, "=", 2)
 			if len(s) != 2 {
-				return ErrInvalidArgs
+				return remote.ErrInvalidArgs
 			}
 			key, value := s[0], s[1]
 			value = strings.Trim(value, "\"")
 			osinfo[strings.ToLower(key)] = value
 		}
 		if h.String() != LOCALHOST {
-			output, err := h.Run(`pwd`)
+			output, err := h.Run("pwd")
 			if err != nil {
 				log.Error().Err(err).Msg("")
 			} else {
@@ -397,7 +364,11 @@ func ReadConfig() {
 			log.Debug().Msgf("hosts value not a map[string]interface{} but a %T", host)
 			continue
 		}
-		hosts.Store(v.GetString("name"), &Host{v, true, time.Time{}, nil})
+		r := remote.NewSSHRemote(v.GetString("name"),
+			remote.Username(v.GetString("username")),
+			remote.Port(uint16(v.GetInt("port"))),
+			remote.Hostname(v.GetString("hostname")))
+		hosts.Store(v.GetString("name"), &Host{r, v, true, time.Time{}, nil})
 	}
 }
 
@@ -432,22 +403,4 @@ func WriteConfig() error {
 func UserHostsFilePath() string {
 	userConfDir, _ := config.UserConfigDir()
 	return filepath.Join(userConfDir, UserHostFile)
-}
-
-func (h *Host) Run(name string, args ...string) (output []byte, err error) {
-	// at this point 'h' may not be set to LOCAL, test the name
-	if h.String() == LOCALHOST {
-		// run locally
-		cmd := exec.Command(name, args...)
-		return cmd.Output()
-	}
-	remote, err := h.Dial()
-	if err != nil {
-		return
-	}
-	session, err := remote.NewSession()
-	if err != nil {
-		return
-	}
-	return session.Output(name)
 }

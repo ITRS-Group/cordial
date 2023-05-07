@@ -20,21 +20,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package host
+package remote
 
 import (
-	"net"
-	"os"
-
+	"github.com/Microsoft/go-winio"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh/agent"
 )
 
 func sshConnectAgent() (agentClient agent.ExtendedAgent) {
-	socket := os.Getenv("SSH_AUTH_SOCK")
+	socket := `\\.\pipe\openssh-ssh-agent`
 	if socket != "" {
 		log.Debug().Msgf("connecting to agent on %s", socket)
-		sshAgent, err := net.Dial("unix", socket)
+		sshAgent, err := winio.DialPipe(socket, nil)
 		if err != nil {
 			log.Error().Msgf("Failed to connect to ssh agent: %v", err)
 		} else {

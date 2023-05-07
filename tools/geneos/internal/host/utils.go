@@ -35,7 +35,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/itrs-group/cordial/pkg/remote"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
+	"github.com/pkg/sftp"
 	"github.com/rs/zerolog/log"
 )
 
@@ -44,7 +46,7 @@ import (
 // Any existing files will be overwritten.
 func CopyFile(srcHost *Host, srcPath string, dstHost *Host, dstPath string) (err error) {
 	if srcHost == ALL || dstHost == ALL {
-		return ErrInvalidArgs
+		return remote.ErrInvalidArgs
 	}
 
 	ss, err := srcHost.Stat(srcPath)
@@ -84,7 +86,7 @@ func CopyFile(srcHost *Host, srcPath string, dstHost *Host, dstPath string) (err
 // CopyAll copies a directory between any combination of local or remote locations
 func CopyAll(srcHost *Host, srcDir string, dstHost *Host, dstDir string) (err error) {
 	if srcHost == ALL || dstHost == ALL {
-		return ErrInvalidArgs
+		return remote.ErrInvalidArgs
 	}
 
 	if srcHost == LOCAL {
@@ -106,7 +108,7 @@ func CopyAll(srcHost *Host, srcDir string, dstHost *Host, dstDir string) (err er
 		return
 	}
 
-	s, err := srcHost.DialSFTP()
+	s, err := &sftp.Client{}, nil // srcHost.DialSFTP()
 	if err != nil {
 		return err
 	}
@@ -198,7 +200,7 @@ func CleanRelativePath(path string) (clean string, err error) {
 	clean = filepath.Clean(path)
 	if filepath.IsAbs(clean) || strings.HasPrefix(clean, "../") {
 		log.Debug().Msgf("path %q must be relative and descending only", clean)
-		return "", ErrInvalidArgs
+		return "", remote.ErrInvalidArgs
 	}
 
 	return

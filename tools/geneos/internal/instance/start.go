@@ -24,12 +24,8 @@ package instance
 
 import (
 	"fmt"
-	"os"
-	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 func Start(c geneos.Instance) (err error) {
@@ -57,83 +53,11 @@ func Start(c geneos.Instance) (err error) {
 	username := c.Config().GetString("user")
 	errfile := ComponentFilepath(c, "txt")
 
-	if c.Host() != host.LOCAL {
-		r := c.Host()
-		rUsername := r.GetString("username")
-		if rUsername != username && username != "" {
-			return fmt.Errorf("cannot run remote process as a different user (%q != %q)", rUsername, username)
-		}
-		rem, err := r.Dial()
-		if err != nil {
-			return err
-		}
-		sess, err := rem.NewSession()
-		if err != nil {
-			return err
-		}
-
-		// we have to convert cmd to a string ourselves as we have to quote any args
-		// with spaces (like "Demo Gateway")
-		//
-		// given this is sent to a shell, we can quote everything blindly ?
-		//
-		// note that cmd.Args hosts the command as Args[0], so no Path required
-		var cmdstr = ""
-		for _, a := range cmd.Args {
-			cmdstr = fmt.Sprintf("%s %q", cmdstr, a)
-		}
-		pipe, err := sess.StdinPipe()
-		if err != nil {
-			return err
-		}
-
-		if err = sess.Shell(); err != nil {
-			return err
-		}
-		fmt.Fprintln(pipe, "cd", c.Home())
-		for _, e := range env {
-			fmt.Fprintln(pipe, "export", e)
-		}
-		fmt.Fprintf(pipe, "%s > %q 2>&1 &", cmdstr, errfile)
-		fmt.Fprintln(pipe, "exit")
-		sess.Close()
-		// wait a short while for remote to catch-up
-		time.Sleep(250 * time.Millisecond)
-
-		pid, err := GetPID(c)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("%s started with PID %d\n", c, pid)
-		return nil
-	}
-
-	// pass possibly empty string down to setuser - it handles defaults
-	if err = utils.SetUser(cmd, username); err != nil {
-		return
-	}
-
-	cmd.Env = append(os.Environ(), env...)
-
-	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_WRONLY, 0644)
+	c.Host().Start(cmd, env, username, c.Home(), errfile)
+	pid, err = GetPID(c)
 	if err != nil {
 		return err
 	}
-
-	procSetupOS(cmd, out)
-
-	cmd.Stdout = out
-	cmd.Stderr = out
-	cmd.Dir = c.Home()
-
-	if err = cmd.Start(); err != nil {
-		return
-	}
-	fmt.Printf("%s started with PID %d\n", c, cmd.Process.Pid)
-	if cmd.Process != nil {
-		// detach from control
-		cmd.Process.Release()
-	}
-
-	return
+	fmt.Printf("%s started with PID %d\n", c, pid)
+	return nil
 }
