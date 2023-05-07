@@ -34,6 +34,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -112,7 +113,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 		return
 	}
 
-	archiveDir := filepath.Join(host.Geneos(), "packages", "downloads")
+	archiveDir := filepath.Join(Root(), "packages", "downloads")
 	host.LOCAL.MkdirAll(archiveDir, 0775)
 	archivePath := filepath.Join(archiveDir, filename)
 	s, err := host.LOCAL.Stat(archivePath)
@@ -260,7 +261,7 @@ func unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 		if name, err = host.CleanRelativePath(name); err != nil {
 			return
 		}
-		fullpath := utils.JoinSlash(basedir, name)
+		fullpath := path.Join(basedir, name)
 		switch hdr.Typeflag {
 		case tar.TypeReg:
 			// check (and created) containing directories - account for munged tar files

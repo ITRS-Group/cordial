@@ -36,13 +36,15 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
-var aesImportCmdKeyfile, aesImportCmdHostname string
+var aesImportCmdKeyfile config.KeyFile
+var aesImportCmdHostname string
 
 func init() {
 	AesCmd.AddCommand(aesImportCmd)
 
-	defKeyFile := geneos.UserConfigFilePaths("keyfile.aes")[0]
-	aesImportCmd.Flags().StringVarP(&aesImportCmdKeyfile, "keyfile", "k", defKeyFile, "Keyfile to use")
+	aesImportCmdKeyfile = cmd.DefaultUserKeyfile
+
+	aesImportCmd.Flags().VarP(&aesImportCmdKeyfile, "keyfile", "k", "Keyfile to use")
 	aesImportCmd.Flags().StringVarP(&aesImportCmdHostname, "host", "H", "", "Import only to named `host`, default is all")
 	aesImportCmd.Flags().SortFlags = false
 
@@ -76,13 +78,7 @@ type.
 	RunE: func(command *cobra.Command, _ []string) error {
 		ct, _, _ := cmd.CmdArgsParams(command)
 
-		f, _, err := geneos.Open(aesImportCmdKeyfile)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		a, err := config.Read(f)
+		a, err := aesImportCmdKeyfile.Read()
 		if err != nil {
 			return err
 		}

@@ -85,7 +85,7 @@ type Instance interface {
 	Rebuild(bool) error
 }
 
-var Root Component = Component{
+var RootComponent Component = Component{
 	Name:             "none",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"any"},
@@ -120,7 +120,7 @@ var Root Component = Component{
 }
 
 func init() {
-	Root.RegisterComponent(nil)
+	RootComponent.RegisterComponent(nil)
 }
 
 type ComponentsMap map[string]*Component

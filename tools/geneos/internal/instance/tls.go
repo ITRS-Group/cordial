@@ -42,7 +42,7 @@ import (
 //
 // skip if certificate exists (no expiry check)
 func CreateCert(c geneos.Instance) (err error) {
-	tlsDir := filepath.Join(host.Geneos(), "tls")
+	tlsDir := filepath.Join(geneos.Root(), "tls")
 
 	// skip if we can load an existing certificate
 	if _, err = ReadCert(c); err == nil {
@@ -134,13 +134,13 @@ func WriteKey(c geneos.Instance, key *rsa.PrivateKey) (err error) {
 
 // read the rootCA certificate from the installation directory
 func ReadRootCert() (cert *x509.Certificate, err error) {
-	tlsDir := filepath.Join(host.Geneos(), "tls")
+	tlsDir := filepath.Join(geneos.Root(), "tls")
 	return host.LOCAL.ReadCert(filepath.Join(tlsDir, geneos.RootCAFile+".pem"))
 }
 
 // read the signing certificate from the installation directory
 func ReadSigningCert() (cert *x509.Certificate, err error) {
-	tlsDir := filepath.Join(host.Geneos(), "tls")
+	tlsDir := filepath.Join(geneos.Root(), "tls")
 	return host.LOCAL.ReadCert(filepath.Join(tlsDir, geneos.SigningCertFile+".pem"))
 }
 

@@ -28,6 +28,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -100,16 +101,15 @@ func ValidInstanceName(in string) (ok bool) {
 
 // given a filename or path, prepend the instance home directory
 // if not absolute, and clean
-func Abs(c geneos.Instance, file string) (path string) {
-	path = filepath.Clean(file)
-	if filepath.IsAbs(path) {
+func Abs(c geneos.Instance, file string) (result string) {
+	file = filepath.Clean(file)
+	if filepath.IsAbs(file) {
 		return
 	}
-	return utils.JoinSlash(c.Home(), path)
+	return path.Join(c.Home(), file)
 }
 
-// given a pathlist (typically ':') seperated list of paths, remove all
-// files and directories
+// RemovePaths removes all files and directories in paths, each file or directory is separated by ListSeperator
 func RemovePaths(c geneos.Instance, paths string) (err error) {
 	list := filepath.SplitList(paths)
 	for _, p := range list {
@@ -120,7 +120,7 @@ func RemovePaths(c geneos.Instance, paths string) (err error) {
 			return fmt.Errorf("%s %w", p, err)
 		}
 		// glob here
-		m, err := c.Host().Glob(utils.JoinSlash(c.Home(), p))
+		m, err := c.Host().Glob(path.Join(c.Home(), p))
 		if err != nil {
 			return err
 		}
@@ -144,9 +144,9 @@ func LogFile(c geneos.Instance) (logfile string) {
 	case filepath.IsAbs(logd):
 		logfile = logd
 	default:
-		logfile = utils.JoinSlash(c.Home(), logd)
+		logfile = path.Join(c.Home(), logd)
 	}
-	logfile = utils.JoinSlash(logfile, c.Config().GetString("logfile"))
+	logfile = path.Join(logfile, c.Config().GetString("logfile"))
 	return
 }
 
@@ -413,7 +413,7 @@ func Version(c geneos.Instance) (base string, version string, err error) {
 	version = base
 
 	for i = 0; i < 10; i++ {
-		basepath := utils.JoinSlash(basedir, version)
+		basepath := path.Join(basedir, version)
 		st, err = c.Host().Lstat(basepath)
 		if err != nil {
 			version = "unknown"

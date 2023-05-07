@@ -104,7 +104,7 @@ $ geneos ps
 	// SilenceErrors:      true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		// check initialisation
-		geneosdir := host.Geneos()
+		geneosdir := geneos.Root()
 		if geneosdir == "" {
 			// commands that do not require geneos home to be set - use
 			// a const/var to iterate over to test this

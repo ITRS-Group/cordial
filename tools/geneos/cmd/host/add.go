@@ -39,14 +39,13 @@ import (
 )
 
 var hostAddCmdInit, hostAddCmdPrompt bool
-var hostAddCmdPassword, hostAddDefaultKeyfile string
+var hostAddCmdPassword string
 var hostAddCmdKeyfile config.KeyFile
 
 func init() {
 	HostCmd.AddCommand(hostAddCmd)
 
-	hostAddDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
-
+	hostAddCmdKeyfile = cmd.DefaultUserKeyfile
 	hostAddCmd.Flags().BoolVarP(&hostAddCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
 	hostAddCmd.Flags().BoolVarP(&hostAddCmdPrompt, "prompt", "p", false, "Prompt for password")
 	hostAddCmd.Flags().StringVarP(&hostAddCmdPassword, "password", "P", "", "Password")
@@ -137,12 +136,9 @@ func hostAdd(h *host.Host, sshurl *url.URL) (err error) {
 	h.SetDefault("port", 22)
 	h.SetDefault("username", config.GetString("defaultuser"))
 	// XXX default to remote user's home dir, not local
-	h.SetDefault("geneos", host.Geneos())
+	h.SetDefault("geneos", geneos.Root())
 
 	password := ""
-	if hostAddCmdKeyfile == "" {
-		hostAddCmdKeyfile = cmd.DefaultUserKeyfile
-	}
 
 	if hostAddCmdPrompt {
 		if password, err = hostAddCmdKeyfile.EncodePasswordInput(true); err != nil {

@@ -35,7 +35,7 @@ import (
 )
 
 // StatX returns extended Stat info. Needs to be deprecated to support
-// non LInux platforms
+// non Linux platforms
 func (h *Host) StatX(name string) (s FileStat, err error) {
 	switch h.GetString("name") {
 	case LOCALHOST:
@@ -60,10 +60,9 @@ func (h *Host) StatX(name string) (s FileStat, err error) {
 	return
 }
 
-// try to be atomic, lots of edge cases, UNIX/Linux only
-// we know the size of config structs is typically small, so just marshal
-// in memory
-func WriteConfigFile(file string, username string, perms fs.FileMode, conf *config.Config) (err error) {
+// try to be atomic, lots of edge cases, UNIX/Linux only. We know the size of
+// config structs is typically small, so just marshal in memory
+func WriteConfigFile(conf *config.Config, file string, username string, perms fs.FileMode) (err error) {
 	cf := config.New()
 	for k, v := range conf.AllSettings() {
 		cf.Set(k, v)

@@ -30,6 +30,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -38,7 +39,6 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/rs/zerolog/log"
 )
 
@@ -187,8 +187,8 @@ func Files(c geneos.Instance) (openfiles map[int]OpenFiles) {
 		return
 	}
 
-	path := fmt.Sprintf("/proc/%d/fd", pid)
-	fds, err := c.Host().ReadDir(path)
+	file := fmt.Sprintf("/proc/%d/fd", pid)
+	fds, err := c.Host().ReadDir(file)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
 		return
@@ -198,7 +198,7 @@ func Files(c geneos.Instance) (openfiles map[int]OpenFiles) {
 
 	for _, ent := range fds {
 		fd := ent.Name()
-		dest, err := c.Host().Readlink(utils.JoinSlash(path, fd))
+		dest, err := c.Host().Readlink(path.Join(file, fd))
 		if err != nil {
 			log.Debug().Err(err).Msg("")
 			continue
@@ -208,7 +208,7 @@ func Files(c geneos.Instance) (openfiles map[int]OpenFiles) {
 		}
 		n, _ := strconv.Atoi(fd)
 
-		fdPath := utils.JoinSlash(path, fd)
+		fdPath := path.Join(file, fd)
 		fdMode, err := c.Host().Lstat(fdPath)
 		if err != nil {
 			log.Debug().Err(err).Msg("skipping")
@@ -244,15 +244,15 @@ func Sockets(c geneos.Instance) (links map[int]int) {
 		log.Debug().Err(err).Msg("")
 		return
 	}
-	path := fmt.Sprintf("/proc/%d/fd", pid)
-	fds, err := c.Host().ReadDir(path)
+	file := fmt.Sprintf("/proc/%d/fd", pid)
+	fds, err := c.Host().ReadDir(file)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
 		return
 	}
 	for _, ent := range fds {
 		fd := ent.Name()
-		dest, err := c.Host().Readlink(utils.JoinSlash(path, fd))
+		dest, err := c.Host().Readlink(path.Join(file, fd))
 		if err != nil {
 			log.Debug().Err(err).Msg("")
 			continue

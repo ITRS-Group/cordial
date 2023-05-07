@@ -66,7 +66,7 @@ private key file is left unchanged if it exists.
 
 // renew an instance certificate, use private key if it exists
 func renewInstanceCert(c geneos.Instance, _ []string) (err error) {
-	tlsDir := filepath.Join(host.Geneos(), "tls")
+	tlsDir := filepath.Join(geneos.Root(), "tls")
 
 	hostname, _ := os.Hostname()
 	if c.Host() != host.LOCAL {

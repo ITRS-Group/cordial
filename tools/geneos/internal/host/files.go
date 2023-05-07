@@ -31,6 +31,7 @@ import (
 	"io/fs"
 	"math/rand"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -72,7 +73,7 @@ func CopyFile(srcHost *Host, srcPath string, dstHost *Host, dstPath string) (err
 	ds, err := dstHost.Stat(dstPath)
 	if err == nil {
 		if ds.IsDir() {
-			dstPath = utils.JoinSlash(dstPath, filepath.Base(srcPath))
+			dstPath = path.Join(dstPath, filepath.Base(srcPath))
 		}
 	} else {
 		dstHost.MkdirAll(utils.Dir(dstPath), 0775)
@@ -97,7 +98,7 @@ func CopyAll(srcHost *Host, srcDir string, dstHost *Host, dstDir string) (err er
 
 	if srcHost == LOCAL {
 		filesystem := os.DirFS(srcDir)
-		fs.WalkDir(filesystem, ".", func(path string, d fs.DirEntry, err error) error {
+		fs.WalkDir(filesystem, ".", func(file string, d fs.DirEntry, err error) error {
 			if err != nil {
 				log.Error().Err(err).Msg("")
 				return nil
@@ -107,8 +108,8 @@ func CopyAll(srcHost *Host, srcDir string, dstHost *Host, dstDir string) (err er
 				log.Error().Err(err).Msg("")
 				return nil
 			}
-			dstPath := utils.JoinSlash(dstDir, path)
-			srcPath := utils.JoinSlash(srcDir, path)
+			dstPath := path.Join(dstDir, file)
+			srcPath := path.Join(srcDir, file)
 			return copyDirEntry(fi, srcHost, srcPath, dstHost, dstPath)
 		})
 		return
@@ -127,7 +128,7 @@ func CopyAll(srcHost *Host, srcDir string, dstHost *Host, dstDir string) (err er
 		}
 		fi := w.Stat()
 		srcPath := w.Path()
-		dstPath := utils.JoinSlash(dstDir, strings.TrimPrefix(w.Path(), srcDir))
+		dstPath := path.Join(dstDir, strings.TrimPrefix(w.Path(), srcDir))
 		if err = copyDirEntry(fi, srcHost, srcPath, dstHost, dstPath); err != nil {
 			log.Error().Err(err).Msg("")
 			continue

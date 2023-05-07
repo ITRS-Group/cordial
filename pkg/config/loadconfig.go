@@ -131,10 +131,14 @@ func SetAppName(name string) LoadOptions {
 	}
 }
 
-// SetConfigFile forces [LoadConfig] to load only the configuration at
-// the given path. This path must include the file extension. Defaults
-// are still loaded from all the normal directories unless
-// [IgnoreDefaults] is also passed as an option.
+// SetConfigFile forces [LoadConfig] to load only the configuration at the given
+// path. This path must include the file extension. Defaults are still loaded
+// from all the normal directories unless [IgnoreDefaults] is also passed as an
+// option.
+//
+// If the argument is an empty string then the option is not used. This also means
+// it can be called with a command line flag value which can default to an empty
+// string
 func SetConfigFile(path string) LoadOptions {
 	return func(c *configOptions) {
 		c.configFile = path
