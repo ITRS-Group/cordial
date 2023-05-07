@@ -30,7 +30,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-func WriteConfigFileconf *config.Config, file string, username string, perms fs.FileMode) (err error) {
+func WriteConfigFile(conf *config.Config, file string, username string, perms fs.FileMode) (err error) {
 	cf := config.New()
 	for k, v := range conf.AllSettings() {
 		cf.Set(k, v)

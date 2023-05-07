@@ -132,7 +132,7 @@ func psInstancePlain(c geneos.Instance, params []string) (err error) {
 	base, underlying, _ := instance.Version(c)
 	ports := instance.TCPListenPorts(c)
 
-	fmt.Fprintf(psTabWriter, "%s\t%s\t%s\t%d\t%v\t%s\t%s\t%s\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), pid, ports, username, groupname, time.Unix(mtime, 0).Local().Format(time.RFC3339), base, underlying, c.Home())
+	fmt.Fprintf(psTabWriter, "%s\t%s\t%s\t%d\t%v\t%s\t%s\t%s\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), pid, ports, username, groupname, mtime.Local().Format(time.RFC3339), base, underlying, c.Home())
 
 	// if psCmdShowFiles {
 	// 	// list open files (test code)
@@ -190,7 +190,7 @@ func psInstanceCSV(c geneos.Instance, params []string) (err error) {
 		groupname = g.Name
 	}
 	base, underlying, _ := instance.Version(c)
-	psCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, time.Unix(mtime, 0).Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	psCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 
 	return
 }
@@ -217,7 +217,7 @@ func psInstanceJSON(c geneos.Instance, params []string) (err error) {
 		groupname = g.Name
 	}
 	base, underlying, _ := instance.Version(c)
-	psJSONEncoder.Encode(psType{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, time.Unix(mtime, 0).Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	psJSONEncoder.Encode(psType{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 
 	return
 }
