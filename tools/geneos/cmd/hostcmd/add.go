@@ -25,6 +25,7 @@ package hostcmd
 import (
 	"fmt"
 	"net/url"
+	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -134,7 +135,8 @@ func hostAdd(h *geneos.Host, sshurl *url.URL) (err error) {
 
 	h.SetDefault("hostname", sshurl.Hostname())
 	h.SetDefault("port", 22)
-	h.SetDefault("username", config.GetString("defaultuser"))
+	u, _ := user.Current()
+	h.SetDefault("username", u.Username)
 	// XXX default to remote user's home dir, not local
 	h.SetDefault("geneos", geneos.Root())
 

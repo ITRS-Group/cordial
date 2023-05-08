@@ -33,6 +33,7 @@ import (
 
 	// import subsystems here for command registration
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/aescmd"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/hostcmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/initcmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/pkgcmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/tlscmd"

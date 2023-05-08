@@ -94,16 +94,6 @@ var RootComponent Component = Component{
 		// Root URL for all downloads of software archives
 		"download.url": "https://resources.itrsgroup.com/download/latest/",
 
-		// XXX DEPRECATED - No longer supported
-		// Username to start components if not explicitly defined
-		// and we are running with elevated privileges
-		//
-		// When running as a normal user this is unused and
-		// we simply test a defined user against the running user
-		//
-		// default is owner of Geneos
-		"defaultuser": "",
-
 		// Path List separated additions to the reserved names list, over and above
 		// any words matched by ParseComponentName()
 		"reservednames": "",
