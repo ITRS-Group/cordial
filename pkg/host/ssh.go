@@ -60,7 +60,7 @@ type SSHRemote struct {
 	lastAttempt time.Time
 }
 
-func NewSSHRemote(name string, options ...SSHOptions) Remote {
+func NewSSHRemote(name string, options ...SSHOptions) Host {
 	r := &SSHRemote{
 		name: name,
 	}

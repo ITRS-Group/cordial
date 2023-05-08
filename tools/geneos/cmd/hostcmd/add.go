@@ -98,9 +98,9 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		var h *geneos.Host
 		sshurl, err := url.Parse(args[0])
 		if err == nil && sshurl.Scheme != "" {
-			h = geneos.Get(sshurl.Hostname())
+			h = geneos.GetHost(sshurl.Hostname())
 		} else {
-			h = geneos.Get(args[0])
+			h = geneos.GetHost(args[0])
 			if len(args) > 1 {
 				if sshurl, err = url.Parse(args[1]); err != nil {
 					log.Error().Msgf("invalid ssh url %q", args[1])
@@ -193,8 +193,8 @@ func hostAdd(h *geneos.Host, sshurl *url.URL) (err error) {
 		h.Set("geneos", homedir)
 	}
 
-	geneos.Add(h)
-	if err = geneos.WriteConfig(); err != nil {
+	h.Add()
+	if err = geneos.WriteHostConfig(); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 

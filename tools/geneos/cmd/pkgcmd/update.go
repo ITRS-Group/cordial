@@ -102,7 +102,7 @@ geneos package update netprobe 5.13.2
 			}
 		}
 
-		r := geneos.Get(packageUpdateCmdHost)
+		r := geneos.GetHost(packageUpdateCmdHost)
 
 		version := packageUpdateCmdVersion
 		cs := instance.MatchKeyValue(r, ct, "protected", "true")

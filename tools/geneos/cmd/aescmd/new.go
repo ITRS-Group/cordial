@@ -111,7 +111,7 @@ setting to support GA6.x key file rolling.
 			}
 
 			ct, args, _ := cmd.CmdArgsParams(command)
-			h := geneos.Get(aesNewCmdHostname)
+			h := geneos.GetHost(aesNewCmdHostname)
 
 			for _, ct := range ct.Range(componentsWithKeyfiles...) {
 				for _, h := range h.Range(geneos.AllHosts()...) {

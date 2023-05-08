@@ -526,7 +526,7 @@ func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name 
 	parts := strings.SplitN(in, "@", 2)
 	name = parts[0]
 	if len(parts) > 1 {
-		h = geneos.Get(parts[1])
+		h = geneos.GetHost(parts[1])
 	}
 	parts = strings.SplitN(name, ":", 2)
 	if len(parts) > 1 {

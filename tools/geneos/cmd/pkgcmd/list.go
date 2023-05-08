@@ -77,7 +77,7 @@ Versions are listed in descending order for each component type, i.e.
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		ct, _ := cmd.CmdArgs(command)
 
-		h := geneos.Get(packageLsCmdHost)
+		h := geneos.GetHost(packageLsCmdHost)
 		versions := []geneos.ReleaseDetails{}
 
 		for _, h := range h.Range(geneos.AllHosts()...) {

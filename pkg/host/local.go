@@ -39,7 +39,7 @@ import (
 type Local struct {
 }
 
-func NewLocal() Remote {
+func NewLocal() Host {
 	return &Local{}
 }
 

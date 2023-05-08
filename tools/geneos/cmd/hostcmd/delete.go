@@ -66,7 +66,7 @@ Delete the local configuration referring to a remote host.
 		// check args are hosts ('all' means all non-local ?)
 		var hosts []*geneos.Host
 		for _, hostname := range args {
-			h := geneos.Get(hostname)
+			h := geneos.GetHost(hostname)
 			if !h.Exists() {
 				log.Error().Msgf("%q is not a known host", hostname)
 				return
@@ -101,13 +101,10 @@ Delete the local configuration referring to a remote host.
 			}
 
 			// remove host config
-			// if err = geneos.LOCAL.RemoveAll(h.Home); err != nil {
-			// 	return
-			// }
-			geneos.Delete(h)
+			h.Delete()
 			fmt.Printf("%q deleted\n", h)
 		}
-		geneos.WriteConfig()
+		geneos.WriteHostConfig()
 
 		return nil
 	},
