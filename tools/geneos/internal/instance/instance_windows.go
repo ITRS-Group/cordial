@@ -49,6 +49,3 @@ func Files(c geneos.Instance) (links map[int]string) {
 func Sockets(c geneos.Instance) (links map[int]string) {
 	return
 }
-
-func procSetupOS(cmd *exec.Cmd, out *os.File) {
-}
