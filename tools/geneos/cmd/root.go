@@ -32,7 +32,6 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -114,7 +113,7 @@ $ geneos ps
 				cmd.Parent().Name() == "host" ||
 				cmd.Parent().Name() == "init" ||
 				cmd.Parent().Name() == "aes" ||
-				len(host.RemoteHosts()) > 0) {
+				len(geneos.RemoteHosts()) > 0) {
 				cmd.SetUsageTemplate(" ")
 				return fmt.Errorf("%s", strings.ReplaceAll(`
 Geneos installation directory not set.
@@ -218,7 +217,8 @@ func initConfig() {
 	}
 
 	// initialise after config loaded
-	host.Init()
+	// host.Init()
+	geneos.InitHosts()
 }
 
 // RunE runs a command in a sub-package to avoid import loops. It is

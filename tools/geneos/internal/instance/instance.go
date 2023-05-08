@@ -40,7 +40,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 
 	"github.com/rs/zerolog/log"
@@ -51,14 +50,14 @@ type Instance struct {
 	geneos.Instance `json:"-"`
 	L               *sync.RWMutex     `json:"-"`
 	Conf            *config.Config    `json:"-"`
-	InstanceHost    *host.Host        `json:"-"`
+	InstanceHost    *geneos.Host      `json:"-"`
 	Component       *geneos.Component `json:"-"`
 	ConfigLoaded    bool              `json:"-"`
 	Env             []string          `json:",omitempty"`
 }
 
 func DisplayName(c geneos.Instance) string {
-	if c.Host() == host.LOCAL {
+	if c.Host() == geneos.LOCAL {
 		return fmt.Sprintf("%s %q", c.Type(), c.Name())
 	}
 	return fmt.Sprintf("%s \"%s@%s\"", c.Type(), c.Name(), c.Host())
@@ -115,7 +114,7 @@ func RemovePaths(c geneos.Instance, paths string) (err error) {
 	for _, p := range list {
 		// clean path, error on absolute or parent paths, like 'import'
 		// walk globbed directories, remove everything
-		p, err = host.CleanRelativePath(p)
+		p, err = geneos.CleanRelativePath(p)
 		if err != nil {
 			return fmt.Errorf("%s %w", p, err)
 		}
@@ -175,7 +174,7 @@ func Get(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 }
 
 // return a slice of instances for a given component type
-func GetAll(r *host.Host, ct *geneos.Component) (confs []geneos.Instance) {
+func GetAll(r *geneos.Host, ct *geneos.Component) (confs []geneos.Instance) {
 	if ct == nil {
 		for _, c := range geneos.RealComponents() {
 			confs = append(confs, GetAll(r, c)...)
@@ -212,7 +211,7 @@ func Match(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 // construct and return a slice of a/all component types that have
 // a matching name
 func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
-	_, local, r := SplitName(name, host.ALL)
+	_, local, r := SplitName(name, geneos.ALL)
 	if !r.Exists() {
 		log.Debug().Msgf("host %s not loaded", r)
 		return
@@ -227,7 +226,7 @@ func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
 
 	for _, name := range AllNames(r, ct) {
 		// for case insensitive match change to EqualFold here
-		_, ldir, _ := SplitName(name, host.ALL)
+		_, ldir, _ := SplitName(name, geneos.ALL)
 		if filepath.Base(ldir) == local {
 			i, err := Get(ct, name)
 			if err != nil {
@@ -243,7 +242,7 @@ func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
 
 // MatchKeyValue returns a slice of instances where the instance
 // configuration key matches the value given.
-func MatchKeyValue(h *host.Host, ct *geneos.Component, key, value string) (confs []geneos.Instance) {
+func MatchKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (confs []geneos.Instance) {
 	if ct == nil {
 		for _, c := range geneos.RealComponents() {
 			confs = append(confs, MatchKeyValue(h, c, key, value)...)
@@ -277,8 +276,8 @@ func MatchKeyValue(h *host.Host, ct *geneos.Component, key, value string) (confs
 // files, such as gateway setup or netprobe collection agent
 //
 // returns a map
-func GetPorts(r *host.Host) (ports map[uint16]*geneos.Component) {
-	if r == host.ALL {
+func GetPorts(r *geneos.Host) (ports map[uint16]*geneos.Component) {
+	if r == geneos.ALL {
 		log.Fatal().Msg("getports() call with all hosts")
 	}
 	ports = make(map[uint16]*geneos.Component)
@@ -316,7 +315,7 @@ func GetPorts(r *host.Host) (ports map[uint16]*geneos.Component) {
 // some limits based on https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
 //
 // not concurrency safe at this time
-func NextPort(r *host.Host, ct *geneos.Component) uint16 {
+func NextPort(r *geneos.Host, ct *geneos.Component) uint16 {
 	from := config.GetString(ct.PortRange)
 	used := GetPorts(r)
 	ps := strings.Split(from, ",")
@@ -420,7 +419,7 @@ func ForAll(ct *geneos.Component, fn func(geneos.Instance, []string) error, args
 	// calls with an empty arg list without having to do the parseArgs()
 	// dance
 	if len(args) == 0 {
-		args = AllNames(host.ALL, ct)
+		args = AllNames(geneos.ALL, ct)
 	}
 	for _, name := range args {
 		cs := MatchAll(ct, name)
@@ -452,7 +451,7 @@ func ForAllWithResults(ct *geneos.Component, fn func(geneos.Instance, []string) 
 	// calls with an empty arg list without having to do the parseArgs()
 	// dance
 	if len(args) == 0 {
-		args = AllNames(host.ALL, ct)
+		args = AllNames(geneos.ALL, ct)
 	}
 	for _, name := range args {
 		var res interface{}
@@ -480,11 +479,11 @@ func ForAllWithResults(ct *geneos.Component, fn func(geneos.Instance, []string) 
 // Return a slice of all instance names for a given component. No
 // checking is done to validate that the directory is a populated
 // instance.
-func AllNames(h *host.Host, ct *geneos.Component) (names []string) {
+func AllNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 	var files []fs.DirEntry
 
-	if h == host.ALL {
-		for _, r := range host.AllHosts() {
+	if h == geneos.ALL {
+		for _, r := range geneos.AllHosts() {
 			names = append(names, AllNames(r, ct)...)
 		}
 		log.Debug().Msgf("names: %s", names)
@@ -520,14 +519,14 @@ func AllNames(h *host.Host, ct *geneos.Component) (names []string) {
 // SplitName returns the parts of an instance name given an instance
 // name in the format [TYPE:]NAME[@HOST] and a default host, return a
 // *geneos.Component for the TYPE if given, a string for the NAME and a
-// *host.Host - the latter being either from the name or the default
+// *geneos.Host - the latter being either from the name or the default
 // provided
-func SplitName(in string, defaultHost *host.Host) (ct *geneos.Component, name string, h *host.Host) {
+func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name string, h *geneos.Host) {
 	h = defaultHost
 	parts := strings.SplitN(in, "@", 2)
 	name = parts[0]
 	if len(parts) > 1 {
-		h = host.Get(parts[1])
+		h = geneos.Get(parts[1])
 	}
 	parts = strings.SplitN(name, ":", 2)
 	if len(parts) > 1 {

@@ -50,7 +50,7 @@ var unsetUserCmd = &cobra.Command{
 		var changed bool
 
 		_, args := CmdArgs(cmd)
-		orig := readConfigFile(geneos.UserConfigFilePaths()...)
+		orig := ReadUserConfig(geneos.UserConfigFilePaths()...)
 		new := config.New()
 
 	OUTER:

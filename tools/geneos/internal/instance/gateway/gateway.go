@@ -33,7 +33,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
@@ -112,7 +111,7 @@ func init() {
 	Gateway.RegisterComponent(New)
 }
 
-func Init(r *host.Host, ct *geneos.Component) {
+func Init(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
 	if err := r.WriteFile(r.Filepath("gateway", "templates", GatewayDefaultTemplate), GatewayTemplate, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
@@ -125,7 +124,7 @@ func Init(r *host.Host, ct *geneos.Component) {
 var gateways sync.Map
 
 func New(name string) geneos.Instance {
-	_, local, h := instance.SplitName(name, host.LOCAL)
+	_, local, h := instance.SplitName(name, geneos.LOCAL)
 	if i, ok := gateways.Load(h.FullName(local)); ok {
 		if g, ok := i.(*Gateways); ok {
 			return g
@@ -167,7 +166,7 @@ func (g *Gateways) Prefix() string {
 	return "gate"
 }
 
-func (g *Gateways) Host() *host.Host {
+func (g *Gateways) Host() *geneos.Host {
 	return g.InstanceHost
 }
 

@@ -188,12 +188,12 @@ func gatewayURL(c geneos.Instance) (u *url.URL) {
 		return
 	}
 	u = &url.URL{}
-	host := c.Host().GetString("hostname")
-	if host == "" {
-		host = "localhost"
+	hostname := c.Host().GetString("hostname")
+	if hostname == "" {
+		hostname = "localhost"
 	}
 	port := c.Config().GetInt("port")
-	u.Host = fmt.Sprintf("%s:%d", host, port)
+	u.Host = fmt.Sprintf("%s:%d", hostname, port)
 	u.Scheme = "http"
 	if instance.Filename(c, "certificate") != "" {
 		u.Scheme = "https"

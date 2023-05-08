@@ -47,6 +47,6 @@ var setGlobalCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		_, _, params := CmdArgsParams(cmd)
-		return writeConfigParams(geneos.GlobalConfigPath, params)
+		return WriteUserConfig(geneos.GlobalConfigPath, params)
 	},
 }

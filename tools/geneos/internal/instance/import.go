@@ -13,15 +13,14 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
-func ImportFile(h *host.Host, home string, user string, source string, options ...geneos.Options) (filename string, err error) {
+func ImportFile(h *geneos.Host, home string, user string, source string, options ...geneos.Options) (filename string, err error) {
 	var backuppath string
 	var from io.ReadCloser
 
-	if h == host.ALL {
+	if h == geneos.ALL {
 		err = geneos.ErrInvalidArgs
 		return
 	}
@@ -45,7 +44,7 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 			if splitsource[0] == "" {
 				log.Fatal().Msg("dest path empty")
 			}
-			destfile, err = host.CleanRelativePath(splitsource[0])
+			destfile, err = geneos.CleanRelativePath(splitsource[0])
 			if err != nil {
 				log.Fatal().Msg("dest path must be relative to (and in) instance directory")
 			}
@@ -128,7 +127,7 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 	return
 }
 
-func ImportCommons(r *host.Host, ct *geneos.Component, common string, params []string) (filename string, err error) {
+func ImportCommons(r *geneos.Host, ct *geneos.Component, common string, params []string) (filename string, err error) {
 	if ct == nil || !ct.RealComponent {
 		err = geneos.ErrNotSupported
 		return

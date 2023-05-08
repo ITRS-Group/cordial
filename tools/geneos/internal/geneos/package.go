@@ -35,8 +35,6 @@ import (
 
 	"github.com/hashicorp/go-version"
 	"github.com/rs/zerolog/log"
-
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
 
 // split an package archive name into type and version
@@ -79,7 +77,7 @@ func (r Releases) Swap(i, j int) {
 // symlinks are ignored.
 //
 // No validation is done on the contents, only that a directory exists.
-func GetReleases(h *host.Host, ct *Component) (releases Releases, err error) {
+func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
 	if !h.Exists() {
 		return nil, fmt.Errorf("host does not exist")
 	}
@@ -137,7 +135,7 @@ func GetReleases(h *host.Host, ct *Component) (releases Releases, err error) {
 	return releases, nil
 }
 
-func getVersions(r *host.Host, ct *Component) (versions map[string]*version.Version, originals map[string]string) {
+func getVersions(r *Host, ct *Component) (versions map[string]*version.Version, originals map[string]string) {
 	dir := r.Filepath("packages", ct.String())
 	ents, err := r.ReadDir(dir)
 	if err != nil {
@@ -178,7 +176,7 @@ func getVersions(r *host.Host, ct *Component) (versions map[string]*version.Vers
 	return
 }
 
-func AdjacentVersions(r *host.Host, ct *Component, current string) (prev string, next string, err error) {
+func AdjacentVersions(r *Host, ct *Component, current string) (prev string, next string, err error) {
 	if current == "" {
 		log.Debug().Msg("current version must be set, ignoring")
 		return
@@ -217,7 +215,7 @@ func AdjacentVersions(r *host.Host, ct *Component, current string) (prev string,
 }
 
 // PreviousVersion returns the latest installed package that is earlier than version current
-func PreviousVersion(r *host.Host, ct *Component, current string) (prev string, err error) {
+func PreviousVersion(r *Host, ct *Component, current string) (prev string, err error) {
 	if current == "" {
 		log.Debug().Msg("current version must be set, ignoring")
 		return
@@ -245,7 +243,7 @@ func PreviousVersion(r *host.Host, ct *Component, current string) (prev string, 
 	return
 }
 
-func NextVersion(r *host.Host, ct *Component, current string) (next string, err error) {
+func NextVersion(r *Host, ct *Component, current string) (next string, err error) {
 	if current == "" {
 		log.Debug().Msg("current version must be set, ignoring")
 		return
@@ -279,7 +277,7 @@ func NextVersion(r *host.Host, ct *Component, current string) (next string, err 
 // and any metadata is ignored. The matching is limited by the optional
 // prefix filter. An error is returned if there are problems accessing
 // the directories or parsing any names as semantic versions.
-func LatestVersion(r *host.Host, ct *Component, prefix string) (v string, err error) {
+func LatestVersion(r *Host, ct *Component, prefix string) (v string, err error) {
 	dir := r.Filepath("packages", ct.String())
 	dirs, err := r.ReadDir(dir)
 	if err != nil {
@@ -372,8 +370,8 @@ func CompareVersion(version1, version2 string) int {
 // Install installs a Geneos software release. The host must be given
 // and defaults to 'all'. If a component type is passed in ct then only that
 // component release is installed.
-func Install(h *host.Host, ct *Component, options ...Options) (err error) {
-	if h == host.ALL {
+func Install(h *Host, ct *Component, options ...Options) (err error) {
+	if h == ALL {
 		return ErrInvalidArgs
 	}
 

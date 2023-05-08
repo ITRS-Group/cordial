@@ -31,7 +31,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/fa2"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
@@ -99,7 +98,7 @@ func init() {
 	San.RegisterComponent(New)
 }
 
-func Init(r *host.Host, ct *geneos.Component) {
+func Init(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
 	if err := r.WriteFile(r.Filepath(ct, "templates", SanDefaultTemplate), SanTemplate, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
@@ -109,7 +108,7 @@ func Init(r *host.Host, ct *geneos.Component) {
 var sans sync.Map
 
 func New(name string) geneos.Instance {
-	ct, local, r := instance.SplitName(name, host.LOCAL)
+	ct, local, r := instance.SplitName(name, geneos.LOCAL)
 	s, ok := sans.Load(r.FullName(local))
 	if ok {
 		sn, ok := s.(*Sans)
@@ -157,7 +156,7 @@ func (s *Sans) Prefix() string {
 	return "san"
 }
 
-func (s *Sans) Host() *host.Host {
+func (s *Sans) Host() *geneos.Host {
 	return s.InstanceHost
 }
 
