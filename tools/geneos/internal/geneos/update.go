@@ -29,14 +29,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 
 	"github.com/rs/zerolog/log"
 )
 
 // check selected version exists first
-func Update(h *host.Host, ct *Component, options ...Options) (err error) {
+func Update(h *Host, ct *Component, options ...Options) (err error) {
 	opts := EvalOptions(options...)
 	if ct == nil {
 		for _, t := range RealComponents() {
@@ -68,8 +67,8 @@ func Update(h *host.Host, ct *Component, options ...Options) (err error) {
 		return nil
 	}
 
-	if h == host.ALL {
-		for _, h := range host.AllHosts() {
+	if h == ALL {
+		for _, h := range AllHosts() {
 			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
 				log.Error().Err(err).Msg("")
 			}
@@ -120,10 +119,10 @@ func Update(h *host.Host, ct *Component, options ...Options) (err error) {
 	if err = h.Symlink(opts.version, basepath); err != nil {
 		return err
 	}
-	if h == host.LOCAL && utils.IsSuperuser() {
+	if h == LOCAL && utils.IsSuperuser() {
 		uid, gid, _, err := utils.GetIDs(h.GetString("username"))
 		if err == nil {
-			host.LOCAL.Lchown(basepath, uid, gid)
+			LOCAL.Lchown(basepath, uid, gid)
 		}
 	}
 	fmt.Println(ct, h.Path(basepath), "updated to", opts.version)

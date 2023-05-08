@@ -28,7 +28,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 
 	"github.com/rs/zerolog/log"
@@ -149,7 +148,7 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 
 // XXX muddled - fix
 // (only called from set user and set global)
-func writeConfigParams(filename string, params []string) (err error) {
+func WriteUserConfig(filename string, params []string) (err error) {
 	vp, _ := config.Load("geneos", config.SetConfigFile(filename))
 
 	// change here
@@ -170,10 +169,10 @@ func writeConfigParams(filename string, params []string) (err error) {
 		vp.Set("itrshome", nil)
 	}
 
-	return host.WriteConfigFile(vp, filename, "", 0664)
+	return geneos.WriteConfigFile(vp, filename, "", 0664)
 }
 
-func readConfigFile(paths ...string) (v *config.Config) {
+func ReadUserConfig(paths ...string) (v *config.Config) {
 	v, _ = config.Load("user", config.SetConfigFile(paths[0]))
 	// v = config.New()
 	// for _, path := range paths {

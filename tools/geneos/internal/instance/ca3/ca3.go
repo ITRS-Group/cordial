@@ -33,7 +33,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 )
@@ -95,7 +94,7 @@ func init() {
 var ca3s sync.Map
 
 func New(name string) geneos.Instance {
-	_, local, r := instance.SplitName(name, host.LOCAL)
+	_, local, r := instance.SplitName(name, geneos.LOCAL)
 	n, ok := ca3s.Load(r.FullName(local))
 	if ok {
 		np, ok := n.(*CA3s)
@@ -139,7 +138,7 @@ func (n *CA3s) Prefix() string {
 	return "ca3"
 }
 
-func (n *CA3s) Host() *host.Host {
+func (n *CA3s) Host() *geneos.Host {
 	return n.InstanceHost
 }
 

@@ -111,9 +111,11 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 //
 // error check core values - e.g. Name
 func LoadConfig(c geneos.Instance) (err error) {
-	if c.Host().Failed() {
-		return
+	if !c.Host().IsAvailable() {
+		return fmt.Errorf("cannot reach %s", c.Host())
 	}
+	// first, ensure we are using the right filesystem driver
+	c.Config().SetFs(c.Host().GetFs())
 	if err = ReadConfig(c); err != nil {
 		// generic error as no .json or .rc found
 		return fmt.Errorf("no configuration files for %s in %s: %w", c, c.Home(), os.ErrNotExist)
@@ -302,7 +304,7 @@ func WriteConfig(c geneos.Instance) (err error) {
 }
 
 // writeConfig writes out the configuration for instance c without
-// trying migrating legacy files. It does this by copying all
+// trying to migrate legacy files. It does this by copying all
 // non-aliased values to a new configuration structure as viper offers
 // no way to delete values.
 func writeConfig(c geneos.Instance) (err error) {
@@ -323,7 +325,7 @@ func writeConfig(c geneos.Instance) (err error) {
 		}
 		nv.Set(k, c.Config().Get(k))
 	}
-	nv.SetFs(c.Host().NewAferoFS())
+	nv.SetFs(c.Host().GetFs())
 	log.Debug().Msgf("writing config for %s as %q", c, file)
 	if err = nv.WriteConfigAs(file); err != nil {
 		return err
@@ -335,9 +337,8 @@ func writeConfig(c geneos.Instance) (err error) {
 	return
 }
 
-// WriteConfigValues writes the given values to the configuration file
-// for instance c. It does not merge values with the existing
-// configuration values.
+// WriteConfigValues writes the given values to the configuration file for
+// instance c. It does not merge values with the existing configuration values.
 func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err error) {
 	// speculatively migrate the config, in case there is a legacy .rc
 	// file in place. Migrate() returns an error only for real errors
@@ -354,7 +355,7 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 		}
 		nv.Set(k, v)
 	}
-	nv.SetFs(c.Host().NewAferoFS())
+	nv.SetFs(c.Host().GetFs())
 	if err = nv.WriteConfigAs(file); err != nil {
 		return err
 	}
@@ -369,8 +370,6 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 // for that instance type. First try the preferred file type and if that fails
 // loop through all types and if they all fail then try the legacy file.
 func ReadConfig(c geneos.Instance) (err error) {
-	c.Config().SetFs(c.Host().NewAferoFS())
-
 	c.Config().SetConfigFile(ComponentFilepath(c, ConfigFileType()))
 	if err = c.Config().MergeInConfig(); err != nil {
 		for _, t := range ConfigFileTypes() {

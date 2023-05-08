@@ -34,7 +34,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
@@ -110,7 +109,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 	// check validity and reserved words here
 	name := args[0]
 
-	_, _, rem := instance.SplitName(name, host.LOCAL)
+	_, _, rem := instance.SplitName(name, geneos.LOCAL)
 	if err = ct.MakeComponentDirs(rem); err != nil {
 		return
 	}

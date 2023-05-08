@@ -50,7 +50,7 @@ var unsetGlobalCmd = &cobra.Command{
 		var changed bool
 
 		_, args := CmdArgs(cmd)
-		orig := readConfigFile(geneos.GlobalConfigPath)
+		orig := ReadUserConfig(geneos.GlobalConfigPath)
 		new := config.New()
 
 	OUTER:

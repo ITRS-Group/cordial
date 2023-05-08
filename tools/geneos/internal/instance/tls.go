@@ -33,7 +33,6 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
 
 // create a new certificate for an instance
@@ -50,7 +49,7 @@ func CreateCert(c geneos.Instance) (err error) {
 	}
 
 	hostname, _ := os.Hostname()
-	if c.Host() != host.LOCAL {
+	if c.Host() != geneos.LOCAL {
 		hostname = c.Host().GetString("hostname")
 	}
 
@@ -77,7 +76,7 @@ func CreateCert(c geneos.Instance) (err error) {
 	if err != nil {
 		return
 	}
-	intrKey, err := host.LOCAL.ReadKey(filepath.Join(tlsDir, geneos.SigningCertFile+".key"))
+	intrKey, err := geneos.LOCAL.ReadKey(filepath.Join(tlsDir, geneos.SigningCertFile+".key"))
 	if err != nil {
 		return
 	}
@@ -135,13 +134,13 @@ func WriteKey(c geneos.Instance, key *rsa.PrivateKey) (err error) {
 // read the rootCA certificate from the installation directory
 func ReadRootCert() (cert *x509.Certificate, err error) {
 	tlsDir := filepath.Join(geneos.Root(), "tls")
-	return host.LOCAL.ReadCert(filepath.Join(tlsDir, geneos.RootCAFile+".pem"))
+	return geneos.LOCAL.ReadCert(filepath.Join(tlsDir, geneos.RootCAFile+".pem"))
 }
 
 // read the signing certificate from the installation directory
 func ReadSigningCert() (cert *x509.Certificate, err error) {
 	tlsDir := filepath.Join(geneos.Root(), "tls")
-	return host.LOCAL.ReadCert(filepath.Join(tlsDir, geneos.SigningCertFile+".pem"))
+	return geneos.LOCAL.ReadCert(filepath.Join(tlsDir, geneos.SigningCertFile+".pem"))
 }
 
 // read the instance certificate

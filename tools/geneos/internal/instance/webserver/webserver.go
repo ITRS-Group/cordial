@@ -32,7 +32,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
@@ -97,7 +96,7 @@ func init() {
 var webservers sync.Map
 
 func New(name string) geneos.Instance {
-	_, local, r := instance.SplitName(name, host.LOCAL)
+	_, local, r := instance.SplitName(name, geneos.LOCAL)
 	w, ok := webservers.Load(r.FullName(local))
 	if ok {
 		ws, ok := w.(*Webservers)
@@ -156,7 +155,7 @@ func (w *Webservers) Prefix() string {
 	return "webs"
 }
 
-func (w *Webservers) Host() *host.Host {
+func (w *Webservers) Host() *geneos.Host {
 	return w.InstanceHost
 }
 

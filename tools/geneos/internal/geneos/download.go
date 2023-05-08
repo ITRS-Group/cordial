@@ -34,7 +34,6 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
 
 const defaultURL = "https://resources.itrsgroup.com/download/latest/"
@@ -63,7 +62,7 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 
 	// if no content-disposition, then grab the path from the response URL
 	if filename == "" {
-		filename, err = host.CleanRelativePath(path.Base(u.Path))
+		filename, err = CleanRelativePath(path.Base(u.Path))
 		if err != nil {
 			return
 		}

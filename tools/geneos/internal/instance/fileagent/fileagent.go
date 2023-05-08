@@ -29,7 +29,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
@@ -97,7 +96,7 @@ func init() {
 var fileagents sync.Map
 
 func New(name string) geneos.Instance {
-	_, local, r := instance.SplitName(name, host.LOCAL)
+	_, local, r := instance.SplitName(name, geneos.LOCAL)
 	f, ok := fileagents.Load(r.FullName(local))
 	if ok {
 		fa, ok := f.(*FileAgents)
@@ -141,7 +140,7 @@ func (n *FileAgents) Prefix() string {
 	return "fa"
 }
 
-func (n *FileAgents) Host() *host.Host {
+func (n *FileAgents) Host() *geneos.Host {
 	return n.InstanceHost
 }
 

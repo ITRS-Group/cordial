@@ -45,7 +45,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
@@ -76,11 +75,11 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 		if opts.version == "latest" {
 			opts.version = ""
 		}
-		archiveDir := host.LOCAL.Filepath("packages", "downloads")
+		archiveDir := LOCAL.Filepath("packages", "downloads")
 		if opts.source != "" {
 			archiveDir = opts.source
 		}
-		filename, err = LatestArchive(host.LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
+		filename, err = LatestArchive(LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
 			log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
 			switch ct.String() {
 			case "webserver":
@@ -101,7 +100,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 			return
 		}
 		var f io.ReadSeekCloser
-		if f, err = host.LOCAL.Open(filepath.Join(archiveDir, filename)); err != nil {
+		if f, err = LOCAL.Open(filepath.Join(archiveDir, filename)); err != nil {
 			err = fmt.Errorf("local installation selected but no suitable file found for %s (%w)", ct, err)
 			return
 		}
@@ -114,11 +113,11 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 	}
 
 	archiveDir := filepath.Join(Root(), "packages", "downloads")
-	host.LOCAL.MkdirAll(archiveDir, 0775)
+	LOCAL.MkdirAll(archiveDir, 0775)
 	archivePath := filepath.Join(archiveDir, filename)
-	s, err := host.LOCAL.Stat(archivePath)
+	s, err := LOCAL.Stat(archivePath)
 	if err == nil && s.Size() == resp.ContentLength {
-		if f, err := host.LOCAL.Open(archivePath); err == nil {
+		if f, err := LOCAL.Open(archivePath); err == nil {
 			log.Debug().Msgf("not downloading, file with same size already exists: %s", archivePath)
 			resp.Body.Close()
 			return f, filename, nil
@@ -166,7 +165,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 // unarchive unpacks the gzipped, open archive passed as an io.Reader on
 // the host given for the component. If there is anm error then the
 // caller must close the io.Reader
-func unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, options ...Options) (err error) {
+func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ...Options) (err error) {
 	var version string
 
 	opts := EvalOptions(options...)
@@ -258,7 +257,7 @@ func unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 		if name = fnname(hdr.Name); name == "" {
 			continue
 		}
-		if name, err = host.CleanRelativePath(name); err != nil {
+		if name, err = CleanRelativePath(name); err != nil {
 			return
 		}
 		fullpath := path.Join(basedir, name)
@@ -307,12 +306,12 @@ func unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 	}
 
 	// if root, (l)chown of created tree to default user
-	if h == host.LOCAL && utils.IsSuperuser() {
+	if h == LOCAL && utils.IsSuperuser() {
 		uid, gid, _, err := utils.GetIDs(h.GetString("username"))
 		if err == nil {
 			filepath.WalkDir(h.Path(basedir), func(path string, dir fs.DirEntry, err error) error {
 				if err == nil {
-					err = host.LOCAL.Lchown(path, uid, gid)
+					err = LOCAL.Lchown(path, uid, gid)
 				}
 				return err
 			})
@@ -484,7 +483,7 @@ func MatchVersion(v string) bool {
 //
 // If there is semver metadata, check for platform_id on host and remove
 // any non-platform metadata from list before sorting
-func LatestArchive(r *host.Host, dir, filterString string, filterFunc func(os.DirEntry) bool) (latest string, err error) {
+func LatestArchive(r *Host, dir, filterString string, filterFunc func(os.DirEntry) bool) (latest string, err error) {
 	ents, err := r.ReadDir(dir)
 	if err != nil {
 		return

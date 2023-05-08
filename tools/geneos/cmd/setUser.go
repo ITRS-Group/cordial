@@ -46,6 +46,6 @@ var setUserCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		_, _, params := CmdArgsParams(cmd)
-		return writeConfigParams(geneos.UserConfigFilePaths()[0], params)
+		return WriteUserConfig(geneos.UserConfigFilePaths()[0], params)
 	},
 }

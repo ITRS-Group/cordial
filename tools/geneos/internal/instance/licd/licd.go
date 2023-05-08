@@ -29,7 +29,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
@@ -90,7 +89,7 @@ func init() {
 var licds sync.Map
 
 func New(name string) geneos.Instance {
-	_, local, r := instance.SplitName(name, host.LOCAL)
+	_, local, r := instance.SplitName(name, geneos.LOCAL)
 	l, ok := licds.Load(r.FullName(local))
 	if ok {
 		lc, ok := l.(*Licds)
@@ -134,7 +133,7 @@ func (l *Licds) Prefix() string {
 	return "licd"
 }
 
-func (l *Licds) Host() *host.Host {
+func (l *Licds) Host() *geneos.Host {
 	return l.InstanceHost
 }
 

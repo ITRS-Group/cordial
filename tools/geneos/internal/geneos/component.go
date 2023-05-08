@@ -28,7 +28,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 
 	"github.com/rs/zerolog/log"
@@ -44,7 +43,7 @@ type DownloadBases struct {
 }
 
 type Component struct {
-	Initialise       func(*host.Host, *Component)
+	Initialise       func(*Host, *Component)
 	New              func(string) Instance
 	Name             string
 	RelatedTypes     []*Component
@@ -68,7 +67,7 @@ type Instance interface {
 	Name() string
 	Home() string
 	Type() *Component
-	Host() *host.Host
+	Host() *Host
 	Prefix() string
 	String() string
 
@@ -199,9 +198,9 @@ func ParseComponentName(component string) *Component {
 // there is an error creating the directory or updating the ownership
 // for superuser then this is immediate returned and the list of
 // directories may only be partially created.
-func (ct *Component) MakeComponentDirs(h *host.Host) (err error) {
+func (ct *Component) MakeComponentDirs(h *Host) (err error) {
 	name := "none"
-	if h == host.ALL {
+	if h == ALL {
 		log.Fatal().Msg("called with all hosts")
 	}
 	if ct != nil {
@@ -230,7 +229,7 @@ func (ct *Component) MakeComponentDirs(h *host.Host) (err error) {
 
 // InstancesDir return the base directory for the instances of a
 // component
-func (ct *Component) InstancesDir(h *host.Host) string {
+func (ct *Component) InstancesDir(h *Host) string {
 	if ct == nil {
 		return ""
 	}
@@ -239,7 +238,7 @@ func (ct *Component) InstancesDir(h *host.Host) string {
 }
 
 // SharedDir return the shared directory for the component
-func (ct *Component) SharedDir(h *host.Host) string {
+func (ct *Component) SharedDir(h *Host) string {
 	if ct == nil {
 		return ""
 	}

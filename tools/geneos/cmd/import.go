@@ -27,7 +27,6 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -106,7 +105,7 @@ func ImportFiles(ct *geneos.Component, args []string, sources []string) (err err
 		if ct == nil {
 			return fmt.Errorf("component type must be specified for common/shared directory import")
 		}
-		for _, r := range host.Match(importCmdHostname) {
+		for _, r := range geneos.Match(importCmdHostname) {
 			if _, err = instance.ImportCommons(r, ct, ct.String()+"_"+importCmdCommon, sources); err != nil {
 				return
 			}

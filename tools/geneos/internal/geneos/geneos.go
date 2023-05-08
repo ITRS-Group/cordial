@@ -34,7 +34,6 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 
 	"github.com/rs/zerolog/log"
@@ -67,10 +66,10 @@ var GlobalConfigPath = filepath.Join(GlobalConfigDir, ConfigSubdirName, UserConf
 //
 // When called on a remote host then the user running the command cannot
 // be super-user.
-func Init(h *host.Host, options ...Options) (err error) {
+func Init(h *Host, options ...Options) (err error) {
 	var uid, gid int
 
-	if h != host.LOCAL && utils.IsSuperuser() {
+	if h != LOCAL && utils.IsSuperuser() {
 		err = ErrNotSupported
 		return
 	}
@@ -97,7 +96,7 @@ func Init(h *host.Host, options ...Options) (err error) {
 		}
 		for _, entry := range dirs {
 			if !strings.HasPrefix(entry.Name(), ".") {
-				if h != host.LOCAL {
+				if h != LOCAL {
 					log.Debug().Msg("remote directories exist, exiting init")
 					return nil
 				}
@@ -106,7 +105,7 @@ func Init(h *host.Host, options ...Options) (err error) {
 		}
 	}
 
-	if h == host.LOCAL {
+	if h == LOCAL {
 		config.GetConfig().Set("geneos", opts.homedir)
 		config.GetConfig().Set("defaultuser", opts.localusername)
 
@@ -119,14 +118,14 @@ func Init(h *host.Host, options ...Options) (err error) {
 			userConfFile = filepath.Join(userConfDir, ConfigSubdirName, UserConfigFile)
 		}
 
-		if err = host.WriteConfigFile(config.GetConfig(), userConfFile, opts.localusername, 0664); err != nil {
+		if err = WriteConfigFile(config.GetConfig(), userConfFile, opts.localusername, 0664); err != nil {
 			return err
 		}
 
-		// recreate host.LOCAL to load "geneos" and others
-		host.LOCAL = nil
-		host.LOCAL = host.Get(host.LOCALHOST)
-		h = host.LOCAL
+		// recreate LOCAL to load "geneos" and others
+		LOCAL = nil
+		LOCAL = Get(LOCALHOST)
+		h = LOCAL
 	}
 
 	if utils.IsSuperuser() {
@@ -134,7 +133,7 @@ func Init(h *host.Host, options ...Options) (err error) {
 		if err != nil {
 			// XXX do something
 		}
-		if err = host.LOCAL.Chown(opts.homedir, uid, gid); err != nil {
+		if err = LOCAL.Chown(opts.homedir, uid, gid); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 	}
@@ -158,7 +157,7 @@ func Init(h *host.Host, options ...Options) (err error) {
 	if utils.IsSuperuser() {
 		err = filepath.WalkDir(opts.homedir, func(path string, dir fs.DirEntry, err error) error {
 			if err == nil {
-				err = host.LOCAL.Chown(path, uid, gid)
+				err = LOCAL.Chown(path, uid, gid)
 			}
 			return err
 		})
