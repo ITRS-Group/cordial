@@ -54,7 +54,8 @@ Moving across hosts is fully supported.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args, params := CmdArgsParams(cmd)

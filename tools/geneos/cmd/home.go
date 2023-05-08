@@ -55,7 +55,8 @@ cat $(geneos home gateway example2)/gateway.txt
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, _ := CmdArgsParams(cmd)

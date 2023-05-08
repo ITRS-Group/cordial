@@ -90,7 +90,8 @@ geneos package update netprobe 5.13.2
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	Args: cobra.RangeArgs(0, 2),
 	RunE: func(command *cobra.Command, _ []string) (err error) {

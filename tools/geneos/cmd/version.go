@@ -27,7 +27,8 @@ Show program version details
 	SilenceUsage: true,
 	Version:      cordial.VERSION,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("%s version %s\n", cmdName, cmd.Version)

@@ -72,7 +72,8 @@ Versions are listed in descending order for each component type, i.e.
 	Aliases:      []string{"list"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		ct, _ := cmd.CmdArgs(command)

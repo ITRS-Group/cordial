@@ -88,7 +88,8 @@ geneos add netprobe infraprobe12 --start --log
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, _ []string) error {

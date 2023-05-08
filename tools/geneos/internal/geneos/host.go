@@ -314,16 +314,19 @@ func ReadHostConfig() {
 	userConfDir, _ := config.UserConfigDir()
 	oldConfigFile := filepath.Join(userConfDir, OldUserHostFile)
 	r, path := config.OpenPromoteFile(host.Localhost, UserHostsFilePath(), oldConfigFile)
-	ext := filepath.Ext(path)
-	if ext != "" {
-		h.SetConfigType(ext[1:])
-	} else {
-		h.SetConfigType(ConfigFileType)
+	if path != "" {
+		ext := filepath.Ext(path)
+		if ext != "" {
+			h.SetConfigType(ext[1:])
+		} else {
+			h.SetConfigType(ConfigFileType)
+		}
+		if err := h.ReadConfig(r); err != nil {
+			// a missing file is fine
+			log.Error().Err(err).Msg("")
+		}
+		r.Close()
 	}
-	if err := h.ReadConfig(r); err != nil {
-		log.Error().Err(err).Msg("")
-	}
-	r.Close()
 
 	// recreate empty
 	hosts = sync.Map{}

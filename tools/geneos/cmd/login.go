@@ -75,7 +75,8 @@ credentials can use a separate keyfile.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		if loginCmdUsername == "" {

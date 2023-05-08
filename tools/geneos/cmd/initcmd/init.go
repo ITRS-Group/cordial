@@ -145,7 +145,8 @@ sudo geneos init geneos /opt/itrs
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	// initialise a geneos installation
 	//

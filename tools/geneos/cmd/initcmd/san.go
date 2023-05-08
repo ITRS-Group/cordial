@@ -82,7 +82,8 @@ multiple times.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, args, params := cmd.CmdArgsParams(command)

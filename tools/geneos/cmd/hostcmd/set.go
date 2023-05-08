@@ -57,7 +57,8 @@ Set options on remote host configurations.
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		_, args, params := cmd.CmdArgsParams(command)

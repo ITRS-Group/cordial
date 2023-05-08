@@ -42,7 +42,8 @@ var setUserCmd = &cobra.Command{
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		_, _, params := CmdArgsParams(cmd)

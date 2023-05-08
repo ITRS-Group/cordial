@@ -89,7 +89,8 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, args, params := cmd.CmdArgsParams(command)
