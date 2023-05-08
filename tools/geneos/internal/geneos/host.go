@@ -25,10 +25,7 @@ package geneos
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
-	"io"
-	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -315,32 +312,19 @@ func RemoteHosts() (hs []*Host) {
 // migrates that file to the new location if found.
 func ReadHostConfig() {
 	h := config.New()
-	h.SetConfigFile(UserHostsFilePath())
-	if err := h.ReadInConfig(); err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			// try old location
-			userConfDir, _ := config.UserConfigDir()
-			oldConfigFile := filepath.Join(userConfDir, OldUserHostFile)
-			if s, err := os.Stat(oldConfigFile); err == nil {
-				if !s.IsDir() {
-					if f, err := os.Open(oldConfigFile); err == nil {
-						defer f.Close()
-						if w, err := os.Create(UserHostsFilePath()); err == nil {
-							defer w.Close()
-							if _, err := io.Copy(w, f); err == nil {
-								f.Close()
-								w.Close()
-								os.Remove(oldConfigFile)
-								if err := h.ReadInConfig(); err != nil {
-									log.Debug().Err(err).Msg("old hosts file is unreadable, but still moved")
-								}
-							}
-						}
-					}
-				}
-			}
-		}
+	userConfDir, _ := config.UserConfigDir()
+	oldConfigFile := filepath.Join(userConfDir, OldUserHostFile)
+	r, path := config.OpenPromoteFile(host.Localhost, UserHostsFilePath(), oldConfigFile)
+	ext := filepath.Ext(path)
+	if ext != "" {
+		h.SetConfigType(ext[1:])
+	} else {
+		h.SetConfigType(ConfigFileType)
 	}
+	if err := h.ReadConfig(r); err != nil {
+		log.Error().Err(err).Msg("")
+	}
+	r.Close()
 
 	// recreate empty
 	hosts = sync.Map{}
