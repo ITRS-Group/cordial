@@ -201,7 +201,7 @@ func (n *CA3s) Add(tmpl string, port uint16) (err error) {
 	}
 
 	for _, source := range ca3Files {
-		if _, err = instance.ImportFile(n.Host(), n.Home(), n.Config().GetString("user"), source); err != nil {
+		if _, err = instance.ImportFile(n.Host(), n.Home(), source); err != nil {
 			return
 		}
 	}

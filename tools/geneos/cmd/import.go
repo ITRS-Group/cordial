@@ -65,18 +65,9 @@ provided in PATH.
 the current directory (without a |PATH=| prefix) **MUST** be prefixed
 with |./|. Any SOURCE that is not a valid instance name is treated as
 SOURCE and no immediate error is raised. Directories are created as required.
-If run as root, directories and files ownership is set to the user in
-the instance configuration or the default user.
 
 Currently only files can be imported and if the SOURCE is a directory
 then this is an error.
-
-Like other commands that write to the file system, it can safely be
-run as root as the destination directory and file will be changed to
-be owned by either the instance or the default user, with the caveat
-that any intermediate directories created above the destination
-directory (e.g. the first two in |my/long/path|) will be owned by
-root.
 `, "|", "`"),
 	Example: strings.ReplaceAll(`
 geneos import gateway example1 https://example.com/myfiles/gateway.setup.xml
@@ -138,7 +129,7 @@ func importInstance(c geneos.Instance, sources []string) (err error) {
 	}
 
 	for _, source := range sources {
-		if _, err = instance.ImportFile(c.Host(), c.Home(), c.Config().GetString("user"), source); err != nil {
+		if _, err = instance.ImportFile(c.Host(), c.Home(), source); err != nil {
 			return
 		}
 	}

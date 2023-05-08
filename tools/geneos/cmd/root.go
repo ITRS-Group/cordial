@@ -26,7 +26,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/user"
 	"strings"
 
 	"github.com/itrs-group/cordial"
@@ -187,20 +186,6 @@ func initConfig() {
 	replacer := strings.NewReplacer(".", "_")
 	cf.SetEnvKeyReplacer(replacer)
 	cf.AutomaticEnv()
-
-	u, err := user.Current()
-	username := "nobody"
-	if err != nil {
-		log.Error().Err(err).Msg("cannot get user details")
-	} else {
-		username = u.Username
-	}
-	// strip domain in case we are running on windows
-	i := strings.Index(username, "\\")
-	if i != -1 && len(username) >= i {
-		username = username[i+1:]
-	}
-	cf.SetDefault("defaultuser", username)
 
 	// manual alias+remove as the viper.RegisterAlias doesn't work as expected
 	if cf.IsSet("itrshome") {

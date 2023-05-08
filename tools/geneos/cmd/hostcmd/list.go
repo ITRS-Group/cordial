@@ -67,6 +67,7 @@ var hostLsCmd = &cobra.Command{
 	Long: strings.ReplaceAll(`
 List the matching remote hosts.
 `, "|", "`"),
+	Aliases:      []string{"list"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",

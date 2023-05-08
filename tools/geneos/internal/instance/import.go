@@ -12,11 +12,10 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-func ImportFile(h *geneos.Host, home string, user string, source string, options ...geneos.Options) (filename string, err error) {
+func ImportFile(h *geneos.Host, home string, source string, options ...geneos.Options) (filename string, err error) {
 	var backuppath string
 	var from io.ReadCloser
 
@@ -116,7 +115,7 @@ func ImportCommons(r *geneos.Host, ct *geneos.Component, common string, params [
 
 	dir := r.Filepath(ct, common)
 	for _, source := range params {
-		if filename, err = ImportFile(r, dir, config.GetString("defaultuser"), source); err != nil {
+		if filename, err = ImportFile(r, dir, source); err != nil {
 			return
 		}
 	}
