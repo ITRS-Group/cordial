@@ -54,7 +54,8 @@ them but configurations will not be rebuilt.
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		// _, _, params := processArgsParams(cmd)

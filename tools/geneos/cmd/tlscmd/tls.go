@@ -47,5 +47,11 @@ certificates as well as listing details and copying a certificate
 chain to all other hosts.
 `, "|", "`"),
 	SilenceUsage: true,
-	Annotations:  make(map[string]string),
+	Annotations: map[string]string{
+		"needshomedir": "true",
+	},
+	DisableFlagParsing: true,
+	RunE: func(command *cobra.Command, args []string) (err error) {
+		return cmd.RunE(command.Root(), []string{"tls", "ls"}, args)
+	},
 }

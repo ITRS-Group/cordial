@@ -93,7 +93,9 @@ $ geneos start
 $ geneos ps
 `, "|", "`"),
 	SilenceUsage: true,
-	Annotations:  make(map[string]string),
+	Annotations: map[string]string{
+		"needshomedir": "true",
+	},
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
@@ -107,13 +109,8 @@ $ geneos ps
 		if geneosdir == "" {
 			// commands that do not require geneos home to be set - use
 			// a const/var to iterate over to test this
-			log.Debug().Msgf("parent? %v parent name %s name %s", cmd.HasParent(), cmd.Parent().Name(), cmd.Name())
-			if !((!cmd.HasParent() && (cmd.Name() == "version" || cmd.Name() == "init")) ||
-				(cmd.Parent().Name() == "set" && (cmd.Name() == "user" || cmd.Name() == "global")) ||
-				cmd.Parent().Name() == "host" ||
-				cmd.Parent().Name() == "init" ||
-				cmd.Parent().Name() == "aes" ||
-				len(geneos.RemoteHosts()) > 0) {
+			log.Debug().Msgf("parent? %v parent name %s name %s needshomedir %s", cmd.HasParent(), cmd.Parent().Name(), cmd.Name(), cmd.Annotations["needshomedir"])
+			if cmd.Annotations["needshomedir"] == "true" {
 				cmd.SetUsageTemplate(" ")
 				return fmt.Errorf("%s", strings.ReplaceAll(`
 Geneos installation directory not set.
@@ -133,6 +130,7 @@ For temporary usage:
 		}
 		return parseArgs(cmd, args)
 	},
+	// RunE: lsCmd.RunE,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -143,10 +141,6 @@ func Execute() {
 		os.Exit(1)
 	}
 }
-
-// func RootCmd() *cobra.Command {
-// 	return RootCmd
-// }
 
 // catch misspelling and abbreviations of common flags
 func cmdNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {

@@ -67,7 +67,8 @@ var aesEncodeCmd = &cobra.Command{
 	`, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
 		var plaintext []byte

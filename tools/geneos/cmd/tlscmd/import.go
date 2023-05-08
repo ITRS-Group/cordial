@@ -54,7 +54,8 @@ certificates with matching private keys are imported.
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) error {
 		_, args, _ := cmd.CmdArgsParams(command)

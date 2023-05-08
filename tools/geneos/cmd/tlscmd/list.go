@@ -90,7 +90,8 @@ same as for the main ls command.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) error {
 		ct, args, params := cmd.CmdArgsParams(command)

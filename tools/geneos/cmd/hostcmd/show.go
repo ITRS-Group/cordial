@@ -58,7 +58,8 @@ being accidentally shown in clear text.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var hosts []*geneos.Host

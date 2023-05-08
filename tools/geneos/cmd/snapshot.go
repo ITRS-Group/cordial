@@ -95,8 +95,9 @@ not applied in any defined order.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"ct":       "gateway",
-		"wildcard": "true",
+		"ct":           "gateway",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args, params := CmdArgsParams(cmd)

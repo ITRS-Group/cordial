@@ -80,7 +80,8 @@ instance details.
 	Aliases:      []string{"log"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args, params := CmdArgsParams(cmd)

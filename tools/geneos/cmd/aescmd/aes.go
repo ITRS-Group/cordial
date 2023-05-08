@@ -49,5 +49,11 @@ var AesCmd = &cobra.Command{
 Manage Geneos compatible key files and encode/decode passwords
 `, "|", "`"),
 	SilenceUsage: true,
-	Annotations:  make(map[string]string),
+	Annotations: map[string]string{
+		"needshomedir": "true",
+	},
+	DisableFlagParsing: true,
+	RunE: func(command *cobra.Command, args []string) (err error) {
+		return cmd.RunE(command.Root(), []string{"aes", "ls"}, args)
+	},
 }

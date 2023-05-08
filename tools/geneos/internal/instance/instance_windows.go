@@ -23,8 +23,6 @@ THE SOFTWARE.
 package instance
 
 import (
-	"os"
-	"os/exec"
 	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"

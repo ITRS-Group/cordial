@@ -54,7 +54,8 @@ this alias will be removed in an upcoming release.
 	SilenceUsage: true,
 	Args:         cobra.RangeArgs(1, 2),
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
@@ -72,7 +73,8 @@ future as this alias will be removed in an upcoming release.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
@@ -90,7 +92,8 @@ this alias will be removed in an upcoming release.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	DisableFlagParsing: true,
 	Deprecated:         "Use `geneos host ls` instead.",
@@ -108,7 +111,8 @@ var setHostCmd = &cobra.Command{
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
@@ -124,7 +128,8 @@ var showHostCmd = &cobra.Command{
 	Aliases:      []string{"hosts"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
@@ -139,7 +144,8 @@ var installCmd = &cobra.Command{
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
@@ -154,7 +160,8 @@ var updateLsCmd = &cobra.Command{
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
@@ -169,7 +176,8 @@ var updateCmd = &cobra.Command{
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	Args:               cobra.RangeArgs(0, 2),
 	DisableFlagParsing: true,

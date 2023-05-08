@@ -50,7 +50,8 @@ to quickly create a Cobra application.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		// ct, args, params := CmdArgsParams(cmd)

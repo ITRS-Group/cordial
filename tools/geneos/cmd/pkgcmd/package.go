@@ -23,8 +23,6 @@ THE SOFTWARE.
 package pkgcmd // "package" is a reserved word
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -40,8 +38,13 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("package called")
+	Annotations: map[string]string{
+		"wildcard":     "false",
+		"needshomedir": "true",
+	},
+	DisableFlagParsing: true,
+	RunE: func(command *cobra.Command, args []string) (err error) {
+		return cmd.RunE(command.Root(), []string{"package", "ls"}, args)
 	},
 }
 

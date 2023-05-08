@@ -75,7 +75,8 @@ setting to support GA6.x key file rolling.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var crc uint32

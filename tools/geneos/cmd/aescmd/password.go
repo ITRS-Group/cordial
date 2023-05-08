@@ -37,7 +37,8 @@ on of the flags is set.
 	Aliases:      []string{"passwd"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var plaintext []byte

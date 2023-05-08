@@ -76,7 +76,8 @@ to prevent visibility in casual viewing.
 	Aliases:      []string{"details"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		if len(args) == 0 {

@@ -53,7 +53,8 @@ exist.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) error {
 		return tlsSync()

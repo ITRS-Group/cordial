@@ -72,7 +72,8 @@ type.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) error {
 		ct, _, _ := cmd.CmdArgsParams(command)
