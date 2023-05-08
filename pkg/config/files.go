@@ -34,7 +34,7 @@ import (
 // empty string). It returns an io.ReadSeekCloser for the open file and the
 // final path. If there is an error moving the file then the returned path is
 // that of the originally opened file.
-func OpenPromoteFile(r host.Host, paths []string) (f io.ReadSeekCloser, final string) {
+func OpenPromoteFile(r host.Host, paths ...string) (f io.ReadSeekCloser, final string) {
 	for i, path := range paths {
 		var err error
 		f, err = r.Open(path)
