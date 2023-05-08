@@ -33,7 +33,6 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 var Webserver = geneos.Component{
@@ -186,13 +185,8 @@ func (w *Webservers) Config() *config.Config {
 	return w.Conf
 }
 
-func (w *Webservers) SetConf(v *config.Config) {
-	w.Conf = v
-}
-
-func (w *Webservers) Add(username string, tmpl string, port uint16) (err error) {
+func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	w.Config().Set("port", instance.NextPort(w.InstanceHost, &Webserver))
-	w.Config().Set("user", username)
 
 	if err = instance.WriteConfig(w); err != nil {
 		return
@@ -216,10 +210,6 @@ func (w *Webservers) Add(username string, tmpl string, port uint16) (err error) 
 	webappsdir := filepath.Join(w.Home(), "webapps")
 	if err = w.Host().MkdirAll(webappsdir, 0775); err != nil {
 		return
-	}
-	if utils.IsSuperuser() {
-		uid, gid, _, _ := utils.GetIDs("")
-		w.Host().Chown(webappsdir, uid, gid)
 	}
 
 	for _, source := range webserverFiles {

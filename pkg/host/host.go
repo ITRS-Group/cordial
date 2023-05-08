@@ -53,6 +53,7 @@ type Host interface {
 	IsAvailable() bool
 	IsLocal() bool
 	LastError() error
+	Username() string
 
 	// file operations
 	Chown(name string, uid, gid int) (err error)
@@ -76,7 +77,7 @@ type Host interface {
 	// process control
 	Signal(pid int, signal syscall.Signal) (err error)
 	Run(name string, args ...string) (output []byte, err error)
-	Start(cmd *exec.Cmd, env []string, username, home, errfile string) (err error)
+	Start(cmd *exec.Cmd, env []string, home, errfile string) (err error)
 }
 
 var (

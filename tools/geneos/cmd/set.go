@@ -169,7 +169,7 @@ func WriteUserConfig(filename string, params []string) (err error) {
 		vp.Set("itrshome", nil)
 	}
 
-	return geneos.WriteConfigFile(vp, filename, "", 0664)
+	return geneos.WriteConfigFile(vp, filename, 0664)
 }
 
 func ReadUserConfig(paths ...string) (v *config.Config) {

@@ -171,16 +171,11 @@ func (n *FileAgents) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *FileAgents) SetConf(v *config.Config) {
-	n.Conf = v
-}
-
-func (n *FileAgents) Add(username string, tmpl string, port uint16) (err error) {
+func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(n.Host(), &FileAgent)
 	}
 	n.Config().Set("port", port)
-	n.Config().Set("user", username)
 
 	if err = instance.WriteConfig(n); err != nil {
 		log.Fatal().Err(err).Msg("")

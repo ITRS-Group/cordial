@@ -39,6 +39,14 @@ func Start(c geneos.Instance) (err error) {
 		return geneos.ErrDisabled
 	}
 
+	// changing users is not supported
+	username := c.Host().Username()
+	instanceUsername := c.Config().GetString("user")
+
+	if instanceUsername != "" && username != instanceUsername {
+		return fmt.Errorf("%s is configured with a different user to the one trying to start it (instance user %q != %q (you))", c, instanceUsername, username)
+	}
+
 	binary := c.Config().GetString("program")
 	if _, err = c.Host().Stat(binary); err != nil {
 		return fmt.Errorf("%q %w", binary, err)
@@ -50,10 +58,9 @@ func Start(c geneos.Instance) (err error) {
 	}
 
 	// set underlying user for child proc
-	username := c.Config().GetString("user")
 	errfile := ComponentFilepath(c, "txt")
 
-	c.Host().Start(cmd, env, username, c.Home(), errfile)
+	c.Host().Start(cmd, env, c.Home(), errfile)
 	pid, err = GetPID(c)
 	if err != nil {
 		return err

@@ -24,6 +24,7 @@ package aescmd
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -32,7 +33,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 var aesImportCmdKeyfile config.KeyFile
@@ -108,16 +108,16 @@ func aesImportSave(ct *geneos.Component, h *geneos.Host, a *config.KeyValues) (e
 	crcstr := fmt.Sprintf("%08X", crc)
 
 	// save given keyfile
-	path := h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
-	if _, err := h.Stat(path); err == nil {
+	file := h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
+	if _, err := h.Stat(file); err == nil {
 		log.Debug().Msgf("keyfile already exists for host %s, component %s", h, ct)
 		return nil
 	}
-	if err := h.MkdirAll(utils.Dir(path), 0775); err != nil {
+	if err := h.MkdirAll(path.Dir(file), 0775); err != nil {
 		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
 		return err
 	}
-	w, err := h.Create(path, 0600)
+	w, err := h.Create(file, 0600)
 	if err != nil {
 		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
 		return

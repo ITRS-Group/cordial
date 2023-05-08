@@ -187,16 +187,11 @@ func (s *Sans) Config() *config.Config {
 	return s.Conf
 }
 
-func (s *Sans) SetConf(v *config.Config) {
-	s.Conf = v
-}
-
-func (s *Sans) Add(username string, template string, port uint16) (err error) {
+func (s *Sans) Add(template string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(s.InstanceHost, &San)
 	}
 	s.Config().Set("port", port)
-	s.Config().Set("user", username)
 	s.Config().Set("config.rebuild", "always")
 	s.Config().Set("config.template", SanDefaultTemplate)
 	s.Config().SetDefault("config.template", SanDefaultTemplate)

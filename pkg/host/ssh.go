@@ -87,6 +87,10 @@ func Username(username string) SSHOptions {
 	}
 }
 
+func (s *SSHRemote) Username() string {
+	return s.username
+}
+
 func Port(port uint16) SSHOptions {
 	return func(s *SSHRemote) {
 		s.port = port
@@ -543,11 +547,7 @@ func (h *SSHRemote) Signal(pid int, signal syscall.Signal) (err error) {
 	return
 }
 
-func (h *SSHRemote) Start(cmd *exec.Cmd, env []string, username, home, errfile string) (err error) {
-	// rUsername := r.GetString("username")
-	// if rUsername != username && username != "" {
-	// 	return 0, fmt.Errorf("cannot run remote process as a different user (%q != %q)", rUsername, username)
-	// }
+func (h *SSHRemote) Start(cmd *exec.Cmd, env []string, home, errfile string) (err error) {
 	rem, err := h.Dial()
 	if err != nil {
 		return

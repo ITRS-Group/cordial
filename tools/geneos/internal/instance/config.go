@@ -15,7 +15,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 
 	"github.com/rs/zerolog/log"
 )
@@ -76,12 +75,6 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 		return err
 	}
 	defer out.Close()
-	if utils.IsSuperuser() {
-		uid, gid, _, _ := utils.GetIDs("")
-		c.Host().Chown(path, uid, gid)
-	}
-
-	// m := make(map[string]string)
 	m := c.Config().AllSettings()
 	// viper insists this is a float64, manually override
 	m["port"] = uint16(c.Config().GetUint("port"))
@@ -309,15 +302,10 @@ func WriteConfig(c geneos.Instance) (err error) {
 // no way to delete values.
 func writeConfig(c geneos.Instance) (err error) {
 	file := ComponentFilepath(c)
-	if err = c.Host().MkdirAll(utils.Dir(file), 0775); err != nil {
+	if err = c.Host().MkdirAll(path.Dir(file), 0775); err != nil {
 		log.Debug().Err(err).Msg("")
 		return
 	}
-	if utils.IsSuperuser() {
-		uid, gid, _, _ := utils.GetIDs("")
-		c.Host().Chown(utils.Dir(file), uid, gid)
-	}
-
 	nv := config.New()
 	for _, k := range c.Config().AllKeys() {
 		if _, ok := c.Type().Aliases[k]; ok {
@@ -329,10 +317,6 @@ func writeConfig(c geneos.Instance) (err error) {
 	log.Debug().Msgf("writing config for %s as %q", c, file)
 	if err = nv.WriteConfigAs(file); err != nil {
 		return err
-	}
-	if utils.IsSuperuser() {
-		uid, gid, _, _ := utils.GetIDs("")
-		c.Host().Chown(file, uid, gid)
 	}
 	return
 }
@@ -358,10 +342,6 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 	nv.SetFs(c.Host().GetFs())
 	if err = nv.WriteConfigAs(file); err != nil {
 		return err
-	}
-	if utils.IsSuperuser() {
-		uid, gid, _, _ := utils.GetIDs("")
-		c.Host().Chown(file, uid, gid)
 	}
 	return
 }

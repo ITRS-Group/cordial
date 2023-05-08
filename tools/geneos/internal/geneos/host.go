@@ -34,7 +34,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 
 	"github.com/rs/zerolog/log"
 )
@@ -338,10 +337,12 @@ func ReadHostConfig() {
 			log.Debug().Msgf("hosts value not a map[string]interface{} but a %T", hostval)
 			continue
 		}
+
 		r := host.NewSSHRemote(v.GetString("name"),
-			host.Username(v.GetString("username")),
+			host.Username(v.GetString("username")), // username is the login name for the remote host
+			host.Hostname(v.GetString("hostname")),
 			host.Port(uint16(v.GetInt("port"))),
-			host.Hostname(v.GetString("hostname")))
+		)
 		hosts.Store(v.GetString("name"), &Host{r, v, true})
 	}
 }
@@ -366,10 +367,6 @@ func WriteHostConfig() error {
 	}
 	if err := n.WriteConfigAs(userhostfile); err != nil {
 		return err
-	}
-	if utils.IsSuperuser() {
-		uid, gid, _, _ := utils.GetIDs("")
-		LOCAL.Chown(userhostfile, uid, gid)
 	}
 	return nil
 }

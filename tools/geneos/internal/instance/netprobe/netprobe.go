@@ -163,16 +163,11 @@ func (n *Netprobes) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *Netprobes) SetConf(v *config.Config) {
-	n.Conf = v
-}
-
-func (n *Netprobes) Add(username string, tmpl string, port uint16) (err error) {
+func (n *Netprobes) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(n.Host(), &Netprobe)
 	}
 	n.Config().Set("port", port)
-	n.Config().Set("user", username)
 
 	if err = instance.WriteConfig(n); err != nil {
 		return
