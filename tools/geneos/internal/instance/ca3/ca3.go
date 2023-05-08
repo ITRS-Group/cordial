@@ -169,18 +169,13 @@ func (n *CA3s) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *CA3s) SetConf(v *config.Config) {
-	n.Conf = v
-}
-
-func (n *CA3s) Add(username string, tmpl string, port uint16) (err error) {
+func (n *CA3s) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(n.Host(), &CA3)
 	}
 
 	baseDir := filepath.Join(n.Config().GetString("install"), n.Config().GetString("version"), "collection_agent")
 	n.Config().Set("port", port)
-	n.Config().Set("user", username)
 
 	// instance.SetEnvs(n, []string{
 	// 	fmt.Sprintf("CA_PLUGIN_DIR=%s", filepath.Join(baseDir, "plugins")),

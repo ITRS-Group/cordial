@@ -40,7 +40,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 
 	"github.com/rs/zerolog/log"
 )
@@ -563,11 +562,6 @@ func Disable(c geneos.Instance) (err error) {
 		return fmt.Errorf("instance %s running", c)
 	}
 
-	uid, gid, _, err := utils.GetIDs(c.Config().GetString("user"))
-	if err != nil {
-		return
-	}
-
 	disablePath := ComponentFilepath(c, geneos.DisableExtension)
 
 	h := c.Host()
@@ -577,12 +571,6 @@ func Disable(c geneos.Instance) (err error) {
 		return err
 	}
 	f.Close()
-
-	if utils.IsSuperuser() {
-		if err = h.Chown(disablePath, uid, gid); err != nil {
-			h.Remove(disablePath)
-		}
-	}
 	return
 }
 

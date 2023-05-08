@@ -26,11 +26,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 	"syscall"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/pkg/sftp"
 )
 
@@ -55,7 +53,7 @@ func (h *Host) GetFileOwner(info fs.FileInfo) (s FileOwner) {
 // WriteConfigFile writes a local configuration file. Tries to be
 // atomic, lots of edge cases, UNIX/Linux only. We know the size of
 // config structs is typically small, so just marshal in memory
-func WriteConfigFile(conf *config.Config, file string, username string, perms fs.FileMode) (err error) {
+func WriteConfigFile(conf *config.Config, file string, perms fs.FileMode) (err error) {
 	cf := config.New()
 	for k, v := range conf.AllSettings() {
 		cf.Set(k, v)
@@ -63,29 +61,5 @@ func WriteConfigFile(conf *config.Config, file string, username string, perms fs
 	cf.SetConfigFile(file)
 	os.MkdirAll(filepath.Dir(file), 0755)
 	cf.WriteConfig()
-
-	uid, gid := -1, -1
-	if utils.IsSuperuser() {
-		if username == "" {
-			// try $SUDO_UID etc.
-			sudoUID := os.Getenv("SUDO_UID")
-			sudoGID := os.Getenv("SUDO_GID")
-
-			if sudoUID != "" && sudoGID != "" {
-				if uid, err = strconv.Atoi(sudoUID); err != nil {
-					uid = -1
-				}
-
-				if gid, err = strconv.Atoi(sudoGID); err != nil {
-					gid = -1
-				}
-			}
-		} else {
-			uid, gid, _, _ = utils.GetIDs(username)
-		}
-		os.Chown(file, uid, gid)
-		os.Chmod(file, perms)
-	}
-
 	return
 }

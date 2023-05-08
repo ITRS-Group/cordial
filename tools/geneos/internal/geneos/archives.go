@@ -30,7 +30,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -45,7 +44,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 type downloadauth struct {
@@ -54,7 +52,9 @@ type downloadauth struct {
 }
 
 // openArchive locates and returns an io.ReadCloser for an archive for
-// the component ct. The source of the archive is given as an option.
+// the component ct. The source of the archive is given as an option. If
+// no options are set then the "latest" release from the ITRS releases
+// web site is downloaded and returned.
 func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filename string, err error) {
 	var resp *http.Response
 
@@ -154,11 +154,6 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 	}
 	body = w
 
-	// chown package
-	if utils.IsSuperuser() {
-		uid, gid, _, _ := utils.GetIDs(opts.localusername)
-		w.Chown(uid, gid)
-	}
 	return
 }
 
@@ -264,7 +259,7 @@ func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ..
 		switch hdr.Typeflag {
 		case tar.TypeReg:
 			// check (and created) containing directories - account for munged tar files
-			dir := utils.Dir(fullpath)
+			dir := path.Dir(fullpath)
 			if err = h.MkdirAll(dir, 0775); err != nil {
 				return
 			}
@@ -305,18 +300,6 @@ func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ..
 		}
 	}
 
-	// if root, (l)chown of created tree to default user
-	if h == LOCAL && utils.IsSuperuser() {
-		uid, gid, _, err := utils.GetIDs(h.GetString("username"))
-		if err == nil {
-			filepath.WalkDir(h.Path(basedir), func(path string, dir fs.DirEntry, err error) error {
-				if err == nil {
-					err = LOCAL.Lchown(path, uid, gid)
-				}
-				return err
-			})
-		}
-	}
 	fmt.Printf("installed %q to %q\n", filename, h.Path(basedir))
 	options = append(options, Version(version))
 	return Update(h, ct, options...)

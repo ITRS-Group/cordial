@@ -29,8 +29,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
-
 	"github.com/rs/zerolog/log"
 )
 
@@ -118,12 +116,6 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 	}
 	if err = h.Symlink(opts.version, basepath); err != nil {
 		return err
-	}
-	if h == LOCAL && utils.IsSuperuser() {
-		uid, gid, _, err := utils.GetIDs(h.GetString("username"))
-		if err == nil {
-			LOCAL.Lchown(basepath, uid, gid)
-		}
 	}
 	fmt.Println(ct, h.Path(basepath), "updated to", opts.version)
 	return nil

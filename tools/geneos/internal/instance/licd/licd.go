@@ -164,16 +164,11 @@ func (l *Licds) Config() *config.Config {
 	return l.Conf
 }
 
-func (l *Licds) SetConf(v *config.Config) {
-	l.Conf = v
-}
-
-func (l *Licds) Add(username string, tmpl string, port uint16) (err error) {
+func (l *Licds) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(l.InstanceHost, &Licd)
 	}
 	l.Config().Set("port", port)
-	l.Config().Set("user", username)
 
 	if err = instance.WriteConfig(l); err != nil {
 		log.Fatal().Err(err).Msg("")

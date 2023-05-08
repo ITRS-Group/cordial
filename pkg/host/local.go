@@ -28,6 +28,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"runtime"
 	"syscall"
@@ -43,6 +44,11 @@ var Localhost = NewLocal()
 
 func NewLocal() Host {
 	return &Local{}
+}
+
+func (h *Local) Username() string {
+	u, _ := user.Current()
+	return u.Username
 }
 
 func (h *Local) IsLocal() bool {
@@ -163,7 +169,7 @@ func (h *Local) Signal(pid int, signal syscall.Signal) (err error) {
 	return nil
 }
 
-func (h *Local) Start(cmd *exec.Cmd, env []string, username, home, errfile string) (err error) {
+func (h *Local) Start(cmd *exec.Cmd, env []string, home, errfile string) (err error) {
 	cmd.Env = append(os.Environ(), env...)
 
 	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_WRONLY, 0644)

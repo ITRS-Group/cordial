@@ -34,7 +34,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 var Gateway = geneos.Component{
@@ -197,18 +196,13 @@ func (g *Gateways) Config() *config.Config {
 	return g.Conf
 }
 
-func (g *Gateways) SetConf(v *config.Config) {
-	g.Conf = v
-}
-
-func (g *Gateways) Add(username string, template string, port uint16) (err error) {
+func (g *Gateways) Add(template string, port uint16) (err error) {
 	cf := g.Config()
 
 	if port == 0 {
 		port = instance.NextPort(g.InstanceHost, &Gateway)
 	}
 	cf.Set("port", port)
-	cf.Set("user", username)
 	cf.Set("config.rebuild", "initial")
 
 	cf.SetDefault("config.template", GatewayDefaultTemplate)
@@ -389,10 +383,6 @@ func createAESKeyFile(c geneos.Instance) (err error) {
 	defer w.Close()
 	if err = a.Write(w); err != nil {
 		return
-	}
-	if utils.IsSuperuser() {
-		uid, gid, _, _ := utils.GetIDs("")
-		c.Host().Chown(instance.ComponentFilepath(c, "aes"), uid, gid)
 	}
 
 	c.Config().Set("keyfile", instance.ComponentFilename(c, "aes"))

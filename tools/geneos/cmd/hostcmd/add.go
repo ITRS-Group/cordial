@@ -204,7 +204,6 @@ func hostAdd(h *geneos.Host, sshurl *url.URL) (err error) {
 
 		if err = geneos.Init(h,
 			geneos.Force(true),
-			geneos.LocalUsername(h.GetString("username")),
 			geneos.Homedir(h.GetString("geneos"))); err != nil {
 			return
 		}

@@ -26,19 +26,16 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os/user"
 	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 var addCmdTemplate, addCmdBase, addCmdKeyfile, addCmdKeyfileCRC string
@@ -104,31 +101,12 @@ geneos add netprobe infraprobe12 --start --log
 //
 // this is also called from the init command code
 func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, args ...string) (err error) {
-	var username string
-
 	// check validity and reserved words here
 	name := args[0]
 
 	_, _, rem := instance.SplitName(name, geneos.LOCAL)
 	if err = ct.MakeComponentDirs(rem); err != nil {
 		return
-	}
-
-	if utils.IsSuperuser() {
-		username = config.GetString("defaultuser")
-	} else {
-		u, err := user.Current()
-		username = "nobody"
-		if err != nil {
-			log.Error().Err(err).Msg("cannot get user details")
-		} else {
-			username = u.Username
-		}
-		// strip domain in case we are running on windows
-		i := strings.Index(username, "\\")
-		if i != -1 && len(username) >= i {
-			username = username[i+1:]
-		}
 	}
 
 	c, err := instance.Get(ct, name)
@@ -142,7 +120,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 		return
 	}
 
-	if err = c.Add(username, addCmdTemplate, addCmdPort); err != nil {
+	if err = c.Add(addCmdTemplate, addCmdPort); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 

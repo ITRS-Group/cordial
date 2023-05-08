@@ -28,8 +28,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
-
 	"github.com/rs/zerolog/log"
 )
 
@@ -75,10 +73,9 @@ type Instance interface {
 	Load() error
 	Unload() error
 	Loaded() bool
-	SetConf(*config.Config)
 
 	// actions
-	Add(string, string, uint16) error
+	Add(template string, port uint16) error
 	Command() ([]string, []string)
 	Reload(params []string) (err error)
 	Rebuild(bool) error
@@ -97,6 +94,7 @@ var RootComponent Component = Component{
 		// Root URL for all downloads of software archives
 		"download.url": "https://resources.itrsgroup.com/download/latest/",
 
+		// XXX DEPRECATED - No longer supported
 		// Username to start components if not explicitly defined
 		// and we are running with elevated privileges
 		//
@@ -192,12 +190,10 @@ func ParseComponentName(component string) *Component {
 }
 
 // MakeComponentDirs creates the directory structure for the component.
-// If ct is nil then the Root component type is used. If called as
-// superuser / root then the underlying user is used for the ownership
-// of the leaf directories. Non-leaf directories are left unchanged. If
-// there is an error creating the directory or updating the ownership
-// for superuser then this is immediate returned and the list of
-// directories may only be partially created.
+// If ct is nil then the Root component type is used. If there is an
+// error creating the directory or updating the ownership for superuser
+// then this is immediate returned and the list of directories may only
+// be partially created.
 func (ct *Component) MakeComponentDirs(h *Host) (err error) {
 	name := "none"
 	if h == ALL {
@@ -207,21 +203,11 @@ func (ct *Component) MakeComponentDirs(h *Host) (err error) {
 		name = ct.Name
 	}
 	geneos := h.GetString("geneos")
-	uid, gid := -1, -1
-	if utils.IsSuperuser() {
-		uid, gid, _, _ = utils.GetIDs("")
-	}
-
 	for _, d := range initDirs[name] {
 		dir := filepath.Join(geneos, d)
 		log.Debug().Msgf("mkdirall %s", dir)
 		if err = h.MkdirAll(dir, 0775); err != nil {
 			return
-		}
-		if uid != -1 && gid != -1 {
-			if err = h.Chown(dir, uid, gid); err != nil {
-				return
-			}
 		}
 	}
 	return

@@ -23,23 +23,22 @@ THE SOFTWARE.
 package geneos
 
 type geneosOptions struct {
-	nosave        bool
-	local         bool
-	force         bool
-	override      string
-	restart       bool
-	fullclean     bool
-	version       string
-	basename      string
-	homedir       string
-	localusername string
-	username      string
-	password      []byte
-	platform_id   string
-	downloadbase  string
-	downloadtype  string
-	source        string
-	doupdate      bool
+	nosave       bool
+	local        bool
+	force        bool
+	override     string
+	restart      bool
+	fullclean    bool
+	version      string
+	basename     string
+	homedir      string
+	username     string
+	password     []byte
+	platform_id  string
+	downloadbase string
+	downloadtype string
+	source       string
+	doupdate     bool
 }
 
 type Options func(*geneosOptions)
@@ -115,14 +114,6 @@ func Basename(b string) Options {
 // the settings)
 func Homedir(h string) Options {
 	return func(d *geneosOptions) { d.homedir = h }
-}
-
-// LocalUsername sets the user name of the user running the program, or if
-// running as root the default username that should be used. This is
-// different to any remote username for executing commands on remote
-// hosts.
-func LocalUsername(u string) Options {
-	return func(d *geneosOptions) { d.localusername = u }
 }
 
 // Username is the remote access username for downloads

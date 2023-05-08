@@ -28,13 +28,11 @@ package geneos
 import (
 	"encoding/json"
 	"errors"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 
 	"github.com/rs/zerolog/log"
 )
@@ -67,13 +65,6 @@ var GlobalConfigPath = filepath.Join(GlobalConfigDir, ConfigSubdirName, UserConf
 // When called on a remote host then the user running the command cannot
 // be super-user.
 func Init(h *Host, options ...Options) (err error) {
-	var uid, gid int
-
-	if h != LOCAL && utils.IsSuperuser() {
-		err = ErrNotSupported
-		return
-	}
-
 	opts := EvalOptions(options...)
 	if opts.homedir == "" {
 		log.Fatal().Msg("homedir not set")
@@ -107,18 +98,8 @@ func Init(h *Host, options ...Options) (err error) {
 
 	if h == LOCAL {
 		config.GetConfig().Set("geneos", opts.homedir)
-		config.GetConfig().Set("defaultuser", opts.localusername)
-
 		userConfFile := UserConfigFilePaths()[0]
-		if utils.IsSuperuser() {
-			userConfDir, err := config.UserConfigDir(opts.localusername)
-			if err != nil {
-				log.Fatal().Err(err).Msg("")
-			}
-			userConfFile = filepath.Join(userConfDir, ConfigSubdirName, UserConfigFile)
-		}
-
-		if err = WriteConfigFile(config.GetConfig(), userConfFile, opts.localusername, 0664); err != nil {
+		if err = WriteConfigFile(config.GetConfig(), userConfFile, 0664); err != nil {
 			return err
 		}
 
@@ -128,21 +109,6 @@ func Init(h *Host, options ...Options) (err error) {
 		h = LOCAL
 	}
 
-	if utils.IsSuperuser() {
-		uid, gid, _, err = utils.GetIDs(opts.localusername)
-		if err != nil {
-			// XXX do something
-		}
-		if err = LOCAL.Chown(opts.homedir, uid, gid); err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
-	}
-
-	// it's not an error to try to re-create existing dirs
-	// if err = Root.MakeComponentDirs(h); err != nil {
-	// 	return
-	// }
-
 	for _, c := range AllComponents() {
 		if err := c.MakeComponentDirs(h); err != nil {
 			continue
@@ -150,17 +116,6 @@ func Init(h *Host, options ...Options) (err error) {
 		if c.Initialise != nil {
 			c.Initialise(h, c)
 		}
-	}
-
-	// if we've created directory paths as root, go through and change
-	// ownership to the tree
-	if utils.IsSuperuser() {
-		err = filepath.WalkDir(opts.homedir, func(path string, dir fs.DirEntry, err error) error {
-			if err == nil {
-				err = LOCAL.Chown(path, uid, gid)
-			}
-			return err
-		})
 	}
 
 	return

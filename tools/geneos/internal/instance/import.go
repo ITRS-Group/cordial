@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 func ImportFile(h *geneos.Host, home string, user string, source string, options ...geneos.Options) (filename string, err error) {
@@ -22,11 +22,6 @@ func ImportFile(h *geneos.Host, home string, user string, source string, options
 
 	if h == geneos.ALL {
 		err = geneos.ErrInvalidArgs
-		return
-	}
-
-	uid, gid, _, err := utils.GetIDs(user)
-	if err != nil {
 		return
 	}
 
@@ -77,16 +72,10 @@ func ImportFile(h *geneos.Host, home string, user string, source string, options
 
 	// check to containing directory, as destfile above may be a
 	// relative path under destdir and not just a filename
-	if _, err := h.Stat(utils.Dir(destfile)); err != nil {
-		err = h.MkdirAll(utils.Dir(destfile), 0775)
+	if _, err := h.Stat(path.Dir(destfile)); err != nil {
+		err = h.MkdirAll(path.Dir(destfile), 0775)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
 			log.Fatal().Err(err).Msg("")
-		}
-		// if created by root, chown the last directory element
-		if err == nil && utils.IsSuperuser() {
-			if err = h.Chown(utils.Dir(destfile), uid, gid); err != nil {
-				return filename, err
-			}
 		}
 	}
 
@@ -107,18 +96,6 @@ func ImportFile(h *geneos.Host, home string, user string, source string, options
 		return
 	}
 	defer cf.Close()
-
-	if utils.IsSuperuser() {
-		if err = h.Chown(destfile, uid, gid); err != nil {
-			h.Remove(destfile)
-			if backuppath != "" {
-				if err = h.Rename(backuppath, destfile); err != nil {
-					return
-				}
-				return
-			}
-		}
-	}
 
 	if _, err = io.Copy(cf, from); err != nil {
 		return

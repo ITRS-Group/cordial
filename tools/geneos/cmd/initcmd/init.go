@@ -37,7 +37,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 var initCmdAll string
@@ -197,7 +196,7 @@ sudo geneos init geneos /opt/itrs
 // initProcessArgs works through the parsed arguments and returns a
 // geneos.GeneosOptions slice to be passed to worker functions
 func initProcessArgs(args []string) (options []geneos.Options, err error) {
-	var username, homedir, root string
+	var homedir, root string
 
 	options = []geneos.Options{
 		geneos.Version(initCmdVersion),
@@ -212,68 +211,31 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 		}
 	}
 
-	if utils.IsSuperuser() {
-		// if running as root then set the local username and default
-		// the homedir relative to that user
-		if len(args) == 0 {
-			log.Fatal().Msg("init requires a username when run as root")
-		}
-		username = args[0]
-		options = append(options, geneos.LocalUsername(username))
-
-		u, err := user.Lookup(username)
-		if err != nil {
-			log.Fatal().Msgf("invalid user %s", username)
-		}
-		homedir = u.HomeDir
-
-		if len(args) == 1 {
-			// If user's home dir doesn't end in "geneos" then create a
-			// directory "geneos" else use the home directory directly
-			root = homedir
-			if filepath.Base(homedir) != "geneos" {
-				root = filepath.Join(homedir, "geneos")
-			}
-		} else {
-			// must be an absolute path or relative to given user's home
-			root = args[1]
-			if !strings.HasPrefix(root, "/") {
-				root = homedir
-				if filepath.Base(homedir) != "geneos" {
-					root = filepath.Join(homedir, root)
-				}
-			}
-		}
-		options = append(options, geneos.Homedir(root))
+	u, err := user.Current()
+	homedir = "/"
+	if err != nil {
+		log.Error().Err(err).Msg("cannot get user details")
 	} else {
-		u, err := user.Current()
-		username = "nobody"
-		homedir = "/"
-		if err != nil {
-			log.Error().Err(err).Msg("cannot get user details")
-		} else {
-			username = u.Username
-			homedir = u.HomeDir
-		}
-		options = append(options, geneos.LocalUsername(username))
-
-		log.Debug().Msgf("%d %v", len(args), args)
-		switch len(args) {
-		case 0: // default home + geneos
-			root = homedir
-			if filepath.Base(homedir) != "geneos" {
-				root = filepath.Join(homedir, "geneos")
-			}
-		case 1: // home = abs path
-			if !filepath.IsAbs(args[0]) {
-				log.Fatal().Msgf("Home directory must be absolute path: %s", args[0])
-			}
-			root = filepath.Clean(args[0])
-		default:
-			log.Fatal().Msgf("too many args: %v", args)
-		}
-		options = append(options, geneos.Homedir(root))
+		homedir = u.HomeDir
 	}
+
+	log.Debug().Msgf("%d %v", len(args), args)
+	switch len(args) {
+	case 0: // default home + geneos
+		root = homedir
+		if filepath.Base(homedir) != "geneos" {
+			root = filepath.Join(homedir, "geneos")
+		}
+	case 1: // home = abs path
+		if !filepath.IsAbs(args[0]) {
+			log.Fatal().Msgf("Home directory must be absolute path: %s", args[0])
+		}
+		root = filepath.Clean(args[0])
+	default:
+		log.Fatal().Msgf("too many args: %v", args)
+	}
+	options = append(options, geneos.Homedir(root))
+	// }
 
 	// download authentication
 	if initCmdDLUsername == "" {
