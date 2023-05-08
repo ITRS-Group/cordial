@@ -94,7 +94,7 @@ geneos uninstall --version 5.14.1
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, _ := cmd.CmdArgs(command)
-		h := geneos.Get(packageUninstallCmdHost)
+		h := geneos.GetHost(packageUninstallCmdHost)
 
 		for _, h := range h.Range(geneos.AllHosts()...) {
 			for _, ct := range ct.Range(geneos.RealComponents()...) {

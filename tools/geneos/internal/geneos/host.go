@@ -53,7 +53,7 @@ const ALLHOSTS = "all"
 var LOCAL, ALL *Host
 
 type Host struct {
-	host.Remote
+	host.Host
 	*config.Config
 
 	// loaded from config or just an instance?
@@ -67,21 +67,21 @@ var hosts sync.Map
 // command to set the initial values of host.LOCAL and host.ALL and
 // reads the host configuration file.
 func InitHosts() {
-	LOCAL = Get(LOCALHOST)
-	ALL = Get(ALLHOSTS)
-	ReadConfig()
+	LOCAL = GetHost(LOCALHOST)
+	ALL = GetHost(ALLHOSTS)
+	ReadHostConfig()
 }
 
 // interface method set
 
-// Get returns a pointer to Host value. If passed an empty name, returns
+// GetHost returns a pointer to Host value. If passed an empty name, returns
 // nil. If passed the special values LOCALHOST or ALLHOSTS then it will
 // return the respective special values LOCAL or ALL. Otherwise it tries
 // to lookup an existing host with the given name to return or
 // initialises a new value to return. This may not be an existing host.
 //
 // XXX new needs the top level config and passes back a Sub()
-func Get(name string) (c *Host) {
+func GetHost(name string) (h *Host) {
 	switch name {
 	case "":
 		return nil
@@ -89,38 +89,40 @@ func Get(name string) (c *Host) {
 		if LOCAL != nil {
 			return LOCAL
 		}
-		c = &Host{host.NewLocal(), config.New(), true}
-		c.Set("name", LOCALHOST)
-		c.SetOSReleaseEnv()
+		h = &Host{host.NewLocal(), config.New(), true}
+		h.Set("name", LOCALHOST)
+		h.SetOSReleaseEnv()
 	case ALLHOSTS:
 		if ALL != nil {
 			return ALL
 		}
-		c = &Host{host.NewLocal(), config.New(), true}
-		c.Set("name", ALLHOSTS)
+		h = &Host{host.NewLocal(), config.New(), true}
+		h.Set("name", ALLHOSTS)
 	default:
 		r, ok := hosts.Load(name)
 		if ok {
-			c, ok = r.(*Host)
+			h, ok = r.(*Host)
 			if ok {
 				return
 			}
 		}
 		// or bootstrap, but NOT save a new one
-		c = &Host{host.NewSSHRemote(name), config.New(), false}
-		c.Set("name", name)
-		hosts.Store(name, c)
+		h = &Host{host.NewSSHRemote(name), config.New(), false}
+		h.Set("name", name)
+		hosts.Store(name, h)
 	}
 
-	c.Set("geneos", config.GetString("geneos", config.Default(config.GetString("itrshome"))))
+	h.Set("geneos", config.GetString("geneos", config.Default(config.GetString("itrshome"))))
 	return
 }
 
-func Add(h *Host) {
+// Add marks the host loaded and so qualified for saving to the hosts config
+// file
+func (h *Host) Add() {
 	h.loaded = true
 }
 
-func Delete(h *Host) {
+func (h *Host) Delete() {
 	hosts.Delete(h.String())
 }
 
@@ -232,7 +234,7 @@ func Match(h string) (r []*Host) {
 	case ALLHOSTS:
 		return AllHosts()
 	default:
-		return []*Host{Get(h)}
+		return []*Host{GetHost(h)}
 	}
 }
 
@@ -256,11 +258,11 @@ func (h *Host) Range(hosts ...*Host) []*Host {
 	}
 }
 
-// Filepath returns an absolute path relative to the Geneos root
-// directory. Each argument is used as a path component and are joined
-// using filepath.Join(). Each part can be a plain string or a type with
-// a String() method - non-string types are rendered using fmt.Sprint()
-// without further error checking.
+// Filepath returns an absolute path rooted in the Geneos home directory on the
+// host. Each argument is used as a path component and are joined using
+// filepath.Join(). Each part can be a plain string or a type with a String()
+// method - non-string types are rendered using fmt.Sprint() without further
+// error checking.
 func (h *Host) Filepath(parts ...interface{}) string {
 	strParts := []string{}
 
@@ -294,12 +296,12 @@ func AllHosts() (hs []*Host) {
 	return
 }
 
-// RemoteHosts returns a slice of all valid remote hosts
+// RemoteHosts returns a slice of all valid (loaded and reachable) remote hosts
 func RemoteHosts() (hs []*Host) {
 	hs = []*Host{}
 
 	hosts.Range(func(k, v interface{}) bool {
-		h := Get(k.(string))
+		h := GetHost(k.(string))
 		if h.IsAvailable() {
 			hs = append(hs, h)
 		}
@@ -308,10 +310,10 @@ func RemoteHosts() (hs []*Host) {
 	return
 }
 
-// ReadConfig loads configuration entries from the default host
+// ReadHostConfig loads configuration entries from the host
 // configuration file. If that fails, it tries the old location and
 // migrates that file to the new location if found.
-func ReadConfig() {
+func ReadHostConfig() {
 	h := config.New()
 	h.SetConfigFile(UserHostsFilePath())
 	if err := h.ReadInConfig(); err != nil {
@@ -360,7 +362,7 @@ func ReadConfig() {
 	}
 }
 
-func WriteConfig() error {
+func WriteHostConfig() error {
 	n := config.New()
 
 	hosts.Range(func(k, v interface{}) bool {

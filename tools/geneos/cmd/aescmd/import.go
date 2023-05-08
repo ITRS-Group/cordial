@@ -82,7 +82,7 @@ type.
 			return err
 		}
 
-		h := geneos.Get(aesImportCmdHostname)
+		h := geneos.GetHost(aesImportCmdHostname)
 
 		// at this point we have an AESValue struct and a CRC to use as
 		// the filename base. create 'keyfiles' directory as required

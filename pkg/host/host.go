@@ -38,12 +38,13 @@ import (
 	"github.com/spf13/afero"
 )
 
-// Remote encapsulates all the methods required by callers to manage
-// Geneos installs.
+// Host encapsulates all the methods required by callers to manage Geneos
+// installs on a host.
 //
-// This should have been based on (and extending) something like Afero,
-// but this was quicker for the moment.
-type Remote interface {
+// This should have been based on (and extending) something like Afero, but this
+// was quicker for the moment. This interface also provides process handling
+// etc.
+type Host interface {
 	// informational
 	String() string
 	GetFs() afero.Fs
@@ -86,7 +87,7 @@ var (
 // CopyFile copies a file between two locations. Destination can be a
 // directory or a file. Parent directories will be created as required.
 // Any existing files will be overwritten.
-func CopyFile(srcHost Remote, srcPath string, dstHost Remote, dstPath string) (err error) {
+func CopyFile(srcHost Host, srcPath string, dstHost Host, dstPath string) (err error) {
 	ss, err := srcHost.Stat(srcPath)
 	if err != nil {
 		return err
@@ -122,7 +123,7 @@ func CopyFile(srcHost Remote, srcPath string, dstHost Remote, dstPath string) (e
 }
 
 // CopyAll copies a directory between any combination of local or remote locations
-func CopyAll(srcHost Remote, srcDir string, dstHost Remote, dstDir string) (err error) {
+func CopyAll(srcHost Host, srcDir string, dstHost Host, dstDir string) (err error) {
 	if srcHost.IsLocal() {
 		filesystem := os.DirFS(srcDir)
 		fs.WalkDir(filesystem, ".", func(file string, d fs.DirEntry, err error) error {
@@ -160,7 +161,7 @@ func CopyAll(srcHost Remote, srcDir string, dstHost Remote, dstDir string) (err 
 	return
 }
 
-func processDirEntry(fi fs.FileInfo, srcHost Remote, srcPath string, dstHost Remote, dstPath string) (err error) {
+func processDirEntry(fi fs.FileInfo, srcHost Host, srcPath string, dstHost Host, dstPath string) (err error) {
 	switch {
 	case fi.IsDir():
 		ds, err := srcHost.Stat(srcPath)

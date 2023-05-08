@@ -124,7 +124,7 @@ func Init(h *Host, options ...Options) (err error) {
 
 		// recreate LOCAL to load "geneos" and others
 		LOCAL = nil
-		LOCAL = Get(LOCALHOST)
+		LOCAL = GetHost(LOCALHOST)
 		h = LOCAL
 	}
 

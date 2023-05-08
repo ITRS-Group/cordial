@@ -67,7 +67,7 @@ being accidentally shown in clear text.
 			hosts = geneos.RemoteHosts()
 		} else {
 			for _, a := range args {
-				h := geneos.Get(a)
+				h := geneos.GetHost(a)
 				if h != nil && h.Exists() {
 					hosts = append(hosts, h)
 				}

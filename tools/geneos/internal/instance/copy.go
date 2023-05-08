@@ -31,11 +31,11 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 		if sHostName == dHostName {
 			return fmt.Errorf("%w: src and destination host must be different", geneos.ErrInvalidArgs)
 		}
-		sHost := geneos.Get(sHostName)
+		sHost := geneos.GetHost(sHostName)
 		if !sHost.Exists() {
 			return fmt.Errorf("%w: source host %q not found", os.ErrNotExist, sHostName)
 		}
-		dHost := geneos.Get(dHostName)
+		dHost := geneos.GetHost(dHostName)
 		if !dHost.Exists() {
 			return fmt.Errorf("%w: destination host %q not found", os.ErrNotExist, dHostName)
 		}

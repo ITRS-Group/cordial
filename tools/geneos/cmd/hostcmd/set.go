@@ -68,7 +68,7 @@ Set options on remote host configurations.
 			hosts = geneos.RemoteHosts()
 		} else {
 			for _, a := range args {
-				h := geneos.Get(a)
+				h := geneos.GetHost(a)
 				if h != nil && h.Exists() {
 					hosts = append(hosts, h)
 				}
@@ -110,7 +110,7 @@ Set options on remote host configurations.
 			}
 		}
 
-		if err = geneos.WriteConfig(); err != nil {
+		if err = geneos.WriteHostConfig(); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 		return
