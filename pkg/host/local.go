@@ -39,6 +39,8 @@ import (
 type Local struct {
 }
 
+var Localhost = NewLocal()
+
 func NewLocal() Host {
 	return &Local{}
 }
