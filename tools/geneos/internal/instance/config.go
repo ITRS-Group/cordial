@@ -518,15 +518,20 @@ func (i *IncludeValues) String() string {
 }
 
 func (i *IncludeValues) Set(value string) error {
+	if *i == nil {
+		*i = IncludeValues{}
+	}
 	e := strings.SplitN(value, ":", 2)
-	val := "100"
+	priority := "100"
+	path := e[0]
 	if len(e) > 1 {
-		val = e[1]
+		priority = e[0]
+		path = e[1]
 	} else {
 		// XXX check two values and first is a number
-		log.Debug().Msgf("second value missing after ':', using default %s", val)
+		log.Debug().Msgf("second value missing after ':', using default %s", priority)
 	}
-	(*i)[e[0]] = val
+	(*i)[priority] = path
 	return nil
 }
 
@@ -542,6 +547,9 @@ func (i *GatewayValues) String() string {
 }
 
 func (i *GatewayValues) Set(value string) error {
+	if *i == nil {
+		*i = GatewayValues{}
+	}
 	e := strings.SplitN(value, ":", 2)
 	val := "7039"
 	if len(e) > 1 {
@@ -615,6 +623,10 @@ func (i *VarValues) String() string {
 
 func (i *VarValues) Set(value string) error {
 	var t, k, v string
+
+	if *i == nil {
+		*i = VarValues{}
+	}
 
 	e := strings.SplitN(value, ":", 2)
 	if len(e) == 1 {
