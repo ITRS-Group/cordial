@@ -57,7 +57,7 @@ func init() {
 
 	getCmd.Flags().IntVarP(&getCmdMaxDataviews, "max", "m", 0, "Maximum matching Dataviews to pass to template. Default 0, meaning unlimited.")
 
-	getCmd.Flags().StringVarP(&getCmdGatewayUsername, "user", "u", "", "Gateway Username")
+	getCmd.Flags().StringVarP(&getCmdGatewayUsername, "username", "u", "", "Gateway Username")
 	getCmd.Flags().StringVarP(&getCmdGatewayPassword, "password", "p", "", "Gateway Password")
 
 	getCmd.Flags().StringVarP(&getCmdOutput, "output", "o", "", "output file. default stdout")

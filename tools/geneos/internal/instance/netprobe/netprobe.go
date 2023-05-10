@@ -34,6 +34,7 @@ import (
 
 var Netprobe = geneos.Component{
 	Name:             "netprobe",
+	LegacyPrefix:     "netp",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"netprobe", "probe", "netprobes", "probes"},
 	RealComponent:    true,
@@ -126,10 +127,6 @@ func (n *Netprobes) Home() string {
 		return ""
 	}
 	return n.Config().GetString("home")
-}
-
-func (n *Netprobes) Prefix() string {
-	return "netp"
 }
 
 func (n *Netprobes) Host() *geneos.Host {

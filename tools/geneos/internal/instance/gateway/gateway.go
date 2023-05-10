@@ -39,6 +39,7 @@ import (
 var Gateway = geneos.Component{
 	Initialise:       Init,
 	Name:             "gateway",
+	LegacyPrefix:     "gate",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"gateway", "gateways"},
 	RealComponent:    true,
@@ -161,10 +162,6 @@ func (g *Gateways) Home() string {
 	return g.Config().GetString("home")
 }
 
-func (g *Gateways) Prefix() string {
-	return "gate"
-}
-
 func (g *Gateways) Host() *geneos.Host {
 	return g.InstanceHost
 }
@@ -226,6 +223,7 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 		}
 	}
 
+	// always create a keyfile ?
 	if err = createAESKeyFile(g); err != nil {
 		return
 	}
@@ -369,7 +367,7 @@ func (g *Gateways) Command() (args, env []string) {
 }
 
 // create a gateway key file for secure passwords as per
-// https://docs.itrsgroup.com/docs/geneos/4.8.0/Gateway_Reference_Guide/gateway_secure_passwords.htm
+// https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm
 func createAESKeyFile(c geneos.Instance) (err error) {
 	a, err := config.NewKeyValues()
 	if err != nil {

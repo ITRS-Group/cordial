@@ -39,6 +39,7 @@ import (
 
 var CA3 = geneos.Component{
 	Name:             "ca3",
+	LegacyPrefix:     "",
 	RelatedTypes:     []*geneos.Component{&netprobe.Netprobe},
 	ComponentMatches: []string{"ca3", "collection-agent", "ca3s", "collector"},
 	RealComponent:    true,
@@ -132,10 +133,6 @@ func (n *CA3s) Home() string {
 		return ""
 	}
 	return n.Config().GetString("home")
-}
-
-func (n *CA3s) Prefix() string {
-	return "ca3"
 }
 
 func (n *CA3s) Host() *geneos.Host {

@@ -105,7 +105,7 @@ Delete the local configuration referring to a remote host.
 			h.Delete()
 			fmt.Printf("%q deleted\n", h)
 		}
-		geneos.WriteHostConfig()
+		geneos.SaveHostConfig()
 
 		return nil
 	},

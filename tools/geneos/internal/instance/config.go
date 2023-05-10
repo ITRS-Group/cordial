@@ -1,7 +1,6 @@
 package instance
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -68,8 +67,6 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 		t = template.Must(t.Parse(string(defaultTemplate)))
 	}
 
-	// XXX backup old file - use same scheme as writeConfigFile()
-
 	if out, err = c.Host().Create(path, 0660); err != nil {
 		log.Warn().Msgf("Cannot create configuration file for %s %s", c, path)
 		return err
@@ -97,78 +94,36 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 	return
 }
 
-// loadConfig will load the JSON config file is available, otherwise
+// LoadConfig will load the JSON config file if available, otherwise
 // try to load the "legacy" .rc file
 //
 // support cache?
 //
 // error check core values - e.g. Name
 func LoadConfig(c geneos.Instance) (err error) {
-	if !c.Host().IsAvailable() {
-		return fmt.Errorf("cannot reach %s", c.Host())
+	// pull these out in prep for cleanup
+	// cf := c.Config()
+	r := c.Host()
+	prefix := c.Type().LegacyPrefix
+	aliases := c.Type().Aliases
+
+	cf, err := config.Load(c.Type().Name, config.LoadFrom(r), config.LoadDir(c.Home()), config.UseDefaults(false))
+	if err != nil {
+		if err = cf.ReadRCConfig(r, ComponentFilepath(c, "rc"), prefix, aliases); err != nil {
+			return
+		}
 	}
-	// first, ensure we are using the right filesystem driver
-	c.Config().SetFs(c.Host().GetFs())
-	if err = ReadConfig(c); err != nil {
+
+	// aliases have to be set AFTER loading from file (https://github.com/spf13/viper/issues/560)
+	for a, k := range aliases {
+		cf.RegisterAlias(a, k)
+	}
+
+	if err != nil {
 		// generic error as no .json or .rc found
 		return fmt.Errorf("no configuration files for %s in %s: %w", c, c.Home(), os.ErrNotExist)
 	}
-	return
-}
-
-// read an old style .rc file. parameters are one-per-line and are key=value
-// any keys that do not match the component prefix or the special
-// 'BinSuffix' are treated as environment variables
-//
-// No processing of shell variables. should there be?
-func readRCConfig(c geneos.Instance) (err error) {
-	rcdata, err := c.Host().ReadFile(ComponentFilepath(c, "rc"))
-	if err != nil {
-		return
-	}
-	log.Debug().Msgf("loading config from %q", ComponentFilepath(c, "rc"))
-
-	confs := make(map[string]string)
-
-	scanner := bufio.NewScanner(bytes.NewBuffer(rcdata))
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if len(line) == 0 || strings.HasPrefix(line, "#") {
-			continue
-		}
-		s := strings.SplitN(line, "=", 2)
-		if len(s) != 2 {
-			return fmt.Errorf("invalid line (must be key=value) %q: %w", line, geneos.ErrInvalidArgs)
-		}
-		key, value := s[0], s[1]
-		// trim double and single quotes and tabs and spaces from value
-		value = strings.Trim(value, "\"' \t")
-		confs[key] = value
-	}
-
-	var env []string
-	for k, v := range confs {
-		lk := strings.ToLower(k)
-		if lk == "binary" {
-			c.Config().Set(lk, v)
-			continue
-		}
-
-		if strings.HasPrefix(lk, c.Prefix()) {
-			nk, ok := c.Type().Aliases[lk]
-			if !ok {
-				nk = lk
-			}
-			c.Config().Set(nk, v)
-		} else {
-			// set env var
-			env = append(env, fmt.Sprintf("%s=%s", k, v))
-		}
-	}
-
-	if len(env) > 0 {
-		c.Config().Set("Env", env)
-	}
+	log.Debug().Msgf("config loaded for %s from %q", c, cf.ConfigFileUsed())
 	return
 }
 
@@ -346,39 +301,6 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 	return
 }
 
-// ReadConfig reads the instance configuration from the standard file
-// for that instance type. First try the preferred file type and if that fails
-// loop through all types and if they all fail then try the legacy file.
-func ReadConfig(c geneos.Instance) (err error) {
-	c.Config().SetConfigFile(ComponentFilepath(c, ConfigFileType()))
-	if err = c.Config().MergeInConfig(); err != nil {
-		for _, t := range ConfigFileTypes() {
-			log.Debug().Msgf("%s: trying %q extension", c, t)
-			c.Config().SetConfigFile(ComponentFilepath(c, t))
-			if err = c.Config().MergeInConfig(); err == nil {
-				log.Debug().Msg("success!")
-				break
-			}
-		}
-
-		if err != nil {
-			// if load fails try a legacy .rc file before returning an error
-			if err = readRCConfig(c); err != nil {
-				return err
-			}
-		}
-	}
-
-	// aliases have to be set AFTER loading from file (https://github.com/spf13/viper/issues/560)
-	for a, k := range c.Type().Aliases {
-		c.Config().RegisterAlias(a, k)
-	}
-	if err == nil {
-		log.Debug().Msgf("config loaded for %s from %q", c, c.Config().ConfigFileUsed())
-	}
-	return
-}
-
 // migrate config from .rc to .json, but check first
 func Migrate(c geneos.Instance) (err error) {
 	// if no .rc, return
@@ -452,6 +374,8 @@ func SetDefaults(c geneos.Instance, name string) (err error) {
 	return
 }
 
+// ConfigFileType returns the current primary configuration file
+// extension
 func ConfigFileType() (conftype string) {
 	conftype = config.GetString("configtype")
 	if conftype == "" {
@@ -460,6 +384,8 @@ func ConfigFileType() (conftype string) {
 	return
 }
 
+// ConfigFileTypes contains a list of supported configuration file
+// extensions
 func ConfigFileTypes() []string {
 	return []string{"json", "yaml"}
 }

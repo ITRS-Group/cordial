@@ -28,6 +28,7 @@ package config
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -51,9 +52,13 @@ func GetConfig() *Config {
 	return global
 }
 
-// New returns a Config instance initialised with a new viper instance
-func New() *Config {
-	return &Config{Viper: viper.New()}
+// New returns a Config instance initialised with a new viper instance.
+// Can be called with config.DefaultExpandOptions(...) to set defaults for
+// future calls that use Expand.
+func New(options ...ExpandOptions) *Config {
+	cf := &Config{Viper: viper.New()}
+	evalExpandOptions(cf, options...)
+	return cf
 }
 
 // Sub returns a Config instance rooted at the key passed
@@ -177,4 +182,24 @@ func (c *Config) GetStringMapString(s string, options ...ExpandOptions) (m map[s
 		m[k] = c.ExpandString(v, options...)
 	}
 	return m
+}
+
+// SetKeyValues takes a list of `key=value` pairs as strings and applies
+// them to the config object. Any item without an `=` is skipped.
+func (c *Config) SetKeyValues(items ...string) {
+	for _, item := range items {
+		if !strings.Contains(item, "=") {
+			continue
+		}
+		s := strings.SplitN(item, "=", 2)
+		k, v := s[0], s[1]
+		c.Set(k, v)
+	}
+}
+
+// SetKeyValues takes a list of `key-value` pairs as strings and
+// applies them to the global configuration object. Items without an `=`
+// are skipped.
+func SetKeyValues(items ...string) {
+	global.SetKeyValues(items...)
 }

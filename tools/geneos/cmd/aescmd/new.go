@@ -139,14 +139,16 @@ setting to support GA6.x key file rolling.
 
 func aesNewSetInstance(c geneos.Instance, params []string) (err error) {
 	var rolled bool
+	cf := c.Config()
+
 	// roll old file
 	// XXX - check keyfile still exists, do not update if not
-	p := c.Config().GetString("keyfile")
+	p := cf.GetString("keyfile")
 	if p != "" {
-		c.Config().Set("prevkeyfile", p)
+		cf.Set("prevkeyfile", p)
 		rolled = true
 	}
-	c.Config().Set("keyfile", c.Host().Filepath(c.Type(), c.Type().String()+"_shared", "keyfiles", params[0]))
+	cf.Set("keyfile", c.Host().Filepath(c.Type(), c.Type().String()+"_shared", "keyfiles", params[0]))
 
 	if err = instance.WriteConfig(c); err != nil {
 		log.Fatal().Err(err).Msg("")

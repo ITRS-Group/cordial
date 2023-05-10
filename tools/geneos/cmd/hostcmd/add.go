@@ -197,7 +197,7 @@ func hostAdd(h *geneos.Host, sshurl *url.URL) (err error) {
 	}
 
 	h.Add()
-	if err = geneos.WriteHostConfig(); err != nil {
+	if err = geneos.SaveHostConfig(); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 

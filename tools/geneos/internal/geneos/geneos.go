@@ -98,8 +98,7 @@ func Init(h *Host, options ...Options) (err error) {
 
 	if h == LOCAL {
 		config.GetConfig().Set("geneos", opts.homedir)
-		userConfFile := UserConfigFilePaths()[0]
-		if err = WriteConfigFile(config.GetConfig(), userConfFile, 0664); err != nil {
+		if err = config.Save("geneos"); err != nil {
 			return err
 		}
 

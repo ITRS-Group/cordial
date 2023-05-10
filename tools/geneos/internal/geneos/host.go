@@ -65,7 +65,7 @@ var hosts sync.Map
 func InitHosts() {
 	LOCAL = GetHost(LOCALHOST)
 	ALL = GetHost(ALLHOSTS)
-	ReadHostConfig()
+	LoadHostConfig()
 }
 
 // interface method set
@@ -306,29 +306,19 @@ func RemoteHosts() (hs []*Host) {
 	return
 }
 
-// ReadHostConfig loads configuration entries from the host
-// configuration file. If that fails, it tries the old location and
-// migrates that file to the new location if found.
-func ReadHostConfig() {
-	h := config.New()
+// LoadHostConfig loads configuration entries from the host
+// configuration file.
+func LoadHostConfig() {
 	userConfDir, _ := config.UserConfigDir()
 	oldConfigFile := filepath.Join(userConfDir, OldUserHostFile)
-	r, path := config.OpenPromoteFile(host.Localhost, UserHostsFilePath(), oldConfigFile)
-	if path != "" {
-		ext := filepath.Ext(path)
-		if ext != "" {
-			h.SetConfigType(ext[1:])
-		} else {
-			h.SetConfigType(ConfigFileType)
-		}
-		if err := h.ReadConfig(r); err != nil {
-			// a missing file is fine
-			log.Error().Err(err).Msg("")
-		}
-		r.Close()
-	}
+	// note that SetAppName only matters when PromoteFile returns an empty path
+	h, _ := config.Load("hosts",
+		config.SetAppName("geneos"),
+		config.SetConfigFile(config.PromoteFile(host.Localhost, UserHostsFilePath(), oldConfigFile)),
+		config.UseDefaults(false),
+		config.IgnoreWorkingDir(),
+	)
 
-	// recreate empty
 	hosts = sync.Map{}
 
 	for _, hostval := range h.GetStringMap("hosts") {
@@ -350,7 +340,7 @@ func ReadHostConfig() {
 	}
 }
 
-func WriteHostConfig() error {
+func SaveHostConfig() error {
 	n := config.New()
 
 	hosts.Range(func(k, v interface{}) bool {
