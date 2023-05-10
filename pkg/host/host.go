@@ -83,6 +83,7 @@ type Host interface {
 var (
 	ErrInvalidArgs  = errors.New("invalid arguments")
 	ErrNotSupported = errors.New("not supported")
+	ErrNotAvailable = errors.New("not available")
 )
 
 // CopyFile copies a file between two locations. Destination can be a

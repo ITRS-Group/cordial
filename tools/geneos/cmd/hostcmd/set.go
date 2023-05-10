@@ -111,7 +111,7 @@ Set options on remote host configurations.
 			}
 		}
 
-		if err = geneos.WriteHostConfig(); err != nil {
+		if err = geneos.SaveHostConfig(); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 		return

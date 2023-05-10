@@ -37,6 +37,7 @@ import (
 
 var Webserver = geneos.Component{
 	Name:             "webserver",
+	LegacyPrefix:     "webs",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"web-server", "webserver", "webservers", "webdashboard", "dashboards"},
 	RealComponent:    true,
@@ -148,10 +149,6 @@ func (w *Webservers) Home() string {
 		return ""
 	}
 	return w.Config().GetString("home")
-}
-
-func (w *Webservers) Prefix() string {
-	return "webs"
 }
 
 func (w *Webservers) Host() *geneos.Host {

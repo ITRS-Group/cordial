@@ -196,7 +196,6 @@ func initConfig() {
 	}
 
 	// initialise after config loaded
-	// host.Init()
 	geneos.InitHosts()
 }
 

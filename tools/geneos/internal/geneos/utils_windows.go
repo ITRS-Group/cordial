@@ -29,15 +29,3 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
-
-func WriteConfigFile(conf *config.Config, file string, perms fs.FileMode) (err error) {
-	cf := config.New()
-	for k, v := range conf.AllSettings() {
-		cf.Set(k, v)
-	}
-	cf.SetConfigFile(file)
-	os.MkdirAll(filepath.Dir(file), 0755)
-	cf.WriteConfig()
-
-	return
-}

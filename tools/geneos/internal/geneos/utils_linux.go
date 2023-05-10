@@ -24,11 +24,8 @@ package geneos
 
 import (
 	"io/fs"
-	"os"
-	"path/filepath"
 	"syscall"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/pkg/sftp"
 )
 
@@ -47,19 +44,5 @@ func (h *Host) GetFileOwner(info fs.FileInfo) (s FileOwner) {
 		s.Uid = info.Sys().(*sftp.FileStat).UID
 		s.Gid = info.Sys().(*sftp.FileStat).GID
 	}
-	return
-}
-
-// WriteConfigFile writes a local configuration file. Tries to be
-// atomic, lots of edge cases, UNIX/Linux only. We know the size of
-// config structs is typically small, so just marshal in memory
-func WriteConfigFile(conf *config.Config, file string, perms fs.FileMode) (err error) {
-	cf := config.New()
-	for k, v := range conf.AllSettings() {
-		cf.Set(k, v)
-	}
-	cf.SetConfigFile(file)
-	os.MkdirAll(filepath.Dir(file), 0755)
-	cf.WriteConfig()
 	return
 }

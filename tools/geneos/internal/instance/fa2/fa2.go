@@ -34,6 +34,7 @@ import (
 
 var FA2 = geneos.Component{
 	Name:             "fa2",
+	LegacyPrefix:     "fa2",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"fa2", "fixanalyser", "fixanalyzer", "fixanalyser2-netprobe"},
 	RealComponent:    true,
@@ -127,10 +128,6 @@ func (n *FA2s) Home() string {
 		return ""
 	}
 	return n.Config().GetString("home")
-}
-
-func (n *FA2s) Prefix() string {
-	return "fa2"
 }
 
 func (n *FA2s) Host() *geneos.Host {

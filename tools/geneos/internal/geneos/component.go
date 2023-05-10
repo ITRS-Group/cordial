@@ -44,6 +44,7 @@ type Component struct {
 	Initialise       func(*Host, *Component)
 	New              func(string) Instance
 	Name             string
+	LegacyPrefix     string
 	RelatedTypes     []*Component
 	ComponentMatches []string
 	RealComponent    bool
@@ -66,7 +67,6 @@ type Instance interface {
 	Home() string
 	Type() *Component
 	Host() *Host
-	Prefix() string
 	String() string
 
 	// config

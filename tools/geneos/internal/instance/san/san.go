@@ -39,6 +39,7 @@ import (
 var San = geneos.Component{
 	Initialise:       Init,
 	Name:             "san",
+	LegacyPrefix:     "san",
 	RelatedTypes:     []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
 	ComponentMatches: []string{"san", "sans"},
 	RealComponent:    true,
@@ -150,10 +151,6 @@ func (s *Sans) Home() string {
 		return ""
 	}
 	return s.Config().GetString("home")
-}
-
-func (s *Sans) Prefix() string {
-	return "san"
 }
 
 func (s *Sans) Host() *geneos.Host {

@@ -34,6 +34,7 @@ import (
 
 var Licd = geneos.Component{
 	Name:             "licd",
+	LegacyPrefix:     "licd",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"licd", "licds"},
 	RealComponent:    true,
@@ -127,10 +128,6 @@ func (l *Licds) Home() string {
 		return ""
 	}
 	return l.Config().GetString("home")
-}
-
-func (l *Licds) Prefix() string {
-	return "licd"
 }
 
 func (l *Licds) Host() *geneos.Host {

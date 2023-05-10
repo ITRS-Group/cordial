@@ -28,6 +28,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/awnumar/memguard"
+
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 
@@ -50,6 +52,9 @@ import (
 )
 
 func main() {
+	memguard.CatchInterrupt()
+	defer memguard.Purge()
+
 	execname := filepath.Base(os.Args[0])
 
 	// if the executable does not have a `ctl` suffix then execute the

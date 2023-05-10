@@ -34,6 +34,7 @@ import (
 
 var FileAgent = geneos.Component{
 	Name:             "fileagent",
+	LegacyPrefix:     "fa",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"fileagent", "fileagents", "file-agent"},
 	RealComponent:    true,
@@ -134,10 +135,6 @@ func (n *FileAgents) Home() string {
 		return ""
 	}
 	return n.Config().GetString("home")
-}
-
-func (n *FileAgents) Prefix() string {
-	return "fa"
 }
 
 func (n *FileAgents) Host() *geneos.Host {

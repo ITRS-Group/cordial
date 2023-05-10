@@ -149,18 +149,11 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 
 // XXX muddled - fix
 // (only called from set user and set global)
+// this actually loads, updates and save a config file
 func WriteUserConfig(filename string, params []string) (err error) {
 	vp, _ := config.Load("geneos", config.SetConfigFile(filename))
 
-	// change here
-	for _, set := range params {
-		if !strings.Contains(set, "=") {
-			continue
-		}
-		s := strings.SplitN(set, "=", 2)
-		k, v := s[0], s[1]
-		vp.Set(k, v)
-	}
+	vp.SetKeyValues(params...)
 
 	// fix breaking change
 	if vp.IsSet("itrshome") {
@@ -170,15 +163,5 @@ func WriteUserConfig(filename string, params []string) (err error) {
 		vp.Set("itrshome", nil)
 	}
 
-	return geneos.WriteConfigFile(vp, filename, 0664)
-}
-
-func ReadUserConfig(paths ...string) (v *config.Config) {
-	v, _ = config.Load("user", config.SetConfigFile(paths[0]))
-	// v = config.New()
-	// for _, path := range paths {
-	// 	v.SetConfigFile(path)
-	// }
-	// v.ReadInConfig()
-	return
+	return vp.Save("geneos")
 }

@@ -53,7 +53,7 @@ func init() {
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdSnoozes, "snooze", "Z", false, "Request cell snooze info")
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdUserAssignments, "userassignment", "U", false, "Request cell user assignment info")
 
-	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username for snaptshot, defaults to configuration value in snapshot.username")
+	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username for snapshot, defaults to configuration value in snapshot.username")
 	snapshotCmd.Flags().StringVarP(&snapshotCmdPwFile, "pwfile", "P", "", "Password file to read for snapshots, defaults to configuration value in snapshot.password or otherwise prompts")
 
 	snapshotCmd.Flags().IntVarP(&snapshotCmdMaxitems, "limit", "l", 0, "limit matching items to display. default is unlimited. results unsorted.")

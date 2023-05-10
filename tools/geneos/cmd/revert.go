@@ -115,7 +115,7 @@ func revertCommands() (err error) {
 			continue
 		}
 		if realpath != geneosExec {
-			fmt.Printf("%s is not a link to %s, skipping", path, geneosExec)
+			log.Debug().Msgf("%s is not a link to %s, skipping", path, geneosExec)
 			continue
 		}
 
