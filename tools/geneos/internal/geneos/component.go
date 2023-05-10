@@ -89,7 +89,7 @@ var RootComponent Component = Component{
 	DownloadBase:     DownloadBases{Resources: "", Nexus: ""},
 	GlobalSettings: map[string]string{
 		// Root directory for all operations
-		"geneos": "",
+		Execname: "",
 
 		// Root URL for all downloads of software archives
 		"download.url": "https://resources.itrsgroup.com/download/latest/",
@@ -106,7 +106,10 @@ var RootComponent Component = Component{
 	},
 }
 
-func init() {
+var Execname string
+
+func Initialise(app string) {
+	Execname = app
 	RootComponent.RegisterComponent(nil)
 }
 
@@ -192,7 +195,7 @@ func (ct *Component) MakeComponentDirs(h *Host) (err error) {
 	if ct != nil {
 		name = ct.Name
 	}
-	geneos := h.GetString("geneos")
+	geneos := h.GetString(Execname)
 	for _, d := range initDirs[name] {
 		dir := filepath.Join(geneos, d)
 		log.Debug().Msgf("mkdirall %s", dir)

@@ -211,7 +211,11 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 	cf.Set("includes", make(map[int]string))
 
 	// try to save config early
-	if err = instance.WriteConfig(g); err != nil {
+	if err = g.Config().Save(g.Type().String(),
+		config.SaveTo(g.Host()),
+		config.SaveDir(g.Type().InstancesDir(g.Host())),
+		config.SaveAppName(g.Name()),
+	); err != nil {
 		log.Fatal().Err(err).Msg("")
 		return
 	}
@@ -283,7 +287,11 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	}
 
 	if changed {
-		if err = instance.WriteConfig(g); err != nil {
+		if err = g.Config().Save(g.Type().String(),
+			config.SaveTo(g.Host()),
+			config.SaveDir(g.Type().InstancesDir(g.Host())),
+			config.SaveAppName(g.Name()),
+		); err != nil {
 			return
 		}
 	}

@@ -35,6 +35,7 @@ import (
 
 	// import subsystems here for command registration
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/aescmd"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/cfgcmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/hostcmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/initcmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/pkgcmd"
@@ -61,7 +62,7 @@ func main() {
 	// underlying code directly
 	if !strings.HasSuffix(execname, "ctl") {
 		cmd.Execute()
-		os.Exit(0)
+		memguard.SafeExit(0)
 	}
 
 	// otherwise emulate core ctl commands

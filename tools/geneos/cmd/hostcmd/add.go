@@ -138,7 +138,7 @@ func hostAdd(h *geneos.Host, sshurl *url.URL) (err error) {
 	u, _ := user.Current()
 	h.SetDefault("username", u.Username)
 	// XXX default to remote user's home dir, not local
-	h.SetDefault("geneos", geneos.Root())
+	h.SetDefault(cmd.Execname, geneos.Root())
 
 	password := ""
 
@@ -181,11 +181,11 @@ func hostAdd(h *geneos.Host, sshurl *url.URL) (err error) {
 	if sshurl.Path != "" {
 		// XXX check and adopt local setting for remote user and/or remote global settings
 		// - only if ssh URL does not contain explicit path
-		h.Set("geneos", sshurl.Path)
+		h.Set(cmd.Execname, sshurl.Path)
 	} else if runtime.GOOS != h.GetString("os") {
 		homedir := h.GetString("homedir")
-		if filepath.Base(homedir) != "geneos" {
-			homedir = filepath.Join(homedir, "geneos")
+		if filepath.Base(homedir) != cmd.Execname {
+			homedir = filepath.Join(homedir, cmd.Execname)
 		}
 		switch h.GetString("os") {
 		case "windows":
@@ -193,7 +193,7 @@ func hostAdd(h *geneos.Host, sshurl *url.URL) (err error) {
 		case "linux":
 			homedir = filepath.ToSlash(homedir)
 		}
-		h.Set("geneos", homedir)
+		h.Set(cmd.Execname, homedir)
 	}
 
 	h.Add()
@@ -207,7 +207,7 @@ func hostAdd(h *geneos.Host, sshurl *url.URL) (err error) {
 
 		if err = geneos.Init(h,
 			geneos.Force(true),
-			geneos.Homedir(h.GetString("geneos"))); err != nil {
+			geneos.Homedir(h.GetString(cmd.Execname))); err != nil {
 			return
 		}
 	}

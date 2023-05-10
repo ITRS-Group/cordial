@@ -174,13 +174,11 @@ func (n *CA3s) Add(tmpl string, port uint16) (err error) {
 	baseDir := filepath.Join(n.Config().GetString("install"), n.Config().GetString("version"), "collection_agent")
 	n.Config().Set("port", port)
 
-	// instance.SetEnvs(n, []string{
-	// 	fmt.Sprintf("CA_PLUGIN_DIR=%s", filepath.Join(baseDir, "plugins")),
-	// 	fmt.Sprintf("HEALTH_CHECK_PORT=%d", 9136),
-	// 	fmt.Sprintf("TCP_REPORTER_PORT=%d", 7137),
-	// })
-
-	if err = instance.WriteConfig(n); err != nil {
+	if err = n.Config().Save(n.Type().String(),
+		config.SaveTo(n.Host()),
+		config.SaveDir(n.Type().InstancesDir(n.Host())),
+		config.SaveAppName(n.Name()),
+	); err != nil {
 		return
 	}
 

@@ -28,10 +28,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/cobra"
 )
 
 type showCmdConfig struct {
@@ -108,8 +110,12 @@ to prevent visibility in casual viewing.
 func showInstance(c geneos.Instance, params []string) (result interface{}, err error) {
 	// remove aliases
 	nv := config.New()
+	aliases := c.Type().Aliases
 	for _, k := range c.Config().AllKeys() {
-		if _, ok := c.Type().Aliases[k]; !ok {
+		// skip any names in the alias table
+		log.Debug().Msgf("checking %s", k)
+		if _, ok := aliases[k]; !ok {
+			log.Debug().Msgf("setting %s", k)
 			nv.Set(k, c.Config().Get(k))
 		}
 	}

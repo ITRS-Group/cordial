@@ -66,6 +66,11 @@ func (c *Config) Sub(key string) *Config {
 	return &Config{Viper: c.Viper.Sub(key)}
 }
 
+// Set sets the key to value
+func Set(key string, value interface{}) {
+	global.Set(key, value)
+}
+
 // SetMap iterates over a map[string]string and sets each key to the
 // value given. Viper's Set() doesn't support maps until the
 // configuration is written to and read back from a file.

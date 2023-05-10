@@ -29,7 +29,6 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -44,16 +43,14 @@ var (
 	ErrIsADirectory error = errors.New("is a directory")
 )
 
-const RootCAFile = "rootCA"
-const SigningCertFile = "geneos"
 const DisableExtension = "disabled"
 
+var RootCAFile = "rootCA"
+var SigningCertFile = Execname
 var ConfigFileType = "json"
-
 var GlobalConfigDir = "/etc"
-var ConfigSubdirName = "geneos"
+var ConfigSubdirName = Execname
 var UserConfigFile = "geneos.json"
-var GlobalConfigPath = filepath.Join(GlobalConfigDir, ConfigSubdirName, UserConfigFile)
 
 // Init initialises a Geneos environment by creating a directory
 // structure and then it calls the initialisation functions for each
@@ -97,8 +94,8 @@ func Init(h *Host, options ...Options) (err error) {
 	}
 
 	if h == LOCAL {
-		config.GetConfig().Set("geneos", opts.homedir)
-		if err = config.Save("geneos"); err != nil {
+		config.Set(Execname, opts.homedir)
+		if err = config.Save(Execname); err != nil {
 			return err
 		}
 
@@ -124,7 +121,7 @@ func Init(h *Host, options ...Options) (err error) {
 // run on an older installation it may return the value from the legacy
 // configuration item `itrshome` if `geneos` is not set.
 func Root() string {
-	return config.GetString("geneos", config.Default(config.GetString("itrshome")))
+	return config.GetString(Execname, config.Default(config.GetString("itrshome")))
 }
 
 // ReadLocalConfigFile reads a local configuration file without the need
@@ -137,35 +134,4 @@ func ReadLocalConfigFile(file string, config interface{}) (err error) {
 
 	// dec := json.NewDecoder(jsonFile)
 	return json.Unmarshal(jsonFile, &config)
-}
-
-// UserConfigFilePaths returns a slice of all the possible file paths to
-// the user configuration file. If arguments are passed then they are
-// used, in-turn, as the base filename for each directory. If no
-// arguments are passed then the default filename is taken from
-// `UserConfigFile`. The first element is the preferred file and the one
-// that should be used to write to.
-//
-// This function can be used to ensure that as the location changes in
-// the future, the code can still look for older copies when the
-// preferred path is empty.
-func UserConfigFilePaths(bases ...string) (paths []string) {
-	userConfDir, err := config.UserConfigDir()
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
-	if len(bases) == 0 {
-		bases = []string{UserConfigFile}
-	}
-
-	for _, base := range bases {
-		paths = append(paths, filepath.Join(userConfDir, ConfigSubdirName, base))
-		paths = append(paths, filepath.Join(userConfDir, base))
-	}
-	return
-}
-
-func FirstUserConfigFile(dirs ...string) {
-
 }

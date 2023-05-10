@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -98,13 +97,15 @@ setting to support GA6.x key file rolling.
 				return
 			}
 		} else if !aesNewCmdImport {
-			fmt.Print(a)
+			fmt.Print(a.String())
 		}
 
 		crc, err = a.Checksum()
 
 		crcstr := fmt.Sprintf("%08X", crc)
-		fmt.Printf("%s created, checksum %s\n", aesNewCmdKeyfile, crcstr)
+		if aesNewCmdKeyfile != "" {
+			fmt.Printf("%s created, checksum %s\n", aesNewCmdKeyfile, crcstr)
+		}
 
 		if aesNewCmdImport {
 			if aesNewCmdKeyfile == "" {
@@ -150,8 +151,17 @@ func aesNewSetInstance(c geneos.Instance, params []string) (err error) {
 	}
 	cf.Set("keyfile", c.Host().Filepath(c.Type(), c.Type().String()+"_shared", "keyfiles", params[0]))
 
-	if err = instance.WriteConfig(c); err != nil {
-		log.Fatal().Err(err).Msg("")
+	if c.Config().Type == "rc" {
+		err = instance.Migrate(c)
+	} else {
+		err = c.Config().Save(c.Type().String(),
+			config.SaveTo(c.Host()),
+			config.SaveDir(c.Type().InstancesDir(c.Host())),
+			config.SaveAppName(c.Name()),
+		)
+	}
+	if err != nil {
+		return
 	}
 
 	fmt.Printf("%s keyfile %s set", c, params[0])

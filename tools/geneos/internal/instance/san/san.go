@@ -203,7 +203,11 @@ func (s *Sans) Add(template string, port uint16) (err error) {
 	s.Config().Set("variables", make(map[string]string))
 	s.Config().Set("gateways", make(map[string]string))
 
-	if err = instance.WriteConfig(s); err != nil {
+	if err = s.Config().Save(s.Type().String(),
+		config.SaveTo(s.Host()),
+		config.SaveDir(s.Type().InstancesDir(s.Host())),
+		config.SaveAppName(s.Name()),
+	); err != nil {
 		return
 	}
 
@@ -249,7 +253,11 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 	}
 	if changed {
 		s.Config().Set("gateways", gws)
-		if err := instance.WriteConfig(s); err != nil {
+		if err = s.Config().Save(s.Type().String(),
+			config.SaveTo(s.Host()),
+			config.SaveDir(s.Type().InstancesDir(s.Host())),
+			config.SaveAppName(s.Name()),
+		); err != nil {
 			return err
 		}
 	}

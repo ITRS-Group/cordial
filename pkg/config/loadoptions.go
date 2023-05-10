@@ -25,19 +25,20 @@ package config
 import "github.com/itrs-group/cordial/pkg/host"
 
 type loadOptions struct {
-	defaults       []byte
-	defaultsFormat string
-	configFile     string
-	configFileType string
-	configDirs     []string
-	appname        string
-	workingdir     string
-	userconfdir    string
-	systemdir      string
-	setglobals     bool
-	usedefaults    bool
-	merge          bool
-	remote         host.Host
+	appname                string
+	internalDefaults       []byte
+	internalDefaultsFormat string
+	configFile             string
+	configFileFormat       string
+	remote                 host.Host
+	configDirs             []string
+	workingdir             string
+	userconfdir            string
+	systemdir              string
+	setglobals             bool
+	usedefaults            bool
+	merge                  bool
+	notfounderr            bool
 }
 
 // LoadOptions can be passed to the LoadConfig function to
@@ -47,11 +48,12 @@ type LoadOptions func(*loadOptions)
 func evalLoadOptions(configName string, options ...LoadOptions) (c *loadOptions) {
 	// init
 	c = &loadOptions{
-		configDirs:  []string{},
-		workingdir:  ".",
-		systemdir:   "/etc", // UNIX/Linux only!
-		usedefaults: true,
-		remote:      host.Localhost,
+		configFileFormat: "json",
+		remote:           host.Localhost,
+		configDirs:       []string{},
+		workingdir:       ".",
+		systemdir:        "/etc", // UNIX/Linux only!
+		usedefaults:      true,
 	}
 	c.userconfdir, _ = UserConfigDir()
 
@@ -60,8 +62,8 @@ func evalLoadOptions(configName string, options ...LoadOptions) (c *loadOptions)
 	}
 
 	// defaults
-	if c.defaultsFormat == "" {
-		c.defaultsFormat = "yaml"
+	if c.internalDefaultsFormat == "" {
+		c.internalDefaultsFormat = "yaml"
 	}
 
 	if c.appname == "" {
@@ -103,8 +105,16 @@ func UseDefaults(b bool) LoadOptions {
 //	c, err := config.LoadConfig("appname", config.SetDefaults(defaults, "yaml"))
 func SetDefaults(defaults []byte, format string) LoadOptions {
 	return func(c *loadOptions) {
-		c.defaults = defaults
-		c.defaultsFormat = format
+		c.internalDefaults = defaults
+		c.internalDefaultsFormat = format
+	}
+}
+
+// MustExist makes Load() return an error if the configuration file is
+// not found. This does not apply to defaults.
+func MustExist() LoadOptions {
+	return func(lo *loadOptions) {
+		lo.notfounderr = true
 	}
 }
 
@@ -140,12 +150,13 @@ func SetConfigFile(path string) LoadOptions {
 	}
 }
 
-// SetConfigType sets the file format for the configuration. If the type
+// SetFileFormat sets the file format for the configuration. If the type
 // is not set and the configuration file loaded has an extension then
-// that is used.
-func SetConfigFileType(extension string) LoadOptions {
+// that is used. This appliles to both defaults and main configuration
+// files (but not embedded defaults). The default is "json".
+func SetFileFormat(extension string) LoadOptions {
 	return func(c *loadOptions) {
-		c.configFileType = extension
+		c.configFileFormat = extension
 	}
 }
 

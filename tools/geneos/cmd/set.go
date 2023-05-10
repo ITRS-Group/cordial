@@ -127,6 +127,8 @@ func Set(ct *geneos.Component, args, params []string) error {
 func setInstance(c geneos.Instance, params []string) (err error) {
 	log.Debug().Msgf("c %s params %v", c, params)
 
+	cf := c.Config()
+
 	instance.SetExtendedValues(c, setCmdExtras)
 
 	for _, arg := range params {
@@ -137,31 +139,18 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 		}
 		// you can set an alias here, the write functions do the
 		// translations
-		c.Config().Set(s[0], s[1])
+		cf.Set(s[0], s[1])
 	}
 
-	if err = instance.WriteConfig(c); err != nil {
-		log.Fatal().Err(err).Msg("")
+	if cf.Type == "rc" {
+		err = instance.Migrate(c)
+	} else {
+		err = cf.Save(c.Type().String(),
+			config.SaveTo(c.Host()),
+			config.SaveDir(c.Type().InstancesDir(c.Host())),
+			config.SaveAppName(c.Name()),
+		)
 	}
 
 	return
-}
-
-// XXX muddled - fix
-// (only called from set user and set global)
-// this actually loads, updates and save a config file
-func WriteUserConfig(filename string, params []string) (err error) {
-	vp, _ := config.Load("geneos", config.SetConfigFile(filename))
-
-	vp.SetKeyValues(params...)
-
-	// fix breaking change
-	if vp.IsSet("itrshome") {
-		if !vp.IsSet("geneos") {
-			vp.Set("geneos", vp.GetString("itrshome"))
-		}
-		vp.Set("itrshome", nil)
-	}
-
-	return vp.Save("geneos")
 }

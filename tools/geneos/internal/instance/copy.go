@@ -8,6 +8,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -163,7 +164,11 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 
 	// config changes don't matter until writing config succeeds
 	log.Debug().Msgf("writing: %v", newdst.Config().AllSettings())
-	if err = WriteConfig(newdst); err != nil {
+	if err = newdst.Config().Save(newdst.Type().String(),
+		config.SaveTo(newdst.Host()),
+		config.SaveDir(newdst.Type().InstancesDir(newdst.Host())),
+		config.SaveAppName(newdst.Name()),
+	); err != nil {
 		log.Debug().Err(err).Msg("")
 		return
 	}

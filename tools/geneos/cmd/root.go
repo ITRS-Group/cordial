@@ -26,11 +26,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -50,14 +52,20 @@ var UserKeyFile config.KeyFile
 
 var debug, quiet bool
 
-var DefaultUserKeyfile = config.KeyFile(geneos.UserConfigFilePaths("keyfile.aes")[0])
+var DefaultUserKeyfile = config.KeyFile(config.Path("keyfile", config.SetFileFormat("aes")))
+
+// geneos.UserConfigFilePaths("keyfile.aes")[0])
 
 func init() {
 	cordial.LogInit(pkgname)
 
 	cobra.OnInitialize(initConfig)
 
-	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/geneos.json, "+geneos.GlobalConfigPath+")")
+	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/geneos.json, "+
+		config.Path(Execname,
+			config.IgnoreUserConfDir(),
+			config.IgnoreWorkingDir())+
+		")")
 	RootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
 	RootCmd.PersistentFlags().MarkHidden("debug")
 	RootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
@@ -73,13 +81,17 @@ func init() {
 	// this doesn't work as expected, define sort = false in each command
 	// RootCmd.PersistentFlags().SortFlags = false
 	RootCmd.Flags().SortFlags = false
+
+	// run initialisers on internal packages, set the executable name
+	geneos.Initialise(Execname)
+	instance.Initialise(Execname)
 }
 
-const cmdName = "geneos"
+var Execname = filepath.Base(os.Args[0])
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   cmdName,
+	Use:   Execname,
 	Short: "Control your Geneos environment",
 	Long: strings.ReplaceAll(`
 Manage and control your Geneos environment. With |geneos| you can
@@ -169,17 +181,18 @@ func initConfig() {
 	// already looks in standardised user and global directories.
 	oldConfDir, _ := config.UserConfigDir()
 
-	cf, err := config.Load("geneos",
+	cf, err := config.Load(Execname,
 		config.SetConfigFile(cfgFile),
 		config.SetGlobal(),
 		config.AddConfigDirs(oldConfDir),
 		config.MergeSettings(),
+		config.IgnoreWorkingDir(),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 	// support old set-ups
-	cf.BindEnv("geneos", "ITRS_HOME")
+	cf.BindEnv(Execname, "ITRS_HOME")
 
 	// auto env variables must be prefixed "ITRS_"
 	cf.SetEnvPrefix("ITRS")
@@ -189,14 +202,14 @@ func initConfig() {
 
 	// manual alias+remove as the viper.RegisterAlias doesn't work as expected
 	if cf.IsSet("itrshome") {
-		if !cf.IsSet("geneos") {
-			cf.Set("geneos", cf.GetString("itrshome"))
+		if !cf.IsSet(Execname) {
+			cf.Set(Execname, cf.GetString("itrshome"))
 		}
 		cf.Set("itrshome", nil)
 	}
 
 	// initialise after config loaded
-	geneos.InitHosts()
+	geneos.InitHosts(Execname)
 }
 
 // RunE runs a command in a sub-package to avoid import loops. It is

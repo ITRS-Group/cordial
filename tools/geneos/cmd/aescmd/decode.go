@@ -45,7 +45,10 @@ func init() {
 	AesCmd.AddCommand(aesDecodeCmd)
 
 	cmd.UserKeyFile = cmd.DefaultUserKeyfile
-	aesPrevUserKeyFile = config.KeyFile(geneos.UserConfigFilePaths("prevkeyfile.aes")[0])
+	aesPrevUserKeyFile = config.KeyFile(config.Path(cmd.Execname,
+		config.SetAppName("prevkeyfile"),
+		config.SetFileFormat("aes"),
+	))
 
 	aesDecodeCmdAESFILE = cmd.UserKeyFile
 	aesDecodeCmdPrevAESFILE = aesPrevUserKeyFile
