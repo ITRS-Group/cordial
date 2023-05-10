@@ -20,33 +20,58 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package cfgcmd
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	setCmd.AddCommand(setUserCmd)
+	configCmd.AddCommand(showUserCmd)
 
-	// setUserCmd.Flags().SortFlags = false
+	// showUserCmd.Flags().SortFlags = false
 }
 
-var setUserCmd = &cobra.Command{
-	Use:   "user [KEY=VALUE...]",
-	Short: "Set user configuration parameters",
+var showUserCmd = &cobra.Command{
+	Use:   "show",
+	Short: "Show configuration parameters",
 	Long: strings.ReplaceAll(`
+A longer description that spans multiple lines and likely contains examples
+and usage of using your command. For example:
+
+Cobra is a CLI library for Go that empowers applications.
+This application is a tool to generate the needed files
+to quickly create a Cobra application.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		_, _, params := CmdArgsParams(cmd)
-		return WriteUserConfig(geneos.UserConfigFilePaths()[0], params)
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		// ct, args, params := CmdArgsParams(cmd)
+		// var c interface{}
+		var buffer []byte
+
+		// paths := geneos.UserConfigFilePaths()
+		// for _, path := range paths {
+		// 	if err = geneos.ReadLocalConfigFile(path, &c); err == nil {
+		// 		break
+		// 	}
+		// }
+		cf, _ := config.Load(cmd.Execname, config.IgnoreSystemDir(), config.IgnoreWorkingDir())
+
+		if buffer, err = json.MarshalIndent(cf.AllSettings(), "", "    "); err != nil {
+			return
+		}
+		fmt.Println(string(buffer))
+
+		return
 	},
 }

@@ -20,26 +20,26 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package cfgcmd
 
 import (
 	"strings"
 
-	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
 func init() {
-	unsetCmd.AddCommand(unsetUserCmd)
+	configCmd.AddCommand(setUserCmd)
 
-	// unsetUserCmd.Flags().SortFlags = false
+	// setUserCmd.Flags().SortFlags = false
 }
 
-var unsetUserCmd = &cobra.Command{
-	Use:   "user",
-	Short: "Unset a user parameter",
+var setUserCmd = &cobra.Command{
+	Use:   "set [KEY=VALUE...]",
+	Short: "Set configuration parameters",
 	Long: strings.ReplaceAll(`
 `, "|", "`"),
 	SilenceUsage: true,
@@ -47,29 +47,20 @@ var unsetUserCmd = &cobra.Command{
 		"wildcard":     "false",
 		"needshomedir": "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		var changed bool
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		_, _, params := cmd.CmdArgsParams(command)
 
-		_, args := CmdArgs(cmd)
-		orig, _ := config.Load("geneos", config.IgnoreWorkingDir(), config.IgnoreSystemDir())
-		new := config.New()
+		vp, _ := config.Load(cmd.Execname, config.IgnoreSystemDir(), config.IgnoreWorkingDir())
+		vp.SetKeyValues(params...)
 
-	OUTER:
-		for _, k := range orig.AllKeys() {
-			for _, a := range args {
-				if k == a {
-					changed = true
-					continue OUTER
-				}
+		// fix breaking change
+		if vp.IsSet("itrshome") {
+			if !vp.IsSet("geneos") {
+				vp.Set("geneos", vp.GetString("itrshome"))
 			}
-			new.Set(k, orig.Get(k))
+			vp.Set("itrshome", nil)
 		}
 
-		if changed {
-			log.Debug().Msgf("%v", orig.AllSettings())
-			new.SetConfigFile(geneos.UserConfigFilePaths()[0])
-			return new.WriteConfig()
-		}
-		return nil
+		return vp.Save(cmd.Execname)
 	},
 }

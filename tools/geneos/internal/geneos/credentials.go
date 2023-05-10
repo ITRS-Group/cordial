@@ -1,8 +1,6 @@
 package geneos
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -17,7 +15,7 @@ const UserCredsFile = "credentials"
 func LoadCredentials() {
 	// note that SetAppName only matters when PromoteFile returns an empty path
 	cr, _ := config.Load("credentials",
-		config.SetAppName("geneos"),
+		config.SetAppName(Execname),
 		config.UseDefaults(false),
 		config.IgnoreWorkingDir(),
 	)
@@ -49,13 +47,5 @@ func SaveCredentials() (err error) {
 		return true
 	})
 
-	userhostfile := UserHostsFilePath()
-
-	if err := os.MkdirAll(filepath.Dir(userhostfile), 0775); err != nil {
-		return err
-	}
-	if err := c.WriteConfigAs(userhostfile); err != nil {
-		return err
-	}
-	return nil
+	return c.Save("credentials", config.SaveAppName(Execname))
 }

@@ -185,7 +185,11 @@ func (w *Webservers) Config() *config.Config {
 func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	w.Config().Set("port", instance.NextPort(w.InstanceHost, &Webserver))
 
-	if err = instance.WriteConfig(w); err != nil {
+	if err = w.Config().Save(w.Type().String(),
+		config.SaveTo(w.Host()),
+		config.SaveDir(w.Type().InstancesDir(w.Host())),
+		config.SaveAppName(w.Name()),
+	); err != nil {
 		return
 	}
 

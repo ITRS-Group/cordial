@@ -167,7 +167,11 @@ func (n *FA2s) Add(tmpl string, port uint16) (err error) {
 	}
 	n.Config().Set("port", port)
 
-	if err = instance.WriteConfig(n); err != nil {
+	if err = n.Config().Save(n.Type().String(),
+		config.SaveTo(n.Host()),
+		config.SaveDir(n.Type().InstancesDir(n.Host())),
+		config.SaveAppName(n.Name()),
+	); err != nil {
 		return
 	}
 

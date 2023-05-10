@@ -38,7 +38,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// const ConfigSubdirName = "geneos"
 const OldUserHostFile = "geneos-hosts.json"
 
 var UserHostFile = filepath.Join(ConfigSubdirName, "hosts.json")
@@ -62,7 +61,7 @@ var hosts sync.Map
 // Init initialises the host settings and is only called from the root
 // command to set the initial values of host.LOCAL and host.ALL and
 // reads the host configuration file.
-func InitHosts() {
+func InitHosts(app string) {
 	LOCAL = GetHost(LOCALHOST)
 	ALL = GetHost(ALLHOSTS)
 	LoadHostConfig()
@@ -108,7 +107,7 @@ func GetHost(name string) (h *Host) {
 		hosts.Store(name, h)
 	}
 
-	h.Set("geneos", config.GetString("geneos", config.Default(config.GetString("itrshome"))))
+	h.Set(Execname, config.GetString(Execname, config.Default(config.GetString("itrshome"))))
 	return
 }
 
@@ -275,7 +274,7 @@ func (h *Host) Filepath(parts ...interface{}) string {
 		}
 	}
 
-	return path.Join(append([]string{h.GetString("geneos")}, strParts...)...)
+	return path.Join(append([]string{h.GetString(Execname)}, strParts...)...)
 }
 
 func (h *Host) FullName(name string) string {
@@ -313,7 +312,7 @@ func LoadHostConfig() {
 	oldConfigFile := filepath.Join(userConfDir, OldUserHostFile)
 	// note that SetAppName only matters when PromoteFile returns an empty path
 	h, _ := config.Load("hosts",
-		config.SetAppName("geneos"),
+		config.SetAppName(Execname),
 		config.SetConfigFile(config.PromoteFile(host.Localhost, UserHostsFilePath(), oldConfigFile)),
 		config.UseDefaults(false),
 		config.IgnoreWorkingDir(),

@@ -31,7 +31,7 @@ Show program version details
 		"needshomedir": "false",
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s version %s\n", cmdName, cmd.Version)
+		fmt.Printf("%s version %s\n", Execname, cmd.Version)
 		if debug {
 			info, ok := dbg.ReadBuildInfo()
 			if ok {

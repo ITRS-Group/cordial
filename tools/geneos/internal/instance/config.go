@@ -59,6 +59,8 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 	var out io.WriteCloser
 	// var t *template.Template
 
+	cf := c.Config()
+
 	t := template.New("").Funcs(fnmap).Option("missingkey=zero")
 	if t, err = t.ParseGlob(c.Host().Filepath(c.Type(), "templates", "*")); err != nil {
 		t = template.New(name).Funcs(fnmap).Option("missingkey=zero")
@@ -72,14 +74,14 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 		return err
 	}
 	defer out.Close()
-	m := c.Config().AllSettings()
+	m := cf.AllSettings()
 	// viper insists this is a float64, manually override
-	m["port"] = uint16(c.Config().GetUint("port"))
+	m["port"] = uint16(cf.GetUint("port"))
 	// set high level defaults
 	m["root"] = c.Host().GetString("geneos")
 	m["name"] = c.Name()
 	// XXX remove aliases ??
-	for _, k := range c.Config().AllKeys() {
+	for _, k := range cf.AllKeys() {
 		if _, ok := c.Type().Aliases[k]; ok {
 			delete(m, k)
 		}
@@ -101,18 +103,24 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 //
 // error check core values - e.g. Name
 func LoadConfig(c geneos.Instance) (err error) {
-	// pull these out in prep for cleanup
-	// cf := c.Config()
 	r := c.Host()
 	prefix := c.Type().LegacyPrefix
 	aliases := c.Type().Aliases
 
-	cf, err := config.Load(c.Type().Name, config.LoadFrom(r), config.LoadDir(c.Home()), config.UseDefaults(false))
+	cf, err := config.Load(c.Type().Name,
+		config.LoadFrom(r),
+		config.LoadDir(c.Home()),
+		config.UseDefaults(false),
+		config.MustExist(),
+	)
 	if err != nil {
 		if err = cf.ReadRCConfig(r, ComponentFilepath(c, "rc"), prefix, aliases); err != nil {
 			return
 		}
 	}
+
+	// not we have them, merge tham into main instance config
+	c.Config().MergeConfigMap(cf.AllSettings())
 
 	// aliases have to be set AFTER loading from file (https://github.com/spf13/viper/issues/560)
 	for a, k := range aliases {
@@ -123,7 +131,7 @@ func LoadConfig(c geneos.Instance) (err error) {
 		// generic error as no .json or .rc found
 		return fmt.Errorf("no configuration files for %s in %s: %w", c, c.Home(), os.ErrNotExist)
 	}
-	log.Debug().Msgf("config loaded for %s from %q", c, cf.ConfigFileUsed())
+	log.Debug().Msgf("config loaded for %s from %s %q", c, r.String(), cf.ConfigFileUsed())
 	return
 }
 
@@ -164,10 +172,12 @@ func ComponentFilename(c geneos.Instance, extensions ...string) string {
 // the home directory of the instance and returned. No indication is
 // given if the path is a valid local one or on a remote host.
 func Filepath(c geneos.Instance, name string) string {
-	if c.Config() == nil {
+	cf := c.Config()
+
+	if cf == nil {
 		return ""
 	}
-	filename := c.Config().GetString(name)
+	filename := cf.GetString(name)
 	if filename == "" {
 		return ""
 	}
@@ -183,11 +193,13 @@ func Filepath(c geneos.Instance, name string) string {
 // item given in 'name'. Returns an empty string if the configuration
 // item doesn't exist or is not set.
 func Filename(c geneos.Instance, name string) (filename string) {
-	if c.Config() == nil {
+	cf := c.Config()
+
+	if cf == nil {
 		return
 	}
 	// return empty and not a "."
-	filename = filepath.Base(c.Config().GetString(name))
+	filename = filepath.Base(cf.GetString(name))
 	if filename == "." {
 		filename = ""
 	}
@@ -199,11 +211,13 @@ func Filename(c geneos.Instance, name string) (filename string) {
 // instance is not valid or empty strings for each name if the
 // configuration item doesn't exist or is not set.
 func Filenames(c geneos.Instance, names ...string) (filenames []string) {
-	if c.Config() == nil {
+	cf := c.Config()
+
+	if cf == nil {
 		return
 	}
 	for _, name := range names {
-		filename := filepath.Base(c.Config().GetString(name))
+		filename := filepath.Base(cf.GetString(name))
 		// return empty and not a "."
 		if filename == "." {
 			filename = ""
@@ -240,42 +254,6 @@ func SetSecureArgs(c geneos.Instance) (args []string) {
 	return
 }
 
-// WriteConfig writes out the existing configuration for instance c.
-func WriteConfig(c geneos.Instance) (err error) {
-	// speculatively migrate the config, in case there is a legacy .rc
-	// file in place. Migrate() returns an error only for real errors
-	// and returns nil if there is no .rc file to migrate.
-	if err = Migrate(c); err != nil {
-		return
-	}
-	return writeConfig(c)
-}
-
-// writeConfig writes out the configuration for instance c without
-// trying to migrate legacy files. It does this by copying all
-// non-aliased values to a new configuration structure as viper offers
-// no way to delete values.
-func writeConfig(c geneos.Instance) (err error) {
-	file := ComponentFilepath(c)
-	if err = c.Host().MkdirAll(path.Dir(file), 0775); err != nil {
-		log.Debug().Err(err).Msg("")
-		return
-	}
-	nv := config.New()
-	for _, k := range c.Config().AllKeys() {
-		if _, ok := c.Type().Aliases[k]; ok {
-			continue
-		}
-		nv.Set(k, c.Config().Get(k))
-	}
-	nv.SetFs(c.Host().GetFs())
-	log.Debug().Msgf("writing config for %s as %q", c, file)
-	if err = nv.WriteConfigAs(file); err != nil {
-		return err
-	}
-	return
-}
-
 // WriteConfigValues writes the given values to the configuration file for
 // instance c. It does not merge values with the existing configuration values.
 func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err error) {
@@ -301,8 +279,18 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 	return
 }
 
-// migrate config from .rc to .json, but check first
+// Migrate is a helper that checks if the configuration was loaded from
+// a legacy .rc file and if it has it then saves the current
+// configuration (it does not convert the .rc file) in a new format file
+// and renames the .rc file to .rc.orig to allow Revert to work.
 func Migrate(c geneos.Instance) (err error) {
+	cf := c.Config()
+
+	// only migrate if labelled as a .rc file
+	if cf.Type != "rc" {
+		return
+	}
+
 	// if no .rc, return
 	if _, err = c.Host().Stat(ComponentFilepath(c, "rc")); errors.Is(err, fs.ErrNotExist) {
 		return nil
@@ -313,9 +301,17 @@ func Migrate(c geneos.Instance) (err error) {
 		return nil
 	}
 
-	// write new .json
-	if err = writeConfig(c); err != nil {
-		log.Error().Err(err).Msg("failed to write config file")
+	// remove type label before save
+	cf.Type = ""
+
+	if err = cf.Save(c.Type().String(),
+		config.SaveTo(c.Host()),
+		config.SaveDir(c.Type().InstancesDir(c.Host())),
+		config.SaveAppName(c.Name()),
+	); err != nil {
+		// restore label on error
+		cf.Type = "rc"
+		log.Error().Err(err).Msg("failed to write new configuration file")
 		return
 	}
 
@@ -336,8 +332,10 @@ var textJoinFuncs = template.FuncMap{"join": path.Join}
 // struct and set the defaults as defined in the 'defaults'
 // struct tags.
 func SetDefaults(c geneos.Instance, name string) (err error) {
+	cf := c.Config()
+
 	aliases := c.Type().Aliases
-	c.Config().SetDefault("name", name)
+	cf.SetDefault("name", name)
 	if c.Type().Defaults != nil {
 		// set bootstrap values used by templates
 		root := c.Host().GetString("geneos")
@@ -350,11 +348,11 @@ func SetDefaults(c geneos.Instance, name string) (err error) {
 				log.Error().Err(err).Msgf("%s parse error: %s", c, v)
 				return err
 			}
-			if c.Config() == nil {
+			if cf == nil {
 				log.Error().Err(err).Msg("no config found")
 			}
 			// add a bootstrap for 'root'
-			settings := c.Config().AllSettings()
+			settings := cf.AllSettings()
 			settings["root"] = root
 			if err = val.Execute(&b, settings); err != nil {
 				log.Error().Msgf("%s cannot set defaults: %s", c, v)
@@ -367,7 +365,7 @@ func SetDefaults(c geneos.Instance, name string) (err error) {
 					k = nk
 				}
 			}
-			c.Config().SetDefault(k, b.String())
+			cf.SetDefault(k, b.String())
 		}
 	}
 
@@ -423,6 +421,8 @@ func SetEnvs(c geneos.Instance, envs []string) (changed bool) {
 
 // XXX abstract this for a general case
 func SetExtendedValues(c geneos.Instance, x ExtraConfigValues) (changed bool) {
+	cf := c.Config()
+
 	if SetSlice(c, x.Attributes, "attributes", func(a string) string {
 		return strings.SplitN(a, "=", 2)[0]
 	}) {
@@ -438,27 +438,27 @@ func SetExtendedValues(c geneos.Instance, x ExtraConfigValues) (changed bool) {
 	}
 
 	if len(x.Gateways) > 0 {
-		gateways := c.Config().GetStringMapString("gateways")
+		gateways := cf.GetStringMapString("gateways")
 		for k, v := range x.Gateways {
 			gateways[k] = v
 		}
-		c.Config().Set("gateways", gateways)
+		cf.Set("gateways", gateways)
 	}
 
 	if len(x.Includes) > 0 {
-		incs := c.Config().GetStringMapString("includes")
+		incs := cf.GetStringMapString("includes")
 		for k, v := range x.Includes {
 			incs[k] = v
 		}
-		c.Config().Set("includes", incs)
+		cf.Set("includes", incs)
 	}
 
 	if len(x.Variables) > 0 {
-		vars := c.Config().GetStringMapString("variables")
+		vars := cf.GetStringMapString("variables")
 		for k, v := range x.Variables {
 			vars[k] = v
 		}
-		c.Config().Set("variables", vars)
+		cf.Set("variables", vars)
 	}
 
 	return
@@ -467,16 +467,18 @@ func SetExtendedValues(c geneos.Instance, x ExtraConfigValues) (changed bool) {
 // sets 'items' in the settings identified by 'key'. the key() function returns an identifier to use
 // in merge comparisons
 func SetSlice(c geneos.Instance, items []string, setting string, key func(string) string) (changed bool) {
+	cf := c.Config()
+
 	if len(items) == 0 {
 		return
 	}
 
 	newvals := []string{}
-	vals := c.Config().GetStringSlice(setting)
+	vals := cf.GetStringSlice(setting)
 
 	// if there are no existing values just set directly and finish
 	if len(vals) == 0 {
-		c.Config().Set(setting, items)
+		cf.Set(setting, items)
 		changed = true
 		return
 	}
@@ -504,7 +506,7 @@ func SetSlice(c geneos.Instance, items []string, setting string, key func(string
 
 	// check old values against map, copy those that do not exist
 
-	c.Config().Set(setting, newvals)
+	cf.Set(setting, newvals)
 	return
 }
 
@@ -699,20 +701,24 @@ func UnsetValues(c geneos.Instance, x UnsetConfigValues) (changed bool, err erro
 }
 
 func UnsetMap(c geneos.Instance, key string, items UnsetCmdValues) (changed bool) {
-	x := c.Config().GetStringMap(key)
+	cf := c.Config()
+
+	x := cf.GetStringMap(key)
 	for _, k := range items {
 		DeleteSettingFromMap(c, x, k)
 		changed = true
 	}
 	if changed {
-		c.Config().Set(key, x)
+		cf.Set(key, x)
 	}
 	return
 }
 
 func UnsetSlice(c geneos.Instance, key string, items []string, cmp func(string, string) bool) (changed bool) {
+	cf := c.Config()
+
 	newvals := []string{}
-	vals := c.Config().GetStringSlice(key)
+	vals := cf.GetStringSlice(key)
 OUTER:
 	for _, t := range vals {
 		for _, v := range items {
@@ -723,7 +729,7 @@ OUTER:
 		}
 		newvals = append(newvals, t)
 	}
-	c.Config().Set(key, newvals)
+	cf.Set(key, newvals)
 	return
 }
 

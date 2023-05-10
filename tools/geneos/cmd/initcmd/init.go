@@ -224,8 +224,8 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 	switch len(args) {
 	case 0: // default home + geneos
 		root = homedir
-		if filepath.Base(homedir) != "geneos" {
-			root = filepath.Join(homedir, "geneos")
+		if filepath.Base(homedir) != cmd.Execname {
+			root = filepath.Join(homedir, cmd.Execname)
 		}
 	case 1: // home = abs path
 		if !filepath.IsAbs(args[0]) {

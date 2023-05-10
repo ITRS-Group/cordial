@@ -41,6 +41,9 @@ func init() {
 	updateCmd.AddCommand(updateLsCmd)
 	RootCmd.AddCommand(installCmd)
 	RootCmd.AddCommand(updateCmd)
+	showCmd.AddCommand(showGlobalCmd)
+	setCmd.AddCommand(setGlobalCmd)
+	unsetCmd.AddCommand(unsetGlobalCmd)
 }
 
 var addHostCmd = &cobra.Command{
@@ -184,4 +187,98 @@ var updateCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		return RunE(command.Root(), []string{"package", "update"}, args)
 	},
+}
+
+var setUserCmd = &cobra.Command{
+	Use:   "user [KEY=VALUE...]",
+	Short: "Set user configuration parameters",
+	Long: strings.ReplaceAll(`
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard":     "false",
+		"needshomedir": "false",
+	},
+	DisableFlagParsing: true,
+	RunE: func(command *cobra.Command, args []string) (err error) {
+		return RunE(command.Root(), []string{"config", "set"}, args)
+	},
+}
+
+var unsetUserCmd = &cobra.Command{
+	Use:   "user",
+	Short: "Unset a user parameter",
+	Long: strings.ReplaceAll(`
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard":     "false",
+		"needshomedir": "false",
+	},
+	DisableFlagParsing: true,
+	RunE: func(command *cobra.Command, args []string) error {
+		return RunE(command.Root(), []string{"config", "unset"}, args)
+	},
+}
+
+var showUserCmd = &cobra.Command{
+	Use:   "user",
+	Short: "A brief description of your command",
+	Long: strings.ReplaceAll(`
+A longer description that spans multiple lines and likely contains examples
+and usage of using your command. For example:
+
+Cobra is a CLI library for Go that empowers applications.
+This application is a tool to generate the needed files
+to quickly create a Cobra application.
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard":     "false",
+		"needshomedir": "false",
+	},
+	DisableFlagParsing: true,
+	RunE: func(command *cobra.Command, args []string) (err error) {
+		return RunE(command.Root(), []string{"config", "show"}, args)
+	},
+}
+
+var showGlobalCmd = &cobra.Command{
+	Use:   "global",
+	Short: "set global is deprecated",
+	Long: strings.ReplaceAll(`
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard":     "false",
+		"needshomedir": "false",
+	},
+	Deprecated: "please view the global config file directly if required.",
+}
+
+var setGlobalCmd = &cobra.Command{
+	Use:   "global [KEY=VALUE...]",
+	Short: "Set global configuration parameters",
+	Long: strings.ReplaceAll(`
+`, "|", "`"),
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Annotations: map[string]string{
+		"wildcard":     "false",
+		"needshomedir": "false",
+	},
+	Deprecated: "please edit the global config file directly if required.",
+}
+
+var unsetGlobalCmd = &cobra.Command{
+	Use:   "global",
+	Short: "Unset a global parameter",
+	Long: strings.ReplaceAll(`
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard":     "false",
+		"needshomedir": "false",
+	},
+	Deprecated: "please edit the global config file directly if required",
 }

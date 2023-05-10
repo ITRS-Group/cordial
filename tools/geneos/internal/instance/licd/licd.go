@@ -167,7 +167,11 @@ func (l *Licds) Add(tmpl string, port uint16) (err error) {
 	}
 	l.Config().Set("port", port)
 
-	if err = instance.WriteConfig(l); err != nil {
+	if err = l.Config().Save(l.Type().String(),
+		config.SaveTo(l.Host()),
+		config.SaveDir(l.Type().InstancesDir(l.Host())),
+		config.SaveAppName(l.Name()),
+	); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 

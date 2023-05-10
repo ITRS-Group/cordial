@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -100,6 +101,8 @@ func CreateCert(c geneos.Instance) (err error) {
 }
 
 func WriteCert(c geneos.Instance, cert *x509.Certificate) (err error) {
+	cf := c.Config()
+
 	if c.Type() == nil {
 		return geneos.ErrInvalidArgs
 	}
@@ -107,15 +110,21 @@ func WriteCert(c geneos.Instance, cert *x509.Certificate) (err error) {
 	if err = c.Host().WriteCert(filepath.Join(c.Home(), certfile), cert); err != nil {
 		return
 	}
-	if c.Config().GetString("certificate") == certfile {
+	if cf.GetString("certificate") == certfile {
 		return
 	}
-	c.Config().Set("certificate", certfile)
+	cf.Set("certificate", certfile)
 
-	return WriteConfig(c)
+	return cf.Save(c.Type().String(),
+		config.SaveTo(c.Host()),
+		config.SaveDir(c.Type().InstancesDir(c.Host())),
+		config.SaveAppName(c.Name()),
+	)
 }
 
 func WriteKey(c geneos.Instance, key *rsa.PrivateKey) (err error) {
+	cf := c.Config()
+
 	if c.Type() == nil {
 		return geneos.ErrInvalidArgs
 	}
@@ -124,11 +133,15 @@ func WriteKey(c geneos.Instance, key *rsa.PrivateKey) (err error) {
 	if err = c.Host().WriteKey(filepath.Join(c.Home(), keyfile), key); err != nil {
 		return
 	}
-	if c.Config().GetString("privatekey") == keyfile {
+	if cf.GetString("privatekey") == keyfile {
 		return
 	}
-	c.Config().Set("privatekey", keyfile)
-	return WriteConfig(c)
+	cf.Set("privatekey", keyfile)
+	return cf.Save(c.Type().String(),
+		config.SaveTo(c.Host()),
+		config.SaveDir(c.Type().InstancesDir(c.Host())),
+		config.SaveAppName(c.Name()),
+	)
 }
 
 // read the rootCA certificate from the installation directory

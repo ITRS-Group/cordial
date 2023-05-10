@@ -31,6 +31,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
@@ -114,6 +115,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
 	}
+	cf := c.Config()
 
 	// check if instance already exists
 	if c.Loaded() {
@@ -121,23 +123,28 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 		return
 	}
 
+	// call components specific Add()
 	if err = c.Add(addCmdTemplate, addCmdPort); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
 	if addCmdBase != "active_prod" {
-		c.Config().Set("version", addCmdBase)
+		cf.Set("version", addCmdBase)
 	}
 
 	if ct == &gateway.Gateway || ct == &netprobe.Netprobe || ct == &san.San {
 		if addCmdKeyfileCRC != "" {
-			c.Config().Set("keyfile", c.Host().Filepath(ct, ct.String()+"_shared", "keyfiles", addCmdKeyfileCRC+".aes"))
+			cf.Set("keyfile", c.Host().Filepath(ct, ct.String()+"_shared", "keyfiles", addCmdKeyfileCRC+".aes"))
 		} else if addCmdKeyfile != "" {
-			c.Config().Set("keyfile", addCmdKeyfile)
+			cf.Set("keyfile", addCmdKeyfile)
 		}
 	}
 	instance.SetExtendedValues(c, addCmdExtras)
-	if err = instance.WriteConfig(c); err != nil {
+	if err = cf.Save(c.Type().String(),
+		config.SaveTo(c.Host()),
+		config.SaveDir(c.Type().InstancesDir(c.Host())),
+		config.SaveAppName(c.Name()),
+	); err != nil {
 		return
 	}
 	c.Rebuild(true)
@@ -145,7 +152,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 	// reload config as instance data is not updated by Add() as an interface value
 	c.Unload()
 	c.Load()
-	fmt.Printf("%s added, port %d\n", c, c.Config().GetInt("port"))
+	fmt.Printf("%s added, port %d\n", c, cf.GetInt("port"))
 
 	if addCmdStart || addCmdLogs {
 		if err = instance.Start(c); err != nil {

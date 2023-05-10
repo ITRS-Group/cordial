@@ -26,30 +26,12 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io"
+	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/rs/zerolog/log"
 )
-
-// OpenPromoteFile searches paths on remote r for the first file to exist and be
-// readable. If this is not the first element in paths it then renames/moves ths
-// found file to the path in the first element in the slice (unless it's an
-// empty string). It returns an io.ReadSeekCloser for the open file and the
-// final path. If there is an error moving the file then the returned path is
-// that of the originally opened file.
-func OpenPromoteFile(r host.Host, paths ...string) (f io.ReadSeekCloser, final string) {
-	var err error
-	final = PromoteFile(r, paths...)
-	if final != "" {
-		f, err = r.Open(final)
-		if err != nil {
-			final = ""
-		}
-	}
-	return
-}
 
 // PromoteFile iterates over paths and finds the first regular file that
 // exists. If this is not the first element in the paths slice then the
@@ -161,10 +143,45 @@ func (cf *Config) ReadRCConfig(r host.Host, path string, prefix string, aliases 
 		cf.Set("Env", env)
 	}
 
+	// label the type as an "rc" to make it easy to check later
+	cf.Type = "rc"
+
 	return
 }
 
-// WriteConfig writes the configuration c to a file on remote r.
-// func (c *Config) WriteConfig(r host.Host) {
+// Path returns the full path to the first regular file found that would
+// be opened by Load() given the same options
+func Path(name string, options ...LoadOptions) string {
+	opts := evalLoadOptions(name, options...)
+	r := opts.remote
 
-// }
+	if opts.configFile != "" {
+		return opts.configFile
+	}
+
+	confDirs := opts.configDirs
+	if opts.workingdir != "" {
+		confDirs = append(confDirs, opts.workingdir)
+	}
+	if opts.userconfdir != "" {
+		confDirs = append(confDirs, filepath.Join(opts.userconfdir, opts.appname))
+	}
+	if opts.systemdir != "" {
+		confDirs = append(confDirs, filepath.Join(opts.systemdir, opts.appname))
+	}
+
+	filename := name
+	if opts.configFileFormat != "" {
+		filename = fmt.Sprintf("%s.%s", filename, opts.configFileFormat)
+	}
+	if len(confDirs) > 0 {
+		for _, dir := range confDirs {
+			path := filepath.Join(dir, filename)
+			if st, err := r.Stat(path); err == nil && st.Mode().IsRegular() {
+				return path
+			}
+		}
+	}
+
+	return ""
+}

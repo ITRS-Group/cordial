@@ -55,6 +55,12 @@ type Instance struct {
 	Env             []string          `json:",omitempty"`
 }
 
+var Execname string
+
+func Initialise(app string) {
+	Execname = app
+}
+
 func DisplayName(c geneos.Instance) string {
 	if c.Host() == geneos.LOCAL {
 		return fmt.Sprintf("%s %q", c.Type(), c.Name())
@@ -135,14 +141,14 @@ func RemovePaths(c geneos.Instance, paths string) (err error) {
 
 // logdir = LogD relative to Home or absolute
 func LogFile(c geneos.Instance) (logfile string) {
-	logd := filepath.Clean(c.Config().GetString("logdir"))
+	logdir := filepath.Clean(c.Config().GetString("logdir"))
 	switch {
-	case logd == "":
+	case logdir == "":
 		logfile = c.Home()
-	case filepath.IsAbs(logd):
-		logfile = logd
+	case filepath.IsAbs(logdir):
+		logfile = logdir
 	default:
-		logfile = path.Join(c.Home(), logd)
+		logfile = path.Join(c.Home(), logdir)
 	}
 	logfile = path.Join(logfile, c.Config().GetString("logfile"))
 	return
@@ -157,8 +163,8 @@ func Signal(c geneos.Instance, signal syscall.Signal) (err error) {
 	return c.Host().Signal(pid, signal)
 }
 
-// return an instance of component ct, loads the config.
-// it is an error if the config cannot be loaded
+// Get return an instance of component ct, and loads the config. It is
+// an error if the config cannot be loaded.
 func Get(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 	if ct == nil {
 		return nil, geneos.ErrInvalidArgs
@@ -172,7 +178,7 @@ func Get(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 	return
 }
 
-// return a slice of instances for a given component type
+// GetAll returns a slice of instances for a given component type on remote r
 func GetAll(r *geneos.Host, ct *geneos.Component) (confs []geneos.Instance) {
 	if ct == nil {
 		for _, c := range geneos.RealComponents() {

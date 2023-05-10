@@ -146,30 +146,38 @@ will not result in that file being copies to other hosts.
 }
 
 func aesSetAESInstance(c geneos.Instance, params []string) (err error) {
+	cf := c.Config()
+
 	path := c.Host().Filepath(c.Type(), c.Type().String()+"_shared", "keyfiles", params[0]+".aes")
 
 	// roll old file
 	if !aesSetCmdNoRoll {
-		p := c.Config().GetString("keyfile")
+		p := cf.GetString("keyfile")
 		if p != "" {
 			if p == path {
 				fmt.Printf("%s: new and existing keyfile have same CRC. Not updating\n", c)
 			} else {
-				c.Config().Set("keyfile", path)
-				c.Config().Set("prevkeyfile", p)
+				cf.Set("keyfile", path)
+				cf.Set("prevkeyfile", p)
 				fmt.Printf("%s keyfile %s set, existing keyfile moved to prevkeyfile\n", c, params[0])
 			}
 		} else {
-			c.Config().Set("keyfile", path)
+			cf.Set("keyfile", path)
 			fmt.Printf("%s keyfile %s set\n", c, params[0])
 		}
 	} else {
-		c.Config().Set("keyfile", path)
+		cf.Set("keyfile", path)
 		fmt.Printf("%s keyfile %s set\n", c, params[0])
 	}
 
-	if err = instance.WriteConfig(c); err != nil {
-		log.Fatal().Err(err).Msg("")
+	if cf.Type == "rc" {
+		err = instance.Migrate(c)
+	} else {
+		err = cf.Save(c.Type().String(),
+			config.SaveTo(c.Host()),
+			config.SaveDir(c.Type().InstancesDir(c.Host())),
+			config.SaveAppName(c.Name()),
+		)
 	}
 
 	return

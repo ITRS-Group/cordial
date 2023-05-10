@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 
 	"github.com/itrs-group/cordial/pkg/host"
+	"github.com/rs/zerolog/log"
 )
 
 // Save a configuration file for the component name. The filesystem
@@ -55,6 +56,7 @@ func (cf *Config) Save(name string, options ...SaveOptions) (err error) {
 	}
 
 	cf.SetFs(r.GetFs())
+	log.Debug().Msgf("saving configuration to %s", path)
 	return cf.WriteConfigAs(path)
 }
 
@@ -94,7 +96,7 @@ func SaveAppName(name string) SaveOptions {
 	}
 }
 
-func SaveInDir(dir string) SaveOptions {
+func SaveDir(dir string) SaveOptions {
 	return func(so *saveOptions) {
 		so.dir = dir
 	}
