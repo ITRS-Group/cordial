@@ -55,6 +55,7 @@ delete other template files that may already exist.
 Use this command if you get missing template errors using the |add|
 command.
 `, "|", "`"),
+	Aliases:      []string{"templates"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
