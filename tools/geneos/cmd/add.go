@@ -141,9 +141,9 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 	}
 	instance.SetExtendedValues(c, addCmdExtras)
 	if err = cf.Save(c.Type().String(),
-		config.SaveTo(c.Host()),
+		config.Host(c.Host()),
 		config.SaveDir(c.Type().InstancesDir(c.Host())),
-		config.SaveAppName(c.Name()),
+		config.SetAppName(c.Name()),
 	); err != nil {
 		return
 	}

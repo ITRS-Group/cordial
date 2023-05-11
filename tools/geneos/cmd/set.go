@@ -39,7 +39,7 @@ func init() {
 
 	setCmd.Flags().VarP(&setCmdExtras.Envs, "env", "e", "(all components) Add an environment variable in the format NAME=VALUE")
 	setCmd.Flags().VarP(&setCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
-	setCmd.Flags().VarP(&setCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME:PORT")
+	setCmd.Flags().VarP(&setCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME[:PORT[:SECURE]]")
 	setCmd.Flags().VarP(&setCmdExtras.Attributes, "attribute", "a", "(sans) Add an attribute in the format NAME=VALUE")
 	setCmd.Flags().VarP(&setCmdExtras.Types, "type", "t", "(sans) Add a type NAME")
 	setCmd.Flags().VarP(&setCmdExtras.Variables, "variable", "v", "(sans) Add a variable in the format [TYPE:]NAME=VALUE")
@@ -129,6 +129,7 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 
 	cf := c.Config()
 
+	// XXX add backward compatibility ?
 	instance.SetExtendedValues(c, setCmdExtras)
 
 	for _, arg := range params {
@@ -146,9 +147,9 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 		err = instance.Migrate(c)
 	} else {
 		err = cf.Save(c.Type().String(),
-			config.SaveTo(c.Host()),
+			config.Host(c.Host()),
 			config.SaveDir(c.Type().InstancesDir(c.Host())),
-			config.SaveAppName(c.Name()),
+			config.SetAppName(c.Name()),
 		)
 	}
 

@@ -33,7 +33,7 @@ import (
 // Save a configuration file for the component name. The filesystem
 // target for the configuration object is updated to match the remote
 // destination, which can be set by SaveTo() or defaults to "localhost"
-func (cf *Config) Save(name string, options ...SaveOptions) (err error) {
+func (cf *Config) Save(name string, options ...FileOptions) (err error) {
 	opts := evalSaveOptions(options...)
 	r := opts.remote
 	if !r.IsAvailable() {
@@ -45,10 +45,10 @@ func (cf *Config) Save(name string, options ...SaveOptions) (err error) {
 	if opts.appname != "" {
 		subdir = opts.appname
 	}
-	path := filepath.Join(opts.dir, subdir, fmt.Sprintf("%s.%s", name, opts.format))
+	path := filepath.Join(opts.dir, subdir, fmt.Sprintf("%s.%s", name, opts.configFileFormat))
 
-	if opts.path != "" {
-		path = opts.path
+	if opts.configFile != "" {
+		path = opts.configFile
 	}
 
 	if err = r.MkdirAll(filepath.Dir(path), 0775); err != nil {
@@ -62,60 +62,6 @@ func (cf *Config) Save(name string, options ...SaveOptions) (err error) {
 
 // Save writes the global configuration to a configuration file defined
 // by the component name and options
-func Save(name string, options ...SaveOptions) (err error) {
+func Save(name string, options ...FileOptions) (err error) {
 	return global.Save(name, options...)
-}
-
-type saveOptions struct {
-	path    string
-	dir     string
-	appname string
-	format  string
-	remote  host.Host
-}
-
-type SaveOptions func(*saveOptions)
-
-func evalSaveOptions(options ...SaveOptions) (c *saveOptions) {
-	c = &saveOptions{
-		format: "json",
-		remote: host.Localhost,
-	}
-	c.dir, _ = UserConfigDir()
-
-	for _, opt := range options {
-		opt(c)
-	}
-
-	return
-}
-
-func SaveAppName(name string) SaveOptions {
-	return func(so *saveOptions) {
-		so.appname = name
-	}
-}
-
-func SaveDir(dir string) SaveOptions {
-	return func(so *saveOptions) {
-		so.dir = dir
-	}
-}
-
-func SaveInFile(path string) SaveOptions {
-	return func(so *saveOptions) {
-		so.path = path
-	}
-}
-
-func SaveFormat(format string) SaveOptions {
-	return func(so *saveOptions) {
-		so.format = format
-	}
-}
-
-func SaveTo(r host.Host) SaveOptions {
-	return func(so *saveOptions) {
-		so.remote = r
-	}
 }

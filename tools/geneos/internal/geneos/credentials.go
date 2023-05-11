@@ -47,5 +47,5 @@ func SaveCredentials() (err error) {
 		return true
 	})
 
-	return c.Save("credentials", config.SaveAppName(Execname))
+	return c.Save("credentials", config.SetAppName(Execname))
 }

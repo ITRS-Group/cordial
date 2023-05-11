@@ -186,9 +186,9 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	w.Config().Set("port", instance.NextPort(w.InstanceHost, &Webserver))
 
 	if err = w.Config().Save(w.Type().String(),
-		config.SaveTo(w.Host()),
+		config.Host(w.Host()),
 		config.SaveDir(w.Type().InstancesDir(w.Host())),
-		config.SaveAppName(w.Name()),
+		config.SetAppName(w.Name()),
 	); err != nil {
 		return
 	}

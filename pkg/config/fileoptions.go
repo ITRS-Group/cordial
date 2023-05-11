@@ -24,13 +24,14 @@ package config
 
 import "github.com/itrs-group/cordial/pkg/host"
 
-type loadOptions struct {
+type fileOptions struct {
 	appname                string
 	internalDefaults       []byte
 	internalDefaultsFormat string
 	configFile             string
 	configFileFormat       string
 	remote                 host.Host
+	dir                    string
 	configDirs             []string
 	workingdir             string
 	userconfdir            string
@@ -39,21 +40,33 @@ type loadOptions struct {
 	usedefaults            bool
 	merge                  bool
 	notfounderr            bool
+	delimiter              string
 }
 
-// LoadOptions can be passed to the Load function to
+// FileOptions can be passed to the Load function to
 // influence it's behaviour.
-type LoadOptions func(*loadOptions)
+type FileOptions func(*fileOptions)
 
-func evalLoadOptions(configName string, options ...LoadOptions) (c *loadOptions) {
+func evalFileOptions(options ...FileOptions) (c *fileOptions) {
+	c = &fileOptions{
+		delimiter: ".",
+	}
+	for _, opt := range options {
+		opt(c)
+	}
+	return
+}
+
+func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions) {
 	// init
-	c = &loadOptions{
+	c = &fileOptions{
 		configFileFormat: "json",
 		remote:           host.Localhost,
 		configDirs:       []string{},
 		workingdir:       ".",
 		systemdir:        "/etc", // UNIX/Linux only!
 		usedefaults:      true,
+		delimiter:        ".",
 	}
 	c.userconfdir, _ = UserConfigDir()
 
@@ -73,11 +86,25 @@ func evalLoadOptions(configName string, options ...LoadOptions) (c *loadOptions)
 	return
 }
 
+func evalSaveOptions(options ...FileOptions) (c *fileOptions) {
+	c = &fileOptions{
+		configFileFormat: "json",
+		remote:           host.Localhost,
+	}
+	c.dir, _ = UserConfigDir()
+
+	for _, opt := range options {
+		opt(c)
+	}
+
+	return
+}
+
 // SetGlobal tells [Load] to set values in the global
 // configuration structure instead of creating a new one. The global
 // configuration is then returned by [Load].
-func SetGlobal() LoadOptions {
-	return func(c *loadOptions) {
+func SetGlobal() FileOptions {
+	return func(c *fileOptions) {
 		c.setglobals = true
 	}
 }
@@ -88,8 +115,8 @@ func SetGlobal() LoadOptions {
 // extension, i.e. for `config.yaml` the defaults file would be
 // `config.defaults.yaml` but it is searched in all the directories and
 // may be located elsewhere to the main configuration.
-func UseDefaults(b bool) LoadOptions {
-	return func(c *loadOptions) {
+func UseDefaults(b bool) FileOptions {
+	return func(c *fileOptions) {
 		c.usedefaults = b
 	}
 }
@@ -103,8 +130,8 @@ func UseDefaults(b bool) LoadOptions {
 //	var defaults []byte
 //	...
 //	c, err := config.Load("appname", config.SetDefaults(defaults, "yaml"))
-func SetDefaults(defaults []byte, format string) LoadOptions {
-	return func(c *loadOptions) {
+func SetDefaults(defaults []byte, format string) FileOptions {
+	return func(c *fileOptions) {
 		c.internalDefaults = defaults
 		c.internalDefaultsFormat = format
 	}
@@ -112,8 +139,8 @@ func SetDefaults(defaults []byte, format string) LoadOptions {
 
 // MustExist makes Load() return an error if the configuration file is
 // not found. This does not apply to defaults.
-func MustExist() LoadOptions {
-	return func(lo *loadOptions) {
+func MustExist() FileOptions {
+	return func(lo *fileOptions) {
 		lo.notfounderr = true
 	}
 }
@@ -130,8 +157,8 @@ func MustExist() LoadOptions {
 // Then one valid location of a configuration file would be:
 //
 //	${HOME}/.config/basename/myprogram.yaml
-func SetAppName(name string) LoadOptions {
-	return func(c *loadOptions) {
+func SetAppName(name string) FileOptions {
+	return func(c *fileOptions) {
 		c.appname = name
 	}
 }
@@ -144,8 +171,8 @@ func SetAppName(name string) LoadOptions {
 // If the argument is an empty string then the option is not used. This also means
 // it can be called with a command line flag value which can default to an empty
 // string
-func SetConfigFile(path string) LoadOptions {
-	return func(c *loadOptions) {
+func SetConfigFile(path string) FileOptions {
+	return func(c *fileOptions) {
 		c.configFile = path
 	}
 }
@@ -154,8 +181,8 @@ func SetConfigFile(path string) LoadOptions {
 // is not set and the configuration file loaded has an extension then
 // that is used. This appliles to both defaults and main configuration
 // files (but not embedded defaults). The default is "json".
-func SetFileFormat(extension string) LoadOptions {
-	return func(c *loadOptions) {
+func SetFileFormat(extension string) FileOptions {
+	return func(c *fileOptions) {
 		c.configFileFormat = extension
 	}
 }
@@ -165,8 +192,8 @@ func SetFileFormat(extension string) LoadOptions {
 // order given, and any directories added with this option are checked
 // before any built-in list. This option can be given multiple times and
 // each call appends to the existing list.
-func AddConfigDirs(paths ...string) LoadOptions {
-	return func(c *loadOptions) {
+func AddConfigDirs(paths ...string) FileOptions {
+	return func(c *fileOptions) {
 		c.configDirs = append(c.configDirs, paths...)
 	}
 }
@@ -174,8 +201,8 @@ func AddConfigDirs(paths ...string) LoadOptions {
 // LoadDir sets the only directory to search for the configuration
 // files. It disables searching in the working directory, the user
 // config directory and the system directory.
-func LoadDir(dir string) LoadOptions {
-	return func(lo *loadOptions) {
+func LoadDir(dir string) FileOptions {
+	return func(lo *fileOptions) {
 		lo.configDirs = []string{dir}
 		lo.workingdir = ""
 		lo.systemdir = ""
@@ -186,8 +213,8 @@ func LoadDir(dir string) LoadOptions {
 // IgnoreWorkingDir tells [Load] not to search the working
 // directory of the process for configuration files. This should be used
 // when the caller may be running from an unknown or untrusted location.
-func IgnoreWorkingDir() LoadOptions {
-	return func(c *loadOptions) {
+func IgnoreWorkingDir() FileOptions {
+	return func(c *fileOptions) {
 		c.workingdir = ""
 	}
 }
@@ -195,8 +222,8 @@ func IgnoreWorkingDir() LoadOptions {
 // IgnoreUserConfDir tells [Load] not to search under the user
 // config directory. The user configuration directory is as per
 // [os.UserConfDir]
-func IgnoreUserConfDir() LoadOptions {
-	return func(c *loadOptions) {
+func IgnoreUserConfDir() FileOptions {
+	return func(c *fileOptions) {
 		c.userconfdir = ""
 	}
 }
@@ -204,8 +231,8 @@ func IgnoreUserConfDir() LoadOptions {
 // IgnoreSystemDir tells Load() not to search in the system
 // configuration directory. This only applies on UNIX-like systems and
 // is normally `/etc` and a sub-directory of AppName.
-func IgnoreSystemDir() LoadOptions {
-	return func(c *loadOptions) {
+func IgnoreSystemDir() FileOptions {
+	return func(c *fileOptions) {
 		c.systemdir = ""
 	}
 }
@@ -219,14 +246,34 @@ func IgnoreSystemDir() LoadOptions {
 // MergeSettings applies to both default and main settings, but
 // separately, i.e. all defaults are first merged and applied then the
 // main configuration files are merged and loaded.
-func MergeSettings() LoadOptions {
-	return func(c *loadOptions) {
+func MergeSettings() FileOptions {
+	return func(c *fileOptions) {
 		c.merge = true
 	}
 }
 
-func LoadFrom(r host.Host) LoadOptions {
-	return func(lo *loadOptions) {
+// Host sets the source/destination for the configuration file. It
+// defaults to localhost
+func Host(r host.Host) FileOptions {
+	return func(lo *fileOptions) {
 		lo.remote = r
+	}
+}
+
+// SaveDir sets the parent / top-most configuration directory to save the
+// configuration. The configuration is saved in a sub-directory named
+// after the application name.
+func SaveDir(dir string) FileOptions {
+	return func(so *fileOptions) {
+		so.dir = dir
+	}
+}
+
+// KeyDelimiter sets the delimiter for keys in the configuration loaded
+// with Load. This can only be changed at the time of creation of the
+// configuration object so will not apply if used with SetGlobal().
+func KeyDelimiter(delimiter string) FileOptions {
+	return func(fo *fileOptions) {
+		fo.delimiter = delimiter
 	}
 }

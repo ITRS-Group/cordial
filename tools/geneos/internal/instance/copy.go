@@ -165,9 +165,9 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 	// config changes don't matter until writing config succeeds
 	log.Debug().Msgf("writing: %v", newdst.Config().AllSettings())
 	if err = newdst.Config().Save(newdst.Type().String(),
-		config.SaveTo(newdst.Host()),
+		config.Host(newdst.Host()),
 		config.SaveDir(newdst.Type().InstancesDir(newdst.Host())),
-		config.SaveAppName(newdst.Name()),
+		config.SetAppName(newdst.Name()),
 	); err != nil {
 		log.Debug().Err(err).Msg("")
 		return

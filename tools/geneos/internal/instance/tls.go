@@ -116,9 +116,9 @@ func WriteCert(c geneos.Instance, cert *x509.Certificate) (err error) {
 	cf.Set("certificate", certfile)
 
 	return cf.Save(c.Type().String(),
-		config.SaveTo(c.Host()),
+		config.Host(c.Host()),
 		config.SaveDir(c.Type().InstancesDir(c.Host())),
-		config.SaveAppName(c.Name()),
+		config.SetAppName(c.Name()),
 	)
 }
 
@@ -138,9 +138,9 @@ func WriteKey(c geneos.Instance, key *rsa.PrivateKey) (err error) {
 	}
 	cf.Set("privatekey", keyfile)
 	return cf.Save(c.Type().String(),
-		config.SaveTo(c.Host()),
+		config.Host(c.Host()),
 		config.SaveDir(c.Type().InstancesDir(c.Host())),
-		config.SaveAppName(c.Name()),
+		config.SetAppName(c.Name()),
 	)
 }
 

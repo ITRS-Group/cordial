@@ -66,24 +66,6 @@ func PromoteFile(r host.Host, paths ...string) (final string) {
 	return
 }
 
-// ReadConfig reads a configuration file from remote r.
-//
-// The configuration file path is set so that rewriting the file works
-// without change.
-func ReadConfig(r host.Host, path string, options ...LoadOptions) (cf *Config, err error) {
-	if !r.IsAvailable() {
-		err = fmt.Errorf("cannot reach %s", r)
-		return
-	}
-	cf = New()
-	cf.SetFs(r.GetFs())
-	cf.SetConfigFile(path)
-	if err = cf.ReadInConfig(); err != nil {
-		return
-	}
-	return
-}
-
 // ReadRCConfig reads an old-style, legacy Geneos "ctl" layout
 // configuration file and sets values in cf corresponding to updated
 // equivalents.
@@ -151,7 +133,7 @@ func (cf *Config) ReadRCConfig(r host.Host, path string, prefix string, aliases 
 
 // Path returns the full path to the first regular file found that would
 // be opened by Load() given the same options
-func Path(name string, options ...LoadOptions) string {
+func Path(name string, options ...FileOptions) string {
 	opts := evalLoadOptions(name, options...)
 	r := opts.remote
 

@@ -55,9 +55,9 @@ func GetConfig() *Config {
 // New returns a Config instance initialised with a new viper instance.
 // Can be called with config.DefaultExpandOptions(...) to set defaults for
 // future calls that use Expand.
-func New(options ...ExpandOptions) *Config {
-	cf := &Config{Viper: viper.New()}
-	evalExpandOptions(cf, options...)
+func New(options ...FileOptions) *Config {
+	opts := evalFileOptions(options...)
+	cf := &Config{Viper: viper.NewWithOptions(viper.KeyDelimiter(opts.delimiter))}
 	return cf
 }
 
