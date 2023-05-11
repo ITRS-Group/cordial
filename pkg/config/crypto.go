@@ -34,6 +34,7 @@ import (
 	"hash/crc32"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"unicode/utf8"
 
@@ -257,4 +258,82 @@ func Checksum(data io.Reader) (crc uint32, err error) {
 	}
 	crc = crc32.ChecksumIEEE(b.Bytes())
 	return
+}
+
+// Credentials handling function
+
+// Credentials can carry a number of different credential types. Add
+// more as required. Eventually this will go into memguard.
+type Credentials struct {
+	Domain       string `json:"domain"`
+	Username     string `json:"username,omitempty"`
+	Password     string `json:"password,omitempty"`
+	ClientID     string `json:"client_id,omitempty"`
+	ClientSecret string `json:"client_secret,omitempty"`
+	Token        string `json:"token,omitempty"`
+	Renewal      string `json:"renewal,omitempty"`
+}
+
+// FindCreds finds a set of credentials in the given config structure
+// under the key "credentials" and tries to match the longest one, if
+// any.
+func (cf *Config) FindCreds(match string) (creds *Credentials) {
+	creds = &Credentials{}
+	cr := cf.GetStringMap("credentials")
+	if cr == nil {
+		return
+	}
+	paths := []string{}
+	for k := range cr {
+		paths = append(paths, k)
+	}
+	// sort the paths longest to shortest
+	sort.Slice(paths, func(i, j int) bool {
+		return len(paths[i]) > len(paths[j])
+	})
+	for _, p := range paths {
+		if strings.Contains(p, match) {
+			cf.UnmarshalKey("credentials::"+p, &creds)
+			return
+		}
+	}
+	return
+}
+
+// FindCreds looks for matching credentials in a default "credentials"
+// file. options are the same as for [Load] but the default KeyDelimiter
+// is set to "::" as credential domains are likely to be hostnames or
+// URLs. The longest match wins.
+func FindCreds(search string, options ...FileOptions) (cred *Credentials) {
+	options = append(options, KeyDelimiter("::"))
+	cf, _ := Load("credentials", options...)
+	return cf.FindCreds(search)
+}
+
+// Add creds to the "credentials" file identified by the options.
+// creds.Domain is used as the key for matching later on. Any existing
+// credential with the same Domain is overwritten. If there is an error
+// un the underlying routines it is returned without change.
+func AddCreds(creds Credentials, options ...FileOptions) (err error) {
+	options = append(options, KeyDelimiter("::"))
+	cf, err := Load("credentials", options...)
+	if err != nil {
+		return
+	}
+	cf.Set("credentials::"+creds.Domain, creds)
+	return cf.Save("credentials", options...)
+}
+
+// DeleteCreds removes the entry for domain from the "credentials" file
+// using FileOptions options.
+func DeleteCreds(domain string, options ...FileOptions) (err error) {
+	options = append(options, KeyDelimiter("::"))
+	cf, err := Load("credentials", options...)
+	if err != nil {
+		return
+	}
+	cr := cf.GetStringMap("credentials")
+	delete(cr, domain)
+	cf.Set("credentials", cr)
+	return cf.Save("credentials", options...)
 }

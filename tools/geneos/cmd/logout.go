@@ -24,6 +24,7 @@ to quickly create a Cobra application.`,
 		"needshomedir": "false",
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+
 		fmt.Println("logout called")
 	},
 }
