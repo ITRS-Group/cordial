@@ -109,7 +109,7 @@ to prevent visibility in casual viewing.
 
 func showInstance(c geneos.Instance, params []string) (result interface{}, err error) {
 	// remove aliases
-	nv := config.New()
+	nv := config.New(config.KeyDelimiter("::"))
 	aliases := c.Type().Aliases
 	for _, k := range c.Config().AllKeys() {
 		// skip any names in the alias table

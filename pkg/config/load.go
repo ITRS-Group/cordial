@@ -67,14 +67,14 @@ import (
 // different remotes. The default is "localhost".
 //
 // TBD: windows equiv of above
-func Load(name string, options ...LoadOptions) (c *Config, err error) {
+func Load(name string, options ...FileOptions) (c *Config, err error) {
 	opts := evalLoadOptions(name, options...)
 	r := opts.remote
 
 	if opts.setglobals {
 		c = global
 	} else {
-		c = New()
+		c = New(options...)
 	}
 
 	// return first error after initialising the config structure.

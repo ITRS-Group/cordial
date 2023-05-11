@@ -118,7 +118,7 @@ func New(name string) geneos.Instance {
 		}
 	}
 	c := &Sans{}
-	c.Conf = config.New()
+	c.Conf = config.New(config.KeyDelimiter("::"))
 	c.InstanceHost = r
 	c.Component = &San
 	c.Config().SetDefault("santype", "netprobe")
@@ -204,9 +204,9 @@ func (s *Sans) Add(template string, port uint16) (err error) {
 	s.Config().Set("gateways", make(map[string]string))
 
 	if err = s.Config().Save(s.Type().String(),
-		config.SaveTo(s.Host()),
+		config.Host(s.Host()),
 		config.SaveDir(s.Type().InstancesDir(s.Host())),
-		config.SaveAppName(s.Name()),
+		config.SetAppName(s.Name()),
 	); err != nil {
 		return
 	}
@@ -227,7 +227,7 @@ func (s *Sans) Add(template string, port uint16) (err error) {
 //
 // we do a dance if there is a change in TLS setup and we use default ports
 func (s *Sans) Rebuild(initial bool) (err error) {
-	configrebuild := s.Config().GetString("config.rebuild")
+	configrebuild := s.Config().GetString("config::rebuild")
 	if configrebuild == "never" {
 		return
 	}
@@ -254,9 +254,9 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 	if changed {
 		s.Config().Set("gateways", gws)
 		if err = s.Config().Save(s.Type().String(),
-			config.SaveTo(s.Host()),
+			config.Host(s.Host()),
 			config.SaveDir(s.Type().InstancesDir(s.Host())),
-			config.SaveAppName(s.Name()),
+			config.SetAppName(s.Name()),
 		); err != nil {
 			return err
 		}

@@ -131,7 +131,7 @@ func New(name string) geneos.Instance {
 		}
 	}
 	g := &Gateways{}
-	g.Conf = config.New()
+	g.Conf = config.New(config.KeyDelimiter("::"))
 	g.Component = &Gateway
 	g.InstanceHost = h
 	if err := instance.SetDefaults(g, local); err != nil {
@@ -212,9 +212,9 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 
 	// try to save config early
 	if err = g.Config().Save(g.Type().String(),
-		config.SaveTo(g.Host()),
+		config.Host(g.Host()),
 		config.SaveDir(g.Type().InstancesDir(g.Host())),
-		config.SaveAppName(g.Name()),
+		config.SetAppName(g.Name()),
 	); err != nil {
 		log.Fatal().Err(err).Msg("")
 		return
@@ -244,7 +244,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 		return
 	}
 
-	configrebuild := cf.GetString("config.rebuild")
+	configrebuild := cf.GetString("config::rebuild")
 
 	if configrebuild == "never" {
 		return
@@ -288,9 +288,9 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 
 	if changed {
 		if err = g.Config().Save(g.Type().String(),
-			config.SaveTo(g.Host()),
+			config.Host(g.Host()),
 			config.SaveDir(g.Type().InstancesDir(g.Host())),
-			config.SaveAppName(g.Name()),
+			config.SetAppName(g.Name()),
 		); err != nil {
 			return
 		}

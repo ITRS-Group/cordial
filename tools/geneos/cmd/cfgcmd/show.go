@@ -55,18 +55,9 @@ to quickly create a Cobra application.
 		"needshomedir": "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		// ct, args, params := CmdArgsParams(cmd)
-		// var c interface{}
 		var buffer []byte
 
-		// paths := geneos.UserConfigFilePaths()
-		// for _, path := range paths {
-		// 	if err = geneos.ReadLocalConfigFile(path, &c); err == nil {
-		// 		break
-		// 	}
-		// }
 		cf, _ := config.Load(cmd.Execname, config.IgnoreSystemDir(), config.IgnoreWorkingDir())
-
 		if buffer, err = json.MarshalIndent(cf.AllSettings(), "", "    "); err != nil {
 			return
 		}

@@ -109,10 +109,11 @@ func LoadConfig(c geneos.Instance) (err error) {
 	aliases := c.Type().Aliases
 
 	cf, err := config.Load(c.Type().Name,
-		config.LoadFrom(r),
+		config.Host(r),
 		config.LoadDir(c.Home()),
 		config.UseDefaults(false),
 		config.MustExist(),
+		config.KeyDelimiter("::"),
 	)
 	if err != nil {
 		if err = cf.ReadRCConfig(r, ComponentFilepath(c, "rc"), prefix, aliases); err != nil {
@@ -306,9 +307,9 @@ func Migrate(c geneos.Instance) (err error) {
 	cf.Type = ""
 
 	if err = cf.Save(c.Type().String(),
-		config.SaveTo(c.Host()),
+		config.Host(c.Host()),
 		config.SaveDir(c.Type().InstancesDir(c.Host())),
-		config.SaveAppName(c.Name()),
+		config.SetAppName(c.Name()),
 	); err != nil {
 		// restore label on error
 		cf.Type = "rc"
@@ -455,7 +456,7 @@ func SetExtendedValues(c geneos.Instance, x ExtraConfigValues) (changed bool) {
 	}
 
 	if len(x.Variables) > 0 {
-		vars := cf.GetStringMapString("variables")
+		vars := cf.GetStringMap("variables")
 		for k, v := range x.Variables {
 			vars[k] = v
 		}

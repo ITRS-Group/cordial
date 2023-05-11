@@ -174,9 +174,9 @@ func aesSetAESInstance(c geneos.Instance, params []string) (err error) {
 		err = instance.Migrate(c)
 	} else {
 		err = cf.Save(c.Type().String(),
-			config.SaveTo(c.Host()),
+			config.Host(c.Host()),
 			config.SaveDir(c.Type().InstancesDir(c.Host())),
-			config.SaveAppName(c.Name()),
+			config.SetAppName(c.Name()),
 		)
 	}
 
