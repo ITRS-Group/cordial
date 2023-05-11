@@ -33,6 +33,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
@@ -104,7 +105,7 @@ var aesEncodeCmd = &cobra.Command{
 }
 
 func aesEncodeInstance(c geneos.Instance, params []string) (err error) {
-	if !(c.Type() == &gateway.Gateway || c.Type() == &netprobe.Netprobe || c.Type() == &san.San) {
+	if !(c.Type() == &gateway.Gateway || c.Type() == &netprobe.Netprobe || c.Type() == &san.San || c.Type() == &floating.Floating) {
 		return nil
 	}
 	keyfile := config.KeyFile(instance.Filepath(c, "keyfile"))

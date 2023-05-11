@@ -29,12 +29,13 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 )
 
-var componentsWithKeyfiles = []*geneos.Component{&gateway.Gateway, &netprobe.Netprobe, &san.San}
+var componentsWithKeyfiles = []*geneos.Component{&gateway.Gateway, &netprobe.Netprobe, &san.San, &floating.Floating}
 
 func init() {
 	cmd.RootCmd.AddCommand(AesCmd)

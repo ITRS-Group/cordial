@@ -172,7 +172,7 @@ func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ..
 		// special handling for SANs
 		switch ct.Name {
 		// XXX abstract this
-		case "none", "san", "ca3":
+		case "none", "san", "floating", "ca3":
 			ct = ctFromFile
 		case ctFromFile.Name:
 			break

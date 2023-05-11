@@ -35,13 +35,14 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 )
 
 var initCmdAll string
 var initCmdLogs, initCmdMakeCerts, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
-var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdVersion string
+var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdFloatingTemplate, initCmdVersion string
 var initCmdDLUsername, initCmdPwFile string
 var initCmdDLPassword []byte
 
@@ -94,7 +95,8 @@ func init() {
 	initCmd.PersistentFlags().MarkHidden("pwfile")
 
 	initCmd.PersistentFlags().StringVarP(&initCmdGatewayTemplate, "gatewaytemplate", "w", "", "A gateway template file")
-	initCmd.PersistentFlags().StringVarP(&initCmdSANTemplate, "santemplate", "s", "", "A san template file")
+	initCmd.PersistentFlags().StringVarP(&initCmdSANTemplate, "santemplate", "s", "", "SAN template file")
+	initCmd.PersistentFlags().StringVarP(&initCmdFloatingTemplate, "floatingtemplate", "f", "", "Floating probe template file")
 
 	initCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", "Add an environment variable in the format NAME=VALUE. Repeat flag for more values.")
 
@@ -279,6 +281,16 @@ func initMisc(command *cobra.Command) (err error) {
 			return
 		}
 		if err = geneos.LOCAL.WriteFile(geneos.LOCAL.Filepath(san.San, "templates", san.SanDefaultTemplate), tmpl, 0664); err != nil {
+			return
+		}
+	}
+
+	if initCmdFloatingTemplate != "" {
+		var tmpl []byte
+		if tmpl, err = geneos.ReadFrom(initCmdFloatingTemplate); err != nil {
+			return
+		}
+		if err = geneos.LOCAL.WriteFile(geneos.LOCAL.Filepath(floating.Floating, "templates", floating.FloatingDefaultTemplate), tmpl, 0664); err != nil {
 			return
 		}
 	}

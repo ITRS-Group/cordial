@@ -27,12 +27,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/itrs-group/cordial/tools/geneos/cmd"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 )
 
 func init() {
@@ -106,6 +108,19 @@ func initTemplates(h *geneos.Host, options ...geneos.Options) (err error) {
 		log.Fatal().Err(err).Msg("")
 	}
 	fmt.Printf("san template written to %s\n", filepath.Join(sanTemplates, san.SanDefaultTemplate))
+
+	floatingTemplates := h.Filepath(floating.Floating, "templates")
+	h.MkdirAll(floatingTemplates, 0775)
+	tmpl = floating.FloatingTemplate
+	if initCmdFloatingTemplate != "" {
+		if tmpl, err = geneos.ReadFrom(initCmdFloatingTemplate); err != nil {
+			return
+		}
+	}
+	if err := h.WriteFile(filepath.Join(floatingTemplates, floating.FloatingDefaultTemplate), tmpl, 0664); err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+	fmt.Printf("floating template written to %s\n", filepath.Join(floatingTemplates, floating.FloatingDefaultTemplate))
 
 	return
 }

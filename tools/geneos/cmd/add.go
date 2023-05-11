@@ -34,6 +34,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
@@ -59,7 +60,7 @@ func init() {
 
 	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", "(all components) Add an environment variable in the format NAME=VALUE")
 	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format `PRIORITY:[PATH|URL]`")
-	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME:PORT")
+	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", "(sans, floating) Add a gateway in the format NAME:PORT:SECURE")
 	addCmd.Flags().VarP(&addCmdExtras.Attributes, "attribute", "a", "(sans) Add an attribute in the format NAME=VALUE")
 	addCmd.Flags().VarP(&addCmdExtras.Types, "type", "t", "(sans) Add a type TYPE")
 	addCmd.Flags().VarP(&addCmdExtras.Variables, "variable", "v", "(sans) Add a variable in the format [TYPE:]NAME=VALUE")
@@ -79,8 +80,8 @@ can be found using the |geneos home TYPE NAME| command.
 The default configuration file format and extension is |json|. There will
 be support for |yaml| in future releases for easier human editing.
 	
-Gateways and SANs are given a configuration file based on the templates
-configured for the different components.
+Gateways, SANs and Floating probes are given a configuration file
+based on the templates configured for the different components.
 `, "|", "`"),
 	Example: `
 geneos add gateway EXAMPLE1
@@ -132,7 +133,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 		cf.Set("version", addCmdBase)
 	}
 
-	if ct == &gateway.Gateway || ct == &netprobe.Netprobe || ct == &san.San {
+	if ct == &gateway.Gateway || ct == &netprobe.Netprobe || ct == &san.San || ct == &floating.Floating {
 		if addCmdKeyfileCRC != "" {
 			cf.Set("keyfile", c.Host().Filepath(ct, ct.String()+"_shared", "keyfiles", addCmdKeyfileCRC+".aes"))
 		} else if addCmdKeyfile != "" {
