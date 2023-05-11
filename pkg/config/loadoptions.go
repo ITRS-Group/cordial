@@ -41,7 +41,7 @@ type loadOptions struct {
 	notfounderr            bool
 }
 
-// LoadOptions can be passed to the LoadConfig function to
+// LoadOptions can be passed to the Load function to
 // influence it's behaviour.
 type LoadOptions func(*loadOptions)
 
@@ -73,16 +73,16 @@ func evalLoadOptions(configName string, options ...LoadOptions) (c *loadOptions)
 	return
 }
 
-// SetGlobal tells [LoadConfig] to set values in the global
+// SetGlobal tells [Load] to set values in the global
 // configuration structure instead of creating a new one. The global
-// configuration is then returned by [LoadConfig].
+// configuration is then returned by [Load].
 func SetGlobal() LoadOptions {
 	return func(c *loadOptions) {
 		c.setglobals = true
 	}
 }
 
-// UseDefaults tells [LoadConfig] whether to load defaults or not. The
+// UseDefaults tells [Load] whether to load defaults or not. The
 // default is true. Defaults are loaded from a file with the same name
 // as the main on but with an extra `.defaults` suffix before the
 // extension, i.e. for `config.yaml` the defaults file would be
@@ -102,7 +102,7 @@ func UseDefaults(b bool) LoadOptions {
 //	//go:embed "defaults.yaml"
 //	var defaults []byte
 //	...
-//	c, err := config.LoadConfig("appname", config.SetDefaults(defaults, "yaml"))
+//	c, err := config.Load("appname", config.SetDefaults(defaults, "yaml"))
 func SetDefaults(defaults []byte, format string) LoadOptions {
 	return func(c *loadOptions) {
 		c.internalDefaults = defaults
@@ -118,14 +118,14 @@ func MustExist() LoadOptions {
 	}
 }
 
-// SetAppName overrides to use of the [LoadConfig] `configName` argument
+// SetAppName overrides to use of the [Load] `configName` argument
 // as the application name, `AppName`, which is used for sub-directories
 // while `configName“ is used as the prefix for files in those
 // directories.
 //
-// For example, if LoadConfig is called like this:
+// For example, if Load is called like this:
 //
-//	LoadConfig("myprogram", config.SetAppName("basename"))
+//	Load("myprogram", config.SetAppName("basename"))
 //
 // Then one valid location of a configuration file would be:
 //
@@ -136,7 +136,7 @@ func SetAppName(name string) LoadOptions {
 	}
 }
 
-// SetConfigFile forces [LoadConfig] to load only the configuration at the given
+// SetConfigFile forces [Load] to load only the configuration at the given
 // path. This path must include the file extension. Defaults are still loaded
 // from all the normal directories unless [IgnoreDefaults] is also passed as an
 // option.
@@ -183,7 +183,7 @@ func LoadDir(dir string) LoadOptions {
 	}
 }
 
-// IgnoreWorkingDir tells [LoadConfig] not to search the working
+// IgnoreWorkingDir tells [Load] not to search the working
 // directory of the process for configuration files. This should be used
 // when the caller may be running from an unknown or untrusted location.
 func IgnoreWorkingDir() LoadOptions {
@@ -192,7 +192,7 @@ func IgnoreWorkingDir() LoadOptions {
 	}
 }
 
-// IgnoreUserConfDir tells [LoadConfig] not to search under the user
+// IgnoreUserConfDir tells [Load] not to search under the user
 // config directory. The user configuration directory is as per
 // [os.UserConfDir]
 func IgnoreUserConfDir() LoadOptions {
@@ -201,7 +201,7 @@ func IgnoreUserConfDir() LoadOptions {
 	}
 }
 
-// IgnoreSystemDir tells LoadConfig() not to search in the system
+// IgnoreSystemDir tells Load() not to search in the system
 // configuration directory. This only applies on UNIX-like systems and
 // is normally `/etc` and a sub-directory of AppName.
 func IgnoreSystemDir() LoadOptions {
@@ -210,7 +210,7 @@ func IgnoreSystemDir() LoadOptions {
 	}
 }
 
-// MergeSettings change the default behaviour of [LoadConfig] which is
+// MergeSettings change the default behaviour of [Load] which is
 // to load the first configuration file found, instead loading each
 // configuration file found and merging the settings together. Merging
 // is done using [viper.MergeConfigMap] and should result in the last
