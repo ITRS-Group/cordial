@@ -457,6 +457,7 @@ func SetExtendedValues(c geneos.Instance, x ExtraConfigValues) (changed bool) {
 
 	if len(x.Variables) > 0 {
 		vars := cf.GetStringMap("variables")
+		convertVars(vars)
 		for k, v := range x.Variables {
 			vars[k] = v
 		}
@@ -464,6 +465,24 @@ func SetExtendedValues(c geneos.Instance, x ExtraConfigValues) (changed bool) {
 	}
 
 	return
+}
+
+// convertVars updates old style variables items to the new style
+func convertVars(vars map[string]interface{}) {
+	for k, v := range vars {
+		switch t := v.(type) {
+		case string:
+			// convert
+			log.Debug().Msgf("convert var %s type %T", k, t)
+			value := strings.Replace(t, ":", ":"+k+"=", 1)
+			nk, nv := GetVarValue(value)
+			delete(vars, k)
+			vars[nk] = nv
+		default:
+			log.Debug().Msgf("leave var %s type %T", k, t)
+			// leave
+		}
+	}
 }
 
 // sets 'items' in the settings identified by 'key'. the key() function returns an identifier to use
@@ -628,14 +647,10 @@ func (i *VarValues) String() string {
 	return ""
 }
 
-func (i *VarValues) Set(value string) error {
+func GetVarValue(in string) (key string, value VarValue) {
 	var t, k, v string
 
-	if *i == nil {
-		*i = VarValues{}
-	}
-
-	e := strings.SplitN(value, ":", 2)
+	e := strings.SplitN(in, ":", 2)
 	if len(e) == 1 {
 		t = "string"
 		s := strings.SplitN(e[0], "=", 2)
@@ -663,15 +678,26 @@ func (i *VarValues) Set(value string) error {
 	}
 	if _, ok := validtypes[t]; !ok {
 		log.Error().Msgf("invalid type %q for variable. valid types are 'string', 'integer', 'double', 'boolean', 'activeTime', 'externalConfigFile'", t)
-		return geneos.ErrInvalidArgs
+		return
 	}
-	// val := t + ":" + v
-	key := hex.EncodeToString([]byte(k))
-	(*i)[key] = VarValue{
+	key = hex.EncodeToString([]byte(k))
+	value = VarValue{
 		Type:  t,
 		Name:  k,
 		Value: v,
 	}
+	return
+}
+
+func (i *VarValues) Set(value string) error {
+	// var t, k, v string
+
+	if *i == nil {
+		*i = VarValues{}
+	}
+
+	k, v := GetVarValue(value)
+	(*i)[k] = v
 	return nil
 }
 
@@ -742,6 +768,9 @@ func UnsetMapHex(c geneos.Instance, key string, items UnsetCmdHexKeyed) (changed
 	cf := c.Config()
 
 	x := cf.GetStringMap(key)
+	if key == "variables" {
+		convertVars(x)
+	}
 	for _, k := range items {
 		DeleteSettingFromMap(c, x, k)
 		changed = true
@@ -796,7 +825,7 @@ func (i *UnsetCmdHexKeyed) String() string {
 }
 
 func (i *UnsetCmdHexKeyed) Set(value string) error {
-	// discard any values accidentally passed with '=value'
+	// trim any values accidentally passed with '=value'
 	value = strings.SplitN(value, "=", 2)[0]
 	value = hex.EncodeToString([]byte(value))
 	*i = append(*i, value)
