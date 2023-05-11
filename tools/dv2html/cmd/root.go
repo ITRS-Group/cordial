@@ -84,6 +84,7 @@ func initConfig() {
 		}
 	} else {
 		cf, err := config.Load(execname,
+			config.SetAppName("geneos"),
 			config.SetConfigFile(cfgFile),
 			config.SetGlobal(),
 			config.MergeSettings(),

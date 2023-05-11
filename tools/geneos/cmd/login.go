@@ -38,7 +38,7 @@ var loginKeyfile config.KeyFile
 func init() {
 	RootCmd.AddCommand(loginCmd)
 
-	loginKeyfile = UserKeyFile
+	// loginKeyfile = UserKeyFile
 	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username")
 	loginCmd.Flags().StringVarP(&loginCmdPassword, "password", "p", "", "Password")
 	loginCmd.Flags().VarP(&loginKeyfile, "keyfile", "k", "Keyfile to use")
@@ -92,6 +92,8 @@ credentials can use a separate keyfile.
 			createKeyfile = true
 		}
 
+		log.Debug().Msgf("checking keyfile %q, default file %q", loginKeyfile, DefaultUserKeyfile)
+
 		if crc, created, err := loginKeyfile.Check(createKeyfile); err != nil {
 			return err
 		} else if created {
@@ -105,6 +107,9 @@ credentials can use a separate keyfile.
 		}
 
 		urlMatch := "itrsgroup.com"
+		if loginCmdSiteURL != "" {
+			urlMatch = loginCmdSiteURL
+		}
 
 		// default URL pattern
 		if len(args) > 0 {
@@ -148,11 +153,10 @@ func getCredentials(path string) (a auth) {
 	default:
 		return
 	}
-	return
 }
 
 func setCredentials(urlmatch, username, password string) {
-	cf := config.GetConfig()
+	cf := config.New(config.KeyDelimiter("::"))
 	creds := cf.GetStringMap("credentials")
 	a := auth{
 		Username: username,
@@ -160,4 +164,5 @@ func setCredentials(urlmatch, username, password string) {
 	}
 	creds[urlmatch] = a
 	cf.Set("credentials", creds)
+	cf.Save("credentials", config.SetAppName(Execname))
 }
