@@ -45,6 +45,7 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/ca3"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fa2"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fileagent"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/licd"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"

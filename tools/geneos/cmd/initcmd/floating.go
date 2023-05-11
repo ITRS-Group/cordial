@@ -31,36 +31,36 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
 )
 
-var initSanCmdArchive, initSanCmdVersion, initSanCmdOverride string
+var initFloatingCmdArchive, initFloatingCmdVersion, initFloatingCmdOverride string
 
 func init() {
-	initCmd.AddCommand(initSanCmd)
+	initCmd.AddCommand(initFloatingCmd)
 
-	initSanCmd.Flags().StringVarP(&initSanCmdVersion, "version", "V", "latest", "Download this `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
-	initSanCmd.Flags().StringVarP(&initSanCmdArchive, "archive", "A", "", "`PATH or URL` to software archive to install")
-	initSanCmd.Flags().StringVarP(&initSanCmdOverride, "override", "T", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
-	initSanCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", "Add gateway in the format NAME:PORT. Repeat flag for more gateways.")
-	initSanCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", "Add an attribute in the format NAME=VALUE. Repeat flag for more attributes.")
-	initSanCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", "Add a type NAME. Repeat flag for more types.")
-	initSanCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", "Add a variable in the format [TYPE:]NAME=VALUE. Repeat flag for more variables")
+	initFloatingCmd.Flags().StringVarP(&initFloatingCmdVersion, "version", "V", "latest", "Download this `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
+	initFloatingCmd.Flags().StringVarP(&initFloatingCmdArchive, "archive", "A", "", "`PATH or URL` to software archive to install")
+	initFloatingCmd.Flags().StringVarP(&initFloatingCmdOverride, "override", "T", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
+	initFloatingCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", "Add gateway in the format NAME:PORT. Repeat flag for more gateways.")
+	initFloatingCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", "Add an attribute in the format NAME=VALUE. Repeat flag for more attributes.")
+	initFloatingCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", "Add a type NAME. Repeat flag for more types.")
+	initFloatingCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", "Add a variable in the format [TYPE:]NAME=VALUE. Repeat flag for more variables")
 
-	initSanCmd.Flags().SortFlags = false
+	initFloatingCmd.Flags().SortFlags = false
 }
 
-var initSanCmd = &cobra.Command{
-	Use:   "san [flags] [USERNAME] [DIRECTORY]",
-	Short: "Initialise a Geneos SAN (Self-Announcing Netprobe) environment",
+var initFloatingCmd = &cobra.Command{
+	Use:   "floating [flags] [USERNAME] [DIRECTORY]",
+	Short: "Initialise a Geneos Floating Netprobe environment",
 	Long: strings.ReplaceAll(`
-Install a Self-Announcing Netprobe (SAN) into a new Geneos install
+Install a Floating Netprobe into a new Geneos install
 directory.
 
-Without any flags the command installs a SAN in a directory called
+Without any flags the command installs a Floating Netprobe in a directory called
 |geneos| under the user's home directory (unless the user's home
 directory ends in |geneos| in which case it uses that directly),
-downloads the latest netprobe release and create a SAN instance using
+downloads the latest netprobe release and create a netprobe instance using
 the |hostname| of the system.
 
 In almost all cases authentication will be required to download the
@@ -107,34 +107,34 @@ multiple times.
 		}
 
 		// prefix with netprobe
-		if initSanCmdOverride != "" && !strings.Contains(initSanCmdOverride, ":") {
-			initSanCmdOverride = "netprobe:" + initSanCmdOverride
+		if initFloatingCmdOverride != "" && !strings.Contains(initFloatingCmdOverride, ":") {
+			initFloatingCmdOverride = "netprobe:" + initFloatingCmdOverride
 		}
 
 		options = append(options,
-			geneos.Source(initSanCmdArchive),
-			geneos.Version(initSanCmdVersion),
-			geneos.OverrideVersion(initSanCmdOverride),
+			geneos.Source(initFloatingCmdArchive),
+			geneos.Version(initFloatingCmdVersion),
+			geneos.OverrideVersion(initFloatingCmdOverride),
 		)
-		return initSan(geneos.LOCAL, options...)
+		return initFloating(geneos.LOCAL, options...)
 	},
 }
 
-func initSan(h *geneos.Host, options ...geneos.Options) (err error) {
-	var sanname string
+func initFloating(h *geneos.Host, options ...geneos.Options) (err error) {
+	var floatingname string
 
 	e := []string{}
 
 	if initCmdName != "" {
-		sanname = initCmdName
+		floatingname = initCmdName
 	} else {
-		sanname, _ = os.Hostname()
+		floatingname, _ = os.Hostname()
 	}
 	if h != geneos.LOCAL {
-		sanname = sanname + "@" + geneos.LOCALHOST
+		floatingname = floatingname + "@" + geneos.LOCALHOST
 	}
-	install(&san.San, geneos.LOCALHOST, options...)
-	cmd.AddInstance(&san.San, initCmdExtras, sanname)
+	install(&floating.Floating, geneos.LOCALHOST, options...)
+	cmd.AddInstance(&floating.Floating, initCmdExtras, floatingname)
 	cmd.Start(nil, initCmdLogs, e, e)
 	cmd.CommandPS(nil, e, e)
 	return nil

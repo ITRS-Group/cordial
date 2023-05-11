@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 ITRS Group
+Copyright © 2023 ITRS Group
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package san
+package floating
 
 import (
 	_ "embed"
@@ -36,132 +36,118 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 )
 
-var San = geneos.Component{
+var Floating = geneos.Component{
 	Initialise:       Init,
-	Name:             "san",
-	LegacyPrefix:     "san",
+	Name:             "floating",
+	LegacyPrefix:     "flt",
 	RelatedTypes:     []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
-	ComponentMatches: []string{"san", "sans"},
+	ComponentMatches: []string{"float", "floating"},
 	RealComponent:    true,
 	DownloadBase:     geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
-	PortRange:        "SanPortRange",
-	CleanList:        "SanCleanList",
-	PurgeList:        "SanPurgeList",
-	Aliases: map[string]string{
-		"binsuffix": "binary",
-		"sanhome":   "home",
-		"sanbins":   "install",
-		"sanbase":   "version",
-		"sanexec":   "program",
-		"sanlogd":   "logdir",
-		"sanlogf":   "logfile",
-		"sanport":   "port",
-		"sanlibs":   "libpaths",
-		"sancert":   "certificate",
-		"sankey":    "privatekey",
-		"sanuser":   "user",
-		"sanopts":   "options",
-	},
+	PortRange:        "FloatingPortRange",
+	CleanList:        "FloatingCleanList",
+	PurgeList:        "FloatingPurgeList",
+	Aliases:          map[string]string{},
 	Defaults: []string{
-		`binary={{if eq .santype "fa2"}}fix-analyser2-{{end}}netprobe.linux_64`,
-		`home={{join .root "san" "sans" .name}}`,
-		`install={{join .root "packages" .santype}}`,
+		`binary={{if eq .floatingtype "fa2"}}fix-analyser2-{{end}}netprobe.linux_64`,
+		`home={{join .root "floating" "floatings" .name}}`,
+		`install={{join .root "packages" .floatingtype}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
-		`logfile=san.log`,
+		`logfile=floating.log`,
 		`port=7036`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 		`sanname={{.name}}`,
 	},
 	GlobalSettings: map[string]string{
-		"SanPortRange": "7036,7100-",
-		"SanCleanList": "*.old",
-		"SanPurgeList": "san.log:san.txt:*.snooze:*.user_assignment",
+		"FloatingPortRange": "7036,7100-",
+		"FloatingCleanList": "*.old",
+		"FloatingPurgeList": "floating.log:floating.txt:*.snooze:*.user_assignment",
 	},
 	Directories: []string{
 		"packages/netprobe",
-		"san/sans",
-		"san/templates",
+		"floating/floatings",
+		"floating/templates",
 	},
 }
 
-type Sans instance.Instance
+type Floatings instance.Instance
 
-// ensure that Sans satisfies geneos.Instance interface
-var _ geneos.Instance = (*Sans)(nil)
+// ensure that Floatings satisfies geneos.Instance interface
+var _ geneos.Instance = (*Floatings)(nil)
 
 //go:embed templates/netprobe.setup.xml.gotmpl
-var SanTemplate []byte
+var FloatingTemplate []byte
 
-const SanDefaultTemplate = "netprobe.setup.xml.gotmpl"
+const FloatingDefaultTemplate = "netprobe.setup.xml.gotmpl"
 
 func init() {
-	San.RegisterComponent(New)
+	Floating.RegisterComponent(New)
 }
 
 func Init(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
-	if err := r.WriteFile(r.Filepath(ct, "templates", SanDefaultTemplate), SanTemplate, 0664); err != nil {
+	if err := r.WriteFile(r.Filepath(ct, "templates", FloatingDefaultTemplate), FloatingTemplate, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 }
 
-var sans sync.Map
+var floatings sync.Map
 
 func New(name string) geneos.Instance {
 	ct, local, r := instance.SplitName(name, geneos.LOCAL)
-	s, ok := sans.Load(r.FullName(local))
+	s, ok := floatings.Load(r.FullName(local))
 	if ok {
-		sn, ok := s.(*Sans)
+		sn, ok := s.(*Floatings)
 		if ok {
 			return sn
 		}
 	}
-	c := &Sans{}
+	c := &Floatings{}
 	c.Conf = config.New(config.KeyDelimiter("::"))
 	c.InstanceHost = r
-	c.Component = &San
-	c.Config().SetDefault("santype", "netprobe")
+	c.Component = &Floating
+	c.Config().SetDefault("floatingtype", "netprobe")
 	if ct != nil {
-		c.Config().SetDefault("santype", ct.Name)
+		c.Config().SetDefault("floatingtype", ct.Name)
 	}
 	if err := instance.SetDefaults(c, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
 	}
-	sans.Store(r.FullName(local), c)
+	floatings.Store(r.FullName(local), c)
 	return c
 }
 
 // interface method set
 
 // Return the Component for an Instance
-func (s *Sans) Type() *geneos.Component {
+func (s *Floatings) Type() *geneos.Component {
 	return s.Component
 }
 
-func (s *Sans) Name() string {
+func (s *Floatings) Name() string {
 	if s.Config() == nil {
 		return ""
 	}
 	return s.Config().GetString("name")
 }
 
-func (s *Sans) Home() string {
+func (s *Floatings) Home() string {
 	if s.Config() == nil {
 		return ""
 	}
 	return s.Config().GetString("home")
 }
 
-func (s *Sans) Host() *geneos.Host {
+func (s *Floatings) Host() *geneos.Host {
 	return s.InstanceHost
 }
 
-func (s *Sans) String() string {
+func (s *Floatings) String() string {
 	return instance.DisplayName(s)
 }
 
-func (s *Sans) Load() (err error) {
+func (s *Floatings) Load() (err error) {
 	if s.ConfigLoaded {
 		return
 	}
@@ -170,28 +156,28 @@ func (s *Sans) Load() (err error) {
 	return
 }
 
-func (s *Sans) Unload() (err error) {
-	sans.Delete(s.Name() + "@" + s.Host().String())
+func (s *Floatings) Unload() (err error) {
+	floatings.Delete(s.Name() + "@" + s.Host().String())
 	s.ConfigLoaded = false
 	return
 }
 
-func (s *Sans) Loaded() bool {
+func (s *Floatings) Loaded() bool {
 	return s.ConfigLoaded
 }
 
-func (s *Sans) Config() *config.Config {
+func (s *Floatings) Config() *config.Config {
 	return s.Conf
 }
 
-func (s *Sans) Add(template string, port uint16) (err error) {
+func (s *Floatings) Add(template string, port uint16) (err error) {
 	if port == 0 {
-		port = instance.NextPort(s.InstanceHost, &San)
+		port = instance.NextPort(s.InstanceHost, &Floating)
 	}
 	s.Config().Set("port", port)
 	s.Config().Set("config.rebuild", "always")
-	s.Config().Set("config.template", SanDefaultTemplate)
-	s.Config().SetDefault("config.template", SanDefaultTemplate)
+	s.Config().Set("config.template", FloatingDefaultTemplate)
+	s.Config().SetDefault("config.template", FloatingDefaultTemplate)
 
 	if template != "" {
 		filename, _ := instance.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
@@ -226,7 +212,7 @@ func (s *Sans) Add(template string, port uint16) (err error) {
 // rebuild the netprobe.setup.xml file
 //
 // we do a dance if there is a change in TLS setup and we use default ports
-func (s *Sans) Rebuild(initial bool) (err error) {
+func (s *Floatings) Rebuild(initial bool) (err error) {
 	configrebuild := s.Config().GetString("config::rebuild")
 	if configrebuild == "never" {
 		return
@@ -261,10 +247,10 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 			return err
 		}
 	}
-	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), instance.Filename(s, "config::template"), SanTemplate)
+	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), instance.Filename(s, "config::template"), FloatingTemplate)
 }
 
-func (s *Sans) Command() (args, env []string) {
+func (s *Floatings) Command() (args, env []string) {
 	logFile := instance.LogFile(s)
 	args = []string{
 		s.Name(),
