@@ -145,10 +145,9 @@ func MustExist() FileOptions {
 	}
 }
 
-// SetAppName overrides to use of the [Load] `configName` argument
-// as the application name, `AppName`, which is used for sub-directories
-// while `configName“ is used as the prefix for files in those
-// directories.
+// SetAppName overrides to use of the [Load] `name` argument as the
+// application name, `AppName`, which is used for sub-directories while
+// `name` is used as the prefix for files in those directories.
 //
 // For example, if Load is called like this:
 //

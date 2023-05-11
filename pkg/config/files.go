@@ -132,7 +132,10 @@ func (cf *Config) ReadRCConfig(r host.Host, path string, prefix string, aliases 
 }
 
 // Path returns the full path to the first regular file found that would
-// be opened by Load() given the same options
+// be opened by Load() given the same options. If no file is found then
+// a path to the expected file in the first configured directory is
+// returned. This allows for a default value to be returned for new
+// files. If no directories are used then the plain filename is returned.
 func Path(name string, options ...FileOptions) string {
 	opts := evalLoadOptions(name, options...)
 	r := opts.remote
@@ -163,7 +166,8 @@ func Path(name string, options ...FileOptions) string {
 				return path
 			}
 		}
+		return filepath.Join(confDirs[0], filename)
 	}
 
-	return ""
+	return filename
 }

@@ -52,7 +52,7 @@ var UserKeyFile config.KeyFile
 
 var debug, quiet bool
 
-var DefaultUserKeyfile = config.KeyFile(config.Path("keyfile", config.SetFileFormat("aes")))
+var DefaultUserKeyfile = config.KeyFile(config.Path("keyfile", config.SetAppName(Execname), config.SetFileFormat("aes"), config.IgnoreWorkingDir()))
 
 // geneos.UserConfigFilePaths("keyfile.aes")[0])
 
