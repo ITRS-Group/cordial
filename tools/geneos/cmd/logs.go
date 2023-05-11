@@ -62,6 +62,9 @@ func init() {
 	logsCmd.Flags().StringVarP(&logCmdMatch, "match", "g", "", "Match lines with STRING")
 	logsCmd.Flags().StringVarP(&logCmdIgnore, "ignore", "v", "", "Match lines without STRING")
 
+	logsCmd.MarkFlagsMutuallyExclusive("match", "ignore")
+	logsCmd.MarkFlagsMutuallyExclusive("cat", "follow")
+
 	logsCmd.Flags().SortFlags = false
 }
 
@@ -85,14 +88,6 @@ instance details.
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args, params := CmdArgsParams(cmd)
-		// validate options
-		if logCmdMatch != "" && logCmdIgnore != "" {
-			log.Fatal().Msg("Only one of -g or -v can be given")
-		}
-
-		if logCmdCat && logCmdFollow {
-			log.Fatal().Msg("Only one of -c or -f can be given")
-		}
 
 		// if we have match or exclude with other defaults, then turn on logcat
 		if (logCmdMatch != "" || logCmdIgnore != "") && !logCmdFollow {
@@ -278,7 +273,8 @@ func logCatInstance(c geneos.Instance, _ []string) (err error) {
 func logFollowInstance(c geneos.Instance, _ []string) (err error) {
 	logfile := instance.LogFile(c)
 
-	// store a placeholder
+	// store a placeholder, records interest for this instance even if
+	// file does not exist at start
 	tails.Store(c, &files{nil, 0})
 
 	f, err := c.Host().Open(logfile)
