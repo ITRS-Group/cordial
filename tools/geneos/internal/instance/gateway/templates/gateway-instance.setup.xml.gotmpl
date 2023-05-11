@@ -15,7 +15,7 @@
 			<string>{{.version}}</string>
 		</var>
 		<var name="_gatewayLogFile">
-			<string>{{$dir := first .logdir .gatehome}}{{join $dir .logfile}}</string>
+			<string>{{join .home .logfile}}</string>
 		</var>
 		{{range $key, $value := .env -}}
 		<var name="_{{nameOf $value "="}}">
