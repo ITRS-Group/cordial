@@ -81,7 +81,7 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 	// set high level defaults
 	m["root"] = c.Host().GetString("geneos")
 	m["name"] = c.Name()
-	// XXX remove aliases ??
+	// remove aliases
 	for _, k := range cf.AllKeys() {
 		if _, ok := c.Type().Aliases[k]; ok {
 			delete(m, k)
