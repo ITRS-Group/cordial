@@ -23,8 +23,8 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -34,6 +34,7 @@ import (
 
 var loginCmdSiteURL, loginCmdUsername, loginCmdPassword string
 var loginKeyfile config.KeyFile
+var retrieve bool
 
 func init() {
 	RootCmd.AddCommand(loginCmd)
@@ -42,6 +43,7 @@ func init() {
 	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username")
 	loginCmd.Flags().StringVarP(&loginCmdPassword, "password", "p", "", "Password")
 	loginCmd.Flags().VarP(&loginKeyfile, "keyfile", "k", "Keyfile to use")
+	loginCmd.Flags().BoolVarP(&retrieve, "ret", "r", false, "retrieve creds")
 
 	loginCmd.Flags().SortFlags = false
 
@@ -79,6 +81,17 @@ credentials can use a separate keyfile.
 		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		urlMatch := "itrsgroup.com"
+		if loginCmdSiteURL != "" {
+			urlMatch = loginCmdSiteURL
+		}
+
+		if retrieve {
+			b, _ := json.MarshalIndent(config.FindCreds(urlMatch, config.SetAppName(Execname)), "", "    ")
+			fmt.Printf("creds:\n%s\n", string(b))
+			return
+		}
+
 		if loginCmdUsername == "" {
 			if loginCmdUsername, err = config.ReadUserInput("Username: "); err != nil {
 				return
@@ -104,11 +117,8 @@ credentials can use a separate keyfile.
 		if loginCmdPassword == "" {
 			// prompt for password
 			enc, err = loginKeyfile.EncodePasswordInput(true)
-		}
-
-		urlMatch := "itrsgroup.com"
-		if loginCmdSiteURL != "" {
-			urlMatch = loginCmdSiteURL
+		} else {
+			enc, err = loginKeyfile.EncodeString(loginCmdPassword, true)
 		}
 
 		// default URL pattern
@@ -116,53 +126,13 @@ credentials can use a separate keyfile.
 			urlMatch = args[0]
 		}
 
-		fmt.Printf("username=%s, password=%s\n", loginCmdUsername, enc)
-		setCredentials(urlMatch, loginCmdUsername, enc)
+		config.AddCreds(config.Credentials{
+			Domain:   urlMatch,
+			Username: loginCmdUsername,
+			Password: enc,
+		}, config.SetAppName(Execname))
+
 		log.Debug().Msgf("conf: %+v", config.GetConfig().AllSettings())
 		return
 	},
-}
-
-type auth struct {
-	Username string
-	Password string
-}
-
-// var creds map[string]auth
-
-func getCredentials(path string) (a auth) {
-	cf := config.GetConfig()
-	creds := cf.GetStringMap("credentials")
-	paths := []string{}
-	for k, _ := range creds {
-		if strings.Contains(path, k) {
-			paths = append(paths, k)
-		}
-	}
-	if len(paths) == 0 {
-		return
-	}
-	sort.Slice(paths, func(i, j int) bool {
-		return len(paths[i]) < len(paths[j])
-	})
-
-	log.Debug().Msgf("paths: %v", paths)
-	switch v := creds[paths[0]].(type) {
-	case auth:
-		return v
-	default:
-		return
-	}
-}
-
-func setCredentials(urlmatch, username, password string) {
-	cf := config.New(config.KeyDelimiter("::"))
-	creds := cf.GetStringMap("credentials")
-	a := auth{
-		Username: username,
-		Password: password,
-	}
-	creds[urlmatch] = a
-	cf.Set("credentials", creds)
-	cf.Save("credentials", config.SetAppName(Execname))
 }
