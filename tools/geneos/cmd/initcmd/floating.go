@@ -25,6 +25,7 @@ package initcmd
 import (
 	"os"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -133,9 +134,16 @@ func initFloating(h *geneos.Host, options ...geneos.Options) (err error) {
 	if h != geneos.LOCAL {
 		floatingname = floatingname + "@" + geneos.LOCALHOST
 	}
-	install(&floating.Floating, geneos.LOCALHOST, options...)
-	cmd.AddInstance(&floating.Floating, initCmdExtras, floatingname)
-	cmd.Start(nil, initCmdLogs, e, e)
-	cmd.CommandPS(nil, e, e)
-	return nil
+	if err = install(&floating.Floating, geneos.LOCALHOST, options...); err != nil {
+		return
+	}
+
+	if err = cmd.AddInstance(&floating.Floating, initCmdExtras, floatingname); err != nil {
+		return
+	}
+	if err = cmd.Start(nil, initCmdLogs, e, e); err != nil {
+		return
+	}
+	time.Sleep(time.Second * 2)
+	return cmd.CommandPS(nil, e, e)
 }

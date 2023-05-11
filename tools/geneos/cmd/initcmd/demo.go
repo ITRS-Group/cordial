@@ -24,6 +24,7 @@ package initcmd
 
 import (
 	"strings"
+	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -110,19 +111,35 @@ func initDemo(h *geneos.Host, options ...geneos.Options) (err error) {
 	e := []string{}
 	g := []string{"Demo Gateway@" + h.String()}
 
-	install(&gateway.Gateway, geneos.LOCALHOST, options...)
-	install(&netprobe.Netprobe, geneos.LOCALHOST, options...)
-	install(&webserver.Webserver, geneos.LOCALHOST, options...)
+	if err = install(&gateway.Gateway, geneos.LOCALHOST, options...); err != nil {
+		return
+	}
+	if err = install(&netprobe.Netprobe, geneos.LOCALHOST, options...); err != nil {
+		return
+	}
+	if err = install(&webserver.Webserver, geneos.LOCALHOST, options...); err != nil {
+		return
+	}
 
-	cmd.AddInstance(&gateway.Gateway, initCmdExtras, "Demo Gateway@"+h.String())
-	cmd.Set(&gateway.Gateway, g, []string{"options=-demo"})
+	if err = cmd.AddInstance(&gateway.Gateway, initCmdExtras, "Demo Gateway@"+h.String()); err != nil {
+		return
+	}
+	if err = cmd.Set(&gateway.Gateway, g, []string{"options=-demo"}); err != nil {
+		return
+	}
 	// if len(initCmdExtras.Gateways) == 0 {
 	// 	initCmdExtras.Gateways.Set("localhost")
 	// }
-	cmd.AddInstance(&netprobe.Netprobe, initCmdExtras, "localhost@"+h.String())
-	cmd.AddInstance(&webserver.Webserver, initCmdExtras, "demo@"+h.String())
+	if err = cmd.AddInstance(&netprobe.Netprobe, initCmdExtras, "localhost@"+h.String()); err != nil {
+		return
+	}
+	if err = cmd.AddInstance(&webserver.Webserver, initCmdExtras, "demo@"+h.String()); err != nil {
+		return
+	}
 
-	cmd.Start(nil, initCmdLogs, e, e)
-	cmd.CommandPS(nil, e, e)
-	return
+	if err = cmd.Start(nil, initCmdLogs, e, e); err != nil {
+		return
+	}
+	time.Sleep(time.Second * 2)
+	return cmd.CommandPS(nil, e, e)
 }

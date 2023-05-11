@@ -25,6 +25,7 @@ package initcmd
 import (
 	"os"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -133,9 +134,15 @@ func initSan(h *geneos.Host, options ...geneos.Options) (err error) {
 	if h != geneos.LOCAL {
 		sanname = sanname + "@" + geneos.LOCALHOST
 	}
-	install(&san.San, geneos.LOCALHOST, options...)
-	cmd.AddInstance(&san.San, initCmdExtras, sanname)
-	cmd.Start(nil, initCmdLogs, e, e)
-	cmd.CommandPS(nil, e, e)
-	return nil
+	if err = install(&san.San, geneos.LOCALHOST, options...); err != nil {
+		return
+	}
+	if err = cmd.AddInstance(&san.San, initCmdExtras, sanname); err != nil {
+		return
+	}
+	if err = cmd.Start(nil, initCmdLogs, e, e); err != nil {
+		return
+	}
+	time.Sleep(time.Second * 2)
+	return cmd.CommandPS(nil, e, e)
 }
