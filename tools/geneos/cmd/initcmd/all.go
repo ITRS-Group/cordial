@@ -25,6 +25,7 @@ package initcmd
 import (
 	"os"
 	"strings"
+	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -128,20 +129,40 @@ func initAll(h *geneos.Host, options ...geneos.Options) (err error) {
 		}
 	}
 
-	install(&licd.Licd, h.String(), options...)
-	install(&gateway.Gateway, h.String(), options...)
-	install(&netprobe.Netprobe, h.String(), options...)
-	install(&webserver.Webserver, h.String(), options...)
+	if err = install(&licd.Licd, h.String(), options...); err != nil {
+		return
+	}
+	if err = install(&gateway.Gateway, h.String(), options...); err != nil {
+		return
+	}
+	if err = install(&netprobe.Netprobe, h.String(), options...); err != nil {
+		return
+	}
+	if err = install(&webserver.Webserver, h.String(), options...); err != nil {
+		return
+	}
 
-	cmd.AddInstance(&licd.Licd, initCmdExtras, initCmdName)
-	cmd.ImportFiles(&licd.Licd, []string{initCmdName}, []string{"geneos.lic=" + initAllCmdLicenseFile})
-	cmd.AddInstance(&gateway.Gateway, initCmdExtras, initCmdName)
+	if err = cmd.AddInstance(&licd.Licd, initCmdExtras, initCmdName); err != nil {
+		return
+	}
+	if err = cmd.ImportFiles(&licd.Licd, []string{initCmdName}, []string{"geneos.lic=" + initAllCmdLicenseFile}); err != nil {
+		return
+	}
+	if err = cmd.AddInstance(&gateway.Gateway, initCmdExtras, initCmdName); err != nil {
+		return
+	}
 	// if len(initCmdExtras.Gateways) == 0 {
 	// 	initCmdExtras.Gateways.Set("localhost")
 	// }
-	cmd.AddInstance(&netprobe.Netprobe, initCmdExtras, "localhost@"+h.String())
-	cmd.AddInstance(&webserver.Webserver, initCmdExtras, initCmdName)
-	cmd.Start(nil, initCmdLogs, e, e)
-	cmd.CommandPS(nil, e, e)
-	return nil
+	if err = cmd.AddInstance(&netprobe.Netprobe, initCmdExtras, "localhost@"+h.String()); err != nil {
+		return
+	}
+	if err = cmd.AddInstance(&webserver.Webserver, initCmdExtras, initCmdName); err != nil {
+		return
+	}
+	if err = cmd.Start(nil, initCmdLogs, e, e); err != nil {
+		return
+	}
+	time.Sleep(time.Second * 2)
+	return cmd.CommandPS(nil, e, e)
 }

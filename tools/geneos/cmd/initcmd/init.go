@@ -311,7 +311,7 @@ func initMisc(command *cobra.Command) (err error) {
 	return
 }
 
-// XXX this is a duplicate of the function in package/packageInstall.go
+// XXX this is a duplicate of the function in pkgcmd/install.go
 func install(ct *geneos.Component, target string, options ...geneos.Options) (err error) {
 	for _, h := range geneos.Match(target) {
 		if err = ct.MakeComponentDirs(h); err != nil {
