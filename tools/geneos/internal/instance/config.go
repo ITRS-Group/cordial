@@ -2,6 +2,7 @@ package instance
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -615,7 +616,12 @@ func (i *EnvValues) Type() string {
 }
 
 // variables - [TYPE:]NAME=VALUE
-type VarValues map[string]string
+type VarValue struct {
+	Type  string
+	Name  string
+	Value string
+}
+type VarValues map[string]VarValue
 
 func (i *VarValues) String() string {
 	return ""
@@ -658,8 +664,13 @@ func (i *VarValues) Set(value string) error {
 		log.Error().Msgf("invalid type %q for variable. valid types are 'string', 'integer', 'double', 'boolean', 'activeTime', 'externalConfigFile'", t)
 		return geneos.ErrInvalidArgs
 	}
-	val := t + ":" + v
-	(*i)[k] = val
+	// val := t + ":" + v
+	key := hex.EncodeToString([]byte(k))
+	(*i)[key] = VarValue{
+		Type:  t,
+		Name:  k,
+		Value: v,
+	}
 	return nil
 }
 
@@ -673,7 +684,7 @@ type UnsetConfigValues struct {
 	Gateways   UnsetCmdValues
 	Attributes UnsetCmdValues
 	Envs       UnsetCmdValues
-	Variables  UnsetCmdValues
+	Variables  UnsetCmdHexKeyed
 	Types      UnsetCmdValues
 }
 
@@ -687,7 +698,7 @@ func UnsetValues(c geneos.Instance, x UnsetConfigValues) (changed bool, err erro
 		changed = true
 	}
 
-	if UnsetMap(c, "variables", x.Variables) {
+	if UnsetMapHex(c, "variables", x.Variables) {
 		changed = true
 	}
 
@@ -713,6 +724,20 @@ func UnsetValues(c geneos.Instance, x UnsetConfigValues) (changed bool, err erro
 }
 
 func UnsetMap(c geneos.Instance, key string, items UnsetCmdValues) (changed bool) {
+	cf := c.Config()
+
+	x := cf.GetStringMap(key)
+	for _, k := range items {
+		DeleteSettingFromMap(c, x, k)
+		changed = true
+	}
+	if changed {
+		cf.Set(key, x)
+	}
+	return
+}
+
+func UnsetMapHex(c geneos.Instance, key string, items UnsetCmdHexKeyed) (changed bool) {
 	cf := c.Config()
 
 	x := cf.GetStringMap(key)
@@ -760,5 +785,23 @@ func (i *UnsetCmdValues) Set(value string) error {
 }
 
 func (i *UnsetCmdValues) Type() string {
+	return "SETTING"
+}
+
+type UnsetCmdHexKeyed []string
+
+func (i *UnsetCmdHexKeyed) String() string {
+	return ""
+}
+
+func (i *UnsetCmdHexKeyed) Set(value string) error {
+	// discard any values accidentally passed with '=value'
+	value = strings.SplitN(value, "=", 2)[0]
+	value = hex.EncodeToString([]byte(value))
+	*i = append(*i, value)
+	return nil
+}
+
+func (i *UnsetCmdHexKeyed) Type() string {
 	return "SETTING"
 }
