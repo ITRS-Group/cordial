@@ -6,7 +6,7 @@ This probably could be done using custom decode hooks for viper, but I have not 
 
 Using a wrapper also allows custom methods on config for further functionality.
 
-Unless the file format is given to [`LoadConfig`](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#LoadConfig) then all the viper formats are supported.
+Unless the file format is given to [`Load`](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Load) then all the viper formats are supported.
 
 ## Expansion of values
 

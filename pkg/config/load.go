@@ -132,7 +132,7 @@ func Load(name string, options ...LoadOptions) (c *Config, err error) {
 	log.Debug().Msgf("confDirs: %v", confDirs)
 
 	// search directories for defaults unless UseDefault(false) is
-	// used as an option to LoadConfig(). we do this even if the
+	// used as an option to Load(). we do this even if the
 	// config file itself is set using option SetConfigFile()
 	if opts.usedefaults {
 		if opts.merge {
