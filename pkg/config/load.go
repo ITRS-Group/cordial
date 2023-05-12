@@ -87,8 +87,8 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 	vp := c.Viper
 	vp.SetFs(r.GetFs())
 
-	defaults := viper.New()
-	internalDefaults := viper.New()
+	defaults := New(options...)
+	internalDefaults := New(options...)
 
 	if opts.usedefaults && len(opts.internalDefaults) > 0 {
 		buf := bytes.NewBuffer(opts.internalDefaults)
@@ -137,7 +137,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 	if opts.usedefaults {
 		if opts.merge {
 			for _, dir := range confDirs {
-				d := viper.New()
+				d := New(options...)
 				d.SetFs(r.GetFs())
 				d.AddConfigPath(dir)
 				d.SetConfigName(name + ".defaults." + opts.configFileFormat)
@@ -200,7 +200,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 	if opts.merge {
 		found := 0
 		for _, dir := range confDirs {
-			d := viper.New()
+			d := New(options...)
 			d.SetFs(r.GetFs())
 			d.AddConfigPath(dir)
 			d.SetConfigName(name + "." + opts.configFileFormat)
