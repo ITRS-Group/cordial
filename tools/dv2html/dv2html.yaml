@@ -89,7 +89,7 @@ html-template: |+
 
     table, th, td {
       table-layout: fixed;
-      font-family: monospace;
+      font-family: Lucida Console, monospace;
       border: 1px solid black;
       border-collapse: collapse;
       padding: 5px;
@@ -150,7 +150,7 @@ html-template: |+
     <tbody>
       <tr><th>Dataview</th><td>{{.Name}}</td></tr>
       <tr><th>XPath</th><td>{{.XPath}}</td></tr>
-      <tr><th>Last Sampler</th><td>{{.SampleTime}}</td></tr>
+      <tr><th>Last Sample</th><td>{{.SampleTime}}</td></tr>
       <tr>
         <th>Headlines</th>
         <td>
@@ -158,7 +158,7 @@ html-template: |+
             <tbody>
               {{range $headline, $values := .Headlines}}<tr>
                 <th class="headlines">{{$headline}}</th>
-                <td class="headlines {{.Severity}}">{{$values.Value}}</td>
+                <td class="headlines {{.Severity}} {{if and (eq $.Env._HEADLINE $headline)}} target{{end}}">{{$values.Value}}</td>
               </tr>
               {{end}}
             </tbody>
@@ -173,12 +173,18 @@ html-template: |+
               {{range .Columns}}<th>{{.}}</th>{{end}}
             </thead>
             <tbody>
-              {{range $row, $cells := .Table}}<tr>
+              {{range $row := $.Rows}}
+              <tr>
                 <th>{{$row}}</th>
                 {{range $i, $column := $dataview.Columns}}
-                  {{if ne $i 0}}{{with (index $cells $column)}}<td class="{{.Severity}}{{if and (eq $.Env._ROW $row) (eq $.Env._COLUMN $column)}} target{{end}}">{{.Value}}</td>{{end}}{{end}}
+                    {{if ne $i 0}}
+                      {{with (index $dataview.Table $row $column)}}
+                        <td class="cells {{.Severity}}{{if and (eq $.Env._ROWNAME $row) (eq $.Env._COLUMN $column)}} target{{end}}">{{.Value}}</td>
+                      {{end}}
+                    {{end}}
                 {{end}}
-              </tr>{{end}}
+              </tr>
+              {{end}}
             </tbody>
           </table>
           {{end}}

@@ -23,6 +23,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	_ "embed"
 	"fmt"
 	"html/template"
 	"io"
@@ -30,13 +31,15 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/aymerick/douceur/inliner"
+	"github.com/go-mail/mail/v2"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/commands"
@@ -65,7 +68,10 @@ func init() {
 	cordial.LogInit(execname)
 }
 
+var cf *config.Config
+
 func initConfig() {
+	var err error
 	if quiet {
 		zerolog.SetGlobalLevel(zerolog.Disabled)
 	} else if debug {
@@ -74,38 +80,29 @@ func initConfig() {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-		viper.AutomaticEnv() // read in environment variables that match
-		// If a config file is found, read it in.
-		if err := viper.ReadInConfig(); err == nil {
-			fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-		}
-	} else {
-		cf, err := config.Load(execname,
-			config.SetAppName("geneos"),
-			config.SetConfigFile(cfgFile),
-			config.SetGlobal(),
-			config.MergeSettings(),
-			config.SetFileFormat("yaml"),
-		)
-		if err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
-
-		replacer := strings.NewReplacer(".", "_")
-		cf.SetEnvKeyReplacer(replacer)
-		cf.AutomaticEnv()
+	cf, err = config.Load(execname,
+		config.SetAppName("geneos"),
+		config.SetConfigFile(cfgFile),
+		config.MergeSettings(),
+		config.SetFileFormat("yaml"),
+		config.KeyDelimiter("::"),
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
 	}
+	cf.AutomaticEnv()
 }
 
 type dv2htmlData struct {
 	CSSURL    string
 	CSSDATA   template.CSS
 	Dataviews []*commands.Dataview
+	Rows      []string
 	Env       map[string]string
 }
+
+//go:embed dv2html.gotmpl
+var htmlDefaultTemplate string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -124,7 +121,6 @@ gateway can be located in dv2html.yaml (either in the working
 directory or in the user's .config/dv2html directory)
 	`, "|", "`"),
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		cf := config.GetConfig()
 		u := &url.URL{
 			Scheme: "http",
 			Host:   fmt.Sprintf("%s:%d", cf.GetString("host"), cf.GetInt("port")),
@@ -147,12 +143,11 @@ directory or in the user's .config/dv2html directory)
 			log.Fatal().Err(err).Msg("")
 		}
 
-		// cf.SetDefault("css-data", cssData)
-
 		tmplData := dv2htmlData{
 			CSSURL:    cf.GetString("css-url"),
 			CSSDATA:   template.CSS(cf.GetString("css-data")),
 			Dataviews: []*commands.Dataview{},
+			Rows:      []string{},
 			Env:       make(map[string]string, len(os.Environ())),
 		}
 
@@ -169,33 +164,33 @@ directory or in the user's .config/dv2html directory)
 			return
 		}
 
-		paths, err := gw.Match(dv, 0)
+		dataviews, err := gw.Match(dv, 0)
 		if err != nil {
 			log.Error().Err(err).Msg("")
 			return
 		}
 
-		if len(paths) == 0 {
+		if len(dataviews) == 0 {
 			log.Fatal().Msg("no matching dataviews found")
 		}
 
 		em := config.New()
 		// set default from yaml file, can be overridden from Geneos
-		em.SetDefault("_smtp_username", cf.GetString("email.username"))
-		em.SetDefault("_smtp_password", cf.GetString("email.password", config.RawString()))
-		em.SetDefault("_smtp_server", cf.GetString("email.smtp", config.Default("localhost")))
-		em.SetDefault("_smtp_port", cf.GetInt("email.port", config.Default(25)))
-		em.SetDefault("_from", cf.GetString("email.from"))
-		em.SetDefault("_to", cf.GetString("email.to"))
-		em.SetDefault("_subject", cf.GetString("email.subject", config.Default("Geneos Alert")))
+		em.SetDefault("_smtp_username", cf.GetString("email::username"))
+		em.SetDefault("_smtp_password", cf.GetString("email::password", config.RawString()))
+		em.SetDefault("_smtp_server", cf.GetString("email::smtp", config.Default("localhost")))
+		em.SetDefault("_smtp_port", cf.GetInt("email::port", config.Default(25)))
+		em.SetDefault("_from", cf.GetString("email::from"))
+		em.SetDefault("_to", cf.GetString("email::to"))
+		em.SetDefault("_subject", cf.GetString("email::subject", config.Default("Geneos Alert")))
 
 		for _, e := range os.Environ() {
 			n := strings.SplitN(e, "=", 2)
 			em.Set(n[0], n[1])
 		}
 
-		for _, x := range paths {
-			data, err := gw.Snapshot(x, commands.Scope{Value: true, Severity: true})
+		for _, dataview := range dataviews {
+			data, err := gw.Snapshot(dataview, commands.Scope{Value: true, Severity: true})
 			if err != nil {
 				log.Error().Err(err).Msg("")
 				continue
@@ -204,9 +199,10 @@ directory or in the user's .config/dv2html directory)
 			tmplData.Dataviews = append(tmplData.Dataviews, data)
 
 			// filter here
-			if em.IsSet("__headlines") {
+
+			headlines := match(data.Name, "headline-filter", "__headlines", em)
+			if len(headlines) > 0 {
 				nh := map[string]commands.DataItem{}
-				headlines := strings.Split(em.GetString("__headlines"), ",")
 				for _, h := range headlines {
 					h = strings.TrimSpace(h)
 					for oh, headline := range data.Headlines {
@@ -218,9 +214,9 @@ directory or in the user's .config/dv2html directory)
 				data.Headlines = nh
 			}
 
-			if em.IsSet("__columns") {
-				nc := []string{"rowname"}
-				cols := strings.Split(em.GetString("__columns"), ",")
+			cols := match(data.Name, "column-order", "__columns", em)
+			if len(cols) > 0 {
+				nc := []string{cols[0]}
 				for _, c := range cols {
 					c = strings.TrimSpace(c)
 					for _, oc := range data.Columns {
@@ -235,9 +231,9 @@ directory or in the user's .config/dv2html directory)
 				data.Columns = nc
 			}
 
-			if em.IsSet("__rows") {
+			rows := match(data.Name, "row-filter", "__rows", em)
+			if len(rows) > 0 {
 				nr := map[string]map[string]commands.DataItem{}
-				rows := strings.Split(em.GetString("__rows"), ",")
 				for _, r := range rows {
 					r = strings.TrimSpace(r)
 					for rowname, row := range data.Table {
@@ -247,6 +243,46 @@ directory or in the user's .config/dv2html directory)
 					}
 				}
 				data.Table = nr
+			}
+
+			// default ordered rownames after filtering
+			for k := range data.Table {
+				tmplData.Rows = append(tmplData.Rows, k)
+			}
+			sort.Strings(tmplData.Rows)
+
+			asc := true
+			matches := matchdv(data.Name, "row-order")
+			if len(matches) > 0 {
+				m := matches[0]
+				switch {
+				case strings.HasSuffix(m, "-"):
+					asc = false
+					m = m[:len(m)-1]
+				case strings.HasSuffix(m, "+"):
+					m = m[:len(m)-1]
+					fallthrough
+				default:
+					asc = true
+				}
+				sort.Slice(tmplData.Rows, func(i, j int) bool {
+					r := tmplData.Rows
+					a := data.Table[r[i]][m].Value
+					af, _ := strconv.ParseFloat(a, 64)
+					b := data.Table[r[j]][m].Value
+					bf, _ := strconv.ParseFloat(b, 64)
+					if a == b {
+						if asc {
+							return a < b
+						} else {
+							return a > b
+						}
+					}
+					if asc {
+						return af < bf
+					}
+					return bf < af
+				})
 			}
 
 			if err != nil {
@@ -266,6 +302,8 @@ directory or in the user's .config/dv2html directory)
 		}
 		m.SetHeader("Subject", em.GetString("_subject"))
 
+		m.SetBody("text/plain", cf.GetString("text-template"))
+
 		if inlineCSS {
 			var body strings.Builder
 			t.Execute(&body, tmplData)
@@ -273,11 +311,19 @@ directory or in the user's .config/dv2html directory)
 			if err != nil {
 				log.Fatal().Err(err).Msg("")
 			}
-			m.SetBody("text/html", inlined)
+			m.AddAlternative("text/html", inlined)
 		} else {
-			m.SetBodyWriter("text/html", func(w io.Writer) error {
+			m.AddAlternativeWriter("text/html", func(w io.Writer) error {
 				return t.Execute(w, tmplData)
 			})
+		}
+
+		for name, path := range cf.GetStringMapString("images") {
+			if _, err := os.Stat(path); err != nil {
+				log.Error().Err(err).Msg("skipping")
+				continue
+			}
+			m.Embed(path, mail.Rename(name))
 		}
 
 		err = d.DialAndSend(m)
@@ -296,4 +342,45 @@ func Execute() {
 	if err != nil {
 		os.Exit(1)
 	}
+}
+
+func match(dataview, confkey, env string, em *config.Config) (matches []string) {
+	if em.IsSet(env) {
+		matches = strings.Split(em.GetString(env), ",")
+	} else {
+		matches = matchdv(dataview, confkey)
+		// rowmatches := cf.GetStringMapStringSlice(confkey)
+		// keys := []string{}
+		// for k := range rowmatches {
+		// 	keys = append(keys, k)
+		// }
+		// sort.Slice(keys, func(i, j int) bool {
+		// 	return len(keys[i]) > len(keys[j])
+		// })
+		// for _, m := range keys {
+		// 	if ok, _ := path.Match(m, dataview); ok {
+		// 		matches = rowmatches[m]
+		// 		break
+		// 	}
+		// }
+	}
+	return
+}
+
+func matchdv(dataview, confkey string) (matches []string) {
+	checks := cf.GetStringMapStringSlice(confkey)
+	keys := []string{}
+	for k := range checks {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return len(keys[i]) > len(keys[j])
+	})
+	for _, m := range keys {
+		if ok, _ := path.Match(m, dataview); ok {
+			matches = checks[m]
+			break
+		}
+	}
+	return
 }
