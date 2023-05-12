@@ -76,18 +76,11 @@ func init() {
 //
 //
 
-//go:embed dv2html.css
-var cssData template.CSS
+// //go:embed dv2html.css
+// var cssData template.CSS
 
 //go:embed dv2html.gotmpl
 var htmlDefaultTemplate string
-
-type templateData struct {
-	CSSURL    string
-	CSSDATA   template.CSS
-	Dataviews []*commands.Dataview
-	Env       map[string]string
-}
 
 // getCmd represents the get command
 var getCmd = &cobra.Command{
@@ -140,9 +133,9 @@ Get a Dataview from a Gateway and convert to HTML using a template and CSS.
 			log.Fatal().Err(err).Msg("")
 		}
 
-		cf.SetDefault("css-data", cssData)
+		// cf.SetDefault("css-data", cssData)
 
-		tmplData := templateData{
+		tmplData := dv2htmlData{
 			CSSURL:    cf.GetString("css-url"),
 			CSSDATA:   template.CSS(cf.GetString("css-data")),
 			Dataviews: []*commands.Dataview{},

@@ -54,7 +54,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	rootCmd.PersistentFlags().BoolVarP(&inlineCSS, "inline-css", "i", false, "try to inline CSS for better mail client support")
+	rootCmd.PersistentFlags().BoolVarP(&inlineCSS, "inline-css", "i", true, "try to inline CSS for better mail client support")
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2html.yaml)")
 
 	// how to remove the help flag help text from the help output! Sigh...
@@ -88,6 +88,7 @@ func initConfig() {
 			config.SetConfigFile(cfgFile),
 			config.SetGlobal(),
 			config.MergeSettings(),
+			config.SetFileFormat("yaml"),
 		)
 		if err != nil {
 			log.Fatal().Err(err).Msg("")
@@ -97,6 +98,13 @@ func initConfig() {
 		cf.SetEnvKeyReplacer(replacer)
 		cf.AutomaticEnv()
 	}
+}
+
+type dv2htmlData struct {
+	CSSURL    string
+	CSSDATA   template.CSS
+	Dataviews []*commands.Dataview
+	Env       map[string]string
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -115,7 +123,7 @@ Settings for the Gateway REST connection and defaults for the EMail
 gateway can be located in dv2html.yaml (either in the working
 directory or in the user's .config/dv2html directory)
 	`, "|", "`"),
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		cf := config.GetConfig()
 		u := &url.URL{
 			Scheme: "http",
@@ -132,19 +140,16 @@ directory or in the user's .config/dv2html directory)
 			log.Fatal().Err(err).Msg("")
 		}
 
-		htmlTemplate := htmlDefaultTemplate
-		if h := cf.GetString("html-template"); h != "" {
-			htmlTemplate = h
-		}
+		htmlTemplate := cf.GetString("html-template", config.Default(htmlDefaultTemplate))
 
 		t, err := template.New("dataview").Parse(htmlTemplate)
 		if err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 
-		cf.SetDefault("css-data", cssData)
+		// cf.SetDefault("css-data", cssData)
 
-		tmplData := templateData{
+		tmplData := dv2htmlData{
 			CSSURL:    cf.GetString("css-url"),
 			CSSDATA:   template.CSS(cf.GetString("css-data")),
 			Dataviews: []*commands.Dataview{},
