@@ -1,10 +1,21 @@
 username: readonly
 password: geneos
-
 use-tls: true
 allow-insecure: true
-
 port: 7038
+
+# configure the email server details in your user dv2html YAML file -
+# which should have "0600" permissions - which is then merged with the
+# YAML file in the working directory. Your user YAML file is normally
+# ${HOME}/.config/geneos/dv2html.yaml
+
+# email:
+#   smtp: smtp.gmail.com
+#   port: 465
+#   username: user-email
+#   password: ${enc:~/.config/geneos/keyfile.aes:+encs+XXX}
+#   from: from-email
+#   to: destination-email
 
 text-template: ""
 
