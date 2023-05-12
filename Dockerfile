@@ -16,20 +16,18 @@ RUN apk add build-base
 # be from a different arch or environment
 COPY ./ /app/cordial
 WORKDIR /app/cordial/tools/geneos
-# RUN go mod tidy
-# RUN go clean
 RUN go build --ldflags '-linkmode external -extldflags=-static'
 RUN GOOS=windows go build
+WORKDIR /app/cordial/tools/dv2html
+RUN go build --ldflags '-linkmode external -extldflags=-static'
 WORKDIR /app/cordial/integrations/servicenow
-# RUN go mod tidy
-# RUN go clean
 RUN go build --ldflags '-linkmode external -extldflags=-static'
 WORKDIR /app/cordial/integrations/pagerduty
-# RUN go mod tidy
-# RUN go clean
 RUN go build --ldflags '-linkmode external -extldflags=-static'
 
-# special centos7 build environment for shared libs
+# special centos7 build environment for shared libs and a version of the
+# geneos program that is dynamic enough to communicate with a domain
+# controller
 FROM centos:7 AS build-libs
 LABEL stage=cordial-build
 RUN yum install -y gcc make
@@ -59,6 +57,8 @@ RUN apt update && apt install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0
 RUN npm install --global mdpdf
 RUN mdpdf --border=15mm /app/cordial/tools/geneos/README.md geneos.pdf
 COPY ./tools/geneos/README.md geneos.md
+RUN mdpdf --border=15mm /app/cordial/tools/dv2html/README.md dv2html.pdf
+COPY ./tools/dv2html/README.md dv2html.md
 RUN mdpdf --border=15mm /app/cordial/integrations/servicenow/README.md servicenow.pdf
 COPY ./integrations/servicenow/README.md servicenow.md
 RUN mdpdf --border=15mm /app/cordial/integrations/pagerduty/README.md pagerduty.pdf
@@ -79,6 +79,7 @@ WORKDIR /app/cordial
 COPY --from=build /app/cordial/VERSION /
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
 COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/bin/
+COPY --from=build /app/cordial/tools/dv2html/dv2html /cordial/bin/
 COPY --from=build-docs /app/cordial/doc-output /cordial/docs
 COPY --from=build /app/cordial/integrations/servicenow/servicenow /app/cordial/integrations/servicenow/ticket.sh /app/cordial/integrations/pagerduty/pagerduty /cordial/bin/
 COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /app/cordial/integrations/pagerduty/cmd/pagerduty.defaults.yaml /cordial/etc/geneos/
@@ -87,7 +88,7 @@ COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /cordial/lib/
 COPY --from=build-libs /app/cordial/libraries/libalert/libalert.so /cordial/lib/
 RUN mv /cordial /cordial-$(cat /VERSION)
 WORKDIR /
-RUN tar czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION) && zip -q -r /cordial-$(cat /VERSION).zip cordial-$(cat /VERSION) && rm -r /cordial-$(cat /VERSION)
+RUN tar czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION) && zip -q -r /cordial-$(cat /VERSION).zip cordial-$(cat /VERSION)
 CMD [ "bash" ]
 
 #
@@ -96,6 +97,8 @@ CMD [ "bash" ]
 FROM debian AS cordial-run
 RUN apt update && apt install -y fontconfig ca-certificates
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
+COPY --from=build /app/cordial/tools/dv2html/dv2html /bin/
+COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /lib/
 RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
@@ -108,6 +111,8 @@ CMD [ "bash" ]
 FROM centos:centos8 AS cordial-run-el8
 # RUN apt update && apt install -y fontconfig ca-certificates
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
+COPY --from=build /app/cordial/tools/dv2html/dv2html /bin/
+COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /lib/
 RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos

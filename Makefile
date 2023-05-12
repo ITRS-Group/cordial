@@ -9,6 +9,8 @@ release:
 	mkdir -p releases/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).tar.gz releases/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).zip releases/
+	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/geneos releases/geneos-$(VERSION)
+	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/dv2html releases/dv2html-$(VERSION)
 	docker rm cordial-build-$(VERSION)
 	docker image rm cordial-build:$(VERSION)
 	docker image prune --filter label=stage=cordial-build -f
