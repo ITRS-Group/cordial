@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -41,7 +42,7 @@ on of the flags is set.
 		"needshomedir": "false",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
-		var plaintext []byte
+		var plaintext *memguard.Enclave
 
 		crc, created, err := cmd.DefaultUserKeyfile.Check(true)
 		if err != nil {
@@ -53,12 +54,14 @@ on of the flags is set.
 		}
 
 		if aesPasswordCmdString != "" {
-			plaintext = []byte(aesPasswordCmdString)
+			plaintext = memguard.NewEnclave([]byte(aesPasswordCmdString))
 		} else if aesPasswordCmdSource != "" {
-			plaintext, err = geneos.ReadFrom(aesPasswordCmdSource)
+			var pt []byte
+			pt, err = geneos.ReadFrom(aesPasswordCmdSource)
 			if err != nil {
 				return
 			}
+			plaintext = memguard.NewEnclave(pt)
 		} else {
 			plaintext, err = config.ReadPasswordInput(true, 3)
 			if err != nil {

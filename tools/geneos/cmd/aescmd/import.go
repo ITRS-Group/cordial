@@ -78,10 +78,11 @@ type.
 	RunE: func(command *cobra.Command, _ []string) error {
 		ct, _, _ := cmd.CmdArgsParams(command)
 
-		a, err := aesImportCmdKeyfile.Read()
+		m, a, err := aesImportCmdKeyfile.Read()
 		if err != nil {
 			return err
 		}
+		defer m.Destroy()
 
 		h := geneos.GetHost(aesImportCmdHostname)
 
@@ -89,7 +90,7 @@ type.
 		// the filename base. create 'keyfiles' directory as required
 		for _, ct := range ct.Range(componentsWithKeyfiles...) {
 			for _, h := range h.Range(geneos.AllHosts()...) {
-				aesImportSave(ct, h, &a)
+				aesImportSave(ct, h, a)
 			}
 		}
 

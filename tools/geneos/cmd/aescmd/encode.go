@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -72,14 +73,15 @@ var aesEncodeCmd = &cobra.Command{
 		"needshomedir": "true",
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
-		var plaintext []byte
+		var plaintext *memguard.Enclave
 		if aesEncodeCmdString != "" {
-			plaintext = []byte(aesEncodeCmdString)
+			plaintext = memguard.NewEnclave([]byte(aesEncodeCmdString))
 		} else if aesEncodeCmdSource != "" {
-			plaintext, err = geneos.ReadFrom(aesEncodeCmdSource)
+			pt, err := geneos.ReadFrom(aesEncodeCmdSource)
 			if err != nil {
-				return
+				return err
 			}
+			plaintext = memguard.NewEnclave(pt)
 		} else {
 			plaintext, err = config.ReadPasswordInput(!aesEncodeCmdAskOnce, 0)
 			if err != nil {
@@ -98,8 +100,9 @@ var aesEncodeCmd = &cobra.Command{
 		}
 
 		ct, args := cmd.CmdArgs(command)
-		err = instance.ForAll(ct, aesEncodeInstance, args, []string{base64.StdEncoding.EncodeToString(plaintext)})
-		// plaintext = bytes.Repeat([]byte{0}, len(plaintext)) // zero plaintext when done - not for now
+		pw, _ := plaintext.Open()
+		err = instance.ForAll(ct, aesEncodeInstance, args, []string{base64.StdEncoding.EncodeToString(pw.Bytes())})
+		pw.Destroy()
 		return
 	},
 }
@@ -113,7 +116,8 @@ func aesEncodeInstance(c geneos.Instance, params []string) (err error) {
 		return
 	}
 
-	plaintext, _ := base64.StdEncoding.DecodeString(params[0])
+	pw, _ := base64.StdEncoding.DecodeString(params[0])
+	plaintext := memguard.NewEnclave(pw)
 	e, err := keyfile.Encode(plaintext, aesEncodeCmdExpandable)
 	if err != nil {
 		return

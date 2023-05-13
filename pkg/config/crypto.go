@@ -27,8 +27,6 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
-	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"hash/crc32"
@@ -37,43 +35,32 @@ import (
 	"sort"
 	"strings"
 	"unicode/utf8"
+	"unsafe"
 
-	"golang.org/x/crypto/pbkdf2"
+	"github.com/awnumar/memguard"
 )
 
 // KeyValues contains the values required to create a Geneos Gateway AES
 // key file and then to encode and decode AES passwords in
 // configurations
 type KeyValues struct {
-	key []byte
-	iv  []byte
+	key [aes.BlockSize * 2]byte
+	iv  [aes.BlockSize]byte
 }
 
-// NewKeyValues returns a new KeyValues structure with a key and iv
-// generated using the crypto/rand package.
-func NewKeyValues() (kv KeyValues, err error) {
-	rp := make([]byte, 20)
-	salt := make([]byte, 10)
+// NewRandomKeyValues returns a new KeyValues structure with a key and iv
+// generated using the memguard. The KeyValue should be destoryed after use.
+func NewRandomKeyValues() (m *memguard.LockedBuffer, kv *KeyValues) {
+	var k *KeyValues
+	m = memguard.NewBufferRandom(int(unsafe.Sizeof(*k)))
+	kv = (*KeyValues)(unsafe.Pointer(&m.Bytes()[0]))
+	return
+}
 
-	// generate the key and IV separately; this could be done in one
-	// call, but it seems better practise to do it in two passes
-
-	if _, err = rand.Read(rp); err != nil {
-		return
-	}
-	if _, err = rand.Read(salt); err != nil {
-		return
-	}
-	kv.key = pbkdf2.Key(rp, salt, 10000, 32, sha1.New)
-
-	if _, err = rand.Read(rp); err != nil {
-		return
-	}
-	if _, err = rand.Read(salt); err != nil {
-		return
-	}
-	kv.iv = pbkdf2.Key(rp, salt, 10000, aes.BlockSize, sha1.New)
-
+func NewKeyValues() (m *memguard.LockedBuffer, kv *KeyValues) {
+	var k *KeyValues
+	m = memguard.NewBuffer(int(unsafe.Sizeof(*k)))
+	kv = (*KeyValues)(unsafe.Pointer(&m.Bytes()[0]))
 	return
 }
 
@@ -83,31 +70,23 @@ func NewKeyValues() (kv KeyValues, err error) {
 // file for secure passwords as described in:
 // https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm
 func (kv *KeyValues) String() string {
-	if len(kv.key) != 32 || len(kv.iv) != aes.BlockSize {
-		return ""
-	}
 	// space intentional to match native OpenSSL output
 	return fmt.Sprintf("key=%X\niv =%X\n", kv.key, kv.iv)
 }
 
 // Write writes the KeyValues structure to the io.Writer.
 func (kv *KeyValues) Write(w io.Writer) error {
-	if len(kv.key) != 32 || len(kv.iv) != aes.BlockSize {
-		return fmt.Errorf("invalid AES values")
-	}
-	s := kv.String()
-	if s != "" {
-		if _, err := fmt.Fprint(w, kv); err != nil {
-			return err
-		}
+	if _, err := fmt.Fprint(w, kv.String()); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-// Read returns an KeyValues struct populated with the contents
-// read from r. The caller must close the Reader on return.
-func Read(r io.Reader) (kv KeyValues, err error) {
+// Read KeyValues from the io.Reader r and return a locked buffer keyvalues kv. m should be
+// destroyed after use.
+func Read(r io.Reader) (m *memguard.LockedBuffer, kv *KeyValues) {
+	m, kv = NewKeyValues()
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -116,7 +95,7 @@ func Read(r io.Reader) (kv KeyValues, err error) {
 		}
 		s := strings.SplitN(line, "=", 2)
 		if len(s) != 2 {
-			err = fmt.Errorf("invalid line (must be key=value) %q", line)
+			// err = fmt.Errorf("invalid line (must be key=value) %q", line)
 			return
 		}
 		key, value := strings.TrimSpace(s[0]), strings.TrimSpace(s[1])
@@ -124,17 +103,17 @@ func Read(r io.Reader) (kv KeyValues, err error) {
 		case "salt":
 			// ignore
 		case "key":
-			kv.key, _ = hex.DecodeString(value)
+			k, _ := hex.DecodeString(value)
+			m.Move(k)
 		case "iv":
-			kv.iv, _ = hex.DecodeString(value)
+			i, _ := hex.DecodeString(value)
+			m.Move(i)
 		default:
-			err = fmt.Errorf("unknown entry in file: %q", key)
+			// err = fmt.Errorf("unknown entry in file: %q", key)
 			return
 		}
 	}
-	if len(kv.key) != 32 || len(kv.iv) != aes.BlockSize {
-		return KeyValues{}, fmt.Errorf("invalid AES values")
-	}
+	m.Freeze()
 	return
 }
 
@@ -148,34 +127,31 @@ func (kv *KeyValues) Checksum() (c uint32, err error) {
 	return
 }
 
-func (kv *KeyValues) encode(in []byte) (out []byte, err error) {
-	block, err := aes.NewCipher(kv.key)
+func (kv *KeyValues) encode(plaintext *memguard.Enclave) (out []byte, err error) {
+	block, err := aes.NewCipher(kv.key[:])
 	if err != nil {
 		err = fmt.Errorf("invalid key: %w", err)
 		return
 	}
-	if len(kv.iv) != aes.BlockSize {
-		err = fmt.Errorf("IV is not the same length as the block size")
-		return
-	}
+
+	in, _ := plaintext.Open()
 
 	// always pad at least one byte (the length)
 	var pad []byte
-	padBytes := aes.BlockSize - len(in)%aes.BlockSize
+	padBytes := aes.BlockSize - in.Size()%aes.BlockSize
 	if padBytes == 0 {
 		padBytes = aes.BlockSize
 	}
 	pad = bytes.Repeat([]byte{byte(padBytes)}, padBytes)
-	in = append(in, pad...)
-	mode := cipher.NewCBCEncrypter(block, kv.iv)
-	mode.CryptBlocks(in, in)
-	out = in
+	mode := cipher.NewCBCEncrypter(block, kv.iv[:])
+	out = make([]byte, in.Size()+len(pad))
+	mode.CryptBlocks(out, append(in.Bytes(), pad...))
+	in.Destroy()
 	return
 }
 
-func (kv *KeyValues) Encode(in []byte) (out []byte, err error) {
-	text := []byte(in)
-	cipher, err := kv.encode(text)
+func (kv *KeyValues) Encode(in *memguard.Enclave) (out []byte, err error) {
+	cipher, err := kv.encode(in)
 	if err == nil {
 		out = make([]byte, len(cipher)*2)
 		hex.Encode(out, cipher)
@@ -185,7 +161,7 @@ func (kv *KeyValues) Encode(in []byte) (out []byte, err error) {
 }
 
 func (kv *KeyValues) EncodeString(in string) (out string, err error) {
-	text := []byte(in)
+	text := memguard.NewEnclave([]byte(in))
 	cipher, err := kv.encode(text)
 	if err == nil {
 		out = strings.ToUpper(hex.EncodeToString(cipher))
@@ -202,7 +178,7 @@ func (kv *KeyValues) Decode(in []byte) (out []byte, err error) {
 
 	text := make([]byte, hex.DecodedLen(len(in)))
 	hex.Decode(text, in)
-	block, err := aes.NewCipher(kv.key)
+	block, err := aes.NewCipher(kv.key[:])
 	if err != nil {
 		err = fmt.Errorf("invalid key: %w", err)
 		return
@@ -215,7 +191,7 @@ func (kv *KeyValues) Decode(in []byte) (out []byte, err error) {
 		err = fmt.Errorf("IV is not the same length as the block size")
 		return
 	}
-	mode := cipher.NewCBCDecrypter(block, kv.iv)
+	mode := cipher.NewCBCDecrypter(block, kv.iv[:])
 	mode.CryptBlocks(text, text)
 
 	if len(text) == 0 {

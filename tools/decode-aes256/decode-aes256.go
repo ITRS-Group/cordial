@@ -18,10 +18,11 @@ func main() {
 		log.Fatal("no keyfile path given")
 	}
 
-	a, err := keyfile.Read()
+	m, a, err := keyfile.Read()
 	if err != nil {
 		log.Fatal("cannot read keyfile:", err)
 	}
+	defer m.Destroy()
 	password := flag.Arg(0)
 	if password == "" {
 		log.Fatal("no encoded password to decode")

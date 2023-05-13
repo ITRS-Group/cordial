@@ -150,10 +150,8 @@ func aesDecodeInstance(c geneos.Instance, params []string) (err error) {
 		return
 	}
 	defer r.Close()
-	a, err := config.Read(r)
-	if err != nil {
-		return
-	}
+	m, a := config.Read(r)
+	defer m.Destroy()
 	e, err := a.DecodeString(params[0])
 	if err != nil {
 		return nil

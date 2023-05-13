@@ -39,7 +39,6 @@ var retrieve bool
 func init() {
 	RootCmd.AddCommand(loginCmd)
 
-	// loginKeyfile = UserKeyFile
 	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username")
 	loginCmd.Flags().StringVarP(&loginCmdPassword, "password", "p", "", "Password")
 	loginCmd.Flags().VarP(&loginKeyfile, "keyfile", "k", "Keyfile to use")

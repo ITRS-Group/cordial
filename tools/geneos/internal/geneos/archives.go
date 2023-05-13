@@ -358,7 +358,9 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 			if req, err = http.NewRequest("GET", source, nil); err != nil {
 				return
 			}
-			req.SetBasicAuth(opts.username, string(opts.password))
+			pw, _ := opts.password.Open()
+			req.SetBasicAuth(opts.username, pw.String())
+			pw.Destroy()
 			if resp, err = client.Do(req); err != nil {
 				return
 			}
@@ -411,7 +413,10 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 		var auth_body []byte
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
 			if opts.username != "" {
-				da := downloadauth{opts.username, string(opts.password)}
+				pw, _ := opts.password.Open()
+				// XXX da should be a locked buffer ?
+				da := downloadauth{opts.username, pw.String()}
+				pw.Destroy()
 				auth_body, err = json.Marshal(da)
 				if err != nil {
 					return

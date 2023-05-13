@@ -23,12 +23,12 @@ THE SOFTWARE.
 package config
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"strings"
 	"syscall"
 
+	"github.com/awnumar/memguard"
 	"golang.org/x/term"
 )
 
@@ -36,7 +36,6 @@ import (
 // there is an error. The prompt is shown to the user as-is.
 func ReadUserInput(prompt string) (input string, err error) {
 	var oldState *term.State
-	// prompt for username
 	if oldState, err = term.MakeRaw(int(os.Stdin.Fd())); err != nil {
 		return
 	}
@@ -47,15 +46,17 @@ func ReadUserInput(prompt string) (input string, err error) {
 }
 
 // ReadPasswordInput prompts the user for a password without echoing the input.
-// This is returned as a byte slice. If match is true then the user is prompted
-// twice and the two instances checked for a match. Up to maxtries attempts are
-// allowed after which an error is returned. If maxtries is 0 then a default of
-// 3 attempts is set.
+// This is returned as a memguard LockBuffer. If match is true then the user is
+// prompted twice and the two instances checked for a match. Up to maxtries
+// attempts are allowed after which an error is returned. If maxtries is 0 then
+// a default of 3 attempts is set.
 //
 // If prompt is given then it must either be one or two strings, depending on
 // match set. The prompt(s) are suffixed with ": " in both cases. The defaults
 // are "Password" and "Re-enter Password".
-func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw []byte, err error) {
+//
+// On error the pw is empty and does not need to be Destory()ed.
+func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw *memguard.Enclave, err error) {
 	if match {
 		var matched bool
 		if len(prompt) != 2 {
@@ -67,31 +68,41 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw []byte, e
 		}
 
 		for i := 0; i < maxtries; i++ {
+			var pwt []byte
 			if len(prompt) == 0 {
 				fmt.Printf("Password: ")
 			} else {
 				fmt.Printf("%s: ", prompt[0])
 			}
-			pw1, err := term.ReadPassword(int(syscall.Stdin))
+			pwt, err = term.ReadPassword(syscall.Stdin)
+			pw1 := memguard.NewEnclave(pwt)
 			fmt.Println() // always move to new line even on error
 			if err != nil {
-				return pw, err
+				return
 			}
 			if len(prompt) < 2 {
 				fmt.Printf("Re-enter Password: ")
 			} else {
 				fmt.Printf("%s: ", prompt[1])
 			}
-			pw2, err := term.ReadPassword(int(syscall.Stdin))
+			pwt, err = term.ReadPassword(syscall.Stdin)
+			pw2 := memguard.NewEnclave(pwt)
 			fmt.Println() // always move to new line even on error
 			if err != nil {
-				return pw, err
+				return
 			}
-			if bytes.Equal(pw1, pw2) {
+			fmt.Println() // always move to new line even on error
+
+			pw1b, _ := pw1.Open()
+			pw2b, _ := pw2.Open()
+			if pw1b.EqualTo(pw2b.Bytes()) {
+				pw2b.Destroy()
 				pw = pw1
 				matched = true
 				break
 			}
+			pw1b.Destroy()
+			pw2b.Destroy()
 			fmt.Println("Passwords do not match. Please try again.")
 		}
 		if !matched {
@@ -99,12 +110,18 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw []byte, e
 			return
 		}
 	} else {
+		var pwt []byte
 		if len(prompt) == 0 {
 			fmt.Printf("Password: ")
 		} else {
 			fmt.Printf("%s: ", strings.Join(prompt, " "))
 		}
-		pw, err = term.ReadPassword(int(syscall.Stdin))
+		pwt, err = term.ReadPassword(syscall.Stdin)
+		pw = memguard.NewEnclave(pwt)
+		fmt.Println() // always move to new line even on error
+		if err != nil {
+			return
+		}
 		fmt.Println() // always move to new line even on error
 		if err != nil {
 			return
