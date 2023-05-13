@@ -78,11 +78,10 @@ type.
 	RunE: func(command *cobra.Command, _ []string) error {
 		ct, _, _ := cmd.CmdArgsParams(command)
 
-		m, a, err := aesImportCmdKeyfile.Read()
+		a, err := aesImportCmdKeyfile.Read()
 		if err != nil {
 			return err
 		}
-		defer m.Destroy()
 
 		h := geneos.GetHost(aesImportCmdHostname)
 

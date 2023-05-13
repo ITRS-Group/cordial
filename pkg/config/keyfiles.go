@@ -23,7 +23,6 @@ THE SOFTWARE.
 package config
 
 import (
-	"crypto/aes"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -32,6 +31,7 @@ import (
 	"strings"
 
 	"github.com/awnumar/memguard"
+	"github.com/rs/zerolog/log"
 )
 
 // KeyFile is a type that represents the path to a keyfile
@@ -96,13 +96,13 @@ func (k *KeyFile) Dir() string {
 // Read returns an KeyValues struct populated with the contents of the
 // file passed as path. If the keyfile is not in a valid format and err
 // is returned.
-func (k *KeyFile) Read() (m *memguard.LockedBuffer, kv *KeyValues, err error) {
+func (k *KeyFile) Read() (kv *KeyValues, err error) {
 	r, err := os.Open(k.String())
 	if err != nil {
 		return
 	}
 	defer r.Close()
-	m, kv = Read(r)
+	kv = Read(r)
 	return
 }
 
@@ -113,9 +113,6 @@ func (k *KeyFile) Write(kv KeyValues) (err error) {
 	}
 	defer w.Close()
 
-	if len(kv.key) != 32 || len(kv.iv) != aes.BlockSize {
-		return fmt.Errorf("invalid AES values")
-	}
 	s := kv.String()
 	if s != "" {
 		if _, err := fmt.Fprint(w, kv); err != nil {
@@ -133,8 +130,7 @@ func (k *KeyFile) Write(kv KeyValues) (err error) {
 // err will be set appropriately. If create is true then directories and
 // a file may have been created even on error.
 func (k *KeyFile) Check(create bool) (crc32 uint32, created bool, err error) {
-	if m, kv, err := k.Read(); err == nil { // ok?
-		defer m.Destroy()
+	if kv, err := k.Read(); err == nil { // ok?
 		crc32, err = kv.Checksum()
 		return crc32, false, err
 	}
@@ -148,8 +144,7 @@ func (k *KeyFile) Check(create bool) (crc32 uint32, created bool, err error) {
 			err = fmt.Errorf("failed to create keyfile directory %q: %w", k.Dir(), err)
 			return
 		}
-		m, kv := NewRandomKeyValues()
-		defer m.Destroy()
+		kv := NewRandomKeyValues()
 		if err = os.WriteFile(k.String(), []byte(kv.String()), 0600); err != nil {
 			err = fmt.Errorf("failed to write keyfile to %q: %w", k, err)
 			return
@@ -174,11 +169,10 @@ func (k *KeyFile) Check(create bool) (crc32 uint32, created bool, err error) {
 // as defined by UserConfigDir, then the function will replace any home
 // directory prefix with `~/' to shorten the keyfile path.
 func (k *KeyFile) EncodeString(plaintext string, expandable bool) (out string, err error) {
-	m, a, err := k.Read()
+	a, err := k.Read()
 	if err != nil {
 		return "", err
 	}
-	defer m.Destroy()
 
 	e, err := a.EncodeString(plaintext)
 	if err != nil {
@@ -208,11 +202,11 @@ func (k *KeyFile) EncodeString(plaintext string, expandable bool) (out string, e
 // as defined by UserConfigDir, then the function will replace any home
 // directory prefix with `~/' to shorten the keyfile path.
 func (k *KeyFile) Encode(plaintext *memguard.Enclave, expandable bool) (out []byte, err error) {
-	m, a, err := k.Read()
+	a, err := k.Read()
 	if err != nil {
 		return
 	}
-	defer m.Destroy()
+	log.Info().Msgf("keyfile:\n%s", a.String())
 
 	e, err := a.Encode(plaintext)
 	if err != nil {
@@ -235,22 +229,20 @@ func (k *KeyFile) Encode(plaintext *memguard.Enclave, expandable bool) (out []by
 // Decode input as a string using keyfile and return plaintext. An error
 // is returned if the keyfile is not readable.
 func (k *KeyFile) DecodeString(input string) (plaintext string, err error) {
-	m, a, err := k.Read()
+	a, err := k.Read()
 	if err != nil {
 		return
 	}
-	defer m.Destroy()
 	return a.DecodeString(input)
 }
 
 // Decode input as a byte slice using keyfile and return byte slice
 // plaintext. An error is returned if the keyfile is not readable.
 func (k *KeyFile) Decode(input []byte) (plaintext []byte, err error) {
-	m, a, err := k.Read()
+	a, err := k.Read()
 	if err != nil {
 		return
 	}
-	defer m.Destroy()
 	return a.Decode(input)
 }
 
