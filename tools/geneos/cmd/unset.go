@@ -87,6 +87,7 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 	if len(unsetCmdValues.Keys) > 0 {
 		for _, k := range unsetCmdValues.Keys {
 			// check and delete one level of maps
+			// XXX not sure if we need to allow other delimiters here
 			if strings.Contains(k, ".") {
 				p := strings.SplitN(k, ".", 2)
 				switch x := s[p[0]].(type) {

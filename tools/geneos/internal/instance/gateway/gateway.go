@@ -131,7 +131,7 @@ func New(name string) geneos.Instance {
 		}
 	}
 	g := &Gateways{}
-	g.Conf = config.New(config.KeyDelimiter("::"))
+	g.Conf = config.New()
 	g.Component = &Gateway
 	g.InstanceHost = h
 	if err := instance.SetDefaults(g, local); err != nil {

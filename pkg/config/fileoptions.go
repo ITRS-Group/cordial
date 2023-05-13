@@ -49,7 +49,7 @@ type FileOptions func(*fileOptions)
 
 func evalFileOptions(options ...FileOptions) (c *fileOptions) {
 	c = &fileOptions{
-		delimiter: ".",
+		delimiter: defaultKeyDelimiter,
 	}
 	for _, opt := range options {
 		opt(c)
@@ -66,7 +66,7 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 		workingdir:       ".",
 		systemdir:        "/etc", // UNIX/Linux only!
 		usedefaults:      true,
-		delimiter:        ".",
+		delimiter:        defaultKeyDelimiter,
 	}
 	c.userconfdir, _ = UserConfigDir()
 
@@ -98,6 +98,14 @@ func evalSaveOptions(options ...FileOptions) (c *fileOptions) {
 	}
 
 	return
+}
+
+var defaultKeyDelimiter = "."
+
+// DefaultKeyDelimiter sets the default key delimiter for all future
+// calls to config.New(). The default is "."
+func DefaultKeyDelimiter(delimiter string) {
+	defaultKeyDelimiter = delimiter
 }
 
 // SetGlobal tells [Load] to set values in the global

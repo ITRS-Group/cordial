@@ -49,14 +49,6 @@ func init() {
 
 var setCmdExtras = instance.ExtraConfigValues{}
 
-// 	Includes:   IncludeValues{},
-// 	Gateways:   GatewayValues{},
-// 	Attributes: AttributeValues{},
-// 	Envs:       EnvValues{},
-// 	Variables:  VarValues{},
-// 	Types:      TypeValues{},
-// }
-
 var setCmd = &cobra.Command{
 	Use:   "set [flags] [TYPE] [NAME...] [KEY=VALUE...]",
 	Short: "Set instance configuration parameters",

@@ -61,6 +61,8 @@ func init() {
 
 	cobra.OnInitialize(initConfig)
 
+	config.DefaultKeyDelimiter("::")
+
 	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/geneos.json, "+
 		config.Path(Execname,
 			config.IgnoreUserConfDir(),

@@ -56,6 +56,8 @@ var inlineCSS bool
 func init() {
 	cobra.OnInitialize(initConfig)
 
+	config.DefaultKeyDelimiter("::")
+
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
 	rootCmd.PersistentFlags().BoolVarP(&inlineCSS, "inline-css", "i", true, "try to inline CSS for better mail client support")
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2html.yaml)")
@@ -85,7 +87,6 @@ func initConfig() {
 		config.SetConfigFile(cfgFile),
 		config.MergeSettings(),
 		config.SetFileFormat("yaml"),
-		config.KeyDelimiter("::"),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")

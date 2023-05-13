@@ -38,6 +38,7 @@ type Config struct {
 	*viper.Viper
 	Type                 string // The type of configuration file loaded
 	defaultExpandOptions []ExpandOptions
+	delimiter            string
 }
 
 // global is the default configuration container for non-method callers
@@ -57,8 +58,15 @@ func GetConfig() *Config {
 // future calls that use Expand.
 func New(options ...FileOptions) *Config {
 	opts := evalFileOptions(options...)
-	cf := &Config{Viper: viper.NewWithOptions(viper.KeyDelimiter(opts.delimiter))}
+	cf := &Config{Viper: viper.NewWithOptions(viper.KeyDelimiter(opts.delimiter)), delimiter: opts.delimiter}
 	return cf
+}
+
+// Join returns a configuration settings key joined with the delimiter
+// for the c config object.
+func (c *Config) Join(parts ...string) string {
+	elems := []string{}
+	return strings.Join(append(elems, parts...), c.delimiter)
 }
 
 // Sub returns a Config instance rooted at the key passed
@@ -76,7 +84,7 @@ func Set(key string, value interface{}) {
 // configuration is written to and read back from a file.
 func (c *Config) SetStringMapString(m string, vals map[string]string) {
 	for k, v := range vals {
-		c.Set(m+"."+k, v)
+		c.Set(m+c.delimiter+k, v)
 	}
 }
 

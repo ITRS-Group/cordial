@@ -58,9 +58,6 @@ var UserConfigFile = "geneos.json"
 //
 // If the directory is not empty and the Force() option is not passed
 // then nothing is changed
-//
-// When called on a remote host then the user running the command cannot
-// be super-user.
 func Init(h *Host, options ...Options) (err error) {
 	opts := EvalOptions(options...)
 	if opts.homedir == "" {
@@ -70,8 +67,8 @@ func Init(h *Host, options ...Options) (err error) {
 
 	// dir must first not exist (or be empty) and then be creatable
 	//
-	// maybe check that the entire list of registered directories are
-	// either directories or do not exist
+	// XXX maybe check that the entire list of registered directories
+	// are either directories or do not exist
 	if _, err := h.Stat(opts.homedir); err != nil {
 		if err = h.MkdirAll(opts.homedir, 0775); err != nil {
 			log.Fatal().Err(err).Msg("")
@@ -101,7 +98,7 @@ func Init(h *Host, options ...Options) (err error) {
 
 		// recreate LOCAL to load "geneos" and others
 		LOCAL = nil
-		LOCAL = GetHost(LOCALHOST)
+		LOCAL = NewHost(LOCALHOST)
 		h = LOCAL
 	}
 

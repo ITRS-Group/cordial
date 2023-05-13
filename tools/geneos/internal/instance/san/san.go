@@ -118,7 +118,7 @@ func New(name string) geneos.Instance {
 		}
 	}
 	c := &Sans{}
-	c.Conf = config.New(config.KeyDelimiter("::"))
+	c.Conf = config.New()
 	c.InstanceHost = r
 	c.Component = &San
 	c.Config().SetDefault("santype", "netprobe")

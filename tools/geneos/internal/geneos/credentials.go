@@ -1,7 +1,6 @@
 package geneos
 
 import (
-	"strings"
 	"sync"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -41,8 +40,7 @@ func SaveCredentials() (err error) {
 		name := k.(string)
 		switch v := v.(type) {
 		case *config.Config:
-			name = strings.ReplaceAll(name, ".", "-")
-			c.Set("credentials."+name, v.AllSettings())
+			c.Set(c.Join("credentials", name), v.AllSettings())
 		}
 		return true
 	})

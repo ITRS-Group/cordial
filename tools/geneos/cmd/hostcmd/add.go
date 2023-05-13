@@ -30,6 +30,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -95,17 +96,101 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		"wildcard":     "false",
 		"needshomedir": "false",
 	},
-	RunE: func(command *cobra.Command, _ []string) error {
+	RunE: func(command *cobra.Command, _ []string) (err error) {
 		_, args := cmd.CmdArgs(command)
 
+		cf := config.New()
+
+		var sshurl *url.URL
+		var name string
+
+		switch len(args) {
+		case 1:
+			if sshurl, err = url.Parse(args[0]); err != nil || sshurl.Scheme == "" {
+				// build a URL from just the hostname arg
+				sshurl = &url.URL{
+					Scheme: "ssh",
+					Host:   args[0],
+				}
+			}
+			name = sshurl.Hostname()
+		case 2:
+			name = args[0]
+			if sshurl, err = url.Parse(args[1]); err != nil {
+				log.Error().Msgf("invalid ssh url %q", args[1])
+				return
+			}
+		}
+
+		// validate name - almost anything but no double colons
+		if strings.Contains(name, "::") {
+			log.Error().Msg("a remote hostname may not contain `::`")
+			return cmd.ErrInvalidArgs
+		}
+
+		log.Debug().Msgf("hostname: %s", name)
+		cf.SetDefault("hostname", name)
+		u, _ := user.Current()
+		cf.SetDefault("username", u.Username)
+		cf.SetDefault("port", 22)
+		// XXX default to remote user's home dir, not local
+		cf.SetDefault(cmd.Execname, geneos.Root())
+
+		var password []byte
+		var pw *memguard.Enclave
+
+		if hostAddCmdPrompt {
+			pw, err = config.ReadPasswordInput(true, 3)
+			if err != nil {
+				return
+			}
+		} else if hostAddCmdPassword != "" {
+			pw = memguard.NewEnclave([]byte(hostAddCmdPassword))
+		}
+
+		if pw != nil && pw.Size() > 0 {
+			if password, err = hostAddCmdKeyfile.Encode(pw, true); err != nil {
+				return
+			}
+
+			if len(password) > 0 {
+				// this is the encoded password for the config file, not an enclave
+				cf.Set("password", string(password))
+			}
+		}
+
+		if sshurl == nil {
+			return geneos.ErrInvalidArgs
+		}
+
+		if sshurl.Scheme != "ssh" {
+			return fmt.Errorf("unsupported scheme %q (ssh only at the moment)", sshurl.Scheme)
+		}
+
+		// now disassemble URL
+		if sshurl.Hostname() == "" {
+			cf.Set("hostname", cf.GetString("name"))
+		}
+
+		if sshurl.Port() != "" {
+			cf.Set("port", sshurl.Port())
+		}
+
+		if sshurl.User.Username() != "" {
+			cf.Set("username", sshurl.User.Username())
+		}
+
 		var h *geneos.Host
-		sshurl, err := url.Parse(args[0])
-		if err == nil && sshurl.Scheme != "" {
-			h = geneos.GetHost(sshurl.Hostname(),
-				host.Hostname(sshurl.Hostname()),
+
+		if sshurl.Scheme != "" {
+			h = geneos.NewHost(cf.GetString("hostname"),
+				host.Hostname(cf.GetString("hostname")),
+				host.Username(cf.GetString("username")),
+				host.Port(uint16(cf.GetInt("port"))),
+				host.Password(pw),
 			)
 		} else {
-			h = geneos.GetHost(args[0],
+			h = geneos.NewHost(args[0],
 				host.Hostname(args[0]),
 			)
 			if len(args) > 1 {
@@ -120,103 +205,56 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 				}
 			}
 		}
+		h.MergeConfigMap(cf.AllSettings())
 
-		return hostAdd(h, sshurl)
-	},
-}
+		if h.Exists() {
+			return fmt.Errorf("host %q already exists", name)
+		}
 
-func hostAdd(h *geneos.Host, sshurl *url.URL) (err error) {
-	if h.Exists() {
-		return fmt.Errorf("host %q already exists", h)
-	}
+		if !h.IsAvailable() {
+			log.Debug().Err(err).Msg("cannot connect to remote host, not adding.")
+			return err
+		}
 
-	if sshurl == nil {
-		return geneos.ErrInvalidArgs
-	}
-
-	if sshurl.Scheme != "ssh" {
-		return fmt.Errorf("unsupported scheme %q (ssh only at the moment)", sshurl.Scheme)
-	}
-
-	h.SetDefault("hostname", sshurl.Hostname())
-	h.SetDefault("port", 22)
-	u, _ := user.Current()
-	h.SetDefault("username", u.Username)
-	// XXX default to remote user's home dir, not local
-	h.SetDefault(cmd.Execname, geneos.Root())
-
-	password := ""
-
-	if hostAddCmdPrompt {
-		if password, err = hostAddCmdKeyfile.EncodePasswordInput(true); err != nil {
+		// once we are bootstrapped, read os-release info and re-write config
+		if err = h.SetOSReleaseEnv(); err != nil {
 			return
 		}
-	} else if hostAddCmdPassword != "" {
-		if password, err = hostAddCmdKeyfile.EncodeString(hostAddCmdPassword, true); err != nil {
-			return
+
+		if sshurl.Path != "" {
+			// XXX check and adopt local setting for remote user and/or remote global settings
+			// - only if ssh URL does not contain explicit path
+			cf.Set(cmd.Execname, sshurl.Path)
+		} else if runtime.GOOS != cf.GetString("os") {
+			homedir := cf.GetString("homedir")
+			if filepath.Base(homedir) != cmd.Execname {
+				homedir = filepath.Join(homedir, cmd.Execname)
+			}
+			switch cf.GetString("os") {
+			case "windows":
+				homedir = filepath.FromSlash(homedir)
+			case "linux":
+				homedir = filepath.ToSlash(homedir)
+			}
+			cf.Set(cmd.Execname, homedir)
 		}
-	}
 
-	if password != "" {
-		h.Set("password", password)
-	}
+		h.Valid()
 
-	// now disassemble URL
-	if sshurl.Hostname() == "" {
-		h.Set("hostname", h.GetString("name"))
-	}
+		if err = geneos.SaveHostConfig(); err != nil {
+			log.Fatal().Err(err).Msg("")
+		}
 
-	if sshurl.Port() != "" {
-		h.Set("port", sshurl.Port())
-	}
+		if hostAddCmdInit {
+			// initialise the remote directory structure, but perhaps ignore errors
+			// as we may simply be adding an existing installation
 
-	if sshurl.User.Username() != "" {
-		h.Set("username", sshurl.User.Username())
-	}
-
-	if !h.IsAvailable() {
-		log.Debug().Err(err).Msg("cannot connect to remote host, not adding.")
-		return err
-	}
-
-	// once we are bootstrapped, read os-release info and re-write config
-	if err = h.SetOSReleaseEnv(); err != nil {
+			if err = geneos.Init(h,
+				geneos.Force(true),
+				geneos.Homedir(h.GetString(cmd.Execname))); err != nil {
+				return
+			}
+		}
 		return
-	}
-
-	if sshurl.Path != "" {
-		// XXX check and adopt local setting for remote user and/or remote global settings
-		// - only if ssh URL does not contain explicit path
-		h.Set(cmd.Execname, sshurl.Path)
-	} else if runtime.GOOS != h.GetString("os") {
-		homedir := h.GetString("homedir")
-		if filepath.Base(homedir) != cmd.Execname {
-			homedir = filepath.Join(homedir, cmd.Execname)
-		}
-		switch h.GetString("os") {
-		case "windows":
-			homedir = filepath.FromSlash(homedir)
-		case "linux":
-			homedir = filepath.ToSlash(homedir)
-		}
-		h.Set(cmd.Execname, homedir)
-	}
-
-	h.Add()
-	if err = geneos.SaveHostConfig(); err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
-	if hostAddCmdInit {
-		// initialise the remote directory structure, but perhaps ignore errors
-		// as we may simply be adding an existing installation
-
-		if err = geneos.Init(h,
-			geneos.Force(true),
-			geneos.Homedir(h.GetString(cmd.Execname))); err != nil {
-			return
-		}
-	}
-
-	return
+	},
 }

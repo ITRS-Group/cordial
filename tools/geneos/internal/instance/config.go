@@ -113,7 +113,6 @@ func LoadConfig(c geneos.Instance) (err error) {
 		config.LoadDir(c.Home()),
 		config.UseDefaults(false),
 		config.MustExist(),
-		config.KeyDelimiter("::"),
 	)
 	if err != nil {
 		if err = cf.ReadRCConfig(r, ComponentFilepath(c, "rc"), prefix, aliases); err != nil {

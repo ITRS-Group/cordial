@@ -104,7 +104,7 @@ func New(name string) geneos.Instance {
 		}
 	}
 	c := &Floatings{}
-	c.Conf = config.New(config.KeyDelimiter("::"))
+	c.Conf = config.New()
 	c.InstanceHost = r
 	c.Component = &Floating
 	c.Config().SetDefault("floatingtype", "netprobe")
