@@ -35,6 +35,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/awnumar/memguard"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/sftpfs"
 
@@ -54,13 +55,13 @@ type SSHRemote struct {
 	username    string
 	hostname    string
 	port        uint16
-	password    []byte
+	password    *memguard.Enclave
 	keys        []string
 	failed      error
 	lastAttempt time.Time
 }
 
-func NewSSHRemote(name string, options ...SSHOptions) Host {
+func NewSSHRemote(name string, options ...any) Host {
 	r := &SSHRemote{
 		name: name,
 	}
@@ -70,13 +71,16 @@ func NewSSHRemote(name string, options ...SSHOptions) Host {
 
 type SSHOptions func(*SSHRemote)
 
-func evalOptions(r *SSHRemote, options ...SSHOptions) {
+func evalOptions(r *SSHRemote, options ...any) {
 	// defaults
 	u, _ := user.Current()
 	r.username = u.Username
 
 	for _, opt := range options {
-		opt(r)
+		switch o := opt.(type) {
+		case SSHOptions:
+			o(r)
+		}
 	}
 
 }
@@ -139,7 +143,7 @@ func readSSHkeys(homedir string, files ...string) (signers []ssh.Signer) {
 	return
 }
 
-func sshConnect(dest, user string, password []byte, keyfiles ...string) (client *ssh.Client, err error) {
+func sshConnect(dest, user string, password *memguard.Enclave, keyfiles ...string) (client *ssh.Client, err error) {
 	var authmethods []ssh.AuthMethod
 	var homedir string
 
@@ -149,7 +153,8 @@ func sshConnect(dest, user string, password []byte, keyfiles ...string) (client 
 		return
 	}
 
-	// XXX we need this because https://github.com/golang/go/issues/29286#issuecomment-1160958614
+	// XXX we need this because:
+	// https://github.com/golang/go/issues/29286#issuecomment-1160958614
 	kh, err := knownhosts.New(filepath.Join(homedir, userSSHdir, "known_hosts"))
 	if err != nil {
 		log.Debug().Msg("cannot load ssh known_hosts file, ssh will not be available.")
@@ -166,8 +171,10 @@ func sshConnect(dest, user string, password []byte, keyfiles ...string) (client 
 		log.Debug().Msgf("added %d private key(s) to auth methods", len(signers))
 	}
 
-	if len(password) > 0 {
-		authmethods = append(authmethods, ssh.Password(string(password)))
+	if password != nil && password.Size() > 0 {
+		l, _ := password.Open()
+		authmethods = append(authmethods, ssh.Password(l.String()))
+		l.Destroy()
 		log.Debug().Msg("added password to auth methods")
 	}
 
@@ -184,43 +191,43 @@ func sshConnect(dest, user string, password []byte, keyfiles ...string) (client 
 // Dial connects to a remote host using ssh and returns an *ssh.Client
 // on success. Each connection is cached and returned if found without
 // checking if it is still valid. To remove a session call Close()
-func (h *SSHRemote) Dial() (s *ssh.Client, err error) {
-	if h == nil {
+func (s *SSHRemote) Dial() (sc *ssh.Client, err error) {
+	if s == nil {
 		err = ErrInvalidArgs
 		return
 	}
 
-	if h.failed != nil {
-		err = h.failed
+	if s.failed != nil {
+		err = s.failed
 		return
 	}
-	if h.username == "" {
-		log.Error().Msgf("username not set for remote %s", h)
+	if s.username == "" {
+		log.Error().Msgf("username not set for remote %s", s)
 		return nil, ErrInvalidArgs
 	}
-	if h.hostname == "" {
-		log.Error().Msgf("hostname not set for remote %s", h)
+	if s.hostname == "" {
+		log.Panic().Msgf("hostname not set for remote %s", s)
 		return nil, ErrInvalidArgs
 	}
-	if h.port == 0 {
-		h.port = 22
+	if s.port == 0 {
+		s.port = 22
 	}
 
-	dest := fmt.Sprintf("%s:%d", h.hostname, h.port)
-	val, ok := sshSessions.Load(h.name)
+	dest := fmt.Sprintf("%s:%d", s.hostname, s.port)
+	val, ok := sshSessions.Load(s.name)
 	if ok {
-		s = val.(*ssh.Client)
+		sc = val.(*ssh.Client)
 	} else {
-		log.Debug().Msgf("ssh connect to %s as %s", dest, h.username)
-		s, err = sshConnect(dest, h.username, h.password, h.keys...)
+		log.Debug().Msgf("ssh connect to %s as %s", dest, s.username)
+		sc, err = sshConnect(dest, s.username, s.password, s.keys...)
 		if err != nil {
 			log.Debug().Err(err).Msg("")
-			h.failed = err
-			h.lastAttempt = time.Now()
+			s.failed = err
+			s.lastAttempt = time.Now()
 			return
 		}
-		log.Debug().Msgf("host opened %s %s %s", h.name, dest, h.username)
-		sshSessions.Store(h.name, s)
+		log.Debug().Msgf("host opened %s %s %s", s.name, dest, s.username)
+		sshSessions.Store(s.name, sc)
 	}
 	return
 }
@@ -286,12 +293,12 @@ func (h *SSHRemote) IsLocal() bool {
 	return false
 }
 
-func (h *SSHRemote) IsAvailable() bool {
-	if h.failed != nil && !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) < 5*time.Second {
+func (s *SSHRemote) IsAvailable() bool {
+	if s.failed != nil && !s.lastAttempt.IsZero() && time.Since(s.lastAttempt) < 5*time.Second {
 		// not available for 5 seconds since last error
 		return false
 	}
-	_, err := h.Dial()
+	_, err := s.Dial()
 	return err == nil
 }
 

@@ -34,6 +34,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -100,9 +101,13 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		var h *geneos.Host
 		sshurl, err := url.Parse(args[0])
 		if err == nil && sshurl.Scheme != "" {
-			h = geneos.GetHost(sshurl.Hostname())
+			h = geneos.GetHost(sshurl.Hostname(),
+				host.Hostname(sshurl.Hostname()),
+			)
 		} else {
-			h = geneos.GetHost(args[0])
+			h = geneos.GetHost(args[0],
+				host.Hostname(args[0]),
+			)
 			if len(args) > 1 {
 				if sshurl, err = url.Parse(args[1]); err != nil {
 					log.Error().Msgf("invalid ssh url %q", args[1])
@@ -130,7 +135,7 @@ func hostAdd(h *geneos.Host, sshurl *url.URL) (err error) {
 	}
 
 	if sshurl.Scheme != "ssh" {
-		return fmt.Errorf("unsupported scheme (ssh only at the moment): %q", sshurl.Scheme)
+		return fmt.Errorf("unsupported scheme %q (ssh only at the moment)", sshurl.Scheme)
 	}
 
 	h.SetDefault("hostname", sshurl.Hostname())
@@ -151,6 +156,7 @@ func hostAdd(h *geneos.Host, sshurl *url.URL) (err error) {
 			return
 		}
 	}
+
 	if password != "" {
 		h.Set("password", password)
 	}

@@ -40,13 +40,14 @@ import (
 	"github.com/awnumar/memguard"
 )
 
-// KeyValues contains the values required to create a Geneos Gateway AES
-// key file and then to encode and decode AES passwords in
-// configurations
+// KeyValues contains the values required to create a Geneos Gateway AES key
+// file and then to encode and decode AES passwords in configurations. It is
+// handled as a memguard Enclave to protect the plaintext as much as possible.
 type KeyValues struct {
 	*memguard.Enclave
 }
 
+// keyvalues holds an AES key and IV
 type keyvalues struct {
 	key [aes.BlockSize * 2]byte
 	iv  [aes.BlockSize]byte

@@ -67,8 +67,6 @@ func InitHosts(app string) {
 	LoadHostConfig()
 }
 
-// interface method set
-
 // GetHost returns a pointer to Host value. If passed an empty name, returns
 // nil. If passed the special values LOCALHOST or ALLHOSTS then it will
 // return the respective special values LOCAL or ALL. Otherwise it tries
@@ -76,7 +74,8 @@ func InitHosts(app string) {
 // initialises a new value to return. This may not be an existing host.
 //
 // XXX new needs the top level config and passes back a Sub()
-func GetHost(name string) (h *Host) {
+func GetHost(name string, options ...any) (h *Host) {
+	log.Debug().Msgf("name: %s, options: %d", name, len(options))
 	switch name {
 	case "":
 		return nil
@@ -101,8 +100,8 @@ func GetHost(name string) (h *Host) {
 				return
 			}
 		}
-		// or bootstrap, but NOT save a new one
-		h = &Host{host.NewSSHRemote(name), config.New(), false}
+		// or bootstrap, but NOT save a new one, with only the name set
+		h = &Host{host.NewSSHRemote(name, options...), config.New(), false}
 		h.Set("name", name)
 		hosts.Store(name, h)
 	}
@@ -308,15 +307,19 @@ func RemoteHosts() (hs []*Host) {
 // LoadHostConfig loads configuration entries from the host
 // configuration file.
 func LoadHostConfig() {
+	var err error
 	userConfDir, _ := config.UserConfigDir()
 	oldConfigFile := filepath.Join(userConfDir, OldUserHostFile)
 	// note that SetAppName only matters when PromoteFile returns an empty path
-	h, _ := config.Load("hosts",
+	h, err := config.Load("hosts",
 		config.SetAppName(Execname),
 		config.SetConfigFile(config.PromoteFile(host.Localhost, UserHostsFilePath(), oldConfigFile)),
 		config.UseDefaults(false),
 		config.IgnoreWorkingDir(),
 	)
+	if err != nil {
+		log.Error().Err(err).Msg("")
+	}
 
 	hosts = sync.Map{}
 
