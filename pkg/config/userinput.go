@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"syscall"
 
 	"github.com/awnumar/memguard"
 	"golang.org/x/term"
@@ -74,7 +73,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw *memguard
 			} else {
 				fmt.Printf("%s: ", prompt[0])
 			}
-			pwt, err = term.ReadPassword(syscall.Stdin)
+			pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
 			pw1 := memguard.NewEnclave(pwt)
 			fmt.Println() // always move to new line even on error
 			if err != nil {
@@ -85,7 +84,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw *memguard
 			} else {
 				fmt.Printf("%s: ", prompt[1])
 			}
-			pwt, err = term.ReadPassword(syscall.Stdin)
+			pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
 			pw2 := memguard.NewEnclave(pwt)
 			fmt.Println() // always move to new line even on error
 			if err != nil {
@@ -116,7 +115,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw *memguard
 		} else {
 			fmt.Printf("%s: ", strings.Join(prompt, " "))
 		}
-		pwt, err = term.ReadPassword(syscall.Stdin)
+		pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
 		pw = memguard.NewEnclave(pwt)
 		fmt.Println() // always move to new line even on error
 		if err != nil {
