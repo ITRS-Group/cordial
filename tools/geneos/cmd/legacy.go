@@ -38,12 +38,18 @@ func init() {
 	lsCmd.AddCommand(lsHostCmd)
 	setCmd.AddCommand(setHostCmd)
 	showCmd.AddCommand(showHostCmd)
+
 	updateCmd.AddCommand(updateLsCmd)
 	RootCmd.AddCommand(installCmd)
 	RootCmd.AddCommand(updateCmd)
+
 	showCmd.AddCommand(showGlobalCmd)
 	setCmd.AddCommand(setGlobalCmd)
 	unsetCmd.AddCommand(unsetGlobalCmd)
+
+	setCmd.AddCommand(setUserCmd)
+	unsetCmd.AddCommand(unsetUserCmd)
+	showCmd.AddCommand(showUserCmd)
 }
 
 var addHostCmd = &cobra.Command{
