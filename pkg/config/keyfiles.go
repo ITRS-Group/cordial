@@ -31,7 +31,6 @@ import (
 	"strings"
 
 	"github.com/awnumar/memguard"
-	"github.com/rs/zerolog/log"
 )
 
 // KeyFile is a type that represents the path to a keyfile
@@ -206,7 +205,6 @@ func (k *KeyFile) Encode(plaintext *memguard.Enclave, expandable bool) (out []by
 	if err != nil {
 		return
 	}
-	log.Info().Msgf("keyfile:\n%s", a.String())
 
 	e, err := a.Encode(plaintext)
 	if err != nil {
