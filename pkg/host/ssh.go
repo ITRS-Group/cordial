@@ -91,6 +91,12 @@ func Username(username string) SSHOptions {
 	}
 }
 
+func Password(password *memguard.Enclave) SSHOptions {
+	return func(s *SSHRemote) {
+		s.password = password
+	}
+}
+
 func (s *SSHRemote) Username() string {
 	return s.username
 }
@@ -221,7 +227,7 @@ func (s *SSHRemote) Dial() (sc *ssh.Client, err error) {
 		log.Debug().Msgf("ssh connect to %s as %s", dest, s.username)
 		sc, err = sshConnect(dest, s.username, s.password, s.keys...)
 		if err != nil {
-			log.Debug().Err(err).Msg("")
+			log.Error().Err(err).Msg("(you MUST add remote keys manually to known_hosts)")
 			s.failed = err
 			s.lastAttempt = time.Now()
 			return

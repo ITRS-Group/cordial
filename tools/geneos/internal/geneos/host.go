@@ -42,11 +42,6 @@ const OldUserHostFile = "geneos-hosts.json"
 
 var UserHostFile = filepath.Join(ConfigSubdirName, "hosts.json")
 
-const LOCALHOST = "localhost"
-const ALLHOSTS = "all"
-
-var LOCAL, ALL *Host
-
 type Host struct {
 	host.Host
 	*config.Config
@@ -56,26 +51,31 @@ type Host struct {
 	loaded bool
 }
 
+// hosts holds all of the configured remote hosts. It does not store
+// localhost or all.
 var hosts sync.Map
+
+const (
+	LOCALHOST = "localhost"
+	ALLHOSTS  = "all"
+)
+
+var LOCAL, ALL *Host
 
 // Init initialises the host settings and is only called from the root
 // command to set the initial values of host.LOCAL and host.ALL and
-// reads the host configuration file.
+// reads the host configuration file. LOCAL and ALL cannot be
+// initialised outside a function as there would be a definition loop.
 func InitHosts(app string) {
-	LOCAL = GetHost(LOCALHOST)
-	ALL = GetHost(ALLHOSTS)
+	LOCAL = NewHost(LOCALHOST)
+	ALL = NewHost(ALLHOSTS)
 	LoadHostConfig()
 }
 
-// GetHost returns a pointer to Host value. If passed an empty name, returns
-// nil. If passed the special values LOCALHOST or ALLHOSTS then it will
-// return the respective special values LOCAL or ALL. Otherwise it tries
-// to lookup an existing host with the given name to return or
-// initialises a new value to return. This may not be an existing host.
-//
-// XXX new needs the top level config and passes back a Sub()
-func GetHost(name string, options ...any) (h *Host) {
-	log.Debug().Msgf("name: %s, options: %d", name, len(options))
+// NewHost is a factory method for Host. It returns an initialised Host
+// and will store it in the global map. If name is "localhost" or
+// "all" then it returns pseudo-hosts used for testing and ranges.
+func NewHost(name string, options ...any) (h *Host) {
 	switch name {
 	case "":
 		return nil
@@ -110,14 +110,40 @@ func GetHost(name string, options ...any) (h *Host) {
 	return
 }
 
-// Add marks the host loaded and so qualified for saving to the hosts config
-// file
-func (h *Host) Add() {
-	h.loaded = true
+// GetHost returns a pointer to Host value. If passed an empty name, returns
+// nil. If passed the special values LOCALHOST or ALLHOSTS then it will
+// return the respective special values LOCAL or ALL. Otherwise it tries
+// to lookup an existing host with the given name.
+//
+// It will return nil if the named host is not found. Use NewHost() to initialise a new host
+func GetHost(name string) (h *Host) {
+	switch name {
+	case "":
+		return nil
+	case LOCALHOST:
+		return LOCAL
+	case ALLHOSTS:
+		return ALL
+	default:
+		r, ok := hosts.Load(name)
+		if ok {
+			h, ok = r.(*Host)
+			if ok {
+				return
+			}
+		}
+		return nil
+	}
 }
 
 func (h *Host) Delete() {
 	hosts.Delete(h.String())
+}
+
+// Valid marks the host loaded and so qualified for saving to the hosts config
+// file
+func (h *Host) Valid() {
+	h.loaded = true
 }
 
 func (h *Host) Exists() bool {
@@ -311,9 +337,10 @@ func LoadHostConfig() {
 	userConfDir, _ := config.UserConfigDir()
 	oldConfigFile := filepath.Join(userConfDir, OldUserHostFile)
 	// note that SetAppName only matters when PromoteFile returns an empty path
+	confpath := filepath.Join(userConfDir, Execname)
 	h, err := config.Load("hosts",
 		config.SetAppName(Execname),
-		config.SetConfigFile(config.PromoteFile(host.Localhost, UserHostsFilePath(), oldConfigFile)),
+		config.SetConfigFile(config.PromoteFile(host.Localhost, confpath, oldConfigFile)),
 		config.UseDefaults(false),
 		config.IgnoreWorkingDir(),
 	)
@@ -342,6 +369,7 @@ func LoadHostConfig() {
 	}
 }
 
+// SaveHostConfig writes the current hosts to the users hosts configuration file
 func SaveHostConfig() error {
 	n := config.New()
 
@@ -349,24 +377,10 @@ func SaveHostConfig() error {
 		name := k.(string)
 		switch v := v.(type) {
 		case *Host:
-			name = strings.ReplaceAll(name, ".", "-")
-			n.Set("hosts."+name, v.AllSettings())
+			n.Set(n.Join("hosts", name), v.AllSettings())
 		}
 		return true
 	})
 
-	userhostfile := UserHostsFilePath()
-
-	if err := os.MkdirAll(filepath.Dir(userhostfile), 0775); err != nil {
-		return err
-	}
-	if err := n.WriteConfigAs(userhostfile); err != nil {
-		return err
-	}
-	return nil
-}
-
-func UserHostsFilePath() string {
-	userConfDir, _ := config.UserConfigDir()
-	return filepath.Join(userConfDir, UserHostFile)
+	return n.Save("hosts", config.SetAppName(Execname))
 }
