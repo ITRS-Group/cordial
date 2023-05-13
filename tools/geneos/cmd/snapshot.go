@@ -29,6 +29,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/xpath"
@@ -42,7 +43,7 @@ import (
 var snapshotCmdValues, snapshotCmdSeverities, snapshotCmdSnoozes, snapshotCmdUserAssignments, snapshotCmdXpathsonly bool
 var snapshotCmdMaxitems int
 var snapshotCmdUsername, snapshotCmdPwFile string
-var snapshotCmdPassword []byte
+var snapshotCmdPassword *memguard.Enclave
 
 func init() {
 	RootCmd.AddCommand(snapshotCmd)
@@ -110,14 +111,16 @@ not applied in any defined order.
 		}
 
 		if snapshotCmdPwFile != "" {
-			if snapshotCmdPassword, err = os.ReadFile(snapshotCmdPwFile); err != nil {
+			var sp []byte
+			if sp, err = os.ReadFile(snapshotCmdPwFile); err != nil {
 				return
 			}
+			snapshotCmdPassword = memguard.NewEnclave(sp)
 		} else {
-			snapshotCmdPassword = config.GetByteSlice("snapshot.password")
+			snapshotCmdPassword = memguard.NewEnclave(config.GetByteSlice("snapshot.password"))
 		}
 
-		if snapshotCmdUsername != "" && len(snapshotCmdPassword) == 0 {
+		if snapshotCmdUsername != "" && snapshotCmdPassword.Size() == 0 {
 			snapshotCmdPassword, _ = config.ReadPasswordInput(false, 0)
 		}
 
@@ -144,7 +147,9 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 			username = snapshotCmdUsername
 		}
 		if len(password) == 0 {
-			password = snapshotCmdPassword
+			pwb, _ := snapshotCmdPassword.Open()
+			password = pwb.Bytes()
+			pwb.Destroy()
 		}
 
 		log.Debug().Msgf("dialling %s", gatewayURL(c))

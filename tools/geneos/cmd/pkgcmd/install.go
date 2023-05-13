@@ -27,6 +27,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -37,7 +38,7 @@ import (
 
 var packageInstallCmdLocal, packageInstallCmdNoSave, packageInstallCmdUpdate, packageInstallCmdNexus, packageInstallCmdSnapshot bool
 var packageInstallCmdBase, packageInstallCmdHost, packageInstallCmdOverride, packageInstallCmdVersion, packageInstallCmdUsername, packageInstallCmdPwFile string
-var packageInstallCmdPassword []byte
+var packageInstallCmdPassword *memguard.Enclave
 
 func init() {
 	PackageCmd.AddCommand(packageInstallCmd)
@@ -121,14 +122,16 @@ geneos install netprobe -b active_dev -U
 		}
 
 		if packageInstallCmdPwFile != "" {
-			if packageInstallCmdPassword, err = os.ReadFile(packageInstallCmdPwFile); err != nil {
+			var pp []byte
+			if pp, err = os.ReadFile(packageInstallCmdPwFile); err != nil {
 				return
 			}
+			packageInstallCmdPassword = memguard.NewEnclave(pp)
 		} else {
-			packageInstallCmdPassword = config.GetByteSlice("download.password")
+			packageInstallCmdPassword = memguard.NewEnclave(config.GetByteSlice("download.password"))
 		}
 
-		if packageInstallCmdUsername != "" && len(packageInstallCmdPassword) == 0 {
+		if packageInstallCmdUsername != "" && packageInstallCmdPassword.Size() == 0 {
 			packageInstallCmdPassword, _ = config.ReadPasswordInput(false, 0)
 		}
 

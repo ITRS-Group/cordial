@@ -30,6 +30,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/awnumar/memguard"
 )
 
 // KeyFile is a type that represents the path to a keyfile
@@ -51,9 +53,9 @@ func (k *KeyFile) Type() string {
 	return "KEYFILE"
 }
 
-// RollKeyfile will create a new keyfile at path. It will backup any
-// existing file with the suffix backup unless backup is an empty
-// string, in which case any existing file is overwritten.
+// RollKeyfile will create a new keyfile at path. It will backup any existing
+// file with the suffix backup unless backup is an empty string, in which case
+// any existing file is overwritten and no backup made.
 func (k *KeyFile) RollKeyfile(backup string) (crc uint32, err error) {
 	if _, _, err = k.Check(false); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -94,13 +96,14 @@ func (k *KeyFile) Dir() string {
 // Read returns an KeyValues struct populated with the contents of the
 // file passed as path. If the keyfile is not in a valid format and err
 // is returned.
-func (k *KeyFile) Read() (kv KeyValues, err error) {
+func (k *KeyFile) Read() (m *memguard.LockedBuffer, kv *KeyValues, err error) {
 	r, err := os.Open(k.String())
 	if err != nil {
 		return
 	}
 	defer r.Close()
-	return Read(r)
+	m, kv = Read(r)
+	return
 }
 
 func (k *KeyFile) Write(kv KeyValues) (err error) {
@@ -130,40 +133,34 @@ func (k *KeyFile) Write(kv KeyValues) (err error) {
 // err will be set appropriately. If create is true then directories and
 // a file may have been created even on error.
 func (k *KeyFile) Check(create bool) (crc32 uint32, created bool, err error) {
-	var kv KeyValues
-	if _, err = os.Stat(k.String()); err != nil {
-		// only try to create if the error is a not exists
-		if errors.Is(err, fs.ErrNotExist) {
-			if !create {
-				return
-			}
-			if kv, err = NewKeyValues(); err != nil {
-				return
-			}
-			if err = os.MkdirAll(k.Dir(), 0775); err != nil {
-				err = fmt.Errorf("failed to create keyfile directory %q: %w", k.Dir(), err)
-				return
-			}
-			if err = os.WriteFile(k.String(), []byte(kv.String()), 0600); err != nil {
-				err = fmt.Errorf("failed to write keyfile to %q: %w", k, err)
-				return
-			}
-			created = true
+	if m, kv, err := k.Read(); err == nil { // ok?
+		defer m.Destroy()
+		crc32, err = kv.Checksum()
+		return crc32, false, err
+	}
 
-			crc32, err = kv.Checksum()
-			if err != nil {
-				return
-			}
+	// only try to create if the file error is a not exists
+	if _, err = os.Stat(k.String()); err != nil && errors.Is(err, fs.ErrNotExist) {
+		if !create {
+			return
 		}
-		return
-	}
+		if err = os.MkdirAll(k.Dir(), 0775); err != nil {
+			err = fmt.Errorf("failed to create keyfile directory %q: %w", k.Dir(), err)
+			return
+		}
+		m, kv := NewRandomKeyValues()
+		defer m.Destroy()
+		if err = os.WriteFile(k.String(), []byte(kv.String()), 0600); err != nil {
+			err = fmt.Errorf("failed to write keyfile to %q: %w", k, err)
+			return
+		}
+		created = true
 
-	// read existing and return crc
-	kv, err = k.Read()
-	if err != nil {
-		return
+		crc32, err = kv.Checksum()
+		if err != nil {
+			return
+		}
 	}
-	crc32, err = kv.Checksum()
 	return
 }
 
@@ -177,10 +174,11 @@ func (k *KeyFile) Check(create bool) (crc32 uint32, created bool, err error) {
 // as defined by UserConfigDir, then the function will replace any home
 // directory prefix with `~/' to shorten the keyfile path.
 func (k *KeyFile) EncodeString(plaintext string, expandable bool) (out string, err error) {
-	a, err := k.Read()
+	m, a, err := k.Read()
 	if err != nil {
 		return "", err
 	}
+	defer m.Destroy()
 
 	e, err := a.EncodeString(plaintext)
 	if err != nil {
@@ -209,11 +207,12 @@ func (k *KeyFile) EncodeString(plaintext string, expandable bool) (out string, e
 // If the keyfile is located under the user's configuration directory,
 // as defined by UserConfigDir, then the function will replace any home
 // directory prefix with `~/' to shorten the keyfile path.
-func (k *KeyFile) Encode(plaintext []byte, expandable bool) (out []byte, err error) {
-	a, err := k.Read()
+func (k *KeyFile) Encode(plaintext *memguard.Enclave, expandable bool) (out []byte, err error) {
+	m, a, err := k.Read()
 	if err != nil {
 		return
 	}
+	defer m.Destroy()
 
 	e, err := a.Encode(plaintext)
 	if err != nil {
@@ -236,20 +235,22 @@ func (k *KeyFile) Encode(plaintext []byte, expandable bool) (out []byte, err err
 // Decode input as a string using keyfile and return plaintext. An error
 // is returned if the keyfile is not readable.
 func (k *KeyFile) DecodeString(input string) (plaintext string, err error) {
-	a, err := k.Read()
+	m, a, err := k.Read()
 	if err != nil {
 		return
 	}
+	defer m.Destroy()
 	return a.DecodeString(input)
 }
 
 // Decode input as a byte slice using keyfile and return byte slice
 // plaintext. An error is returned if the keyfile is not readable.
 func (k *KeyFile) Decode(input []byte) (plaintext []byte, err error) {
-	a, err := k.Read()
+	m, a, err := k.Read()
 	if err != nil {
 		return
 	}
+	defer m.Destroy()
 	return a.Decode(input)
 }
 

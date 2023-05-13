@@ -22,6 +22,8 @@ THE SOFTWARE.
 
 package geneos
 
+import "github.com/awnumar/memguard"
+
 type geneosOptions struct {
 	nosave       bool
 	local        bool
@@ -33,7 +35,7 @@ type geneosOptions struct {
 	basename     string
 	homedir      string
 	username     string
-	password     []byte
+	password     *memguard.Enclave
 	platform_id  string
 	downloadbase string
 	downloadtype string
@@ -122,7 +124,7 @@ func Username(u string) Options {
 }
 
 // Password is the remote access password for downloads
-func Password(p []byte) Options {
+func Password(p *memguard.Enclave) Options {
 	return func(d *geneosOptions) { d.password = p }
 }
 

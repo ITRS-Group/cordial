@@ -80,10 +80,8 @@ setting to support GA6.x key file rolling.
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var crc uint32
 
-		a, err := config.NewKeyValues()
-		if err != nil {
-			return
-		}
+		m, a := config.NewRandomKeyValues()
+		defer m.Destroy()
 
 		if aesNewCmdSaveDefault {
 			aesNewCmdKeyfile = cmd.DefaultUserKeyfile
@@ -93,9 +91,10 @@ setting to support GA6.x key file rolling.
 			if _, err = aesNewCmdKeyfile.RollKeyfile(aesNewCmdBackupSuffix); err != nil {
 				return
 			}
-			if a, err = aesNewCmdKeyfile.Read(); err != nil {
+			if m, a, err = aesNewCmdKeyfile.Read(); err != nil {
 				return
 			}
+			defer m.Destroy()
 		} else if !aesNewCmdImport {
 			fmt.Print(a.String())
 		}
@@ -117,7 +116,7 @@ setting to support GA6.x key file rolling.
 
 			for _, ct := range ct.Range(componentsWithKeyfiles...) {
 				for _, h := range h.Range(geneos.AllHosts()...) {
-					aesImportSave(ct, h, &a)
+					aesImportSave(ct, h, a)
 				}
 			}
 

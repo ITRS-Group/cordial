@@ -110,7 +110,9 @@ func Open(source string, options ...Options) (from io.ReadCloser, filename strin
 				if req, err = http.NewRequest("GET", u.String(), nil); err != nil {
 					return
 				}
-				req.SetBasicAuth(opts.username, string(opts.password))
+				pw, _ := opts.password.Open()
+				req.SetBasicAuth(opts.username, pw.String())
+				pw.Destroy()
 				if resp, err = client.Do(req); err != nil {
 					return
 				}

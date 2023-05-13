@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -44,7 +45,7 @@ var initCmdAll string
 var initCmdLogs, initCmdMakeCerts, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
 var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdFloatingTemplate, initCmdVersion string
 var initCmdDLUsername, initCmdPwFile string
-var initCmdDLPassword []byte
+var initCmdDLPassword *memguard.Enclave
 
 var initCmdExtras = instance.ExtraConfigValues{}
 
@@ -245,19 +246,21 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 		initCmdDLUsername = config.GetString("download.username")
 	}
 
-	if initCmdPwFile != "" {
-		if initCmdDLPassword, err = os.ReadFile(initCmdPwFile); err != nil {
-			return
-		}
-	} else {
-		initCmdDLPassword = config.GetByteSlice("download.password")
-	}
-
-	if initCmdDLUsername != "" && len(initCmdDLPassword) == 0 {
-		initCmdDLPassword, _ = config.ReadPasswordInput(false, 0)
-	}
-
 	if initCmdDLUsername != "" {
+		if initCmdPwFile != "" {
+			var ip []byte
+			if ip, err = os.ReadFile(initCmdPwFile); err != nil {
+				return
+			}
+			initCmdDLPassword = memguard.NewEnclave(ip)
+		} else {
+			initCmdDLPassword = memguard.NewEnclave(config.GetByteSlice("download.password"))
+		}
+
+		if initCmdDLUsername != "" && initCmdDLPassword.Size() == 0 {
+			initCmdDLPassword, _ = config.ReadPasswordInput(false, 0)
+		}
+
 		options = append(options, geneos.Username(initCmdDLUsername), geneos.Password(initCmdDLPassword))
 	}
 
