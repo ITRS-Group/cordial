@@ -200,12 +200,12 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 		port = instance.NextPort(g.InstanceHost, &Gateway)
 	}
 	cf.Set("port", port)
-	cf.Set("config.rebuild", "initial")
+	cf.Set(cf.Join("config", "rebuild"), "initial")
 
-	cf.SetDefault("config.template", GatewayDefaultTemplate)
+	cf.SetDefault(cf.Join("config", "template"), GatewayDefaultTemplate)
 	if template != "" {
 		filename, _ := instance.ImportCommons(g.Host(), g.Type(), "templates", []string{template})
-		cf.Set("config.template", filename)
+		cf.Set(cf.Join("config", "template"), filename)
 	}
 
 	cf.Set("includes", make(map[int]string))

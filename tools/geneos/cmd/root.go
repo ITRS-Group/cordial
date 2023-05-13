@@ -54,14 +54,13 @@ var debug, quiet bool
 
 var DefaultUserKeyfile = config.KeyFile(config.Path("keyfile", config.SetAppName(Execname), config.SetFileFormat("aes"), config.IgnoreWorkingDir()))
 
-// geneos.UserConfigFilePaths("keyfile.aes")[0])
-
 func init() {
 	cordial.LogInit(pkgname)
 
 	cobra.OnInitialize(initConfig)
 
 	config.DefaultKeyDelimiter("::")
+	config.ResetConfig(config.KeyDelimiter("::"))
 
 	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/geneos.json, "+
 		config.Path(Execname,

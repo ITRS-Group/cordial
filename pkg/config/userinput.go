@@ -95,13 +95,15 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw *memguard
 			pw1b, _ := pw1.Open()
 			pw2b, _ := pw2.Open()
 			if pw1b.EqualTo(pw2b.Bytes()) {
-				pw2b.Destroy()
-				pw = pw1
 				matched = true
-				break
 			}
 			pw1b.Destroy()
 			pw2b.Destroy()
+
+			if matched {
+				pw = pw1
+				break
+			}
 			fmt.Println("Passwords do not match. Please try again.")
 		}
 		if !matched {
@@ -117,10 +119,6 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw *memguard
 		}
 		pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
 		pw = memguard.NewEnclave(pwt)
-		fmt.Println() // always move to new line even on error
-		if err != nil {
-			return
-		}
 		fmt.Println() // always move to new line even on error
 		if err != nil {
 			return

@@ -92,7 +92,7 @@ var RootComponent Component = Component{
 		Execname: "",
 
 		// Root URL for all downloads of software archives
-		"download.url": "https://resources.itrsgroup.com/download/latest/",
+		config.Join("download", "url"): "https://resources.itrsgroup.com/download/latest/",
 
 		// Path List separated additions to the reserved names list, over and above
 		// any words matched by ParseComponentName()

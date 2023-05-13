@@ -39,7 +39,7 @@ import (
 const defaultURL = "https://resources.itrsgroup.com/download/latest/"
 
 func init() {
-	config.GetConfig().SetDefault("download.url", defaultURL)
+	config.GetConfig().SetDefault(config.Join("download", "url"), defaultURL)
 }
 
 // FilenameFromHTTPResp decodes and returns the filename from the
