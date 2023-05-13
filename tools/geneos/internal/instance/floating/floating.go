@@ -171,25 +171,26 @@ func (s *Floatings) Config() *config.Config {
 }
 
 func (s *Floatings) Add(template string, port uint16) (err error) {
+	cf := s.Config()
 	if port == 0 {
 		port = instance.NextPort(s.InstanceHost, &Floating)
 	}
-	s.Config().Set("port", port)
-	s.Config().Set("config.rebuild", "always")
-	s.Config().Set("config.template", FloatingDefaultTemplate)
-	s.Config().SetDefault("config.template", FloatingDefaultTemplate)
+	cf.Set("port", port)
+	cf.Set(cf.Join("config", "rebuild"), "always")
+	cf.Set(cf.Join("config", "template"), FloatingDefaultTemplate)
+	cf.SetDefault(cf.Join("config", "template"), FloatingDefaultTemplate)
 
 	if template != "" {
 		filename, _ := instance.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
-		s.Config().Set("config.template", filename)
+		cf.Set(cf.Join("config", "template"), filename)
 	}
 
-	s.Config().Set("types", []string{})
-	s.Config().Set("attributes", make(map[string]string))
-	s.Config().Set("variables", make(map[string]string))
-	s.Config().Set("gateways", make(map[string]string))
+	cf.Set("types", []string{})
+	cf.Set("attributes", make(map[string]string))
+	cf.Set("variables", make(map[string]string))
+	cf.Set("gateways", make(map[string]string))
 
-	if err = s.Config().Save(s.Type().String(),
+	if err = cf.Save(s.Type().String(),
 		config.Host(s.Host()),
 		config.SaveDir(s.Type().InstancesDir(s.Host())),
 		config.SetAppName(s.Name()),

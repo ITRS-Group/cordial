@@ -179,8 +179,8 @@ func sshConnect(dest, user string, password *memguard.Enclave, keyfiles ...strin
 
 	if password != nil && password.Size() > 0 {
 		l, _ := password.Open()
+		defer l.Destroy()
 		authmethods = append(authmethods, ssh.Password(l.String()))
-		l.Destroy()
 		log.Debug().Msg("added password to auth methods")
 	}
 

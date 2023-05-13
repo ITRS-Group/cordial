@@ -371,7 +371,7 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 		}
 
 	default:
-		baseurl := config.GetString("download.url")
+		baseurl := config.GetString(config.Join("download", "url"))
 		downloadURL, _ := url.Parse(baseurl)
 		realpath, _ := url.Parse(ct.DownloadBase.Resources)
 		v := url.Values{}
@@ -415,9 +415,12 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 			if opts.username != "" {
 				pw, _ := opts.password.Open()
 				// XXX da should be a locked buffer ?
-				da := downloadauth{opts.username, pw.String()}
-				pw.Destroy()
+				da := downloadauth{
+					Username: opts.username,
+					Password: pw.String(),
+				}
 				auth_body, err = json.Marshal(da)
+				pw.Destroy()
 				if err != nil {
 					return
 				}

@@ -107,7 +107,7 @@ not applied in any defined order.
 		}
 
 		if snapshotCmdUsername == "" {
-			snapshotCmdUsername = config.GetString("snapshot.username")
+			snapshotCmdUsername = config.GetString(config.Join("snapshot", "username"))
 		}
 
 		if snapshotCmdPwFile != "" {
@@ -117,10 +117,10 @@ not applied in any defined order.
 			}
 			snapshotCmdPassword = memguard.NewEnclave(sp)
 		} else {
-			snapshotCmdPassword = memguard.NewEnclave(config.GetByteSlice("snapshot.password"))
+			snapshotCmdPassword = memguard.NewEnclave(config.GetByteSlice(config.Join("snapshot", "password")))
 		}
 
-		if snapshotCmdUsername != "" && snapshotCmdPassword.Size() == 0 {
+		if snapshotCmdUsername != "" && (snapshotCmdPassword == nil || snapshotCmdPassword.Size() == 0) {
 			snapshotCmdPassword, _ = config.ReadPasswordInput(false, 0)
 		}
 
@@ -142,20 +142,21 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 
 		// always use auth details in per-instance config, but if not
 		// given use those from the command line or user/global config
-		username, password := c.Config().GetString("snapshot.username"), c.Config().GetByteSlice("snapshot.password")
+		username, password := c.Config().GetString(config.Join("snapshot", "username")), c.Config().GetString(config.Join("snapshot", "password"))
 		if username == "" {
 			username = snapshotCmdUsername
 		}
+
 		if len(password) == 0 {
 			pwb, _ := snapshotCmdPassword.Open()
-			password = pwb.Bytes()
-			pwb.Destroy()
+			password = pwb.String()
+			defer pwb.Destroy()
 		}
 
 		log.Debug().Msgf("dialling %s", gatewayURL(c))
 		gw, err := commands.DialGateway(gatewayURL(c),
 			commands.AllowInsecureCertificates(true),
-			commands.SetBasicAuth(username, string(password)))
+			commands.SetBasicAuth(username, password))
 		if err != nil {
 			return err
 		}

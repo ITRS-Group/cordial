@@ -118,7 +118,7 @@ geneos install netprobe -b active_dev -U
 		}
 
 		if packageInstallCmdUsername == "" {
-			packageInstallCmdUsername = config.GetString("download.username")
+			packageInstallCmdUsername = config.GetString(config.Join("download", "username"))
 		}
 
 		if packageInstallCmdPwFile != "" {
@@ -128,10 +128,10 @@ geneos install netprobe -b active_dev -U
 			}
 			packageInstallCmdPassword = memguard.NewEnclave(pp)
 		} else {
-			packageInstallCmdPassword = memguard.NewEnclave(config.GetByteSlice("download.password"))
+			packageInstallCmdPassword = memguard.NewEnclave(config.GetByteSlice(config.Join("download", "password")))
 		}
 
-		if packageInstallCmdUsername != "" && packageInstallCmdPassword.Size() == 0 {
+		if packageInstallCmdUsername != "" && (packageInstallCmdPassword == nil || packageInstallCmdPassword.Size() == 0) {
 			packageInstallCmdPassword, _ = config.ReadPasswordInput(false, 0)
 		}
 

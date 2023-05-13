@@ -243,7 +243,7 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 
 	// download authentication
 	if initCmdDLUsername == "" {
-		initCmdDLUsername = config.GetString("download.username")
+		initCmdDLUsername = config.GetString(config.Join("download", "username"))
 	}
 
 	if initCmdDLUsername != "" {
@@ -254,10 +254,10 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 			}
 			initCmdDLPassword = memguard.NewEnclave(ip)
 		} else {
-			initCmdDLPassword = memguard.NewEnclave(config.GetByteSlice("download.password"))
+			initCmdDLPassword = memguard.NewEnclave(config.GetByteSlice(config.Join("download", "password")))
 		}
 
-		if initCmdDLUsername != "" && initCmdDLPassword.Size() == 0 {
+		if initCmdDLUsername != "" && (initCmdDLPassword == nil || initCmdDLPassword.Size() == 0) {
 			initCmdDLPassword, _ = config.ReadPasswordInput(false, 0)
 		}
 

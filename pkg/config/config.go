@@ -45,12 +45,22 @@ type Config struct {
 var global *Config
 
 func init() {
-	global = &Config{Viper: viper.New()}
+	// global = &Config{Viper: viper.NewWithOptions()}
+	global = New()
 }
 
 // GetConfig returns the global Config instance
 func GetConfig() *Config {
 	return global
+}
+
+// ResetConfig reinitialises the global configuration object. Existing
+// settings will be copied over. This is primarily to be able to change
+// the default delimiter after start-up.
+func ResetConfig(options ...FileOptions) {
+	tmp := global.AllSettings()
+	global = New(options...)
+	global.MergeConfigMap(tmp)
 }
 
 // New returns a Config instance initialised with a new viper instance.
@@ -60,6 +70,13 @@ func New(options ...FileOptions) *Config {
 	opts := evalFileOptions(options...)
 	cf := &Config{Viper: viper.NewWithOptions(viper.KeyDelimiter(opts.delimiter)), delimiter: opts.delimiter}
 	return cf
+}
+
+// Join returns a configuration key made up of parts joined with the
+// default delimiter for the global configuration object.
+func Join(parts ...string) string {
+	elems := []string{}
+	return strings.Join(append(elems, parts...), global.delimiter)
 }
 
 // Join returns a configuration settings key joined with the delimiter

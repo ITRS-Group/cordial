@@ -387,7 +387,7 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 		return nil
 	}
 
-	options = append(options, PlatformID(h.GetString("osinfo.platform_id")))
+	options = append(options, PlatformID(h.GetString(h.Join("osinfo", "platform_id"))))
 
 	opts := EvalOptions(options...)
 
