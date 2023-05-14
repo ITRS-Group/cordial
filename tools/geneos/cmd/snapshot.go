@@ -117,7 +117,7 @@ not applied in any defined order.
 			}
 			snapshotCmdPassword = memguard.NewEnclave(sp)
 		} else {
-			snapshotCmdPassword = memguard.NewEnclave(config.GetByteSlice(config.Join("snapshot", "password")))
+			snapshotCmdPassword = config.GetEnclave(config.Join("snapshot", "password"))
 		}
 
 		if snapshotCmdUsername != "" && (snapshotCmdPassword == nil || snapshotCmdPassword.Size() == 0) {

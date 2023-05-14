@@ -89,9 +89,11 @@ func (c *Config) DefaultExpandOptions(options ...ExpandOptions) {
 	c.defaultExpandOptions = options
 }
 
-// RawString overrides all other options except Default and returns the value
-// (or the default) as-is with no expansion applied.
-func RawString() ExpandOptions {
+// NoExpand overrides all other options except Default and returns the
+// value (or the default) as-is with no expansion applied. This is to
+// allow the normal functions and methods to be called but to receive
+// the underlying configuration item, such as an encoded password.
+func NoExpand() ExpandOptions {
 	return func(e *expandOptions) {
 		e.rawstring = true
 	}

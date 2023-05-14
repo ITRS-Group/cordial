@@ -244,6 +244,14 @@ func (k *KeyFile) Decode(input []byte) (plaintext []byte, err error) {
 	return a.Decode(input)
 }
 
+func (k *KeyFile) DecodeEnclave(input []byte) (plaintext *memguard.Enclave, err error) {
+	a, err := k.Read()
+	if err != nil {
+		return
+	}
+	return a.DecodeEnclave(input)
+}
+
 // EncodePasswordInput prompts the user for a password and again to
 // verify, offering up to three attempts until the password match. When
 // the two match the plaintext is encoded using the keyfile. If

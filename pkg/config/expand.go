@@ -30,6 +30,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/maja42/goval"
 )
 
@@ -172,6 +173,7 @@ func (c *Config) ExpandString(input string, options ...ExpandOptions) (value str
 		if input != "" {
 			return input
 		}
+		// return a *copy* of the defaultvalue
 		return fmt.Sprint(opts.defaultValue)
 	}
 
@@ -205,6 +207,15 @@ func Expand(input string, options ...ExpandOptions) (value []byte) {
 // Expand behaves like the ExpandString method but returns a byte
 // slice.
 func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
+	opts := evalExpandOptions(c, options...)
+	if opts.rawstring {
+		if input != "" {
+			return []byte(input)
+		}
+		// return a *copy* of the defaultvalue
+		return []byte(fmt.Sprint(opts.defaultValue))
+	}
+
 	value = expandBytes([]byte(input), func(s []byte) (r []byte) {
 		if bytes.HasPrefix(s, []byte("enc:")) {
 			return c.expandEncodedBytes(s[4:], options...)
@@ -212,6 +223,51 @@ func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
 		str, _ := c.ExpandRawString(string(s), options...)
 		return []byte(str)
 	})
+
+	if opts.trimSpace {
+		value = bytes.TrimSpace(value)
+	}
+
+	if len(value) == 0 {
+		value = []byte(fmt.Sprint(opts.defaultValue))
+	}
+
+	return
+}
+
+func ExpandEnclave(input string, options ...ExpandOptions) (value *memguard.Enclave) {
+	return global.ExpandEnclave(input, options...)
+}
+
+// ExpandEnclave expands the input string and returns a sealed enclave.
+// The option TrimSpace is ignored.
+func (c *Config) ExpandEnclave(input string, options ...ExpandOptions) (value *memguard.Enclave) {
+	opts := evalExpandOptions(c, options...)
+	if opts.rawstring {
+		if input != "" {
+			l := memguard.NewBufferFromBytes([]byte(input))
+			return l.Seal()
+		}
+		// return a *copy* of the defaultvalue, don't let memguard wipe it!
+		l := memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.defaultValue)))
+		return l.Seal()
+	}
+
+	value = expandEnclave([]byte(input), func(s []byte) (r *memguard.Enclave) {
+		if bytes.HasPrefix(s, []byte("enc:")) {
+			return c.expandEncodedBytesEnclave(s[4:], options...)
+		}
+		str, _ := c.ExpandRawString(string(s), options...)
+		l := memguard.NewBufferFromBytes([]byte(str))
+		return l.Seal()
+	})
+
+	if value.Size() == 0 {
+		// return a *copy* of the defaultvalue, don't let memguard wipe it!
+		l := memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.defaultValue)))
+		return l.Seal()
+	}
+
 	return
 }
 
@@ -312,6 +368,36 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 	return
 }
 
+func (c *Config) expandEncodedBytesEnclave(s []byte, options ...ExpandOptions) (value *memguard.Enclave) {
+	p := bytes.SplitN(s, []byte(":"), 2)
+	if len(p) != 2 {
+		return
+	}
+	keyfiles, encodedValue := p[0], p[1]
+
+	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
+		str, _ := c.ExpandRawString(string(encodedValue), options...)
+		encodedValue = []byte(str)
+	}
+	if len(encodedValue) == 0 {
+		return
+	}
+
+	for _, k := range bytes.Split(keyfiles, []byte("|")) {
+		if bytes.HasPrefix(k, []byte("~/")) {
+			home, _ := os.UserHomeDir()
+			k = bytes.Replace(k, []byte("~"), []byte(home), 1)
+		}
+		keyfile := KeyFile(k)
+		p, err := keyfile.DecodeEnclave(encodedValue)
+		if err != nil {
+			continue
+		}
+		return p
+	}
+	return
+}
+
 // ExpandRawString expands the string s using the same rules and options
 // as [ExpandString] but treats the whole of s as if it were wrapped in
 // '${...}'. The function does most of the core work for configuration
@@ -330,11 +416,7 @@ func (c *Config) ExpandRawString(s string, options ...ExpandOptions) (value stri
 			return fetchFile(c, s, opts.trimSpace)
 		}
 		return
-	case strings.HasPrefix(s, "config:"):
-		fallthrough
-	case !strings.Contains(s, ":"):
-		// note fallthrough from above, hence the check for prefix with
-		// a "config:" in it.
+	case strings.HasPrefix(s, "config:"), !strings.Contains(s, ":"):
 		if strings.HasPrefix(s, "config:") || strings.Contains(s, ".") {
 			s = strings.TrimPrefix(s, "config:")
 			// this call to GetString() must NOT be recursive
@@ -534,6 +616,45 @@ func expandBytes(s []byte, mapping func([]byte) []byte) []byte {
 		return s
 	}
 	return append(buf, s[i:]...)
+}
+
+func expandEnclave(s []byte, mapping func([]byte) *memguard.Enclave) *memguard.Enclave {
+	var buf []byte
+	// ${} is all ASCII, so bytes are fine for this operation.
+	i := 0
+	for j := 0; j < len(s); j++ {
+		if s[j] == '$' && j+1 < len(s) {
+			if buf == nil {
+				buf = make([]byte, 0, 2*len(s))
+			}
+			buf = append(buf, s[i:j]...)
+			name, w := getShellName(string(s[j+1:]))
+			if name == "" && w > 0 {
+				// Encountered invalid syntax; eat the
+				// characters.
+			} else if name == "" {
+				// Valid syntax, but $ was not followed by a
+				// name. Leave the dollar character untouched.
+				buf = append(buf, s[j])
+			} else {
+				e := mapping([]byte(name))
+				l, _ := e.Open()
+				buf = append(buf, l.Bytes()...)
+				l.Destroy()
+			}
+			j += w
+			i = j + 1
+		}
+	}
+	if buf == nil {
+		// if no expansion, return as is in enclave
+		l := memguard.NewBufferFromBytes(s)
+		return l.Seal()
+	}
+
+	buf = append(buf, s[i:]...)
+	l := memguard.NewBufferFromBytes(buf)
+	return l.Seal()
 }
 
 // isShellSpecialVar reports whether the character identifies a special

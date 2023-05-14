@@ -178,7 +178,7 @@ directory or in the user's .config/dv2html directory)
 		em := config.New()
 		// set default from yaml file, can be overridden from Geneos
 		em.SetDefault("_smtp_username", cf.GetString("email::username"))
-		em.SetDefault("_smtp_password", cf.GetString("email::password", config.RawString()))
+		em.SetDefault("_smtp_password", cf.GetString("email::password", config.NoExpand()))
 		em.SetDefault("_smtp_server", cf.GetString("email::smtp", config.Default("localhost")))
 		em.SetDefault("_smtp_port", cf.GetInt("email::port", config.Default(25)))
 		em.SetDefault("_from", cf.GetString("email::from"))

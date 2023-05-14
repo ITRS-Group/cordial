@@ -23,13 +23,13 @@ THE SOFTWARE.
 package geneos
 
 import (
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"path/filepath"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/rs/zerolog/log"
 )
@@ -47,9 +47,9 @@ func CleanRelativePath(path string) (clean string, err error) {
 	return
 }
 
-// read a PEM encoded RSA private key from path. returns the first found as
-// a parsed key
-func (r *Host) ReadKey(path string) (key *rsa.PrivateKey, err error) {
+// ReadKey reads a keyfile and saves the PEM encoded key in an
+// enclave (without type or headers)
+func (r *Host) ReadKey(path string) (key *memguard.Enclave, err error) {
 	keyPEM, err := r.ReadFile(path)
 	if err != nil {
 		return
@@ -61,21 +61,22 @@ func (r *Host) ReadKey(path string) (key *rsa.PrivateKey, err error) {
 			return nil, fmt.Errorf("cannot locate RSA private key in %s", path)
 		}
 		if p.Type == "RSA PRIVATE KEY" {
-			return x509.ParsePKCS1PrivateKey(p.Bytes)
+			key = memguard.NewEnclave(p.Bytes)
+			return
 		}
 		keyPEM = rest
 	}
 }
 
 // write a private key as PEM to path. sets file permissions to 0600 (before umask)
-func (r *Host) WriteKey(path string, key *rsa.PrivateKey) (err error) {
-	log.Debug().Msgf("write key to %s", path)
-	keyPEM := pem.EncodeToMemory(&pem.Block{
+func (r *Host) WriteKey(path string, key *memguard.Enclave) (err error) {
+	l, _ := key.Open()
+	defer l.Destroy()
+	p := pem.EncodeToMemory(&pem.Block{
 		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(key),
+		Bytes: l.Bytes(),
 	})
-
-	return r.WriteFile(path, keyPEM, 0600)
+	return r.WriteFile(path, p, 0600)
 }
 
 // read a PEM encoded cert from path, return the first found as a parsed certificate
