@@ -27,11 +27,15 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
+	"github.com/awnumar/memguard"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -122,7 +126,7 @@ func WriteCert(c geneos.Instance, cert *x509.Certificate) (err error) {
 	)
 }
 
-func WriteKey(c geneos.Instance, key *rsa.PrivateKey) (err error) {
+func WriteKey(c geneos.Instance, key *memguard.Enclave) (err error) {
 	cf := c.Config()
 
 	if c.Type() == nil {
@@ -169,35 +173,73 @@ func ReadCert(c geneos.Instance) (cert *x509.Certificate, err error) {
 }
 
 // read the instance RSA private key
-func ReadKey(c geneos.Instance) (key *rsa.PrivateKey, err error) {
-	if c.Type() == nil {
+func ReadKey(c geneos.Instance) (key *memguard.Enclave, err error) {
+	if c.Type() == nil || c.Config().GetString("privatekey") == "" {
 		return nil, geneos.ErrInvalidArgs
 	}
 
 	return c.Host().ReadKey(Abs(c, c.Config().GetString("privatekey")))
 }
 
-// wrapper to create a new certificate given the sign cert and private key and an optional private key to (re)use
-// for the created certificate itself. returns a certificate and private key
-func CreateCertKey(template, parent *x509.Certificate, parentKey *rsa.PrivateKey, existingKey *rsa.PrivateKey) (cert *x509.Certificate, key *rsa.PrivateKey, err error) {
-	if existingKey != nil {
-		key = existingKey
-	} else {
-		key, err = rsa.GenerateKey(rand.Reader, 4096)
-		if err != nil {
+// NewPrivateKey returns a PKCS1 encoded RSA Private Key as an enclave. It is
+// not PEM encoded.
+func NewPrivateKey() *memguard.Enclave {
+	certKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
+	return memguard.NewEnclave(x509.MarshalPKCS1PrivateKey(certKey))
+}
+
+// wrapper to create a new certificate given the sign cert and private
+// key and an optional private key to (re)use for the created
+// certificate itself. returns a certificate and private key. Keys are
+// in PEM format so need parsing after unsealing.
+func CreateCertKey(template, parent *x509.Certificate, parentKeyPEM, existingKeyPEM *memguard.Enclave) (cert *x509.Certificate, keyPEM *memguard.Enclave, err error) {
+	var certBytes []byte
+	var certKey *rsa.PrivateKey
+
+	if template != parent && parentKeyPEM == nil {
+		err = errors.New("parent key empty but not self-signing")
+		return
+	}
+
+	keyPEM = existingKeyPEM
+	if keyPEM == nil {
+		keyPEM = NewPrivateKey()
+	}
+
+	l, _ := keyPEM.Open()
+	if certKey, err = x509.ParsePKCS1PrivateKey(l.Bytes()); err != nil {
+		keyPEM = nil
+		return
+	}
+
+	signingKey := certKey
+	certPubKey := &certKey.PublicKey
+
+	if parentKeyPEM != nil {
+		pk, _ := parentKeyPEM.Open()
+		if signingKey, err = x509.ParsePKCS1PrivateKey(pk.Bytes()); err != nil {
+			keyPEM = nil
 			return
 		}
+		pk.Destroy()
 	}
 
-	privKey := key
-	if parentKey != nil {
-		privKey = parentKey
+	if certBytes, err = x509.CreateCertificate(rand.Reader, template, parent, certPubKey, signingKey); err != nil {
+		keyPEM = nil
+		l.Destroy()
+		return
 	}
 
-	var certBytes []byte
-	if certBytes, err = x509.CreateCertificate(rand.Reader, template, parent, &key.PublicKey, privKey); err == nil {
-		cert, err = x509.ParseCertificate(certBytes)
+	if cert, err = x509.ParseCertificate(certBytes); err != nil {
+		keyPEM = nil
+		l.Destroy()
+		return
 	}
 
+	keyPEM = l.Seal()
 	return
 }

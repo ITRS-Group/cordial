@@ -254,7 +254,7 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 			}
 			initCmdDLPassword = memguard.NewEnclave(ip)
 		} else {
-			initCmdDLPassword = memguard.NewEnclave(config.GetByteSlice(config.Join("download", "password")))
+			initCmdDLPassword = config.GetEnclave(config.Join("download", "password"))
 		}
 
 		if initCmdDLUsername != "" && (initCmdDLPassword == nil || initCmdDLPassword.Size() == 0) {

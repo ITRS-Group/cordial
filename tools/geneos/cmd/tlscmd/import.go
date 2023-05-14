@@ -31,7 +31,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unsafe"
 
+	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -85,7 +87,7 @@ func tlsImport(sources ...string) (err error) {
 	// and then validate private keys against certs before saving
 	// anything to disk
 	var certs []*x509.Certificate
-	var keys []*rsa.PrivateKey
+	var keys []*memguard.Enclave
 	var f []byte
 
 	for _, source := range sources {
@@ -109,14 +111,7 @@ func tlsImport(sources ...string) (err error) {
 				}
 				certs = append(certs, cert)
 			case "RSA PRIVATE KEY":
-				key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-				if err != nil {
-					return err
-				}
-				if err = key.Validate(); err != nil {
-					return err
-				}
-				keys = append(keys, key)
+				keys = append(keys, memguard.NewEnclave(block.Bytes))
 			default:
 				return fmt.Errorf("unknown PEM type found: %s", block.Type)
 			}
@@ -162,11 +157,15 @@ func tlsImport(sources ...string) (err error) {
 	return
 }
 
-func matchKey(cert *x509.Certificate, keys []*rsa.PrivateKey) (index int, err error) {
+func matchKey(cert *x509.Certificate, keys []*memguard.Enclave) (index int, err error) {
 	for i, key := range keys {
+		l, _ := key.Open()
+		key := (*rsa.PrivateKey)(unsafe.Pointer(&l.Bytes()[0]))
 		if key.PublicKey.Equal(cert.PublicKey) {
+			l.Destroy()
 			return i, nil
 		}
+		l.Destroy()
 	}
 	return -1, os.ErrNotExist
 }

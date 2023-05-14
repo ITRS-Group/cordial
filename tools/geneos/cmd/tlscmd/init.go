@@ -101,7 +101,7 @@ func newRootCA(dir string) (err error) {
 	if err != nil {
 		return
 	}
-	template := x509.Certificate{
+	template := &x509.Certificate{
 		SerialNumber: serial,
 		Subject: pkix.Name{
 			CommonName: "geneos root CA",
@@ -114,7 +114,7 @@ func newRootCA(dir string) (err error) {
 		MaxPathLen:            2,
 	}
 
-	cert, key, err := instance.CreateCertKey(&template, &template, nil, nil)
+	cert, key, err := instance.CreateCertKey(template, template, nil, nil)
 	if err != nil {
 		return
 	}

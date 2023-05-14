@@ -110,6 +110,7 @@ var Execname string
 
 func Initialise(app string) {
 	Execname = app
+	SigningCertFile = Execname
 	RootComponent.RegisterComponent(nil)
 }
 

@@ -30,6 +30,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/spf13/viper"
 )
 
@@ -125,6 +126,20 @@ func (c *Config) GetString(s string, options ...ExpandOptions) string {
 	return c.ExpandString(c.Viper.GetString(s), options...)
 }
 
+// GetEnclave returns a sealed enclave containing the configuration item
+// identified by key and expanded using the Expand function with the
+// options supplied.
+func GetEnclave(s string, options ...ExpandOptions) *memguard.Enclave {
+	return global.GetEnclave(s, options...)
+}
+
+// GetEnclave returns a sealed enclave containing the configuration item
+// identified by key and expanded using the Expand function with the
+// options supplied.
+func (c *Config) GetEnclave(key string, options ...ExpandOptions) *memguard.Enclave {
+	return c.ExpandEnclave(c.Viper.GetString(key), options...)
+}
+
 // GetInt functions like [viper.GetInt] but additionally calls
 // [ExpandString] with the configuration value, passing any "values"
 // maps. If the conversion fails then the value returned will be the one
@@ -165,17 +180,17 @@ func (c *Config) GetInt64(s string, options ...ExpandOptions) (i int64) {
 	return
 }
 
-// GetByteSlice functions like [viper.GetString] but additionally calls
+// GetBytes functions like [viper.GetString] but additionally calls
 // [Expand] with the configuration value, passing any "values" maps and
 // returning a byte slice
-func GetByteSlice(s string, options ...ExpandOptions) []byte {
-	return global.GetByteSlice(s, options...)
+func GetBytes(s string, options ...ExpandOptions) []byte {
+	return global.GetBytes(s, options...)
 }
 
-// GetByteSlice functions like [viper.GetString] on a Config instance, but
+// GetBytes functions like [viper.GetString] on a Config instance, but
 // additionally calls [Expand] with the configuration value, passing
 // any "values" maps and returning a byte slice
-func (c *Config) GetByteSlice(s string, options ...ExpandOptions) []byte {
+func (c *Config) GetBytes(s string, options ...ExpandOptions) []byte {
 	return c.Expand(c.Viper.GetString(s), options...)
 }
 

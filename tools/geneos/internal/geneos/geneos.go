@@ -46,7 +46,7 @@ var (
 const DisableExtension = "disabled"
 
 var RootCAFile = "rootCA"
-var SigningCertFile = Execname
+var SigningCertFile string
 var ConfigFileType = "json"
 var GlobalConfigDir = "/etc"
 var ConfigSubdirName = Execname

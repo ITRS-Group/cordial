@@ -235,6 +235,50 @@ func (kv *KeyValues) Decode(in []byte) (out []byte, err error) {
 	return
 }
 
+func (kv *KeyValues) DecodeEnclave(in []byte) (out *memguard.Enclave, err error) {
+	kl, _ := kv.Open()
+	defer kl.Destroy()
+	k := (*keyvalues)(unsafe.Pointer(&kl.Bytes()[0]))
+
+	in = bytes.TrimPrefix(in, []byte("+encs+"))
+
+	text := make([]byte, hex.DecodedLen(len(in)))
+
+	hex.Decode(text, in)
+	block, err := aes.NewCipher(k.key[:])
+	if err != nil {
+		err = fmt.Errorf("invalid key: %w", err)
+		return
+	}
+	if len(text)%aes.BlockSize != 0 {
+		err = fmt.Errorf("input is not a multiple of the block size")
+		return
+	}
+	mode := cipher.NewCBCDecrypter(block, k.iv[:])
+	l := memguard.NewBuffer(len(text))
+	lout := (*[]byte)(unsafe.Pointer(&l.Bytes()[0]))
+	mode.CryptBlocks(*lout, text)
+
+	if len(*lout) == 0 {
+		err = fmt.Errorf("decode failed")
+		return
+	}
+
+	// remove padding as per RFC5246
+	paddingLength := int((*lout)[len(*lout)-1])
+	if paddingLength == 0 || paddingLength > aes.BlockSize {
+		err = fmt.Errorf("invalid padding size")
+		return
+	}
+	*lout = (*lout)[0 : len(*lout)-paddingLength]
+	if !utf8.Valid(text) {
+		err = fmt.Errorf("decoded test not valid UTF-8")
+		return
+	}
+	out = l.Seal()
+	return
+}
+
 // DecodeString returns plaintext of the input or an error
 func (kv *KeyValues) DecodeString(in string) (out string, err error) {
 	plain, err := kv.Decode([]byte(in))
