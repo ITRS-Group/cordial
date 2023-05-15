@@ -31,7 +31,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/fa2"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
@@ -40,6 +39,7 @@ import (
 var San = geneos.Component{
 	Initialise:       Init,
 	Name:             "san",
+	LegacyPrefix:     "san",
 	RelatedTypes:     []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
 	ComponentMatches: []string{"san", "sans"},
 	RealComponent:    true,
@@ -99,7 +99,7 @@ func init() {
 	San.RegisterComponent(New)
 }
 
-func Init(r *host.Host, ct *geneos.Component) {
+func Init(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
 	if err := r.WriteFile(r.Filepath(ct, "templates", SanDefaultTemplate), SanTemplate, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
@@ -109,7 +109,7 @@ func Init(r *host.Host, ct *geneos.Component) {
 var sans sync.Map
 
 func New(name string) geneos.Instance {
-	ct, local, r := instance.SplitName(name, host.LOCAL)
+	ct, local, r := instance.SplitName(name, geneos.LOCAL)
 	s, ok := sans.Load(r.FullName(local))
 	if ok {
 		sn, ok := s.(*Sans)
@@ -153,11 +153,7 @@ func (s *Sans) Home() string {
 	return s.Config().GetString("home")
 }
 
-func (s *Sans) Prefix() string {
-	return "san"
-}
-
-func (s *Sans) Host() *host.Host {
+func (s *Sans) Host() *geneos.Host {
 	return s.InstanceHost
 }
 
@@ -188,31 +184,32 @@ func (s *Sans) Config() *config.Config {
 	return s.Conf
 }
 
-func (s *Sans) SetConf(v *config.Config) {
-	s.Conf = v
-}
+func (s *Sans) Add(template string, port uint16) (err error) {
+	cf := s.Config()
 
-func (s *Sans) Add(username string, template string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(s.InstanceHost, &San)
 	}
-	s.Config().Set("port", port)
-	s.Config().Set("user", username)
-	s.Config().Set("config.rebuild", "always")
-	s.Config().Set("config.template", SanDefaultTemplate)
-	s.Config().SetDefault("config.template", SanDefaultTemplate)
+	cf.Set("port", port)
+	cf.Set(cf.Join("config", "rebuild"), "always")
+	cf.Set(cf.Join("config", "template"), SanDefaultTemplate)
+	cf.SetDefault(cf.Join("config", "template"), SanDefaultTemplate)
 
 	if template != "" {
 		filename, _ := instance.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
-		s.Config().Set("config.template", filename)
+		cf.Set(cf.Join("config", "template"), filename)
 	}
 
-	s.Config().Set("types", []string{})
-	s.Config().Set("attributes", make(map[string]string))
-	s.Config().Set("variables", make(map[string]string))
-	s.Config().Set("gateways", make(map[string]string))
+	cf.Set("types", []string{})
+	cf.Set("attributes", make(map[string]string))
+	cf.Set("variables", make(map[string]string))
+	cf.Set("gateways", make(map[string]string))
 
-	if err = instance.WriteConfig(s); err != nil {
+	if err = cf.Save(s.Type().String(),
+		config.Host(s.Host()),
+		config.SaveDir(s.Type().InstancesDir(s.Host())),
+		config.SetAppName(s.Name()),
+	); err != nil {
 		return
 	}
 
@@ -232,7 +229,7 @@ func (s *Sans) Add(username string, template string, port uint16) (err error) {
 //
 // we do a dance if there is a change in TLS setup and we use default ports
 func (s *Sans) Rebuild(initial bool) (err error) {
-	configrebuild := s.Config().GetString("config.rebuild")
+	configrebuild := s.Config().GetString("config::rebuild")
 	if configrebuild == "never" {
 		return
 	}
@@ -258,11 +255,15 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 	}
 	if changed {
 		s.Config().Set("gateways", gws)
-		if err := instance.WriteConfig(s); err != nil {
+		if err = s.Config().Save(s.Type().String(),
+			config.Host(s.Host()),
+			config.SaveDir(s.Type().InstancesDir(s.Host())),
+			config.SetAppName(s.Name()),
+		); err != nil {
 			return err
 		}
 	}
-	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), instance.Filename(s, "config.template"), SanTemplate)
+	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), instance.Filename(s, "config::template"), SanTemplate)
 }
 
 func (s *Sans) Command() (args, env []string) {
@@ -280,8 +281,4 @@ func (s *Sans) Command() (args, env []string) {
 	env = append(env, "LOG_FILENAME="+logFile)
 
 	return
-}
-
-func (s *Sans) Reload(params []string) (err error) {
-	return geneos.ErrNotSupported
 }

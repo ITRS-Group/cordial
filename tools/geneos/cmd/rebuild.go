@@ -34,7 +34,7 @@ import (
 var rebuildCmdForce, rebuildCmdReload bool
 
 func init() {
-	rootCmd.AddCommand(rebuildCmd)
+	RootCmd.AddCommand(rebuildCmd)
 
 	rebuildCmd.Flags().BoolVarP(&rebuildCmdForce, "force", "F", false, "Force rebuild")
 	rebuildCmd.Flags().BoolVarP(&rebuildCmdReload, "reload", "r", false, "Reload instances after rebuild")
@@ -49,10 +49,11 @@ Rebuild instance configuration files based on current templates and instance con
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		return instance.ForAll(ct, rebuildInstance, args, params)
 	},
 }

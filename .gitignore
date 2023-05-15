@@ -20,6 +20,7 @@
 libraries/libemail/libemail.h
 tools/geneos/geneos
 
+releases/
 integrations/servicenow/snow_router/snow_router
 integrations/servicenow/snow_router/snow_router.yaml
 integrations/servicenow/snow_client/snow_client
@@ -36,3 +37,4 @@ docs/docs
 .vscode
 tools/sso-diag/sso-diag
 tools/decode-aes256/decode-aes256
+tools/dv2html/dv2html

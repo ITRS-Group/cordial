@@ -22,7 +22,11 @@ THE SOFTWARE.
 
 package commands
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/awnumar/memguard"
+)
 
 // Authentication types. SSO is not currently implemented.
 const (
@@ -43,9 +47,11 @@ func AuthSSO() {
 
 }
 
-func AuthBasic(c *http.Request, username, password string) (err error) {
+func AuthBasic(c *http.Request, username string, pw *memguard.Enclave) (err error) {
 	if c != nil {
-		c.SetBasicAuth(username, password)
+		l, _ := pw.Open()
+		c.SetBasicAuth(username, l.String())
+		l.Destroy()
 	}
 	return
 }

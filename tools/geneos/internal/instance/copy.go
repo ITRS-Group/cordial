@@ -8,8 +8,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
 
 func CopyInstance(ct *geneos.Component, source, destination string, move bool) (err error) {
@@ -31,11 +32,11 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 		if sHostName == dHostName {
 			return fmt.Errorf("%w: src and destination host must be different", geneos.ErrInvalidArgs)
 		}
-		sHost := host.Get(sHostName)
+		sHost := geneos.GetHost(sHostName)
 		if !sHost.Exists() {
 			return fmt.Errorf("%w: source host %q not found", os.ErrNotExist, sHostName)
 		}
-		dHost := host.Get(dHostName)
+		dHost := geneos.GetHost(dHostName)
 		if !dHost.Exists() {
 			return fmt.Errorf("%w: destination host %q not found", os.ErrNotExist, dHostName)
 		}
@@ -99,7 +100,7 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 		}
 	}
 
-	_, dName, dHost := SplitName(destination, host.LOCAL)
+	_, dName, dHost := SplitName(destination, geneos.LOCAL)
 
 	// do a dance here to deep copy-ish the dst
 	newdst := src.Type().New(destination)
@@ -117,7 +118,7 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 	}
 
 	// delete one or the other, depending
-	defer func(srcname string, srcrem *host.Host, srchome string, dst geneos.Instance) {
+	defer func(srcname string, srcrem *geneos.Host, srchome string, dst geneos.Instance) {
 		if done {
 			if move {
 				// once we are done, try to delete old instance
@@ -158,12 +159,16 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 
 	// update any component name only if the same as the instance name
 	log.Debug().Msgf("src name: %s, setting dst to %s", src.Config().GetString("name"), destination)
-	_, newname, _ := SplitName(destination, host.LOCAL)
+	_, newname, _ := SplitName(destination, geneos.LOCAL)
 	newdst.Config().Set("name", newname)
 
 	// config changes don't matter until writing config succeeds
 	log.Debug().Msgf("writing: %v", newdst.Config().AllSettings())
-	if err = WriteConfig(newdst); err != nil {
+	if err = newdst.Config().Save(newdst.Type().String(),
+		config.Host(newdst.Host()),
+		config.SaveDir(newdst.Type().InstancesDir(newdst.Host())),
+		config.SetAppName(newdst.Name()),
+	); err != nil {
 		log.Debug().Err(err).Msg("")
 		return
 	}

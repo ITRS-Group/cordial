@@ -27,13 +27,17 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
+	"github.com/awnumar/memguard"
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
 
 // create a new certificate for an instance
@@ -42,7 +46,7 @@ import (
 //
 // skip if certificate exists (no expiry check)
 func CreateCert(c geneos.Instance) (err error) {
-	tlsDir := filepath.Join(host.Geneos(), "tls")
+	tlsDir := filepath.Join(geneos.Root(), "tls")
 
 	// skip if we can load an existing certificate
 	if _, err = ReadCert(c); err == nil {
@@ -50,7 +54,7 @@ func CreateCert(c geneos.Instance) (err error) {
 	}
 
 	hostname, _ := os.Hostname()
-	if c.Host() != host.LOCAL {
+	if c.Host() != geneos.LOCAL {
 		hostname = c.Host().GetString("hostname")
 	}
 
@@ -77,7 +81,7 @@ func CreateCert(c geneos.Instance) (err error) {
 	if err != nil {
 		return
 	}
-	intrKey, err := host.LOCAL.ReadKey(filepath.Join(tlsDir, geneos.SigningCertFile+".key"))
+	intrKey, err := geneos.LOCAL.ReadKey(filepath.Join(tlsDir, geneos.SigningCertFile+".key"))
 	if err != nil {
 		return
 	}
@@ -101,6 +105,8 @@ func CreateCert(c geneos.Instance) (err error) {
 }
 
 func WriteCert(c geneos.Instance, cert *x509.Certificate) (err error) {
+	cf := c.Config()
+
 	if c.Type() == nil {
 		return geneos.ErrInvalidArgs
 	}
@@ -108,15 +114,21 @@ func WriteCert(c geneos.Instance, cert *x509.Certificate) (err error) {
 	if err = c.Host().WriteCert(filepath.Join(c.Home(), certfile), cert); err != nil {
 		return
 	}
-	if c.Config().GetString("certificate") == certfile {
+	if cf.GetString("certificate") == certfile {
 		return
 	}
-	c.Config().Set("certificate", certfile)
+	cf.Set("certificate", certfile)
 
-	return WriteConfig(c)
+	return cf.Save(c.Type().String(),
+		config.Host(c.Host()),
+		config.SaveDir(c.Type().InstancesDir(c.Host())),
+		config.SetAppName(c.Name()),
+	)
 }
 
-func WriteKey(c geneos.Instance, key *rsa.PrivateKey) (err error) {
+func WriteKey(c geneos.Instance, key *memguard.Enclave) (err error) {
+	cf := c.Config()
+
 	if c.Type() == nil {
 		return geneos.ErrInvalidArgs
 	}
@@ -125,23 +137,27 @@ func WriteKey(c geneos.Instance, key *rsa.PrivateKey) (err error) {
 	if err = c.Host().WriteKey(filepath.Join(c.Home(), keyfile), key); err != nil {
 		return
 	}
-	if c.Config().GetString("privatekey") == keyfile {
+	if cf.GetString("privatekey") == keyfile {
 		return
 	}
-	c.Config().Set("privatekey", keyfile)
-	return WriteConfig(c)
+	cf.Set("privatekey", keyfile)
+	return cf.Save(c.Type().String(),
+		config.Host(c.Host()),
+		config.SaveDir(c.Type().InstancesDir(c.Host())),
+		config.SetAppName(c.Name()),
+	)
 }
 
 // read the rootCA certificate from the installation directory
 func ReadRootCert() (cert *x509.Certificate, err error) {
-	tlsDir := filepath.Join(host.Geneos(), "tls")
-	return host.LOCAL.ReadCert(filepath.Join(tlsDir, geneos.RootCAFile+".pem"))
+	tlsDir := filepath.Join(geneos.Root(), "tls")
+	return geneos.LOCAL.ReadCert(filepath.Join(tlsDir, geneos.RootCAFile+".pem"))
 }
 
 // read the signing certificate from the installation directory
 func ReadSigningCert() (cert *x509.Certificate, err error) {
-	tlsDir := filepath.Join(host.Geneos(), "tls")
-	return host.LOCAL.ReadCert(filepath.Join(tlsDir, geneos.SigningCertFile+".pem"))
+	tlsDir := filepath.Join(geneos.Root(), "tls")
+	return geneos.LOCAL.ReadCert(filepath.Join(tlsDir, geneos.SigningCertFile+".pem"))
 }
 
 // read the instance certificate
@@ -157,35 +173,73 @@ func ReadCert(c geneos.Instance) (cert *x509.Certificate, err error) {
 }
 
 // read the instance RSA private key
-func ReadKey(c geneos.Instance) (key *rsa.PrivateKey, err error) {
-	if c.Type() == nil {
+func ReadKey(c geneos.Instance) (key *memguard.Enclave, err error) {
+	if c.Type() == nil || c.Config().GetString("privatekey") == "" {
 		return nil, geneos.ErrInvalidArgs
 	}
 
 	return c.Host().ReadKey(Abs(c, c.Config().GetString("privatekey")))
 }
 
-// wrapper to create a new certificate given the sign cert and private key and an optional private key to (re)use
-// for the created certificate itself. returns a certificate and private key
-func CreateCertKey(template, parent *x509.Certificate, parentKey *rsa.PrivateKey, existingKey *rsa.PrivateKey) (cert *x509.Certificate, key *rsa.PrivateKey, err error) {
-	if existingKey != nil {
-		key = existingKey
-	} else {
-		key, err = rsa.GenerateKey(rand.Reader, 4096)
-		if err != nil {
+// NewPrivateKey returns a PKCS1 encoded RSA Private Key as an enclave. It is
+// not PEM encoded.
+func NewPrivateKey() *memguard.Enclave {
+	certKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
+	return memguard.NewEnclave(x509.MarshalPKCS1PrivateKey(certKey))
+}
+
+// wrapper to create a new certificate given the sign cert and private
+// key and an optional private key to (re)use for the created
+// certificate itself. returns a certificate and private key. Keys are
+// in PEM format so need parsing after unsealing.
+func CreateCertKey(template, parent *x509.Certificate, parentKeyPEM, existingKeyPEM *memguard.Enclave) (cert *x509.Certificate, keyPEM *memguard.Enclave, err error) {
+	var certBytes []byte
+	var certKey *rsa.PrivateKey
+
+	if template != parent && parentKeyPEM == nil {
+		err = errors.New("parent key empty but not self-signing")
+		return
+	}
+
+	keyPEM = existingKeyPEM
+	if keyPEM == nil {
+		keyPEM = NewPrivateKey()
+	}
+
+	l, _ := keyPEM.Open()
+	if certKey, err = x509.ParsePKCS1PrivateKey(l.Bytes()); err != nil {
+		keyPEM = nil
+		return
+	}
+
+	signingKey := certKey
+	certPubKey := &certKey.PublicKey
+
+	if parentKeyPEM != nil {
+		pk, _ := parentKeyPEM.Open()
+		if signingKey, err = x509.ParsePKCS1PrivateKey(pk.Bytes()); err != nil {
+			keyPEM = nil
 			return
 		}
+		pk.Destroy()
 	}
 
-	privKey := key
-	if parentKey != nil {
-		privKey = parentKey
+	if certBytes, err = x509.CreateCertificate(rand.Reader, template, parent, certPubKey, signingKey); err != nil {
+		keyPEM = nil
+		l.Destroy()
+		return
 	}
 
-	var certBytes []byte
-	if certBytes, err = x509.CreateCertificate(rand.Reader, template, parent, &key.PublicKey, privKey); err == nil {
-		cert, err = x509.ParseCertificate(certBytes)
+	if cert, err = x509.ParseCertificate(certBytes); err != nil {
+		keyPEM = nil
+		l.Destroy()
+		return
 	}
 
+	keyPEM = l.Seal()
 	return
 }

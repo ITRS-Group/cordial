@@ -28,14 +28,10 @@ package geneos
 import (
 	"encoding/json"
 	"errors"
-	"io/fs"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 
 	"github.com/rs/zerolog/log"
 )
@@ -47,16 +43,14 @@ var (
 	ErrIsADirectory error = errors.New("is a directory")
 )
 
-const RootCAFile = "rootCA"
-const SigningCertFile = "geneos"
 const DisableExtension = "disabled"
 
+var RootCAFile = "rootCA"
+var SigningCertFile string
 var ConfigFileType = "json"
-
 var GlobalConfigDir = "/etc"
-var ConfigSubdirName = "geneos"
+var ConfigSubdirName = Execname
 var UserConfigFile = "geneos.json"
-var GlobalConfigPath = filepath.Join(GlobalConfigDir, ConfigSubdirName, UserConfigFile)
 
 // Init initialises a Geneos environment by creating a directory
 // structure and then it calls the initialisation functions for each
@@ -64,17 +58,7 @@ var GlobalConfigPath = filepath.Join(GlobalConfigDir, ConfigSubdirName, UserConf
 //
 // If the directory is not empty and the Force() option is not passed
 // then nothing is changed
-//
-// When called on a remote host then the user running the command cannot
-// be super-user.
-func Init(h *host.Host, options ...Options) (err error) {
-	var uid, gid int
-
-	if h != host.LOCAL && utils.IsSuperuser() {
-		err = ErrNotSupported
-		return
-	}
-
+func Init(h *Host, options ...Options) (err error) {
 	opts := EvalOptions(options...)
 	if opts.homedir == "" {
 		log.Fatal().Msg("homedir not set")
@@ -83,8 +67,8 @@ func Init(h *host.Host, options ...Options) (err error) {
 
 	// dir must first not exist (or be empty) and then be creatable
 	//
-	// maybe check that the entire list of registered directories are
-	// either directories or do not exist
+	// XXX maybe check that the entire list of registered directories
+	// are either directories or do not exist
 	if _, err := h.Stat(opts.homedir); err != nil {
 		if err = h.MkdirAll(opts.homedir, 0775); err != nil {
 			log.Fatal().Err(err).Msg("")
@@ -97,7 +81,7 @@ func Init(h *host.Host, options ...Options) (err error) {
 		}
 		for _, entry := range dirs {
 			if !strings.HasPrefix(entry.Name(), ".") {
-				if h != host.LOCAL {
+				if h != LOCAL {
 					log.Debug().Msg("remote directories exist, exiting init")
 					return nil
 				}
@@ -106,43 +90,17 @@ func Init(h *host.Host, options ...Options) (err error) {
 		}
 	}
 
-	if h == host.LOCAL {
-		config.GetConfig().Set("geneos", opts.homedir)
-		config.GetConfig().Set("defaultuser", opts.localusername)
-
-		userConfFile := UserConfigFilePaths()[0]
-		if utils.IsSuperuser() {
-			userConfDir, err := config.UserConfigDir(opts.localusername)
-			if err != nil {
-				log.Fatal().Err(err).Msg("")
-			}
-			userConfFile = filepath.Join(userConfDir, ConfigSubdirName, UserConfigFile)
-		}
-
-		if err = host.WriteConfigFile(userConfFile, opts.localusername, 0664, config.GetConfig()); err != nil {
+	if h == LOCAL {
+		config.Set(Execname, opts.homedir)
+		if err = config.Save(Execname); err != nil {
 			return err
 		}
 
-		// recreate host.LOCAL to load "geneos" and others
-		host.LOCAL = nil
-		host.LOCAL = host.Get(host.LOCALHOST)
-		h = host.LOCAL
+		// recreate LOCAL to load "geneos" and others
+		LOCAL = nil
+		LOCAL = NewHost(LOCALHOST)
+		h = LOCAL
 	}
-
-	if utils.IsSuperuser() {
-		uid, gid, _, err = utils.GetIDs(opts.localusername)
-		if err != nil {
-			// XXX do something
-		}
-		if err = host.LOCAL.Chown(opts.homedir, uid, gid); err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
-	}
-
-	// it's not an error to try to re-create existing dirs
-	// if err = Root.MakeComponentDirs(h); err != nil {
-	// 	return
-	// }
 
 	for _, c := range AllComponents() {
 		if err := c.MakeComponentDirs(h); err != nil {
@@ -153,18 +111,14 @@ func Init(h *host.Host, options ...Options) (err error) {
 		}
 	}
 
-	// if we've created directory paths as root, go through and change
-	// ownership to the tree
-	if utils.IsSuperuser() {
-		err = filepath.WalkDir(opts.homedir, func(path string, dir fs.DirEntry, err error) error {
-			if err == nil {
-				err = host.LOCAL.Chown(path, uid, gid)
-			}
-			return err
-		})
-	}
-
 	return
+}
+
+// Root return the absolute path to the local Geneos installation. If
+// run on an older installation it may return the value from the legacy
+// configuration item `itrshome` if `geneos` is not set.
+func Root() string {
+	return config.GetString(Execname, config.Default(config.GetString("itrshome")))
 }
 
 // ReadLocalConfigFile reads a local configuration file without the need
@@ -177,31 +131,4 @@ func ReadLocalConfigFile(file string, config interface{}) (err error) {
 
 	// dec := json.NewDecoder(jsonFile)
 	return json.Unmarshal(jsonFile, &config)
-}
-
-// UserConfigFilePaths returns a slice of all the possible file paths to
-// the user configuration file. If arguments are passed then they are
-// used, in-turn, as the base filename for each directory. If no
-// arguments are passed then the default filename is taken from
-// `UserConfigFile`. The first element is the preferred file and the one
-// that should be used to write to.
-//
-// This function can be used to ensure that as the location changes in
-// the future, the code can still look for older copies when the
-// preferred path is empty.
-func UserConfigFilePaths(bases ...string) (paths []string) {
-	userConfDir, err := config.UserConfigDir()
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
-	if len(bases) == 0 {
-		bases = []string{UserConfigFile}
-	}
-
-	for _, base := range bases {
-		paths = append(paths, filepath.Join(userConfDir, ConfigSubdirName, base))
-		paths = append(paths, filepath.Join(userConfDir, base))
-	}
-	return
 }

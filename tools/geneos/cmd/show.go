@@ -28,10 +28,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/cobra"
 )
 
 type showCmdConfig struct {
@@ -46,7 +48,7 @@ type showCmdConfig struct {
 var showCmdRaw bool
 
 func init() {
-	rootCmd.AddCommand(showCmd)
+	RootCmd.AddCommand(showCmd)
 
 	showCmd.Flags().BoolVarP(&showCmdRaw, "raw", "r", false, "Show raw (unexpanded) configuration values")
 
@@ -76,7 +78,8 @@ to prevent visibility in casual viewing.
 	Aliases:      []string{"details"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		if len(args) == 0 {
@@ -90,7 +93,7 @@ to prevent visibility in casual viewing.
 			return nil
 		}
 
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		results, err := instance.ForAllWithResults(ct, showInstance, args, params)
 		if err != nil {
 			if err == os.ErrNotExist {
@@ -107,8 +110,12 @@ to prevent visibility in casual viewing.
 func showInstance(c geneos.Instance, params []string) (result interface{}, err error) {
 	// remove aliases
 	nv := config.New()
+	aliases := c.Type().Aliases
 	for _, k := range c.Config().AllKeys() {
-		if _, ok := c.Type().Aliases[k]; !ok {
+		// skip any names in the alias table
+		log.Debug().Msgf("checking %s", k)
+		if _, ok := aliases[k]; !ok {
+			log.Debug().Msgf("setting %s", k)
 			nv.Set(k, c.Config().Get(k))
 		}
 	}

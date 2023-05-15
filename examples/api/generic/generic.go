@@ -1,19 +1,9 @@
 package generic
 
 import (
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/plugins"
 	"github.com/itrs-group/cordial/pkg/samplers"
-)
-
-func init() {
-	logger.EnableDebugLog()
-}
-
-var (
-	log      = logger.Log
-	logDebug = logger.Debug
-	logError = logger.Error
+	"github.com/rs/zerolog/log"
 )
 
 type GenericData struct {
@@ -34,12 +24,12 @@ func New(s *plugins.Connection, name string, group string) (*GenericSampler, err
 }
 
 func (g *GenericSampler) InitSampler() error {
-	logDebug.Println("called")
+	log.Debug().Msg("called")
 	example, err := g.Parameter("EXAMPLE")
 	longparameter, err := g.Parameter("DIRS")
 	log.Printf("long param len: %d\n%s", len(longparameter), longparameter)
 	if err != nil {
-		logError.Println(err)
+		log.Error().Err(err).Msg("")
 		return nil
 	}
 	g.localdata = example
@@ -52,7 +42,7 @@ func (g *GenericSampler) InitSampler() error {
 }
 
 func (p *GenericSampler) DoSample() error {
-	logDebug.Print("called")
+	log.Debug().Msg("called")
 	var rowdata = []GenericData{
 		{"row4", "data1", "data2"},
 		{"row2", "data1", "data2"},

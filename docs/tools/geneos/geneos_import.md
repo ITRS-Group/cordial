@@ -29,6 +29,13 @@ the instance configuration or the default user.
 Currently only files can be imported and if the SOURCE is a directory
 then this is an error.
 
+Like other commands that write to the file system, it can safely be
+run as root as the destination directory and file will be changed to
+be owned by either the instance or the default user, with the caveat
+that any intermediate directories created above the destination
+directory (e.g. the first two in `my/long/path`) will be owned by
+root.
+
 
 ```
 geneos import [flags] [TYPE] [NAME...] [PATH=]SOURCE...

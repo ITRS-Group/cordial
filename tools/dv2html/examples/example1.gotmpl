@@ -1,0 +1,47 @@
+  <html>
+    <head>
+      {{if .CSSURL}}
+      <link rel="stylesheet" href="{{.CSSURL}}">
+      {{else if .CSSDATA}}
+      <style>
+      ${config:css-data}
+      </style>
+      {{end}}
+    </head>
+    <body>
+      {{range $index, $dataview := .Dataviews}}
+      <h1>{{ .Name }}</h1>
+      <h2>{{ .XPath }}</h2>
+      <p>Sample Time: {{ .SampleTime }}</p>
+      <h2>Headlines</h2>
+      <table id="headlines">
+        <tbody>
+      {{range $headline, $values := .Headlines}}<tr id="headline-{{$headline}}">
+          <th>{{$headline}}</th>
+            <td class="headline {{$values.Severity}}">{{$values.Value}}</td>{{end}}
+          </tr>
+        </tbody>
+      </table>
+      <h2>Table</h2>
+      <table id="cells">
+        <thead>
+      {{range .Columns}}    <th>{{.}}</th>{{end}}
+        </thead>
+        <tbody>
+      {{range $row, $cells := .Table}}<tr id="row-{{$row}}">
+      <th>{{$row}}</th>
+      {{range $i, $column := $dataview.Columns}}
+      {{if ne $i 0}}{{with (index $cells $column)}}<td class="cell {{.Severity}}">{{.Value}}</td>{{end}}{{end}}
+      {{end}}
+      </tr>{{end}}
+        </tbody>
+      </table>
+      {{end}}
+      <h2>Environment Vars:</h2>
+      <table class="env">
+        <tbody>
+          {{range $key, $value := .Env}}<tr><th>{{$key}}</th><td>{{$value}}</td></tr>{{end}}
+        </tbody>
+      </table>
+    </body>
+  </html>

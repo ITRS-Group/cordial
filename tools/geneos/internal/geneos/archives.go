@@ -30,10 +30,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -44,8 +44,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 type downloadauth struct {
@@ -54,7 +52,9 @@ type downloadauth struct {
 }
 
 // openArchive locates and returns an io.ReadCloser for an archive for
-// the component ct. The source of the archive is given as an option.
+// the component ct. The source of the archive is given as an option. If
+// no options are set then the "latest" release from the ITRS releases
+// web site is downloaded and returned.
 func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filename string, err error) {
 	var resp *http.Response
 
@@ -75,11 +75,11 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 		if opts.version == "latest" {
 			opts.version = ""
 		}
-		archiveDir := host.LOCAL.Filepath("packages", "downloads")
+		archiveDir := LOCAL.Filepath("packages", "downloads")
 		if opts.source != "" {
 			archiveDir = opts.source
 		}
-		filename, err = LatestArchive(host.LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
+		filename, err = LatestArchive(LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
 			log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
 			switch ct.String() {
 			case "webserver":
@@ -100,7 +100,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 			return
 		}
 		var f io.ReadSeekCloser
-		if f, err = host.LOCAL.Open(filepath.Join(archiveDir, filename)); err != nil {
+		if f, err = LOCAL.Open(filepath.Join(archiveDir, filename)); err != nil {
 			err = fmt.Errorf("local installation selected but no suitable file found for %s (%w)", ct, err)
 			return
 		}
@@ -112,14 +112,15 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 		return
 	}
 
-	archiveDir := filepath.Join(host.Geneos(), "packages", "downloads")
-	host.LOCAL.MkdirAll(archiveDir, 0775)
+	archiveDir := filepath.Join(Root(), "packages", "downloads")
+	LOCAL.MkdirAll(archiveDir, 0775)
 	archivePath := filepath.Join(archiveDir, filename)
-	s, err := host.LOCAL.Stat(archivePath)
+	s, err := LOCAL.Stat(archivePath)
 	if err == nil && s.Size() == resp.ContentLength {
-		if f, err := host.LOCAL.Open(archivePath); err == nil {
+		if f, err := LOCAL.Open(archivePath); err == nil {
 			log.Debug().Msgf("not downloading, file with same size already exists: %s", archivePath)
 			resp.Body.Close()
+			fmt.Printf("%s already exists (sizes match), skipping\n", filename)
 			return f, filename, nil
 		}
 	}
@@ -154,18 +155,13 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 	}
 	body = w
 
-	// chown package
-	if utils.IsSuperuser() {
-		uid, gid, _, _ := utils.GetIDs(opts.localusername)
-		w.Chown(uid, gid)
-	}
 	return
 }
 
 // unarchive unpacks the gzipped, open archive passed as an io.Reader on
 // the host given for the component. If there is anm error then the
 // caller must close the io.Reader
-func unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, options ...Options) (err error) {
+func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ...Options) (err error) {
 	var version string
 
 	opts := EvalOptions(options...)
@@ -177,7 +173,7 @@ func unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 		// special handling for SANs
 		switch ct.Name {
 		// XXX abstract this
-		case "none", "san", "ca3":
+		case "none", "san", "floating", "ca3":
 			ct = ctFromFile
 		case ctFromFile.Name:
 			break
@@ -257,14 +253,14 @@ func unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 		if name = fnname(hdr.Name); name == "" {
 			continue
 		}
-		if name, err = host.CleanRelativePath(name); err != nil {
+		if name, err = CleanRelativePath(name); err != nil {
 			return
 		}
-		fullpath := utils.JoinSlash(basedir, name)
+		fullpath := path.Join(basedir, name)
 		switch hdr.Typeflag {
 		case tar.TypeReg:
 			// check (and created) containing directories - account for munged tar files
-			dir := utils.Dir(fullpath)
+			dir := path.Dir(fullpath)
 			if err = h.MkdirAll(dir, 0775); err != nil {
 				return
 			}
@@ -305,18 +301,6 @@ func unarchive(h *host.Host, ct *Component, filename string, gz io.Reader, optio
 		}
 	}
 
-	// if root, (l)chown of created tree to default user
-	if h == host.LOCAL && utils.IsSuperuser() {
-		uid, gid, _, err := utils.GetIDs(h.GetString("username"))
-		if err == nil {
-			filepath.WalkDir(h.Path(basedir), func(path string, dir fs.DirEntry, err error) error {
-				if err == nil {
-					err = host.LOCAL.Lchown(path, uid, gid)
-				}
-				return err
-			})
-		}
-	}
 	fmt.Printf("installed %q to %q\n", filename, h.Path(basedir))
 	options = append(options, Version(version))
 	return Update(h, ct, options...)
@@ -369,13 +353,30 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 
 		log.Debug().Msgf("nexus url: %s", source)
 
+		// check for fallback creds
+		if opts.username == "" {
+			creds := config.FindCreds(source, config.SetAppName(Execname))
+			if creds != nil {
+				opts.username = creds.GetString("username")
+				opts.password = creds.GetEnclave("password")
+			}
+		}
+
 		if opts.username != "" {
 			var req *http.Request
 			client := &http.Client{}
 			if req, err = http.NewRequest("GET", source, nil); err != nil {
 				return
 			}
-			req.SetBasicAuth(opts.username, string(opts.password))
+			if opts.password != nil {
+				pw, _ := opts.password.Open()
+				password := config.ExpandLockedBuffer(pw.String())
+				pw.Destroy()
+				req.SetBasicAuth(opts.username, password.String())
+				password.Destroy()
+			} else {
+				req.SetBasicAuth(opts.username, "")
+			}
 			if resp, err = client.Do(req); err != nil {
 				return
 			}
@@ -386,7 +387,7 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 		}
 
 	default:
-		baseurl := config.GetString("download.url")
+		baseurl := config.GetString(config.Join("download", "url"))
 		downloadURL, _ := url.Parse(baseurl)
 		realpath, _ := url.Parse(ct.DownloadBase.Resources)
 		v := url.Values{}
@@ -424,11 +425,29 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 			}
 		}
 
+		// check for fallback creds
+		if opts.username == "" {
+			creds := config.FindCreds(source, config.SetAppName(Execname))
+			if creds != nil {
+				opts.username = creds.GetString("username")
+				opts.password = creds.GetEnclave("password")
+			}
+		}
+
 		// only use auth if required - but save auth for potential reuse below
 		var auth_body []byte
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
 			if opts.username != "" {
-				da := downloadauth{opts.username, string(opts.password)}
+				da := downloadauth{
+					Username: opts.username,
+				}
+				if opts.password != nil {
+					pw, _ := opts.password.Open()
+					password := config.ExpandLockedBuffer(pw.String())
+					pw.Destroy()
+					da.Password = strings.Clone(password.String())
+					password.Destroy()
+				}
 				auth_body, err = json.Marshal(da)
 				if err != nil {
 					return
@@ -483,7 +502,7 @@ func MatchVersion(v string) bool {
 //
 // If there is semver metadata, check for platform_id on host and remove
 // any non-platform metadata from list before sorting
-func LatestArchive(r *host.Host, dir, filterString string, filterFunc func(os.DirEntry) bool) (latest string, err error) {
+func LatestArchive(r *Host, dir, filterString string, filterFunc func(os.DirEntry) bool) (latest string, err error) {
 	ents, err := r.ReadDir(dir)
 	if err != nil {
 		return

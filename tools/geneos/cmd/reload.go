@@ -31,7 +31,7 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(reloadCmd)
+	RootCmd.AddCommand(reloadCmd)
 
 	// reloadCmd.Flags().SortFlags = false
 }
@@ -45,10 +45,11 @@ Signal the matching instances to reload their configurations, depending on the c
 	Aliases:      []string{"refresh"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		return instance.ForAll(ct, reloadInstance, args, params)
 	},
 }

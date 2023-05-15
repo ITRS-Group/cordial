@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 
 	"github.com/rs/zerolog/log"
@@ -107,7 +106,7 @@ func parseArgs(cmd *cobra.Command, rawargs []string) (err error) {
 		if len(args) == 0 || (len(args) == 1 && args[0] == "all") {
 			// no args also means all instances
 			wild = true
-			args = instance.AllNames(host.ALL, ct)
+			args = instance.AllNames(geneos.ALL, ct)
 		} else {
 			// expand each arg and save results to a new slice
 			// if local == "", then all instances on host (e.g. @host)
@@ -121,7 +120,7 @@ func parseArgs(cmd *cobra.Command, rawargs []string) (err error) {
 					nargs = append(nargs, arg)
 					continue
 				}
-				_, local, r := instance.SplitName(arg, host.ALL)
+				_, local, r := instance.SplitName(arg, geneos.ALL)
 				if !r.Exists() {
 					log.Debug().Msgf("%s - host not found", arg)
 					// we have tried to match something and it may result in an empty list
@@ -137,10 +136,10 @@ func parseArgs(cmd *cobra.Command, rawargs []string) (err error) {
 						nargs = append(nargs, rargs...)
 						wild = true
 					}
-				} else if r == host.ALL {
+				} else if r == geneos.ALL {
 					// no '@host' in arg
 					var matched bool
-					for _, rem := range host.AllHosts() {
+					for _, rem := range geneos.AllHosts() {
 						wild = true
 						log.Debug().Msgf("checking host %s for %s", rem.String(), local)
 						name := local + "@" + rem.String()
@@ -201,8 +200,8 @@ func parseArgs(cmd *cobra.Command, rawargs []string) (err error) {
 	}
 
 	// if args is empty, find them all again. ct == None too?
-	if len(args) == 0 && host.Geneos() != "" && !wild {
-		args = instance.AllNames(host.ALL, ct)
+	if len(args) == 0 && geneos.Root() != "" && !wild {
+		args = instance.AllNames(geneos.ALL, ct)
 		jsonargs, _ := json.Marshal(args)
 		a["args"] = string(jsonargs)
 	}
@@ -211,7 +210,7 @@ func parseArgs(cmd *cobra.Command, rawargs []string) (err error) {
 	return
 }
 
-func cmdArgs(cmd *cobra.Command) (ct *geneos.Component, args []string) {
+func CmdArgs(cmd *cobra.Command) (ct *geneos.Component, args []string) {
 	log.Debug().Msgf("%s %v", cmd.Annotations, ct)
 	ct = geneos.ParseComponentName(cmd.Annotations["ct"])
 	if err := json.Unmarshal([]byte(cmd.Annotations["args"]), &args); err != nil {
@@ -220,8 +219,8 @@ func cmdArgs(cmd *cobra.Command) (ct *geneos.Component, args []string) {
 	return
 }
 
-func cmdArgsParams(cmd *cobra.Command) (ct *geneos.Component, args, params []string) {
-	ct, args = cmdArgs(cmd)
+func CmdArgsParams(cmd *cobra.Command) (ct *geneos.Component, args, params []string) {
+	ct, args = CmdArgs(cmd)
 	if err := json.Unmarshal([]byte(cmd.Annotations["params"]), &params); err != nil {
 		log.Debug().Err(err).Msg("")
 	}

@@ -1,3 +1,25 @@
+/*
+Copyright © 2022 ITRS Group
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
 package config
 
 import (
@@ -5,96 +27,85 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
-	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"hash/crc32"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"unicode/utf8"
+	"unsafe"
 
-	"golang.org/x/crypto/pbkdf2"
+	"github.com/awnumar/memguard"
 )
 
-// An AESValues structure contains the values required to create a
-// Geneos Gateway AES key file and then to encode and decode AES
-// passwords in configurations
-type AESValues struct {
-	Key []byte
-	IV  []byte
+// KeyValues contains the values required to create a Geneos Gateway AES key
+// file and then to encode and decode AES passwords in configurations. It is
+// handled as a memguard Enclave to protect the plaintext as much as possible.
+type KeyValues struct {
+	*memguard.Enclave
 }
 
-// NewAESValues returns a new AESValues structure or an error
-func NewAESValues() (a AESValues, err error) {
-	rp := make([]byte, 20)
-	salt := make([]byte, 10)
+// keyvalues holds an AES key and IV
+type keyvalues struct {
+	key [aes.BlockSize * 2]byte
+	iv  [aes.BlockSize]byte
+}
 
-	// generate the key and IV separately
-
-	if _, err = rand.Read(rp); err != nil {
-		return
+// NewRandomKeyValues returns a new KeyValues structure with a key and iv
+// generated using the memguard.
+func NewRandomKeyValues() (kv *KeyValues) {
+	var k *keyvalues
+	kv = &KeyValues{
+		memguard.NewEnclaveRandom(int(unsafe.Sizeof(*k))),
 	}
-	if _, err = rand.Read(salt); err != nil {
-		return
-	}
-	a.Key = pbkdf2.Key(rp, salt, 10000, 32, sha1.New)
-
-	if _, err = rand.Read(rp); err != nil {
-		return
-	}
-	if _, err = rand.Read(salt); err != nil {
-		return
-	}
-	a.IV = pbkdf2.Key(rp, salt, 10000, aes.BlockSize, sha1.New)
-
 	return
 }
 
-// String method for AESValues
+func NewKeyValues() (kv *KeyValues) {
+	var k *keyvalues
+	m := memguard.NewBuffer(int(unsafe.Sizeof(*k)))
+	kv = &KeyValues{
+		m.Seal(),
+	}
+	return
+}
+
+func lockedBufferTo[T any](m *memguard.LockedBuffer) (v *T) {
+	return (*T)(unsafe.Pointer(&m.Bytes()[0]))
+}
+
+// String method for KeyValues
 //
 // The output is in the format for suitable for use as a gateway key
 // file for secure passwords as described in:
 // https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm
-func (a AESValues) String() string {
-	if len(a.Key) != 32 || len(a.IV) != aes.BlockSize {
-		return ""
-	}
-	// space intentional to match native OpenSSL output
-	return fmt.Sprintf("key=%X\niv =%X\n", a.Key, a.IV)
+func (kv *KeyValues) String() string {
+	kl, _ := kv.Open()
+	defer kl.Destroy()
+	k := lockedBufferTo[keyvalues](kl)
+
+	// leading space intentional to match native OpenSSL output
+	return fmt.Sprintf("key=%X\niv =%X\n", k.key, k.iv)
 }
 
-// WriteAESValues writes the AESValues structure to the io.Writer. Each
-// fields acts as if it were being marshalled with an ",omitempty" tag.
-func (a AESValues) WriteAESValues(w io.Writer) error {
-	if len(a.Key) != 32 || len(a.IV) != aes.BlockSize {
-		return fmt.Errorf("invalid AES values")
-	}
-	s := a.String()
-	if s != "" {
-		if _, err := fmt.Fprint(w, a); err != nil {
-			return err
-		}
+// Write writes the KeyValues structure to the io.Writer.
+func (kv *KeyValues) Write(w io.Writer) error {
+	if _, err := fmt.Fprint(w, kv.String()); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-// ReadAESValuesFile returns an AESValues struct populated with the
-// contents of the file passed as path.
-func ReadAESValuesFile(path string) (a AESValues, err error) {
-	r, err := os.Open(path)
-	if err != nil {
-		return
-	}
-	defer r.Close()
-	return ReadAESValues(r)
-}
+// Read KeyValues from the io.Reader r and return a locked buffer keyvalues kv. m should be
+// destroyed after use.
+func Read(r io.Reader) (kv *KeyValues) {
+	var k *keyvalues
+	m := memguard.NewBuffer(int(unsafe.Sizeof(*k)))
+	k = lockedBufferTo[keyvalues](m)
 
-// ReadAESValues returns an AESValues struct populated with the contents
-// read from r. The caller must close the Reader on return.
-func ReadAESValues(r io.Reader) (a AESValues, err error) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -103,7 +114,7 @@ func ReadAESValues(r io.Reader) (a AESValues, err error) {
 		}
 		s := strings.SplitN(line, "=", 2)
 		if len(s) != 2 {
-			err = fmt.Errorf("invalid line (must be key=value) %q", line)
+			// err = fmt.Errorf("invalid line (must be key=value) %q", line)
 			return
 		}
 		key, value := strings.TrimSpace(s[0]), strings.TrimSpace(s[1])
@@ -111,82 +122,61 @@ func ReadAESValues(r io.Reader) (a AESValues, err error) {
 		case "salt":
 			// ignore
 		case "key":
-			a.Key, _ = hex.DecodeString(value)
+			key, _ := hex.DecodeString(value)
+			copy(k.key[:], key)
 		case "iv":
-			a.IV, _ = hex.DecodeString(value)
+			iv, _ := hex.DecodeString(value)
+			copy(k.iv[:], iv)
 		default:
-			err = fmt.Errorf("unknown entry in file: %q", key)
+			// err = fmt.Errorf("unknown entry in file: %q", key)
 			return
 		}
 	}
-	if len(a.Key) != 32 || len(a.IV) != aes.BlockSize {
-		return AESValues{}, fmt.Errorf("invalid AES values")
+	kv = &KeyValues{
+		m.Seal(),
 	}
 	return
 }
 
-func ChecksumFile(path string) (c uint32, err error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return
-	}
-	c = crc32.ChecksumIEEE(b)
-	return
-}
-
-// Checksum returns the CRC32 checksum of the AESValue it is called on.
-func (a *AESValues) Checksum() (c uint32, err error) {
-	if a == nil {
+// Checksum returns the CRC32 checksum of the KeyValues
+func (kv *KeyValues) Checksum() (c uint32, err error) {
+	if kv == nil {
 		err = os.ErrInvalid
 		return
 	}
-	c = crc32.ChecksumIEEE([]byte(a.String()))
+	c = crc32.ChecksumIEEE([]byte(kv.String()))
 	return
 }
 
-func Checksum(r io.Reader) (c uint32, err error) {
-	b := bytes.Buffer{}
-	_, err = b.ReadFrom(r)
-	if err != nil {
-		return
-	}
-	c = crc32.ChecksumIEEE(b.Bytes())
-	return
-}
+func (kv *KeyValues) encode(plaintext *memguard.Enclave) (out []byte, err error) {
+	kl, _ := kv.Open()
+	defer kl.Destroy()
+	k := lockedBufferTo[keyvalues](kl)
 
-func ChecksumString(in string) (c uint32, err error) {
-	c = crc32.ChecksumIEEE([]byte(in))
-	return
-}
-
-func (a AESValues) EncodeAES(in []byte) (out []byte, err error) {
-	block, err := aes.NewCipher(a.Key)
+	block, err := aes.NewCipher(k.key[:])
 	if err != nil {
 		err = fmt.Errorf("invalid key: %w", err)
 		return
 	}
-	if len(a.IV) != aes.BlockSize {
-		err = fmt.Errorf("IV is not the same length as the block size")
-		return
-	}
+
+	in, _ := plaintext.Open()
 
 	// always pad at least one byte (the length)
 	var pad []byte
-	padBytes := aes.BlockSize - len(in)%aes.BlockSize
+	padBytes := aes.BlockSize - in.Size()%aes.BlockSize
 	if padBytes == 0 {
 		padBytes = aes.BlockSize
 	}
 	pad = bytes.Repeat([]byte{byte(padBytes)}, padBytes)
-	in = append(in, pad...)
-	mode := cipher.NewCBCEncrypter(block, a.IV)
-	mode.CryptBlocks(in, in)
-	out = in
+	mode := cipher.NewCBCEncrypter(block, k.iv[:])
+	out = make([]byte, in.Size()+len(pad))
+	mode.CryptBlocks(out, append(in.Bytes(), pad...))
+	in.Destroy()
 	return
 }
 
-func (a AESValues) EncodeAESBytes(in []byte) (out []byte, err error) {
-	text := []byte(in)
-	cipher, err := a.EncodeAES(text)
+func (kv *KeyValues) Encode(in *memguard.Enclave) (out []byte, err error) {
+	cipher, err := kv.encode(in)
 	if err == nil {
 		out = make([]byte, len(cipher)*2)
 		hex.Encode(out, cipher)
@@ -195,25 +185,29 @@ func (a AESValues) EncodeAESBytes(in []byte) (out []byte, err error) {
 	return
 }
 
-func (a AESValues) EncodeAESString(in string) (out string, err error) {
-	text := []byte(in)
-	cipher, err := a.EncodeAES(text)
+func (kv *KeyValues) EncodeString(in string) (out string, err error) {
+	text := memguard.NewEnclave([]byte(in))
+	cipher, err := kv.encode(text)
 	if err == nil {
 		out = strings.ToUpper(hex.EncodeToString(cipher))
 	}
 	return
 }
 
-// DecodeAES returns the decoded value of in bytes using the AESValues
+// Decode returns the decoded value of in bytes using the KeyValues
 // given as the method receiver. Any prefix of "+encs+" is trimmed
-// before decode. If decoding fails out is empty and error will contain
-// the reason.
-func (a AESValues) DecodeAES(in []byte) (out []byte, err error) {
+// before decode. If decoding fails then out is returned empty and err
+// will contain the reason.
+func (kv *KeyValues) Decode(in []byte) (out []byte, err error) {
+	kl, _ := kv.Open()
+	defer kl.Destroy()
+	k := lockedBufferTo[keyvalues](kl)
+
 	in = bytes.TrimPrefix(in, []byte("+encs+"))
 
 	text := make([]byte, hex.DecodedLen(len(in)))
 	hex.Decode(text, in)
-	block, err := aes.NewCipher(a.Key)
+	block, err := aes.NewCipher(k.key[:])
 	if err != nil {
 		err = fmt.Errorf("invalid key: %w", err)
 		return
@@ -222,11 +216,7 @@ func (a AESValues) DecodeAES(in []byte) (out []byte, err error) {
 		err = fmt.Errorf("input is not a multiple of the block size")
 		return
 	}
-	if len(a.IV) != aes.BlockSize {
-		err = fmt.Errorf("IV is not the same length as the block size")
-		return
-	}
-	mode := cipher.NewCBCDecrypter(block, a.IV)
+	mode := cipher.NewCBCDecrypter(block, k.iv[:])
 	mode.CryptBlocks(text, text)
 
 	if len(text) == 0 {
@@ -249,93 +239,153 @@ func (a AESValues) DecodeAES(in []byte) (out []byte, err error) {
 	return
 }
 
-// DecodeAESString returns a plain text of the input or an error
-func (a AESValues) DecodeAESString(in string) (out string, err error) {
-	plain, err := a.DecodeAES([]byte(in))
+func (kv *KeyValues) DecodeEnclave(in []byte) (out *memguard.Enclave, err error) {
+	kl, _ := kv.Open()
+	defer kl.Destroy()
+	k := lockedBufferTo[keyvalues](kl)
+
+	in = bytes.TrimPrefix(in, []byte("+encs+"))
+
+	ciphertext := make([]byte, hex.DecodedLen(len(in)))
+
+	hex.Decode(ciphertext, in)
+	block, err := aes.NewCipher(k.key[:])
+	if err != nil {
+		err = fmt.Errorf("invalid key: %w", err)
+		return
+	}
+	if len(ciphertext)%aes.BlockSize != 0 {
+		err = fmt.Errorf("input is not a multiple of the block size")
+		return
+	}
+	mode := cipher.NewCBCDecrypter(block, k.iv[:])
+	l := memguard.NewBuffer(len(ciphertext))
+	plaintext := l.Bytes()
+	mode.CryptBlocks(plaintext, ciphertext)
+
+	if len(plaintext) == 0 {
+		err = fmt.Errorf("decode failed")
+		return
+	}
+
+	// remove padding as per RFC5246
+	paddingLength := int((plaintext)[len(plaintext)-1])
+	if paddingLength == 0 || paddingLength > aes.BlockSize {
+		err = fmt.Errorf("invalid padding size")
+		return
+	}
+	plaintext = (plaintext)[0 : len(plaintext)-paddingLength]
+	if !utf8.Valid(plaintext) {
+		err = fmt.Errorf("decoded test not valid UTF-8")
+		return
+	}
+	out = memguard.NewEnclave(plaintext)
+	return
+}
+
+// DecodeString returns plaintext of the input or an error
+func (kv *KeyValues) DecodeString(in string) (out string, err error) {
+	plain, err := kv.Decode([]byte(in))
 	if err == nil {
 		out = string(plain)
 	}
 	return
 }
 
-// EncodeWithKey encodes the plaintext using the AES key read from the
-// file given. The encoded password is returned in `Geneos AES256`
-// format, with the `+encs+` prefix, unless expandable is set to true in
-// which case it is returned in a format that can be used with the
-// Expand function and includes a reference to the keyfile.
-//
-// If the keyfile is located under the user's configuration directory,
-// as defined by UserConfigDir, then the function will replace any home
-// directory prefix with `~/' to shorten the keyfile path.
-func EncodeWithKeyfile(plaintext []byte, keyfile string, expandable bool) (out string, err error) {
-	a, err := ReadAESValuesFile(keyfile)
-	if err != nil {
-		return "", err
+// Checksum reads from [io.Reader] data until EOF and returns crc as the
+// 32-bit IEEE checksum. data should be closed by the caller on return.
+// If there is an error reading from r then err is returned with the
+// reason.
+func Checksum(data io.Reader) (crc uint32, err error) {
+	b := bytes.Buffer{}
+	if _, err = b.ReadFrom(data); err != nil {
+		return
 	}
-
-	e, err := a.EncodeAESBytes(plaintext)
-	if err != nil {
-		return "", err
-	}
-
-	if expandable {
-		home, _ := os.UserHomeDir()
-		cfdir, _ := UserConfigDir()
-		if strings.HasPrefix(keyfile, cfdir) {
-			keyfile = "~" + strings.TrimPrefix(keyfile, home)
-		}
-		out = fmt.Sprintf("${enc:%s:+encs+%s}", keyfile, e)
-	} else {
-		out = fmt.Sprintf("+encs+%s", e)
-	}
+	crc = crc32.ChecksumIEEE(b.Bytes())
 	return
 }
 
-// EncodeWithKey encodes the plaintext using the AES key read from the
-// io.Reader given. The encoded password is returned in `Geneos AES256`
-// format, with the `+encs+` prefix.
-func EncodeWithKeyReader(plaintext []byte, r io.Reader) (out string, err error) {
-	a, err := ReadAESValues(r)
-	if err != nil {
-		return "", err
-	}
+// Credentials handling function
 
-	e, err := a.EncodeAESBytes(plaintext)
-	if err != nil {
-		return "", err
-	}
-
-	out = fmt.Sprintf("+encs+%s", e)
-	return
+// Credentials can carry a number of different credential types. Add
+// more as required. Eventually this will go into memguard.
+type Credentials struct {
+	Domain       string `json:"domain,omitempty"`
+	Username     string `json:"username,omitempty"`
+	Password     string `json:"password,omitempty"`
+	ClientID     string `json:"client_id,omitempty"`
+	ClientSecret string `json:"client_secret,omitempty"`
+	Token        string `json:"token,omitempty"`
+	Renewal      string `json:"renewal,omitempty"`
 }
 
-// EncodeWithKey encodes the plaintext using the AES key in the byte
-// slice given. The encoded password is returned in `Geneos AES256`
-// format, with the `+encs+` prefix.
-func EncodeWithKey(plaintext []byte, key []byte) (out string, err error) {
-	r := bytes.NewReader(key)
-	return EncodeWithKeyReader(plaintext, r)
-}
-
-// EncodePasswordPrompt prompts the user for a password and again to
-// verify, offering up to three attempts until the password match. When
-// the two match the plaintext is encoded using the supplied keyfile. If
-// expandable is true then the encoded password is returned in a format
-// useable by the Expand function and includes a path to the keyfile.
-func EncodePasswordPrompt(keyfile string, expandable bool) (out string, err error) {
-	var plaintext []byte
-	var match bool
-	for i := 0; i < 3; i++ {
-		plaintext = ReadPasswordPrompt()
-		plaintext2 := ReadPasswordPrompt("Re-enter Password")
-		if bytes.Equal(plaintext, plaintext2) {
-			match = true
-			break
+// FindCreds finds a set of credentials in the given config structure
+// under the key "credentials" and tries to match the longest one, if
+// any. creds is nil if not matching credentials found.
+func (cf *Config) FindCreds(path string) (creds *Config) {
+	cr := cf.GetStringMap("credentials")
+	if cr == nil {
+		return
+	}
+	paths := []string{}
+	for k := range cr {
+		paths = append(paths, k)
+	}
+	// sort the paths longest to shortest
+	sort.Slice(paths, func(i, j int) bool {
+		return len(paths[i]) > len(paths[j])
+	})
+	creds = New()
+	for _, p := range paths {
+		if strings.Contains(strings.ToLower(path), strings.ToLower(p)) {
+			creds.MergeConfigMap(cf.GetStringMap(cf.Join("credentials", p)))
+			return
 		}
-		fmt.Println("Passwords do not match. Please try again.")
 	}
-	if !match {
-		return "", fmt.Errorf("too many attempts, giving up")
+	return nil
+}
+
+// FindCreds looks for matching credentials in a default "credentials"
+// file. options are the same as for [Load] but the default KeyDelimiter
+// is set to "::" as credential domains are likely to be hostnames or
+// URLs. The longest match wins.
+func FindCreds(path string, options ...FileOptions) (cred *Config) {
+	options = append(options, KeyDelimiter("::"))
+	cf, _ := Load("credentials", options...)
+	return cf.FindCreds(path)
+}
+
+// Add creds to the "credentials" file identified by the options.
+// creds.Domain is used as the key for matching later on. Any existing
+// credential with the same Domain is overwritten. If there is an error
+// un the underlying routines it is returned without change.
+func AddCreds(creds Credentials, options ...FileOptions) (err error) {
+	options = append(options, KeyDelimiter("::"))
+	cf, err := Load("credentials", options...)
+	if err != nil {
+		return
 	}
-	return EncodeWithKeyfile(plaintext, keyfile, expandable)
+	cf.Set(cf.Join("credentials", creds.Domain), creds)
+	return cf.Save("credentials", options...)
+}
+
+// DeleteCreds removes the entry for domain from the "credentials" file
+// using FileOptions options.
+func DeleteCreds(domain string, options ...FileOptions) (err error) {
+	options = append(options, KeyDelimiter("::"))
+	cf, err := Load("credentials", options...)
+	if err != nil {
+		return
+	}
+	credmap := cf.GetStringMap("credentials")
+	delete(credmap, domain)
+	cf.Set("credentials", credmap)
+	return cf.Save("credentials", options...)
+}
+
+func DeleteAllCreds(options ...FileOptions) (err error) {
+	options = append(options, KeyDelimiter("::"))
+	cf := New(options...)
+	cf.Set("credentials", &Credentials{})
+	return cf.Save("credentials", options...)
 }

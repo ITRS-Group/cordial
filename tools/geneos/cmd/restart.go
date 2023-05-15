@@ -37,7 +37,7 @@ import (
 var restartCmdAll, restartCmdKill, restartCmdForce, restartCmdLogs bool
 
 func init() {
-	rootCmd.AddCommand(restartCmd)
+	RootCmd.AddCommand(restartCmd)
 
 	restartCmd.Flags().BoolVarP(&restartCmdAll, "all", "a", false, "Start all matching instances, not just those already running")
 	restartCmd.Flags().BoolVarP(&restartCmdForce, "force", "F", false, "Force restart of protected instances")
@@ -59,10 +59,11 @@ as both start and stop.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		return commandRestart(ct, args, params)
 	},
 }

@@ -30,7 +30,7 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(moveCmd)
+	RootCmd.AddCommand(moveCmd)
 
 	// moveCmd.Flags().SortFlags = false
 }
@@ -54,10 +54,11 @@ Moving across hosts is fully supported.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		if len(args) == 0 && len(params) == 2 && strings.HasPrefix(params[0], "@") && strings.HasPrefix(params[1], "@") {
 			args = params
 		}

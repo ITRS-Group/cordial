@@ -23,7 +23,7 @@ to prevent visibility in casual viewing.
 
 
 ```
-geneos show [flags]
+geneos show [flags] [TYPE] [NAME...]
 ```
 
 ### Options
@@ -42,5 +42,6 @@ geneos show [flags]
 
 * [geneos](geneos.md)	 - Control your Geneos environment
 * [geneos show global](geneos_show_global.md)	 - A brief description of your command
+* [geneos show host](geneos_show_host.md)	 - Alias for `show host`
 * [geneos show user](geneos_show_user.md)	 - A brief description of your command
 

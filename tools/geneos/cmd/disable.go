@@ -36,7 +36,7 @@ import (
 var disableCmdForce bool
 
 func init() {
-	rootCmd.AddCommand(disableCmd)
+	RootCmd.AddCommand(disableCmd)
 
 	disableCmd.Flags().BoolVarP(&disableCmdForce, "force", "F", false, "force disable instances")
 	disableCmd.Flags().SortFlags = false
@@ -51,10 +51,11 @@ stopped.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		return instance.ForAll(ct, disableInstance, args, params)
 	},
 }

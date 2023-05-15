@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(versionCmd)
+	RootCmd.AddCommand(versionCmd)
 
 	// versionCmd.Flags().SortFlags = false
 }
@@ -27,10 +27,11 @@ Show program version details
 	SilenceUsage: true,
 	Version:      cordial.VERSION,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "false",
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s version %s\n", cmdName, cmd.Version)
+		fmt.Printf("%s version %s\n", Execname, cmd.Version)
 		if debug {
 			info, ok := dbg.ReadBuildInfo()
 			if ok {

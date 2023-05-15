@@ -7,23 +7,30 @@ Initialise a more complete Geneos environment
 
 Initialise a typical Geneos installation.
 
-This command installs a Gateway, Netprobe, Licence-Daemon and
-Webserver. A licence file is required and should be give using the
-`-L` flag. If a licence file is not available then use `-L /dev/null`
-which will create and empty `geneos.lic` file that can be overwritten
-later.
+This command initialises a Geneos installation by:
+- Creating the directory structure & user configuration file,
+- Installing software ackages for component types `gateway`, `licd`,
+  `netprobe` & `webserver`,
+- Creating an instance for each component type named after the hostname
+  (except for `netprobe` whose instance is named `localhost`)
+- Starting the created instances.
 
-In almost all cases authentication will be required to download the
-install packages and as this is a new Geneos installation it is
-unlikely that the download credentials are saved in a local config
-file, so use the `-u email@example.com` as appropriate.
+A license file is required and should be given using option `-L`.
+If a license file is not available, then use `-L /dev/null` which will
+create an empty `geneos.lc` file that can be overwritten later.
 
-If packages are already downloaded locally then use the `-A` flag to
-refer to the directory contain the archives. They must be named in
-the same format as those downloaded from the main download website.
-If no version is given using the `-V` flag then the latest version of
-each component is installed.
+Authentication will most-likely be required to download the installation
+software packages and, as this is a new Geneos installation, it is unlikely
+that the download credentials are saved in a local config file.
+Use option `-u email@example.com` to define the username for downloading
+software packages.
 
+If packages are already downloaded locally, use option `-A Path_To_Archive`
+to refer to the directory containing the package archives.  Package files
+must be named in the same format as those downloaded from the 
+[ITRS download portal](https://resources.itrsgroup.com/downloads).
+If no version is given using option `-V`, then the latest version of each
+component is installed.
 
 
 ```
@@ -45,7 +52,6 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 ```
   -L, --licence Filepath or URL       Filepath or URL to license file (default "geneos.lic")
   -A, --archive PATH or URL           PATH or URL to software archive to install
-  -e, --env NAME=VALUE                Add environment variables in the format NAME=VALUE. Repeat flag for more values.
   -i, --include PRIORITY:{URL|PATH}   (gateways) Add an include file in the format PRIORITY:PATH
 ```
 
@@ -53,6 +59,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 
 ```
   -G, --config string                config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -e, --env NAME=VALUE               Add an environment variable in the format NAME=VALUE. Repeat flag for more values.
   -F, --force                        Be forceful, ignore existing directories.
   -w, --gatewaytemplate string       A gateway template file
   -c, --importcert string            signing certificate file with optional embedded private key

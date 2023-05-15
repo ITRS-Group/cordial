@@ -29,16 +29,14 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
+	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 	"github.com/rs/zerolog/log"
 )
 
@@ -94,14 +92,15 @@ func GetPID(c geneos.Instance) (pid int, err error) {
 	return 0, os.ErrProcessDone
 }
 
-func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime int64, err error) {
+func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime time.Time, err error) {
 	pid, err = GetPID(c)
 	if err == nil {
-		var s host.FileStat
-		s, err = c.Host().StatX(fmt.Sprintf("/proc/%d", pid))
-		return pid, s.Uid, s.Gid, s.Mtime, err
+		var st os.FileInfo
+		st, err = c.Host().Stat(fmt.Sprintf("/proc/%d", pid))
+		s := c.Host().GetFileOwner(st)
+		return pid, s.Uid, s.Gid, st.ModTime(), err
 	}
-	return 0, 0, 0, 0, os.ErrProcessDone
+	return 0, 0, 0, time.Time{}, os.ErrProcessDone
 }
 
 func allTCPListenPorts(c geneos.Instance, source string, ports map[int]int) (err error) {
@@ -187,8 +186,8 @@ func Files(c geneos.Instance) (openfiles map[int]OpenFiles) {
 		return
 	}
 
-	path := fmt.Sprintf("/proc/%d/fd", pid)
-	fds, err := c.Host().ReadDir(path)
+	file := fmt.Sprintf("/proc/%d/fd", pid)
+	fds, err := c.Host().ReadDir(file)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
 		return
@@ -198,7 +197,7 @@ func Files(c geneos.Instance) (openfiles map[int]OpenFiles) {
 
 	for _, ent := range fds {
 		fd := ent.Name()
-		dest, err := c.Host().Readlink(utils.JoinSlash(path, fd))
+		dest, err := c.Host().Readlink(path.Join(file, fd))
 		if err != nil {
 			log.Debug().Err(err).Msg("")
 			continue
@@ -208,7 +207,7 @@ func Files(c geneos.Instance) (openfiles map[int]OpenFiles) {
 		}
 		n, _ := strconv.Atoi(fd)
 
-		fdPath := utils.JoinSlash(path, fd)
+		fdPath := path.Join(file, fd)
 		fdMode, err := c.Host().Lstat(fdPath)
 		if err != nil {
 			log.Debug().Err(err).Msg("skipping")
@@ -244,15 +243,15 @@ func Sockets(c geneos.Instance) (links map[int]int) {
 		log.Debug().Err(err).Msg("")
 		return
 	}
-	path := fmt.Sprintf("/proc/%d/fd", pid)
-	fds, err := c.Host().ReadDir(path)
+	file := fmt.Sprintf("/proc/%d/fd", pid)
+	fds, err := c.Host().ReadDir(file)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
 		return
 	}
 	for _, ent := range fds {
 		fd := ent.Name()
-		dest, err := c.Host().Readlink(utils.JoinSlash(path, fd))
+		dest, err := c.Host().Readlink(path.Join(file, fd))
 		if err != nil {
 			log.Debug().Err(err).Msg("")
 			continue
@@ -264,20 +263,4 @@ func Sockets(c geneos.Instance) (links map[int]int) {
 		}
 	}
 	return
-}
-
-func procSetupOS(cmd *exec.Cmd, out *os.File) {
-	var err error
-
-	// if we've set-up privs at all, set the redirection output file to the same
-	if cmd.SysProcAttr != nil && cmd.SysProcAttr.Credential != nil {
-		if err = out.Chown(int(cmd.SysProcAttr.Credential.Uid), int(cmd.SysProcAttr.Credential.Gid)); err != nil {
-			log.Error().Err(err).Msg("chown")
-		}
-	}
-	// detach process by creating a session (fixed start + log)
-	if cmd.SysProcAttr == nil {
-		cmd.SysProcAttr = &syscall.SysProcAttr{}
-	}
-	cmd.SysProcAttr.Setsid = true
 }

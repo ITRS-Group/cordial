@@ -32,13 +32,12 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 var Webserver = geneos.Component{
 	Name:             "webserver",
+	LegacyPrefix:     "webs",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"web-server", "webserver", "webservers", "webdashboard", "dashboards"},
 	RealComponent:    true,
@@ -97,7 +96,7 @@ func init() {
 var webservers sync.Map
 
 func New(name string) geneos.Instance {
-	_, local, r := instance.SplitName(name, host.LOCAL)
+	_, local, r := instance.SplitName(name, geneos.LOCAL)
 	w, ok := webservers.Load(r.FullName(local))
 	if ok {
 		ws, ok := w.(*Webservers)
@@ -152,11 +151,7 @@ func (w *Webservers) Home() string {
 	return w.Config().GetString("home")
 }
 
-func (w *Webservers) Prefix() string {
-	return "webs"
-}
-
-func (w *Webservers) Host() *host.Host {
+func (w *Webservers) Host() *geneos.Host {
 	return w.InstanceHost
 }
 
@@ -187,15 +182,14 @@ func (w *Webservers) Config() *config.Config {
 	return w.Conf
 }
 
-func (w *Webservers) SetConf(v *config.Config) {
-	w.Conf = v
-}
-
-func (w *Webservers) Add(username string, tmpl string, port uint16) (err error) {
+func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	w.Config().Set("port", instance.NextPort(w.InstanceHost, &Webserver))
-	w.Config().Set("user", username)
 
-	if err = instance.WriteConfig(w); err != nil {
+	if err = w.Config().Save(w.Type().String(),
+		config.Host(w.Host()),
+		config.SaveDir(w.Type().InstancesDir(w.Host())),
+		config.SetAppName(w.Name()),
+	); err != nil {
 		return
 	}
 
@@ -218,13 +212,9 @@ func (w *Webservers) Add(username string, tmpl string, port uint16) (err error) 
 	if err = w.Host().MkdirAll(webappsdir, 0775); err != nil {
 		return
 	}
-	if utils.IsSuperuser() {
-		uid, gid, _, _ := utils.GetIDs("")
-		w.Host().Chown(webappsdir, uid, gid)
-	}
 
 	for _, source := range webserverFiles {
-		if _, err = instance.ImportFile(w.Host(), w.Home(), w.Config().GetString("user"), source); err != nil {
+		if _, err = instance.ImportFile(w.Host(), w.Home(), source); err != nil {
 			return
 		}
 	}

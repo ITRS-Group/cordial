@@ -56,7 +56,7 @@ var psCSVWriter *csv.Writer
 var psJSONEncoder *json.Encoder
 
 func init() {
-	rootCmd.AddCommand(psCmd)
+	RootCmd.AddCommand(psCmd)
 
 	psCmd.Flags().BoolVarP(&psCmdShowFiles, "files", "f", false, "Show open files")
 	psCmd.Flags().BoolVarP(&psCmdJSON, "json", "j", false, "Output JSON")
@@ -75,15 +75,16 @@ Show the status of the matching instances.
 	Aliases:      []string{"status"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return commandPS(ct, args, params)
+		ct, args, params := CmdArgsParams(cmd)
+		return CommandPS(ct, args, params)
 	},
 }
 
-func commandPS(ct *geneos.Component, args []string, params []string) (err error) {
+func CommandPS(ct *geneos.Component, args []string, params []string) (err error) {
 	switch {
 	case psCmdJSON, psCmdIndent:
 		psJSONEncoder = json.NewEncoder(os.Stdout)
@@ -132,7 +133,7 @@ func psInstancePlain(c geneos.Instance, params []string) (err error) {
 	base, underlying, _ := instance.Version(c)
 	ports := instance.TCPListenPorts(c)
 
-	fmt.Fprintf(psTabWriter, "%s\t%s\t%s\t%d\t%v\t%s\t%s\t%s\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), pid, ports, username, groupname, time.Unix(mtime, 0).Local().Format(time.RFC3339), base, underlying, c.Home())
+	fmt.Fprintf(psTabWriter, "%s\t%s\t%s\t%d\t%v\t%s\t%s\t%s\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), pid, ports, username, groupname, mtime.Local().Format(time.RFC3339), base, underlying, c.Home())
 
 	// if psCmdShowFiles {
 	// 	// list open files (test code)
@@ -190,7 +191,7 @@ func psInstanceCSV(c geneos.Instance, params []string) (err error) {
 		groupname = g.Name
 	}
 	base, underlying, _ := instance.Version(c)
-	psCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, time.Unix(mtime, 0).Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	psCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 
 	return
 }
@@ -217,7 +218,7 @@ func psInstanceJSON(c geneos.Instance, params []string) (err error) {
 		groupname = g.Name
 	}
 	base, underlying, _ := instance.Version(c)
-	psJSONEncoder.Encode(psType{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, time.Unix(mtime, 0).Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	psJSONEncoder.Encode(psType{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 
 	return
 }

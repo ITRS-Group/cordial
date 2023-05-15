@@ -28,6 +28,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -39,8 +40,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 
 	"github.com/rs/zerolog/log"
 )
@@ -50,14 +49,20 @@ type Instance struct {
 	geneos.Instance `json:"-"`
 	L               *sync.RWMutex     `json:"-"`
 	Conf            *config.Config    `json:"-"`
-	InstanceHost    *host.Host        `json:"-"`
+	InstanceHost    *geneos.Host      `json:"-"`
 	Component       *geneos.Component `json:"-"`
 	ConfigLoaded    bool              `json:"-"`
 	Env             []string          `json:",omitempty"`
 }
 
+var Execname string
+
+func Initialise(app string) {
+	Execname = app
+}
+
 func DisplayName(c geneos.Instance) string {
-	if c.Host() == host.LOCAL {
+	if c.Host() == geneos.LOCAL {
 		return fmt.Sprintf("%s %q", c.Type(), c.Name())
 	}
 	return fmt.Sprintf("%s \"%s@%s\"", c.Type(), c.Name(), c.Host())
@@ -100,27 +105,26 @@ func ValidInstanceName(in string) (ok bool) {
 
 // given a filename or path, prepend the instance home directory
 // if not absolute, and clean
-func Abs(c geneos.Instance, file string) (path string) {
-	path = filepath.Clean(file)
-	if filepath.IsAbs(path) {
+func Abs(c geneos.Instance, file string) (result string) {
+	file = filepath.Clean(file)
+	if filepath.IsAbs(file) {
 		return
 	}
-	return utils.JoinSlash(c.Home(), path)
+	return path.Join(c.Home(), file)
 }
 
-// given a pathlist (typically ':') seperated list of paths, remove all
-// files and directories
+// RemovePaths removes all files and directories in paths, each file or directory is separated by ListSeperator
 func RemovePaths(c geneos.Instance, paths string) (err error) {
 	list := filepath.SplitList(paths)
 	for _, p := range list {
 		// clean path, error on absolute or parent paths, like 'import'
 		// walk globbed directories, remove everything
-		p, err = host.CleanRelativePath(p)
+		p, err = geneos.CleanRelativePath(p)
 		if err != nil {
 			return fmt.Errorf("%s %w", p, err)
 		}
 		// glob here
-		m, err := c.Host().Glob(utils.JoinSlash(c.Home(), p))
+		m, err := c.Host().Glob(path.Join(c.Home(), p))
 		if err != nil {
 			return err
 		}
@@ -137,16 +141,16 @@ func RemovePaths(c geneos.Instance, paths string) (err error) {
 
 // logdir = LogD relative to Home or absolute
 func LogFile(c geneos.Instance) (logfile string) {
-	logd := filepath.Clean(c.Config().GetString("logdir"))
+	logdir := filepath.Clean(c.Config().GetString("logdir"))
 	switch {
-	case logd == "":
+	case logdir == "":
 		logfile = c.Home()
-	case filepath.IsAbs(logd):
-		logfile = logd
+	case filepath.IsAbs(logdir):
+		logfile = logdir
 	default:
-		logfile = utils.JoinSlash(c.Home(), logd)
+		logfile = path.Join(c.Home(), logdir)
 	}
-	logfile = utils.JoinSlash(logfile, c.Config().GetString("logfile"))
+	logfile = path.Join(logfile, c.Config().GetString("logfile"))
 	return
 }
 
@@ -156,37 +160,11 @@ func Signal(c geneos.Instance, signal syscall.Signal) (err error) {
 		return os.ErrProcessDone
 	}
 
-	if c.Host() == host.LOCAL {
-		proc, _ := os.FindProcess(pid)
-		if err = proc.Signal(signal); err != nil && !errors.Is(err, syscall.EEXIST) {
-			log.Warn().Msgf("%s FAILED to send a signal %d: %s", c, signal, err)
-			return
-		}
-		log.Debug().Msgf("%s sent a signal %d", c, signal)
-		return nil
-	}
-
-	rem, err := c.Host().Dial()
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-	sess, err := rem.NewSession()
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
-	output, err := sess.CombinedOutput(fmt.Sprintf("kill -s %d %d", signal, pid))
-	sess.Close()
-	if err != nil {
-		log.Warn().Msgf("%s FAILED to send signal %d: %s %q", c, signal, err, output)
-		return
-	}
-	log.Debug().Msgf("%s sent a signal %d", c, signal)
-	return nil
+	return c.Host().Signal(pid, signal)
 }
 
-// return an instance of component ct, loads the config.
-// it is an error if the config cannot be loaded
+// Get return an instance of component ct, and loads the config. It is
+// an error if the config cannot be loaded.
 func Get(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 	if ct == nil {
 		return nil, geneos.ErrInvalidArgs
@@ -200,8 +178,8 @@ func Get(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 	return
 }
 
-// return a slice of instances for a given component type
-func GetAll(r *host.Host, ct *geneos.Component) (confs []geneos.Instance) {
+// GetAll returns a slice of instances for a given component type on remote r
+func GetAll(r *geneos.Host, ct *geneos.Component) (confs []geneos.Instance) {
 	if ct == nil {
 		for _, c := range geneos.RealComponents() {
 			confs = append(confs, GetAll(r, c)...)
@@ -238,7 +216,7 @@ func Match(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 // construct and return a slice of a/all component types that have
 // a matching name
 func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
-	_, local, r := SplitName(name, host.ALL)
+	_, local, r := SplitName(name, geneos.ALL)
 	if !r.Exists() {
 		log.Debug().Msgf("host %s not loaded", r)
 		return
@@ -253,7 +231,7 @@ func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
 
 	for _, name := range AllNames(r, ct) {
 		// for case insensitive match change to EqualFold here
-		_, ldir, _ := SplitName(name, host.ALL)
+		_, ldir, _ := SplitName(name, geneos.ALL)
 		if filepath.Base(ldir) == local {
 			i, err := Get(ct, name)
 			if err != nil {
@@ -269,7 +247,7 @@ func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
 
 // MatchKeyValue returns a slice of instances where the instance
 // configuration key matches the value given.
-func MatchKeyValue(h *host.Host, ct *geneos.Component, key, value string) (confs []geneos.Instance) {
+func MatchKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (confs []geneos.Instance) {
 	if ct == nil {
 		for _, c := range geneos.RealComponents() {
 			confs = append(confs, MatchKeyValue(h, c, key, value)...)
@@ -303,8 +281,8 @@ func MatchKeyValue(h *host.Host, ct *geneos.Component, key, value string) (confs
 // files, such as gateway setup or netprobe collection agent
 //
 // returns a map
-func GetPorts(r *host.Host) (ports map[uint16]*geneos.Component) {
-	if r == host.ALL {
+func GetPorts(r *geneos.Host) (ports map[uint16]*geneos.Component) {
+	if r == geneos.ALL {
 		log.Fatal().Msg("getports() call with all hosts")
 	}
 	ports = make(map[uint16]*geneos.Component)
@@ -342,7 +320,7 @@ func GetPorts(r *host.Host) (ports map[uint16]*geneos.Component) {
 // some limits based on https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
 //
 // not concurrency safe at this time
-func NextPort(r *host.Host, ct *geneos.Component) uint16 {
+func NextPort(r *geneos.Host, ct *geneos.Component) uint16 {
 	from := config.GetString(ct.PortRange)
 	used := GetPorts(r)
 	ps := strings.Split(from, ",")
@@ -413,7 +391,7 @@ func Version(c geneos.Instance) (base string, version string, err error) {
 	version = base
 
 	for i = 0; i < 10; i++ {
-		basepath := utils.JoinSlash(basedir, version)
+		basepath := path.Join(basedir, version)
 		st, err = c.Host().Lstat(basepath)
 		if err != nil {
 			version = "unknown"
@@ -436,6 +414,17 @@ func Version(c geneos.Instance) (base string, version string, err error) {
 	return
 }
 
+// AtLeastVersion returns true if the installed version for instance c
+// is version or greater. If the version of the instance is somehow
+// unparseable then this returns false.
+func AtLeastVersion(c geneos.Instance, version string) bool {
+	_, iv, err := Version(c)
+	if err != nil {
+		return false
+	}
+	return geneos.CompareVersion(iv, version) >= 0
+}
+
 // ForAll calls the supplied function for each matching instance. It
 // prints any returned error on STDOUT and the only error returned is
 // os.ErrNotExist if there are no matching instances.
@@ -446,7 +435,7 @@ func ForAll(ct *geneos.Component, fn func(geneos.Instance, []string) error, args
 	// calls with an empty arg list without having to do the parseArgs()
 	// dance
 	if len(args) == 0 {
-		args = AllNames(host.ALL, ct)
+		args = AllNames(geneos.ALL, ct)
 	}
 	for _, name := range args {
 		cs := MatchAll(ct, name)
@@ -478,7 +467,7 @@ func ForAllWithResults(ct *geneos.Component, fn func(geneos.Instance, []string) 
 	// calls with an empty arg list without having to do the parseArgs()
 	// dance
 	if len(args) == 0 {
-		args = AllNames(host.ALL, ct)
+		args = AllNames(geneos.ALL, ct)
 	}
 	for _, name := range args {
 		var res interface{}
@@ -506,11 +495,11 @@ func ForAllWithResults(ct *geneos.Component, fn func(geneos.Instance, []string) 
 // Return a slice of all instance names for a given component. No
 // checking is done to validate that the directory is a populated
 // instance.
-func AllNames(h *host.Host, ct *geneos.Component) (names []string) {
+func AllNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 	var files []fs.DirEntry
 
-	if h == host.ALL {
-		for _, r := range host.AllHosts() {
+	if h == geneos.ALL {
+		for _, r := range geneos.AllHosts() {
 			names = append(names, AllNames(r, ct)...)
 		}
 		log.Debug().Msgf("names: %s", names)
@@ -546,14 +535,14 @@ func AllNames(h *host.Host, ct *geneos.Component) (names []string) {
 // SplitName returns the parts of an instance name given an instance
 // name in the format [TYPE:]NAME[@HOST] and a default host, return a
 // *geneos.Component for the TYPE if given, a string for the NAME and a
-// *host.Host - the latter being either from the name or the default
+// *geneos.Host - the latter being either from the name or the default
 // provided
-func SplitName(in string, defaultHost *host.Host) (ct *geneos.Component, name string, h *host.Host) {
+func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name string, h *geneos.Host) {
 	h = defaultHost
 	parts := strings.SplitN(in, "@", 2)
 	name = parts[0]
 	if len(parts) > 1 {
-		h = host.Get(parts[1])
+		h = geneos.GetHost(parts[1])
 	}
 	parts = strings.SplitN(name, ":", 2)
 	if len(parts) > 1 {
@@ -590,11 +579,6 @@ func Disable(c geneos.Instance) (err error) {
 		return fmt.Errorf("instance %s running", c)
 	}
 
-	uid, gid, _, err := utils.GetIDs(c.Config().GetString("user"))
-	if err != nil {
-		return
-	}
-
 	disablePath := ComponentFilepath(c, geneos.DisableExtension)
 
 	h := c.Host()
@@ -604,12 +588,6 @@ func Disable(c geneos.Instance) (err error) {
 		return err
 	}
 	f.Close()
-
-	if utils.IsSuperuser() {
-		if err = h.Chown(disablePath, uid, gid); err != nil {
-			h.Remove(disablePath)
-		}
-	}
 	return
 }
 

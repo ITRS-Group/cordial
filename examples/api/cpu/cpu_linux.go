@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/samplers"
 )
 
@@ -36,7 +38,7 @@ type cpustat struct {
 }
 
 func (p *CPUSampler) DoSample() (err error) {
-	logDebug.Print("called")
+	log.Debug().Msg("called")
 	laststats := p.cpustats
 	if laststats.lastsample.IsZero() {
 		// first time through, store initial stats, don't update table and wait for next call

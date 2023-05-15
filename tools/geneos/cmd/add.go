@@ -26,7 +26,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os/user"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -34,12 +33,11 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 var addCmdTemplate, addCmdBase, addCmdKeyfile, addCmdKeyfileCRC string
@@ -49,7 +47,7 @@ var addCmdPort uint16
 var addCmdExtras = instance.ExtraConfigValues{}
 
 func init() {
-	rootCmd.AddCommand(addCmd)
+	RootCmd.AddCommand(addCmd)
 
 	addCmd.Flags().StringVarP(&addCmdTemplate, "template", "T", "", "template file to use instead of default")
 	addCmd.Flags().BoolVarP(&addCmdStart, "start", "S", false, "Start new instance(s) after creation")
@@ -62,9 +60,9 @@ func init() {
 
 	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", "(all components) Add an environment variable in the format NAME=VALUE")
 	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format `PRIORITY:[PATH|URL]`")
-	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME:PORT")
+	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", "(sans, floating) Add a gateway in the format NAME:PORT:SECURE")
 	addCmd.Flags().VarP(&addCmdExtras.Attributes, "attribute", "a", "(sans) Add an attribute in the format NAME=VALUE")
-	addCmd.Flags().VarP(&addCmdExtras.Types, "type", "t", "(sans) Add a gateway in the format NAME:PORT")
+	addCmd.Flags().VarP(&addCmdExtras.Types, "type", "t", "(sans) Add a type TYPE")
 	addCmd.Flags().VarP(&addCmdExtras.Variables, "variable", "v", "(sans) Add a variable in the format [TYPE:]NAME=VALUE")
 
 	addCmd.Flags().SortFlags = false
@@ -82,8 +80,8 @@ can be found using the |geneos home TYPE NAME| command.
 The default configuration file format and extension is |json|. There will
 be support for |yaml| in future releases for easier human editing.
 	
-Gateways and SANs are given a configuration file based on the templates
-configured for the different components.
+Gateways, SANs and Floating probes are given a configuration file
+based on the templates configured for the different components.
 `, "|", "`"),
 	Example: `
 geneos add gateway EXAMPLE1
@@ -92,50 +90,33 @@ geneos add netprobe infraprobe12 --start --log
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args := cmdArgs(cmd)
-		return addInstance(ct, addCmdExtras, args...)
+		ct, args := CmdArgs(cmd)
+		return AddInstance(ct, addCmdExtras, args...)
 	},
 }
 
-// addInstance an instance
+// AddInstance an instance
 //
 // this is also called from the init command code
-func addInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, args ...string) (err error) {
-	var username string
-
+func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, args ...string) (err error) {
 	// check validity and reserved words here
 	name := args[0]
 
-	_, _, rem := instance.SplitName(name, host.LOCAL)
+	_, _, rem := instance.SplitName(name, geneos.LOCAL)
 	if err = ct.MakeComponentDirs(rem); err != nil {
 		return
-	}
-
-	if utils.IsSuperuser() {
-		username = config.GetString("defaultuser")
-	} else {
-		u, err := user.Current()
-		username = "nobody"
-		if err != nil {
-			log.Error().Err(err).Msg("cannot get user details")
-		} else {
-			username = u.Username
-		}
-		// strip domain in case we are running on windows
-		i := strings.Index(username, "\\")
-		if i != -1 && len(username) >= i {
-			username = username[i+1:]
-		}
 	}
 
 	c, err := instance.Get(ct, name)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
 	}
+	cf := c.Config()
 
 	// check if instance already exists
 	if c.Loaded() {
@@ -143,23 +124,28 @@ func addInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 		return
 	}
 
-	if err = c.Add(username, addCmdTemplate, addCmdPort); err != nil {
+	// call components specific Add()
+	if err = c.Add(addCmdTemplate, addCmdPort); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
 	if addCmdBase != "active_prod" {
-		c.Config().Set("version", addCmdBase)
+		cf.Set("version", addCmdBase)
 	}
 
-	if ct == &gateway.Gateway || ct == &netprobe.Netprobe || ct == &san.San {
+	if ct == &gateway.Gateway || ct == &netprobe.Netprobe || ct == &san.San || ct == &floating.Floating {
 		if addCmdKeyfileCRC != "" {
-			c.Config().Set("keyfile", c.Host().Filepath(ct, ct.String()+"_shared", "keyfiles", addCmdKeyfileCRC+".aes"))
+			cf.Set("keyfile", c.Host().Filepath(ct, ct.String()+"_shared", "keyfiles", addCmdKeyfileCRC+".aes"))
 		} else if addCmdKeyfile != "" {
-			c.Config().Set("keyfile", addCmdKeyfile)
+			cf.Set("keyfile", addCmdKeyfile)
 		}
 	}
 	instance.SetExtendedValues(c, addCmdExtras)
-	if err = instance.WriteConfig(c); err != nil {
+	if err = cf.Save(c.Type().String(),
+		config.Host(c.Host()),
+		config.SaveDir(c.Type().InstancesDir(c.Host())),
+		config.SetAppName(c.Name()),
+	); err != nil {
 		return
 	}
 	c.Rebuild(true)
@@ -167,7 +153,7 @@ func addInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 	// reload config as instance data is not updated by Add() as an interface value
 	c.Unload()
 	c.Load()
-	fmt.Printf("%s added, port %d\n", c, c.Config().GetInt("port"))
+	fmt.Printf("%s added, port %d\n", c, cf.GetInt("port"))
 
 	if addCmdStart || addCmdLogs {
 		if err = instance.Start(c); err != nil {
