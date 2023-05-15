@@ -242,40 +242,40 @@ func (kv *KeyValues) DecodeEnclave(in []byte) (out *memguard.Enclave, err error)
 
 	in = bytes.TrimPrefix(in, []byte("+encs+"))
 
-	text := make([]byte, hex.DecodedLen(len(in)))
+	ciphertext := make([]byte, hex.DecodedLen(len(in)))
 
-	hex.Decode(text, in)
+	hex.Decode(ciphertext, in)
 	block, err := aes.NewCipher(k.key[:])
 	if err != nil {
 		err = fmt.Errorf("invalid key: %w", err)
 		return
 	}
-	if len(text)%aes.BlockSize != 0 {
+	if len(ciphertext)%aes.BlockSize != 0 {
 		err = fmt.Errorf("input is not a multiple of the block size")
 		return
 	}
 	mode := cipher.NewCBCDecrypter(block, k.iv[:])
-	l := memguard.NewBuffer(len(text))
-	lout := (*[]byte)(unsafe.Pointer(&l.Bytes()[0]))
-	mode.CryptBlocks(*lout, text)
+	l := memguard.NewBuffer(len(ciphertext))
+	plaintext := l.Bytes()
+	mode.CryptBlocks(plaintext, ciphertext)
 
-	if len(*lout) == 0 {
+	if len(plaintext) == 0 {
 		err = fmt.Errorf("decode failed")
 		return
 	}
 
 	// remove padding as per RFC5246
-	paddingLength := int((*lout)[len(*lout)-1])
+	paddingLength := int((plaintext)[len(plaintext)-1])
 	if paddingLength == 0 || paddingLength > aes.BlockSize {
 		err = fmt.Errorf("invalid padding size")
 		return
 	}
-	*lout = (*lout)[0 : len(*lout)-paddingLength]
-	if !utf8.Valid(text) {
+	plaintext = (plaintext)[0 : len(plaintext)-paddingLength]
+	if !utf8.Valid(plaintext) {
 		err = fmt.Errorf("decoded test not valid UTF-8")
 		return
 	}
-	out = l.Seal()
+	out = memguard.NewEnclave(plaintext)
 	return
 }
 
@@ -317,9 +317,8 @@ type Credentials struct {
 
 // FindCreds finds a set of credentials in the given config structure
 // under the key "credentials" and tries to match the longest one, if
-// any.
-func (cf *Config) FindCreds(match string) (creds *Credentials) {
-	creds = &Credentials{}
+// any. creds is nil if not matching credentials found.
+func (cf *Config) FindCreds(path string) (creds *Config) {
 	cr := cf.GetStringMap("credentials")
 	if cr == nil {
 		return
@@ -332,23 +331,24 @@ func (cf *Config) FindCreds(match string) (creds *Credentials) {
 	sort.Slice(paths, func(i, j int) bool {
 		return len(paths[i]) > len(paths[j])
 	})
+	creds = New()
 	for _, p := range paths {
-		if strings.Contains(p, match) {
-			cf.UnmarshalKey("credentials::"+p, &creds)
+		if strings.Contains(path, p) {
+			creds.MergeConfigMap(cf.GetStringMap(cf.Join("credentials", p)))
 			return
 		}
 	}
-	return
+	return nil
 }
 
 // FindCreds looks for matching credentials in a default "credentials"
 // file. options are the same as for [Load] but the default KeyDelimiter
 // is set to "::" as credential domains are likely to be hostnames or
 // URLs. The longest match wins.
-func FindCreds(search string, options ...FileOptions) (cred *Credentials) {
+func FindCreds(path string, options ...FileOptions) (cred *Config) {
 	options = append(options, KeyDelimiter("::"))
 	cf, _ := Load("credentials", options...)
-	return cf.FindCreds(search)
+	return cf.FindCreds(path)
 }
 
 // Add creds to the "credentials" file identified by the options.
@@ -361,7 +361,7 @@ func AddCreds(creds Credentials, options ...FileOptions) (err error) {
 	if err != nil {
 		return
 	}
-	cf.Set("credentials::"+creds.Domain, creds)
+	cf.Set(cf.Join("credentials", creds.Domain), creds)
 	return cf.Save("credentials", options...)
 }
 
