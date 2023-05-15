@@ -47,7 +47,7 @@ func init() {
 
 	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdLocal, "local", "L", false, "Install from local files only")
 	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdNoSave, "nosave", "n", false, "Do not save a local copy of any downloads")
-	packageInstallCmd.Flags().StringVarP(&packageInstallCmdHost, "host", "H", string(geneos.ALLHOSTS), "Perform on a remote host. \"all\" means all hosts and locally")
+	packageInstallCmd.Flags().StringVarP(&packageInstallCmdHost, "host", "H", string(geneos.LOCALHOST), "Perform on a remote host. \"all\" means all hosts and locally")
 
 	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires auth.")
 	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
@@ -149,6 +149,7 @@ geneos install netprobe -b active_dev -U
 				geneos.Basename(packageInstallCmdBase),
 				geneos.NoSave(packageInstallCmdNoSave),
 				geneos.LocalOnly(packageInstallCmdLocal),
+				geneos.DoUpdate(packageInstallCmdUpdate),
 				geneos.Force(packageInstallCmdUpdate),
 				geneos.OverrideVersion(packageInstallCmdOverride),
 				geneos.Username(packageInstallCmdUsername),
@@ -171,6 +172,7 @@ geneos install netprobe -b active_dev -U
 				geneos.Basename(packageInstallCmdBase),
 				geneos.NoSave(packageInstallCmdNoSave),
 				geneos.LocalOnly(packageInstallCmdLocal),
+				geneos.DoUpdate(packageInstallCmdUpdate),
 				geneos.Force(packageInstallCmdUpdate),
 				geneos.OverrideVersion(packageInstallCmdOverride),
 				geneos.Username(packageInstallCmdUsername),
