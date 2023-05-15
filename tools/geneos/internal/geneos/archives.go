@@ -120,6 +120,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 		if f, err := LOCAL.Open(archivePath); err == nil {
 			log.Debug().Msgf("not downloading, file with same size already exists: %s", archivePath)
 			resp.Body.Close()
+			fmt.Printf("%s already exists (sizes match), skipping\n", filename)
 			return f, filename, nil
 		}
 	}
