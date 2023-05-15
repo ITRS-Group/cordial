@@ -7,27 +7,72 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
 
+var protectCmdUnprotect bool
+
+func init() {
+	RootCmd.AddCommand(protectCmd)
+
+	protectCmd.Flags().BoolVarP(&protectCmdUnprotect, "unprotect", "U", false, "unprotect instances")
+}
+
 // protectCmd represents the protect command
 var protectCmd = &cobra.Command{
-	Use:   "protect",
+	Use:   "protect [TYPE] [NAME...]",
 	Short: "Mark instances as protected",
 	Long: strings.ReplaceAll(`
+Mark matcing instances as protected.
+
+To reverse this you must use the same command with the |-U| flag.
+There is no |unprotect| command. This is intentional.
+
+Note that you can also manually add or remove the |protected| setting
+in an instance configuration file.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		fmt.Println("protect called")
-		return
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, args := CmdArgs(command)
+
+		return instance.ForAll(ct, protectInstance, args, []string{fmt.Sprintf("%v", !protectCmdUnprotect)})
 	},
 }
 
-func init() {
-	RootCmd.AddCommand(protectCmd)
+func protectInstance(c geneos.Instance, params []string) (err error) {
+	cf := c.Config()
 
+	var protect bool
+	if len(params) > 0 {
+		protect = params[0] == "true"
+	}
+	cf.Set("protected", protect)
+
+	if cf.Type == "rc" {
+		err = instance.Migrate(c)
+	} else {
+		err = cf.Save(c.Type().String(),
+			config.Host(c.Host()),
+			config.SaveDir(c.Type().InstancesDir(c.Host())),
+			config.SetAppName(c.Name()),
+		)
+	}
+	if err != nil {
+		return
+	}
+
+	if protect {
+		fmt.Printf("%s set to protected\n", c)
+	} else {
+		fmt.Printf("%s set to unprotected\n", c)
+	}
+
+	return
 }
