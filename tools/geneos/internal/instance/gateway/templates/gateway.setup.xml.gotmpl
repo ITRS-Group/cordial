@@ -41,59 +41,6 @@
 		<disconnectedProbeTimeout>3600</disconnectedProbeTimeout>
 	</selfAnnouncingProbes>
 	<operatingEnvironment>
-		<gatewayName>{{.gatewayname}}</gatewayName>
-		<listenPorts>
-		{{- if .certificate}}
-			{{if eq .port 7039 -}}
-			<secure>7038</secure>
-			<insecure>7039</insecure>
-			{{- else -}}
-			<secure>{{.port}}</secure>
-			{{- end}}
-		{{- else}}
-			<insecure>{{.port}}</insecure>
-		{{- end}}
-		</listenPorts>
-		<var name="gatewayName">
-			<macro>
-				<gatewayName></gatewayName>
-			</macro>
-		</var>
-		<var name="insecureGatewayPort">
-			<macro>
-				<insecureGatewayPort></insecureGatewayPort>
-			</macro>
-		</var>
-		<var name="managedEntityName">
-			<macro>
-				<managedEntityName></managedEntityName>
-			</macro>
-		</var>
-		<var name="netprobeHost">
-			<macro>
-				<netprobeHost></netprobeHost>
-			</macro>
-		</var>
-		<var name="netprobeName">
-			<macro>
-				<netprobeName></netprobeName>
-			</macro>
-		</var>
-		<var name="netprobePort">
-			<macro>
-				<netprobePort></netprobePort>
-			</macro>
-		</var>
-		<var name="samplerName">
-			<macro>
-				<samplerName></samplerName>
-			</macro>
-		</var>
-		<var name="secureGatewayPort">
-			<macro>
-				<secureGatewayPort></secureGatewayPort>
-			</macro>
-		</var>
 		<writeStatsToFile>
 			<filename>{{.home}}/stats.xml</filename>
 			<enablePeriodicWrite>true</enablePeriodicWrite>

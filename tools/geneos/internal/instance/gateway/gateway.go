@@ -335,9 +335,12 @@ func (g *Gateways) Command() (args, env []string) {
 		args = append([]string{cf.GetString("gatewayname")}, args...)
 	}
 
-	if cf.IsSet("port") {
-		args = append([]string{"-port", fmt.Sprint(cf.GetString("port"))}, args...)
-	}
+	// We should not set port on command line. This is now done in the
+	// instance template.
+
+	// if cf.IsSet("port") {
+	//  args = append([]string{"-port", fmt.Sprint(cf.GetString("port"))}, args...)
+	// }
 
 	if cf.GetString("licdhost") != "" {
 		args = append(args, "-licd-host", cf.GetString("licdhost"))
@@ -349,12 +352,8 @@ func (g *Gateways) Command() (args, env []string) {
 
 	args = append(args, instance.SetSecureArgs(g)...)
 
-	licdsecure := cf.GetString("licdsecure")
-	if instance.Filename(g, "certificate") != "" {
-		if licdsecure == "" || licdsecure != "false" {
-			args = append(args, "-licd-secure")
-		}
-	} else if licdsecure != "" && licdsecure == "true" {
+	// 3 options: set, set to false, not set
+	if cf.GetBool("licdsecure") || (!cf.IsSet("licdsecure") && instance.Filename(g, "certificate") != "") {
 		args = append(args, "-licd-secure")
 	}
 
