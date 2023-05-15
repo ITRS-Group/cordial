@@ -59,7 +59,7 @@ func init() {
 	config.DefaultKeyDelimiter("::")
 
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	rootCmd.PersistentFlags().BoolVarP(&inlineCSS, "inline-css", "i", true, "try to inline CSS for better mail client support")
+	rootCmd.PersistentFlags().BoolVarP(&inlineCSS, "inline-css", "i", true, "inline CSS for better mail client support")
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2html.yaml)")
 
 	// how to remove the help flag help text from the help output! Sigh...
@@ -250,7 +250,8 @@ directory or in the user's .config/dv2html directory)
 			for k := range data.Table {
 				tmplData.Rows = append(tmplData.Rows, k)
 			}
-			sort.Strings(tmplData.Rows)
+
+			// sort.Strings(tmplData.Rows)
 
 			asc := true
 			matches := matchdv(data.Name, "row-order")
