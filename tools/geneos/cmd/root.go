@@ -115,15 +115,26 @@ $ geneos ps
 	DisableAutoGenTag:  true,
 	DisableSuggestions: true,
 	// SilenceErrors:      true,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
+	PersistentPreRunE: func(command *cobra.Command, args []string) (err error) {
+		// "manually" parse root flags so that legacy commands get conf
+		// file, debug etc.
+		command.Root().ParseFlags(args)
+		if quiet {
+			zerolog.SetGlobalLevel(zerolog.Disabled)
+		} else if debug {
+			zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		} else {
+			zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		}
+
 		// check initialisation
 		geneosdir := geneos.Root()
 		if geneosdir == "" {
 			// commands that do not require geneos home to be set - use
 			// a const/var to iterate over to test this
-			log.Debug().Msgf("parent? %v parent name %s name %s needshomedir %s", cmd.HasParent(), cmd.Parent().Name(), cmd.Name(), cmd.Annotations["needshomedir"])
-			if cmd.Annotations["needshomedir"] == "true" {
-				cmd.SetUsageTemplate(" ")
+			log.Debug().Msgf("parent? %v parent name %s name %s needshomedir %s", command.HasParent(), command.Parent().Name(), command.Name(), command.Annotations["needshomedir"])
+			if command.Annotations["needshomedir"] == "true" {
+				command.SetUsageTemplate(" ")
 				return fmt.Errorf("%s", strings.ReplaceAll(`
 Geneos installation directory not set.
 
@@ -140,7 +151,7 @@ For temporary usage:
 `, "|", "`"))
 			}
 		}
-		return parseArgs(cmd, args)
+		return parseArgs(command, args)
 	},
 	// RunE: lsCmd.RunE,
 }
