@@ -72,6 +72,10 @@ func NewKeyValues() (kv *KeyValues) {
 	return
 }
 
+func lockedBufferTo[T any](m *memguard.LockedBuffer) (v *T) {
+	return (*T)(unsafe.Pointer(&m.Bytes()[0]))
+}
+
 // String method for KeyValues
 //
 // The output is in the format for suitable for use as a gateway key
@@ -80,7 +84,7 @@ func NewKeyValues() (kv *KeyValues) {
 func (kv *KeyValues) String() string {
 	kl, _ := kv.Open()
 	defer kl.Destroy()
-	k := (*keyvalues)(unsafe.Pointer(&kl.Bytes()[0]))
+	k := lockedBufferTo[keyvalues](kl)
 
 	// leading space intentional to match native OpenSSL output
 	return fmt.Sprintf("key=%X\niv =%X\n", k.key, k.iv)
@@ -100,7 +104,7 @@ func (kv *KeyValues) Write(w io.Writer) error {
 func Read(r io.Reader) (kv *KeyValues) {
 	var k *keyvalues
 	m := memguard.NewBuffer(int(unsafe.Sizeof(*k)))
-	k = (*keyvalues)(unsafe.Pointer(&m.Bytes()[0]))
+	k = lockedBufferTo[keyvalues](m)
 
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
@@ -147,7 +151,7 @@ func (kv *KeyValues) Checksum() (c uint32, err error) {
 func (kv *KeyValues) encode(plaintext *memguard.Enclave) (out []byte, err error) {
 	kl, _ := kv.Open()
 	defer kl.Destroy()
-	k := (*keyvalues)(unsafe.Pointer(&kl.Bytes()[0]))
+	k := lockedBufferTo[keyvalues](kl)
 
 	block, err := aes.NewCipher(k.key[:])
 	if err != nil {
@@ -197,7 +201,7 @@ func (kv *KeyValues) EncodeString(in string) (out string, err error) {
 func (kv *KeyValues) Decode(in []byte) (out []byte, err error) {
 	kl, _ := kv.Open()
 	defer kl.Destroy()
-	k := (*keyvalues)(unsafe.Pointer(&kl.Bytes()[0]))
+	k := lockedBufferTo[keyvalues](kl)
 
 	in = bytes.TrimPrefix(in, []byte("+encs+"))
 
@@ -238,7 +242,7 @@ func (kv *KeyValues) Decode(in []byte) (out []byte, err error) {
 func (kv *KeyValues) DecodeEnclave(in []byte) (out *memguard.Enclave, err error) {
 	kl, _ := kv.Open()
 	defer kl.Destroy()
-	k := (*keyvalues)(unsafe.Pointer(&kl.Bytes()[0]))
+	k := lockedBufferTo[keyvalues](kl)
 
 	in = bytes.TrimPrefix(in, []byte("+encs+"))
 
