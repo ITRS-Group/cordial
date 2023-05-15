@@ -367,16 +367,31 @@ func CompareVersion(version1, version2 string) int {
 	return strings.Compare(v1p[0], v2p[0])
 }
 
-// Install installs a Geneos software release. The host must be given
-// and defaults to 'all'. If a component type is passed in ct then only that
-// component release is installed.
+// Install installs a Geneos software release. The host must be given.
+// If a component type is passed in ct then only that component release
+// is installed.
 func Install(h *Host, ct *Component, options ...Options) (err error) {
 	if h == ALL {
 		return ErrInvalidArgs
 	}
+	opts := EvalOptions(options...)
 
 	if ct == nil {
-		for _, ct := range RealComponents() {
+		// install only for components that do not have a related type
+		// but then run update for all components that do have related
+		// types afterwards
+		//
+		// this is *unnecessary* but keeping in case we split the way
+		// subcomponents are handled with base links later
+		cts := RealComponents()
+		sort.Slice(cts, func(i, j int) bool {
+			return len(cts[i].RelatedTypes) < len(cts[j].RelatedTypes)
+		})
+
+		for _, ct := range cts {
+			if ct.RelatedTypes != nil {
+				continue
+			}
 			if err = Install(h, ct, options...); err != nil {
 				if errors.Is(err, fs.ErrExist) {
 					continue
@@ -384,12 +399,17 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 				return
 			}
 		}
+
+		for _, ct := range cts {
+			if len(ct.RelatedTypes) > 0 && opts.doupdate {
+				log.Debug().Msgf("trying to update %s", ct)
+				Update(h, ct, options...)
+			}
+		}
 		return nil
 	}
 
 	options = append(options, PlatformID(h.GetString(h.Join("osinfo", "platform_id"))))
-
-	opts := EvalOptions(options...)
 
 	// open and unarchive if given a tar.gz
 
