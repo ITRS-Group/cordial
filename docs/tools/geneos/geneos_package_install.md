@@ -55,7 +55,7 @@ geneos install netprobe -b active_dev -U
   -b, --base string       Override the base active_prod link name (default "active_prod")
   -L, --local             Install from local files only
   -n, --nosave            Do not save a local copy of any downloads
-  -H, --host string       Perform on a remote host. "all" means all hosts and locally (default "all")
+  -H, --host string       Perform on a remote host. "all" means all hosts and locally (default "localhost")
   -N, --nexus             Download from nexus.itrsgroup.com. Requires auth.
   -p, --snapshots         Download from nexus snapshots (pre-releases), not releases. Requires -N
   -V, --version string    Download this version, defaults to latest. Doesn't work for EL8 archives. (default "latest")

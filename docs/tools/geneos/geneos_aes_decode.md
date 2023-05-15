@@ -28,11 +28,11 @@ geneos aes decode [flags] [TYPE] [NAME...]
 ### Options
 
 ```
-  -e, --expand string     A string in ExpandString format (including '${...}') to decode
-  -k, --keyfile string    Main AES key file to use (default "/home/peter/.config/geneos/keyfile.aes")
-  -v, --previous string   Previous AES key file to use (default "/home/peter/.config/geneos/prevkeyfile.aes")
-  -p, --password string   Password to decode
-  -s, --source string     Source for password to use
+  -e, --expand string      A string in ExpandString format (including '${...}') to decode
+  -k, --keyfile KEYFILE    Main AES key file to use (default /home/peter/.config/geneos/keyfile.aes)
+  -v, --previous KEYFILE   Previous AES key file to use (default /home/peter/.config/geneos/prevkeyfile.aes)
+  -p, --password string    Password to decode
+  -s, --source string      Source for password to use
 ```
 
 ### Options inherited from parent commands

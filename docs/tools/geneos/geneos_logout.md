@@ -1,18 +1,24 @@
 ## geneos logout
 
-A brief description of your command
+Logout (remove credentials)
 
 ### Synopsis
 
-A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.
+The logout command removes the credentials for the names given. If no
+names are set then the default credentials are removed.
+
+If the `-A` options is given then all credentials are removed.
+
 
 ```
-geneos logout [flags]
+geneos logout [flags] [NAME...]
+```
+
+### Options
+
+```
+  -A, --all   remove all credentials
 ```
 
 ### Options inherited from parent commands

@@ -43,7 +43,7 @@ geneos snapshot [flags] [gateway] [NAME] XPATH...
   -S, --severity          Request cell severities
   -Z, --snooze            Request cell snooze info
   -U, --userassignment    Request cell user assignment info
-  -u, --username string   Username for snaptshot, defaults to configuration value in snapshot.username
+  -u, --username string   Username for snapshot, defaults to configuration value in snapshot.username
   -P, --pwfile string     Password file to read for snapshots, defaults to configuration value in snapshot.password or otherwise prompts
   -l, --limit int         limit matching items to display. default is unlimited. results unsorted.
   -x, --xpaths            just show matching xpaths

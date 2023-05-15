@@ -12,6 +12,10 @@ certificates as well as listing details and copying a certificate
 chain to all other hosts.
 
 
+```
+geneos tls [flags]
+```
+
 ### Options inherited from parent commands
 
 ```

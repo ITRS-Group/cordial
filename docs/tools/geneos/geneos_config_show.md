@@ -1,6 +1,6 @@
-## geneos show global
+## geneos config show
 
-A brief description of your command
+Show configuration parameters
 
 ### Synopsis
 
@@ -14,7 +14,7 @@ to quickly create a Cobra application.
 
 
 ```
-geneos show global [flags]
+geneos config show [flags]
 ```
 
 ### Options inherited from parent commands
@@ -25,5 +25,5 @@ geneos show global [flags]
 
 ### SEE ALSO
 
-* [geneos show](geneos_show.md)	 - Show runtime, global, user or instance configuration is JSON format
+* [geneos config](geneos_config.md)	 - Configure geneos command environment
 

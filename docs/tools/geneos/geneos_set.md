@@ -63,7 +63,7 @@ geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
 ```
   -e, --env NAME=VALUE                (all components) Add an environment variable in the format NAME=VALUE
   -i, --include PRIORITY:{URL|PATH}   (gateways) Add an include file in the format PRIORITY:PATH
-  -g, --gateway HOSTNAME:PORT         (sans) Add a gateway in the format NAME:PORT
+  -g, --gateway HOSTNAME:PORT         (sans) Add a gateway in the format NAME[:PORT[:SECURE]]
   -a, --attribute NAME=VALUE          (sans) Add an attribute in the format NAME=VALUE
   -t, --type NAME                     (sans) Add a type NAME
   -v, --variable [TYPE:]NAME=VALUE    (sans) Add a variable in the format [TYPE:]NAME=VALUE
@@ -78,7 +78,6 @@ geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
 ### SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-* [geneos set global](geneos_set_global.md)	 - Set global configuration parameters
 * [geneos set host](geneos_set_host.md)	 - Alias for 'host set'
 * [geneos set user](geneos_set_user.md)	 - Set user configuration parameters
 

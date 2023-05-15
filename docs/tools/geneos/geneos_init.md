@@ -66,7 +66,8 @@ sudo geneos init geneos /opt/itrs
   -V, --version string               Download matching version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
   -u, --username download.username   Username for downloads. Defaults to configuration value download.username
   -w, --gatewaytemplate string       A gateway template file
-  -s, --santemplate string           A san template file
+  -s, --santemplate string           SAN template file
+  -f, --floatingtemplate string      Floating probe template file
   -e, --env NAME=VALUE               Add an environment variable in the format NAME=VALUE. Repeat flag for more values.
 ```
 
@@ -81,6 +82,7 @@ sudo geneos init geneos /opt/itrs
 * [geneos](geneos.md)	 - Control your Geneos environment
 * [geneos init all](geneos_init_all.md)	 - Initialise a more complete Geneos environment
 * [geneos init demo](geneos_init_demo.md)	 - Initialise a Geneos Demo environment
+* [geneos init floating](geneos_init_floating.md)	 - Initialise a Geneos Floating Netprobe environment
 * [geneos init san](geneos_init_san.md)	 - Initialise a Geneos SAN (Self-Announcing Netprobe) environment
 * [geneos init template](geneos_init_template.md)	 - Initialise or overwrite templates
 

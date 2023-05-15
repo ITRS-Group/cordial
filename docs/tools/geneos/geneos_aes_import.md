@@ -30,8 +30,8 @@ geneos aes import [flags] [TYPE] [NAME...]
 ### Options
 
 ```
-  -k, --keyfile string   Keyfile to use (default "/home/peter/.config/geneos/keyfile.aes")
-  -H, --host host        Import only to named host, default is all
+  -k, --keyfile KEYFILE   Keyfile to use (default /home/peter/.config/geneos/keyfile.aes)
+  -H, --host host         Import only to named host, default is all
 ```
 
 ### Options inherited from parent commands
