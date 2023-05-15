@@ -352,15 +352,30 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 
 		log.Debug().Msgf("nexus url: %s", source)
 
+		// check for fallback creds
+		if opts.username == "" {
+			creds := config.FindCreds(source, config.SetAppName(Execname))
+			if creds != nil {
+				opts.username = creds.GetString("username")
+				opts.password = creds.GetEnclave("password")
+			}
+		}
+
 		if opts.username != "" {
 			var req *http.Request
 			client := &http.Client{}
 			if req, err = http.NewRequest("GET", source, nil); err != nil {
 				return
 			}
-			pw, _ := opts.password.Open()
-			req.SetBasicAuth(opts.username, pw.String())
-			pw.Destroy()
+			if opts.password != nil {
+				pw, _ := opts.password.Open()
+				password := config.ExpandLockedBuffer(pw.String())
+				pw.Destroy()
+				req.SetBasicAuth(opts.username, password.String())
+				password.Destroy()
+			} else {
+				req.SetBasicAuth(opts.username, "")
+			}
 			if resp, err = client.Do(req); err != nil {
 				return
 			}
@@ -409,18 +424,30 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 			}
 		}
 
+		// check for fallback creds
+		if opts.username == "" {
+			creds := config.FindCreds(source, config.SetAppName(Execname))
+			if creds != nil {
+				opts.username = creds.GetString("username")
+				opts.password = creds.GetEnclave("password")
+			}
+		}
+
 		// only use auth if required - but save auth for potential reuse below
 		var auth_body []byte
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
 			if opts.username != "" {
-				pw, _ := opts.password.Open()
-				// XXX da should be a locked buffer ?
 				da := downloadauth{
 					Username: opts.username,
-					Password: pw.String(),
+				}
+				if opts.password != nil {
+					pw, _ := opts.password.Open()
+					password := config.ExpandLockedBuffer(pw.String())
+					pw.Destroy()
+					da.Password = strings.Clone(password.String())
+					password.Destroy()
 				}
 				auth_body, err = json.Marshal(da)
-				pw.Destroy()
 				if err != nil {
 					return
 				}
