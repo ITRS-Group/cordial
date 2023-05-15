@@ -48,7 +48,7 @@ type showCmdConfig struct {
 var showCmdRaw bool
 
 func init() {
-	RootCmd.AddCommand(showCmd)
+	GeneosCmd.AddCommand(showCmd)
 
 	showCmd.Flags().BoolVarP(&showCmdRaw, "raw", "r", false, "Show raw (unexpanded) configuration values")
 

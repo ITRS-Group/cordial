@@ -12,8 +12,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
-// configCmd represents the config command
-var configCmd = &cobra.Command{
+// ConfigCmd represents the config command
+var ConfigCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Configure geneos command environment",
 	Long: strings.ReplaceAll(`
@@ -24,5 +24,5 @@ var configCmd = &cobra.Command{
 }
 
 func init() {
-	cmd.RootCmd.AddCommand(configCmd)
+	cmd.GeneosCmd.AddCommand(ConfigCmd)
 }

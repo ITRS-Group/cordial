@@ -35,7 +35,7 @@ import (
 var importCmdCommon, importCmdHostname string
 
 func init() {
-	RootCmd.AddCommand(importCmd)
+	GeneosCmd.AddCommand(importCmd)
 
 	importCmd.Flags().StringVarP(&importCmdCommon, "common", "c", "", "Import into a common directory instead of matching instances.	For example, if TYPE is 'gateway' and NAME is 'shared' then this common directory is 'gateway/gateway_shared'")
 	importCmd.Flags().StringVarP(&importCmdHostname, "host", "H", "all", "Import only to named host, default is all")

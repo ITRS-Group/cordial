@@ -36,7 +36,7 @@ import (
 var disableCmdForce bool
 
 func init() {
-	RootCmd.AddCommand(disableCmd)
+	GeneosCmd.AddCommand(disableCmd)
 
 	disableCmd.Flags().BoolVarP(&disableCmdForce, "force", "F", false, "force disable instances")
 	disableCmd.Flags().SortFlags = false

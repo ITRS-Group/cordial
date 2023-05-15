@@ -47,7 +47,7 @@ var addCmdPort uint16
 var addCmdExtras = instance.ExtraConfigValues{}
 
 func init() {
-	RootCmd.AddCommand(addCmd)
+	GeneosCmd.AddCommand(addCmd)
 
 	addCmd.Flags().StringVarP(&addCmdTemplate, "template", "T", "", "template file to use instead of default")
 	addCmd.Flags().BoolVarP(&addCmdStart, "start", "S", false, "Start new instance(s) after creation")

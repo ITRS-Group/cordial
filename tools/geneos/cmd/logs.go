@@ -54,7 +54,7 @@ type files struct {
 var tails *sync.Map
 
 func init() {
-	RootCmd.AddCommand(logsCmd)
+	GeneosCmd.AddCommand(logsCmd)
 
 	logsCmd.Flags().IntVarP(&logCmdLines, "lines", "n", 10, "Lines to tail")
 	logsCmd.Flags().BoolVarP(&logCmdStderr, "stderr", "E", false, "Show STDERR output files")

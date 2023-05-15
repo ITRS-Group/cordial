@@ -33,7 +33,7 @@ import (
 )
 
 func init() {
-	configCmd.AddCommand(showUserCmd)
+	ConfigCmd.AddCommand(showUserCmd)
 
 	// showUserCmd.Flags().SortFlags = false
 }

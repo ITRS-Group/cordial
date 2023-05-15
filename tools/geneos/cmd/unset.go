@@ -37,7 +37,7 @@ var unsetCmdWarned bool
 var unsetCmdValues = instance.UnsetConfigValues{}
 
 func init() {
-	RootCmd.AddCommand(unsetCmd)
+	GeneosCmd.AddCommand(unsetCmd)
 
 	unsetCmd.Flags().VarP(&unsetCmdValues.Keys, "key", "k", "Unset a configuration key item")
 	unsetCmd.Flags().VarP(&unsetCmdValues.Envs, "env", "e", "Remove an environment variable `NAME`")

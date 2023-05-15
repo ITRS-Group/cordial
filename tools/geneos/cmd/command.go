@@ -33,7 +33,7 @@ import (
 )
 
 func init() {
-	RootCmd.AddCommand(commandCmd)
+	GeneosCmd.AddCommand(commandCmd)
 
 	// commandCmd.Flags().SortFlags = false
 }

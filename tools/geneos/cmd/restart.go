@@ -37,7 +37,7 @@ import (
 var restartCmdAll, restartCmdKill, restartCmdForce, restartCmdLogs bool
 
 func init() {
-	RootCmd.AddCommand(restartCmd)
+	GeneosCmd.AddCommand(restartCmd)
 
 	restartCmd.Flags().BoolVarP(&restartCmdAll, "all", "a", false, "Start all matching instances, not just those already running")
 	restartCmd.Flags().BoolVarP(&restartCmdForce, "force", "F", false, "Force restart of protected instances")

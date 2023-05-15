@@ -32,7 +32,7 @@ import (
 )
 
 func init() {
-	RootCmd.AddCommand(enableCmd)
+	GeneosCmd.AddCommand(enableCmd)
 
 	enableCmd.Flags().BoolVarP(&enableCmdStart, "start", "S", false, "Start enabled instances")
 

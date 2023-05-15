@@ -31,7 +31,7 @@ import (
 )
 
 func init() {
-	RootCmd.AddCommand(reloadCmd)
+	GeneosCmd.AddCommand(reloadCmd)
 
 	// reloadCmd.Flags().SortFlags = false
 }

@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	RootCmd.AddCommand(versionCmd)
+	GeneosCmd.AddCommand(versionCmd)
 
 	// versionCmd.Flags().SortFlags = false
 }

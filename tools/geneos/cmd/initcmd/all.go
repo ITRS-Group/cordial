@@ -41,7 +41,7 @@ import (
 var initAllCmdLicenseFile, initAllCmdArchive string
 
 func init() {
-	initCmd.AddCommand(initAllCmd)
+	InitCmd.AddCommand(initAllCmd)
 
 	initAllCmd.Flags().StringVarP(&initAllCmdLicenseFile, "licence", "L", "geneos.lic", "`Filepath or URL` to license file")
 	initAllCmd.MarkFlagRequired("licence")

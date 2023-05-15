@@ -33,7 +33,7 @@ import (
 var startCmdLogs bool
 
 func init() {
-	RootCmd.AddCommand(startCmd)
+	GeneosCmd.AddCommand(startCmd)
 
 	startCmd.Flags().BoolVarP(&startCmdLogs, "log", "l", false, "Run 'logs -f' after starting instance(s)")
 	startCmd.Flags().SortFlags = false

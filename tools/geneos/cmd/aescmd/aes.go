@@ -38,9 +38,7 @@ import (
 var componentsWithKeyfiles = []*geneos.Component{&gateway.Gateway, &netprobe.Netprobe, &san.San, &floating.Floating}
 
 func init() {
-	cmd.RootCmd.AddCommand(AesCmd)
-	// aesCmd.Flags().SortFlags = false
-
+	cmd.GeneosCmd.AddCommand(AesCmd)
 }
 
 var AesCmd = &cobra.Command{
