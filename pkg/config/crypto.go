@@ -306,7 +306,7 @@ func Checksum(data io.Reader) (crc uint32, err error) {
 // Credentials can carry a number of different credential types. Add
 // more as required. Eventually this will go into memguard.
 type Credentials struct {
-	Domain       string `json:"domain"`
+	Domain       string `json:"domain,omitempty"`
 	Username     string `json:"username,omitempty"`
 	Password     string `json:"password,omitempty"`
 	ClientID     string `json:"client_id,omitempty"`
@@ -373,8 +373,15 @@ func DeleteCreds(domain string, options ...FileOptions) (err error) {
 	if err != nil {
 		return
 	}
-	cr := cf.GetStringMap("credentials")
-	delete(cr, domain)
-	cf.Set("credentials", cr)
+	credmap := cf.GetStringMap("credentials")
+	delete(credmap, domain)
+	cf.Set("credentials", credmap)
+	return cf.Save("credentials", options...)
+}
+
+func DeleteAllCreds(options ...FileOptions) (err error) {
+	options = append(options, KeyDelimiter("::"))
+	cf := New(options...)
+	cf.Set("credentials", &Credentials{})
 	return cf.Save("credentials", options...)
 }
