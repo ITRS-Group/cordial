@@ -23,18 +23,18 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
-var loginCmdSiteURL, loginCmdUsername, loginCmdPassword string
+var loginCmdUsername, loginCmdPassword string
 var loginKeyfile config.KeyFile
-var retrieve bool
+var loginCmdList bool
 
 func init() {
 	RootCmd.AddCommand(loginCmd)
@@ -42,7 +42,7 @@ func init() {
 	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username")
 	loginCmd.Flags().StringVarP(&loginCmdPassword, "password", "p", "", "Password")
 	loginCmd.Flags().VarP(&loginKeyfile, "keyfile", "k", "Keyfile to use")
-	loginCmd.Flags().BoolVarP(&retrieve, "ret", "r", false, "retrieve creds")
+	loginCmd.Flags().BoolVarP(&loginCmdList, "list", "l", false, "list domains of credentials (no validity checks are done)")
 
 	loginCmd.Flags().SortFlags = false
 
@@ -81,13 +81,17 @@ credentials can use a separate keyfile.
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		urlMatch := "itrsgroup.com"
-		if loginCmdSiteURL != "" {
-			urlMatch = loginCmdSiteURL
-		}
 
-		if retrieve {
-			b, _ := json.MarshalIndent(config.FindCreds(urlMatch, config.SetAppName(Execname)), "", "    ")
-			fmt.Printf("creds:\n%s\n", string(b))
+		if loginCmdList {
+			cr, _ := config.Load("credentials",
+				config.SetAppName(Execname),
+				config.UseDefaults(false),
+				config.IgnoreWorkingDir(),
+			)
+			for d := range cr.GetStringMap("credentials") {
+				fmt.Println(d)
+			}
+
 			return
 		}
 
