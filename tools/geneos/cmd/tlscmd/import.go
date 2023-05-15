@@ -31,7 +31,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"unsafe"
 
 	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
@@ -159,9 +158,13 @@ func tlsImport(sources ...string) (err error) {
 
 func matchKey(cert *x509.Certificate, keys []*memguard.Enclave) (index int, err error) {
 	for i, key := range keys {
+		var pkey *rsa.PrivateKey
 		l, _ := key.Open()
-		key := (*rsa.PrivateKey)(unsafe.Pointer(&l.Bytes()[0]))
-		if key.PublicKey.Equal(cert.PublicKey) {
+		if pkey, err = x509.ParsePKCS1PrivateKey(l.Bytes()); err != nil {
+			break
+		}
+
+		if pkey.PublicKey.Equal(cert.PublicKey) {
 			l.Destroy()
 			return i, nil
 		}
