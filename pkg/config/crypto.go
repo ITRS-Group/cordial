@@ -337,7 +337,7 @@ func (cf *Config) FindCreds(path string) (creds *Config) {
 	})
 	creds = New()
 	for _, p := range paths {
-		if strings.Contains(path, p) {
+		if strings.Contains(strings.ToLower(path), strings.ToLower(p)) {
 			creds.MergeConfigMap(cf.GetStringMap(cf.Join("credentials", p)))
 			return
 		}
