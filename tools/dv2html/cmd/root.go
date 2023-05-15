@@ -61,13 +61,13 @@ func init() {
 
 	config.DefaultKeyDelimiter("::")
 
-	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	rootCmd.PersistentFlags().BoolVarP(&inlineCSS, "inline-css", "i", true, "inline CSS for better mail client support")
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2html.yaml)")
+	DV2HTMLCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	DV2HTMLCmd.PersistentFlags().BoolVarP(&inlineCSS, "inline-css", "i", true, "inline CSS for better mail client support")
+	DV2HTMLCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2html.yaml)")
 
 	// how to remove the help flag help text from the help output! Sigh...
-	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	rootCmd.PersistentFlags().MarkHidden("help")
+	DV2HTMLCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	DV2HTMLCmd.PersistentFlags().MarkHidden("help")
 
 	execname = filepath.Base(os.Args[0])
 	cordial.LogInit(execname)
@@ -109,8 +109,8 @@ var textDefaultTemplate string
 //go:embed dv2html.gotmpl
 var htmlDefaultTemplate string
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
+// DV2HTMLCmd represents the base command when called without any subcommands
+var DV2HTMLCmd = &cobra.Command{
 	Use:   "dv2html",
 	Short: "Email a Dataview following Geneos Action/Effect conventions",
 	Long: strings.ReplaceAll(`
@@ -181,7 +181,7 @@ directory or in the user's .config/dv2html directory)
 			return
 		}
 
-		textTemplate := cf.GetString("text-template", config.Default(htmlDefaultTemplate))
+		textTemplate := cf.GetString("text-template", config.Default(textDefaultTemplate))
 		tt, err := ttemplate.New("dataview").Parse(textTemplate)
 		if err != nil {
 			return
@@ -415,7 +415,7 @@ directory or in the user's .config/dv2html directory)
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	err := rootCmd.Execute()
+	err := DV2HTMLCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}

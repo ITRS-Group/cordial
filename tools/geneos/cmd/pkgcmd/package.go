@@ -49,5 +49,5 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	cmd.RootCmd.AddCommand(PackageCmd)
+	cmd.GeneosCmd.AddCommand(PackageCmd)
 }

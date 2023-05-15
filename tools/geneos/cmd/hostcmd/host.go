@@ -49,5 +49,5 @@ Manage remote host settings. Without a subcommand defaults to |ls| of hosts.
 }
 
 func init() {
-	cmd.RootCmd.AddCommand(HostCmd)
+	cmd.GeneosCmd.AddCommand(HostCmd)
 }

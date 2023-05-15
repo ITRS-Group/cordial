@@ -56,7 +56,7 @@ var psCSVWriter *csv.Writer
 var psJSONEncoder *json.Encoder
 
 func init() {
-	RootCmd.AddCommand(psCmd)
+	GeneosCmd.AddCommand(psCmd)
 
 	psCmd.Flags().BoolVarP(&psCmdShowFiles, "files", "f", false, "Show open files")
 	psCmd.Flags().BoolVarP(&psCmdJSON, "json", "j", false, "Output JSON")

@@ -42,6 +42,9 @@ import (
 
 const pkgname = "cordial"
 
+// default command name for pre-init
+const execname = "geneos"
+
 var (
 	ErrInvalidArgs  error = errors.New("invalid arguments")
 	ErrNotSupported error = errors.New("not supported")
@@ -62,36 +65,36 @@ func init() {
 	config.DefaultKeyDelimiter("::")
 	config.ResetConfig(config.KeyDelimiter("::"))
 
-	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/geneos.json, "+
+	GeneosCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/geneos.json, "+
 		config.Path(Execname,
 			config.IgnoreUserConfDir(),
 			config.IgnoreWorkingDir())+
 		")")
-	RootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	RootCmd.PersistentFlags().MarkHidden("debug")
-	RootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
-	RootCmd.PersistentFlags().MarkHidden("quiet")
+	GeneosCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	GeneosCmd.PersistentFlags().MarkHidden("debug")
+	GeneosCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
+	GeneosCmd.PersistentFlags().MarkHidden("quiet")
 
 	// how to remove the help flag help text from the help output! Sigh...
-	RootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	RootCmd.PersistentFlags().MarkHidden("help")
+	GeneosCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	GeneosCmd.PersistentFlags().MarkHidden("help")
 
 	// catch common abbreviations and typos
-	RootCmd.PersistentFlags().SetNormalizeFunc(cmdNormalizeFunc)
+	GeneosCmd.PersistentFlags().SetNormalizeFunc(cmdNormalizeFunc)
 
 	// this doesn't work as expected, define sort = false in each command
 	// RootCmd.PersistentFlags().SortFlags = false
-	RootCmd.Flags().SortFlags = false
+	GeneosCmd.Flags().SortFlags = false
 
 	// run initialisers on internal packages, set the executable name
 	geneos.Initialise(Execname)
 	instance.Initialise(Execname)
 }
 
-var Execname = filepath.Base(os.Args[0])
+var Execname = execname // filepath.Base(os.Args[0])
 
-// RootCmd represents the base command when called without any subcommands
-var RootCmd = &cobra.Command{
+// GeneosCmd represents the base command when called without any subcommands
+var GeneosCmd = &cobra.Command{
 	Use:   Execname,
 	Short: "Control your Geneos environment",
 	Long: strings.ReplaceAll(`
@@ -159,7 +162,7 @@ For temporary usage:
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the RootCmd.
 func Execute() {
-	err := RootCmd.Execute()
+	err := GeneosCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
@@ -180,6 +183,8 @@ func cmdNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	Execname = filepath.Base(os.Args[0])
+
 	if quiet {
 		zerolog.SetGlobalLevel(zerolog.Disabled)
 	} else if debug {

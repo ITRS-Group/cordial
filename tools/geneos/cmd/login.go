@@ -37,7 +37,7 @@ var loginKeyfile config.KeyFile
 var loginCmdList bool
 
 func init() {
-	RootCmd.AddCommand(loginCmd)
+	GeneosCmd.AddCommand(loginCmd)
 
 	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username")
 	loginCmd.Flags().StringVarP(&loginCmdPassword, "password", "p", "", "Password")

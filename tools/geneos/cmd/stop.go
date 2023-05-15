@@ -34,7 +34,7 @@ import (
 var stopCmdForce, stopCmdKill bool
 
 func init() {
-	RootCmd.AddCommand(stopCmd)
+	GeneosCmd.AddCommand(stopCmd)
 
 	stopCmd.Flags().BoolVarP(&stopCmdForce, "force", "F", false, "Stop protected instances")
 	stopCmd.Flags().BoolVarP(&stopCmdKill, "kill", "K", false, "Force immediate stop by sending an immediate SIGKILL")

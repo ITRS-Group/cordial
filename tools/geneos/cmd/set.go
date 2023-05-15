@@ -35,7 +35,7 @@ import (
 )
 
 func init() {
-	RootCmd.AddCommand(setCmd)
+	GeneosCmd.AddCommand(setCmd)
 
 	setCmd.Flags().VarP(&setCmdExtras.Envs, "env", "e", "(all components) Add an environment variable in the format NAME=VALUE")
 	setCmd.Flags().VarP(&setCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")

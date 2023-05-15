@@ -34,7 +34,7 @@ import (
 var deleteCmdForce bool
 
 func init() {
-	RootCmd.AddCommand(deleteCmd)
+	GeneosCmd.AddCommand(deleteCmd)
 
 	deleteCmd.Flags().BoolVarP(&deleteCmdForce, "force", "F", false, "Force delete of instances")
 

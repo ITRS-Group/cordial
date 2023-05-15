@@ -30,7 +30,7 @@ import (
 )
 
 func init() {
-	RootCmd.AddCommand(moveCmd)
+	GeneosCmd.AddCommand(moveCmd)
 
 	// moveCmd.Flags().SortFlags = false
 }

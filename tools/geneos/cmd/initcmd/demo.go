@@ -38,7 +38,7 @@ import (
 var initDemoCmdArchive string
 
 func init() {
-	initCmd.AddCommand(initDemoCmd)
+	InitCmd.AddCommand(initDemoCmd)
 
 	initDemoCmd.Flags().StringVarP(&initDemoCmdArchive, "archive", "A", "", "`PATH or URL` to software archive to install")
 	initDemoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")

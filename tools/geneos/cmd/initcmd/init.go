@@ -50,62 +50,62 @@ var initCmdDLPassword *memguard.Enclave
 var initCmdExtras = instance.ExtraConfigValues{}
 
 func init() {
-	cmd.RootCmd.AddCommand(initCmd)
+	cmd.GeneosCmd.AddCommand(InitCmd)
 
 	// old flags, these are now sub-commands so hide them
-	initCmd.Flags().StringVarP(&initCmdAll, "all", "A", "", "Perform initialisation steps using given license file and start instances")
-	initCmd.Flags().MarkDeprecated("all", "please use `geneos init all -l PATH ...`")
-	initCmd.Flags().BoolVarP(&initCmdDemo, "demo", "D", false, "Perform initialisation steps for a demo setup and start instances")
-	initCmd.Flags().MarkDeprecated("demo", "please use `geneos init demo`")
-	initCmd.Flags().BoolVarP(&initCmdSAN, "san", "S", false, "Create a SAN and start SAN")
-	initCmd.Flags().MarkDeprecated("san", "please use the `geneos init san` sub-command")
-	initCmd.Flags().BoolVarP(&initCmdTemplates, "writetemplates", "T", false, "Overwrite/create templates from embedded (for version upgrades)")
-	initCmd.Flags().MarkDeprecated("writetemplates", "please use `geneos init templates`")
-	initCmd.MarkFlagsMutuallyExclusive("all", "demo", "san", "writetemplates")
+	InitCmd.Flags().StringVarP(&initCmdAll, "all", "A", "", "Perform initialisation steps using given license file and start instances")
+	InitCmd.Flags().MarkDeprecated("all", "please use `geneos init all -l PATH ...`")
+	InitCmd.Flags().BoolVarP(&initCmdDemo, "demo", "D", false, "Perform initialisation steps for a demo setup and start instances")
+	InitCmd.Flags().MarkDeprecated("demo", "please use `geneos init demo`")
+	InitCmd.Flags().BoolVarP(&initCmdSAN, "san", "S", false, "Create a SAN and start SAN")
+	InitCmd.Flags().MarkDeprecated("san", "please use the `geneos init san` sub-command")
+	InitCmd.Flags().BoolVarP(&initCmdTemplates, "writetemplates", "T", false, "Overwrite/create templates from embedded (for version upgrades)")
+	InitCmd.Flags().MarkDeprecated("writetemplates", "please use `geneos init templates`")
+	InitCmd.MarkFlagsMutuallyExclusive("all", "demo", "san", "writetemplates")
 
-	initCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
-	initCmd.Flags().MarkDeprecated("include", "please use the `geneos init all|demo|san` sub-commands")
+	InitCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
+	InitCmd.Flags().MarkDeprecated("include", "please use the `geneos init all|demo|san` sub-commands")
 
-	initCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME:PORT. Repeat flag for more gateways.")
-	initCmd.Flags().MarkDeprecated("gateway", "please use the `geneos init san` sub-command")
-	initCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", "(sans) Add an attribute in the format NAME=VALUE")
-	initCmd.Flags().MarkDeprecated("attribute", "please use the `geneos init san` sub-command. Repeat flag for more attributes.")
-	initCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", "(sans) Add a type NAME. Repeat flag for more types")
-	initCmd.Flags().MarkDeprecated("type", "please use the `geneos init san` sub-command. Repeat flag for more types.")
-	initCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", "(sans) Add a variable in the format [TYPE:]NAME=VALUE")
-	initCmd.Flags().MarkDeprecated("variable", "please use the `geneos init san` sub-command")
+	InitCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME:PORT. Repeat flag for more gateways.")
+	InitCmd.Flags().MarkDeprecated("gateway", "please use the `geneos init san` sub-command")
+	InitCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", "(sans) Add an attribute in the format NAME=VALUE")
+	InitCmd.Flags().MarkDeprecated("attribute", "please use the `geneos init san` sub-command. Repeat flag for more attributes.")
+	InitCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", "(sans) Add a type NAME. Repeat flag for more types")
+	InitCmd.Flags().MarkDeprecated("type", "please use the `geneos init san` sub-command. Repeat flag for more types.")
+	InitCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", "(sans) Add a variable in the format [TYPE:]NAME=VALUE")
+	InitCmd.Flags().MarkDeprecated("variable", "please use the `geneos init san` sub-command")
 
 	// common flags, need checking
 
-	initCmd.PersistentFlags().BoolVarP(&initCmdMakeCerts, "makecerts", "C", false, "Create default certificates for TLS support")
-	initCmd.PersistentFlags().BoolVarP(&initCmdLogs, "log", "l", false, "Run 'logs -f' after starting instance(s)")
-	initCmd.PersistentFlags().BoolVarP(&initCmdForce, "force", "F", false, "Be forceful, ignore existing directories.")
-	initCmd.PersistentFlags().StringVarP(&initCmdName, "name", "n", "", "Use the given name for instances and configurations instead of the hostname")
+	InitCmd.PersistentFlags().BoolVarP(&initCmdMakeCerts, "makecerts", "C", false, "Create default certificates for TLS support")
+	InitCmd.PersistentFlags().BoolVarP(&initCmdLogs, "log", "l", false, "Run 'logs -f' after starting instance(s)")
+	InitCmd.PersistentFlags().BoolVarP(&initCmdForce, "force", "F", false, "Be forceful, ignore existing directories.")
+	InitCmd.PersistentFlags().StringVarP(&initCmdName, "name", "n", "", "Use the given name for instances and configurations instead of the hostname")
 
-	initCmd.PersistentFlags().StringVarP(&initCmdImportCert, "importcert", "c", "", "signing certificate file with optional embedded private key")
-	initCmd.PersistentFlags().StringVarP(&initCmdImportKey, "importkey", "k", "", "signing private key file")
+	InitCmd.PersistentFlags().StringVarP(&initCmdImportCert, "importcert", "c", "", "signing certificate file with optional embedded private key")
+	InitCmd.PersistentFlags().StringVarP(&initCmdImportKey, "importkey", "k", "", "signing private key file")
 
-	initCmd.PersistentFlags().BoolVarP(&initCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires ITRS internal credentials")
-	initCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots. Requires -N")
+	InitCmd.PersistentFlags().BoolVarP(&initCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires ITRS internal credentials")
+	InitCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots. Requires -N")
 
-	initCmd.PersistentFlags().StringVarP(&initCmdVersion, "version", "V", "latest", "Download matching version, defaults to latest. Doesn't work for EL8 archives.")
-	initCmd.PersistentFlags().StringVarP(&initCmdDLUsername, "username", "u", "", "Username for downloads. Defaults to configuration value `download.username`")
+	InitCmd.PersistentFlags().StringVarP(&initCmdVersion, "version", "V", "latest", "Download matching version, defaults to latest. Doesn't work for EL8 archives.")
+	InitCmd.PersistentFlags().StringVarP(&initCmdDLUsername, "username", "u", "", "Username for downloads. Defaults to configuration value `download.username`")
 
 	// we now prompt for passwords if not in config, so hide this old flag
-	initCmd.PersistentFlags().StringVarP(&initCmdPwFile, "pwfile", "P", "", "")
-	initCmd.PersistentFlags().MarkHidden("pwfile")
+	InitCmd.PersistentFlags().StringVarP(&initCmdPwFile, "pwfile", "P", "", "")
+	InitCmd.PersistentFlags().MarkHidden("pwfile")
 
-	initCmd.PersistentFlags().StringVarP(&initCmdGatewayTemplate, "gatewaytemplate", "w", "", "A gateway template file")
-	initCmd.PersistentFlags().StringVarP(&initCmdSANTemplate, "santemplate", "s", "", "SAN template file")
-	initCmd.PersistentFlags().StringVarP(&initCmdFloatingTemplate, "floatingtemplate", "f", "", "Floating probe template file")
+	InitCmd.PersistentFlags().StringVarP(&initCmdGatewayTemplate, "gatewaytemplate", "w", "", "A gateway template file")
+	InitCmd.PersistentFlags().StringVarP(&initCmdSANTemplate, "santemplate", "s", "", "SAN template file")
+	InitCmd.PersistentFlags().StringVarP(&initCmdFloatingTemplate, "floatingtemplate", "f", "", "Floating probe template file")
 
-	initCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", "Add an environment variable in the format NAME=VALUE. Repeat flag for more values.")
+	InitCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", "Add an environment variable in the format NAME=VALUE. Repeat flag for more values.")
 
-	initCmd.PersistentFlags().SortFlags = false
-	initCmd.Flags().SortFlags = false
+	InitCmd.PersistentFlags().SortFlags = false
+	InitCmd.Flags().SortFlags = false
 }
 
-var initCmd = &cobra.Command{
+var InitCmd = &cobra.Command{
 	Use:   "init [flags] [USERNAME] [DIRECTORY]",
 	Short: "Initialise a Geneos installation",
 	Long: strings.ReplaceAll(`

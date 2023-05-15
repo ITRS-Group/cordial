@@ -46,7 +46,7 @@ var snapshotCmdUsername, snapshotCmdPwFile string
 var snapshotCmdPassword *memguard.Enclave
 
 func init() {
-	RootCmd.AddCommand(snapshotCmd)
+	GeneosCmd.AddCommand(snapshotCmd)
 
 	snapshotCmd.Flags().SortFlags = false
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdValues, "value", "V", true, "Request cell values")

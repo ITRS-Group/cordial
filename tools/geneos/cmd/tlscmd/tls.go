@@ -31,7 +31,7 @@ import (
 )
 
 func init() {
-	cmd.RootCmd.AddCommand(TLSCmd)
+	cmd.GeneosCmd.AddCommand(TLSCmd)
 
 	// tlsCmd.Flags().SortFlags = false
 }

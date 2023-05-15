@@ -52,7 +52,7 @@ var lsTabWriter *tabwriter.Writer
 var LsCSVWriter *csv.Writer
 
 func init() {
-	RootCmd.AddCommand(lsCmd)
+	GeneosCmd.AddCommand(lsCmd)
 
 	lsCmd.PersistentFlags().BoolVarP(&lsCmdJSON, "json", "j", false, "Output JSON")
 	lsCmd.PersistentFlags().BoolVarP(&lsCmdIndent, "pretty", "i", false, "Output indented JSON")

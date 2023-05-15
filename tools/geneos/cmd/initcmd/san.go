@@ -38,7 +38,7 @@ import (
 var initSanCmdArchive, initSanCmdVersion, initSanCmdOverride string
 
 func init() {
-	initCmd.AddCommand(initSanCmd)
+	InitCmd.AddCommand(initSanCmd)
 
 	initSanCmd.Flags().StringVarP(&initSanCmdVersion, "version", "V", "latest", "Download this `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
 	initSanCmd.Flags().StringVarP(&initSanCmdArchive, "archive", "A", "", "`PATH or URL` to software archive to install")
