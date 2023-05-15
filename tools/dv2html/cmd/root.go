@@ -24,8 +24,9 @@ package cmd
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
-	"html/template"
+	htemplate "html/template"
 	"io"
 	"net/url"
 	"os"
@@ -34,6 +35,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	ttemplate "text/template"
 
 	"github.com/awnumar/memguard"
 	"github.com/aymerick/douceur/inliner"
@@ -100,6 +102,9 @@ type dv2htmlData struct {
 	Rows      []string
 	Env       map[string]string
 }
+
+//go:embed dv2html-text.gotmpl
+var textDefaultTemplate string
 
 //go:embed dv2html.gotmpl
 var htmlDefaultTemplate string
@@ -171,10 +176,15 @@ directory or in the user's .config/dv2html directory)
 		}
 
 		htmlTemplate := cf.GetString("html-template", config.Default(htmlDefaultTemplate))
-
-		t, err := template.New("dataview").Parse(htmlTemplate)
+		ht, err := htemplate.New("dataview").Parse(htmlTemplate)
 		if err != nil {
-			log.Fatal().Err(err).Msg("")
+			return
+		}
+
+		textTemplate := cf.GetString("text-template", config.Default(htmlDefaultTemplate))
+		tt, err := ttemplate.New("dataview").Parse(textTemplate)
+		if err != nil {
+			return
 		}
 
 		tmplData := dv2htmlData{
@@ -192,18 +202,16 @@ directory or in the user's .config/dv2html directory)
 		dv = dv.ResolveTo(&xpath.Dataview{})
 
 		if err != nil {
-			log.Error().Err(err).Msg("")
 			return
 		}
 
 		dataviews, err := gw.Match(dv, 0)
 		if err != nil {
-			log.Error().Err(err).Msg("")
 			return
 		}
 
 		if len(dataviews) == 0 {
-			log.Fatal().Msg("no matching dataviews found")
+			return errors.New("no matching dataviews found")
 		}
 
 		em := config.New()
@@ -222,10 +230,8 @@ directory or in the user's .config/dv2html directory)
 
 		if eusername != "" {
 			pw, _ := epwe.Open()
-			// pws := config.ExpandLockedBuffer(pw.String())
 			epassword = strings.Clone(pw.String())
 			pw.Destroy()
-			// pws.Destroy()
 		}
 
 		if eusername == "" {
@@ -237,10 +243,8 @@ directory or in the user's .config/dv2html directory)
 
 			if pwb != nil {
 				pw, _ := pwb.Open()
-				// pws := config.ExpandLockedBuffer(pw.String())
 				epassword = strings.Clone(pw.String())
 				pw.Destroy()
-				// pws.Destroy()
 			}
 		}
 
@@ -369,19 +373,25 @@ directory or in the user's .config/dv2html directory)
 		}
 		m.SetHeader("Subject", em.GetString("_subject"))
 
-		m.SetBody("text/plain", cf.GetString("text-template"))
+		m.SetBodyWriter("text/plain", func(w io.Writer) error {
+			return tt.Execute(w, tmplData)
+		})
 
 		if inlineCSS {
 			var body strings.Builder
-			t.Execute(&body, tmplData)
-			inlined, err := inliner.Inline(body.String())
+			err = ht.Execute(&body, tmplData)
 			if err != nil {
-				log.Fatal().Err(err).Msg("")
+				return
+			}
+			var inlined string
+			inlined, err = inliner.Inline(body.String())
+			if err != nil {
+				return
 			}
 			m.AddAlternative("text/html", inlined)
 		} else {
 			m.AddAlternativeWriter("text/html", func(w io.Writer) error {
-				return t.Execute(w, tmplData)
+				return ht.Execute(w, tmplData)
 			})
 		}
 
