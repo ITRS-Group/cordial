@@ -90,7 +90,6 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw *memguard
 			if err != nil {
 				return
 			}
-			fmt.Println() // always move to new line even on error
 
 			pw1b, _ := pw1.Open()
 			pw2b, _ := pw2.Open()
