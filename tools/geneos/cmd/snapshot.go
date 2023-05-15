@@ -131,6 +131,9 @@ not applied in any defined order.
 }
 
 func snapshotInstance(c geneos.Instance, params []string) (err error) {
+	if !instance.AtLeastVersion(c, "5.14") {
+		return fmt.Errorf("%s is too old (5.14 or above required)", c)
+	}
 	dvs := []string{}
 	log.Debug().Msgf("snapshot on %s", c)
 	for _, path := range params {
@@ -147,10 +150,28 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 			username = snapshotCmdUsername
 		}
 
-		if len(password) == 0 {
+		if len(password) == 0 && snapshotCmdPassword != nil {
 			pwb, _ := snapshotCmdPassword.Open()
 			password = pwb.String()
 			defer pwb.Destroy()
+		}
+
+		// if username is still unset then look for credentials
+		if username == "" {
+			var pwb *memguard.Enclave
+			creds := config.FindCreds(c.Type().String()+":"+c.Name(), config.SetAppName(Execname))
+			if creds != nil {
+				username = creds.GetString("username")
+				pwb = creds.GetEnclave("password")
+			}
+
+			if pwb != nil {
+				pw, _ := pwb.Open()
+				pws := config.ExpandLockedBuffer(pw.String())
+				password = strings.Clone(pws.String())
+				pw.Destroy()
+				pws.Destroy()
+			}
 		}
 
 		log.Debug().Msgf("dialling %s", gatewayURL(c))
