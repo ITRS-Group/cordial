@@ -238,7 +238,7 @@ func SetSecureArgs(c geneos.Instance) (args []string) {
 		return
 	}
 	if files[0] != "" {
-		if c.Type().String() != "gateway" {
+		if !c.Type().IsA("gateway", "san", "floating") {
 			args = append(args, "-secure")
 		}
 		args = append(args, "-ssl-certificate", files[0])

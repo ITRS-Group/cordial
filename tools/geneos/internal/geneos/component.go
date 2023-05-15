@@ -183,6 +183,19 @@ func ParseComponentName(component string) *Component {
 	return nil
 }
 
+// IsA returns true is any of the names match the any of the names
+// defined in ComponentMatches.
+func (ct Component) IsA(name ...string) bool {
+	for _, a := range ct.ComponentMatches {
+		for _, b := range name {
+			if strings.EqualFold(a, b) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // MakeComponentDirs creates the directory structure for the component.
 // If ct is nil then the Root component type is used. If there is an
 // error creating the directory or updating the ownership for superuser
