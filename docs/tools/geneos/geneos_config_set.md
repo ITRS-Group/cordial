@@ -1,6 +1,6 @@
-## geneos set global
+## geneos config set
 
-Set global configuration parameters
+Set configuration parameters
 
 ### Synopsis
 
@@ -8,7 +8,7 @@ Set global configuration parameters
 
 
 ```
-geneos set global [KEY=VALUE...]
+geneos config set [KEY=VALUE...] [flags]
 ```
 
 ### Options inherited from parent commands
@@ -19,5 +19,5 @@ geneos set global [KEY=VALUE...]
 
 ### SEE ALSO
 
-* [geneos set](geneos_set.md)	 - Set instance configuration parameters
+* [geneos config](geneos_config.md)	 - Configure geneos command environment
 

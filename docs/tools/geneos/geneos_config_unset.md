@@ -1,15 +1,14 @@
-## geneos tls new
+## geneos config unset
 
-Create new certificates
+Unset a configuration parameter
 
 ### Synopsis
 
 
-Create new certificates for instances.
 
 
 ```
-geneos tls new [TYPE] [NAME...] [flags]
+geneos config unset [flags]
 ```
 
 ### Options inherited from parent commands
@@ -20,5 +19,5 @@ geneos tls new [TYPE] [NAME...] [flags]
 
 ### SEE ALSO
 
-* [geneos tls](geneos_tls.md)	 - Manage certificates for secure connections
+* [geneos config](geneos_config.md)	 - Configure geneos command environment
 

@@ -44,9 +44,9 @@ geneos aes set [flags] [TYPE] [NAME...]
 ### Options
 
 ```
-  -C, --crc string       CRC of existing component shared keyfile to use
-  -k, --keyfile string   Keyfile to import and use (default "/home/peter/.config/geneos/keyfile.aes")
-  -N, --noroll           Do not roll any existing keyfile to previous keyfile setting
+  -C, --crc string        CRC of existing component shared keyfile to use
+  -k, --keyfile KEYFILE   Keyfile to import and use (default /home/peter/.config/geneos/keyfile.aes)
+  -N, --noroll            Do not roll any existing keyfile to previous keyfile setting
 ```
 
 ### Options inherited from parent commands

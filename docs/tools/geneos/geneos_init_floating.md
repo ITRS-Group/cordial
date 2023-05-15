@@ -1,17 +1,17 @@
-## geneos init san
+## geneos init floating
 
-Initialise a Geneos SAN (Self-Announcing Netprobe) environment
+Initialise a Geneos Floating Netprobe environment
 
 ### Synopsis
 
 
-Install a Self-Announcing Netprobe (SAN) into a new Geneos install
+Install a Floating Netprobe into a new Geneos install
 directory.
 
-Without any flags the command installs a SAN in a directory called
+Without any flags the command installs a Floating Netprobe in a directory called
 `geneos` under the user's home directory (unless the user's home
 directory ends in `geneos` in which case it uses that directly),
-downloads the latest netprobe release and create a SAN instance using
+downloads the latest netprobe release and create a netprobe instance using
 the `hostname` of the system.
 
 In almost all cases authentication will be required to download the
@@ -33,7 +33,7 @@ multiple times.
 
 
 ```
-geneos init san [flags] [USERNAME] [DIRECTORY]
+geneos init floating [flags] [USERNAME] [DIRECTORY]
 ```
 
 ### Options

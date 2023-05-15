@@ -13,8 +13,8 @@ can be found using the `geneos home TYPE NAME` command.
 The default configuration file format and extension is `json`. There will
 be support for `yaml` in future releases for easier human editing.
 	
-Gateways and SANs are given a configuration file based on the templates
-configured for the different components.
+Gateways, SANs and Floating probes are given a configuration file
+based on the templates configured for the different components.
 
 
 ```
@@ -43,9 +43,9 @@ geneos add netprobe infraprobe12 --start --log
   -C, --crc string                    use a keyfile (in the component shared directory) with CRC for AES256 encoding
   -e, --env NAME=VALUE                (all components) Add an environment variable in the format NAME=VALUE
   -i, --include PRIORITY:[PATH|URL]   (gateways) Add an include file in the format PRIORITY:[PATH|URL]
-  -g, --gateway HOSTNAME:PORT         (sans) Add a gateway in the format NAME:PORT
+  -g, --gateway HOSTNAME:PORT         (sans, floating) Add a gateway in the format NAME:PORT:SECURE
   -a, --attribute NAME=VALUE          (sans) Add an attribute in the format NAME=VALUE
-  -t, --type NAME                     (sans) Add a gateway in the format NAME:PORT
+  -t, --type NAME                     (sans) Add a type TYPE
   -v, --variable [TYPE:]NAME=VALUE    (sans) Add a variable in the format [TYPE:]NAME=VALUE
 ```
 

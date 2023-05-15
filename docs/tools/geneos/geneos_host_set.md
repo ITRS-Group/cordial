@@ -17,7 +17,7 @@ geneos host set [flags] [NAME...] [KEY=VALUE...]
 ```
   -p, --prompt            Prompt for password
   -P, --password string   Password
-  -k, --keyfile string    Keyfile
+  -k, --keyfile KEYFILE   Keyfile
 ```
 
 ### Options inherited from parent commands

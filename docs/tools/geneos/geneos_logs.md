@@ -22,6 +22,7 @@ geneos logs [flags] [TYPE] [NAME...]
 
 ```
   -n, --lines int       Lines to tail (default 10)
+  -E, --stderr          Show STDERR output files
   -f, --follow          Follow file
   -c, --cat             Cat whole file
   -g, --match string    Match lines with STRING

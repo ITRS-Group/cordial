@@ -50,7 +50,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
   -I, --init              Initialise the remote host directories and component files
   -p, --prompt            Prompt for password
   -P, --password string   Password
-  -k, --keyfile string    Keyfile
+  -k, --keyfile KEYFILE   Keyfile (default /home/peter/.config/geneos/keyfile.aes)
 ```
 
 ### Options inherited from parent commands

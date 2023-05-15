@@ -60,6 +60,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 ```
   -G, --config string                config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -e, --env NAME=VALUE               Add an environment variable in the format NAME=VALUE. Repeat flag for more values.
+  -f, --floatingtemplate string      Floating probe template file
   -F, --force                        Be forceful, ignore existing directories.
   -w, --gatewaytemplate string       A gateway template file
   -c, --importcert string            signing certificate file with optional embedded private key
@@ -68,7 +69,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
   -C, --makecerts                    Create default certificates for TLS support
   -n, --name string                  Use the given name for instances and configurations instead of the hostname
   -N, --nexus                        Download from nexus.itrsgroup.com. Requires ITRS internal credentials
-  -s, --santemplate string           A san template file
+  -s, --santemplate string           SAN template file
   -p, --snapshots                    Download from nexus snapshots. Requires -N
   -u, --username download.username   Username for downloads. Defaults to configuration value download.username
   -V, --version string               Download matching version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
