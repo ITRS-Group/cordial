@@ -37,7 +37,7 @@ import (
 var migrateCmdExecutables bool
 
 func init() {
-	rootCmd.AddCommand(migrateCmd)
+	RootCmd.AddCommand(migrateCmd)
 
 	migrateCmd.Flags().BoolVarP(&migrateCmdExecutables, "executables", "X", false, "Migrate executables by symlinking to this binary")
 	migrateCmd.Flags().SortFlags = false
@@ -53,10 +53,11 @@ take on the new labels and are not a direct conversion.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		if migrateCmdExecutables {
 			if err := migrateCommands(); err != nil {
 				log.Error().Err(err).Msg("migrating old executables failed")

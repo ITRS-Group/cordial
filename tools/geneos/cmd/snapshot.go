@@ -26,8 +26,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/xpath"
@@ -41,10 +43,10 @@ import (
 var snapshotCmdValues, snapshotCmdSeverities, snapshotCmdSnoozes, snapshotCmdUserAssignments, snapshotCmdXpathsonly bool
 var snapshotCmdMaxitems int
 var snapshotCmdUsername, snapshotCmdPwFile string
-var snapshotCmdPassword []byte
+var snapshotCmdPassword *memguard.Enclave
 
 func init() {
-	rootCmd.AddCommand(snapshotCmd)
+	RootCmd.AddCommand(snapshotCmd)
 
 	snapshotCmd.Flags().SortFlags = false
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdValues, "value", "V", true, "Request cell values")
@@ -52,7 +54,7 @@ func init() {
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdSnoozes, "snooze", "Z", false, "Request cell snooze info")
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdUserAssignments, "userassignment", "U", false, "Request cell user assignment info")
 
-	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username for snaptshot, defaults to configuration value in snapshot.username")
+	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username for snapshot, defaults to configuration value in snapshot.username")
 	snapshotCmd.Flags().StringVarP(&snapshotCmdPwFile, "pwfile", "P", "", "Password file to read for snapshots, defaults to configuration value in snapshot.password or otherwise prompts")
 
 	snapshotCmd.Flags().IntVarP(&snapshotCmdMaxitems, "limit", "l", 0, "limit matching items to display. default is unlimited. results unsorted.")
@@ -94,27 +96,32 @@ not applied in any defined order.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"ct":       "gateway",
-		"wildcard": "true",
+		"ct":           "gateway",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		ct, args, params := CmdArgsParams(cmd)
 		if len(params) == 0 {
 			return fmt.Errorf("no dataview xpath(s) supplied")
 		}
 
 		if snapshotCmdUsername == "" {
-			snapshotCmdUsername = config.GetString("snapshot.username")
+			snapshotCmdUsername = config.GetString(config.Join("snapshot", "username"))
 		}
 
 		if snapshotCmdPwFile != "" {
-			snapshotCmdPassword = config.ReadPasswordFile(snapshotCmdPwFile)
+			var sp []byte
+			if sp, err = os.ReadFile(snapshotCmdPwFile); err != nil {
+				return
+			}
+			snapshotCmdPassword = memguard.NewEnclave(sp)
 		} else {
-			snapshotCmdPassword = config.GetByteSlice("snapshot.password")
+			snapshotCmdPassword = config.GetEnclave(config.Join("snapshot", "password"))
 		}
 
-		if snapshotCmdUsername != "" && len(snapshotCmdPassword) == 0 {
-			snapshotCmdPassword = config.ReadPasswordPrompt()
+		if snapshotCmdUsername != "" && (snapshotCmdPassword == nil || snapshotCmdPassword.Size() == 0) {
+			snapshotCmdPassword, _ = config.ReadPasswordInput(false, 0)
 		}
 
 		// at this point snapshotCmdUsername/Password contain global or
@@ -124,6 +131,9 @@ not applied in any defined order.
 }
 
 func snapshotInstance(c geneos.Instance, params []string) (err error) {
+	if !instance.AtLeastVersion(c, "5.14") {
+		return fmt.Errorf("%s is too old (5.14 or above required)", c)
+	}
 	dvs := []string{}
 	log.Debug().Msgf("snapshot on %s", c)
 	for _, path := range params {
@@ -135,18 +145,39 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 
 		// always use auth details in per-instance config, but if not
 		// given use those from the command line or user/global config
-		username, password := c.Config().GetString("snapshot.username"), c.Config().GetByteSlice("snapshot.password")
+		username, password := c.Config().GetString(config.Join("snapshot", "username")), c.Config().GetString(config.Join("snapshot", "password"))
 		if username == "" {
 			username = snapshotCmdUsername
 		}
-		if len(password) == 0 {
-			password = snapshotCmdPassword
+
+		if len(password) == 0 && snapshotCmdPassword != nil {
+			pwb, _ := snapshotCmdPassword.Open()
+			password = pwb.String()
+			defer pwb.Destroy()
+		}
+
+		// if username is still unset then look for credentials
+		if username == "" {
+			var pwb *memguard.Enclave
+			creds := config.FindCreds(c.Type().String()+":"+c.Name(), config.SetAppName(Execname))
+			if creds != nil {
+				username = creds.GetString("username")
+				pwb = creds.GetEnclave("password")
+			}
+
+			if pwb != nil {
+				pw, _ := pwb.Open()
+				pws := config.ExpandLockedBuffer(pw.String())
+				password = strings.Clone(pws.String())
+				pw.Destroy()
+				pws.Destroy()
+			}
 		}
 
 		log.Debug().Msgf("dialling %s", gatewayURL(c))
 		gw, err := commands.DialGateway(gatewayURL(c),
 			commands.AllowInsecureCertificates(true),
-			commands.SetBasicAuth(username, string(password)))
+			commands.SetBasicAuth(username, password))
 		if err != nil {
 			return err
 		}
@@ -185,12 +216,12 @@ func gatewayURL(c geneos.Instance) (u *url.URL) {
 		return
 	}
 	u = &url.URL{}
-	host := c.Host().GetString("hostname")
-	if host == "" {
-		host = "localhost"
+	hostname := c.Host().GetString("hostname")
+	if hostname == "" {
+		hostname = "localhost"
 	}
 	port := c.Config().GetInt("port")
-	u.Host = fmt.Sprintf("%s:%d", host, port)
+	u.Host = fmt.Sprintf("%s:%d", hostname, port)
 	u.Scheme = "http"
 	if instance.Filename(c, "certificate") != "" {
 		u.Scheme = "https"

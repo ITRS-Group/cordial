@@ -40,7 +40,7 @@ import (
 var revertCmdExecutables bool
 
 func init() {
-	rootCmd.AddCommand(revertCmd)
+	RootCmd.AddCommand(revertCmd)
 
 	revertCmd.Flags().BoolVarP(&revertCmdExecutables, "executables", "X", false, "Revert 'ctl' executables")
 	revertCmd.Flags().SortFlags = false
@@ -57,10 +57,11 @@ never changed.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		if err := revertCommands(); err != nil {
 			log.Error().Err(err).Msg("reverting old executables failed")
 		}
@@ -114,7 +115,7 @@ func revertCommands() (err error) {
 			continue
 		}
 		if realpath != geneosExec {
-			fmt.Printf("%s is not a link to %s, skipping", path, geneosExec)
+			log.Debug().Msgf("%s is not a link to %s, skipping", path, geneosExec)
 			continue
 		}
 

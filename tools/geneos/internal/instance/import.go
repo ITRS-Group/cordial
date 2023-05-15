@@ -5,29 +5,22 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
-func ImportFile(h *host.Host, home string, user string, source string, options ...geneos.Options) (filename string, err error) {
+func ImportFile(h *geneos.Host, home string, source string, options ...geneos.Options) (filename string, err error) {
 	var backuppath string
 	var from io.ReadCloser
 
-	if h == host.ALL {
+	if h == geneos.ALL {
 		err = geneos.ErrInvalidArgs
-		return
-	}
-
-	uid, gid, _, err := utils.GetIDs(user)
-	if err != nil {
 		return
 	}
 
@@ -45,7 +38,7 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 			if splitsource[0] == "" {
 				log.Fatal().Msg("dest path empty")
 			}
-			destfile, err = host.CleanRelativePath(splitsource[0])
+			destfile, err = geneos.CleanRelativePath(splitsource[0])
 			if err != nil {
 				log.Fatal().Msg("dest path must be relative to (and in) instance directory")
 			}
@@ -78,16 +71,10 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 
 	// check to containing directory, as destfile above may be a
 	// relative path under destdir and not just a filename
-	if _, err := h.Stat(utils.Dir(destfile)); err != nil {
-		err = h.MkdirAll(utils.Dir(destfile), 0775)
+	if _, err := h.Stat(path.Dir(destfile)); err != nil {
+		err = h.MkdirAll(path.Dir(destfile), 0775)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
 			log.Fatal().Err(err).Msg("")
-		}
-		// if created by root, chown the last directory element
-		if err == nil && utils.IsSuperuser() {
-			if err = h.Chown(utils.Dir(destfile), uid, gid); err != nil {
-				return filename, err
-			}
 		}
 	}
 
@@ -109,18 +96,6 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 	}
 	defer cf.Close()
 
-	if utils.IsSuperuser() {
-		if err = h.Chown(destfile, uid, gid); err != nil {
-			h.Remove(destfile)
-			if backuppath != "" {
-				if err = h.Rename(backuppath, destfile); err != nil {
-					return
-				}
-				return
-			}
-		}
-	}
-
 	if _, err = io.Copy(cf, from); err != nil {
 		return
 	}
@@ -128,7 +103,7 @@ func ImportFile(h *host.Host, home string, user string, source string, options .
 	return
 }
 
-func ImportCommons(r *host.Host, ct *geneos.Component, common string, params []string) (filename string, err error) {
+func ImportCommons(r *geneos.Host, ct *geneos.Component, common string, params []string) (filename string, err error) {
 	if ct == nil || !ct.RealComponent {
 		err = geneos.ErrNotSupported
 		return
@@ -140,7 +115,7 @@ func ImportCommons(r *host.Host, ct *geneos.Component, common string, params []s
 
 	dir := r.Filepath(ct, common)
 	for _, source := range params {
-		if filename, err = ImportFile(r, dir, config.GetString("defaultuser"), source); err != nil {
+		if filename, err = ImportFile(r, dir, source); err != nil {
 			return
 		}
 	}

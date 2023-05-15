@@ -34,13 +34,12 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 )
 
 const defaultURL = "https://resources.itrsgroup.com/download/latest/"
 
 func init() {
-	config.GetConfig().SetDefault("download.url", defaultURL)
+	config.GetConfig().SetDefault(config.Join("download", "url"), defaultURL)
 }
 
 // FilenameFromHTTPResp decodes and returns the filename from the
@@ -63,7 +62,7 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 
 	// if no content-disposition, then grab the path from the response URL
 	if filename == "" {
-		filename, err = host.CleanRelativePath(path.Base(u.Path))
+		filename, err = CleanRelativePath(path.Base(u.Path))
 		if err != nil {
 			return
 		}
@@ -111,7 +110,9 @@ func Open(source string, options ...Options) (from io.ReadCloser, filename strin
 				if req, err = http.NewRequest("GET", u.String(), nil); err != nil {
 					return
 				}
-				req.SetBasicAuth(opts.username, string(opts.password))
+				pw, _ := opts.password.Open()
+				req.SetBasicAuth(opts.username, pw.String())
+				pw.Destroy()
 				if resp, err = client.Do(req); err != nil {
 					return
 				}

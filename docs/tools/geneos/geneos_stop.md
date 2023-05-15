@@ -19,7 +19,8 @@ geneos stop [flags] [TYPE] [NAME...]
 ### Options
 
 ```
-  -K, --kill   Force immediate stop by sending an immediate SIGKILL
+  -F, --force   Stop protected instances
+  -K, --kill    Force immediate stop by sending an immediate SIGKILL
 ```
 
 ### Options inherited from parent commands

@@ -32,7 +32,7 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(enableCmd)
+	RootCmd.AddCommand(enableCmd)
 
 	enableCmd.Flags().BoolVarP(&enableCmdStart, "start", "S", false, "Start enabled instances")
 
@@ -51,10 +51,11 @@ when the |-S| flag is used.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		return instance.ForAll(ct, enableInstance, args, params)
 	},
 }

@@ -8,8 +8,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/plugins"
 	"github.com/itrs-group/cordial/pkg/samplers"
@@ -71,11 +73,17 @@ func (p PowerwallSampler) DoSample() (err error) {
 	}
 	resp, err := http.Get(p.pwurl)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("")
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
 	var data map[string]map[string]interface{}
 	err = json.Unmarshal(body, &data)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
 	// all numbers are float64 at this point, don't forget to reconvert
 
 	table := make([][]string, len(pwrows))
@@ -102,7 +110,7 @@ func (p PowerwallSampler) DoSample() (err error) {
 	}
 	err = p.UpdateTable(pwcols, table...)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	return
 }

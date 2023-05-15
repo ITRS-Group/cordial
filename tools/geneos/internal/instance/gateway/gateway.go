@@ -25,6 +25,7 @@ package gateway
 import (
 	_ "embed"
 	"fmt"
+	"path"
 	"path/filepath"
 	"sync"
 
@@ -32,14 +33,13 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
 )
 
 var Gateway = geneos.Component{
 	Initialise:       Init,
 	Name:             "gateway",
+	LegacyPrefix:     "gate",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"gateway", "gateways"},
 	RealComponent:    true,
@@ -111,7 +111,7 @@ func init() {
 	Gateway.RegisterComponent(New)
 }
 
-func Init(r *host.Host, ct *geneos.Component) {
+func Init(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
 	if err := r.WriteFile(r.Filepath("gateway", "templates", GatewayDefaultTemplate), GatewayTemplate, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
@@ -124,7 +124,7 @@ func Init(r *host.Host, ct *geneos.Component) {
 var gateways sync.Map
 
 func New(name string) geneos.Instance {
-	_, local, h := instance.SplitName(name, host.LOCAL)
+	_, local, h := instance.SplitName(name, geneos.LOCAL)
 	if i, ok := gateways.Load(h.FullName(local)); ok {
 		if g, ok := i.(*Gateways); ok {
 			return g
@@ -162,11 +162,7 @@ func (g *Gateways) Home() string {
 	return g.Config().GetString("home")
 }
 
-func (g *Gateways) Prefix() string {
-	return "gate"
-}
-
-func (g *Gateways) Host() *host.Host {
+func (g *Gateways) Host() *geneos.Host {
 	return g.InstanceHost
 }
 
@@ -197,30 +193,29 @@ func (g *Gateways) Config() *config.Config {
 	return g.Conf
 }
 
-func (g *Gateways) SetConf(v *config.Config) {
-	g.Conf = v
-}
-
-func (g *Gateways) Add(username string, template string, port uint16) (err error) {
+func (g *Gateways) Add(template string, port uint16) (err error) {
 	cf := g.Config()
 
 	if port == 0 {
 		port = instance.NextPort(g.InstanceHost, &Gateway)
 	}
 	cf.Set("port", port)
-	cf.Set("user", username)
-	cf.Set("config.rebuild", "initial")
+	cf.Set(cf.Join("config", "rebuild"), "initial")
 
-	cf.SetDefault("config.template", GatewayDefaultTemplate)
+	cf.SetDefault(cf.Join("config", "template"), GatewayDefaultTemplate)
 	if template != "" {
 		filename, _ := instance.ImportCommons(g.Host(), g.Type(), "templates", []string{template})
-		cf.Set("config.template", filename)
+		cf.Set(cf.Join("config", "template"), filename)
 	}
 
 	cf.Set("includes", make(map[int]string))
 
 	// try to save config early
-	if err = instance.WriteConfig(g); err != nil {
+	if err = g.Config().Save(g.Type().String(),
+		config.Host(g.Host()),
+		config.SaveDir(g.Type().InstancesDir(g.Host())),
+		config.SetAppName(g.Name()),
+	); err != nil {
 		log.Fatal().Err(err).Msg("")
 		return
 	}
@@ -232,6 +227,7 @@ func (g *Gateways) Add(username string, template string, port uint16) (err error
 		}
 	}
 
+	// always create a keyfile ?
 	if err = createAESKeyFile(g); err != nil {
 		return
 	}
@@ -248,7 +244,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 		return
 	}
 
-	configrebuild := cf.GetString("config.rebuild")
+	configrebuild := cf.GetString("config::rebuild")
 
 	if configrebuild == "never" {
 		return
@@ -291,12 +287,16 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	}
 
 	if changed {
-		if err = instance.WriteConfig(g); err != nil {
+		if err = g.Config().Save(g.Type().String(),
+			config.Host(g.Host()),
+			config.SaveDir(g.Type().InstancesDir(g.Host())),
+			config.SetAppName(g.Name()),
+		); err != nil {
 			return
 		}
 	}
 
-	return instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "gateway.setup.xml"), instance.Filename(g, "config.template"), GatewayTemplate)
+	return instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "gateway.setup.xml"), instance.Filename(g, "config::template"), GatewayTemplate)
 }
 
 func (g *Gateways) Command() (args, env []string) {
@@ -308,11 +308,11 @@ func (g *Gateways) Command() (args, env []string) {
 	args = []string{
 		g.Name(),
 		"-resources-dir",
-		utils.JoinSlash(cf.GetString("install"), cf.GetString("version"), "resources"),
+		path.Join(cf.GetString("install"), cf.GetString("version"), "resources"),
 		"-log",
 		instance.LogFile(g),
 		"-setup",
-		utils.JoinSlash(cf.GetString("home"), "gateway.setup.xml"),
+		path.Join(cf.GetString("home"), "gateway.setup.xml"),
 		// enable stats by default
 		"-stats",
 	}
@@ -335,7 +335,12 @@ func (g *Gateways) Command() (args, env []string) {
 		args = append([]string{cf.GetString("gatewayname")}, args...)
 	}
 
-	args = append([]string{"-port", fmt.Sprint(cf.GetString("port"))}, args...)
+	// We should not set port on command line. This is now done in the
+	// instance template.
+
+	// if cf.IsSet("port") {
+	//  args = append([]string{"-port", fmt.Sprint(cf.GetString("port"))}, args...)
+	// }
 
 	if cf.GetString("licdhost") != "" {
 		args = append(args, "-licd-host", cf.GetString("licdhost"))
@@ -347,12 +352,8 @@ func (g *Gateways) Command() (args, env []string) {
 
 	args = append(args, instance.SetSecureArgs(g)...)
 
-	licdsecure := cf.GetString("licdsecure")
-	if instance.Filename(g, "certificate") != "" {
-		if licdsecure == "" || licdsecure != "false" {
-			args = append(args, "-licd-secure")
-		}
-	} else if licdsecure != "" && licdsecure == "true" {
+	// 3 options: set, set to false, not set
+	if cf.GetBool("licdsecure") || (!cf.IsSet("licdsecure") && instance.Filename(g, "certificate") != "") {
 		args = append(args, "-licd-secure")
 	}
 
@@ -373,24 +374,17 @@ func (g *Gateways) Command() (args, env []string) {
 }
 
 // create a gateway key file for secure passwords as per
-// https://docs.itrsgroup.com/docs/geneos/4.8.0/Gateway_Reference_Guide/gateway_secure_passwords.htm
+// https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm
 func createAESKeyFile(c geneos.Instance) (err error) {
-	a, err := config.NewAESValues()
-	if err != nil {
-		return
-	}
+	a := config.NewRandomKeyValues()
 
 	w, err := c.Host().Create(instance.ComponentFilepath(c, "aes"), 0600)
 	if err != nil {
 		return
 	}
 	defer w.Close()
-	if err = a.WriteAESValues(w); err != nil {
+	if err = a.Write(w); err != nil {
 		return
-	}
-	if utils.IsSuperuser() {
-		uid, gid, _, _ := utils.GetIDs("")
-		c.Host().Chown(instance.ComponentFilepath(c, "aes"), uid, gid)
 	}
 
 	c.Config().Set("keyfile", instance.ComponentFilename(c, "aes"))

@@ -26,13 +26,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/user"
+	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -48,37 +48,51 @@ var (
 )
 
 var cfgFile string
+var UserKeyFile config.KeyFile
 
 var debug, quiet bool
+
+var DefaultUserKeyfile = config.KeyFile(config.Path("keyfile", config.SetAppName(Execname), config.SetFileFormat("aes"), config.IgnoreWorkingDir()))
 
 func init() {
 	cordial.LogInit(pkgname)
 
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/geneos.json, "+geneos.GlobalConfigPath+")")
-	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	rootCmd.PersistentFlags().MarkHidden("debug")
-	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
-	rootCmd.PersistentFlags().MarkHidden("quiet")
+	config.DefaultKeyDelimiter("::")
+	config.ResetConfig(config.KeyDelimiter("::"))
+
+	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/geneos.json, "+
+		config.Path(Execname,
+			config.IgnoreUserConfDir(),
+			config.IgnoreWorkingDir())+
+		")")
+	RootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	RootCmd.PersistentFlags().MarkHidden("debug")
+	RootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
+	RootCmd.PersistentFlags().MarkHidden("quiet")
 
 	// how to remove the help flag help text from the help output! Sigh...
-	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	rootCmd.PersistentFlags().MarkHidden("help")
+	RootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	RootCmd.PersistentFlags().MarkHidden("help")
 
 	// catch common abbreviations and typos
-	rootCmd.PersistentFlags().SetNormalizeFunc(cmdNormalizeFunc)
+	RootCmd.PersistentFlags().SetNormalizeFunc(cmdNormalizeFunc)
 
 	// this doesn't work as expected, define sort = false in each command
-	// rootCmd.PersistentFlags().SortFlags = false
-	rootCmd.Flags().SortFlags = false
+	// RootCmd.PersistentFlags().SortFlags = false
+	RootCmd.Flags().SortFlags = false
+
+	// run initialisers on internal packages, set the executable name
+	geneos.Initialise(Execname)
+	instance.Initialise(Execname)
 }
 
-const cmdName = "geneos"
+var Execname = filepath.Base(os.Args[0])
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   cmdName,
+// RootCmd represents the base command when called without any subcommands
+var RootCmd = &cobra.Command{
+	Use:   Execname,
 	Short: "Control your Geneos environment",
 	Long: strings.ReplaceAll(`
 Manage and control your Geneos environment. With |geneos| you can
@@ -91,7 +105,9 @@ $ geneos start
 $ geneos ps
 `, "|", "`"),
 	SilenceUsage: true,
-	Annotations:  make(map[string]string),
+	Annotations: map[string]string{
+		"needshomedir": "true",
+	},
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
@@ -99,20 +115,26 @@ $ geneos ps
 	DisableAutoGenTag:  true,
 	DisableSuggestions: true,
 	// SilenceErrors:      true,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
+	PersistentPreRunE: func(command *cobra.Command, args []string) (err error) {
+		// "manually" parse root flags so that legacy commands get conf
+		// file, debug etc.
+		command.Root().ParseFlags(args)
+		if quiet {
+			zerolog.SetGlobalLevel(zerolog.Disabled)
+		} else if debug {
+			zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		} else {
+			zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		}
+
 		// check initialisation
-		geneosdir := host.Geneos()
+		geneosdir := geneos.Root()
 		if geneosdir == "" {
-			// commands that do not require geneos home to be set - make this a pair of slices to test
-			if !(cmd == versionCmd ||
-				cmd == initCmd ||
-				cmd == setUserCmd ||
-				cmd == setGlobalCmd ||
-				cmd == addHostCmd ||
-				cmd.Parent() == initCmd ||
-				cmd.Parent() == aesCmd ||
-				len(host.RemoteHosts()) > 0) {
-				cmd.SetUsageTemplate(" ")
+			// commands that do not require geneos home to be set - use
+			// a const/var to iterate over to test this
+			log.Debug().Msgf("parent? %v parent name %s name %s needshomedir %s", command.HasParent(), command.Parent().Name(), command.Name(), command.Annotations["needshomedir"])
+			if command.Annotations["needshomedir"] == "true" {
+				command.SetUsageTemplate(" ")
 				return fmt.Errorf("%s", strings.ReplaceAll(`
 Geneos installation directory not set.
 
@@ -129,21 +151,18 @@ For temporary usage:
 `, "|", "`"))
 			}
 		}
-		return parseArgs(cmd, args)
+		return parseArgs(command, args)
 	},
+	// RunE: lsCmd.RunE,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+// This is called by main.main(). It only needs to happen once to the RootCmd.
 func Execute() {
-	err := rootCmd.Execute()
+	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
-}
-
-func RootCmd() *cobra.Command {
-	return rootCmd
 }
 
 // catch misspelling and abbreviations of common flags
@@ -174,17 +193,18 @@ func initConfig() {
 	// already looks in standardised user and global directories.
 	oldConfDir, _ := config.UserConfigDir()
 
-	cf, err := config.LoadConfig("geneos",
+	cf, err := config.Load(Execname,
 		config.SetConfigFile(cfgFile),
-		config.Global(),
+		config.SetGlobal(),
 		config.AddConfigDirs(oldConfDir),
 		config.MergeSettings(),
+		config.IgnoreWorkingDir(),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 	// support old set-ups
-	cf.BindEnv("geneos", "ITRS_HOME")
+	cf.BindEnv(Execname, "ITRS_HOME")
 
 	// auto env variables must be prefixed "ITRS_"
 	cf.SetEnvPrefix("ITRS")
@@ -192,28 +212,40 @@ func initConfig() {
 	cf.SetEnvKeyReplacer(replacer)
 	cf.AutomaticEnv()
 
-	u, err := user.Current()
-	username := "nobody"
-	if err != nil {
-		log.Error().Err(err).Msg("cannot get user details")
-	} else {
-		username = u.Username
-	}
-	// strip domain in case we are running on windows
-	i := strings.Index(username, "\\")
-	if i != -1 && len(username) >= i {
-		username = username[i+1:]
-	}
-	cf.SetDefault("defaultuser", username)
-
 	// manual alias+remove as the viper.RegisterAlias doesn't work as expected
 	if cf.IsSet("itrshome") {
-		if !cf.IsSet("geneos") {
-			cf.Set("geneos", cf.GetString("itrshome"))
+		if !cf.IsSet(Execname) {
+			cf.Set(Execname, cf.GetString("itrshome"))
 		}
 		cf.Set("itrshome", nil)
 	}
 
 	// initialise after config loaded
-	host.Init()
+	geneos.InitHosts(Execname)
+}
+
+// RunE runs a command in a sub-package to avoid import loops. It is
+// named to align with the cobra struct member of the same name.
+//
+// The caller must have:
+//
+//	DisableFlagParsing: true,
+//
+// set in their command struct for flags to work. Then hook this
+// function like this in the command struct:
+//
+//	RunE: func(command *cobra.Command, args []string) (err error) {
+//	     return RunE(command.Root(), []string{"host", "ls"}, args)
+//	},
+func RunE(root *cobra.Command, path []string, args []string) (err error) {
+	alias, newargs, err := root.Find(append(path, args...))
+	if err != nil {
+		return
+	}
+	alias.ParseFlags(newargs)
+	// we have to explicitly test for the help flag for some reason
+	if t, _ := alias.Flags().GetBool("help"); t {
+		return alias.Help()
+	}
+	return alias.RunE(alias, alias.Flags().Args())
 }

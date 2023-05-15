@@ -37,7 +37,7 @@ var unsetCmdWarned bool
 var unsetCmdValues = instance.UnsetConfigValues{}
 
 func init() {
-	rootCmd.AddCommand(unsetCmd)
+	RootCmd.AddCommand(unsetCmd)
 
 	unsetCmd.Flags().VarP(&unsetCmdValues.Keys, "key", "k", "Unset a configuration key item")
 	unsetCmd.Flags().VarP(&unsetCmdValues.Envs, "env", "e", "Remove an environment variable `NAME`")
@@ -67,10 +67,11 @@ geneos unset san -g Gateway1
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args := cmdArgs(cmd)
+		ct, args := CmdArgs(cmd)
 		return instance.ForAll(ct, unsetInstance, args, []string{})
 	},
 }
@@ -86,6 +87,7 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 	if len(unsetCmdValues.Keys) > 0 {
 		for _, k := range unsetCmdValues.Keys {
 			// check and delete one level of maps
+			// XXX not sure if we need to allow other delimiters here
 			if strings.Contains(k, ".") {
 				p := strings.SplitN(k, ".", 2)
 				switch x := s[p[0]].(type) {

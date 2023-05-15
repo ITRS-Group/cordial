@@ -18,6 +18,6 @@ var triggerCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(triggerCmd)
+	RootCmd.AddCommand(triggerCmd)
 
 }

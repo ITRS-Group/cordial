@@ -9,16 +9,16 @@ import (
 )
 
 func main() {
-	var keyfile string
+	var keyfile config.KeyFile
 
-	flag.StringVar(&keyfile, "k", "", "path to keyfile")
+	flag.Var(&keyfile, "k", "path to keyfile")
 	flag.Parse()
 
 	if keyfile == "" {
 		log.Fatal("no keyfile path given")
 	}
 
-	a, err := config.ReadAESValuesFile(keyfile)
+	a, err := keyfile.Read()
 	if err != nil {
 		log.Fatal("cannot read keyfile:", err)
 	}
@@ -26,7 +26,7 @@ func main() {
 	if password == "" {
 		log.Fatal("no encoded password to decode")
 	}
-	p, err := a.DecodeAESString(password)
+	p, err := a.DecodeString(password)
 	if err != nil {
 		log.Fatal("decode of password filed:", err)
 	}

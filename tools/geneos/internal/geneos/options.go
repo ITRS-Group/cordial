@@ -22,24 +22,25 @@ THE SOFTWARE.
 
 package geneos
 
+import "github.com/awnumar/memguard"
+
 type geneosOptions struct {
-	nosave        bool
-	local         bool
-	force         bool
-	override      string
-	restart       bool
-	fullclean     bool
-	version       string
-	basename      string
-	homedir       string
-	localusername string
-	username      string
-	password      []byte
-	platform_id   string
-	downloadbase  string
-	downloadtype  string
-	source        string
-	doupdate      bool
+	nosave       bool
+	local        bool
+	force        bool
+	override     string
+	restart      bool
+	fullclean    bool
+	version      string
+	basename     string
+	homedir      string
+	username     string
+	password     *memguard.Enclave
+	platform_id  string
+	downloadbase string
+	downloadtype string
+	source       string
+	doupdate     bool
 }
 
 type Options func(*geneosOptions)
@@ -117,21 +118,13 @@ func Homedir(h string) Options {
 	return func(d *geneosOptions) { d.homedir = h }
 }
 
-// LocalUsername sets the user name of the user running the program, or if
-// running as root the default username that should be used. This is
-// different to any remote username for executing commands on remote
-// hosts.
-func LocalUsername(u string) Options {
-	return func(d *geneosOptions) { d.localusername = u }
-}
-
 // Username is the remote access username for downloads
 func Username(u string) Options {
 	return func(d *geneosOptions) { d.username = u }
 }
 
 // Password is the remote access password for downloads
-func Password(p []byte) Options {
+func Password(p *memguard.Enclave) Options {
 	return func(d *geneosOptions) { d.password = p }
 }
 

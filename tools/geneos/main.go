@@ -28,12 +28,24 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/awnumar/memguard"
+
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 
+	// import subsystems here for command registration
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/aescmd"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/cfgcmd"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/hostcmd"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/initcmd"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/pkgcmd"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/tlscmd"
+
 	// each component type registers itself when imported here
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/ca3"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fa2"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fileagent"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/licd"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
@@ -42,13 +54,16 @@ import (
 )
 
 func main() {
+	memguard.CatchInterrupt()
+	defer memguard.Purge()
+
 	execname := filepath.Base(os.Args[0])
 
 	// if the executable does not have a `ctl` suffix then execute the
 	// underlying code directly
 	if !strings.HasSuffix(execname, "ctl") {
 		cmd.Execute()
-		os.Exit(0)
+		memguard.SafeExit(0)
 	}
 
 	// otherwise emulate core ctl commands

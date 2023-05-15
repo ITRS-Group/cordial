@@ -5,11 +5,11 @@ Delete an instance. Instance must be stopped
 ### Synopsis
 
 
-Delete the matching instances. This will only work on
-instances that are disabled to prevent accidental deletion. The
-instance directory is removed without being backed-up. The user
-running the command must have the appropriate permissions and a
-partial deletion cannot be protected against.
+Delete the matching instances. This will only work on instances that
+are disabled, or if the `-F` flag is given, to prevent accidental
+deletion. The instance directory is removed without being backed-up.
+The user running the command must have the appropriate permissions
+and a partial deletion cannot be protected against.
 
 
 ```
@@ -31,5 +31,5 @@ geneos delete [flags] [TYPE] [NAME...]
 ### SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-* [geneos delete host](geneos_delete_host.md)	 - Delete a remote host configuration
+* [geneos delete host](geneos_delete_host.md)	 - Alias for `host delete`
 

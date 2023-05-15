@@ -29,12 +29,12 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
 var FileAgent = geneos.Component{
 	Name:             "fileagent",
+	LegacyPrefix:     "fa",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"fileagent", "fileagents", "file-agent"},
 	RealComponent:    true,
@@ -97,7 +97,7 @@ func init() {
 var fileagents sync.Map
 
 func New(name string) geneos.Instance {
-	_, local, r := instance.SplitName(name, host.LOCAL)
+	_, local, r := instance.SplitName(name, geneos.LOCAL)
 	f, ok := fileagents.Load(r.FullName(local))
 	if ok {
 		fa, ok := f.(*FileAgents)
@@ -137,11 +137,7 @@ func (n *FileAgents) Home() string {
 	return n.Config().GetString("home")
 }
 
-func (n *FileAgents) Prefix() string {
-	return "fa"
-}
-
-func (n *FileAgents) Host() *host.Host {
+func (n *FileAgents) Host() *geneos.Host {
 	return n.InstanceHost
 }
 
@@ -172,18 +168,17 @@ func (n *FileAgents) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *FileAgents) SetConf(v *config.Config) {
-	n.Conf = v
-}
-
-func (n *FileAgents) Add(username string, tmpl string, port uint16) (err error) {
+func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(n.Host(), &FileAgent)
 	}
 	n.Config().Set("port", port)
-	n.Config().Set("user", username)
 
-	if err = instance.WriteConfig(n); err != nil {
+	if err = n.Config().Save(n.Type().String(),
+		config.Host(n.Host()),
+		config.SaveDir(n.Type().InstancesDir(n.Host())),
+		config.SetAppName(n.Name()),
+	); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 

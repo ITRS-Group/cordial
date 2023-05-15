@@ -20,6 +20,22 @@
 				{{- end}}
 				{{if .variables -}}
 				<variables>
+					<!-- variables prefixed with '_' are added automatically -->
+					<var name="_netprobeInstance">
+						<string>{{.name}}</string>
+					</var>
+					<var name="_geneosHome">
+						<string>{{.root}}</string>
+					</var>
+					<var name="_netprobeHome">
+						<string>{{.home}}</string>
+					</var>
+					<var name="_netprobeBaseVersion">
+						<string>{{.version}}</string>
+					</var>
+					<var name="_netprobeLogFile">
+						<string>{{join .home .logfile}}</string>
+					</var>
 					{{range $key, $value := .variables -}}
 					<var name="{{$key}}">
 						<{{nameOf $value ":"}}>{{valueOf $value ":"}}</{{nameOf $value ":"}}>

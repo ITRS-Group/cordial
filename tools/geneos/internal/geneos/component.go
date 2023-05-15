@@ -28,9 +28,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
-	"github.com/itrs-group/cordial/tools/geneos/internal/utils"
-
 	"github.com/rs/zerolog/log"
 )
 
@@ -44,9 +41,10 @@ type DownloadBases struct {
 }
 
 type Component struct {
-	Initialise       func(*host.Host, *Component)
+	Initialise       func(*Host, *Component)
 	New              func(string) Instance
 	Name             string
+	LegacyPrefix     string
 	RelatedTypes     []*Component
 	ComponentMatches []string
 	RealComponent    bool
@@ -68,24 +66,22 @@ type Instance interface {
 	Name() string
 	Home() string
 	Type() *Component
-	Host() *host.Host
-	Prefix() string
+	Host() *Host
 	String() string
 
 	// config
 	Load() error
 	Unload() error
 	Loaded() bool
-	SetConf(*config.Config)
 
 	// actions
-	Add(string, string, uint16) error
+	Add(template string, port uint16) error
 	Command() ([]string, []string)
 	Reload(params []string) (err error)
 	Rebuild(bool) error
 }
 
-var Root Component = Component{
+var RootComponent Component = Component{
 	Name:             "none",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"any"},
@@ -93,19 +89,10 @@ var Root Component = Component{
 	DownloadBase:     DownloadBases{Resources: "", Nexus: ""},
 	GlobalSettings: map[string]string{
 		// Root directory for all operations
-		"geneos": "",
+		Execname: "",
 
 		// Root URL for all downloads of software archives
-		"download.url": "https://resources.itrsgroup.com/download/latest/",
-
-		// Username to start components if not explicitly defined
-		// and we are running with elevated privileges
-		//
-		// When running as a normal user this is unused and
-		// we simply test a defined user against the running user
-		//
-		// default is owner of Geneos
-		"defaultuser": "",
+		config.Join("download", "url"): "https://resources.itrsgroup.com/download/latest/",
 
 		// Path List separated additions to the reserved names list, over and above
 		// any words matched by ParseComponentName()
@@ -119,8 +106,12 @@ var Root Component = Component{
 	},
 }
 
-func init() {
-	Root.RegisterComponent(nil)
+var Execname string
+
+func Initialise(app string) {
+	Execname = app
+	SigningCertFile = Execname
+	RootComponent.RegisterComponent(nil)
 }
 
 type ComponentsMap map[string]*Component
@@ -192,37 +183,38 @@ func ParseComponentName(component string) *Component {
 	return nil
 }
 
+// IsA returns true is any of the names match the any of the names
+// defined in ComponentMatches.
+func (ct Component) IsA(name ...string) bool {
+	for _, a := range ct.ComponentMatches {
+		for _, b := range name {
+			if strings.EqualFold(a, b) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // MakeComponentDirs creates the directory structure for the component.
-// If ct is nil then the Root component type is used. If called as
-// superuser / root then the underlying user is used for the ownership
-// of the leaf directories. Non-leaf directories are left unchanged. If
-// there is an error creating the directory or updating the ownership
-// for superuser then this is immediate returned and the list of
-// directories may only be partially created.
-func (ct *Component) MakeComponentDirs(h *host.Host) (err error) {
+// If ct is nil then the Root component type is used. If there is an
+// error creating the directory or updating the ownership for superuser
+// then this is immediate returned and the list of directories may only
+// be partially created.
+func (ct *Component) MakeComponentDirs(h *Host) (err error) {
 	name := "none"
-	if h == host.ALL {
+	if h == ALL {
 		log.Fatal().Msg("called with all hosts")
 	}
 	if ct != nil {
 		name = ct.Name
 	}
-	geneos := h.GetString("geneos")
-	uid, gid := -1, -1
-	if utils.IsSuperuser() {
-		uid, gid, _, _ = utils.GetIDs("")
-	}
-
+	geneos := h.GetString(Execname)
 	for _, d := range initDirs[name] {
 		dir := filepath.Join(geneos, d)
 		log.Debug().Msgf("mkdirall %s", dir)
 		if err = h.MkdirAll(dir, 0775); err != nil {
 			return
-		}
-		if uid != -1 && gid != -1 {
-			if err = h.Chown(dir, uid, gid); err != nil {
-				return
-			}
 		}
 	}
 	return
@@ -230,7 +222,7 @@ func (ct *Component) MakeComponentDirs(h *host.Host) (err error) {
 
 // InstancesDir return the base directory for the instances of a
 // component
-func (ct *Component) InstancesDir(h *host.Host) string {
+func (ct *Component) InstancesDir(h *Host) string {
 	if ct == nil {
 		return ""
 	}
@@ -239,7 +231,7 @@ func (ct *Component) InstancesDir(h *host.Host) string {
 }
 
 // SharedDir return the shared directory for the component
-func (ct *Component) SharedDir(h *host.Host) string {
+func (ct *Component) SharedDir(h *Host) string {
 	if ct == nil {
 		return ""
 	}

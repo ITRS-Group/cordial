@@ -674,10 +674,6 @@ If files are locally downloaded then this can either be a `file://` style URL or
   * `ITRS_SNAPSHOT_USERNAME`
   * `ITRS_SNAPSHOT_PASSWORD`
 
-* `defaultuser`
-
-Principally used when running with elevated privilege (setuid or `sudo`) and a suitable username is not defined in instance configurations or for file ownership of shared directories.
-
 * `GatewayPortRange` & `NetprobePortRange` & `LicdPortRange`
 
 ...
@@ -698,7 +694,6 @@ Structure of the default file is as follows.
 
 ```json
 {
-  "defaultuser": "itrs",
   "download": {
     "url": "https://resources.itrsgroup.com/download/latest/"
   },

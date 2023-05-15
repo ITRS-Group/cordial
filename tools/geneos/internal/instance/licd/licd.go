@@ -29,12 +29,12 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
 var Licd = geneos.Component{
 	Name:             "licd",
+	LegacyPrefix:     "licd",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"licd", "licds"},
 	RealComponent:    true,
@@ -90,7 +90,7 @@ func init() {
 var licds sync.Map
 
 func New(name string) geneos.Instance {
-	_, local, r := instance.SplitName(name, host.LOCAL)
+	_, local, r := instance.SplitName(name, geneos.LOCAL)
 	l, ok := licds.Load(r.FullName(local))
 	if ok {
 		lc, ok := l.(*Licds)
@@ -130,11 +130,7 @@ func (l *Licds) Home() string {
 	return l.Config().GetString("home")
 }
 
-func (l *Licds) Prefix() string {
-	return "licd"
-}
-
-func (l *Licds) Host() *host.Host {
+func (l *Licds) Host() *geneos.Host {
 	return l.InstanceHost
 }
 
@@ -165,18 +161,17 @@ func (l *Licds) Config() *config.Config {
 	return l.Conf
 }
 
-func (l *Licds) SetConf(v *config.Config) {
-	l.Conf = v
-}
-
-func (l *Licds) Add(username string, tmpl string, port uint16) (err error) {
+func (l *Licds) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(l.InstanceHost, &Licd)
 	}
 	l.Config().Set("port", port)
-	l.Config().Set("user", username)
 
-	if err = instance.WriteConfig(l); err != nil {
+	if err = l.Config().Save(l.Type().String(),
+		config.Host(l.Host()),
+		config.SaveDir(l.Type().InstancesDir(l.Host())),
+		config.SetAppName(l.Name()),
+	); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 

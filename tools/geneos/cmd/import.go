@@ -27,7 +27,6 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -36,7 +35,7 @@ import (
 var importCmdCommon, importCmdHostname string
 
 func init() {
-	rootCmd.AddCommand(importCmd)
+	RootCmd.AddCommand(importCmd)
 
 	importCmd.Flags().StringVarP(&importCmdCommon, "common", "c", "", "Import into a common directory instead of matching instances.	For example, if TYPE is 'gateway' and NAME is 'shared' then this common directory is 'gateway/gateway_shared'")
 	importCmd.Flags().StringVarP(&importCmdHostname, "host", "H", "all", "Import only to named host, default is all")
@@ -66,18 +65,9 @@ provided in PATH.
 the current directory (without a |PATH=| prefix) **MUST** be prefixed
 with |./|. Any SOURCE that is not a valid instance name is treated as
 SOURCE and no immediate error is raised. Directories are created as required.
-If run as root, directories and files ownership is set to the user in
-the instance configuration or the default user.
 
 Currently only files can be imported and if the SOURCE is a directory
 then this is an error.
-
-Like other commands that write to the file system, it can safely be
-run as root as the destination directory and file will be changed to
-be owned by either the instance or the default user, with the caveat
-that any intermediate directories created above the destination
-directory (e.g. the first two in |my/long/path|) will be owned by
-root.
 `, "|", "`"),
 	Example: strings.ReplaceAll(`
 geneos import gateway example1 https://example.com/myfiles/gateway.setup.xml
@@ -88,11 +78,12 @@ geneos import gateway -c shared common_include.xml
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return importFiles(ct, args, params)
+		ct, args, params := CmdArgsParams(cmd)
+		return ImportFiles(ct, args, params)
 	},
 }
 
@@ -100,13 +91,13 @@ geneos import gateway -c shared common_include.xml
 // overwrites without asking - use case is license files, setup files etc.
 // backup / history track older files (date/time?)
 // no restart or reload of components?
-func importFiles(ct *geneos.Component, args []string, sources []string) (err error) {
+func ImportFiles(ct *geneos.Component, args []string, sources []string) (err error) {
 	if importCmdCommon != "" {
 		// ignore args, use ct & params
 		if ct == nil {
 			return fmt.Errorf("component type must be specified for common/shared directory import")
 		}
-		for _, r := range host.Match(importCmdHostname) {
+		for _, r := range geneos.Match(importCmdHostname) {
 			if _, err = instance.ImportCommons(r, ct, ct.String()+"_"+importCmdCommon, sources); err != nil {
 				return
 			}
@@ -138,7 +129,7 @@ func importInstance(c geneos.Instance, sources []string) (err error) {
 	}
 
 	for _, source := range sources {
-		if _, err = instance.ImportFile(c.Host(), c.Home(), c.Config().GetString("user"), source); err != nil {
+		if _, err = instance.ImportFile(c.Host(), c.Home(), source); err != nil {
 			return
 		}
 	}

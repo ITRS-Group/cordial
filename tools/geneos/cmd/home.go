@@ -27,13 +27,12 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	rootCmd.AddCommand(homeCmd)
+	RootCmd.AddCommand(homeCmd)
 
 	// homeCmd.Flags().SortFlags = false
 }
@@ -56,29 +55,30 @@ cat $(geneos home gateway example2)/gateway.txt
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, _ := cmdArgsParams(cmd)
+		ct, args, _ := CmdArgsParams(cmd)
 		if ct == nil && len(args) == 0 {
-			fmt.Println(host.Geneos())
+			fmt.Println(geneos.Root())
 			return nil
 		}
 
 		if ct != nil && len(args) == 0 {
-			fmt.Println(host.LOCAL.Filepath(ct))
+			fmt.Println(geneos.LOCAL.Filepath(ct))
 			return nil
 		}
 
 		var i []geneos.Instance
 		if len(args) == 0 {
-			i = instance.GetAll(host.LOCAL, ct)
+			i = instance.GetAll(geneos.LOCAL, ct)
 		} else {
 			i = instance.MatchAll(ct, args[0])
 		}
 
 		if len(i) == 0 {
-			fmt.Println(host.Geneos())
+			fmt.Println(geneos.Root())
 			return nil
 		}
 

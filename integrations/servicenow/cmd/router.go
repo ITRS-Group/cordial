@@ -41,7 +41,7 @@ import (
 var daemon bool
 
 func init() {
-	rootCmd.AddCommand(routerCmd)
+	RootCmd.AddCommand(routerCmd)
 
 	routerCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Daemonise the router process")
 	routerCmd.Flags().SortFlags = false

@@ -31,7 +31,7 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(copyCmd)
+	RootCmd.AddCommand(copyCmd)
 
 	// copyCmd.Flags().SortFlags = false
 }
@@ -64,10 +64,11 @@ before the restart. This allows SANs to be updated as expected.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "false",
+		"wildcard":     "false",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		if len(args) == 0 && len(params) == 2 && strings.HasPrefix(params[0], "@") && strings.HasPrefix(params[1], "@") {
 			args = params
 		}

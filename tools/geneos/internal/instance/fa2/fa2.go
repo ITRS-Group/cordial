@@ -29,12 +29,12 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
 var FA2 = geneos.Component{
 	Name:             "fa2",
+	LegacyPrefix:     "fa2",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"fa2", "fixanalyser", "fixanalyzer", "fixanalyser2-netprobe"},
 	RealComponent:    true,
@@ -90,7 +90,7 @@ func init() {
 var fa2s sync.Map
 
 func New(name string) geneos.Instance {
-	_, local, r := instance.SplitName(name, host.LOCAL)
+	_, local, r := instance.SplitName(name, geneos.LOCAL)
 	f, ok := fa2s.Load(r.FullName(local))
 	if ok {
 		fa, ok := f.(*FA2s)
@@ -130,11 +130,7 @@ func (n *FA2s) Home() string {
 	return n.Config().GetString("home")
 }
 
-func (n *FA2s) Prefix() string {
-	return "fa2"
-}
-
-func (n *FA2s) Host() *host.Host {
+func (n *FA2s) Host() *geneos.Host {
 	return n.InstanceHost
 }
 
@@ -165,18 +161,17 @@ func (n *FA2s) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *FA2s) SetConf(v *config.Config) {
-	n.Conf = v
-}
-
-func (n *FA2s) Add(username string, tmpl string, port uint16) (err error) {
+func (n *FA2s) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(n.InstanceHost, &FA2)
 	}
 	n.Config().Set("port", port)
-	n.Config().Set("user", username)
 
-	if err = instance.WriteConfig(n); err != nil {
+	if err = n.Config().Save(n.Type().String(),
+		config.Host(n.Host()),
+		config.SaveDir(n.Type().InstancesDir(n.Host())),
+		config.SetAppName(n.Name()),
+	); err != nil {
 		return
 	}
 

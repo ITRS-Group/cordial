@@ -4,19 +4,8 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/plugins"
 	"github.com/itrs-group/cordial/pkg/samplers"
-)
-
-func init() {
-	logger.EnableDebugLog()
-}
-
-var (
-	log      = logger.Log
-	logDebug = logger.Debug
-	logError = logger.Error
 )
 
 type MemorySampler struct {

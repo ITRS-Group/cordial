@@ -1,5 +1,134 @@
 # Change Log
 
+## Version v1.5.0-beta - 2023/05/16
+
+* BREAKING CHANGES
+
+  * `pkg/logger`:
+
+    * REMOVED. This simplistic internal logging package has been removed
+      in favour of more mature solutions, such as zerolog.
+
+  * `tools/geneos`:
+
+    * The way SAN instances handle gateway connections has been fixed to
+      allow gateway represented as FDQNs or IP addresses. The old way
+      resulted in a mess - viper defaults to dots ('.') as configuration
+      item hierarchy delimiters and this caused issues. Most users with
+      SANs should not notice any change, but if you see problems please
+      check the san XML file and correct the `gateways` section as
+      necessary. The easiest way is probably to remove and re-set them
+      using `geneos set san XXX -g gateway.example.com ...`
+
+    * Similarly to the above any variables defined in either SAN or
+      Gateway configurations for use in the XML templates will have not
+      worked in a case sensitive manner to align with how Geneos does
+      it. To fix this the format of the `variables` section has been
+      changed to move the variable name from the configuration key to a
+      separate structure as a value. Code has been added to
+      automatically convert from the old format to the new when the
+      configuration file is updated however there is no fix for the
+      correction of variable name case being wrong. Please review and
+      adjust as necessary.
+
+    * Support for running under `sudo` or for an instances where the
+      `user` is different to the user running the command has been
+      deprecated. Security is hard, and the support for these was poorly
+      implemented. A better way will be coming in a later release.
+
+      This may mean that where users has configured netprobes to run as
+      different users and have run `sudo geneos start` to let the tool
+      do the right thing will sun into issues. Please be careful if any
+      of your instances run as other users and so not run the `geneos`
+      tool with `sudo`. There is no additional checking/rejection of
+      running under `sudo` or any other privilege escalation system so
+      this is important!
+
+* Changes
+
+  * There has been a large amount of refactoring and rebalancing of the
+    code-base. Most of this should not be user visible, but some
+    previous public APIs have changed. As with all major changes there
+    may be problems that have no been caught in testing. Please report
+    anything you see as either a github issue or via the ITRS Community
+    Forum.
+
+    Specific changes worth mentioning include:
+
+    * [`memguard`](https://pkg.go.dev/github.com/awnumar/memguard)
+      support for protected memory. Most credentials should now be
+      handled as Enclaves (for plaintext or private keys) or as
+      LockedBuffers (for ciphertexts of sensitive data).
+
+      The changes are ongoing and in addition to adding a layer of data
+      security to cordial an added benefit is the catching of memory
+      misuse etc. If you see errors, panic etc. please report them!
+
+    * A number of the previous package APIs have undergone review and
+      refactoring. In particular the `pkg/config` API has been through
+      the wringer and if you have any code that relies on it from v1.4
+      and before then it will need updating. There are many new
+      functions, which is normal, but also some older entry points have
+      been renamed or had the argument signatures changed. Please review
+      the documentation to see what the methods and functions have
+      become.
+
+    * Credentials support. There is both general purpose and `geneos`
+      specific support for the local storage of credentials. At rest the
+      passwords are stored in Geneos AES256 format with a key that is
+      auto-generated if not found. To decode these passwords you must
+      have both the key file (which is by default only user readable)
+      and the credentials file. Future support for other credentials,
+      such as OAuth style client secrets and tokens, will be
+      forthcoming. The username and the domain the the credentials apply
+      to are not encrypted, by design. This is however subject to
+      change.
+
+      The credentials support currently works with a plain test domain
+      that is used to match the destination "longest match wins", e.g.
+      for a URL this may be a full or partial domain name, and for
+      Geneos component authentication, e.g. the REST command API, the
+      domain is in the form `gateway:NAME`. More will be added later,
+      including SSH password and private keys.
+
+  * `tools/geneos`:
+
+    * Move `aes` and `tls` to their own directories as new subsystems.
+    * Add `host` and `package` subsystems and  create aliases for
+      original commands, e.g.
+      * `add host` becomes `host add`
+      * `install` becomes `package install`
+      * etc.
+    * The `set user`, `show user` etc. commands are now under single
+      `config` sub-command, e.g. `geneos config set mykey=value`
+    * The `set global` and related commands have been deprecated.
+    * The new `package` subsystem command pulls all Geneos release
+      management into one place
+    * New `login` and `logout` commands to manage credentials.
+
+  * `tools/dv2html`:
+
+    * This new program can be run as an Action or Effect to capture a
+      complete Dataview and send it as email. The configuration is
+      extensive and the layout and contents are completely configurable
+      through the use of Go templates.
+
+* Fixes
+
+  * `tools/geneos`:
+
+    * Version checking of local release archives was broken because of
+      overloading of a common function. This is now split and checking
+      should work once again.
+
+    * Many reported issues on github have been fixed.
+
+* To Do:
+
+  * `tools/geneos`:
+
+    * Local storage of encrypted passwords for remote SSH access needs documenting
+
 ## Version v1.4.4 - 2023/04/12
 
 * Fixes

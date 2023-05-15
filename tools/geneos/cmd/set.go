@@ -28,7 +28,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 
 	"github.com/rs/zerolog/log"
@@ -36,11 +35,11 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(setCmd)
+	RootCmd.AddCommand(setCmd)
 
 	setCmd.Flags().VarP(&setCmdExtras.Envs, "env", "e", "(all components) Add an environment variable in the format NAME=VALUE")
 	setCmd.Flags().VarP(&setCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
-	setCmd.Flags().VarP(&setCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME:PORT")
+	setCmd.Flags().VarP(&setCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME[:PORT[:SECURE]]")
 	setCmd.Flags().VarP(&setCmdExtras.Attributes, "attribute", "a", "(sans) Add an attribute in the format NAME=VALUE")
 	setCmd.Flags().VarP(&setCmdExtras.Types, "type", "t", "(sans) Add a type NAME")
 	setCmd.Flags().VarP(&setCmdExtras.Variables, "variable", "v", "(sans) Add a variable in the format [TYPE:]NAME=VALUE")
@@ -49,14 +48,6 @@ func init() {
 }
 
 var setCmdExtras = instance.ExtraConfigValues{}
-
-// 	Includes:   IncludeValues{},
-// 	Gateways:   GatewayValues{},
-// 	Attributes: AttributeValues{},
-// 	Envs:       EnvValues{},
-// 	Variables:  VarValues{},
-// 	Types:      TypeValues{},
-// }
 
 var setCmd = &cobra.Command{
 	Use:   "set [flags] [TYPE] [NAME...] [KEY=VALUE...]",
@@ -112,21 +103,25 @@ but will not affect the instance.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
-		return set(ct, args, params)
+		ct, args, params := CmdArgsParams(cmd)
+		return Set(ct, args, params)
 	},
 }
 
-func set(ct *geneos.Component, args, params []string) error {
+func Set(ct *geneos.Component, args, params []string) error {
 	return instance.ForAll(ct, setInstance, args, params)
 }
 
 func setInstance(c geneos.Instance, params []string) (err error) {
 	log.Debug().Msgf("c %s params %v", c, params)
 
+	cf := c.Config()
+
+	// XXX add backward compatibility ?
 	instance.SetExtendedValues(c, setCmdExtras)
 
 	for _, arg := range params {
@@ -137,46 +132,18 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 		}
 		// you can set an alias here, the write functions do the
 		// translations
-		c.Config().Set(s[0], s[1])
+		cf.Set(s[0], s[1])
 	}
 
-	if err = instance.WriteConfig(c); err != nil {
-		log.Fatal().Err(err).Msg("")
+	if cf.Type == "rc" {
+		err = instance.Migrate(c)
+	} else {
+		err = cf.Save(c.Type().String(),
+			config.Host(c.Host()),
+			config.SaveDir(c.Type().InstancesDir(c.Host())),
+			config.SetAppName(c.Name()),
+		)
 	}
 
-	return
-}
-
-// XXX muddled - fix
-func writeConfigParams(filename string, params []string) (err error) {
-	vp := readConfigFile(filename)
-
-	// change here
-	for _, set := range params {
-		if !strings.Contains(set, "=") {
-			continue
-		}
-		s := strings.SplitN(set, "=", 2)
-		k, v := s[0], s[1]
-		vp.Set(k, v)
-	}
-
-	// fix breaking change
-	if vp.IsSet("itrshome") {
-		if !vp.IsSet("geneos") {
-			vp.Set("geneos", vp.GetString("itrshome"))
-		}
-		vp.Set("itrshome", nil)
-	}
-
-	return host.WriteConfigFile(filename, "", 0664, vp)
-}
-
-func readConfigFile(paths ...string) (v *config.Config) {
-	v = config.New()
-	for _, path := range paths {
-		v.SetConfigFile(path)
-	}
-	v.ReadInConfig()
 	return
 }

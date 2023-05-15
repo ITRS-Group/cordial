@@ -33,7 +33,7 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(commandCmd)
+	RootCmd.AddCommand(commandCmd)
 
 	// commandCmd.Flags().SortFlags = false
 }
@@ -46,10 +46,11 @@ Show for each of the matching instance the command line that would be used to ru
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		"wildcard":     "true",
+		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := cmdArgsParams(cmd)
+		ct, args, params := CmdArgsParams(cmd)
 		return instance.ForAll(ct, commandInstance, args, params)
 	},
 }
