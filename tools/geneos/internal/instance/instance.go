@@ -414,6 +414,17 @@ func Version(c geneos.Instance) (base string, version string, err error) {
 	return
 }
 
+// AtLeastVersion returns true if the installed version for instance c
+// is version or greater. If the version of the instance is somehow
+// unparseable then this returns false.
+func AtLeastVersion(c geneos.Instance, version string) bool {
+	_, iv, err := Version(c)
+	if err != nil {
+		return false
+	}
+	return geneos.CompareVersion(iv, version) >= 0
+}
+
 // ForAll calls the supplied function for each matching instance. It
 // prints any returned error on STDOUT and the only error returned is
 // os.ErrNotExist if there are no matching instances.
