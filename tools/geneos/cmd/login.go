@@ -77,7 +77,7 @@ credentials can use a separate keyfile.
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
-		"needshomedir": "true",
+		"needshomedir": "false",
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		urlMatch := "itrsgroup.com"
@@ -125,11 +125,13 @@ credentials can use a separate keyfile.
 			urlMatch = args[0]
 		}
 
-		config.AddCreds(config.Credentials{
+		if err = config.AddCreds(config.Credentials{
 			Domain:   urlMatch,
 			Username: loginCmdUsername,
 			Password: enc,
-		}, config.SetAppName(Execname))
+		}, config.SetAppName(Execname)); err != nil {
+			return err
+		}
 
 		log.Debug().Msgf("conf: %+v", config.GetConfig().AllSettings())
 		return
