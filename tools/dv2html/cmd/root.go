@@ -35,6 +35,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/aymerick/douceur/inliner"
 	"github.com/go-mail/mail/v2"
 	"github.com/rs/zerolog"
@@ -95,8 +96,6 @@ func initConfig() {
 }
 
 type dv2htmlData struct {
-	CSSURL    string
-	CSSDATA   template.CSS
 	Dataviews []*commands.Dataview
 	Rows      []string
 	Env       map[string]string
@@ -122,17 +121,51 @@ gateway can be located in dv2html.yaml (either in the working
 directory or in the user's .config/dv2html directory)
 	`, "|", "`"),
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		gwcf := cf.Sub("gateway")
 		u := &url.URL{
 			Scheme: "http",
-			Host:   fmt.Sprintf("%s:%d", cf.GetString("host"), cf.GetInt("port")),
+			Host:   fmt.Sprintf("%s:%d", gwcf.GetString("host", config.Default("localhost")), gwcf.GetInt("port", config.Default(7038))),
 		}
-		cf.SetDefault("use-tls", true)
-		if cf.GetBool("use-tls") {
+
+		gwcf.SetDefault("use-tls", true)
+		if gwcf.GetBool("use-tls") {
 			u.Scheme = "https"
 		}
+
+		var password string
+		var pwb *memguard.Enclave
+
+		username := gwcf.GetString("username")
+		gateway := gwcf.GetString("name")
+		pwe := gwcf.GetEnclave("password")
+
+		if username != "" {
+			pw, _ := pwe.Open()
+			pws := config.ExpandLockedBuffer(pw.String())
+			password = strings.Clone(pws.String())
+			pw.Destroy()
+			pws.Destroy()
+		}
+
+		if username == "" && gateway != "" {
+			creds := config.FindCreds("gateway:"+gateway, config.SetAppName("geneos"))
+			if creds != nil {
+				username = creds.GetString("username")
+				pwb = creds.GetEnclave("password")
+			}
+
+			if pwb != nil {
+				pw, _ := pwb.Open()
+				pws := config.ExpandLockedBuffer(pw.String())
+				password = strings.Clone(pws.String())
+				pw.Destroy()
+				pws.Destroy()
+			}
+		}
+
 		gw, err := commands.DialGateway(u,
-			commands.SetBasicAuth(cf.GetString("username"), cf.GetString("password")),
-			commands.AllowInsecureCertificates(cf.GetBool("allow-insecure")))
+			commands.SetBasicAuth(username, password),
+			commands.AllowInsecureCertificates(gwcf.GetBool("allow-insecure")))
 		if err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
@@ -145,8 +178,6 @@ directory or in the user's .config/dv2html directory)
 		}
 
 		tmplData := dv2htmlData{
-			CSSURL:    cf.GetString("css-url"),
-			CSSDATA:   template.CSS(cf.GetString("css-data")),
 			Dataviews: []*commands.Dataview{},
 			Rows:      []string{},
 			Env:       make(map[string]string, len(os.Environ())),
@@ -177,13 +208,49 @@ directory or in the user's .config/dv2html directory)
 
 		em := config.New()
 		// set default from yaml file, can be overridden from Geneos
-		em.SetDefault("_smtp_username", cf.GetString("email::username"))
-		em.SetDefault("_smtp_password", cf.GetString("email::password", config.NoExpand()))
-		em.SetDefault("_smtp_server", cf.GetString("email::smtp", config.Default("localhost")))
-		em.SetDefault("_smtp_port", cf.GetInt("email::port", config.Default(25)))
-		em.SetDefault("_from", cf.GetString("email::from"))
-		em.SetDefault("_to", cf.GetString("email::to"))
-		em.SetDefault("_subject", cf.GetString("email::subject", config.Default("Geneos Alert")))
+
+		// creds can come from `geneos` credentials for the mail server
+		// domain
+
+		var epassword string
+
+		emcf := cf.Sub("email")
+
+		eusername := emcf.GetString("username")
+		epwe := emcf.GetEnclave("password")
+		smtpserver := emcf.GetString("smtp", config.Default("localhost"))
+
+		if eusername != "" {
+			pw, _ := epwe.Open()
+			// pws := config.ExpandLockedBuffer(pw.String())
+			epassword = strings.Clone(pw.String())
+			pw.Destroy()
+			// pws.Destroy()
+		}
+
+		if eusername == "" {
+			creds := config.FindCreds(smtpserver, config.SetAppName("geneos"))
+			if creds != nil {
+				eusername = creds.GetString("username")
+				pwb = creds.GetEnclave("password")
+			}
+
+			if pwb != nil {
+				pw, _ := pwb.Open()
+				// pws := config.ExpandLockedBuffer(pw.String())
+				epassword = strings.Clone(pw.String())
+				pw.Destroy()
+				// pws.Destroy()
+			}
+		}
+
+		em.SetDefault("_smtp_username", eusername)
+		em.SetDefault("_smtp_password", epassword)
+		em.SetDefault("_smtp_server", smtpserver)
+		em.SetDefault("_smtp_port", emcf.GetInt("port", config.Default(25)))
+		em.SetDefault("_from", emcf.GetString("from"))
+		em.SetDefault("_to", emcf.GetString("to"))
+		em.SetDefault("_subject", emcf.GetString("subject", config.Default("Geneos Alert")))
 
 		for _, e := range os.Environ() {
 			n := strings.SplitN(e, "=", 2)
@@ -250,8 +317,6 @@ directory or in the user's .config/dv2html directory)
 			for k := range data.Table {
 				tmplData.Rows = append(tmplData.Rows, k)
 			}
-
-			// sort.Strings(tmplData.Rows)
 
 			asc := true
 			matches := matchdv(data.Name, "row-order")
@@ -351,20 +416,6 @@ func match(dataview, confkey, env string, em *config.Config) (matches []string) 
 		matches = strings.Split(em.GetString(env), ",")
 	} else {
 		matches = matchdv(dataview, confkey)
-		// rowmatches := cf.GetStringMapStringSlice(confkey)
-		// keys := []string{}
-		// for k := range rowmatches {
-		// 	keys = append(keys, k)
-		// }
-		// sort.Slice(keys, func(i, j int) bool {
-		// 	return len(keys[i]) > len(keys[j])
-		// })
-		// for _, m := range keys {
-		// 	if ok, _ := path.Match(m, dataview); ok {
-		// 		matches = rowmatches[m]
-		// 		break
-		// 	}
-		// }
 	}
 	return
 }
