@@ -248,10 +248,10 @@ the defaults (except the templates which can be quite large):
   * `to` - no default
   * `subject` - default `Geneos Alert`
 
-* `column-filter` - default from Environment Variable `__columns` (two underscores)
-* `row-filter` - default from Environment Variable `__rows` (two underscores)
-* `headline-filter` - default from Environment Variable `__headlines` (two underscores)
-* `first-column` - default from Environment Variable `_FIRSTCOLUMN`
+* `column-filter` - default from Environment Variable `__COLUMNS` (two underscores)
+* `row-filter` - default from Environment Variable `__ROWS` (two underscores)
+* `headline-filter` - default from Environment Variable `__HEADLINES` (two underscores)
+* `first-column` - default from Environment Variable `_FIRSTCOLUMN` (single underscore)
 * `row-order` - default first column ascending
 
   These five configuration settings influence the way that Dataview
