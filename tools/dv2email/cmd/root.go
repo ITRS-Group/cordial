@@ -230,6 +230,7 @@ directory or in the user's .config/dv2email directory)
 		eusername := emcf.GetString("username")
 		epwe := emcf.GetEnclave("password")
 		smtpserver := emcf.GetString("smtp", config.Default("localhost"))
+		smtptls := emcf.GetString("use-tls", config.Default("default"))
 
 		if eusername != "" {
 			pw, _ := epwe.Open()
@@ -254,6 +255,7 @@ directory or in the user's .config/dv2email directory)
 		em.SetDefault("_smtp_username", eusername)
 		em.SetDefault("_smtp_password", epassword)
 		em.SetDefault("_smtp_server", smtpserver)
+		em.SetDefault("_smtp_tls", smtptls)
 		em.SetDefault("_smtp_port", emcf.GetInt("port", config.Default(25)))
 		em.SetDefault("_from", emcf.GetString("from"))
 		em.SetDefault("_to", emcf.GetString("to"))
@@ -294,7 +296,7 @@ directory or in the user's .config/dv2email directory)
 			// environment variable _FIRSTCOLUMN or `rowname` and is
 			// always the first column.
 			var rowname string
-			defaultRowName := match(data.Name, "first-column", "__firstcolumn", em)
+			defaultRowName := match(data.Name, "first-column", "_firstcolumn", em)
 			if len(defaultRowName) > 0 {
 				rowname = defaultRowName[0]
 			} else {
