@@ -265,7 +265,7 @@ the defaults (except the templates which can be quite large):
   column-filter:
     pattern1: [ item1, item2, item3 ]
     pattern2: [ item4, item5, item6 ]
-    '*': [ other, values]
+    '*': [ other, values ]
   ```
 
   The pattern on the left is matched against the Dataview name and for
