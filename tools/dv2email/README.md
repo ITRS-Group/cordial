@@ -47,9 +47,9 @@ systems.
   simulating a minimal alert on the command line:
 
   ```bash
-  $ cd $(geneos home MyGateway)
-  $ _VARIABLEPATH='//dataview[(@name="SOMEDATAVIEWNAME")]' dv2email
-    ```
+  cd $(geneos home MyGateway)
+  _VARIABLEPATH='//dataview[(@name="SOMEDATAVIEWNAME")]' dv2email
+  ```
 
   Replace `SOMEDATAVIEWNAME` above with the name of a Dataview on your
   Gateway that is likely to match exactly one Dataview. If it matches
@@ -162,19 +162,88 @@ the defaults (except the templates which can be quite large):
   need to configure the username and password.
 
   * `host` - default `localhost`
+
+    The hostname or IP address of the Gateway.
+
   * `port` - default `7038`
+
+    The port that the Gateway accepts REST Commands on. The default is
+    7038 regardless of the `use-tls` setting below. This is intentional
+    as the REST Command API will normally only accept commands on a
+    secure port.
+
   * `use-tls` - default `true`
+
+    Use a secure connection. This is the default for the REST Command
+    API when enabled.
+
   * `allow-insecure` - default `true`
-  * `name` - no default
+
+    This setting controls the checking of the Gateways server
+    certificate and default to `true` as most Gateways will use private
+    certificates.
+
+    In a future release the program may be able to automatically check
+    against the certificate chain created and maintained by the `geneos`
+    program.
+
   * `username` - no default
   * `password` - no default
+
+    The username and password used to authenticate to the Gateway REST
+    Command API. The password should normally be AES256 encrypted using
+    Geneos formatted secure passwords but enclosed in `cordial`
+    expandable format. These can be generated using `geneos aes password`.
+
+  * `name` - no default
+
+    If no username and password are configured then the program tries to
+    locate credentials using the value of `name` - typically the gateway
+    name - that have been created and stored using `geneos login`. The
+    credential used must be prefixed with `gateway:` to the login
+    command. e.g.
+
+    ```bash
+    geneos login gateway:MyGateway -u readonly
+    ```
 
 * `email`
 
   * `smtp` - default `localhost`
+
+    The hostname or IP of the SMTP server.
+
   * `port` - default `25`
+
+    The port of the SMTP server. While the default is 25 most modern
+    SMTP server will be listening on ports 465 or 587 depending on their
+    configured services, especially when using TLS to protect the
+    connection.
+
+  * `use-tls` - default `default`
+
+    By default the the SMTP connection is made using opportunistic TLS,
+    i.e. TLS is used if the server advertises STARTTLS but otherwise the
+    email is sent in the clear. The other options are `force` and `none`
+    which do what the names suggest.
+
+    Note that is it not possible to ignore server certificate errors for
+    SMTP. This is intentional.
+
   * `username` - no default
   * `password` - no default
+
+    The username and password to use for the SMTP connection. The
+    password should ne AES256 encrypted as for the Gateway password
+    above.
+
+    If no username or password are given then the SMTP connection is
+    attempted without authentication.
+
+    In a future release there may be support for fetching these values
+    from the `cordial` credentials store but for now they must be in one
+    of the `dv2email` configuration files.
+
   * `from` - no default
   * `to` - no default
   * `subject` - default `Geneos Alert`
@@ -185,13 +254,75 @@ the defaults (except the templates which can be quite large):
 * `first-column` - default from Environment Variable `_FIRSTCOLUMN`
 * `row-order` - default first column ascending
 
-  These five configuration settings influence the way that Dataview cells are passed into the templates.
+  These five configuration settings influence the way that Dataview
+  cells are passed into the templates.
+  
+  The three `filter` items all work the same way but have some
+  difference depending on the dimension of data they apply to. The
+  configuration formats all follow the same pattern:
 
+  ```yaml
+  column-filter:
+    pattern1: [ item1, item2, item3 ]
+    pattern2: [ item4, item5, item6 ]
+    '*': [ other, values]
+  ```
+
+  The pattern on the left is matched against the Dataview name and for
+  all the patterns that match the longest match is selected. This means
+  you can have specific configuration for one Dataview and then more
+  general defaults for others. The pattern matching is not a regular
+  expression but the simpler shell style file patterns known as
+  `globbing`. The supported patterns are documented in the Go
+  [path.Match 🔗](https://pkg.go.dev/path#Match) docs. The final pattern
+  above, the catch-all wildcard must be enclosed in quotes for YAML to
+  be valid.
+
+  Once the list of items is matched they are then applied to the data
+  set in the following ways:
+
+  * rows - each item is matched against the rowname using the same
+    `globbing` rules as above. The total set of rows matched is passed
+    to the template in the `Rows` slice. The order of `Rows` is further
+    refined by the `row-order` item (see below).
+
+  * columns - each item is matched against the columns names (except the
+    first column, see below) and the order of the columns is determined
+    by how they matched the items.
+
+    The first column, the `rowname`, is special and is always included.
+    If the program is called from the Gateway on a Dataview table cell
+    then the environment variable `_FIRSTCOLUMN` is set and this is used
+    instead of the literal `rowname`. The configuration item
+    `first-column` can be used, with the same syntax as for the filters
+    above, to define the name on a per-Dataview basis.
+
+  * headlines - Headline cells are treated in a similar way to columns
+    and for all the patterns that match the Dataview name, each item is
+    matched against all the available headlines and all that match are
+    passed into the template. Headlines are not ordered in anyway.
+
+  Rows can be ordered by one column, including the name of the first
+  column (or `rowname` if none is defined) using a similar pattern match
+  to the filters above. Only the first item is used and it must be an
+  exact match for a column name followed by an option '+' or '-' to
+  indicate ascending or descending order, respectively.
 
 * `images`
 
   A list of image files to embed into the resulting email. The name (on
-  the left) is used as the href `cid` value.
+  the left) is used as the href `cid` value. e.g.
+
+  ```yaml
+  images:
+    logo1.png: /path/to/my/logo.png
+    alert.png: /path/to/another/image.png
+  ```
+
+  In a future release it may be possible to refer to images using URLs
+  or other "expandable" formats but for now they must be file paths and
+  if relative they must be accessibkle from the working directory of the
+  process.
 
 * `text-template`
 
