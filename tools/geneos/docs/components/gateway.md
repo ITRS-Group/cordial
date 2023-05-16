@@ -1,0 +1,2 @@
+# `geneos` Gateway Component
+

@@ -25,7 +25,7 @@ type docs struct {
 }
 
 var doclist = []docs{
-	{cmd.GeneosCmd, "tools/geneos"},
+	{cmd.GeneosCmd, "../tools/geneos/docs/commands"},
 
 	{dv2email.DV2EMAILCmd, "tools/dv2email"},
 
