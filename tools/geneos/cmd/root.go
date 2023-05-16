@@ -274,5 +274,6 @@ func RunE(root *cobra.Command, path []string, args []string) (err error) {
 		return
 	}
 	alias.ParseFlags(newargs)
+	parseArgs(alias, newargs)
 	return alias.RunE(alias, alias.Flags().Args())
 }
