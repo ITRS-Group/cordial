@@ -13,8 +13,8 @@ systems.
   authentication and is limited to `data` permissions, i.e. a read-only
   account. How to do this can be found in the following documentation:
 
-  * [REST Service](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#REST_Service)
-  * [Authentication](https://docs.itrsgroup.com/docs/geneos/6.3.0/Gateway_Reference_Guide/geneos_authentication_tr.html)
+  * [REST Service 🔗](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#REST_Service)
+  * [Authentication 🔗](https://docs.itrsgroup.com/docs/geneos/6.3.0/Gateway_Reference_Guide/geneos_authentication_tr.html)
 
 * Install `dv2email` and `geneos` (optional) somewhere in your execution path (or use the full path to where you install them)
 
@@ -93,8 +93,8 @@ list of values differs based on which mechanism is used and also the
 data item that the Action or Effect is run against. Details are
 documented here:
 
-* [Actions](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_rulesactionsalerts_tr.html#Action_Configuration)
-* [Effects](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_rulesactionsalerts_tr.html#Alerting-Effects)
+* [Actions 🔗](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_rulesactionsalerts_tr.html#Action_Configuration)
+* [Effects 🔗](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_rulesactionsalerts_tr.html#Alerting-Effects)
 
 The primary difference for `dv2email` is that when running from an Alert
 and Effect some of the email headers are automatically set based on the
