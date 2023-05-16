@@ -26,21 +26,21 @@ import (
 // any args with '=' are treated as parameters
 //
 // a bare argument with a '@' prefix means all instance of type on a host
-func parseArgs(cmd *cobra.Command, rawargs []string) (err error) {
+func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 	var wild bool
 	var newnames []string
 
 	var ct *geneos.Component
 	var args, params []string
 
-	if cmd.Annotations == nil {
-		cmd.Annotations = make(map[string]string)
+	if command.Annotations == nil {
+		command.Annotations = make(map[string]string)
 	}
-	a := cmd.Annotations
-	a["args"] = "[]"
-	a["params"] = "[]"
+	annotations := command.Annotations
+	annotations["args"] = "[]"
+	annotations["params"] = "[]"
 
-	if len(rawargs) == 0 && a["wildcard"] != "true" {
+	if len(rawargs) == 0 && annotations["wildcard"] != "true" {
 		return nil
 	}
 
@@ -60,29 +60,29 @@ func parseArgs(cmd *cobra.Command, rawargs []string) (err error) {
 	}
 	rawargs = rawargs[:n]
 
-	log.Debug().Msgf("rawargs %v, params %v, ct %s", rawargs, params, a["ct"])
+	log.Debug().Msgf("rawargs %v, params %v, ct %s", rawargs, params, annotations["ct"])
 
-	if _, ok := a["ct"]; !ok {
-		a["ct"] = ""
+	if _, ok := annotations["ct"]; !ok {
+		annotations["ct"] = ""
 	}
 	jsonargs, _ := json.Marshal(params)
-	a["params"] = string(jsonargs)
+	annotations["params"] = string(jsonargs)
 
-	if a["wildcard"] == "false" {
+	if annotations["wildcard"] == "false" {
 		if len(rawargs) == 0 {
 			return nil
 		}
 		if ct = geneos.ParseComponentName(rawargs[0]); ct == nil {
 			jsonargs, _ := json.Marshal(rawargs)
-			a["args"] = string(jsonargs)
+			annotations["args"] = string(jsonargs)
 			return
 		}
-		if a["ct"] == "" {
-			a["ct"] = rawargs[0]
+		if annotations["ct"] == "" {
+			annotations["ct"] = rawargs[0]
 		}
 		args = rawargs[1:]
 	} else {
-		defaultComponent := a["ct"]
+		defaultComponent := annotations["ct"]
 		if defaultComponent == "" && len(rawargs) > 0 {
 			defaultComponent = rawargs[0]
 		}
@@ -94,8 +94,8 @@ func parseArgs(cmd *cobra.Command, rawargs []string) (err error) {
 			// first arg is not a known type, so treat the rest as instance names
 			args = rawargs
 		} else {
-			if a["ct"] == "" {
-				a["ct"] = rawargs[0]
+			if annotations["ct"] == "" {
+				annotations["ct"] = rawargs[0]
 				args = rawargs[1:]
 			} else {
 				args = rawargs
@@ -191,11 +191,11 @@ func parseArgs(cmd *cobra.Command, rawargs []string) (err error) {
 	args = newnames
 
 	jsonargs, _ = json.Marshal(args)
-	a["args"] = string(jsonargs)
+	annotations["args"] = string(jsonargs)
 	jsonparams, _ := json.Marshal(params)
-	a["params"] = string(jsonparams)
+	annotations["params"] = string(jsonparams)
 
-	if a["wildcard"] == "false" {
+	if annotations["wildcard"] == "false" {
 		return
 	}
 
@@ -203,25 +203,25 @@ func parseArgs(cmd *cobra.Command, rawargs []string) (err error) {
 	if len(args) == 0 && geneos.Root() != "" && !wild {
 		args = instance.AllNames(geneos.ALL, ct)
 		jsonargs, _ := json.Marshal(args)
-		a["args"] = string(jsonargs)
+		annotations["args"] = string(jsonargs)
 	}
 
 	log.Debug().Msgf("ct %s, args %v, params %v", ct, args, params)
 	return
 }
 
-func CmdArgs(cmd *cobra.Command) (ct *geneos.Component, args []string) {
-	log.Debug().Msgf("%s %v", cmd.Annotations, ct)
-	ct = geneos.ParseComponentName(cmd.Annotations["ct"])
-	if err := json.Unmarshal([]byte(cmd.Annotations["args"]), &args); err != nil {
+func CmdArgs(command *cobra.Command) (ct *geneos.Component, args []string) {
+	log.Debug().Msgf("%s %v", command.Annotations, ct)
+	ct = geneos.ParseComponentName(command.Annotations["ct"])
+	if err := json.Unmarshal([]byte(command.Annotations["args"]), &args); err != nil {
 		log.Debug().Err(err).Msg("")
 	}
 	return
 }
 
-func CmdArgsParams(cmd *cobra.Command) (ct *geneos.Component, args, params []string) {
-	ct, args = CmdArgs(cmd)
-	if err := json.Unmarshal([]byte(cmd.Annotations["params"]), &params); err != nil {
+func CmdArgsParams(command *cobra.Command) (ct *geneos.Component, args, params []string) {
+	ct, args = CmdArgs(command)
+	if err := json.Unmarshal([]byte(command.Annotations["params"]), &params); err != nil {
 		log.Debug().Err(err).Msg("")
 	}
 	return
