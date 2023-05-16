@@ -150,6 +150,11 @@ $ geneos ps
 				return newcmd.Help()
 			}
 		}
+		if t, _ := command.Flags().GetBool("help"); t {
+			command.RunE = nil
+			command.Run = func(cmd *cobra.Command, args []string) { return }
+			return command.Help()
+		}
 
 		// check initialisation
 		geneosdir := geneos.Root()
