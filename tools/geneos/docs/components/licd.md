@@ -1,0 +1,2 @@
+# `geneos` License Daemon Component
+
