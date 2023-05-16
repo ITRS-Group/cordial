@@ -22,7 +22,7 @@ THE SOFTWARE.
 
 package main
 
-import "github.com/itrs-group/cordial/tools/dv2html/cmd"
+import "github.com/itrs-group/cordial/tools/dv2email/cmd"
 
 func main() {
 	cmd.Execute()

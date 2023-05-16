@@ -6,7 +6,7 @@ Cordial comprises a set of interrelated programs, integrations, libraries and pa
 
 * [`geneos` Manager Program](tools/geneos/)
 
-* [`dv2html` Dataview to EMail](tools/dv2html/)
+* [`dv2email` Dataview to EMail](tools/dv2email)
 
 * [ServiceNow Incident Integration](integrations/servicenow/)
 
@@ -28,7 +28,7 @@ Cordial comprises a set of interrelated programs, integrations, libraries and pa
   * `email`
 
     Functions pulled from libemail to be more generally available,
-    initially for the `dv2html` program.
+    initially for the `dv2email` program.
 
   * `geneos`
 

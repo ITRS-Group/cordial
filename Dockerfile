@@ -18,7 +18,7 @@ COPY ./ /app/cordial
 WORKDIR /app/cordial/tools/geneos
 RUN go build --ldflags '-linkmode external -extldflags=-static'
 RUN GOOS=windows go build
-WORKDIR /app/cordial/tools/dv2html
+WORKDIR /app/cordial/tools/dv2email
 RUN go build --ldflags '-linkmode external -extldflags=-static'
 WORKDIR /app/cordial/integrations/servicenow
 RUN go build --ldflags '-linkmode external -extldflags=-static'
@@ -57,8 +57,8 @@ RUN apt update && apt install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0
 RUN npm install --global mdpdf
 RUN mdpdf --border=15mm /app/cordial/tools/geneos/README.md geneos.pdf
 COPY ./tools/geneos/README.md geneos.md
-RUN mdpdf --border=15mm /app/cordial/tools/dv2html/README.md dv2html.pdf
-COPY ./tools/dv2html/README.md dv2html.md
+RUN mdpdf --border=15mm /app/cordial/tools/dv2email/README.md dv2email.pdf
+COPY ./tools/dv2email/README.md dv2email.md
 RUN mdpdf --border=15mm /app/cordial/integrations/servicenow/README.md servicenow.pdf
 COPY ./integrations/servicenow/README.md servicenow.md
 RUN mdpdf --border=15mm /app/cordial/integrations/pagerduty/README.md pagerduty.pdf
@@ -79,7 +79,7 @@ WORKDIR /app/cordial
 COPY --from=build /app/cordial/VERSION /
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
 COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/bin/
-COPY --from=build /app/cordial/tools/dv2html/dv2html /cordial/bin/
+COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
 COPY --from=build-docs /app/cordial/doc-output /cordial/docs
 COPY --from=build /app/cordial/integrations/servicenow/servicenow /app/cordial/integrations/servicenow/ticket.sh /app/cordial/integrations/pagerduty/pagerduty /cordial/bin/
 COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /app/cordial/integrations/pagerduty/cmd/pagerduty.defaults.yaml /cordial/etc/geneos/
@@ -97,7 +97,7 @@ CMD [ "bash" ]
 FROM debian AS cordial-run
 RUN apt update && apt install -y fontconfig ca-certificates
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
-COPY --from=build /app/cordial/tools/dv2html/dv2html /bin/
+COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /lib/
 RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
@@ -111,7 +111,7 @@ CMD [ "bash" ]
 FROM centos:centos8 AS cordial-run-el8
 # RUN apt update && apt install -y fontconfig ca-certificates
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
-COPY --from=build /app/cordial/tools/dv2html/dv2html /bin/
+COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /lib/
 RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos

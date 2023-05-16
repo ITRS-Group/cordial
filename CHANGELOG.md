@@ -106,7 +106,7 @@
       management into one place
     * New `login` and `logout` commands to manage credentials.
 
-  * `tools/dv2html`:
+  * `tools/dv2email`:
 
     * This new program can be run as an Action or Effect to capture a
       complete Dataview and send it as email. The configuration is
