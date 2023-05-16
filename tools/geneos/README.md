@@ -657,56 +657,6 @@ of the process.
 
 There will also be an XML setup file and so on.
 
-## Instance Properties
-
-**Note**: This section is incomplete and remains as work-in-progress.
-
-| Property      | Previous Name | `licd`             | `gateway`          | `netprobe`         | `san`              | `fa2`              | `fileagent`        | `webserver`        | Description |
-| --------      | ------------- | ------             | ---------          | ----------         | -----              | -----              | -----------        | -----------        | ----------- |
-| `binary`      | `BinSuffix`   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Name of the binary file used to run the instance of the componenent TYPE. |
-| n/a           | `TYPERoot`    | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | Root directory for the TYPE. Ignored. |
-| n/a           | `TYPEMode`    | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | Process execution mode - baskground or foregbround. Ignored. |
-| `home`        | `TYPEHome`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Path to the instance's home directory, from where the instance component TYPE is started. |
-| `install`     | `TYPEBins`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Path to the directory where the binaries of the component TYPE are installed. |
-| `libpaths`    | `TYPELibs`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Library path(s) (separated by `:`) used by the instance of the component TYPE. |
-| `logdir`      | `TYPELogD`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Path to the dorectory where logs are to be written for the instance of the component TYPE. |
-| `logfile`     | `TYPELogF`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Name of the primary log file to be generated for the instance. |
-| `name`        | `TYPEName`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Name of the instance. |
-| `options`     | `TYPEOpts`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Additional command-line options to be used as part of the command line to start the instance of the component TYPE. |
-| `port`        | `TYPEport`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Listening port used by the instance. |
-| `program`     | `TYPEExec`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Absolute path to the binary file used to run the instance of the component TYPE. |
-| `user`        | `TYPEUser`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | User owning the instance. |
-| `version`     | `TYPEBase`    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | Version as either the name of the directory holding the component TYPE's binaries or the name of the symlink pointing to that directory. |
-| Gateway Specific: |
-| `gatewayname` | n/a *         | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Name of the gateway instance. This can be different to the instance name. |
-| `licdhost`    | `GateLicH`    | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Name of the host where the license daemon (licd) to be used by the gateway instance is hosted. |
-| `licdport`    | `GateLicP`    | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Port number of the license daemon (licd) to be used by the gateway instance. |
-| `licdsecure`  | `GateLicS` *  | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | Flag indicating whether connection to licd is secured by TLS encryption. |
-| `keyfile`     | n/a           | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | External keyfile for AES 256 encoding. |
-| `prevkeyfile` | n/a           | :x:                | :heavy_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                | External keyfile for AES 256 encoding. |
-| Webserver Specific: |
-| `maxmem`      | `WebsXmx`     | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :heavy_check_mark: | Java value for maximum memory for the Web Server (`-Xmx`) |
-| TLS Settings: |
-| `certificate` | `TYPECert` *  | :radio_button:     | :radio_button:     | :radio_button:     | :radio_button:     | :radio_button:     | :x:                | :radio_button:     | File containing a TLS certificate used for Geneos internal secure comms (TLS-encrypted). |
-| `privatekey`  | `TYPEKey` *   | :radio_button:     | :radio_button:     | :radio_button:     | :radio_button:     | :radio_button:     | :x:                | :radio_button:     | File containing the privatye key associated with the TLS certificate `certificate`, used for Geneos internal secure comms (TLS-encrypted). |
-
-Note: Settings in the `Previous Name`column with an `*` indicate those that were interim values during the development of the program and did not exist in the original `binutils` implementation.
-
-Key:
-
-| Checkmarks | `TYPE` labels in Pervious Name Column |
-| ------ | ------ |
-| :heavy_check_mark: - Supported and **required** | `gate` - Gateways |
-| :radio_button: - Supports and optional | `licd` - License Daemons |
-| :x: - Not support (and ignored) | `netp` - Netprobes |
-| | `webs` - Web servers |
-| | `FAgent` - File Agent |
-
-In addition to the above simple properties there are a number of
-properties that are lists of values and these values must be specific
-formats.
-
-* `env`
 
 ## Installation
 
