@@ -5,7 +5,7 @@ import (
 
 	pdCmd "github.com/itrs-group/cordial/integrations/pagerduty/cmd"
 	snowCmd "github.com/itrs-group/cordial/integrations/servicenow/cmd"
-	dv2html "github.com/itrs-group/cordial/tools/dv2html/cmd"
+	dv2email "github.com/itrs-group/cordial/tools/dv2email/cmd"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/aescmd"
@@ -27,7 +27,7 @@ type docs struct {
 var doclist = []docs{
 	{cmd.GeneosCmd, "tools/geneos"},
 
-	{dv2html.DV2HTMLCmd, "tools/dv2html"},
+	{dv2email.DV2EMAILCmd, "tools/dv2email"},
 
 	{snowCmd.RootCmd, "integrations/servicenow"},
 	{pdCmd.RootCmd, "integrations/pagerduty"},

@@ -61,13 +61,13 @@ func init() {
 
 	config.DefaultKeyDelimiter("::")
 
-	DV2HTMLCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	DV2HTMLCmd.PersistentFlags().BoolVarP(&inlineCSS, "inline-css", "i", true, "inline CSS for better mail client support")
-	DV2HTMLCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2html.yaml)")
+	DV2EMAILCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	DV2EMAILCmd.PersistentFlags().BoolVarP(&inlineCSS, "inline-css", "i", true, "inline CSS for better mail client support")
+	DV2EMAILCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2email.yaml)")
 
 	// how to remove the help flag help text from the help output! Sigh...
-	DV2HTMLCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	DV2HTMLCmd.PersistentFlags().MarkHidden("help")
+	DV2EMAILCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	DV2EMAILCmd.PersistentFlags().MarkHidden("help")
 
 	execname = filepath.Base(os.Args[0])
 	cordial.LogInit(execname)
@@ -97,21 +97,21 @@ func initConfig() {
 	cf.AutomaticEnv()
 }
 
-type dv2htmlData struct {
+type dv2emailData struct {
 	Dataviews []*commands.Dataview
 	Rows      []string
 	Env       map[string]string
 }
 
-//go:embed dv2html-text.gotmpl
+//go:embed dv2email-text.gotmpl
 var textDefaultTemplate string
 
-//go:embed dv2html.gotmpl
+//go:embed dv2email-html.gotmpl
 var htmlDefaultTemplate string
 
-// DV2HTMLCmd represents the base command when called without any subcommands
-var DV2HTMLCmd = &cobra.Command{
-	Use:   "dv2html",
+// DV2EMAILCmd represents the base command when called without any subcommands
+var DV2EMAILCmd = &cobra.Command{
+	Use:   "dv2email",
 	Short: "Email a Dataview following Geneos Action/Effect conventions",
 	Long: strings.ReplaceAll(`
 Email a Dataview following Geneos Action/Effect conventions.
@@ -122,8 +122,8 @@ conventions and constructs an HTML Email of the dataview the data
 item is from.
 
 Settings for the Gateway REST connection and defaults for the EMail
-gateway can be located in dv2html.yaml (either in the working
-directory or in the user's .config/dv2html directory)
+gateway can be located in dv2email.yaml (either in the working
+directory or in the user's .config/dv2email directory)
 	`, "|", "`"),
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		gwcf := cf.Sub("gateway")
@@ -187,7 +187,7 @@ directory or in the user's .config/dv2html directory)
 			return
 		}
 
-		tmplData := dv2htmlData{
+		tmplData := dv2emailData{
 			Dataviews: []*commands.Dataview{},
 			Rows:      []string{},
 			Env:       make(map[string]string, len(os.Environ())),
@@ -415,7 +415,7 @@ directory or in the user's .config/dv2html directory)
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	err := DV2HTMLCmd.Execute()
+	err := DV2EMAILCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
