@@ -341,3 +341,11 @@ the defaults (except the templates which can be quite large):
 
   The data available to the template (and the text template above) is
   details in the `dv2email.yaml` file.
+
+  For both template types it is possible to include the contents of a
+  file or a URL using "expandable" syntax, like this:
+
+  ```yaml
+  text-template: ${https://myserver.example.com/files/txt.gotmpl}
+  html-template: ${file:/path/to/template.gotmpl}
+  ```
