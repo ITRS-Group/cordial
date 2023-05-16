@@ -122,12 +122,33 @@ $ geneos ps
 		// "manually" parse root flags so that legacy commands get conf
 		// file, debug etc.
 		command.Root().ParseFlags(args)
+
 		if quiet {
 			zerolog.SetGlobalLevel(zerolog.Disabled)
 		} else if debug {
 			zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		} else {
 			zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		}
+
+		// check for "replacedby" annotation, warn the user, run the new
+		// command later (after prerun) but if the help flag is set
+		// output the help for the new command and cleanly exit.
+		var newcmd *cobra.Command
+		if r, ok := command.Annotations["replacedby"]; ok {
+			args := strings.Split(r, " ")
+			newcmd, _, _ = command.Root().Find(args)
+			if newcmd != nil {
+				log.Warn().Msgf("Please note that the %q command has been replaced by %q\n", command.CommandPath(), newcmd.CommandPath())
+			}
+		}
+
+		if newcmd != nil {
+			if t, _ := command.Flags().GetBool("help"); t {
+				command.RunE = nil
+				command.Run = func(cmd *cobra.Command, args []string) { return }
+				return newcmd.Help()
+			}
 		}
 
 		// check initialisation
@@ -248,9 +269,5 @@ func RunE(root *cobra.Command, path []string, args []string) (err error) {
 		return
 	}
 	alias.ParseFlags(newargs)
-	// we have to explicitly test for the help flag for some reason
-	if t, _ := alias.Flags().GetBool("help"); t {
-		return alias.Help()
-	}
 	return alias.RunE(alias, alias.Flags().Args())
 }

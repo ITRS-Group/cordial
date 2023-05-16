@@ -65,6 +65,7 @@ this alias will be removed in an upcoming release.
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "false",
+		"replacedby":   "host add",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
@@ -84,6 +85,7 @@ future as this alias will be removed in an upcoming release.
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "false",
+		"replacedby":   "host delete",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
@@ -103,6 +105,7 @@ this alias will be removed in an upcoming release.
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "false",
+		"replacedby":   "host ls",
 	},
 	DisableFlagParsing: true,
 	Deprecated:         "Use `geneos host ls` instead.",
@@ -122,6 +125,7 @@ var setHostCmd = &cobra.Command{
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "false",
+		"replacedby":   "host set",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
@@ -139,6 +143,7 @@ var showHostCmd = &cobra.Command{
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "false",
+		"replacedby":   "host show",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
@@ -155,6 +160,7 @@ var installCmd = &cobra.Command{
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "true",
+		"replacedby":   "package install",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
@@ -171,6 +177,7 @@ var updateLsCmd = &cobra.Command{
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "true",
+		"replacedby":   "package ls",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
@@ -187,6 +194,7 @@ var updateCmd = &cobra.Command{
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "true",
+		"replacedby":   "package update",
 	},
 	Args:               cobra.RangeArgs(0, 2),
 	DisableFlagParsing: true,
@@ -204,6 +212,7 @@ var setUserCmd = &cobra.Command{
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "false",
+		"replacedby":   "config set",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
@@ -220,6 +229,7 @@ var unsetUserCmd = &cobra.Command{
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "false",
+		"replacedby":   "config unset",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) error {
@@ -242,6 +252,7 @@ to quickly create a Cobra application.
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "false",
+		"replacedby":   "config show",
 	},
 	DisableFlagParsing: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
