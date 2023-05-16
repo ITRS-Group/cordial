@@ -65,21 +65,30 @@ email:
 # output, nor is the name of the first column (the 'rowName') given. Use
 # this section to match (using shell globbing rules and not regular
 # expressions) the name of the dataview to select the columns to output
-# and in what order. The first value is always applied to th first
-# column, which is special. Note that if an environment variable
-# '__columns' (case insensitive name, comma separated values) is passed
-# to the program that will override these settings.
+# and in which order. The first column is always set to the environment
+# variable `_FIRSTCOLUMN` or `rowname`. Note that if an environment
+# variable '__columns' (case insensitive name, comma separated values)
+# is passed to the program that will override these settings.
+#
+# `_FIRSTCOLUMN` is only set by the Gateway for Actions or Alerts on
+# table cells and will not be set for headline cells or rules on non
+# cell data items.
 #
 # The dataview name is tested against all the keys in longest to
 # shortest order and the first match wins.
 #
-# Apart from the first column name you can use further patterns to match
-# multiple columns and any columns not listed are excluded from the
-# output
-column-order:
+# Apart from the first column (see above) you can use further patterns
+# to match multiple columns and any columns not listed are excluded from
+# the output
+column-filter:
   # dvname*: [ list, of, columns ]
-  toolkit: [ username, passwd, uid, gid, gcos, homedir, shell ]
+  toolkit: [ passwd, uid, gid, gcos, homedir, shell ]
   # '*': [ unknown ]
+
+first-column:
+  # dvname*: something
+  toolkit: username
+  '*': rowname
 
 # similar to the above, these settings let you filter rows from being
 # used. Each string is matched against the rowname (first column) and if
@@ -89,7 +98,7 @@ row-filter:
   # '*': [ sys*, root ]
 
 row-order:
-  toolkit: uid
+  toolkit: username+
 
 # similar to the above, these settings let you filter headlines from
 # being included in the email. No ordering is possible.

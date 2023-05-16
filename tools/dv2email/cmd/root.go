@@ -127,6 +127,8 @@ directory or in the user's .config/dv2email directory)
 	`, "|", "`"),
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		gwcf := cf.Sub("gateway")
+		gwcf.SetDefault("allow-insecure", true)
+
 		u := &url.URL{
 			Scheme: "http",
 			Host:   fmt.Sprintf("%s:%d", gwcf.GetString("host", config.Default("localhost")), gwcf.GetInt("port", config.Default(7038))),
@@ -170,7 +172,8 @@ directory or in the user's .config/dv2email directory)
 
 		gw, err := commands.DialGateway(u,
 			commands.SetBasicAuth(username, password),
-			commands.AllowInsecureCertificates(gwcf.GetBool("allow-insecure")))
+			commands.AllowInsecureCertificates(gwcf.GetBool("allow-insecure")),
+		)
 		if err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
@@ -286,13 +289,28 @@ directory or in the user's .config/dv2email directory)
 				data.Headlines = nh
 			}
 
-			cols := match(data.Name, "column-order", "__columns", em)
+			// the first column is either from `first-column` in config
+			// (matched against the dataview name) or from the
+			// environment variable _FIRSTCOLUMN or `rowname` and is
+			// always the first column.
+			var rowname string
+			defaultRowName := match(data.Name, "first-column", "__firstcolumn", em)
+			if len(defaultRowName) > 0 {
+				rowname = defaultRowName[0]
+			} else {
+				rowname = em.GetString("_FIRSTCOLUMN", config.Default("rowname"))
+			}
+			// set the default, may be overridden below but then reset
+			// to the same value
+			data.Columns[0] = rowname
+
+			cols := match(data.Name, "column-filter", "__columns", em)
 			if len(cols) > 0 {
-				nc := []string{cols[0]}
+				nc := []string{rowname}
 				for _, c := range cols {
 					c = strings.TrimSpace(c)
 					for _, oc := range data.Columns {
-						if oc == "rowname" {
+						if oc == rowname {
 							continue
 						}
 						if ok, err := path.Match(c, oc); err == nil && ok {
@@ -300,6 +318,7 @@ directory or in the user's .config/dv2email directory)
 						}
 					}
 				}
+
 				data.Columns = nc
 			}
 
@@ -317,13 +336,13 @@ directory or in the user's .config/dv2email directory)
 				data.Table = nr
 			}
 
-			// default ordered rownames after filtering
+			// default unordered rownames after filtering
 			for k := range data.Table {
 				tmplData.Rows = append(tmplData.Rows, k)
 			}
 
 			asc := true
-			matches := matchdv(data.Name, "row-order")
+			matches := matchForName(data.Name, "row-order")
 			if len(matches) > 0 {
 				m := matches[0]
 				switch {
@@ -336,24 +355,39 @@ directory or in the user's .config/dv2email directory)
 				default:
 					asc = true
 				}
-				sort.Slice(tmplData.Rows, func(i, j int) bool {
-					r := tmplData.Rows
-					a := data.Table[r[i]][m].Value
-					af, _ := strconv.ParseFloat(a, 64)
-					b := data.Table[r[j]][m].Value
-					bf, _ := strconv.ParseFloat(b, 64)
-					if a == b {
+
+				// if the row-order is for a column that is used as the
+				// rowname (decided above in Column ordering) then sort
+				// the tmplData.Rows slice directly based on value and
+				// not a cell in the row
+				if m == "rowname" || m == data.Columns[0] {
+					sort.Slice(tmplData.Rows, func(i, j int) bool {
 						if asc {
-							return a < b
+							return tmplData.Rows[i] < tmplData.Rows[j]
 						} else {
-							return a > b
+							return tmplData.Rows[j] < tmplData.Rows[i]
 						}
-					}
-					if asc {
-						return af < bf
-					}
-					return bf < af
-				})
+					})
+				} else {
+					sort.Slice(tmplData.Rows, func(i, j int) bool {
+						r := tmplData.Rows
+						a := data.Table[r[i]][m].Value
+						af, _ := strconv.ParseFloat(a, 64)
+						b := data.Table[r[j]][m].Value
+						bf, _ := strconv.ParseFloat(b, 64)
+						if a == b {
+							if asc {
+								return a < b
+							} else {
+								return a > b
+							}
+						}
+						if asc {
+							return af < bf
+						}
+						return bf < af
+					})
+				}
 			}
 
 			if err != nil {
@@ -421,16 +455,29 @@ func Execute() {
 	}
 }
 
-func match(dataview, confkey, env string, em *config.Config) (matches []string) {
+// match will return either a fixed list of matches from a comma
+// separated env (if set in config instance em) or it will search for a
+// section in the global configuration instance for `confkey` and return
+// the values for the longest matching key (using globbing rules)
+func match(name, confkey, env string, em *config.Config) (matches []string) {
 	if em.IsSet(env) {
 		matches = strings.Split(em.GetString(env), ",")
 	} else {
-		matches = matchdv(dataview, confkey)
+		matches = matchForName(name, confkey)
 	}
 	return
 }
 
-func matchdv(dataview, confkey string) (matches []string) {
+// matchForName returns a the first slice of values of the member of confkey that
+// matches name using globbing rules, longest match wins. e.g. for
+//
+// confkey:
+//
+//	col*: this, that, other
+//	columnFullName: only, these
+//
+// and if name is 'columnFullName' then [ 'only', 'these' ] is returned.
+func matchForName(name, confkey string) (matches []string) {
 	checks := cf.GetStringMapStringSlice(confkey)
 	keys := []string{}
 	for k := range checks {
@@ -440,7 +487,7 @@ func matchdv(dataview, confkey string) (matches []string) {
 		return len(keys[i]) > len(keys[j])
 	})
 	for _, m := range keys {
-		if ok, _ := path.Match(m, dataview); ok {
+		if ok, _ := path.Match(m, name); ok {
 			matches = checks[m]
 			break
 		}
