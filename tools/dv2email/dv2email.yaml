@@ -218,7 +218,7 @@ html-template: |+
       }
 
       .target {
-        border: 3px solid blue;
+        border: 5px dashed black;
       }
     </style>
   </head>
