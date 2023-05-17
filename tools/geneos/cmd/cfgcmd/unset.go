@@ -33,14 +33,17 @@ import (
 
 func init() {
 	ConfigCmd.AddCommand(unsetUserCmd)
-
-	// unsetUserCmd.Flags().SortFlags = false
 }
 
 var unsetUserCmd = &cobra.Command{
-	Use:   "unset",
-	Short: "Unset a configuration parameter",
+	Use:   "unset [KEY...]",
+	Short: "Unset a program parameter",
 	Long: strings.ReplaceAll(`
+Unset removes the program configuration value for any arguments given
+on the command line.
+
+No validation is done and there if you mistype a key name it is still
+considered valid to remove an non-existing key.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
