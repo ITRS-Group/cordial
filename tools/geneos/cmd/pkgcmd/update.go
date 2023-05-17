@@ -35,7 +35,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var packageUpdateCmdBase, packageUpdateCmdHost, packageUpdateCmdVersion string
+var packageUpdateCmdBase, packageUpdateCmdVersion string
 var packageUpdateCmdForce, packageUpdateCmdRestart bool
 
 func init() {
@@ -44,7 +44,6 @@ func init() {
 	packageUpdateCmd.Flags().StringVarP(&packageUpdateCmdVersion, "version", "V", "latest", "Update to this version, defaults to latest")
 
 	packageUpdateCmd.Flags().StringVarP(&packageUpdateCmdBase, "base", "b", "active_prod", "Base name for the symlink, defaults to active_prod")
-	packageUpdateCmd.Flags().StringVarP(&packageUpdateCmdHost, "host", "H", string(geneos.ALLHOSTS), "Apply only on remote host. \"all\" (the default) means all remote hosts and locally")
 	packageUpdateCmd.Flags().BoolVarP(&packageUpdateCmdForce, "force", "F", false, "Update all protected instances")
 	packageUpdateCmd.Flags().BoolVarP(&packageUpdateCmdRestart, "restart", "R", false, "Restart all instances that may have an update applied")
 
@@ -103,7 +102,7 @@ geneos package update netprobe 5.13.2
 			}
 		}
 
-		r := geneos.GetHost(packageUpdateCmdHost)
+		r := geneos.GetHost(cmd.Hostname)
 
 		version := packageUpdateCmdVersion
 		cs := instance.MatchKeyValue(r, ct, "protected", "true")

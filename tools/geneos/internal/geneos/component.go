@@ -230,12 +230,16 @@ func (ct *Component) InstancesDir(h *Host) string {
 	return p
 }
 
-// SharedDir return the shared directory for the component
-func (ct *Component) SharedDir(h *Host) string {
+const sharedSuffix = "_shared"
+
+// SharedPath return the shared directory for the component on host h
+// joined to subdirectories and file given as subs.
+func (ct *Component) SharedPath(h *Host, subs ...interface{}) string {
 	if ct == nil {
 		return ""
 	}
-	p := h.Filepath(ct, ct.String()+"_shared")
+	parts := append([]interface{}{ct, ct.String() + sharedSuffix}, subs...)
+	p := h.Filepath(parts...)
 	return p
 }
 

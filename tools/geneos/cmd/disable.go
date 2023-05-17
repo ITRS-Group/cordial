@@ -57,7 +57,7 @@ stopped.
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := CmdArgsParams(cmd)
-		return instance.ForAll(ct, disableInstance, args, params)
+		return instance.ForAll(ct, Hostname, disableInstance, args, params)
 	},
 }
 

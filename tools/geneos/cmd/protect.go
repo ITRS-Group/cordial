@@ -43,7 +43,7 @@ in an instance configuration file.
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, args := CmdArgs(command)
 
-		return instance.ForAll(ct, protectInstance, args, []string{fmt.Sprintf("%v", !protectCmdUnprotect)})
+		return instance.ForAll(ct, Hostname, protectInstance, args, []string{fmt.Sprintf("%v", !protectCmdUnprotect)})
 	},
 }
 

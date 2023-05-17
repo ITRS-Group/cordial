@@ -60,7 +60,7 @@ private key file is left unchanged if it exists.
 	},
 	RunE: func(command *cobra.Command, _ []string) error {
 		ct, args, params := cmd.CmdArgsParams(command)
-		return instance.ForAll(ct, renewInstanceCert, args, params)
+		return instance.ForAll(ct, cmd.Hostname, renewInstanceCert, args, params)
 	},
 }
 

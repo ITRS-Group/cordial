@@ -114,7 +114,7 @@ but will not affect the instance.
 }
 
 func Set(ct *geneos.Component, args, params []string) error {
-	return instance.ForAll(ct, setInstance, args, params)
+	return instance.ForAll(ct, Hostname, setInstance, args, params)
 }
 
 func setInstance(c geneos.Instance, params []string) (err error) {

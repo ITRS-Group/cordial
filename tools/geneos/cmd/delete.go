@@ -61,7 +61,7 @@ and a partial deletion cannot be protected against.
 	RunE: func(cmd *cobra.Command, allargs []string) error {
 		ct, args, params := CmdArgsParams(cmd)
 
-		return instance.ForAll(ct, deleteInstance, args, params)
+		return instance.ForAll(ct, Hostname, deleteInstance, args, params)
 	},
 }
 

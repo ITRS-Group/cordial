@@ -136,7 +136,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 
 	if ct == &gateway.Gateway || ct == &netprobe.Netprobe || ct == &san.San || ct == &floating.Floating {
 		if addCmdKeyfileCRC != "" {
-			cf.Set("keyfile", c.Host().Filepath(ct, ct.String()+"_shared", "keyfiles", addCmdKeyfileCRC+".aes"))
+			cf.Set("keyfile", instance.SharedPath(c, "keyfiles", addCmdKeyfileCRC+".aes"))
 		} else if addCmdKeyfile != "" {
 			cf.Set("keyfile", addCmdKeyfile)
 		}

@@ -92,16 +92,16 @@ func CommandPS(ct *geneos.Component, args []string, params []string) (err error)
 		if psCmdIndent {
 			psJSONEncoder.SetIndent("", "    ")
 		}
-		err = instance.ForAll(ct, psInstanceJSON, args, params)
+		err = instance.ForAll(ct, Hostname, psInstanceJSON, args, params)
 	case psCmdCSV:
 		psCSVWriter = csv.NewWriter(os.Stdout)
 		psCSVWriter.Write([]string{"Type", "Name", "Host", "PID", "User", "Group", "Starttime", "Version", "Home"})
-		err = instance.ForAll(ct, psInstanceCSV, args, params)
+		err = instance.ForAll(ct, Hostname, psInstanceCSV, args, params)
 		psCSVWriter.Flush()
 	default:
 		psTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\n")
-		err = instance.ForAll(ct, psInstancePlain, args, params)
+		err = instance.ForAll(ct, Hostname, psInstancePlain, args, params)
 		psTabWriter.Flush()
 	}
 	if err == os.ErrNotExist {

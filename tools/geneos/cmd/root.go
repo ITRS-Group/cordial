@@ -51,6 +51,7 @@ var (
 )
 
 var cfgFile string
+var Hostname string
 var UserKeyFile config.KeyFile
 
 var debug, quiet bool
@@ -104,6 +105,7 @@ func init() {
 			config.IgnoreUserConfDir(),
 			config.IgnoreWorkingDir())+
 		")")
+	GeneosCmd.PersistentFlags().StringVarP(&Hostname, "host", "H", "", "Limit actions to `HOSTNAME` (not for commands given instance@host parameters)")
 	GeneosCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
 	GeneosCmd.PersistentFlags().MarkHidden("debug")
 	GeneosCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")

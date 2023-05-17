@@ -92,12 +92,12 @@ latter "pretty" formatting the output over multiple, indented lines.
 		case lsCmdCSV:
 			LsCSVWriter = csv.NewWriter(os.Stdout)
 			LsCSVWriter.Write([]string{"Type", "Name", "Disabled", "Protected", "Host", "Port", "Version", "Home"})
-			err = instance.ForAll(ct, lsInstanceCSV, args, params)
+			err = instance.ForAll(ct, Hostname, lsInstanceCSV, args, params)
 			LsCSVWriter.Flush()
 		default:
 			lsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(lsTabWriter, "Type\tName\tHost\tPort\tVersion\tHome\n")
-			err = instance.ForAll(ct, lsInstancePlain, args, params)
+			err = instance.ForAll(ct, Hostname, lsInstancePlain, args, params)
 			lsTabWriter.Flush()
 		}
 		if err == os.ErrNotExist {

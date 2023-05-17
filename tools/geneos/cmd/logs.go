@@ -98,12 +98,12 @@ instance details.
 
 		switch {
 		case logCmdCat:
-			err = instance.ForAll(ct, logCatInstance, args, params)
+			err = instance.ForAll(ct, Hostname, logCatInstance, args, params)
 		case logCmdFollow:
 			// never returns
 			err = followLogs(ct, args, params)
 		default:
-			err = instance.ForAll(ct, logTailInstance, args, params)
+			err = instance.ForAll(ct, Hostname, logTailInstance, args, params)
 		}
 
 		return
@@ -123,7 +123,7 @@ func followLog(c geneos.Instance) (err error) {
 func followLogs(ct *geneos.Component, args, params []string) (err error) {
 	done := make(chan bool)
 	tails = watchLogs()
-	if err = instance.ForAll(ct, logFollowInstance, args, params); err != nil {
+	if err = instance.ForAll(ct, Hostname, logFollowInstance, args, params); err != nil {
 		log.Error().Err(err).Msg("")
 	}
 	<-done

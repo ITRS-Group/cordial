@@ -51,7 +51,7 @@ Create new certificates for instances.
 	},
 	RunE: func(command *cobra.Command, _ []string) error {
 		ct, args, params := cmd.CmdArgsParams(command)
-		return instance.ForAll(ct, newInstanceCert, args, params)
+		return instance.ForAll(ct, cmd.Hostname, newInstanceCert, args, params)
 	},
 }
 

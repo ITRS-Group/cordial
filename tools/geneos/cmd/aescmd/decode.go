@@ -156,7 +156,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 
 		ct, args, _ := cmd.CmdArgsParams(command)
 		params := []string{ciphertext}
-		return instance.ForAll(ct, aesDecodeInstance, args, params)
+		return instance.ForAll(ct, cmd.Hostname, aesDecodeInstance, args, params)
 	},
 }
 

@@ -20,6 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+// Package aescmd package groups related AES256 keyfile and crypto commands
 package aescmd
 
 import (
@@ -41,6 +42,7 @@ func init() {
 	cmd.GeneosCmd.AddCommand(AesCmd)
 }
 
+// AesCmd exported to parent / root command in the cmd package
 var AesCmd = &cobra.Command{
 	Use:     "aes",
 	GroupID: cmd.GROUP_SUBSYSTEMS,

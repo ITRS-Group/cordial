@@ -197,7 +197,7 @@ func GetAll(r *geneos.Host, ct *geneos.Component) (confs []geneos.Instance) {
 	return
 }
 
-// Looks for exactly one matching instance across types and hosts
+// Match looks for exactly one matching instance across types and hosts
 // returns Invalid Args if zero of more than 1 match
 func Match(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 	list := MatchAll(ct, name)
@@ -428,14 +428,18 @@ func AtLeastVersion(c geneos.Instance, version string) bool {
 // ForAll calls the supplied function for each matching instance. It
 // prints any returned error on STDOUT and the only error returned is
 // os.ErrNotExist if there are no matching instances.
-func ForAll(ct *geneos.Component, fn func(geneos.Instance, []string) error, args []string, params []string) (err error) {
+func ForAll(ct *geneos.Component, hostname string, fn func(geneos.Instance, []string) error, args []string, params []string) (err error) {
 	n := 0
 	log.Debug().Msgf("args %v, params %v", args, params)
 	// if args is empty, get all matching instances. this allows internal
 	// calls with an empty arg list without having to do the parseArgs()
 	// dance
+	h := geneos.GetHost(hostname)
+	if h == nil {
+		h = geneos.ALL
+	}
 	if len(args) == 0 {
-		args = AllNames(geneos.ALL, ct)
+		args = AllNames(h, ct)
 	}
 	for _, name := range args {
 		cs := MatchAll(ct, name)
@@ -497,6 +501,10 @@ func ForAllWithResults(ct *geneos.Component, fn func(geneos.Instance, []string) 
 // instance.
 func AllNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 	var files []fs.DirEntry
+
+	if h == nil {
+		h = geneos.ALL
+	}
 
 	if h == geneos.ALL {
 		for _, r := range geneos.AllHosts() {
@@ -608,6 +616,18 @@ func IsDisabled(c geneos.Instance) bool {
 	return false
 }
 
+// IsProtected returns true if instance c is marked protected
 func IsProtected(c geneos.Instance) bool {
 	return c.Config().GetBool("protected")
+}
+
+// SharedPath returns the full path a directory or file in the instances
+// component type shared directory joined to any parts subs - the last
+// element can be a filename. If the instance is not loaded then "." is
+// returned for the current directory.
+func SharedPath(c geneos.Instance, subs ...interface{}) string {
+	if !c.Loaded() {
+		return "."
+	}
+	return c.Type().SharedPath(c.Host(), subs...)
 }

@@ -57,7 +57,7 @@ when the |-S| flag is used.
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := CmdArgsParams(cmd)
-		return instance.ForAll(ct, enableInstance, args, params)
+		return instance.ForAll(ct, Hostname, enableInstance, args, params)
 	},
 }
 

@@ -52,7 +52,7 @@ Show for each of the matching instance the command line that would be used to ru
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := CmdArgsParams(cmd)
-		return instance.ForAll(ct, commandInstance, args, params)
+		return instance.ForAll(ct, Hostname, commandInstance, args, params)
 	},
 }
 
