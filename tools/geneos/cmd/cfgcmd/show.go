@@ -41,7 +41,7 @@ func init() {
 }
 
 var configShowCmd = &cobra.Command{
-	Use:   "show",
+	Use:   "show [KEY...]",
 	Short: "Show program configuration",
 	Long: strings.ReplaceAll(`
 The show command outputs the current configuration for the |geneos|
@@ -49,13 +49,16 @@ program in JSON format. It shows the processed values from the
 on-disk copy of your program configuration and not the final
 configuration that the running program uses, which includes many
 built-in defaults.
+
+If any arguments are given then they are treated as a list of keys to
+limit the output to just those keys that match and have a non-nil value.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "false",
 	},
-	RunE: func(command *cobra.Command, _ []string) (err error) {
+	RunE: func(command *cobra.Command, args []string) (err error) {
 		var buffer []byte
 		var cf *config.Config
 
@@ -64,8 +67,22 @@ built-in defaults.
 		} else {
 			cf, _ = config.Load(cmd.Execname, config.IgnoreSystemDir(), config.IgnoreWorkingDir())
 		}
-		if buffer, err = json.MarshalIndent(cf.AllSettings(), "", "    "); err != nil {
-			return
+
+		if len(args) > 0 {
+			values := make(map[string]interface{})
+			for _, k := range args {
+				v := cf.Get(k)
+				if v != nil {
+					values[k] = v
+				}
+			}
+			if buffer, err = json.MarshalIndent(values, "", "    "); err != nil {
+				return
+			}
+		} else {
+			if buffer, err = json.MarshalIndent(cf.AllSettings(), "", "    "); err != nil {
+				return
+			}
 		}
 		fmt.Println(string(buffer))
 
