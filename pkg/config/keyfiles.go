@@ -52,9 +52,10 @@ func (k *KeyFile) Type() string {
 	return "KEYFILE"
 }
 
-// RollKeyfile will create a new keyfile at path. It will backup any existing
-// file with the suffix backup unless backup is an empty string, in which case
-// any existing file is overwritten and no backup made.
+// RollKeyfile will create a new keyfile at path. It will backup any
+// existing file with the suffix backup unless the argument is an empty
+// string, in which case any existing file is overwritten and no backup
+// made.
 func (k *KeyFile) RollKeyfile(backup string) (crc uint32, err error) {
 	if _, _, err = k.Check(false); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -79,7 +80,7 @@ func (k *KeyFile) RollKeyfile(backup string) (crc uint32, err error) {
 // backup file path for an existing keyfile.
 func (k *KeyFile) Concat(extras ...string) string {
 	elems := append([]string{k.String()}, extras...)
-	return filepath.Join(elems...)
+	return strings.Join(elems, "")
 }
 
 // Base returns the last component of the file path to keyfile
