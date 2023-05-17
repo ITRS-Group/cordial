@@ -67,6 +67,17 @@ const (
 	GROUP_CREDENTIALS = "credentials"
 )
 
+var geneosUnsetError = strings.ReplaceAll(`Geneos location not set.
+
+You can do one of the following:
+* Run |geneos config set geneos=/PATH| (where |/PATH| is the location of the Geneos installation)
+* Run |geneos init| or |geneos init /PATH| to initialise an installation
+  * There are also variations on the |init| command, please see help for the command
+* Set the |GENEOS_HOME| or |ITRS_HOME| environment variables, either once or in your |.profile|:
+  * |export GENEOS_HOME=/PATH|
+
+`, "|", "`")
+
 func init() {
 	cordial.LogInit(pkgname)
 
@@ -210,20 +221,7 @@ $ geneos ps
 			log.Debug().Msgf("parent? %v parent name %s name %s needshomedir %s", command.HasParent(), command.Parent().Name(), command.Name(), command.Annotations["needshomedir"])
 			if command.Annotations["needshomedir"] == "true" {
 				command.SetUsageTemplate(" ")
-				return fmt.Errorf("%s", strings.ReplaceAll(`
-Geneos installation directory not set.
-
-Use one of the following to fix this:
-
-For an existing installation:
-	$ geneos set user geneos=/path/to/geneos
-
-To initialise a new installation:
-	$ geneos init /path/to/geneos
-
-For temporary usage:
-	$ export ITRS_HOME=/path/to/geneos
-`, "|", "`"))
+				return fmt.Errorf("%s", geneosUnsetError)
 			}
 		}
 		return parseArgs(command, args)
@@ -281,7 +279,7 @@ func initConfig() {
 		log.Fatal().Err(err).Msg("")
 	}
 	// support old set-ups
-	cf.BindEnv(Execname, "ITRS_HOME")
+	cf.BindEnv(Execname, "GENEOS_HOME", "ITRS_HOME")
 
 	// auto env variables must be prefixed "ITRS_"
 	cf.SetEnvPrefix("ITRS")
