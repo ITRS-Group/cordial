@@ -39,9 +39,27 @@ func init() {
 
 var setUserCmd = &cobra.Command{
 	Use:   "set [KEY=VALUE...]",
-	Short: "Set configuration parameters",
+	Short: "Set program configuration",
 	Long: strings.ReplaceAll(`
+Set configuration parameters for the |geneos| program.
+
+Each value is in the form of KEY=VALUE where key is the configuration
+item and value an arbitrary string value. Where a KEY is in a
+hierarchy use a dot (|.|) as the delimiter.
+
+While you can set arbitrary keys only some have any meaning. The most
+important one is |geneos|, the path to the root directory of the
+Geneos installation managed by the program. If you change or remove
+this value you may break the functionality of the program, so please
+be careful.
+
+For an explanation of the various configuration parameters see the
+main documentation.
 `, "|", "`"),
+	Example: `
+geneos config set geneos="/opt/geneos"
+geneos config set config.rebuild=always
+`,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -50,17 +68,21 @@ var setUserCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		_, _, params := cmd.CmdArgsParams(command)
 
-		vp, _ := config.Load(cmd.Execname, config.IgnoreSystemDir(), config.IgnoreWorkingDir())
-		vp.SetKeyValues(params...)
+		cf, _ := config.Load(cmd.Execname,
+			config.IgnoreSystemDir(),
+			config.IgnoreWorkingDir(),
+			config.KeyDelimiter("."),
+		)
+		cf.SetKeyValues(params...)
 
 		// fix breaking change
-		if vp.IsSet("itrshome") {
-			if !vp.IsSet("geneos") {
-				vp.Set("geneos", vp.GetString("itrshome"))
+		if cf.IsSet("itrshome") {
+			if !cf.IsSet("geneos") {
+				cf.Set("geneos", cf.GetString("itrshome"))
 			}
-			vp.Set("itrshome", nil)
+			cf.Set("itrshome", nil)
 		}
 
-		return vp.Save(cmd.Execname)
+		return cf.Save(cmd.Execname)
 	},
 }
