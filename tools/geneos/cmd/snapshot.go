@@ -43,7 +43,7 @@ import (
 var snapshotCmdValues, snapshotCmdSeverities, snapshotCmdSnoozes, snapshotCmdUserAssignments, snapshotCmdXpathsonly bool
 var snapshotCmdMaxitems int
 var snapshotCmdUsername, snapshotCmdPwFile string
-var snapshotCmdPassword *memguard.Enclave
+var snapshotCmdPassword config.Plaintext
 
 func init() {
 	GeneosCmd.AddCommand(snapshotCmd)
@@ -115,12 +115,12 @@ not applied in any defined order.
 			if sp, err = os.ReadFile(snapshotCmdPwFile); err != nil {
 				return
 			}
-			snapshotCmdPassword = memguard.NewEnclave(sp)
+			snapshotCmdPassword = config.NewPlaintext(sp)
 		} else {
-			snapshotCmdPassword = config.GetEnclave(config.Join("snapshot", "password"))
+			snapshotCmdPassword = config.GetPassword(config.Join("snapshot", "password"))
 		}
 
-		if snapshotCmdUsername != "" && (snapshotCmdPassword == nil || snapshotCmdPassword.Size() == 0) {
+		if snapshotCmdUsername != "" && (snapshotCmdPassword.IsNil() || snapshotCmdPassword.Size() == 0) {
 			snapshotCmdPassword, _ = config.ReadPasswordInput(false, 0)
 		}
 
@@ -150,10 +150,8 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 			username = snapshotCmdUsername
 		}
 
-		if len(password) == 0 && snapshotCmdPassword != nil {
-			pwb, _ := snapshotCmdPassword.Open()
-			password = pwb.String()
-			defer pwb.Destroy()
+		if len(password) == 0 {
+			password = snapshotCmdPassword.String()
 		}
 
 		// if username is still unset then look for credentials
@@ -162,7 +160,7 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 			creds := config.FindCreds(c.Type().String()+":"+c.Name(), config.SetAppName(Execname))
 			if creds != nil {
 				username = creds.GetString("username")
-				pwb = creds.GetEnclave("password")
+				password = fmt.Sprint(creds.GetPassword("password"))
 			}
 
 			if pwb != nil {

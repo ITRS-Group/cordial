@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/awnumar/memguard"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -47,41 +46,59 @@ var aesEncodeCmdExpandable, aesEncodeCmdAskOnce bool
 func init() {
 	AesCmd.AddCommand(aesEncodeCmd)
 
-	aesEncodeCmd.Flags().VarP(&aesEncodeCmdKeyfile, "keyfile", "k", "Specific AES key file to use. Ignores matching instances")
-	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdString, "password", "p", "", "Password string to use")
-	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdSource, "source", "s", "", "Source for password to use")
-	aesEncodeCmd.Flags().BoolVarP(&aesEncodeCmdExpandable, "expandable", "e", false, "Output in ExpandString format")
-	aesEncodeCmd.Flags().BoolVarP(&aesEncodeCmdAskOnce, "once", "o", false, "Only prompt for password once. For scripts injecting passwords on stdin")
+	aesEncodeCmd.Flags().BoolVarP(&aesEncodeCmdExpandable, "expandable", "e", false, "Output in 'expandable' format")
+	aesEncodeCmd.Flags().VarP(&aesEncodeCmdKeyfile, "keyfile", "k", "Path to keyfile")
+	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdString, "password", "p", "", "Plaintext password")
+	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdSource, "source", "s", "", "Alternative source for plaintext password")
+	aesEncodeCmd.Flags().BoolVarP(&aesEncodeCmdAskOnce, "once", "o", false, "Only prompt for password once, do not verify. Normally use '-s -' for stdin")
 
 	aesEncodeCmd.Flags().SortFlags = false
 }
 
 var aesEncodeCmd = &cobra.Command{
 	Use:   "encode [flags] [TYPE] [NAME...]",
-	Short: "Encode a password using a Geneos compatible keyfile",
+	Short: "Encode plaintext to a Geneos AES256 password using a key file",
 	Long: strings.ReplaceAll(`
-	Encode a password (or any other string) using a Geneos compatible keyfile.
-	
-	By default the user is prompted to enter a password but can provide a
-	string or URL with the |-p| option. If TYPE and NAME are given then
-	the key files are checked for those instances. If multiple instances
-	match then the given password is encoded for each keyfile found.
+Encode plaintext to a Geneos AES256 format password using a key file.
+
+A key file must either be provided using the |-k| option or otherwise all
+matching instances that have a configured key file are used to produce an
+encrypted password.
+
+The plaintext password can be provided in three ways. The default is to
+prompt for the plaintext and again to verify they match. Alternatively the
+password can be provided directly on the command line using the |-p
+plaintext| flag or from an external source using the |-s PATH| or |-s URL|
+option where the contents of the file at PATH ir URL is read and used. If |-s
+-| is used then the plaintext is read from STDIN.
+
+It is important to note that no whitespace is trimmed from the
+plaintext. This can have unexpected results if you do something like
+this:
+
+$ echo "test" | geneos aes encode -s -
+
+rather then this:
+
+$ echo -n "test" | geneos aes encode -s -
 	`, "|", "`"),
+	Example: `
+`,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
-		var plaintext *memguard.Enclave
+		var plaintext config.Plaintext
 		if aesEncodeCmdString != "" {
-			plaintext = memguard.NewEnclave([]byte(aesEncodeCmdString))
+			plaintext = config.NewPlaintext([]byte(aesEncodeCmdString))
 		} else if aesEncodeCmdSource != "" {
 			pt, err := geneos.ReadFrom(aesEncodeCmdSource)
 			if err != nil {
 				return err
 			}
-			plaintext = memguard.NewEnclave(pt)
+			plaintext = config.NewPlaintext(pt)
 		} else {
 			plaintext, err = config.ReadPasswordInput(!aesEncodeCmdAskOnce, 0)
 			if err != nil {
@@ -95,7 +112,7 @@ var aesEncodeCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			fmt.Printf("%s\n", e)
+			fmt.Println(e)
 			return nil
 		}
 
@@ -117,7 +134,7 @@ func aesEncodeInstance(c geneos.Instance, params []string) (err error) {
 	}
 
 	pw, _ := base64.StdEncoding.DecodeString(params[0])
-	plaintext := memguard.NewEnclave(pw)
+	plaintext := config.NewPlaintext(pw)
 	e, err := keyfile.Encode(plaintext, aesEncodeCmdExpandable)
 	if err != nil {
 		return

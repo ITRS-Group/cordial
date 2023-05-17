@@ -28,7 +28,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -45,7 +44,7 @@ var initCmdAll string
 var initCmdLogs, initCmdMakeCerts, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
 var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdFloatingTemplate, initCmdVersion string
 var initCmdDLUsername, initCmdPwFile string
-var initCmdDLPassword *memguard.Enclave
+var initCmdDLPassword config.Plaintext
 
 var initCmdExtras = instance.ExtraConfigValues{}
 
@@ -253,12 +252,12 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 			if ip, err = os.ReadFile(initCmdPwFile); err != nil {
 				return
 			}
-			initCmdDLPassword = memguard.NewEnclave(ip)
+			initCmdDLPassword = config.NewPlaintext(ip)
 		} else {
-			initCmdDLPassword = config.GetEnclave(config.Join("download", "password"))
+			initCmdDLPassword = config.GetPassword(config.Join("download", "password"))
 		}
 
-		if initCmdDLUsername != "" && (initCmdDLPassword == nil || initCmdDLPassword.Size() == 0) {
+		if initCmdDLUsername != "" && (initCmdDLPassword.IsNil() || initCmdDLPassword.Size() == 0) {
 			initCmdDLPassword, _ = config.ReadPasswordInput(false, 0)
 		}
 

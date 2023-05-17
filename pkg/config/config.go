@@ -30,7 +30,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/awnumar/memguard"
 	"github.com/spf13/viper"
 )
 
@@ -126,18 +125,18 @@ func (c *Config) GetString(s string, options ...ExpandOptions) string {
 	return c.ExpandString(c.Viper.GetString(s), options...)
 }
 
-// GetEnclave returns a sealed enclave containing the configuration item
+// GetPassword returns a sealed enclave containing the configuration item
 // identified by key and expanded using the Expand function with the
 // options supplied.
-func GetEnclave(s string, options ...ExpandOptions) *memguard.Enclave {
-	return global.GetEnclave(s, options...)
+func GetPassword(s string, options ...ExpandOptions) Plaintext {
+	return global.GetPassword(s, options...)
 }
 
-// GetEnclave returns a sealed enclave containing the configuration item
+// GetPassword returns a sealed enclave containing the configuration item
 // identified by key and expanded using the Expand function with the
 // options supplied.
-func (c *Config) GetEnclave(key string, options ...ExpandOptions) *memguard.Enclave {
-	return c.ExpandEnclave(c.Viper.GetString(key), options...)
+func (c *Config) GetPassword(key string, options ...ExpandOptions) Plaintext {
+	return Plaintext{c.ExpandEnclave(c.Viper.GetString(key), options...)}
 }
 
 // GetInt functions like [viper.GetInt] but additionally calls

@@ -358,7 +358,7 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 			creds := config.FindCreds(source, config.SetAppName(Execname))
 			if creds != nil {
 				opts.username = creds.GetString("username")
-				opts.password = creds.GetEnclave("password")
+				opts.password = creds.GetPassword("password")
 			}
 		}
 
@@ -368,15 +368,7 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 			if req, err = http.NewRequest("GET", source, nil); err != nil {
 				return
 			}
-			if opts.password != nil {
-				pw, _ := opts.password.Open()
-				password := config.ExpandLockedBuffer(pw.String())
-				pw.Destroy()
-				req.SetBasicAuth(opts.username, password.String())
-				password.Destroy()
-			} else {
-				req.SetBasicAuth(opts.username, "")
-			}
+			req.SetBasicAuth(opts.username, opts.password.String())
 			if resp, err = client.Do(req); err != nil {
 				return
 			}
@@ -430,7 +422,7 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 			creds := config.FindCreds(source, config.SetAppName(Execname))
 			if creds != nil {
 				opts.username = creds.GetString("username")
-				opts.password = creds.GetEnclave("password")
+				opts.password = creds.GetPassword("password")
 			}
 		}
 
@@ -440,21 +432,15 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 			if opts.username != "" {
 				da := downloadauth{
 					Username: opts.username,
-				}
-				if opts.password != nil {
-					pw, _ := opts.password.Open()
-					password := config.ExpandLockedBuffer(pw.String())
-					pw.Destroy()
-					da.Password = strings.Clone(password.String())
-					password.Destroy()
+					Password: opts.password.String(),
 				}
 				auth_body, err = json.Marshal(da)
 				if err != nil {
 					return
 				}
 				ba := auth_body
-				auth_reader := bytes.NewBuffer(ba)
-				if resp, err = http.Post(source, "application/json", auth_reader); err != nil {
+				authReader := bytes.NewBuffer(ba)
+				if resp, err = http.Post(source, "application/json", authReader); err != nil {
 					return
 				}
 			}

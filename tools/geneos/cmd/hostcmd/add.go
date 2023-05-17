@@ -30,7 +30,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -41,7 +40,7 @@ import (
 )
 
 var hostAddCmdInit, hostAddCmdPrompt bool
-var hostAddCmdPassword string
+var hostAddCmdPassword config.Plaintext
 var hostAddCmdKeyfile config.KeyFile
 
 func init() {
@@ -50,7 +49,7 @@ func init() {
 	hostAddCmdKeyfile = cmd.DefaultUserKeyfile
 	hostAddCmd.Flags().BoolVarP(&hostAddCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
 	hostAddCmd.Flags().BoolVarP(&hostAddCmdPrompt, "prompt", "p", false, "Prompt for password")
-	hostAddCmd.Flags().StringVarP(&hostAddCmdPassword, "password", "P", "", "Password")
+	hostAddCmd.Flags().VarP(&hostAddCmdPassword, "password", "P", "Password")
 	hostAddCmd.Flags().VarP(&hostAddCmdKeyfile, "keyfile", "k", "Keyfile")
 
 	hostAddCmd.Flags().SortFlags = false
@@ -136,26 +135,26 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		// XXX default to remote user's home dir, not local
 		cf.SetDefault(cmd.Execname, geneos.Root())
 
-		var password []byte
-		var pw *memguard.Enclave
+		var password string
+		var pw config.Plaintext
 
 		if hostAddCmdPrompt {
 			pw, err = config.ReadPasswordInput(true, 3)
 			if err != nil {
 				return
 			}
-		} else if hostAddCmdPassword != "" {
-			pw = memguard.NewEnclave([]byte(hostAddCmdPassword))
+		} else if !hostAddCmdPassword.IsNil() {
+			pw = hostAddCmdPassword
 		}
 
-		if pw != nil && pw.Size() > 0 {
+		if !pw.IsNil() && pw.Size() > 0 {
 			if password, err = hostAddCmdKeyfile.Encode(pw, true); err != nil {
 				return
 			}
 
 			if len(password) > 0 {
 				// this is the encoded password for the config file, not an enclave
-				cf.Set("password", string(password))
+				cf.Set("password", password)
 			}
 		}
 
@@ -187,7 +186,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 				host.Hostname(cf.GetString("hostname")),
 				host.Username(cf.GetString("username")),
 				host.Port(uint16(cf.GetInt("port"))),
-				host.Password(pw),
+				host.Password(pw.Enclave),
 			)
 		} else {
 			h = geneos.NewHost(args[0],

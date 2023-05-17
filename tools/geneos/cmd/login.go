@@ -32,7 +32,8 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-var loginCmdUsername, loginCmdPassword string
+var loginCmdUsername string
+var loginCmdPassword config.Plaintext
 var loginKeyfile config.KeyFile
 var loginCmdList bool
 
@@ -40,7 +41,7 @@ func init() {
 	GeneosCmd.AddCommand(loginCmd)
 
 	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username")
-	loginCmd.Flags().StringVarP(&loginCmdPassword, "password", "p", "", "Password")
+	loginCmd.Flags().VarP(&loginCmdPassword, "password", "p", "Password")
 	loginCmd.Flags().VarP(&loginKeyfile, "keyfile", "k", "Keyfile to use")
 	loginCmd.Flags().BoolVarP(&loginCmdList, "list", "l", false, "list domains of credentials (no validity checks are done)")
 
@@ -118,14 +119,14 @@ credentials can use a separate keyfile.
 		}
 
 		var enc string
-		if loginCmdPassword == "" {
+		if loginCmdPassword.IsNil() {
 			// prompt for password
 			enc, err = loginKeyfile.EncodePasswordInput(true)
 			if err != nil {
 				return
 			}
 		} else {
-			enc, err = loginKeyfile.EncodeString(loginCmdPassword, true)
+			enc, err = loginKeyfile.Encode(loginCmdPassword, true)
 			if err != nil {
 				return
 			}

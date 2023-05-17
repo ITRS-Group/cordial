@@ -53,6 +53,48 @@ type keyvalues struct {
 	iv  [aes.BlockSize]byte
 }
 
+// Plaintext is a type that represents a plaintext string that should be
+// protected
+type Plaintext struct {
+	*memguard.Enclave
+}
+
+// String returns the path to the keyfile as a string
+func (secret *Plaintext) String() string {
+	if secret.Enclave == nil {
+		return ""
+	}
+	l, _ := secret.Open()
+	plaintext := strings.Clone(l.String())
+	l.Destroy()
+	return string(plaintext)
+}
+
+// Set is required to satisfy the pflag Values interface
+func (secret *Plaintext) Set(value string) error {
+	*secret = Plaintext{memguard.NewEnclave([]byte(value))}
+	return nil
+}
+
+// Type is required to satisfy the pflag Values interface
+func (secret *Plaintext) Type() string {
+	return "PLAINTEXT"
+}
+
+// NewPlaintext returns a memguard Enclave initialised with buf
+func NewPlaintext(buf []byte) Plaintext {
+	return Plaintext{memguard.NewEnclave(buf)}
+}
+
+// IsNil returns true if the secret or the underlying memguard Enclave
+// is nil
+func (secret *Plaintext) IsNil() bool {
+	if secret == nil {
+		return true
+	}
+	return secret.Enclave == nil
+}
+
 // NewRandomKeyValues returns a new KeyValues structure with a key and iv
 // generated using the memguard.
 func NewRandomKeyValues() (kv *KeyValues) {
@@ -148,7 +190,7 @@ func (kv *KeyValues) Checksum() (c uint32, err error) {
 	return
 }
 
-func (kv *KeyValues) encode(plaintext *memguard.Enclave) (out []byte, err error) {
+func (kv *KeyValues) encode(plaintext Plaintext) (out []byte, err error) {
 	kl, _ := kv.Open()
 	defer kl.Destroy()
 	k := lockedBufferTo[keyvalues](kl)
@@ -175,7 +217,7 @@ func (kv *KeyValues) encode(plaintext *memguard.Enclave) (out []byte, err error)
 	return
 }
 
-func (kv *KeyValues) Encode(in *memguard.Enclave) (out []byte, err error) {
+func (kv *KeyValues) Encode(in Plaintext) (out []byte, err error) {
 	cipher, err := kv.encode(in)
 	if err == nil {
 		out = make([]byte, len(cipher)*2)
@@ -186,7 +228,7 @@ func (kv *KeyValues) Encode(in *memguard.Enclave) (out []byte, err error) {
 }
 
 func (kv *KeyValues) EncodeString(in string) (out string, err error) {
-	text := memguard.NewEnclave([]byte(in))
+	text := NewPlaintext([]byte(in))
 	cipher, err := kv.encode(text)
 	if err == nil {
 		out = strings.ToUpper(hex.EncodeToString(cipher))
