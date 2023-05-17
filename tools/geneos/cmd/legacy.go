@@ -52,6 +52,8 @@ func init() {
 	showCmd.AddCommand(showUserCmd)
 }
 
+var legacyRun = func(command *cobra.Command, args []string) {}
+
 var addHostCmd = &cobra.Command{
 	Use:     "host [flags] [NAME] [SSHURL]",
 	Aliases: []string{"remote"},
@@ -68,9 +70,7 @@ this alias will be removed in an upcoming release.
 		"replacedby":   "host add",
 	},
 	DisableFlagParsing: true,
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		return RunE(command.Root(), []string{"host", "add"}, args)
-	},
+	Run:                legacyRun,
 }
 
 var deleteHostCmd = &cobra.Command{
@@ -88,9 +88,7 @@ future as this alias will be removed in an upcoming release.
 		"replacedby":   "host delete",
 	},
 	DisableFlagParsing: true,
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		return RunE(command.Root(), []string{"host", "delete"}, args)
-	},
+	Run:                legacyRun,
 }
 
 var lsHostCmd = &cobra.Command{
@@ -108,10 +106,7 @@ this alias will be removed in an upcoming release.
 		"replacedby":   "host ls",
 	},
 	DisableFlagParsing: true,
-	Deprecated:         "Use `geneos host ls` instead.",
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		return RunE(command.Root(), []string{"host", "ls"}, args)
-	},
+	Run:                func(cmd *cobra.Command, args []string) {},
 }
 
 var setHostCmd = &cobra.Command{
@@ -128,9 +123,7 @@ var setHostCmd = &cobra.Command{
 		"replacedby":   "host set",
 	},
 	DisableFlagParsing: true,
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		return RunE(command.Root(), []string{"host", "set"}, args)
-	},
+	Run:                legacyRun,
 }
 
 var showHostCmd = &cobra.Command{
@@ -146,9 +139,7 @@ var showHostCmd = &cobra.Command{
 		"replacedby":   "host show",
 	},
 	DisableFlagParsing: true,
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		return RunE(command.Root(), []string{"host", "show"}, args)
-	},
+	Run:                legacyRun,
 }
 
 var installCmd = &cobra.Command{
@@ -163,9 +154,7 @@ var installCmd = &cobra.Command{
 		"replacedby":   "package install",
 	},
 	DisableFlagParsing: true,
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		return RunE(command.Root(), []string{"package", "install"}, args)
-	},
+	Run:                legacyRun,
 }
 
 var updateLsCmd = &cobra.Command{
@@ -180,9 +169,7 @@ var updateLsCmd = &cobra.Command{
 		"replacedby":   "package ls",
 	},
 	DisableFlagParsing: true,
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		return RunE(command.Root(), []string{"package", "ls"}, args)
-	},
+	Run:                legacyRun,
 }
 
 var updateCmd = &cobra.Command{
@@ -198,9 +185,7 @@ var updateCmd = &cobra.Command{
 	},
 	Args:               cobra.RangeArgs(0, 2),
 	DisableFlagParsing: true,
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		return RunE(command.Root(), []string{"package", "update"}, args)
-	},
+	Run:                legacyRun,
 }
 
 var setUserCmd = &cobra.Command{
@@ -215,9 +200,7 @@ var setUserCmd = &cobra.Command{
 		"replacedby":   "config set",
 	},
 	DisableFlagParsing: true,
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		return RunE(command.Root(), []string{"config", "set"}, args)
-	},
+	Run:                legacyRun,
 }
 
 var unsetUserCmd = &cobra.Command{
@@ -232,9 +215,7 @@ var unsetUserCmd = &cobra.Command{
 		"replacedby":   "config unset",
 	},
 	DisableFlagParsing: true,
-	RunE: func(command *cobra.Command, args []string) error {
-		return RunE(command.Root(), []string{"config", "unset"}, args)
-	},
+	Run:                legacyRun,
 }
 
 var showUserCmd = &cobra.Command{
@@ -255,9 +236,7 @@ to quickly create a Cobra application.
 		"replacedby":   "config show",
 	},
 	DisableFlagParsing: true,
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		return RunE(command.Root(), []string{"config", "show"}, args)
-	},
+	Run:                legacyRun,
 }
 
 var showGlobalCmd = &cobra.Command{
