@@ -35,14 +35,14 @@ import (
 )
 
 var hostSetCmdPrompt bool
-var hostSetCmdPassword string
+var hostSetCmdPassword config.Plaintext
 var hostSetCmdKeyfile config.KeyFile
 
 func init() {
 	HostCmd.AddCommand(hostSetCmd)
 
 	hostSetCmd.Flags().BoolVarP(&hostSetCmdPrompt, "prompt", "p", false, "Prompt for password")
-	hostSetCmd.Flags().StringVarP(&hostSetCmdPassword, "password", "P", "", "Password")
+	hostSetCmd.Flags().VarP(&hostSetCmdPassword, "password", "P", "password")
 	hostSetCmd.Flags().VarP(&hostSetCmdKeyfile, "keyfile", "k", "Keyfile")
 
 	hostSetCmd.Flags().SortFlags = false
@@ -90,8 +90,8 @@ Set options on remote host configurations.
 			if password, err = hostSetCmdKeyfile.EncodePasswordInput(true); err != nil {
 				return
 			}
-		} else if hostSetCmdPassword != "" {
-			if password, err = hostSetCmdKeyfile.EncodeString(hostSetCmdPassword, true); err != nil {
+		} else if !hostSetCmdPassword.IsNil() {
+			if password, err = hostSetCmdKeyfile.Encode(hostSetCmdPassword, true); err != nil {
 				return
 			}
 		}

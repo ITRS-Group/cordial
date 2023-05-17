@@ -200,7 +200,7 @@ func (k *KeyFile) EncodeString(plaintext string, expandable bool) (out string, e
 // If the keyfile is located under the user's configuration directory,
 // as defined by UserConfigDir, then the function will replace any home
 // directory prefix with `~/' to shorten the keyfile path.
-func (k *KeyFile) Encode(plaintext *memguard.Enclave, expandable bool) (out []byte, err error) {
+func (k *KeyFile) Encode(plaintext Plaintext, expandable bool) (out string, err error) {
 	a, err := k.Read()
 	if err != nil {
 		return
@@ -217,15 +217,15 @@ func (k *KeyFile) Encode(plaintext *memguard.Enclave, expandable bool) (out []by
 		if strings.HasPrefix(k.String(), cfdir) {
 			*k = KeyFile("~" + strings.TrimPrefix(k.String(), home))
 		}
-		out = fmt.Appendf(out, "${enc:%s:+encs+%s}", k, e)
+		out = fmt.Sprintf("${enc:%s:+encs+%s}", k, e)
 	} else {
-		out = fmt.Appendf(out, "+encs+%s", e)
+		out = fmt.Sprintf("+encs+%s", e)
 	}
 	return
 }
 
-// Decode input as a string using keyfile and return plaintext. An error
-// is returned if the keyfile is not readable.
+// DecodeString decodes the input as a string using keyfile and return
+// plaintext. An error is returned if the keyfile is not readable.
 func (k *KeyFile) DecodeString(input string) (plaintext string, err error) {
 	a, err := k.Read()
 	if err != nil {
@@ -263,8 +263,6 @@ func (k *KeyFile) EncodePasswordInput(expandable bool) (out string, err error) {
 	if err != nil {
 		return
 	}
-	var e []byte
-	e, err = k.Encode(plaintext, expandable)
-	out = string(e)
+	out, err = k.Encode(plaintext, expandable)
 	return
 }

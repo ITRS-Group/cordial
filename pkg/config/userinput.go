@@ -27,7 +27,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/awnumar/memguard"
 	"golang.org/x/term"
 )
 
@@ -55,7 +54,7 @@ func ReadUserInput(prompt string) (input string, err error) {
 // are "Password" and "Re-enter Password".
 //
 // On error the pw is empty and does not need to be Destory()ed.
-func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw *memguard.Enclave, err error) {
+func ReadPasswordInput(match bool, maxtries int, prompt ...string) (plaintext Plaintext, err error) {
 	if match {
 		var matched bool
 		if len(prompt) != 2 {
@@ -74,7 +73,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw *memguard
 				fmt.Printf("%s: ", prompt[0])
 			}
 			pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
-			pw1 := memguard.NewEnclave(pwt)
+			pw1 := NewPlaintext(pwt)
 			fmt.Println() // always move to new line even on error
 			if err != nil {
 				return
@@ -85,7 +84,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw *memguard
 				fmt.Printf("%s: ", prompt[1])
 			}
 			pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
-			pw2 := memguard.NewEnclave(pwt)
+			pw2 := NewPlaintext(pwt)
 			fmt.Println() // always move to new line even on error
 			if err != nil {
 				return
@@ -100,7 +99,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw *memguard
 			pw2b.Destroy()
 
 			if matched {
-				pw = pw1
+				plaintext = pw1
 				break
 			}
 			fmt.Println("Passwords do not match. Please try again.")
@@ -117,7 +116,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (pw *memguard
 			fmt.Printf("%s: ", strings.Join(prompt, " "))
 		}
 		pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
-		pw = memguard.NewEnclave(pwt)
+		plaintext = NewPlaintext(pwt)
 		fmt.Println() // always move to new line even on error
 		if err != nil {
 			return

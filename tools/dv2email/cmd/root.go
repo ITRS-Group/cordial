@@ -144,7 +144,7 @@ directory or in the user's .config/dv2email directory)
 
 		username := gwcf.GetString("username")
 		gateway := gwcf.GetString("name")
-		pwe := gwcf.GetEnclave("password")
+		pwe := gwcf.GetPassword("password")
 
 		if username != "" {
 			pw, _ := pwe.Open()
@@ -158,7 +158,7 @@ directory or in the user's .config/dv2email directory)
 			creds := config.FindCreds("gateway:"+gateway, config.SetAppName("geneos"))
 			if creds != nil {
 				username = creds.GetString("username")
-				pwb = creds.GetEnclave("password")
+				pwb = creds.GetPassword("password")
 			}
 
 			if pwb != nil {
@@ -228,7 +228,7 @@ directory or in the user's .config/dv2email directory)
 		emcf := cf.Sub("email")
 
 		eusername := emcf.GetString("username")
-		epwe := emcf.GetEnclave("password")
+		epwe := emcf.GetPassword("password")
 		smtpserver := emcf.GetString("smtp", config.Default("localhost"))
 		smtptls := emcf.GetString("use-tls", config.Default("default"))
 
@@ -242,7 +242,7 @@ directory or in the user's .config/dv2email directory)
 			creds := config.FindCreds(smtpserver, config.SetAppName("geneos"))
 			if creds != nil {
 				eusername = creds.GetString("username")
-				pwb = creds.GetEnclave("password")
+				pwb = creds.GetPassword("password")
 			}
 
 			if pwb != nil {
