@@ -30,13 +30,16 @@ does not already exist.
 
 For each instance any existing `keyfile` path is copied to a
 `prevkeyfile` setting, unless the `--noroll`/`-N` option if given, to
-support key file updating in Geneos GA6.x.
+support key file updating in Geneos GA6 and above.
 
 Key files are only set on components that support them.
 
 Only local keyfiles, unless given as a URL, can be copied to remote
 hosts, not visa versa. Referencing a keyfile by CRC on a remote host
 will not result in that file being copies to other hosts.
+
+
+
 
 
 ```
