@@ -5,20 +5,51 @@ Add a new instance
 ### Synopsis
 
 
-Add a new instance of a component TYPE with the name NAME. The
-details will depends on the component TYPE and are saved to a
-configuration file in the instance directory. The instance directory
-can be found using the `geneos home TYPE NAME` command.
+Add a new instance of a component TYPE with the name NAME.
+
+The meaning of the options vary by component TYPE and are stored in a
+configuration file in the instance directory.
 
 The default configuration file format and extension is `json`. There will
-be support for `yaml` in future releases for easier human editing.
+be support for `yaml` in future releases.
 	
-Gateways, SANs and Floating probes are given a configuration file
-based on the templates configured for the different components.
+The instance will be started after completion if given the `--start`/`-S` or
+`--log`/`-l` options. The latter will also follow the log file until
+interrupted.
+
+Geneos components all use TCP ports either for inbound connections or, in the
+case of SANs, to identify themselves to the Gateway. The program will choose
+the next available port from the list in the for each component called
+`TYPEportrange` (e.g. `gatewayportrange`) in the program configurations.
+Availability is only determined by searching all other instances (of any
+TYPE) on the same host. This behavior can be overridden with the
+`--port`/`-p` option.
+
+When an instance is started it is given an environment made up of the
+variables in it's configuration file and some necessary defailts, such as
+`LD_LIBRARY_PATH`.  Additional variables can be set with the `--env`/`-e`
+option, which can be repeated as many times as required.
+
+The underlying package used by each instance is referenced by a `basename`
+which defaults to `active_prod`. You may want to run multiple components of
+the same type but different releases. You can do this by configuring
+additional base names with `geneos package update` and by setting the base
+name with the `--base``-b` option.
+
+Gateways, SANs and Floating probes are given a configuration file based on
+the templates configured for the different components. The default template
+can be overridden with the `--template`/`-T` option specifying the source to
+use. The source can be a local file, a URL or STDIN.
+
+Any additional command line arguments are used to set configuration values.
+Any arguments not in the form NAME=VALUE are ignored. Note that NAME must be
+a plain word and must not contain dots (`.`) or double colons (`::`) as these
+are used as internal delimiters. No component uses hierarchical configuration
+names except those that can be set by the options above. 
 
 
 ```
-geneos add [flags] TYPE NAME
+geneos add [flags] TYPE NAME [KEY=VALUE...]
 ```
 
 ### Examples
@@ -34,19 +65,28 @@ geneos add netprobe infraprobe12 --start --log
 ### Options
 
 ```
-  -T, --template string               template file to use instead of default
-  -S, --start                         Start new instance(s) after creation
-  -l, --log                           Run 'logs -f' after starting instance. Implies -S to start the instance
-  -b, --base string                   select the base version for the instance, default active_prod (default "active_prod")
-  -p, --port uint16                   override the default port selection
-  -k, --keyfile string                use an external keyfile for AES256 encoding
-  -C, --crc string                    use a keyfile (in the component shared directory) with CRC for AES256 encoding
-  -e, --env NAME=VALUE                (all components) Add an environment variable in the format NAME=VALUE
-  -i, --include PRIORITY:[PATH|URL]   (gateways) Add an include file in the format PRIORITY:[PATH|URL]
-  -g, --gateway HOSTNAME:PORT         (sans, floating) Add a gateway in the format NAME:PORT:SECURE
-  -a, --attribute NAME=VALUE          (sans) Add an attribute in the format NAME=VALUE
-  -t, --type NAME                     (sans) Add a type TYPE
-  -v, --variable [TYPE:]NAME=VALUE    (sans) Add a variable in the format [TYPE:]NAME=VALUE
+  -S, --start                         Start new instance after creation
+  -l, --log                           Follow the logs after starting the instance.
+                                      Implies -S to start the instance
+  -p, --port uint16                   Override the default port selection
+  -e, --env NAME=VALUE                Set an environment variable for the instance start-up
+                                      Repeat option as required.
+  -b, --base string                   Select the base version for the
+                                      instance (default "active_prod")
+  -k, --keyfile PATH                  Keyfile PATH
+  -C, --crc CRC                       CRC of key file in the component's shared "keyfiles" 
+                                      directory (extension optional)
+  -T, --template PATH|URL|-           Template file to use PATH|URL|-
+  -i, --include PRIORITY:[PATH|URL]   Set an include file in the format PRIORITY:[PATH|URL]
+                                      Repeat option as required (gateway only)
+  -g, --gateway HOSTNAME:PORT         Set a gateway in the format NAME:PORT:SECURE
+                                      Repeat options as required (san, floating only)
+  -a, --attribute NAME=VALUE          Set an attribute in the format NAME=VALUE
+                                      Repeat option as required (san only)
+  -t, --type NAME                     Set a type TYPE
+                                      Repeat option as required (san only)
+  -v, --variable [TYPE:]NAME=VALUE    Set a variable in the format [TYPE:]NAME=VALUE
+                                      Repeat option as required (san only)
 ```
 
 ### Options inherited from parent commands
