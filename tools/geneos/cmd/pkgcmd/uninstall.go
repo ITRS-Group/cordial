@@ -96,8 +96,8 @@ geneos uninstall --version 5.14.1
 		ct, _ := cmd.CmdArgs(command)
 		h := geneos.GetHost(cmd.Hostname)
 
-		for _, h := range h.Range(geneos.AllHosts()...) {
-			for _, ct := range ct.Range(geneos.RealComponents()...) {
+		for _, h := range h.OrList(geneos.AllHosts()...) {
+			for _, ct := range ct.OrList(geneos.RealComponents()...) {
 				if ct.RelatedTypes != nil {
 					log.Debug().Msgf("skipping %s as has related types, remove those instead", ct)
 					continue

@@ -124,8 +124,8 @@ geneos aes new -S gateway
 			ct, args, _ := cmd.CmdArgsParams(command)
 			h := geneos.GetHost(cmd.Hostname)
 
-			for _, ct := range ct.Range(componentsWithKeyfiles...) {
-				for _, h := range h.Range(geneos.AllHosts()...) {
+			for _, ct := range ct.OrList(componentsWithKeyfiles...) {
+				for _, h := range h.OrList(geneos.AllHosts()...) {
 					aesImportSave(ct, h, kv)
 					params := []string{crcstr + ".aes"}
 					instance.ForAll(ct, cmd.Hostname, aesNewSetInstance, args, params)

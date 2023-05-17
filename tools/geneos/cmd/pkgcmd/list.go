@@ -78,8 +78,8 @@ Versions are listed in descending order for each component type, i.e.
 		h := geneos.GetHost(cmd.Hostname)
 		versions := []geneos.ReleaseDetails{}
 
-		for _, h := range h.Range(geneos.AllHosts()...) {
-			for _, ct := range ct.Range(geneos.RealComponents()...) {
+		for _, h := range h.OrList(geneos.AllHosts()...) {
+			for _, ct := range ct.OrList(geneos.RealComponents()...) {
 				v, err := geneos.GetReleases(h, ct)
 				if err != nil {
 					return err
