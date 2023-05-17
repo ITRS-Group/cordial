@@ -1,34 +1,47 @@
 ## geneos aes ls
 
-List configured keyfiles for instances
+List key files
 
 ### Synopsis
 
 
-For matching instances list configured keyfiles, their location in
-the filesystem and their CRC. 
+List details of the key files referenced by matching instances.
 
-The default output is human readable columns but can be in CSV
-format using the `-c` flag or JSON with the `-j` or `-i` flags, the
-latter "pretty" formatting the output over multiple, indented lines
+If given the `--shared`/`-S` flag then the key files in the shared
+component directory are listed. This can be filtered by host with the
+`--host`/`-H` and/or by component TYPE.
+
+The default output is human-readable table format. You can select CSV
+or JSON formats using the appropriate flags.
 
 
 ```
 geneos aes ls [flags] [TYPE] [NAME...]
 ```
 
+### Examples
+
+```
+
+geneos aes ls gateway
+geneos aes ls -S gateway -H localhost -c
+
+```
+
 ### Options
 
 ```
-  -c, --csv      Output CSV
+  -S, --shared   List shared key files
   -j, --json     Output JSON
   -i, --pretty   Output indented JSON
+  -c, --csv      Output CSV
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
 ### SEE ALSO

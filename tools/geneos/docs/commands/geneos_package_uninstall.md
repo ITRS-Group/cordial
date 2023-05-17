@@ -51,7 +51,6 @@ geneos uninstall --version 5.14.1
 ```
   -A, --all              Uninstall all releases, stopping and disabling running instances
   -f, --force            Force uninstall, stopping protected instances first
-  -H, --host string      Perform on a remote host. "all" means all hosts and locally (default "all")
   -V, --version string   Uninstall a specific version
 ```
 
@@ -59,6 +58,7 @@ geneos uninstall --version 5.14.1
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
 ### SEE ALSO

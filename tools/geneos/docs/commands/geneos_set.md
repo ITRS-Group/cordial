@@ -73,11 +73,10 @@ geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
 ### SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-* [geneos set host](geneos_set_host.md)	 - Alias for 'host set'
-* [geneos set user](geneos_set_user.md)	 - Set user configuration parameters
 
