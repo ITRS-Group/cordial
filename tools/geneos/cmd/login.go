@@ -121,8 +121,14 @@ credentials can use a separate keyfile.
 		if loginCmdPassword == "" {
 			// prompt for password
 			enc, err = loginKeyfile.EncodePasswordInput(true)
+			if err != nil {
+				return
+			}
 		} else {
 			enc, err = loginKeyfile.EncodeString(loginCmdPassword, true)
+			if err != nil {
+				return
+			}
 		}
 
 		// default URL pattern

@@ -14,9 +14,9 @@ import (
 	"github.com/itrs-group/cordial/pkg/samplers"
 )
 
-// CPUStats must be exported, along with all it's fields, so that
+// cpustats must be exported, along with all it's fields, so that
 // it can be output by methods in the plugins package.
-type CPUStats struct {
+type cpustats struct {
 	Name        string `column:"cpuName,sort=+num"`
 	Utilisation uint64 `column:"% utilisation,format=%.2f %%"`
 	User        uint64 `column:"user,format=%.2f %%"`
@@ -33,10 +33,11 @@ type CPUStats struct {
 
 // one entry for each CPU row in /proc/stats
 type cpustat struct {
-	cpus       map[string]CPUStats
+	cpus       map[string]cpustats
 	lastsample time.Time
 }
 
+// DoSample is the entry point for the example CPU sampler
 func (p *CPUSampler) DoSample() (err error) {
 	log.Debug().Msg("called")
 	laststats := p.cpustats
@@ -71,7 +72,7 @@ func parsestats(c *cpustat) (err error) {
 		return
 	}
 	c.lastsample = time.Now()
-	c.cpus = make(map[string]CPUStats)
+	c.cpus = make(map[string]cpustats)
 	defer stats.Close()
 
 	lines := bufio.NewScanner(stats)
@@ -80,7 +81,7 @@ func parsestats(c *cpustat) (err error) {
 		if strings.HasPrefix(line, "cpu") {
 			line = strings.ReplaceAll(line, "  ", " ")
 			fields := strings.Split(line, " ")
-			var cpu CPUStats
+			var cpu cpustats
 			cpuname := fields[0]
 			cpu.Name = cpuname
 			if cpuname == "cpu" {
@@ -105,5 +106,5 @@ func parsestats(c *cpustat) (err error) {
 }
 
 func (p CPUSampler) initColumns() (cols samplers.Columns, columnnames []string, sortcol string, err error) {
-	return p.ColumnInfo(CPUStats{})
+	return p.ColumnInfo(cpustats{})
 }
