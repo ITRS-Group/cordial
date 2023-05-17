@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -49,40 +50,71 @@ var addCmdExtras = instance.ExtraConfigValues{}
 func init() {
 	GeneosCmd.AddCommand(addCmd)
 
-	addCmd.Flags().StringVarP(&addCmdTemplate, "template", "T", "", "template file to use instead of default")
-	addCmd.Flags().BoolVarP(&addCmdStart, "start", "S", false, "Start new instance(s) after creation")
-	addCmd.Flags().BoolVarP(&addCmdLogs, "log", "l", false, "Run 'logs -f' after starting instance. Implies -S to start the instance")
-	addCmd.Flags().StringVarP(&addCmdBase, "base", "b", "active_prod", "select the base version for the instance, default active_prod")
-	addCmd.Flags().Uint16VarP(&addCmdPort, "port", "p", 0, "override the default port selection")
+	addCmd.Flags().BoolVarP(&addCmdStart, "start", "S", false, "Start new instance after creation")
+	addCmd.Flags().BoolVarP(&addCmdLogs, "log", "l", false, "Follow the logs after starting the instance.\nImplies -S to start the instance")
+	addCmd.Flags().Uint16VarP(&addCmdPort, "port", "p", 0, "Override the default port selection")
+	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", "Set an environment variable for the instance start-up\nRepeat option as required.")
+	addCmd.Flags().StringVarP(&addCmdBase, "base", "b", "active_prod", "Select the base version for the\ninstance")
 
-	addCmd.Flags().StringVarP(&addCmdKeyfile, "keyfile", "k", "", "use an external keyfile for AES256 encoding")
-	addCmd.Flags().StringVarP(&addCmdKeyfileCRC, "crc", "C", "", "use a keyfile (in the component shared directory) with CRC for AES256 encoding")
+	addCmd.Flags().StringVarP(&addCmdKeyfile, "keyfile", "k", "", "Keyfile `PATH`")
+	addCmd.Flags().StringVarP(&addCmdKeyfileCRC, "crc", "C", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory (extension optional)")
 
-	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", "(all components) Add an environment variable in the format NAME=VALUE")
-	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format `PRIORITY:[PATH|URL]`")
-	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", "(sans, floating) Add a gateway in the format NAME:PORT:SECURE")
-	addCmd.Flags().VarP(&addCmdExtras.Attributes, "attribute", "a", "(sans) Add an attribute in the format NAME=VALUE")
-	addCmd.Flags().VarP(&addCmdExtras.Types, "type", "t", "(sans) Add a type TYPE")
-	addCmd.Flags().VarP(&addCmdExtras.Variables, "variable", "v", "(sans) Add a variable in the format [TYPE:]NAME=VALUE")
+	addCmd.Flags().StringVarP(&addCmdTemplate, "template", "T", "", "Template file to use `PATH|URL|-`")
+	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", "Set an include file in the format `PRIORITY:[PATH|URL]`\nRepeat option as required (gateway only)")
+	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", "Set a gateway in the format NAME:PORT:SECURE\nRepeat options as required (san, floating only)")
+	addCmd.Flags().VarP(&addCmdExtras.Attributes, "attribute", "a", "Set an attribute in the format NAME=VALUE\nRepeat option as required (san only)")
+	addCmd.Flags().VarP(&addCmdExtras.Types, "type", "t", "Set a type TYPE\nRepeat option as required (san only)")
+	addCmd.Flags().VarP(&addCmdExtras.Variables, "variable", "v", "Set a variable in the format [TYPE:]NAME=VALUE\nRepeat option as required (san only)")
 
 	addCmd.Flags().SortFlags = false
 }
 
 var addCmd = &cobra.Command{
-	Use:     "add [flags] TYPE NAME",
+	Use:     "add [flags] TYPE NAME [KEY=VALUE...]",
 	GroupID: GROUP_CONFIG,
 	Short:   "Add a new instance",
 	Long: strings.ReplaceAll(`
-Add a new instance of a component TYPE with the name NAME. The
-details will depends on the component TYPE and are saved to a
-configuration file in the instance directory. The instance directory
-can be found using the |geneos home TYPE NAME| command.
+Add a new instance of a component TYPE with the name NAME.
+
+The meaning of the options vary by component TYPE and are stored in a
+configuration file in the instance directory.
 
 The default configuration file format and extension is |json|. There will
-be support for |yaml| in future releases for easier human editing.
+be support for |yaml| in future releases.
 	
-Gateways, SANs and Floating probes are given a configuration file
-based on the templates configured for the different components.
+The instance will be started after completion if given the |--start|/|-S| or
+|--log|/|-l| options. The latter will also follow the log file until
+interrupted.
+
+Geneos components all use TCP ports either for inbound connections or, in the
+case of SANs, to identify themselves to the Gateway. The program will choose
+the next available port from the list in the for each component called
+|TYPEportrange| (e.g. |gatewayportrange|) in the program configurations.
+Availability is only determined by searching all other instances (of any
+TYPE) on the same host. This behavior can be overridden with the
+|--port|/|-p| option.
+
+When an instance is started it is given an environment made up of the
+variables in it's configuration file and some necessary defailts, such as
+|LD_LIBRARY_PATH|.  Additional variables can be set with the |--env|/|-e|
+option, which can be repeated as many times as required.
+
+The underlying package used by each instance is referenced by a |basename|
+which defaults to |active_prod|. You may want to run multiple components of
+the same type but different releases. You can do this by configuring
+additional base names with |geneos package update| and by setting the base
+name with the |--base||-b| option.
+
+Gateways, SANs and Floating probes are given a configuration file based on
+the templates configured for the different components. The default template
+can be overridden with the |--template|/|-T| option specifying the source to
+use. The source can be a local file, a URL or STDIN.
+
+Any additional command line arguments are used to set configuration values.
+Any arguments not in the form NAME=VALUE are ignored. Note that NAME must be
+a plain word and must not contain dots (|.|) or double colons (|::|) as these
+are used as internal delimiters. No component uses hierarchical configuration
+names except those that can be set by the options above. 
 `, "|", "`"),
 	Example: `
 geneos add gateway EXAMPLE1
@@ -96,15 +128,15 @@ geneos add netprobe infraprobe12 --start --log
 	},
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args := CmdArgs(cmd)
-		return AddInstance(ct, addCmdExtras, args...)
+		ct, args, params := CmdArgsParams(cmd)
+		return AddInstance(ct, addCmdExtras, params, args...)
 	},
 }
 
 // AddInstance an instance
 //
 // this is also called from the init command code
-func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, args ...string) (err error) {
+func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, items []string, args ...string) (err error) {
 	// check validity and reserved words here
 	name := args[0]
 
@@ -136,12 +168,17 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 
 	if ct == &gateway.Gateway || ct == &netprobe.Netprobe || ct == &san.San || ct == &floating.Floating {
 		if addCmdKeyfileCRC != "" {
-			cf.Set("keyfile", instance.SharedPath(c, "keyfiles", addCmdKeyfileCRC+".aes"))
+			crcfile := addCmdKeyfileCRC
+			if filepath.Ext(crcfile) != "aes" {
+				crcfile += ".aes"
+			}
+			cf.Set("keyfile", instance.SharedPath(c, "keyfiles", crcfile))
 		} else if addCmdKeyfile != "" {
 			cf.Set("keyfile", addCmdKeyfile)
 		}
 	}
 	instance.SetExtendedValues(c, addCmdExtras)
+	cf.SetKeyValues(items...)
 	if err = cf.Save(c.Type().String(),
 		config.Host(c.Host()),
 		config.SaveDir(c.Type().InstancesDir(c.Host())),

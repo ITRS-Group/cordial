@@ -142,22 +142,22 @@ func initAll(h *geneos.Host, options ...geneos.Options) (err error) {
 		return
 	}
 
-	if err = cmd.AddInstance(&licd.Licd, initCmdExtras, initCmdName); err != nil {
+	if err = cmd.AddInstance(&licd.Licd, initCmdExtras, []string{}, initCmdName); err != nil {
 		return
 	}
 	if err = cmd.ImportFiles(&licd.Licd, []string{initCmdName}, []string{"geneos.lic=" + initAllCmdLicenseFile}); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(&gateway.Gateway, initCmdExtras, initCmdName); err != nil {
+	if err = cmd.AddInstance(&gateway.Gateway, initCmdExtras, []string{}, initCmdName); err != nil {
 		return
 	}
 	// if len(initCmdExtras.Gateways) == 0 {
 	// 	initCmdExtras.Gateways.Set("localhost")
 	// }
-	if err = cmd.AddInstance(&netprobe.Netprobe, initCmdExtras, "localhost@"+h.String()); err != nil {
+	if err = cmd.AddInstance(&netprobe.Netprobe, initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(&webserver.Webserver, initCmdExtras, initCmdName); err != nil {
+	if err = cmd.AddInstance(&webserver.Webserver, initCmdExtras, []string{}, initCmdName); err != nil {
 		return
 	}
 	if err = cmd.Start(nil, initCmdLogs, e, e); err != nil {

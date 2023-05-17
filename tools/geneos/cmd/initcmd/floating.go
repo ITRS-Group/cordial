@@ -138,7 +138,7 @@ func initFloating(h *geneos.Host, options ...geneos.Options) (err error) {
 		return
 	}
 
-	if err = cmd.AddInstance(&floating.Floating, initCmdExtras, floatingname); err != nil {
+	if err = cmd.AddInstance(&floating.Floating, initCmdExtras, []string{}, floatingname); err != nil {
 		return
 	}
 	if err = cmd.Start(nil, initCmdLogs, e, e); err != nil {
