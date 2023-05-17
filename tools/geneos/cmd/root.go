@@ -136,23 +136,33 @@ $ geneos ps
 		// output the help for the new command and cleanly exit.
 		var newcmd *cobra.Command
 		if r, ok := command.Annotations["replacedby"]; ok {
-			args := strings.Split(r, " ")
-			newcmd, _, _ = command.Root().Find(args)
+			var newargs []string
+			// args := strings.Split(r, " ")
+			newcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
+			if err != nil {
+				log.Fatal().Err(err).Msg("")
+			}
 			if newcmd != nil {
 				log.Warn().Msgf("Please note that the %q command has been replaced by %q\n", command.CommandPath(), newcmd.CommandPath())
+				command.RunE = func(cmd *cobra.Command, args []string) error {
+					newcmd.ParseFlags(newargs)
+					parseArgs(newcmd, newargs)
+					return newcmd.RunE(newcmd, newcmd.Flags().Args())
+				}
 			}
 		}
-
 		if newcmd != nil {
 			if t, _ := command.Flags().GetBool("help"); t {
 				command.RunE = nil
-				command.Run = func(cmd *cobra.Command, args []string) { return }
+				// Run cannot be nil
+				command.Run = func(cmd *cobra.Command, args []string) {}
 				return newcmd.Help()
 			}
 		}
 		if t, _ := command.Flags().GetBool("help"); t {
 			command.RunE = nil
-			command.Run = func(cmd *cobra.Command, args []string) { return }
+			// Run cannot be nil
+			command.Run = func(cmd *cobra.Command, args []string) {}
 			return command.Help()
 		}
 
