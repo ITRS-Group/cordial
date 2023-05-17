@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -45,41 +46,43 @@ func init() {
 	AesCmd.AddCommand(aesSetCmd)
 
 	aesSetCmdKeyfile = cmd.DefaultUserKeyfile
-	aesSetCmd.Flags().StringVarP(&aesSetCmdCRC, "crc", "C", "", "CRC of existing component shared keyfile to use")
-	aesSetCmd.Flags().VarP(&aesSetCmdKeyfile, "keyfile", "k", "Keyfile to import and use")
+	aesSetCmd.Flags().StringVarP(&aesSetCmdCRC, "crc", "c", "", "CRC of existing component shared keyfile to use (extension optional)")
+	aesSetCmd.Flags().VarP(&aesSetCmdKeyfile, "keyfile", "k", "Key file to import and use")
 	aesSetCmd.Flags().BoolVarP(&aesSetCmdNoRoll, "noroll", "N", false, "Do not roll any existing keyfile to previous keyfile setting")
 }
 
 var aesSetCmd = &cobra.Command{
 	Use:   "set [flags] [TYPE] [NAME...]",
-	Short: "Set keyfile for instances",
+	Short: "Set active keyfile for instances",
 	Long: strings.ReplaceAll(`
-Set a keyfile for matching instances. The keyfile is saved to each
-matching component shared directory and the configuration set to
-that path.
+Set a key file for matching instances. The key file is saved to each
+matching component's (default: all) shared directory and the
+configuration set to that path.
 
-The keyfile can be given as either an existing CRC (without file
-extension) or as a path or URL. If neither |-C| or |-k| are given
-then the user's default keyfile is used, if found.
+The keyfile can be given as an existing CRC (with or without |.aes|
+file extension) with the |--crc|/|-c| option or as a file path (which
+can be prefixed |~/| for the user's home directory) or a URL with
+|--keyfile|/|-k|. If neither option is given then the user's default
+keyfile is used, if it exists.
 
-If the |-C| flag is given and it identifies an existing keyfile in
-the component shared directory then that is used for matching
-instances. When TYPE is not given, the keyfile will also be copied to
-the shared directories of other component types if not already
-present.
+If the |--crc|/|-c| flag is given and it matches an existing
+keyfile in the component shared directory then that is used for
+matching instances. When TYPE is not given, the keyfile will also be
+copied to the shared directories of other component types if not
+already present.
 
-The |-k| flag value can be a local file (including a prefix of |~/|
-to represent the home directory), a URL or a dash |-| for STDIN. The
-given keyfile is evaluated and its CRC32 checksum checked against
-existing keyfiles in the matching component shared directories. The
-keyfile is only saved if one with the same checksum does not already
-exist. 
+The |--keyfile|/|-k| flag value can be a local file (including a
+prefix of |~/| to represent the home directory), a URL or a dash |-|
+for STDIN. The given keyfile is evaluated and its CRC32 checksum
+checked against existing keyfiles in the matching component shared
+directories. The keyfile is only saved if one with the same checksum
+does not already exist. 
 
-Any existing |keyfile| path is copied to a |prevkeyfile| setting,
-unless the |-N| option if given, to support key file updating in
-Geneos GA6.x.
+For each instance any existing |keyfile| path is copied to a
+|prevkeyfile| setting, unless the |--noroll|/|-N| option if given, to
+support key file updating in Geneos GA6.x.
 
-Currently only Gateways and Netprobes (and SANs) are supported.
+Key files are only set on components that support them.
 
 Only local keyfiles, unless given as a URL, can be copied to remote
 hosts, not visa versa. Referencing a keyfile by CRC on a remote host
@@ -93,17 +96,22 @@ will not result in that file being copies to other hosts.
 		ct, args := cmd.CmdArgs(command)
 
 		var crclist []string
-		var a config.KeyValues
+		var kv *config.KeyValues
 
 		var keyfile config.KeyFile
 
+		// if no CRC given then use the keyfile or the user's default one
 		if aesSetCmdCRC == "" {
 			keyfile = aesSetCmdKeyfile
 		} else {
 			// search for existing CRC in all shared dirs
 			var path string
+			crcfile := aesSetCmdCRC
+			if filepath.Ext(crcfile) != "aes" {
+				crcfile += ".aes"
+			}
 			for _, ct := range ct.Range(componentsWithKeyfiles...) {
-				path = ct.SharedPath(geneos.LOCAL, "keyfiles", aesSetCmdCRC+".aes")
+				path = ct.SharedPath(geneos.LOCAL, "keyfiles", crcfile)
 				log.Debug().Msgf("looking for keyfile %s", path)
 				if _, err := geneos.LOCAL.Stat(path); err == nil {
 					break
@@ -112,7 +120,7 @@ will not result in that file being copies to other hosts.
 			}
 
 			if path == "" {
-				return fmt.Errorf("keyfile with CRC %q not found locally", aesSetCmdCRC)
+				return fmt.Errorf("keyfile with CRC %q not found", aesSetCmdCRC)
 			}
 			keyfile = config.KeyFile(path)
 		}
@@ -122,15 +130,19 @@ will not result in that file being copies to other hosts.
 			return err
 		}
 		crclist = []string{fmt.Sprintf("%08X", crc)}
+		kv, err = keyfile.Read()
+		if err != nil {
+			return
+		}
 
-		// at this point we have an AESValue struct and a CRC to use as a test
+		// at this point we have a KeyValues and a CRC to use as a test
 		// create 'keyfiles' directory as required
 		for _, ct := range ct.Range(componentsWithKeyfiles...) {
 			for _, h := range geneos.AllHosts() {
 				// only import if it is not found
 				path := ct.SharedPath(h, "keyfiles", crclist[0]+".aes")
 				if _, err := h.Stat(path); err != nil && errors.Is(err, fs.ErrNotExist) {
-					aesImportSave(ct, h, &a)
+					aesImportSave(ct, h, kv)
 				} else if err == nil {
 					log.Debug().Msgf("not importing existing %q CRC named keyfile on %s", crclist[0], h)
 				}

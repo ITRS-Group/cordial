@@ -39,8 +39,8 @@ var aesPasswordCmdSource string
 func init() {
 	AesCmd.AddCommand(aesPasswordCmd)
 
-	aesPasswordCmd.Flags().VarP(&aesPasswordCmdString, "password", "p", "plaintext password")
-	aesPasswordCmd.Flags().StringVarP(&aesPasswordCmdSource, "source", "s", "", "external source for plaintext `PATH|URL|-`")
+	aesPasswordCmd.Flags().VarP(&aesPasswordCmdString, "password", "p", "A plaintext password")
+	aesPasswordCmd.Flags().StringVarP(&aesPasswordCmdSource, "source", "s", "", "External source for plaintext `PATH|URL|-`")
 }
 
 // aesPasswordCmd represents the password command
@@ -49,10 +49,13 @@ var aesPasswordCmd = &cobra.Command{
 	Short: "Encode a password with an AES256 key file",
 	Long: strings.ReplaceAll(`
 Encode a password using the user's keyfile. If no keyfile exists it
-is created. Output is in |Expand| format.
+is created. Output is in "expandable" format.
 
-User is prompted to enter the password (twice, for validation) unless
-on of the flags is set.
+You will be prompted to enter the password (twice, for validation)
+unless on of the flags is set.
+
+To encode a plaintext password using a specific key file please use
+the |geneos aes encode| command
 `, "|", "`"),
 	Aliases:      []string{"passwd"},
 	SilenceUsage: true,

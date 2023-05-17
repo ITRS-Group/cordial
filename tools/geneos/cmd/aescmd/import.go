@@ -149,6 +149,6 @@ func aesImportSave(ct *geneos.Component, h *geneos.Host, a *config.KeyValues) (e
 	if err = a.Write(w); err != nil {
 		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
 	}
-	fmt.Printf("imported key file as %s.aes for %s on %s\n", crcstr, ct, h)
+	fmt.Printf("key file %s.aes saved to shared directory for %s on %s\n", crcstr, ct, h)
 	return
 }
