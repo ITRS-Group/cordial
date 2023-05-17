@@ -32,22 +32,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	ConfigCmd.AddCommand(showUserCmd)
+var configShowCmdAll bool
 
-	// showUserCmd.Flags().SortFlags = false
+func init() {
+	ConfigCmd.AddCommand(configShowCmd)
+
+	configShowCmd.Flags().BoolVarP(&configShowCmdAll, "all", "a", false, "Show all the parameters including all defaults")
 }
 
-var showUserCmd = &cobra.Command{
+var configShowCmd = &cobra.Command{
 	Use:   "show",
-	Short: "Show configuration parameters",
+	Short: "Show program configuration",
 	Long: strings.ReplaceAll(`
-A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.
+The show command outputs the current configuration for the |geneos|
+program in JSON format. It shows the processed values from the
+on-disk copy of your program configuration and not the final
+configuration that the running program uses, which includes many
+built-in defaults.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -56,8 +57,13 @@ to quickly create a Cobra application.
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var buffer []byte
+		var cf *config.Config
 
-		cf, _ := config.Load(cmd.Execname, config.IgnoreSystemDir(), config.IgnoreWorkingDir())
+		if configShowCmdAll {
+			cf = config.GetConfig()
+		} else {
+			cf, _ = config.Load(cmd.Execname, config.IgnoreSystemDir(), config.IgnoreWorkingDir())
+		}
 		if buffer, err = json.MarshalIndent(cf.AllSettings(), "", "    "); err != nil {
 			return
 		}

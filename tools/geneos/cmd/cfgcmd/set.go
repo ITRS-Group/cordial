@@ -33,8 +33,6 @@ import (
 
 func init() {
 	ConfigCmd.AddCommand(setUserCmd)
-
-	// setUserCmd.Flags().SortFlags = false
 }
 
 var setUserCmd = &cobra.Command{
