@@ -58,11 +58,11 @@ type aesLsCmdType struct {
 func init() {
 	AesCmd.AddCommand(aesLsCmd)
 
-	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdShared, "shared", "S", false, "List shared key files")
+	aesLsCmd.Flags().BoolVarP(&aesLsCmdShared, "shared", "S", false, "List shared key files")
 
-	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdJSON, "json", "j", false, "Output JSON")
-	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdIndent, "pretty", "i", false, "Output indented JSON")
-	aesLsCmd.PersistentFlags().BoolVarP(&aesLsCmdCSV, "csv", "c", false, "Output CSV")
+	aesLsCmd.Flags().BoolVarP(&aesLsCmdJSON, "json", "j", false, "Output JSON")
+	aesLsCmd.Flags().BoolVarP(&aesLsCmdIndent, "pretty", "i", false, "Output indented JSON")
+	aesLsCmd.Flags().BoolVarP(&aesLsCmdCSV, "csv", "c", false, "Output CSV")
 	aesLsCmd.Flags().SortFlags = false
 }
 
