@@ -108,8 +108,8 @@ geneos aes import -k https://myserver.example.com/secure/keyfile.aes -H remote1
 
 		// at this point we have an AESValue struct and a CRC to use as
 		// the filename base. create 'keyfiles' directory as required
-		for _, ct := range ct.Range(componentsWithKeyfiles...) {
-			for _, h := range h.Range(geneos.AllHosts()...) {
+		for _, ct := range ct.OrList(componentsWithKeyfiles...) {
+			for _, h := range h.OrList(geneos.AllHosts()...) {
 				aesImportSave(ct, h, a)
 			}
 		}

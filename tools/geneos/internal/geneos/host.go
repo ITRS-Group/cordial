@@ -258,13 +258,10 @@ func Match(h string) (r []*Host) {
 	}
 }
 
-// Range will either return just the specific host it is called on, or
-// if that is nil than the list of all hosts passed as args. If no args
-// are passed and h is nil then all hosts are returned.
-//
-// This is a convenience to avoid a double layer of if and range in
-// callers than want to work on specific component types.
-func (h *Host) Range(hosts ...*Host) []*Host {
+// OrList will return the receiver unless it is nil, or the list of all hosts
+// passed as args. If no args are given and the receiver is nil then all hosts
+// are returned.
+func (h *Host) OrList(hosts ...*Host) []*Host {
 	switch h {
 	case nil:
 		if len(hosts) == 0 {

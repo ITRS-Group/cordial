@@ -143,7 +143,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 						wild = true
 						log.Debug().Msgf("checking host %s for %s", rem.String(), local)
 						name := local + "@" + rem.String()
-						for _, ct := range ct.Range(geneos.RealComponents()...) {
+						for _, ct := range ct.OrList(geneos.RealComponents()...) {
 							if i, err := instance.Get(ct, name); err == nil && i.Loaded() {
 								nargs = append(nargs, name)
 								matched = true

@@ -80,13 +80,16 @@ does not already exist.
 
 For each instance any existing |keyfile| path is copied to a
 |prevkeyfile| setting, unless the |--noroll|/|-N| option if given, to
-support key file updating in Geneos GA6.x.
+support key file updating in Geneos GA6 and above.
 
 Key files are only set on components that support them.
 
 Only local keyfiles, unless given as a URL, can be copied to remote
 hosts, not visa versa. Referencing a keyfile by CRC on a remote host
 will not result in that file being copies to other hosts.
+
+
+
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -110,7 +113,7 @@ will not result in that file being copies to other hosts.
 			if filepath.Ext(crcfile) != "aes" {
 				crcfile += ".aes"
 			}
-			for _, ct := range ct.Range(componentsWithKeyfiles...) {
+			for _, ct := range ct.OrList(componentsWithKeyfiles...) {
 				path = ct.SharedPath(geneos.LOCAL, "keyfiles", crcfile)
 				log.Debug().Msgf("looking for keyfile %s", path)
 				if _, err := geneos.LOCAL.Stat(path); err == nil {
@@ -137,7 +140,7 @@ will not result in that file being copies to other hosts.
 
 		// at this point we have a KeyValues and a CRC to use as a test
 		// create 'keyfiles' directory as required
-		for _, ct := range ct.Range(componentsWithKeyfiles...) {
+		for _, ct := range ct.OrList(componentsWithKeyfiles...) {
 			for _, h := range geneos.AllHosts() {
 				// only import if it is not found
 				path := ct.SharedPath(h, "keyfiles", crclist[0]+".aes")
@@ -150,7 +153,7 @@ will not result in that file being copies to other hosts.
 		}
 
 		// params[0] is the CRC
-		for _, ct := range ct.Range(componentsWithKeyfiles...) {
+		for _, ct := range ct.OrList(componentsWithKeyfiles...) {
 			instance.ForAll(ct, cmd.Hostname, aesSetAESInstance, args, crclist)
 		}
 		return nil
