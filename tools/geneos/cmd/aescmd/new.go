@@ -32,46 +32,62 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 )
 
 var aesNewCmdKeyfile config.KeyFile
 var aesNewCmdBackupSuffix string
-var aesNewCmdImport, aesNewCmdSaveDefault, aesNewCmdOverwriteKeyfile bool
+var aesNewCmdImportShared, aesNewCmdSaveUser, aesNewCmdOverwriteKeyfile bool
 
 // var aesDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
 
 func init() {
 	AesCmd.AddCommand(aesNewCmd)
 
-	aesNewCmd.Flags().VarP(&aesNewCmdKeyfile, "keyfile", "k", "Optional key file to create, defaults to STDOUT. (Will NOT overwrite without -f)")
-	aesNewCmd.Flags().BoolVarP(&aesNewCmdSaveDefault, "default", "D", false, "Save as user default keyfile (will NOT overwrite without -f)")
+	aesNewCmd.Flags().VarP(&aesNewCmdKeyfile, "keyfile", "k", "Path to key file, defaults to STDOUT")
+	aesNewCmd.Flags().BoolVarP(&aesNewCmdSaveUser, "user", "U", false, `New user key file (typically "${HOME}/.config/geneos/keyfile.aes")`)
+
 	aesNewCmd.Flags().StringVarP(&aesNewCmdBackupSuffix, "backup", "b", ".old", "Backup existing keyfile with extension given")
-	aesNewCmd.Flags().BoolVarP(&aesNewCmdOverwriteKeyfile, "overwrite", "f", false, "Overwrite existing keyfile")
 
-	aesNewCmd.Flags().BoolVarP(&aesNewCmdImport, "import", "I", false, "Import the keyfile to components and set on matching instances.")
+	aesNewCmd.Flags().BoolVarP(&aesNewCmdOverwriteKeyfile, "force", "F", false, "Force overwriting an existing key file")
 
-	aesNewCmd.MarkFlagsMutuallyExclusive("keyfile", "default")
+	aesNewCmd.Flags().BoolVarP(&aesNewCmdImportShared, "shared", "S", false, "Import the keyfile to component shared directories and set on instances")
+
+	aesNewCmd.MarkFlagsMutuallyExclusive("keyfile", "user")
 }
 
 var aesNewCmd = &cobra.Command{
 	Use:   "new [flags] [TYPE] [NAME...]",
 	Short: "Create a new key file",
 	Long: strings.ReplaceAll(`
-Create a new key file. Written to STDOUT by default, but can be
-written to a file with the |-k FILE| option.
+Create a new key file. With no other options this is written to
+STDOUT.
 
-If the flag |-I| is given then the new key file is imported to the
-shared directories of matching components, using |CRC32.aes| as the
-file base name, where CRC32 is an 8 digit hexadecimal checksum to
-help distinguish keyfiles. Currently limited to Gateway and Netprobe
-types, including SANs, for use by Toolkit Secure Environment
-Variables.
+To write to a specific file use the |--keyfile|/|-k| option
+or to write to your user's default key file location use the
+|--user|/|-u| flag. These options are mutually exclusive.
 
-Additionally, when using the |-I| flag any matching Gateway instances
-have any existing |keyfile| path setting moved to the |prevkeyfile|
-setting to support GA6.x key file rolling.
+If the |--shared|/|-S| flag is set then the newly created key file is
+also saved to the shared "keyfiles" directory of component |TYPE| using
+the base-name of its 8-hexadecimal digit checksum to distinguish it
+from other key files. In all examples the CRC is shown as |DEADBEEF|
+in honour of many generations of previous UNIX documentation. There
+is a very small chance of a checksum clash. If TYPE is not given then
+all components that support key files are used.
+
+When saving key files to shared component directories the contents of
+the key file are not written to STDOUT in the absence of |--keyfile|
+or |--user| options.
+
+An existing key file with the same name will be backed-up using the
+suffix given with the |--backup|/|-b| option which defaults to
+|.old|. This is only likely to apply to key files being saved to
+explicit paths with the |--keyfile| or |--user| options.
 `, "|", "`"),
+	Example: `
+geneos aes new
+geneos aes new -F ~/keyfile.aes
+geneos aes new -S gateway
+`,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",
@@ -80,9 +96,9 @@ setting to support GA6.x key file rolling.
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var crc uint32
 
-		a := config.NewRandomKeyValues()
+		kv := config.NewRandomKeyValues()
 
-		if aesNewCmdSaveDefault {
+		if aesNewCmdSaveUser {
 			aesNewCmdKeyfile = cmd.DefaultUserKeyfile
 		}
 
@@ -90,45 +106,32 @@ setting to support GA6.x key file rolling.
 			if _, err = aesNewCmdKeyfile.RollKeyfile(aesNewCmdBackupSuffix); err != nil {
 				return
 			}
-			if a, err = aesNewCmdKeyfile.Read(); err != nil {
+			if kv, err = aesNewCmdKeyfile.Read(); err != nil {
 				return
 			}
-		} else if !aesNewCmdImport {
-			fmt.Print(a.String())
+		} else if !aesNewCmdImportShared {
+			fmt.Print(kv.String())
 		}
 
-		crc, err = a.Checksum()
+		crc, err = kv.Checksum()
 
 		crcstr := fmt.Sprintf("%08X", crc)
 		if aesNewCmdKeyfile != "" {
 			fmt.Printf("%s created, checksum %s\n", aesNewCmdKeyfile, crcstr)
 		}
 
-		if aesNewCmdImport {
-			if aesNewCmdKeyfile == "" {
-				fmt.Printf("saving keyfile with checksum %s\n", crcstr)
-			}
-
+		if aesNewCmdImportShared {
 			ct, args, _ := cmd.CmdArgsParams(command)
 			h := geneos.GetHost(cmd.Hostname)
 
 			for _, ct := range ct.Range(componentsWithKeyfiles...) {
 				for _, h := range h.Range(geneos.AllHosts()...) {
-					aesImportSave(ct, h, a)
+					aesImportSave(ct, h, kv)
+					params := []string{crcstr + ".aes"}
+					instance.ForAll(ct, cmd.Hostname, aesNewSetInstance, args, params)
 				}
 			}
 
-			if ct == nil {
-				ct = &gateway.Gateway
-			}
-
-			// set configs only on Gateways for now
-			if ct != &gateway.Gateway {
-				return
-			}
-
-			params := []string{crcstr + ".aes"}
-			instance.ForAll(ct, cmd.Hostname, aesNewSetInstance, args, params)
 			return
 		}
 		return
