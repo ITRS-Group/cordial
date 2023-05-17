@@ -52,6 +52,7 @@ geneos init demo [flags] [USERNAME] [DIRECTORY]
   -f, --floatingtemplate string      Floating probe template file
   -F, --force                        Be forceful, ignore existing directories.
   -w, --gatewaytemplate string       A gateway template file
+  -H, --host HOSTNAME                Limit actions to HOSTNAME (not for commands given instance@host parameters)
   -c, --importcert string            signing certificate file with optional embedded private key
   -k, --importkey string             signing private key file
   -l, --log                          Run 'logs -f' after starting instance(s)

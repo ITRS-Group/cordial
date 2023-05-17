@@ -34,16 +34,17 @@ geneos login [flags] [URLPATTERN]
 ### Options
 
 ```
-  -u, --username string   Username
-  -p, --password string   Password
-  -k, --keyfile KEYFILE   Keyfile to use
-  -l, --list              list domains of credentials (no validity checks are done)
+  -u, --username string      Username
+  -p, --password PLAINTEXT   Password
+  -k, --keyfile KEYFILE      Keyfile to use
+  -l, --list                 list domains of credentials (no validity checks are done)
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
 ### SEE ALSO

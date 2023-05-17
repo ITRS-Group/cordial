@@ -36,11 +36,10 @@ geneos show [flags] [TYPE] [NAME...]
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
 ### SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-* [geneos show host](geneos_show_host.md)	 - Alias for `show host`
-* [geneos show user](geneos_show_user.md)	 - A brief description of your command
 

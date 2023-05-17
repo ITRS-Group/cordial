@@ -1,15 +1,18 @@
 ## geneos aes password
 
-Encode a password using user's keyfile
+Encode a password with an AES256 key file
 
 ### Synopsis
 
 
 Encode a password using the user's keyfile. If no keyfile exists it
-is created. Output is in `Expand` format.
+is created. Output is in "expandable" format.
 
-User is prompted to enter the password (twice, for validation) unless
-on of the flags is set.
+You will be prompted to enter the password (twice, for validation)
+unless on of the flags is set.
+
+To encode a plaintext password using a specific key file please use
+the `geneos aes encode` command
 
 
 ```
@@ -19,14 +22,15 @@ geneos aes password [flags]
 ### Options
 
 ```
-  -p, --password string   Password string to use
-  -s, --source string     Source for password to use
+  -p, --password PLAINTEXT   A plaintext password
+  -s, --source PATH|URL|-    External source for plaintext PATH|URL|-
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
 ### SEE ALSO

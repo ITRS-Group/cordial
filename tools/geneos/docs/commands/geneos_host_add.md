@@ -47,16 +47,17 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 ### Options
 
 ```
-  -I, --init              Initialise the remote host directories and component files
-  -p, --prompt            Prompt for password
-  -P, --password string   Password
-  -k, --keyfile KEYFILE   Keyfile (default /home/peter/.config/geneos/keyfile.aes)
+  -I, --init                 Initialise the remote host directories and component files
+  -p, --prompt               Prompt for password
+  -P, --password PLAINTEXT   Password
+  -k, --keyfile KEYFILE      Keyfile (default /home/peter/.config/geneos/keyfile.aes)
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
 ### SEE ALSO

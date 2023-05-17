@@ -23,16 +23,16 @@ geneos package ls [flags] [TYPE]
 ### Options
 
 ```
-  -H, --host string   Apply only on remote host. "all" (the default) means all remote hosts and locally (default "all")
-  -j, --json          Output JSON
-  -i, --pretty        Output indented JSON
-  -c, --csv           Output CSV
+  -j, --json     Output JSON
+  -i, --pretty   Output indented JSON
+  -c, --csv      Output CSV
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
 ### SEE ALSO

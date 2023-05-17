@@ -24,6 +24,7 @@ $ geneos ps
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
 ### SEE ALSO
@@ -41,7 +42,6 @@ $ geneos ps
 * [geneos host](geneos_host.md)	 - Manage remote host settings
 * [geneos import](geneos_import.md)	 - Import files to an instance or a common directory
 * [geneos init](geneos_init.md)	 - Initialise a Geneos installation
-* [geneos install](geneos_install.md)	 - Alias for `package install`
 * [geneos login](geneos_login.md)	 - Store credentials for software downloads
 * [geneos logout](geneos_logout.md)	 - Logout (remove credentials)
 * [geneos logs](geneos_logs.md)	 - Show log(s) for instances
@@ -62,6 +62,5 @@ $ geneos ps
 * [geneos stop](geneos_stop.md)	 - Stop instances
 * [geneos tls](geneos_tls.md)	 - Manage certificates for secure connections
 * [geneos unset](geneos_unset.md)	 - Unset a configuration value
-* [geneos update](geneos_update.md)	 - Alias for `package update`
 * [geneos version](geneos_version.md)	 - Show program version details
 

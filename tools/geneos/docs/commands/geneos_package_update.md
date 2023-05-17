@@ -53,7 +53,6 @@ geneos package update netprobe 5.13.2
 ```
   -V, --version string   Update to this version, defaults to latest (default "latest")
   -b, --base string      Base name for the symlink, defaults to active_prod (default "active_prod")
-  -H, --host string      Apply only on remote host. "all" (the default) means all remote hosts and locally (default "all")
   -F, --force            Update all protected instances
   -R, --restart          Restart all instances that may have an update applied
 ```
@@ -62,6 +61,7 @@ geneos package update netprobe 5.13.2
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
 ### SEE ALSO

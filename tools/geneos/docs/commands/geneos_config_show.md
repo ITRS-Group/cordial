@@ -1,26 +1,35 @@
 ## geneos config show
 
-Show configuration parameters
+Show program configuration
 
 ### Synopsis
 
 
-A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+The show command outputs the current configuration for the `geneos`
+program in JSON format. It shows the processed values from the
+on-disk copy of your program configuration and not the final
+configuration that the running program uses, which includes many
+built-in defaults.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.
+If any arguments are given then they are treated as a list of keys to
+limit the output to just those keys that match and have a non-nil value.
 
 
 ```
-geneos config show [flags]
+geneos config show [KEY...] [flags]
+```
+
+### Options
+
+```
+  -a, --all   Show all the parameters including all defaults
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
 ### SEE ALSO

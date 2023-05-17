@@ -1,23 +1,38 @@
 ## geneos aes import
 
-Import shared keyfiles for components
+Import key files for component TYPE
 
 ### Synopsis
 
 
-Import keyfiles to component TYPE's shared directory.
+Import keyfiles to the TYPE `keyfiles` directory in each matching
+component TYPE shared directory.
 
-The argument given with the `-k` flag can be a local file, which can have
-a prefix of `~/` to represent the user's home directory, a URL or a dash
-`-` for STDIN. If no `-k` flag is given then the user's default
-keyfile is imported, if found.
+A key file must be provided with the `--keyfile`/`-k` option. The
+option value can be a path or a URL or a '-' to read from STDIN. A
+prefix of `~/` to the path interprets the rest relative to the home
+directory.
 
-If a TYPE is given then the key is only imported to that component
-type, otherwise the keyfile is imported to all supported components.
-Currently only Gateways and Netprobes (including SANs) are supported.
+The key file is copied from the supplied source to a file with the
+base-name of its 8-hexadecimal digit checksum to distinguish it from
+other key files. In all examples the CRC is shown as `DEADBEEF` in
+honour of many generations of previous UNIX documentation. There is a
+very small chance of a checksum clash.
 
-Keyfiles are imported to all configured hosts unless `-H` is used to
-limit to a specific host.
+The shared directory for each component is one level above instance
+directories and has a `_shared` suffix. The convention is to use this
+path for Geneos instances to share common configurations and
+resources. e.g. for a Gateway the path would be
+`.../gateway/gateway_shared/keyfiles` where instance directories
+would be `.../gateway/gateways/NAME`
+
+If a TYPE is given then the key is only imported for that component,
+otherwise the key file is imported to all components that are known to
+support key files. Currently only Gateways and Netprobes (including
+SANs) are supported.
+
+Key files are imported to all configured hosts unless `--host`/`-H` is
+used to limit to a specific host.
 
 Instance names can be given to indirectly identify the component
 type.
@@ -27,17 +42,29 @@ type.
 geneos aes import [flags] [TYPE] [NAME...]
 ```
 
+### Examples
+
+```
+
+# import local keyfile.aes to GENEOS/gateway/gateway_shared/DEADBEEF.aes
+geneos aes import --keyfile ~/keyfile.aes gateway
+
+# import a remote keyfile to the remote Geneos host named `remote1`
+geneos aes import -k https://myserver.example.com/secure/keyfile.aes -H remote1
+
+```
+
 ### Options
 
 ```
-  -k, --keyfile KEYFILE   Keyfile to use (default /home/peter/.config/geneos/keyfile.aes)
-  -H, --host host         Import only to named host, default is all
+  -k, --keyfile PATH|URL|-   Keyfile to use PATH|URL|- (default /home/peter/.config/geneos/keyfile.aes)
 ```
 
 ### Options inherited from parent commands
 
 ```
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
 ### SEE ALSO
