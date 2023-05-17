@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-// Package aescmd package groups related AES256 keyfile and crypto commands
+// Package aescmd groups related AES256 keyfile and crypto commands
 package aescmd
 
 import (
