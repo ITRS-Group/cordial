@@ -75,7 +75,6 @@ List the matching remote hosts.
 		"needshomedir": "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		// ct, args, params := CmdArgsParams(cmd)
 		switch {
 		case hostLsCmdJSON, hostLsCmdIndent:
 			hostLsCmdEntries = []hostLsCmdType{}
@@ -118,7 +117,7 @@ func lsInstancePlainHosts(h *geneos.Host) (err error) {
 }
 
 func lsInstanceCSVHosts(h *geneos.Host) (err error) {
-	hostLsCSVWriter.Write([]string{h.String(), h.GetString("username"), h.GetString("hostname"), fmt.Sprint(h.GetInt("port"), config.Default(22)), h.GetString(cmd.Execname)})
+	hostLsCSVWriter.Write([]string{h.String(), h.GetString("username"), h.GetString("hostname"), fmt.Sprint(h.GetInt("port", config.Default(22))), h.GetString(cmd.Execname)})
 	return
 }
 
