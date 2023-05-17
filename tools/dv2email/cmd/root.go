@@ -124,6 +124,8 @@ Settings for the Gateway REST connection and defaults for the EMail
 gateway can be located in dv2email.yaml (either in the working
 directory or in the user's .config/dv2email directory)
 	`, "|", "`"),
+	DisableAutoGenTag:  true,
+	DisableSuggestions: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		gwcf := cf.Sub("gateway")
 		gwcf.SetDefault("allow-insecure", true)
