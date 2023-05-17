@@ -546,7 +546,11 @@ func AllNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 // *geneos.Host - the latter being either from the name or the default
 // provided
 func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name string, h *geneos.Host) {
-	h = defaultHost
+	if defaultHost == nil {
+		h = geneos.ALL
+	} else {
+		h = defaultHost
+	}
 	parts := strings.SplitN(in, "@", 2)
 	name = parts[0]
 	if len(parts) > 1 {
