@@ -121,7 +121,7 @@ func initDemo(h *geneos.Host, options ...geneos.Options) (err error) {
 		return
 	}
 
-	if err = cmd.AddInstance(&gateway.Gateway, initCmdExtras, "Demo Gateway@"+h.String()); err != nil {
+	if err = cmd.AddInstance(&gateway.Gateway, initCmdExtras, []string{}, "Demo Gateway@"+h.String()); err != nil {
 		return
 	}
 	if err = cmd.Set(&gateway.Gateway, g, []string{"options=-demo"}); err != nil {
@@ -130,10 +130,10 @@ func initDemo(h *geneos.Host, options ...geneos.Options) (err error) {
 	// if len(initCmdExtras.Gateways) == 0 {
 	// 	initCmdExtras.Gateways.Set("localhost")
 	// }
-	if err = cmd.AddInstance(&netprobe.Netprobe, initCmdExtras, "localhost@"+h.String()); err != nil {
+	if err = cmd.AddInstance(&netprobe.Netprobe, initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(&webserver.Webserver, initCmdExtras, "demo@"+h.String()); err != nil {
+	if err = cmd.AddInstance(&webserver.Webserver, initCmdExtras, []string{}, "demo@"+h.String()); err != nil {
 		return
 	}
 
