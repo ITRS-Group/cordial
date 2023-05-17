@@ -47,8 +47,9 @@ func init() {
 }
 
 var revertCmd = &cobra.Command{
-	Use:   "revert [TYPE] [NAME...]",
-	Short: "Revert migration of .rc files from backups",
+	Use:     "revert [TYPE] [NAME...]",
+	GroupID: GROUP_CONFIG,
+	Short:   "Revert migration of .rc files from backups",
 	Long: strings.ReplaceAll(`
 Revert migration of legacy .rc files to JSON if the .rc.orig backup
 file still exists. Any changes to the instance configuration since

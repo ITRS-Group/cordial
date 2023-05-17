@@ -21,8 +21,9 @@ func init() {
 
 // logoutCmd represents the logout command
 var logoutCmd = &cobra.Command{
-	Use:   "logout [flags] [NAME...]",
-	Short: "Logout (remove credentials)",
+	Use:     "logout [flags] [NAME...]",
+	GroupID: GROUP_CREDENTIALS,
+	Short:   "Logout (remove credentials)",
 	Long: strings.ReplaceAll(`
 The logout command removes the credentials for the names given. If no
 names are set then the default credentials are removed.

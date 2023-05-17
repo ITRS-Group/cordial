@@ -43,8 +43,9 @@ func init() {
 }
 
 var disableCmd = &cobra.Command{
-	Use:   "disable [TYPE] [NAME...]",
-	Short: "Stop and disable instances",
+	Use:     "disable [TYPE] [NAME...]",
+	GroupID: GROUP_MANAGE,
+	Short:   "Stop and disable instances",
 	Long: strings.ReplaceAll(`
 Mark any matching instances as disabled. The instances are also
 stopped.

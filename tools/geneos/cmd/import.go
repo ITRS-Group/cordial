@@ -44,8 +44,9 @@ func init() {
 }
 
 var importCmd = &cobra.Command{
-	Use:   "import [flags] [TYPE] [NAME...] [PATH=]SOURCE...",
-	Short: "Import files to an instance or a common directory",
+	Use:     "import [flags] [TYPE] [NAME...] [PATH=]SOURCE...",
+	GroupID: GROUP_CONFIG,
+	Short:   "Import files to an instance or a common directory",
 	Long: strings.ReplaceAll(`
 Import one or more files to matching instance directories, or with
 |--common| flag to a component shared directory. This can be used to

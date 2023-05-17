@@ -69,8 +69,9 @@ func init() {
 }
 
 var addCmd = &cobra.Command{
-	Use:   "add [flags] TYPE NAME",
-	Short: "Add a new instance",
+	Use:     "add [flags] TYPE NAME",
+	GroupID: GROUP_CONFIG,
+	Short:   "Add a new instance",
 	Long: strings.ReplaceAll(`
 Add a new instance of a component TYPE with the name NAME. The
 details will depends on the component TYPE and are saved to a

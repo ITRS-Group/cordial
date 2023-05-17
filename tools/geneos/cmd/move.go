@@ -37,6 +37,7 @@ func init() {
 
 var moveCmd = &cobra.Command{
 	Use:     "move [TYPE] SOURCE DESTINATION",
+	GroupID: GROUP_MANAGE,
 	Aliases: []string{"mv", "rename"},
 	Short:   "Move (or rename) instances",
 	Long: strings.ReplaceAll(`

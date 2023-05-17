@@ -62,8 +62,9 @@ func init() {
 }
 
 var lsCmd = &cobra.Command{
-	Use:   "ls [flags] [TYPE] [NAME...]",
-	Short: "List instances",
+	Use:     "ls [flags] [TYPE] [NAME...]",
+	GroupID: GROUP_VIEW,
+	Short:   "List instances",
 	Long: strings.ReplaceAll(`
 Matching instances are listed with details.
 

@@ -42,8 +42,9 @@ func init() {
 var enableCmdStart bool
 
 var enableCmd = &cobra.Command{
-	Use:   "enable [flags] [TYPE] [NAME...]",
-	Short: "Enable instances",
+	Use:     "enable [flags] [TYPE] [NAME...]",
+	GroupID: GROUP_MANAGE,
+	Short:   "Enable instances",
 	Long: strings.ReplaceAll(`
 Mark any matching instances as enabled and if the |-S| flag is given
 then start the instance. Only those instances that were disabled are started

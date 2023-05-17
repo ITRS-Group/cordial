@@ -69,6 +69,7 @@ this alias will be removed in an upcoming release.
 		"needshomedir": "false",
 		"replacedby":   "host add",
 	},
+	Hidden:             true,
 	DisableFlagParsing: true,
 	Run:                legacyRun,
 }
@@ -87,6 +88,7 @@ future as this alias will be removed in an upcoming release.
 		"needshomedir": "false",
 		"replacedby":   "host delete",
 	},
+	Hidden:             true,
 	DisableFlagParsing: true,
 	Run:                legacyRun,
 }
@@ -105,6 +107,7 @@ this alias will be removed in an upcoming release.
 		"needshomedir": "false",
 		"replacedby":   "host ls",
 	},
+	Hidden:             true,
 	DisableFlagParsing: true,
 	Run:                func(cmd *cobra.Command, args []string) {},
 }
@@ -122,6 +125,7 @@ var setHostCmd = &cobra.Command{
 		"needshomedir": "false",
 		"replacedby":   "host set",
 	},
+	Hidden:             true,
 	DisableFlagParsing: true,
 	Run:                legacyRun,
 }
@@ -138,6 +142,7 @@ var showHostCmd = &cobra.Command{
 		"needshomedir": "false",
 		"replacedby":   "host show",
 	},
+	Hidden:             true,
 	DisableFlagParsing: true,
 	Run:                legacyRun,
 }
@@ -153,6 +158,7 @@ var installCmd = &cobra.Command{
 		"needshomedir": "true",
 		"replacedby":   "package install",
 	},
+	Hidden:             true,
 	DisableFlagParsing: true,
 	Run:                legacyRun,
 }
@@ -168,6 +174,7 @@ var updateLsCmd = &cobra.Command{
 		"needshomedir": "true",
 		"replacedby":   "package ls",
 	},
+	Hidden:             true,
 	DisableFlagParsing: true,
 	Run:                legacyRun,
 }
@@ -184,6 +191,7 @@ var updateCmd = &cobra.Command{
 		"replacedby":   "package update",
 	},
 	Args:               cobra.RangeArgs(0, 2),
+	Hidden:             true,
 	DisableFlagParsing: true,
 	Run:                legacyRun,
 }
@@ -199,6 +207,7 @@ var setUserCmd = &cobra.Command{
 		"needshomedir": "false",
 		"replacedby":   "config set",
 	},
+	Hidden:             true,
 	DisableFlagParsing: true,
 	Run:                legacyRun,
 }
@@ -214,6 +223,7 @@ var unsetUserCmd = &cobra.Command{
 		"needshomedir": "false",
 		"replacedby":   "config unset",
 	},
+	Hidden:             true,
 	DisableFlagParsing: true,
 	Run:                legacyRun,
 }
@@ -235,6 +245,7 @@ to quickly create a Cobra application.
 		"needshomedir": "false",
 		"replacedby":   "config show",
 	},
+	Hidden:             true,
 	DisableFlagParsing: true,
 	Run:                legacyRun,
 }
@@ -249,6 +260,7 @@ var showGlobalCmd = &cobra.Command{
 		"wildcard":     "false",
 		"needshomedir": "false",
 	},
+	Hidden:     true,
 	Deprecated: "please view the global config file directly if required.",
 }
 
@@ -263,6 +275,7 @@ var setGlobalCmd = &cobra.Command{
 		"wildcard":     "false",
 		"needshomedir": "false",
 	},
+	Hidden:     true,
 	Deprecated: "please edit the global config file directly if required.",
 }
 
@@ -276,5 +289,6 @@ var unsetGlobalCmd = &cobra.Command{
 		"wildcard":     "false",
 		"needshomedir": "false",
 	},
+	Hidden:     true,
 	Deprecated: "please edit the global config file directly if required",
 }

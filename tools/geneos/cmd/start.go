@@ -40,8 +40,9 @@ func init() {
 }
 
 var startCmd = &cobra.Command{
-	Use:   "start [flags] [TYPE] [NAME...]",
-	Short: "Start instances",
+	Use:     "start [flags] [TYPE] [NAME...]",
+	GroupID: GROUP_PROCESS,
+	Short:   "Start instances",
 	Long: strings.ReplaceAll(`
 Start one or more matching instances. All instances are run in
 the background and STDOUT and STDERR are redirected to a |.txt| file

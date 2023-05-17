@@ -50,8 +50,9 @@ func init() {
 
 // loginCmd represents the login command
 var loginCmd = &cobra.Command{
-	Use:   "login [flags] [URLPATTERN]",
-	Short: "Store credentials for software downloads",
+	Use:     "login [flags] [URLPATTERN]",
+	GroupID: GROUP_CREDENTIALS,
+	Short:   "Store credentials for software downloads",
 	Long: strings.ReplaceAll(`
 Prompt for and stored credentials for later use by commands.
 

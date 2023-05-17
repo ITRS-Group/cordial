@@ -67,8 +67,9 @@ func init() {
 }
 
 var psCmd = &cobra.Command{
-	Use:   "ps [flags] [TYPE] [NAMES...]",
-	Short: "List process information for instances, optionally in CSV or JSON format",
+	Use:     "ps [flags] [TYPE] [NAMES...]",
+	GroupID: GROUP_VIEW,
+	Short:   "List process information for instances, optionally in CSV or JSON format",
 	Long: strings.ReplaceAll(`
 Show the status of the matching instances.
 `, "|", "`"),

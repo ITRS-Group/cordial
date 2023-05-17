@@ -43,8 +43,9 @@ func init() {
 }
 
 var stopCmd = &cobra.Command{
-	Use:   "stop [flags] [TYPE] [NAME...]",
-	Short: "Stop instances",
+	Use:     "stop [flags] [TYPE] [NAME...]",
+	GroupID: GROUP_PROCESS,
+	Short:   "Stop instances",
 	Long: strings.ReplaceAll(`
 Stop one or more matching instances. Unless the -K
 flag is given, a SIGTERM is sent and if the instance is

@@ -38,6 +38,7 @@ func init() {
 
 var copyCmd = &cobra.Command{
 	Use:     "copy [TYPE] SOURCE DESTINATION",
+	GroupID: GROUP_MANAGE,
 	Aliases: []string{"cp"},
 	Short:   "Copy instances",
 	Long: strings.ReplaceAll(`

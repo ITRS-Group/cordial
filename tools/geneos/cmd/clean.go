@@ -41,8 +41,9 @@ func init() {
 var cleanCmdFull bool
 
 var cleanCmd = &cobra.Command{
-	Use:   "clean [flags] [TYPE] [NAME...]",
-	Short: "Clean-up instance directories",
+	Use:     "clean [flags] [TYPE] [NAME...]",
+	GroupID: GROUP_MANAGE,
+	Short:   "Clean-up instance directories",
 	Long: strings.ReplaceAll(`
 Clean-up instance directories by removing old log & config file backups
 from the working directory of the targetted instances, without affecting

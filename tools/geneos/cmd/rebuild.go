@@ -42,8 +42,9 @@ func init() {
 }
 
 var rebuildCmd = &cobra.Command{
-	Use:   "rebuild [flags] [TYPE] [NAME...]",
-	Short: "Rebuild instance configuration files",
+	Use:     "rebuild [flags] [TYPE] [NAME...]",
+	GroupID: GROUP_CONFIG,
+	Short:   "Rebuild instance configuration files",
 	Long: strings.ReplaceAll(`
 Rebuild instance configuration files based on current templates and instance configuration values.
 `, "|", "`"),
