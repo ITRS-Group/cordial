@@ -42,13 +42,15 @@ func init() {
 }
 
 var AesCmd = &cobra.Command{
-	Use:   "aes",
-	Short: "Manage Geneos compatible key files and encode/decode passwords",
+	Use:     "aes",
+	GroupID: cmd.GROUP_SUBSYSTEMS,
+	Short:   "Manage Geneos compatible key files and encode/decode passwords",
 	Long: strings.ReplaceAll(`
 Manage Geneos compatible key files and encode/decode passwords
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
+		"wildcard":     "false",
 		"needshomedir": "true",
 	},
 	DisableFlagParsing: true,

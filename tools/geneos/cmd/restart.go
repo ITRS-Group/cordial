@@ -48,8 +48,9 @@ func init() {
 }
 
 var restartCmd = &cobra.Command{
-	Use:   "restart [flags] [TYPE] [NAME...]",
-	Short: "Restart instances",
+	Use:     "restart [flags] [TYPE] [NAME...]",
+	GroupID: GROUP_PROCESS,
+	Short:   "Restart instances",
 	Long: strings.ReplaceAll(`
 Restart the matching instances. This is identical to running |geneos
 stop| followed by |geneos start| except if the |-a| flag is given

@@ -57,8 +57,42 @@ var debug, quiet bool
 
 var DefaultUserKeyfile = config.KeyFile(config.Path("keyfile", config.SetAppName(Execname), config.SetFileFormat("aes"), config.IgnoreWorkingDir()))
 
+const (
+	GROUP_PROCESS     = "process"
+	GROUP_VIEW        = "view"
+	GROUP_MANAGE      = "manage"
+	GROUP_CONFIG      = "config"
+	GROUP_SUBSYSTEMS  = "subsystems"
+	GROUP_CREDENTIALS = "credentials"
+)
+
 func init() {
 	cordial.LogInit(pkgname)
+
+	GeneosCmd.AddGroup(&cobra.Group{
+		ID:    GROUP_PROCESS,
+		Title: "Control Geneos Instances",
+	})
+	GeneosCmd.AddGroup(&cobra.Group{
+		ID:    GROUP_VIEW,
+		Title: "Inspect Geneos instances",
+	})
+	GeneosCmd.AddGroup(&cobra.Group{
+		ID:    GROUP_MANAGE,
+		Title: "Manage Geneos Instances",
+	})
+	GeneosCmd.AddGroup(&cobra.Group{
+		ID:    GROUP_CONFIG,
+		Title: "Configure Geneos Instances",
+	})
+	GeneosCmd.AddGroup(&cobra.Group{
+		ID:    GROUP_SUBSYSTEMS,
+		Title: "Subsystems",
+	})
+	GeneosCmd.AddGroup(&cobra.Group{
+		ID:    GROUP_CREDENTIALS,
+		Title: "Manage Credentials",
+	})
 
 	cobra.OnInitialize(initConfig)
 

@@ -39,8 +39,9 @@ func init() {
 }
 
 var commandCmd = &cobra.Command{
-	Use:   "command [TYPE] [NAME...]",
-	Short: "Show command line and environment for launching instances",
+	Use:     "command [TYPE] [NAME...]",
+	GroupID: GROUP_VIEW,
+	Short:   "Show command line and environment for launching instances",
 	Long: strings.ReplaceAll(`
 Show for each of the matching instance the command line that would be used to run it as well as any environment variables.
 `, "|", "`"),

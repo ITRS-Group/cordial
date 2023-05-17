@@ -28,10 +28,15 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
+func init() {
+	cmd.GeneosCmd.AddCommand(PackageCmd)
+}
+
 // PackageCmd represents the package command
 var PackageCmd = &cobra.Command{
-	Use:   "package",
-	Short: "A brief description of your command",
+	Use:     "package",
+	GroupID: cmd.GROUP_SUBSYSTEMS,
+	Short:   "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
 
@@ -46,8 +51,4 @@ to quickly create a Cobra application.`,
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		return cmd.RunE(command.Root(), []string{"package", "ls"}, args)
 	},
-}
-
-func init() {
-	cmd.GeneosCmd.AddCommand(PackageCmd)
 }

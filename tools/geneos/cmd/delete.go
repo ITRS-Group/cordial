@@ -43,6 +43,7 @@ func init() {
 
 var deleteCmd = &cobra.Command{
 	Use:     "delete [flags] [TYPE] [NAME...]",
+	GroupID: GROUP_CONFIG,
 	Aliases: []string{"rm"},
 	Short:   "Delete an instance. Instance must be stopped",
 	Long: strings.ReplaceAll(`

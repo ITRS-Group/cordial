@@ -70,8 +70,9 @@ func init() {
 }
 
 var logsCmd = &cobra.Command{
-	Use:   "logs [flags] [TYPE] [NAME...]",
-	Short: "Show log(s) for instances",
+	Use:     "logs [flags] [TYPE] [NAME...]",
+	GroupID: GROUP_VIEW,
+	Short:   "Show log(s) for instances",
 	Long: strings.ReplaceAll(`
 Show log(s) for instances. The default is to show the last 10 lines
 for each matching instance. If either |-g| or |-v| are given without

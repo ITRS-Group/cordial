@@ -44,8 +44,9 @@ func init() {
 }
 
 var migrateCmd = &cobra.Command{
-	Use:   "migrate [TYPE] [NAME...]",
-	Short: "Migrate legacy .rc configuration to new formats",
+	Use:     "migrate [TYPE] [NAME...]",
+	GroupID: GROUP_CONFIG,
+	Short:   "Migrate legacy .rc configuration to new formats",
 	Long: strings.ReplaceAll(`
 Migrate any legacy .rc configuration files to JSON format and
 rename the .rc file to .rc.orig. The entries in the new configuration

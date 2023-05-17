@@ -39,8 +39,9 @@ func init() {
 
 // homeCmd represents the home command
 var homeCmd = &cobra.Command{
-	Use:   "home [flags] [TYPE] [NAME]",
-	Short: "Print the home directory of the first instance or the Geneos home dir",
+	Use:     "home [flags] [TYPE] [NAME]",
+	GroupID: GROUP_VIEW,
+	Short:   "Print the home directory of the first instance or the Geneos home dir",
 	Long: strings.ReplaceAll(`
 Output the path of the home directory of the first matching instance
 or local installation or the remote on stdout. This is intended for scripting.

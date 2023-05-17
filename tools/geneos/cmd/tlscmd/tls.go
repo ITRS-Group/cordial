@@ -32,13 +32,12 @@ import (
 
 func init() {
 	cmd.GeneosCmd.AddCommand(TLSCmd)
-
-	// tlsCmd.Flags().SortFlags = false
 }
 
 var TLSCmd = &cobra.Command{
-	Use:   "tls",
-	Short: "Manage certificates for secure connections",
+	Use:     "tls",
+	GroupID: cmd.GROUP_SUBSYSTEMS,
+	Short:   "Manage certificates for secure connections",
 	Long: strings.ReplaceAll(`
 Manage certificates for [Geneos Secure Communications](https://docs.itrsgroup.com/docs/geneos/current/SSL/ssl_ug.html).
 

@@ -56,8 +56,9 @@ func init() {
 }
 
 var showCmd = &cobra.Command{
-	Use:   "show [flags] [TYPE] [NAME...]",
-	Short: "Show runtime, global, user or instance configuration is JSON format",
+	Use:     "show [flags] [TYPE] [NAME...]",
+	GroupID: GROUP_VIEW,
+	Short:   "Show runtime, global, user or instance configuration is JSON format",
 	Long: strings.ReplaceAll(`
 Show the runtime or instance configuration. The loaded
 global or user configurations can be seen through the show global

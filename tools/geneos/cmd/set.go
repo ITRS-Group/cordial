@@ -50,8 +50,9 @@ func init() {
 var setCmdExtras = instance.ExtraConfigValues{}
 
 var setCmd = &cobra.Command{
-	Use:   "set [flags] [TYPE] [NAME...] [KEY=VALUE...]",
-	Short: "Set instance configuration parameters",
+	Use:     "set [flags] [TYPE] [NAME...] [KEY=VALUE...]",
+	GroupID: GROUP_CONFIG,
+	Short:   "Set instance configuration parameters",
 	Long: strings.ReplaceAll(`
 Set configuration item values in global (|geneos set global|), user 
 (|geneos set user|), or for a specific instance.

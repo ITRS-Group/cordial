@@ -106,8 +106,9 @@ func init() {
 }
 
 var InitCmd = &cobra.Command{
-	Use:   "init [flags] [USERNAME] [DIRECTORY]",
-	Short: "Initialise a Geneos installation",
+	Use:     "init [flags] [USERNAME] [DIRECTORY]",
+	GroupID: cmd.GROUP_SUBSYSTEMS,
+	Short:   "Initialise a Geneos installation",
 	Long: strings.ReplaceAll(`
 Initialise a Geneos installation by creating the directory
 structure and user configuration file, with the optional username and directory.

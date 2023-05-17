@@ -23,8 +23,9 @@ func init() {
 
 // protectCmd represents the protect command
 var protectCmd = &cobra.Command{
-	Use:   "protect [TYPE] [NAME...]",
-	Short: "Mark instances as protected",
+	Use:     "protect [TYPE] [NAME...]",
+	GroupID: GROUP_MANAGE,
+	Short:   "Mark instances as protected",
 	Long: strings.ReplaceAll(`
 Mark matcing instances as protected.
 

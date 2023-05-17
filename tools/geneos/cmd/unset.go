@@ -52,8 +52,9 @@ func init() {
 
 // unsetCmd represents the unset command
 var unsetCmd = &cobra.Command{
-	Use:   "unset [flags] [TYPE] [NAME...]",
-	Short: "Unset a configuration value",
+	Use:     "unset [flags] [TYPE] [NAME...]",
+	GroupID: GROUP_CONFIG,
+	Short:   "Unset a configuration value",
 	Long: strings.ReplaceAll(`
 Unset a configuration value.
 	

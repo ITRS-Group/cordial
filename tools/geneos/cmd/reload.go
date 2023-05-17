@@ -37,8 +37,9 @@ func init() {
 }
 
 var reloadCmd = &cobra.Command{
-	Use:   "reload [TYPE] [NAME...]",
-	Short: "Reload instance configuration, where supported",
+	Use:     "reload [TYPE] [NAME...]",
+	GroupID: GROUP_PROCESS,
+	Short:   "Reload instance configuration, where supported",
 	Long: strings.ReplaceAll(`
 Signal the matching instances to reload their configurations, depending on the component TYPE.
 `, "|", "`"),

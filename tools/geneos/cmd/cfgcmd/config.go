@@ -14,8 +14,9 @@ import (
 
 // ConfigCmd represents the config command
 var ConfigCmd = &cobra.Command{
-	Use:   "config",
-	Short: "Configure geneos command environment",
+	Use:     "config",
+	GroupID: cmd.GROUP_SUBSYSTEMS,
+	Short:   "Configure geneos command environment",
 	Long: strings.ReplaceAll(`
 `, "|", "`"),
 	Run: func(cmd *cobra.Command, args []string) {
