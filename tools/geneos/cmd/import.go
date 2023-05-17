@@ -32,13 +32,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var importCmdCommon, importCmdHostname string
+var importCmdCommon string
 
 func init() {
 	GeneosCmd.AddCommand(importCmd)
 
 	importCmd.Flags().StringVarP(&importCmdCommon, "common", "c", "", "Import into a common directory instead of matching instances.	For example, if TYPE is 'gateway' and NAME is 'shared' then this common directory is 'gateway/gateway_shared'")
-	importCmd.Flags().StringVarP(&importCmdHostname, "host", "H", "all", "Import only to named host, default is all")
 
 	importCmd.Flags().SortFlags = false
 }
@@ -98,7 +97,7 @@ func ImportFiles(ct *geneos.Component, args []string, sources []string) (err err
 		if ct == nil {
 			return fmt.Errorf("component type must be specified for common/shared directory import")
 		}
-		for _, r := range geneos.Match(importCmdHostname) {
+		for _, r := range geneos.Match(Hostname) {
 			if _, err = instance.ImportCommons(r, ct, ct.String()+"_"+importCmdCommon, sources); err != nil {
 				return
 			}
@@ -106,7 +105,7 @@ func ImportFiles(ct *geneos.Component, args []string, sources []string) (err err
 		return
 	}
 
-	return instance.ForAll(ct, importInstance, args, sources)
+	return instance.ForAll(ct, Hostname, importInstance, args, sources)
 }
 
 // args are instance [file...]

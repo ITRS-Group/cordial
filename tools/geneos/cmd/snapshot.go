@@ -126,7 +126,7 @@ not applied in any defined order.
 
 		// at this point snapshotCmdUsername/Password contain global or
 		// command line values. These can be overridden per-instance.
-		return instance.ForAll(ct, snapshotInstance, args, params)
+		return instance.ForAll(ct, Hostname, snapshotInstance, args, params)
 	},
 }
 

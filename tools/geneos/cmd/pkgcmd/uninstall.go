@@ -38,7 +38,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var packageUninstallCmdHost, packageUninstallCmdVersion string
+var packageUninstallCmdVersion string
 var packageUninstallCmdAll, packageUninstallCmdForce bool
 
 func init() {
@@ -46,7 +46,6 @@ func init() {
 
 	packageUninstallCmd.Flags().BoolVarP(&packageUninstallCmdAll, "all", "A", false, "Uninstall all releases, stopping and disabling running instances")
 	packageUninstallCmd.Flags().BoolVarP(&packageUninstallCmdForce, "force", "f", false, "Force uninstall, stopping protected instances first")
-	packageUninstallCmd.Flags().StringVarP(&packageUninstallCmdHost, "host", "H", string(geneos.ALLHOSTS), "Perform on a remote host. \"all\" means all hosts and locally")
 	packageUninstallCmd.Flags().StringVarP(&packageUninstallCmdVersion, "version", "V", "", "Uninstall a specific version")
 
 	packageUninstallCmd.Flags().SortFlags = false
@@ -95,7 +94,7 @@ geneos uninstall --version 5.14.1
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, _ := cmd.CmdArgs(command)
-		h := geneos.GetHost(packageUninstallCmdHost)
+		h := geneos.GetHost(cmd.Hostname)
 
 		for _, h := range h.Range(geneos.AllHosts()...) {
 			for _, ct := range ct.Range(geneos.RealComponents()...) {

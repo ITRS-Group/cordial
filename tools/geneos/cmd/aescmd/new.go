@@ -36,7 +36,7 @@ import (
 )
 
 var aesNewCmdKeyfile config.KeyFile
-var aesNewCmdHostname, aesNewCmdBackupSuffix string
+var aesNewCmdBackupSuffix string
 var aesNewCmdImport, aesNewCmdSaveDefault, aesNewCmdOverwriteKeyfile bool
 
 // var aesDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
@@ -48,8 +48,8 @@ func init() {
 	aesNewCmd.Flags().BoolVarP(&aesNewCmdSaveDefault, "default", "D", false, "Save as user default keyfile (will NOT overwrite without -f)")
 	aesNewCmd.Flags().StringVarP(&aesNewCmdBackupSuffix, "backup", "b", ".old", "Backup existing keyfile with extension given")
 	aesNewCmd.Flags().BoolVarP(&aesNewCmdOverwriteKeyfile, "overwrite", "f", false, "Overwrite existing keyfile")
+
 	aesNewCmd.Flags().BoolVarP(&aesNewCmdImport, "import", "I", false, "Import the keyfile to components and set on matching instances.")
-	aesNewCmd.Flags().StringVarP(&aesNewCmdHostname, "host", "H", "", "Import only to named host, default is all")
 
 	aesNewCmd.MarkFlagsMutuallyExclusive("keyfile", "default")
 }
@@ -110,7 +110,7 @@ setting to support GA6.x key file rolling.
 			}
 
 			ct, args, _ := cmd.CmdArgsParams(command)
-			h := geneos.GetHost(aesNewCmdHostname)
+			h := geneos.GetHost(cmd.Hostname)
 
 			for _, ct := range ct.Range(componentsWithKeyfiles...) {
 				for _, h := range h.Range(geneos.AllHosts()...) {
@@ -128,7 +128,7 @@ setting to support GA6.x key file rolling.
 			}
 
 			params := []string{crcstr + ".aes"}
-			instance.ForAll(ct, aesNewSetInstance, args, params)
+			instance.ForAll(ct, cmd.Hostname, aesNewSetInstance, args, params)
 			return
 		}
 		return
@@ -146,7 +146,7 @@ func aesNewSetInstance(c geneos.Instance, params []string) (err error) {
 		cf.Set("prevkeyfile", p)
 		rolled = true
 	}
-	cf.Set("keyfile", c.Host().Filepath(c.Type(), c.Type().String()+"_shared", "keyfiles", params[0]))
+	cf.Set("keyfile", instance.SharedPath(c, "keyfiles", params[0]))
 
 	if c.Config().Type == "rc" {
 		err = instance.Migrate(c)

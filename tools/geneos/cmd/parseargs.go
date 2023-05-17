@@ -106,7 +106,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 		if len(args) == 0 || (len(args) == 1 && args[0] == "all") {
 			// no args also means all instances
 			wild = true
-			args = instance.AllNames(geneos.ALL, ct)
+			args = instance.AllNames(geneos.GetHost(Hostname), ct)
 		} else {
 			// expand each arg and save results to a new slice
 			// if local == "", then all instances on host (e.g. @host)
@@ -120,7 +120,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 					nargs = append(nargs, arg)
 					continue
 				}
-				_, local, r := instance.SplitName(arg, geneos.ALL)
+				_, local, r := instance.SplitName(arg, geneos.GetHost(Hostname))
 				if !r.Exists() {
 					log.Debug().Msgf("%s - host not found", arg)
 					// we have tried to match something and it may result in an empty list
@@ -201,7 +201,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 
 	// if args is empty, find them all again. ct == None too?
 	if len(args) == 0 && geneos.Root() != "" && !wild {
-		args = instance.AllNames(geneos.ALL, ct)
+		args = instance.AllNames(geneos.GetHost(Hostname), ct)
 		jsonargs, _ := json.Marshal(args)
 		annotations["args"] = string(jsonargs)
 	}

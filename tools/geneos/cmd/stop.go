@@ -60,7 +60,7 @@ a |SIGKILL|.
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := CmdArgsParams(cmd)
-		return instance.ForAll(ct, stopInstance, args, params)
+		return instance.ForAll(ct, Hostname, stopInstance, args, params)
 	},
 }
 

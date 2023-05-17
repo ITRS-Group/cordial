@@ -51,7 +51,7 @@ Signal the matching instances to reload their configurations, depending on the c
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := CmdArgsParams(cmd)
-		return instance.ForAll(ct, reloadInstance, args, params)
+		return instance.ForAll(ct, Hostname, reloadInstance, args, params)
 	},
 }
 

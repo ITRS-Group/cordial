@@ -134,7 +134,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 				})
 			}
 		}
-		err = instance.ForAll(ct, lsInstanceCertJSON, args, params)
+		err = instance.ForAll(ct, cmd.Hostname, lsInstanceCertJSON, args, params)
 	case tlsCmdCSV:
 		tlsLsCSVWriter = csv.NewWriter(os.Stdout)
 		tlsLsCSVWriter.Write([]string{
@@ -167,7 +167,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 				})
 			}
 		}
-		err = instance.ForAll(ct, lsInstanceCertCSV, args, params)
+		err = instance.ForAll(ct, cmd.Hostname, lsInstanceCertCSV, args, params)
 		tlsLsCSVWriter.Flush()
 	default:
 		tlsLsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
@@ -184,7 +184,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 					geneosCert.Subject.CommonName)
 			}
 		}
-		err = instance.ForAll(ct, lsInstanceCert, args, params)
+		err = instance.ForAll(ct, cmd.Hostname, lsInstanceCert, args, params)
 		tlsLsTabWriter.Flush()
 	}
 	return
@@ -230,7 +230,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 				})
 			}
 		}
-		err = instance.ForAll(ct, lsInstanceCertJSON, args, params)
+		err = instance.ForAll(ct, cmd.Hostname, lsInstanceCertJSON, args, params)
 	case tlsCmdCSV:
 		tlsLsCSVWriter = csv.NewWriter(os.Stdout)
 		tlsLsCSVWriter.Write([]string{
@@ -275,7 +275,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 				})
 			}
 		}
-		err = instance.ForAll(ct, lsInstanceCertCSV, args, params)
+		err = instance.ForAll(ct, cmd.Hostname, lsInstanceCertCSV, args, params)
 		tlsLsCSVWriter.Flush()
 	default:
 		tlsLsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
@@ -292,7 +292,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 					geneosCert.Subject.CommonName, geneosCert.Issuer.CommonName, sha1.Sum(geneosCert.Raw))
 			}
 		}
-		err = instance.ForAll(ct, lsInstanceCert, args, params)
+		err = instance.ForAll(ct, cmd.Hostname, lsInstanceCert, args, params)
 		tlsLsTabWriter.Flush()
 	}
 	return

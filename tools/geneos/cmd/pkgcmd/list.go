@@ -37,7 +37,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var packageLsCmdHost string
 var packageLsCmdJSON, packageLsCmdIndent, packageLsCmdCSV bool
 
 var packageLsTabWriter *tabwriter.Writer
@@ -46,8 +45,6 @@ var packageLsCSVWriter *csv.Writer
 func init() {
 	PackageCmd.AddCommand(packageLsCmd)
 
-	packageLsCmd.Flags().StringVarP(&packageLsCmdHost, "host", "H", string(geneos.ALLHOSTS),
-		`Apply only on remote host. "all" (the default) means all remote hosts and locally`)
 	packageLsCmd.Flags().BoolVarP(&packageLsCmdJSON, "json", "j", false, "Output JSON")
 	packageLsCmd.Flags().BoolVarP(&packageLsCmdIndent, "pretty", "i", false, "Output indented JSON")
 	packageLsCmd.Flags().BoolVarP(&packageLsCmdCSV, "csv", "c", false, "Output CSV")
@@ -78,7 +75,7 @@ Versions are listed in descending order for each component type, i.e.
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		ct, _ := cmd.CmdArgs(command)
 
-		h := geneos.GetHost(packageLsCmdHost)
+		h := geneos.GetHost(cmd.Hostname)
 		versions := []geneos.ReleaseDetails{}
 
 		for _, h := range h.Range(geneos.AllHosts()...) {

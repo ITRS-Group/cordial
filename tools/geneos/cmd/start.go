@@ -61,7 +61,7 @@ in the instance directory. You can watch the resulting logs files with the
 }
 
 func Start(ct *geneos.Component, watchlogs bool, args []string, params []string) (err error) {
-	if err = instance.ForAll(ct, func(c geneos.Instance, _ []string) error {
+	if err = instance.ForAll(ct, Hostname, func(c geneos.Instance, _ []string) error {
 		return instance.Start(c)
 	}, args, params); err != nil {
 		return

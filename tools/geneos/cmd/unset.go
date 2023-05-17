@@ -73,7 +73,7 @@ geneos unset san -g Gateway1
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args := CmdArgs(cmd)
-		return instance.ForAll(ct, unsetInstance, args, []string{})
+		return instance.ForAll(ct, Hostname, unsetInstance, args, []string{})
 	},
 }
 

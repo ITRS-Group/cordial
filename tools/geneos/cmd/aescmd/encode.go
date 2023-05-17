@@ -118,7 +118,7 @@ $ echo -n "test" | geneos aes encode -s -
 
 		ct, args := cmd.CmdArgs(command)
 		pw, _ := plaintext.Open()
-		err = instance.ForAll(ct, aesEncodeInstance, args, []string{base64.StdEncoding.EncodeToString(pw.Bytes())})
+		err = instance.ForAll(ct, cmd.Hostname, aesEncodeInstance, args, []string{base64.StdEncoding.EncodeToString(pw.Bytes())})
 		pw.Destroy()
 		return
 	},

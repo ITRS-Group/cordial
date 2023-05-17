@@ -64,7 +64,7 @@ take on the new labels and are not a direct conversion.
 				log.Error().Err(err).Msg("migrating old executables failed")
 			}
 		}
-		return instance.ForAll(ct, migrateInstance, args, params)
+		return instance.ForAll(ct, Hostname, migrateInstance, args, params)
 	},
 }
 

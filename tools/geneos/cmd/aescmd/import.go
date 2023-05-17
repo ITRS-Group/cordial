@@ -36,54 +36,75 @@ import (
 )
 
 var aesImportCmdKeyfile config.KeyFile
-var aesImportCmdHostname string
 
 func init() {
 	AesCmd.AddCommand(aesImportCmd)
 
 	aesImportCmdKeyfile = cmd.DefaultUserKeyfile
 
-	aesImportCmd.Flags().VarP(&aesImportCmdKeyfile, "keyfile", "k", "Keyfile to use")
-	aesImportCmd.Flags().StringVarP(&aesImportCmdHostname, "host", "H", "", "Import only to named `host`, default is all")
+	aesImportCmd.Flags().VarP(&aesImportCmdKeyfile, "keyfile", "k", "Keyfile to use `PATH|URL|-`")
+	aesImportCmd.MarkFlagRequired("keyfile")
 	aesImportCmd.Flags().SortFlags = false
 
 }
 
 var aesImportCmd = &cobra.Command{
 	Use:   "import [flags] [TYPE] [NAME...]",
-	Short: "Import shared keyfiles for components",
+	Short: "Import key files for component TYPE",
 	Long: strings.ReplaceAll(`
-Import keyfiles to component TYPE's shared directory.
+Import keyfiles to the TYPE |keyfiles| directory in each matching
+component TYPE shared directory.
 
-The argument given with the |-k| flag can be a local file, which can have
-a prefix of |~/| to represent the user's home directory, a URL or a dash
-|-| for STDIN. If no |-k| flag is given then the user's default
-keyfile is imported, if found.
+A key file must be provided with the |--keyfile|/|-k| option. The
+option value can be a path or a URL or a '-' to read from STDIN. A
+prefix of |~/| to the path interprets the rest relative to the home
+directory.
 
-If a TYPE is given then the key is only imported to that component
-type, otherwise the keyfile is imported to all supported components.
-Currently only Gateways and Netprobes (including SANs) are supported.
+The key file is copied from the supplied source to a file with the
+base-name of its 8-hexadecimal digit checksum to distinguish it from
+other key files. In all examples the CRC is shown as |DEADBEEF| in
+honour of many generations of previous UNIX documentation. There is a
+very small chance of a checksum clash.
 
-Keyfiles are imported to all configured hosts unless |-H| is used to
-limit to a specific host.
+The shared directory for each component is one level above instance
+directories and has a |_shared| suffix. The convention is to use this
+path for Geneos instances to share common configurations and
+resources. e.g. for a Gateway the path would be
+|.../gateway/gateway_shared/keyfiles| where instance directories
+would be |.../gateway/gateways/NAME|
+
+If a TYPE is given then the key is only imported for that component,
+otherwise the key file is imported to all components that are known to
+support key files. Currently only Gateways and Netprobes (including
+SANs) are supported.
+
+Key files are imported to all configured hosts unless |--host|/|-H| is
+used to limit to a specific host.
 
 Instance names can be given to indirectly identify the component
 type.
 `, "|", "`"),
+	Example: strings.ReplaceAll(`
+# import local keyfile.aes to GENEOS/gateway/gateway_shared/DEADBEEF.aes
+geneos aes import --keyfile ~/keyfile.aes gateway
+
+# import a remote keyfile to the remote Geneos host named |remote1|
+geneos aes import -k https://myserver.example.com/secure/keyfile.aes -H remote1
+`, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
+		"wildcard":     "false",
 		"needshomedir": "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) error {
-		ct, _, _ := cmd.CmdArgsParams(command)
+		ct, _ := cmd.CmdArgs(command)
 
 		a, err := aesImportCmdKeyfile.Read()
 		if err != nil {
 			return err
 		}
 
-		h := geneos.GetHost(aesImportCmdHostname)
+		h := geneos.GetHost(cmd.Hostname)
 
 		// at this point we have an AESValue struct and a CRC to use as
 		// the filename base. create 'keyfiles' directory as required
@@ -109,9 +130,9 @@ func aesImportSave(ct *geneos.Component, h *geneos.Host, a *config.KeyValues) (e
 	crcstr := fmt.Sprintf("%08X", crc)
 
 	// save given keyfile
-	file := h.Filepath(ct, ct.String()+"_shared", "keyfiles", crcstr+".aes")
+	file := ct.SharedPath(h, "keyfiles", crcstr+".aes")
 	if _, err := h.Stat(file); err == nil {
-		log.Debug().Msgf("keyfile already exists for host %s, component %s", h, ct)
+		log.Debug().Msgf("keyfile %s already exists for host %s, component %s", file, h, ct)
 		return nil
 	}
 	if err := h.MkdirAll(path.Dir(file), 0775); err != nil {
@@ -128,5 +149,6 @@ func aesImportSave(ct *geneos.Component, h *geneos.Host, a *config.KeyValues) (e
 	if err = a.Write(w); err != nil {
 		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
 	}
+	fmt.Printf("imported key file as %s.aes for %s on %s\n", crcstr, ct, h)
 	return
 }

@@ -103,7 +103,7 @@ will not result in that file being copies to other hosts.
 			// search for existing CRC in all shared dirs
 			var path string
 			for _, ct := range ct.Range(componentsWithKeyfiles...) {
-				path = geneos.LOCAL.Filepath(ct, ct.String()+"_shared", "keyfiles", aesSetCmdCRC+".aes")
+				path = ct.SharedPath(geneos.LOCAL, "keyfiles", aesSetCmdCRC+".aes")
 				log.Debug().Msgf("looking for keyfile %s", path)
 				if _, err := geneos.LOCAL.Stat(path); err == nil {
 					break
@@ -128,7 +128,7 @@ will not result in that file being copies to other hosts.
 		for _, ct := range ct.Range(componentsWithKeyfiles...) {
 			for _, h := range geneos.AllHosts() {
 				// only import if it is not found
-				path := h.Filepath(ct, ct.String()+"_shared", "keyfiles", crclist[0]+".aes")
+				path := ct.SharedPath(h, "keyfiles", crclist[0]+".aes")
 				if _, err := h.Stat(path); err != nil && errors.Is(err, fs.ErrNotExist) {
 					aesImportSave(ct, h, &a)
 				} else if err == nil {
@@ -139,7 +139,7 @@ will not result in that file being copies to other hosts.
 
 		// params[0] is the CRC
 		for _, ct := range ct.Range(componentsWithKeyfiles...) {
-			instance.ForAll(ct, aesSetAESInstance, args, crclist)
+			instance.ForAll(ct, cmd.Hostname, aesSetAESInstance, args, crclist)
 		}
 		return nil
 	},
@@ -148,7 +148,7 @@ will not result in that file being copies to other hosts.
 func aesSetAESInstance(c geneos.Instance, params []string) (err error) {
 	cf := c.Config()
 
-	path := c.Host().Filepath(c.Type(), c.Type().String()+"_shared", "keyfiles", params[0]+".aes")
+	path := instance.SharedPath(c, "keyfiles", params[0]+".aes")
 
 	// roll old file
 	if !aesSetCmdNoRoll {

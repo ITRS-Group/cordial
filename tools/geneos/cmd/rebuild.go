@@ -55,7 +55,7 @@ Rebuild instance configuration files based on current templates and instance con
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := CmdArgsParams(cmd)
-		return instance.ForAll(ct, rebuildInstance, args, params)
+		return instance.ForAll(ct, Hostname, rebuildInstance, args, params)
 	},
 }
 

@@ -36,7 +36,7 @@ import (
 )
 
 var packageInstallCmdLocal, packageInstallCmdNoSave, packageInstallCmdUpdate, packageInstallCmdNexus, packageInstallCmdSnapshot bool
-var packageInstallCmdBase, packageInstallCmdHost, packageInstallCmdOverride, packageInstallCmdVersion, packageInstallCmdUsername, packageInstallCmdPwFile string
+var packageInstallCmdBase, packageInstallCmdOverride, packageInstallCmdVersion, packageInstallCmdUsername, packageInstallCmdPwFile string
 var packageInstallCmdPassword config.Plaintext
 
 func init() {
@@ -46,7 +46,6 @@ func init() {
 
 	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdLocal, "local", "L", false, "Install from local files only")
 	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdNoSave, "nosave", "n", false, "Do not save a local copy of any downloads")
-	packageInstallCmd.Flags().StringVarP(&packageInstallCmdHost, "host", "H", string(geneos.LOCALHOST), "Perform on a remote host. \"all\" means all hosts and locally")
 
 	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires auth.")
 	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
@@ -141,7 +140,7 @@ geneos install netprobe -b active_dev -U
 		// overrides do not work in this case as the version and type have to be part of the
 		// archive file name
 		if ct != nil || len(args) == 0 {
-			log.Debug().Msgf("installing %q version of %s to %s host(s)", packageInstallCmdVersion, ct, packageInstallCmdHost)
+			log.Debug().Msgf("installing %q version of %s to %s host(s)", packageInstallCmdVersion, ct, cmd.Hostname)
 
 			options := []geneos.Options{
 				geneos.Version(packageInstallCmdVersion),
@@ -160,7 +159,7 @@ geneos install netprobe -b active_dev -U
 					options = append(options, geneos.UseSnapshots())
 				}
 			}
-			return install(ct, packageInstallCmdHost, options...)
+			return install(ct, cmd.Hostname, options...)
 		}
 
 		// work through command line args and try to install them using the naming format
@@ -177,7 +176,7 @@ geneos install netprobe -b active_dev -U
 				geneos.Username(packageInstallCmdUsername),
 				geneos.Password(packageInstallCmdPassword),
 			}
-			if err = install(ct, packageInstallCmdHost, options...); err != nil {
+			if err = install(ct, cmd.Hostname, options...); err != nil {
 				return err
 			}
 		}

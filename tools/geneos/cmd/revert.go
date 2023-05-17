@@ -66,7 +66,7 @@ never changed.
 		if err := revertCommands(); err != nil {
 			log.Error().Err(err).Msg("reverting old executables failed")
 		}
-		return instance.ForAll(ct, revertInstance, args, params)
+		return instance.ForAll(ct, Hostname, revertInstance, args, params)
 	},
 }
 
