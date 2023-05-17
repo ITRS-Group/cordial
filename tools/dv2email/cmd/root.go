@@ -37,7 +37,6 @@ import (
 	"strings"
 	ttemplate "text/template"
 
-	"github.com/awnumar/memguard"
 	"github.com/aymerick/douceur/inliner"
 	"github.com/go-mail/mail/v2"
 	"github.com/rs/zerolog"
@@ -140,33 +139,20 @@ directory or in the user's .config/dv2email directory)
 		}
 
 		var password string
-		var pwb *memguard.Enclave
 
 		username := gwcf.GetString("username")
 		gateway := gwcf.GetString("name")
 		pwe := gwcf.GetPassword("password")
 
 		if username != "" {
-			pw, _ := pwe.Open()
-			pws := config.ExpandLockedBuffer(pw.String())
-			password = strings.Clone(pws.String())
-			pw.Destroy()
-			pws.Destroy()
+			password = pwe.String()
 		}
 
 		if username == "" && gateway != "" {
 			creds := config.FindCreds("gateway:"+gateway, config.SetAppName("geneos"))
 			if creds != nil {
 				username = creds.GetString("username")
-				pwb = creds.GetPassword("password")
-			}
-
-			if pwb != nil {
-				pw, _ := pwb.Open()
-				pws := config.ExpandLockedBuffer(pw.String())
-				password = strings.Clone(pws.String())
-				pw.Destroy()
-				pws.Destroy()
+				password = fmt.Sprint(creds.GetPassword("password"))
 			}
 		}
 
@@ -233,22 +219,14 @@ directory or in the user's .config/dv2email directory)
 		smtptls := emcf.GetString("use-tls", config.Default("default"))
 
 		if eusername != "" {
-			pw, _ := epwe.Open()
-			epassword = strings.Clone(pw.String())
-			pw.Destroy()
+			epassword = epwe.String()
 		}
 
 		if eusername == "" {
 			creds := config.FindCreds(smtpserver, config.SetAppName("geneos"))
 			if creds != nil {
 				eusername = creds.GetString("username")
-				pwb = creds.GetPassword("password")
-			}
-
-			if pwb != nil {
-				pw, _ := pwb.Open()
-				epassword = strings.Clone(pw.String())
-				pw.Destroy()
+				epassword = fmt.Sprint(creds.GetPassword("password"))
 			}
 		}
 
