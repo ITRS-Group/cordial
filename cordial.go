@@ -23,7 +23,7 @@ THE SOFTWARE.
 package cordial
 
 import (
-	_ "embed"
+	_ "embed" // embed the VERSION in the top-level package
 	"fmt"
 	"os"
 	"path/filepath"
@@ -35,9 +35,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// VERSION is a semi-global string variable
+//
 //go:embed VERSION
 var VERSION string
 
+// LogInit is called to set-up zerolog the way we like it
 func LogInit(prefix string) {
 	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
 		fnName := "UNKNOWN"
