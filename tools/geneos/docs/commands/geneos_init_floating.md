@@ -38,32 +38,37 @@ multiple times.
 
 ```text
   -V, --version VERSION              Download this VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
-  -A, --archive PATH or URL          PATH or URL to software archive to install
+  -A, --archive string               Directory of releases for installation
   -T, --override [TYPE:]VERSION      Override the [TYPE:]VERSION for archive files with non-standard names
-  -g, --gateway HOSTNAME:PORT        Add gateway in the format NAME:PORT. Repeat flag for more gateways.
-  -a, --attribute NAME=VALUE         Add an attribute in the format NAME=VALUE. Repeat flag for more attributes.
-  -t, --type NAME                    Add a type NAME. Repeat flag for more types.
-  -v, --variable [TYPE:]NAME=VALUE   Add a variable in the format [TYPE:]NAME=VALUE. Repeat flag for more variables
+  -g, --gateway HOSTNAME:PORT        A gateway connection in the format HOSTNAME:PORT
+                                     (Repeat as required, san and floating only)
+  -a, --attribute NAME=VALUE         An attribute in the format NAME=VALUE
+                                     (Repeat as required, san only)
+  -t, --type NAME                    A type NAME
+                                     (Repeat as required, san only)
+  -v, --variable [TYPE:]NAME=VALUE   A variable in the format [TYPE:]NAME=VALUE
+                                     (Repeat as required, san only)
 ```
 
 ### Options inherited from parent commands
 
 ```text
-  -G, --config string                config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -e, --env NAME=VALUE               Add an environment variable in the format NAME=VALUE. Repeat flag for more values.
-  -f, --floatingtemplate string      Floating probe template file
-  -F, --force                        Be forceful, ignore existing directories.
-  -w, --gatewaytemplate string       A gateway template file
-  -H, --host HOSTNAME                Limit actions to HOSTNAME (not for commands given instance@host parameters)
-  -c, --importcert string            signing certificate file with optional embedded private key
-  -k, --importkey string             signing private key file
-  -l, --log                          Run 'logs -f' after starting instance(s)
-  -C, --makecerts                    Create default certificates for TLS support
-  -n, --name string                  Use the given name for instances and configurations instead of the hostname
-  -N, --nexus                        Download from nexus.itrsgroup.com. Requires ITRS internal credentials
-  -s, --santemplate string           SAN template file
-  -p, --snapshots                    Download from nexus snapshots. Requires -N
-  -u, --username download.username   Username for downloads. Defaults to configuration value download.username
+  -G, --config string             config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -e, --env NAME=VALUE            An environment variable for instance start-up
+                                  (Repeat as required)
+  -f, --floatingtemplate string   Floating probe template file
+  -F, --force                     Be forceful, ignore existing directories.
+  -w, --gatewaytemplate string    A gateway template file
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters)
+  -c, --importcert string         signing certificate file with optional embedded private key
+  -k, --importkey string          signing private key file
+  -l, --log                       Follow logs after starting instance(s)
+  -C, --makecerts                 Create default certificates for TLS support
+  -n, --name string               Use name for instances and configurations instead of the hostname
+  -N, --nexus                     Download from nexus.itrsgroup.com. Requires ITRS internal credentials
+  -s, --santemplate string        SAN template file
+  -p, --snapshots                 Download from nexus snapshots. Requires -N
+  -u, --username string           Username for downloads
 ```
 
 ## SEE ALSO

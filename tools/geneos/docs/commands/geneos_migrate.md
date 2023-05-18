@@ -1,6 +1,6 @@
 # `geneos migrate`
 
-Migrate legacy .rc configuration to new formats
+Migrate configurations
 
 ```text
 geneos migrate [TYPE] [NAME...] [flags]
@@ -8,9 +8,15 @@ geneos migrate [TYPE] [NAME...] [flags]
 
 ## Details
 
-Migrate any legacy .rc configuration files to JSON format and
-rename the .rc file to .rc.orig. The entries in the new configuration
-take on the new labels and are not a direct conversion.
+By default the `migrate` command will convert legacy `.rc` format
+files to JSON and named the old file to end `.rc.orig`. The `revert`
+command can be used to restore these backup files. If you run a full
+clean (`geneos clean -F`) then it is likely these backup files will
+be removed.
+
+The `--executables`/`-X` option instead creates symbolic links in the
+${GENEOS_HOME}/bin directory for names that match the original `ctl`
+scripts pointing back to the `geneos` program.
 
 ### Options
 

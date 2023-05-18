@@ -8,11 +8,27 @@ geneos restart [flags] [TYPE] [NAME...]
 
 ## Details
 
-Restart the matching instances. This is identical to running `geneos
-stop` followed by `geneos start` except if the `-a` flag is given
-then all matching instances are started regardless of whether they
-were stopped by the command. The command also accepts the same flags
-as both start and stop.
+Restart the matching instances.
+
+By default this is identical to running `geneos stop` followed by
+`geneos start`.
+
+If the `--all`/`-a` option is given then all matching instances are
+started regardless of whether they were stopped by the command.
+
+Protected instances will not be restarted unless the `--force`/`-F`
+option is given.
+
+Normal behaviour is to send, on Linux, a SIGTERM to the process and
+wait for a short period before trying again until the process is no
+longer running. If this fails to stop the process a SIGKILL is sent
+to terminate the process without further action. If the `--kill`/`-K`
+option is used then the terminate signal is sent immediately without
+waiting. Beware that this can leave instance files corrupted or in an
+indeterminate state.
+
+If the `--log`/`-l` option is given then the logs of all instances
+that are started are followed until interrupted by the user.
 
 ### Options
 

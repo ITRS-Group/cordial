@@ -1,6 +1,6 @@
 # `geneos ps`
 
-List process information for instances, optionally in CSV or JSON format
+Show running instances
 
 ```text
 geneos ps [flags] [TYPE] [NAMES...]
@@ -8,12 +8,16 @@ geneos ps [flags] [TYPE] [NAMES...]
 
 ## Details
 
-Show the status of the matching instances.
+The `ps` command will report details of matching and running instances.
+
+The default output is a table format intended for humans but this can
+be changed to CSV format using the `--csv`/`-c` flag or JSON with the
+`--json`/`-j` or `--pretty`/`-i` options, the latter option
+formatting the output over multiple, indented lines.
 
 ### Options
 
 ```text
-  -f, --files    Show open files
   -j, --json     Output JSON
   -i, --pretty   Output indented JSON
   -c, --csv      Output CSV

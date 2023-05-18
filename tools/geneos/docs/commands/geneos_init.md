@@ -49,20 +49,21 @@ only the configuration file for that user is created.
 ### Options
 
 ```text
-  -C, --makecerts                    Create default certificates for TLS support
-  -l, --log                          Run 'logs -f' after starting instance(s)
-  -F, --force                        Be forceful, ignore existing directories.
-  -n, --name string                  Use the given name for instances and configurations instead of the hostname
-  -c, --importcert string            signing certificate file with optional embedded private key
-  -k, --importkey string             signing private key file
-  -N, --nexus                        Download from nexus.itrsgroup.com. Requires ITRS internal credentials
-  -p, --snapshots                    Download from nexus snapshots. Requires -N
-  -V, --version string               Download matching version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
-  -u, --username download.username   Username for downloads. Defaults to configuration value download.username
-  -w, --gatewaytemplate string       A gateway template file
-  -s, --santemplate string           SAN template file
-  -f, --floatingtemplate string      Floating probe template file
-  -e, --env NAME=VALUE               Add an environment variable in the format NAME=VALUE. Repeat flag for more values.
+  -C, --makecerts                 Create default certificates for TLS support
+  -l, --log                       Follow logs after starting instance(s)
+  -F, --force                     Be forceful, ignore existing directories.
+  -n, --name string               Use name for instances and configurations instead of the hostname
+  -c, --importcert string         signing certificate file with optional embedded private key
+  -k, --importkey string          signing private key file
+  -N, --nexus                     Download from nexus.itrsgroup.com. Requires ITRS internal credentials
+  -p, --snapshots                 Download from nexus snapshots. Requires -N
+  -V, --version string            Download matching version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
+  -u, --username string           Username for downloads
+  -w, --gatewaytemplate string    A gateway template file
+  -s, --santemplate string        SAN template file
+  -f, --floatingtemplate string   Floating probe template file
+  -e, --env NAME=VALUE            An environment variable for instance start-up
+                                  (Repeat as required)
 ```
 
 ### Options inherited from parent commands

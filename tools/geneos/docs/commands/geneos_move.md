@@ -1,6 +1,6 @@
 # `geneos move`
 
-Move (or rename) instances
+Move instances
 
 ```text
 geneos move [TYPE] SOURCE DESTINATION [flags]
@@ -8,7 +8,9 @@ geneos move [TYPE] SOURCE DESTINATION [flags]
 
 ## Details
 
-Move (or rename) instances. As any existing legacy .rc
+Move, including rename, instances.
+
+As any existing legacy .rc
 file is never changed, this will migrate the instance from .rc to
 JSON. The instance is stopped and restarted after the instance is
 moved. It is an error to try to move an instance to one that already
