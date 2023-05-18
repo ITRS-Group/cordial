@@ -68,8 +68,8 @@ command.
 		log.Debug().Msgf("%s %v %v", ct, args, params)
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			log.Error().Err(cmd.ErrInvalidArgs).Msg(ct.String())
-			return cmd.ErrInvalidArgs
+			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
+			return geneos.ErrInvalidArgs
 		}
 
 		return initTemplates(geneos.LOCAL)

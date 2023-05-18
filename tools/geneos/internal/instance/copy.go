@@ -85,7 +85,7 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 	dst.Unload()
 
 	if move {
-		if _, err = GetPID(src); err != os.ErrProcessDone {
+		if IsRunning(src) {
 			if err = Stop(src, true, false); err == nil {
 				stopped = true
 				// defer a call to restart the original if not "done"

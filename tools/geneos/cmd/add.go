@@ -53,18 +53,19 @@ func init() {
 	addCmd.Flags().BoolVarP(&addCmdStart, "start", "S", false, "Start new instance after creation")
 	addCmd.Flags().BoolVarP(&addCmdLogs, "log", "l", false, "Follow the logs after starting the instance.\nImplies -S to start the instance")
 	addCmd.Flags().Uint16VarP(&addCmdPort, "port", "p", 0, "Override the default port selection")
-	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", "Set an environment variable for the instance start-up\nRepeat option as required.")
+	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", instance.EnvValuesOptionsText)
 	addCmd.Flags().StringVarP(&addCmdBase, "base", "b", "active_prod", "Select the base version for the\ninstance")
 
 	addCmd.Flags().StringVarP(&addCmdKeyfile, "keyfile", "k", "", "Keyfile `PATH`")
 	addCmd.Flags().StringVarP(&addCmdKeyfileCRC, "crc", "C", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory (extension optional)")
 
 	addCmd.Flags().StringVarP(&addCmdTemplate, "template", "T", "", "Template file to use `PATH|URL|-`")
-	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", "Set an include file in the format `PRIORITY:[PATH|URL]`\nRepeat option as required (gateway only)")
-	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", "Set a gateway in the format NAME:PORT:SECURE\nRepeat options as required (san, floating only)")
-	addCmd.Flags().VarP(&addCmdExtras.Attributes, "attribute", "a", "Set an attribute in the format NAME=VALUE\nRepeat option as required (san only)")
-	addCmd.Flags().VarP(&addCmdExtras.Types, "type", "t", "Set a type TYPE\nRepeat option as required (san only)")
-	addCmd.Flags().VarP(&addCmdExtras.Variables, "variable", "v", "Set a variable in the format [TYPE:]NAME=VALUE\nRepeat option as required (san only)")
+
+	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
+	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
+	addCmd.Flags().VarP(&addCmdExtras.Attributes, "attribute", "a", instance.AttributeValuesOptionsText)
+	addCmd.Flags().VarP(&addCmdExtras.Types, "type", "t", instance.TypeValuesOptionsText)
+	addCmd.Flags().VarP(&addCmdExtras.Variables, "variable", "v", instance.VarValuesOptionsText)
 
 	addCmd.Flags().SortFlags = false
 }
@@ -79,42 +80,44 @@ Add a new instance of a component TYPE with the name NAME.
 The meaning of the options vary by component TYPE and are stored in a
 configuration file in the instance directory.
 
-The default configuration file format and extension is |json|. There will
-be support for |yaml| in future releases.
+The default configuration file format and extension is |json|. There
+will be support for |yaml| in future releases.
 	
-The instance will be started after completion if given the |--start|/|-S| or
-|--log|/|-l| options. The latter will also follow the log file until
-interrupted.
+The instance will be started after completion if given the
+|--start|/|-S| or |--log|/|-l| options. The latter will also follow
+the log file until interrupted.
 
-Geneos components all use TCP ports either for inbound connections or, in the
-case of SANs, to identify themselves to the Gateway. The program will choose
-the next available port from the list in the for each component called
-|TYPEportrange| (e.g. |gatewayportrange|) in the program configurations.
-Availability is only determined by searching all other instances (of any
-TYPE) on the same host. This behavior can be overridden with the
-|--port|/|-p| option.
+Geneos components all use TCP ports either for inbound connections
+or, in the case of SANs, to identify themselves to the Gateway. The
+program will choose the next available port from the list in the for
+each component called |TYPEportrange| (e.g. |gatewayportrange|) in
+the program configurations. Availability is only determined by
+searching all other instances (of any TYPE) on the same host. This
+behaviour can be overridden with the |--port|/|-p| option.
 
 When an instance is started it is given an environment made up of the
-variables in it's configuration file and some necessary defailts, such as
-|LD_LIBRARY_PATH|.  Additional variables can be set with the |--env|/|-e|
-option, which can be repeated as many times as required.
+variables in it's configuration file and some necessary defaults,
+such as |LD_LIBRARY_PATH|.  Additional variables can be set with the
+|--env|/|-e| option, which can be repeated as many times as required.
 
-The underlying package used by each instance is referenced by a |basename|
-which defaults to |active_prod|. You may want to run multiple components of
-the same type but different releases. You can do this by configuring
-additional base names with |geneos package update| and by setting the base
-name with the |--base||-b| option.
+The underlying package used by each instance is referenced by a
+|basename| which defaults to |active_prod|. You may want to run
+multiple components of the same type but different releases. You can
+do this by configuring additional base names with |geneos package
+update| and by setting the base name with the |--base||-b| option.
 
-Gateways, SANs and Floating probes are given a configuration file based on
-the templates configured for the different components. The default template
-can be overridden with the |--template|/|-T| option specifying the source to
-use. The source can be a local file, a URL or STDIN.
+Gateways, SANs and Floating probes are given a configuration file
+based on the templates configured for the different components. The
+default template can be overridden with the |--template|/|-T| option
+specifying the source to use. The source can be a local file, a URL
+or |STDIN|.
 
-Any additional command line arguments are used to set configuration values.
-Any arguments not in the form NAME=VALUE are ignored. Note that NAME must be
-a plain word and must not contain dots (|.|) or double colons (|::|) as these
-are used as internal delimiters. No component uses hierarchical configuration
-names except those that can be set by the options above. 
+Any additional command line arguments are used to set configuration
+values. Any arguments not in the form NAME=VALUE are ignored. Note
+that NAME must be a plain word and must not contain dots (|.|) or
+double colons (|::|) as these are used as internal delimiters. No
+component uses hierarchical configuration names except those that can
+be set by the options above. 
 `, "|", "`"),
 	Example: `
 geneos add gateway EXAMPLE1

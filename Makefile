@@ -8,8 +8,8 @@ release:
 	docker create --name cordial-build-$(VERSION) cordial-build:$(VERSION)
 	mkdir -p releases/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).tar.gz releases/
-	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).zip releases/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/geneos releases/geneos-$(VERSION)
+	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/geneos.exe releases/geneos-$(VERSION).exe
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/dv2email releases/dv2email-$(VERSION)
 	docker rm cordial-build-$(VERSION)
 	docker image rm cordial-build:$(VERSION)

@@ -25,9 +25,10 @@ package cmd
 import (
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/spf13/cobra"
 )
 
 var startCmdLogs bool
@@ -35,7 +36,7 @@ var startCmdLogs bool
 func init() {
 	GeneosCmd.AddCommand(startCmd)
 
-	startCmd.Flags().BoolVarP(&startCmdLogs, "log", "l", false, "Run 'logs -f' after starting instance(s)")
+	startCmd.Flags().BoolVarP(&startCmdLogs, "log", "l", false, "Follow logs after starting instance")
 	startCmd.Flags().SortFlags = false
 }
 
@@ -44,10 +45,16 @@ var startCmd = &cobra.Command{
 	GroupID: GROUP_PROCESS,
 	Short:   "Start instances",
 	Long: strings.ReplaceAll(`
-Start one or more matching instances. All instances are run in
-the background and STDOUT and STDERR are redirected to a |.txt| file
-in the instance directory. You can watch the resulting logs files with the
-|-l| flag.
+Start the matching instances.
+
+The start-up command and environment can be seen using the |geneos
+command| command.
+
+Any matching instances that are marked as |disabled| are not started.
+
+With the |--log|/|-l| option the command will follow the logs of all
+instances started, including the STDERR logs as these are good
+sources of start-up issues.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -68,6 +75,8 @@ func Start(ct *geneos.Component, watchlogs bool, args []string, params []string)
 	}
 
 	if watchlogs {
+		// watch STDERR on start-up
+		logCmdStderr = true
 		// never returns
 		return followLogs(ct, args, params)
 	}

@@ -47,11 +47,18 @@ var stopCmd = &cobra.Command{
 	GroupID: GROUP_PROCESS,
 	Short:   "Stop instances",
 	Long: strings.ReplaceAll(`
-Stop one or more matching instances. Unless the -K
-flag is given, a SIGTERM is sent and if the instance is
-still running after a few seconds then a SIGKILL is sent. If the
-|-K| flag is given the instance(s) are immediately terminated with
-a |SIGKILL|.
+Stop the matching instances.
+
+Protected instances will not be restarted unless the |--force|/|-F|
+option is given.
+
+Normal behaviour is to send, on Linux, a SIGTERM to the process and
+wait for a short period before trying again until the process is no
+longer running. If this fails to stop the process a SIGKILL is sent
+to terminate the process without further action. If the |--kill|/|-K|
+option is used then the terminate signal is sent immediately without
+waiting. Beware that this can leave instance files corrupted or in an
+indeterminate state.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

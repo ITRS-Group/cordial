@@ -138,9 +138,9 @@ func allTCPListenPorts(c geneos.Instance, source string, ports map[int]int) (err
 // running as the instance. An empty slice is returned if the process
 // cannot be found. The instance may be on a remote host.
 func TCPListenPorts(c geneos.Instance) (ports []int) {
-	_, err := GetPID(c)
-	if err != nil {
-		log.Debug().Err(err).Msg("")
+	var err error
+
+	if !IsRunning(c) {
 		return
 	}
 
@@ -179,17 +179,14 @@ type OpenFiles struct {
 // as the instance. All paths that are not absolute paths are ignored.
 // An empty map is returned if the process cannot be found.
 func Files(c geneos.Instance) (openfiles map[int]OpenFiles) {
-
 	pid, err := GetPID(c)
 	if err != nil {
-		log.Debug().Err(err).Msg("")
 		return
 	}
 
 	file := fmt.Sprintf("/proc/%d/fd", pid)
 	fds, err := c.Host().ReadDir(file)
 	if err != nil {
-		log.Debug().Err(err).Msg("")
 		return
 	}
 
@@ -199,7 +196,6 @@ func Files(c geneos.Instance) (openfiles map[int]OpenFiles) {
 		fd := ent.Name()
 		dest, err := c.Host().Readlink(path.Join(file, fd))
 		if err != nil {
-			log.Debug().Err(err).Msg("")
 			continue
 		}
 		if !filepath.IsAbs(dest) {
@@ -210,13 +206,11 @@ func Files(c geneos.Instance) (openfiles map[int]OpenFiles) {
 		fdPath := path.Join(file, fd)
 		fdMode, err := c.Host().Lstat(fdPath)
 		if err != nil {
-			log.Debug().Err(err).Msg("skipping")
 			continue
 		}
 
 		s, err := c.Host().Stat(dest)
 		if err != nil {
-			log.Debug().Err(err).Msg("skipping")
 			continue
 		}
 
@@ -240,20 +234,17 @@ func Sockets(c geneos.Instance) (links map[int]int) {
 	links = make(map[int]int)
 	pid, err := GetPID(c)
 	if err != nil {
-		log.Debug().Err(err).Msg("")
 		return
 	}
 	file := fmt.Sprintf("/proc/%d/fd", pid)
 	fds, err := c.Host().ReadDir(file)
 	if err != nil {
-		log.Debug().Err(err).Msg("")
 		return
 	}
 	for _, ent := range fds {
 		fd := ent.Name()
 		dest, err := c.Host().Readlink(path.Join(file, fd))
 		if err != nil {
-			log.Debug().Err(err).Msg("")
 			continue
 		}
 		if n, err := fmt.Sscanf(dest, "socket:[%d]", &inode); err == nil && n == 1 {

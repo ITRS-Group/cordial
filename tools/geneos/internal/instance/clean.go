@@ -1,8 +1,6 @@
 package instance
 
 import (
-	"os"
-
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -26,7 +24,7 @@ func Clean(c geneos.Instance, options ...geneos.Options) (err error) {
 		return
 	}
 
-	if _, err = GetPID(c); err == os.ErrProcessDone {
+	if !IsRunning(c) {
 		stopped = false
 	} else if err = Stop(c, true, false); err != nil {
 		return

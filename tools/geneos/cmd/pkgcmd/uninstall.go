@@ -26,7 +26,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -139,7 +138,7 @@ geneos uninstall --version 5.14.1
 					if instance.IsProtected(c) && !packageUninstallCmdForce {
 						fmt.Printf("%s is marked protected and uses version %s, skipping\n", c, version)
 					} else if !instance.IsProtected(c) || packageUninstallCmdForce {
-						if _, err := instance.GetPID(c); err != os.ErrProcessDone {
+						if instance.IsRunning(c) {
 							restart[version] = append(restart[version], c)
 						}
 						continue

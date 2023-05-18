@@ -20,9 +20,13 @@ func init() {
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Show program version details",
+	Short: "Show program version",
 	Long: strings.ReplaceAll(`
 Show program version details
+
+With the |--debug|/|-d| option it will also output build information
+which may be useful when reporting issues or to check for suspected
+problems in build dependencies.
 `, "|", "`"),
 	SilenceUsage: true,
 	Version:      cordial.VERSION,

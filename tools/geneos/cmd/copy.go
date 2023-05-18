@@ -25,6 +25,7 @@ package cmd
 import (
 	"strings"
 
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 
 	"github.com/spf13/cobra"
@@ -75,7 +76,7 @@ before the restart. This allows SANs to be updated as expected.
 			args = append(args, params[0])
 		}
 		if len(args) != 2 {
-			return ErrInvalidArgs
+			return geneos.ErrInvalidArgs
 		}
 
 		return instance.CopyInstance(ct, args[0], args[1], false)

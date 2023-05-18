@@ -25,6 +25,7 @@ package cmd
 import (
 	"strings"
 
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
@@ -39,9 +40,11 @@ var moveCmd = &cobra.Command{
 	Use:     "move [TYPE] SOURCE DESTINATION",
 	GroupID: GROUP_MANAGE,
 	Aliases: []string{"mv", "rename"},
-	Short:   "Move (or rename) instances",
+	Short:   "Move instances",
 	Long: strings.ReplaceAll(`
-Move (or rename) instances. As any existing legacy .rc
+Move, including rename, instances.
+
+As any existing legacy .rc
 file is never changed, this will migrate the instance from .rc to
 JSON. The instance is stopped and restarted after the instance is
 moved. It is an error to try to move an instance to one that already
@@ -67,7 +70,7 @@ Moving across hosts is fully supported.
 			args = append(args, params[0])
 		}
 		if len(args) != 2 {
-			return ErrInvalidArgs
+			return geneos.ErrInvalidArgs
 		}
 
 		return instance.CopyInstance(ct, args[0], args[1], true)

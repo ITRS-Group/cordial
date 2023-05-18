@@ -120,7 +120,7 @@ geneos aes import -k https://myserver.example.com/secure/keyfile.aes -H remote1
 
 func aesImportSave(ct *geneos.Component, h *geneos.Host, a *config.KeyValues) (err error) {
 	if ct == nil || h == nil || a == nil {
-		return cmd.ErrInvalidArgs
+		return geneos.ErrInvalidArgs
 	}
 
 	crc, err := a.Checksum()

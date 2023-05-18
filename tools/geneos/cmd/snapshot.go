@@ -54,8 +54,8 @@ func init() {
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdSnoozes, "snooze", "Z", false, "Request cell snooze info")
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdUserAssignments, "userassignment", "U", false, "Request cell user assignment info")
 
-	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username for snapshot, defaults to configuration value in snapshot.username")
-	snapshotCmd.Flags().StringVarP(&snapshotCmdPwFile, "pwfile", "P", "", "Password file to read for snapshots, defaults to configuration value in snapshot.password or otherwise prompts")
+	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username")
+	snapshotCmd.Flags().StringVarP(&snapshotCmdPwFile, "pwfile", "P", "", "Password")
 
 	snapshotCmd.Flags().IntVarP(&snapshotCmdMaxitems, "limit", "l", 0, "limit matching items to display. default is unlimited. results unsorted.")
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdXpathsonly, "xpaths", "x", false, "just show matching xpaths")
@@ -79,10 +79,12 @@ command line by the |-u| and |-P| options. The user is only prompted
 for a password if it cannot be located in either of the previous
 places.
 
+CREDENTIALS - also, fix them, gateway:NAME@HOST (if not local)
+
 The output is in JSON format as an array of dataviews, where each
 dataview is in the format defined in the Gateway documentation at
 
-	https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#fetch_dataviews
+<https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#fetch_dataviews>
 
 Flags to select which properties of data items are available: |-V|,
 |-S|, |-Z|, |-U| for value, severity, snooze and user-assignment

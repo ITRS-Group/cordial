@@ -40,6 +40,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 )
 
+const ArchiveOptionsText = "Directory of releases for installation"
+
 var initCmdAll string
 var initCmdLogs, initCmdMakeCerts, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
 var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdFloatingTemplate, initCmdVersion string
@@ -63,24 +65,24 @@ func init() {
 	InitCmd.Flags().MarkDeprecated("writetemplates", "please use `geneos init templates`")
 	InitCmd.MarkFlagsMutuallyExclusive("all", "demo", "san", "writetemplates")
 
-	InitCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
+	InitCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
 	InitCmd.Flags().MarkDeprecated("include", "please use the `geneos init all|demo|san` sub-commands")
 
-	InitCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME:PORT. Repeat flag for more gateways.")
+	InitCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
 	InitCmd.Flags().MarkDeprecated("gateway", "please use the `geneos init san` sub-command")
-	InitCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", "(sans) Add an attribute in the format NAME=VALUE")
+	InitCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", instance.AttributeValuesOptionsText)
 	InitCmd.Flags().MarkDeprecated("attribute", "please use the `geneos init san` sub-command. Repeat flag for more attributes.")
-	InitCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", "(sans) Add a type NAME. Repeat flag for more types")
+	InitCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", instance.TypeValuesOptionsText)
 	InitCmd.Flags().MarkDeprecated("type", "please use the `geneos init san` sub-command. Repeat flag for more types.")
-	InitCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", "(sans) Add a variable in the format [TYPE:]NAME=VALUE")
+	InitCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", instance.VarValuesOptionsText)
 	InitCmd.Flags().MarkDeprecated("variable", "please use the `geneos init san` sub-command")
 
 	// common flags, need checking
 
 	InitCmd.PersistentFlags().BoolVarP(&initCmdMakeCerts, "makecerts", "C", false, "Create default certificates for TLS support")
-	InitCmd.PersistentFlags().BoolVarP(&initCmdLogs, "log", "l", false, "Run 'logs -f' after starting instance(s)")
+	InitCmd.PersistentFlags().BoolVarP(&initCmdLogs, "log", "l", false, "Follow logs after starting instance(s)")
 	InitCmd.PersistentFlags().BoolVarP(&initCmdForce, "force", "F", false, "Be forceful, ignore existing directories.")
-	InitCmd.PersistentFlags().StringVarP(&initCmdName, "name", "n", "", "Use the given name for instances and configurations instead of the hostname")
+	InitCmd.PersistentFlags().StringVarP(&initCmdName, "name", "n", "", "Use name for instances and configurations instead of the hostname")
 
 	InitCmd.PersistentFlags().StringVarP(&initCmdImportCert, "importcert", "c", "", "signing certificate file with optional embedded private key")
 	InitCmd.PersistentFlags().StringVarP(&initCmdImportKey, "importkey", "k", "", "signing private key file")
@@ -89,7 +91,7 @@ func init() {
 	InitCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots. Requires -N")
 
 	InitCmd.PersistentFlags().StringVarP(&initCmdVersion, "version", "V", "latest", "Download matching version, defaults to latest. Doesn't work for EL8 archives.")
-	InitCmd.PersistentFlags().StringVarP(&initCmdDLUsername, "username", "u", "", "Username for downloads. Defaults to configuration value `download.username`")
+	InitCmd.PersistentFlags().StringVarP(&initCmdDLUsername, "username", "u", "", "Username for downloads")
 
 	// we now prompt for passwords if not in config, so hide this old flag
 	InitCmd.PersistentFlags().StringVarP(&initCmdPwFile, "pwfile", "P", "", "")
@@ -99,7 +101,7 @@ func init() {
 	InitCmd.PersistentFlags().StringVarP(&initCmdSANTemplate, "santemplate", "s", "", "SAN template file")
 	InitCmd.PersistentFlags().StringVarP(&initCmdFloatingTemplate, "floatingtemplate", "f", "", "Floating probe template file")
 
-	InitCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", "Add an environment variable in the format NAME=VALUE. Repeat flag for more values.")
+	InitCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", instance.EnvValuesOptionsText)
 
 	InitCmd.PersistentFlags().SortFlags = false
 	InitCmd.Flags().SortFlags = false
@@ -163,8 +165,8 @@ sudo geneos init geneos /opt/itrs
 		log.Debug().Msgf("%s %v", ct, args)
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			log.Error().Err(cmd.ErrInvalidArgs).Msg(ct.String())
-			return cmd.ErrInvalidArgs
+			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
+			return geneos.ErrInvalidArgs
 		}
 
 		options, err := initProcessArgs(args)

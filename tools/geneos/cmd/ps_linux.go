@@ -24,42 +24,44 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
 	"strings"
-
-	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 )
 
-func init() {
-	GeneosCmd.AddCommand(reloadCmd)
-}
+// listOpenFiles is a placeholder for functionality to come later
+func listOpenFiles(c geneos.Instance) {
 
-var reloadCmd = &cobra.Command{
-	Use:     "reload [TYPE] [NAME...]",
-	GroupID: GROUP_PROCESS,
-	Short:   "Reload configurations",
-	Long: strings.ReplaceAll(`
-Send a reload signal to all matching instances whose TYPE supports
-them.
-`, "|", "`"),
-	Aliases:      []string{"refresh"},
-	SilenceUsage: true,
-	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := CmdArgsParams(cmd)
-		return instance.ForAll(ct, Hostname, reloadInstance, args, params)
-	},
-}
+	// list open files (test code)
 
-func reloadInstance(c geneos.Instance, params []string) (err error) {
-	err = c.Reload(params)
-	if err == nil {
-		fmt.Printf("%s: reload signal sent\n", c)
+	instdir := c.Home()
+	files := instance.Files(c)
+	fds := make([]int, len(files))
+	i := 0
+	for f := range files {
+		fds[i] = f
+		i++
 	}
-	return nil
+	sort.Ints(fds)
+	for _, n := range fds {
+		fdPath := files[n].FD
+		perms := ""
+		p := files[n].FDMode & 0700
+		log.Debug().Msgf("%s perms %o", fdPath, p)
+		if p&0400 == 0400 {
+			perms += "r"
+		}
+		if p&0200 == 0200 {
+			perms += "w"
+		}
+
+		path := files[n].Path
+		if strings.HasPrefix(path, instdir) {
+			path = strings.Replace(path, instdir, ".", 1)
+		}
+		fmt.Fprintf(psTabWriter, "\t%d:%s (%d bytes) %s\n", n, perms, files[n].Stat.Size(), path)
+	}
 }

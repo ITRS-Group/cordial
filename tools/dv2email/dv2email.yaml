@@ -163,17 +163,17 @@ html-template: |+
   <head>
     <style>
       .CRITICAL {
-        background-color: crimson;
+        background-color: #FF5668;
         color: white;
       }
 
       .WARNING {
-        background-color: gold;
+        background-color: #F9B057;
         color: black;
       }
 
       .OK {
-        background-color: limegreen;
+        background-color: 5BB25C;
         color: white;
       }
 

@@ -122,7 +122,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 		}
 
 		if aesDecodeCmdExpandString != "" {
-			return fmt.Errorf("%w: expandable string must be of the form '${enc:keyfile:ciphertext}'", cmd.ErrInvalidArgs)
+			return fmt.Errorf("%w: expandable string must be of the form '${enc:keyfile:ciphertext}'", geneos.ErrInvalidArgs)
 		}
 
 		if aesDecodeCmdPassword != "" {

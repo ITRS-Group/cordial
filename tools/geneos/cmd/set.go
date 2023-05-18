@@ -25,24 +25,23 @@ package cmd
 import (
 	"strings"
 
-	"github.com/itrs-group/cordial/pkg/config"
-
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
 func init() {
 	GeneosCmd.AddCommand(setCmd)
 
-	setCmd.Flags().VarP(&setCmdExtras.Envs, "env", "e", "(all components) Add an environment variable in the format NAME=VALUE")
-	setCmd.Flags().VarP(&setCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
-	setCmd.Flags().VarP(&setCmdExtras.Gateways, "gateway", "g", "(sans) Add a gateway in the format NAME[:PORT[:SECURE]]")
-	setCmd.Flags().VarP(&setCmdExtras.Attributes, "attribute", "a", "(sans) Add an attribute in the format NAME=VALUE")
-	setCmd.Flags().VarP(&setCmdExtras.Types, "type", "t", "(sans) Add a type NAME")
-	setCmd.Flags().VarP(&setCmdExtras.Variables, "variable", "v", "(sans) Add a variable in the format [TYPE:]NAME=VALUE")
+	setCmd.Flags().VarP(&setCmdExtras.Envs, "env", "e", instance.EnvValuesOptionsText)
+	setCmd.Flags().VarP(&setCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
+	setCmd.Flags().VarP(&setCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
+	setCmd.Flags().VarP(&setCmdExtras.Attributes, "attribute", "a", instance.AttributeValuesOptionsText)
+	setCmd.Flags().VarP(&setCmdExtras.Types, "type", "t", instance.TypeValuesOptionsText)
+	setCmd.Flags().VarP(&setCmdExtras.Variables, "variable", "v", instance.VarValuesOptionsText)
 
 	setCmd.Flags().SortFlags = false
 }
@@ -54,54 +53,81 @@ var setCmd = &cobra.Command{
 	GroupID: GROUP_CONFIG,
 	Short:   "Set instance configuration parameters",
 	Long: strings.ReplaceAll(`
-Set configuration item values in global (|geneos set global|), user 
-(|geneos set user|), or for a specific instance.
+Set one or more configuration parameters for matching instances.
 
-The |geneos set| command allows for the definition of instance properties,
-including:
-- environment variables (option |-e|)
-- for gateways only
-  - include files (option |-i|)
-- for self-announcing netprobes (san) only
-  - gateways (option |-g|)
-  - attributes (option |-a|)
-  - types (option |-t|)
-  - variables (option |-v|)
+Set will also allow changes to existing parameters including setting
+them to empty values. To remove a parameter use the |geneos unset|
+command instead.
 
-The |geneos set| command does not rebuild any configuration files 
-for instances.  Use |geneos rebuild| for this.
+The command supports simple parameters given as |KEY=VALUE| pairs on
+the command line as well as options for structured or repeatable
+keys. Each simple parameter uses a case-insensitive |KEY|, unlike the
+options below.
 
-To set "special" items, such as Environment variables or Attributes you should
-now use the specific flags and not the old special syntax.
+Environment variables can be set using the |--env|/|-e| option, which
+can be repeated as required, and the argument to the option should be
+in the format NAME=VALUE. An environment variable NAME will be set or
+updated for all matching instances under the configuration key |env|.
+These environment variables are used to construct the start-up
+environment of the instance. Environments can be added to any
+component TYPE.
 
-The "set" command does not rebuild any configuration files for instances.
-Use "rebuild" to do this.
+Include files (only used for Gateway component TYPEs) can be set
+using the |--include|/|-i| option, which can be repeated. The value
+must me in the form |PRIORITY:PATH/URL| where priority is a number
+between 1 and 65534 and the PATH is either an absolute file path or
+relative to the working directory of the Gateway. Alternatively a URL
+can be used to refer to a read-only remote include file. As each
+include file must have a different priority in the Geneos Gateway
+configuration file, this is the value that should be used as the
+unique key for updating include files.
 
-The properties of a component instance may vary depending on the
-component TYPE.  However the following properties are commonly used:
-- |binary| - Name of the binary file used to run the instance of the 
-  component TYPE.
-- |home| - Path to the instance's home directory, from where the instance
-  component TYPE is started.
-- |install| - Path to the directory where the binaries of the component 
-  TYPE are installed.
-- |libpaths| - Library path(s) (separated by ":") used by the instance 
-  of the component TYPE.
-- |logfile| - Name of the log file to be generated for the instance.
-- |name| - Name of the instance.
-- |port| - Listening port used by the instance.
-- |program| - Absolute path to the binary file used to run the instance 
-  of the component TYPE. 
-- |user| - User owning the instance.
-- |version| - Version as either the name of the directory holding the 
-  component TYPE's binaries or the name of the symlink pointing to 
-that directory.
-For more details on instance properties, refer to [Instance Properties](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos#instance-properties).
+Include file parameters are passed to templates (see |geneos
+rebuild|) and the template may or may not add additional values to
+the include file section. Templates are fully configurable and may
+not use these values at all.
 
-**Note**: In case for any instance you set a property that is not supported,
-that property will be written to the instance's |json| configuration file,
-but will not affect the instance.
+For SANs and Floating Netprobes you can add or update Gateway
+connection details with the |--gateway|/|-g| option. These are given
+in the form |HOSTNAME:PORT|. The |HOSTNAME| can also be an IP address
+and is not the same as the |geneos host| command labels for remote
+hosts being managed, but the actual network accessible hostname or IP
+that the Gateway is listening on. This option can also be repeated as
+necessary and is applied to the instance configuration through
+templates, see |geneos rebuild|.
+
+Three more options exist for SANs to set Attributes, Types and
+Variables respectively. As above these options can be repeated and
+will update or replace existing parameters and to remove them you
+should use |geneos unset|. All of these parameters depend on SAN
+configurations being built using template files and do not have any
+effect on their own. See |geneos rebuild| for more information.
+
+Attributes are set using |--attribute|/|-a| with a value in the form
+|NAME=VALUE|.
+
+Types are set using |--type|/|-t| and are just the NAME of the type.
+To remove a type use |geneos unset|.
+
+Variables are set using |--variable|/|-v| and have the format
+[TYPE]:NAME=VALUE, where TYPE in this case is the type of content the
+variable stores. The supported variable TYPEs are: (|string|,
+|integer|, |double|, |boolean|, |activeTime|, |externalConfigFile|).
+These TYPE names are case sensitive and so, for example, |String| is
+not a valid variable TYPE. Other TYPEs may be supported in the
+future. Variable NAMEs must be unique and setting a variable with the
+name of an existing one will overwrite not just the VALUE but also
+the TYPE.
+
+Future releases may add other special options and also may offer a
+simpler way of configuring SANs and Floating Netprobes to connect to
+Gateway also managed by the same |geneos| program.
 `, "|", "`"),
+	Example: `
+geneos set gateway MyGateway licdsecure=false
+geneos set infraprobe -e JAVA_HOME=/usr/lib/java8/jre -e TNS_ADMIN=/etc/ora/network/admin
+geneos set ...
+`,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",
@@ -128,7 +154,7 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 	for _, arg := range params {
 		s := strings.SplitN(arg, "=", 2)
 		if len(s) != 2 {
-			log.Error().Err(ErrInvalidArgs).Msgf("ignoring %q", arg)
+			log.Error().Err(geneos.ErrInvalidArgs).Msgf("ignoring %q", arg)
 			continue
 		}
 		// you can set an alias here, the write functions do the

@@ -591,7 +591,7 @@ func BuildCmd(c geneos.Instance) (cmd *exec.Cmd, env []string) {
 // Disable the instance c. Does not try to stop a running instance and
 // returns an error if it is running.
 func Disable(c geneos.Instance) (err error) {
-	if _, err = GetPID(c); err != os.ErrProcessDone {
+	if IsRunning(c) {
 		return fmt.Errorf("instance %s running", c)
 	}
 

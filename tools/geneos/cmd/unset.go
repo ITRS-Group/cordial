@@ -39,13 +39,14 @@ var unsetCmdValues = instance.UnsetConfigValues{}
 func init() {
 	GeneosCmd.AddCommand(unsetCmd)
 
-	unsetCmd.Flags().VarP(&unsetCmdValues.Keys, "key", "k", "Unset a configuration key item")
-	unsetCmd.Flags().VarP(&unsetCmdValues.Envs, "env", "e", "Remove an environment variable `NAME`")
-	unsetCmd.Flags().VarP(&unsetCmdValues.Includes, "include", "i", "(gateways) Remove an include file with`PRIORITY`")
-	unsetCmd.Flags().VarP(&unsetCmdValues.Gateways, "gateway", "g", "(san) Remove the gateway `NAME`")
-	unsetCmd.Flags().VarP(&unsetCmdValues.Attributes, "attribute", "a", "(san) Remove the attribute `NAME`")
-	unsetCmd.Flags().VarP(&unsetCmdValues.Types, "type", "t", "(san) Remove the type `NAME`")
-	unsetCmd.Flags().VarP(&unsetCmdValues.Variables, "variable", "v", "(san) Remove the variable `NAME`")
+	unsetCmd.Flags().VarP(&unsetCmdValues.Keys, "key", "k", "Unset configuration parameter `KEY`\n(Repeat as required)")
+
+	unsetCmd.Flags().VarP(&unsetCmdValues.Envs, "env", "e", "Remove an environment variable `NAME`\n(Repeat as required)")
+	unsetCmd.Flags().VarP(&unsetCmdValues.Includes, "include", "i", "Remove an include file with `PRIORITY`\n(Repeat as required, gateways only)")
+	unsetCmd.Flags().VarP(&unsetCmdValues.Gateways, "gateway", "g", "Remove the gateway `NAME`\n(Repeat as required, san and floating only)")
+	unsetCmd.Flags().VarP(&unsetCmdValues.Attributes, "attribute", "a", "Remove the attribute `NAME`\n(Repeat as required, san only)")
+	unsetCmd.Flags().VarP(&unsetCmdValues.Types, "type", "t", "Remove the type `NAME`\n(Repeat as required, san only)")
+	unsetCmd.Flags().VarP(&unsetCmdValues.Variables, "variable", "v", "Remove the variable `NAME`\n(Repeat as required, san only)")
 
 	unsetCmd.Flags().SortFlags = false
 }
@@ -54,12 +55,26 @@ func init() {
 var unsetCmd = &cobra.Command{
 	Use:     "unset [flags] [TYPE] [NAME...]",
 	GroupID: GROUP_CONFIG,
-	Short:   "Unset a configuration value",
+	Short:   "Unset configuration parameters",
 	Long: strings.ReplaceAll(`
-Unset a configuration value.
-	
-This command has been added to remove the confusing negation syntax
-in the |set| command
+Unset (remove) configuration parameters from matching instances. This
+command is |unset| rather than |remove| as that is reserved as an
+alias for the |delete| command.
+
+Unlike the |geneos set| command, where parameters are in the form of
+KEY=VALUE, there is no way to distinguish a KEY to remove and a
+possible instance name, so you must use one or more |--key|/|-k|
+options to unset each simple parameter.
+
+WARNING: Be careful removing keys that are necessary for instances to
+be manageable. Some keys, if removed, will require manual
+intervention to remove or fox the old configuration and recreate the
+instance.
+
+You can also unset values for structured parameters. For
+|--include|/|-i| options the parameter key is the |PRIORITY| of the
+include file set while for the other options it is the |NAME|. Note
+that for structured parameters the |NAME| is case-sensitive.
 `, "|", "`"),
 	Example: strings.ReplaceAll(`
 geneos unset gateway GW1 -k aesfile

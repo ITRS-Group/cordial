@@ -32,9 +32,10 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
+// Stop an instance
 func Stop(c geneos.Instance, force, kill bool) (err error) {
-	if !force && c.Config().GetBool("protected") {
-		return fmt.Errorf("cannot stop a protected instance without '--force' or equivalent")
+	if !force && IsProtected(c) {
+		return geneos.ErrProtected
 	}
 
 	if !kill {
@@ -55,7 +56,7 @@ func Stop(c geneos.Instance, force, kill bool) (err error) {
 			}
 		}
 
-		if _, err = GetPID(c); err == os.ErrProcessDone {
+		if !IsRunning(c) {
 			fmt.Printf("%s stopped\n", c)
 			return nil
 		}
@@ -66,8 +67,7 @@ func Stop(c geneos.Instance, force, kill bool) (err error) {
 	}
 
 	time.Sleep(250 * time.Millisecond)
-	_, err = GetPID(c)
-	if err == os.ErrProcessDone {
+	if !IsRunning(c) {
 		fmt.Printf("%s killed\n", c)
 		return nil
 	}
