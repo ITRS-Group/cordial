@@ -7,11 +7,11 @@ geneos host [flags]
 ```
 ## Commands
 
-* [`geneos host` add](`geneos_host`_add.md)	 - Add a remote host
-* [`geneos host` delete](`geneos_host`_delete.md)	 - Delete a remote host configuration
-* [`geneos host` ls](`geneos_host`_ls.md)	 - List hosts, optionally in CSV or JSON format
-* [`geneos host` set](`geneos_host`_set.md)	 - Set host configuration value
-* [`geneos host` show](`geneos_host`_show.md)	 - Show details of remote host configuration
+* [`geneos host add`](geneos_host_add.md)	 - Add a remote host
+* [`geneos host delete`](geneos_host_delete.md)	 - Delete a remote host configuration
+* [`geneos host ls`](geneos_host_ls.md)	 - List hosts, optionally in CSV or JSON format
+* [`geneos host set`](geneos_host_set.md)	 - Set host configuration value
+* [`geneos host show`](geneos_host_show.md)	 - Show details of remote host configuration
 
 ## Details
 
