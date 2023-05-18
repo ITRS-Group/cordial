@@ -1,4 +1,4 @@
-# servicenow incident
+# `servicenow incident`
 
 Raise or update a ServiceNow incident
 

@@ -1,4 +1,4 @@
-# geneos tls sync
+# `geneos tls sync`
 
 Sync remote hosts certificate chain files
 

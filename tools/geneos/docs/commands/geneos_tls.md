@@ -1,4 +1,4 @@
-# geneos tls
+# `geneos tls`
 
 Manage certificates for secure connections
 
@@ -7,12 +7,12 @@ geneos tls [flags]
 ```
 ## Commands
 
-* [geneos tls import](geneos_tls_import.md)	 - Import root and signing certificates
-* [geneos tls init](geneos_tls_init.md)	 - Initialise the TLS environment
-* [geneos tls ls](geneos_tls_ls.md)	 - List certificates
-* [geneos tls new](geneos_tls_new.md)	 - Create new certificates
-* [geneos tls renew](geneos_tls_renew.md)	 - Renew instance certificates
-* [geneos tls sync](geneos_tls_sync.md)	 - Sync remote hosts certificate chain files
+* [`geneos tls` import](`geneos_tls`_import.md)	 - Import root and signing certificates
+* [`geneos tls` init](`geneos_tls`_init.md)	 - Initialise the TLS environment
+* [`geneos tls` ls](`geneos_tls`_ls.md)	 - List certificates
+* [`geneos tls` new](`geneos_tls`_new.md)	 - Create new certificates
+* [`geneos tls` renew](`geneos_tls`_renew.md)	 - Renew instance certificates
+* [`geneos tls` sync](`geneos_tls`_sync.md)	 - Sync remote hosts certificate chain files
 
 ## Details
 

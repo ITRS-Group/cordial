@@ -1,4 +1,4 @@
-# geneos snapshot
+# `geneos snapshot`
 
 Capture a snapshot of each matching dataview
 

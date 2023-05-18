@@ -1,4 +1,4 @@
-# geneos unset
+# `geneos unset`
 
 Unset a configuration value
 
@@ -37,6 +37,7 @@ in the `set` command
 ```bash
 geneos unset gateway GW1 -k aesfile
 geneos unset san -g Gateway1
+
 ```
 
 ## SEE ALSO

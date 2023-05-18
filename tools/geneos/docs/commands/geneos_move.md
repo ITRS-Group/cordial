@@ -1,4 +1,4 @@
-# geneos move
+# `geneos move`
 
 Move (or rename) instances
 

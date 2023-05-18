@@ -1,4 +1,4 @@
-# geneos logout
+# `geneos logout`
 
 Logout (remove credentials)
 

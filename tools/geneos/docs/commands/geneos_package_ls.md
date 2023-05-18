@@ -1,4 +1,4 @@
-# geneos package ls
+# `geneos package ls`
 
 List packages available for update command
 

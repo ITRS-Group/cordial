@@ -1,4 +1,4 @@
-# geneos start
+# `geneos start`
 
 Start instances
 

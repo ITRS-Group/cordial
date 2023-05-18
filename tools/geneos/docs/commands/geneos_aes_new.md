@@ -1,4 +1,4 @@
-# geneos aes new
+# `geneos aes new`
 
 Create a new key file
 
@@ -55,6 +55,7 @@ explicit paths with the `--keyfile` or `--user` options.
 geneos aes new
 geneos aes new -F ~/keyfile.aes
 geneos aes new -S gateway
+
 ```
 
 ## SEE ALSO

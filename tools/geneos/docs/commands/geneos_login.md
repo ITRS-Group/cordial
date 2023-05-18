@@ -1,4 +1,4 @@
-# geneos login
+# `geneos login`
 
 Store credentials for software downloads
 

@@ -1,4 +1,4 @@
-# geneos delete
+# `geneos delete`
 
 Delete instances
 

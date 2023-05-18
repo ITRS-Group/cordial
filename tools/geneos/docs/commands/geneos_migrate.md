@@ -1,4 +1,4 @@
-# geneos migrate
+# `geneos migrate`
 
 Migrate legacy .rc configuration to new formats
 

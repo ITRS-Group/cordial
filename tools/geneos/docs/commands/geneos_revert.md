@@ -1,4 +1,4 @@
-# geneos revert
+# `geneos revert`
 
 Revert migration of .rc files from backups
 

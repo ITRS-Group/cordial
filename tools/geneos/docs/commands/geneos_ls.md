@@ -1,4 +1,4 @@
-# geneos ls
+# `geneos ls`
 
 List instances
 

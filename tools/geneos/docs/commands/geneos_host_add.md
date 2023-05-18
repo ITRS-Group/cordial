@@ -1,4 +1,4 @@
-# geneos host add
+# `geneos host add`
 
 Add a remote host
 
@@ -54,6 +54,7 @@ defined, it is set to the same as the local Geneos root directory.
 geneos host add server1
 geneos host add ssh://server2:50122
 geneos host add remote1 ssh://server.example.com/opt/geneos
+
 ```
 
 ## SEE ALSO

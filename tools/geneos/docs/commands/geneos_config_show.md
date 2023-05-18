@@ -1,4 +1,4 @@
-# geneos config show
+# `geneos config show`
 
 Show program configuration
 

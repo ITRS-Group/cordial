@@ -1,4 +1,4 @@
-# pagerduty assign
+# `pagerduty assign`
 
 Send a Pagerduty trigger event
 

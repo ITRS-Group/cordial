@@ -106,7 +106,7 @@ geneos aes decode -p +encs+hexencodedciphertext
 
 # try to decode using the AES key file associated with the 'Demo Gateway' instance
 geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
-	`,
+`,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",

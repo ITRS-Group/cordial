@@ -1,4 +1,4 @@
-# geneos clean
+# `geneos clean`
 
 Clean-up instance directories
 
@@ -46,6 +46,7 @@ geneos clean gateway Gateway1
 # Stop all netprobes and remove all non-essential files from working 
 # directories, then restart netprobes
 geneos clean --full netprobe
+
 ```
 
 ## SEE ALSO

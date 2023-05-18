@@ -1,4 +1,4 @@
-# geneos set
+# `geneos set`
 
 Set instance configuration parameters
 

@@ -1,4 +1,4 @@
-# geneos logs
+# `geneos logs`
 
 Show log(s) for instances
 

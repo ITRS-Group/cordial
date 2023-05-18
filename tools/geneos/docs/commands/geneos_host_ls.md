@@ -1,4 +1,4 @@
-# geneos host ls
+# `geneos host ls`
 
 List hosts, optionally in CSV or JSON format
 

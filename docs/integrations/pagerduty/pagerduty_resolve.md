@@ -1,4 +1,4 @@
-# pagerduty resolve
+# `pagerduty resolve`
 
 Send a Pagerduty resolve event
 

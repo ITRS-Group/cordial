@@ -1,4 +1,4 @@
-# geneos home
+# `geneos home`
 
 Output a directory path for given options
 
@@ -50,6 +50,7 @@ a quoted path but the bash shell ignores these quotes inside
 cd $(geneos home)
 cd $(geneos home gateway example1)
 cat $(geneos home gateway example2)/gateway.txt
+
 ```
 
 ## SEE ALSO

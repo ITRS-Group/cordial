@@ -1,4 +1,4 @@
-# geneos host set
+# `geneos host set`
 
 Set host configuration value
 

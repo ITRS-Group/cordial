@@ -1,4 +1,4 @@
-# geneos host show
+# `geneos host show`
 
 Show details of remote host configuration
 

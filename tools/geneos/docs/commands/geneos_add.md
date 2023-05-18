@@ -1,4 +1,4 @@
-# geneos add
+# `geneos add`
 
 Add a new instance
 
@@ -90,6 +90,7 @@ names except those that can be set by the options above.
 geneos add gateway EXAMPLE1
 geneos add san server1 --start -g GW1 -g GW2 -t "Infrastructure Defaults" -t "App1" -a COMPONENT=APP1
 geneos add netprobe infraprobe12 --start --log
+
 ```
 
 ## SEE ALSO

@@ -1,4 +1,4 @@
-# geneos config set
+# `geneos config set`
 
 Set program configuration
 
@@ -35,6 +35,7 @@ main documentation.
 ```bash
 geneos config set geneos="/opt/geneos"
 geneos config set config.rebuild=always
+
 ```
 
 ## SEE ALSO

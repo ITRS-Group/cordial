@@ -1,4 +1,4 @@
-# geneos init san
+# `geneos init san`
 
 Initialise a Geneos SAN (Self-Announcing Netprobe) environment
 

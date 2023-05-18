@@ -1,4 +1,4 @@
-# geneos rebuild
+# `geneos rebuild`
 
 Rebuild instance configuration files
 

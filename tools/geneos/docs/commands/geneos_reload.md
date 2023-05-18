@@ -1,4 +1,4 @@
-# geneos reload
+# `geneos reload`
 
 Reload instance configuration, where supported
 

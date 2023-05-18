@@ -1,4 +1,4 @@
-# geneos tls renew
+# `geneos tls renew`
 
 Renew instance certificates
 

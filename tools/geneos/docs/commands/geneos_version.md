@@ -1,4 +1,4 @@
-# geneos version
+# `geneos version`
 
 Show program version details
 

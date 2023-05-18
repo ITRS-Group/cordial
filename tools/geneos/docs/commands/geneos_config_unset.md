@@ -1,4 +1,4 @@
-# geneos config unset
+# `geneos config unset`
 
 Unset a program parameter
 

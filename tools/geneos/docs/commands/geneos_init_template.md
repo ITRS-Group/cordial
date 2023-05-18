@@ -1,4 +1,4 @@
-# geneos init template
+# `geneos init template`
 
 Initialise or overwrite templates
 

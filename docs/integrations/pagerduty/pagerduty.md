@@ -1,4 +1,4 @@
-# pagerduty
+# `pagerduty`
 
 Send a pagerduty event
 
@@ -7,9 +7,9 @@ pagerduty [flags]
 ```
 ## Commands
 
-* [pagerduty assign](pagerduty_assign.md)	 - Send a Pagerduty trigger event
-* [pagerduty resolve](pagerduty_resolve.md)	 - Send a Pagerduty resolve event
-* [pagerduty trigger](pagerduty_trigger.md)	 - Send a Pagerduty trigger event
+* [`pagerduty` assign](`pagerduty`_assign.md)	 - Send a Pagerduty trigger event
+* [`pagerduty` resolve](`pagerduty`_resolve.md)	 - Send a Pagerduty resolve event
+* [`pagerduty` trigger](`pagerduty`_trigger.md)	 - Send a Pagerduty trigger event
 
 ## Details
 

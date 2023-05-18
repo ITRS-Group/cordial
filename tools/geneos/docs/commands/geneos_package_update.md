@@ -1,4 +1,4 @@
-# geneos package update
+# `geneos package update`
 
 Update the active version of installed Geneos package
 
@@ -58,6 +58,7 @@ geneos package update gateway -b active_prod
 geneos package update gateway -b active_dev 5.11
 geneos package update
 geneos package update netprobe 5.13.2
+
 ```
 
 ## SEE ALSO
