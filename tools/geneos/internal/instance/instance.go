@@ -38,6 +38,7 @@ import (
 	"syscall"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 
@@ -55,12 +56,8 @@ type Instance struct {
 	Env             []string          `json:",omitempty"`
 }
 
-var Execname string
-
-func Initialise(app string) {
-	Execname = app
-}
-
+// DisplayName returns the type, name and non-local host as a string
+// suitable for display.
 func DisplayName(c geneos.Instance) string {
 	if c.Host() == geneos.LOCAL {
 		return fmt.Sprintf("%s %q", c.Type(), c.Name())
@@ -68,17 +65,19 @@ func DisplayName(c geneos.Instance) string {
 	return fmt.Sprintf("%s \"%s@%s\"", c.Type(), c.Name(), c.Host())
 }
 
-// separate reserved words and invalid syntax
-func ReservedName(in string) (ok bool) {
-	log.Debug().Msgf("checking %q", in)
-	if geneos.ParseComponentName(in) != nil {
+// ReservedName returns true if in name a reserved word. Reserved names
+// are checked against all the values registered by components at
+// start-up.
+func ReservedName(name string) (ok bool) {
+	log.Debug().Msgf("checking %q", name)
+	if geneos.ParseComponentName(name) != nil {
 		log.Debug().Msg("matches a reserved word")
 		return true
 	}
 	if config.GetString("reservednames") != "" {
-		list := strings.Split(in, ",")
+		list := strings.Split(name, ",")
 		for _, n := range list {
-			if strings.EqualFold(in, strings.TrimSpace(n)) {
+			if strings.EqualFold(name, strings.TrimSpace(n)) {
 				log.Debug().Msg("matches a user defined reserved name")
 				return true
 			}
@@ -92,19 +91,21 @@ func ReservedName(in string) (ok bool) {
 // distinguish from versions
 var validStringRE = regexp.MustCompile(`^\w[\w-]?[:@\.\w -]*$`)
 
-// return true while a string is considered a valid instance name
+// ValidInstanceName returns true if name is considered a valid instance
+// name. It is not checked against the list of reserved names.
 //
-// used to consume instance names until parameters are then passed down
-func ValidInstanceName(in string) (ok bool) {
-	ok = validStringRE.MatchString(in)
+// XXX used to consume instance names until parameters are then passed
+// down
+func ValidInstanceName(name string) (ok bool) {
+	ok = validStringRE.MatchString(name)
 	if !ok {
-		log.Debug().Msgf("no rexexp match: %s", in)
+		log.Debug().Msgf("no rexexp match: %s", name)
 	}
 	return
 }
 
-// given a filename or path, prepend the instance home directory
-// if not absolute, and clean
+// Abs returns an absolute path to file prepended with the instance
+// working directory if file is not already an absolute path.
 func Abs(c geneos.Instance, file string) (result string) {
 	file = filepath.Clean(file)
 	if filepath.IsAbs(file) {
@@ -139,7 +140,9 @@ func RemovePaths(c geneos.Instance, paths string) (err error) {
 	return
 }
 
-// logdir = LogD relative to Home or absolute
+// LogFile returns the fulle path to the log file for the instance.
+//
+// XXX logdir = LogD relative to Home or absolute
 func LogFile(c geneos.Instance) (logfile string) {
 	logdir := filepath.Clean(c.Config().GetString("logdir"))
 	switch {
@@ -154,6 +157,7 @@ func LogFile(c geneos.Instance) (logfile string) {
 	return
 }
 
+// Signal sends the signal to the instance
 func Signal(c geneos.Instance, signal syscall.Signal) (err error) {
 	pid, err := GetPID(c)
 	if err != nil {
@@ -213,12 +217,12 @@ func Match(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 	return
 }
 
-// construct and return a slice of a/all component types that have
-// a matching name
+// MatchAll constructs and returns a slice of instances that have a
+// matching name
 func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
 	_, local, r := SplitName(name, geneos.ALL)
 	if !r.Exists() {
-		log.Debug().Msgf("host %s not loaded", r)
+		log.Debug().Msgf("host %s %w", host.ErrNotAvailable)
 		return
 	}
 
@@ -276,9 +280,9 @@ func MatchKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (con
 	return
 }
 
-// get all used ports in config files on a specific remote
-// this will not work for ports assigned in component config
-// files, such as gateway setup or netprobe collection agent
+// GetPorts gets all used ports in config files on a specific remote
+// this will not work for ports assigned in component config files, such
+// as gateway setup or netprobe collection agent
 //
 // returns a map
 func GetPorts(r *geneos.Host) (ports map[uint16]*geneos.Component) {
@@ -612,6 +616,7 @@ func Enable(c geneos.Instance) (err error) {
 	return c.Host().Remove(disableFile)
 }
 
+// IsDisabled returns true if the instance c is disabled.
 func IsDisabled(c geneos.Instance) bool {
 	d := ComponentFilepath(c, geneos.DisableExtension)
 	if f, err := c.Host().Stat(d); err == nil && f.Mode().IsRegular() {
@@ -623,6 +628,12 @@ func IsDisabled(c geneos.Instance) bool {
 // IsProtected returns true if instance c is marked protected
 func IsProtected(c geneos.Instance) bool {
 	return c.Config().GetBool("protected")
+}
+
+// IsRunning returns true if the instance is running
+func IsRunning(c geneos.Instance) bool {
+	_, err := GetPID(c)
+	return err != os.ErrProcessDone
 }
 
 // SharedPath returns the full path a directory or file in the instances

@@ -28,11 +28,10 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
+// Start runs the instance.
 func Start(c geneos.Instance) (err error) {
-	pid, err := GetPID(c)
-	if err == nil {
-		fmt.Printf("%s already running with PID %d\n", c, pid)
-		return
+	if IsRunning(c) {
+		return geneos.ErrRunning
 	}
 
 	if IsDisabled(c) {
@@ -61,7 +60,7 @@ func Start(c geneos.Instance) (err error) {
 	errfile := ComponentFilepath(c, "txt")
 
 	c.Host().Start(cmd, env, c.Home(), errfile)
-	pid, err = GetPID(c)
+	pid, err := GetPID(c)
 	if err != nil {
 		return err
 	}
