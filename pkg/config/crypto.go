@@ -411,8 +411,8 @@ func AddCreds(creds Credentials, options ...FileOptions) (err error) {
 	return cf.Save("credentials", options...)
 }
 
-// DeleteCreds removes the entry for domain from the "credentials" file
-// using FileOptions options.
+// DeleteCreds removes the entry for domain from the credentials file
+// identified by options.
 func DeleteCreds(domain string, options ...FileOptions) (err error) {
 	options = append(options, KeyDelimiter("::"))
 	cf, err := Load("credentials", options...)
@@ -425,6 +425,8 @@ func DeleteCreds(domain string, options ...FileOptions) (err error) {
 	return cf.Save("credentials", options...)
 }
 
+// DeleteAllCreds will remove all the credentials in the credentials
+// file identified by options.
 func DeleteAllCreds(options ...FileOptions) (err error) {
 	options = append(options, KeyDelimiter("::"))
 	cf := New(options...)
