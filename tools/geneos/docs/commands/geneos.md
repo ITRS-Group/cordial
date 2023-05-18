@@ -17,9 +17,9 @@ Control your Geneos environment
 * [`geneos host`](geneos_host.md)	 - Manage remote host settings
 * [`geneos import`](geneos_import.md)	 - Import files to an instance or a common directory
 * [`geneos init`](geneos_init.md)	 - Initialise a Geneos installation
-* [`geneos login`](geneos_login.md)	 - Store credentials for software downloads
+* [`geneos login`](geneos_login.md)	 - Store credentials related to Geneos
 * [`geneos logout`](geneos_logout.md)	 - Logout (remove credentials)
-* [`geneos logs`](geneos_logs.md)	 - Show log(s) for instances
+* [`geneos logs`](geneos_logs.md)	 - View, search or follow logs
 * [`geneos ls`](geneos_ls.md)	 - List instances
 * [`geneos migrate`](geneos_migrate.md)	 - Migrate legacy .rc configuration to new formats
 * [`geneos move`](geneos_move.md)	 - Move (or rename) instances

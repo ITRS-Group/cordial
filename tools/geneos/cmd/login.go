@@ -42,8 +42,8 @@ func init() {
 
 	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username")
 	loginCmd.Flags().VarP(&loginCmdPassword, "password", "p", "Password")
-	loginCmd.Flags().VarP(&loginKeyfile, "keyfile", "k", "Keyfile to use")
-	loginCmd.Flags().BoolVarP(&loginCmdList, "list", "l", false, "list domains of credentials (no validity checks are done)")
+	loginCmd.Flags().VarP(&loginKeyfile, "keyfile", "k", "Key file to use")
+	loginCmd.Flags().BoolVarP(&loginCmdList, "list", "l", false, "List the names of the currently stored credentials")
 
 	loginCmd.Flags().SortFlags = false
 
@@ -51,30 +51,47 @@ func init() {
 
 // loginCmd represents the login command
 var loginCmd = &cobra.Command{
-	Use:     "login [flags] [URLPATTERN]",
+	Use:     "login [flags] [DOMAIN]",
 	GroupID: GROUP_CREDENTIALS,
-	Short:   "Store credentials for software downloads",
+	Short:   "Store credentials related to Geneos",
 	Long: strings.ReplaceAll(`
-Prompt for and stored credentials for later use by commands.
+The login command will store credentials in your local configuration
+directory for use with |geneos| and other tools from |cordial|.
+Passwords are encrypted using a key file which is created if it does
+not already exist.
 
-Typical use is for downloading release archives from the official ITRS web
-site.
+If not given |DOMAIN| defaults to |itrsgroup.com|. When
+credentials are used, the destination is checked against all stored
+credentials and the longest match is selected.
 
-If not given |URLPATTERN| defaults to |itrsgroup.com|. When credentials are
-used, the destination is checked against all stored credentials and the
-longest match is selected.
+A common use of stored credentials is for the download and
+installation of Geneos packages via the |geneos package| subsystem.
+Credentials are also used by the |geneos snapshot| command and the
+|dv2email| program.
 
-If no |-u USERNAME| is given then the user is prompted for a username.
+If no |--username|/|-u| option is given then the user is prompted for one.
 
-If no |-p PASSWORD| is given then the user is prompted for the password,
-which is not echoed, twice and it is only accepted if both instances match.
+If no |--password|/|-p| is given then the user is prompted to enter
+the password twice and it is only accepted if both instances match.
+After three failures to match password the program will terminate and
+not save the credential.
 
-The credentials are encrypted with the keyfile specified with |-k KEYFILE|
-and if not given then the user's default keyfile is used - and created if it
-does not exist. See |geneos aes new| for details.
+The user's default key file is used unless the |--keyfile|/|-k| is
+given. The path to the key file used is stored in the credential and
+so if the key file is moved or overwritten then that credential
+becomes unusable.
 
-The credentials cannot be used without the keyfile and each set of
-credentials can use a separate keyfile.
+The credentials cannot be used without the original key file and each
+set of credentials can use a separate key file.
+
+The credentials file itself can be world readable as the security is
+through the use of a protected key file. Running |geneos.exe| on
+Windows does not currently protect the key file on creation.
+
+Future releases will support extended credential sets, for example
+SSH and 2-legged OAuth ClientID/ClientSecret (such as application
+keys from cloud providers). Another addition may be the automatic
+encryption of non-password data in credentials.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

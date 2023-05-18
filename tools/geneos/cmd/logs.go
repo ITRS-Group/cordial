@@ -56,10 +56,12 @@ var tails *sync.Map
 func init() {
 	GeneosCmd.AddCommand(logsCmd)
 
-	logsCmd.Flags().IntVarP(&logCmdLines, "lines", "n", 10, "Lines to tail")
-	logsCmd.Flags().BoolVarP(&logCmdStderr, "stderr", "E", false, "Show STDERR output files")
 	logsCmd.Flags().BoolVarP(&logCmdFollow, "follow", "f", false, "Follow file")
-	logsCmd.Flags().BoolVarP(&logCmdCat, "cat", "c", false, "Cat whole file")
+	logsCmd.Flags().IntVarP(&logCmdLines, "lines", "n", 10, "Lines to tail")
+	logsCmd.Flags().BoolVarP(&logCmdCat, "cat", "c", false, "Output whole file")
+
+	logsCmd.Flags().BoolVarP(&logCmdStderr, "stderr", "E", false, "Also show STDERR output files")
+
 	logsCmd.Flags().StringVarP(&logCmdMatch, "match", "g", "", "Match lines with STRING")
 	logsCmd.Flags().StringVarP(&logCmdIgnore, "ignore", "v", "", "Match lines without STRING")
 
@@ -72,15 +74,41 @@ func init() {
 var logsCmd = &cobra.Command{
 	Use:     "logs [flags] [TYPE] [NAME...]",
 	GroupID: GROUP_VIEW,
-	Short:   "Show log(s) for instances",
+	Short:   "View, search or follow logs",
 	Long: strings.ReplaceAll(`
-Show log(s) for instances. The default is to show the last 10 lines
-for each matching instance. If either |-g| or |-v| are given without
-|-f| to follow live logs, then |-c| to search the whole log is
-implied.
-	
-When more than one instance matches each output block is prefixed by
-instance details.
+The default behaviour is to show the last 10 lines of the log file
+for each matching instance. The order of instances cannot be
+predicted.
+
+You can control the basic behaviour of the command with three
+options. The |--lines|/|-n| option controls how many lines to output
+per instance at the start of the program. The |--cat|/|-c| options
+will output the whole log file and any |--lines|/|-n| option is
+ignored. The |--follow|/|-f| option will show the last 10 lines
+(unless you ask for more with the |--lines|/|-n| option) and then
+wait for the log to be updated, just like the standard |tail -f|
+command except it will work for all matching instances including
+remote ones. |--cat|/|-c| and |--follow|/|-f| are mutually exclusive.
+
+The |--stderr|/|-E| option controls whether the separate |STDERR| log
+(if there is one) for each matching instance is also shown along with
+the main log. There is no way currently to only view the |STDERR|
+logs.
+
+The |--match|/|-g| and |--ignore|/|-v| options will filter lines the
+output based on a case sensitive search over the whole line. As can
+be expected |--match|/|-g| behaves somewhat like |grep| and
+|--ignore|/|-v| like |grep -v|. Case-insensitive filtering is avoided
+for performance.
+
+Only on |--match|/|-g| or |--ignore|/|-v| is allowed.
+
+Each block of output has a header indicating the details of the
+instance and the path to the log file. The header is output each time
+the file being output changes. There is no way to suppress this header.
+
+Future releases may add support for more complex filtering using
+regular expressions and also multiple filters.
 `, "|", "`"),
 	Aliases:      []string{"log"},
 	SilenceUsage: true,
@@ -184,7 +212,7 @@ func tailLines(f io.ReadSeekCloser, end int64, linecount int) (text string, err 
 	var chunk int64 = int64(linecount * charsPerLine)
 	var buf []byte = make([]byte, chunk)
 	var i int64
-	var alllines []string = []string{""}
+	alllines := []string{""}
 
 	if f == nil {
 		return

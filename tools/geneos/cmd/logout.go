@@ -21,15 +21,17 @@ func init() {
 
 // logoutCmd represents the logout command
 var logoutCmd = &cobra.Command{
-	Use:     "logout [flags] [NAME...]",
+	Use:     "logout [flags] [DOMAIN...]",
 	GroupID: GROUP_CREDENTIALS,
 	Short:   "Logout (remove credentials)",
 	Long: strings.ReplaceAll(`
-The logout command removes the credentials for the names given. If no
-names are set then the default credentials are removed.
+The logout command removes the credentials for the |DOMAIN| given. If no
+names are set then the default credentials (|itrsgroup.com|) are removed.
 
-If the |-A| options is given then all credentials are removed.
+If the |-A| options is given then all credentials are removed, but
+the underlying file is not deleted.
 `, "|", "`"),
+	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "false",

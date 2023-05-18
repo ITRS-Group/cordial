@@ -13,13 +13,13 @@ Import each `SOURCE` to instance directories. With the
 sub-directory `TYPE_` suffixed with the value to the `--common`/`-c`
 option. See examples below.
 
-The `SOURCE` can be the path to a local file, a URL or '-' for STDIN.
+The `SOURCE` can be the path to a local file, a URL or '-' for `STDIN`.
 `SOURCE` may not be a directory.
 
-If the `SOURCE` is a file in the current directory then it must be
+If `SOURCE` is a file in the current directory then it must be
 prefixed with `"./"` to avoid being seen as an instance NAME to
 search for. Any file path with a directory separator already present
-does not need this precaution. The program will read from STDIN if
+does not need this precaution. The program will read from `STDIN` if
 the `SOURCE` '-' is given but this can only be used once and a
 destination DEST must be defined.
 
@@ -40,13 +40,13 @@ These may be scripts, include files and so on. Using a TYPE `gateway`
 as an example and using a `--common config` option the destination
 for `SOURCE` would be `gateway/gateway_config`
 
-Future release may add support for directories and.or unarchiving of
+Future releases may add support for directories and.or unarchiving of
 `tar.gz`/`zip` and other file archives.
 
 ### Options
 
 ```text
-  -c, --common SUFFIX   Import file(s) to a components top-level directory with suffix TYPE_SUFFIX
+  -c, --common SUFFIX   Import files to a component directory named TYPE_SUFFIX
 ```
 
 ### Options inherited from parent commands
