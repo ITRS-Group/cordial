@@ -32,7 +32,6 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -135,7 +134,6 @@ func init() {
 
 	// run initialisers on internal packages, set the executable name
 	geneos.Initialise(Execname)
-	instance.Initialise(Execname)
 }
 
 var Execname = execname // filepath.Base(os.Args[0])

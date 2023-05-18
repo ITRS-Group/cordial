@@ -33,20 +33,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var disableCmdForce bool
+var disableCmdForce, disableCmdStop bool
 
 func init() {
 	GeneosCmd.AddCommand(disableCmd)
 
-	disableCmd.Flags().BoolVarP(&disableCmdForce, "force", "F", false, "force disable instances")
+	disableCmd.Flags().BoolVarP(&disableCmdStop, "stop", "S", false, "Stop instances")
+	disableCmd.Flags().BoolVarP(&disableCmdForce, "force", "F", false, "Force disable instances")
 	disableCmd.Flags().SortFlags = false
 }
 
 var disableCmd = &cobra.Command{
 	Use:     "disable [TYPE] [NAME...]",
 	GroupID: GROUP_MANAGE,
-	Short:   "Stop and disable instances",
+	Short:   "Disable instances",
 	Long: strings.ReplaceAll(`
+
 Mark any matching instances as disabled. The instances are also
 stopped.
 `, "|", "`"),
@@ -66,18 +68,24 @@ func disableInstance(c geneos.Instance, params []string) (err error) {
 		return nil
 	}
 
-	if instance.IsProtected(c) && !disableCmdForce {
-		fmt.Printf("%s protected. Use --force to override\n", c)
-		return
+	if instance.IsProtected(c) {
+		return geneos.ErrProtected
 	}
 
-	if err = instance.Stop(c, disableCmdForce, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
-		return
+	if disableCmdStop {
+		if c.Type().RealComponent {
+			if err = instance.Stop(c, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
+				return
+			}
+		}
 	}
 
-	if err = instance.Disable(c); err == nil {
-		fmt.Printf("%s disabled\n", c)
+	if !instance.IsProtected(c) || disableCmdForce {
+		if err = instance.Disable(c); err == nil {
+			fmt.Printf("%s disabled\n", c)
+			return nil
+		}
 	}
 
-	return
+	return fmt.Errorf("not disabled. Instances must not be running or use the '--force'/'-F' option")
 }

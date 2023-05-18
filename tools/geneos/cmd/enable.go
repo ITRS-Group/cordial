@@ -44,11 +44,11 @@ var enableCmdStart bool
 var enableCmd = &cobra.Command{
 	Use:     "enable [flags] [TYPE] [NAME...]",
 	GroupID: GROUP_MANAGE,
-	Short:   "Enable instances",
+	Short:   "Enable instance",
 	Long: strings.ReplaceAll(`
-Mark any matching instances as enabled and if the |-S| flag is given
-then start the instance. Only those instances that were disabled are started
-when the |-S| flag is used.
+Enable matching instances and, if the |--start|/|-S| options is set
+then start the instance. Only those instances that were disabled are
+started when the |--start|/|-S| flag is used.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -62,8 +62,14 @@ when the |-S| flag is used.
 }
 
 func enableInstance(c geneos.Instance, params []string) (err error) {
+	if !instance.IsDisabled(c) {
+		return
+	}
 	if err = instance.Enable(c); err == nil {
 		fmt.Printf("%s enabled\n", c)
+		if enableCmdStart {
+			return instance.Start(c)
+		}
 	}
 	return
 }
