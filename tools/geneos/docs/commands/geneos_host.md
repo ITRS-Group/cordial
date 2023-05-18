@@ -26,4 +26,4 @@ Manage remote host settings. Without a subcommand defaults to `ls` of hosts.
 
 ## SEE ALSO
 
-* [geneos](geneos.md)	 - Control your Geneos environment
+* [geneos](geneos.md)	 - Take control of your Geneos environments

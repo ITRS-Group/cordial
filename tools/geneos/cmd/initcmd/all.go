@@ -61,7 +61,7 @@ Initialise a typical Geneos installation.
 
 This command initialises a Geneos installation by:
 - Creating the directory structure & user configuration file,
-- Installing software ackages for component types |gateway|, |licd|,
+- Installing software packages for component types |gateway|, |licd|,
   |netprobe| & |webserver|,
 - Creating an instance for each component type named after the hostname
   (except for |netprobe| whose instance is named |localhost|)
