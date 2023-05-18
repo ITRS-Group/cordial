@@ -1,6 +1,6 @@
 # `geneos version`
 
-Show program version details
+Show program version
 
 ```text
 geneos version [flags]
@@ -9,6 +9,10 @@ geneos version [flags]
 ## Details
 
 Show program version details
+
+With the `--debug`/`-d` option it will also output build information
+which may be useful when reporting issues or to check for suspected
+problems in build dependencies.
 
 ### Options inherited from parent commands
 

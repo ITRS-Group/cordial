@@ -1,6 +1,6 @@
 # `geneos reload`
 
-Reload instance configuration, where supported
+Reload configurations
 
 ```text
 geneos reload [TYPE] [NAME...] [flags]
@@ -8,7 +8,8 @@ geneos reload [TYPE] [NAME...] [flags]
 
 ## Details
 
-Signal the matching instances to reload their configurations, depending on the component TYPE.
+Send a reload signal to all matching instances whose TYPE supports
+them.
 
 ### Options inherited from parent commands
 

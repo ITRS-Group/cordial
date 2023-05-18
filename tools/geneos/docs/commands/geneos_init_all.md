@@ -38,30 +38,32 @@ component is installed.
 ### Options
 
 ```text
-  -L, --licence Filepath or URL       Filepath or URL to license file (default "geneos.lic")
-  -A, --archive PATH or URL           PATH or URL to software archive to install
-  -i, --include PRIORITY:{URL|PATH}   (gateways) Add an include file in the format PRIORITY:PATH
+  -L, --licence string                Licence file location (default "geneos.lic")
+  -A, --archive string                Directory of releases for installation
+  -i, --include PRIORITY:{URL|PATH}   A gateway connection in the format HOSTNAME:PORT
+                                      (Repeat as required, san and floating only)
 ```
 
 ### Options inherited from parent commands
 
 ```text
-  -G, --config string                config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -e, --env NAME=VALUE               Add an environment variable in the format NAME=VALUE. Repeat flag for more values.
-  -f, --floatingtemplate string      Floating probe template file
-  -F, --force                        Be forceful, ignore existing directories.
-  -w, --gatewaytemplate string       A gateway template file
-  -H, --host HOSTNAME                Limit actions to HOSTNAME (not for commands given instance@host parameters)
-  -c, --importcert string            signing certificate file with optional embedded private key
-  -k, --importkey string             signing private key file
-  -l, --log                          Run 'logs -f' after starting instance(s)
-  -C, --makecerts                    Create default certificates for TLS support
-  -n, --name string                  Use the given name for instances and configurations instead of the hostname
-  -N, --nexus                        Download from nexus.itrsgroup.com. Requires ITRS internal credentials
-  -s, --santemplate string           SAN template file
-  -p, --snapshots                    Download from nexus snapshots. Requires -N
-  -u, --username download.username   Username for downloads. Defaults to configuration value download.username
-  -V, --version string               Download matching version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
+  -G, --config string             config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -e, --env NAME=VALUE            An environment variable for instance start-up
+                                  (Repeat as required)
+  -f, --floatingtemplate string   Floating probe template file
+  -F, --force                     Be forceful, ignore existing directories.
+  -w, --gatewaytemplate string    A gateway template file
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters)
+  -c, --importcert string         signing certificate file with optional embedded private key
+  -k, --importkey string          signing private key file
+  -l, --log                       Follow logs after starting instance(s)
+  -C, --makecerts                 Create default certificates for TLS support
+  -n, --name string               Use name for instances and configurations instead of the hostname
+  -N, --nexus                     Download from nexus.itrsgroup.com. Requires ITRS internal credentials
+  -s, --santemplate string        SAN template file
+  -p, --snapshots                 Download from nexus snapshots. Requires -N
+  -u, --username string           Username for downloads
+  -V, --version string            Download matching version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
 ```
 
 ## Examples

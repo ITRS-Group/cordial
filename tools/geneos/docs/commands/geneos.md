@@ -21,23 +21,23 @@ Control your Geneos environment
 * [`geneos logout`](geneos_logout.md)	 - Logout (remove credentials)
 * [`geneos logs`](geneos_logs.md)	 - View, search or follow logs
 * [`geneos ls`](geneos_ls.md)	 - List instances
-* [`geneos migrate`](geneos_migrate.md)	 - Migrate legacy .rc configuration to new formats
-* [`geneos move`](geneos_move.md)	 - Move (or rename) instances
+* [`geneos migrate`](geneos_migrate.md)	 - Migrate configurations
+* [`geneos move`](geneos_move.md)	 - Move instances
 * [`geneos package`](geneos_package.md)	 - A brief description of your command
 * [`geneos protect`](geneos_protect.md)	 - Mark instances as protected
-* [`geneos ps`](geneos_ps.md)	 - List process information for instances, optionally in CSV or JSON format
+* [`geneos ps`](geneos_ps.md)	 - Show running instances
 * [`geneos rebuild`](geneos_rebuild.md)	 - Rebuild instance configuration files
-* [`geneos reload`](geneos_reload.md)	 - Reload instance configuration, where supported
+* [`geneos reload`](geneos_reload.md)	 - Reload configurations
 * [`geneos restart`](geneos_restart.md)	 - Restart instances
-* [`geneos revert`](geneos_revert.md)	 - Revert migration of .rc files from backups
+* [`geneos revert`](geneos_revert.md)	 - Revert earlier migration of configuration files
 * [`geneos set`](geneos_set.md)	 - Set instance configuration parameters
-* [`geneos show`](geneos_show.md)	 - Show runtime, global, user or instance configuration is JSON format
+* [`geneos show`](geneos_show.md)	 - Show instance configuration
 * [`geneos snapshot`](geneos_snapshot.md)	 - Capture a snapshot of each matching dataview
 * [`geneos start`](geneos_start.md)	 - Start instances
 * [`geneos stop`](geneos_stop.md)	 - Stop instances
 * [`geneos tls`](geneos_tls.md)	 - Manage certificates for secure connections
-* [`geneos unset`](geneos_unset.md)	 - Unset a configuration value
-* [`geneos version`](geneos_version.md)	 - Show program version details
+* [`geneos unset`](geneos_unset.md)	 - Unset configuration parameters
+* [`geneos version`](geneos_version.md)	 - Show program version
 
 ## Details
 

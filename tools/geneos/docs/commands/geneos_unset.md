@@ -1,6 +1,6 @@
 # `geneos unset`
 
-Unset a configuration value
+Unset configuration parameters
 
 ```text
 geneos unset [flags] [TYPE] [NAME...]
@@ -8,21 +8,42 @@ geneos unset [flags] [TYPE] [NAME...]
 
 ## Details
 
-Unset a configuration value.
-	
-This command has been added to remove the confusing negation syntax
-in the `set` command
+Unset (remove) configuration parameters from matching instances. This
+command is `unset` rather than `remove` as that is reserved as an
+alias for the `delete` command.
+
+Unlike the `geneos set` command, where parameters are in the form of
+KEY=VALUE, there is no way to distinguish a KEY to remove and a
+possible instance name, so you must use one or more `--key`/`-k`
+options to unset each simple parameter.
+
+WARNING: Be careful removing keys that are necessary for instances to
+be manageable. Some keys, if removed, will require manual
+intervention to remove or fox the old configuration and recreate the
+instance.
+
+You can also unset values for structured parameters. For
+`--include`/`-i` options the parameter key is the `PRIORITY` of the
+include file set while for the other options it is the `NAME`. Note
+that for structured parameters the `NAME` is case-sensitive.
 
 ### Options
 
 ```text
-  -k, --key SETTING        Unset a configuration key item
+  -k, --key KEY            Unset configuration parameter KEY
+                           (Repeat as required)
   -e, --env NAME           Remove an environment variable NAME
-  -i, --include PRIORITY   (gateways) Remove an include file withPRIORITY
-  -g, --gateway NAME       (san) Remove the gateway NAME
-  -a, --attribute NAME     (san) Remove the attribute NAME
-  -t, --type NAME          (san) Remove the type NAME
-  -v, --variable NAME      (san) Remove the variable NAME
+                           (Repeat as required)
+  -i, --include PRIORITY   Remove an include file with PRIORITY
+                           (Repeat as required, gateways only)
+  -g, --gateway NAME       Remove the gateway NAME
+                           (Repeat as required, san and floating only)
+  -a, --attribute NAME     Remove the attribute NAME
+                           (Repeat as required, san only)
+  -t, --type NAME          Remove the type NAME
+                           (Repeat as required, san only)
+  -v, --variable NAME      Remove the variable NAME
+                           (Repeat as required, san only)
 ```
 
 ### Options inherited from parent commands
