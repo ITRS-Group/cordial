@@ -1,11 +1,11 @@
 ## geneos command
 
-Show command line and environment for launching instances
+Show command line and environment for instances
 
 ### Synopsis
 
 
-Show for each of the matching instance the command line that would be used to run it as well as any environment variables.
+Show the command line and environment variables for matching instances.
 
 
 ```
