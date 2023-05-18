@@ -27,15 +27,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/licd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/webserver"
-
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 var initAllCmdLicenseFile, initAllCmdArchive string
@@ -43,11 +44,11 @@ var initAllCmdLicenseFile, initAllCmdArchive string
 func init() {
 	InitCmd.AddCommand(initAllCmd)
 
-	initAllCmd.Flags().StringVarP(&initAllCmdLicenseFile, "licence", "L", "geneos.lic", "`Filepath or URL` to license file")
+	initAllCmd.Flags().StringVarP(&initAllCmdLicenseFile, "licence", "L", "geneos.lic", "Licence file location")
 	initAllCmd.MarkFlagRequired("licence")
 
-	initAllCmd.Flags().StringVarP(&initAllCmdArchive, "archive", "A", "", "`PATH or URL` to software archive to install")
-	initAllCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
+	initAllCmd.Flags().StringVarP(&initAllCmdArchive, "archive", "A", "", ArchiveOptionsText)
+	initAllCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewayValuesOptionstext)
 
 	initAllCmd.Flags().SortFlags = false
 }
@@ -98,8 +99,8 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 		log.Debug().Msgf("%s %v %v", ct, args, params)
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			log.Error().Err(cmd.ErrInvalidArgs).Msg(ct.String())
-			return cmd.ErrInvalidArgs
+			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
+			return geneos.ErrInvalidArgs
 		}
 		options, err := initProcessArgs(args)
 		if err != nil {

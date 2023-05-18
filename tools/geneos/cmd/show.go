@@ -36,13 +36,17 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+type showCmdInstanceConfig struct {
+	Name      string `json:"name,omitempty"`
+	Host      string `json:"host,omitempty"`
+	Type      string `json:"type,omitempty"`
+	Disabled  bool   `json:"disabled"`
+	Protected bool   `json:"protected"`
+}
+
 type showCmdConfig struct {
-	Name      string      `json:"name,omitempty"`
-	Host      string      `json:"host,omitempty"`
-	Type      string      `json:"type,omitempty"`
-	Disabled  bool        `json:"disabled"`
-	Protected bool        `json:"protected"`
-	Config    interface{} `json:"config,omitempty"`
+	Instance      showCmdInstanceConfig `json:"instance"`
+	Configuration interface{}           `json:"configuration,omitempty"`
 }
 
 var showCmdRaw bool
@@ -58,23 +62,22 @@ func init() {
 var showCmd = &cobra.Command{
 	Use:     "show [flags] [TYPE] [NAME...]",
 	GroupID: GROUP_VIEW,
-	Short:   "Show runtime, global, user or instance configuration is JSON format",
+	Short:   "Show instance configuration",
 	Long: strings.ReplaceAll(`
-Show the runtime or instance configuration. The loaded
-global or user configurations can be seen through the show global
-and show user sub-commands, respectively.
+Show the configuration for all matching instances.
 
-With no arguments show the full runtime configuration that
-results from environment variables, loading built-in defaults and the
-global and user configurations.
+At the moment this is in JSON format and is output as a single,
+concatenated JSON array of object literals, one per instance.
 
-If a component TYPE and/or instance NAME(s) are given then the
-configuration for those instances are output as JSON. This is
-regardless of the instance using a legacy .rc file or a native JSON
-configuration.
-
-Passwords and secrets are redacted in a very simplistic manner simply
-to prevent visibility in casual viewing.
+Each instance's underlying configuration is in an object key
+|configuration|. Only the objects in this |configuration| key are
+stored in the instance's actual configuration file and this is the
+root for all parameter names used by other commands, i.e. for a value
+under |configuration.licdsecure| the parameter you would use for a
+|geneos set| command is just |licdsecure|. Confusingly there is a
+|configuration.config| object, used for template support. Other
+run-time information is shown under the |instance| key and includes
+the instance name, the host it is configured on, it's type and so on.
 `, "|", "`"),
 	Aliases:      []string{"details"},
 	SilenceUsage: true,
@@ -83,17 +86,6 @@ to prevent visibility in casual viewing.
 		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		if len(args) == 0 {
-			// running config
-			rc := config.GetConfig().ExpandAllSettings()
-			if showCmdRaw {
-				rc = config.GetConfig().AllSettings()
-			}
-			j, _ := json.MarshalIndent(rc, "", "    ")
-			fmt.Println(string(j))
-			return nil
-		}
-
 		ct, args, params := CmdArgsParams(cmd)
 		results, err := instance.ForAllWithResults(ct, showInstance, args, params)
 		if err != nil {
@@ -127,12 +119,14 @@ func showInstance(c geneos.Instance, params []string) (result interface{}, err e
 		as = nv.AllSettings()
 	}
 	cf := &showCmdConfig{
-		Name:      c.Name(),
-		Host:      c.Host().String(),
-		Type:      c.Type().String(),
-		Disabled:  instance.IsDisabled(c),
-		Protected: instance.IsProtected(c),
-		Config:    as,
+		Instance: showCmdInstanceConfig{
+			Name:      c.Name(),
+			Host:      c.Host().String(),
+			Type:      c.Type().String(),
+			Disabled:  instance.IsDisabled(c),
+			Protected: instance.IsProtected(c),
+		},
+		Configuration: as,
 	}
 
 	result = cf

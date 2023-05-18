@@ -23,7 +23,6 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -44,10 +43,12 @@ const pkgname = "cordial"
 // default command name for pre-init
 const execname = "geneos"
 
-var (
-	ErrInvalidArgs  error = errors.New("invalid arguments")
-	ErrNotSupported error = errors.New("not supported")
-)
+// Execname is the basename, without extention, of the underlying binary
+// used to start the program. The initialising routines evaluate
+// symlinks etc.
+//
+// initialise to sensible default
+var Execname = execname // filepath.Base(os.Args[0])
 
 var cfgFile string
 var Hostname string
@@ -135,8 +136,6 @@ func init() {
 	// run initialisers on internal packages, set the executable name
 	geneos.Initialise(Execname)
 }
-
-var Execname = execname // filepath.Base(os.Args[0])
 
 // GeneosCmd represents the base command when called without any subcommands
 var GeneosCmd = &cobra.Command{
@@ -271,7 +270,11 @@ func cmdNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	Execname = filepath.Base(os.Args[0])
+	bin, _ := os.Executable()
+	bin, _ = filepath.EvalSymlinks(bin)
+	bin = filepath.Base(bin)
+
+	Execname = filepath.Base(bin)
 
 	if quiet {
 		zerolog.SetGlobalLevel(zerolog.Disabled)

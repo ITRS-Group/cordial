@@ -533,6 +533,8 @@ func SetSlice(c geneos.Instance, items []string, setting string, key func(string
 // include file - priority:url|path
 type IncludeValues map[string]string
 
+const IncludeValuesOptionsText = "An include file in the format `PRIORITY:[PATH|URL]`\n(Repeat as required, gateway only)"
+
 func (i *IncludeValues) String() string {
 	return ""
 }
@@ -562,6 +564,8 @@ func (i *IncludeValues) Type() string {
 // gateway - name:port
 type GatewayValues map[string]string
 
+const GatewayValuesOptionstext = "A gateway connection in the format HOSTNAME:PORT\n(Repeat as required, san and floating only)"
+
 func (i *GatewayValues) String() string {
 	return ""
 }
@@ -589,6 +593,8 @@ func (i *GatewayValues) Type() string {
 // attribute - name=value
 type AttributeValues []string
 
+const AttributeValuesOptionsText = "An attribute in the format NAME=VALUE\n(Repeat as required, san only)"
+
 func (i *AttributeValues) String() string {
 	return ""
 }
@@ -605,6 +611,8 @@ func (i *AttributeValues) Type() string {
 // attribute - name=value
 type TypeValues []string
 
+const TypeValuesOptionsText = "A type NAME\n(Repeat as required, san only)"
+
 func (i *TypeValues) String() string {
 	return ""
 }
@@ -620,6 +628,8 @@ func (i *TypeValues) Type() string {
 
 // env NAME=VALUE - string slice
 type EnvValues []string
+
+const EnvValuesOptionsText = "An environment variable for instance start-up\n(Repeat as required)"
 
 func (i *EnvValues) String() string {
 	return ""
@@ -641,6 +651,8 @@ type VarValue struct {
 	Value string
 }
 type VarValues map[string]VarValue
+
+const VarValuesOptionsText = "A variable in the format [TYPE:]NAME=VALUE\n(Repeat as required, san only)"
 
 func (i *VarValues) String() string {
 	return ""

@@ -28,6 +28,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/webserver"
@@ -40,8 +41,8 @@ var initDemoCmdArchive string
 func init() {
 	InitCmd.AddCommand(initDemoCmd)
 
-	initDemoCmd.Flags().StringVarP(&initDemoCmdArchive, "archive", "A", "", "`PATH or URL` to software archive to install")
-	initDemoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", "(gateways) Add an include file in the format PRIORITY:PATH")
+	initDemoCmd.Flags().StringVarP(&initDemoCmdArchive, "archive", "A", "", ArchiveOptionsText)
+	initDemoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewayValuesOptionstext)
 	initDemoCmd.Flags().SortFlags = false
 }
 
@@ -86,8 +87,8 @@ influence the installation.
 		log.Debug().Msgf("%s %v %v", ct, args, params)
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			log.Error().Err(cmd.ErrInvalidArgs).Msg(ct.String())
-			return cmd.ErrInvalidArgs
+			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
+			return geneos.ErrInvalidArgs
 		}
 		options, err := initProcessArgs(args)
 		if err != nil {

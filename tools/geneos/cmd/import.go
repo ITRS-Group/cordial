@@ -152,7 +152,7 @@ func ImportFiles(ct *geneos.Component, args []string, sources []string) (err err
 // local directories are created
 func importInstance(c geneos.Instance, sources []string) (err error) {
 	if !c.Type().RealComponent {
-		return ErrNotSupported
+		return geneos.ErrNotSupported
 	}
 
 	if len(sources) == 0 {

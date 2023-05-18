@@ -1,6 +1,6 @@
 # Change Log
 
-## Version v1.5.0-beta - 2023/05/16
+## Version v1.5.0-beta2 - 2023/05/18
 
 * BREAKING CHANGES
 
@@ -105,6 +105,8 @@
     * The new `package` subsystem command pulls all Geneos release
       management into one place
     * New `login` and `logout` commands to manage credentials.
+    * New `ca3` and `floating` components for Collection Agent 3 and Floating
+      Netprobes
 
   * `tools/dv2email`:
 

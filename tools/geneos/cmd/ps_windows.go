@@ -23,43 +23,9 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/spf13/cobra"
-
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-func init() {
-	GeneosCmd.AddCommand(reloadCmd)
-}
-
-var reloadCmd = &cobra.Command{
-	Use:     "reload [TYPE] [NAME...]",
-	GroupID: GROUP_PROCESS,
-	Short:   "Reload configurations",
-	Long: strings.ReplaceAll(`
-Send a reload signal to all matching instances whose TYPE supports
-them.
-`, "|", "`"),
-	Aliases:      []string{"refresh"},
-	SilenceUsage: true,
-	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := CmdArgsParams(cmd)
-		return instance.ForAll(ct, Hostname, reloadInstance, args, params)
-	},
-}
-
-func reloadInstance(c geneos.Instance, params []string) (err error) {
-	err = c.Reload(params)
-	if err == nil {
-		fmt.Printf("%s: reload signal sent\n", c)
-	}
-	return nil
+func listOpenFiles(c geneos.Instance) {
+	// nothing
 }

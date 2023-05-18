@@ -224,7 +224,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			}
 			s := strings.SplitN(line, "=", 2)
 			if len(s) != 2 {
-				return host.ErrInvalidArgs
+				return ErrInvalidArgs
 			}
 			key, value := s[0], s[1]
 			value = strings.Trim(value, "\"")

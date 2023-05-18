@@ -124,7 +124,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		// validate name - almost anything but no double colons
 		if strings.Contains(name, "::") {
 			log.Error().Msg("a remote hostname may not contain `::`")
-			return cmd.ErrInvalidArgs
+			return geneos.ErrInvalidArgs
 		}
 
 		log.Debug().Msgf("hostname: %s", name)

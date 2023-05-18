@@ -32,6 +32,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 )
 
@@ -41,12 +42,13 @@ func init() {
 	InitCmd.AddCommand(initSanCmd)
 
 	initSanCmd.Flags().StringVarP(&initSanCmdVersion, "version", "V", "latest", "Download this `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
-	initSanCmd.Flags().StringVarP(&initSanCmdArchive, "archive", "A", "", "`PATH or URL` to software archive to install")
+	initSanCmd.Flags().StringVarP(&initSanCmdArchive, "archive", "A", "", ArchiveOptionsText)
 	initSanCmd.Flags().StringVarP(&initSanCmdOverride, "override", "T", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
-	initSanCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", "Add gateway in the format NAME:PORT. Repeat flag for more gateways.")
-	initSanCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", "Add an attribute in the format NAME=VALUE. Repeat flag for more attributes.")
-	initSanCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", "Add a type NAME. Repeat flag for more types.")
-	initSanCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", "Add a variable in the format [TYPE:]NAME=VALUE. Repeat flag for more variables")
+
+	initSanCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
+	initSanCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", instance.AttributeValuesOptionsText)
+	initSanCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", instance.TypeValuesOptionsText)
+	initSanCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", instance.VarValuesOptionsText)
 
 	initSanCmd.Flags().SortFlags = false
 }
@@ -91,8 +93,8 @@ multiple times.
 		log.Debug().Msgf("%s %v %v", ct, args, params)
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			log.Error().Err(cmd.ErrInvalidArgs).Msg(ct.String())
-			return cmd.ErrInvalidArgs
+			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
+			return geneos.ErrInvalidArgs
 		}
 		options, err := initProcessArgs(args)
 		if err != nil {

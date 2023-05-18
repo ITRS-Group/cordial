@@ -1,4 +1,4 @@
-# Dockerfile to build cordial components and tar.gz/zip files
+# Dockerfile to build cordial components and tar.gz files
 #
 # Build executables statically on alpine for maximum compatibility, but
 # then buils libemail.so (and future shared libraries) on a centos7
@@ -69,12 +69,11 @@ RUN mdpdf --border=15mm /app/cordial/libraries/libalert/README.md libalert.pdf
 COPY ./libraries/libalert/README.md libalert.md
 
 #
-# assemble files from previous stages into a .zip and .tar.gz ready from
-# extraction in the Makefile
+# assemble files from previous stages into a .tar.gz ready for extraction in the
+# Makefile
 #
 FROM alpine AS cordial-build
 LABEL stage=cordial-build
-RUN apk add zip
 WORKDIR /app/cordial
 COPY --from=build /app/cordial/VERSION /
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
@@ -88,7 +87,7 @@ COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /cordial/lib/
 COPY --from=build-libs /app/cordial/libraries/libalert/libalert.so /cordial/lib/
 RUN mv /cordial /cordial-$(cat /VERSION)
 WORKDIR /
-RUN tar czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION) && zip -q -r /cordial-$(cat /VERSION).zip cordial-$(cat /VERSION)
+RUN tar czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION)
 CMD [ "bash" ]
 
 #
