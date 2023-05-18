@@ -58,7 +58,8 @@ geneos config geneos=/opt/itrs
 		"wildcard":     "false",
 		"needshomedir": "false",
 	},
-	DisableFlagParsing: true,
+	DisableFlagParsing:    true,
+	DisableFlagsInUseLine: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var doSet bool
 		for _, a := range args {

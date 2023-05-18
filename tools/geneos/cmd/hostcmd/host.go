@@ -47,7 +47,8 @@ Manage remote host settings. Without a subcommand defaults to |ls| of hosts.
 		"wildcard":     "false",
 		"needshomedir": "false",
 	},
-	DisableFlagParsing: true,
+	DisableFlagParsing:    true,
+	DisableFlagsInUseLine: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		return cmd.RunE(command.Root(), []string{"host", "ls"}, args)
 	},
