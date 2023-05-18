@@ -87,10 +87,9 @@ cat $(geneos home gateway example2)/gateway.txt
 			if ct == nil {
 				fmt.Println(geneos.Root())
 				return nil
-			} else {
-				fmt.Println(geneos.LOCAL.Filepath(ct))
-				return nil
 			}
+			fmt.Println(geneos.LOCAL.Filepath(ct))
+			return nil
 		}
 
 		i, err := instance.Match(ct, args[0])

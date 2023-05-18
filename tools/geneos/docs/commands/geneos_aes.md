@@ -3,7 +3,7 @@
 Manage Geneos compatible key files and encode/decode passwords
 
 ```text
-geneos aes [flags]
+geneos aes
 ```
 ## Commands
 

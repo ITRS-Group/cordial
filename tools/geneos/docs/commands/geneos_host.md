@@ -3,7 +3,7 @@
 Manage remote host settings
 
 ```text
-geneos host [flags]
+geneos host
 ```
 ## Commands
 

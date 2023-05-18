@@ -3,7 +3,7 @@
 Configure geneos command environment
 
 ```text
-geneos config [flags]
+geneos config
 ```
 ## Commands
 
