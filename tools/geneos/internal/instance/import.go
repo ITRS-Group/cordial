@@ -15,7 +15,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-func ImportFile(h *geneos.Host, home string, source string, options ...geneos.Options) (filename string, err error) {
+// ImportFile
+func ImportFile(h *geneos.Host, dir string, source string, options ...geneos.Options) (filename string, err error) {
 	var backuppath string
 	var from io.ReadCloser
 
@@ -25,31 +26,64 @@ func ImportFile(h *geneos.Host, home string, source string, options ...geneos.Op
 	}
 
 	// destdir becomes the absolute path for the imported file
-	destdir := home
+	destdir := dir
 	// destfile is the basename of the import path, empty if the source
 	// filename should be kept
 	destfile := ""
 
-	// if the source is a http(s) url then skip '=' split (protect queries in URL)
-	if !strings.HasPrefix(source, "https://") && !strings.HasPrefix(source, "http://") {
-		splitsource := strings.SplitN(source, "=", 2)
-		if len(splitsource) > 1 {
+	// if the source contains the start of a URL then only split if the
+	// '=' is directly before
+	if strings.Contains(source, "https://") || strings.Contains(source, "http://") {
+		s := strings.SplitN(source, "=https://", 2)
+		if len(s) != 2 {
+			s = strings.SplitN(source, "=http://", 2)
+			if len(s) != 2 {
+				// ERROR
+			}
+			if s[1] == "" {
+				log.Fatal().Msg("no source defined")
+			}
+			source = "http://" + s[1]
+		} else {
+			if s[1] == "" {
+				log.Fatal().Msg("no source defined")
+			}
+			source = "https://" + s[1]
+		}
+		if s[0] == "" {
+			log.Fatal().Msg("dest path empty")
+		}
+		destfile, err = geneos.CleanRelativePath(s[0])
+		if err != nil {
+			log.Fatal().Msg("dest path must be relative to (and in) instance directory")
+		}
+		// if the destination exists is it a directory?
+		if s, err := h.Stat(filepath.Join(dir, destfile)); err == nil {
+			if s.IsDir() {
+				destdir = filepath.Join(dir, destfile)
+				destfile = ""
+			}
+		}
+
+	} else {
+		s := strings.SplitN(source, "=", 2)
+		if len(s) > 1 {
 			// do some basic validation on user-supplied destination
-			if splitsource[0] == "" {
+			if s[0] == "" {
 				log.Fatal().Msg("dest path empty")
 			}
-			destfile, err = geneos.CleanRelativePath(splitsource[0])
+			destfile, err = geneos.CleanRelativePath(s[0])
 			if err != nil {
 				log.Fatal().Msg("dest path must be relative to (and in) instance directory")
 			}
 			// if the destination exists is it a directory?
-			if s, err := h.Stat(filepath.Join(home, destfile)); err == nil {
+			if s, err := h.Stat(filepath.Join(dir, destfile)); err == nil {
 				if s.IsDir() {
-					destdir = filepath.Join(home, destfile)
+					destdir = filepath.Join(dir, destfile)
 					destfile = ""
 				}
 			}
-			source = splitsource[1]
+			source = s[1]
 			if source == "" {
 				log.Fatal().Msg("no source defined")
 			}

@@ -3,7 +3,7 @@
 Manage certificates for secure connections
 
 ```text
-geneos tls [flags]
+geneos tls
 ```
 ## Commands
 

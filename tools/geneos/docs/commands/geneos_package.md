@@ -3,7 +3,7 @@
 A brief description of your command
 
 ```text
-geneos package [flags]
+geneos package
 ```
 ## Commands
 
