@@ -180,6 +180,7 @@ $ geneos ps
 		// command later (after prerun) but if the help flag is set
 		// output the help for the new command and cleanly exit.
 		var newcmd *cobra.Command
+
 		if r, ok := command.Annotations["replacedby"]; ok {
 			var newargs []string
 			// args := strings.Split(r, " ")
@@ -196,6 +197,24 @@ $ geneos ps
 				}
 			}
 		}
+
+		// same as above, but no warning message
+		if r, ok := command.Annotations["aliasfor"]; ok {
+			var newargs []string
+			// args := strings.Split(r, " ")
+			newcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
+			if err != nil {
+				log.Fatal().Err(err).Msg("")
+			}
+			if newcmd != nil {
+				command.RunE = func(cmd *cobra.Command, args []string) error {
+					newcmd.ParseFlags(newargs)
+					parseArgs(newcmd, newargs)
+					return newcmd.RunE(newcmd, newcmd.Flags().Args())
+				}
+			}
+		}
+
 		if newcmd != nil {
 			if t, _ := command.Flags().GetBool("help"); t {
 				command.RunE = nil
@@ -204,6 +223,7 @@ $ geneos ps
 				return newcmd.Help()
 			}
 		}
+
 		if t, _ := command.Flags().GetBool("help"); t {
 			command.RunE = nil
 			// Run cannot be nil

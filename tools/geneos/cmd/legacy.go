@@ -52,7 +52,7 @@ func init() {
 	showCmd.AddCommand(showUserCmd)
 }
 
-var legacyRun = func(command *cobra.Command, args []string) {}
+var RunPlaceholder = func(command *cobra.Command, args []string) {}
 
 var addHostCmd = &cobra.Command{
 	Use:     "host [flags] [NAME] [SSHURL]",
@@ -71,7 +71,7 @@ this alias will be removed in an upcoming release.
 	},
 	Hidden:             true,
 	DisableFlagParsing: true,
-	Run:                legacyRun,
+	Run:                RunPlaceholder,
 }
 
 var deleteHostCmd = &cobra.Command{
@@ -90,7 +90,7 @@ future as this alias will be removed in an upcoming release.
 	},
 	Hidden:             true,
 	DisableFlagParsing: true,
-	Run:                legacyRun,
+	Run:                RunPlaceholder,
 }
 
 var lsHostCmd = &cobra.Command{
@@ -127,7 +127,7 @@ var setHostCmd = &cobra.Command{
 	},
 	Hidden:             true,
 	DisableFlagParsing: true,
-	Run:                legacyRun,
+	Run:                RunPlaceholder,
 }
 
 var showHostCmd = &cobra.Command{
@@ -144,7 +144,7 @@ var showHostCmd = &cobra.Command{
 	},
 	Hidden:             true,
 	DisableFlagParsing: true,
-	Run:                legacyRun,
+	Run:                RunPlaceholder,
 }
 
 var installCmd = &cobra.Command{
@@ -160,7 +160,7 @@ var installCmd = &cobra.Command{
 	},
 	Hidden:             true,
 	DisableFlagParsing: true,
-	Run:                legacyRun,
+	Run:                RunPlaceholder,
 }
 
 var updateLsCmd = &cobra.Command{
@@ -176,7 +176,7 @@ var updateLsCmd = &cobra.Command{
 	},
 	Hidden:             true,
 	DisableFlagParsing: true,
-	Run:                legacyRun,
+	Run:                RunPlaceholder,
 }
 
 var updateCmd = &cobra.Command{
@@ -193,7 +193,7 @@ var updateCmd = &cobra.Command{
 	Args:               cobra.RangeArgs(0, 2),
 	Hidden:             true,
 	DisableFlagParsing: true,
-	Run:                legacyRun,
+	Run:                RunPlaceholder,
 }
 
 var setUserCmd = &cobra.Command{
@@ -209,7 +209,7 @@ var setUserCmd = &cobra.Command{
 	},
 	Hidden:             true,
 	DisableFlagParsing: true,
-	Run:                legacyRun,
+	Run:                RunPlaceholder,
 }
 
 var unsetUserCmd = &cobra.Command{
@@ -225,7 +225,7 @@ var unsetUserCmd = &cobra.Command{
 	},
 	Hidden:             true,
 	DisableFlagParsing: true,
-	Run:                legacyRun,
+	Run:                RunPlaceholder,
 }
 
 var showUserCmd = &cobra.Command{
@@ -247,7 +247,7 @@ to quickly create a Cobra application.
 	},
 	Hidden:             true,
 	DisableFlagParsing: true,
-	Run:                legacyRun,
+	Run:                RunPlaceholder,
 }
 
 var showGlobalCmd = &cobra.Command{
