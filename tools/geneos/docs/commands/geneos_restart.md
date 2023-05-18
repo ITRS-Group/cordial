@@ -1,4 +1,4 @@
-# geneos restart
+# `geneos restart`
 
 Restart instances
 

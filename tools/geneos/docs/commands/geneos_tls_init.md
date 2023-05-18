@@ -1,4 +1,4 @@
-# geneos tls init
+# `geneos tls init`
 
 Initialise the TLS environment
 

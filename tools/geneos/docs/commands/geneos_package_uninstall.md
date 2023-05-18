@@ -1,4 +1,4 @@
-# geneos package uninstall
+# `geneos package uninstall`
 
 Uninstall Geneos releases
 
@@ -55,6 +55,7 @@ Use `geneos update ls` to see what is installed.
 ```bash
 geneos uninstall netprobe
 geneos uninstall --version 5.14.1
+
 ```
 
 ## SEE ALSO

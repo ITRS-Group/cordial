@@ -1,4 +1,4 @@
-# geneos import
+# `geneos import`
 
 Import files to an instance or a common directory
 
@@ -51,6 +51,7 @@ geneos import licd example2 geneos.lic=license.txt
 geneos import netprobe example3 scripts/=myscript.sh
 geneos import san localhost ./netprobe.setup.xml
 geneos import gateway -c shared common_include.xml
+
 ```
 
 ## SEE ALSO

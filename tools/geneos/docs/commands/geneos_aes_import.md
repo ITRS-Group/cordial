@@ -1,4 +1,4 @@
-# geneos aes import
+# `geneos aes import`
 
 Import key files for component TYPE
 
@@ -61,6 +61,7 @@ geneos aes import --keyfile ~/keyfile.aes gateway
 
 # import a remote keyfile to the remote Geneos host named `remote1`
 geneos aes import -k https://myserver.example.com/secure/keyfile.aes -H remote1
+
 ```
 
 ## SEE ALSO

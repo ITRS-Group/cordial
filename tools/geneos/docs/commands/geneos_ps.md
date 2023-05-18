@@ -1,4 +1,4 @@
-# geneos ps
+# `geneos ps`
 
 List process information for instances, optionally in CSV or JSON format
 

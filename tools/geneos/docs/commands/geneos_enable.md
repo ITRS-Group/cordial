@@ -1,4 +1,4 @@
-# geneos enable
+# `geneos enable`
 
 Enable instance
 

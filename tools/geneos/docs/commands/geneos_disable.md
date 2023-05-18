@@ -1,4 +1,4 @@
-# geneos disable
+# `geneos disable`
 
 Disable instances
 

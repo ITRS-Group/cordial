@@ -1,4 +1,4 @@
-# geneos command
+# `geneos command`
 
 Show command line and environment for instances
 

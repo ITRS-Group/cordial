@@ -1,4 +1,4 @@
-# geneos package
+# `geneos package`
 
 A brief description of your command
 
@@ -7,10 +7,10 @@ geneos package [flags]
 ```
 ## Commands
 
-* [geneos package install](geneos_package_install.md)	 - Install Geneos releases
-* [geneos package ls](geneos_package_ls.md)	 - List packages available for update command
-* [geneos package uninstall](geneos_package_uninstall.md)	 - Uninstall Geneos releases
-* [geneos package update](geneos_package_update.md)	 - Update the active version of installed Geneos package
+* [`geneos package` install](`geneos_package`_install.md)	 - Install Geneos releases
+* [`geneos package` ls](`geneos_package`_ls.md)	 - List packages available for update command
+* [`geneos package` uninstall](`geneos_package`_uninstall.md)	 - Uninstall Geneos releases
+* [`geneos package` update](`geneos_package`_update.md)	 - Update the active version of installed Geneos package
 
 ## Details
 A longer description that spans multiple lines and likely contains examples

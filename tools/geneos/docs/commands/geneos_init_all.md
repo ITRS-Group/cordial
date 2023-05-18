@@ -1,4 +1,4 @@
-# geneos init all
+# `geneos init all`
 
 Initialise a more complete Geneos environment
 
@@ -70,6 +70,7 @@ component is installed.
 geneos init all -L https://myserver/files/geneos.lic -u email@example.com
 geneos init all -L ~/geneos.lic -A ~/downloads /opt/itrs
 sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneos
+
 ```
 
 ## SEE ALSO

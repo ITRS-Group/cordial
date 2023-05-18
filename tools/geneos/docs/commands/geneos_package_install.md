@@ -1,4 +1,4 @@
-# geneos package install
+# `geneos package install`
 
 Install Geneos releases
 
@@ -65,6 +65,7 @@ Installation will ...
 geneos install gateway
 geneos install fa2 5.5 -U
 geneos install netprobe -b active_dev -U
+
 ```
 
 ## SEE ALSO

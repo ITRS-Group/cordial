@@ -1,4 +1,4 @@
-# geneos init
+# `geneos init`
 
 Initialise a Geneos installation
 
@@ -7,11 +7,11 @@ geneos init [flags] [USERNAME] [DIRECTORY]
 ```
 ## Commands
 
-* [geneos init all](geneos_init_all.md)	 - Initialise a more complete Geneos environment
-* [geneos init demo](geneos_init_demo.md)	 - Initialise a Geneos Demo environment
-* [geneos init floating](geneos_init_floating.md)	 - Initialise a Geneos Floating Netprobe environment
-* [geneos init san](geneos_init_san.md)	 - Initialise a Geneos SAN (Self-Announcing Netprobe) environment
-* [geneos init template](geneos_init_template.md)	 - Initialise or overwrite templates
+* [`geneos init` all](`geneos_init`_all.md)	 - Initialise a more complete Geneos environment
+* [`geneos init` demo](`geneos_init`_demo.md)	 - Initialise a Geneos Demo environment
+* [`geneos init` floating](`geneos_init`_floating.md)	 - Initialise a Geneos Floating Netprobe environment
+* [`geneos init` san](`geneos_init`_san.md)	 - Initialise a Geneos SAN (Self-Announcing Netprobe) environment
+* [`geneos init` template](`geneos_init`_template.md)	 - Initialise or overwrite templates
 
 ## Details
 
@@ -79,6 +79,7 @@ only the configuration file for that user is created.
 geneos init
 # To create a new Geneos tree owned by user `geneos` under `/opt/itrs`
 sudo geneos init geneos /opt/itrs
+
 ```
 
 ## SEE ALSO

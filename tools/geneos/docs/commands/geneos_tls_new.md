@@ -1,4 +1,4 @@
-# geneos tls new
+# `geneos tls new`
 
 Create new certificates
 

@@ -1,4 +1,4 @@
-# geneos init floating
+# `geneos init floating`
 
 Initialise a Geneos Floating Netprobe environment
 

@@ -1,4 +1,4 @@
-# geneos tls import
+# `geneos tls import`
 
 Import root and signing certificates
 

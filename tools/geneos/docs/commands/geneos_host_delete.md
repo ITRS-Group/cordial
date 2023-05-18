@@ -1,4 +1,4 @@
-# geneos host delete
+# `geneos host delete`
 
 Delete a remote host configuration
 

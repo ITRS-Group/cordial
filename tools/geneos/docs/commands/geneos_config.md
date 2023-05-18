@@ -1,4 +1,4 @@
-# geneos config
+# `geneos config`
 
 Configure geneos command environment
 
@@ -7,9 +7,9 @@ geneos config [flags]
 ```
 ## Commands
 
-* [geneos config set](geneos_config_set.md)	 - Set program configuration
-* [geneos config show](geneos_config_show.md)	 - Show program configuration
-* [geneos config unset](geneos_config_unset.md)	 - Unset a program parameter
+* [`geneos config` set](`geneos_config`_set.md)	 - Set program configuration
+* [`geneos config` show](`geneos_config`_show.md)	 - Show program configuration
+* [`geneos config` unset](`geneos_config`_unset.md)	 - Unset a program parameter
 
 ## Details
 
@@ -33,6 +33,7 @@ supply any further arguments that contain an "=".
 ```bash
 geneos config
 geneos config geneos=/opt/itrs
+
 ```
 
 ## SEE ALSO

@@ -1,4 +1,4 @@
-# geneos aes set
+# `geneos aes set`
 
 Set active keyfile for instances
 

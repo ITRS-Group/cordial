@@ -1,4 +1,4 @@
-# geneos stop
+# `geneos stop`
 
 Stop instances
 

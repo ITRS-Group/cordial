@@ -1,4 +1,4 @@
-# geneos show
+# `geneos show`
 
 Show runtime, global, user or instance configuration is JSON format
 

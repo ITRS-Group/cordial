@@ -1,4 +1,4 @@
-# geneos protect
+# `geneos protect`
 
 Mark instances as protected
 

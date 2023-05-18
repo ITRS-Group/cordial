@@ -1,4 +1,4 @@
-# geneos aes password
+# `geneos aes password`
 
 Encode a password with an AES256 key file
 

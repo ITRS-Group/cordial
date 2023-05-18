@@ -1,4 +1,4 @@
-# geneos aes ls
+# `geneos aes ls`
 
 List key files
 
@@ -38,6 +38,7 @@ or JSON formats using the appropriate flags.
 ```bash
 geneos aes ls gateway
 geneos aes ls -S gateway -H localhost -c
+
 ```
 
 ## SEE ALSO

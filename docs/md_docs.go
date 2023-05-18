@@ -58,7 +58,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 	buf := new(bytes.Buffer)
 	name := cmd.CommandPath()
 
-	buf.WriteString("# " + name + "\n\n")
+	buf.WriteString("# `" + name + "`\n\n")
 	buf.WriteString(cmd.Short + "\n\n")
 	if cmd.Runnable() {
 		buf.WriteString(fmt.Sprintf("```text\n%s\n```\n", cmd.UseLine()))
@@ -76,7 +76,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 				buf.WriteString("## Commands\n\n")
 				cmdHeader = true
 			}
-			cname := name + " " + child.Name()
+			cname := "`" + name + "` " + child.Name()
 			link := cname + ".md"
 			link = strings.ReplaceAll(link, " ", "_")
 			buf.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", cname, linkHandler(link), child.Short))
@@ -95,7 +95,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 
 	if len(cmd.Example) > 0 {
 		buf.WriteString("## Examples\n\n")
-		buf.WriteString(fmt.Sprintf("```bash%s```\n\n", cmd.Example))
+		buf.WriteString(fmt.Sprintf("```bash%s\n```\n\n", cmd.Example))
 	}
 
 	if hasSeeAlso(cmd) {

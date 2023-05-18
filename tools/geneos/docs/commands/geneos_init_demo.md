@@ -1,4 +1,4 @@
-# geneos init demo
+# `geneos init demo`
 
 Initialise a Geneos Demo environment
 

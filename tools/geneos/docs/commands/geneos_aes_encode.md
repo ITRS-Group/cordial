@@ -1,4 +1,4 @@
-# geneos aes encode
+# `geneos aes encode`
 
 Encode plaintext to a Geneos AES256 password using a key file
 
@@ -51,6 +51,7 @@ $ echo -n "test" ` geneos aes encode -s -
 ## Examples
 
 ```bash
+
 ```
 
 ## SEE ALSO

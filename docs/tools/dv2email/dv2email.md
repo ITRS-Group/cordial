@@ -1,4 +1,4 @@
-# dv2email
+# `dv2email`
 
 Email a Dataview following Geneos Action/Effect conventions
 

@@ -1,4 +1,4 @@
-# geneos aes decode
+# `geneos aes decode`
 
 Decode a Geneos AES256 format password using a key file
 
@@ -65,7 +65,8 @@ geneos aes decode -p +encs+hexencodedciphertext
 
 # try to decode using the AES key file associated with the 'Demo Gateway' instance
 geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
-	```
+
+```
 
 ## SEE ALSO
 

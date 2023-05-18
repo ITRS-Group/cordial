@@ -1,4 +1,4 @@
-# geneos tls ls
+# `geneos tls ls`
 
 List certificates
 

@@ -1,4 +1,4 @@
-# geneos copy
+# `geneos copy`
 
 Copy instances
 
