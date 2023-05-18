@@ -52,4 +52,4 @@ template` to overwrite existing file with the built-in ones.
 
 ## SEE ALSO
 
-* [geneos](geneos.md)	 - Control your Geneos environment
+* [geneos](geneos.md)	 - Take control of your Geneos environments

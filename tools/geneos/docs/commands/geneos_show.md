@@ -38,4 +38,4 @@ the instance name, the host it is configured on, it's type and so on.
 
 ## SEE ALSO
 
-* [geneos](geneos.md)	 - Control your Geneos environment
+* [geneos](geneos.md)	 - Take control of your Geneos environments

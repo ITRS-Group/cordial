@@ -139,19 +139,19 @@ func init() {
 
 // GeneosCmd represents the base command when called without any subcommands
 var GeneosCmd = &cobra.Command{
-	Use:   Execname,
-	Short: "Control your Geneos environment",
+	Use:   Execname + " COMMAND [flags] [TYPE] [NAME...] [parameters...]",
+	Short: "Take control of your Geneos environments",
 	Long: strings.ReplaceAll(`
-Manage and control your Geneos environment. With |geneos| you can
-initialise a new installation, add and remove components, control
-processes and build template based configuration files for SANs and
-more.
+With |geneos| you can initialise a new installation, install and
+update software releases, add and remove instances, control processes
+and build template based configuration files for SANs and more.
 `, "|", "`"),
 	Example: strings.ReplaceAll(`
-$ geneos start
-$ geneos ps
+geneos init demo -u jondoe@example.com -l
+geneos ps
+geneos restart
 `, "|", "`"),
-	SilenceUsage: true,
+	// SilenceUsage: true,
 	Annotations: map[string]string{
 		"needshomedir": "true",
 	},
@@ -161,7 +161,7 @@ $ geneos ps
 	Version:            cordial.VERSION,
 	DisableAutoGenTag:  true,
 	DisableSuggestions: true,
-	// SilenceErrors:      true,
+	SilenceErrors:      true,
 	PersistentPreRunE: func(command *cobra.Command, args []string) (err error) {
 		// "manually" parse root flags so that legacy commands get conf
 		// file, debug etc.
@@ -243,6 +243,7 @@ $ geneos ps
 		}
 		return parseArgs(command, args)
 	},
+	Run: RunPlaceholder,
 	// RunE: lsCmd.RunE,
 }
 

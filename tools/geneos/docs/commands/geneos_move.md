@@ -31,4 +31,4 @@ Moving across hosts is fully supported.
 
 ## SEE ALSO
 
-* [geneos](geneos.md)	 - Control your Geneos environment
+* [geneos](geneos.md)	 - Take control of your Geneos environments

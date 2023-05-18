@@ -55,4 +55,4 @@ cat $(geneos home gateway example2)/gateway.txt
 
 ## SEE ALSO
 
-* [geneos](geneos.md)	 - Control your Geneos environment
+* [geneos](geneos.md)	 - Take control of your Geneos environments

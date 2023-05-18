@@ -48,4 +48,4 @@ that are started are followed until interrupted by the user.
 
 ## SEE ALSO
 
-* [geneos](geneos.md)	 - Control your Geneos environment
+* [geneos](geneos.md)	 - Take control of your Geneos environments

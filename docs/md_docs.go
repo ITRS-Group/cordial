@@ -65,16 +65,27 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 	}
 	if hasSeeAlso(cmd) {
 		children := cmd.Commands()
-		sort.Sort(byName(children))
+		sort.Sort(subsystemsThenNames(children))
 
 		cmdHeader := false
+		hadChildren := false
 		for _, child := range children {
 			if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
 				continue
 			}
 			if !cmdHeader {
-				buf.WriteString("## Commands\n\n")
+				if child.HasAvailableSubCommands() && !hadChildren {
+					buf.WriteString("## Subsystems\n\n")
+					hadChildren = true
+				} else {
+					buf.WriteString("## Commands\n\n")
+				}
 				cmdHeader = true
+			}
+
+			if !child.HasAvailableSubCommands() && hadChildren && cmdHeader {
+				buf.WriteString("\n## Commands\n\n")
+				hadChildren = false
 			}
 			cname := name + " " + child.Name()
 			link := cname + ".md"
@@ -202,3 +213,17 @@ type byName []*cobra.Command
 func (s byName) Len() int           { return len(s) }
 func (s byName) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s byName) Less(i, j int) bool { return s[i].Name() < s[j].Name() }
+
+type subsystemsThenNames []*cobra.Command
+
+func (s subsystemsThenNames) Len() int      { return len(s) }
+func (s subsystemsThenNames) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s subsystemsThenNames) Less(i, j int) bool {
+	if s[i].HasAvailableSubCommands() && !s[j].HasAvailableSubCommands() {
+		return true
+	}
+	if !s[i].HasAvailableSubCommands() && s[j].HasAvailableSubCommands() {
+		return false
+	}
+	return s[i].Name() < s[j].Name()
+}
