@@ -7,13 +7,13 @@ geneos aes [flags]
 ```
 ## Commands
 
-* [`geneos aes` decode](`geneos_aes`_decode.md)	 - Decode a Geneos AES256 format password using a key file
-* [`geneos aes` encode](`geneos_aes`_encode.md)	 - Encode plaintext to a Geneos AES256 password using a key file
-* [`geneos aes` import](`geneos_aes`_import.md)	 - Import key files for component TYPE
-* [`geneos aes` ls](`geneos_aes`_ls.md)	 - List key files
-* [`geneos aes` new](`geneos_aes`_new.md)	 - Create a new key file
-* [`geneos aes` password](`geneos_aes`_password.md)	 - Encode a password with an AES256 key file
-* [`geneos aes` set](`geneos_aes`_set.md)	 - Set active keyfile for instances
+* [`geneos aes decode`](geneos_aes_decode.md)	 - Decode a Geneos AES256 format password using a key file
+* [`geneos aes encode`](geneos_aes_encode.md)	 - Encode plaintext to a Geneos AES256 password using a key file
+* [`geneos aes import`](geneos_aes_import.md)	 - Import key files for component TYPE
+* [`geneos aes ls`](geneos_aes_ls.md)	 - List key files
+* [`geneos aes new`](geneos_aes_new.md)	 - Create a new key file
+* [`geneos aes password`](geneos_aes_password.md)	 - Encode a password with an AES256 key file
+* [`geneos aes set`](geneos_aes_set.md)	 - Set active keyfile for instances
 
 ## Details
 

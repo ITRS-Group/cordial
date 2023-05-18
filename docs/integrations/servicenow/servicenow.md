@@ -4,8 +4,8 @@ Geneos to ServiceNow integration
 
 ## Commands
 
-* [`servicenow` incident](`servicenow`_incident.md)	 - Raise or update a ServiceNow incident
-* [`servicenow` router](`servicenow`_router.md)	 - Run a ServiceNow integration router
+* [`servicenow incident`](servicenow_incident.md)	 - Raise or update a ServiceNow incident
+* [`servicenow router`](servicenow_router.md)	 - Run a ServiceNow integration router
 
 ## Details
 
