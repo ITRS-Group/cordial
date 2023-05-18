@@ -47,7 +47,8 @@ to quickly create a Cobra application.`,
 		"wildcard":     "false",
 		"needshomedir": "true",
 	},
-	DisableFlagParsing: true,
+	DisableFlagParsing:    true,
+	DisableFlagsInUseLine: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		return cmd.RunE(command.Root(), []string{"package", "ls"}, args)
 	},

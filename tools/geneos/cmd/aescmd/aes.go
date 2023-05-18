@@ -42,7 +42,6 @@ func init() {
 	cmd.GeneosCmd.AddCommand(AesCmd)
 }
 
-// AesCmd exported to parent / root command in the cmd package
 var AesCmd = &cobra.Command{
 	Use:     "aes",
 	GroupID: cmd.GROUP_SUBSYSTEMS,
@@ -55,7 +54,8 @@ Manage Geneos compatible key files and encode/decode passwords
 		"wildcard":     "false",
 		"needshomedir": "true",
 	},
-	DisableFlagParsing: true,
+	DisableFlagParsing:    true,
+	DisableFlagsInUseLine: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		return cmd.RunE(command.Root(), []string{"aes", "ls"}, args)
 	},

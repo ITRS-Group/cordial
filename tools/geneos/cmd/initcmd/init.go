@@ -50,6 +50,7 @@ var initCmdExtras = instance.ExtraConfigValues{}
 
 func init() {
 	cmd.GeneosCmd.AddCommand(InitCmd)
+	InitCmd.AddCommand(initTLSCmd)
 
 	// old flags, these are now sub-commands so hide them
 	InitCmd.Flags().StringVarP(&initCmdAll, "all", "A", "", "Perform initialisation steps using given license file and start instances")
@@ -195,6 +196,23 @@ sudo geneos init geneos /opt/itrs
 			return
 		}
 	},
+}
+
+var initTLSCmd = &cobra.Command{
+	Use:   "tls",
+	Short: "Initialise the TLS environment (alias)",
+	Long: strings.ReplaceAll(`
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		"wildcard":     "false",
+		"needshomedir": "true",
+		"aliasfor":     "tls init",
+	},
+	Hidden:                true,
+	DisableFlagParsing:    true,
+	DisableFlagsInUseLine: true,
+	Run:                   cmd.RunPlaceholder,
 }
 
 // initProcessArgs works through the parsed arguments and returns a
