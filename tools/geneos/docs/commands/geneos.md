@@ -32,13 +32,13 @@ $ geneos ps
 * [geneos add](geneos_add.md)	 - Add a new instance
 * [geneos aes](geneos_aes.md)	 - Manage Geneos compatible key files and encode/decode passwords
 * [geneos clean](geneos_clean.md)	 - Clean-up instance directories
-* [geneos command](geneos_command.md)	 - Show command line and environment for launching instances
+* [geneos command](geneos_command.md)	 - Show command line and environment for instances
 * [geneos config](geneos_config.md)	 - Configure geneos command environment
 * [geneos copy](geneos_copy.md)	 - Copy instances
-* [geneos delete](geneos_delete.md)	 - Delete an instance. Instance must be stopped
-* [geneos disable](geneos_disable.md)	 - Stop and disable instances
-* [geneos enable](geneos_enable.md)	 - Enable instances
-* [geneos home](geneos_home.md)	 - Print the home directory of the first instance or the Geneos home dir
+* [geneos delete](geneos_delete.md)	 - Delete instances
+* [geneos disable](geneos_disable.md)	 - Disable instances
+* [geneos enable](geneos_enable.md)	 - Enable instance
+* [geneos home](geneos_home.md)	 - Output a directory path for given options
 * [geneos host](geneos_host.md)	 - Manage remote host settings
 * [geneos import](geneos_import.md)	 - Import files to an instance or a common directory
 * [geneos init](geneos_init.md)	 - Initialise a Geneos installation

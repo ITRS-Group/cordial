@@ -1,8 +1,9 @@
 ## geneos disable
 
-Stop and disable instances
+Disable instances
 
 ### Synopsis
+
 
 
 Mark any matching instances as disabled. The instances are also
@@ -16,7 +17,8 @@ geneos disable [TYPE] [NAME...] [flags]
 ### Options
 
 ```
-  -F, --force   force disable instances
+  -S, --stop    Stop instances
+  -F, --force   Force disable instances
 ```
 
 ### Options inherited from parent commands
