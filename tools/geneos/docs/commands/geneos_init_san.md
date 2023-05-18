@@ -1,9 +1,12 @@
-## geneos init san
+# geneos init san
 
 Initialise a Geneos SAN (Self-Announcing Netprobe) environment
 
-### Synopsis
+```text
+geneos init san [flags] [USERNAME] [DIRECTORY]
+```
 
+## Details
 
 Install a Self-Announcing Netprobe (SAN) into a new Geneos install
 directory.
@@ -31,14 +34,9 @@ with the `-s` option. You can set `gateways`, `types`, `attributes`,
 `variables` using the appropriate flags. These flags can be specified
 multiple times.
 
-
-```
-geneos init san [flags] [USERNAME] [DIRECTORY]
-```
-
 ### Options
 
-```
+```text
   -V, --version VERSION              Download this VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
   -A, --archive PATH or URL          PATH or URL to software archive to install
   -T, --override [TYPE:]VERSION      Override the [TYPE:]VERSION for archive files with non-standard names
@@ -50,7 +48,7 @@ geneos init san [flags] [USERNAME] [DIRECTORY]
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string                config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -e, --env NAME=VALUE               Add an environment variable in the format NAME=VALUE. Repeat flag for more values.
   -f, --floatingtemplate string      Floating probe template file
@@ -68,7 +66,6 @@ geneos init san [flags] [USERNAME] [DIRECTORY]
   -u, --username download.username   Username for downloads. Defaults to configuration value download.username
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos init](geneos_init.md)	 - Initialise a Geneos installation
-

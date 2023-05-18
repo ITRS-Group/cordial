@@ -1,9 +1,12 @@
-## geneos aes ls
+# geneos aes ls
 
 List key files
 
-### Synopsis
+```text
+geneos aes ls [flags] [TYPE] [NAME...]
+```
 
+## Details
 
 List details of the key files referenced by matching instances.
 
@@ -14,23 +17,9 @@ component directory are listed. This can be filtered by host with the
 The default output is human-readable table format. You can select CSV
 or JSON formats using the appropriate flags.
 
-
-```
-geneos aes ls [flags] [TYPE] [NAME...]
-```
-
-### Examples
-
-```
-
-geneos aes ls gateway
-geneos aes ls -S gateway -H localhost -c
-
-```
-
 ### Options
 
-```
+```text
   -S, --shared   List shared key files
   -j, --json     Output JSON
   -i, --pretty   Output indented JSON
@@ -39,12 +28,18 @@ geneos aes ls -S gateway -H localhost -c
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## Examples
+
+```bash
+geneos aes ls gateway
+geneos aes ls -S gateway -H localhost -c
+```
+
+## SEE ALSO
 
 * [geneos aes](geneos_aes.md)	 - Manage Geneos compatible key files and encode/decode passwords
-

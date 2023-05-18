@@ -1,33 +1,8 @@
-## geneos
+# geneos
 
 Control your Geneos environment
 
-### Synopsis
-
-
-Manage and control your Geneos environment. With `geneos` you can
-initialise a new installation, add and remove components, control
-processes and build template based configuration files for SANs and
-more.
-
-
-### Examples
-
-```
-
-$ geneos start
-$ geneos ps
-
-```
-
-### Options
-
-```
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
-```
-
-### SEE ALSO
+## Commands
 
 * [geneos add](geneos_add.md)	 - Add a new instance
 * [geneos aes](geneos_aes.md)	 - Manage Geneos compatible key files and encode/decode passwords
@@ -63,4 +38,27 @@ $ geneos ps
 * [geneos tls](geneos_tls.md)	 - Manage certificates for secure connections
 * [geneos unset](geneos_unset.md)	 - Unset a configuration value
 * [geneos version](geneos_version.md)	 - Show program version details
+
+## Details
+
+Manage and control your Geneos environment. With `geneos` you can
+initialise a new installation, add and remove components, control
+processes and build template based configuration files for SANs and
+more.
+
+### Options
+
+```text
+  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
+```
+
+## Examples
+
+```bash
+$ geneos start
+$ geneos ps
+```
+
+## SEE ALSO
 

@@ -1,9 +1,12 @@
-## geneos delete
+# geneos delete
 
 Delete instances
 
-### Synopsis
+```text
+geneos delete [flags] [TYPE] [NAME...]
+```
 
+## Details
 
 Delete matching instances.
 
@@ -18,26 +21,20 @@ The instance directory is removed without being backed-up. The user
 running the command must have the appropriate permissions and a
 partial deletion cannot be protected against.
 
-
-```
-geneos delete [flags] [TYPE] [NAME...]
-```
-
 ### Options
 
-```
+```text
   -S, --stop    Stop instances first
   -F, --force   Force delete of protected instances
 ```
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-

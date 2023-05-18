@@ -1,9 +1,12 @@
-## geneos aes import
+# geneos aes import
 
 Import key files for component TYPE
 
-### Synopsis
+```text
+geneos aes import [flags] [TYPE] [NAME...]
+```
 
+## Details
 
 Import keyfiles to the TYPE `keyfiles` directory in each matching
 component TYPE shared directory.
@@ -37,37 +40,29 @@ used to limit to a specific host.
 Instance names can be given to indirectly identify the component
 type.
 
-
-```
-geneos aes import [flags] [TYPE] [NAME...]
-```
-
-### Examples
-
-```
-
-# import local keyfile.aes to GENEOS/gateway/gateway_shared/DEADBEEF.aes
-geneos aes import --keyfile ~/keyfile.aes gateway
-
-# import a remote keyfile to the remote Geneos host named `remote1`
-geneos aes import -k https://myserver.example.com/secure/keyfile.aes -H remote1
-
-```
-
 ### Options
 
-```
+```text
   -k, --keyfile PATH|URL|-   Keyfile to use PATH|URL|- (default /home/peter/.config/geneos/keyfile.aes)
 ```
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## Examples
+
+```bash
+# import local keyfile.aes to GENEOS/gateway/gateway_shared/DEADBEEF.aes
+geneos aes import --keyfile ~/keyfile.aes gateway
+
+# import a remote keyfile to the remote Geneos host named `remote1`
+geneos aes import -k https://myserver.example.com/secure/keyfile.aes -H remote1
+```
+
+## SEE ALSO
 
 * [geneos aes](geneos_aes.md)	 - Manage Geneos compatible key files and encode/decode passwords
-

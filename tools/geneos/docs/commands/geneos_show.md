@@ -1,9 +1,12 @@
-## geneos show
+# geneos show
 
 Show runtime, global, user or instance configuration is JSON format
 
-### Synopsis
+```text
+geneos show [flags] [TYPE] [NAME...]
+```
 
+## Details
 
 Show the runtime or instance configuration. The loaded
 global or user configurations can be seen through the show global
@@ -21,25 +24,19 @@ configuration.
 Passwords and secrets are redacted in a very simplistic manner simply
 to prevent visibility in casual viewing.
 
-
-```
-geneos show [flags] [TYPE] [NAME...]
-```
-
 ### Options
 
-```
+```text
   -r, --raw   Show raw (unexpanded) configuration values
 ```
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-

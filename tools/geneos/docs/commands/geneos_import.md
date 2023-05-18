@@ -1,9 +1,12 @@
-## geneos import
+# geneos import
 
 Import files to an instance or a common directory
 
-### Synopsis
+```text
+geneos import [flags] [TYPE] [NAME...] [PATH=]SOURCE...
+```
 
+## Details
 
 Import one or more files to matching instance directories, or with
 `--common` flag to a component shared directory. This can be used to
@@ -27,37 +30,29 @@ SOURCE and no immediate error is raised. Directories are created as required.
 Currently only files can be imported and if the SOURCE is a directory
 then this is an error.
 
-
-```
-geneos import [flags] [TYPE] [NAME...] [PATH=]SOURCE...
-```
-
-### Examples
-
-```
-
-geneos import gateway example1 https://example.com/myfiles/gateway.setup.xml
-geneos import licd example2 geneos.lic=license.txt
-geneos import netprobe example3 scripts/=myscript.sh
-geneos import san localhost ./netprobe.setup.xml
-geneos import gateway -c shared common_include.xml
-
-```
-
 ### Options
 
-```
+```text
   -c, --common string   Import into a common directory instead of matching instances.	For example, if TYPE is 'gateway' and NAME is 'shared' then this common directory is 'gateway/gateway_shared'
 ```
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## Examples
+
+```bash
+geneos import gateway example1 https://example.com/myfiles/gateway.setup.xml
+geneos import licd example2 geneos.lic=license.txt
+geneos import netprobe example3 scripts/=myscript.sh
+geneos import san localhost ./netprobe.setup.xml
+geneos import gateway -c shared common_include.xml
+```
+
+## SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-

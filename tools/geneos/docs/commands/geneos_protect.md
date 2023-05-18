@@ -1,9 +1,12 @@
-## geneos protect
+# geneos protect
 
 Mark instances as protected
 
-### Synopsis
+```text
+geneos protect [TYPE] [NAME...] [flags]
+```
 
+## Details
 
 Mark matcing instances as protected.
 
@@ -13,25 +16,19 @@ There is no `unprotect` command. This is intentional.
 Note that you can also manually add or remove the `protected` setting
 in an instance configuration file.
 
-
-```
-geneos protect [TYPE] [NAME...] [flags]
-```
-
 ### Options
 
-```
+```text
   -U, --unprotect   unprotect instances
 ```
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-

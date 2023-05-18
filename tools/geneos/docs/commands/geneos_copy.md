@@ -1,9 +1,12 @@
-## geneos copy
+# geneos copy
 
 Copy instances
 
-### Synopsis
+```text
+geneos copy [TYPE] SOURCE DESTINATION [flags]
+```
 
+## Details
 
 Copy instance SOURCE to DESTINATION. If TYPE is not given than each
 component type that has a named instance SOURCE will be copied to
@@ -26,19 +29,13 @@ unchanged.
 If the component support Rebuild then this is run after the copy but
 before the restart. This allows SANs to be updated as expected.
 
-
-```
-geneos copy [TYPE] SOURCE DESTINATION [flags]
-```
-
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-

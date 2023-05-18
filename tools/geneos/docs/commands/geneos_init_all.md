@@ -1,9 +1,12 @@
-## geneos init all
+# geneos init all
 
 Initialise a more complete Geneos environment
 
-### Synopsis
+```text
+geneos init all [flags] [USERNAME] [DIRECTORY]
+```
 
+## Details
 
 Initialise a typical Geneos installation.
 
@@ -32,24 +35,9 @@ must be named in the same format as those downloaded from the
 If no version is given using option `-V`, then the latest version of each
 component is installed.
 
-
-```
-geneos init all [flags] [USERNAME] [DIRECTORY]
-```
-
-### Examples
-
-```
-
-geneos init all -L https://myserver/files/geneos.lic -u email@example.com
-geneos init all -L ~/geneos.lic -A ~/downloads /opt/itrs
-sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneos
-
-```
-
 ### Options
 
-```
+```text
   -L, --licence Filepath or URL       Filepath or URL to license file (default "geneos.lic")
   -A, --archive PATH or URL           PATH or URL to software archive to install
   -i, --include PRIORITY:{URL|PATH}   (gateways) Add an include file in the format PRIORITY:PATH
@@ -57,7 +45,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string                config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -e, --env NAME=VALUE               Add an environment variable in the format NAME=VALUE. Repeat flag for more values.
   -f, --floatingtemplate string      Floating probe template file
@@ -76,7 +64,14 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
   -V, --version string               Download matching version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
 ```
 
-### SEE ALSO
+## Examples
+
+```bash
+geneos init all -L https://myserver/files/geneos.lic -u email@example.com
+geneos init all -L ~/geneos.lic -A ~/downloads /opt/itrs
+sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneos
+```
+
+## SEE ALSO
 
 * [geneos init](geneos_init.md)	 - Initialise a Geneos installation
-

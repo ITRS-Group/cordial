@@ -1,9 +1,12 @@
-## geneos tls import
+# geneos tls import
 
 Import root and signing certificates
 
-### Synopsis
+```text
+geneos tls import
+```
 
+## Details
 
 Import non-instance certificates. A root certificate is one where the
 subject is the same as the issuer. All other certificates are
@@ -12,19 +15,13 @@ is used. Private keys must be supplied, either as individual files on
 in the certificate files and cannot be password protected. Only
 certificates with matching private keys are imported.
 
-
-```
-geneos tls import
-```
-
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos tls](geneos_tls.md)	 - Manage certificates for secure connections
-

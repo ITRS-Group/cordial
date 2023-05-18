@@ -1,9 +1,12 @@
-## geneos home
+# geneos home
 
 Output a directory path for given options
 
-### Synopsis
+```text
+geneos home [flags] [TYPE] [NAME]
+```
 
+## Details
 
 Output a directory path for use in shell expansion like `cd $(geneos
 home mygateway)`.
@@ -34,29 +37,21 @@ instance name or directory path above it. (Note: We tried outputting
 a quoted path but the bash shell ignores these quotes inside
 `$(...)`)
 
-
-```
-geneos home [flags] [TYPE] [NAME]
-```
-
-### Examples
-
-```
-
-cd $(geneos home)
-cd $(geneos home gateway example1)
-cat $(geneos home gateway example2)/gateway.txt
-
-```
-
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## Examples
+
+```bash
+cd $(geneos home)
+cd $(geneos home gateway example1)
+cat $(geneos home gateway example2)/gateway.txt
+```
+
+## SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-

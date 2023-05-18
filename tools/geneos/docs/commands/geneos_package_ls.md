@@ -1,9 +1,12 @@
-## geneos package ls
+# geneos package ls
 
 List packages available for update command
 
-### Synopsis
+```text
+geneos package ls [flags] [TYPE]
+```
 
+## Details
 
 List the packages for the matching TYPE or all component types if no
 TYPE is given. The `-H` flags restricts the check to a specific
@@ -15,14 +18,9 @@ between local summer/winter times in some locales.
 Versions are listed in descending order for each component type, i.e.
 `latest` is always the first entry for each component.
 
-
-```
-geneos package ls [flags] [TYPE]
-```
-
 ### Options
 
-```
+```text
   -j, --json     Output JSON
   -i, --pretty   Output indented JSON
   -c, --csv      Output CSV
@@ -30,12 +28,11 @@ geneos package ls [flags] [TYPE]
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos package](geneos_package.md)	 - A brief description of your command
-

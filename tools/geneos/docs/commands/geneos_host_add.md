@@ -1,9 +1,12 @@
-## geneos host add
+# geneos host add
 
 Add a remote host
 
-### Synopsis
+```text
+geneos host add [flags] [NAME] [SSHURL]
+```
 
+## Details
 
 Add a remote host `NAME` for seamless control of your Geneos estate.
 
@@ -29,24 +32,9 @@ defined the default is 22.
 `PATH` is the root Geneos directory used on the target host. If not
 defined, it is set to the same as the local Geneos root directory.
 
-
-```
-geneos host add [flags] [NAME] [SSHURL]
-```
-
-### Examples
-
-```
-
-geneos host add server1
-geneos host add ssh://server2:50122
-geneos host add remote1 ssh://server.example.com/opt/geneos
-
-```
-
 ### Options
 
-```
+```text
   -I, --init                 Initialise the remote host directories and component files
   -p, --prompt               Prompt for password
   -P, --password PLAINTEXT   Password
@@ -55,12 +43,19 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## Examples
+
+```bash
+geneos host add server1
+geneos host add ssh://server2:50122
+geneos host add remote1 ssh://server.example.com/opt/geneos
+```
+
+## SEE ALSO
 
 * [geneos host](geneos_host.md)	 - Manage remote host settings
-

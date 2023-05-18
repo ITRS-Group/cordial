@@ -1,9 +1,12 @@
-## geneos snapshot
+# geneos snapshot
 
 Capture a snapshot of each matching dataview
 
-### Synopsis
+```text
+geneos snapshot [flags] [gateway] [NAME] XPATH...
+```
 
+## Details
 
 Snapshot one or more dataviews using the REST Commands API endpoint
 introduced in GA5.14. The TYPE, if given, must be `gateway`.
@@ -31,14 +34,9 @@ capture matching xpaths without the dataview contents. `-l` can be
 used to limit the number of dataviews (or xpaths) but the limit is
 not applied in any defined order.
 
-
-```
-geneos snapshot [flags] [gateway] [NAME] XPATH...
-```
-
 ### Options
 
-```
+```text
   -V, --value             Request cell values (default true)
   -S, --severity          Request cell severities
   -Z, --snooze            Request cell snooze info
@@ -51,12 +49,11 @@ geneos snapshot [flags] [gateway] [NAME] XPATH...
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-
