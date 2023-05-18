@@ -37,10 +37,13 @@ import (
 )
 
 var (
-	ErrInvalidArgs  error = errors.New("invalid arguments")
-	ErrNotSupported error = errors.New("not supported")
-	ErrDisabled     error = errors.New("disabled")
-	ErrIsADirectory error = errors.New("is a directory")
+	ErrInvalidArgs  = errors.New("invalid arguments")
+	ErrNotSupported = errors.New("not supported")
+	ErrDisabled     = errors.New("is disabled")
+	ErrProtected    = errors.New("is protected")
+	ErrRunning      = errors.New("is running")
+	ErrNotRunning   = errors.New("is not running")
+	ErrIsADirectory = errors.New("is a directory")
 )
 
 const DisableExtension = "disabled"
