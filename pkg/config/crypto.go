@@ -134,7 +134,7 @@ func (kv *KeyValues) String() string {
 
 // Write writes the KeyValues structure to the io.Writer.
 func (kv *KeyValues) Write(w io.Writer) error {
-	if _, err := fmt.Fprint(w, kv.String()); err != nil {
+	if _, err := io.WriteString(w, kv.String()); err != nil {
 		return err
 	}
 
