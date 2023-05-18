@@ -1,9 +1,12 @@
-## geneos aes encode
+# geneos aes encode
 
 Encode plaintext to a Geneos AES256 password using a key file
 
-### Synopsis
+```text
+geneos aes encode [flags] [TYPE] [NAME...]
+```
 
+## Details
 
 Encode plaintext to a Geneos AES256 format password using a key file.
 
@@ -28,21 +31,9 @@ rather then this:
 
 $ echo -n "test" ` geneos aes encode -s -
 	
-
-```
-geneos aes encode [flags] [TYPE] [NAME...]
-```
-
-### Examples
-
-```
-
-
-```
-
 ### Options
 
-```
+```text
   -e, --expandable        Output in 'expandable' format
   -k, --keyfile KEYFILE   Path to keyfile
   -p, --password string   Plaintext password
@@ -52,12 +43,16 @@ geneos aes encode [flags] [TYPE] [NAME...]
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## Examples
+
+```bash
+```
+
+## SEE ALSO
 
 * [geneos aes](geneos_aes.md)	 - Manage Geneos compatible key files and encode/decode passwords
-

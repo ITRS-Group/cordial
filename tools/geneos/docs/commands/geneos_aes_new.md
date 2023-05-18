@@ -1,9 +1,12 @@
-## geneos aes new
+# geneos aes new
 
 Create a new key file
 
-### Synopsis
+```text
+geneos aes new [flags] [TYPE] [NAME...]
+```
 
+## Details
 
 Create a new key file. With no other options this is written to
 STDOUT.
@@ -29,24 +32,9 @@ suffix given with the `--backup`/`-b` option which defaults to
 `.old`. This is only likely to apply to key files being saved to
 explicit paths with the `--keyfile` or `--user` options.
 
-
-```
-geneos aes new [flags] [TYPE] [NAME...]
-```
-
-### Examples
-
-```
-
-geneos aes new
-geneos aes new -F ~/keyfile.aes
-geneos aes new -S gateway
-
-```
-
 ### Options
 
-```
+```text
   -b, --backup string     Backup existing keyfile with extension given (default ".old")
   -F, --force             Force overwriting an existing key file
   -k, --keyfile KEYFILE   Path to key file, defaults to STDOUT
@@ -56,12 +44,19 @@ geneos aes new -S gateway
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## Examples
+
+```bash
+geneos aes new
+geneos aes new -F ~/keyfile.aes
+geneos aes new -S gateway
+```
+
+## SEE ALSO
 
 * [geneos aes](geneos_aes.md)	 - Manage Geneos compatible key files and encode/decode passwords
-

@@ -1,9 +1,12 @@
-## geneos aes decode
+# geneos aes decode
 
 Decode a Geneos AES256 format password using a key file
 
-### Synopsis
+```text
+geneos aes decode [flags] [TYPE] [NAME...]
+```
 
+## Details
 
 Decode a Geneos AES256 format password using the keyfile(s) given.
 
@@ -30,15 +33,26 @@ decode fail. The ciphertext may contain the optional prefix `+encs+`.
 If both `-p` and `-s` options are given then the argument to the `-p`
 flag is used. To read a ciphertext from STDIN use `-s -`.
 
+### Options
 
+```text
+  -e, --expandable string   The keyfile and ciphertext in expandable format (including '${...}')
+  -k, --keyfile KEYFILE     Path to keyfile (default /home/peter/.config/geneos/keyfile.aes)
+  -v, --previous KEYFILE    Path to previous keyfile (default /home/peter/.config/geneos/prevkeyfile.aes)
+  -p, --password string     'Geneos formatted AES256 password
+  -s, --source string       Alternative source for password
 ```
-geneos aes decode [flags] [TYPE] [NAME...]
+
+### Options inherited from parent commands
+
+```text
+  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### Examples
+## Examples
 
-```
-
+```bash
 # don't forget to use single quotes to escape the ${...} from shell
 # interpolation
 geneos aes decode -e '${enc:~/.config/geneos/keyfile.aes:hexencodedciphertext}'
@@ -51,27 +65,8 @@ geneos aes decode -p +encs+hexencodedciphertext
 
 # try to decode using the AES key file associated with the 'Demo Gateway' instance
 geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
-	
-```
+	```
 
-### Options
-
-```
-  -e, --expandable string   The keyfile and ciphertext in expandable format (including '${...}')
-  -k, --keyfile KEYFILE     Path to keyfile (default /home/peter/.config/geneos/keyfile.aes)
-  -v, --previous KEYFILE    Path to previous keyfile (default /home/peter/.config/geneos/prevkeyfile.aes)
-  -p, --password string     'Geneos formatted AES256 password
-  -s, --source string       Alternative source for password
-```
-
-### Options inherited from parent commands
-
-```
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
-```
-
-### SEE ALSO
+## SEE ALSO
 
 * [geneos aes](geneos_aes.md)	 - Manage Geneos compatible key files and encode/decode passwords
-

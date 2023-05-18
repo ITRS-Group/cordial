@@ -1,9 +1,12 @@
-## geneos move
+# geneos move
 
 Move (or rename) instances
 
-### Synopsis
+```text
+geneos move [TYPE] SOURCE DESTINATION [flags]
+```
 
+## Details
 
 Move (or rename) instances. As any existing legacy .rc
 file is never changed, this will migrate the instance from .rc to
@@ -17,19 +20,13 @@ to be updated as expected.
 
 Moving across hosts is fully supported.
 
-
-```
-geneos move [TYPE] SOURCE DESTINATION [flags]
-```
-
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-

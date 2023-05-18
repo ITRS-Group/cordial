@@ -16,7 +16,6 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/tlscmd"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/cobra/doc"
 )
 
 type docs struct {
@@ -36,7 +35,7 @@ var doclist = []docs{
 func main() {
 	for _, d := range doclist {
 		os.MkdirAll(d.dir, 0775)
-		if err := doc.GenMarkdownTree(d.command, d.dir); err != nil {
+		if err := GenMarkdownTree(d.command, d.dir); err != nil {
 			panic(err)
 		}
 	}

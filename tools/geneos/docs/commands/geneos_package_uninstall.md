@@ -1,9 +1,12 @@
-## geneos package uninstall
+# geneos package uninstall
 
 Uninstall Geneos releases
 
-### Synopsis
+```text
+geneos package uninstall [flags] [TYPE]
+```
 
+## Details
 
 Uninstall selected Geneos releases. By default all releases that are
 not used by any enabled or running instance are removed with the
@@ -32,23 +35,9 @@ uninstall applies to all configured hosts.
 
 Use `geneos update ls` to see what is installed.
 
-
-```
-geneos package uninstall [flags] [TYPE]
-```
-
-### Examples
-
-```
-
-geneos uninstall netprobe
-geneos uninstall --version 5.14.1
-
-```
-
 ### Options
 
-```
+```text
   -A, --all              Uninstall all releases, stopping and disabling running instances
   -f, --force            Force uninstall, stopping protected instances first
   -V, --version string   Uninstall a specific version
@@ -56,12 +45,18 @@ geneos uninstall --version 5.14.1
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## Examples
+
+```bash
+geneos uninstall netprobe
+geneos uninstall --version 5.14.1
+```
+
+## SEE ALSO
 
 * [geneos package](geneos_package.md)	 - A brief description of your command
-

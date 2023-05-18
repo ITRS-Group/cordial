@@ -1,9 +1,12 @@
-## geneos init demo
+# geneos init demo
 
 Initialise a Geneos Demo environment
 
-### Synopsis
+```text
+geneos init demo [flags] [USERNAME] [DIRECTORY]
+```
 
+## Details
 
 Initialise a Geneos Demo environment, creating a new directory
 structure as required.
@@ -32,21 +35,16 @@ multiple times.
 Other flags inherited from the `geneos init` command can be used to
 influence the installation.
 
-
-```
-geneos init demo [flags] [USERNAME] [DIRECTORY]
-```
-
 ### Options
 
-```
+```text
   -A, --archive PATH or URL           PATH or URL to software archive to install
   -i, --include PRIORITY:{URL|PATH}   (gateways) Add an include file in the format PRIORITY:PATH
 ```
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string                config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -e, --env NAME=VALUE               Add an environment variable in the format NAME=VALUE. Repeat flag for more values.
   -f, --floatingtemplate string      Floating probe template file
@@ -65,7 +63,6 @@ geneos init demo [flags] [USERNAME] [DIRECTORY]
   -V, --version string               Download matching version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos init](geneos_init.md)	 - Initialise a Geneos installation
-

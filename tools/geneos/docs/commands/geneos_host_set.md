@@ -1,20 +1,18 @@
-## geneos host set
+# geneos host set
 
 Set host configuration value
 
-### Synopsis
-
-
-Set options on remote host configurations.
-
-
-```
+```text
 geneos host set [flags] [NAME...] [KEY=VALUE...]
 ```
 
+## Details
+
+Set options on remote host configurations.
+
 ### Options
 
-```
+```text
   -p, --prompt               Prompt for password
   -P, --password PLAINTEXT   password
   -k, --keyfile KEYFILE      Keyfile
@@ -22,12 +20,11 @@ geneos host set [flags] [NAME...] [KEY=VALUE...]
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos host](geneos_host.md)	 - Manage remote host settings
-

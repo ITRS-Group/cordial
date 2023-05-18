@@ -1,9 +1,12 @@
-## geneos add
+# geneos add
 
 Add a new instance
 
-### Synopsis
+```text
+geneos add [flags] TYPE NAME [KEY=VALUE...]
+```
 
+## Details
 
 Add a new instance of a component TYPE with the name NAME.
 
@@ -47,24 +50,9 @@ a plain word and must not contain dots (`.`) or double colons (`::`) as these
 are used as internal delimiters. No component uses hierarchical configuration
 names except those that can be set by the options above. 
 
-
-```
-geneos add [flags] TYPE NAME [KEY=VALUE...]
-```
-
-### Examples
-
-```
-
-geneos add gateway EXAMPLE1
-geneos add san server1 --start -g GW1 -g GW2 -t "Infrastructure Defaults" -t "App1" -a COMPONENT=APP1
-geneos add netprobe infraprobe12 --start --log
-
-```
-
 ### Options
 
-```
+```text
   -S, --start                         Start new instance after creation
   -l, --log                           Follow the logs after starting the instance.
                                       Implies -S to start the instance
@@ -91,12 +79,19 @@ geneos add netprobe infraprobe12 --start --log
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## Examples
+
+```bash
+geneos add gateway EXAMPLE1
+geneos add san server1 --start -g GW1 -g GW2 -t "Infrastructure Defaults" -t "App1" -a COMPONENT=APP1
+geneos add netprobe infraprobe12 --start --log
+```
+
+## SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-

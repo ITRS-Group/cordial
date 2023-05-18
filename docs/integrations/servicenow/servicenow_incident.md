@@ -1,9 +1,12 @@
-## servicenow incident
+# servicenow incident
 
 Raise or update a ServiceNow incident
 
-### Synopsis
+```text
+servicenow incident [flags]
+```
 
+## Details
 
 Raise or update a ServiceNow incident from ITRS Geneos.
 
@@ -15,14 +18,9 @@ ServiceNow API.
 
 
 
-
-```
-servicenow incident [flags]
-```
-
 ### Options
 
-```
+```text
   -s, --short string      short description
   -t, --text string       Textual note. Long desceription for new incidents, Work Note for updates.
       --rawtext string    Raw textual note, not unquoted. Long desceription for new incidents, Work Note for updates.
@@ -35,11 +33,10 @@ servicenow incident [flags]
 
 ### Options inherited from parent commands
 
-```
+```text
   -c, --conf string   override config file
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [servicenow](servicenow.md)	 - Geneos to ServiceNow integration
-

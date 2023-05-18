@@ -1,9 +1,12 @@
-## geneos package update
+# geneos package update
 
 Update the active version of installed Geneos package
 
-### Synopsis
+```text
+geneos package update [flags] [TYPE] [VERSION]
+```
 
+## Details
 
 Update the symlink from the default base name of the package to
 the best match for VERSION. The default base directory is `active_prod`
@@ -32,25 +35,9 @@ only installed packages are used in the search.
 If a basename for the symlink does not already exist it will be created,
 so it important to check the spelling carefully.
 
-
-```
-geneos package update [flags] [TYPE] [VERSION]
-```
-
-### Examples
-
-```
-
-geneos package update gateway -b active_prod
-geneos package update gateway -b active_dev 5.11
-geneos package update
-geneos package update netprobe 5.13.2
-
-```
-
 ### Options
 
-```
+```text
   -V, --version string   Update to this version, defaults to latest (default "latest")
   -b, --base string      Base name for the symlink, defaults to active_prod (default "active_prod")
   -F, --force            Update all protected instances
@@ -59,12 +46,20 @@ geneos package update netprobe 5.13.2
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## Examples
+
+```bash
+geneos package update gateway -b active_prod
+geneos package update gateway -b active_dev 5.11
+geneos package update
+geneos package update netprobe 5.13.2
+```
+
+## SEE ALSO
 
 * [geneos package](geneos_package.md)	 - A brief description of your command
-

@@ -1,9 +1,12 @@
-## geneos logs
+# geneos logs
 
 Show log(s) for instances
 
-### Synopsis
+```text
+geneos logs [flags] [TYPE] [NAME...]
+```
 
+## Details
 
 Show log(s) for instances. The default is to show the last 10 lines
 for each matching instance. If either `-g` or `-v` are given without
@@ -13,14 +16,9 @@ implied.
 When more than one instance matches each output block is prefixed by
 instance details.
 
-
-```
-geneos logs [flags] [TYPE] [NAME...]
-```
-
 ### Options
 
-```
+```text
   -n, --lines int       Lines to tail (default 10)
   -E, --stderr          Show STDERR output files
   -f, --follow          Follow file
@@ -31,12 +29,11 @@ geneos logs [flags] [TYPE] [NAME...]
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-

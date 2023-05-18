@@ -1,9 +1,12 @@
-## geneos package install
+# geneos package install
 
 Install Geneos releases
 
-### Synopsis
+```text
+geneos package install [flags] [TYPE] [FILE|URL...]
+```
 
+## Details
 
 Installs Geneos software packages in the Geneos directory structure under
 directory `packages`. The Geneos software packages will be sourced from
@@ -34,24 +37,9 @@ Installation will ...
   web dashboards), `fa2` (fix analyser netprobe), `fileagent` (file agent for 
   fix analyser).
 
-
-```
-geneos package install [flags] [TYPE] [FILE|URL...]
-```
-
-### Examples
-
-```
-
-geneos install gateway
-geneos install fa2 5.5 -U
-geneos install netprobe -b active_dev -U
-
-```
-
 ### Options
 
-```
+```text
   -b, --base string       Override the base active_prod link name (default "active_prod")
   -L, --local             Install from local files only
   -n, --nosave            Do not save a local copy of any downloads
@@ -66,12 +54,19 @@ geneos install netprobe -b active_dev -U
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## Examples
+
+```bash
+geneos install gateway
+geneos install fa2 5.5 -U
+geneos install netprobe -b active_dev -U
+```
+
+## SEE ALSO
 
 * [geneos package](geneos_package.md)	 - A brief description of your command
-

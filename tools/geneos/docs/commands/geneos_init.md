@@ -1,9 +1,19 @@
-## geneos init
+# geneos init
 
 Initialise a Geneos installation
 
-### Synopsis
+```text
+geneos init [flags] [USERNAME] [DIRECTORY]
+```
+## Commands
 
+* [geneos init all](geneos_init_all.md)	 - Initialise a more complete Geneos environment
+* [geneos init demo](geneos_init_demo.md)	 - Initialise a Geneos Demo environment
+* [geneos init floating](geneos_init_floating.md)	 - Initialise a Geneos Floating Netprobe environment
+* [geneos init san](geneos_init_san.md)	 - Initialise a Geneos SAN (Self-Announcing Netprobe) environment
+* [geneos init template](geneos_init_template.md)	 - Initialise or overwrite templates
+
+## Details
 
 Initialise a Geneos installation by creating the directory
 structure and user configuration file, with the optional username and directory.
@@ -36,25 +46,9 @@ only the configuration file for that user is created.
 - The geneos directory hierarchy / structure / layout is defined at
   [Directory Layout](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos#directory-layout).
 
-
-```
-geneos init [flags] [USERNAME] [DIRECTORY]
-```
-
-### Examples
-
-```
-
-# To create a Geneos tree under home area
-geneos init
-# To create a new Geneos tree owned by user `geneos` under `/opt/itrs`
-sudo geneos init geneos /opt/itrs
-
-```
-
 ### Options
 
-```
+```text
   -C, --makecerts                    Create default certificates for TLS support
   -l, --log                          Run 'logs -f' after starting instance(s)
   -F, --force                        Be forceful, ignore existing directories.
@@ -73,17 +67,20 @@ sudo geneos init geneos /opt/itrs
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## Examples
+
+```bash
+# To create a Geneos tree under home area
+geneos init
+# To create a new Geneos tree owned by user `geneos` under `/opt/itrs`
+sudo geneos init geneos /opt/itrs
+```
+
+## SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-* [geneos init all](geneos_init_all.md)	 - Initialise a more complete Geneos environment
-* [geneos init demo](geneos_init_demo.md)	 - Initialise a Geneos Demo environment
-* [geneos init floating](geneos_init_floating.md)	 - Initialise a Geneos Floating Netprobe environment
-* [geneos init san](geneos_init_san.md)	 - Initialise a Geneos SAN (Self-Announcing Netprobe) environment
-* [geneos init template](geneos_init_template.md)	 - Initialise or overwrite templates
-

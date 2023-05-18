@@ -1,9 +1,12 @@
-## geneos aes set
+# geneos aes set
 
 Set active keyfile for instances
 
-### Synopsis
+```text
+geneos aes set [flags] [TYPE] [NAME...]
+```
 
+## Details
 
 Set a key file for matching instances. The key file is saved to each
 matching component's (default: all) shared directory and the
@@ -41,14 +44,9 @@ will not result in that file being copies to other hosts.
 
 
 
-
-```
-geneos aes set [flags] [TYPE] [NAME...]
-```
-
 ### Options
 
-```
+```text
   -c, --crc string        CRC of existing component shared keyfile to use (extension optional)
   -k, --keyfile KEYFILE   Key file to import and use (default /home/peter/.config/geneos/keyfile.aes)
   -N, --noroll            Do not roll any existing keyfile to previous keyfile setting
@@ -56,12 +54,11 @@ geneos aes set [flags] [TYPE] [NAME...]
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos aes](geneos_aes.md)	 - Manage Geneos compatible key files and encode/decode passwords
-

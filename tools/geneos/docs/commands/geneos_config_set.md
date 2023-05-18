@@ -1,9 +1,12 @@
-## geneos config set
+# geneos config set
 
 Set program configuration
 
-### Synopsis
+```text
+geneos config set [KEY=VALUE...] [flags]
+```
 
+## Details
 
 Set configuration parameters for the `geneos` program.
 
@@ -20,28 +23,20 @@ be careful.
 For an explanation of the various configuration parameters see the
 main documentation.
 
-
-```
-geneos config set [KEY=VALUE...] [flags]
-```
-
-### Examples
-
-```
-
-geneos config set geneos="/opt/geneos"
-geneos config set config.rebuild=always
-
-```
-
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## Examples
+
+```bash
+geneos config set geneos="/opt/geneos"
+geneos config set config.rebuild=always
+```
+
+## SEE ALSO
 
 * [geneos config](geneos_config.md)	 - Configure geneos command environment
-

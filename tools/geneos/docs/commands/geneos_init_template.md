@@ -1,9 +1,12 @@
-## geneos init template
+# geneos init template
 
 Initialise or overwrite templates
 
-### Synopsis
+```text
+geneos init template [flags]
+```
 
+## Details
 
 The `geneos` commands contains a number of default template files
 that are normally written out during initialization of a new
@@ -17,14 +20,9 @@ delete other template files that may already exist.
 Use this command if you get missing template errors using the `add`
 command.
 
-
-```
-geneos init template [flags]
-```
-
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string                config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -e, --env NAME=VALUE               Add an environment variable in the format NAME=VALUE. Repeat flag for more values.
   -f, --floatingtemplate string      Floating probe template file
@@ -43,7 +41,6 @@ geneos init template [flags]
   -V, --version string               Download matching version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos init](geneos_init.md)	 - Initialise a Geneos installation
-

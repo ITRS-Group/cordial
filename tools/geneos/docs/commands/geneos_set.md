@@ -1,9 +1,12 @@
-## geneos set
+# geneos set
 
 Set instance configuration parameters
 
-### Synopsis
+```text
+geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
+```
 
+## Details
 
 Set configuration item values in global (`geneos set global`), user 
 (`geneos set user`), or for a specific instance.
@@ -53,14 +56,9 @@ For more details on instance properties, refer to [Instance Properties](https://
 that property will be written to the instance's `json` configuration file,
 but will not affect the instance.
 
-
-```
-geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
-```
-
 ### Options
 
-```
+```text
   -e, --env NAME=VALUE                (all components) Add an environment variable in the format NAME=VALUE
   -i, --include PRIORITY:{URL|PATH}   (gateways) Add an include file in the format PRIORITY:PATH
   -g, --gateway HOSTNAME:PORT         (sans) Add a gateway in the format NAME[:PORT[:SECURE]]
@@ -71,12 +69,11 @@ geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-

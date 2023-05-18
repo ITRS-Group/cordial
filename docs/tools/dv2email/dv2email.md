@@ -1,9 +1,11 @@
-## dv2email
+# dv2email
 
 Email a Dataview following Geneos Action/Effect conventions
 
-### Synopsis
-
+```text
+dv2email [flags]
+```
+## Details
 
 Email a Dataview following Geneos Action/Effect conventions.
 
@@ -16,14 +18,9 @@ Settings for the Gateway REST connection and defaults for the EMail
 gateway can be located in dv2email.yaml (either in the working
 directory or in the user's .config/dv2email directory)
 	
-
-```
-dv2email [flags]
-```
-
 ### Options
 
-```
+```text
   -f, --config string   config file (default is $HOME/.config/geneos/dv2email.yaml)
   -d, --debug           enable extra debug output
   -i, --inline-css      inline CSS for better mail client support (default true)

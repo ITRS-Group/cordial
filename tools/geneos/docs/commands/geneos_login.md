@@ -1,9 +1,12 @@
-## geneos login
+# geneos login
 
 Store credentials for software downloads
 
-### Synopsis
+```text
+geneos login [flags] [URLPATTERN]
+```
 
+## Details
 
 Prompt for and stored credentials for later use by commands.
 
@@ -26,14 +29,9 @@ does not exist. See `geneos aes new` for details.
 The credentials cannot be used without the keyfile and each set of
 credentials can use a separate keyfile.
 
-
-```
-geneos login [flags] [URLPATTERN]
-```
-
 ### Options
 
-```
+```text
   -u, --username string      Username
   -p, --password PLAINTEXT   Password
   -k, --keyfile KEYFILE      Keyfile to use
@@ -42,12 +40,11 @@ geneos login [flags] [URLPATTERN]
 
 ### Options inherited from parent commands
 
-```
+```text
   -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
 ```
 
-### SEE ALSO
+## SEE ALSO
 
 * [geneos](geneos.md)	 - Control your Geneos environment
-
