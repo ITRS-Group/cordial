@@ -32,8 +32,6 @@ import (
 
 func init() {
 	GeneosCmd.AddCommand(copyCmd)
-
-	// copyCmd.Flags().SortFlags = false
 }
 
 var copyCmd = &cobra.Command{

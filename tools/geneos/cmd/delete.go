@@ -31,12 +31,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var deleteCmdForce bool
+var deleteCmdStop, deleteCmdForce bool
 
 func init() {
 	GeneosCmd.AddCommand(deleteCmd)
 
-	deleteCmd.Flags().BoolVarP(&deleteCmdForce, "force", "F", false, "Force delete of instances")
+	deleteCmd.Flags().BoolVarP(&deleteCmdStop, "stop", "S", false, "Stop instances first")
+	deleteCmd.Flags().BoolVarP(&deleteCmdForce, "force", "F", false, "Force delete of protected instances")
 
 	deleteCmd.Flags().SortFlags = false
 }
@@ -45,13 +46,20 @@ var deleteCmd = &cobra.Command{
 	Use:     "delete [flags] [TYPE] [NAME...]",
 	GroupID: GROUP_CONFIG,
 	Aliases: []string{"rm"},
-	Short:   "Delete an instance. Instance must be stopped",
+	Short:   "Delete instances",
 	Long: strings.ReplaceAll(`
-Delete the matching instances. This will only work on instances that
-are disabled, or if the |-F| flag is given, to prevent accidental
-deletion. The instance directory is removed without being backed-up.
-The user running the command must have the appropriate permissions
-and a partial deletion cannot be protected against.
+Delete matching instances.
+
+Instances that are marked |protected| are not deleted without the
+|--force|/|-F| option, or they can be unprotected using |geneos
+protect -U| first.
+
+Instances that are running are not removed unless the |--stop|/|-S|
+option is given.
+
+The instance directory is removed without being backed-up. The user
+running the command must have the appropriate permissions and a
+partial deletion cannot be protected against.
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -66,7 +74,11 @@ and a partial deletion cannot be protected against.
 }
 
 func deleteInstance(c geneos.Instance, params []string) (err error) {
-	if deleteCmdForce {
+	if instance.IsProtected(c) {
+		return geneos.ErrProtected
+	}
+
+	if deleteCmdStop {
 		if c.Type().RealComponent {
 			if err = instance.Stop(c, true, false); err != nil {
 				return
@@ -74,7 +86,7 @@ func deleteInstance(c geneos.Instance, params []string) (err error) {
 		}
 	}
 
-	if deleteCmdForce || instance.IsDisabled(c) {
+	if !instance.IsRunning(c) || deleteCmdForce {
 		if err = c.Host().RemoveAll(c.Home()); err != nil {
 			return
 		}
@@ -83,5 +95,5 @@ func deleteInstance(c geneos.Instance, params []string) (err error) {
 		return nil
 	}
 
-	return fmt.Errorf("instance must be disabled or use '--force' before delete")
+	return fmt.Errorf("not deleted. Instances must not be running or use the '--force'/'-F' option")
 }
