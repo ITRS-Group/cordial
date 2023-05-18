@@ -48,42 +48,21 @@ var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, in
 var initCmdDLUsername, initCmdPwFile string
 var initCmdDLPassword config.Plaintext
 
+// initCmdExtras is shared between all `init` commands as they share common
+// flags (for now)
 var initCmdExtras = instance.ExtraConfigValues{}
 
 func init() {
 	cmd.GeneosCmd.AddCommand(InitCmd)
 	InitCmd.AddCommand(initTLSCmd)
 
-	// old flags, these are now sub-commands so hide them
-	InitCmd.Flags().StringVarP(&initCmdAll, "all", "A", "", "Perform initialisation steps using given license file and start instances")
-	InitCmd.Flags().MarkDeprecated("all", "please use `geneos init all -l PATH ...`")
-	InitCmd.Flags().BoolVarP(&initCmdDemo, "demo", "D", false, "Perform initialisation steps for a demo setup and start instances")
-	InitCmd.Flags().MarkDeprecated("demo", "please use `geneos init demo`")
-	InitCmd.Flags().BoolVarP(&initCmdSAN, "san", "S", false, "Create a SAN and start SAN")
-	InitCmd.Flags().MarkDeprecated("san", "please use the `geneos init san` sub-command")
-	InitCmd.Flags().BoolVarP(&initCmdTemplates, "writetemplates", "T", false, "Overwrite/create templates from embedded (for version upgrades)")
-	InitCmd.Flags().MarkDeprecated("writetemplates", "please use `geneos init templates`")
-	InitCmd.MarkFlagsMutuallyExclusive("all", "demo", "san", "writetemplates")
-
-	InitCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
-	InitCmd.Flags().MarkDeprecated("include", "please use the `geneos init all|demo|san` sub-commands")
-
-	InitCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
-	InitCmd.Flags().MarkDeprecated("gateway", "please use the `geneos init san` sub-command")
-	InitCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", instance.AttributeValuesOptionsText)
-	InitCmd.Flags().MarkDeprecated("attribute", "please use the `geneos init san` sub-command. Repeat flag for more attributes.")
-	InitCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", instance.TypeValuesOptionsText)
-	InitCmd.Flags().MarkDeprecated("type", "please use the `geneos init san` sub-command. Repeat flag for more types.")
-	InitCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", instance.VarValuesOptionsText)
-	InitCmd.Flags().MarkDeprecated("variable", "please use the `geneos init san` sub-command")
-
 	// common flags, need checking
 
-	InitCmd.PersistentFlags().BoolVarP(&initCmdMakeCerts, "makecerts", "C", false, "Create default certificates for TLS support")
 	InitCmd.PersistentFlags().BoolVarP(&initCmdLogs, "log", "l", false, "Follow logs after starting instance(s)")
 	InitCmd.PersistentFlags().BoolVarP(&initCmdForce, "force", "F", false, "Be forceful, ignore existing directories.")
 	InitCmd.PersistentFlags().StringVarP(&initCmdName, "name", "n", "", "Use name for instances and configurations instead of the hostname")
 
+	InitCmd.PersistentFlags().BoolVarP(&initCmdMakeCerts, "makecerts", "C", false, "Create default certificates for TLS support")
 	InitCmd.PersistentFlags().StringVarP(&initCmdImportCert, "importcert", "c", "", "signing certificate file with optional embedded private key")
 	InitCmd.PersistentFlags().StringVarP(&initCmdImportKey, "importkey", "k", "", "signing private key file")
 
