@@ -12,8 +12,6 @@ geneos config
 * [`geneos config show`](geneos_config_show.md)	 - Show program configuration
 * [`geneos config unset`](geneos_config_unset.md)	 - Unset a program parameter
 
-## Details
-
 # `geneos config` Subsystem Commands
 
 The commands in the `config` subsystem allow you to control the

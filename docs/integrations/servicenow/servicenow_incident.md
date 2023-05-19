@@ -6,8 +6,6 @@ Raise or update a ServiceNow incident
 servicenow incident [flags]
 ```
 
-## Details
-
 
 Raise or update a ServiceNow incident from ITRS Geneos.
 

@@ -6,8 +6,6 @@ Send a Pagerduty resolve event
 pagerduty resolve [flags]
 ```
 
-## Details
-
 
 
 ### Options inherited from parent commands

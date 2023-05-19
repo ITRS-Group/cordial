@@ -14,8 +14,6 @@ geneos init [flags] [USERNAME] [DIRECTORY]
 * [`geneos init san`](geneos_init_san.md)	 - Initialise a Geneos SAN (Self-Announcing Netprobe) environment
 * [`geneos init template`](geneos_init_template.md)	 - Initialise or overwrite templates
 
-## Details
-
 # `geneos init` Subsystem Commands
 
 

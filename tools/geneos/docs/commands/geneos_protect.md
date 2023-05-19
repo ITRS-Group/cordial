@@ -6,8 +6,6 @@ Mark instances as protected
 geneos protect [TYPE] [NAME...] [flags]
 ```
 
-## Details
-
 Mark matching instances as protected. Various operations that affect the
 state or availability of an instance will be prevented if it is marked
 `protected`.

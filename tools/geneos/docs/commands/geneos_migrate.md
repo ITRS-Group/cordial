@@ -6,8 +6,6 @@ Migrate configurations
 geneos migrate [TYPE] [NAME...] [flags]
 ```
 
-## Details
-
 By default the `migrate` command will convert legacy `.rc` format files
 to JSON and named the old file to end `.rc.orig`. The `revert` command
 can be used to restore these backup files. If you run a full clean

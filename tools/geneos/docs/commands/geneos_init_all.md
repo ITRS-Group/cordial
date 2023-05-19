@@ -6,8 +6,6 @@ Initialise a more complete Geneos environment
 geneos init all [flags] [USERNAME] [DIRECTORY]
 ```
 
-## Details
-
 Initialise a typical Geneos installation.
 
 This command initialises a Geneos installation by:

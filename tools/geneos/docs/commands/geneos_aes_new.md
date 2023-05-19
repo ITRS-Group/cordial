@@ -6,8 +6,6 @@ Create a new key file
 geneos aes new [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 Create a new key file. With no other options this is written to STDOUT.
 
 To write to a specific file use the `--keyfile`/`-k` option or to write

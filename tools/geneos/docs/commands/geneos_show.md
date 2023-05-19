@@ -6,8 +6,6 @@ Show instance configuration
 geneos show [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 Show the configuration for all matching instances.
 
 At the moment this is in JSON format and is output as a single,

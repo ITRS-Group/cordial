@@ -6,8 +6,6 @@ Run a ServiceNow integration router
 servicenow router [flags]
 ```
 
-## Details
-
 
 Run an ITRS Geneos to ServiceNow router.
 

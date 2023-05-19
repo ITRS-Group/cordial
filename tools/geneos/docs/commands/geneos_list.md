@@ -6,8 +6,6 @@ List instances
 geneos list [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 List details of matching instances.
 
 As for other commands if a `TYPE` is not given all `TYPE`s are included

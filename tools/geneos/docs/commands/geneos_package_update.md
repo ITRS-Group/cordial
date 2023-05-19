@@ -6,8 +6,6 @@ Update the active version of installed Geneos package
 geneos package update [flags] [TYPE] [VERSION]
 ```
 
-## Details
-
 Update the symlink from the default base name of the package to the best
 match for VERSION. The default base directory is `active_prod` and is
 normally linked to the latest version of a component type in the

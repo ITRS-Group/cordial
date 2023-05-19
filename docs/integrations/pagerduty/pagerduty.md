@@ -12,8 +12,6 @@ pagerduty [flags]
 * [`pagerduty resolve`](pagerduty_resolve.md)	 - Send a Pagerduty resolve event
 * [`pagerduty trigger`](pagerduty_trigger.md)	 - Send a Pagerduty trigger event
 
-## Details
-
 
 
 ### Options

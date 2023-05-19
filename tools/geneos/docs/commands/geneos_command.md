@@ -6,8 +6,6 @@ Show command line and environment for instances
 geneos command [TYPE] [NAME...] [flags]
 ```
 
-## Details
-
 Show the command line and environment variables for matching instances.
 
 ### Options inherited from parent commands

@@ -6,8 +6,6 @@ Show running instances
 geneos ps [flags] [TYPE] [NAMES...]
 ```
 
-## Details
-
 The `ps` command will report details of matching and running instances.
 
 The default output is a table format intended for humans but this can be

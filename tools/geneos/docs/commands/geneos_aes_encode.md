@@ -6,8 +6,6 @@ Encode plaintext to a Geneos AES256 password using a key file
 geneos aes encode [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 Encode plaintext to a Geneos AES256 format password using a key file.
 
 A key file must either be provided using the `-k` option or otherwise

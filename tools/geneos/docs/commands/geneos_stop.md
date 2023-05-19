@@ -6,8 +6,6 @@ Stop instances
 geneos stop [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 Stop the matching instances.
 
 Protected instances will not be restarted unless the `--force`/`-F`

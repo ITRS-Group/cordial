@@ -6,8 +6,6 @@ Initialise or overwrite templates
 geneos init template [flags]
 ```
 
-## Details
-
 The `geneos` commands contains a number of default template files that
 are normally written out during initialization of a new installation. In
 the case of adopting a legacy installation or upgrading the program it

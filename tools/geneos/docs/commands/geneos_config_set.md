@@ -6,8 +6,6 @@ Set program configuration
 geneos config set [KEY=VALUE...] [flags]
 ```
 
-## Details
-
 Set configuration parameters for the `geneos` program.
 
 Each value is in the form of `KEY=VALUE` where key is the configuration

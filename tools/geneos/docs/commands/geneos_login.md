@@ -6,8 +6,6 @@ Store credentials related to Geneos
 geneos login [flags] [DOMAIN]
 ```
 
-## Details
-
 The login command will store credentials in your local configuration
 directory for use with `geneos` and other tools from `cordial`.
 Passwords are encrypted using a key file which is created if it does not

@@ -15,8 +15,6 @@ geneos tls
 * [`geneos tls renew`](geneos_tls_renew.md)	 - Renew instance certificates
 * [`geneos tls sync`](geneos_tls_sync.md)	 - Sync remote hosts certificate chain files
 
-## Details
-
 # `geneos tls` Subsystem Commands
 
 Manage certificates for [Geneos Secure

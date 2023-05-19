@@ -6,8 +6,6 @@ Unset configuration parameters
 geneos unset [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 Unset (remove) configuration parameters from matching instances. This
 command is `unset` rather than `remove` as that is reserved as an alias
 for the `delete` command.

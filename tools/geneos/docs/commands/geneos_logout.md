@@ -6,8 +6,6 @@ Logout (remove credentials)
 geneos logout [flags] [DOMAIN...]
 ```
 
-## Details
-
 The logout command removes the credentials for the `DOMAIN` given. If no
 names are set then the default credentials (`itrsgroup.com`) are
 removed.

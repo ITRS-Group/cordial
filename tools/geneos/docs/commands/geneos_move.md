@@ -6,8 +6,6 @@ Move instances
 geneos move [TYPE] SOURCE DESTINATION [flags]
 ```
 
-## Details
-
 Move, including rename, instances.
 
 As any existing legacy .rc file is never changed, this will migrate the

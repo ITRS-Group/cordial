@@ -113,7 +113,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 	}
 
 	if len(cmd.Long) > 0 {
-		buf.WriteString("## Details\n\n")
+		// buf.WriteString("## Details\n\n")
 		buf.WriteString(cmd.Long + "\n")
 	}
 

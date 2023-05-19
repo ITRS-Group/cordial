@@ -6,8 +6,6 @@ Uninstall Geneos releases
 geneos package uninstall [flags] [TYPE]
 ```
 
-## Details
-
 Uninstall selected Geneos releases. By default all releases that are not
 used by any enabled or running instance are removed with the exception
 of the "latest" release.

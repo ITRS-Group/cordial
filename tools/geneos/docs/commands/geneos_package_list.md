@@ -6,8 +6,6 @@ List packages available for update command
 geneos package list [flags] [TYPE]
 ```
 
-## Details
-
 List the packages for the matching TYPE or all component types if no
 TYPE is given. The `-H` flags restricts the check to a specific remote
 host.

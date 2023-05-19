@@ -14,8 +14,6 @@ geneos host
 * [`geneos host set`](geneos_host_set.md)	 - Set host configuration value
 * [`geneos host show`](geneos_host_show.md)	 - Show details of remote host configuration
 
-## Details
-
 # `geneos host` Subsystem
 
 The `geneos host` subsystem manages all the tasks and configuration
