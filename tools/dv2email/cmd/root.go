@@ -144,10 +144,9 @@ directory or in the user's .config/dv2email directory)
 
 		username := gwcf.GetString("username")
 		gateway := gwcf.GetString("name")
-		pwe := gwcf.GetPassword("password")
 
 		if username != "" {
-			password = pwe
+			password = gwcf.GetPassword("password")
 		}
 
 		if username == "" && gateway != "" {
@@ -216,12 +215,11 @@ directory or in the user's .config/dv2email directory)
 		emcf := cf.Sub("email")
 
 		eusername := emcf.GetString("username")
-		epwe := emcf.GetPassword("password")
 		smtpserver := emcf.GetString("smtp", config.Default("localhost"))
 		smtptls := emcf.GetString("use-tls", config.Default("default"))
 
 		if eusername != "" {
-			epassword = epwe
+			epassword = emcf.GetPassword("password")
 		}
 
 		if eusername == "" {
