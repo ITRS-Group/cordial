@@ -38,7 +38,7 @@ import (
 var aesImportCmdKeyfile config.KeyFile
 
 func init() {
-	AesCmd.AddCommand(aesImportCmd)
+	aesCmd.AddCommand(aesImportCmd)
 
 	aesImportCmdKeyfile = cmd.DefaultUserKeyfile
 

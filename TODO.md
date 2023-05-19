@@ -1,5 +1,7 @@
 # To Do list
 
+These should be moved into github issues
+
 ## `geneos` tool
 
 (unordered)
@@ -20,19 +22,12 @@
   * output chain.pem file / or to stdout for sharing
   * TLS sync should copy root CA
 * Docker Compose file build from selection of components
-* check capabilities and not just setuid/root user
 * Run REST commands against gateways
   * initially just a framework that picks up port number etc.
   * specific command output parsing
-* command should show user information
-* standalone collection agent
 * centralised config
 * web dashboard - mostly done, better port numbers and tls to do
 * Support gateway2.gci format files
-* Redo template support, primarily for SANs but also gateways
-  * document changes
-* Update docs to include configuration file rebuilds, gateway includes etc.
-* Look at 'sudo' support for remotes
 * web interface
   * first pass review configs
   * second to edit
@@ -40,12 +35,6 @@
 * explore gRPC and other options over ssh for remotes (required daemon mode)
 * add socket and open file details to ps (ala lsof) - perhaps a "details" command or an option to "show" ?
   * /proc/N/fd/* links
-
-## libemail.so
-
-* fix image attachments (0-many, cid links by name)
-* allow empty text template
-* attach dataview snapshot as html table
 
 ## Other
 

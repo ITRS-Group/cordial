@@ -23,26 +23,26 @@ THE SOFTWARE.
 package pkgcmd // "package" is a reserved word
 
 import (
+	_ "embed"
+
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
 func init() {
-	cmd.GeneosCmd.AddCommand(PackageCmd)
+	cmd.GeneosCmd.AddCommand(packageCmd)
 }
 
-// PackageCmd represents the package command
-var PackageCmd = &cobra.Command{
+//go:embed README.md
+var longDescription string
+
+// packageCmd represents the package command
+var packageCmd = &cobra.Command{
 	Use:     "package",
 	GroupID: cmd.GROUP_SUBSYSTEMS,
 	Short:   "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Long:    longDescription,
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "true",

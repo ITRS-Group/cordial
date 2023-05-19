@@ -23,7 +23,7 @@ THE SOFTWARE.
 package hostcmd
 
 import (
-	"strings"
+	_ "embed"
 
 	"github.com/spf13/cobra"
 
@@ -34,14 +34,15 @@ func init() {
 	cmd.GeneosCmd.AddCommand(HostCmd)
 }
 
+//go:embed README.md
+var longDescription string
+
 // HostCmd represents the host command
 var HostCmd = &cobra.Command{
-	Use:     "host",
-	GroupID: cmd.GROUP_SUBSYSTEMS,
-	Short:   "Manage remote host settings",
-	Long: strings.ReplaceAll(`
-Manage remote host settings. Without a subcommand defaults to |ls| of hosts.
-`, "|", "`"),
+	Use:          "host",
+	GroupID:      cmd.GROUP_SUBSYSTEMS,
+	Short:        "Manage remote host settings",
+	Long:         longDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",

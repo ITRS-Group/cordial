@@ -40,7 +40,7 @@ var aesEncodeCmdString, aesEncodeCmdSource string
 var aesEncodeCmdExpandable, aesEncodeCmdAskOnce bool
 
 func init() {
-	AesCmd.AddCommand(aesEncodeCmd)
+	aesCmd.AddCommand(aesEncodeCmd)
 
 	aesEncodeCmd.Flags().BoolVarP(&aesEncodeCmdExpandable, "expandable", "e", false, "Output in 'expandable' format")
 	aesEncodeCmd.Flags().VarP(&aesEncodeCmdKeyfile, "keyfile", "k", "Path to keyfile")

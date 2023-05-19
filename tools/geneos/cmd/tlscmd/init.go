@@ -39,7 +39,7 @@ import (
 )
 
 func init() {
-	TLSCmd.AddCommand(tlsInitCmd)
+	tlsCmd.AddCommand(tlsInitCmd)
 	tlsInitCmd.Flags().SortFlags = false
 }
 

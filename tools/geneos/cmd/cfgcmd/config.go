@@ -24,6 +24,7 @@ THE SOFTWARE.
 package cfgcmd
 
 import (
+	_ "embed"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -32,23 +33,18 @@ import (
 )
 
 func init() {
-	cmd.GeneosCmd.AddCommand(ConfigCmd)
+	cmd.GeneosCmd.AddCommand(configCmd)
 }
 
-// ConfigCmd represents the config command
-var ConfigCmd = &cobra.Command{
+//go:embed README.md
+var longDescription string
+
+// configCmd represents the config command
+var configCmd = &cobra.Command{
 	Use:     "config",
 	GroupID: cmd.GROUP_SUBSYSTEMS,
 	Short:   "Configure geneos command environment",
-	Long: strings.ReplaceAll(`
-The commands in the |config| subsystem allow you to control the
-environment of the |geneos| program itself. Please see the
-descriptions of the commands below for more information.
-
-If you run this command directly then you will either be shown the
-output of |geneos config show| or |geneos config set [ARGS]| if you
-supply any further arguments that contain an "=".
-`, "|", "`"),
+	Long:    longDescription,
 	Example: `
 geneos config
 geneos config geneos=/opt/itrs

@@ -32,7 +32,7 @@ import (
 )
 
 func init() {
-	ConfigCmd.AddCommand(unsetUserCmd)
+	configCmd.AddCommand(unsetUserCmd)
 }
 
 var unsetUserCmd = &cobra.Command{

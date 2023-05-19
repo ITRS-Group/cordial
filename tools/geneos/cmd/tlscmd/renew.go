@@ -40,7 +40,7 @@ import (
 )
 
 func init() {
-	TLSCmd.AddCommand(tlsRenewCmd)
+	tlsCmd.AddCommand(tlsRenewCmd)
 
 	// tlsRenewCmd.Flags().SortFlags = false
 }

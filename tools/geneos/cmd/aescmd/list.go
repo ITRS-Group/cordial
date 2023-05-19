@@ -56,7 +56,7 @@ type aesLsCmdType struct {
 }
 
 func init() {
-	AesCmd.AddCommand(aesLsCmd)
+	aesCmd.AddCommand(aesLsCmd)
 
 	aesLsCmd.Flags().BoolVarP(&aesLsCmdShared, "shared", "S", false, "List shared key files")
 

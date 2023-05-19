@@ -23,7 +23,7 @@ THE SOFTWARE.
 package tlscmd
 
 import (
-	"strings"
+	_ "embed"
 
 	"github.com/spf13/cobra"
 
@@ -31,20 +31,17 @@ import (
 )
 
 func init() {
-	cmd.GeneosCmd.AddCommand(TLSCmd)
+	cmd.GeneosCmd.AddCommand(tlsCmd)
 }
 
-var TLSCmd = &cobra.Command{
-	Use:     "tls",
-	GroupID: cmd.GROUP_SUBSYSTEMS,
-	Short:   "Manage certificates for secure connections",
-	Long: strings.ReplaceAll(`
-Manage certificates for [Geneos Secure Communications](https://docs.itrsgroup.com/docs/geneos/current/SSL/ssl_ug.html).
+//go:embed README.md
+var longDescription string
 
-Sub-commands allow for initialisation, create and renewal of
-certificates as well as listing details and copying a certificate
-chain to all other hosts.
-`, "|", "`"),
+var tlsCmd = &cobra.Command{
+	Use:          "tls",
+	GroupID:      cmd.GROUP_SUBSYSTEMS,
+	Short:        "Manage certificates for secure connections",
+	Long:         longDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"needshomedir": "true",
