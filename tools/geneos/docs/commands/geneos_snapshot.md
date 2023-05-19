@@ -6,8 +6,6 @@ Capture a snapshot of each matching dataview
 geneos snapshot [flags] [gateway] [NAME] XPATH...
 ```
 
-## Details
-
 Snapshot one or more dataviews using the REST Commands API endpoint
 introduced in GA5.14. The TYPE, if given, must be `gateway`.
 

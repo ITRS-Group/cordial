@@ -6,8 +6,6 @@ Decode a Geneos AES256 format password using a key file
 geneos aes decode [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 Decode a Geneos AES256 format password using the keyfile(s) given.
 
 If an `expandable` string is given with the `-e` option it must be of

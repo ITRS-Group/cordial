@@ -6,8 +6,6 @@ Initialise a Geneos Demo environment
 geneos init demo [flags] [USERNAME] [DIRECTORY]
 ```
 
-## Details
-
 Initialise a Geneos Demo environment, creating a new directory structure
 as required.
 

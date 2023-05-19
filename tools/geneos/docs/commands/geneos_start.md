@@ -6,8 +6,6 @@ Start instances
 geneos start [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 Start the matching instances.
 
 The start-up command and environment can be seen using the `geneos

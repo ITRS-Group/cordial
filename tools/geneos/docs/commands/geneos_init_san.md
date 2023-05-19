@@ -6,8 +6,6 @@ Initialise a Geneos SAN (Self-Announcing Netprobe) environment
 geneos init san [flags] [USERNAME] [DIRECTORY]
 ```
 
-## Details
-
 Install a Self-Announcing Netprobe (SAN) into a new Geneos install
 directory.
 

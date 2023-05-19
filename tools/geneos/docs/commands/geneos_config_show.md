@@ -6,8 +6,6 @@ Show program configuration
 geneos config show [KEY...] [flags]
 ```
 
-## Details
-
 The show command outputs the current configuration for the `geneos`
 program in JSON format. It shows the processed values from the on-disk
 copy of your program configuration and not the final configuration that

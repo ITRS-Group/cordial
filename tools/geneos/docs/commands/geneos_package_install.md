@@ -6,8 +6,6 @@ Install Geneos releases
 geneos package install [flags] [TYPE] [FILE|URL...]
 ```
 
-## Details
-
 Installs Geneos software packages in the Geneos directory structure
 under directory `packages`. The Geneos software packages will be sourced
 from the [ITRS Download

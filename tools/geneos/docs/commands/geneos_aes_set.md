@@ -6,8 +6,6 @@ Set active keyfile for instances
 geneos aes set [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 Set a key file for matching instances. The key file is saved to each
 matching component's (default: `all`) shared directory and the
 configuration set to that path.

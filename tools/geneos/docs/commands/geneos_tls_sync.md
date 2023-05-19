@@ -6,8 +6,6 @@ Sync remote hosts certificate chain files
 geneos tls sync [flags]
 ```
 
-## Details
-
 Create a chain.pem file made up of the root and signing certificates and
 then copy them to all remote hosts. This can then be used to verify
 connections from components.

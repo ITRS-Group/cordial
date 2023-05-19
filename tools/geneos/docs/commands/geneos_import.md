@@ -6,8 +6,6 @@ Import files to an instance or a common directory
 geneos import [flags] [TYPE] [NAME...] [DEST=]SOURCE...
 ```
 
-## Details
-
 Import each `SOURCE` to instance directories. With the `--common`/`-c`
 option the imports are to a TYPE component sub-directory `TYPE_`
 suffixed with the value to the `--common`/`-c` option. See examples

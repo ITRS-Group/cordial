@@ -6,8 +6,6 @@ Import key files for component TYPE
 geneos aes import [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 Import key files to the `TYPE/keyfiles` directory in each matching
 component TYPE shared directory.
 

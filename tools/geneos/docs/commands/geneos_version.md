@@ -6,8 +6,6 @@ Show program version
 geneos version [flags]
 ```
 
-## Details
-
 Show program version details
 
 With the `--debug`/`-d` option it will also output build information

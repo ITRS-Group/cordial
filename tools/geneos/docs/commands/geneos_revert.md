@@ -6,8 +6,6 @@ Revert earlier migration of configuration files
 geneos revert [TYPE] [NAME...] [flags]
 ```
 
-## Details
-
 The command will revert the `.rc.orig` suffixed configuration file for
 all matching instances.
 

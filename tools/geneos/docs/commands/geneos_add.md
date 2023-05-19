@@ -6,8 +6,6 @@ Add a new instance
 geneos add [flags] TYPE NAME [KEY=VALUE...]
 ```
 
-## Details
-
 Add a new instance of a component `TYPE` with the name `NAME`.
 
 The applicability of the options vary by component `TYPE` and are stored

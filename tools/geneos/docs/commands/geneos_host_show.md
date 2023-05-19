@@ -6,8 +6,6 @@ Show details of remote host configuration
 geneos host show [flags] [NAME...]
 ```
 
-## Details
-
 Show details of remote host configurations. If no names are supplied
 then all configured hosts are shown.
 

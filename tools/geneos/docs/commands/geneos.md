@@ -47,8 +47,6 @@ Take control of your Geneos environments
 * [`geneos login`](geneos_login.md)	 - Store credentials related to Geneos
 * [`geneos logout`](geneos_logout.md)	 - Logout (remove credentials)
 
-## Details
-
 The `geneos` program will help you manage your Geneos environment.
 
 

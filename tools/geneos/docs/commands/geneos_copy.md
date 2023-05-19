@@ -6,8 +6,6 @@ Copy instances
 geneos copy [TYPE] SOURCE DESTINATION [flags]
 ```
 
-## Details
-
 Copy instance `SOURCE` to `DESTINATION`. If TYPE is not given than each
 component type that has a named instance SOURCE will be copied to
 `DESTINATION`. If `DESTINATION` is given as an @ followed by a remote

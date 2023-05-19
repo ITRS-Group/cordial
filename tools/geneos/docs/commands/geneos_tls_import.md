@@ -6,8 +6,6 @@ Import root and signing certificates
 geneos tls import
 ```
 
-## Details
-
 Import non-instance certificates. A root certificate is one where the
 subject is the same as the issuer. All other certificates are imported
 as signing certs. Only the last one, if multiple are given, is used.

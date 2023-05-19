@@ -6,8 +6,6 @@ Unset a program parameter
 geneos config unset [KEY...] [flags]
 ```
 
-## Details
-
 Unset removes the program configuration value for any arguments given on
 the command line.
 

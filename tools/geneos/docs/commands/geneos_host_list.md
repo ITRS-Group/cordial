@@ -6,8 +6,6 @@ List hosts, optionally in CSV or JSON format
 geneos host list [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 List the matching remote hosts.
 
 ### Options

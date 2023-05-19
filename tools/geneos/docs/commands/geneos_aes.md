@@ -16,8 +16,6 @@ geneos aes
 * [`geneos aes password`](geneos_aes_password.md)	 - Encode a password with an AES256 key file
 * [`geneos aes set`](geneos_aes_set.md)	 - Set active keyfile for instances
 
-## Details
-
 # `geneos aes` Subsystem
 
 The `aes` subsystem allows you to manage AES256 keyfiles and perform

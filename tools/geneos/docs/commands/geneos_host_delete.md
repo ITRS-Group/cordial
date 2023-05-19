@@ -6,8 +6,6 @@ Delete a remote host configuration
 geneos host delete [flags] NAME...
 ```
 
-## Details
-
 Delete the local configuration referring to a remote host.
 
 ### Options

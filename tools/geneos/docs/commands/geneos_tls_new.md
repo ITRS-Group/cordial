@@ -6,8 +6,6 @@ Create new certificates
 geneos tls new [TYPE] [NAME...] [flags]
 ```
 
-## Details
-
 Create new certificates for instances.
 
 ### Options inherited from parent commands

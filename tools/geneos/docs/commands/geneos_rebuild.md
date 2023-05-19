@@ -6,8 +6,6 @@ Rebuild instance configuration files
 geneos rebuild [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 All matching instances whose TYPE supported templates for configuration
 file will have them rebuilt depending on the `config.rebuild` setting
 for each instance.

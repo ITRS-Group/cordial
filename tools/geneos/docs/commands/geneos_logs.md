@@ -6,8 +6,6 @@ View, search or follow logs
 geneos logs [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 The default behaviour is to show the last 10 lines of the log file for
 each matching instance. The order of instances cannot be predicted.
 

@@ -6,8 +6,6 @@ Delete instances
 geneos delete [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 Delete matching instances.
 
 Instances that are marked `protected` are not deleted without the

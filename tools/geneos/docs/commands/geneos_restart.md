@@ -6,8 +6,6 @@ Restart instances
 geneos restart [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 Restart the matching instances.
 
 By default this is identical to running `geneos stop` followed by

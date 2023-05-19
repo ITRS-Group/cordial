@@ -6,8 +6,6 @@ Add a remote host
 geneos host add [flags] [NAME] [SSHURL]
 ```
 
-## Details
-
 Add a remote host `NAME` for seamless control of your Geneos estate.
 
 One or both of `NAME` or `SSHURL` must be given. `NAME` is used as the

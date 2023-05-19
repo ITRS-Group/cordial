@@ -6,8 +6,6 @@ Clean-up instance directories
 geneos clean [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 Clean the working directory for matching instances.
 
 The default behaviour is to leave the instance running and only remove

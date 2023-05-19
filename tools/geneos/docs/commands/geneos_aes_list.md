@@ -6,8 +6,6 @@ List key files
 geneos aes list [flags] [TYPE] [NAME...]
 ```
 
-## Details
-
 List details of the key files referenced by matching instances.
 
 If given the `--shared`/`-S` flag then the key files in the shared

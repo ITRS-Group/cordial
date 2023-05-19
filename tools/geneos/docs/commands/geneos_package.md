@@ -13,8 +13,6 @@ geneos package
 * [`geneos package uninstall`](geneos_package_uninstall.md)	 - Uninstall Geneos releases
 * [`geneos package update`](geneos_package_update.md)	 - Update the active version of installed Geneos package
 
-## Details
-
 # `geneos package` Subsystem Commands
 
 

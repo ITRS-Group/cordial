@@ -5,8 +5,6 @@ Email a Dataview following Geneos Action/Effect conventions
 ```text
 dv2email [flags]
 ```
-## Details
-
 
 Email a Dataview following Geneos Action/Effect conventions.
 

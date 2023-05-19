@@ -6,8 +6,6 @@ Initialise a Geneos Floating Netprobe environment
 geneos init floating [flags] [USERNAME] [DIRECTORY]
 ```
 
-## Details
-
 Install a Floating Netprobe into a new Geneos install
 directory.
 

@@ -6,8 +6,6 @@ Output a directory path for given options
 geneos home [flags] [TYPE] [NAME]
 ```
 
-## Details
-
 Output a directory path for use in shell expansion like `cd $(geneos
 home mygateway)`.
 

@@ -6,8 +6,6 @@ Set instance configuration parameters
 geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
 ```
 
-## Details
-
 Set one or more configuration parameters for matching instances.
 
 Set will also allow changes to existing parameters including setting

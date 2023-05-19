@@ -6,8 +6,6 @@ Encode a password with an AES256 key file
 geneos aes password [flags]
 ```
 
-## Details
-
 Encode a password using the user's keyfile. If no keyfile exists it is
 created. Output is in `expandable` format.
 
