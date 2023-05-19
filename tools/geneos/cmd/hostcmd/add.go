@@ -23,6 +23,7 @@ THE SOFTWARE.
 package hostcmd
 
 import (
+	_ "embed"
 	"fmt"
 	"net/url"
 	"os/user"
@@ -44,7 +45,7 @@ var hostAddCmdPassword config.Plaintext
 var hostAddCmdKeyfile config.KeyFile
 
 func init() {
-	HostCmd.AddCommand(hostAddCmd)
+	hostCmd.AddCommand(hostAddCmd)
 
 	hostAddCmdKeyfile = cmd.DefaultUserKeyfile
 	hostAddCmd.Flags().BoolVarP(&hostAddCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
@@ -55,34 +56,13 @@ func init() {
 	hostAddCmd.Flags().SortFlags = false
 }
 
+//go:embed _docs/add.md
+var hostAddCmdDescription string
+
 var hostAddCmd = &cobra.Command{
 	Use:   "add [flags] [NAME] [SSHURL]",
 	Short: "Add a remote host",
-	Long: strings.ReplaceAll(`
-Add a remote host |NAME| for seamless control of your Geneos estate.
-
-One or both of |NAME| or |SSHURL| must be given. |NAME| is used as
-the default hostname if not |SSHURL| is given and, conversely, the
-hostname portion of the |SSHURL| is used if no NAME is supplied.
-
-The |SSHURL| extends the standard format by allowing a path to the
-root directory for the remote Geneos installation in the format:
-
-  ssh://[USER@]HOST[:PORT][/PATH]
-
-Here:
-
-|USER| is the username to be used to connect to the target host. If
-is not defined, it will default to the current username.
-
-|PORT| is the ssh port used to connect to the target host. If not
-defined the default is 22.
-
-|HOST| the hostname or IP address of the target host. Required.
-  
-|PATH| is the root Geneos directory used on the target host. If not
-defined, it is set to the same as the local Geneos root directory.
-`, "|", "`"),
+	Long:  hostAddCmdDescription,
 	Example: strings.ReplaceAll(`
 geneos host add server1
 geneos host add ssh://server2:50122

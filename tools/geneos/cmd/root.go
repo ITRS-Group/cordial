@@ -20,9 +20,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+// Package cmd contains all the main commands for the `geneos` program
 package cmd
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -43,7 +45,7 @@ const pkgname = "cordial"
 // default command name for pre-init
 const execname = "geneos"
 
-// Execname is the basename, without extention, of the underlying binary
+// Execname is the basename, without extension, of the underlying binary
 // used to start the program. The initialising routines evaluate
 // symlinks etc.
 //
@@ -51,20 +53,32 @@ const execname = "geneos"
 var Execname = execname // filepath.Base(os.Args[0])
 
 var cfgFile string
+
+// Hostname is the cmd package global host selected ny the `--host`/`-H` option
 var Hostname string
+
+// UserKeyFile is the path to the user's key file. It starts as DefaultUserKeyFile but can be changed.
 var UserKeyFile config.KeyFile
 
 var debug, quiet bool
 
-var DefaultUserKeyfile = config.KeyFile(config.Path("keyfile", config.SetAppName(Execname), config.SetFileFormat("aes"), config.IgnoreWorkingDir()))
+// DefaultUserKeyfile is the path to the user's key file as a
+// config.Keyfile type
+var DefaultUserKeyfile = config.KeyFile(config.Path("keyfile",
+	config.SetAppName(Execname),
+	config.SetFileFormat("aes"),
+	config.IgnoreWorkingDir()),
+)
 
+// Available command groups for Cobra command set-up. This influences
+// the display of the help text for the top-level `geneos` command.
 const (
-	GROUP_PROCESS     = "process"
-	GROUP_VIEW        = "view"
-	GROUP_MANAGE      = "manage"
-	GROUP_CONFIG      = "config"
-	GROUP_SUBSYSTEMS  = "subsystems"
-	GROUP_CREDENTIALS = "credentials"
+	CommandGroupProcess     = "process"
+	CommandGroupView        = "view"
+	CommandGroupManage      = "manage"
+	CommandGroupConfig      = "config"
+	CommandGroupSubsystems  = "subsystems"
+	CommandGroupCredentials = "credentials"
 )
 
 var geneosUnsetError = strings.ReplaceAll(`Geneos location not set.
@@ -82,27 +96,27 @@ func init() {
 	cordial.LogInit(pkgname)
 
 	GeneosCmd.AddGroup(&cobra.Group{
-		ID:    GROUP_PROCESS,
+		ID:    CommandGroupProcess,
 		Title: "Control Geneos Instances",
 	})
 	GeneosCmd.AddGroup(&cobra.Group{
-		ID:    GROUP_VIEW,
+		ID:    CommandGroupView,
 		Title: "Inspect Geneos instances",
 	})
 	GeneosCmd.AddGroup(&cobra.Group{
-		ID:    GROUP_MANAGE,
+		ID:    CommandGroupManage,
 		Title: "Manage Geneos Instances",
 	})
 	GeneosCmd.AddGroup(&cobra.Group{
-		ID:    GROUP_CONFIG,
+		ID:    CommandGroupConfig,
 		Title: "Configure Geneos Instances",
 	})
 	GeneosCmd.AddGroup(&cobra.Group{
-		ID:    GROUP_SUBSYSTEMS,
+		ID:    CommandGroupSubsystems,
 		Title: "Subsystems",
 	})
 	GeneosCmd.AddGroup(&cobra.Group{
-		ID:    GROUP_CREDENTIALS,
+		ID:    CommandGroupCredentials,
 		Title: "Manage Credentials",
 	})
 
@@ -137,15 +151,14 @@ func init() {
 	geneos.Initialise(Execname)
 }
 
+//go:embed _docs/geneos.md
+var geneosCmdDescription string
+
 // GeneosCmd represents the base command when called without any subcommands
 var GeneosCmd = &cobra.Command{
 	Use:   Execname + " COMMAND [flags] [TYPE] [NAME...] [parameters...]",
 	Short: "Take control of your Geneos environments",
-	Long: strings.ReplaceAll(`
-With |geneos| you can initialise a new installation, install and
-update software releases, add and remove instances, control processes
-and build template based configuration files for SANs and more.
-`, "|", "`"),
+	Long:  geneosCmdDescription,
 	Example: strings.ReplaceAll(`
 geneos init demo -u jondoe@example.com -l
 geneos ps
@@ -233,9 +246,6 @@ geneos restart
 		// check initialisation
 		geneosdir := geneos.Root()
 		if geneosdir == "" {
-			// commands that do not require geneos home to be set - use
-			// a const/var to iterate over to test this
-			log.Debug().Msgf("parent? %v parent name %s name %s needshomedir %s", command.HasParent(), command.Parent().Name(), command.Name(), command.Annotations["needshomedir"])
 			if command.Annotations["needshomedir"] == "true" {
 				command.SetUsageTemplate(" ")
 				return fmt.Errorf("%s", geneosUnsetError)
@@ -243,8 +253,8 @@ geneos restart
 		}
 		return parseArgs(command, args)
 	},
-	Run: RunPlaceholder,
-	// RunE: lsCmd.RunE,
+	// remove placeholder for now to allow help output
+	// Run: RunPlaceholder,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -274,6 +284,11 @@ func initConfig() {
 	bin, _ := os.Executable()
 	bin, _ = filepath.EvalSymlinks(bin)
 	bin = filepath.Base(bin)
+
+	// strip the VERSION, if found, prefixed by a dash, on the end of the basename
+	//
+	// this way you can run a versioned binary and still see the right config files
+	bin = strings.TrimSuffix(bin, "-"+cordial.VERSION)
 
 	Execname = filepath.Base(bin)
 

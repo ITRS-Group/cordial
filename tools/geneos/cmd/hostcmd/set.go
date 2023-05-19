@@ -23,6 +23,7 @@ THE SOFTWARE.
 package hostcmd
 
 import (
+	_ "embed"
 	"fmt"
 	"strings"
 
@@ -39,7 +40,7 @@ var hostSetCmdPassword config.Plaintext
 var hostSetCmdKeyfile config.KeyFile
 
 func init() {
-	HostCmd.AddCommand(hostSetCmd)
+	hostCmd.AddCommand(hostSetCmd)
 
 	hostSetCmd.Flags().BoolVarP(&hostSetCmdPrompt, "prompt", "p", false, "Prompt for password")
 	hostSetCmd.Flags().VarP(&hostSetCmdPassword, "password", "P", "password")
@@ -48,12 +49,13 @@ func init() {
 	hostSetCmd.Flags().SortFlags = false
 }
 
+//go:embed _docs/set.md
+var hostSetCmdDescription string
+
 var hostSetCmd = &cobra.Command{
-	Use:   "set [flags] [NAME...] [KEY=VALUE...]",
-	Short: "Set host configuration value",
-	Long: strings.ReplaceAll(`
-Set options on remote host configurations.
-`, "|", "`"),
+	Use:                   "set [flags] [NAME...] [KEY=VALUE...]",
+	Short:                 "Set host configuration value",
+	Long:                  hostSetCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{

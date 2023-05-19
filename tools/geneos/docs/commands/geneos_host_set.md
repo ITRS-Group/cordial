@@ -8,6 +8,7 @@ geneos host set [flags] [NAME...] [KEY=VALUE...]
 
 ## Details
 
+
 Set options on remote host configurations.
 
 ### Options

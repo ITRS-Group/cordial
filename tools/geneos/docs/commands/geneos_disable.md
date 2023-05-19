@@ -8,7 +8,6 @@ geneos disable [TYPE] [NAME...] [flags]
 
 ## Details
 
-
 Mark any matching instances as disabled. The instances are also
 stopped.
 

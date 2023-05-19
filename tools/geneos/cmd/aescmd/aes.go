@@ -39,13 +39,13 @@ func init() {
 }
 
 //go:embed README.md
-var longDescription string
+var aesCmdDescription string
 
 var aesCmd = &cobra.Command{
 	Use:          "aes",
-	GroupID:      cmd.GROUP_SUBSYSTEMS,
+	GroupID:      cmd.CommandGroupSubsystems,
 	Short:        "Manage Geneos compatible key files and encode/decode passwords",
-	Long:         longDescription,
+	Long:         aesCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",

@@ -20,6 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+// Package hostcmd contains all the host subsystem commands
 package hostcmd
 
 import (
@@ -31,18 +32,18 @@ import (
 )
 
 func init() {
-	cmd.GeneosCmd.AddCommand(HostCmd)
+	cmd.GeneosCmd.AddCommand(hostCmd)
 }
 
 //go:embed README.md
-var longDescription string
+var hostCmdDescription string
 
-// HostCmd represents the host command
-var HostCmd = &cobra.Command{
+// hostCmd represents the host command
+var hostCmd = &cobra.Command{
 	Use:          "host",
-	GroupID:      cmd.GROUP_SUBSYSTEMS,
+	GroupID:      cmd.CommandGroupSubsystems,
 	Short:        "Manage remote host settings",
-	Long:         longDescription,
+	Long:         hostCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",

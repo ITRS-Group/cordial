@@ -7,6 +7,7 @@ dv2email [flags]
 ```
 ## Details
 
+
 Email a Dataview following Geneos Action/Effect conventions.
 
 When called without a sub-command and no arguments the program

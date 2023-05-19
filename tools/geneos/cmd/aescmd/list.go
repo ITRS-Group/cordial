@@ -23,6 +23,7 @@ THE SOFTWARE.
 package aescmd
 
 import (
+	_ "embed"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -40,13 +41,13 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var aesLSTabWriter *tabwriter.Writer
-var aesLsCmdCSV, aesLsCmdJSON, aesLsCmdIndent bool
-var aesLsCmdShared bool
+var aesListTabWriter *tabwriter.Writer
+var aesListCmdCSV, aesListCmdJSON, aesListCmdIndent bool
+var aesListCmdShared bool
 
-var aesLsCSVWriter *csv.Writer
+var aesListCSVWriter *csv.Writer
 
-type aesLsCmdType struct {
+type aesListCmdType struct {
 	Name    string `json:"name,omitempty"`
 	Type    string `json:"type,omitempty"`
 	Host    string `json:"host,omitempty"`
@@ -56,33 +57,28 @@ type aesLsCmdType struct {
 }
 
 func init() {
-	aesCmd.AddCommand(aesLsCmd)
+	aesCmd.AddCommand(aesListCmd)
 
-	aesLsCmd.Flags().BoolVarP(&aesLsCmdShared, "shared", "S", false, "List shared key files")
+	aesListCmd.Flags().BoolVarP(&aesListCmdShared, "shared", "S", false, "List shared key files")
 
-	aesLsCmd.Flags().BoolVarP(&aesLsCmdJSON, "json", "j", false, "Output JSON")
-	aesLsCmd.Flags().BoolVarP(&aesLsCmdIndent, "pretty", "i", false, "Output indented JSON")
-	aesLsCmd.Flags().BoolVarP(&aesLsCmdCSV, "csv", "c", false, "Output CSV")
-	aesLsCmd.Flags().SortFlags = false
+	aesListCmd.Flags().BoolVarP(&aesListCmdJSON, "json", "j", false, "Output JSON")
+	aesListCmd.Flags().BoolVarP(&aesListCmdIndent, "pretty", "i", false, "Output indented JSON")
+	aesListCmd.Flags().BoolVarP(&aesListCmdCSV, "csv", "c", false, "Output CSV")
+	aesListCmd.Flags().SortFlags = false
 }
 
-var aesLsCmd = &cobra.Command{
-	Use:   "ls [flags] [TYPE] [NAME...]",
+//go:embed _docs/list.md
+var aesListCmdDescription string
+
+var aesListCmd = &cobra.Command{
+	Use:   "list [flags] [TYPE] [NAME...]",
 	Short: "List key files",
-	Long: strings.ReplaceAll(`
-List details of the key files referenced by matching instances.
-
-If given the |--shared|/|-S| flag then the key files in the shared
-component directory are listed. This can be filtered by host with the
-|--host|/|-H| and/or by component TYPE.
-
-The default output is human-readable table format. You can select CSV
-or JSON formats using the appropriate flags.
-`, "|", "`"),
+	Long:  aesListCmdDescription,
 	Example: `
-geneos aes ls gateway
+geneos aes list gateway
 geneos aes ls -S gateway -H localhost -c
 `,
+	Aliases:      []string{"ls"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",
@@ -92,42 +88,42 @@ geneos aes ls -S gateway -H localhost -c
 		ct, args, params := cmd.CmdArgsParams(command)
 
 		h := geneos.GetHost(cmd.Hostname)
-		if aesLsCmdShared {
+		if aesListCmdShared {
 
 		}
 		switch {
-		case aesLsCmdJSON, aesLsCmdIndent:
+		case aesListCmdJSON, aesListCmdIndent:
 			var results []interface{}
-			if aesLsCmdShared {
-				results, _ = aesLSSharedJSON(ct, h)
+			if aesListCmdShared {
+				results, _ = aesListSharedJSON(ct, h)
 			} else {
-				results, _ = instance.ForAllWithResults(ct, aesLSInstanceJSON, args, params)
+				results, _ = instance.ForAllWithResults(ct, aesListInstanceJSON, args, params)
 			}
 			var b []byte
-			if aesLsCmdIndent {
+			if aesListCmdIndent {
 				b, _ = json.MarshalIndent(results, "", "    ")
 			} else {
 				b, _ = json.Marshal(results)
 			}
 			fmt.Println(string(b))
-		case aesLsCmdCSV:
-			aesLsCSVWriter = csv.NewWriter(os.Stdout)
-			aesLsCSVWriter.Write([]string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
-			if aesLsCmdShared {
-				aesLSSharedCSV(ct, h)
+		case aesListCmdCSV:
+			aesListCSVWriter = csv.NewWriter(os.Stdout)
+			aesListCSVWriter.Write([]string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
+			if aesListCmdShared {
+				aesListSharedCSV(ct, h)
 			} else {
-				err = instance.ForAll(ct, cmd.Hostname, aesLSInstanceCSV, args, params)
+				err = instance.ForAll(ct, cmd.Hostname, aesListInstanceCSV, args, params)
 			}
-			aesLsCSVWriter.Flush()
+			aesListCSVWriter.Flush()
 		default:
-			aesLSTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-			fmt.Fprintf(aesLSTabWriter, "Type\tName\tHost\tKeyfile\tCRC32\tModtime\n")
-			if aesLsCmdShared {
-				aesLSShared(ct, h)
+			aesListTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+			fmt.Fprintf(aesListTabWriter, "Type\tName\tHost\tKeyfile\tCRC32\tModtime\n")
+			if aesListCmdShared {
+				aesListShared(ct, h)
 			} else {
-				instance.ForAll(ct, cmd.Hostname, aesLSInstance, args, params)
+				instance.ForAll(ct, cmd.Hostname, aesListInstance, args, params)
 			}
-			aesLSTabWriter.Flush()
+			aesListTabWriter.Flush()
 		}
 		if err == os.ErrNotExist {
 			err = nil
@@ -136,19 +132,19 @@ geneos aes ls -S gateway -H localhost -c
 	},
 }
 
-func aesLSPath(ct *geneos.Component, h *geneos.Host, name string, path string) (err error) {
+func aesListPath(ct *geneos.Component, h *geneos.Host, name string, path string) (err error) {
 	if path == "" {
 		return
 	}
 	s, err := h.Stat(path)
 	if err != nil {
-		fmt.Fprintf(aesLSTabWriter, "%s\t%s\t%s\t%s\t-\t-\n", ct, name, h, path)
+		fmt.Fprintf(aesListTabWriter, "%s\t%s\t%s\t%s\t-\t-\n", ct, name, h, path)
 		return nil
 	}
 
 	r, err := h.Open(path)
 	if err != nil {
-		fmt.Fprintf(aesLSTabWriter, "%s\t%s\t%s\t%s\t-\t%s\n", ct, name, h, path, s.ModTime().Format(time.RFC3339))
+		fmt.Fprintf(aesListTabWriter, "%s\t%s\t%s\t%s\t-\t%s\n", ct, name, h, path, s.ModTime().Format(time.RFC3339))
 		return nil
 	}
 	defer r.Close()
@@ -156,22 +152,22 @@ func aesLSPath(ct *geneos.Component, h *geneos.Host, name string, path string) (
 	if err != nil {
 		return
 	}
-	fmt.Fprintf(aesLSTabWriter, "%s\t%s\t%s\t%s\t%08X\t%s\n", ct, name, h, path, crc, s.ModTime().Format(time.RFC3339))
+	fmt.Fprintf(aesListTabWriter, "%s\t%s\t%s\t%s\t%08X\t%s\n", ct, name, h, path, crc, s.ModTime().Format(time.RFC3339))
 	return
 }
 
-func aesLSInstance(c geneos.Instance, params []string) (err error) {
+func aesListInstance(c geneos.Instance, params []string) (err error) {
 	path := instance.Filepath(c, "keyfile")
 	prev := instance.Filepath(c, "prevkeyfile")
 	if path == "" {
 		return
 	}
-	aesLSPath(c.Type(), c.Host(), c.Name(), path)
-	aesLSPath(c.Type(), c.Host(), c.Name()+"**", prev)
+	aesListPath(c.Type(), c.Host(), c.Name(), path)
+	aesListPath(c.Type(), c.Host(), c.Name()+"**", prev)
 	return
 }
 
-func aesLSShared(ct *geneos.Component, h *geneos.Host) (err error) {
+func aesListShared(ct *geneos.Component, h *geneos.Host) (err error) {
 	for _, ct := range ct.OrList(componentsWithKeyfiles...) {
 		for _, h := range h.OrList(geneos.AllHosts()...) {
 			var dirs []fs.DirEntry
@@ -183,26 +179,26 @@ func aesLSShared(ct *geneos.Component, h *geneos.Host) (err error) {
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				aesLSPath(ct, h, "shared", ct.SharedPath(h, "keyfiles", dir.Name()))
+				aesListPath(ct, h, "shared", ct.SharedPath(h, "keyfiles", dir.Name()))
 			}
 		}
 	}
 	return
 }
 
-func aesLSPathCSV(ct *geneos.Component, h *geneos.Host, name string, path string) (err error) {
+func aesListPathCSV(ct *geneos.Component, h *geneos.Host, name string, path string) (err error) {
 	if path == "" {
 		return
 	}
 	s, err := h.Stat(path)
 	if err != nil {
-		aesLsCSVWriter.Write([]string{ct.String(), name, h.String(), path, "-", "-"})
+		aesListCSVWriter.Write([]string{ct.String(), name, h.String(), path, "-", "-"})
 		return nil
 	}
 
 	r, err := h.Open(path)
 	if err != nil {
-		aesLsCSVWriter.Write([]string{ct.String(), name, h.String(), path, "-", s.ModTime().Format(time.RFC3339)})
+		aesListCSVWriter.Write([]string{ct.String(), name, h.String(), path, "-", s.ModTime().Format(time.RFC3339)})
 		return nil
 	}
 	defer r.Close()
@@ -211,19 +207,19 @@ func aesLSPathCSV(ct *geneos.Component, h *geneos.Host, name string, path string
 		return
 	}
 	crcstr := fmt.Sprintf("%08X", crc)
-	aesLsCSVWriter.Write([]string{ct.String(), name, h.String(), path, crcstr, s.ModTime().Format(time.RFC3339)})
+	aesListCSVWriter.Write([]string{ct.String(), name, h.String(), path, crcstr, s.ModTime().Format(time.RFC3339)})
 	return
 }
 
-func aesLSInstanceCSV(c geneos.Instance, params []string) (err error) {
+func aesListInstanceCSV(c geneos.Instance, params []string) (err error) {
 	path := instance.Filepath(c, "keyfile")
 	prev := instance.Filepath(c, "prevkeyfile")
-	aesLSPathCSV(c.Type(), c.Host(), c.Name(), path)
-	aesLSPathCSV(c.Type(), c.Host(), c.Name()+"**", prev)
+	aesListPathCSV(c.Type(), c.Host(), c.Name(), path)
+	aesListPathCSV(c.Type(), c.Host(), c.Name()+"**", prev)
 	return
 }
 
-func aesLSSharedCSV(ct *geneos.Component, h *geneos.Host) (err error) {
+func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (err error) {
 	for _, ct := range ct.OrList(componentsWithKeyfiles...) {
 		for _, h := range h.OrList(geneos.AllHosts()...) {
 			var dirs []fs.DirEntry
@@ -235,21 +231,21 @@ func aesLSSharedCSV(ct *geneos.Component, h *geneos.Host) (err error) {
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				aesLSPathCSV(ct, h, "shared", ct.SharedPath(h, "keyfiles", dir.Name()))
+				aesListPathCSV(ct, h, "shared", ct.SharedPath(h, "keyfiles", dir.Name()))
 			}
 		}
 	}
 	return
 }
 
-func aesLSPathJSON(ct *geneos.Component, h *geneos.Host, name string, path string) (result interface{}, err error) {
+func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, path string) (result interface{}, err error) {
 	if path == "" {
 		return
 	}
 	s, err := h.Stat(path)
 	if err != nil {
 		err = nil
-		result = aesLsCmdType{
+		result = aesListCmdType{
 			Name:    name,
 			Type:    ct.String(),
 			Host:    h.String(),
@@ -263,7 +259,7 @@ func aesLSPathJSON(ct *geneos.Component, h *geneos.Host, name string, path strin
 	r, err := h.Open(path)
 	if err != nil {
 		err = nil
-		result = aesLsCmdType{
+		result = aesListCmdType{
 			Name:    name,
 			Type:    ct.String(),
 			Host:    h.String(),
@@ -279,7 +275,7 @@ func aesLSPathJSON(ct *geneos.Component, h *geneos.Host, name string, path strin
 		return
 	}
 	crcstr := fmt.Sprintf("%08X", crc)
-	result = aesLsCmdType{
+	result = aesListCmdType{
 		Name:    name,
 		Type:    ct.String(),
 		Host:    h.String(),
@@ -291,7 +287,7 @@ func aesLSPathJSON(ct *geneos.Component, h *geneos.Host, name string, path strin
 	return
 }
 
-func aesLSSharedJSON(ct *geneos.Component, h *geneos.Host) (results []interface{}, err error) {
+func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results []interface{}, err error) {
 	results = []interface{}{}
 	for _, ct := range ct.OrList(componentsWithKeyfiles...) {
 		for _, h := range h.OrList(geneos.AllHosts()...) {
@@ -304,7 +300,7 @@ func aesLSSharedJSON(ct *geneos.Component, h *geneos.Host) (results []interface{
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				result, err := aesLSPathJSON(ct, h, "shared", ct.SharedPath(h, "keyfiles", dir.Name()))
+				result, err := aesListPathJSON(ct, h, "shared", ct.SharedPath(h, "keyfiles", dir.Name()))
 				if err != nil {
 					continue
 				}
@@ -315,7 +311,7 @@ func aesLSSharedJSON(ct *geneos.Component, h *geneos.Host) (results []interface{
 	return
 }
 
-func aesLSInstanceJSON(c geneos.Instance, params []string) (result interface{}, err error) {
+func aesListInstanceJSON(c geneos.Instance, params []string) (result interface{}, err error) {
 	path := instance.Filepath(c, "keyfile")
-	return aesLSPathJSON(c.Type(), c.Host(), c.Name(), path)
+	return aesListPathJSON(c.Type(), c.Host(), c.Name(), path)
 }

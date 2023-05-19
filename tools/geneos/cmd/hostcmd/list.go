@@ -23,11 +23,11 @@ THE SOFTWARE.
 package hostcmd
 
 import (
+	_ "embed"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -37,7 +37,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-type hostLsCmdType struct {
+type hostListCmdType struct {
 	Name      string
 	Username  string
 	Hostname  string
@@ -45,30 +45,31 @@ type hostLsCmdType struct {
 	Directory string
 }
 
-var hostLsCmdJSON, hostLsCmdIndent, hostLsCmdCSV bool
+var hostListCmdJSON, hostListCmdIndent, hostListCmdCSV bool
 
-var hostLsCmdEntries []hostLsCmdType
+var hostListCmdEntries []hostListCmdType
 
-var hostLsTabWriter *tabwriter.Writer
-var hostLsCSVWriter *csv.Writer
+var hostListTabWriter *tabwriter.Writer
+var hostListCSVWriter *csv.Writer
 
 func init() {
-	HostCmd.AddCommand(hostLsCmd)
+	hostCmd.AddCommand(hostListCmd)
 
-	hostLsCmd.Flags().BoolVarP(&hostLsCmdJSON, "json", "j", false, "Output JSON")
-	hostLsCmd.Flags().BoolVarP(&hostLsCmdIndent, "pretty", "i", false, "Output indented JSON")
-	hostLsCmd.Flags().BoolVarP(&hostLsCmdCSV, "csv", "c", false, "Output CSV")
+	hostListCmd.Flags().BoolVarP(&hostListCmdJSON, "json", "j", false, "Output JSON")
+	hostListCmd.Flags().BoolVarP(&hostListCmdIndent, "pretty", "i", false, "Output indented JSON")
+	hostListCmd.Flags().BoolVarP(&hostListCmdCSV, "csv", "c", false, "Output CSV")
 
-	hostLsCmd.Flags().SortFlags = false
+	hostListCmd.Flags().SortFlags = false
 }
 
-var hostLsCmd = &cobra.Command{
-	Use:   "ls [flags] [TYPE] [NAME...]",
-	Short: "List hosts, optionally in CSV or JSON format",
-	Long: strings.ReplaceAll(`
-List the matching remote hosts.
-`, "|", "`"),
-	Aliases:      []string{"list"},
+//go:embed _docs/list.md
+var hostListCmdDescription string
+
+var hostListCmd = &cobra.Command{
+	Use:          "list [flags] [TYPE] [NAME...]",
+	Short:        "List hosts, optionally in CSV or JSON format",
+	Long:         hostListCmdDescription,
+	Aliases:      []string{"ls"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -76,26 +77,26 @@ List the matching remote hosts.
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		switch {
-		case hostLsCmdJSON, hostLsCmdIndent:
-			hostLsCmdEntries = []hostLsCmdType{}
-			err = loopHosts(lsInstanceJSONHosts)
+		case hostListCmdJSON, hostListCmdIndent:
+			hostListCmdEntries = []hostListCmdType{}
+			err = loopHosts(hostListInstanceJSONHosts)
 			var b []byte
-			if hostLsCmdIndent {
-				b, _ = json.MarshalIndent(hostLsCmdEntries, "", "    ")
+			if hostListCmdIndent {
+				b, _ = json.MarshalIndent(hostListCmdEntries, "", "    ")
 			} else {
-				b, _ = json.Marshal(hostLsCmdEntries)
+				b, _ = json.Marshal(hostListCmdEntries)
 			}
 			fmt.Println(string(b))
-		case hostLsCmdCSV:
-			hostLsCSVWriter = csv.NewWriter(os.Stdout)
-			hostLsCSVWriter.Write([]string{"Type", "Name", "Disabled", "Username", "Hostname", "Port", "Directory"})
-			err = loopHosts(lsInstanceCSVHosts)
-			hostLsCSVWriter.Flush()
+		case hostListCmdCSV:
+			hostListCSVWriter = csv.NewWriter(os.Stdout)
+			hostListCSVWriter.Write([]string{"Type", "Name", "Disabled", "Username", "Hostname", "Port", "Directory"})
+			err = loopHosts(hostListInstanceCSVHosts)
+			hostListCSVWriter.Flush()
 		default:
-			hostLsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-			fmt.Fprintf(hostLsTabWriter, "Name\tUsername\tHostname\tPort\tDirectory\n")
-			err = loopHosts(lsInstancePlainHosts)
-			hostLsTabWriter.Flush()
+			hostListTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+			fmt.Fprintf(hostListTabWriter, "Name\tUsername\tHostname\tPort\tDirectory\n")
+			err = loopHosts(hostListInstancePlainHosts)
+			hostListTabWriter.Flush()
 		}
 		if err == os.ErrNotExist {
 			err = nil
@@ -111,17 +112,17 @@ func loopHosts(fn func(*geneos.Host) error) error {
 	return nil
 }
 
-func lsInstancePlainHosts(h *geneos.Host) (err error) {
-	fmt.Fprintf(hostLsTabWriter, "%s\t%s\t%s\t%d\t%s\n", h.GetString("name"), h.GetString("username"), h.GetString("hostname"), h.GetInt("port", config.Default(22)), h.GetString(cmd.Execname))
+func hostListInstancePlainHosts(h *geneos.Host) (err error) {
+	fmt.Fprintf(hostListTabWriter, "%s\t%s\t%s\t%d\t%s\n", h.GetString("name"), h.GetString("username"), h.GetString("hostname"), h.GetInt("port", config.Default(22)), h.GetString(cmd.Execname))
 	return
 }
 
-func lsInstanceCSVHosts(h *geneos.Host) (err error) {
-	hostLsCSVWriter.Write([]string{h.String(), h.GetString("username"), h.GetString("hostname"), fmt.Sprint(h.GetInt("port", config.Default(22))), h.GetString(cmd.Execname)})
+func hostListInstanceCSVHosts(h *geneos.Host) (err error) {
+	hostListCSVWriter.Write([]string{h.String(), h.GetString("username"), h.GetString("hostname"), fmt.Sprint(h.GetInt("port", config.Default(22))), h.GetString(cmd.Execname)})
 	return
 }
 
-func lsInstanceJSONHosts(h *geneos.Host) (err error) {
-	hostLsCmdEntries = append(hostLsCmdEntries, hostLsCmdType{h.String(), h.GetString("username"), h.GetString("hostname"), h.GetInt64("port", config.Default(22)), h.GetString(cmd.Execname)})
+func hostListInstanceJSONHosts(h *geneos.Host) (err error) {
+	hostListCmdEntries = append(hostListCmdEntries, hostListCmdType{h.String(), h.GetString("username"), h.GetString("hostname"), h.GetInt64("port", config.Default(22)), h.GetString(cmd.Execname)})
 	return
 }

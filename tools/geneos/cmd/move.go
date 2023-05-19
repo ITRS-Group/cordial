@@ -23,6 +23,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	_ "embed"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -32,30 +33,17 @@ import (
 
 func init() {
 	GeneosCmd.AddCommand(moveCmd)
-
-	// moveCmd.Flags().SortFlags = false
 }
 
+//go:embed _docs/move.md
+var moveCmdDescription string
+
 var moveCmd = &cobra.Command{
-	Use:     "move [TYPE] SOURCE DESTINATION",
-	GroupID: GROUP_MANAGE,
-	Aliases: []string{"mv", "rename"},
-	Short:   "Move instances",
-	Long: strings.ReplaceAll(`
-Move, including rename, instances.
-
-As any existing legacy .rc
-file is never changed, this will migrate the instance from .rc to
-JSON. The instance is stopped and restarted after the instance is
-moved. It is an error to try to move an instance to one that already
-exists with the same name.
-
-If the component support rebuilding a templated configuration then
-this is run after the move but before the restart. This allows SANs
-to be updated as expected.
-
-Moving across hosts is fully supported.
-`, "|", "`"),
+	Use:          "move [TYPE] SOURCE DESTINATION",
+	GroupID:      CommandGroupManage,
+	Aliases:      []string{"mv", "rename"},
+	Short:        "Move instances",
+	Long:         moveCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",

@@ -23,7 +23,7 @@ THE SOFTWARE.
 package tlscmd
 
 import (
-	"strings"
+	_ "embed"
 
 	"github.com/spf13/cobra"
 
@@ -34,16 +34,15 @@ import (
 
 func init() {
 	tlsCmd.AddCommand(tlsNewCmd)
-
-	// tlsNewCmd.Flags().SortFlags = false
 }
 
+//go:embed _docs/new.md
+var tlsNewCmdDescription string
+
 var tlsNewCmd = &cobra.Command{
-	Use:   "new [TYPE] [NAME...]",
-	Short: "Create new certificates",
-	Long: strings.ReplaceAll(`
-Create new certificates for instances.
-`, "|", "`"),
+	Use:          "new [TYPE] [NAME...]",
+	Short:        "Create new certificates",
+	Long:         tlsNewCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",

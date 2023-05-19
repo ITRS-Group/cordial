@@ -1,13 +1,3 @@
-# `geneos ls`
-
-List instances
-
-```text
-geneos ls [flags] [TYPE] [NAME...]
-```
-
-## Details
-
 List details of matching instances.
 
 As for other commands if a `TYPE` is not given all `TYPE`s are
@@ -24,22 +14,3 @@ formatting the output over multiple, indented lines.
 In plain output format (i.e. not CSV or JSON) the instance name may
 be tagged with a '*' or a '+' which indicate disabled and protected,
 respectively.
-
-### Options
-
-```text
-  -c, --csv      Output CSV
-  -j, --json     Output JSON
-  -i, --pretty   Output indented JSON
-```
-
-### Options inherited from parent commands
-
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters)
-```
-
-## SEE ALSO
-
-* [geneos](geneos.md)	 - Take control of your Geneos environments

@@ -2,6 +2,12 @@
 
 * Gateway general
 
+The `gateway` component type represents a Geneos Gateway.
+
+* Configuration
+
+
+
 * Gateway templates
 
   When creating a new Gateway instance a default `gateway.setup.xml`

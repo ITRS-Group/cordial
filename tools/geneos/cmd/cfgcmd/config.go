@@ -37,14 +37,14 @@ func init() {
 }
 
 //go:embed README.md
-var longDescription string
+var configCmdDescription string
 
 // configCmd represents the config command
 var configCmd = &cobra.Command{
 	Use:     "config",
-	GroupID: cmd.GROUP_SUBSYSTEMS,
+	GroupID: cmd.CommandGroupSubsystems,
 	Short:   "Configure geneos command environment",
-	Long:    longDescription,
+	Long:    configCmdDescription,
 	Example: `
 geneos config
 geneos config geneos=/opt/itrs

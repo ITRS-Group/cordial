@@ -23,8 +23,8 @@ THE SOFTWARE.
 package cmd
 
 import (
+	_ "embed"
 	"fmt"
-	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -34,17 +34,16 @@ import (
 
 func init() {
 	GeneosCmd.AddCommand(commandCmd)
-
-	// commandCmd.Flags().SortFlags = false
 }
 
+//go:embed _docs/command.md
+var commandCmdDescription string
+
 var commandCmd = &cobra.Command{
-	Use:     "command [TYPE] [NAME...]",
-	GroupID: GROUP_VIEW,
-	Short:   "Show command line and environment for instances",
-	Long: strings.ReplaceAll(`
-Show the command line and environment variables for matching instances.
-`, "|", "`"),
+	Use:          "command [TYPE] [NAME...]",
+	GroupID:      CommandGroupView,
+	Short:        "Show command line and environment for instances",
+	Long:         commandCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",

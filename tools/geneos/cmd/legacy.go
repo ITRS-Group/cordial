@@ -23,8 +23,6 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"strings"
-
 	"github.com/spf13/cobra"
 )
 
@@ -35,7 +33,7 @@ import (
 func init() {
 	addCmd.AddCommand(addHostCmd)
 	deleteCmd.AddCommand(deleteHostCmd)
-	lsCmd.AddCommand(lsHostCmd)
+	listCmd.AddCommand(lsHostCmd)
 	setCmd.AddCommand(setHostCmd)
 	showCmd.AddCommand(showHostCmd)
 
@@ -52,16 +50,15 @@ func init() {
 	showCmd.AddCommand(showUserCmd)
 }
 
+// RunPlaceholder is an empty function for commands that have to run but no do anything
+//
+// Used to allow PersistentPreRun to check for aliases for legacy commands
 var RunPlaceholder = func(command *cobra.Command, args []string) {}
 
 var addHostCmd = &cobra.Command{
-	Use:     "host [flags] [NAME] [SSHURL]",
-	Aliases: []string{"remote"},
-	Short:   "Alias for `host add`",
-	Long: strings.ReplaceAll(`
-Alias for |host add|. Please use |geneos host add| in the future as
-this alias will be removed in an upcoming release.
-`, "|", "`"),
+	Use:          "host [flags] [NAME] [SSHURL]",
+	Aliases:      []string{"remote"},
+	Short:        "Alias for `host add`",
 	SilenceUsage: true,
 	Args:         cobra.RangeArgs(1, 2),
 	Annotations: map[string]string{
@@ -75,13 +72,9 @@ this alias will be removed in an upcoming release.
 }
 
 var deleteHostCmd = &cobra.Command{
-	Use:     "host [flags] NAME...",
-	Aliases: []string{"hosts", "remote", "remotes"},
-	Short:   "Alias for `host delete`",
-	Long: strings.ReplaceAll(`
-Alias for |host delete|. Please use |geneos host delete| in the
-future as this alias will be removed in an upcoming release.
-`, "|", "`"),
+	Use:          "host [flags] NAME...",
+	Aliases:      []string{"hosts", "remote", "remotes"},
+	Short:        "Alias for `host delete`",
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -94,13 +87,9 @@ future as this alias will be removed in an upcoming release.
 }
 
 var lsHostCmd = &cobra.Command{
-	Use:     "host [flags] [TYPE] [NAME...]",
-	Aliases: []string{"hosts", "remote", "remotes"},
-	Short:   "Alias for `host ls`",
-	Long: strings.ReplaceAll(`
-Alias for |host ls|. Please use |geneos host ls| in the future as
-this alias will be removed in an upcoming release.
-`, "|", "`"),
+	Use:          "host [flags] [TYPE] [NAME...]",
+	Aliases:      []string{"hosts", "remote", "remotes"},
+	Short:        "Alias for `host ls`",
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -113,11 +102,8 @@ this alias will be removed in an upcoming release.
 }
 
 var setHostCmd = &cobra.Command{
-	Use:   "host [flags] [NAME...] [KEY=VALUE...]",
-	Short: "Alias for 'host set'",
-	Long: strings.ReplaceAll(`
-
-`, "|", "`"),
+	Use:                   "host [flags] [NAME...] [KEY=VALUE...]",
+	Short:                 "Alias for 'host set'",
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
@@ -131,10 +117,8 @@ var setHostCmd = &cobra.Command{
 }
 
 var showHostCmd = &cobra.Command{
-	Use:   "host [flags] [NAME...]",
-	Short: "Alias for `show host`",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
+	Use:          "host [flags] [NAME...]",
+	Short:        "Alias for `show host`",
 	Aliases:      []string{"hosts"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -148,10 +132,8 @@ var showHostCmd = &cobra.Command{
 }
 
 var installCmd = &cobra.Command{
-	Use:   "install [flags] [TYPE] [FILE|URL...]",
-	Short: "Alias for `package install`",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
+	Use:          "install [flags] [TYPE] [FILE|URL...]",
+	Short:        "Alias for `package install`",
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -164,10 +146,8 @@ var installCmd = &cobra.Command{
 }
 
 var updateLsCmd = &cobra.Command{
-	Use:   "ls [flags] [TYPE]",
-	Short: "Alias for `package ls`",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
+	Use:          "ls [flags] [TYPE]",
+	Short:        "Alias for `package ls`",
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -180,10 +160,8 @@ var updateLsCmd = &cobra.Command{
 }
 
 var updateCmd = &cobra.Command{
-	Use:   "update [flags] [TYPE] [VERSION]",
-	Short: "Alias for `package update`",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
+	Use:          "update [flags] [TYPE] [VERSION]",
+	Short:        "Alias for `package update`",
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -197,10 +175,8 @@ var updateCmd = &cobra.Command{
 }
 
 var setUserCmd = &cobra.Command{
-	Use:   "user [KEY=VALUE...]",
-	Short: "Set user configuration parameters",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
+	Use:          "user [KEY=VALUE...]",
+	Short:        "Set user configuration parameters",
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -213,10 +189,8 @@ var setUserCmd = &cobra.Command{
 }
 
 var unsetUserCmd = &cobra.Command{
-	Use:   "user",
-	Short: "Unset a user parameter",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
+	Use:          "user",
+	Short:        "Unset a user parameter",
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -229,10 +203,8 @@ var unsetUserCmd = &cobra.Command{
 }
 
 var showUserCmd = &cobra.Command{
-	Use:   "user",
-	Short: "user",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
+	Use:          "user",
+	Short:        "user",
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -245,10 +217,8 @@ var showUserCmd = &cobra.Command{
 }
 
 var showGlobalCmd = &cobra.Command{
-	Use:   "global",
-	Short: "set global is deprecated",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
+	Use:          "global",
+	Short:        "set global is deprecated",
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -259,10 +229,8 @@ var showGlobalCmd = &cobra.Command{
 }
 
 var setGlobalCmd = &cobra.Command{
-	Use:   "global [KEY=VALUE...]",
-	Short: "Set global configuration parameters",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
+	Use:                   "global [KEY=VALUE...]",
+	Short:                 "Set global configuration parameters",
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
@@ -274,10 +242,8 @@ var setGlobalCmd = &cobra.Command{
 }
 
 var unsetGlobalCmd = &cobra.Command{
-	Use:   "global",
-	Short: "Unset a global parameter",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
+	Use:          "global",
+	Short:        "Unset a global parameter",
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",

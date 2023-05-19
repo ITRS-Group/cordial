@@ -23,6 +23,7 @@ THE SOFTWARE.
 package pkgcmd
 
 import (
+	_ "embed"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -37,36 +38,29 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var packageLsCmdJSON, packageLsCmdIndent, packageLsCmdCSV bool
+var packageListCmdJSON, packageListCmdIndent, packageListCmdCSV bool
 
-var packageLsTabWriter *tabwriter.Writer
-var packageLsCSVWriter *csv.Writer
+var packageListTabWriter *tabwriter.Writer
+var packageListCSVWriter *csv.Writer
 
 func init() {
-	packageCmd.AddCommand(packageLsCmd)
+	packageCmd.AddCommand(packageListCmd)
 
-	packageLsCmd.Flags().BoolVarP(&packageLsCmdJSON, "json", "j", false, "Output JSON")
-	packageLsCmd.Flags().BoolVarP(&packageLsCmdIndent, "pretty", "i", false, "Output indented JSON")
-	packageLsCmd.Flags().BoolVarP(&packageLsCmdCSV, "csv", "c", false, "Output CSV")
+	packageListCmd.Flags().BoolVarP(&packageListCmdJSON, "json", "j", false, "Output JSON")
+	packageListCmd.Flags().BoolVarP(&packageListCmdIndent, "pretty", "i", false, "Output indented JSON")
+	packageListCmd.Flags().BoolVarP(&packageListCmdCSV, "csv", "c", false, "Output CSV")
 
-	packageLsCmd.Flags().SortFlags = false
+	packageListCmd.Flags().SortFlags = false
 }
 
-var packageLsCmd = &cobra.Command{
-	Use:   "ls [flags] [TYPE]",
-	Short: "List packages available for update command",
-	Long: strings.ReplaceAll(`
-List the packages for the matching TYPE or all component types if no
-TYPE is given. The |-H| flags restricts the check to a specific
-remote host.
+//go:embed _docs/list.md
+var packageListCmdDescription string
 
-All timestamps are displayed in UTC to avoid filesystem confusion
-between local summer/winter times in some locales.
-
-Versions are listed in descending order for each component type, i.e.
-|latest| is always the first entry for each component.
-`, "|", "`"),
-	Aliases:      []string{"list"},
+var packageListCmd = &cobra.Command{
+	Use:          "list [flags] [TYPE]",
+	Short:        "List packages available for update command",
+	Long:         packageListCmdDescription,
+	Aliases:      []string{"ls"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -92,9 +86,9 @@ Versions are listed in descending order for each component type, i.e.
 		}
 
 		switch {
-		case packageLsCmdJSON, packageLsCmdIndent:
+		case packageListCmdJSON, packageListCmdIndent:
 			var b []byte
-			if packageLsCmdIndent {
+			if packageListCmdIndent {
 				b, err = json.MarshalIndent(versions, "", "    ")
 			} else {
 				b, err = json.Marshal(versions)
@@ -103,24 +97,24 @@ Versions are listed in descending order for each component type, i.e.
 				return err
 			}
 			fmt.Println(string(b))
-		case packageLsCmdCSV:
-			packageLsCSVWriter = csv.NewWriter(os.Stdout)
-			packageLsCSVWriter.Write([]string{"Component", "Host", "Version", "Latest", "Links", "LastModified", "Path"})
+		case packageListCmdCSV:
+			packageListCSVWriter = csv.NewWriter(os.Stdout)
+			packageListCSVWriter.Write([]string{"Component", "Host", "Version", "Latest", "Links", "LastModified", "Path"})
 			for _, d := range versions {
-				packageLsCSVWriter.Write([]string{d.Component, d.Host, d.Version, fmt.Sprintf("%v", d.Latest), strings.Join(d.Links, ", "), d.ModTime.Format(time.RFC3339), d.Path})
+				packageListCSVWriter.Write([]string{d.Component, d.Host, d.Version, fmt.Sprintf("%v", d.Latest), strings.Join(d.Links, ", "), d.ModTime.Format(time.RFC3339), d.Path})
 			}
-			packageLsCSVWriter.Flush()
+			packageListCSVWriter.Flush()
 		default:
-			packageLsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-			fmt.Fprintf(packageLsTabWriter, "Component\tHost\tVersion\tLinks\tLastModified\tPath\n")
+			packageListTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+			fmt.Fprintf(packageListTabWriter, "Component\tHost\tVersion\tLinks\tLastModified\tPath\n")
 			for _, d := range versions {
 				name := d.Version
 				if d.Latest {
 					name = fmt.Sprintf("%s (latest)", d.Version)
 				}
-				fmt.Fprintf(packageLsTabWriter, "%s\t%s\t%s\t%s\t%s\t%s\n", d.Component, d.Host, name, strings.Join(d.Links, ", "), d.ModTime.Format(time.RFC3339), d.Path)
+				fmt.Fprintf(packageListTabWriter, "%s\t%s\t%s\t%s\t%s\t%s\n", d.Component, d.Host, name, strings.Join(d.Links, ", "), d.ModTime.Format(time.RFC3339), d.Path)
 			}
-			packageLsTabWriter.Flush()
+			packageListTabWriter.Flush()
 		}
 
 		if err == os.ErrNotExist {

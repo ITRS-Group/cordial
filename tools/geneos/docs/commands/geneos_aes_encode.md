@@ -30,7 +30,7 @@ $ echo "test" ` geneos aes encode -s -
 rather then this:
 
 $ echo -n "test" ` geneos aes encode -s -
-	
+
 ### Options
 
 ```text

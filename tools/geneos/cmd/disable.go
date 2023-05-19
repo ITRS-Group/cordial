@@ -23,10 +23,10 @@ THE SOFTWARE.
 package cmd
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -43,15 +43,14 @@ func init() {
 	disableCmd.Flags().SortFlags = false
 }
 
-var disableCmd = &cobra.Command{
-	Use:     "disable [TYPE] [NAME...]",
-	GroupID: GROUP_MANAGE,
-	Short:   "Disable instances",
-	Long: strings.ReplaceAll(`
+//go:embed _docs/disable.md
+var disableCmdDescription string
 
-Mark any matching instances as disabled. The instances are also
-stopped.
-`, "|", "`"),
+var disableCmd = &cobra.Command{
+	Use:          "disable [TYPE] [NAME...]",
+	GroupID:      CommandGroupManage,
+	Short:        "Disable instances",
+	Long:         disableCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",

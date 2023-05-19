@@ -23,10 +23,10 @@ THE SOFTWARE.
 package tlscmd
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -35,22 +35,15 @@ import (
 
 func init() {
 	tlsCmd.AddCommand(tlsSyncCmd)
-
-	// tlsSyncCmd.Flags().SortFlags = false
 }
 
-// tlsSyncCmd represents the tlsSync command
-var tlsSyncCmd = &cobra.Command{
-	Use:   "sync",
-	Short: "Sync remote hosts certificate chain files",
-	Long: strings.ReplaceAll(`
-Create a chain.pem file made up of the root and signing
-certificates and then copy them to all remote hosts. This can
-then be used to verify connections from components.
+//go:embed _docs/sync.md
+var tlsSyncCmdDescription string
 
-The root certificate is optional, b ut the signing certificate must
-exist.
-`, "|", "`"),
+var tlsSyncCmd = &cobra.Command{
+	Use:          "sync",
+	Short:        "Sync remote hosts certificate chain files",
+	Long:         tlsSyncCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",

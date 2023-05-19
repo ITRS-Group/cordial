@@ -23,8 +23,8 @@ THE SOFTWARE.
 package cmd
 
 import (
+	_ "embed"
 	"fmt"
-	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -42,25 +42,15 @@ func init() {
 	deleteCmd.Flags().SortFlags = false
 }
 
+//go:embed _docs/delete.md
+var deleteCmdDescription string
+
 var deleteCmd = &cobra.Command{
-	Use:     "delete [flags] [TYPE] [NAME...]",
-	GroupID: GROUP_CONFIG,
-	Aliases: []string{"rm"},
-	Short:   "Delete instances",
-	Long: strings.ReplaceAll(`
-Delete matching instances.
-
-Instances that are marked |protected| are not deleted without the
-|--force|/|-F| option, or they can be unprotected using |geneos
-protect -U| first.
-
-Instances that are running are not removed unless the |--stop|/|-S|
-option is given.
-
-The instance directory is removed without being backed-up. The user
-running the command must have the appropriate permissions and a
-partial deletion cannot be protected against.
-`, "|", "`"),
+	Use:          "delete [flags] [TYPE] [NAME...]",
+	GroupID:      CommandGroupConfig,
+	Aliases:      []string{"rm"},
+	Short:        "Delete instances",
+	Long:         deleteCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",

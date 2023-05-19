@@ -23,11 +23,11 @@ THE SOFTWARE.
 package cmd
 
 import (
+	_ "embed"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -35,7 +35,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type lsCmdType struct {
+type listCmdType struct {
 	Type      string `json:"type,omitempty"`
 	Name      string `json:"name,omitempty"`
 	Disabled  bool   `json:"disabled"`
@@ -46,43 +46,30 @@ type lsCmdType struct {
 	Home      string `json:"home,omitempty"`
 }
 
-var lsCmdJSON, lsCmdCSV, lsCmdIndent bool
+var listCmdJSON, listCmdCSV, listCmdIndent bool
 
-var lsTabWriter *tabwriter.Writer
-var LsCSVWriter *csv.Writer
+var listTabWriter *tabwriter.Writer
+var listCSVWriter *csv.Writer
 
 func init() {
-	GeneosCmd.AddCommand(lsCmd)
+	GeneosCmd.AddCommand(listCmd)
 
-	lsCmd.PersistentFlags().BoolVarP(&lsCmdJSON, "json", "j", false, "Output JSON")
-	lsCmd.PersistentFlags().BoolVarP(&lsCmdIndent, "pretty", "i", false, "Output indented JSON")
-	lsCmd.PersistentFlags().BoolVarP(&lsCmdCSV, "csv", "c", false, "Output CSV")
+	listCmd.PersistentFlags().BoolVarP(&listCmdJSON, "json", "j", false, "Output JSON")
+	listCmd.PersistentFlags().BoolVarP(&listCmdIndent, "pretty", "i", false, "Output indented JSON")
+	listCmd.PersistentFlags().BoolVarP(&listCmdCSV, "csv", "c", false, "Output CSV")
 
-	lsCmd.Flags().SortFlags = false
+	listCmd.Flags().SortFlags = false
 }
 
-var lsCmd = &cobra.Command{
-	Use:     "ls [flags] [TYPE] [NAME...]",
-	GroupID: GROUP_VIEW,
-	Short:   "List instances",
-	Long: strings.ReplaceAll(`
-List details of matching instances.
+//go:embed _docs/ls.md
+var listCmdDescription string
 
-As for other commands if a |TYPE| is not given all |TYPE|s are
-included and if no |NAME| is given all instances for |TYPE| are
-included. Unless |NAME| is given in the format |NAME@HOST| then
-instances from all hosts are considered. The host can also be
-controlled using the |--host|/|-H| global option.
-
-The default output is a table format intended for humans but this can
-be changed to CSV format using the |--csv|/|-c| flag or JSON with the
-|--json|/|-j| or |--pretty|/|-i| options, the latter option
-formatting the output over multiple, indented lines.
-
-In plain output format (i.e. not CSV or JSON) the instance name may
-be tagged with a '*' or a '+' which indicate disabled and protected,
-respectively.
-`, "|", "`"),
+var listCmd = &cobra.Command{
+	Use:          "list [flags] [TYPE] [NAME...]",
+	GroupID:      CommandGroupView,
+	Short:        "List instances",
+	Long:         listCmdDescription,
+	Aliases:      []string{"ls"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",
@@ -91,25 +78,25 @@ respectively.
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args, params := CmdArgsParams(cmd)
 		switch {
-		case lsCmdJSON, lsCmdIndent:
-			results, _ := instance.ForAllWithResults(ct, lsInstanceJSON, args, params)
+		case listCmdJSON, listCmdIndent:
+			results, _ := instance.ForAllWithResults(ct, listInstanceJSON, args, params)
 			var b []byte
-			if lsCmdIndent {
+			if listCmdIndent {
 				b, _ = json.MarshalIndent(results, "", "    ")
 			} else {
 				b, _ = json.Marshal(results)
 			}
 			fmt.Println(string(b))
-		case lsCmdCSV:
-			LsCSVWriter = csv.NewWriter(os.Stdout)
-			LsCSVWriter.Write([]string{"Type", "Name", "Disabled", "Protected", "Host", "Port", "Version", "Home"})
-			err = instance.ForAll(ct, Hostname, lsInstanceCSV, args, params)
-			LsCSVWriter.Flush()
+		case listCmdCSV:
+			listCSVWriter = csv.NewWriter(os.Stdout)
+			listCSVWriter.Write([]string{"Type", "Name", "Disabled", "Protected", "Host", "Port", "Version", "Home"})
+			err = instance.ForAll(ct, Hostname, listInstanceCSV, args, params)
+			listCSVWriter.Flush()
 		default:
-			lsTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-			fmt.Fprintf(lsTabWriter, "Type\tName\tHost\tPort\tVersion\tHome\n")
-			err = instance.ForAll(ct, Hostname, lsInstancePlain, args, params)
-			lsTabWriter.Flush()
+			listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+			fmt.Fprintf(listTabWriter, "Type\tName\tHost\tPort\tVersion\tHome\n")
+			err = instance.ForAll(ct, Hostname, listInstancePlain, args, params)
+			listTabWriter.Flush()
 		}
 		if err == os.ErrNotExist {
 			err = nil
@@ -118,7 +105,7 @@ respectively.
 	},
 }
 
-func lsInstancePlain(c geneos.Instance, params []string) (err error) {
+func listInstancePlain(c geneos.Instance, params []string) (err error) {
 	var suffix string
 	if instance.IsDisabled(c) {
 		suffix = "*"
@@ -127,13 +114,14 @@ func lsInstancePlain(c geneos.Instance, params []string) (err error) {
 		suffix += "+"
 	}
 	base, underlying, _ := instance.Version(c)
-	fmt.Fprintf(lsTabWriter, "%s\t%s\t%s\t%d\t%s:%s\t%s\n", c.Type(), c.Name()+suffix, c.Host(), c.Config().GetInt("port"), base, underlying, c.Home())
+	fmt.Fprintf(listTabWriter, "%s\t%s\t%s\t%d\t%s:%s\t%s\n", c.Type(), c.Name()+suffix, c.Host(), c.Config().GetInt("port"), base, underlying, c.Home())
 	return
 }
 
-func lsInstanceCSV(c geneos.Instance, params []string) (err error) {
-	var dis string = "N"
-	var protected string = "N"
+func listInstanceCSV(c geneos.Instance, params []string) (err error) {
+	dis := "N"
+	protected := "N"
+
 	if instance.IsDisabled(c) {
 		dis = "Y"
 	}
@@ -141,12 +129,12 @@ func lsInstanceCSV(c geneos.Instance, params []string) (err error) {
 		protected = "Y"
 	}
 	base, underlying, _ := instance.Version(c)
-	LsCSVWriter.Write([]string{c.Type().String(), c.Name(), dis, protected, c.Host().String(), fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	listCSVWriter.Write([]string{c.Type().String(), c.Name(), dis, protected, c.Host().String(), fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 	return
 }
 
-func lsInstanceJSON(c geneos.Instance, params []string) (result interface{}, err error) {
+func listInstanceJSON(c geneos.Instance, params []string) (result interface{}, err error) {
 	base, underlying, _ := instance.Version(c)
-	result = lsCmdType{c.Type().String(), c.Name(), instance.IsDisabled(c), instance.IsProtected(c), c.Host().String(), c.Config().GetInt64("port"), fmt.Sprintf("%s:%s", base, underlying), c.Home()}
+	result = listCmdType{c.Type().String(), c.Name(), instance.IsDisabled(c), instance.IsProtected(c), c.Host().String(), c.Config().GetInt64("port"), fmt.Sprintf("%s:%s", base, underlying), c.Home()}
 	return
 }

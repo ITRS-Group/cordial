@@ -23,9 +23,9 @@ THE SOFTWARE.
 package initcmd
 
 import (
+	_ "embed"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -38,22 +38,13 @@ func init() {
 	initCmd.AddCommand(initTemplatesCmd)
 }
 
+//go:embed _docs/templates.md
+var initTemplatesCmdDescription string
+
 var initTemplatesCmd = &cobra.Command{
-	Use:   "template",
-	Short: "Initialise or overwrite templates",
-	Long: strings.ReplaceAll(`
-The |geneos| commands contains a number of default template files
-that are normally written out during initialization of a new
-installation. In the case of adopting a legacy installation or
-upgrading the program it might be desirable to extract these template
-files.
-
-This command will overwrite any files with the same name but will not
-delete other template files that may already exist.
-
-Use this command if you get missing template errors using the |add|
-command.
-`, "|", "`"),
+	Use:          "template",
+	Short:        "Initialise or overwrite templates",
+	Long:         initTemplatesCmdDescription,
 	Aliases:      []string{"templates"},
 	SilenceUsage: true,
 	Annotations: map[string]string{

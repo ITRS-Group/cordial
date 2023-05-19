@@ -8,9 +8,9 @@ geneos copy [TYPE] SOURCE DESTINATION [flags]
 
 ## Details
 
-Copy instance SOURCE to DESTINATION. If TYPE is not given than each
+Copy instance `SOURCE` to `DESTINATION`. If TYPE is not given than each
 component type that has a named instance SOURCE will be copied to
-DESTINATION. If DESTINATION is given as an @ followed by a remote
+`DESTINATION`. If `DESTINATION` is given as an @ followed by a remote
 host then the instance is copied to the remote host but the name
 retained. This can be used, for example, to create a standby Gateway
 on another host.

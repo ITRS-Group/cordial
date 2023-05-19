@@ -23,10 +23,10 @@ THE SOFTWARE.
 package cmd
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -59,26 +59,14 @@ func init() {
 	showCmd.Flags().SortFlags = false
 }
 
+//go:embed _docs/show.md
+var showCmdDescription string
+
 var showCmd = &cobra.Command{
-	Use:     "show [flags] [TYPE] [NAME...]",
-	GroupID: GROUP_VIEW,
-	Short:   "Show instance configuration",
-	Long: strings.ReplaceAll(`
-Show the configuration for all matching instances.
-
-At the moment this is in JSON format and is output as a single,
-concatenated JSON array of object literals, one per instance.
-
-Each instance's underlying configuration is in an object key
-|configuration|. Only the objects in this |configuration| key are
-stored in the instance's actual configuration file and this is the
-root for all parameter names used by other commands, i.e. for a value
-under |configuration.licdsecure| the parameter you would use for a
-|geneos set| command is just |licdsecure|. Confusingly there is a
-|configuration.config| object, used for template support. Other
-run-time information is shown under the |instance| key and includes
-the instance name, the host it is configured on, it's type and so on.
-`, "|", "`"),
+	Use:          "show [flags] [TYPE] [NAME...]",
+	GroupID:      CommandGroupView,
+	Short:        "Show instance configuration",
+	Long:         showCmdDescription,
 	Aliases:      []string{"details"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
