@@ -35,7 +35,7 @@ import (
 var configShowCmdAll bool
 
 func init() {
-	ConfigCmd.AddCommand(configShowCmd)
+	configCmd.AddCommand(configShowCmd)
 
 	configShowCmd.Flags().BoolVarP(&configShowCmdAll, "all", "a", false, "Show all the parameters including all defaults")
 }

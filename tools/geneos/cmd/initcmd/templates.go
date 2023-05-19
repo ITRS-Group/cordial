@@ -35,7 +35,7 @@ import (
 )
 
 func init() {
-	InitCmd.AddCommand(initTemplatesCmd)
+	initCmd.AddCommand(initTemplatesCmd)
 }
 
 var initTemplatesCmd = &cobra.Command{

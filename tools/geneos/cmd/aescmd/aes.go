@@ -24,7 +24,7 @@ THE SOFTWARE.
 package aescmd
 
 import (
-	"strings"
+	_ "embed"
 
 	"github.com/spf13/cobra"
 
@@ -35,16 +35,17 @@ import (
 var componentsWithKeyfiles = geneos.UsesKeyFiles()
 
 func init() {
-	cmd.GeneosCmd.AddCommand(AesCmd)
+	cmd.GeneosCmd.AddCommand(aesCmd)
 }
 
-var AesCmd = &cobra.Command{
-	Use:     "aes",
-	GroupID: cmd.GROUP_SUBSYSTEMS,
-	Short:   "Manage Geneos compatible key files and encode/decode passwords",
-	Long: strings.ReplaceAll(`
-Manage Geneos compatible key files and encode/decode passwords
-`, "|", "`"),
+//go:embed README.md
+var longDescription string
+
+var aesCmd = &cobra.Command{
+	Use:          "aes",
+	GroupID:      cmd.GROUP_SUBSYSTEMS,
+	Short:        "Manage Geneos compatible key files and encode/decode passwords",
+	Long:         longDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",

@@ -41,7 +41,7 @@ var aesNewCmdImportShared, aesNewCmdSaveUser, aesNewCmdOverwriteKeyfile bool
 // var aesDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
 
 func init() {
-	AesCmd.AddCommand(aesNewCmd)
+	aesCmd.AddCommand(aesNewCmd)
 
 	aesNewCmd.Flags().VarP(&aesNewCmdKeyfile, "keyfile", "k", "Path to key file, defaults to STDOUT")
 	aesNewCmd.Flags().BoolVarP(&aesNewCmdSaveUser, "user", "U", false, `New user key file (typically "${HOME}/.config/geneos/keyfile.aes")`)

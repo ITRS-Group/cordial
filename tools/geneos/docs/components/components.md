@@ -1,42 +1,5 @@
 # `geneos` Components
 
-## Component Types
-
-The following component types (and their aliases) are supported:
-
-* **`gateway`** - or `gateways`
-
-  A Geneos Gateway
-
-* **`netprobe`** - or `netprobes`, `probe` or `probes`
-
-* **`san`** - or `sans`
-
-* **`floating`** - or `float`
-
-* **`ca3`** - `collection-agent`, `collector` or `ca3s`
-
-* **`licd`** - or `licds`
-
-* **`webserver`** - or `webservers`, `webdashboard`. `dashboards`
-
-* **`fa2`** - or `fixanalyser`, `fix-analyser`
-
-* **`fileagent`** - or `fileagents`
-
-* `any` (which is the default)
-
-The first name, in bold, is also the directory name used for each type.
-These names are also reserved words and you cannot configure (or expect
-to consistently manage) components with those names. This means that you
-cannot have a gateway called `gateway` or a probe called `probe`. If you
-do already have instances with these names then you will have to be
-careful migrating. See more below.
-
-Each component type is described below along with specific component options.
-
-**Note** This section is not yet complete, apologies.
-
 ## Instance Properties
 
 **Note**: This section is incomplete and remains as work-in-progress.

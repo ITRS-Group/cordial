@@ -43,7 +43,7 @@ var packageLsTabWriter *tabwriter.Writer
 var packageLsCSVWriter *csv.Writer
 
 func init() {
-	PackageCmd.AddCommand(packageLsCmd)
+	packageCmd.AddCommand(packageLsCmd)
 
 	packageLsCmd.Flags().BoolVarP(&packageLsCmdJSON, "json", "j", false, "Output JSON")
 	packageLsCmd.Flags().BoolVarP(&packageLsCmdIndent, "pretty", "i", false, "Output indented JSON")

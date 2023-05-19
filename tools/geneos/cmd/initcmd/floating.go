@@ -38,7 +38,7 @@ import (
 var initFloatingCmdArchive, initFloatingCmdVersion, initFloatingCmdOverride string
 
 func init() {
-	InitCmd.AddCommand(initFloatingCmd)
+	initCmd.AddCommand(initFloatingCmd)
 
 	initFloatingCmd.Flags().StringVarP(&initFloatingCmdVersion, "version", "V", "latest", "Download this `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
 	initFloatingCmd.Flags().StringVarP(&initFloatingCmdArchive, "archive", "A", "", ArchiveOptionsText)

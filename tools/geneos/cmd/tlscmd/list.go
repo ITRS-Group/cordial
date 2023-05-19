@@ -68,7 +68,7 @@ var tlsLsTabWriter *tabwriter.Writer
 var tlsLsCSVWriter *csv.Writer
 
 func init() {
-	TLSCmd.AddCommand(tlsLsCmd)
+	tlsCmd.AddCommand(tlsLsCmd)
 
 	tlsLsCmd.Flags().BoolVarP(&tlsCmdAll, "all", "a", false, "Show all certs, including global and signing certs")
 	tlsLsCmd.Flags().BoolVarP(&tlsCmdLong, "long", "l", false, "Long output")

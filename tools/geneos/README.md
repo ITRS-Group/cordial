@@ -38,12 +38,12 @@ The `geneos` program breaks down functionality into subsystems and
 commands. Each of the subsystems has it's own set of commands. The
 subsystems available are:
 
-* [`geneos aes`](docs/aes.md) - AES256 Encryption and decryption commands using keyfiles
-* [`geneos config`](docs/config.md) - Configuration options for the `geneos` program itself
-* [`geneos host`](docs/host.md) - Remote host configuration commands
-* [`geneos init`](docs/init.md) - Environment initialisation commands
-* [`geneos package`](docs/package.md) - Geneos package management
-* [`geneos tls`](docs/tls.md) - TLS/SSL certificate management
+* [`geneos aes`](cmd/aescmd/README.md) - AES256 Encryption and decryption commands using keyfiles
+* [`geneos config`](cmd/cfgcmd/README.md) - Configuration options for the `geneos` program itself
+* [`geneos host`](cmd/hostcmd/README.md) - Remote host configuration commands
+* [`geneos init`](cmd/initcmd/README.md) - Environment initialisation commands
+* [`geneos package`](cmd/pkgcmd/README.md) - Geneos package management
+* [`geneos tls`](cmd/tlscmd/README.md) - TLS/SSL certificate management
 
 If you use any of these named subsystems as commands then they will tend
 to do something useful, such as list available resources. Any of the

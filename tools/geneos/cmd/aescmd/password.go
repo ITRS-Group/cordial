@@ -37,7 +37,7 @@ var aesPasswordCmdString config.Plaintext
 var aesPasswordCmdSource string
 
 func init() {
-	AesCmd.AddCommand(aesPasswordCmd)
+	aesCmd.AddCommand(aesPasswordCmd)
 
 	aesPasswordCmd.Flags().VarP(&aesPasswordCmdString, "password", "p", "A plaintext password")
 	aesPasswordCmd.Flags().StringVarP(&aesPasswordCmdSource, "source", "s", "", "External source for plaintext `PATH|URL|-`")

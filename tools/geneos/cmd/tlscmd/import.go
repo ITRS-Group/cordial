@@ -65,7 +65,7 @@ certificates with matching private keys are imported.
 }
 
 func init() {
-	TLSCmd.AddCommand(tlsImportCmd)
+	tlsCmd.AddCommand(tlsImportCmd)
 	tlsImportCmd.Flags().SortFlags = false
 }
 

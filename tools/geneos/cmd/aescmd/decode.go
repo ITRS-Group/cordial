@@ -39,7 +39,7 @@ var aesDecodeCmdAESFILE, aesDecodeCmdPrevAESFILE, aesPrevUserKeyFile config.KeyF
 var aesDecodeCmdPassword, aesDecodeCmdSource, aesDecodeCmdExpandString string
 
 func init() {
-	AesCmd.AddCommand(aesDecodeCmd)
+	aesCmd.AddCommand(aesDecodeCmd)
 
 	cmd.UserKeyFile = cmd.DefaultUserKeyfile
 	aesPrevUserKeyFile = config.KeyFile(config.Path("prevkeyfile",

@@ -43,7 +43,7 @@ var aesSetCmdCRC string
 var aesSetCmdNoRoll bool
 
 func init() {
-	AesCmd.AddCommand(aesSetCmd)
+	aesCmd.AddCommand(aesSetCmd)
 
 	aesSetCmdKeyfile = cmd.DefaultUserKeyfile
 	aesSetCmd.Flags().StringVarP(&aesSetCmdCRC, "crc", "c", "", "CRC of existing component shared keyfile to use (extension optional)")

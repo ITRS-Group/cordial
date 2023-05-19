@@ -36,7 +36,7 @@ import (
 var initDemoCmdArchive string
 
 func init() {
-	InitCmd.AddCommand(initDemoCmd)
+	initCmd.AddCommand(initDemoCmd)
 
 	initDemoCmd.Flags().StringVarP(&initDemoCmdArchive, "archive", "A", "", ArchiveOptionsText)
 	initDemoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewayValuesOptionstext)

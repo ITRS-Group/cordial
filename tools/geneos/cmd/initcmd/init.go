@@ -23,6 +23,7 @@ THE SOFTWARE.
 package initcmd
 
 import (
+	_ "embed"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -50,77 +51,49 @@ var initCmdDLPassword config.Plaintext
 var initCmdExtras = instance.ExtraConfigValues{}
 
 func init() {
-	cmd.GeneosCmd.AddCommand(InitCmd)
+	cmd.GeneosCmd.AddCommand(initCmd)
 
 	// alias placeholder for `init tls` to `tls init`
-	InitCmd.AddCommand(initTLSCmd)
+	initCmd.AddCommand(initTLSCmd)
 
 	// common flags, need checking
 
-	InitCmd.PersistentFlags().BoolVarP(&initCmdLogs, "log", "l", false, "Follow logs after starting instance(s)")
-	InitCmd.PersistentFlags().BoolVarP(&initCmdForce, "force", "F", false, "Be forceful, ignore existing directories.")
-	InitCmd.PersistentFlags().StringVarP(&initCmdName, "name", "n", "", "Use name for instances and configurations instead of the hostname")
+	initCmd.PersistentFlags().BoolVarP(&initCmdLogs, "log", "l", false, "Follow logs after starting instance(s)")
+	initCmd.PersistentFlags().BoolVarP(&initCmdForce, "force", "F", false, "Be forceful, ignore existing directories.")
+	initCmd.PersistentFlags().StringVarP(&initCmdName, "name", "n", "", "Use name for instances and configurations instead of the hostname")
 
-	InitCmd.PersistentFlags().BoolVarP(&initCmdMakeCerts, "makecerts", "C", false, "Create default certificates for TLS support")
-	InitCmd.PersistentFlags().StringVarP(&initCmdImportCert, "importcert", "c", "", "signing certificate file with optional embedded private key")
-	InitCmd.PersistentFlags().StringVarP(&initCmdImportKey, "importkey", "k", "", "signing private key file")
+	initCmd.PersistentFlags().BoolVarP(&initCmdMakeCerts, "makecerts", "C", false, "Create default certificates for TLS support")
+	initCmd.PersistentFlags().StringVarP(&initCmdImportCert, "importcert", "c", "", "signing certificate file with optional embedded private key")
+	initCmd.PersistentFlags().StringVarP(&initCmdImportKey, "importkey", "k", "", "signing private key file")
 
-	InitCmd.PersistentFlags().BoolVarP(&initCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires ITRS internal credentials")
-	InitCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots. Requires -N")
+	initCmd.PersistentFlags().BoolVarP(&initCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires ITRS internal credentials")
+	initCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots. Requires -N")
 
-	InitCmd.PersistentFlags().StringVarP(&initCmdVersion, "version", "V", "latest", "Download matching version, defaults to latest. Doesn't work for EL8 archives.")
-	InitCmd.PersistentFlags().StringVarP(&initCmdDLUsername, "username", "u", "", "Username for downloads")
+	initCmd.PersistentFlags().StringVarP(&initCmdVersion, "version", "V", "latest", "Download matching version, defaults to latest. Doesn't work for EL8 archives.")
+	initCmd.PersistentFlags().StringVarP(&initCmdDLUsername, "username", "u", "", "Username for downloads")
 
 	// we now prompt for passwords if not in config, so hide this old flag
-	InitCmd.PersistentFlags().StringVarP(&initCmdPwFile, "pwfile", "P", "", "")
-	InitCmd.PersistentFlags().MarkHidden("pwfile")
+	initCmd.PersistentFlags().StringVarP(&initCmdPwFile, "pwfile", "P", "", "")
+	initCmd.PersistentFlags().MarkHidden("pwfile")
 
-	InitCmd.PersistentFlags().StringVarP(&initCmdGatewayTemplate, "gatewaytemplate", "w", "", "A gateway template file")
-	InitCmd.PersistentFlags().StringVarP(&initCmdSANTemplate, "santemplate", "s", "", "SAN template file")
-	InitCmd.PersistentFlags().StringVarP(&initCmdFloatingTemplate, "floatingtemplate", "f", "", "Floating probe template file")
+	initCmd.PersistentFlags().StringVarP(&initCmdGatewayTemplate, "gatewaytemplate", "w", "", "A gateway template file")
+	initCmd.PersistentFlags().StringVarP(&initCmdSANTemplate, "santemplate", "s", "", "SAN template file")
+	initCmd.PersistentFlags().StringVarP(&initCmdFloatingTemplate, "floatingtemplate", "f", "", "Floating probe template file")
 
-	InitCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", instance.EnvValuesOptionsText)
+	initCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", instance.EnvValuesOptionsText)
 
-	InitCmd.PersistentFlags().SortFlags = false
-	InitCmd.Flags().SortFlags = false
+	initCmd.PersistentFlags().SortFlags = false
+	initCmd.Flags().SortFlags = false
 }
 
-var InitCmd = &cobra.Command{
+//go:embed README.md
+var longDescription string
+
+var initCmd = &cobra.Command{
 	Use:     "init [flags] [USERNAME] [DIRECTORY]",
 	GroupID: cmd.GROUP_SUBSYSTEMS,
 	Short:   "Initialise a Geneos installation",
-	Long: strings.ReplaceAll(`
-Initialise a Geneos installation by creating the directory
-structure and user configuration file, with the optional username and directory.
-
-- |USERNAME| refers to the Linux username under which the |geneos| utility
-  and all Geneos component instances will be run.
-- |DIRECTORY| refers to the base / home directory under which all Geneos
-  binaries, instances and working directories will be hosted.
-  When specified in the |geneos init| command, DIRECTORY:
-  - Must be defined as an absolute path.
-    This syntax is used to distinguish it from USERNAME which is an
-    optional parameter.
-	If undefined, |${HOME}/geneos| will be used, or |${HOME}| in case
-	the last component of |${HOME}| is equal to |geneos|.
-  - Must have a parent directory that is writeable by the user running 
-    the |geneos init| command or by the specified USERNAME.
-  - Must be a non-existing directory or an empty directory (except for
-	the "dot" files).
-	**Note**:  In case DIRECTORY is an existing directory, you can use option
-	|-F| to force the use of this directory.
-
-The generic command syntax is as follows.
-| geneos init [flags] [USERNAME] [DIRECTORY] |
-
-When run with superuser privileges a USERNAME must be supplied and
-only the configuration file for that user is created.
-| sudo geneos init geneos /opt/itrs |
-
-**Note**:
-- The geneos directory hierarchy / structure / layout is defined at
-  [Directory Layout](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos#directory-layout).
-`, "|", "`"),
+	Long:    longDescription,
 	Example: strings.ReplaceAll(`
 # To create a Geneos tree under home area
 geneos init
