@@ -26,6 +26,7 @@ import "github.com/itrs-group/cordial/pkg/xpath"
 
 // test commands to work out kinks in args and returns
 
+// SnoozeManual runs the internal command of the same name
 func (c *Connection) SnoozeManual(target *xpath.XPath, info string) (err error) {
 	if target.IsGateway() || target.IsProbe() || target.IsEntity() {
 		_, err = c.RunCommandAll("/SNOOZE:manual", target, Arg(1, info))
@@ -37,6 +38,7 @@ func (c *Connection) SnoozeManual(target *xpath.XPath, info string) (err error) 
 	return
 }
 
+// Unsnooze runs the internal command of the same name
 func (c *Connection) Unsnooze(target *xpath.XPath, info string) (err error) {
 	if target.IsGateway() || target.IsProbe() || target.IsEntity() {
 		_, err = c.RunCommandAll("/SNOOZE:unsnooze", target, Arg(1, info))
@@ -48,6 +50,7 @@ func (c *Connection) Unsnooze(target *xpath.XPath, info string) (err error) {
 	return
 }
 
+// SnoozeInfo runs the internal command of the same name
 func (c *Connection) SnoozeInfo(target *xpath.XPath) (crs []CommandResponse, err error) {
 	crs, err = c.RunCommandAll("/SNOOZE:info", target)
 	return

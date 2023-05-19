@@ -26,11 +26,19 @@ import (
 	"github.com/itrs-group/cordial/pkg/xpath"
 )
 
+// SampleNow calls the internal command of the same name on the
+// connection c and against the target XPath. An error is returned on
+// failure to run the command.
 func (c *Connection) SampleNow(target *xpath.XPath) (err error) {
 	_, err = c.RunCommandAll("/PLUGIN:sampleNow", target)
 	return
 }
 
+// LastSampleInfo calls the internal command of the same name and
+// returns a slice of CommandResponse types, one for each matching data
+// item, on the connection c. While errors from the Gateway are returned
+// in the CommandResponse structures, if there is an error connecting or
+// running the command then that is returned in err
 func (c *Connection) LastSampleInfo(target *xpath.XPath) (crs []CommandResponse, err error) {
 	return c.RunCommandAll("/PLUGIN:lastSampleInfo", target)
 }

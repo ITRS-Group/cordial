@@ -20,6 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+// Package cordial is a collection of tools, packages and integrations for
+// Geneos written primarily in Go
 package cordial
 
 import (
