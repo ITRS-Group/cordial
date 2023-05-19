@@ -20,11 +20,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-Support for Geneos Gateway REST Commands
-
-Based on https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#REST_Service
-*/
+// Package commands wraps the Geneos Gateway REST Command API in Go
+//
+// Based on https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#REST_Service
 package commands
 
 import (
@@ -104,6 +102,7 @@ type Connection struct {
 	ping               *func(*Connection) error
 }
 
+// GeneosRESTError is the error returned from the REST API
 type GeneosRESTError struct {
 	Error string `json:"error"`
 }
@@ -111,13 +110,14 @@ type GeneosRESTError struct {
 // the default endpoint for normal commands
 const endpoint = "/rest/runCommand"
 
-// Connect to a Geneos gateway on the given URL and check the connection.
-// The connection is checked by trying a lightweight REST command (fetch
-// gateway timezone and time) and if an error is returned then the connection
-// should not be reused.
+// DialGateway connects to a Geneos gateway on the given URL and check
+// the connection. The connection is checked by trying a lightweight
+// REST command (fetch gateway timezone and time) and if an error is
+// returned then the connection should not be reused.
 //
-// Options can be given to set authentication, ignore unverifiable certificates
-// and to override the default "ping" to check the gateway connection
+// Options can be given to set authentication, ignore unverifiable
+// certificates and to override the default "ping" to check the gateway
+// connection
 func DialGateway(u *url.URL, options ...Options) (c *Connection, err error) {
 	c = &Connection{
 		rrurls: []*url.URL{u},
@@ -127,9 +127,10 @@ func DialGateway(u *url.URL, options ...Options) (c *Connection, err error) {
 	return
 }
 
-// Connect to a Geneos gateway given a slice of URLs. This is to support
-// standby pairs. Each URL is checked in a random order and the first working
-// one is returned. If all URLs fail the check then an error is returned.
+// DialGateways connects to a Geneos gateway given a slice of URLs. This
+// is to support standby pairs. Each URL is checked in a random order
+// and the first working one is returned. If all URLs fail the check
+// then an error is returned.
 //
 // Options are the same as for DialGateway()
 func DialGateways(urls []*url.URL, options ...Options) (c *Connection, err error) {
@@ -282,7 +283,8 @@ func cookResponse(raw CommandResponseRaw) (cr CommandResponse) {
 	return
 }
 
-// RunCommand runs command against exactly one target, returning the response
+// RunCommand runs command against exactly one target, returning the
+// response
 func (c *Connection) RunCommand(command string, target *xpath.XPath, args ...Args) (response CommandResponse, err error) {
 	arguments := &CommandArgs{}
 	evalArgOptions(arguments, args...)
@@ -301,9 +303,9 @@ func (c *Connection) RunCommand(command string, target *xpath.XPath, args ...Arg
 	})
 }
 
-// RunCommands runs command against all matching data items, returning
-// separately concatenated stdout, stderr and execlog when returned by
-// the underlying command
+// RunCommandAll runs command against all matching data items,
+// returning separately concatenated stdout, stderr and execlog when
+// returned by the underlying command
 func (c *Connection) RunCommandAll(command string, target *xpath.XPath, args ...Args) (responses []CommandResponse, err error) {
 	arguments := &CommandArgs{}
 	evalArgOptions(arguments, args...)

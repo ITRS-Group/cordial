@@ -25,7 +25,7 @@ package commands
 import (
 	"net/http"
 
-	"github.com/awnumar/memguard"
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 // Authentication types. SSO is not currently implemented.
@@ -35,23 +35,26 @@ const (
 	SSO
 )
 
+// SSOAuth is a placeholder struct for SSO authentication in the command
+// Connection struct
 type SSOAuth struct {
 	AccessToken string `json:"access_token,omitempty"`
 	Expires     int64  `json:"expires,omitempty"`
 	TokenType   string `json:"token_type,omitempty"`
 }
 
-// try to authentication using SSO
+// AuthSSO is a placeholder for future SSO authentication
 func AuthSSO() {
 	const endpoint = "/rest/authorize"
 
 }
 
-func AuthBasic(c *http.Request, username string, pw *memguard.Enclave) (err error) {
+// AuthBasic sets up HTTP Basic Authentication on client c using the
+// plaintext username and password pw. The password is a
+// config.Plaintext enclave
+func AuthBasic(c *http.Request, username string, password config.Plaintext) (err error) {
 	if c != nil {
-		l, _ := pw.Open()
-		c.SetBasicAuth(username, l.String())
-		l.Destroy()
+		c.SetBasicAuth(username, password.String())
 	}
 	return
 }
