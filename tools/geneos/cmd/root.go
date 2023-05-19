@@ -73,12 +73,12 @@ var DefaultUserKeyfile = config.KeyFile(config.Path("keyfile",
 // Available command groups for Cobra command set-up. This influences
 // the display of the help text for the top-level `geneos` command.
 const (
-	CommandGroupProcess     = "process"
-	CommandGroupView        = "view"
-	CommandGroupManage      = "manage"
 	CommandGroupConfig      = "config"
-	CommandGroupSubsystems  = "subsystems"
 	CommandGroupCredentials = "credentials"
+	CommandGroupManage      = "manage"
+	CommandGroupProcess     = "process"
+	CommandGroupSubsystems  = "subsystems"
+	CommandGroupView        = "view"
 )
 
 var geneosUnsetError = strings.ReplaceAll(`Geneos location not set.
@@ -96,6 +96,10 @@ func init() {
 	cordial.LogInit(pkgname)
 
 	GeneosCmd.AddGroup(&cobra.Group{
+		ID:    CommandGroupSubsystems,
+		Title: "Subsystems",
+	})
+	GeneosCmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupProcess,
 		Title: "Control Geneos Instances",
 	})
@@ -110,10 +114,6 @@ func init() {
 	GeneosCmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupConfig,
 		Title: "Configure Geneos Instances",
-	})
-	GeneosCmd.AddGroup(&cobra.Group{
-		ID:    CommandGroupSubsystems,
-		Title: "Subsystems",
 	})
 	GeneosCmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupCredentials,

@@ -5,6 +5,7 @@ Manage certificates for secure connections
 ```text
 geneos tls
 ```
+
 ## Commands
 
 * [`geneos tls import`](geneos_tls_import.md)	 - Import root and signing certificates
@@ -18,11 +19,12 @@ geneos tls
 
 # `geneos tls` Subsystem Commands
 
-Manage certificates for [Geneos Secure Communications](https://docs.itrsgroup.com/docs/geneos/current/SSL/ssl_ug.html).
+Manage certificates for [Geneos Secure
+Communications](https://docs.itrsgroup.com/docs/geneos/current/SSL/ssl_ug.html).
 
 Sub-commands allow for initialisation, create and renewal of
-certificates as well as listing details and copying a certificate
-chain to all other hosts.
+certificates as well as listing details and copying a certificate chain
+to all other hosts.
 
 
 The `geneos tls` command provides a number of subcommands to create and
@@ -97,6 +99,7 @@ commands.
 * `geneos tls sync`
 
   Copies chain.pem to all remotes
+
 ### Options inherited from parent commands
 
 ```text

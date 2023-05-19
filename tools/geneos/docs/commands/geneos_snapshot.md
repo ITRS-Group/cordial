@@ -11,13 +11,12 @@ geneos snapshot [flags] [gateway] [NAME] XPATH...
 Snapshot one or more dataviews using the REST Commands API endpoint
 introduced in GA5.14. The TYPE, if given, must be `gateway`.
 
-Authentication to the Gateway is through a combination of command
-line flags and configuration parameters. If either of the parameters
-`snapshot.username` or `snapshot.password` is defined for the Gateway
-or globally then this is used as a default unless overridden on the
-command line by the `-u` and `-P` options. The user is only prompted
-for a password if it cannot be located in either of the previous
-places.
+Authentication to the Gateway is through a combination of command line
+flags and configuration parameters. If either of the parameters
+`snapshot.username` or `snapshot.password` is defined for the Gateway or
+globally then this is used as a default unless overridden on the command
+line by the `-u` and `-P` options. The user is only prompted for a
+password if it cannot be located in either of the previous places.
 
 CREDENTIALS - also, fix them, gateway:NAME@HOST (if not local)
 
@@ -28,13 +27,12 @@ dataview is in the format defined in the Gateway documentation at
 
 Flags to select which properties of data items are available: `-V`,
 `-S`, `-Z`, `-U` for value, severity, snooze and user-assignment
-respectively. If none is given then the default is to fetch values
-only.
+respectively. If none is given then the default is to fetch values only.
 
 To help capture diagnostic information the `-x` option can be used to
-capture matching xpaths without the dataview contents. `-l` can be
-used to limit the number of dataviews (or xpaths) but the limit is
-not applied in any defined order.
+capture matching xpaths without the dataview contents. `-l` can be used
+to limit the number of dataviews (or xpaths) but the limit is not
+applied in any defined order.
 
 ### Options
 

@@ -39,7 +39,8 @@ are not visible to users.
   `-skip-cache` option which can be set with `geneos set -k
   options=-skip-cache` and so on.
 
-* `geneos aes encode [-k KEYFILE] [-p PASSWORD] [-s SOURCE] [-e] [TYPE] [NAME]`
+* `geneos aes encode [-k KEYFILE] [-p PASSWORD] [-s SOURCE] [-e] [TYPE]
+  [NAME]`
 
   Encode a plain text PASSWORD or SOURCE using the keyfile given or the
   keyfiles configured for all matching instances or the user's default
@@ -51,7 +52,8 @@ are not visible to users.
   for copying directly into configuration files that support
   ExpandString() values.
 
-* `geneos aes decode [-e STRING] [-k KEYFILE] [-v KEYFILE] [-p PASSWORD] [-s SOURCE] [TYPE] [NAME]`
+* `geneos aes decode [-e STRING] [-k KEYFILE] [-v KEYFILE] [-p PASSWORD]
+  [-s SOURCE] [TYPE] [NAME]`
 
   Decode the ExpandString format STRING (with embedded keyfile path) or
   the encoded PASSWORD or the SOURCE using the provided keyfile (or

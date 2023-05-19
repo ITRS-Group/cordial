@@ -5,6 +5,7 @@ Send a pagerduty event
 ```text
 pagerduty [flags]
 ```
+
 ## Commands
 
 * [`pagerduty assign`](pagerduty_assign.md)	 - Send a Pagerduty trigger event

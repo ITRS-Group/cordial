@@ -1,6 +1,6 @@
 List the packages for the matching TYPE or all component types if no
-TYPE is given. The `-H` flags restricts the check to a specific
-remote host.
+TYPE is given. The `-H` flags restricts the check to a specific remote
+host.
 
 All timestamps are displayed in UTC to avoid filesystem confusion
 between local summer/winter times in some locales.

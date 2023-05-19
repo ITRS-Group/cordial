@@ -5,6 +5,7 @@ Package commands subsystem
 ```text
 geneos package
 ```
+
 ## Commands
 
 * [`geneos package install`](geneos_package_install.md)	 - Install Geneos releases
