@@ -140,21 +140,21 @@ directory or in the user's .config/dv2email directory)
 			u.Scheme = "https"
 		}
 
-		var password string
+		var password config.Plaintext
 
 		username := gwcf.GetString("username")
 		gateway := gwcf.GetString("name")
 		pwe := gwcf.GetPassword("password")
 
 		if username != "" {
-			password = pwe.String()
+			password = pwe
 		}
 
 		if username == "" && gateway != "" {
 			creds := config.FindCreds("gateway:"+gateway, config.SetAppName("geneos"))
 			if creds != nil {
 				username = creds.GetString("username")
-				password = fmt.Sprint(creds.GetPassword("password"))
+				password = creds.GetPassword("password")
 			}
 		}
 
@@ -211,7 +211,7 @@ directory or in the user's .config/dv2email directory)
 		// creds can come from `geneos` credentials for the mail server
 		// domain
 
-		var epassword string
+		var epassword config.Plaintext
 
 		emcf := cf.Sub("email")
 
@@ -221,19 +221,19 @@ directory or in the user's .config/dv2email directory)
 		smtptls := emcf.GetString("use-tls", config.Default("default"))
 
 		if eusername != "" {
-			epassword = epwe.String()
+			epassword = epwe
 		}
 
 		if eusername == "" {
 			creds := config.FindCreds(smtpserver, config.SetAppName("geneos"))
 			if creds != nil {
 				eusername = creds.GetString("username")
-				epassword = fmt.Sprint(creds.GetPassword("password"))
+				epassword = creds.GetPassword("password")
 			}
 		}
 
 		em.SetDefault("_smtp_username", eusername)
-		em.SetDefault("_smtp_password", epassword)
+		em.SetDefault("_smtp_password", epassword.String())
 		em.SetDefault("_smtp_server", smtpserver)
 		em.SetDefault("_smtp_tls", smtptls)
 		em.SetDefault("_smtp_port", emcf.GetInt("port", config.Default(25)))

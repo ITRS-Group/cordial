@@ -30,7 +30,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/awnumar/memguard"
 	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/xpath"
@@ -121,30 +120,24 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 
 		// always use auth details in per-instance config, but if not
 		// given use those from the command line or user/global config
-		username, password := c.Config().GetString(config.Join("snapshot", "username")), c.Config().GetString(config.Join("snapshot", "password"))
+		// or credentials file
+		username := c.Config().GetString(config.Join("snapshot", "username"))
+		password := c.Config().GetPassword(config.Join("snapshot", "password"))
+
 		if username == "" {
 			username = snapshotCmdUsername
 		}
 
-		if len(password) == 0 {
-			password = snapshotCmdPassword.String()
+		if password.IsNil() {
+			password = snapshotCmdPassword
 		}
 
 		// if username is still unset then look for credentials
 		if username == "" {
-			var pwb *memguard.Enclave
 			creds := config.FindCreds(c.Type().String()+":"+c.Name(), config.SetAppName(Execname))
 			if creds != nil {
 				username = creds.GetString("username")
-				password = fmt.Sprint(creds.GetPassword("password"))
-			}
-
-			if pwb != nil {
-				pw, _ := pwb.Open()
-				pws := config.ExpandLockedBuffer(pw.String())
-				password = strings.Clone(pws.String())
-				pw.Destroy()
-				pws.Destroy()
+				password = creds.GetPassword("password")
 			}
 		}
 

@@ -39,6 +39,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/xpath"
 )
 
@@ -94,7 +95,7 @@ type Connection struct {
 	BaseURL            *url.URL
 	AuthType           int
 	Username           string
-	Password           string
+	Password           config.Plaintext
 	SSO                SSOAuth
 	InsecureSkipVerify bool
 	Timeout            time.Duration
@@ -209,7 +210,7 @@ func (c *Connection) Do(endpoint string, command *Command) (response CommandResp
 	}
 	switch c.AuthType {
 	case Basic:
-		req.SetBasicAuth(c.Username, c.Password)
+		req.SetBasicAuth(c.Username, c.Password.String())
 	case SSO:
 		// XXX
 	default:
