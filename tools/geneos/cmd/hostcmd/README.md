@@ -1,15 +1,16 @@
 # `geneos host` Subsystem
 
-The host subsystem manages all the tasks and configuration related to
-remote hosts.
+The `geneos host` subsystem manages all the tasks and configuration
+related to remote hosts.
 
-Each host you create maps remote Geneos installations to local commands.
+Each host you create gives you remote Geneos installations to local
+commands.
+
 For almost any command that accepts instance names you can qualify them
-with an '@host' suffix to indicate which remote host that instance is on.
+with an '@host' suffix to indicate which remote host that instance is
+on.
 
 Currently only SSH is supported.
-
-
 
 ## Remote Management
 

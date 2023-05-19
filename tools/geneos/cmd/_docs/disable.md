@@ -1,2 +1,1 @@
-Mark any matching instances as disabled. The instances are also
-stopped.
+Mark any matching instances as disabled. The instances are also stopped.

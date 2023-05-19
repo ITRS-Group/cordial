@@ -68,32 +68,46 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 	}
 	if hasSeeAlso(cmd) {
 		children := cmd.Commands()
-		sort.Sort(subsystemsThenNames(children))
+		sort.Sort(byName(children))
 
-		cmdHeader := false
-		hadChildren := false
-		for _, child := range children {
-			if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
-				continue
-			}
-			if !cmdHeader {
-				if child.HasAvailableSubCommands() && !hadChildren {
-					buf.WriteString("## Subsystems\n\n")
-					hadChildren = true
-				} else {
-					buf.WriteString("## Commands\n\n")
+		groups := cmd.Groups()
+
+		if len(groups) > 0 {
+			for _, group := range groups {
+				cmdHeader := false
+				for _, child := range children {
+					if child.GroupID != group.ID {
+						continue
+					}
+					if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
+						continue
+					}
+					if !cmdHeader {
+						buf.WriteString("## " + group.Title + "\n\n")
+						cmdHeader = true
+					}
+
+					cname := name + " " + child.Name()
+					link := cname + ".md"
+					link = strings.ReplaceAll(link, " ", "_")
+					buf.WriteString(fmt.Sprintf("* [`%s`](%s)\t - %s\n", cname, linkHandler(link), child.Short))
 				}
-				cmdHeader = true
 			}
-
-			if !child.HasAvailableSubCommands() && hadChildren && cmdHeader {
-				buf.WriteString("\n## Commands\n\n")
-				hadChildren = false
+		} else {
+			hadChildren := true
+			for _, child := range children {
+				if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
+					continue
+				}
+				if !child.HasAvailableSubCommands() && hadChildren {
+					buf.WriteString("\n## Commands\n\n")
+					hadChildren = false
+				}
+				cname := name + " " + child.Name()
+				link := cname + ".md"
+				link = strings.ReplaceAll(link, " ", "_")
+				buf.WriteString(fmt.Sprintf("* [`%s`](%s)\t - %s\n", cname, linkHandler(link), child.Short))
 			}
-			cname := name + " " + child.Name()
-			link := cname + ".md"
-			link = strings.ReplaceAll(link, " ", "_")
-			buf.WriteString(fmt.Sprintf("* [`%s`](%s)\t - %s\n", cname, linkHandler(link), child.Short))
 		}
 		buf.WriteString("\n")
 	}
@@ -230,3 +244,17 @@ func (s subsystemsThenNames) Less(i, j int) bool {
 	}
 	return s[i].Name() < s[j].Name()
 }
+
+// type groupsThenNames []*cobra.Command
+
+// func (s groupsThenNames) Len() int      { return len(s) }
+// func (s groupsThenNames) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+// func (s groupsThenNames) Less(i, j int) bool {
+// 	if s[i].HasAvailableSubCommands() && !s[j].HasAvailableSubCommands() {
+// 		return true
+// 	}
+// 	if !s[i].HasAvailableSubCommands() && s[j].HasAvailableSubCommands() {
+// 		return false
+// 	}
+// 	return s[i].Name() < s[j].Name()
+// }
