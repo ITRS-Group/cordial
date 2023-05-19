@@ -23,9 +23,9 @@ THE SOFTWARE.
 package cfgcmd
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -40,19 +40,13 @@ func init() {
 	configShowCmd.Flags().BoolVarP(&configShowCmdAll, "all", "a", false, "Show all the parameters including all defaults")
 }
 
-var configShowCmd = &cobra.Command{
-	Use:   "show [KEY...]",
-	Short: "Show program configuration",
-	Long: strings.ReplaceAll(`
-The show command outputs the current configuration for the |geneos|
-program in JSON format. It shows the processed values from the
-on-disk copy of your program configuration and not the final
-configuration that the running program uses, which includes many
-built-in defaults.
+//go:embed _docs/show.md
+var configShowCmdDescription string
 
-If any arguments are given then they are treated as a list of keys to
-limit the output to just those keys that match and have a non-nil value.
-`, "|", "`"),
+var configShowCmd = &cobra.Command{
+	Use:          "show [KEY...]",
+	Short:        "Show program configuration",
+	Long:         configShowCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",

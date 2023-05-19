@@ -23,8 +23,8 @@ THE SOFTWARE.
 package cmd
 
 import (
+	_ "embed"
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -36,14 +36,14 @@ func init() {
 	GeneosCmd.AddCommand(reloadCmd)
 }
 
+//go:embed _docs/reload.md
+var reloadCmdDescription string
+
 var reloadCmd = &cobra.Command{
-	Use:     "reload [TYPE] [NAME...]",
-	GroupID: GROUP_PROCESS,
-	Short:   "Reload configurations",
-	Long: strings.ReplaceAll(`
-Send a reload signal to all matching instances whose TYPE supports
-them.
-`, "|", "`"),
+	Use:          "reload [TYPE] [NAME...]",
+	GroupID:      CommandGroupProcess,
+	Short:        "Reload configurations",
+	Long:         reloadCmdDescription,
 	Aliases:      []string{"refresh"},
 	SilenceUsage: true,
 	Annotations: map[string]string{

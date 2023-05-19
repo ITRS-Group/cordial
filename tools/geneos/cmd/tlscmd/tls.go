@@ -20,6 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+// Package tlscmd contains all the TLS subsystem commands
 package tlscmd
 
 import (
@@ -35,13 +36,13 @@ func init() {
 }
 
 //go:embed README.md
-var longDescription string
+var tlsCmdDescription string
 
 var tlsCmd = &cobra.Command{
 	Use:          "tls",
-	GroupID:      cmd.GROUP_SUBSYSTEMS,
+	GroupID:      cmd.CommandGroupSubsystems,
 	Short:        "Manage certificates for secure connections",
-	Long:         longDescription,
+	Long:         tlsCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"needshomedir": "true",

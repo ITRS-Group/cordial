@@ -23,8 +23,8 @@ THE SOFTWARE.
 package aescmd
 
 import (
+	_ "embed"
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -43,20 +43,13 @@ func init() {
 	aesPasswordCmd.Flags().StringVarP(&aesPasswordCmdSource, "source", "s", "", "External source for plaintext `PATH|URL|-`")
 }
 
-// aesPasswordCmd represents the password command
+//go:embed _docs/password.md
+var aesPasswordCmdDescription string
+
 var aesPasswordCmd = &cobra.Command{
-	Use:   "password [flags]",
-	Short: "Encode a password with an AES256 key file",
-	Long: strings.ReplaceAll(`
-Encode a password using the user's keyfile. If no keyfile exists it
-is created. Output is in "expandable" format.
-
-You will be prompted to enter the password (twice, for validation)
-unless on of the flags is set.
-
-To encode a plaintext password using a specific key file please use
-the |geneos aes encode| command
-`, "|", "`"),
+	Use:          "password [flags]",
+	Short:        "Encode a password with an AES256 key file",
+	Long:         aesPasswordCmdDescription,
 	Aliases:      []string{"passwd"},
 	SilenceUsage: true,
 	Annotations: map[string]string{

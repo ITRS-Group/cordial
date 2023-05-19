@@ -23,8 +23,8 @@ THE SOFTWARE.
 package cmd
 
 import (
+	_ "embed"
 	"fmt"
-	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -41,15 +41,14 @@ func init() {
 
 var enableCmdStart bool
 
+//go:embed _docs/enable.md
+var enableCmdDescription string
+
 var enableCmd = &cobra.Command{
-	Use:     "enable [flags] [TYPE] [NAME...]",
-	GroupID: GROUP_MANAGE,
-	Short:   "Enable instance",
-	Long: strings.ReplaceAll(`
-Enable matching instances and, if the |--start|/|-S| options is set
-then start the instance. Only those instances that were disabled are
-started when the |--start|/|-S| flag is used.
-`, "|", "`"),
+	Use:          "enable [flags] [TYPE] [NAME...]",
+	GroupID:      CommandGroupManage,
+	Short:        "Enable instance",
+	Long:         enableCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",

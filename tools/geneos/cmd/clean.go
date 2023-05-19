@@ -23,6 +23,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	_ "embed"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -40,27 +41,14 @@ func init() {
 
 var cleanCmdFull bool
 
+//go:embed _docs/clean.md
+var cleanCmdDescription string
+
 var cleanCmd = &cobra.Command{
 	Use:     "clean [flags] [TYPE] [NAME...]",
-	GroupID: GROUP_MANAGE,
+	GroupID: CommandGroupManage,
 	Short:   "Clean-up instance directories",
-	Long: strings.ReplaceAll(`
-Clean the working directories for all matching instances.
-
-The default behavior is to leave the instance running and only inactive files
-are removed.
-
-With the |--full|/|-F| option, the command will stop the
-instance, remove all non-essential files from the working
-directory of the instance and restart the instance.
-
-**Note**: Files removed by |geneos clean| are defined in the geneos main
-configuration file |geneos.json| as |[TYPE]CleanList|. Files removed by
-|geneos clean -F| or |geneos clean --full| are defined in the geneos main
-configuration file |geneos.json| as |[TYPE]PurgeList|. Both these lists are
-formatted as a PathListSeparator (typically a colon) separated list of file
-globs.
-`, "|", "`"),
+	Long:    cleanCmdDescription,
 	Example: strings.ReplaceAll(`
 # Delete old logs and config file backups without affecting the running
 # instance

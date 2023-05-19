@@ -23,7 +23,7 @@ THE SOFTWARE.
 package cfgcmd
 
 import (
-	"strings"
+	_ "embed"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -32,19 +32,16 @@ import (
 )
 
 func init() {
-	configCmd.AddCommand(unsetUserCmd)
+	configCmd.AddCommand(configUnsetCmd)
 }
 
-var unsetUserCmd = &cobra.Command{
-	Use:   "unset [KEY...]",
-	Short: "Unset a program parameter",
-	Long: strings.ReplaceAll(`
-Unset removes the program configuration value for any arguments given
-on the command line.
+//go:embed _docs/unset.md
+var configUnsetCmdDescription string
 
-No validation is done and there if you mistype a key name it is still
-considered valid to remove an non-existing key.
-`, "|", "`"),
+var configUnsetCmd = &cobra.Command{
+	Use:          "unset [KEY...]",
+	Short:        "Unset a program parameter",
+	Long:         configUnsetCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",

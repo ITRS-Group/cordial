@@ -20,6 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+// Package initcmd contains all the init subsystem commands
 package initcmd
 
 import (
@@ -38,7 +39,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-const ArchiveOptionsText = "Directory of releases for installation"
+const archiveOptionsText = "Directory of releases for installation"
 
 var initCmdAll string
 var initCmdLogs, initCmdMakeCerts, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
@@ -91,7 +92,7 @@ var longDescription string
 
 var initCmd = &cobra.Command{
 	Use:     "init [flags] [USERNAME] [DIRECTORY]",
-	GroupID: cmd.GROUP_SUBSYSTEMS,
+	GroupID: cmd.CommandGroupSubsystems,
 	Short:   "Initialise a Geneos installation",
 	Long:    longDescription,
 	Example: strings.ReplaceAll(`
@@ -152,10 +153,9 @@ sudo geneos init geneos /opt/itrs
 }
 
 var initTLSCmd = &cobra.Command{
-	Use:   "tls",
-	Short: "Initialise the TLS environment (alias)",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
+	Use:          "tls",
+	Short:        "Initialise the TLS environment (alias)",
+	Long:         "Alias for `geneos tls init`",
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -243,15 +243,15 @@ func initMisc(command *cobra.Command) (err error) {
 
 	if initCmdMakeCerts {
 		return cmd.RunE(command.Root(), []string{"tls", "init"}, []string{})
-	} else {
-		// both options can import arbitrary PEM files, fix this
-		if initCmdImportCert != "" {
-			cmd.RunE(command.Root(), []string{"tls", "import"}, []string{initCmdImportCert})
-		}
+	}
 
-		if initCmdImportKey != "" {
-			cmd.RunE(command.Root(), []string{"tls", "import"}, []string{initCmdImportKey})
-		}
+	// both options can import arbitrary PEM files, fix this
+	if initCmdImportCert != "" {
+		cmd.RunE(command.Root(), []string{"tls", "import"}, []string{initCmdImportCert})
+	}
+
+	if initCmdImportKey != "" {
+		cmd.RunE(command.Root(), []string{"tls", "import"}, []string{initCmdImportKey})
 	}
 
 	return

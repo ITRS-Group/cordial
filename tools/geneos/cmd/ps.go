@@ -23,12 +23,12 @@ THE SOFTWARE.
 package cmd
 
 import (
+	_ "embed"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/user"
-	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -67,18 +67,14 @@ func init() {
 	psCmd.Flags().SortFlags = false
 }
 
-var psCmd = &cobra.Command{
-	Use:     "ps [flags] [TYPE] [NAMES...]",
-	GroupID: GROUP_VIEW,
-	Short:   "Show running instances",
-	Long: strings.ReplaceAll(`
-The |ps| command will report details of matching and running instances.
+//go:embed _docs/ps.md
+var psCmdDescription string
 
-The default output is a table format intended for humans but this can
-be changed to CSV format using the |--csv|/|-c| flag or JSON with the
-|--json|/|-j| or |--pretty|/|-i| options, the latter option
-formatting the output over multiple, indented lines.
-`, "|", "`"),
+var psCmd = &cobra.Command{
+	Use:          "ps [flags] [TYPE] [NAMES...]",
+	GroupID:      CommandGroupView,
+	Short:        "Show running instances",
+	Long:         psCmdDescription,
 	Aliases:      []string{"status"},
 	SilenceUsage: true,
 	Annotations: map[string]string{

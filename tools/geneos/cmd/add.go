@@ -23,11 +23,11 @@ THE SOFTWARE.
 package cmd
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"io/fs"
 	"path/filepath"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -66,55 +66,14 @@ func init() {
 	addCmd.Flags().SortFlags = false
 }
 
+//go:embed _docs/add.md
+var addCmdDescription string
+
 var addCmd = &cobra.Command{
 	Use:     "add [flags] TYPE NAME [KEY=VALUE...]",
-	GroupID: GROUP_CONFIG,
+	GroupID: CommandGroupConfig,
 	Short:   "Add a new instance",
-	Long: strings.ReplaceAll(`
-Add a new instance of a component TYPE with the name NAME.
-
-The meaning of the options vary by component TYPE and are stored in a
-configuration file in the instance directory.
-
-The default configuration file format and extension is |json|. There
-will be support for |yaml| in future releases.
-	
-The instance will be started after completion if given the
-|--start|/|-S| or |--log|/|-l| options. The latter will also follow
-the log file until interrupted.
-
-Geneos components all use TCP ports either for inbound connections
-or, in the case of SANs, to identify themselves to the Gateway. The
-program will choose the next available port from the list in the for
-each component called |TYPEportrange| (e.g. |gatewayportrange|) in
-the program configurations. Availability is only determined by
-searching all other instances (of any TYPE) on the same host. This
-behaviour can be overridden with the |--port|/|-p| option.
-
-When an instance is started it is given an environment made up of the
-variables in it's configuration file and some necessary defaults,
-such as |LD_LIBRARY_PATH|.  Additional variables can be set with the
-|--env|/|-e| option, which can be repeated as many times as required.
-
-The underlying package used by each instance is referenced by a
-|basename| which defaults to |active_prod|. You may want to run
-multiple components of the same type but different releases. You can
-do this by configuring additional base names with |geneos package
-update| and by setting the base name with the |--base||-b| option.
-
-Gateways, SANs and Floating probes are given a configuration file
-based on the templates configured for the different components. The
-default template can be overridden with the |--template|/|-T| option
-specifying the source to use. The source can be a local file, a URL
-or |STDIN|.
-
-Any additional command line arguments are used to set configuration
-values. Any arguments not in the form NAME=VALUE are ignored. Note
-that NAME must be a plain word and must not contain dots (|.|) or
-double colons (|::|) as these are used as internal delimiters. No
-component uses hierarchical configuration names except those that can
-be set by the options above. 
-`, "|", "`"),
+	Long:    addCmdDescription,
 	Example: `
 geneos add gateway EXAMPLE1
 geneos add san server1 --start -g GW1 -g GW2 -t "Infrastructure Defaults" -t "App1" -a COMPONENT=APP1
@@ -132,9 +91,7 @@ geneos add netprobe infraprobe12 --start --log
 	},
 }
 
-// AddInstance an instance
-//
-// this is also called from the init command code
+// AddInstance add an instance of ct the the option extra configuration values addCmdExtras
 func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, items []string, args ...string) (err error) {
 	// check validity and reserved words here
 	name := args[0]

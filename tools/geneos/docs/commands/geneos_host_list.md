@@ -1,9 +1,9 @@
-# `geneos host ls`
+# `geneos host list`
 
 List hosts, optionally in CSV or JSON format
 
 ```text
-geneos host ls [flags] [TYPE] [NAME...]
+geneos host list [flags] [TYPE] [NAME...]
 ```
 
 ## Details

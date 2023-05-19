@@ -20,6 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+// Package pkgcmd contains all the package subsystem commands
 package pkgcmd // "package" is a reserved word
 
 import (
@@ -35,14 +36,14 @@ func init() {
 }
 
 //go:embed README.md
-var longDescription string
+var packageCmdDescription string
 
 // packageCmd represents the package command
 var packageCmd = &cobra.Command{
 	Use:     "package",
-	GroupID: cmd.GROUP_SUBSYSTEMS,
-	Short:   "A brief description of your command",
-	Long:    longDescription,
+	GroupID: cmd.CommandGroupSubsystems,
+	Short:   "Package commands subsystem",
+	Long:    packageCmdDescription,
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "true",

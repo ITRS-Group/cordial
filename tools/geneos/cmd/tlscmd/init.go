@@ -26,9 +26,9 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	_ "embed"
 	"fmt"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -43,15 +43,13 @@ func init() {
 	tlsInitCmd.Flags().SortFlags = false
 }
 
+//go:embed _docs/init.md
+var tlsInitCmdDescription string
+
 var tlsInitCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Initialise the TLS environment",
-	Long: strings.ReplaceAll(`
-Initialise the TLS environment by creating a self-signed
-root certificate to act as a CA and a signing certificate signed
-by the root. Any instances will have certificates created for
-them but configurations will not be rebuilt.
-`, "|", "`"),
+	Use:                   "init",
+	Short:                 "Initialise the TLS environment",
+	Long:                  tlsInitCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{

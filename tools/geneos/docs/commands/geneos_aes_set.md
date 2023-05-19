@@ -41,9 +41,6 @@ Only local keyfiles, unless given as a URL, can be copied to remote
 hosts, not visa versa. Referencing a keyfile by CRC on a remote host
 will not result in that file being copies to other hosts.
 
-
-
-
 ### Options
 
 ```text

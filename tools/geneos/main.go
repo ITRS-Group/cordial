@@ -30,6 +30,7 @@ import (
 
 	"github.com/awnumar/memguard"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 
@@ -52,6 +53,12 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/webserver"
 )
+
+func init() {
+	// strip any whitespace from the embedded VERSION value as early as
+	// possible
+	cordial.VERSION = strings.TrimSpace(cordial.VERSION)
+}
 
 func main() {
 	memguard.CatchInterrupt()

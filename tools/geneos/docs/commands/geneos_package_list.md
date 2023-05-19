@@ -1,9 +1,9 @@
-# `geneos package ls`
+# `geneos package list`
 
 List packages available for update command
 
 ```text
-geneos package ls [flags] [TYPE]
+geneos package list [flags] [TYPE]
 ```
 
 ## Details
@@ -35,4 +35,4 @@ Versions are listed in descending order for each component type, i.e.
 
 ## SEE ALSO
 
-* [geneos package](geneos_package.md)	 - A brief description of your command
+* [geneos package](geneos_package.md)	 - Package commands subsystem

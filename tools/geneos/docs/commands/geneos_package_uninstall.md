@@ -60,4 +60,4 @@ geneos uninstall --version 5.14.1
 
 ## SEE ALSO
 
-* [geneos package](geneos_package.md)	 - A brief description of your command
+* [geneos package](geneos_package.md)	 - Package commands subsystem

@@ -23,7 +23,7 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"strings"
+	_ "embed"
 
 	"github.com/spf13/cobra"
 
@@ -40,22 +40,14 @@ func init() {
 	startCmd.Flags().SortFlags = false
 }
 
+//go:embed _docs/start.md
+var startCmdDescription string
+
 var startCmd = &cobra.Command{
-	Use:     "start [flags] [TYPE] [NAME...]",
-	GroupID: GROUP_PROCESS,
-	Short:   "Start instances",
-	Long: strings.ReplaceAll(`
-Start the matching instances.
-
-The start-up command and environment can be seen using the |geneos
-command| command.
-
-Any matching instances that are marked as |disabled| are not started.
-
-With the |--log|/|-l| option the command will follow the logs of all
-instances started, including the STDERR logs as these are good
-sources of start-up issues.
-`, "|", "`"),
+	Use:          "start [flags] [TYPE] [NAME...]",
+	GroupID:      CommandGroupProcess,
+	Short:        "Start instances",
+	Long:         startCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",

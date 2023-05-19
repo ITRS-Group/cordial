@@ -23,9 +23,9 @@ THE SOFTWARE.
 package hostcmd
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/spf13/cobra"
@@ -39,23 +39,18 @@ type hostShowCmdConfig struct {
 }
 
 func init() {
-	HostCmd.AddCommand(hostShowCmd)
+	hostCmd.AddCommand(hostShowCmd)
 
 	hostShowCmd.Flags().SortFlags = false
 }
 
-// hostShowCmd represents the hostShow command
-var hostShowCmd = &cobra.Command{
-	Use:   "show [flags] [NAME...]",
-	Short: "Show details of remote host configuration",
-	Long: strings.ReplaceAll(`
-Show details of remote host configurations. If no names are supplied
-then all configured hosts are shown.
+//go:embed _docs/show.md
+var hostShowCmdDescription string
 
-The output is always unprocessed, and so any values in |expandable|
-format are left as-is. This protects, for example, SSH passwords from
-being accidentally shown in clear text.
-`, "|", "`"),
+var hostShowCmd = &cobra.Command{
+	Use:          "show [flags] [NAME...]",
+	Short:        "Show details of remote host configuration",
+	Long:         hostShowCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",

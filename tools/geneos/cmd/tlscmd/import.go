@@ -26,11 +26,11 @@ import (
 	"bytes"
 	"crypto/rsa"
 	"crypto/x509"
+	_ "embed"
 	"encoding/pem"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
@@ -40,18 +40,13 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-// tlsImportCmd represents the tlsImport command
+//go:embed _docs/import.md
+var tlsImportCmdDescription string
+
 var tlsImportCmd = &cobra.Command{
-	Use:   "import",
-	Short: "Import root and signing certificates",
-	Long: strings.ReplaceAll(`
-Import non-instance certificates. A root certificate is one where the
-subject is the same as the issuer. All other certificates are
-imported as signing certs. Only the last one, if multiple are given,
-is used. Private keys must be supplied, either as individual files on
-in the certificate files and cannot be password protected. Only
-certificates with matching private keys are imported.
-`, "|", "`"),
+	Use:                   "import",
+	Short:                 "Import root and signing certificates",
+	Long:                  tlsImportCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{

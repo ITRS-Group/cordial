@@ -112,6 +112,10 @@ func Init(r *geneos.Host, ct *geneos.Component) {
 
 var sans sync.Map
 
+// New is the factory method fpr SANs.
+//
+// If the name has a TYPE prefix then that type is used as the "santype"
+// parameter to select other Netprobe types, such as fa2
 func New(name string) geneos.Instance {
 	ct, local, r := instance.SplitName(name, geneos.LOCAL)
 	s, ok := sans.Load(r.FullName(local))

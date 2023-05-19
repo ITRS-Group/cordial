@@ -9,6 +9,7 @@ pagerduty resolve [flags]
 ## Details
 
 
+
 ### Options inherited from parent commands
 
 ```text

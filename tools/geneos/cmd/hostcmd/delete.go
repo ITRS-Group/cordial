@@ -23,8 +23,8 @@ THE SOFTWARE.
 package hostcmd
 
 import (
+	_ "embed"
 	"fmt"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -37,7 +37,7 @@ import (
 var hostDeleteCmdForce, hostDeleteCmdRecurse, hostDeleteCmdStop bool
 
 func init() {
-	HostCmd.AddCommand(hostDeleteCmd)
+	hostCmd.AddCommand(hostDeleteCmd)
 
 	hostDeleteCmd.Flags().BoolVarP(&hostDeleteCmdForce, "force", "F", false, "Delete instances without checking if disabled")
 	hostDeleteCmd.Flags().BoolVarP(&hostDeleteCmdRecurse, "all", "R", false, "Recursively delete all instances on the host before removing the host config")
@@ -46,13 +46,14 @@ func init() {
 	hostDeleteCmd.Flags().SortFlags = false
 }
 
+//go:embed _docs/delete.md
+var hostDeleteCmdDescription string
+
 var hostDeleteCmd = &cobra.Command{
-	Use:     "delete [flags] NAME...",
-	Aliases: []string{"rm", "remove"},
-	Short:   "Delete a remote host configuration",
-	Long: strings.ReplaceAll(`
-Delete the local configuration referring to a remote host.
-`, "|", "`"),
+	Use:          "delete [flags] NAME...",
+	Aliases:      []string{"rm", "remove"},
+	Short:        "Delete a remote host configuration",
+	Long:         hostDeleteCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",

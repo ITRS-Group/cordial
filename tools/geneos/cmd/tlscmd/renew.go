@@ -26,10 +26,10 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -41,18 +41,15 @@ import (
 
 func init() {
 	tlsCmd.AddCommand(tlsRenewCmd)
-
-	// tlsRenewCmd.Flags().SortFlags = false
 }
 
+//go:embed _docs/renew.md
+var tlsRenewCmdDescription string
+
 var tlsRenewCmd = &cobra.Command{
-	Use:   "renew [TYPE] [NAME...]",
-	Short: "Renew instance certificates",
-	Long: strings.ReplaceAll(`
-Renew instance certificates. All matching instances have a new
-certificate issued using the current signing certificate but the
-private key file is left unchanged if it exists.
-`, "|", "`"),
+	Use:          "renew [TYPE] [NAME...]",
+	Short:        "Renew instance certificates",
+	Long:         tlsRenewCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",

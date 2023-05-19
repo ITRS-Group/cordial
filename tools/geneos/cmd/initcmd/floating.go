@@ -23,6 +23,7 @@ THE SOFTWARE.
 package initcmd
 
 import (
+	_ "embed"
 	"os"
 	"strings"
 	"time"
@@ -41,7 +42,7 @@ func init() {
 	initCmd.AddCommand(initFloatingCmd)
 
 	initFloatingCmd.Flags().StringVarP(&initFloatingCmdVersion, "version", "V", "latest", "Download this `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
-	initFloatingCmd.Flags().StringVarP(&initFloatingCmdArchive, "archive", "A", "", ArchiveOptionsText)
+	initFloatingCmd.Flags().StringVarP(&initFloatingCmdArchive, "archive", "A", "", archiveOptionsText)
 	initFloatingCmd.Flags().StringVarP(&initFloatingCmdOverride, "override", "T", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
 
 	initFloatingCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
@@ -52,36 +53,13 @@ func init() {
 	initFloatingCmd.Flags().SortFlags = false
 }
 
+//go:embed _docs/floating.md
+var initFloatingCmdDescription string
+
 var initFloatingCmd = &cobra.Command{
-	Use:   "floating [flags] [USERNAME] [DIRECTORY]",
-	Short: "Initialise a Geneos Floating Netprobe environment",
-	Long: strings.ReplaceAll(`
-Install a Floating Netprobe into a new Geneos install
-directory.
-
-Without any flags the command installs a Floating Netprobe in a directory called
-|geneos| under the user's home directory (unless the user's home
-directory ends in |geneos| in which case it uses that directly),
-downloads the latest netprobe release and create a netprobe instance using
-the |hostname| of the system.
-
-In almost all cases authentication will be required to download the
-Netprobe package and as this is a new Geneos installation it is
-unlikely that the download credentials are saved in a local config
-file, so use the |-u email@example.com| as appropriate.
-
-If you have a netprobe software archive locally then use the |-A
-PATH|. If the name of the file is not in the same format as
-downloaded from the official site(s) then you have to also set the
-type (netprobe) and version using the |-T [TYPE:]VERSION|. TYPE is
-set to |netprobe| if not given. 
-
-The initial configuration file is built from the default templates
-installed and located in |.../templates| but this can be overridden
-with the |-s| option. You can set |gateways|, |types|, |attributes|,
-|variables| using the appropriate flags. These flags can be specified
-multiple times.
-`, "|", "`"),
+	Use:          "floating [flags] [USERNAME] [DIRECTORY]",
+	Short:        "Initialise a Geneos Floating Netprobe environment",
+	Long:         initFloatingCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",

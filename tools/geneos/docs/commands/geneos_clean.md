@@ -10,7 +10,7 @@ geneos clean [flags] [TYPE] [NAME...]
 
 Clean the working directories for all matching instances.
 
-The default behavior is to leave the instance running and only inactive files
+The default behaviour is to leave the instance running and only inactive files
 are removed.
 
 With the `--full`/`-F` option, the command will stop the
