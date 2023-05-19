@@ -1,6 +1,6 @@
 # Change Log
 
-## Version v1.5.0-beta2 - 2023/05/18
+## Version v1.5.0-beta3 - 2023/05/18
 
 * BREAKING CHANGES
 
@@ -73,16 +73,16 @@
       the documentation to see what the methods and functions have
       become.
 
-    * Credentials support. There is both general purpose and `geneos`
-      specific support for the local storage of credentials. At rest the
-      passwords are stored in Geneos AES256 format with a key that is
-      auto-generated if not found. To decode these passwords you must
-      have both the key file (which is by default only user readable)
-      and the credentials file. Future support for other credentials,
-      such as OAuth style client secrets and tokens, will be
-      forthcoming. The username and the domain the the credentials apply
-      to are not encrypted, by design. This is however subject to
-      change.
+    * Credentials support. There is both general purpose and
+      `tools/geneos` specific support for the local storage of
+      credentials. At rest the passwords are stored in Geneos AES256
+      format with a key that is auto-generated if not found. To decode
+      these passwords you must have both the key file (which is by
+      default only user readable) and the credentials file. Future
+      support for other credentials, such as OAuth style client secrets
+      and tokens, will be forthcoming. The username and the domain the
+      the credentials apply to are not encrypted, by design. This is
+      however subject to change.
 
       The credentials support currently works with a plain test domain
       that is used to match the destination "longest match wins", e.g.
@@ -91,16 +91,35 @@
       domain is in the form `gateway:NAME`. More will be added later,
       including SSH password and private keys.
 
+    * Releases now include selected binaries with a semantic version
+      suffix. The programs in `cordial` tend to use the base name of the
+      binary as the key to which configuration files to load, so that
+      renaming the binary gets you a different set of configuration file
+      automatically.
+
+      Now any version suffix is automatically stripped if, and only if,
+      it matched the one used to build the binary. This means you can
+      now download `geneos-v.1.5.0` and use it without having to rename
+      it for initial testing.
+
   * `tools/geneos`:
 
-    * Move `aes` and `tls` to their own directories as new subsystems.
-    * Add `host` and `package` subsystems and  create aliases for
+    * Extensive documentation restructuring and rewriting. This is not
+      yet complete, but built-in help text (shown with the `help`
+      command or the `--help`/`-h` option) should now align more closely
+      with actual functionality and also the online documentation is now
+      largely built from the same source text. This work is ongoing and
+      there are still large gaps in explanatory and introductory
+      materials.
+    * Move `aes` and `tls` command sources to their own directories as
+      new subsystems.
+    * Add `host` and `package` subsystems and create aliases for
       original commands, e.g.
       * `add host` becomes `host add`
       * `install` becomes `package install`
       * etc.
     * The `set user`, `show user` etc. commands are now under single
-      `config` sub-command, e.g. `geneos config set mykey=value`
+      `config` subystem, e.g. `geneos config set mykey=value`
     * The `set global` and related commands have been deprecated.
     * The new `package` subsystem command pulls all Geneos release
       management into one place
@@ -129,7 +148,8 @@
 
   * `tools/geneos`:
 
-    * Local storage of encrypted passwords for remote SSH access needs documenting
+    * Local storage of encrypted passwords for remote SSH access needs
+      documenting
 
 ## Version v1.4.4 - 2023/04/12
 
