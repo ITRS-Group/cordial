@@ -20,39 +20,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-// Package aescmd groups related AES256 keyfile and crypto commands
-package aescmd
+package san
 
 import (
-	"strings"
-
-	"github.com/spf13/cobra"
+	_ "embed"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/spf13/cobra"
 )
 
-var componentsWithKeyfiles = geneos.UsesKeyFiles()
+// Help command and text to hook into Cobra command tree
+
+//go:embed README.md
+var longDescription string
 
 func init() {
-	cmd.GeneosCmd.AddCommand(AesCmd)
+	cmd.GeneosCmd.AddCommand(helpDocCmd)
 }
 
-var AesCmd = &cobra.Command{
-	Use:     "aes",
-	GroupID: cmd.GROUP_SUBSYSTEMS,
-	Short:   "Manage Geneos compatible key files and encode/decode passwords",
-	Long: strings.ReplaceAll(`
-Manage Geneos compatible key files and encode/decode passwords
-`, "|", "`"),
+var helpDocCmd = &cobra.Command{
+	Use:          "san",
+	Aliases:      []string{"rm"},
+	Short:        "Help for Self-Announcing Netprobes",
+	Long:         longDescription,
 	SilenceUsage: true,
-	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "true",
-	},
-	DisableFlagParsing:    true,
-	DisableFlagsInUseLine: true,
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		return cmd.RunE(command.Root(), []string{"aes", "ls"}, args)
-	},
 }

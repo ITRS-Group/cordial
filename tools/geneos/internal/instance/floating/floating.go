@@ -43,11 +43,15 @@ var Floating = geneos.Component{
 	RelatedTypes:     []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
 	ComponentMatches: []string{"float", "floating"},
 	RealComponent:    true,
-	DownloadBase:     geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
-	PortRange:        "FloatingPortRange",
-	CleanList:        "FloatingCleanList",
-	PurgeList:        "FloatingPurgeList",
-	Aliases:          map[string]string{},
+	UsesKeyfiles:     true,
+	Templates: []geneos.Templates{
+		{Filename: templateName, Content: template},
+	},
+	DownloadBase: geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
+	PortRange:    "FloatingPortRange",
+	CleanList:    "FloatingCleanList",
+	PurgeList:    "FloatingPurgeList",
+	Aliases:      map[string]string{},
 	Defaults: []string{
 		`binary={{if eq .floatingtype "fa2"}}fix-analyser2-{{end}}netprobe.linux_64`,
 		`home={{join .root "floating" "floatings" .name}}`,
@@ -77,9 +81,9 @@ type Floatings instance.Instance
 var _ geneos.Instance = (*Floatings)(nil)
 
 //go:embed templates/netprobe.setup.xml.gotmpl
-var FloatingTemplate []byte
+var template []byte
 
-const FloatingDefaultTemplate = "netprobe.setup.xml.gotmpl"
+const templateName = "netprobe.setup.xml.gotmpl"
 
 func init() {
 	Floating.RegisterComponent(New)
@@ -87,7 +91,7 @@ func init() {
 
 func Init(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
-	if err := r.WriteFile(r.Filepath(ct, "templates", FloatingDefaultTemplate), FloatingTemplate, 0664); err != nil {
+	if err := r.WriteFile(r.Filepath(ct, "templates", templateName), template, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 }
@@ -177,8 +181,8 @@ func (s *Floatings) Add(template string, port uint16) (err error) {
 	}
 	cf.Set("port", port)
 	cf.Set(cf.Join("config", "rebuild"), "always")
-	cf.Set(cf.Join("config", "template"), FloatingDefaultTemplate)
-	cf.SetDefault(cf.Join("config", "template"), FloatingDefaultTemplate)
+	cf.Set(cf.Join("config", "template"), templateName)
+	cf.SetDefault(cf.Join("config", "template"), templateName)
 
 	if template != "" {
 		filename, _ := instance.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
@@ -248,7 +252,7 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 			return err
 		}
 	}
-	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), instance.Filename(s, "config::template"), FloatingTemplate)
+	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), instance.Filename(s, "config::template"), template)
 }
 
 func (s *Floatings) Command() (args, env []string) {

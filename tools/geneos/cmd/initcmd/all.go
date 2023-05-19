@@ -33,10 +33,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/licd"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/webserver"
 )
 
 var initAllCmdLicenseFile, initAllCmdArchive string
@@ -130,35 +126,35 @@ func initAll(h *geneos.Host, options ...geneos.Options) (err error) {
 		}
 	}
 
-	if err = install(&licd.Licd, h.String(), options...); err != nil {
+	if err = install("licd", h.String(), options...); err != nil {
 		return
 	}
-	if err = install(&gateway.Gateway, h.String(), options...); err != nil {
+	if err = install("gateway", h.String(), options...); err != nil {
 		return
 	}
-	if err = install(&netprobe.Netprobe, h.String(), options...); err != nil {
+	if err = install("netprobe", h.String(), options...); err != nil {
 		return
 	}
-	if err = install(&webserver.Webserver, h.String(), options...); err != nil {
+	if err = install("webserver", h.String(), options...); err != nil {
 		return
 	}
 
-	if err = cmd.AddInstance(&licd.Licd, initCmdExtras, []string{}, initCmdName); err != nil {
+	if err = cmd.AddInstance(geneos.FindComponent("licd"), initCmdExtras, []string{}, initCmdName); err != nil {
 		return
 	}
-	if err = cmd.ImportFiles(&licd.Licd, []string{initCmdName}, []string{"geneos.lic=" + initAllCmdLicenseFile}); err != nil {
+	if err = cmd.ImportFiles(geneos.FindComponent("licd"), []string{initCmdName}, []string{"geneos.lic=" + initAllCmdLicenseFile}); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(&gateway.Gateway, initCmdExtras, []string{}, initCmdName); err != nil {
+	if err = cmd.AddInstance(geneos.FindComponent("gateway"), initCmdExtras, []string{}, initCmdName); err != nil {
 		return
 	}
 	// if len(initCmdExtras.Gateways) == 0 {
 	// 	initCmdExtras.Gateways.Set("localhost")
 	// }
-	if err = cmd.AddInstance(&netprobe.Netprobe, initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
+	if err = cmd.AddInstance(geneos.FindComponent("netprobe"), initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(&webserver.Webserver, initCmdExtras, []string{}, initCmdName); err != nil {
+	if err = cmd.AddInstance(geneos.FindComponent("webserver"), initCmdExtras, []string{}, initCmdName); err != nil {
 		return
 	}
 	if err = cmd.Start(nil, initCmdLogs, e, e); err != nil {

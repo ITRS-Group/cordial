@@ -33,10 +33,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 )
 
 var aesDecodeCmdAESFILE, aesDecodeCmdPrevAESFILE, aesPrevUserKeyFile config.KeyFile
@@ -162,7 +158,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 
 func aesDecodeInstance(c geneos.Instance, params []string) (err error) {
 	log.Debug().Msgf("trying to decode for instance %s", c)
-	if !(c.Type() == &gateway.Gateway || c.Type() == &netprobe.Netprobe || c.Type() == &san.San || c.Type() == &floating.Floating) {
+	if !c.Type().UsesKeyfiles {
 		return
 	}
 	path := instance.Filepath(c, "keyfile")

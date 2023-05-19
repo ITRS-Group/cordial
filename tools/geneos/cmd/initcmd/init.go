@@ -35,9 +35,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 )
 
 const ArchiveOptionsText = "Directory of releases for installation"
@@ -54,6 +51,8 @@ var initCmdExtras = instance.ExtraConfigValues{}
 
 func init() {
 	cmd.GeneosCmd.AddCommand(InitCmd)
+
+	// alias placeholder for `init tls` to `tls init`
 	InitCmd.AddCommand(initTLSCmd)
 
 	// common flags, need checking
@@ -267,35 +266,7 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 }
 
 func initMisc(command *cobra.Command) (err error) {
-	if initCmdGatewayTemplate != "" {
-		var tmpl []byte
-		if tmpl, err = geneos.ReadFrom(initCmdGatewayTemplate); err != nil {
-			return
-		}
-		if err := geneos.LOCAL.WriteFile(geneos.LOCAL.Filepath(gateway.Gateway, "templates", gateway.GatewayDefaultTemplate), tmpl, 0664); err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
-	}
-
-	if initCmdSANTemplate != "" {
-		var tmpl []byte
-		if tmpl, err = geneos.ReadFrom(initCmdSANTemplate); err != nil {
-			return
-		}
-		if err = geneos.LOCAL.WriteFile(geneos.LOCAL.Filepath(san.San, "templates", san.SanDefaultTemplate), tmpl, 0664); err != nil {
-			return
-		}
-	}
-
-	if initCmdFloatingTemplate != "" {
-		var tmpl []byte
-		if tmpl, err = geneos.ReadFrom(initCmdFloatingTemplate); err != nil {
-			return
-		}
-		if err = geneos.LOCAL.WriteFile(geneos.LOCAL.Filepath(floating.Floating, "templates", floating.FloatingDefaultTemplate), tmpl, 0664); err != nil {
-			return
-		}
-	}
+	initTemplates(geneos.LOCAL)
 
 	if initCmdMakeCerts {
 		return cmd.RunE(command.Root(), []string{"tls", "init"}, []string{})
@@ -314,7 +285,11 @@ func initMisc(command *cobra.Command) (err error) {
 }
 
 // XXX this is a duplicate of the function in pkgcmd/install.go
-func install(ct *geneos.Component, target string, options ...geneos.Options) (err error) {
+func install(comp string, target string, options ...geneos.Options) (err error) {
+	ct := geneos.FindComponent(comp)
+	if ct == nil {
+		return geneos.ErrInvalidArgs
+	}
 	for _, h := range geneos.Match(target) {
 		if err = ct.MakeComponentDirs(h); err != nil {
 			return err

@@ -35,7 +35,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/xpath"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -212,7 +211,7 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 }
 
 func gatewayURL(c geneos.Instance) (u *url.URL) {
-	if c.Type() != &gateway.Gateway {
+	if c.Type().String() != "gateway" {
 		return
 	}
 	u = &url.URL{}

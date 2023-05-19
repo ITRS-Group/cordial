@@ -49,10 +49,10 @@ only the configuration file for that user is created.
 ### Options
 
 ```text
-  -C, --makecerts                 Create default certificates for TLS support
   -l, --log                       Follow logs after starting instance(s)
   -F, --force                     Be forceful, ignore existing directories.
   -n, --name string               Use name for instances and configurations instead of the hostname
+  -C, --makecerts                 Create default certificates for TLS support
   -c, --importcert string         signing certificate file with optional embedded private key
   -k, --importkey string          signing private key file
   -N, --nexus                     Download from nexus.itrsgroup.com. Requires ITRS internal credentials

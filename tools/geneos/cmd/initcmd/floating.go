@@ -33,7 +33,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
 )
 
 var initFloatingCmdArchive, initFloatingCmdVersion, initFloatingCmdOverride string
@@ -136,11 +135,11 @@ func initFloating(h *geneos.Host, options ...geneos.Options) (err error) {
 	if h != geneos.LOCAL {
 		floatingname = floatingname + "@" + geneos.LOCALHOST
 	}
-	if err = install(&floating.Floating, geneos.LOCALHOST, options...); err != nil {
+	if err = install("floating", geneos.LOCALHOST, options...); err != nil {
 		return
 	}
 
-	if err = cmd.AddInstance(&floating.Floating, initCmdExtras, []string{}, floatingname); err != nil {
+	if err = cmd.AddInstance(geneos.FindComponent("floating"), initCmdExtras, []string{}, floatingname); err != nil {
 		return
 	}
 	if err = cmd.Start(nil, initCmdLogs, e, e); err != nil {

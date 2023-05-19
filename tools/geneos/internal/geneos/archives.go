@@ -188,7 +188,7 @@ func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ..
 			err = fmt.Errorf("type/version override must be in the form TYPE:VERSION (%w)", ErrInvalidArgs)
 			return
 		}
-		ct = ParseComponentName(s[0])
+		ct = FindComponent(s[0])
 		if ct == nil {
 			return fmt.Errorf("invalid component type %q (%w)", s[0], ErrInvalidArgs)
 		}

@@ -32,9 +32,6 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 )
 
 func init() {
@@ -77,50 +74,27 @@ command.
 }
 
 func initTemplates(h *geneos.Host, options ...geneos.Options) (err error) {
-	gatewayTemplates := h.Filepath(gateway.Gateway, "templates")
-	h.MkdirAll(gatewayTemplates, 0775)
-	tmpl := gateway.GatewayTemplate
-	if initCmdGatewayTemplate != "" {
-		if tmpl, err = geneos.ReadFrom(initCmdGatewayTemplate); err != nil {
-			return
+	for _, ct := range geneos.RealComponents() {
+		if len(ct.Templates) == 0 {
+			continue
+		}
+		templateDir := h.Filepath(ct.Name, "templates")
+		h.MkdirAll(templateDir, 0775)
+
+		for _, t := range ct.Templates {
+			tmpl := t.Content
+			if initCmdGatewayTemplate != "" {
+				if tmpl, err = geneos.ReadFrom(initCmdGatewayTemplate); err != nil {
+					return
+				}
+			}
+
+			if err = h.WriteFile(filepath.Join(templateDir, t.Filename), tmpl, 0664); err != nil {
+				return
+			}
+			fmt.Printf("%s template %q written to %s\n", ct, t.Filename, templateDir)
 		}
 	}
-	if err := h.WriteFile(filepath.Join(gatewayTemplates, gateway.GatewayDefaultTemplate), tmpl, 0664); err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-	fmt.Printf("gateway template written to %s\n", filepath.Join(gatewayTemplates, gateway.GatewayDefaultTemplate))
-
-	tmpl = gateway.InstanceTemplate
-	if err := h.WriteFile(filepath.Join(gatewayTemplates, gateway.GatewayInstanceTemplate), tmpl, 0664); err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-	fmt.Printf("gateway instance template written to %s\n", filepath.Join(gatewayTemplates, gateway.GatewayInstanceTemplate))
-
-	sanTemplates := h.Filepath(san.San, "templates")
-	h.MkdirAll(sanTemplates, 0775)
-	tmpl = san.SanTemplate
-	if initCmdSANTemplate != "" {
-		if tmpl, err = geneos.ReadFrom(initCmdSANTemplate); err != nil {
-			return
-		}
-	}
-	if err := h.WriteFile(filepath.Join(sanTemplates, san.SanDefaultTemplate), tmpl, 0664); err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-	fmt.Printf("san template written to %s\n", filepath.Join(sanTemplates, san.SanDefaultTemplate))
-
-	floatingTemplates := h.Filepath(floating.Floating, "templates")
-	h.MkdirAll(floatingTemplates, 0775)
-	tmpl = floating.FloatingTemplate
-	if initCmdFloatingTemplate != "" {
-		if tmpl, err = geneos.ReadFrom(initCmdFloatingTemplate); err != nil {
-			return
-		}
-	}
-	if err := h.WriteFile(filepath.Join(floatingTemplates, floating.FloatingDefaultTemplate), tmpl, 0664); err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-	fmt.Printf("floating template written to %s\n", filepath.Join(floatingTemplates, floating.FloatingDefaultTemplate))
 
 	return
 }
