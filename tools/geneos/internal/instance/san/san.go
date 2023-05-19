@@ -43,10 +43,14 @@ var San = geneos.Component{
 	RelatedTypes:     []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
 	ComponentMatches: []string{"san", "sans"},
 	RealComponent:    true,
-	DownloadBase:     geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
-	PortRange:        "SanPortRange",
-	CleanList:        "SanCleanList",
-	PurgeList:        "SanPurgeList",
+	UsesKeyfiles:     true,
+	Templates: []geneos.Templates{
+		{Filename: templateName, Content: template},
+	},
+	DownloadBase: geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
+	PortRange:    "SanPortRange",
+	CleanList:    "SanCleanList",
+	PurgeList:    "SanPurgeList",
 	Aliases: map[string]string{
 		"binsuffix": "binary",
 		"sanhome":   "home",
@@ -91,9 +95,9 @@ type Sans instance.Instance
 var _ geneos.Instance = (*Sans)(nil)
 
 //go:embed templates/netprobe.setup.xml.gotmpl
-var SanTemplate []byte
+var template []byte
 
-const SanDefaultTemplate = "netprobe.setup.xml.gotmpl"
+const templateName = "netprobe.setup.xml.gotmpl"
 
 func init() {
 	San.RegisterComponent(New)
@@ -101,7 +105,7 @@ func init() {
 
 func Init(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
-	if err := r.WriteFile(r.Filepath(ct, "templates", SanDefaultTemplate), SanTemplate, 0664); err != nil {
+	if err := r.WriteFile(r.Filepath(ct, "templates", templateName), template, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 }
@@ -192,8 +196,8 @@ func (s *Sans) Add(template string, port uint16) (err error) {
 	}
 	cf.Set("port", port)
 	cf.Set(cf.Join("config", "rebuild"), "always")
-	cf.Set(cf.Join("config", "template"), SanDefaultTemplate)
-	cf.SetDefault(cf.Join("config", "template"), SanDefaultTemplate)
+	cf.Set(cf.Join("config", "template"), templateName)
+	cf.SetDefault(cf.Join("config", "template"), templateName)
 
 	if template != "" {
 		filename, _ := instance.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
@@ -263,7 +267,7 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 			return err
 		}
 	}
-	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), instance.Filename(s, "config::template"), SanTemplate)
+	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), instance.Filename(s, "config::template"), template)
 }
 
 func (s *Sans) Command() (args, env []string) {

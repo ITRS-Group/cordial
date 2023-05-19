@@ -43,10 +43,15 @@ var Gateway = geneos.Component{
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"gateway", "gateways"},
 	RealComponent:    true,
-	DownloadBase:     geneos.DownloadBases{Resources: "Gateway+2", Nexus: "geneos-gateway"},
-	PortRange:        "GatewayPortRange",
-	CleanList:        "GatewayCleanList",
-	PurgeList:        "GatewayPurgeList",
+	UsesKeyfiles:     true,
+	Templates: []geneos.Templates{
+		{Filename: templateName, Content: template},
+		{Filename: instanceTemplateName, Content: instanceTemplate},
+	},
+	DownloadBase: geneos.DownloadBases{Resources: "Gateway+2", Nexus: "geneos-gateway"},
+	PortRange:    "GatewayPortRange",
+	CleanList:    "GatewayCleanList",
+	PurgeList:    "GatewayPurgeList",
 	Aliases: map[string]string{
 		"binsuffix": "binary",
 		"gatehome":  "home",
@@ -99,13 +104,13 @@ type Gateways instance.Instance
 var _ geneos.Instance = (*Gateways)(nil)
 
 //go:embed templates/gateway.setup.xml.gotmpl
-var GatewayTemplate []byte
+var template []byte
 
 //go:embed templates/gateway-instance.setup.xml.gotmpl
-var InstanceTemplate []byte
+var instanceTemplate []byte
 
-const GatewayDefaultTemplate = "gateway.setup.xml.gotmpl"
-const GatewayInstanceTemplate = "gateway-instance.setup.xml.gotmpl"
+const templateName = "gateway.setup.xml.gotmpl"
+const instanceTemplateName = "gateway-instance.setup.xml.gotmpl"
 
 func init() {
 	Gateway.RegisterComponent(New)
@@ -113,10 +118,10 @@ func init() {
 
 func Init(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
-	if err := r.WriteFile(r.Filepath("gateway", "templates", GatewayDefaultTemplate), GatewayTemplate, 0664); err != nil {
+	if err := r.WriteFile(r.Filepath("gateway", "templates", templateName), template, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
-	if err := r.WriteFile(r.Filepath("gateway", "templates", GatewayInstanceTemplate), InstanceTemplate, 0664); err != nil {
+	if err := r.WriteFile(r.Filepath("gateway", "templates", instanceTemplateName), instanceTemplate, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 }
@@ -202,7 +207,7 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 	cf.Set("port", port)
 	cf.Set(cf.Join("config", "rebuild"), "initial")
 
-	cf.SetDefault(cf.Join("config", "template"), GatewayDefaultTemplate)
+	cf.SetDefault(cf.Join("config", "template"), templateName)
 	if template != "" {
 		filename, _ := instance.ImportCommons(g.Host(), g.Type(), "templates", []string{template})
 		cf.Set(cf.Join("config", "template"), filename)
@@ -239,7 +244,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	cf := g.Config()
 
 	// always rebuild an instance template
-	err = instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "instance.setup.xml"), GatewayInstanceTemplate, InstanceTemplate)
+	err = instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "instance.setup.xml"), instanceTemplateName, instanceTemplate)
 	if err != nil {
 		return
 	}
@@ -296,7 +301,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 		}
 	}
 
-	return instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "gateway.setup.xml"), instance.Filename(g, "config::template"), GatewayTemplate)
+	return instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "gateway.setup.xml"), instance.Filename(g, "config::template"), template)
 }
 
 func (g *Gateways) Command() (args, env []string) {

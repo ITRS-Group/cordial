@@ -29,9 +29,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/webserver"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -112,29 +109,29 @@ func initDemo(h *geneos.Host, options ...geneos.Options) (err error) {
 	e := []string{}
 	g := []string{"Demo Gateway@" + h.String()}
 
-	if err = install(&gateway.Gateway, geneos.LOCALHOST, options...); err != nil {
+	if err = install("gateway", geneos.LOCALHOST, options...); err != nil {
 		return
 	}
-	if err = install(&netprobe.Netprobe, geneos.LOCALHOST, options...); err != nil {
+	if err = install("netprobe", geneos.LOCALHOST, options...); err != nil {
 		return
 	}
-	if err = install(&webserver.Webserver, geneos.LOCALHOST, options...); err != nil {
+	if err = install("webserver", geneos.LOCALHOST, options...); err != nil {
 		return
 	}
 
-	if err = cmd.AddInstance(&gateway.Gateway, initCmdExtras, []string{}, "Demo Gateway@"+h.String()); err != nil {
+	if err = cmd.AddInstance(geneos.FindComponent("gateway"), initCmdExtras, []string{}, "Demo Gateway@"+h.String()); err != nil {
 		return
 	}
-	if err = cmd.Set(&gateway.Gateway, g, []string{"options=-demo"}); err != nil {
+	if err = cmd.Set(geneos.FindComponent("gateway"), g, []string{"options=-demo"}); err != nil {
 		return
 	}
 	// if len(initCmdExtras.Gateways) == 0 {
 	// 	initCmdExtras.Gateways.Set("localhost")
 	// }
-	if err = cmd.AddInstance(&netprobe.Netprobe, initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
+	if err = cmd.AddInstance(geneos.FindComponent("netprobe"), initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(&webserver.Webserver, initCmdExtras, []string{}, "demo@"+h.String()); err != nil {
+	if err = cmd.AddInstance(geneos.FindComponent("webserver"), initCmdExtras, []string{}, "demo@"+h.String()); err != nil {
 		return
 	}
 

@@ -35,10 +35,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 )
 
 var addCmdTemplate, addCmdBase, addCmdKeyfile, addCmdKeyfileCRC string
@@ -169,7 +165,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 		cf.Set("version", addCmdBase)
 	}
 
-	if ct == &gateway.Gateway || ct == &netprobe.Netprobe || ct == &san.San || ct == &floating.Floating {
+	if ct.UsesKeyfiles {
 		if addCmdKeyfileCRC != "" {
 			crcfile := addCmdKeyfileCRC
 			if filepath.Ext(crcfile) != "aes" {

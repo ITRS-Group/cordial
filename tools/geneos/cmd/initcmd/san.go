@@ -33,7 +33,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
 )
 
 var initSanCmdArchive, initSanCmdVersion, initSanCmdOverride string
@@ -136,10 +135,10 @@ func initSan(h *geneos.Host, options ...geneos.Options) (err error) {
 	if h != geneos.LOCAL {
 		sanname = sanname + "@" + geneos.LOCALHOST
 	}
-	if err = install(&san.San, geneos.LOCALHOST, options...); err != nil {
+	if err = install("san", geneos.LOCALHOST, options...); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(&san.San, initCmdExtras, []string{}, sanname); err != nil {
+	if err = cmd.AddInstance(geneos.FindComponent("san"), initCmdExtras, []string{}, sanname); err != nil {
 		return
 	}
 	if err = cmd.Start(nil, initCmdLogs, e, e); err != nil {

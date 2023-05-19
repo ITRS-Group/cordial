@@ -72,7 +72,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 		if len(rawargs) == 0 {
 			return nil
 		}
-		if ct = geneos.ParseComponentName(rawargs[0]); ct == nil {
+		if ct = geneos.FindComponent(rawargs[0]); ct == nil {
 			jsonargs, _ := json.Marshal(rawargs)
 			annotations["args"] = string(jsonargs)
 			return
@@ -90,7 +90,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 		// if len(rawargs) == 0 {
 		// 	// nothing
 		// } else
-		if ct = geneos.ParseComponentName(defaultComponent); ct == nil {
+		if ct = geneos.FindComponent(defaultComponent); ct == nil {
 			// first arg is not a known type, so treat the rest as instance names
 			args = rawargs
 		} else {
@@ -212,7 +212,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 
 func CmdArgs(command *cobra.Command) (ct *geneos.Component, args []string) {
 	log.Debug().Msgf("%s %v", command.Annotations, ct)
-	ct = geneos.ParseComponentName(command.Annotations["ct"])
+	ct = geneos.FindComponent(command.Annotations["ct"])
 	if err := json.Unmarshal([]byte(command.Annotations["args"]), &args); err != nil {
 		log.Debug().Err(err).Msg("")
 	}

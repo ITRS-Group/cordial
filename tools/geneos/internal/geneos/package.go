@@ -444,6 +444,6 @@ func FilenameToComponent(filename string) (ct *Component, version string, err er
 		version = strings.ReplaceAll(version, "-"+m, "+"+m)
 	}
 
-	ct = ParseComponentName(parts[1])
+	ct = FindComponent(parts[1])
 	return
 }

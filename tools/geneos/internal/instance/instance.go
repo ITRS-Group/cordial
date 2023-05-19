@@ -56,6 +56,15 @@ type Instance struct {
 	Env             []string          `json:",omitempty"`
 }
 
+// IsA returns true if instance c has a type that is component if the type name.
+func IsA(c geneos.Instance, name string) bool {
+	ct := geneos.FindComponent(name)
+	if ct == nil {
+		return false
+	}
+	return ct.IsA(c.Type().String())
+}
+
 // DisplayName returns the type, name and non-local host as a string
 // suitable for display.
 func DisplayName(c geneos.Instance) string {
@@ -70,7 +79,7 @@ func DisplayName(c geneos.Instance) string {
 // start-up.
 func ReservedName(name string) (ok bool) {
 	log.Debug().Msgf("checking %q", name)
-	if geneos.ParseComponentName(name) != nil {
+	if geneos.FindComponent(name) != nil {
 		log.Debug().Msg("matches a reserved word")
 		return true
 	}
@@ -562,7 +571,7 @@ func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name 
 	}
 	parts = strings.SplitN(name, ":", 2)
 	if len(parts) > 1 {
-		ct = geneos.ParseComponentName(parts[0])
+		ct = geneos.FindComponent(parts[0])
 		name = parts[1]
 	}
 	return

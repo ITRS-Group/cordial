@@ -40,6 +40,11 @@ type DownloadBases struct {
 	Nexus     string
 }
 
+type Templates struct {
+	Filename string
+	Content  []byte
+}
+
 type Component struct {
 	Initialise       func(*Host, *Component)
 	New              func(string) Instance
@@ -48,6 +53,8 @@ type Component struct {
 	RelatedTypes     []*Component
 	ComponentMatches []string
 	RealComponent    bool
+	UsesKeyfiles     bool
+	Templates        []Templates
 	DownloadBase     DownloadBases
 	PortRange        string
 	CleanList        string
@@ -140,6 +147,15 @@ func RealComponents() (cts []*Component) {
 	return
 }
 
+func UsesKeyFiles() (cts []*Component) {
+	for _, c := range registeredComponents {
+		if c.UsesKeyfiles {
+			cts = append(cts, c)
+		}
+	}
+	return
+}
+
 // RegisterComponent adds the given Component ct to the internal list of
 // component types. The factory parameter is the Component's New()
 // function, which has to be passed in to avoid initialisation loops as
@@ -168,11 +184,11 @@ func (ct Component) String() (name string) {
 	return ct.Name
 }
 
-// ParseComponentName returns the component type by iterating over all
+// FindComponent returns the component type by iterating over all
 // the names registered by components and returning as soon as any value
 // matches. The comparison is case-insensitive. nil is returned if the
 // component does not match any known name.
-func ParseComponentName(component string) *Component {
+func FindComponent(component string) *Component {
 	for _, v := range registeredComponents {
 		for _, m := range v.ComponentMatches {
 			if strings.EqualFold(m, component) {

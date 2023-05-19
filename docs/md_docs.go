@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// This is a customised copy of the md_docs.go source from the cobra
+// project but with change to meet local cordial requirements.
+
 package main
 
 import (
