@@ -25,6 +25,8 @@ package commands
 import (
 	"fmt"
 	"time"
+
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 // Options is an option type used for commands functions
@@ -38,7 +40,7 @@ func evalOptions(c *Connection, options ...Options) {
 
 // SetBasicAuth configures basic authentication on the connection, given
 // a username and password (both as plain strings)
-func SetBasicAuth(username, password string) Options {
+func SetBasicAuth(username string, password config.Plaintext) Options {
 	return func(c *Connection) {
 		if username != "" {
 			c.AuthType = Basic
