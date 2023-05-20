@@ -42,6 +42,7 @@ var Webserver = geneos.Component{
 	ComponentMatches: []string{"web-server", "webserver", "webservers", "webdashboard", "dashboards"},
 	RealComponent:    true,
 	DownloadBase:     geneos.DownloadBases{Resources: "Web+Dashboard", Nexus: "geneos-web-server"},
+	DownloadInfix:    "web-server",
 	PortRange:        "WebserverPortRange",
 	CleanList:        "WebserverCleanList",
 	PurgeList:        "WebserverPurgeList",
