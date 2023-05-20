@@ -43,19 +43,20 @@ var packageInstallCmdPassword config.Plaintext
 func init() {
 	packageCmd.AddCommand(packageInstallCmd)
 
-	packageInstallCmd.Flags().StringVarP(&packageInstallCmdBase, "base", "b", "active_prod", "Override the base active_prod link name")
+	packageInstallCmd.Flags().StringVarP(&packageInstallCmdUsername, "username", "u", "", "Username for downloads, defaults to configuration value in download.username")
+	packageInstallCmd.Flags().StringVarP(&packageInstallCmdPwFile, "pwfile", "P", "", "Password file to read for downloads, defaults to configuration value in download.password or otherwise prompts")
 
 	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdLocal, "local", "L", false, "Install from local files only")
 	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdNoSave, "nosave", "n", false, "Do not save a local copy of any downloads")
 
-	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires auth.")
-	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
-	packageInstallCmd.Flags().StringVarP(&packageInstallCmdVersion, "version", "V", "latest", "Download this version, defaults to latest. Doesn't work for EL8 archives.")
-	packageInstallCmd.Flags().StringVarP(&packageInstallCmdUsername, "username", "u", "", "Username for downloads, defaults to configuration value in download.username")
-	packageInstallCmd.Flags().StringVarP(&packageInstallCmdPwFile, "pwfile", "P", "", "Password file to read for downloads, defaults to configuration value in download.password or otherwise prompts")
-
 	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdUpdate, "update", "U", false, "Update the base directory symlink")
+	packageInstallCmd.Flags().StringVarP(&packageInstallCmdBase, "base", "b", "active_prod", "Override the base active_prod link name")
+
+	packageInstallCmd.Flags().StringVarP(&packageInstallCmdVersion, "version", "V", "latest", "Download this version, defaults to latest. Doesn't work for EL8 archives.")
 	packageInstallCmd.Flags().StringVarP(&packageInstallCmdOverride, "override", "T", "", "Override (set) the TYPE:VERSION for archive files with non-standard names")
+
+	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires auth.")
+	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdSnapshot, "snapshots", "S", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
 
 	packageInstallCmd.Flags().SortFlags = false
 }
@@ -124,11 +125,12 @@ geneos install netprobe -b active_dev -U
 				geneos.Username(packageInstallCmdUsername),
 				geneos.Password(packageInstallCmdPassword),
 			}
+			if packageInstallCmdSnapshot {
+				packageInstallCmdNexus = true
+				options = append(options, geneos.UseSnapshots())
+			}
 			if packageInstallCmdNexus {
 				options = append(options, geneos.UseNexus())
-				if packageInstallCmdSnapshot {
-					options = append(options, geneos.UseSnapshots())
-				}
 			}
 			log.Debug().Msgf("install to %s with opts: %#v", cmd.Hostname, options)
 			err = install(ct, cmd.Hostname, options...)
