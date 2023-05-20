@@ -81,16 +81,11 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 		}
 		filename, err = LatestArchive(LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
 			log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
-			switch ct.String() {
-			case "webserver":
-				return strings.Contains(v.Name(), "web-server")
-			case "fa2":
-				return strings.Contains(v.Name(), "fixanalyser2-netprobe")
-			case "fileagent":
-				return strings.Contains(v.Name(), "file-agent")
-			default:
-				return strings.Contains(v.Name(), ct.String())
+			check := ct.String()
+			if ct.DownloadInfix != "" {
+				check = ct.DownloadInfix
 			}
+			return strings.Contains(v.Name(), check)
 		})
 		if err != nil {
 			log.Debug().Err(err).Msg("latest() returned err")
