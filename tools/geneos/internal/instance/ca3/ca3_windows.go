@@ -26,6 +26,6 @@ import (
 	"os"
 )
 
-func ca3getPID(i interface{}) (pid int, err error) {
+func getPID(i interface{}) (pid int, err error) {
 	return 0, os.ErrProcessDone
 }

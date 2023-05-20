@@ -68,7 +68,7 @@ var CA3 = geneos.Component{
 		"packages/ca3",
 		"ca3/ca3s",
 	},
-	GetPID: ca3getPID,
+	GetPID: getPID,
 }
 
 const (
