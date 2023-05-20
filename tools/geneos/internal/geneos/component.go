@@ -35,16 +35,20 @@ import (
 
 // type ComponentType string
 
+// DownloadBases define the base names for the download archived for
+// standard and nexus downloads
 type DownloadBases struct {
 	Resources string
 	Nexus     string
 }
 
+// Templates define the filename and embedded content for template files
 type Templates struct {
 	Filename string
 	Content  []byte
 }
 
+// Component defines a register component
 type Component struct {
 	Initialise       func(*Host, *Component)
 	New              func(string) Instance
@@ -66,6 +70,8 @@ type Component struct {
 	GetPID           func(interface{}) (int, error) // if set, use this to get the PID of an instance
 }
 
+// Instance interfaces contains the method set for an instance of a
+// registered Component
 type Instance interface {
 	Config() *config.Config
 
@@ -88,7 +94,7 @@ type Instance interface {
 	Rebuild(bool) error
 }
 
-var RootComponent Component = Component{
+var rootComponent = Component{
 	Name:             "none",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"any"},
@@ -96,7 +102,7 @@ var RootComponent Component = Component{
 	DownloadBase:     DownloadBases{Resources: "", Nexus: ""},
 	GlobalSettings: map[string]string{
 		// Root directory for all operations
-		Execname: "",
+		execname: "",
 
 		// Root URL for all downloads of software archives
 		config.Join("download", "url"): "https://resources.itrsgroup.com/download/latest/",
@@ -109,23 +115,26 @@ var RootComponent Component = Component{
 	},
 	Directories: []string{
 		"packages/downloads",
-		"hosts",
 	},
 }
 
-var Execname string
+var execname string
 
+// initDirs is a map of component type name to a slice of directories to create
+var initDirs = make(map[string][]string)
+
+// Initialise is called from the main command initialisation
 func Initialise(app string) {
-	Execname = app
-	SigningCertFile = Execname
-	RootComponent.RegisterComponent(nil)
+	execname = app
+	SigningCertFile = execname
+	rootComponent.RegisterComponent(nil)
 }
 
-type ComponentsMap map[string]*Component
+type componentsMap map[string]*Component
 
 // slice of registered component types for indirect calls
 // this should actually become an Interface
-var registeredComponents ComponentsMap = make(ComponentsMap)
+var registeredComponents = make(componentsMap)
 
 // AllComponents returns a slice of all registered components, include
 // the Root component type
@@ -147,6 +156,8 @@ func RealComponents() (cts []*Component) {
 	return
 }
 
+// UsesKeyFiles returns a slice of registered components that use key
+// files
 func UsesKeyFiles() (cts []*Component) {
 	for _, c := range registeredComponents {
 		if c.UsesKeyfiles {
@@ -166,18 +177,10 @@ func (ct *Component) RegisterComponent(factory func(string) Instance) {
 	}
 	ct.New = factory
 	registeredComponents[ct.Name] = ct
-	ct.RegisterDirs(ct.Directories)
+	initDirs[ct.Name] = ct.Directories
 	for k, v := range ct.GlobalSettings {
 		config.GetConfig().SetDefault(k, v)
 	}
-}
-
-var initDirs map[string][]string = make(map[string][]string)
-
-// register directories that need to be created in the
-// root of the install (by init)
-func (ct Component) RegisterDirs(dirs []string) {
-	initDirs[ct.Name] = dirs
 }
 
 func (ct Component) String() (name string) {
@@ -225,7 +228,7 @@ func (ct *Component) MakeComponentDirs(h *Host) (err error) {
 	if ct != nil {
 		name = ct.Name
 	}
-	geneos := h.GetString(Execname)
+	geneos := h.GetString(execname)
 	for _, d := range initDirs[name] {
 		dir := filepath.Join(geneos, d)
 		log.Debug().Msgf("mkdirall %s", dir)

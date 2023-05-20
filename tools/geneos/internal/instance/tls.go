@@ -54,7 +54,7 @@ func CreateCert(c geneos.Instance) (err error) {
 	}
 
 	hostname, _ := os.Hostname()
-	if c.Host() != geneos.LOCAL {
+	if !c.Host().IsLocal() {
 		hostname = c.Host().GetString("hostname")
 	}
 

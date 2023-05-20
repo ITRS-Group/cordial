@@ -295,12 +295,14 @@ func (h *SSHRemote) CloseSFTP() {
 	}
 }
 
+// IsLocal returns true if h is local, which for SSH is always false
 func (h *SSHRemote) IsLocal() bool {
 	return false
 }
 
+// IsAvaialble returns true is the remote host can be contacted
 func (s *SSHRemote) IsAvailable() bool {
-	if s.failed != nil && !s.lastAttempt.IsZero() && time.Since(s.lastAttempt) < 5*time.Second {
+	if s == nil || (s.failed != nil && !s.lastAttempt.IsZero() && time.Since(s.lastAttempt) < 5*time.Second) {
 		// not available for 5 seconds since last error
 		return false
 	}

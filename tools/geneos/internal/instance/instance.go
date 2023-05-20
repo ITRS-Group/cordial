@@ -68,7 +68,7 @@ func IsA(c geneos.Instance, name string) bool {
 // DisplayName returns the type, name and non-local host as a string
 // suitable for display.
 func DisplayName(c geneos.Instance) string {
-	if c.Host() == geneos.LOCAL {
+	if c.Host().IsLocal() {
 		return fmt.Sprintf("%s %q", c.Type(), c.Name())
 	}
 	return fmt.Sprintf("%s \"%s@%s\"", c.Type(), c.Name(), c.Host())
@@ -230,7 +230,7 @@ func Match(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 // matching name
 func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
 	_, local, r := SplitName(name, geneos.ALL)
-	if !r.Exists() {
+	if !r.IsAvailable() {
 		log.Debug().Msgf("host %s %w", host.ErrNotAvailable)
 		return
 	}

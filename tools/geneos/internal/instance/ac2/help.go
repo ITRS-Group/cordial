@@ -20,60 +20,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package ac2
 
 import (
 	_ "embed"
-	"fmt"
-	"strings"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/spf13/cobra"
 )
 
+// Help command and text to hook into Cobra command tree
+
+//go:embed README.md
+var longDescription string
+
 func init() {
-	GeneosCmd.AddCommand(homeCmd)
+	cmd.GeneosCmd.AddCommand(helpDocCmd)
 }
 
-//go:embed _docs/home.md
-var homeCmdDescription string
-
-var homeCmd = &cobra.Command{
-	Use:     "home [flags] [TYPE] [NAME]",
-	GroupID: CommandGroupView,
-	Short:   "Output a directory path for given options",
-	Long:    homeCmdDescription,
-	Example: strings.ReplaceAll(`
-cd $(geneos home)
-cd $(geneos home gateway example1)
-cat $(geneos home gateway example2)/gateway.txt
-`, "|", "`"),
+var helpDocCmd = &cobra.Command{
+	Use:          "ac2",
+	Aliases:      []string{"rm"},
+	Short:        "Help for ac2",
+	Long:         longDescription,
 	SilenceUsage: true,
-	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "true",
-	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, _ := CmdArgsParams(cmd)
-
-		if len(args) == 0 {
-			if ct == nil {
-				fmt.Println(geneos.Root())
-				return nil
-			}
-			fmt.Println(geneos.LOCAL.Filepath(ct))
-			return nil
-		}
-
-		i, err := instance.Match(ct, args[0])
-
-		if err != nil || !i.Host().IsLocal() {
-			fmt.Println(geneos.Root())
-			return nil
-		}
-
-		fmt.Println(i.Home())
-		return nil
-	},
 }

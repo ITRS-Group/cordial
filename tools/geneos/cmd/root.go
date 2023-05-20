@@ -130,7 +130,7 @@ func init() {
 			config.IgnoreUserConfDir(),
 			config.IgnoreWorkingDir())+
 		")")
-	GeneosCmd.PersistentFlags().StringVarP(&Hostname, "host", "H", "", "Limit actions to `HOSTNAME` (not for commands given instance@host parameters)")
+	GeneosCmd.PersistentFlags().StringVarP(&Hostname, "host", "H", "all", "Limit actions to `HOSTNAME` (not for commands given instance@host parameters)")
 	GeneosCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
 	GeneosCmd.PersistentFlags().MarkHidden("debug")
 	GeneosCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
@@ -174,7 +174,8 @@ geneos restart
 	Version:            cordial.VERSION,
 	DisableAutoGenTag:  true,
 	DisableSuggestions: true,
-	SilenceErrors:      true,
+	// SilenceErrors:      true, // this blocks all child errors too...
+	// don't uncomment it
 	PersistentPreRunE: func(command *cobra.Command, args []string) (err error) {
 		// "manually" parse root flags so that legacy commands get conf
 		// file, debug etc.

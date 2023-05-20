@@ -72,7 +72,7 @@ var hostSetCmd = &cobra.Command{
 		} else {
 			for _, a := range args {
 				h := geneos.GetHost(a)
-				if h != nil && h.Exists() {
+				if h.Exists() {
 					hosts = append(hosts, h)
 				}
 			}

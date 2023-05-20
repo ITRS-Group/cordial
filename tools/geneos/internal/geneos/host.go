@@ -38,10 +38,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// OldUserHostFile is a legacy name that will be deprecated in the
+// future
 const OldUserHostFile = "geneos-hosts.json"
 
-var UserHostFile = filepath.Join(ConfigSubdirName, "hosts.json")
-
+// Host defines a host for seamless remote management
 type Host struct {
 	host.Host
 	*config.Config
@@ -55,15 +56,21 @@ type Host struct {
 // localhost or all.
 var hosts sync.Map
 
+// Default host labels that always exist
 const (
 	LOCALHOST = "localhost"
 	ALLHOSTS  = "all"
 )
 
-var LOCAL, ALL *Host
+// LOCAL and ALL are the global Host values that represent LOCALHOST and
+// ALLHOSTS from above, and must always exist
+var (
+	LOCAL *Host
+	ALL   *Host
+)
 
-// Init initialises the host settings and is only called from the root
-// command to set the initial values of host.LOCAL and host.ALL and
+// InitHosts initialises the host settings and is only called from the
+// root command to set the initial values of host.LOCAL and host.ALL and
 // reads the host configuration file. LOCAL and ALL cannot be
 // initialised outside a function as there would be a definition loop.
 func InitHosts(app string) {
@@ -85,6 +92,8 @@ func NewHost(name string, options ...any) (h *Host) {
 		}
 		h = &Host{host.NewLocal(), config.New(), true}
 		h.Set("name", LOCALHOST)
+		hostname, _ := os.Hostname()
+		h.Set("hostname", hostname)
 		h.SetOSReleaseEnv()
 	case ALLHOSTS:
 		if ALL != nil {
@@ -106,7 +115,7 @@ func NewHost(name string, options ...any) (h *Host) {
 		hosts.Store(name, h)
 	}
 
-	h.Set(Execname, config.GetString(Execname, config.Default(config.GetString("itrshome"))))
+	h.Set(execname, config.GetString(execname, config.Default(config.GetString("itrshome"))))
 	return
 }
 
@@ -136,6 +145,8 @@ func GetHost(name string) (h *Host) {
 	}
 }
 
+// Delete host h from the internal list of hosts. Does not change the
+// on-disk configuration file
 func (h *Host) Delete() {
 	hosts.Delete(h.String())
 }
@@ -146,6 +157,9 @@ func (h *Host) Valid() {
 	h.loaded = true
 }
 
+// Exists returns true if the host h has an initialised configuration
+//
+// To check is a host can be contacted use the IsAvailable() instead
 func (h *Host) Exists() bool {
 	if h == nil {
 		return false
@@ -195,7 +209,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 				osinfo["build_id"] = vers[len(vers)-1]
 			}
 		}
-		if h.String() != LOCALHOST {
+		if !h.IsLocal() {
 			output, err := h.Run(`cmd /c echo %USERPROFILE%`)
 			if err != nil {
 				log.Error().Err(err).Msg("")
@@ -230,7 +244,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			value = strings.Trim(value, "\"")
 			osinfo[strings.ToLower(key)] = value
 		}
-		if h.String() != LOCALHOST {
+		if !h.IsLocal() {
 			output, err := h.Run("pwd")
 			if err != nil {
 				log.Error().Err(err).Msg("")
@@ -296,9 +310,12 @@ func (h *Host) Filepath(parts ...interface{}) string {
 		}
 	}
 
-	return path.Join(append([]string{h.GetString(Execname)}, strParts...)...)
+	return path.Join(append([]string{h.GetString(execname)}, strParts...)...)
 }
 
+// FullName returns name with the host h label appended if there is no
+// existing host label in the form `instance@host`. Any existing label
+// is not checked or changed.
 func (h *Host) FullName(name string) string {
 	if strings.Contains(name, "@") {
 		return name
@@ -334,9 +351,9 @@ func LoadHostConfig() {
 	userConfDir, _ := config.UserConfigDir()
 	oldConfigFile := filepath.Join(userConfDir, OldUserHostFile)
 	// note that SetAppName only matters when PromoteFile returns an empty path
-	confpath := filepath.Join(userConfDir, Execname)
+	confpath := filepath.Join(userConfDir, execname)
 	h, err := config.Load("hosts",
-		config.SetAppName(Execname),
+		config.SetAppName(execname),
 		config.SetConfigFile(config.PromoteFile(host.Localhost, confpath, oldConfigFile)),
 		config.UseDefaults(false),
 		config.IgnoreWorkingDir(),
@@ -379,5 +396,5 @@ func SaveHostConfig() error {
 		return true
 	})
 
-	return n.Save("hosts", config.SetAppName(Execname))
+	return n.Save("hosts", config.SetAppName(execname))
 }

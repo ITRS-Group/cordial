@@ -115,7 +115,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 				tlsJSONEncoder.Encode(tlsListCertType{
 					"global",
 					geneos.RootCAFile,
-					string(geneos.LOCALHOST),
+					geneos.LOCALHOST,
 					time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
 					rootCert.NotAfter,
 					rootCert.Subject.CommonName,
@@ -125,7 +125,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 				tlsJSONEncoder.Encode(tlsListCertType{
 					"global",
 					geneos.SigningCertFile,
-					string(geneos.LOCALHOST),
+					geneos.LOCALHOST,
 					time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
 					geneosCert.NotAfter,
 					geneosCert.Subject.CommonName,
@@ -148,7 +148,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 				tlsListCSVWriter.Write([]string{
 					"global",
 					geneos.RootCAFile,
-					string(geneos.LOCALHOST),
+					geneos.LOCALHOST,
 					fmt.Sprintf("%0f", time.Until(rootCert.NotAfter).Seconds()),
 					rootCert.NotAfter.String(),
 					rootCert.Subject.CommonName,
@@ -158,7 +158,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 				tlsListCSVWriter.Write([]string{
 					"global",
 					geneos.SigningCertFile,
-					string(geneos.LOCALHOST),
+					geneos.LOCALHOST,
 					fmt.Sprintf("%0f", time.Until(geneosCert.NotAfter).Seconds()),
 					geneosCert.NotAfter.String(),
 					geneosCert.Subject.CommonName,
@@ -203,7 +203,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 				tlsJSONEncoder.Encode(tlsListCertLongType{
 					"global",
 					geneos.RootCAFile,
-					string(geneos.LOCALHOST),
+					geneos.LOCALHOST,
 					time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
 					rootCert.NotAfter,
 					rootCert.Subject.CommonName,
@@ -217,7 +217,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 				tlsJSONEncoder.Encode(tlsListCertLongType{
 					"global",
 					geneos.SigningCertFile,
-					string(geneos.LOCALHOST),
+					geneos.LOCALHOST,
 					time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
 					geneosCert.NotAfter,
 					geneosCert.Subject.CommonName,
@@ -248,7 +248,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 				tlsListCSVWriter.Write([]string{
 					"global",
 					geneos.RootCAFile,
-					string(geneos.LOCALHOST),
+					geneos.LOCALHOST,
 					fmt.Sprintf("%.f", time.Until(rootCert.NotAfter).Seconds()),
 					rootCert.NotAfter.String(),
 					rootCert.Subject.CommonName,
@@ -262,7 +262,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 				tlsListCSVWriter.Write([]string{
 					"global",
 					geneos.SigningCertFile,
-					string(geneos.LOCALHOST),
+					geneos.LOCALHOST,
 					fmt.Sprintf("%.f", time.Until(geneosCert.NotAfter).Seconds()),
 					geneosCert.NotAfter.String(),
 					geneosCert.Subject.CommonName,

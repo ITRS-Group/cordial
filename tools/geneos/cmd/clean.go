@@ -69,5 +69,5 @@ geneos clean --full netprobe
 }
 
 func cleanInstance(c geneos.Instance, params []string) (err error) {
-	return instance.Clean(c, geneos.FullClean(cleanCmdFull))
+	return instance.Clean(c, cleanCmdFull)
 }

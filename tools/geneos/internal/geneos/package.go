@@ -34,6 +34,7 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/go-version"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/rs/zerolog/log"
 )
 
@@ -78,8 +79,8 @@ func (r Releases) Swap(i, j int) {
 //
 // No validation is done on the contents, only that a directory exists.
 func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
-	if !h.Exists() {
-		return nil, fmt.Errorf("host does not exist")
+	if !h.IsAvailable() {
+		return nil, host.ErrNotAvailable
 	}
 	basedir := h.Filepath("packages", ct)
 	ents, err := h.ReadDir(basedir)

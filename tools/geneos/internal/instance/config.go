@@ -1,3 +1,25 @@
+/*
+Copyright © 2022 ITRS Group
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
 package instance
 
 import (
@@ -46,7 +68,7 @@ func first(d ...interface{}) string {
 	return ""
 }
 
-var fnmap template.FuncMap = template.FuncMap{
+var fnmap = template.FuncMap{
 	"first":   first,
 	"join":    path.Join,
 	"nameOf":  nameOf,
@@ -136,7 +158,7 @@ func LoadConfig(c geneos.Instance) (err error) {
 	return
 }
 
-// ComponentFilepath() returns an absolute path to a file named for the
+// ComponentFilepath returns an absolute path to a file named for the
 // component type of the instance with any extensions joined using ".", e.g.
 // is c is a netprobe instance then
 //
@@ -155,7 +177,7 @@ func ComponentFilepath(c geneos.Instance, extensions ...string) string {
 	return path.Join(c.Home(), ComponentFilename(c, extensions...))
 }
 
-// ComponentFilename() returns the filename for the component named by
+// ComponentFilename returns the filename for the component named by
 // the instance similarly to ComponentFilepath
 func ComponentFilename(c geneos.Instance, extensions ...string) string {
 	parts := []string{c.Type().String()}
@@ -328,7 +350,7 @@ func Migrate(c geneos.Instance) (err error) {
 // a template function to support "{{join .X .Y}}"
 var textJoinFuncs = template.FuncMap{"join": path.Join}
 
-// SetDefaults() is a common function called by component factory
+// SetDefaults is a common function called by component factory
 // functions to iterate over the component specific instance
 // struct and set the defaults as defined in the 'defaults'
 // struct tags.
@@ -399,6 +421,8 @@ func DeleteSettingFromMap(c geneos.Instance, from map[string]interface{}, key st
 	delete(from, key)
 }
 
+// ExtraConfigValues defined the set of non-simple configuration options
+// that can be accepted by various commands
 type ExtraConfigValues struct {
 	Includes   IncludeValues
 	Gateways   GatewayValues
@@ -406,20 +430,14 @@ type ExtraConfigValues struct {
 	Envs       EnvValues
 	Variables  VarValues
 	Types      TypeValues
-	// Keys       StringSliceValues
 }
 
 // Value types for multiple flags
 
-func SetEnvs(c geneos.Instance, envs []string) (changed bool) {
-	if SetSlice(c, envs, "env", func(a string) string {
-		return strings.SplitN(a, "=", 2)[0]
-	}) {
-		changed = true
-	}
-	return
-}
-
+// SetExtendedValues applies the settings in x to instance c by
+// iterating through the fields and calling the appropriate helper
+// function
+//
 // XXX abstract this for a general case
 func SetExtendedValues(c geneos.Instance, x ExtraConfigValues) (changed bool) {
 	cf := c.Config()
@@ -484,8 +502,19 @@ func convertVars(vars map[string]interface{}) {
 	}
 }
 
-// sets 'items' in the settings identified by 'key'. the key() function returns an identifier to use
-// in merge comparisons
+// SetEnvs takes a slice of KEY=VALUE pairs and applies them to the
+// configuration key "envs" for instance c
+func SetEnvs(c geneos.Instance, envs []string) (changed bool) {
+	if SetSlice(c, envs, "env", func(a string) string {
+		return strings.SplitN(a, "=", 2)[0]
+	}) {
+		changed = true
+	}
+	return
+}
+
+// SetSlice sets items in the instance configuration key setting. The
+// key function returns an identifier to use in merge comparisons
 func SetSlice(c geneos.Instance, items []string, setting string, key func(string) string) (changed bool) {
 	cf := c.Config()
 
@@ -530,11 +559,15 @@ func SetSlice(c geneos.Instance, items []string, setting string, key func(string
 	return
 }
 
+// IncludeValues is a map of include file priority to path
 // include file - priority:url|path
 type IncludeValues map[string]string
 
+// IncludeValuesOptionsText is the default help text for command to use
+// for options setting include files
 const IncludeValuesOptionsText = "An include file in the format `PRIORITY:[PATH|URL]`\n(Repeat as required, gateway only)"
 
+// String is the string method for the IncludeValues type
 func (i *IncludeValues) String() string {
 	return ""
 }

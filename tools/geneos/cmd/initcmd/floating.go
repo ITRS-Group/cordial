@@ -110,7 +110,7 @@ func initFloating(h *geneos.Host, options ...geneos.Options) (err error) {
 	} else {
 		floatingname, _ = os.Hostname()
 	}
-	if h != geneos.LOCAL {
+	if !h.IsLocal() {
 		floatingname = floatingname + "@" + geneos.LOCALHOST
 	}
 	if err = install("floating", geneos.LOCALHOST, options...); err != nil {
