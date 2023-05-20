@@ -60,6 +60,7 @@ type Component struct {
 	UsesKeyfiles     bool
 	Templates        []Templates
 	DownloadBase     DownloadBases
+	DownloadInfix    string // if set replace this string with component name for download matches
 	PortRange        string
 	CleanList        string
 	PurgeList        string

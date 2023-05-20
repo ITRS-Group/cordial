@@ -24,7 +24,9 @@ package pkgcmd
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 
@@ -165,6 +167,10 @@ func install(ct *geneos.Component, target string, options ...geneos.Options) (er
 			return err
 		}
 		if err = geneos.Install(h, ct, options...); err != nil {
+			if errors.Is(err, fs.ErrExist) {
+				err = nil
+				continue
+			}
 			return err
 		}
 	}
