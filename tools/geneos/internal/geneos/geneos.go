@@ -63,7 +63,7 @@ var UserConfigFile = "geneos.json"
 // then nothing is changed
 func Init(h *Host, options ...Options) (err error) {
 	opts := EvalOptions(options...)
-	if opts.homedir == "" {
+	if opts.geneosdir == "" {
 		log.Fatal().Msg("homedir not set")
 		// default or error
 	}
@@ -72,13 +72,13 @@ func Init(h *Host, options ...Options) (err error) {
 	//
 	// XXX maybe check that the entire list of registered directories
 	// are either directories or do not exist
-	if _, err := h.Stat(opts.homedir); err != nil {
-		if err = h.MkdirAll(opts.homedir, 0775); err != nil {
+	if _, err := h.Stat(opts.geneosdir); err != nil {
+		if err = h.MkdirAll(opts.geneosdir, 0775); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 	} else if !opts.force {
 		// check empty
-		dirs, err := h.ReadDir(opts.homedir)
+		dirs, err := h.ReadDir(opts.geneosdir)
 		if err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
@@ -88,13 +88,13 @@ func Init(h *Host, options ...Options) (err error) {
 					log.Debug().Msg("remote directories exist, exiting init")
 					return nil
 				}
-				log.Fatal().Msgf("target directory %q exists and is not empty", opts.homedir)
+				log.Fatal().Msgf("target directory %q exists and is not empty", opts.geneosdir)
 			}
 		}
 	}
 
 	if h == LOCAL {
-		config.Set(Execname, opts.homedir)
+		config.Set(Execname, opts.geneosdir)
 		if err = config.Save(Execname); err != nil {
 			return err
 		}

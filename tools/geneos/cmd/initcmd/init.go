@@ -209,7 +209,7 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 	default:
 		log.Fatal().Msgf("too many args: %v", args)
 	}
-	options = append(options, geneos.Homedir(root))
+	options = append(options, geneos.UseRoot(root))
 	// }
 
 	// download authentication
