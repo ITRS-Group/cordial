@@ -35,7 +35,7 @@ type geneosOptions struct {
 	fullclean    bool
 	version      string
 	basename     string
-	homedir      string
+	geneosdir    string
 	username     string
 	password     config.Plaintext
 	platform_id  string
@@ -114,10 +114,10 @@ func Basename(b string) Options {
 	return func(d *geneosOptions) { d.basename = b }
 }
 
-// Homedir sets the Geneos installation home directory (aka `geneos` in
+// UseRoot sets the Geneos installation home directory (aka `geneos` in
 // the settings)
-func Homedir(h string) Options {
-	return func(d *geneosOptions) { d.homedir = h }
+func UseRoot(h string) Options {
+	return func(d *geneosOptions) { d.geneosdir = h }
 }
 
 // Username is the remote access username for downloads
