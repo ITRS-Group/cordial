@@ -48,3 +48,7 @@ For internal ITRS users there are the `--nexus`/`-N` and
 `--snapshot`/`-S` options to download archives from the internal nexus
 server. The `--snapshot`/`-S` option implies `--nexus`/`-N`. You may
 need to supply different credentials for these downloads.
+
+Installations can be limited to a specific host with the global
+`--host`/`-H` option otherwise the installation is done to all
+configured hosts.

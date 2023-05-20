@@ -32,7 +32,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// check selected version exists first
+// Update will check and update the base link given in the options If
+// the base link exists then the force option must be used to update it,
+// otherwise it is created as expected. When called from unarchive()
+// this allows new installs to work without explicitly calling update.
 func Update(h *Host, ct *Component, options ...Options) (err error) {
 	opts := EvalOptions(options...)
 	if ct == nil {

@@ -420,9 +420,11 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 	}
 	defer reader.Close()
 
-	if err = unarchive(h, ct, filename, reader, options...); err != nil {
+	var dir string
+	if dir, err = unarchive(h, ct, filename, reader, options...); err != nil {
 		if errors.Is(err, fs.ErrExist) {
-			return nil
+			fmt.Printf("%s on %s version %q already exists as %q\n", ct, h, opts.version, dir)
+			return err
 		}
 		return err
 	}

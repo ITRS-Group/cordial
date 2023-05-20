@@ -30,6 +30,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -115,7 +116,6 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 		if f, err := LOCAL.Open(archivePath); err == nil {
 			log.Debug().Msgf("not downloading, file with same size already exists: %s", archivePath)
 			resp.Body.Close()
-			fmt.Printf("%s already exists (sizes match), skipping\n", filename)
 			return f, filename, nil
 		}
 	}
@@ -154,9 +154,9 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 }
 
 // unarchive unpacks the gzipped, open archive passed as an io.Reader on
-// the host given for the component. If there is anm error then the
+// the host given for the component. If there is an error then the
 // caller must close the io.Reader
-func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ...Options) (err error) {
+func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ...Options) (dir string, err error) {
 	var version string
 
 	opts := EvalOptions(options...)
@@ -185,20 +185,18 @@ func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ..
 		}
 		ct = FindComponent(s[0])
 		if ct == nil {
-			return fmt.Errorf("invalid component type %q (%w)", s[0], ErrInvalidArgs)
+			return "", fmt.Errorf("invalid component type %q (%w)", s[0], ErrInvalidArgs)
 		}
 		version = s[1]
 		if !matchVersion(version) {
-			return fmt.Errorf("invalid version %q (%w)", s[1], ErrInvalidArgs)
+			return "", fmt.Errorf("invalid version %q (%w)", s[1], ErrInvalidArgs)
 		}
 	}
 
 	basedir := h.Filepath("packages", ct, version)
 	log.Debug().Msg(basedir)
 	if _, err = h.Stat(basedir); err == nil {
-		// something is already using that dir
-		// XXX - option to delete and overwrite?
-		return
+		return h.Path(basedir), fs.ErrExist
 	}
 	if err = h.MkdirAll(basedir, 0775); err != nil {
 		return
@@ -257,17 +255,17 @@ func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ..
 			// check (and created) containing directories - account for munged tar files
 			dir := path.Dir(fullpath)
 			if err = h.MkdirAll(dir, 0775); err != nil {
-				return
+				return "", err
 			}
 
 			var out io.WriteCloser
 			if out, err = h.Create(fullpath, hdr.FileInfo().Mode()); err != nil {
-				return err
+				return "", err
 			}
 			n, err := io.Copy(out, tr)
 			if err != nil {
 				out.Close()
-				return err
+				return "", err
 			}
 			if n != hdr.Size {
 				log.Error().Msgf("lengths different: %s %d", hdr.Size, n)
@@ -298,7 +296,7 @@ func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ..
 
 	fmt.Printf("installed %q to %q\n", filename, h.Path(basedir))
 	options = append(options, Version(version))
-	return Update(h, ct, options...)
+	return h.Path(basedir), Update(h, ct, options...)
 }
 
 // openRemoteArchive locates and opens a remote software archive file
