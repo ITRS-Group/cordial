@@ -20,9 +20,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-// The `geneos` package provides internal features to manage a typical
-// `Best Practice` installation layout and the conventions that have
-// formed around that structure over many years.
+// Package geneos provides internal features to manage a typical `Best
+// Practice` installation layout and the conventions that have formed
+// around that structure over many years.
 package geneos
 
 import (
@@ -36,6 +36,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Useful errors for the package to return
+//
+// Can also be used by other packages
 var (
 	ErrInvalidArgs  = errors.New("invalid arguments")
 	ErrNotSupported = errors.New("not supported")
@@ -46,14 +49,17 @@ var (
 	ErrNotRunning   = errors.New("instance is not running")
 )
 
+// DisableExtension is the suffix added to instance config files to mark
+// them disabled
 const DisableExtension = "disabled"
 
+// RootCAFile is the file base name for the root certificate authority
+// created with the TLS commands
 var RootCAFile = "rootCA"
+
+// SigningCertFile is the file base name for the signing certificate
+// created with the TLS commands
 var SigningCertFile string
-var ConfigFileType = "json"
-var GlobalConfigDir = "/etc"
-var ConfigSubdirName = Execname
-var UserConfigFile = "geneos.json"
 
 // Init initialises a Geneos environment by creating a directory
 // structure and then it calls the initialisation functions for each
@@ -93,9 +99,9 @@ func Init(h *Host, options ...Options) (err error) {
 		}
 	}
 
-	if h == LOCAL {
-		config.Set(Execname, opts.geneosdir)
-		if err = config.Save(Execname); err != nil {
+	if h.IsLocal() {
+		config.Set(execname, opts.geneosdir)
+		if err = config.Save(execname); err != nil {
 			return err
 		}
 
@@ -121,7 +127,7 @@ func Init(h *Host, options ...Options) (err error) {
 // run on an older installation it may return the value from the legacy
 // configuration item `itrshome` if `geneos` is not set.
 func Root() string {
-	return config.GetString(Execname, config.Default(config.GetString("itrshome")))
+	return config.GetString(execname, config.Default(config.GetString("itrshome")))
 }
 
 // ReadLocalConfigFile reads a local configuration file without the need

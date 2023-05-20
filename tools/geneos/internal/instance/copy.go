@@ -1,3 +1,25 @@
+/*
+Copyright © 2022 ITRS Group
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
 package instance
 
 import (
@@ -13,6 +35,19 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
+// CopyInstance copies the instance named source to destination for
+// component type ct. If the move argument is true then the source is
+// deleted after the copy.
+//
+// Both source and destination can include host labels as well as being
+// only host labels to indicate all instances of type ct on that host.
+// If source is in the form `@host` then destination must also be a host
+// - and different - or the function returns an error, but is it valid
+// to have a specific source and a destination of only `@host` and then
+// the name of the instance is used, as with file system operations on
+// files and directories normally.
+//
+// If ct is nil that all component types are considered
 func CopyInstance(ct *geneos.Component, source, destination string, move bool) (err error) {
 	var stopped, done bool
 	if source == destination {
@@ -21,8 +56,6 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 
 	log.Debug().Msgf("%s %s %s", ct, source, destination)
 
-	// move/copy all instances from host
-	// destination must also be a host and different and exist
 	if strings.HasPrefix(source, "@") {
 		if !strings.HasPrefix(destination, "@") {
 			return fmt.Errorf("%w: destination must be a host when source is a host", geneos.ErrInvalidArgs)
@@ -182,7 +215,7 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 	done = true
 
 	// now a full clean on the destination
-	if err = Clean(newdst, geneos.FullClean(true)); err != nil {
+	if err = Clean(newdst, true); err != nil {
 		return
 	}
 

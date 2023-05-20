@@ -51,10 +51,12 @@ func (h *Local) Username() string {
 	return u.Username
 }
 
+// IsLocal returns true if h is local, which for Local it is
 func (h *Local) IsLocal() bool {
 	return true
 }
 
+// IsAvailable returns true for Local
 func (h *Local) IsAvailable() bool {
 	return true
 }

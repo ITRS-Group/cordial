@@ -110,7 +110,7 @@ func initSan(h *geneos.Host, options ...geneos.Options) (err error) {
 	} else {
 		sanname, _ = os.Hostname()
 	}
-	if h != geneos.LOCAL {
+	if !h.IsLocal() {
 		sanname = sanname + "@" + geneos.LOCALHOST
 	}
 	if err = install("san", geneos.LOCALHOST, options...); err != nil {

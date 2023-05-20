@@ -193,7 +193,7 @@ func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ..
 			return fmt.Errorf("invalid component type %q (%w)", s[0], ErrInvalidArgs)
 		}
 		version = s[1]
-		if !MatchVersion(version) {
+		if !matchVersion(version) {
 			return fmt.Errorf("invalid version %q (%w)", s[1], ErrInvalidArgs)
 		}
 	}
@@ -355,7 +355,7 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 
 		// check for fallback creds
 		if opts.username == "" {
-			creds := config.FindCreds(source, config.SetAppName(Execname))
+			creds := config.FindCreds(source, config.SetAppName(execname))
 			if creds != nil {
 				opts.username = creds.GetString("username")
 				opts.password = creds.GetPassword("password")
@@ -419,7 +419,7 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 
 		// check for fallback creds
 		if opts.username == "" {
-			creds := config.FindCreds(source, config.SetAppName(Execname))
+			creds := config.FindCreds(source, config.SetAppName(execname))
 			if creds != nil {
 				opts.username = creds.GetString("username")
 				opts.password = creds.GetPassword("password")
@@ -427,18 +427,19 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 		}
 
 		// only use auth if required - but save auth for potential reuse below
-		var auth_body []byte
+		var authBody []byte
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
 			if opts.username != "" {
 				da := downloadauth{
 					Username: opts.username,
 					Password: opts.password.String(),
 				}
-				auth_body, err = json.Marshal(da)
+				authBody, err = json.Marshal(da)
 				if err != nil {
 					return
 				}
-				ba := auth_body
+				// make a copy as bytes.NewBuffer() takes ownership
+				ba := bytes.Clone(authBody)
 				authReader := bytes.NewBuffer(ba)
 				if resp, err = http.Post(source, "application/json", authReader); err != nil {
 					return
@@ -454,8 +455,8 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 			source = downloadURL.ResolveReference(realpath).String()
 
 			log.Debug().Msgf("platform download failed, retry source url: %q", source)
-			auth_reader := bytes.NewBuffer(auth_body)
-			if resp, err = http.Post(source, "application/json", auth_reader); err != nil {
+			authReader := bytes.NewBuffer(authBody)
+			if resp, err = http.Post(source, "application/json", authReader); err != nil {
 				return
 			}
 		}
@@ -478,7 +479,7 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 
 var anchoredVersRE = regexp.MustCompile(`^(\d+(\.\d+){0,2})$`)
 
-func MatchVersion(v string) bool {
+func matchVersion(v string) bool {
 	return anchoredVersRE.MatchString(v)
 }
 

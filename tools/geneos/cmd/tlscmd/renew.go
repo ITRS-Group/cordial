@@ -66,7 +66,7 @@ func renewInstanceCert(c geneos.Instance, _ []string) (err error) {
 	tlsDir := filepath.Join(geneos.Root(), "tls")
 
 	hostname, _ := os.Hostname()
-	if c.Host() != geneos.LOCAL {
+	if !c.Host().IsLocal() {
 		hostname = c.Host().GetString("hostname")
 	}
 

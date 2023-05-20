@@ -26,13 +26,14 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
+// geneosOptions defines the internal options for various operations in
+// the geneos package
 type geneosOptions struct {
 	nosave       bool
 	local        bool
 	force        bool
 	override     string
 	restart      bool
-	fullclean    bool
 	version      string
 	basename     string
 	geneosdir    string
@@ -89,16 +90,6 @@ func Restart(r bool) Options {
 // XXX Currently doesn't work.
 func (d *geneosOptions) Restart() bool {
 	return d.restart
-}
-
-// FullClean the instance
-func FullClean(r bool) Options {
-	return func(d *geneosOptions) { d.fullclean = r }
-}
-
-// FullClean returns the current value
-func (d *geneosOptions) FullClean() bool {
-	return d.fullclean
 }
 
 // Version sets the desired version number, defaults to "latest" in most
