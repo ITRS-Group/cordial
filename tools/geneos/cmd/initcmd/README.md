@@ -1,6 +1,5 @@
 # `geneos init` Subsystem Commands
 
-
 Initialise a Geneos installation by creating the directory structure and
 user configuration file, with the optional username and directory.
 
