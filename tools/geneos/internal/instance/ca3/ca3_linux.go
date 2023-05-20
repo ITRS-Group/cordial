@@ -32,7 +32,7 @@ import (
 	"strings"
 )
 
-func ca3getPID(i interface{}) (pid int, err error) {
+func getPID(i interface{}) (pid int, err error) {
 	switch c := i.(type) {
 	case *CA3s:
 		var pids []int
