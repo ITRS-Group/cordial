@@ -26,7 +26,6 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -80,10 +79,6 @@ geneos install netprobe -b active_dev -U
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, args, params := cmd.CmdArgsParams(command)
-		if ct == nil && len(args) == 0 && packageInstallCmdLocal {
-			args = []string{filepath.Join(geneos.Root(), "packages", "downloads")}
-			packageInstallCmdNoSave = true
-		}
 
 		for _, p := range params {
 			if strings.HasPrefix(p, "@") {
