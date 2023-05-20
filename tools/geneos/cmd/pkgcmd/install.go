@@ -26,6 +26,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -80,8 +81,8 @@ geneos install netprobe -b active_dev -U
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, args, params := cmd.CmdArgsParams(command)
 		if ct == nil && len(args) == 0 && packageInstallCmdLocal {
-			log.Error().Msg("install -L (local) flag with no component or file/url")
-			return nil
+			args = []string{filepath.Join(geneos.Root(), "packages", "downloads")}
+			packageInstallCmdNoSave = true
 		}
 
 		for _, p := range params {
@@ -134,7 +135,9 @@ geneos install netprobe -b active_dev -U
 					options = append(options, geneos.UseSnapshots())
 				}
 			}
-			return install(ct, cmd.Hostname, options...)
+			log.Debug().Msgf("install to %s with opts: %#v", cmd.Hostname, options)
+			err = install(ct, cmd.Hostname, options...)
+			return err
 		}
 
 		// work through command line args and try to install them using the naming format
@@ -165,7 +168,7 @@ func install(ct *geneos.Component, target string, options ...geneos.Options) (er
 			return err
 		}
 		if err = geneos.Install(h, ct, options...); err != nil {
-			return
+			return err
 		}
 	}
 	return
