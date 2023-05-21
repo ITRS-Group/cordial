@@ -33,13 +33,6 @@ The best solution is to not use white space in any instance name or
 directory path above it. (Note: We tried outputting a quoted path but
 the bash shell ignores these quotes inside `$(...)`)
 
-### Options inherited from parent commands
-
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
-
 ## Examples
 
 ```bash

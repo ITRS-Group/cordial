@@ -74,6 +74,7 @@ var DefaultUserKeyfile = config.KeyFile(config.Path("keyfile",
 // the display of the help text for the top-level `geneos` command.
 const (
 	CommandGroupConfig      = "config"
+	CommandGroupComponents  = "components"
 	CommandGroupCredentials = "credentials"
 	CommandGroupManage      = "manage"
 	CommandGroupProcess     = "process"
@@ -118,6 +119,10 @@ func init() {
 	GeneosCmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupCredentials,
 		Title: "Manage Credentials",
+	})
+	GeneosCmd.AddGroup(&cobra.Group{
+		ID:    CommandGroupComponents,
+		Title: "Recognised Component Types",
 	})
 
 	cobra.OnInitialize(initConfig)
@@ -232,16 +237,16 @@ geneos restart
 			if t, _ := command.Flags().GetBool("help"); t {
 				command.RunE = nil
 				// Run cannot be nil
-				command.Run = func(cmd *cobra.Command, args []string) {}
-				return newcmd.Help()
+				command.Run = newcmd.HelpFunc()
+				return nil
 			}
 		}
 
-		if t, _ := command.Flags().GetBool("help"); t {
+		if t, _ := command.Flags().GetBool("help"); t { // || command.Name() == "help" {
 			command.RunE = nil
 			// Run cannot be nil
-			command.Run = func(cmd *cobra.Command, args []string) {}
-			return command.Help()
+			command.Run = command.HelpFunc()
+			return nil
 		}
 
 		// check initialisation
@@ -251,6 +256,10 @@ geneos restart
 				command.SetUsageTemplate(" ")
 				return fmt.Errorf("%s", geneosUnsetError)
 			}
+		}
+		if command.Name() == "help" {
+			// don't parse args if the command is a help
+			return nil
 		}
 		return parseArgs(command, args)
 	},

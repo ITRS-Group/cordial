@@ -2,9 +2,6 @@
 
 Configure the command environment
 
-```text
-geneos config
-```
 
 ## Commands
 
@@ -15,19 +12,14 @@ geneos config
 # `geneos config` Subsystem Commands
 
 The commands in the `config` subsystem allow you to control the
-environment of the `geneos` program itself. Please see the descriptions
-of the commands below for more information.
+environment of the `geneos` program itself.
 
-If you run this command directly then you will either be shown the
-output of `geneos config show` or `geneos config set [ARGS]` if you
-supply any further arguments that contain an "=".
+`config show` will display the configuration.
 
-### Options inherited from parent commands
+`config set` will set parameters.
 
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
+`config unset` will unset (remove) parameters.
+
 
 ## Examples
 

@@ -12,7 +12,8 @@ Package commands subsystem
 
 # `geneos package` Subsystem Commands
 
-The `geneos package` commands help you manage Geneos software releases.
+The `geneos package` commands help you manage ITRS Geneos software
+releases.
 
 To download and unarchive releases use `geneos package install`. You can
 also install releases from files you have already downloaded.
@@ -25,9 +26,9 @@ releases to link to which base names and to create new base names.
 
 Finally use `geneos package uninstall` to remove installed packages.
 
-
-
-The matching of VERSION is based on directory names of the form:
+For those commands that use them, `VERSION` options are based on the
+ITRS Geneos release versioning which is now semantic versioning but
+older versions will have `GA` and `RA` prefixes:
 
 `[GA]X.Y.Z`
 

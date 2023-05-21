@@ -2,9 +2,6 @@
 
 Manage remote host settings
 
-```text
-geneos host
-```
 
 ## Commands
 
@@ -109,13 +106,6 @@ features available on remote servers:
   NEVER be `root`) and so instances that are meant to run as other users
   cannot be controlled. Files and directories may not be available if
   the user does not have suitable permissions.
-
-### Options inherited from parent commands
-
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
 
 ## SEE ALSO
 

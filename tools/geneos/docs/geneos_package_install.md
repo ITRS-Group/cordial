@@ -75,13 +75,6 @@ configured hosts.
   -S, --snapshots         Download from nexus snapshots (pre-releases), not releases. Requires -N
 ```
 
-### Options inherited from parent commands
-
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
-
 ## Examples
 
 ```bash

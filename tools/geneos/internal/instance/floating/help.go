@@ -32,16 +32,18 @@ import (
 // Help command and text to hook into Cobra command tree
 
 //go:embed README.md
-var longDescription string
+var floatingDescription string
 
 func init() {
 	cmd.GeneosCmd.AddCommand(helpDocCmd)
 }
 
 var helpDocCmd = &cobra.Command{
-	Use:          "floating",
-	Aliases:      []string{"rm"},
-	Short:        "Help for Floating Netprobes",
-	Long:         longDescription,
-	SilenceUsage: true,
+	Use:                   "floating",
+	GroupID:               cmd.CommandGroupComponents,
+	Short:                 "Help for Floating Netprobes",
+	Long:                  floatingDescription,
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Run:                   cmd.GeneosCmd.HelpFunc(),
 }

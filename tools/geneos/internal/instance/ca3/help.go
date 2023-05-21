@@ -32,16 +32,18 @@ import (
 // Help command and text to hook into Cobra command tree
 
 //go:embed README.md
-var longDescription string
+var ca3Description string
 
 func init() {
 	cmd.GeneosCmd.AddCommand(helpDocCmd)
 }
 
 var helpDocCmd = &cobra.Command{
-	Use:          "ca3",
-	Aliases:      []string{"rm"},
-	Short:        "Help for ca3",
-	Long:         longDescription,
-	SilenceUsage: true,
+	Use:                   "ca3",
+	GroupID:               cmd.CommandGroupComponents,
+	Short:                 "Help for ca3",
+	Long:                  ca3Description,
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Run:                   cmd.GeneosCmd.HelpFunc(),
 }

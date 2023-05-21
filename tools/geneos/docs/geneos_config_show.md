@@ -20,13 +20,6 @@ limit the output to just those keys that match and have a non-nil value.
   -a, --all   Show all the parameters including all defaults
 ```
 
-### Options inherited from parent commands
-
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
-
 ## SEE ALSO
 
 * [geneos config](geneos_config.md)	 - Configure the command environment

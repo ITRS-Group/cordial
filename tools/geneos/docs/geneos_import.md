@@ -47,13 +47,6 @@ Future releases may add support for directories and.or unarchiving of
   -c, --common SUFFIX   Import files to a component directory named TYPE_SUFFIX
 ```
 
-### Options inherited from parent commands
-
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
-
 ## Examples
 
 ```bash

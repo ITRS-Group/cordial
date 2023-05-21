@@ -68,9 +68,9 @@ func init() {
 	initCmd.PersistentFlags().StringVarP(&initCmdImportKey, "importkey", "k", "", "signing private key file")
 
 	initCmd.PersistentFlags().BoolVarP(&initCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires ITRS internal credentials")
-	initCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "p", false, "Download from nexus snapshots. Requires -N")
+	initCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "S", false, "Download from nexus snapshots. Requires -N")
 
-	initCmd.PersistentFlags().StringVarP(&initCmdVersion, "version", "V", "latest", "Download matching version, defaults to latest. Doesn't work for EL8 archives.")
+	initCmd.PersistentFlags().StringVarP(&initCmdVersion, "version", "V", "latest", "Download matching `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
 	initCmd.PersistentFlags().StringVarP(&initCmdDLUsername, "username", "u", "", "Username for downloads")
 
 	// we now prompt for passwords if not in config, so hide this old flag
@@ -91,15 +91,12 @@ func init() {
 var longDescription string
 
 var initCmd = &cobra.Command{
-	Use:     "init [flags] [USERNAME] [DIRECTORY]",
+	Use:     "init [flags] [DIRECTORY]",
 	GroupID: cmd.CommandGroupSubsystems,
 	Short:   "Initialise a Geneos installation",
 	Long:    longDescription,
 	Example: strings.ReplaceAll(`
-# To create a Geneos tree under home area
 geneos init
-# To create a new Geneos tree owned by user |geneos| under |/opt/itrs|
-sudo geneos init geneos /opt/itrs
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{

@@ -20,17 +20,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-// docs creates documentation from the tools and integrations in the
-// repo (except `geneos` which has it's own copy of this with custom
-// mods)
+// The docs utility builds markdown documentation from the geneos program
+// sources and writes to the `docs` directory.
 package main
 
 import (
 	"os"
 
-	pdCmd "github.com/itrs-group/cordial/integrations/pagerduty/cmd"
-	snowCmd "github.com/itrs-group/cordial/integrations/servicenow/cmd"
-	dv2email "github.com/itrs-group/cordial/tools/dv2email/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/aescmd"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/cfgcmd"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/hostcmd"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/initcmd"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/pkgcmd"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/tlscmd"
+
+	// components from internals for documentation
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/ca3"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fa2"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fileagent"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/licd"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/webserver"
 
 	"github.com/spf13/cobra"
 )
@@ -41,10 +55,7 @@ type docs struct {
 }
 
 var doclist = []docs{
-	{dv2email.DV2EMAILCmd, "../tools/dv2email/docs"},
-
-	{snowCmd.RootCmd, "../integrations/servicenow/docs"},
-	{pdCmd.RootCmd, "../integrations/pagerduty/docs"},
+	{cmd.GeneosCmd, "../../docs"},
 }
 
 func main() {

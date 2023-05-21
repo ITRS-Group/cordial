@@ -24,13 +24,6 @@ Versions are listed in descending order for each component type, i.e.
   -c, --csv      Output CSV
 ```
 
-### Options inherited from parent commands
-
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
-
 ## SEE ALSO
 
 * [geneos package](geneos_package.md)	 - Package commands subsystem

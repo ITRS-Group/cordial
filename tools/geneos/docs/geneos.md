@@ -52,6 +52,18 @@ Take control of your Geneos environments
 * [`geneos login`](geneos_login.md)	 - Store credentials related to Geneos
 * [`geneos logout`](geneos_logout.md)	 - Logout (remove credentials)
 
+## Recognised Component Types
+
+* [`geneos ca3`](geneos_ca3.md)	 - Help for ca3
+* [`geneos fa2`](geneos_fa2.md)	 - Help for Fix Analyser 2
+* [`geneos fileagent`](geneos_fileagent.md)	 - Help for fileagent
+* [`geneos floating`](geneos_floating.md)	 - Help for Floating Netprobes
+* [`geneos gateway`](geneos_gateway.md)	 - Help for gateways
+* [`geneos licd`](geneos_licd.md)	 - Help for Licence Daemon
+* [`geneos netprobe`](geneos_netprobe.md)	 - Help for Netprobes
+* [`geneos san`](geneos_san.md)	 - Help for Self-Announcing Netprobes
+* [`geneos webserver`](geneos_webserver.md)	 - Help for Web Dashboard Servers
+
 The `geneos` program will help you manage your Geneos environment.
 
 

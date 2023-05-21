@@ -32,16 +32,18 @@ import (
 // Help command and text to hook into Cobra command tree
 
 //go:embed README.md
-var longDescription string
+var gatewayDescription string
 
 func init() {
 	cmd.GeneosCmd.AddCommand(helpDocCmd)
 }
 
 var helpDocCmd = &cobra.Command{
-	Use:          "gateway",
-	Aliases:      []string{"rm"},
-	Short:        "Help for gateways",
-	Long:         longDescription,
-	SilenceUsage: true,
+	Use:                   "gateway",
+	GroupID:               cmd.CommandGroupComponents,
+	Short:                 "Help for gateways",
+	Long:                  gatewayDescription,
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Run:                   cmd.GeneosCmd.HelpFunc(),
 }

@@ -32,7 +32,7 @@ import (
 // Help command and text to hook into Cobra command tree
 
 //go:embed README.md
-var longDescription string
+var fa2Description string
 
 func init() {
 	cmd.GeneosCmd.AddCommand(helpDocCmd)
@@ -40,8 +40,9 @@ func init() {
 
 var helpDocCmd = &cobra.Command{
 	Use:          "fa2",
+	GroupID:      cmd.CommandGroupComponents,
 	Aliases:      []string{"rm"},
 	Short:        "Help for Fix Analyser 2",
-	Long:         longDescription,
+	Long:         fa2Description,
 	SilenceUsage: true,
 }

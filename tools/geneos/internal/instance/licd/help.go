@@ -32,16 +32,18 @@ import (
 // Help command and text to hook into Cobra command tree
 
 //go:embed README.md
-var longDescription string
+var licdDescription string
 
 func init() {
 	cmd.GeneosCmd.AddCommand(helpDocCmd)
 }
 
 var helpDocCmd = &cobra.Command{
-	Use:          "licd",
-	Aliases:      []string{"rm"},
-	Short:        "Help for Licence Daemon",
-	Long:         longDescription,
-	SilenceUsage: true,
+	Use:                   "licd",
+	GroupID:               cmd.CommandGroupComponents,
+	Short:                 "Help for Licence Daemon",
+	Long:                  licdDescription,
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Run:                   cmd.GeneosCmd.HelpFunc(),
 }
