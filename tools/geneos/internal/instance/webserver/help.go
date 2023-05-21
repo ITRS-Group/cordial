@@ -41,7 +41,7 @@ func init() {
 var helpDocCmd = &cobra.Command{
 	Use:                   "webserver",
 	GroupID:               cmd.CommandGroupComponents,
-	Short:                 "Help for Web Dashboard Servers",
+	Short:                 "Web Dashboard Servers",
 	Long:                  longDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,

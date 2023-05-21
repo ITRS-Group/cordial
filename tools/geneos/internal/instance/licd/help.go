@@ -41,7 +41,7 @@ func init() {
 var helpDocCmd = &cobra.Command{
 	Use:                   "licd",
 	GroupID:               cmd.CommandGroupComponents,
-	Short:                 "Help for Licence Daemon",
+	Short:                 "Licence Daemon",
 	Long:                  licdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,

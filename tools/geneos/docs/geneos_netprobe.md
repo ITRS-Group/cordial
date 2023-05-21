@@ -1,6 +1,6 @@
 # `geneos netprobe`
 
-Help for Netprobes
+Netprobes
 
 ```text
 geneos netprobe

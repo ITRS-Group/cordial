@@ -1,6 +1,6 @@
 # `geneos floating`
 
-Help for Floating Netprobes
+Floating Netprobes
 
 ```text
 geneos floating

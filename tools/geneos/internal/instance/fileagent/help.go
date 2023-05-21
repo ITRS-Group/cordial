@@ -41,7 +41,7 @@ func init() {
 var helpDocCmd = &cobra.Command{
 	Use:                   "fileagent",
 	GroupID:               cmd.CommandGroupComponents,
-	Short:                 "Help for fileagent",
+	Short:                 "File Agent",
 	Long:                  fileagentDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,

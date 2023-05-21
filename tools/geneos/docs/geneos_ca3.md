@@ -1,6 +1,6 @@
 # `geneos ca3`
 
-Help for ca3
+Collection Agent 3
 
 ```text
 geneos ca3

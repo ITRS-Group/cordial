@@ -41,7 +41,7 @@ func init() {
 var helpDocCmd = &cobra.Command{
 	Use:                   "gateway",
 	GroupID:               cmd.CommandGroupComponents,
-	Short:                 "Help for gateways",
+	Short:                 "Gateways",
 	Long:                  gatewayDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,

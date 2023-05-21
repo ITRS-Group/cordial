@@ -42,7 +42,7 @@ var helpDocCmd = &cobra.Command{
 	Use:          "fa2",
 	GroupID:      cmd.CommandGroupComponents,
 	Aliases:      []string{"rm"},
-	Short:        "Help for Fix Analyser 2",
+	Short:        "Fix Analyser 2",
 	Long:         fa2Description,
 	SilenceUsage: true,
 }

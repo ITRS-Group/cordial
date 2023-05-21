@@ -1,6 +1,6 @@
 # `geneos fileagent`
 
-Help for fileagent
+File Agent
 
 ```text
 geneos fileagent
