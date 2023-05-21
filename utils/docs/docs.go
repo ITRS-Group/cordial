@@ -41,10 +41,10 @@ type docs struct {
 }
 
 var doclist = []docs{
-	{dv2email.DV2EMAILCmd, "../tools/dv2email/docs"},
+	{dv2email.DV2EMAILCmd, "../../tools/dv2email/docs"},
 
-	{snowCmd.RootCmd, "../integrations/servicenow/docs"},
-	{pdCmd.RootCmd, "../integrations/pagerduty/docs"},
+	{snowCmd.RootCmd, "../../integrations/servicenow/docs"},
+	{pdCmd.RootCmd, "../../integrations/pagerduty/docs"},
 }
 
 func main() {

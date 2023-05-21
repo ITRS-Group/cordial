@@ -33,9 +33,9 @@ examples/api/api
 cordial.code-workspace
 integrations/servicenow/servicenow.yaml
 integrations/pagerduty/pagerduty
-docs/docs
 .vscode
 tools/sso-diag/sso-diag
 tools/decode-aes256/decode-aes256
 tools/dv2email/dv2email
 tools/geneos/utils/docs/docs
+utils/docs/docs
