@@ -50,7 +50,4 @@ var packageCmd = &cobra.Command{
 	},
 	DisableFlagParsing:    true,
 	DisableFlagsInUseLine: true,
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		return cmd.RunE(command.Root(), []string{"package", "ls"}, args)
-	},
 }

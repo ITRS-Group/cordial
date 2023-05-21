@@ -1,9 +1,11 @@
 # `geneos config` Subsystem Commands
 
 The commands in the `config` subsystem allow you to control the
-environment of the `geneos` program itself. Please see the descriptions
-of the commands below for more information.
+environment of the `geneos` program itself.
 
-If you run this command directly then you will either be shown the
-output of `geneos config show` or `geneos config set [ARGS]` if you
-supply any further arguments that contain an "=".
+`config show` will display the configuration.
+
+`config set` will set parameters.
+
+`config unset` will unset (remove) parameters.
+

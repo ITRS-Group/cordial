@@ -153,17 +153,17 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 	return
 }
 
-// unarchive unpacks the gzipped, open archive passed as an io.Reader on
-// the host given for the component. If there is an error then the
-// caller must close the io.Reader
-func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ...Options) (dir string, err error) {
+// unarchive unpacks the gzipped archive passed as an io.Reader on the
+// host given for the component. If there is an error then the caller
+// must close the io.Reader
+func unarchive(h *Host, ct *Component, archive io.Reader, filename string, options ...Options) (dir string, err error) {
 	var version string
 
 	opts := EvalOptions(options...)
 
 	if opts.override == "" {
 		var ctFromFile *Component
-		ctFromFile, version, err = FilenameToComponent(filename)
+		ctFromFile, version, err = filenameToComponent(filename)
 		// check the component in the filename
 		// special handling for SANs
 		switch ct.Name {
@@ -202,15 +202,15 @@ func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ..
 		return
 	}
 
-	t, err := gzip.NewReader(gz)
+	var fnname func(string) string
+
+	t, err := gzip.NewReader(archive)
 	if err != nil {
 		// cannot gunzip file
 		return
 	}
 	defer t.Close()
-
-	var name string
-	var fnname func(string) string
+	t.Multistream(false)
 
 	switch ct.Name {
 	case "webserver":
@@ -229,7 +229,22 @@ func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ..
 		}
 	}
 
+	untar(h, basedir, t, fnname)
+
+	fmt.Printf("installed %q to %q\n", filename, h.Path(basedir))
+	options = append(options, Version(version))
+	// if opts.doupdate {
+	// 	return h.Path(basedir), nil
+	// }
+	return h.Path(basedir), Update(h, ct, options...)
+}
+
+// untar the archive from an io.Reader onto host h in directory dir.
+// Call stripPrefix for each file to remove configurable prefix
+func untar(h *Host, dir string, t io.Reader, stripPrefix func(string) string) (err error) {
+	var name string
 	tr := tar.NewReader(t)
+
 	for {
 		var hdr *tar.Header
 		hdr, err = tr.Next()
@@ -240,32 +255,33 @@ func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ..
 		if err != nil {
 			return
 		}
-		// strip leading component name (XXX - except webserver)
+
 		// do not trust tar archives to contain safe paths
 
-		if name = fnname(hdr.Name); name == "" {
+		if name = stripPrefix(hdr.Name); name == "" {
 			continue
 		}
 		if name, err = CleanRelativePath(name); err != nil {
 			return
 		}
-		fullpath := path.Join(basedir, name)
+		fullpath := path.Join(dir, name)
 		switch hdr.Typeflag {
 		case tar.TypeReg:
 			// check (and created) containing directories - account for munged tar files
 			dir := path.Dir(fullpath)
 			if err = h.MkdirAll(dir, 0775); err != nil {
-				return "", err
+				return
 			}
 
 			var out io.WriteCloser
 			if out, err = h.Create(fullpath, hdr.FileInfo().Mode()); err != nil {
-				return "", err
+				return
 			}
-			n, err := io.Copy(out, tr)
+			var n int64
+			n, err = io.Copy(out, tr)
 			if err != nil {
 				out.Close()
-				return "", err
+				return
 			}
 			if n != hdr.Size {
 				log.Error().Msgf("lengths different: %s %d", hdr.Size, n)
@@ -293,10 +309,7 @@ func unarchive(h *Host, ct *Component, filename string, gz io.Reader, options ..
 			log.Warn().Msgf("unsupported file type %c\n", hdr.Typeflag)
 		}
 	}
-
-	fmt.Printf("installed %q to %q\n", filename, h.Path(basedir))
-	options = append(options, Version(version))
-	return h.Path(basedir), Update(h, ct, options...)
+	return
 }
 
 // openRemoteArchive locates and opens a remote software archive file
@@ -456,8 +469,14 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 	}
 
 	if resp.StatusCode > 299 {
-		err = fmt.Errorf("cannot access %s package at %q version %s: %s", ct, source, opts.version, resp.Status)
 		resp.Body.Close()
+		switch resp.StatusCode {
+		case 404:
+			fmt.Printf("cannot find %s package that matches version %s\n", ct, opts.version)
+			err = fs.ErrNotExist
+		default:
+			err = fmt.Errorf("cannot access %s package at %q version %s: %s", ct, source, opts.version, resp.Status)
+		}
 		return
 	}
 
@@ -512,7 +531,7 @@ func LatestArchive(r *Host, dir, filterString string, filterFunc func(os.DirEntr
 		n := d.Name()
 
 		// check if this is a valid release archive
-		ct, v, err := FilenameToComponent(n)
+		ct, v, err := filenameToComponent(n)
 		if err == nil {
 			log.Debug().Msgf("found archive of %s with version %s", ct, v)
 			nv, _ := version.NewVersion(v)

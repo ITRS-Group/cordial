@@ -1,0 +1,51 @@
+# `geneos package`
+
+Package commands subsystem
+
+
+## Commands
+
+* [`geneos package install`](geneos_package_install.md)	 - Install Geneos releases
+* [`geneos package list`](geneos_package_list.md)	 - List packages available for update command
+* [`geneos package uninstall`](geneos_package_uninstall.md)	 - Uninstall Geneos releases
+* [`geneos package update`](geneos_package_update.md)	 - Update the active version of installed Geneos package
+
+# `geneos package` Subsystem Commands
+
+The `geneos package` commands help you manage Geneos software releases.
+
+To download and unarchive releases use `geneos package install`. You can
+also install releases from files you have already downloaded.
+
+Use `geneos package list` to show installed versions and which are
+linked to which base names (symlinks like `active_prod`).
+
+The `geneos package update` command allows you to select which installed
+releases to link to which base names and to create new base names.
+
+Finally use `geneos package uninstall` to remove installed packages.
+
+
+
+The matching of VERSION is based on directory names of the form:
+
+`[GA]X.Y.Z`
+
+Where X, Y, Z are each ordered in ascending numerical order. If a
+directory starts `GA` it will be selected over a directory with the same
+numerical versions. All other directories name formats will result in
+unexpected behaviour. If multiple installed versions match then the
+lexically latest match will be used. The chosen match may be much higher
+than that given on the command line as only installed packages are used
+in the search.
+
+### Options inherited from parent commands
+
+```text
+  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+```
+
+## SEE ALSO
+
+* [geneos](geneos.md)	 - Take control of your Geneos environments
