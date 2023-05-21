@@ -43,13 +43,6 @@ for structured parameters the `NAME` is case-sensitive.
                            (Repeat as required, san only)
 ```
 
-### Options inherited from parent commands
-
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
-
 ## Examples
 
 ```bash

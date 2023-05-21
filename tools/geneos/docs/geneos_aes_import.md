@@ -42,13 +42,6 @@ Instance names can be given to indirectly identify the component type.
   -k, --keyfile PATH|URL|-   Keyfile to use PATH|URL|- (default /home/peter/.config/geneos/keyfile.aes)
 ```
 
-### Options inherited from parent commands
-
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
-
 ## Examples
 
 ```bash

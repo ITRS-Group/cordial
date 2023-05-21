@@ -32,16 +32,18 @@ import (
 // Help command and text to hook into Cobra command tree
 
 //go:embed README.md
-var longDescription string
+var ac2Description string
 
 func init() {
 	cmd.GeneosCmd.AddCommand(helpDocCmd)
 }
 
 var helpDocCmd = &cobra.Command{
-	Use:          "ac2",
-	Aliases:      []string{"rm"},
-	Short:        "Help for ac2",
-	Long:         longDescription,
-	SilenceUsage: true,
+	Use:                   "ac2",
+	GroupID:               cmd.CommandGroupComponents,
+	Short:                 "Help for ac2",
+	Long:                  ac2Description,
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Run:                   cmd.GeneosCmd.HelpFunc(),
 }

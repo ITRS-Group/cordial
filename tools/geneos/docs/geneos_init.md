@@ -3,7 +3,7 @@
 Initialise a Geneos installation
 
 ```text
-geneos init [flags] [USERNAME] [DIRECTORY]
+geneos init [flags] [DIRECTORY]
 ```
 
 ## Commands
@@ -16,35 +16,49 @@ geneos init [flags] [USERNAME] [DIRECTORY]
 
 # `geneos init` Subsystem Commands
 
-Initialise a Geneos installation by creating the directory structure and
-user configuration file, with the optional username and directory.
+The `init` commands initialise your Geneos install environment ready to
+run Geneos instances.
 
-- `USERNAME` refers to the Linux username under which the `geneos`
-  utility and all Geneos component instances will be run.
-- `DIRECTORY` refers to the base / home directory under which all Geneos
-  binaries, instances and working directories will be hosted. When
-  specified in the `geneos init` command, DIRECTORY:
-  - Must be defined as an absolute path. This syntax is used to
-    distinguish it from USERNAME which is an optional parameter. If
-    undefined, `${HOME}/geneos` will be used, or `${HOME}` in case the
-	last component of `${HOME}` is equal to `geneos`.
-  - Must have a parent directory that is writeable by the user running
-    the `geneos init` command or by the specified USERNAME.
-  - Must be a non-existing directory or an empty directory (except for
-	the "dot" files). **Note**:  In case DIRECTORY is an existing
-	directory, you can use option `-F` to force the use of this directory.
+On it's own the `init` command will create a new directory (or use an
+existing one if it's considered empty) based on the options used. By
+default it will create a directory named `geneos` in your user's home
+directory unless your home directory ends in `geneos` (e.g.
+`/home/geneos`) in which case it tries that to avoid stuttering in the
+path.
 
-The generic command syntax is as follows. ` geneos init [flags]
-[USERNAME] [DIRECTORY] `
+The installation directory is considered empty if it exists but only
+contains `dot` files and directories - so if you are running the `geneos
+init` command as a newly created user called `geneos` should work as
+expected.
 
-When run with superuser privileges a USERNAME must be supplied and only
-the configuration file for that user is created. ` sudo geneos init
-geneos /opt/itrs `
+If you want to use an existing directory, including adopting an existing
+installation, then use the `--force`/`-F` option. The `init` command
+will create any missing directories but will not remove or change
+existing files. If you adopt an existing installation then see the `init
+templates` command for how to add default template files to the
+installation for use by new instances.
 
-**Note**:
-- The geneos directory hierarchy / structure / layout is defined at
-  [Directory
-  Layout](https://github.com/ITRS-Group/cordial/tree/main/tools/geneos#directory-layout).
+To specify a directory pass it as the only argument. It must be an
+absolute path.
+
+Note: The `init` commands no longer support setting a `USERNAME` and
+will return an error. All commands must be run as the user that will own
+and manage the Geneos environment.
+
+To also add Geneos components and install software releases you can use
+one of the pre-defined commands:
+
+`package init demo`
+
+`package init san`
+
+`package init floating`
+
+`package init all`
+
+`package init template`
+
+...
 
 ## Adopting An Existing Installation
 
@@ -200,8 +214,8 @@ geneos ps
   -c, --importcert string         signing certificate file with optional embedded private key
   -k, --importkey string          signing private key file
   -N, --nexus                     Download from nexus.itrsgroup.com. Requires ITRS internal credentials
-  -p, --snapshots                 Download from nexus snapshots. Requires -N
-  -V, --version string            Download matching version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
+  -S, --snapshots                 Download from nexus snapshots. Requires -N
+  -V, --version VERSION           Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
   -u, --username string           Username for downloads
   -w, --gatewaytemplate string    A gateway template file
   -s, --santemplate string        SAN template file
@@ -210,20 +224,10 @@ geneos ps
                                   (Repeat as required)
 ```
 
-### Options inherited from parent commands
-
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
-
 ## Examples
 
 ```bash
-# To create a Geneos tree under home area
 geneos init
-# To create a new Geneos tree owned by user `geneos` under `/opt/itrs`
-sudo geneos init geneos /opt/itrs
 
 ```
 

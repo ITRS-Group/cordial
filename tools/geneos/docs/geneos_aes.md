@@ -2,9 +2,6 @@
 
 Manage Geneos compatible key files and encode/decode passwords
 
-```text
-geneos aes
-```
 
 ## Commands
 
@@ -21,10 +18,10 @@ geneos aes
 The `aes` subsystem allows you to manage AES256 keyfiles and perform
 encryption and decryption.
 
-
-The `geneos aes` commands provide tools to manage Geneos AES256 key
-files as [documented
-here](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm).
+The `aes` commands provide tools to manage Geneos AES256 key files as
+documented in the [Secure
+Passwords](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm)
+section of the manuals.
 
 In addition to the functionality built-in to Geneos as described in the
 Gateway documentation these encoded password can also be included in
@@ -90,13 +87,6 @@ are not visible to users.
   Update the existing keyfile in use by rotating the currently
   configured keyfile to previous-keyfile. Requires GA6.x.
   
-### Options inherited from parent commands
-
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
-
 ## SEE ALSO
 
 * [geneos](geneos.md)	 - Take control of your Geneos environments

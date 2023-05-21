@@ -39,9 +39,11 @@ func init() {
 }
 
 var helpDocCmd = &cobra.Command{
-	Use:          "netprobe",
-	Aliases:      []string{"rm"},
-	Short:        "Help for Netprobes",
-	Long:         longDescription,
-	SilenceUsage: true,
+	Use:                   "netprobe",
+	GroupID:               cmd.CommandGroupComponents,
+	Short:                 "Help for Netprobes",
+	Long:                  longDescription,
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Run:                   cmd.GeneosCmd.HelpFunc(),
 }

@@ -39,13 +39,6 @@ defined, it is set to the same as the local Geneos root directory.
   -k, --keyfile KEYFILE      Keyfile (default /home/peter/.config/geneos/keyfile.aes)
 ```
 
-### Options inherited from parent commands
-
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
-
 ## Examples
 
 ```bash

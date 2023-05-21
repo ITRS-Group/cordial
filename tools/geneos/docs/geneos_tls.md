@@ -2,9 +2,6 @@
 
 Manage certificates for secure connections
 
-```text
-geneos tls
-```
 
 ## Commands
 
@@ -20,23 +17,18 @@ geneos tls
 Manage certificates for [Geneos Secure
 Communications](https://docs.itrsgroup.com/docs/geneos/current/SSL/ssl_ug.html).
 
-Sub-commands allow for initialisation, create and renewal of
-certificates as well as listing details and copying a certificate chain
-to all other hosts.
+Commands allow for initialisation, create and renewal of certificates as
+well as listing details and copying a certificate chain to all other
+hosts.
 
-
-The `geneos tls` command provides a number of subcommands to create and
-manage certificates and instance configurations for encrypted
-connections.
-
-Once enabled then all new instances will also have certificates created
-and configuration set to use secure (encrypted) connections where
-possible.
+Once initialised then all new instances will also have certificates
+created and their configuration set to use secure (encrypted) connections
+where possible.
 
 The root and signing certificates are only kept on the local server and
-the `tls sync` command can be used to copy a `chain.pem` file to remote
-servers. Keys are never copied to remote servers by any built-in
-commands.
+the `sync` command can be used to copy a `chain.pem` file to remote
+servers. Keys, which should be kept secure, are never copied to remote
+servers by any commands.
 
 * `geneos tls init`
 
@@ -97,13 +89,6 @@ commands.
 * `geneos tls sync`
 
   Copies chain.pem to all remotes
-
-### Options inherited from parent commands
-
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
 
 ## SEE ALSO
 

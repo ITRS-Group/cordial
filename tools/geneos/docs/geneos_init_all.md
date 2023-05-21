@@ -43,28 +43,6 @@ installed.
                                       (Repeat as required, san and floating only)
 ```
 
-### Options inherited from parent commands
-
-```text
-  -G, --config string             config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -e, --env NAME=VALUE            An environment variable for instance start-up
-                                  (Repeat as required)
-  -f, --floatingtemplate string   Floating probe template file
-  -F, --force                     Be forceful, ignore existing directories.
-  -w, --gatewaytemplate string    A gateway template file
-  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-  -c, --importcert string         signing certificate file with optional embedded private key
-  -k, --importkey string          signing private key file
-  -l, --log                       Follow logs after starting instance(s)
-  -C, --makecerts                 Create default certificates for TLS support
-  -n, --name string               Use name for instances and configurations instead of the hostname
-  -N, --nexus                     Download from nexus.itrsgroup.com. Requires ITRS internal credentials
-  -s, --santemplate string        SAN template file
-  -p, --snapshots                 Download from nexus snapshots. Requires -N
-  -u, --username string           Username for downloads
-  -V, --version string            Download matching version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
-```
-
 ## Examples
 
 ```bash

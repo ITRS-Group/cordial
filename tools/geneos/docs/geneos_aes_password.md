@@ -22,13 +22,6 @@ To encode a plaintext password using a specific key file please use the
   -s, --source PATH|URL|-    External source for plaintext PATH|URL|-
 ```
 
-### Options inherited from parent commands
-
-```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
-
 ## SEE ALSO
 
 * [geneos aes](geneos_aes.md)	 - Manage Geneos compatible key files and encode/decode passwords

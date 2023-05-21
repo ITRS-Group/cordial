@@ -32,16 +32,18 @@ import (
 // Help command and text to hook into Cobra command tree
 
 //go:embed README.md
-var longDescription string
+var sanDescription string
 
 func init() {
 	cmd.GeneosCmd.AddCommand(helpDocCmd)
 }
 
 var helpDocCmd = &cobra.Command{
-	Use:          "san",
-	Aliases:      []string{"rm"},
-	Short:        "Help for Self-Announcing Netprobes",
-	Long:         longDescription,
-	SilenceUsage: true,
+	Use:                   "san",
+	GroupID:               cmd.CommandGroupComponents,
+	Short:                 "Help for Self-Announcing Netprobes",
+	Long:                  sanDescription,
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Run:                   cmd.GeneosCmd.HelpFunc(),
 }

@@ -32,16 +32,18 @@ import (
 // Help command and text to hook into Cobra command tree
 
 //go:embed README.md
-var longDescription string
+var fileagentDescription string
 
 func init() {
 	cmd.GeneosCmd.AddCommand(helpDocCmd)
 }
 
 var helpDocCmd = &cobra.Command{
-	Use:          "fileagent",
-	Aliases:      []string{"rm"},
-	Short:        "Help for fileagent",
-	Long:         longDescription,
-	SilenceUsage: true,
+	Use:                   "fileagent",
+	GroupID:               cmd.CommandGroupComponents,
+	Short:                 "Help for fileagent",
+	Long:                  fileagentDescription,
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Run:                   cmd.GeneosCmd.HelpFunc(),
 }

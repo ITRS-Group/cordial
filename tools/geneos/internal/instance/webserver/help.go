@@ -39,9 +39,11 @@ func init() {
 }
 
 var helpDocCmd = &cobra.Command{
-	Use:          "webserver",
-	Aliases:      []string{"rm"},
-	Short:        "Help for Web Dashboard Servers",
-	Long:         longDescription,
-	SilenceUsage: true,
+	Use:                   "webserver",
+	GroupID:               cmd.CommandGroupComponents,
+	Short:                 "Help for Web Dashboard Servers",
+	Long:                  longDescription,
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Run:                   cmd.GeneosCmd.HelpFunc(),
 }
