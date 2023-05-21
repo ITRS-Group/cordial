@@ -1,4 +1,4 @@
-Show the configuration for all matching instances.
+Show the configuration for matching instances.
 
 At the moment this is in JSON format and is output as a single,
 concatenated JSON array of object literals, one per instance.
@@ -12,3 +12,9 @@ set` command is just `licdsecure`. Confusingly there is a
 `configuration.config` object, used for template support. Other run-time
 information is shown under the `instance` key and includes the instance
 name, the host it is configured on, it's type and so on.
+
+By default the interpolated ("expandable" values are expanded) values
+are shown. The see the underlying value use the `--raw`/`-r` option.
+
+No values that are encrypted are shown decrypted with or without the
+`--raw`/`-r` option.

@@ -30,6 +30,7 @@ type expandOptions struct {
 	trimPrefix       bool
 	trimSpace        bool
 	rawstring        bool
+	nodecode         bool
 	defaultValue     any
 }
 
@@ -96,6 +97,13 @@ func (c *Config) DefaultExpandOptions(options ...ExpandOptions) {
 func NoExpand() ExpandOptions {
 	return func(e *expandOptions) {
 		e.rawstring = true
+	}
+}
+
+// NoDecode disables the expansion of encoded values.
+func NoDecode() ExpandOptions {
+	return func(e *expandOptions) {
+		e.nodecode = true
 	}
 }
 

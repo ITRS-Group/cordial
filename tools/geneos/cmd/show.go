@@ -102,7 +102,7 @@ func showInstance(c geneos.Instance, params []string) (result interface{}, err e
 	}
 
 	// XXX wrap in location and type
-	as := nv.ExpandAllSettings()
+	as := nv.ExpandAllSettings(config.NoDecode())
 	if showCmdRaw {
 		as = nv.AllSettings()
 	}
