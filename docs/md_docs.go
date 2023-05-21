@@ -73,7 +73,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 		groups := cmd.Groups()
 
 		if len(groups) > 0 {
-			for _, group := range groups {
+			for i, group := range groups {
 				cmdHeader := false
 				for _, child := range children {
 					if child.GroupID != group.ID {
@@ -91,6 +91,9 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 					link := cname + ".md"
 					link = strings.ReplaceAll(link, " ", "_")
 					buf.WriteString(fmt.Sprintf("* [`%s`](%s)\t - %s\n", cname, linkHandler(link), child.Short))
+				}
+				if i != len(groups)-1 {
+					buf.WriteString("\n")
 				}
 			}
 		} else {
@@ -113,7 +116,6 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 	}
 
 	if len(cmd.Long) > 0 {
-		// buf.WriteString("## Details\n\n")
 		buf.WriteString(cmd.Long + "\n")
 	}
 
@@ -140,20 +142,6 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 				}
 			})
 		}
-
-		// children := cmd.Commands()
-		// sort.Sort(byName(children))
-
-		// for _, child := range children {
-		// 	if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
-		// 		continue
-		// 	}
-		// 	cname := name + " " + child.Name()
-		// 	link := cname + ".md"
-		// 	link = strings.ReplaceAll(link, " ", "_")
-		// 	buf.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", cname, linkHandler(link), child.Short))
-		// }
-		// buf.WriteString("\n")
 	}
 	_, err := buf.WriteTo(w)
 	return err

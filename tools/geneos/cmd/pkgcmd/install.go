@@ -89,6 +89,8 @@ geneos install netprobe -b active_dev -U
 			}
 		}
 
+		h := geneos.GetHost(cmd.Hostname)
+
 		if packageInstallCmdUsername == "" {
 			packageInstallCmdUsername = config.GetString(config.Join("download", "username"))
 		}
@@ -107,6 +109,18 @@ geneos install netprobe -b active_dev -U
 			packageInstallCmdPassword, _ = config.ReadPasswordInput(false, 0)
 		}
 
+		// base options
+		options := []geneos.Options{
+			geneos.Basename(packageInstallCmdBase),
+			geneos.DoUpdate(packageInstallCmdUpdate),
+			geneos.Force(packageInstallCmdUpdate),
+			geneos.LocalOnly(packageInstallCmdLocal),
+			geneos.NoSave(packageInstallCmdNoSave),
+			geneos.OverrideVersion(packageInstallCmdOverride),
+			geneos.Password(packageInstallCmdPassword),
+			geneos.Username(packageInstallCmdUsername),
+		}
+
 		// if we have a component on the command line then use an archive in packages/downloads
 		// or download from official web site unless -L is given. version numbers checked.
 		// default to 'latest'
@@ -116,17 +130,7 @@ geneos install netprobe -b active_dev -U
 		if ct != nil || len(args) == 0 {
 			log.Debug().Msgf("installing %q version of %s to %s host(s)", packageInstallCmdVersion, ct, cmd.Hostname)
 
-			options := []geneos.Options{
-				geneos.Version(packageInstallCmdVersion),
-				geneos.Basename(packageInstallCmdBase),
-				geneos.NoSave(packageInstallCmdNoSave),
-				geneos.LocalOnly(packageInstallCmdLocal),
-				geneos.DoUpdate(packageInstallCmdUpdate),
-				geneos.Force(packageInstallCmdUpdate),
-				geneos.OverrideVersion(packageInstallCmdOverride),
-				geneos.Username(packageInstallCmdUsername),
-				geneos.Password(packageInstallCmdPassword),
-			}
+			options = append(options, geneos.Version(packageInstallCmdVersion))
 			if packageInstallCmdSnapshot {
 				packageInstallCmdNexus = true
 				options = append(options, geneos.UseSnapshots())
@@ -135,25 +139,15 @@ geneos install netprobe -b active_dev -U
 				options = append(options, geneos.UseNexus())
 			}
 			log.Debug().Msgf("install to %s with opts: %#v", cmd.Hostname, options)
-			err = install(ct, cmd.Hostname, options...)
+			err = install(h, ct, options...)
 			return err
 		}
 
-		// work through command line args and try to install them using the naming format
-		// of standard downloads - fix versioning
+		// work through command line args and try to install each
+		// argument using the naming format of standard downloads
 		for _, source := range args {
-			options := []geneos.Options{
-				geneos.Source(source),
-				geneos.Basename(packageInstallCmdBase),
-				geneos.NoSave(packageInstallCmdNoSave),
-				geneos.LocalOnly(packageInstallCmdLocal),
-				geneos.DoUpdate(packageInstallCmdUpdate),
-				geneos.Force(packageInstallCmdUpdate),
-				geneos.OverrideVersion(packageInstallCmdOverride),
-				geneos.Username(packageInstallCmdUsername),
-				geneos.Password(packageInstallCmdPassword),
-			}
-			if err = install(ct, cmd.Hostname, options...); err != nil {
+			o := append(options, geneos.Source(source))
+			if err = install(h, ct, o...); err != nil {
 				return err
 			}
 		}
@@ -161,17 +155,23 @@ geneos install netprobe -b active_dev -U
 	},
 }
 
-func install(ct *geneos.Component, target string, options ...geneos.Options) (err error) {
-	for _, h := range geneos.Match(target) {
+func install(h *geneos.Host, ct *geneos.Component, options ...geneos.Options) (err error) {
+	for _, h := range h.OrList() {
 		if err = ct.MakeComponentDirs(h); err != nil {
 			return err
 		}
-		if err = geneos.Install(h, ct, options...); err != nil {
-			if errors.Is(err, fs.ErrExist) {
-				err = nil
-				continue
+		for _, ct := range ct.OrList(geneos.RealComponents()...) {
+			if err = geneos.Install(h, ct, options...); err != nil {
+				if errors.Is(err, fs.ErrExist) {
+					err = nil
+					continue
+				}
+				if errors.Is(err, fs.ErrNotExist) && packageInstallCmdVersion != "latest" {
+					err = nil
+					continue
+				}
+				return err
 			}
-			return err
 		}
 	}
 	return

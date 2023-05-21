@@ -51,7 +51,4 @@ var hostCmd = &cobra.Command{
 	},
 	DisableFlagParsing:    true,
 	DisableFlagsInUseLine: true,
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		return cmd.RunE(command.Root(), []string{"host", "ls"}, args)
-	},
 }

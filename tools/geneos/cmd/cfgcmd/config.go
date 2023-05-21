@@ -25,7 +25,6 @@ package cfgcmd
 
 import (
 	_ "embed"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -56,16 +55,16 @@ geneos config geneos=/opt/itrs
 	},
 	DisableFlagParsing:    true,
 	DisableFlagsInUseLine: true,
-	RunE: func(command *cobra.Command, args []string) (err error) {
-		var doSet bool
-		for _, a := range args {
-			if strings.Contains(a, "=") {
-				doSet = true
-			}
-		}
-		if doSet {
-			return cmd.RunE(command.Root(), []string{"config", "set"}, args)
-		}
-		return cmd.RunE(command.Root(), []string{"config", "show"}, args)
-	},
+	// RunE: func(command *cobra.Command, args []string) (err error) {
+	// 	var doSet bool
+	// 	for _, a := range args {
+	// 		if strings.Contains(a, "=") {
+	// 			doSet = true
+	// 		}
+	// 	}
+	// 	if doSet {
+	// 		return cmd.RunE(command.Root(), []string{"config", "set"}, args)
+	// 	}
+	// 	return cmd.RunE(command.Root(), []string{"config", "show"}, args)
+	// },
 }

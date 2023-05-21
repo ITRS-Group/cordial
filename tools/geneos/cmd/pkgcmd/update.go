@@ -46,7 +46,7 @@ func init() {
 
 	packageUpdateCmd.Flags().StringVarP(&packageUpdateCmdBase, "base", "b", "active_prod", "Base name for the symlink, defaults to active_prod")
 	packageUpdateCmd.Flags().BoolVarP(&packageUpdateCmdForce, "force", "F", false, "Update all protected instances")
-	packageUpdateCmd.Flags().BoolVarP(&packageUpdateCmdRestart, "restart", "R", false, "Restart all instances that may have an update applied")
+	packageUpdateCmd.Flags().BoolVarP(&packageUpdateCmdRestart, "restart", "R", true, "Restart all instances that may have an update applied")
 
 	packageUpdateCmd.Flags().SortFlags = false
 }
@@ -60,7 +60,7 @@ var packageUpdateCmd = &cobra.Command{
 	Long:  packageUpdateCmdDescription,
 	Example: strings.ReplaceAll(`
 geneos package update gateway -b active_prod
-geneos package update gateway -b active_dev 5.11
+geneos package update gateway -b active_dev -V 5.11
 geneos package update
 geneos package update netprobe 5.13.2
 `, "|", "`"),
@@ -75,29 +75,34 @@ geneos package update netprobe 5.13.2
 
 		for _, p := range params {
 			if strings.HasPrefix(p, "@") {
-				return fmt.Errorf("@HOST not valid here, perhaps you meant `-H HOST`?")
+				return fmt.Errorf("@HOST not valid here, please use the `--host`/`-H` option")
 			}
 		}
 
-		r := geneos.GetHost(cmd.Hostname)
+		h := geneos.GetHost(cmd.Hostname)
 
 		version := packageUpdateCmdVersion
-		cs := instance.MatchKeyValue(r, ct, "protected", "true")
+		cs := instance.MatchKeyValue(h, ct, "protected", "true")
 		if len(cs) > 0 && !packageUpdateCmdForce {
 			fmt.Println("There are one or more protected instances using the current version. Use `--force` to override")
 		}
 		if len(args) > 0 {
 			version = args[0]
 		}
-		options := []geneos.Options{geneos.Version(version), geneos.Basename(packageUpdateCmdBase), geneos.Force(true), geneos.Restart(packageUpdateCmdRestart)}
 		if packageUpdateCmdRestart {
-			cs := instance.MatchKeyValue(r, ct, "version", packageUpdateCmdBase)
+			cs := instance.MatchKeyValue(h, ct, "version", packageUpdateCmdBase)
 			for _, c := range cs {
-				instance.Stop(c, packageUpdateCmdForce, false)
+				if err = instance.Stop(c, packageUpdateCmdForce, false); err != nil {
+					// stop failed?
+				}
 				defer instance.Start(c)
 			}
 		}
-		if err = geneos.Update(r, ct, options...); err != nil && errors.Is(err, os.ErrNotExist) {
+		if err = geneos.Update(h, ct,
+			geneos.Version(version),
+			geneos.Basename(packageUpdateCmdBase),
+			geneos.Force(true),
+			geneos.Restart(packageUpdateCmdRestart)); err != nil && errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
 		return

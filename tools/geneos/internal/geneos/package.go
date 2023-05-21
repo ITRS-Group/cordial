@@ -38,9 +38,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// split an package archive name into type and version
-var archiveRE = regexp.MustCompile(`^geneos-(web-server|fixanalyser2-netprobe|file-agent|\w+)-([\w\.-]+?)[\.-]?linux`)
-
 // list of platform in release package names
 var platformToMetaList = []string{
 	"el8",
@@ -177,7 +174,7 @@ func getVersions(r *Host, ct *Component) (versions map[string]*version.Version, 
 	return
 }
 
-func AdjacentVersions(r *Host, ct *Component, current string) (prev string, next string, err error) {
+func adjacentVersions(r *Host, ct *Component, current string) (prev string, next string, err error) {
 	if current == "" {
 		log.Debug().Msg("current version must be set, ignoring")
 		return
@@ -215,8 +212,8 @@ func AdjacentVersions(r *Host, ct *Component, current string) (prev string, next
 	return
 }
 
-// PreviousVersion returns the latest installed package that is earlier than version current
-func PreviousVersion(r *Host, ct *Component, current string) (prev string, err error) {
+// previousVersion returns the latest installed package that is earlier than version current
+func previousVersion(r *Host, ct *Component, current string) (prev string, err error) {
 	if current == "" {
 		log.Debug().Msg("current version must be set, ignoring")
 		return
@@ -244,7 +241,7 @@ func PreviousVersion(r *Host, ct *Component, current string) (prev string, err e
 	return
 }
 
-func NextVersion(r *Host, ct *Component, current string) (next string, err error) {
+func nextVersion(r *Host, ct *Component, current string) (next string, err error) {
 	if current == "" {
 		log.Debug().Msg("current version must be set, ignoring")
 		return
@@ -368,60 +365,27 @@ func CompareVersion(version1, version2 string) int {
 	return strings.Compare(v1p[0], v2p[0])
 }
 
-// Install installs a Geneos software release. The host must be given.
-// If a component type is passed in ct then only that component release
-// is installed.
+// Install a Geneos software release. The destination host h and the
+// component type ct must be given. options controls behaviour like
+// local only and restarts of affected instances.
 func Install(h *Host, ct *Component, options ...Options) (err error) {
-	if h == ALL {
+	if h == ALL || ct == nil {
 		return ErrInvalidArgs
-	}
-	opts := EvalOptions(options...)
-
-	if ct == nil {
-		// install only for components that do not have a related type
-		// but then run update for all components that do have related
-		// types afterwards
-		//
-		// this is *unnecessary* but keeping in case we split the way
-		// subcomponents are handled with base links later
-		cts := RealComponents()
-		sort.Slice(cts, func(i, j int) bool {
-			return len(cts[i].RelatedTypes) < len(cts[j].RelatedTypes)
-		})
-
-		for _, ct := range cts {
-			if ct.RelatedTypes != nil {
-				continue
-			}
-			if err = Install(h, ct, options...); err != nil {
-				if errors.Is(err, fs.ErrExist) {
-					continue
-				}
-				return
-			}
-		}
-
-		for _, ct := range cts {
-			if len(ct.RelatedTypes) > 0 && opts.doupdate {
-				log.Debug().Msgf("trying to update %s", ct)
-				Update(h, ct, options...)
-			}
-		}
-		return nil
 	}
 
 	options = append(options, PlatformID(h.GetString(h.Join("osinfo", "platform_id"))))
 
+	opts := EvalOptions(options...)
+
 	// open and unarchive if given a tar.gz
 
-	reader, filename, err := openArchive(ct, options...)
+	archive, filename, err := openArchive(ct, options...)
 	if err != nil {
-		return err
+		return
 	}
-	defer reader.Close()
+	defer archive.Close()
 
-	var dir string
-	if dir, err = unarchive(h, ct, filename, reader, options...); err != nil {
+	if dir, err := unarchive(h, ct, archive, filename, options...); err != nil {
 		if errors.Is(err, fs.ErrExist) {
 			fmt.Printf("%s on %s version %q already exists as %q\n", ct, h, opts.version, dir)
 			return err
@@ -435,7 +399,13 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 	return
 }
 
-func FilenameToComponent(filename string) (ct *Component, version string, err error) {
+// split an package archive name into type and version
+var archiveRE = regexp.MustCompile(`^geneos-(web-server|fixanalyser2-netprobe|file-agent|\w+)-([\w\.-]+?)[\.-]?linux`)
+
+// filenameToComponent transforms an archive filename and returns the
+// component and version or an error if the file format is not
+// recognised
+func filenameToComponent(filename string) (ct *Component, version string, err error) {
 	parts := archiveRE.FindStringSubmatch(filename)
 	if len(parts) != 3 {
 		err = fmt.Errorf("%q: %w", filename, ErrInvalidArgs)
