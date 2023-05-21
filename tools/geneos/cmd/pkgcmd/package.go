@@ -42,7 +42,7 @@ var packageCmdDescription string
 var packageCmd = &cobra.Command{
 	Use:     "package",
 	GroupID: cmd.CommandGroupSubsystems,
-	Short:   "Package commands subsystem",
+	Short:   "Package Operations",
 	Long:    packageCmdDescription,
 	Annotations: map[string]string{
 		"wildcard":     "false",

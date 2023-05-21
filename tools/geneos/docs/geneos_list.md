@@ -1,6 +1,6 @@
 # `geneos list`
 
-List instances
+List Instances
 
 ```text
 geneos list [flags] [TYPE] [NAME...]

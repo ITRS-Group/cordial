@@ -1,6 +1,6 @@
 # `geneos logout`
 
-Logout (remove credentials)
+Remove Credentials
 
 ```text
 geneos logout [flags] [DOMAIN...]

@@ -1,6 +1,6 @@
 # `geneos rebuild`
 
-Rebuild instance configuration files
+Rebuild Instance Configurations From Templates
 
 ```text
 geneos rebuild [flags] [TYPE] [NAME...]

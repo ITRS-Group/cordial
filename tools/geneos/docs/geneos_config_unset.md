@@ -14,4 +14,4 @@ considered valid to remove an non-existing key.
 
 ## SEE ALSO
 
-* [geneos config](geneos_config.md)	 - Configure the command environment
+* [geneos config](geneos_config.md)	 - Configure Command Behaviour

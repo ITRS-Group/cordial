@@ -49,7 +49,7 @@ var migrateCmdDescription string
 var migrateCmd = &cobra.Command{
 	Use:          "migrate [TYPE] [NAME...]",
 	GroupID:      CommandGroupConfig,
-	Short:        "Migrate configurations",
+	Short:        "Migrate Instance Configurations",
 	Long:         migrateCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

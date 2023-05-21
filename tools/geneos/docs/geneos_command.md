@@ -1,6 +1,6 @@
 # `geneos command`
 
-Show command line and environment for instances
+Show Instance Start-up Details
 
 ```text
 geneos command [TYPE] [NAME...] [flags]

@@ -55,7 +55,7 @@ var loginCmdDescription string
 var loginCmd = &cobra.Command{
 	Use:          "login [flags] [DOMAIN]",
 	GroupID:      CommandGroupCredentials,
-	Short:        "Store credentials related to Geneos",
+	Short:        "Enter Credentials",
 	Long:         loginCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

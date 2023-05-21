@@ -1,6 +1,6 @@
 # `geneos login`
 
-Store credentials related to Geneos
+Enter Credentials
 
 ```text
 geneos login [flags] [DOMAIN]

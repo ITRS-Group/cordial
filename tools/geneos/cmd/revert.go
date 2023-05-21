@@ -52,7 +52,7 @@ var revertCmdDescription string
 var revertCmd = &cobra.Command{
 	Use:          "revert [TYPE] [NAME...]",
 	GroupID:      CommandGroupConfig,
-	Short:        "Revert earlier migration of configuration files",
+	Short:        "Revert Migrated Instance Configuration",
 	Long:         revertCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

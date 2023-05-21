@@ -1,6 +1,6 @@
 # `geneos show`
 
-Show instance configuration
+Show Instance Configuration
 
 ```text
 geneos show [flags] [TYPE] [NAME...]

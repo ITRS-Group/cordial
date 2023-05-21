@@ -1,6 +1,6 @@
 # `geneos start`
 
-Start instances
+Start Instances
 
 ```text
 geneos start [flags] [TYPE] [NAME...]

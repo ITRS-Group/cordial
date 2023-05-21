@@ -52,4 +52,4 @@ geneos package update netprobe 5.13.2
 
 ## SEE ALSO
 
-* [geneos package](geneos_package.md)	 - Package commands subsystem
+* [geneos package](geneos_package.md)	 - Package Operations

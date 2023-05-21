@@ -30,4 +30,4 @@ geneos config set config.rebuild=always
 
 ## SEE ALSO
 
-* [geneos config](geneos_config.md)	 - Configure the command environment
+* [geneos config](geneos_config.md)	 - Configure Command Behaviour

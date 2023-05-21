@@ -1,6 +1,6 @@
 # `geneos import`
 
-Import files to an instance or a common directory
+Import Files To Instances Or Components
 
 ```text
 geneos import [flags] [TYPE] [NAME...] [DEST=]SOURCE...

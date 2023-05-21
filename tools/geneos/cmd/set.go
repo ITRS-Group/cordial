@@ -55,7 +55,7 @@ var setCmdDescription string
 var setCmd = &cobra.Command{
 	Use:     "set [flags] [TYPE] [NAME...] [KEY=VALUE...]",
 	GroupID: CommandGroupConfig,
-	Short:   "Set instance configuration parameters",
+	Short:   "Set Instance Parameters",
 	Long:    setCmdDescription,
 	Example: `
 geneos set gateway MyGateway licdsecure=false

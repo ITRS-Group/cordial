@@ -15,4 +15,4 @@ with matching private keys are imported.
 
 ## SEE ALSO
 
-* [geneos tls](geneos_tls.md)	 - Manage certificates for secure connections
+* [geneos tls](geneos_tls.md)	 - TLS Certificate Operations

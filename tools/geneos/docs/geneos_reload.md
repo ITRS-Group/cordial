@@ -1,6 +1,6 @@
 # `geneos reload`
 
-Reload configurations
+Reload Instance Configurations
 
 ```text
 geneos reload [TYPE] [NAME...] [flags]

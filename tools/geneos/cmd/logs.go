@@ -78,7 +78,7 @@ var logsCmdDescription string
 var logsCmd = &cobra.Command{
 	Use:          "logs [flags] [TYPE] [NAME...]",
 	GroupID:      CommandGroupView,
-	Short:        "View, search or follow logs",
+	Short:        "View Instance Logs",
 	Long:         logsCmdDescription,
 	Aliases:      []string{"log"},
 	SilenceUsage: true,

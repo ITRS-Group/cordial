@@ -73,7 +73,7 @@ var psCmdDescription string
 var psCmd = &cobra.Command{
 	Use:          "ps [flags] [TYPE] [NAMES...]",
 	GroupID:      CommandGroupView,
-	Short:        "Show running instances",
+	Short:        "List Running Instance Details",
 	Long:         psCmdDescription,
 	Aliases:      []string{"status"},
 	SilenceUsage: true,

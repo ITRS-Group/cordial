@@ -42,7 +42,7 @@ var hostCmdDescription string
 var hostCmd = &cobra.Command{
 	Use:          "host",
 	GroupID:      cmd.CommandGroupSubsystems,
-	Short:        "Manage remote host settings",
+	Short:        "Remote Host Operations",
 	Long:         hostCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

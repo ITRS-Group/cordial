@@ -1,6 +1,6 @@
 # `geneos clean`
 
-Clean-up instance directories
+Clean-up Instance Directories
 
 ```text
 geneos clean [flags] [TYPE] [NAME...]

@@ -4,32 +4,32 @@ Take control of your Geneos environments
 
 ## Subsystems
 
-* [`geneos aes`](geneos_aes.md)	 - Manage Geneos compatible key files and encode/decode passwords
-* [`geneos config`](geneos_config.md)	 - Configure the command environment
-* [`geneos host`](geneos_host.md)	 - Manage remote host settings
-* [`geneos init`](geneos_init.md)	 - Initialise a Geneos installation
-* [`geneos package`](geneos_package.md)	 - Package commands subsystem
-* [`geneos tls`](geneos_tls.md)	 - Manage certificates for secure connections
+* [`geneos aes`](geneos_aes.md)	 - AES256 Key File Operations
+* [`geneos config`](geneos_config.md)	 - Configure Command Behaviour
+* [`geneos host`](geneos_host.md)	 - Remote Host Operations
+* [`geneos init`](geneos_init.md)	 - Initialise The Installation
+* [`geneos package`](geneos_package.md)	 - Package Operations
+* [`geneos tls`](geneos_tls.md)	 - TLS Certificate Operations
 
 ## Control Geneos Instances
 
-* [`geneos reload`](geneos_reload.md)	 - Reload configurations
-* [`geneos restart`](geneos_restart.md)	 - Restart instances
-* [`geneos start`](geneos_start.md)	 - Start instances
-* [`geneos stop`](geneos_stop.md)	 - Stop instances
+* [`geneos reload`](geneos_reload.md)	 - Reload Instance Configurations
+* [`geneos restart`](geneos_restart.md)	 - Restart Instances
+* [`geneos start`](geneos_start.md)	 - Start Instances
+* [`geneos stop`](geneos_stop.md)	 - Stop Instances
 
 ## Inspect Geneos instances
 
-* [`geneos command`](geneos_command.md)	 - Show command line and environment for instances
-* [`geneos home`](geneos_home.md)	 - Output a directory path for given options
-* [`geneos list`](geneos_list.md)	 - List instances
-* [`geneos logs`](geneos_logs.md)	 - View, search or follow logs
-* [`geneos ps`](geneos_ps.md)	 - Show running instances
-* [`geneos show`](geneos_show.md)	 - Show instance configuration
+* [`geneos command`](geneos_command.md)	 - Show Instance Start-up Details
+* [`geneos home`](geneos_home.md)	 - Display Instance and Component Home Directories
+* [`geneos list`](geneos_list.md)	 - List Instances
+* [`geneos logs`](geneos_logs.md)	 - View Instance Logs
+* [`geneos ps`](geneos_ps.md)	 - List Running Instance Details
+* [`geneos show`](geneos_show.md)	 - Show Instance Configuration
 
 ## Manage Geneos Instances
 
-* [`geneos clean`](geneos_clean.md)	 - Clean-up instance directories
+* [`geneos clean`](geneos_clean.md)	 - Clean-up Instance Directories
 * [`geneos copy`](geneos_copy.md)	 - Copy instances
 * [`geneos disable`](geneos_disable.md)	 - Disable instances
 * [`geneos enable`](geneos_enable.md)	 - Enable instance
@@ -39,18 +39,18 @@ Take control of your Geneos environments
 ## Configure Geneos Instances
 
 * [`geneos add`](geneos_add.md)	 - Add a new instance
-* [`geneos delete`](geneos_delete.md)	 - Delete instances
-* [`geneos import`](geneos_import.md)	 - Import files to an instance or a common directory
-* [`geneos migrate`](geneos_migrate.md)	 - Migrate configurations
-* [`geneos rebuild`](geneos_rebuild.md)	 - Rebuild instance configuration files
-* [`geneos revert`](geneos_revert.md)	 - Revert earlier migration of configuration files
-* [`geneos set`](geneos_set.md)	 - Set instance configuration parameters
-* [`geneos unset`](geneos_unset.md)	 - Unset configuration parameters
+* [`geneos delete`](geneos_delete.md)	 - Delete Instances
+* [`geneos import`](geneos_import.md)	 - Import Files To Instances Or Components
+* [`geneos migrate`](geneos_migrate.md)	 - Migrate Instance Configurations
+* [`geneos rebuild`](geneos_rebuild.md)	 - Rebuild Instance Configurations From Templates
+* [`geneos revert`](geneos_revert.md)	 - Revert Migrated Instance Configuration
+* [`geneos set`](geneos_set.md)	 - Set Instance Parameters
+* [`geneos unset`](geneos_unset.md)	 - Unset Instance Parameters
 
 ## Manage Credentials
 
-* [`geneos login`](geneos_login.md)	 - Store credentials related to Geneos
-* [`geneos logout`](geneos_logout.md)	 - Logout (remove credentials)
+* [`geneos login`](geneos_login.md)	 - Enter Credentials
+* [`geneos logout`](geneos_logout.md)	 - Remove Credentials
 
 ## Recognised Component Types
 

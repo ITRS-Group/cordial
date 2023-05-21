@@ -42,7 +42,7 @@ var reloadCmdDescription string
 var reloadCmd = &cobra.Command{
 	Use:          "reload [TYPE] [NAME...]",
 	GroupID:      CommandGroupProcess,
-	Short:        "Reload configurations",
+	Short:        "Reload Instance Configurations",
 	Long:         reloadCmdDescription,
 	Aliases:      []string{"refresh"},
 	SilenceUsage: true,

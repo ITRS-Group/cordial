@@ -1,6 +1,6 @@
 # `geneos package`
 
-Package commands subsystem
+Package Operations
 
 
 ## Commands

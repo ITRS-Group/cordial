@@ -1,6 +1,6 @@
 # `geneos migrate`
 
-Migrate configurations
+Migrate Instance Configurations
 
 ```text
 geneos migrate [TYPE] [NAME...] [flags]

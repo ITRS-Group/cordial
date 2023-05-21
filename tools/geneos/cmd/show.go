@@ -65,7 +65,7 @@ var showCmdDescription string
 var showCmd = &cobra.Command{
 	Use:          "show [flags] [TYPE] [NAME...]",
 	GroupID:      CommandGroupView,
-	Short:        "Show instance configuration",
+	Short:        "Show Instance Configuration",
 	Long:         showCmdDescription,
 	Aliases:      []string{"details"},
 	SilenceUsage: true,

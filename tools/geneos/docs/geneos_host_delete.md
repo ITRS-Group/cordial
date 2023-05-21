@@ -18,4 +18,4 @@ Delete the local configuration referring to a remote host.
 
 ## SEE ALSO
 
-* [geneos host](geneos_host.md)	 - Manage remote host settings
+* [geneos host](geneos_host.md)	 - Remote Host Operations

@@ -1,6 +1,6 @@
 # `geneos aes`
 
-Manage Geneos compatible key files and encode/decode passwords
+AES256 Key File Operations
 
 
 ## Commands

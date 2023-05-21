@@ -54,4 +54,4 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 
 ## SEE ALSO
 
-* [geneos init](geneos_init.md)	 - Initialise a Geneos installation
+* [geneos init](geneos_init.md)	 - Initialise The Installation
