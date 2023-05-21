@@ -1,6 +1,6 @@
 # `geneos licd`
 
-Help for Licence Daemon
+Licence Daemon
 
 ```text
 geneos licd

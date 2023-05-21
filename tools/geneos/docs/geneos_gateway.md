@@ -1,6 +1,6 @@
 # `geneos gateway`
 
-Help for gateways
+Gateways
 
 ```text
 geneos gateway

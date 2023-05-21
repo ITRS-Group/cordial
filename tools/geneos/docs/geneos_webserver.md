@@ -1,6 +1,6 @@
 # `geneos webserver`
 
-Help for Web Dashboard Servers
+Web Dashboard Servers
 
 ```text
 geneos webserver

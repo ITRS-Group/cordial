@@ -41,7 +41,7 @@ func init() {
 var helpDocCmd = &cobra.Command{
 	Use:                   "ca3",
 	GroupID:               cmd.CommandGroupComponents,
-	Short:                 "Help for ca3",
+	Short:                 "Collection Agent 3",
 	Long:                  ca3Description,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,

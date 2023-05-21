@@ -1,6 +1,6 @@
 # `geneos san`
 
-Help for Self-Announcing Netprobes
+Self-Announcing Netprobes
 
 ```text
 geneos san

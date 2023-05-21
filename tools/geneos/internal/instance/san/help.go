@@ -41,7 +41,7 @@ func init() {
 var helpDocCmd = &cobra.Command{
 	Use:                   "san",
 	GroupID:               cmd.CommandGroupComponents,
-	Short:                 "Help for Self-Announcing Netprobes",
+	Short:                 "Self-Announcing Netprobes",
 	Long:                  sanDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,

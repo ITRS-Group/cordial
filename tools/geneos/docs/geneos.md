@@ -54,15 +54,15 @@ Take control of your Geneos environments
 
 ## Recognised Component Types
 
-* [`geneos ca3`](geneos_ca3.md)	 - Help for ca3
-* [`geneos fa2`](geneos_fa2.md)	 - Help for Fix Analyser 2
-* [`geneos fileagent`](geneos_fileagent.md)	 - Help for fileagent
-* [`geneos floating`](geneos_floating.md)	 - Help for Floating Netprobes
-* [`geneos gateway`](geneos_gateway.md)	 - Help for gateways
-* [`geneos licd`](geneos_licd.md)	 - Help for Licence Daemon
-* [`geneos netprobe`](geneos_netprobe.md)	 - Help for Netprobes
-* [`geneos san`](geneos_san.md)	 - Help for Self-Announcing Netprobes
-* [`geneos webserver`](geneos_webserver.md)	 - Help for Web Dashboard Servers
+* [`geneos ca3`](geneos_ca3.md)	 - Collection Agent 3
+* [`geneos fa2`](geneos_fa2.md)	 - Fix Analyser 2
+* [`geneos fileagent`](geneos_fileagent.md)	 - File Agent
+* [`geneos floating`](geneos_floating.md)	 - Floating Netprobes
+* [`geneos gateway`](geneos_gateway.md)	 - Gateways
+* [`geneos licd`](geneos_licd.md)	 - Licence Daemon
+* [`geneos netprobe`](geneos_netprobe.md)	 - Netprobes
+* [`geneos san`](geneos_san.md)	 - Self-Announcing Netprobes
+* [`geneos webserver`](geneos_webserver.md)	 - Web Dashboard Servers
 
 The `geneos` program will help you manage your Geneos environment.
 

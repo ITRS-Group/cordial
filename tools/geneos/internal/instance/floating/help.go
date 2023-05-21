@@ -41,7 +41,7 @@ func init() {
 var helpDocCmd = &cobra.Command{
 	Use:                   "floating",
 	GroupID:               cmd.CommandGroupComponents,
-	Short:                 "Help for Floating Netprobes",
+	Short:                 "Floating Netprobes",
 	Long:                  floatingDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
