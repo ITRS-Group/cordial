@@ -44,7 +44,7 @@ var aesCmdDescription string
 var aesCmd = &cobra.Command{
 	Use:          "aes",
 	GroupID:      cmd.CommandGroupSubsystems,
-	Short:        "Manage Geneos compatible key files and encode/decode passwords",
+	Short:        "AES256 Key File Operations",
 	Long:         aesCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

@@ -1,6 +1,6 @@
 # `geneos delete`
 
-Delete instances
+Delete Instances
 
 ```text
 geneos delete [flags] [TYPE] [NAME...]

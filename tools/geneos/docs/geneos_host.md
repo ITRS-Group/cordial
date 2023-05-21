@@ -1,6 +1,6 @@
 # `geneos host`
 
-Manage remote host settings
+Remote Host Operations
 
 
 ## Commands

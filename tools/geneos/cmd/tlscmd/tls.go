@@ -41,7 +41,7 @@ var tlsCmdDescription string
 var tlsCmd = &cobra.Command{
 	Use:          "tls",
 	GroupID:      cmd.CommandGroupSubsystems,
-	Short:        "Manage certificates for secure connections",
+	Short:        "TLS Certificate Operations",
 	Long:         tlsCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

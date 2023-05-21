@@ -1,6 +1,6 @@
 # `geneos config`
 
-Configure the command environment
+Configure Command Behaviour
 
 
 ## Commands

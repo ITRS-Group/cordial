@@ -46,7 +46,7 @@ var startCmdDescription string
 var startCmd = &cobra.Command{
 	Use:          "start [flags] [TYPE] [NAME...]",
 	GroupID:      CommandGroupProcess,
-	Short:        "Start instances",
+	Short:        "Start Instances",
 	Long:         startCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

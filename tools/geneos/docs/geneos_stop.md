@@ -1,6 +1,6 @@
 # `geneos stop`
 
-Stop instances
+Stop Instances
 
 ```text
 geneos stop [flags] [TYPE] [NAME...]

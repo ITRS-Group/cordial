@@ -1,6 +1,6 @@
 # `geneos restart`
 
-Restart instances
+Restart Instances
 
 ```text
 geneos restart [flags] [TYPE] [NAME...]

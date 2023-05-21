@@ -47,7 +47,7 @@ var cleanCmdDescription string
 var cleanCmd = &cobra.Command{
 	Use:     "clean [flags] [TYPE] [NAME...]",
 	GroupID: CommandGroupManage,
-	Short:   "Clean-up instance directories",
+	Short:   "Clean-up Instance Directories",
 	Long:    cleanCmdDescription,
 	Example: strings.ReplaceAll(`
 # Delete old logs and config file backups without affecting the running

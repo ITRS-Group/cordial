@@ -43,4 +43,4 @@ influence the installation.
 
 ## SEE ALSO
 
-* [geneos init](geneos_init.md)	 - Initialise a Geneos installation
+* [geneos init](geneos_init.md)	 - Initialise The Installation

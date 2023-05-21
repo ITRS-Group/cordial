@@ -50,7 +50,7 @@ var importCmdDescription string
 var importCmd = &cobra.Command{
 	Use:     "import [flags] [TYPE] [NAME...] [DEST=]SOURCE...",
 	GroupID: CommandGroupConfig,
-	Short:   "Import files to an instance or a common directory",
+	Short:   "Import Files To Instances Or Components",
 	Long:    importCmdDescription,
 	Example: strings.ReplaceAll(`
 # import a gateway setup file from a web server

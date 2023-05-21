@@ -49,7 +49,7 @@ var deleteCmd = &cobra.Command{
 	Use:          "delete [flags] [TYPE] [NAME...]",
 	GroupID:      CommandGroupConfig,
 	Aliases:      []string{"rm"},
-	Short:        "Delete instances",
+	Short:        "Delete Instances",
 	Long:         deleteCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

@@ -28,4 +28,4 @@ No values that are encrypted are shown decrypted.
 
 ## SEE ALSO
 
-* [geneos config](geneos_config.md)	 - Configure the command environment
+* [geneos config](geneos_config.md)	 - Configure Command Behaviour

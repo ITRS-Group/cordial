@@ -1,6 +1,6 @@
 # `geneos init`
 
-Initialise a Geneos installation
+Initialise The Installation
 
 ```text
 geneos init [flags] [DIRECTORY]

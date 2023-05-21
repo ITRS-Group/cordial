@@ -1,6 +1,6 @@
 # `geneos set`
 
-Set instance configuration parameters
+Set Instance Parameters
 
 ```text
 geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]

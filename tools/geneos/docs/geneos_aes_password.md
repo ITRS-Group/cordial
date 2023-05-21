@@ -24,4 +24,4 @@ To encode a plaintext password using a specific key file please use the
 
 ## SEE ALSO
 
-* [geneos aes](geneos_aes.md)	 - Manage Geneos compatible key files and encode/decode passwords
+* [geneos aes](geneos_aes.md)	 - AES256 Key File Operations

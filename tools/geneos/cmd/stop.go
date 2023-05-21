@@ -48,7 +48,7 @@ var stopCmdDescription string
 var stopCmd = &cobra.Command{
 	Use:          "stop [flags] [TYPE] [NAME...]",
 	GroupID:      CommandGroupProcess,
-	Short:        "Stop instances",
+	Short:        "Stop Instances",
 	Long:         stopCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

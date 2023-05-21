@@ -58,7 +58,7 @@ var unsetCmdDescription string
 var unsetCmd = &cobra.Command{
 	Use:     "unset [flags] [TYPE] [NAME...]",
 	GroupID: CommandGroupConfig,
-	Short:   "Unset configuration parameters",
+	Short:   "Unset Instance Parameters",
 	Long:    unsetCmdDescription,
 	Example: strings.ReplaceAll(`
 geneos unset gateway GW1 -k aesfile

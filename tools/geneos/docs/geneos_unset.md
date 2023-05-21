@@ -1,6 +1,6 @@
 # `geneos unset`
 
-Unset configuration parameters
+Unset Instance Parameters
 
 ```text
 geneos unset [flags] [TYPE] [NAME...]

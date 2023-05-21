@@ -1,6 +1,6 @@
 # `geneos logs`
 
-View, search or follow logs
+View Instance Logs
 
 ```text
 geneos logs [flags] [TYPE] [NAME...]

@@ -44,7 +44,7 @@ var logoutCmdDescription string
 var logoutCmd = &cobra.Command{
 	Use:          "logout [flags] [DOMAIN...]",
 	GroupID:      CommandGroupCredentials,
-	Short:        "Logout (remove credentials)",
+	Short:        "Remove Credentials",
 	Long:         logoutCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

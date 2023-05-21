@@ -53,7 +53,7 @@ var restartCmdDescription string
 var restartCmd = &cobra.Command{
 	Use:          "restart [flags] [TYPE] [NAME...]",
 	GroupID:      CommandGroupProcess,
-	Short:        "Restart instances",
+	Short:        "Restart Instances",
 	Long:         restartCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

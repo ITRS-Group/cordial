@@ -1,6 +1,9 @@
 # `geneos` management tool
 
-The `geneos` program will help you manage your Geneos environment on Linux.
+The `geneos` program will help you manage your Geneos environment on
+Linux.
+
+The online documentation for all the commands and options is [here](docs/geneos.md)
 
 ## Aims
 
@@ -20,52 +23,25 @@ The `geneos` program will help you manage your Geneos environment on Linux.
 * Download and install Geneos software, update components
 * Simple bootstrapping of Self-Announcing Netprobes
 
-> **Note**
->
-> Please note that this README.md file and the pre-generated
-> documentation it references are not always fully up-to-date and there
-> will be small, possibly annoying or confusing, differences between
-> functionality and this documentation. The command help text listing
-> available flags is however generated from the code itself and should
-> be generally up-to-date, except in those cases where internal
-> behaviour doesn't match the flag - once again apologies. As this is an
-> OSS project contributions are more than welcome, but will probably
-> involve reading code rather than correcting grammar and spelling.
-
 ## Getting Started
 
-The `geneos` program breaks down functionality into subsystems and
-commands. Each of the subsystems has it's own set of commands. The
-subsystems available are:
+First download the pre-built binary or build from source. See
+[Installation](#installation) for details.
 
-* [`geneos aes`](cmd/aescmd/README.md) - AES256 Encryption and decryption commands using keyfiles
-* [`geneos config`](cmd/cfgcmd/README.md) - Configuration options for the `geneos` program itself
-* [`geneos host`](cmd/hostcmd/README.md) - Remote host configuration commands
-* [`geneos init`](cmd/initcmd/README.md) - Environment initialisation commands
-* [`geneos package`](cmd/pkgcmd/README.md) - Geneos package management
-* [`geneos tls`](cmd/tlscmd/README.md) - TLS/SSL certificate management
 
-If you use any of these named subsystems as commands then they will tend
-to do something useful, such as list available resources. Any of the
-instructions below that apply to a normal command apply to the commands
-inside each subsystem, e.g. `geneos aes ls` is an `ls` command for
-`aes`.
 
 For typical commands the command line will be like this:
 
 `geneos COMMAND [flags] [TYPE] [NAMES...]`
 
-* `COMMAND` is the name of the command
+* `COMMAND` is the one or two word name of the command
 * `flags` are dash or double-dash prefixed options. Many of these
   options will require arguments and the details for each command will
-  be in the help test.
+  be in the help text.
 * `TYPE` is the optional component type
 * `NAMES` is an optional list of instance names. They can have an
   optional `@HOST` suffix which restricts the match to only the
   configured HOST.
-
-Some commands have special options which are documented in the individual
-pages linked below.
 
 The overall goal when choosing command names and their options has been
 to make things more intuitive rather than less. This is not always
@@ -394,87 +370,6 @@ configuration and then use `set` to make changes.
 Note that execution mode (e.g. `GateMode`) is not supported and all
 components run in the background.
 
-#### `geneos` Configuration File
-
-This configuration file - in JSON format - should be found in the home
-directory of the user as `~/.config/geneos/geneos.json`.
-
-Structure of the default file is as follows.
-
-```json
-{
-  "download": {
-    "url": "https://resources.itrsgroup.com/download/latest/"
-  },
-  "fa2cleanlist": "*.old",
-  "fa2portrange": "7030,7100-",
-  "fa2purgelist": "fa2.log:fa2.txt:*.snooze:*.user_assignment",
-  "facleanlist": "*.old",
-  "faportrange": "7030,7100-",
-  "fapurgelist": "fileagent.log:fileagent.txt",
-  "gatewaycleanlist": "*.old:*.history",
-  "gatewayportrange": "7039,7100-",
-  "gatewaypurgelist": "gateway.log:gateway.txt:gateway.snooze:gateway.user_assignment:licences.cache:cache/:database/",
-  "geneos": "/opt/itrs",
-  "licdcleanlist": "*.old",
-  "licdportrange": "7041,7100-",
-  "licdpurgelist": "licd.log:licd.txt",
-  "netprobecleanlist": "*.old",
-  "netprobeportrange": "7036,7100-",
-  "netprobepurgelist": "netprobe.log:netprobe.txt:*.snooze:*.user_assignment",
-  "privatekeys": "id_rsa,id_ecdsa,id_ecdsa_sk,id_ed25519,id_ed25519_sk,id_dsa",
-  "reservednames": "",
-  "sancleanlist": "*.old",
-  "sanportrange": "7036,7100-",
-  "sanpurgelist": "san.log:san.txt:*.snooze:*.user_assignment",
-  "webservercleanlist": "*.old",
-  "webserverportrange": "8080,8100-",
-  "webserverpurgelist": "logs/*.log:webserver.txt"
-}
-```
-
-**Note**: This file should not require any changes, except for fields
-ending in `portrange` which may need to be adjusted based on your
-environment.
-
-#### Host Configuration File
-
-This configuration file - in JSON format - should be found in the home
-directory of the user as `~/.config/geneos/hosts.json`.
-
-Structure of the default file is as follows.
-
-```json
-{
-  "hosts": {
-    "psapac-dev-02": {
-      "geneos": "/opt/itrs",
-      "hostname": "172.123.456.789",
-      "name": "PsApac-Dev-02",
-      "osinfo": {
-        "ansi_color": "0;31",
-        "bug_report_url": "https://bugzilla.redhat.com/",
-        "cpe_name": "cpe:/o:redhat:enterprise_linux:7.7:GA:server",
-        "home_url": "https://www.redhat.com/",
-        "id": "rhel",
-        "id_like": "fedora",
-        "name": "Red Hat Enterprise Linux Server",
-        "pretty_name": "Red Hat Enterprise Linux Server 7.7 (Maipo)",
-        "redhat_bugzilla_product": "Red Hat Enterprise Linux 7",
-        "redhat_bugzilla_product_version": "7.7",
-        "redhat_support_product": "Red Hat Enterprise Linux",
-        "redhat_support_product_version": "7.7",
-        "variant": "Server",
-        "variant_id": "server",
-        "version": "7.7 (Maipo)",
-        "version_id": "7.7"
-      },
-      "port": 22,
-      "username": "itrs"
-    }
-  }
-}
-```
 
 #### Instance Configuration File
 

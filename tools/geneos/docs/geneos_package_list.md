@@ -26,4 +26,4 @@ Versions are listed in descending order for each component type, i.e.
 
 ## SEE ALSO
 
-* [geneos package](geneos_package.md)	 - Package commands subsystem
+* [geneos package](geneos_package.md)	 - Package Operations

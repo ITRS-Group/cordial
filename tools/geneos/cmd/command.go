@@ -42,7 +42,7 @@ var commandCmdDescription string
 var commandCmd = &cobra.Command{
 	Use:          "command [TYPE] [NAME...]",
 	GroupID:      CommandGroupView,
-	Short:        "Show command line and environment for instances",
+	Short:        "Show Instance Start-up Details",
 	Long:         commandCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

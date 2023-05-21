@@ -42,7 +42,7 @@ var configCmdDescription string
 var configCmd = &cobra.Command{
 	Use:     "config",
 	GroupID: cmd.CommandGroupSubsystems,
-	Short:   "Configure the command environment",
+	Short:   "Configure Command Behaviour",
 	Long:    configCmdDescription,
 	Example: `
 geneos config

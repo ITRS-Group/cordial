@@ -47,7 +47,7 @@ var rebuildCmdDescription string
 var rebuildCmd = &cobra.Command{
 	Use:          "rebuild [flags] [TYPE] [NAME...]",
 	GroupID:      CommandGroupConfig,
-	Short:        "Rebuild instance configuration files",
+	Short:        "Rebuild Instance Configurations From Templates",
 	Long:         rebuildCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

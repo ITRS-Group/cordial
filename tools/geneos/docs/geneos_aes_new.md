@@ -50,4 +50,4 @@ geneos aes new -S gateway
 
 ## SEE ALSO
 
-* [geneos aes](geneos_aes.md)	 - Manage Geneos compatible key files and encode/decode passwords
+* [geneos aes](geneos_aes.md)	 - AES256 Key File Operations

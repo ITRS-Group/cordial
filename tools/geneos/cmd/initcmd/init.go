@@ -93,7 +93,7 @@ var longDescription string
 var initCmd = &cobra.Command{
 	Use:     "init [flags] [DIRECTORY]",
 	GroupID: cmd.CommandGroupSubsystems,
-	Short:   "Initialise a Geneos installation",
+	Short:   "Initialise The Installation",
 	Long:    longDescription,
 	Example: strings.ReplaceAll(`
 geneos init

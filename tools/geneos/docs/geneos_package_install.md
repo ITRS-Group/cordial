@@ -86,4 +86,4 @@ geneos install netprobe -b active_dev -U
 
 ## SEE ALSO
 
-* [geneos package](geneos_package.md)	 - Package commands subsystem
+* [geneos package](geneos_package.md)	 - Package Operations

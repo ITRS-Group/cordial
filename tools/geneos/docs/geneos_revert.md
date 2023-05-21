@@ -1,6 +1,6 @@
 # `geneos revert`
 
-Revert earlier migration of configuration files
+Revert Migrated Instance Configuration
 
 ```text
 geneos revert [TYPE] [NAME...] [flags]

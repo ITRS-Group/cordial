@@ -1,6 +1,6 @@
 # `geneos ps`
 
-Show running instances
+List Running Instance Details
 
 ```text
 geneos ps [flags] [TYPE] [NAMES...]

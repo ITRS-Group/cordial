@@ -67,7 +67,7 @@ var listCmdDescription string
 var listCmd = &cobra.Command{
 	Use:          "list [flags] [TYPE] [NAME...]",
 	GroupID:      CommandGroupView,
-	Short:        "List instances",
+	Short:        "List Instances",
 	Long:         listCmdDescription,
 	Aliases:      []string{"ls"},
 	SilenceUsage: true,

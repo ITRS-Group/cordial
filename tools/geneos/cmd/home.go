@@ -42,7 +42,7 @@ var homeCmdDescription string
 var homeCmd = &cobra.Command{
 	Use:     "home [flags] [TYPE] [NAME]",
 	GroupID: CommandGroupView,
-	Short:   "Output a directory path for given options",
+	Short:   "Display Instance and Component Home Directories",
 	Long:    homeCmdDescription,
 	Example: strings.ReplaceAll(`
 cd $(geneos home)

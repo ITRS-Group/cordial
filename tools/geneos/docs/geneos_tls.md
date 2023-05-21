@@ -1,6 +1,6 @@
 # `geneos tls`
 
-Manage certificates for secure connections
+TLS Certificate Operations
 
 
 ## Commands

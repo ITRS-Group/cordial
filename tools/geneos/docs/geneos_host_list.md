@@ -18,4 +18,4 @@ List the matching remote hosts.
 
 ## SEE ALSO
 
-* [geneos host](geneos_host.md)	 - Manage remote host settings
+* [geneos host](geneos_host.md)	 - Remote Host Operations

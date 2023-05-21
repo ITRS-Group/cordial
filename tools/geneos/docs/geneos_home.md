@@ -1,6 +1,6 @@
 # `geneos home`
 
-Output a directory path for given options
+Display Instance and Component Home Directories
 
 ```text
 geneos home [flags] [TYPE] [NAME]
