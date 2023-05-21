@@ -14,7 +14,10 @@ RUN apk add build-base
 # The "clean" lines below are in case of running this in a working
 # directory with existing builds from outside the container, which may
 # be from a different arch or environment
-COPY ./ /app/cordial
+COPY go.mod go.sum cordial.go VERSION /app/cordial/
+COPY integrations /app/cordial/integrations/
+COPY pkg /app/cordial/pkg
+COPY tools /app/cordial/tools
 WORKDIR /app/cordial/tools/geneos
 RUN go build --ldflags '-linkmode external -extldflags=-static'
 RUN GOOS=windows go build
@@ -36,7 +39,10 @@ ARG BUILDARCH
 ADD https://go.dev/dl/go1.20.4.${BUILDOS}-${BUILDARCH}.tar.gz /tmp/
 RUN tar -C /usr/local -xzf /tmp/go1.20.4.${BUILDOS}-${BUILDARCH}.tar.gz
 ENV PATH=$PATH:/usr/local/go/bin
-COPY ./ /app/cordial
+COPY go.mod go.sum cordial.go VERSION /app/cordial/
+COPY libraries /app/cordial/libraries/
+COPY pkg /app/cordial/pkg
+COPY tools /app/cordial/tools
 WORKDIR /app/cordial/tools/geneos
 RUN go build
 WORKDIR /app/cordial/libraries/libemail
@@ -51,7 +57,11 @@ RUN make
 #
 FROM node AS build-docs
 LABEL stage=cordial-build
-COPY ./ /app/cordial
+COPY go.mod go.sum cordial.go VERSION /app/cordial/
+COPY integrations /app/cordial/integrations/
+COPY libraries /app/cordial/libraries/
+COPY pkg /app/cordial/pkg
+COPY tools /app/cordial/tools
 WORKDIR /app/cordial/doc-output
 RUN apt update && apt install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2
 RUN npm install --global mdpdf
