@@ -16,7 +16,8 @@ systems.
   * [REST Service 🔗](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#REST_Service)
   * [Authentication 🔗](https://docs.itrsgroup.com/docs/geneos/6.3.0/Gateway_Reference_Guide/geneos_authentication_tr.html)
 
-* Install `dv2email` and `geneos` (optional) somewhere in your execution path (or use the full path to where you install them)
+* Install `dv2email` and `geneos` (optional) somewhere in your execution
+  path (or use the full path to where you install them)
 
   Next configure your dv2email YAML files:
 
