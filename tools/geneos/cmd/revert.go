@@ -61,8 +61,8 @@ var revertCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := CmdArgsParams(cmd)
-		if err := revertCommands(); err != nil {
-			log.Error().Err(err).Msg("reverting old executables failed")
+		if revertCmdExecutables {
+			return revertCommands()
 		}
 		return instance.ForAll(ct, Hostname, revertInstance, args, params)
 	},
