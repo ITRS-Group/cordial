@@ -49,7 +49,7 @@ import (
 //
 // Other parameters
 
-// Set-up a Dialer using the _SMTP_* parameters
+// Dial sets up a Dialer using the Geneos _SMTP_* parameters
 //
 // All the parameters in the official docs are supported and have the same
 // defaults
@@ -58,7 +58,6 @@ import (
 // * _SMTP_TLS - default / force / none (case insensitive)
 // * _SMTP_USERNAME - if defined authentication attempted
 // * _SMTP_PASSWORD - password in [ExpandString] format
-// * XXX - _SMTP_REFERENCE - override the SMTP Reference header for conversations / threading
 func Dial(conf *config.Config) (d *mail.Dialer, err error) {
 	server := conf.GetString("_SMTP_SERVER", config.Default("localhost"))
 	port := conf.GetInt("_SMTP_PORT", config.Default(25))
@@ -80,10 +79,11 @@ func Dial(conf *config.Config) (d *mail.Dialer, err error) {
 		username := conf.GetString("_SMTP_USERNAME")
 		// get the password from the file given or continue with
 		// an empty string
-		password := conf.GetString("_SMTP_PASSWORD")
-		// the password can be empty at this point. this is valid, even if a bit dumb.
+		password := conf.GetPassword("_SMTP_PASSWORD")
+		// the password can be empty at this point. this is valid, even
+		// if a bit dumb.
 
-		d = mail.NewDialer(server, port, username, password)
+		d = mail.NewDialer(server, port, username, password.String())
 	} else {
 		// no auth - initialise Dialer directly
 		d = &mail.Dialer{Host: server, Port: port}
@@ -94,6 +94,9 @@ func Dial(conf *config.Config) (d *mail.Dialer, err error) {
 	return d, nil
 }
 
+// Envelope processes the Geneos libemail parameters for _FROM, _TO, _CC
+// and _BCC and their related parameters stored in conf and returns a
+// populated mail.Message structure or an error.
 func Envelope(conf *config.Config) (m *mail.Message, err error) {
 	m = mail.NewMessage()
 
