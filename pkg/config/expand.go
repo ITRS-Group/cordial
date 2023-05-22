@@ -34,104 +34,106 @@ import (
 	"github.com/maja42/goval"
 )
 
-// ExpandString returns the input with all occurrences of the form
-// ${name} replaced using an [os.Expand]-like function (but without
+// The Expand* functions return the input with all occurrences of the
+// form ${name} replaced using an [os.Expand]-like function (but without
 // support for $name in the input) for the built-in and optional formats
 // (in the order of priority) below. The caller can use options to
-// define additional expansion functions based on a "prefix:", disabled
+// define additional expansion functions based on a "prefix:", disable
 // external lookups and also to pass in lookup tables referred to as
 // value maps.
 //
-//	${enc:keyfile[|keyfile...]:encodedvalue}
+//  ${enc:keyfile[|keyfile...]:encodedvalue}
 //
-//	  "encodedvalue" is an AES256 ciphertext in Geneos format - or, if
-//	  not prefixed with `+encs+` then it ss processed as an expandable
-//	  string itself and can be a reference to another configuration key
-//	  or a file or remote url containing one - which will be decoded
-//	  using the key file(s) given. Each "keyfile" must be one of either
-//	  an absolute path, a path relative to the working directory of the
-//	  program, or if prefixed with "~/" then relative to the home
-//	  directory of the user running the program. The first valid decode
-//	  (see below) is returned.
+//    "encodedvalue" is an AES256 ciphertext in Geneos format - or, if
+//    not prefixed with `+encs+` then it is processed as an expandable
+//    string itself and can be a reference to another configuration key
+//    or a file or remote url containing one - which will be decoded
+//    using the key file(s) given. Each "keyfile" must be one of either
+//    an absolute path, a path relative to the working directory of the
+//    program, or if prefixed with "~/" then relative to the home
+//    directory of the user running the program. The first valid decode
+//    (see below) is returned.
 //
-//	  To minimise (but not wholly eliminate) any false-positive decodes
-//	  that occur in some circumstances when using the wrong key file,
-//	  the decoded value is only returned if it is a valid UTF-8 string
-//	  as per [utf8.Valid].
+//    To minimise (but not wholly eliminate) any false-positive decodes
+//    that occur in some circumstances when using the wrong key file,
+//    the decoded value is only returned if it is a valid UTF-8 string
+//    as per [utf8.Valid].
 //
-//	  Examples:
+//    This prefix can be disabled with the `config.NoDecode()` option.
 //
-//	   * password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
-//	   * password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
-//	   * password: ${enc:~/.config/geneos/keyfile1.aes:app.password}
-//	   * password: ${enc:~/.keyfile.aes:config:mySecret}
+//    Examples:
 //
-//	${config:key} or ${path.to.config}
+//    - password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
+//    - password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
+//    - password: ${enc:~/.config/geneos/keyfile1.aes:app.password}
+//    - password: ${enc:~/.keyfile.aes:config:mySecret}
 //
-//	   Fetch the "key" configuration value (for single layered
-//	   configurations, where a sub-level dot cannot be used) or if any
-//	   value containing one or more dots "." will be looked-up in the
-//	   existing configuration that the method is called on. The
-//	   underlying configuration is not changed and values are resolved
-//	   each time ExpandString() is called. No locking of the
-//	   configuration is done.
+//  ${config:key} or ${path.to.config}
 //
-//	${key}
+//     Fetch the "key" configuration value (for single layered
+//     configurations, where a sub-level dot cannot be used) or if any
+//     value containing one or more dots "." will be looked-up in the
+//     existing configuration that the method is called on. The
+//     underlying configuration is not changed and values are resolved
+//     each time ExpandString() is called. No locking of the
+//     configuration is done.
 //
-//	  "key" will be substituted with the value of the first matching key
-//	  from the tables set using config.LookupTable(), in the order passed
-//	  to the function. If no lookup tables are set (as opposed to the
-//	  key not being found in any of the tables) then name is looked up
-//	  as an environment variable, as below.
+//  ${key}
 //
-//	${env:name}
+//    "key" will be substituted with the value of the first matching key
+//    from the tables set using config.LookupTable(), in the order passed
+//    to the function. If no lookup tables are set (as opposed to the
+//    key not being found in any of the tables) then name is looked up
+//    as an environment variable, as below.
 //
-//	  "name" will be substituted with the contents of the environment
-//	  variable of the same name. If no environment variable with name
-//	  exists then the value returned is an empty string.
+//  ${env:name}
 //
-//	The additional prefixes below are enabled by default. They can be
-//	disabled using the config.ExternalLookups() option.
+//    "name" will be substituted with the contents of the environment
+//    variable of the same name. If no environment variable with name
+//    exists then the value returned is an empty string.
 //
-//	${.../path/to/file} or ${~/file} or ${file://path/to/file} or ${file:~/path/to/file}
+//  The additional prefixes below are enabled by default. They can be
+//  disabled using the config.ExternalLookups() option.
 //
-//	  The contents of the referenced file will be read. Multiline files
-//	  are used as-is; this can, for example, be used to read PEM
-//	  certificate files or keys. If the path is prefixed with "~/" (or
-//	  as an addition to a standard file url, if the first "/" is
-//	  replaced with a tilde "~") then the path is relative to the home
-//	  directory of the user running the process.
+//  ${.../path/to/file} or ${~/file} or ${file://path/to/file} or ${file:~/path/to/file}
 //
-//	  Any name that contains a `/` but not a `:` will be treated as a
-//	  file, if file reading is enabled. File paths can be absolute or
-//	  relative to the working directory (or relative to the home
-//	  directory, as above)
+//    The contents of the referenced file will be read. Multiline files
+//    are used as-is; this can, for example, be used to read PEM
+//    certificate files or keys. If the path is prefixed with "~/" (or
+//    as an addition to a standard file url, if the first "/" is
+//    replaced with a tilde "~") then the path is relative to the home
+//    directory of the user running the process.
 //
-//	  Examples:
+//    Any name that contains a `/` but not a `:` will be treated as a
+//    file, if file reading is enabled. File paths can be absolute or
+//    relative to the working directory (or relative to the home
+//    directory, as above)
 //
-//	  * certfile: ${file://etc/ssl/cert.pem}
-//	  * template: ${file:~/templates/autogen.gotmpl}
-//	  * relative: ${./file.txt}
+//    Examples:
 //
-//	${https://host/path} or ${http://host/path}
+//    - certfile: ${file://etc/ssl/cert.pem}
+//    - template: ${file:~/templates/autogen.gotmpl}
+//    - relative: ${./file.txt}
 //
-//	  The contents of the URL are fetched and used similarly as for
-//	  local files above. The URL is passed to [http.Get] and supports
-//	  proxies, embedded Basic Authentication and other features from
-//	  that function.
+//  ${https://host/path} or ${http://host/path}
 //
-//	The prefix below can be enabled with the config.Expressions() option.
+//    The contents of the URL are fetched and used similarly as for
+//    local files above. The URL is passed to [http.Get] and supports
+//    proxies, embedded Basic Authentication and other features from
+//    that function.
 //
-//	${expr:EXPRESSION}
+//  The prefix below can be enabled with the config.Expressions() option.
 //
-//	  EXPRESSION is evaluated using https://github.com/maja42/goval. Inside
-//	  the expression all configuration items are available as variables
-//	  with the top level map `env` set to the environment variables
-//	  available. All results are returned as strings. An empty string
-//	  may mean there was an error in evaluating the expression.
+//  ${expr:EXPRESSION}
 //
-// Additional custom lookup prefixes can be added with the
-// config.Prefix() option.
+//    EXPRESSION is evaluated using https://github.com/maja42/goval. Inside
+//    the expression all configuration items are available as variables
+//    with the top level map `env` set to the environment variables
+//    available. All results are returned as strings. An empty string
+//    may mean there was an error in evaluating the expression.
+//
+// Additional custom prefixes can be added with the config.Prefix()
+// option.
 //
 // The bare form "$name" is NOT supported, unlike [os.Expand] as this
 // can unexpectedly match values containing valid literal dollar signs.
@@ -144,9 +146,9 @@ import (
 // during a process lifetime.
 //
 // Any errors (particularly from substitutions from external files or
-// remote URLs) may result in an empty or corrupt string being returned.
-// Error returns are intentionally discarded and an empty string
-// substituted. Where a value contains multiple expandable items
+// remote URLs) will result in an empty or corrupt string being
+// returned. Error returns are intentionally discarded and an empty
+// string substituted. Where a value contains multiple expandable items
 // processing will continue even after an error for one of them.
 //
 // It is not currently possible to escape the syntax supported by
@@ -155,19 +157,23 @@ import (
 // item to the value and refer to it using the dotted syntax, e.g. for
 // YAML
 //
-//	config:
-//	  real: ${config.literal}
-//	  literal: "${unchanged}"
+//  config:
+//    real: ${config.literal}
+//    literal: "${unchanged}"
 //
 // In the above a reference to ${config.real} will return the literal
 // string ${unchanged} as there is no recursive lookups.
+
+// ExpandString returns the global configuration value for input as an
+// expanded string. The returned string is always a freshly allocated
+// value.
 func ExpandString(input string, options ...ExpandOptions) (value string) {
 	return global.ExpandString(input, options...)
 }
 
-// ExpandString works just like the package level [ExpandString] but on
-// a specific config instance. The return value is always a freshly
-// allocated string.
+// ExpandString returns the configuration c value for input as an
+// expanded string. The returned string is always a freshly allocated
+// value.
 func (c *Config) ExpandString(input string, options ...ExpandOptions) (value string) {
 	opts := evalExpandOptions(c, options...)
 	if opts.rawstring {
@@ -246,15 +252,15 @@ func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
 	return
 }
 
-// ExpandEnclave expands the input string and returns a sealed enclave.
-// The option TrimSpace is ignored.
-func ExpandEnclave(input string, options ...ExpandOptions) (value *memguard.Enclave) {
-	return global.ExpandEnclave(input, options...)
+// ExpandToEnclave expands the input string and returns a sealed
+// enclave. The option TrimSpace is ignored.
+func ExpandToEnclave(input string, options ...ExpandOptions) (value *memguard.Enclave) {
+	return global.ExpandToEnclave(input, options...)
 }
 
-// ExpandEnclave expands the input string and returns a sealed enclave.
-// The option TrimSpace is ignored.
-func (c *Config) ExpandEnclave(input string, options ...ExpandOptions) (value *memguard.Enclave) {
+// ExpandToEnclave expands the input string and returns a sealed
+// enclave. The option TrimSpace is ignored.
+func (c *Config) ExpandToEnclave(input string, options ...ExpandOptions) (value *memguard.Enclave) {
 	opts := evalExpandOptions(c, options...)
 	if opts.rawstring {
 		if input != "" {
@@ -266,7 +272,7 @@ func (c *Config) ExpandEnclave(input string, options ...ExpandOptions) (value *m
 		return l.Seal()
 	}
 
-	value = expandEnclave([]byte(input), func(s []byte) (r *memguard.Enclave) {
+	value = expandToEnclave([]byte(input), func(s []byte) (r *memguard.Enclave) {
 		if opts.nodecode {
 			return memguard.NewEnclave(fmt.Append([]byte{}, `${`, s, `}`))
 		}
@@ -285,15 +291,15 @@ func (c *Config) ExpandEnclave(input string, options ...ExpandOptions) (value *m
 	return
 }
 
-// ExpandLockedBuffer expands the input string and returns a sealed enclave.
-// The option TrimSpace is ignored.
-func ExpandLockedBuffer(input string, options ...ExpandOptions) (value *memguard.LockedBuffer) {
-	return global.ExpandLockedBuffer(input, options...)
+// ExpandToLockedBuffer expands the input string and returns a sealed
+// enclave. The option TrimSpace is ignored.
+func ExpandToLockedBuffer(input string, options ...ExpandOptions) (value *memguard.LockedBuffer) {
+	return global.ExpandToLockedBuffer(input, options...)
 }
 
-// ExpandLockedBuffer expands the input string and returns a sealed enclave.
-// The option TrimSpace is ignored.
-func (c *Config) ExpandLockedBuffer(input string, options ...ExpandOptions) (value *memguard.LockedBuffer) {
+// ExpandToLockedBuffer expands the input string and returns a sealed
+// enclave. The option TrimSpace is ignored.
+func (c *Config) ExpandToLockedBuffer(input string, options ...ExpandOptions) (value *memguard.LockedBuffer) {
 	opts := evalExpandOptions(c, options...)
 	if opts.rawstring {
 		if input != "" {
@@ -303,7 +309,7 @@ func (c *Config) ExpandLockedBuffer(input string, options ...ExpandOptions) (val
 		return memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.defaultValue)))
 	}
 
-	value = expandLockedBuffer([]byte(input), func(s []byte) *memguard.LockedBuffer {
+	value = expandToLockedBuffer([]byte(input), func(s []byte) *memguard.LockedBuffer {
 		if opts.nodecode {
 			return memguard.NewBufferFromBytes(fmt.Append([]byte{}, `${`, s, `}`))
 
@@ -701,7 +707,7 @@ func expandBytes(s []byte, mapping func([]byte) []byte) []byte {
 	return append(buf, s[i:]...)
 }
 
-func expandEnclave(s []byte, mapping func([]byte) *memguard.Enclave) *memguard.Enclave {
+func expandToEnclave(s []byte, mapping func([]byte) *memguard.Enclave) *memguard.Enclave {
 	var buf []byte
 	// ${} is all UTF-8, so bytes are fine for this operation.
 	i := 0
@@ -740,7 +746,7 @@ func expandEnclave(s []byte, mapping func([]byte) *memguard.Enclave) *memguard.E
 	return memguard.NewEnclave(buf)
 }
 
-func expandLockedBuffer(s []byte, mapping func([]byte) *memguard.LockedBuffer) *memguard.LockedBuffer {
+func expandToLockedBuffer(s []byte, mapping func([]byte) *memguard.LockedBuffer) *memguard.LockedBuffer {
 	var buf []byte
 	// ${} is all UTF-8, so bytes are fine for this operation.
 	i := 0
