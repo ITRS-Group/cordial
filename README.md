@@ -1,59 +1,98 @@
-# cordial
+# `cordial` - ITRS Geneos Utilities Written In Go
 
-* Current Version: v1.5.0-beta3 - 2023/05/18
+Cordial is a collection of utilities, integrations and support packages for
+ITRS Geneos.
 
-Cordial comprises a set of interrelated programs, integrations, libraries and packages for Geneos, principally written in Go.
+> **Current Version: v1.5.0**
+>
+> Released 2023/05/22
+>
+> See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 
-* [`geneos` Manager Program](tools/geneos/)
+## Utilities
 
-* [`dv2email` Dataview to EMail](tools/dv2email)
+* [`geneos`](tools/geneos/) - Manage Your Geneos environment
 
-* [ServiceNow Incident Integration](integrations/servicenow/)
+* [`dv2email`](tools/dv2email) - Send a Dataview as an EMail
 
-* [PagerDuty Integration](integrations/pagerduty/)
+* [`libemail`](libraries/libemail/) - Enhanced Drop-In Replacement for `libemail`
 
-* [Enhanced `libemail`](libraries/libemail/)
+## Integrations
 
-* Go Packages
+* [ServiceNow](integrations/servicenow/) - Send Geneos
+  Alerts to ServiceNow
 
-  * `commands`
+* [PagerDuty](integrations/pagerduty/) - Send Geneos to PagerDuty
 
-    Geneos Gateway REST API Commands including programmatic support for
-    `snapshots` of dataviews
+## Packages
 
-  * `config`
+These packages provide Go interfaces to ITRS Geneos as well as utilities
+to help build useful tools for working with ITRS Geneos.
 
-    Configuration file support, based on `viper` with local extensions
+* [`config`](pkg/config/README.md)
 
-  * `email`
+  Configuration support, based on the excellent
+  [`viper`](https://pkg.go.dev/github.com/spf13/viper) package, with
+  local extensions to add expansion of embedded references including AES
+  encrypted values, interpolation of environment variables and other
+  configuration parameters as well as reading local files and from URLs.
 
-    Functions pulled from libemail to be more generally available,
-    initially for the `dv2email` program.
+  A one-stop-shop to load and save configurations makes initialising
+  programs easier and simpler.
 
-  * `geneos`
+  The implementation is slowly maturing but is not complete and is
+  subject to API changes as we find better ways to do things. The
+  options on those functions that have been extended allow fine grained
+  control of how interpolation is performed including restricting which
+  methods are supported and adding custom functions for
+  interpolation/expansion.
 
-    Automated Geneos XML configuration file generations based on Go data
-    structures
+* [`email`](pkg/email/README.md)
 
-  * `host`
+  Functions extracted from the original libemail to be more generally
+  available, initially for the `dv2email` program but also for
+  additional tools in the future. `libemail` has not been changed so
+  that it remains fully backward compatible.
 
-    Remote host integration pulled from `geneos` internal packages and
-    turned into an extensible interface that supports local OS and
-    remote SSH/SFTP operations. This is a rough and ready API and could
-    do with more review and structure.
+* [`geneos`](pkg/geneos/README.md)
 
-  * `plugins`, `samplers`, `streams`, `xmlrpc`
+  Automate Geneos XML configuration file generation using Go programs.
+  
+  The Geneos schema is not, and cannot be, fully implemented at this
+  stage as the mappings have been hand-rolled rather than any attempt as
+  machine translation.
 
-    Geneos API plugin XML-RPC support
+* [`host`](pkg/host/README.md)
 
-  * `process`
+  Remote host integration extracted from `geneos` internal packages and
+  turned into an extensible interface that supports local OS and remote
+  SSH/SFTP operations. The API is still in flux and could do with more
+  review and structure.
 
-    Process management utilities.
+* [`plugins`](pkg/plugins/README.md)
+* [`samplers`](pkg/samplers/README.md)
+* [`streams`](pkg/streams/README.md)
+* [`xmlrpc`](pkg/xmlrpc/README.md)
 
-  * `xpath`
+  These four packages provide support for the Geneos XML-RPC API Plugin.
 
-    Geneos XPath handling
+* [`process`](pkg/process/README.md)
 
-## ChangeLog
+  Process management functions. Currently there is only a `Daemon()`
+  function to background a process, but over time there should be more
+  common functions extracted from other packages and the internal
+  packages of `geneos`.
 
-See [`CHANGELOG.md`](CHANGELOG.md) for more
+* [`commands`](pkg/commands/README.md)
+
+  Geneos Gateway REST API Commands including programmatic support for
+  `snapshots` of Dataviews. When used with the `xpath` package (below)
+  this package provides a simple way of executing REST commands on
+  Geneos Gateways.
+
+* [`xpath`](pkg/xpath/README.md)
+
+  Geneos XPath handling functions and methods. This is a developing API
+  and is not complete. Basic functionality exists to parse and
+  manipulate simple XPaths.
+

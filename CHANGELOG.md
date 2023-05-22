@@ -1,13 +1,28 @@
 # Change Log
 
-## Version v1.5.0-beta3 - 2023/05/18
+## Version v1.5.0
 
-* BREAKING CHANGES
+> **Released 2023/05/22**
+>
+> Please report issues via
+> [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS
+> Community Forum](https://community.itrsgroup.com/).
+
+### v1.5.0 - Highlights
+
+This release brings numerous changes to the `cordial` tools, especially
+the `geneos` utility. We have tried to improve the reliability and
+usability of the utility through updated and improved documentation and
+subsequent fixes and changes that arose from writing and checking that
+documentation.
+
+### v1.5.0 - **BREAKING CHANGES**
 
   * `pkg/logger`:
 
-    * REMOVED. This simplistic internal logging package has been removed
-      in favour of more mature solutions, such as zerolog.
+    * **REMOVED**. This simplistic internal logging package has been
+      deprecated in favour of more mature solutions, such as
+      [zerolog](https://pkg.go.dev/github.com/rs/zerolog).
 
   * `tools/geneos`:
 
@@ -17,145 +32,177 @@
       item hierarchy delimiters and this caused issues. Most users with
       SANs should not notice any change, but if you see problems please
       check the san XML file and correct the `gateways` section as
-      necessary. The easiest way is probably to remove and re-set them
-      using `geneos set san XXX -g gateway.example.com ...`
+      necessary. One way is to remove and re-set them using:
+      
+      > `geneos set san mySan -g gateway.example.com ...`
 
-    * Similarly to the above any variables defined in either SAN or
-      Gateway configurations for use in the XML templates will have not
-      worked in a case sensitive manner to align with how Geneos does
-      it. To fix this the format of the `variables` section has been
-      changed to move the variable name from the configuration key to a
-      separate structure as a value. Code has been added to
-      automatically convert from the old format to the new when the
+      Running `set` will rewrite the configuration in the new format bu
+      there is a chance that the previous configuration will continue to
+      occupy settings. You may need to manually edit the instance
+      configuration file `san.json` anyway.
+
+    * Like the above any variables defined for either SAN or Gateway
+      instances used to generate XML from templates will have not worked
+      in a case sensitive manner to mirror how Geneos treats variable
+      names. To fix this the internal format of the `variables` section
+      has been updated to move the variable name from the configuration
+      key to a separate structure as it's own value. Code has been added
+      to automatically convert from the old format to the new when the
       configuration file is updated however there is no fix for the
-      correction of variable name case being wrong. Please review and
-      adjust as necessary.
+      correction of variable case name being incorrect from previous
+      configurations. Please review and adjust as necessary.
 
-    * Support for running under `sudo` or for an instances where the
-      `user` is different to the user running the command has been
-      deprecated. Security is hard, and the support for these was poorly
-      implemented. A better way will be coming in a later release.
+    * Support for running instances as other user accounts or under
+      `sudo` has been deprecated. Security is _hard_, and the support
+      for these was poorly implemented. A better way should be coming in
+      a future release.
 
       This may mean that where users has configured netprobes to run as
-      different users and have run `sudo geneos start` to let the tool
-      do the right thing will sun into issues. Please be careful if any
-      of your instances run as other users and so not run the `geneos`
-      tool with `sudo`. There is no additional checking/rejection of
-      running under `sudo` or any other privilege escalation system so
-      this is important!
+      different users and have previously run `sudo geneos start` to let
+      the program do the right thing will run into issues. Please be
+      careful if any of your instances run as other users and do not run
+      the `geneos` program with `sudo`. There is no additional
+      checking/rejection of running under `sudo` or any other privilege
+      escalation system so this is important!
 
-* Changes
+### v1.5.0 - Other Changes
 
-  * There has been a large amount of refactoring and rebalancing of the
-    code-base. Most of this should not be user visible, but some
-    previous public APIs have changed. As with all major changes there
-    may be problems that have no been caught in testing. Please report
-    anything you see as either a github issue or via the ITRS Community
-    Forum.
+  * There has been a significant amount of refactoring and moving around
+    of the code-base. Most of this should not be user visible, but some
+    public APIs have changed. As with all major changes there may be
+    problems that have not been caught in testing. Please report
+    anything you see as either a [github
+    issue](https://github.com/ITRS-Group/cordial/issues) or via the
+    [ITRS Community Forum](https://community.itrsgroup.com/).
 
-    Specific changes worth mentioning include:
+    There are too many changed to list them all in detail but specific
+    ones worth mentioning include:
 
     * [`memguard`](https://pkg.go.dev/github.com/awnumar/memguard)
-      support for protected memory. Most credentials should now be
-      handled as Enclaves (for plaintext or private keys) or as
-      LockedBuffers (for ciphertexts of sensitive data).
+      support for protected memory. Credentials (passwords, TLS keys and
+      so on) should now be handled as Enclaves (for plaintext or private
+      keys) or as LockedBuffers (for ciphertexts of sensitive data).
 
-      The changes are ongoing and in addition to adding a layer of data
-      security to cordial an added benefit is the catching of memory
-      misuse etc. If you see errors, panic etc. please report them!
+      The [`config`](pkg/config/README.md) package includes new methods
+      for handling configuration file data as Enclaves and LockedBuffers
+      to try to reduce the amount of confidential data visible in the
+      process.
+
+      The changes are ongoing and, in addition to adding a layer of data
+      security to `cordial`, an added benefit is the interception of
+      memory use errors etc. If you see errors, panic etc. please report
+      them as a [github
+      issue](https://github.com/ITRS-Group/cordial/issues)
 
     * A number of the previous package APIs have undergone review and
-      refactoring. In particular the `pkg/config` API has been through
-      the wringer and if you have any code that relies on it from v1.4
-      and before then it will need updating. There are many new
-      functions, which is normal, but also some older entry points have
-      been renamed or had the argument signatures changed. Please review
-      the documentation to see what the methods and functions have
-      become.
+      changed as needed. In particular the
+      [`config`](pkg/config/README.md) API has been through the wringer
+      and if you have any code that relies on it from v1.4 or earlier
+      then it will require changes. There are new functions, which is to
+      be expected, but also some existing ones have been renamed or had
+      their argument signatures changed. Please review the documentation
+      to see what the methods and functions have become.
 
     * Credentials support. There is both general purpose and
-      `tools/geneos` specific support for the local storage of
-      credentials. At rest the passwords are stored in Geneos AES256
-      format with a key that is auto-generated if not found. To decode
-      these passwords you must have both the key file (which is by
-      default only user readable) and the credentials file. Future
-      support for other credentials, such as OAuth style client secrets
-      and tokens, will be forthcoming. The username and the domain the
-      the credentials apply to are not encrypted, by design. This is
-      however subject to change.
+      [`geneos`](tools/geneos/README.md) specific support for the local
+      storage of credentials. Passwords and other secrets "at rest" are
+      stored in Geneos AES256 format using a key file that is initial
+      auto-generated. To decode these passwords you must have both the
+      key file (which is by default only user readable) and the
+      credentials file. There should be support for other credentials
+      types, such as OAuth style client secrets and tokens, in future
+      releases. The _username_ and the _domain_ that the credentials
+      apply to are not encrypted, by design. This is however subject to
+      change in a future release.
 
-      The credentials support currently works with a plain test domain
-      that is used to match the destination "longest match wins", e.g.
-      for a URL this may be a full or partial domain name, and for
-      Geneos component authentication, e.g. the REST command API, the
-      domain is in the form `gateway:NAME`. More will be added later,
-      including SSH password and private keys.
+      Credentials currently works with a free-text domain that matches a
+      destination using a "longest match wins" search, e.g. for a URL
+      this may be a full or partial domain name, and for Geneos
+      component authentication, e.g. the REST command API, the domain is
+      in the form `gateway:NAME`. Others will be added later, probably
+      including TLS certificates and keys as well as SSH password and
+      private keys.
 
     * Releases now include selected binaries with a semantic version
-      suffix. The programs in `cordial` tend to use the base name of the
-      binary as the key to which configuration files to load, so that
-      renaming the binary gets you a different set of configuration file
-      automatically.
+      suffix. The programs in `cordial` use the base name of the binary
+      as a key to select which configuration files to load, so that
+      renaming the binary will result in a different set of
+      configuration file being used, automatically.
 
-      Now any version suffix is automatically stripped if, and only if,
-      it matched the one used to build the binary. This means you can
-      now download `geneos-v.1.5.0` and use it without having to rename
-      it for initial testing.
+      To make life simpler, any version suffix is automatically stripped
+      if, and only if, it matches the one used to build the binary. This
+      means you can now download `geneos-v.1.5.0` and use it without
+      having to rename it (useful for initial testing of new releases).
 
-  * `tools/geneos`:
+  * [`tools/geneos`](tools/geneos/README.md):
 
-    * Extensive documentation restructuring and rewriting. This is not
-      yet complete, but built-in help text (shown with the `help`
-      command or the `--help`/`-h` option) should now align more closely
-      with actual functionality and also the online documentation is now
-      largely built from the same source text. This work is ongoing and
-      there are still large gaps in explanatory and introductory
-      materials.
-    * Move `aes` and `tls` command sources to their own directories as
-      new subsystems.
-    * Add `host` and `package` subsystems and create aliases for
+    * Extensive documentation restructuring and rewriting. This is still
+      work in progress but largely complet. Built-in help text (shown
+      with the `help` command or the `--help`/`-h` option) should now
+      align much more closely with real functionality and the online
+      documentation is now almost completely built from the same source.
+
+    * Addition of _subsystems_ to group commands.
+
+    * Move `aes` and `tls` command sources to their subsystems.
+
+    * Add `host` and `package` subsystems and create aliases for the
       original commands, e.g.
       * `add host` becomes `host add`
       * `install` becomes `package install`
       * etc.
+
     * The `set user`, `show user` etc. commands are now under single
       `config` subystem, e.g. `geneos config set mykey=value`
+
     * The `set global` and related commands have been deprecated.
+
     * The new `package` subsystem command pulls all Geneos release
       management into one place
+
     * New `login` and `logout` commands to manage credentials.
+
     * New `ca3` and `floating` components for Collection Agent 3 and Floating
       Netprobes
 
-  * `tools/dv2email`:
+  * [`tools/dv2email`](tools/dv2email/README.md):
 
-    * This new program can be run as an Action or Effect to capture a
-      complete Dataview and send it as email. The configuration is
-      extensive and the layout and contents are completely configurable
-      through the use of Go templates.
+    * This new utility can be run as a Geneos Action or Effect to
+      capture one or more Dataviews and send as an email. The
+      configuration is extensive and the layout and contents are
+      completely configurable through the use of Go templates.
 
-* Fixes
+### v1.5.0 - Bug Fixes
 
-  * `tools/geneos`:
+  * [`tools/geneos`](tools/geneos/README.md):
 
     * Version checking of local release archives was broken because of
       overloading of a common function. This is now split and checking
       should work once again.
 
-    * Many reported issues on github have been fixed.
+    * Most reported issues on github have been fixed.
 
-* To Do:
+### v1.5.0 - To Do
 
-  * `tools/geneos`:
+  * Documentation needs more work and refinement. The built-in help for
+    almost all commands is now up-to-date but the `init` and `tls`
+    subsystems need to be reviewed further and completed. This should be
+    in a patch release soon.
+
+  * [`tools/geneos`](tools/geneos/README.md):
 
     * Local storage of encrypted passwords for remote SSH access needs
       documenting
+
+---
 
 ## Version v1.4.4 - 2023/04/12
 
 * Fixes
 
   * New `Default` expand option should NOT itself default to `nil`
+
+---
 
 ## Version v1.4.3 - 2023/04/12
 
@@ -177,6 +224,8 @@
   * pkg/geneos: added more Geneos XML config support, specifically Sampler Schemas and Standardised Formatting
   * libraries/libemail: added initial msTeams notification function
 
+---
+
 ## Version v1.4.2 - 2022/12/21
 
 * Fixes
@@ -187,6 +236,8 @@
   * tools/geneos: `install` should error out is passed `@host` instead of `-H host`
   * tools/geneos: ssh known hosts handling improved (for mixed IP / hostnames)
   * tools/geneos: remote hosts with IP names are now renamed `A-B-C-D` to avoid issues with viper names
+
+---
 
 ## Version v1.4.1 - 2022/12/19
 
@@ -211,7 +262,7 @@
 * Changes
 
   * tools/geneos: clean-up various comments, refactor methods, add license/copyright notices to many files
-  * pkg/config: Add an options `expr` prefix to expansion items which supports [github.com/maja42/goval] syntax
+  * pkg/config: Add an options `expr` prefix to expansion items which supports <https://pkg.go.dev/github.com/maja42/goval> syntax
   * pkg/config: API change: Add options to the config expansion functions rather than just lookup maps
   * tools/geneos: add SSH password support for remote hosts
   * tools/geneos: support embedded SSH passwords in hosts config, using new 'set host' sub-command
@@ -224,6 +275,8 @@
   * tools/geneos: ongoing documentation and command help usage updates
   * tools/geneos: update README.md with more information about instance configuration files and their values (@gvastel)
 
+---
+
 ## Version v1.3.2 - 2022/11/02
 
 * Fixes
@@ -231,12 +284,16 @@
   * tools/geneos: fix running as root (or via sudo) and creation of config directories and file ownerships
   * tools/geneos: fix creation of full user config directories when running 'set user'
 
+---
+
 ## Version v1.3.1 - 2022/11/01
 
 * Fixes
 
   * tools/geneos: chown files and directories creates when run as root
   * tools/geneos: ensure plain 'init' creates all components dirs
+
+---
 
 ## Version v1.3.0 - 2022/10/25
 
@@ -265,9 +322,13 @@
   * Integrations: Merge ServiceNow binaries into one
   * tools/geneos: change internal remote Stat() API
 
+---
+
 ## Version v1.2.1 - 2022/10/11
 
 Final release after numerous small fixes.
+
+---
 
 ## Version v1.2.1-rc3 - 2022/10/07
 
@@ -279,7 +340,10 @@ Final release after numerous small fixes.
     * Local-only installs now work again (including default "latest" support)
 
   * Security
-    * Updated Labstack Echo to 4.9.0 to address security advisory [CVE-2022-40083](https://nvd.nist.gov/vuln/detail/CVE-2022-40083). To best of our knowledge this particular set of features was never used in this package.
+    * Updated Labstack Echo to 4.9.0 to address security advisory
+      [CVE-2022-40083](https://nvd.nist.gov/vuln/detail/CVE-2022-40083).
+      To best of our knowledge this particular set of features was never
+      used in this package.
 
 * Additional features and improvements
 
@@ -294,11 +358,19 @@ Final release after numerous small fixes.
     * Enhanced `OpenLocalFileOrURL` to support `~/` paths
     * Enhanced `ExpandString` to support direct file paths and updates package docs further
 
+---
+
 ## Version v1.2.1-rc1 - 2022/09/28
 
 * Fixes
 
-  * `geneos` instance configuration files now have expansion applied to string-like values. This means, for example, that changing the `version` of an instance from `active_prod` will correctly be reflected in the executable path and library paths. Previously these needed to be manually changed. Please note that existing instance configuration files will NOT be updated and will require editing. You can go from:
+  * `geneos` instance configuration files now have expansion applied to
+    string-like values. This means, for example, that changing the
+    `version` of an instance from `active_prod` will correctly be
+    reflected in the executable path and library paths. Previously these
+    needed to be manually changed. Please note that existing instance
+    configuration files will NOT be updated and will require editing.
+    You can go from:
 
         "program": ".../packages/gateway/active_prod/gateway2.linux_64",
 
@@ -306,19 +378,30 @@ Final release after numerous small fixes.
 
         "program": "${config:install}/${config:version}/${config:binary}",
 
-  For a complete list of supported expansions see `ExpandString()` in the [`config`](../../pkg/config) package.
+  For a complete list of supported expansions see `ExpandString()` in the [`config`](pkg/config/README.md) package.
 
 * Additional features and improvements
 
-  * `ExpandString()` was enhanced to add a `config:` prefix so that configurations with a flat structure, i.e. no "." in names, could be referenced.
-  * To support the changes above in instance configurations a new method was added - `ExpandAllSettings()` - and the `geneos show` command enhanced to display both expanded and raw configurations via the new `--raw` flag.
-  * Additional configuration item support in the [`geneos`](../../pkg/geneos) package
+  * `ExpandString()` was enhanced to add a `config:` prefix so that
+    configurations with a flat structure, i.e. no "." in names, could be
+    referenced.
+  * To support the changes above in instance configurations a new method
+    was added - `ExpandAllSettings()` - and the `geneos show` command
+    enhanced to display both expanded and raw configurations via the new
+    `--raw` flag.
+  * Additional configuration item support in the
+    [`geneos`](pkg/geneos/README.md) package
+
+---
 
 ## Version v1.2.0-rc2 - 2022/09/26
 
 * Fixes found during testing
 
-  * Removed support for `$var` format expansion, now it's `${var}` only. This prevents configuration issues when, for example, plain text passwords contain dollar signs. The documented workaround if you need to include literal `${` in a configuration value still applies.
+  * Removed support for `$var` format expansion, now it's `${var}` only.
+    This prevents configuration issues when, for example, plain text
+    passwords contain dollar signs. The documented workaround if you
+    need to include literal `${` in a configuration value still applies.
 
 * Additional features and improvements
 
@@ -327,11 +410,17 @@ Final release after numerous small fixes.
   * Improvements, clarification to package and function documentation
   * Code clean-up and refactor to make some internals more understandable and to remove code duplication
 
+---
+
 ## Version v1.2.0-rc1 - 2022/09/21
 
 * Breaking Changes
 
-  There are quite a lot of changes to the various components and packages since the original v1.0.0. Given that almost no-one outside the components contained in the repo itself is using the public package APIs I have broken the rules around semantic versioning and changed parts of the API.
+  There are quite a lot of changes to the various components and
+  packages since the original v1.0.0. Given that almost no-one outside
+  the components contained in the repo itself is using the public
+  package APIs I have broken the rules around semantic versioning and
+  changed parts of the API.
 
 * Highlights
 
@@ -351,6 +440,8 @@ Final release after numerous small fixes.
     * Configuration support is now direct with `config` above, allowing full value expansions support, including encoded credentials.
   * Logging changes
     * The logging in `tools/geneos` has been migrated to `zerolog` from the internal `logger` for a more flexible package. This will be further rolled-out to other parts of the repo in time.
+
+---
 
 ## Version v1.0.0 - 2022/06/14
 

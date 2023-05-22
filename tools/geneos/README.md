@@ -1,34 +1,56 @@
-# `geneos` management tool
+# `geneos` Utility
 
-The `geneos` program will help you manage your Geneos environment on
-Linux.
+The `geneos` utility will help you manage your Geneos environment.
 
-The online documentation for all the commands and options is [here](docs/geneos.md)
+> The documentation for commands and their options is
+[here](docs/geneos.md)
+
+## Features
+
+* Initialise a new installation with a single command
+* Adopt an existing installation created using older tools
+* Operate Geneos across a group of servers with a single command
+* Create Geneos compatible AES256 encoded passwords and other
+  credentials
+* Manage certificates for TLS connectivity between Geneos components
+* Change instance settings without editing files
+* Download, install and update Geneos software
+* Simple installation of Self-Announcing and Floating Netprobes
 
 ## Aims
 
-* Make your life easier; at least the part managing Geneos
+* To make your life easier; at least the Geneos part
 * Keep it simple through the [Principle of least
   astonishment](https://en.wikipedia.org/wiki/Principle_of_least_astonishment)
 * Help you use automation tools with Geneos
 
-## Basic Features
-
-* Initialise a new installation with one command
-* Adopt an existing installation that uses older tools
-* Manage a group of servers with a single command
-* Create and manage Geneos compatible AES256 encoded passwords
-* Manage certificates for TLS connectivity between Geneos components
-* Configure instance settings without editing files
-* Download and install Geneos software, update components
-* Simple bootstrapping of Self-Announcing Netprobes
-
 ## Getting Started
 
-First download the pre-built binary or build from source. See
-[Installation](#installation) for details.
+First download the [latest pre-built
+binary](https://github.com/ITRS-Group/cordial/releases) and make it
+executable, then install it in a directory you can run it from.
 
+```bash
+curl -OL https://github.com/ITRS-Group/cordial/releases/download/v1.5.0/geneos-v1.5.0
+chmod + x /geneos-v1.5.0
+mv geneos-v1.5.0 ${HOME}/bin/geneos
+```
 
+If you prefer
+you can build from source. For more details see [Installation](#installation).
+
+You are now ready to go!
+
+If you are on a system or in a container without Geneos, you can try:
+
+```bash
+geneos init demo -u you@example.com
+```
+
+You will be prompted for your download password and then, after a short
+while, you will have a running Geneos Demo environment!
+
+### Typical Commands
 
 For typical commands the command line will be like this:
 
@@ -50,77 +72,123 @@ performing the same task; One examples is the `-f` (follow) flags for
 `logs` which has similar functionality to the `-l` (logs) flag for
 `init` commands.
 
-### Legacy Command Emulation
+### Adopting An Existing Installation
 
-If you run the program with a name ending in `ctl`, either through a
-symbolic link or by copying the binary, then the legacy command syntax
-is emulated in a simplistic way. This will allow for users or automation
-scripts to continue working in their environment and get used to the
-`geneos` command syntax gradually. The first half of the executable name
-is mapped to the component type, so for example:
+If you have a running Geneos environment and you currently use older
+ITRS tools like `gatewayctl` and `netprobectl` to manage it then you can
+start using the new `geneos` program straight away! There are a couple
+of options, but the simplest is to tell `geneos` where the existing
+Geneos installation is:
 
 ```bash
-ln -s geneos gatewayctl
-# this then runs ./geneos start gateway GW1
-./gatewayctl GW1 start
-
-ln -s geneos netprobectl
-# this then runs ./geneos list netprobe
-./netprobectl list
+geneos config set geneos=/path/to/geneos
 ```
 
-In general `TYPEctl NAME COMMAND` becomes `geneos COMMAND TYPE NAME`
+The path you need to use above is the one that contains the `bin` directory
+that the existing `gatewayctl` etc. are located in, typically
+`/opt/itrs` or `/home/geneos`. If you happen to have an environment
+variable `ITRS_HOME` already set then you can skip the above step
+altogether. You can just try listing existing Geneos instances like
+this, without any risk of changes:
+
+```bash
+geneos list
+```
+
+If this works then you are ready.
+
+#### Legacy Command Emulation
+
+To help you migrate from older tools to `geneos`, the program will
+emulate the syntax of the older command (with some restrictions, such as
+no `create` emulation) if run using those names.
+
+This allows your users or existing automations to continue to work as before.
+
+To back-up your old scripts and create the right link to the new
+`geneos` program just run:
+
+```bash
+geneos migrate -X
+```
+
+This will rename any `*ctl` programs for Geneos components to an `.orig`
+suffix and then create a link to the current location of the `geneos`
+program.
+
+To reverse this simply run:
+
+```bash
+geneos revert -X
+```
+
+This works by taking the first part of the executable name and mapping
+it to the component type, so for example a legacy command `TYPEctl NAME
+COMMAND` becomes `geneos COMMAND TYPE NAME`
 
 The word `all` instead of a specific instance name is supported as
 expected.
 
-### Available Commands
-
-Commands have their own automatically generated documents and are listed
-here: [`geneos.md`](docs/geneos.md)
-
 ## Concepts & Terminology
 
-This documentation and the program itself assumes familiarity with the
-Geneos suite of products. Many of the key terms have been inherited from
+We assumes familiarity with the [ITRS
+Geneos](https://www.itrsgroup.com/products/geneos) products.
+
+Many of the terms used by the `geneos` program have been inherited from
 earlier systems.
-
-The specific types supported by this program are details in
-[Component Types](#geneos-components).
-
-### Geneos
-
-[Geneos](https://www.itrsgroup.com/products/geneos) is a suite of
-software products from [ITRS](https://www.itrsgroup.com/) that provide
-real-time visibility of I.T. infrastructure and trading environments. It
-uses a three-tier architecture to collect, process and present enriched
-data to administrators.
 
 ### Components
 
-A *component* is a type of software package and associated data. Each
-component will typically be a software package from one of the
-three-tiers mentioned above but can also be a derivative, e.g. a
-Self-Announcing Netprobe is a component type that abstracts the special
-configuration of either a vanilla Netprobe or, for example, the Fix
-Analyser Netprobe.
+A *Component* is a stand-alone software release that forms one part of
+the ITRS Geneos product.
 
-The supported component types are listed in
-[Component Types](docs/geneos.md).
+The currently supported _Component_ types are listed in [Recognised
+Component Types](docs/geneos.md#recognised-component-types).
 
-### Instances
+A _Component_ can also refer to a variety of another _Component_ type.
+The most common one is a Self-Announcing Netprobe which is a variety of
+Netprobe.
 
-An *instance* is an independent copy of a component with a working
-directory (`<top-level directory>/<component>/<component>s/<instance
-name>`, e.g. `/opt/itrs/netprobe/netprobes/myNetprobe`), configuration
-and other persistent files. Instances share read-only package
-directories for the binaries and other files from the distribution for
-the specific version being used.
+_Components_ are normally referred to as a `TYPE` in command help and
+documentation.
+
+_Components_ (more specifically the software releases that they are made
+up of) are managed through the [`package`](cmd/pkgcmd/README.md)
+subsystem.
 
 ### Hosts
 
-*Hosts* are the locations that components are installed and
-instantiated. There is always a *localhost*.
+A _Host_ is the location that components are installed and can be
+operated. There is always a `localhost`. There is also a special `all`
+host keyword that is implied when no host is specified.
+
+Normally commands will apply to all _Hosts_. Operations can be limited
+using the global option `--host`/`-H` for most commands.
+
+Hosts are managed through the [`hosts`](cmd/hostcmd/README.md) subsystem.
+
+### Instances
+
+An _Instance_ is an example of the running context of a _Component_. An
+_Instance_ is primarily made up of a working directory and a
+configuration file and optionally other related files. The `geneos`
+utility uses these to manage the lifecycle of a _Component_
+independently of other _Instances_ of the same _Component_ `TYPE`.
+
+_Instances_ are referred to as `NAME` in the command help and
+documentation.
+
+Each _Instance_ must have a unique case-insensitive name for that
+_Component_ `TYPE` and on that `HOST` and must not be one of the
+reserved names.
+
+Reserved name are those that would be ambiguous on the command line and
+include Component types and the aliases, command names and their aliases
+and some special terms (such as `all` or `any`).
+
+An instance name can have a suffix that refers to the `HOST` it is
+located on in the form `NAME@HOST`. If not specified then commands will
+apply to all _Instances_ of `NAME` across all hosts.
 
 ## Instance Protection
 
@@ -160,26 +228,27 @@ overrides `download.username`
 
 ## Instance Settings
 
-Each instance has a configuration file. This is the most basic
-expression of an instance. New instances that you create will have a
-configuration file named after the component type plus the extension
-`.json`. Older instances which you have adopted from older control
-scripts will have a configuration file with the extension `.rc`
+Every instance has a configuration file stored in a working directory.
+This is the most basic set-up for an instance. New instances that you
+create will have a configuration file named after the component type
+plus the file type extension `.json`. Older instances which you have
+adopted from older control scripts will have a configuration file with
+the extension `.rc`
 
 ### Legacy Configuration Files
 
-Historical (aka. legacy) `.rc` files have a simple format of the form
+Historical (i.e. legacy) `.rc` files have a simple format like this:
 
 ```bash
 GatePort=1234
 GateUser=geneos
 ```
 
-Where the prefix (`Gate`) also encodes the component type and the suffix
-(e.g. `Port`) is the setting. Any lines that do not contain the prefix
-are treated as environment variables and are evaluated and passed to the
-program on start. Lines that contain environment variables like
-`${HOME}` will be expanded at run time. If the configuration is
+Where the prefix (`Gate`) also implies the component type and the suffix
+(`Port`) is the parameter. Any lines that do not contain the prefix are
+treated as environment variables and are evaluated and passed to the
+program on start-up. Parameter values that contain environment variables
+in the format `${HOME}` will be expanded at run time. If the configuration is
 migrated, either through an explicit `geneos migrate` command or if a
 setting is changes through `geneos set` or similar then the value of the
 environment variable will be carried over and continue to be expanded at
@@ -194,22 +263,23 @@ using the `migrate` command.
 ### JSON Configuration Files
 
 The `.json` configuration files share common parameters as well as
-component type specific settings. For brevity some of these parameters
-are overloaded and have different meanings depending on the component
-type they apply to.
+component type specific settings. For simplicity some of these
+parameters have different meanings depending on the component type they
+apply to.
 
 While editing the configuration files directly is possible, it is best
 to use the `set` and `unset` commands to ensure the syntax is correct.
 
 ### Special parameters
 
-All instance types support custom environment variables being set or
-unset. This is done through the `set` and `unset` commands below,
-alongside the standard configuration parameters for each instance type.
+All instances support custom environment variables being set or unset.
+This is done through the `set` and `unset` commands.
 
-Some component types, namely Gateways and SANs, support other special
-parameters via other command line flags. See the help text or the full
-documentation for the `set` and `unset` commands for more details.
+Some component types, Gateways, SANs and Floating Netprobes, support
+other special parameters through options to the various commands that
+create or edit instance configurations. See the help text for the `set`
+and `unset` commands for more details as well as `add` and the `init`
+subsystem.
 
 To set an environment variable use this syntax:
 
@@ -231,9 +301,9 @@ You can specify multiple entries by using the flag more than once:
 geneos set netprobe example1 -e JAVA_HOME=/path -e ORACLE_HOME=/path2
 ```
 
-Finally, if your environment variable value contains spaces then use
-quotes as appropriate to your shell to prevent those spaces being
-processed. In bash you can do any of these to achieve the same result:
+If the value of the environment variable contains spaces then use quotes
+to prevent those spaces being caught by the shell. In bash you can do
+any of these to achieve the same result:
 
 ```bash
 geneos set netprobe example1 -e MYVAR="a string with spaces"
@@ -246,113 +316,25 @@ You can review the environment for any instance using the `show` command:
 geneos show netprobe example1
 ```
 
-Also. output is available from the `command` command to show what would
+Also, output is available from the `command` command to show what would
 be run when calling the `start` command:
 
 ```bash
 geneos command netprobe example1
 ```
 
-#### General Command Flags & Arguments
+Other special parameters behave in similar ways. Please see the command
+documentation for details.
 
-```bash
-geneos COMMAND [flags] [TYPE] [NAME...] [PARAM...]
-```
+### File and URLs
 
-Where:
-
-* `COMMAND` - one of the configured commands
-* `flags` - Both general and command specific flags
-* `TYPE` - the component type
-* `NAME` - one or more instance names, optionally including the remote server
-* `PARAM` - anything that isn't one of the above
-
-In general, with the exception of `COMMAND` and `TYPE`, all parameters
-can be in any order as they are filtered into their types for most
-commands. Some commands require arguments in an exact order.
-
-As an example, these have the same meaning:
-
-```bash
-geneos ls -c gateway one two three
-geneos ls gateway one -c two three
-```
-
-Reserved instance names are case-insensitive. So, for example,
-"gateway", "Gateway" and "GATEWAY" are all reserved.
-
-The `NAME` is of the format `INSTANCE@REMOTE` where either is optional.
-In general commands will wildcard the part not provided. There are
-special `REMOTE` names `@localhost` and `@all` - the former is, as the
-name suggests, the local server and `@all` is the same as not providing
-a remote name.
-
-There is a special format for adding SANs in the form `TYPE:NAME@REMOTE`
-where `TYPE` can be used to select the underlying Netprobe type. This
-format is still accepted for all other commands but the `TYPE` is
-silently ignored.
-
-#### File and URLs
-
-In general all source file references support URLs, e.g. importing
+Most configuration file values support URLs, e.g. importing
 certificate and keys, license files, etc.
 
 The primary exception is for Gateway include files used in templated
 configurations. If these are given as URLs then they are used in the
 configuration as URLs.
 
-## Configuration Files
-
-### General Configuration
-
-* `/etc/geneos/geneos.json` - Global options
-* `${HOME}/.config/geneos/geneos.json` - User options
-* Environment variables ITRS_`option` - where `.` is replaced by `_`,
-  e.g. `ITRS_DOWNLOAD_USERNAME`
-
-General options are loaded from the global config file first, then the
-user one and any environment variables override both files. The current
-options are:
-
-* `geneos`
-
-The home directory for all other commands. See [Directory
-Layout](#directory-layout) below. If set the environment variable
-ITRS_HOME overrides any settings in the files. This is to maintain
-backward compatibility with older tools. The default, if not set
-anywhere else, is the home directory of the user running the command or,
-if running as root, the home directory of the `geneos` or `itrs` users
-(in that order). (To be fully implemented) This value is also set by the
-environment variables `ITRS_HOME` or `ITRS_GENEOS`
-
-* `download.url`
-
-The base URL for downloads for automating installations. Not yet used.
-If files are locally downloaded then this can either be a `file://`
-style URL or a directory path.
-
-* `download.username` `download.password`
-
-  These specify the username and password to use when downloading
-  packages. They can also be set as the environment variables, but the
-  environment variables are not subject to expansion and so cannot
-  contain Geneos encoded passwords (see below):
-
-  * `ITRS_DOWNLOAD_USERNAME`
-  * `ITRS_DOWNLOAD_PASSWORD`
-
-* `snapshot.username` `snapshot.password`
-
-  Similarly to the above, these specify the username and password to use
-  when taking dataview snapshots. They can also be set as the
-  environment variables, with the same restrictions as above:
-
-  * `ITRS_SNAPSHOT_USERNAME`
-  * `ITRS_SNAPSHOT_PASSWORD`
-
-* `GatewayPortRange` & `NetprobePortRange` & `LicdPortRange`
-
-...
 
 ### Component Configuration
 
@@ -371,6 +353,7 @@ Note that execution mode (e.g. `GateMode`) is not supported and all
 components run in the background.
 
 
+
 #### Instance Configuration File
 
 These configuration files - in JSON format -  should be found in
@@ -383,228 +366,6 @@ sub-directories under the `geneos` base directory (typiocally
 * `TYPEs` is the component type followed by the letter "s" (lowercase) to indicate a plural.
 * `INSTANCE` is the instance name.
 * `TYPE.json` is a the file name (e.g. `licd.json`, `gateway.json`, etc.).]
-
-## Directory Layout
-
-The `geneos` configuration setting or the environment variable
-`ITRS_HOME` points to the base directory for all subsequent operations.
-The layout follows that of the original `gatewayctl` etc.
-
-Directory structure / hierarchy / layout is as follows:
-
-```text
-/opt/itrs
-├── fa2
-│   └── fa2s
-├── fileagent
-│   └── fileagents
-├── gateway
-│   ├── gateway_config
-│   ├── gateways
-│   │   └── [gateway instance name]
-│   ├── gateway_shared
-│   └── templates
-│       ├── gateway-instance.setup.xml.gotmpl
-│       └── gateway.setup.xml.gotmpl
-├── hosts
-├── licd
-│   └── licds
-│       └── [licd instance name]
-├── netprobe
-│   └── netprobes
-│       └── [netprobe instance name]
-├── packages
-│   ├── downloads
-│   │   ├── geneos-gateway-6.0.0-linux-x64.tar.gz
-│   │   ├── geneos-licd-6.0.0-linux-x64.tar.gz
-│   │   ├── geneos-netprobe-6.0.2-linux-x64.tar.gz
-│   │   └── geneos-web-server-6.0.0-linux-x64.tar.gz
-│   ├── fa2
-│   ├── fileagent
-│   ├── gateway
-│   │   ├── 6.0.0
-│   │   └── active_prod -> 6.0.0
-│   ├── licd
-│   │   ├── 6.0.0
-│   │   └── active_prod -> 6.0.0
-│   ├── netprobe
-│   │   ├── 6.0.2
-│   │   └── active_prod -> 6.0.2
-│   └── webserver
-│       ├── 6.0.0
-│       └── active_prod -> 6.0.0
-├── san
-│   ├── sans
-│   └── templates
-│       └── netprobe.setup.xml.gotmpl
-└── webserver
-    └── webservers
-        └── [webserver instance name]
-```
-
-where:
-
-* `fa2/` (Fix Analyser) contains settings & instance data related to the
-  `fa2` component type.
-
-  * `fa2/fa2s/` contains one sub-directory for each Fix Analyser
-    instance named after the fa2 instance. These sub-directory will be
-    used as working directories for the corresponding instances.
-
-* `fileagent/` (File Agent for Fix Analyser) contains settings &
-  instance data related to the `fileagent` component type.
-
-  * `fileagent/fileagents/` contains one sub-directory for each File
-    Agent instance named after the file agent instance. These
-    sub-directory will be used as working directories for the
-    corresponding instances.
-
-* `gateway/` contains settings & instance data related to the `gateway`
-  component type.
-
-  * `gateway/gateway_config/` contains common Gateway configuration as
-    include `XML` files.
-  * `gateway/gateways/` contains one sub-directory for each Gateway
-    instance named after the gateway instance. These sub-directories
-    will be used as working directories for the corresponding gateway
-    instances.
-  * `gateway/gateway_shared/` contains shared Gateway data such as
-    include `XML` files or scritped tools.
-  * `gateway/templates/` contains Gateway configuration templates in the
-    form of Golang XML templates.
-
-* `hosts/` contains configurations for supporting control of Geneos
-  component instances running on remote hosts.
-* `licd/` (License Daemon) contains settings & instance data related to
-  the `licd` component type.
-  * `licd/licds/` contains one sub-directory for each licd instance
-    named after the licd instance. This sub-directories will be used as
-    working directories for the corresponding License Daemon (licd)
-    instance.
-
-* `netprobe/` contains settings & instance data related to the
-  `netprobe` component type.
-  * `netprobe/netprobes/` contains one sub-directory for each Netprobe
-    instance named after the netprobe instance. These sub-directories
-    will be used as working directories for the corresponding netprobe
-    instances.
-
-* `packages/` contains the Geneos binaries / software packages
-  installed.
-  * `packages/downloads/` contains files downloaded from the ITRS
-    download portal, or the file repository used.
-  * `packages/fa2/` contains one sub-directory for each version of Fix
-    Analyser installed, as well as symlinks (e.g. `active_prod`)
-    pointing to the current default version. These sub-directory will
-    contain the corresponding binaries.
-  * `packages/fileagent/` contains one sub-directory for each version of
-    File Agent installed, as well as symlinks (e.g. `active_prod`)
-    pointing to the current default version. These sub-directory will
-    contain the corresponding binaries.
-  * `packages/gateway/` contains one sub-directory for each version of
-    Gateway installed, as well as a symlinks (e.g. `active_prod`)
-    pointing to the current default version.  These sub-directory will
-    contain the corresponding binaries.
-  * `packages/licd/` contains one sub-directory for each version of
-    License Daemon (licd) installed, as well as a symlinks (e.g.
-    `active_prod`) pointing to the current default version. These
-    sub-directory will contain the corresponding binaries.
-  * `packages/netprobe/` contains one sub-directory for each version of
-    Netprobe installed, as well as a symlinks (e.g. `active_prod`)
-    pointing to the current default version. These sub-directory will
-    contain the corresponding binaries.
-  * `packages/webserver/` contains one sub-directory for each version of
-    Webserver (for web dashboards) installed, as well as a symlinks
-    (e.g. `active_prod`) pointing to the current default version. These
-    sub-directory will contain the corresponding binaries.
-
-* `san/` (Self-Announcing Netprobe) contains settings & instance data
-  related to the `san` component type.
-  * `san/sans/` contains one sub-directory for each Self-Announcing
-    Netprobe instance named after the san instance. These
-    sub-directories will be used as working directories for the
-    corresponding san instances.
-  * `san/templates/` contains Self-Announcing Netprobe configuration
-    templates in the form of Golang XML templates.
-
-* `webserver/` (Webserver for web dashbaords) contains settings &
-  instance data related to the `webserver` component type.
-  * `webserver/webservers/` contains one sub-directory for each
-    Webserver instance named after the webserver instance. These
-    sub-directories will be used as working directories for the
-    corresponding Webserver instances.
-
-The `bin/` directory and the default `.rc` files are **ignored**.
-Please be careful in case you have customised anything in `bin/`.
-
-As a very quick recap, each component directory will have a subdirectory
-with the plural of the name (e.g. `gateway/gateways`) which will contain
-subdirectories, one per instance, and these act as the configuration and
-working directories for the individual processes. Taking an example
-gateway called `Gateway1` the path will be:
-`${ITRS_HOME}/gateway/gateways/Gateway1`.
-
-This directory will be the working directory of the process and also
-contain an `.rc` configuration file - if using the legacy scripts (e.g.
-`gatewayctl`) - or a `.json` configuration file - if using the `geneos`
-utility - as well as a `.txt` file to capture the `STDOUT` and `STDERR`
-of the process.
-
-There will also be an XML setup file and so on.
-
-
-## `geneos` Components
-
-### Instance Properties
-
-**Note**: This section is incomplete and remains as work-in-progress.
-
-| Property      | Previous Name | `licd`             | `gateway`          | `netprobe`         | `san`              | `fa2`              | `fileagent`        | `webserver`        | Description |
-| --------      | ------------- | ------             | ---------          | ----------         | -----              | -----              | -----------        | -----------        | ----------- |
-| `binary`      | `BinSuffix`   | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Name of the binary file used to run the instance of the componenent TYPE. |
-| n/a           | `TYPERoot`    | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | Root directory for the TYPE. Ignored. |
-| n/a           | `TYPEMode`    | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | Process execution mode - baskground or foregbround. Ignored. |
-| `home`        | `TYPEHome`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Path to the instance's home directory, from where the instance component TYPE is started. |
-| `install`     | `TYPEBins`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Path to the directory where the binaries of the component TYPE are installed. |
-| `libpaths`    | `TYPELibs`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Library path(s) (separated by `:`) used by the instance of the component TYPE. |
-| `logdir`      | `TYPELogD`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Path to the dorectory where logs are to be written for the instance of the component TYPE. |
-| `logfile`     | `TYPELogF`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Name of the primary log file to be generated for the instance. |
-| `name`        | `TYPEName`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Name of the instance. |
-| `options`     | `TYPEOpts`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Additional command-line options to be used as part of the command line to start the instance of the component TYPE. |
-| `port`        | `TYPEport`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Listening port used by the instance. |
-| `program`     | `TYPEExec`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Absolute path to the binary file used to run the instance of the component TYPE. |
-| `user`        | `TYPEUser`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | User owning the instance. |
-| `version`     | `TYPEBase`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Version as either the name of the directory holding the component TYPE's binaries or the name of the symlink pointing to that directory. |
-| Gateway Specific: |
-| `gatewayname` | n/a *         | ❌ | ✔ | ❌ | ❌ | ❌ | ❌ | ❌ | Name of the gateway instance. This can be different to the instance name. |
-| `licdhost`    | `GateLicH`    | ❌ | ✔ | ❌ | ❌ | ❌ | ❌ | ❌ | Name of the host where the license daemon (licd) to be used by the gateway instance is hosted. |
-| `licdport`    | `GateLicP`    | ❌ | ✔ | ❌ | ❌ | ❌ | ❌ | ❌ | Port number of the license daemon (licd) to be used by the gateway instance. |
-| `licdsecure`  | `GateLicS` *  | ❌ | ✔ | ❌ | ❌ | ❌ | ❌ | ❌ | Flag indicating whether connection to licd is secured by TLS encryption. |
-| `keyfile`     | n/a           | ❌ | ✔ | ❌ | ❌ | ❌ | ❌ | ❌ | External keyfile for AES 256 encoding. |
-| `prevkeyfile` | n/a           | ❌ | ✔ | ❌ | ❌ | ❌ | ❌ | ❌ | External keyfile for AES 256 encoding. |
-| Webserver Specific: |
-| `maxmem`      | `WebsXmx`     | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔ | Java value for maximum memory for the Web Server (`-Xmx`) |
-| TLS Settings: |
-| `certificate` | `TYPECert` *  | 🔘 | 🔘 | 🔘 | 🔘 | 🔘 | ❌ | 🔘 | File containing a TLS certificate used for Geneos internal secure comms (TLS-encrypted). |
-| `privatekey`  | `TYPEKey` *   | 🔘 | 🔘 | 🔘 | 🔘 | 🔘 | ❌ | 🔘 | File containing the privatye key associated with the TLS certificate `certificate`, used for Geneos internal secure comms (TLS-encrypted). |
-
-Note: Settings in the `Previous Name`column with an `*` indicate those that were interim values during the development of the program and did not exist in the original `binutils` implementation.
-
-Key:
-
-| Checkmarks | `TYPE` labels in Pervious Name Column |
-| ------ | ------ |
-| ✔ - Supported and **required** | `gate` - Gateways |
-| :radio_button: - Supports and optional | `licd` - License Daemons |
-| :x: - Not support (and ignored) | `netp` - Netprobes |
-| | `webs` - Web servers |
-| | `FAgent` - File Agent |
-
-In addition to the above simple properties there are a number of
-properties that are lists of values and these values must be specific
-formats.
-
-* `env`
 
 
 
