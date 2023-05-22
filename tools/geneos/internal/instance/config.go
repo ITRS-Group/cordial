@@ -613,7 +613,9 @@ func (i *GatewayValues) Set(value string) error {
 		val = e[1]
 	} else {
 		// XXX check two values and first is a number
-		log.Debug().Msgf("second value missing after ':', using default %s", val)
+		// this debug happens before flags initialised, so it is always
+		// output. comment out for now.
+		// log.Debug().Msgf("second value missing after ':', using default %s", val)
 	}
 	(*i)[e[0]] = val
 	return nil
