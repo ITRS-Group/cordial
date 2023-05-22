@@ -136,7 +136,7 @@ func GetPassword(s string, options ...ExpandOptions) Plaintext {
 // identified by key and expanded using the Expand function with the
 // options supplied.
 func (c *Config) GetPassword(key string, options ...ExpandOptions) Plaintext {
-	return Plaintext{c.ExpandEnclave(c.Viper.GetString(key), options...)}
+	return Plaintext{c.ExpandToEnclave(c.Viper.GetString(key), options...)}
 }
 
 // GetInt functions like [viper.GetInt] but additionally calls
