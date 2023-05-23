@@ -40,7 +40,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-// create a new certificate for an instance
+// CreateCert creates a new certificate for an instance
 //
 // this also creates a new private key
 //
@@ -77,7 +77,7 @@ func CreateCert(c geneos.Instance) (err error) {
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	intrCert, err := ReadSigningCert()
+	intrCert, err := ReadSigningCert(filepath.Join(geneos.Root(), "tls"))
 	if err != nil {
 		return
 	}
@@ -104,6 +104,107 @@ func CreateCert(c geneos.Instance) (err error) {
 	return
 }
 
+// CreateRootCA creates a new root certificate and private key and saves
+// it in dir. If overwrite is true then any existing certificate and key
+// is overwritten.
+func CreateRootCA(dir string, overwrite bool) (err error) {
+	// create rootCA.pem / rootCA.key
+	var cert *x509.Certificate
+	rootCertPath := filepath.Join(dir, geneos.RootCAFile+".pem")
+	rootKeyPath := filepath.Join(dir, geneos.RootCAFile+".key")
+
+	if !overwrite {
+		if _, err = ReadRootCert(dir); err == nil {
+			return geneos.ErrExists
+		}
+	}
+	serial, err := rand.Prime(rand.Reader, 64)
+	if err != nil {
+		return
+	}
+	template := &x509.Certificate{
+		SerialNumber: serial,
+		Subject: pkix.Name{
+			CommonName: "geneos root CA",
+		},
+		NotBefore:             time.Now().Add(-60 * time.Second),
+		NotAfter:              time.Now().AddDate(10, 0, 0).Truncate(24 * time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		MaxPathLen:            2,
+	}
+
+	cert, key, err := CreateCertKey(template, template, nil, nil)
+	if err != nil {
+		return
+	}
+
+	if err = geneos.LOCAL.WriteCert(rootCertPath, cert); err != nil {
+		return
+	}
+	if err = geneos.LOCAL.WriteKey(rootKeyPath, key); err != nil {
+		return
+	}
+
+	return
+}
+
+// CreateSigningCert creates a new signing certificate and private key.
+// If overwrite is true than any existing cert and key are overwritten.
+func CreateSigningCert(dir string, overwrite bool) (err error) {
+	var cert *x509.Certificate
+	intrCertPath := filepath.Join(dir, geneos.SigningCertFile+".pem")
+	intrKeyPath := filepath.Join(dir, geneos.SigningCertFile+".key")
+
+	if !overwrite {
+		if _, err = ReadSigningCert(dir); err == nil {
+			return geneos.ErrExists
+		}
+	}
+
+	serial, err := rand.Prime(rand.Reader, 64)
+	if err != nil {
+		return
+	}
+	template := x509.Certificate{
+		SerialNumber: serial,
+		Subject: pkix.Name{
+			CommonName: "geneos intermediate CA",
+		},
+		NotBefore:             time.Now().Add(-60 * time.Second),
+		NotAfter:              time.Now().AddDate(10, 0, 0).Truncate(24 * time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		MaxPathLen:            1,
+	}
+
+	rootCert, err := ReadRootCert(dir)
+	if err != nil {
+		return
+	}
+	rootKey, err := geneos.LOCAL.ReadKey(filepath.Join(dir, geneos.RootCAFile+".key"))
+	if err != nil {
+		return
+	}
+
+	cert, key, err := CreateCertKey(&template, rootCert, rootKey, nil)
+	if err != nil {
+		return
+	}
+
+	if err = geneos.LOCAL.WriteCert(intrCertPath, cert); err != nil {
+		return
+	}
+	if err = geneos.LOCAL.WriteKey(intrKeyPath, key); err != nil {
+		return
+	}
+
+	return
+}
+
+// WriteCert writes the certificate for the instance c
 func WriteCert(c geneos.Instance, cert *x509.Certificate) (err error) {
 	cf := c.Config()
 
@@ -126,6 +227,7 @@ func WriteCert(c geneos.Instance, cert *x509.Certificate) (err error) {
 	)
 }
 
+// WriteKey writes the key for the instance c
 func WriteKey(c geneos.Instance, key *memguard.Enclave) (err error) {
 	cf := c.Config()
 
@@ -148,19 +250,19 @@ func WriteKey(c geneos.Instance, key *memguard.Enclave) (err error) {
 	)
 }
 
-// read the rootCA certificate from the installation directory
-func ReadRootCert() (cert *x509.Certificate, err error) {
-	tlsDir := filepath.Join(geneos.Root(), "tls")
+// ReadRootCert reads the root certificate from the installation
+// directory
+func ReadRootCert(tlsDir string) (cert *x509.Certificate, err error) {
 	return geneos.LOCAL.ReadCert(filepath.Join(tlsDir, geneos.RootCAFile+".pem"))
 }
 
-// read the signing certificate from the installation directory
-func ReadSigningCert() (cert *x509.Certificate, err error) {
-	tlsDir := filepath.Join(geneos.Root(), "tls")
+// ReadSigningCert reads the signing certificate from the installation
+// directory
+func ReadSigningCert(tlsDir string) (cert *x509.Certificate, err error) {
 	return geneos.LOCAL.ReadCert(filepath.Join(tlsDir, geneos.SigningCertFile+".pem"))
 }
 
-// read the instance certificate
+// ReadCert reads the instance certificate
 func ReadCert(c geneos.Instance) (cert *x509.Certificate, err error) {
 	if c.Type() == nil {
 		return nil, geneos.ErrInvalidArgs
@@ -172,7 +274,7 @@ func ReadCert(c geneos.Instance) (cert *x509.Certificate, err error) {
 	return c.Host().ReadCert(Filepath(c, "certificate"))
 }
 
-// read the instance RSA private key
+// ReadKey reads the instance RSA private key
 func ReadKey(c geneos.Instance) (key *memguard.Enclave, err error) {
 	if c.Type() == nil || c.Config().GetString("privatekey") == "" {
 		return nil, geneos.ErrInvalidArgs
@@ -192,10 +294,10 @@ func NewPrivateKey() *memguard.Enclave {
 	return memguard.NewEnclave(x509.MarshalPKCS1PrivateKey(certKey))
 }
 
-// wrapper to create a new certificate given the sign cert and private
-// key and an optional private key to (re)use for the created
-// certificate itself. returns a certificate and private key. Keys are
-// in PEM format so need parsing after unsealing.
+// CreateCertKey is a wrapper to create a new certificate given the
+// signing cert and private key and an optional private key to (re)use
+// for the created certificate itself. returns a certificate and private
+// key. Keys are in PEM format so need parsing after unsealing.
 func CreateCertKey(template, parent *x509.Certificate, parentKeyPEM, existingKeyPEM *memguard.Enclave) (cert *x509.Certificate, keyPEM *memguard.Enclave, err error) {
 	var certBytes []byte
 	var certKey *rsa.PrivateKey

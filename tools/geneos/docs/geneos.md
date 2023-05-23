@@ -11,14 +11,14 @@ Take control of your Geneos environments
 * [`geneos package`](geneos_package.md)	 - Package Operations
 * [`geneos tls`](geneos_tls.md)	 - TLS Certificate Operations
 
-## Control Geneos Instances
+## Control Instances
 
 * [`geneos reload`](geneos_reload.md)	 - Reload Instance Configurations
 * [`geneos restart`](geneos_restart.md)	 - Restart Instances
 * [`geneos start`](geneos_start.md)	 - Start Instances
 * [`geneos stop`](geneos_stop.md)	 - Stop Instances
 
-## Inspect Geneos instances
+## Inspect Instances
 
 * [`geneos command`](geneos_command.md)	 - Show Instance Start-up Details
 * [`geneos home`](geneos_home.md)	 - Display Instance and Component Home Directories
@@ -27,7 +27,7 @@ Take control of your Geneos environments
 * [`geneos ps`](geneos_ps.md)	 - List Running Instance Details
 * [`geneos show`](geneos_show.md)	 - Show Instance Configuration
 
-## Manage Geneos Instances
+## Manage Instances
 
 * [`geneos clean`](geneos_clean.md)	 - Clean-up Instance Directories
 * [`geneos copy`](geneos_copy.md)	 - Copy instances
@@ -36,7 +36,7 @@ Take control of your Geneos environments
 * [`geneos move`](geneos_move.md)	 - Move instances
 * [`geneos protect`](geneos_protect.md)	 - Mark instances as protected
 
-## Configure Geneos Instances
+## Configure Instances
 
 * [`geneos add`](geneos_add.md)	 - Add a new instance
 * [`geneos delete`](geneos_delete.md)	 - Delete Instances
