@@ -37,8 +37,8 @@
 						<string>{{join .home .logfile}}</string>
 					</var>
 					{{range $key, $value := .variables -}}
-					<var name="{{$key}}">
-						<{{nameOf $value ":"}}>{{valueOf $value ":"}}</{{nameOf $value ":"}}>
+					<var name="{{$value.name}}">
+						<{{$value.type}}>{{$value.value}}</{{$value.type}}>
 					</var>
 					{{end}}
 				</variables>
