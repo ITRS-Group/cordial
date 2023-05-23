@@ -1,5 +1,44 @@
 # Change Log
 
+## Version v1.5.1
+
+> **Not yet released**
+>
+> Please report issues via
+> [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS
+> Community Forum](https://community.itrsgroup.com/).
+
+## v1.5.1 Changes
+
+* [`tools/geneos`](tools/geneos/README.md):
+
+  * #85 - TLS Issues
+
+    Added verification for certificates against existing root and
+    signing certificates.
+
+    Added an option to recreate root and signing certs from `tls init`.
+
+  * #86 - New log option for stderr logs blocked main logs
+
+    Reworked the way that logs are followed to allow both normal and
+    stderr logs to be followed. This fixes `start -l`, `restart -l` and
+    by implication `init -l` options. Added a `--nostandard`/`-N` option
+    to `logs` to allow normal log to be surpressed when you only want
+    the error logs.
+
+  * #88 - Floating probe configuration template output malformed
+
+    The defaults for new floating probes used `sanname` instead of
+    `floatingname` as the parameter for the template rendering.
+
+  * #90 - Variables in SANs
+
+    The san template was not corrected updated for the new variable
+    structure.
+
+---
+
 ## Version v1.5.0
 
 > **Released 2023/05/22**
