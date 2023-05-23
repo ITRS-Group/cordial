@@ -73,10 +73,9 @@ func commandRestart(ct *geneos.Component, args []string, params []string) (err e
 	}
 
 	if restartCmdLogs {
-		// watch STDERR on start-up
-		logCmdStderr = true
+		// also watch STDERR on start-up
 		// never returns
-		return followLogs(ct, args, params)
+		return followLogs(ct, args, params, true)
 	}
 	return
 }

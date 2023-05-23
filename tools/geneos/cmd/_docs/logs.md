@@ -13,7 +13,8 @@ for all matching instances including remote ones. `--cat`/`-c` and
 
 The `--stderr`/`-E` option controls whether the separate `STDERR` log
 (if there is one) for each matching instance is also shown along with
-the main log. There is no way currently to only view the `STDERR` logs.
+the main log. If used with the `--nostandard`/`-N` option to suppress
+normal log files then only error output is shown.
 
 The `--match`/`-g` and `--ignore`/`-v` options will filter lines the
 output based on a case sensitive search over the whole line. As can be
