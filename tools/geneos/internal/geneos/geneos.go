@@ -43,6 +43,8 @@ var (
 	ErrInvalidArgs  = errors.New("invalid arguments")
 	ErrNotSupported = errors.New("not supported")
 	ErrIsADirectory = errors.New("is a directory")
+	ErrExists       = errors.New("exists")
+	ErrNotExist     = errors.New("does not exist")
 	ErrDisabled     = errors.New("instance is disabled")
 	ErrProtected    = errors.New("instance is protected")
 	ErrRunning      = errors.New("instance is running")

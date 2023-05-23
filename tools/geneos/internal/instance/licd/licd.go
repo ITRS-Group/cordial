@@ -23,6 +23,7 @@ THE SOFTWARE.
 package licd
 
 import (
+	"path/filepath"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -176,7 +177,7 @@ func (l *Licds) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// check tls config, create certs if found
-	if _, err = instance.ReadSigningCert(); err == nil {
+	if _, err = instance.ReadSigningCert(filepath.Join(geneos.Root(), "tls")); err == nil {
 		if err = instance.CreateCert(l); err != nil {
 			return
 		}
