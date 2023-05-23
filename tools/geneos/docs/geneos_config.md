@@ -21,6 +21,61 @@ environment of the `geneos` program itself.
 `config unset` will unset (remove) parameters.
 
 
+
+## Program Configuration
+
+### General Configuration
+
+* `/etc/geneos/geneos.json` - Global options
+* `${HOME}/.config/geneos/geneos.json` - User options
+* Environment variables ITRS_`option` - where `.` is replaced by `_`,
+  e.g. `ITRS_DOWNLOAD_USERNAME`
+
+General options are loaded from the global config file first, then the
+user one and any environment variables override both files. The current
+options are:
+
+* `geneos`
+
+The home directory for all other commands. See [Directory
+Layout](#directory-layout) below. If set the environment variable
+ITRS_HOME overrides any settings in the files. This is to maintain
+backward compatibility with older tools. The default, if not set
+anywhere else, is the home directory of the user running the command or,
+if running as root, the home directory of the `geneos` or `itrs` users
+(in that order). (To be fully implemented) This value is also set by the
+environment variables `ITRS_HOME` or `ITRS_GENEOS`
+
+* `download.url`
+
+The base URL for downloads for automating installations. Not yet used.
+If files are locally downloaded then this can either be a `file://`
+style URL or a directory path.
+
+* `download.username` `download.password`
+
+  These specify the username and password to use when downloading
+  packages. They can also be set as the environment variables, but the
+  environment variables are not subject to expansion and so cannot
+  contain Geneos encoded passwords (see below):
+
+  * `ITRS_DOWNLOAD_USERNAME`
+  * `ITRS_DOWNLOAD_PASSWORD`
+
+* `snapshot.username` `snapshot.password`
+
+  Similarly to the above, these specify the username and password to use
+  when taking dataview snapshots. They can also be set as the
+  environment variables, with the same restrictions as above:
+
+  * `ITRS_SNAPSHOT_USERNAME`
+  * `ITRS_SNAPSHOT_PASSWORD`
+
+* `GatewayPortRange` & `NetprobePortRange` & `LicdPortRange`
+
+...
+
+
 ## Examples
 
 ```bash

@@ -59,11 +59,12 @@ var tlsSyncCmd = &cobra.Command{
 //
 // XXX Should we do more with certpools ?
 func tlsSync() (err error) {
-	rootCert, err := instance.ReadRootCert()
+	tlsDir := filepath.Join(geneos.Root(), "tls")
+	rootCert, err := instance.ReadRootCert(tlsDir)
 	if err != nil {
 		rootCert = nil
 	}
-	geneosCert, err := instance.ReadSigningCert()
+	geneosCert, err := instance.ReadSigningCert(tlsDir)
 	if err != nil {
 		return os.ErrNotExist
 	}
