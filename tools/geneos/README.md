@@ -31,9 +31,9 @@ binary](https://github.com/ITRS-Group/cordial/releases) and make it
 executable, then install it in a directory you can run it from.
 
 ```bash
-curl -OL https://github.com/ITRS-Group/cordial/releases/download/v1.5.0/geneos-v1.5.0
-chmod + x /geneos-v1.5.0
-mv geneos-v1.5.0 ${HOME}/bin/geneos
+curl -OL https://github.com/ITRS-Group/cordial/releases/latest/download/geneos
+chmod + x /geneos
+mv geneos ${HOME}/bin/geneos
 ```
 
 If you prefer
