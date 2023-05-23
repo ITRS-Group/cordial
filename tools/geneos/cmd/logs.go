@@ -43,10 +43,11 @@ import (
 )
 
 var logCmdLines int
-var logCmdStderr, logCmdFollow, logCmdCat bool
+var logCmdStderr, logCmdNoNormal, logCmdFollow, logCmdCat bool
 var logCmdMatch, logCmdIgnore string
 
 type files struct {
+	c geneos.Instance
 	f io.ReadSeekCloser
 	p int64
 }
@@ -61,7 +62,8 @@ func init() {
 	logsCmd.Flags().IntVarP(&logCmdLines, "lines", "n", 10, "Lines to tail")
 	logsCmd.Flags().BoolVarP(&logCmdCat, "cat", "c", false, "Output whole file")
 
-	logsCmd.Flags().BoolVarP(&logCmdStderr, "stderr", "E", false, "Also show STDERR output files")
+	logsCmd.Flags().BoolVarP(&logCmdStderr, "stderr", "E", false, "Show STDERR output files")
+	logsCmd.Flags().BoolVarP(&logCmdNoNormal, "nostandard", "N", false, "Do not show standard log files")
 
 	logsCmd.Flags().StringVarP(&logCmdMatch, "match", "g", "", "Match lines with STRING")
 	logsCmd.Flags().StringVarP(&logCmdIgnore, "ignore", "v", "", "Match lines without STRING")
@@ -99,7 +101,7 @@ var logsCmd = &cobra.Command{
 			err = instance.ForAll(ct, Hostname, logCatInstance, args, params)
 		case logCmdFollow:
 			// never returns
-			err = followLogs(ct, args, params)
+			err = followLogs(ct, args, params, logCmdStderr)
 		default:
 			err = instance.ForAll(ct, Hostname, logTailInstance, args, params)
 		}
@@ -118,7 +120,8 @@ func followLog(c geneos.Instance) (err error) {
 	return
 }
 
-func followLogs(ct *geneos.Component, args, params []string) (err error) {
+func followLogs(ct *geneos.Component, args, params []string, stderr bool) (err error) {
+	logCmdStderr = stderr
 	done := make(chan bool)
 	tails = watchLogs()
 	if err = instance.ForAll(ct, Hostname, logFollowInstance, args, params); err != nil {
@@ -143,14 +146,20 @@ func outHeader(c geneos.Instance, path string) {
 }
 
 func logTailInstance(c geneos.Instance, params []string) (err error) {
-	var logfile string
-
-	if !logCmdStderr {
-		logfile = instance.LogFile(c)
-	} else {
-		logfile = instance.ComponentFilepath(c, "txt")
+	if logCmdStderr {
+		if err = logTailInstanceFile(c, instance.ComponentFilepath(c, "txt")); err != nil {
+			return
+		}
 	}
+	if !logCmdNoNormal {
+		if err = logTailInstanceFile(c, instance.LogFile(c)); err != nil {
+			return
+		}
+	}
+	return nil
+}
 
+func logTailInstanceFile(c geneos.Instance, logfile string) (err error) {
 	st, err := c.Host().Stat(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -256,13 +265,20 @@ func filterOutput(c geneos.Instance, path string, reader io.ReadSeeker) (sz int6
 }
 
 func logCatInstance(c geneos.Instance, _ []string) (err error) {
-	var logfile string
 	if !logCmdStderr {
-		logfile = instance.LogFile(c)
-	} else {
-		logfile = instance.ComponentFilepath(c, "txt")
+		if err = logCatInstanceFile(c, instance.ComponentFilepath(c, "txt")); err != nil {
+			return
+		}
 	}
+	if !logCmdNoNormal {
+		if err = logCatInstanceFile(c, instance.LogFile(c)); err != nil {
+			return logCatInstanceFile(c, instance.LogFile(c))
+		}
+	}
+	return nil
+}
 
+func logCatInstanceFile(c geneos.Instance, logfile string) (err error) {
 	lines, err := c.Host().Open(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -281,16 +297,23 @@ func logCatInstance(c geneos.Instance, _ []string) (err error) {
 // for remote logs, spawn a go routine for each log, watch using stat etc.
 // and output changes
 func logFollowInstance(c geneos.Instance, _ []string) (err error) {
-	var logfile string
-	if !logCmdStderr {
-		logfile = instance.LogFile(c)
-	} else {
-		logfile = instance.ComponentFilepath(c, "txt")
+	if logCmdStderr {
+		if err = logFollowInstanceFile(c, instance.ComponentFilepath(c, "txt")); err != nil {
+			return
+		}
 	}
+	if !logCmdNoNormal {
+		if err = logFollowInstanceFile(c, instance.LogFile(c)); err != nil {
+			return
+		}
+	}
+	return
+}
 
+func logFollowInstanceFile(c geneos.Instance, logfile string) (err error) {
 	// store a placeholder, records interest for this instance even if
 	// file does not exist at start
-	tails.Store(c, &files{nil, 0})
+	tails.Store(logfile, &files{c, nil, 0})
 
 	f, err := c.Host().Open(logfile)
 	if err != nil {
@@ -307,7 +330,7 @@ func logFollowInstance(c geneos.Instance, _ []string) (err error) {
 			filterOutput(c, logfile, strings.NewReader(text+"\n"))
 		}
 
-		tails.Store(c, &files{f, st.Size()})
+		tails.Store(logfile, &files{c, f, st.Size()})
 	}
 	log.Debug().Msgf("watching %s", logfile)
 
@@ -326,17 +349,12 @@ func watchLogs() (tails *sync.Map) {
 					return true
 				}
 
-				c := key.(geneos.Instance)
+				logfile := key.(string)
 				tail := value.(*files)
 
+				c := tail.c.(geneos.Instance)
 				oldsize := tail.p
 
-				var logfile string
-				if !logCmdStderr {
-					logfile = instance.LogFile(c)
-				} else {
-					logfile = instance.ComponentFilepath(c, "txt")
-				}
 				st, err := c.Host().Stat(logfile)
 				if err != nil {
 					return true
@@ -353,7 +371,8 @@ func watchLogs() (tails *sync.Map) {
 					// tail.f.Seek(oldsize, io.SeekStart)
 					newsize = copyFromFile(c, logfile)
 					if newsize > oldsize {
-						tails.Store(key, &files{tail.f, newsize})
+						tail.p = newsize
+						tails.Store(key, tail)
 						return true
 					}
 
@@ -377,7 +396,7 @@ func watchLogs() (tails *sync.Map) {
 }
 
 func copyFromFile(c geneos.Instance, logfile string) (sz int64) {
-	if t, ok := tails.Load(c); ok {
+	if t, ok := tails.Load(logfile); ok {
 		tail := t.(*files)
 		sz = tail.p
 		if tail.f != nil {
