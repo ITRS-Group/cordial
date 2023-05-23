@@ -61,7 +61,7 @@ var Floating = geneos.Component{
 		`logfile=floating.log`,
 		`port=7036`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
-		`sanname={{.name}}`,
+		`floatingname={{.name}}`,
 	},
 	GlobalSettings: map[string]string{
 		"FloatingPortRange": "7036,7100-",
