@@ -28,6 +28,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
@@ -78,7 +79,7 @@ func tlsSync() (err error) {
 		if err = r.MkdirAll(tlsPath, 0775); err != nil {
 			return
 		}
-		if err = r.WriteCerts(filepath.Join(tlsPath, "chain.pem"), rootCert, geneosCert); err != nil {
+		if err = config.WriteCerts(r, filepath.Join(tlsPath, "chain.pem"), rootCert, geneosCert); err != nil {
 			return
 		}
 

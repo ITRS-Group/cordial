@@ -36,6 +36,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -138,11 +139,11 @@ func tlsImport(sources ...string) (err error) {
 			keys = keys[:i]
 		}
 
-		if err = geneos.LOCAL.WriteCert(filepath.Join(tlsPath, prefix+".pem"), cert); err != nil {
+		if err = config.WriteCert(geneos.LOCAL, filepath.Join(tlsPath, prefix+".pem"), cert); err != nil {
 			return err
 		}
 		fmt.Printf("imported %s certificate to %q\n", title, filepath.Join(tlsPath, prefix+".pem"))
-		if err = geneos.LOCAL.WriteKey(filepath.Join(tlsPath, prefix+".key"), key); err != nil {
+		if err = config.WriteKey(geneos.LOCAL, filepath.Join(tlsPath, prefix+".key"), key); err != nil {
 			return err
 		}
 		fmt.Printf("imported %s RSA private key to %q\n", title, filepath.Join(tlsPath, prefix+".pem"))
