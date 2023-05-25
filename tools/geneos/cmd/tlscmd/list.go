@@ -332,16 +332,17 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 }
 
 func tlsListCmdInstanceCert(c geneos.Instance, params []string) (err error) {
-	cert, err := instance.ReadCert(c)
+	cert, valid, err := instance.ReadCert(c)
 	if err == os.ErrNotExist {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return nil
 	}
-	if err != nil {
+	if cert == nil && err != nil {
 		return
 	}
+
 	expires := cert.NotAfter
-	fmt.Fprintf(tlsListTabWriter, "%s\t%s\t%s\t%.f\t%q\t%q\t%v\t", c.Type(), c.Name(), c.Host(), time.Until(expires).Seconds(), expires, cert.Subject.CommonName, verifyCert(cert))
+	fmt.Fprintf(tlsListTabWriter, "%s\t%s\t%s\t%.f\t%q\t%q\t%v\t", c.Type(), c.Name(), c.Host(), time.Until(expires).Seconds(), expires, cert.Subject.CommonName, valid)
 
 	if tlsListCmdLong {
 		fmt.Fprintf(tlsListTabWriter, "%q\t", cert.Issuer.CommonName)
@@ -360,7 +361,7 @@ func tlsListCmdInstanceCert(c geneos.Instance, params []string) (err error) {
 }
 
 func tlsListCmdInstanceCertCSV(c geneos.Instance, params []string) (err error) {
-	cert, err := instance.ReadCert(c)
+	cert, valid, err := instance.ReadCert(c)
 	if err == os.ErrNotExist {
 		// this is OK
 		return nil
@@ -370,7 +371,7 @@ func tlsListCmdInstanceCertCSV(c geneos.Instance, params []string) (err error) {
 	}
 	expires := cert.NotAfter
 	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
-	cols := []string{c.Type().String(), c.Name(), c.Host().String(), until, expires.String(), cert.Subject.CommonName, fmt.Sprint(verifyCert(cert))}
+	cols := []string{c.Type().String(), c.Name(), c.Host().String(), until, expires.String(), cert.Subject.CommonName, fmt.Sprint(valid)}
 	if tlsListCmdLong {
 		cols = append(cols, cert.Issuer.CommonName)
 		cols = append(cols, fmt.Sprintf("%v", cert.DNSNames))
@@ -383,7 +384,7 @@ func tlsListCmdInstanceCertCSV(c geneos.Instance, params []string) (err error) {
 }
 
 func tlsListCmdInstanceCertJSON(c geneos.Instance, params []string) (err error) {
-	cert, err := instance.ReadCert(c)
+	cert, valid, err := instance.ReadCert(c)
 	if err == os.ErrNotExist {
 		// this is OK
 		return nil
@@ -391,7 +392,6 @@ func tlsListCmdInstanceCertJSON(c geneos.Instance, params []string) (err error) 
 	if err != nil {
 		return
 	}
-	valid := verifyCert(cert)
 	if tlsListCmdLong {
 		tlsJSONEncoder.Encode(tlsListCertLongType{c.Type().String(), c.Name(), c.Host().String(), time.Duration(time.Until(cert.NotAfter).Seconds()),
 			cert.NotAfter, cert.Subject.CommonName, valid, cert.Issuer.CommonName, cert.DNSNames, cert.IPAddresses, fmt.Sprintf("%X", sha1.Sum(cert.Raw))})
@@ -430,6 +430,7 @@ func verifyCert(cert *x509.Certificate) bool {
 	chains, err = cert.Verify(x509.VerifyOptions{})
 	if err != nil {
 		log.Debug().Err(err).Msg("")
+		return false
 	}
 	if len(chains) > 0 {
 		log.Debug().Msgf("cert %q verified", cert.Subject.CommonName)

@@ -34,6 +34,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -89,18 +90,18 @@ func renewInstanceCert(c geneos.Instance, _ []string) (err error) {
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	intrCert, err := geneos.LOCAL.ReadCert(filepath.Join(tlsDir, geneos.SigningCertFile+".pem"))
+	intrCert, err := config.ReadCert(geneos.LOCAL, filepath.Join(tlsDir, geneos.SigningCertFile+".pem"))
 	if err != nil {
 		return
 	}
-	intrKey, err := geneos.LOCAL.ReadKey(filepath.Join(tlsDir, geneos.SigningCertFile+".key"))
+	intrKey, err := config.ReadKey(geneos.LOCAL, filepath.Join(tlsDir, geneos.SigningCertFile+".key"))
 	if err != nil {
 		return
 	}
 
 	// read existing key or create a new one
 	existingKey, _ := instance.ReadKey(c)
-	cert, key, err := instance.CreateCertKey(&template, intrCert, intrKey, existingKey)
+	cert, key, err := config.CreateCertKey(&template, intrCert, intrKey, existingKey)
 	if err != nil {
 		return
 	}
