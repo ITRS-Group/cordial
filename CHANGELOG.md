@@ -2,7 +2,7 @@
 
 ## Version v1.5.1
 
-> **Not yet released**
+> **Releases 2023/05/25**
 >
 > Please report issues via
 > [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS
