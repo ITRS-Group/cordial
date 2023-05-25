@@ -79,6 +79,11 @@ func disableInstance(c geneos.Instance, params []string) (err error) {
 		}
 	}
 
+	if !disableCmdForce && instance.IsRunning(c) {
+		fmt.Printf("%s is running, skipping. Use the `--stop` option to stop running instances\n", c)
+		return nil
+	}
+
 	if !instance.IsProtected(c) || disableCmdForce {
 		if err = instance.Disable(c); err == nil {
 			fmt.Printf("%s disabled\n", c)
