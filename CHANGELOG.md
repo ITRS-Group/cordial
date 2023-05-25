@@ -12,14 +12,15 @@
 
 * [`tools/geneos`](tools/geneos/README.md):
 
-  * #85 - TLS Issues
+  * [#85](https://github.com/ITRS-Group/cordial/issues/85) - TLS Issues
 
     Added verification for certificates against existing root and
     signing certificates.
 
     Added an option to recreate root and signing certs from `tls init`.
 
-  * #86 - New log option for stderr logs blocked main logs
+  * [#86](https://github.com/ITRS-Group/cordial/issues/86) - New log
+    option for stderr logs blocked main logs
 
     Reworked the way that logs are followed to allow both normal and
     stderr logs to be followed. This fixes `start -l`, `restart -l` and
@@ -27,15 +28,22 @@
     to `logs` to allow normal log to be surpressed when you only want
     the error logs.
 
-  * #88 - Floating probe configuration template output malformed
+  * [#88](https://github.com/ITRS-Group/cordial/issues/88) - Floating
+    probe configuration template output malformed
 
     The defaults for new floating probes used `sanname` instead of
     `floatingname` as the parameter for the template rendering.
 
-  * #90 - Variables in SANs
+  * [#90](https://github.com/ITRS-Group/cordial/issues/90) - Variables
+    in SANs
 
     The san template was not corrected updated for the new variable
     structure.
+
+  * [#43](https://github.com/ITRS-Group/cordial/issues/43) - Minor error
+    in `disable`
+   
+    In `disable` check if stopped and print error if not `--force`
 
 ---
 
