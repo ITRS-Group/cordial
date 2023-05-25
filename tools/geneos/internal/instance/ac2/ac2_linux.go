@@ -29,9 +29,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
-	"strings"
 )
 
+// getPID only find the first process called ActiveConsole
 func getPID(i interface{}) (pid int, err error) {
 	switch c := i.(type) {
 	case *AC2s:
@@ -50,27 +50,16 @@ func getPID(i interface{}) (pid int, err error) {
 
 		var data []byte
 		for _, pid = range pids {
-			var jarOK, configOK bool
 			if data, err = c.Host().ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid)); err != nil {
 				// process may disappear by this point, ignore error
 				continue
 			}
 			args := bytes.Split(data, []byte("\000"))
 			execfile := filepath.Base(string(args[0]))
-			if execfile != "java" {
-				continue
+			if execfile == c.Config().GetString("program") {
+				return
 			}
-			for _, arg := range args[1:] {
-				if strings.Contains(string(arg), "collection-agent") {
-					jarOK = true
-				}
-				if strings.Contains(string(arg), c.Config().GetString("config")) {
-					configOK = true
-				}
-				if jarOK && configOK {
-					return
-				}
-			}
+
 		}
 	default:
 		return 0, os.ErrProcessDone

@@ -43,6 +43,7 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/tlscmd"
 
 	// each component type registers itself when imported here
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/ac2"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/ca3"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fa2"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fileagent"
