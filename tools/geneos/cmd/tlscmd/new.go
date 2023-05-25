@@ -108,7 +108,7 @@ func CreateCert(dir string, cn string, hostname string) (err error) {
 	}
 
 	// rootCert, _ = instance.ReadRootCert(filepath.Join(geneos.Root(), "tls"))
-	intrCert, err := config.ReadCert(geneos.LOCAL, filepath.Join(tlsDir, geneos.SigningCertFile+".cert"))
+	intrCert, err := config.ReadCert(geneos.LOCAL, filepath.Join(tlsDir, geneos.SigningCertFile+".pem"))
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
