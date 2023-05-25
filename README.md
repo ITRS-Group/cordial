@@ -3,11 +3,9 @@
 Cordial is a collection of utilities, integrations and support packages for
 ITRS Geneos.
 
-> **Next Version: v1.5.1**
-
-> **Current Version: v1.5.0**
+> **Current Version: v1.5.1**
 >
-> Released 2023/05/22
+> Released 2023/05/25
 >
 > See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 
