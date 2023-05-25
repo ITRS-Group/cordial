@@ -55,7 +55,8 @@ func ImportFile(h *geneos.Host, dir string, source string, options ...geneos.Opt
 
 	// if the source contains the start of a URL then only split if the
 	// '=' is directly before
-	if strings.Contains(source, "https://") || strings.Contains(source, "http://") {
+	if (strings.Contains(source, "https://") && !strings.HasPrefix(source, "https://")) ||
+		(strings.Contains(source, "http://") && !strings.HasPrefix(source, "http://")) {
 		s := strings.SplitN(source, "=https://", 2)
 		if len(s) != 2 {
 			s = strings.SplitN(source, "=http://", 2)
@@ -86,7 +87,6 @@ func ImportFile(h *geneos.Host, dir string, source string, options ...geneos.Opt
 				destfile = ""
 			}
 		}
-
 	} else {
 		s := strings.SplitN(source, "=", 2)
 		if len(s) > 1 {
