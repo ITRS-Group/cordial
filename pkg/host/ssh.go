@@ -23,6 +23,7 @@ THE SOFTWARE.
 package host
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/fs"
@@ -508,18 +509,6 @@ func (h *SSHRemote) Open(name string) (io.ReadSeekCloser, error) {
 	}
 }
 
-func (h *SSHRemote) Run(name string, args ...string) (output []byte, err error) {
-	remote, err := h.Dial()
-	if err != nil {
-		return
-	}
-	session, err := remote.NewSession()
-	if err != nil {
-		return
-	}
-	return session.Output(name)
-}
-
 func (h *SSHRemote) Path(path string) string {
 	return fmt.Sprintf("%s:%s", h, path)
 }
@@ -607,4 +596,50 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, env []string, home, errfile string) (er
 	time.Sleep(250 * time.Millisecond)
 
 	return
+}
+
+// Run starts a process on an SSH attached remote host h. It uses a
+// shell and waits for the process status before returning. It returns
+// the output and any error
+func (h *SSHRemote) Run(cmd *exec.Cmd, env []string, home, errfile string) (output []byte, err error) {
+	rem, err := h.Dial()
+	if err != nil {
+		return
+	}
+	sess, err := rem.NewSession()
+	if err != nil {
+		return
+	}
+
+	// we have to convert cmd to a string ourselves as we have to quote any args
+	// with spaces (like "Demo Gateway")
+	//
+	// given this is sent to a shell, we can quote everything blindly ?
+	//
+	// note that cmd.Args hosts the command as Args[0], so no Path required
+	var cmdstr = ""
+	for _, a := range cmd.Args {
+		cmdstr = fmt.Sprintf("%s %q", cmdstr, a)
+	}
+	pipe, err := sess.StdinPipe()
+	if err != nil {
+		return
+	}
+
+	var buf bytes.Buffer
+	sess.Stdout = &buf
+
+	if err = sess.Shell(); err != nil {
+		return
+	}
+	if home != "" {
+		fmt.Fprintln(pipe, "cd", home)
+	}
+	for _, e := range env {
+		fmt.Fprintln(pipe, "export", e)
+	}
+	fmt.Fprintf(pipe, "%s 2> %q", cmdstr, errfile)
+	fmt.Fprintln(pipe, "exit")
+	sess.Close()
+	return buf.Bytes(), sess.Wait()
 }

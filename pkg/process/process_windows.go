@@ -8,7 +8,21 @@ import (
 )
 
 func prepareCmd(cmd *exec.Cmd) {
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
+	if cmd.SysProcAttr == nil {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
+		}
+	} else {
+		cmd.SysProcAttr.CreationFlags = syscall.CREATE_NEW_PROCESS_GROUP
 	}
+}
+
+// user and group are sids
+func setCredentials(cmd *exec.Cmd, user, group any) {
+	// not implemented
+}
+
+func setCredentialsFromUsername(cmd *exec.Cmd, username string) (err error) {
+	// not implemented
+	return
 }
