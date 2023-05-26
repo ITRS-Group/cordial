@@ -23,10 +23,17 @@ THE SOFTWARE.
 package process
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/itrs-group/cordial/pkg/host"
 )
 
 // Daemon backgrounds the current process by re-executing the existing
@@ -91,4 +98,52 @@ OUTER:
 		out = append(out, a)
 	}
 	return
+}
+
+// GetPID returns the PID of the process started with binary name and
+// all args (in any order) on host h. If not found then an err of
+// os.ErrProcessDone is returned.
+//
+// walk the /proc directory (local or remote) and find the matching pid.
+// This is subject to races, but not much we can do
+//
+// TODO: add support for windows hosts - the lookups are based on the
+// host h and not the local system
+func GetPID(h host.Host, binary string, args ...string) (pid int, err error) {
+	var pids []int
+
+	// safe to ignore error as it can only be bad pattern,
+	// which means no matches to range over
+	dirs, _ := h.Glob("/proc/[0-9]*")
+
+	for _, dir := range dirs {
+		p, _ := strconv.Atoi(filepath.Base(dir))
+		pids = append(pids, p)
+	}
+
+	sort.Ints(pids)
+
+	var data []byte
+PIDS:
+	for _, pid = range pids {
+		if data, err = h.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid)); err != nil {
+			// process may disappear by this point, ignore error
+			continue
+		}
+		procargs := bytes.Split(data, []byte("\000"))
+		execfile := filepath.Base(string(procargs[0]))
+		if strings.HasPrefix(execfile, binary) {
+			argmap := make(map[string]bool)
+			for _, arg := range procargs[1:] {
+				argmap[string(arg)] = true
+			}
+			for _, arg := range args {
+				if !argmap[arg] {
+					continue PIDS
+				}
+			}
+			return
+		}
+	}
+	return 0, os.ErrProcessDone
 }

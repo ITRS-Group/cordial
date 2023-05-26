@@ -24,18 +24,17 @@ package instance
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/process"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/rs/zerolog/log"
 )
@@ -57,39 +56,7 @@ func GetPID(c geneos.Instance) (pid int, err error) {
 		return fn(c)
 	}
 
-	var pids []int
-	binary := c.Config().GetString("binary")
-
-	// safe to ignore error as it can only be bad pattern,
-	// which means no matches to range over
-	dirs, _ := c.Host().Glob("/proc/[0-9]*")
-
-	for _, dir := range dirs {
-		p, _ := strconv.Atoi(filepath.Base(dir))
-		pids = append(pids, p)
-	}
-
-	sort.Ints(pids)
-
-	var data []byte
-	for _, pid = range pids {
-		if data, err = c.Host().ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid)); err != nil {
-			// process may disappear by this point, ignore error
-			continue
-		}
-		args := bytes.Split(data, []byte("\000"))
-		execfile := filepath.Base(string(args[0]))
-		if strings.HasPrefix(execfile, binary) {
-			for _, arg := range args[1:] {
-				// very simplistic - we look for a bare arg that matches the instance name
-				if string(arg) == c.Name() {
-					// found
-					return
-				}
-			}
-		}
-	}
-	return 0, os.ErrProcessDone
+	return process.GetPID(c.Host(), c.Config().GetString("binary"), c.Name())
 }
 
 func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime time.Time, err error) {
