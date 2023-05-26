@@ -50,6 +50,8 @@ const userSSHdir = ".ssh"
 var sshSessions sync.Map
 var sftpSessions sync.Map
 
+// An SSHRemote a type that satisfies the Host interface for SSH
+// attached remote hosts
 type SSHRemote struct {
 	name        string
 	username    string
@@ -97,8 +99,8 @@ func Password(password *memguard.Enclave) SSHOptions {
 	}
 }
 
-func (s *SSHRemote) Username() string {
-	return s.username
+func (h *SSHRemote) Username() string {
+	return h.username
 }
 
 func Port(port uint16) SSHOptions {
@@ -197,47 +199,48 @@ func sshConnect(dest, user string, password *memguard.Enclave, keyfiles ...strin
 // Dial connects to a remote host using ssh and returns an *ssh.Client
 // on success. Each connection is cached and returned if found without
 // checking if it is still valid. To remove a session call Close()
-func (s *SSHRemote) Dial() (sc *ssh.Client, err error) {
-	if s == nil {
+func (h *SSHRemote) Dial() (sc *ssh.Client, err error) {
+	if h == nil {
 		err = ErrInvalidArgs
 		return
 	}
 
-	if s.failed != nil {
-		err = s.failed
+	if h.failed != nil {
+		err = h.failed
 		return
 	}
-	if s.username == "" {
-		log.Error().Msgf("username not set for remote %s", s)
+	if h.username == "" {
+		log.Error().Msgf("username not set for remote %s", h)
 		return nil, ErrInvalidArgs
 	}
-	if s.hostname == "" {
-		log.Panic().Msgf("hostname not set for remote %s", s)
+	if h.hostname == "" {
+		log.Panic().Msgf("hostname not set for remote %s", h)
 		return nil, ErrInvalidArgs
 	}
-	if s.port == 0 {
-		s.port = 22
+	if h.port == 0 {
+		h.port = 22
 	}
 
-	dest := fmt.Sprintf("%s:%d", s.hostname, s.port)
-	val, ok := sshSessions.Load(s.name)
+	dest := fmt.Sprintf("%s:%d", h.hostname, h.port)
+	val, ok := sshSessions.Load(h.name)
 	if ok {
 		sc = val.(*ssh.Client)
 	} else {
-		log.Debug().Msgf("ssh connect to %s as %s", dest, s.username)
-		sc, err = sshConnect(dest, s.username, s.password, s.keys...)
+		log.Debug().Msgf("ssh connect to %s as %s", dest, h.username)
+		sc, err = sshConnect(dest, h.username, h.password, h.keys...)
 		if err != nil {
 			log.Error().Err(err).Msg("(you MUST add remote keys manually to known_hosts)")
-			s.failed = err
-			s.lastAttempt = time.Now()
+			h.failed = err
+			h.lastAttempt = time.Now()
 			return
 		}
-		log.Debug().Msgf("host opened %s %s %s", s.name, dest, s.username)
-		sshSessions.Store(s.name, sc)
+		log.Debug().Msgf("host opened %s %s %s", h.name, dest, h.username)
+		sshSessions.Store(h.name, sc)
 	}
 	return
 }
 
+// Close a remote host connection
 func (h *SSHRemote) Close() {
 	if h == nil {
 		return
@@ -300,13 +303,13 @@ func (h *SSHRemote) IsLocal() bool {
 	return false
 }
 
-// IsAvaialble returns true is the remote host can be contacted
-func (s *SSHRemote) IsAvailable() bool {
-	if s == nil || (s.failed != nil && !s.lastAttempt.IsZero() && time.Since(s.lastAttempt) < 5*time.Second) {
+// IsAvailable returns true is the remote host can be contacted
+func (h *SSHRemote) IsAvailable() bool {
+	if h == nil || (h.failed != nil && !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) < 5*time.Second) {
 		// not available for 5 seconds since last error
 		return false
 	}
-	_, err := s.Dial()
+	_, err := h.Dial()
 	return err == nil
 }
 
@@ -562,6 +565,9 @@ func (h *SSHRemote) Signal(pid int, signal syscall.Signal) (err error) {
 	return
 }
 
+// Start starts a process on an SSH attached remote host h. It uses a
+// shell and backgrounds and redirects. May not work on all remotes and
+// for all processes.
 func (h *SSHRemote) Start(cmd *exec.Cmd, env []string, home, errfile string) (err error) {
 	rem, err := h.Dial()
 	if err != nil {

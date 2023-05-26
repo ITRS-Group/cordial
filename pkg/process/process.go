@@ -26,14 +26,17 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/host"
+	"github.com/rs/zerolog/log"
 )
 
 // Daemon backgrounds the current process by re-executing the existing
@@ -146,4 +149,61 @@ PIDS:
 		}
 	}
 	return 0, os.ErrProcessDone
+}
+
+// Start runs a process in the background on host h. username should be
+// am empty string (for now). home is the working directory for the
+// process, defaults to the home dir of the user if empty. out is the
+// log to write stdout and stderr to. args are process args, env is a
+// slice of key=value env vars.
+func Start(h host.Host, binary string, username string, home string, out string, args, env []string) (err error) {
+	// GetPID ...
+
+	// changing users is not supported
+	hUsername := h.Username()
+
+	if username != "" && username != hUsername {
+		return fmt.Errorf("cannot run as different user, yet")
+	}
+	if username == "" {
+		u, _ := user.Current()
+		username = u.Username
+	}
+	if home == "" {
+		u, _ := user.Lookup(username)
+		home = u.HomeDir
+	}
+
+	if _, err = h.Stat(binary); err != nil {
+		return fmt.Errorf("%q %w", binary, err)
+	}
+
+	h.Start(exec.Command(binary, args...), env, home, out)
+
+	pid, err := GetPID(h, binary)
+	if err != nil {
+		return err
+	}
+	log.Debug().Msgf("started with PID %d\n", pid)
+	return nil
+}
+
+// keep this for later, not yet required but useful
+func writerFromAny(dest any, flags int, perms fs.FileMode) (writer io.Writer, err error) {
+	switch e := dest.(type) {
+	case string:
+		// open and set
+		w, err := os.OpenFile(e, flags, perms)
+		if err != nil {
+			return nil, err
+
+		}
+		writer = w
+	default:
+		if w, ok := e.(io.Writer); ok {
+			writer = w
+		}
+		err = fmt.Errorf("unknown writer destination type %T", e)
+	}
+	return
 }
