@@ -11,6 +11,7 @@ require (
 	github.com/go-ldap/ldap/v3 v3.4.4
 	github.com/go-mail/mail/v2 v2.3.0
 	github.com/gurkankaymak/hocon v1.2.15
+	github.com/hashicorp/go-reap v0.0.0-20230117204525-bf69c61a7b71
 	github.com/hashicorp/go-version v1.6.0
 	github.com/jcmturner/goidentity/v6 v6.0.1
 	github.com/jcmturner/gokrb5/v8 v8.4.4
@@ -53,9 +54,9 @@ require (
 	github.com/labstack/gommon v0.4.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.18 // indirect
+	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.7 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect

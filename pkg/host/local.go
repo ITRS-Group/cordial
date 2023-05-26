@@ -23,6 +23,7 @@ THE SOFTWARE.
 package host
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"io/fs"
@@ -32,6 +33,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/spf13/afero"
 )
@@ -141,12 +143,6 @@ func (h *Local) Open(name string) (f io.ReadSeekCloser, err error) {
 	return os.Open(name)
 }
 
-func (h *Local) Run(name string, args ...string) (output []byte, err error) {
-	// run locally
-	cmd := exec.Command(name, args...)
-	return cmd.Output()
-}
-
 func (h *Local) Path(path string) string {
 	return path
 }
@@ -179,7 +175,7 @@ func (h *Local) Start(cmd *exec.Cmd, env []string, home, errfile string) (err er
 		return
 	}
 
-	procSetupOS(cmd, out)
+	procSetupOS(cmd, out, true)
 
 	cmd.Stdout = out
 	cmd.Stderr = out
@@ -194,4 +190,40 @@ func (h *Local) Start(cmd *exec.Cmd, env []string, home, errfile string) (err er
 		cmd.Process.Release()
 	}
 	return
+}
+
+// Run starts a program, waits for completion and returns the output
+// and/or any error
+func (h *Local) Run(cmd *exec.Cmd, env []string, home, errfile string) (output []byte, err error) {
+	cmd.Env = append(os.Environ(), env...)
+
+	if errfile == "" {
+		errfile = os.DevNull
+	}
+
+	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return
+	}
+
+	procSetupOS(cmd, out, false)
+
+	cmd.WaitDelay = 200 * time.Millisecond
+
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	// cmd.Stdout = out
+
+	cmd.Stderr = out
+	cmd.Dir = home
+
+	if err = cmd.Start(); err != nil {
+		return
+	}
+
+	if err = cmd.Wait(); err != nil {
+		return
+	}
+
+	return buf.Bytes(), err
 }

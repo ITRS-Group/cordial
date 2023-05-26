@@ -27,6 +27,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -182,7 +183,8 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 		// XXX simulate values? this also applies to "localhost"
 		h.Set("os", "windows")
 		osinfo["id"] = "windows"
-		output, _ := h.Run("systeminfo")
+		cmd := exec.Command("systeminfo")
+		output, _ := h.Run(cmd, []string{}, "", "")
 		// if err == nil {
 		// 	log.Debug().Msg(string(output))
 		// }
@@ -210,7 +212,8 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			}
 		}
 		if !h.IsLocal() {
-			output, err := h.Run(`cmd /c echo %USERPROFILE%`)
+			cmd := exec.Command("cmd", "/c", "echo", "%USERPROFILE%")
+			output, err := h.Run(cmd, []string{}, "", "")
 			if err != nil {
 				log.Error().Err(err).Msg("")
 			} else {
@@ -245,7 +248,8 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			osinfo[strings.ToLower(key)] = value
 		}
 		if !h.IsLocal() {
-			output, err := h.Run("pwd")
+			cmd := exec.Command("pwd")
+			output, err := h.Run(cmd, []string{}, "", "")
 			if err != nil {
 				log.Error().Err(err).Msg("")
 			} else {
