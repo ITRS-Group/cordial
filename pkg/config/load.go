@@ -73,6 +73,8 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 
 	if opts.setglobals {
 		c = global
+		// update config directory
+		c.appUserConfDir = filepath.Join(opts.userconfdir, opts.appname)
 	} else {
 		c = New(options...)
 	}

@@ -128,6 +128,7 @@ var initDirs = make(map[string][]string)
 func Initialise(app string) {
 	execname = app
 	SigningCertFile = execname
+	ChainCertFile = execname + "-chain.pem"
 	rootComponent.RegisterComponent(nil)
 }
 

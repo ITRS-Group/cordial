@@ -195,7 +195,7 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// check tls config, create certs if found
-	if _, err = instance.ReadSigningCert(filepath.Join(geneos.Root(), "tls")); err == nil {
+	if _, err = instance.ReadSigningCert(); err == nil {
 		if err = instance.CreateCert(w); err != nil {
 			return
 		}
