@@ -31,7 +31,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path/filepath"
 	"text/tabwriter"
 	"time"
 
@@ -101,8 +100,8 @@ var tlsListCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, _ []string) error {
 		ct, args, params := cmd.CmdArgsParams(command)
-		rootCert, _ = instance.ReadRootCert(filepath.Join(geneos.Root(), "tls"))
-		geneosCert, _ = instance.ReadSigningCert(filepath.Join(geneos.Root(), "tls"))
+		rootCert, _ = instance.ReadRootCert()
+		geneosCert, _ = instance.ReadSigningCert()
 
 		if tlsListCmdLong {
 			return listCertsLongCommand(ct, args, params)

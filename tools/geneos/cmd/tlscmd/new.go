@@ -86,8 +86,6 @@ func newInstanceCert(c geneos.Instance, _ []string) (err error) {
 //
 // skip if certificate exists and is valid
 func CreateCert(dir string, cn string, hostname string) (err error) {
-	tlsDir := filepath.Join(geneos.Root(), "tls")
-
 	serial, err := rand.Prime(rand.Reader, 64)
 	if err != nil {
 		return
@@ -108,12 +106,12 @@ func CreateCert(dir string, cn string, hostname string) (err error) {
 	}
 
 	// rootCert, _ = instance.ReadRootCert(filepath.Join(geneos.Root(), "tls"))
-	intrCert, err := config.ReadCert(geneos.LOCAL, filepath.Join(tlsDir, geneos.SigningCertFile+".pem"))
+	intrCert, err := config.ReadCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".pem"))
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
-	intrKey, err := config.ReadKey(geneos.LOCAL, filepath.Join(tlsDir, geneos.SigningCertFile+".key"))
+	intrKey, err := config.ReadKey(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return

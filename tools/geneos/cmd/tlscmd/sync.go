@@ -55,17 +55,17 @@ var tlsSyncCmd = &cobra.Command{
 	},
 }
 
-// if there is a local tls/chain.pem file then copy it to all hosts
-// overwriting any existing versions
+// tlsSync creates and copies a certificate chain file to all remote
+// hosts
 //
-// XXX Should we do more with certpools ?
+// the cert chain is kept in the geneos tls directory, not the app
+// config directory
 func tlsSync() (err error) {
-	tlsDir := filepath.Join(geneos.Root(), "tls")
-	rootCert, err := instance.ReadRootCert(tlsDir)
+	rootCert, err := instance.ReadRootCert()
 	if err != nil {
 		rootCert = nil
 	}
-	geneosCert, err := instance.ReadSigningCert(tlsDir)
+	geneosCert, err := instance.ReadSigningCert()
 	if err != nil {
 		return os.ErrNotExist
 	}
@@ -79,11 +79,12 @@ func tlsSync() (err error) {
 		if err = r.MkdirAll(tlsPath, 0775); err != nil {
 			return
 		}
-		if err = config.WriteCerts(r, filepath.Join(tlsPath, "chain.pem"), rootCert, geneosCert); err != nil {
+		chainpath := filepath.Join(tlsPath, geneos.ChainCertFile)
+		if err = config.WriteCerts(r, chainpath, rootCert, geneosCert); err != nil {
 			return
 		}
 
-		fmt.Println("Updated chain.pem on", r.String())
+		fmt.Printf("Updated certificate chain %s pem on %s", chainpath, r.String())
 	}
 	return
 }

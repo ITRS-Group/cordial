@@ -63,6 +63,11 @@ var RootCAFile = "rootCA"
 // created with the TLS commands
 var SigningCertFile string
 
+// ChainCertFile the is file name (including extension, as this does not
+// need to be used for keys) for the consolidated chain file used to
+// verify instance certificates
+var ChainCertFile string
+
 // Init initialises a Geneos environment by creating a directory
 // structure and then it calls the initialisation functions for each
 // component type registered.

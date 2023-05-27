@@ -269,7 +269,8 @@ func SetSecureArgs(c geneos.Instance) (args []string) {
 		args = append(args, "-ssl-certificate-key", files[1])
 	}
 
-	chainfile := c.Host().Filepath("tls", "chain.pem")
+	// promote old files that may exist
+	chainfile := config.PromoteFile(c.Host(), c.Host().Filepath("tls", geneos.ChainCertFile), c.Host().Filepath("tls", "chain.pem"))
 	s, err := c.Host().Stat(chainfile)
 	if err == nil && !s.IsDir() {
 		args = append(args, "-ssl-certificate-chain", chainfile)
