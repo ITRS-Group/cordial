@@ -161,10 +161,10 @@ PIDS:
 // Args and Env can be either a string, which is split on whitespace or
 // a slice of strings which is used as-is
 type Program struct {
-	Path       string        // Path to program, passed through exec.LookPath
-	User       string        // The name of the user, if empty use current
-	Dir        string        // The working directory, defaults to home dir of user
-	Logfile    string        // The name of the logfile, defaults to basename of program+".log" in Dir
+	Executable string        // Path to program, passed through exec.LookPath
+	Username   string        // The name of the user, if empty use current
+	WoringDir  string        // The working directory, defaults to home dir of user
+	ErrLog     string        // The name of the logfile, defaults to basename of program+".log" in Dir
 	Args       any           // Args not including program
 	Env        any           // Env as key=value pairs
 	Foreground bool          // Run in foreground, to completion, return if result != 0
@@ -190,8 +190,6 @@ func retErrIfFalse(ret bool, err error) error {
 // TODO: return error windows
 // TODO: look at remote processes
 func Start(h host.Host, program Program) (pid int, err error) {
-	// GetPID ...
-
 	args, err := sliceFromAny(program.Args)
 	if err != nil {
 		err = retErrIfFalse(program.IgnoreErr, err)
@@ -205,52 +203,58 @@ func Start(h host.Host, program Program) (pid int, err error) {
 	}
 
 	// changing users is not supported
-	if program.User != "" && program.User != h.Username() {
+	if program.Username != "" && program.Username != h.Username() {
 		if os.Getuid() == 0 || os.Geteuid() == 0 {
 			// i am root
 			if h != host.Localhost {
-				return 0, retErrIfFalse(program.IgnoreErr, fmt.Errorf("cannot run as different user on remote host, yet"))
+				return 0, host.ErrInvalidArgs
 			}
-			u, err := user.Lookup(program.User)
+			u, err := user.Lookup(program.Username)
 			if err != nil {
 				return 0, err
 			}
-			if program.Dir == "" {
-				program.Dir = u.HomeDir
+			if program.WoringDir == "" {
+				program.WoringDir = u.HomeDir
 			}
 			// build basic env after any caller values set, keep PATH
-			env = append(env, "HOME="+program.Dir, "SHELL=/bin/bash", "USER="+program.User, "LOGNAME="+program.User, "PATH="+os.Getenv("PATH"))
+			env = append(env,
+				"HOME="+program.WoringDir,
+				"SHELL=/bin/bash",
+				"USER="+program.Username,
+				"LOGNAME="+program.Username,
+				"PATH="+os.Getenv("PATH"),
+			)
 		} else {
-			return 0, retErrIfFalse(program.IgnoreErr, fmt.Errorf("insufficient privileges to run %q as %q", program.Path, program.User))
+			return 0, os.ErrPermission
 		}
 	} else {
-		if program.User == "" {
+		if program.Username == "" {
 			u, _ := user.Current()
-			program.User = u.Username
+			program.Username = u.Username
 		}
 
-		if program.Dir == "" {
-			u, _ := user.Lookup(program.User)
-			program.Dir = u.HomeDir
+		if program.WoringDir == "" {
+			u, _ := user.Lookup(program.Username)
+			program.WoringDir = u.HomeDir
 		}
 	}
 
-	if program.Logfile == "" {
-		program.Logfile = filepath.Join(program.Dir, filepath.Base(program.Path+".log"))
-	} else if !filepath.IsAbs(program.Logfile) {
-		program.Logfile = filepath.Join(program.Dir, program.Logfile)
+	if program.ErrLog == "" {
+		program.ErrLog = filepath.Join(program.WoringDir, filepath.Base(program.Executable+".log"))
+	} else if !filepath.IsAbs(program.ErrLog) {
+		program.ErrLog = filepath.Join(program.WoringDir, program.ErrLog)
 	}
 
-	path, err := exec.LookPath(program.Path)
+	path, err := exec.LookPath(program.Executable)
 	if err != nil {
 		return 0, retErrIfFalse(program.IgnoreErr, fmt.Errorf("%q %w", path, err))
 	}
 
 	switch {
 	case program.Foreground:
-		cmd := exec.Command(program.Path, args...)
-		setCredentialsFromUsername(cmd, program.User)
-		if _, err := h.Run(cmd, env, program.Dir, program.Logfile); err != nil {
+		cmd := exec.Command(program.Executable, args...)
+		setCredentialsFromUsername(cmd, program.Username)
+		if _, err := h.Run(cmd, env, program.WoringDir, program.ErrLog); err != nil {
 			log.Fatal().Err(err).Msg("")
 			return 0, retErrIfFalse(program.IgnoreErr, err)
 		}
@@ -258,10 +262,10 @@ func Start(h host.Host, program Program) (pid int, err error) {
 		go reap.ReapChildren(nil, nil, nil, nil)
 		go func() {
 			for {
-				cmd := exec.Command(program.Path, args...)
-				setCredentialsFromUsername(cmd, program.User)
+				cmd := exec.Command(program.Executable, args...)
+				setCredentialsFromUsername(cmd, program.Username)
 
-				h.Run(cmd, env, program.Dir, program.Logfile)
+				h.Run(cmd, env, program.WoringDir, program.ErrLog)
 				if program.Wait != 0 {
 					time.Sleep(program.Wait)
 				} else {
@@ -270,9 +274,9 @@ func Start(h host.Host, program Program) (pid int, err error) {
 			}
 		}()
 	default:
-		cmd := exec.Command(program.Path, args...)
-		setCredentialsFromUsername(cmd, program.User)
-		if err = h.Start(cmd, env, program.Dir, program.Logfile); err != nil {
+		cmd := exec.Command(program.Executable, args...)
+		setCredentialsFromUsername(cmd, program.Username)
+		if err = h.Start(cmd, env, program.WoringDir, program.ErrLog); err != nil {
 			return 0, retErrIfFalse(program.IgnoreErr, err)
 		}
 	}

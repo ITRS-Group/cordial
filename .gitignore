@@ -15,6 +15,10 @@
 *.tar.gz
 *.zip
 
+# no certs or keys
+*.pem
+*.key
+
 # Dependency directories (remove the comment below to include it)
 # vendor/
 libraries/libemail/libemail.h

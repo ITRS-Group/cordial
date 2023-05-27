@@ -79,7 +79,7 @@ Most commands
 ### Options
 
 ```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -G, --config string   config file (defaults are $HOME/.config/geneos.json, geneos/geneos/geneos.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 

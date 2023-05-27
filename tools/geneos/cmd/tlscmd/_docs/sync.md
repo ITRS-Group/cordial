@@ -1,6 +1,6 @@
-Create a chain.pem file made up of the root and signing certificates and
+Create a certificate chain file of the root and signing certificates and
 then copy them to all remote hosts. This can then be used to verify
 connections from components.
 
-The root certificate is optional, b ut the signing certificate must
+The root certificate is optional, but the signing certificate must
 exist.
