@@ -43,3 +43,4 @@ tools/decode-aes256/decode-aes256
 tools/dv2email/dv2email
 tools/geneos/utils/docs/docs
 utils/docs/docs
+tools/runner
