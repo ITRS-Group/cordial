@@ -105,7 +105,6 @@ func CreateCert(dir string, cn string, hostname string) (err error) {
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	// rootCert, _ = instance.ReadRootCert(filepath.Join(geneos.Root(), "tls"))
 	intrCert, err := config.ReadCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".pem"))
 	if err != nil {
 		log.Error().Err(err).Msg("")

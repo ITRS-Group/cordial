@@ -31,6 +31,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/spf13/cobra"
 )
@@ -75,7 +76,7 @@ func tlsInit() (err error) {
 		log.Fatal().Err(err).Msg("")
 	}
 
-	if err := config.CreateRootCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.RootCAFile), tlsInitCmdOverwrite); err != nil {
+	if err := config.CreateRootCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.RootCAFile), cmd.Execname+" root certificate", tlsInitCmdOverwrite); err != nil {
 		if errors.Is(err, geneos.ErrExists) {
 			fmt.Println("root certificate already exists in", config.AppConfigDir())
 			return nil
@@ -83,7 +84,7 @@ func tlsInit() (err error) {
 	}
 	fmt.Printf("CA certificate created for %s\n", geneos.RootCAFile)
 
-	if err := config.CreateSigningCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile), filepath.Join(config.AppConfigDir(), geneos.RootCAFile), tlsInitCmdOverwrite); err != nil {
+	if err := config.CreateSigningCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile), filepath.Join(config.AppConfigDir(), geneos.RootCAFile), cmd.Execname+" intermediate certificate", tlsInitCmdOverwrite); err != nil {
 		if errors.Is(err, geneos.ErrExists) {
 			fmt.Println("signing certificate already exists in", config.AppConfigDir())
 			return nil
