@@ -185,7 +185,7 @@ func NewPrivateKey() *memguard.Enclave {
 // saves it with dir and file basefilepath with .pem and .key extensions. If
 // overwrite is true then any existing certificate and key is
 // overwritten.
-func CreateRootCert(h host.Host, basefilepath string, overwrite bool) (err error) {
+func CreateRootCert(h host.Host, basefilepath string, cn string, overwrite bool) (err error) {
 	// create rootCA.pem / rootCA.key
 	var cert *x509.Certificate
 
@@ -201,7 +201,7 @@ func CreateRootCert(h host.Host, basefilepath string, overwrite bool) (err error
 	template := &x509.Certificate{
 		SerialNumber: serial,
 		Subject: pkix.Name{
-			CommonName: "geneos root CA",
+			CommonName: cn,
 		},
 		NotBefore:             time.Now().Add(-60 * time.Second),
 		NotAfter:              time.Now().AddDate(10, 0, 0).Truncate(24 * time.Hour),
@@ -230,7 +230,7 @@ func CreateRootCert(h host.Host, basefilepath string, overwrite bool) (err error
 // with the path and file bane name basefilepath. You must provide a
 // valid root certificate and key in rootbasefilepath. If overwrite is
 // true than any existing cert and key are overwritten.
-func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string, overwrite bool) (err error) {
+func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string, cn string, overwrite bool) (err error) {
 	var cert *x509.Certificate
 
 	if !overwrite {
@@ -246,7 +246,7 @@ func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string
 	template := x509.Certificate{
 		SerialNumber: serial,
 		Subject: pkix.Name{
-			CommonName: "geneos intermediate CA",
+			CommonName: cn,
 		},
 		NotBefore:             time.Now().Add(-60 * time.Second),
 		NotAfter:              time.Now().AddDate(10, 0, 0).Truncate(24 * time.Hour),

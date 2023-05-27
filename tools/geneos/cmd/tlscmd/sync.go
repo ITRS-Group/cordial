@@ -84,7 +84,7 @@ func tlsSync() (err error) {
 			return
 		}
 
-		fmt.Printf("Updated certificate chain %s pem on %s", chainpath, r.String())
+		fmt.Printf("Updated certificate chain %s pem on %s\n", chainpath, r.String())
 	}
 	return
 }
