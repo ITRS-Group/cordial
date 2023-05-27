@@ -12,7 +12,7 @@ created and their configuration set to use secure (encrypted) connections
 where possible.
 
 The root and signing certificates are only kept on the local server and
-the `sync` command can be used to copy a `chain.pem` file to remote
+the `sync` command can be used to copy a certificate chain file to remote
 servers. Keys, which should be kept secure, are never copied to remote
 servers by any commands.
 
@@ -20,9 +20,9 @@ servers by any commands.
 
   Initialised the TLS environment by creating a `tls` directory in
   Geneos and populating it with a new root and intermediate (signing)
-  certificate and keys as well as a `chain.pem` which includes both CA
-  certificates. The keys are only readable by the user running the
-  command. Also does a `sync` if remotes are configured.
+  certificate and keys as well as a certificate chain which includes
+  both CA certificates. The keys are only readable by the user running
+  the command. Also does a `sync` if remotes are configured.
 
   Any existing instances have certificates created and their
   configurations updated to reference them. This means that any legacy
@@ -74,4 +74,4 @@ servers by any commands.
 
 * `geneos tls sync`
 
-  Copies chain.pem to all remotes
+  Copies certificate chain to all remotes

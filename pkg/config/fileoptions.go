@@ -22,7 +22,11 @@ THE SOFTWARE.
 
 package config
 
-import "github.com/itrs-group/cordial/pkg/host"
+import (
+	"path/filepath"
+
+	"github.com/itrs-group/cordial/pkg/host"
+)
 
 type fileOptions struct {
 	appname                string
@@ -81,6 +85,10 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 
 	if c.appname == "" {
 		c.appname = configName
+	}
+
+	if c.userconfdir == "" {
+		c.userconfdir = filepath.Join(c.userconfdir, c.appname)
 	}
 
 	return

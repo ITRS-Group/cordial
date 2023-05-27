@@ -35,6 +35,7 @@ import (
 
 	"github.com/awnumar/memguard"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -44,8 +45,6 @@ import (
 //
 // skip if certificate exists and is valid
 func CreateCert(c geneos.Instance) (err error) {
-	tlsDir := filepath.Join(geneos.Root(), "tls")
-
 	// skip if we can load an existing certificate
 	if _, _, err = ReadCert(c); err == nil {
 		return
@@ -75,11 +74,11 @@ func CreateCert(c geneos.Instance) (err error) {
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	intrCert, err := ReadSigningCert(filepath.Join(geneos.Root(), "tls"))
+	intrCert, err := ReadSigningCert()
 	if err != nil {
 		return
 	}
-	intrKey, err := config.ReadKey(geneos.LOCAL, filepath.Join(tlsDir, geneos.SigningCertFile+".key"))
+	intrKey, err := config.ReadKey(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
 	if err != nil {
 		return
 	}
@@ -148,16 +147,26 @@ func WriteKey(c geneos.Instance, key *memguard.Enclave) (err error) {
 	)
 }
 
-// ReadRootCert reads the root certificate from the installation
-// directory
-func ReadRootCert(tlsDir string) (cert *x509.Certificate, err error) {
-	return config.ReadCert(geneos.LOCAL, filepath.Join(tlsDir, geneos.RootCAFile+".pem"))
+// ReadRootCert reads the root certificate from the user's app config
+// directory. It "promotes" old cert and key files from the previous tls
+// directory if files do not already exist in the user app config
+// directory.
+func ReadRootCert() (cert *x509.Certificate, err error) {
+	file := config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.Filepath("tls"), geneos.RootCAFile+".pem")
+	log.Debug().Msgf("reading %s", file)
+	config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.Filepath("tls"), geneos.RootCAFile+".key")
+	return config.ReadCert(geneos.LOCAL, file)
 }
 
-// ReadSigningCert reads the signing certificate from the installation
-// directory
-func ReadSigningCert(tlsDir string) (cert *x509.Certificate, err error) {
-	return config.ReadCert(geneos.LOCAL, filepath.Join(tlsDir, geneos.SigningCertFile+".pem"))
+// ReadSigningCert reads the signing certificate from the user's app
+// config directory. It "promotes" old cert and key files from the
+// previous tls directory if files do not already exist in the user app
+// config directory.
+func ReadSigningCert() (cert *x509.Certificate, err error) {
+	file := config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.Filepath("tls", geneos.SigningCertFile+".pem"))
+	log.Debug().Msgf("reading %s", file)
+	config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.Filepath("tls", geneos.SigningCertFile+".key"))
+	return config.ReadCert(geneos.LOCAL, file)
 }
 
 // ReadCert reads the instance certificate
@@ -171,8 +180,10 @@ func ReadCert(c geneos.Instance) (cert *x509.Certificate, valid bool, err error)
 	}
 	cert, err = config.ReadCert(c.Host(), Filepath(c, "certificate"))
 
-	// validate against chain.pem on the same host, expiry etc.
-	if chain, err := c.Host().ReadFile(c.Host().Filepath("tls", "chain.pem")); err == nil {
+	// validate against certificate chain file on the same host, expiry
+	// etc.
+	chainfile := config.PromoteFile(c.Host(), c.Host().Filepath("tls", geneos.ChainCertFile), c.Host().Filepath("tls", "chain.pem"))
+	if chain, err := c.Host().ReadFile(chainfile); err == nil {
 		cp := x509.NewCertPool()
 		cp.AppendCertsFromPEM(chain)
 

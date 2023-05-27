@@ -27,6 +27,7 @@ encryption key files and basic encryption and decryption.
 package config
 
 import (
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -39,6 +40,7 @@ type Config struct {
 	Type                 string // The type of configuration file loaded
 	defaultExpandOptions []ExpandOptions
 	delimiter            string
+	appUserConfDir       string
 }
 
 // global is the default configuration container for non-method callers
@@ -68,8 +70,23 @@ func ResetConfig(options ...FileOptions) {
 // future calls that use Expand.
 func New(options ...FileOptions) *Config {
 	opts := evalFileOptions(options...)
-	cf := &Config{Viper: viper.NewWithOptions(viper.KeyDelimiter(opts.delimiter)), delimiter: opts.delimiter}
+	userConfDir, _ := UserConfigDir()
+	cf := &Config{
+		Viper:          viper.NewWithOptions(viper.KeyDelimiter(opts.delimiter)),
+		delimiter:      opts.delimiter,
+		appUserConfDir: filepath.Join(userConfDir, opts.appname),
+	}
 	return cf
+}
+
+// AppConfigDir returns the application configuration directory
+func AppConfigDir() string {
+	return global.appUserConfDir
+}
+
+// AppConfigDir returns the application configuration directory
+func (c *Config) AppConfigDir() string {
+	return c.appUserConfDir
 }
 
 // Join returns a configuration key made up of parts joined with the

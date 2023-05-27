@@ -71,9 +71,7 @@ func init() {
 //
 // no support for instance certs (yet)
 func tlsImport(sources ...string) (err error) {
-	log.Debug().Msgf("%v", sources)
-	tlsPath := filepath.Join(geneos.Root(), "tls")
-	err = geneos.LOCAL.MkdirAll(tlsPath, 0755)
+	err = geneos.LOCAL.MkdirAll(config.AppConfigDir(), 0755)
 	if err != nil {
 		return
 	}
@@ -139,14 +137,14 @@ func tlsImport(sources ...string) (err error) {
 			keys = keys[:i]
 		}
 
-		if err = config.WriteCert(geneos.LOCAL, filepath.Join(tlsPath, prefix+".pem"), cert); err != nil {
+		if err = config.WriteCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), prefix+".pem"), cert); err != nil {
 			return err
 		}
-		fmt.Printf("imported %s certificate to %q\n", title, filepath.Join(tlsPath, prefix+".pem"))
-		if err = config.WriteKey(geneos.LOCAL, filepath.Join(tlsPath, prefix+".key"), key); err != nil {
+		fmt.Printf("imported %s certificate to %q\n", title, filepath.Join(config.AppConfigDir(), prefix+".pem"))
+		if err = config.WriteKey(geneos.LOCAL, filepath.Join(config.AppConfigDir(), prefix+".key"), key); err != nil {
 			return err
 		}
-		fmt.Printf("imported %s RSA private key to %q\n", title, filepath.Join(tlsPath, prefix+".pem"))
+		fmt.Printf("imported %s RSA private key to %q\n", title, filepath.Join(config.AppConfigDir(), prefix+".pem"))
 	}
 
 	return

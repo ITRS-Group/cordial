@@ -41,8 +41,22 @@ import (
 // If the first element of paths is an empty string then no rename takes
 // place and the first existing file is returned. If the first element
 // is a directory then the file is moved into that directory through a
-// rename operation.
+// rename operation and a file with the first matching basename of any
+// other arguments is returned (this avoids the second call returning
+// nothing).
 func PromoteFile(r host.Host, paths ...string) (final string) {
+	log.Debug().Msgf("paths: %v", paths)
+	if len(paths) == 0 {
+		return
+	}
+
+	var dir string
+	if paths[0] != "" {
+		if p0, err := r.Stat(paths[0]); err == nil && p0.IsDir() {
+			dir = paths[0]
+		}
+	}
+
 	for i, path := range paths {
 		var err error
 		if path == "" {
@@ -52,17 +66,44 @@ func PromoteFile(r host.Host, paths ...string) (final string) {
 			continue
 		}
 
+		log.Debug().Msgf("here: %s", path)
 		final = path
 		if i == 0 || paths[0] == "" {
+			log.Debug().Msgf("returning paths[0]")
 			return
 		}
-		if err = r.Rename(path, paths[0]); err != nil {
-			return
+		if dir == "" {
+			if err = r.Rename(path, paths[0]); err != nil {
+				log.Debug().Msgf("renaming path %s to path %s", path, paths[0])
+				return
+			}
+			final = paths[0]
+		} else {
+			final = filepath.Join(dir, filepath.Base(path))
+			// don't overwrite existing, return that
+			if p, err := r.Stat(final); err == nil && p.Mode().IsRegular() {
+				return final
+			}
+			if err = r.Rename(path, final); err != nil {
+				log.Debug().Msgf("renaming path %s to dir %s", path, final)
+				return
+			}
 		}
-		final = paths[0]
+
+		log.Debug().Msgf("returning path %s", final)
 		return
 	}
 
+	if final == "" && dir != "" {
+		for _, path := range paths[1:] {
+			check := filepath.Join(dir, filepath.Base(path))
+			if p, err := r.Stat(check); err == nil && p.Mode().IsRegular() {
+				return check
+			}
+		}
+	}
+
+	log.Debug().Msgf("returning path %s", final)
 	return
 }
 
