@@ -12,6 +12,12 @@
 
 * [`tools/geneos`](tools/geneos/README.md):
 
+  * [#109](https://github.com/ITRS-Group/cordial/issues/109) - New `tls
+    create` command
+
+    Move the functions of `--name` etc from `tls new` to `tls create` to
+    remove dependency on the Geneos home directory.
+
   * [#85](https://github.com/ITRS-Group/cordial/issues/85) - TLS Issues
 
     Added verification for certificates against existing root and
