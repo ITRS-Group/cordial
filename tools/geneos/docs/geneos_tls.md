@@ -5,6 +5,7 @@ TLS Certificate Operations
 
 ## Commands
 
+* [`geneos tls create`](geneos_tls_create.md)	 - Create new certificates
 * [`geneos tls import`](geneos_tls_import.md)	 - Import root and signing certificates
 * [`geneos tls init`](geneos_tls_init.md)	 - Initialise the TLS environment
 * [`geneos tls list`](geneos_tls_list.md)	 - List certificates

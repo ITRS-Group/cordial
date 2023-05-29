@@ -26,11 +26,13 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/spf13/cobra"
@@ -56,11 +58,10 @@ var tlsInitCmd = &cobra.Command{
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
-		"needshomedir": "true",
+		"needshomedir": "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		// _, _, params := processArgsParams(cmd)
-		return tlsInit()
+		return tlsInit(tlsInitCmdOverwrite)
 	},
 }
 
@@ -69,28 +70,34 @@ var tlsInitCmd = &cobra.Command{
 // later options to allow import of a DCA
 //
 // This is also called from `init`
-func tlsInit() (err error) {
+func tlsInit(overwrite bool) (err error) {
 	// directory permissions do not need to be restrictive
 	err = geneos.LOCAL.MkdirAll(config.AppConfigDir(), 0775)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
-	if err := config.CreateRootCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.RootCAFile), cmd.Execname+" root certificate", tlsInitCmdOverwrite); err != nil {
-		if errors.Is(err, geneos.ErrExists) {
-			fmt.Println("root certificate already exists in", config.AppConfigDir())
+	if err := config.CreateRootCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.RootCAFile), cmd.Execname+" root certificate", overwrite); err != nil {
+		if errors.Is(err, host.ErrExists) {
+			// fmt.Println("root certificate already exists in", config.AppConfigDir())
 			return nil
 		}
+		return err
 	}
-	fmt.Printf("CA certificate created for %s\n", geneos.RootCAFile)
+	fmt.Printf("CA created for %s\n", geneos.RootCAFile)
 
-	if err := config.CreateSigningCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile), filepath.Join(config.AppConfigDir(), geneos.RootCAFile), cmd.Execname+" intermediate certificate", tlsInitCmdOverwrite); err != nil {
-		if errors.Is(err, geneos.ErrExists) {
-			fmt.Println("signing certificate already exists in", config.AppConfigDir())
+	if err := config.CreateSigningCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile), filepath.Join(config.AppConfigDir(), geneos.RootCAFile), cmd.Execname+" intermediate certificate", overwrite); err != nil {
+		if errors.Is(err, host.ErrExists) {
+			// fmt.Println("signing certificate already exists in", config.AppConfigDir())
 			return nil
 		}
+		return err
 	}
 	fmt.Printf("Signing certificate created for %s\n", geneos.SigningCertFile)
 
-	return tlsSync()
+	// sync if geneos root exists
+	if d, err := os.Stat(geneos.Root()); err == nil && d.IsDir() {
+		return tlsSync()
+	}
+	return nil
 }
