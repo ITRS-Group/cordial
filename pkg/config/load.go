@@ -142,7 +142,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 				d := New(options...)
 				d.SetFs(r.GetFs())
 				d.AddConfigPath(dir)
-				d.SetConfigName(name + ".defaults." + opts.configFileFormat)
+				d.SetConfigName(name + ".defaults")
 				d.SetConfigType(opts.configFileFormat)
 				// d.ReadInConfig()
 				if err = d.ReadInConfig(); err != nil {
@@ -163,7 +163,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 			}
 
 			defaults.SetFs(r.GetFs())
-			defaults.SetConfigName(name + ".defaults." + opts.configFileFormat)
+			defaults.SetConfigName(name + ".defaults")
 			defaults.SetConfigType(opts.configFileFormat)
 			if err = defaults.ReadInConfig(); err != nil {
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
@@ -205,7 +205,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 			d := New(options...)
 			d.SetFs(r.GetFs())
 			d.AddConfigPath(dir)
-			d.SetConfigName(name + "." + opts.configFileFormat)
+			d.SetConfigName(name)
 			d.SetConfigType(opts.configFileFormat)
 			if err = d.ReadInConfig(); err != nil {
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
@@ -231,7 +231,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 		for _, dir := range confDirs {
 			vp.AddConfigPath(dir)
 		}
-		vp.SetConfigName(name + "." + opts.configFileFormat)
+		vp.SetConfigName(name)
 		vp.SetConfigType(opts.configFileFormat)
 		if err = vp.ReadInConfig(); err != nil {
 			if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
