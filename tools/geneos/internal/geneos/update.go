@@ -77,7 +77,7 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 		return
 	}
 
-	// from here hosts and component types are specific
+	// from here hosts and component types must be specified
 
 	log.Debug().Msgf("checking and updating %s on %s %q to %q", ct, h, opts.basename, opts.version)
 

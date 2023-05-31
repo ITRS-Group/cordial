@@ -168,6 +168,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 		// special handling for SANs
 		switch ct.Name {
 		// XXX abstract this
+		// components that use other components... i.e. netprobes
 		case "none", "san", "floating", "ca3":
 			ct = ctFromFile
 		case ctFromFile.Name:
@@ -233,9 +234,6 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 
 	fmt.Printf("installed %q to %q\n", filename, h.Path(basedir))
 	options = append(options, Version(version))
-	// if opts.doupdate {
-	// 	return h.Path(basedir), nil
-	// }
 	return h.Path(basedir), Update(h, ct, options...)
 }
 

@@ -39,22 +39,23 @@ import (
 var AC2 = geneos.Component{
 	Name:             "ac2",
 	LegacyPrefix:     "",
-	RelatedTypes:     []*geneos.Component{},
-	ComponentMatches: []string{"ac2", "active-console", "activeconsole"},
+	RelatedTypes:     nil,
+	ComponentMatches: []string{"ac2", "active-console", "activeconsole", "desktop-activeconsole"},
 	RealComponent:    true,
-	//https://resources.itrsgroup.com/download/latest/Active+Console?title=geneos-desktop-activeconsole-6.3.0-linux-x64.tar.gz
-	DownloadBase: geneos.DownloadBases{Resources: "Active+Console", Nexus: "geneos-desktop-activeconsole"},
-	PortRange:    "AC2PortRange",
-	CleanList:    "AC2CleanList",
-	PurgeList:    "AC2PurgeList",
-	Aliases:      map[string]string{},
+	DownloadBase:     geneos.DownloadBases{Resources: "Active+Console", Nexus: "geneos-desktop-activeconsole"},
+	PortRange:        "AC2PortRange",
+	CleanList:        "AC2CleanList",
+	PurgeList:        "AC2PurgeList",
+	Aliases:          map[string]string{},
 	Defaults: []string{
+		`binary=ActiveConsole`,
 		`home={{join .root "ac2" "ac2s" .name}}`,
 		`install={{join .root "packages" "ac2"}}`,
 		`version=active_prod`,
-		`program={{"ActiveConsole"}}`,
+		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=ActiveConsole.log`,
-		`config={{join .home "collection-agent.yml"}}`,
+		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}`,
+		`config={{join .home "ActiveConsol.gci"}}`,
 	},
 	GlobalSettings: map[string]string{
 		"AC2PortRange": "7040-",
@@ -76,8 +77,9 @@ const (
 var ac2jarRE = regexp.MustCompile(`^` + ac2prefix + `(.+)` + ac2suffix)
 
 var ac2Files = []string{
-	"collection-agent.yml",
-	"logback.xml",
+	"ActiveConsole.gci",
+	"log4j2.properties",
+	"defaultws.dwx",
 }
 
 type AC2s instance.Instance
@@ -163,12 +165,13 @@ func (n *AC2s) Config() *config.Config {
 	return n.Conf
 }
 
+// Add created a new instance of AC2
 func (n *AC2s) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(n.Host(), &AC2)
 	}
 
-	baseDir := filepath.Join(n.Config().GetString("install"), n.Config().GetString("version"), "collection_agent")
+	baseDir := filepath.Join(n.Config().GetString("install"), n.Config().GetString("version"))
 	n.Config().Set("port", port)
 
 	if err = n.Config().Save(n.Type().String(),
@@ -198,7 +201,6 @@ func (n *AC2s) Add(tmpl string, port uint16) (err error) {
 		}
 	}
 
-	// default config XML etc.
 	return
 }
 
@@ -206,29 +208,79 @@ func (n *AC2s) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }
 
-// XXX the is for initial testing - needs cleaning up
-
+// initial testing - needs cleaning up
 func (n *AC2s) Command() (args, env []string) {
-	// locate jar file
-	baseDir := filepath.Join(n.Config().GetString("install"), n.Config().GetString("version"), "collection_agent")
+	baseDir := filepath.Join(n.Config().GetString("install"), n.Config().GetString("version"))
 
-	d, err := os.ReadDir(baseDir)
-	if err != nil {
-		log.Error().Err(err).Msg("")
-		return
+	args = []string{
+		"-jarscan",
+		baseDir + "/jars",
+		"-libpath",
+		baseDir + "/lib64",
+		"-mainclass",
+		"com.itrsgroup.activeconsole.Splasher",
+		"-jvm",
+		baseDir + "/JRE/lib/server/libjvm.so",
+		"-jvmargs",
+		"Xmx1024M",
+		"XX:+HeapDumpOnOutOfMemoryError",
+		"Ddocking.floatingContainerType=frame",
+		"Dsun.java2d.d3d=false",
+		"Dorg.quartz.threadPool.threadCount=1",
+		"Dfile.encoding=UTF-8",
+		"Djdk.tls.maxCertificateChainLength=15",
+		"-MaxHeartBeatInterval",
+		"35",
+		"-patheditorconfig",
+		baseDir + "/resources/configuration",
+		"-userResourcesDirectory",
+		baseDir + "/resources",
+		"-ApmEmfModelFilter",
+		"DataItemUpdateFilter(Property=SampleTime)",
+		"-logexceptions",
+		"-path",
+		baseDir + "/JRE/bin",
+		"-maximumDatabaseConnections",
+		"100",
+		"-fastShutdown",
+		"-bdosync",
+		"DataView,BDOSyncType_Level,DV1_SyncLevel_RedAmberCells",
+		"-autoSort",
+		"none",
+		"-autoAcceptLicense",
+		"ADB",
+		"-dashboardDisplayFont",
+		"Arial Unicode MS",
+		"-criticalDialogTimeout",
+		"60",
+		"-cshHost",
+		"https://docs.itrsgroup.com/docs/geneos/",
+		"-enableCertificateValidation",
+		"false",
+		"-gsedir",
+		baseDir + "/gse",
+		"-connections",
+		"show",
+		"enabled",
+		"-locking",
+		"enabled",
+		"-includes",
+		"enabled",
+		"-appname",
+		"GatewaySetupEditor",
+		"-appdisplayname",
+		"Gateway Setup Editor",
+		"-quickcreate",
+		"probes.probe",
+		"managedEntities.managedEntity",
+		"samplers.sampler",
+		"-schemaroot",
+		"gateway",
+		"-nodeCacheMinNodes",
+		"5",
+		"-nodeCacheMaxWeight",
+		"2000",
 	}
-	latest := ""
-	for _, n := range d {
-		parts := ac2jarRE.FindStringSubmatch(n.Name())
-		log.Debug().Msgf("found %d parts: %v", len(parts), parts)
-		if len(parts) > 1 {
-			if geneos.CompareVersion(parts[1], latest) > 0 {
-				latest = parts[1]
-			}
-		}
-	}
-
-	args = []string{}
 
 	env = []string{}
 
