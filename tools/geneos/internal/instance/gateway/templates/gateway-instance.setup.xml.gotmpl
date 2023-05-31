@@ -6,13 +6,21 @@
 		<listenPorts>
 		{{- if .certificate}}
 			{{if eq .port 7039 -}}
-			<secure>7038</secure>
-			<insecure>7039</insecure>
+			<secure>
+				<listenPort>7038</listenPort>
+			</secure>
+			<insecure>
+				<listenPort>7039</listenPort>
+			</insecure>
 			{{- else -}}
-			<secure>{{.port}}</secure>
+			<secure>
+				<listenPort>{{.port}}</listenPort>
+			</secure>
 			{{- end}}
 		{{- else}}
-			<insecure>{{.port}}</insecure>
+			<insecure>
+				<listenPort>{{.port}}</listenPort>
+			</insecure>
 		{{- end}}
 		</listenPorts>
 		<var name="gatewayName">
