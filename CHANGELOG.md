@@ -1,22 +1,50 @@
 # Change Log
 
-## Version v1.5.1
+## Version v1.5.2
 
-> **Releases 2023/05/25**
+> **Releases 2023/05/31**
 >
-> Please report issues via
-> [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS
-> Community Forum](https://community.itrsgroup.com/).
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-## v1.5.1 Changes
+## v1.5.2 Changes
 
-* [`tools/geneos`](tools/geneos/README.md):
+  * [#102](https://github.com/ITRS-Group/cordial/issues/102) - `process`
+    package additions
 
   * [#109](https://github.com/ITRS-Group/cordial/issues/109) - New `tls
     create` command
 
     Move the functions of `--name` etc from `tls new` to `tls create` to
     remove dependency on the Geneos home directory.
+
+  * [#106](https://github.com/ITRS-Group/cordial/issues/106) - Change
+    directory for TLS root and signing certs and keys
+
+  * [#97](https://github.com/ITRS-Group/cordial/issues/97) - Start of
+    Linux AC2 support. Not yet fully functional.
+
+  * [#98](https://github.com/ITRS-Group/cordial/issues/98) - Work done
+    and then superceeded by
+    [#109](https://github.com/ITRS-Group/cordial/issues/109) above.
+
+
+## v1.5.2 Fixes
+
+  * [#111](https://github.com/ITRS-Group/cordial/issues/111) - Fix
+    gateway instance template ports
+
+  * [#103](https://github.com/ITRS-Group/cordial/issues/103) - Fix
+    default web server log file name
+
+## Version v1.5.1
+
+> **Releases 2023/05/25**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.5.1 Changes
+
+* [`tools/geneos`](tools/geneos/README.md):
 
   * [#85](https://github.com/ITRS-Group/cordial/issues/85) - TLS Issues
 
@@ -57,9 +85,7 @@
 
 > **Released 2023/05/22**
 >
-> Please report issues via
-> [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS
-> Community Forum](https://community.itrsgroup.com/).
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
 ### v1.5.0 - Highlights
 
