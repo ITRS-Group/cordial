@@ -400,7 +400,7 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 }
 
 // split an package archive name into type and version
-var archiveRE = regexp.MustCompile(`^geneos-(web-server|fixanalyser2-netprobe|file-agent|\w+)-([\w\.-]+?)[\.-]?linux`)
+var archiveRE = regexp.MustCompile(`^geneos-(desktop-activeconsole|web-server|fixanalyser2-netprobe|file-agent|\w+)-([\w\.-]+?)[\.-]?linux`)
 
 // filenameToComponent transforms an archive filename and returns the
 // component and version or an error if the file format is not
