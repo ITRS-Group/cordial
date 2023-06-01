@@ -90,7 +90,7 @@ type Instance interface {
 
 	// actions
 	Add(template string, port uint16) error
-	Command() ([]string, []string)
+	Command() ([]string, []string, string)
 	Reload(params []string) (err error)
 	Rebuild(bool) error
 }

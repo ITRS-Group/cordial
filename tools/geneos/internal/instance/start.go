@@ -51,7 +51,7 @@ func Start(c geneos.Instance) (err error) {
 		return fmt.Errorf("%q %w", binary, err)
 	}
 
-	cmd, env := BuildCmd(c)
+	cmd, env, home := BuildCmd(c)
 	if cmd == nil {
 		return fmt.Errorf("BuildCmd() returned nil")
 	}
@@ -59,7 +59,7 @@ func Start(c geneos.Instance) (err error) {
 	// set underlying user for child proc
 	errfile := ComponentFilepath(c, "txt")
 
-	c.Host().Start(cmd, env, c.Home(), errfile)
+	c.Host().Start(cmd, env, home, errfile)
 	pid, err := GetPID(c)
 	if err != nil {
 		return err

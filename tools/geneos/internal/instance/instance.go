@@ -580,10 +580,10 @@ func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name 
 // BuildCmd gathers the path to the binary, arguments and any environment variables
 // for an instance and returns an exec.Cmd, almost ready for execution. Callers
 // will add more details such as working directories, user and group etc.
-func BuildCmd(c geneos.Instance) (cmd *exec.Cmd, env []string) {
+func BuildCmd(c geneos.Instance) (cmd *exec.Cmd, env []string, home string) {
 	binary := Filepath(c, "program")
 
-	args, env := c.Command()
+	args, env, home := c.Command()
 
 	opts := strings.Fields(c.Config().GetString("options"))
 	args = append(args, opts...)

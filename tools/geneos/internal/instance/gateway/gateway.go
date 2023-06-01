@@ -305,7 +305,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	return instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "gateway.setup.xml"), instance.Filename(g, "config::template"), template)
 }
 
-func (g *Gateways) Command() (args, env []string) {
+func (g *Gateways) Command() (args, env []string, home string) {
 	cf := g.Config()
 
 	// get opts from
@@ -375,6 +375,8 @@ func (g *Gateways) Command() (args, env []string) {
 		}
 
 	}
+
+	home = g.Home()
 
 	return
 }

@@ -187,15 +187,15 @@ func (n *FA2s) Add(tmpl string, port uint16) (err error) {
 	return nil
 }
 
-func (n *FA2s) Command() (args, env []string) {
+func (n *FA2s) Command() (args, env []string, home string) {
 	logFile := instance.LogFile(n)
 	args = []string{
 		n.Name(),
 		"-port", n.Config().GetString("port"),
 	}
 	args = append(args, instance.SetSecureArgs(n)...)
-
 	env = append(env, "LOG_FILENAME="+logFile)
+	home = n.Home()
 
 	return
 }
