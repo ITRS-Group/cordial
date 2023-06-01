@@ -190,15 +190,15 @@ func (n *Netprobes) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }
 
-func (n *Netprobes) Command() (args, env []string) {
+func (n *Netprobes) Command() (args, env []string, home string) {
 	logFile := instance.LogFile(n)
 	args = []string{
 		n.Name(),
 		"-port", n.Config().GetString("port"),
 	}
 	args = append(args, instance.SetSecureArgs(n)...)
-
 	env = append(env, "LOG_FILENAME="+logFile)
+	home = n.Home()
 
 	return
 }

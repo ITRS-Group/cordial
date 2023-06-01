@@ -274,7 +274,7 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), instance.Filename(s, "config::template"), template)
 }
 
-func (s *Sans) Command() (args, env []string) {
+func (s *Sans) Command() (args, env []string, home string) {
 	logFile := instance.LogFile(s)
 	args = []string{
 		s.Name(),
@@ -287,6 +287,6 @@ func (s *Sans) Command() (args, env []string) {
 
 	// add environment variables to use in setup file substitution
 	env = append(env, "LOG_FILENAME="+logFile)
-
+	home = s.Home()
 	return
 }

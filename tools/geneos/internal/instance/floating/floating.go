@@ -255,7 +255,7 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), instance.Filename(s, "config::template"), template)
 }
 
-func (s *Floatings) Command() (args, env []string) {
+func (s *Floatings) Command() (args, env []string, home string) {
 	logFile := instance.LogFile(s)
 	args = []string{
 		s.Name(),
@@ -265,9 +265,8 @@ func (s *Floatings) Command() (args, env []string) {
 		"-setup-interval", "300",
 	}
 	args = append(args, instance.SetSecureArgs(s)...)
-
-	// add environment variables to use in setup file substitution
 	env = append(env, "LOG_FILENAME="+logFile)
+	home = s.Home()
 
 	return
 }

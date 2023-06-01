@@ -227,9 +227,10 @@ func (w *Webservers) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }
 
-func (w *Webservers) Command() (args, env []string) {
+func (w *Webservers) Command() (args, env []string, home string) {
 	WebsBase := filepath.Join(w.Config().GetString("install"), w.Config().GetString("version"))
-	home := w.Home()
+	home = w.Home()
+
 	args = []string{
 		// "-Duser.home=" + c.WebsHome,
 		"-XX:+UseConcMarkSweepGC",
