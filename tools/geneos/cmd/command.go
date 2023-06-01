@@ -57,13 +57,13 @@ var commandCmd = &cobra.Command{
 
 func commandInstance(c geneos.Instance, params []string) (err error) {
 	fmt.Printf("=== %s ===\n", c)
-	cmd, env := instance.BuildCmd(c)
+	cmd, env, home := instance.BuildCmd(c)
 	if cmd != nil {
 		fmt.Println("command line:")
 		fmt.Println("\t", cmd.String())
 		fmt.Println()
 		fmt.Println("working directory:")
-		fmt.Println("\t", c.Home())
+		fmt.Println("\t", home)
 		fmt.Println()
 		fmt.Println("environment:")
 		for _, e := range env {
