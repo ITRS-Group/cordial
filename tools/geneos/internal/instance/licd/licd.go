@@ -186,7 +186,7 @@ func (l *Licds) Add(tmpl string, port uint16) (err error) {
 	return nil
 }
 
-func (l *Licds) Command() (args, env []string) {
+func (l *Licds) Command() (args, env []string, home string) {
 	args = []string{
 		l.Name(),
 		"-port", l.Config().GetString("port"),
@@ -194,6 +194,7 @@ func (l *Licds) Command() (args, env []string) {
 	}
 
 	args = append(args, instance.SetSecureArgs(l)...)
+	home = l.Home()
 	return
 }
 

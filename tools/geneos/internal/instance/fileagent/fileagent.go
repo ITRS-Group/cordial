@@ -194,14 +194,14 @@ func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 	return nil
 }
 
-func (c *FileAgents) Command() (args, env []string) {
+func (c *FileAgents) Command() (args, env []string, home string) {
 	logFile := instance.LogFile(c)
 	args = []string{
 		c.Name(),
 		"-port", c.Config().GetString("port"),
 	}
 	env = append(env, "LOG_FILENAME="+logFile)
-
+	home = c.Home()
 	return
 }
 

@@ -211,7 +211,7 @@ func (n *CA3s) Rebuild(initial bool) error {
 
 // XXX the is for initial testing - needs cleaning up
 
-func (n *CA3s) Command() (args, env []string) {
+func (n *CA3s) Command() (args, env []string, home string) {
 	// locate jar file
 	baseDir := filepath.Join(n.Config().GetString("install"), n.Config().GetString("version"), "collection_agent")
 
@@ -248,6 +248,8 @@ func (n *CA3s) Command() (args, env []string) {
 		fmt.Sprintf("HEALTH_CHECK_PORT=%d", n.Config().GetInt("health-check-port", config.Default(9136))),
 		fmt.Sprintf("TCP_REPORTER_PORT=%d", n.Config().GetInt("tcp-reporter-port", config.Default(7137))),
 	}
+
+	home = n.Home()
 
 	return
 }
