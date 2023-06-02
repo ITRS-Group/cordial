@@ -52,11 +52,15 @@ import (
 // is available to do this.
 //
 // If successful the function never returns and the child process PID is
-// written to writepid, which can be io.Discard if not required. On
-// failure the function does return with an error.
+// written to writepid, if not nil. Remember to only open the file
+// inside the test for daemon mode in the caller, otherwise on
+// re-execution the file will be re-opened and overwrite the one from
+// the parent.
+//
+// On failure the function does return with an error.
 //
 //	process.Daemon(os.Stdout, process.RemoveArgs, "-D", "--daemon")
-func Daemon(writepid io.Writer, processArgs func([]string, ...string) []string, args ...string) (err error) {
+func Daemon(writepid io.WriteCloser, processArgs func([]string, ...string) []string, args ...string) (err error) {
 	bin, err := os.Executable()
 	if err != nil {
 		return
@@ -79,8 +83,12 @@ func Daemon(writepid io.Writer, processArgs func([]string, ...string) []string, 
 		return
 	}
 	if writepid != nil {
-		fmt.Fprintln(writepid, cmd.Process.Pid)
+		if _, err = fmt.Fprintln(writepid, cmd.Process.Pid); err != nil {
+			// too late to return now, just try to log
+			log.Error().Err(err).Msgf("pid %d", cmd.Process.Pid)
+		}
 	}
+	writepid.Close()
 	if cmd.Process != nil {
 		cmd.Process.Release()
 	}
