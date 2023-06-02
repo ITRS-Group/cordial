@@ -316,8 +316,11 @@ func Migrate(c geneos.Instance) (err error) {
 	current := filepath.Dir(c.Home())
 	shouldbe := c.Type().InstancesDir(c.Host())
 	if current != shouldbe {
+		if err = c.Host().MkdirAll(shouldbe, 0775); err != nil {
+			return
+		}
 		if err = c.Host().Rename(c.Home(), filepath.Join(shouldbe, c.Name())); err != nil {
-			log.Error().Err(err).Msg("")
+			return
 		}
 		fmt.Printf("%s moved from %s to %s\n", c, current, shouldbe)
 	}
