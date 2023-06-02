@@ -56,6 +56,7 @@ type Component struct {
 	LegacyPrefix     string
 	RelatedTypes     []*Component
 	ComponentMatches []string
+	ParentType       *Component
 	RealComponent    bool
 	UsesKeyfiles     bool
 	Templates        []Templates
@@ -241,14 +242,32 @@ func (ct *Component) MakeComponentDirs(h *Host) (err error) {
 	return
 }
 
-// InstancesDir return the base directory for the instances of a
+// InstancesDir return the parent directory for the instances of a
 // component
-func (ct *Component) InstancesDir(h *Host) string {
+func (ct *Component) InstancesDir(h *Host) (dir string) {
 	if ct == nil {
 		return ""
 	}
-	p := h.Filepath(ct, ct.String()+"s")
-	return p
+	if ct.ParentType == nil {
+		dir = h.Filepath(ct, ct.String()+"s")
+	} else {
+		dir = h.Filepath(ct.ParentType, ct.String()+"s")
+
+	}
+	return
+}
+
+// InstancesDirs (plural) returns a list of possible instance
+// directories to look for an instance.
+func (ct *Component) InstancesDirs(h *Host) (dirs []string) {
+	if ct == nil {
+		return
+	}
+	if ct.ParentType != nil {
+		dirs = append(dirs, h.Filepath(ct.ParentType, ct.String()+"s"))
+	}
+	dirs = append(dirs, h.Filepath(ct.Name, ct.String()+"s"))
+	return
 }
 
 const sharedSuffix = "_shared"
@@ -259,9 +278,13 @@ func (ct *Component) SharedPath(h *Host, subs ...interface{}) string {
 	if ct == nil {
 		return ""
 	}
-	parts := append([]interface{}{ct, ct.String() + sharedSuffix}, subs...)
-	p := h.Filepath(parts...)
-	return p
+	parts := []interface{}{}
+	if ct.ParentType == nil {
+		parts = append(parts, ct, ct.String()+sharedSuffix, subs)
+	} else {
+		parts = append(parts, ct.ParentType, ct.String()+sharedSuffix, subs)
+	}
+	return h.Filepath(parts...)
 }
 
 // OrList will return receiver, if not nil, or the list of component types

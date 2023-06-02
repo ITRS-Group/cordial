@@ -135,9 +135,10 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 	}
 	instance.SetExtendedValues(c, addCmdExtras)
 	cf.SetKeyValues(items...)
+	log.Debug().Msgf("savedir=%s", instance.ParentDirectory(c))
 	if err = cf.Save(c.Type().String(),
 		config.Host(c.Host()),
-		config.SaveDir(c.Type().InstancesDir(c.Host())),
+		config.SaveDir(instance.ParentDirectory(c)),
 		config.SetAppName(c.Name()),
 	); err != nil {
 		return
