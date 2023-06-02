@@ -77,9 +77,9 @@ const (
 var ac2jarRE = regexp.MustCompile(`^` + ac2prefix + `(.+)` + ac2suffix)
 
 var ac2Files = []string{
-	"ActiveConsole.gci",
-	"log4j2.properties",
-	"defaultws.dwx",
+	// "ActiveConsole.gci",
+	// "log4j2.properties",
+	// "defaultws.dwx",
 }
 
 type AC2s instance.Instance
@@ -109,6 +109,8 @@ func New(name string) geneos.Instance {
 	if err := instance.SetDefaults(c, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
 	}
+	// set the home dir based on where it might be, default to one above
+	c.Config().Set("home", filepath.Join(instance.ParentDirectory(c), local))
 	ac2s.Store(r.FullName(local), c)
 	return c
 }
@@ -176,7 +178,7 @@ func (n *AC2s) Add(tmpl string, port uint16) (err error) {
 
 	if err = n.Config().Save(n.Type().String(),
 		config.Host(n.Host()),
-		config.SaveDir(n.Type().InstancesDir(n.Host())),
+		config.SaveDir(instance.ParentDirectory(n)),
 		config.SetAppName(n.Name()),
 	); err != nil {
 		return

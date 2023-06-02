@@ -307,8 +307,20 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 // a legacy .rc file and if it has it then saves the current
 // configuration (it does not convert the .rc file) in a new format file
 // and renames the .rc file to .rc.orig to allow Revert to work.
+//
+// Also now check if instance directory path has changed. If so move it.
 func Migrate(c geneos.Instance) (err error) {
 	cf := c.Config()
+
+	// check if instance directory is up-to date
+	current := filepath.Dir(c.Home())
+	shouldbe := c.Type().InstancesDir(c.Host())
+	if current != shouldbe {
+		if err = c.Host().Rename(c.Home(), filepath.Join(shouldbe, c.Name())); err != nil {
+			log.Error().Err(err).Msg("")
+		}
+		fmt.Printf("%s moved from %s to %s\n", c, current, shouldbe)
+	}
 
 	// only migrate if labelled as a .rc file
 	if cf.Type != "rc" {
@@ -330,7 +342,7 @@ func Migrate(c geneos.Instance) (err error) {
 
 	if err = cf.Save(c.Type().String(),
 		config.Host(c.Host()),
-		config.SaveDir(c.Type().InstancesDir(c.Host())),
+		config.SaveDir(ParentDirectory(c)),
 		config.SetAppName(c.Name()),
 	); err != nil {
 		// restore label on error

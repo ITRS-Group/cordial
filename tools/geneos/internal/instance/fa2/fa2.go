@@ -23,6 +23,7 @@ THE SOFTWARE.
 package fa2
 
 import (
+	"path/filepath"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -30,6 +31,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
 )
 
 var FA2 = geneos.Component{
@@ -37,6 +39,7 @@ var FA2 = geneos.Component{
 	LegacyPrefix:     "fa2",
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"fa2", "fixanalyser", "fixanalyzer", "fixanalyser2-netprobe"},
+	ParentType:       &netprobe.Netprobe,
 	RealComponent:    true,
 	DownloadBase:     geneos.DownloadBases{Resources: "Fix+Analyser+2+Netprobe", Nexus: "geneos-fixanalyser2-netprobe"},
 	DownloadInfix:    "fixanalyser2-netprobe",
@@ -75,7 +78,7 @@ var FA2 = geneos.Component{
 	},
 	Directories: []string{
 		"packages/fa2",
-		"fa2/fa2s",
+		"netprobe/fa2s",
 	},
 }
 
@@ -104,8 +107,10 @@ func New(name string) geneos.Instance {
 	c.InstanceHost = r
 	c.Component = &FA2
 	if err := instance.SetDefaults(c, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()")
+		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
 	}
+	// set the home dir based on where it might be, default to one above
+	c.Config().Set("home", filepath.Join(instance.ParentDirectory(c), local))
 	fa2s.Store(r.FullName(local), c)
 	return c
 }
@@ -170,7 +175,7 @@ func (n *FA2s) Add(tmpl string, port uint16) (err error) {
 
 	if err = n.Config().Save(n.Type().String(),
 		config.Host(n.Host()),
-		config.SaveDir(n.Type().InstancesDir(n.Host())),
+		config.SaveDir(instance.ParentDirectory(n)),
 		config.SetAppName(n.Name()),
 	); err != nil {
 		return

@@ -23,6 +23,7 @@ THE SOFTWARE.
 package netprobe
 
 import (
+	"path/filepath"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -75,6 +76,7 @@ var Netprobe = geneos.Component{
 	Directories: []string{
 		"packages/netprobe",
 		"netprobe/netprobes",
+		"netprobe/netprobes_shared",
 	},
 }
 
@@ -105,6 +107,8 @@ func New(name string) geneos.Instance {
 	if err := instance.SetDefaults(c, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
 	}
+	// set the home dir based on where it might be, default to one above
+	c.Config().Set("home", filepath.Join(instance.ParentDirectory(c), local))
 	netprobes.Store(r.FullName(local), c)
 	return c
 }
@@ -169,7 +173,7 @@ func (n *Netprobes) Add(tmpl string, port uint16) (err error) {
 
 	if err = n.Config().Save(n.Type().String(),
 		config.Host(n.Host()),
-		config.SaveDir(n.Type().InstancesDir(n.Host())),
+		config.SaveDir(instance.ParentDirectory(n)),
 		config.SetAppName(n.Name()),
 	); err != nil {
 		return

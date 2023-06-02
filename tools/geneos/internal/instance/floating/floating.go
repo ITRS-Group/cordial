@@ -42,6 +42,7 @@ var Floating = geneos.Component{
 	LegacyPrefix:     "flt",
 	RelatedTypes:     []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
 	ComponentMatches: []string{"float", "floating"},
+	ParentType:       &netprobe.Netprobe,
 	RealComponent:    true,
 	UsesKeyfiles:     true,
 	Templates: []geneos.Templates{
@@ -70,8 +71,9 @@ var Floating = geneos.Component{
 	},
 	Directories: []string{
 		"packages/netprobe",
-		"floating/floatings",
-		"floating/templates",
+		"netprobe/netprobes_shared",
+		"netprobe/floatings",
+		"netprobe/templates",
 	},
 }
 
@@ -91,7 +93,7 @@ func init() {
 
 func Init(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
-	if err := r.WriteFile(r.Filepath(ct, "templates", templateName), template, 0664); err != nil {
+	if err := r.WriteFile(r.Filepath(ct.ParentType, "templates", templateName), template, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 }
@@ -118,6 +120,8 @@ func New(name string) geneos.Instance {
 	if err := instance.SetDefaults(c, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
 	}
+	// set the home dir based on where it might be, default to one above
+	c.Config().Set("home", filepath.Join(instance.ParentDirectory(c), local))
 	floatings.Store(r.FullName(local), c)
 	return c
 }
@@ -196,7 +200,7 @@ func (s *Floatings) Add(template string, port uint16) (err error) {
 
 	if err = cf.Save(s.Type().String(),
 		config.Host(s.Host()),
-		config.SaveDir(s.Type().InstancesDir(s.Host())),
+		config.SaveDir(instance.ParentDirectory(s)),
 		config.SetAppName(s.Name()),
 	); err != nil {
 		return
@@ -246,7 +250,7 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 		s.Config().Set("gateways", gws)
 		if err = s.Config().Save(s.Type().String(),
 			config.Host(s.Host()),
-			config.SaveDir(s.Type().InstancesDir(s.Host())),
+			config.SaveDir(instance.ParentDirectory(s)),
 			config.SetAppName(s.Name()),
 		); err != nil {
 			return err

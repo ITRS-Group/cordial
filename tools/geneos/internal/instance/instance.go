@@ -231,7 +231,7 @@ func Match(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
 	_, local, r := SplitName(name, geneos.ALL)
 	if !r.IsAvailable() {
-		log.Debug().Msgf("host %s %w", host.ErrNotAvailable)
+		log.Debug().Err(host.ErrNotAvailable).Msgf("host %s", r)
 		return
 	}
 
@@ -509,9 +509,63 @@ func ForAllWithResults(ct *geneos.Component, fn func(geneos.Instance, []string) 
 	return results, nil
 }
 
-// Return a slice of all instance names for a given component. No
-// checking is done to validate that the directory is a populated
+// ParentDirectory returns the first directory that contains the instance from:
+//
+//   - The one configured for the instance factory and accessed via Home()
+//   - In the default component instances directory (component.InstanceDir)
+//   - If the instance's component type has a parent component then in that instances directory
+//
+// The function has to accept an interface as it is called from inside
+// the factory methods for each component type
+func ParentDirectory(i interface{}) (dir string) {
+	c, ok := i.(geneos.Instance)
+	if !ok {
+		log.Debug().Msg("i is not a geneos instance")
+		return ""
+	}
+	h := c.Host()
+
+	// first, does the configured home exist as a dir?
+	if c.Home() != "" {
+		dir = filepath.Dir(c.Home())
+		// but check the configured home, not the parent
+		if d, err := h.Stat(c.Home()); err == nil && d.IsDir() {
+			log.Debug().Msg("default home, as defined")
+			return
+		}
+	}
+
+	// second, does the instance exist in the default instances dir?
+	dir = c.Type().InstancesDir(h)
+	if dir != "" {
+		if d, err := h.Stat(dir); err == nil && d.IsDir() {
+			log.Debug().Msg("instanceDir home selected")
+			return
+		}
+	}
+
+	// third, look in any "legacy" location, but only if parent type is
+	// non nil
+	if c.Type().ParentType != nil {
+		dir = filepath.Join(h.Filepath(c.Type(), c.Type().String()+"s"))
+		if dir != "" {
+			if d, err := h.Stat(dir); err == nil && d.IsDir() {
+				log.Debug().Msgf("new home, from legacy %s", dir)
+				return
+			}
+		}
+	}
+
+	log.Debug().Msgf("default %s", dir)
+	return dir
+}
+
+// AllNames returns a slice of all instance names for a given component.
+// No checking is done to validate that the directory is a populated
 // instance.
+//
+// To support the move to parent types we do a little more, looking for
+// legacy locations in here
 func AllNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 	var files []fs.DirEntry
 
@@ -528,14 +582,20 @@ func AllNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 	}
 
 	if ct == nil {
-		for _, t := range geneos.RealComponents() {
+		for _, ct := range geneos.RealComponents() {
 			// ignore errors, we only care about any files found
-			d, _ := h.ReadDir(t.InstancesDir(h))
-			files = append(files, d...)
+			for _, dir := range ct.InstancesDirs(h) {
+				log.Debug().Msgf("ct, dirs: %s %s", ct, dir)
+				d, _ := h.ReadDir(dir)
+				files = append(files, d...)
+			}
 		}
 	} else {
 		// ignore errors, we only care about any files found
-		files, _ = h.ReadDir(ct.InstancesDir(h))
+		for _, dir := range ct.InstancesDirs(h) {
+			d, _ := h.ReadDir(dir)
+			files = append(files, d...)
+		}
 	}
 
 	sort.Slice(files, func(i, j int) bool {
