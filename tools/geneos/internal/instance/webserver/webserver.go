@@ -110,8 +110,10 @@ func New(name string) geneos.Instance {
 	c.InstanceHost = r
 	c.Component = &Webserver
 	if err := instance.SetDefaults(c, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()")
+		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
 	}
+	// set the home dir based on where it might be, default to one above
+	c.Config().Set("home", filepath.Join(instance.ParentDirectory(c), local))
 	webservers.Store(r.FullName(local), c)
 	return c
 }
@@ -188,7 +190,7 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 
 	if err = w.Config().Save(w.Type().String(),
 		config.Host(w.Host()),
-		config.SaveDir(w.Type().InstancesDir(w.Host())),
+		config.SaveDir(instance.ParentDirectory(w)),
 		config.SetAppName(w.Name()),
 	); err != nil {
 		return

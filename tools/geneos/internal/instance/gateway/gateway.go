@@ -140,8 +140,10 @@ func New(name string) geneos.Instance {
 	g.Component = &Gateway
 	g.InstanceHost = h
 	if err := instance.SetDefaults(g, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()")
+		log.Fatal().Err(err).Msgf("%s setDefaults()", g)
 	}
+	// set the home dir based on where it might be, default to one above
+	g.Config().Set("home", filepath.Join(instance.ParentDirectory(g), local))
 	gateways.Store(h.FullName(local), g)
 	return g
 }
@@ -216,9 +218,10 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 	cf.Set("includes", make(map[int]string))
 
 	// try to save config early
+	log.Debug().Msgf("dir: %s", instance.ParentDirectory(g))
 	if err = g.Config().Save(g.Type().String(),
 		config.Host(g.Host()),
-		config.SaveDir(g.Type().InstancesDir(g.Host())),
+		config.SaveDir(instance.ParentDirectory(g)),
 		config.SetAppName(g.Name()),
 	); err != nil {
 		log.Fatal().Err(err).Msg("")
@@ -295,7 +298,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	if changed {
 		if err = g.Config().Save(g.Type().String(),
 			config.Host(g.Host()),
-			config.SaveDir(g.Type().InstancesDir(g.Host())),
+			config.SaveDir(instance.ParentDirectory(g)),
 			config.SetAppName(g.Name()),
 		); err != nil {
 			return
