@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -293,28 +292,39 @@ func (h *Host) OrList(hosts ...*Host) []*Host {
 	}
 }
 
-// Filepath returns an absolute path rooted in the Geneos home directory on the
-// host. Each argument is used as a path component and are joined using
-// filepath.Join(). Each part can be a plain string or a type with a String()
-// method - non-string types are rendered using fmt.Sprint() without further
-// error checking.
+// Filepath builds an absolute path based on the Geneos root of the host
+// h (using the executable name as the key) and the parts passed as
+// arguments. Each part can be a pointer to a geneos.Component, in which
+// case the component name or the parent component name is used, or any
+// other type is passed to fmt.Sprint to be stringified. The path is
+// returned from filepath.Join.
 func (h *Host) Filepath(parts ...interface{}) string {
-	strParts := []string{}
-
 	if h == nil {
 		h = LOCAL
 	}
 
+	strParts := []string{h.GetString(execname)}
+
 	for _, p := range parts {
 		switch s := p.(type) {
-		case string:
-			strParts = append(strParts, s)
+		case *Component:
+			if s.ParentType != nil {
+				strParts = append(strParts, s.ParentType.Name)
+			} else {
+				strParts = append(strParts, s.Name)
+			}
+		case []interface{}:
+			for _, t := range s {
+				strParts = append(strParts, fmt.Sprint(t))
+			}
+		// case string:
+		// 	strParts = append(strParts, s)
 		default:
 			strParts = append(strParts, fmt.Sprint(s))
 		}
 	}
 
-	return path.Join(append([]string{h.GetString(execname)}, strParts...)...)
+	return filepath.Join(strParts...)
 }
 
 // FullName returns name with the host h label appended if there is no

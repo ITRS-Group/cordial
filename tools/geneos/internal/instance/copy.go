@@ -85,7 +85,7 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 	if ct == nil {
 		for _, t := range geneos.RealComponents() {
 			if err = CopyInstance(t, source, destination, move); err != nil {
-				fmt.Println("Error:", err)
+				log.Debug().Err(err).Msg("")
 				continue
 			}
 		}
@@ -168,7 +168,7 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 		}
 	}(src.String(), src.Host(), src.Home(), dst)
 
-	// update *Home manually, as it's not just the prefix
+	// XXX update *Home manually, as it's not just the prefix
 	newdst.Config().Set("home", filepath.Join(dst.Type().InstancesDir(dHost), dName))
 
 	if src.Host() == dHost {

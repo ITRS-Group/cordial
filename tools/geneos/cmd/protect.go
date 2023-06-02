@@ -74,7 +74,7 @@ func protectInstance(c geneos.Instance, params []string) (err error) {
 	} else {
 		err = cf.Save(c.Type().String(),
 			config.Host(c.Host()),
-			config.SaveDir(c.Type().InstancesDir(c.Host())),
+			config.SaveDir(instance.ParentDirectory(c)),
 			config.SetAppName(c.Name()),
 		)
 	}

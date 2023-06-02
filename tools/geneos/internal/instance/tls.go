@@ -119,7 +119,7 @@ func WriteCert(c geneos.Instance, cert *x509.Certificate) (err error) {
 
 	return cf.Save(c.Type().String(),
 		config.Host(c.Host()),
-		config.SaveDir(c.Type().InstancesDir(c.Host())),
+		config.SaveDir(ParentDirectory(c)),
 		config.SetAppName(c.Name()),
 	)
 }
@@ -142,7 +142,7 @@ func WriteKey(c geneos.Instance, key *memguard.Enclave) (err error) {
 	cf.Set("privatekey", keyfile)
 	return cf.Save(c.Type().String(),
 		config.Host(c.Host()),
-		config.SaveDir(c.Type().InstancesDir(c.Host())),
+		config.SaveDir(ParentDirectory(c)),
 		config.SetAppName(c.Name()),
 	)
 }
