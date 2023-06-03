@@ -206,7 +206,7 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	// copy default configs
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
-	configSrc := filepath.Join(w.Config().GetString("install"), w.Config().GetString("version"), "config")
+	configSrc := filepath.Join(instance.BaseVersion(w), "config")
 	if err = os.Chdir(configSrc); err != nil {
 		return
 	}
@@ -230,7 +230,7 @@ func (w *Webservers) Rebuild(initial bool) error {
 }
 
 func (w *Webservers) Command() (args, env []string, home string) {
-	WebsBase := filepath.Join(w.Config().GetString("install"), w.Config().GetString("version"))
+	WebsBase := instance.BaseVersion(w)
 	home = w.Home()
 
 	args = []string{

@@ -317,7 +317,7 @@ func (g *Gateways) Command() (args, env []string, home string) {
 	args = []string{
 		g.Name(),
 		"-resources-dir",
-		path.Join(cf.GetString("install"), cf.GetString("version"), "resources"),
+		path.Join(instance.BaseVersion(g), "resources"),
 		"-log",
 		instance.LogFile(g),
 		"-setup",

@@ -175,7 +175,7 @@ func (n *CA3s) Add(tmpl string, port uint16) (err error) {
 		port = instance.NextPort(n.Host(), &CA3)
 	}
 
-	baseDir := filepath.Join(n.Config().GetString("install"), n.Config().GetString("version"), "collection_agent")
+	baseDir := filepath.Join(instance.BaseVersion(n), "collection_agent")
 	n.Config().Set("port", port)
 
 	if err = n.Config().Save(n.Type().String(),
@@ -217,7 +217,7 @@ func (n *CA3s) Rebuild(initial bool) error {
 
 func (n *CA3s) Command() (args, env []string, home string) {
 	// locate jar file
-	baseDir := filepath.Join(n.Config().GetString("install"), n.Config().GetString("version"), "collection_agent")
+	baseDir := instance.BaseVersion(n)
 
 	d, err := os.ReadDir(baseDir)
 	if err != nil {
