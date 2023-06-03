@@ -39,7 +39,7 @@ type geneosOptions struct {
 	geneosdir    string
 	username     string
 	password     config.Plaintext
-	platform_id  string
+	platformId   string
 	downloadbase string
 	downloadtype string
 	source       string
@@ -124,7 +124,7 @@ func Password(p config.Plaintext) Options {
 // PlatformID sets the (Linux) platform ID from the OS release info.
 // Currently used to distinguish RHEL8 installs from others.
 func PlatformID(id string) Options {
-	return func(d *geneosOptions) { d.platform_id = id }
+	return func(d *geneosOptions) { d.platformId = id }
 }
 
 // UseNexus sets the flag to use nexus.itrsgroup.com for internal
