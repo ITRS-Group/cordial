@@ -208,6 +208,21 @@ func (c *Config) ExpandString(input string, options ...ExpandOptions) (value str
 	return strings.Clone(value)
 }
 
+// ExpandStringSlice applies ExpandString to each member of the input
+// slice
+func ExpandStringSlice(input []string, options ...ExpandOptions) []string {
+	return global.ExpandStringSlice(input, options...)
+}
+
+// ExpandStringSlice applies ExpandString to each member of the input
+// slice
+func (c *Config) ExpandStringSlice(input []string, options ...ExpandOptions) (vals []string) {
+	for _, v := range input {
+		vals = append(vals, c.ExpandString(v, options...))
+	}
+	return
+}
+
 // Expand behaves like ExpandString but returns a byte slice.
 //
 // This should be used where the return value may contain sensitive data
