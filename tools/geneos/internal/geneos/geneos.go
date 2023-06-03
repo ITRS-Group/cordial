@@ -81,6 +81,8 @@ func Init(h *Host, options ...Options) (err error) {
 		// default or error
 	}
 
+	opts.geneosdir, _ = h.Abs(opts.geneosdir)
+
 	// dir must first not exist (or be empty) and then be creatable
 	//
 	// XXX maybe check that the entire list of registered directories

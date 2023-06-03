@@ -56,6 +56,7 @@ type Host interface {
 	Username() string
 
 	// file operations
+	Abs(name string) (string, error)
 	Getwd() (dir string, err error)
 	Chown(name string, uid, gid int) (err error)
 	Glob(pattern string) (paths []string, err error)
