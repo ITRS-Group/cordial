@@ -26,10 +26,12 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 	"unicode"
 
@@ -43,6 +45,7 @@ var platformToMetaList = []string{
 	"el8",
 }
 
+// ReleaseDetails is a set of values for a release
 type ReleaseDetails struct {
 	Component string    `json:"Component"`
 	Host      string    `json:"Host"`
@@ -53,6 +56,7 @@ type ReleaseDetails struct {
 	Path      string    `json:"Path"`
 }
 
+// Releases is a slice of ReleaseDetails, used for sorting ReleaseDetails
 type Releases []ReleaseDetails
 
 func (r Releases) Len() int {
@@ -270,13 +274,67 @@ func nextVersion(r *Host, ct *Component, current string) (next string, err error
 	return
 }
 
+// CurrentVersion returns the version that base points to for the
+// component ct on host h. If base is not a symlink then it is returned
+// unchanged. Returns version set to "unknown" on error.
+func CurrentVersion(h *Host, ct *Component, base string) (version string, err error) {
+	var st fs.FileInfo
+	var i int
+
+	dir := h.Filepath("packages", ct)
+	version = base
+
+	for i = 0; i < 10; i++ {
+		basepath := path.Join(dir, version)
+		log.Debug().Msgf("basepath: %s", basepath)
+		st, err = h.Lstat(basepath)
+		if err != nil {
+			log.Debug().Err(err).Msg("Lstat")
+			version = "unknown"
+			return
+		}
+		if st.Mode()&fs.ModeSymlink == 0 {
+			if !st.IsDir() {
+				err = syscall.ENOTDIR
+				log.Debug().Err(err).Msg("symlink?")
+				version = "unknown"
+				return
+			}
+			log.Debug().Msgf("return %s", version)
+			// version = st.Name()
+			return
+		}
+		version, err = h.Readlink(basepath)
+		if err != nil {
+			log.Debug().Err(err).Msg("readlink")
+			version = "unknown"
+			return
+		}
+		if version == base {
+			err = syscall.ELOOP
+			log.Debug().Err(err).Msg("loop")
+			version = "unknown"
+			return
+		}
+	}
+	if i == 10 {
+		err = fmt.Errorf("too many levels of symbolic link (>10)")
+		log.Debug().Err(err).Msg("levels")
+		version = "unknown"
+	}
+
+	log.Debug().Msgf("return %s", version)
+
+	return
+}
+
 // LatestVersion returns the name of the latest release for component
 // type ct on host h. The comparison is done using semantic versioning
 // and any metadata is ignored. The matching is limited by the optional
 // prefix filter. An error is returned if there are problems accessing
 // the directories or parsing any names as semantic versions.
 func LatestVersion(r *Host, ct *Component, prefix string) (v string, err error) {
-	dir := r.Filepath("packages", ct.String())
+	dir := r.Filepath("packages", ct)
 	dirs, err := r.ReadDir(dir)
 	if err != nil {
 		return

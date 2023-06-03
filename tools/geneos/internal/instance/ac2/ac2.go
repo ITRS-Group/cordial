@@ -173,7 +173,7 @@ func (n *AC2s) Add(tmpl string, port uint16) (err error) {
 		port = instance.NextPort(n.Host(), &AC2)
 	}
 
-	baseDir := filepath.Join(n.Config().GetString("install"), n.Config().GetString("version"))
+	baseDir := instance.BaseVersion(n)
 	n.Config().Set("port", port)
 
 	if err = n.Config().Save(n.Type().String(),
@@ -210,79 +210,11 @@ func (n *AC2s) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }
 
-// initial testing - needs cleaning up
+// Command returns the command, args and environment for the instance
 func (n *AC2s) Command() (args, env []string, home string) {
-	home = filepath.Join(n.Config().GetString("install"), n.Config().GetString("version"))
+	home = instance.BaseVersion(n)
 
-	args = []string{
-		// "-jarscan",
-		// home + "/jars",
-		// "-libpath",
-		// home + "/lib64",
-		// "-mainclass",
-		// "com.itrsgroup.activeconsole.Splasher",
-		// "-jvm",
-		// home + "/JRE/lib/server/libjvm.so",
-		// "-jvmargs",
-		// "Xmx1024M",
-		// "XX:+HeapDumpOnOutOfMemoryError",
-		// "Ddocking.floatingContainerType=frame",
-		// "Dsun.java2d.d3d=false",
-		// "Dorg.quartz.threadPool.threadCount=1",
-		// "Dfile.encoding=UTF-8",
-		// "Djdk.tls.maxCertificateChainLength=15",
-		// "-MaxHeartBeatInterval",
-		// "35",
-		// "-patheditorconfig",
-		// home + "/resources/configuration",
-		// "-userResourcesDirectory",
-		// home + "/resources",
-		// "-ApmEmfModelFilter",
-		// "DataItemUpdateFilter(Property=SampleTime)",
-		// "-logexceptions",
-		// "-path",
-		// home + "/JRE/bin",
-		// "-maximumDatabaseConnections",
-		// "100",
-		// "-fastShutdown",
-		// "-bdosync",
-		// "DataView,BDOSyncType_Level,DV1_SyncLevel_RedAmberCells",
-		// "-autoSort",
-		// "none",
-		// "-autoAcceptLicense",
-		// "ADB",
-		// "-dashboardDisplayFont",
-		// "Arial Unicode MS",
-		// "-criticalDialogTimeout",
-		// "60",
-		// "-cshHost",
-		// "https://docs.itrsgroup.com/docs/geneos/",
-		// "-enableCertificateValidation",
-		// "false",
-		// "-gsedir",
-		// home + "/gse",
-		// "-connections",
-		// "show",
-		// "enabled",
-		// "-locking",
-		// "enabled",
-		// "-includes",
-		// "enabled",
-		// "-appname",
-		// "GatewaySetupEditor",
-		// "-appdisplayname",
-		// "Gateway Setup Editor",
-		// "-quickcreate",
-		// "probes.probe",
-		// "managedEntities.managedEntity",
-		// "samplers.sampler",
-		// "-schemaroot",
-		// "gateway",
-		// "-nodeCacheMinNodes",
-		// "5",
-		// "-nodeCacheMaxWeight",
-		// "2000",
-	}
+	args = []string{}
 
 	env = []string{
 		"_JAVA_OPTIONS=-Dawt.useSystemAAFontSettings=lcd",
