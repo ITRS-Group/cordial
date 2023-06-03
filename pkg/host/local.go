@@ -67,6 +67,10 @@ func (h *Local) String() string {
 	return "localhost"
 }
 
+func (h *Local) Getwd() (dir string, err error) {
+	return os.Getwd()
+}
+
 func (h *Local) Symlink(oldname, newname string) (err error) {
 	return os.Symlink(oldname, newname)
 }

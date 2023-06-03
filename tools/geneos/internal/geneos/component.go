@@ -96,8 +96,10 @@ type Instance interface {
 	Rebuild(bool) error
 }
 
-var rootComponent = Component{
-	Name:             "none",
+const RootComponentName = "root"
+
+var RootComponent = Component{
+	Name:             RootComponentName,
 	RelatedTypes:     nil,
 	ComponentMatches: []string{"any"},
 	RealComponent:    false,
@@ -110,7 +112,7 @@ var rootComponent = Component{
 		config.Join("download", "url"): "https://resources.itrsgroup.com/download/latest/",
 
 		// Path List separated additions to the reserved names list, over and above
-		// any words matched by ParseComponentName()
+		// any words matched by FindComponent()
 		"reservednames": "",
 
 		"privatekeys": "id_rsa,id_ecdsa,id_ecdsa_sk,id_ed25519,id_ed25519_sk,id_dsa",
@@ -130,7 +132,7 @@ func Initialise(app string) {
 	execname = app
 	SigningCertFile = execname
 	ChainCertFile = execname + "-chain.pem"
-	rootComponent.RegisterComponent(nil)
+	RootComponent.RegisterComponent(nil)
 }
 
 type componentsMap map[string]*Component
@@ -220,18 +222,17 @@ func (ct Component) IsA(name ...string) bool {
 
 // MakeComponentDirs creates the directory structure for the component.
 // If ct is nil then the Root component type is used. If there is an
-// error creating the directory or updating the ownership for superuser
-// then this is immediate returned and the list of directories may only
-// be partially created.
+// error creating the directory then the error is immediately returned
+// and the list of directories may only be partially created.
 func (ct *Component) MakeComponentDirs(h *Host) (err error) {
-	name := "none"
+	name := RootComponentName
 	if h == ALL {
 		log.Fatal().Msg("called with all hosts")
 	}
 	if ct != nil {
 		name = ct.Name
 	}
-	geneos := h.GetString(execname)
+	geneos := h.GetString(execname) // root for host h
 	for _, d := range initDirs[name] {
 		dir := filepath.Join(geneos, d)
 		log.Debug().Msgf("mkdirall %s", dir)

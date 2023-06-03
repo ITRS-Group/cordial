@@ -390,40 +390,20 @@ func NextPort(r *geneos.Host, ct *geneos.Component) uint16 {
 	return 0
 }
 
+// BaseVersion returns the absolute path of the base package directory
+// for the instance c. No longer references the instance "install" parameter.
+func BaseVersion(c geneos.Instance) (dir string) {
+	return c.Host().Filepath("packages", c.Type(), c.Config().GetString("version"))
+}
+
 // Version returns the base package name and the underlying package
 // version for the instance c. If base is not a link, then base is also
 // returned as the symlink. If there are more than 10 levels of symlink
 // then return symlink set to "loop-detected" and err set to
 // syscall.ELOOP to prevent infinite loops.
 func Version(c geneos.Instance) (base string, version string, err error) {
-	var st fs.FileInfo
-	var i int
-
-	basedir := c.Config().GetString("install")
 	base = c.Config().GetString("version")
-	version = base
-
-	for i = 0; i < 10; i++ {
-		basepath := path.Join(basedir, version)
-		st, err = c.Host().Lstat(basepath)
-		if err != nil {
-			version = "unknown"
-			return
-		}
-		if st.Mode()&fs.ModeSymlink != 0 {
-			version, err = c.Host().Readlink(basepath)
-			if err != nil {
-				version = "unknown"
-				return
-			}
-		} else {
-			break
-		}
-	}
-	if i == 10 {
-		err = syscall.ELOOP
-		version = "loop-detected"
-	}
+	version, err = geneos.CurrentVersion(c.Host(), c.Type(), c.Config().GetString("version"))
 	return
 }
 

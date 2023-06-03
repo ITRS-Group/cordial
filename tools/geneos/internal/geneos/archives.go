@@ -169,7 +169,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 		switch ct.Name {
 		// XXX abstract this
 		// components that use other components... i.e. netprobes
-		case "none", "san", "floating", "ca3":
+		case RootComponentName, "san", "floating", "ca3":
 			ct = ctFromFile
 		case ctFromFile.Name:
 			break
@@ -282,7 +282,7 @@ func untar(h *Host, dir string, t io.Reader, stripPrefix func(string) string) (e
 				return
 			}
 			if n != hdr.Size {
-				log.Error().Msgf("lengths different: %s %d", hdr.Size, n)
+				log.Error().Msgf("lengths different: %d %d", hdr.Size, n)
 			}
 			out.Close()
 
@@ -324,8 +324,8 @@ func openRemoteArchive(ct *Component, options ...Options) (filename string, resp
 
 	// cannot fetch partial versions for el8 - restriction on download search interface
 	platform := ""
-	if opts.platform_id != "" {
-		s := strings.Split(opts.platform_id, ":")
+	if opts.platformId != "" {
+		s := strings.Split(opts.platformId, ":")
 		if len(s) > 1 {
 			platform = s[1]
 		}
