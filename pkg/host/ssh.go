@@ -318,6 +318,14 @@ func (h *SSHRemote) String() string {
 	return h.name
 }
 
+func (h *SSHRemote) Abs(dir string) (string, error) {
+	if s, err := h.DialSFTP(); err != nil {
+		return "", err
+	} else {
+		return s.RealPath(dir)
+	}
+}
+
 func (h *SSHRemote) Getwd() (dir string, err error) {
 	if s, err := h.DialSFTP(); err != nil {
 		return "", err

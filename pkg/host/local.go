@@ -67,6 +67,10 @@ func (h *Local) String() string {
 	return "localhost"
 }
 
+func (h *Local) Abs(dir string) (string, error) {
+	return filepath.Abs(dir)
+}
+
 func (h *Local) Getwd() (dir string, err error) {
 	return os.Getwd()
 }
