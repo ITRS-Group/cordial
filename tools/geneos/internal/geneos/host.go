@@ -247,14 +247,12 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			osinfo[strings.ToLower(key)] = value
 		}
 		if !h.IsLocal() {
-			cmd := exec.Command("pwd")
-			output, err := h.Run(cmd, []string{}, "", "")
+			dir, err := h.Getwd()
 			if err != nil {
-				log.Error().Err(err).Msg("")
-			} else {
-				dir := strings.TrimSpace(string(output))
-				h.Set("homedir", dir)
+				return err
 			}
+			dir = strings.TrimSpace(string(dir))
+			h.Set("homedir", dir)
 		}
 	}
 	h.SetStringMapString("osinfo", osinfo)
