@@ -169,16 +169,16 @@ PIDS:
 // Args and Env can be either a string, which is split on whitespace or
 // a slice of strings which is used as-is
 type Program struct {
-	Executable string        // Path to program, passed through exec.LookPath
-	Username   string        // The name of the user, if empty use current
-	WoringDir  string        // The working directory, defaults to home dir of user
-	ErrLog     string        // The name of the logfile, defaults to basename of program+".log" in Dir
-	Args       any           // Args not including program
-	Env        any           // Env as key=value pairs
-	Foreground bool          // Run in foreground, to completion, return if result != 0
-	Restart    bool          // restart on exit
-	IgnoreErr  bool          // If true do not return err on failure
-	Wait       time.Duration // period to wait after starting, default none
+	Executable string        `json:"executable,omitempty"` // Path to program, passed through exec.LookPath
+	Username   string        `json:"username,omitempty"`   // The name of the user, if empty use current
+	WorkingDir string        `json:"workingdir,omitempty"` // The working directory, defaults to home dir of user
+	ErrLog     string        `json:"errlog,omitempty"`     // The name of the logfile, defaults to basename of program+".log" in Dir
+	Args       []string      `json:"args,omitempty"`       // Args not including program
+	Env        []string      `json:"env,omitempty"`        // Env as key=value pairs
+	Foreground bool          `json:"foreground,omitempty"` // Run in foreground, to completion, return if result != 0
+	Restart    bool          `json:"restart,omitempty"`    // restart on exit
+	IgnoreErr  bool          `json:"ignoreerr,omitempty"`  // If true do not return err on failure
+	Wait       time.Duration `json:"wait,omitempty"`       // period to wait after starting, default none
 }
 
 func retErrIfFalse(ret bool, err error) error {
@@ -198,19 +198,6 @@ func retErrIfFalse(ret bool, err error) error {
 // TODO: return error windows
 // TODO: look at remote processes
 func Start(h host.Host, program Program) (pid int, err error) {
-	args, err := sliceFromAny(program.Args)
-	if err != nil {
-		err = retErrIfFalse(program.IgnoreErr, err)
-		return
-	}
-
-	env, err := sliceFromAny(program.Env)
-	if err != nil {
-		err = retErrIfFalse(program.IgnoreErr, err)
-		return
-	}
-
-	// changing users is not supported
 	if program.Username != "" && program.Username != h.Username() {
 		if os.Getuid() == 0 || os.Geteuid() == 0 {
 			// i am root
@@ -221,17 +208,9 @@ func Start(h host.Host, program Program) (pid int, err error) {
 			if err != nil {
 				return 0, err
 			}
-			if program.WoringDir == "" {
-				program.WoringDir = u.HomeDir
+			if program.WorkingDir == "" {
+				program.WorkingDir = u.HomeDir
 			}
-			// build basic env after any caller values set, keep PATH
-			env = append(env,
-				"HOME="+program.WoringDir,
-				"SHELL=/bin/bash",
-				"USER="+program.Username,
-				"LOGNAME="+program.Username,
-				"PATH="+os.Getenv("PATH"),
-			)
 		} else {
 			return 0, os.ErrPermission
 		}
@@ -241,16 +220,25 @@ func Start(h host.Host, program Program) (pid int, err error) {
 			program.Username = u.Username
 		}
 
-		if program.WoringDir == "" {
+		if program.WorkingDir == "" {
 			u, _ := user.Lookup(program.Username)
-			program.WoringDir = u.HomeDir
+			program.WorkingDir = u.HomeDir
 		}
 	}
 
+	// build basic env after any caller values set, keep PATH
+	program.Env = append(program.Env,
+		"HOME="+program.WorkingDir,
+		"SHELL=/bin/bash",
+		"USER="+program.Username,
+		"LOGNAME="+program.Username,
+		"PATH="+os.Getenv("PATH"),
+	)
+
 	if program.ErrLog == "" {
-		program.ErrLog = filepath.Join(program.WoringDir, filepath.Base(program.Executable+".log"))
+		program.ErrLog = filepath.Join(program.WorkingDir, filepath.Base(program.Executable+".log"))
 	} else if !filepath.IsAbs(program.ErrLog) {
-		program.ErrLog = filepath.Join(program.WoringDir, program.ErrLog)
+		program.ErrLog = filepath.Join(program.WorkingDir, program.ErrLog)
 	}
 
 	path, err := exec.LookPath(program.Executable)
@@ -260,9 +248,9 @@ func Start(h host.Host, program Program) (pid int, err error) {
 
 	switch {
 	case program.Foreground:
-		cmd := exec.Command(program.Executable, args...)
+		cmd := exec.Command(program.Executable, program.Args...)
 		setCredentialsFromUsername(cmd, program.Username)
-		if _, err := h.Run(cmd, env, program.WoringDir, program.ErrLog); err != nil {
+		if _, err := h.Run(cmd, program.Env, program.WorkingDir, program.ErrLog); err != nil {
 			log.Fatal().Err(err).Msg("")
 			return 0, retErrIfFalse(program.IgnoreErr, err)
 		}
@@ -270,10 +258,10 @@ func Start(h host.Host, program Program) (pid int, err error) {
 		go reap.ReapChildren(nil, nil, nil, nil)
 		go func() {
 			for {
-				cmd := exec.Command(program.Executable, args...)
+				cmd := exec.Command(program.Executable, program.Args...)
 				setCredentialsFromUsername(cmd, program.Username)
 
-				h.Run(cmd, env, program.WoringDir, program.ErrLog)
+				h.Run(cmd, program.Env, program.WorkingDir, program.ErrLog)
 				if program.Wait != 0 {
 					time.Sleep(program.Wait)
 				} else {
@@ -282,9 +270,9 @@ func Start(h host.Host, program Program) (pid int, err error) {
 			}
 		}()
 	default:
-		cmd := exec.Command(program.Executable, args...)
+		cmd := exec.Command(program.Executable, program.Args...)
 		setCredentialsFromUsername(cmd, program.Username)
-		if err = h.Start(cmd, env, program.WoringDir, program.ErrLog); err != nil {
+		if err = h.Start(cmd, program.Env, program.WorkingDir, program.ErrLog); err != nil {
 			return 0, retErrIfFalse(program.IgnoreErr, err)
 		}
 	}
