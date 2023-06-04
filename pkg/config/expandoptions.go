@@ -120,6 +120,14 @@ func LookupTable(values map[string]string) ExpandOptions {
 	}
 }
 
+// LookupTables sets the expansion lookup tables to the slice of maps
+// passed as values. Any existing lookup tables are discarded.
+func LookupTables(values []map[string]string) ExpandOptions {
+	return func(e *expandOptions) {
+		e.lookupTables = values
+	}
+}
+
 // Prefix defines a custom mapping for the given prefix to an
 // expand-like function. The prefix should not include the terminating
 // ":". If the configuration prefix matches during expansion then the
