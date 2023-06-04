@@ -40,6 +40,7 @@ import (
 
 	"github.com/hashicorp/go-reap"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
@@ -127,6 +128,10 @@ OUTER:
 func GetPID(h host.Host, binary string, args ...string) (pid int, err error) {
 	var pids []int
 
+	if strings.Contains(h.ServerVersion(), "windows") {
+		return 0, os.ErrProcessDone
+	}
+
 	// safe to ignore error as it can only be bad pattern,
 	// which means no matches to range over
 	dirs, _ := h.Glob("/proc/[0-9]*")
@@ -197,22 +202,27 @@ func retErrIfFalse(ret bool, err error) error {
 //
 // TODO: return error windows
 // TODO: look at remote processes
-func Start(h host.Host, program Program) (pid int, err error) {
+func Start(h host.Host, program Program, options ...Options) (pid int, err error) {
+	opts := evalOptions(options...)
+
 	if program.Username != "" && program.Username != h.Username() {
-		if os.Getuid() == 0 || os.Geteuid() == 0 {
-			// i am root
-			if h != host.Localhost {
-				return 0, host.ErrInvalidArgs
-			}
-			u, err := user.Lookup(program.Username)
-			if err != nil {
-				return 0, err
-			}
-			if program.WorkingDir == "" {
-				program.WorkingDir = u.HomeDir
-			}
-		} else {
+		// if username is set and is not surrent user for host h
+
+		// if not root
+		if os.Getuid() != 0 && os.Geteuid() != 0 {
 			return 0, os.ErrPermission
+		}
+
+		// if root, and not localhost
+		if h != host.Localhost {
+			return 0, host.ErrInvalidArgs
+		}
+		u, err := user.Lookup(program.Username)
+		if err != nil {
+			return 0, err
+		}
+		if program.WorkingDir == "" {
+			program.WorkingDir = u.HomeDir
 		}
 	} else {
 		if program.Username == "" {
@@ -234,6 +244,15 @@ func Start(h host.Host, program Program) (pid int, err error) {
 		"LOGNAME="+program.Username,
 		"PATH="+os.Getenv("PATH"),
 	)
+
+	// check for expand options
+	if opts.expandArgs {
+		program.Args = config.ExpandStringSlice(program.Args, config.LookupTables(opts.lookup))
+	}
+
+	if opts.expandEnv {
+		program.Env = config.ExpandStringSlice(program.Env, config.LookupTables(opts.lookup))
+	}
 
 	if program.ErrLog == "" {
 		program.ErrLog = filepath.Join(program.WorkingDir, filepath.Base(program.Executable+".log"))
@@ -291,13 +310,13 @@ func Start(h host.Host, program Program) (pid int, err error) {
 // returns err then Batch returns immediately. Set IgnoreErr in Program
 // to not return errors for each stage. If any stage has Restart set and
 // it is supported then a reaper is run and the done channel returned.
-func Batch(h host.Host, batch []Program) (done chan struct{}, err error) {
+func Batch(h host.Host, batch []Program, options ...Options) (done chan struct{}, err error) {
 	r := false
 	for _, program := range batch {
 		if program.Restart {
 			r = true
 		}
-		_, err = Start(h, program)
+		_, err = Start(h, program, options...)
 		if err != nil && err != os.ErrProcessDone {
 			return
 		}
