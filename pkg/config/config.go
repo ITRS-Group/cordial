@@ -245,6 +245,29 @@ func (c *Config) GetStringMapString(s string, options ...ExpandOptions) (m map[s
 	return m
 }
 
+// GetSliceStringMapString returns a slice of string maps for the key s,
+// it iterates over all values in all maps and applies the ExpandString
+// with the options given
+func (c *Config) GetSliceStringMapString(s string, options ...ExpandOptions) (result []map[string]string) {
+	err := c.UnmarshalKey(s, &result)
+	if err != nil {
+		return
+	}
+	for _, m := range result {
+		for k, v := range m {
+			m[k] = ExpandString(v, options...)
+		}
+	}
+	return
+}
+
+// GetSliceStringMapString returns a slice of string maps for the key s,
+// it iterates over all values in all maps and applies the ExpandString
+// with the options given
+func GetSliceStringMapString(s string, options ...ExpandOptions) (result []map[string]string) {
+	return global.GetSliceStringMapString(s, options...)
+}
+
 // SetKeyValues takes a list of `key=value` pairs as strings and applies
 // them to the config object. Any item without an `=` is skipped.
 func (c *Config) SetKeyValues(items ...string) {
