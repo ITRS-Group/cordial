@@ -163,12 +163,12 @@ func aesListInstance(c geneos.Instance, params []string) (err error) {
 		return
 	}
 	aesListPath(c.Type(), c.Host(), c.Name(), path)
-	aesListPath(c.Type(), c.Host(), c.Name()+"**", prev)
+	aesListPath(c.Type(), c.Host(), c.Name()+" (prev)", prev)
 	return
 }
 
 func aesListShared(ct *geneos.Component, h *geneos.Host) (err error) {
-	for _, ct := range ct.OrList(componentsWithKeyfiles...) {
+	for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 		for _, h := range h.OrList(geneos.AllHosts()...) {
 			var dirs []fs.DirEntry
 			dirs, err = h.ReadDir(ct.SharedPath(h, "keyfiles"))
@@ -215,12 +215,12 @@ func aesListInstanceCSV(c geneos.Instance, params []string) (err error) {
 	path := instance.Filepath(c, "keyfile")
 	prev := instance.Filepath(c, "prevkeyfile")
 	aesListPathCSV(c.Type(), c.Host(), c.Name(), path)
-	aesListPathCSV(c.Type(), c.Host(), c.Name()+"**", prev)
+	aesListPathCSV(c.Type(), c.Host(), c.Name()+" (prev)", prev)
 	return
 }
 
 func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (err error) {
-	for _, ct := range ct.OrList(componentsWithKeyfiles...) {
+	for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 		for _, h := range h.OrList(geneos.AllHosts()...) {
 			var dirs []fs.DirEntry
 			dirs, err = h.ReadDir(ct.SharedPath(h, "keyfiles"))
@@ -289,7 +289,7 @@ func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, path str
 
 func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results []interface{}, err error) {
 	results = []interface{}{}
-	for _, ct := range ct.OrList(componentsWithKeyfiles...) {
+	for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 		for _, h := range h.OrList(geneos.AllHosts()...) {
 			var dirs []fs.DirEntry
 			dirs, err = h.ReadDir(ct.SharedPath(h, "keyfiles"))

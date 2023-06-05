@@ -24,7 +24,6 @@ package initcmd
 
 import (
 	_ "embed"
-	"os"
 	"strings"
 	"time"
 
@@ -97,10 +96,7 @@ func initAll(h *geneos.Host, options ...geneos.Options) (err error) {
 	e := []string{}
 
 	if initCmdName == "" {
-		initCmdName, err = os.Hostname()
-		if err != nil {
-			return err
-		}
+		initCmdName = h.Hostname()
 	}
 
 	if err = install("licd", h.String(), options...); err != nil {

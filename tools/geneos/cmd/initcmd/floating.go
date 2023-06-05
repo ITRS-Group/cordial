@@ -24,7 +24,6 @@ package initcmd
 
 import (
 	_ "embed"
-	"os"
 	"strings"
 	"time"
 
@@ -108,7 +107,7 @@ func initFloating(h *geneos.Host, options ...geneos.Options) (err error) {
 	if initCmdName != "" {
 		floatingname = initCmdName
 	} else {
-		floatingname, _ = os.Hostname()
+		floatingname = h.Hostname()
 	}
 	if !h.IsLocal() {
 		floatingname = floatingname + "@" + geneos.LOCALHOST

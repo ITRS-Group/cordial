@@ -24,7 +24,6 @@ package initcmd
 
 import (
 	_ "embed"
-	"os"
 	"strings"
 	"time"
 
@@ -108,7 +107,7 @@ func initSan(h *geneos.Host, options ...geneos.Options) (err error) {
 	if initCmdName != "" {
 		sanname = initCmdName
 	} else {
-		sanname, _ = os.Hostname()
+		sanname = h.Hostname()
 	}
 	if !h.IsLocal() {
 		sanname = sanname + "@" + geneos.LOCALHOST
