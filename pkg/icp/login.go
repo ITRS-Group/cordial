@@ -1,6 +1,7 @@
 package icp
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strconv"
@@ -8,10 +9,10 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-// Credentials type
+// LoginRequest type
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-login
-type Credentials struct {
+type LoginRequest struct {
 	Username string `json:"Username"`
 	Password string `json:"Password"`
 }
@@ -21,12 +22,12 @@ var icp *ICP
 // Login sends a login request to the http endpoint and returns a token
 // or an error
 func Login(projectID int, username string, password config.Plaintext, options ...Options) (icp *ICP, err error) {
-	creds := &Credentials{
+	creds := &LoginRequest{
 		Username: username,
 		Password: password.String(),
 	}
 	icp = New(projectID, options...)
-	resp, err := icp.Post("api/login", creds)
+	resp, err := icp.Post(context.Background(), LoginEndpoint, creds)
 	if err != nil {
 		return
 	}
@@ -39,6 +40,6 @@ func Login(projectID int, username string, password config.Plaintext, options ..
 	if err != nil {
 		return
 	}
-	icp.Token, _ = strconv.Unquote(string(b))
+	icp.token, _ = strconv.Unquote(string(b))
 	return
 }
