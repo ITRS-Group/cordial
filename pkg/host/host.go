@@ -49,6 +49,7 @@ type Host interface {
 	String() string
 	GetFs() afero.Fs
 	Path(path string) string
+	Hostname() string
 	ServerVersion() string
 	IsAvailable() bool
 	IsLocal() bool

@@ -29,10 +29,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
-
-var componentsWithKeyfiles = geneos.UsesKeyFiles()
 
 func init() {
 	cmd.GeneosCmd.AddCommand(aesCmd)

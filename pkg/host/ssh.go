@@ -116,6 +116,10 @@ func Hostname(hostname string) SSHOptions {
 	}
 }
 
+func (s *SSHRemote) Hostname() string {
+	return s.hostname
+}
+
 func Keys(paths ...string) SSHOptions {
 	return func(s *SSHRemote) {
 		s.keys = append(s.keys, paths...)

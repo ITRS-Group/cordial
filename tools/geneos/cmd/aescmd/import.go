@@ -25,15 +25,14 @@ package aescmd
 import (
 	_ "embed"
 	"fmt"
-	"path"
 	"strings"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
 var aesImportCmdKeyfile config.KeyFile
@@ -68,59 +67,12 @@ geneos aes import -k https://myserver.example.com/secure/keyfile.aes -H remote1
 		"wildcard":     "false",
 		"needshomedir": "true",
 	},
-	RunE: func(command *cobra.Command, _ []string) error {
+	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, _ := cmd.CmdArgs(command)
-
-		a, err := aesImportCmdKeyfile.Read()
-		if err != nil {
-			return err
-		}
-
 		h := geneos.GetHost(cmd.Hostname)
 
-		// at this point we have an AESValue struct and a CRC to use as
-		// the filename base. create 'keyfiles' directory as required
-		for _, ct := range ct.OrList(componentsWithKeyfiles...) {
-			for _, h := range h.OrList(geneos.AllHosts()...) {
-				aesImportSave(ct, h, a)
-			}
-		}
-
-		return nil
-	},
-}
-
-func aesImportSave(ct *geneos.Component, h *geneos.Host, a *config.KeyValues) (err error) {
-	if ct == nil || h == nil || a == nil {
-		return geneos.ErrInvalidArgs
-	}
-
-	crc, err := a.Checksum()
-	if err != nil {
-		return err
-	}
-	crcstr := fmt.Sprintf("%08X", crc)
-
-	// save given keyfile
-	file := ct.SharedPath(h, "keyfiles", crcstr+".aes")
-	if _, err := h.Stat(file); err == nil {
-		log.Debug().Msgf("keyfile %s already exists for host %s, component %s", file, h, ct)
-		return nil
-	}
-	if err := h.MkdirAll(path.Dir(file), 0775); err != nil {
-		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
-		return err
-	}
-	w, err := h.Create(file, 0600)
-	if err != nil {
-		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
+		crc32, err := instance.ImportKeyFile(h, ct, aesImportCmdKeyfile)
+		fmt.Printf("imported keyfile with CRC %08X\n", crc32)
 		return
-	}
-	defer w.Close()
-
-	if err = a.Write(w); err != nil {
-		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
-	}
-	fmt.Printf("key file %s.aes saved to shared directory for %s on %s\n", crcstr, ct, h)
-	return
+	},
 }

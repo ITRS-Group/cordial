@@ -53,6 +53,11 @@ func (h *Local) Username() string {
 	return u.Username
 }
 
+func (h *Local) Hostname() string {
+	hostname, _ := os.Hostname()
+	return hostname
+}
+
 // IsLocal returns true if h is local, which for Local it is
 func (h *Local) IsLocal() bool {
 	return true

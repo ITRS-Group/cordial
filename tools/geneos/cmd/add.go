@@ -27,7 +27,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"path/filepath"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -37,9 +36,11 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var addCmdTemplate, addCmdBase, addCmdKeyfile, addCmdKeyfileCRC string
+var addCmdTemplate, addCmdBase, addCmdKeyfileCRC string
 var addCmdStart, addCmdLogs bool
 var addCmdPort uint16
+var addCmdImportFiles instance.ImportFiles
+var addCmdKeyfile config.KeyFile
 
 var addCmdExtras = instance.ExtraConfigValues{}
 
@@ -52,10 +53,12 @@ func init() {
 	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", instance.EnvValuesOptionsText)
 	addCmd.Flags().StringVarP(&addCmdBase, "base", "b", "active_prod", "Select the base version for the\ninstance")
 
-	addCmd.Flags().StringVarP(&addCmdKeyfile, "keyfile", "k", "", "Keyfile `PATH`")
-	addCmd.Flags().StringVarP(&addCmdKeyfileCRC, "crc", "C", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory (extension optional)")
+	addCmd.Flags().Var(&addCmdKeyfile, "keyfile", "Keyfile `PATH`")
+	addCmd.Flags().StringVar(&addCmdKeyfileCRC, "keycrc", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory (extension optional)")
 
 	addCmd.Flags().StringVarP(&addCmdTemplate, "template", "T", "", "Template file to use `PATH|URL|-`")
+
+	addCmd.Flags().VarP(&addCmdImportFiles, "import", "I", "import file(s) to instance. DEST defaults to the base\nname of the import source or if given it must be\nrelative to and below the instance directory\n(Repeat as required)")
 
 	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
 	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
@@ -96,12 +99,17 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 	// check validity and reserved words here
 	name := args[0]
 
-	_, _, rem := instance.SplitName(name, geneos.LOCAL)
-	if err = ct.MakeComponentDirs(rem); err != nil {
+	h := geneos.GetHost(Hostname)
+	if h == geneos.ALL {
+		h = geneos.LOCAL
+	}
+
+	_, _, h = instance.SplitName(name, h)
+	if err = ct.MakeComponentDirs(h); err != nil {
 		return
 	}
 
-	c, err := instance.Get(ct, name)
+	c, err := instance.Get(ct, h.FullName(name))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
 	}
@@ -123,16 +131,12 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 	}
 
 	if ct.UsesKeyfiles {
-		if addCmdKeyfileCRC != "" {
-			crcfile := addCmdKeyfileCRC
-			if filepath.Ext(crcfile) != "aes" {
-				crcfile += ".aes"
-			}
-			cf.Set("keyfile", instance.SharedPath(c, "keyfiles", crcfile))
-		} else if addCmdKeyfile != "" {
-			cf.Set("keyfile", addCmdKeyfile)
+		crc, err := instance.UseKeyFile(c.Host(), c.Type(), addCmdKeyfile, addCmdKeyfileCRC)
+		if err == nil {
+			cf.Set("keyfile", instance.SharedPath(c, "keyfiles", crc+".aes"))
 		}
 	}
+
 	instance.SetExtendedValues(c, addCmdExtras)
 	cf.SetKeyValues(items...)
 	log.Debug().Msgf("savedir=%s", instance.ParentDirectory(c))
@@ -148,6 +152,13 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 	// reload config as instance data is not updated by Add() as an interface value
 	c.Unload()
 	c.Load()
+
+	for _, i := range addCmdImportFiles {
+		if _, err = instance.ImportFile(c.Host(), c.Home(), i); err != nil {
+			return err
+		}
+	}
+
 	fmt.Printf("%s added, port %d\n", c, cf.GetInt("port"))
 
 	if addCmdStart || addCmdLogs {

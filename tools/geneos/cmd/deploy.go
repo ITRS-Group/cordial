@@ -37,41 +37,47 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var deployCmdTemplate, deployCmdBase, deployCmdKeyfile, deployCmdKeyfileCRC string
-var deployCmdGeneosHome, deployCmdUsername string
+var deployCmdTemplate, deployCmdBase, deployCmdKeyfileCRC string
+var deployCmdGeneosHome, deployCmdUsername, deployCmdName string
 var deployCmdStart, deployCmdLogs, deployCmdLocal, deployCmdNexus, deployCmdSnapshot bool
 var deployCmdSecure bool
 var deployCmdPort uint16
 var deployCmdArchive, deployCmdVersion, deployCmdOverride string
 var deployCmdPassword config.Plaintext
-
+var deployCmdImportFiles instance.ImportFiles
+var deployCmdKeyfile config.KeyFile
 var deployCmdExtras = instance.ExtraConfigValues{}
 
 func init() {
 	GeneosCmd.AddCommand(deployCmd)
 
-	deployCmd.Flags().StringVarP(&deployCmdGeneosHome, "geneos", "D", "", "`GENEOS_HOME` directory")
+	deployCmd.Flags().StringVarP(&deployCmdGeneosHome, "geneos", "D", "", "`GENEOS_HOME` directory. No default if not found\nin user configuration or environment")
 	deployCmd.Flags().BoolVarP(&deployCmdStart, "start", "S", false, "Start new instance after creation")
-	deployCmd.Flags().BoolVarP(&deployCmdLogs, "log", "l", false, "Follow the logs after starting the instance.\nImplies -S to start the instance")
+	deployCmd.Flags().BoolVarP(&deployCmdLogs, "log", "l", false, "Follow the logs after starting the instance.\nImplies --start to start the instance")
 	deployCmd.Flags().Uint16VarP(&deployCmdPort, "port", "p", 0, "Override the default port selection")
-	deployCmd.Flags().StringVarP(&deployCmdBase, "base", "b", "active_prod", "Select the base version for the\ninstance")
+	deployCmd.Flags().StringVarP(&deployCmdBase, "base", "b", "active_prod", "Select the base version for the instance")
 
-	deployCmd.Flags().BoolVarP(&deployCmdSecure, "secure", "T", false, "Use secure connects\nInitilise TLS subsystem if required")
+	deployCmd.Flags().StringVarP(&deployCmdName, "name", "n", "", "Use name for instances and configurations instead of the hostname")
+	deployCmd.Flags().MarkHidden("name")
+
+	deployCmd.Flags().BoolVarP(&deployCmdSecure, "secure", "T", false, "Use secure connects\nInitialise TLS subsystem if required")
 
 	deployCmd.Flags().StringVarP(&deployCmdUsername, "username", "u", "", "Username for downloads\nCredentials used if not given.")
 	deployCmd.Flags().VarP(&deployCmdPassword, "password", "P", "Password for downloads\nPrompted if required and not given")
 
 	deployCmd.Flags().StringVarP(&deployCmdVersion, "version", "V", "latest", "Use this `VERSION`\nDoesn't work for EL8 archives.")
 	deployCmd.Flags().BoolVarP(&deployCmdLocal, "local", "L", false, "Install from local files only")
-	deployCmd.Flags().StringVarP(&deployCmdArchive, "archive", "A", "", "File or directory of release\narchives for installation")
-	deployCmd.Flags().StringVar(&deployCmdOverride, "override", "", "Override the `[TYPE:]VERSION`\nfor archive files with non-standard names")
+	deployCmd.Flags().StringVarP(&deployCmdArchive, "archive", "A", "", "File or directory to search for local release archives")
+	deployCmd.Flags().StringVar(&deployCmdOverride, "override", "", "Override the `[TYPE:]VERSION` for archive\nfiles with non-standard names")
 
 	deployCmd.Flags().BoolVar(&deployCmdNexus, "nexus", false, "Download from nexus.itrsgroup.com\nRequires ITRS internal credentials")
 	deployCmd.Flags().BoolVar(&deployCmdSnapshot, "snapshots", false, "Download from nexus snapshots\nImplies --nexus")
 
-	deployCmd.Flags().StringVar(&deployCmdTemplate, "template", "", "Template file to use `PATH|URL|-`")
-	deployCmd.Flags().StringVar(&deployCmdKeyfile, "keyfile", "", "Keyfile `PATH`")
-	deployCmd.Flags().StringVar(&deployCmdKeyfileCRC, "keycrc", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory (extension optional)")
+	deployCmd.Flags().StringVar(&deployCmdTemplate, "template", "", "Template file to use (if supported for TYPE). `PATH|URL|-`")
+	deployCmd.Flags().Var(&deployCmdKeyfile, "keyfile", "Keyfile `PATH` to use. Default is\nto create one for TYPEs that support them")
+	deployCmd.Flags().StringVar(&deployCmdKeyfileCRC, "keycrc", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory to use (extension optional)")
+
+	deployCmd.Flags().VarP(&deployCmdImportFiles, "import", "I", "import file(s) to instance. DEST defaults to the base\nname of the import source or if given it must be\nrelative to and below the instance directory\n(Repeat as required)")
 
 	deployCmd.Flags().VarP(&deployCmdExtras.Envs, "env", "e", instance.EnvValuesOptionsText)
 	deployCmd.Flags().VarP(&deployCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
@@ -87,7 +93,7 @@ func init() {
 var deployCmdDescription string
 
 var deployCmd = &cobra.Command{
-	Use:     "deploy [flags] TYPE NAME [KEY=VALUE...]",
+	Use:     "deploy [flags] TYPE [NAME] [KEY=VALUE...]",
 	GroupID: CommandGroupConfig,
 	Short:   "Deploy a new Geneos instance",
 	Long:    deployCmdDescription,
@@ -99,23 +105,37 @@ var deployCmd = &cobra.Command{
 		"needshomedir": "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		var name string
+
 		ct, args, params := CmdArgsParams(cmd)
 		if ct == nil {
 			fmt.Println("component type must be given for a deployment")
 			return nil
 		}
 
-		// check validity and reserved words here
-		name := args[0]
+		// name is from hidden --name, then NAME finally hostname
+		if deployCmdName != "" {
+			name = deployCmdName
+		} else if len(args) > 0 {
+			name = args[0]
+		}
 
 		// check we have a Geneos directory, update host based on instance
 		// name wanted
 		h := geneos.GetHost(Hostname)
-		_, _, h = instance.SplitName(name, h)
+		if name != "" {
+			_, _, h = instance.SplitName(name, h)
+		}
 
 		if h == geneos.ALL {
 			h = geneos.LOCAL
 		}
+
+		if name == "" {
+			name = h.Hostname()
+		}
+
+		log.Debug().Msgf("host=%s, name=%s", h, name)
 
 		if h == geneos.LOCAL {
 			if geneos.Root() == "" {
@@ -153,20 +173,23 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
-		// deploy templates if component requires them
+		// deploy templates if component requires them, do not ovewrite existing
 		if len(ct.Templates) != 0 {
 			templateDir := h.Filepath(ct, "templates")
 			h.MkdirAll(templateDir, 0775)
 
 			for _, t := range ct.Templates {
 				tmpl := t.Content
+				output := filepath.Join(templateDir, t.Filename)
+				if _, err := h.Stat(output); err == nil {
+					continue
+				}
 				if deployCmdTemplate != "" {
 					if tmpl, err = geneos.ReadFrom(deployCmdTemplate); err != nil {
 						return
 					}
 				}
-
-				if err = h.WriteFile(filepath.Join(templateDir, t.Filename), tmpl, 0664); err != nil {
+				if err = h.WriteFile(output, tmpl, 0664); err != nil {
 					return
 				}
 				fmt.Printf("%s template %q written to %s\n", ct, t.Filename, templateDir)
@@ -214,7 +237,7 @@ var deployCmd = &cobra.Command{
 
 		// we are installed and ready to go, drop through to code from `add`
 
-		c, err := instance.Get(ct, name)
+		c, err := instance.Get(ct, h.FullName(name))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return
 		}
@@ -236,16 +259,12 @@ var deployCmd = &cobra.Command{
 		}
 
 		if ct.UsesKeyfiles {
-			if deployCmdKeyfileCRC != "" {
-				crcfile := deployCmdKeyfileCRC
-				if filepath.Ext(crcfile) != "aes" {
-					crcfile += ".aes"
-				}
-				cf.Set("keyfile", instance.SharedPath(c, "keyfiles", crcfile))
-			} else if deployCmdKeyfile != "" {
-				cf.Set("keyfile", deployCmdKeyfile)
+			crc, err := instance.UseKeyFile(c.Host(), c.Type(), deployCmdKeyfile, deployCmdKeyfileCRC)
+			if err == nil {
+				cf.Set("keyfile", instance.SharedPath(c, "keyfiles", crc+".aes"))
 			}
 		}
+
 		instance.SetExtendedValues(c, deployCmdExtras)
 		cf.SetKeyValues(params...)
 		log.Debug().Msgf("savedir=%s", instance.ParentDirectory(c))
@@ -261,6 +280,13 @@ var deployCmd = &cobra.Command{
 		// reload config as instance data is not updated by Add() as an interface value
 		c.Unload()
 		c.Load()
+
+		for _, i := range deployCmdImportFiles {
+			if _, err = instance.ImportFile(c.Host(), c.Home(), i); err != nil {
+				return err
+			}
+		}
+
 		fmt.Printf("%s added, port %d\n", c, cf.GetInt("port"))
 
 		if deployCmdStart || deployCmdLogs {

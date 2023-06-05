@@ -8,12 +8,13 @@ can be prefixed `~/` for the user's home directory) or a URL with
 `--keyfile`/`-k`. If neither option is given then the user's default key
 file is used, if it exists.
 
-If the `--crc`/`-c` flag is given and it matches an existing key file in
-the component shared directory then that is used for matching instances.
-When TYPE is not given, the key file will also be copied to the shared
-directories of other component types if not already present.
+If the `--keycrc` flag is given it is first converted to upper-case
+and then if it matches an existing key file in the component shared
+directory then that is used for matching instances. When `TYPE` is not
+given, the key file will also be copied to the shared directories of
+other component types if not already present.
 
-The `--keyfile`/`-k` flag value can be a local file (including a prefix
+The `--keyfile` flag value can be a local file (including a prefix
 of `~/` to represent the home directory), a URL or a dash `-` for
 `STDIN`. The given key file is evaluated and its CRC32 checksum checked
 against existing key files in the matching component shared directories.
