@@ -55,7 +55,7 @@ var Floating = geneos.Component{
 	Aliases:      map[string]string{},
 	Defaults: []string{
 		`binary={{if eq .floatingtype "fa2"}}fix-analyser2-{{end}}netprobe.linux_64`,
-		`home={{join .root "floating" "floatings" .name}}`,
+		`home={{join .root "netprobe" "floatings" .name}}`,
 		`install={{join .root "packages" .floatingtype}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
@@ -63,6 +63,7 @@ var Floating = geneos.Component{
 		`port=7036`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 		`floatingname={{.name}}`,
+		`setup={{join "${config:home}" "netprobe.setup.xml"}}`,
 	},
 	GlobalSettings: map[string]string{
 		"FloatingPortRange": "7036,7100-",
@@ -82,10 +83,10 @@ type Floatings instance.Instance
 // ensure that Floatings satisfies geneos.Instance interface
 var _ geneos.Instance = (*Floatings)(nil)
 
-//go:embed templates/netprobe.setup.xml.gotmpl
+//go:embed templates/floating.setup.xml.gotmpl
 var template []byte
 
-const templateName = "netprobe.setup.xml.gotmpl"
+const templateName = "floating.setup.xml.gotmpl"
 
 func init() {
 	Floating.RegisterComponent(New)
@@ -180,13 +181,15 @@ func (s *Floatings) Config() *config.Config {
 
 func (s *Floatings) Add(template string, port uint16) (err error) {
 	cf := s.Config()
+
+	cf.SetDefault(cf.Join("config", "template"), templateName)
+
 	if port == 0 {
 		port = instance.NextPort(s.InstanceHost, &Floating)
 	}
 	cf.Set("port", port)
 	cf.Set(cf.Join("config", "rebuild"), "always")
 	cf.Set(cf.Join("config", "template"), templateName)
-	cf.SetDefault(cf.Join("config", "template"), templateName)
 
 	if template != "" {
 		filename, _ := instance.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
@@ -222,7 +225,8 @@ func (s *Floatings) Add(template string, port uint16) (err error) {
 //
 // we do a dance if there is a change in TLS setup and we use default ports
 func (s *Floatings) Rebuild(initial bool) (err error) {
-	configrebuild := s.Config().GetString("config::rebuild")
+	cf := s.Config()
+	configrebuild := cf.GetString("config::rebuild")
 	if configrebuild == "never" {
 		return
 	}
@@ -234,7 +238,7 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 	// recheck check certs/keys
 	var changed bool
 	secure := instance.Filename(s, "certificate") != "" && instance.Filename(s, "privatekey") != ""
-	gws := s.Config().GetStringMapString("gateways")
+	gws := cf.GetStringMapString("gateways")
 	for gw := range gws {
 		port := gws[gw]
 		if secure && port == "7039" {
@@ -247,8 +251,8 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 		gws[gw] = port
 	}
 	if changed {
-		s.Config().Set("gateways", gws)
-		if err = s.Config().Save(s.Type().String(),
+		cf.Set("gateways", gws)
+		if err = cf.Save(s.Type().String(),
 			config.Host(s.Host()),
 			config.SaveDir(instance.ParentDirectory(s)),
 			config.SetAppName(s.Name()),
@@ -256,16 +260,20 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 			return err
 		}
 	}
-	return instance.CreateConfigFromTemplate(s, filepath.Join(s.Home(), "netprobe.setup.xml"), instance.Filename(s, "config::template"), template)
+	return instance.CreateConfigFromTemplate(s,
+		cf.GetString("setup", config.Default(filepath.Join(s.Home(), "netprobe.setup.xml"))),
+		instance.Filename(s, "config::template"),
+		template)
 }
 
 func (s *Floatings) Command() (args, env []string, home string) {
+	cf := s.Config()
 	logFile := instance.LogFile(s)
 	args = []string{
 		s.Name(),
 		"-listenip", "none",
-		"-port", s.Config().GetString("port"),
-		"-setup", "netprobe.setup.xml",
+		"-port", cf.GetString("port"),
+		"-setup", cf.GetString("setup", config.Default(filepath.Join(s.Home(), "netprobe.setup.xml"))),
 		"-setup-interval", "300",
 	}
 	args = append(args, instance.SetSecureArgs(s)...)
