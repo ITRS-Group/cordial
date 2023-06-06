@@ -63,7 +63,7 @@ var FA2 = geneos.Component{
 	},
 	Defaults: []string{
 		`binary=fix-analyser2-netprobe.linux_64`,
-		`home={{join .root "fa2" "fa2s" .name}}`,
+		`home={{join .root "netprobe" "fa2s" .name}}`,
 		`install={{join .root "packages" "fa2"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,

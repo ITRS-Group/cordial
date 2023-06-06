@@ -131,11 +131,27 @@ func LoadConfig(c geneos.Instance) (err error) {
 
 	cf, err := config.Load(c.Type().Name,
 		config.Host(r),
-		config.LoadDir(c.Home()),
+		config.LoadDir(filepath.Join(ParentDirectory(c), c.Name())),
 		config.UseDefaults(false),
 		config.MustExist(),
 	)
+
 	if err != nil {
+		// look in "legacy" parent dir and if found update "home"
+		// setting (but not save)
+		home := filepath.Join(r.Filepath(c.Type().String(), c.Type().String()+"s"), c.Name())
+		log.Debug().Msgf("also looking in %s", home)
+		cf, err = config.Load(c.Type().Name,
+			config.Host(r),
+			config.LoadDir(home),
+			config.UseDefaults(false),
+			config.MustExist(),
+		)
+		c.Config().Set("home", home)
+	}
+
+	if err != nil {
+		log.Debug().Err(err).Msg("")
 		if err = cf.ReadRCConfig(r, ComponentFilepath(c, "rc"), prefix, aliases); err != nil {
 			return
 		}
