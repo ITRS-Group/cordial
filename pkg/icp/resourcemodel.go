@@ -96,3 +96,24 @@ type MetricCapacities struct {
 	CapacityValue string    `json:"CapacityValue"`
 	EffectiveFrom time.Time `json:"EffectiveFrom"`
 }
+
+// PredictedEvent type
+//
+// https://icp-api.itrsgroup.com/v2.0/Help/ResourceModel?modelName=PredictedEvent
+type PredictedEvent struct {
+	ID             int       `json:"Id,omitempty"`
+	Priority       string    `json:"Priority,omitempty"`
+	Confidence     float64   `json:"Confidence,omitempty"`
+	EventTime      time.Time `json:"EventTime,omitempty"`
+	Metric         string    `json:"Metric,omitempty"`
+	Description    string    `json:"Description,omitempty"`
+	Entity         string    `json:"Entity,omitempty"`
+	EntityType     string    `json:"EntityType,omitempty"`
+	Element        string    `json:"Element,omitempty"`
+	InternalID     string    `json:"InternalId,omitempty"`
+	SourceServer   string    `json:"SourceServer,omitempty"`
+	IsClusterEvent bool      `json:"IsClusterEvent,omitempty"`
+	Critical       string    `json:"Critical,omitempty"`
+	Major          string    `json:"Major,omitempty"`
+	Warning        string    `json:"Warning,omitempty"`
+}

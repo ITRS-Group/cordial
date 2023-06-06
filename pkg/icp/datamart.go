@@ -14,6 +14,15 @@ type DataMartEntityPerformanceRequest struct {
 	EntityPerformance []EntityPerformance `json:"EntityPerformance"`
 }
 
+// DataMartEntityPerformance request
+//
+// https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-EntityPerformance
+func (i *ICP) DataMartEntityPerformance(ctx context.Context, request *DataMartEntityPerformanceRequest) (resp *http.Response, err error) {
+	resp, err = i.Post(ctx, DataMartEntityPerformanceEndpoint, request)
+	resp.Body.Close()
+	return
+}
+
 // DataMartEntityRelationRequest type
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-EntityRelation
@@ -22,12 +31,30 @@ type DataMartEntityRelationRequest struct {
 	EntityRelation []EntityRelation `json:"EntityRelation"`
 }
 
+// DataMartEntityRelation request
+//
+// https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-EntityRelation
+func (i *ICP) DataMartEntityRelation(ctx context.Context, request *DataMartEntityRelationRequest) (resp *http.Response, err error) {
+	resp, err = i.Post(ctx, DataMartEntityRelationEndpoint, request)
+	resp.Body.Close()
+	return
+}
+
 // DataMartPropertiesEntityRequest body type
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-PropertiesEntity
 type DataMartPropertiesEntityRequest struct {
 	ProjectID        int                `json:"ProjectId"`
 	PropertiesEntity []PropertiesEntity `json:"PropertiesEntity"`
+}
+
+// DataMartPropertiesEntity request
+//
+// https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-PropertiesEntity
+func (i *ICP) DataMartPropertiesEntity(ctx context.Context, request *DataMartPropertiesEntityRequest) (resp *http.Response, err error) {
+	resp, err = i.Post(ctx, DataMartPropertiesEntityEndpoint, request)
+	resp.Body.Close()
+	return
 }
 
 // DataMartMetricsRequest type
@@ -42,6 +69,15 @@ type DataMartMetricsRequest struct {
 	SourceKey4     string    `json:"SourceKey4,omitempty"`
 	SourceKey5     string    `json:"SourceKey5,omitempty"`
 	Metrics        []Metrics `json:"Metrics"`
+}
+
+// DataMartMetrics request
+//
+// https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-Metrics
+func (i *ICP) DataMartMetrics(ctx context.Context, request *DataMartMetricsRequest) (resp *http.Response, err error) {
+	resp, err = i.Post(ctx, DataMartMetricsEndpoint, request)
+	resp.Body.Close()
+	return
 }
 
 // DataMartMetricTimeSeriesRequest type
@@ -59,6 +95,15 @@ type DataMartMetricTimeSeriesRequest struct {
 	MetricTimeseries []MetricTimeSeries `json:"MetricTimeSeries"`
 }
 
+// DataMartMetricTimeseries request
+//
+// https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-MetricTimeseries
+func (i *ICP) DataMartMetricTimeseries(ctx context.Context, request *DataMartMetricsRequest) (resp *http.Response, err error) {
+	resp, err = i.Post(ctx, DataMartMetricTimeseriesEndpoint, request)
+	resp.Body.Close()
+	return
+}
+
 // DataMartEntityPropertiesRequest type
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-EntityProperties
@@ -71,6 +116,15 @@ type DataMartEntityPropertiesRequest struct {
 	SourceKey4       string             `json:"SourceKey4,omitempty"`
 	SourceKey5       string             `json:"SourceKey5,omitempty"`
 	EntityProperties []EntityProperties `json:"Metrics"`
+}
+
+// DataMartEntityProperties request
+//
+// https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-EntityProperties
+func (i *ICP) DataMartEntityProperties(ctx context.Context, request *DataMartMetricsRequest) (resp *http.Response, err error) {
+	resp, err = i.Post(ctx, DataMartEntityPropertiesEndpoint, request)
+	resp.Body.Close()
+	return
 }
 
 // DataMartMetricCapacitiesRequest type
@@ -88,12 +142,30 @@ type DataMartMetricCapacitiesRequest struct {
 	MetricCapacities []MetricCapacities `json:"MetricCapacities"`
 }
 
+// DataMartMetricCapacities request
+//
+// https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-MetricCapacities
+func (i *ICP) DataMartMetricCapacities(ctx context.Context, request *DataMartMetricsRequest) (resp *http.Response, err error) {
+	resp, err = i.Post(ctx, DataMartMetricCapacitiesEndpoint, request)
+	resp.Body.Close()
+	return
+}
+
 // DataMartGetEntitiesRequest type
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-GetEntities
 type DataMartGetEntitiesRequest struct {
 	ProjectID  int      `json:"ProjectId"`
 	EntityType []string `json:"EntityType"`
+}
+
+// DataMartGetEntities request
+//
+// https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-GetEntities
+func (i *ICP) DataMartGetEntities(ctx context.Context, request *DataMartMetricsRequest) (resp *http.Response, err error) {
+	resp, err = i.Post(ctx, DataMartMetricCapacitiesEndpoint, request)
+	resp.Body.Close()
+	return
 }
 
 // DataMartStartProcessingRequest type
@@ -103,7 +175,13 @@ type DataMartStartProcessingRequest struct {
 	ProjectID int `json:"ProjectId"`
 }
 
-// DataMartEntityPerformance request
-func (i *ICP) DataMartEntityPerformance(ctx context.Context, request *DataMartEntityPerformanceRequest) (resp *http.Response, err error) {
-	return i.Post(ctx, DataMartEntityPerformanceEndpoint, request)
+// DataMartStartProcessing request
+//
+// (Response format unknown)
+//
+// https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-StartProcessing
+func (i *ICP) DataMartStartProcessing(ctx context.Context, request *DataMartMetricsRequest) (resp *http.Response, err error) {
+	resp, err = i.Post(ctx, DataMartStartProcessingEndpoint, request)
+	resp.Body.Close()
+	return
 }
