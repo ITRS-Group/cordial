@@ -84,6 +84,9 @@ func (icp *ICP) Get(ctx context.Context, endpoint string, request interface{}, r
 		return
 	}
 	defer resp.Body.Close()
+	if response == nil {
+		return
+	}
 	switch t := response.(type) {
 	case string:
 		var b []byte
