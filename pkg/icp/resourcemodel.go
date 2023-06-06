@@ -117,3 +117,11 @@ type PredictedEvent struct {
 	Major          string    `json:"Major,omitempty"`
 	Warning        string    `json:"Warning,omitempty"`
 }
+
+// Grouping type
+//
+// https://icp-api.itrsgroup.com/v2.0/Help/ResourceModel?modelName=Grouping
+type Grouping struct {
+	Key   string `json:"Key"`
+	Value string `json:"Value"`
+}

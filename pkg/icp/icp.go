@@ -15,10 +15,9 @@ import (
 // ICP holds the projectID, endpoint and http client for the configured
 // ICP instance. If token is set it is sent with each request as a auth header.
 type ICP struct {
-	ProjectID int
-	BaseURL   string
-	client    *http.Client
-	token     string
+	BaseURL string
+	client  *http.Client
+	token   string
 }
 
 // ErrServerError makes it a little easier for the caller to check the
@@ -28,12 +27,11 @@ var ErrServerError = errors.New("Error from server (HTTP Status > 299)")
 // New returns a new ICP object. BaseURL defaults to
 // "https://icp-api.itrsgroup.com/v2.0" and client, if nil, to a default
 // http.Client
-func New(projectID int, options ...Options) (icp *ICP) {
+func New(options ...Options) (icp *ICP) {
 	opts := evalOptions(options...)
 	icp = &ICP{
-		ProjectID: projectID,
-		BaseURL:   opts.baseURL,
-		client:    opts.client,
+		BaseURL: opts.baseURL,
+		client:  opts.client,
 	}
 	return
 }

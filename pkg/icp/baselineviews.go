@@ -2,6 +2,7 @@ package icp
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -42,7 +43,7 @@ type BaselineView struct {
 
 // BaselineViewsProject request
 func (i *ICP) BaselineViewsProject(ctx context.Context, request BaselineViewsProjectRequest) (response BaselineViewsProjectResponse, resp *http.Response, err error) {
-	endpoint, _ := url.JoinPath(BaselineViewsProjectEndpoint, string(request))
+	endpoint, _ := url.JoinPath(BaselineViewsProjectEndpoint, fmt.Sprint(request))
 	resp, err = i.Get(ctx, endpoint, nil, &response)
 	return
 }
@@ -51,7 +52,7 @@ func (i *ICP) BaselineViewsProject(ctx context.Context, request BaselineViewsPro
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/GET-api-baselineviews-baselineViewId
 func (i *ICP) BaselineView(ctx context.Context, request BaselineViewsRequest) (response BaselineViewsResponse, resp *http.Response, err error) {
-	endpoint, _ := url.JoinPath(BaselineViewsEndpoint, string(request))
+	endpoint, _ := url.JoinPath(BaselineViewsEndpoint, fmt.Sprint(request))
 	resp, err = i.Get(ctx, endpoint, nil, &response)
 	return
 }
