@@ -489,11 +489,13 @@ func ForAllWithResults(ct *geneos.Component, fn func(geneos.Instance, []string) 
 	return results, nil
 }
 
-// ParentDirectory returns the first directory that contains the instance from:
+// ParentDirectory returns the first directory that contains the
+// instance from:
 //
 //   - The one configured for the instance factory and accessed via Home()
 //   - In the default component instances directory (component.InstanceDir)
-//   - If the instance's component type has a parent component then in that instances directory
+//   - If the instance's component type has a parent component then in the
+//     legacy instances directory
 //
 // The function has to accept an interface as it is called from inside
 // the factory methods for each component type

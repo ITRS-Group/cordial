@@ -50,7 +50,7 @@ var CA3 = geneos.Component{
 	PurgeList:        "CA3PurgeList",
 	Aliases:          map[string]string{},
 	Defaults: []string{
-		`home={{join .root "ca3" "ca3s" .name}}`,
+		`home={{join .root "netprobe" "ca3s" .name}}`,
 		`install={{join .root "packages" "netprobe"}}`,
 		`plugins={{join .install "collection_agent" "plugins"}}`,
 		`version=active_prod`,
