@@ -18,7 +18,44 @@ type AssetServersRequest struct {
 // XXX Unknown response from docs
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/GET-api-asset-servers_projectId_baselineId
-type AssetServersResponse []string
+type AssetServersResponse []AssetServersItem
+
+// AssetServersItem type
+//
+// Not documented
+type AssetServersItem struct {
+	ServerID  int               `json:"ServerId"`
+	Assets    Assets            `json:"Assets"`
+	Groupings map[string]string `json:"Groupings"`
+}
+
+// Assets Type
+//
+// Not documented
+type Assets struct {
+	CPURatio             float64   `json:"CPURatio,omitempty"`
+	EntityInternalID     string    `json:"EntityInternalId,omitempty"`
+	HostID               int       `json:"HostID,omitempty"`
+	ServerType           string    `json:"ServerType,omitempty"`
+	BenchmarkScore       string    `json:"benchmarkScore,omitempty"`
+	CoreMHzCapacity      string    `json:"coreMHzCapacity,omitempty"`
+	Cores                string    `json:"cores,omitempty"`
+	DecommisionDate      time.Time `json:"decommisionDate,omitempty"`
+	DeployDate           time.Time `json:"deployDate,omitempty"`
+	DeriveredCPUCapacity string    `json:"deriveredCPUCapacity,omitempty"`
+	IOLimit              string    `json:"ioLimit,omitempty"`
+	IOLimitActual        string    `json:"ioLimitActual,omitempty"`
+	MemoryCapacity       string    `json:"memoryCapacity,omitempty"`
+	ParentType           string    `json:"parentType,omitempty"`
+	ServerName           string    `json:"serverName,omitempty"`
+}
+
+// AssetServers request
+func (i *ICP) AssetServers(ctx context.Context, request *AssetServersRequest) (response AssetServersResponse, resp *http.Response, err error) {
+	resp, err = i.Get(ctx, AssetServersEndpoint, request, &response)
+
+	return
+}
 
 // AssetStorageRequest type
 //
@@ -32,7 +69,49 @@ type AssetStorageRequest struct {
 // XXX Unknown response from docs
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/GET-api-asset-storage_projectId_baselineId
-type AssetStorageResponse []string
+type AssetStorageResponse struct {
+	DataStores []DataStore `json:"DataStore"`
+	VMFiles    []VMFile    `json:"VMFiles"`
+}
+
+// DataStore type
+//
+// Not documented
+type DataStore struct {
+	CapacityMB       float64 `json:"capacityMB"`
+	DataCenter       string  `json:"dataCenter"`
+	DataStoreCluster string  `json:"datastoreCluster"`
+	DataStoreID      int     `json:"datastoreID"`
+	DataStoreName    string  `json:"datastoreName"`
+	EntitySource     string  `json:"entitySource"`
+	InternalID       string  `json:"internalId"`
+	ProvisionedMB    float64 `json:"provisionedMB"`
+	ReservedRatio    float64 `json:"reserveRatio"`
+	Shared           bool    `json:"shared"`
+	UsedMB           float64 `json:"usedMB"`
+}
+
+// VMFile type
+//
+// Not documented
+type VMFile struct {
+	CapacityMB      float64 `json:"capacityMB"`
+	DataStoreID     int     `json:"datastoreID"`
+	DemandMB        float64 `json:"demandMB"`
+	EntityID        int     `json:"entityID"`
+	FileSizeMB      float64 `json:"fileSizeMB"`
+	Filename        string  `json:"filename"`
+	HasTrueDemand   bool    `json:"hasTrueDemand"`
+	StorageFileType int     `json:"storageFileType"`
+	StorageFormat   int     `json:"storageFormat"`
+	VMFileID        int     `json:"vmFileID"`
+}
+
+// AssetStorage request
+func (i *ICP) AssetStorage(ctx context.Context, request *AssetStorageRequest) (response AssetStorageResponse, resp *http.Response, err error) {
+	resp, err = i.Get(ctx, AssetStorageEndpoint, request, &response)
+	return
+}
 
 // AssetGroupingsRequest type
 //
@@ -48,6 +127,12 @@ type AssetGroupingsRequest struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/GET-api-asset-groupings_projectId_baselineId
 type AssetGroupingsResponse []string
 
+// AssetGroupings request
+func (i *ICP) AssetGroupings(ctx context.Context, request *AssetGroupingsRequest) (response AssetGroupingsResponse, resp *http.Response, err error) {
+	resp, err = i.Get(ctx, AssetGroupingsEndpoint, request, &response)
+	return
+}
+
 // AssetGroupingsGroupingRequest type
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/GET-api-asset-groupings-grouping_projectId_groupingName_baselineId
@@ -62,6 +147,12 @@ type AssetGroupingsGroupingRequest struct {
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/GET-api-asset-groupings-grouping_projectId_groupingName_baselineId
 type AssetGroupingsGroupingResponse []string
+
+// AssetGroupingsGrouping request
+func (i *ICP) AssetGroupingsGrouping(ctx context.Context, request *AssetGroupingsGroupingRequest) (response AssetGroupingsGroupingResponse, resp *http.Response, err error) {
+	resp, err = i.Get(ctx, AssetGroupingsGroupingEndpoint, request, &response)
+	return
+}
 
 // AssetGroupingsEntityRequest type
 //
@@ -131,30 +222,6 @@ type AssetRegisterItem struct {
 	HardwareModel                string     `json:"HardwareModel,omitempty"`
 	HardwareVendor               string     `json:"HardwareVendor,omitempty"`
 	Groupings                    []Grouping `json:"Groupings,omitempty"`
-}
-
-// AssetServers request
-func (i *ICP) AssetServers(ctx context.Context, request *AssetServersRequest) (response AssetServersResponse, resp *http.Response, err error) {
-	resp, err = i.Get(ctx, AssetServersEndpoint, request, &response)
-	return
-}
-
-// AssetStorage request
-func (i *ICP) AssetStorage(ctx context.Context, request *AssetStorageRequest) (response AssetStorageResponse, resp *http.Response, err error) {
-	resp, err = i.Get(ctx, AssetStorageEndpoint, request, &response)
-	return
-}
-
-// AssetGroupings request
-func (i *ICP) AssetGroupings(ctx context.Context, request *AssetGroupingsRequest) (response AssetGroupingsResponse, resp *http.Response, err error) {
-	resp, err = i.Get(ctx, AssetGroupingsEndpoint, request, &response)
-	return
-}
-
-// AssetGroupingsGrouping request
-func (i *ICP) AssetGroupingsGrouping(ctx context.Context, request *AssetGroupingsGroupingRequest) (response AssetGroupingsGroupingResponse, resp *http.Response, err error) {
-	resp, err = i.Get(ctx, AssetGroupingsGroupingEndpoint, request, &response)
-	return
 }
 
 // AssetGroupingsEntity request

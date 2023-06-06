@@ -21,12 +21,12 @@ var icp *ICP
 
 // Login sends a login request to the http endpoint and returns a token
 // or an error
-func Login(projectID int, username string, password config.Plaintext, options ...Options) (icp *ICP, err error) {
+func Login(username string, password config.Plaintext, options ...Options) (icp *ICP, err error) {
 	creds := &LoginRequest{
 		Username: username,
 		Password: password.String(),
 	}
-	icp = New(projectID, options...)
+	icp = New(options...)
 	resp, err := icp.Post(context.Background(), LoginEndpoint, creds)
 	if err != nil {
 		return
