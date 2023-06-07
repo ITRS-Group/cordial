@@ -27,6 +27,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
+	"os/user"
 	"path/filepath"
 
 	"github.com/rs/zerolog/log"
@@ -140,8 +142,21 @@ var deployCmd = &cobra.Command{
 		if h == geneos.LOCAL {
 			if geneos.Root() == "" {
 				if deployCmdGeneosHome == "" {
-					fmt.Println("Geneos location not set and no directory option (--geneos/-D) given")
-					return nil
+					// fmt.Println("Geneos location not set and no directory option (--geneos/-D) given")
+					// return nil
+					var input string
+					u, _ := user.Current()
+					root := u.HomeDir
+					if filepath.Base(u.HomeDir) != Execname {
+						root = filepath.Join(u.HomeDir, Execname)
+					}
+					input, err = config.ReadUserInput("Geneos Directory (default %q): ", root)
+					if err == nil {
+						root = input
+					} else if err != config.ErrNotInteractive {
+						return
+					}
+					err = nil
 				}
 				// create base install
 				deployCmdGeneosHome, _ = h.Abs(deployCmdGeneosHome)
@@ -201,7 +216,11 @@ var deployCmd = &cobra.Command{
 		log.Debug().Msgf("version: %s", version)
 		if deployCmdVersion != "latest" || version == "unknown" {
 			if !deployCmdLocal && deployCmdUsername != "" && (deployCmdPassword.IsNil() || deployCmdPassword.Size() == 0) {
-				deployCmdPassword, _ = config.ReadPasswordInput(false, 0)
+				deployCmdPassword, err = config.ReadPasswordInput(false, 0)
+				if err == config.ErrNotInteractive {
+					err = fmt.Errorf("%w and password required", err)
+					return
+				}
 			}
 
 			options := []geneos.Options{
@@ -291,6 +310,9 @@ var deployCmd = &cobra.Command{
 
 		if deployCmdStart || deployCmdLogs {
 			if err = instance.Start(c); err != nil {
+				if errors.Is(err, os.ErrProcessDone) {
+					err = nil
+				}
 				return
 			}
 			if deployCmdLogs {

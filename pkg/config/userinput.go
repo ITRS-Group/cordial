@@ -23,6 +23,7 @@ THE SOFTWARE.
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -30,16 +31,27 @@ import (
 	"golang.org/x/term"
 )
 
+// ErrNotInteractive is returned when input is required and STDIN is a
+// named pipe
+var ErrNotInteractive = errors.New("not an interactive session")
+
 // ReadUserInput reads input from Stdin and returns the input unless
-// there is an error. The prompt is shown to the user as-is.
-func ReadUserInput(prompt string) (input string, err error) {
+// there is an error. The prompt is made up from format and args (passed
+// to fmt.Sprintf) and then shown to the user as-is. If STDIN is a named
+// pipe (and not interactive) then a syscall.ENOTTY is returned.
+func ReadUserInput(format string, args ...any) (input string, err error) {
 	var oldState *term.State
+	fi, _ := os.Stdin.Stat()
+	if fi.Mode()&os.ModeNamedPipe > 0 {
+		err = ErrNotInteractive
+		return
+	}
 	if oldState, err = term.MakeRaw(int(os.Stdin.Fd())); err != nil {
 		return
 	}
 	defer term.Restore(int(os.Stdin.Fd()), oldState)
 
-	t := term.NewTerminal(os.Stdin, prompt)
+	t := term.NewTerminal(os.Stdin, fmt.Sprintf(format, args...))
 	return t.ReadLine()
 }
 
@@ -54,7 +66,15 @@ func ReadUserInput(prompt string) (input string, err error) {
 // are "Password" and "Re-enter Password".
 //
 // On error the pw is empty and does not need to be Destory()ed.
+//
+// If STDIN is a named pipe (not interactive) a syscall.ENOTTY is
+// returned as an error
 func ReadPasswordInput(match bool, maxtries int, prompt ...string) (plaintext Plaintext, err error) {
+	fi, _ := os.Stdin.Stat()
+	if fi.Mode()&os.ModeNamedPipe > 0 {
+		err = ErrNotInteractive
+		return
+	}
 	if match {
 		var matched bool
 		if len(prompt) != 2 {
