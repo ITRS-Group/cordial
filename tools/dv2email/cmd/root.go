@@ -88,7 +88,7 @@ func initConfig() {
 		config.SetAppName("geneos"),
 		config.SetConfigFile(cfgFile),
 		config.MergeSettings(),
-		config.SetFileFormat("yaml"),
+		config.SetFileExtension("yaml"),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")

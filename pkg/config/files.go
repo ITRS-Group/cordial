@@ -197,8 +197,8 @@ func Path(name string, options ...FileOptions) string {
 	}
 
 	filename := name
-	if opts.configFileFormat != "" {
-		filename = fmt.Sprintf("%s.%s", filename, opts.configFileFormat)
+	if opts.extension != "" {
+		filename = fmt.Sprintf("%s.%s", filename, opts.extension)
 	}
 	if len(confDirs) > 0 {
 		for _, dir := range confDirs {
