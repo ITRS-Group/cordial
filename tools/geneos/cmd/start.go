@@ -53,15 +53,28 @@ var startCmd = &cobra.Command{
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, origargs []string) error {
 		ct, args, params := CmdArgsParams(cmd)
-		return Start(ct, startCmdLogs, args, params)
+		var autostart bool
+		// if we have a TYPE and at least one NAME then autostart is on
+		if ct != nil && len(origargs) > 1 {
+			autostart = true
+		}
+		return Start(ct, startCmdLogs, autostart, args, params)
 	},
 }
 
-func Start(ct *geneos.Component, watchlogs bool, args []string, params []string) (err error) {
+// Start is a single entrypoint for multiple commands to start
+// instances. ct is the component type, nil means all. watchlogs is a
+// flag to, well, watch logs while autostart is a flag to indicate if
+// Start() is being called as part of a group of instances - this is for
+// use by autostart checking.
+func Start(ct *geneos.Component, watchlogs bool, autostart bool, args []string, params []string) (err error) {
 	if err = instance.ForAll(ct, Hostname, func(c geneos.Instance, _ []string) error {
-		return instance.Start(c)
+		if instance.IsAutoStart(c) || autostart {
+			return instance.Start(c)
+		}
+		return nil
 	}, args, params); err != nil {
 		return
 	}

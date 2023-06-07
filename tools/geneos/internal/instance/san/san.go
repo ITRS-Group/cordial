@@ -77,6 +77,7 @@ var San = geneos.Component{
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 		`sanname={{.name}}`,
 		`setup={{join "${config:home}" "netprobe.setup.xml"}}`,
+		`autostart=true`,
 	},
 	GlobalSettings: map[string]string{
 		"SanPortRange": "7036,7100-",

@@ -59,6 +59,7 @@ var CA3 = geneos.Component{
 		`config={{join .home "collection-agent.yml"}}`,
 		`minheap=512M`,
 		`maxheap=512M`,
+		`autostart=false`,
 	},
 	GlobalSettings: map[string]string{
 		"CA3PortRange": "7137-",

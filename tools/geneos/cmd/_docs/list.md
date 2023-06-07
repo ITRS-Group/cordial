@@ -11,6 +11,10 @@ changed to CSV format using the `--csv`/`-c` flag or JSON with the
 `--json`/`-j` or `--pretty`/`-i` options, the latter option formatting
 the output over multiple, indented lines.
 
-In plain output format (i.e. not CSV or JSON) the instance name may be
-tagged with a '*' or a '+' which indicate disabled and protected,
-respectively.
+In plain (human readable) format the Flags column contains:
+
+  * `D` - Disabled
+  * `P` - Protected
+  * `A` - Auto Start
+
+In other output formats each flag gets it's own column or field.
