@@ -8,7 +8,7 @@ images:
 	docker build --tag cordial --tag cordial:$(VERSION) --target cordial-run .
 
 release: images
-	# docker build --tag cordial-build:$(VERSION) --target cordial-build .
+	docker build --tag cordial-build:$(VERSION) --target cordial-build .
 	-docker rm cordial-build-$(VERSION)
 	docker create --name cordial-build-$(VERSION) cordial-build:$(VERSION)
 	mkdir -p releases/
