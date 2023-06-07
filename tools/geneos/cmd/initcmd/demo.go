@@ -120,7 +120,7 @@ func initDemo(h *geneos.Host, options ...geneos.Options) (err error) {
 		}
 	}
 
-	if err = cmd.Start(nil, initCmdLogs, e, e); err != nil {
+	if err = cmd.Start(nil, initCmdLogs, true, e, e); err != nil {
 		return
 	}
 	time.Sleep(time.Second * 2)

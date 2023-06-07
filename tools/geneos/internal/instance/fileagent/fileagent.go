@@ -75,6 +75,7 @@ var FileAgent = geneos.Component{
 		`logfile=fileagent.log`,
 		`port=7030`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
+		`autostart=true`,
 	},
 	GlobalSettings: map[string]string{
 		"FAPortRange": "7030,7100-",
