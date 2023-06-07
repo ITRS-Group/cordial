@@ -43,6 +43,7 @@ var AC2 = geneos.Component{
 	ComponentMatches: []string{"ac2", "active-console", "activeconsole", "desktop-activeconsole"},
 	RealComponent:    true,
 	DownloadBase:     geneos.DownloadBases{Resources: "Active+Console", Nexus: "geneos-desktop-activeconsole"},
+	DownloadInfix:    "desktop-activeconsole",
 	PortRange:        "AC2PortRange",
 	CleanList:        "AC2CleanList",
 	PurgeList:        "AC2PurgeList",
