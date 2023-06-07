@@ -29,6 +29,11 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
+var (
+	defaultKeyDelimiter  = "."
+	defaultFileExtension = "json"
+)
+
 type fileOptions struct {
 	appname                string
 	configDirs             []string
@@ -65,7 +70,7 @@ func evalFileOptions(options ...FileOptions) (c *fileOptions) {
 func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions) {
 	// init
 	c = &fileOptions{
-		extension:   "json",
+		extension:   defaultFileExtension,
 		remote:      host.Localhost,
 		configDirs:  []string{},
 		workingdir:  ".",
@@ -97,7 +102,7 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 
 func evalSaveOptions(options ...FileOptions) (c *fileOptions) {
 	c = &fileOptions{
-		extension: "json",
+		extension: defaultFileExtension,
 		remote:    host.Localhost,
 	}
 	c.dir, _ = UserConfigDir()
@@ -109,8 +114,6 @@ func evalSaveOptions(options ...FileOptions) (c *fileOptions) {
 	return
 }
 
-var defaultKeyDelimiter = "."
-
 // DefaultKeyDelimiter sets the default key delimiter for all future
 // calls to config.New() and config.Load(). The default is ".". You "::"
 // if your keys are likely to contain "." such as domains, ipv4
@@ -118,6 +121,12 @@ var defaultKeyDelimiter = "."
 // to be ipv6 addresses.
 func DefaultKeyDelimiter(delimiter string) {
 	defaultKeyDelimiter = delimiter
+}
+
+// DefaultFileExtension sets the default file extension for all future
+// calls to config.New() and config.Load(). The initial default is "json"
+func DefaultFileExtension(extension string) {
+	defaultFileExtension = extension
 }
 
 // UseGlobal tells [Load] to set values in the global
