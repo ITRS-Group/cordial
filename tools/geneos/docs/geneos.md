@@ -40,6 +40,7 @@ Take control of your Geneos environments
 
 * [`geneos add`](geneos_add.md)	 - Add a new instance
 * [`geneos delete`](geneos_delete.md)	 - Delete Instances
+* [`geneos deploy`](geneos_deploy.md)	 - Deploy a new Geneos instance
 * [`geneos import`](geneos_import.md)	 - Import Files To Instances Or Components
 * [`geneos migrate`](geneos_migrate.md)	 - Migrate Instance Configurations
 * [`geneos rebuild`](geneos_rebuild.md)	 - Rebuild Instance Configurations From Templates
