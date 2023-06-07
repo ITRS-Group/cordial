@@ -129,26 +129,19 @@ func LoadConfig(c geneos.Instance) (err error) {
 	prefix := c.Type().LegacyPrefix
 	aliases := c.Type().Aliases
 
+	home := filepath.Join(r.Filepath(c.Type(), c.Type().String()+"s"), c.Name())
+	if _, err = r.Stat(home); err != nil && errors.Is(err, fs.ErrNotExist) {
+		home = filepath.Join(r.Filepath(c.Type().String(), c.Type().String()+"s"), c.Name())
+	}
 	cf, err := config.Load(c.Type().Name,
 		config.Host(r),
-		config.FromDir(filepath.Join(ParentDirectory(c), c.Name())),
+		config.FromDir(home),
 		config.UseDefaults(false),
 		config.MustExist(),
 	)
-
-	if err != nil {
-		// look in "legacy" parent dir and if found update "home"
-		// setting (but not save)
-		home := filepath.Join(r.Filepath(c.Type().String(), c.Type().String()+"s"), c.Name())
-		log.Debug().Msgf("also looking in %s", home)
-		cf, err = config.Load(c.Type().Name,
-			config.Host(r),
-			config.FromDir(home),
-			config.UseDefaults(false),
-			config.MustExist(),
-		)
-		c.Config().Set("home", home)
-	}
+	// override the home from the config file and use the directory the
+	// config was found in
+	c.Config().Set("home", home)
 
 	if err != nil {
 		log.Debug().Err(err).Msg("")
@@ -156,6 +149,8 @@ func LoadConfig(c geneos.Instance) (err error) {
 			return
 		}
 	}
+
+	log.Debug().Msgf("home: %s", c.Home())
 
 	// not we have them, merge tham into main instance config
 	c.Config().MergeConfigMap(cf.AllSettings())

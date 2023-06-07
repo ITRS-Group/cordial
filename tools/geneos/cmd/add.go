@@ -148,11 +148,12 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 	); err != nil {
 		return
 	}
-	c.Rebuild(true)
 
 	// reload config as instance data is not updated by Add() as an interface value
 	c.Unload()
 	c.Load()
+	log.Debug().Msgf("home is now %s", c.Home())
+	c.Rebuild(true)
 
 	for _, i := range addCmdImportFiles {
 		if _, err = instance.ImportFile(c.Host(), c.Home(), i); err != nil {

@@ -1,8 +1,113 @@
 # Change Log
 
+## Version v1.6.0
+
+> **Released 2023-06-07**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.6.0 Changes
+
+* [#116](https://github.com/ITRS-Group/cordial/issues/116)
+
+  Added a new [`geneos deploy`](tools/geneos/docs/geneos_deploy.md)
+  command that combines `geneos init` and `geneos add` but takes more
+  care over existing installations and/or creating new directories.
+
+  As part of this work all the `geneos init` command will prompt the
+  user for a directory if none is given on the command line. If the
+  command is run from a non-interactive parent (e.g. a pipe from the
+  shell) then the prompt is skipped and the default directory is used.
+  
+  The `geneos deploy` command uses the same initialisation rules but
+  reduces the number of options. The intended audience is around
+  automation where the deployment scripts may not have the knowledge or
+  logic to check for existing installations.
+
+* [#114](https://github.com/ITRS-Group/cordial/issues/114)
+
+  For `geneos` instances that have both the default `libpaths` and an
+  environment variable `LD_LIBRARY_PATH` configured these are now
+  concatenated with `libpaths` always first.
+
+* [#117](https://github.com/ITRS-Group/cordial/issues/117)
+
+  Based on user feedback all the Netprobe types have been merged under
+  the `netprobe/` directory in their respective plural names, e.g.
+  `netprobe/sans`. Existing installations should continue to work
+  unchanged but you can use the `geneos migrate` command to
+  automatically merge the instance directories under `netprobe/`
+  including the update of configuration files.
+
+* [#97](https://github.com/ITRS-Group/cordial/issues/97)
+
+  The Linux Active Console is now treated like any other component and
+  instance. At the moment, if you issue a `geneos start` command then
+  all instances including Active Console(s) will be run. In a future
+  release we may add an `autostart` like flag that can prevent this and
+  require a manual start using the full `geneos start ac2 abcde` syntax.
+
+* [`pkg/process`](pkg/process/) - New features
+
+  New functions have been added to support the running of single
+  processes and batches based on a Program struct. This is for running
+  tasks loaded from a config file (typically YAML) for an ongoing
+  project. The reason for not using existing external packages was the
+  integration with other `cordial` tooling. This functionality is
+  currently maturing and is very sparsely documented and subject to
+  major changes.
+
+* [`pkg/icp`](pkg/icp) and [`pkg/gwhub`](pkg/gwhub) - New APIs
+
+  These two packages are the start of Go APIs for ITRS Capacity Planner
+  and Gateway Hub, respectively. These should not yet be used and have
+  been included to track progress over the next few releases.
+
+## v1.6.0 Fixes
+
+* [#126](https://github.com/ITRS-Group/cordial/issues/126)
+
+  In the [config package](pkg/config/) the Load() function would fail if
+  used with a file format set bu other defaults and run in the same
+  directory as the binary it ran in because viper would also try to load
+  the bare-named program binary as a config file of the type given. The
+  package now does it's own file name construction to avoid this.
+
+  As a consequence of the work done around this fix to make the usage of
+  options to Load() and Save() clearer some have changed names. Existing
+  code that wants to use v1.6.0 will experience minor API breakage. The
+  fixes are simple refactors, so no backward compatibility has been
+  retained.
+
+* [#124](https://github.com/ITRS-Group/cordial/issues/124)
+
+  The work done for
+  [#117](https://github.com/ITRS-Group/cordial/issues/117) above meant
+  that all templates are now located under `netprobe/templates` and both
+  `san` and `floating` templates had the same name. The default
+  templates now have updated root names, e.g. `san.setup.xml.gotmpl`,
+  but existing configuration may need updating if the existing templates
+  clash.
+
+  To help users control which configuration files are created from
+  templates, and which to use for instance start-up, a new instance
+  parameter `setup` has been introduced for this. The defaults are
+  `netprobe.setup.xml` and `gateway.setup.xml` for the two affected
+  component types which means no change for existing users.
+
+  So even though the new SAN template is `san.setup.xml.gotmpl`, for
+  example, running `geneos rebuild san` will still result in a
+  `netprobe.setup.xml` in the instance directory.
+
+* [#120](https://github.com/ITRS-Group/cordial/issues/120)
+
+  While this report was a misunderstanding of the way to use Daemon()
+  the comments have been updated to give better direction on how to use
+  the pidfile io.Writer parameters.
+
 ## Version v1.5.2
 
-> **Releases 2023/05/31**
+> **Released 2023/05/31**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 

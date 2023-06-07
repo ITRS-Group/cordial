@@ -199,7 +199,7 @@ func (s *Sans) Config() *config.Config {
 func (s *Sans) Add(template string, port uint16) (err error) {
 	cf := s.Config()
 
-	cf.SetDefault(cf.Join("config", "template"), templateName)
+	// cf.SetDefault(cf.Join("config", "template"), s.Host().Filepath(ct.ParentType, "templates", templateName))
 
 	if port == 0 {
 		port = instance.NextPort(s.InstanceHost, &San)
@@ -207,7 +207,7 @@ func (s *Sans) Add(template string, port uint16) (err error) {
 
 	cf.Set("port", port)
 	cf.Set(cf.Join("config", "rebuild"), "always")
-	cf.Set(cf.Join("config", "template"), templateName)
+	cf.Set(cf.Join("config", "template"), s.Host().Filepath(s.Type(), "templates", templateName))
 
 	if template != "" {
 		filename, _ := instance.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
@@ -239,7 +239,7 @@ func (s *Sans) Add(template string, port uint16) (err error) {
 	return nil
 }
 
-// rebuild the netprobe.setup.xml file
+// Rebuild the netprobe.setup.xml file
 //
 // we do a dance if there is a change in TLS setup and we use default ports
 func (s *Sans) Rebuild(initial bool) (err error) {
