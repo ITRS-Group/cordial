@@ -66,7 +66,7 @@ var debug, quiet bool
 // config.Keyfile type
 var DefaultUserKeyfile = config.KeyFile(config.Path("keyfile",
 	config.SetAppName(Execname),
-	config.SetFileFormat("aes"),
+	config.SetFileExtension("aes"),
 	config.IgnoreWorkingDir()),
 )
 
@@ -275,8 +275,8 @@ func initConfig() {
 
 	cf, err := config.Load(Execname,
 		config.SetConfigFile(cfgFile),
-		config.SetGlobal(),
-		config.AddConfigDirs(oldConfDir),
+		config.UseGlobal(),
+		config.AddDirs(oldConfDir),
 		config.MergeSettings(),
 		config.IgnoreWorkingDir(),
 	)
