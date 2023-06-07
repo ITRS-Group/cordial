@@ -96,7 +96,11 @@ var snapshotCmd = &cobra.Command{
 		}
 
 		if snapshotCmdUsername != "" && (snapshotCmdPassword.IsNil() || snapshotCmdPassword.Size() == 0) {
-			snapshotCmdPassword, _ = config.ReadPasswordInput(false, 0)
+			snapshotCmdPassword, err = config.ReadPasswordInput(false, 0)
+			if err == config.ErrNotInteractive {
+				err = fmt.Errorf("%w and password required", err)
+				return
+			}
 		}
 
 		// at this point snapshotCmdUsername/Password contain global or

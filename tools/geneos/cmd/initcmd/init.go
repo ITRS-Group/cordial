@@ -25,6 +25,7 @@ package initcmd
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -193,11 +194,21 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 
 	log.Debug().Msgf("%d %v", len(args), args)
 	switch len(args) {
-	case 0: // default home + geneos
+	case 0:
+		// default home + geneos, but check with user if it's an
+		// interactive session
+		var input string
 		root = homedir
 		if filepath.Base(homedir) != cmd.Execname {
 			root = filepath.Join(homedir, cmd.Execname)
 		}
+		input, err = config.ReadUserInput("Geneos Directory (default %q): ", root)
+		if err == nil {
+			root = input
+		} else if err != config.ErrNotInteractive {
+			return
+		}
+		err = nil
 	case 1: // home = abs path
 		if !filepath.IsAbs(args[0]) {
 			log.Fatal().Msgf("Home directory must be absolute path: %s", args[0])
@@ -226,7 +237,11 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 		}
 
 		if initCmdDLUsername != "" && (initCmdDLPassword.IsNil() || initCmdDLPassword.Size() == 0) {
-			initCmdDLPassword, _ = config.ReadPasswordInput(false, 0)
+			initCmdDLPassword, err = config.ReadPasswordInput(false, 0)
+			if err == config.ErrNotInteractive {
+				err = fmt.Errorf("%w and password required", err)
+				return
+			}
 		}
 
 		options = append(options, geneos.Username(initCmdDLUsername), geneos.Password(initCmdDLPassword))

@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -163,6 +164,9 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 
 	if addCmdStart || addCmdLogs {
 		if err = instance.Start(c); err != nil {
+			if errors.Is(err, os.ErrProcessDone) {
+				err = nil
+			}
 			return
 		}
 		if addCmdLogs {

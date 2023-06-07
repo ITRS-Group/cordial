@@ -106,7 +106,11 @@ geneos install netprobe -b active_dev -U
 		}
 
 		if packageInstallCmdUsername != "" && (packageInstallCmdPassword.IsNil() || packageInstallCmdPassword.Size() == 0) {
-			packageInstallCmdPassword, _ = config.ReadPasswordInput(false, 0)
+			packageInstallCmdPassword, err = config.ReadPasswordInput(false, 0)
+			if err == config.ErrNotInteractive {
+				err = fmt.Errorf("%w and password required", err)
+				return
+			}
 		}
 
 		// base options
