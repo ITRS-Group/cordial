@@ -84,6 +84,7 @@ var Gateway = geneos.Component{
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:/usr/lib64`,
 		`gatewayname={{.name}}`,
 		`setup={{join "${config:home}" "gateway.setup.xml"}}`,
+		`autostart=true`,
 	},
 	GlobalSettings: map[string]string{
 		"GatewayPortRange": "7039,7100-",

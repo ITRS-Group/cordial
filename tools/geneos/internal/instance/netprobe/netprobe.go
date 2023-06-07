@@ -67,6 +67,7 @@ var Netprobe = geneos.Component{
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=netprobe.log`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
+		`autostart=true`,
 	},
 	GlobalSettings: map[string]string{
 		"NetprobePortRange": "7036,7100-",
