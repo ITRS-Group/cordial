@@ -131,7 +131,7 @@ func LoadConfig(c geneos.Instance) (err error) {
 
 	cf, err := config.Load(c.Type().Name,
 		config.Host(r),
-		config.LoadDir(filepath.Join(ParentDirectory(c), c.Name())),
+		config.FromDir(filepath.Join(ParentDirectory(c), c.Name())),
 		config.UseDefaults(false),
 		config.MustExist(),
 	)
@@ -143,7 +143,7 @@ func LoadConfig(c geneos.Instance) (err error) {
 		log.Debug().Msgf("also looking in %s", home)
 		cf, err = config.Load(c.Type().Name,
 			config.Host(r),
-			config.LoadDir(home),
+			config.FromDir(home),
 			config.UseDefaults(false),
 			config.MustExist(),
 		)

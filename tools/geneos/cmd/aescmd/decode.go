@@ -45,7 +45,7 @@ func init() {
 	cmd.UserKeyFile = cmd.DefaultUserKeyfile
 	aesPrevUserKeyFile = config.KeyFile(config.Path("prevkeyfile",
 		config.SetAppName(cmd.Execname),
-		config.SetFileFormat("aes"),
+		config.SetFileExtension("aes"),
 		config.IgnoreWorkingDir(),
 	))
 

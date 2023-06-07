@@ -24,27 +24,28 @@ package config
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
 type fileOptions struct {
 	appname                string
+	configDirs             []string
+	configFile             string
+	extension              string // extension without "."
+	delimiter              string
+	dir                    string
 	internalDefaults       []byte
 	internalDefaultsFormat string
-	configFile             string
-	configFileFormat       string
-	remote                 host.Host
-	dir                    string
-	configDirs             []string
-	workingdir             string
-	userconfdir            string
-	systemdir              string
-	setglobals             bool
-	usedefaults            bool
 	merge                  bool
-	notfounderr            bool
-	delimiter              string
+	mustexist              bool
+	remote                 host.Host
+	setglobals             bool
+	systemdir              string
+	usedefaults            bool
+	userconfdir            string
+	workingdir             string
 }
 
 // FileOptions can be passed to the Load function to
@@ -64,13 +65,13 @@ func evalFileOptions(options ...FileOptions) (c *fileOptions) {
 func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions) {
 	// init
 	c = &fileOptions{
-		configFileFormat: "json",
-		remote:           host.Localhost,
-		configDirs:       []string{},
-		workingdir:       ".",
-		systemdir:        "/etc", // UNIX/Linux only!
-		usedefaults:      true,
-		delimiter:        defaultKeyDelimiter,
+		extension:   "json",
+		remote:      host.Localhost,
+		configDirs:  []string{},
+		workingdir:  ".",
+		systemdir:   "/etc", // UNIX/Linux only!
+		usedefaults: true,
+		delimiter:   defaultKeyDelimiter,
 	}
 	c.userconfdir, _ = UserConfigDir()
 
@@ -96,8 +97,8 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 
 func evalSaveOptions(options ...FileOptions) (c *fileOptions) {
 	c = &fileOptions{
-		configFileFormat: "json",
-		remote:           host.Localhost,
+		extension: "json",
+		remote:    host.Localhost,
 	}
 	c.dir, _ = UserConfigDir()
 
@@ -111,15 +112,18 @@ func evalSaveOptions(options ...FileOptions) (c *fileOptions) {
 var defaultKeyDelimiter = "."
 
 // DefaultKeyDelimiter sets the default key delimiter for all future
-// calls to config.New(). The default is "."
+// calls to config.New() and config.Load(). The default is ".". You "::"
+// if your keys are likely to contain "." such as domains, ipv4
+// addresses or version numbers. Use something else if keys are likely
+// to be ipv6 addresses.
 func DefaultKeyDelimiter(delimiter string) {
 	defaultKeyDelimiter = delimiter
 }
 
-// SetGlobal tells [Load] to set values in the global
+// UseGlobal tells [Load] to set values in the global
 // configuration structure instead of creating a new one. The global
 // configuration is then returned by [Load].
-func SetGlobal() FileOptions {
+func UseGlobal() FileOptions {
 	return func(c *fileOptions) {
 		c.setglobals = true
 	}
@@ -154,14 +158,14 @@ func SetDefaults(defaults []byte, format string) FileOptions {
 }
 
 // MustExist makes Load() return an error if the configuration file is
-// not found. This does not apply to defaults.
+// not found. This does not apply to default configuration files.
 func MustExist() FileOptions {
 	return func(lo *fileOptions) {
-		lo.notfounderr = true
+		lo.mustexist = true
 	}
 }
 
-// SetAppName overrides to use of the [Load] `name` argument as the
+// SetAppName overrides to use of the Load `name` argument as the
 // application name, `AppName`, which is used for sub-directories while
 // `name` is used as the prefix for files in those directories.
 //
@@ -178,45 +182,48 @@ func SetAppName(name string) FileOptions {
 	}
 }
 
-// SetConfigFile forces [Load] to load only the configuration at the given
-// path. This path must include the file extension. Defaults are still loaded
-// from all the normal directories unless [IgnoreDefaults] is also passed as an
-// option.
+// SetConfigFile forces Load to load only the configuration at the given
+// path. This path must include the file extension. Defaults are still
+// loaded from all the normal directories unless [IgnoreDefaults] is
+// also passed as an option.
 //
-// If the argument is an empty string then the option is not used. This also means
-// it can be called with a command line flag value which can default to an empty
-// string
+// If the argument is an empty string then the option is not used. This
+// also means it can be called with a command line flag value which can
+// default to an empty string
 func SetConfigFile(path string) FileOptions {
 	return func(c *fileOptions) {
 		c.configFile = path
 	}
 }
 
-// SetFileFormat sets the file format for the configuration. If the type
-// is not set and the configuration file loaded has an extension then
-// that is used. This appliles to both defaults and main configuration
-// files (but not embedded defaults). The default is "json".
-func SetFileFormat(extension string) FileOptions {
+// SetFileExtension sets the file extension and, by implication, the
+// format for the configuration. If the type is not set and the
+// configuration file loaded has an extension then that is used. This
+// applies to both defaults and main configuration files (but not
+// embedded defaults). The default is "json". Any leading "." is
+// removed.
+func SetFileExtension(extension string) FileOptions {
 	return func(c *fileOptions) {
-		c.configFileFormat = extension
+		extension = strings.TrimLeft(extension, ".")
+		c.extension = extension
 	}
 }
 
-// AddConfigDirs adds paths as directories to search for the
-// configuration and defaults files. Directories are searched in the
-// order given, and any directories added with this option are checked
-// before any built-in list. This option can be given multiple times and
-// each call appends to the existing list.
-func AddConfigDirs(paths ...string) FileOptions {
+// AddDirs adds paths as directories to search for the configuration and
+// defaults files. Directories are searched in the order given, and any
+// directories added with this option are checked before any built-in
+// list. This option can be given multiple times and each call appends
+// to the existing list.
+func AddDirs(paths ...string) FileOptions {
 	return func(c *fileOptions) {
 		c.configDirs = append(c.configDirs, paths...)
 	}
 }
 
-// LoadDir sets the only directory to search for the configuration
+// FromDir sets the only directory to search for the configuration
 // files. It disables searching in the working directory, the user
 // config directory and the system directory.
-func LoadDir(dir string) FileOptions {
+func FromDir(dir string) FileOptions {
 	return func(lo *fileOptions) {
 		lo.configDirs = []string{dir}
 		lo.workingdir = ""
@@ -252,8 +259,8 @@ func IgnoreSystemDir() FileOptions {
 	}
 }
 
-// MergeSettings change the default behaviour of [Load] which is
-// to load the first configuration file found, instead loading each
+// MergeSettings change the default behaviour of Load which is to load
+// the first configuration file found, instead loading each
 // configuration file found and merging the settings together. Merging
 // is done using [viper.MergeConfigMap] and should result in the last
 // definition of each configuration item being used.
