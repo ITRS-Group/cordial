@@ -80,12 +80,19 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 		if opts.source != "" {
 			archiveDir = opts.source
 		}
+		// matching rules for local files
 		filename, err = LatestArchive(LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
 			log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
 			check := ct.String()
+
+			if ct.ParentType != nil {
+				check = ct.ParentType.String()
+			}
+
 			if ct.DownloadInfix != "" {
 				check = ct.DownloadInfix
 			}
+
 			return strings.Contains(v.Name(), check)
 		})
 		if err != nil {
@@ -194,8 +201,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 		}
 	}
 
-	basedir := h.Filepath("packages", ct, version)
-	log.Debug().Msg(basedir)
+	basedir := h.Filepath("packages", ct.String(), version)
 	if _, err = h.Stat(basedir); err == nil {
 		return h.Path(basedir), fs.ErrExist
 	}

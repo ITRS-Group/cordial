@@ -296,6 +296,10 @@ func (h *Host) OrList(hosts ...*Host) []*Host {
 // case the component name or the parent component name is used, or any
 // other type is passed to fmt.Sprint to be stringified. The path is
 // returned from filepath.Join.
+//
+// If calling this against the "packages" directory remember to use
+// ct.String() to not deference the parent type, which is done if a part
+// is a *Component
 func (h *Host) Filepath(parts ...interface{}) string {
 	if h == nil {
 		h = LOCAL

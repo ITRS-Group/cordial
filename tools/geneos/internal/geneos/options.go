@@ -29,21 +29,21 @@ import (
 // geneosOptions defines the internal options for various operations in
 // the geneos package
 type geneosOptions struct {
-	nosave       bool
-	local        bool
-	force        bool
-	override     string
-	restart      bool
-	version      string
 	basename     string
-	geneosdir    string
-	username     string
-	password     config.Plaintext
-	platformId   string
+	doupdate     bool
 	downloadbase string
 	downloadtype string
+	force        bool
+	geneosdir    string
+	local        bool
+	nosave       bool
+	override     string
+	password     config.Plaintext
+	platformId   string
+	restart      bool
 	source       string
-	doupdate     bool
+	username     string
+	version      string
 }
 
 type Options func(*geneosOptions)

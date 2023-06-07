@@ -83,7 +83,7 @@ func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
 	if !h.IsAvailable() {
 		return nil, host.ErrNotAvailable
 	}
-	basedir := h.Filepath("packages", ct)
+	basedir := h.Filepath("packages", ct.String())
 	ents, err := h.ReadDir(basedir)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
@@ -281,7 +281,8 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 	var st fs.FileInfo
 	var i int
 
-	dir := h.Filepath("packages", ct)
+	dir := h.Filepath("packages", ct.String())
+	log.Debug().Msgf("ct=%s dir=%s", ct, dir)
 	version = base
 
 	for i = 0; i < 10; i++ {
@@ -334,7 +335,7 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 // prefix filter. An error is returned if there are problems accessing
 // the directories or parsing any names as semantic versions.
 func LatestVersion(r *Host, ct *Component, prefix string) (v string, err error) {
-	dir := r.Filepath("packages", ct)
+	dir := r.Filepath("packages", ct.String())
 	dirs, err := r.ReadDir(dir)
 	if err != nil {
 		return
@@ -458,7 +459,7 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 }
 
 // split an package archive name into type and version
-var archiveRE = regexp.MustCompile(`^geneos-(desktop-activeconsole|web-server|fixanalyser2-netprobe|file-agent|\w+)-([\w\.-]+?)[\.-]?linux`)
+var archiveRE = regexp.MustCompile(`^geneos-(\w+-\w+|\w+)-([\w\.-]+?)[\.-]?linux`)
 
 // filenameToComponent transforms an archive filename and returns the
 // component and version or an error if the file format is not

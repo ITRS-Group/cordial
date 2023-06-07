@@ -125,8 +125,14 @@ var deployCmd = &cobra.Command{
 		// check we have a Geneos directory, update host based on instance
 		// name wanted
 		h := geneos.GetHost(Hostname)
+		var pkgct *geneos.Component
 		if name != "" {
-			_, _, h = instance.SplitName(name, h)
+			// update ct and host - ct may come from TYPE:NAME@HOST format
+			pkgct, _, h = instance.SplitName(name, h)
+		}
+
+		if pkgct == nil {
+			pkgct = ct
 		}
 
 		if h == geneos.ALL {
@@ -137,7 +143,7 @@ var deployCmd = &cobra.Command{
 			name = h.Hostname()
 		}
 
-		log.Debug().Msgf("host=%s, name=%s", h, name)
+		log.Debug().Msgf("host=%s, pkgct=%s, ct=%s, name=%s", h, pkgct, ct, name)
 
 		if h == geneos.LOCAL {
 			if geneos.Root() == "" {
@@ -183,13 +189,16 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
-		// create required component directories, speculatively
-		if err = ct.MakeComponentDirs(h); err != nil {
+		// create required component directories, for pkg type, speculatively
+		if err = pkgct.MakeComponentDirs(h); err != nil {
 			return err
 		}
 
-		// deploy templates if component requires them, do not ovewrite existing
-		if len(ct.Templates) != 0 {
+		// deploy templates if component requires them, do not overwrite
+		// existing
+		//
+		// templates are based on real component type (e.g. san and not fa2)
+		if ct != nil && len(ct.Templates) != 0 {
 			templateDir := h.Filepath(ct, "templates")
 			h.MkdirAll(templateDir, 0775)
 
@@ -212,7 +221,7 @@ var deployCmd = &cobra.Command{
 		}
 
 		// check base package for existence, install etc.
-		version, _ := geneos.CurrentVersion(h, ct, deployCmdBase)
+		version, _ := geneos.CurrentVersion(h, pkgct, deployCmdBase)
 		log.Debug().Msgf("version: %s", version)
 		if deployCmdVersion != "latest" || version == "unknown" {
 			if !deployCmdLocal && deployCmdUsername != "" && (deployCmdPassword.IsNil() || deployCmdPassword.Size() == 0) {
@@ -242,7 +251,9 @@ var deployCmd = &cobra.Command{
 				options = append(options, geneos.UseNexus())
 			}
 
-			if err = geneos.Install(h, ct, options...); err != nil {
+			log.Debug().Msgf("installing on %s for %s", h, pkgct)
+
+			if err = geneos.Install(h, pkgct, options...); err != nil {
 				return
 			}
 		}
