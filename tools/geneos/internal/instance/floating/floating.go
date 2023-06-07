@@ -66,6 +66,7 @@ var Floating = geneos.Component{
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 		`floatingname={{.name}}`,
 		`setup={{join "${config:home}" "netprobe.setup.xml"}}`,
+		`autostart=true`,
 	},
 	GlobalSettings: map[string]string{
 		"FloatingPortRange": "7036,7100-",
