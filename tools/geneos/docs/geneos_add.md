@@ -28,8 +28,14 @@ This behaviour can be overridden with the `--port`/`-p` option.
 
 When an instance is started it has an environment made up of the
 variables in it's configuration file and some necessary defaults, such
-as `LD_LIBRARY_PATH`. Additional variables can be set with the
-`--env`/`-e` option, which can be repeated as many times as required.
+as `JAVA_HOME`. Additional variables can be set with the `--env`/`-e`
+option, which can be repeated as many times as required.
+
+File can be imported, just like the `import` command, using one or more
+`--import`/`-I` options. The syntax is the same as for `import` but
+because the import source cannot be confused with the `NAME` of the
+instance using `add` then source can just be a plain file name without
+the `./` prefix.
 
 The underlying package used by each instance is referenced by a
 `basename` parameter which defaults to `active_prod`. You can run
@@ -37,6 +43,11 @@ multiple components of the same type but different releases. You can do
 this by configuring additional base names in advance with `geneos
 package update` and then by setting the base name with the `--base`/`-b`
 option.
+
+For a `TYPE` that supports key files have one created unless one is
+supplied via the `--keyfile` or `--keycrc` options. The `--keyfile`
+option uses the file given while the `--keycrc` sets the key file path
+to a key file with the value given (with or with the `.aes` extension).
 
 Gateways, SANs and Floating probes are given a configuration file based
 on the templates configured for the different components. The default
@@ -67,10 +78,14 @@ probes.
                                       (Repeat as required)
   -b, --base string                   Select the base version for the
                                       instance (default "active_prod")
-  -k, --keyfile PATH                  Keyfile PATH
-  -C, --crc CRC                       CRC of key file in the component's shared "keyfiles" 
+      --keyfile PATH                  Keyfile PATH
+      --keycrc CRC                    CRC of key file in the component's shared "keyfiles" 
                                       directory (extension optional)
   -T, --template PATH|URL|-           Template file to use PATH|URL|-
+  -I, --import [DEST=]PATH|URL        import file(s) to instance. DEST defaults to the base
+                                      name of the import source or if given it must be
+                                      relative to and below the instance directory
+                                      (Repeat as required)
   -i, --include PRIORITY:[PATH|URL]   An include file in the format PRIORITY:[PATH|URL]
                                       (Repeat as required, gateway only)
   -g, --gateway HOSTNAME:PORT         A gateway connection in the format HOSTNAME:PORT
