@@ -24,6 +24,7 @@ package initcmd
 
 import (
 	_ "embed"
+	"os"
 	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -88,27 +89,35 @@ func initDemo(h *geneos.Host, options ...geneos.Options) (err error) {
 	if err = install("gateway", geneos.LOCALHOST, options...); err != nil {
 		return
 	}
-	if err = install("netprobe", geneos.LOCALHOST, options...); err != nil {
-		return
-	}
-	if err = install("webserver", geneos.LOCALHOST, options...); err != nil {
-		return
-	}
-
 	if err = cmd.AddInstance(geneos.FindComponent("gateway"), initCmdExtras, []string{}, "Demo Gateway@"+h.String()); err != nil {
 		return
 	}
 	if err = cmd.Set(geneos.FindComponent("gateway"), g, []string{"options=-demo"}); err != nil {
 		return
 	}
-	// if len(initCmdExtras.Gateways) == 0 {
-	// 	initCmdExtras.Gateways.Set("localhost")
-	// }
+
+	if err = install("netprobe", geneos.LOCALHOST, options...); err != nil {
+		return
+	}
 	if err = cmd.AddInstance(geneos.FindComponent("netprobe"), initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
+		return
+	}
+
+	if err = install("webserver", geneos.LOCALHOST, options...); err != nil {
 		return
 	}
 	if err = cmd.AddInstance(geneos.FindComponent("webserver"), initCmdExtras, []string{}, "demo@"+h.String()); err != nil {
 		return
+	}
+
+	disp := os.Getenv("DISPLAY")
+	if disp != "" {
+		if err = install("ac2", geneos.LOCALHOST, options...); err != nil {
+			return
+		}
+		if err = cmd.AddInstance(geneos.FindComponent("ac2"), initCmdExtras, []string{}, "demo@"+h.String()); err != nil {
+			return
+		}
 	}
 
 	if err = cmd.Start(nil, initCmdLogs, e, e); err != nil {
