@@ -3,9 +3,9 @@
 Cordial is a collection of utilities, integrations and support packages for
 ITRS Geneos.
 
-> **Current Version: v1.5.2**
+> **Current Version: v1.60**
 >
-> Released 2023/05/31
+> Released 2023/06/07
 >
 > See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 
@@ -78,10 +78,10 @@ to help build useful tools for working with ITRS Geneos.
 
 * [`process`](pkg/process/README.md)
 
-  Process management functions. Currently there is only a `Daemon()`
-  function to background a process, but over time there should be more
-  common functions extracted from other packages and the internal
-  packages of `geneos`.
+  Process management functions. There is a `Daemon()` function to
+  background a process and the beginnings of program and batch managers.
+  While the `Daemon()` function is relatively stable the other methods
+  in this package are new and liable to change as usage dictates.
 
 * [`commands`](pkg/commands/README.md)
 
@@ -95,4 +95,10 @@ to help build useful tools for working with ITRS Geneos.
   Geneos XPath handling functions and methods. This is a developing API
   and is not complete. Basic functionality exists to parse and
   manipulate simple XPaths.
+
+* [`pkg/icp`](pkg/icp) and [`pkg/gwhub`](pkg/gwhub)
+
+  These two packages are the start of Go APIs to ITRS Capacity Planner
+  and Gateway Hub respectively. They are work in progress and should not
+  be used for anything other than testing for the moment.
 
