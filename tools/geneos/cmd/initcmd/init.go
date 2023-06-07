@@ -204,7 +204,10 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 		}
 		input, err = config.ReadUserInput("Geneos Directory (default %q): ", root)
 		if err == nil {
-			root = input
+			if strings.TrimSpace(input) != "" {
+				log.Debug().Msgf("set root to %s", input)
+				root = input
+			}
 		} else if err != config.ErrNotInteractive {
 			return
 		}
@@ -217,8 +220,8 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 	default:
 		log.Fatal().Msgf("too many args: %v", args)
 	}
+
 	options = append(options, geneos.UseRoot(root))
-	// }
 
 	// download authentication
 	if initCmdDLUsername == "" {

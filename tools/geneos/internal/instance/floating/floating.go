@@ -52,11 +52,13 @@ var Floating = geneos.Component{
 	PortRange:    "FloatingPortRange",
 	CleanList:    "FloatingCleanList",
 	PurgeList:    "FloatingPurgeList",
-	Aliases:      map[string]string{},
+	Aliases: map[string]string{
+		"floatingtype": "pkgtype",
+	},
 	Defaults: []string{
-		`binary={{if eq .floatingtype "fa2"}}fix-analyser2-{{end}}netprobe.linux_64`,
+		`binary={{if eq .pkgtype "fa2"}}fix-analyser2-{{end}}netprobe.linux_64`,
 		`home={{join .root "netprobe" "floatings" .name}}`,
-		`install={{join .root "packages" .floatingtype}}`,
+		`install={{join .root "packages" .pkgtype}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=floating.log`,
@@ -114,9 +116,9 @@ func New(name string) geneos.Instance {
 	c.Conf = config.New()
 	c.InstanceHost = r
 	c.Component = &Floating
-	c.Config().SetDefault("floatingtype", "netprobe")
+	c.Config().SetDefault("pkgtype", "netprobe")
 	if ct != nil {
-		c.Config().SetDefault("floatingtype", ct.Name)
+		c.Config().SetDefault("pkgtype", ct.Name)
 	}
 	if err := instance.SetDefaults(c, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", c)

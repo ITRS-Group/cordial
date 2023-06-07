@@ -28,6 +28,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"text/tabwriter"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -114,6 +115,10 @@ func listInstancePlain(c geneos.Instance, params []string) (err error) {
 		suffix += "+"
 	}
 	base, underlying, _ := instance.Version(c)
+	if pkgtype := c.Config().GetString("pkgtype"); pkgtype != "" {
+		base = path.Join(pkgtype, base)
+	}
+
 	fmt.Fprintf(listTabWriter, "%s\t%s\t%s\t%d\t%s:%s\t%s\n", c.Type(), c.Name()+suffix, c.Host(), c.Config().GetInt("port"), base, underlying, c.Home())
 	return
 }

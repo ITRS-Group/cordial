@@ -64,11 +64,12 @@ var San = geneos.Component{
 		"sankey":    "privatekey",
 		"sanuser":   "user",
 		"sanopts":   "options",
+		"santype":   "pkgtype",
 	},
 	Defaults: []string{
-		`binary={{if eq .santype "fa2"}}fix-analyser2-{{end}}netprobe.linux_64`,
+		`binary={{if eq .pkgtype "fa2"}}fix-analyser2-{{end}}netprobe.linux_64`,
 		`home={{join .root "netprobe" "sans" .name}}`,
-		`install={{join .root "packages" .santype}}`,
+		`install={{join .root "packages" .pkgtype}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=san.log`,
@@ -115,7 +116,7 @@ var sans sync.Map
 
 // New is the factory method fpr SANs.
 //
-// If the name has a TYPE prefix then that type is used as the "santype"
+// If the name has a TYPE prefix then that type is used as the "pkgtype"
 // parameter to select other Netprobe types, such as fa2
 func New(name string) geneos.Instance {
 	ct, local, r := instance.SplitName(name, geneos.LOCAL)
@@ -130,9 +131,9 @@ func New(name string) geneos.Instance {
 	c.Conf = config.New()
 	c.InstanceHost = r
 	c.Component = &San
-	c.Config().SetDefault("santype", "netprobe")
+	c.Config().SetDefault("pkgtype", "netprobe")
 	if ct != nil {
-		c.Config().SetDefault("santype", ct.Name)
+		c.Config().SetDefault("pkgtype", ct.Name)
 	}
 	if err := instance.SetDefaults(c, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", c)

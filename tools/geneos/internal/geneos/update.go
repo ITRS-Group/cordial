@@ -81,7 +81,7 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 
 	log.Debug().Msgf("checking and updating %s on %s %q to %q", ct, h, opts.basename, opts.version)
 
-	basedir := h.Filepath("packages", ct)
+	basedir := h.Filepath("packages", ct.String())
 	basepath := filepath.Join(basedir, opts.basename)
 
 	if opts.version == "latest" {
