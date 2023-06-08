@@ -44,8 +44,8 @@ type Metric struct {
 }
 
 type Bucketing struct {
-	Duration time.Duration `json:"duration,omitempty"`
-	Count    int           `json:"count,omitempty"`
+	Duration string `json:"duration,omitempty"`
+	Count    int    `json:"count,omitempty"`
 }
 
 // MetricsQuery request
@@ -75,5 +75,5 @@ type MetricsAggregation struct {
 
 // MetricsAggregations request
 func (h *Hub) MetricsAggregations(ctx context.Context, response *MetricsAggregationsResponse) (resp *http.Response, err error) {
-	return h.Get(ctx, MetricsAggregationsEndpoint, nil, &response)
+	return h.Get(ctx, MetricsAggregationsEndpoint, nil, response)
 }
