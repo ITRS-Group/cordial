@@ -67,6 +67,7 @@ var Licd = geneos.Component{
 		`logfile=licd.log`,
 		`port=7041`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}`,
+		`autostart=true`,
 	},
 	GlobalSettings: map[string]string{
 		"LicdPortRange": "7041,7100-",

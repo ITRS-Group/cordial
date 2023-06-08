@@ -706,6 +706,11 @@ func IsRunning(c geneos.Instance) bool {
 	return err != os.ErrProcessDone
 }
 
+// IsAutoStart returns true is the instance is set to autostart
+func IsAutoStart(c geneos.Instance) bool {
+	return c.Config().GetBool("autostart")
+}
+
 // SharedPath returns the full path a directory or file in the instances
 // component type shared directory joined to any parts subs - the last
 // element can be a filename. If the instance is not loaded then "." is

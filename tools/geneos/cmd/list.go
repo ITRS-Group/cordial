@@ -39,9 +39,10 @@ import (
 type listCmdType struct {
 	Type      string `json:"type,omitempty"`
 	Name      string `json:"name,omitempty"`
+	Host      string `json:"host,omitempty"`
 	Disabled  bool   `json:"disabled"`
 	Protected bool   `json:"protected"`
-	Host      string `json:"host,omitempty"`
+	AutoStart bool   `json:"autostart"`
 	Port      int64  `json:"port,omitempty"`
 	Version   string `json:"version,omitempty"`
 	Home      string `json:"home,omitempty"`
@@ -62,7 +63,7 @@ func init() {
 	listCmd.Flags().SortFlags = false
 }
 
-//go:embed _docs/ls.md
+//go:embed _docs/list.md
 var listCmdDescription string
 
 var listCmd = &cobra.Command{
@@ -90,12 +91,12 @@ var listCmd = &cobra.Command{
 			fmt.Println(string(b))
 		case listCmdCSV:
 			listCSVWriter = csv.NewWriter(os.Stdout)
-			listCSVWriter.Write([]string{"Type", "Name", "Disabled", "Protected", "Host", "Port", "Version", "Home"})
+			listCSVWriter.Write([]string{"Type", "Name", "Host", "Disabled", "Protected", "AutoStart", "Port", "Version", "Home"})
 			err = instance.ForAll(ct, Hostname, listInstanceCSV, args, params)
 			listCSVWriter.Flush()
 		default:
 			listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-			fmt.Fprintf(listTabWriter, "Type\tName\tHost\tPort\tVersion\tHome\n")
+			fmt.Fprintf(listTabWriter, "Type\tNames\tHost\tFlag\tPort\tVersion\tHome\n")
 			err = instance.ForAll(ct, Hostname, listInstancePlain, args, params)
 			listTabWriter.Flush()
 		}
@@ -107,39 +108,59 @@ var listCmd = &cobra.Command{
 }
 
 func listInstancePlain(c geneos.Instance, params []string) (err error) {
-	var suffix string
+	var flags string
 	if instance.IsDisabled(c) {
-		suffix = "*"
+		flags += "D"
 	}
 	if instance.IsProtected(c) {
-		suffix += "+"
+		flags += "P"
+	}
+	if instance.IsAutoStart(c) {
+		flags += "A"
+	}
+	if flags == "" {
+		flags = "-"
 	}
 	base, underlying, _ := instance.Version(c)
 	if pkgtype := c.Config().GetString("pkgtype"); pkgtype != "" {
 		base = path.Join(pkgtype, base)
 	}
 
-	fmt.Fprintf(listTabWriter, "%s\t%s\t%s\t%d\t%s:%s\t%s\n", c.Type(), c.Name()+suffix, c.Host(), c.Config().GetInt("port"), base, underlying, c.Home())
+	fmt.Fprintf(listTabWriter, "%s\t%s\t%s\t%s\t%d\t%s:%s\t%s\n", c.Type(), c.Name(), flags, c.Host(), c.Config().GetInt("port"), base, underlying, c.Home())
 	return
 }
 
 func listInstanceCSV(c geneos.Instance, params []string) (err error) {
-	dis := "N"
+	disabled := "N"
 	protected := "N"
+	autostart := "N"
 
 	if instance.IsDisabled(c) {
-		dis = "Y"
+		disabled = "Y"
 	}
 	if instance.IsProtected(c) {
 		protected = "Y"
 	}
+	if instance.IsAutoStart(c) {
+		autostart = "Y"
+	}
 	base, underlying, _ := instance.Version(c)
-	listCSVWriter.Write([]string{c.Type().String(), c.Name(), dis, protected, c.Host().String(), fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	listCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), disabled, protected, autostart, fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 	return
 }
 
 func listInstanceJSON(c geneos.Instance, params []string) (result interface{}, err error) {
 	base, underlying, _ := instance.Version(c)
-	result = listCmdType{c.Type().String(), c.Name(), instance.IsDisabled(c), instance.IsProtected(c), c.Host().String(), c.Config().GetInt64("port"), fmt.Sprintf("%s:%s", base, underlying), c.Home()}
+	result = listCmdType{
+		Type:      c.Type().String(),
+		Name:      c.Name(),
+		Host:      c.Host().String(),
+		Disabled:  instance.IsDisabled(c),
+		Protected: instance.IsProtected(c),
+		AutoStart: instance.IsAutoStart(c),
+		Port:      c.Config().GetInt64("port"),
+		Version:   fmt.Sprintf("%s:%s", base, underlying),
+		Home:      c.Home(),
+	}
 	return
 }
