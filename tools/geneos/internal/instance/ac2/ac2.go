@@ -57,6 +57,7 @@ var AC2 = geneos.Component{
 		`logfile=ActiveConsole.log`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}`,
 		`config={{join .home "ActiveConsol.gci"}}`,
+		`autostart=false`,
 	},
 	GlobalSettings: map[string]string{
 		"AC2PortRange": "7040-",

@@ -72,6 +72,7 @@ var Webserver = geneos.Component{
 		`port=8080`,
 		`libpaths={{join "${config:install}" "${config:version}" "JRE/lib"}}:{{join "${config:install}" "${config:version}" "lib64"}}`,
 		`maxmem=1024m`,
+		`autostart=true`,
 	},
 	GlobalSettings: map[string]string{
 		"WebserverPortRange": "8080,8100-",
