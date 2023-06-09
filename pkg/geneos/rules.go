@@ -27,18 +27,18 @@ import "encoding/xml"
 // Rules
 
 type Rules struct {
-	XMLName    xml.Name `xml:"rules"`
+	XMLName    xml.Name `xml:"rules" json:"-" yaml:"-"`
 	RuleGroups []interface{}
 	Rules      []interface{}
 }
 
 type RuleGroups struct {
-	XMLName xml.Name `xml:"ruleGroup"`
+	XMLName xml.Name `xml:"ruleGroup" json:"-" yaml:"-"`
 	Name    string   `xml:"name,attr"`
 }
 
 type Rule struct {
-	XMLName      xml.Name `xml:"rule"`
+	XMLName      xml.Name `xml:"rule" json:"-" yaml:"-"`
 	Name         string   `xml:"name,attr"`
 	Targets      []string `xml:"targets>target"`
 	Priority     int      `xml:"priority"`

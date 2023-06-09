@@ -38,20 +38,20 @@ type GatewaySQLTables struct {
 }
 
 type GatewaySQLTableDataview struct {
-	XMLName xml.Name          `xml:"dataview"`
+	XMLName xml.Name          `xml:"dataview" json:"-" yaml:"-"`
 	Name    *SingleLineString `xml:"tableName"`
 	XPath   string            `xml:"xpath"`
 	Columns *[]GWSQLColumn    `xml:"columns>column,omitempty"`
 }
 
 type GatewaySQLTableHeadline struct {
-	XMLName xml.Name          `xml:"headlines"`
+	XMLName xml.Name          `xml:"headlines" json:"-" yaml:"-"`
 	Name    *SingleLineString `xml:"tableName"`
 	XPath   string            `xml:"xpath"`
 }
 
 type GatewaySQLTableXPath struct {
-	XMLName xml.Name          `xml:"xpath"`
+	XMLName xml.Name          `xml:"xpath" json:"-" yaml:"-"`
 	Name    *SingleLineString `xml:"tableName"`
 	XPaths  []string          `xml:"xpaths>xpath"`
 	Columns []GWSQLColumn     `xml:"columns>column"`
@@ -64,7 +64,7 @@ type GWSQLColumn struct {
 }
 
 type GWSQLView struct {
-	XMLName  xml.Name          `xml:"view"`
+	XMLName  xml.Name          `xml:"view" json:"-" yaml:"-"`
 	ViewName *SingleLineString `xml:"name"`
 	SQL      *SingleLineString `xml:"sql"`
 }

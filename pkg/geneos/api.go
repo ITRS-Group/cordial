@@ -44,6 +44,6 @@ type APIStreamsPlugin struct {
 }
 
 type Streams struct {
-	XMLName xml.Name            `xml:"streams"`
+	XMLName xml.Name            `xml:"streams" json:"-" yaml:"-"`
 	Stream  []*SingleLineString `xml:"stream"`
 }

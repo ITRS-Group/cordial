@@ -36,7 +36,7 @@ type FTMPlugin struct {
 }
 
 type FTMFile struct {
-	XMLName         xml.Name            `xml:"file"`
+	XMLName         xml.Name            `xml:"file" json:"-" yaml:"-"`
 	Path            *SingleLineString   `xml:"path"`
 	AdditionalPaths *FTMAdditionalPaths `xml:"additionalPaths,omitempty"`
 	ExpectedArrival *Value              `xml:"expectedArrival,omitempty"`
@@ -61,7 +61,7 @@ type FTMAdditionalPaths struct {
 }
 
 type FTMHolidaysVars struct {
-	XMLName xml.Name            `xml:"holidaysVar"`
+	XMLName xml.Name            `xml:"holidaysVar" json:"-" yaml:"-"`
 	Holiday []*SingleLineString `xml:"holiday,omitempty"`
 	Day     *FTMWeekdays        `xml:"day,omitempty"`
 }
