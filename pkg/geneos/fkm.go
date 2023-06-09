@@ -31,48 +31,57 @@ import (
 
 type FKMPlugin struct {
 	Display *FKMDisplay `xml:"fkm>display,omitempty"`
-	Files   []FKMFile   `xml:"fkm>files>file,omitempty"`
+	Files   FKMFiles    `xml:",omitempty" mapstructure:"files"`
 }
 
 type FKMDisplay struct {
 	TriggerMode string `xml:"triggerMode,omitempty"`
 }
 
+type FKMFiles struct {
+	XMLName xml.Name   `xml:"files" json:"-" yaml:"-"`
+	Files   []FKMFiles `mapstructure:"file"`
+}
+
 type FKMFile struct {
-	XMLName             xml.Name          `xml:"file"`
-	Filename            *SingleLineString `xml:"source>filename,omitempty"`
-	Stream              *SingleLineString `xml:"source>stream,omitempty"`
-	Tables              []FKMTable        `xml:"tables>table,omitempty"`
-	ClearTime           *Value            `xml:"clearTime"`
-	DefaultKeyClearTime *Value            `xml:"defaultKeyClearTime"`
-	Rewind              *Value            `xml:"rewind"`
-	Alias               *Value            `xml:"alias"`
+	XMLName             xml.Name      `xml:"file" json:"-" yaml:"-"`
+	Source              FKMFileSource `xml:"source"`
+	Tables              []FKMTable    `xml:"tables>table,omitempty" mapstructure:"tables"`
+	ClearTime           *Value        `xml:"clearTime"`
+	DefaultKeyClearTime *Value        `xml:"defaultKeyClearTime"`
+	Rewind              *Value        `xml:"rewind"`
+	Alias               *Value        `xml:"alias"`
+}
+
+type FKMFileSource struct {
+	Filename *SingleLineString `xml:"filename,omitempty" mapstructure:"filename"`
+	Stream   *SingleLineString `xml:"stream,omitempty" mapstructure:"stream"`
 }
 
 type FKMTable struct {
-	XMLName  xml.Name `xml:"table"`
+	XMLName  xml.Name `xml:"table" json:"-" yaml:"-"`
 	Severity string   `xml:"severity"`
 	KeyTable *Value   `xml:"keyTable"`
 }
 
 type FKMKeyTable struct {
-	XMLName xml.Name `xml:"fkmTable"`
+	XMLName xml.Name `xml:"fkmTable" json:"-" yaml:"-"`
 	Name    string   `xml:"ref,attr"`
 }
 
 type FKMStaticKeyTable struct {
-	XMLName xml.Name `xml:"fkmTable"`
+	XMLName xml.Name `xml:"fkmTable" json:"-" yaml:"-"`
 	Name    string   `xml:"name,attr"`
 	Keys    FKMKeys
 }
 
 type FKMKeyData struct {
-	XMLName xml.Name `xml:"data"`
+	XMLName xml.Name `xml:"data" json:"-" yaml:"-"`
 	Keys    FKMKeys
 }
 
 type FKMKeys struct {
-	XMLName xml.Name      `xml:"keys"`
+	XMLName xml.Name      `xml:"keys" json:"-" yaml:"-"`
 	Keys    []interface{} // should be FKMIgnoreKey or FKMKey
 }
 
@@ -201,13 +210,13 @@ func (in FKMKeys) Append(key string) (out FKMKeys) {
 }
 
 type FKMIgnoreKey struct {
-	XMLName xml.Name `xml:"ignoreKey"`
+	XMLName xml.Name `xml:"ignoreKey" json:"-" yaml:"-"`
 	Match   FKMMatch `xml:"match"`
 	// ActiveTime
 }
 
 type FKMKey struct {
-	XMLName  xml.Name  `xml:"key"`
+	XMLName  xml.Name  `xml:"key" json:"-" yaml:"-"`
 	SetKey   FKMSetKey `xml:"setKey"`
 	ClearKey *FKMMatch `xml:"clearKey,omitempty"`
 	Message  *Value    `xml:"message,omitempty"`
