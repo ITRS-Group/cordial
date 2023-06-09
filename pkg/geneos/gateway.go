@@ -36,7 +36,6 @@ package geneos
 
 import (
 	"encoding/xml"
-	"time"
 )
 
 type Gateway struct {
@@ -50,70 +49,9 @@ type Gateway struct {
 	Environments    *Environments
 }
 
-type ManagedEntities struct {
-	XMLName             xml.Name             `xml:"managedEntities"`
-	Entities            []ManagedEntity      `xml:",omitempty"`
-	ManagedEntityGroups []ManagedEntityGroup `xml:",omitempty"`
-}
-
-type ManagedEntityGroup struct {
-	XMLName             xml.Name             `xml:"managedEntityGroup"`
-	Name                string               `xml:"name,attr"`
-	Attributes          []Attribute          `xml:",omitempty"`
-	Vars                []Vars               `xml:",omitempty"`
-	Entities            []ManagedEntity      `xml:",omitempty"`
-	ManagedEntityGroups []ManagedEntityGroup `xml:",omitempty"`
-}
-
-type ManagedEntity struct {
-	XMLName xml.Name `xml:"managedEntity"`
-	Name    string   `xml:"name,attr"`
-	Probe   struct {
-		Name     string         `xml:"ref,attr"`
-		Timezone *time.Location `xml:"-"`
-	} `xml:"probe"`
-	Environment *EnvironmentRef `xml:",omitempty"`
-	Attributes  []Attribute     `xml:",omitempty"`
-	AddTypes    struct {
-		XMLName xml.Name  `xml:"addTypes"`
-		Types   []TypeRef `xml:",omitempty"`
-	}
-	Vars     []Vars      `xml:",omitempty"`
-	Samplers []Reference `xml:"sampler,omitempty"`
-}
-
 type EnvironmentRef struct {
 	XMLName xml.Name `xml:"environment"`
-	Ref     string   `xml:"ref,attr"`
-}
-
-type TypeRef struct {
-	XMLName     xml.Name        `xml:"type"`
-	Type        string          `xml:"ref,attr"`
-	Environment *EnvironmentRef `xml:"environment"`
-}
-
-type Attribute struct {
-	XMLName xml.Name `xml:"attribute"`
-	Name    string   `xml:"name,attr"`
-	Value   string   `xml:",innerxml"`
-}
-
-type Types struct {
-	XMLName xml.Name `xml:"types"`
-	Group   struct {
-		XMLName xml.Name `xml:"typeGroup"`
-		Name    string   `xml:"name,attr"`
-		Types   []Type
-	}
-}
-
-type Type struct {
-	XMLName      xml.Name    `xml:"type"`
-	Name         string      `xml:"name,attr"`
-	Environments []Reference `xml:"environment,omitempty"`
-	Vars         []Vars      `xml:",omitempty"`
-	Samplers     []Reference `xml:"sampler,omitempty"`
+	Ref     string   `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Environments struct {
@@ -133,34 +71,6 @@ type Environment struct {
 	Name         string        `xml:"name,attr"`
 	Environments []Environment `xml:"environment,omitempty"`
 	Vars         []Vars
-}
-
-type Samplers struct {
-	XMLName       xml.Name       `xml:"samplers"`
-	Samplers      []Sampler      `xml:",omitempty"`
-	SamplerGroups []SamplerGroup `xml:",omitempty"`
-}
-
-type SamplerGroup struct {
-	XMLName       xml.Name       `xml:"samplerGroup"`
-	Name          string         `xml:"name,attr"`
-	Samplers      []Sampler      `xml:",omitempty"`
-	SamplerGroups []SamplerGroup `xml:",omitempty"`
-}
-
-// A Sampler is a Geneos Sampler structure. The Plugin field should be
-// populated with a pointer to a Plugin struct of the wanted type.
-type Sampler struct {
-	XMLName                xml.Name                `xml:"sampler"`
-	Name                   string                  `xml:"name,attr"`
-	Comment                string                  `xml:",comment"`
-	Group                  *SingleLineString       `xml:"var-group,omitempty"`
-	Interval               *Value                  `xml:"sampleInterval,omitempty"`
-	SampleOnStartup        bool                    `xml:"sampleOnStartup"`
-	Plugin                 interface{}             `xml:"plugin"`
-	Dataviews              *[]Dataview             `xml:"dataviews>dataview,omitempty"`
-	Schemas                *Schemas                `xml:"schemas,omitempty"`
-	StandardisedFormatting *StandardisedFormatting `xml:"standardisedFormatting,omitempty"`
 }
 
 type Dataview struct {

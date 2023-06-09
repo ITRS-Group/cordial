@@ -1,3 +1,25 @@
+/*
+Copyright © 2022 ITRS Group
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
 package geneos
 
 import "encoding/xml"
@@ -14,22 +36,22 @@ import "encoding/xml"
 // booleans and ints that can be zero, in groups.
 
 type Probes struct {
-	XMLName       xml.Name        `xml:"probes" json:"-" yaml:"-"`
-	ProbeGroup    []ProbeGroup    `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
-	Probe         []Probe         `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
-	VirtualProbe  []VirtualProbe  `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
-	FloatingProbe []FloatingProbe `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
+	XMLName        xml.Name        `xml:"probes" json:"-" yaml:"-"`
+	ProbeGroups    []ProbeGroup    `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probegroup"`
+	Probes         []Probe         `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probe"`
+	VirtualProbes  []VirtualProbe  `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"virtualprobe"`
+	FloatingProbes []FloatingProbe `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"floatingprobe"`
 }
 
 type ProbeGroup struct {
-	XMLName       xml.Name `xml:"probeGroup" json:"-" yaml:"-"`
-	Name          string   `xml:"name,attr" json:"name"`
-	Disabled      bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
-	ProbeInfo     `yaml:",inline" mapstructure:",squash"`
-	ProbeGroup    []ProbeGroup    `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
-	Probe         []Probe         `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
-	VirtualProbe  []VirtualProbe  `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
-	FloatingProbe []FloatingProbe `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
+	XMLName        xml.Name `xml:"probeGroup" json:"-" yaml:"-"`
+	Name           string   `xml:"name,attr"`
+	Disabled       bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	ProbeInfo      `yaml:",inline" mapstructure:",squash"`
+	ProbeGroups    []ProbeGroup    `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probegroup"`
+	Probes         []Probe         `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probe"`
+	VirtualProbes  []VirtualProbe  `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"virtualprobe"`
+	FloatingProbes []FloatingProbe `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"floatingprobe"`
 }
 
 // ProbeInfo is embedded in groups and probes
@@ -50,7 +72,7 @@ type ProbeInfoWithoutPort struct {
 
 type Probe struct {
 	XMLName   xml.Name `xml:"probe" json:"-" yaml:"-"`
-	Name      string   `xml:"name,attr" json:"name"`
+	Name      string   `xml:"name,attr"`
 	Disabled  bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 	Hostname  string   `xml:"hostname" json:"hostname"`
 	ProbeInfo `yaml:",inline" mapstructure:",squash"`
@@ -58,7 +80,7 @@ type Probe struct {
 
 type VirtualProbe struct {
 	XMLName  xml.Name `xml:"virtualProbe" json:"-" yaml:"-"`
-	Name     string   `xml:"name.attr" json:"name"`
+	Name     string   `xml:"name.attr"`
 	Disabled bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
