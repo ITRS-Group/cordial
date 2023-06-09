@@ -31,15 +31,15 @@ import (
 // be set at a time. This list is not complete, much like many of the
 // configuration settings.
 type Vars struct {
-	XMLName       xml.Name       `xml:"var"`
+	XMLName       xml.Name       `xml:"var" json:"-" yaml:"-"`
 	Name          string         `xml:"name,attr"`
-	Boolean       *bool          `xml:"boolean,omitempty"`
-	Double        *float64       `xml:"double,omitempty"`
-	Integer       *int64         `xml:"integer,omitempty"`
-	String        string         `xml:"string,omitempty"`
-	StringList    *StringList    `xml:"stringList,omitempty"`
-	NameValueList *NameValueList `xml:"nameValueList,omitempty"`
-	Macro         *Macro         `xml:"macro,omitempty"`
+	Boolean       *bool          `xml:"boolean,omitempty" json:",omitempty" yaml:",omitempty"`
+	Double        *float64       `xml:"double,omitempty" json:",omitempty" yaml:",omitempty"`
+	Integer       *int64         `xml:"integer,omitempty" json:",omitempty" yaml:",omitempty"`
+	String        string         `xml:"string,omitempty" json:",omitempty" yaml:",omitempty"`
+	StringList    *StringList    `xml:"stringList,omitempty" json:",omitempty" yaml:",omitempty"`
+	NameValueList *NameValueList `xml:"nameValueList,omitempty" json:",omitempty" yaml:",omitempty"`
+	Macro         *Macro         `xml:"macro,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 // Macro is a container for the various macro variable types. Only
@@ -48,14 +48,14 @@ type Vars struct {
 //
 //	macro := geneos.Macro{InsecureGatewayPort: &geneos.EmptyStruct{}}
 type Macro struct {
-	InsecureGatewayPort *EmptyStruct `xml:"insecureGatewayPort,omitempty"`
-	GatewayName         *EmptyStruct `xml:"gatewayName,omitempty"`
-	NetprobeName        *EmptyStruct `xml:"netprobeName,omitempty"`
-	NetprobeHost        *EmptyStruct `xml:"netprobeHost,omitempty"`
-	NetprobePort        *EmptyStruct `xml:"netprobePort,omitempty"`
-	ManagedEntitiesName *EmptyStruct `xml:"managedEntityName,omitempty"`
-	SamplerName         *EmptyStruct `xml:"samplerName,omitempty"`
-	SecureGatewayPort   *EmptyStruct `xml:"secureGatewayPort,omitempty"`
+	InsecureGatewayPort *EmptyStruct `xml:"insecureGatewayPort,omitempty" json:",omitempty" yaml:",omitempty"`
+	GatewayName         *EmptyStruct `xml:"gatewayName,omitempty" json:",omitempty" yaml:",omitempty"`
+	NetprobeName        *EmptyStruct `xml:"netprobeName,omitempty" json:",omitempty" yaml:",omitempty"`
+	NetprobeHost        *EmptyStruct `xml:"netprobeHost,omitempty" json:",omitempty" yaml:",omitempty"`
+	NetprobePort        *EmptyStruct `xml:"netprobePort,omitempty" json:",omitempty" yaml:",omitempty"`
+	ManagedEntitiesName *EmptyStruct `xml:"managedEntityName,omitempty" json:",omitempty" yaml:",omitempty"`
+	SamplerName         *EmptyStruct `xml:"samplerName,omitempty" json:",omitempty" yaml:",omitempty"`
+	SecureGatewayPort   *EmptyStruct `xml:"secureGatewayPort,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 // EmptyStruct is an empty struct used to indicate which macro VarMacro refers
@@ -63,11 +63,29 @@ type Macro struct {
 type EmptyStruct struct{}
 
 type StringList struct {
-	Strings []string `xml:"string"`
+	Strings []string `xml:"string" mapstructure:"string"`
+}
+
+// UnmarshalText conforms to the mapstructure decode hook to covert an
+// empty tag to a map, not a string (from mxj)
+func (s *StringList) UnmarshalText(text []byte) error {
+	if len(text) == 0 {
+		s = &StringList{}
+	}
+	return nil
 }
 
 type NameValueList struct {
-	NameValues []NameValue `xml:"item,omitempty"`
+	NameValues []NameValue `xml:"item,omitempty" json:",omitempty" yaml:",omitempty"`
+}
+
+// UnmarshalText conforms to the mapstructure decode hook to covert an
+// empty tag to a map, not a string (from mxj)
+func (s *NameValueList) UnmarshalText(text []byte) error {
+	if len(text) == 0 {
+		s = &NameValueList{}
+	}
+	return nil
 }
 
 type NameValue struct {
@@ -76,7 +94,7 @@ type NameValue struct {
 }
 
 type Reference struct {
-	Ref string `xml:"ref,attr"`
+	Ref string `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // A SingleLineString is a container for a single line string that
@@ -125,12 +143,12 @@ func NewSingleLineString(in string) (s *SingleLineString) {
 }
 
 type Var struct {
-	XMLName xml.Name `xml:"var"`
+	XMLName xml.Name `xml:"var" json:"-" yaml:"-"`
 	Var     string   `xml:"ref,attr"`
 }
 
 type Data struct {
-	XMLName xml.Name `xml:"data"`
+	XMLName xml.Name `xml:"data" json:"-" yaml:"-"`
 	Data    string   `xml:",chardata"`
 }
 
