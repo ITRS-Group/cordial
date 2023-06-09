@@ -39,18 +39,18 @@ type FKMDisplay struct {
 }
 
 type FKMFiles struct {
-	XMLName xml.Name   `xml:"files" json:"-" yaml:"-"`
-	Files   []FKMFiles `mapstructure:"file"`
+	XMLName xml.Name  `xml:"files" json:"-" yaml:"-"`
+	Files   []FKMFile `mapstructure:"file"`
 }
 
 type FKMFile struct {
-	XMLName             xml.Name      `xml:"file" json:"-" yaml:"-"`
-	Source              FKMFileSource `xml:"source"`
-	Tables              []FKMTable    `xml:"tables>table,omitempty" mapstructure:"tables"`
-	ClearTime           *Value        `xml:"clearTime"`
-	DefaultKeyClearTime *Value        `xml:"defaultKeyClearTime"`
-	Rewind              *Value        `xml:"rewind"`
-	Alias               *Value        `xml:"alias"`
+	XMLName             xml.Name       `xml:"file" json:"-" yaml:"-"`
+	Source              *FKMFileSource `xml:"source"`
+	Tables              []FKMTable     `xml:"tables>table,omitempty" mapstructure:"tables"`
+	ClearTime           *Value         `xml:"clearTime"`
+	DefaultKeyClearTime *Value         `xml:"defaultKeyClearTime"`
+	Rewind              *Value         `xml:"rewind"`
+	Alias               *Value         `xml:"alias"`
 }
 
 type FKMFileSource struct {
