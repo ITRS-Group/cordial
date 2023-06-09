@@ -24,18 +24,21 @@ package geneos
 
 import "encoding/xml"
 
+// These types represent those found in a netprobe setup file (SAN or
+// floating) and not a probe config in the gateway
+
 type Netprobe struct {
-	XMLName          xml.Name       `xml:"netprobe"`
-	Compatibility    int            `xml:"compatibility,attr"`                 // 1
-	XMLNs            string         `xml:"xmlns:xsi,attr"`                     // http://www.w3.org/2001/XMLSchema-instance
-	XSI              string         `xml:"xsi:noNamespaceSchemaLocation,attr"` // http://schema.itrsgroup.com/GA5.12.0-220125/netprobe.xsd
-	FloatingProbe    *FloatingProbe `xml:"floatingProbe,omitempty"`
-	PluginWhiteList  []string       `xml:"pluginWhiteList,omitempty"`
-	CommandWhiteList []string       `xml:"commandWhiteList,omitempty"`
-	SelfAnnounce     *SelfAnnounce  `xml:"selfAnnounce,omitempty"`
+	XMLName          xml.Name          `xml:"netprobe"`
+	Compatibility    int               `xml:"compatibility,attr"`                 // 1
+	XMLNs            string            `xml:"xmlns:xsi,attr"`                     // http://www.w3.org/2001/XMLSchema-instance
+	XSI              string            `xml:"xsi:noNamespaceSchemaLocation,attr"` // http://schema.itrsgroup.com/GA5.12.0-220125/netprobe.xsd
+	FloatingNetprobe *FloatingNetprobe `xml:"floatingProbe,omitempty"`
+	PluginWhiteList  []string          `xml:"pluginWhiteList,omitempty"`
+	CommandWhiteList []string          `xml:"commandWhiteList,omitempty"`
+	SelfAnnounce     *SelfAnnounce     `xml:"selfAnnounce,omitempty"`
 }
 
-type FloatingProbe struct {
+type FloatingNetprobe struct {
 	Enabled                  bool       `xml:"enabled"`
 	RetryInterval            int        `xml:"retryInterval,omitempty"`
 	RequireReverseConnection bool       `xml:"requireReverseConnection,omitempty"`
