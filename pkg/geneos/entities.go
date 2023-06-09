@@ -33,12 +33,12 @@ type ManagedEntities struct {
 }
 
 type ManagedEntityGroup struct {
-	XMLName             xml.Name             `xml:"managedEntityGroup" json:"-" yaml:"-"`
-	Name                string               `xml:"name,attr"`
-	Disabled            bool                 `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	XMLName             xml.Name `xml:"managedEntityGroup" json:"-" yaml:"-"`
+	Name                string   `xml:"name,attr"`
+	Disabled            bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	ManagedEntityInfo   `yaml:",inline" mapstructure:",squash"`
 	Entities            []ManagedEntity      `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentity"`
 	ManagedEntityGroups []ManagedEntityGroup `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentitygroup"`
-	ManagedEntityInfo   `yaml:",inline" mapstructure:",squash"`
 }
 
 type ManagedEntity struct {
@@ -55,11 +55,11 @@ type ManagedEntity struct {
 
 type ManagedEntityInfo struct {
 	Attributes []Attribute `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"attribute"`
-	Vars       []Vars      `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
 	AddTypes   struct {
 		XMLName xml.Name  `xml:"addTypes" json:"-" yaml:"-"`
 		Types   []TypeRef `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
 	} `json:",omitempty" yaml:",omitempty"`
+	Vars []Vars `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
 }
 
 type Attribute struct {
