@@ -55,11 +55,18 @@ type ManagedEntity struct {
 
 type ManagedEntityInfo struct {
 	Attributes []Attribute `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"attribute"`
-	AddTypes   struct {
-		XMLName xml.Name  `xml:"addTypes" json:"-" yaml:"-"`
-		Types   []TypeRef `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
-	} `json:",omitempty" yaml:",omitempty"`
-	Vars []Vars `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
+	AddTypes   *AddTypes   `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
+	Vars       []Vars      `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
+}
+
+// struct {
+// 	XMLName xml.Name  `xml:"addTypes" json:"-" yaml:"-"`
+// 	Types   []TypeRef `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
+// } `json:",omitempty" yaml:",omitempty"`
+
+type AddTypes struct {
+	XMLName xml.Name  `xml:"addTypes" json:"-" yaml:"-"`
+	Types   []TypeRef `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
 }
 
 type Attribute struct {
@@ -70,6 +77,6 @@ type Attribute struct {
 
 type TypeRef struct {
 	XMLName     xml.Name        `xml:"type" json:"-" yaml:"-"`
-	Type        string          `xml:"ref,attr"`
-	Environment *EnvironmentRef `xml:",omitempty"`
+	Type        string          `xml:"ref,attr" json:",omitempty" yaml:",omitempty" mapstructure:"ref"`
+	Environment *EnvironmentRef `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
 }

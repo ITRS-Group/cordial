@@ -50,7 +50,7 @@ type Gateway struct {
 }
 
 type EnvironmentRef struct {
-	XMLName xml.Name `xml:"environment"`
+	XMLName xml.Name `xml:"environment" json:"-" yaml:"-"`
 	Ref     string   `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
 }
 
