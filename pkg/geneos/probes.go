@@ -70,8 +70,15 @@ type ProbeInfoWithoutPort struct {
 	MaxToolkitProcesses    int `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"maxtoolkitprocesses"`
 }
 
+const (
+	ProbeTypeProbe int = iota
+	ProbeTypeFloating
+	ProbeTypeVirtual
+)
+
 type Probe struct {
 	XMLName   xml.Name `xml:"probe" json:"-" yaml:"-"`
+	Type      int      `xml:"-" json:"-" yaml:"-"`
 	Name      string   `xml:"name,attr"`
 	Disabled  bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 	Hostname  string   `xml:"hostname" json:"hostname"`

@@ -42,6 +42,11 @@ type Vars struct {
 	Macro         *Macro         `xml:"macro,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
+// GetKey satisfies the KeyedObject interface
+func (v Vars) GetKey() string {
+	return v.Name
+}
+
 // Macro is a container for the various macro variable types. Only
 // initialise one field to an empty struct, the rest must be nil
 // pointers. e.g.

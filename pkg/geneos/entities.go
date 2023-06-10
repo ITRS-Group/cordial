@@ -75,6 +75,11 @@ type Attribute struct {
 	Value   string   `xml:",innerxml" mapstructure:"#text"`
 }
 
+// GetKey satisfies the KeyedObject interface
+func (a Attribute) GetKey() string {
+	return a.Name
+}
+
 type TypeRef struct {
 	XMLName     xml.Name        `xml:"type" json:"-" yaml:"-"`
 	Type        string          `xml:"ref,attr" json:",omitempty" yaml:",omitempty" mapstructure:"ref"`
