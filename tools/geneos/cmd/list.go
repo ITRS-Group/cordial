@@ -81,7 +81,7 @@ var listCmd = &cobra.Command{
 		ct, args, params := CmdArgsParams(cmd)
 		switch {
 		case listCmdJSON, listCmdIndent:
-			results, _ := instance.ForAllWithResults(ct, listInstanceJSON, args, params)
+			results, _ := instance.ForAllWithResults(ct, Hostname, listInstanceJSON, args, params)
 			var b []byte
 			if listCmdIndent {
 				b, _ = json.MarshalIndent(results, "", "    ")
