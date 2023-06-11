@@ -23,7 +23,7 @@ THE SOFTWARE.
 package host
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -32,6 +32,8 @@ import (
 	"os/user"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -578,6 +580,10 @@ func (h *SSHRemote) Signal(pid int, signal syscall.Signal) (err error) {
 // shell and backgrounds and redirects. May not work on all remotes and
 // for all processes.
 func (h *SSHRemote) Start(cmd *exec.Cmd, env []string, home, errfile string) (err error) {
+	if strings.Contains(h.ServerVersion(), "windows") {
+		err = errors.New("cannot run remote commands on windows")
+	}
+
 	rem, err := h.Dial()
 	if err != nil {
 		return
@@ -609,7 +615,7 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, env []string, home, errfile string) (er
 	for _, e := range env {
 		fmt.Fprintln(pipe, "export", e)
 	}
-	fmt.Fprintf(pipe, "%s > %q 2>&1 &", cmdstr, errfile)
+	fmt.Fprintf(pipe, "%s > %q 2>&1 &\n", cmdstr, errfile)
 	fmt.Fprintln(pipe, "exit")
 	sess.Close()
 	// wait a short while for remote to catch-up
@@ -620,8 +626,13 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, env []string, home, errfile string) (er
 
 // Run starts a process on an SSH attached remote host h. It uses a
 // shell and waits for the process status before returning. It returns
-// the output and any error
+// the output and any error. errfile is an optional (remote) file for
+// stderr output
 func (h *SSHRemote) Run(cmd *exec.Cmd, env []string, home, errfile string) (output []byte, err error) {
+	if strings.Contains(h.ServerVersion(), "windows") {
+		err = errors.New("cannot run remote commands on windows")
+	}
+
 	rem, err := h.Dial()
 	if err != nil {
 		return
@@ -641,25 +652,28 @@ func (h *SSHRemote) Run(cmd *exec.Cmd, env []string, home, errfile string) (outp
 	for _, a := range cmd.Args {
 		cmdstr = fmt.Sprintf("%s %q", cmdstr, a)
 	}
-	pipe, err := sess.StdinPipe()
-	if err != nil {
-		return
+	// pipe, err := sess.StdinPipe()
+	// if err != nil {
+	// 	return
+	// }
+
+	if errfile != "" {
+		if !filepath.IsAbs(errfile) {
+			errfile = filepath.Join(home, errfile)
+		}
+		e, err := h.Create(errfile, 0664)
+		if err != nil {
+			return []byte{}, err
+		}
+		defer e.Close()
+		sess.Stderr = e
 	}
 
-	var buf bytes.Buffer
-	sess.Stdout = &buf
-
-	if err = sess.Shell(); err != nil {
-		return
-	}
-	if home != "" {
-		fmt.Fprintln(pipe, "cd", home)
-	}
+	envs := []string{}
 	for _, e := range env {
-		fmt.Fprintln(pipe, "export", e)
+		envs = append(envs, strconv.Quote(e))
 	}
-	fmt.Fprintf(pipe, "%s 2> %q", cmdstr, errfile)
-	fmt.Fprintln(pipe, "exit")
-	sess.Close()
-	return buf.Bytes(), sess.Wait()
+	cmdstr = fmt.Sprintf("cd %s && %s %s", home, strings.Join(env, " "), cmdstr)
+
+	return sess.Output(cmdstr)
 }
