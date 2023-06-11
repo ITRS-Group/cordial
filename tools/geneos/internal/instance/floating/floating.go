@@ -264,7 +264,7 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 		}
 	}
 	return instance.CreateConfigFromTemplate(s,
-		cf.GetString("setup", config.Default(filepath.Join(s.Home(), "netprobe.setup.xml"))),
+		cf.GetString("setup"),
 		instance.Filename(s, "config::template"),
 		template)
 }
@@ -276,7 +276,7 @@ func (s *Floatings) Command() (args, env []string, home string) {
 		s.Name(),
 		"-listenip", "none",
 		"-port", cf.GetString("port"),
-		"-setup", cf.GetString("setup", config.Default(filepath.Join(s.Home(), "netprobe.setup.xml"))),
+		"-setup", cf.GetString("setup"),
 		"-setup-interval", "300",
 	}
 	args = append(args, instance.SetSecureArgs(s)...)

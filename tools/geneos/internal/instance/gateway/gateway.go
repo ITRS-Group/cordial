@@ -307,7 +307,10 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 		}
 	}
 
-	return instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "gateway.setup.xml"), instance.Filename(g, "config::template"), template)
+	return instance.CreateConfigFromTemplate(g,
+		g.Config().GetString("setup"),
+		instance.Filename(g, "config::template"),
+		template)
 }
 
 func (g *Gateways) Command() (args, env []string, home string) {
@@ -323,7 +326,7 @@ func (g *Gateways) Command() (args, env []string, home string) {
 		"-log",
 		instance.LogFile(g),
 		"-setup",
-		path.Join(cf.GetString("home"), "gateway.setup.xml"),
+		g.Config().GetString("setup"),
 		// enable stats by default
 		"-stats",
 	}
