@@ -463,14 +463,18 @@ func ForAll(ct *geneos.Component, hostname string, fn func(geneos.Instance, []st
 // and gather the return values into a slice of interfaces for handling
 // upstream. Errors are printed on STDOUT for each call and the only
 // error returned ErrNotExist if there are no matches.
-func ForAllWithResults(ct *geneos.Component, fn func(geneos.Instance, []string) (interface{}, error), args []string, params []string) (results []interface{}, err error) {
+func ForAllWithResults(ct *geneos.Component, hostname string, fn func(geneos.Instance, []string) (interface{}, error), args []string, params []string) (results []interface{}, err error) {
 	n := 0
 	log.Debug().Msgf("args %v, params %v", args, params)
 	// if args is empty, get all matching instances. this allows internal
 	// calls with an empty arg list without having to do the parseArgs()
 	// dance
+	h := geneos.GetHost(hostname)
+	if h == nil {
+		h = geneos.ALL
+	}
 	if len(args) == 0 {
-		args = AllNames(geneos.ALL, ct)
+		args = AllNames(h, ct)
 	}
 	for _, name := range args {
 		var res interface{}

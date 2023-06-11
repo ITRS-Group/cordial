@@ -24,6 +24,7 @@ package cmd
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -32,8 +33,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var commandCmdJSON bool
+
 func init() {
 	GeneosCmd.AddCommand(commandCmd)
+
+	commandCmd.Flags().BoolVarP(&commandCmdJSON, "json", "j", false, "JSON formatted output")
 }
 
 //go:embed _docs/command.md
@@ -51,6 +56,18 @@ var commandCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := CmdArgsParams(cmd)
+		if commandCmdJSON {
+			results, err := instance.ForAllWithResults(ct, Hostname, commandInstanceJSON, args, params)
+			if err != nil {
+				return err
+			}
+			b, err := json.MarshalIndent(results, "", "    ")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(b))
+			return nil
+		}
 		return instance.ForAll(ct, Hostname, commandInstance, args, params)
 	},
 }
@@ -72,4 +89,30 @@ func commandInstance(c geneos.Instance, params []string) (err error) {
 		fmt.Println()
 	}
 	return
+}
+
+func commandInstanceJSON(c geneos.Instance, params []string) (result interface{}, err error) {
+	cmd, env, home := instance.BuildCmd(c)
+	command := &command{
+		Instance: c.Name(),
+		Type:     c.Type().Name,
+		Host:     c.Host().String(),
+		Path:     cmd.Path,
+		Env:      env,
+		Home:     home,
+	}
+	if len(cmd.Args) > 1 {
+		command.Args = cmd.Args[1:]
+	}
+	return command, nil
+}
+
+type command struct {
+	Instance string   `json:"instance"`
+	Type     string   `json:"type"`
+	Host     string   `json:"host"`
+	Path     string   `json:"path"`
+	Args     []string `json:"arguments,omitempty"`
+	Env      []string `json:"environment,omitempty"`
+	Home     string   `json:"directory"`
 }
