@@ -10,6 +10,7 @@ require (
 	github.com/aymerick/douceur v0.2.0
 	github.com/go-ldap/ldap/v3 v3.4.4
 	github.com/go-mail/mail/v2 v2.3.0
+	github.com/google/go-querystring v1.1.0
 	github.com/gurkankaymak/hocon v1.2.15
 	github.com/hashicorp/go-reap v0.0.0-20230117204525-bf69c61a7b71
 	github.com/hashicorp/go-version v1.6.0
@@ -41,7 +42,6 @@ require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect

@@ -23,10 +23,12 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -49,12 +51,18 @@ type showCmdConfig struct {
 	Configuration interface{}           `json:"configuration,omitempty"`
 }
 
-var showCmdRaw bool
+var showCmdRaw, showCmdSetup, showCmdMerge bool
+var showCmdOutput string
 
 func init() {
 	GeneosCmd.AddCommand(showCmd)
 
+	showCmd.Flags().StringVarP(&showCmdOutput, "output", "o", "", "Output file, default stdout")
+
 	showCmd.Flags().BoolVarP(&showCmdRaw, "raw", "r", false, "Show raw (unexpanded) configuration values")
+
+	showCmd.Flags().BoolVarP(&showCmdSetup, "setup", "s", false, "Show the instance Geneos configuration file, if any")
+	showCmd.Flags().BoolVarP(&showCmdMerge, "merge", "m", false, "Merge Gateway configurations using the Gateway -dump-xml flag")
 
 	showCmd.Flags().SortFlags = false
 }
@@ -75,6 +83,36 @@ var showCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		ct, args, params := CmdArgsParams(cmd)
+		output := os.Stdout
+		if showCmdOutput != "" {
+			output, err = os.Create(showCmdOutput)
+			if err != nil {
+				return
+			}
+		}
+
+		if showCmdSetup {
+			params = []string{}
+			if showCmdMerge {
+				params = append(params, "merge")
+			}
+			var results []interface{}
+			results, err = instance.ForAllWithResults(ct, showInstanceConfig, args, params)
+
+			if err != nil {
+				if err == os.ErrNotExist {
+					return fmt.Errorf("no matching instance found")
+				}
+			}
+			for _, r := range results {
+				result, ok := r.(showConfig)
+				if !ok {
+					return
+				}
+				fmt.Fprintf(output, "<!-- configuration for %s -->\n\n%s\n\n", result.c, result.file)
+			}
+			return
+		}
 		results, err := instance.ForAllWithResults(ct, showInstance, args, params)
 		if err != nil {
 			if err == os.ErrNotExist {
@@ -83,9 +121,58 @@ var showCmd = &cobra.Command{
 			return
 		}
 		b, _ := json.MarshalIndent(results, "", "    ")
-		fmt.Println(string(b))
+		fmt.Fprintln(output, string(b))
 		return
 	},
+}
+
+type showConfig struct {
+	c    geneos.Instance
+	file []byte
+}
+
+// showInstanceConfig returns a slice of showConfig structs per instance
+func showInstanceConfig(c geneos.Instance, params []string) (result interface{}, err error) {
+	setup := c.Config().GetString("setup")
+	if setup == "" {
+		return
+	}
+	if c.Type().String() == "gateway" && len(params) > 0 && params[0] == "merge" {
+		// run a gateway with -dump-xml and consume the result, discard the heading
+		cmd, env, home := instance.BuildCmd(c)
+		// replace args with a more limited set
+		cmd.Args = []string{
+			cmd.Path,
+			"-resources-dir",
+			path.Join(instance.BaseVersion(c), "resources"),
+			"-nolog",
+			"-setup",
+			c.Config().GetString("setup"),
+			"-dump-xml",
+		}
+		var output []byte
+		// we don't care about errors, just the output
+		output, _ = c.Host().Run(cmd, env, home, "errors.txt")
+		i := bytes.Index(output, []byte("<?xml"))
+		if i == -1 {
+			return
+		}
+		result = showConfig{
+			c:    c,
+			file: output[i:],
+		}
+		return
+	}
+	file, err := os.ReadFile(setup)
+	if err != nil {
+		return
+	}
+	result = showConfig{
+		c:    c,
+		file: file,
+	}
+
+	return
 }
 
 func showInstance(c geneos.Instance, params []string) (result interface{}, err error) {
