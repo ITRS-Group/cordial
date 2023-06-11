@@ -23,7 +23,6 @@ THE SOFTWARE.
 package host
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"io/fs"
@@ -33,7 +32,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"syscall"
-	"time"
 
 	"github.com/spf13/afero"
 )
@@ -183,10 +181,18 @@ func (h *Local) Signal(pid int, signal syscall.Signal) (err error) {
 func (h *Local) Start(cmd *exec.Cmd, env []string, home, errfile string) (err error) {
 	cmd.Env = append(os.Environ(), env...)
 
+	if errfile == "" {
+		errfile = os.DevNull
+	}
+	if !filepath.IsAbs(errfile) {
+		errfile = filepath.Join(home, errfile)
+	}
+
 	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return
 	}
+	defer out.Close()
 
 	procSetupOS(cmd, out, true)
 
@@ -206,7 +212,7 @@ func (h *Local) Start(cmd *exec.Cmd, env []string, home, errfile string) (err er
 }
 
 // Run starts a program, waits for completion and returns the output
-// and/or any error
+// and/or any error. errfile is either absolute or relative to home.
 func (h *Local) Run(cmd *exec.Cmd, env []string, home, errfile string) (output []byte, err error) {
 	cmd.Env = append(os.Environ(), env...)
 
@@ -214,29 +220,20 @@ func (h *Local) Run(cmd *exec.Cmd, env []string, home, errfile string) (output [
 		errfile = os.DevNull
 	}
 
+	if !filepath.IsAbs(errfile) {
+		errfile = filepath.Join(home, errfile)
+	}
+
 	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return
 	}
+	defer out.Close()
 
 	procSetupOS(cmd, out, false)
-
-	cmd.WaitDelay = 200 * time.Millisecond
-
-	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	// cmd.Stdout = out
 
 	cmd.Stderr = out
 	cmd.Dir = home
 
-	if err = cmd.Start(); err != nil {
-		return
-	}
-
-	if err = cmd.Wait(); err != nil {
-		return
-	}
-
-	return buf.Bytes(), err
+	return cmd.Output()
 }
