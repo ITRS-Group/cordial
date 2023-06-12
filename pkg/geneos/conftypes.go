@@ -24,6 +24,7 @@ package geneos
 
 import (
 	"encoding/xml"
+	"fmt"
 	"strings"
 )
 
@@ -144,6 +145,20 @@ func NewSingleLineString(in string) (s *SingleLineString) {
 		i += st + 2 + en
 	}
 
+	return
+}
+
+func (s *SingleLineString) String() (out string) {
+	for _, p := range s.Parts {
+		switch t := p.(type) {
+		case Data:
+			out += t.Data
+		case Var:
+			out += fmt.Sprintf("$(%s)", t.Var)
+		default:
+			panic("unknown part type")
+		}
+	}
 	return
 }
 
