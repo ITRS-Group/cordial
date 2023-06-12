@@ -17,12 +17,12 @@ type TypeGroup struct {
 }
 
 type Type struct {
-	XMLName      xml.Name     `xml:"type" json:"-" yaml:"-"`
-	Name         string       `xml:"name,attr"`
-	Disabled     bool         `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
-	Environments *Reference   `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
-	Vars         []Vars       `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
-	Samplers     []SamplerRef `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
+	XMLName     xml.Name     `xml:"type" json:"-" yaml:"-"`
+	Name        string       `xml:"name,attr"`
+	Disabled    bool         `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Environment *Reference   `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
+	Vars        []Vars       `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
+	Samplers    []SamplerRef `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
 }
 
 type SamplerRef struct {
