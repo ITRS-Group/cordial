@@ -91,6 +91,10 @@ var showCmd = &cobra.Command{
 			}
 		}
 
+		if showCmdMerge {
+			showCmdSetup = true
+		}
+
 		if showCmdSetup {
 			params = []string{}
 			if showCmdMerge {
@@ -146,13 +150,17 @@ func showInstanceConfig(c geneos.Instance, params []string) (result interface{},
 			"-resources-dir",
 			path.Join(instance.BaseVersion(c), "resources"),
 			"-nolog",
+			"-skip-cache",
 			"-setup",
 			c.Config().GetString("setup"),
 			"-dump-xml",
 		}
 		var output []byte
 		// we don't care about errors, just the output
-		output, _ = c.Host().Run(cmd, env, home, "errors.txt")
+		output, err = c.Host().Run(cmd, env, home, "errors.txt")
+		if err != nil {
+			log.Debug().Msgf("error: %s", output)
+		}
 		i := bytes.Index(output, []byte("<?xml"))
 		if i == -1 {
 			return
