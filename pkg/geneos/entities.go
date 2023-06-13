@@ -28,8 +28,8 @@ import (
 
 type ManagedEntities struct {
 	XMLName             xml.Name             `xml:"managedEntities" json:"-" yaml:"-"`
-	Entities            []ManagedEntity      `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentity"`
-	ManagedEntityGroups []ManagedEntityGroup `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentitygroup"`
+	Entities            []ManagedEntity      `xml:"managedEntity,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentity"`
+	ManagedEntityGroups []ManagedEntityGroup `xml:"managedEntityGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentitygroup"`
 }
 
 type ManagedEntityGroup struct {
@@ -37,8 +37,8 @@ type ManagedEntityGroup struct {
 	Name                string   `xml:"name,attr"`
 	Disabled            bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 	ManagedEntityInfo   `yaml:",inline" mapstructure:",squash"`
-	Entities            []ManagedEntity      `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentity"`
-	ManagedEntityGroups []ManagedEntityGroup `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentitygroup"`
+	Entities            []ManagedEntity      `xml:"managedEntity,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentity"`
+	ManagedEntityGroups []ManagedEntityGroup `xml:"managedEntityGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentitygroup"`
 }
 
 type ManagedEntity struct {
@@ -46,27 +46,22 @@ type ManagedEntity struct {
 	Name              string          `xml:"name,attr"`
 	Disabled          bool            `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 	Probe             *Reference      `xml:"probe" json:",omitempty" yaml:",omitempty"`
-	FloatingProbe     *Reference      `xml:"floatingprobe" json:",omitempty" yaml:",omitempty"`
-	VirtualProbe      *Reference      `xml:"virtualprobe" json:",omitempty" yaml:",omitempty"`
-	Environment       *EnvironmentRef `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
+	FloatingProbe     *Reference      `xml:"floatingProbe" json:",omitempty" yaml:",omitempty"`
+	VirtualProbe      *Reference      `xml:"virtualProbe" json:",omitempty" yaml:",omitempty"`
+	Environment       *EnvironmentRef `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
 	ManagedEntityInfo `yaml:",inline" mapstructure:",squash"`
 	Samplers          []Reference `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
 }
 
 type ManagedEntityInfo struct {
-	Attributes []Attribute `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"attribute"`
-	AddTypes   *AddTypes   `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
-	Vars       []Vars      `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
+	Attributes []Attribute `xml:"attribute,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"attribute"`
+	AddTypes   *AddTypes   `xml:"addTypes,omitempty" json:",omitempty" yaml:",omitempty"`
+	Vars       []Vars      `xml:"var,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
 }
-
-// struct {
-// 	XMLName xml.Name  `xml:"addTypes" json:"-" yaml:"-"`
-// 	Types   []TypeRef `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
-// } `json:",omitempty" yaml:",omitempty"`
 
 type AddTypes struct {
 	XMLName xml.Name  `xml:"addTypes" json:"-" yaml:"-"`
-	Types   []TypeRef `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
+	Types   []TypeRef `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
 }
 
 type Attribute struct {

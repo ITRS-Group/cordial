@@ -37,10 +37,10 @@ import "encoding/xml"
 
 type Probes struct {
 	XMLName        xml.Name        `xml:"probes" json:"-" yaml:"-"`
-	ProbeGroups    []ProbeGroup    `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probegroup"`
-	Probes         []Probe         `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probe"`
-	VirtualProbes  []VirtualProbe  `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"virtualprobe"`
-	FloatingProbes []FloatingProbe `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"floatingprobe"`
+	ProbeGroups    []ProbeGroup    `xml:"probeGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probegroup"`
+	Probes         []Probe         `xml:"probe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probe"`
+	VirtualProbes  []VirtualProbe  `xml:"virtualProbe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"virtualprobe"`
+	FloatingProbes []FloatingProbe `xml:"floatingProbe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"floatingprobe"`
 }
 
 type ProbeGroup struct {
@@ -48,10 +48,10 @@ type ProbeGroup struct {
 	Name           string   `xml:"name,attr"`
 	Disabled       bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 	ProbeInfo      `yaml:",inline" mapstructure:",squash"`
-	ProbeGroups    []ProbeGroup    `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probegroup"`
-	Probes         []Probe         `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probe"`
-	VirtualProbes  []VirtualProbe  `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"virtualprobe"`
-	FloatingProbes []FloatingProbe `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"floatingprobe"`
+	ProbeGroups    []ProbeGroup    `xml:"probeGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probegroup"`
+	Probes         []Probe         `xml:"probe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probe"`
+	VirtualProbes  []VirtualProbe  `xml:"virtualProbe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"virtualprobe"`
+	FloatingProbes []FloatingProbe `xml:"floatingProbe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"floatingprobe"`
 }
 
 // ProbeInfo is embedded in groups and probes
@@ -79,21 +79,21 @@ const (
 type Probe struct {
 	XMLName   xml.Name `xml:"probe" json:"-" yaml:"-"`
 	Type      int      `xml:"-" json:"-" yaml:"-"`
-	Name      string   `xml:"name,attr"`
+	Name      string   `xml:"name,attr" json:"name" yaml:"name"`
 	Disabled  bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
-	Hostname  string   `xml:"hostname" json:"hostname"`
-	ProbeInfo `yaml:",inline" mapstructure:",squash"`
+	Hostname  string   `xml:"hostname" json:"hostname" yaml:"hostname"`
+	ProbeInfo `json:",inline" yaml:",inline" mapstructure:",squash"`
 }
 
 type VirtualProbe struct {
 	XMLName  xml.Name `xml:"virtualProbe" json:"-" yaml:"-"`
-	Name     string   `xml:"name.attr"`
+	Name     string   `xml:"name,attr" json:"name" yaml:"name"`
 	Disabled bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 type FloatingProbe struct {
 	XMLName              xml.Name `xml:"floatingProbe" json:"-" yaml:"-"`
-	Name                 string   `xml:"name.attr" json:"name"`
+	Name                 string   `xml:"name.attr" json:"name" yaml:"name"`
 	Disabled             bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 	ProbeInfoWithoutPort `yaml:",inline" mapstructure:",squash"`
 }

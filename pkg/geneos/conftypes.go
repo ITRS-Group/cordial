@@ -23,9 +23,14 @@ THE SOFTWARE.
 package geneos
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"io"
+	"reflect"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Vars is a container for specific variable types. Only one field should
@@ -100,7 +105,7 @@ type NameValue struct {
 }
 
 type Reference struct {
-	Ref string `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
+	Name string `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // A SingleLineString is a container for a single line string that
@@ -148,17 +153,68 @@ func NewSingleLineString(in string) (s *SingleLineString) {
 	return
 }
 
-func (s *SingleLineString) String() (out string) {
-	for _, p := range s.Parts {
-		switch t := p.(type) {
-		case Data:
-			out += t.Data
-		case Var:
-			out += fmt.Sprintf("$(%s)", t.Var)
-		default:
-			panic("unknown part type")
+// ensure that Value satisfies xml.Unmarshaler interface
+var _ xml.Unmarshaler = (*SingleLineString)(nil)
+
+func (v *SingleLineString) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
+	if v == nil {
+		v = &SingleLineString{}
+	}
+
+	for {
+		tok, err := d.Token()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+		element, ok := tok.(xml.StartElement)
+		if !ok {
+			continue
+		}
+
+		switch element.Name.Local {
+		case "data":
+			t := &Data{}
+			err = d.DecodeElement(&t, &element)
+			if err != nil {
+				return err
+			}
+			v.Parts = append(v.Parts, t)
+		case "var":
+			t := &Var{}
+			err = d.DecodeElement(&t, &element)
+			if err != nil {
+				return err
+			}
+			v.Parts = append(v.Parts, t)
 		}
 	}
+}
+
+var _ fmt.Stringer = (*SingleLineString)(nil)
+
+func (s *SingleLineString) String() (out string) {
+	for _, p := range s.Parts {
+		s, ok := p.(fmt.Stringer)
+		if ok {
+			out += s.String()
+		}
+	}
+	return
+}
+
+var _ json.Marshaler = (*SingleLineString)(nil)
+
+func (s *SingleLineString) MarshalJSON() (out []byte, err error) {
+	return json.Marshal(s.String())
+}
+
+var _ yaml.Marshaler = (*SingleLineString)(nil)
+
+func (s *SingleLineString) MarshalYAML() (out interface{}, err error) {
+	out = s.String()
 	return
 }
 
@@ -167,15 +223,24 @@ type Var struct {
 	Var     string   `xml:"ref,attr"`
 }
 
+func (v Var) String() string {
+	return "$(" + v.Var + ")"
+}
+
 type Data struct {
 	XMLName xml.Name `xml:"data" json:"-" yaml:"-"`
 	Data    string   `xml:",chardata"`
 }
 
+func (d Data) String() string {
+	return d.Data
+}
+
 // A Value can contain multiple parts. In the most basic and common form
 // it is a mix of text (as "data") and variables
 type Value struct {
-	Parts []interface{}
+	Data []Data `xml:"data,omitempty" json:",omitempty" yaml:",omitempty"`
+	Var  *Var   `xml:"var,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 // NewValue takes an argument and if a string removes leading and
@@ -183,7 +248,7 @@ type Value struct {
 // pointer to a VarData struct containing a Var{} or if a non-empty
 // string returns a Data{}. If the string is empty then a nil pointer is
 // returned. Any other value is copied as is. This allows
-// `xml:",omixempty"“ to leave out VarData fields that contain no data.
+// `xml:",omitempty"“ to leave out VarData fields that contain no data.
 func NewValue(in interface{}) (n *Value) {
 	n = &Value{}
 	switch s := in.(type) {
@@ -193,15 +258,75 @@ func NewValue(in interface{}) (n *Value) {
 			return nil
 		}
 		if strings.HasPrefix(s, "$(") && strings.HasSuffix(s, ")") {
-			n.Parts = append(n.Parts, Var{Var: s[2 : len(s)-1]})
+			n.Var = &Var{Var: s[2 : len(s)-1]}
 		} else {
-			n.Parts = append(n.Parts, Data{Data: s})
+			n.Data = append(n.Data, Data{Data: s})
+		}
+	case []string:
+		for _, str := range s {
+			n.Data = append(n.Data, Data{Data: str})
 		}
 	default:
-		n.Parts = append(n.Parts, in)
+		if reflect.TypeOf(s).Kind() == reflect.Slice {
+			sl := reflect.ValueOf(s)
+			for i := 0; i < sl.Len(); i++ {
+				n.Data = append(n.Data, Data{Data: fmt.Sprint(sl.Index(i))})
+			}
+		} else {
+			n.Data = append(n.Data, Data{Data: fmt.Sprint(s)})
+		}
 	}
 
 	return
+}
+
+// ensure that Value satisfies xml.Unmarshaler interface
+var _ xml.Unmarshaler = (*Value)(nil)
+
+func (v *Value) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
+	if v == nil {
+		v = &Value{}
+	}
+
+	for {
+		tok, err := d.Token()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+		element, ok := tok.(xml.StartElement)
+		if !ok {
+			continue
+		}
+
+		switch element.Name.Local {
+		case "data":
+			t := Data{}
+			err = d.DecodeElement(&t, &element)
+			if err != nil {
+				return err
+			}
+			v.Data = append(v.Data, t)
+		case "var":
+			t := &Var{}
+			err = d.DecodeElement(&t, &element)
+			if err != nil {
+				return err
+			}
+			v.Var = t
+		}
+	}
+}
+
+var _ fmt.Stringer = (*Value)(nil)
+
+func (s *Value) String() (out string) {
+	if s.Var != nil {
+		return "$(" + s.Var.Var + ")"
+	}
+	return fmt.Sprint(s.Data)
 }
 
 type Regex struct {
