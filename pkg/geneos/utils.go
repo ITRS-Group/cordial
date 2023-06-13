@@ -1,6 +1,7 @@
 package geneos
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/rs/zerolog/log"
@@ -108,7 +109,7 @@ func flattenProbeGroup(in ProbeGroup) (probes []Probe, floatingProbes []Floating
 		if p.Disabled {
 			continue
 		}
-		setDefaults(&p.ProbeInfo, in.ProbeInfo)
+		setDefaults(in.ProbeInfo, &p.ProbeInfo)
 		probes = append(probes, p)
 
 	}
@@ -116,7 +117,7 @@ func flattenProbeGroup(in ProbeGroup) (probes []Probe, floatingProbes []Floating
 		if f.Disabled {
 			continue
 		}
-		setDefaults(&f.ProbeInfoWithoutPort, in.ProbeInfoWithoutPort)
+		setDefaults(in.ProbeInfoWithoutPort, &f.ProbeInfoWithoutPort)
 		floatingProbes = append(floatingProbes, f)
 	}
 	for _, v := range in.VirtualProbes {
@@ -128,7 +129,7 @@ func flattenProbeGroup(in ProbeGroup) (probes []Probe, floatingProbes []Floating
 	}
 
 	for _, g := range in.ProbeGroups {
-		setDefaults(&g.ProbeInfo, in.ProbeInfo)
+		setDefaults(in.ProbeInfo, &g.ProbeInfo)
 		p, f, v := flattenProbeGroup(g)
 
 		for _, p := range p {
@@ -157,17 +158,20 @@ func flattenProbeGroup(in ProbeGroup) (probes []Probe, floatingProbes []Floating
 }
 
 // FlattenEntities func
-func FlattenEntities(in ManagedEntities) (entities map[string]ManagedEntity) {
+func FlattenEntities(in ManagedEntities, types map[string]Type) (entities map[string]ManagedEntity) {
 	entities = make(map[string]ManagedEntity)
 	for _, e := range in.Entities {
 		if e.Disabled {
 			continue
 		}
+
+		resolveEntitySamplers(&e, types)
 		entities[e.Name] = e
 	}
 
 	for _, g := range in.ManagedEntityGroups {
-		e := flattenEntityGroup(g)
+		// resolveSamplers(&in.ManagedEntityInfo, &g.ManagedEntityInfo, types)
+		e := flattenEntityGroup(g, types)
 		for _, e := range e {
 			if e.Disabled {
 				continue
@@ -181,7 +185,7 @@ func FlattenEntities(in ManagedEntities) (entities map[string]ManagedEntity) {
 }
 
 // flattenEntityGroup type
-func flattenEntityGroup(in ManagedEntityGroup) (entities map[string]ManagedEntity) {
+func flattenEntityGroup(in ManagedEntityGroup, types map[string]Type) (entities map[string]ManagedEntity) {
 	entities = make(map[string]ManagedEntity)
 
 	if in.Disabled {
@@ -192,13 +196,18 @@ func flattenEntityGroup(in ManagedEntityGroup) (entities map[string]ManagedEntit
 		if e.Disabled {
 			continue
 		}
-		setDefaults(&e.ManagedEntityInfo, in.ManagedEntityInfo)
+
+		resolveEntitySamplers(&e, types)
+
+		setDefaults(in.ManagedEntityInfo, &e.ManagedEntityInfo)
 		entities[e.Name] = e
 	}
 
 	for _, g := range in.ManagedEntityGroups {
-		setDefaults(&g.ManagedEntityInfo, in.ManagedEntityInfo)
-		e := flattenEntityGroup(g)
+		setDefaults(in.ManagedEntityInfo, &g.ManagedEntityInfo)
+		resolveSamplersFromGroup(in.ManagedEntityInfo, &g.ManagedEntityInfo, types)
+
+		e := flattenEntityGroup(g, types)
 		for _, e := range e {
 			if e.Disabled {
 				continue
@@ -208,6 +217,65 @@ func flattenEntityGroup(in ManagedEntityGroup) (entities map[string]ManagedEntit
 	}
 
 	return
+}
+
+// resolveSamplersFromGroup processes RemoveTypes, RemoveSamplers and AddTypes in
+// "from" and applies them to the ResolvedSamplers map in "to".
+func resolveSamplersFromGroup(from ManagedEntityInfo, to *ManagedEntityInfo, types map[string]Type) {
+	if to.ResolvedSamplers == nil {
+		to.ResolvedSamplers = map[string]bool{}
+	}
+
+	if from.RemoveTypes != nil {
+		for _, tr := range from.RemoveTypes.Types {
+			if t, ok := types[tr.Type]; ok {
+				for _, s := range t.Samplers {
+					delete(to.ResolvedSamplers, tr.Type+":"+s.Name)
+				}
+			}
+		}
+	}
+
+	if from.RemoveSamplers != nil {
+		for _, sr := range from.RemoveSamplers.Samplers {
+			delete(to.ResolvedSamplers, sr.Type.Type+":"+sr.Sampler)
+		}
+	}
+
+	if to.AddTypes != nil {
+		for _, at := range to.AddTypes.Types {
+			for _, sampler := range types[at.Type].Samplers {
+				if !sampler.Disabled {
+					to.ResolvedSamplers[at.Type+":"+sampler.Name] = true
+				}
+			}
+		}
+	}
+}
+
+func resolveEntitySamplers(entity *ManagedEntity, types map[string]Type) {
+	if entity.ResolvedSamplers == nil {
+		entity.ResolvedSamplers = map[string]bool{}
+	}
+
+	for _, s := range entity.Samplers {
+		if !s.Disabled {
+			entity.ResolvedSamplers[":"+s.Name] = true
+		}
+	}
+
+	if entity.AddTypes != nil {
+		fmt.Printf("entity %q AddTypes not nil\n", entity.Name)
+		for _, at := range entity.AddTypes.Types {
+			fmt.Printf("\tType %q:\n", at.Type)
+			for _, sampler := range types[at.Type].Samplers {
+				fmt.Printf("\t\tSampler %q:\n", sampler.Name)
+				if !sampler.Disabled {
+					entity.ResolvedSamplers[at.Type+":"+sampler.Name] = true
+				}
+			}
+		}
+	}
 }
 
 func FlattenTypes(in Types) (types map[string]Type) {
@@ -299,17 +367,17 @@ func flattenSamplerGroup(in SamplerGroup) (samplers map[string]Sampler) {
 // loop over fields and if the default is not a nil pointer or a nil
 // values and the field is not set then assign. uses field name not
 // position for defaults.
-func setDefaults(s any, defaults any) {
-	if reflect.TypeOf(s).Kind() != reflect.Pointer {
-		log.Error().Msg("not a pointer")
+func setDefaults(from any, to any) {
+	if reflect.TypeOf(to).Kind() != reflect.Pointer {
+		log.Error().Msg("'to' not a pointer")
 		return
 	}
-	sv := reflect.ValueOf(s).Elem()
+	sv := reflect.ValueOf(to).Elem()
 
 	for i := 0; i < sv.NumField(); i++ {
 		fv := sv.Field(i)
 		fn := sv.Type().Field(i).Name
-		dv := reflect.ValueOf(defaults).FieldByName(fn)
+		dv := reflect.ValueOf(from).FieldByName(fn)
 
 		switch {
 		case fv.Type() == reflect.PointerTo(reflect.TypeOf((bool)(false))):
@@ -325,18 +393,10 @@ func setDefaults(s any, defaults any) {
 				fv.Set(reflect.AppendSlice(fv, dv)) // append defaults - then later checks can delete duplicates (e.g. attributes) easier
 			}
 		case fv.Kind() == reflect.Struct && fv.CanSet():
-			setDefaults(fv.Addr().Interface(), dv.Interface())
-		case fv.Type() == reflect.PointerTo(reflect.TypeOf(AddTypes{})) && fv.CanSet():
-			if fv.IsNil() {
-				// empty, just copy
-				fv.Set(dv)
-			} else if !dv.IsNil() {
-				// check for something to copy
-				tv := fv.Elem().FieldByName("Types")
-				tv2 := dv.Elem().FieldByName("Types")
-				tv.Set(reflect.AppendSlice(tv2, tv))
-			}
+			setDefaults(dv.Interface(), fv.Addr().Interface())
 		default:
+			// ignore RemoveTypes and RemoveSamplers in managed entities and
+			// groups - they are not "\inherited"
 			log.Debug().Msgf("unknown type %v", fv.Type())
 		}
 	}

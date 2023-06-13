@@ -50,18 +50,37 @@ type ManagedEntity struct {
 	VirtualProbe      *Reference      `xml:"virtualProbe" json:",omitempty" yaml:",omitempty"`
 	Environment       *EnvironmentRef `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
 	ManagedEntityInfo `yaml:",inline" mapstructure:",squash"`
-	Samplers          []Reference `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
+	Samplers          []SamplerRef `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
 }
 
 type ManagedEntityInfo struct {
-	Attributes []Attribute `xml:"attribute,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"attribute"`
-	AddTypes   *AddTypes   `xml:"addTypes,omitempty" json:",omitempty" yaml:",omitempty"`
-	Vars       []Vars      `xml:"var,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
+	Attributes       []Attribute     `xml:"attribute,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"attribute"`
+	RemoveTypes      *RemoveTypes    `xml:"removeTypes,omitempty" json:",omitempty" yaml:",omitempty"`
+	RemoveSamplers   *RemoveSamplers `xml:"removeSamplers,omitempty" json:",omitempty" yaml:",omitempty"`
+	AddTypes         *AddTypes       `xml:"addTypes,omitempty" json:",omitempty" yaml:",omitempty"`
+	Vars             []Vars          `xml:"var,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
+	ResolvedSamplers map[string]bool `xml:"-" json:",omitempty" yaml:",omitempty"` // map of "type:sampler" that exist at this point
+}
+
+type RemoveTypes struct {
+	XMLName xml.Name  `xml:"removeTypes" json:"-" yaml:"-"`
+	Types   []TypeRef `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
+}
+
+type RemoveSamplers struct {
+	XMLName  xml.Name          `xml:"removeSamplers" json:"-" yaml:"-"`
+	Samplers []SamplerWithType `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 type AddTypes struct {
-	XMLName xml.Name  `xml:"addTypes" json:"-" yaml:"-"`
-	Types   []TypeRef `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
+	XMLName xml.Name         `xml:"addTypes" json:"-" yaml:"-"`
+	Types   []TypeRefWithEnv `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
+}
+
+type SamplerWithType struct {
+	XMLName xml.Name `xml:"sampler" json:"-" yaml:"-"`
+	Sampler string   `xml:"ref,attr"`
+	Type    TypeRef  `xml:"type"`
 }
 
 type Attribute struct {
@@ -76,6 +95,11 @@ func (a Attribute) GetKey() string {
 }
 
 type TypeRef struct {
+	XMLName xml.Name `xml:"type" json:"-" yaml:"-"`
+	Type    string   `xml:"ref,attr" json:",omitempty" yaml:",omitempty" mapstructure:"ref"`
+}
+
+type TypeRefWithEnv struct {
 	XMLName     xml.Name        `xml:"type" json:"-" yaml:"-"`
 	Type        string          `xml:"ref,attr" json:",omitempty" yaml:",omitempty" mapstructure:"ref"`
 	Environment *EnvironmentRef `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
