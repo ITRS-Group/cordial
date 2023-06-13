@@ -1,7 +1,6 @@
 package geneos
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/rs/zerolog/log"
@@ -14,7 +13,7 @@ type KeyedObject interface {
 	GetKey() string
 }
 
-// RemoveDuplicates iterates over any slice that satisfies KeyedObjec
+// RemoveDuplicates iterates over any slice that satisfies KeyedObject
 // and returns a slice of the same type but with duplicates removed. The
 // first item is kept in all cases.
 func RemoveDuplicates[T KeyedObject](kvs []T) []T {
@@ -24,8 +23,6 @@ func RemoveDuplicates[T KeyedObject](kvs []T) []T {
 		if _, ok := a[v.GetKey()]; !ok {
 			result = append(result, v)
 			a[v.GetKey()] = true
-		} else {
-			fmt.Printf("found duplicate %q\n", v.GetKey())
 		}
 	}
 	return result

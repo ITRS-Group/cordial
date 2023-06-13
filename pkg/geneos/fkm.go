@@ -30,32 +30,32 @@ import (
 // FKM
 
 type FKMPlugin struct {
-	Display *FKMDisplay `xml:"fkm>display,omitempty"`
-	Files   FKMFiles    `xml:",omitempty" mapstructure:"files"`
+	Display *FKMDisplay `xml:"fkm>display,omitempty" json:",omitempty" yaml:",omitempty"`
+	Files   FKMFiles    `xml:"files,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"files"`
 }
 
 type FKMDisplay struct {
-	TriggerMode string `xml:"triggerMode,omitempty"`
+	TriggerMode string `xml:"triggerMode,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 type FKMFiles struct {
 	XMLName xml.Name  `xml:"files" json:"-" yaml:"-"`
-	Files   []FKMFile `mapstructure:"file"`
+	Files   []FKMFile `xml:"file,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"file"`
 }
 
 type FKMFile struct {
 	XMLName             xml.Name       `xml:"file" json:"-" yaml:"-"`
 	Source              *FKMFileSource `xml:"source"`
-	Tables              []FKMTable     `xml:"tables>table,omitempty" mapstructure:"tables"`
-	ClearTime           *Value         `xml:"clearTime"`
-	DefaultKeyClearTime *Value         `xml:"defaultKeyClearTime"`
-	Rewind              *Value         `xml:"rewind"`
-	Alias               *Value         `xml:"alias"`
+	Tables              []FKMTable     `xml:"tables>table,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"tables"`
+	ClearTime           *Value         `xml:"clearTime,omitempty" json:",omitempty" yaml:",omitempty"`
+	DefaultKeyClearTime *Value         `xml:"defaultKeyClearTime,omitempty" json:",omitempty" yaml:",omitempty"`
+	Rewind              *Value         `xml:"rewind,omitempty" json:",omitempty" yaml:",omitempty"`
+	Alias               *Value         `xml:"alias,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 type FKMFileSource struct {
-	Filename *SingleLineString `xml:"filename,omitempty" mapstructure:"filename"`
-	Stream   *SingleLineString `xml:"stream,omitempty" mapstructure:"stream"`
+	Filename *SingleLineString `xml:"filename,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"filename"`
+	Stream   *SingleLineString `xml:"stream,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"stream"`
 }
 
 type FKMTable struct {

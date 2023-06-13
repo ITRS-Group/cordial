@@ -38,6 +38,19 @@ import (
 	"encoding/xml"
 )
 
+// GatewayOut is for outputting a configuration using SamplersOut which in turn uses an interface{} for Plugin
+type GatewayOut struct {
+	XMLName         xml.Name `xml:"gateway"`
+	Compatibility   int      `xml:"compatibility,attr"`
+	XMLNs           string   `xml:"xmlns:xsi,attr"`                     // http://www.w3.org/2001/XMLSchema-instance
+	XSI             string   `xml:"xsi:noNamespaceSchemaLocation,attr"` // http://schema.itrsgroup.com/GA5.12.0-220125/gateway.xsd
+	ManagedEntities *ManagedEntities
+	Types           *Types
+	Samplers        *SamplersOut
+	Environments    *Environments
+}
+
+// Gateway is for reading a Gateway configuration
 type Gateway struct {
 	XMLName         xml.Name `xml:"gateway"`
 	Compatibility   int      `xml:"compatibility,attr"`
@@ -51,43 +64,58 @@ type Gateway struct {
 
 type EnvironmentRef struct {
 	XMLName xml.Name `xml:"environment" json:"-" yaml:"-"`
-	Ref     string   `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
+	Name    string   `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Environments struct {
-	XMLName      xml.Name `xml:"environments"`
-	Groups       []EnvironmentGroup
-	Environments []Environment
+	XMLName      xml.Name           `xml:"environments" json:"-" yaml:"-"`
+	Groups       []EnvironmentGroup `xml:"environmentGroup,omitempty" json:",omitempty" yaml:",omitempty"`
+	Environments []Environment      `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 type EnvironmentGroup struct {
-	XMLName      xml.Name `xml:"environmentGroup"`
-	Name         string   `xml:"name,attr"`
-	Environments []Environment
+	XMLName      xml.Name      `xml:"environmentGroup" json:"-" yaml:"-"`
+	Name         string        `xml:"name,attr"`
+	Environments []Environment `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 type Environment struct {
-	XMLName      xml.Name      `xml:"environment"`
+	XMLName      xml.Name      `xml:"environment" json:"-" yaml:"-"`
 	Name         string        `xml:"name,attr"`
-	Environments []Environment `xml:"environment,omitempty"`
-	Vars         []Vars
+	Environments []Environment `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
+	Vars         []Vars        `xml:"var,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
 }
 
 type Dataview struct {
-	Name      string `xml:"name,attr"`
-	Additions DataviewAdditions
+	Name      string            `xml:"name,attr"`
+	Additions DataviewAdditions `xml:"additions,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 type DataviewAdditions struct {
-	XMLName   xml.Name `xml:"additions"`
-	Headlines *Value   `xml:"var-headlines,omitempty"`
-	Columns   *Value   `xml:"var-columns,omitempty"`
-	Rows      *Value   `xml:"var-rows,omitempty"`
+	XMLName   xml.Name                  `xml:"additions" json:"-" yaml:"-"`
+	Headlines DataviewAdditionHeadlines `xml:"var-headlines,omitempty"`
+	Columns   DataviewAdditionColumns   `xml:"var-columns,omitempty"`
+	Rows      DataviewAdditionRows      `xml:"var-rows,omitempty"`
 }
 
 type DataviewAddition struct {
-	XMLName xml.Name          `xml:"data"`
+	XMLName xml.Name          `xml:"data" json:"-" yaml:"-"`
 	Name    *SingleLineString `xml:"headline,omitempty"`
+}
+
+type DataviewAdditionHeadlines struct {
+	Var       *Var               `xml:"var,omitempty"`
+	Headlines []SingleLineString `xml:"data>headline,omitempty"`
+}
+
+type DataviewAdditionColumns struct {
+	Var       *Var               `xml:"var,omitempty"`
+	Headlines []SingleLineString `xml:"data>column,omitempty"`
+}
+
+type DataviewAdditionRows struct {
+	Var       *Var               `xml:"var,omitempty"`
+	Headlines []SingleLineString `xml:"data>rows,omitempty"`
 }
 
 type Schemas struct {
@@ -144,7 +172,7 @@ type UnitOfMeasure struct {
 }
 
 type StandardisedFormatting struct {
-	Dataviews *[]StandardisedFormattingDataview `xml:"dataviews>dataview,omitempty"`
+	Dataviews *[]StandardisedFormattingDataview `xml:"dataviews>dataview,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 type StandardisedFormattingDataview struct {
