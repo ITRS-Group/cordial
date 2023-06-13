@@ -1,5 +1,35 @@
 # Change Log
 
+## Version v1.6.1
+
+> **Released 2023-06-13**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.6.1 Changes
+
+* `pkg/geneos` Changes
+
+  Some API changes to support work on a project for reading Gateway configuration files. Existing structures used to write config files cannot co-exist and have been renamed with an "Out" suffix down to the SamplerOut level. While the old names should have been retained and the new API requirements used new names, it was decided that this is the more common use case in the future.
+
+* `tools/geneos` Command updates
+
+  The `show` command can now output an instance's own configuration file (for types of Netprobe and Gateway) and also try to produce a merged Gateway file using a modified command line with the Gateway `-dump-xml` command line option.
+
+  A new instance flag `autostart` has been added, set to `true` for all types except `ac2` which defaults to `false`. Documentation updtes to follow.
+
+  The `init demo` command now detects if the user has a `DISPLAY` environment variable set and if so also installs an `ac2` instance.
+
+  The `command` command can now output the details in JSON format. This format is not quite compatible with the `pkg/process` Run and Batch functions, but the aim is to eventually merge the formats so that they can also share the implementation later.
+
+## v1.6.1 Fixes
+
+* Minor ongoing changes
+
+  While adding new features there is ongoing review work and refactoring of code.
+
+---
+
 ## Version v1.6.0
 
 > **Released 2023-06-07**
@@ -104,6 +134,8 @@
   While this report was a misunderstanding of the way to use Daemon()
   the comments have been updated to give better direction on how to use
   the pidfile io.Writer parameters.
+
+---
 
 ## Version v1.5.2
 
