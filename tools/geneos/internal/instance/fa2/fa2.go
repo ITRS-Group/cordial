@@ -131,10 +131,7 @@ func (n *FA2s) Name() string {
 }
 
 func (n *FA2s) Home() string {
-	if n.Config() == nil {
-		return ""
-	}
-	return n.Config().GetString("home")
+	return instance.HomeDir(n)
 }
 
 func (n *FA2s) Host() *geneos.Host {

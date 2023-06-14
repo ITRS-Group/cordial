@@ -160,10 +160,7 @@ func (s *Sans) Name() string {
 }
 
 func (s *Sans) Home() string {
-	if s.Config() == nil {
-		return ""
-	}
-	return s.Config().GetString("home")
+	return instance.HomeDir(s)
 }
 
 func (s *Sans) Host() *geneos.Host {

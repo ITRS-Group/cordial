@@ -145,10 +145,7 @@ func (s *Floatings) Name() string {
 }
 
 func (s *Floatings) Home() string {
-	if s.Config() == nil {
-		return ""
-	}
-	return s.Config().GetString("home")
+	return instance.HomeDir(s)
 }
 
 func (s *Floatings) Host() *geneos.Host {

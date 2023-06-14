@@ -165,10 +165,7 @@ func (g *Gateways) Name() string {
 }
 
 func (g *Gateways) Home() string {
-	if g.Config() == nil {
-		return ""
-	}
-	return g.Config().GetString("home")
+	return instance.HomeDir(g)
 }
 
 func (g *Gateways) Host() *geneos.Host {

@@ -148,8 +148,6 @@ var deployCmd = &cobra.Command{
 		if h == geneos.LOCAL {
 			if geneos.Root() == "" {
 				if deployCmdGeneosHome == "" {
-					// fmt.Println("Geneos location not set and no directory option (--geneos/-D) given")
-					// return nil
 					var input string
 					u, _ := user.Current()
 					root := u.HomeDir
@@ -297,6 +295,8 @@ var deployCmd = &cobra.Command{
 
 		instance.SetExtendedValues(c, deployCmdExtras)
 		cf.SetKeyValues(params...)
+		// update home so save is correct
+		cf.Set("home", filepath.Join(instance.ParentDirectory(c), c.Name()))
 		log.Debug().Msgf("savedir=%s", instance.ParentDirectory(c))
 		if err = cf.Save(c.Type().String(),
 			config.Host(c.Host()),

@@ -149,10 +149,7 @@ func (w *Webservers) Name() string {
 }
 
 func (w *Webservers) Home() string {
-	if w.Config() == nil {
-		return ""
-	}
-	return w.Config().GetString("home")
+	return instance.HomeDir(w)
 }
 
 func (w *Webservers) Host() *geneos.Host {
