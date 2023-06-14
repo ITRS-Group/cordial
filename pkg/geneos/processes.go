@@ -3,11 +3,13 @@ package geneos
 import "encoding/xml"
 
 type ProcessesPlugin struct {
-	// XMLName xml.Name `xml:"processes"`
-	// ...
 	AdjustForLogicalCPUs *Value    `xml:"adjustForLogicalCPUs,omitempty" json:",omitempty" yaml:",omitempty"`
 	Processes            []Process `xml:"processes>processes>process,omitempty" json:",omitempty" yaml:",omitempty"`
 	Rest                 string    `xml:",any"`
+}
+
+func (f *ProcessesPlugin) String() string {
+	return "processes"
 }
 
 type Process struct {

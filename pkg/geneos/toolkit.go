@@ -28,6 +28,10 @@ type ToolkitPlugin struct {
 	EnvironmentVariables *[]EnvironmentVariable `xml:"toolkit>environmentVariables>variable"`
 }
 
+func (f *ToolkitPlugin) String() string {
+	return "toolkit"
+}
+
 type EnvironmentVariable struct {
 	Name  string            `xml:"name"`
 	Value *SingleLineString `xml:"value"`

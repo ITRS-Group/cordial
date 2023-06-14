@@ -33,6 +33,10 @@ type GatewaySQLPlugin struct {
 	Views  []GWSQLView       `xml:"Gateway-sql>views>view"`
 }
 
+func (f *GatewaySQLPlugin) String() string {
+	return "gateway-sql"
+}
+
 type GatewaySQLTables struct {
 	Tables []interface{}
 }

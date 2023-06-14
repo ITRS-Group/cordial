@@ -35,6 +35,10 @@ type FTMPlugin struct {
 	SizeUnit                   string           `xml:"ftm>sizeUnit"`
 }
 
+func (f *FTMPlugin) String() string {
+	return "ftm"
+}
+
 type FTMFile struct {
 	XMLName         xml.Name            `xml:"file" json:"-" yaml:"-"`
 	Path            *SingleLineString   `xml:"path"`

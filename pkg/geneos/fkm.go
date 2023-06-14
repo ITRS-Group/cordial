@@ -34,6 +34,10 @@ type FKMPlugin struct {
 	Files   FKMFiles    `xml:"files,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"files"`
 }
 
+func (f *FKMPlugin) String() string {
+	return "fkm"
+}
+
 type FKMDisplay struct {
 	TriggerMode string `xml:"triggerMode,omitempty" json:",omitempty" yaml:",omitempty"`
 }

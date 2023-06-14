@@ -68,13 +68,17 @@ type Sampler struct {
 
 // Plugin lists all the plugins we know about
 type Plugin struct {
-	// Process    *ProcessesPlugin  `xml:"processes,omitempty" json:"processes,omitempty" yaml:"processes,omitempty"`
-	FKM        *FKMPlugin        `xml:"fkm,omitempty" json:"fkm,omitempty" yaml:"fkm,omitempty"`
-	FTM        *FTMPlugin        `xml:"ftm,omitempty" json:"ftm,omitempty" yaml:"ftm,omitempty"`
-	Toolkit    *ToolkitPlugin    `xml:"toolkit,omitempty" json:"toolkit,omitempty" yaml:"toolkit,omitempty"`
-	SQLToolkit *SQLToolkitPlugin `xml:"sql-toolkit,omitempty" json:"sql-toolkit,omitempty" yaml:"sql-toolkit,omitempty"`
-	API        *APIPlugin        `xml:"api,omitempty" json:"api,omitempty" yaml:"api,omitempty"`
-	APIStreams *APIStreamsPlugin `xml:"api-streams,omitempty" json:"api-streams,omitempty" yaml:"api-streams,omitempty"`
-	GatewaySQL *GatewaySQLPlugin `xml:"Gateway-sql,omitempty" json:"Gateway-sql,omitempty" yaml:"Gateway-sql,omitempty"`
-	Other      string            `xml:",any,omitempty" json:",omitempty" yaml:",omitempty"`
+	API          *APIPlugin          `xml:"api,omitempty" json:"api,omitempty" yaml:"api,omitempty"`
+	APIStreams   *APIStreamsPlugin   `xml:"api-streams,omitempty" json:"api-streams,omitempty" yaml:"api-streams,omitempty"`
+	ControlM     *ControlMPlugin     `xml:"control-m,omitempty" json:"control-m,omitempty" yaml:"control-m,omitempty"`
+	FKM          *FKMPlugin          `xml:"fkm,omitempty" json:"fkm,omitempty" yaml:"fkm,omitempty"`
+	FTM          *FTMPlugin          `xml:"ftm,omitempty" json:"ftm,omitempty" yaml:"ftm,omitempty"`
+	GatewaySQL   *GatewaySQLPlugin   `xml:"Gateway-sql,omitempty" json:"Gateway-sql,omitempty" yaml:"Gateway-sql,omitempty"`
+	Process      *ProcessesPlugin    `xml:"processes,omitempty" json:"processes,omitempty" yaml:"processes,omitempty"`
+	SQLToolkit   *SQLToolkitPlugin   `xml:"sql-toolkit,omitempty" json:"sql-toolkit,omitempty" yaml:"sql-toolkit,omitempty"`
+	StateTracker *StateTrackerPlugin `xml:"stateTracker,omitempty" json:"stateTracker,omitempty" yaml:"stateTracker,omitempty"`
+	Toolkit      *ToolkitPlugin      `xml:"toolkit,omitempty" json:"toolkit,omitempty" yaml:"toolkit,omitempty"`
+	XPing        *XPingPlugin        `xml:"x-ping,omitempty" json:"x-ping,omitempty" yaml:"x-ping,omitempty"`
+
+	Other string `xml:",innerxml" json:",omitempty" yaml:",omitempty"`
 }
