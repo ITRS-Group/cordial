@@ -522,7 +522,7 @@ func ParentDirectory(i interface{}) (dir string) {
 		dir = filepath.Dir(c.Home())
 		// but check the configured home, not the parent
 		if d, err := h.Stat(c.Home()); err == nil && d.IsDir() {
-			log.Debug().Msg("default home, as defined")
+			log.Debug().Msgf("default home %s as defined", dir)
 			return
 		}
 	}
@@ -531,7 +531,7 @@ func ParentDirectory(i interface{}) (dir string) {
 	dir = c.Type().InstancesDir(h)
 	if dir != "" {
 		if d, err := h.Stat(dir); err == nil && d.IsDir() {
-			log.Debug().Msg("instanceDir home selected")
+			log.Debug().Msgf("instanceDir home %s selected", dir)
 			return
 		}
 	}
@@ -542,7 +542,7 @@ func ParentDirectory(i interface{}) (dir string) {
 		dir = filepath.Join(h.Filepath(c.Type(), c.Type().String()+"s"))
 		if dir != "" {
 			if d, err := h.Stat(dir); err == nil && d.IsDir() {
-				log.Debug().Msgf("new home, from legacy %s", dir)
+				log.Debug().Msgf("new home %s from legacy", dir)
 				return
 			}
 		}
@@ -550,6 +550,25 @@ func ParentDirectory(i interface{}) (dir string) {
 
 	log.Debug().Msgf("default %s", dir)
 	return dir
+}
+
+// HomeDir return the validated-to-exist directory for the instance
+func HomeDir(c geneos.Instance) (home string) {
+	ct := c.Type()
+	h := c.Host()
+
+	if c.Config() == nil {
+		return ""
+	}
+	home = c.Config().GetString("home")
+	if _, err := h.Stat(home); err != nil {
+		if ct.ParentType == nil {
+			home = h.Filepath(ct, ct.String()+"s", c.Name())
+		} else {
+			home = h.Filepath(ct.ParentType, ct.String()+"s", c.Name())
+		}
+	}
+	return
 }
 
 // AllNames returns a slice of all instance names for a given component.

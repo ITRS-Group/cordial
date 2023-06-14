@@ -129,10 +129,7 @@ func (n *Netprobes) Name() string {
 }
 
 func (n *Netprobes) Home() string {
-	if n.Config() == nil {
-		return ""
-	}
-	return n.Config().GetString("home")
+	return instance.HomeDir(n)
 }
 
 func (n *Netprobes) Host() *geneos.Host {

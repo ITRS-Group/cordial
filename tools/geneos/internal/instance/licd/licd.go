@@ -128,10 +128,7 @@ func (l *Licds) Name() string {
 }
 
 func (l *Licds) Home() string {
-	if l.Config() == nil {
-		return ""
-	}
-	return l.Config().GetString("home")
+	return instance.HomeDir(l)
 }
 
 func (l *Licds) Host() *geneos.Host {

@@ -136,10 +136,7 @@ func (n *FileAgents) Name() string {
 }
 
 func (n *FileAgents) Home() string {
-	if n.Config() == nil {
-		return ""
-	}
-	return n.Config().GetString("home")
+	return instance.HomeDir(n)
 }
 
 func (n *FileAgents) Host() *geneos.Host {

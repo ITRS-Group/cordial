@@ -134,10 +134,7 @@ func (n *CA3s) Name() string {
 }
 
 func (n *CA3s) Home() string {
-	if n.Config() == nil {
-		return ""
-	}
-	return n.Config().GetString("home")
+	return instance.HomeDir(n)
 }
 
 func (n *CA3s) Host() *geneos.Host {
