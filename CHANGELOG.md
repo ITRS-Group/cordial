@@ -1,5 +1,15 @@
 # Change Log
 
+## Version v1.6.2
+
+> **Released 2023-06-14**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.6.2 Fixes
+
+* `tools/geneos` Fix late found bug with `deploy` and home directories
+
 ## Version v1.6.1
 
 > **Released 2023-06-13**
