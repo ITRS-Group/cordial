@@ -44,6 +44,7 @@ type GatewayOut struct {
 	Compatibility   int      `xml:"compatibility,attr"`
 	XMLNs           string   `xml:"xmlns:xsi,attr"`                     // http://www.w3.org/2001/XMLSchema-instance
 	XSI             string   `xml:"xsi:noNamespaceSchemaLocation,attr"` // http://schema.itrsgroup.com/GA5.12.0-220125/gateway.xsd
+	Probes          *Probes  `xml:"probes"`
 	ManagedEntities *ManagedEntities
 	Types           *Types
 	Samplers        *SamplersOut
@@ -56,6 +57,7 @@ type Gateway struct {
 	Compatibility   int      `xml:"compatibility,attr"`
 	XMLNs           string   `xml:"xmlns:xsi,attr"`                     // http://www.w3.org/2001/XMLSchema-instance
 	XSI             string   `xml:"xsi:noNamespaceSchemaLocation,attr"` // http://schema.itrsgroup.com/GA5.12.0-220125/gateway.xsd
+	Probes          *Probes  `xml:"probes"`
 	ManagedEntities *ManagedEntities
 	Types           *Types
 	Samplers        *Samplers

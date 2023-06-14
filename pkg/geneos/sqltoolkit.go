@@ -29,6 +29,10 @@ type SQLToolkitPlugin struct {
 	Connection DBConnection `xml:"sql-toolkit>connection"`
 }
 
+func (f *SQLToolkitPlugin) String() string {
+	return "sql-toolkit"
+}
+
 type Query struct {
 	Name *SingleLineString `xml:"name"`
 	SQL  *SingleLineString `xml:"sql"`

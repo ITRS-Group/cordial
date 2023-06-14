@@ -31,6 +31,10 @@ type APIPlugin struct {
 	SummaryView *SingleLineString `xml:"api>showSummaryView>always>viewName,omitempty"`
 }
 
+func (f *APIPlugin) String() string {
+	return "api"
+}
+
 type Parameter struct {
 	Name  string            `xml:"name"`
 	Value *SingleLineString `xml:"value"`
@@ -39,8 +43,13 @@ type Parameter struct {
 // API Streams Plugin
 
 type APIStreamsPlugin struct {
+	XMLName    xml.Name `xml:"api-streams"`
 	Streams    *Streams `xml:"api-streams>streams"`
 	CreateView *Value   `xml:"api-streams>createView,omitempty"`
+}
+
+func (f *APIStreamsPlugin) String() string {
+	return "api-streams"
 }
 
 type Streams struct {
