@@ -1,7 +1,6 @@
 package geneos
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/rs/zerolog/log"
@@ -32,7 +31,7 @@ func RemoveDuplicates[T KeyedObject](kvs []T) []T {
 // FlattenProbes takes the top level geneos.Probes struct and returns a
 // map of probe name to geneos.Probe objects while setting the Type
 // field to the type of probe
-func FlattenProbes(in Probes) (probes map[string]Probe) {
+func FlattenProbes(in *Probes) (probes map[string]Probe) {
 	probes = make(map[string]Probe)
 
 	for _, p := range in.Probes {
@@ -66,7 +65,7 @@ func FlattenProbes(in Probes) (probes map[string]Probe) {
 	// top level has no group defaults so just loop over sub-groups and
 	// append non-disabled probes
 	for _, g := range in.ProbeGroups {
-		p, f, v := flattenProbeGroup(g)
+		p, f, v := flattenProbeGroup(&g)
 		for _, p := range p {
 			if p.Disabled {
 				continue
@@ -100,7 +99,7 @@ func FlattenProbes(in Probes) (probes map[string]Probe) {
 
 // flattenProbeGroup works through a geneos.ProbeGroup and applies
 // defaults to all it's contents and returns three slices of probe types
-func flattenProbeGroup(in ProbeGroup) (probes []Probe, floatingProbes []FloatingProbe, virtualProbes []VirtualProbe) {
+func flattenProbeGroup(in *ProbeGroup) (probes []Probe, floatingProbes []FloatingProbe, virtualProbes []VirtualProbe) {
 	if in.Disabled {
 		return
 	}
@@ -130,7 +129,7 @@ func flattenProbeGroup(in ProbeGroup) (probes []Probe, floatingProbes []Floating
 
 	for _, g := range in.ProbeGroups {
 		setDefaults(in.ProbeInfo, &g.ProbeInfo)
-		p, f, v := flattenProbeGroup(g)
+		p, f, v := flattenProbeGroup(&g)
 
 		for _, p := range p {
 			if p.Disabled {
@@ -158,61 +157,70 @@ func flattenProbeGroup(in ProbeGroup) (probes []Probe, floatingProbes []Floating
 }
 
 // FlattenEntities func
-func FlattenEntities(in ManagedEntities, types map[string]Type) (entities map[string]ManagedEntity) {
+func FlattenEntities(in *ManagedEntities, types map[string]Type) (entities map[string]ManagedEntity) {
 	entities = make(map[string]ManagedEntity)
-	for _, e := range in.Entities {
-		if e.Disabled {
+	for _, entity := range in.Entities {
+		if entity.Disabled {
 			continue
 		}
 
-		resolveEntitySamplers(&e, types)
-		entities[e.Name] = e
+		resolveEntitySamplers(nil, &entity, types)
+		entities[entity.Name] = entity
 	}
 
-	for _, g := range in.ManagedEntityGroups {
-		// resolveSamplers(&in.ManagedEntityInfo, &g.ManagedEntityInfo, types)
-		e := flattenEntityGroup(g, types)
-		for _, e := range e {
-			if e.Disabled {
+	for _, childGroup := range in.ManagedEntityGroups {
+		flattenedEntities := flattenEntityGroup(&childGroup, types)
+		for _, entity := range flattenedEntities {
+			if entity.Disabled {
 				continue
 			}
-			e.ManagedEntityInfo.Attributes = RemoveDuplicates(e.ManagedEntityInfo.Attributes)
-			e.ManagedEntityInfo.Vars = RemoveDuplicates(e.ManagedEntityInfo.Vars)
-			entities[e.Name] = e
+
+			// remove dups from the flattening process
+			// entity.ManagedEntityInfo.Attributes = RemoveDuplicates(entity.ManagedEntityInfo.Attributes)
+			// entity.ManagedEntityInfo.Vars = RemoveDuplicates(entity.ManagedEntityInfo.Vars)
+
+			entities[entity.Name] = entity
 		}
 	}
 	return
 }
 
 // flattenEntityGroup type
-func flattenEntityGroup(in ManagedEntityGroup, types map[string]Type) (entities map[string]ManagedEntity) {
+func flattenEntityGroup(group *ManagedEntityGroup, types map[string]Type) (entities map[string]ManagedEntity) {
 	entities = make(map[string]ManagedEntity)
 
-	if in.Disabled {
+	if group.Disabled {
 		return
 	}
 
-	for _, e := range in.Entities {
-		if e.Disabled {
+	for _, entity := range group.Entities {
+		if entity.Disabled {
 			continue
 		}
 
-		resolveEntitySamplers(&e, types)
+		setDefaults(group.ManagedEntityInfo, &entity.ManagedEntityInfo)
+		// remove dups from merged slices in setDefaults
+		entity.ManagedEntityInfo.Attributes = RemoveDuplicates(entity.ManagedEntityInfo.Attributes)
+		entity.ManagedEntityInfo.Vars = RemoveDuplicates(entity.ManagedEntityInfo.Vars)
 
-		setDefaults(in.ManagedEntityInfo, &e.ManagedEntityInfo)
-		entities[e.Name] = e
+		resolveEntitySamplers(group, &entity, types)
+		entities[entity.Name] = entity
 	}
 
-	for _, g := range in.ManagedEntityGroups {
-		setDefaults(in.ManagedEntityInfo, &g.ManagedEntityInfo)
-		resolveSamplersFromGroup(in.ManagedEntityInfo, &g.ManagedEntityInfo, types)
+	for _, childGroup := range group.ManagedEntityGroups {
+		setDefaults(group.ManagedEntityInfo, &childGroup.ManagedEntityInfo)
+		// remove dups from merged slices in setDefaults
+		group.ManagedEntityInfo.Attributes = RemoveDuplicates(group.ManagedEntityInfo.Attributes)
+		group.ManagedEntityInfo.Vars = RemoveDuplicates(group.ManagedEntityInfo.Vars)
 
-		e := flattenEntityGroup(g, types)
-		for _, e := range e {
-			if e.Disabled {
+		resolveSamplersFromGroup(group.ManagedEntityInfo, &childGroup.ManagedEntityInfo, types)
+
+		flattenedEntities := flattenEntityGroup(&childGroup, types)
+		for _, entity := range flattenedEntities {
+			if entity.Disabled {
 				continue
 			}
-			entities[e.Name] = e
+			entities[entity.Name] = entity
 		}
 	}
 
@@ -224,6 +232,11 @@ func flattenEntityGroup(in ManagedEntityGroup, types map[string]Type) (entities 
 func resolveSamplersFromGroup(from ManagedEntityInfo, to *ManagedEntityInfo, types map[string]Type) {
 	if to.ResolvedSamplers == nil {
 		to.ResolvedSamplers = map[string]bool{}
+		if from.ResolvedSamplers != nil {
+			for k, v := range from.ResolvedSamplers {
+				to.ResolvedSamplers[k] = v
+			}
+		}
 	}
 
 	if from.RemoveTypes != nil {
@@ -253,9 +266,14 @@ func resolveSamplersFromGroup(from ManagedEntityInfo, to *ManagedEntityInfo, typ
 	}
 }
 
-func resolveEntitySamplers(entity *ManagedEntity, types map[string]Type) {
+func resolveEntitySamplers(group *ManagedEntityGroup, entity *ManagedEntity, types map[string]Type) {
 	if entity.ResolvedSamplers == nil {
 		entity.ResolvedSamplers = map[string]bool{}
+		if group != nil && group.ResolvedSamplers != nil {
+			for k, v := range group.ResolvedSamplers {
+				entity.ResolvedSamplers[k] = v
+			}
+		}
 	}
 
 	for _, s := range entity.Samplers {
@@ -265,11 +283,8 @@ func resolveEntitySamplers(entity *ManagedEntity, types map[string]Type) {
 	}
 
 	if entity.AddTypes != nil {
-		fmt.Printf("entity %q AddTypes not nil\n", entity.Name)
 		for _, at := range entity.AddTypes.Types {
-			fmt.Printf("\tType %q:\n", at.Type)
 			for _, sampler := range types[at.Type].Samplers {
-				fmt.Printf("\t\tSampler %q:\n", sampler.Name)
 				if !sampler.Disabled {
 					entity.ResolvedSamplers[at.Type+":"+sampler.Name] = true
 				}
@@ -278,7 +293,7 @@ func resolveEntitySamplers(entity *ManagedEntity, types map[string]Type) {
 	}
 }
 
-func FlattenTypes(in Types) (types map[string]Type) {
+func FlattenTypes(in *Types) (types map[string]Type) {
 	types = make(map[string]Type)
 	for _, t := range in.Types {
 		if t.Disabled {
@@ -287,7 +302,7 @@ func FlattenTypes(in Types) (types map[string]Type) {
 		types[t.Name] = t
 	}
 	for _, g := range in.TypeGroups {
-		t := flattenTypeGroup(g)
+		t := flattenTypeGroup(&g)
 		for _, t := range t {
 			if t.Disabled {
 				continue
@@ -298,7 +313,7 @@ func FlattenTypes(in Types) (types map[string]Type) {
 	return
 }
 
-func flattenTypeGroup(in TypeGroup) (types map[string]Type) {
+func flattenTypeGroup(in *TypeGroup) (types map[string]Type) {
 	types = make(map[string]Type)
 	for _, t := range in.Types {
 		if t.Disabled {
@@ -307,7 +322,7 @@ func flattenTypeGroup(in TypeGroup) (types map[string]Type) {
 		types[t.Name] = t
 	}
 	for _, g := range in.TypeGroups {
-		t := flattenTypeGroup(g)
+		t := flattenTypeGroup(&g)
 		for _, t := range t {
 			if t.Disabled {
 				continue
@@ -318,7 +333,7 @@ func flattenTypeGroup(in TypeGroup) (types map[string]Type) {
 	return
 }
 
-func FlattenSamplers(in Samplers) (samplers map[string]Sampler) {
+func FlattenSamplers(in *Samplers) (samplers map[string]Sampler) {
 	samplers = make(map[string]Sampler)
 	for _, s := range in.Samplers {
 		if s.Disabled {
@@ -330,7 +345,7 @@ func FlattenSamplers(in Samplers) (samplers map[string]Sampler) {
 		samplers[s.Name] = s
 	}
 	for _, g := range in.SamplerGroups {
-		s := flattenSamplerGroup(g)
+		s := flattenSamplerGroup(&g)
 		for _, s := range s {
 			if s.Disabled {
 				continue
@@ -341,7 +356,7 @@ func FlattenSamplers(in Samplers) (samplers map[string]Sampler) {
 	return
 }
 
-func flattenSamplerGroup(in SamplerGroup) (samplers map[string]Sampler) {
+func flattenSamplerGroup(in *SamplerGroup) (samplers map[string]Sampler) {
 	samplers = make(map[string]Sampler)
 	for _, s := range in.Samplers {
 		if s.Disabled {
@@ -350,7 +365,7 @@ func flattenSamplerGroup(in SamplerGroup) (samplers map[string]Sampler) {
 		samplers[s.Name] = s
 	}
 	for _, g := range in.SamplerGroups {
-		s := flattenSamplerGroup(g)
+		s := flattenSamplerGroup(&g)
 		for _, s := range s {
 			if s.Disabled {
 				continue
@@ -396,8 +411,27 @@ func setDefaults(from any, to any) {
 			setDefaults(dv.Interface(), fv.Addr().Interface())
 		default:
 			// ignore RemoveTypes and RemoveSamplers in managed entities and
-			// groups - they are not "\inherited"
+			// groups - they are not "inherited"
 			log.Debug().Msgf("unknown type %v", fv.Type())
 		}
 	}
+}
+
+// GetPlugin searches plugin for the first non-nil/non-empty field and
+// returns it, using reflection
+func GetPlugin(plugin *Plugin) interface{} {
+	if plugin == nil {
+		return nil
+	}
+	v := reflect.ValueOf(plugin).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		fv := v.Field(i)
+		if fv.Kind() == reflect.String {
+			return fv.String()
+		}
+		if !fv.IsNil() {
+			return fv.Interface()
+		}
+	}
+	return nil
 }
