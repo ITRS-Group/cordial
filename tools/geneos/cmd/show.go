@@ -26,9 +26,11 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -51,8 +53,8 @@ type showCmdConfig struct {
 	Configuration interface{}           `json:"configuration,omitempty"`
 }
 
-var showCmdRaw, showCmdSetup, showCmdMerge bool
-var showCmdOutput string
+var showCmdRaw, showCmdSetup, showCmdMerge, showCmdValidate bool
+var showCmdOutput, showCmdHooksDir string
 
 func init() {
 	GeneosCmd.AddCommand(showCmd)
@@ -63,6 +65,9 @@ func init() {
 
 	showCmd.Flags().BoolVarP(&showCmdSetup, "setup", "s", false, "Show the instance Geneos configuration file, if any")
 	showCmd.Flags().BoolVarP(&showCmdMerge, "merge", "m", false, "Merge Gateway configurations using the Gateway -dump-xml flag")
+
+	showCmd.Flags().BoolVarP(&showCmdValidate, "validate", "v", false, "Validate Gateway configurations using the Gateway -validate flag")
+	showCmd.Flags().StringVar(&showCmdHooksDir, "hooks", "", "Hooks directory (may clash with instance options)")
 
 	showCmd.Flags().SortFlags = false
 }
@@ -91,8 +96,35 @@ var showCmd = &cobra.Command{
 			}
 		}
 
+		if showCmdMerge && showCmdValidate {
+			return errors.New("cannot validate and merge at the same time")
+		}
+
 		if showCmdMerge {
 			showCmdSetup = true
+		}
+
+		if showCmdValidate {
+			if showCmdHooksDir != "" {
+				params = append(params, showCmdHooksDir)
+			}
+
+			var results []interface{}
+			results, err = instance.ForAllWithResults(ct, Hostname, showValidateInstance, args, params)
+
+			if err != nil {
+				if err == os.ErrNotExist {
+					return fmt.Errorf("no matching instance found")
+				}
+			}
+			for _, r := range results {
+				result, ok := r.(showConfig)
+				if !ok {
+					return
+				}
+				fmt.Fprintf(output, "### validation results for %s\n\n%s\n\n", result.c, result.file)
+			}
+			return
 		}
 
 		if showCmdSetup {
@@ -130,6 +162,75 @@ var showCmd = &cobra.Command{
 	},
 }
 
+func showValidateInstance(c geneos.Instance, params []string) (result interface{}, err error) {
+	setup := c.Config().GetString("setup")
+	if setup == "" {
+		return
+	}
+	if c.Type().String() == "gateway" {
+		// temp file for JSON output
+		tempfile := filepath.Join(c.Host().TempDir(), "validate-"+c.Name()+".json")
+		defer c.Host().Remove(tempfile)
+
+		tempport := -1
+
+		ports := instance.AllListeningPorts(c.Host(), 2048, 32768)
+		for i := range ports {
+			if len(ports) > i+1 {
+				if ports[i]+1 != ports[i+1] {
+					tempport = ports[i] + 1
+					log.Debug().Msgf("using port %d", tempport)
+					break
+				}
+			}
+		}
+		if tempport == -1 {
+			err = errors.New("cannot find free port to run validation gateway")
+			return
+		}
+
+		// run a gateway with -dump-xml and consume the result, discard the heading
+		cmd, env, home := instance.BuildCmd(c)
+		// replace args with a more limited set
+		cmd.Args = []string{
+			cmd.Path,
+			"-resources-dir",
+			path.Join(instance.BaseVersion(c), "resources"),
+			"-nolog",
+			"-skip-cache",
+			"-setup",
+			c.Config().GetString("setup"),
+			"-validate-json-output",
+			tempfile,
+			"-silent",
+			"-port",
+			fmt.Sprint(tempport),
+		}
+		cmd.Args = append(cmd.Args, instance.SetSecureArgs(c)...)
+		if len(params) > 0 {
+			cmd.Args = append(cmd.Args, "-hooks-dir", params[0])
+		}
+
+		var output []byte
+		// we don't care about errors, just the output
+		_, err = c.Host().Run(cmd, env, home, "errors.txt")
+		if err != nil {
+			log.Debug().Msgf("error: %s", output)
+		}
+		output, err = os.ReadFile(tempfile)
+		if err != nil {
+			return
+		}
+
+		result = showConfig{
+			c:    c,
+			file: output,
+		}
+		return
+	}
+	return
+}
+
 type showConfig struct {
 	c    geneos.Instance
 	file []byte
@@ -155,6 +256,7 @@ func showInstanceConfig(c geneos.Instance, params []string) (result interface{},
 			c.Config().GetString("setup"),
 			"-dump-xml",
 		}
+		cmd.Args = append(cmd.Args, instance.SetSecureArgs(c)...)
 		var output []byte
 		// we don't care about errors, just the output
 		output, err = c.Host().Run(cmd, env, home, "errors.txt")

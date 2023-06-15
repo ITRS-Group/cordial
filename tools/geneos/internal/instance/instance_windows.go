@@ -36,7 +36,11 @@ func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime time.
 	return
 }
 
-func TCPListenPorts(c geneos.Instance) (ports []int) {
+func ListeningPorts(c geneos.Instance) (ports []int) {
+	return
+}
+
+func AllListeningPorts(h *geneos.Host, min, max int) (ports []int) {
 	return
 }
 
