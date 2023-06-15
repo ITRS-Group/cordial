@@ -34,7 +34,7 @@ type FKMPlugin struct {
 	Files   FKMFiles    `xml:"files,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"files"`
 }
 
-func (f *FKMPlugin) String() string {
+func (_ *FKMPlugin) String() string {
 	return "fkm"
 }
 
@@ -58,8 +58,8 @@ type FKMFile struct {
 }
 
 type FKMFileSource struct {
-	Filename *SingleLineString `xml:"filename,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"filename"`
-	Stream   *SingleLineString `xml:"stream,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"stream"`
+	Filename *SingleLineStringVar `xml:"filename,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"filename"`
+	Stream   *SingleLineStringVar `xml:"stream,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"stream"`
 }
 
 type FKMTable struct {
@@ -242,6 +242,6 @@ const (
 )
 
 type FKMMatch struct {
-	SearchString *SingleLineString `xml:"searchString"`
-	Rules        FKMMatchRules     `xml:"rules,omitempty"`
+	SearchString *SingleLineStringVar `xml:"searchString"`
+	Rules        FKMMatchRules        `xml:"rules,omitempty"`
 }

@@ -108,21 +108,21 @@ type Reference struct {
 	Name string `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
 }
 
-// A SingleLineString is a container for a single line string that
+// A SingleLineStringVar is a container for a single line string that
 // can be made up of static text and variable references. Use like this:
 //
 //	type MyContainer struct {
 //	    XMLName  xml.Name             `xml:"mycontainer"`
-//	    VarField *SingleLineString `xml:"fieldname"`
+//	    VarField *SingleLineStringVar `xml:"fieldname"`
 //	}
 //
 //	func blah() {
 //	    x := MyContainer{
-//	        VarField: geneos.SingleLineString("hello $(var) world!")
+//	        VarField: geneos.SingleLineStringVar("hello $(var) world!")
 //	    }
 //	    ...
 //	}
-type SingleLineString struct {
+type SingleLineStringVar struct {
 	Parts []interface{}
 }
 
@@ -130,8 +130,8 @@ type SingleLineString struct {
 // variables of the form $(var) - note these are parenthesis and not brackets -
 // and splits the string into Data and Var parts as required so that this can be
 // used directly in the XML encodings.
-func NewSingleLineString(in string) (s *SingleLineString) {
-	s = &SingleLineString{}
+func NewSingleLineString(in string) (s *SingleLineStringVar) {
+	s = &SingleLineStringVar{}
 	for i := 0; i < len(in); i++ {
 		st := strings.Index(in[i:], "$(")
 		if st == -1 {
@@ -154,11 +154,11 @@ func NewSingleLineString(in string) (s *SingleLineString) {
 }
 
 // ensure that Value satisfies xml.Unmarshaler interface
-var _ xml.Unmarshaler = (*SingleLineString)(nil)
+var _ xml.Unmarshaler = (*SingleLineStringVar)(nil)
 
-func (v *SingleLineString) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
+func (v *SingleLineStringVar) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
 	if v == nil {
-		v = &SingleLineString{}
+		v = &SingleLineStringVar{}
 	}
 
 	for {
@@ -193,9 +193,9 @@ func (v *SingleLineString) UnmarshalXML(d *xml.Decoder, start xml.StartElement) 
 	}
 }
 
-var _ fmt.Stringer = (*SingleLineString)(nil)
+var _ fmt.Stringer = (*SingleLineStringVar)(nil)
 
-func (s *SingleLineString) String() (out string) {
+func (s *SingleLineStringVar) String() (out string) {
 	for _, p := range s.Parts {
 		s, ok := p.(fmt.Stringer)
 		if ok {
@@ -205,15 +205,15 @@ func (s *SingleLineString) String() (out string) {
 	return
 }
 
-var _ json.Marshaler = (*SingleLineString)(nil)
+var _ json.Marshaler = (*SingleLineStringVar)(nil)
 
-func (s *SingleLineString) MarshalJSON() (out []byte, err error) {
+func (s *SingleLineStringVar) MarshalJSON() (out []byte, err error) {
 	return json.Marshal(s.String())
 }
 
-var _ yaml.Marshaler = (*SingleLineString)(nil)
+var _ yaml.Marshaler = (*SingleLineStringVar)(nil)
 
-func (s *SingleLineString) MarshalYAML() (out interface{}, err error) {
+func (s *SingleLineStringVar) MarshalYAML() (out interface{}, err error) {
 	out = s.String()
 	return
 }

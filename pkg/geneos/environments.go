@@ -22,11 +22,28 @@ THE SOFTWARE.
 
 package geneos
 
-type StateTrackerPlugin struct {
-	Display *FKMDisplay `xml:"fkm>display,omitempty" json:",omitempty" yaml:",omitempty"`
-	Files   FKMFiles    `xml:"files,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"files"`
+import "encoding/xml"
+
+type EnvironmentRef struct {
+	XMLName xml.Name `xml:"environment" json:"-" yaml:"-"`
+	Name    string   `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
 }
 
-func (f *StateTrackerPlugin) String() string {
-	return "stateTracker"
+type Environments struct {
+	XMLName      xml.Name           `xml:"environments" json:"-" yaml:"-"`
+	Groups       []EnvironmentGroup `xml:"environmentGroup,omitempty" json:",omitempty" yaml:",omitempty"`
+	Environments []Environment      `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
+}
+
+type EnvironmentGroup struct {
+	XMLName      xml.Name      `xml:"environmentGroup" json:"-" yaml:"-"`
+	Name         string        `xml:"name,attr"`
+	Environments []Environment `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
+}
+
+type Environment struct {
+	XMLName      xml.Name      `xml:"environment" json:"-" yaml:"-"`
+	Name         string        `xml:"name,attr"`
+	Environments []Environment `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
+	Vars         []Vars        `xml:"var,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
 }
