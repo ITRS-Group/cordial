@@ -170,6 +170,10 @@ func (h *Local) GetFs() afero.Fs {
 	return afero.NewOsFs()
 }
 
+func (h *Local) TempDir() string {
+	return os.TempDir()
+}
+
 func (h *Local) Signal(pid int, signal syscall.Signal) (err error) {
 	proc, _ := os.FindProcess(pid)
 	if err = proc.Signal(signal); err != nil && !errors.Is(err, syscall.EEXIST) {

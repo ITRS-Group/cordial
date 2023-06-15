@@ -535,6 +535,16 @@ func (h *SSHRemote) Path(path string) string {
 	return fmt.Sprintf("%s:%s", h, path)
 }
 
+// TempDir returns a path on the remote to a temporary directory
+//
+// BUG This is currently broken - hardwired values for now
+func (h *SSHRemote) TempDir() string {
+	if strings.Contains(h.ServerVersion(), "windows") {
+		return `C:\TEMP`
+	}
+	return "/tmp"
+}
+
 func (h *SSHRemote) LastError() error {
 	// if the failure was a while back, try again (XXX crude)
 	if h.failed != nil && !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) > 5*time.Second {

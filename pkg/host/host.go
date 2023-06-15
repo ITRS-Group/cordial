@@ -72,6 +72,7 @@ type Host interface {
 	Rename(oldpath, newpath string) (err error)
 	Stat(name string) (f fs.FileInfo, err error)
 	Symlink(oldname, newname string) (err error)
+	TempDir() string
 	WriteFile(name string, data []byte, perm os.FileMode) (err error)
 	// these two do not conform to the afero / os interface
 	Open(name string) (f io.ReadSeekCloser, err error)
