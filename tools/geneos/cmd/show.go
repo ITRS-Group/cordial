@@ -172,6 +172,23 @@ func showValidateInstance(c geneos.Instance, params []string) (result interface{
 		tempfile := filepath.Join(c.Host().TempDir(), "validate-"+c.Name()+".json")
 		defer c.Host().Remove(tempfile)
 
+		tempport := -1
+
+		ports := instance.AllListeningPorts(c.Host(), 2048, 32768)
+		for i := range ports {
+			if len(ports) > i+1 {
+				if ports[i]+1 != ports[i+1] {
+					tempport = ports[i] + 1
+					log.Debug().Msgf("using port %d", tempport)
+					break
+				}
+			}
+		}
+		if tempport == -1 {
+			err = errors.New("cannot find free port to run validation gateway")
+			return
+		}
+
 		// run a gateway with -dump-xml and consume the result, discard the heading
 		cmd, env, home := instance.BuildCmd(c)
 		// replace args with a more limited set
@@ -186,7 +203,8 @@ func showValidateInstance(c geneos.Instance, params []string) (result interface{
 			"-validate-json-output",
 			tempfile,
 			"-silent",
-			"-hub-validation-rules",
+			"-port",
+			fmt.Sprint(tempport),
 		}
 		cmd.Args = append(cmd.Args, instance.SetSecureArgs(c)...)
 		if len(params) > 0 {
