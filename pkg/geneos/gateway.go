@@ -40,52 +40,38 @@ import (
 
 // GatewayOut is for outputting a configuration using SamplersOut which in turn uses an interface{} for Plugin
 type GatewayOut struct {
-	XMLName         xml.Name `xml:"gateway"`
-	Compatibility   int      `xml:"compatibility,attr"`
-	XMLNs           string   `xml:"xmlns:xsi,attr"`                     // http://www.w3.org/2001/XMLSchema-instance
-	XSI             string   `xml:"xsi:noNamespaceSchemaLocation,attr"` // http://schema.itrsgroup.com/GA5.12.0-220125/gateway.xsd
-	Probes          *Probes  `xml:"probes"`
-	ManagedEntities *ManagedEntities
-	Types           *Types
-	Samplers        *SamplersOut
-	Environments    *Environments
+	XMLName              xml.Name              `xml:"gateway"`
+	Compatibility        int                   `xml:"compatibility,attr"`
+	XMLNs                string                `xml:"xmlns:xsi,attr"`                     // http://www.w3.org/2001/XMLSchema-instance
+	XSI                  string                `xml:"xsi:noNamespaceSchemaLocation,attr"` // http://schema.itrsgroup.com/GA5.12.0-220125/gateway.xsd
+	Probes               *Probes               `xml:"probes,omitempty"`
+	ManagedEntities      *ManagedEntities      `xml:"managedEntities,omitempty"`
+	Types                *Types                `xml:"types,omitempty"`
+	Samplers             *SamplersOut          `xml:"samplers,omitempty"`
+	Environments         *Environments         `xml:"environments,omitempty"`
+	OperatingEnvironment *OperatingEnvironment `xml:"operatingEnvironment,omitempty"`
 }
 
 // Gateway is for reading a Gateway configuration
 type Gateway struct {
-	XMLName         xml.Name `xml:"gateway"`
-	Compatibility   int      `xml:"compatibility,attr"`
-	XMLNs           string   `xml:"xmlns:xsi,attr"`                     // http://www.w3.org/2001/XMLSchema-instance
-	XSI             string   `xml:"xsi:noNamespaceSchemaLocation,attr"` // http://schema.itrsgroup.com/GA5.12.0-220125/gateway.xsd
-	Probes          *Probes  `xml:"probes"`
-	ManagedEntities *ManagedEntities
-	Types           *Types
-	Samplers        *Samplers
-	Environments    *Environments
+	XMLName              xml.Name              `xml:"gateway"`
+	Compatibility        int                   `xml:"compatibility,attr"`
+	XMLNs                string                `xml:"xmlns:xsi,attr"`                     // http://www.w3.org/2001/XMLSchema-instance
+	XSI                  string                `xml:"xsi:noNamespaceSchemaLocation,attr"` // http://schema.itrsgroup.com/GA5.12.0-220125/gateway.xsd
+	Probes               *Probes               `xml:"probes"`
+	ManagedEntities      *ManagedEntities      `xml:"managedEntities,omitempty"`
+	Types                *Types                `xml:"types,omitempty"`
+	Samplers             *Samplers             `xml:"samplers,omitempty"`
+	Environments         *Environments         `xml:"environments,omitempty"`
+	OperatingEnvironment *OperatingEnvironment `xml:"operatingEnvironment,omitempty"`
 }
 
-type EnvironmentRef struct {
-	XMLName xml.Name `xml:"environment" json:"-" yaml:"-"`
-	Name    string   `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
-}
-
-type Environments struct {
-	XMLName      xml.Name           `xml:"environments" json:"-" yaml:"-"`
-	Groups       []EnvironmentGroup `xml:"environmentGroup,omitempty" json:",omitempty" yaml:",omitempty"`
-	Environments []Environment      `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
-}
-
-type EnvironmentGroup struct {
-	XMLName      xml.Name      `xml:"environmentGroup" json:"-" yaml:"-"`
-	Name         string        `xml:"name,attr"`
-	Environments []Environment `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
-}
-
-type Environment struct {
-	XMLName      xml.Name      `xml:"environment" json:"-" yaml:"-"`
-	Name         string        `xml:"name,attr"`
-	Environments []Environment `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
-	Vars         []Vars        `xml:"var,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
+type OperatingEnvironment struct {
+	XMLName      xml.Name `xml:"operatingEnvironment"`
+	GatewayID    int      `xml:"gatewayId"`
+	GatewayName  string   `xml:"gatewayName"`
+	SecurePort   int      `xml:"listenPorts>secure>listenPort,omitempty"`
+	InsecurePort int      `xml:"listenPorts>insecure>listenPort,omitempty"`
 }
 
 type Dataview struct {
@@ -101,23 +87,23 @@ type DataviewAdditions struct {
 }
 
 type DataviewAddition struct {
-	XMLName xml.Name          `xml:"data" json:"-" yaml:"-"`
-	Name    *SingleLineString `xml:"headline,omitempty"`
+	XMLName xml.Name             `xml:"data" json:"-" yaml:"-"`
+	Name    *SingleLineStringVar `xml:"headline,omitempty"`
 }
 
 type DataviewAdditionHeadlines struct {
-	Var       *Var               `xml:"var,omitempty"`
-	Headlines []SingleLineString `xml:"data>headline,omitempty"`
+	Var       *Var                  `xml:"var,omitempty"`
+	Headlines []SingleLineStringVar `xml:"data>headline,omitempty"`
 }
 
 type DataviewAdditionColumns struct {
-	Var       *Var               `xml:"var,omitempty"`
-	Headlines []SingleLineString `xml:"data>column,omitempty"`
+	Var       *Var                  `xml:"var,omitempty"`
+	Headlines []SingleLineStringVar `xml:"data>column,omitempty"`
 }
 
 type DataviewAdditionRows struct {
-	Var       *Var               `xml:"var,omitempty"`
-	Headlines []SingleLineString `xml:"data>rows,omitempty"`
+	Var       *Var                  `xml:"var,omitempty"`
+	Headlines []SingleLineStringVar `xml:"data>rows,omitempty"`
 }
 
 type Schemas struct {

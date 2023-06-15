@@ -22,11 +22,8 @@ THE SOFTWARE.
 
 package geneos
 
-type StateTrackerPlugin struct {
-	Display *FKMDisplay `xml:"fkm>display,omitempty" json:",omitempty" yaml:",omitempty"`
-	Files   FKMFiles    `xml:"files,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"files"`
-}
+type FIXAnalyser2Plugin struct{}
 
-func (f *StateTrackerPlugin) String() string {
-	return "stateTracker"
+func (_ *FIXAnalyser2Plugin) String() string {
+	return "fix-analyser2"
 }

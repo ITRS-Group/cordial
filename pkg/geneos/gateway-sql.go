@@ -27,13 +27,13 @@ import "encoding/xml"
 // Gateway-SQL
 
 type GatewaySQLPlugin struct {
-	Setup  *SingleLineString `xml:"Gateway-sql>setupSql>sql"`
-	Tables *GatewaySQLTables `xml:"Gateway-sql>tables"`
-	Sample *SingleLineString `xml:"Gateway-sql>sampleSql>sql"`
-	Views  []GWSQLView       `xml:"Gateway-sql>views>view"`
+	Setup  *SingleLineStringVar `xml:"Gateway-sql>setupSql>sql"`
+	Tables *GatewaySQLTables    `xml:"Gateway-sql>tables"`
+	Sample *SingleLineStringVar `xml:"Gateway-sql>sampleSql>sql"`
+	Views  []GWSQLView          `xml:"Gateway-sql>views>view"`
 }
 
-func (f *GatewaySQLPlugin) String() string {
+func (_ *GatewaySQLPlugin) String() string {
 	return "gateway-sql"
 }
 
@@ -42,33 +42,33 @@ type GatewaySQLTables struct {
 }
 
 type GatewaySQLTableDataview struct {
-	XMLName xml.Name          `xml:"dataview" json:"-" yaml:"-"`
-	Name    *SingleLineString `xml:"tableName"`
-	XPath   string            `xml:"xpath"`
-	Columns *[]GWSQLColumn    `xml:"columns>column,omitempty"`
+	XMLName xml.Name             `xml:"dataview" json:"-" yaml:"-"`
+	Name    *SingleLineStringVar `xml:"tableName"`
+	XPath   string               `xml:"xpath"`
+	Columns *[]GWSQLColumn       `xml:"columns>column,omitempty"`
 }
 
 type GatewaySQLTableHeadline struct {
-	XMLName xml.Name          `xml:"headlines" json:"-" yaml:"-"`
-	Name    *SingleLineString `xml:"tableName"`
-	XPath   string            `xml:"xpath"`
+	XMLName xml.Name             `xml:"headlines" json:"-" yaml:"-"`
+	Name    *SingleLineStringVar `xml:"tableName"`
+	XPath   string               `xml:"xpath"`
 }
 
 type GatewaySQLTableXPath struct {
-	XMLName xml.Name          `xml:"xpath" json:"-" yaml:"-"`
-	Name    *SingleLineString `xml:"tableName"`
-	XPaths  []string          `xml:"xpaths>xpath"`
-	Columns []GWSQLColumn     `xml:"columns>column"`
+	XMLName xml.Name             `xml:"xpath" json:"-" yaml:"-"`
+	Name    *SingleLineStringVar `xml:"tableName"`
+	XPaths  []string             `xml:"xpaths>xpath"`
+	Columns []GWSQLColumn        `xml:"columns>column"`
 }
 
 type GWSQLColumn struct {
-	Name  *SingleLineString `xml:"name"`
-	XPath string            `xml:"xpath,omitempty"`
-	Type  string            `xml:"type,omitempty"`
+	Name  *SingleLineStringVar `xml:"name"`
+	XPath string               `xml:"xpath,omitempty"`
+	Type  string               `xml:"type,omitempty"`
 }
 
 type GWSQLView struct {
-	XMLName  xml.Name          `xml:"view" json:"-" yaml:"-"`
-	ViewName *SingleLineString `xml:"name"`
-	SQL      *SingleLineString `xml:"sql"`
+	XMLName  xml.Name             `xml:"view" json:"-" yaml:"-"`
+	ViewName *SingleLineStringVar `xml:"name"`
+	SQL      *SingleLineStringVar `xml:"sql"`
 }

@@ -29,37 +29,37 @@ type SQLToolkitPlugin struct {
 	Connection DBConnection `xml:"sql-toolkit>connection"`
 }
 
-func (f *SQLToolkitPlugin) String() string {
+func (_ *SQLToolkitPlugin) String() string {
 	return "sql-toolkit"
 }
 
 type Query struct {
-	Name *SingleLineString `xml:"name"`
-	SQL  *SingleLineString `xml:"sql"`
+	Name *SingleLineStringVar `xml:"name"`
+	SQL  *SingleLineStringVar `xml:"sql"`
 }
 
 type DBConnection struct {
-	MySQL                     *MySQL            `xml:"database>mysql,omitempty"`
-	SQLServer                 *SQLServer        `xml:"database>sqlServer,omitempty"`
-	Sybase                    *Sybase           `xml:"database>sybase,omitempty"`
-	Username                  *SingleLineString `xml:"var-userName"`
-	Password                  *SingleLineString `xml:"password"`
-	CloseConnectionAfterQuery *Value            `xml:"closeConnectionAfterQuery,omitempty"`
+	MySQL                     *MySQL               `xml:"database>mysql,omitempty"`
+	SQLServer                 *SQLServer           `xml:"database>sqlServer,omitempty"`
+	Sybase                    *Sybase              `xml:"database>sybase,omitempty"`
+	Username                  *SingleLineStringVar `xml:"var-userName"`
+	Password                  *SingleLineStringVar `xml:"password"`
+	CloseConnectionAfterQuery *Value               `xml:"closeConnectionAfterQuery,omitempty"`
 }
 
 type MySQL struct {
-	ServerName *SingleLineString `xml:"var-serverName"`
-	DBName     *SingleLineString `xml:"var-databaseName"`
-	Port       *SingleLineString `xml:"var-port"`
+	ServerName *SingleLineStringVar `xml:"var-serverName"`
+	DBName     *SingleLineStringVar `xml:"var-databaseName"`
+	Port       *SingleLineStringVar `xml:"var-port"`
 }
 
 type SQLServer struct {
-	ServerName *SingleLineString `xml:"var-serverName"`
-	DBName     *SingleLineString `xml:"var-databaseName"`
-	Port       *SingleLineString `xml:"var-port"`
+	ServerName *SingleLineStringVar `xml:"var-serverName"`
+	DBName     *SingleLineStringVar `xml:"var-databaseName"`
+	Port       *SingleLineStringVar `xml:"var-port"`
 }
 
 type Sybase struct {
-	InstanceName *SingleLineString `xml:"var-instanceName"`
-	DBName       *SingleLineString `xml:"var-databaseName"`
+	InstanceName *SingleLineStringVar `xml:"var-instanceName"`
+	DBName       *SingleLineStringVar `xml:"var-databaseName"`
 }

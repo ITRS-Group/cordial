@@ -23,16 +23,16 @@ THE SOFTWARE.
 package geneos
 
 type ToolkitPlugin struct {
-	SamplerScript        *SingleLineString      `xml:"toolkit>samplerScript"`
+	SamplerScript        *SingleLineStringVar   `xml:"toolkit>samplerScript"`
 	SamplerTimeout       *Value                 `xml:"toolkit>scriptTimeout,omitempty"`
 	EnvironmentVariables *[]EnvironmentVariable `xml:"toolkit>environmentVariables>variable"`
 }
 
-func (f *ToolkitPlugin) String() string {
+func (_ *ToolkitPlugin) String() string {
 	return "toolkit"
 }
 
 type EnvironmentVariable struct {
-	Name  string            `xml:"name"`
-	Value *SingleLineString `xml:"value"`
+	Name  string               `xml:"name"`
+	Value *SingleLineStringVar `xml:"value"`
 }

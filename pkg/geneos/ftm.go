@@ -35,21 +35,21 @@ type FTMPlugin struct {
 	SizeUnit                   string           `xml:"ftm>sizeUnit"`
 }
 
-func (f *FTMPlugin) String() string {
+func (_ *FTMPlugin) String() string {
 	return "ftm"
 }
 
 type FTMFile struct {
-	XMLName         xml.Name            `xml:"file" json:"-" yaml:"-"`
-	Path            *SingleLineString   `xml:"path"`
-	AdditionalPaths *FTMAdditionalPaths `xml:"additionalPaths,omitempty"`
-	ExpectedArrival *Value              `xml:"expectedArrival,omitempty"`
+	XMLName         xml.Name             `xml:"file" json:"-" yaml:"-"`
+	Path            *SingleLineStringVar `xml:"path"`
+	AdditionalPaths *FTMAdditionalPaths  `xml:"additionalPaths,omitempty"`
+	ExpectedArrival *Value               `xml:"expectedArrival,omitempty"`
 	ExpectedPeriod  *struct {
 		Period string `xml:",innerxml"`
 	} `xml:"expectedPeriod,omitempty"`
-	TZOffset         *Value            `xml:"tzOffset,omitempty"`
-	MonitoringPeriod interface{}       `xml:"monitoringPeriod"`
-	Alias            *SingleLineString `xml:"alias"`
+	TZOffset         *Value               `xml:"tzOffset,omitempty"`
+	MonitoringPeriod interface{}          `xml:"monitoringPeriod"`
+	Alias            *SingleLineStringVar `xml:"alias"`
 }
 
 type MonitoringPeriodAlias struct {
@@ -61,13 +61,13 @@ type MonitoringPeriodStart struct {
 }
 
 type FTMAdditionalPaths struct {
-	Paths []*SingleLineString `xml:"additionalPath"`
+	Paths []*SingleLineStringVar `xml:"additionalPath"`
 }
 
 type FTMHolidaysVars struct {
-	XMLName xml.Name            `xml:"holidaysVar" json:"-" yaml:"-"`
-	Holiday []*SingleLineString `xml:"holiday,omitempty"`
-	Day     *FTMWeekdays        `xml:"day,omitempty"`
+	XMLName xml.Name               `xml:"holidaysVar" json:"-" yaml:"-"`
+	Holiday []*SingleLineStringVar `xml:"holiday,omitempty"`
+	Day     *FTMWeekdays           `xml:"day,omitempty"`
 }
 
 type FTMWeekdays struct {
