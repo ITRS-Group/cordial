@@ -239,23 +239,30 @@ func Filename(c geneos.Instance, name string) (filename string) {
 	return
 }
 
-// Filenames returns the basename of the files named by the
+// Filepaths returns the full path of the files named by the
 // configuration items given in 'names'. Returns an empty slice if the
 // instance is not valid or empty strings for each name if the
 // configuration item doesn't exist or is not set.
-func Filenames(c geneos.Instance, names ...string) (filenames []string) {
+func Filepaths(c geneos.Instance, names ...string) (filenames []string) {
 	cf := c.Config()
 
 	if cf == nil {
 		return
 	}
+
+	dir := HomeDir(c)
+
 	for _, name := range names {
-		filename := filepath.Base(cf.GetString(name))
-		// return empty and not a "."
-		if filename == "." {
-			filename = ""
+		if filepath.IsAbs(name) {
+			filenames = append(filenames, name)
+		} else {
+			filename := filepath.Join(dir, cf.GetString(name))
+			// return empty and not a "."
+			if filename == "." {
+				filename = ""
+			}
+			filenames = append(filenames, filename)
 		}
-		filenames = append(filenames, filename)
 	}
 	return
 }
@@ -265,7 +272,7 @@ func Filenames(c geneos.Instance, names ...string) (filenames []string) {
 // command line options are common to all core Geneos components except
 // the gateway, which is special-cased
 func SetSecureArgs(c geneos.Instance) (args []string) {
-	files := Filenames(c, "certificate", "privatekey")
+	files := Filepaths(c, "certificate", "privatekey")
 	if len(files) == 0 {
 		return
 	}
