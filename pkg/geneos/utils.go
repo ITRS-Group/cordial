@@ -56,6 +56,10 @@ func RemoveDuplicates[T KeyedObject](kvs []T) []T {
 func FlattenProbes(in *Probes) (probes map[string]Probe) {
 	probes = make(map[string]Probe)
 
+	if in == nil {
+		return
+	}
+
 	for _, p := range in.Probes {
 		if p.Disabled {
 			continue
@@ -181,6 +185,11 @@ func flattenProbeGroup(in *ProbeGroup) (probes []Probe, floatingProbes []Floatin
 // FlattenEntities func
 func FlattenEntities(in *ManagedEntities, types map[string]Type) (entities map[string]ManagedEntity) {
 	entities = make(map[string]ManagedEntity)
+
+	if in == nil {
+		return
+	}
+
 	for _, entity := range in.Entities {
 		if entity.Disabled {
 			continue
@@ -317,6 +326,11 @@ func resolveEntitySamplers(group *ManagedEntityGroup, entity *ManagedEntity, typ
 
 func FlattenTypes(in *Types) (types map[string]Type) {
 	types = make(map[string]Type)
+
+	if in == nil {
+		return
+	}
+
 	for _, t := range in.Types {
 		if t.Disabled {
 			continue
@@ -357,6 +371,11 @@ func flattenTypeGroup(in *TypeGroup) (types map[string]Type) {
 
 func FlattenSamplers(in *Samplers) (samplers map[string]Sampler) {
 	samplers = make(map[string]Sampler)
+
+	if in == nil {
+		return
+	}
+
 	for _, s := range in.Samplers {
 		if s.Disabled {
 			continue
