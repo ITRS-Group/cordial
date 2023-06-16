@@ -22,15 +22,18 @@ THE SOFTWARE.
 
 package geneos
 
+import "encoding/xml"
+
 // SQL Toolkit
 
 type SQLToolkitPlugin struct {
-	Queries    []Query      `xml:"sql-toolkit>queries>query"`
-	Connection DBConnection `xml:"sql-toolkit>connection"`
+	XMLName    xml.Name     `xml:"sql-toolkit" json:"-" yaml:"-"`
+	Queries    []Query      `xml:"queries>query"`
+	Connection DBConnection `xml:"connection"`
 }
 
-func (_ *SQLToolkitPlugin) String() string {
-	return "sql-toolkit"
+func (p *SQLToolkitPlugin) String() string {
+	return p.XMLName.Local
 }
 
 type Query struct {

@@ -30,7 +30,8 @@ import (
 // FKM
 
 type FKMPlugin struct {
-	Display *FKMDisplay `xml:"fkm>display,omitempty" json:",omitempty" yaml:",omitempty"`
+	XMLName xml.Name    `xml:"fkm" json:"-" yaml:"-"`
+	Display *FKMDisplay `xml:"display,omitempty" json:",omitempty" yaml:",omitempty"`
 	Files   FKMFiles    `xml:"files,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"files"`
 }
 
@@ -58,8 +59,10 @@ type FKMFile struct {
 }
 
 type FKMFileSource struct {
-	Filename *SingleLineStringVar `xml:"filename,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"filename"`
-	Stream   *SingleLineStringVar `xml:"stream,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"stream"`
+	Filename          *SingleLineStringVar `xml:"filename,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"filename"`
+	Stream            *SingleLineStringVar `xml:"stream,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"stream"`
+	NTEventLog        string               `xml:"ntEventLog,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"ntEventLog"`
+	ProcessDescriptor *Reference           `xml:"processDescriptor,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"processDescriptor"`
 }
 
 type FKMTable struct {

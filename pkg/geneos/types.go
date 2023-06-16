@@ -5,7 +5,7 @@ import "encoding/xml"
 type Types struct {
 	XMLName    xml.Name    `xml:"types" json:"-" yaml:"-"`
 	Types      []Type      `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
-	TypeGroups []TypeGroup `json:"typeGroup,omitempty" yaml:",omitempty" mapstructure:"typegroup"`
+	TypeGroups []TypeGroup `xml:"typeGroup,omitempty" json:"typeGroup,omitempty" yaml:",omitempty" mapstructure:"typegroup"`
 }
 
 type TypeGroup struct {
@@ -13,7 +13,7 @@ type TypeGroup struct {
 	Name       string      `xml:"name,attr"`
 	Disabled   bool        `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 	Types      []Type      `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
-	TypeGroups []TypeGroup `json:"typeGroup,omitempty" yaml:",omitempty" mapstructure:"typegroup"`
+	TypeGroups []TypeGroup `xml:"typeGroup,omitempty" json:"typeGroup,omitempty" yaml:",omitempty" mapstructure:"typegroup"`
 }
 
 type Type struct {

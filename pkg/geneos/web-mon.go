@@ -22,8 +22,12 @@ THE SOFTWARE.
 
 package geneos
 
-type WebMonPlugin struct{}
+import "encoding/xml"
 
-func (_ *WebMonPlugin) String() string {
-	return "web-mon"
+type WebMonPlugin struct {
+	XMLName xml.Name `xml:"web-mon" json:"-" yaml:"-"`
+}
+
+func (p *WebMonPlugin) String() string {
+	return p.XMLName.Local
 }

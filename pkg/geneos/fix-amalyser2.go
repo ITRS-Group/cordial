@@ -22,8 +22,12 @@ THE SOFTWARE.
 
 package geneos
 
-type FIXAnalyser2Plugin struct{}
+import "encoding/xml"
 
-func (_ *FIXAnalyser2Plugin) String() string {
-	return "fix-analyser2"
+type FIXAnalyser2Plugin struct {
+	XMLName xml.Name `xml:"fix-analyser2" json:"-" yaml:"-"`
+}
+
+func (p *FIXAnalyser2Plugin) String() string {
+	return p.XMLName.Local
 }

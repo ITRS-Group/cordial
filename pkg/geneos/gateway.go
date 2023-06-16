@@ -63,6 +63,7 @@ type Gateway struct {
 	Types                *Types                `xml:"types,omitempty"`
 	Samplers             *Samplers             `xml:"samplers,omitempty"`
 	Environments         *Environments         `xml:"environments,omitempty"`
+	ProcessDescriptors   *ProcessDescriptors   `xml:"staticVars>processDescriptors,omitempty"`
 	OperatingEnvironment *OperatingEnvironment `xml:"operatingEnvironment,omitempty"`
 }
 

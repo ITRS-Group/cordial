@@ -22,8 +22,12 @@ THE SOFTWARE.
 
 package geneos
 
-type UNIXUsersPlugin struct{}
+import "encoding/xml"
 
-func (_ *UNIXUsersPlugin) String() string {
-	return "unix-users"
+type UNIXUsersPlugin struct {
+	XMLName xml.Name `xml:"unix-users" json:"-" yaml:"-"`
+}
+
+func (p *UNIXUsersPlugin) String() string {
+	return p.XMLName.Local
 }

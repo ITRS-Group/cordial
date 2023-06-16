@@ -27,8 +27,9 @@ import "encoding/xml"
 // API Plugin
 
 type APIPlugin struct {
-	Parameters  []Parameter          `xml:"api>parameters>parameter"`
-	SummaryView *SingleLineStringVar `xml:"api>showSummaryView>always>viewName,omitempty"`
+	XMLName     xml.Name             `xml:"api" json:"-" yaml:"-"`
+	Parameters  []Parameter          `xml:"parameters>parameter"`
+	SummaryView *SingleLineStringVar `xml:"showSummaryView>always>viewName,omitempty"`
 }
 
 func (f *APIPlugin) String() string {
@@ -43,9 +44,10 @@ type Parameter struct {
 // API Streams Plugin
 
 type APIStreamsPlugin struct {
-	XMLName    xml.Name `xml:"api-streams"`
-	Streams    *Streams `xml:"api-streams>streams"`
-	CreateView *Value   `xml:"api-streams>createView,omitempty"`
+	XMLName    xml.Name `xml:"api-streams" json:"-" yaml:"-"`
+	Streams    *Streams `xml:"streams"`
+	BufferSize *Value   `xml:"bufferSize,omitempty"`
+	CreateView *Value   `xml:"createView,omitempty"`
 }
 
 func (f *APIStreamsPlugin) String() string {

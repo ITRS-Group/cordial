@@ -22,8 +22,12 @@ THE SOFTWARE.
 
 package geneos
 
-type WinServicesPlugin struct{}
+import "encoding/xml"
 
-func (_ *WinServicesPlugin) String() string {
-	return "win-services"
+type WinServicesPlugin struct {
+	XMLName xml.Name `xml:"win-services" json:"-" yaml:"-"`
+}
+
+func (p *WinServicesPlugin) String() string {
+	return p.XMLName.Local
 }

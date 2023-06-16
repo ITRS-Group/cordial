@@ -22,8 +22,12 @@ THE SOFTWARE.
 
 package geneos
 
-type TopPlugin struct{}
+import "encoding/xml"
 
-func (_ *TopPlugin) String() string {
-	return "top"
+type TopPlugin struct {
+	XMLName xml.Name `xml:"top" json:"-" yaml:"-"`
+}
+
+func (p *TopPlugin) String() string {
+	return p.XMLName.Local
 }

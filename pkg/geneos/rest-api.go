@@ -22,8 +22,12 @@ THE SOFTWARE.
 
 package geneos
 
-type RESTAPIPlugin struct{}
+import "encoding/xml"
 
-func (_ *RESTAPIPlugin) String() string {
-	return "rest-api"
+type RESTAPIPlugin struct {
+	XMLName xml.Name `xml:"rest-api" json:"-" yaml:"-"`
+}
+
+func (p *RESTAPIPlugin) String() string {
+	return p.XMLName.Local
 }

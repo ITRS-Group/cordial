@@ -25,33 +25,47 @@ package geneos
 import "encoding/xml"
 
 type ProcessesPlugin struct {
-	AdjustForLogicalCPUs *Value    `xml:"adjustForLogicalCPUs,omitempty" json:",omitempty" yaml:",omitempty"`
-	Processes            []Process `xml:"processes>processes>process,omitempty" json:",omitempty" yaml:",omitempty"`
-	Rest                 string    `xml:",any"`
+	XMLName                     xml.Name  `xml:"processes" json:"-" yaml:"-"`
+	AdjustForLogicalCPUs        *Value    `xml:"adjustForLogicalCPUs,omitempty" json:",omitempty" yaml:",omitempty"`
+	AdjustForLogicalCPUsSummary *Value    `xml:"adjustForLogicalCPUsSummary,omitempty" json:",omitempty" yaml:",omitempty"`
+	Processes                   []Process `xml:"processes>process,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
-func (_ *ProcessesPlugin) String() string {
-	return "processes"
+func (p *ProcessesPlugin) String() string {
+	return p.XMLName.Local
 }
 
 type Process struct {
+	XMLName           xml.Name              `xml:"process" json:"-" yaml:"-"`
 	Data              *ProcessDescriptor    `xml:"data,omitempty" json:",omitempty" yaml:",omitempty"`
 	ProcessDescriptor *ProcessDescriptorRef `xml:"processDescriptor,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 type ProcessDescriptorRef struct {
-	Name string `xml:"ref,attr"`
+	Name string `xml:"ref,attr" json:"name" yaml:"name"`
 }
 
 type ProcessDescriptors struct {
-	XMLName xml.Name `xml:"processDescriptors"`
+	XMLName                 xml.Name                 `xml:"processDescriptors" json:"-" yaml:"-"`
+	ProcessDescriptors      []ProcessDescriptor      `xml:"data,omitempty" json:",omitempty" yaml:",omitempty"`
+	ProcessDescriptorGroups []ProcessDescriptorGroup `xml:"processDescriptorGroup,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 type ProcessDescriptorGroup struct {
-	XMLName            xml.Name            `xml:"processDescriptorGroup"`
-	ProcessDescriptors []ProcessDescriptor `xml:"processDescriptor,omitempty" json:",omitempty" yaml:",omitempty"`
+	XMLName                 xml.Name                 `xml:"processDescriptorGroup" json:"-" yaml:"-"`
+	Name                    string                   `xml:"name,attr" json:"name" yaml:"name"`
+	Disabled                bool                     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	ProcessDescriptors      []ProcessDescriptor      `xml:"processDescriptor,omitempty" json:",omitempty" yaml:",omitempty"`
+	ProcessDescriptorGroups []ProcessDescriptorGroup `xml:"processDescriptorGroup,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 type ProcessDescriptor struct {
-	Alias *SingleLineStringVar `xml:"alias"`
+	// no struct XMLName as we can get here via two routes - "data" or "processDescriptor"
+	// XMLName  xml.Name             `xml:"processDescriptor" json:"-" yaml:"-"`
+	Name     string               `xml:"name,attr" json:"name" yaml:"name"`
+	Disabled bool                 `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Alias    *SingleLineStringVar `xml:"alias" json:"alias" yaml:"alias"`
+	Start    *SingleLineStringVar `xml:"start,omitempty" json:"start,omitempty" yaml:"start,omitempty"`
+	Stop     *SingleLineStringVar `xml:"stop,omitempty" json:"stop,omitempty" yaml:"stop,omitempty"`
+	LogFile  *SingleLineStringVar `xml:"logFile,omitempty" json:"logfile,omitempty" yaml:"logfile,omitempty"`
 }

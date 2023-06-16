@@ -25,18 +25,19 @@ package geneos
 import "encoding/xml"
 
 type FTMPlugin struct {
-	Files                      []FTMFile        `xml:"ftm>files>file"`
-	Holidays                   *FTMHolidaysVars `xml:"ftm>holidaysVar,omitempty"`
-	MonitoredDays              *FTMWeekdays     `xml:"ftm>monitoredDays,omitempty"`
-	ConsistentDateStamps       *Value           `xml:"ftm>consistentDateStamps,omitempty"`
-	DisplayTimeInISO8601Format *Value           `xml:"ftm>displayTimeInIso8601Format,omitempty"`
-	ShowActualFilename         *Value           `xml:"ftm>showActualFilename,omitempty"`
-	DelayUnit                  string           `xml:"ftm>delayUnit"`
-	SizeUnit                   string           `xml:"ftm>sizeUnit"`
+	XMLName                    xml.Name         `xml:"ftm" json:"-" yaml:"-"`
+	Files                      []FTMFile        `xml:"files>file"`
+	Holidays                   *FTMHolidaysVars `xml:"holidaysVar,omitempty"`
+	MonitoredDays              *FTMWeekdays     `xml:"monitoredDays,omitempty"`
+	ConsistentDateStamps       *Value           `xml:"consistentDateStamps,omitempty"`
+	DisplayTimeInISO8601Format *Value           `xml:"displayTimeInIso8601Format,omitempty"`
+	ShowActualFilename         *Value           `xml:"showActualFilename,omitempty"`
+	DelayUnit                  string           `xml:"delayUnit"`
+	SizeUnit                   string           `xml:"sizeUnit"`
 }
 
-func (_ *FTMPlugin) String() string {
-	return "ftm"
+func (p *FTMPlugin) String() string {
+	return p.XMLName.Local
 }
 
 type FTMFile struct {
