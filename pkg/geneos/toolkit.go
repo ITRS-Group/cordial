@@ -22,17 +22,21 @@ THE SOFTWARE.
 
 package geneos
 
+import "encoding/xml"
+
 type ToolkitPlugin struct {
-	SamplerScript        *SingleLineStringVar   `xml:"toolkit>samplerScript"`
-	SamplerTimeout       *Value                 `xml:"toolkit>scriptTimeout,omitempty"`
-	EnvironmentVariables *[]EnvironmentVariable `xml:"toolkit>environmentVariables>variable"`
+	XMLName              xml.Name               `xml:"toolkit" json:"-" yaml:"-"`
+	SamplerScript        *SingleLineStringVar   `xml:"samplerScript"`
+	SamplerTimeout       *Value                 `xml:"scriptTimeout,omitempty"`
+	EnvironmentVariables *[]EnvironmentVariable `xml:"environmentVariables>variable"`
 }
 
-func (_ *ToolkitPlugin) String() string {
-	return "toolkit"
+func (p *ToolkitPlugin) String() string {
+	return p.XMLName.Local
 }
 
 type EnvironmentVariable struct {
-	Name  string               `xml:"name"`
-	Value *SingleLineStringVar `xml:"value"`
+	XMLName xml.Name             `xml:"variable"  json:"-" yaml:"-"`
+	Name    string               `xml:"name"`
+	Value   *SingleLineStringVar `xml:"value"`
 }

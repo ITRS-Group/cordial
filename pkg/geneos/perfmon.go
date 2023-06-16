@@ -22,8 +22,12 @@ THE SOFTWARE.
 
 package geneos
 
-type PerfmonPlugin struct{}
+import "encoding/xml"
 
-func (_ *PerfmonPlugin) String() string {
-	return "perfmon"
+type PerfmonPlugin struct {
+	XMLName xml.Name `xml:"perfmon" json:"-" yaml:"-"`
+}
+
+func (p *PerfmonPlugin) String() string {
+	return p.XMLName.Local
 }

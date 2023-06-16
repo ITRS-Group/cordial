@@ -92,31 +92,24 @@ type Sampler struct {
 
 // Plugin lists all the plugins we know about
 type Plugin struct {
-	API          *APIPlugin          `xml:"api,omitempty" json:"api,omitempty" yaml:"api,omitempty"`
-	APIStreams   *APIStreamsPlugin   `xml:"api-streams,omitempty" json:"api-streams,omitempty" yaml:"api-streams,omitempty"`
-	ControlM     *ControlMPlugin     `xml:"control-m,omitempty" json:"control-m,omitempty" yaml:"control-m,omitempty"`
-	CpuPlugin    *CPUPlugin          `xml:"cpu,omitempty" json:"cpu,omitempty" yaml:"cpu,omitempty"`
-	DiskPlugin   *DiskPlugin         `xml:"disk,omitempty" json:"disk,omitempty" yaml:"disk,omitempty"`
-	FIXAnalyser2 *FIXAnalyser2Plugin `xml:"fix-analyser2,omitempty" json:"fix-analyser2,omitempty" yaml:"fix-analyser2,omitempty"`
-	FKM          *FKMPlugin          `xml:"fkm,omitempty" json:"fkm,omitempty" yaml:"fkm,omitempty"`
-	FTM          *FTMPlugin          `xml:"ftm,omitempty" json:"ftm,omitempty" yaml:"ftm,omitempty"`
-	Hardware     *HardwarePlugin     `xml:"hardware,omitempty" json:"hardware,omitempty" yaml:"hardware,omitempty"`
-	Network      *NetworkPlugin      `xml:"network,omitempty" json:"network,omitempty" yaml:"hardware,omitempty"`
-	Perfmon      *PerfmonPlugin      `xml:"perfmon,omitempty" json:"perfmon,omitempty" yaml:"perfmon,omitempty"`
-	Process      *ProcessesPlugin    `xml:"processes,omitempty" json:"processes,omitempty" yaml:"processes,omitempty"`
-	RESTAPI      *RESTAPIPlugin      `xml:"rest-api,omitempty" json:"rest-api,omitempty" yaml:"rest-api,omitempty"`
-	SQLToolkit   *SQLToolkitPlugin   `xml:"sql-toolkit,omitempty" json:"sql-toolkit,omitempty" yaml:"sql-toolkit,omitempty"`
-	StateTracker *StateTrackerPlugin `xml:"stateTracker,omitempty" json:"stateTracker,omitempty" yaml:"stateTracker,omitempty"`
-	Toolkit      *ToolkitPlugin      `xml:"toolkit,omitempty" json:"toolkit,omitempty" yaml:"toolkit,omitempty"`
-	TopPlugin    *TopPlugin          `xml:"top,omitempty" json:"top,omitempty" yaml:"top,omitempty"`
-	UNIXUsers    *UNIXUsersPlugin    `xml:"unix-users,omitempty" json:"unix-users,omitempty" yaml:"unix-users,omitempty"`
-	WebMon       *WebMonPlugin       `xml:"web-mon,omitempty" json:"web-mon,omitempty" yaml:"web-mon,omitempty"`
-	WinServices  *WinServicesPlugin  `xml:"win-services,omitempty" json:"win-services,omitempty" yaml:"win-services,omitempty"`
-	WMI          *WMIPlugin          `xml:"wmi,omitempty" json:"wmi,omitempty" yaml:"wmi,omitempty"`
-	WTSSessions  *WTSSessionsPlugin  `xml:"wts-sessions,omitempty" json:"wts-sessions,omitempty" yaml:"wts-sessions,omitempty"`
-	XPing        *XPingPlugin        `xml:"x-ping,omitempty" json:"x-ping,omitempty" yaml:"x-ping,omitempty"`
+	// api.go
+	API        *APIPlugin        `xml:"api,omitempty" json:"api,omitempty" yaml:"api,omitempty"`
+	APIStreams *APIStreamsPlugin `xml:"api-streams,omitempty" json:"api-streams,omitempty" yaml:"api-streams,omitempty"`
 
-	GatewayBreachPredictor              *GatewayBreachPredictorPlugin              `xml:"Gateway-breachpredictor,omitempty" json:"Gateway-breachpredictor,omitempty" yaml:"Gateway-breachpredictor,omitempty"`
+	// control-m.go
+	ControlM *ControlMPlugin `xml:"control-m,omitempty" json:"control-m,omitempty" yaml:"control-m,omitempty"`
+
+	// fix-analyser.go
+	FIXAnalyser2 *FIXAnalyser2Plugin `xml:"fix-analyser2,omitempty" json:"fix-analyser2,omitempty" yaml:"fix-analyser2,omitempty"`
+
+	// fkm.go
+	FKM *FKMPlugin `xml:"fkm,omitempty" json:"fkm,omitempty" yaml:"fkm,omitempty"`
+
+	// ftm.go
+	FTM *FTMPlugin `xml:"ftm,omitempty" json:"ftm,omitempty" yaml:"ftm,omitempty"`
+
+	// gateway-plugins.go
+	GatewayBreachPredictor              *GatewayBreachPredictorPlugin              `xml:"Gateway-breachPredictor,omitempty" json:"Gateway-breachpredictor,omitempty" yaml:"Gateway-breachpredictor,omitempty"`
 	GatewayClientConnectionData         *GatewayClientConnectionDataPlugin         `xml:"Gateway-clientConnectionData,omitempty" json:"Gateway-clientConnectionData,omitempty" yaml:"Gateway-clientConnectionData,omitempty"`
 	GatewayDatabaseLogging              *GatewayDatabaseLoggingPlugin              `xml:"Gateway-databaseLogging,omitempty" json:"Gateway-databaseLogging,omitempty" yaml:"Gateway-databaseLogging,omitempty"`
 	GatewayExportedData                 *GatewayExportedDataPlugin                 `xml:"Gateway-exportedData,omitempty" json:"Gateway-exportedData,omitempty" yaml:"Gateway-exportedData,omitempty"`
@@ -129,13 +122,65 @@ type Plugin struct {
 	GatewayManagedEntityData            *GatewayManagedEntityDataPlugin            `xml:"Gateway-managedEntitiesData,omitempty" json:"Gateway-managedEntitiesData,omitempty" yaml:"Gateway-managedEntitiesData,omitempty"`
 	GatewayObcervConnection             *GatewayObcervConnectionPlugin             `xml:"Gateway-obcervConnection,omitempty" json:"Gateway-obcervConnection,omitempty" yaml:"Gateway-obcervConnection,omitempty"`
 	GatewayProbeData                    *GatewayProbeDataPlugin                    `xml:"Gateway-probeData,omitempty" json:"Gateway-probeData,omitempty" yaml:"Gateway-probeData,omitempty"`
-	GatewayScheduledCommandData         *GatewayScheduledCommandDataPlugin         `xml:"Gateway-scheduledCommandData,omitempty" json:"Gateway-scheduledCommandData,omitempty" yaml:"Gateway-scheduledCommandData,omitempty"`
 	GatewayScheduledCommandsHistoryData *GatewayScheduledCommandsHistoryDataPlugin `xml:"Gateway-scheduledCommandsHistoryData,omitempty" json:"Gateway-scheduledCommandsHistoryData,omitempty" yaml:"Gateway-scheduledCommandsHistoryData,omitempty"`
+	GatewayScheduledCommandData         *GatewayScheduledCommandDataPlugin         `xml:"Gateway-scheduledCommandData,omitempty" json:"Gateway-scheduledCommandData,omitempty" yaml:"Gateway-scheduledCommandData,omitempty"`
 	GatewaySeverityCount                *GatewaySeverityCountPlugin                `xml:"Gateway-severityCount,omitempty" json:"Gateway-severityCount,omitempty" yaml:"Gateway-severityCount,omitempty"`
 	GatewaySeverityData                 *GatewaySeverityDataPlugin                 `xml:"Gateway-severityData,omitempty" json:"Gateway-severityData,omitempty" yaml:"Gateway-severityData,omitempty"`
 	GatewaySnoozeData                   *GatewaySnoozeDataPlugin                   `xml:"Gateway-snoozeData,omitempty" json:"Gateway-snoozeData,omitempty" yaml:"Gateway-snoozeData,omitempty"`
 	GatewaySQL                          *GatewaySQLPlugin                          `xml:"Gateway-sql,omitempty" json:"Gateway-sql,omitempty" yaml:"Gateway-sql,omitempty"`
 	GatewayUserAssignmentData           *GatewayUserAssignmentDataPlugin           `xml:"Gateway-userAssignmentData,omitempty" json:"Gateway-userAssignmentData,omitempty" yaml:"Gateway-userAssignmentData,omitempty"`
 
+	// hardware-plugins.go
+	CPU      *CPUPlugin      `xml:"cpu,omitempty" json:"cpu,omitempty" yaml:"cpu,omitempty"`
+	Disk     *DiskPlugin     `xml:"disk,omitempty" json:"disk,omitempty" yaml:"disk,omitempty"`
+	DeviceIO *DeviceIOPlugin `xml:"deviceio,omitempty" json:"deviceio,omitempty" yaml:"deviceio,omitempty"`
+	Hardware *HardwarePlugin `xml:"hardware,omitempty" json:"hardware,omitempty" yaml:"hardware,omitempty"`
+	Network  *NetworkPlugin  `xml:"network,omitempty" json:"network,omitempty" yaml:"hardware,omitempty"`
+
+	// mq.go
+	MQChannel *MQChannelPlugin `xml:"mq-channel,omitempty" json:"mq-channel,omitempty" yaml:"mq-channel,omitempty"`
+	MQQInfo   *MQQInfoPlugin   `xml:"mq-qinfo,omitempty" json:"mq-qinfo,omitempty" yaml:"mq-qinfo,omitempty"`
+	MQQueue   *MQQueuePlugin   `xml:"mq-queue,omitempty" json:"mq-queue,omitempty" yaml:"mq-queue,omitempty"`
+
+	// perfmon.go
+	Perfmon *PerfmonPlugin `xml:"perfmon,omitempty" json:"perfmon,omitempty" yaml:"perfmon,omitempty"`
+
+	// processes.go
+	Process *ProcessesPlugin `xml:"processes,omitempty" json:"processes,omitempty" yaml:"processes,omitempty"`
+
+	// rest-api.go
+	RESTAPI *RESTAPIPlugin `xml:"rest-api,omitempty" json:"rest-api,omitempty" yaml:"rest-api,omitempty"`
+
+	// sql-toolkit.go
+	SQLToolkit *SQLToolkitPlugin `xml:"sql-toolkit,omitempty" json:"sql-toolkit,omitempty" yaml:"sql-toolkit,omitempty"`
+
+	// state-tracker.go
+	StateTracker *StateTrackerPlugin `xml:"stateTracker,omitempty" json:"stateTracker,omitempty" yaml:"stateTracker,omitempty"`
+
+	// toolkit.go
+	Toolkit *ToolkitPlugin `xml:"toolkit,omitempty" json:"toolkit,omitempty" yaml:"toolkit,omitempty"`
+
+	// top.go
+	Top *TopPlugin `xml:"top,omitempty" json:"top,omitempty" yaml:"top,omitempty"`
+
+	// unix-users.go
+	UNIXUsers *UNIXUsersPlugin `xml:"unix-users,omitempty" json:"unix-users,omitempty" yaml:"unix-users,omitempty"`
+
+	// web-mon.go
+	WebMon *WebMonPlugin `xml:"web-mon,omitempty" json:"web-mon,omitempty" yaml:"web-mon,omitempty"`
+
+	// win-services.go
+	WinServices *WinServicesPlugin `xml:"win-services,omitempty" json:"win-services,omitempty" yaml:"win-services,omitempty"`
+
+	// wmi.go
+	WMI *WMIPlugin `xml:"wmi,omitempty" json:"wmi,omitempty" yaml:"wmi,omitempty"`
+
+	// wts-sessions.go
+	WTSSessions *WTSSessionsPlugin `xml:"wts-sessions,omitempty" json:"wts-sessions,omitempty" yaml:"wts-sessions,omitempty"`
+
+	// x-ping.go
+	XPing *XPingPlugin `xml:"x-ping,omitempty" json:"x-ping,omitempty" yaml:"x-ping,omitempty"`
+
+	// unsupported
 	Other string `xml:",innerxml" json:",omitempty" yaml:",omitempty"`
 }

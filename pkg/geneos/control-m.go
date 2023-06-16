@@ -22,8 +22,11 @@ THE SOFTWARE.
 
 package geneos
 
+import "encoding/xml"
+
 type ControlMPlugin struct {
-	Rest string `xml:",any"`
+	XMLName xml.Name `xml:"control-m" json:"-" yaml:"-"`
+	Rest    string   `xml:",any"`
 }
 
 func (_ *ControlMPlugin) String() string {

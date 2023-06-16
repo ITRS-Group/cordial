@@ -196,6 +196,9 @@ func (v *SingleLineStringVar) UnmarshalXML(d *xml.Decoder, start xml.StartElemen
 var _ fmt.Stringer = (*SingleLineStringVar)(nil)
 
 func (s *SingleLineStringVar) String() (out string) {
+	if s == nil {
+		return
+	}
 	for _, p := range s.Parts {
 		s, ok := p.(fmt.Stringer)
 		if ok {

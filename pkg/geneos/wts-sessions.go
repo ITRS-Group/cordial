@@ -22,8 +22,12 @@ THE SOFTWARE.
 
 package geneos
 
-type WTSSessionsPlugin struct{}
+import "encoding/xml"
 
-func (_ *WTSSessionsPlugin) String() string {
-	return "wts-sessions"
+type WTSSessionsPlugin struct {
+	XMLName xml.Name `xml:"wts-sessions" json:"-" yaml:"-"`
+}
+
+func (p *WTSSessionsPlugin) String() string {
+	return p.XMLName.Local
 }

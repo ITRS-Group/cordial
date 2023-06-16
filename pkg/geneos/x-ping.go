@@ -22,8 +22,12 @@ THE SOFTWARE.
 
 package geneos
 
-type XPingPlugin struct{}
+import "encoding/xml"
 
-func (_ *XPingPlugin) String() string {
-	return "x-ping"
+type XPingPlugin struct {
+	XMLName xml.Name `xml:"x-ping" json:"-" yaml:"-"`
+}
+
+func (p *XPingPlugin) String() string {
+	return p.XMLName.Local
 }

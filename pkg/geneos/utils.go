@@ -337,6 +337,7 @@ func FlattenTypes(in *Types) (types map[string]Type) {
 		}
 		types[t.Name] = t
 	}
+
 	for _, g := range in.TypeGroups {
 		t := flattenTypeGroup(&g)
 		for _, t := range t {
@@ -412,6 +413,52 @@ func flattenSamplerGroup(in *SamplerGroup) (samplers map[string]Sampler) {
 				continue
 			}
 			samplers[s.Name] = s
+		}
+	}
+	return
+}
+
+func FlattenProcessDescriptors(in *ProcessDescriptors) (processDescriptors map[string]ProcessDescriptor) {
+	processDescriptors = make(map[string]ProcessDescriptor)
+
+	if in == nil {
+		return
+	}
+
+	for _, p := range in.ProcessDescriptors {
+		if p.Disabled {
+			continue
+		}
+		processDescriptors[p.Name] = p
+	}
+
+	for _, g := range in.ProcessDescriptorGroups {
+		p := flattenProcessDescriptorGroups(&g)
+		for _, p := range p {
+			if p.Disabled {
+				continue
+			}
+			processDescriptors[p.Name] = p
+		}
+	}
+	return
+}
+
+func flattenProcessDescriptorGroups(in *ProcessDescriptorGroup) (processDescriptors map[string]ProcessDescriptor) {
+	processDescriptors = make(map[string]ProcessDescriptor)
+	for _, p := range in.ProcessDescriptors {
+		if p.Disabled {
+			continue
+		}
+		processDescriptors[p.Name] = p
+	}
+	for _, g := range in.ProcessDescriptorGroups {
+		p := flattenProcessDescriptorGroups(&g)
+		for _, p := range p {
+			if p.Disabled {
+				continue
+			}
+			processDescriptors[p.Name] = p
 		}
 	}
 	return
