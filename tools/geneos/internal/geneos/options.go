@@ -38,7 +38,7 @@ type geneosOptions struct {
 	local        bool
 	nosave       bool
 	override     string
-	password     config.Plaintext
+	password     *config.Plaintext
 	platformId   string
 	restart      bool
 	source       string
@@ -117,7 +117,7 @@ func Username(u string) Options {
 }
 
 // Password is the remote access password for downloads
-func Password(p config.Plaintext) Options {
+func Password(p *config.Plaintext) Options {
 	return func(d *geneosOptions) { d.password = p }
 }
 

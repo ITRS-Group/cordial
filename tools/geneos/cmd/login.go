@@ -33,15 +33,17 @@ import (
 )
 
 var loginCmdUsername string
-var loginCmdPassword config.Plaintext
+var loginCmdPassword *config.Plaintext
 var loginKeyfile config.KeyFile
 var loginCmdList bool
 
 func init() {
 	GeneosCmd.AddCommand(loginCmd)
 
+	loginCmdPassword = &config.Plaintext{}
+
 	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username")
-	loginCmd.Flags().VarP(&loginCmdPassword, "password", "p", "Password")
+	loginCmd.Flags().VarP(loginCmdPassword, "password", "p", "Password")
 	loginCmd.Flags().VarP(&loginKeyfile, "keyfile", "k", "Key file to use")
 	loginCmd.Flags().BoolVarP(&loginCmdList, "list", "l", false, "List the names of the currently stored credentials")
 

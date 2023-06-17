@@ -26,7 +26,7 @@ type authResponse struct {
 	TokenType    string `json:"token_type"`
 }
 
-func (h *Hub) Login(ctx context.Context, username string, password config.Plaintext) (err error) {
+func (h *Hub) Login(ctx context.Context, username string, password *config.Plaintext) (err error) {
 	v := url.Values{}
 	v.Add("response_type", "code")
 	v.Add("client_id", "rest")

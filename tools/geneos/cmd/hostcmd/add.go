@@ -41,16 +41,17 @@ import (
 )
 
 var hostAddCmdInit, hostAddCmdPrompt bool
-var hostAddCmdPassword config.Plaintext
+var hostAddCmdPassword *config.Plaintext
 var hostAddCmdKeyfile config.KeyFile
 
 func init() {
 	hostCmd.AddCommand(hostAddCmd)
 
+	hostAddCmdPassword = &config.Plaintext{}
 	hostAddCmdKeyfile = cmd.DefaultUserKeyfile
 	hostAddCmd.Flags().BoolVarP(&hostAddCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
 	hostAddCmd.Flags().BoolVarP(&hostAddCmdPrompt, "prompt", "p", false, "Prompt for password")
-	hostAddCmd.Flags().VarP(&hostAddCmdPassword, "password", "P", "Password")
+	hostAddCmd.Flags().VarP(hostAddCmdPassword, "password", "P", "Password")
 	hostAddCmd.Flags().VarP(&hostAddCmdKeyfile, "keyfile", "k", "Keyfile")
 
 	hostAddCmd.Flags().SortFlags = false
@@ -117,7 +118,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		hostcf.SetDefault(cmd.Execname, geneos.Root())
 
 		var password string
-		var pw config.Plaintext
+		var pw *config.Plaintext
 
 		if hostAddCmdPrompt {
 			pw, err = config.ReadPasswordInput(true, 3)

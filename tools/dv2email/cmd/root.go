@@ -140,7 +140,7 @@ directory or in the user's .config/dv2email directory)
 			u.Scheme = "https"
 		}
 
-		var password config.Plaintext
+		password := &config.Plaintext{}
 
 		username := gwcf.GetString("username")
 		gateway := gwcf.GetString("name")
@@ -210,7 +210,7 @@ directory or in the user's .config/dv2email directory)
 		// creds can come from `geneos` credentials for the mail server
 		// domain
 
-		var epassword config.Plaintext
+		epassword := &config.Plaintext{}
 
 		emcf := cf.Sub("email")
 

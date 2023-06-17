@@ -69,7 +69,7 @@ func ReadUserInput(format string, args ...any) (input string, err error) {
 //
 // If STDIN is a named pipe (not interactive) a syscall.ENOTTY is
 // returned as an error
-func ReadPasswordInput(match bool, maxtries int, prompt ...string) (plaintext Plaintext, err error) {
+func ReadPasswordInput(match bool, maxtries int, prompt ...string) (plaintext *Plaintext, err error) {
 	fi, _ := os.Stdin.Stat()
 	if fi.Mode()&os.ModeNamedPipe > 0 {
 		err = ErrNotInteractive

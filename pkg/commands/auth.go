@@ -52,7 +52,7 @@ func AuthSSO() {
 // AuthBasic sets up HTTP Basic Authentication on client c using the
 // plaintext username and password pw. The password is a
 // config.Plaintext enclave
-func AuthBasic(c *http.Request, username string, password config.Plaintext) (err error) {
+func AuthBasic(c *http.Request, username string, password *config.Plaintext) (err error) {
 	if c != nil {
 		c.SetBasicAuth(username, password.String())
 	}

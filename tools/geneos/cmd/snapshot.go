@@ -42,7 +42,7 @@ import (
 var snapshotCmdValues, snapshotCmdSeverities, snapshotCmdSnoozes, snapshotCmdUserAssignments, snapshotCmdXpathsonly bool
 var snapshotCmdMaxitems int
 var snapshotCmdUsername, snapshotCmdPwFile string
-var snapshotCmdPassword config.Plaintext
+var snapshotCmdPassword *config.Plaintext
 
 func init() {
 	GeneosCmd.AddCommand(snapshotCmd)

@@ -45,7 +45,7 @@ var deployCmdStart, deployCmdLogs, deployCmdLocal, deployCmdNexus, deployCmdSnap
 var deployCmdSecure bool
 var deployCmdPort uint16
 var deployCmdArchive, deployCmdVersion, deployCmdOverride string
-var deployCmdPassword config.Plaintext
+var deployCmdPassword *config.Plaintext
 var deployCmdImportFiles instance.ImportFiles
 var deployCmdKeyfile config.KeyFile
 var deployCmdExtras = instance.ExtraConfigValues{}
@@ -53,6 +53,7 @@ var deployCmdExtras = instance.ExtraConfigValues{}
 func init() {
 	GeneosCmd.AddCommand(deployCmd)
 
+	deployCmdPassword = &config.Plaintext{}
 	deployCmd.Flags().StringVarP(&deployCmdGeneosHome, "geneos", "D", "", "`GENEOS_HOME` directory. No default if not found\nin user configuration or environment")
 	deployCmd.Flags().BoolVarP(&deployCmdStart, "start", "S", false, "Start new instance after creation")
 	deployCmd.Flags().BoolVarP(&deployCmdLogs, "log", "l", false, "Follow the logs after starting the instance.\nImplies --start to start the instance")
@@ -65,7 +66,7 @@ func init() {
 	deployCmd.Flags().BoolVarP(&deployCmdSecure, "secure", "T", false, "Use secure connects\nInitialise TLS subsystem if required")
 
 	deployCmd.Flags().StringVarP(&deployCmdUsername, "username", "u", "", "Username for downloads\nCredentials used if not given.")
-	deployCmd.Flags().VarP(&deployCmdPassword, "password", "P", "Password for downloads\nPrompted if required and not given")
+	deployCmd.Flags().VarP(deployCmdPassword, "password", "P", "Password for downloads\nPrompted if required and not given")
 
 	deployCmd.Flags().StringVarP(&deployCmdVersion, "version", "V", "latest", "Use this `VERSION`\nDoesn't work for EL8 archives.")
 	deployCmd.Flags().BoolVarP(&deployCmdLocal, "local", "L", false, "Install from local files only")
