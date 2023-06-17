@@ -46,7 +46,7 @@ var initCmdAll string
 var initCmdLogs, initCmdMakeCerts, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
 var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdFloatingTemplate, initCmdVersion string
 var initCmdDLUsername, initCmdPwFile string
-var initCmdDLPassword config.Plaintext
+var initCmdDLPassword *config.Plaintext
 
 // initCmdExtras is shared between all `init` commands as they share common
 // flags (for now)
@@ -54,6 +54,8 @@ var initCmdExtras = instance.ExtraConfigValues{}
 
 func init() {
 	cmd.GeneosCmd.AddCommand(initCmd)
+
+	initCmdDLPassword = &config.Plaintext{}
 
 	// alias placeholder for `init tls` to `tls init`
 	initCmd.AddCommand(initTLSCmd)

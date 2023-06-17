@@ -145,15 +145,15 @@ func (c *Config) GetString(s string, options ...ExpandOptions) string {
 // GetPassword returns a sealed enclave containing the configuration item
 // identified by key and expanded using the Expand function with the
 // options supplied.
-func GetPassword(s string, options ...ExpandOptions) Plaintext {
+func GetPassword(s string, options ...ExpandOptions) *Plaintext {
 	return global.GetPassword(s, options...)
 }
 
 // GetPassword returns a sealed enclave containing the configuration item
 // identified by key and expanded using the Expand function with the
 // options supplied.
-func (c *Config) GetPassword(key string, options ...ExpandOptions) Plaintext {
-	return Plaintext{c.ExpandToEnclave(c.Viper.GetString(key), options...)}
+func (c *Config) GetPassword(key string, options ...ExpandOptions) *Plaintext {
+	return &Plaintext{c.ExpandToEnclave(c.Viper.GetString(key), options...)}
 }
 
 // GetInt functions like [viper.GetInt] but additionally calls

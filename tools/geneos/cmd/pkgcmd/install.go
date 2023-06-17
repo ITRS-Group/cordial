@@ -40,10 +40,12 @@ import (
 
 var packageInstallCmdLocal, packageInstallCmdNoSave, packageInstallCmdUpdate, packageInstallCmdNexus, packageInstallCmdSnapshot bool
 var packageInstallCmdBase, packageInstallCmdOverride, packageInstallCmdVersion, packageInstallCmdUsername, packageInstallCmdPwFile string
-var packageInstallCmdPassword config.Plaintext
+var packageInstallCmdPassword *config.Plaintext
 
 func init() {
 	packageCmd.AddCommand(packageInstallCmd)
+
+	packageInstallCmdPassword = &config.Plaintext{}
 
 	packageInstallCmd.Flags().StringVarP(&packageInstallCmdUsername, "username", "u", "", "Username for downloads, defaults to configuration value in download.username")
 	packageInstallCmd.Flags().StringVarP(&packageInstallCmdPwFile, "pwfile", "P", "", "Password file to read for downloads, defaults to configuration value in download.password or otherwise prompts")

@@ -33,13 +33,15 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var aesPasswordCmdString config.Plaintext
+var aesPasswordCmdString *config.Plaintext
 var aesPasswordCmdSource string
 
 func init() {
 	aesCmd.AddCommand(aesPasswordCmd)
 
-	aesPasswordCmd.Flags().VarP(&aesPasswordCmdString, "password", "p", "A plaintext password")
+	aesPasswordCmdString = &config.Plaintext{}
+
+	aesPasswordCmd.Flags().VarP(aesPasswordCmdString, "password", "p", "A plaintext password")
 	aesPasswordCmd.Flags().StringVarP(&aesPasswordCmdSource, "source", "s", "", "External source for plaintext `PATH|URL|-`")
 }
 
@@ -57,7 +59,7 @@ var aesPasswordCmd = &cobra.Command{
 		"needshomedir": "false",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
-		var plaintext config.Plaintext
+		var plaintext *config.Plaintext
 
 		crc, created, err := cmd.DefaultUserKeyfile.Check(true)
 		if err != nil {

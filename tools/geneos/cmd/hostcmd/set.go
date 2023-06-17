@@ -36,14 +36,16 @@ import (
 )
 
 var hostSetCmdPrompt bool
-var hostSetCmdPassword config.Plaintext
+var hostSetCmdPassword *config.Plaintext
 var hostSetCmdKeyfile config.KeyFile
 
 func init() {
 	hostCmd.AddCommand(hostSetCmd)
 
+	hostSetCmdPassword = &config.Plaintext{}
+
 	hostSetCmd.Flags().BoolVarP(&hostSetCmdPrompt, "prompt", "p", false, "Prompt for password")
-	hostSetCmd.Flags().VarP(&hostSetCmdPassword, "password", "P", "password")
+	hostSetCmd.Flags().VarP(hostSetCmdPassword, "password", "P", "password")
 	hostSetCmd.Flags().VarP(&hostSetCmdKeyfile, "keyfile", "k", "Keyfile")
 
 	hostSetCmd.Flags().SortFlags = false

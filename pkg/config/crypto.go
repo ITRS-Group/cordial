@@ -61,7 +61,7 @@ type Plaintext struct {
 
 // String returns the path to the keyfile as a string
 func (secret *Plaintext) String() string {
-	if secret.Enclave == nil {
+	if secret == nil || secret.Enclave == nil {
 		return ""
 	}
 	l, _ := secret.Open()
@@ -72,7 +72,9 @@ func (secret *Plaintext) String() string {
 
 // Set is required to satisfy the pflag Values interface
 func (secret *Plaintext) Set(value string) error {
-	*secret = Plaintext{memguard.NewEnclave([]byte(value))}
+	if secret != nil {
+		secret = &Plaintext{memguard.NewEnclave([]byte(value))}
+	}
 	return nil
 }
 
@@ -82,8 +84,8 @@ func (secret *Plaintext) Type() string {
 }
 
 // NewPlaintext returns a memguard Enclave initialised with buf
-func NewPlaintext(buf []byte) Plaintext {
-	return Plaintext{memguard.NewEnclave(buf)}
+func NewPlaintext(buf []byte) *Plaintext {
+	return &Plaintext{memguard.NewEnclave(buf)}
 }
 
 // IsNil returns true if the secret or the underlying memguard Enclave
@@ -190,7 +192,7 @@ func (kv *KeyValues) Checksum() (c uint32, err error) {
 	return
 }
 
-func (kv *KeyValues) encode(plaintext Plaintext) (out []byte, err error) {
+func (kv *KeyValues) encode(plaintext *Plaintext) (out []byte, err error) {
 	kl, _ := kv.Open()
 	defer kl.Destroy()
 	k := lockedBufferTo[keyvalues](kl)
@@ -217,7 +219,7 @@ func (kv *KeyValues) encode(plaintext Plaintext) (out []byte, err error) {
 	return
 }
 
-func (kv *KeyValues) Encode(in Plaintext) (out []byte, err error) {
+func (kv *KeyValues) Encode(in *Plaintext) (out []byte, err error) {
 	cipher, err := kv.encode(in)
 	if err == nil {
 		out = make([]byte, len(cipher)*2)

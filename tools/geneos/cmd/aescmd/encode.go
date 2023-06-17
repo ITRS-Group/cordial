@@ -36,16 +36,18 @@ import (
 )
 
 var aesEncodeCmdKeyfile config.KeyFile
-var aesEncodeCmdString config.Plaintext
+var aesEncodeCmdString *config.Plaintext
 var aesEncodeCmdSource string
 var aesEncodeCmdExpandable, aesEncodeCmdAskOnce bool
 
 func init() {
 	aesCmd.AddCommand(aesEncodeCmd)
 
+	aesEncodeCmdString = &config.Plaintext{}
+
 	aesEncodeCmd.Flags().BoolVarP(&aesEncodeCmdExpandable, "expandable", "e", false, "Output in 'expandable' format")
 	aesEncodeCmd.Flags().VarP(&aesEncodeCmdKeyfile, "keyfile", "k", "Path to keyfile")
-	aesEncodeCmd.Flags().VarP(&aesEncodeCmdString, "password", "p", "Plaintext password")
+	aesEncodeCmd.Flags().VarP(aesEncodeCmdString, "password", "p", "Plaintext password")
 	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdSource, "source", "s", "", "Alternative source for plaintext password")
 	aesEncodeCmd.Flags().BoolVarP(&aesEncodeCmdAskOnce, "once", "o", false, "Only prompt for password once, do not verify. Normally use '-s -' for stdin")
 
@@ -67,7 +69,7 @@ var aesEncodeCmd = &cobra.Command{
 		"needshomedir": "true",
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
-		var plaintext config.Plaintext
+		var plaintext *config.Plaintext
 		if !aesEncodeCmdString.IsNil() {
 			plaintext = aesEncodeCmdString
 		} else if aesEncodeCmdSource != "" {

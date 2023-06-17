@@ -188,7 +188,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 					return
 				}
 			} else {
-				return c, fmt.Errorf("error reading config: %w", err)
+				return c, fmt.Errorf("error reading config (%s): %w", opts.configFile, err)
 			}
 		}
 		return c, nil
@@ -229,7 +229,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 					continue
 				} else {
-					return c, fmt.Errorf("error reading config: %w", err)
+					return c, fmt.Errorf("error reading config (%s): %w", filepath.Join(dir, name+"."+opts.extension), err)
 				}
 			}
 			break
