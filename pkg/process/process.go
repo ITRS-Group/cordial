@@ -206,7 +206,7 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 	opts := evalOptions(options...)
 
 	if program.Username != "" && program.Username != h.Username() {
-		// if username is set and is not surrent user for host h
+		// if username is set and is not current user for host h
 
 		// if not root
 		if os.Getuid() != 0 && os.Geteuid() != 0 {
