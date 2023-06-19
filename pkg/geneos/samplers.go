@@ -181,6 +181,13 @@ type Plugin struct {
 	// x-ping.go
 	XPing *XPingPlugin `xml:"x-ping,omitempty" json:"x-ping,omitempty" yaml:"x-ping,omitempty"`
 
-	// unsupported
-	Other string `xml:",innerxml" json:",omitempty" yaml:",omitempty"`
+	// unsupported - put config in 'Other'
+	Other *UnsupportedPlugin `xml:",any" json:",omitempty" yaml:",omitempty"`
+}
+
+// UnsupportedPlugin records any unsupported Plugin, capturing the
+// element in XMLName and the raw XML in RawXML for later analysis.
+type UnsupportedPlugin struct {
+	XMLName xml.Name
+	RawXML  string `xml:",innerxml" json:",omitempty" yaml:",omitempty"`
 }
