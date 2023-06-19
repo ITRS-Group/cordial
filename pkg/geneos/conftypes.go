@@ -239,11 +239,10 @@ func (d Data) String() string {
 	return d.Data
 }
 
-// A Value can contain multiple parts. In the most basic and common form
-// it is a mix of text (as "data") and variables
+// A Value is either a simple string or a variable
 type Value struct {
-	Data []Data `xml:"data,omitempty" json:",omitempty" yaml:",omitempty"`
-	Var  *Var   `xml:"var,omitempty" json:",omitempty" yaml:",omitempty"`
+	Data *Data `xml:"data,omitempty" json:",omitempty" yaml:",omitempty"`
+	Var  *Var  `xml:"var,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 // NewValue takes an argument and if a string removes leading and
@@ -263,20 +262,24 @@ func NewValue(in interface{}) (n *Value) {
 		if strings.HasPrefix(s, "$(") && strings.HasSuffix(s, ")") {
 			n.Var = &Var{Var: s[2 : len(s)-1]}
 		} else {
-			n.Data = append(n.Data, Data{Data: s})
+			n.Data = &Data{Data: s}
+			// n.Data = append(n.Data, Data{Data: s})
 		}
 	case []string:
 		for _, str := range s {
-			n.Data = append(n.Data, Data{Data: str})
+			n.Data = &Data{Data: str}
+			// n.Data = append(n.Data, Data{Data: str})
 		}
 	default:
 		if reflect.TypeOf(s).Kind() == reflect.Slice {
 			sl := reflect.ValueOf(s)
 			for i := 0; i < sl.Len(); i++ {
-				n.Data = append(n.Data, Data{Data: fmt.Sprint(sl.Index(i))})
+				n.Data = &Data{Data: fmt.Sprint(sl.Index(i))}
+				// n.Data = append(n.Data, Data{Data: fmt.Sprint(sl.Index(i))})
 			}
 		} else {
-			n.Data = append(n.Data, Data{Data: fmt.Sprint(s)})
+			n.Data = &Data{Data: fmt.Sprint(s)}
+			// n.Data = append(n.Data, Data{Data: fmt.Sprint(s)})
 		}
 	}
 
@@ -311,7 +314,8 @@ func (v *Value) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error)
 			if err != nil {
 				return err
 			}
-			v.Data = append(v.Data, t)
+			v.Data = &t
+			// v.Data = append(v.Data, t)
 		case "var":
 			t := &Var{}
 			err = d.DecodeElement(&t, &element)
