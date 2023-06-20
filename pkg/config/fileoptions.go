@@ -41,6 +41,8 @@ type fileOptions struct {
 	extension              string // extension without "."
 	delimiter              string
 	dir                    string
+	envprefix              string
+	envdelimiter           string
 	internalDefaults       []byte
 	internalDefaultsFormat string
 	merge                  bool
@@ -59,7 +61,8 @@ type FileOptions func(*fileOptions)
 
 func evalFileOptions(options ...FileOptions) (c *fileOptions) {
 	c = &fileOptions{
-		delimiter: defaultKeyDelimiter,
+		delimiter:    defaultKeyDelimiter,
+		envdelimiter: "_",
 	}
 	for _, opt := range options {
 		opt(c)
@@ -70,13 +73,14 @@ func evalFileOptions(options ...FileOptions) (c *fileOptions) {
 func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions) {
 	// init
 	c = &fileOptions{
-		extension:   defaultFileExtension,
-		remote:      host.Localhost,
-		configDirs:  []string{},
-		workingdir:  ".",
-		systemdir:   "/etc", // UNIX/Linux only!
-		usedefaults: true,
-		delimiter:   defaultKeyDelimiter,
+		envdelimiter: "_",
+		extension:    defaultFileExtension,
+		remote:       host.Localhost,
+		configDirs:   []string{},
+		workingdir:   ".",
+		systemdir:    "/etc", // UNIX/Linux only!
+		usedefaults:  true,
+		delimiter:    defaultKeyDelimiter,
 	}
 	c.userconfdir, _ = UserConfigDir()
 
@@ -306,5 +310,12 @@ func SaveDir(dir string) FileOptions {
 func KeyDelimiter(delimiter string) FileOptions {
 	return func(fo *fileOptions) {
 		fo.delimiter = delimiter
+	}
+}
+
+func UseEnvs(prefix string, delimiter string) FileOptions {
+	return func(fo *fileOptions) {
+		fo.envprefix = prefix
+		fo.envdelimiter = delimiter
 	}
 }
