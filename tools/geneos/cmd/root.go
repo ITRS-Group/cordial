@@ -279,18 +279,13 @@ func initConfig() {
 		config.AddDirs(oldConfDir),
 		config.MergeSettings(),
 		config.IgnoreWorkingDir(),
+		config.UseEnvs("ITRS", "_"),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 	// support old set-ups
 	cf.BindEnv(Execname, "GENEOS_HOME", "ITRS_HOME")
-
-	// auto env variables must be prefixed "ITRS_"
-	cf.SetEnvPrefix("ITRS")
-	replacer := strings.NewReplacer(".", "_")
-	cf.SetEnvKeyReplacer(replacer)
-	cf.AutomaticEnv()
 
 	// manual alias+remove as the viper.RegisterAlias doesn't work as expected
 	if cf.IsSet("itrshome") {

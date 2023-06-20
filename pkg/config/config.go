@@ -72,9 +72,15 @@ func New(options ...FileOptions) *Config {
 	opts := evalFileOptions(options...)
 	userConfDir, _ := UserConfigDir()
 	cf := &Config{
-		Viper:          viper.NewWithOptions(viper.KeyDelimiter(opts.delimiter)),
+		Viper: viper.NewWithOptions(
+			viper.KeyDelimiter(opts.delimiter),
+			viper.EnvKeyReplacer(strings.NewReplacer(opts.delimiter, opts.envdelimiter))),
 		delimiter:      opts.delimiter,
 		appUserConfDir: filepath.Join(userConfDir, opts.appname),
+	}
+	if opts.envprefix != "" {
+		cf.SetEnvPrefix(opts.envprefix)
+		cf.AutomaticEnv()
 	}
 	return cf
 }

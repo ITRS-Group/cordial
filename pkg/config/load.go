@@ -72,12 +72,14 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 	r := opts.remote
 
 	if opts.setglobals {
+		ResetConfig(options...)
 		c = global
 		// update config directory
 		c.appUserConfDir = filepath.Join(opts.userconfdir, opts.appname)
 	} else {
 		c = New(options...)
 	}
+	log.Debug().Msgf("envdelimiter: %s, delimiter: %s, prefix: %s", opts.envdelimiter, opts.delimiter, opts.envprefix)
 
 	// return first error after initialising the config structure.
 	// Always return a config object.

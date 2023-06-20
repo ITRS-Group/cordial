@@ -144,7 +144,6 @@ geneos install netprobe -b active_dev -U
 			if packageInstallCmdNexus {
 				options = append(options, geneos.UseNexus())
 			}
-			log.Debug().Msgf("install to %s with opts: %#v", cmd.Hostname, options)
 			err = install(h, ct, options...)
 			return err
 		}
