@@ -203,8 +203,7 @@ func showValidateInstance(c geneos.Instance, params []string) (result interface{
 			"-validate-json-output",
 			tempfile,
 			"-silent",
-			"-port",
-			fmt.Sprint(tempport),
+			"-hub-validation-rules",
 		}
 		cmd.Args = append(cmd.Args, instance.SetSecureArgs(c)...)
 		if len(params) > 0 {
