@@ -33,6 +33,7 @@ executable, then install it in a directory you can run it from.
 ```bash
 curl -OL https://github.com/ITRS-Group/cordial/releases/latest/download/geneos
 chmod +x ./geneos
+mkdir -p ${HOME}/bin
 mv geneos ${HOME}/bin/geneos
 ```
 
