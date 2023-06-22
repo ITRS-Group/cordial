@@ -110,6 +110,10 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (plaintext *P
 				return
 			}
 
+			if pw1.IsNil() || pw2.IsNil() {
+				fmt.Println("Invalid password(s)")
+				continue
+			}
 			pw1b, _ := pw1.Open()
 			pw2b, _ := pw2.Open()
 			if pw1b.EqualTo(pw2b.Bytes()) {
@@ -122,7 +126,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (plaintext *P
 				plaintext = pw1
 				break
 			}
-			fmt.Println("Passwords do not match. Please try again.")
+			fmt.Println("Passwords do not match")
 		}
 		if !matched {
 			err = fmt.Errorf("too many attempts, giving up")
