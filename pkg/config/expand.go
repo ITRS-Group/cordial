@@ -185,11 +185,11 @@ func (c *Config) ExpandString(input string, options ...ExpandOptions) (value str
 	}
 
 	value = expand(input, func(s string) (r string) {
-		if opts.nodecode {
-			// return string and restore containing ${...}
-			return `${` + s + `}`
-		}
 		if strings.HasPrefix(s, "enc:") {
+			if opts.nodecode {
+				// return string and restore containing ${...}
+				return `${` + s + `}`
+			}
 			return c.expandEncodedString(s[4:], options...)
 		}
 		r, _ = c.ExpandRawString(s, options...)
@@ -244,12 +244,11 @@ func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
 	}
 
 	value = expandBytes([]byte(input), func(s []byte) (r []byte) {
-		if opts.nodecode {
-			// return string and restore containing ${...}
-			return fmt.Append([]byte{}, `${`, s, `}`)
-		}
-
 		if bytes.HasPrefix(s, []byte("enc:")) {
+			if opts.nodecode {
+				// return string and restore containing ${...}
+				return fmt.Append([]byte{}, `${`, s, `}`)
+			}
 			return c.expandEncodedBytes(s[4:], options...)
 		}
 		str, _ := c.ExpandRawString(string(s), options...)
@@ -288,10 +287,10 @@ func (c *Config) ExpandToEnclave(input string, options ...ExpandOptions) (value 
 	}
 
 	value = expandToEnclave([]byte(input), func(s []byte) (r *memguard.Enclave) {
-		if opts.nodecode {
-			return memguard.NewEnclave(fmt.Append([]byte{}, `${`, s, `}`))
-		}
 		if bytes.HasPrefix(s, []byte("enc:")) {
+			if opts.nodecode {
+				return memguard.NewEnclave(fmt.Append([]byte{}, `${`, s, `}`))
+			}
 			return c.expandEncodedBytesEnclave(s[4:], options...)
 		}
 		str, _ := c.ExpandRawString(string(s), options...)
@@ -325,11 +324,10 @@ func (c *Config) ExpandToLockedBuffer(input string, options ...ExpandOptions) (v
 	}
 
 	value = expandToLockedBuffer([]byte(input), func(s []byte) *memguard.LockedBuffer {
-		if opts.nodecode {
-			return memguard.NewBufferFromBytes(fmt.Append([]byte{}, `${`, s, `}`))
-
-		}
 		if bytes.HasPrefix(s, []byte("enc:")) {
+			if opts.nodecode {
+				return memguard.NewBufferFromBytes(fmt.Append([]byte{}, `${`, s, `}`))
+			}
 			return c.expandEncodedBytesLockedBuffer(s[4:], options...)
 		}
 		str, _ := c.ExpandRawString(string(s), options...)
