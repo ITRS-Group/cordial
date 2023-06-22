@@ -62,6 +62,16 @@ var aesSetCmd = &cobra.Command{
 		ct, args := cmd.CmdArgs(command)
 
 		h := geneos.GetHost(cmd.Hostname)
+
+		crc32, created, err := aesSetCmdKeyfile.Check(true)
+		if err != nil {
+			return
+		}
+
+		if created {
+			fmt.Printf("%s created, checksum %08X\n", aesSetCmdKeyfile, crc32)
+		}
+
 		crc, err := instance.UseKeyFile(h, ct, aesSetCmdKeyfile, aesSetCmdCRC)
 		if err != nil {
 			return
