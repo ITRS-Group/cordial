@@ -92,10 +92,10 @@ geneos package update netprobe 5.13.2
 		if packageUpdateCmdRestart {
 			cs := instance.MatchKeyValue(h, ct, "version", packageUpdateCmdBase)
 			for _, c := range cs {
-				if err = instance.Stop(c, packageUpdateCmdForce, false); err != nil {
-					// stop failed?
+				if err = instance.Stop(c, packageUpdateCmdForce, false); err == nil {
+					// only restart instances that we stopped
+					defer instance.Start(c)
 				}
-				defer instance.Start(c)
 			}
 		}
 		if err = geneos.Update(h, ct,

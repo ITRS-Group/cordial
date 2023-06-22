@@ -24,7 +24,6 @@ package cmd
 
 import (
 	_ "embed"
-	"os"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -62,9 +61,5 @@ var stopCmd = &cobra.Command{
 }
 
 func stopInstance(c geneos.Instance, params []string) error {
-	_, err := instance.GetPID(c)
-	if err == os.ErrProcessDone {
-		return nil
-	}
 	return instance.Stop(c, stopCmdForce, stopCmdKill)
 }
