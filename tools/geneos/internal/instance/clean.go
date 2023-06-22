@@ -23,6 +23,9 @@ THE SOFTWARE.
 package instance
 
 import (
+	"errors"
+	"os"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -52,7 +55,8 @@ func Clean(c geneos.Instance, full bool) (err error) {
 
 	if !IsRunning(c) {
 		stopped = false
-	} else if err = Stop(c, true, false); err != nil {
+		// stop failed?
+	} else if err = Stop(c, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
 		return
 	} else {
 		stopped = true

@@ -24,7 +24,9 @@ package cmd
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -70,7 +72,7 @@ func deleteInstance(c geneos.Instance, params []string) (err error) {
 
 	if deleteCmdStop {
 		if c.Type().RealComponent {
-			if err = instance.Stop(c, true, false); err != nil {
+			if err = instance.Stop(c, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
 				return
 			}
 		}
