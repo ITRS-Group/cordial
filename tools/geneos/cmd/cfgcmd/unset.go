@@ -47,8 +47,11 @@ var configUnsetCmd = &cobra.Command{
 		"wildcard":     "false",
 		"needshomedir": "false",
 	},
-	RunE: func(command *cobra.Command, _ []string) error {
+	RunE: func(command *cobra.Command, origargs []string) error {
 		var changed bool
+		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
+			return command.Usage()
+		}
 
 		_, args := cmd.CmdArgs(command)
 		orig, _ := config.Load(cmd.Execname, config.IgnoreWorkingDir(), config.IgnoreSystemDir())

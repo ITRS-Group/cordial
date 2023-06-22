@@ -68,7 +68,7 @@ geneos set ...
 		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, origargs []string) error {
-		if len(origargs) == 0 {
+		if len(origargs) == 0 && cmd.Flags().NFlag() == 0 {
 			return cmd.Usage()
 		}
 		ct, args, params := CmdArgsParams(cmd)

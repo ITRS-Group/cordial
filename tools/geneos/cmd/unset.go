@@ -70,7 +70,10 @@ geneos unset san -g Gateway1
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, origargs []string) error {
+		if len(origargs) == 0 && cmd.Flags().NFlag() == 0 {
+			return cmd.Usage()
+		}
 		ct, args := CmdArgs(cmd)
 		return instance.ForAll(ct, Hostname, unsetInstance, args, []string{})
 	},
