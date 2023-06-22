@@ -67,7 +67,10 @@ geneos set ...
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, origargs []string) error {
+		if len(origargs) == 0 {
+			return cmd.Usage()
+		}
 		ct, args, params := CmdArgsParams(cmd)
 		return Set(ct, args, params)
 	},
