@@ -64,7 +64,10 @@ var hostSetCmd = &cobra.Command{
 		"wildcard":     "false",
 		"needshomedir": "false",
 	},
-	RunE: func(command *cobra.Command, _ []string) (err error) {
+	RunE: func(command *cobra.Command, origargs []string) (err error) {
+		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
+			return command.Usage()
+		}
 		_, args, params := cmd.CmdArgsParams(command)
 		var password string
 		var hosts []*geneos.Host

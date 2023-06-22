@@ -51,9 +51,11 @@ geneos config set config.rebuild=always
 		"wildcard":     "false",
 		"needshomedir": "false",
 	},
-	RunE: func(command *cobra.Command, _ []string) (err error) {
+	RunE: func(command *cobra.Command, origargs []string) (err error) {
 		_, _, params := cmd.CmdArgsParams(command)
-
+		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
+			return command.Usage()
+		}
 		cf, _ := config.Load(cmd.Execname,
 			config.IgnoreSystemDir(),
 			config.IgnoreWorkingDir(),
