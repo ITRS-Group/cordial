@@ -44,6 +44,8 @@ No values that are encrypted are shown decrypted with or without the
   -r, --raw             Show raw (unexpanded) configuration values
   -s, --setup           Show the instance Geneos configuration file, if any
   -m, --merge           Merge Gateway configurations using the Gateway -dump-xml flag
+  -v, --validate        Validate Gateway configurations using the Gateway -validate flag
+      --hooks string    Hooks directory (may clash with instance options)
 ```
 
 ## SEE ALSO
