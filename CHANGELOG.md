@@ -1,5 +1,35 @@
 # Change Log
 
+## Version v1.6.3
+
+> **Released 2023-06-22**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.6.3 Changes
+
+* `tools/geneos` - Add new `--validate` option to `geneos show` to run a validation and output results as JSON. 
+
+* `pkg/geneos` - Updates for further parsing of config files, fix the treatment of `geneos.Value` type.
+
+* `pkg/config` - Add a `config.UseEnvs()` option to `New()` and `Load()` to trigger viper `AutomaticEnv()` and use prefixes.
+
+* Convert all packages and programs to use `*config.Plaintext` and not `config.Plaintext`.
+
+## v1.6.3 Fixes
+
+* [#142](https://github.com/ITRS-Group/cordial/issues/142) - Fix expansion of non-encoded config strings in `show` and other places
+
+* [#140](https://github.com/ITRS-Group/cordial/issues/140) - Fix generation of 'secure' args for command start-up
+
+* [#138](https://github.com/ITRS-Group/cordial/issues/138) - Fix autostart behaviour for `geneos restart`
+
+* [#139](https://github.com/ITRS-Group/cordial/issues/139) - Show running AC2 instances
+
+* [#134](https://github.com/ITRS-Group/cordial/issues/134) - Update some `geneos` commands that need either flags or args set to just output usage otherwise.
+
+* [#133](https://github.com/ITRS-Group/cordial/issues/133) - Check restart logic and fix for when instance is already stopped. Also update the Stop() function and it's usage in other callers.
+
 ## Version v1.6.2
 
 > **Released 2023-06-14**
