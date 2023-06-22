@@ -118,7 +118,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		hostcf.SetDefault(cmd.Execname, geneos.Root())
 
 		var password string
-		var pw *config.Plaintext
+		var pw = &config.Plaintext{}
 
 		if hostAddCmdPrompt {
 			pw, err = config.ReadPasswordInput(true, 3)
