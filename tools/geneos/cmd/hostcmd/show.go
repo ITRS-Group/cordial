@@ -32,9 +32,8 @@ import (
 )
 
 type hostShowCmdConfig struct {
-	Name string `json:"name,omitempty"`
-	// Disabled  bool        `json:"disabled"`
-	// Protected bool        `json:"protected"`
+	Name   string      `json:"name,omitempty"`
+	Hidden bool        `json:"hidden,omitempty"`
 	Config interface{} `json:"config,omitempty"`
 }
 
@@ -60,7 +59,7 @@ var hostShowCmd = &cobra.Command{
 		var hosts []*geneos.Host
 
 		if len(args) == 0 {
-			hosts = geneos.RemoteHosts()
+			hosts = geneos.RemoteHosts(false)
 		} else {
 			for _, a := range args {
 				h := geneos.GetHost(a)
@@ -75,6 +74,7 @@ var hostShowCmd = &cobra.Command{
 		for _, h := range hosts {
 			confs = append(confs, hostShowCmdConfig{
 				Name:   h.GetString("name"),
+				Hidden: h.Hidden(),
 				Config: h.AllSettings(),
 			})
 		}
