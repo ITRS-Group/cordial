@@ -5,6 +5,8 @@
 # image for glibc compatibility with Gateway on older systems.
 #
 
+ARG GOVERSION=1.20.5
+
 # build Linux executables statically. Also build any Windows binaries
 # here for completeness.
 FROM golang:alpine AS build
@@ -34,10 +36,11 @@ RUN go build --ldflags '-linkmode external -extldflags=-static'
 FROM centos:7 AS build-libs
 LABEL stage=cordial-build
 RUN yum install -y gcc make
+ARG GOVERSION
 ARG BUILDOS
 ARG BUILDARCH
-ADD https://go.dev/dl/go1.20.4.${BUILDOS}-${BUILDARCH}.tar.gz /tmp/
-RUN tar -C /usr/local -xzf /tmp/go1.20.4.${BUILDOS}-${BUILDARCH}.tar.gz
+ADD https://go.dev/dl/go${GOVERSION}.${BUILDOS}-${BUILDARCH}.tar.gz /tmp/
+RUN tar -C /usr/local -xzf /tmp/go${GOVERSION}.${BUILDOS}-${BUILDARCH}.tar.gz
 ENV PATH=$PATH:/usr/local/go/bin
 COPY go.mod go.sum cordial.go VERSION /app/cordial/
 COPY libraries /app/cordial/libraries/
