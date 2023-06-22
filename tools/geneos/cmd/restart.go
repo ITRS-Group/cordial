@@ -24,8 +24,6 @@ package cmd
 
 import (
 	_ "embed"
-	"errors"
-	"os"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -82,7 +80,7 @@ func commandRestart(ct *geneos.Component, args []string, params []string) (err e
 
 func restartInstance(c geneos.Instance, params []string) (err error) {
 	err = instance.Stop(c, restartCmdForce, false)
-	if err == nil || errors.Is(err, os.ErrProcessDone) || restartCmdAll {
+	if err == nil || restartCmdAll {
 		return instance.Start(c)
 	}
 	return

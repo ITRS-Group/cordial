@@ -38,6 +38,10 @@ func Stop(c geneos.Instance, force, kill bool) (err error) {
 		return geneos.ErrProtected
 	}
 
+	if !IsRunning(c) {
+		return os.ErrProcessDone
+	}
+
 	if !kill {
 		err = Signal(c, syscall.SIGTERM)
 		if err == os.ErrProcessDone {
@@ -52,7 +56,7 @@ func Stop(c geneos.Instance, force, kill bool) (err error) {
 			time.Sleep(250 * time.Millisecond)
 			err = Signal(c, syscall.SIGTERM)
 			if err == os.ErrProcessDone {
-				break
+				return nil
 			}
 		}
 
