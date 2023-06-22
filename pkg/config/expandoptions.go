@@ -23,15 +23,15 @@ THE SOFTWARE.
 package config
 
 type expandOptions struct {
-	lookupTables     []map[string]string
-	funcMaps         map[string]func(*Config, string, bool) (string, error)
-	externalFuncMaps bool
+	defaultValue     any
 	expressions      bool
+	externalFuncMaps bool
+	funcMaps         map[string]func(*Config, string, bool) (string, error)
+	lookupTables     []map[string]string
+	nodecode         bool
+	rawstring        bool
 	trimPrefix       bool
 	trimSpace        bool
-	rawstring        bool
-	nodecode         bool
-	defaultValue     any
 }
 
 // ExpandOptions control the way configuration options undergo string
