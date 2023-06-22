@@ -54,8 +54,8 @@ func getPID(i interface{}) (pid int, err error) {
 				// process may disappear by this point, ignore error
 				continue
 			}
-			args := bytes.Split(data, []byte("\000"))
-			execfile := filepath.Base(string(args[0]))
+			bin := bytes.TrimRight(data, "\000")
+			execfile := filepath.Base(string(bin))
 			if execfile == c.Config().GetString("program") {
 				return
 			}
