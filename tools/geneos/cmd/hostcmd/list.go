@@ -45,7 +45,7 @@ type hostListCmdType struct {
 	Directory string
 }
 
-var hostListCmdJSON, hostListCmdIndent, hostListCmdCSV bool
+var hostListCmdShowHidden, hostListCmdJSON, hostListCmdIndent, hostListCmdCSV bool
 
 var hostListCmdEntries []hostListCmdType
 
@@ -55,6 +55,7 @@ var hostListCSVWriter *csv.Writer
 func init() {
 	hostCmd.AddCommand(hostListCmd)
 
+	hostListCmd.Flags().BoolVarP(&hostListCmdShowHidden, "all", "a", false, "Show all hosts")
 	hostListCmd.Flags().BoolVarP(&hostListCmdJSON, "json", "j", false, "Output JSON")
 	hostListCmd.Flags().BoolVarP(&hostListCmdIndent, "pretty", "i", false, "Output indented JSON")
 	hostListCmd.Flags().BoolVarP(&hostListCmdCSV, "csv", "c", false, "Output CSV")
@@ -66,7 +67,7 @@ func init() {
 var hostListCmdDescription string
 
 var hostListCmd = &cobra.Command{
-	Use:          "list [flags] [TYPE] [NAME...]",
+	Use:          "list [flags] [NAME...]",
 	Short:        "List hosts, optionally in CSV or JSON format",
 	Long:         hostListCmdDescription,
 	Aliases:      []string{"ls"},
@@ -79,7 +80,7 @@ var hostListCmd = &cobra.Command{
 		switch {
 		case hostListCmdJSON, hostListCmdIndent:
 			hostListCmdEntries = []hostListCmdType{}
-			err = loopHosts(hostListInstanceJSONHosts)
+			err = loopHosts(hostListInstanceJSONHosts, hostListCmdShowHidden)
 			var b []byte
 			if hostListCmdIndent {
 				b, _ = json.MarshalIndent(hostListCmdEntries, "", "    ")
@@ -90,12 +91,12 @@ var hostListCmd = &cobra.Command{
 		case hostListCmdCSV:
 			hostListCSVWriter = csv.NewWriter(os.Stdout)
 			hostListCSVWriter.Write([]string{"Type", "Name", "Disabled", "Username", "Hostname", "Port", "Directory"})
-			err = loopHosts(hostListInstanceCSVHosts)
+			err = loopHosts(hostListInstanceCSVHosts, hostListCmdShowHidden)
 			hostListCSVWriter.Flush()
 		default:
 			hostListTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(hostListTabWriter, "Name\tUsername\tHostname\tPort\tDirectory\n")
-			err = loopHosts(hostListInstancePlainHosts)
+			err = loopHosts(hostListInstancePlainHosts, hostListCmdShowHidden)
 			hostListTabWriter.Flush()
 		}
 		if err == os.ErrNotExist {
@@ -105,8 +106,8 @@ var hostListCmd = &cobra.Command{
 	},
 }
 
-func loopHosts(fn func(*geneos.Host) error) error {
-	for _, h := range geneos.RemoteHosts() {
+func loopHosts(fn func(*geneos.Host) error, showHidden bool) error {
+	for _, h := range geneos.RemoteHosts(showHidden) {
 		fn(h)
 	}
 	return nil

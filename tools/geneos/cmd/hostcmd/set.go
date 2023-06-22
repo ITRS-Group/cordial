@@ -73,7 +73,7 @@ var hostSetCmd = &cobra.Command{
 		var hosts []*geneos.Host
 
 		if len(args) == 0 {
-			hosts = geneos.RemoteHosts()
+			hosts = geneos.RemoteHosts(false)
 		} else {
 			for _, a := range args {
 				h := geneos.GetHost(a)

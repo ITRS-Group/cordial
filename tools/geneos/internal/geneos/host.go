@@ -47,6 +47,9 @@ type Host struct {
 	host.Host
 	*config.Config
 
+	// hidden from wildcard loops?
+	hidden bool
+
 	// loaded from config or just an instance?
 	// always true for LOCALHOST and ALLHOSTS
 	loaded bool
@@ -90,7 +93,7 @@ func NewHost(name string, options ...any) (h *Host) {
 		if LOCAL != nil {
 			return LOCAL
 		}
-		h = &Host{host.NewLocal(), config.New(), true}
+		h = &Host{host.NewLocal(), config.New(), false, true}
 		h.Set("name", LOCALHOST)
 		hostname, _ := os.Hostname()
 		h.Set("hostname", hostname)
@@ -99,7 +102,7 @@ func NewHost(name string, options ...any) (h *Host) {
 		if ALL != nil {
 			return ALL
 		}
-		h = &Host{host.NewLocal(), config.New(), true}
+		h = &Host{host.NewLocal(), config.New(), false, true}
 		h.Set("name", ALLHOSTS)
 	default:
 		r, ok := hosts.Load(name)
@@ -110,7 +113,7 @@ func NewHost(name string, options ...any) (h *Host) {
 			}
 		}
 		// or bootstrap, but NOT save a new one, with only the name set
-		h = &Host{host.NewSSHRemote(name, options...), config.New(), false}
+		h = &Host{host.NewSSHRemote(name, options...), config.New(), false, false}
 		h.Set("name", name)
 		hosts.Store(name, h)
 	}
@@ -342,22 +345,27 @@ func (h *Host) FullName(name string) string {
 // AllHosts returns a slice of all hosts, including LOCAL
 func AllHosts() (hs []*Host) {
 	hs = []*Host{LOCAL}
-	hs = append(hs, RemoteHosts()...)
+	hs = append(hs, RemoteHosts(false)...)
 	return
 }
 
 // RemoteHosts returns a slice of all valid (loaded and reachable) remote hosts
-func RemoteHosts() (hs []*Host) {
+func RemoteHosts(includeHidden bool) (hs []*Host) {
 	hs = []*Host{}
 
 	hosts.Range(func(k, v interface{}) bool {
 		h := GetHost(k.(string))
-		if h.IsAvailable() {
+		if h.IsAvailable() && (includeHidden || !h.hidden) {
 			hs = append(hs, h)
 		}
 		return true
 	})
 	return
+}
+
+// Hidden returns true is the host is marked hidden
+func (h *Host) Hidden() bool {
+	return h.hidden
 }
 
 // LoadHostConfig loads configuration entries from the host
@@ -396,7 +404,7 @@ func LoadHostConfig() {
 			host.Port(uint16(v.GetInt("port"))),
 			host.Password(v.GetPassword("password").Enclave),
 		)
-		hosts.Store(v.GetString("name"), &Host{r, v, true})
+		hosts.Store(v.GetString("name"), &Host{r, v, v.GetBool("hidden"), true})
 	}
 }
 
