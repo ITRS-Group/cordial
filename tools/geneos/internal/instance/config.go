@@ -256,6 +256,9 @@ func Filepaths(c geneos.Instance, names ...string) (filenames []string) {
 		if filepath.IsAbs(name) {
 			filenames = append(filenames, name)
 		} else {
+			if !cf.IsSet(name) {
+				continue
+			}
 			filename := filepath.Join(dir, cf.GetString(name))
 			// return empty and not a "."
 			if filename == "." {
