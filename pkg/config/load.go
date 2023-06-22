@@ -79,7 +79,6 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 	} else {
 		c = New(options...)
 	}
-	log.Debug().Msgf("envdelimiter: %s, delimiter: %s, prefix: %s", opts.envdelimiter, opts.delimiter, opts.envprefix)
 
 	// return first error after initialising the config structure.
 	// Always return a config object.
