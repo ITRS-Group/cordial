@@ -24,7 +24,9 @@ package hostcmd
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -84,7 +86,7 @@ var hostDeleteCmd = &cobra.Command{
 			// stop and/or delete instances on host
 			if hostDeleteCmdStop {
 				for _, c := range instance.GetAll(h, nil) {
-					if err = instance.Stop(c, hostDeleteCmdForce, false); err != nil {
+					if err = instance.Stop(c, hostDeleteCmdForce, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
 						return
 					}
 					if hostDeleteCmdRecurse {
