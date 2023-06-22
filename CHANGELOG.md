@@ -1,12 +1,16 @@
 # Change Log
 
-## Version v1.6.3
+## Version v1.6.4
 
 > **Released 2023-06-22**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-## v1.6.3 Changes
+Note: v1.6.3 was removed, and v.1.6.4 releases to address some last minute issues.
+
+## v1.6.4 Changes
+
+* `tools/geneos` - Add an initial `hidden` flag to hosts, so they don't participate in wildcarded operations.
 
 * `tools/geneos` - Add new `--validate` option to `geneos show` to run a validation and output results as JSON. 
 
@@ -16,7 +20,9 @@
 
 * Convert all packages and programs to use `*config.Plaintext` and not `config.Plaintext`.
 
-## v1.6.3 Fixes
+## v1.6.4 Fixes
+
+* Fix remote host optional encoded password handling
 
 * [#142](https://github.com/ITRS-Group/cordial/issues/142) - Fix expansion of non-encoded config strings in `show` and other places
 
