@@ -26,6 +26,7 @@ import (
 	_ "embed"
 	"fmt"
 	"net/url"
+	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
@@ -111,8 +112,14 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		log.Debug().Msgf("hostname: %s", sshurl.Hostname())
 
 		hostcf.SetDefault("hostname", sshurl.Hostname())
-		u, _ := user.Current()
-		hostcf.SetDefault("username", u.Username)
+		var username string
+		if u, err := user.Current(); err == nil {
+			username = u.Username
+		} else {
+			username = os.Getenv("USER")
+		}
+
+		hostcf.SetDefault("username", username)
 		hostcf.SetDefault("port", 22)
 		// XXX default to remote user's home dir, not local
 		hostcf.SetDefault(cmd.Execname, geneos.Root())
