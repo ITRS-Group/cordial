@@ -78,8 +78,11 @@ type SSHOptions func(*SSHRemote)
 
 func evalOptions(r *SSHRemote, options ...any) {
 	// defaults
-	u, _ := user.Current()
-	r.username = u.Username
+	if u, err := user.Current(); err == nil {
+		r.username = u.Username
+	} else {
+		r.username = os.Getenv("USER")
+	}
 
 	for _, opt := range options {
 		switch o := opt.(type) {

@@ -47,8 +47,10 @@ func NewLocal() Host {
 }
 
 func (h *Local) Username() string {
-	u, _ := user.Current()
-	return u.Username
+	if u, err := user.Current(); err == nil {
+		return u.Username
+	}
+	return os.Getenv("USER")
 }
 
 func (h *Local) Hostname() string {
