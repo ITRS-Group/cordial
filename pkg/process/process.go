@@ -226,8 +226,11 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 		}
 	} else {
 		if program.Username == "" {
-			u, _ := user.Current()
-			program.Username = u.Username
+			if u, err := user.Current(); err == nil {
+				program.Username = u.Username
+			} else {
+				program.Username = os.Getenv("USER")
+			}
 		}
 
 		if program.WorkingDir == "" {

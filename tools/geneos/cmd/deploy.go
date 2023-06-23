@@ -149,15 +149,18 @@ var deployCmd = &cobra.Command{
 		if h == geneos.LOCAL {
 			if geneos.Root() == "" {
 				if deployCmdGeneosHome == "" {
-					var input string
-					u, _ := user.Current()
-					root := u.HomeDir
-					if filepath.Base(u.HomeDir) != Execname {
-						root = filepath.Join(u.HomeDir, Execname)
+					var input, home string
+					if u, err := user.Current(); err == nil {
+						home = u.HomeDir
+					} else {
+						home = os.Getenv("HOME")
 					}
-					input, err = config.ReadUserInput("Geneos Directory (default %q): ", root)
+					if filepath.Base(home) != Execname {
+						home = filepath.Join(home, Execname)
+					}
+					input, err = config.ReadUserInput("Geneos Directory (default %q): ", home)
 					if err == nil {
-						root = input
+						home = input
 					} else if err != config.ErrNotInteractive {
 						return
 					}

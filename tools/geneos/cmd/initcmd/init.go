@@ -171,7 +171,7 @@ var initTLSCmd = &cobra.Command{
 // initProcessArgs works through the parsed arguments and returns a
 // geneos.GeneosOptions slice to be passed to worker functions
 func initProcessArgs(args []string) (options []geneos.Options, err error) {
-	var homedir, root string
+	var root string
 
 	options = []geneos.Options{
 		geneos.Version(initCmdVersion),
@@ -186,12 +186,11 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 		}
 	}
 
-	u, err := user.Current()
-	homedir = "/"
-	if err != nil {
-		log.Error().Err(err).Msg("cannot get user details")
-	} else {
+	homedir := "/"
+	if u, err := user.Current(); err == nil {
 		homedir = u.HomeDir
+	} else {
+		homedir = os.Getenv("HOME")
 	}
 
 	log.Debug().Msgf("%d %v", len(args), args)
