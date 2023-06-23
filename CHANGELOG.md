@@ -1,5 +1,17 @@
 # Change Log
 
+## Version v1.6.5
+
+> **Released 2023-06-23**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.6.4 Fixes
+
+* [#146](https://github.com/ITRS-Group/cordial/issues/146) - Entering empty passwords could cause pointer panics
+
+* [#148](https://github.com/ITRS-Group/cordial/issues/148) - Fallback to environment vars when user.Current() fails because user is not in local passwd file with static binary.
+
 ## Version v1.6.4
 
 > **Released 2023-06-22**
