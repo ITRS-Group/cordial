@@ -83,7 +83,7 @@ func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
 	if !h.IsAvailable() {
 		return nil, host.ErrNotAvailable
 	}
-	basedir := h.Filepath("packages", ct.String())
+	basedir := h.Filepath("packages", ct)
 	ents, err := h.ReadDir(basedir)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
@@ -138,7 +138,7 @@ func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
 }
 
 func getVersions(r *Host, ct *Component) (versions map[string]*version.Version, originals map[string]string) {
-	dir := r.Filepath("packages", ct.String())
+	dir := r.Filepath("packages", ct)
 	ents, err := r.ReadDir(dir)
 	if err != nil {
 		return
@@ -281,7 +281,7 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 	var st fs.FileInfo
 	var i int
 
-	dir := h.Filepath("packages", ct.String())
+	dir := h.Filepath("packages", ct)
 	log.Debug().Msgf("ct=%s dir=%s", ct, dir)
 	version = base
 
@@ -335,7 +335,7 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 // prefix filter. An error is returned if there are problems accessing
 // the directories or parsing any names as semantic versions.
 func LatestVersion(r *Host, ct *Component, prefix string) (v string, err error) {
-	dir := r.Filepath("packages", ct.String())
+	dir := r.Filepath("packages", ct)
 	dirs, err := r.ReadDir(dir)
 	if err != nil {
 		return

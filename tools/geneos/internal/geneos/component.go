@@ -249,12 +249,7 @@ func (ct *Component) InstancesDir(h *Host) (dir string) {
 	if ct == nil {
 		return ""
 	}
-	if ct.ParentType == nil {
-		dir = h.Filepath(ct, ct.String()+"s")
-	} else {
-		dir = h.Filepath(ct.ParentType, ct.String()+"s")
-
-	}
+	dir = h.Filepath(ct, ct.String()+"s")
 	return
 }
 
@@ -264,6 +259,7 @@ func (ct *Component) InstancesDirs(h *Host) (dirs []string) {
 	if ct == nil {
 		return
 	}
+	// this check is to support older installations
 	if ct.ParentType != nil {
 		dirs = append(dirs, h.Filepath(ct.ParentType, ct.String()+"s"))
 	}
