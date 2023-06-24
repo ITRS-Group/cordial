@@ -32,6 +32,7 @@ type geneosOptions struct {
 	basename     string
 	doupdate     bool
 	downloadbase string
+	downloadonly bool
 	downloadtype string
 	force        bool
 	geneosdir    string
@@ -41,7 +42,7 @@ type geneosOptions struct {
 	password     *config.Plaintext
 	platformId   string
 	restart      bool
-	source       string
+	archive      string
 	username     string
 	version      string
 }
@@ -51,6 +52,7 @@ type Options func(*geneosOptions)
 func EvalOptions(options ...Options) (d *geneosOptions) {
 	// defaults
 	d = &geneosOptions{
+		// source:       filepath.Join(Root(), "packages", "downloads"),
 		downloadbase: "releases",
 		downloadtype: "resources",
 	}
@@ -58,6 +60,15 @@ func EvalOptions(options ...Options) (d *geneosOptions) {
 		opt(d)
 	}
 	return
+}
+
+// DownloadOnly prevents the unarchiving of the selected packages.
+// Downloads are stored in the directory given to Source() or the
+// default packages/download directory
+func DownloadOnly(o bool) Options {
+	return func(d *geneosOptions) {
+		d.downloadonly = o
+	}
 }
 
 // NoSave prevents downloads from being saved in the archive directory
@@ -141,12 +152,11 @@ func UseSnapshots() Options {
 	return func(d *geneosOptions) { d.downloadbase = "snapshots" }
 }
 
-// Source is the source of the installation and overrides all other
-// settings include Local and download URLs. It can be a directory, in
-// which case that directory is searched for the appropriate archive
+// Archive is the archive source or destination. It can be a directory,
+// in which case that directory is used for the appropriate archive
 // file(s)
-func Source(f string) Options {
-	return func(d *geneosOptions) { d.source = f }
+func Archive(f string) Options {
+	return func(d *geneosOptions) { d.archive = f }
 }
 
 // DoUpdate sets the option to also do an update after an install

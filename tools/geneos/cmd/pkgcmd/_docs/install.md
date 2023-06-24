@@ -52,3 +52,11 @@ need to supply different credentials for these downloads.
 Installations can be limited to a specific host with the global
 `--host`/`-H` option otherwise the installation is done to all
 configured hosts.
+
+Finally, if you just want to download releases and not install them - so
+you can put them on a shred drive for example - then you can use the
+`--download`/`-D` option. This will download the selected releases to
+the current directory, or if you give a directory on the command line
+then to that directory. Note that this option makes no sense with a
+number of other command line options and will error if those are given,
+e.g. `--local/-L` and so on.

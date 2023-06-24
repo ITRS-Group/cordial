@@ -77,7 +77,7 @@ var demoCmd = &cobra.Command{
 			return
 		}
 
-		options = append(options, geneos.Source(demoCmdArchive))
+		options = append(options, geneos.Archive(demoCmdArchive))
 		return initDemo(geneos.LOCAL, options...)
 	},
 }

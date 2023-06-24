@@ -60,13 +60,23 @@ need to supply different credentials for these downloads.
 Installations can be limited to a specific host with the global
 `--host`/`-H` option otherwise the installation is done to all
 configured hosts.
+
+Finally, if you just want to download releases and not install them - so
+you can put them on a shred drive for example - then you can use the
+`--download`/`-D` option. This will download the selected releases to
+the current directory, or if you give a directory on the command line
+then to that directory. Note that this option makes no sense with a
+number of other command line options and will error if those are given,
+e.g. `--local/-L` and so on.
+
 ### Options
 
 ```text
   -u, --username string   Username for downloads, defaults to configuration value in download.username
-  -P, --pwfile string     Password file to read for downloads, defaults to configuration value in download.password or otherwise prompts
+  -P, --pwfile string     Password file to read for downloads, defaults to configuration value in download::password or otherwise prompts
   -L, --local             Install from local files only
   -n, --nosave            Do not save a local copy of any downloads
+  -D, --download          Download only
   -U, --update            Update the base directory symlink
   -b, --base string       Override the base active_prod link name (default "active_prod")
   -V, --version string    Download this version, defaults to latest. Doesn't work for EL8 archives. (default "latest")

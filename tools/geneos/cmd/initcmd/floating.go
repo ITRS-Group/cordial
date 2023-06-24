@@ -91,7 +91,7 @@ var floatingCmd = &cobra.Command{
 		}
 
 		options = append(options,
-			geneos.Source(floatingCmdArchive),
+			geneos.Archive(floatingCmdArchive),
 			geneos.Version(floatingCmdVersion),
 			geneos.OverrideVersion(floatingCmdOverride),
 		)

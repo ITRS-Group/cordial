@@ -91,7 +91,7 @@ var sanCmd = &cobra.Command{
 		}
 
 		options = append(options,
-			geneos.Source(sanCmdArchive),
+			geneos.Archive(sanCmdArchive),
 			geneos.Version(sanCmdVersion),
 			geneos.OverrideVersion(sanCmdOverride),
 		)

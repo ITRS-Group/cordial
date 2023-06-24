@@ -25,7 +25,7 @@ package cmd
 
 import (
 	_ "embed"
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -70,7 +70,7 @@ var DefaultUserKeyfile = config.KeyFile(config.Path("keyfile",
 	config.IgnoreWorkingDir()),
 )
 
-var geneosUnsetError = strings.ReplaceAll(`Geneos location not set.
+var GeneosUnsetError = errors.New(strings.ReplaceAll(`Geneos location not set.
 
 You can do one of the following:
 * Run |geneos config set geneos=/PATH| (where |/PATH| is the location of the Geneos installation)
@@ -79,7 +79,7 @@ You can do one of the following:
 * Set the |GENEOS_HOME| or |ITRS_HOME| environment variables, either once or in your |.profile|:
   * |export GENEOS_HOME=/PATH|
 
-`, "|", "`")
+`, "|", "`"))
 
 func init() {
 	cordial.LogInit(pkgname)
@@ -208,11 +208,10 @@ geneos restart
 		}
 
 		// check initialisation
-		geneosdir := geneos.Root()
-		if geneosdir == "" {
+		if geneos.Root() == "" {
 			if command.Annotations["needshomedir"] == "true" {
 				command.SetUsageTemplate(" ")
-				return fmt.Errorf("%s", geneosUnsetError)
+				return GeneosUnsetError
 			}
 		}
 		if command.Name() == "help" {
