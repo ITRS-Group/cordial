@@ -41,7 +41,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type tlsListCertType struct {
+type listCertType struct {
 	Type       string
 	Name       string
 	Host       string
@@ -51,7 +51,7 @@ type tlsListCertType struct {
 	Verified   bool
 }
 
-type tlsListCertLongType struct {
+type listCertLongType struct {
 	Type        string
 	Name        string
 	Host        string
@@ -66,10 +66,10 @@ type tlsListCertLongType struct {
 }
 
 var listCmdAll, listCmdCSV, listCmdJSON, listCmdIndent, listCmdLong bool
-var tlsJSONEncoder *json.Encoder
+var listJSONEncoder *json.Encoder
 
-var tlsListTabWriter *tabwriter.Writer
-var tlsListCSVWriter *csv.Writer
+var listTabWriter *tabwriter.Writer
+var listCSVWriter *csv.Writer
 
 func init() {
 	tlsCmd.AddCommand(listCmd)
@@ -113,13 +113,14 @@ var listCmd = &cobra.Command{
 func listCertsCommand(ct *geneos.Component, args []string, params []string) (err error) {
 	switch {
 	case listCmdJSON, listCmdIndent:
-		tlsJSONEncoder = json.NewEncoder(os.Stdout)
+		var results []listCertType
+		listJSONEncoder = json.NewEncoder(os.Stdout)
 		if listCmdIndent {
-			tlsJSONEncoder.SetIndent("", "    ")
+			listJSONEncoder.SetIndent("", "    ")
 		}
 		if listCmdAll {
 			if rootCert != nil {
-				tlsJSONEncoder.Encode(tlsListCertType{
+				results = append(results, listCertType{
 					"global",
 					geneos.RootCAFile,
 					geneos.LOCALHOST,
@@ -130,7 +131,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 				})
 			}
 			if geneosCert != nil {
-				tlsJSONEncoder.Encode(tlsListCertType{
+				results = append(results, listCertType{
 					"global",
 					geneos.SigningCertFile,
 					geneos.LOCALHOST,
@@ -141,10 +142,14 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 				})
 			}
 		}
-		err = instance.ForAll(ct, cmd.Hostname, listCmdInstanceCertJSON, args, params)
+		results2, _ := instance.ForAllWithResults(ct, cmd.Hostname, listCmdInstanceCertJSON, args, params)
+		for _, r := range results2 {
+			results = append(results, r.(listCertType))
+		}
+		listJSONEncoder.Encode(results)
 	case listCmdCSV:
-		tlsListCSVWriter = csv.NewWriter(os.Stdout)
-		tlsListCSVWriter.Write([]string{
+		listCSVWriter = csv.NewWriter(os.Stdout)
+		listCSVWriter.Write([]string{
 			"Type",
 			"Name",
 			"Host",
@@ -155,7 +160,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 		})
 		if listCmdAll {
 			if rootCert != nil {
-				tlsListCSVWriter.Write([]string{
+				listCSVWriter.Write([]string{
 					"global",
 					geneos.RootCAFile,
 					geneos.LOCALHOST,
@@ -166,7 +171,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 				})
 			}
 			if geneosCert != nil {
-				tlsListCSVWriter.Write([]string{
+				listCSVWriter.Write([]string{
 					"global",
 					geneos.SigningCertFile,
 					geneos.LOCALHOST,
@@ -178,13 +183,13 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 			}
 		}
 		err = instance.ForAll(ct, cmd.Hostname, listCmdInstanceCertCSV, args, params)
-		tlsListCSVWriter.Flush()
+		listCSVWriter.Flush()
 	default:
-		tlsListTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-		fmt.Fprintln(tlsListTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tVerified")
+		listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+		fmt.Fprintln(listTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tVerified")
 		if listCmdAll {
 			if rootCert != nil {
-				fmt.Fprintf(tlsListTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\n",
+				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\n",
 					geneos.RootCAFile,
 					geneos.LOCALHOST,
 					time.Until(rootCert.NotAfter).Seconds(),
@@ -193,7 +198,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 					verifyCert(rootCert))
 			}
 			if geneosCert != nil {
-				fmt.Fprintf(tlsListTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\n",
+				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\n",
 					geneos.SigningCertFile,
 					geneos.LOCALHOST,
 					time.Until(geneosCert.NotAfter).Seconds(),
@@ -203,7 +208,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 			}
 		}
 		err = instance.ForAll(ct, cmd.Hostname, listCmdInstanceCert, args, params)
-		tlsListTabWriter.Flush()
+		listTabWriter.Flush()
 	}
 	return
 }
@@ -211,13 +216,14 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 func listCertsLongCommand(ct *geneos.Component, args []string, params []string) (err error) {
 	switch {
 	case listCmdJSON:
-		tlsJSONEncoder = json.NewEncoder(os.Stdout)
+		var results []listCertLongType
+		listJSONEncoder = json.NewEncoder(os.Stdout)
 		if listCmdIndent {
-			tlsJSONEncoder.SetIndent("", "    ")
+			listJSONEncoder.SetIndent("", "    ")
 		}
 		if listCmdAll {
 			if rootCert != nil {
-				tlsJSONEncoder.Encode(tlsListCertLongType{
+				results = append(results, listCertLongType{
 					"global",
 					geneos.RootCAFile,
 					geneos.LOCALHOST,
@@ -232,7 +238,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 				})
 			}
 			if geneosCert != nil {
-				tlsJSONEncoder.Encode(tlsListCertLongType{
+				results = append(results, listCertLongType{
 					"global",
 					geneos.SigningCertFile,
 					geneos.LOCALHOST,
@@ -247,10 +253,13 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 				})
 			}
 		}
-		err = instance.ForAll(ct, cmd.Hostname, listCmdInstanceCertJSON, args, params)
+		results2, _ := instance.ForAllWithResults(ct, cmd.Hostname, listCmdInstanceCertJSON, args, params)
+		for _, r := range results2 {
+			results = append(results, r.(listCertLongType))
+		}
 	case listCmdCSV:
-		tlsListCSVWriter = csv.NewWriter(os.Stdout)
-		tlsListCSVWriter.Write([]string{
+		listCSVWriter = csv.NewWriter(os.Stdout)
+		listCSVWriter.Write([]string{
 			"Type",
 			"Name",
 			"Host",
@@ -265,7 +274,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 		})
 		if listCmdAll {
 			if rootCert != nil {
-				tlsListCSVWriter.Write([]string{
+				listCSVWriter.Write([]string{
 					"global",
 					geneos.RootCAFile,
 					geneos.LOCALHOST,
@@ -280,7 +289,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 				})
 			}
 			if geneosCert != nil {
-				tlsListCSVWriter.Write([]string{
+				listCSVWriter.Write([]string{
 					"global",
 					geneos.SigningCertFile,
 					geneos.LOCALHOST,
@@ -296,13 +305,13 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 			}
 		}
 		err = instance.ForAll(ct, cmd.Hostname, listCmdInstanceCertCSV, args, params)
-		tlsListCSVWriter.Flush()
+		listCSVWriter.Flush()
 	default:
-		tlsListTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-		fmt.Fprintln(tlsListTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tVerified\tIssuer\tSubjAltNames\tIPs\tFingerprint")
+		listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+		fmt.Fprintln(listTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tVerified\tIssuer\tSubjAltNames\tIPs\tFingerprint")
 		if listCmdAll {
 			if rootCert != nil {
-				fmt.Fprintf(tlsListTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t\t\t%X\n",
+				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t\t\t%X\n",
 					geneos.RootCAFile,
 					geneos.LOCALHOST,
 					time.Until(rootCert.NotAfter).Seconds(),
@@ -313,7 +322,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 					sha1.Sum(rootCert.Raw))
 			}
 			if geneosCert != nil {
-				fmt.Fprintf(tlsListTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t\t\t%X\n",
+				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t\t\t%X\n",
 					geneos.SigningCertFile,
 					geneos.LOCALHOST,
 					time.Until(geneosCert.NotAfter).Seconds(),
@@ -325,7 +334,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 			}
 		}
 		err = instance.ForAll(ct, cmd.Hostname, listCmdInstanceCert, args, params)
-		tlsListTabWriter.Flush()
+		listTabWriter.Flush()
 	}
 	return
 }
@@ -341,20 +350,20 @@ func listCmdInstanceCert(c geneos.Instance, params []string) (err error) {
 	}
 
 	expires := cert.NotAfter
-	fmt.Fprintf(tlsListTabWriter, "%s\t%s\t%s\t%.f\t%q\t%q\t%v\t", c.Type(), c.Name(), c.Host(), time.Until(expires).Seconds(), expires, cert.Subject.CommonName, valid)
+	fmt.Fprintf(listTabWriter, "%s\t%s\t%s\t%.f\t%q\t%q\t%v\t", c.Type(), c.Name(), c.Host(), time.Until(expires).Seconds(), expires, cert.Subject.CommonName, valid)
 
 	if listCmdLong {
-		fmt.Fprintf(tlsListTabWriter, "%q\t", cert.Issuer.CommonName)
+		fmt.Fprintf(listTabWriter, "%q\t", cert.Issuer.CommonName)
 		if len(cert.DNSNames) > 0 {
-			fmt.Fprintf(tlsListTabWriter, "%v", cert.DNSNames)
+			fmt.Fprintf(listTabWriter, "%v", cert.DNSNames)
 		}
-		fmt.Fprintf(tlsListTabWriter, "\t")
+		fmt.Fprintf(listTabWriter, "\t")
 		if len(cert.IPAddresses) > 0 {
-			fmt.Fprintf(tlsListTabWriter, "%v", cert.IPAddresses)
+			fmt.Fprintf(listTabWriter, "%v", cert.IPAddresses)
 		}
-		fmt.Fprintf(tlsListTabWriter, "\t%X", sha1.Sum(cert.Raw))
+		fmt.Fprintf(listTabWriter, "\t%X", sha1.Sum(cert.Raw))
 	}
-	fmt.Fprint(tlsListTabWriter, "\n")
+	fmt.Fprint(listTabWriter, "\n")
 
 	return
 }
@@ -378,25 +387,44 @@ func listCmdInstanceCertCSV(c geneos.Instance, params []string) (err error) {
 		cols = append(cols, fmt.Sprintf("%X", sha1.Sum(cert.Raw)))
 	}
 
-	tlsListCSVWriter.Write(cols)
+	listCSVWriter.Write(cols)
 	return
 }
 
-func listCmdInstanceCertJSON(c geneos.Instance, params []string) (err error) {
+func listCmdInstanceCertJSON(c geneos.Instance, params []string) (result interface{}, err error) {
 	cert, valid, err := instance.ReadCert(c)
 	if err == os.ErrNotExist {
 		// this is OK
-		return nil
+		err = nil
+		return
 	}
 	if err != nil {
 		return
 	}
 	if listCmdLong {
-		tlsJSONEncoder.Encode(tlsListCertLongType{c.Type().String(), c.Name(), c.Host().String(), time.Duration(time.Until(cert.NotAfter).Seconds()),
-			cert.NotAfter, cert.Subject.CommonName, valid, cert.Issuer.CommonName, cert.DNSNames, cert.IPAddresses, fmt.Sprintf("%X", sha1.Sum(cert.Raw))})
-	} else {
-		tlsJSONEncoder.Encode(tlsListCertType{c.Type().String(), c.Name(), c.Host().String(), time.Duration(time.Until(cert.NotAfter).Seconds()),
-			cert.NotAfter, cert.Subject.CommonName, valid})
+		result = listCertLongType{
+			c.Type().String(),
+			c.Name(),
+			c.Host().String(),
+			time.Duration(time.Until(cert.NotAfter).Seconds()),
+			cert.NotAfter,
+			cert.Subject.CommonName,
+			valid,
+			cert.Issuer.CommonName,
+			cert.DNSNames,
+			cert.IPAddresses,
+			fmt.Sprintf("%X", sha1.Sum(cert.Raw)),
+		}
+		return
+	}
+	result = listCertType{
+		c.Type().String(),
+		c.Name(),
+		c.Host().String(),
+		time.Duration(time.Until(cert.NotAfter).Seconds()),
+		cert.NotAfter,
+		cert.Subject.CommonName,
+		valid,
 	}
 	return
 }
