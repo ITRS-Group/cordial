@@ -35,30 +35,30 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var initSanCmdArchive, initSanCmdVersion, initSanCmdOverride string
+var sanCmdArchive, sanCmdVersion, sanCmdOverride string
 
 func init() {
-	initCmd.AddCommand(initSanCmd)
+	initCmd.AddCommand(sanCmd)
 
-	initSanCmd.Flags().StringVarP(&initSanCmdVersion, "version", "V", "latest", "Download this `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
-	initSanCmd.Flags().StringVarP(&initSanCmdArchive, "archive", "A", "", archiveOptionsText)
-	initSanCmd.Flags().StringVarP(&initSanCmdOverride, "override", "T", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
+	sanCmd.Flags().StringVarP(&sanCmdVersion, "version", "V", "latest", "Download this `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
+	sanCmd.Flags().StringVarP(&sanCmdArchive, "archive", "A", "", archiveOptionsText)
+	sanCmd.Flags().StringVarP(&sanCmdOverride, "override", "T", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
 
-	initSanCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
-	initSanCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", instance.AttributeValuesOptionsText)
-	initSanCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", instance.TypeValuesOptionsText)
-	initSanCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", instance.VarValuesOptionsText)
+	sanCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
+	sanCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", instance.AttributeValuesOptionsText)
+	sanCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", instance.TypeValuesOptionsText)
+	sanCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", instance.VarValuesOptionsText)
 
-	initSanCmd.Flags().SortFlags = false
+	sanCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/san.md
-var initSanCmdDescription string
+var sanCmdDescription string
 
-var initSanCmd = &cobra.Command{
+var sanCmd = &cobra.Command{
 	Use:          "san [flags] [USERNAME] [DIRECTORY]",
 	Short:        "Initialise a Geneos SAN (Self-Announcing Netprobe) environment",
-	Long:         initSanCmdDescription,
+	Long:         sanCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -86,14 +86,14 @@ var initSanCmd = &cobra.Command{
 		}
 
 		// prefix with netprobe
-		if initSanCmdOverride != "" && !strings.Contains(initSanCmdOverride, ":") {
-			initSanCmdOverride = "netprobe:" + initSanCmdOverride
+		if sanCmdOverride != "" && !strings.Contains(sanCmdOverride, ":") {
+			sanCmdOverride = "netprobe:" + sanCmdOverride
 		}
 
 		options = append(options,
-			geneos.Source(initSanCmdArchive),
-			geneos.Version(initSanCmdVersion),
-			geneos.OverrideVersion(initSanCmdOverride),
+			geneos.Source(sanCmdArchive),
+			geneos.Version(sanCmdVersion),
+			geneos.OverrideVersion(sanCmdOverride),
 		)
 		return initSan(geneos.LOCAL, options...)
 	},

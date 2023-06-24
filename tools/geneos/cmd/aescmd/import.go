@@ -35,26 +35,26 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var aesImportCmdKeyfile config.KeyFile
+var importCmdKeyfile config.KeyFile
 
 func init() {
-	aesCmd.AddCommand(aesImportCmd)
+	aesCmd.AddCommand(importCmd)
 
-	aesImportCmdKeyfile = cmd.DefaultUserKeyfile
+	importCmdKeyfile = cmd.DefaultUserKeyfile
 
-	aesImportCmd.Flags().VarP(&aesImportCmdKeyfile, "keyfile", "k", "Keyfile to use `PATH|URL|-`")
-	aesImportCmd.MarkFlagRequired("keyfile")
-	aesImportCmd.Flags().SortFlags = false
+	importCmd.Flags().VarP(&importCmdKeyfile, "keyfile", "k", "Keyfile to use `PATH|URL|-`")
+	importCmd.MarkFlagRequired("keyfile")
+	importCmd.Flags().SortFlags = false
 
 }
 
 //go:embed _docs/import.md
-var aesImportCmdDescription string
+var importCmdDescription string
 
-var aesImportCmd = &cobra.Command{
+var importCmd = &cobra.Command{
 	Use:   "import [flags] [TYPE] [NAME...]",
 	Short: "Import key files for component TYPE",
-	Long:  aesImportCmdDescription,
+	Long:  importCmdDescription,
 	Example: strings.ReplaceAll(`
 # import local keyfile.aes to GENEOS/gateway/gateway_shared/DEADBEEF.aes
 geneos aes import --keyfile ~/keyfile.aes gateway
@@ -71,7 +71,7 @@ geneos aes import -k https://myserver.example.com/secure/keyfile.aes -H remote1
 		ct, _ := cmd.CmdArgs(command)
 		h := geneos.GetHost(cmd.Hostname)
 
-		crc32, err := instance.ImportKeyFile(h, ct, aesImportCmdKeyfile)
+		crc32, err := instance.ImportKeyFile(h, ct, importCmdKeyfile)
 		fmt.Printf("imported keyfile with CRC %08X\n", crc32)
 		return
 	},

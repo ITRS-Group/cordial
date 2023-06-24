@@ -35,30 +35,30 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var initFloatingCmdArchive, initFloatingCmdVersion, initFloatingCmdOverride string
+var floatingCmdArchive, floatingCmdVersion, floatingCmdOverride string
 
 func init() {
-	initCmd.AddCommand(initFloatingCmd)
+	initCmd.AddCommand(floatingCmd)
 
-	initFloatingCmd.Flags().StringVarP(&initFloatingCmdVersion, "version", "V", "latest", "Download this `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
-	initFloatingCmd.Flags().StringVarP(&initFloatingCmdArchive, "archive", "A", "", archiveOptionsText)
-	initFloatingCmd.Flags().StringVarP(&initFloatingCmdOverride, "override", "T", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
+	floatingCmd.Flags().StringVarP(&floatingCmdVersion, "version", "V", "latest", "Download this `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
+	floatingCmd.Flags().StringVarP(&floatingCmdArchive, "archive", "A", "", archiveOptionsText)
+	floatingCmd.Flags().StringVarP(&floatingCmdOverride, "override", "T", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
 
-	initFloatingCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
-	initFloatingCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", instance.AttributeValuesOptionsText)
-	initFloatingCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", instance.TypeValuesOptionsText)
-	initFloatingCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", instance.VarValuesOptionsText)
+	floatingCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
+	floatingCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", instance.AttributeValuesOptionsText)
+	floatingCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", instance.TypeValuesOptionsText)
+	floatingCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", instance.VarValuesOptionsText)
 
-	initFloatingCmd.Flags().SortFlags = false
+	floatingCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/floating.md
-var initFloatingCmdDescription string
+var floatingCmdDescription string
 
-var initFloatingCmd = &cobra.Command{
+var floatingCmd = &cobra.Command{
 	Use:          "floating [flags] [USERNAME] [DIRECTORY]",
 	Short:        "Initialise a Geneos Floating Netprobe environment",
-	Long:         initFloatingCmdDescription,
+	Long:         floatingCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -86,14 +86,14 @@ var initFloatingCmd = &cobra.Command{
 		}
 
 		// prefix with netprobe
-		if initFloatingCmdOverride != "" && !strings.Contains(initFloatingCmdOverride, ":") {
-			initFloatingCmdOverride = "netprobe:" + initFloatingCmdOverride
+		if floatingCmdOverride != "" && !strings.Contains(floatingCmdOverride, ":") {
+			floatingCmdOverride = "netprobe:" + floatingCmdOverride
 		}
 
 		options = append(options,
-			geneos.Source(initFloatingCmdArchive),
-			geneos.Version(initFloatingCmdVersion),
-			geneos.OverrideVersion(initFloatingCmdOverride),
+			geneos.Source(floatingCmdArchive),
+			geneos.Version(floatingCmdVersion),
+			geneos.OverrideVersion(floatingCmdOverride),
 		)
 		return initFloating(geneos.LOCAL, options...)
 	},

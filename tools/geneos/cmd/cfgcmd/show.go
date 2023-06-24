@@ -32,21 +32,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var configShowCmdAll bool
+var showCmdAll bool
 
 func init() {
-	configCmd.AddCommand(configShowCmd)
+	configCmd.AddCommand(showCmd)
 
-	configShowCmd.Flags().BoolVarP(&configShowCmdAll, "all", "a", false, "Show all the parameters including all defaults")
+	showCmd.Flags().BoolVarP(&showCmdAll, "all", "a", false, "Show all the parameters including all defaults")
 }
 
 //go:embed _docs/show.md
-var configShowCmdDescription string
+var showCmdDescription string
 
-var configShowCmd = &cobra.Command{
+var showCmd = &cobra.Command{
 	Use:          "show [KEY...]",
 	Short:        "Show program configuration",
-	Long:         configShowCmdDescription,
+	Long:         showCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -56,7 +56,7 @@ var configShowCmd = &cobra.Command{
 		var buffer []byte
 		var cf *config.Config
 
-		if configShowCmdAll {
+		if showCmdAll {
 			cf = config.GetConfig()
 		} else {
 			cf, _ = config.Load(cmd.Execname, config.IgnoreSystemDir(), config.IgnoreWorkingDir())

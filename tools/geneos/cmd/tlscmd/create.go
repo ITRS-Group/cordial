@@ -41,46 +41,46 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var tlsCreateCmdCN string
-var tlsCreateCmdOverwrite bool
-var tlsCreateCmdSANs tlsCreateCmdSAN
+var createCmdCN string
+var createCmdOverwrite bool
+var createCmdSANs createCmdSAN
 
 func init() {
-	tlsCmd.AddCommand(tlsCreateCmd)
+	tlsCmd.AddCommand(createCmd)
 
 	hostname, _ := os.Hostname()
-	tlsCreateCmd.Flags().StringVarP(&tlsCreateCmdCN, "cname", "c", hostname, "Common Name for certificate. Defaults to hostname.")
-	tlsCreateCmd.Flags().VarP(&tlsCreateCmdSANs, "san", "s", "Subject-Alternative-Name (repeat for each one required). Defaults to hostname if none given.")
-	tlsCreateCmd.Flags().BoolVarP(&tlsCreateCmdOverwrite, "force", "F", false, "Force overwrite existing certificate (but not root and intermediate)")
+	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", hostname, "Common Name for certificate. Defaults to hostname.")
+	createCmd.Flags().VarP(&createCmdSANs, "san", "s", "Subject-Alternative-Name (repeat for each one required). Defaults to hostname if none given.")
+	createCmd.Flags().BoolVarP(&createCmdOverwrite, "force", "F", false, "Force overwrite existing certificate (but not root and intermediate)")
 }
 
 //go:embed _docs/create.md
-var tlsCreateCmdDescription string
+var createCmdDescription string
 
-var tlsCreateCmd = &cobra.Command{
+var createCmd = &cobra.Command{
 	Use:          "create",
 	Short:        "Create new certificates",
-	Long:         tlsCreateCmdDescription,
+	Long:         createCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
 		"needshomedir": "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		if len(tlsCreateCmdSANs) == 0 {
+		if len(createCmdSANs) == 0 {
 			hostname, _ := os.Hostname()
-			tlsCreateCmdSANs = []string{hostname}
+			createCmdSANs = []string{hostname}
 		}
 		tlsInit(false)
-		err = CreateCert(".", tlsCreateCmdOverwrite, tlsCreateCmdCN, tlsCreateCmdSANs...)
+		err = CreateCert(".", createCmdOverwrite, createCmdCN, createCmdSANs...)
 		if err != nil {
-			if errors.Is(err, host.ErrExists) && !tlsCreateCmdOverwrite {
-				fmt.Printf("Certficate already exists for CN=%q, use --force to overwrite\n", tlsCreateCmdCN)
+			if errors.Is(err, host.ErrExists) && !createCmdOverwrite {
+				fmt.Printf("Certficate already exists for CN=%q, use --force to overwrite\n", createCmdCN)
 				return nil
 			}
 			return
 		}
-		fmt.Printf("Certificate and key created for CN=%q\n", tlsCreateCmdCN)
+		fmt.Printf("Certificate and key created for CN=%q\n", createCmdCN)
 		return
 	},
 }
@@ -143,17 +143,17 @@ func CreateCert(dir string, overwrite bool, cn string, san ...string) (err error
 	return
 }
 
-type tlsCreateCmdSAN []string
+type createCmdSAN []string
 
-func (san *tlsCreateCmdSAN) Set(name string) (err error) {
+func (san *createCmdSAN) Set(name string) (err error) {
 	*san = append(*san, name)
 	return
 }
 
-func (san *tlsCreateCmdSAN) String() string {
+func (san *createCmdSAN) String() string {
 	return ""
 }
 
-func (san *tlsCreateCmdSAN) Type() string {
+func (san *createCmdSAN) Type() string {
 	return "SAN"
 }

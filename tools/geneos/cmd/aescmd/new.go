@@ -34,34 +34,34 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var aesNewCmdKeyfile config.KeyFile
-var aesNewCmdBackupSuffix string
-var aesNewCmdImportShared, aesNewCmdSaveUser, aesNewCmdOverwriteKeyfile bool
+var newCmdKeyfile config.KeyFile
+var newCmdBackupSuffix string
+var newCmdImportShared, newCmdSaveUser, newCmdOverwriteKeyfile bool
 
 // var aesDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
 
 func init() {
-	aesCmd.AddCommand(aesNewCmd)
+	aesCmd.AddCommand(newCmd)
 
-	aesNewCmd.Flags().VarP(&aesNewCmdKeyfile, "keyfile", "k", "Path to key file, defaults to STDOUT")
-	aesNewCmd.Flags().BoolVarP(&aesNewCmdSaveUser, "user", "U", false, `New user key file (typically "${HOME}/.config/geneos/keyfile.aes")`)
+	newCmd.Flags().VarP(&newCmdKeyfile, "keyfile", "k", "Path to key file, defaults to STDOUT")
+	newCmd.Flags().BoolVarP(&newCmdSaveUser, "user", "U", false, `New user key file (typically "${HOME}/.config/geneos/keyfile.aes")`)
 
-	aesNewCmd.Flags().StringVarP(&aesNewCmdBackupSuffix, "backup", "b", ".old", "Backup existing keyfile with extension given")
+	newCmd.Flags().StringVarP(&newCmdBackupSuffix, "backup", "b", ".old", "Backup existing keyfile with extension given")
 
-	aesNewCmd.Flags().BoolVarP(&aesNewCmdOverwriteKeyfile, "force", "F", false, "Force overwriting an existing key file")
+	newCmd.Flags().BoolVarP(&newCmdOverwriteKeyfile, "force", "F", false, "Force overwriting an existing key file")
 
-	aesNewCmd.Flags().BoolVarP(&aesNewCmdImportShared, "shared", "S", false, "Import the keyfile to component shared directories and set on instances")
+	newCmd.Flags().BoolVarP(&newCmdImportShared, "shared", "S", false, "Import the keyfile to component shared directories and set on instances")
 
-	aesNewCmd.MarkFlagsMutuallyExclusive("keyfile", "user")
+	newCmd.MarkFlagsMutuallyExclusive("keyfile", "user")
 }
 
 //go:embed _docs/new.md
-var aesNewCmdDescription string
+var newCmdDescription string
 
-var aesNewCmd = &cobra.Command{
+var newCmd = &cobra.Command{
 	Use:   "new [flags] [TYPE] [NAME...]",
 	Short: "Create a new key file",
-	Long:  aesNewCmdDescription,
+	Long:  newCmdDescription,
 	Example: `
 geneos aes new
 geneos aes new -F ~/keyfile.aes
@@ -77,29 +77,29 @@ geneos aes new -S gateway
 
 		kv := config.NewRandomKeyValues()
 
-		if aesNewCmdSaveUser {
-			aesNewCmdKeyfile = cmd.DefaultUserKeyfile
+		if newCmdSaveUser {
+			newCmdKeyfile = cmd.DefaultUserKeyfile
 		}
 
-		if aesNewCmdKeyfile != "" {
-			if _, err = aesNewCmdKeyfile.RollKeyfile(aesNewCmdBackupSuffix); err != nil {
+		if newCmdKeyfile != "" {
+			if _, err = newCmdKeyfile.RollKeyfile(newCmdBackupSuffix); err != nil {
 				return
 			}
-			if kv, err = aesNewCmdKeyfile.Read(); err != nil {
+			if kv, err = newCmdKeyfile.Read(); err != nil {
 				return
 			}
-		} else if !aesNewCmdImportShared {
+		} else if !newCmdImportShared {
 			fmt.Print(kv.String())
 		}
 
 		crc, err = kv.Checksum()
 
 		crcstr := fmt.Sprintf("%08X", crc)
-		if aesNewCmdKeyfile != "" {
-			fmt.Printf("%s created, checksum %s\n", aesNewCmdKeyfile, crcstr)
+		if newCmdKeyfile != "" {
+			fmt.Printf("%s created, checksum %s\n", newCmdKeyfile, crcstr)
 		}
 
-		if aesNewCmdImportShared {
+		if newCmdImportShared {
 			ct, args, _ := cmd.CmdArgsParams(command)
 			h := geneos.GetHost(cmd.Hostname)
 

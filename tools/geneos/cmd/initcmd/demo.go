@@ -34,23 +34,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var initDemoCmdArchive string
+var demoCmdArchive string
 
 func init() {
-	initCmd.AddCommand(initDemoCmd)
+	initCmd.AddCommand(demoCmd)
 
-	initDemoCmd.Flags().StringVarP(&initDemoCmdArchive, "archive", "A", "", archiveOptionsText)
-	initDemoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewayValuesOptionstext)
-	initDemoCmd.Flags().SortFlags = false
+	demoCmd.Flags().StringVarP(&demoCmdArchive, "archive", "A", "", archiveOptionsText)
+	demoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewayValuesOptionstext)
+	demoCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/demo.md
-var initDemoCmdDescription string
+var demoCmdDescription string
 
-var initDemoCmd = &cobra.Command{
+var demoCmd = &cobra.Command{
 	Use:          "demo [flags] [USERNAME] [DIRECTORY]",
 	Short:        "Initialise a Geneos Demo environment",
-	Long:         initDemoCmdDescription,
+	Long:         demoCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -77,7 +77,7 @@ var initDemoCmd = &cobra.Command{
 			return
 		}
 
-		options = append(options, geneos.Source(initDemoCmdArchive))
+		options = append(options, geneos.Source(demoCmdArchive))
 		return initDemo(geneos.LOCAL, options...)
 	},
 }

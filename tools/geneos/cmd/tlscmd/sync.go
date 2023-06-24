@@ -35,16 +35,16 @@ import (
 )
 
 func init() {
-	tlsCmd.AddCommand(tlsSyncCmd)
+	tlsCmd.AddCommand(syncCmd)
 }
 
 //go:embed _docs/sync.md
-var tlsSyncCmdDescription string
+var syncCmdDescription string
 
-var tlsSyncCmd = &cobra.Command{
+var syncCmd = &cobra.Command{
 	Use:          "sync",
 	Short:        "Sync remote hosts certificate chain files",
-	Long:         tlsSyncCmdDescription,
+	Long:         syncCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",

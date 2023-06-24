@@ -38,26 +38,26 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var packageUninstallCmdVersion string
-var packageUninstallCmdAll, packageUninstallCmdForce bool
+var uninstallCmdVersion string
+var uninstallCmdAll, uninstallCmdForce bool
 
 func init() {
-	packageCmd.AddCommand(packageUninstallCmd)
+	packageCmd.AddCommand(uninstallCmd)
 
-	packageUninstallCmd.Flags().StringVarP(&packageUninstallCmdVersion, "version", "V", "", "Uninstall `VERSION`")
-	packageUninstallCmd.Flags().BoolVarP(&packageUninstallCmdAll, "all", "A", false, "Uninstall all releases, stopping and disabling running instances")
-	packageUninstallCmd.Flags().BoolVarP(&packageUninstallCmdForce, "force", "f", false, "Force uninstall, stopping protected instances first")
+	uninstallCmd.Flags().StringVarP(&uninstallCmdVersion, "version", "V", "", "Uninstall `VERSION`")
+	uninstallCmd.Flags().BoolVarP(&uninstallCmdAll, "all", "A", false, "Uninstall all releases, stopping and disabling running instances")
+	uninstallCmd.Flags().BoolVarP(&uninstallCmdForce, "force", "f", false, "Force uninstall, stopping protected instances first")
 
-	packageUninstallCmd.Flags().SortFlags = false
+	uninstallCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/uninstall.md
-var packageUninstallCmdDescription string
+var uninstallCmdDescription string
 
-var packageUninstallCmd = &cobra.Command{
+var uninstallCmd = &cobra.Command{
 	Use:   "uninstall [flags] [TYPE]",
 	Short: "Uninstall Geneos releases",
-	Long:  packageUninstallCmdDescription,
+	Long:  uninstallCmdDescription,
 	Example: strings.ReplaceAll(`
 geneos uninstall netprobe
 geneos uninstall --version 5.14.1
@@ -86,9 +86,9 @@ geneos uninstall --version 5.14.1
 				// save candidates for removal
 				removeReleases := map[string]geneos.ReleaseDetails{}
 				for _, i := range r {
-					if packageUninstallCmdAll || // --all
-						(packageUninstallCmdVersion == "" && !i.Latest) || // default leave 'latest'
-						packageUninstallCmdVersion == i.Version { // specific --version
+					if uninstallCmdAll || // --all
+						(uninstallCmdVersion == "" && !i.Latest) || // default leave 'latest'
+						uninstallCmdVersion == i.Version { // specific --version
 						removeReleases[i.Version] = i
 					}
 				}
@@ -111,9 +111,9 @@ geneos uninstall --version 5.14.1
 						continue
 					}
 
-					if instance.IsProtected(c) && !packageUninstallCmdForce {
+					if instance.IsProtected(c) && !uninstallCmdForce {
 						fmt.Printf("%s is marked protected and uses version %s, skipping\n", c, version)
-					} else if !instance.IsProtected(c) || packageUninstallCmdForce {
+					} else if !instance.IsProtected(c) || uninstallCmdForce {
 						if instance.IsRunning(c) {
 							restart[version] = append(restart[version], c)
 						}
@@ -136,7 +136,7 @@ geneos uninstall --version 5.14.1
 						stopped = append(stopped, c)
 					}
 					if len(release.Links) != 0 {
-						if packageUninstallCmdAll {
+						if uninstallCmdAll {
 							// remove all links to this release if given --all flag
 							for _, l := range release.Links {
 								h.Remove(filepath.Join(basedir, l))

@@ -36,11 +36,11 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var aesDecodeCmdAESFILE, aesDecodeCmdPrevAESFILE, aesPrevUserKeyFile config.KeyFile
-var aesDecodeCmdPassword, aesDecodeCmdSource, aesDecodeCmdExpandString string
+var decodeCmdAESFILE, decodeCmdPrevAESFILE, aesPrevUserKeyFile config.KeyFile
+var decodeCmdPassword, decodeCmdSource, decodeCmdExpandString string
 
 func init() {
-	aesCmd.AddCommand(aesDecodeCmd)
+	aesCmd.AddCommand(decodeCmd)
 
 	cmd.UserKeyFile = cmd.DefaultUserKeyfile
 	aesPrevUserKeyFile = config.KeyFile(config.Path("prevkeyfile",
@@ -49,25 +49,25 @@ func init() {
 		config.IgnoreWorkingDir(),
 	))
 
-	aesDecodeCmdAESFILE = cmd.UserKeyFile
-	aesDecodeCmdPrevAESFILE = aesPrevUserKeyFile
+	decodeCmdAESFILE = cmd.UserKeyFile
+	decodeCmdPrevAESFILE = aesPrevUserKeyFile
 
-	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdExpandString, "expandable", "e", "", "The keyfile and ciphertext in expandable format (including '${...}')")
-	aesDecodeCmd.Flags().VarP(&aesDecodeCmdAESFILE, "keyfile", "k", "Path to keyfile")
-	aesDecodeCmd.Flags().VarP(&aesDecodeCmdPrevAESFILE, "previous", "v", "Path to previous keyfile")
-	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdPassword, "password", "p", "", "'Geneos formatted AES256 password")
-	aesDecodeCmd.Flags().StringVarP(&aesDecodeCmdSource, "source", "s", "", "Alternative source for password")
+	decodeCmd.Flags().StringVarP(&decodeCmdExpandString, "expandable", "e", "", "The keyfile and ciphertext in expandable format (including '${...}')")
+	decodeCmd.Flags().VarP(&decodeCmdAESFILE, "keyfile", "k", "Path to keyfile")
+	decodeCmd.Flags().VarP(&decodeCmdPrevAESFILE, "previous", "v", "Path to previous keyfile")
+	decodeCmd.Flags().StringVarP(&decodeCmdPassword, "password", "p", "", "'Geneos formatted AES256 password")
+	decodeCmd.Flags().StringVarP(&decodeCmdSource, "source", "s", "", "Alternative source for password")
 
-	aesDecodeCmd.Flags().SortFlags = false
+	decodeCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/decode.md
-var aesDecodeCmdDescription string
+var decodeCmdDescription string
 
-var aesDecodeCmd = &cobra.Command{
+var decodeCmd = &cobra.Command{
 	Use:   "decode [flags] [TYPE] [NAME...]",
 	Short: "Decode a Geneos AES256 format password using a key file",
-	Long:  aesDecodeCmdDescription,
+	Long:  decodeCmdDescription,
 	Example: `
 # don't forget to use single quotes to escape the ${...} from shell
 # interpolation
@@ -91,19 +91,19 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 		var ciphertext string
 
 		// XXX Allow -e to provide non-inline sources, e.g. stdin, file etc.
-		if strings.HasPrefix(aesDecodeCmdExpandString, "${enc:") {
-			fmt.Println(config.ExpandString(aesDecodeCmdExpandString))
+		if strings.HasPrefix(decodeCmdExpandString, "${enc:") {
+			fmt.Println(config.ExpandString(decodeCmdExpandString))
 			return nil
 		}
 
-		if aesDecodeCmdExpandString != "" {
+		if decodeCmdExpandString != "" {
 			return fmt.Errorf("%w: expandable string must be of the form '${enc:keyfile:ciphertext}'", geneos.ErrInvalidArgs)
 		}
 
-		if aesDecodeCmdPassword != "" {
-			ciphertext = aesDecodeCmdPassword
-		} else if aesDecodeCmdSource != "" {
-			b, err := geneos.ReadFrom(aesDecodeCmdSource)
+		if decodeCmdPassword != "" {
+			ciphertext = decodeCmdPassword
+		} else if decodeCmdSource != "" {
+			b, err := geneos.ReadFrom(decodeCmdSource)
 			if err != nil {
 				return err
 			}
@@ -112,7 +112,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 			return geneos.ErrInvalidArgs
 		}
 
-		for _, k := range []config.KeyFile{aesDecodeCmdAESFILE, aesDecodeCmdPrevAESFILE} {
+		for _, k := range []config.KeyFile{decodeCmdAESFILE, decodeCmdPrevAESFILE} {
 			if k == "" {
 				continue
 			}
@@ -125,7 +125,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 			return nil
 		}
 
-		if aesDecodeCmdAESFILE != cmd.UserKeyFile || aesDecodeCmdPrevAESFILE != aesPrevUserKeyFile {
+		if decodeCmdAESFILE != cmd.UserKeyFile || decodeCmdPrevAESFILE != aesPrevUserKeyFile {
 			return fmt.Errorf("decode failed with key file(s) provided")
 		}
 

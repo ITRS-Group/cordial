@@ -42,12 +42,12 @@ import (
 )
 
 var aesListTabWriter *tabwriter.Writer
-var aesListCmdCSV, aesListCmdJSON, aesListCmdIndent bool
-var aesListCmdShared bool
+var listCmdCSV, listCmdJSON, listCmdIndent bool
+var listCmdShared bool
 
 var aesListCSVWriter *csv.Writer
 
-type aesListCmdType struct {
+type listCmdType struct {
 	Name    string `json:"name,omitempty"`
 	Type    string `json:"type,omitempty"`
 	Host    string `json:"host,omitempty"`
@@ -57,23 +57,23 @@ type aesListCmdType struct {
 }
 
 func init() {
-	aesCmd.AddCommand(aesListCmd)
+	aesCmd.AddCommand(listCmd)
 
-	aesListCmd.Flags().BoolVarP(&aesListCmdShared, "shared", "S", false, "List shared key files")
+	listCmd.Flags().BoolVarP(&listCmdShared, "shared", "S", false, "List shared key files")
 
-	aesListCmd.Flags().BoolVarP(&aesListCmdJSON, "json", "j", false, "Output JSON")
-	aesListCmd.Flags().BoolVarP(&aesListCmdIndent, "pretty", "i", false, "Output indented JSON")
-	aesListCmd.Flags().BoolVarP(&aesListCmdCSV, "csv", "c", false, "Output CSV")
-	aesListCmd.Flags().SortFlags = false
+	listCmd.Flags().BoolVarP(&listCmdJSON, "json", "j", false, "Output JSON")
+	listCmd.Flags().BoolVarP(&listCmdIndent, "pretty", "i", false, "Output indented JSON")
+	listCmd.Flags().BoolVarP(&listCmdCSV, "csv", "c", false, "Output CSV")
+	listCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/list.md
-var aesListCmdDescription string
+var listCmdDescription string
 
-var aesListCmd = &cobra.Command{
+var listCmd = &cobra.Command{
 	Use:   "list [flags] [TYPE] [NAME...]",
 	Short: "List key files",
-	Long:  aesListCmdDescription,
+	Long:  listCmdDescription,
 	Example: `
 geneos aes list gateway
 geneos aes ls -S gateway -H localhost -c
@@ -88,28 +88,28 @@ geneos aes ls -S gateway -H localhost -c
 		ct, args, params := cmd.CmdArgsParams(command)
 
 		h := geneos.GetHost(cmd.Hostname)
-		if aesListCmdShared {
+		if listCmdShared {
 
 		}
 		switch {
-		case aesListCmdJSON, aesListCmdIndent:
+		case listCmdJSON, listCmdIndent:
 			var results []interface{}
-			if aesListCmdShared {
+			if listCmdShared {
 				results, _ = aesListSharedJSON(ct, h)
 			} else {
 				results, _ = instance.ForAllWithResults(ct, cmd.Hostname, aesListInstanceJSON, args, params)
 			}
 			var b []byte
-			if aesListCmdIndent {
+			if listCmdIndent {
 				b, _ = json.MarshalIndent(results, "", "    ")
 			} else {
 				b, _ = json.Marshal(results)
 			}
 			fmt.Println(string(b))
-		case aesListCmdCSV:
+		case listCmdCSV:
 			aesListCSVWriter = csv.NewWriter(os.Stdout)
 			aesListCSVWriter.Write([]string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
-			if aesListCmdShared {
+			if listCmdShared {
 				aesListSharedCSV(ct, h)
 			} else {
 				err = instance.ForAll(ct, cmd.Hostname, aesListInstanceCSV, args, params)
@@ -118,7 +118,7 @@ geneos aes ls -S gateway -H localhost -c
 		default:
 			aesListTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(aesListTabWriter, "Type\tName\tHost\tKeyfile\tCRC32\tModtime\n")
-			if aesListCmdShared {
+			if listCmdShared {
 				aesListShared(ct, h)
 			} else {
 				instance.ForAll(ct, cmd.Hostname, aesListInstance, args, params)
@@ -245,7 +245,7 @@ func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, path str
 	s, err := h.Stat(path)
 	if err != nil {
 		err = nil
-		result = aesListCmdType{
+		result = listCmdType{
 			Name:    name,
 			Type:    ct.String(),
 			Host:    h.String(),
@@ -259,7 +259,7 @@ func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, path str
 	r, err := h.Open(path)
 	if err != nil {
 		err = nil
-		result = aesListCmdType{
+		result = listCmdType{
 			Name:    name,
 			Type:    ct.String(),
 			Host:    h.String(),
@@ -275,7 +275,7 @@ func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, path str
 		return
 	}
 	crcstr := fmt.Sprintf("%08X", crc)
-	result = aesListCmdType{
+	result = listCmdType{
 		Name:    name,
 		Type:    ct.String(),
 		Host:    h.String(),
