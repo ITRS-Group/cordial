@@ -444,6 +444,10 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 	}
 	defer archive.Close()
 
+	if opts.downloadonly {
+		return
+	}
+
 	if dir, err := unarchive(h, ct, archive, filename, options...); err != nil {
 		if errors.Is(err, fs.ErrExist) {
 			log.Debug().Msgf("%s on %s version %q already exists as %q\n", ct, h, opts.version, dir)

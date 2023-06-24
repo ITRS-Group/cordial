@@ -40,6 +40,7 @@ import (
 
 var installCmdLocal, installCmdNoSave, installCmdUpdate, installCmdNexus, installCmdSnapshot bool
 var installCmdBase, installCmdOverride, installCmdVersion, installCmdUsername, installCmdPwFile string
+var installCmdDownloadOnly bool
 var installCmdPassword *config.Plaintext
 
 func init() {
@@ -48,10 +49,11 @@ func init() {
 	installCmdPassword = &config.Plaintext{}
 
 	installCmd.Flags().StringVarP(&installCmdUsername, "username", "u", "", "Username for downloads, defaults to configuration value in download.username")
-	installCmd.Flags().StringVarP(&installCmdPwFile, "pwfile", "P", "", "Password file to read for downloads, defaults to configuration value in download.password or otherwise prompts")
+	installCmd.Flags().StringVarP(&installCmdPwFile, "pwfile", "P", "", "Password file to read for downloads, defaults to configuration value in download::password or otherwise prompts")
 
 	installCmd.Flags().BoolVarP(&installCmdLocal, "local", "L", false, "Install from local files only")
 	installCmd.Flags().BoolVarP(&installCmdNoSave, "nosave", "n", false, "Do not save a local copy of any downloads")
+	installCmd.Flags().BoolVarP(&installCmdDownloadOnly, "download", "D", false, "Download only")
 
 	installCmd.Flags().BoolVarP(&installCmdUpdate, "update", "U", false, "Update the base directory symlink")
 	installCmd.Flags().StringVarP(&installCmdBase, "base", "b", "active_prod", "Override the base active_prod link name")
@@ -80,9 +82,22 @@ geneos install netprobe -b active_dev -U
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
-		"needshomedir": "true",
+		"needshomedir": "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
+		if installCmdDownloadOnly {
+			if installCmdLocal || installCmdBase != "active_prod" || installCmdUpdate || installCmdNoSave || installCmdOverride != "" {
+				return errors.New("flag --download/-D set with other incompatible options")
+			}
+			// force localhost
+			cmd.Hostname = geneos.LOCALHOST
+		} else {
+			if geneos.Root() == "" {
+				command.SetUsageTemplate(" ")
+				return cmd.GeneosUnsetError
+			}
+		}
+
 		ct, args, params := cmd.CmdArgsParams(command)
 
 		for _, p := range params {
@@ -125,6 +140,29 @@ geneos install netprobe -b active_dev -U
 			geneos.OverrideVersion(installCmdOverride),
 			geneos.Password(installCmdPassword),
 			geneos.Username(installCmdUsername),
+			geneos.DownloadOnly(installCmdDownloadOnly),
+		}
+
+		if installCmdDownloadOnly {
+			archive := "."
+			if len(args) > 0 {
+				archive = args[0]
+			} else if len(params) > 0 {
+				archive = params[0]
+			}
+			log.Debug().Msgf("downloading %q version of %s to %s", installCmdVersion, ct, archive)
+			options = append(options,
+				geneos.Archive(archive),
+				geneos.Version(installCmdVersion),
+			)
+			if installCmdSnapshot {
+				installCmdNexus = true
+				options = append(options, geneos.UseSnapshots())
+			}
+			if installCmdNexus {
+				options = append(options, geneos.UseNexus())
+			}
+			return install(h, ct, options...)
 		}
 
 		// if we have a component on the command line then use an archive in packages/downloads
@@ -151,7 +189,7 @@ geneos install netprobe -b active_dev -U
 		// work through command line args and try to install each
 		// argument using the naming format of standard downloads
 		for _, source := range args {
-			o := append(options, geneos.Source(source))
+			o := append(options, geneos.Archive(source))
 			if err = install(h, ct, o...); err != nil {
 				return err
 			}

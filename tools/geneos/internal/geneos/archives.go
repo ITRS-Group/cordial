@@ -39,10 +39,10 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/go-version"
 	"github.com/rs/zerolog/log"
+	"github.com/schollz/progressbar/v3"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -61,8 +61,8 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 
 	opts := EvalOptions(options...)
 
-	if opts.source != "" {
-		body, filename, err = Open(opts.source, options...)
+	if !opts.downloadonly && opts.archive != "" {
+		body, filename, err = Open(opts.archive, options...)
 		if err == nil || !errors.Is(err, ErrIsADirectory) {
 			// if success or it's not a directory, return
 			return
@@ -76,12 +76,8 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 		if opts.version == "latest" {
 			opts.version = ""
 		}
-		archiveDir := LOCAL.Filepath("packages", "downloads")
-		if opts.source != "" {
-			archiveDir = opts.source
-		}
 		// matching rules for local files
-		filename, err = LatestArchive(LOCAL, archiveDir, opts.version, func(v os.DirEntry) bool {
+		filename, err = LatestArchive(LOCAL, opts.archive, opts.version, func(v os.DirEntry) bool {
 			log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
 			check := ct.String()
 
@@ -103,7 +99,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 			return
 		}
 		var f io.ReadSeekCloser
-		if f, err = LOCAL.Open(filepath.Join(archiveDir, filename)); err != nil {
+		if f, err = LOCAL.Open(filepath.Join(opts.archive, filename)); err != nil {
 			err = fmt.Errorf("local installation selected but no suitable file found for %s (%w)", ct, err)
 			return
 		}
@@ -115,9 +111,8 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 		return
 	}
 
-	archiveDir := filepath.Join(Root(), "packages", "downloads")
-	LOCAL.MkdirAll(archiveDir, 0775)
-	archivePath := filepath.Join(archiveDir, filename)
+	LOCAL.MkdirAll(opts.archive, 0775)
+	archivePath := filepath.Join(opts.archive, filename)
 	s, err := LOCAL.Stat(archivePath)
 	if err == nil && s.Size() == resp.ContentLength {
 		if f, err := LOCAL.Open(archivePath); err == nil {
@@ -139,19 +134,13 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 	if err != nil {
 		return
 	}
-	fmt.Printf("downloading %s package version %q to %s\n", ct, opts.version, archivePath)
-	t1 := time.Now()
-	if _, err = io.Copy(w, resp.Body); err != nil {
+	bar := progressbar.DefaultBytes(
+		resp.ContentLength,
+		filename,
+	)
+	if _, err = io.Copy(io.MultiWriter(w, bar), resp.Body); err != nil {
 		return
 	}
-	t2 := time.Now()
-	resp.Body.Close()
-	b, dr := resp.ContentLength, t2.Sub(t1).Seconds()
-	bps := 0.0
-	if dr > 0 {
-		bps = float64(b) / dr
-	}
-	fmt.Printf("downloaded %d bytes in %.3f seconds (%.0f bytes/sec)\n", b, dr, bps)
 	if _, err = w.Seek(0, 0); err != nil {
 		return
 	}

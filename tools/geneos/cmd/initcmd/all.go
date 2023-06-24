@@ -87,7 +87,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 			return
 		}
 
-		options = append(options, geneos.Source(allCmdArchive))
+		options = append(options, geneos.Archive(allCmdArchive))
 		return initAll(geneos.LOCAL, options...)
 	},
 }
