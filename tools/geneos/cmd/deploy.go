@@ -225,7 +225,7 @@ var deployCmd = &cobra.Command{
 		// check base package for existence, install etc.
 		version, _ := geneos.CurrentVersion(h, pkgct, deployCmdBase)
 		log.Debug().Msgf("version: %s", version)
-		if deployCmdVersion != "latest" || version == "unknown" {
+		if version == "unknown" || (deployCmdVersion != "latest" && deployCmdVersion != version) {
 			if !deployCmdLocal && deployCmdUsername != "" && (deployCmdPassword.IsNil() || deployCmdPassword.Size() == 0) {
 				deployCmdPassword, err = config.ReadPasswordInput(false, 0)
 				if err == config.ErrNotInteractive {

@@ -190,7 +190,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 		}
 	}
 
-	basedir := h.Filepath("packages", ct.String(), version)
+	basedir := h.Filepath("packages", ct, version)
 	if _, err = h.Stat(basedir); err == nil {
 		return h.Path(basedir), fs.ErrExist
 	}

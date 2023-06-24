@@ -562,11 +562,7 @@ func HomeDir(c geneos.Instance) (home string) {
 	}
 	home = c.Config().GetString("home")
 	if _, err := h.Stat(home); err != nil {
-		if ct.ParentType == nil {
-			home = h.Filepath(ct, ct.String()+"s", c.Name())
-		} else {
-			home = h.Filepath(ct.ParentType, ct.String()+"s", c.Name())
-		}
+		home = h.Filepath(ct, ct.String()+"s", c.Name())
 	}
 	return
 }
