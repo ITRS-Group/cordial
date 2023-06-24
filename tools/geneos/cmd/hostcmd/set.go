@@ -35,29 +35,29 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var hostSetCmdPrompt bool
-var hostSetCmdPassword *config.Plaintext
-var hostSetCmdKeyfile config.KeyFile
+var setCmdPrompt bool
+var setCmdPassword *config.Plaintext
+var setCmdKeyfile config.KeyFile
 
 func init() {
-	hostCmd.AddCommand(hostSetCmd)
+	hostCmd.AddCommand(setCmd)
 
-	hostSetCmdPassword = &config.Plaintext{}
+	setCmdPassword = &config.Plaintext{}
 
-	hostSetCmd.Flags().BoolVarP(&hostSetCmdPrompt, "prompt", "p", false, "Prompt for password")
-	hostSetCmd.Flags().VarP(hostSetCmdPassword, "password", "P", "password")
-	hostSetCmd.Flags().VarP(&hostSetCmdKeyfile, "keyfile", "k", "Keyfile")
+	setCmd.Flags().BoolVarP(&setCmdPrompt, "prompt", "p", false, "Prompt for password")
+	setCmd.Flags().VarP(setCmdPassword, "password", "P", "password")
+	setCmd.Flags().VarP(&setCmdKeyfile, "keyfile", "k", "Keyfile")
 
-	hostSetCmd.Flags().SortFlags = false
+	setCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/set.md
-var hostSetCmdDescription string
+var setCmdDescription string
 
-var hostSetCmd = &cobra.Command{
+var setCmd = &cobra.Command{
 	Use:                   "set [flags] [NAME...] [KEY=VALUE...]",
 	Short:                 "Set host configuration value",
-	Long:                  hostSetCmdDescription,
+	Long:                  setCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
@@ -88,17 +88,17 @@ var hostSetCmd = &cobra.Command{
 			return nil
 		}
 
-		if hostSetCmdKeyfile == "" {
-			hostSetCmdKeyfile = cmd.DefaultUserKeyfile
+		if setCmdKeyfile == "" {
+			setCmdKeyfile = cmd.DefaultUserKeyfile
 		}
 
 		// check for passwords
-		if hostSetCmdPrompt {
-			if password, err = hostSetCmdKeyfile.EncodePasswordInput(true); err != nil {
+		if setCmdPrompt {
+			if password, err = setCmdKeyfile.EncodePasswordInput(true); err != nil {
 				return
 			}
-		} else if !hostSetCmdPassword.IsNil() {
-			if password, err = hostSetCmdKeyfile.Encode(hostSetCmdPassword, true); err != nil {
+		} else if !setCmdPassword.IsNil() {
+			if password, err = setCmdKeyfile.Encode(setCmdPassword, true); err != nil {
 				return
 			}
 		}

@@ -41,30 +41,30 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var hostAddCmdInit, hostAddCmdPrompt bool
-var hostAddCmdPassword *config.Plaintext
-var hostAddCmdKeyfile config.KeyFile
+var addCmdInit, addCmdPrompt bool
+var addCmdPassword *config.Plaintext
+var addCmdKeyfile config.KeyFile
 
 func init() {
-	hostCmd.AddCommand(hostAddCmd)
+	hostCmd.AddCommand(addCmd)
 
-	hostAddCmdPassword = &config.Plaintext{}
-	hostAddCmdKeyfile = cmd.DefaultUserKeyfile
-	hostAddCmd.Flags().BoolVarP(&hostAddCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
-	hostAddCmd.Flags().BoolVarP(&hostAddCmdPrompt, "prompt", "p", false, "Prompt for password")
-	hostAddCmd.Flags().VarP(hostAddCmdPassword, "password", "P", "Password")
-	hostAddCmd.Flags().VarP(&hostAddCmdKeyfile, "keyfile", "k", "Keyfile")
+	addCmdPassword = &config.Plaintext{}
+	addCmdKeyfile = cmd.DefaultUserKeyfile
+	addCmd.Flags().BoolVarP(&addCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
+	addCmd.Flags().BoolVarP(&addCmdPrompt, "prompt", "p", false, "Prompt for password")
+	addCmd.Flags().VarP(addCmdPassword, "password", "P", "Password")
+	addCmd.Flags().VarP(&addCmdKeyfile, "keyfile", "k", "Keyfile")
 
-	hostAddCmd.Flags().SortFlags = false
+	addCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/add.md
-var hostAddCmdDescription string
+var addCmdDescription string
 
-var hostAddCmd = &cobra.Command{
+var addCmd = &cobra.Command{
 	Use:   "add [flags] [NAME] [SSHURL]",
 	Short: "Add a remote host",
-	Long:  hostAddCmdDescription,
+	Long:  addCmdDescription,
 	Example: strings.ReplaceAll(`
 geneos host add server1
 geneos host add ssh://server2:50122
@@ -127,26 +127,26 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		var password string
 		var pw = &config.Plaintext{}
 
-		if hostAddCmdPrompt {
+		if addCmdPrompt {
 			pw, err = config.ReadPasswordInput(true, 3)
 			if err != nil {
 				return
 			}
-		} else if !hostAddCmdPassword.IsNil() {
-			pw = hostAddCmdPassword
+		} else if !addCmdPassword.IsNil() {
+			pw = addCmdPassword
 		}
 
 		if !pw.IsNil() && pw.Size() > 0 {
 			var crc uint32
 			var created bool
-			crc, created, err = hostAddCmdKeyfile.Check(true)
+			crc, created, err = addCmdKeyfile.Check(true)
 			if err != nil {
 				return
 			}
 			if created {
-				fmt.Printf("%s created, checksum %08X\n", hostAddCmdKeyfile, crc)
+				fmt.Printf("%s created, checksum %08X\n", addCmdKeyfile, crc)
 			}
-			if password, err = hostAddCmdKeyfile.Encode(pw, true); err != nil {
+			if password, err = addCmdKeyfile.Encode(pw, true); err != nil {
 				return
 			}
 
@@ -255,7 +255,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			return err
 		}
 
-		if hostAddCmdInit {
+		if addCmdInit {
 			// initialise the remote directory structure, but perhaps ignore errors
 			// as we may simply be adding an existing installation
 

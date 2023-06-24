@@ -35,16 +35,16 @@ import (
 )
 
 func init() {
-	initCmd.AddCommand(initTemplatesCmd)
+	initCmd.AddCommand(templatesCmd)
 }
 
 //go:embed _docs/templates.md
-var initTemplatesCmdDescription string
+var templatesCmdDescription string
 
-var initTemplatesCmd = &cobra.Command{
+var templatesCmd = &cobra.Command{
 	Use:          "template",
 	Short:        "Initialise or overwrite templates",
-	Long:         initTemplatesCmdDescription,
+	Long:         templatesCmdDescription,
 	Aliases:      []string{"templates"},
 	SilenceUsage: true,
 	Annotations: map[string]string{

@@ -32,16 +32,16 @@ import (
 )
 
 func init() {
-	configCmd.AddCommand(configSetCmd)
+	configCmd.AddCommand(setCmd)
 }
 
 //go:embed _docs/set.md
-var configSetCmdDescription string
+var setCmdDescription string
 
-var configSetCmd = &cobra.Command{
+var setCmd = &cobra.Command{
 	Use:   "set [KEY=VALUE...]",
 	Short: "Set program configuration",
-	Long:  configSetCmdDescription,
+	Long:  setCmdDescription,
 	Example: `
 geneos config set geneos="/opt/geneos"
 geneos config set config.rebuild=always

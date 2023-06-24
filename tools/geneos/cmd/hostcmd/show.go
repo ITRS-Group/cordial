@@ -31,25 +31,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type hostShowCmdConfig struct {
+type showCmdConfig struct {
 	Name   string      `json:"name,omitempty"`
 	Hidden bool        `json:"hidden,omitempty"`
 	Config interface{} `json:"config,omitempty"`
 }
 
 func init() {
-	hostCmd.AddCommand(hostShowCmd)
+	hostCmd.AddCommand(showCmd)
 
-	hostShowCmd.Flags().SortFlags = false
+	showCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/show.md
-var hostShowCmdDescription string
+var showCmdDescription string
 
-var hostShowCmd = &cobra.Command{
+var showCmd = &cobra.Command{
 	Use:          "show [flags] [NAME...]",
 	Short:        "Show details of remote host configuration",
-	Long:         hostShowCmdDescription,
+	Long:         showCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -69,10 +69,10 @@ var hostShowCmd = &cobra.Command{
 			}
 		}
 
-		var confs []hostShowCmdConfig
+		var confs []showCmdConfig
 
 		for _, h := range hosts {
-			confs = append(confs, hostShowCmdConfig{
+			confs = append(confs, showCmdConfig{
 				Name:   h.GetString("name"),
 				Hidden: h.Hidden(),
 				Config: h.AllSettings(),

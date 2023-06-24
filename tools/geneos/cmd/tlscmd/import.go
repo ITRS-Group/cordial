@@ -42,12 +42,12 @@ import (
 )
 
 //go:embed _docs/import.md
-var tlsImportCmdDescription string
+var importCmdDescription string
 
-var tlsImportCmd = &cobra.Command{
+var importCmd = &cobra.Command{
 	Use:                   "import",
 	Short:                 "Import root and signing certificates",
-	Long:                  tlsImportCmdDescription,
+	Long:                  importCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
@@ -61,8 +61,8 @@ var tlsImportCmd = &cobra.Command{
 }
 
 func init() {
-	tlsCmd.AddCommand(tlsImportCmd)
-	tlsImportCmd.Flags().SortFlags = false
+	tlsCmd.AddCommand(importCmd)
+	importCmd.Flags().SortFlags = false
 }
 
 // import root and signing certs

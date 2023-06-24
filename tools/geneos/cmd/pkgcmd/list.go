@@ -38,28 +38,28 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var packageListCmdJSON, packageListCmdIndent, packageListCmdCSV bool
+var listCmdJSON, listCmdIndent, listCmdCSV bool
 
 var packageListTabWriter *tabwriter.Writer
 var packageListCSVWriter *csv.Writer
 
 func init() {
-	packageCmd.AddCommand(packageListCmd)
+	packageCmd.AddCommand(listCmd)
 
-	packageListCmd.Flags().BoolVarP(&packageListCmdJSON, "json", "j", false, "Output JSON")
-	packageListCmd.Flags().BoolVarP(&packageListCmdIndent, "pretty", "i", false, "Output indented JSON")
-	packageListCmd.Flags().BoolVarP(&packageListCmdCSV, "csv", "c", false, "Output CSV")
+	listCmd.Flags().BoolVarP(&listCmdJSON, "json", "j", false, "Output JSON")
+	listCmd.Flags().BoolVarP(&listCmdIndent, "pretty", "i", false, "Output indented JSON")
+	listCmd.Flags().BoolVarP(&listCmdCSV, "csv", "c", false, "Output CSV")
 
-	packageListCmd.Flags().SortFlags = false
+	listCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/list.md
-var packageListCmdDescription string
+var listCmdDescription string
 
-var packageListCmd = &cobra.Command{
+var listCmd = &cobra.Command{
 	Use:          "list [flags] [TYPE]",
 	Short:        "List packages available for update command",
-	Long:         packageListCmdDescription,
+	Long:         listCmdDescription,
 	Aliases:      []string{"ls"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -86,9 +86,9 @@ var packageListCmd = &cobra.Command{
 		}
 
 		switch {
-		case packageListCmdJSON, packageListCmdIndent:
+		case listCmdJSON, listCmdIndent:
 			var b []byte
-			if packageListCmdIndent {
+			if listCmdIndent {
 				b, err = json.MarshalIndent(versions, "", "    ")
 			} else {
 				b, err = json.Marshal(versions)
@@ -97,7 +97,7 @@ var packageListCmd = &cobra.Command{
 				return err
 			}
 			fmt.Println(string(b))
-		case packageListCmdCSV:
+		case listCmdCSV:
 			packageListCSVWriter = csv.NewWriter(os.Stdout)
 			packageListCSVWriter.Write([]string{"Component", "Host", "Version", "Latest", "Links", "LastModified", "Path"})
 			for _, d := range versions {

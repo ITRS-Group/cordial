@@ -33,25 +33,25 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var aesPasswordCmdString *config.Plaintext
-var aesPasswordCmdSource string
+var passwordCmdString *config.Plaintext
+var passwordCmdSource string
 
 func init() {
-	aesCmd.AddCommand(aesPasswordCmd)
+	aesCmd.AddCommand(passwordCmd)
 
-	aesPasswordCmdString = &config.Plaintext{}
+	passwordCmdString = &config.Plaintext{}
 
-	aesPasswordCmd.Flags().VarP(aesPasswordCmdString, "password", "p", "A plaintext password")
-	aesPasswordCmd.Flags().StringVarP(&aesPasswordCmdSource, "source", "s", "", "External source for plaintext `PATH|URL|-`")
+	passwordCmd.Flags().VarP(passwordCmdString, "password", "p", "A plaintext password")
+	passwordCmd.Flags().StringVarP(&passwordCmdSource, "source", "s", "", "External source for plaintext `PATH|URL|-`")
 }
 
 //go:embed _docs/password.md
-var aesPasswordCmdDescription string
+var passwordCmdDescription string
 
-var aesPasswordCmd = &cobra.Command{
+var passwordCmd = &cobra.Command{
 	Use:          "password [flags]",
 	Short:        "Encode a password with an AES256 key file",
-	Long:         aesPasswordCmdDescription,
+	Long:         passwordCmdDescription,
 	Aliases:      []string{"passwd"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -70,11 +70,11 @@ var aesPasswordCmd = &cobra.Command{
 			fmt.Printf("%s created, checksum %08X\n", cmd.DefaultUserKeyfile, crc)
 		}
 
-		if !aesPasswordCmdString.IsNil() {
-			plaintext = aesPasswordCmdString
-		} else if aesPasswordCmdSource != "" {
+		if !passwordCmdString.IsNil() {
+			plaintext = passwordCmdString
+		} else if passwordCmdSource != "" {
 			var pt []byte
-			pt, err = geneos.ReadFrom(aesPasswordCmdSource)
+			pt, err = geneos.ReadFrom(passwordCmdSource)
 			if err != nil {
 				return
 			}

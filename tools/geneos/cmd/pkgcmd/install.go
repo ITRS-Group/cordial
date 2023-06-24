@@ -38,40 +38,40 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var packageInstallCmdLocal, packageInstallCmdNoSave, packageInstallCmdUpdate, packageInstallCmdNexus, packageInstallCmdSnapshot bool
-var packageInstallCmdBase, packageInstallCmdOverride, packageInstallCmdVersion, packageInstallCmdUsername, packageInstallCmdPwFile string
-var packageInstallCmdPassword *config.Plaintext
+var installCmdLocal, installCmdNoSave, installCmdUpdate, installCmdNexus, installCmdSnapshot bool
+var installCmdBase, installCmdOverride, installCmdVersion, installCmdUsername, installCmdPwFile string
+var installCmdPassword *config.Plaintext
 
 func init() {
-	packageCmd.AddCommand(packageInstallCmd)
+	packageCmd.AddCommand(installCmd)
 
-	packageInstallCmdPassword = &config.Plaintext{}
+	installCmdPassword = &config.Plaintext{}
 
-	packageInstallCmd.Flags().StringVarP(&packageInstallCmdUsername, "username", "u", "", "Username for downloads, defaults to configuration value in download.username")
-	packageInstallCmd.Flags().StringVarP(&packageInstallCmdPwFile, "pwfile", "P", "", "Password file to read for downloads, defaults to configuration value in download.password or otherwise prompts")
+	installCmd.Flags().StringVarP(&installCmdUsername, "username", "u", "", "Username for downloads, defaults to configuration value in download.username")
+	installCmd.Flags().StringVarP(&installCmdPwFile, "pwfile", "P", "", "Password file to read for downloads, defaults to configuration value in download.password or otherwise prompts")
 
-	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdLocal, "local", "L", false, "Install from local files only")
-	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdNoSave, "nosave", "n", false, "Do not save a local copy of any downloads")
+	installCmd.Flags().BoolVarP(&installCmdLocal, "local", "L", false, "Install from local files only")
+	installCmd.Flags().BoolVarP(&installCmdNoSave, "nosave", "n", false, "Do not save a local copy of any downloads")
 
-	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdUpdate, "update", "U", false, "Update the base directory symlink")
-	packageInstallCmd.Flags().StringVarP(&packageInstallCmdBase, "base", "b", "active_prod", "Override the base active_prod link name")
+	installCmd.Flags().BoolVarP(&installCmdUpdate, "update", "U", false, "Update the base directory symlink")
+	installCmd.Flags().StringVarP(&installCmdBase, "base", "b", "active_prod", "Override the base active_prod link name")
 
-	packageInstallCmd.Flags().StringVarP(&packageInstallCmdVersion, "version", "V", "latest", "Download this version, defaults to latest. Doesn't work for EL8 archives.")
-	packageInstallCmd.Flags().StringVarP(&packageInstallCmdOverride, "override", "T", "", "Override (set) the TYPE:VERSION for archive files with non-standard names")
+	installCmd.Flags().StringVarP(&installCmdVersion, "version", "V", "latest", "Download this version, defaults to latest. Doesn't work for EL8 archives.")
+	installCmd.Flags().StringVarP(&installCmdOverride, "override", "T", "", "Override (set) the TYPE:VERSION for archive files with non-standard names")
 
-	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires auth.")
-	packageInstallCmd.Flags().BoolVarP(&packageInstallCmdSnapshot, "snapshots", "S", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
+	installCmd.Flags().BoolVarP(&installCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires auth.")
+	installCmd.Flags().BoolVarP(&installCmdSnapshot, "snapshots", "S", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
 
-	packageInstallCmd.Flags().SortFlags = false
+	installCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/install.md
-var packageInstallCmdDescription string
+var installCmdDescription string
 
-var packageInstallCmd = &cobra.Command{
+var installCmd = &cobra.Command{
 	Use:   "install [flags] [TYPE] [FILE|URL...]",
 	Short: "Install Geneos releases",
-	Long:  packageInstallCmdDescription,
+	Long:  installCmdDescription,
 	Example: strings.ReplaceAll(`
 geneos install gateway
 geneos install fa2 5.5 -U
@@ -93,22 +93,22 @@ geneos install netprobe -b active_dev -U
 
 		h := geneos.GetHost(cmd.Hostname)
 
-		if packageInstallCmdUsername == "" {
-			packageInstallCmdUsername = config.GetString(config.Join("download", "username"))
+		if installCmdUsername == "" {
+			installCmdUsername = config.GetString(config.Join("download", "username"))
 		}
 
-		if packageInstallCmdPwFile != "" {
+		if installCmdPwFile != "" {
 			var pp []byte
-			if pp, err = os.ReadFile(packageInstallCmdPwFile); err != nil {
+			if pp, err = os.ReadFile(installCmdPwFile); err != nil {
 				return
 			}
-			packageInstallCmdPassword = config.NewPlaintext(pp)
+			installCmdPassword = config.NewPlaintext(pp)
 		} else {
-			packageInstallCmdPassword = config.GetPassword(config.Join("download", "password"))
+			installCmdPassword = config.GetPassword(config.Join("download", "password"))
 		}
 
-		if packageInstallCmdUsername != "" && (packageInstallCmdPassword.IsNil() || packageInstallCmdPassword.Size() == 0) {
-			packageInstallCmdPassword, err = config.ReadPasswordInput(false, 0)
+		if installCmdUsername != "" && (installCmdPassword.IsNil() || installCmdPassword.Size() == 0) {
+			installCmdPassword, err = config.ReadPasswordInput(false, 0)
 			if err == config.ErrNotInteractive {
 				err = fmt.Errorf("%w and password required", err)
 				return
@@ -117,14 +117,14 @@ geneos install netprobe -b active_dev -U
 
 		// base options
 		options := []geneos.Options{
-			geneos.Basename(packageInstallCmdBase),
-			geneos.DoUpdate(packageInstallCmdUpdate),
-			geneos.Force(packageInstallCmdUpdate),
-			geneos.LocalOnly(packageInstallCmdLocal),
-			geneos.NoSave(packageInstallCmdNoSave),
-			geneos.OverrideVersion(packageInstallCmdOverride),
-			geneos.Password(packageInstallCmdPassword),
-			geneos.Username(packageInstallCmdUsername),
+			geneos.Basename(installCmdBase),
+			geneos.DoUpdate(installCmdUpdate),
+			geneos.Force(installCmdUpdate),
+			geneos.LocalOnly(installCmdLocal),
+			geneos.NoSave(installCmdNoSave),
+			geneos.OverrideVersion(installCmdOverride),
+			geneos.Password(installCmdPassword),
+			geneos.Username(installCmdUsername),
 		}
 
 		// if we have a component on the command line then use an archive in packages/downloads
@@ -134,14 +134,14 @@ geneos install netprobe -b active_dev -U
 		// overrides do not work in this case as the version and type have to be part of the
 		// archive file name
 		if ct != nil || len(args) == 0 {
-			log.Debug().Msgf("installing %q version of %s to %s host(s)", packageInstallCmdVersion, ct, cmd.Hostname)
+			log.Debug().Msgf("installing %q version of %s to %s host(s)", installCmdVersion, ct, cmd.Hostname)
 
-			options = append(options, geneos.Version(packageInstallCmdVersion))
-			if packageInstallCmdSnapshot {
-				packageInstallCmdNexus = true
+			options = append(options, geneos.Version(installCmdVersion))
+			if installCmdSnapshot {
+				installCmdNexus = true
 				options = append(options, geneos.UseSnapshots())
 			}
-			if packageInstallCmdNexus {
+			if installCmdNexus {
 				options = append(options, geneos.UseNexus())
 			}
 			err = install(h, ct, options...)
@@ -171,7 +171,7 @@ func install(h *geneos.Host, ct *geneos.Component, options ...geneos.Options) (e
 					err = nil
 					continue
 				}
-				if errors.Is(err, fs.ErrNotExist) && packageInstallCmdVersion != "latest" {
+				if errors.Is(err, fs.ErrNotExist) && installCmdVersion != "latest" {
 					err = nil
 					continue
 				}

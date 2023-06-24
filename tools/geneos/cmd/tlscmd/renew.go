@@ -41,16 +41,16 @@ import (
 )
 
 func init() {
-	tlsCmd.AddCommand(tlsRenewCmd)
+	tlsCmd.AddCommand(renewCmd)
 }
 
 //go:embed _docs/renew.md
-var tlsRenewCmdDescription string
+var renewCmdDescription string
 
-var tlsRenewCmd = &cobra.Command{
+var renewCmd = &cobra.Command{
 	Use:          "renew [TYPE] [NAME...]",
 	Short:        "Renew instance certificates",
-	Long:         tlsRenewCmdDescription,
+	Long:         renewCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",

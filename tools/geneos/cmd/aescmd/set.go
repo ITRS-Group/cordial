@@ -34,26 +34,26 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var aesSetCmdKeyfile config.KeyFile
-var aesSetCmdCRC string
-var aesSetCmdNoRoll bool
+var setCmdKeyfile config.KeyFile
+var setCmdCRC string
+var setCmdNoRoll bool
 
 func init() {
-	aesCmd.AddCommand(aesSetCmd)
+	aesCmd.AddCommand(setCmd)
 
-	aesSetCmdKeyfile = cmd.DefaultUserKeyfile
-	aesSetCmd.Flags().StringVarP(&aesSetCmdCRC, "crc", "c", "", "CRC of existing component shared keyfile to use (extension optional)")
-	aesSetCmd.Flags().VarP(&aesSetCmdKeyfile, "keyfile", "k", "Key file to import and use")
-	aesSetCmd.Flags().BoolVarP(&aesSetCmdNoRoll, "noroll", "N", false, "Do not roll any existing keyfile to previous keyfile setting")
+	setCmdKeyfile = cmd.DefaultUserKeyfile
+	setCmd.Flags().StringVarP(&setCmdCRC, "crc", "c", "", "CRC of existing component shared keyfile to use (extension optional)")
+	setCmd.Flags().VarP(&setCmdKeyfile, "keyfile", "k", "Key file to import and use")
+	setCmd.Flags().BoolVarP(&setCmdNoRoll, "noroll", "N", false, "Do not roll any existing keyfile to previous keyfile setting")
 }
 
 //go:embed _docs/set.md
-var aesSetCmdDescription string
+var setCmdDescription string
 
-var aesSetCmd = &cobra.Command{
+var setCmd = &cobra.Command{
 	Use:          "set [flags] [TYPE] [NAME...]",
 	Short:        "Set active keyfile for instances",
-	Long:         aesSetCmdDescription,
+	Long:         setCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard": "true",
@@ -63,16 +63,16 @@ var aesSetCmd = &cobra.Command{
 
 		h := geneos.GetHost(cmd.Hostname)
 
-		crc32, created, err := aesSetCmdKeyfile.Check(true)
+		crc32, created, err := setCmdKeyfile.Check(true)
 		if err != nil {
 			return
 		}
 
 		if created {
-			fmt.Printf("%s created, checksum %08X\n", aesSetCmdKeyfile, crc32)
+			fmt.Printf("%s created, checksum %08X\n", setCmdKeyfile, crc32)
 		}
 
-		crc, err := instance.UseKeyFile(h, ct, aesSetCmdKeyfile, aesSetCmdCRC)
+		crc, err := instance.UseKeyFile(h, ct, setCmdKeyfile, setCmdCRC)
 		if err != nil {
 			return
 		}
@@ -92,7 +92,7 @@ func aesSetAESInstance(c geneos.Instance, params []string) (err error) {
 	path := instance.SharedPath(c, "keyfiles", params[0])
 
 	// roll old file
-	if !aesSetCmdNoRoll {
+	if !setCmdNoRoll {
 		p := cf.GetString("keyfile")
 		if p != "" {
 			if p == path {

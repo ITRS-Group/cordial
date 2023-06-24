@@ -36,26 +36,26 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var hostDeleteCmdForce, hostDeleteCmdRecurse, hostDeleteCmdStop bool
+var deleteCmdForce, deleteCmdRecurse, deleteCmdStop bool
 
 func init() {
-	hostCmd.AddCommand(hostDeleteCmd)
+	hostCmd.AddCommand(deleteCmd)
 
-	hostDeleteCmd.Flags().BoolVarP(&hostDeleteCmdForce, "force", "F", false, "Delete instances without checking if disabled")
-	hostDeleteCmd.Flags().BoolVarP(&hostDeleteCmdRecurse, "all", "R", false, "Recursively delete all instances on the host before removing the host config")
-	hostDeleteCmd.Flags().BoolVarP(&hostDeleteCmdStop, "stop", "S", false, "Stop all instances on the host before deleting the local entry")
+	deleteCmd.Flags().BoolVarP(&deleteCmdForce, "force", "F", false, "Delete instances without checking if disabled")
+	deleteCmd.Flags().BoolVarP(&deleteCmdRecurse, "all", "R", false, "Recursively delete all instances on the host before removing the host config")
+	deleteCmd.Flags().BoolVarP(&deleteCmdStop, "stop", "S", false, "Stop all instances on the host before deleting the local entry")
 
-	hostDeleteCmd.Flags().SortFlags = false
+	deleteCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/delete.md
-var hostDeleteCmdDescription string
+var deleteCmdDescription string
 
-var hostDeleteCmd = &cobra.Command{
+var deleteCmd = &cobra.Command{
 	Use:          "delete [flags] NAME...",
 	Aliases:      []string{"rm", "remove"},
 	Short:        "Delete a remote host configuration",
-	Long:         hostDeleteCmdDescription,
+	Long:         deleteCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
@@ -78,19 +78,19 @@ var hostDeleteCmd = &cobra.Command{
 			hosts = append(hosts, h)
 		}
 
-		if hostDeleteCmdRecurse {
-			hostDeleteCmdStop = true
+		if deleteCmdRecurse {
+			deleteCmdStop = true
 		}
 
 		for _, h := range hosts {
 			// stop and/or delete instances on host
-			if hostDeleteCmdStop {
+			if deleteCmdStop {
 				for _, c := range instance.GetAll(h, nil) {
-					if err = instance.Stop(c, hostDeleteCmdForce, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
+					if err = instance.Stop(c, deleteCmdForce, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
 						return
 					}
-					if hostDeleteCmdRecurse {
-						if hostDeleteCmdForce || instance.IsDisabled(c) {
+					if deleteCmdRecurse {
+						if deleteCmdForce || instance.IsDisabled(c) {
 							if err = c.Host().RemoveAll(c.Home()); err != nil {
 								return
 							}

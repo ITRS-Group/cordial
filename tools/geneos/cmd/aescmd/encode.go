@@ -35,32 +35,32 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var aesEncodeCmdKeyfile config.KeyFile
-var aesEncodeCmdString *config.Plaintext
-var aesEncodeCmdSource string
-var aesEncodeCmdExpandable, aesEncodeCmdAskOnce bool
+var encodeCmdKeyfile config.KeyFile
+var encodeCmdString *config.Plaintext
+var encodeCmdSource string
+var encodeCmdExpandable, encodeCmdAskOnce bool
 
 func init() {
-	aesCmd.AddCommand(aesEncodeCmd)
+	aesCmd.AddCommand(encodeCmd)
 
-	aesEncodeCmdString = &config.Plaintext{}
+	encodeCmdString = &config.Plaintext{}
 
-	aesEncodeCmd.Flags().BoolVarP(&aesEncodeCmdExpandable, "expandable", "e", false, "Output in 'expandable' format")
-	aesEncodeCmd.Flags().VarP(&aesEncodeCmdKeyfile, "keyfile", "k", "Path to keyfile")
-	aesEncodeCmd.Flags().VarP(aesEncodeCmdString, "password", "p", "Plaintext password")
-	aesEncodeCmd.Flags().StringVarP(&aesEncodeCmdSource, "source", "s", "", "Alternative source for plaintext password")
-	aesEncodeCmd.Flags().BoolVarP(&aesEncodeCmdAskOnce, "once", "o", false, "Only prompt for password once, do not verify. Normally use '-s -' for stdin")
+	encodeCmd.Flags().BoolVarP(&encodeCmdExpandable, "expandable", "e", false, "Output in 'expandable' format")
+	encodeCmd.Flags().VarP(&encodeCmdKeyfile, "keyfile", "k", "Path to keyfile")
+	encodeCmd.Flags().VarP(encodeCmdString, "password", "p", "Plaintext password")
+	encodeCmd.Flags().StringVarP(&encodeCmdSource, "source", "s", "", "Alternative source for plaintext password")
+	encodeCmd.Flags().BoolVarP(&encodeCmdAskOnce, "once", "o", false, "Only prompt for password once, do not verify. Normally use '-s -' for stdin")
 
-	aesEncodeCmd.Flags().SortFlags = false
+	encodeCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/encode.md
-var aesEncodeCmdDescription string
+var encodeCmdDescription string
 
-var aesEncodeCmd = &cobra.Command{
+var encodeCmd = &cobra.Command{
 	Use:   "encode [flags] [TYPE] [NAME...]",
 	Short: "Encode plaintext to a Geneos AES256 password using a key file",
-	Long:  aesEncodeCmdDescription,
+	Long:  encodeCmdDescription,
 	Example: `
 `,
 	SilenceUsage: true,
@@ -70,24 +70,24 @@ var aesEncodeCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
 		var plaintext *config.Plaintext
-		if !aesEncodeCmdString.IsNil() {
-			plaintext = aesEncodeCmdString
-		} else if aesEncodeCmdSource != "" {
-			pt, err := geneos.ReadFrom(aesEncodeCmdSource)
+		if !encodeCmdString.IsNil() {
+			plaintext = encodeCmdString
+		} else if encodeCmdSource != "" {
+			pt, err := geneos.ReadFrom(encodeCmdSource)
 			if err != nil {
 				return err
 			}
 			plaintext = config.NewPlaintext(pt)
 		} else {
-			plaintext, err = config.ReadPasswordInput(!aesEncodeCmdAskOnce, 0)
+			plaintext, err = config.ReadPasswordInput(!encodeCmdAskOnce, 0)
 			if err != nil {
 				return
 			}
 		}
 
-		if aesEncodeCmdKeyfile != "" {
+		if encodeCmdKeyfile != "" {
 			// encode using specific file
-			e, err := aesEncodeCmdKeyfile.Encode(plaintext, aesEncodeCmdExpandable)
+			e, err := encodeCmdKeyfile.Encode(plaintext, encodeCmdExpandable)
 			if err != nil {
 				return err
 			}
@@ -114,7 +114,7 @@ func aesEncodeInstance(c geneos.Instance, params []string) (err error) {
 
 	pw, _ := base64.StdEncoding.DecodeString(params[0])
 	plaintext := config.NewPlaintext(pw)
-	e, err := keyfile.Encode(plaintext, aesEncodeCmdExpandable)
+	e, err := keyfile.Encode(plaintext, encodeCmdExpandable)
 	if err != nil {
 		return
 	}

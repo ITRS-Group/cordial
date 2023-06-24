@@ -38,22 +38,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var tlsInitCmdOverwrite bool
+var initCmdOverwrite bool
 
 func init() {
-	tlsCmd.AddCommand(tlsInitCmd)
+	tlsCmd.AddCommand(initCmd)
 
-	tlsInitCmd.Flags().BoolVarP(&tlsInitCmdOverwrite, "force", "F", false, "Overwrite any existing certificates")
-	tlsInitCmd.Flags().SortFlags = false
+	initCmd.Flags().BoolVarP(&initCmdOverwrite, "force", "F", false, "Overwrite any existing certificates")
+	initCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/init.md
-var tlsInitCmdDescription string
+var initCmdDescription string
 
-var tlsInitCmd = &cobra.Command{
+var initCmd = &cobra.Command{
 	Use:                   "init",
 	Short:                 "Initialise the TLS environment",
-	Long:                  tlsInitCmdDescription,
+	Long:                  initCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
@@ -61,7 +61,7 @@ var tlsInitCmd = &cobra.Command{
 		"needshomedir": "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		return tlsInit(tlsInitCmdOverwrite)
+		return tlsInit(initCmdOverwrite)
 	},
 }
 

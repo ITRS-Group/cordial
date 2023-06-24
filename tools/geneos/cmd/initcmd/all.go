@@ -35,27 +35,27 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var initAllCmdLicenseFile, initAllCmdArchive string
+var allCmdLicenseFile, allCmdArchive string
 
 func init() {
-	initCmd.AddCommand(initAllCmd)
+	initCmd.AddCommand(allCmd)
 
-	initAllCmd.Flags().StringVarP(&initAllCmdLicenseFile, "licence", "L", "geneos.lic", "Licence file location")
-	initAllCmd.MarkFlagRequired("licence")
+	allCmd.Flags().StringVarP(&allCmdLicenseFile, "licence", "L", "geneos.lic", "Licence file location")
+	allCmd.MarkFlagRequired("licence")
 
-	initAllCmd.Flags().StringVarP(&initAllCmdArchive, "archive", "A", "", archiveOptionsText)
-	initAllCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewayValuesOptionstext)
+	allCmd.Flags().StringVarP(&allCmdArchive, "archive", "A", "", archiveOptionsText)
+	allCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewayValuesOptionstext)
 
-	initAllCmd.Flags().SortFlags = false
+	allCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/all.md
-var initAllCmdDescription string
+var allCmdDescription string
 
-var initAllCmd = &cobra.Command{
+var allCmd = &cobra.Command{
 	Use:   "all [flags] [USERNAME] [DIRECTORY]",
 	Short: "Initialise a more complete Geneos environment",
-	Long:  initAllCmdDescription,
+	Long:  allCmdDescription,
 	Example: strings.ReplaceAll(`
 geneos init all -L https://myserver/files/geneos.lic -u email@example.com
 geneos init all -L ~/geneos.lic -A ~/downloads /opt/itrs
@@ -87,7 +87,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 			return
 		}
 
-		options = append(options, geneos.Source(initAllCmdArchive))
+		options = append(options, geneos.Source(allCmdArchive))
 		return initAll(geneos.LOCAL, options...)
 	},
 }
@@ -115,7 +115,7 @@ func initAll(h *geneos.Host, options ...geneos.Options) (err error) {
 	if err = cmd.AddInstance(geneos.FindComponent("licd"), initCmdExtras, []string{}, initCmdName); err != nil {
 		return
 	}
-	if err = cmd.ImportFiles(geneos.FindComponent("licd"), []string{initCmdName}, []string{"geneos.lic=" + initAllCmdLicenseFile}); err != nil {
+	if err = cmd.ImportFiles(geneos.FindComponent("licd"), []string{initCmdName}, []string{"geneos.lic=" + allCmdLicenseFile}); err != nil {
 		return
 	}
 	if err = cmd.AddInstance(geneos.FindComponent("gateway"), initCmdExtras, []string{}, initCmdName); err != nil {

@@ -36,28 +36,28 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var packageUpdateCmdBase, packageUpdateCmdVersion string
-var packageUpdateCmdForce, packageUpdateCmdRestart bool
+var updateCmdBase, updateCmdVersion string
+var updateCmdForce, updateCmdRestart bool
 
 func init() {
-	packageCmd.AddCommand(packageUpdateCmd)
+	packageCmd.AddCommand(updateCmd)
 
-	packageUpdateCmd.Flags().StringVarP(&packageUpdateCmdVersion, "version", "V", "latest", "Update to this version, defaults to latest")
+	updateCmd.Flags().StringVarP(&updateCmdVersion, "version", "V", "latest", "Update to this version, defaults to latest")
 
-	packageUpdateCmd.Flags().StringVarP(&packageUpdateCmdBase, "base", "b", "active_prod", "Base name for the symlink, defaults to active_prod")
-	packageUpdateCmd.Flags().BoolVarP(&packageUpdateCmdForce, "force", "F", false, "Update all protected instances")
-	packageUpdateCmd.Flags().BoolVarP(&packageUpdateCmdRestart, "restart", "R", true, "Restart all instances that may have an update applied")
+	updateCmd.Flags().StringVarP(&updateCmdBase, "base", "b", "active_prod", "Base name for the symlink, defaults to active_prod")
+	updateCmd.Flags().BoolVarP(&updateCmdForce, "force", "F", false, "Update all protected instances")
+	updateCmd.Flags().BoolVarP(&updateCmdRestart, "restart", "R", true, "Restart all instances that may have an update applied")
 
-	packageUpdateCmd.Flags().SortFlags = false
+	updateCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/update.md
-var packageUpdateCmdDescription string
+var updateCmdDescription string
 
-var packageUpdateCmd = &cobra.Command{
+var updateCmd = &cobra.Command{
 	Use:   "update [flags] [TYPE] [VERSION]",
 	Short: "Update the active version of installed Geneos package",
-	Long:  packageUpdateCmdDescription,
+	Long:  updateCmdDescription,
 	Example: strings.ReplaceAll(`
 geneos package update gateway -b active_prod
 geneos package update gateway -b active_dev -V 5.11
@@ -81,18 +81,18 @@ geneos package update netprobe 5.13.2
 
 		h := geneos.GetHost(cmd.Hostname)
 
-		version := packageUpdateCmdVersion
+		version := updateCmdVersion
 		cs := instance.MatchKeyValue(h, ct, "protected", "true")
-		if len(cs) > 0 && !packageUpdateCmdForce {
+		if len(cs) > 0 && !updateCmdForce {
 			fmt.Println("There are one or more protected instances using the current version. Use `--force` to override")
 		}
 		if len(args) > 0 {
 			version = args[0]
 		}
-		if packageUpdateCmdRestart {
-			cs := instance.MatchKeyValue(h, ct, "version", packageUpdateCmdBase)
+		if updateCmdRestart {
+			cs := instance.MatchKeyValue(h, ct, "version", updateCmdBase)
 			for _, c := range cs {
-				if err = instance.Stop(c, packageUpdateCmdForce, false); err == nil {
+				if err = instance.Stop(c, updateCmdForce, false); err == nil {
 					// only restart instances that we stopped
 					defer instance.Start(c)
 				}
@@ -100,9 +100,9 @@ geneos package update netprobe 5.13.2
 		}
 		if err = geneos.Update(h, ct,
 			geneos.Version(version),
-			geneos.Basename(packageUpdateCmdBase),
+			geneos.Basename(updateCmdBase),
 			geneos.Force(true),
-			geneos.Restart(packageUpdateCmdRestart)); err != nil && errors.Is(err, os.ErrNotExist) {
+			geneos.Restart(updateCmdRestart)); err != nil && errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
 		return

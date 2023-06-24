@@ -33,16 +33,16 @@ import (
 )
 
 func init() {
-	tlsCmd.AddCommand(tlsNewCmd)
+	tlsCmd.AddCommand(newCmd)
 }
 
 //go:embed _docs/new.md
-var tlsNewCmdDescription string
+var newCmdDescription string
 
-var tlsNewCmd = &cobra.Command{
+var newCmd = &cobra.Command{
 	Use:          "new [TYPE] [NAME...]",
 	Short:        "Create new certificates",
-	Long:         tlsNewCmdDescription,
+	Long:         newCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "true",

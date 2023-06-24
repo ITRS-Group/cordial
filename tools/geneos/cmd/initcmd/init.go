@@ -144,7 +144,7 @@ geneos init
 		case initCmdSAN:
 			return initSan(geneos.LOCAL, options...)
 		case initCmdAll != "":
-			initAllCmdLicenseFile = initCmdAll
+			allCmdLicenseFile = initCmdAll
 			return initAll(geneos.LOCAL, options...)
 		default:
 			return

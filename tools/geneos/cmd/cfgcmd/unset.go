@@ -32,16 +32,16 @@ import (
 )
 
 func init() {
-	configCmd.AddCommand(configUnsetCmd)
+	configCmd.AddCommand(unsetCmd)
 }
 
 //go:embed _docs/unset.md
-var configUnsetCmdDescription string
+var unsetCmdDescription string
 
-var configUnsetCmd = &cobra.Command{
+var unsetCmd = &cobra.Command{
 	Use:          "unset [KEY...]",
 	Short:        "Unset a program parameter",
-	Long:         configUnsetCmdDescription,
+	Long:         unsetCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		"wildcard":     "false",
