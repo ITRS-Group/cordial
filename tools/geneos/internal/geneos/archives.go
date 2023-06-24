@@ -39,10 +39,12 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-version"
 	"github.com/rs/zerolog/log"
 	"github.com/schollz/progressbar/v3"
+	"golang.org/x/term"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -134,13 +136,37 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 	if err != nil {
 		return
 	}
-	bar := progressbar.DefaultBytes(
+	isterm := term.IsTerminal(int(os.Stderr.Fd()))
+
+	out := io.Discard
+	if isterm {
+		out = os.Stdout
+	}
+	bar := progressbar.NewOptions64(
 		resp.ContentLength,
-		filename,
+		progressbar.OptionSetDescription(filename),
+		progressbar.OptionSetWriter(out),
+		progressbar.OptionShowBytes(true),
+		// progressbar.OptionSetWidth(10),
+		progressbar.OptionThrottle(65*time.Millisecond),
+		progressbar.OptionShowCount(),
+		// progressbar.OptionOnCompletion(func() {
+		// 	fmt.Fprint(os.Stderr, "\n")
+		// }),
+		progressbar.OptionSpinnerType(14),
+		progressbar.OptionFullWidth(),
+		progressbar.OptionSetRenderBlankState(true),
+		progressbar.OptionEnableColorCodes(true),
 	)
+
 	if _, err = io.Copy(io.MultiWriter(w, bar), resp.Body); err != nil {
 		return
 	}
+
+	if !isterm {
+		fmt.Println(bar.String())
+	}
+
 	if _, err = w.Seek(0, 0); err != nil {
 		return
 	}
