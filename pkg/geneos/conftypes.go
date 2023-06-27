@@ -240,9 +240,13 @@ func (d Data) String() string {
 }
 
 // A Value is either a simple string or a variable
+//
+// It can also contain an external password reference or an encoded password
 type Value struct {
-	Data *Data `xml:"data,omitempty" json:",omitempty" yaml:",omitempty"`
-	Var  *Var  `xml:"var,omitempty" json:",omitempty" yaml:",omitempty"`
+	Data   *Data  `xml:"data,omitempty" json:",omitempty" yaml:",omitempty"`
+	Var    *Var   `xml:"var,omitempty" json:",omitempty" yaml:",omitempty"`
+	ExtPwd string `xml:"extPwd,omitempty" json:",omitempty" yaml:",omitempty"`
+	StdAES string `xml:"stdAES,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 // NewValue takes an argument and if a string removes leading and
@@ -323,6 +327,17 @@ func (v *Value) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error)
 				return err
 			}
 			v.Var = t
+		case "extPwd":
+			err = d.DecodeElement(&v.ExtPwd, &element)
+			if err != nil {
+				return err
+			}
+		case "stdAES":
+			err = d.DecodeElement(&v.StdAES, &element)
+			if err != nil {
+				panic(err)
+				return err
+			}
 		}
 	}
 }
@@ -332,6 +347,12 @@ var _ fmt.Stringer = (*Value)(nil)
 func (s *Value) String() (out string) {
 	if s.Var != nil {
 		return "$(" + s.Var.Var + ")"
+	}
+	if s.ExtPwd != "" {
+		return "extpwd:" + s.ExtPwd
+	}
+	if s.StdAES != "" {
+		return "[encoded-password]"
 	}
 	return fmt.Sprint(s.Data)
 }
@@ -344,4 +365,24 @@ type Regex struct {
 type RegexFlags struct {
 	CaseInsensitive *bool `xml:"i,omitempty"`
 	DotMatchesAll   *bool `xml:"s,omitempty"`
+}
+
+type Host struct {
+	Name      string     `xml:"name,omitempty"`
+	IPAddress *IPAddress `xml:"ipAddress,omitempty"`
+	Var       *Reference `xml:"var,omitempty"`
+}
+
+func (t *Host) String() string {
+	if t.IPAddress != nil {
+		return fmt.Sprintf("%d.%d.%d.%d", t.IPAddress.Octets[0], t.IPAddress.Octets[1], t.IPAddress.Octets[2], t.IPAddress.Octets[3])
+	}
+	if t.Var != nil {
+		return "$(" + t.Name + ")"
+	}
+	return t.Name
+}
+
+type IPAddress struct {
+	Octets [4]uint8 `xml:"value"`
 }
