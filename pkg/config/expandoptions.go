@@ -27,6 +27,7 @@ type expandOptions struct {
 	expressions      bool
 	externalFuncMaps bool
 	funcMaps         map[string]func(*Config, string, bool) (string, error)
+	initialValue     any
 	lookupTables     []map[string]string
 	nodecode         bool
 	rawstring        bool
@@ -188,5 +189,15 @@ func TrimSpace(yes bool) ExpandOptions {
 func Default(value any) ExpandOptions {
 	return func(e *expandOptions) {
 		e.defaultValue = value
+	}
+}
+
+// Initial sets an initial default value to be used if the configuration
+// item is empty (or nil) to start. This differs from Default() which
+// supplies a value to use if the value if empty after expansion. The
+// initial value, if used, is expanded as would any configuration value.
+func Initial(value any) ExpandOptions {
+	return func(e *expandOptions) {
+		e.initialValue = value
 	}
 }
