@@ -57,7 +57,7 @@ type StateTrackerGroup struct {
 }
 
 type StateTrackerTracker struct {
-	XMLName        xml.Name             `xml:"tracker"  json:"-" yaml:"-"`
+	// XMLName        xml.Name             `xml:"tracker" json:"-" yaml:"-"`
 	DeprecatedName string               `xml:"name,attr"`
 	Name           *SingleLineStringVar `xml:"name"`
 	Filename       *SingleLineStringVar `xml:"filename"`

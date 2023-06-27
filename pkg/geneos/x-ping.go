@@ -22,10 +22,16 @@ THE SOFTWARE.
 
 package geneos
 
-import "encoding/xml"
+import (
+	"encoding/xml"
+)
 
 type XPingPlugin struct {
-	XMLName xml.Name `xml:"x-ping" json:"-" yaml:"-"`
+	XMLName           xml.Name   `xml:"x-ping" json:"-" yaml:"-"`
+	TargetNodes       []Host     `xml:"targetNodes>targetNode,omitempty" json:"targetNode,omitempty" yaml:"targetNode,omitempty"`
+	RecvInterfacesVar *Reference `xml:"recvInterfaces>var,omitempty" json:"recvInterfaceVar,omitempty" yaml:"recvInterfaceVar,omitempty"`
+	RecvInterfaces    []Value    `xml:"recvInterfaces>data>recvInterface,omitempty" json:"recvInterface,omitempty" yaml:"recvInterface,omitempty"`
+	SendInterface     *Value     `xml:"sendInterface" json:"sendInterface" yaml:"sendInterface"`
 }
 
 func (p *XPingPlugin) String() string {
