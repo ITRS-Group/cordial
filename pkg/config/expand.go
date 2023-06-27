@@ -180,8 +180,15 @@ func (c *Config) ExpandString(input string, options ...ExpandOptions) (value str
 		if input != "" {
 			return strings.Clone(input)
 		}
-		// return a *copy* of the defaultvalue
+		// return a *copy* of the initialValue or defaultValue
+		if v := fmt.Sprint(opts.initialValue); v != "" {
+			return v
+		}
 		return fmt.Sprint(opts.defaultValue)
+	}
+
+	if input == "" {
+		input = fmt.Sprint(opts.initialValue)
 	}
 
 	value = expand(input, func(s string) (r string) {
@@ -239,8 +246,14 @@ func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
 		if input != "" {
 			return []byte(input)
 		}
-		// return a *copy* of the defaultvalue
+		if v := fmt.Sprint(opts.initialValue); v != "" {
+			return []byte(v)
+		}
 		return []byte(fmt.Sprint(opts.defaultValue))
+	}
+
+	if input == "" {
+		input = fmt.Sprint(opts.initialValue)
 	}
 
 	value = expandBytes([]byte(input), func(s []byte) (r []byte) {
@@ -281,9 +294,16 @@ func (c *Config) ExpandToEnclave(input string, options ...ExpandOptions) (value 
 			l := memguard.NewBufferFromBytes([]byte(input))
 			return l.Seal()
 		}
-		// return a *copy* of the defaultvalue, don't let memguard wipe it!
-		l := memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.defaultValue)))
+		var l *memguard.LockedBuffer
+		if v := fmt.Sprint(opts.initialValue); v != "" {
+			l = memguard.NewBufferFromBytes([]byte(v))
+		}
+		l = memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.defaultValue)))
 		return l.Seal()
+	}
+
+	if input == "" {
+		input = fmt.Sprint(opts.initialValue)
 	}
 
 	value = expandToEnclave([]byte(input), func(s []byte) (r *memguard.Enclave) {
@@ -320,7 +340,14 @@ func (c *Config) ExpandToLockedBuffer(input string, options ...ExpandOptions) (v
 			return memguard.NewBufferFromBytes([]byte(input))
 		}
 		// return a *copy* of the defaultvalue, don't let memguard wipe it!
+		if v := fmt.Sprint(opts.initialValue); v != "" {
+			return memguard.NewBufferFromBytes([]byte(v))
+		}
 		return memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.defaultValue)))
+	}
+
+	if input == "" {
+		input = fmt.Sprint(opts.initialValue)
 	}
 
 	value = expandToLockedBuffer([]byte(input), func(s []byte) *memguard.LockedBuffer {

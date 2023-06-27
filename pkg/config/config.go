@@ -226,16 +226,24 @@ func GetStringSlice(s string, options ...ExpandOptions) []string {
 // instance but additionally calls [ExpandString] on each element of the
 // slice, passing any "values" maps
 func (c *Config) GetStringSlice(s string, options ...ExpandOptions) (slice []string) {
-	var r []string
+	var result []string
+	opts := evalExpandOptions(c, options...)
+
 	if !c.Viper.IsSet(s) {
-		opts := evalExpandOptions(c, options...)
-		if def, ok := opts.defaultValue.([]string); ok {
-			r = def
+		if init, ok := opts.initialValue.([]string); ok {
+			result = init
 		}
 	} else {
-		r = c.Viper.GetStringSlice(s)
+		result = c.Viper.GetStringSlice(s)
 	}
-	for _, n := range r {
+
+	if len(result) == 0 {
+		if def, ok := opts.defaultValue.([]string); ok {
+			result = def
+		}
+	}
+
+	for _, n := range result {
 		slice = append(slice, c.ExpandString(n, options...))
 	}
 	return
