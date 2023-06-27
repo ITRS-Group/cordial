@@ -213,6 +213,7 @@ func FlattenEntities(in *ManagedEntities, types map[string]Type) (entities map[s
 			entities[entity.Name] = entity
 		}
 	}
+
 	return
 }
 
@@ -238,11 +239,12 @@ func flattenEntityGroup(group *ManagedEntityGroup, types map[string]Type) (entit
 		entities[entity.Name] = entity
 	}
 
+	group.ManagedEntityInfo.Attributes = RemoveDuplicates(group.ManagedEntityInfo.Attributes)
+	group.ManagedEntityInfo.Vars = RemoveDuplicates(group.ManagedEntityInfo.Vars)
+
 	for _, childGroup := range group.ManagedEntityGroups {
 		setDefaults(group.ManagedEntityInfo, &childGroup.ManagedEntityInfo)
 		// remove dups from merged slices in setDefaults
-		group.ManagedEntityInfo.Attributes = RemoveDuplicates(group.ManagedEntityInfo.Attributes)
-		group.ManagedEntityInfo.Vars = RemoveDuplicates(group.ManagedEntityInfo.Vars)
 
 		resolveSamplersFromGroup(group.ManagedEntityInfo, &childGroup.ManagedEntityInfo, types)
 
@@ -304,6 +306,22 @@ func resolveEntitySamplers(group *ManagedEntityGroup, entity *ManagedEntity, typ
 			for k, v := range group.ResolvedSamplers {
 				entity.ResolvedSamplers[k] = v
 			}
+		}
+	}
+
+	if group.RemoveTypes != nil {
+		for _, tr := range group.RemoveTypes.Types {
+			if t, ok := types[tr.Type]; ok {
+				for _, s := range t.Samplers {
+					delete(entity.ResolvedSamplers, tr.Type+":"+s.Name)
+				}
+			}
+		}
+	}
+
+	if group.RemoveSamplers != nil {
+		for _, sr := range group.RemoveSamplers.Samplers {
+			delete(entity.ResolvedSamplers, sr.Type.Type+":"+sr.Sampler)
 		}
 	}
 
