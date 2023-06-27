@@ -25,10 +25,26 @@ package geneos
 import "encoding/xml"
 
 type ControlMPlugin struct {
-	XMLName xml.Name `xml:"control-m" json:"-" yaml:"-"`
-	Rest    string   `xml:",any"`
+	XMLName   xml.Name           `xml:"control-m" json:"-" yaml:"-"`
+	Host      *Host              `xml:"host"`
+	Port      *Value             `xml:"port"`
+	Username  *Value             `xml:"username"`
+	Password  *Value             `xml:"password"`
+	Timeout   *Value             `xml:"timeout,omitempty"`
+	Dataviews []ControlMDataview `xml:"dataviews>dataview,omitempty"`
 }
 
 func (_ *ControlMPlugin) String() string {
 	return "control-m"
+}
+
+type ControlMDataview struct {
+	Name       string              `xml:"name"`
+	Parameters []ControlMParameter `xml:"parameters,omitempty"`
+	Columns    []string            `xml:"columns>column,omitempty"`
+}
+
+type ControlMParameter struct {
+	Parameter string `xml:"parameter"`
+	Criteria  string `xml:"criteria"`
 }

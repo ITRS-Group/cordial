@@ -137,6 +137,9 @@ type Plugin struct {
 	Hardware *HardwarePlugin `xml:"hardware,omitempty" json:"hardware,omitempty" yaml:"hardware,omitempty"`
 	Network  *NetworkPlugin  `xml:"network,omitempty" json:"network,omitempty" yaml:"hardware,omitempty"`
 
+	// jmx-server.go
+	JMXServer *JMXServerPlugin `xml:"jmx-server,omitempty" json:"jmx-server,omitempty" yaml:"jmx-server,omitempty"`
+
 	// mq.go
 	MQChannel *MQChannelPlugin `xml:"mq-channel,omitempty" json:"mq-channel,omitempty" yaml:"mq-channel,omitempty"`
 	MQQInfo   *MQQInfoPlugin   `xml:"mq-qinfo,omitempty" json:"mq-qinfo,omitempty" yaml:"mq-qinfo,omitempty"`
@@ -156,6 +159,9 @@ type Plugin struct {
 
 	// state-tracker.go
 	StateTracker *StateTrackerPlugin `xml:"stateTracker,omitempty" json:"stateTracker,omitempty" yaml:"stateTracker,omitempty"`
+
+	// tcp-links.go
+	TCPLinks *TCPLinksPlugin `xml:"tcp-links,omitempty" json:"tcp-links,omitempty" yaml:"tcp-links,omitempty"`
 
 	// toolkit.go
 	Toolkit *ToolkitPlugin `xml:"toolkit,omitempty" json:"toolkit,omitempty" yaml:"toolkit,omitempty"`

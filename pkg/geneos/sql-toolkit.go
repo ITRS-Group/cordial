@@ -22,7 +22,10 @@ THE SOFTWARE.
 
 package geneos
 
-import "encoding/xml"
+import (
+	"encoding/xml"
+	"fmt"
+)
 
 // SQL Toolkit
 
@@ -45,24 +48,63 @@ type DBConnection struct {
 	MySQL                     *MySQL               `xml:"database>mysql,omitempty"`
 	SQLServer                 *SQLServer           `xml:"database>sqlServer,omitempty"`
 	Sybase                    *Sybase              `xml:"database>sybase,omitempty"`
+	Oracle                    *Oracle              `xml:"database>oracle,omitempty"`
 	Username                  *SingleLineStringVar `xml:"var-userName"`
 	Password                  *SingleLineStringVar `xml:"password"`
 	CloseConnectionAfterQuery *Value               `xml:"closeConnectionAfterQuery,omitempty"`
 }
 
+func (d *DBConnection) String() string {
+	if d.MySQL != nil {
+		port := d.MySQL.Port.String()
+		if port == "" {
+			port = "3306"
+		}
+		return fmt.Sprintf("mysql://%s:%s/%s", d.MySQL.ServerName, port, d.MySQL.DBName)
+	}
+
+	if d.SQLServer != nil {
+		port := d.SQLServer.Port.String()
+		if port == "" {
+			port = "1433"
+		}
+		return fmt.Sprintf("sqlserver://%s:%s/%s", d.SQLServer.ServerName, port, d.SQLServer.DBName)
+	}
+
+	if d.Sybase != nil {
+		return fmt.Sprintf("sybase:%s/%s", d.Sybase.InterfaceEntry, d.Sybase.DBName)
+	}
+
+	if d.Oracle != nil {
+		if d.Oracle.DBName != nil {
+			return fmt.Sprintf("oracle:%s", d.Oracle.DBName)
+		}
+		return fmt.Sprintf("oracle:%s", d.Oracle.DBNameAlt)
+	}
+
+	return "unsupported"
+}
+
 type MySQL struct {
-	ServerName *SingleLineStringVar `xml:"var-serverName"`
-	DBName     *SingleLineStringVar `xml:"var-databaseName"`
-	Port       *SingleLineStringVar `xml:"var-port"`
+	ServerName *SingleLineStringVar `xml:"var-serverName,omitempty"`
+	DBName     *SingleLineStringVar `xml:"var-databaseName,omitempty"`
+	Port       *SingleLineStringVar `xml:"var-port,omitempty"`
 }
 
 type SQLServer struct {
-	ServerName *SingleLineStringVar `xml:"var-serverName"`
-	DBName     *SingleLineStringVar `xml:"var-databaseName"`
-	Port       *SingleLineStringVar `xml:"var-port"`
+	ServerName *SingleLineStringVar `xml:"var-serverName,omitempty"`
+	DBName     *SingleLineStringVar `xml:"var-databaseName,omitempty"`
+	Port       *SingleLineStringVar `xml:"var-port,omitempty"`
+}
+
+type Oracle struct {
+	DBName          *SingleLineStringVar `xml:"var-databaseName,omitempty"`
+	DBNameAlt       *SingleLineStringVar `xml:"databaseName,omitempty"`
+	ApplicationName *SingleLineStringVar `xml:"var-applicationName,omitempty"`
 }
 
 type Sybase struct {
-	InstanceName *SingleLineStringVar `xml:"var-instanceName"`
-	DBName       *SingleLineStringVar `xml:"var-databaseName"`
+	InterfaceEntry  *SingleLineStringVar `xml:"var-interfaceEntry,omitempty"`
+	DBName          *SingleLineStringVar `xml:"var-databaseName,omitempty"`
+	ApplicationName *SingleLineStringVar `xml:"var-applicationName,omitempty"`
 }
