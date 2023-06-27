@@ -181,13 +181,13 @@ func (c *Config) ExpandString(input string, options ...ExpandOptions) (value str
 			return strings.Clone(input)
 		}
 		// return a *copy* of the initialValue or defaultValue
-		if v := fmt.Sprint(opts.initialValue); v != "" {
-			return v
+		if opts.initialValue != nil {
+			return fmt.Sprint(opts.initialValue)
 		}
 		return fmt.Sprint(opts.defaultValue)
 	}
 
-	if input == "" {
+	if input == "" && opts.initialValue != nil {
 		input = fmt.Sprint(opts.initialValue)
 	}
 
@@ -246,13 +246,16 @@ func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
 		if input != "" {
 			return []byte(input)
 		}
-		if v := fmt.Sprint(opts.initialValue); v != "" {
-			return []byte(v)
+		if opts.initialValue != nil {
+			if b, ok := opts.initialValue.([]byte); ok {
+				return b
+			}
+			return []byte(fmt.Sprint(opts.initialValue))
 		}
 		return []byte(fmt.Sprint(opts.defaultValue))
 	}
 
-	if input == "" {
+	if input == "" && opts.initialValue != nil {
 		input = fmt.Sprint(opts.initialValue)
 	}
 
@@ -295,14 +298,19 @@ func (c *Config) ExpandToEnclave(input string, options ...ExpandOptions) (value 
 			return l.Seal()
 		}
 		var l *memguard.LockedBuffer
-		if v := fmt.Sprint(opts.initialValue); v != "" {
-			l = memguard.NewBufferFromBytes([]byte(v))
+		if opts.initialValue != nil {
+			if b, ok := opts.initialValue.([]byte); ok {
+				l = memguard.NewBufferFromBytes(b)
+			} else {
+				l = memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.initialValue)))
+			}
 		}
+
 		l = memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.defaultValue)))
 		return l.Seal()
 	}
 
-	if input == "" {
+	if input == "" && opts.initialValue != nil {
 		input = fmt.Sprint(opts.initialValue)
 	}
 
@@ -339,14 +347,16 @@ func (c *Config) ExpandToLockedBuffer(input string, options ...ExpandOptions) (v
 		if input != "" {
 			return memguard.NewBufferFromBytes([]byte(input))
 		}
-		// return a *copy* of the defaultvalue, don't let memguard wipe it!
-		if v := fmt.Sprint(opts.initialValue); v != "" {
-			return memguard.NewBufferFromBytes([]byte(v))
+		if opts.initialValue != nil {
+			if b, ok := opts.initialValue.([]byte); ok {
+				return memguard.NewBufferFromBytes(b)
+			}
+			return memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.initialValue)))
 		}
 		return memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.defaultValue)))
 	}
 
-	if input == "" {
+	if input == "" && opts.initialValue != nil {
 		input = fmt.Sprint(opts.initialValue)
 	}
 

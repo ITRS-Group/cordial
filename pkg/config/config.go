@@ -229,12 +229,10 @@ func (c *Config) GetStringSlice(s string, options ...ExpandOptions) (slice []str
 	var result []string
 	opts := evalExpandOptions(c, options...)
 
-	if !c.Viper.IsSet(s) {
-		if init, ok := opts.initialValue.([]string); ok {
-			result = init
-		}
-	} else {
+	if c.Viper.IsSet(s) {
 		result = c.Viper.GetStringSlice(s)
+	} else if init, ok := opts.initialValue.([]string); ok {
+		result = init
 	}
 
 	if len(result) == 0 {
