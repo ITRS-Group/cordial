@@ -50,10 +50,10 @@ func RemoveDuplicates[T KeyedObject](kvs []T) []T {
 	return result
 }
 
-// FlattenProbes takes the top level geneos.Probes struct and returns a
+// UnrollProbes takes the top level geneos.Probes struct and returns a
 // map of probe name to geneos.Probe objects while setting the Type
 // field to the type of probe
-func FlattenProbes(in *Probes) (probes map[string]Probe) {
+func UnrollProbes(in *Probes) (probes map[string]Probe) {
 	probes = make(map[string]Probe)
 
 	if in == nil {
@@ -91,7 +91,7 @@ func FlattenProbes(in *Probes) (probes map[string]Probe) {
 	// top level has no group defaults so just loop over sub-groups and
 	// append non-disabled probes
 	for _, g := range in.ProbeGroups {
-		p, f, v := flattenProbeGroup(&g)
+		p, f, v := unrollProbeGroup(&g)
 		for _, p := range p {
 			if p.Disabled {
 				continue
@@ -123,9 +123,9 @@ func FlattenProbes(in *Probes) (probes map[string]Probe) {
 	return
 }
 
-// flattenProbeGroup works through a geneos.ProbeGroup and applies
+// unrollProbeGroup works through a geneos.ProbeGroup and applies
 // defaults to all it's contents and returns three slices of probe types
-func flattenProbeGroup(in *ProbeGroup) (probes []Probe, floatingProbes []FloatingProbe, virtualProbes []VirtualProbe) {
+func unrollProbeGroup(in *ProbeGroup) (probes []Probe, floatingProbes []FloatingProbe, virtualProbes []VirtualProbe) {
 	if in.Disabled {
 		return
 	}
@@ -155,7 +155,7 @@ func flattenProbeGroup(in *ProbeGroup) (probes []Probe, floatingProbes []Floatin
 
 	for _, g := range in.ProbeGroups {
 		setDefaults(in.ProbeInfo, &g.ProbeInfo)
-		p, f, v := flattenProbeGroup(&g)
+		p, f, v := unrollProbeGroup(&g)
 
 		for _, p := range p {
 			if p.Disabled {
@@ -182,8 +182,8 @@ func flattenProbeGroup(in *ProbeGroup) (probes []Probe, floatingProbes []Floatin
 	return
 }
 
-// FlattenEntities func
-func FlattenEntities(in *ManagedEntities, types map[string]Type) (entities map[string]ManagedEntity) {
+// UnrollEntities func
+func UnrollEntities(in *ManagedEntities, types map[string]Type) (entities map[string]ManagedEntity) {
 	entities = make(map[string]ManagedEntity)
 
 	if in == nil {
@@ -200,13 +200,13 @@ func FlattenEntities(in *ManagedEntities, types map[string]Type) (entities map[s
 	}
 
 	for _, childGroup := range in.ManagedEntityGroups {
-		flattenedEntities := flattenEntityGroup(&childGroup, types)
-		for _, entity := range flattenedEntities {
+		unrolledEntities := unrollEntityGroup(&childGroup, types)
+		for _, entity := range unrolledEntities {
 			if entity.Disabled {
 				continue
 			}
 
-			// remove dups from the flattening process
+			// remove dups from the unrolling process
 			// entity.ManagedEntityInfo.Attributes = RemoveDuplicates(entity.ManagedEntityInfo.Attributes)
 			// entity.ManagedEntityInfo.Vars = RemoveDuplicates(entity.ManagedEntityInfo.Vars)
 
@@ -217,8 +217,8 @@ func FlattenEntities(in *ManagedEntities, types map[string]Type) (entities map[s
 	return
 }
 
-// flattenEntityGroup type
-func flattenEntityGroup(group *ManagedEntityGroup, types map[string]Type) (entities map[string]ManagedEntity) {
+// unrollEntityGroup type
+func unrollEntityGroup(group *ManagedEntityGroup, types map[string]Type) (entities map[string]ManagedEntity) {
 	entities = make(map[string]ManagedEntity)
 
 	if group.Disabled {
@@ -248,8 +248,8 @@ func flattenEntityGroup(group *ManagedEntityGroup, types map[string]Type) (entit
 
 		resolveSamplersFromGroup(group.ManagedEntityInfo, &childGroup.ManagedEntityInfo, types)
 
-		flattenedEntities := flattenEntityGroup(&childGroup, types)
-		for _, entity := range flattenedEntities {
+		unrolledEntities := unrollEntityGroup(&childGroup, types)
+		for _, entity := range unrolledEntities {
 			if entity.Disabled {
 				continue
 			}
@@ -342,7 +342,7 @@ func resolveEntitySamplers(group *ManagedEntityGroup, entity *ManagedEntity, typ
 	}
 }
 
-func FlattenTypes(in *Types) (types map[string]Type) {
+func UnrollTypes(in *Types) (types map[string]Type) {
 	types = make(map[string]Type)
 
 	if in == nil {
@@ -357,7 +357,7 @@ func FlattenTypes(in *Types) (types map[string]Type) {
 	}
 
 	for _, g := range in.TypeGroups {
-		t := flattenTypeGroup(&g)
+		t := unrollTypeGroup(&g)
 		for _, t := range t {
 			if t.Disabled {
 				continue
@@ -368,7 +368,7 @@ func FlattenTypes(in *Types) (types map[string]Type) {
 	return
 }
 
-func flattenTypeGroup(in *TypeGroup) (types map[string]Type) {
+func unrollTypeGroup(in *TypeGroup) (types map[string]Type) {
 	types = make(map[string]Type)
 	for _, t := range in.Types {
 		if t.Disabled {
@@ -377,7 +377,7 @@ func flattenTypeGroup(in *TypeGroup) (types map[string]Type) {
 		types[t.Name] = t
 	}
 	for _, g := range in.TypeGroups {
-		t := flattenTypeGroup(&g)
+		t := unrollTypeGroup(&g)
 		for _, t := range t {
 			if t.Disabled {
 				continue
@@ -388,7 +388,7 @@ func flattenTypeGroup(in *TypeGroup) (types map[string]Type) {
 	return
 }
 
-func FlattenSamplers(in *Samplers) (samplers map[string]Sampler) {
+func UnrollSamplers(in *Samplers) (samplers map[string]Sampler) {
 	samplers = make(map[string]Sampler)
 
 	if in == nil {
@@ -405,7 +405,7 @@ func FlattenSamplers(in *Samplers) (samplers map[string]Sampler) {
 		samplers[s.Name] = s
 	}
 	for _, g := range in.SamplerGroups {
-		s := flattenSamplerGroup(&g)
+		s := unrollSamplerGroup(&g)
 		for _, s := range s {
 			if s.Disabled {
 				continue
@@ -416,7 +416,7 @@ func FlattenSamplers(in *Samplers) (samplers map[string]Sampler) {
 	return
 }
 
-func flattenSamplerGroup(in *SamplerGroup) (samplers map[string]Sampler) {
+func unrollSamplerGroup(in *SamplerGroup) (samplers map[string]Sampler) {
 	samplers = make(map[string]Sampler)
 	for _, s := range in.Samplers {
 		if s.Disabled {
@@ -425,7 +425,7 @@ func flattenSamplerGroup(in *SamplerGroup) (samplers map[string]Sampler) {
 		samplers[s.Name] = s
 	}
 	for _, g := range in.SamplerGroups {
-		s := flattenSamplerGroup(&g)
+		s := unrollSamplerGroup(&g)
 		for _, s := range s {
 			if s.Disabled {
 				continue
@@ -436,7 +436,7 @@ func flattenSamplerGroup(in *SamplerGroup) (samplers map[string]Sampler) {
 	return
 }
 
-func FlattenProcessDescriptors(in *ProcessDescriptors) (processDescriptors map[string]ProcessDescriptor) {
+func UnrollProcessDescriptors(in *ProcessDescriptors) (processDescriptors map[string]ProcessDescriptor) {
 	processDescriptors = make(map[string]ProcessDescriptor)
 
 	if in == nil {
@@ -451,7 +451,7 @@ func FlattenProcessDescriptors(in *ProcessDescriptors) (processDescriptors map[s
 	}
 
 	for _, g := range in.ProcessDescriptorGroups {
-		p := flattenProcessDescriptorGroups(&g)
+		p := unrollProcessDescriptorGroups(&g)
 		for _, p := range p {
 			if p.Disabled {
 				continue
@@ -462,7 +462,7 @@ func FlattenProcessDescriptors(in *ProcessDescriptors) (processDescriptors map[s
 	return
 }
 
-func flattenProcessDescriptorGroups(in *ProcessDescriptorGroup) (processDescriptors map[string]ProcessDescriptor) {
+func unrollProcessDescriptorGroups(in *ProcessDescriptorGroup) (processDescriptors map[string]ProcessDescriptor) {
 	processDescriptors = make(map[string]ProcessDescriptor)
 	for _, p := range in.ProcessDescriptors {
 		if p.Disabled {
@@ -471,7 +471,7 @@ func flattenProcessDescriptorGroups(in *ProcessDescriptorGroup) (processDescript
 		processDescriptors[p.Name] = p
 	}
 	for _, g := range in.ProcessDescriptorGroups {
-		p := flattenProcessDescriptorGroups(&g)
+		p := unrollProcessDescriptorGroups(&g)
 		for _, p := range p {
 			if p.Disabled {
 				continue
