@@ -358,13 +358,25 @@ func (s *Value) String() (out string) {
 }
 
 type Regex struct {
-	Regex string        `xml:"regex"`
-	Flags *[]RegexFlags `xml:"regexFlags,omitempty"`
+	XMLName xml.Name    `xml:"regex" json:"-" yaml:"-"`
+	Regex   string      `xml:"pattern" json:"pattern,omitempty" yaml:"pattern,omitempty"`
+	Flags   *RegexFlags `xml:"flags,omitempty" json:"flags,omitempty" yaml:"flags,omitempty"`
 }
 
 type RegexFlags struct {
-	CaseInsensitive *bool `xml:"i,omitempty"`
-	DotMatchesAll   *bool `xml:"s,omitempty"`
+	CaseInsensitive *bool `xml:"i,omitempty" json:"i,omitempty" yaml:"i,omitempty"`
+	DotMatchesAll   *bool `xml:"s,omitempty" json:"s,omitempty" yaml:"s,omitempty"`
+}
+
+func (r *Regex) String() (s string) {
+	s = fmt.Sprintf("/%s/", r.Regex)
+	if r.Flags.CaseInsensitive != nil && *r.Flags.CaseInsensitive {
+		s += "i"
+	}
+	if r.Flags.DotMatchesAll != nil && *r.Flags.DotMatchesAll {
+		s += "s"
+	}
+	return
 }
 
 type Host struct {
