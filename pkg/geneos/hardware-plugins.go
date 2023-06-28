@@ -28,8 +28,8 @@ type CPUPlugin struct {
 	XMLName xml.Name `xml:"cpu" json:"-" yaml:"-"`
 }
 
-func (_ *CPUPlugin) String() string {
-	return "cpu"
+func (p *CPUPlugin) String() string {
+	return p.XMLName.Local
 }
 
 type DeviceIOPlugin struct {
@@ -50,6 +50,10 @@ type DiskPlugin struct {
 	MatchExactPartitions *Value             `xml:"matchExactPartitions,omitempty"`
 }
 
+func (p *DiskPlugin) String() string {
+	return p.XMLName.Local
+}
+
 type Partition struct {
 	Path  *SingleLineStringVar `xml:"path"`
 	Alias *SingleLineStringVar `xml:"alias"`
@@ -58,10 +62,6 @@ type Partition struct {
 type ExcludePartition struct {
 	Path       string `xml:"path"`
 	FileSystem string `xml:"fileSystem"`
-}
-
-func (_ *DiskPlugin) String() string {
-	return "disk"
 }
 
 type HardwarePlugin struct {
