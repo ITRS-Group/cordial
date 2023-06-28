@@ -74,6 +74,7 @@ var Gateway = geneos.Component{
 		"gateopts":  "options",
 	},
 	Defaults: []string{
+		// order is important, do not change
 		`binary=gateway2.linux_64`,
 		`home={{join .root "gateway" "gateways" .name}}`,
 		`install={{join .root "packages" "gateway"}}`,
