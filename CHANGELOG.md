@@ -1,12 +1,34 @@
 # Change Log
 
+## Version v1.6.6
+
+> **Released 2023-06-28**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.6.6 Fixes
+
+* [#145](https://github.com/ITRS-Group/cordial/issues/145) - Wrap `geneos tls list` JSON output in an array correctly
+
+* `tools/geneos` - Package version handling was broken in some cases, especially for components with 'parent' types
+
+## v1.6.6 Changes
+
+* `tools/geneos` - Add a progress bar for downloads when running interactively. Make checking if running interactively consistent
+
+* `tools/geneos` - Add `package install -D` to download packages without unpacking them
+
+* `tools/geneos` - Refactor internal variable names in subsystem packages to shrink very long names
+
+* `pkg/geneos` - Various updates to plugins and other structures to support an ongoing project
+
 ## Version v1.6.5
 
 > **Released 2023-06-23**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-## v1.6.4 Fixes
+## v1.6.5 Fixes
 
 * [#146](https://github.com/ITRS-Group/cordial/issues/146) - Entering empty passwords could cause pointer panics
 
