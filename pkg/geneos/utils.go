@@ -309,19 +309,21 @@ func resolveEntitySamplers(group *ManagedEntityGroup, entity *ManagedEntity, typ
 		}
 	}
 
-	if group.RemoveTypes != nil {
-		for _, tr := range group.RemoveTypes.Types {
-			if t, ok := types[tr.Type]; ok {
-				for _, s := range t.Samplers {
-					delete(entity.ResolvedSamplers, tr.Type+":"+s.Name)
+	if group != nil {
+		if group.RemoveTypes != nil {
+			for _, tr := range group.RemoveTypes.Types {
+				if t, ok := types[tr.Type]; ok {
+					for _, s := range t.Samplers {
+						delete(entity.ResolvedSamplers, tr.Type+":"+s.Name)
+					}
 				}
 			}
 		}
-	}
 
-	if group.RemoveSamplers != nil {
-		for _, sr := range group.RemoveSamplers.Samplers {
-			delete(entity.ResolvedSamplers, sr.Type.Type+":"+sr.Sampler)
+		if group.RemoveSamplers != nil {
+			for _, sr := range group.RemoveSamplers.Samplers {
+				delete(entity.ResolvedSamplers, sr.Type.Type+":"+sr.Sampler)
+			}
 		}
 	}
 
