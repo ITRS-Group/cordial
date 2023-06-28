@@ -375,7 +375,7 @@ type Host struct {
 
 func (t *Host) String() string {
 	if t.IPAddress != nil {
-		return fmt.Sprintf("%d.%d.%d.%d", t.IPAddress.Octets[0], t.IPAddress.Octets[1], t.IPAddress.Octets[2], t.IPAddress.Octets[3])
+		return t.IPAddress.String()
 	}
 	if t.Var != nil {
 		return "$(" + t.Name + ")"
@@ -384,5 +384,12 @@ func (t *Host) String() string {
 }
 
 type IPAddress struct {
-	Octets [4]uint8 `xml:"value"`
+	Octets []int `xml:"value"` // must be []int else unmarshal treats []uint8 as a []byte
+}
+
+func (ip *IPAddress) String() string {
+	if len(ip.Octets) != 4 {
+		return ""
+	}
+	return fmt.Sprintf("%d.%d.%d.%d", ip.Octets[0], ip.Octets[1], ip.Octets[2], ip.Octets[3])
 }
