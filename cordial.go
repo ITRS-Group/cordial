@@ -71,9 +71,11 @@ func LogInit(prefix string) {
 
 func renderMD(in string) (md string) {
 	tr, err := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
-		glamour.WithWordWrap(80),
+		// glamour.WithAutoStyle(),
+		// glamour.WithWordWrap(80),
+		glamour.WithEmoji(),
 		glamour.WithEnvironmentConfig(),
+		// glamour.WithPreservedNewLines(),
 		glamour.WithStylesFromJSONBytes([]byte(`{ "document": { "margin": 0 } }`)),
 	)
 	if err != nil {
