@@ -53,6 +53,11 @@ Take control of your Geneos environments
 * [`geneos login`](geneos_login.md)	 - Enter Credentials
 * [`geneos logout`](geneos_logout.md)	 - Remove Credentials
 
+## Miscellaneous
+
+* [`geneos snapshot`](geneos_snapshot.md)	 - Capture a snapshot of each matching dataview
+* [`geneos version`](geneos_version.md)	 - Show program version
+
 ## Recognised Component Types
 
 * [`geneos ca3`](geneos_ca3.md)	 - Collection Agent 3
