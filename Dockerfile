@@ -11,24 +11,23 @@ ARG GOVERSION=1.20.5
 # here for completeness.
 FROM golang:alpine AS build
 LABEL stage=cordial-build
-# build-base required for support to build libemail (and CGO in the future)
-RUN apk add build-base
-# The "clean" lines below are in case of running this in a working
-# directory with existing builds from outside the container, which may
-# be from a different arch or environment
+
 COPY go.mod go.sum cordial.go VERSION /app/cordial/
 COPY integrations /app/cordial/integrations/
 COPY pkg /app/cordial/pkg
 COPY tools /app/cordial/tools
-WORKDIR /app/cordial/tools/geneos
-RUN go build --ldflags '-linkmode external -extldflags=-static'
-RUN GOOS=windows go build
-WORKDIR /app/cordial/tools/dv2email
-RUN go build --ldflags '-linkmode external -extldflags=-static'
-WORKDIR /app/cordial/integrations/servicenow
-RUN go build --ldflags '-linkmode external -extldflags=-static'
-WORKDIR /app/cordial/integrations/pagerduty
-RUN go build --ldflags '-linkmode external -extldflags=-static'
+
+RUN set -eux; \
+    apk add build-base; \
+    cd /app/cordial/tools/geneos; \
+    go build --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    GOOS=windows go build --ldflags '-s -w'; \
+    cd /app/cordial/tools/dv2email; \
+    go build --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    cd /app/cordial/integrations/servicenow; \
+    go build --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    cd /app/cordial/integrations/pagerduty; \
+    go build --ldflags '-s -w -linkmode external -extldflags=-static'
 
 # special centos7 build environment for shared libs and a version of the
 # geneos program that is dynamic enough to communicate with a domain
@@ -46,12 +45,13 @@ COPY go.mod go.sum cordial.go VERSION /app/cordial/
 COPY libraries /app/cordial/libraries/
 COPY pkg /app/cordial/pkg
 COPY tools /app/cordial/tools
-WORKDIR /app/cordial/tools/geneos
-RUN go build
-WORKDIR /app/cordial/libraries/libemail
-RUN make
-WORKDIR /app/cordial/libraries/libalert
-RUN make
+RUN set -eux; \
+    cd /app/cordial/tools/geneos; \
+    go build --ldflags '-s -w'; \
+    cd /app/cordial/libraries/libemail; \
+    make; \
+    cd /app/cordial/libraries/libalert; \
+    make
 
 #
 # Build PDF documentation using mdpdf. Like all Puppeteer based PDF
@@ -65,21 +65,38 @@ COPY integrations /app/cordial/integrations/
 COPY libraries /app/cordial/libraries/
 COPY pkg /app/cordial/pkg
 COPY tools /app/cordial/tools
+
 WORKDIR /app/cordial/doc-output
-RUN apt update && apt install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2
-RUN npm install --global mdpdf
-RUN mdpdf --border=15mm /app/cordial/tools/geneos/README.md geneos.pdf
-COPY ./tools/geneos/README.md geneos.md
-RUN mdpdf --border=15mm /app/cordial/tools/dv2email/README.md dv2email.pdf
-COPY ./tools/dv2email/README.md dv2email.md
-RUN mdpdf --border=15mm /app/cordial/integrations/servicenow/README.md servicenow.pdf
-COPY ./integrations/servicenow/README.md servicenow.md
-RUN mdpdf --border=15mm /app/cordial/integrations/pagerduty/README.md pagerduty.pdf
-COPY ./integrations/pagerduty/README.md pagerduty.md
-RUN mdpdf --border=15mm /app/cordial/libraries/libemail/README.md libemail.pdf
-COPY ./libraries/libemail/README.md libemail.md
-RUN mdpdf --border=15mm /app/cordial/libraries/libalert/README.md libalert.pdf
-COPY ./libraries/libalert/README.md libalert.md
+COPY tools/geneos/README.md geneos.md
+COPY tools/dv2email/README.md dv2email.md
+COPY integrations/servicenow/README.md servicenow.md
+COPY integrations/pagerduty/README.md pagerduty.md
+COPY libraries/libemail/README.md libemail.md
+COPY libraries/libalert/README.md libalert.md
+
+RUN set -eux; \
+    apt update; \
+    apt install -y \
+        libnss3 \
+        libnspr4 \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
+        libcups2 \
+        libdrm2 \
+        libxkbcommon0 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxfixes3 \
+        libxrandr2 \
+        libgbm1 \
+        libasound2; \
+    npm install --global mdpdf; \
+    mdpdf --border=15mm /app/cordial/tools/geneos/README.md geneos.pdf; \
+    mdpdf --border=15mm /app/cordial/tools/dv2email/README.md dv2email.pdf; \
+    mdpdf --border=15mm /app/cordial/integrations/servicenow/README.md servicenow.pdf; \
+    mdpdf --border=15mm /app/cordial/integrations/pagerduty/README.md pagerduty.pdf; \
+    mdpdf --border=15mm /app/cordial/libraries/libemail/README.md libemail.pdf; \
+    mdpdf --border=15mm /app/cordial/libraries/libalert/README.md libalert.pdf
 
 #
 # assemble files from previous stages into a .tar.gz ready for extraction in the
@@ -87,33 +104,43 @@ COPY ./libraries/libalert/README.md libalert.md
 #
 FROM alpine AS cordial-build
 LABEL stage=cordial-build
-WORKDIR /app/cordial
+# WORKDIR /app/cordial
 COPY --from=build /app/cordial/VERSION /
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
 COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
 COPY --from=build-docs /app/cordial/doc-output /cordial/docs
-COPY --from=build /app/cordial/integrations/servicenow/servicenow /app/cordial/integrations/servicenow/ticket.sh /app/cordial/integrations/pagerduty/pagerduty /cordial/bin/
+COPY --from=build /app/cordial/integrations/servicenow/servicenow /app/cordial/integrations/pagerduty/pagerduty /cordial/bin/
 COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /app/cordial/integrations/pagerduty/cmd/pagerduty.defaults.yaml /cordial/etc/geneos/
 COPY --from=build-libs /app/cordial/tools/geneos/geneos /cordial/bin/geneos.centos7-x86_64
 COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /cordial/lib/
 COPY --from=build-libs /app/cordial/libraries/libalert/libalert.so /cordial/lib/
-RUN mv /cordial /cordial-$(cat /VERSION)
-WORKDIR /
-RUN tar czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION)
+
+RUN set -eux; \
+        apk add upx; \
+        upx -qq --best /cordial/bin/*; \
+        mv /cordial /cordial-$(cat /VERSION); \
+        tar czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION)
+
 CMD [ "bash" ]
 
 #
 # create a runnable test image
 #
 FROM debian AS cordial-run
-RUN apt update && apt install -y fontconfig ca-certificates
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /lib/
-RUN useradd -ms /bin/bash geneos
+RUN set -eux; \
+    apt update; \
+    apt install -y \
+        fontconfig \
+        ca-certificates \
+        ; \
+    useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
+
 CMD [ "bash" ]
 
 #
@@ -121,7 +148,6 @@ CMD [ "bash" ]
 # centos8 is too hard for basic testing.
 #
 FROM centos:centos8 AS cordial-run-el8
-# RUN apt update && apt install -y fontconfig ca-certificates
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /lib/
