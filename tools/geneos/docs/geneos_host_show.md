@@ -6,12 +6,9 @@ Show details of remote host configuration
 geneos host show [flags] [NAME...]
 ```
 
-Show details of remote host configurations. If no names are supplied
-then all configured hosts are shown.
+Show details of remote host configurations. If no names are supplied then all configured hosts are shown.
 
-The output is always unprocessed, and so any values in `expandable`
-format are left as-is. This protects, for example, SSH passwords from
-being accidentally shown in clear text.
+The output is always unprocessed, and so any values in `expandable` format are left as-is. This protects, for example, SSH passwords from being accidentally shown in clear text.
 
 ## SEE ALSO
 

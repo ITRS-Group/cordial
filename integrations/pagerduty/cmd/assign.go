@@ -4,8 +4,6 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"strings"
-
 	"github.com/spf13/cobra"
 )
 
@@ -13,8 +11,7 @@ import (
 var assignCmd = &cobra.Command{
 	Use:   "assign",
 	Short: "Send a Pagerduty trigger event",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
+	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return sendEvent(Assign)
 	},

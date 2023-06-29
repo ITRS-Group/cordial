@@ -108,22 +108,14 @@ var textDefaultTemplate string
 //go:embed dv2email-html.gotmpl
 var htmlDefaultTemplate string
 
+//go:embed _docs/root.md
+var DV2EMAILCmdDescription string
+
 // DV2EMAILCmd represents the base command when called without any subcommands
 var DV2EMAILCmd = &cobra.Command{
-	Use:   "dv2email",
-	Short: "Email a Dataview following Geneos Action/Effect conventions",
-	Long: strings.ReplaceAll(`
-Email a Dataview following Geneos Action/Effect conventions.
-
-When called without a sub-command and no arguments the program
-processes environment variables setup as per Geneos Action/Effect
-conventions and constructs an HTML Email of the dataview the data
-item is from.
-
-Settings for the Gateway REST connection and defaults for the EMail
-gateway can be located in dv2email.yaml (either in the working
-directory or in the user's .config/dv2email directory)
-	`, "|", "`"),
+	Use:                "dv2email",
+	Short:              "Email a Dataview following Geneos Action/Effect conventions",
+	Long:               DV2EMAILCmdDescription,
 	DisableAutoGenTag:  true,
 	DisableSuggestions: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
@@ -427,8 +419,10 @@ directory or in the user's .config/dv2email directory)
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+// This is called by main.main(). It only needs to happen once to the RootCmd.
 func Execute() {
+	cordial.RenderHelpAsMD(DV2EMAILCmd)
+
 	err := DV2EMAILCmd.Execute()
 	if err != nil {
 		os.Exit(1)

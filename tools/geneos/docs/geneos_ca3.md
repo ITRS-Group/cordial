@@ -6,11 +6,11 @@ Collection Agent 3
 geneos ca3
 ```
 
-# `geneos` CA3 Components
+# `geneos` Collection Agents
 
-CA3 components are unmanaged Collection Agents (version 3) instances.
-They use the standard netprobe installation packages and require Java to
-be installed.
+A `ca3` instance is an unmanaged Collection Agents. The instances uses
+the standard netprobe installation packages and requires Java 11 to be
+installed.
 
 ## SEE ALSO
 

@@ -1,4 +1,4 @@
-# `geneos` Fileagent Components
+# `geneos` Fileagents
 
 The Fileagent is a small agent used to relay files from one system to a
 Geneos Netprobe. Normally deployed with Fix Analyser 2, this allows high

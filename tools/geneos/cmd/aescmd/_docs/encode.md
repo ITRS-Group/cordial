@@ -1,22 +1,21 @@
 Encode plaintext to a Geneos AES256 format password using a key file.
 
-A key file must either be provided using the `-k` option or otherwise
-all matching instances that have a configured key file are used to
-produce an encrypted password.
+A key file must either be provided using the `-k` option or otherwise all matching instances that have a configured key file are used to produce an encrypted password.
 
-The plaintext password can be provided in three ways. The default is to
-prompt for the plaintext and again to verify they match. Alternatively
-the password can be provided directly on the command line using the `-p
-plaintext` flag or from an external source using the `-s PATH` or `-s
-URL` option where the contents of the file at PATH ir URL is read and
-used. If `-s -` is used then the plaintext is read from `STDIN`.
+The plaintext password can be provided in three ways.
 
-It is important to note that no whitespace is trimmed from the
-plaintext. This can have unexpected results if you do something like
-this:
+1. The default is to prompt for the plaintext and again to verify they match.
+2. Alternatively the password can be provided directly on the command line using the `-p plaintext` flag or,
+3. From an external source using the `-s PATH` or `-s URL` option where the contents of the file at PATH ir URL is read and used. If `-s -` is used then the plaintext is read from `STDIN`.
 
-$ echo "test" ` geneos aes encode -s -
+It is important to note that no whitespace is trimmed from the plaintext. This can have unexpected results if you do something like this:
 
-rather then this:
+```bash
+$ echo "test" | geneos aes encode -s -
+```
 
-$ echo -n "test" ` geneos aes encode -s -
+Rather than:
+
+```bash
+$ echo -n "test" | geneos aes encode -s -
+```

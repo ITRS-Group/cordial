@@ -6,8 +6,6 @@ Send a Pagerduty trigger event
 pagerduty assign [flags]
 ```
 
-
-
 ### Options inherited from parent commands
 
 ```text
