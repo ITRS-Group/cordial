@@ -33,8 +33,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/glamour"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
 )
 
 // VERSION is a semi-global string variable
@@ -65,4 +67,33 @@ func LogInit(prefix string) {
 			return strings.ToUpper(fmt.Sprintf("%s:", i))
 		},
 	}).With().Caller().Logger()
+}
+
+func renderMD(in string) (md string) {
+	tr, err := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(80),
+		glamour.WithEnvironmentConfig(),
+		glamour.WithStylesFromJSONBytes([]byte(`{ "document": { "margin": 0 } }`)),
+	)
+	if err != nil {
+		return in
+	}
+	md, err = tr.Render(in)
+	if err != nil {
+		return in
+	}
+	return
+}
+
+// RenderHelpAsMD updated the given command to use glamour to render the
+// command's Long description as markdown formatted text to an ANSI
+// terminal.
+func RenderHelpAsMD(command *cobra.Command) {
+	// render help with glamour
+	cobra.AddTemplateFunc("md", renderMD)
+	command.SetHelpTemplate(`{{with (or .Long .Short)}}{{. | md | trimTrailingWhitespaces}}
+
+	{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}
+`)
 }

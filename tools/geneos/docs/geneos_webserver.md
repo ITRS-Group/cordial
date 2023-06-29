@@ -6,6 +6,9 @@ Web Dashboard Servers
 geneos webserver
 ```
 
+# `geneos` Web Dashboard Servers
+
+
 ## SEE ALSO
 
 * [geneos](geneos.md)	 - Take control of your Geneos environments

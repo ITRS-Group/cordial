@@ -1,2 +1,2 @@
-# `geneos` Fix Analyser 2 Netprobe Component
+# `geneos` Fix Analysers
 

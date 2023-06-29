@@ -6,8 +6,7 @@ Create new certificates
 geneos tls new [TYPE] [NAME...] [flags]
 ```
 
-By default the `new` command creates new certificates for matching
-instances. It overwrites existing certificates.
+By default the `new` command creates new certificates for matching instances. It overwrites existing certificates.
 
 ## SEE ALSO
 

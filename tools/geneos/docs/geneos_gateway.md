@@ -6,14 +6,51 @@ Gateways
 geneos gateway
 ```
 
-# `geneos` Gateway Component
+# `geneos` Gateways
 
-* Gateway general
+A `gateway` instance is a Geneos Gateway.
 
-The `gateway` component type represents a Geneos Gateway.
+<https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_introduction.htm>
 
-* Configuration
+## Configuration
 
+* `binary`- The Gateway program filename.
+
+  Default: `gateway2.linux_64` 
+
+* `home` - Default: `${GENEOS_HOME}/gateway/gateways/NAME` - This
+  parameter is special in that even though it can be changed it is
+  re-evaluated based on the instance's directory.
+
+* `install` - Default: `${GENEOS_HOME}/packages/gateway` - The
+  installation directory for Gateway releases
+
+* `version` - Default `active_prod` - The version of the Gateway in the
+  the `install` directory above. 
+
+* `program` - Default: `${config:install}/${config:version}/${config:binary}` - The full path
+  to the Gateway executable. The items in the default of the form
+  `${config:NAME}` refer other configuration parameters above.
+
+* `logdir` - Default `` (none)
+
+  If set, it is used as the directory for the log file below. If not set (the default) then the `home` directory of the instance is used.
+
+* `logfile` - Default `gateway.log`
+
+  The file name of the Gateway log file.
+
+* `port` - Default `7039` (but `7038` if TLS is enabled)
+
+* `libpaths` - Default `${config:install}/${config:version}/lib64:/usr/lib64`
+
+* `gatewayname` - Default Instance Name
+
+* `setup` - Default `${config:home}/gateway.setup.xml`
+
+* `autostart` - Default `true`
+
+* `protected` - Default `false`
 
 
 * Gateway templates

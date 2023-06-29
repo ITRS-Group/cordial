@@ -137,8 +137,7 @@ There is one built in `_DEBUG` parameter but you can also add your own to the te
 
 ## `GoSendToMsTeamsChannel` function
 
-This is a function that sends notification messages to one or multiple Microsoft Teams channels, using the incoming webhook API.
-A pre-requisite for using this function is to create an incoming webhook for each target channel in Microsoft Teams.  See following refs for details:
+This is a function that sends notification messages to one or multiple Microsoft Teams channels, using the incoming webhook API. A pre-requisite for using this function is to create an incoming webhook for each target channel in Microsoft Teams.  See following refs for details:
 
 * <https://docs.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook>
 * <https://techcommunity.microsoft.com/t5/microsoft-365-pnp-blog/how-to-configure-and-use-incoming-webhooks-in-microsoft-teams/ba-p/2051118>

@@ -6,9 +6,7 @@ Enable instance
 geneos enable [flags] [TYPE] [NAME...]
 ```
 
-Enable matching instances and, if the `--start`/`-S` options is set then
-start the instance. Only those instances that were disabled are started
-when the `--start`/`-S` flag is used.
+Enable matching instances and, if the `--start`/`-S` options is set then start the instance. Only those instances that were disabled are started when the `--start`/`-S` flag is used.
 
 ### Options
 

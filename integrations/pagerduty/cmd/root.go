@@ -82,8 +82,7 @@ func init() {
 var RootCmd = &cobra.Command{
 	Use:   "pagerduty",
 	Short: "Send a pagerduty event",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
+	Long:  ``,
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
@@ -98,6 +97,7 @@ var RootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	cordial.RenderHelpAsMD(RootCmd)
 	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
