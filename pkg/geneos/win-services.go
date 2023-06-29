@@ -42,7 +42,7 @@ type Service struct {
 type ServiceName struct {
 	Basic                *SingleLineStringVar `xml:"basic>pattern,omitempty" json:"basic,omitempty" yaml:"basic,omitempty"`
 	BasicShowUnavailable bool                 `xml:"basic>showIfUnavailable,omitempty" json:"showIfUnavailable,omitempty" yaml:"showIfUnavailable,omitempty"`
-	Regex                *Regex               `xml:"regex,omitempty" json:"regex,omitempty" yaml:"regex,omitempty"`
+	Regex                *Value               `xml:"regex,omitempty" json:"regex,omitempty" yaml:"regex,omitempty"`
 }
 
 type ServiceDescription struct {
