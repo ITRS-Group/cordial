@@ -71,12 +71,12 @@ func LogInit(prefix string) {
 
 func renderMD(in string) (md string) {
 	tr, err := glamour.NewTermRenderer(
-		// glamour.WithAutoStyle(),
-		// glamour.WithWordWrap(80),
+		glamour.WithStylesFromJSONBytes([]byte(`{ "document": { "margin": 0 } }`)),
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(80),
 		glamour.WithEmoji(),
 		glamour.WithEnvironmentConfig(),
 		// glamour.WithPreservedNewLines(),
-		glamour.WithStylesFromJSONBytes([]byte(`{ "document": { "margin": 0 } }`)),
 	)
 	if err != nil {
 		return in
@@ -96,6 +96,6 @@ func RenderHelpAsMD(command *cobra.Command) {
 	cobra.AddTemplateFunc("md", renderMD)
 	command.SetHelpTemplate(`{{with (or .Long .Short)}}{{. | md | trimTrailingWhitespaces}}
 
-	{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}
+{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}
 `)
 }

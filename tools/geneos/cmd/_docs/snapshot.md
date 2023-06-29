@@ -2,7 +2,7 @@ Snapshot one or more dataviews using the REST Commands API endpoint introduced i
 
 Authentication to the Gateway is through a combination of command line flags and configuration parameters. If either of the parameters `snapshot.username` or `snapshot.password` is defined for the Gateway or globally then this is used as a default unless overridden on the command line by the `-u` and `-P` options. The user is only prompted for a password if it cannot be located in either of the previous places.
 
-CREDENTIALS - also, fix them, gateway:NAME@HOST (if not local)
+<!-- CREDENTIALS - also, fix them, gateway:NAME@HOST (if not local) -->
 
 The output is in JSON format as an array of dataviews, where each dataview is in the format defined in the Gateway documentation at
 
