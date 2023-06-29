@@ -161,21 +161,21 @@ type UnitOfMeasure struct {
 }
 
 type StandardisedFormatting struct {
-	Dataviews *[]StandardisedFormattingDataview `xml:"dataviews>dataview,omitempty" json:",omitempty" yaml:",omitempty"`
+	Dataviews []StandardisedFormattingDataview `xml:"dataviews>dataview,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 type StandardisedFormattingDataview struct {
-	Name      string                            `xml:"name"` // do not omitempty
-	Variables *[]StandardisedFormattingVariable `xml:"variables>variable"`
+	Name      string                           `xml:"name"` // do not omitempty
+	Variables []StandardisedFormattingVariable `xml:"variables>variable"`
 }
 
 type StandardisedFormattingVariable struct {
-	Type          StandardisedFormattingType          `xml:"type"`
-	Applicability StandardisedFormattingApplicability `xml:"applicability"`
+	Type          *StandardisedFormattingType          `xml:"type"`
+	Applicability *StandardisedFormattingApplicability `xml:"applicability"`
 }
 
 type StandardisedFormattingType struct {
-	DateTime StandardisedFormattingDateTime `xml:"dateTime"`
+	DateTime *StandardisedFormattingDateTime `xml:"dateTime"`
 }
 
 type StandardisedFormattingDateTime struct {
@@ -186,9 +186,9 @@ type StandardisedFormattingDateTime struct {
 }
 
 type StandardisedFormattingApplicability struct {
-	Headlines *[]Regex                      `xml:"headlines>pattern,omitempty"`
-	Columns   *[]Regex                      `xml:"columns>pattern,omitempty"`
-	Cells     *[]StandardisedFormattingCell `xml:"cells>cell,omitempty"`
+	Headlines []Regex                      `xml:"headlines>pattern,omitempty"`
+	Columns   []Regex                      `xml:"columns>pattern,omitempty"`
+	Cells     []StandardisedFormattingCell `xml:"cells>cell,omitempty"`
 }
 
 type StandardisedFormattingCell struct {

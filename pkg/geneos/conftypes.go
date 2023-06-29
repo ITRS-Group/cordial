@@ -46,6 +46,7 @@ type Vars struct {
 	StringList    *StringList    `xml:"stringList,omitempty" json:",omitempty" yaml:",omitempty"`
 	NameValueList *NameValueList `xml:"nameValueList,omitempty" json:",omitempty" yaml:",omitempty"`
 	Macro         *Macro         `xml:"macro,omitempty" json:",omitempty" yaml:",omitempty"`
+	Regex         *Regex         `xml:"regex,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 // GetKey satisfies the KeyedObject interface
@@ -358,9 +359,8 @@ func (s *Value) String() (out string) {
 }
 
 type Regex struct {
-	XMLName xml.Name    `xml:"regex" json:"-" yaml:"-"`
-	Regex   string      `xml:"pattern" json:"pattern,omitempty" yaml:"pattern,omitempty"`
-	Flags   *RegexFlags `xml:"flags,omitempty" json:"flags,omitempty" yaml:"flags,omitempty"`
+	Regex string      `xml:"regex" json:"regex,omitempty" yaml:"regex,omitempty"`
+	Flags *RegexFlags `xml:"flags,omitempty" json:"flags,omitempty" yaml:"flags,omitempty"`
 }
 
 type RegexFlags struct {
