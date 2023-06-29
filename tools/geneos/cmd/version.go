@@ -40,6 +40,7 @@ var versionCmdDescription string
 
 var versionCmd = &cobra.Command{
 	Use:          "version",
+	GroupID:      CommandGroupOther,
 	Short:        "Show program version",
 	Long:         versionCmdDescription,
 	SilenceUsage: true,

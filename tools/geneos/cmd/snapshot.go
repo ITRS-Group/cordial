@@ -67,6 +67,7 @@ var snapshotCmdDescription string
 
 var snapshotCmd = &cobra.Command{
 	Use:          "snapshot [flags] [gateway] [NAME] XPATH...",
+	GroupID:      CommandGroupOther,
 	Short:        "Capture a snapshot of each matching dataview",
 	Long:         snapshotCmdDescription,
 	SilenceUsage: true,

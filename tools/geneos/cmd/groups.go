@@ -31,6 +31,7 @@ const (
 	CommandGroupComponents  = "components"
 	CommandGroupCredentials = "credentials"
 	CommandGroupManage      = "manage"
+	CommandGroupOther       = "other"
 	CommandGroupProcess     = "process"
 	CommandGroupSubsystems  = "subsystems"
 	CommandGroupView        = "view"
@@ -60,6 +61,10 @@ func init() {
 	GeneosCmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupCredentials,
 		Title: "Manage Credentials",
+	})
+	GeneosCmd.AddGroup(&cobra.Group{
+		ID:    CommandGroupOther,
+		Title: "Miscellaneous",
 	})
 	GeneosCmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupComponents,
