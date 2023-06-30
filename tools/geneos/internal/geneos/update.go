@@ -32,7 +32,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Update will check and update the base link given in the options If
+// Update will check and update the base link given in the options. If
 // the base link exists then the force option must be used to update it,
 // otherwise it is created as expected. When called from unarchive()
 // this allows new installs to work without explicitly calling update.
