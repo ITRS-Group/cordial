@@ -79,25 +79,26 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 			opts.version = ""
 		}
 		// matching rules for local files
-		filename, err = LatestArchive(LOCAL, opts.archive, opts.version, func(v os.DirEntry) bool {
-			log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
-			check := ct.String()
+		filename, err = LatestArchive(LOCAL, opts.archive, opts.version,
+			func(v os.DirEntry) bool {
+				// log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
+				check := ct.String()
 
-			if ct.ParentType != nil {
-				check = ct.ParentType.String()
-			}
+				if ct.ParentType != nil {
+					check = ct.ParentType.String()
+				}
 
-			if ct.DownloadInfix != "" {
-				check = ct.DownloadInfix
-			}
+				if ct.DownloadInfix != "" {
+					check = ct.DownloadInfix
+				}
 
-			return strings.Contains(v.Name(), check)
-		})
+				return strings.Contains(v.Name(), check)
+			})
 		if err != nil {
 			log.Debug().Err(err).Msg("latest() returned err")
 		}
 		if filename == "" {
-			err = fmt.Errorf("local installation selected but no suitable file found for %s (%w)", ct, ErrInvalidArgs)
+			err = fmt.Errorf("local installation selected but no suitable file found for %s (%w)", ct, ErrNotExist)
 			return
 		}
 		var f io.ReadSeekCloser
@@ -251,7 +252,9 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 		}
 	}
 
-	untar(h, basedir, t, fnname)
+	if err = untar(h, basedir, t, fnname); err != nil {
+		return
+	}
 
 	fmt.Printf("installed %q to %q\n", filename, h.Path(basedir))
 	options = append(options, Version(version))
@@ -537,6 +540,8 @@ func LatestArchive(r *Host, dir, filterString string, filterFunc func(os.DirEntr
 		}
 		ents = ents[:i]
 	}
+
+	log.Debug().Msgf("looking for %q in %s", filterString, dir)
 
 	var versions = make(map[string]*version.Version)
 	var originals = make(map[string]string, len(ents)) // map of processed names to original entries

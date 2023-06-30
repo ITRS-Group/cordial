@@ -137,6 +137,7 @@ geneos install netprobe -b active_dev -U
 			geneos.Force(installCmdUpdate),
 			geneos.LocalOnly(installCmdLocal),
 			geneos.NoSave(installCmdNoSave),
+			geneos.Version(installCmdVersion),
 			geneos.OverrideVersion(installCmdOverride),
 			geneos.Password(installCmdPassword),
 			geneos.Username(installCmdUsername),
@@ -153,7 +154,6 @@ geneos install netprobe -b active_dev -U
 			log.Debug().Msgf("downloading %q version of %s to %s", installCmdVersion, ct, archive)
 			options = append(options,
 				geneos.Archive(archive),
-				geneos.Version(installCmdVersion),
 			)
 			if installCmdSnapshot {
 				installCmdNexus = true
@@ -174,7 +174,6 @@ geneos install netprobe -b active_dev -U
 		if ct != nil || len(args) == 0 {
 			log.Debug().Msgf("installing %q version of %s to %s host(s)", installCmdVersion, ct, cmd.Hostname)
 
-			options = append(options, geneos.Version(installCmdVersion))
 			if installCmdSnapshot {
 				installCmdNexus = true
 				options = append(options, geneos.UseSnapshots())
@@ -206,6 +205,7 @@ func install(h *geneos.Host, ct *geneos.Component, options ...geneos.Options) (e
 		for _, ct := range ct.OrList(geneos.RealComponents()...) {
 			if err = geneos.Install(h, ct, options...); err != nil {
 				if errors.Is(err, fs.ErrExist) {
+					fmt.Printf("%s installation already exists, skipping", ct)
 					err = nil
 					continue
 				}
