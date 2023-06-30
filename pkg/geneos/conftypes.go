@@ -346,6 +346,9 @@ func (v *Value) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error)
 var _ fmt.Stringer = (*Value)(nil)
 
 func (s *Value) String() (out string) {
+	if s == nil {
+		return ""
+	}
 	if s.Var != nil {
 		return "$(" + s.Var.Var + ")"
 	}
@@ -369,7 +372,13 @@ type RegexFlags struct {
 }
 
 func (r *Regex) String() (s string) {
+	if r == nil {
+		return ""
+	}
 	s = fmt.Sprintf("/%s/", r.Regex)
+	if r.Flags == nil {
+		return
+	}
 	if r.Flags.CaseInsensitive != nil && *r.Flags.CaseInsensitive {
 		s += "i"
 	}
@@ -386,6 +395,9 @@ type Host struct {
 }
 
 func (t *Host) String() string {
+	if t == nil {
+		return ""
+	}
 	if t.IPAddress != nil {
 		return t.IPAddress.String()
 	}
@@ -400,6 +412,9 @@ type IPAddress struct {
 }
 
 func (ip *IPAddress) String() string {
+	if ip == nil {
+		return "0.0.0.0"
+	}
 	if len(ip.Octets) != 4 {
 		return ""
 	}
