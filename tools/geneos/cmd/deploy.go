@@ -256,7 +256,11 @@ var deployCmd = &cobra.Command{
 			log.Debug().Msgf("installing on %s for %s", h, pkgct)
 
 			if err = geneos.Install(h, pkgct, options...); err != nil {
-				return
+				if errors.Is(err, fs.ErrExist) {
+					err = nil
+				} else {
+					return
+				}
 			}
 		}
 
