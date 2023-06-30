@@ -118,7 +118,7 @@ COPY --from=build-libs /app/cordial/libraries/libalert/libalert.so /cordial/lib/
 
 RUN set -eux; \
         apk add upx; \
-        upx -qq --best /cordial/bin/*; \
+        upx -q /cordial/bin/*; \
         mv /cordial /cordial-$(cat /VERSION); \
         tar czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION)
 
