@@ -195,7 +195,9 @@ geneos restart
 			if t, _ := command.Flags().GetBool("help"); t {
 				command.RunE = nil
 				// Run cannot be nil
-				command.Run = newcmd.HelpFunc()
+				command.Run = func(cmd *cobra.Command, args []string) {
+					newcmd.Usage()
+				}
 				return nil
 			}
 		}
@@ -203,7 +205,9 @@ geneos restart
 		if t, _ := command.Flags().GetBool("help"); t { // || command.Name() == "help" {
 			command.RunE = nil
 			// Run cannot be nil
-			command.Run = command.HelpFunc()
+			command.Run = func(cmd *cobra.Command, args []string) {
+				command.Usage()
+			}
 			return nil
 		}
 
