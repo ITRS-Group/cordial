@@ -26,6 +26,7 @@ package cmd
 import (
 	_ "embed"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -110,6 +111,16 @@ func init() {
 	// RootCmd.PersistentFlags().SortFlags = false
 	GeneosCmd.Flags().SortFlags = false
 
+	// save orig help func, check if this is a --help call or a help command
+	helpfunc := GeneosCmd.HelpFunc()
+	GeneosCmd.SetHelpFunc(func(c *cobra.Command, s []string) {
+		if b, _ := c.Flags().GetBool("help"); b {
+			c.Usage()
+		} else {
+			helpfunc(c, []string{})
+		}
+	})
+
 	// run initialisers on internal packages, set the executable name
 	geneos.Initialise(Execname)
 }
@@ -165,7 +176,7 @@ geneos restart
 				log.Fatal().Err(err).Msg("")
 			}
 			if newcmd != nil {
-				log.Warn().Msgf("Please note that the %q command has been replaced by %q\n", command.CommandPath(), newcmd.CommandPath())
+				fmt.Printf("*** Please note that the %q command has been replaced by %q\n\n", command.CommandPath(), newcmd.CommandPath())
 				command.RunE = func(cmd *cobra.Command, args []string) error {
 					newcmd.ParseFlags(newargs)
 					parseArgs(newcmd, newargs)
