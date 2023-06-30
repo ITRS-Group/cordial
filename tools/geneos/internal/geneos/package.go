@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net/url"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -440,6 +441,22 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 
 	archive, filename, err := openArchive(ct, options...)
 	if err != nil {
+		if errors.Is(err, ErrNotExist) {
+			var dir bool
+			if opts.archive != "" {
+				u, _ := url.Parse(opts.archive)
+				if u.Scheme == "https" || u.Scheme == "http" {
+					return
+				}
+				if s, err := h.Stat(opts.archive); err == nil && s.IsDir() {
+					dir = true
+				}
+			}
+			if opts.local || (!opts.downloadonly && dir) {
+				fmt.Printf("%s archive not found but local install selected, skipping\n", ct)
+				return nil
+			}
+		}
 		return
 	}
 	defer archive.Close()
@@ -450,7 +467,7 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 
 	if dir, err := unarchive(h, ct, archive, filename, options...); err != nil {
 		if errors.Is(err, fs.ErrExist) {
-			log.Debug().Msgf("%s on %s version %q already exists as %q\n", ct, h, opts.version, dir)
+			log.Debug().Msgf("%s on %s already installed as %q\n", ct, h, dir)
 			return nil
 		}
 		return err
