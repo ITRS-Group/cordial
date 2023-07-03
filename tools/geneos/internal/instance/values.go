@@ -137,11 +137,8 @@ func setMap[V any](c geneos.Instance, items map[string]V, setting string) {
 	c.Config().Set(setting, s)
 }
 
-// setEncoded takes a slice of strings in the form NAME=VALUE. For those
-// that do not have a VALUE the user is prompted if on a terminal, else
-// an error is returned. The VALUE is encoded using the keyfile
-// supplied. If keyfile is invalid then an error is returned.
-func setEncoded(values []string, keyfile config.KeyFile) (params []string, err error) {
+// setEncoded takes a slice of SecureValue.
+func setEncoded(values SecureValues, keyfile config.KeyFile) (params []string, err error) {
 	if len(values) == 0 {
 		return
 	}
@@ -151,27 +148,18 @@ func setEncoded(values []string, keyfile config.KeyFile) (params []string, err e
 	}
 
 	for _, s := range values {
-		var param, ciphertext string
-		var secret *config.Plaintext
-
-		p := strings.SplitN(s, "=", 2)
-		param = p[0]
-		if len(p) == 1 {
-			// prompt
-			secret, err = config.ReadPasswordInput(true, 3, fmt.Sprintf("Enter Secret for %q", param), fmt.Sprintf("Re-enter Secret for %q", param))
-			if err != nil {
-				return
-			}
-		} else {
-			secret = config.NewPlaintext([]byte(p[1]))
+		if s.Ciphertext != "" {
+			continue
 		}
-
-		ciphertext, err = keyfile.Encode(secret, true)
+		if s.Plaintext.IsNil() {
+			log.Fatal().Msg("plaintext is not set")
+		}
+		s.Ciphertext, err = keyfile.Encode(s.Plaintext, true)
 		if err != nil {
 			return
 		}
 
-		params = append(params, param+"="+ciphertext)
+		params = append(params, s.Value+"="+s.Ciphertext)
 	}
 	return
 }
@@ -224,17 +212,37 @@ func setSlice(c geneos.Instance, items []string, setting string, key func(string
 
 // interfaces for pflag Var interface
 
-type SecureValues []string
+type SecureValues []*SecureValue
+
+type SecureValue struct {
+	Value      string
+	Plaintext  *config.Plaintext
+	Ciphertext string
+}
 
 func (p *SecureValues) String() string {
 	return ""
 }
 
+// Set a SecureValue. If there is a "=VALUE" part then this is saved in
+// Plaintext, otherwise only the NAME is set. This allows later
+// processing to either encode the Plaintext into Ciphertext or to
+// prompt the user for a plaintext
 func (p *SecureValues) Set(v string) error {
 	if p == nil {
 		return geneos.ErrInvalidArgs
 	}
-	*p = append(*p, v)
+	s := strings.SplitN(v, "=", 2)
+	if len(s) == 1 {
+		*p = append(*p, &SecureValue{
+			Value: s[0],
+		})
+	} else {
+		*p = append(*p, &SecureValue{
+			Value:     s[0],
+			Plaintext: config.NewPlaintext([]byte(s[1])),
+		})
+	}
 	return nil
 }
 

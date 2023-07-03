@@ -24,6 +24,7 @@ package cmd
 
 import (
 	_ "embed"
+	"fmt"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -73,11 +74,21 @@ geneos set ...
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(cmd *cobra.Command, origargs []string) error {
+	RunE: func(cmd *cobra.Command, origargs []string) (err error) {
 		if len(origargs) == 0 && cmd.Flags().NFlag() == 0 {
 			return cmd.Usage()
 		}
 		ct, args, params := CmdArgsParams(cmd)
+
+		// check if secure args are set, prompt once for each without a supplied value
+
+		if err = promptForSecrets("Parameter", setCmdValues.SecureParams); err != nil {
+			return nil
+		}
+		if err = promptForSecrets("Environment Variable", setCmdValues.SecureEnvs); err != nil {
+			return nil
+		}
+
 		return Set(ct, args, params)
 	},
 }
@@ -92,6 +103,7 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 	cf := c.Config()
 
 	setCmdValues.Params = params
+
 	if err = instance.SetInstanceValues(c, setCmdValues, setCmdKeyfile); err != nil {
 		return
 	}
@@ -106,5 +118,22 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 		)
 	}
 
+	return
+}
+
+func promptForSecrets(prompt string, v instance.SecureValues) (err error) {
+	for _, s := range v {
+		if s.Plaintext.IsNil() {
+			// prompt
+			s.Plaintext, err = config.ReadPasswordInput(true, 3,
+				fmt.Sprintf("Enter Secret for %s %q", prompt, s.Value),
+				fmt.Sprintf("Re-enter Secret for %s %q", prompt, s.Value),
+			)
+			if err != nil {
+				return
+			}
+		}
+		// v[i] = s
+	}
 	return
 }
