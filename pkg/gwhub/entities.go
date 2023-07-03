@@ -60,6 +60,14 @@ func (h *Hub) EntityMetrics(ctx context.Context, request EntityMetricsRequest, r
 	return h.Get(ctx, endpoint, request, response)
 }
 
+// EntitiesSummaryRequest
+type EntitiesSummaryRequest struct {
+	Filter         string   `url:"filter,omitempty"`
+	GroupBy        []string `url:"groupBy,omitempty"`
+	Samples        int      `url:"nrSamples,omitempty"`
+	IncludeDeleted bool     `url:"includeDeleted,omitempty"`
+}
+
 // EntitiesSummaryResponse type
 type EntitiesSummaryResponse []EntitiesSummary
 
@@ -79,8 +87,8 @@ type EntitiesSummariesCount struct {
 }
 
 // EntitiesSummary request
-func (h *Hub) EntitiesSummary(ctx context.Context, response *EntitiesSummaryResponse) (resp *http.Response, err error) {
-	return h.Get(ctx, EntitiesSummaryEndpoint, nil, response)
+func (h *Hub) EntitiesSummary(ctx context.Context, request EntitiesSummaryRequest, response *EntitiesSummaryResponse) (resp *http.Response, err error) {
+	return h.Get(ctx, EntitiesSummaryEndpoint, request, response)
 }
 
 // Entity request
