@@ -64,10 +64,9 @@ func ReadUserInput(format string, args ...any) (input string, err error) {
 // match set. The prompt(s) are suffixed with ": " in both cases. The defaults
 // are "Password" and "Re-enter Password".
 //
-// On error the pw is empty and does not need to be Destory()ed.
+// On error the pw is empty and does not need to be Destroy()ed.
 //
-// If STDIN is a named pipe (not interactive) a syscall.ENOTTY is
-// returned as an error
+// If STDIN is not a terminal then config.ErrNotInteractive is returned.
 func ReadPasswordInput(match bool, maxtries int, prompt ...string) (plaintext *Plaintext, err error) {
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		err = ErrNotInteractive
@@ -124,7 +123,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (plaintext *P
 				plaintext = pw1
 				break
 			}
-			fmt.Println("Passwords do not match")
+			fmt.Println("Entries do not match")
 		}
 		if !matched {
 			err = fmt.Errorf("too many attempts, giving up")

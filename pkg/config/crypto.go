@@ -59,7 +59,7 @@ type Plaintext struct {
 	*memguard.Enclave
 }
 
-// String returns the path to the keyfile as a string
+// String returns the secret as a string
 func (secret *Plaintext) String() string {
 	if secret == nil || secret.Enclave == nil {
 		return ""
