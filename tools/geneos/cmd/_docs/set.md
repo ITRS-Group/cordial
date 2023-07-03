@@ -4,7 +4,11 @@ Set will also update existing parameters, including setting them to empty values
 
 The command supports simple parameters given as `KEY=VALUE` pairs on the command line as well as options for structured or repeatable keys. Each simple parameter uses a case-insensitive `KEY`, unlike the options below.
 
+Parameters can be encoded so that secrets do not appear in plain text in configuration files. Use the `--secure`/`-s` option with a parameter name and optional plaintext value. If no value is given then you will be prompted to enter the secret.
+
 Environment variables can be set using the `--env`/`-e` option, which can be repeated as required, and the argument to the option should be in the format NAME=VALUE. An environment variable NAME will be set or updated for all matching instances under the configuration key `env`. These environment variables are used to construct the start-up environment of the instance. Environments can be added to any component TYPE.
+
+Environment variables can be encoded so that secrets do not appear in plain text in configuration files. Use the `--secureenv`/`-E` option with a variable name and optional plaintext value. If no value is given then you will be prompted to enter the secret.
 
 Include files (only used for Gateway component TYPEs) can be set using the `--include`/`-i` option, which can be repeated. The value must me in the form `PRIORITY:PATH/URL` where priority is a number between 1 and 65534 and the PATH is either an absolute file path or relative to the working directory of the Gateway. Alternatively a URL can be used to refer to a read-only remote include file. As each include file must have a different priority in the Geneos Gateway configuration file, this is the value that should be used as the unique key for updating include files.
 
