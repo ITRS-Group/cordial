@@ -102,9 +102,9 @@ func NoExpand() ExpandOptions {
 }
 
 // NoDecode disables the expansion of encoded values.
-func NoDecode() ExpandOptions {
+func NoDecode(n bool) ExpandOptions {
 	return func(e *expandOptions) {
-		e.nodecode = true
+		e.nodecode = n
 	}
 }
 

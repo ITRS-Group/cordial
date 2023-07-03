@@ -55,8 +55,8 @@ type fileOptions struct {
 	workingdir             string
 }
 
-// FileOptions can be passed to the Load function to
-// influence it's behaviour.
+// FileOptions can be passed to the Load or Save functions to
+// influence behaviour.
 type FileOptions func(*fileOptions)
 
 func evalFileOptions(options ...FileOptions) (c *fileOptions) {
@@ -119,8 +119,8 @@ func evalSaveOptions(options ...FileOptions) (c *fileOptions) {
 }
 
 // DefaultKeyDelimiter sets the default key delimiter for all future
-// calls to config.New() and config.Load(). The default is ".". You "::"
-// if your keys are likely to contain "." such as domains, ipv4
+// calls to config.New() and config.Load(). The default is ".". You can
+// use "::" if your keys are likely to contain "." such as domains, ipv4
 // addresses or version numbers. Use something else if keys are likely
 // to be ipv6 addresses.
 func DefaultKeyDelimiter(delimiter string) {
