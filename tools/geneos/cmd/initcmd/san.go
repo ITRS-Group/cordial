@@ -44,10 +44,10 @@ func init() {
 	sanCmd.Flags().StringVarP(&sanCmdArchive, "archive", "A", "", archiveOptionsText)
 	sanCmd.Flags().StringVarP(&sanCmdOverride, "override", "T", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
 
-	sanCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
-	sanCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", instance.AttributeValuesOptionsText)
-	sanCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", instance.TypeValuesOptionsText)
-	sanCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", instance.VarValuesOptionsText)
+	sanCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", instance.GatewaysOptionstext)
+	sanCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", instance.AttributesOptionsText)
+	sanCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", instance.TypesOptionsText)
+	sanCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", instance.VarsOptionsText)
 
 	sanCmd.Flags().SortFlags = false
 }

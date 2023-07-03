@@ -33,6 +33,8 @@ import (
 
 func init() {
 	configCmd.AddCommand(setCmd)
+
+	// setCmd.Flags().VarP()
 }
 
 //go:embed _docs/set.md
@@ -44,7 +46,6 @@ var setCmd = &cobra.Command{
 	Long:  setCmdDescription,
 	Example: `
 geneos config set geneos="/opt/geneos"
-geneos config set config.rebuild=always
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{

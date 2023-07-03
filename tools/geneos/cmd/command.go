@@ -74,7 +74,7 @@ var commandCmd = &cobra.Command{
 
 func commandInstance(c geneos.Instance, params []string) (err error) {
 	fmt.Printf("=== %s ===\n", c)
-	cmd, env, home := instance.BuildCmd(c)
+	cmd, env, home := instance.BuildCmd(c, true)
 	if cmd != nil {
 		fmt.Println("command line:")
 		fmt.Println("\t", cmd.String())
@@ -92,7 +92,7 @@ func commandInstance(c geneos.Instance, params []string) (err error) {
 }
 
 func commandInstanceJSON(c geneos.Instance, params []string) (result interface{}, err error) {
-	cmd, env, home := instance.BuildCmd(c)
+	cmd, env, home := instance.BuildCmd(c, true)
 	command := &command{
 		Instance: c.Name(),
 		Type:     c.Type().Name,

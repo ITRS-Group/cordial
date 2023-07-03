@@ -8,43 +8,43 @@ A `gateway` instance is a Geneos Gateway.
 
 ### Standard Parameters
 
-These parameters always exist or are synthesised from other settings. 
+Standard parameters always have values, using the defaults if not set in the configuration file.
 
 #### `autostart`
 
-> Default: `true`
-
 Gateway instances are set to be started with the default `geneos start` command. Setting `autostart` to false is different to using `geneos disable` to stop an instance from running. This can be used for instances that only need to be run occasionally or manually, for example a load monitoring Gateway instance.
+
+> Default: `true`
 
 #### `binary`
 
-> Default: `gateway2.linux_64`
-
 The Gateway program filename. Should not be changed.
+
+> Default: `gateway2.linux_64`
 
 #### `gatewayname`
 
-> Default: Instance Name
-
 The Gateway's name can be different to the instance name. This is used in the default templates, under the Operating Environment creared in `instance.setup.xml`
+
+> Default: Instance Name
 
 #### `home`
 
-> Default: `${GENEOS_HOME}/gateway/gateways/NAME`  
-
 This parameter is special in that even though it can be changed it is re-evaluated based on the instance's directory
+
+> Default: `${GENEOS_HOME}/gateway/gateways/NAME`  
 
 #### `install`
 
-> Default: `${GENEOS_HOME}/packages/gateway`
-    
 The installation directory for Gateway releases
 
+> Default: `${GENEOS_HOME}/packages/gateway`
+    
 #### `libpaths`
 
-> Default: `${config:install}/${config:version}/lib64:/usr/lib64`
-
 This parameter is combined with any `LD_LIBRARY_PATH` environment variable.
+
+> Default: `${config:install}/${config:version}/lib64:/usr/lib64`
 
 #### `licdhost`
 
@@ -66,28 +66,27 @@ The file name of the Gateway log file.
 
 #### `port`
 
-> Default: First available from `7038-7039,7100+`
-
 The default port to listen on. The actual default is selected from the first available port in the range defined in `GatewayPortRange` in the program settings.
+
+> Default: First available from `7038-7039,7100+`
 
 #### `program`
 
-> Default: `${config:install}/${config:version}/${config:binary}`
-
 The full path to the Gateway executable. The items in the default of the form `${config:NAME}` refer other configuration parameters above.
+
+> Default: `${config:install}/${config:version}/${config:binary}`
 
 #### `setup`
 
-> Default: `${config:home}/gateway.setup.xml`
-
 The Gateway setup file. This should normally not be changed.
 
+> Default: `${config:home}/gateway.setup.xml`
 
 #### `version`
 
-> Default: `active_prod`
+The version of the Gateway in the the `install` directory above. This is normally the name of a symbolic version which is maintained as a link to a real installation version directory. You can create new symbolic version or tie an instance to an exact installed version.
 
-The version of the Gateway in the the `install` directory above. 
+> Default: `active_prod`
 
 ### Special Parameters
 
@@ -107,7 +106,6 @@ The `rebuild` parameter controls how the instance responds to the `geneos rebuil
 
 The `template` parameter controls which template file is used to build the gateway setup file when `geneos rebuild` is run.`
 
-
 #### `env`
 
 Environment variables set for the start-up of the Gateway are stored as an array of `NAME=VALUE` pairs. They should be set and unset using `geneos set -e` and `geneos unset -e` respectively to ensure consistency.
@@ -122,20 +120,19 @@ A list of include files to be used when building the Gateway setup file from tem
 
 > Default: `false`
 
-
 #### `certificate` / `privatekey`
-
-> Defaults, if created: `gateway.pem` / `key.pem`
 
 If defined these settings are filename or paths to TLS certificate and private key files in PEM format, respectively. When they are defined the Gateway is started with the appropriate secure options, and if the listening port is the default (7039) then it is updated to 7038 if and when the setup files are rebuilt.
     
 With TLS initialised all new Gateway instances are created with certificates and private keys automatically.
 
+> Defaults, if created: `gateway.pem` / `key.pem`
+
 #### `logdir`
 
-> Default: `${config:home}`
-
 If set, it is used as the directory for the log file below. If not set (the default) then the `home` directory of the instance is used.
+
+> Default: `${config:home}`
 
 #### `keyfile`
 

@@ -83,7 +83,7 @@ func unsetInstance(c geneos.Instance, params []string) (err error) {
 	var changed bool
 	log.Debug().Msgf("c %s params %v", c, params)
 
-	changed, err = instance.UnsetValues(c, unsetCmdValues)
+	changed, err = instance.UnsetInstanceValues(c, unsetCmdValues)
 
 	s := c.Config().AllSettings()
 

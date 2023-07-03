@@ -50,7 +50,7 @@ var initCmdDLPassword *config.Plaintext
 
 // initCmdExtras is shared between all `init` commands as they share common
 // flags (for now)
-var initCmdExtras = instance.ExtraConfigValues{}
+var initCmdExtras = instance.SetConfigValues{}
 
 func init() {
 	cmd.GeneosCmd.AddCommand(initCmd)
@@ -84,7 +84,7 @@ func init() {
 	initCmd.PersistentFlags().StringVarP(&initCmdSANTemplate, "santemplate", "s", "", "SAN template file")
 	initCmd.PersistentFlags().StringVarP(&initCmdFloatingTemplate, "floatingtemplate", "f", "", "Floating probe template file")
 
-	initCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", instance.EnvValuesOptionsText)
+	initCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", instance.EnvsOptionsText)
 
 	initCmd.PersistentFlags().SortFlags = false
 	initCmd.Flags().SortFlags = false

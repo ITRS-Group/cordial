@@ -392,40 +392,43 @@ var textJoinFuncs = template.FuncMap{"join": path.Join}
 // struct tags.
 func SetDefaults(c geneos.Instance, name string) (err error) {
 	cf := c.Config()
+	if cf == nil {
+		log.Error().Err(err).Msg("no config found")
+		return fmt.Errorf("no configuration initialised")
+	}
 
 	aliases := c.Type().Aliases
+	root := c.Host().GetString("geneos")
 	cf.SetDefault("name", name)
-	if c.Type().Defaults != nil {
-		// set bootstrap values used by templates
-		root := c.Host().GetString("geneos")
-		for _, s := range c.Type().Defaults {
-			var b bytes.Buffer
-			p := strings.SplitN(s, "=", 2)
-			k, v := p[0], p[1]
-			val, err := template.New(k).Funcs(textJoinFuncs).Parse(v)
-			if err != nil {
-				log.Error().Err(err).Msgf("%s parse error: %s", c, v)
-				return err
-			}
-			if cf == nil {
-				log.Error().Err(err).Msg("no config found")
-			}
-			// add a bootstrap for 'root'
-			settings := cf.AllSettings()
-			settings["root"] = root
-			if err = val.Execute(&b, settings); err != nil {
-				log.Error().Msgf("%s cannot set defaults: %s", c, v)
-				return err
-			}
-			// if default is an alias, resolve it here
-			if aliases != nil {
-				nk, ok := aliases[k]
-				if ok {
-					k = nk
-				}
-			}
-			cf.SetDefault(k, b.String())
+
+	// add a bootstrap for 'root'
+	// data to a template must be renewed each time
+	settings := cf.AllSettings()
+	settings["root"] = root
+
+	// set bootstrap values used by templates
+	for _, s := range c.Type().Defaults {
+		var b bytes.Buffer
+		p := strings.SplitN(s, "=", 2)
+		k, v := p[0], p[1]
+		t, err := template.New(k).Funcs(textJoinFuncs).Parse(v)
+		if err != nil {
+			log.Error().Err(err).Msgf("%s parse error: %s", c, v)
+			return err
 		}
+		if err = t.Execute(&b, settings); err != nil {
+			log.Error().Msgf("%s cannot set defaults: %s", c, v)
+			return err
+		}
+		// if default is an alias, resolve it here
+		if aliases != nil {
+			nk, ok := aliases[k]
+			if ok {
+				k = nk
+			}
+		}
+		settings[k] = b.String()
+		cf.SetDefault(k, b.String())
 	}
 
 	return
@@ -455,142 +458,4 @@ func DeleteSettingFromMap(c geneos.Instance, from map[string]interface{}, key st
 		delete(from, a)
 	}
 	delete(from, key)
-}
-
-// ExtraConfigValues defined the set of non-simple configuration options
-// that can be accepted by various commands
-type ExtraConfigValues struct {
-	Includes   IncludeValues
-	Gateways   GatewayValues
-	Attributes AttributeValues
-	Envs       EnvValues
-	Variables  VarValues
-	Types      TypeValues
-}
-
-// Value types for multiple flags
-
-// SetExtendedValues applies the settings in x to instance c by
-// iterating through the fields and calling the appropriate helper
-// function
-//
-// XXX abstract this for a general case
-func SetExtendedValues(c geneos.Instance, x ExtraConfigValues) (changed bool) {
-	cf := c.Config()
-
-	if SetSlice(c, x.Attributes, "attributes", func(a string) string {
-		return strings.SplitN(a, "=", 2)[0]
-	}) {
-		changed = true
-	}
-
-	changed = SetEnvs(c, x.Envs)
-
-	if SetSlice(c, x.Types, "types", func(a string) string {
-		return a
-	}) {
-		changed = true
-	}
-
-	if len(x.Gateways) > 0 {
-		gateways := cf.GetStringMapString("gateways")
-		for k, v := range x.Gateways {
-			gateways[k] = v
-		}
-		cf.Set("gateways", gateways)
-	}
-
-	if len(x.Includes) > 0 {
-		incs := cf.GetStringMapString("includes")
-		for k, v := range x.Includes {
-			incs[k] = v
-		}
-		cf.Set("includes", incs)
-	}
-
-	if len(x.Variables) > 0 {
-		vars := cf.GetStringMap("variables")
-		convertVars(vars)
-		for k, v := range x.Variables {
-			vars[k] = v
-		}
-		cf.Set("variables", vars)
-	}
-
-	return
-}
-
-// convertVars updates old style variables items to the new style
-func convertVars(vars map[string]interface{}) {
-	for k, v := range vars {
-		switch t := v.(type) {
-		case string:
-			// convert
-			log.Debug().Msgf("convert var %s type %T", k, t)
-			value := strings.Replace(t, ":", ":"+k+"=", 1)
-			nk, nv := GetVarValue(value)
-			delete(vars, k)
-			vars[nk] = nv
-		default:
-			log.Debug().Msgf("leave var %s type %T", k, t)
-			// leave
-		}
-	}
-}
-
-// SetEnvs takes a slice of KEY=VALUE pairs and applies them to the
-// configuration key "envs" for instance c
-func SetEnvs(c geneos.Instance, envs []string) (changed bool) {
-	if SetSlice(c, envs, "env", func(a string) string {
-		return strings.SplitN(a, "=", 2)[0]
-	}) {
-		changed = true
-	}
-	return
-}
-
-// SetSlice sets items in the instance configuration key setting. The
-// key function returns an identifier to use in merge comparisons
-func SetSlice(c geneos.Instance, items []string, setting string, key func(string) string) (changed bool) {
-	cf := c.Config()
-
-	if len(items) == 0 {
-		return
-	}
-
-	newvals := []string{}
-	vals := cf.GetStringSlice(setting)
-
-	// if there are no existing values just set directly and finish
-	if len(vals) == 0 {
-		cf.Set(setting, items)
-		changed = true
-		return
-	}
-
-	// map to store the identifier and the full value for later checks
-	keys := map[string]string{}
-	for _, v := range items {
-		keys[key(v)] = v
-		newvals = append(newvals, v)
-	}
-
-	for _, v := range vals {
-		if w, ok := keys[key(v)]; ok {
-			// exists
-			if v != w {
-				// only changed if different value
-				changed = true
-				continue
-			}
-		} else {
-			// copying the old value is not a change
-			newvals = append(newvals, v)
-		}
-	}
-
-	// check old values against map, copy those that do not exist
-
-	cf.Set(setting, newvals)
-	return
 }

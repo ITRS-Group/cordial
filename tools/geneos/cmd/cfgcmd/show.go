@@ -74,7 +74,7 @@ var showCmd = &cobra.Command{
 				return
 			}
 		} else {
-			if buffer, err = json.MarshalIndent(cf.ExpandAllSettings(config.NoDecode()), "", "    "); err != nil {
+			if buffer, err = json.MarshalIndent(cf.ExpandAllSettings(config.NoDecode(true)), "", "    "); err != nil {
 				return
 			}
 		}

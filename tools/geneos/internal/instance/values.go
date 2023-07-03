@@ -24,30 +24,240 @@ package instance
 
 import (
 	"encoding/hex"
+	"fmt"
 	"strings"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/rs/zerolog/log"
 )
 
+// Value types for multiple flags
+
+// SetConfigValues defined the set of non-simple configuration options
+// that can be accepted by various commands
+type SetConfigValues struct {
+	// Includes are include files for Gateway templates, keyed by priority
+	Includes Includes
+
+	// Gateways are gateway connections for SAN templates
+	Gateways Gateways
+
+	// Attributes are name=value pairs for attributes for Gateway templates
+	Attributes NameValue
+
+	// Environment variables for all instances as name=value pairs
+	Envs NameValue
+
+	// Variables for SAN templates, keyed by variable name
+	Variables Vars
+
+	// Types for SAN templates
+	Types Types
+
+	// Params are key=value pairs set directly in the configuration after checking
+	Params []string
+
+	// SecureParams parameters name[=value] where value will be prompted
+	// for if not supplied and are encoded with a keyfile
+	SecureParams SecureValues
+
+	// SecureEnvs are environment variables in the form name[=value]
+	// where value will be prompted for if not supplied and are encoded
+	// with a keyfile
+	SecureEnvs SecureValues
+}
+
+// SetInstanceValues applies the settings in values to instance c by
+// iterating through the fields and calling the appropriate helper
+// function. SecureEnvs overwrite any set by Envs earlier.
+func SetInstanceValues(c geneos.Instance, values SetConfigValues, keyfile config.KeyFile) (err error) {
+	var secrets []string
+
+	cf := c.Config()
+
+	// only bother with keyfile if we need it later?
+	if len(values.SecureEnvs) > 0 || len(values.SecureParams) > 0 {
+		if keyfile == "" {
+			keyfile = config.KeyFile(cf.GetString("keyfile"))
+		}
+
+		if keyfile == "" {
+			return fmt.Errorf("%s: no keyfile", c)
+		}
+	}
+
+	// update vars, regardless
+	vars := cf.GetStringMap("variables")
+	convertVars(vars)
+	cf.Set("variables", vars)
+
+	cf.SetKeyValues(values.Params...)
+
+	secrets, err = setEncoded(values.SecureParams, keyfile)
+	if err != nil {
+		return
+	}
+	cf.SetKeyValues(secrets...)
+
+	setSlice(c, values.Attributes, "attributes", func(a string) string {
+		return strings.SplitN(a, "=", 2)[0]
+	})
+
+	setSlice(c, values.Envs, "env", func(a string) string {
+		return strings.SplitN(a, "=", 2)[0]
+	})
+
+	secrets, err = setEncoded(values.SecureEnvs, keyfile)
+	if err != nil {
+		return
+	}
+	setSlice(c, secrets, "env", func(a string) string {
+		return strings.SplitN(a, "=", 2)[0]
+	})
+
+	setSlice(c, values.Types, "types", func(a string) string {
+		return a
+	})
+
+	setMap(c, values.Gateways, "gateways")
+	setMap(c, values.Includes, "includes")
+	setMap(c, values.Variables, "variables")
+
+	return
+}
+
+// setMap sets the values in items, which is a map of string to
+// anything, in instance c's setting value setting
+func setMap[V any](c geneos.Instance, items map[string]V, setting string) {
+	s := c.Config().GetStringMap(setting)
+	for k, v := range items {
+		s[k] = v
+	}
+	c.Config().Set(setting, s)
+}
+
+// setEncoded takes a slice of strings in the form NAME=VALUE. For those
+// that do not have a VALUE the user is prompted if on a terminal, else
+// an error is returned. The VALUE is encoded using the keyfile
+// supplied. If keyfile is invalid then an error is returned.
+func setEncoded(values []string, keyfile config.KeyFile) (params []string, err error) {
+	if len(values) == 0 {
+		return
+	}
+
+	if _, _, err = keyfile.Check(false); err != nil {
+		return
+	}
+
+	for _, s := range values {
+		var param, ciphertext string
+		var secret *config.Plaintext
+
+		p := strings.SplitN(s, "=", 2)
+		param = p[0]
+		if len(p) == 1 {
+			// prompt
+			secret, err = config.ReadPasswordInput(true, 3, fmt.Sprintf("Enter Secret for %q", param), fmt.Sprintf("Re-enter Secret for %q", param))
+			if err != nil {
+				return
+			}
+		} else {
+			secret = config.NewPlaintext([]byte(p[1]))
+		}
+
+		ciphertext, err = keyfile.Encode(secret, true)
+		if err != nil {
+			return
+		}
+
+		params = append(params, param+"="+ciphertext)
+	}
+	return
+}
+
+// setSlice sets items view merging in the instance configuration key
+// setting. Anything with the key returned by the key function is overwritten.
+func setSlice(c geneos.Instance, items []string, setting string, key func(string) string) (changed bool) {
+	cf := c.Config()
+
+	if len(items) == 0 {
+		return
+	}
+
+	newvals := []string{}
+	vals := cf.GetStringSlice(setting)
+
+	// if there are no existing values just set directly and finish
+	if len(vals) == 0 {
+		cf.Set(setting, items)
+		changed = true
+		return
+	}
+
+	// map to store the identifier and the full value for later checks
+	keys := map[string]string{}
+	for _, v := range items {
+		keys[key(v)] = v
+		newvals = append(newvals, v)
+	}
+
+	for _, v := range vals {
+		if w, ok := keys[key(v)]; ok {
+			// exists
+			if v != w {
+				// only changed if different value
+				changed = true
+				continue
+			}
+		} else {
+			// copying the old value is not a change
+			newvals = append(newvals, v)
+		}
+	}
+
+	// check old values against map, copy those that do not exist
+
+	cf.Set(setting, newvals)
+	return
+}
+
 // interfaces for pflag Var interface
 
-// IncludeValues is a map of include file priority to path
+type SecureValues []string
+
+func (p *SecureValues) String() string {
+	return ""
+}
+
+func (p *SecureValues) Set(v string) error {
+	if p == nil {
+		return geneos.ErrInvalidArgs
+	}
+	*p = append(*p, v)
+	return nil
+}
+
+func (p *SecureValues) Type() string {
+	return "NAME[=VALUE]"
+}
+
+// Includes is a map of include file priority to path
 // include file - priority:url|path
-type IncludeValues map[string]string
+type Includes map[string]string
 
 // IncludeValuesOptionsText is the default help text for command to use
 // for options setting include files
 const IncludeValuesOptionsText = "An include file in the format `PRIORITY:[PATH|URL]`\n(Repeat as required, gateway only)"
 
 // String is the string method for the IncludeValues type
-func (i *IncludeValues) String() string {
+func (i *Includes) String() string {
 	return ""
 }
 
-func (i *IncludeValues) Set(value string) error {
+func (i *Includes) Set(value string) error {
 	if *i == nil {
-		*i = IncludeValues{}
+		*i = Includes{}
 	}
 	e := strings.SplitN(value, ":", 2)
 	priority := "100"
@@ -63,22 +273,22 @@ func (i *IncludeValues) Set(value string) error {
 	return nil
 }
 
-func (i *IncludeValues) Type() string {
+func (i *Includes) Type() string {
 	return "PRIORITY:{URL|PATH}"
 }
 
 // gateway - name:port
-type GatewayValues map[string]string
+type Gateways map[string]string
 
-const GatewayValuesOptionstext = "A gateway connection in the format HOSTNAME:PORT\n(Repeat as required, san and floating only)"
+const GatewaysOptionstext = "A gateway connection in the format HOSTNAME:PORT\n(Repeat as required, san and floating only)"
 
-func (i *GatewayValues) String() string {
+func (i *Gateways) String() string {
 	return ""
 }
 
-func (i *GatewayValues) Set(value string) error {
+func (i *Gateways) Set(value string) error {
 	if *i == nil {
-		*i = GatewayValues{}
+		*i = Gateways{}
 	}
 	e := strings.SplitN(value, ":", 2)
 	val := "7039"
@@ -94,62 +304,45 @@ func (i *GatewayValues) Set(value string) error {
 	return nil
 }
 
-func (i *GatewayValues) Type() string {
+func (i *Gateways) Type() string {
 	return "HOSTNAME:PORT"
 }
 
 // attribute - name=value
-type AttributeValues []string
+type NameValue []string
 
-const AttributeValuesOptionsText = "An attribute in the format NAME=VALUE\n(Repeat as required, san only)"
+const AttributesOptionsText = "An attribute in the format NAME=VALUE\n(Repeat as required, san only)"
+const EnvsOptionsText = "An environment variable for instance start-up\n(Repeat as required)"
 
-func (i *AttributeValues) String() string {
+func (i *NameValue) String() string {
 	return ""
 }
 
-func (i *AttributeValues) Set(value string) error {
+func (i *NameValue) Set(value string) error {
 	*i = append(*i, value)
 	return nil
 }
 
-func (i *AttributeValues) Type() string {
+func (i *NameValue) Type() string {
 	return "NAME=VALUE"
 }
 
 // attribute - name=value
-type TypeValues []string
+type Types []string
 
-const TypeValuesOptionsText = "A type NAME\n(Repeat as required, san only)"
+const TypesOptionsText = "A type NAME\n(Repeat as required, san only)"
 
-func (i *TypeValues) String() string {
+func (i *Types) String() string {
 	return ""
 }
 
-func (i *TypeValues) Set(value string) error {
+func (i *Types) Set(value string) error {
 	*i = append(*i, value)
 	return nil
 }
 
-func (i *TypeValues) Type() string {
+func (i *Types) Type() string {
 	return "NAME"
-}
-
-// env NAME=VALUE - string slice
-type EnvValues []string
-
-const EnvValuesOptionsText = "An environment variable for instance start-up\n(Repeat as required)"
-
-func (i *EnvValues) String() string {
-	return ""
-}
-
-func (i *EnvValues) Set(value string) error {
-	*i = append(*i, value)
-	return nil
-}
-
-func (i *EnvValues) Type() string {
-	return "NAME=VALUE"
 }
 
 // variables - [TYPE:]NAME=VALUE
@@ -158,15 +351,33 @@ type VarValue struct {
 	Name  string
 	Value string
 }
-type VarValues map[string]VarValue
+type Vars map[string]VarValue
 
-const VarValuesOptionsText = "A variable in the format [TYPE:]NAME=VALUE\n(Repeat as required, san only)"
+// convertVars updates old style variables items to the new style
+func convertVars(vars map[string]interface{}) {
+	for k, v := range vars {
+		switch t := v.(type) {
+		case string:
+			// convert
+			log.Debug().Msgf("convert var %s type %T", k, t)
+			value := strings.Replace(t, ":", ":"+k+"=", 1)
+			nk, nv := getVarValue(value)
+			delete(vars, k)
+			vars[nk] = nv
+		default:
+			log.Debug().Msgf("leave var %s type %T", k, t)
+			// leave
+		}
+	}
+}
 
-func (i *VarValues) String() string {
+const VarsOptionsText = "A variable in the format [TYPE:]NAME=VALUE\n(Repeat as required, san only)"
+
+func (i *Vars) String() string {
 	return ""
 }
 
-func GetVarValue(in string) (key string, value VarValue) {
+func getVarValue(in string) (key string, value VarValue) {
 	var t, k, v string
 
 	e := strings.SplitN(in, ":", 2)
@@ -208,59 +419,59 @@ func GetVarValue(in string) (key string, value VarValue) {
 	return
 }
 
-func (i *VarValues) Set(value string) error {
+func (i *Vars) Set(value string) error {
 	// var t, k, v string
 
 	if *i == nil {
-		*i = VarValues{}
+		*i = Vars{}
 	}
 
-	k, v := GetVarValue(value)
+	k, v := getVarValue(value)
 	(*i)[k] = v
 	return nil
 }
 
-func (i *VarValues) Type() string {
+func (i *Vars) Type() string {
 	return "[TYPE:]NAME=VALUE"
 }
 
 type UnsetConfigValues struct {
-	Keys       UnsetCmdValues
-	Includes   UnsetCmdValues
-	Gateways   UnsetCmdValues
-	Attributes UnsetCmdValues
-	Envs       UnsetCmdValues
-	Variables  UnsetCmdHexKeyed
-	Types      UnsetCmdValues
+	Attributes UnsetValues
+	Envs       UnsetValues
+	Gateways   UnsetValues
+	Includes   UnsetValues
+	Keys       UnsetValues
+	Types      UnsetValues
+	Variables  UnsetVars
 }
 
 // XXX abstract this for a general case
-func UnsetValues(c geneos.Instance, x UnsetConfigValues) (changed bool, err error) {
-	if UnsetMap(c, "gateways", x.Gateways) {
+func UnsetInstanceValues(c geneos.Instance, x UnsetConfigValues) (changed bool, err error) {
+	if unsetMap(c, "gateways", x.Gateways) {
 		changed = true
 	}
 
-	if UnsetMap(c, "includes", x.Includes) {
+	if unsetMap(c, "includes", x.Includes) {
 		changed = true
 	}
 
-	if UnsetMapHex(c, "variables", x.Variables) {
+	if unsetMapHex(c, "variables", x.Variables) {
 		changed = true
 	}
 
-	if UnsetSlice(c, "attributes", x.Attributes, func(a, b string) bool {
+	if unsetSlice(c, "attributes", x.Attributes, func(a, b string) bool {
 		return strings.HasPrefix(a, b+"=")
 	}) {
 		changed = true
 	}
 
-	if UnsetSlice(c, "env", x.Envs, func(a, b string) bool {
+	if unsetSlice(c, "env", x.Envs, func(a, b string) bool {
 		return strings.HasPrefix(a, b+"=")
 	}) {
 		changed = true
 	}
 
-	if UnsetSlice(c, "types", x.Types, func(a, b string) bool {
+	if unsetSlice(c, "types", x.Types, func(a, b string) bool {
 		return a == b
 	}) {
 		changed = true
@@ -269,7 +480,7 @@ func UnsetValues(c geneos.Instance, x UnsetConfigValues) (changed bool, err erro
 	return
 }
 
-func UnsetMap(c geneos.Instance, key string, items UnsetCmdValues) (changed bool) {
+func unsetMap(c geneos.Instance, key string, items UnsetValues) (changed bool) {
 	cf := c.Config()
 
 	x := cf.GetStringMap(key)
@@ -283,7 +494,7 @@ func UnsetMap(c geneos.Instance, key string, items UnsetCmdValues) (changed bool
 	return
 }
 
-func UnsetMapHex(c geneos.Instance, key string, items UnsetCmdHexKeyed) (changed bool) {
+func unsetMapHex(c geneos.Instance, key string, items UnsetVars) (changed bool) {
 	cf := c.Config()
 
 	x := cf.GetStringMap(key)
@@ -300,7 +511,7 @@ func UnsetMapHex(c geneos.Instance, key string, items UnsetCmdHexKeyed) (changed
 	return
 }
 
-func UnsetSlice(c geneos.Instance, key string, items []string, cmp func(string, string) bool) (changed bool) {
+func unsetSlice(c geneos.Instance, key string, items []string, cmp func(string, string) bool) (changed bool) {
 	cf := c.Config()
 
 	newvals := []string{}
@@ -320,30 +531,30 @@ OUTER:
 }
 
 // unset Var flags take just the key, either a name or a priority for include files
-type UnsetCmdValues []string
+type UnsetValues []string
 
-func (i *UnsetCmdValues) String() string {
+func (i *UnsetValues) String() string {
 	return ""
 }
 
-func (i *UnsetCmdValues) Set(value string) error {
+func (i *UnsetValues) Set(value string) error {
 	// discard any values accidentally passed with '=value'
 	value = strings.SplitN(value, "=", 2)[0]
 	*i = append(*i, value)
 	return nil
 }
 
-func (i *UnsetCmdValues) Type() string {
+func (i *UnsetValues) Type() string {
 	return "SETTING"
 }
 
-type UnsetCmdHexKeyed []string
+type UnsetVars []string
 
-func (i *UnsetCmdHexKeyed) String() string {
+func (i *UnsetVars) String() string {
 	return ""
 }
 
-func (i *UnsetCmdHexKeyed) Set(value string) error {
+func (i *UnsetVars) Set(value string) error {
 	// trim any values accidentally passed with '=value'
 	value = strings.SplitN(value, "=", 2)[0]
 	value = hex.EncodeToString([]byte(value))
@@ -351,7 +562,7 @@ func (i *UnsetCmdHexKeyed) Set(value string) error {
 	return nil
 }
 
-func (i *UnsetCmdHexKeyed) Type() string {
+func (i *UnsetVars) Type() string {
 	return "SETTING"
 }
 

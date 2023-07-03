@@ -51,7 +51,7 @@ func Start(c geneos.Instance) (err error) {
 		return fmt.Errorf("%q %w", binary, err)
 	}
 
-	cmd, env, home := BuildCmd(c)
+	cmd, env, home := BuildCmd(c, false)
 	if cmd == nil {
 		return fmt.Errorf("BuildCmd() returned nil")
 	}

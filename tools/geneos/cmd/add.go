@@ -43,7 +43,7 @@ var addCmdPort uint16
 var addCmdImportFiles instance.ImportFiles
 var addCmdKeyfile config.KeyFile
 
-var addCmdExtras = instance.ExtraConfigValues{}
+var addCmdExtras = instance.SetConfigValues{}
 
 func init() {
 	GeneosCmd.AddCommand(addCmd)
@@ -51,7 +51,7 @@ func init() {
 	addCmd.Flags().BoolVarP(&addCmdStart, "start", "S", false, "Start new instance after creation")
 	addCmd.Flags().BoolVarP(&addCmdLogs, "log", "l", false, "Follow the logs after starting the instance.\nImplies -S to start the instance")
 	addCmd.Flags().Uint16VarP(&addCmdPort, "port", "p", 0, "Override the default port selection")
-	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", instance.EnvValuesOptionsText)
+	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", instance.EnvsOptionsText)
 	addCmd.Flags().StringVarP(&addCmdBase, "base", "b", "active_prod", "Select the base version for the\ninstance")
 
 	addCmd.Flags().Var(&addCmdKeyfile, "keyfile", "Keyfile `PATH`")
@@ -62,10 +62,10 @@ func init() {
 	addCmd.Flags().VarP(&addCmdImportFiles, "import", "I", "import file(s) to instance. DEST defaults to the base\nname of the import source or if given it must be\nrelative to and below the instance directory\n(Repeat as required)")
 
 	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
-	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
-	addCmd.Flags().VarP(&addCmdExtras.Attributes, "attribute", "a", instance.AttributeValuesOptionsText)
-	addCmd.Flags().VarP(&addCmdExtras.Types, "type", "t", instance.TypeValuesOptionsText)
-	addCmd.Flags().VarP(&addCmdExtras.Variables, "variable", "v", instance.VarValuesOptionsText)
+	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", instance.GatewaysOptionstext)
+	addCmd.Flags().VarP(&addCmdExtras.Attributes, "attribute", "a", instance.AttributesOptionsText)
+	addCmd.Flags().VarP(&addCmdExtras.Types, "type", "t", instance.TypesOptionsText)
+	addCmd.Flags().VarP(&addCmdExtras.Variables, "variable", "v", instance.VarsOptionsText)
 
 	addCmd.Flags().SortFlags = false
 }
@@ -96,7 +96,7 @@ geneos add netprobe infraprobe12 --start --log
 }
 
 // AddInstance add an instance of ct the the option extra configuration values addCmdExtras
-func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, items []string, args ...string) (err error) {
+func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, items []string, args ...string) (err error) {
 	// check validity and reserved words here
 	name := args[0]
 
@@ -138,7 +138,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.ExtraConfigValues, 
 		}
 	}
 
-	instance.SetExtendedValues(c, addCmdExtras)
+	instance.SetInstanceValues(c, addCmdExtras, "")
 	cf.SetKeyValues(items...)
 	log.Debug().Msgf("savedir=%s", instance.ParentDirectory(c))
 	if err = cf.Save(c.Type().String(),
