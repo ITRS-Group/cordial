@@ -37,7 +37,7 @@ import (
 // otherwise it is created as expected. When called from unarchive()
 // this allows new installs to work without explicitly calling update.
 func Update(h *Host, ct *Component, options ...Options) (err error) {
-	opts := EvalOptions(options...)
+	opts := evalOptions(options...)
 	if ct == nil {
 		for _, t := range RealComponents() {
 			if err = Update(h, t, options...); err != nil && !errors.Is(err, os.ErrNotExist) {

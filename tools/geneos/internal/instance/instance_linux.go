@@ -61,14 +61,14 @@ func GetPID(c geneos.Instance) (pid int, err error) {
 }
 
 func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime time.Time, err error) {
-	pid, err = GetPID(c)
-	if err == nil {
-		var st os.FileInfo
-		st, err = c.Host().Stat(fmt.Sprintf("/proc/%d", pid))
-		s := c.Host().GetFileOwner(st)
-		return pid, s.Uid, s.Gid, st.ModTime(), err
+	if pid, err = GetPID(c); err != nil {
+		return
 	}
-	return 0, 0, 0, time.Time{}, os.ErrProcessDone
+
+	var st os.FileInfo
+	st, err = c.Host().Stat(fmt.Sprintf("/proc/%d", pid))
+	s := c.Host().GetFileOwner(st)
+	return pid, s.Uid, s.Gid, st.ModTime(), err
 }
 
 var tcpfiles = []string{
@@ -122,7 +122,7 @@ func ListeningPorts(c geneos.Instance) (ports []int) {
 		return
 	}
 
-	sockets := Sockets(c)
+	sockets := sockets(c)
 	if len(sockets) == 0 {
 		return
 	}
@@ -142,8 +142,8 @@ func ListeningPorts(c geneos.Instance) (ports []int) {
 }
 
 // AllListeningPorts returns a sorted list of all listening TCP ports on
-// host h between min and max (inclusive). If min or max is -1 then it
-// is ignored
+// host h between min and max (inclusive). If min or max is -1 then no
+// limit is imposed.
 func AllListeningPorts(h *geneos.Host, min, max int) (ports []int) {
 	var err error
 
@@ -222,10 +222,10 @@ func Files(c geneos.Instance) (openfiles map[int]OpenFiles) {
 	return
 }
 
-// Sockets returns a map[int]int of file descriptor to socket inode for all open
+// sockets returns a map[int]int of file descriptor to socket inode for all open
 // files for the process running as the instance. An empty map is
 // returned if the process cannot be found.
-func Sockets(c geneos.Instance) (links map[int]int) {
+func sockets(c geneos.Instance) (links map[int]int) {
 	var inode int
 	links = make(map[int]int)
 	pid, err := GetPID(c)

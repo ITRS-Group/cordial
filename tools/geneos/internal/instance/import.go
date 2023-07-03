@@ -37,8 +37,12 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-// ImportFile
-func ImportFile(h *geneos.Host, dir string, source string, options ...geneos.Options) (filename string, err error) {
+// ImportFile copies the file from source to the directory dir on host
+// h. The destination filename can be given as a "NAME=" prefix in
+// source. If no filename is given then it is derived from the source.
+//
+// source can be a path to a file or a http/https URL.
+func ImportFile(h *geneos.Host, dir string, source string) (filename string, err error) {
 	var backuppath string
 	var from io.ReadCloser
 
@@ -159,6 +163,7 @@ func ImportFile(h *geneos.Host, dir string, source string, options ...geneos.Opt
 	return
 }
 
+// ImportCommons copies a file to an instance common directory.
 func ImportCommons(r *geneos.Host, ct *geneos.Component, common string, params []string) (filename string, err error) {
 	if ct == nil || !ct.RealComponent {
 		err = geneos.ErrNotSupported

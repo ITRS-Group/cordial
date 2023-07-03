@@ -75,7 +75,7 @@ var fnmap = template.FuncMap{
 }
 
 // CreateConfigFromTemplate loads templates from TYPE/templates/[tmpl]* and
-// parse it using the instance data write it out to a single file. If tmpl is
+// parse them, using the instance data write it out to a single file. If tmpl is
 // empty, load all files
 func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defaultTemplate []byte) (err error) {
 	var out io.WriteCloser
@@ -165,108 +165,6 @@ func LoadConfig(c geneos.Instance) (err error) {
 		return fmt.Errorf("no configuration files for %s in %s: %w", c, c.Home(), os.ErrNotExist)
 	}
 	log.Debug().Msgf("config loaded for %s from %s %q", c, r.String(), cf.ConfigFileUsed())
-	return
-}
-
-// ComponentFilepath returns an absolute path to a file named for the
-// component type of the instance with any extensions joined using ".", e.g.
-// is c is a netprobe instance then
-//
-//	path := instance.ComponentFilepath(c, "xml", "orig")
-//
-// will return /path/to/netprobe/netprobe.xml.orig
-//
-// If no extensions are passed then the default us to add an extension of the
-// instance.ConfigType, which defaults to "json", e.g. using the same instance
-// as above:
-//
-//	path := instance.ComponentPath(c)
-//
-// will return /path/to/netprobe/netprobe.json
-func ComponentFilepath(c geneos.Instance, extensions ...string) string {
-	return path.Join(c.Home(), ComponentFilename(c, extensions...))
-}
-
-// ComponentFilename returns the filename for the component named by
-// the instance similarly to ComponentFilepath
-func ComponentFilename(c geneos.Instance, extensions ...string) string {
-	parts := []string{c.Type().String()}
-	if len(extensions) > 0 {
-		parts = append(parts, extensions...)
-	} else {
-		parts = append(parts, ConfigFileType())
-	}
-	return strings.Join(parts, ".")
-}
-
-// Filepath returns the full path to the file named by the configuration
-// item given in 'name'. If the configuration item is already an
-// absolute path then it is returned as-is, otherwise it is joined with
-// the home directory of the instance and returned. No indication is
-// given if the path is a valid local one or on a remote host.
-func Filepath(c geneos.Instance, name string) string {
-	cf := c.Config()
-
-	if cf == nil {
-		return ""
-	}
-	filename := cf.GetString(name)
-	if filename == "" {
-		return ""
-	}
-
-	if filepath.IsAbs(filename) {
-		return filename
-	}
-
-	return path.Join(c.Home(), filename)
-}
-
-// Filename returns the basename of the file named by the configuration
-// item given in 'name'. Returns an empty string if the configuration
-// item doesn't exist or is not set.
-func Filename(c geneos.Instance, name string) (filename string) {
-	cf := c.Config()
-
-	if cf == nil {
-		return
-	}
-	// return empty and not a "."
-	filename = filepath.Base(cf.GetString(name))
-	if filename == "." {
-		filename = ""
-	}
-	return
-}
-
-// Filepaths returns the full path of the files named by the
-// configuration items given in 'names'. Returns an empty slice if the
-// instance is not valid or empty strings for each name if the
-// configuration item doesn't exist or is not set.
-func Filepaths(c geneos.Instance, names ...string) (filenames []string) {
-	cf := c.Config()
-
-	if cf == nil {
-		return
-	}
-
-	dir := HomeDir(c)
-
-	for _, name := range names {
-		if filepath.IsAbs(name) {
-			filenames = append(filenames, name)
-		} else {
-			if !cf.IsSet(name) {
-				continue
-			}
-			filename := filepath.Join(dir, cf.GetString(name))
-			// return empty and not a "."
-			if filename == "." {
-				filename = ""
-			}
-			filenames = append(filenames, filename)
-		}
-	}
 	return
 }
 
@@ -432,22 +330,6 @@ func SetDefaults(c geneos.Instance, name string) (err error) {
 	}
 
 	return
-}
-
-// ConfigFileType returns the current primary configuration file
-// extension
-func ConfigFileType() (conftype string) {
-	conftype = config.GetString("configtype")
-	if conftype == "" {
-		conftype = "json"
-	}
-	return
-}
-
-// ConfigFileTypes contains a list of supported configuration file
-// extensions
-func ConfigFileTypes() []string {
-	return []string{"json", "yaml"}
 }
 
 // DeleteSettingFromMap removes key from the map from and if it is

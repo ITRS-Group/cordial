@@ -36,15 +36,15 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/tlscmd"
 
 	// components from internals for documentation
-	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/ca3"
-	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fa2"
-	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/fileagent"
-	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/floating"
-	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/gateway"
-	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/licd"
-	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/netprobe"
-	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/san"
-	_ "github.com/itrs-group/cordial/tools/geneos/internal/instance/webserver"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ca3"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/fileagent"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/floating"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/gateway"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/licd"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/san"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/webserver"
 
 	"github.com/spf13/cobra"
 )

@@ -62,6 +62,6 @@ var copyCmd = &cobra.Command{
 			return geneos.ErrInvalidArgs
 		}
 
-		return instance.CopyInstance(ct, args[0], args[1], false)
+		return instance.Copy(ct, args[0], args[1], false)
 	},
 }

@@ -26,9 +26,7 @@ THE SOFTWARE.
 package geneos
 
 import (
-	"encoding/json"
 	"errors"
-	"os"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -75,7 +73,7 @@ var ChainCertFile string
 // If the directory is not empty and the Force() option is not passed
 // then nothing is changed
 func Init(h *Host, options ...Options) (err error) {
-	opts := EvalOptions(options...)
+	opts := evalOptions(options...)
 	if opts.geneosdir == "" {
 		log.Fatal().Msg("homedir not set")
 		// default or error
@@ -132,21 +130,17 @@ func Init(h *Host, options ...Options) (err error) {
 	return
 }
 
+// Initialise is called from the main command initialisation
+func Initialise(app string) {
+	execname = app
+	SigningCertFile = execname
+	ChainCertFile = execname + "-chain.pem"
+	RootComponent.RegisterComponent(nil)
+}
+
 // Root return the absolute path to the local Geneos installation. If
 // run on an older installation it may return the value from the legacy
 // configuration item `itrshome` if `geneos` is not set.
 func Root() string {
 	return config.GetString(execname, config.Default(config.GetString("itrshome")))
-}
-
-// ReadLocalConfigFile reads a local configuration file without the need
-// for a host connection, primarily for bootstrapping
-func ReadLocalConfigFile(file string, config interface{}) (err error) {
-	jsonFile, err := os.ReadFile(file)
-	if err != nil {
-		return
-	}
-
-	// dec := json.NewDecoder(jsonFile)
-	return json.Unmarshal(jsonFile, &config)
 }

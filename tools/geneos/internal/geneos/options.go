@@ -47,9 +47,10 @@ type geneosOptions struct {
 	version      string
 }
 
+// Options can be passed to various function and influence behaviour
 type Options func(*geneosOptions)
 
-func EvalOptions(options ...Options) (d *geneosOptions) {
+func evalOptions(options ...Options) (d *geneosOptions) {
 	// defaults
 	d = &geneosOptions{
 		// source:       filepath.Join(Root(), "packages", "downloads"),

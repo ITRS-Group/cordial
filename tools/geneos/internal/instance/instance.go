@@ -56,7 +56,9 @@ type Instance struct {
 	Env             []string          `json:",omitempty"`
 }
 
-// IsA returns true if instance c has a type that is component if the type name.
+// IsA returns true if instance c has a type that is component of the
+// type name. If name is not a known component type then false is
+// returned without checking the instance.
 func IsA(c geneos.Instance, name string) bool {
 	ct := geneos.FindComponent(name)
 	if ct == nil {
@@ -113,43 +115,7 @@ func ValidInstanceName(name string) (ok bool) {
 	return
 }
 
-// Abs returns an absolute path to file prepended with the instance
-// working directory if file is not already an absolute path.
-func Abs(c geneos.Instance, file string) (result string) {
-	file = filepath.Clean(file)
-	if filepath.IsAbs(file) {
-		return
-	}
-	return path.Join(c.Home(), file)
-}
-
-// RemovePaths removes all files and directories in paths, each file or directory is separated by ListSeperator
-func RemovePaths(c geneos.Instance, paths string) (err error) {
-	list := filepath.SplitList(paths)
-	for _, p := range list {
-		// clean path, error on absolute or parent paths, like 'import'
-		// walk globbed directories, remove everything
-		p, err = geneos.CleanRelativePath(p)
-		if err != nil {
-			return fmt.Errorf("%s %w", p, err)
-		}
-		// glob here
-		m, err := c.Host().Glob(path.Join(c.Home(), p))
-		if err != nil {
-			return err
-		}
-		for _, f := range m {
-			if err = c.Host().RemoveAll(f); err != nil {
-				log.Error().Err(err).Msg("")
-				continue
-			}
-			fmt.Printf("removed %s\n", c.Host().Path(f))
-		}
-	}
-	return
-}
-
-// LogFile returns the fulle path to the log file for the instance.
+// LogFile returns the full path to the log file for the instance.
 //
 // XXX logdir = LogD relative to Home or absolute
 func LogFile(c geneos.Instance) (logfile string) {
@@ -390,40 +356,6 @@ func NextPort(r *geneos.Host, ct *geneos.Component) uint16 {
 	return 0
 }
 
-// BaseVersion returns the absolute path of the base package directory
-// for the instance c. No longer references the instance "install" parameter.
-func BaseVersion(c geneos.Instance) (dir string) {
-	return c.Host().Filepath("packages", c.Type().String(), c.Config().GetString("version"))
-}
-
-// Version returns the base package name and the underlying package
-// version for the instance c. If base is not a link, then base is also
-// returned as the symlink. If there are more than 10 levels of symlink
-// then return symlink set to "loop-detected" and err set to
-// syscall.ELOOP to prevent infinite loops.
-func Version(c geneos.Instance) (base string, version string, err error) {
-	cf := c.Config()
-	base = cf.GetString("version")
-	pkgtype := cf.GetString("pkgtype")
-	ct := c.Type()
-	if pkgtype != "" {
-		ct = geneos.FindComponent(pkgtype)
-	}
-	version, err = geneos.CurrentVersion(c.Host(), ct, cf.GetString("version"))
-	return
-}
-
-// AtLeastVersion returns true if the installed version for instance c
-// is version or greater. If the version of the instance is somehow
-// unparseable then this returns false.
-func AtLeastVersion(c geneos.Instance, version string) bool {
-	_, iv, err := Version(c)
-	if err != nil {
-		return false
-	}
-	return geneos.CompareVersion(iv, version) >= 0
-}
-
 // ForAll calls the supplied function for each matching instance. It
 // prints any returned error on STDOUT and the only error returned is
 // os.ErrNotExist if there are no matching instances.
@@ -497,74 +429,6 @@ func ForAllWithResults(ct *geneos.Component, hostname string, fn func(geneos.Ins
 		return nil, os.ErrNotExist
 	}
 	return results, nil
-}
-
-// ParentDirectory returns the first directory that contains the
-// instance from:
-//
-//   - The one configured for the instance factory and accessed via Home()
-//   - In the default component instances directory (component.InstanceDir)
-//   - If the instance's component type has a parent component then in the
-//     legacy instances directory
-//
-// The function has to accept an interface as it is called from inside
-// the factory methods for each component type
-func ParentDirectory(i interface{}) (dir string) {
-	c, ok := i.(geneos.Instance)
-	if !ok {
-		log.Debug().Msg("i is not a geneos instance")
-		return ""
-	}
-	h := c.Host()
-
-	// first, does the configured home exist as a dir?
-	if c.Home() != "" {
-		dir = filepath.Dir(c.Home())
-		// but check the configured home, not the parent
-		if d, err := h.Stat(c.Home()); err == nil && d.IsDir() {
-			log.Debug().Msgf("default home %s as defined", dir)
-			return
-		}
-	}
-
-	// second, does the instance exist in the default instances dir?
-	dir = c.Type().InstancesDir(h)
-	if dir != "" {
-		if d, err := h.Stat(dir); err == nil && d.IsDir() {
-			log.Debug().Msgf("instanceDir home %s selected", dir)
-			return
-		}
-	}
-
-	// third, look in any "legacy" location, but only if parent type is
-	// non nil
-	if c.Type().ParentType != nil {
-		dir = filepath.Join(h.Filepath(c.Type(), c.Type().String()+"s"))
-		if dir != "" {
-			if d, err := h.Stat(dir); err == nil && d.IsDir() {
-				log.Debug().Msgf("new home %s from legacy", dir)
-				return
-			}
-		}
-	}
-
-	log.Debug().Msgf("default %s", dir)
-	return dir
-}
-
-// HomeDir return the validated-to-exist directory for the instance
-func HomeDir(c geneos.Instance) (home string) {
-	ct := c.Type()
-	h := c.Host()
-
-	if c.Config() == nil {
-		return ""
-	}
-	home = c.Config().GetString("home")
-	if _, err := h.Stat(home); err != nil {
-		home = h.Filepath(ct, ct.String()+"s", c.Name())
-	}
-	return
 }
 
 // AllNames returns a slice of all instance names for a given component.
@@ -705,40 +569,4 @@ func Enable(c geneos.Instance) (err error) {
 		return nil
 	}
 	return c.Host().Remove(disableFile)
-}
-
-// IsDisabled returns true if the instance c is disabled.
-func IsDisabled(c geneos.Instance) bool {
-	d := ComponentFilepath(c, geneos.DisableExtension)
-	if f, err := c.Host().Stat(d); err == nil && f.Mode().IsRegular() {
-		return true
-	}
-	return false
-}
-
-// IsProtected returns true if instance c is marked protected
-func IsProtected(c geneos.Instance) bool {
-	return c.Config().GetBool("protected")
-}
-
-// IsRunning returns true if the instance is running
-func IsRunning(c geneos.Instance) bool {
-	_, err := GetPID(c)
-	return err != os.ErrProcessDone
-}
-
-// IsAutoStart returns true is the instance is set to autostart
-func IsAutoStart(c geneos.Instance) bool {
-	return c.Config().GetBool("autostart")
-}
-
-// SharedPath returns the full path a directory or file in the instances
-// component type shared directory joined to any parts subs - the last
-// element can be a filename. If the instance is not loaded then "." is
-// returned for the current directory.
-func SharedPath(c geneos.Instance, subs ...interface{}) string {
-	if !c.Loaded() {
-		return "."
-	}
-	return c.Type().SharedPath(c.Host(), subs...)
 }
