@@ -1,6 +1,6 @@
 Set one or more configuration parameters for matching instances.
 
-Set will also allow changes to existing parameters including setting them to empty values. To remove a parameter use the `geneos unset` command instead.
+Set will also update existing parameters, including setting them to empty values. To remove a parameter use the `geneos unset` command instead.
 
 The command supports simple parameters given as `KEY=VALUE` pairs on the command line as well as options for structured or repeatable keys. Each simple parameter uses a case-insensitive `KEY`, unlike the options below.
 

@@ -24,7 +24,6 @@ package cmd
 
 import (
 	_ "embed"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -34,23 +33,29 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-func init() {
-	GeneosCmd.AddCommand(setCmd)
-
-	setCmd.Flags().VarP(&setCmdExtras.Envs, "env", "e", instance.EnvValuesOptionsText)
-	setCmd.Flags().VarP(&setCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
-	setCmd.Flags().VarP(&setCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
-	setCmd.Flags().VarP(&setCmdExtras.Attributes, "attribute", "a", instance.AttributeValuesOptionsText)
-	setCmd.Flags().VarP(&setCmdExtras.Types, "type", "t", instance.TypeValuesOptionsText)
-	setCmd.Flags().VarP(&setCmdExtras.Variables, "variable", "v", instance.VarValuesOptionsText)
-
-	setCmd.Flags().SortFlags = false
-}
-
-var setCmdExtras = instance.ExtraConfigValues{}
+var setCmdKeyfile config.KeyFile
+var setCmdValues = instance.SetConfigValues{}
 
 //go:embed _docs/set.md
 var setCmdDescription string
+
+func init() {
+	GeneosCmd.AddCommand(setCmd)
+
+	setCmd.Flags().VarP(&setCmdKeyfile, "keyfile", "k", "keyfile to use for encoding secrets\ndefault is instance configured keyfile")
+
+	setCmd.Flags().VarP(&setCmdValues.SecureParams, "secure", "s", "encode a secret for NAME, prompt if VALUE not supplied, using a keyfile")
+
+	setCmd.Flags().VarP(&setCmdValues.Envs, "env", "e", instance.EnvsOptionsText)
+	setCmd.Flags().VarP(&setCmdValues.SecureEnvs, "secureenv", "E", "encode a secret for env var NAME, prompt if VALUE not supplied, using a keyfile")
+	setCmd.Flags().VarP(&setCmdValues.Includes, "include", "i", instance.IncludeValuesOptionsText)
+	setCmd.Flags().VarP(&setCmdValues.Gateways, "gateway", "g", instance.GatewaysOptionstext)
+	setCmd.Flags().VarP(&setCmdValues.Attributes, "attribute", "a", instance.AttributesOptionsText)
+	setCmd.Flags().VarP(&setCmdValues.Types, "type", "t", instance.TypesOptionsText)
+	setCmd.Flags().VarP(&setCmdValues.Variables, "variable", "v", instance.VarsOptionsText)
+
+	setCmd.Flags().SortFlags = false
+}
 
 var setCmd = &cobra.Command{
 	Use:     "set [flags] [TYPE] [NAME...] [KEY=VALUE...]",
@@ -60,6 +65,7 @@ var setCmd = &cobra.Command{
 	Example: `
 geneos set gateway MyGateway licdsecure=false
 geneos set infraprobe -e JAVA_HOME=/usr/lib/java8/jre -e TNS_ADMIN=/etc/ora/network/admin
+geneos set -p secret netprobe local1
 geneos set ...
 `,
 	SilenceUsage: true,
@@ -85,18 +91,9 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 
 	cf := c.Config()
 
-	// XXX add backward compatibility ?
-	instance.SetExtendedValues(c, setCmdExtras)
-
-	for _, arg := range params {
-		s := strings.SplitN(arg, "=", 2)
-		if len(s) != 2 {
-			log.Error().Err(geneos.ErrInvalidArgs).Msgf("ignoring %q", arg)
-			continue
-		}
-		// you can set an alias here, the write functions do the
-		// translations
-		cf.Set(s[0], s[1])
+	setCmdValues.Params = params
+	if err = instance.SetInstanceValues(c, setCmdValues, setCmdKeyfile); err != nil {
+		return
 	}
 
 	if cf.Type == "rc" {

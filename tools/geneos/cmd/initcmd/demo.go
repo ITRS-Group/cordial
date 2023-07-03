@@ -40,7 +40,7 @@ func init() {
 	initCmd.AddCommand(demoCmd)
 
 	demoCmd.Flags().StringVarP(&demoCmdArchive, "archive", "A", "", archiveOptionsText)
-	demoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewayValuesOptionstext)
+	demoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewaysOptionstext)
 	demoCmd.Flags().SortFlags = false
 }
 

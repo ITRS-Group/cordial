@@ -647,7 +647,9 @@ func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name 
 // BuildCmd gathers the path to the binary, arguments and any environment variables
 // for an instance and returns an exec.Cmd, almost ready for execution. Callers
 // will add more details such as working directories, user and group etc.
-func BuildCmd(c geneos.Instance) (cmd *exec.Cmd, env []string, home string) {
+//
+// If nodecode is set then any secure environment vars are not decoded, so OK for display
+func BuildCmd(c geneos.Instance, nodecode bool) (cmd *exec.Cmd, env []string, home string) {
 	binary := Filepath(c, "program")
 
 	args, env, home := c.Command()
@@ -655,7 +657,7 @@ func BuildCmd(c geneos.Instance) (cmd *exec.Cmd, env []string, home string) {
 	opts := strings.Fields(c.Config().GetString("options"))
 	args = append(args, opts...)
 
-	envs := c.Config().GetStringSlice("Env")
+	envs := c.Config().GetStringSlice("Env", config.NoDecode(nodecode))
 	libs := []string{}
 	if c.Config().GetString("libpaths") != "" {
 		libs = append(libs, c.Config().GetString("libpaths"))

@@ -48,7 +48,7 @@ var deployCmdArchive, deployCmdVersion, deployCmdOverride string
 var deployCmdPassword *config.Plaintext
 var deployCmdImportFiles instance.ImportFiles
 var deployCmdKeyfile config.KeyFile
-var deployCmdExtras = instance.ExtraConfigValues{}
+var deployCmdExtras = instance.SetConfigValues{}
 
 func init() {
 	GeneosCmd.AddCommand(deployCmd)
@@ -82,12 +82,12 @@ func init() {
 
 	deployCmd.Flags().VarP(&deployCmdImportFiles, "import", "I", "import file(s) to instance. DEST defaults to the base\nname of the import source or if given it must be\nrelative to and below the instance directory\n(Repeat as required)")
 
-	deployCmd.Flags().VarP(&deployCmdExtras.Envs, "env", "e", instance.EnvValuesOptionsText)
+	deployCmd.Flags().VarP(&deployCmdExtras.Envs, "env", "e", instance.EnvsOptionsText)
 	deployCmd.Flags().VarP(&deployCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
-	deployCmd.Flags().VarP(&deployCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
-	deployCmd.Flags().VarP(&deployCmdExtras.Attributes, "attribute", "a", instance.AttributeValuesOptionsText)
-	deployCmd.Flags().VarP(&deployCmdExtras.Types, "type", "t", instance.TypeValuesOptionsText)
-	deployCmd.Flags().VarP(&deployCmdExtras.Variables, "variable", "v", instance.VarValuesOptionsText)
+	deployCmd.Flags().VarP(&deployCmdExtras.Gateways, "gateway", "g", instance.GatewaysOptionstext)
+	deployCmd.Flags().VarP(&deployCmdExtras.Attributes, "attribute", "a", instance.AttributesOptionsText)
+	deployCmd.Flags().VarP(&deployCmdExtras.Types, "type", "t", instance.TypesOptionsText)
+	deployCmd.Flags().VarP(&deployCmdExtras.Variables, "variable", "v", instance.VarsOptionsText)
 
 	deployCmd.Flags().SortFlags = false
 }
@@ -301,7 +301,7 @@ var deployCmd = &cobra.Command{
 			}
 		}
 
-		instance.SetExtendedValues(c, deployCmdExtras)
+		instance.SetInstanceValues(c, deployCmdExtras, "")
 		cf.SetKeyValues(params...)
 		// update home so save is correct
 		cf.Set("home", filepath.Join(instance.ParentDirectory(c), c.Name()))

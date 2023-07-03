@@ -44,7 +44,7 @@ func init() {
 	allCmd.MarkFlagRequired("licence")
 
 	allCmd.Flags().StringVarP(&allCmdArchive, "archive", "A", "", archiveOptionsText)
-	allCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewayValuesOptionstext)
+	allCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewaysOptionstext)
 
 	allCmd.Flags().SortFlags = false
 }

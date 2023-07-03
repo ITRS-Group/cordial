@@ -44,10 +44,10 @@ func init() {
 	floatingCmd.Flags().StringVarP(&floatingCmdArchive, "archive", "A", "", archiveOptionsText)
 	floatingCmd.Flags().StringVarP(&floatingCmdOverride, "override", "T", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
 
-	floatingCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", instance.GatewayValuesOptionstext)
-	floatingCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", instance.AttributeValuesOptionsText)
-	floatingCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", instance.TypeValuesOptionsText)
-	floatingCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", instance.VarValuesOptionsText)
+	floatingCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", instance.GatewaysOptionstext)
+	floatingCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", instance.AttributesOptionsText)
+	floatingCmd.Flags().VarP(&initCmdExtras.Types, "type", "t", instance.TypesOptionsText)
+	floatingCmd.Flags().VarP(&initCmdExtras.Variables, "variable", "v", instance.VarsOptionsText)
 
 	floatingCmd.Flags().SortFlags = false
 }

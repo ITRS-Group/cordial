@@ -173,7 +173,7 @@ func showValidateInstance(c geneos.Instance, params []string) (result interface{
 		defer c.Host().Remove(tempfile)
 
 		// run a gateway with -dump-xml and consume the result, discard the heading
-		cmd, env, home := instance.BuildCmd(c)
+		cmd, env, home := instance.BuildCmd(c, false)
 		// replace args with a more limited set
 		cmd.Args = []string{
 			cmd.Path,
@@ -226,7 +226,7 @@ func showInstanceConfig(c geneos.Instance, params []string) (result interface{},
 	}
 	if c.Type().String() == "gateway" && len(params) > 0 && params[0] == "merge" {
 		// run a gateway with -dump-xml and consume the result, discard the heading
-		cmd, env, home := instance.BuildCmd(c)
+		cmd, env, home := instance.BuildCmd(c, false)
 		// replace args with a more limited set
 		cmd.Args = []string{
 			cmd.Path,
@@ -280,7 +280,7 @@ func showInstance(c geneos.Instance, params []string) (result interface{}, err e
 		}
 	}
 
-	as := nv.ExpandAllSettings(config.NoDecode())
+	as := nv.ExpandAllSettings(config.NoDecode(true))
 	if showCmdRaw {
 		as = nv.AllSettings()
 	}
