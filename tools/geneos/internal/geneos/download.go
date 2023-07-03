@@ -88,7 +88,7 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 // returned. If any other stage fails then err is returned from the
 // underlying package.
 func Open(source string, options ...Options) (from io.ReadCloser, filename string, err error) {
-	opts := EvalOptions(options...)
+	opts := evalOptions(options...)
 
 	u, err := url.Parse(source)
 	if err != nil {

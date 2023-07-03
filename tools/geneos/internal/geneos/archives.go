@@ -61,7 +61,7 @@ type downloadauth struct {
 func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filename string, err error) {
 	var resp *http.Response
 
-	opts := EvalOptions(options...)
+	opts := evalOptions(options...)
 
 	if !opts.downloadonly && opts.archive != "" {
 		body, filename, err = Open(opts.archive, options...)
@@ -182,7 +182,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 func unarchive(h *Host, ct *Component, archive io.Reader, filename string, options ...Options) (dir string, err error) {
 	var version string
 
-	opts := EvalOptions(options...)
+	opts := evalOptions(options...)
 
 	if opts.override == "" {
 		var ctFromFile *Component
@@ -344,7 +344,7 @@ func untar(h *Host, dir string, t io.Reader, stripPrefix func(string) string) (e
 func openRemoteArchive(ct *Component, options ...Options) (filename string, resp *http.Response, err error) {
 	var source string
 
-	opts := EvalOptions(options...)
+	opts := evalOptions(options...)
 
 	// cannot fetch partial versions for el8 - restriction on download search interface
 	platform := ""

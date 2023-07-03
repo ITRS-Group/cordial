@@ -31,9 +31,46 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var execname string
+
+// initDirs is a map of component type name to a slice of directories to create
+var initDirs = make(map[string][]string)
+
+// slice of registered component types for indirect calls
+// this should actually become an Interface
+var registeredComponents = make(componentsMap)
+
+const RootComponentName = "root"
+
+const sharedSuffix = "_shared"
+
+var RootComponent = Component{
+	Name:             RootComponentName,
+	RelatedTypes:     nil,
+	ComponentMatches: []string{"any"},
+	RealComponent:    false,
+	DownloadBase:     DownloadBases{Resources: "", Nexus: ""},
+	GlobalSettings: map[string]string{
+		// Root directory for all operations
+		execname: "",
+
+		// Root URL for all downloads of software archives
+		config.Join("download", "url"): "https://resources.itrsgroup.com/download/latest/",
+
+		// Path List separated additions to the reserved names list, over and above
+		// any words matched by FindComponent()
+		"reservednames": "",
+
+		"privatekeys": "id_rsa,id_ecdsa,id_ecdsa_sk,id_ed25519,id_ed25519_sk,id_dsa",
+	},
+	Directories: []string{
+		"packages/downloads",
+	},
+}
+
 // definitions and access methods for the generic component types
 
-// type ComponentType string
+type componentsMap map[string]*Component
 
 // DownloadBases define the base names for the download archived for
 // standard and nexus downloads
@@ -96,82 +133,6 @@ type Instance interface {
 	Rebuild(bool) error
 }
 
-const RootComponentName = "root"
-
-var RootComponent = Component{
-	Name:             RootComponentName,
-	RelatedTypes:     nil,
-	ComponentMatches: []string{"any"},
-	RealComponent:    false,
-	DownloadBase:     DownloadBases{Resources: "", Nexus: ""},
-	GlobalSettings: map[string]string{
-		// Root directory for all operations
-		execname: "",
-
-		// Root URL for all downloads of software archives
-		config.Join("download", "url"): "https://resources.itrsgroup.com/download/latest/",
-
-		// Path List separated additions to the reserved names list, over and above
-		// any words matched by FindComponent()
-		"reservednames": "",
-
-		"privatekeys": "id_rsa,id_ecdsa,id_ecdsa_sk,id_ed25519,id_ed25519_sk,id_dsa",
-	},
-	Directories: []string{
-		"packages/downloads",
-	},
-}
-
-var execname string
-
-// initDirs is a map of component type name to a slice of directories to create
-var initDirs = make(map[string][]string)
-
-// Initialise is called from the main command initialisation
-func Initialise(app string) {
-	execname = app
-	SigningCertFile = execname
-	ChainCertFile = execname + "-chain.pem"
-	RootComponent.RegisterComponent(nil)
-}
-
-type componentsMap map[string]*Component
-
-// slice of registered component types for indirect calls
-// this should actually become an Interface
-var registeredComponents = make(componentsMap)
-
-// AllComponents returns a slice of all registered components, include
-// the Root component type
-func AllComponents() (cts []*Component) {
-	for _, c := range registeredComponents {
-		cts = append(cts, c)
-	}
-	return
-}
-
-// RealComponents returns a slice of all registered components that have
-// their `RealComponent` field set to true.
-func RealComponents() (cts []*Component) {
-	for _, c := range registeredComponents {
-		if c.RealComponent {
-			cts = append(cts, c)
-		}
-	}
-	return
-}
-
-// UsesKeyFiles returns a slice of registered components that use key
-// files
-func UsesKeyFiles() (cts []*Component) {
-	for _, c := range registeredComponents {
-		if c.UsesKeyfiles {
-			cts = append(cts, c)
-		}
-	}
-	return
-}
-
 // RegisterComponent adds the given Component ct to the internal list of
 // component types. The factory parameter is the Component's New()
 // function, which has to be passed in to avoid initialisation loops as
@@ -190,21 +151,6 @@ func (ct *Component) RegisterComponent(factory func(string) Instance) {
 
 func (ct Component) String() (name string) {
 	return ct.Name
-}
-
-// FindComponent returns the component type by iterating over all
-// the names registered by components and returning as soon as any value
-// matches. The comparison is case-insensitive. nil is returned if the
-// component does not match any known name.
-func FindComponent(component string) *Component {
-	for _, v := range registeredComponents {
-		for _, m := range v.ComponentMatches {
-			if strings.EqualFold(m, component) {
-				return v
-			}
-		}
-	}
-	return nil
 }
 
 // IsA returns true is any of the names match the any of the names
@@ -267,8 +213,6 @@ func (ct *Component) InstancesDirs(h *Host) (dirs []string) {
 	return
 }
 
-const sharedSuffix = "_shared"
-
 // SharedPath return the shared directory for the component on host h
 // joined to subdirectories and file given as subs.
 func (ct *Component) SharedPath(h *Host, subs ...interface{}) string {
@@ -297,4 +241,50 @@ func (ct *Component) OrList(cts ...*Component) []*Component {
 	}
 
 	return cts
+}
+
+// AllComponents returns a slice of all registered components, include
+// the Root component type
+func AllComponents() (cts []*Component) {
+	for _, c := range registeredComponents {
+		cts = append(cts, c)
+	}
+	return
+}
+
+// RealComponents returns a slice of all registered components that have
+// their `RealComponent` field set to true.
+func RealComponents() (cts []*Component) {
+	for _, c := range registeredComponents {
+		if c.RealComponent {
+			cts = append(cts, c)
+		}
+	}
+	return
+}
+
+// UsesKeyFiles returns a slice of registered components that use key
+// files
+func UsesKeyFiles() (cts []*Component) {
+	for _, c := range registeredComponents {
+		if c.UsesKeyfiles {
+			cts = append(cts, c)
+		}
+	}
+	return
+}
+
+// FindComponent returns the component type by iterating over all
+// the names registered by components and returning as soon as any value
+// matches. The comparison is case-insensitive. nil is returned if the
+// component does not match any known name.
+func FindComponent(component string) *Component {
+	for _, v := range registeredComponents {
+		for _, m := range v.ComponentMatches {
+			if strings.EqualFold(m, component) {
+				return v
+			}
+		}
+	}
+	return nil
 }

@@ -24,7 +24,10 @@ package instance
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"path"
+	"path/filepath"
 
 	"github.com/rs/zerolog/log"
 
@@ -75,6 +78,32 @@ func Clean(c geneos.Instance, full bool) (err error) {
 	log.Debug().Msgf("%s fully cleaned", c)
 	if stopped {
 		err = Start(c)
+	}
+	return
+}
+
+// RemovePaths removes all files and directories in paths, each file or directory is separated by ListSeperator
+func RemovePaths(c geneos.Instance, paths string) (err error) {
+	list := filepath.SplitList(paths)
+	for _, p := range list {
+		// clean path, error on absolute or parent paths, like 'import'
+		// walk globbed directories, remove everything
+		p, err = geneos.CleanRelativePath(p)
+		if err != nil {
+			return fmt.Errorf("%s %w", p, err)
+		}
+		// glob here
+		m, err := c.Host().Glob(path.Join(c.Home(), p))
+		if err != nil {
+			return err
+		}
+		for _, f := range m {
+			if err = c.Host().RemoveAll(f); err != nil {
+				log.Error().Err(err).Msg("")
+				continue
+			}
+			fmt.Printf("removed %s\n", c.Host().Path(f))
+		}
 	}
 	return
 }

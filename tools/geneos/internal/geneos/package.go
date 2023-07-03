@@ -37,8 +37,9 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/go-version"
-	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/rs/zerolog/log"
+
+	"github.com/itrs-group/cordial/pkg/host"
 )
 
 // list of platform in release package names
@@ -435,7 +436,7 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 
 	options = append(options, PlatformID(h.GetString(h.Join("osinfo", "platform_id"))))
 
-	opts := EvalOptions(options...)
+	opts := evalOptions(options...)
 
 	// open and unarchive if given a tar.gz
 

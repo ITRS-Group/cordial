@@ -26,12 +26,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/rs/zerolog/log"
+
+	"github.com/itrs-group/cordial/pkg/host"
 )
 
 // CleanRelativePath given a path returns a cleaned version. If the
-// cleaning results in and absolute path or one that tries to ascend the
+// cleaning results in an absolute path or one that tries to ascend the
 // tree then return an error
 func CleanRelativePath(path string) (clean string, err error) {
 	clean = filepath.Clean(path)

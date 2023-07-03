@@ -35,7 +35,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-// CopyInstance copies the instance named source to destination for
+// Copy copies the instance named source to destination for
 // component type ct. If the move argument is true then the source is
 // deleted after the copy.
 //
@@ -48,7 +48,7 @@ import (
 // files and directories normally.
 //
 // If ct is nil that all component types are considered
-func CopyInstance(ct *geneos.Component, source, destination string, move bool) (err error) {
+func Copy(ct *geneos.Component, source, destination string, move bool) (err error) {
 	var stopped, done bool
 	if source == destination {
 		return fmt.Errorf("source and destination must have different names and/or locations")
@@ -75,7 +75,7 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 		}
 		// they both exist, now loop through all instances on src and try to move/copy
 		for _, name := range AllNames(sHost, ct) {
-			if err = CopyInstance(ct, name, destination, move); err != nil {
+			if err = Copy(ct, name, destination, move); err != nil {
 				fmt.Println("Error:", err)
 			}
 		}
@@ -84,7 +84,7 @@ func CopyInstance(ct *geneos.Component, source, destination string, move bool) (
 
 	if ct == nil {
 		for _, t := range geneos.RealComponents() {
-			if err = CopyInstance(t, source, destination, move); err != nil {
+			if err = Copy(t, source, destination, move); err != nil {
 				log.Debug().Err(err).Msg("")
 				continue
 			}
