@@ -18,7 +18,6 @@ For an explanation of the various configuration parameters see the main document
 
 ```bash
 geneos config set geneos="/opt/geneos"
-geneos config set config.rebuild=always
 
 ```
 
