@@ -14,82 +14,155 @@ A `gateway` instance is a Geneos Gateway.
 
 ## Configuration
 
-* `binary`
+### Standard Parameters
 
-    > Default: `gateway2.linux_64`
+Standard parameters always have values, using the defaults if not set in the configuration file.
 
-    The Gateway program filename. Should not be changed.
+#### `autostart`
 
-* `home`  
+Gateway instances are set to be started with the default `geneos start` command. Setting `autostart` to false is different to using `geneos disable` to stop an instance from running. This can be used for instances that only need to be run occasionally or manually, for example a load monitoring Gateway instance.
 
-    > Default: `${GENEOS_HOME}/gateway/gateways/NAME`  
+> Default: `true`
 
-    This parameter is special in that even though it can be changed it is re-evaluated based on the instance's directory
+#### `binary`
 
-* `install`
+The Gateway program filename. Should not be changed.
 
-    > Default: `${GENEOS_HOME}/packages/gateway`
+> Default: `gateway2.linux_64`
+
+#### `gatewayname`
+
+The Gateway's name can be different to the instance name. This is used in the default templates, under the Operating Environment creared in `instance.setup.xml`
+
+> Default: Instance Name
+
+#### `home`
+
+This parameter is special in that even though it can be changed it is re-evaluated based on the instance's directory
+
+> Default: `${GENEOS_HOME}/gateway/gateways/NAME`  
+
+#### `install`
+
+The installation directory for Gateway releases
+
+> Default: `${GENEOS_HOME}/packages/gateway`
     
-    The installation directory for Gateway releases
+#### `libpaths`
 
-* `version`
+This parameter is combined with any `LD_LIBRARY_PATH` environment variable.
 
-    > Default: `active_prod`
+> Default: `${config:install}/${config:version}/lib64:/usr/lib64`
 
-    The version of the Gateway in the the `install` directory above. 
+#### `licdhost`
 
-* `program`
+> Default: `localhost`
 
-    > Default: `${config:install}/${config:version}/${config:binary}`
+#### `licdport`
 
-    The full path to the Gateway executable. The items in the default of the form `${config:NAME}` refer other configuration parameters above.
+> Default: `7041`
 
-* `logdir`
+#### `logfile`
 
-    > Default: none
+> Default: `gateway.log`
 
-    If set, it is used as the directory for the log file below. If not set (the default) then the `home` directory of the instance is used.
+The file name of the Gateway log file.
 
-* `logfile`
+#### `name`
 
-    > Default: `gateway.log`
+> Default: Instance Name
 
-    The file name of the Gateway log file.
+#### `port`
 
-* `port`
+The default port to listen on. The actual default is selected from the first available port in the range defined in `GatewayPortRange` in the program settings.
 
-    > Default: First available from `7038-7039,7100+`
+> Default: First available from `7038-7039,7100+`
 
-    The default port to listen on. The actual default is selected from the first available port in the range defined in `GatewayPortRange` in the program settings.
+#### `program`
 
-* `libpaths`
+The full path to the Gateway executable. The items in the default of the form `${config:NAME}` refer other configuration parameters above.
 
-    > Default: `${config:install}/${config:version}/lib64:/usr/lib64`
+> Default: `${config:install}/${config:version}/${config:binary}`
 
-    This parameter is combined with any `LD_LIBRARY_PATH` environment variable.
+#### `setup`
 
-* `gatewayname`
+The Gateway setup file. This should normally not be changed.
 
-    > Default: Instance Name
+> Default: `${config:home}/gateway.setup.xml`
 
-* `setup`
+#### `version`
 
-    > Default: `${config:home}/gateway.setup.xml`
+The version of the Gateway in the the `install` directory above. This is normally the name of a symbolic version which is maintained as a link to a real installation version directory. You can create new symbolic version or tie an instance to an exact installed version.
 
-    The Gateway setup file.
+> Default: `active_prod`
 
-* `autostart`
+### Special Parameters
 
-    > Default: `true`
+#### `config`
 
-* `protected`
+Parameters under the `config` section are related to the instance configuration handling and are not used for control of the Gateway environment.
 
-    > Default: `false`
+##### `rebuild`
 
+> Default: `initial`
+
+The `rebuild` parameter controls how the instance responds to the `geneos rebuild` command. See below for more details.
+
+##### `template`
+
+> Default: `gateway.setup.xml.gotmpl`
+
+The `template` parameter controls which template file is used to build the gateway setup file when `geneos rebuild` is run.`
+
+#### `env`
+
+Environment variables set for the start-up of the Gateway are stored as an array of `NAME=VALUE` pairs. They should be set and unset using `geneos set -e` and `geneos unset -e` respectively to ensure consistency.
+
+#### `includes`
+
+A list of include files to be used when building the Gateway setup file from templates. See below.
+
+### Other Parameters
+
+#### `protected`
+
+> Default: `false`
+
+#### `certificate` / `privatekey`
+
+If defined these settings are filename or paths to TLS certificate and private key files in PEM format, respectively. When they are defined the Gateway is started with the appropriate secure options, and if the listening port is the default (7039) then it is updated to 7038 if and when the setup files are rebuilt.
+    
+With TLS initialised all new Gateway instances are created with certificates and private keys automatically.
+
+> Defaults, if created: `gateway.pem` / `key.pem`
+
+#### `logdir`
+
+If set, it is used as the directory for the log file below. If not set (the default) then the `home` directory of the instance is used.
+
+> Default: `${config:home}`
+
+#### `keyfile`
+
+#### `prevkeyfile`
+
+#### `usekeyfile`
+
+#### `user`
+
+#### `options`
+
+Additional options to pass on the command line to the Gateway
+
+#### `licdsecure`
 
 ## Gateway templates
 
-When creating a new Gateway instance a default `gateway.setup.xml` file is created from the template(s) installed in the `gateway/templates` directory. By default this file is only created once but can be re-created using the `rebuild` command with the `-F` option if required. In turn this can also be protected against by setting the Gateway configuration setting `config::rebuild` to `never`.
+When creating a new Gateway instance two setup files are created.
+
+An `instance.setup.xml` include file is created and contains settings synthesised from the instance configuration. It is always updated when using the `geneos rebuild` command. This file is rebuilt regardless of the `config::rebuild` parameter.
+
+A default `gateway.setup.xml` file is also created from the template(s) installed in the `gateway/templates` directory. By default this file is only created once but can be re-created using the `rebuild` command with the `-F` option if required. In turn this can also be protected against by setting the Gateway configuration setting `config::rebuild` to `never`.
 
 ### Gateway variables for templates
 
