@@ -99,7 +99,7 @@ func renewInstanceCert(c geneos.Instance, _ []string) (err error) {
 
 	// read existing key or create a new one
 	existingKey, _ := instance.ReadKey(c)
-	cert, key, err := config.CreateCertKey(&template, intrCert, intrKey, existingKey)
+	cert, key, err := config.CreateCertificateAndKey(&template, intrCert, intrKey, existingKey)
 	if err != nil {
 		return
 	}

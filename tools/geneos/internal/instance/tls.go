@@ -74,16 +74,16 @@ func CreateCert(c geneos.Instance) (err error) {
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	intrCert, err := ReadSigningCert()
+	signingCert, err := ReadSigningCert()
 	if err != nil {
 		return
 	}
-	intrKey, err := config.ReadPrivateKey(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
+	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
 	if err != nil {
 		return
 	}
 
-	cert, key, err := config.CreateCertKey(&template, intrCert, intrKey, nil)
+	cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey, nil)
 	if err != nil {
 		return
 	}

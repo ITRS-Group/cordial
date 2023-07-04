@@ -126,7 +126,7 @@ func CreateCert(dir string, overwrite bool, cn string, san ...string) (err error
 		return
 	}
 
-	cert, key, err := config.CreateCertKey(&template, intrCert, intrKey, nil)
+	cert, key, err := config.CreateCertificateAndKey(&template, intrCert, intrKey, nil)
 	if err != nil {
 		return
 	}
