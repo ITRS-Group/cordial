@@ -37,13 +37,13 @@ import (
 )
 
 var Gateway = geneos.Component{
-	Initialise:       Init,
-	Name:             "gateway",
-	LegacyPrefix:     "gate",
-	RelatedTypes:     nil,
-	ComponentMatches: []string{"gateway", "gateways"},
-	RealComponent:    true,
-	UsesKeyfiles:     true,
+	Initialise:    initialise,
+	Name:          "gateway",
+	LegacyPrefix:  "gate",
+	RelatedTypes:  nil,
+	Aliases:       []string{"gateway", "gateways"},
+	RealComponent: true,
+	UsesKeyfiles:  true,
 	Templates: []geneos.Templates{
 		{Filename: templateName, Content: template},
 		{Filename: instanceTemplateName, Content: instanceTemplate},
@@ -52,7 +52,7 @@ var Gateway = geneos.Component{
 	PortRange:    "GatewayPortRange",
 	CleanList:    "GatewayCleanList",
 	PurgeList:    "GatewayPurgeList",
-	Aliases: map[string]string{
+	LegacyParameters: map[string]string{
 		"binsuffix": "binary",
 		"gatehome":  "home",
 		"gatebins":  "install",
@@ -109,17 +109,18 @@ var _ geneos.Instance = (*Gateways)(nil)
 //go:embed templates/gateway.setup.xml.gotmpl
 var template []byte
 
+const templateName = "gateway.setup.xml.gotmpl"
+
 //go:embed templates/gateway-instance.setup.xml.gotmpl
 var instanceTemplate []byte
 
-const templateName = "gateway.setup.xml.gotmpl"
 const instanceTemplateName = "gateway-instance.setup.xml.gotmpl"
 
 func init() {
-	Gateway.RegisterComponent(New)
+	Gateway.RegisterComponent(factory)
 }
 
-func Init(r *geneos.Host, ct *geneos.Component) {
+func initialise(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
 	if err := r.WriteFile(r.Filepath("gateway", "templates", templateName), template, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
@@ -131,7 +132,8 @@ func Init(r *geneos.Host, ct *geneos.Component) {
 
 var gateways sync.Map
 
-func New(name string) geneos.Instance {
+// factory is the factory method for Gateways
+func factory(name string) geneos.Instance {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
 	if i, ok := gateways.Load(h.FullName(local)); ok {
 		if g, ok := i.(*Gateways); ok {

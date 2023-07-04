@@ -37,14 +37,14 @@ import (
 )
 
 var Floating = geneos.Component{
-	Initialise:       Init,
-	Name:             "floating",
-	LegacyPrefix:     "flt",
-	RelatedTypes:     []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
-	ComponentMatches: []string{"float", "floating"},
-	ParentType:       &netprobe.Netprobe,
-	RealComponent:    true,
-	UsesKeyfiles:     true,
+	Initialise:    Init,
+	Name:          "floating",
+	LegacyPrefix:  "flt",
+	RelatedTypes:  []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
+	Aliases:       []string{"float", "floating"},
+	ParentType:    &netprobe.Netprobe,
+	RealComponent: true,
+	UsesKeyfiles:  true,
 	Templates: []geneos.Templates{
 		{Filename: templateName, Content: template},
 	},
@@ -52,7 +52,7 @@ var Floating = geneos.Component{
 	PortRange:    "FloatingPortRange",
 	CleanList:    "FloatingCleanList",
 	PurgeList:    "FloatingPurgeList",
-	Aliases: map[string]string{
+	LegacyParameters: map[string]string{
 		"floatingtype": "pkgtype",
 	},
 	Defaults: []string{

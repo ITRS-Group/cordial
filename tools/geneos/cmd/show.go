@@ -270,7 +270,7 @@ func showInstanceConfig(c geneos.Instance, params []string) (result interface{},
 func showInstance(c geneos.Instance, params []string) (result interface{}, err error) {
 	// remove aliases
 	nv := config.New()
-	aliases := c.Type().Aliases
+	aliases := c.Type().LegacyParameters
 	for _, k := range c.Config().AllKeys() {
 		// skip any names in the alias table
 		log.Debug().Msgf("checking %s", k)
