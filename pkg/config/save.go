@@ -45,7 +45,7 @@ func (cf *Config) Save(name string, options ...FileOptions) (err error) {
 	if opts.appname != "" {
 		subdir = opts.appname
 	}
-	path := filepath.Join(opts.dir, subdir, fmt.Sprintf("%s.%s", name, opts.extension))
+	path := filepath.Join(opts.savedir, subdir, fmt.Sprintf("%s.%s", name, opts.extension))
 
 	if opts.configFile != "" {
 		path = opts.configFile

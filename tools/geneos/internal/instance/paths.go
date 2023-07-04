@@ -166,14 +166,17 @@ func ConfigFileTypes() []string {
 	return []string{"json", "yaml"}
 }
 
-// HomeDir return the validated-to-exist directory for the instance
+// HomeDir return the validated-to-exist directory for the instance, or
+// an empty string
 func HomeDir(c geneos.Instance) (home string) {
-	ct := c.Type()
-	h := c.Host()
-
 	if c.Config() == nil {
 		return ""
 	}
+
+	ct := c.Type()
+	h := c.Host()
+
+	// can't use c.Home() as this function is called from there!
 	home = c.Config().GetString("home")
 	if _, err := h.Stat(home); err != nil {
 		home = h.Filepath(ct, ct.String()+"s", c.Name())
@@ -200,10 +203,11 @@ func ParentDirectory(i interface{}) (dir string) {
 	h := c.Host()
 
 	// first, does the configured home exist as a dir?
-	if c.Home() != "" {
-		dir = filepath.Dir(c.Home())
+	home := c.Config().GetString("home")
+	if home != "" {
+		dir = filepath.Dir(home)
 		// but check the configured home, not the parent
-		if d, err := h.Stat(c.Home()); err == nil && d.IsDir() {
+		if d, err := h.Stat(home); err == nil && d.IsDir() {
 			log.Debug().Msgf("default home %s as defined", dir)
 			return
 		}

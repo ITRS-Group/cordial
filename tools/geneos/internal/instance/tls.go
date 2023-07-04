@@ -108,8 +108,8 @@ func WriteCert(c geneos.Instance, cert *x509.Certificate) (err error) {
 	if c.Type() == nil {
 		return geneos.ErrInvalidArgs
 	}
-	certfile := c.Type().String() + ".pem"
-	if err = config.WriteCert(c.Host(), filepath.Join(c.Home(), certfile), cert); err != nil {
+	certfile := ComponentFilepath(c, "pem")
+	if err = config.WriteCert(c.Host(), certfile, cert); err != nil {
 		return
 	}
 	if cf.GetString("certificate") == certfile {
@@ -124,7 +124,7 @@ func WriteCert(c geneos.Instance, cert *x509.Certificate) (err error) {
 	)
 }
 
-// WriteKey writes the key for the instance c
+// WriteKey writes the key for the instance c and updates the config if required
 func WriteKey(c geneos.Instance, key *memguard.Enclave) (err error) {
 	cf := c.Config()
 
@@ -132,8 +132,8 @@ func WriteKey(c geneos.Instance, key *memguard.Enclave) (err error) {
 		return geneos.ErrInvalidArgs
 	}
 
-	keyfile := c.Type().String() + ".key"
-	if err = config.WritePrivateKey(c.Host(), filepath.Join(c.Home(), keyfile), key); err != nil {
+	keyfile := ComponentFilepath(c, "key")
+	if err = config.WritePrivateKey(c.Host(), keyfile, key); err != nil {
 		return
 	}
 	if cf.GetString("privatekey") == keyfile {

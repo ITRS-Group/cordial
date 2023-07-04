@@ -40,7 +40,6 @@ type fileOptions struct {
 	configFile             string
 	extension              string // extension without "."
 	delimiter              string
-	dir                    string
 	envprefix              string
 	envdelimiter           string
 	internalDefaults       []byte
@@ -48,6 +47,7 @@ type fileOptions struct {
 	merge                  bool
 	mustexist              bool
 	remote                 host.Host
+	savedir                string // directory to save appname/appname.ext to
 	setglobals             bool
 	systemdir              string
 	usedefaults            bool
@@ -109,7 +109,7 @@ func evalSaveOptions(options ...FileOptions) (c *fileOptions) {
 		extension: defaultFileExtension,
 		remote:    host.Localhost,
 	}
-	c.dir, _ = UserConfigDir()
+	c.savedir, _ = UserConfigDir()
 
 	for _, opt := range options {
 		opt(c)
@@ -300,7 +300,7 @@ func Host(r host.Host) FileOptions {
 // after the application name.
 func SaveDir(dir string) FileOptions {
 	return func(so *fileOptions) {
-		so.dir = dir
+		so.savedir = dir
 	}
 }
 
