@@ -31,8 +31,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/awnumar/memguard"
+	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
@@ -78,7 +78,7 @@ func CreateCert(c geneos.Instance) (err error) {
 	if err != nil {
 		return
 	}
-	intrKey, err := config.ReadKey(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
+	intrKey, err := config.ReadPrivateKey(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
 	if err != nil {
 		return
 	}
@@ -133,7 +133,7 @@ func WriteKey(c geneos.Instance, key *memguard.Enclave) (err error) {
 	}
 
 	keyfile := c.Type().String() + ".key"
-	if err = config.WriteKey(c.Host(), filepath.Join(c.Home(), keyfile), key); err != nil {
+	if err = config.WritePrivateKey(c.Host(), filepath.Join(c.Home(), keyfile), key); err != nil {
 		return
 	}
 	if cf.GetString("privatekey") == keyfile {
@@ -155,7 +155,7 @@ func ReadRootCert() (cert *x509.Certificate, err error) {
 	file := config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.Filepath("tls"), geneos.RootCAFile+".pem")
 	log.Debug().Msgf("reading %s", file)
 	config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.Filepath("tls"), geneos.RootCAFile+".key")
-	return config.ReadCert(geneos.LOCAL, file)
+	return config.ParseCertificate(geneos.LOCAL, file)
 }
 
 // ReadSigningCert reads the signing certificate from the user's app
@@ -166,7 +166,7 @@ func ReadSigningCert() (cert *x509.Certificate, err error) {
 	file := config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.Filepath("tls", geneos.SigningCertFile+".pem"))
 	log.Debug().Msgf("reading %s", file)
 	config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.Filepath("tls", geneos.SigningCertFile+".key"))
-	return config.ReadCert(geneos.LOCAL, file)
+	return config.ParseCertificate(geneos.LOCAL, file)
 }
 
 // ReadCert reads the instance certificate
@@ -178,7 +178,7 @@ func ReadCert(c geneos.Instance) (cert *x509.Certificate, valid bool, err error)
 	if Filename(c, "certificate") == "" {
 		return nil, false, os.ErrNotExist
 	}
-	cert, err = config.ReadCert(c.Host(), Filepath(c, "certificate"))
+	cert, err = config.ParseCertificate(c.Host(), Filepath(c, "certificate"))
 
 	// validate against certificate chain file on the same host, expiry
 	// etc.
@@ -214,5 +214,5 @@ func ReadKey(c geneos.Instance) (key *memguard.Enclave, err error) {
 		return nil, geneos.ErrInvalidArgs
 	}
 
-	return config.ReadKey(c.Host(), Abs(c, c.Config().GetString("privatekey")))
+	return config.ReadPrivateKey(c.Host(), Abs(c, c.Config().GetString("privatekey")))
 }

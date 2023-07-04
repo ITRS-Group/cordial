@@ -39,10 +39,12 @@ import (
 )
 
 var initCmdOverwrite bool
+var initCmdKeyType string
 
 func init() {
 	tlsCmd.AddCommand(initCmd)
 
+	initCmd.Flags().StringVarP(&initCmdKeyType, "keytype", "K", "ecdh", "Key type for root, one of ecdh, ecdsa, ec15529 or rsa")
 	initCmd.Flags().BoolVarP(&initCmdOverwrite, "force", "F", false, "Overwrite any existing certificates")
 	initCmd.Flags().SortFlags = false
 }
@@ -77,7 +79,12 @@ func tlsInit(overwrite bool) (err error) {
 		log.Fatal().Err(err).Msg("")
 	}
 
-	if err := config.CreateRootCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.RootCAFile), cmd.Execname+" root certificate", overwrite); err != nil {
+	if err := config.CreateRootCert(
+		geneos.LOCAL,
+		filepath.Join(config.AppConfigDir(), geneos.RootCAFile),
+		cmd.Execname+" root certificate",
+		overwrite,
+		initCmdKeyType); err != nil {
 		if errors.Is(err, host.ErrExists) {
 			// fmt.Println("root certificate already exists in", config.AppConfigDir())
 			return nil
@@ -86,7 +93,11 @@ func tlsInit(overwrite bool) (err error) {
 	}
 	fmt.Printf("CA created for %s\n", geneos.RootCAFile)
 
-	if err := config.CreateSigningCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile), filepath.Join(config.AppConfigDir(), geneos.RootCAFile), cmd.Execname+" intermediate certificate", overwrite); err != nil {
+	if err := config.CreateSigningCert(
+		geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile),
+		filepath.Join(config.AppConfigDir(), geneos.RootCAFile),
+		cmd.Execname+" intermediate certificate",
+		overwrite); err != nil {
 		if errors.Is(err, host.ErrExists) {
 			// fmt.Println("signing certificate already exists in", config.AppConfigDir())
 			return nil
