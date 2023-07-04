@@ -245,6 +245,8 @@ func (k *KeyFile) Decode(input []byte) (plaintext []byte, err error) {
 	return a.Decode(input)
 }
 
+// DecodeEnclave decodes the input using the keyfile k and returns a
+// memguard.Enclave
 func (k *KeyFile) DecodeEnclave(input []byte) (plaintext *memguard.Enclave, err error) {
 	a, err := k.Read()
 	if err != nil {
