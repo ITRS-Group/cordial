@@ -98,8 +98,8 @@ func ReadPrivateKey(h host.Host, path string) (key *memguard.Enclave, err error)
 }
 
 // ParseKey tries to parse the PEM encoded private key first as PKCS#8
-// and then PKCS#1 if that fails. It returns the keu, the public key
-// part or an error
+// and then PKCS#1 if that fails. It returns the private and public keys
+// or an error
 func ParseKey(keyPEM *memguard.Enclave) (privateKey any, publickey crypto.PublicKey, err error) {
 	k, err := keyPEM.Open()
 	if err != nil {
@@ -159,11 +159,11 @@ func WritePrivateKey(h host.Host, path string, key *memguard.Enclave) (err error
 
 const DefaultKeyType = "ecdh"
 
-// CreateCertKey is a wrapper to create a new certificate given the
-// signing cert and private key and an optional private key to (re)use
-// for the created certificate itself. returns a certificate and private
-// key. Keys are in PEM format so need parsing after unsealing.
-func CreateCertKey(template, parent *x509.Certificate, signingKeyPEM, existingKeyPEM *memguard.Enclave) (cert *x509.Certificate, certKeyPEM *memguard.Enclave, err error) {
+// CreateCertificateAndKey is a wrapper to create a new certificate
+// given the signing cert and key and an optional private key to (re)use
+// for the certificate creation. Returns a certificate and private key.
+// Keys are usually PKCS#8 encoded and so need parsing after unsealing.
+func CreateCertificateAndKey(template, parent *x509.Certificate, signingKeyPEM, existingKeyPEM *memguard.Enclave) (cert *x509.Certificate, certKeyPEM *memguard.Enclave, err error) {
 	var certBytes []byte
 	// var certKey *rsa.PrivateKey
 
@@ -304,7 +304,7 @@ func CreateRootCert(h host.Host, basefilepath string, cn string, overwrite bool,
 
 	privateKeyPEM, err := NewPrivateKey(keytype)
 
-	cert, key, err := CreateCertKey(template, template, privateKeyPEM, nil)
+	cert, key, err := CreateCertificateAndKey(template, template, privateKeyPEM, nil)
 	if err != nil {
 		return
 	}
@@ -358,7 +358,7 @@ func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string
 		return
 	}
 
-	cert, key, err := CreateCertKey(&template, rootCert, rootKey, nil)
+	cert, key, err := CreateCertificateAndKey(&template, rootCert, rootKey, nil)
 	if err != nil {
 		return
 	}
