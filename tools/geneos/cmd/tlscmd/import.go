@@ -103,7 +103,7 @@ func tlsImport(sources ...string) (err error) {
 					return err
 				}
 				certs = append(certs, cert)
-			case "RSA PRIVATE KEY":
+			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
 				keys = append(keys, memguard.NewEnclave(block.Bytes))
 			default:
 				return fmt.Errorf("unknown PEM type found: %s", block.Type)
@@ -141,10 +141,10 @@ func tlsImport(sources ...string) (err error) {
 			return err
 		}
 		fmt.Printf("imported %s certificate to %q\n", title, filepath.Join(config.AppConfigDir(), prefix+".pem"))
-		if err = config.WriteKey(geneos.LOCAL, filepath.Join(config.AppConfigDir(), prefix+".key"), key); err != nil {
+		if err = config.WritePrivateKey(geneos.LOCAL, filepath.Join(config.AppConfigDir(), prefix+".key"), key); err != nil {
 			return err
 		}
-		fmt.Printf("imported %s RSA private key to %q\n", title, filepath.Join(config.AppConfigDir(), prefix+".pem"))
+		fmt.Printf("imported %s private key to %q\n", title, filepath.Join(config.AppConfigDir(), prefix+".pem"))
 	}
 
 	return

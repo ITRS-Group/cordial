@@ -37,6 +37,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -114,12 +115,12 @@ func CreateCert(dir string, overwrite bool, cn string, san ...string) (err error
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	intrCert, err := config.ReadCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".pem"))
+	intrCert, err := instance.ReadSigningCert() // config.ReadCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".pem"))
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
-	intrKey, err := config.ReadKey(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
+	intrKey, err := config.ReadPrivateKey(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
@@ -134,7 +135,7 @@ func CreateCert(dir string, overwrite bool, cn string, san ...string) (err error
 		return
 	}
 
-	if err = config.WriteKey(geneos.LOCAL, basepath+".key", key); err != nil {
+	if err = config.WritePrivateKey(geneos.LOCAL, basepath+".key", key); err != nil {
 		return
 	}
 
