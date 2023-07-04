@@ -34,10 +34,10 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-
-	"github.com/rs/zerolog/log"
 )
 
 // return the KEY from "[TYPE:]KEY=VALUE"
@@ -104,7 +104,7 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 	m["name"] = c.Name()
 	// remove aliases
 	for _, k := range cf.AllKeys() {
-		if _, ok := c.Type().Aliases[k]; ok {
+		if _, ok := c.Type().LegacyParameters[k]; ok {
 			delete(m, k)
 		}
 	}
@@ -127,7 +127,7 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 func LoadConfig(c geneos.Instance) (err error) {
 	r := c.Host()
 	prefix := c.Type().LegacyPrefix
-	aliases := c.Type().Aliases
+	aliases := c.Type().LegacyParameters
 
 	home := filepath.Join(r.Filepath(c.Type(), c.Type().String()+"s"), c.Name())
 	if _, err = r.Stat(home); err != nil && errors.Is(err, fs.ErrNotExist) {
@@ -209,7 +209,7 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 	nv := config.New()
 	for k, v := range values {
 		// skip aliases
-		if _, ok := c.Type().Aliases[k]; ok {
+		if _, ok := c.Type().LegacyParameters[k]; ok {
 			continue
 		}
 		nv.Set(k, v)
@@ -295,7 +295,7 @@ func SetDefaults(c geneos.Instance, name string) (err error) {
 		return fmt.Errorf("no configuration initialised")
 	}
 
-	aliases := c.Type().Aliases
+	aliases := c.Type().LegacyParameters
 	root := c.Host().GetString("geneos")
 	cf.SetDefault("name", name)
 
@@ -335,7 +335,7 @@ func SetDefaults(c geneos.Instance, name string) (err error) {
 // DeleteSettingFromMap removes key from the map from and if it is
 // registered as an alias it also removes the key that alias refers to.
 func DeleteSettingFromMap(c geneos.Instance, from map[string]interface{}, key string) {
-	if a, ok := c.Type().Aliases[key]; ok {
+	if a, ok := c.Type().LegacyParameters[key]; ok {
 		// delete any setting this is an alias for, as well as the alias
 		delete(from, a)
 	}

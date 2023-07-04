@@ -36,17 +36,17 @@ import (
 )
 
 var Webserver = geneos.Component{
-	Name:             "webserver",
-	LegacyPrefix:     "webs",
-	RelatedTypes:     nil,
-	ComponentMatches: []string{"web-server", "webserver", "webservers", "webdashboard", "dashboards"},
-	RealComponent:    true,
-	DownloadBase:     geneos.DownloadBases{Resources: "Web+Dashboard", Nexus: "geneos-web-server"},
-	DownloadInfix:    "web-server",
-	PortRange:        "WebserverPortRange",
-	CleanList:        "WebserverCleanList",
-	PurgeList:        "WebserverPurgeList",
-	Aliases: map[string]string{
+	Name:          "webserver",
+	LegacyPrefix:  "webs",
+	RelatedTypes:  nil,
+	Aliases:       []string{"web-server", "webserver", "webservers", "webdashboard", "dashboards"},
+	RealComponent: true,
+	DownloadBase:  geneos.DownloadBases{Resources: "Web+Dashboard", Nexus: "geneos-web-server"},
+	DownloadInfix: "web-server",
+	PortRange:     "WebserverPortRange",
+	CleanList:     "WebserverCleanList",
+	PurgeList:     "WebserverPurgeList",
+	LegacyParameters: map[string]string{
 		"binsuffix": "binary",
 		"webshome":  "home",
 		"websbins":  "install",

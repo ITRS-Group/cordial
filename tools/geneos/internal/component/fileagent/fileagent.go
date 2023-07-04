@@ -34,17 +34,17 @@ import (
 )
 
 var FileAgent = geneos.Component{
-	Name:             "fileagent",
-	LegacyPrefix:     "fa",
-	RelatedTypes:     nil,
-	ComponentMatches: []string{"fileagent", "fileagents", "file-agent"},
-	RealComponent:    true,
-	DownloadBase:     geneos.DownloadBases{Resources: "Fix+Analyser+File+Agent", Nexus: "geneos-file-agent"},
-	DownloadInfix:    "file-agent",
-	PortRange:        "FAPortRange",
-	CleanList:        "FACleanList",
-	PurgeList:        "FAPurgeList",
-	Aliases: map[string]string{
+	Name:          "fileagent",
+	LegacyPrefix:  "fa",
+	RelatedTypes:  nil,
+	Aliases:       []string{"fileagent", "fileagents", "file-agent"},
+	RealComponent: true,
+	DownloadBase:  geneos.DownloadBases{Resources: "Fix+Analyser+File+Agent", Nexus: "geneos-file-agent"},
+	DownloadInfix: "file-agent",
+	PortRange:     "FAPortRange",
+	CleanList:     "FACleanList",
+	PurgeList:     "FAPurgeList",
+	LegacyParameters: map[string]string{
 		"binsuffix":  "binary",
 		"fahome":     "home",
 		"fabins":     "install",

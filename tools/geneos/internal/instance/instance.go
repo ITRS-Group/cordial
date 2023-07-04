@@ -34,26 +34,22 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
-
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-
-	"github.com/rs/zerolog/log"
 )
 
 // The Instance type is the common data shared by all instance / component types
 type Instance struct {
 	geneos.Instance `json:"-"`
-	L               *sync.RWMutex     `json:"-"`
 	Conf            *config.Config    `json:"-"`
 	InstanceHost    *geneos.Host      `json:"-"`
 	Component       *geneos.Component `json:"-"`
 	ConfigLoaded    bool              `json:"-"`
-	Env             []string          `json:",omitempty"`
 }
 
 // IsA returns true if instance c has a type that is component of the

@@ -35,18 +35,18 @@ import (
 )
 
 var FA2 = geneos.Component{
-	Name:             "fa2",
-	LegacyPrefix:     "fa2",
-	RelatedTypes:     nil,
-	ComponentMatches: []string{"fa2", "fixanalyser", "fixanalyzer", "fixanalyser2-netprobe"},
-	ParentType:       &netprobe.Netprobe,
-	RealComponent:    true,
-	DownloadBase:     geneos.DownloadBases{Resources: "Fix+Analyser+2+Netprobe", Nexus: "geneos-fixanalyser2-netprobe"},
-	DownloadInfix:    "fixanalyser2-netprobe",
-	PortRange:        "FA2PortRange",
-	CleanList:        "FA2CleanList",
-	PurgeList:        "FA2PurgeList",
-	Aliases: map[string]string{
+	Name:          "fa2",
+	LegacyPrefix:  "fa2",
+	RelatedTypes:  nil,
+	Aliases:       []string{"fa2", "fixanalyser", "fixanalyzer", "fixanalyser2-netprobe"},
+	ParentType:    &netprobe.Netprobe,
+	RealComponent: true,
+	DownloadBase:  geneos.DownloadBases{Resources: "Fix+Analyser+2+Netprobe", Nexus: "geneos-fixanalyser2-netprobe"},
+	DownloadInfix: "fixanalyser2-netprobe",
+	PortRange:     "FA2PortRange",
+	CleanList:     "FA2CleanList",
+	PurgeList:     "FA2PurgeList",
+	LegacyParameters: map[string]string{
 		"binsuffix": "binary",
 		"fa2home":   "home",
 		"fa2bins":   "install",

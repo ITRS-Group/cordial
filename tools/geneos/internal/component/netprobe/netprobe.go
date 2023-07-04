@@ -34,17 +34,17 @@ import (
 )
 
 var Netprobe = geneos.Component{
-	Name:             "netprobe",
-	LegacyPrefix:     "netp",
-	RelatedTypes:     nil,
-	ComponentMatches: []string{"netprobe", "probe", "netprobes", "probes"},
-	RealComponent:    true,
-	UsesKeyfiles:     true,
-	DownloadBase:     geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
-	PortRange:        "NetprobePortRange",
-	CleanList:        "NetprobeCleanList",
-	PurgeList:        "NetprobePurgeList",
-	Aliases: map[string]string{
+	Name:          "netprobe",
+	LegacyPrefix:  "netp",
+	RelatedTypes:  nil,
+	Aliases:       []string{"netprobe", "probe", "netprobes", "probes"},
+	RealComponent: true,
+	UsesKeyfiles:  true,
+	DownloadBase:  geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
+	PortRange:     "NetprobePortRange",
+	CleanList:     "NetprobeCleanList",
+	PurgeList:     "NetprobePurgeList",
+	LegacyParameters: map[string]string{
 		"binsuffix": "binary",
 		"netphome":  "home",
 		"netpbins":  "install",

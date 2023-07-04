@@ -52,6 +52,9 @@ func (h *Hub) Get(ctx context.Context, endpoint string, request interface{}, res
 		req.URL.RawQuery = v.Encode()
 	}
 	resp, err = h.client.Do(req)
+	if err != nil {
+		return
+	}
 	if resp.StatusCode > 299 {
 		err = ErrServerError
 		return

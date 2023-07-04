@@ -45,11 +45,11 @@ const RootComponentName = "root"
 const sharedSuffix = "_shared"
 
 var RootComponent = Component{
-	Name:             RootComponentName,
-	RelatedTypes:     nil,
-	ComponentMatches: []string{"any"},
-	RealComponent:    false,
-	DownloadBase:     DownloadBases{Resources: "", Nexus: ""},
+	Name:          RootComponentName,
+	RelatedTypes:  nil,
+	Aliases:       []string{"any"},
+	RealComponent: false,
+	DownloadBase:  DownloadBases{Resources: "", Nexus: ""},
 	GlobalSettings: map[string]string{
 		// Root directory for all operations
 		execname: "",
@@ -85,28 +85,68 @@ type Templates struct {
 	Content  []byte
 }
 
-// Component defines a register component
+// Component defines a registered component
 type Component struct {
-	Initialise       func(*Host, *Component)
-	New              func(string) Instance
-	Name             string
-	LegacyPrefix     string
-	RelatedTypes     []*Component
-	ComponentMatches []string
-	ParentType       *Component
-	RealComponent    bool
-	UsesKeyfiles     bool
-	Templates        []Templates
-	DownloadBase     DownloadBases
-	DownloadInfix    string // if set replace this string with component name for download matches
-	PortRange        string
-	CleanList        string
-	PurgeList        string
-	Aliases          map[string]string
-	Defaults         []string // ordered list of key=value pairs
-	GlobalSettings   map[string]string
-	Directories      []string
-	GetPID           func(interface{}) (int, error) // if set, use this to get the PID of an instance
+	// Name of a component
+	Name string
+
+	// Aliases are any aliases for component
+	Aliases []string
+
+	// Defaults are name=value templates that are "run" for each new
+	// instance
+	//
+	// They are run in order, as later defaults may depend on earlier
+	// settings, and so this cannot be a map
+	Defaults []string
+
+	// LegacyPrefix is the three or four letter prefix from legacy `ctl`
+	// commands
+	LegacyPrefix string
+
+	// LegacyParameters is a map of legacy parameters (including prefix)
+	// to new parameter names
+	LegacyParameters map[string]string
+
+	// RelatedTypes are any related component types. This could also be
+	// derived from ParentType
+	RelatedTypes []*Component
+
+	// ParentType, if set, is the parent component that the component is
+	// under, e.g. san has a parent of netprobe
+	ParentType *Component
+
+	RealComponent bool
+	UsesKeyfiles  bool
+
+	// Directories to be created (under Geneos home) on initialisation
+	Directories []string
+
+	// Templates are any templates for the component. Each Template has
+	// a filename and default content
+	Templates []Templates
+
+	DownloadBase  DownloadBases
+	DownloadInfix string // if set replace this string with component name for download matches
+
+	GlobalSettings map[string]string
+
+	PortRange string
+	CleanList string
+	PurgeList string
+
+	// Functions
+
+	// Initialise a component. Callback after the component is registered
+	Initialise func(*Host, *Component)
+
+	// New is the factory method for the component. It has to be added
+	// during initialisation to avoid loops
+	New func(string) Instance
+
+	// GetPID returns the process ID of an instance - if nil a standard
+	// function is used
+	GetPID func(interface{}) (int, error) // if set, use this to get the PID of an instance
 }
 
 // Instance interfaces contains the method set for an instance of a
@@ -156,7 +196,7 @@ func (ct Component) String() (name string) {
 // IsA returns true is any of the names match the any of the names
 // defined in ComponentMatches.
 func (ct Component) IsA(name ...string) bool {
-	for _, a := range ct.ComponentMatches {
+	for _, a := range ct.Aliases {
 		for _, b := range name {
 			if strings.EqualFold(a, b) {
 				return true
@@ -280,7 +320,7 @@ func UsesKeyFiles() (cts []*Component) {
 // component does not match any known name.
 func FindComponent(component string) *Component {
 	for _, v := range registeredComponents {
-		for _, m := range v.ComponentMatches {
+		for _, m := range v.Aliases {
 			if strings.EqualFold(m, component) {
 				return v
 			}

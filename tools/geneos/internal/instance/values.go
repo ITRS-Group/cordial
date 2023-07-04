@@ -27,9 +27,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+	
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/rs/zerolog/log"
 )
 
 // Value types for multiple flags
