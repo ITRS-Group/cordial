@@ -32,7 +32,6 @@ import (
 	"hash/crc32"
 	"io"
 	"os"
-	"sort"
 	"strings"
 	"unicode/utf8"
 	"unsafe"
@@ -103,15 +102,6 @@ func NewRandomKeyValues() (kv *KeyValues) {
 	var k *keyvalues
 	kv = &KeyValues{
 		memguard.NewEnclaveRandom(int(unsafe.Sizeof(*k))),
-	}
-	return
-}
-
-func NewKeyValues() (kv *KeyValues) {
-	var k *keyvalues
-	m := memguard.NewBuffer(int(unsafe.Sizeof(*k)))
-	kv = &KeyValues{
-		m.Seal(),
 	}
 	return
 }
@@ -219,8 +209,9 @@ func (kv *KeyValues) encode(plaintext *Plaintext) (out []byte, err error) {
 	return
 }
 
-func (kv *KeyValues) Encode(in *Plaintext) (out []byte, err error) {
-	cipher, err := kv.encode(in)
+// Encode the plaintext using kv, return a byte slice
+func (kv *KeyValues) Encode(plaintext *Plaintext) (out []byte, err error) {
+	cipher, err := kv.encode(plaintext)
 	if err == nil {
 		out = make([]byte, len(cipher)*2)
 		hex.Encode(out, cipher)
@@ -229,8 +220,9 @@ func (kv *KeyValues) Encode(in *Plaintext) (out []byte, err error) {
 	return
 }
 
-func (kv *KeyValues) EncodeString(in string) (out string, err error) {
-	text := NewPlaintext([]byte(in))
+// EncodeString encodes the plaintext string using kv, return as a string
+func (kv *KeyValues) EncodeString(plaintext string) (out string, err error) {
+	text := NewPlaintext([]byte(plaintext))
 	cipher, err := kv.encode(text)
 	if err == nil {
 		out = strings.ToUpper(hex.EncodeToString(cipher))
@@ -283,6 +275,7 @@ func (kv *KeyValues) Decode(in []byte) (out []byte, err error) {
 	return
 }
 
+// DecodeEnclave decodes the input using kv and returns a *memguard.Enclave
 func (kv *KeyValues) DecodeEnclave(in []byte) (out *memguard.Enclave, err error) {
 	kl, _ := kv.Open()
 	defer kl.Destroy()
@@ -336,10 +329,10 @@ func (kv *KeyValues) DecodeString(in string) (out string, err error) {
 	return
 }
 
-// Checksum reads from [io.Reader] data until EOF and returns crc as the
-// 32-bit IEEE checksum. data should be closed by the caller on return.
-// If there is an error reading from r then err is returned with the
-// reason.
+// Checksum reads from [io.Reader] data until EOF (or other error) and
+// returns crc as the 32-bit IEEE checksum. data should be closed by the
+// caller on return. If there is an error reading from r then err is
+// returned with the reason.
 func Checksum(data io.Reader) (crc uint32, err error) {
 	b := bytes.Buffer{}
 	if _, err = b.ReadFrom(data); err != nil {
@@ -347,91 +340,4 @@ func Checksum(data io.Reader) (crc uint32, err error) {
 	}
 	crc = crc32.ChecksumIEEE(b.Bytes())
 	return
-}
-
-// Credentials handling function
-
-// Credentials can carry a number of different credential types. Add
-// more as required. Eventually this will go into memguard.
-type Credentials struct {
-	Domain       string `json:"domain,omitempty"`
-	Username     string `json:"username,omitempty"`
-	Password     string `json:"password,omitempty"`
-	ClientID     string `json:"client_id,omitempty"`
-	ClientSecret string `json:"client_secret,omitempty"`
-	Token        string `json:"token,omitempty"`
-	Renewal      string `json:"renewal,omitempty"`
-}
-
-// FindCreds finds a set of credentials in the given config structure
-// under the key "credentials" and tries to match the longest one, if
-// any. creds is nil if not matching credentials found.
-func (cf *Config) FindCreds(path string) (creds *Config) {
-	cr := cf.GetStringMap("credentials")
-	if cr == nil {
-		return
-	}
-	paths := []string{}
-	for k := range cr {
-		paths = append(paths, k)
-	}
-	// sort the paths longest to shortest
-	sort.Slice(paths, func(i, j int) bool {
-		return len(paths[i]) > len(paths[j])
-	})
-	creds = New()
-	for _, p := range paths {
-		if strings.Contains(strings.ToLower(path), strings.ToLower(p)) {
-			creds.MergeConfigMap(cf.GetStringMap(cf.Join("credentials", p)))
-			return
-		}
-	}
-	return nil
-}
-
-// FindCreds looks for matching credentials in a default "credentials"
-// file. options are the same as for [Load] but the default KeyDelimiter
-// is set to "::" as credential domains are likely to be hostnames or
-// URLs. The longest match wins.
-func FindCreds(path string, options ...FileOptions) (cred *Config) {
-	options = append(options, KeyDelimiter("::"))
-	cf, _ := Load("credentials", options...)
-	return cf.FindCreds(path)
-}
-
-// Add creds to the "credentials" file identified by the options.
-// creds.Domain is used as the key for matching later on. Any existing
-// credential with the same Domain is overwritten. If there is an error
-// un the underlying routines it is returned without change.
-func AddCreds(creds Credentials, options ...FileOptions) (err error) {
-	options = append(options, KeyDelimiter("::"))
-	cf, err := Load("credentials", options...)
-	if err != nil {
-		return
-	}
-	cf.Set(cf.Join("credentials", creds.Domain), creds)
-	return cf.Save("credentials", options...)
-}
-
-// DeleteCreds removes the entry for domain from the credentials file
-// identified by options.
-func DeleteCreds(domain string, options ...FileOptions) (err error) {
-	options = append(options, KeyDelimiter("::"))
-	cf, err := Load("credentials", options...)
-	if err != nil {
-		return
-	}
-	credmap := cf.GetStringMap("credentials")
-	delete(credmap, domain)
-	cf.Set("credentials", credmap)
-	return cf.Save("credentials", options...)
-}
-
-// DeleteAllCreds will remove all the credentials in the credentials
-// file identified by options.
-func DeleteAllCreds(options ...FileOptions) (err error) {
-	options = append(options, KeyDelimiter("::"))
-	cf := New(options...)
-	cf.Set("credentials", &Credentials{})
-	return cf.Save("credentials", options...)
 }
