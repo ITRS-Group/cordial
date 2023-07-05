@@ -59,7 +59,9 @@ var showCmd = &cobra.Command{
 		if showCmdAll {
 			cf = config.GetConfig()
 		} else {
-			cf, _ = config.Load(cmd.Execname, config.IgnoreSystemDir(), config.IgnoreWorkingDir())
+			cf, _ = config.Load(cmd.Execname,
+				config.IgnoreSystemDir(),
+				config.IgnoreWorkingDir())
 		}
 
 		if len(args) > 0 {

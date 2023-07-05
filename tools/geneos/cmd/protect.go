@@ -26,7 +26,6 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
@@ -72,11 +71,7 @@ func protectInstance(c geneos.Instance, params []string) (err error) {
 	if cf.Type == "rc" {
 		err = instance.Migrate(c)
 	} else {
-		err = cf.Save(c.Type().String(),
-			config.Host(c.Host()),
-			config.SaveDir(instance.ParentDirectory(c)),
-			config.SetAppName(c.Name()),
-		)
+		err = instance.SaveConfig(c)
 	}
 	if err != nil {
 		return

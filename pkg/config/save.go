@@ -30,22 +30,29 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Save a configuration file for the component name. The filesystem
-// target for the configuration object is updated to match the remote
-// destination, which can be set by SaveTo() or defaults to "localhost"
+// Save a configuration file for the module name.
+//
+// - The file specified by config.SetConfigFile()
+// - A file name.ext in the first directory give with config.AddDirs()
+// - A file name.ext in the user config directory + appname
+//
+// The filesystem target for the configuration object is updated to
+// match the remote destination, which can be set by Host() option with
+// a default of "localhost"
 func (cf *Config) Save(name string, options ...FileOptions) (err error) {
-	opts := evalSaveOptions(options...)
+	opts := evalSaveOptions(name, options...)
 	r := opts.remote
 	if !r.IsAvailable() {
 		err = host.ErrNotAvailable
 		return
 	}
 
-	subdir := name
-	if opts.appname != "" {
-		subdir = opts.appname
+	filename := fmt.Sprintf("%s.%s", name, opts.extension)
+
+	path := filepath.Join(opts.userconfdir, opts.appname, filename)
+	if len(opts.configDirs) > 0 {
+		path = filepath.Join(opts.configDirs[0], filename)
 	}
-	path := filepath.Join(opts.savedir, subdir, fmt.Sprintf("%s.%s", name, opts.extension))
 
 	if opts.configFile != "" {
 		path = opts.configFile

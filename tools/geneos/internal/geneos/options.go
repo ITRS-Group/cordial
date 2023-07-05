@@ -29,6 +29,7 @@ import (
 // geneosOptions defines the internal options for various operations in
 // the geneos package
 type geneosOptions struct {
+	archive      string
 	basename     string
 	doupdate     bool
 	downloadbase string
@@ -42,7 +43,6 @@ type geneosOptions struct {
 	password     *config.Plaintext
 	platformId   string
 	restart      bool
-	archive      string
 	username     string
 	version      string
 }
@@ -53,7 +53,6 @@ type Options func(*geneosOptions)
 func evalOptions(options ...Options) (d *geneosOptions) {
 	// defaults
 	d = &geneosOptions{
-		// source:       filepath.Join(Root(), "packages", "downloads"),
 		downloadbase: "releases",
 		downloadtype: "resources",
 	}

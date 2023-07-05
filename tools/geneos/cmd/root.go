@@ -65,10 +65,11 @@ var debug, quiet bool
 
 // DefaultUserKeyfile is the path to the user's key file as a
 // config.Keyfile type
-var DefaultUserKeyfile = config.KeyFile(config.Path("keyfile",
-	config.SetAppName(Execname),
-	config.SetFileExtension("aes"),
-	config.IgnoreWorkingDir()),
+var DefaultUserKeyfile = config.KeyFile(
+	config.Path("keyfile",
+		config.SetAppName(Execname),
+		config.SetFileExtension("aes"),
+		config.IgnoreWorkingDir()),
 )
 
 var GeneosUnsetError = errors.New(strings.ReplaceAll(`Geneos location not set.
@@ -295,7 +296,7 @@ func initConfig() {
 		config.AddDirs(oldConfDir),
 		config.MergeSettings(),
 		config.IgnoreWorkingDir(),
-		config.UseEnvs("ITRS", "_"),
+		config.WithEnvs("ITRS", "_"),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")

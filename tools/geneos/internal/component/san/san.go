@@ -24,7 +24,6 @@ package san
 
 import (
 	_ "embed"
-	"path/filepath"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -140,7 +139,7 @@ func New(name string) geneos.Instance {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
 	}
 	// set the home dir based on where it might be, default to one above
-	c.Config().Set("home", filepath.Join(instance.ParentDirectory(c), local))
+	c.Config().Set("home", instance.HomeDir(c))
 	sans.Store(r.FullName(local), c)
 	return c
 }
@@ -217,11 +216,7 @@ func (s *Sans) Add(template string, port uint16) (err error) {
 	cf.Set("variables", make(map[string]string))
 	cf.Set("gateways", make(map[string]string))
 
-	if err = cf.Save(s.Type().String(),
-		config.Host(s.Host()),
-		config.SaveDir(instance.ParentDirectory(s)),
-		config.SetAppName(s.Name()),
-	); err != nil {
+	if err = instance.SaveConfig(s); err != nil {
 		return
 	}
 
@@ -269,11 +264,7 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 	}
 	if changed {
 		cf.Set("gateways", gws)
-		if err = cf.Save(s.Type().String(),
-			config.Host(s.Host()),
-			config.SaveDir(instance.ParentDirectory(s)),
-			config.SetAppName(s.Name()),
-		); err != nil {
+		if err = instance.SaveConfig(s); err != nil {
 			return err
 		}
 	}

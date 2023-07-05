@@ -23,7 +23,6 @@ THE SOFTWARE.
 package fileagent
 
 import (
-	"path/filepath"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -116,7 +115,7 @@ func New(name string) geneos.Instance {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
 	}
 	// set the home dir based on where it might be, default to one above
-	c.Config().Set("home", filepath.Join(instance.ParentDirectory(c), local))
+	c.Config().Set("home", instance.HomeDir(c))
 	fileagents.Store(r.FullName(local), c)
 	return c
 }
@@ -176,11 +175,7 @@ func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 	}
 	n.Config().Set("port", port)
 
-	if err = n.Config().Save(n.Type().String(),
-		config.Host(n.Host()),
-		config.SaveDir(instance.ParentDirectory(n)),
-		config.SetAppName(n.Name()),
-	); err != nil {
+	if err = instance.SaveConfig(n); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
