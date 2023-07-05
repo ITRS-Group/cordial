@@ -155,9 +155,9 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 		// progressbar.OptionSetWidth(10),
 		progressbar.OptionThrottle(65*time.Millisecond),
 		progressbar.OptionShowCount(),
-		// progressbar.OptionOnCompletion(func() {
-		// 	fmt.Fprint(os.Stderr, "\n")
-		// }),
+		progressbar.OptionOnCompletion(func() {
+			fmt.Fprint(os.Stderr, "\n")
+		}),
 		progressbar.OptionSpinnerType(14),
 		progressbar.OptionFullWidth(),
 		progressbar.OptionSetRenderBlankState(true),
