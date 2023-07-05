@@ -126,7 +126,7 @@ func listInstancePlain(c geneos.Instance, params []string) (err error) {
 		base = path.Join(pkgtype, base)
 	}
 
-	fmt.Fprintf(listTabWriter, "%s\t%s\t%s\t%s\t%d\t%s:%s\t%s\n", c.Type(), c.Name(), flags, c.Host(), c.Config().GetInt("port"), base, underlying, c.Home())
+	fmt.Fprintf(listTabWriter, "%s\t%s\t%s\t%s\t%d\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), flags, c.Config().GetInt("port"), base, underlying, c.Home())
 	return
 }
 
