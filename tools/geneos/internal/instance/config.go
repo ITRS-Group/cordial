@@ -168,6 +168,18 @@ func LoadConfig(c geneos.Instance) (err error) {
 	return
 }
 
+// SaveConfig writes the instance configuration to the standard file for
+// that instance
+func SaveConfig(c geneos.Instance) (err error) {
+	cf := c.Config()
+
+	return cf.Save(c.Type().String(),
+		config.Host(c.Host()),
+		config.AddDirs(HomeDir(c)),
+		config.SetAppName(c.Name()),
+	)
+}
+
 // SetSecureArgs returns a slice of arguments to enable secure
 // connections if the correct configuration values are set. These
 // command line options are common to all core Geneos components except
@@ -261,11 +273,7 @@ func Migrate(c geneos.Instance) (err error) {
 	// remove type label before save
 	cf.Type = ""
 
-	if err = cf.Save(c.Type().String(),
-		config.Host(c.Host()),
-		config.SaveDir(ParentDirectory(c)),
-		config.SetAppName(c.Name()),
-	); err != nil {
+	if err = SaveConfig(c); err != nil {
 		// restore label on error
 		cf.Type = "rc"
 		log.Error().Err(err).Msg("failed to write new configuration file")

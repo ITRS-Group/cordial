@@ -43,11 +43,12 @@ func init() {
 	aesCmd.AddCommand(decodeCmd)
 
 	cmd.UserKeyFile = cmd.DefaultUserKeyfile
-	aesPrevUserKeyFile = config.KeyFile(config.Path("prevkeyfile",
-		config.SetAppName(cmd.Execname),
-		config.SetFileExtension("aes"),
-		config.IgnoreWorkingDir(),
-	))
+	aesPrevUserKeyFile = config.KeyFile(
+		config.Path("prevkeyfile",
+			config.SetAppName(cmd.Execname),
+			config.SetFileExtension("aes"),
+			config.IgnoreWorkingDir(),
+		))
 
 	decodeCmdAESFILE = cmd.UserKeyFile
 	decodeCmdPrevAESFILE = aesPrevUserKeyFile

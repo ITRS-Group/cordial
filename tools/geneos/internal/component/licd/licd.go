@@ -23,7 +23,6 @@ THE SOFTWARE.
 package licd
 
 import (
-	"path/filepath"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -108,7 +107,7 @@ func New(name string) geneos.Instance {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
 	}
 	// set the home dir based on where it might be, default to one above
-	c.Config().Set("home", filepath.Join(instance.ParentDirectory(c), local))
+	c.Config().Set("home", instance.HomeDir(c))
 	licds.Store(r.FullName(local), c)
 	return c
 }
@@ -168,11 +167,7 @@ func (l *Licds) Add(tmpl string, port uint16) (err error) {
 	}
 	l.Config().Set("port", port)
 
-	if err = l.Config().Save(l.Type().String(),
-		config.Host(l.Host()),
-		config.SaveDir(instance.ParentDirectory(l)),
-		config.SetAppName(l.Name()),
-	); err != nil {
+	if err = instance.SaveConfig(l); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 

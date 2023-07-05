@@ -111,11 +111,7 @@ func setInstance(c geneos.Instance, params []string) (err error) {
 	if cf.Type == "rc" {
 		err = instance.Migrate(c)
 	} else {
-		err = cf.Save(c.Type().String(),
-			config.Host(c.Host()),
-			config.SaveDir(instance.ParentDirectory(c)),
-			config.SetAppName(c.Name()),
-		)
+		err = instance.SaveConfig(c)
 	}
 
 	return

@@ -69,7 +69,7 @@ var demoCmd = &cobra.Command{
 			return
 		}
 
-		if err = geneos.Init(geneos.LOCAL, options...); err != nil {
+		if err = geneos.GeneosInit(geneos.LOCAL, options...); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 

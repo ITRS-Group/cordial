@@ -63,14 +63,18 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 
 	opts := evalOptions(options...)
 
-	if !opts.downloadonly && opts.archive != "" {
-		body, filename, err = Open(opts.archive, options...)
-		if err == nil || !errors.Is(err, ErrIsADirectory) {
-			// if success or it's not a directory, return
-			return
+	if !opts.downloadonly {
+		if opts.archive != "" {
+			body, filename, err = Open(opts.archive, options...)
+			if err == nil || !errors.Is(err, ErrIsADirectory) {
+				// if success or it's not a directory, return
+				return
+			}
+			log.Debug().Msg("source is a directory, setting local")
+			opts.local = true
+		} else {
+			opts.archive = filepath.Join(Root(), "packages", "downloads")
 		}
-		log.Debug().Msg("source is a directory, setting local")
-		opts.local = true
 	}
 
 	if opts.local {
