@@ -65,16 +65,6 @@ func ComponentFilepath(c geneos.Instance, extensions ...string) string {
 	return path.Join(c.Home(), ComponentFilename(c, extensions...))
 }
 
-// Abs returns an absolute path to file prepended with the instance
-// working directory if file is not already an absolute path.
-func Abs(c geneos.Instance, file string) (result string) {
-	file = filepath.Clean(file)
-	if filepath.IsAbs(file) {
-		return
-	}
-	return path.Join(c.Home(), file)
-}
-
 // Filename returns the basename of the file identified by the
 // configuration parameter name.
 //
@@ -118,7 +108,17 @@ func Filepath(c geneos.Instance, name string) string {
 	return path.Join(c.Home(), filename)
 }
 
-// Filepaths returns the full paths to the files ideitified by the list
+// Abs returns an absolute path to file prepended with the instance
+// working directory if file is not already an absolute path.
+func Abs(c geneos.Instance, file string) (result string) {
+	result = filepath.Clean(file)
+	if filepath.IsAbs(result) {
+		return
+	}
+	return path.Join(c.Home(), result)
+}
+
+// Filepaths returns the full paths to the files identified by the list
 // of parameters in names.
 //
 // If the instance configuration is valid an empty slice is returned. If
@@ -130,22 +130,13 @@ func Filepaths(c geneos.Instance, names ...string) (filenames []string) {
 		return
 	}
 
-	dir := HomeDir(c)
+	// dir := HomeDir(c)
 
 	for _, name := range names {
-		if filepath.IsAbs(name) {
-			filenames = append(filenames, name)
-		} else {
-			if !cf.IsSet(name) {
-				continue
-			}
-			filename := filepath.Join(dir, cf.GetString(name))
-			// return empty and not a "."
-			if filename == "." {
-				filename = ""
-			}
-			filenames = append(filenames, filename)
+		if !cf.IsSet(name) {
+			continue
 		}
+		filenames = append(filenames, Abs(c, cf.GetString(name)))
 	}
 	return
 }
@@ -166,8 +157,14 @@ func ConfigFileTypes() []string {
 	return []string{"json", "yaml"}
 }
 
-// HomeDir return the validated-to-exist directory for the instance, or
-// an empty string
+// HomeDir return the directory for the instance. It checks for the first existing directory from:
+//
+//   - The one configured for the instance factory and in the configuration parameter "home"
+//   - In the default component instances directory (component.InstanceDir)
+//   - If the instance's component type has a parent component then in the
+//     legacy instances directory
+//
+// If no directory is found then a default built using Filepath() is returned
 func HomeDir(c geneos.Instance) (home string) {
 	if c.Config() == nil {
 		return ""
@@ -178,46 +175,17 @@ func HomeDir(c geneos.Instance) (home string) {
 
 	// can't use c.Home() as this function is called from there!
 	home = c.Config().GetString("home")
-	if _, err := h.Stat(home); err != nil {
-		home = h.Filepath(ct, ct.String()+"s", c.Name())
+	if d, err := h.Stat(home); err == nil && d.IsDir() {
+		log.Debug().Msgf("default home %s as defined", home)
+		return
 	}
-	return
-}
 
-// ParentDirectory returns the first directory that contains the
-// instance from:
-//
-//   - The one configured for the instance factory and accessed via Home()
-//   - In the default component instances directory (component.InstanceDir)
-//   - If the instance's component type has a parent component then in the
-//     legacy instances directory
-//
-// The function has to accept an interface as it is called from inside
-// the factory methods for each component type
-func ParentDirectory(i interface{}) (dir string) {
-	c, ok := i.(geneos.Instance)
-	if !ok {
-		log.Debug().Msg("i is not a geneos instance")
-		return ""
-	}
-	h := c.Host()
-
-	// first, does the configured home exist as a dir?
-	home := c.Config().GetString("home")
-	if home != "" {
-		dir = filepath.Dir(home)
-		// but check the configured home, not the parent
+	// second, does the instance exist in the default instances parentDir?
+	parentDir := c.Type().InstancesDir(h)
+	if parentDir != "" {
+		home = filepath.Join(parentDir, c.Name())
 		if d, err := h.Stat(home); err == nil && d.IsDir() {
-			log.Debug().Msgf("default home %s as defined", dir)
-			return
-		}
-	}
-
-	// second, does the instance exist in the default instances dir?
-	dir = c.Type().InstancesDir(h)
-	if dir != "" {
-		if d, err := h.Stat(dir); err == nil && d.IsDir() {
-			log.Debug().Msgf("instanceDir home %s selected", dir)
+			log.Debug().Msgf("instanceDir home %s selected", home)
 			return
 		}
 	}
@@ -225,17 +193,19 @@ func ParentDirectory(i interface{}) (dir string) {
 	// third, look in any "legacy" location, but only if parent type is
 	// non nil
 	if c.Type().ParentType != nil {
-		dir = filepath.Join(h.Filepath(c.Type(), c.Type().String()+"s"))
-		if dir != "" {
-			if d, err := h.Stat(dir); err == nil && d.IsDir() {
-				log.Debug().Msgf("new home %s from legacy", dir)
+		parentDir := filepath.Join(h.Filepath(c.Type(), c.Type().String()+"s"))
+		if parentDir != "" {
+			home = filepath.Join(parentDir, c.Name())
+			if d, err := h.Stat(home); err == nil && d.IsDir() {
+				log.Debug().Msgf("new home %s from legacy", home)
 				return
 			}
 		}
 	}
 
-	log.Debug().Msgf("default %s", dir)
-	return dir
+	home = h.Filepath(ct, ct.String()+"s", c.Name())
+	log.Debug().Msgf("default %s", home)
+	return
 }
 
 // SharedPath returns the full path a directory or file in the instances

@@ -132,14 +132,10 @@ func aesNewSetInstance(c geneos.Instance, params []string) (err error) {
 	}
 	cf.Set("keyfile", instance.SharedPath(c, "keyfiles", params[0]))
 
-	if c.Config().Type == "rc" {
+	if cf.Type == "rc" {
 		err = instance.Migrate(c)
 	} else {
-		err = c.Config().Save(c.Type().String(),
-			config.Host(c.Host()),
-			config.SaveDir(instance.ParentDirectory(c)),
-			config.SetAppName(c.Name()),
-		)
+		err = instance.SaveConfig(c)
 	}
 	if err != nil {
 		return

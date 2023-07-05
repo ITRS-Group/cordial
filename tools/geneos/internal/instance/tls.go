@@ -116,12 +116,7 @@ func WriteCert(c geneos.Instance, cert *x509.Certificate) (err error) {
 		return
 	}
 	cf.Set("certificate", certfile)
-
-	return cf.Save(c.Type().String(),
-		config.Host(c.Host()),
-		config.SaveDir(ParentDirectory(c)),
-		config.SetAppName(c.Name()),
-	)
+	return SaveConfig(c)
 }
 
 // WriteKey writes the key for the instance c and updates the config if required
@@ -140,11 +135,7 @@ func WriteKey(c geneos.Instance, key *memguard.Enclave) (err error) {
 		return
 	}
 	cf.Set("privatekey", keyfile)
-	return cf.Save(c.Type().String(),
-		config.Host(c.Host()),
-		config.SaveDir(ParentDirectory(c)),
-		config.SetAppName(c.Name()),
-	)
+	return SaveConfig(c)
 }
 
 // ReadRootCert reads the root certificate from the user's app config
