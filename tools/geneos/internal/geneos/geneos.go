@@ -66,13 +66,13 @@ var SigningCertFile string
 // verify instance certificates
 var ChainCertFile string
 
-// Init initialises a Geneos environment by creating a directory
+// GeneosInit initialises a Geneos environment by creating a directory
 // structure and then it calls the initialisation functions for each
 // component type registered.
 //
 // If the directory is not empty and the Force() option is not passed
 // then nothing is changed
-func Init(h *Host, options ...Options) (err error) {
+func GeneosInit(h *Host, options ...Options) (err error) {
 	opts := evalOptions(options...)
 	if opts.geneosdir == "" {
 		log.Fatal().Msg("homedir not set")

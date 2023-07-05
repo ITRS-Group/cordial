@@ -60,7 +60,6 @@ geneos config set geneos="/opt/geneos"
 		cf, _ := config.Load(cmd.Execname,
 			config.IgnoreSystemDir(),
 			config.IgnoreWorkingDir(),
-			config.KeyDelimiter("."),
 		)
 		cf.SetKeyValues(params...)
 

@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/host"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -47,7 +48,6 @@ type fileOptions struct {
 	merge                  bool
 	mustexist              bool
 	remote                 host.Host
-	savedir                string // directory to save appname/appname.ext to
 	setglobals             bool
 	systemdir              string
 	usedefaults            bool
@@ -71,7 +71,7 @@ func evalFileOptions(options ...FileOptions) (c *fileOptions) {
 }
 
 func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions) {
-	// init
+	// init defaults
 	c = &fileOptions{
 		envdelimiter: "_",
 		extension:    defaultFileExtension,
@@ -82,7 +82,7 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 		usedefaults:  true,
 		delimiter:    defaultKeyDelimiter,
 	}
-	c.userconfdir, _ = UserConfigDir()
+	c.userconfdir = "placeholder"
 
 	for _, opt := range options {
 		opt(c)
@@ -97,24 +97,38 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 		c.appname = configName
 	}
 
-	if c.userconfdir == "" {
-		c.userconfdir = filepath.Join(c.userconfdir, c.appname)
+	// if not cleared by options...
+	if c.userconfdir == "placeholder" {
+		c.userconfdir, _ = UserConfigDir()
 	}
+
+	// XXX this is wrong - empty means do not use
+	// if c.userconfdir == "" {
+	// 	c.userconfdir = filepath.Join(c.userconfdir, c.appname)
+	// }
 
 	return
 }
 
-func evalSaveOptions(options ...FileOptions) (c *fileOptions) {
+func evalSaveOptions(configName string, options ...FileOptions) (c *fileOptions) {
 	c = &fileOptions{
-		extension: defaultFileExtension,
-		remote:    host.Localhost,
+		appname:    configName,
+		extension:  defaultFileExtension,
+		remote:     host.Localhost,
+		configDirs: []string{},
 	}
-	c.savedir, _ = UserConfigDir()
+
+	c.userconfdir, _ = UserConfigDir()
 
 	for _, opt := range options {
 		opt(c)
 	}
 
+	log.Debug().Msgf("configdirs=%v", c.configDirs)
+	if len(c.configDirs) == 0 {
+		dir, _ := UserConfigDir()
+		c.configDirs = append(c.configDirs, filepath.Join(dir, c.appname))
+	}
 	return
 }
 
@@ -154,7 +168,7 @@ func UseDefaults(b bool) FileOptions {
 	}
 }
 
-// SetDefaults takes a []byte slice and a format type to set
+// WithDefaults takes a []byte slice and a format type to set
 // configuration defaults. This can be used in conjunction with `embed`
 // to set embedded default configuration values so that a program can
 // function without a configuration file, e.g.
@@ -162,15 +176,15 @@ func UseDefaults(b bool) FileOptions {
 //	//go:embed "defaults.yaml"
 //	var defaults []byte
 //	...
-//	c, err := config.Load("appname", config.SetDefaults(defaults, "yaml"))
-func SetDefaults(defaults []byte, format string) FileOptions {
+//	c, err := config.Load("appname", config.WithDefaults(defaults, "yaml"))
+func WithDefaults(defaults []byte, format string) FileOptions {
 	return func(c *fileOptions) {
 		c.internalDefaults = defaults
 		c.internalDefaultsFormat = format
 	}
 }
 
-// MustExist makes Load() return an error if the configuration file is
+// MustExist makes Load() return an error if a configuration file is
 // not found. This does not apply to default configuration files.
 func MustExist() FileOptions {
 	return func(lo *fileOptions) {
@@ -214,7 +228,7 @@ func SetConfigFile(path string) FileOptions {
 // configuration file loaded has an extension then that is used. This
 // applies to both defaults and main configuration files (but not
 // embedded defaults). The default is "json". Any leading "." is
-// removed.
+// ignored.
 func SetFileExtension(extension string) FileOptions {
 	return func(c *fileOptions) {
 		extension = strings.TrimLeft(extension, ".")
@@ -295,15 +309,6 @@ func Host(r host.Host) FileOptions {
 	}
 }
 
-// SaveDir sets the parent / top-most configuration directory to save the
-// configuration. The configuration is saved in a sub-directory named
-// after the application name.
-func SaveDir(dir string) FileOptions {
-	return func(so *fileOptions) {
-		so.savedir = dir
-	}
-}
-
 // KeyDelimiter sets the delimiter for keys in the configuration loaded
 // with Load. This can only be changed at the time of creation of the
 // configuration object so will not apply if used with SetGlobal().
@@ -313,7 +318,10 @@ func KeyDelimiter(delimiter string) FileOptions {
 	}
 }
 
-func UseEnvs(prefix string, delimiter string) FileOptions {
+// WithEnvs enables the use of environment variables using viper's
+// AutomaticEnv() functionality. If empty delimiter defaults to an
+// underscore.
+func WithEnvs(prefix string, delimiter string) FileOptions {
 	return func(fo *fileOptions) {
 		fo.envprefix = prefix
 		fo.envdelimiter = delimiter
