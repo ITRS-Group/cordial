@@ -1,5 +1,39 @@
 # Change Log
 
+## Version v1.7.0-beta
+
+> **Released 2023-07-05**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.7.0 Fixes
+
+* [#156](https://github.com/ITRS-Group/cordial/issues/156) - fix progressbar newline issue
+
+* [#155](https://github.com/ITRS-Group/cordial/issues/155) - refactor instance home directory handling (mostly internal)
+
+* [#153](https://github.com/ITRS-Group/cordial/issues/153) - fix local install of only components available
+
+* `tools/geneos` - fix order of columns in plain `geneos ls`
+
+## v1.7.0 Changes
+
+* Add support for TLS key type selection, defaulting to ECDH (see `geneos help tls init`)
+
+* Split `help` and `-h` options - `help` now gives the long description and usage while `--help`/`-h` only gives short description plus usage
+
+* `pkg/geneos` updates to XML parsing structures, fix regex handling
+
+* `pkg/gwhub` updates for better API support (work in progress)
+
+* `pkg/config` updates, with some API changes, to better support `tools/geneos` configuration handling and other refactoring and update ExpandString option NoDecode()
+
+* Use `upx` for compression of binaries during releases build - saves about 2/3rd space
+
+* Make consistent the handling of TLS certs and keys internally
+
+---
+
 ## Version v1.6.6
 
 > **Released 2023-06-28**
@@ -22,6 +56,8 @@
 
 * `pkg/geneos` - Various updates to plugins and other structures to support an ongoing project
 
+---
+
 ## Version v1.6.5
 
 > **Released 2023-06-23**
@@ -33,6 +69,8 @@
 * [#146](https://github.com/ITRS-Group/cordial/issues/146) - Entering empty passwords could cause pointer panics
 
 * [#148](https://github.com/ITRS-Group/cordial/issues/148) - Fallback to environment vars when user.Current() fails because user is not in local passwd file with static binary.
+
+---
 
 ## Version v1.6.4
 
@@ -70,6 +108,8 @@ Note: v1.6.3 was removed, and v.1.6.4 releases to address some last minute issue
 
 * [#133](https://github.com/ITRS-Group/cordial/issues/133) - Check restart logic and fix for when instance is already stopped. Also update the Stop() function and it's usage in other callers.
 
+---
+
 ## Version v1.6.2
 
 > **Released 2023-06-14**
@@ -79,6 +119,8 @@ Note: v1.6.3 was removed, and v.1.6.4 releases to address some last minute issue
 ## v1.6.2 Fixes
 
 * `tools/geneos` Fix late found bug with `deploy` and home directories
+
+---
 
 ## Version v1.6.1
 
