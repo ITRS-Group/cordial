@@ -181,7 +181,12 @@ func SaveConfig(c geneos.Instance) (err error) {
 		return
 	}
 
-	return c.Rebuild(false)
+	// rebuild on every save, but skip errors from any components that do not support rebuilds
+	if err = c.Rebuild(false); err != nil && err == geneos.ErrNotSupported {
+		err = nil
+	}
+
+	return
 }
 
 // SetSecureArgs returns a slice of arguments to enable secure

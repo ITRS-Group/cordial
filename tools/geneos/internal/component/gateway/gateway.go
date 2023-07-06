@@ -248,7 +248,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	if err != nil {
 		return
 	}
-	fmt.Printf("%s instance template %q rebuilt\n", g, "instance.setup.xml")
+	log.Debug().Msgf("%s instance template %q rebuilt", g, "instance.setup.xml")
 
 	configrebuild := cf.GetString("config::rebuild")
 
