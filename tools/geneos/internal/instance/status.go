@@ -87,7 +87,7 @@ func Version(c geneos.Instance) (base string, version string, actual string, err
 		err = nil
 		return
 	}
-	// XXX linux only (move to X_linux.go)
+	// This is the path on the target host, and only linux is supported anyway
 	actual, err = c.Host().Readlink(fmt.Sprintf("/proc/%d/exe", pid))
 	if err != nil {
 		actual = "unknown"
