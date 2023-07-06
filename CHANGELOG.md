@@ -16,6 +16,8 @@
 
 * `tools/geneos` - fix order of columns in plain `geneos ls`
 
+* [#38](https://github.com/ITRS-Group/cordial/issues/38) - fix update stop/start as well as a number of related issues in `package install` and the handling of `fa2` packages
+
 ## v1.7.0 Changes
 
 * Add support for TLS key type selection, defaulting to ECDH (see `geneos help tls init`)
