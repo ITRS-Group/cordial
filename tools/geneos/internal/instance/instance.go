@@ -444,7 +444,6 @@ func AllNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 		for _, r := range geneos.AllHosts() {
 			names = append(names, AllNames(r, ct)...)
 		}
-		log.Debug().Msgf("names: %s", names)
 		return
 	}
 

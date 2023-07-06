@@ -45,17 +45,19 @@ func Stop(c geneos.Instance, force, kill bool) (err error) {
 	if !kill {
 		err = Signal(c, syscall.SIGTERM)
 		if err == os.ErrProcessDone {
+			fmt.Printf("%s stopped\n", c)
 			return nil
 		}
 
 		if errors.Is(err, syscall.EPERM) {
-			return nil
+			return os.ErrPermission
 		}
 
 		for i := 0; i < 10; i++ {
 			time.Sleep(250 * time.Millisecond)
 			err = Signal(c, syscall.SIGTERM)
 			if err == os.ErrProcessDone {
+				fmt.Printf("%s stopped\n", c)
 				return nil
 			}
 		}
