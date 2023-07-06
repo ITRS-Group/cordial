@@ -277,6 +277,14 @@ func initConfig() {
 
 	Execname = filepath.Base(bin)
 
+	// finally strip any extension from the binary, to allow windows
+	// binary to work. Note we get the extension first, it may be
+	// capitalised. This will also remove any other extensions, users
+	// should use '-' or '_' instead.
+	if ext := filepath.Ext(Execname); ext != "" {
+		Execname = strings.TrimSuffix(Execname, ext)
+	}
+
 	if quiet {
 		zerolog.SetGlobalLevel(zerolog.Disabled)
 	} else if debug {

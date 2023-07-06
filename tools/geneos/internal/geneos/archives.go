@@ -73,7 +73,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 			log.Debug().Msg("source is a directory, setting local")
 			opts.local = true
 		} else {
-			opts.archive = filepath.Join(Root(), "packages", "downloads")
+			opts.archive = path.Join(Root(), "packages", "downloads")
 		}
 	}
 
@@ -106,7 +106,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 			return
 		}
 		var f io.ReadSeekCloser
-		if f, err = LOCAL.Open(filepath.Join(opts.archive, filename)); err != nil {
+		if f, err = LOCAL.Open(path.Join(opts.archive, filename)); err != nil {
 			err = fmt.Errorf("local installation selected but no suitable file found for %s (%w)", ct, err)
 			return
 		}
@@ -119,7 +119,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 	}
 
 	LOCAL.MkdirAll(opts.archive, 0775)
-	archivePath := filepath.Join(opts.archive, filename)
+	archivePath := path.Join(opts.archive, filename)
 	s, err := LOCAL.Stat(archivePath)
 	if err == nil && s.Size() == resp.ContentLength {
 		if f, err := LOCAL.Open(archivePath); err == nil {

@@ -27,7 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -139,7 +139,7 @@ geneos uninstall --version 5.14.1
 						if uninstallCmdAll {
 							// remove all links to this release if given --all flag
 							for _, l := range release.Links {
-								h.Remove(filepath.Join(basedir, l))
+								h.Remove(path.Join(basedir, l))
 							}
 						} else {
 							// update to latest version, remove all others
@@ -153,7 +153,7 @@ geneos uninstall --version 5.14.1
 					}
 
 					// remove the release
-					if err = h.RemoveAll(filepath.Join(basedir, version)); err != nil {
+					if err = h.RemoveAll(path.Join(basedir, version)); err != nil {
 						log.Error().Err(err)
 						continue
 					}
@@ -180,7 +180,7 @@ geneos uninstall --version 5.14.1
 // map to the same old target to the new one.
 func updateLinks(h *geneos.Host, releaseDir string, release geneos.ReleaseDetails, oldVersion, newVersion string) (err error) {
 	for _, l := range release.Links {
-		link := filepath.Join(releaseDir, l)
+		link := path.Join(releaseDir, l)
 		if err = h.Remove(link); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			log.Error().Err(err)
 			continue

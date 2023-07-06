@@ -63,8 +63,8 @@ func (c *Config) MergeHOCONConfig(conf string) (err error) {
 
 // MergeHOCONFile reads a HOCON configuration file in path and
 // merges the settings into the cf *config.Config object
-func (c *Config) MergeHOCONFile(path string) (err error) {
-	b, err := os.ReadFile(path)
+func (c *Config) MergeHOCONFile(p string) (err error) {
+	b, err := os.ReadFile(p)
 	if err != nil {
 		return
 	}

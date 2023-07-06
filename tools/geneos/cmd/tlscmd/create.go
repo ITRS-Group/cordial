@@ -30,7 +30,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"time"
 
@@ -92,7 +92,7 @@ var createCmd = &cobra.Command{
 //
 // skip if certificate exists and is valid
 func CreateCert(dir string, overwrite bool, cn string, san ...string) (err error) {
-	basepath := filepath.Join(dir, strings.ReplaceAll(cn, " ", "-"))
+	basepath := path.Join(dir, strings.ReplaceAll(cn, " ", "-"))
 	if _, err = os.Stat(basepath + ".pem"); err == nil && !overwrite {
 		return host.ErrExists
 	}
@@ -115,12 +115,12 @@ func CreateCert(dir string, overwrite bool, cn string, san ...string) (err error
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	intrCert, err := instance.ReadSigningCert() // config.ReadCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".pem"))
+	intrCert, err := instance.ReadSigningCert()
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
-	intrKey, err := config.ReadPrivateKey(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
+	intrKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return

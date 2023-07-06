@@ -46,8 +46,8 @@ import (
 
 // ParseCertificate reads a PEM encoded cert from path on host h, return the
 // first found as a parsed certificate
-func ParseCertificate(h host.Host, path string) (cert *x509.Certificate, err error) {
-	certPEM, err := h.ReadFile(path)
+func ParseCertificate(h host.Host, pt string) (cert *x509.Certificate, err error) {
+	certPEM, err := h.ReadFile(pt)
 	if err != nil {
 		return
 	}
@@ -55,7 +55,7 @@ func ParseCertificate(h host.Host, path string) (cert *x509.Certificate, err err
 	for {
 		p, rest := pem.Decode(certPEM)
 		if p == nil {
-			return nil, fmt.Errorf("cannot locate certificate in %s", path)
+			return nil, fmt.Errorf("cannot locate certificate in %s", pt)
 		}
 		if p.Type == "CERTIFICATE" {
 			return x509.ParseCertificate(p.Bytes)
@@ -67,8 +67,8 @@ func ParseCertificate(h host.Host, path string) (cert *x509.Certificate, err err
 // ParseCertificates reads a PEM encoded file from host h and returns
 // all the certificates found (using the same rules as
 // x509.ParseCertificates).
-func ParseCertificates(h host.Host, path string) (certs []*x509.Certificate, err error) {
-	certPEM, err := h.ReadFile(path)
+func ParseCertificates(h host.Host, p string) (certs []*x509.Certificate, err error) {
+	certPEM, err := h.ReadFile(p)
 	if err != nil {
 		return
 	}
@@ -78,8 +78,8 @@ func ParseCertificates(h host.Host, path string) (certs []*x509.Certificate, err
 
 // ReadPrivateKey reads a unencrypted, PEM-encoded private key and saves
 // the decoded, but unparsed, key in a memguard.Enclave
-func ReadPrivateKey(h host.Host, path string) (key *memguard.Enclave, err error) {
-	keyPEM, err := h.ReadFile(path)
+func ReadPrivateKey(h host.Host, pt string) (key *memguard.Enclave, err error) {
+	keyPEM, err := h.ReadFile(pt)
 	if err != nil {
 		return
 	}
@@ -87,7 +87,7 @@ func ReadPrivateKey(h host.Host, path string) (key *memguard.Enclave, err error)
 	for {
 		p, rest := pem.Decode(keyPEM)
 		if p == nil {
-			return nil, fmt.Errorf("cannot locate private key in %s", path)
+			return nil, fmt.Errorf("cannot locate private key in %s", pt)
 		}
 		if strings.HasSuffix(p.Type, "PRIVATE KEY") {
 			key = memguard.NewEnclave(p.Bytes)
@@ -118,19 +118,19 @@ func ParseKey(keyPEM *memguard.Enclave) (privateKey any, publickey crypto.Public
 }
 
 // WriteCert writes cert as PEM to path on host h
-func WriteCert(h host.Host, path string, cert *x509.Certificate) (err error) {
-	log.Debug().Msgf("write cert to %s", path)
+func WriteCert(h host.Host, p string, cert *x509.Certificate) (err error) {
+	log.Debug().Msgf("write cert to %s", p)
 	certPEM := pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: cert.Raw,
 	})
 
-	return h.WriteFile(path, certPEM, 0644)
+	return h.WriteFile(p, certPEM, 0644)
 }
 
 // WriteCerts concatenate certs and writes to path on host h
-func WriteCerts(h host.Host, path string, certs ...*x509.Certificate) (err error) {
-	log.Debug().Msgf("write certs to %s", path)
+func WriteCerts(h host.Host, p string, certs ...*x509.Certificate) (err error) {
+	log.Debug().Msgf("write certs to %s", p)
 	var certsPEM []byte
 	for _, cert := range certs {
 		if cert == nil {
@@ -142,19 +142,19 @@ func WriteCerts(h host.Host, path string, certs ...*x509.Certificate) (err error
 		})
 		certsPEM = append(certsPEM, p...)
 	}
-	return h.WriteFile(path, certsPEM, 0644)
+	return h.WriteFile(p, certsPEM, 0644)
 }
 
 // WritePrivateKey writes a private key as PEM to path on host h. sets file
 // permissions to 0600 (before umask)
-func WritePrivateKey(h host.Host, path string, key *memguard.Enclave) (err error) {
+func WritePrivateKey(h host.Host, pt string, key *memguard.Enclave) (err error) {
 	l, _ := key.Open()
 	defer l.Destroy()
 	p := pem.EncodeToMemory(&pem.Block{
 		Type:  "PRIVATE KEY",
 		Bytes: l.Bytes(),
 	})
-	return h.WriteFile(path, p, 0600)
+	return h.WriteFile(pt, p, 0600)
 }
 
 const DefaultKeyType = "ecdh"

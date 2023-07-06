@@ -195,5 +195,5 @@ func KeyFileNormalise(in string) (out string) {
 	}
 
 	log.Debug().Msgf("returning: %s/%s", dir, file+".aes")
-	return filepath.Join(dir, file+".aes")
+	return path.Join(dir, file+".aes")
 }
