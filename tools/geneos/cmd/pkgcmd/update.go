@@ -85,6 +85,7 @@ geneos package update netprobe 5.13.2
 		cs := instance.MatchKeyValue(h, ct, "protected", "true")
 		if len(cs) > 0 && !updateCmdForce {
 			fmt.Println("There are one or more protected instances using the current version. Use `--force` to override")
+			return
 		}
 		if len(args) > 0 {
 			version = args[0]

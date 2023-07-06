@@ -126,7 +126,7 @@ geneos uninstall --version 5.14.1
 
 				// directory that contains releases for this component
 				// on the selected host
-				basedir := h.Filepath("packages", ct)
+				basedir := h.Filepath("packages", ct.String())
 				stopped := []geneos.Instance{}
 
 				for version, release := range removeReleases {
