@@ -1,8 +1,8 @@
 # Change Log
 
-## Version v1.7.0-beta
+## Version v1.7.0-beta2
 
-> **Released 2023-07-05**
+> **Released 2023-07-06**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
@@ -17,6 +17,10 @@
 * `tools/geneos` - fix order of columns in plain `geneos ls`
 
 * [#38](https://github.com/ITRS-Group/cordial/issues/38) - fix update stop/start as well as a number of related issues in `package install` and the handling of `fa2` packages
+
+* [#152](https://github.com/ITRS-Group/cordial/issues/152) - call Rebuild() on *every* instance config save - then instance.setup.xml will stay in sync with config
+
+* [#150](https://github.com/ITRS-Group/cordial/issues/150) - document `deploy` behaviour when versions clash
 
 ## v1.7.0 Changes
 
@@ -33,6 +37,8 @@
 * Use `upx` for compression of binaries during releases build - saves about 2/3rd space
 
 * Make consistent the handling of TLS certs and keys internally
+
+* `geneos ps` will show the actual version of each instance running, in case the base symlink has been updated and the process not restarted
 
 ---
 
