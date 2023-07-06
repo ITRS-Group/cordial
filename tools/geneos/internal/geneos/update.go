@@ -38,9 +38,10 @@ import (
 // this allows new installs to work without explicitly calling update.
 func Update(h *Host, ct *Component, options ...Options) (err error) {
 	opts := evalOptions(options...)
+
 	if ct == nil {
-		for _, t := range RealComponents() {
-			if err = Update(h, t, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
+		for _, ct := range ct.OrList() {
+			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
 				log.Error().Err(err).Msg("")
 			}
 		}
@@ -69,11 +70,12 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 	}
 
 	if h == ALL {
-		for _, h := range AllHosts() {
+		for _, h := range h.OrList() {
 			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
 				log.Error().Err(err).Msg("")
 			}
 		}
+
 		return
 	}
 
@@ -81,7 +83,7 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 
 	log.Debug().Msgf("checking and updating %s on %s %q to %q", ct, h, opts.basename, opts.version)
 
-	basedir := h.Filepath("packages", ct)
+	basedir := h.Filepath("packages", ct.String())
 	basepath := filepath.Join(basedir, opts.basename)
 
 	if opts.version == "latest" {
@@ -92,7 +94,7 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 	// })
 	opts.version, err = LatestVersion(h, ct, opts.version)
 	if err != nil {
-		log.Debug().Err(err).Msg("latest() returned err")
+		log.Debug().Err(err).Msg("")
 	}
 
 	if opts.version == "" {
@@ -105,12 +107,15 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 		log.Debug().Msgf("cannot read link for existing version %s", basepath)
 	}
 
+	log.Debug().Msgf("trying to update %s to %s", basepath, filepath.Join(basedir, opts.version))
+
 	// before removing existing link, check there is something to link to
 	if _, err = h.Stat(filepath.Join(basedir, opts.version)); err != nil {
 		return fmt.Errorf("%q version of %s on %s: %w", opts.version, ct, h, os.ErrNotExist)
 	}
 
 	if (existing != "" && !opts.force) || existing == opts.version {
+		log.Debug().Msgf("existing=%s, version=%s, force=%v", existing, opts.version, opts.force)
 		return nil
 	}
 
