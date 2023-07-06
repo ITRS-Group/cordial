@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -200,8 +200,8 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 		// interactive session
 		var input string
 		root = homedir
-		if filepath.Base(homedir) != cmd.Execname {
-			root = filepath.Join(homedir, cmd.Execname)
+		if path.Base(homedir) != cmd.Execname {
+			root = path.Join(homedir, cmd.Execname)
 		}
 		input, err = config.ReadUserInput("Geneos Directory (default %q): ", root)
 		if err == nil {
@@ -214,10 +214,10 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 		}
 		err = nil
 	case 1: // home = abs path
-		if !filepath.IsAbs(args[0]) {
+		if !path.IsAbs(args[0]) {
 			log.Fatal().Msgf("Home directory must be absolute path: %s", args[0])
 		}
-		root = filepath.Clean(args[0])
+		root = path.Clean(args[0])
 	default:
 		log.Fatal().Msgf("too many args: %v", args)
 	}

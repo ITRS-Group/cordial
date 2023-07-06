@@ -30,7 +30,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"path/filepath"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -135,7 +135,7 @@ func Keys(paths ...string) SSHOptions {
 func readSSHkeys(homedir string, files ...string) (signers []ssh.Signer) {
 	// files := strings.Split(config.GetString("privateKeys"), ",")
 	// for i, f := range files {
-	// 	files[i] = filepath.Join(homedir, userSSHdir, f)
+	// 	files[i] = path.Join(homedir, userSSHdir, f)
 	// }
 	// files := []string{}
 	// for _, k := range morekeys {
@@ -144,9 +144,9 @@ func readSSHkeys(homedir string, files ...string) (signers []ssh.Signer) {
 	// 	}
 	// }
 
-	for _, path := range files {
-		log.Debug().Msgf("trying to read private key %s", path)
-		key, err := os.ReadFile(path)
+	for _, p := range files {
+		log.Debug().Msgf("trying to read private key %s", p)
+		key, err := os.ReadFile(p)
 		if err != nil {
 			continue
 		}
@@ -155,7 +155,7 @@ func readSSHkeys(homedir string, files ...string) (signers []ssh.Signer) {
 			log.Debug().Err(err).Msg("")
 			continue
 		}
-		log.Debug().Msgf("loaded private key from %s", path)
+		log.Debug().Msgf("loaded private key from %s", p)
 		signers = append(signers, signer)
 	}
 	return
@@ -173,7 +173,7 @@ func sshConnect(dest, user string, password *memguard.Enclave, keyfiles ...strin
 
 	// XXX we need this because:
 	// https://github.com/golang/go/issues/29286#issuecomment-1160958614
-	kh, err := knownhosts.New(filepath.Join(homedir, userSSHdir, "known_hosts"))
+	kh, err := knownhosts.New(path.Join(homedir, userSSHdir, "known_hosts"))
 	if err != nil {
 		log.Debug().Msg("cannot load ssh known_hosts file, ssh will not be available.")
 		return
@@ -359,11 +359,11 @@ func (h *SSHRemote) Readlink(file string) (string, error) {
 	}
 }
 
-func (h *SSHRemote) MkdirAll(path string, perm os.FileMode) error {
+func (h *SSHRemote) MkdirAll(p string, perm os.FileMode) error {
 	if s, err := h.DialSFTP(); err != nil {
 		return err
 	} else {
-		return s.MkdirAll(path)
+		return s.MkdirAll(p)
 	}
 }
 
@@ -384,13 +384,13 @@ func (h *SSHRemote) Lchown(name string, uid, gid int) error {
 	}
 }
 
-func (h *SSHRemote) Create(path string, perms fs.FileMode) (out io.WriteCloser, err error) {
+func (h *SSHRemote) Create(p string, perms fs.FileMode) (out io.WriteCloser, err error) {
 	var cf *sftp.File
 	var s *sftp.Client
 	if s, err = h.DialSFTP(); err != nil {
 		return
 	}
-	if cf, err = s.Create(path); err != nil {
+	if cf, err = s.Create(p); err != nil {
 		return
 	}
 	out = cf
@@ -534,8 +534,8 @@ func (h *SSHRemote) Open(name string) (io.ReadSeekCloser, error) {
 	}
 }
 
-func (h *SSHRemote) Path(path string) string {
-	return fmt.Sprintf("%s:%s", h, path)
+func (h *SSHRemote) Path(p string) string {
+	return fmt.Sprintf("%s:%s", h, p)
 }
 
 // TempDir returns a path on the remote to a temporary directory
@@ -671,8 +671,8 @@ func (h *SSHRemote) Run(cmd *exec.Cmd, env []string, home, errfile string) (outp
 	// }
 
 	if errfile != "" {
-		if !filepath.IsAbs(errfile) {
-			errfile = filepath.Join(home, errfile)
+		if !path.IsAbs(errfile) {
+			errfile = path.Join(home, errfile)
 		}
 		e, err := h.Create(errfile, 0664)
 		if err != nil {

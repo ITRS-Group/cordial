@@ -25,7 +25,7 @@ package initcmd
 import (
 	_ "embed"
 	"fmt"
-	"path/filepath"
+	"path"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -80,7 +80,7 @@ func initTemplates(h *geneos.Host, options ...geneos.Options) (err error) {
 				}
 			}
 
-			if err = h.WriteFile(filepath.Join(templateDir, t.Filename), tmpl, 0664); err != nil {
+			if err = h.WriteFile(path.Join(templateDir, t.Filename), tmpl, 0664); err != nil {
 				return
 			}
 			fmt.Printf("%s template %q written to %s\n", ct, t.Filename, templateDir)

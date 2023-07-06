@@ -27,7 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 
 	"github.com/rs/zerolog/log"
 
@@ -81,7 +81,7 @@ func tlsInit(overwrite bool) (err error) {
 
 	if err := config.CreateRootCert(
 		geneos.LOCAL,
-		filepath.Join(config.AppConfigDir(), geneos.RootCAFile),
+		path.Join(config.AppConfigDir(), geneos.RootCAFile),
 		cmd.Execname+" root certificate",
 		overwrite,
 		initCmdKeyType); err != nil {
@@ -94,8 +94,8 @@ func tlsInit(overwrite bool) (err error) {
 	fmt.Printf("CA created for %s\n", geneos.RootCAFile)
 
 	if err := config.CreateSigningCert(
-		geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile),
-		filepath.Join(config.AppConfigDir(), geneos.RootCAFile),
+		geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile),
+		path.Join(config.AppConfigDir(), geneos.RootCAFile),
 		cmd.Execname+" intermediate certificate",
 		overwrite); err != nil {
 		if errors.Is(err, host.ErrExists) {

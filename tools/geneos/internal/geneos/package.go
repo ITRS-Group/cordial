@@ -28,7 +28,6 @@ import (
 	"io/fs"
 	"net/url"
 	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -101,7 +100,7 @@ func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
 			continue
 		}
 		if einfo.Mode()&fs.ModeSymlink != 0 {
-			link, err := h.Readlink(filepath.Join(basedir, ent.Name()))
+			link, err := h.Readlink(path.Join(basedir, ent.Name()))
 			if err != nil {
 				// skip entries with errors
 				log.Debug().Err(err).Msg("skipping")
@@ -129,7 +128,7 @@ func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
 				Latest:    ent.Name() == latest,
 				Links:     links,
 				ModTime:   mtime,
-				Path:      filepath.Join(basedir, ent.Name()),
+				Path:      path.Join(basedir, ent.Name()),
 			})
 		}
 	}

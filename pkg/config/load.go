@@ -27,7 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"path/filepath"
+	"path"
 
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/rs/zerolog/log"
@@ -75,7 +75,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 		ResetConfig(options...)
 		c = global
 		// update config directory
-		c.appUserConfDir = filepath.Join(opts.userconfdir, opts.appname)
+		c.appUserConfDir = path.Join(opts.userconfdir, opts.appname)
 	} else {
 		c = New(options...)
 	}
@@ -118,10 +118,10 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 		confDirs = append(confDirs, opts.workingdir)
 	}
 	if opts.userconfdir != "" {
-		confDirs = append(confDirs, filepath.Join(opts.userconfdir, opts.appname))
+		confDirs = append(confDirs, path.Join(opts.userconfdir, opts.appname))
 	}
 	if opts.systemdir != "" {
-		confDirs = append(confDirs, filepath.Join(opts.systemdir, opts.appname))
+		confDirs = append(confDirs, path.Join(opts.systemdir, opts.appname))
 	}
 
 	// if we are merging, then we load in reverse order to ensure lower
@@ -142,7 +142,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 			for _, dir := range confDirs {
 				d := New(options...)
 				d.SetFs(r.GetFs())
-				d.SetConfigFile(filepath.Join(dir, name+".defaults."+opts.extension))
+				d.SetConfigFile(path.Join(dir, name+".defaults."+opts.extension))
 				if err = d.ReadInConfig(); err != nil {
 					if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 						// not found is fine
@@ -157,7 +157,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 			}
 		} else if len(confDirs) > 0 {
 			for _, dir := range confDirs {
-				defaults.SetConfigFile(filepath.Join(dir, name+".defaults."+opts.extension))
+				defaults.SetConfigFile(path.Join(dir, name+".defaults."+opts.extension))
 				if err = defaults.ReadInConfig(); err != nil {
 					if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 						continue
@@ -202,7 +202,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 		for _, dir := range confDirs {
 			d := New(options...)
 			d.SetFs(r.GetFs())
-			d.SetConfigFile(filepath.Join(dir, name+"."+opts.extension))
+			d.SetConfigFile(path.Join(dir, name+"."+opts.extension))
 			if err = d.ReadInConfig(); err != nil {
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 					// not found is fine, we are merging
@@ -225,12 +225,12 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 
 	if len(confDirs) > 0 {
 		for _, dir := range confDirs {
-			vp.SetConfigFile(filepath.Join(dir, name+"."+opts.extension))
+			vp.SetConfigFile(path.Join(dir, name+"."+opts.extension))
 			if err = vp.ReadInConfig(); err != nil {
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 					continue
 				} else {
-					return c, fmt.Errorf("error reading config (%s): %w", filepath.Join(dir, name+"."+opts.extension), err)
+					return c, fmt.Errorf("error reading config (%s): %w", path.Join(dir, name+"."+opts.extension), err)
 				}
 			}
 			break
@@ -269,10 +269,10 @@ func Path(name string, options ...FileOptions) string {
 		confDirs = append(confDirs, opts.workingdir)
 	}
 	if opts.userconfdir != "" {
-		confDirs = append(confDirs, filepath.Join(opts.userconfdir, opts.appname))
+		confDirs = append(confDirs, path.Join(opts.userconfdir, opts.appname))
 	}
 	if opts.systemdir != "" {
-		confDirs = append(confDirs, filepath.Join(opts.systemdir, opts.appname))
+		confDirs = append(confDirs, path.Join(opts.systemdir, opts.appname))
 	}
 
 	filename := name
@@ -281,12 +281,12 @@ func Path(name string, options ...FileOptions) string {
 	}
 	if len(confDirs) > 0 {
 		for _, dir := range confDirs {
-			path := filepath.Join(dir, filename)
-			if st, err := r.Stat(path); err == nil && st.Mode().IsRegular() {
-				return path
+			p := path.Join(dir, filename)
+			if st, err := r.Stat(p); err == nil && st.Mode().IsRegular() {
+				return p
 			}
 		}
-		return filepath.Join(confDirs[0], filename)
+		return path.Join(confDirs[0], filename)
 	}
 
 	return filename

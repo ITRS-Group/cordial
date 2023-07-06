@@ -174,16 +174,20 @@ func HomeDir(c geneos.Instance) (home string) {
 	h := c.Host()
 
 	// can't use c.Home() as this function is called from there!
-	home = c.Config().GetString("home")
-	if d, err := h.Stat(home); err == nil && d.IsDir() {
-		log.Debug().Msgf("default home %s as defined", home)
-		return
+	if c.Config().IsSet("home") {
+		home = c.Config().GetString("home")
+		log.Debug().Msgf("home set to %s", home)
+		if d, err := h.Stat(home); err == nil && d.IsDir() {
+			log.Debug().Msgf("default home %s as defined", home)
+			return
+		}
 	}
 
 	// second, does the instance exist in the default instances parentDir?
 	parentDir := c.Type().InstancesDir(h)
 	if parentDir != "" {
-		home = filepath.Join(parentDir, c.Name())
+		log.Debug().Msgf("parent dir %s", parentDir)
+		home = path.Join(parentDir, c.Name())
 		if d, err := h.Stat(home); err == nil && d.IsDir() {
 			log.Debug().Msgf("instanceDir home %s selected", home)
 			return
@@ -193,9 +197,10 @@ func HomeDir(c geneos.Instance) (home string) {
 	// third, look in any "legacy" location, but only if parent type is
 	// non nil
 	if c.Type().ParentType != nil {
-		parentDir := filepath.Join(h.Filepath(c.Type(), c.Type().String()+"s"))
+		parentDir := h.Filepath(c.Type().String(), c.Type().String()+"s")
 		if parentDir != "" {
-			home = filepath.Join(parentDir, c.Name())
+			log.Debug().Msgf("legacy parent dir %s", parentDir)
+			home = path.Join(parentDir, c.Name())
 			if d, err := h.Stat(home); err == nil && d.IsDir() {
 				log.Debug().Msgf("new home %s from legacy", home)
 				return

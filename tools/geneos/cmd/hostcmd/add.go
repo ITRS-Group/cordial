@@ -28,6 +28,7 @@ import (
 	"net/url"
 	"os"
 	"os/user"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -231,7 +232,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		} else if runtime.GOOS != h.GetString("os") {
 			geneosdir := h.GetString("homedir")
 			if filepath.Base(geneosdir) != cmd.Execname {
-				geneosdir = filepath.Join(geneosdir, cmd.Execname)
+				geneosdir = path.Join(geneosdir, cmd.Execname)
 			}
 			switch h.GetString("os") {
 			case "windows":
@@ -243,7 +244,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		} else {
 			geneosdir := h.GetString("homedir")
 			if filepath.Base(geneosdir) != cmd.Execname {
-				geneosdir = filepath.Join(geneosdir, cmd.Execname)
+				geneosdir = path.Join(geneosdir, cmd.Execname)
 			}
 			h.Set(cmd.Execname, geneosdir)
 		}

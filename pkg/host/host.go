@@ -48,7 +48,7 @@ type Host interface {
 	// informational
 	String() string
 	GetFs() afero.Fs
-	Path(path string) string
+	Path(p string) string
 	Hostname() string
 	ServerVersion() string
 	IsAvailable() bool
@@ -63,7 +63,7 @@ type Host interface {
 	Glob(pattern string) (paths []string, err error)
 	Lchown(name string, uid, gid int) (err error)
 	Lstat(name string) (f fs.FileInfo, err error)
-	MkdirAll(path string, perm os.FileMode) (err error)
+	MkdirAll(p string, perm os.FileMode) (err error)
 	ReadDir(name string) (dirs []os.DirEntry, err error)
 	ReadFile(name string) (b []byte, err error)
 	Readlink(file string) (link string, err error)
@@ -76,7 +76,7 @@ type Host interface {
 	WriteFile(name string, data []byte, perm os.FileMode) (err error)
 	// these two do not conform to the afero / os interface
 	Open(name string) (f io.ReadSeekCloser, err error)
-	Create(path string, perms fs.FileMode) (out io.WriteCloser, err error)
+	Create(p string, perms fs.FileMode) (out io.WriteCloser, err error)
 
 	// process control
 	Signal(pid int, signal syscall.Signal) (err error)

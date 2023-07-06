@@ -25,7 +25,6 @@ package instance
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -93,9 +92,10 @@ func Version(c geneos.Instance) (base string, version string, actual string, err
 		actual = "unknown"
 		return
 	}
-	actual = strings.TrimPrefix(actual, c.Host().Filepath("packages", ct.String()))
-	actual, _ = filepath.Split(actual)
-	actual = strings.Trim(actual, "/")
+	actual = strings.TrimPrefix(actual, c.Host().Filepath("packages", ct.String())+"/")
+	if strings.Contains(actual, "/") {
+		actual = actual[:strings.Index(actual, "/")]
+	}
 	if actual == "" {
 		actual = "unknown"
 	}

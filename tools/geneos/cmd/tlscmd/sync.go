@@ -26,7 +26,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -79,7 +79,7 @@ func tlsSync() (err error) {
 		if err = r.MkdirAll(tlsPath, 0775); err != nil {
 			return
 		}
-		chainpath := filepath.Join(tlsPath, geneos.ChainCertFile)
+		chainpath := path.Join(tlsPath, geneos.ChainCertFile)
 		if err = config.WriteCerts(r, chainpath, rootCert, geneosCert); err != nil {
 			return
 		}

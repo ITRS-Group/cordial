@@ -30,7 +30,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 
 	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
@@ -137,14 +137,14 @@ func tlsImport(sources ...string) (err error) {
 			keys = keys[:i]
 		}
 
-		if err = config.WriteCert(geneos.LOCAL, filepath.Join(config.AppConfigDir(), prefix+".pem"), cert); err != nil {
+		if err = config.WriteCert(geneos.LOCAL, path.Join(config.AppConfigDir(), prefix+".pem"), cert); err != nil {
 			return err
 		}
-		fmt.Printf("imported %s certificate to %q\n", title, filepath.Join(config.AppConfigDir(), prefix+".pem"))
-		if err = config.WritePrivateKey(geneos.LOCAL, filepath.Join(config.AppConfigDir(), prefix+".key"), key); err != nil {
+		fmt.Printf("imported %s certificate to %q\n", title, path.Join(config.AppConfigDir(), prefix+".pem"))
+		if err = config.WritePrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), prefix+".key"), key); err != nil {
 			return err
 		}
-		fmt.Printf("imported %s private key to %q\n", title, filepath.Join(config.AppConfigDir(), prefix+".pem"))
+		fmt.Printf("imported %s private key to %q\n", title, path.Join(config.AppConfigDir(), prefix+".pem"))
 	}
 
 	return
