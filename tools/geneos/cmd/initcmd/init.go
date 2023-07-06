@@ -209,8 +209,8 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 				log.Debug().Msgf("set root to %s", input)
 				root = input
 			}
-		} else if err != config.ErrNotInteractive {
-			return
+			// } else if err != config.ErrNotInteractive {
+			// 	return
 		}
 		err = nil
 	case 1: // home = abs path

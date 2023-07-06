@@ -322,7 +322,7 @@ func (g *Gateways) Command() (args, env []string, home string) {
 		"-stats",
 	}
 
-	_, version, err := instance.Version(g)
+	_, version, _, err := instance.Version(g)
 	if err == nil { // if we have a valid version test for additional features
 		switch {
 		case geneos.CompareVersion(version, "6.0.0") >= 0:

@@ -105,7 +105,7 @@ geneos uninstall --version 5.14.1
 						continue
 					}
 
-					_, version, err := instance.Version(c)
+					_, version, _, err := instance.Version(c)
 					if err != nil {
 						log.Debug().Err(err).Msg("")
 						continue

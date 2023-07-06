@@ -23,7 +23,10 @@ THE SOFTWARE.
 package instance
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -59,12 +62,15 @@ func BaseVersion(c geneos.Instance) (dir string) {
 	return c.Host().Filepath("packages", c.Type().String(), c.Config().GetString("version"))
 }
 
-// Version returns the base package name and the underlying package
-// version for the instance c. If base is not a link, then base is also
-// returned as the symlink. If there are more than 10 levels of symlink
-// then return symlink set to "loop-detected" and err set to
-// syscall.ELOOP to prevent infinite loops.
-func Version(c geneos.Instance) (base string, version string, err error) {
+// Version returns the base package name, the underlying package version
+// and the actual version in use for the instance c. If base is not a
+// link, then base is also returned as the symlink. If there are more
+// than 10 levels of symlink then return symlink set to "loop-detected"
+// and err set to syscall.ELOOP to prevent infinite loops. If the
+// instance is not running or the executable path cannot be determined
+// then actual will be returned as "unknown".
+func Version(c geneos.Instance) (base string, version string, actual string, err error) {
+	actual = "unknown"
 	cf := c.Config()
 	base = cf.GetString("version")
 	pkgtype := cf.GetString("pkgtype")
@@ -73,6 +79,26 @@ func Version(c geneos.Instance) (base string, version string, err error) {
 		ct = geneos.FindComponent(pkgtype)
 	}
 	version, err = geneos.CurrentVersion(c.Host(), ct, cf.GetString("version"))
+	if err != nil {
+		return
+	}
+	pid, err := GetPID(c)
+	if err != nil && err == os.ErrProcessDone {
+		err = nil
+		return
+	}
+	// XXX linux only (move to X_linux.go)
+	actual, err = c.Host().Readlink(fmt.Sprintf("/proc/%d/exe", pid))
+	if err != nil {
+		actual = "unknown"
+		return
+	}
+	actual = strings.TrimPrefix(actual, c.Host().Filepath("packages", ct.String()))
+	actual, _ = filepath.Split(actual)
+	actual = strings.Trim(actual, "/")
+	if actual == "" {
+		actual = "unknown"
+	}
 	return
 }
 
@@ -80,7 +106,7 @@ func Version(c geneos.Instance) (base string, version string, err error) {
 // is version or greater. If the version of the instance is somehow
 // unparseable then this returns false.
 func AtLeastVersion(c geneos.Instance, version string) bool {
-	_, iv, err := Version(c)
+	_, iv, _, err := Version(c)
 	if err != nil {
 		return false
 	}

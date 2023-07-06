@@ -121,7 +121,7 @@ func listInstancePlain(c geneos.Instance, params []string) (err error) {
 	if flags == "" {
 		flags = "-"
 	}
-	base, underlying, _ := instance.Version(c)
+	base, underlying, _, _ := instance.Version(c)
 	if pkgtype := c.Config().GetString("pkgtype"); pkgtype != "" {
 		base = path.Join(pkgtype, base)
 	}
@@ -144,13 +144,13 @@ func listInstanceCSV(c geneos.Instance, params []string) (err error) {
 	if instance.IsAutoStart(c) {
 		autostart = "Y"
 	}
-	base, underlying, _ := instance.Version(c)
+	base, underlying, _, _ := instance.Version(c)
 	listCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), disabled, protected, autostart, fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 	return
 }
 
 func listInstanceJSON(c geneos.Instance, params []string) (result interface{}, err error) {
-	base, underlying, _ := instance.Version(c)
+	base, underlying, _, _ := instance.Version(c)
 	result = listCmdType{
 		Type:      c.Type().String(),
 		Name:      c.Name(),
