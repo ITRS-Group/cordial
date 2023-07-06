@@ -36,9 +36,10 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var installCmdLocal, installCmdNoSave, installCmdUpdate, installCmdNexus, installCmdSnapshot bool
+var installCmdLocal, installCmdNoSave, installCmdUpdate, installCmdForce, installCmdNexus, installCmdSnapshot bool
 var installCmdBase, installCmdOverride, installCmdVersion, installCmdUsername, installCmdPwFile string
 var installCmdDownloadOnly bool
 var installCmdPassword *config.Plaintext
@@ -55,7 +56,9 @@ func init() {
 	installCmd.Flags().BoolVarP(&installCmdNoSave, "nosave", "n", false, "Do not save a local copy of any downloads")
 	installCmd.Flags().BoolVarP(&installCmdDownloadOnly, "download", "D", false, "Download only")
 
-	installCmd.Flags().BoolVarP(&installCmdUpdate, "update", "U", false, "Update the base directory symlink")
+	installCmd.Flags().BoolVarP(&installCmdUpdate, "update", "U", false, "Update the base directory symlink, will restart unprotected instances")
+	installCmd.Flags().BoolVarP(&installCmdForce, "force", "F", false, "Will also restart protected instances, implies --update")
+
 	installCmd.Flags().StringVarP(&installCmdBase, "base", "b", "active_prod", "Override the base active_prod link name")
 
 	installCmd.Flags().StringVarP(&installCmdVersion, "version", "V", "latest", "Download this version, defaults to latest. Doesn't work for EL8 archives.")
@@ -130,11 +133,15 @@ geneos install netprobe -b active_dev -U
 			}
 		}
 
+		if installCmdForce {
+			installCmdUpdate = true
+		}
+
 		// base options
 		options := []geneos.Options{
 			geneos.Basename(installCmdBase),
 			geneos.DoUpdate(installCmdUpdate),
-			geneos.Force(installCmdUpdate),
+			geneos.Force(installCmdForce),
 			geneos.LocalOnly(installCmdLocal),
 			geneos.NoSave(installCmdNoSave),
 			geneos.Version(installCmdVersion),
@@ -165,6 +172,22 @@ geneos install netprobe -b active_dev -U
 			return install(h, ct, options...)
 		}
 
+		cs := instance.MatchKeyValue(h, ct, "protected", "true")
+		if len(cs) > 0 && installCmdUpdate && !installCmdForce {
+			fmt.Println("There are one or more protected instances using the current version. Use `--force` to override")
+			return
+		}
+
+		if installCmdUpdate {
+			instances := instance.MatchKeyValue(h, ct, "version", installCmdBase)
+			for _, c := range instances {
+				if err = instance.Stop(c, installCmdForce, false); err == nil {
+					// only restart instances that we stopped, regardless of success of install/update
+					defer instance.Start(c)
+				}
+			}
+		}
+
 		// if we have a component on the command line then use an archive in packages/downloads
 		// or download from official web site unless -L is given. version numbers checked.
 		// default to 'latest'
@@ -181,15 +204,13 @@ geneos install netprobe -b active_dev -U
 			if installCmdNexus {
 				options = append(options, geneos.UseNexus())
 			}
-			err = install(h, ct, options...)
-			return err
+			return install(h, ct, options...)
 		}
 
 		// work through command line args and try to install each
 		// argument using the naming format of standard downloads
 		for _, source := range args {
-			o := append(options, geneos.Archive(source))
-			if err = install(h, ct, o...); err != nil {
+			if err = install(h, ct, append(options, geneos.Archive(source))...); err != nil {
 				return err
 			}
 		}
