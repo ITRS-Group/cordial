@@ -136,10 +136,13 @@ func psInstancePlain(c geneos.Instance, params []string) (err error) {
 	if g, err = user.LookupGroupId(groupname); err == nil {
 		groupname = g.Name
 	}
-	base, underlying, _ := instance.Version(c)
+	base, underlying, actual, _ := instance.Version(c)
 	ports := instance.ListeningPorts(c)
+	if underlying != actual {
+		base += "*"
+	}
 
-	fmt.Fprintf(psTabWriter, "%s\t%s\t%s\t%d\t%v\t%s\t%s\t%s\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), pid, ports, username, groupname, mtime.Local().Format(time.RFC3339), base, underlying, c.Home())
+	fmt.Fprintf(psTabWriter, "%s\t%s\t%s\t%d\t%v\t%s\t%s\t%s\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), pid, ports, username, groupname, mtime.Local().Format(time.RFC3339), base, actual, c.Home())
 
 	if psCmdShowFiles {
 		listOpenFiles(c)
@@ -168,8 +171,11 @@ func psInstanceCSV(c geneos.Instance, params []string) (err error) {
 	if g, err = user.LookupGroupId(groupname); err == nil {
 		groupname = g.Name
 	}
-	base, underlying, _ := instance.Version(c)
-	psCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	base, underlying, actual, _ := instance.Version(c)
+	if underlying != actual {
+		base += "*"
+	}
+	psCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()})
 
 	return
 }
@@ -195,8 +201,11 @@ func psInstanceJSON(c geneos.Instance, params []string) (err error) {
 	if g, err = user.LookupGroupId(groupname); err == nil {
 		groupname = g.Name
 	}
-	base, underlying, _ := instance.Version(c)
-	psJSONEncoder.Encode(psType{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	base, underlying, actual, _ := instance.Version(c)
+	if underlying != actual {
+		base += "*"
+	}
+	psJSONEncoder.Encode(psType{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()})
 
 	return
 }

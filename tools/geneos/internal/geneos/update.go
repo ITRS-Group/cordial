@@ -89,9 +89,7 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 	if opts.version == "latest" {
 		opts.version = ""
 	}
-	// opts.version, err = LatestArchive(h, basedir, opts.version, func(d os.DirEntry) bool {
-	// 	return d.IsDir()
-	// })
+
 	opts.version, err = LatestVersion(h, ct, opts.version)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
@@ -106,8 +104,6 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 	if err != nil {
 		log.Debug().Msgf("cannot read link for existing version %s", basepath)
 	}
-
-	log.Debug().Msgf("trying to update %s to %s", basepath, filepath.Join(basedir, opts.version))
 
 	// before removing existing link, check there is something to link to
 	if _, err = h.Stat(filepath.Join(basedir, opts.version)); err != nil {
@@ -125,6 +121,6 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 	if err = h.Symlink(opts.version, basepath); err != nil {
 		return err
 	}
-	fmt.Println(ct, h.Path(basepath), "updated to", opts.version)
+	fmt.Printf("%s base %q updated to %s\n", ct, filepath.Base(basepath), opts.version)
 	return nil
 }
