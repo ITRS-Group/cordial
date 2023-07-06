@@ -173,11 +173,15 @@ func LoadConfig(c geneos.Instance) (err error) {
 func SaveConfig(c geneos.Instance) (err error) {
 	cf := c.Config()
 
-	return cf.Save(c.Type().String(),
+	if err = cf.Save(c.Type().String(),
 		config.Host(c.Host()),
 		config.AddDirs(HomeDir(c)),
 		config.SetAppName(c.Name()),
-	)
+	); err != nil {
+		return
+	}
+
+	return c.Rebuild(false)
 }
 
 // SetSecureArgs returns a slice of arguments to enable secure
