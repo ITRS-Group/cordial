@@ -24,7 +24,7 @@ package webserver
 
 import (
 	"os"
-	"path/filepath"
+	"path"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -200,12 +200,12 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	// copy default configs
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
-	configSrc := filepath.Join(instance.BaseVersion(w), "config")
+	configSrc := path.Join(instance.BaseVersion(w), "config")
 	if err = os.Chdir(configSrc); err != nil {
 		return
 	}
 
-	webappsdir := filepath.Join(w.Home(), "webapps")
+	webappsdir := path.Join(w.Home(), "webapps")
 	if err = w.Host().MkdirAll(webappsdir, 0775); err != nil {
 		return
 	}

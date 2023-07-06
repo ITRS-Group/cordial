@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -56,7 +57,7 @@ func start() {
 	vc.SetDefault("kerberos.krb5_conf", "krb5.conf")
 	// ... set default from a defaults map
 
-	ssoCfgFile := filepath.Join(confDir, "conf/sso-agent.conf")
+	ssoCfgFile := path.Join(confDir, "conf/sso-agent.conf")
 	err := vc.MergeHOCONFile(ssoCfgFile)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
@@ -69,7 +70,7 @@ func start() {
 
 	krb5conf := vc.GetString("kerberos.krb5_conf")
 	if !filepath.IsAbs(krb5conf) {
-		krb5conf = filepath.Join(confDir, krb5conf)
+		krb5conf = path.Join(confDir, krb5conf)
 	}
 	cf, err := krb5config.Load(krb5conf)
 	if err != nil {
@@ -171,7 +172,7 @@ func initServer(vc *config.Config, kt *keytab.Keytab, username string) {
 func loadSSOkey(cf *config.Config) *rsa.PrivateKey {
 	ks := cf.GetString("server.key_store.location")
 	if !filepath.IsAbs(ks) {
-		ks = filepath.Join(confDir, ks)
+		ks = path.Join(confDir, ks)
 	}
 	pw := []byte(cf.GetString("server.key_store.password"))
 

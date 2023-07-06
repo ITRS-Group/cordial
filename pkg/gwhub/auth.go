@@ -33,8 +33,8 @@ func (h *Hub) Login(ctx context.Context, username string, password *config.Plain
 	state := randValue()
 	v.Add("state", state)
 
-	path, _ := url.JoinPath(h.BaseURL, "/authorize")
-	req, _ := http.NewRequestWithContext(ctx, "GET", path, nil)
+	p, _ := url.JoinPath(h.BaseURL, "/authorize")
+	req, _ := http.NewRequestWithContext(ctx, "GET", p, nil)
 	req.URL.RawQuery = v.Encode()
 
 	resp, err := h.client.Do(req)
@@ -60,7 +60,7 @@ func (h *Hub) Login(ctx context.Context, username string, password *config.Plain
 	v.Add("state", state)
 	nonce := randValue()
 	v.Add("nonce", nonce)
-	req, _ = http.NewRequestWithContext(ctx, "GET", path, nil)
+	req, _ = http.NewRequestWithContext(ctx, "GET", p, nil)
 	req.URL.RawQuery = v.Encode()
 	req.Header.Add("Authorization", "Bearer "+h.token)
 

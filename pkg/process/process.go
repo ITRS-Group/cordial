@@ -30,7 +30,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"path/filepath"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -125,6 +125,9 @@ OUTER:
 //
 // TODO: add support for windows hosts - the lookups are based on the
 // host h and not the local system
+//
+// TODO: cache /proc entries for a period, this is very likely to be
+// used over and over in the same proc
 func GetPID(h host.Host, binary string, args ...string) (pid int, err error) {
 	var pids []int
 
@@ -137,7 +140,7 @@ func GetPID(h host.Host, binary string, args ...string) (pid int, err error) {
 	dirs, _ := h.Glob("/proc/[0-9]*")
 
 	for _, dir := range dirs {
-		p, _ := strconv.Atoi(filepath.Base(dir))
+		p, _ := strconv.Atoi(path.Base(dir))
 		pids = append(pids, p)
 	}
 
@@ -151,7 +154,7 @@ PIDS:
 			continue
 		}
 		procargs := bytes.Split(data, []byte("\000"))
-		execfile := filepath.Base(string(procargs[0]))
+		execfile := path.Base(string(procargs[0]))
 		if strings.HasPrefix(execfile, binary) {
 			argmap := make(map[string]bool)
 			for _, arg := range procargs[1:] {
@@ -258,14 +261,14 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 	}
 
 	if program.ErrLog == "" {
-		program.ErrLog = filepath.Join(program.WorkingDir, filepath.Base(program.Executable+".log"))
-	} else if !filepath.IsAbs(program.ErrLog) {
-		program.ErrLog = filepath.Join(program.WorkingDir, program.ErrLog)
+		program.ErrLog = path.Join(program.WorkingDir, path.Base(program.Executable+".log"))
+	} else if !path.IsAbs(program.ErrLog) {
+		program.ErrLog = path.Join(program.WorkingDir, program.ErrLog)
 	}
 
-	path, err := exec.LookPath(program.Executable)
+	p, err := exec.LookPath(program.Executable)
 	if err != nil {
-		return 0, retErrIfFalse(program.IgnoreErr, fmt.Errorf("%q %w", path, err))
+		return 0, retErrIfFalse(program.IgnoreErr, fmt.Errorf("%q %w", p, err))
 	}
 
 	switch {
@@ -304,7 +307,7 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 	}
 
 	// only valid if long running
-	pid, err = GetPID(h, path)
+	pid, err = GetPID(h, p)
 	err = retErrIfFalse(program.IgnoreErr, err)
 	return
 }

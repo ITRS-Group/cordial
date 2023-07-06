@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"path"
 	"strings"
 	"sync"
 
@@ -298,7 +298,7 @@ func (h *Host) OrList(hosts ...*Host) []*Host {
 // arguments. Each part can be a pointer to a geneos.Component, in which
 // case the component name or the parent component name is used, or any
 // other type is passed to fmt.Sprint to be stringified. The path is
-// returned from filepath.Join.
+// returned from path.Join
 //
 // If calling this against the "packages" directory remember to use
 // ct.String() to not deference the parent type, which is done if a part
@@ -329,7 +329,7 @@ func (h *Host) Filepath(parts ...interface{}) string {
 		}
 	}
 
-	return filepath.Join(strParts...)
+	return path.Join(strParts...)
 }
 
 // FullName returns name with the host h label appended if there is no
@@ -373,9 +373,9 @@ func (h *Host) Hidden() bool {
 func LoadHostConfig() {
 	var err error
 	userConfDir, _ := config.UserConfigDir()
-	oldConfigFile := filepath.Join(userConfDir, OldUserHostFile)
+	oldConfigFile := path.Join(userConfDir, OldUserHostFile)
 	// note that SetAppName only matters when PromoteFile returns an empty path
-	confpath := filepath.Join(userConfDir, execname)
+	confpath := path.Join(userConfDir, execname)
 	h, err := config.Load("hosts",
 		config.SetAppName(execname),
 		config.SetConfigFile(config.PromoteFile(host.Localhost, confpath, oldConfigFile)),

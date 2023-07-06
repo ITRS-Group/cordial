@@ -29,6 +29,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path"
 	"path/filepath"
 	"runtime"
 	"syscall"
@@ -88,8 +89,8 @@ func (h *Local) Readlink(file string) (link string, err error) {
 	return os.Readlink(file)
 }
 
-func (h *Local) MkdirAll(path string, perm os.FileMode) (err error) {
-	return os.MkdirAll(path, perm)
+func (h *Local) MkdirAll(p string, perm os.FileMode) (err error) {
+	return os.MkdirAll(p, perm)
 }
 
 func (h *Local) Chown(name string, uid, gid int) (err error) {
@@ -101,9 +102,9 @@ func (h *Local) Lchown(name string, uid, gid int) (err error) {
 	return os.Lchown(name, uid, gid)
 }
 
-func (h *Local) Create(path string, perms fs.FileMode) (out io.WriteCloser, err error) {
+func (h *Local) Create(p string, perms fs.FileMode) (out io.WriteCloser, err error) {
 	var cf *os.File
-	cf, err = os.Create(path)
+	cf, err = os.Create(p)
 	if err != nil {
 		return
 	}
@@ -156,8 +157,8 @@ func (h *Local) Open(name string) (f io.ReadSeekCloser, err error) {
 	return os.Open(name)
 }
 
-func (h *Local) Path(path string) string {
-	return path
+func (h *Local) Path(p string) string {
+	return p
 }
 
 func (h *Local) LastError() error {
@@ -190,8 +191,8 @@ func (h *Local) Start(cmd *exec.Cmd, env []string, home, errfile string) (err er
 	if errfile == "" {
 		errfile = os.DevNull
 	}
-	if !filepath.IsAbs(errfile) {
-		errfile = filepath.Join(home, errfile)
+	if !path.IsAbs(errfile) {
+		errfile = path.Join(home, errfile)
 	}
 
 	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_WRONLY, 0644)
@@ -226,8 +227,8 @@ func (h *Local) Run(cmd *exec.Cmd, env []string, home, errfile string) (output [
 		errfile = os.DevNull
 	}
 
-	if !filepath.IsAbs(errfile) {
-		errfile = filepath.Join(home, errfile)
+	if !path.IsAbs(errfile) {
+		errfile = path.Join(home, errfile)
 	}
 
 	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_WRONLY, 0644)

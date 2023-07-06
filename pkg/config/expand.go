@@ -630,13 +630,13 @@ func fetchURL(cf *Config, url string, trim bool) (s string, err error) {
 	return
 }
 
-func fetchFile(cf *Config, path string, trim bool) (s string, err error) {
-	path = strings.TrimPrefix(path, "file:")
-	if strings.HasPrefix(path, "~/") {
+func fetchFile(cf *Config, p string, trim bool) (s string, err error) {
+	p = strings.TrimPrefix(p, "file:")
+	if strings.HasPrefix(p, "~/") {
 		home, _ := os.UserHomeDir()
-		path = strings.Replace(path, "~", home, 1)
+		p = strings.Replace(p, "~", home, 1)
 	}
-	b, err := os.ReadFile(path)
+	b, err := os.ReadFile(p)
 	if err != nil {
 		return
 	}

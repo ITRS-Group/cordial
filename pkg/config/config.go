@@ -27,7 +27,7 @@ encryption key files and basic encryption and decryption.
 package config
 
 import (
-	"path/filepath"
+	"path"
 	"strconv"
 	"strings"
 
@@ -76,7 +76,7 @@ func New(options ...FileOptions) *Config {
 			viper.KeyDelimiter(opts.delimiter),
 			viper.EnvKeyReplacer(strings.NewReplacer(opts.delimiter, opts.envdelimiter))),
 		delimiter:      opts.delimiter,
-		appUserConfDir: filepath.Join(userConfDir, opts.appname),
+		appUserConfDir: path.Join(userConfDir, opts.appname),
 	}
 	if opts.envprefix != "" {
 		cf.SetEnvPrefix(opts.envprefix)

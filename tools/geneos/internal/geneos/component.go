@@ -23,7 +23,7 @@ THE SOFTWARE.
 package geneos
 
 import (
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -220,7 +220,7 @@ func (ct *Component) MakeComponentDirs(h *Host) (err error) {
 	}
 	geneos := h.GetString(execname) // root for host h
 	for _, d := range initDirs[name] {
-		dir := filepath.Join(geneos, d)
+		dir := path.Join(geneos, d)
 		log.Debug().Msgf("mkdirall %s", dir)
 		if err = h.MkdirAll(dir, 0775); err != nil {
 			return

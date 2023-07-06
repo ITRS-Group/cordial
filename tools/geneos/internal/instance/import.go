@@ -85,9 +85,9 @@ func ImportFile(h *geneos.Host, dir string, source string) (filename string, err
 			log.Fatal().Msg("dest path must be relative to (and in) instance directory")
 		}
 		// if the destination exists is it a directory?
-		if s, err := h.Stat(filepath.Join(dir, destfile)); err == nil {
+		if s, err := h.Stat(path.Join(dir, destfile)); err == nil {
 			if s.IsDir() {
-				destdir = filepath.Join(dir, destfile)
+				destdir = path.Join(dir, destfile)
 				destfile = ""
 			}
 		}
@@ -103,9 +103,9 @@ func ImportFile(h *geneos.Host, dir string, source string) (filename string, err
 				log.Fatal().Msg("dest path must be relative to (and in) instance directory")
 			}
 			// if the destination exists is it a directory?
-			if s, err := h.Stat(filepath.Join(dir, destfile)); err == nil {
+			if s, err := h.Stat(path.Join(dir, destfile)); err == nil {
 				if s.IsDir() {
-					destdir = filepath.Join(dir, destfile)
+					destdir = path.Join(dir, destfile)
 					destfile = ""
 				}
 			}
@@ -127,7 +127,7 @@ func ImportFile(h *geneos.Host, dir string, source string) (filename string, err
 	}
 	// return final basename
 	filename = filepath.Base(destfile)
-	destfile = filepath.Join(destdir, destfile)
+	destfile = path.Join(destdir, destfile)
 
 	// check to containing directory, as destfile above may be a
 	// relative path under destdir and not just a filename

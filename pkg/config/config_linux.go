@@ -3,10 +3,10 @@ package config
 import (
 	"os"
 	"os/user"
-	"path/filepath"
+	"path"
 )
 
-func UserConfigDir(username ...string) (path string, err error) {
+func UserConfigDir(username ...string) (p string, err error) {
 	if len(username) == 0 {
 		return os.UserConfigDir()
 	}
@@ -14,6 +14,6 @@ func UserConfigDir(username ...string) (path string, err error) {
 	if err != nil {
 		return
 	}
-	path = filepath.Join(u.HomeDir, ".config")
+	p = path.Join(u.HomeDir, ".config")
 	return
 }
