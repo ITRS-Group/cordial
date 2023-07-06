@@ -44,7 +44,7 @@ type Credentials struct {
 // FindCreds finds a set of credentials in the given config under the
 // key "credentials" and returns the longest match, if any. creds
 // is nil if no matching credentials found.
-func (cf *Config) FindCreds(path string) (creds *Config) {
+func (cf *Config) FindCreds(p string) (creds *Config) {
 	cr := cf.GetStringMap("credentials")
 	if cr == nil {
 		return
@@ -59,7 +59,7 @@ func (cf *Config) FindCreds(path string) (creds *Config) {
 	})
 	creds = New()
 	for _, domain := range domains {
-		if strings.Contains(strings.ToLower(path), strings.ToLower(domain)) {
+		if strings.Contains(strings.ToLower(p), strings.ToLower(domain)) {
 			creds.MergeConfigMap(cf.GetStringMap(cf.Join("credentials", domain)))
 			return
 		}
@@ -71,10 +71,10 @@ func (cf *Config) FindCreds(path string) (creds *Config) {
 // file. Options are the same as for [Load] but the default KeyDelimiter
 // is set to "::" as credential domains are likely to be hostnames or
 // URLs. The longest match wins.
-func FindCreds(path string, options ...FileOptions) (creds *Config) {
+func FindCreds(p string, options ...FileOptions) (creds *Config) {
 	options = append(options, KeyDelimiter("::"))
 	cf, _ := Load("credentials", options...)
-	return cf.FindCreds(path)
+	return cf.FindCreds(p)
 }
 
 // AddCreds adds credentials to the "credentials" file identified by the

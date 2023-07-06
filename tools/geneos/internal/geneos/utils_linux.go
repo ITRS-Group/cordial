@@ -31,18 +31,18 @@ import (
 
 // FileOwner is only available on Linux localhost
 type FileOwner struct {
-	Uid uint32
-	Gid uint32
+	Uid int
+	Gid int
 }
 
 func (h *Host) GetFileOwner(info fs.FileInfo) (s FileOwner) {
 	switch h.GetString("name") {
 	case LOCALHOST:
-		s.Uid = info.Sys().(*syscall.Stat_t).Uid
-		s.Gid = info.Sys().(*syscall.Stat_t).Gid
+		s.Uid = int(info.Sys().(*syscall.Stat_t).Uid)
+		s.Gid = int(info.Sys().(*syscall.Stat_t).Gid)
 	default:
-		s.Uid = info.Sys().(*sftp.FileStat).UID
-		s.Gid = info.Sys().(*sftp.FileStat).GID
+		s.Uid = int(info.Sys().(*sftp.FileStat).UID)
+		s.Gid = int(info.Sys().(*sftp.FileStat).GID)
 	}
 	return
 }

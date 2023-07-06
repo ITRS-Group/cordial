@@ -24,6 +24,7 @@ package config
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 
 	"github.com/itrs-group/cordial/pkg/host"
@@ -49,22 +50,22 @@ func (cf *Config) Save(name string, options ...FileOptions) (err error) {
 
 	filename := fmt.Sprintf("%s.%s", name, opts.extension)
 
-	path := filepath.Join(opts.userconfdir, opts.appname, filename)
+	p := path.Join(opts.userconfdir, opts.appname, filename)
 	if len(opts.configDirs) > 0 {
-		path = filepath.Join(opts.configDirs[0], filename)
+		p = path.Join(opts.configDirs[0], filename)
 	}
 
 	if opts.configFile != "" {
-		path = opts.configFile
+		p = opts.configFile
 	}
 
-	if err = r.MkdirAll(filepath.Dir(path), 0775); err != nil {
+	if err = r.MkdirAll(filepath.Dir(p), 0775); err != nil {
 		return
 	}
 
 	cf.SetFs(r.GetFs())
-	log.Debug().Msgf("saving configuration to %s", path)
-	return cf.WriteConfigAs(path)
+	log.Debug().Msgf("saving configuration to %s", p)
+	return cf.WriteConfigAs(p)
 }
 
 // Save writes the global configuration to a configuration file defined

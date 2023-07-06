@@ -25,7 +25,7 @@ package ca3
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"regexp"
 	"sync"
 
@@ -173,7 +173,7 @@ func (n *CA3s) Add(tmpl string, port uint16) (err error) {
 		port = instance.NextPort(n.Host(), &CA3)
 	}
 
-	baseDir := filepath.Join(instance.BaseVersion(n), "collection_agent")
+	baseDir := path.Join(instance.BaseVersion(n), "collection_agent")
 	n.Config().Set("port", port)
 
 	if err = instance.SaveConfig(n); err != nil {
@@ -231,18 +231,18 @@ func (n *CA3s) Command() (args, env []string, home string) {
 	log.Debug().Msgf("latest version %s", latest)
 	var jar string
 	if latest != "" {
-		jar = filepath.Join(baseDir, ca3prefix+latest+ca3suffix)
+		jar = path.Join(baseDir, ca3prefix+latest+ca3suffix)
 	}
 
 	args = []string{
 		"-Xms" + n.Config().GetString("minheap", config.Default("512M")),
 		"-Xmx" + n.Config().GetString("maxheap", config.Default("512M")),
-		"-Dlogback.configurationFile=" + filepath.Join(baseDir, "logback.xml"),
+		"-Dlogback.configurationFile=" + path.Join(baseDir, "logback.xml"),
 		"-jar", jar, n.Config().GetString("config"),
 	}
 
 	env = []string{
-		fmt.Sprintf("CA_PLUGIN_DIR=%s", n.Config().GetString("plugins", config.Default(filepath.Join(baseDir, "plugins")))),
+		fmt.Sprintf("CA_PLUGIN_DIR=%s", n.Config().GetString("plugins", config.Default(path.Join(baseDir, "plugins")))),
 		fmt.Sprintf("HEALTH_CHECK_PORT=%d", n.Config().GetInt("health-check-port", config.Default(9136))),
 		fmt.Sprintf("TCP_REPORTER_PORT=%d", n.Config().GetInt("tcp-reporter-port", config.Default(7137))),
 	}

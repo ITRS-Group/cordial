@@ -77,7 +77,7 @@ var fnmap = template.FuncMap{
 // CreateConfigFromTemplate loads templates from TYPE/templates/[tmpl]* and
 // parse them, using the instance data write it out to a single file. If tmpl is
 // empty, load all files
-func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defaultTemplate []byte) (err error) {
+func CreateConfigFromTemplate(c geneos.Instance, p string, name string, defaultTemplate []byte) (err error) {
 	var out io.WriteCloser
 	// var t *template.Template
 
@@ -91,8 +91,8 @@ func CreateConfigFromTemplate(c geneos.Instance, path string, name string, defau
 		t = template.Must(t.Parse(string(defaultTemplate)))
 	}
 
-	if out, err = c.Host().Create(path, 0660); err != nil {
-		log.Warn().Msgf("Cannot create configuration file for %s %s", c, path)
+	if out, err = c.Host().Create(p, 0660); err != nil {
+		log.Warn().Msgf("Cannot create configuration file for %s %s", c, p)
 		return err
 	}
 	defer out.Close()
@@ -129,10 +129,11 @@ func LoadConfig(c geneos.Instance) (err error) {
 	prefix := c.Type().LegacyPrefix
 	aliases := c.Type().LegacyParameters
 
-	home := filepath.Join(r.Filepath(c.Type(), c.Type().String()+"s"), c.Name())
-	if _, err = r.Stat(home); err != nil && errors.Is(err, fs.ErrNotExist) {
-		home = filepath.Join(r.Filepath(c.Type().String(), c.Type().String()+"s"), c.Name())
-	}
+	home := HomeDir(c)
+	// home := filepath.Join(r.Filepath(c.Type(), c.Type().String()+"s"), c.Name())
+	// if _, err = r.Stat(home); err != nil && errors.Is(err, fs.ErrNotExist) {
+	// 	home = filepath.Join(r.Filepath(c.Type().String(), c.Type().String()+"s"), c.Name())
+	// }
 	cf, err := config.Load(c.Type().Name,
 		config.Host(r),
 		config.FromDir(home),
@@ -142,6 +143,7 @@ func LoadConfig(c geneos.Instance) (err error) {
 	// override the home from the config file and use the directory the
 	// config was found in
 	c.Config().Set("home", home)
+	log.Debug().Msgf("home: %s", c.Home())
 
 	if err != nil {
 		log.Debug().Err(err).Msg("")
@@ -150,9 +152,7 @@ func LoadConfig(c geneos.Instance) (err error) {
 		}
 	}
 
-	log.Debug().Msgf("home: %s", c.Home())
-
-	// not we have them, merge tham into main instance config
+	// not we have them, merge them into main instance config
 	c.Config().MergeConfigMap(cf.AllSettings())
 
 	// aliases have to be set AFTER loading from file (https://github.com/spf13/viper/issues/560)
@@ -258,7 +258,7 @@ func Migrate(c geneos.Instance) (err error) {
 		if err = c.Host().MkdirAll(shouldbe, 0775); err != nil {
 			return
 		}
-		if err = c.Host().Rename(c.Home(), filepath.Join(shouldbe, c.Name())); err != nil {
+		if err = c.Host().Rename(c.Home(), path.Join(shouldbe, c.Name())); err != nil {
 			return
 		}
 		fmt.Printf("%s moved from %s to %s\n", c, current, shouldbe)

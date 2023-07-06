@@ -375,77 +375,77 @@ func (x *XPath) IsGateway() bool {
 }
 
 // return a string representation of an XPath
-func (x *XPath) String() (path string) {
+func (x *XPath) String() (p string) {
 	if x.Gateway == nil {
 		return
 	}
-	path += "/geneos/gateway"
+	p += "/geneos/gateway"
 	if x.Gateway.Name != "" {
-		path += fmt.Sprintf("[(@name=%q)]", x.Gateway.Name)
+		p += fmt.Sprintf("[(@name=%q)]", x.Gateway.Name)
 	}
-	path += "/directory"
+	p += "/directory"
 
 	if x.Probe == nil {
 		return
 	}
-	path += "/probe"
+	p += "/probe"
 	if x.Probe.Name != "" {
-		path += fmt.Sprintf("[(@name=%q)]", x.Probe.Name)
+		p += fmt.Sprintf("[(@name=%q)]", x.Probe.Name)
 	}
 
 	if x.Entity == nil {
 		return
 	}
-	path += "/managedEntity"
+	p += "/managedEntity"
 	if x.Entity.Name != "" {
-		path += fmt.Sprintf("[(@name=%q)]", x.Entity.Name)
+		p += fmt.Sprintf("[(@name=%q)]", x.Entity.Name)
 	}
 	for k, v := range x.Entity.Attributes {
-		path += fmt.Sprintf("[(attr(%q)=%q)]", k, v)
+		p += fmt.Sprintf("[(attr(%q)=%q)]", k, v)
 	}
 
 	if x.Sampler == nil {
 		return
 	}
-	path += "/sampler"
+	p += "/sampler"
 	if x.Sampler.Name != "" {
-		path += fmt.Sprintf("[(@name=%q)]", x.Sampler.Name)
+		p += fmt.Sprintf("[(@name=%q)]", x.Sampler.Name)
 	}
 	if x.Sampler.Type != nil {
-		path += fmt.Sprintf("[(@type=%q)]", *x.Sampler.Type)
+		p += fmt.Sprintf("[(@type=%q)]", *x.Sampler.Type)
 	}
 
 	if x.Dataview == nil {
 		return
 	}
-	path += "/dataview"
+	p += "/dataview"
 	if x.Dataview.Name != "" {
-		path += fmt.Sprintf("[(@name=%q)]", x.Dataview.Name)
+		p += fmt.Sprintf("[(@name=%q)]", x.Dataview.Name)
 	}
 
 	if x.Rows {
-		path += "/rows"
+		p += "/rows"
 		if x.Row == nil {
 			return
 		}
-		path += "/row"
+		p += "/row"
 		if x.Row.Name != "" {
-			path += fmt.Sprintf("[(@name=%q)]", x.Row.Name)
+			p += fmt.Sprintf("[(@name=%q)]", x.Row.Name)
 		}
 		if x.Column == nil {
 			return
 		}
-		path += "/cell"
+		p += "/cell"
 		if x.Column.Name != "" {
-			path += fmt.Sprintf("[(@column=%q)]", x.Column.Name)
+			p += fmt.Sprintf("[(@column=%q)]", x.Column.Name)
 		}
 	} else {
 		if x.Headline == nil {
 			return
 		}
-		path += "/headlines"
+		p += "/headlines"
 		if x.Headline.Name != "" {
-			path += fmt.Sprintf("/cell[(@name=%q)]", x.Headline.Name)
+			p += fmt.Sprintf("/cell[(@name=%q)]", x.Headline.Name)
 		}
 	}
 	return

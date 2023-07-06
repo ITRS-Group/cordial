@@ -20,34 +20,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package instance
+package geneos
 
 import (
-	"time"
+	"io/fs"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/pkg/sftp"
 )
 
-func GetPID(c geneos.Instance) (pid int, err error) {
-	return
+// FileOwner is only available on Linux localhost
+type FileOwner struct {
+	Uid int
+	Gid int
 }
 
-func GetPIDInfo(c geneos.Instance) (pid int, uid uint32, gid uint32, mtime time.Time, err error) {
-	return
-}
-
-func ListeningPorts(c geneos.Instance) (ports []int) {
-	return
-}
-
-func AllListeningPorts(h *geneos.Host, min, max int) (ports []int) {
-	return
-}
-
-func Files(c geneos.Instance) (links map[int]string) {
-	return
-}
-
-func Sockets(c geneos.Instance) (links map[int]string) {
+func (h *Host) GetFileOwner(info fs.FileInfo) (s FileOwner) {
+	switch h.GetString("name") {
+	case LOCALHOST:
+		s.Uid = -1
+		s.Gid = -1
+	default:
+		s.Uid = int(info.Sys().(*sftp.FileStat).UID)
+		s.Gid = int(info.Sys().(*sftp.FileStat).GID)
+	}
 	return
 }

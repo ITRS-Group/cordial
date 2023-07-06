@@ -29,6 +29,7 @@ import (
 	"io/fs"
 	"os"
 	"os/user"
+	"path"
 	"path/filepath"
 
 	"github.com/rs/zerolog/log"
@@ -156,7 +157,7 @@ var deployCmd = &cobra.Command{
 						root = os.Getenv("HOME")
 					}
 					if filepath.Base(root) != Execname {
-						root = filepath.Join(root, Execname)
+						root = path.Join(root, Execname)
 					}
 					input, err = config.ReadUserInput("Geneos Directory (default %q): ", root)
 					if err == nil {
@@ -206,7 +207,7 @@ var deployCmd = &cobra.Command{
 
 			for _, t := range ct.Templates {
 				tmpl := t.Content
-				output := filepath.Join(templateDir, t.Filename)
+				output := path.Join(templateDir, t.Filename)
 				if _, err := h.Stat(output); err == nil {
 					continue
 				}

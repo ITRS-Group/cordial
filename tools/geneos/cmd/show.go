@@ -30,7 +30,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -169,7 +168,7 @@ func showValidateInstance(c geneos.Instance, params []string) (result interface{
 	}
 	if c.Type().String() == "gateway" {
 		// temp file for JSON output
-		tempfile := filepath.Join(c.Host().TempDir(), "validate-"+c.Name()+".json")
+		tempfile := path.Join(c.Host().TempDir(), "validate-"+c.Name()+".json")
 		defer c.Host().Remove(tempfile)
 
 		// run a gateway with -dump-xml and consume the result, discard the heading

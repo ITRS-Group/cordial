@@ -26,7 +26,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/host"
@@ -57,35 +57,35 @@ func PromoteFile(r host.Host, paths ...string) (final string) {
 		}
 	}
 
-	for i, path := range paths {
+	for i, p := range paths {
 		var err error
-		if path == "" {
+		if p == "" {
 			continue
 		}
-		if p, err := r.Stat(path); err != nil || !p.Mode().IsRegular() {
+		if p, err := r.Stat(p); err != nil || !p.Mode().IsRegular() {
 			continue
 		}
 
-		log.Debug().Msgf("here: %s", path)
-		final = path
+		log.Debug().Msgf("here: %s", p)
+		final = p
 		if i == 0 || paths[0] == "" {
 			log.Debug().Msgf("returning paths[0]")
 			return
 		}
 		if dir == "" {
-			if err = r.Rename(path, paths[0]); err != nil {
-				log.Debug().Msgf("renaming path %s to path %s", path, paths[0])
+			if err = r.Rename(p, paths[0]); err != nil {
+				log.Debug().Msgf("renaming path %s to path %s", p, paths[0])
 				return
 			}
 			final = paths[0]
 		} else {
-			final = filepath.Join(dir, filepath.Base(path))
+			final = path.Join(dir, path.Base(p))
 			// don't overwrite existing, return that
 			if p, err := r.Stat(final); err == nil && p.Mode().IsRegular() {
 				return final
 			}
-			if err = r.Rename(path, final); err != nil {
-				log.Debug().Msgf("renaming path %s to dir %s", path, final)
+			if err = r.Rename(p, final); err != nil {
+				log.Debug().Msgf("renaming path %s to dir %s", p, final)
 				return
 			}
 		}
@@ -95,8 +95,8 @@ func PromoteFile(r host.Host, paths ...string) (final string) {
 	}
 
 	if final == "" && dir != "" {
-		for _, path := range paths[1:] {
-			check := filepath.Join(dir, filepath.Base(path))
+		for _, p := range paths[1:] {
+			check := path.Join(dir, path.Base(p))
 			if p, err := r.Stat(check); err == nil && p.Mode().IsRegular() {
 				return check
 			}
@@ -122,12 +122,12 @@ func PromoteFile(r host.Host, paths ...string) (final string) {
 //     used.
 //   - All other `name=value` entries are saved as environment variables
 //     in the configuration for the instance under the `Env` key.
-func (cf *Config) ReadRCConfig(r host.Host, path string, prefix string, aliases map[string]string) (err error) {
-	data, err := r.ReadFile(path)
+func (cf *Config) ReadRCConfig(r host.Host, p string, prefix string, aliases map[string]string) (err error) {
+	data, err := r.ReadFile(p)
 	if err != nil {
 		return
 	}
-	log.Debug().Msgf("loading config from %q", path)
+	log.Debug().Msgf("loading config from %q", p)
 
 	confs := make(map[string]string)
 

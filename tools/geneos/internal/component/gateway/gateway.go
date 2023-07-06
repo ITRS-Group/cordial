@@ -26,7 +26,6 @@ import (
 	_ "embed"
 	"fmt"
 	"path"
-	"path/filepath"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -244,7 +243,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	cf := g.Config()
 
 	// always rebuild an instance template
-	err = instance.CreateConfigFromTemplate(g, filepath.Join(g.Home(), "instance.setup.xml"), instanceTemplateName, instanceTemplate)
+	err = instance.CreateConfigFromTemplate(g, instance.Abs(g, "instance.setup.xml"), instanceTemplateName, instanceTemplate)
 	if err != nil {
 		return
 	}

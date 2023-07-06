@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/rs/zerolog/log"
@@ -84,7 +85,7 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 	log.Debug().Msgf("checking and updating %s on %s %q to %q", ct, h, opts.basename, opts.version)
 
 	basedir := h.Filepath("packages", ct.String())
-	basepath := filepath.Join(basedir, opts.basename)
+	basepath := path.Join(basedir, opts.basename)
 
 	if opts.version == "latest" {
 		opts.version = ""
@@ -106,7 +107,7 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 	}
 
 	// before removing existing link, check there is something to link to
-	if _, err = h.Stat(filepath.Join(basedir, opts.version)); err != nil {
+	if _, err = h.Stat(path.Join(basedir, opts.version)); err != nil {
 		return fmt.Errorf("%q version of %s on %s: %w", opts.version, ct, h, os.ErrNotExist)
 	}
 

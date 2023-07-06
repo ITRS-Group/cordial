@@ -25,7 +25,7 @@ package instance
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -168,7 +168,7 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 	}(src.String(), src.Host(), src.Home(), dst)
 
 	// XXX update *Home manually, as it's not just the prefix
-	newdst.Config().Set("home", filepath.Join(dst.Type().InstancesDir(dHost), dName))
+	newdst.Config().Set("home", path.Join(dst.Type().InstancesDir(dHost), dName))
 
 	if src.Host() == dHost {
 		if !move {

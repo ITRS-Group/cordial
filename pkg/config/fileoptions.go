@@ -23,11 +23,10 @@ THE SOFTWARE.
 package config
 
 import (
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/host"
-	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -102,11 +101,6 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 		c.userconfdir, _ = UserConfigDir()
 	}
 
-	// XXX this is wrong - empty means do not use
-	// if c.userconfdir == "" {
-	// 	c.userconfdir = filepath.Join(c.userconfdir, c.appname)
-	// }
-
 	return
 }
 
@@ -124,10 +118,9 @@ func evalSaveOptions(configName string, options ...FileOptions) (c *fileOptions)
 		opt(c)
 	}
 
-	log.Debug().Msgf("configdirs=%v", c.configDirs)
 	if len(c.configDirs) == 0 {
 		dir, _ := UserConfigDir()
-		c.configDirs = append(c.configDirs, filepath.Join(dir, c.appname))
+		c.configDirs = append(c.configDirs, path.Join(dir, c.appname))
 	}
 	return
 }
@@ -217,9 +210,9 @@ func SetAppName(name string) FileOptions {
 // If the argument is an empty string then the option is not used. This
 // also means it can be called with a command line flag value which can
 // default to an empty string
-func SetConfigFile(path string) FileOptions {
+func SetConfigFile(p string) FileOptions {
 	return func(c *fileOptions) {
-		c.configFile = path
+		c.configFile = p
 	}
 }
 

@@ -28,7 +28,7 @@ import (
 	"crypto/x509/pkix"
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"time"
 
 	"github.com/awnumar/memguard"
@@ -78,7 +78,7 @@ func CreateCert(c geneos.Instance) (err error) {
 	if err != nil {
 		return
 	}
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, filepath.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
+	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
 	if err != nil {
 		return
 	}
