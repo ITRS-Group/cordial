@@ -222,7 +222,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 	}
 
 	// if args is empty, find them all again. ct == None too?
-	if len(args) == 0 && geneos.Root() != "" && !wild {
+	if len(args) == 0 && (geneos.Root() != "" || len(geneos.RemoteHosts(false)) > 0) && !wild {
 		args = instance.AllNames(geneos.GetHost(Hostname), ct)
 		jsonargs, _ := json.Marshal(args)
 		annotations["args"] = string(jsonargs)

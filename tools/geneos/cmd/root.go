@@ -225,7 +225,7 @@ geneos restart
 		}
 
 		// check initialisation
-		if geneos.Root() == "" {
+		if geneos.Root() == "" && len(geneos.RemoteHosts(false)) == 0 {
 			if command.Annotations["needshomedir"] == "true" {
 				command.SetUsageTemplate(" ")
 				return GeneosUnsetError
@@ -311,6 +311,7 @@ func initConfig() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
+
 	// support old set-ups
 	cf.BindEnv(Execname, "GENEOS_HOME", "ITRS_HOME")
 
