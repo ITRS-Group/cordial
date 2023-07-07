@@ -28,7 +28,6 @@ import (
 	"io/fs"
 	"os"
 	"path"
-	"path/filepath"
 
 	"github.com/rs/zerolog/log"
 )
@@ -122,6 +121,6 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 	if err = h.Symlink(opts.version, basepath); err != nil {
 		return err
 	}
-	fmt.Printf("%s base %q updated to %s\n", ct, filepath.Base(basepath), opts.version)
+	fmt.Printf("%s base %q updated to %s\n", ct, path.Base(basepath), opts.version)
 	return nil
 }

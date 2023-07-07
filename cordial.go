@@ -28,7 +28,7 @@ import (
 	_ "embed" // embed the VERSION in the top-level package
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"runtime"
 	"strings"
 	"time"
@@ -52,7 +52,7 @@ func LogInit(prefix string) {
 		if fn != nil {
 			fnName = fn.Name()
 		}
-		fnName = filepath.Base(fnName)
+		fnName = path.Base(fnName)
 		// fnName = strings.TrimPrefix(fnName, "main.")
 
 		s := strings.SplitAfterN(file, prefix+"/", 2)

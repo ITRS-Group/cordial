@@ -25,7 +25,7 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 
 	"github.com/itrs-group/cordial"
 	"github.com/spf13/cobra"
@@ -66,7 +66,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "conf", "c", "", "config file (default is $HOME/.config/geneos/sso-diag.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&confDir, "dir", "d", ".", "sso-agent directory for relative path resolution (default is ./)")
 
-	execname = filepath.Base(os.Args[0])
+	execname = path.Base(os.Args[0])
 	cordial.LogInit(execname)
 }
 

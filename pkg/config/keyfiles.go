@@ -27,7 +27,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/awnumar/memguard"
@@ -85,12 +85,12 @@ func (k *KeyFile) Concat(extras ...string) string {
 
 // Base returns the last component of the file path to keyfile
 func (k *KeyFile) Base() string {
-	return filepath.Base(k.String())
+	return path.Base(k.String())
 }
 
 // Dir returns the path to the directory containing keyfile
 func (k *KeyFile) Dir() string {
-	return filepath.Dir(k.String())
+	return path.Dir(k.String())
 }
 
 // Read returns an KeyValues struct populated with the contents of the

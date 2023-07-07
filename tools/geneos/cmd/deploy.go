@@ -30,7 +30,6 @@ import (
 	"os"
 	"os/user"
 	"path"
-	"path/filepath"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -156,7 +155,7 @@ var deployCmd = &cobra.Command{
 					} else {
 						root = os.Getenv("HOME")
 					}
-					if filepath.Base(root) != Execname {
+					if path.Base(root) != Execname {
 						root = path.Join(root, Execname)
 					}
 					input, err = config.ReadUserInput("Geneos Directory (default %q): ", root)
