@@ -89,31 +89,34 @@ type AC2s instance.Instance
 var _ geneos.Instance = (*AC2s)(nil)
 
 func init() {
-	AC2.RegisterComponent(New)
+	AC2.RegisterComponent(factory)
 }
 
 var ac2s sync.Map
 
-func New(name string) geneos.Instance {
-	_, local, r := instance.SplitName(name, geneos.LOCAL)
-	n, ok := ac2s.Load(r.FullName(local))
+func factory(name string) geneos.Instance {
+	_, local, h := instance.SplitName(name, geneos.LOCAL)
+	if h == geneos.LOCAL && geneos.Root() == "" {
+		return nil
+	}
+	n, ok := ac2s.Load(h.FullName(local))
 	if ok {
 		np, ok := n.(*AC2s)
 		if ok {
 			return np
 		}
 	}
-	c := &AC2s{}
-	c.Conf = config.New()
-	c.InstanceHost = r
-	c.Component = &AC2
-	if err := instance.SetDefaults(c, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
+	ac2 := &AC2s{}
+	ac2.Conf = config.New()
+	ac2.InstanceHost = h
+	ac2.Component = &AC2
+	if err := instance.SetDefaults(ac2, local); err != nil {
+		log.Fatal().Err(err).Msgf("%s setDefaults()", ac2)
 	}
 	// set the home dir based on where it might be, default to one above
-	c.Config().Set("home", instance.HomeDir(c))
-	ac2s.Store(r.FullName(local), c)
-	return c
+	ac2.Config().Set("home", instance.HomeDir(ac2))
+	ac2s.Store(h.FullName(local), ac2)
+	return ac2
 }
 
 // interface method set

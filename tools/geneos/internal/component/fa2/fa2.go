@@ -88,31 +88,34 @@ type FA2s instance.Instance
 var _ geneos.Instance = (*FA2s)(nil)
 
 func init() {
-	FA2.RegisterComponent(New)
+	FA2.RegisterComponent(factory)
 }
 
 var fa2s sync.Map
 
-func New(name string) geneos.Instance {
-	_, local, r := instance.SplitName(name, geneos.LOCAL)
-	f, ok := fa2s.Load(r.FullName(local))
+func factory(name string) geneos.Instance {
+	_, local, h := instance.SplitName(name, geneos.LOCAL)
+	if h == geneos.LOCAL && geneos.Root() == "" {
+		return nil
+	}
+	f, ok := fa2s.Load(h.FullName(local))
 	if ok {
 		fa, ok := f.(*FA2s)
 		if ok {
 			return fa
 		}
 	}
-	c := &FA2s{}
-	c.Conf = config.New()
-	c.InstanceHost = r
-	c.Component = &FA2
-	if err := instance.SetDefaults(c, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
+	fa2 := &FA2s{}
+	fa2.Conf = config.New()
+	fa2.InstanceHost = h
+	fa2.Component = &FA2
+	if err := instance.SetDefaults(fa2, local); err != nil {
+		log.Fatal().Err(err).Msgf("%s setDefaults()", fa2)
 	}
 	// set the home dir based on where it might be, default to one above
-	c.Config().Set("home", instance.HomeDir(c))
-	fa2s.Store(r.FullName(local), c)
-	return c
+	fa2.Config().Set("home", instance.HomeDir(fa2))
+	fa2s.Store(h.FullName(local), fa2)
+	return fa2
 }
 
 // interface method set

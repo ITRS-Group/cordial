@@ -91,7 +91,7 @@ var template []byte
 const templateName = "floating.setup.xml.gotmpl"
 
 func init() {
-	Floating.RegisterComponent(New)
+	Floating.RegisterComponent(factory)
 }
 
 func Init(r *geneos.Host, ct *geneos.Component) {
@@ -103,30 +103,33 @@ func Init(r *geneos.Host, ct *geneos.Component) {
 
 var floatings sync.Map
 
-func New(name string) geneos.Instance {
-	ct, local, r := instance.SplitName(name, geneos.LOCAL)
-	s, ok := floatings.Load(r.FullName(local))
+func factory(name string) geneos.Instance {
+	ct, local, h := instance.SplitName(name, geneos.LOCAL)
+	if h == geneos.LOCAL && geneos.Root() == "" {
+		return nil
+	}
+	s, ok := floatings.Load(h.FullName(local))
 	if ok {
 		sn, ok := s.(*Floatings)
 		if ok {
 			return sn
 		}
 	}
-	c := &Floatings{}
-	c.Conf = config.New()
-	c.InstanceHost = r
-	c.Component = &Floating
-	c.Config().SetDefault("pkgtype", "netprobe")
+	floating := &Floatings{}
+	floating.Conf = config.New()
+	floating.InstanceHost = h
+	floating.Component = &Floating
+	floating.Config().SetDefault("pkgtype", "netprobe")
 	if ct != nil {
-		c.Config().SetDefault("pkgtype", ct.Name)
+		floating.Config().SetDefault("pkgtype", ct.Name)
 	}
-	if err := instance.SetDefaults(c, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
+	if err := instance.SetDefaults(floating, local); err != nil {
+		log.Fatal().Err(err).Msgf("%s setDefaults()", floating)
 	}
 	// set the home dir based on where it might be, default to one above
-	c.Config().Set("home", instance.HomeDir(c))
-	floatings.Store(r.FullName(local), c)
-	return c
+	floating.Config().Set("home", instance.HomeDir(floating))
+	floatings.Store(h.FullName(local), floating)
+	return floating
 }
 
 // interface method set

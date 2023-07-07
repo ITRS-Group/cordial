@@ -85,31 +85,34 @@ type Licds instance.Instance
 var _ geneos.Instance = (*Licds)(nil)
 
 func init() {
-	Licd.RegisterComponent(New)
+	Licd.RegisterComponent(factory)
 }
 
 var licds sync.Map
 
-func New(name string) geneos.Instance {
-	_, local, r := instance.SplitName(name, geneos.LOCAL)
-	l, ok := licds.Load(r.FullName(local))
+func factory(name string) geneos.Instance {
+	_, local, h := instance.SplitName(name, geneos.LOCAL)
+	if h == geneos.LOCAL && geneos.Root() == "" {
+		return nil
+	}
+	l, ok := licds.Load(h.FullName(local))
 	if ok {
 		lc, ok := l.(*Licds)
 		if ok {
 			return lc
 		}
 	}
-	c := &Licds{}
-	c.Conf = config.New()
-	c.InstanceHost = r
-	c.Component = &Licd
-	if err := instance.SetDefaults(c, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
+	licd := &Licds{}
+	licd.Conf = config.New()
+	licd.InstanceHost = h
+	licd.Component = &Licd
+	if err := instance.SetDefaults(licd, local); err != nil {
+		log.Fatal().Err(err).Msgf("%s setDefaults()", licd)
 	}
 	// set the home dir based on where it might be, default to one above
-	c.Config().Set("home", instance.HomeDir(c))
-	licds.Store(r.FullName(local), c)
-	return c
+	licd.Config().Set("home", instance.HomeDir(licd))
+	licds.Store(h.FullName(local), licd)
+	return licd
 }
 
 // interface method set
