@@ -28,7 +28,6 @@ import (
 	"io"
 	"io/fs"
 	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -126,7 +125,7 @@ func ImportFile(h *geneos.Host, dir string, source string) (filename string, err
 		destfile = filename
 	}
 	// return final basename
-	filename = filepath.Base(destfile)
+	filename = path.Base(destfile)
 	destfile = path.Join(destdir, destfile)
 
 	// check to containing directory, as destfile above may be a

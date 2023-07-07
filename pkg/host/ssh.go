@@ -239,7 +239,7 @@ func (h *SSHRemote) Dial() (sc *ssh.Client, err error) {
 		log.Debug().Msgf("ssh connect to %s as %s", dest, h.username)
 		sc, err = sshConnect(dest, h.username, h.password, h.keys...)
 		if err != nil {
-			log.Error().Err(err).Msg("(you MUST add remote keys manually to known_hosts)")
+			log.Error().Err(err).Msg("(note: you MUST add remote keys manually to known_hosts)")
 			h.failed = err
 			h.lastAttempt = time.Now()
 			return

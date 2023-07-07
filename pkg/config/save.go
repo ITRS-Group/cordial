@@ -25,7 +25,6 @@ package config
 import (
 	"fmt"
 	"path"
-	"path/filepath"
 
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/rs/zerolog/log"
@@ -59,7 +58,7 @@ func (cf *Config) Save(name string, options ...FileOptions) (err error) {
 		p = opts.configFile
 	}
 
-	if err = r.MkdirAll(filepath.Dir(p), 0775); err != nil {
+	if err = r.MkdirAll(path.Dir(p), 0775); err != nil {
 		return
 	}
 
