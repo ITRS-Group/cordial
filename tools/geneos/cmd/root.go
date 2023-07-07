@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -51,7 +52,7 @@ const execname = "geneos"
 // symlinks etc.
 //
 // initialise to sensible default
-var Execname = execname // filepath.Base(os.Args[0])
+var Execname = execname
 
 var cfgFile string
 
@@ -268,20 +269,21 @@ func cmdNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 func initConfig() {
 	bin, _ := os.Executable()
 	bin, _ = filepath.EvalSymlinks(bin)
-	bin = filepath.Base(bin)
+	bin = filepath.ToSlash(bin)
+	bin = path.Base(bin)
 
 	// strip the VERSION, if found, prefixed by a dash, on the end of the basename
 	//
 	// this way you can run a versioned binary and still see the right config files
 	bin = strings.TrimSuffix(bin, "-"+cordial.VERSION)
 
-	Execname = filepath.Base(bin)
+	Execname = path.Base(bin)
 
 	// finally strip any extension from the binary, to allow windows
 	// binary to work. Note we get the extension first, it may be
 	// capitalised. This will also remove any other extensions, users
 	// should use '-' or '_' instead.
-	if ext := filepath.Ext(Execname); ext != "" {
+	if ext := path.Ext(Execname); ext != "" {
 		Execname = strings.TrimSuffix(Execname, ext)
 	}
 

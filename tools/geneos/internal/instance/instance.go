@@ -118,7 +118,7 @@ func ValidInstanceName(name string) (ok bool) {
 //
 // XXX logdir = LogD relative to Home or absolute
 func LogFile(c geneos.Instance) (logfile string) {
-	logdir := filepath.Clean(c.Config().GetString("logdir"))
+	logdir := path.Clean(c.Config().GetString("logdir"))
 	switch {
 	case logdir == "":
 		logfile = c.Home()
@@ -534,7 +534,7 @@ func BuildCmd(c geneos.Instance, nodecode bool) (cmd *exec.Cmd, env []string, ho
 		}
 	}
 	if len(libs) > 0 {
-		env = append(env, "LD_LIBRARY_PATH="+strings.Join(libs, string(filepath.ListSeparator)))
+		env = append(env, "LD_LIBRARY_PATH="+strings.Join(libs, ":"))
 	}
 	cmd = exec.Command(binary, args...)
 

@@ -23,6 +23,7 @@ THE SOFTWARE.
 package geneos
 
 import (
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -34,8 +35,8 @@ import (
 // CleanRelativePath given a path returns a cleaned version. If the
 // cleaning results in an absolute path or one that tries to ascend the
 // tree then return an error
-func CleanRelativePath(path string) (clean string, err error) {
-	clean = filepath.Clean(path)
+func CleanRelativePath(p string) (clean string, err error) {
+	clean = path.Clean(p)
 	if filepath.IsAbs(clean) || strings.HasPrefix(clean, "../") {
 		log.Debug().Msgf("path %q must be relative and descending only", clean)
 		return "", host.ErrInvalidArgs

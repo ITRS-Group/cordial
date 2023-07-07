@@ -76,7 +76,7 @@ func Filename(c geneos.Instance, name string) (filename string) {
 		return
 	}
 	// return empty and not a "."
-	filename = filepath.Base(cf.GetString(name))
+	filename = path.Base(cf.GetString(name))
 	if filename == "." {
 		filename = ""
 	}
@@ -111,7 +111,7 @@ func Filepath(c geneos.Instance, name string) string {
 // Abs returns an absolute path to file prepended with the instance
 // working directory if file is not already an absolute path.
 func Abs(c geneos.Instance, file string) (result string) {
-	result = filepath.Clean(file)
+	result = path.Clean(file)
 	if filepath.IsAbs(result) {
 		return
 	}

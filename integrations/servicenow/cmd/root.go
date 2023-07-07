@@ -24,7 +24,7 @@ package cmd
 
 import (
 	"os"
-	"path/filepath"
+	"path"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
@@ -49,7 +49,7 @@ func init() {
 
 	RootCmd.Flags().SortFlags = false
 
-	execname = filepath.Base(os.Args[0])
+	execname = path.Base(os.Args[0])
 	cordial.LogInit(execname)
 }
 

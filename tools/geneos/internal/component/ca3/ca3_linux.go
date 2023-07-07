@@ -26,7 +26,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -42,7 +42,7 @@ func getPID(i interface{}) (pid int, err error) {
 		dirs, _ := c.Host().Glob("/proc/[0-9]*")
 
 		for _, dir := range dirs {
-			p, _ := strconv.Atoi(filepath.Base(dir))
+			p, _ := strconv.Atoi(path.Base(dir))
 			pids = append(pids, p)
 		}
 
@@ -56,7 +56,7 @@ func getPID(i interface{}) (pid int, err error) {
 				continue
 			}
 			args := bytes.Split(data, []byte("\000"))
-			execfile := filepath.Base(string(args[0]))
+			execfile := path.Base(string(args[0]))
 			if execfile != "java" {
 				continue
 			}
