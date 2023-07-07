@@ -184,8 +184,8 @@ func GetAll(r *geneos.Host, ct *geneos.Component) (confs []geneos.Instance) {
 
 // Match looks for exactly one matching instance across types and hosts
 // returns Invalid Args if zero of more than 1 match
-func Match(ct *geneos.Component, name string) (c geneos.Instance, err error) {
-	list := MatchAll(ct, name)
+func Match(ct *geneos.Component, h *geneos.Host, name string) (c geneos.Instance, err error) {
+	list := MatchAll(ct, h, name)
 	if len(list) == 0 {
 		err = os.ErrNotExist
 		return
@@ -200,16 +200,20 @@ func Match(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 
 // MatchAll constructs and returns a slice of instances that have a
 // matching name
-func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
-	_, local, r := SplitName(name, geneos.ALL)
+func MatchAll(ct *geneos.Component, h *geneos.Host, name string) (c []geneos.Instance) {
+	_, local, r := SplitName(name, h)
 	if !r.IsAvailable() {
 		log.Debug().Err(host.ErrNotAvailable).Msgf("host %s", r)
 		return
 	}
 
+	if h != geneos.ALL && r.String() != h.String() {
+		return
+	}
+
 	if ct == nil {
 		for _, ct := range geneos.RealComponents() {
-			c = append(c, MatchAll(ct, name)...)
+			c = append(c, MatchAll(ct, h, name)...)
 		}
 		return
 	}
@@ -220,7 +224,6 @@ func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
 		if path.Base(ldir) == local {
 			i, err := Get(ct, name)
 			if err != nil {
-				log.Debug().Err(err).Msg("")
 				continue
 			}
 			c = append(c, i)
@@ -367,7 +370,6 @@ func NextPort(r *geneos.Host, ct *geneos.Component) uint16 {
 // os.ErrNotExist if there are no matching instances.
 func ForAll(ct *geneos.Component, hostname string, fn func(geneos.Instance, []string) error, args []string, params []string) (err error) {
 	n := 0
-	log.Debug().Msgf("args %v, params %v", args, params)
 	// if args is empty, get all matching instances. this allows internal
 	// calls with an empty arg list without having to do the parseArgs()
 	// dance
@@ -378,22 +380,28 @@ func ForAll(ct *geneos.Component, hostname string, fn func(geneos.Instance, []st
 	if len(args) == 0 {
 		args = AllNames(h, ct)
 	}
+
+	allcs := []geneos.Instance{}
+
 	for _, name := range args {
-		cs := MatchAll(ct, name)
+		cs := MatchAll(ct, h, name)
 		if len(cs) == 0 {
-			log.Debug().Msgf("no match for %s", name)
 			continue
 		}
 		n++
-		for _, c := range cs {
-			if err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
-				fmt.Printf("%s: %s\n", c, err)
-			}
-		}
+		allcs = append(allcs, cs...)
 	}
+
 	if n == 0 {
 		return os.ErrNotExist
 	}
+
+	for _, c := range allcs {
+		if err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
+			fmt.Printf("%s: %s\n", c, err)
+		}
+	}
+
 	return nil
 }
 
@@ -403,7 +411,6 @@ func ForAll(ct *geneos.Component, hostname string, fn func(geneos.Instance, []st
 // error returned ErrNotExist if there are no matches.
 func ForAllWithResults(ct *geneos.Component, hostname string, fn func(geneos.Instance, []string) (interface{}, error), args []string, params []string) (results []interface{}, err error) {
 	n := 0
-	log.Debug().Msgf("args %v, params %v", args, params)
 	// if args is empty, get all matching instances. this allows internal
 	// calls with an empty arg list without having to do the parseArgs()
 	// dance
@@ -414,21 +421,24 @@ func ForAllWithResults(ct *geneos.Component, hostname string, fn func(geneos.Ins
 	if len(args) == 0 {
 		args = AllNames(h, ct)
 	}
+	allcs := []geneos.Instance{}
+
 	for _, name := range args {
-		var res interface{}
-		cs := MatchAll(ct, name)
+		cs := MatchAll(ct, h, name)
 		if len(cs) == 0 {
-			log.Debug().Msgf("no match for %s", name)
 			continue
 		}
 		n++
-		for _, c := range cs {
-			if res, err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
-				fmt.Printf("%s: %s\n", c, err)
-			}
-			if res != nil {
-				results = append(results, res)
-			}
+		allcs = append(allcs, cs...)
+	}
+
+	for _, c := range allcs {
+		var res interface{}
+		if res, err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
+			fmt.Printf("%s: %s\n", c, err)
+		}
+		if res != nil {
+			results = append(results, res)
 		}
 	}
 	if n == 0 {
@@ -451,8 +461,8 @@ func AllNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 	}
 
 	if h == geneos.ALL {
-		for _, r := range geneos.AllHosts() {
-			names = append(names, AllNames(r, ct)...)
+		for _, h := range geneos.AllHosts() {
+			names = append(names, AllNames(h, ct)...)
 		}
 		return
 	}
@@ -461,7 +471,7 @@ func AllNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 		for _, ct := range geneos.RealComponents() {
 			// ignore errors, we only care about any files found
 			for _, dir := range ct.InstancesDirs(h) {
-				log.Debug().Msgf("ct, dirs: %s %s", ct, dir)
+				// log.Debug().Msgf("ct, dirs: %s %s", ct, dir)
 				d, _ := h.ReadDir(dir)
 				files = append(files, d...)
 			}
@@ -589,11 +599,11 @@ func Enable(c geneos.Instance) (err error) {
 // walk the /proc directory (local or remote) and find the matching pid.
 // This is subject to races, but not much we can do
 func GetPID(c geneos.Instance) (pid int, err error) {
-	if fn := c.Type().GetPID; fn != nil {
-		return fn(c)
-	}
+	// if fn := c.Type().GetPID; fn != nil {
+	// 	return fn(c)
+	// }
 
-	return process.GetPID(c.Host(), c.Config().GetString("binary"), c.Name())
+	return process.GetPID(c.Host(), c.Config().GetString("binary"), c.Type().GetPID, c, c.Name())
 }
 
 func GetPIDInfo(c geneos.Instance) (pid int, uid int, gid int, mtime time.Time, err error) {

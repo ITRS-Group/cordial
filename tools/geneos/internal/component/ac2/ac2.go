@@ -67,7 +67,7 @@ var AC2 = geneos.Component{
 		"packages/ac2",
 		"ac2/ac2s",
 	},
-	GetPID: getPID,
+	GetPID: pidCheckFn,
 }
 
 const (
@@ -222,4 +222,15 @@ func (n *AC2s) Command() (args, env []string, home string) {
 
 func (n *AC2s) Reload(params []string) (err error) {
 	return geneos.ErrNotSupported
+}
+
+func pidCheckFn(binary string, check interface{}, execfile string, args [][]byte) bool {
+	c, ok := check.(*AC2s)
+	if !ok {
+		return false
+	}
+	if execfile == c.Config().GetString("program") {
+		return true
+	}
+	return false
 }
