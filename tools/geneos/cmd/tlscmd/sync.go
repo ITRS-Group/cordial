@@ -75,7 +75,7 @@ func tlsSync() (err error) {
 	}
 
 	for _, r := range geneos.AllHosts() {
-		tlsPath := r.Filepath("tls")
+		tlsPath := r.PathTo("tls")
 		if err = r.MkdirAll(tlsPath, 0775); err != nil {
 			return
 		}

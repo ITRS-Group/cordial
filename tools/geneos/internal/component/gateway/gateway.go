@@ -121,10 +121,10 @@ func init() {
 
 func initialise(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
-	if err := r.WriteFile(r.Filepath("gateway", "templates", templateName), template, 0664); err != nil {
+	if err := r.WriteFile(r.PathTo("gateway", "templates", templateName), template, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
-	if err := r.WriteFile(r.Filepath("gateway", "templates", instanceTemplateName), instanceTemplate, 0664); err != nil {
+	if err := r.WriteFile(r.PathTo("gateway", "templates", instanceTemplateName), instanceTemplate, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 }
@@ -362,12 +362,12 @@ func (g *Gateways) Command() (args, env []string, home string) {
 	}
 
 	if cf.GetBool("usekeyfile") {
-		keyfile := instance.Filepath(g, "keyfile")
+		keyfile := instance.PathOf(g, "keyfile")
 		if keyfile != "" {
 			args = append(args, "-key-file", keyfile)
 		}
 
-		prevkeyfile := instance.Filepath(g, "prevkeyfile")
+		prevkeyfile := instance.PathOf(g, "prevkeyfile")
 		if keyfile != "" {
 			args = append(args, "-previous-key-file", prevkeyfile)
 		}

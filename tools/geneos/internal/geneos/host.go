@@ -293,7 +293,7 @@ func (h *Host) OrList(hosts ...*Host) []*Host {
 	}
 }
 
-// Filepath builds an absolute path based on the Geneos root of the host
+// PathTo builds an absolute path based on the Geneos root of the host
 // h (using the executable name as the key) and the parts passed as
 // arguments. Each part can be a pointer to a geneos.Component, in which
 // case the component name or the parent component name is used, or any
@@ -303,7 +303,7 @@ func (h *Host) OrList(hosts ...*Host) []*Host {
 // If calling this against the "packages" directory remember to use
 // ct.String() to not deference the parent type, which is done if a part
 // is a *Component
-func (h *Host) Filepath(parts ...interface{}) string {
+func (h *Host) PathTo(parts ...interface{}) string {
 	if h == nil {
 		h = LOCAL
 	}

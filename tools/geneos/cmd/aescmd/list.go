@@ -153,8 +153,8 @@ func aesListPath(ct *geneos.Component, h *geneos.Host, name string, path config.
 }
 
 func aesListInstance(c geneos.Instance, params []string) (err error) {
-	path := config.KeyFile(instance.Filepath(c, "keyfile"))
-	prev := config.KeyFile(instance.Filepath(c, "prevkeyfile"))
+	path := config.KeyFile(instance.PathOf(c, "keyfile"))
+	prev := config.KeyFile(instance.PathOf(c, "prevkeyfile"))
 	if path == "" {
 		return
 	}
@@ -203,8 +203,8 @@ func aesListPathCSV(ct *geneos.Component, h *geneos.Host, name string, path conf
 }
 
 func aesListInstanceCSV(c geneos.Instance, params []string) (err error) {
-	path := config.KeyFile(instance.Filepath(c, "keyfile"))
-	prev := config.KeyFile(instance.Filepath(c, "prevkeyfile"))
+	path := config.KeyFile(instance.PathOf(c, "keyfile"))
+	prev := config.KeyFile(instance.PathOf(c, "prevkeyfile"))
 	aesListPathCSV(c.Type(), c.Host(), c.Name(), path)
 	aesListPathCSV(c.Type(), c.Host(), c.Name()+" (prev)", prev)
 	return
@@ -298,6 +298,6 @@ func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results []interfac
 }
 
 func aesListInstanceJSON(c geneos.Instance, params []string) (result interface{}, err error) {
-	path := config.KeyFile(instance.Filepath(c, "keyfile"))
+	path := config.KeyFile(instance.PathOf(c, "keyfile"))
 	return aesListPathJSON(c.Type(), c.Host(), c.Name(), path)
 }

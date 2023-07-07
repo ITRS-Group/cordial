@@ -201,7 +201,7 @@ var deployCmd = &cobra.Command{
 		//
 		// templates are based on real component type (e.g. san and not fa2)
 		if ct != nil && len(ct.Templates) != 0 {
-			templateDir := h.Filepath(ct, "templates")
+			templateDir := h.PathTo(ct, "templates")
 			h.MkdirAll(templateDir, 0775)
 
 			for _, t := range ct.Templates {

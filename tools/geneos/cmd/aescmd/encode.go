@@ -107,7 +107,7 @@ func aesEncodeInstance(c geneos.Instance, params []string) (err error) {
 	if !c.Type().UsesKeyfiles {
 		return nil
 	}
-	keyfile := config.KeyFile(instance.Filepath(c, "keyfile"))
+	keyfile := config.KeyFile(instance.PathOf(c, "keyfile"))
 	if keyfile == "" {
 		return
 	}

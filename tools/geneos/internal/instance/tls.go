@@ -143,9 +143,9 @@ func WriteKey(c geneos.Instance, key *memguard.Enclave) (err error) {
 // directory if files do not already exist in the user app config
 // directory.
 func ReadRootCert() (cert *x509.Certificate, err error) {
-	file := config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.Filepath("tls"), geneos.RootCAFile+".pem")
+	file := config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.PathTo("tls"), geneos.RootCAFile+".pem")
 	log.Debug().Msgf("reading %s", file)
-	config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.Filepath("tls"), geneos.RootCAFile+".key")
+	config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.PathTo("tls"), geneos.RootCAFile+".key")
 	return config.ParseCertificate(geneos.LOCAL, file)
 }
 
@@ -154,9 +154,9 @@ func ReadRootCert() (cert *x509.Certificate, err error) {
 // previous tls directory if files do not already exist in the user app
 // config directory.
 func ReadSigningCert() (cert *x509.Certificate, err error) {
-	file := config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.Filepath("tls", geneos.SigningCertFile+".pem"))
+	file := config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.PathTo("tls", geneos.SigningCertFile+".pem"))
 	log.Debug().Msgf("reading %s", file)
-	config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.Filepath("tls", geneos.SigningCertFile+".key"))
+	config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.PathTo("tls", geneos.SigningCertFile+".key"))
 	return config.ParseCertificate(geneos.LOCAL, file)
 }
 
@@ -169,11 +169,11 @@ func ReadCert(c geneos.Instance) (cert *x509.Certificate, valid bool, err error)
 	if Filename(c, "certificate") == "" {
 		return nil, false, os.ErrNotExist
 	}
-	cert, err = config.ParseCertificate(c.Host(), Filepath(c, "certificate"))
+	cert, err = config.ParseCertificate(c.Host(), PathOf(c, "certificate"))
 
 	// validate against certificate chain file on the same host, expiry
 	// etc.
-	chainfile := config.PromoteFile(c.Host(), c.Host().Filepath("tls", geneos.ChainCertFile), c.Host().Filepath("tls", "chain.pem"))
+	chainfile := config.PromoteFile(c.Host(), c.Host().PathTo("tls", geneos.ChainCertFile), c.Host().PathTo("tls", "chain.pem"))
 	if chain, err := c.Host().ReadFile(chainfile); err == nil {
 		cp := x509.NewCertPool()
 		cp.AppendCertsFromPEM(chain)

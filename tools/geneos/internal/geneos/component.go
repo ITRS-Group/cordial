@@ -235,7 +235,7 @@ func (ct *Component) InstancesDir(h *Host) (dir string) {
 	if ct == nil {
 		return ""
 	}
-	dir = h.Filepath(ct, ct.String()+"s")
+	dir = h.PathTo(ct, ct.String()+"s")
 	return
 }
 
@@ -247,9 +247,9 @@ func (ct *Component) InstancesDirs(h *Host) (dirs []string) {
 	}
 	// this check is to support older installations
 	if ct.ParentType != nil {
-		dirs = append(dirs, h.Filepath(ct.ParentType, ct.String()+"s"))
+		dirs = append(dirs, h.PathTo(ct.ParentType, ct.String()+"s"))
 	}
-	dirs = append(dirs, h.Filepath(ct.Name, ct.String()+"s"))
+	dirs = append(dirs, h.PathTo(ct.Name, ct.String()+"s"))
 	return
 }
 
@@ -265,7 +265,7 @@ func (ct *Component) SharedPath(h *Host, subs ...interface{}) string {
 	} else {
 		parts = append(parts, ct.ParentType, ct.String()+sharedSuffix, subs)
 	}
-	return h.Filepath(parts...)
+	return h.PathTo(parts...)
 }
 
 // OrList will return receiver, if not nil, or the list of component types

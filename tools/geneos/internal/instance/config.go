@@ -83,10 +83,10 @@ func CreateConfigFromTemplate(c geneos.Instance, p string, name string, defaultT
 	cf := c.Config()
 
 	t := template.New("").Funcs(fnmap).Option("missingkey=zero")
-	if t, err = t.ParseGlob(c.Host().Filepath(c.Type(), "templates", "*")); err != nil {
+	if t, err = t.ParseGlob(c.Host().PathTo(c.Type(), "templates", "*")); err != nil {
 		t = template.New(name).Funcs(fnmap).Option("missingkey=zero")
 		// if there are no templates, use internal as a fallback
-		log.Warn().Msgf("No templates found in %s, using internal defaults", c.Host().Filepath(c.Type(), "templates"))
+		log.Warn().Msgf("No templates found in %s, using internal defaults", c.Host().PathTo(c.Type(), "templates"))
 		t = template.Must(t.Parse(string(defaultTemplate)))
 	}
 
@@ -129,10 +129,6 @@ func LoadConfig(c geneos.Instance) (err error) {
 	aliases := c.Type().LegacyParameters
 
 	home := HomeDir(c)
-	// home := filepath.Join(r.Filepath(c.Type(), c.Type().String()+"s"), c.Name())
-	// if _, err = r.Stat(home); err != nil && errors.Is(err, fs.ErrNotExist) {
-	// 	home = filepath.Join(r.Filepath(c.Type().String(), c.Type().String()+"s"), c.Name())
-	// }
 	cf, err := config.Load(c.Type().Name,
 		config.Host(r),
 		config.FromDir(home),
@@ -208,7 +204,7 @@ func SetSecureArgs(c geneos.Instance) (args []string) {
 	}
 
 	// promote old files that may exist
-	chainfile := config.PromoteFile(c.Host(), c.Host().Filepath("tls", geneos.ChainCertFile), c.Host().Filepath("tls", "chain.pem"))
+	chainfile := config.PromoteFile(c.Host(), c.Host().PathTo("tls", geneos.ChainCertFile), c.Host().PathTo("tls", "chain.pem"))
 	s, err := c.Host().Stat(chainfile)
 	if err == nil && !s.IsDir() {
 		args = append(args, "-ssl-certificate-chain", chainfile)

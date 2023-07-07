@@ -62,7 +62,7 @@ cat $(geneos home gateway example2)/gateway.txt
 				fmt.Println(geneos.Root())
 				return nil
 			}
-			fmt.Println(geneos.LOCAL.Filepath(ct))
+			fmt.Println(geneos.LOCAL.PathTo(ct))
 			return nil
 		}
 
