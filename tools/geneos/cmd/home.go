@@ -66,7 +66,7 @@ cat $(geneos home gateway example2)/gateway.txt
 			return nil
 		}
 
-		i, err := instance.Match(ct, args[0])
+		i, err := instance.Match(ct, geneos.GetHost(Hostname), args[0])
 
 		if err != nil || !i.Host().IsLocal() {
 			fmt.Println(geneos.Root())

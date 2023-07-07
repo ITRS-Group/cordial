@@ -25,6 +25,7 @@ package webserver
 import (
 	"os"
 	"path"
+	"strings"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -83,7 +84,7 @@ var Webserver = geneos.Component{
 		"packages/webserver",
 		"webserver/webservers",
 	},
-	GetPID: webserverGetPID,
+	GetPID: pidCheckFn,
 }
 
 type Webservers instance.Instance
@@ -266,4 +267,27 @@ func (w *Webservers) Command() (args, env []string, home string) {
 
 func (w *Webservers) Reload(params []string) (err error) {
 	return geneos.ErrNotSupported
+}
+
+func pidCheckFn(binary string, check interface{}, execfile string, args [][]byte) bool {
+	var wdOK, jarOK bool
+	w, ok := check.(*Webservers)
+	if !ok {
+		return false
+	}
+	if execfile != "java" {
+		return false
+	}
+	for _, arg := range args[1:] {
+		if string(arg) == "-Dworking.directory="+w.Home() {
+			wdOK = true
+		}
+		if strings.HasSuffix(string(arg), "geneos-web-server.jar") {
+			jarOK = true
+		}
+		if wdOK && jarOK {
+			return true
+		}
+	}
+	return false
 }

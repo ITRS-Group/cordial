@@ -121,7 +121,7 @@ func psInstancePlain(c geneos.Instance, params []string) (err error) {
 	}
 	pid, uid, gid, mtime, err := instance.GetPIDInfo(c)
 	if err != nil {
-		return nil
+		return
 	}
 
 	var u *user.User
@@ -147,7 +147,7 @@ func psInstancePlain(c geneos.Instance, params []string) (err error) {
 	if psCmdShowFiles {
 		listOpenFiles(c)
 	}
-	return
+	return nil
 }
 
 func psInstanceCSV(c geneos.Instance, params []string) (err error) {
@@ -177,7 +177,7 @@ func psInstanceCSV(c geneos.Instance, params []string) (err error) {
 	}
 	psCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()})
 
-	return
+	return nil
 }
 
 func psInstanceJSON(c geneos.Instance, params []string) (err error) {
@@ -207,5 +207,5 @@ func psInstanceJSON(c geneos.Instance, params []string) (err error) {
 	}
 	psJSONEncoder.Encode(psType{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()})
 
-	return
+	return nil
 }

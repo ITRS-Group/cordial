@@ -116,6 +116,10 @@ OUTER:
 	return
 }
 
+// key is host name (not hostname)
+var pidcache = make(map[string][]int)
+var dirs = make(map[string][]string)
+
 // GetPID returns the PID of the process started with binary name and
 // all args (in any order) on host h. If not found then an err of
 // os.ErrProcessDone is returned.
@@ -128,48 +132,74 @@ OUTER:
 //
 // TODO: cache /proc entries for a period, this is very likely to be
 // used over and over in the same proc
-func GetPID(h host.Host, binary string, args ...string) (pid int, err error) {
-	var pids []int
-
+func GetPID(h host.Host, binary string, checkfn func(string, interface{}, string, [][]byte) bool, checkarg interface{}, args ...string) (pid int, err error) {
 	if strings.Contains(h.ServerVersion(), "windows") {
 		return 0, os.ErrProcessDone
 	}
 
-	// safe to ignore error as it can only be bad pattern,
-	// which means no matches to range over
-	dirs, _ := h.Glob("/proc/[0-9]*")
+	hostname := h.String()
 
-	for _, dir := range dirs {
-		p, _ := strconv.Atoi(path.Base(dir))
-		pids = append(pids, p)
+	if cmdlineCacheTime[hostname].IsZero() || time.Since(cmdlineCacheTime[hostname]) > 5*time.Second {
+		// (re)initialise caches
+
+		cmdlineCacheTime[hostname] = time.Now()
+		cmdlineCache[hostname] = map[int][]byte{}
+
+		// safe to ignore error as it can only be bad pattern,
+		// which means no matches to range over
+		dirs[hostname], err = h.Glob("/proc/[0-9]*")
+		if err != nil {
+			err = os.ErrProcessDone
+			return
+		}
+
+		pids := []int{}
+		for _, dir := range dirs[hostname] {
+			p, _ := strconv.Atoi(path.Base(dir))
+			pids = append(pids, p)
+		}
+
+		sort.Ints(pids)
+		pidcache[hostname] = pids
 	}
-
-	sort.Ints(pids)
 
 	var data []byte
 PIDS:
-	for _, pid = range pids {
-		if data, err = h.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid)); err != nil {
-			// process may disappear by this point, ignore error
-			continue
+	for _, pid = range pidcache[hostname] {
+		var ok bool
+		if data, ok = cmdlineCache[hostname][pid]; !ok {
+			if data, err = h.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid)); err != nil {
+				// process may disappear by this point, perms denied etc., ignore error
+				continue
+			}
+			cmdlineCache[hostname][pid] = data
 		}
 		procargs := bytes.Split(data, []byte("\000"))
 		execfile := path.Base(string(procargs[0]))
-		if strings.HasPrefix(execfile, binary) {
-			argmap := make(map[string]bool)
-			for _, arg := range procargs[1:] {
-				argmap[string(arg)] = true
+		if checkfn != nil {
+			if checkfn(binary, checkarg, execfile, procargs) {
+				return
 			}
-			for _, arg := range args {
-				if !argmap[arg] {
-					continue PIDS
+		} else {
+			if strings.HasPrefix(execfile, binary) {
+				argmap := make(map[string]bool)
+				for _, arg := range procargs[1:] {
+					argmap[string(arg)] = true
 				}
+				for _, arg := range args {
+					if !argmap[arg] {
+						continue PIDS
+					}
+				}
+				return
 			}
-			return
 		}
 	}
 	return 0, os.ErrProcessDone
 }
+
+var cmdlineCache = make(map[string]map[int][]byte)
+var cmdlineCacheTime = make(map[string]time.Time)
 
 // Program is a highly simplified representation of a program to
 // manage with Start or Batch.
@@ -307,7 +337,7 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 	}
 
 	// only valid if long running
-	pid, err = GetPID(h, p)
+	pid, err = GetPID(h, p, nil, nil)
 	err = retErrIfFalse(program.IgnoreErr, err)
 	return
 }

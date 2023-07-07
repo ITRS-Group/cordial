@@ -27,6 +27,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strings"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -71,7 +72,7 @@ var CA3 = geneos.Component{
 		"netprobe/netprobes_shared",
 		"netprobe/ca3s",
 	},
-	GetPID: getPID,
+	GetPID: pidCheckFn,
 }
 
 const (
@@ -257,4 +258,28 @@ func (n *CA3s) Command() (args, env []string, home string) {
 
 func (n *CA3s) Reload(params []string) (err error) {
 	return geneos.ErrNotSupported
+}
+
+func pidCheckFn(binary string, check interface{}, execfile string, args [][]byte) bool {
+	var jarOK, configOK bool
+
+	c, ok := check.(*CA3s)
+	if !ok {
+		return false
+	}
+	if execfile != "java" {
+		return false
+	}
+	for _, arg := range args[1:] {
+		if strings.Contains(string(arg), "collection-agent") {
+			jarOK = true
+		}
+		if strings.Contains(string(arg), c.Config().GetString("config")) {
+			configOK = true
+		}
+		if jarOK && configOK {
+			return true
+		}
+	}
+	return false
 }

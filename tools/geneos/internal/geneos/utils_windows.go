@@ -35,13 +35,13 @@ type FileOwner struct {
 }
 
 func (h *Host) GetFileOwner(info fs.FileInfo) (s FileOwner) {
-	switch h.GetString("name") {
-	case LOCALHOST:
-		s.Uid = -1
-		s.Gid = -1
-	default:
-		s.Uid = int(info.Sys().(*sftp.FileStat).UID)
-		s.Gid = int(info.Sys().(*sftp.FileStat).GID)
+	s.Uid = -1
+	s.Gid = -1
+	if h.GetString("name") != LOCALHOST {
+		if sys := info.Sys(); sys != nil {
+			s.Uid = int(info.Sys().(*sftp.FileStat).UID)
+			s.Gid = int(info.Sys().(*sftp.FileStat).GID)
+		}
 	}
 	return
 }
