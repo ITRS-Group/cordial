@@ -134,22 +134,25 @@ var gateways sync.Map
 // factory is the factory method for Gateways
 func factory(name string) geneos.Instance {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
+	if h == geneos.LOCAL && geneos.Root() == "" {
+		return nil
+	}
 	if i, ok := gateways.Load(h.FullName(local)); ok {
 		if g, ok := i.(*Gateways); ok {
 			return g
 		}
 	}
-	g := &Gateways{}
-	g.Conf = config.New()
-	g.Component = &Gateway
-	g.InstanceHost = h
-	if err := instance.SetDefaults(g, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", g)
+	gateway := &Gateways{}
+	gateway.Conf = config.New()
+	gateway.Component = &Gateway
+	gateway.InstanceHost = h
+	if err := instance.SetDefaults(gateway, local); err != nil {
+		log.Fatal().Err(err).Msgf("%s setDefaults()", gateway)
 	}
 	// set the home dir based on where it might be, default to one above
-	g.Config().Set("home", instance.HomeDir(g))
-	gateways.Store(h.FullName(local), g)
-	return g
+	gateway.Config().Set("home", instance.HomeDir(gateway))
+	gateways.Store(h.FullName(local), gateway)
+	return gateway
 }
 
 // interface method set

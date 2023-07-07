@@ -86,31 +86,34 @@ type Netprobes instance.Instance
 var _ geneos.Instance = (*Netprobes)(nil)
 
 func init() {
-	Netprobe.RegisterComponent(New)
+	Netprobe.RegisterComponent(factory)
 }
 
 var netprobes sync.Map
 
-func New(name string) geneos.Instance {
-	_, local, r := instance.SplitName(name, geneos.LOCAL)
-	n, ok := netprobes.Load(r.FullName(local))
+func factory(name string) geneos.Instance {
+	_, local, h := instance.SplitName(name, geneos.LOCAL)
+	if h == geneos.LOCAL && geneos.Root() == "" {
+		return nil
+	}
+	n, ok := netprobes.Load(h.FullName(local))
 	if ok {
 		np, ok := n.(*Netprobes)
 		if ok {
 			return np
 		}
 	}
-	c := &Netprobes{}
-	c.Conf = config.New()
-	c.InstanceHost = r
-	c.Component = &Netprobe
-	if err := instance.SetDefaults(c, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
+	netprobe := &Netprobes{}
+	netprobe.Conf = config.New()
+	netprobe.InstanceHost = h
+	netprobe.Component = &Netprobe
+	if err := instance.SetDefaults(netprobe, local); err != nil {
+		log.Fatal().Err(err).Msgf("%s setDefaults()", netprobe)
 	}
 	// set the home dir based on where it might be, default to one above
-	c.Config().Set("home", instance.HomeDir(c))
-	netprobes.Store(r.FullName(local), c)
-	return c
+	netprobe.Config().Set("home", instance.HomeDir(netprobe))
+	netprobes.Store(h.FullName(local), netprobe)
+	return netprobe
 }
 
 // interface method set

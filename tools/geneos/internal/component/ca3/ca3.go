@@ -92,31 +92,34 @@ type CA3s instance.Instance
 var _ geneos.Instance = (*CA3s)(nil)
 
 func init() {
-	CA3.RegisterComponent(New)
+	CA3.RegisterComponent(factory)
 }
 
 var ca3s sync.Map
 
-func New(name string) geneos.Instance {
-	_, local, r := instance.SplitName(name, geneos.LOCAL)
-	n, ok := ca3s.Load(r.FullName(local))
+func factory(name string) geneos.Instance {
+	_, local, h := instance.SplitName(name, geneos.LOCAL)
+	if h == geneos.LOCAL && geneos.Root() == "" {
+		return nil
+	}
+	n, ok := ca3s.Load(h.FullName(local))
 	if ok {
 		np, ok := n.(*CA3s)
 		if ok {
 			return np
 		}
 	}
-	c := &CA3s{}
-	c.Conf = config.New()
-	c.InstanceHost = r
-	c.Component = &CA3
-	if err := instance.SetDefaults(c, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
+	ca3 := &CA3s{}
+	ca3.Conf = config.New()
+	ca3.InstanceHost = h
+	ca3.Component = &CA3
+	if err := instance.SetDefaults(ca3, local); err != nil {
+		log.Fatal().Err(err).Msgf("%s setDefaults()", ca3)
 	}
 	// set the home dir based on where it might be, default to one above
-	c.Config().Set("home", instance.HomeDir(c))
-	ca3s.Store(r.FullName(local), c)
-	return c
+	ca3.Config().Set("home", instance.HomeDir(ca3))
+	ca3s.Store(h.FullName(local), ca3)
+	return ca3
 }
 
 // interface method set

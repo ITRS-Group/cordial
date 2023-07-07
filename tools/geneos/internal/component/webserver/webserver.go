@@ -92,31 +92,34 @@ type Webservers instance.Instance
 var _ geneos.Instance = (*Webservers)(nil)
 
 func init() {
-	Webserver.RegisterComponent(New)
+	Webserver.RegisterComponent(factory)
 }
 
 var webservers sync.Map
 
-func New(name string) geneos.Instance {
-	_, local, r := instance.SplitName(name, geneos.LOCAL)
-	w, ok := webservers.Load(r.FullName(local))
+func factory(name string) geneos.Instance {
+	_, local, h := instance.SplitName(name, geneos.LOCAL)
+	if h == geneos.LOCAL && geneos.Root() == "" {
+		return nil
+	}
+	w, ok := webservers.Load(h.FullName(local))
 	if ok {
 		ws, ok := w.(*Webservers)
 		if ok {
 			return ws
 		}
 	}
-	c := &Webservers{}
-	c.Conf = config.New()
-	c.InstanceHost = r
-	c.Component = &Webserver
-	if err := instance.SetDefaults(c, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
+	webserver := &Webservers{}
+	webserver.Conf = config.New()
+	webserver.InstanceHost = h
+	webserver.Component = &Webserver
+	if err := instance.SetDefaults(webserver, local); err != nil {
+		log.Fatal().Err(err).Msgf("%s setDefaults()", webserver)
 	}
 	// set the home dir based on where it might be, default to one above
-	c.Config().Set("home", instance.HomeDir(c))
-	webservers.Store(r.FullName(local), c)
-	return c
+	webserver.Config().Set("home", instance.HomeDir(webserver))
+	webservers.Store(h.FullName(local), webserver)
+	return webserver
 }
 
 // list of file patterns to copy?

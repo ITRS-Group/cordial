@@ -38,6 +38,7 @@ import (
 //
 // Can also be used by other packages
 var (
+	ErrRootNotSet   = errors.New("root directory not set")
 	ErrInvalidArgs  = errors.New("invalid arguments")
 	ErrNotSupported = errors.New("not supported")
 	ErrIsADirectory = errors.New("is a directory")

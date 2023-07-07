@@ -102,7 +102,7 @@ var template []byte
 const templateName = "san.setup.xml.gotmpl"
 
 func init() {
-	San.RegisterComponent(New)
+	San.RegisterComponent(factory)
 }
 
 func Init(r *geneos.Host, ct *geneos.Component) {
@@ -114,12 +114,15 @@ func Init(r *geneos.Host, ct *geneos.Component) {
 
 var sans sync.Map
 
-// New is the factory method fpr SANs.
+// factory is the factory method fpr SANs.
 //
 // If the name has a TYPE prefix then that type is used as the "pkgtype"
 // parameter to select other Netprobe types, such as fa2
-func New(name string) geneos.Instance {
+func factory(name string) geneos.Instance {
 	ct, local, r := instance.SplitName(name, geneos.LOCAL)
+	if r == geneos.LOCAL && geneos.Root() == "" {
+		return nil
+	}
 	s, ok := sans.Load(r.FullName(local))
 	if ok {
 		sn, ok := s.(*Sans)
@@ -127,21 +130,21 @@ func New(name string) geneos.Instance {
 			return sn
 		}
 	}
-	c := &Sans{}
-	c.Conf = config.New()
-	c.InstanceHost = r
-	c.Component = &San
-	c.Config().SetDefault("pkgtype", "netprobe")
+	san := &Sans{}
+	san.Conf = config.New()
+	san.InstanceHost = r
+	san.Component = &San
+	san.Config().SetDefault("pkgtype", "netprobe")
 	if ct != nil {
-		c.Config().SetDefault("pkgtype", ct.Name)
+		san.Config().SetDefault("pkgtype", ct.Name)
 	}
-	if err := instance.SetDefaults(c, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", c)
+	if err := instance.SetDefaults(san, local); err != nil {
+		log.Fatal().Err(err).Msgf("%s setDefaults()", san)
 	}
 	// set the home dir based on where it might be, default to one above
-	c.Config().Set("home", instance.HomeDir(c))
-	sans.Store(r.FullName(local), c)
-	return c
+	san.Config().Set("home", instance.HomeDir(san))
+	sans.Store(r.FullName(local), san)
+	return san
 }
 
 // interface method set

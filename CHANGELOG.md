@@ -40,6 +40,10 @@
 
 * `geneos ps` will show the actual version of each instance running, in case the base symlink has been updated and the process not restarted
 
+* Quite a bit of redecorating inside `tools/geneos` internal packages to make things clearer (refactoring, merge and split of functions etc.)
+
+* `tools/geneos` - Initial support for "remote only" working; i.e. if GENEOS_HOME is not set but there are remotes then try to "do stuff". This will break if you perform a local operation such as `add` as the root then is the current directory. Further work required, but getting Windows support working again is on the way.
+
 ---
 
 ## Version v1.6.6

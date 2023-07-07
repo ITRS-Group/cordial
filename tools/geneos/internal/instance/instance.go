@@ -150,7 +150,14 @@ func Get(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 
 	c = ct.New(name)
 	if c == nil {
-		return nil, geneos.ErrInvalidArgs
+		// if no instance is created, check why
+		_, _, h := SplitName(name, geneos.LOCAL)
+		if h == geneos.LOCAL && geneos.Root() == "" {
+			err = geneos.ErrRootNotSet
+			return
+		}
+		err = geneos.ErrInvalidArgs
+		return
 	}
 	err = c.Load()
 	return
@@ -213,7 +220,7 @@ func MatchAll(ct *geneos.Component, name string) (c []geneos.Instance) {
 		if path.Base(ldir) == local {
 			i, err := Get(ct, name)
 			if err != nil {
-				log.Error().Err(err).Msg("")
+				log.Debug().Err(err).Msg("")
 				continue
 			}
 			c = append(c, i)

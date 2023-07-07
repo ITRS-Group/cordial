@@ -112,7 +112,11 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 
 	c, err := instance.Get(ct, h.FullName(name))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		// we get a not exists error for a new instance, but c is still populated
 		return
+	}
+	if c == nil {
+		panic("instance is nil")
 	}
 	cf := c.Config()
 
