@@ -27,7 +27,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"time"
 
@@ -74,7 +74,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
 	RootCmd.PersistentFlags().MarkHidden("help")
 
-	execname = filepath.Base(os.Args[0])
+	execname = path.Base(os.Args[0])
 	cordial.LogInit(execname)
 }
 

@@ -30,7 +30,6 @@ import (
 	"io/fs"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -252,7 +251,7 @@ func Migrate(c geneos.Instance) (err error) {
 	cf := c.Config()
 
 	// check if instance directory is up-to date
-	current := filepath.Dir(c.Home())
+	current := path.Dir(c.Home())
 	shouldbe := c.Type().InstancesDir(c.Host())
 	if current != shouldbe {
 		if err = c.Host().MkdirAll(shouldbe, 0775); err != nil {

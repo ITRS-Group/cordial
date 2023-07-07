@@ -146,8 +146,9 @@ func Open(source string, options ...Options) (from io.ReadCloser, filename strin
 			return nil, "", ErrIsADirectory
 		}
 		source, _ = filepath.Abs(source)
+		source = filepath.ToSlash(source)
 		from, err = os.Open(source)
-		filename = filepath.Base(source)
+		filename = path.Base(source)
 	}
 	return
 }

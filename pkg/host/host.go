@@ -30,7 +30,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -113,10 +112,10 @@ func CopyFile(srcHost Host, srcPath string, dstHost Host, dstPath string) (err e
 	ds, err := dstHost.Stat(dstPath)
 	if err == nil {
 		if ds.IsDir() {
-			dstPath = path.Join(dstPath, filepath.Base(srcPath))
+			dstPath = path.Join(dstPath, path.Base(srcPath))
 		}
 	} else {
-		dstHost.MkdirAll(filepath.Dir(dstPath), 0775)
+		dstHost.MkdirAll(path.Dir(dstPath), 0775)
 	}
 
 	df, err := dstHost.Create(dstPath, ss.Mode())
