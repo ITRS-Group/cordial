@@ -116,6 +116,8 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		var username string
 		if u, err := user.Current(); err == nil {
 			username = u.Username
+			// for windows, discard any domain (cheating)
+			username = filepath.Base(username)
 		} else {
 			username = os.Getenv("USER")
 		}
@@ -178,34 +180,12 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			hostcf.Set("username", sshurl.User.Username())
 		}
 
-		var h *geneos.Host
-
-		// creating the host initialises the remote homedir, so use it
-		// as the default later...
-
-		if sshurl.Scheme != "" {
-			h = geneos.NewHost(name,
-				host.Hostname(hostcf.GetString("hostname")),
-				host.Username(hostcf.GetString("username")),
-				host.Port(uint16(hostcf.GetInt("port"))),
-				host.Password(pw.Enclave),
-			)
-		} else {
-			h = geneos.NewHost(args[0],
-				host.Hostname(args[0]),
-			)
-			if len(args) > 1 {
-				if sshurl, err = url.Parse(args[1]); err != nil {
-					log.Error().Msgf("invalid ssh url %q", args[1])
-					return geneos.ErrInvalidArgs
-				}
-			} else {
-				sshurl = &url.URL{
-					Scheme: "ssh",
-					Host:   args[0],
-				}
-			}
-		}
+		h := geneos.NewHost(name,
+			host.Hostname(hostcf.GetString("hostname")),
+			host.Username(hostcf.GetString("username")),
+			host.Port(uint16(hostcf.GetInt("port"))),
+			host.Password(pw.Enclave),
+		)
 
 		h.MergeConfigMap(hostcf.AllSettings())
 
@@ -231,19 +211,19 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			h.Set(cmd.Execname, sshurl.Path)
 		} else if runtime.GOOS != h.GetString("os") {
 			geneosdir := h.GetString("homedir")
-			if filepath.Base(geneosdir) != cmd.Execname {
+			if path.Base(geneosdir) != cmd.Execname {
 				geneosdir = path.Join(geneosdir, cmd.Execname)
 			}
-			switch h.GetString("os") {
-			case "windows":
-				geneosdir = filepath.FromSlash(geneosdir)
-			case "linux":
-				geneosdir = filepath.ToSlash(geneosdir)
-			}
+			// switch h.GetString("os") {
+			// case "windows":
+			// 	geneosdir = filepath.FromSlash(geneosdir)
+			// case "linux":
+			// 	geneosdir = filepath.ToSlash(geneosdir)
+			// }
 			h.Set(cmd.Execname, geneosdir)
 		} else {
 			geneosdir := h.GetString("homedir")
-			if filepath.Base(geneosdir) != cmd.Execname {
+			if path.Base(geneosdir) != cmd.Execname {
 				geneosdir = path.Join(geneosdir, cmd.Execname)
 			}
 			h.Set(cmd.Execname, geneosdir)

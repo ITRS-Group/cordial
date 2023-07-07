@@ -25,7 +25,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/awnumar/memguard"
@@ -65,7 +65,7 @@ func main() {
 	memguard.CatchInterrupt()
 	defer memguard.Purge()
 
-	execname := filepath.Base(os.Args[0])
+	execname := path.Base(os.Args[0])
 
 	// if the executable does not have a `ctl` suffix then execute the
 	// underlying code directly

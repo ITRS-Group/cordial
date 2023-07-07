@@ -31,7 +31,6 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -68,7 +67,7 @@ func init() {
 	DV2EMAILCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
 	DV2EMAILCmd.PersistentFlags().MarkHidden("help")
 
-	execname = filepath.Base(os.Args[0])
+	execname = path.Base(os.Args[0])
 	cordial.LogInit(execname)
 }
 
