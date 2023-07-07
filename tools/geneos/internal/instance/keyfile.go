@@ -25,7 +25,6 @@ package instance
 import (
 	"fmt"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -167,9 +166,9 @@ func SaveKeyFileShared(h *geneos.Host, ct *geneos.Component, a *config.KeyValues
 func KeyFileNormalise(in string) (out string) {
 	out = in
 
-	dir, file := filepath.Split(in)
+	dir, file := path.Split(in)
 	file = strings.ToUpper(file)
-	ext := filepath.Ext(file) // ext is now in UPPER case
+	ext := path.Ext(file) // ext is now in UPPER case
 
 	log.Debug().Msgf("dir=%s file=%s ext=%s", dir, file, ext)
 

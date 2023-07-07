@@ -117,6 +117,7 @@ func revertCommands() (err error) {
 		if err != nil {
 			continue
 		}
+		realpath = filepath.ToSlash(realpath)
 		if realpath != geneosExec {
 			log.Debug().Msgf("%s is not a link to %s, skipping", path, geneosExec)
 			continue

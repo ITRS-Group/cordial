@@ -73,8 +73,13 @@ func (h *Local) String() string {
 	return "localhost"
 }
 
-func (h *Local) Abs(dir string) (string, error) {
-	return filepath.Abs(dir)
+func (h *Local) Abs(dir string) (abs string, err error) {
+	abs, err = filepath.Abs(dir)
+	if err != nil {
+		return
+	}
+	abs = filepath.ToSlash(abs)
+	return
 }
 
 func (h *Local) Getwd() (dir string, err error) {
@@ -136,7 +141,14 @@ func (h *Local) Lstat(name string) (f fs.FileInfo, err error) {
 }
 
 func (h *Local) Glob(pattern string) (paths []string, err error) {
-	return filepath.Glob(pattern)
+	paths, err = filepath.Glob(pattern)
+	if err != nil {
+		return
+	}
+	for i := range paths {
+		paths[i] = filepath.ToSlash(paths[i])
+	}
+	return
 }
 
 func (h *Local) WriteFile(name string, data []byte, perm os.FileMode) (err error) {
