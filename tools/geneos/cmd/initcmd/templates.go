@@ -69,7 +69,7 @@ func initTemplates(h *geneos.Host, options ...geneos.Options) (err error) {
 		if len(ct.Templates) == 0 {
 			continue
 		}
-		templateDir := h.Filepath(ct, "templates")
+		templateDir := h.PathTo(ct, "templates")
 		h.MkdirAll(templateDir, 0775)
 
 		for _, t := range ct.Templates {

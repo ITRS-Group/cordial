@@ -107,7 +107,7 @@ func init() {
 
 func Init(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
-	if err := r.WriteFile(r.Filepath(ct.ParentType, "templates", templateName), template, 0664); err != nil {
+	if err := r.WriteFile(r.PathTo(ct.ParentType, "templates", templateName), template, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 }
@@ -196,15 +196,13 @@ func (s *Sans) Config() *config.Config {
 func (s *Sans) Add(template string, port uint16) (err error) {
 	cf := s.Config()
 
-	// cf.SetDefault(cf.Join("config", "template"), s.Host().Filepath(ct.ParentType, "templates", templateName))
-
 	if port == 0 {
 		port = instance.NextPort(s.InstanceHost, &San)
 	}
 
 	cf.Set("port", port)
 	cf.Set(cf.Join("config", "rebuild"), "always")
-	cf.Set(cf.Join("config", "template"), s.Host().Filepath(s.Type(), "templates", templateName))
+	cf.Set(cf.Join("config", "template"), s.Host().PathTo(s.Type(), "templates", templateName))
 
 	if template != "" {
 		filename, _ := instance.ImportCommons(s.Host(), s.Type(), "templates", []string{template})

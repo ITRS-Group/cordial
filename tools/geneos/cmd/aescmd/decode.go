@@ -141,7 +141,7 @@ func aesDecodeInstance(c geneos.Instance, params []string) (err error) {
 	if !c.Type().UsesKeyfiles {
 		return
 	}
-	path := instance.Filepath(c, "keyfile")
+	path := instance.PathOf(c, "keyfile")
 	if path == "" {
 		return
 	}

@@ -83,14 +83,14 @@ func Filename(c geneos.Instance, name string) (filename string) {
 	return
 }
 
-// Filepath returns the full path to the file identified by the
+// PathOf returns the full path to the file identified by the
 // configuration parameter name. If the parameters value is already an
 // absolute path then it is returned as-is, otherwise it is joined with
 // the home directory of the instance and returned. The path is only
 // useful on the host that instance c is on.
 //
 // If the parameter is unset or empty then an empty path is returned.
-func Filepath(c geneos.Instance, name string) string {
+func PathOf(c geneos.Instance, name string) string {
 	cf := c.Config()
 
 	if cf == nil {
@@ -164,7 +164,7 @@ func ConfigFileTypes() []string {
 //   - If the instance's component type has a parent component then in the
 //     legacy instances directory
 //
-// If no directory is found then a default built using Filepath() is returned
+// If no directory is found then a default built using PathTo() is returned
 func HomeDir(c geneos.Instance) (home string) {
 	if c.Config() == nil {
 		return ""
@@ -197,7 +197,7 @@ func HomeDir(c geneos.Instance) (home string) {
 	// third, look in any "legacy" location, but only if parent type is
 	// non nil
 	if c.Type().ParentType != nil {
-		parentDir := h.Filepath(c.Type().String(), c.Type().String()+"s")
+		parentDir := h.PathTo(c.Type().String(), c.Type().String()+"s")
 		if parentDir != "" {
 			log.Debug().Msgf("legacy parent dir %s", parentDir)
 			home = path.Join(parentDir, c.Name())
@@ -208,7 +208,7 @@ func HomeDir(c geneos.Instance) (home string) {
 		}
 	}
 
-	home = h.Filepath(ct, ct.String()+"s", c.Name())
+	home = h.PathTo(ct, ct.String()+"s", c.Name())
 	log.Debug().Msgf("default %s", home)
 	return
 }

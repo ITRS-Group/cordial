@@ -512,7 +512,7 @@ func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name 
 //
 // If nodecode is set then any secure environment vars are not decoded, so OK for display
 func BuildCmd(c geneos.Instance, nodecode bool) (cmd *exec.Cmd, env []string, home string) {
-	binary := Filepath(c, "program")
+	binary := PathOf(c, "program")
 
 	args, env, home := c.Command()
 

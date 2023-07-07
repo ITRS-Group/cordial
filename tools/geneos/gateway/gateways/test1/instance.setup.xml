@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA5.10.1-211027/gateway.xsd">
+    <!-- DO NOT EDIT THIS INCLUDE FILE, IT IS AUTOMATICALLY BUILT BY THE 'geneos' COMMAND -->
+	<operatingEnvironment>
+		<gatewayName>test1</gatewayName>
+		<listenPorts>
+			<insecure>
+				<listenPort>7039</listenPort>
+			</insecure>
+		</listenPorts>
+		<var name="gatewayName">
+			<macro>
+				<gatewayName></gatewayName>
+			</macro>
+		</var>
+		<var name="insecureGatewayPort">
+			<macro>
+				<insecureGatewayPort></insecureGatewayPort>
+			</macro>
+		</var>
+		<var name="managedEntityName">
+			<macro>
+				<managedEntityName></managedEntityName>
+			</macro>
+		</var>
+		<var name="netprobeHost">
+			<macro>
+				<netprobeHost></netprobeHost>
+			</macro>
+		</var>
+		<var name="netprobeName">
+			<macro>
+				<netprobeName></netprobeName>
+			</macro>
+		</var>
+		<var name="netprobePort">
+			<macro>
+				<netprobePort></netprobePort>
+			</macro>
+		</var>
+		<var name="samplerName">
+			<macro>
+				<samplerName></samplerName>
+			</macro>
+		</var>
+		<var name="secureGatewayPort">
+			<macro>
+				<secureGatewayPort></secureGatewayPort>
+			</macro>
+		</var>
+		<var name="_gatewayInstance">
+			<string>test1</string>
+		</var>
+		<var name="_geneosHome">
+			<string></string>
+		</var>
+		<var name="_gatewayHome">
+			<string>gateway/gateways/test1</string>
+		</var>
+		<var name="_gatewayBaseVersion">
+			<string>active_prod</string>
+		</var>
+		<var name="_gatewayLogFile">
+			<string>gateway/gateways/test1/gateway.log</string>
+		</var>
+		
+	</operatingEnvironment>
+</gateway>
