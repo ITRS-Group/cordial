@@ -122,6 +122,10 @@ func NewHost(name string, options ...any) (h *Host) {
 	return
 }
 
+func (h *Host) String() string {
+	return h.GetString("name")
+}
+
 // GetHost returns a pointer to Host value. If passed an empty name, returns
 // nil. If passed the special values LOCALHOST or ALLHOSTS then it will
 // return the respective special values LOCAL or ALL. Otherwise it tries
@@ -129,18 +133,23 @@ func NewHost(name string, options ...any) (h *Host) {
 //
 // It will return nil if the named host is not found. Use NewHost() to initialise a new host
 func GetHost(name string) (h *Host) {
+	log.Debug().Msgf("name: %s", name)
 	switch name {
 	case "":
+		log.Debug().Msgf("return nil")
 		return nil
 	case LOCALHOST:
+		log.Debug().Msgf("return %s", LOCAL)
 		return LOCAL
 	case ALLHOSTS:
+		log.Debug().Msgf("return %s", ALL)
 		return ALL
 	default:
 		r, ok := hosts.Load(name)
 		if ok {
 			h, ok = r.(*Host)
 			if ok {
+				log.Debug().Msgf("return %s", r)
 				return
 			}
 		}
