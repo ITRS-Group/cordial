@@ -29,6 +29,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -39,13 +41,15 @@ func Stop(c geneos.Instance, force, kill bool) (err error) {
 	}
 
 	if !IsRunning(c) {
+		log.Debug().Msgf("%s not running", c)
 		return os.ErrProcessDone
 	}
 
+	start := time.Now()
+
 	if !kill {
-		err = Signal(c, syscall.SIGTERM)
-		if err == os.ErrProcessDone {
-			fmt.Printf("%s stopped\n", c)
+		if err = Signal(c, syscall.SIGTERM); err == os.ErrProcessDone {
+			fmt.Printf("%s stopped in %.3fs\n", c, time.Since(start).Seconds())
 			return nil
 		}
 
@@ -55,26 +59,26 @@ func Stop(c geneos.Instance, force, kill bool) (err error) {
 
 		for i := 0; i < 10; i++ {
 			time.Sleep(250 * time.Millisecond)
-			err = Signal(c, syscall.SIGTERM)
-			if err == os.ErrProcessDone {
-				fmt.Printf("%s stopped\n", c)
+			if err = Signal(c, syscall.SIGTERM); err == os.ErrProcessDone {
+				fmt.Printf("%s stopped in %.3fs\n", c, time.Since(start).Seconds())
 				return nil
 			}
 		}
 
 		if !IsRunning(c) {
-			fmt.Printf("%s stopped\n", c)
+			fmt.Printf("%s stopped in %.3fs\n", c, time.Since(start).Seconds())
 			return nil
 		}
 	}
 
 	if err = Signal(c, syscall.SIGKILL); err == os.ErrProcessDone {
+		fmt.Printf("%s killed after %.3fs\n", c, time.Since(start).Seconds())
 		return nil
 	}
 
 	time.Sleep(250 * time.Millisecond)
 	if !IsRunning(c) {
-		fmt.Printf("%s killed\n", c)
+		fmt.Printf("%s killed after %.3fs\n", c, time.Since(start).Seconds())
 		return nil
 	}
 	return

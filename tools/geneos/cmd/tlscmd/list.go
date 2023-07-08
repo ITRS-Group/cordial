@@ -185,6 +185,10 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 		err = instance.ForAll(ct, cmd.Hostname, listCmdInstanceCertCSV, args, params)
 		listCSVWriter.Flush()
 	default:
+		results, err := instance.ForAllWithResults(ct, cmd.Hostname, listCmdInstanceCert, args, params)
+		if err != nil {
+			return err
+		}
 		listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintln(listTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tVerified")
 		if listCmdAll {
@@ -207,7 +211,9 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 					verifyCert(geneosCert))
 			}
 		}
-		err = instance.ForAll(ct, cmd.Hostname, listCmdInstanceCert, args, params)
+		for _, r := range results {
+			fmt.Fprint(listTabWriter, r)
+		}
 		listTabWriter.Flush()
 	}
 	return
@@ -307,6 +313,10 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 		err = instance.ForAll(ct, cmd.Hostname, listCmdInstanceCertCSV, args, params)
 		listCSVWriter.Flush()
 	default:
+		results, err := instance.ForAllWithResults(ct, cmd.Hostname, listCmdInstanceCert, args, params)
+		if err != nil {
+			return err
+		}
 		listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintln(listTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tVerified\tIssuer\tSubjAltNames\tIPs\tFingerprint")
 		if listCmdAll {
@@ -333,39 +343,42 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 					sha1.Sum(geneosCert.Raw))
 			}
 		}
-		err = instance.ForAll(ct, cmd.Hostname, listCmdInstanceCert, args, params)
+		for _, r := range results {
+			fmt.Fprint(listTabWriter, r)
+		}
 		listTabWriter.Flush()
 	}
 	return
 }
 
-func listCmdInstanceCert(c geneos.Instance, params []string) (err error) {
+func listCmdInstanceCert(c geneos.Instance, params []string) (result interface{}, err error) {
+	var output string
+
 	cert, valid, err := instance.ReadCert(c)
 	if err == os.ErrNotExist {
 		// this is OK - instance.ReadCert() reports no configured cert this way
-		return nil
+		return "", nil
 	}
 	if cert == nil && err != nil {
 		return
 	}
 
 	expires := cert.NotAfter
-	fmt.Fprintf(listTabWriter, "%s\t%s\t%s\t%.f\t%q\t%q\t%v\t", c.Type(), c.Name(), c.Host(), time.Until(expires).Seconds(), expires, cert.Subject.CommonName, valid)
+	output = fmt.Sprintf("%s\t%s\t%s\t%.f\t%q\t%q\t%v\t", c.Type(), c.Name(), c.Host(), time.Until(expires).Seconds(), expires, cert.Subject.CommonName, valid)
 
 	if listCmdLong {
-		fmt.Fprintf(listTabWriter, "%q\t", cert.Issuer.CommonName)
+		output += fmt.Sprintf("%q\t", cert.Issuer.CommonName)
 		if len(cert.DNSNames) > 0 {
-			fmt.Fprintf(listTabWriter, "%v", cert.DNSNames)
+			output += fmt.Sprint(cert.DNSNames)
 		}
-		fmt.Fprintf(listTabWriter, "\t")
+		output += "\t"
 		if len(cert.IPAddresses) > 0 {
-			fmt.Fprintf(listTabWriter, "%v", cert.IPAddresses)
+			output += fmt.Sprint(cert.IPAddresses)
 		}
-		fmt.Fprintf(listTabWriter, "\t%X", sha1.Sum(cert.Raw))
+		output += fmt.Sprintf("\t%X", sha1.Sum(cert.Raw))
 	}
-	fmt.Fprint(listTabWriter, "\n")
-
-	return
+	output += "\n"
+	return output, nil
 }
 
 func listCmdInstanceCertCSV(c geneos.Instance, params []string) (err error) {

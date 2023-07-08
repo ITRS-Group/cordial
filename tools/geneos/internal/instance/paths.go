@@ -29,7 +29,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/rs/zerolog/log"
 )
 
 // ComponentFilename returns the filename for the component used by the
@@ -176,9 +175,7 @@ func HomeDir(c geneos.Instance) (home string) {
 	// can't use c.Home() as this function is called from there!
 	if c.Config().IsSet("home") {
 		home = c.Config().GetString("home")
-		log.Debug().Msgf("home set to %s", home)
 		if d, err := h.Stat(home); err == nil && d.IsDir() {
-			log.Debug().Msgf("default home %s as defined", home)
 			return
 		}
 	}
@@ -186,10 +183,8 @@ func HomeDir(c geneos.Instance) (home string) {
 	// second, does the instance exist in the default instances parentDir?
 	parentDir := c.Type().InstancesDir(h)
 	if parentDir != "" {
-		log.Debug().Msgf("parent dir %s", parentDir)
 		home = path.Join(parentDir, c.Name())
 		if d, err := h.Stat(home); err == nil && d.IsDir() {
-			log.Debug().Msgf("instanceDir home %s selected", home)
 			return
 		}
 	}
@@ -199,17 +194,14 @@ func HomeDir(c geneos.Instance) (home string) {
 	if c.Type().ParentType != nil {
 		parentDir := h.PathTo(c.Type().String(), c.Type().String()+"s")
 		if parentDir != "" {
-			log.Debug().Msgf("legacy parent dir %s", parentDir)
 			home = path.Join(parentDir, c.Name())
 			if d, err := h.Stat(home); err == nil && d.IsDir() {
-				log.Debug().Msgf("new home %s from legacy", home)
 				return
 			}
 		}
 	}
 
 	home = h.PathTo(ct, ct.String()+"s", c.Name())
-	log.Debug().Msgf("default %s", home)
 	return
 }
 

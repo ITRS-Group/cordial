@@ -283,12 +283,10 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 	var i int
 
 	dir := h.PathTo("packages", ct.String())
-	log.Debug().Msgf("ct=%s dir=%s", ct, dir)
 	version = base
 
 	for i = 0; i < 10; i++ {
 		basepath := path.Join(dir, version)
-		log.Debug().Msgf("basepath: %s", basepath)
 		st, err = h.Lstat(basepath)
 		if err != nil {
 			log.Debug().Err(err).Msg("Lstat")
@@ -302,7 +300,6 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 				version = "unknown"
 				return
 			}
-			log.Debug().Msgf("return %s", version)
 			// version = st.Name()
 			return
 		}

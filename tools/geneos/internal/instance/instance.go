@@ -35,6 +35,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -138,7 +139,12 @@ func Signal(c geneos.Instance, signal syscall.Signal) (err error) {
 		return os.ErrProcessDone
 	}
 
-	return c.Host().Signal(pid, signal)
+	if err = c.Host().Signal(pid, signal); err != nil {
+		return
+	}
+
+	_, err = GetPID(c)
+	return
 }
 
 // Get return an instance of component ct, and loads the config. It is
@@ -396,11 +402,19 @@ func ForAll(ct *geneos.Component, hostname string, fn func(geneos.Instance, []st
 		return os.ErrNotExist
 	}
 
+	var wg sync.WaitGroup
 	for _, c := range allcs {
-		if err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
-			fmt.Printf("%s: %s\n", c, err)
-		}
+		wg.Add(1)
+		go func(c geneos.Instance) {
+			log.Debug().Msgf("starting for %s\n", c)
+			defer wg.Done()
+			if err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
+				fmt.Printf("%s: %s\n", c, err)
+			}
+			log.Debug().Msgf("done for %s\n", c)
+		}(c)
 	}
+	wg.Wait()
 
 	return nil
 }
@@ -432,15 +446,25 @@ func ForAllWithResults(ct *geneos.Component, hostname string, fn func(geneos.Ins
 		allcs = append(allcs, cs...)
 	}
 
+	var mutex sync.Mutex
+	var wg sync.WaitGroup
+
 	for _, c := range allcs {
-		var res interface{}
-		if res, err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
-			fmt.Printf("%s: %s\n", c, err)
-		}
-		if res != nil {
-			results = append(results, res)
-		}
+		wg.Add(1)
+		go func(c geneos.Instance) {
+			var res interface{}
+			defer wg.Done()
+			if res, err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
+				fmt.Printf("%s: %s\n", c, err)
+			}
+			if res != nil {
+				mutex.Lock()
+				results = append(results, res)
+				mutex.Unlock()
+			}
+		}(c)
 	}
+	wg.Wait()
 	if n == 0 {
 		return nil, os.ErrNotExist
 	}
@@ -599,15 +623,15 @@ func Enable(c geneos.Instance) (err error) {
 // walk the /proc directory (local or remote) and find the matching pid.
 // This is subject to races, but not much we can do
 func GetPID(c geneos.Instance) (pid int, err error) {
-	// if fn := c.Type().GetPID; fn != nil {
-	// 	return fn(c)
-	// }
-
 	return process.GetPID(c.Host(), c.Config().GetString("binary"), c.Type().GetPID, c, c.Name())
 }
 
+func GetPIDCached(c geneos.Instance) (pid int, err error) {
+	return process.GetPIDCached(c.Host(), c.Config().GetString("binary"), c.Type().GetPID, c, c.Name())
+}
+
 func GetPIDInfo(c geneos.Instance) (pid int, uid int, gid int, mtime time.Time, err error) {
-	if pid, err = GetPID(c); err != nil {
+	if pid, err = GetPIDCached(c); err != nil {
 		return
 	}
 
@@ -684,6 +708,37 @@ func ListeningPorts(c geneos.Instance) (ports []int) {
 			log.Debug().Msgf("process listening on %v", port)
 		}
 	}
+	sort.Ints(ports)
+	return
+}
+
+// ListeningPorts returns all TCP ports currently open for the process
+// running as the instance. An empty slice is returned if the process
+// cannot be found. The instance may be on a remote host.
+func ListeningPortsStrings(c geneos.Instance) (ports []string) {
+	var err error
+
+	if !IsRunning(c) {
+		return
+	}
+
+	sockets := sockets(c)
+	if len(sockets) == 0 {
+		return
+	}
+
+	tcpports := make(map[int]int) // key = socket inode
+	if err = allTCPListenPorts(c.Host(), tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		log.Error().Err(err).Msg("continuing")
+	}
+
+	for _, s := range sockets {
+		if port, ok := tcpports[s]; ok {
+			ports = append(ports, fmt.Sprint(port))
+			log.Debug().Msgf("process listening on %v", port)
+		}
+	}
+	sort.Strings(ports)
 	return
 }
 
@@ -792,7 +847,7 @@ func sockets(c geneos.Instance) (links map[int]int) {
 		if n, err := fmt.Sscanf(dest, "socket:[%d]", &inode); err == nil && n == 1 {
 			f, _ := strconv.Atoi(fd)
 			links[f] = inode
-			log.Debug().Msgf("\tfd %s points to socket %q", fd, inode)
+			log.Debug().Msgf("\tfd %s points to socket %d", fd, inode)
 		}
 	}
 	return

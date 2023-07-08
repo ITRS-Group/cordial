@@ -133,23 +133,18 @@ func (h *Host) String() string {
 //
 // It will return nil if the named host is not found. Use NewHost() to initialise a new host
 func GetHost(name string) (h *Host) {
-	log.Debug().Msgf("name: %s", name)
 	switch name {
 	case "":
-		log.Debug().Msgf("return nil")
 		return nil
 	case LOCALHOST:
-		log.Debug().Msgf("return %s", LOCAL)
 		return LOCAL
 	case ALLHOSTS:
-		log.Debug().Msgf("return %s", ALL)
 		return ALL
 	default:
 		r, ok := hosts.Load(name)
 		if ok {
 			h, ok = r.(*Host)
 			if ok {
-				log.Debug().Msgf("return %s", r)
 				return
 			}
 		}

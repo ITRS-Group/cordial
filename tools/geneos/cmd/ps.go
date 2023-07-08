@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -42,6 +43,7 @@ type psType struct {
 	Name      string
 	Host      string
 	PID       string
+	Ports     []int
 	User      string
 	Group     string
 	Starttime string
@@ -49,7 +51,7 @@ type psType struct {
 	Home      string
 }
 
-var psCmdShowFiles, psCmdJSON, psCmdIndent, psCmdCSV bool
+var psCmdLong, psCmdShowFiles, psCmdJSON, psCmdIndent, psCmdCSV, psCmdNoLookups bool
 
 var psTabWriter *tabwriter.Writer
 var psCSVWriter *csv.Writer
@@ -60,6 +62,10 @@ func init() {
 
 	psCmd.Flags().BoolVarP(&psCmdShowFiles, "files", "f", false, "Show open files")
 	psCmd.Flags().MarkHidden("files")
+
+	psCmd.Flags().BoolVarP(&psCmdLong, "long", "l", false, "Show more output (remote ports etc.)")
+	psCmd.Flags().BoolVarP(&psCmdNoLookups, "nolookup", "n", false, "No lookups for user/groups")
+
 	psCmd.Flags().BoolVarP(&psCmdJSON, "json", "j", false, "Output JSON")
 	psCmd.Flags().BoolVarP(&psCmdIndent, "pretty", "i", false, "Output indented JSON")
 	psCmd.Flags().BoolVarP(&psCmdCSV, "csv", "c", false, "Output CSV")
@@ -100,13 +106,19 @@ func CommandPS(ct *geneos.Component, args []string, params []string) (err error)
 		err = instance.ForAll(ct, Hostname, psInstanceJSON, args, params)
 	case psCmdCSV:
 		psCSVWriter = csv.NewWriter(os.Stdout)
-		psCSVWriter.Write([]string{"Type", "Name", "Host", "PID", "User", "Group", "Starttime", "Version", "Home"})
+		psCSVWriter.Write([]string{"Type", "Name", "Host", "PID", "Ports", "User", "Group", "Starttime", "Version", "Home"})
 		err = instance.ForAll(ct, Hostname, psInstanceCSV, args, params)
 		psCSVWriter.Flush()
 	default:
+		results, err := instance.ForAllWithResults(ct, Hostname, psInstancePlain, args, params)
+		if err != nil {
+			return err
+		}
 		psTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\n")
-		err = instance.ForAll(ct, Hostname, psInstancePlain, args, params)
+		for _, r := range results {
+			fmt.Fprint(psTabWriter, r)
+		}
 		psTabWriter.Flush()
 	}
 	if err == os.ErrNotExist {
@@ -115,9 +127,11 @@ func CommandPS(ct *geneos.Component, args []string, params []string) (err error)
 	return
 }
 
-func psInstancePlain(c geneos.Instance, params []string) (err error) {
+func psInstancePlain(c geneos.Instance, params []string) (result interface{}, err error) {
+	var output string
+
 	if instance.IsDisabled(c) {
-		return nil
+		return
 	}
 	pid, uid, gid, mtime, err := instance.GetPIDInfo(c)
 	if err != nil {
@@ -130,24 +144,33 @@ func psInstancePlain(c geneos.Instance, params []string) (err error) {
 	username := fmt.Sprint(uid)
 	groupname := fmt.Sprint(gid)
 
-	if u, err = user.LookupId(username); err == nil {
-		username = u.Username
-	}
-	if g, err = user.LookupGroupId(groupname); err == nil {
-		groupname = g.Name
+	if !psCmdNoLookups {
+		if u, err = user.LookupId(username); err == nil {
+			username = u.Username
+		}
+		if g, err = user.LookupGroupId(groupname); err == nil {
+			groupname = g.Name
+		}
 	}
 	base, underlying, actual, _ := instance.Version(c)
-	ports := instance.ListeningPorts(c)
+	ports := []string{}
+	if c.Host() == geneos.LOCAL || psCmdLong {
+		ports = instance.ListeningPortsStrings(c)
+	}
+	portlist := strings.Join(ports, " ")
+	if portlist == "" {
+		portlist = "..."
+	}
 	if underlying != actual {
 		base += "*"
 	}
 
-	fmt.Fprintf(psTabWriter, "%s\t%s\t%s\t%d\t%v\t%s\t%s\t%s\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), pid, ports, username, groupname, mtime.Local().Format(time.RFC3339), base, actual, c.Home())
+	output = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), pid, portlist, username, groupname, mtime.Local().Format(time.RFC3339), base, actual, c.Home())
 
-	if psCmdShowFiles {
-		listOpenFiles(c)
-	}
-	return nil
+	// if psCmdShowFiles {
+	// 	listOpenFiles(c)
+	// }
+	return output, nil
 }
 
 func psInstanceCSV(c geneos.Instance, params []string) (err error) {
@@ -165,17 +188,24 @@ func psInstanceCSV(c geneos.Instance, params []string) (err error) {
 	username := fmt.Sprint(uid)
 	groupname := fmt.Sprint(gid)
 
-	if u, err = user.LookupId(username); err == nil {
-		username = u.Username
+	if !psCmdNoLookups {
+		if u, err = user.LookupId(username); err == nil {
+			username = u.Username
+		}
+		if g, err = user.LookupGroupId(groupname); err == nil {
+			groupname = g.Name
+		}
 	}
-	if g, err = user.LookupGroupId(groupname); err == nil {
-		groupname = g.Name
+	ports := []string{}
+	if c.Host() == geneos.LOCAL || psCmdLong {
+		ports = instance.ListeningPortsStrings(c)
 	}
+	portlist := strings.Join(ports, ":")
 	base, underlying, actual, _ := instance.Version(c)
 	if underlying != actual {
 		base += "*"
 	}
-	psCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()})
+	psCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), portlist, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()})
 
 	return nil
 }
@@ -195,17 +225,23 @@ func psInstanceJSON(c geneos.Instance, params []string) (err error) {
 	username := fmt.Sprint(uid)
 	groupname := fmt.Sprint(gid)
 
-	if u, err = user.LookupId(username); err == nil {
-		username = u.Username
+	if !psCmdNoLookups {
+		if u, err = user.LookupId(username); err == nil {
+			username = u.Username
+		}
+		if g, err = user.LookupGroupId(groupname); err == nil {
+			groupname = g.Name
+		}
 	}
-	if g, err = user.LookupGroupId(groupname); err == nil {
-		groupname = g.Name
+	ports := []int{}
+	if c.Host() == geneos.LOCAL || psCmdLong {
+		ports = instance.ListeningPorts(c)
 	}
 	base, underlying, actual, _ := instance.Version(c)
 	if underlying != actual {
 		base += "*"
 	}
-	psJSONEncoder.Encode(psType{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()})
+	psJSONEncoder.Encode(psType{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), ports, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()})
 
 	return nil
 }

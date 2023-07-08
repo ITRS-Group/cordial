@@ -138,7 +138,6 @@ func LoadConfig(c geneos.Instance) (err error) {
 	// override the home from the config file and use the directory the
 	// config was found in
 	c.Config().Set("home", home)
-	log.Debug().Msgf("home: %s", c.Home())
 
 	if err != nil {
 		log.Debug().Err(err).Msg("")

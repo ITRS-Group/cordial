@@ -132,7 +132,6 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 			confDirs[i], confDirs[opp] = confDirs[opp], confDirs[i]
 		}
 	}
-	log.Debug().Msgf("confDirs: %v", confDirs)
 
 	// search directories for defaults unless UseDefault(false) is
 	// used as an option to Load(). we do this even if the

@@ -236,6 +236,7 @@ func (h *SSHRemote) Dial() (sc *ssh.Client, err error) {
 	if ok {
 		sc = val.(*ssh.Client)
 	} else {
+		start := time.Now()
 		log.Debug().Msgf("ssh connect to %s as %s", dest, h.username)
 		sc, err = sshConnect(dest, h.username, h.password, h.keys...)
 		if err != nil {
@@ -244,7 +245,7 @@ func (h *SSHRemote) Dial() (sc *ssh.Client, err error) {
 			h.lastAttempt = time.Now()
 			return
 		}
-		log.Debug().Msgf("host opened %s %s %s", h.name, dest, h.username)
+		log.Debug().Msgf("ssh connect opened %s %s %s in %.3fs", h.name, dest, h.username, time.Since(start).Seconds())
 		sshSessions.Store(h.name, sc)
 	}
 	return
@@ -279,6 +280,7 @@ func (h *SSHRemote) DialSFTP() (f *sftp.Client, err error) {
 		f = val.(*sftp.Client)
 	} else {
 		var s *ssh.Client
+		start := time.Now()
 		if s, err = h.Dial(); err != nil {
 			h.failed = err
 			h.lastAttempt = time.Now()
@@ -289,7 +291,7 @@ func (h *SSHRemote) DialSFTP() (f *sftp.Client, err error) {
 			h.lastAttempt = time.Now()
 			return
 		}
-		log.Debug().Msgf("remote opened %s", h.name)
+		log.Debug().Msgf("sftp remote %s opened %.3fs", h.name, time.Since(start).Seconds())
 		sftpSessions.Store(h.name, f)
 	}
 	return
@@ -585,7 +587,7 @@ func (h *SSHRemote) Signal(pid int, signal syscall.Signal) (err error) {
 	}
 	defer sess.Close()
 
-	_, err = sess.CombinedOutput(fmt.Sprintf("kill -s %d %d", signal, pid))
+	sess.CombinedOutput(fmt.Sprintf("kill -s %d %d", signal, pid))
 	return
 }
 
@@ -611,7 +613,7 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, env []string, home, errfile string) (er
 	//
 	// given this is sent to a shell, we can quote everything blindly ?
 	//
-	// note that cmd.Args hosts the command as Args[0], so no Path required
+	// note that cmd.Args already has the command as Args[0], so no Path required
 	var cmdstr = ""
 	for _, a := range cmd.Args {
 		cmdstr = fmt.Sprintf("%s %q", cmdstr, a)
@@ -630,11 +632,12 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, env []string, home, errfile string) (er
 	}
 	fmt.Fprintf(pipe, "%s > %q 2>&1 &\n", cmdstr, errfile)
 	fmt.Fprintln(pipe, "exit")
-	sess.Close()
-	// wait a short while for remote to catch-up
-	time.Sleep(250 * time.Millisecond)
+	return sess.Wait()
 
-	return
+	// wait a short while for remote to catch-up
+	// time.Sleep(250 * time.Millisecond)
+
+	// return
 }
 
 // Run starts a process on an SSH attached remote host h. It uses a
