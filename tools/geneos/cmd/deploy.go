@@ -329,7 +329,6 @@ var deployCmd = &cobra.Command{
 				if errors.Is(err, os.ErrProcessDone) {
 					err = nil
 				}
-				return
 			}
 			if deployCmdLogs {
 				return followLog(c)

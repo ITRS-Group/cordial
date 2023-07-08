@@ -170,6 +170,9 @@ func ReadCert(c geneos.Instance) (cert *x509.Certificate, valid bool, err error)
 		return nil, false, os.ErrNotExist
 	}
 	cert, err = config.ParseCertificate(c.Host(), PathOf(c, "certificate"))
+	if err != nil {
+		return
+	}
 
 	// validate against certificate chain file on the same host, expiry
 	// etc.

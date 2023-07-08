@@ -95,9 +95,12 @@ var listCmd = &cobra.Command{
 			err = instance.ForAll(ct, Hostname, listInstanceCSV, args, params)
 			listCSVWriter.Flush()
 		default:
+			results, _ := instance.ForAllWithResults(ct, Hostname, listInstancePlain, args, params)
 			listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(listTabWriter, "Type\tNames\tHost\tFlag\tPort\tVersion\tHome\n")
-			err = instance.ForAll(ct, Hostname, listInstancePlain, args, params)
+			for _, r := range results {
+				fmt.Fprint(listTabWriter, r)
+			}
 			listTabWriter.Flush()
 		}
 		if err == os.ErrNotExist {
@@ -107,7 +110,8 @@ var listCmd = &cobra.Command{
 	},
 }
 
-func listInstancePlain(c geneos.Instance, params []string) (err error) {
+func listInstancePlain(c geneos.Instance, params []string) (result interface{}, err error) {
+	var output string
 	var flags string
 	if instance.IsDisabled(c) {
 		flags += "D"
@@ -126,8 +130,8 @@ func listInstancePlain(c geneos.Instance, params []string) (err error) {
 		base = path.Join(pkgtype, base)
 	}
 
-	fmt.Fprintf(listTabWriter, "%s\t%s\t%s\t%s\t%d\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), flags, c.Config().GetInt("port"), base, underlying, c.Home())
-	return
+	output = fmt.Sprintf("%s\t%s\t%s\t%s\t%d\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), flags, c.Config().GetInt("port"), base, underlying, c.Home())
+	return output, nil
 }
 
 func listInstanceCSV(c geneos.Instance, params []string) (err error) {
