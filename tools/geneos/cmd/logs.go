@@ -47,9 +47,9 @@ var logCmdStderr, logCmdNoNormal, logCmdFollow, logCmdCat bool
 var logCmdMatch, logCmdIgnore string
 
 type files struct {
-	c geneos.Instance
-	f io.ReadSeekCloser
-	p int64
+	c   geneos.Instance
+	r   io.ReadSeekCloser
+	pos int64
 }
 
 // global watchers for logs
@@ -160,7 +160,7 @@ func logTailInstance(c geneos.Instance, params []string) (err error) {
 }
 
 func logTailInstanceFile(c geneos.Instance, logfile string) (err error) {
-	st, err := c.Host().Stat(logfile)
+	_, err = c.Host().Stat(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			fmt.Printf("===> %s log file %s not found <===\n", c, logfile)
@@ -174,7 +174,7 @@ func logTailInstanceFile(c geneos.Instance, logfile string) (err error) {
 	}
 	defer f.Close()
 
-	text, err := tailLines(f, st.Size(), logCmdLines)
+	text, err := tailLines(f, logCmdLines)
 	if err != nil && !errors.Is(err, io.EOF) {
 		log.Error().Err(err).Msg("")
 	}
@@ -185,12 +185,14 @@ func logTailInstanceFile(c geneos.Instance, logfile string) (err error) {
 	return nil
 }
 
-func tailLines(f io.ReadSeekCloser, end int64, linecount int) (text string, err error) {
+const charsPerLine = 132
+
+func tailLines(f io.ReadSeekCloser, linecount int) (text string, err error) {
+	var i int64
+
 	// reasonable guess at bytes per line to use as a multiplier
-	const charsPerLine = 132
 	chunk := int64(linecount * charsPerLine)
 	buf := make([]byte, chunk)
-	var i int64
 	alllines := []string{""}
 
 	if f == nil {
@@ -201,6 +203,10 @@ func tailLines(f io.ReadSeekCloser, end int64, linecount int) (text string, err 
 		_, err = f.Seek(0, io.SeekEnd)
 		return
 	}
+
+	pos, _ := f.Seek(0, os.SEEK_CUR)
+	end, _ := f.Seek(0, os.SEEK_END)
+	f.Seek(pos, os.SEEK_SET)
 
 	for i = 1 + end/chunk; i > 0; i-- {
 		f.Seek((i-1)*chunk, io.SeekStart)
@@ -323,14 +329,14 @@ func logFollowInstanceFile(c geneos.Instance, logfile string) (err error) {
 		fmt.Printf("===> %s log file not found <===\n", c)
 	} else {
 		// output up to this point
-		st, _ := c.Host().Stat(logfile)
-		text, _ := tailLines(f, st.Size(), logCmdLines)
+		text, _ := tailLines(f, logCmdLines)
 
 		if len(text) != 0 {
 			filterOutput(c, logfile, strings.NewReader(text+"\n"))
 		}
 
-		tails.Store(logfile, &files{c, f, st.Size()})
+		sz, _ := f.Seek(0, os.SEEK_CUR)
+		tails.Store(logfile, &files{c, f, sz})
 	}
 	log.Debug().Msgf("watching %s", logfile)
 
@@ -352,57 +358,47 @@ func watchLogs() (tails *sync.Map) {
 				logfile := key.(string)
 				tail := value.(*files)
 
-				c := tail.c.(geneos.Instance)
-				oldsize := tail.p
-
-				st, err := c.Host().Stat(logfile)
+				st, err := tail.c.Host().Stat(logfile)
 				if err != nil {
 					return true
 				}
 				newsize := st.Size()
 
-				if newsize == oldsize {
+				if newsize == tail.pos {
+					// no change
 					return true
 				}
 
 				// if we have an existing file and it appears
 				// to have grown then output whatever is new
-				if tail.f != nil {
-					// tail.f.Seek(oldsize, io.SeekStart)
-					newsize = copyFromFile(c, logfile)
-					if newsize > oldsize {
-						tail.p = newsize
+				if tail.r != nil {
+					newsize = filterOutput(tail.c, logfile, tail.r)
+					if newsize > tail.pos {
+						tail.pos = newsize
 						tails.Store(key, tail)
 						return true
 					}
 
-					// if the file seems to have shrunk, then
-					// we are here, so close the old one
-					tail.f.Close()
+					if newsize < tail.pos {
+						// if the file seems to have shrunk, then
+						// we are here, so close the old one
+						tail.r.Close()
+						tails.Store(key, &files{tail.c, nil, 0})
+						fmt.Printf("===> %s %s Rolled, re-opening <===\n", tail.c, logfile)
+
+					}
 				}
 
 				// open new file, read to the end, return
-				if tail.f, err = c.Host().Open(logfile); err != nil {
+				if tail.r, err = tail.c.Host().Open(logfile); err != nil {
 					log.Error().Err(err).Msg("cannot (re)open")
 				}
-				tail.p = copyFromFile(c, logfile)
+				tail.pos = filterOutput(tail.c, logfile, tail.r)
 				tails.Store(key, tail)
 				return true
 			})
 		}
 	}()
 
-	return
-}
-
-func copyFromFile(c geneos.Instance, logfile string) (sz int64) {
-	if t, ok := tails.Load(logfile); ok {
-		tail := t.(*files)
-		sz = tail.p
-		if tail.f != nil {
-			log.Debug().Msgf("tail %s", logfile)
-			sz = filterOutput(c, logfile, tail.f)
-		}
-	}
 	return
 }
