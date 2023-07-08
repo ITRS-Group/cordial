@@ -12,7 +12,7 @@ If an `expandable` string is given with the `-e` option it must be of the form `
 
 The format of `expandable` strings is documented here:
 
-<https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#ExpandString>
+<https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#readme-expandable-formats>
 
 A specific key file can be given using the `-k` flag and an alternative ("previous") key file with the `-v` flag. If either of these key files are supplied then the command tries to decode the given ciphertext and a value may be returned. An error is returned if all attempts fail.
 
