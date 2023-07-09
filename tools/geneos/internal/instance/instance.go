@@ -406,12 +406,10 @@ func ForAll(ct *geneos.Component, hostname string, fn func(geneos.Instance, []st
 	for _, c := range allcs {
 		wg.Add(1)
 		go func(c geneos.Instance) {
-			log.Debug().Msgf("starting for %s\n", c)
 			defer wg.Done()
 			if err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
 				fmt.Printf("%s: %s\n", c, err)
 			}
-			log.Debug().Msgf("done for %s\n", c)
 		}(c)
 	}
 	wg.Wait()
@@ -626,12 +624,8 @@ func GetPID(c geneos.Instance) (pid int, err error) {
 	return process.GetPID(c.Host(), c.Config().GetString("binary"), c.Type().GetPID, c, c.Name())
 }
 
-func GetPIDCached(c geneos.Instance) (pid int, err error) {
-	return process.GetPIDCached(c.Host(), c.Config().GetString("binary"), c.Type().GetPID, c, c.Name())
-}
-
 func GetPIDInfo(c geneos.Instance) (pid int, uid int, gid int, mtime time.Time, err error) {
-	if pid, err = GetPIDCached(c); err != nil {
+	if pid, err = GetPID(c); err != nil {
 		return
 	}
 

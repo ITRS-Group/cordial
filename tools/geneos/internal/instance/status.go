@@ -58,7 +58,7 @@ func IsAutoStart(c geneos.Instance) bool {
 // BaseVersion returns the absolute path of the base package directory
 // for the instance c. No longer references the instance "install" parameter.
 func BaseVersion(c geneos.Instance) (dir string) {
-	return c.Host().PathTo("packages", c.Type().String(), c.Config().GetString("version"))
+	return c.Host().PathTo("packages", c.Type(), c.Config().GetString("version"))
 }
 
 // Version returns the base package name, the underlying package version

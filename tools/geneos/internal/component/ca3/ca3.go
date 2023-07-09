@@ -51,16 +51,18 @@ var CA3 = geneos.Component{
 	PurgeList:        "CA3PurgeList",
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
+		`binary=java`, // needed for 'ps' matching
 		`home={{join .root "netprobe" "ca3s" .name}}`,
 		`install={{join .root "packages" "netprobe"}}`,
-		`plugins={{join .install "collection_agent" "plugins"}}`,
 		`version=active_prod`,
+		`plugins={{join .install .version "collection_agent"}}`,
 		`program={{"/usr/bin/java"}}`,
+		`logdir={{join .home "collection_agent"}}`,
 		`logfile=collection-agent.log`,
 		`config={{join .home "collection-agent.yml"}}`,
 		`minheap=512M`,
 		`maxheap=512M`,
-		`autostart=false`,
+		`autostart=true`,
 	},
 	GlobalSettings: map[string]string{
 		"CA3PortRange": "7137-",
@@ -215,7 +217,7 @@ func (n *CA3s) Rebuild(initial bool) error {
 
 func (n *CA3s) Command() (args, env []string, home string) {
 	// locate jar file
-	baseDir := instance.BaseVersion(n)
+	baseDir := path.Join(instance.BaseVersion(n), "collection_agent")
 
 	d, err := os.ReadDir(baseDir)
 	if err != nil {
