@@ -153,12 +153,11 @@ func psInstancePlain(c geneos.Instance, params []string) (result interface{}, er
 		}
 	}
 	base, underlying, actual, _ := instance.Version(c)
-	ports := []string{}
+	var portlist string
 	if c.Host() == geneos.LOCAL || psCmdLong {
-		ports = instance.ListeningPortsStrings(c)
+		portlist = strings.Join(instance.ListeningPortsStrings(c), " ")
 	}
-	portlist := strings.Join(ports, " ")
-	if portlist == "" {
+	if c.Host() != geneos.LOCAL && portlist == "" {
 		portlist = "..."
 	}
 	if underlying != actual {

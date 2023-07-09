@@ -34,7 +34,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -117,107 +116,6 @@ OUTER:
 	return
 }
 
-var (
-	mutex            sync.RWMutex
-	pidcache         = make(map[string][]int)
-	cmdlineCache     = make(map[string]map[int][]byte)
-	cmdlineCacheTime = make(map[string]time.Time)
-)
-
-// GetPIDCached returns the PID of the process started with binary name and
-// all args (in any order) on host h. If not found then an err of
-// os.ErrProcessDone is returned.
-//
-// walk the /proc directory (local or remote) and find the matching pid.
-// This is subject to races, but not much we can do
-//
-// TODO: add support for windows hosts - the lookups are based on the
-// host h and not the local system
-//
-// TODO: cache /proc entries for a period, this is very likely to be
-// used over and over in the same proc
-func GetPIDCached(h host.Host, binary string, checkfn func(string, interface{}, string, [][]byte) bool, checkarg interface{}, args ...string) (pid int, err error) {
-	if strings.Contains(h.ServerVersion(), "windows") {
-		return 0, os.ErrProcessDone
-	}
-
-	hostname := h.String()
-
-	pids := []int{}
-	mutex.RLock()
-	if cmdlineCacheTime[hostname].IsZero() || time.Since(cmdlineCacheTime[hostname]) > 5*time.Second {
-		mutex.RUnlock()
-		// (re)initialise caches
-
-		mutex.Lock()
-		cmdlineCacheTime[hostname] = time.Now()
-		cmdlineCache[hostname] = map[int][]byte{}
-
-		// safe to ignore error as it can only be bad pattern,
-		// which means no matches to range over
-
-		dirs := []string{}
-		dirs, err = h.Glob("/proc/[0-9]*")
-		if err != nil {
-			err = os.ErrProcessDone
-			return
-		}
-
-		for _, dir := range dirs {
-			p, _ := strconv.Atoi(path.Base(dir))
-			pids = append(pids, p)
-		}
-
-		sort.Ints(pids)
-		pidcache[hostname] = pids
-		mutex.Unlock()
-	} else {
-		pids = pidcache[hostname]
-		mutex.RUnlock()
-	}
-
-	var data []byte
-PIDS:
-	for _, pid = range pids {
-		var ok bool
-		mutex.RLock()
-		if data, ok = cmdlineCache[hostname][pid]; !ok {
-			mutex.RUnlock()
-			if data, err = h.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid)); err != nil {
-				// process may disappear by this point, perms denied etc., ignore error
-				continue
-			}
-			mutex.Lock()
-			cmdlineCache[hostname][pid] = data
-			mutex.Unlock()
-		} else {
-			mutex.RUnlock()
-		}
-
-		procargs := bytes.Split(data, []byte("\000"))
-		execfile := path.Base(string(procargs[0]))
-		if checkfn != nil {
-			if checkfn(binary, checkarg, execfile, procargs) {
-				return
-			}
-		} else {
-			if strings.HasPrefix(execfile, binary) {
-				argmap := make(map[string]bool)
-				for _, arg := range procargs[1:] {
-					argmap[string(arg)] = true
-				}
-				for _, arg := range args {
-					if !argmap[arg] {
-						continue PIDS
-					}
-				}
-				return
-			}
-		}
-	}
-	return 0, os.ErrProcessDone
-}
-
 // GetPID returns the PID of the process started with binary name and
 // all args (in any order) on host h. If not found then an err of
 // os.ErrProcessDone is returned.
@@ -254,6 +152,14 @@ func GetPID(h host.Host, binary string, checkfn func(string, interface{}, string
 	var data []byte
 PIDS:
 	for _, pid = range pids {
+		var ls string
+		ls, err = h.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
+		if err != nil {
+			continue
+		}
+		if path.Base(ls) != binary {
+			continue
+		}
 		if data, err = h.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid)); err != nil {
 			// process may disappear by this point, perms denied etc., ignore error
 			continue

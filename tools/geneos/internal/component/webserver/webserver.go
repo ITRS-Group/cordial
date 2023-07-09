@@ -64,6 +64,7 @@ var Webserver = geneos.Component{
 		"websxmx":   "maxmem",
 	},
 	Defaults: []string{
+		`binary=java`, // needed for 'ps' matching
 		`home={{join .root "webserver" "webservers" .name}}`,
 		`install={{join .root "packages" "webserver"}}`,
 		`version=active_prod`,
