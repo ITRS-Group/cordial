@@ -39,10 +39,11 @@ func init() {
 }
 
 var helpDocCmd = &cobra.Command{
-	Use:          "fa2",
-	GroupID:      cmd.CommandGroupComponents,
-	Aliases:      []string{"rm"},
-	Short:        "Fix Analyser 2",
-	Long:         fa2Description,
-	SilenceUsage: true,
+	Use:                   "fa2",
+	GroupID:               cmd.CommandGroupComponents,
+	Short:                 "Fix Analyser 2",
+	Long:                  fa2Description,
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Run:                   cmd.GeneosCmd.HelpFunc(),
 }
