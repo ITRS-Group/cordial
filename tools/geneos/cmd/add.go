@@ -105,12 +105,26 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 		h = geneos.LOCAL
 	}
 
-	var pkgct *geneos.Component
-	var local string
-	pkgct, local, h = instance.NameParts(name, h)
+	pkgct, local, h := instance.NameParts(name, h)
+
 	if local == "" {
-		name = fmt.Sprintf("%s:%s@%s", pkgct, h.Hostname(), h)
+		local = h.Hostname()
 	}
+
+	if pkgct == nil {
+		if ct.ParentType != nil {
+			pkgct = ct.ParentType
+		} else {
+			pkgct = ct
+		}
+	}
+
+	if h == geneos.ALL {
+		h = geneos.LOCAL
+	}
+
+	name = fmt.Sprintf("%s:%s@%s", pkgct, local, h)
+
 	if err = ct.MakeComponentDirs(h); err != nil {
 		return
 	}

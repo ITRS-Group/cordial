@@ -147,12 +147,6 @@ var deployCmd = &cobra.Command{
 
 		name = fmt.Sprintf("%s:%s@%s", pkgct, local, h)
 
-		if name == "" {
-			name = h.Hostname()
-		}
-
-		log.Debug().Msgf("host=%s, pkgct=%s, ct=%s, name=%s", h, pkgct, ct, name)
-
 		if h == geneos.LOCAL {
 			if geneos.Root() == "" {
 				if deployCmdGeneosHome == "" {
