@@ -140,7 +140,7 @@ func LoadConfig(c geneos.Instance) (err error) {
 	c.Config().Set("home", home)
 
 	if err != nil {
-		log.Debug().Err(err).Msg("")
+		// log.Debug().Err(err).Msg("")
 		if err = cf.ReadRCConfig(r, ComponentFilepath(c, "rc"), prefix, aliases); err != nil {
 			return
 		}

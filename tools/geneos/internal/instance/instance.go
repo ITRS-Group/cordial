@@ -152,7 +152,7 @@ func Get(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 	c = ct.New(name)
 	if c == nil {
 		// if no instance is created, check why
-		_, _, h := SplitName(name, geneos.LOCAL)
+		_, _, h := NameParts(name, geneos.LOCAL)
 		if h == geneos.LOCAL && geneos.Root() == "" {
 			err = geneos.ErrRootNotSet
 			return
@@ -186,7 +186,7 @@ func GetAll(h *geneos.Host, ct *geneos.Component) (confs []geneos.Instance) {
 // MatchAll constructs and returns a slice of instances that have a
 // matching name
 func MatchAll(h *geneos.Host, ct *geneos.Component, name string) (c []geneos.Instance) {
-	_, local, r := SplitName(name, h)
+	_, local, r := NameParts(name, h)
 	if !r.IsAvailable() {
 		log.Debug().Err(host.ErrNotAvailable).Msgf("host %s", r)
 		return
@@ -205,7 +205,7 @@ func MatchAll(h *geneos.Host, ct *geneos.Component, name string) (c []geneos.Ins
 
 	for _, name := range Names(r, ct) {
 		// for case insensitive match change to EqualFold here
-		_, ldir, _ := SplitName(name, geneos.ALL)
+		_, ldir, _ := NameParts(name, geneos.ALL)
 		if path.Base(ldir) == local {
 			i, err := Get(ct, name)
 			if err != nil {
@@ -412,12 +412,12 @@ func Names(h *geneos.Host, ct *geneos.Component) (names []string) {
 	return
 }
 
-// SplitName returns the parts of an instance name given an instance
+// NameParts returns the parts of an instance name given an instance
 // name in the format [TYPE:]NAME[@HOST] and a default host, return a
 // *geneos.Component for the TYPE if given, a string for the NAME and a
 // *geneos.Host - the latter being either from the name or the default
 // provided
-func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name string, h *geneos.Host) {
+func NameParts(in string, defaultHost *geneos.Host) (ct *geneos.Component, name string, h *geneos.Host) {
 	if defaultHost == nil {
 		h = geneos.ALL
 	} else {

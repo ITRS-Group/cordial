@@ -107,7 +107,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 
 	var pkgct *geneos.Component
 	var local string
-	pkgct, local, h = instance.SplitName(name, h)
+	pkgct, local, h = instance.NameParts(name, h)
 	if local == "" {
 		name = fmt.Sprintf("%s:%s@%s", pkgct, h.Hostname(), h)
 	}
