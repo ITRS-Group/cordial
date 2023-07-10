@@ -97,7 +97,7 @@ geneos aes ls -S gateway -H localhost -c
 			if listCmdShared {
 				results, _ = aesListSharedJSON(ct, h)
 			} else {
-				_, results, _ = instance.ForAllWithResults(ct, cmd.Hostname, aesListInstanceJSON, args, params)
+				results, _ = instance.ForAllWithResults(ct, cmd.Hostname, aesListInstanceJSON, args, params)
 			}
 			var b []byte
 			if listCmdIndent {
@@ -120,7 +120,7 @@ geneos aes ls -S gateway -H localhost -c
 			if listCmdShared {
 				results, err = aesListShared(ct, h)
 			} else {
-				_, results, err = instance.ForAllWithResults(ct, cmd.Hostname, aesListInstance, args, params)
+				results, err = instance.ForAllWithResults(ct, cmd.Hostname, aesListInstance, args, params)
 			}
 			if err != nil {
 				return

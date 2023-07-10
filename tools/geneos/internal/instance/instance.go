@@ -300,8 +300,7 @@ func ForAll(ct *geneos.Component, hostname string, fn func(geneos.Instance, []st
 
 // ForAllWithResults calls the function fn for each matching instance
 // and gather the return values into a slice of interfaces for handling
-// upstream. The instances matched are returned in the same order in
-// instances and can be used for sorting by callers. Errors are printed
+// upstream. The slice is sorted by host, type and name. Errors are printed
 // on STDOUT for each call and the only error returned ErrNotExist if
 // there are no matches.
 func ForAllWithResults(
@@ -310,7 +309,9 @@ func ForAllWithResults(
 	fn func(geneos.Instance, []string) (interface{}, error),
 	args []string,
 	params []string,
-) (instances []geneos.Instance, results []interface{}, err error) {
+) (results []interface{}, err error) {
+	var instances []geneos.Instance
+
 	n := 0
 	// if args is empty, get all matching instances. this allows internal
 	// calls with an empty arg list without having to do the parseArgs()
@@ -337,6 +338,7 @@ func ForAllWithResults(
 	var wg sync.WaitGroup
 
 	for _, c := range allcs {
+		instances = make([]geneos.Instance, 0, len(allcs))
 		wg.Add(1)
 		go func(c geneos.Instance) {
 			var res interface{}
@@ -354,9 +356,11 @@ func ForAllWithResults(
 	}
 	wg.Wait()
 	if n == 0 {
-		return nil, nil, os.ErrNotExist
+		return nil, os.ErrNotExist
 	}
-	return instances, results, nil
+
+	sort.Sort(SortInstanceResults{Instances: instances, Results: results})
+	return results, nil
 }
 
 // Names returns a slice of all instance names for a given component ct

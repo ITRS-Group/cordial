@@ -57,7 +57,7 @@ var commandCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, args, params := CmdArgsParams(cmd)
 		if commandCmdJSON {
-			_, results, err := instance.ForAllWithResults(ct, Hostname, commandInstanceJSON, args, params)
+			results, err := instance.ForAllWithResults(ct, Hostname, commandInstanceJSON, args, params)
 			if err != nil {
 				return err
 			}
