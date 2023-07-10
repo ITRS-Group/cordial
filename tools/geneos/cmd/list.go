@@ -29,7 +29,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"sort"
 	"text/tabwriter"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -82,7 +81,7 @@ var listCmd = &cobra.Command{
 		ct, args, params := CmdArgsParams(cmd)
 		switch {
 		case listCmdJSON, listCmdIndent:
-			_, results, _ := instance.ForAllWithResults(ct, Hostname, listInstanceJSON, args, params)
+			results, _ := instance.ForAllWithResults(ct, Hostname, listInstanceJSON, args, params)
 			var b []byte
 			if listCmdIndent {
 				b, _ = json.MarshalIndent(results, "", "    ")
@@ -96,10 +95,9 @@ var listCmd = &cobra.Command{
 			err = instance.ForAll(ct, Hostname, listInstanceCSV, args, params)
 			listCSVWriter.Flush()
 		default:
-			instances, results, _ := instance.ForAllWithResults(ct, Hostname, listInstancePlain, args, params)
+			results, _ := instance.ForAllWithResults(ct, Hostname, listInstancePlain, args, params)
 			listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(listTabWriter, "Type\tNames\tHost\tFlag\tPort\tVersion\tHome\n")
-			sort.Sort(instance.SortInstanceResults{Instances: instances, Results: results})
 			for _, r := range results {
 				fmt.Fprint(listTabWriter, r)
 			}

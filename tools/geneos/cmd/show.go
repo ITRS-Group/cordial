@@ -109,7 +109,7 @@ var showCmd = &cobra.Command{
 			}
 
 			var results []interface{}
-			_, results, err = instance.ForAllWithResults(ct, Hostname, showValidateInstance, args, params)
+			results, err = instance.ForAllWithResults(ct, Hostname, showValidateInstance, args, params)
 
 			if err != nil {
 				if err == os.ErrNotExist {
@@ -132,7 +132,7 @@ var showCmd = &cobra.Command{
 				params = append(params, "merge")
 			}
 			var results []interface{}
-			_, results, err = instance.ForAllWithResults(ct, Hostname, showInstanceConfig, args, params)
+			results, err = instance.ForAllWithResults(ct, Hostname, showInstanceConfig, args, params)
 
 			if err != nil {
 				if err == os.ErrNotExist {
@@ -148,7 +148,7 @@ var showCmd = &cobra.Command{
 			}
 			return
 		}
-		_, results, err := instance.ForAllWithResults(ct, Hostname, showInstance, args, params)
+		results, err := instance.ForAllWithResults(ct, Hostname, showInstance, args, params)
 		if err != nil {
 			if err == os.ErrNotExist {
 				return fmt.Errorf("no matching instance found")
