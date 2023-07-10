@@ -34,6 +34,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/glamour"
+	"golang.org/x/term"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -70,13 +72,16 @@ func LogInit(prefix string) {
 }
 
 func renderMD(in string) (md string) {
+	style := glamour.WithAutoStyle()
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		style = glamour.WithStandardStyle("ascii")
+	}
+
 	tr, err := glamour.NewTermRenderer(
+		style,
 		glamour.WithStylesFromJSONBytes([]byte(`{ "document": { "margin": 0 } }`)),
-		glamour.WithAutoStyle(),
 		glamour.WithWordWrap(80),
 		glamour.WithEmoji(),
-		glamour.WithEnvironmentConfig(),
-		// glamour.WithPreservedNewLines(),
 	)
 	if err != nil {
 		return in
@@ -95,7 +100,7 @@ func RenderHelpAsMD(command *cobra.Command) {
 	// render help with glamour
 	cobra.AddTemplateFunc("md", renderMD)
 	command.SetHelpTemplate(`{{with (or .Long .Short)}}{{. | md | trimTrailingWhitespaces}}
-
-{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}
+		
+		{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}
 `)
 }
