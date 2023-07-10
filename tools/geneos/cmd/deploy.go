@@ -126,22 +126,28 @@ var deployCmd = &cobra.Command{
 		// check we have a Geneos directory, update host based on instance
 		// name wanted
 		h := geneos.GetHost(Hostname)
-		var pkgct *geneos.Component
-		var local string
-		if name != "" {
-			// update ct and host - ct may come from TYPE:NAME@HOST format
-			pkgct, local, h = instance.NameParts(name, h)
+		// update ct and host - ct may come from TYPE:NAME@HOST format
+		pkgct, local, h := instance.NameParts(name, h)
+
+		if local == "" {
+			local = h.Hostname()
 		}
 
 		if pkgct == nil {
-			pkgct = ct
+			if ct.ParentType != nil {
+				pkgct = ct.ParentType
+			} else {
+				pkgct = ct
+			}
 		}
 
 		if h == geneos.ALL {
 			h = geneos.LOCAL
 		}
 
-		if name == "" || local == "" {
+		name = fmt.Sprintf("%s:%s@%s", pkgct, local, h)
+
+		if name == "" {
 			name = h.Hostname()
 		}
 
@@ -274,7 +280,7 @@ var deployCmd = &cobra.Command{
 
 		// we are installed and ready to go, drop through to code from `add`
 
-		c, err := instance.Get(ct, h.FullName(name))
+		c, err := instance.Get(ct, name)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return
 		}
