@@ -1,28 +1,14 @@
 # Change Log
 
-## Version v1.7.0-beta2
+## Version v1.7.0-beta3
 
-> **Released 2023-07-06**
+> **Released 2023-07-10**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-## v1.7.0 Fixes
-
-* [#156](https://github.com/ITRS-Group/cordial/issues/156) - fix progressbar newline issue
-
-* [#155](https://github.com/ITRS-Group/cordial/issues/155) - refactor instance home directory handling (mostly internal)
-
-* [#153](https://github.com/ITRS-Group/cordial/issues/153) - fix local install of only components available
-
-* `tools/geneos` - fix order of columns in plain `geneos ls`
-
-* [#38](https://github.com/ITRS-Group/cordial/issues/38) - fix update stop/start as well as a number of related issues in `package install` and the handling of `fa2` packages
-
-* [#152](https://github.com/ITRS-Group/cordial/issues/152) - call Rebuild() on *every* instance config save - then instance.setup.xml will stay in sync with config
-
-* [#150](https://github.com/ITRS-Group/cordial/issues/150) - document `deploy` behaviour when versions clash
-
 ## v1.7.0 Changes
+
+* `tools/geneos` - Optimisation and parallel execution. All operations on Geneos instances are now run in parallel which has resulted in significant improvements in responsiveness and has reduced delays waiting for things to happen on larger installations and remote hosts. While extensive testing has taken place to ensure that the underlying functionality is not affected, there may still be issues in some cases - please report them as soon as you can!
 
 * Add support for TLS key type selection, defaulting to ECDH (see `geneos help tls init`)
 
@@ -43,6 +29,26 @@
 * Quite a bit of redecorating inside `tools/geneos` internal packages to make things clearer (refactoring, merge and split of functions etc.)
 
 * `tools/geneos` - Initial support for "remote only" working; i.e. if GENEOS_HOME is not set but there are remotes then try to "do stuff". This will break if you perform a local operation such as `add` as the root then is the current directory. Further work required, but getting Windows support working again is on the way.
+
+## v1.7.0 Fixes
+
+* [#156](https://github.com/ITRS-Group/cordial/issues/156) - fix progressbar newline issue
+
+* [#155](https://github.com/ITRS-Group/cordial/issues/155) - refactor instance home directory handling (mostly internal)
+
+* [#153](https://github.com/ITRS-Group/cordial/issues/153) - fix local install of only components available
+
+* `tools/geneos` - fix order of columns in plain `geneos ls`
+
+* [#38](https://github.com/ITRS-Group/cordial/issues/38) - fix update stop/start as well as a number of related issues in `package install` and the handling of `fa2` packages
+
+* [#152](https://github.com/ITRS-Group/cordial/issues/152) - call Rebuild() on *every* instance config save - then instance.setup.xml will stay in sync with config
+
+* [#150](https://github.com/ITRS-Group/cordial/issues/150) - document `deploy` behaviour when versions clash
+
+## 1.7.0 Known Issues
+
+* [#165](https://github.com/ITRS-Group/cordial/issues/165) - restarting while updating SANs is not working
 
 ---
 

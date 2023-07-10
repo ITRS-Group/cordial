@@ -100,7 +100,7 @@ var fileagents sync.Map
 
 func factory(name string) geneos.Instance {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
-	if h == geneos.LOCAL && geneos.Root() == "" {
+	if local == "" || h == geneos.LOCAL && geneos.Root() == "" {
 		return nil
 	}
 	f, ok := fileagents.Load(h.FullName(local))
@@ -194,7 +194,7 @@ func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 }
 
 func (c *FileAgents) Command() (args, env []string, home string) {
-	logFile := instance.LogFile(c)
+	logFile := instance.LogFilePath(c)
 	args = []string{
 		c.Name(),
 		"-port", c.Config().GetString("port"),

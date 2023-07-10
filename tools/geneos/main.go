@@ -75,7 +75,7 @@ func main() {
 	}
 
 	// otherwise emulate core ctl commands
-	ct := geneos.FindComponent(strings.TrimSuffix(execname, "ctl"))
+	ct := geneos.ParseComponent(strings.TrimSuffix(execname, "ctl"))
 	if len(os.Args) > 1 {
 		name := os.Args[1]
 		switch name {

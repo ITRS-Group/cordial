@@ -95,7 +95,7 @@ var fa2s sync.Map
 
 func factory(name string) geneos.Instance {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
-	if h == geneos.LOCAL && geneos.Root() == "" {
+	if local == "" || h == geneos.LOCAL && geneos.Root() == "" {
 		return nil
 	}
 	f, ok := fa2s.Load(h.FullName(local))
@@ -189,7 +189,7 @@ func (n *FA2s) Add(tmpl string, port uint16) (err error) {
 }
 
 func (n *FA2s) Command() (args, env []string, home string) {
-	logFile := instance.LogFile(n)
+	logFile := instance.LogFilePath(n)
 	args = []string{
 		n.Name(),
 		"-port", n.Config().GetString("port"),

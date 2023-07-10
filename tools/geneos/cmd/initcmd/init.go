@@ -275,7 +275,7 @@ func initMisc(command *cobra.Command) (err error) {
 
 // XXX this is a duplicate of the function in pkgcmd/install.go
 func install(comp string, target string, options ...geneos.Options) (err error) {
-	ct := geneos.FindComponent(comp)
+	ct := geneos.ParseComponent(comp)
 	if ct == nil {
 		return geneos.ErrInvalidArgs
 	}

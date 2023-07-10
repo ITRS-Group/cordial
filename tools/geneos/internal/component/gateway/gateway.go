@@ -134,7 +134,7 @@ var gateways sync.Map
 // factory is the factory method for Gateways
 func factory(name string) geneos.Instance {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
-	if h == geneos.LOCAL && geneos.Root() == "" {
+	if local == "" || h == geneos.LOCAL && geneos.Root() == "" {
 		return nil
 	}
 	if i, ok := gateways.Load(h.FullName(local)); ok {
@@ -317,14 +317,14 @@ func (g *Gateways) Command() (args, env []string, home string) {
 		"-resources-dir",
 		path.Join(instance.BaseVersion(g), "resources"),
 		"-log",
-		instance.LogFile(g),
+		instance.LogFilePath(g),
 		"-setup",
 		g.Config().GetString("setup"),
 		// enable stats by default
 		"-stats",
 	}
 
-	_, version, _, err := instance.Version(g)
+	_, version, err := instance.Version(g)
 	if err == nil { // if we have a valid version test for additional features
 		switch {
 		case geneos.CompareVersion(version, "6.0.0") >= 0:

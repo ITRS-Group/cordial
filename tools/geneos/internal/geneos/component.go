@@ -314,11 +314,11 @@ func UsesKeyFiles() (cts []*Component) {
 	return
 }
 
-// FindComponent returns the component type by iterating over all
+// ParseComponent returns the component type by iterating over all
 // the names registered by components and returning as soon as any value
 // matches. The comparison is case-insensitive. nil is returned if the
 // component does not match any known name.
-func FindComponent(component string) *Component {
+func ParseComponent(component string) *Component {
 	for _, v := range registeredComponents {
 		for _, m := range v.Aliases {
 			if strings.EqualFold(m, component) {

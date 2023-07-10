@@ -105,7 +105,7 @@ var floatings sync.Map
 
 func factory(name string) geneos.Instance {
 	ct, local, h := instance.SplitName(name, geneos.LOCAL)
-	if h == geneos.LOCAL && geneos.Root() == "" {
+	if local == "" || h == geneos.LOCAL && geneos.Root() == "" {
 		return nil
 	}
 	s, ok := floatings.Load(h.FullName(local))
@@ -262,7 +262,7 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 
 func (s *Floatings) Command() (args, env []string, home string) {
 	cf := s.Config()
-	logFile := instance.LogFile(s)
+	logFile := instance.LogFilePath(s)
 	args = []string{
 		s.Name(),
 		"-listenip", "none",

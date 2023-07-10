@@ -101,7 +101,7 @@ var webservers sync.Map
 
 func factory(name string) geneos.Instance {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
-	if h == geneos.LOCAL && geneos.Root() == "" {
+	if local == "" || h == geneos.LOCAL && geneos.Root() == "" {
 		return nil
 	}
 	w, ok := webservers.Load(h.FullName(local))

@@ -211,7 +211,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 			err = fmt.Errorf("type/version override must be in the form TYPE:VERSION (%w)", ErrInvalidArgs)
 			return
 		}
-		ct = FindComponent(s[0])
+		ct = ParseComponent(s[0])
 		if ct == nil {
 			return "", fmt.Errorf("invalid component type %q (%w)", s[0], ErrInvalidArgs)
 		}
@@ -221,6 +221,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 		}
 	}
 
+	// unarchive in non-parent package dir, e.g. fa2 not netprobe
 	basedir := h.PathTo("packages", ct.String(), version)
 	log.Debug().Msgf("basedir=%s ct=%s version=%s", basedir, ct, version)
 	if _, err = h.Stat(basedir); err == nil {

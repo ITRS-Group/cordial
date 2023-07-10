@@ -430,6 +430,15 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 		return ErrInvalidArgs
 	}
 
+	if ct.RelatedTypes != nil {
+		for _, ct := range ct.RelatedTypes {
+			if err = Install(h, ct, options...); err != nil {
+				return
+			}
+		}
+		return
+	}
+
 	options = append(options, PlatformID(h.GetString(h.Join("osinfo", "platform_id"))))
 
 	opts := evalOptions(options...)
@@ -497,6 +506,6 @@ func filenameToComponent(filename string) (ct *Component, version string, err er
 		version = strings.ReplaceAll(version, "-"+m, "+"+m)
 	}
 
-	ct = FindComponent(parts[1])
+	ct = ParseComponent(parts[1])
 	return
 }

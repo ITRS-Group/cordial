@@ -54,6 +54,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 
 	var ct *geneos.Component
 	var args, params []string
+	h := geneos.GetHost(Hostname)
 
 	if command.Annotations == nil {
 		command.Annotations = make(map[string]string)
@@ -94,7 +95,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 		if len(rawargs) == 0 {
 			return nil
 		}
-		if ct = geneos.FindComponent(rawargs[0]); ct == nil {
+		if ct = geneos.ParseComponent(rawargs[0]); ct == nil {
 			jsonargs, _ := json.Marshal(rawargs)
 			annotations["args"] = string(jsonargs)
 			return
@@ -112,7 +113,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 		// if len(rawargs) == 0 {
 		// 	// nothing
 		// } else
-		if ct = geneos.FindComponent(defaultComponent); ct == nil {
+		if ct = geneos.ParseComponent(defaultComponent); ct == nil {
 			// first arg is not a known type, so treat the rest as instance names
 			args = rawargs
 		} else {
@@ -128,7 +129,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 		if len(args) == 0 || (len(args) == 1 && args[0] == "all") {
 			// no args also means all instances
 			wild = true
-			args = instance.AllNames(geneos.GetHost(Hostname), ct)
+			args = instance.Names(h, ct)
 		} else {
 			// expand each arg and save results to a new slice
 			// if local == "", then all instances on host (e.g. @host)
@@ -137,12 +138,12 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 			var nargs []string
 			for _, arg := range args {
 				// check if not valid first and leave unchanged, skip
-				if !(strings.HasPrefix(arg, "@") || instance.ValidInstanceName(arg)) {
+				if !(strings.HasPrefix(arg, "@") || instance.ValidName(arg)) {
 					log.Debug().Msgf("leaving unchanged: %s", arg)
 					nargs = append(nargs, arg)
 					continue
 				}
-				_, local, r := instance.SplitName(arg, geneos.GetHost(Hostname))
+				_, local, r := instance.SplitName(arg, h)
 				if !r.Exists() {
 					log.Debug().Msgf("%s - host not found", arg)
 					// we have tried to match something and it may result in an empty list
@@ -154,7 +155,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 				if local == "" {
 					// only a '@host' in arg
 					if r.Exists() {
-						rargs := instance.AllNames(r, ct)
+						rargs := instance.Names(r, ct)
 						nargs = append(nargs, rargs...)
 						wild = true
 					}
@@ -172,7 +173,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 							}
 						}
 					}
-					if !matched && instance.ValidInstanceName(arg) {
+					if !matched && instance.ValidName(arg) {
 						// move the unknown unchanged - file or url - arg so it can later be pushed to params
 						// do not set 'wild' though?
 						log.Debug().Msgf("%s not found, saving to params", arg)
@@ -199,7 +200,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 			log.Fatal().Msgf("%q is reserved name", name)
 		}
 		// move unknown args to params
-		if !instance.ValidInstanceName(name) {
+		if !instance.ValidName(name) {
 			params = append(params, name)
 			continue
 		}
@@ -223,7 +224,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 
 	// if args is empty, find them all again. ct == None too?
 	if len(args) == 0 && (geneos.Root() != "" || len(geneos.RemoteHosts(false)) > 0) && !wild {
-		args = instance.AllNames(geneos.GetHost(Hostname), ct)
+		args = instance.Names(h, ct)
 		jsonargs, _ := json.Marshal(args)
 		annotations["args"] = string(jsonargs)
 	}
@@ -234,7 +235,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 
 func CmdArgs(command *cobra.Command) (ct *geneos.Component, args []string) {
 	log.Debug().Msgf("%s %v", command.Annotations, ct)
-	ct = geneos.FindComponent(command.Annotations["ct"])
+	ct = geneos.ParseComponent(command.Annotations["ct"])
 	if err := json.Unmarshal([]byte(command.Annotations["args"]), &args); err != nil {
 		log.Debug().Err(err).Msg("")
 	}

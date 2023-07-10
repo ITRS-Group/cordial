@@ -105,7 +105,7 @@ geneos uninstall --version 5.14.1
 						continue
 					}
 
-					_, version, _, err := instance.Version(c)
+					_, version, err := instance.Version(c)
 					if err != nil {
 						log.Debug().Err(err).Msg("")
 						continue
@@ -157,7 +157,7 @@ geneos uninstall --version 5.14.1
 						log.Error().Err(err)
 						continue
 					}
-					fmt.Printf("removed %s release %s\n", ct, version)
+					fmt.Printf("removed %s release %s in %s\n", ct, version, basedir)
 				}
 
 				// restart instances previously stopped, if possible
