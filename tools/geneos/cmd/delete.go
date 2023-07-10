@@ -79,6 +79,11 @@ func deleteInstance(c geneos.Instance, params []string) (err error) {
 	}
 
 	if !instance.IsRunning(c) || deleteCmdForce {
+		if instance.IsRunning(c) {
+			if err = instance.Stop(c, true, false); err != nil {
+				return
+			}
+		}
 		if err = c.Host().RemoveAll(c.Home()); err != nil {
 			return
 		}
