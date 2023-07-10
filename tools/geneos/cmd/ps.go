@@ -30,6 +30,7 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"sort"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -111,10 +112,11 @@ func CommandPS(ct *geneos.Component, args []string, params []string) (err error)
 		err = instance.ForAll(ct, Hostname, psInstanceCSV, args, params)
 		psCSVWriter.Flush()
 	default:
-		_, results, err := instance.ForAllWithResults(ct, Hostname, psInstancePlain, args, params)
+		instances, results, err := instance.ForAllWithResults(ct, Hostname, psInstancePlain, args, params)
 		if err != nil {
 			return err
 		}
+		sort.Sort(instance.SortInstanceResults{Instances: instances, Results: results})
 		psTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\n")
 		for _, r := range results {

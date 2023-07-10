@@ -104,7 +104,7 @@ func Init(r *geneos.Host, ct *geneos.Component) {
 var floatings sync.Map
 
 func factory(name string) geneos.Instance {
-	ct, local, h := instance.SplitName(name, geneos.LOCAL)
+	ct, local, h := instance.NameParts(name, geneos.LOCAL)
 	if local == "" || h == geneos.LOCAL && geneos.Root() == "" {
 		return nil
 	}

@@ -132,7 +132,7 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 		}
 	}
 
-	_, dName, dHost := SplitName(destination, geneos.LOCAL)
+	_, dName, dHost := NameParts(destination, geneos.LOCAL)
 
 	// do a dance here to deep copy-ish the dst
 	newdst := src.Type().New(destination)
@@ -191,7 +191,7 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 
 	// update any component name only if the same as the instance name
 	log.Debug().Msgf("src name: %s, setting dst to %s", src.Config().GetString("name"), destination)
-	_, newname, _ := SplitName(destination, geneos.LOCAL)
+	_, newname, _ := NameParts(destination, geneos.LOCAL)
 	newdst.Config().Set("name", newname)
 
 	// config changes don't matter until writing config succeeds

@@ -130,7 +130,7 @@ var deployCmd = &cobra.Command{
 		var local string
 		if name != "" {
 			// update ct and host - ct may come from TYPE:NAME@HOST format
-			pkgct, local, h = instance.SplitName(name, h)
+			pkgct, local, h = instance.NameParts(name, h)
 		}
 
 		if pkgct == nil {
