@@ -178,6 +178,7 @@ geneos install netprobe -b active_dev -U
 			return
 		}
 
+		// stop instances early. once we get to components, we don't know about instances
 		if installCmdUpdate {
 			instances := instance.MatchKeyValue(h, ct, "version", installCmdBase)
 			for _, c := range instances {

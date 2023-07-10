@@ -92,7 +92,7 @@ var licds sync.Map
 
 func factory(name string) geneos.Instance {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
-	if h == geneos.LOCAL && geneos.Root() == "" {
+	if local == "" || h == geneos.LOCAL && geneos.Root() == "" {
 		return nil
 	}
 	l, ok := licds.Load(h.FullName(local))
@@ -189,7 +189,7 @@ func (l *Licds) Command() (args, env []string, home string) {
 	args = []string{
 		l.Name(),
 		"-port", l.Config().GetString("port"),
-		"-log", instance.LogFile(l),
+		"-log", instance.LogFilePath(l),
 	}
 
 	args = append(args, instance.SetSecureArgs(l)...)

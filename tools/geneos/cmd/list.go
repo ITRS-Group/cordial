@@ -81,7 +81,7 @@ var listCmd = &cobra.Command{
 		ct, args, params := CmdArgsParams(cmd)
 		switch {
 		case listCmdJSON, listCmdIndent:
-			results, _ := instance.ForAllWithResults(ct, Hostname, listInstanceJSON, args, params)
+			_, results, _ := instance.ForAllWithResults(ct, Hostname, listInstanceJSON, args, params)
 			var b []byte
 			if listCmdIndent {
 				b, _ = json.MarshalIndent(results, "", "    ")
@@ -95,7 +95,7 @@ var listCmd = &cobra.Command{
 			err = instance.ForAll(ct, Hostname, listInstanceCSV, args, params)
 			listCSVWriter.Flush()
 		default:
-			results, _ := instance.ForAllWithResults(ct, Hostname, listInstancePlain, args, params)
+			_, results, _ := instance.ForAllWithResults(ct, Hostname, listInstancePlain, args, params)
 			listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(listTabWriter, "Type\tNames\tHost\tFlag\tPort\tVersion\tHome\n")
 			for _, r := range results {
@@ -125,7 +125,7 @@ func listInstancePlain(c geneos.Instance, params []string) (result interface{}, 
 	if flags == "" {
 		flags = "-"
 	}
-	base, underlying, _, _ := instance.Version(c)
+	base, underlying, _ := instance.Version(c)
 	if pkgtype := c.Config().GetString("pkgtype"); pkgtype != "" {
 		base = path.Join(pkgtype, base)
 	}
@@ -148,13 +148,13 @@ func listInstanceCSV(c geneos.Instance, params []string) (err error) {
 	if instance.IsAutoStart(c) {
 		autostart = "Y"
 	}
-	base, underlying, _, _ := instance.Version(c)
+	base, underlying, _ := instance.Version(c)
 	listCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), disabled, protected, autostart, fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 	return
 }
 
 func listInstanceJSON(c geneos.Instance, params []string) (result interface{}, err error) {
-	base, underlying, _, _ := instance.Version(c)
+	base, underlying, _ := instance.Version(c)
 	result = listCmdType{
 		Type:      c.Type().String(),
 		Name:      c.Name(),

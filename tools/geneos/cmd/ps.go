@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"path"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -110,7 +111,7 @@ func CommandPS(ct *geneos.Component, args []string, params []string) (err error)
 		err = instance.ForAll(ct, Hostname, psInstanceCSV, args, params)
 		psCSVWriter.Flush()
 	default:
-		results, err := instance.ForAllWithResults(ct, Hostname, psInstancePlain, args, params)
+		_, results, err := instance.ForAllWithResults(ct, Hostname, psInstancePlain, args, params)
 		if err != nil {
 			return err
 		}
@@ -152,7 +153,11 @@ func psInstancePlain(c geneos.Instance, params []string) (result interface{}, er
 			groupname = g.Name
 		}
 	}
-	base, underlying, actual, _ := instance.Version(c)
+	base, underlying, actual, _ := instance.LiveVersion(c, pid)
+	if pkgtype := c.Config().GetString("pkgtype"); pkgtype != "" {
+		base = path.Join(pkgtype, base)
+	}
+
 	var portlist string
 	if c.Host() == geneos.LOCAL || psCmdLong {
 		portlist = strings.Join(instance.ListeningPortsStrings(c), " ")
@@ -200,7 +205,7 @@ func psInstanceCSV(c geneos.Instance, params []string) (err error) {
 		ports = instance.ListeningPortsStrings(c)
 	}
 	portlist := strings.Join(ports, ":")
-	base, underlying, actual, _ := instance.Version(c)
+	base, underlying, actual, _ := instance.LiveVersion(c, pid)
 	if underlying != actual {
 		base += "*"
 	}
@@ -236,7 +241,7 @@ func psInstanceJSON(c geneos.Instance, params []string) (err error) {
 	if c.Host() == geneos.LOCAL || psCmdLong {
 		ports = instance.ListeningPorts(c)
 	}
-	base, underlying, actual, _ := instance.Version(c)
+	base, underlying, actual, _ := instance.LiveVersion(c, pid)
 	if underlying != actual {
 		base += "*"
 	}

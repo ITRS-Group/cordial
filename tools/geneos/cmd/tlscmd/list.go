@@ -142,7 +142,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 				})
 			}
 		}
-		results2, _ := instance.ForAllWithResults(ct, cmd.Hostname, listCmdInstanceCertJSON, args, params)
+		_, results2, _ := instance.ForAllWithResults(ct, cmd.Hostname, listCmdInstanceCertJSON, args, params)
 		for _, r := range results2 {
 			results = append(results, r.(listCertType))
 		}
@@ -185,7 +185,7 @@ func listCertsCommand(ct *geneos.Component, args []string, params []string) (err
 		err = instance.ForAll(ct, cmd.Hostname, listCmdInstanceCertCSV, args, params)
 		listCSVWriter.Flush()
 	default:
-		results, err := instance.ForAllWithResults(ct, cmd.Hostname, listCmdInstanceCert, args, params)
+		_, results, err := instance.ForAllWithResults(ct, cmd.Hostname, listCmdInstanceCert, args, params)
 		if err != nil {
 			return err
 		}
@@ -259,7 +259,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 				})
 			}
 		}
-		results2, _ := instance.ForAllWithResults(ct, cmd.Hostname, listCmdInstanceCertJSON, args, params)
+		_, results2, _ := instance.ForAllWithResults(ct, cmd.Hostname, listCmdInstanceCertJSON, args, params)
 		for _, r := range results2 {
 			results = append(results, r.(listCertLongType))
 		}
@@ -313,7 +313,7 @@ func listCertsLongCommand(ct *geneos.Component, args []string, params []string) 
 		err = instance.ForAll(ct, cmd.Hostname, listCmdInstanceCertCSV, args, params)
 		listCSVWriter.Flush()
 	default:
-		results, err := instance.ForAllWithResults(ct, cmd.Hostname, listCmdInstanceCert, args, params)
+		_, results, err := instance.ForAllWithResults(ct, cmd.Hostname, listCmdInstanceCert, args, params)
 		if err != nil {
 			return err
 		}

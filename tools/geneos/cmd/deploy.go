@@ -116,7 +116,7 @@ var deployCmd = &cobra.Command{
 			return nil
 		}
 
-		// name is from hidden --name, then NAME finally hostname
+		// name is from hidden --name, then NAME and finally use hostname
 		if deployCmdName != "" {
 			name = deployCmdName
 		} else if len(args) > 0 {
@@ -127,9 +127,10 @@ var deployCmd = &cobra.Command{
 		// name wanted
 		h := geneos.GetHost(Hostname)
 		var pkgct *geneos.Component
+		var local string
 		if name != "" {
 			// update ct and host - ct may come from TYPE:NAME@HOST format
-			pkgct, _, h = instance.SplitName(name, h)
+			pkgct, local, h = instance.SplitName(name, h)
 		}
 
 		if pkgct == nil {
@@ -140,7 +141,7 @@ var deployCmd = &cobra.Command{
 			h = geneos.LOCAL
 		}
 
-		if name == "" {
+		if name == "" || local == "" {
 			name = h.Hostname()
 		}
 

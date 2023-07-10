@@ -37,7 +37,20 @@ import (
 // otherwise it is created as expected. When called from unarchive()
 // this allows new installs to work without explicitly calling update.
 func Update(h *Host, ct *Component, options ...Options) (err error) {
-	opts := evalOptions(options...)
+	// before updating a specific type on a specific host, loop
+	// through related types, hosts and components. continue to
+	// other items if a single update fails?
+	//
+	// XXX this is a common pattern, should abstract it a bit like loopCommand
+
+	if h == ALL {
+		for _, h := range h.OrList() {
+			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
+				log.Error().Err(err).Msg("")
+			}
+		}
+		return nil
+	}
 
 	if ct == nil {
 		for _, ct := range ct.OrList() {
@@ -48,42 +61,28 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 		return nil
 	}
 
-	if opts.version == "" {
-		opts.version = "latest"
-	}
-
-	originalVersion := opts.version
-
-	// before updating a specific type on a specific host, loop
-	// through related types, hosts and components. continue to
-	// other items if a single update fails?
-	//
-	// XXX this is a common pattern, should abstract it a bit like loopCommand
-
 	if ct.RelatedTypes != nil {
-		for _, rct := range ct.RelatedTypes {
-			if err = Update(h, rct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
+		for _, ct := range ct.RelatedTypes {
+			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
 				log.Error().Err(err).Msg("")
 			}
 		}
 		return nil
 	}
 
-	if h == ALL {
-		for _, h := range h.OrList() {
-			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
-				log.Error().Err(err).Msg("")
-			}
-		}
+	// from here hosts and component types must be specified
 
-		return
+	opts := evalOptions(options...)
+
+	if opts.version == "" {
+		opts.version = "latest"
 	}
 
-	// from here hosts and component types must be specified
+	originalVersion := opts.version
 
 	log.Debug().Msgf("checking and updating %s on %s %q to %q", ct, h, opts.basename, opts.version)
 
-	basedir := h.PathTo("packages", ct.String())
+	basedir := h.PathTo("packages", ct.String()) // use the actual ct not the parent, if there is one
 	basepath := path.Join(basedir, opts.basename)
 
 	if opts.version == "latest" {

@@ -93,7 +93,7 @@ var netprobes sync.Map
 
 func factory(name string) geneos.Instance {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
-	if h == geneos.LOCAL && geneos.Root() == "" {
+	if local == "" || h == geneos.LOCAL && geneos.Root() == "" {
 		return nil
 	}
 	n, ok := netprobes.Load(h.FullName(local))
@@ -191,7 +191,7 @@ func (n *Netprobes) Rebuild(initial bool) error {
 }
 
 func (n *Netprobes) Command() (args, env []string, home string) {
-	logFile := instance.LogFile(n)
+	logFile := instance.LogFilePath(n)
 	args = []string{
 		n.Name(),
 		"-port", n.Config().GetString("port"),

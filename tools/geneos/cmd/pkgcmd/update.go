@@ -29,6 +29,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -92,6 +93,7 @@ geneos package update netprobe 5.13.2
 		}
 		if updateCmdRestart {
 			cs := instance.MatchKeyValue(h, ct, "version", updateCmdBase)
+			log.Debug().Msgf("instances to stop: %v", cs)
 			for _, c := range cs {
 				if err = instance.Stop(c, updateCmdForce, false); err == nil {
 					// only restart instances that we stopped

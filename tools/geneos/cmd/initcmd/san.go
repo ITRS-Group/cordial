@@ -115,7 +115,7 @@ func initSan(h *geneos.Host, options ...geneos.Options) (err error) {
 	if err = install("san", geneos.LOCALHOST, options...); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(geneos.FindComponent("san"), initCmdExtras, []string{}, sanname); err != nil {
+	if err = cmd.AddInstance(geneos.ParseComponent("san"), initCmdExtras, []string{}, sanname); err != nil {
 		return
 	}
 	if err = cmd.Start(nil, initCmdLogs, true, e, e); err != nil {

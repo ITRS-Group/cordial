@@ -73,7 +73,7 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 			return fmt.Errorf("%w: destination host %q not found", os.ErrNotExist, dHostName)
 		}
 		// they both exist, now loop through all instances on src and try to move/copy
-		for _, name := range AllNames(sHost, ct) {
+		for _, name := range Names(sHost, ct) {
 			if err = Copy(ct, name, destination, move); err != nil {
 				fmt.Println("Error:", err)
 			}
@@ -91,7 +91,7 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 		return nil
 	}
 
-	src, err := Match(ct, geneos.ALL, source)
+	src, err := Match(geneos.ALL, ct, source)
 	if err != nil {
 		return fmt.Errorf("%w: %q %q", err, ct, source)
 	}

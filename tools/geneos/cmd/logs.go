@@ -152,7 +152,7 @@ func logTailInstance(c geneos.Instance, params []string) (err error) {
 		}
 	}
 	if !logCmdNoNormal {
-		if err = logTailInstanceFile(c, instance.LogFile(c)); err != nil {
+		if err = logTailInstanceFile(c, instance.LogFilePath(c)); err != nil {
 			return
 		}
 	}
@@ -277,8 +277,8 @@ func logCatInstance(c geneos.Instance, _ []string) (err error) {
 		}
 	}
 	if !logCmdNoNormal {
-		if err = logCatInstanceFile(c, instance.LogFile(c)); err != nil {
-			return logCatInstanceFile(c, instance.LogFile(c))
+		if err = logCatInstanceFile(c, instance.LogFilePath(c)); err != nil {
+			return logCatInstanceFile(c, instance.LogFilePath(c))
 		}
 	}
 	return nil
@@ -309,7 +309,7 @@ func logFollowInstance(c geneos.Instance, _ []string) (err error) {
 		}
 	}
 	if !logCmdNoNormal {
-		if err = logFollowInstanceFile(c, instance.LogFile(c)); err != nil {
+		if err = logFollowInstanceFile(c, instance.LogFilePath(c)); err != nil {
 			return
 		}
 	}
