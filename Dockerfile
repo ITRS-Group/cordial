@@ -60,20 +60,6 @@ RUN set -eux; \
 #
 FROM node AS build-docs
 LABEL stage=cordial-build
-COPY go.mod go.sum cordial.go VERSION /app/cordial/
-COPY integrations /app/cordial/integrations/
-COPY libraries /app/cordial/libraries/
-COPY pkg /app/cordial/pkg
-COPY tools /app/cordial/tools
-
-WORKDIR /app/cordial/doc-output
-COPY tools/geneos/README.md geneos.md
-COPY tools/dv2email/README.md dv2email.md
-COPY integrations/servicenow/README.md servicenow.md
-COPY integrations/pagerduty/README.md pagerduty.md
-COPY libraries/libemail/README.md libemail.md
-COPY libraries/libalert/README.md libalert.md
-
 RUN set -eux; \
     apt update; \
     apt install -y \
@@ -91,12 +77,31 @@ RUN set -eux; \
         libgbm1 \
         libasound2; \
     npm install --global mdpdf; \
-    mdpdf --border=15mm /app/cordial/tools/geneos/README.md geneos.pdf; \
-    mdpdf --border=15mm /app/cordial/tools/dv2email/README.md dv2email.pdf; \
-    mdpdf --border=15mm /app/cordial/integrations/servicenow/README.md servicenow.pdf; \
-    mdpdf --border=15mm /app/cordial/integrations/pagerduty/README.md pagerduty.pdf; \
-    mdpdf --border=15mm /app/cordial/libraries/libemail/README.md libemail.pdf; \
-    mdpdf --border=15mm /app/cordial/libraries/libalert/README.md libalert.pdf
+    npm install --global @mermaid-js/mermaid-cli
+
+COPY go.mod go.sum cordial.go VERSION /app/cordial/
+COPY integrations /app/cordial/integrations/
+COPY libraries /app/cordial/libraries/
+COPY pkg /app/cordial/pkg
+COPY tools /app/cordial/tools
+
+WORKDIR /app/cordial/doc-output
+COPY tools/geneos/README.md geneos.md
+COPY tools/dv2email/README.md dv2email.md
+COPY integrations/servicenow/README.md servicenow.md
+COPY integrations/pagerduty/README.md pagerduty.md
+COPY libraries/libemail/README.md libemail.md
+COPY libraries/libalert/README.md libalert.md
+
+ARG MERMAID=".mermaid"
+ARG READMEDIRS="tools/geneos tools/dv2email integrations/servicenow integrations/pagerduty libraries/libemail libraries/libalert"
+RUN set -eux; \
+    echo '{  "args": ["--no-sandbox"] }' > /puppeteer.json; \
+    for i in ${READMEDIRS}; \
+    do \
+            mmdc -p /puppeteer.json -i /app/cordial/$i/README.md -o /app/cordial/$i/README${MERMAID}.md; \
+            mdpdf --border=15mm /app/cordial/$i/README${MERMAID}.md ${i##*/}.pdf; \
+    done
 
 #
 # assemble files from previous stages into a .tar.gz ready for extraction in the
