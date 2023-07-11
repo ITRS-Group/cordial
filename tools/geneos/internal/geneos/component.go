@@ -234,21 +234,21 @@ func (ct *Component) Dir(h *Host) (dir string) {
 	if ct == nil {
 		return ""
 	}
-	dir = h.PathTo(ct, ct.String()+"s")
+	dir = h.PathTo(ct, ct.Name+"s")
 	return
 }
 
-// Instances returns a list of possible instance directories to look for
+// InstancesDir returns a list of possible instance directories to look for
 // an instance.
-func (ct *Component) Instances(h *Host) (dirs []string) {
+func (ct *Component) InstancesDir(h *Host) (dirs []string) {
 	if ct == nil {
 		return
 	}
 	// this check is to support older installations
 	if ct.ParentType != nil {
-		dirs = append(dirs, h.PathTo(ct.ParentType, ct.String()+"s"))
+		dirs = append(dirs, h.PathTo(ct.ParentType, ct.Name+"s"))
 	}
-	dirs = append(dirs, h.PathTo(ct.Name, ct.String()+"s"))
+	dirs = append(dirs, h.PathTo(ct.Name, ct.Name+"s"))
 	return
 }
 
@@ -260,9 +260,9 @@ func (ct *Component) Shared(h *Host, subs ...interface{}) string {
 	}
 	parts := []interface{}{}
 	if ct.ParentType == nil {
-		parts = append(parts, ct, ct.String()+sharedSuffix, subs)
+		parts = append(parts, ct, ct.Name+sharedSuffix, subs)
 	} else {
-		parts = append(parts, ct.ParentType, ct.String()+sharedSuffix, subs)
+		parts = append(parts, ct.ParentType, ct.Name+sharedSuffix, subs)
 	}
 	return h.PathTo(parts...)
 }
