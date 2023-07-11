@@ -65,7 +65,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 
 	if !opts.downloadonly {
 		if opts.archive != "" {
-			body, filename, err = Open(opts.archive, options...)
+			body, filename, err = open(opts.archive, options...)
 			if err == nil || !errors.Is(err, ErrIsADirectory) {
 				// if success or it's not a directory, return
 				return
@@ -604,4 +604,26 @@ func LatestArchive(r *Host, dir, filterString string, filterFunc func(os.DirEntr
 	sort.Sort(version.Collection(vers))
 
 	return originals[vers[len(vers)-1].Original()], nil
+}
+
+// split an package archive name into type and version
+var archiveRE = regexp.MustCompile(`^geneos-(\w+-\w+|\w+)-([\w\.-]+?)[\.-]?linux`)
+
+// filenameToComponent transforms an archive filename and returns the
+// component and version or an error if the file format is not
+// recognised
+func filenameToComponent(filename string) (ct *Component, version string, err error) {
+	parts := archiveRE.FindStringSubmatch(filename)
+	if len(parts) != 3 {
+		err = fmt.Errorf("%q: %w", filename, ErrInvalidArgs)
+		return
+	}
+	version = parts[2]
+	// replace '-' prefix of recognised platform suffixes with '+' so work with semver as metadata
+	for _, m := range platformToMetaList {
+		version = strings.ReplaceAll(version, "-"+m, "+"+m)
+	}
+
+	ct = ParseComponent(parts[1])
+	return
 }

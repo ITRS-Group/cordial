@@ -72,11 +72,11 @@ var setCmd = &cobra.Command{
 			fmt.Printf("%s created, checksum %08X\n", setCmdKeyfile, crc32)
 		}
 
-		crc, err := instance.UseKeyFile(h, ct, setCmdKeyfile, setCmdCRC)
+		crc, err := geneos.UseKeyFile(h, ct, setCmdKeyfile, setCmdCRC)
 		if err != nil {
 			return
 		}
-		crc = instance.KeyFileNormalise(crc)
+		crc = geneos.KeyFileNormalise(crc)
 		crclist := []string{crc}
 		// params[0] is the CRC
 		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {

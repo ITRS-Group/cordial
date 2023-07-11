@@ -28,7 +28,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
-	
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -72,13 +72,13 @@ type SetConfigValues struct {
 // SetInstanceValues applies the settings in values to instance c by
 // iterating through the fields and calling the appropriate helper
 // function. SecureEnvs overwrite any set by Envs earlier.
-func SetInstanceValues(c geneos.Instance, values SetConfigValues, keyfile config.KeyFile) (err error) {
+func SetInstanceValues(c geneos.Instance, set SetConfigValues, keyfile config.KeyFile) (err error) {
 	var secrets []string
 
 	cf := c.Config()
 
 	// only bother with keyfile if we need it later?
-	if len(values.SecureEnvs) > 0 || len(values.SecureParams) > 0 {
+	if len(set.SecureEnvs) > 0 || len(set.SecureParams) > 0 {
 		if keyfile == "" {
 			keyfile = config.KeyFile(cf.GetString("keyfile"))
 		}
@@ -93,23 +93,23 @@ func SetInstanceValues(c geneos.Instance, values SetConfigValues, keyfile config
 	convertVars(vars)
 	cf.Set("variables", vars)
 
-	cf.SetKeyValues(values.Params...)
+	cf.SetKeyValues(set.Params...)
 
-	secrets, err = setEncoded(values.SecureParams, keyfile)
+	secrets, err = setEncoded(set.SecureParams, keyfile)
 	if err != nil {
 		return
 	}
 	cf.SetKeyValues(secrets...)
 
-	setSlice(c, values.Attributes, "attributes", func(a string) string {
+	setSlice(c, set.Attributes, "attributes", func(a string) string {
 		return strings.SplitN(a, "=", 2)[0]
 	})
 
-	setSlice(c, values.Envs, "env", func(a string) string {
+	setSlice(c, set.Envs, "env", func(a string) string {
 		return strings.SplitN(a, "=", 2)[0]
 	})
 
-	secrets, err = setEncoded(values.SecureEnvs, keyfile)
+	secrets, err = setEncoded(set.SecureEnvs, keyfile)
 	if err != nil {
 		return
 	}
@@ -117,13 +117,13 @@ func SetInstanceValues(c geneos.Instance, values SetConfigValues, keyfile config
 		return strings.SplitN(a, "=", 2)[0]
 	})
 
-	setSlice(c, values.Types, "types", func(a string) string {
+	setSlice(c, set.Types, "types", func(a string) string {
 		return a
 	})
 
-	setMap(c, values.Gateways, "gateways")
-	setMap(c, values.Includes, "includes")
-	setMap(c, values.Variables, "variables")
+	setMap(c, set.Gateways, "gateways")
+	setMap(c, set.Includes, "includes")
+	setMap(c, set.Variables, "variables")
 
 	return
 }
@@ -455,32 +455,32 @@ type UnsetConfigValues struct {
 }
 
 // XXX abstract this for a general case
-func UnsetInstanceValues(c geneos.Instance, x UnsetConfigValues) (changed bool, err error) {
-	if unsetMap(c, "gateways", x.Gateways) {
+func UnsetInstanceValues(c geneos.Instance, unset UnsetConfigValues) (changed bool, err error) {
+	if unsetMap(c, "gateways", unset.Gateways) {
 		changed = true
 	}
 
-	if unsetMap(c, "includes", x.Includes) {
+	if unsetMap(c, "includes", unset.Includes) {
 		changed = true
 	}
 
-	if unsetMapHex(c, "variables", x.Variables) {
+	if unsetMapHex(c, "variables", unset.Variables) {
 		changed = true
 	}
 
-	if unsetSlice(c, "attributes", x.Attributes, func(a, b string) bool {
+	if unsetSlice(c, "attributes", unset.Attributes, func(a, b string) bool {
 		return strings.HasPrefix(a, b+"=")
 	}) {
 		changed = true
 	}
 
-	if unsetSlice(c, "env", x.Envs, func(a, b string) bool {
+	if unsetSlice(c, "env", unset.Envs, func(a, b string) bool {
 		return strings.HasPrefix(a, b+"=")
 	}) {
 		changed = true
 	}
 
-	if unsetSlice(c, "types", x.Types, func(a, b string) bool {
+	if unsetSlice(c, "types", unset.Types, func(a, b string) bool {
 		return a == b
 	}) {
 		changed = true

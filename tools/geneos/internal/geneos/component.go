@@ -189,13 +189,13 @@ func (ct *Component) Register(factory func(string) Instance) {
 	}
 }
 
-func (ct Component) String() (name string) {
+func (ct *Component) String() (name string) {
 	return ct.Name
 }
 
 // IsA returns true is any of the names match the any of the names
 // defined in ComponentMatches.
-func (ct Component) IsA(name ...string) bool {
+func (ct *Component) IsA(name ...string) bool {
 	for _, a := range ct.Aliases {
 		for _, b := range name {
 			if strings.EqualFold(a, b) {

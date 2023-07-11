@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package instance
+package geneos
 
 import (
 	"fmt"
@@ -31,12 +31,11 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 // UseKeyFile sets the keyfile for component ct from either the given
 // (local) keyfile or the CRC for an existing file.
-func UseKeyFile(h *geneos.Host, ct *geneos.Component, keyfile config.KeyFile, keycrc string) (crc string, err error) {
+func UseKeyFile(h *Host, ct *Component, keyfile config.KeyFile, keycrc string) (crc string, err error) {
 	var path string
 
 	if keycrc == "" {
@@ -54,8 +53,8 @@ func UseKeyFile(h *geneos.Host, ct *geneos.Component, keyfile config.KeyFile, ke
 	crcfile := KeyFileNormalise(keycrc)
 
 	onHost := h
-	for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-		for _, h := range h.OrList(geneos.ALL) {
+	for _, ct := range ct.OrList(UsesKeyFiles()...) {
+		for _, h := range h.OrList(ALL) {
 			path = ct.Shared(h, "keyfiles", crcfile)
 			log.Debug().Msgf("looking for keyfile %s on %s", path, h)
 			if _, err := h.Stat(path); err == nil {
@@ -83,9 +82,9 @@ func UseKeyFile(h *geneos.Host, ct *geneos.Component, keyfile config.KeyFile, ke
 }
 
 // ImportKeyFile copies the keyfile to the host h and component type ct
-// shared directory. Host can be geneos.ALL and ct can be nil, in which
+// shared directory. Host can be ALL and ct can be nil, in which
 // case they are treated as wildcards.
-func ImportKeyFile(h *geneos.Host, ct *geneos.Component, keyfile config.KeyFile) (crc uint32, err error) {
+func ImportKeyFile(h *Host, ct *Component, keyfile config.KeyFile) (crc uint32, err error) {
 	crc, _, err = keyfile.Check(false)
 	if err != nil {
 		return
@@ -99,9 +98,9 @@ func ImportKeyFile(h *geneos.Host, ct *geneos.Component, keyfile config.KeyFile)
 }
 
 // ImportKeyValues saves a keyfile with values kv to the host h and
-// component type ct shared directory. Host can be geneos.ALL and ct can
+// component type ct shared directory. Host can be ALL and ct can
 // be nil, in which case they are treated as wildcards.
-func ImportKeyValues(h *geneos.Host, ct *geneos.Component, kv *config.KeyValues) (crc uint32, err error) {
+func ImportKeyValues(h *Host, ct *Component, kv *config.KeyValues) (crc uint32, err error) {
 	crc, err = kv.Checksum()
 	if err != nil {
 		return
@@ -109,8 +108,8 @@ func ImportKeyValues(h *geneos.Host, ct *geneos.Component, kv *config.KeyValues)
 
 	// at this point we have an AESValue struct and a CRC to use as
 	// the filename base. create 'keyfiles' directory as required
-	for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-		for _, h := range h.OrList(geneos.AllHosts()...) {
+	for _, ct := range ct.OrList(UsesKeyFiles()...) {
+		for _, h := range h.OrList(AllHosts()...) {
 			if err = SaveKeyFileShared(h, ct, kv); err != nil {
 				return
 			} else if err == nil {
@@ -123,9 +122,9 @@ func ImportKeyValues(h *geneos.Host, ct *geneos.Component, kv *config.KeyValues)
 
 // SaveKeyFileShared saves a key file with values a to the shared
 // keyfile directory for component ct on host h
-func SaveKeyFileShared(h *geneos.Host, ct *geneos.Component, a *config.KeyValues) (err error) {
+func SaveKeyFileShared(h *Host, ct *Component, a *config.KeyValues) (err error) {
 	if ct == nil || h == nil || a == nil {
-		return geneos.ErrInvalidArgs
+		return ErrInvalidArgs
 	}
 
 	crc, err := a.Checksum()

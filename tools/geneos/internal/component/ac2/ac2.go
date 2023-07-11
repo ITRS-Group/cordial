@@ -195,7 +195,7 @@ func (n *AC2s) Add(tmpl string, port uint16) (err error) {
 	}
 
 	for _, source := range ac2Files {
-		if _, err = instance.ImportFile(n.Host(), n.Home(), source); err != nil {
+		if _, err = geneos.ImportFile(n.Host(), n.Home(), source); err != nil {
 			return
 		}
 	}

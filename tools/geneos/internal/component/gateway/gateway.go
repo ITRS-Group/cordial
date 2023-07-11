@@ -215,7 +215,7 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 
 	cf.SetDefault(cf.Join("config", "template"), templateName)
 	if template != "" {
-		filename, _ := instance.ImportCommons(g.Host(), g.Type(), "templates", []string{template})
+		filename, _ := geneos.ImportCommons(g.Host(), g.Type(), "templates", []string{template})
 		cf.Set(cf.Join("config", "template"), filename)
 	}
 
@@ -246,7 +246,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	cf := g.Config()
 
 	// always rebuild an instance template
-	err = instance.CreateConfigFromTemplate(g, instance.Abs(g, "instance.setup.xml"), instanceTemplateName, instanceTemplate)
+	err = instance.ExecuteTemplate(g, instance.Abs(g, "instance.setup.xml"), instanceTemplateName, instanceTemplate)
 	if err != nil {
 		return
 	}
@@ -300,7 +300,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 		}
 	}
 
-	return instance.CreateConfigFromTemplate(g,
+	return instance.ExecuteTemplate(g,
 		g.Config().GetString("setup"),
 		instance.FileOf(g, "config::template"),
 		template)

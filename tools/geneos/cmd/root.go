@@ -124,7 +124,7 @@ func init() {
 	})
 
 	// run initialisers on internal packages, set the executable name
-	geneos.Initialise(Execname)
+	geneos.Init(Execname)
 }
 
 //go:embed _docs/geneos.md

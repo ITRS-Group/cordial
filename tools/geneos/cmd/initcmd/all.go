@@ -79,7 +79,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 			return
 		}
 
-		if err = geneos.GeneosInit(geneos.LOCAL, options...); err != nil {
+		if err = geneos.Initialise(geneos.LOCAL, options...); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 

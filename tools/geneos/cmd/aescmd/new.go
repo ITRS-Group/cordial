@@ -105,7 +105,7 @@ geneos aes new -S gateway
 
 			for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 				for _, h := range h.OrList(geneos.AllHosts()...) {
-					if err = instance.SaveKeyFileShared(h, ct, kv); err != nil {
+					if err = geneos.SaveKeyFileShared(h, ct, kv); err != nil {
 						return
 					}
 					params := []string{crcstr + ".aes"}

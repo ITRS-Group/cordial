@@ -155,7 +155,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	}
 
 	if ct.UsesKeyfiles {
-		crc, err := instance.UseKeyFile(c.Host(), c.Type(), addCmdKeyfile, addCmdKeyfileCRC)
+		crc, err := geneos.UseKeyFile(c.Host(), c.Type(), addCmdKeyfile, addCmdKeyfileCRC)
 		if err == nil {
 			cf.Set("keyfile", instance.Shared(c, "keyfiles", crc+".aes"))
 		}
@@ -174,7 +174,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	c.Rebuild(true)
 
 	for _, i := range addCmdImportFiles {
-		if _, err = instance.ImportFile(c.Host(), c.Home(), i); err != nil {
+		if _, err = geneos.ImportFile(c.Host(), c.Home(), i); err != nil {
 			return err
 		}
 	}

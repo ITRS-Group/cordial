@@ -27,8 +27,8 @@ import (
 	"fmt"
 	"io/fs"
 	"net/url"
+	"os"
 	"path"
-	"regexp"
 	"sort"
 	"strings"
 	"syscall"
@@ -85,50 +85,37 @@ func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
 		return nil, host.ErrNotAvailable
 	}
 	basedir := h.PathTo("packages", ct.String())
-	ents, err := h.ReadDir(basedir)
+	dirs, err := h.ReadDir(basedir)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
 	}
 
 	var links = make(map[string][]string)
-
-	for _, ent := range ents {
-		einfo, err := ent.Info()
-		if err != nil {
-			// skip entries with errors
-			log.Debug().Err(err).Msg("skipping")
-			continue
-		}
-		if einfo.Mode()&fs.ModeSymlink != 0 {
-			link, err := h.Readlink(path.Join(basedir, ent.Name()))
-			if err != nil {
-				// skip entries with errors
-				log.Debug().Err(err).Msg("skipping")
-				continue
+	for _, dir := range dirs {
+		if dir.Type()&fs.ModeSymlink != 0 {
+			if link, err := h.Readlink(path.Join(basedir, dir.Name())); err == nil {
+				links[link] = append(links[link], dir.Name())
 			}
-			links[link] = append(links[link], ent.Name())
 		}
 	}
 
 	latest, _ := LatestVersion(h, ct, "")
-	for _, ent := range ents {
-		if ent.IsDir() {
-			einfo, err := ent.Info()
+	for _, dir := range dirs {
+		if dir.IsDir() {
+			info, err := dir.Info()
 			if err != nil {
 				// skip entries with errors
 				log.Debug().Err(err).Msg("skipping")
 				continue
 			}
-			links := links[ent.Name()]
-			mtime := einfo.ModTime().UTC()
 			releases = append(releases, ReleaseDetails{
 				Component: ct.String(),
 				Host:      h.String(),
-				Version:   ent.Name(),
-				Latest:    ent.Name() == latest,
-				Links:     links,
-				ModTime:   mtime,
-				Path:      path.Join(basedir, ent.Name()),
+				Version:   dir.Name(),
+				Latest:    dir.Name() == latest,
+				Links:     links[dir.Name()],
+				ModTime:   info.ModTime().UTC(),
+				Path:      path.Join(basedir, dir.Name()),
 			})
 		}
 	}
@@ -488,24 +475,95 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 	return
 }
 
-// split an package archive name into type and version
-var archiveRE = regexp.MustCompile(`^geneos-(\w+-\w+|\w+)-([\w\.-]+?)[\.-]?linux`)
+// Update will check and update the base link given in the options. If
+// the base link exists then the force option must be used to update it,
+// otherwise it is created as expected. When called from unarchive()
+// this allows new installs to work without explicitly calling update.
+func Update(h *Host, ct *Component, options ...Options) (err error) {
+	// before updating a specific type on a specific host, loop
+	// through related types, hosts and components. continue to
+	// other items if a single update fails?
+	//
 
-// filenameToComponent transforms an archive filename and returns the
-// component and version or an error if the file format is not
-// recognised
-func filenameToComponent(filename string) (ct *Component, version string, err error) {
-	parts := archiveRE.FindStringSubmatch(filename)
-	if len(parts) != 3 {
-		err = fmt.Errorf("%q: %w", filename, ErrInvalidArgs)
-		return
-	}
-	version = parts[2]
-	// replace '-' prefix of recognised platform suffixes with '+' so work with semver as metadata
-	for _, m := range platformToMetaList {
-		version = strings.ReplaceAll(version, "-"+m, "+"+m)
+	// XXX this is a common pattern, should abstract it a bit like loopCommand
+
+	if h == ALL {
+		for _, h := range h.OrList() {
+			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
+				log.Error().Err(err).Msg("")
+			}
+		}
+		return nil
 	}
 
-	ct = ParseComponent(parts[1])
-	return
+	if ct == nil {
+		for _, ct := range ct.OrList() {
+			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
+				log.Error().Err(err).Msg("")
+			}
+		}
+		return nil
+	}
+
+	if ct.RelatedTypes != nil {
+		for _, ct := range ct.RelatedTypes {
+			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
+				log.Error().Err(err).Msg("")
+			}
+		}
+		return nil
+	}
+
+	// from here hosts and component types must be specified
+
+	opts := evalOptions(options...)
+
+	if opts.version == "" {
+		opts.version = "latest"
+	}
+
+	originalVersion := opts.version
+
+	log.Debug().Msgf("checking and updating %s on %s %q to %q", ct, h, opts.basename, opts.version)
+
+	basedir := h.PathTo("packages", ct.String()) // use the actual ct not the parent, if there is one
+	basepath := path.Join(basedir, opts.basename)
+
+	if opts.version == "latest" {
+		opts.version = ""
+	}
+
+	opts.version, err = LatestVersion(h, ct, opts.version)
+	if err != nil {
+		log.Debug().Err(err).Msg("")
+	}
+
+	if opts.version == "" {
+		return fmt.Errorf("%q version of %s on %s: %w", originalVersion, ct, h, os.ErrNotExist)
+	}
+
+	// does the version directory exist?
+	existing, err := h.Readlink(basepath)
+	if err != nil {
+		log.Debug().Msgf("cannot read link for existing version %s", basepath)
+	}
+
+	// before removing existing link, check there is something to link to
+	if _, err = h.Stat(path.Join(basedir, opts.version)); err != nil {
+		return fmt.Errorf("%q version of %s on %s: %w", opts.version, ct, h, os.ErrNotExist)
+	}
+
+	if (existing != "" && !opts.force) || existing == opts.version {
+		log.Debug().Msgf("existing=%s, version=%s, force=%v", existing, opts.version, opts.force)
+		return nil
+	}
+
+	if err = h.Remove(basepath); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	if err = h.Symlink(opts.version, basepath); err != nil {
+		return err
+	}
+	fmt.Printf("%s %q on %s updated to %s\n", ct, path.Base(basepath), h, opts.version)
+	return nil
 }

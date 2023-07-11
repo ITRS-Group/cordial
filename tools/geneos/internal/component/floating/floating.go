@@ -194,7 +194,7 @@ func (s *Floatings) Add(template string, port uint16) (err error) {
 	cf.Set(cf.Join("config", "template"), templateName)
 
 	if template != "" {
-		filename, _ := instance.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
+		filename, _ := geneos.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
 		cf.Set(cf.Join("config", "template"), filename)
 	}
 
@@ -254,7 +254,7 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 			return err
 		}
 	}
-	return instance.CreateConfigFromTemplate(s,
+	return instance.ExecuteTemplate(s,
 		cf.GetString("setup"),
 		instance.FileOf(s, "config::template"),
 		template)

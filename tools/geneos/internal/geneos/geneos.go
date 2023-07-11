@@ -67,13 +67,13 @@ var SigningCertFile string
 // verify instance certificates
 var ChainCertFile string
 
-// GeneosInit initialises a Geneos environment by creating a directory
-// structure and then it calls the initialisation functions for each
-// component type registered.
+// Initialise a Geneos environment by creating a directory structure and
+// then it calls the initialisation functions for each component type
+// registered.
 //
 // If the directory is not empty and the Force() option is not passed
 // then nothing is changed
-func GeneosInit(h *Host, options ...Options) (err error) {
+func Initialise(h *Host, options ...Options) (err error) {
 	opts := evalOptions(options...)
 	if opts.geneosdir == "" {
 		log.Fatal().Msg("homedir not set")
@@ -119,20 +119,20 @@ func GeneosInit(h *Host, options ...Options) (err error) {
 		h = LOCAL
 	}
 
-	for _, c := range AllComponents() {
-		if err := c.MakeDirs(h); err != nil {
+	for _, ct := range AllComponents() {
+		if err := ct.MakeDirs(h); err != nil {
 			continue
 		}
-		if c.Initialise != nil {
-			c.Initialise(h, c)
+		if ct.Initialise != nil {
+			ct.Initialise(h, ct)
 		}
 	}
 
 	return
 }
 
-// Initialise is called from the main command initialisation
-func Initialise(app string) {
+// Init is called from the main command initialisation
+func Init(app string) {
 	execname = app
 	SigningCertFile = execname
 	ChainCertFile = execname + "-chain.pem"
