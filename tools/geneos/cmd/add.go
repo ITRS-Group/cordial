@@ -125,7 +125,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 
 	name = fmt.Sprintf("%s:%s@%s", pkgct, local, h)
 
-	if err = ct.MakeComponentDirs(h); err != nil {
+	if err = ct.MakeDirs(h); err != nil {
 		return
 	}
 
@@ -157,7 +157,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	if ct.UsesKeyfiles {
 		crc, err := instance.UseKeyFile(c.Host(), c.Type(), addCmdKeyfile, addCmdKeyfileCRC)
 		if err == nil {
-			cf.Set("keyfile", instance.SharedPath(c, "keyfiles", crc+".aes"))
+			cf.Set("keyfile", instance.Shared(c, "keyfiles", crc+".aes"))
 		}
 	}
 

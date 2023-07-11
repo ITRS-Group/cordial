@@ -94,7 +94,7 @@ type Webservers instance.Instance
 var _ geneos.Instance = (*Webservers)(nil)
 
 func init() {
-	Webserver.RegisterComponent(factory)
+	Webserver.Register(factory)
 }
 
 var webservers sync.Map
@@ -119,7 +119,7 @@ func factory(name string) geneos.Instance {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", webserver)
 	}
 	// set the home dir based on where it might be, default to one above
-	webserver.Config().Set("home", instance.HomeDir(webserver))
+	webserver.Config().Set("home", instance.Home(webserver))
 	webservers.Store(h.FullName(local), webserver)
 	return webserver
 }
@@ -154,7 +154,7 @@ func (w *Webservers) Name() string {
 }
 
 func (w *Webservers) Home() string {
-	return instance.HomeDir(w)
+	return instance.Home(w)
 }
 
 func (w *Webservers) Host() *geneos.Host {

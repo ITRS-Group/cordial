@@ -188,12 +188,12 @@ var deployCmd = &cobra.Command{
 		}
 
 		// make root component directories, speculatively
-		if err = geneos.RootComponent.MakeComponentDirs(h); err != nil {
+		if err = geneos.RootComponent.MakeDirs(h); err != nil {
 			return err
 		}
 
 		// create required component directories, for pkg type, speculatively
-		if err = pkgct.MakeComponentDirs(h); err != nil {
+		if err = pkgct.MakeDirs(h); err != nil {
 			return err
 		}
 
@@ -298,14 +298,14 @@ var deployCmd = &cobra.Command{
 		if ct.UsesKeyfiles {
 			crc, err := instance.UseKeyFile(c.Host(), c.Type(), deployCmdKeyfile, deployCmdKeyfileCRC)
 			if err == nil {
-				cf.Set("keyfile", instance.SharedPath(c, "keyfiles", crc+".aes"))
+				cf.Set("keyfile", instance.Shared(c, "keyfiles", crc+".aes"))
 			}
 		}
 
 		instance.SetInstanceValues(c, deployCmdExtras, "")
 		cf.SetKeyValues(params...)
 		// update home so save is correct
-		cf.Set("home", instance.HomeDir(c))
+		cf.Set("home", instance.Home(c))
 
 		if err = instance.SaveConfig(c); err != nil {
 			return

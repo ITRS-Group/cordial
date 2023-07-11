@@ -88,7 +88,7 @@ type FA2s instance.Instance
 var _ geneos.Instance = (*FA2s)(nil)
 
 func init() {
-	FA2.RegisterComponent(factory)
+	FA2.Register(factory)
 }
 
 var fa2s sync.Map
@@ -113,7 +113,7 @@ func factory(name string) geneos.Instance {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", fa2)
 	}
 	// set the home dir based on where it might be, default to one above
-	fa2.Config().Set("home", instance.HomeDir(fa2))
+	fa2.Config().Set("home", instance.Home(fa2))
 	fa2s.Store(h.FullName(local), fa2)
 	return fa2
 }
@@ -133,7 +133,7 @@ func (n *FA2s) Name() string {
 }
 
 func (n *FA2s) Home() string {
-	return instance.HomeDir(n)
+	return instance.Home(n)
 }
 
 func (n *FA2s) Host() *geneos.Host {

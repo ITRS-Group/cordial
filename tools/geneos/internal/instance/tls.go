@@ -166,7 +166,7 @@ func ReadCert(c geneos.Instance) (cert *x509.Certificate, valid bool, err error)
 		return nil, false, geneos.ErrInvalidArgs
 	}
 
-	if Filename(c, "certificate") == "" {
+	if FileOf(c, "certificate") == "" {
 		return nil, false, os.ErrNotExist
 	}
 	cert, err = config.ParseCertificate(c.Host(), PathOf(c, "certificate"))

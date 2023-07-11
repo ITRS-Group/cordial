@@ -95,7 +95,7 @@ type CA3s instance.Instance
 var _ geneos.Instance = (*CA3s)(nil)
 
 func init() {
-	CA3.RegisterComponent(factory)
+	CA3.Register(factory)
 }
 
 var ca3s sync.Map
@@ -120,7 +120,7 @@ func factory(name string) geneos.Instance {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", ca3)
 	}
 	// set the home dir based on where it might be, default to one above
-	ca3.Config().Set("home", instance.HomeDir(ca3))
+	ca3.Config().Set("home", instance.Home(ca3))
 	ca3s.Store(h.FullName(local), ca3)
 	return ca3
 }
@@ -140,7 +140,7 @@ func (n *CA3s) Name() string {
 }
 
 func (n *CA3s) Home() string {
-	return instance.HomeDir(n)
+	return instance.Home(n)
 }
 
 func (n *CA3s) Host() *geneos.Host {

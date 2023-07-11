@@ -120,7 +120,7 @@ func GeneosInit(h *Host, options ...Options) (err error) {
 	}
 
 	for _, c := range AllComponents() {
-		if err := c.MakeComponentDirs(h); err != nil {
+		if err := c.MakeDirs(h); err != nil {
 			continue
 		}
 		if c.Initialise != nil {
@@ -136,7 +136,7 @@ func Initialise(app string) {
 	execname = app
 	SigningCertFile = execname
 	ChainCertFile = execname + "-chain.pem"
-	RootComponent.RegisterComponent(nil)
+	RootComponent.Register(nil)
 }
 
 // Root return the absolute path to the local Geneos installation. If

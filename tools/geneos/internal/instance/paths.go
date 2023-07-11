@@ -64,11 +64,11 @@ func ComponentFilepath(c geneos.Instance, extensions ...string) string {
 	return path.Join(c.Home(), ComponentFilename(c, extensions...))
 }
 
-// Filename returns the basename of the file identified by the
+// FileOf returns the basename of the file identified by the
 // configuration parameter name.
 //
 // If the parameter is unset or empty then an empty path is returned.
-func Filename(c geneos.Instance, name string) (filename string) {
+func FileOf(c geneos.Instance, name string) (filename string) {
 	cf := c.Config()
 
 	if cf == nil {
@@ -156,7 +156,7 @@ func ConfigFileTypes() []string {
 	return []string{"json", "yaml"}
 }
 
-// HomeDir return the directory for the instance. It checks for the first existing directory from:
+// Home return the directory for the instance. It checks for the first existing directory from:
 //
 //   - The one configured for the instance factory and in the configuration parameter "home"
 //   - In the default component instances directory (component.InstanceDir)
@@ -164,7 +164,7 @@ func ConfigFileTypes() []string {
 //     legacy instances directory
 //
 // If no directory is found then a default built using PathTo() is returned
-func HomeDir(c geneos.Instance) (home string) {
+func Home(c geneos.Instance) (home string) {
 	if c.Config() == nil {
 		return ""
 	}
@@ -181,7 +181,7 @@ func HomeDir(c geneos.Instance) (home string) {
 	}
 
 	// second, does the instance exist in the default instances parentDir?
-	parentDir := c.Type().InstancesDir(h)
+	parentDir := c.Type().Dir(h)
 	if parentDir != "" {
 		home = path.Join(parentDir, c.Name())
 		if d, err := h.Stat(home); err == nil && d.IsDir() {
@@ -205,13 +205,13 @@ func HomeDir(c geneos.Instance) (home string) {
 	return
 }
 
-// SharedPath returns the full path a directory or file in the instances
+// Shared returns the full path a directory or file in the instances
 // component type shared directory joined to any parts subs - the last
 // element can be a filename. If the instance is not loaded then "." is
 // returned for the current directory.
-func SharedPath(c geneos.Instance, subs ...interface{}) string {
+func Shared(c geneos.Instance, subs ...interface{}) string {
 	if !c.Loaded() {
 		return "."
 	}
-	return c.Type().SharedPath(c.Host(), subs...)
+	return c.Type().Shared(c.Host(), subs...)
 }

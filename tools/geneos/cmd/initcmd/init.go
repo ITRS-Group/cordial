@@ -280,7 +280,7 @@ func install(comp string, target string, options ...geneos.Options) (err error) 
 		return geneos.ErrInvalidArgs
 	}
 	for _, h := range geneos.Match(target) {
-		if err = ct.MakeComponentDirs(h); err != nil {
+		if err = ct.MakeDirs(h); err != nil {
 			return err
 		}
 		if err = geneos.Install(h, ct, options...); err != nil {

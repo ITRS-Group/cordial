@@ -93,7 +93,7 @@ type FileAgents instance.Instance
 var _ geneos.Instance = (*FileAgents)(nil)
 
 func init() {
-	FileAgent.RegisterComponent(factory)
+	FileAgent.Register(factory)
 }
 
 var fileagents sync.Map
@@ -118,7 +118,7 @@ func factory(name string) geneos.Instance {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", fileagent)
 	}
 	// set the home dir based on where it might be, default to one above
-	fileagent.Config().Set("home", instance.HomeDir(fileagent))
+	fileagent.Config().Set("home", instance.Home(fileagent))
 	fileagents.Store(h.FullName(local), fileagent)
 	return fileagent
 }
@@ -138,7 +138,7 @@ func (n *FileAgents) Name() string {
 }
 
 func (n *FileAgents) Home() string {
-	return instance.HomeDir(n)
+	return instance.Home(n)
 }
 
 func (n *FileAgents) Host() *geneos.Host {

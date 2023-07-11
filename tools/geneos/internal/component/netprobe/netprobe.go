@@ -86,7 +86,7 @@ type Netprobes instance.Instance
 var _ geneos.Instance = (*Netprobes)(nil)
 
 func init() {
-	Netprobe.RegisterComponent(factory)
+	Netprobe.Register(factory)
 }
 
 var netprobes sync.Map
@@ -111,7 +111,7 @@ func factory(name string) geneos.Instance {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", netprobe)
 	}
 	// set the home dir based on where it might be, default to one above
-	netprobe.Config().Set("home", instance.HomeDir(netprobe))
+	netprobe.Config().Set("home", instance.Home(netprobe))
 	netprobes.Store(h.FullName(local), netprobe)
 	return netprobe
 }
@@ -131,7 +131,7 @@ func (n *Netprobes) Name() string {
 }
 
 func (n *Netprobes) Home() string {
-	return instance.HomeDir(n)
+	return instance.Home(n)
 }
 
 func (n *Netprobes) Host() *geneos.Host {
