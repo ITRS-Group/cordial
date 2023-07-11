@@ -1,8 +1,8 @@
 # Change Log
 
-## Version v1.7.0-beta3
+## Version v1.7.0
 
-> **Released 2023-07-10**
+> **Released 2023-07-11**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
@@ -29,6 +29,8 @@
 * Quite a bit of redecorating inside `tools/geneos` internal packages to make things clearer (refactoring, merge and split of functions etc.)
 
 * `tools/geneos` - Initial support for "remote only" working; i.e. if GENEOS_HOME is not set but there are remotes then try to "do stuff". This will break if you perform a local operation such as `add` as the root then is the current directory. Further work required, but getting Windows support working again is on the way.
+
+* `tools/geneos` - Add a basic `--install` option to `package update` to allow checking of package that match the ones being updated and download them if found.
 
 ## v1.7.0 Fixes
 
