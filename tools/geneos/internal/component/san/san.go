@@ -102,7 +102,7 @@ var template []byte
 const templateName = "san.setup.xml.gotmpl"
 
 func init() {
-	San.RegisterComponent(factory)
+	San.Register(factory)
 }
 
 func Init(r *geneos.Host, ct *geneos.Component) {
@@ -142,7 +142,7 @@ func factory(name string) geneos.Instance {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", san)
 	}
 	// set the home dir based on where it might be, default to one above
-	san.Config().Set("home", instance.HomeDir(san))
+	san.Config().Set("home", instance.Home(san))
 	sans.Store(r.FullName(local), san)
 	return san
 }
@@ -162,7 +162,7 @@ func (s *Sans) Name() string {
 }
 
 func (s *Sans) Home() string {
-	return instance.HomeDir(s)
+	return instance.Home(s)
 }
 
 func (s *Sans) Host() *geneos.Host {
@@ -250,7 +250,7 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 
 	// recheck check certs/keys
 	var changed bool
-	secure := instance.Filename(s, "certificate") != "" && instance.Filename(s, "privatekey") != ""
+	secure := instance.FileOf(s, "certificate") != "" && instance.FileOf(s, "privatekey") != ""
 	gws := cf.GetStringMapString("gateways")
 	for gw := range gws {
 		port := gws[gw]
@@ -271,7 +271,7 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 	}
 	return instance.CreateConfigFromTemplate(s,
 		cf.GetString("setup"),
-		instance.Filename(s, "config::template"),
+		instance.FileOf(s, "config::template"),
 		template)
 }
 

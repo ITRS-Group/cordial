@@ -89,7 +89,7 @@ var setCmd = &cobra.Command{
 func aesSetAESInstance(c geneos.Instance, params []string) (err error) {
 	cf := c.Config()
 
-	path := instance.SharedPath(c, "keyfiles", params[0])
+	path := instance.Shared(c, "keyfiles", params[0])
 
 	// roll old file
 	if !setCmdNoRoll {

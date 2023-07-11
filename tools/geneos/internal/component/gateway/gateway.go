@@ -116,7 +116,7 @@ var instanceTemplate []byte
 const instanceTemplateName = "gateway-instance.setup.xml.gotmpl"
 
 func init() {
-	Gateway.RegisterComponent(factory)
+	Gateway.Register(factory)
 }
 
 func initialise(r *geneos.Host, ct *geneos.Component) {
@@ -150,7 +150,7 @@ func factory(name string) geneos.Instance {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", gateway)
 	}
 	// set the home dir based on where it might be, default to one above
-	gateway.Config().Set("home", instance.HomeDir(gateway))
+	gateway.Config().Set("home", instance.Home(gateway))
 	gateways.Store(h.FullName(local), gateway)
 	return gateway
 }
@@ -170,7 +170,7 @@ func (g *Gateways) Name() string {
 }
 
 func (g *Gateways) Home() string {
-	return instance.HomeDir(g)
+	return instance.Home(g)
 }
 
 func (g *Gateways) Host() *geneos.Host {
@@ -264,7 +264,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 
 	// recheck check certs/keys
 	var changed bool
-	secure := instance.Filename(g, "certificate") != "" && instance.Filename(g, "privatekey") != ""
+	secure := instance.FileOf(g, "certificate") != "" && instance.FileOf(g, "privatekey") != ""
 
 	// if we have certs then connect to Licd securely
 	if secure && cf.GetString("licdsecure") != "true" {
@@ -302,7 +302,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 
 	return instance.CreateConfigFromTemplate(g,
 		g.Config().GetString("setup"),
-		instance.Filename(g, "config::template"),
+		instance.FileOf(g, "config::template"),
 		template)
 }
 
@@ -360,7 +360,7 @@ func (g *Gateways) Command() (args, env []string, home string) {
 	args = append(args, instance.SetSecureArgs(g)...)
 
 	// 3 options: set, set to false, not set
-	if cf.GetBool("licdsecure") || (!cf.IsSet("licdsecure") && instance.Filename(g, "certificate") != "") {
+	if cf.GetBool("licdsecure") || (!cf.IsSet("licdsecure") && instance.FileOf(g, "certificate") != "") {
 		args = append(args, "-licd-secure")
 	}
 

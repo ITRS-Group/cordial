@@ -89,7 +89,7 @@ type AC2s instance.Instance
 var _ geneos.Instance = (*AC2s)(nil)
 
 func init() {
-	AC2.RegisterComponent(factory)
+	AC2.Register(factory)
 }
 
 var ac2s sync.Map
@@ -114,7 +114,7 @@ func factory(name string) geneos.Instance {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", ac2)
 	}
 	// set the home dir based on where it might be, default to one above
-	ac2.Config().Set("home", instance.HomeDir(ac2))
+	ac2.Config().Set("home", instance.Home(ac2))
 	ac2s.Store(h.FullName(local), ac2)
 	return ac2
 }
@@ -134,7 +134,7 @@ func (n *AC2s) Name() string {
 }
 
 func (n *AC2s) Home() string {
-	return instance.HomeDir(n)
+	return instance.Home(n)
 }
 
 func (n *AC2s) Host() *geneos.Host {

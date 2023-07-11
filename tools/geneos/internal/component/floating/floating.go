@@ -91,7 +91,7 @@ var template []byte
 const templateName = "floating.setup.xml.gotmpl"
 
 func init() {
-	Floating.RegisterComponent(factory)
+	Floating.Register(factory)
 }
 
 func Init(r *geneos.Host, ct *geneos.Component) {
@@ -127,7 +127,7 @@ func factory(name string) geneos.Instance {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", floating)
 	}
 	// set the home dir based on where it might be, default to one above
-	floating.Config().Set("home", instance.HomeDir(floating))
+	floating.Config().Set("home", instance.Home(floating))
 	floatings.Store(h.FullName(local), floating)
 	return floating
 }
@@ -147,7 +147,7 @@ func (s *Floatings) Name() string {
 }
 
 func (s *Floatings) Home() string {
-	return instance.HomeDir(s)
+	return instance.Home(s)
 }
 
 func (s *Floatings) Host() *geneos.Host {
@@ -235,7 +235,7 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 
 	// recheck check certs/keys
 	var changed bool
-	secure := instance.Filename(s, "certificate") != "" && instance.Filename(s, "privatekey") != ""
+	secure := instance.FileOf(s, "certificate") != "" && instance.FileOf(s, "privatekey") != ""
 	gws := cf.GetStringMapString("gateways")
 	for gw := range gws {
 		port := gws[gw]
@@ -256,7 +256,7 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 	}
 	return instance.CreateConfigFromTemplate(s,
 		cf.GetString("setup"),
-		instance.Filename(s, "config::template"),
+		instance.FileOf(s, "config::template"),
 		template)
 }
 

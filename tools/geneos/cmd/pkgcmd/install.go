@@ -221,7 +221,7 @@ geneos install netprobe -b active_dev -U
 
 func install(h *geneos.Host, ct *geneos.Component, options ...geneos.Options) (err error) {
 	for _, h := range h.OrList() {
-		if err = ct.MakeComponentDirs(h); err != nil {
+		if err = ct.MakeDirs(h); err != nil {
 			return err
 		}
 		for _, ct := range ct.OrList(geneos.RealComponents()...) {

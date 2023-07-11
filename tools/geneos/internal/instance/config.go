@@ -128,7 +128,7 @@ func LoadConfig(c geneos.Instance) (err error) {
 	prefix := c.Type().LegacyPrefix
 	aliases := c.Type().LegacyParameters
 
-	home := HomeDir(c)
+	home := Home(c)
 	cf, err := config.Load(c.Type().Name,
 		config.Host(r),
 		config.FromDir(home),
@@ -169,7 +169,7 @@ func SaveConfig(c geneos.Instance) (err error) {
 
 	if err = cf.Save(c.Type().String(),
 		config.Host(c.Host()),
-		config.AddDirs(HomeDir(c)),
+		config.AddDirs(Home(c)),
 		config.SetAppName(c.Name()),
 	); err != nil {
 		return
@@ -247,7 +247,7 @@ func Migrate(c geneos.Instance) (err error) {
 
 	// check if instance directory is up-to date
 	current := path.Dir(c.Home())
-	shouldbe := c.Type().InstancesDir(c.Host())
+	shouldbe := c.Type().Dir(c.Host())
 	if current != shouldbe {
 		if err = c.Host().MkdirAll(shouldbe, 0775); err != nil {
 			return

@@ -130,7 +130,7 @@ func aesNewSetInstance(c geneos.Instance, params []string) (err error) {
 		cf.Set("prevkeyfile", p)
 		rolled = true
 	}
-	cf.Set("keyfile", instance.SharedPath(c, "keyfiles", params[0]))
+	cf.Set("keyfile", instance.Shared(c, "keyfiles", params[0]))
 
 	if cf.Type == "rc" {
 		err = instance.Migrate(c)

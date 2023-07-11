@@ -173,11 +173,11 @@ type Instance interface {
 	Rebuild(bool) error
 }
 
-// RegisterComponent adds the given Component ct to the internal list of
+// Register adds the given Component ct to the internal list of
 // component types. The factory parameter is the Component's New()
 // function, which has to be passed in to avoid initialisation loops as
 // the function refers to the type being registered.
-func (ct *Component) RegisterComponent(factory func(string) Instance) {
+func (ct *Component) Register(factory func(string) Instance) {
 	if ct == nil {
 		return
 	}
@@ -206,11 +206,11 @@ func (ct Component) IsA(name ...string) bool {
 	return false
 }
 
-// MakeComponentDirs creates the directory structure for the component.
+// MakeDirs creates the directory structure for the component ct.
 // If ct is nil then the Root component type is used. If there is an
 // error creating the directory then the error is immediately returned
 // and the list of directories may only be partially created.
-func (ct *Component) MakeComponentDirs(h *Host) (err error) {
+func (ct *Component) MakeDirs(h *Host) (err error) {
 	name := RootComponentName
 	if h == ALL {
 		log.Fatal().Msg("called with all hosts")
@@ -229,9 +229,8 @@ func (ct *Component) MakeComponentDirs(h *Host) (err error) {
 	return
 }
 
-// InstancesDir return the parent directory for the instances of a
-// component
-func (ct *Component) InstancesDir(h *Host) (dir string) {
+// Dir return the parent directory for the instances of a component
+func (ct *Component) Dir(h *Host) (dir string) {
 	if ct == nil {
 		return ""
 	}
@@ -239,9 +238,9 @@ func (ct *Component) InstancesDir(h *Host) (dir string) {
 	return
 }
 
-// InstancesDirs (plural) returns a list of possible instance
-// directories to look for an instance.
-func (ct *Component) InstancesDirs(h *Host) (dirs []string) {
+// Instances returns a list of possible instance directories to look for
+// an instance.
+func (ct *Component) Instances(h *Host) (dirs []string) {
 	if ct == nil {
 		return
 	}
@@ -253,9 +252,9 @@ func (ct *Component) InstancesDirs(h *Host) (dirs []string) {
 	return
 }
 
-// SharedPath return the shared directory for the component on host h
+// Shared return the shared directory for the component on host h
 // joined to subdirectories and file given as subs.
-func (ct *Component) SharedPath(h *Host, subs ...interface{}) string {
+func (ct *Component) Shared(h *Host, subs ...interface{}) string {
 	if ct == nil {
 		return ""
 	}

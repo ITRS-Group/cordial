@@ -85,7 +85,7 @@ type Licds instance.Instance
 var _ geneos.Instance = (*Licds)(nil)
 
 func init() {
-	Licd.RegisterComponent(factory)
+	Licd.Register(factory)
 }
 
 var licds sync.Map
@@ -110,7 +110,7 @@ func factory(name string) geneos.Instance {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", licd)
 	}
 	// set the home dir based on where it might be, default to one above
-	licd.Config().Set("home", instance.HomeDir(licd))
+	licd.Config().Set("home", instance.Home(licd))
 	licds.Store(h.FullName(local), licd)
 	return licd
 }
@@ -130,7 +130,7 @@ func (l *Licds) Name() string {
 }
 
 func (l *Licds) Home() string {
-	return instance.HomeDir(l)
+	return instance.Home(l)
 }
 
 func (l *Licds) Host() *geneos.Host {

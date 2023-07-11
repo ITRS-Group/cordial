@@ -179,7 +179,7 @@ func aesListShared(ct *geneos.Component, h *geneos.Host) (results []interface{},
 	for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 		for _, h := range h.OrList(geneos.AllHosts()...) {
 			var dirs []fs.DirEntry
-			dirs, err = h.ReadDir(ct.SharedPath(h, "keyfiles"))
+			dirs, err = h.ReadDir(ct.Shared(h, "keyfiles"))
 			if err != nil {
 				return
 			}
@@ -187,7 +187,7 @@ func aesListShared(ct *geneos.Component, h *geneos.Host) (results []interface{},
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				output, err := aesListPath(ct, h, "shared", config.KeyFile(ct.SharedPath(h, "keyfiles", dir.Name())))
+				output, err := aesListPath(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name())))
 				if err != nil {
 					continue
 				}
@@ -230,7 +230,7 @@ func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (err error) {
 	for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 		for _, h := range h.OrList(geneos.AllHosts()...) {
 			var dirs []fs.DirEntry
-			dirs, err = h.ReadDir(ct.SharedPath(h, "keyfiles"))
+			dirs, err = h.ReadDir(ct.Shared(h, "keyfiles"))
 			if err != nil {
 				return
 			}
@@ -238,7 +238,7 @@ func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (err error) {
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				aesListPathCSV(ct, h, "shared", config.KeyFile(ct.SharedPath(h, "keyfiles", dir.Name())))
+				aesListPathCSV(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name())))
 			}
 		}
 	}
@@ -294,7 +294,7 @@ func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results []interfac
 	for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 		for _, h := range h.OrList(geneos.AllHosts()...) {
 			var dirs []fs.DirEntry
-			dirs, err = h.ReadDir(ct.SharedPath(h, "keyfiles"))
+			dirs, err = h.ReadDir(ct.Shared(h, "keyfiles"))
 			if err != nil {
 				return
 			}
@@ -302,7 +302,7 @@ func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results []interfac
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				result, err := aesListPathJSON(ct, h, "shared", config.KeyFile(ct.SharedPath(h, "keyfiles", dir.Name())))
+				result, err := aesListPathJSON(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name())))
 				if err != nil {
 					continue
 				}

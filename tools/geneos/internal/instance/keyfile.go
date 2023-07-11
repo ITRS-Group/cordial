@@ -56,7 +56,7 @@ func UseKeyFile(h *geneos.Host, ct *geneos.Component, keyfile config.KeyFile, ke
 	onHost := h
 	for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 		for _, h := range h.OrList(geneos.ALL) {
-			path = ct.SharedPath(h, "keyfiles", crcfile)
+			path = ct.Shared(h, "keyfiles", crcfile)
 			log.Debug().Msgf("looking for keyfile %s on %s", path, h)
 			if _, err := h.Stat(path); err == nil {
 				onHost = h
@@ -135,7 +135,7 @@ func SaveKeyFileShared(h *geneos.Host, ct *geneos.Component, a *config.KeyValues
 	crcstr := fmt.Sprintf("%08X", crc)
 
 	// save given keyfile
-	file := ct.SharedPath(h, "keyfiles", crcstr+".aes")
+	file := ct.Shared(h, "keyfiles", crcstr+".aes")
 	if _, err := h.Stat(file); err == nil {
 		fmt.Printf("keyfile %s.aes already exists in shared directory for %s on %s\n", crcstr, ct, h)
 		return nil

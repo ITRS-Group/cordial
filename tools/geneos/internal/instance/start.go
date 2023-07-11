@@ -24,7 +24,10 @@ package instance
 
 import (
 	"fmt"
+	"os/exec"
+	"strings"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -66,4 +69,41 @@ func Start(c geneos.Instance) (err error) {
 	}
 	fmt.Printf("%s started with PID %d\n", c, pid)
 	return nil
+}
+
+// BuildCmd gathers the path to the binary, arguments and any
+// environment variables for an instance and returns an exec.Cmd, almost
+// ready for execution. Callers will add more details such as working
+// directories, user and group etc.
+//
+// If noDecode is set then any secure environment variables are not decoded,
+// so can be used for display
+func BuildCmd(c geneos.Instance, noDecode bool) (cmd *exec.Cmd, env []string, home string) {
+	binary := PathOf(c, "program")
+
+	args, env, home := c.Command()
+
+	opts := strings.Fields(c.Config().GetString("options"))
+	args = append(args, opts...)
+
+	envs := c.Config().GetStringSlice("Env", config.NoDecode(noDecode))
+	libs := []string{}
+	if c.Config().GetString("libpaths") != "" {
+		libs = append(libs, c.Config().GetString("libpaths"))
+	}
+
+	for _, e := range envs {
+		switch {
+		case strings.HasPrefix(e, "LD_LIBRARY_PATH="):
+			libs = append(libs, strings.TrimPrefix(e, "LD_LIBRARY_PATH="))
+		default:
+			env = append(env, e)
+		}
+	}
+	if len(libs) > 0 {
+		env = append(env, "LD_LIBRARY_PATH="+strings.Join(libs, ":"))
+	}
+	cmd = exec.Command(binary, args...)
+
+	return
 }

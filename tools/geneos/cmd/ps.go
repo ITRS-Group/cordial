@@ -159,10 +159,10 @@ func psInstancePlain(c geneos.Instance, params []string) (result interface{}, er
 	}
 
 	var portlist string
-	if c.Host() == geneos.LOCAL || psCmdLong {
+	if c.Host().IsLocal() || psCmdLong {
 		portlist = strings.Join(instance.ListeningPortsStrings(c), " ")
 	}
-	if c.Host() != geneos.LOCAL && portlist == "" {
+	if !c.Host().IsLocal() && portlist == "" {
 		portlist = "..."
 	}
 	if underlying != actual {
@@ -201,7 +201,7 @@ func psInstanceCSV(c geneos.Instance, params []string) (err error) {
 		}
 	}
 	ports := []string{}
-	if c.Host() == geneos.LOCAL || psCmdLong {
+	if c.Host().IsLocal() || psCmdLong {
 		ports = instance.ListeningPortsStrings(c)
 	}
 	portlist := strings.Join(ports, ":")
@@ -238,7 +238,7 @@ func psInstanceJSON(c geneos.Instance, params []string) (err error) {
 		}
 	}
 	ports := []int{}
-	if c.Host() == geneos.LOCAL || psCmdLong {
+	if c.Host().IsLocal() || psCmdLong {
 		ports = instance.ListeningPorts(c)
 	}
 	base, underlying, actual, _ := instance.LiveVersion(c, pid)
