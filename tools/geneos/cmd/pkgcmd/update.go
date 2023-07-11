@@ -26,6 +26,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 
@@ -38,15 +39,15 @@ import (
 )
 
 var updateCmdBase, updateCmdVersion string
-var updateCmdForce, updateCmdRestart bool
+var updateCmdForce, updateCmdRestart, updateCmdInstall bool
 
 func init() {
 	packageCmd.AddCommand(updateCmd)
 
 	updateCmd.Flags().StringVarP(&updateCmdVersion, "version", "V", "latest", "Update to this version, defaults to latest")
 
+	updateCmd.Flags().BoolVarP(&updateCmdInstall, "install", "I", false, "Install package updates if necessary")
 	updateCmd.Flags().StringVarP(&updateCmdBase, "base", "b", "active_prod", "Base name for the symlink, defaults to active_prod")
-	updateCmd.Flags().BoolVarP(&updateCmdForce, "force", "F", false, "Update all protected instances")
 	updateCmd.Flags().BoolVarP(&updateCmdRestart, "restart", "R", true, "Restart all instances that may have an update applied")
 
 	updateCmd.Flags().SortFlags = false
@@ -81,6 +82,26 @@ geneos package update netprobe 5.13.2
 		}
 
 		h := geneos.GetHost(cmd.Hostname)
+
+		// try to install the wanted version, latest (the default) means check
+		if updateCmdInstall {
+			types := make(map[string]bool)
+			cs := instance.GetAll(h, ct)
+			for _, c := range cs {
+				types[c.Type().String()] = true
+			}
+			for _, h := range h.OrList() {
+				for t := range types {
+					ct := geneos.ParseComponent(t)
+					if err = geneos.Install(h, ct, geneos.Version(updateCmdVersion)); err != nil {
+						if errors.Is(err, fs.ErrNotExist) {
+							continue
+						}
+						log.Error().Err(err).Msg("")
+					}
+				}
+			}
+		}
 
 		version := updateCmdVersion
 		cs := instance.MatchKeyValue(h, ct, "protected", "true")
