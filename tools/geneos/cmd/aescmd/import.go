@@ -32,7 +32,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
 var importCmdKeyfile config.KeyFile
@@ -71,7 +70,7 @@ geneos aes import -k https://myserver.example.com/secure/keyfile.aes -H remote1
 		ct, _ := cmd.CmdArgs(command)
 		h := geneos.GetHost(cmd.Hostname)
 
-		crc32, err := instance.ImportKeyFile(h, ct, importCmdKeyfile)
+		crc32, err := geneos.ImportKeyFile(h, ct, importCmdKeyfile)
 		fmt.Printf("imported keyfile with CRC %08X\n", crc32)
 		return
 	},

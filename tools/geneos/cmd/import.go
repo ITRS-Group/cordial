@@ -98,7 +98,7 @@ func ImportFiles(ct *geneos.Component, args []string, sources []string) (err err
 			return fmt.Errorf("component type must be specified for common/shared directory import")
 		}
 		for _, r := range geneos.Match(Hostname) {
-			if _, err = instance.ImportCommons(r, ct, ct.String()+"_"+importCmdCommon, sources); err != nil {
+			if _, err = geneos.ImportCommons(r, ct, ct.String()+"_"+importCmdCommon, sources); err != nil {
 				return
 			}
 		}
@@ -129,7 +129,7 @@ func importInstance(c geneos.Instance, sources []string) (err error) {
 	}
 
 	for _, source := range sources {
-		if _, err = instance.ImportFile(c.Host(), c.Home(), source); err != nil {
+		if _, err = geneos.ImportFile(c.Host(), c.Home(), source); err != nil {
 			return
 		}
 	}

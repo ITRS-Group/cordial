@@ -296,7 +296,7 @@ var deployCmd = &cobra.Command{
 		}
 
 		if ct.UsesKeyfiles {
-			crc, err := instance.UseKeyFile(c.Host(), c.Type(), deployCmdKeyfile, deployCmdKeyfileCRC)
+			crc, err := geneos.UseKeyFile(c.Host(), c.Type(), deployCmdKeyfile, deployCmdKeyfileCRC)
 			if err == nil {
 				cf.Set("keyfile", instance.Shared(c, "keyfiles", crc+".aes"))
 			}
@@ -318,7 +318,7 @@ var deployCmd = &cobra.Command{
 		c.Rebuild(true)
 
 		for _, i := range deployCmdImportFiles {
-			if _, err = instance.ImportFile(c.Host(), c.Home(), i); err != nil {
+			if _, err = geneos.ImportFile(c.Host(), c.Home(), i); err != nil {
 				return err
 			}
 		}

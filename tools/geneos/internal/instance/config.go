@@ -74,10 +74,10 @@ var fnmap = template.FuncMap{
 	"valueOf": valueOf,
 }
 
-// CreateConfigFromTemplate loads templates from TYPE/templates/[tmpl]* and
-// parse them, using the instance data write it out to a single file. If tmpl is
+// ExecuteTemplate loads templates from TYPE/templates/[tmpl]* and parse them,
+// using the instance data write it out to a single file. If tmpl is
 // empty, load all files
-func CreateConfigFromTemplate(c geneos.Instance, p string, name string, defaultTemplate []byte) (err error) {
+func ExecuteTemplate(c geneos.Instance, p string, name string, defaultTemplate []byte) (err error) {
 	var out io.WriteCloser
 	// var t *template.Template
 

@@ -240,7 +240,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			// initialise the remote directory structure, but perhaps ignore errors
 			// as we may simply be adding an existing installation
 
-			if err = geneos.GeneosInit(h,
+			if err = geneos.Initialise(h,
 				geneos.Force(true),
 				geneos.UseRoot(h.GetString(cmd.Execname))); err != nil {
 				return

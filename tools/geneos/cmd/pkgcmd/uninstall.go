@@ -55,9 +55,10 @@ func init() {
 var uninstallCmdDescription string
 
 var uninstallCmd = &cobra.Command{
-	Use:   "uninstall [flags] [TYPE]",
-	Short: "Uninstall Geneos releases",
-	Long:  uninstallCmdDescription,
+	Use:     "uninstall [flags] [TYPE]",
+	Short:   "Uninstall Geneos releases",
+	Long:    uninstallCmdDescription,
+	Aliases: []string{"delete", "remove", "rm"},
 	Example: strings.ReplaceAll(`
 geneos uninstall netprobe
 geneos uninstall --version 5.14.1

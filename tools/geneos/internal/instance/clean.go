@@ -88,8 +88,7 @@ func RemovePaths(c geneos.Instance, paths string) (err error) {
 	for _, p := range list {
 		// clean path, error on absolute or parent paths, like 'import'
 		// walk globbed directories, remove everything
-		p, err = geneos.CleanRelativePath(p)
-		if err != nil {
+		if p, err = geneos.CleanRelativePath(p); err != nil {
 			return fmt.Errorf("%s %w", p, err)
 		}
 		// glob here

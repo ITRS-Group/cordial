@@ -88,7 +88,11 @@ geneos package update netprobe 5.13.2
 			types := make(map[string]bool)
 			cs := instance.GetAll(h, ct)
 			for _, c := range cs {
-				types[c.Type().String()] = true
+				if pt := c.Config().GetString("pkgtype"); pt != "" {
+					types[pt] = true
+				} else {
+					types[c.Type().String()] = true
+				}
 			}
 			for _, h := range h.OrList() {
 				for t := range types {

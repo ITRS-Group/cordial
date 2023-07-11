@@ -216,7 +216,7 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	}
 
 	for _, source := range webserverFiles {
-		if _, err = instance.ImportFile(w.Host(), w.Home(), source); err != nil {
+		if _, err = geneos.ImportFile(w.Host(), w.Home(), source); err != nil {
 			return
 		}
 	}

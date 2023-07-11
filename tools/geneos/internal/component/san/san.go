@@ -208,7 +208,7 @@ func (s *Sans) Add(template string, port uint16) (err error) {
 	cf.Set(cf.Join("config", "template"), s.Host().PathTo(s.Type(), "templates", templateName))
 
 	if template != "" {
-		filename, _ := instance.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
+		filename, _ := geneos.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
 		cf.Set(cf.Join("config", "template"), filename)
 	}
 
@@ -269,7 +269,7 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 			return err
 		}
 	}
-	return instance.CreateConfigFromTemplate(s,
+	return instance.ExecuteTemplate(s,
 		cf.GetString("setup"),
 		instance.FileOf(s, "config::template"),
 		template)

@@ -62,15 +62,14 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 
 	// if no content-disposition, then grab the path from the response URL
 	if filename == "" {
-		filename, err = CleanRelativePath(path.Base(u.Path))
-		if err != nil {
+		if filename, err = CleanRelativePath(path.Base(u.Path)); err != nil {
 			return
 		}
 	}
 	return
 }
 
-// Open returns an io.ReadCloser and the base filename for the
+// open returns an io.ReadCloser and the base filename for the
 // given source. The source can be a `https` or `http“ URL or a path to
 // a file or '-' for STDIN.
 //
@@ -87,7 +86,7 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 // If source is a path to a directory then `geneos.ErrIsADirectory` is
 // returned. If any other stage fails then err is returned from the
 // underlying package.
-func Open(source string, options ...Options) (from io.ReadCloser, filename string, err error) {
+func open(source string, options ...Options) (from io.ReadCloser, filename string, err error) {
 	opts := evalOptions(options...)
 
 	u, err := url.Parse(source)
@@ -158,7 +157,7 @@ func Open(source string, options ...Options) (from io.ReadCloser, filename strin
 // can be a local file or a URL.
 func ReadFrom(source string, options ...Options) (b []byte, err error) {
 	var from io.ReadCloser
-	from, _, err = Open(source, options...)
+	from, _, err = open(source, options...)
 	if err != nil {
 		return
 	}

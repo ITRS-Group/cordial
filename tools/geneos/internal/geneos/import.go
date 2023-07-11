@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package instance
+package geneos
 
 import (
 	"errors"
@@ -32,8 +32,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 // ImportFile copies the file from source to the directory dir on host
@@ -41,12 +39,12 @@ import (
 // source. If no filename is given then it is derived from the source.
 //
 // source can be a path to a file or a http/https URL.
-func ImportFile(h *geneos.Host, dir string, source string) (filename string, err error) {
+func ImportFile(h *Host, dir string, source string) (filename string, err error) {
 	var backuppath string
 	var from io.ReadCloser
 
-	if h == geneos.ALL {
-		err = geneos.ErrInvalidArgs
+	if h == ALL {
+		err = ErrInvalidArgs
 		return
 	}
 
@@ -79,8 +77,7 @@ func ImportFile(h *geneos.Host, dir string, source string) (filename string, err
 		if s[0] == "" {
 			log.Fatal().Msg("dest path empty")
 		}
-		destfile, err = geneos.CleanRelativePath(s[0])
-		if err != nil {
+		if destfile, err = CleanRelativePath(s[0]); err != nil {
 			log.Fatal().Msg("dest path must be relative to (and in) instance directory")
 		}
 		// if the destination exists is it a directory?
@@ -97,8 +94,7 @@ func ImportFile(h *geneos.Host, dir string, source string) (filename string, err
 			if s[0] == "" {
 				log.Fatal().Msg("dest path empty")
 			}
-			destfile, err = geneos.CleanRelativePath(s[0])
-			if err != nil {
+			if destfile, err = CleanRelativePath(s[0]); err != nil {
 				log.Fatal().Msg("dest path must be relative to (and in) instance directory")
 			}
 			// if the destination exists is it a directory?
@@ -115,7 +111,7 @@ func ImportFile(h *geneos.Host, dir string, source string) (filename string, err
 		}
 	}
 
-	from, filename, err = geneos.Open(source)
+	from, filename, err = open(source)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
@@ -163,9 +159,9 @@ func ImportFile(h *geneos.Host, dir string, source string) (filename string, err
 }
 
 // ImportCommons copies a file to an instance common directory.
-func ImportCommons(r *geneos.Host, ct *geneos.Component, common string, params []string) (filename string, err error) {
+func ImportCommons(r *Host, ct *Component, common string, params []string) (filename string, err error) {
 	if ct == nil || !ct.RealComponent {
-		err = geneos.ErrNotSupported
+		err = ErrNotSupported
 		return
 	}
 
