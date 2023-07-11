@@ -1,6 +1,6 @@
 The `package update` command sets the base link for the given component `TYPE`, or all types if not given, to the latest version found in the same package directory.
 
-Use `package list` to see which versions are installed. To install releases use the `package install` command.
+Use `package list` to see which versions are installed. To install general releases use the `package install` command or, for more limited uses, you can also use the `--install`/`-I` option to download and install packages that match the options given to `update`. To make things simpler, the `--install`/`-I` option only works with predefined credentials (via `geneos login`) and the official download site, but it will use the version given with the `--version`/`-V` option below.
 
 Alternative versions can be selected via the `--version`/`-V` option or by the first argument after options and component. The base link that is updated defaults to `active_prod` but can be set with `--base`/`-b`.
 
