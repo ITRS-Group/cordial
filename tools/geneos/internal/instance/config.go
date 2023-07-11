@@ -32,6 +32,7 @@ import (
 	"path"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -124,6 +125,7 @@ func CreateConfigFromTemplate(c geneos.Instance, p string, name string, defaultT
 //
 // error check core values - e.g. Name
 func LoadConfig(c geneos.Instance) (err error) {
+	start := time.Now()
 	r := c.Host()
 	prefix := c.Type().LegacyPrefix
 	aliases := c.Type().LegacyParameters
@@ -158,7 +160,7 @@ func LoadConfig(c geneos.Instance) (err error) {
 		// generic error as no .json or .rc found
 		return fmt.Errorf("no configuration files for %s in %s: %w", c, c.Home(), os.ErrNotExist)
 	}
-	log.Debug().Msgf("config loaded for %s from %s %q", c, r.String(), cf.ConfigFileUsed())
+	log.Debug().Msgf("config for %s from %s %q loaded in %.4fs", c, r.String(), cf.ConfigFileUsed(), time.Since(start).Seconds())
 	return
 }
 

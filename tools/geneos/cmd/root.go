@@ -157,14 +157,6 @@ geneos restart
 		// file, debug etc.
 		command.Root().ParseFlags(args)
 
-		if quiet {
-			zerolog.SetGlobalLevel(zerolog.Disabled)
-		} else if debug {
-			zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		} else {
-			zerolog.SetGlobalLevel(zerolog.InfoLevel)
-		}
-
 		// check for "replacedby" annotation, warn the user, run the new
 		// command later (after prerun) but if the help flag is set
 		// output the help for the new command and cleanly exit.
@@ -235,6 +227,7 @@ geneos restart
 			// don't parse args if the command is a help
 			return nil
 		}
+
 		return parseArgs(command, args)
 	},
 	// remove placeholder for now to allow help output
@@ -267,26 +260,6 @@ func cmdNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	bin, _ := os.Executable()
-	bin, _ = filepath.EvalSymlinks(bin)
-	bin = filepath.ToSlash(bin)
-	bin = path.Base(bin)
-
-	// strip the VERSION, if found, prefixed by a dash, on the end of the basename
-	//
-	// this way you can run a versioned binary and still see the right config files
-	bin = strings.TrimSuffix(bin, "-"+cordial.VERSION)
-
-	Execname = path.Base(bin)
-
-	// finally strip any extension from the binary, to allow windows
-	// binary to work. Note we get the extension first, it may be
-	// capitalised. This will also remove any other extensions, users
-	// should use '-' or '_' instead.
-	if ext := path.Ext(Execname); ext != "" {
-		Execname = strings.TrimSuffix(Execname, ext)
-	}
-
 	if quiet {
 		zerolog.SetGlobalLevel(zerolog.Disabled)
 	} else if debug {
@@ -294,6 +267,21 @@ func initConfig() {
 	} else {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
+
+	Execname, _ = os.Executable()
+	Execname, _ = filepath.EvalSymlinks(Execname)
+	Execname = path.Base(filepath.ToSlash(Execname))
+
+	// strip the VERSION, if found, prefixed by a dash, on the end of the basename
+	//
+	// this way you can run a versioned binary and still see the right config files
+	Execname = strings.TrimSuffix(Execname, "-"+cordial.VERSION)
+
+	// finally strip any extension from the binary, to allow windows .EXE
+	// binary to work. Note we get the extension first, it may be
+	// capitalised. This will also remove any other extensions, users
+	// should use '-' or '_' instead.
+	Execname = strings.TrimSuffix(Execname, path.Ext(Execname))
 
 	// `oldConfDir` is the original path to the user configuration,
 	// typically directly in `~/geneos`. The LoadConfig() function
@@ -347,5 +335,6 @@ func RunE(root *cobra.Command, path []string, args []string) (err error) {
 	}
 	alias.ParseFlags(newargs)
 	parseArgs(alias, newargs)
+
 	return alias.RunE(alias, alias.Flags().Args())
 }

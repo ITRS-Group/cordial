@@ -183,7 +183,8 @@ func GetAll(h *geneos.Host, ct *geneos.Component) (confs []geneos.Instance) {
 }
 
 // MatchAll constructs and returns a slice of instances that have a
-// matching name
+// matching name. Host h is only used to validate the full name of the
+// instance.
 func MatchAll(h *geneos.Host, ct *geneos.Component, name string) (c []geneos.Instance) {
 	_, local, r := NameParts(name, h)
 	if !r.IsAvailable() {
@@ -203,14 +204,12 @@ func MatchAll(h *geneos.Host, ct *geneos.Component, name string) (c []geneos.Ins
 	}
 
 	for _, name := range Names(r, ct) {
-		// for case insensitive match change to EqualFold here
 		_, ldir, _ := NameParts(name, geneos.ALL)
+		// for case insensitive match change to EqualFold here
 		if path.Base(ldir) == local {
-			i, err := Get(ct, name)
-			if err != nil {
-				continue
+			if i, err := Get(ct, name); err == nil {
+				c = append(c, i)
 			}
-			c = append(c, i)
 		}
 	}
 
@@ -255,6 +254,8 @@ func MatchKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (con
 // sends any returned error on STDOUT and the only error returned is
 // os.ErrNotExist if there are no matching instances.
 func ForAll(ct *geneos.Component, hostname string, fn func(geneos.Instance, []string) error, args []string, params []string) (err error) {
+	allcs := []geneos.Instance{}
+
 	n := 0
 	// if args is empty, get all matching instances. this allows internal
 	// calls with an empty arg list without having to do the parseArgs()
@@ -264,22 +265,20 @@ func ForAll(ct *geneos.Component, hostname string, fn func(geneos.Instance, []st
 		h = geneos.ALL
 	}
 	if len(args) == 0 {
-		args = Names(h, ct)
-	}
-
-	allcs := []geneos.Instance{}
-
-	for _, name := range args {
-		cs := MatchAll(h, ct, name)
-		if len(cs) == 0 {
-			continue
+		allcs = GetAll(h, ct)
+	} else {
+		for _, name := range args {
+			cs := MatchAll(h, ct, name)
+			if len(cs) == 0 {
+				continue
+			}
+			n++
+			allcs = append(allcs, cs...)
 		}
-		n++
-		allcs = append(allcs, cs...)
-	}
 
-	if n == 0 {
-		return os.ErrNotExist
+		if n == 0 {
+			return os.ErrNotExist
+		}
 	}
 
 	var wg sync.WaitGroup
@@ -310,6 +309,7 @@ func ForAllWithResults(
 	params []string,
 ) (results []interface{}, err error) {
 	var instances []geneos.Instance
+	allcs := []geneos.Instance{}
 
 	n := 0
 	// if args is empty, get all matching instances. this allows internal
@@ -319,18 +319,21 @@ func ForAllWithResults(
 	if h == nil {
 		h = geneos.ALL
 	}
-	if len(args) == 0 {
-		args = Names(h, ct)
-	}
-	allcs := []geneos.Instance{}
 
-	for _, name := range args {
-		cs := MatchAll(h, ct, name)
-		if len(cs) == 0 {
-			continue
+	if len(args) == 0 {
+		allcs = GetAll(h, ct)
+	} else {
+		for _, name := range args {
+			cs := MatchAll(h, ct, name)
+			if len(cs) == 0 {
+				continue
+			}
+			n++
+			allcs = append(allcs, cs...)
 		}
-		n++
-		allcs = append(allcs, cs...)
+		if n == 0 {
+			return nil, os.ErrNotExist
+		}
 	}
 
 	var mutex sync.Mutex
@@ -354,9 +357,6 @@ func ForAllWithResults(
 		}(c)
 	}
 	wg.Wait()
-	if n == 0 {
-		return nil, os.ErrNotExist
-	}
 
 	sort.Sort(SortInstanceResults{Instances: instances, Results: results})
 	return results, nil
@@ -385,15 +385,14 @@ func Names(h *geneos.Host, ct *geneos.Component) (names []string) {
 	if ct == nil {
 		for _, ct := range geneos.RealComponents() {
 			// ignore errors, we only care about any files found
-			for _, dir := range ct.Instances(h) {
-				// log.Debug().Msgf("ct, dirs: %s %s", ct, dir)
+			for _, dir := range ct.InstancesDir(h) {
 				d, _ := h.ReadDir(dir)
 				files = append(files, d...)
 			}
 		}
 	} else {
 		// ignore errors, we only care about any files found
-		for _, dir := range ct.Instances(h) {
+		for _, dir := range ct.InstancesDir(h) {
 			d, _ := h.ReadDir(dir)
 			files = append(files, d...)
 		}
@@ -412,6 +411,7 @@ func Names(h *geneos.Host, ct *geneos.Component) (names []string) {
 			names = append(names, file.Name()+"@"+h.String())
 		}
 	}
+
 	return
 }
 
