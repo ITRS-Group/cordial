@@ -10,6 +10,39 @@ This Geneos to ServiceNow integration provides a way for you to create or update
 
 The binary provided is for `linux-amd64` as this is the standard architecture supported by the Geneos Gateway, however there should be no restriction on platform if you build from source.
 
+# ServiceNow Flow Diagram
+
+As a very high level view of how the integration handles Geneos alerts and actions:
+
+```mermaid
+---
+title: ITRS Geneos to ServiceNow Incident
+---
+sequenceDiagram
+    participant G as Geneos Gateway
+    participant C as snow incident command
+    participant R as snow router process
+    participant S as ServiceNow API
+
+    G ->> C: Action/Effect Data<br/>(Environment Variables)
+    C ->> R: Incident field updates<br/>(Based on configuration mappings)
+
+    R ->> S: cmdb_ci Lookup
+    S ->> R: sys_id
+
+    R ->> S: Lookup incident<br/>(using cmdb_ci and correlation_id)
+    S ->> R: Incident sys_id<br/>(or none)
+
+    alt No existing incident
+    R ->> S: Create Incident<br/>(fields adjusted for "New Incident")
+    else Update incident
+    R ->> S: Update Incident<br/>(fields adjusted for "Update Incident")
+    end
+
+    R ->> C: Incident identifier<br/>(or error response)
+    C ->> G: Return code<br/>(No Incident ID)
+```
+
 ## Components
 
 There are two primary components of the integration; The router (`servicenow router`) and the incident trigger (`servicenow incident`).
