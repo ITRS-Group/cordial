@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"net/url"
 
@@ -63,20 +62,13 @@ func (h *Hub) Get(ctx context.Context, endpoint string, request interface{}, res
 	if response == nil {
 		return
 	}
-	switch t := response.(type) {
-	case string:
-		var b []byte
-		b, err = io.ReadAll(resp.Body)
-		t = string(b)
-	default:
-		d := json.NewDecoder(resp.Body)
-		err = d.Decode(&t)
-	}
+	d := json.NewDecoder(resp.Body)
+	err = d.Decode(&response)
 	return
 }
 
 // Post method
-func (h *Hub) Post(ctx context.Context, endpoint string, request interface{}) (resp *http.Response, err error) {
+func (h *Hub) Post(ctx context.Context, endpoint string, request interface{}, response interface{}) (resp *http.Response, err error) {
 	dest, err := url.JoinPath(h.BaseURL, endpoint)
 	if err != nil {
 		return
@@ -93,7 +85,18 @@ func (h *Hub) Post(ctx context.Context, endpoint string, request interface{}) (r
 		req.Header.Add("Authorization", "Bearer "+h.token)
 	}
 	req.Header.Add("content-type", "application/json")
-	return h.client.Do(req)
+	resp, err = h.client.Do(req)
+	if resp.StatusCode > 299 {
+		err = ErrServerError
+		return
+	}
+	defer resp.Body.Close()
+	if response == nil {
+		return
+	}
+	d := json.NewDecoder(resp.Body)
+	err = d.Decode(&response)
+	return
 }
 
 func (h *Hub) Ping(ctx context.Context) (resp *http.Response, err error) {
