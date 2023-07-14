@@ -22,7 +22,7 @@ type ICP struct {
 
 // ErrServerError makes it a little easier for the caller to check the
 // underlying HTTP response
-var ErrServerError = errors.New("Error from server (HTTP Status > 299)")
+var ErrServerError = errors.New("error from server (HTTP status > 299)")
 
 // New returns a new ICP object. BaseURL defaults to
 // "https://icp-api.itrsgroup.com/v2.0" and client, if nil, to a default
@@ -38,7 +38,7 @@ func New(options ...Options) (icp *ICP) {
 
 // Post makes a POST request to the endpoint after marshalling the body
 // as json. The caller must close resp.Body.
-func (icp *ICP) Post(ctx context.Context, endpoint string, request interface{}) (resp *http.Response, err error) {
+func (icp *ICP) Post(ctx context.Context, endpoint string, request interface{}, response interface{}) (resp *http.Response, err error) {
 	dest, err := url.JoinPath(icp.BaseURL, endpoint)
 	if err != nil {
 		return
@@ -55,7 +55,26 @@ func (icp *ICP) Post(ctx context.Context, endpoint string, request interface{}) 
 		req.Header.Add("Authorization", "SUMERIAN "+icp.token)
 	}
 	req.Header.Add("content-type", "application/json")
-	return icp.client.Do(req)
+	resp, err = icp.client.Do(req)
+	if resp.StatusCode > 299 {
+		err = ErrServerError
+		return
+	}
+	defer resp.Body.Close()
+	if response == nil {
+		return
+	}
+	switch t := response.(type) {
+	case string:
+		var b []byte
+		b, err = io.ReadAll(resp.Body)
+		t = string(b)
+	default:
+		d := json.NewDecoder(resp.Body)
+		err = d.Decode(&t)
+	}
+	return
+	// return icp.client.Do(req)
 }
 
 // Get sends a GET request to the endpoint

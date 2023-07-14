@@ -29,7 +29,7 @@ type EntitiesPropertiesItem struct {
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-entityproperties
 func (i *ICP) EntityProperties(ctx context.Context, request *EntityPropertiesRequest) (resp *http.Response, err error) {
-	resp, err = i.Post(ctx, EntityPropertiesEndpoint, request)
+	resp, err = i.Post(ctx, EntityPropertiesEndpoint, request, nil)
 	resp.Body.Close()
 	return
 }

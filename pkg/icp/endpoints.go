@@ -5,7 +5,8 @@ const (
 
 	EntityPropertiesEndpoint = "/api/entityproperties" // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-entityproperties
 
-	ProjectsEndpoint           = "/api/projects"            // https://icp-api.itrsgroup.com/v2.0/Help/Api/GET-api-projects
+	ProjectsEndpoint           = "/api/projects" // https://icp-api.itrsgroup.com/v2.0/Help/Api/GET-api-projects
+	ProjectsSolutionIDEndpoint = "/api/projects/solutionid"
 	ProjectsModelsEndpoint     = "/api/projects/models"     // https://icp-api.itrsgroup.com/v2.0/Help/Api/GET-api-projects-models_projectId_baselineId
 	ProjectsIgnoreListEndpoint = "/api/projects/ignorelist" // https://icp-api.itrsgroup.com/v2.0/Help/Api/GET-api-projects-ignorelist_projectId_baselineId
 

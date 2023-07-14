@@ -2,9 +2,6 @@ package icp
 
 import (
 	"context"
-	"fmt"
-	"io"
-	"strconv"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -27,19 +24,9 @@ func Login(username string, password *config.Plaintext, options ...Options) (icp
 		Password: password.String(),
 	}
 	icp = New(options...)
-	resp, err := icp.Post(context.Background(), LoginEndpoint, creds)
+	_, err = icp.Post(context.Background(), LoginEndpoint, creds, &icp.token)
 	if err != nil {
 		return
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode > 299 {
-		err = fmt.Errorf("%s", resp.Status)
-		return
-	}
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return
-	}
-	icp.token, _ = strconv.Unquote(string(b))
 	return
 }

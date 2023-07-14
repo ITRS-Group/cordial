@@ -2,59 +2,47 @@ package icp
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
-	"time"
 )
 
-// EventBaselineRequest type
+// EventsBaselineViewRequest type
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-events-baselineview
-type EventBaselineRequest struct {
+type EventsBaselineViewRequest struct {
 	BaselineviewID         string `json:"BaselineviewId"`
 	Filter                 string `json:"Filter"`
 	ExcludePrecedingEvents bool   `json:"ExcludePrecedingEvents"`
 	IncludeClusterEvents   bool   `json:"IncludeClusterEvents"`
 }
 
-// EventBaselineResponse type
+// EventsBaselineViewResponse type
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-events-baselineview
-type EventBaselineResponse []PredictedEvent
+type EventsBaselineViewResponse []PredictedEvent
 
-// EventBaseline request
+// EventsBaselineView request
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-events-baselineview
-func (i *ICP) EventBaseline(ctx context.Context, request EventBaselineRequest) (response EventBaselineResponse, resp *http.Response, err error) {
-	resp, err = i.Post(ctx, EventsBaselineViewEndpoint, request)
-	if err != nil {
-		return
-	}
-	if resp.StatusCode > 299 {
-		err = ErrServerError
-		return
-	}
-	defer resp.Body.Close()
-	d := json.NewDecoder(resp.Body)
-	err = d.Decode(&response)
+func (i *ICP) EventsBaselineView(ctx context.Context, request EventsBaselineViewRequest) (response EventsBaselineViewResponse, resp *http.Response, err error) {
+	resp, err = i.Post(ctx, EventsBaselineViewEndpoint, request, &response)
 	return
 }
 
-// EventFilterRequest type
+// EventFilterSetRequest type
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-events-eventfilter
-type EventFilterRequest struct {
-	ProjectID   int       `json:"ProjectID"`
-	Start       time.Time `json:"Start"`
-	End         time.Time `json:"End"`
-	FiltersJSON string    `json:"FiltersJson"`
+type EventFilterSetRequest struct {
+	ProjectID   int    `json:"ProjectID"`
+	Start       *Time  `json:"Start,omitempty"`
+	End         *Time  `json:"End,omitempty"`
+	FiltersJSON string `json:"FiltersJson"`
 }
 
 // EventFilterSet request
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-events-eventfilter
-func (i *ICP) EventFilterSet(ctx context.Context, request EventFilterRequest) (resp *http.Response, err error) {
-	resp, err = i.Post(ctx, EventsEventFilterEndpoint, request)
+func (i *ICP) EventFilterSet(ctx context.Context, request EventFilterSetRequest) (resp *http.Response, err error) {
+	resp, err = i.Post(ctx, EventsEventFilterEndpoint, request, nil)
 	resp.Body.Close()
 	return
 }
