@@ -75,18 +75,8 @@ type Bucketing struct {
 }
 
 // MetricsQuery request
-func (h *Hub) MetricsQuery(ctx context.Context, request MetricsQueryRequest, response *MetricsQueryResponse) (resp *http.Response, err error) {
-	resp, err = h.Post(ctx, MetricsQueryEndpoint, request)
-	if err != nil {
-		return
-	}
-	if resp.StatusCode > 299 {
-		err = ErrServerError
-		return
-	}
-	defer resp.Body.Close()
-	d := json.NewDecoder(resp.Body)
-	err = d.Decode(&response)
+func (h *Hub) MetricsQuery(ctx context.Context, request MetricsQueryRequest) (response MetricsQueryResponse, resp *http.Response, err error) {
+	resp, err = h.Post(ctx, MetricsQueryEndpoint, request, &response)
 	return
 }
 
@@ -100,6 +90,7 @@ type MetricsAggregation struct {
 }
 
 // MetricsAggregations request
-func (h *Hub) MetricsAggregations(ctx context.Context, response *MetricsAggregationsResponse) (resp *http.Response, err error) {
-	return h.Get(ctx, MetricsAggregationsEndpoint, nil, response)
+func (h *Hub) MetricsAggregations(ctx context.Context) (response MetricsAggregationsResponse, resp *http.Response, err error) {
+	resp, err = h.Get(ctx, MetricsAggregationsEndpoint, nil, response)
+	return
 }

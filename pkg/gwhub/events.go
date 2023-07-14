@@ -2,7 +2,6 @@ package gwhub
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 )
@@ -33,17 +32,7 @@ type EventData struct {
 }
 
 // QueryEventRecords request
-func (h *Hub) QueryEventRecords(ctx context.Context, request QueryEventRecordsRequest, response *QueryEventRecordsResponse) (resp *http.Response, err error) {
-	resp, err = h.Post(ctx, QueryEventRecordsEndpoint, request)
-	if err != nil {
-		return
-	}
-	if resp.StatusCode > 299 {
-		err = ErrServerError
-		return
-	}
-	defer resp.Body.Close()
-	d := json.NewDecoder(resp.Body)
-	err = d.Decode(&response)
+func (h *Hub) QueryEventRecords(ctx context.Context, request QueryEventRecordsRequest) (response QueryEventRecordsResponse, resp *http.Response, err error) {
+	resp, err = h.Post(ctx, QueryEventRecordsEndpoint, request, &response)
 	return
 }

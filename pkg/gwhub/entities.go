@@ -25,8 +25,9 @@ type Entity struct {
 }
 
 // Entities request
-func (h *Hub) Entities(ctx context.Context, request EntitiesRequest, response *EntitiesResponse) (resp *http.Response, err error) {
-	return h.Get(ctx, EntitiesEndpoint, request, response)
+func (h *Hub) Entities(ctx context.Context, request EntitiesRequest) (response EntitiesResponse, resp *http.Response, err error) {
+	resp, err = h.Get(ctx, EntitiesEndpoint, request, &response)
+	return
 }
 
 // EntityMetricsRequest type
@@ -55,9 +56,10 @@ type EntityMetricMapping struct {
 }
 
 // EntityMetrics request
-func (h *Hub) EntityMetrics(ctx context.Context, request EntityMetricsRequest, response *EntityMetricsResponse) (resp *http.Response, err error) {
+func (h *Hub) EntityMetrics(ctx context.Context, request EntityMetricsRequest) (response EntityMetricsResponse, resp *http.Response, err error) {
 	endpoint, _ := url.JoinPath(EntitiesEndpoint, fmt.Sprint(request.EntityID), "metrics")
-	return h.Get(ctx, endpoint, request, response)
+	resp, err = h.Get(ctx, endpoint, request, &response)
+	return
 }
 
 // EntitiesSummaryRequest
@@ -87,14 +89,16 @@ type EntitiesSummariesCount struct {
 }
 
 // EntitiesSummary request
-func (h *Hub) EntitiesSummary(ctx context.Context, request EntitiesSummaryRequest, response *EntitiesSummaryResponse) (resp *http.Response, err error) {
-	return h.Get(ctx, EntitiesSummaryEndpoint, request, response)
+func (h *Hub) EntitiesSummary(ctx context.Context, request EntitiesSummaryRequest) (response EntitiesSummaryResponse, resp *http.Response, err error) {
+	resp, err = h.Get(ctx, EntitiesSummaryEndpoint, request, &response)
+	return
 }
 
 // Entity request
-func (h *Hub) Entity(ctx context.Context, entity int, response *Entity) (resp *http.Response, err error) {
+func (h *Hub) Entity(ctx context.Context, entity int) (response Entity, resp *http.Response, err error) {
 	endpoint, _ := url.JoinPath(EntitiesEndpoint, fmt.Sprint(entity))
-	return h.Get(ctx, endpoint, nil, response)
+	resp, err = h.Get(ctx, endpoint, nil, &response)
+	return
 }
 
 // EntityMetricsRowsRequest type
@@ -108,9 +112,10 @@ type EntityMetricsRowsRequest struct {
 type EntityMetricsRowsResponse []string
 
 // EntityMetricsRows request
-func (h *Hub) EntityMetricsRows(ctx context.Context, request EntityMetricsRowsRequest, response *EntityMetricsRowsResponse) (resp *http.Response, err error) {
+func (h *Hub) EntityMetricsRows(ctx context.Context, request EntityMetricsRowsRequest) (response EntityMetricsRowsResponse, resp *http.Response, err error) {
 	endpoint, _ := url.JoinPath(EntitiesEndpoint, fmt.Sprint(request.EntityID), "metrics", "rows")
-	return h.Get(ctx, endpoint, request, response)
+	resp, err = h.Get(ctx, endpoint, request, &response)
+	return
 }
 
 // EntitiesMetricsRequest type
@@ -126,8 +131,9 @@ type EntitiesMetricsRequest struct {
 type EntitiesMetricsResponse []EntityMetric
 
 // EntitiesMetrics request
-func (h *Hub) EntitiesMetrics(ctx context.Context, request EntitiesMetricsRequest, response *EntitiesMetricsResponse) (resp *http.Response, err error) {
-	return h.Get(ctx, EntitiesMetricsEndpoint, request, response)
+func (h *Hub) EntitiesMetrics(ctx context.Context, request EntitiesMetricsRequest) (response EntitiesMetricsResponse, resp *http.Response, err error) {
+	resp, err = h.Get(ctx, EntitiesMetricsEndpoint, request, &response)
+	return
 }
 
 // EntitiesMetricsRowsRequest type
@@ -141,8 +147,9 @@ type EntitiesMetricsRowsRequest struct {
 type EntitiesMetricsRowsResponse []string
 
 // EntitiesMetricsRows request
-func (h *Hub) EntitiesMetricsRows(ctx context.Context, request EntityMetricsRowsRequest, response *EntityMetricsRowsResponse) (resp *http.Response, err error) {
-	return h.Get(ctx, EntitiesMetricsRowsEndpoint, request, response)
+func (h *Hub) EntitiesMetricsRows(ctx context.Context, request EntityMetricsRowsRequest) (response EntityMetricsRowsResponse, resp *http.Response, err error) {
+	resp, err = h.Get(ctx, EntitiesMetricsRowsEndpoint, request, &response)
+	return
 }
 
 // EntitiesAttributesRequest type
@@ -161,8 +168,9 @@ type EntityAttributes struct {
 }
 
 // EntitiesAttributes request
-func (h *Hub) EntitiesAttributes(ctx context.Context, request EntitiesAttributesRequest, response *EntitiesAttributesResponse) (resp *http.Response, err error) {
-	return h.Get(ctx, EntitiesAttributesEndpoint, request, response)
+func (h *Hub) EntitiesAttributes(ctx context.Context, request EntitiesAttributesRequest) (response EntitiesAttributesResponse, resp *http.Response, err error) {
+	resp, err = h.Get(ctx, EntitiesAttributesEndpoint, request, &response)
+	return
 }
 
 // EntitiesAttributeRequest type
@@ -176,9 +184,10 @@ type EntitiesAttributeRequest struct {
 type EntityAttributeResponse []string
 
 // EntityAttributeValues request
-func (h *Hub) EntityAttributeValues(ctx context.Context, request EntitiesAttributeRequest, response *EntityAttributeResponse) (resp *http.Response, err error) {
+func (h *Hub) EntityAttributeValues(ctx context.Context, request EntitiesAttributeRequest) (response EntityAttributeResponse, resp *http.Response, err error) {
 	endpoint, _ := url.JoinPath(EntitiesAttributesEndpoint, request.Name)
-	return h.Get(ctx, endpoint, nil, response)
+	resp, err = h.Get(ctx, endpoint, nil, &response)
+	return
 }
 
 // EntityMetricsDataRequest type
@@ -204,7 +213,8 @@ type EntityMetricsDataValue struct {
 }
 
 // EntityMetricsData request
-func (h *Hub) EntityMetricsData(ctx context.Context, request EntityMetricsDataRequest, response *EntityMetricsDataResponse) (resp *http.Response, err error) {
+func (h *Hub) EntityMetricsData(ctx context.Context, request EntityMetricsDataRequest) (response EntityMetricsDataResponse, resp *http.Response, err error) {
 	endpoint, _ := url.JoinPath(EntitiesEndpoint, fmt.Sprint(request.EntityID), "metrics", "data")
-	return h.Get(ctx, endpoint, request, response)
+	resp, err = h.Get(ctx, endpoint, request, &response)
+	return
 }
