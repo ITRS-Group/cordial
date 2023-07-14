@@ -3,7 +3,6 @@ package icp
 import (
 	"context"
 	"net/http"
-	"time"
 )
 
 // AssetServersRequest type
@@ -11,7 +10,7 @@ import (
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/GET-api-asset-servers_projectId_baselineId
 type AssetServersRequest struct {
 	ProjectID  int `url:"projectId"`
-	BaselineID int `url:"baselineId,omitempty"`
+	BaselineID int `url:"baselineId"`
 }
 
 // AssetServersResponse type
@@ -33,21 +32,21 @@ type AssetServersItem struct {
 //
 // Not documented
 type Assets struct {
-	CPURatio             float64   `json:"CPURatio,omitempty"`
-	EntityInternalID     string    `json:"EntityInternalId,omitempty"`
-	HostID               int       `json:"HostID,omitempty"`
-	ServerType           string    `json:"ServerType,omitempty"`
-	BenchmarkScore       string    `json:"benchmarkScore,omitempty"`
-	CoreMHzCapacity      string    `json:"coreMHzCapacity,omitempty"`
-	Cores                string    `json:"cores,omitempty"`
-	DecommisionDate      time.Time `json:"decommisionDate,omitempty"`
-	DeployDate           time.Time `json:"deployDate,omitempty"`
-	DeriveredCPUCapacity string    `json:"deriveredCPUCapacity,omitempty"`
-	IOLimit              string    `json:"ioLimit,omitempty"`
-	IOLimitActual        string    `json:"ioLimitActual,omitempty"`
-	MemoryCapacity       string    `json:"memoryCapacity,omitempty"`
-	ParentType           string    `json:"parentType,omitempty"`
-	ServerName           string    `json:"serverName,omitempty"`
+	CPURatio             float64 `json:"CPURatio,omitempty"`
+	EntityInternalID     string  `json:"EntityInternalId,omitempty"`
+	HostID               int     `json:"HostID,omitempty"`
+	ServerType           string  `json:"ServerType,omitempty"`
+	BenchmarkScore       string  `json:"benchmarkScore,omitempty"`
+	CoreMHzCapacity      string  `json:"coreMHzCapacity,omitempty"`
+	Cores                string  `json:"cores,omitempty"`
+	DecommisionDate      *Time   `json:"decommisionDate,omitempty"`
+	DeployDate           *Time   `json:"deployDate,omitempty"`
+	DeriveredCPUCapacity string  `json:"deriveredCPUCapacity,omitempty"`
+	IOLimit              string  `json:"ioLimit,omitempty"`
+	IOLimitActual        string  `json:"ioLimitActual,omitempty"`
+	MemoryCapacity       string  `json:"memoryCapacity,omitempty"`
+	ParentType           string  `json:"parentType,omitempty"`
+	ServerName           string  `json:"serverName,omitempty"`
 }
 
 // AssetServers request
@@ -197,7 +196,7 @@ type AssetRequest []AssetRegisterItem
 // https://icp-api.itrsgroup.com/v2.0/Help/ResourceModel?modelName=AssetRegisterItem
 type AssetRegisterItem struct {
 	ServerName                   string     `json:"ServerName,omitempty"`
-	TimeStamp                    time.Time  `json:"TimeStamp,omitempty"`
+	TimeStamp                    *Time      `json:"TimeStamp,omitempty"`
 	InternalID                   string     `json:"InternalID,omitempty"`
 	SourceServer                 string     `json:"SourceServer,omitempty"`
 	ServerType                   string     `json:"ServerType,omitempty"`
@@ -212,8 +211,8 @@ type AssetRegisterItem struct {
 	ClockSpeedMHz                int        `json:"ClockSpeedMHz,omitempty"`
 	NumberOfPhysicalCoresOrvCPUs int        `json:"NumberOfPhysicalCoresOrvCPUs,omitempty"`
 	HyperthreadingEnabled        bool       `json:"HyperthreadingEnabled,omitempty"`
-	DeployedDate                 time.Time  `json:"DeployedDate,omitempty"`
-	DecommissionedDate           time.Time  `json:"DecommissionedDate,omitempty"`
+	DeployedDate                 *Time      `json:"DeployedDate,omitempty"`
+	DecommissionedDate           *Time      `json:"DecommissionedDate,omitempty"`
 	FailoverServerName           string     `json:"FailoverServerName,omitempty"`
 	CPURatio                     int        `json:"CPURatio,omitempty"`
 	SpecintRate2006              int        `json:"specint_rate2006,omitempty"`
@@ -240,7 +239,7 @@ func (i *ICP) AssetGroupingsDynamic(ctx context.Context, request *AssetGroupings
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-asset
 func (i *ICP) Asset(ctx context.Context, request *AssetRequest) (resp *http.Response, err error) {
-	resp, err = i.Post(ctx, AssetEndpoint, AssetEndpoint)
+	resp, err = i.Post(ctx, AssetEndpoint, request, nil)
 	resp.Body.Close()
 	return
 }

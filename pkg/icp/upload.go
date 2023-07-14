@@ -32,6 +32,7 @@ func (i *ICP) Upload(ctx context.Context, request UploadRequest, filename string
 
 	if icp.token != "" {
 		err = errors.New("auth token required")
+		return
 	}
 
 	dest, err := url.JoinPath(icp.BaseURL, UploadEndpoint)

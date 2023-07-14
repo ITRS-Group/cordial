@@ -2,7 +2,6 @@ package icp
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 )
 
@@ -41,23 +40,33 @@ type MetricsSummariesRequest struct {
 // MetricsSummariesResponse type
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-metrics-summaries
-type MetricsSummariesResponse map[string]string
+type MetricsSummariesResponse []MetricsSummaryItem
+
+type MetricsSummaryItem struct {
+	EntityID            int     `json:"EntityID,omitempty"`
+	Metric              string  `json:"Metric,omitempty"`
+	SummaryDate         *Time   `json:"SummaryDate,omitempty"`
+	RecordCount         float64 `json:"RecordCount,omitempty"`
+	LatestValue         float64 `json:"LatestValue,omitempty"`
+	LatestDataDateTime  *Time   `json:"LatestDataDateTime,omitempty"`
+	MinModelMetricValue float64 `json:"MinModelMetricValue,omitempty"`
+	MaxModelMetricValue float64 `json:"MaxModelMetricValue,omitempty"`
+	C5thPercentile      float64 `json:"c5thPercentile,omitempty"`
+	C25thPercentile     float64 `json:"c25thPercentile,omitempty"`
+	C50thPercentile     float64 `json:"c50thPercentile,omitempty"`
+	C75thPercentile     float64 `json:"c75thPercentile,omitempty"`
+	C95thPercentile     float64 `json:"c95thPercentile,omitempty"`
+	C99thPercentile     float64 `json:"c99thPercentile,omitempty"`
+	STDDev              float64 `json:"STDDev,omitempty"`
+	Mean                float64 `json:"Mean,omitempty"`
+	Total               float64 `json:"Total,omitempty"`
+}
 
 // MetricsSummaries request
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-metrics-summaries
 func (i *ICP) MetricsSummaries(ctx context.Context, request MetricsSummariesRequest) (response MetricsSummariesResponse, resp *http.Response, err error) {
-	resp, err = i.Post(ctx, MetricsSummariesEndpoint, request)
-	if err != nil {
-		return
-	}
-	if resp.StatusCode > 299 {
-		err = ErrServerError
-		return
-	}
-	defer resp.Body.Close()
-	d := json.NewDecoder(resp.Body)
-	err = d.Decode(&response)
+	resp, err = i.Post(ctx, MetricsSummariesEndpoint, request, &response)
 	return
 }
 
@@ -78,16 +87,6 @@ type MetricsSummariesDateRangeRequest struct {
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-metrics-summariesdaterange
 func (i *ICP) MetricsSummariesDateRange(ctx context.Context, request MetricsSummariesDateRangeRequest) (response MetricsSummariesResponse, resp *http.Response, err error) {
-	resp, err = i.Post(ctx, MetricsSummariesDateRangeEndpoint, request)
-	if err != nil {
-		return
-	}
-	if resp.StatusCode > 299 {
-		err = ErrServerError
-		return
-	}
-	defer resp.Body.Close()
-	d := json.NewDecoder(resp.Body)
-	err = d.Decode(&response)
+	resp, err = i.Post(ctx, MetricsSummariesDateRangeEndpoint, request, &response)
 	return
 }
