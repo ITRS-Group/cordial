@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"net/url"
 
@@ -64,17 +63,9 @@ func (icp *ICP) Post(ctx context.Context, endpoint string, request interface{}, 
 	if response == nil {
 		return
 	}
-	switch t := response.(type) {
-	case string:
-		var b []byte
-		b, err = io.ReadAll(resp.Body)
-		t = string(b)
-	default:
-		d := json.NewDecoder(resp.Body)
-		err = d.Decode(&t)
-	}
+	d := json.NewDecoder(resp.Body)
+	err = d.Decode(&response)
 	return
-	// return icp.client.Do(req)
 }
 
 // Get sends a GET request to the endpoint
@@ -98,6 +89,9 @@ func (icp *ICP) Get(ctx context.Context, endpoint string, request interface{}, r
 		req.URL.RawQuery = v.Encode()
 	}
 	resp, err = icp.client.Do(req)
+	if err != nil {
+		return
+	}
 	if resp.StatusCode > 299 {
 		err = ErrServerError
 		return
@@ -106,15 +100,8 @@ func (icp *ICP) Get(ctx context.Context, endpoint string, request interface{}, r
 	if response == nil {
 		return
 	}
-	switch t := response.(type) {
-	case string:
-		var b []byte
-		b, err = io.ReadAll(resp.Body)
-		t = string(b)
-	default:
-		d := json.NewDecoder(resp.Body)
-		err = d.Decode(&t)
-	}
+	d := json.NewDecoder(resp.Body)
+	err = d.Decode(&response)
 	return
 }
 
