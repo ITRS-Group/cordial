@@ -31,7 +31,7 @@ func New(options ...Options) *Hub {
 	}
 }
 
-// Get method
+// Get method. On successful return the response body will be closed.
 func (h *Hub) Get(ctx context.Context, endpoint string, request interface{}, response interface{}) (resp *http.Response, err error) {
 	dest, err := url.JoinPath(h.BaseURL, endpoint)
 	if err != nil {
