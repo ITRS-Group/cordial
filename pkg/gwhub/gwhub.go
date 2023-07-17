@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"reflect"
 
 	"github.com/google/go-querystring/query"
 )
@@ -31,8 +32,8 @@ func New(options ...Options) *Hub {
 }
 
 // Get method. On successful return the response body will be closed.
-func (h *Hub) Get(ctx context.Context, endpoint string, request interface{}, response interface{}) (resp *http.Response, err error) {
-	dest, err := url.JoinPath(h.BaseURL, endpoint)
+func (hub *Hub) Get(ctx context.Context, endpoint string, request interface{}, response interface{}) (resp *http.Response, err error) {
+	dest, err := url.JoinPath(hub.BaseURL, endpoint)
 	if err != nil {
 		return
 	}
@@ -40,8 +41,8 @@ func (h *Hub) Get(ctx context.Context, endpoint string, request interface{}, res
 	if err != nil {
 		return
 	}
-	if h.token != "" {
-		req.Header.Add("Authorization", "Bearer "+h.token)
+	if hub.token != "" {
+		req.Header.Add("Authorization", "Bearer "+hub.token)
 	}
 	if request != nil {
 		v, err := query.Values(request)
@@ -50,7 +51,7 @@ func (h *Hub) Get(ctx context.Context, endpoint string, request interface{}, res
 		}
 		req.URL.RawQuery = v.Encode()
 	}
-	resp, err = h.client.Do(req)
+	resp, err = hub.client.Do(req)
 	if err != nil {
 		return
 	}
@@ -62,14 +63,13 @@ func (h *Hub) Get(ctx context.Context, endpoint string, request interface{}, res
 	if response == nil {
 		return
 	}
-	d := json.NewDecoder(resp.Body)
-	err = d.Decode(&response)
+	err = decodeResponse(resp, response)
 	return
 }
 
 // Post method
-func (h *Hub) Post(ctx context.Context, endpoint string, request interface{}, response interface{}) (resp *http.Response, err error) {
-	dest, err := url.JoinPath(h.BaseURL, endpoint)
+func (hub *Hub) Post(ctx context.Context, endpoint string, request interface{}, response interface{}) (resp *http.Response, err error) {
+	dest, err := url.JoinPath(hub.BaseURL, endpoint)
 	if err != nil {
 		return
 	}
@@ -81,11 +81,11 @@ func (h *Hub) Post(ctx context.Context, endpoint string, request interface{}, re
 	if err != nil {
 		return
 	}
-	if h.token != "" {
-		req.Header.Add("Authorization", "Bearer "+h.token)
+	if hub.token != "" {
+		req.Header.Add("Authorization", "Bearer "+hub.token)
 	}
 	req.Header.Add("content-type", "application/json")
-	resp, err = h.client.Do(req)
+	resp, err = hub.client.Do(req)
 	if resp.StatusCode > 299 {
 		err = ErrServerError
 		return
@@ -94,11 +94,46 @@ func (h *Hub) Post(ctx context.Context, endpoint string, request interface{}, re
 	if response == nil {
 		return
 	}
-	d := json.NewDecoder(resp.Body)
-	err = d.Decode(&response)
+	err = decodeResponse(resp, response)
 	return
 }
 
-func (h *Hub) Ping(ctx context.Context) (resp *http.Response, err error) {
-	return h.Get(ctx, PingEndpoint, nil, nil)
+func decodeResponse(resp *http.Response, response interface{}) (err error) {
+	d := json.NewDecoder(resp.Body)
+	rt := reflect.TypeOf(response)
+	switch rt.Kind() {
+	case reflect.Slice:
+		rv := reflect.ValueOf(response)
+		var t json.Token
+		t, err = d.Token()
+		if err != nil {
+			return
+		}
+		if t != "[" {
+			err = errors.New("not an array")
+			return
+		}
+		for d.More() {
+			var s interface{}
+			if err = d.Decode(&s); err != nil {
+				return
+			}
+			rv = reflect.Append(rv, reflect.ValueOf(s))
+		}
+		t, err = d.Token()
+		if err != nil {
+			return
+		}
+		if t != "]" {
+			err = errors.New("array not terminated")
+			return
+		}
+	default:
+		err = d.Decode(&response)
+	}
+	return
+}
+
+func (hub *Hub) Ping(ctx context.Context) (resp *http.Response, err error) {
+	return hub.Get(ctx, PingEndpoint, nil, nil)
 }

@@ -213,8 +213,8 @@ Key:
 | Checkmarks | `TYPE` labels in Pervious Name Column |
 | ------ | ------ |
 | ✔ - Supported and **required** | `gate` - Gateways |
-| :radio_button: - Supports and optional | `licd` - License Daemons |
-| :x: - Not support (and ignored) | `netp` - Netprobes |
+| 🔘 - Supports and optional | `licd` - License Daemons |
+| ❌ - Not support (and ignored) | `netp` - Netprobes |
 | | `webs` - Web servers |
 | | `FAgent` - File Agent |
 
