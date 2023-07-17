@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"reflect"
 
 	"github.com/google/go-querystring/query"
 )
@@ -37,6 +38,8 @@ func New(options ...Options) (icp *ICP) {
 
 // Post makes a POST request to the endpoint after marshalling the body
 // as json. The caller must close resp.Body.
+//
+// TODO: detect if response is a slice or map, then stream decode
 func (icp *ICP) Post(ctx context.Context, endpoint string, request interface{}, response interface{}) (resp *http.Response, err error) {
 	dest, err := url.JoinPath(icp.BaseURL, endpoint)
 	if err != nil {
@@ -63,12 +66,13 @@ func (icp *ICP) Post(ctx context.Context, endpoint string, request interface{}, 
 	if response == nil {
 		return
 	}
-	d := json.NewDecoder(resp.Body)
-	err = d.Decode(&response)
+	err = decodeResponse(resp, response)
 	return
 }
 
 // Get sends a GET request to the endpoint
+//
+// TODO: detect if response is a slice or map, then stream decode
 func (icp *ICP) Get(ctx context.Context, endpoint string, request interface{}, response interface{}) (resp *http.Response, err error) {
 	dest, err := url.JoinPath(icp.BaseURL, endpoint)
 	if err != nil {
@@ -100,8 +104,43 @@ func (icp *ICP) Get(ctx context.Context, endpoint string, request interface{}, r
 	if response == nil {
 		return
 	}
+	err = decodeResponse(resp, response)
+	return
+}
+
+func decodeResponse(resp *http.Response, response interface{}) (err error) {
 	d := json.NewDecoder(resp.Body)
-	err = d.Decode(&response)
+	rt := reflect.TypeOf(response)
+	switch rt.Kind() {
+	case reflect.Slice:
+		rv := reflect.ValueOf(response)
+		var t json.Token
+		t, err = d.Token()
+		if err != nil {
+			return
+		}
+		if t != "[" {
+			err = errors.New("not an array")
+			return
+		}
+		for d.More() {
+			var s interface{}
+			if err = d.Decode(&s); err != nil {
+				return
+			}
+			rv = reflect.Append(rv, reflect.ValueOf(s))
+		}
+		t, err = d.Token()
+		if err != nil {
+			return
+		}
+		if t != "]" {
+			err = errors.New("array not terminated")
+			return
+		}
+	default:
+		err = d.Decode(&response)
+	}
 	return
 }
 

@@ -241,8 +241,6 @@ If you want to change settings you should first `migrate` the configuration and 
 
 Note that execution mode (e.g. `GateMode`) is not supported and all components run in the background.
 
-
-
 #### Instance Configuration File
 
 These configuration files - in JSON format -  should be found in sub-directories under the `geneos` base directory (typiocally `/opt/itrs`, `/opt/itrs/geneos` or `/opt/geneos`) as `GENEOS_BASE_DIRECTORY/TYPE/TYPEs/INSTANCE/TYPE.json` where:
@@ -286,4 +284,44 @@ github clone https://github.com/itrs-group/cordial.git
 cd geneos/cmd/geneos
 go build
 sudo mv geneos /usr/local/bin
+```
+
+## Directory Layout
+
+```mermaid
+%%{ init: { 'theme': 'neutral', 'flowchart': { 'curve': 'basis' } } }%%
+flowchart LR
+  root[.]
+  root ---> Packages
+    subgraph Packages
+      direction LR
+      packages ---> packages/downloads[downloads]
+      packages ---> packages/gateway[gateway]
+      packages ---> packages/netprobe[netprobe]
+      packages ---> packages/licd[licd]
+      packages ---> packages/webserver[webserver]
+    end
+    click packages href "https://www.itrsgroup.com"
+  root ---> Gateways
+    subgraph Gateways
+      direction LR
+      gateway ----> gateway/gateways[gateways]
+      gateway ---> gateway_shared & gateway_config & gateway/templates[templates]
+        gateway/gateways ---> gateway/gateways/example1[example1]
+        gateway/gateways ---> gateway/gateways/example2[example2]
+        gateway/gateways ---> gateway/gateways/example3[...]
+    end
+  root ---> Netprobes
+    subgraph Netprobes
+      direction LR
+      netprobe ----> netprobe/netprobes[netprobes]
+      netprobe ----> netprobe/sans[sans]
+      netprobe ---> netprobe_shared & netprobe_config & netprobe/templates[templates]
+        netprobe/netprobes ---> netprobe/netprobes/example1[example1]
+        netprobe/netprobes ---> netprobe/netprobes/example2[example2]
+        netprobe/netprobes ---> netprobe/netprobes/example3[...]
+        netprobe/sans ---> netprobe/sans/example1[example1]
+        netprobe/sans ---> netprobe/sans/example2[example2]
+        netprobe/sans ---> netprobe/sans/example3[...]
+    end
 ```
