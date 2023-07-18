@@ -102,7 +102,7 @@ func ImportFiles(ct *geneos.Component, args []string, sources []string) (err err
 				return
 			}
 		}
-		return
+		return nil
 	}
 
 	return instance.ForAll(ct, Hostname, importInstance, args, sources)
@@ -129,9 +129,10 @@ func importInstance(c geneos.Instance, sources []string) (err error) {
 	}
 
 	for _, source := range sources {
-		if _, err = geneos.ImportFile(c.Host(), c.Home(), source); err != nil {
+		if _, err = geneos.ImportFile(c.Host(), c.Home(), source); err != nil && err != geneos.ErrExists {
 			return
 		}
 	}
+	err = nil
 	return
 }
