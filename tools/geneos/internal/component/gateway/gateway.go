@@ -301,7 +301,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	}
 
 	return instance.ExecuteTemplate(g,
-		g.Config().GetString("setup"),
+		cf.GetString("setup"),
 		instance.FileOf(g, "config::template"),
 		template)
 }
