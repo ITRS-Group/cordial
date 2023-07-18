@@ -194,8 +194,8 @@ func (s *Floatings) Add(template string, port uint16) (err error) {
 	cf.Set(cf.Join("config", "template"), templateName)
 
 	if template != "" {
-		filename, _ := geneos.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
-		cf.Set(cf.Join("config", "template"), filename)
+		filenames, _ := geneos.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
+		cf.Set(cf.Join("config", "template"), filenames[0])
 	}
 
 	cf.Set("types", []string{})
