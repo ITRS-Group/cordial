@@ -215,8 +215,8 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 
 	cf.SetDefault(cf.Join("config", "template"), templateName)
 	if template != "" {
-		filename, _ := geneos.ImportCommons(g.Host(), g.Type(), "templates", []string{template})
-		cf.Set(cf.Join("config", "template"), filename)
+		filenames, _ := geneos.ImportCommons(g.Host(), g.Type(), "templates", []string{template})
+		cf.Set(cf.Join("config", "template"), filenames[0])
 	}
 
 	cf.Set("includes", make(map[int]string))

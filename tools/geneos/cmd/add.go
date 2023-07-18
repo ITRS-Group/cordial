@@ -174,10 +174,11 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	c.Rebuild(true)
 
 	for _, i := range addCmdImportFiles {
-		if _, err = geneos.ImportFile(c.Host(), c.Home(), i); err != nil {
+		if _, err = geneos.ImportFile(c.Host(), c.Home(), i); err != nil && err != geneos.ErrExists {
 			return err
 		}
 	}
+	err = nil
 
 	fmt.Printf("%s added, port %d\n", c, cf.GetInt("port"))
 

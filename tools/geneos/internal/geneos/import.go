@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -39,9 +40,13 @@ import (
 // source. If no filename is given then it is derived from the source.
 //
 // source can be a path to a file or a http/https URL.
+//
+// If source is a (local) file and it is the same as the destination then an
+// ErrExists is returned.
 func ImportFile(h *Host, dir string, source string) (filename string, err error) {
 	var backuppath string
 	var from io.ReadCloser
+	var isPlain bool // plain file as source?
 
 	if h == ALL {
 		err = ErrInvalidArgs
@@ -55,11 +60,11 @@ func ImportFile(h *Host, dir string, source string) (filename string, err error)
 	destfile := ""
 
 	// if the source contains the start of a URL then only split if the
-	// '=' is directly before
+	// '=' is directly before - "=" is valid later in the URL
 	if (strings.Contains(source, "https://") && !strings.HasPrefix(source, "https://")) ||
 		(strings.Contains(source, "http://") && !strings.HasPrefix(source, "http://")) {
 		s := strings.SplitN(source, "=https://", 2)
-		if len(s) != 2 {
+		if len(s) != 2 { // not found
 			s = strings.SplitN(source, "=http://", 2)
 			if len(s) != 2 {
 				// ERROR
@@ -88,6 +93,7 @@ func ImportFile(h *Host, dir string, source string) (filename string, err error)
 			}
 		}
 	} else {
+		isPlain = true
 		s := strings.SplitN(source, "=", 2)
 		if len(s) > 1 {
 			// do some basic validation on user-supplied destination
@@ -117,12 +123,31 @@ func ImportFile(h *Host, dir string, source string) (filename string, err error)
 	}
 	defer from.Close()
 
+	// only use the returned filename if no explicit destination is given
 	if destfile == "" {
 		destfile = filename
 	}
+
 	// return final basename
-	filename = path.Base(destfile)
 	destfile = path.Join(destdir, destfile)
+	filename = path.Base(destfile)
+
+	// test for same source and dest, return err
+	if isPlain && h.IsLocal() {
+		sfi, err := h.Stat(source)
+		if err != nil {
+			return "", err
+		}
+		dfi, err := h.Stat(destfile)
+		if err != nil {
+			return "", err
+		}
+		if os.SameFile(sfi, dfi) {
+			// same
+			fmt.Printf("import skipped, source and destination are the same file: %q\n", source)
+			return filename, ErrExists
+		}
+	}
 
 	// check to containing directory, as destfile above may be a
 	// relative path under destdir and not just a filename
@@ -159,7 +184,7 @@ func ImportFile(h *Host, dir string, source string) (filename string, err error)
 }
 
 // ImportCommons copies a file to an instance common directory.
-func ImportCommons(r *Host, ct *Component, common string, params []string) (filename string, err error) {
+func ImportCommons(r *Host, ct *Component, common string, params []string) (filenames []string, err error) {
 	if ct == nil || !ct.RealComponent {
 		err = ErrNotSupported
 		return
@@ -171,9 +196,12 @@ func ImportCommons(r *Host, ct *Component, common string, params []string) (file
 
 	dir := r.PathTo(ct, common)
 	for _, source := range params {
-		if filename, err = ImportFile(r, dir, source); err != nil {
+		var filename string
+		if filename, err = ImportFile(r, dir, source); err != nil && err != ErrExists {
 			return
 		}
+		filenames = append(filenames, filename)
 	}
+	err = nil // reset in case above returns ErrExists
 	return
 }

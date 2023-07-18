@@ -318,10 +318,11 @@ var deployCmd = &cobra.Command{
 		c.Rebuild(true)
 
 		for _, i := range deployCmdImportFiles {
-			if _, err = geneos.ImportFile(c.Host(), c.Home(), i); err != nil {
+			if _, err = geneos.ImportFile(c.Host(), c.Home(), i); err != nil && err != geneos.ErrExists {
 				return err
 			}
 		}
+		err = nil
 
 		fmt.Printf("%s added, port %d\n", c, cf.GetInt("port"))
 
