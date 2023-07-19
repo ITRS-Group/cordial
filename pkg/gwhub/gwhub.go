@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -56,7 +58,8 @@ func (hub *Hub) Get(ctx context.Context, endpoint string, request interface{}, r
 		return
 	}
 	if resp.StatusCode > 299 {
-		err = ErrServerError
+		b, _ := io.ReadAll(resp.Body)
+		err = fmt.Errorf("%w: %s", ErrServerError, string(b))
 		return
 	}
 	defer resp.Body.Close()
@@ -87,7 +90,8 @@ func (hub *Hub) Post(ctx context.Context, endpoint string, request interface{}, 
 	req.Header.Add("content-type", "application/json")
 	resp, err = hub.client.Do(req)
 	if resp.StatusCode > 299 {
-		err = ErrServerError
+		b, _ := io.ReadAll(resp.Body)
+		err = fmt.Errorf("%w: %s", ErrServerError, string(b))
 		return
 	}
 	defer resp.Body.Close()

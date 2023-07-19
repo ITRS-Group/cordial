@@ -1,6 +1,9 @@
 package gwhub
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // ISO8601 durations used by GW Hub
 const (
@@ -26,3 +29,46 @@ const (
 	Wednesday = "wednesday"
 	// ...
 )
+
+type Filter struct {
+	Entities    string       `json:"entities,omitempty"`
+	Range       TimeRange    `json:"range"`
+	TimeWindows []TimeWindow `json:"timeWindows,omitempty"`
+}
+
+type TimeRange struct {
+	From time.Time `json:"from"`
+	To   time.Time `json:"to"`
+}
+
+// MarshalJSON is needed as Hub only accepts short form ISO times
+func (t TimeRange) MarshalJSON() ([]byte, error) {
+	timerange := struct {
+		From string `json:"from"`
+		To   string `json:"to"`
+	}{
+		From: t.From.Format(time.RFC3339),
+		To:   t.To.Format(time.RFC3339),
+	}
+	return json.Marshal(timerange)
+}
+
+// TimeWindow is only time-of-day
+type TimeWindow struct {
+	From time.Time `json:"from"`
+	To   time.Time `json:"to"`
+	On   []string  `json:"on,omitempty"`
+}
+
+func (t TimeWindow) MarshalJSON() ([]byte, error) {
+	timewindow := struct {
+		From string   `json:"from"`
+		To   string   `json:"to"`
+		On   []string `json:"on,omitempty"`
+	}{
+		From: t.From.Format("15:04:05"),
+		To:   t.To.Format("15:04:05"),
+		On:   t.On,
+	}
+	return json.Marshal(timewindow)
+}

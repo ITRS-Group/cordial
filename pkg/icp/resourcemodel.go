@@ -2,6 +2,7 @@ package icp
 
 import (
 	"bytes"
+	"fmt"
 	"time"
 )
 
@@ -150,4 +151,9 @@ func (t *Time) UnmarshalJSON(data []byte) (err error) {
 
 	// try default
 	return t.Time.UnmarshalJSON(data)
+}
+
+func (t *Time) MarshalJSON() ([]byte, error) {
+	ts := fmt.Sprintf("%q", t.UTC().Format(time.RFC3339))
+	return []byte(ts), nil
 }

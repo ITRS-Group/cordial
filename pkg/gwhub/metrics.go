@@ -2,9 +2,7 @@ package gwhub
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
-	"time"
 )
 
 type MetricsQueryRequest struct {
@@ -17,51 +15,26 @@ type MetricsQueryRequest struct {
 }
 
 type MetricsQueryResponse struct {
-	Schema interface{} `json:"schema"`
-	Data   interface{} `json:"data"`
+	Schema Schema `json:"schema"`
+	Data   []Data `json:"data"`
 }
 
-type Filter struct {
-	Entities    string       `json:"entities"`
-	Range       TimeRange    `json:"range"`
-	TimeWindows []TimeWindow `json:"timeWindows"`
+type Schema struct {
+	Bucketing Bucketing                         `json:"bucketing"`
+	Grouping  []string                          `json:"grouping"`
+	Metrics   map[string]map[string]interface{} `json:"metrics"`
 }
 
-type TimeRange struct {
-	From time.Time `json:"from"`
-	To   time.Time `json:"to"`
+type Data struct {
+	Bucket   string                            `json:"bucket"`
+	Grouping DataGrouping                      `json:"group"`
+	Metrics  map[string]map[string]interface{} `json:"metrics"`
 }
 
-// MarshalJSON is needed as Hub only accepts short form ISO times
-func (t TimeRange) MarshalJSON() ([]byte, error) {
-	timerange := struct {
-		From string `json:"from"`
-		To   string `json:"to"`
-	}{
-		From: t.From.Format(time.RFC3339),
-		To:   t.To.Format(time.RFC3339),
-	}
-	return json.Marshal(timerange)
-}
-
-// TimeWindow is only time-of-day
-type TimeWindow struct {
-	From time.Time `json:"from"`
-	To   time.Time `json:"to"`
-	On   []string  `json:"on,omitempty"`
-}
-
-func (t TimeWindow) MarshalJSON() ([]byte, error) {
-	timewindow := struct {
-		From string   `json:"from"`
-		To   string   `json:"to"`
-		On   []string `json:"on,omitempty"`
-	}{
-		From: t.From.Format("15:04:05"),
-		To:   t.To.Format("15:04:05"),
-		On:   t.On,
-	}
-	return json.Marshal(timewindow)
+type DataGrouping struct {
+	Rowname   string `json:"rowname,omitempty"`
+	Entity    int    `json:"entity,omitempty"`
+	Attribute string `json:"attribute,omitempty"`
 }
 
 type Metric struct {
