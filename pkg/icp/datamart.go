@@ -115,7 +115,7 @@ type DataMartEntityPropertiesRequest struct {
 	SourceKey3       string             `json:"SourceKey3,omitempty"`
 	SourceKey4       string             `json:"SourceKey4,omitempty"`
 	SourceKey5       string             `json:"SourceKey5,omitempty"`
-	EntityProperties []EntityProperties `json:"Metrics"`
+	EntityProperties []EntityProperties `json:"EntityProperties"`
 }
 
 // DataMartEntityProperties request
