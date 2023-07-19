@@ -110,11 +110,11 @@ func (i *ICP) DataMartMetricTimeseries(ctx context.Context, request *DataMartMet
 type DataMartEntityPropertiesRequest struct {
 	ProjectID        int                `json:"ProjectId"`
 	DataSourceName   string             `json:"DataSourceName"`
-	SourceKey1       string             `json:"SourceKey1,omitempty"`
-	SourceKey2       string             `json:"SourceKey2,omitempty"`
-	SourceKey3       string             `json:"SourceKey3,omitempty"`
-	SourceKey4       string             `json:"SourceKey4,omitempty"`
-	SourceKey5       string             `json:"SourceKey5,omitempty"`
+	SourceKey1       string             `json:"SourceKey1"`
+	SourceKey2       string             `json:"SourceKey2"`
+	SourceKey3       string             `json:"SourceKey3"`
+	SourceKey4       string             `json:"SourceKey4"`
+	SourceKey5       string             `json:"SourceKey5"`
 	EntityProperties []EntityProperties `json:"EntityProperties"`
 }
 
