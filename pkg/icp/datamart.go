@@ -63,11 +63,11 @@ func (i *ICP) DataMartPropertiesEntity(ctx context.Context, request *DataMartPro
 type DataMartMetricsRequest struct {
 	ProjectID      int       `json:"ProjectId"`
 	DataSourceName string    `json:"DataSourceName"`
-	SourceKey1     string    `json:"SourceKey1,omitempty"`
-	SourceKey2     string    `json:"SourceKey2,omitempty"`
-	SourceKey3     string    `json:"SourceKey3,omitempty"`
-	SourceKey4     string    `json:"SourceKey4,omitempty"`
-	SourceKey5     string    `json:"SourceKey5,omitempty"`
+	SourceKey1     string    `json:"SourceKey1"`
+	SourceKey2     string    `json:"SourceKey2"`
+	SourceKey3     string    `json:"SourceKey3"`
+	SourceKey4     string    `json:"SourceKey4"`
+	SourceKey5     string    `json:"SourceKey5"`
 	Metrics        []Metrics `json:"Metrics"`
 }
 
@@ -86,11 +86,11 @@ func (i *ICP) DataMartMetrics(ctx context.Context, request *DataMartMetricsReque
 type DataMartMetricTimeSeriesRequest struct {
 	ProjectID        int                `json:"ProjectId"`
 	DataSourceName   string             `json:"DataSourceName"`
-	SourceKey1       string             `json:"SourceKey1,omitempty"`
-	SourceKey2       string             `json:"SourceKey2,omitempty"`
-	SourceKey3       string             `json:"SourceKey3,omitempty"`
-	SourceKey4       string             `json:"SourceKey4,omitempty"`
-	SourceKey5       string             `json:"SourceKey5,omitempty"`
+	SourceKey1       string             `json:"SourceKey1"`
+	SourceKey2       string             `json:"SourceKey2"`
+	SourceKey3       string             `json:"SourceKey3"`
+	SourceKey4       string             `json:"SourceKey4"`
+	SourceKey5       string             `json:"SourceKey5"`
 	MetricName       string             `json:"MetricName"`
 	MetricTimeseries []MetricTimeSeries `json:"MetricTimeSeries"`
 }
@@ -133,11 +133,11 @@ func (i *ICP) DataMartEntityProperties(ctx context.Context, request *DataMartEnt
 type DataMartMetricCapacitiesRequest struct {
 	ProjectID        int                `json:"ProjectId"`
 	DataSourceName   string             `json:"DataSourceName"`
-	SourceKey1       string             `json:"SourceKey1,omitempty"`
-	SourceKey2       string             `json:"SourceKey2,omitempty"`
-	SourceKey3       string             `json:"SourceKey3,omitempty"`
-	SourceKey4       string             `json:"SourceKey4,omitempty"`
-	SourceKey5       string             `json:"SourceKey5,omitempty"`
+	SourceKey1       string             `json:"SourceKey1"`
+	SourceKey2       string             `json:"SourceKey2"`
+	SourceKey3       string             `json:"SourceKey3"`
+	SourceKey4       string             `json:"SourceKey4"`
+	SourceKey5       string             `json:"SourceKey5"`
 	MetricName       string             `json:"MetricName"`
 	MetricCapacities []MetricCapacities `json:"MetricCapacities"`
 }
@@ -162,12 +162,12 @@ type DataMartGetEntitiesRequest struct {
 type DataMartGetEntitiesResponse []DataMartGetEntitiesItem
 
 type DataMartGetEntitiesItem struct {
-	SourceKey1 string `json:"SourceKey1,omitempty"`
-	SourceKey2 string `json:"SourceKey2,omitempty"`
-	SourceKey3 string `json:"SourceKey3,omitempty"`
-	SourceKey4 string `json:"SourceKey4,omitempty"`
-	SourceKey5 string `json:"SourceKey5,omitempty"`
-	EntityType string `json:"EntityType,omitempty"`
+	SourceKey1 string `json:"SourceKey1"`
+	SourceKey2 string `json:"SourceKey2"`
+	SourceKey3 string `json:"SourceKey3"`
+	SourceKey4 string `json:"SourceKey4"`
+	SourceKey5 string `json:"SourceKey5"`
+	EntityType string `json:"EntityType"`
 }
 
 // DataMartGetEntities request

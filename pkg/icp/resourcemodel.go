@@ -24,11 +24,11 @@ type Version struct {
 type EntityPerformance struct {
 	DataSourceName string `json:"DataSourceName"`
 	DataDateTime   *Time  `json:"DataDateTime"`
-	SourceKey1     string `json:"SourceKey1,omitempty"`
-	SourceKey2     string `json:"SourceKey2,omitempty"`
-	SourceKey3     string `json:"SourceKey3,omitempty"`
-	SourceKey4     string `json:"SourceKey4,omitempty"`
-	SourceKey5     string `json:"SourceKey5,omitempty"`
+	SourceKey1     string `json:"SourceKey1"`
+	SourceKey2     string `json:"SourceKey2"`
+	SourceKey3     string `json:"SourceKey3"`
+	SourceKey4     string `json:"SourceKey4"`
+	SourceKey5     string `json:"SourceKey5"`
 	MetricName     string `json:"MetricName"`
 	MetricValue    string `json:"MetricValue"`
 }
@@ -38,16 +38,16 @@ type EntityPerformance struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/ResourceModel?modelName=EntityRelation
 type EntityRelation struct {
 	DataSourceName    string `json:"DataSourceName"`
-	Entity1SourceKey1 string `json:"Entity1SourceKey1,omitempty"`
-	Entity1SourceKey2 string `json:"Entity1SourceKey2,omitempty"`
-	Entity1SourceKey3 string `json:"Entity1SourceKey3,omitempty"`
-	Entity1SourceKey4 string `json:"Entity1SourceKey4,omitempty"`
-	Entity1SourceKey5 string `json:"Entity1SourceKey5,omitempty"`
-	Entity2SourceKey1 string `json:"Entity2SourceKey1,omitempty"`
-	Entity2SourceKey2 string `json:"Entity2SourceKey2,omitempty"`
-	Entity2SourceKey3 string `json:"Entity2SourceKey3,omitempty"`
-	Entity2SourceKey4 string `json:"Entity2SourceKey4,omitempty"`
-	Entity2SourceKey5 string `json:"Entity2SourceKey5,omitempty"`
+	Entity1SourceKey1 string `json:"Entity1SourceKey1"`
+	Entity1SourceKey2 string `json:"Entity1SourceKey2"`
+	Entity1SourceKey3 string `json:"Entity1SourceKey3"`
+	Entity1SourceKey4 string `json:"Entity1SourceKey4"`
+	Entity1SourceKey5 string `json:"Entity1SourceKey5"`
+	Entity2SourceKey1 string `json:"Entity2SourceKey1"`
+	Entity2SourceKey2 string `json:"Entity2SourceKey2"`
+	Entity2SourceKey3 string `json:"Entity2SourceKey3"`
+	Entity2SourceKey4 string `json:"Entity2SourceKey4"`
+	Entity2SourceKey5 string `json:"Entity2SourceKey5"`
 	RelationName      string `json:"RelationName"`
 	EffectiveFrom     *Time  `json:"EffectiveFrom"`
 }
@@ -57,11 +57,11 @@ type EntityRelation struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/ResourceModel?modelName=PropertiesEntity
 type PropertiesEntity struct {
 	DataSourceName string `json:"DataSourceName"`
-	SourceKey1     string `json:"SourceKey1,omitempty"`
-	SourceKey2     string `json:"SourceKey2,omitempty"`
-	SourceKey3     string `json:"SourceKey3,omitempty"`
-	SourceKey4     string `json:"SourceKey4,omitempty"`
-	SourceKey5     string `json:"SourceKey5,omitempty"`
+	SourceKey1     string `json:"SourceKey1"`
+	SourceKey2     string `json:"SourceKey2"`
+	SourceKey3     string `json:"SourceKey3"`
+	SourceKey4     string `json:"SourceKey4"`
+	SourceKey5     string `json:"SourceKey5"`
 	PropertyName   string `json:"PropertyName"`
 	PropertyValue  string `json:"PropertyValue"`
 	EffectiveFrom  *Time  `json:"EffectiveFrom"`
