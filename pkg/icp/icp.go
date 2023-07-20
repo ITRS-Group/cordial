@@ -47,6 +47,7 @@ func (icp *ICP) Post(ctx context.Context, endpoint string, request interface{}, 
 	if err != nil {
 		return
 	}
+	// TODO: look at streaming large requests
 	j, err := json.Marshal(request)
 	if err != nil {
 		return
