@@ -3,6 +3,7 @@ package gwhub
 import (
 	"context"
 	"net/http"
+	"time"
 )
 
 type MetricsQueryRequest struct {
@@ -26,7 +27,7 @@ type Schema struct {
 }
 
 type Data struct {
-	Bucket   string                            `json:"bucket"`
+	Bucket   time.Time                         `json:"bucket"`
 	Grouping DataGrouping                      `json:"group"`
 	Metrics  map[string]map[string]interface{} `json:"metrics"`
 }
