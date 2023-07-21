@@ -144,7 +144,7 @@ If set, it is used as the directory for the log file below. If not set (the defa
 
 #### `options`
 
-Additional options to pass on the command line to the Gateway
+Additional options to pass on the command line to the Gateway. For example, when you create a "demo" environment using `geneos init demo` the Gateway gets a `option` of `-demo`.
 
 #### `licdsecure`
 
@@ -161,7 +161,7 @@ A default `gateway.setup.xml` file is also created from the template(s) installe
 Gateways support the setting of Include files for use in templated configurations. These are set similarly to the `-e` parameters:
 
 ```text
-geneos gateway set example2 -i 100:/path/to/include
+geneos set gateway example2 -i 100:/path/to/include
 ```
 
 The setting value is `priority:path` and path can be a relative or absolute path or a URL. In the case of a URL the source is NOT downloaded but instead the URL is written as-is in the template output.
