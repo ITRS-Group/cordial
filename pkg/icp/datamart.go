@@ -186,13 +186,18 @@ type DataMartStartProcessingRequest struct {
 	ProjectID int `json:"ProjectId"`
 }
 
+type DataMartStartProcessingResponse struct {
+	ProcessingStarted  bool
+	ProcessingDateTime *Time
+}
+
 // DataMartStartProcessing request
 //
 // (Response format unknown)
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-StartProcessing
-func (i *ICP) DataMartStartProcessing(ctx context.Context, request *DataMartStartProcessingRequest) (response interface{}, resp *http.Response, err error) {
-	resp, err = i.Post(ctx, DataMartStartProcessingEndpoint, request, response)
+func (i *ICP) DataMartStartProcessing(ctx context.Context, request *DataMartStartProcessingRequest) (response DataMartStartProcessingResponse, resp *http.Response, err error) {
+	resp, err = i.Post(ctx, DataMartStartProcessingEndpoint, request, &response)
 	resp.Body.Close()
 	return
 }
