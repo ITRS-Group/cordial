@@ -22,17 +22,25 @@ func evalOptions(options ...Options) (opts *icpOptions) {
 }
 
 // BaseURL sets the root of the REST API URL. The default is
-// "https://icp-api.itrsgroup.com/v2.0"
+// "https://icp-api.itrsgroup.com/v2.0". No change to the default URL is
+// made if called with an empty string, so you can us this without
+// conditional testing in callers
 func BaseURL(baseurl string) Options {
 	return func(io *icpOptions) {
-		io.baseURL = baseurl
+		if baseurl != "" {
+			io.baseURL = baseurl
+		}
 	}
 }
 
 // HTTPClient sets the http.Client to use for requests. The default is
-// the default http package client.
+// the default http package client. If client is nil then the default
+// client is used, letting callers add this option without coditional
+// testing.
 func HTTPClient(client *http.Client) Options {
 	return func(io *icpOptions) {
-		io.client = client
+		if client != nil {
+			io.client = client
+		}
 	}
 }
