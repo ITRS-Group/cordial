@@ -1,4 +1,4 @@
-# `commands Package
+# `commands` Package
 
 The `commands` package provides a Go interface to the Geneos Gateway REST Command API.
 
