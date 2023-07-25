@@ -484,6 +484,64 @@ func unrollProcessDescriptorGroups(in *ProcessDescriptorGroup) (processDescripto
 	return
 }
 
+// UnrollRules resolves all the individual rules in the input by
+// descending RuleGroups and returns a map of Rule with a key of rule
+// path (group name and rule name joined by ` > ` as per Geneos
+// convention) and each component followed by a priority in parenthesis.
+// If a group is disabled it is skipped and the contents ignored. If a
+// rule is disabled is is skipped.
+func UnrollRules(in *Rules) (rules map[string]Rule) {
+	rules = make(map[string]Rule)
+
+	if in == nil {
+		return
+	}
+
+	for _, p := range in.Rules {
+		if p.Disabled {
+			continue
+		}
+		rules[p.Name] = p
+	}
+
+	for _, g := range in.RuleGroups {
+		p, grouppath := unrollRuleGroups(&g, "")
+		for _, p := range p {
+			if p.Disabled {
+				continue
+			}
+			rules[grouppath+" > "+p.Name] = p
+		}
+	}
+	return
+}
+
+func unrollRuleGroups(in *RuleGroup, parentpath string) (rules map[string]Rule, grouppath string) {
+	rules = make(map[string]Rule)
+	if parentpath != "" {
+		grouppath = parentpath + " > " + in.Name
+	} else {
+		grouppath = in.Name
+	}
+
+	for _, p := range in.Rules {
+		if p.Disabled {
+			continue
+		}
+		rules[grouppath+" > "+p.Name] = p
+	}
+	for _, g := range in.RuleGroups {
+		p, lowerpath := unrollRuleGroups(&g, grouppath)
+		for _, p := range p {
+			if p.Disabled {
+				continue
+			}
+			rules[lowerpath+" > "+p.Name] = p
+		}
+	}
+	return
+}
+
 // walk through a struct and set any defaults for fields that are
 // empty/nil
 //

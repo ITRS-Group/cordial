@@ -46,6 +46,23 @@ type FloatingNetprobe struct {
 	Gateways                 []Gateways `xml:"gateways"`
 }
 
+type SelfAnnounce struct {
+	Enabled                  bool               `xml:"enabled"`
+	RetryInterval            int                `xml:"retryInterval,omitempty"`
+	RequireReverseConnection bool               `xml:"requireReverseConnection,omitempty"`
+	ProbeName                string             `xml:"probeName"`
+	EncodedPassword          string             `xml:"encodedPassword,omitempty"`
+	RESTAPIHTTPPort          int                `xml:"restApiHttpPort,omitempty"`
+	RESTAPIHTTPSPort         int                `xml:"restApiHttpsPort,omitempty"`
+	CyberArkApplicationID    string             `xml:"cyberArkApplicationID,omitempty"`
+	CyberArkSDKPath          string             `xml:"cyberArkSdkPath,omitempty"`
+	ManagedEntity            *SANManagedEntity  `xml:"managedEntity,omitempty"`
+	ManagedEntities          []SANManagedEntity `xml:"managedEntities,omitempty"`
+	CollectionAgent          *CollectionAgent   `xml:"collectionAgent,omitempty"`
+	DynamicEntities          *DynamicEntities   `xml:"dynamicEntities,omitempty"`
+	Gateways                 []Gateways         `xml:"gateways"`
+}
+
 type Gateways struct {
 	XMLName  xml.Name `xml:"gateway"`
 	Hostname string   `xml:"hostname"`
@@ -53,24 +70,7 @@ type Gateways struct {
 	Secure   bool     `xml:"secure,omitempty"`
 }
 
-type SelfAnnounce struct {
-	Enabled                  bool              `xml:"enabled"`
-	RetryInterval            int               `xml:"retryInterval,omitempty"`
-	RequireReverseConnection bool              `xml:"requireReverseConnection,omitempty"`
-	ProbeName                string            `xml:"probeName"`
-	EncodedPassword          string            `xml:"encodedPassword,omitempty"`
-	RESTAPIHTTPPort          int               `xml:"restApiHttpPort,omitempty"`
-	RESTAPIHTTPSPort         int               `xml:"restApiHttpsPort,omitempty"`
-	CyberArkApplicationID    string            `xml:"cyberArkApplicationID,omitempty"`
-	CyberArkSDKPath          string            `xml:"cyberArkSdkPath,omitempty"`
-	ManagedEntity            *SAManagedEntity  `xml:"managedEntity,omitempty"`
-	ManagedEntities          []SAManagedEntity `xml:"managedEntities,omitempty"`
-	CollectionAgent          *CollectionAgent  `xml:"collectionAgent,omitempty"`
-	DynamicEntities          *DynamicEntities  `xml:"dynamicEntities,omitempty"`
-	Gateways                 []Gateways        `xml:"gateways"`
-}
-
-type SAManagedEntity struct {
+type SANManagedEntity struct {
 	XMLName    xml.Name    `xml:"managedEntity"`
 	Name       string      `xml:"name"`
 	Attributes []Attribute `xml:"attributes,omitempty"`
