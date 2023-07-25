@@ -136,7 +136,7 @@ var GeneosCmd = &cobra.Command{
 	Short: "Take control of your Geneos environments",
 	Long:  geneosCmdDescription,
 	Example: strings.ReplaceAll(`
-geneos init demo -u jondoe@example.com -l
+geneos init demo -u email@example.com -l
 geneos ps
 geneos restart
 `, "|", "`"),
