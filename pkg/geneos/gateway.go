@@ -48,6 +48,7 @@ type Gateway struct {
 	ManagedEntities      *ManagedEntities      `xml:"managedEntities,omitempty"`
 	Types                *Types                `xml:"types,omitempty"`
 	Samplers             *Samplers             `xml:"samplers,omitempty"`
+	Rules                *Rules                `xml:"rules,omitempty"`
 	Environments         *Environments         `xml:"environments,omitempty"`
 	ProcessDescriptors   *ProcessDescriptors   `xml:"staticVars>processDescriptors,omitempty"`
 	OperatingEnvironment *OperatingEnvironment `xml:"operatingEnvironment,omitempty"`
