@@ -38,20 +38,6 @@ import (
 	"encoding/xml"
 )
 
-// GatewayOut is for outputting a configuration using SamplersOut which in turn uses an interface{} for Plugin
-type GatewayOut struct {
-	XMLName              xml.Name              `xml:"gateway"`
-	Compatibility        int                   `xml:"compatibility,attr"`
-	XMLNs                string                `xml:"xmlns:xsi,attr"`                     // http://www.w3.org/2001/XMLSchema-instance
-	XSI                  string                `xml:"xsi:noNamespaceSchemaLocation,attr"` // http://schema.itrsgroup.com/GA5.12.0-220125/gateway.xsd
-	Probes               *Probes               `xml:"probes,omitempty"`
-	ManagedEntities      *ManagedEntities      `xml:"managedEntities,omitempty"`
-	Types                *Types                `xml:"types,omitempty"`
-	Samplers             *SamplersOut          `xml:"samplers,omitempty"`
-	Environments         *Environments         `xml:"environments,omitempty"`
-	OperatingEnvironment *OperatingEnvironment `xml:"operatingEnvironment,omitempty"`
-}
-
 // Gateway is for reading a Gateway configuration
 type Gateway struct {
 	XMLName              xml.Name              `xml:"gateway"`
@@ -194,4 +180,15 @@ type StandardisedFormattingApplicability struct {
 type StandardisedFormattingCell struct {
 	Row    string `xml:"row"`
 	Column string `xml:"column"`
+}
+
+type ActiveTimeRef struct {
+	XMLName    xml.Name          `xml:"activeTime"`
+	ActiveTime *ActiveTimeByName `xml:"activeTime,omitempty"`
+	Var        *Var              `xml:"var,omitempty"`
+}
+
+type ActiveTimeByName struct {
+	XMLName    xml.Name `xml:"activeTime"`
+	ActiveTime string   `xml:"ref,attr"`
 }

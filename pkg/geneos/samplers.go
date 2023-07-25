@@ -4,39 +4,6 @@ import (
 	"encoding/xml"
 )
 
-// SamplerOut is for output of XML. Plugins make it hard to share the
-// same types between marshal and unmarshal
-type SamplersOut struct {
-	XMLName       xml.Name          `xml:"samplers" json:"-" yaml:"-"`
-	Samplers      []SamplerOut      `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
-	SamplerGroups []SamplerGroupOut `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
-}
-
-type SamplerGroupOut struct {
-	XMLName       xml.Name          `xml:"samplerGroup" json:"-" yaml:"-"`
-	Name          string            `xml:"name,attr"`
-	Disabled      bool              `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
-	Samplers      []SamplerOut      `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
-	SamplerGroups []SamplerGroupOut `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
-}
-
-// A SamplerOut is a Geneos Sampler structure for marshalling to a file.
-// The Plugin field should be populated with a pointer to a Plugin
-// struct of the desired type.
-type SamplerOut struct {
-	XMLName                xml.Name                `xml:"sampler" json:"-" yaml:"-"`
-	Name                   string                  `xml:"name,attr"`
-	Disabled               bool                    `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
-	Comment                string                  `xml:",comment" json:",omitempty" yaml:",omitempty"`
-	Group                  *SingleLineStringVar    `xml:"var-group,omitempty" json:",omitempty" yaml:",omitempty"`
-	Interval               *Value                  `xml:"sampleInterval,omitempty" json:",omitempty" yaml:",omitempty"`
-	SampleOnStartup        bool                    `xml:"sampleOnStartup" json:",omitempty" yaml:",omitempty"`
-	Plugin                 interface{}             `xml:"plugin,omitempty" json:"plugin,omitempty" yaml:"plugin,omitempty"`
-	Dataviews              *[]Dataview             `xml:"dataviews>dataview,omitempty" json:",omitempty" yaml:",omitempty"`
-	Schemas                *Schemas                `xml:"schemas,omitempty" json:",omitempty" yaml:",omitempty"`
-	StandardisedFormatting *StandardisedFormatting `xml:"standardisedFormatting,omitempty" json:",omitempty" yaml:",omitempty"`
-}
-
 type Samplers struct {
 	XMLName       xml.Name       `xml:"samplers" json:"-" yaml:"-"`
 	Samplers      []Sampler      `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
@@ -66,29 +33,6 @@ type Sampler struct {
 	Schemas                *Schemas                `xml:"schemas,omitempty" json:",omitempty" yaml:",omitempty"`
 	StandardisedFormatting *StandardisedFormatting `xml:"standardisedFormatting,omitempty" json:",omitempty" yaml:",omitempty"`
 }
-
-/*
-	<xs:group ref="plugins-db"/>
-	<xs:group ref="plugins-e4jms"/>
-	<xs:group ref="plugins-exset"/>
-	<xs:group ref="plugins-ixwatch"/>
-	<xs:group ref="plugins-fidessa"/>
-	<xs:group ref="plugins-fix-analyser"/>
-	<xs:group ref="plugins-gl"/>
-	<xs:group ref="plugins-misc"/>
-	<xs:group ref="plugins-mq"/>
-	<xs:group ref="plugins-terminal"/>
-	<xs:group ref="plugins-tib"/>
-	<xs:group ref="plugins-universal"/>
-	<xs:group ref="plugins-state"/>
-	<xs:group ref="gateway-plugins"/>
-	<xs:group ref="plugins-tradeview"/>
-	<xs:group ref="plugins-tnl"/>
-	<xs:group ref="plugins-ibmi"/>
-
-	...
-
-*/
 
 // Plugin lists all the plugins we know about
 type Plugin struct {
