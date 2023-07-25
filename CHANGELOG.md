@@ -1,5 +1,25 @@
 # Change Log
 
+## Version v1.7.1
+
+> **Released 2023-07-25**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.7.1 Changes
+
+* `pkg/gwhub` & `pkg/icp` - Updates for ongoing project
+
+## v1.7.1 Fixes
+
+* [#167](https://github.com/ITRS-Group/cordial/issues/167) - Only load template files with a `.gotmpl` extension.
+
+* [#169](https://github.com/ITRS-Group/cordial/issues/169) - If the file being imported is the *same* as the destination, skip the copy.
+
+* `tools/geneos` - Fix installation of packages from local sources with or without component on command line
+
+---
+
 ## Version v1.7.0
 
 > **Released 2023-07-11**
