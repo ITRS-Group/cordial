@@ -27,14 +27,25 @@ import "encoding/xml"
 // Rules
 
 type Rules struct {
-	XMLName    xml.Name `xml:"rules" json:"-" yaml:"-"`
-	RuleGroups []interface{}
-	Rules      []interface{}
+	XMLName    xml.Name    `xml:"rules" json:"-" yaml:"-"`
+	RuleGroups []RuleGroup `xml:"ruleGroup,omitempty" json:"rulegroup,omitempty"`
+	Rules      []Rule      `xml:"rule,omitempty" json:"rule,omitempty"`
 }
 
-type RuleGroups struct {
-	XMLName xml.Name `xml:"ruleGroup" json:"-" yaml:"-"`
-	Name    string   `xml:"name,attr"`
+type RuleGroup struct {
+	XMLName    xml.Name      `xml:"ruleGroup" json:"-" yaml:"-"`
+	Name       string        `xml:"name,attr"`
+	Defaults   []RuleDefault `xml:"default,omitempty"`
+	Rules      []Rule        `xml:"rule,omitempty" json:"rule,omitempty"`
+	RuleGroups []RuleGroup   `xml:"ruleGroup,omitempty" json:"rulegroup,omitempty"`
+}
+
+type RuleDefault struct {
+	XMLName       xml.Name       `xml:"default,omitempty" json:"default,omitempty"`
+	Name          string         `xml:"name,attr"`
+	Contexts      []string       `xml:"rule>contexts>context,omitempty"`
+	PriorityGroup *int           `xml:"priorityGroup,omitempty"`
+	ActiveTime    *ActiveTimeRef `xml:"activeTime"`
 }
 
 type Rule struct {
