@@ -189,6 +189,8 @@ geneos install netprobe -b active_dev -U
 			}
 		}
 
+		args = append(args, params...)
+
 		// if we have a component on the command line then use an archive in packages/downloads
 		// or download from official web site unless -L is given. version numbers checked.
 		// default to 'latest'
