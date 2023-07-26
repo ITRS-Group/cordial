@@ -26,7 +26,7 @@ type Hub struct {
 
 // ErrServerError makes it a little easier for the caller to check the
 // underlying HTTP response
-var ErrServerError = errors.New("Error from server (HTTP Status > 299)")
+var ErrServerError = errors.New("error from server (HTTP Status > 299)")
 
 func New(options ...Options) *Hub {
 	opts := evalOptions(options...)
