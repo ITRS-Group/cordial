@@ -204,7 +204,7 @@ func (c Client) signOnStream(entity string, sampler string, stream string, secon
 }
 
 func (c Client) signOffStream(entity string, sampler string, stream string) (err error) {
-	method := strings.Join([]string{entity, sampler, stream, "signOn"}, ".")
+	method := strings.Join([]string{entity, sampler, stream, "signOff"}, ".")
 	return c.callMethod(method)
 }
 
