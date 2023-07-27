@@ -24,7 +24,7 @@ The Gateway program filename. Should not be changed.
 
 #### `gatewayname`
 
-The Gateway's name can be different to the instance name. This is used in the default templates, under the Operating Environment creared in `instance.setup.xml`
+The Gateway's name can be different to the instance name. This is used in the default templates, under the Operating Environment created in `instance.setup.xml`
 
 > Default: Instance Name
 
