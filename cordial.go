@@ -27,6 +27,7 @@ package cordial
 import (
 	_ "embed" // embed the VERSION in the top-level package
 	"fmt"
+	"html"
 	"os"
 	"path"
 	"runtime"
@@ -71,25 +72,37 @@ func LogInit(prefix string) {
 	}).With().Caller().Logger()
 }
 
-func renderMD(in string) (md string) {
+func renderMD(in string) (out string) {
+	var width int = 80
+	var err error
+
 	style := glamour.WithAutoStyle()
 	if !term.IsTerminal(int(os.Stdout.Fd())) {
 		style = glamour.WithStandardStyle("ascii")
+	} else {
+		width, _, err = term.GetSize(int(os.Stdout.Fd()))
+		if err != nil {
+			width = 80
+		}
+		if width > 132 {
+			width = 132
+		}
 	}
 
 	tr, err := glamour.NewTermRenderer(
 		style,
-		glamour.WithStylesFromJSONBytes([]byte(`{ "document": { "margin": 0 } }`)),
-		glamour.WithWordWrap(80),
+		glamour.WithStylesFromJSONBytes([]byte(`{ "document": { "margin": 2 } }`)),
+		glamour.WithWordWrap(width-4),
 		glamour.WithEmoji(),
 	)
 	if err != nil {
 		return in
 	}
-	md, err = tr.Render(in)
+	out, err = tr.Render(in)
 	if err != nil {
 		return in
 	}
+	out = html.UnescapeString(out)
 	return
 }
 
