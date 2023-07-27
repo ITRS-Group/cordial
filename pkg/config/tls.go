@@ -186,6 +186,9 @@ func CreateCertificateAndKey(template, parent *x509.Certificate, signingKeyPEM, 
 
 	// default the signingKey to the certKey (for self-signed root)
 	signingKey, certPubKey, err := ParseKey(certKeyPEM)
+	if err != nil {
+		return
+	}
 
 	if signingKeyPEM != nil {
 		signingKey, _, err = ParseKey(signingKeyPEM)
