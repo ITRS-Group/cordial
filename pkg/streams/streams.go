@@ -24,8 +24,11 @@ package streams
 
 import (
 	"bytes"
+	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -42,12 +45,12 @@ type Stream struct {
 // Open a stream for writing. `stream` is an optional stream name and
 // additional arguments are ignored. If no stream name is supplied then
 // the sampler name is used for the stream name.
-func Open(url *url.URL, entity, sampler string, stream ...string) (s *Stream, err error) {
+func Open(url *url.URL, entity, sampler string, stream string, options ...xmlrpc.Options) (s *Stream, err error) {
 	name := sampler
-	if len(stream) > 0 {
-		name = stream[0]
+	if stream != "" {
+		name = stream
 	}
-	smpl, err := xmlrpc.NewClient(url).Sampler(entity, sampler)
+	smpl, err := xmlrpc.NewClient(url, options...).Sampler(entity, sampler)
 	s = &Stream{name: name, Sampler: smpl}
 	return
 }
@@ -79,5 +82,45 @@ func (s Stream) WriteString(data string) (n int, err error) {
 	if err != nil {
 		return 0, err
 	}
+	return
+}
+
+type RESTStream struct {
+	baseurl *url.URL
+	client  *http.Client
+}
+
+// ErrServerError makes it a little easier for the caller to check the
+// underlying HTTP response
+var ErrServerError = errors.New("error from server (HTTP Status > 299)")
+
+func NewRESTStream(url *url.URL, entity, sampler, streamname string) (stream RESTStream, err error) {
+	stream.baseurl = url.JoinPath("managedEntity", entity, "sampler", sampler, "stream", streamname)
+	stream.client = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+	return
+}
+
+func (s RESTStream) Write(data []byte) (n int, err error) {
+	b := bytes.NewBuffer(data)
+	u := s.baseurl.String()
+	req, err := http.NewRequest("PUT", u, b)
+	if err != nil {
+		return
+	}
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return
+	}
+	if resp.StatusCode > 299 {
+		b, _ := io.ReadAll(resp.Body)
+		err = fmt.Errorf("%w: %s", ErrServerError, string(b))
+		return
+	}
+	resp.Body.Close()
+	n = len(data)
 	return
 }
