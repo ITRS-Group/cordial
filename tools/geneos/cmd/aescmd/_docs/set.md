@@ -4,7 +4,7 @@ The key file can be given as an existing CRC (with or without `.aes` file extens
 
 If the `--keycrc` flag is given it is first converted to upper-case and then if it matches an existing key file in the component shared directory then that is used for matching instances. When `TYPE` is not given, the key file will also be copied to the shared directories of other component types if not already present.
 
-The `--keyfile` flag value can be a local file (including a prefix of `~/` to represent the home directory), a URL or a dash `-` for `STDIN`. The given key file is evaluated and its CRC32 checksum checked against existing key files in the matching component shared directories. The key file is only saved if one with the same checksum does not already exist. 
+The `--keyfile` flag value can be a local file (including a prefix of `~/` to represent the user's home directory), a URL or a dash `-` for `STDIN`. The given key file is evaluated and its CRC32 checksum checked against existing key files in the matching component shared directories. The key file is only saved if one with the same checksum does not already exist. 
 
 For each instance any existing `keyfile` path is copied to a `prevkeyfile` setting, unless the `--noroll`/`-N` option if given, to support key file updating in Geneos GA6 and above.
 

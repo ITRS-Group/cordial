@@ -8,12 +8,15 @@
 
 ## v1.7.2 Changes
 
+* `pkg/gwhub`, `pkg/icp`, `pkg/streams` and `pkg/geneos` have been updated to match real APIs and to add access to REST API streams
 
 ## v1.7.2 Fixes
 
 * [#172](https://github.com/ITRS-Group/cordial/issues/172) - viper doesn't do the right thing with overridden values in maps containing defaults. This would affect GetStringMap*() callers, and we also now have our own UnmarshalKey() function
 
 * `pkg/config` and `tools/geneos`: Fix handling of command line plaintext passwords (those not prompted for). When passed a pointer to a method you have to set the destination of the pointer, not the ephemeral pointer itself
+
+* `tools/geneos` would not correctly initialise web server directories after changes to import earlier in v1.7. This is now fixed along with the removal of a confusing treatment of "~/" in an import path not meaning the user's home directory
 
 ---
 
