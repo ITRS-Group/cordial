@@ -21,7 +21,6 @@ import (
 type Hub struct {
 	BaseURL string
 	client  *http.Client
-	token   string
 }
 
 // ErrServerError makes it a little easier for the caller to check the
@@ -45,9 +44,6 @@ func (hub *Hub) Get(ctx context.Context, endpoint string, request interface{}, r
 	req, err := http.NewRequestWithContext(ctx, "GET", dest, nil)
 	if err != nil {
 		return
-	}
-	if hub.token != "" {
-		req.Header.Add("Authorization", "Bearer "+hub.token)
 	}
 	if request != nil {
 		v, err := query.Values(request)
@@ -86,9 +82,6 @@ func (hub *Hub) Post(ctx context.Context, endpoint string, request interface{}, 
 	req, err := http.NewRequestWithContext(ctx, "POST", dest, bytes.NewReader(j))
 	if err != nil {
 		return
-	}
-	if hub.token != "" {
-		req.Header.Add("Authorization", "Bearer "+hub.token)
 	}
 	req.Header.Add("content-type", "application/json")
 	resp, err = hub.client.Do(req)

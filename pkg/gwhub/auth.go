@@ -2,81 +2,28 @@ package gwhub
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-	"net/http"
 	"net/url"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
-func randValue() (value string) {
-	b := make([]byte, 16)
-	rand.Read(b)
-	value = hex.EncodeToString(b)
-	return
-}
-
-type authResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	Expires      uint64 `json:"expires"`
-	TokenType    string `json:"token_type"`
-}
-
-func (h *Hub) Login(ctx context.Context, username string, password *config.Plaintext) (err error) {
-	v := url.Values{}
-	v.Add("response_type", "code")
-	v.Add("client_id", "rest")
-	state := randValue()
-	v.Add("state", state)
-
-	p, _ := url.JoinPath(h.BaseURL, "/authorize")
-	req, _ := http.NewRequestWithContext(ctx, "GET", p, nil)
-	req.URL.RawQuery = v.Encode()
-
-	resp, err := h.client.Do(req)
-	if err != nil {
+// Auth with client ID and Secret. If clientid is empty just return,
+// allowing callers to call with config values even when not set.
+func (h *Hub) Auth(ctx context.Context, clientid string, clientsecret *config.Plaintext) {
+	if clientid == "" {
 		return
 	}
-	if resp.StatusCode > 299 {
-		panic(resp.Status)
+	params := make(url.Values)
+	params.Set("grant_type", "client_credentials")
+	tokenauth, _ := url.JoinPath(h.BaseURL + "/oauth2/token")
+	conf := &clientcredentials.Config{
+		ClientID:       clientid,
+		ClientSecret:   clientsecret.String(),
+		EndpointParams: params,
+		TokenURL:       tokenauth,
 	}
-	var authresp authResponse
-	d := json.NewDecoder(resp.Body)
-	err = d.Decode(&authresp)
-	if err != nil {
-		panic(err)
-	}
-	resp.Body.Close()
-	h.token = authresp.AccessToken
-
-	v = url.Values{}
-	v.Add("response_type", "token")
-	v.Add("client_id", "rest")
-	state = randValue()
-	v.Add("state", state)
-	nonce := randValue()
-	v.Add("nonce", nonce)
-	req, _ = http.NewRequestWithContext(ctx, "GET", p, nil)
-	req.URL.RawQuery = v.Encode()
-	req.Header.Add("Authorization", "Bearer "+h.token)
-
-	resp, err = h.client.Do(req)
-	if err != nil {
-		return
-	}
-	if resp.StatusCode > 299 {
-		panic(resp.Status)
-	}
-	d = json.NewDecoder(resp.Body)
-	err = d.Decode(&authresp)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("%#v", authresp)
-	return
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, h.client)
+	h.client = conf.Client(ctx)
 }
