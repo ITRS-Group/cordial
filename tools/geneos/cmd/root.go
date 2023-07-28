@@ -230,8 +230,6 @@ geneos restart
 
 		return parseArgs(command, args)
 	},
-	// remove placeholder for now to allow help output
-	// Run: RunPlaceholder,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

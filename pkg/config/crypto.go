@@ -64,15 +64,14 @@ func (secret *Plaintext) String() string {
 		return ""
 	}
 	l, _ := secret.Open()
-	plaintext := strings.Clone(l.String())
-	l.Destroy()
-	return string(plaintext)
+	defer l.Destroy()
+	return strings.Clone(l.String())
 }
 
 // Set is required to satisfy the pflag Values interface
 func (secret *Plaintext) Set(value string) error {
 	if secret != nil {
-		secret = &Plaintext{memguard.NewEnclave([]byte(value))}
+		*secret = Plaintext{memguard.NewEnclave([]byte(value))}
 	}
 	return nil
 }
