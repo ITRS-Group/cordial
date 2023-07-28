@@ -134,18 +134,21 @@ func ImportFile(h *Host, dir string, source string) (filename string, err error)
 
 	// test for same source and dest, return err
 	if isPlain && h.IsLocal() {
+		if strings.HasPrefix(source, "~/") {
+			home, _ := os.UserHomeDir()
+			source = path.Join(home, strings.TrimPrefix(source, "~/"))
+		}
 		sfi, err := h.Stat(source)
 		if err != nil {
 			return "", err
 		}
 		dfi, err := h.Stat(destfile)
-		if err != nil {
-			return "", err
-		}
-		if os.SameFile(sfi, dfi) {
-			// same
-			fmt.Printf("import skipped, source and destination are the same file: %q\n", source)
-			return filename, ErrExists
+		if err == nil {
+			if os.SameFile(sfi, dfi) {
+				// same
+				fmt.Printf("import skipped, source and destination are the same file: %q\n", source)
+				return filename, ErrExists
+			}
 		}
 	}
 

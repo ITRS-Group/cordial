@@ -8,7 +8,7 @@ geneos aes import [flags] [TYPE] [NAME...]
 
 Import key files to the `TYPE/keyfiles` directory in each matching component TYPE shared directory.
 
-A key file must be provided with the `--keyfile`/`-k` option. The option value can be a path or a URL or a '-' to read from STDIN. A prefix of `~/` to the path interprets the rest relative to the home directory.
+A key file must be provided with the `--keyfile`/`-k` option. The option value can be a path or a URL or a '-' to read from STDIN. A prefix of `~/` to the path interprets the rest relative to the user's home directory.
 
 The key file is copied from the supplied source to a file with the base-name of its 8-hexadecimal digit checksum to distinguish it from other key files. In all examples the CRC is shown as `DEADBEEF` in honour of many generations of previous UNIX documentation. There is a very small chance of a checksum clash.
 

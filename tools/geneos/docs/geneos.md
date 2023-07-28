@@ -86,7 +86,7 @@ The subsystems group the management of related functions together.
 ## Examples
 
 ```bash
-geneos init demo -u jondoe@example.com -l
+geneos init demo -u email@example.com -l
 geneos ps
 geneos restart
 

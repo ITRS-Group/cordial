@@ -129,12 +129,8 @@ func open(source string, options ...Options) (from io.ReadCloser, filename strin
 		filename = "STDIN"
 	default:
 		if strings.HasPrefix(source, "~/") {
-			if opts.geneosdir != "" {
-				source = fmt.Sprintf("%s/%s", opts.geneosdir, strings.TrimPrefix(source, "~/"))
-			} else {
-				home, _ := os.UserHomeDir()
-				source = fmt.Sprintf("%s/%s", home, strings.TrimPrefix(source, "~/"))
-			}
+			home, _ := os.UserHomeDir()
+			source = path.Join(home, strings.TrimPrefix(source, "~/"))
 		}
 		var s os.FileInfo
 		s, err = os.Stat(source)
