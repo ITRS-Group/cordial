@@ -1,5 +1,22 @@
 # Change Log
 
+## Version v1.7.2
+
+> **Released 2023-07-28**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.7.2 Changes
+
+
+## v1.7.2 Fixes
+
+* [#172](https://github.com/ITRS-Group/cordial/issues/172) - viper doesn't do the right thing with overridden values in maps containing defaults. This would affect GetStringMap*() callers, and we also now have our own UnmarshalKey() function
+
+* `pkg/config` and `tools/geneos`: Fix handling of command line plaintext passwords (those not prompted for). When passed a pointer to a method you have to set the destination of the pointer, not the ephemeral pointer itself
+
+---
+
 ## Version v1.7.1
 
 > **Released 2023-07-25**
