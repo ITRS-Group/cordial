@@ -33,13 +33,11 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var passwordCmdString *config.Plaintext
+var passwordCmdString = &config.Plaintext{}
 var passwordCmdSource string
 
 func init() {
 	aesCmd.AddCommand(passwordCmd)
-
-	passwordCmdString = &config.Plaintext{}
 
 	passwordCmd.Flags().VarP(passwordCmdString, "password", "p", "A plaintext password")
 	passwordCmd.Flags().StringVarP(&passwordCmdSource, "source", "s", "", "External source for plaintext `PATH|URL|-`")
