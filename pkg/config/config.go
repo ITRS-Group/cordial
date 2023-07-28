@@ -27,10 +27,13 @@ encryption key files and basic encryption and decryption.
 package config
 
 import (
+	"fmt"
 	"path"
+	"reflect"
 	"strconv"
 	"strings"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 )
 
@@ -247,6 +250,13 @@ func (c *Config) GetStringSlice(s string, options ...ExpandOptions) (slice []str
 	return
 }
 
+func isStringMapInterface(val interface{}) bool {
+	vt := reflect.TypeOf(val)
+	return vt.Kind() == reflect.Map &&
+		vt.Key().Kind() == reflect.String &&
+		vt.Elem().Kind() == reflect.Interface
+}
+
 // GetStringMapString functions like [viper.GetStringMapString] but additionally calls
 // [ExpandString] on each value element of the map, passing any "values" maps
 func GetStringMapString(s string, options ...ExpandOptions) map[string]string {
@@ -256,13 +266,105 @@ func GetStringMapString(s string, options ...ExpandOptions) map[string]string {
 // GetStringMapString functions like [viper.GetStringMapString] on a
 // Config instance but additionally calls [ExpandString] on each value
 // element of the map, passing any "values" maps
-func (c *Config) GetStringMapString(s string, options ...ExpandOptions) (m map[string]string) {
+//
+// Use a version of https://github.com/spf13/viper/pull/1504 to fix viper bug #1106
+func (c *Config) GetStringMapString(key string, options ...ExpandOptions) (m map[string]string) {
 	m = make(map[string]string)
-	r := c.Viper.GetStringMapString(s)
-	for k, v := range r {
-		m[k] = c.ExpandString(v, options...)
+
+	key = strings.ToLower(key)
+	prefix := key + c.delimiter
+
+	i := c.Viper.Get(key)
+	if !isStringMapInterface(i) {
+		return
 	}
-	return m
+	val := i.(map[string]interface{})
+	keys := c.AllKeys()
+	for _, k := range keys {
+		if !strings.HasPrefix(k, prefix) {
+			continue
+		}
+		mk := strings.TrimPrefix(key, prefix)
+		mk = strings.Split(mk, c.delimiter)[0]
+		if _, exists := val[mk]; exists {
+			continue
+		}
+		mv := c.Get(key + c.delimiter + mk)
+		if mv == nil {
+			continue
+		}
+		val[mk] = mv
+	}
+
+	for k, v := range val {
+		m[k] = c.ExpandString(fmt.Sprint(v), options...)
+	}
+
+	// r := c.Viper.GetStringMapString(key)
+	// for k, v := range r {
+	// 	m[k] = c.ExpandString(v, options...)
+	// }
+	return
+}
+
+// defaultDecoderConfig returns default mapstructure.DecoderConfig with support
+// of time.Duration values & string slices
+func defaultDecoderConfig(output interface{}, opts ...viper.DecoderConfigOption) *mapstructure.DecoderConfig {
+	c := &mapstructure.DecoderConfig{
+		Metadata:         nil,
+		Result:           output,
+		WeaklyTypedInput: true,
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeDurationHookFunc(),
+			mapstructure.StringToSliceHookFunc(","),
+		),
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
+}
+
+// A wrapper around mapstructure.Decode that mimics the WeakDecode functionality
+func decode(input interface{}, config *mapstructure.DecoderConfig) error {
+	decoder, err := mapstructure.NewDecoder(config)
+	if err != nil {
+		return err
+	}
+	return decoder.Decode(input)
+}
+
+func UnmarshalKey(key string, rawVal interface{}, opts ...viper.DecoderConfigOption) error {
+	return global.UnmarshalKey(key, rawVal, opts...)
+}
+
+func (c *Config) UnmarshalKey(key string, rawVal interface{}, opts ...viper.DecoderConfigOption) error {
+	key = strings.ToLower(key)
+	prefix := key + c.delimiter
+
+	i := c.Viper.Get(key)
+	if isStringMapInterface(i) {
+		val := i.(map[string]interface{})
+		keys := c.AllKeys()
+		for _, k := range keys {
+			if !strings.HasPrefix(k, prefix) {
+				continue
+			}
+			mk := strings.TrimPrefix(k, prefix)
+			mk = strings.Split(mk, c.delimiter)[0]
+			if _, exists := val[mk]; exists {
+				continue
+			}
+			mv := c.Get(key + c.delimiter + mk)
+			if mv == nil {
+				continue
+			}
+			val[mk] = mv
+		}
+		i = val
+	}
+
+	return decode(i, defaultDecoderConfig(rawVal, opts...))
 }
 
 // GetSliceStringMapString returns a slice of string maps for the key s,
