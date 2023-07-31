@@ -328,6 +328,52 @@ func ForAllWithParams(ct *geneos.Component, hostname string, fn func(geneos.Inst
 	return nil
 }
 
+// ForAllAny calls the supplied function for each matching instance. It
+// sends any returned error on STDOUT and the only error returned is
+// os.ErrNotExist if there are no matching instances.
+func ForAllAny(ct *geneos.Component, hostname string, fn func(geneos.Instance, ...any) error, args []string, params ...any) (err error) {
+	allcs := []geneos.Instance{}
+
+	n := 0
+	// if args is empty, get all matching instances. this allows internal
+	// calls with an empty arg list without having to do the parseArgs()
+	// dance
+	h := geneos.GetHost(hostname)
+	if h == nil {
+		h = geneos.ALL
+	}
+	if len(args) == 0 {
+		allcs = GetAll(h, ct)
+	} else {
+		for _, name := range args {
+			cs := MatchAll(h, ct, name)
+			if len(cs) == 0 {
+				continue
+			}
+			n++
+			allcs = append(allcs, cs...)
+		}
+
+		if n == 0 {
+			return os.ErrNotExist
+		}
+	}
+
+	var wg sync.WaitGroup
+	for _, c := range allcs {
+		wg.Add(1)
+		go func(c geneos.Instance) {
+			defer wg.Done()
+			if err = fn(c, params...); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
+				fmt.Printf("%s: %s\n", c, err)
+			}
+		}(c)
+	}
+	wg.Wait()
+
+	return nil
+}
+
 // ForAllWithResults calls the function fn for each matching instance
 // and gather the return values into a slice of interfaces for handling
 // upstream. The slice is sorted by host, type and name. Errors are printed

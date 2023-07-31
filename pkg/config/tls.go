@@ -117,6 +117,29 @@ func ParseKey(keyPEM *memguard.Enclave) (privateKey any, publickey crypto.Public
 	return
 }
 
+// PublicKey parses the PEM encoded private key and returns the public
+// key if successful. It will first try as PKCS#8 and then PKCS#1 if
+// that fails. Using this over ParseKey() ensures the decoded private
+// key is not returned to the caller when not required.
+func PublicKey(keyPEM *memguard.Enclave) (publickey crypto.PublicKey, err error) {
+	var pkey any
+
+	k, err := keyPEM.Open()
+	if err != nil {
+		return
+	}
+	defer k.Destroy()
+	if pkey, err = x509.ParsePKCS8PrivateKey(k.Bytes()); err != nil {
+		if pkey, err = x509.ParsePKCS1PrivateKey(k.Bytes()); err != nil {
+			return
+		}
+	}
+	if k, ok := pkey.(crypto.Signer); ok {
+		publickey = k.Public()
+	}
+	return
+}
+
 // WriteCert writes cert as PEM to path on host h
 func WriteCert(h host.Host, p string, cert *x509.Certificate) (err error) {
 	log.Debug().Msgf("write cert to %s", p)
@@ -128,8 +151,8 @@ func WriteCert(h host.Host, p string, cert *x509.Certificate) (err error) {
 	return h.WriteFile(p, certPEM, 0644)
 }
 
-// WriteCerts concatenate certs and writes to path on host h
-func WriteCerts(h host.Host, p string, certs ...*x509.Certificate) (err error) {
+// WriteCertChain concatenate certs and writes to path on host h
+func WriteCertChain(h host.Host, p string, certs ...*x509.Certificate) (err error) {
 	log.Debug().Msgf("write certs to %s", p)
 	var certsPEM []byte
 	for _, cert := range certs {
@@ -302,10 +325,13 @@ func CreateRootCert(h host.Host, basefilepath string, cn string, overwrite bool,
 		IsCA:                  true,
 		BasicConstraintsValid: true,
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		MaxPathLen:            2,
+		MaxPathLen:            -1,
 	}
 
 	privateKeyPEM, err := NewPrivateKey(keytype)
+	if err != nil {
+		return
+	}
 
 	cert, key, err := CreateCertificateAndKey(template, template, privateKeyPEM, nil)
 	if err != nil {
@@ -349,7 +375,8 @@ func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string
 		IsCA:                  true,
 		BasicConstraintsValid: true,
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		MaxPathLen:            1,
+		MaxPathLen:            0,
+		MaxPathLenZero:        true,
 	}
 
 	rootCert, err := ParseCertificate(h, rootbasefilepath+".pem")
