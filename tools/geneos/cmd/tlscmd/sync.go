@@ -80,7 +80,7 @@ func tlsSync() (err error) {
 			return
 		}
 		chainpath := path.Join(tlsPath, geneos.ChainCertFile)
-		if err = config.WriteCerts(r, chainpath, rootCert, geneosCert); err != nil {
+		if err = config.WriteCerts(r, chainpath, geneosCert, rootCert); err != nil {
 			return
 		}
 
