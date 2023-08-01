@@ -203,6 +203,6 @@ func (n *Netprobes) Command() (args, env []string, home string) {
 	return
 }
 
-func (n *Netprobes) Reload(params []string) (err error) {
+func (n *Netprobes) Reload() (err error) {
 	return geneos.ErrNotSupported
 }

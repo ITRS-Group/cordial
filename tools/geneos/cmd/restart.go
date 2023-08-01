@@ -59,13 +59,13 @@ var restartCmd = &cobra.Command{
 		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := CmdArgsParams(cmd)
-		return commandRestart(ct, args, params)
+		ct, args := CmdArgs(cmd)
+		return commandRestart(ct, args)
 	},
 }
 
-func commandRestart(ct *geneos.Component, args []string, params []string) (err error) {
-	if err = instance.ForAll(ct, Hostname, restartInstance, args, params); err != nil {
+func commandRestart(ct *geneos.Component, args []string) (err error) {
+	if err = instance.ForAll(ct, Hostname, restartInstance, args); err != nil {
 		log.Debug().Err(err).Msg("")
 		return
 	}
@@ -73,12 +73,12 @@ func commandRestart(ct *geneos.Component, args []string, params []string) (err e
 	if restartCmdLogs {
 		// also watch STDERR on start-up
 		// never returns
-		return followLogs(ct, args, params, true)
+		return followLogs(ct, args, true)
 	}
 	return
 }
 
-func restartInstance(c geneos.Instance, _ []string) (err error) {
+func restartInstance(c geneos.Instance, _ ...any) (err error) {
 	if !instance.IsAutoStart(c) {
 		return nil
 	}

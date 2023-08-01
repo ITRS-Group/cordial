@@ -51,13 +51,13 @@ var reloadCmd = &cobra.Command{
 		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := CmdArgsParams(cmd)
-		return instance.ForAll(ct, Hostname, reloadInstance, args, params)
+		ct, args := CmdArgs(cmd)
+		return instance.ForAll(ct, Hostname, reloadInstance, args)
 	},
 }
 
-func reloadInstance(c geneos.Instance, params []string) (err error) {
-	err = c.Reload(params)
+func reloadInstance(c geneos.Instance, _ ...any) (err error) {
+	err = c.Reload()
 	if err == nil {
 		fmt.Printf("%s: reload signal sent\n", c)
 	}

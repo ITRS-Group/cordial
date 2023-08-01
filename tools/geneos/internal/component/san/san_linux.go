@@ -28,6 +28,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-func (s *Sans) Reload(params []string) (err error) {
+func (s *Sans) Reload() (err error) {
 	return instance.Signal(s, syscall.SIGUSR1)
 }

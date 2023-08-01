@@ -108,7 +108,7 @@ geneos package update netprobe 5.13.2
 		}
 
 		version := updateCmdVersion
-		cs := instance.MatchKeyValue(h, ct, "protected", "true")
+		cs := instance.ByKeyValue(h, ct, "protected", "true")
 		if len(cs) > 0 && !updateCmdForce {
 			fmt.Println("There are one or more protected instances using the current version. Use `--force` to override")
 			return
@@ -117,7 +117,7 @@ geneos package update netprobe 5.13.2
 			version = args[0]
 		}
 		if updateCmdRestart {
-			cs := instance.MatchKeyValue(h, ct, "version", updateCmdBase)
+			cs := instance.ByKeyValue(h, ct, "version", updateCmdBase)
 			log.Debug().Msgf("instances to stop: %v", cs)
 			for _, c := range cs {
 				if err = instance.Stop(c, updateCmdForce, false); err == nil {

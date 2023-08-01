@@ -55,12 +55,12 @@ var enableCmd = &cobra.Command{
 		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := CmdArgsParams(cmd)
-		return instance.ForAll(ct, Hostname, enableInstance, args, params)
+		ct, args := CmdArgs(cmd)
+		return instance.ForAll(ct, Hostname, enableInstance, args)
 	},
 }
 
-func enableInstance(c geneos.Instance, params []string) (err error) {
+func enableInstance(c geneos.Instance, _ ...any) (err error) {
 	if !instance.IsDisabled(c) {
 		return
 	}

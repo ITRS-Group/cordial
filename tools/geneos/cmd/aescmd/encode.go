@@ -97,7 +97,7 @@ var encodeCmd = &cobra.Command{
 
 		ct, args := cmd.CmdArgs(command)
 		pw, _ := plaintext.Open()
-		err = instance.ForAll(ct, cmd.Hostname, aesEncodeInstance, args, []string{base64.StdEncoding.EncodeToString(pw.Bytes())})
+		err = instance.ForAllWithParams(ct, cmd.Hostname, aesEncodeInstance, args, []string{base64.StdEncoding.EncodeToString(pw.Bytes())})
 		pw.Destroy()
 		return
 	},

@@ -197,7 +197,7 @@ func (l *Licds) Command() (args, env []string, home string) {
 	return
 }
 
-func (l *Licds) Reload(params []string) (err error) {
+func (l *Licds) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 

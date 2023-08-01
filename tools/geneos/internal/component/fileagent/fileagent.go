@@ -204,7 +204,7 @@ func (c *FileAgents) Command() (args, env []string, home string) {
 	return
 }
 
-func (c *FileAgents) Reload(params []string) (err error) {
+func (c *FileAgents) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 

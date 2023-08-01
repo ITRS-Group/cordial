@@ -259,7 +259,7 @@ func (n *CA3s) Command() (args, env []string, home string) {
 	return
 }
 
-func (n *CA3s) Reload(params []string) (err error) {
+func (n *CA3s) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 

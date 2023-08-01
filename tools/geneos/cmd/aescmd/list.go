@@ -85,19 +85,20 @@ geneos aes ls -S gateway -H localhost -c
 		"needshomedir": "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmd.CmdArgsParams(command)
+		ct, args := cmd.CmdArgs(command)
 
 		h := geneos.GetHost(cmd.Hostname)
 		if listCmdShared {
-
+			// XXX
 		}
+
 		switch {
 		case listCmdJSON, listCmdIndent:
 			var results []interface{}
 			if listCmdShared {
 				results, _ = aesListSharedJSON(ct, h)
 			} else {
-				results, _ = instance.ForAllWithResults(ct, cmd.Hostname, aesListInstanceJSON, args, params)
+				results, _ = instance.ForAllWithResults(ct, cmd.Hostname, aesListInstanceJSON, args, "")
 			}
 			var b []byte
 			if listCmdIndent {
@@ -112,7 +113,7 @@ geneos aes ls -S gateway -H localhost -c
 			if listCmdShared {
 				aesListSharedCSV(ct, h)
 			} else {
-				err = instance.ForAll(ct, cmd.Hostname, aesListInstanceCSV, args, params)
+				err = instance.ForAll(ct, cmd.Hostname, aesListInstanceCSV, args)
 			}
 			aesListCSVWriter.Flush()
 		default:
@@ -120,7 +121,7 @@ geneos aes ls -S gateway -H localhost -c
 			if listCmdShared {
 				results, err = aesListShared(ct, h)
 			} else {
-				results, err = instance.ForAllWithResults(ct, cmd.Hostname, aesListInstance, args, params)
+				results, err = instance.ForAllWithResults(ct, cmd.Hostname, aesListInstance, args, "")
 			}
 			if err != nil {
 				return
@@ -156,7 +157,7 @@ func aesListPath(ct *geneos.Component, h *geneos.Host, name string, path config.
 	return fmt.Sprintf("%s\t%s\t%s\t%s\t%08X\t%s\n", ct, name, h, path, crc, s.ModTime().Format(time.RFC3339)), nil
 }
 
-func aesListInstance(c geneos.Instance, params []string) (result interface{}, err error) {
+func aesListInstance(c geneos.Instance, _ string) (result interface{}, err error) {
 	var output, outputprev string
 	path := config.KeyFile(instance.PathOf(c, "keyfile"))
 	prev := config.KeyFile(instance.PathOf(c, "prevkeyfile"))
@@ -218,7 +219,7 @@ func aesListPathCSV(ct *geneos.Component, h *geneos.Host, name string, path conf
 	return
 }
 
-func aesListInstanceCSV(c geneos.Instance, params []string) (err error) {
+func aesListInstanceCSV(c geneos.Instance, _ ...any) (err error) {
 	path := config.KeyFile(instance.PathOf(c, "keyfile"))
 	prev := config.KeyFile(instance.PathOf(c, "prevkeyfile"))
 	aesListPathCSV(c.Type(), c.Host(), c.Name(), path)
@@ -313,7 +314,7 @@ func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results []interfac
 	return
 }
 
-func aesListInstanceJSON(c geneos.Instance, params []string) (result interface{}, err error) {
+func aesListInstanceJSON(c geneos.Instance, _ string) (result interface{}, err error) {
 	path := config.KeyFile(instance.PathOf(c, "keyfile"))
 	return aesListPathJSON(c.Type(), c.Host(), c.Name(), path)
 }

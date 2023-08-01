@@ -91,7 +91,7 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 		return nil
 	}
 
-	src, err := Match(geneos.ALL, ct, source)
+	src, err := ByName(geneos.ALL, ct, source)
 	if err != nil {
 		return fmt.Errorf("%w: %q %q", err, ct, source)
 	}

@@ -109,7 +109,7 @@ geneos aes new -S gateway
 						return
 					}
 					params := []string{crcstr + ".aes"}
-					instance.ForAll(ct, cmd.Hostname, aesNewSetInstance, args, params)
+					instance.ForAllWithParams(ct, cmd.Hostname, aesNewSetInstance, args, params)
 				}
 			}
 

@@ -172,7 +172,7 @@ geneos install netprobe -b active_dev -U
 			return install(h, ct, options...)
 		}
 
-		cs := instance.MatchKeyValue(h, ct, "protected", "true")
+		cs := instance.ByKeyValue(h, ct, "protected", "true")
 		if len(cs) > 0 && installCmdUpdate && !installCmdForce {
 			fmt.Println("There are one or more protected instances using the current version. Use `--force` to override")
 			return
@@ -180,7 +180,7 @@ geneos install netprobe -b active_dev -U
 
 		// stop instances early. once we get to components, we don't know about instances
 		if installCmdUpdate {
-			instances := instance.MatchKeyValue(h, ct, "version", installCmdBase)
+			instances := instance.ByKeyValue(h, ct, "version", installCmdBase)
 			for _, c := range instances {
 				if err = instance.Stop(c, installCmdForce, false); err == nil {
 					// only restart instances that we stopped, regardless of success of install/update

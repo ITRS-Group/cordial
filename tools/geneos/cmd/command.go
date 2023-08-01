@@ -55,9 +55,9 @@ var commandCmd = &cobra.Command{
 		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := CmdArgsParams(cmd)
+		ct, args := CmdArgs(cmd)
 		if commandCmdJSON {
-			results, err := instance.ForAllWithResults(ct, Hostname, commandInstanceJSON, args, params)
+			results, err := instance.ForAllWithResults(ct, Hostname, commandInstanceJSON, args, "")
 			if err != nil {
 				return err
 			}
@@ -68,11 +68,11 @@ var commandCmd = &cobra.Command{
 			fmt.Println(string(b))
 			return nil
 		}
-		return instance.ForAll(ct, Hostname, commandInstance, args, params)
+		return instance.ForAll(ct, Hostname, commandInstance, args)
 	},
 }
 
-func commandInstance(c geneos.Instance, params []string) (err error) {
+func commandInstance(c geneos.Instance, _ ...any) (err error) {
 	fmt.Printf("=== %s ===\n", c)
 	cmd, env, home := instance.BuildCmd(c, true)
 	if cmd != nil {
@@ -91,7 +91,7 @@ func commandInstance(c geneos.Instance, params []string) (err error) {
 	return
 }
 
-func commandInstanceJSON(c geneos.Instance, params []string) (result interface{}, err error) {
+func commandInstanceJSON(c geneos.Instance, _ string) (result interface{}, err error) {
 	cmd, env, home := instance.BuildCmd(c, true)
 	command := &command{
 		Instance: c.Name(),
