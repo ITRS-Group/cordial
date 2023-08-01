@@ -53,8 +53,8 @@ func UseKeyFile(h *Host, ct *Component, keyfile config.KeyFile, keycrc string) (
 	crcfile := KeyFileNormalise(keycrc)
 
 	onHost := h
-	for _, ct := range ct.OrList(UsesKeyFiles()...) {
-		for _, h := range h.OrList(ALL) {
+	for _, h := range h.OrList(ALL) {
+		for _, ct := range ct.OrList(UsesKeyFiles()...) {
 			path = ct.Shared(h, "keyfiles", crcfile)
 			log.Debug().Msgf("looking for keyfile %s on %s", path, h)
 			if _, err := h.Stat(path); err == nil {
@@ -108,8 +108,8 @@ func ImportKeyValues(h *Host, ct *Component, kv *config.KeyValues) (crc uint32, 
 
 	// at this point we have an AESValue struct and a CRC to use as
 	// the filename base. create 'keyfiles' directory as required
-	for _, ct := range ct.OrList(UsesKeyFiles()...) {
-		for _, h := range h.OrList(AllHosts()...) {
+	for _, h := range h.OrList(AllHosts()...) {
+		for _, ct := range ct.OrList(UsesKeyFiles()...) {
 			if err = SaveKeyFileShared(h, ct, kv); err != nil {
 				return
 			} else if err == nil {
@@ -136,7 +136,7 @@ func SaveKeyFileShared(h *Host, ct *Component, a *config.KeyValues) (err error) 
 	// save given keyfile
 	file := ct.Shared(h, "keyfiles", crcstr+".aes")
 	if _, err := h.Stat(file); err == nil {
-		fmt.Printf("keyfile %s.aes already exists in shared directory for %s on %s\n", crcstr, ct, h)
+		fmt.Printf("keyfile %s.aes already exists in %s shared directory on %s\n", crcstr, ct, h)
 		return nil
 	}
 	if err := h.MkdirAll(path.Dir(file), 0775); err != nil {
@@ -153,15 +153,15 @@ func SaveKeyFileShared(h *Host, ct *Component, a *config.KeyValues) (err error) 
 	if err = a.Write(w); err != nil {
 		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
 	}
-	fmt.Printf("keyfile %s.aes saved to shared directory for %s on %s\n", crcstr, ct, h)
+	fmt.Printf("keyfile %s.aes saved to %s shared directory on %s\n", crcstr, ct, h)
 	return
 }
 
 // KeyFileNormalise returns the input in for format "DIR/HEX.aes" where
 // HEX is an 8 hexadecimal digit string in uppercase and DIR is any
-// leading path before the file name. If the input is not either an 8
-// digit hex string (in any case) with or without the extension ".aes"
-// (in any case) then the input is returned unchanged.
+// leading path before the file name. If the input is neither an 8 digit
+// hex string (in upper or lower case) with or without the extension
+// ".aes" (in upper or lower case) then the input is returned unchanged.
 func KeyFileNormalise(in string) (out string) {
 	out = in
 

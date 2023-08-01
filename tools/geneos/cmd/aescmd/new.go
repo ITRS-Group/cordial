@@ -103,8 +103,8 @@ geneos aes new -S gateway
 			ct, args, _ := cmd.CmdArgsParams(command)
 			h := geneos.GetHost(cmd.Hostname)
 
-			for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-				for _, h := range h.OrList(geneos.AllHosts()...) {
+			for _, h := range h.OrList(geneos.AllHosts()...) {
+				for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 					if err = geneos.SaveKeyFileShared(h, ct, kv); err != nil {
 						return
 					}
