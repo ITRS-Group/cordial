@@ -104,13 +104,13 @@ var deployCmd = &cobra.Command{
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		AnnotationWildcard:  "false",
+		AnnotationNeedsHome: "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		var name string
 
-		ct, args, params := CmdArgsParams(cmd)
+		ct, names, params := TypeNamesParams(cmd)
 		if ct == nil {
 			fmt.Println("component type must be given for a deployment")
 			return nil
@@ -119,8 +119,8 @@ var deployCmd = &cobra.Command{
 		// name is from hidden --name, then NAME and finally use hostname
 		if deployCmdName != "" {
 			name = deployCmdName
-		} else if len(args) > 0 {
-			name = args[0]
+		} else if len(names) > 0 {
+			name = names[0]
 		}
 
 		// check we have a Geneos directory, update host based on instance

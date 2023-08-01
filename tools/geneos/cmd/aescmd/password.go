@@ -53,8 +53,8 @@ var passwordCmd = &cobra.Command{
 	Aliases:      []string{"passwd"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var plaintext *config.Plaintext

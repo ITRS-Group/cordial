@@ -53,12 +53,12 @@ var renewCmd = &cobra.Command{
 	Long:         renewCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		cmd.AnnotationWildcard:  "true",
+		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args := cmd.CmdArgs(command)
-		_, err = instance.ForAll(geneos.GetHost(cmd.Hostname), ct, renewInstanceCert, args)
+		ct, names := cmd.TypeNames(command)
+		_, err = instance.Do(geneos.GetHost(cmd.Hostname), ct, names, renewInstanceCert)
 		return
 	},
 }

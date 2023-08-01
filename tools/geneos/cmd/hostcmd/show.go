@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/spf13/cobra"
 )
@@ -52,8 +53,8 @@ var showCmd = &cobra.Command{
 	Long:         showCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var hosts []*geneos.Host

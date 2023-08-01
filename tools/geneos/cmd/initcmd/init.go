@@ -103,8 +103,8 @@ geneos init
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "false",
 	},
 	// initialise a geneos installation
 	//
@@ -113,7 +113,7 @@ geneos init
 	//
 	// XXX Call any registered initializer funcs from components
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args := cmd.CmdArgs(command)
+		ct, args := cmd.TypeNames(command)
 		log.Debug().Msgf("%s %v", ct, args)
 		// none of the arguments can be a reserved type
 		if ct != nil {
@@ -158,9 +158,9 @@ var initTLSCmd = &cobra.Command{
 	Long:         "Alias for `geneos tls init`",
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "true",
-		"aliasfor":     "tls init",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "true",
+		cmd.AnnotationAliasFor:  "tls init",
 	},
 	Hidden:                true,
 	DisableFlagParsing:    true,

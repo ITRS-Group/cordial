@@ -45,8 +45,8 @@ var aesCmd = &cobra.Command{
 	Long:         aesCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "true",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "true",
 	},
 	DisableFlagParsing:    true,
 	DisableFlagsInUseLine: true,

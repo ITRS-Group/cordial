@@ -277,14 +277,14 @@ func ByKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (confs 
 	return
 }
 
-// ForAll calls the function fn for each matching instance and gathers
+// Do calls the function fn for each matching instance and gathers
 // the return values into a slice for handling upstream. The functions are
 // called in go routine and must be concurrency safe.
 //
 // The slice is sorted by host, type and name. Errors are printed on
 // STDOUT for each call and the only error returned ErrNotExist if there
 // are no matches.
-func ForAll(h *geneos.Host, ct *geneos.Component, fn func(geneos.Instance) (any, error), names []string) (results []any, err error) {
+func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance) (any, error)) (results []any, err error) {
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
 	var instanceList []geneos.Instance
@@ -317,14 +317,14 @@ func ForAll(h *geneos.Host, ct *geneos.Component, fn func(geneos.Instance) (any,
 	return results, nil
 }
 
-// ForAllWithParamStringSlice calls  function fn with the string slice
+// DoWithStringSlice calls function fn with the string slice
 // params for each matching instance and gathers the return values into
 // a slice for handling upstream. The functions are called in go
 // routine and must be concurrency safe.
 //
 // It sends any returned error on STDOUT and the only error returned is
 // os.ErrNotExist if there are no matching instances.
-func ForAllWithParamStringSlice(h *geneos.Host, ct *geneos.Component, fn func(geneos.Instance, []string) (any, error), names []string, params []string) (results []any, err error) {
+func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, []string) (any, error), params []string) (results []any, err error) {
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
 	var instanceList []geneos.Instance
@@ -357,7 +357,7 @@ func ForAllWithParamStringSlice(h *geneos.Host, ct *geneos.Component, fn func(ge
 	return results, nil
 }
 
-// ForAllWithParams calls function fn for each matching instance and
+// DoWithParams calls function fn for each matching instance and
 // gathers the return values into a slice for handling upstream. The
 // functions are called in go routine and must be concurrency safe.
 //
@@ -365,7 +365,7 @@ func ForAllWithParamStringSlice(h *geneos.Host, ct *geneos.Component, fn func(ge
 // os.ErrNotExist if there are no matching instances. params are passed
 // as a variadic list of any type. The called function should validate
 // and cast params for use.
-func ForAllWithParams(h *geneos.Host, ct *geneos.Component, fn func(geneos.Instance, ...any) (any, error), names []string, params ...any) (results []any, err error) {
+func DoWithParams(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, ...any) (any, error), params ...any) (results []any, err error) {
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
 	var instanceList []geneos.Instance

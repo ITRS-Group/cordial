@@ -45,12 +45,12 @@ var newCmd = &cobra.Command{
 	Long:         newCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		cmd.AnnotationWildcard:  "true",
+		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args := cmd.CmdArgs(command)
-		_, err = instance.ForAll(geneos.GetHost(cmd.Hostname), ct, newInstanceCert, args)
+		ct, names := cmd.TypeNames(command)
+		_, err = instance.Do(geneos.GetHost(cmd.Hostname), ct, names, newInstanceCert)
 		return
 	},
 }

@@ -67,12 +67,12 @@ var importCmd = &cobra.Command{
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "true",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmd.CmdArgsParams(command)
-		log.Debug().Msgf("ct=%s args=%v params=%v", ct, args, params)
+		ct, names, params := cmd.TypeNamesParams(command)
+		log.Debug().Msgf("ct=%s args=%v params=%v", ct, names, params)
 
 		if importCmdCert != "" && importCmdSigner != "" {
 			return errors.New("you can only import an instance *or* a signing certificate, not both")
@@ -83,7 +83,7 @@ var importCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			instance.ForAllWithParams(geneos.GetHost(cmd.Hostname), ct, tlsWriteInstance, args, cert, privkey)
+			instance.DoWithParams(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, cert, privkey)
 			if importCmdChain == "" {
 				if err = tlsWriteChainLocal(chain); err != nil {
 					return err
@@ -96,7 +96,7 @@ var importCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			instance.ForAllWithParams(geneos.GetHost(cmd.Hostname), ct, tlsWriteInstance, args, cert, privkey)
+			instance.DoWithParams(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, cert, privkey)
 			if importCmdChain == "" {
 				if err = tlsWriteChainLocal(chain); err != nil {
 					return err

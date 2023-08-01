@@ -61,11 +61,11 @@ var sanCmd = &cobra.Command{
 	Long:         sanCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmd.CmdArgsParams(command)
+		ct, args, params := cmd.TypeNamesParams(command)
 		log.Debug().Msgf("%s %v %v", ct, args, params)
 		// none of the arguments can be a reserved type
 		if ct != nil {

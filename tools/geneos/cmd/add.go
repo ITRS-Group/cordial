@@ -85,20 +85,20 @@ geneos add netprobe infraprobe12 --start --log
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "true",
+		AnnotationWildcard:  "false",
+		AnnotationNeedsHome: "true",
 	},
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := CmdArgsParams(cmd)
-		return AddInstance(ct, addCmdExtras, params, args...)
+		ct, names, params := TypeNamesParams(cmd)
+		return AddInstance(ct, addCmdExtras, params, names...)
 	},
 }
 
 // AddInstance add an instance of ct the the option extra configuration values addCmdExtras
-func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, items []string, args ...string) (err error) {
+func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, items []string, names ...string) (err error) {
 	// check validity and reserved words here
-	name := args[0]
+	name := names[0]
 
 	h := geneos.GetHost(Hostname)
 	if h == geneos.ALL {

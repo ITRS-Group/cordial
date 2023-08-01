@@ -68,12 +68,12 @@ geneos package update netprobe 5.13.2
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "true",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "true",
 	},
 	Args: cobra.RangeArgs(0, 2),
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmd.CmdArgsParams(command)
+		ct, args, params := cmd.TypeNamesParams(command)
 
 		for _, p := range params {
 			if strings.HasPrefix(p, "@") {

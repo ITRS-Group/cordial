@@ -84,8 +84,8 @@ geneos install netprobe -b active_dev -U
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		if installCmdDownloadOnly {
@@ -101,7 +101,7 @@ geneos install netprobe -b active_dev -U
 			}
 		}
 
-		ct, args, params := cmd.CmdArgsParams(command)
+		ct, args, params := cmd.TypeNamesParams(command)
 
 		for _, p := range params {
 			if strings.HasPrefix(p, "@") {

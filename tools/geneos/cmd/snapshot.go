@@ -72,12 +72,12 @@ var snapshotCmd = &cobra.Command{
 	Long:         snapshotCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"ct":           "gateway",
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationComponent: "gateway",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args, params := CmdArgsParams(cmd)
+		ct, names, params := TypeNamesParams(cmd)
 		if len(params) == 0 {
 			return fmt.Errorf("no dataview xpath(s) supplied")
 		}
@@ -106,7 +106,7 @@ var snapshotCmd = &cobra.Command{
 
 		// at this point snapshotCmdUsername/Password contain global or
 		// command line values. These can be overridden per-instance.
-		_, err = instance.ForAllWithParamStringSlice(geneos.GetHost(Hostname), ct, snapshotInstance, args, params)
+		_, err = instance.DoWithStringSlice(geneos.GetHost(Hostname), ct, names, snapshotInstance, params)
 		return
 	},
 }

@@ -71,14 +71,14 @@ geneos set ...
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, origargs []string) (err error) {
-		if len(origargs) == 0 && cmd.Flags().NFlag() == 0 {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		if len(args) == 0 && cmd.Flags().NFlag() == 0 {
 			return cmd.Usage()
 		}
-		ct, args, params := CmdArgsParams(cmd)
+		ct, names, params := TypeNamesParams(cmd)
 
 		// check if secure args are set, prompt once for each without a supplied value
 
@@ -89,12 +89,12 @@ geneos set ...
 			return nil
 		}
 
-		return Set(ct, args, params)
+		return Set(ct, names, params)
 	},
 }
 
 func Set(ct *geneos.Component, args, params []string) (err error) {
-	_, err = instance.ForAllWithParamStringSlice(geneos.GetHost(Hostname), ct, setInstance, args, params)
+	_, err = instance.DoWithStringSlice(geneos.GetHost(Hostname), ct, args, setInstance, params)
 	return
 }
 

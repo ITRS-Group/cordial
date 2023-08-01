@@ -67,15 +67,15 @@ geneos unset san -g Gateway1
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, origargs []string) (err error) {
-		if len(origargs) == 0 && cmd.Flags().NFlag() == 0 {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		if len(args) == 0 && cmd.Flags().NFlag() == 0 {
 			return cmd.Usage()
 		}
-		ct, args := CmdArgs(cmd)
-		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, unsetInstance, args)
+		ct, names := TypeNames(cmd)
+		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, unsetInstance)
 		return
 	},
 }

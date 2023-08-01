@@ -63,11 +63,11 @@ var listCmd = &cobra.Command{
 	Aliases:      []string{"ls"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "true",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
-		ct, _ := cmd.CmdArgs(command)
+		ct, _ := cmd.TypeNames(command)
 
 		h := geneos.GetHost(cmd.Hostname)
 		versions := []geneos.ReleaseDetails{}

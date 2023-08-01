@@ -50,8 +50,8 @@ geneos config geneos=/opt/itrs
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "false",
 	},
 	DisableFlagParsing:    true,
 	DisableFlagsInUseLine: true,

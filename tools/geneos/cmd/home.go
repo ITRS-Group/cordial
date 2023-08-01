@@ -51,13 +51,13 @@ cat $(geneos home gateway example2)/gateway.txt
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "true",
+		AnnotationWildcard:  "false",
+		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, _ := CmdArgsParams(cmd)
+		ct, names, _ := TypeNamesParams(cmd)
 
-		if len(args) == 0 {
+		if len(names) == 0 {
 			if ct == nil {
 				fmt.Println(geneos.Root())
 				return nil
@@ -66,7 +66,7 @@ cat $(geneos home gateway example2)/gateway.txt
 			return nil
 		}
 
-		i, err := instance.ByName(geneos.GetHost(Hostname), ct, args[0])
+		i, err := instance.ByName(geneos.GetHost(Hostname), ct, names[0])
 
 		if err != nil || !i.Host().IsLocal() {
 			fmt.Println(geneos.Root())

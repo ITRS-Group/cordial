@@ -69,8 +69,8 @@ geneos aes new -S gateway
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		cmd.AnnotationWildcard:  "true",
+		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var crc uint32
@@ -100,7 +100,7 @@ geneos aes new -S gateway
 		}
 
 		if newCmdImportShared {
-			ct, args, _ := cmd.CmdArgsParams(command)
+			ct, names, _ := cmd.TypeNamesParams(command)
 			h := geneos.GetHost(cmd.Hostname)
 
 			for _, h := range h.OrList(geneos.AllHosts()...) {
@@ -109,7 +109,7 @@ geneos aes new -S gateway
 						return
 					}
 					params := []string{crcstr + ".aes"}
-					instance.ForAllWithParamStringSlice(h, ct, aesNewSetInstance, args, params)
+					instance.DoWithStringSlice(h, ct, names, aesNewSetInstance, params)
 				}
 			}
 
