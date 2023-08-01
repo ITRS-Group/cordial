@@ -50,17 +50,17 @@ var startCmd = &cobra.Command{
 	Long:         startCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, origargs []string) error {
-		ct, args, params := CmdArgsParams(cmd)
+		ct, names, params := TypeNamesParams(cmd)
 		var autostart bool
 		// if we have a TYPE and at least one NAME then autostart is on
 		if ct != nil && len(origargs) > 1 {
 			autostart = true
 		}
-		return Start(ct, startCmdLogs, autostart, args, params)
+		return Start(ct, startCmdLogs, autostart, names, params)
 	},
 }
 
@@ -69,14 +69,14 @@ var startCmd = &cobra.Command{
 // flag to, well, watch logs while autostart is a flag to indicate if
 // Start() is being called as part of a group of instances - this is for
 // use by autostart checking.
-func Start(ct *geneos.Component, watchlogs bool, autostart bool, args []string, params []string) (err error) {
-	_, err = instance.ForAll(geneos.GetHost(Hostname), ct, func(c geneos.Instance) (result any, err error) {
+func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string, params []string) (err error) {
+	_, err = instance.Do(geneos.GetHost(Hostname), ct, names, func(c geneos.Instance) (result any, err error) {
 		if instance.IsAutoStart(c) || autostart {
 			err = instance.Start(c)
 			return
 		}
 		return
-	}, args)
+	})
 	if err != nil {
 		return
 	}
@@ -84,7 +84,7 @@ func Start(ct *geneos.Component, watchlogs bool, autostart bool, args []string, 
 	if watchlogs {
 		// also watch STDERR on start-up
 		// never returns
-		return followLogs(ct, args, true)
+		return followLogs(ct, names, true)
 	}
 
 	return

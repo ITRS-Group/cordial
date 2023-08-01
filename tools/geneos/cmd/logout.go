@@ -48,8 +48,8 @@ var logoutCmd = &cobra.Command{
 	Long:         logoutCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		AnnotationWildcard:  "false",
+		AnnotationNeedsHome: "false",
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if logoutCmdAll {

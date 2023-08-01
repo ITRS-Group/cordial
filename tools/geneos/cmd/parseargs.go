@@ -27,11 +27,21 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+)
+
+const (
+	AnnotationWildcard   = "wildcard"
+	AnnotationNames      = "names"
+	AnnotationParams     = "params"
+	AnnotationNeedsHome  = "needshomedir"
+	AnnotationComponent  = "ct"
+	AnnotationReplacedBy = "replacedby"
+	AnnotationAliasFor   = "aliasfor"
 )
 
 // given a list of args (after command has been seen), check if first
@@ -48,66 +58,66 @@ import (
 // any args with '=' are treated as parameters
 //
 // a bare argument with a '@' prefix means all instance of type on a host
-func parseArgs(command *cobra.Command, rawargs []string) (err error) {
+func parseArgs(command *cobra.Command, args []string) (err error) {
 	var wild bool
 	var newnames []string
 
 	var ct *geneos.Component
-	var args, params []string
+	var names, params []string
 	h := geneos.GetHost(Hostname)
 
 	if command.Annotations == nil {
 		command.Annotations = make(map[string]string)
 	}
 	annotations := command.Annotations
-	annotations["args"] = "[]"
-	annotations["params"] = "[]"
+	// args and params are JSON arrays, initialise
+	annotations[AnnotationNames] = "[]"
+	annotations[AnnotationParams] = "[]"
 
-	if len(rawargs) == 0 && annotations["wildcard"] != "true" {
+	if len(args) == 0 && annotations[AnnotationWildcard] != "true" {
 		return nil
 	}
 
-	log.Debug().Msgf("rawargs: %s", rawargs)
+	log.Debug().Msgf("rawargs: %s", args)
 
 	// filter in place - pull out all args containing '=' into params
 	// after rebuild this should only apply to 'import'
 	n := 0
-	for _, a := range rawargs {
-		// if !instance.ValidInstanceName(a) {
+	for _, a := range args {
 		if strings.Contains(a, "=") {
 			params = append(params, a)
 		} else {
-			rawargs[n] = a
+			args[n] = a
 			n++
 		}
 	}
-	rawargs = rawargs[:n]
+	args = args[:n]
 
-	log.Debug().Msgf("rawargs %v, params %v, ct %s", rawargs, params, annotations["ct"])
+	log.Debug().Msgf("rawargs %v, params %v, ct %s", args, params, annotations[AnnotationComponent])
 
-	if _, ok := annotations["ct"]; !ok {
-		annotations["ct"] = ""
+	if _, ok := annotations[AnnotationComponent]; !ok {
+		annotations[AnnotationComponent] = ""
 	}
 	jsonargs, _ := json.Marshal(params)
-	annotations["params"] = string(jsonargs)
+	annotations[AnnotationParams] = string(jsonargs)
 
-	if annotations["wildcard"] == "false" {
-		if len(rawargs) == 0 {
+	if annotations[AnnotationWildcard] == "false" {
+		if len(args) == 0 {
 			return nil
 		}
-		if ct = geneos.ParseComponent(rawargs[0]); ct == nil {
-			jsonargs, _ := json.Marshal(rawargs)
-			annotations["args"] = string(jsonargs)
+		if ct = geneos.ParseComponent(args[0]); ct == nil {
+			jsonargs, _ := json.Marshal(args)
+			annotations[AnnotationNames] = string(jsonargs)
 			return
 		}
-		if annotations["ct"] == "" {
-			annotations["ct"] = rawargs[0]
+		if annotations[AnnotationComponent] == "" {
+			annotations[AnnotationComponent] = args[0]
 		}
-		args = rawargs[1:]
+		names = args[1:]
 	} else {
-		defaultComponent := annotations["ct"]
-		if defaultComponent == "" && len(rawargs) > 0 {
-			defaultComponent = rawargs[0]
+		defaultComponent := annotations[AnnotationComponent]
+		if defaultComponent == "" && len(args) > 0 {
+			defaultComponent = args[0]
 		}
 		// work through wildcard options
 		// if len(rawargs) == 0 {
@@ -115,28 +125,28 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 		// } else
 		if ct = geneos.ParseComponent(defaultComponent); ct == nil {
 			// first arg is not a known type, so treat the rest as instance names
-			args = rawargs
+			names = args
 		} else {
-			if annotations["ct"] == "" {
-				annotations["ct"] = rawargs[0]
-				args = rawargs[1:]
+			if annotations[AnnotationComponent] == "" {
+				annotations[AnnotationComponent] = args[0]
+				names = args[1:]
 			} else {
-				args = rawargs
+				names = args
 			}
 		}
 
-		log.Debug().Msgf("args = %+v", args)
-		if len(args) == 0 || (len(args) == 1 && args[0] == "all") {
+		log.Debug().Msgf("args = %+v", names)
+		if len(names) == 0 || (len(names) == 1 && names[0] == "all") {
 			// no args also means all instances
 			wild = true
-			args = instance.Names(h, ct)
+			names = instance.Names(h, ct)
 		} else {
 			// expand each arg and save results to a new slice
 			// if local == "", then all instances on host (e.g. @host)
 			// if host == "all" (or none given), then check instance on all hosts
 			// @all is not valid - should be no arg
 			var nargs []string
-			for _, arg := range args {
+			for _, arg := range names {
 				// check if not valid first and leave unchanged, skip
 				if !(strings.HasPrefix(arg, "@") || instance.ValidName(arg)) {
 					log.Debug().Msgf("leaving unchanged: %s", arg)
@@ -185,16 +195,16 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 					// wild = true
 				}
 			}
-			args = nargs
+			names = nargs
 		}
 	}
 
-	log.Debug().Msgf("ct %s, args %v, params %v", ct, args, params)
+	log.Debug().Msgf("ct %s, args %v, params %v", ct, names, params)
 
-	m := make(map[string]bool, len(args))
+	m := make(map[string]bool, len(names))
 	// traditional loop because we can't modify args in a loop to skip
-	for i := 0; i < len(args); i++ {
-		name := args[i]
+	for i := 0; i < len(names); i++ {
+		name := names[i]
 		// filter name here
 		if !wild && instance.ReservedName(name) {
 			log.Fatal().Msgf("%q is reserved name", name)
@@ -211,40 +221,40 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 		newnames = append(newnames, name)
 		m[name] = true
 	}
-	args = newnames
+	names = newnames
 
-	jsonargs, _ = json.Marshal(args)
-	annotations["args"] = string(jsonargs)
+	jsonargs, _ = json.Marshal(names)
+	annotations[AnnotationNames] = string(jsonargs)
 	jsonparams, _ := json.Marshal(params)
-	annotations["params"] = string(jsonparams)
+	annotations[AnnotationParams] = string(jsonparams)
 
-	if annotations["wildcard"] == "false" {
+	if annotations[AnnotationWildcard] == "false" {
 		return
 	}
 
 	// if args is empty, find them all again. ct == None too?
-	if len(args) == 0 && (geneos.Root() != "" || len(geneos.RemoteHosts(false)) > 0) && !wild {
-		args = instance.Names(h, ct)
-		jsonargs, _ := json.Marshal(args)
-		annotations["args"] = string(jsonargs)
+	if len(names) == 0 && (geneos.Root() != "" || len(geneos.RemoteHosts(false)) > 0) && !wild {
+		names = instance.Names(h, ct)
+		jsonargs, _ := json.Marshal(names)
+		annotations[AnnotationNames] = string(jsonargs)
 	}
 
-	log.Debug().Msgf("ct %s, args %v, params %v", ct, args, params)
+	log.Debug().Msgf("ct %s, args %v, params %v", ct, names, params)
 	return
 }
 
-func CmdArgs(command *cobra.Command) (ct *geneos.Component, args []string) {
+func TypeNames(command *cobra.Command) (ct *geneos.Component, args []string) {
 	log.Debug().Msgf("%s %v", command.Annotations, ct)
-	ct = geneos.ParseComponent(command.Annotations["ct"])
-	if err := json.Unmarshal([]byte(command.Annotations["args"]), &args); err != nil {
+	ct = geneos.ParseComponent(command.Annotations[AnnotationComponent])
+	if err := json.Unmarshal([]byte(command.Annotations[AnnotationNames]), &args); err != nil {
 		log.Debug().Err(err).Msg("")
 	}
 	return
 }
 
-func CmdArgsParams(command *cobra.Command) (ct *geneos.Component, args, params []string) {
-	ct, args = CmdArgs(command)
-	if err := json.Unmarshal([]byte(command.Annotations["params"]), &params); err != nil {
+func TypeNamesParams(command *cobra.Command) (ct *geneos.Component, args, params []string) {
+	ct, args = TypeNames(command)
+	if err := json.Unmarshal([]byte(command.Annotations[AnnotationParams]), &params); err != nil {
 		log.Debug().Err(err).Msg("")
 	}
 	return

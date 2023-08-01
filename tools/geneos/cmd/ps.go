@@ -85,33 +85,33 @@ var psCmd = &cobra.Command{
 	Aliases:      []string{"status"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := CmdArgsParams(cmd)
-		return CommandPS(ct, args, params)
+		ct, names, params := TypeNamesParams(cmd)
+		return CommandPS(ct, names, params)
 	},
 }
 
 // CommandPS writes running instance information to STDOUT
 //
 // XXX relies on global flags
-func CommandPS(ct *geneos.Component, args []string, params []string) (err error) {
+func CommandPS(ct *geneos.Component, names []string, params []string) (err error) {
 	switch {
 	case psCmdJSON, psCmdIndent:
 		psJSONEncoder = json.NewEncoder(os.Stdout)
 		if psCmdIndent {
 			psJSONEncoder.SetIndent("", "    ")
 		}
-		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, psInstanceJSON, args)
+		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceJSON)
 	case psCmdCSV:
 		psCSVWriter = csv.NewWriter(os.Stdout)
 		psCSVWriter.Write([]string{"Type", "Name", "Host", "PID", "Ports", "User", "Group", "Starttime", "Version", "Home"})
-		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, psInstanceCSV, args)
+		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV)
 		psCSVWriter.Flush()
 	default:
-		results, err := instance.ForAll(geneos.GetHost(Hostname), ct, psInstancePlain, args)
+		results, err := instance.Do(geneos.GetHost(Hostname), ct, names, psInstancePlain)
 		if err != nil {
 			return err
 		}

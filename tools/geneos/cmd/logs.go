@@ -85,11 +85,11 @@ var logsCmd = &cobra.Command{
 	Aliases:      []string{"log"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args := CmdArgs(cmd)
+		ct, names := TypeNames(cmd)
 
 		// if we have match or exclude with other defaults, then turn on logcat
 		if (logCmdMatch != "" || logCmdIgnore != "") && !logCmdFollow {
@@ -98,12 +98,12 @@ var logsCmd = &cobra.Command{
 
 		switch {
 		case logCmdCat:
-			_, err = instance.ForAll(geneos.GetHost(Hostname), ct, logCatInstance, args)
+			_, err = instance.Do(geneos.GetHost(Hostname), ct, names, logCatInstance)
 		case logCmdFollow:
 			// never returns
-			err = followLogs(ct, args, logCmdStderr)
+			err = followLogs(ct, names, logCmdStderr)
 		default:
-			_, err = instance.ForAll(geneos.GetHost(Hostname), ct, logTailInstance, args)
+			_, err = instance.Do(geneos.GetHost(Hostname), ct, names, logTailInstance)
 		}
 
 		return
@@ -124,7 +124,7 @@ func followLogs(ct *geneos.Component, args []string, stderr bool) (err error) {
 	logCmdStderr = stderr
 	done := make(chan bool)
 	tails = watchLogs()
-	if _, err = instance.ForAll(geneos.GetHost(Hostname), ct, logFollowInstance, args); err != nil {
+	if _, err = instance.Do(geneos.GetHost(Hostname), ct, args, logFollowInstance); err != nil {
 		log.Error().Err(err).Msg("")
 	}
 	<-done

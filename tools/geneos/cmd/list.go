@@ -74,14 +74,14 @@ var listCmd = &cobra.Command{
 	Aliases:      []string{"ls"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args := CmdArgs(cmd)
+		ct, names := TypeNames(cmd)
 		switch {
 		case listCmdJSON, listCmdIndent:
-			results, _ := instance.ForAll(geneos.GetHost(Hostname), ct, listInstanceJSON, args)
+			results, _ := instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceJSON)
 			var b []byte
 			if listCmdIndent {
 				b, _ = json.MarshalIndent(results, "", "    ")
@@ -92,10 +92,10 @@ var listCmd = &cobra.Command{
 		case listCmdCSV:
 			listCSVWriter = csv.NewWriter(os.Stdout)
 			listCSVWriter.Write([]string{"Type", "Name", "Host", "Disabled", "Protected", "AutoStart", "Port", "Version", "Home"})
-			_, err = instance.ForAll(geneos.GetHost(Hostname), ct, listInstanceCSV, args)
+			_, err = instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV)
 			listCSVWriter.Flush()
 		default:
-			results, _ := instance.ForAll(geneos.GetHost(Hostname), ct, listInstancePlain, args)
+			results, _ := instance.Do(geneos.GetHost(Hostname), ct, names, listInstancePlain)
 			listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(listTabWriter, "Type\tNames\tHost\tFlag\tPort\tVersion\tHome\n")
 			for _, r := range results {

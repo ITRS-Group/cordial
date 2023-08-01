@@ -59,8 +59,8 @@ var initCmd = &cobra.Command{
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		return tlsInit(initCmdOverwrite)

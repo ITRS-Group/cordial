@@ -142,7 +142,7 @@ geneos restart
 `, "|", "`"),
 	// SilenceUsage: true,
 	Annotations: map[string]string{
-		"needshomedir": "true",
+		AnnotationNeedsHome: "true",
 	},
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
@@ -157,12 +157,12 @@ geneos restart
 		// file, debug etc.
 		command.Root().ParseFlags(args)
 
-		// check for "replacedby" annotation, warn the user, run the new
+		// check for AnnotationReplacedBy annotation, warn the user, run the new
 		// command later (after prerun) but if the help flag is set
 		// output the help for the new command and cleanly exit.
 		var newcmd *cobra.Command
 
-		if r, ok := command.Annotations["replacedby"]; ok {
+		if r, ok := command.Annotations[AnnotationReplacedBy]; ok {
 			var newargs []string
 			// args := strings.Split(r, " ")
 			newcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
@@ -180,7 +180,7 @@ geneos restart
 		}
 
 		// same as above, but no warning message
-		if r, ok := command.Annotations["aliasfor"]; ok {
+		if r, ok := command.Annotations[AnnotationReplacedBy]; ok {
 			var newargs []string
 			// args := strings.Split(r, " ")
 			newcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
@@ -218,7 +218,7 @@ geneos restart
 
 		// check initialisation
 		if geneos.Root() == "" && len(geneos.RemoteHosts(false)) == 0 {
-			if command.Annotations["needshomedir"] == "true" {
+			if command.Annotations[AnnotationNeedsHome] == "true" {
 				command.SetUsageTemplate(" ")
 				return GeneosUnsetError
 			}

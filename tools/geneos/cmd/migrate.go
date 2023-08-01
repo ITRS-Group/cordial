@@ -53,17 +53,17 @@ var migrateCmd = &cobra.Command{
 	Long:         migrateCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args := CmdArgs(cmd)
+		ct, names := TypeNames(cmd)
 		if migrateCmdExecutables {
 			if err := migrateCommands(); err != nil {
 				log.Error().Err(err).Msg("migrating old executables failed")
 			}
 		}
-		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, migrateInstance, args)
+		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, migrateInstance)
 		return
 	},
 }

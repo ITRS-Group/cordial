@@ -61,14 +61,14 @@ var setCmd = &cobra.Command{
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
 		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
 			return command.Usage()
 		}
-		_, args, params := cmd.CmdArgsParams(command)
+		_, args, params := cmd.TypeNamesParams(command)
 		var password string
 		var hosts []*geneos.Host
 

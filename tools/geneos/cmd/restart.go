@@ -55,17 +55,17 @@ var restartCmd = &cobra.Command{
 	Long:         restartCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args := CmdArgs(cmd)
-		return commandRestart(ct, args)
+		ct, names := TypeNames(cmd)
+		return commandRestart(ct, names)
 	},
 }
 
 func commandRestart(ct *geneos.Component, args []string) (err error) {
-	if _, err = instance.ForAll(geneos.GetHost(Hostname), ct, restartInstance, args); err != nil {
+	if _, err = instance.Do(geneos.GetHost(Hostname), ct, args, restartInstance); err != nil {
 		log.Debug().Err(err).Msg("")
 		return
 	}

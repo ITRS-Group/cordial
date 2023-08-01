@@ -51,12 +51,12 @@ var enableCmd = &cobra.Command{
 	Long:         enableCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args := CmdArgs(cmd)
-		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, enableInstance, args)
+		ct, names := TypeNames(cmd)
+		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, enableInstance)
 		return
 	},
 }

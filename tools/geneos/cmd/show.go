@@ -82,11 +82,11 @@ var showCmd = &cobra.Command{
 	Aliases:      []string{"details"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		ct, args, params := CmdArgsParams(cmd)
+	RunE: func(cmd *cobra.Command, names []string) (err error) {
+		ct, names, params := TypeNamesParams(cmd)
 		output := os.Stdout
 		if showCmdOutput != "" {
 			output, err = os.Create(showCmdOutput)
@@ -109,7 +109,7 @@ var showCmd = &cobra.Command{
 			}
 
 			var results []interface{}
-			results, err = instance.ForAllWithParams(geneos.GetHost(Hostname), ct, showValidateInstance, args, showCmdHooksDir)
+			results, err = instance.DoWithParams(geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir)
 
 			if err != nil {
 				if err == os.ErrNotExist {
@@ -128,7 +128,7 @@ var showCmd = &cobra.Command{
 
 		if showCmdSetup {
 			var results []interface{}
-			results, err = instance.ForAllWithParams(geneos.GetHost(Hostname), ct, showInstanceConfig, args, fmt.Sprint(showCmdMerge))
+			results, err = instance.DoWithParams(geneos.GetHost(Hostname), ct, names, showInstanceConfig, fmt.Sprint(showCmdMerge))
 
 			if err != nil {
 				if err == os.ErrNotExist {
@@ -144,7 +144,7 @@ var showCmd = &cobra.Command{
 			}
 			return
 		}
-		results, err := instance.ForAll(geneos.GetHost(Hostname), ct, showInstance, args)
+		results, err := instance.Do(geneos.GetHost(Hostname), ct, names, showInstance)
 		if err != nil {
 			if err == os.ErrNotExist {
 				return fmt.Errorf("no matching instance found")

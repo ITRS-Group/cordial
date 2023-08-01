@@ -53,12 +53,12 @@ var disableCmd = &cobra.Command{
 	Long:         disableCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args := CmdArgs(cmd)
-		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, disableInstance, args)
+		ct, names := TypeNames(cmd)
+		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, disableInstance)
 		return
 	},
 }

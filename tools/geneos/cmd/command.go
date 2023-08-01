@@ -51,13 +51,13 @@ var commandCmd = &cobra.Command{
 	Long:         commandCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args := CmdArgs(cmd)
+		ct, names := TypeNames(cmd)
 		if commandCmdJSON {
-			results, err := instance.ForAll(geneos.GetHost(Hostname), ct, commandInstanceJSON, args)
+			results, err := instance.Do(geneos.GetHost(Hostname), ct, names, commandInstanceJSON)
 			if err != nil {
 				return err
 			}
@@ -68,7 +68,7 @@ var commandCmd = &cobra.Command{
 			fmt.Println(string(b))
 			return nil
 		}
-		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, commandInstance, args)
+		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, commandInstance)
 		return
 	},
 }

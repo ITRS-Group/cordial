@@ -78,12 +78,12 @@ geneos import gateway -c shared common_include.xml
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := CmdArgsParams(cmd)
-		return ImportFiles(ct, args, params)
+		ct, names, params := TypeNamesParams(cmd)
+		return ImportFiles(ct, names, params)
 	},
 }
 
@@ -105,7 +105,7 @@ func ImportFiles(ct *geneos.Component, args []string, sources []string) (err err
 		return nil
 	}
 
-	_, err = instance.ForAllWithParamStringSlice(geneos.GetHost(Hostname), ct, importInstance, args, sources)
+	_, err = instance.DoWithStringSlice(geneos.GetHost(Hostname), ct, args, importInstance, sources)
 	return
 }
 

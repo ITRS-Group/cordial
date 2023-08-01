@@ -81,11 +81,11 @@ geneos aes ls -S gateway -H localhost -c
 	Aliases:      []string{"ls"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		cmd.AnnotationWildcard:  "true",
+		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args := cmd.CmdArgs(command)
+		ct, names := cmd.TypeNames(command)
 
 		h := geneos.GetHost(cmd.Hostname)
 		if listCmdShared {
@@ -98,7 +98,7 @@ geneos aes ls -S gateway -H localhost -c
 			if listCmdShared {
 				results, _ = aesListSharedJSON(ct, h)
 			} else {
-				results, _ = instance.ForAll(h, ct, aesListInstanceJSON, args)
+				results, _ = instance.Do(h, ct, names, aesListInstanceJSON)
 			}
 			var b []byte
 			if listCmdIndent {
@@ -113,7 +113,7 @@ geneos aes ls -S gateway -H localhost -c
 			if listCmdShared {
 				aesListSharedCSV(ct, h)
 			} else {
-				_, err = instance.ForAll(h, ct, aesListInstanceCSV, args)
+				_, err = instance.Do(h, ct, names, aesListInstanceCSV)
 			}
 			aesListCSVWriter.Flush()
 		default:
@@ -121,7 +121,7 @@ geneos aes ls -S gateway -H localhost -c
 			if listCmdShared {
 				results, err = aesListShared(ct, h)
 			} else {
-				results, err = instance.ForAll(h, ct, aesListInstance, args)
+				results, err = instance.Do(h, ct, names, aesListInstance)
 			}
 			if err != nil {
 				return

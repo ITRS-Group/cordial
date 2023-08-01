@@ -44,8 +44,8 @@ var unsetCmd = &cobra.Command{
 	Long:         unsetCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, origargs []string) error {
 		var changed bool
@@ -53,7 +53,7 @@ var unsetCmd = &cobra.Command{
 			return command.Usage()
 		}
 
-		_, args := cmd.CmdArgs(command)
+		_, args := cmd.TypeNames(command)
 		orig, _ := config.Load(cmd.Execname,
 			config.IgnoreWorkingDir(),
 			config.IgnoreSystemDir(),

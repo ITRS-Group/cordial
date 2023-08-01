@@ -46,8 +46,8 @@ var versionCmd = &cobra.Command{
 	SilenceUsage: true,
 	Version:      cordial.VERSION,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		AnnotationWildcard:  "false",
+		AnnotationNeedsHome: "false",
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("%s version %s\n", Execname, cmd.Version)

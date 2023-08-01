@@ -49,8 +49,8 @@ var showCmd = &cobra.Command{
 	Long:         showCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var buffer []byte

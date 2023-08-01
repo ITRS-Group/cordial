@@ -85,8 +85,8 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		cmd.AnnotationWildcard:  "true",
+		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var ciphertext string
@@ -130,9 +130,9 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 			return fmt.Errorf("decode failed with key file(s) provided")
 		}
 
-		ct, args, _ := cmd.CmdArgsParams(command)
+		ct, names, _ := cmd.TypeNamesParams(command)
 		params := []string{ciphertext}
-		_, err = instance.ForAllWithParamStringSlice(geneos.GetHost(cmd.Hostname), ct, aesDecodeInstance, args, params)
+		_, err = instance.DoWithStringSlice(geneos.GetHost(cmd.Hostname), ct, names, aesDecodeInstance, params)
 		return
 	},
 }

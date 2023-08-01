@@ -65,8 +65,8 @@ var encodeCmd = &cobra.Command{
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		cmd.AnnotationWildcard:  "true",
+		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
 		var plaintext *config.Plaintext
@@ -95,9 +95,9 @@ var encodeCmd = &cobra.Command{
 			return nil
 		}
 
-		ct, args := cmd.CmdArgs(command)
+		ct, args := cmd.TypeNames(command)
 		pw, _ := plaintext.Open()
-		_, err = instance.ForAllWithParamStringSlice(geneos.GetHost(cmd.Hostname), ct, aesEncodeInstance, args, []string{base64.StdEncoding.EncodeToString(pw.Bytes())})
+		_, err = instance.DoWithStringSlice(geneos.GetHost(cmd.Hostname), ct, args, aesEncodeInstance, []string{base64.StdEncoding.EncodeToString(pw.Bytes())})
 		pw.Destroy()
 		return
 	},

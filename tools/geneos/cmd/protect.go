@@ -49,13 +49,13 @@ var protectCmd = &cobra.Command{
 	Long:         protectCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args := CmdArgs(command)
+		ct, args := TypeNames(command)
 
-		_, err = instance.ForAllWithParamStringSlice(geneos.GetHost(Hostname), ct, protectInstance, args, []string{fmt.Sprintf("%v", !protectCmdUnprotect)})
+		_, err = instance.DoWithStringSlice(geneos.GetHost(Hostname), ct, args, protectInstance, []string{fmt.Sprintf("%v", !protectCmdUnprotect)})
 		return
 	},
 }

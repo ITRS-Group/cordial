@@ -56,15 +56,15 @@ var revertCmd = &cobra.Command{
 	Long:         revertCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "true",
-		"needshomedir": "true",
+		AnnotationWildcard:  "true",
+		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, args := CmdArgs(cmd)
+		ct, names := TypeNames(cmd)
 		if revertCmdExecutables {
 			return revertCommands()
 		}
-		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, revertInstance, args)
+		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, revertInstance)
 		return
 	},
 }

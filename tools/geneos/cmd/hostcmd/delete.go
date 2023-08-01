@@ -58,11 +58,11 @@ var deleteCmd = &cobra.Command{
 	Long:         deleteCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		_, args := cmd.CmdArgs(command)
+		_, args := cmd.TypeNames(command)
 		if len(args) == 0 {
 			return geneos.ErrInvalidArgs
 		}

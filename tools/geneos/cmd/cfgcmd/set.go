@@ -49,11 +49,11 @@ geneos config set geneos="/opt/geneos"
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard":     "false",
-		"needshomedir": "false",
+		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
-		_, _, params := cmd.CmdArgsParams(command)
+		_, _, params := cmd.TypeNamesParams(command)
 		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
 			return command.Usage()
 		}

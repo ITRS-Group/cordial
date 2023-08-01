@@ -56,10 +56,10 @@ var setCmd = &cobra.Command{
 	Long:         setCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		"wildcard": "true",
+		cmd.AnnotationWildcard: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args := cmd.CmdArgs(command)
+		ct, names := cmd.TypeNames(command)
 
 		h := geneos.GetHost(cmd.Hostname)
 
@@ -79,7 +79,7 @@ var setCmd = &cobra.Command{
 		crc = geneos.KeyFileNormalise(crc)
 		// params[0] is the CRC
 		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-			instance.ForAllWithParams(h, ct, aesSetAESInstance, args, crc)
+			instance.DoWithParams(h, ct, names, aesSetAESInstance, crc)
 		}
 		return nil
 	},
