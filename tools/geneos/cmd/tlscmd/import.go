@@ -83,7 +83,7 @@ var importCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			instance.ForAll(ct, cmd.Hostname, tlsWriteInstance, args, cert, privkey)
+			instance.ForAllWithParams(geneos.GetHost(cmd.Hostname), ct, tlsWriteInstance, args, cert, privkey)
 			if importCmdChain == "" {
 				if err = tlsWriteChainLocal(chain); err != nil {
 					return err
@@ -96,7 +96,7 @@ var importCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			instance.ForAll(ct, cmd.Hostname, tlsWriteInstance, args, cert, privkey)
+			instance.ForAllWithParams(geneos.GetHost(cmd.Hostname), ct, tlsWriteInstance, args, cert, privkey)
 			if importCmdChain == "" {
 				if err = tlsWriteChainLocal(chain); err != nil {
 					return err
@@ -133,18 +133,21 @@ func tlsWriteChainLocal(chain []*x509.Certificate) (err error) {
 	return
 }
 
-func tlsWriteInstance(c geneos.Instance, params ...any) (err error) {
+func tlsWriteInstance(c geneos.Instance, params ...any) (result any, err error) {
 	if len(params) != 2 {
-		return geneos.ErrInvalidArgs
+		err = geneos.ErrInvalidArgs
+		return
 	}
 	cert, ok := params[0].(*x509.Certificate)
 	if !ok {
-		return geneos.ErrInvalidArgs
+		err = geneos.ErrInvalidArgs
+		return
 	}
 
 	key, ok := params[1].(*memguard.Enclave)
 	if !ok {
-		return geneos.ErrInvalidArgs
+		err = geneos.ErrInvalidArgs
+		return
 	}
 
 	if err = instance.WriteCert(c, cert); err != nil {

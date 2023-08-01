@@ -65,7 +65,7 @@ var restartCmd = &cobra.Command{
 }
 
 func commandRestart(ct *geneos.Component, args []string) (err error) {
-	if err = instance.ForAll(ct, Hostname, restartInstance, args); err != nil {
+	if _, err = instance.ForAll(geneos.GetHost(Hostname), ct, restartInstance, args); err != nil {
 		log.Debug().Err(err).Msg("")
 		return
 	}
@@ -78,13 +78,13 @@ func commandRestart(ct *geneos.Component, args []string) (err error) {
 	return
 }
 
-func restartInstance(c geneos.Instance, _ ...any) (err error) {
+func restartInstance(c geneos.Instance) (result any, err error) {
 	if !instance.IsAutoStart(c) {
-		return nil
+		return
 	}
 	err = instance.Stop(c, restartCmdForce, false)
 	if err == nil || restartCmdAll {
-		return instance.Start(c)
+		err = instance.Start(c)
 	}
 	return
 }

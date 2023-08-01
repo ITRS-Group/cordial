@@ -143,7 +143,7 @@ func parseArgs(command *cobra.Command, rawargs []string) (err error) {
 					nargs = append(nargs, arg)
 					continue
 				}
-				_, local, r := instance.NameParts(arg, h)
+				_, local, r := instance.SplitName(arg, h)
 				if !r.Exists() {
 					log.Debug().Msgf("%s - host not found", arg)
 					// we have tried to match something and it may result in an empty list

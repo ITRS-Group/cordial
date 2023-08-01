@@ -151,7 +151,7 @@ func Get(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 	c = ct.New(name)
 	if c == nil {
 		// if no instance is created, check why
-		_, _, h := NameParts(name, geneos.LOCAL)
+		_, _, h := SplitName(name, geneos.LOCAL)
 		if h == geneos.LOCAL && geneos.Root() == "" {
 			err = geneos.ErrRootNotSet
 			return
@@ -214,7 +214,7 @@ func ByNames(h *geneos.Host, ct *geneos.Component, names ...string) (instances [
 // matching name. Host h is only used to validate the full name of the
 // instance.
 func MatchAll(h *geneos.Host, ct *geneos.Component, name string) (c []geneos.Instance) {
-	_, local, r := NameParts(name, h)
+	_, local, r := SplitName(name, h)
 	if !r.IsAvailable() {
 		log.Debug().Err(host.ErrNotAvailable).Msgf("host %s", r)
 		return
@@ -232,7 +232,7 @@ func MatchAll(h *geneos.Host, ct *geneos.Component, name string) (c []geneos.Ins
 	}
 
 	for _, name := range Names(r, ct) {
-		_, ldir, _ := NameParts(name, geneos.ALL)
+		_, ldir, _ := SplitName(name, geneos.ALL)
 		if path.Base(ldir) == local {
 			if i, err := Get(ct, name); err == nil {
 				c = append(c, i)
@@ -277,68 +277,19 @@ func ByKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (confs 
 	return
 }
 
-// ForAll calls the supplied function for each matching instance. It
-// sends any returned error on STDOUT and the only error returned is
-// os.ErrNotExist if there are no matching instances. params are passed
-// as a variadic list of any type. The called function should validate
-// and cast params for use.
-func ForAll(ct *geneos.Component, hostname string, fn func(geneos.Instance, ...any) error, names []string, params ...any) (err error) {
-	var wg sync.WaitGroup
-
-	instances, err := ByNames(geneos.GetHost(hostname), ct, names...)
-	if err != nil {
-		return
-	}
-
-	for _, c := range instances {
-		wg.Add(1)
-		go func(c geneos.Instance) {
-			defer wg.Done()
-			if err = fn(c, params...); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
-				fmt.Printf("%s: %s\n", c, err)
-			}
-		}(c)
-	}
-	wg.Wait()
-
-	return nil
-}
-
-// ForAllWithParams calls the supplied function for each matching instance. It
-// sends any returned error on STDOUT and the only error returned is
-// os.ErrNotExist if there are no matching instances.
-func ForAllWithParams(ct *geneos.Component, hostname string, fn func(geneos.Instance, []string) error, names []string, params []string) (err error) {
-	instances, err := ByNames(geneos.GetHost(hostname), ct, names...)
-	if err != nil {
-		return
-	}
-
-	var wg sync.WaitGroup
-	for _, c := range instances {
-		wg.Add(1)
-		go func(c geneos.Instance) {
-			defer wg.Done()
-			if err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
-				fmt.Printf("%s: %s\n", c, err)
-			}
-		}(c)
-	}
-	wg.Wait()
-
-	return nil
-}
-
-// ForAllWithResults calls the function fn for each matching instance
-// and gather the return values into a slice of interfaces for handling
-// upstream. The slice is sorted by host, type and name. Errors are printed
-// on STDOUT for each call and the only error returned ErrNotExist if
-// there are no matches.
-func ForAllWithResults(ct *geneos.Component, hostname string, fn func(geneos.Instance, string) (interface{}, error), names []string, param string) (results []interface{}, err error) {
+// ForAll calls the function fn for each matching instance and gathers
+// the return values into a slice for handling upstream. The functions are
+// called in go routine and must be concurrency safe.
+//
+// The slice is sorted by host, type and name. Errors are printed on
+// STDOUT for each call and the only error returned ErrNotExist if there
+// are no matches.
+func ForAll(h *geneos.Host, ct *geneos.Component, fn func(geneos.Instance) (any, error), names []string) (results []any, err error) {
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
 	var instanceList []geneos.Instance
 
-	instances, err := ByNames(geneos.GetHost(hostname), ct, names...)
+	instances, err := ByNames(h, ct, names...)
 	if err != nil {
 		return
 	}
@@ -349,7 +300,88 @@ func ForAllWithResults(ct *geneos.Component, hostname string, fn func(geneos.Ins
 		go func(c geneos.Instance) {
 			var result interface{}
 			defer wg.Done()
-			if result, err = fn(c, param); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
+			if result, err = fn(c); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
+				fmt.Printf("%s: %s\n", c, err)
+			}
+			if result != nil {
+				mutex.Lock()
+				instanceList = append(instanceList, c)
+				results = append(results, result)
+				mutex.Unlock()
+			}
+		}(c)
+	}
+	wg.Wait()
+
+	sort.Sort(SortInstanceResults{Instances: instanceList, Results: results})
+	return results, nil
+}
+
+// ForAllWithParamStringSlice calls  function fn with the string slice
+// params for each matching instance and gathers the return values into
+// a slice for handling upstream. The functions are called in go
+// routine and must be concurrency safe.
+//
+// It sends any returned error on STDOUT and the only error returned is
+// os.ErrNotExist if there are no matching instances.
+func ForAllWithParamStringSlice(h *geneos.Host, ct *geneos.Component, fn func(geneos.Instance, []string) (any, error), names []string, params []string) (results []any, err error) {
+	var mutex sync.Mutex
+	var wg sync.WaitGroup
+	var instanceList []geneos.Instance
+
+	instances, err := ByNames(h, ct, names...)
+	if err != nil {
+		return
+	}
+
+	for _, c := range instances {
+		instanceList = make([]geneos.Instance, 0, len(instances))
+		wg.Add(1)
+		go func(c geneos.Instance) {
+			var result interface{}
+			defer wg.Done()
+			if result, err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
+				fmt.Printf("%s: %s\n", c, err)
+			}
+			if result != nil {
+				mutex.Lock()
+				instanceList = append(instanceList, c)
+				results = append(results, result)
+				mutex.Unlock()
+			}
+		}(c)
+	}
+	wg.Wait()
+
+	sort.Sort(SortInstanceResults{Instances: instanceList, Results: results})
+	return results, nil
+}
+
+// ForAllWithParams calls function fn for each matching instance and
+// gathers the return values into a slice for handling upstream. The
+// functions are called in go routine and must be concurrency safe.
+//
+// It sends any returned error on STDOUT and the only error returned is
+// os.ErrNotExist if there are no matching instances. params are passed
+// as a variadic list of any type. The called function should validate
+// and cast params for use.
+func ForAllWithParams(h *geneos.Host, ct *geneos.Component, fn func(geneos.Instance, ...any) (any, error), names []string, params ...any) (results []any, err error) {
+	var mutex sync.Mutex
+	var wg sync.WaitGroup
+	var instanceList []geneos.Instance
+
+	instances, err := ByNames(h, ct, names...)
+	if err != nil {
+		return
+	}
+
+	for _, c := range instances {
+		instanceList = make([]geneos.Instance, 0, len(instances))
+		wg.Add(1)
+		go func(c geneos.Instance) {
+			var result interface{}
+			defer wg.Done()
+			if result, err = fn(c, params...); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
 				fmt.Printf("%s: %s\n", c, err)
 			}
 			if result != nil {
@@ -419,12 +451,12 @@ func Names(h *geneos.Host, ct *geneos.Component) (names []string) {
 	return
 }
 
-// NameParts returns the parts of an instance name given an instance
+// SplitName returns the parts of an instance name given an instance
 // name in the format [TYPE:]NAME[@HOST] and a default host, return a
 // *geneos.Component for the TYPE if given, a string for the NAME and a
 // *geneos.Host - the latter being either from the name or the default
 // provided
-func NameParts(in string, defaultHost *geneos.Host) (ct *geneos.Component, name string, h *geneos.Host) {
+func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name string, h *geneos.Host) {
 	if defaultHost == nil {
 		h = geneos.ALL
 	} else {

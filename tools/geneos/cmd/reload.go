@@ -50,16 +50,18 @@ var reloadCmd = &cobra.Command{
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args := CmdArgs(cmd)
-		return instance.ForAll(ct, Hostname, reloadInstance, args)
+		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, reloadInstance, args)
+		return
 	},
 }
 
-func reloadInstance(c geneos.Instance, _ ...any) (err error) {
+func reloadInstance(c geneos.Instance) (result any, err error) {
 	err = c.Reload()
 	if err == nil {
 		fmt.Printf("%s: reload signal sent\n", c)
 	}
-	return nil
+	err = nil // ignore
+	return
 }

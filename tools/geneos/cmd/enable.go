@@ -54,20 +54,22 @@ var enableCmd = &cobra.Command{
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args := CmdArgs(cmd)
-		return instance.ForAll(ct, Hostname, enableInstance, args)
+		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, enableInstance, args)
+		return
 	},
 }
 
-func enableInstance(c geneos.Instance, _ ...any) (err error) {
+func enableInstance(c geneos.Instance) (result any, err error) {
 	if !instance.IsDisabled(c) {
 		return
 	}
 	if err = instance.Enable(c); err == nil {
 		fmt.Printf("%s enabled\n", c)
 		if enableCmdStart {
-			return instance.Start(c)
+			err = instance.Start(c)
+			return
 		}
 	}
 	return

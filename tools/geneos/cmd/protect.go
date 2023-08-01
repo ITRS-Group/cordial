@@ -55,11 +55,12 @@ var protectCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, args := CmdArgs(command)
 
-		return instance.ForAllWithParams(ct, Hostname, protectInstance, args, []string{fmt.Sprintf("%v", !protectCmdUnprotect)})
+		_, err = instance.ForAllWithParamStringSlice(geneos.GetHost(Hostname), ct, protectInstance, args, []string{fmt.Sprintf("%v", !protectCmdUnprotect)})
+		return
 	},
 }
 
-func protectInstance(c geneos.Instance, params []string) (err error) {
+func protectInstance(c geneos.Instance, params []string) (result any, err error) {
 	cf := c.Config()
 
 	var protect bool

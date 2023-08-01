@@ -54,13 +54,14 @@ var rebuildCmd = &cobra.Command{
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args := CmdArgs(cmd)
-		return instance.ForAll(ct, Hostname, rebuildInstance, args)
+		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, rebuildInstance, args)
+		return
 	},
 }
 
-func rebuildInstance(c geneos.Instance, _ ...any) (err error) {
+func rebuildInstance(c geneos.Instance) (result any, err error) {
 	if err = c.Rebuild(rebuildCmdForce); err != nil {
 		return
 	}

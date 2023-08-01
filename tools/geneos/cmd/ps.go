@@ -104,14 +104,14 @@ func CommandPS(ct *geneos.Component, args []string, params []string) (err error)
 		if psCmdIndent {
 			psJSONEncoder.SetIndent("", "    ")
 		}
-		err = instance.ForAll(ct, Hostname, psInstanceJSON, args)
+		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, psInstanceJSON, args)
 	case psCmdCSV:
 		psCSVWriter = csv.NewWriter(os.Stdout)
 		psCSVWriter.Write([]string{"Type", "Name", "Host", "PID", "Ports", "User", "Group", "Starttime", "Version", "Home"})
-		err = instance.ForAll(ct, Hostname, psInstanceCSV, args)
+		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, psInstanceCSV, args)
 		psCSVWriter.Flush()
 	default:
-		results, err := instance.ForAllWithResults(ct, Hostname, psInstancePlain, args, "")
+		results, err := instance.ForAll(geneos.GetHost(Hostname), ct, psInstancePlain, args)
 		if err != nil {
 			return err
 		}
@@ -128,7 +128,7 @@ func CommandPS(ct *geneos.Component, args []string, params []string) (err error)
 	return
 }
 
-func psInstancePlain(c geneos.Instance, _ string) (result interface{}, err error) {
+func psInstancePlain(c geneos.Instance) (result any, err error) {
 	var output string
 
 	if instance.IsDisabled(c) {
@@ -177,13 +177,14 @@ func psInstancePlain(c geneos.Instance, _ string) (result interface{}, err error
 	return output, nil
 }
 
-func psInstanceCSV(c geneos.Instance, _ ...any) (err error) {
+func psInstanceCSV(c geneos.Instance) (result any, err error) {
 	if instance.IsDisabled(c) {
-		return nil
+		return
 	}
 	pid, uid, gid, mtime, err := instance.GetPIDInfo(c)
 	if err != nil {
-		return nil
+		err = nil // skip
+		return
 	}
 
 	var u *user.User
@@ -211,16 +212,18 @@ func psInstanceCSV(c geneos.Instance, _ ...any) (err error) {
 	}
 	psCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), portlist, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()})
 
-	return nil
+	err = nil // may still be set from above
+	return
 }
 
-func psInstanceJSON(c geneos.Instance, _ ...any) (err error) {
+func psInstanceJSON(c geneos.Instance) (result any, err error) {
 	if instance.IsDisabled(c) {
-		return nil
+		return
 	}
 	pid, uid, gid, mtime, err := instance.GetPIDInfo(c)
 	if err != nil {
-		return nil
+		err = nil // skip
+		return
 	}
 
 	var u *user.User
@@ -247,5 +250,6 @@ func psInstanceJSON(c geneos.Instance, _ ...any) (err error) {
 	}
 	psJSONEncoder.Encode(psType{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), ports, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()})
 
-	return nil
+	err = nil // may still be set from above
+	return
 }

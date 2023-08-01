@@ -54,10 +54,10 @@ var commandCmd = &cobra.Command{
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args := CmdArgs(cmd)
 		if commandCmdJSON {
-			results, err := instance.ForAllWithResults(ct, Hostname, commandInstanceJSON, args, "")
+			results, err := instance.ForAll(geneos.GetHost(Hostname), ct, commandInstanceJSON, args)
 			if err != nil {
 				return err
 			}
@@ -68,11 +68,12 @@ var commandCmd = &cobra.Command{
 			fmt.Println(string(b))
 			return nil
 		}
-		return instance.ForAll(ct, Hostname, commandInstance, args)
+		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, commandInstance, args)
+		return
 	},
 }
 
-func commandInstance(c geneos.Instance, _ ...any) (err error) {
+func commandInstance(c geneos.Instance) (result any, err error) {
 	fmt.Printf("=== %s ===\n", c)
 	cmd, env, home := instance.BuildCmd(c, true)
 	if cmd != nil {
@@ -91,7 +92,7 @@ func commandInstance(c geneos.Instance, _ ...any) (err error) {
 	return
 }
 
-func commandInstanceJSON(c geneos.Instance, _ string) (result interface{}, err error) {
+func commandInstanceJSON(c geneos.Instance) (result any, err error) {
 	cmd, env, home := instance.BuildCmd(c, true)
 	command := &command{
 		Instance: c.Name(),

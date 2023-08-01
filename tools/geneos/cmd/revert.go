@@ -59,45 +59,50 @@ var revertCmd = &cobra.Command{
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args := CmdArgs(cmd)
 		if revertCmdExecutables {
 			return revertCommands()
 		}
-		return instance.ForAll(ct, Hostname, revertInstance, args)
+		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, revertInstance, args)
+		return
 	},
 }
 
-func revertInstance(c geneos.Instance, _ ...any) (err error) {
+func revertInstance(c geneos.Instance) (result any, err error) {
 	if instance.IsProtected(c) {
-		return geneos.ErrProtected
+		err = geneos.ErrProtected
+		return
 	}
 
 	// if *.rc file exists, remove rc.orig+new, continue
-	if _, err := c.Host().Stat(instance.ComponentFilepath(c, "rc")); err == nil {
+	if _, err = c.Host().Stat(instance.ComponentFilepath(c, "rc")); err == nil {
 		// ignore errors
 		if c.Host().Remove(instance.ComponentFilepath(c, "rc", "orig")) == nil || c.Host().Remove(instance.ComponentFilepath(c)) == nil {
 			log.Debug().Msgf("%s removed extra config file(s)", c)
 		}
-		return err
+		return
 	}
 
 	if err = c.Host().Rename(instance.ComponentFilepath(c, "rc", "orig"), instance.ComponentFilepath(c, "rc")); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil
+			err = nil
+			return
 		}
 		return
 	}
 
 	if err = c.Host().Remove(instance.ComponentFilepath(c)); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil
+			err = nil
+			return
 		}
 		return
 	}
 
 	log.Debug().Msgf("%s reverted to RC config", c)
-	return nil
+	err = nil
+	return
 }
 
 // search PATH for *ctl commands, and if they are links to 'geneos'

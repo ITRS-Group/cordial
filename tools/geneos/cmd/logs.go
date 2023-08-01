@@ -98,12 +98,12 @@ var logsCmd = &cobra.Command{
 
 		switch {
 		case logCmdCat:
-			err = instance.ForAll(ct, Hostname, logCatInstance, args)
+			_, err = instance.ForAll(geneos.GetHost(Hostname), ct, logCatInstance, args)
 		case logCmdFollow:
 			// never returns
 			err = followLogs(ct, args, logCmdStderr)
 		default:
-			err = instance.ForAll(ct, Hostname, logTailInstance, args)
+			_, err = instance.ForAll(geneos.GetHost(Hostname), ct, logTailInstance, args)
 		}
 
 		return
@@ -113,7 +113,7 @@ var logsCmd = &cobra.Command{
 func followLog(c geneos.Instance) (err error) {
 	done := make(chan bool)
 	tails = watchLogs()
-	if err = logFollowInstance(c); err != nil {
+	if _, err = logFollowInstance(c); err != nil {
 		log.Error().Err(err).Msg("")
 	}
 	<-done
@@ -124,7 +124,7 @@ func followLogs(ct *geneos.Component, args []string, stderr bool) (err error) {
 	logCmdStderr = stderr
 	done := make(chan bool)
 	tails = watchLogs()
-	if err = instance.ForAll(ct, Hostname, logFollowInstance, args); err != nil {
+	if _, err = instance.ForAll(geneos.GetHost(Hostname), ct, logFollowInstance, args); err != nil {
 		log.Error().Err(err).Msg("")
 	}
 	<-done
@@ -145,7 +145,7 @@ func outHeader(c geneos.Instance, path string) {
 	lastout = path
 }
 
-func logTailInstance(c geneos.Instance, _ ...any) (err error) {
+func logTailInstance(c geneos.Instance) (result any, err error) {
 	if logCmdStderr {
 		if err = logTailInstanceFile(c, instance.ComponentFilepath(c, "txt")); err != nil {
 			return
@@ -156,7 +156,7 @@ func logTailInstance(c geneos.Instance, _ ...any) (err error) {
 			return
 		}
 	}
-	return nil
+	return
 }
 
 func logTailInstanceFile(c geneos.Instance, logfile string) (err error) {
@@ -270,7 +270,7 @@ func filterOutput(c geneos.Instance, path string, reader io.ReadSeeker) (sz int6
 	return
 }
 
-func logCatInstance(c geneos.Instance, _ ...any) (err error) {
+func logCatInstance(c geneos.Instance) (result any, err error) {
 	if !logCmdStderr {
 		if err = logCatInstanceFile(c, instance.ComponentFilepath(c, "txt")); err != nil {
 			return
@@ -278,10 +278,11 @@ func logCatInstance(c geneos.Instance, _ ...any) (err error) {
 	}
 	if !logCmdNoNormal {
 		if err = logCatInstanceFile(c, instance.LogFilePath(c)); err != nil {
-			return logCatInstanceFile(c, instance.LogFilePath(c))
+			err = logCatInstanceFile(c, instance.LogFilePath(c))
+			return
 		}
 	}
-	return nil
+	return
 }
 
 func logCatInstanceFile(c geneos.Instance, logfile string) (err error) {
@@ -302,7 +303,7 @@ func logCatInstanceFile(c geneos.Instance, logfile string) (err error) {
 // add local logs to a watcher list
 // for remote logs, spawn a go routine for each log, watch using stat etc.
 // and output changes
-func logFollowInstance(c geneos.Instance, _ ...any) (err error) {
+func logFollowInstance(c geneos.Instance) (result any, err error) {
 	if logCmdStderr {
 		if err = logFollowInstanceFile(c, instance.ComponentFilepath(c, "txt")); err != nil {
 			return

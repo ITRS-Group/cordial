@@ -62,12 +62,14 @@ geneos clean --full netprobe
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args := CmdArgs(cmd)
-		return instance.ForAll(ct, Hostname, cleanInstance, args)
+		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, cleanInstance, args)
+		return
 	},
 }
 
-func cleanInstance(c geneos.Instance, _ ...any) (err error) {
-	return instance.Clean(c, cleanCmdFull)
+func cleanInstance(c geneos.Instance) (result any, err error) {
+	err = instance.Clean(c, cleanCmdFull)
+	return
 }
