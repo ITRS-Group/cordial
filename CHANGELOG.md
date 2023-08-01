@@ -1,5 +1,11 @@
 # Change Log
 
+## Version v1.8.0
+
+> **Released 2023-08-02**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
 ## Version v1.7.2
 
 > **Released 2023-07-28**
