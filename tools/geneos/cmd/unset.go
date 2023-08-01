@@ -75,13 +75,12 @@ geneos unset san -g Gateway1
 			return cmd.Usage()
 		}
 		ct, args := CmdArgs(cmd)
-		return instance.ForAll(ct, Hostname, unsetInstance, args, []string{})
+		return instance.ForAll(ct, Hostname, unsetInstance, args)
 	},
 }
 
-func unsetInstance(c geneos.Instance, params []string) (err error) {
+func unsetInstance(c geneos.Instance, _ ...any) (err error) {
 	var changed bool
-	log.Debug().Msgf("c %s params %v", c, params)
 
 	changed, err = instance.UnsetInstanceValues(c, unsetCmdValues)
 

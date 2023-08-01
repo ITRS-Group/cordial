@@ -49,11 +49,11 @@ var newCmd = &cobra.Command{
 		"needshomedir": "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) error {
-		ct, args, params := cmd.CmdArgsParams(command)
-		return instance.ForAll(ct, cmd.Hostname, newInstanceCert, args, params)
+		ct, args := cmd.CmdArgs(command)
+		return instance.ForAll(ct, cmd.Hostname, newInstanceCert, args)
 	},
 }
 
-func newInstanceCert(c geneos.Instance, _ []string) (err error) {
+func newInstanceCert(c geneos.Instance, _ ...any) (err error) {
 	return instance.CreateCert(c)
 }

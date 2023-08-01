@@ -267,7 +267,7 @@ func (w *Webservers) Command() (args, env []string, home string) {
 	return
 }
 
-func (w *Webservers) Reload(params []string) (err error) {
+func (w *Webservers) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 

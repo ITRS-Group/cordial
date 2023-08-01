@@ -60,15 +60,15 @@ var revertCmd = &cobra.Command{
 		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := CmdArgsParams(cmd)
+		ct, args := CmdArgs(cmd)
 		if revertCmdExecutables {
 			return revertCommands()
 		}
-		return instance.ForAll(ct, Hostname, revertInstance, args, params)
+		return instance.ForAll(ct, Hostname, revertInstance, args)
 	},
 }
 
-func revertInstance(c geneos.Instance, params []string) (err error) {
+func revertInstance(c geneos.Instance, _ ...any) (err error) {
 	if instance.IsProtected(c) {
 		return geneos.ErrProtected
 	}

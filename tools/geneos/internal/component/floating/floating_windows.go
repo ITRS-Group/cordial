@@ -22,6 +22,6 @@ THE SOFTWARE.
 
 package floating
 
-func (s *Floatings) Reload(params []string) (err error) {
+func (s *Floatings) Reload() (err error) {
 	return
 }

@@ -94,7 +94,7 @@ geneos set ...
 }
 
 func Set(ct *geneos.Component, args, params []string) error {
-	return instance.ForAll(ct, Hostname, setInstance, args, params)
+	return instance.ForAllWithParams(ct, Hostname, setInstance, args, params)
 }
 
 func setInstance(c geneos.Instance, params []string) (err error) {

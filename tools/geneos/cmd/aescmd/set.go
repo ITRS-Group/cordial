@@ -80,7 +80,7 @@ var setCmd = &cobra.Command{
 		crclist := []string{crc}
 		// params[0] is the CRC
 		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-			instance.ForAll(ct, cmd.Hostname, aesSetAESInstance, args, crclist)
+			instance.ForAllWithParams(ct, cmd.Hostname, aesSetAESInstance, args, crclist)
 		}
 		return nil
 	},

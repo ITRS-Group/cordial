@@ -182,6 +182,34 @@ func GetAll(h *geneos.Host, ct *geneos.Component) (confs []geneos.Instance) {
 	return
 }
 
+func ByNames(h *geneos.Host, ct *geneos.Component, names ...string) (instances []geneos.Instance, err error) {
+	n := 0
+	// if args is empty, get all matching instances. this allows internal
+	// calls with an empty arg list without having to do the parseArgs()
+	// dance
+	// h := geneos.GetHost(hostname)
+	if h == nil {
+		h = geneos.ALL
+	}
+
+	if len(names) == 0 {
+		instances = GetAll(h, ct)
+	} else {
+		for _, name := range names {
+			cs := MatchAll(h, ct, name)
+			if len(cs) == 0 {
+				continue
+			}
+			n++
+			instances = append(instances, cs...)
+		}
+		if n == 0 {
+			return nil, os.ErrNotExist
+		}
+	}
+	return
+}
+
 // MatchAll constructs and returns a slice of instances that have a
 // matching name. Host h is only used to validate the full name of the
 // instance.
@@ -205,7 +233,6 @@ func MatchAll(h *geneos.Host, ct *geneos.Component, name string) (c []geneos.Ins
 
 	for _, name := range Names(r, ct) {
 		_, ldir, _ := NameParts(name, geneos.ALL)
-		// for case insensitive match change to EqualFold here
 		if path.Base(ldir) == local {
 			if i, err := Get(ct, name); err == nil {
 				c = append(c, i)
@@ -216,9 +243,9 @@ func MatchAll(h *geneos.Host, ct *geneos.Component, name string) (c []geneos.Ins
 	return
 }
 
-// Match looks for exactly one matching instance across types and hosts
+// ByName looks for exactly one matching instance across types and hosts
 // returns Invalid Args if zero of more than 1 match
-func Match(h *geneos.Host, ct *geneos.Component, name string) (c geneos.Instance, err error) {
+func ByName(h *geneos.Host, ct *geneos.Component, name string) (c geneos.Instance, err error) {
 	list := MatchAll(h, ct, name)
 	if len(list) == 0 {
 		err = os.ErrNotExist
@@ -232,9 +259,9 @@ func Match(h *geneos.Host, ct *geneos.Component, name string) (c geneos.Instance
 	return
 }
 
-// MatchKeyValue returns a slice of instances where the instance
+// ByKeyValue returns a slice of instances where the instance
 // configuration key matches the value given.
-func MatchKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (confs []geneos.Instance) {
+func ByKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (confs []geneos.Instance) {
 	confs = GetAll(h, ct)
 
 	// filter in place
@@ -252,37 +279,42 @@ func MatchKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (con
 
 // ForAll calls the supplied function for each matching instance. It
 // sends any returned error on STDOUT and the only error returned is
-// os.ErrNotExist if there are no matching instances.
-func ForAll(ct *geneos.Component, hostname string, fn func(geneos.Instance, []string) error, args []string, params []string) (err error) {
-	allcs := []geneos.Instance{}
+// os.ErrNotExist if there are no matching instances. params are passed
+// as a variadic list of any type. The called function should validate
+// and cast params for use.
+func ForAll(ct *geneos.Component, hostname string, fn func(geneos.Instance, ...any) error, names []string, params ...any) (err error) {
+	var wg sync.WaitGroup
 
-	n := 0
-	// if args is empty, get all matching instances. this allows internal
-	// calls with an empty arg list without having to do the parseArgs()
-	// dance
-	h := geneos.GetHost(hostname)
-	if h == nil {
-		h = geneos.ALL
+	instances, err := ByNames(geneos.GetHost(hostname), ct, names...)
+	if err != nil {
+		return
 	}
-	if len(args) == 0 {
-		allcs = GetAll(h, ct)
-	} else {
-		for _, name := range args {
-			cs := MatchAll(h, ct, name)
-			if len(cs) == 0 {
-				continue
-			}
-			n++
-			allcs = append(allcs, cs...)
-		}
 
-		if n == 0 {
-			return os.ErrNotExist
-		}
+	for _, c := range instances {
+		wg.Add(1)
+		go func(c geneos.Instance) {
+			defer wg.Done()
+			if err = fn(c, params...); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
+				fmt.Printf("%s: %s\n", c, err)
+			}
+		}(c)
+	}
+	wg.Wait()
+
+	return nil
+}
+
+// ForAllWithParams calls the supplied function for each matching instance. It
+// sends any returned error on STDOUT and the only error returned is
+// os.ErrNotExist if there are no matching instances.
+func ForAllWithParams(ct *geneos.Component, hostname string, fn func(geneos.Instance, []string) error, names []string, params []string) (err error) {
+	instances, err := ByNames(geneos.GetHost(hostname), ct, names...)
+	if err != nil {
+		return
 	}
 
 	var wg sync.WaitGroup
-	for _, c := range allcs {
+	for _, c := range instances {
 		wg.Add(1)
 		go func(c geneos.Instance) {
 			defer wg.Done()
@@ -301,64 +333,36 @@ func ForAll(ct *geneos.Component, hostname string, fn func(geneos.Instance, []st
 // upstream. The slice is sorted by host, type and name. Errors are printed
 // on STDOUT for each call and the only error returned ErrNotExist if
 // there are no matches.
-func ForAllWithResults(
-	ct *geneos.Component,
-	hostname string,
-	fn func(geneos.Instance, []string) (interface{}, error),
-	args []string,
-	params []string,
-) (results []interface{}, err error) {
-	var instances []geneos.Instance
-	allcs := []geneos.Instance{}
-
-	n := 0
-	// if args is empty, get all matching instances. this allows internal
-	// calls with an empty arg list without having to do the parseArgs()
-	// dance
-	h := geneos.GetHost(hostname)
-	if h == nil {
-		h = geneos.ALL
-	}
-
-	if len(args) == 0 {
-		allcs = GetAll(h, ct)
-	} else {
-		for _, name := range args {
-			cs := MatchAll(h, ct, name)
-			if len(cs) == 0 {
-				continue
-			}
-			n++
-			allcs = append(allcs, cs...)
-		}
-		if n == 0 {
-			return nil, os.ErrNotExist
-		}
-	}
-
+func ForAllWithResults(ct *geneos.Component, hostname string, fn func(geneos.Instance, string) (interface{}, error), names []string, param string) (results []interface{}, err error) {
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
+	var instanceList []geneos.Instance
 
-	for _, c := range allcs {
-		instances = make([]geneos.Instance, 0, len(allcs))
+	instances, err := ByNames(geneos.GetHost(hostname), ct, names...)
+	if err != nil {
+		return
+	}
+
+	for _, c := range instances {
+		instanceList = make([]geneos.Instance, 0, len(instances))
 		wg.Add(1)
 		go func(c geneos.Instance) {
-			var res interface{}
+			var result interface{}
 			defer wg.Done()
-			if res, err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
+			if result, err = fn(c, param); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
 				fmt.Printf("%s: %s\n", c, err)
 			}
-			if res != nil {
+			if result != nil {
 				mutex.Lock()
-				instances = append(instances, c)
-				results = append(results, res)
+				instanceList = append(instanceList, c)
+				results = append(results, result)
 				mutex.Unlock()
 			}
 		}(c)
 	}
 	wg.Wait()
 
-	sort.Sort(SortInstanceResults{Instances: instances, Results: results})
+	sort.Sort(SortInstanceResults{Instances: instanceList, Results: results})
 	return results, nil
 }
 

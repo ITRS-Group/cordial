@@ -104,14 +104,14 @@ func CommandPS(ct *geneos.Component, args []string, params []string) (err error)
 		if psCmdIndent {
 			psJSONEncoder.SetIndent("", "    ")
 		}
-		err = instance.ForAll(ct, Hostname, psInstanceJSON, args, params)
+		err = instance.ForAll(ct, Hostname, psInstanceJSON, args)
 	case psCmdCSV:
 		psCSVWriter = csv.NewWriter(os.Stdout)
 		psCSVWriter.Write([]string{"Type", "Name", "Host", "PID", "Ports", "User", "Group", "Starttime", "Version", "Home"})
-		err = instance.ForAll(ct, Hostname, psInstanceCSV, args, params)
+		err = instance.ForAll(ct, Hostname, psInstanceCSV, args)
 		psCSVWriter.Flush()
 	default:
-		results, err := instance.ForAllWithResults(ct, Hostname, psInstancePlain, args, params)
+		results, err := instance.ForAllWithResults(ct, Hostname, psInstancePlain, args, "")
 		if err != nil {
 			return err
 		}
@@ -128,7 +128,7 @@ func CommandPS(ct *geneos.Component, args []string, params []string) (err error)
 	return
 }
 
-func psInstancePlain(c geneos.Instance, params []string) (result interface{}, err error) {
+func psInstancePlain(c geneos.Instance, _ string) (result interface{}, err error) {
 	var output string
 
 	if instance.IsDisabled(c) {
@@ -177,7 +177,7 @@ func psInstancePlain(c geneos.Instance, params []string) (result interface{}, er
 	return output, nil
 }
 
-func psInstanceCSV(c geneos.Instance, params []string) (err error) {
+func psInstanceCSV(c geneos.Instance, _ ...any) (err error) {
 	if instance.IsDisabled(c) {
 		return nil
 	}
@@ -214,7 +214,7 @@ func psInstanceCSV(c geneos.Instance, params []string) (err error) {
 	return nil
 }
 
-func psInstanceJSON(c geneos.Instance, params []string) (err error) {
+func psInstanceJSON(c geneos.Instance, _ ...any) (err error) {
 	if instance.IsDisabled(c) {
 		return nil
 	}

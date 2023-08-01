@@ -55,11 +55,11 @@ var stopCmd = &cobra.Command{
 		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := CmdArgsParams(cmd)
-		return instance.ForAll(ct, Hostname, stopInstance, args, params)
+		ct, args := CmdArgs(cmd)
+		return instance.ForAll(ct, Hostname, stopInstance, args)
 	},
 }
 
-func stopInstance(c geneos.Instance, params []string) error {
+func stopInstance(c geneos.Instance, _ ...any) error {
 	return instance.Stop(c, stopCmdForce, stopCmdKill)
 }

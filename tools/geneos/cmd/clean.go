@@ -63,11 +63,11 @@ geneos clean --full netprobe
 		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, args, params := CmdArgsParams(cmd)
-		return instance.ForAll(ct, Hostname, cleanInstance, args, params)
+		ct, args := CmdArgs(cmd)
+		return instance.ForAll(ct, Hostname, cleanInstance, args)
 	},
 }
 
-func cleanInstance(c geneos.Instance, params []string) (err error) {
+func cleanInstance(c geneos.Instance, _ ...any) (err error) {
 	return instance.Clean(c, cleanCmdFull)
 }

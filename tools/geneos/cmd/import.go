@@ -105,7 +105,7 @@ func ImportFiles(ct *geneos.Component, args []string, sources []string) (err err
 		return nil
 	}
 
-	return instance.ForAll(ct, Hostname, importInstance, args, sources)
+	return instance.ForAllWithParams(ct, Hostname, importInstance, args, sources)
 }
 
 // args are instance [file...]

@@ -22,6 +22,6 @@ THE SOFTWARE.
 
 package san
 
-func (s *Sans) Reload(params []string) (err error) {
+func (s *Sans) Reload() (err error) {
 	return
 }

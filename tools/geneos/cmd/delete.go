@@ -59,13 +59,13 @@ var deleteCmd = &cobra.Command{
 		"needshomedir": "true",
 	},
 	RunE: func(cmd *cobra.Command, allargs []string) error {
-		ct, args, params := CmdArgsParams(cmd)
+		ct, args := CmdArgs(cmd)
 
-		return instance.ForAll(ct, Hostname, deleteInstance, args, params)
+		return instance.ForAll(ct, Hostname, deleteInstance, args)
 	},
 }
 
-func deleteInstance(c geneos.Instance, params []string) (err error) {
+func deleteInstance(c geneos.Instance, _ ...any) (err error) {
 	if instance.IsProtected(c) {
 		return geneos.ErrProtected
 	}

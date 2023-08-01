@@ -106,7 +106,7 @@ var snapshotCmd = &cobra.Command{
 
 		// at this point snapshotCmdUsername/Password contain global or
 		// command line values. These can be overridden per-instance.
-		return instance.ForAll(ct, Hostname, snapshotInstance, args, params)
+		return instance.ForAllWithParams(ct, Hostname, snapshotInstance, args, params)
 	},
 }
 

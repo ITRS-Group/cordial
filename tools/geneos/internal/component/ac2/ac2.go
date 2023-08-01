@@ -221,7 +221,7 @@ func (n *AC2s) Command() (args, env []string, home string) {
 	return
 }
 
-func (n *AC2s) Reload(params []string) (err error) {
+func (n *AC2s) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 

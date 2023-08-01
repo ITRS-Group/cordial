@@ -201,7 +201,7 @@ func (n *FA2s) Command() (args, env []string, home string) {
 	return
 }
 
-func (n *FA2s) Reload(params []string) (err error) {
+func (n *FA2s) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
