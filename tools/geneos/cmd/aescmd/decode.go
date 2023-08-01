@@ -88,7 +88,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(command *cobra.Command, _ []string) error {
+	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var ciphertext string
 
 		// XXX Allow -e to provide non-inline sources, e.g. stdin, file etc.
@@ -132,11 +132,12 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 
 		ct, args, _ := cmd.CmdArgsParams(command)
 		params := []string{ciphertext}
-		return instance.ForAllWithParams(ct, cmd.Hostname, aesDecodeInstance, args, params)
+		_, err = instance.ForAllWithParamStringSlice(geneos.GetHost(cmd.Hostname), ct, aesDecodeInstance, args, params)
+		return
 	},
 }
 
-func aesDecodeInstance(c geneos.Instance, params []string) (err error) {
+func aesDecodeInstance(c geneos.Instance, params []string) (result any, err error) {
 	log.Debug().Msgf("trying to decode for instance %s", c)
 	if !c.Type().UsesKeyfiles {
 		return
@@ -153,8 +154,9 @@ func aesDecodeInstance(c geneos.Instance, params []string) (err error) {
 	a := config.Read(r)
 	e, err := a.DecodeString(params[0])
 	if err != nil {
-		return nil
+		err = nil
+		return
 	}
 	fmt.Printf("%s: %q\n", c, e)
-	return nil
+	return
 }

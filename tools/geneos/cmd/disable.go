@@ -56,19 +56,21 @@ var disableCmd = &cobra.Command{
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, args := CmdArgs(cmd)
-		return instance.ForAll(ct, Hostname, disableInstance, args)
+		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, disableInstance, args)
+		return
 	},
 }
 
-func disableInstance(c geneos.Instance, _ ...any) (err error) {
+func disableInstance(c geneos.Instance) (result any, err error) {
 	if instance.IsDisabled(c) {
-		return nil
+		return
 	}
 
 	if instance.IsProtected(c) {
-		return geneos.ErrProtected
+		err = geneos.ErrProtected
+		return
 	}
 
 	if disableCmdStop {
@@ -81,15 +83,16 @@ func disableInstance(c geneos.Instance, _ ...any) (err error) {
 
 	if !disableCmdForce && instance.IsRunning(c) {
 		fmt.Printf("%s is running, skipping. Use the `--stop` option to stop running instances\n", c)
-		return nil
+		return
 	}
 
 	if !instance.IsProtected(c) || disableCmdForce {
 		if err = instance.Disable(c); err == nil {
 			fmt.Printf("%s disabled\n", c)
-			return nil
+			return
 		}
 	}
 
-	return fmt.Errorf("not disabled. Instances must not be running or use the '--force'/'-F' option")
+	err = fmt.Errorf("not disabled. Instances must not be running or use the '--force'/'-F' option")
+	return
 }

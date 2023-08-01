@@ -109,7 +109,7 @@ var showCmd = &cobra.Command{
 			}
 
 			var results []interface{}
-			results, err = instance.ForAllWithResults(ct, Hostname, showValidateInstance, args, showCmdHooksDir)
+			results, err = instance.ForAllWithParams(geneos.GetHost(Hostname), ct, showValidateInstance, args, showCmdHooksDir)
 
 			if err != nil {
 				if err == os.ErrNotExist {
@@ -128,7 +128,7 @@ var showCmd = &cobra.Command{
 
 		if showCmdSetup {
 			var results []interface{}
-			results, err = instance.ForAllWithResults(ct, Hostname, showInstanceConfig, args, fmt.Sprint(showCmdMerge))
+			results, err = instance.ForAllWithParams(geneos.GetHost(Hostname), ct, showInstanceConfig, args, fmt.Sprint(showCmdMerge))
 
 			if err != nil {
 				if err == os.ErrNotExist {
@@ -144,7 +144,7 @@ var showCmd = &cobra.Command{
 			}
 			return
 		}
-		results, err := instance.ForAllWithResults(ct, Hostname, showInstance, args, "")
+		results, err := instance.ForAll(geneos.GetHost(Hostname), ct, showInstance, args)
 		if err != nil {
 			if err == os.ErrNotExist {
 				return fmt.Errorf("no matching instance found")
@@ -157,7 +157,7 @@ var showCmd = &cobra.Command{
 	},
 }
 
-func showValidateInstance(c geneos.Instance, param string) (result interface{}, err error) {
+func showValidateInstance(c geneos.Instance, params ...any) (result any, err error) {
 	setup := c.Config().GetString("setup")
 	if setup == "" {
 		return
@@ -184,8 +184,8 @@ func showValidateInstance(c geneos.Instance, param string) (result interface{}, 
 			"-hub-validation-rules",
 		}
 		cmd.Args = append(cmd.Args, instance.SetSecureArgs(c)...)
-		if param != "" {
-			cmd.Args = append(cmd.Args, "-hooks-dir", param)
+		if len(params) > 0 {
+			cmd.Args = append(cmd.Args, fmt.Sprintf("-hooks-dir %s", params[0]))
 		}
 
 		var output []byte
@@ -214,12 +214,12 @@ type showConfig struct {
 }
 
 // showInstanceConfig returns a slice of showConfig structs per instance
-func showInstanceConfig(c geneos.Instance, param string) (result interface{}, err error) {
+func showInstanceConfig(c geneos.Instance, params ...any) (result any, err error) {
 	setup := c.Config().GetString("setup")
 	if setup == "" {
 		return
 	}
-	if c.Type().String() == "gateway" && param == "true" {
+	if c.Type().String() == "gateway" && len(params) > 0 && params[0].(bool) {
 		// run a gateway with -dump-xml and consume the result, discard the heading
 		cmd, env, home := instance.BuildCmd(c, false)
 		// replace args with a more limited set
@@ -262,7 +262,7 @@ func showInstanceConfig(c geneos.Instance, param string) (result interface{}, er
 	return
 }
 
-func showInstance(c geneos.Instance, _ string) (result interface{}, err error) {
+func showInstance(c geneos.Instance) (result any, err error) {
 	// remove aliases
 	nv := config.New()
 	aliases := c.Type().LegacyParameters

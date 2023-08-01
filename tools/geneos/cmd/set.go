@@ -93,11 +93,12 @@ geneos set ...
 	},
 }
 
-func Set(ct *geneos.Component, args, params []string) error {
-	return instance.ForAllWithParams(ct, Hostname, setInstance, args, params)
+func Set(ct *geneos.Component, args, params []string) (err error) {
+	_, err = instance.ForAllWithParamStringSlice(geneos.GetHost(Hostname), ct, setInstance, args, params)
+	return
 }
 
-func setInstance(c geneos.Instance, params []string) (err error) {
+func setInstance(c geneos.Instance, params []string) (result any, err error) {
 	log.Debug().Msgf("c %s params %v", c, params)
 
 	cf := c.Config()

@@ -281,6 +281,8 @@ func initConfig() {
 	// should use '-' or '_' instead.
 	Execname = strings.TrimSuffix(Execname, path.Ext(Execname))
 
+	log.Debug().Msgf("cordial 'geneos' running as '%s', version %s", Execname, cordial.VERSION)
+
 	// `oldConfDir` is the original path to the user configuration,
 	// typically directly in `~/geneos`. The LoadConfig() function
 	// already looks in standardised user and global directories.

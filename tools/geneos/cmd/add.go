@@ -105,7 +105,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 		h = geneos.LOCAL
 	}
 
-	pkgct, local, h := instance.NameParts(name, h)
+	pkgct, local, h := instance.SplitName(name, h)
 
 	if local == "" {
 		local = h.Hostname()

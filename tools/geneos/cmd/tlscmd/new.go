@@ -48,12 +48,14 @@ var newCmd = &cobra.Command{
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(command *cobra.Command, _ []string) error {
+	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, args := cmd.CmdArgs(command)
-		return instance.ForAll(ct, cmd.Hostname, newInstanceCert, args)
+		_, err = instance.ForAll(geneos.GetHost(cmd.Hostname), ct, newInstanceCert, args)
+		return
 	},
 }
 
-func newInstanceCert(c geneos.Instance, _ ...any) (err error) {
-	return instance.CreateCert(c)
+func newInstanceCert(c geneos.Instance) (result any, err error) {
+	err = instance.CreateCert(c)
+	return
 }

@@ -80,13 +80,13 @@ var setCmd = &cobra.Command{
 		crclist := []string{crc}
 		// params[0] is the CRC
 		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-			instance.ForAllWithParams(ct, cmd.Hostname, aesSetAESInstance, args, crclist)
+			instance.ForAllWithParamStringSlice(h, ct, aesSetAESInstance, args, crclist)
 		}
 		return nil
 	},
 }
 
-func aesSetAESInstance(c geneos.Instance, params []string) (err error) {
+func aesSetAESInstance(c geneos.Instance, params []string) (result any, err error) {
 	cf := c.Config()
 
 	path := instance.Shared(c, "keyfiles", params[0])

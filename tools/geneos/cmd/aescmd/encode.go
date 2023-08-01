@@ -97,15 +97,15 @@ var encodeCmd = &cobra.Command{
 
 		ct, args := cmd.CmdArgs(command)
 		pw, _ := plaintext.Open()
-		err = instance.ForAllWithParams(ct, cmd.Hostname, aesEncodeInstance, args, []string{base64.StdEncoding.EncodeToString(pw.Bytes())})
+		_, err = instance.ForAllWithParamStringSlice(geneos.GetHost(cmd.Hostname), ct, aesEncodeInstance, args, []string{base64.StdEncoding.EncodeToString(pw.Bytes())})
 		pw.Destroy()
 		return
 	},
 }
 
-func aesEncodeInstance(c geneos.Instance, params []string) (err error) {
+func aesEncodeInstance(c geneos.Instance, params []string) (result any, err error) {
 	if !c.Type().UsesKeyfiles {
-		return nil
+		return
 	}
 	keyfile := config.KeyFile(instance.PathOf(c, "keyfile"))
 	if keyfile == "" {
@@ -119,5 +119,5 @@ func aesEncodeInstance(c geneos.Instance, params []string) (err error) {
 		return
 	}
 	fmt.Printf("%s: %s\n", c, e)
-	return nil
+	return
 }

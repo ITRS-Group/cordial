@@ -127,7 +127,7 @@ var deployCmd = &cobra.Command{
 		// name wanted
 		h := geneos.GetHost(Hostname)
 		// update ct and host - ct may come from TYPE:NAME@HOST format
-		pkgct, local, h := instance.NameParts(name, h)
+		pkgct, local, h := instance.SplitName(name, h)
 
 		if local == "" {
 			local = h.Hostname()

@@ -106,18 +106,21 @@ var snapshotCmd = &cobra.Command{
 
 		// at this point snapshotCmdUsername/Password contain global or
 		// command line values. These can be overridden per-instance.
-		return instance.ForAllWithParams(ct, Hostname, snapshotInstance, args, params)
+		_, err = instance.ForAllWithParamStringSlice(geneos.GetHost(Hostname), ct, snapshotInstance, args, params)
+		return
 	},
 }
 
-func snapshotInstance(c geneos.Instance, params []string) (err error) {
+func snapshotInstance(c geneos.Instance, params []string) (result any, err error) {
 	if !instance.AtLeastVersion(c, "5.14") {
-		return fmt.Errorf("%s is too old (5.14 or above required)", c)
+		err = fmt.Errorf("%s is too old (5.14 or above required)", c)
+		return
 	}
 	dvs := []string{}
 	log.Debug().Msgf("snapshot on %s", c)
 	for _, path := range params {
-		x, err := xpath.Parse(path)
+		var x *xpath.XPath
+		x, err = xpath.Parse(path)
 		if err != nil {
 			log.Error().Msgf("%s: %q", err, path)
 			continue
@@ -147,17 +150,19 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 		}
 
 		log.Debug().Msgf("dialling %s", gatewayURL(c))
-		gw, err := commands.DialGateway(gatewayURL(c),
+		var gw *commands.Connection
+		gw, err = commands.DialGateway(gatewayURL(c),
 			commands.AllowInsecureCertificates(true),
 			commands.SetBasicAuth(username, password))
 		if err != nil {
-			return err
+			return
 		}
 		d := x.ResolveTo(&xpath.Dataview{})
 		log.Debug().Msgf("matching xpath %s", d)
-		views, err := gw.Match(d, 0)
+		var views []*xpath.XPath
+		views, err = gw.Match(d, 0)
 		if err != nil {
-			return err
+			return
 		}
 		if snapshotCmdMaxitems > 0 && len(views) > snapshotCmdMaxitems {
 			views = views[0:snapshotCmdMaxitems]
@@ -168,9 +173,10 @@ func snapshotInstance(c geneos.Instance, params []string) (err error) {
 			}
 		} else {
 			for _, view := range views {
-				data, err := gw.Snapshot(view)
+				var data *commands.Dataview
+				data, err = gw.Snapshot(view)
 				if err != nil {
-					return err
+					return
 				}
 				j, _ := json.MarshalIndent(data, "    ", "    ")
 				dvs = append(dvs, string(j))

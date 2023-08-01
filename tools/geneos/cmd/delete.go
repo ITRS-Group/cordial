@@ -58,16 +58,18 @@ var deleteCmd = &cobra.Command{
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(cmd *cobra.Command, allargs []string) error {
+	RunE: func(cmd *cobra.Command, allargs []string) (err error) {
 		ct, args := CmdArgs(cmd)
 
-		return instance.ForAll(ct, Hostname, deleteInstance, args)
+		_, err = instance.ForAll(geneos.GetHost(Hostname), ct, deleteInstance, args)
+		return
 	},
 }
 
-func deleteInstance(c geneos.Instance, _ ...any) (err error) {
+func deleteInstance(c geneos.Instance) (result any, err error) {
 	if instance.IsProtected(c) {
-		return geneos.ErrProtected
+		err = geneos.ErrProtected
+		return
 	}
 
 	if deleteCmdStop {
@@ -89,8 +91,9 @@ func deleteInstance(c geneos.Instance, _ ...any) (err error) {
 		}
 		fmt.Printf("%s deleted %s:%s\n", c, c.Host().String(), c.Home())
 		c.Unload()
-		return nil
+		return
 	}
 
-	return fmt.Errorf("not deleted. Instances must not be running or use the '--force'/'-F' option")
+	err = fmt.Errorf("not deleted. Instances must not be running or use the '--force'/'-F' option")
+	return
 }

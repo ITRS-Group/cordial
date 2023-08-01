@@ -109,7 +109,7 @@ geneos aes new -S gateway
 						return
 					}
 					params := []string{crcstr + ".aes"}
-					instance.ForAllWithParams(ct, cmd.Hostname, aesNewSetInstance, args, params)
+					instance.ForAllWithParamStringSlice(h, ct, aesNewSetInstance, args, params)
 				}
 			}
 
@@ -119,7 +119,7 @@ geneos aes new -S gateway
 	},
 }
 
-func aesNewSetInstance(c geneos.Instance, params []string) (err error) {
+func aesNewSetInstance(c geneos.Instance, params []string) (result any, err error) {
 	var rolled bool
 	cf := c.Config()
 

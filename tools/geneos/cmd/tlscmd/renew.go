@@ -56,14 +56,15 @@ var renewCmd = &cobra.Command{
 		"wildcard":     "true",
 		"needshomedir": "true",
 	},
-	RunE: func(command *cobra.Command, _ []string) error {
+	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, args := cmd.CmdArgs(command)
-		return instance.ForAll(ct, cmd.Hostname, renewInstanceCert, args)
+		_, err = instance.ForAll(geneos.GetHost(cmd.Hostname), ct, renewInstanceCert, args)
+		return
 	},
 }
 
 // renew an instance certificate, use private key if it exists
-func renewInstanceCert(c geneos.Instance, _ ...any) (err error) {
+func renewInstanceCert(c geneos.Instance) (result any, err error) {
 	hostname, _ := os.Hostname()
 	if !c.Host().IsLocal() {
 		hostname = c.Host().GetString("hostname")

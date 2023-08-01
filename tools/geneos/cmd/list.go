@@ -81,7 +81,7 @@ var listCmd = &cobra.Command{
 		ct, args := CmdArgs(cmd)
 		switch {
 		case listCmdJSON, listCmdIndent:
-			results, _ := instance.ForAllWithResults(ct, Hostname, listInstanceJSON, args, "")
+			results, _ := instance.ForAll(geneos.GetHost(Hostname), ct, listInstanceJSON, args)
 			var b []byte
 			if listCmdIndent {
 				b, _ = json.MarshalIndent(results, "", "    ")
@@ -92,10 +92,10 @@ var listCmd = &cobra.Command{
 		case listCmdCSV:
 			listCSVWriter = csv.NewWriter(os.Stdout)
 			listCSVWriter.Write([]string{"Type", "Name", "Host", "Disabled", "Protected", "AutoStart", "Port", "Version", "Home"})
-			err = instance.ForAll(ct, Hostname, listInstanceCSV, args)
+			_, err = instance.ForAll(geneos.GetHost(Hostname), ct, listInstanceCSV, args)
 			listCSVWriter.Flush()
 		default:
-			results, _ := instance.ForAllWithResults(ct, Hostname, listInstancePlain, args, "")
+			results, _ := instance.ForAll(geneos.GetHost(Hostname), ct, listInstancePlain, args)
 			listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(listTabWriter, "Type\tNames\tHost\tFlag\tPort\tVersion\tHome\n")
 			for _, r := range results {
@@ -110,7 +110,7 @@ var listCmd = &cobra.Command{
 	},
 }
 
-func listInstancePlain(c geneos.Instance, _ string) (result interface{}, err error) {
+func listInstancePlain(c geneos.Instance) (result any, err error) {
 	var output string
 	var flags string
 	if instance.IsDisabled(c) {
@@ -134,7 +134,7 @@ func listInstancePlain(c geneos.Instance, _ string) (result interface{}, err err
 	return output, nil
 }
 
-func listInstanceCSV(c geneos.Instance, _ ...any) (err error) {
+func listInstanceCSV(c geneos.Instance) (result any, err error) {
 	disabled := "N"
 	protected := "N"
 	autostart := "N"
@@ -153,7 +153,7 @@ func listInstanceCSV(c geneos.Instance, _ ...any) (err error) {
 	return
 }
 
-func listInstanceJSON(c geneos.Instance, _ string) (result interface{}, err error) {
+func listInstanceJSON(c geneos.Instance) (result any, err error) {
 	base, underlying, _ := instance.Version(c)
 	result = listCmdType{
 		Type:      c.Type().String(),
