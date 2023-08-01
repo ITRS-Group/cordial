@@ -28,6 +28,7 @@ import (
 	"crypto/x509"
 	_ "embed"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -42,16 +43,14 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var importCmdCert, importCmdSigner, importCmdChain, importCmdCertKey, importCmdSignerKey string
+var importCmdCert, importCmdSigner, importCmdChain, importCmdCertKey string
 
 func init() {
 	tlsCmd.AddCommand(importCmd)
 
 	importCmd.Flags().StringVarP(&importCmdCert, "cert", "c", "", "Instance certificate to import, PEM format")
-	importCmd.Flags().StringVarP(&importCmdCertKey, "privkey", "k", "", "Private key for instance certificate, PEM format")
-
-	importCmd.Flags().StringVarP(&importCmdSigner, "signing", "S", "", "Signing certificate to import, PEM format")
-	importCmd.Flags().StringVarP(&importCmdSignerKey, "signingkey", "K", "", "Signing keyto import, PEM format")
+	importCmd.Flags().StringVarP(&importCmdSigner, "signing", "s", "", "Signing certificate to import, PEM format")
+	importCmd.Flags().StringVarP(&importCmdCertKey, "privkey", "k", "", "Private key for certificate, PEM format")
 
 	importCmd.Flags().StringVarP(&importCmdChain, "chain", "C", "", "Certificate chain to import, PEM format")
 
@@ -75,14 +74,20 @@ var importCmd = &cobra.Command{
 		ct, args, params := cmd.CmdArgsParams(command)
 		log.Debug().Msgf("ct=%s args=%v params=%v", ct, args, params)
 
+		if importCmdCert != "" && importCmdSigner != "" {
+			return errors.New("you can only import an instance *or* a signing certificate, not both")
+		}
+
 		if importCmdSigner != "" {
-			chain, cert, privkey, err := tlsDecompose(importCmdSigner, importCmdSignerKey)
+			chain, cert, privkey, err := tlsDecompose(importCmdSigner, importCmdCertKey)
 			if err != nil {
 				return err
 			}
-			instance.ForAllAny(ct, cmd.Hostname, tlsWriteInstance, args, cert, privkey)
+			instance.ForAll(ct, cmd.Hostname, tlsWriteInstance, args, cert, privkey)
 			if importCmdChain == "" {
-				tlsWriteChainLocal(chain)
+				if err = tlsWriteChainLocal(chain); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -91,9 +96,11 @@ var importCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			instance.ForAllAny(ct, cmd.Hostname, tlsWriteInstance, args, cert, privkey)
+			instance.ForAll(ct, cmd.Hostname, tlsWriteInstance, args, cert, privkey)
 			if importCmdChain == "" {
-				tlsWriteChainLocal(chain)
+				if err = tlsWriteChainLocal(chain); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -102,10 +109,12 @@ var importCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			tlsWriteChainLocal(chain)
+			if err = tlsWriteChainLocal(chain); err != nil {
+				return err
+			}
 		}
 
-		return tlsImport(args...)
+		return
 	},
 }
 
@@ -229,93 +238,6 @@ func tlsDecompose(certfile, keyfile string) (chain []*x509.Certificate, cert *x5
 	// no leaf ? return a chain but no cert, no privkey
 	chain = certs
 	cert = nil
-
-	return
-}
-
-// import root and signing certs
-//
-// a root cert is one where subject == issuer
-//
-// no support for instance certs (yet)
-//
-// instance cert has CA = false
-func tlsImport(sources ...string) (err error) {
-	err = geneos.LOCAL.MkdirAll(config.AppConfigDir(), 0755)
-	if err != nil {
-		return
-	}
-
-	// save certs and keys into memory, then check certs for root / etc.
-	// and then validate private keys against certs before saving
-	// anything to disk
-	var certs []*x509.Certificate
-	var keys []*memguard.Enclave
-	var f []byte
-
-	for _, source := range sources {
-		log.Debug().Msgf("importing %s", source)
-		if f, err = geneos.ReadFrom(source); err != nil {
-			log.Error().Err(err).Msg("")
-			err = nil
-			continue
-		}
-
-		for {
-			block, rest := pem.Decode(f)
-			if block == nil {
-				break
-			}
-			switch block.Type {
-			case "CERTIFICATE":
-				cert, err := x509.ParseCertificate(block.Bytes)
-				if err != nil {
-					return err
-				}
-				certs = append(certs, cert)
-			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
-				keys = append(keys, memguard.NewEnclave(block.Bytes))
-			default:
-				return fmt.Errorf("unknown PEM type found: %s", block.Type)
-			}
-			f = rest
-		}
-	}
-
-	var title, prefix string
-	for _, cert := range certs {
-		if bytes.Equal(cert.RawSubject, cert.RawIssuer) {
-			// root cert
-			title = "root"
-			prefix = geneos.RootCAFile
-		} else {
-			// signing cert
-			title = "signing"
-			prefix = geneos.SigningCertFile
-		}
-		i, err := matchKey(cert, keys)
-		if err != nil {
-			log.Debug().Msgf("cert: no matching key found, ignoring %s", cert.Subject.String())
-			continue
-		}
-
-		// pull out the matching key, write files
-		key := keys[i]
-		if len(keys) > i {
-			keys = append(keys[:i], keys[i+1:]...)
-		} else {
-			keys = keys[:i]
-		}
-
-		if err = config.WriteCert(geneos.LOCAL, path.Join(config.AppConfigDir(), prefix+".pem"), cert); err != nil {
-			return err
-		}
-		fmt.Printf("imported %s certificate to %q\n", title, path.Join(config.AppConfigDir(), prefix+".pem"))
-		if err = config.WritePrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), prefix+".key"), key); err != nil {
-			return err
-		}
-		fmt.Printf("imported %s private key to %q\n", title, path.Join(config.AppConfigDir(), prefix+".pem"))
-	}
 
 	return
 }
