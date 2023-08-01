@@ -25,10 +25,12 @@ package tlscmd
 import (
 	_ "embed"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
@@ -60,6 +62,10 @@ var syncCmd = &cobra.Command{
 //
 // the cert chain is kept in the geneos tls directory, not the app
 // config directory
+//
+// If a signing cert and/or a root cert exist, refresh the chain file
+// from it, otherwise copy the chain file (using the configured name) to
+// all remotes.
 func tlsSync() (err error) {
 	rootCert, err := instance.ReadRootCert()
 	if err != nil {
@@ -71,6 +77,13 @@ func tlsSync() (err error) {
 	}
 
 	if rootCert == nil && geneosCert == nil {
+		tlsPath := geneos.LOCAL.PathTo("tls")
+		chainpath := path.Join(tlsPath, geneos.ChainCertFile)
+		if s, err := geneos.LOCAL.Stat(chainpath); err != nil && (s.Mode().IsRegular() || (s.Mode()&fs.ModeSymlink != 0)) {
+			for _, r := range geneos.RemoteHosts(false) {
+				host.CopyFile(geneos.LOCAL, tlsPath, r, r.PathTo("tls"))
+			}
+		}
 		return
 	}
 
@@ -80,7 +93,7 @@ func tlsSync() (err error) {
 			return
 		}
 		chainpath := path.Join(tlsPath, geneos.ChainCertFile)
-		if err = config.WriteCerts(r, chainpath, geneosCert, rootCert); err != nil {
+		if err = config.WriteCertChain(r, chainpath, geneosCert, rootCert); err != nil {
 			return
 		}
 
