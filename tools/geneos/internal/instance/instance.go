@@ -24,12 +24,15 @@ package instance
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -281,6 +284,41 @@ func ByKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (confs 
 	return
 }
 
+// appendUnrolledResults checks the type of result and appends to results
+// appropriately.
+//
+// If result is a slice of a basic type it is appended as-is, as are non
+// slice types
+//
+// If result is a slice of any other type then each element is appended
+// individually
+//
+// Any nil values (or invalid values) are skipped
+func appendUnrolledResults(in []any, result any) (out []any) {
+	t := reflect.TypeOf(result)
+	v := reflect.ValueOf(result)
+	if !v.IsValid() {
+		return
+	}
+	if t.Kind() != reflect.Slice {
+		return append(in, result)
+	}
+	if t.Elem().Kind() == reflect.String {
+		return append(in, result)
+	}
+	if v.IsZero() {
+		return
+	}
+	out = in
+	for i := 0; i < v.Len(); i++ {
+		if !v.Index(i).IsValid() || v.Index(i).IsZero() {
+			continue
+		}
+		out = append(out, v.Index(i).Interface())
+	}
+	return
+}
+
 // Do calls the function fn for each matching instance and gathers
 // the return values into a slice for handling upstream. The functions are
 // called in go routine and must be concurrency safe.
@@ -310,7 +348,7 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Ins
 			if result != nil {
 				mutex.Lock()
 				instanceList = append(instanceList, c)
-				results = append(results, result)
+				results = appendUnrolledResults(results, result)
 				mutex.Unlock()
 			}
 		}(c)
@@ -350,7 +388,7 @@ func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn 
 			if result != nil {
 				mutex.Lock()
 				instanceList = append(instanceList, c)
-				results = append(results, result)
+				results = appendUnrolledResults(results, result)
 				mutex.Unlock()
 			}
 		}(c)
@@ -391,7 +429,7 @@ func DoWithValues(h *geneos.Host, ct *geneos.Component, names []string, fn func(
 			if result != nil {
 				mutex.Lock()
 				instanceList = append(instanceList, c)
-				results = append(results, result)
+				results = appendUnrolledResults(results, result)
 				mutex.Unlock()
 			}
 		}(c)
@@ -427,6 +465,19 @@ func ResultsToCSVWriter(w *csv.Writer, results []any) (err error) {
 		}
 	}
 	return
+}
+
+// ResultsAsJSON writes the JSON encoding of results to writer w
+//
+// HTML escaping is turned off. If indent is true then the output is
+// indented by four spaces per level for human presentation.
+func ResultsAsJSON(w io.Writer, results any, indent bool) (err error) {
+	j := json.NewEncoder(w)
+	j.SetEscapeHTML(false)
+	if indent {
+		j.SetIndent("", "    ")
+	}
+	return j.Encode(results)
 }
 
 // Names returns a slice of all instance names for a given component ct
