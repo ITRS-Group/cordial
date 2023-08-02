@@ -134,7 +134,7 @@ var deployCmd = &cobra.Command{
 		}
 
 		if pkgct == nil {
-			if ct.ParentType != nil {
+			if ct.ParentType != nil && len(ct.RelatedTypes) > 0 {
 				pkgct = ct.ParentType
 			} else {
 				pkgct = ct
