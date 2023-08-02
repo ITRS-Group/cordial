@@ -109,7 +109,7 @@ var showCmd = &cobra.Command{
 			}
 
 			var results []interface{}
-			results, err = instance.DoWithParams(geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir)
+			results, err = instance.DoWithValues(geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir)
 
 			if err != nil {
 				if err == os.ErrNotExist {
@@ -128,7 +128,7 @@ var showCmd = &cobra.Command{
 
 		if showCmdSetup {
 			var results []interface{}
-			results, err = instance.DoWithParams(geneos.GetHost(Hostname), ct, names, showInstanceConfig, fmt.Sprint(showCmdMerge))
+			results, err = instance.DoWithValues(geneos.GetHost(Hostname), ct, names, showInstanceConfig, fmt.Sprint(showCmdMerge))
 
 			if err != nil {
 				if err == os.ErrNotExist {

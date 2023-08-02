@@ -83,7 +83,7 @@ var importCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			instance.DoWithParams(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, cert, privkey)
+			instance.DoWithValues(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, cert, privkey)
 			if importCmdChain == "" {
 				if err = tlsWriteChainLocal(chain); err != nil {
 					return err
@@ -96,7 +96,7 @@ var importCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			instance.DoWithParams(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, cert, privkey)
+			instance.DoWithValues(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, cert, privkey)
 			if importCmdChain == "" {
 				if err = tlsWriteChainLocal(chain); err != nil {
 					return err
