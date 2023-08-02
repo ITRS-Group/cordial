@@ -133,29 +133,29 @@ func tlsWriteChainLocal(chain []*x509.Certificate) (err error) {
 	return
 }
 
-func tlsWriteInstance(c geneos.Instance, params ...any) (result any, err error) {
+func tlsWriteInstance(c geneos.Instance, params ...any) (result instance.Result) {
 	if len(params) != 2 {
-		err = geneos.ErrInvalidArgs
+		result.Err = geneos.ErrInvalidArgs
 		return
 	}
 	cert, ok := params[0].(*x509.Certificate)
 	if !ok {
-		err = geneos.ErrInvalidArgs
+		result.Err = geneos.ErrInvalidArgs
 		return
 	}
 
 	key, ok := params[1].(*memguard.Enclave)
 	if !ok {
-		err = geneos.ErrInvalidArgs
+		result.Err = geneos.ErrInvalidArgs
 		return
 	}
 
-	if err = instance.WriteCert(c, cert); err != nil {
+	if result.Err = instance.WriteCert(c, cert); result.Err != nil {
 		return
 	}
 	fmt.Printf("%s certificate written\n", c)
 
-	if err = instance.WriteKey(c, key); err != nil {
+	if result.Err = instance.WriteKey(c, key); result.Err != nil {
 		return
 	}
 	fmt.Printf("%s private key written\n", c)

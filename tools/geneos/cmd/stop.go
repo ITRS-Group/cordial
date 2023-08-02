@@ -24,6 +24,7 @@ package cmd
 
 import (
 	_ "embed"
+	"os"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -56,7 +57,9 @@ var stopCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names := TypeNames(cmd)
-		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, stopInstance)
+		var results []any
+		results, err = instance.Do(geneos.GetHost(Hostname), ct, names, stopInstance)
+		instance.WriteResultsStrings(os.Stdout, results)
 		return
 	},
 }

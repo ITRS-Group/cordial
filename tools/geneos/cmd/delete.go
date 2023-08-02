@@ -61,7 +61,9 @@ var deleteCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, allargs []string) (err error) {
 		ct, names := TypeNames(cmd)
 
-		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, deleteInstance)
+		var results []any
+		results, err = instance.Do(geneos.GetHost(Hostname), ct, names, deleteInstance)
+		instance.WriteResultsStrings(os.Stdout, results)
 		return
 	},
 }

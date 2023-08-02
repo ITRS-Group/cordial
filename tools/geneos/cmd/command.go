@@ -26,6 +26,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -68,27 +69,33 @@ var commandCmd = &cobra.Command{
 			fmt.Println(string(b))
 			return nil
 		}
-		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, commandInstance)
+		var results []any
+		results, err = instance.Do(geneos.GetHost(Hostname), ct, names, commandInstance)
+		instance.WriteResultsStrings(os.Stdout, results)
 		return
 	},
 }
 
 func commandInstance(c geneos.Instance) (result any, err error) {
-	fmt.Printf("=== %s ===\n", c)
+	lines := []string{fmt.Sprintf("=== %s ===", c)}
+
 	cmd, env, home := instance.BuildCmd(c, true)
 	if cmd != nil {
-		fmt.Println("command line:")
-		fmt.Println("\t", cmd.String())
-		fmt.Println()
-		fmt.Println("working directory:")
-		fmt.Println("\t", home)
-		fmt.Println()
-		fmt.Println("environment:")
+		lines = append(lines,
+			"command line:",
+			fmt.Sprint("\t", cmd.String()),
+			"\n",
+			"working directory:",
+			fmt.Sprint("\t", home),
+			"\n",
+			"environment:",
+		)
 		for _, e := range env {
-			fmt.Println("\t", e)
+			lines = append(lines, fmt.Sprint("\t", e))
 		}
-		fmt.Println()
+		lines = append(lines, "\n")
 	}
+	result = lines
 	return
 }
 
