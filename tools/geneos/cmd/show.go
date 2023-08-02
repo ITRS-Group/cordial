@@ -86,7 +86,7 @@ var showCmd = &cobra.Command{
 		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, names []string) (err error) {
-		ct, names, params := TypeNamesParams(cmd)
+		ct, names := TypeNames(cmd)
 		output := os.Stdout
 		if showCmdOutput != "" {
 			output, err = os.Create(showCmdOutput)
@@ -104,11 +104,11 @@ var showCmd = &cobra.Command{
 		}
 
 		if showCmdValidate {
-			if showCmdHooksDir != "" {
-				params = append(params, showCmdHooksDir)
-			}
+			// if showCmdHooksDir != "" {
+			// 	params = append(params, showCmdHooksDir)
+			// }
 
-			var results []interface{}
+			var results instance.Results
 			results, err = instance.DoWithValues(geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir)
 
 			if err != nil {
@@ -117,7 +117,7 @@ var showCmd = &cobra.Command{
 				}
 			}
 			for _, r := range results {
-				result, ok := r.(showConfig)
+				result, ok := r.Value.(showConfig)
 				if !ok {
 					return
 				}
@@ -127,16 +127,15 @@ var showCmd = &cobra.Command{
 		}
 
 		if showCmdSetup {
-			var results []interface{}
-			results, err = instance.DoWithValues(geneos.GetHost(Hostname), ct, names, showInstanceConfig, fmt.Sprint(showCmdMerge))
-
+			var results instance.Results
+			results, err = instance.DoWithValues(geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge)
 			if err != nil {
 				if err == os.ErrNotExist {
 					return fmt.Errorf("no matching instance found")
 				}
 			}
 			for _, r := range results {
-				result, ok := r.(showConfig)
+				result, ok := r.Value.(*showConfig)
 				if !ok {
 					return
 				}
@@ -157,7 +156,7 @@ var showCmd = &cobra.Command{
 	},
 }
 
-func showValidateInstance(c geneos.Instance, params ...any) (result any, err error) {
+func showValidateInstance(c geneos.Instance, params ...any) (result instance.Result) {
 	setup := c.Config().GetString("setup")
 	if setup == "" {
 		return
@@ -190,19 +189,20 @@ func showValidateInstance(c geneos.Instance, params ...any) (result any, err err
 
 		var output []byte
 		// we don't care about errors, just the output
-		_, err = c.Host().Run(cmd, env, home, "errors.txt")
+		_, err := c.Host().Run(cmd, env, home, "errors.txt")
 		if err != nil {
 			log.Debug().Msgf("error: %s", output)
 		}
-		output, err = os.ReadFile(tempfile)
-		if err != nil {
+		output, result.Err = os.ReadFile(tempfile)
+		if result.Err != nil {
 			return
 		}
 
-		result = showConfig{
+		result.Value = &showConfig{
 			c:    c,
 			file: output,
 		}
+
 		return
 	}
 	return
@@ -214,7 +214,7 @@ type showConfig struct {
 }
 
 // showInstanceConfig returns a slice of showConfig structs per instance
-func showInstanceConfig(c geneos.Instance, params ...any) (result any, err error) {
+func showInstanceConfig(c geneos.Instance, params ...any) (result instance.Result) {
 	setup := c.Config().GetString("setup")
 	if setup == "" {
 		return
@@ -236,7 +236,7 @@ func showInstanceConfig(c geneos.Instance, params ...any) (result any, err error
 		cmd.Args = append(cmd.Args, instance.SetSecureArgs(c)...)
 		var output []byte
 		// we don't care about errors, just the output
-		output, err = c.Host().Run(cmd, env, home, "errors.txt")
+		output, err := c.Host().Run(cmd, env, home, "errors.txt")
 		if err != nil {
 			log.Debug().Msgf("error: %s", output)
 		}
@@ -244,7 +244,7 @@ func showInstanceConfig(c geneos.Instance, params ...any) (result any, err error
 		if i == -1 {
 			return
 		}
-		result = showConfig{
+		result.Value = &showConfig{
 			c:    c,
 			file: output[i:],
 		}
@@ -252,9 +252,10 @@ func showInstanceConfig(c geneos.Instance, params ...any) (result any, err error
 	}
 	file, err := os.ReadFile(setup)
 	if err != nil {
+		result.Err = err
 		return
 	}
-	result = showConfig{
+	result.Value = &showConfig{
 		c:    c,
 		file: file,
 	}

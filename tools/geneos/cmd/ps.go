@@ -110,7 +110,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) (err error
 		psCSVWriter = csv.NewWriter(os.Stdout)
 		psCSVWriter.Write([]string{"Type", "Name", "Host", "PID", "Ports", "User", "Group", "Starttime", "Version", "Home"})
 		results, err = instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV)
-		instance.ResultsToCSVWriter(psCSVWriter, results)
+		instance.WriteResultsToCSVWriter(psCSVWriter, results)
 		psCSVWriter.Flush()
 	default:
 		results, err := instance.Do(geneos.GetHost(Hostname), ct, names, psInstancePlain)

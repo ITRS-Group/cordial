@@ -97,7 +97,7 @@ var listCmd = &cobra.Command{
 			if err != nil {
 				return
 			}
-			if err = instance.ResultsToCSVWriter(listCSVWriter, results); err != nil {
+			if err = instance.WriteResultsToCSVWriter(listCSVWriter, results); err != nil {
 				return
 			}
 			listCSVWriter.Flush()

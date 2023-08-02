@@ -100,7 +100,7 @@ geneos aes ls -S gateway -H localhost -c
 					return
 				}
 			}
-			instance.ResultsAsJSON(os.Stdout, results, listCmdIndent)
+			instance.WriteResultsAsJSON(os.Stdout, results, listCmdIndent)
 		case listCmdCSV:
 			aesListCSVWriter = csv.NewWriter(os.Stdout)
 			aesListCSVWriter.Write([]string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
@@ -114,7 +114,7 @@ geneos aes ls -S gateway -H localhost -c
 				if err != nil {
 					return
 				}
-				if err = instance.ResultsToCSVWriter(aesListCSVWriter, results); err != nil {
+				if err = instance.WriteResultsToCSVWriter(aesListCSVWriter, results); err != nil {
 					return
 				}
 			}

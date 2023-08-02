@@ -23,16 +23,12 @@ THE SOFTWARE.
 package instance
 
 import (
-	"encoding/csv"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -284,41 +280,6 @@ func ByKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (confs 
 	return
 }
 
-// appendUnrolledResults checks the type of result and appends to results
-// appropriately.
-//
-// If result is a slice of a basic type it is appended as-is, as are non
-// slice types
-//
-// If result is a slice of any other type then each element is appended
-// individually
-//
-// Any nil values (or invalid values) are skipped
-func appendUnrolledResults(in []any, result any) (out []any) {
-	t := reflect.TypeOf(result)
-	v := reflect.ValueOf(result)
-	if !v.IsValid() {
-		return
-	}
-	if t.Kind() != reflect.Slice {
-		return append(in, result)
-	}
-	if t.Elem().Kind() == reflect.String {
-		return append(in, result)
-	}
-	if v.IsZero() {
-		return
-	}
-	out = in
-	for i := 0; i < v.Len(); i++ {
-		if !v.Index(i).IsValid() || v.Index(i).IsZero() {
-			continue
-		}
-		out = append(out, v.Index(i).Interface())
-	}
-	return
-}
-
 // Do calls the function fn for each matching instance and gathers
 // the return values into a slice for handling upstream. The functions are
 // called in go routine and must be concurrency safe.
@@ -342,9 +303,11 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Ins
 		go func(c geneos.Instance) {
 			var result interface{}
 			defer wg.Done()
-			if result, err = fn(c); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
+			result, err = fn(c)
+			if err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
 				fmt.Printf("%s: %s\n", c, err)
 			}
+
 			if result != nil {
 				mutex.Lock()
 				instanceList = append(instanceList, c)
@@ -407,10 +370,9 @@ func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn 
 // os.ErrNotExist if there are no matching instances. params are passed
 // as a variadic list of any type. The called function should validate
 // and cast params for use.
-func DoWithValues(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, ...any) (any, error), values ...any) (results []any, err error) {
+func DoWithValues(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, ...any) Result, values ...any) (results Results, err error) {
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
-	var instanceList []geneos.Instance
 
 	instances, err := ByNames(h, ct, names...)
 	if err != nil {
@@ -418,66 +380,24 @@ func DoWithValues(h *geneos.Host, ct *geneos.Component, names []string, fn func(
 	}
 
 	for _, c := range instances {
-		instanceList = make([]geneos.Instance, 0, len(instances))
 		wg.Add(1)
 		go func(c geneos.Instance) {
-			var result interface{}
 			defer wg.Done()
-			if result, err = fn(c, values...); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
-				fmt.Printf("%s: %s\n", c, err)
+			result := fn(c, values...)
+			if result.Err != nil && !errors.Is(result.Err, os.ErrProcessDone) && !errors.Is(result.Err, geneos.ErrNotSupported) {
+				fmt.Printf("%s: %s\n", c, result.Err)
+				return
 			}
-			if result != nil {
-				mutex.Lock()
-				instanceList = append(instanceList, c)
-				results = appendUnrolledResults(results, result)
-				mutex.Unlock()
-			}
+			result.Instance = c
+			mutex.Lock()
+			results = append(results, result)
+			mutex.Unlock()
 		}(c)
 	}
 	wg.Wait()
 
-	sort.Sort(SortInstanceResults{Instances: instanceList, Results: results})
+	sort.Sort(results)
 	return results, nil
-}
-
-// ResultsToCSVWriter sends all slices of strings to the writer w
-//
-// results can be a slice or a slice of slices or a mix of both, it will
-// recurse into those
-func ResultsToCSVWriter(w *csv.Writer, results []any) (err error) {
-	for _, result := range results {
-		switch row := result.(type) {
-		case []string:
-			if err = w.Write(row); err != nil {
-				return
-			}
-		case [][]string:
-			for _, r := range row {
-				if len(r) == 0 {
-					continue
-				}
-				if err = w.Write(r); err != nil {
-					return
-				}
-			}
-		default:
-			log.Error().Msgf("unexpected row type %T", result)
-		}
-	}
-	return
-}
-
-// ResultsAsJSON writes the JSON encoding of results to writer w
-//
-// HTML escaping is turned off. If indent is true then the output is
-// indented by four spaces per level for human presentation.
-func ResultsAsJSON(w io.Writer, results any, indent bool) (err error) {
-	j := json.NewEncoder(w)
-	j.SetEscapeHTML(false)
-	if indent {
-		j.SetIndent("", "    ")
-	}
-	return j.Encode(results)
 }
 
 // Names returns a slice of all instance names for a given component ct
