@@ -25,7 +25,6 @@ package aescmd
 import (
 	_ "embed"
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -48,12 +47,13 @@ var listCmdShared bool
 var aesListCSVWriter *csv.Writer
 
 type listCmdType struct {
-	Name    string         `json:"name,omitempty"`
-	Type    string         `json:"type,omitempty"`
-	Host    string         `json:"host,omitempty"`
-	Keyfile config.KeyFile `json:"keyfile,omitempty"`
-	CRC32   string         `json:"crc32,omitempty"`
-	Modtime string         `json:"modtime,omitempty"`
+	Name        string          `json:"name,omitempty"`
+	Type        string          `json:"type,omitempty"`
+	Host        string          `json:"host,omitempty"`
+	Keyfile     *config.KeyFile `json:"keyfile,omitempty"`
+	PrevKeyfile bool            `json:"prevkeyfile,omitempty"`
+	CRC32       string          `json:"crc32,omitempty"`
+	Modtime     string          `json:"modtime,omitempty"`
 }
 
 func init() {
@@ -88,9 +88,6 @@ geneos aes ls -S gateway -H localhost -c
 		ct, names := cmd.TypeNames(command)
 
 		h := geneos.GetHost(cmd.Hostname)
-		if listCmdShared {
-			// XXX
-		}
 
 		switch {
 		case listCmdJSON, listCmdIndent:
@@ -98,15 +95,12 @@ geneos aes ls -S gateway -H localhost -c
 			if listCmdShared {
 				results, _ = aesListSharedJSON(ct, h)
 			} else {
-				results, _ = instance.Do(h, ct, names, aesListInstanceJSON)
+				results, err = instance.Do(h, ct, names, aesListInstanceJSON)
+				if err != nil {
+					return
+				}
 			}
-			var b []byte
-			if listCmdIndent {
-				b, _ = json.MarshalIndent(results, "", "    ")
-			} else {
-				b, _ = json.Marshal(results)
-			}
-			fmt.Println(string(b))
+			instance.ResultsAsJSON(os.Stdout, results, listCmdIndent)
 		case listCmdCSV:
 			aesListCSVWriter = csv.NewWriter(os.Stdout)
 			aesListCSVWriter.Write([]string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
@@ -238,11 +232,13 @@ func aesListInstanceCSV(c geneos.Instance) (results any, err error) {
 	rows = append(rows, row)
 
 	prev := config.KeyFile(instance.PathOf(c, "prevkeyfile"))
-	row, err = aesListPathCSV(c.Type(), c.Host(), c.Name()+" (prev)", prev)
-	if err != nil {
-		return
+	if prev != "" {
+		row, err = aesListPathCSV(c.Type(), c.Host(), c.Name()+" (prev)", prev)
+		if err != nil {
+			return
+		}
+		rows = append(rows, row)
 	}
-	rows = append(rows, row)
 	results = rows
 	return
 }
@@ -271,51 +267,72 @@ func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (results [][]string,
 	return
 }
 
-func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, path config.KeyFile) (result interface{}, err error) {
-	if path == "" {
-		return
-	}
-	s, err := h.Stat(path.String())
-	if err != nil {
-		err = nil
-		result = listCmdType{
-			Name:    name,
-			Type:    ct.String(),
-			Host:    h.String(),
-			Keyfile: path,
-			CRC32:   "-",
-			Modtime: "-",
-		}
+// aesListPathJSON fills in a listCmdType struct. paths is either one or
+// two paths, the second being a previous keyfile.
+func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, paths ...config.KeyFile) (result []any, err error) {
+	var keyfile, prevkeyfile *config.KeyFile
+
+	if len(paths) == 0 {
 		return
 	}
 
-	crc, _, err := path.Check(false)
-	if err != nil {
-		err = nil
-		result = listCmdType{
+	keyfile = &paths[0]
+	if len(paths) > 1 {
+		prevkeyfile = &paths[1]
+	}
+
+	if keyfile != nil && len(*keyfile) != 0 {
+		r := listCmdType{
 			Name:    name,
 			Type:    ct.String(),
 			Host:    h.String(),
-			Keyfile: path,
+			Keyfile: keyfile,
 			CRC32:   "-",
-			Modtime: s.ModTime().Format(time.RFC3339),
+			Modtime: "-",
 		}
-		return
+		s, err := h.Stat(keyfile.String())
+		if err == nil {
+			r.Modtime = s.ModTime().Format(time.RFC3339)
+
+			crc, _, err := keyfile.Check(false)
+			if err == nil {
+				crcstr := fmt.Sprintf("%08X", crc)
+				r.CRC32 = crcstr
+			}
+		}
+		err = nil
+		result = append(result, r)
 	}
-	crcstr := fmt.Sprintf("%08X", crc)
-	result = listCmdType{
-		Name:    name,
-		Type:    ct.String(),
-		Host:    h.String(),
-		Keyfile: path,
-		CRC32:   crcstr,
-		Modtime: s.ModTime().Format(time.RFC3339),
+
+	if prevkeyfile != nil && len(*prevkeyfile) != 0 {
+		r := listCmdType{
+			Name:        name,
+			Type:        ct.String(),
+			Host:        h.String(),
+			Keyfile:     prevkeyfile,
+			PrevKeyfile: true,
+			CRC32:       "-",
+			Modtime:     "-",
+		}
+
+		s, err := h.Stat(prevkeyfile.String())
+		if err == nil {
+			r.Modtime = s.ModTime().Format(time.RFC3339)
+
+			crc, _, err := prevkeyfile.Check(false)
+			if err == nil {
+				crcstr := fmt.Sprintf("%08X", crc)
+				r.CRC32 = crcstr
+			}
+		}
+		err = nil
+		result = append(result, r)
 	}
 
 	return
 }
 
-func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results []interface{}, err error) {
+func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results []any, err error) {
 	results = []interface{}{}
 	for _, h := range h.OrList(geneos.AllHosts()...) {
 		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
@@ -332,14 +349,20 @@ func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results []interfac
 				if err != nil {
 					continue
 				}
-				results = append(results, result)
+				results = append(results, result...)
 			}
 		}
 	}
 	return
 }
 
-func aesListInstanceJSON(c geneos.Instance) (result interface{}, err error) {
-	path := config.KeyFile(instance.PathOf(c, "keyfile"))
-	return aesListPathJSON(c.Type(), c.Host(), c.Name(), path)
+func aesListInstanceJSON(c geneos.Instance) (result any, err error) {
+	keys := []any{}
+
+	k, err := aesListPathJSON(c.Type(), c.Host(), c.Name(), config.KeyFile(instance.PathOf(c, "keyfile")), config.KeyFile(instance.PathOf(c, "prevkeyfile")))
+	if err == nil {
+		keys = append(keys, k...)
+	}
+	result = keys
+	return
 }
