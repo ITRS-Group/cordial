@@ -64,7 +64,7 @@ func IsAutoStart(c geneos.Instance) bool {
 // for the instance c.
 func BaseVersion(c geneos.Instance) (dir string) {
 	t := c.Type().String()
-	if c.Type().ParentType != nil {
+	if c.Type().ParentType != nil && len(c.Type().RelatedTypes) > 0 {
 		t = c.Type().ParentType.String()
 	}
 	pkgtype := c.Config().GetString("pkgtype", config.Default(t))
@@ -82,7 +82,7 @@ func Version(c geneos.Instance) (base string, version string, err error) {
 	cf := c.Config()
 	base = cf.GetString("version")
 	t := c.Type().String()
-	if c.Type().ParentType != nil {
+	if c.Type().ParentType != nil && len(c.Type().RelatedTypes) > 0 {
 		t = c.Type().ParentType.String()
 	}
 	pkgtype := cf.GetString("pkgtype", config.Default(t))
