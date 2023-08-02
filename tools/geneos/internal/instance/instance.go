@@ -23,6 +23,7 @@ THE SOFTWARE.
 package instance
 
 import (
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -182,6 +183,25 @@ func GetAll(h *geneos.Host, ct *geneos.Component) (confs []geneos.Instance) {
 	return
 }
 
+// ByName looks for exactly one matching instance across types and hosts
+// returns Invalid Args if zero of more than 1 match
+func ByName(h *geneos.Host, ct *geneos.Component, name string) (instances geneos.Instance, err error) {
+	list := ByNameAll(h, ct, name)
+	if len(list) == 0 {
+		err = os.ErrNotExist
+		return
+	}
+	if len(list) == 1 {
+		instances = list[0]
+		return
+	}
+	err = geneos.ErrInvalidArgs
+	return
+}
+
+// ByNames returns a slice of instances that match any of the names
+// given, using the host h as a validation check against names with a
+// host qualification
 func ByNames(h *geneos.Host, ct *geneos.Component, names ...string) (instances []geneos.Instance, err error) {
 	n := 0
 	// if args is empty, get all matching instances. this allows internal
@@ -196,7 +216,7 @@ func ByNames(h *geneos.Host, ct *geneos.Component, names ...string) (instances [
 		instances = GetAll(h, ct)
 	} else {
 		for _, name := range names {
-			cs := MatchAll(h, ct, name)
+			cs := ByNameAll(h, ct, name)
 			if len(cs) == 0 {
 				continue
 			}
@@ -210,10 +230,10 @@ func ByNames(h *geneos.Host, ct *geneos.Component, names ...string) (instances [
 	return
 }
 
-// MatchAll constructs and returns a slice of instances that have a
-// matching name. Host h is only used to validate the full name of the
-// instance.
-func MatchAll(h *geneos.Host, ct *geneos.Component, name string) (c []geneos.Instance) {
+// ByNameAll constructs and returns a slice of instances that have a
+// matching name. Host h is used to validate the host portion of the
+// full name of the instance, if given.
+func ByNameAll(h *geneos.Host, ct *geneos.Component, name string) (instances []geneos.Instance) {
 	_, local, r := SplitName(name, h)
 	if !r.IsAvailable() {
 		log.Debug().Err(host.ErrNotAvailable).Msgf("host %s", r)
@@ -226,7 +246,7 @@ func MatchAll(h *geneos.Host, ct *geneos.Component, name string) (c []geneos.Ins
 
 	if ct == nil {
 		for _, ct := range geneos.RealComponents() {
-			c = append(c, MatchAll(h, ct, name)...)
+			instances = append(instances, ByNameAll(h, ct, name)...)
 		}
 		return
 	}
@@ -235,27 +255,11 @@ func MatchAll(h *geneos.Host, ct *geneos.Component, name string) (c []geneos.Ins
 		_, ldir, _ := SplitName(name, geneos.ALL)
 		if path.Base(ldir) == local {
 			if i, err := Get(ct, name); err == nil {
-				c = append(c, i)
+				instances = append(instances, i)
 			}
 		}
 	}
 
-	return
-}
-
-// ByName looks for exactly one matching instance across types and hosts
-// returns Invalid Args if zero of more than 1 match
-func ByName(h *geneos.Host, ct *geneos.Component, name string) (c geneos.Instance, err error) {
-	list := MatchAll(h, ct, name)
-	if len(list) == 0 {
-		err = os.ErrNotExist
-		return
-	}
-	if len(list) == 1 {
-		c = list[0]
-		return
-	}
-	err = geneos.ErrInvalidArgs
 	return
 }
 
@@ -357,7 +361,7 @@ func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn 
 	return results, nil
 }
 
-// DoWithParams calls function fn for each matching instance and
+// DoWithValues calls function fn for each matching instance and
 // gathers the return values into a slice for handling upstream. The
 // functions are called in go routine and must be concurrency safe.
 //
@@ -365,7 +369,7 @@ func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn 
 // os.ErrNotExist if there are no matching instances. params are passed
 // as a variadic list of any type. The called function should validate
 // and cast params for use.
-func DoWithParams(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, ...any) (any, error), params ...any) (results []any, err error) {
+func DoWithValues(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, ...any) (any, error), values ...any) (results []any, err error) {
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
 	var instanceList []geneos.Instance
@@ -381,7 +385,7 @@ func DoWithParams(h *geneos.Host, ct *geneos.Component, names []string, fn func(
 		go func(c geneos.Instance) {
 			var result interface{}
 			defer wg.Done()
-			if result, err = fn(c, params...); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
+			if result, err = fn(c, values...); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
 				fmt.Printf("%s: %s\n", c, err)
 			}
 			if result != nil {
@@ -396,6 +400,33 @@ func DoWithParams(h *geneos.Host, ct *geneos.Component, names []string, fn func(
 
 	sort.Sort(SortInstanceResults{Instances: instanceList, Results: results})
 	return results, nil
+}
+
+// ResultsToCSVWriter sends all slices of strings to the writer w
+//
+// results can be a slice or a slice of slices or a mix of both, it will
+// recurse into those
+func ResultsToCSVWriter(w *csv.Writer, results []any) (err error) {
+	for _, result := range results {
+		switch row := result.(type) {
+		case []string:
+			if err = w.Write(row); err != nil {
+				return
+			}
+		case [][]string:
+			for _, r := range row {
+				if len(r) == 0 {
+					continue
+				}
+				if err = w.Write(r); err != nil {
+					return
+				}
+			}
+		default:
+			log.Error().Msgf("unexpected row type %T", result)
+		}
+	}
+	return
 }
 
 // Names returns a slice of all instance names for a given component ct

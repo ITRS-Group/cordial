@@ -92,7 +92,14 @@ var listCmd = &cobra.Command{
 		case listCmdCSV:
 			listCSVWriter = csv.NewWriter(os.Stdout)
 			listCSVWriter.Write([]string{"Type", "Name", "Host", "Disabled", "Protected", "AutoStart", "Port", "Version", "Home"})
-			_, err = instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV)
+			var results []any
+			results, err = instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV)
+			if err != nil {
+				return
+			}
+			if err = instance.ResultsToCSVWriter(listCSVWriter, results); err != nil {
+				return
+			}
 			listCSVWriter.Flush()
 		default:
 			results, _ := instance.Do(geneos.GetHost(Hostname), ct, names, listInstancePlain)
@@ -149,7 +156,7 @@ func listInstanceCSV(c geneos.Instance) (result any, err error) {
 		autostart = "Y"
 	}
 	base, underlying, _ := instance.Version(c)
-	listCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), disabled, protected, autostart, fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
+	result = []string{c.Type().String(), c.Name(), c.Host().String(), disabled, protected, autostart, fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()}
 	return
 }
 

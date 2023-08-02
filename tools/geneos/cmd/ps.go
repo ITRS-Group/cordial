@@ -106,9 +106,11 @@ func CommandPS(ct *geneos.Component, names []string, params []string) (err error
 		}
 		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceJSON)
 	case psCmdCSV:
+		var results []any
 		psCSVWriter = csv.NewWriter(os.Stdout)
 		psCSVWriter.Write([]string{"Type", "Name", "Host", "PID", "Ports", "User", "Group", "Starttime", "Version", "Home"})
-		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV)
+		results, err = instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV)
+		instance.ResultsToCSVWriter(psCSVWriter, results)
 		psCSVWriter.Flush()
 	default:
 		results, err := instance.Do(geneos.GetHost(Hostname), ct, names, psInstancePlain)
@@ -210,7 +212,7 @@ func psInstanceCSV(c geneos.Instance) (result any, err error) {
 	if underlying != actual {
 		base += "*"
 	}
-	psCSVWriter.Write([]string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), portlist, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()})
+	result = []string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), portlist, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()}
 
 	err = nil // may still be set from above
 	return
