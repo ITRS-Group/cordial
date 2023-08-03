@@ -25,6 +25,7 @@ package aescmd
 import (
 	_ "embed"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -132,12 +133,13 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 
 		ct, names, _ := cmd.TypeNamesParams(command)
 		params := []string{ciphertext}
-		_, err = instance.DoWithStringSlice(geneos.GetHost(cmd.Hostname), ct, names, aesDecodeInstance, params)
+		responses := instance.DoWithStringSlice(geneos.GetHost(cmd.Hostname), ct, names, aesDecodeInstance, params)
+		instance.WriteResponseStrings(os.Stdout, responses)
 		return
 	},
 }
 
-func aesDecodeInstance(c geneos.Instance, params []string) (result any, err error) {
+func aesDecodeInstance(c geneos.Instance, params []string) (result instance.Response) {
 	log.Debug().Msgf("trying to decode for instance %s", c)
 	if !c.Type().UsesKeyfiles {
 		return
@@ -148,15 +150,15 @@ func aesDecodeInstance(c geneos.Instance, params []string) (result any, err erro
 	}
 	r, err := c.Host().Open(path)
 	if err != nil {
+		result.Err = err
 		return
 	}
 	defer r.Close()
 	a := config.Read(r)
 	e, err := a.DecodeString(params[0])
 	if err != nil {
-		err = nil
 		return
 	}
-	fmt.Printf("%s: %q\n", c, e)
+	result.String = fmt.Sprintf("%s: %q", c, e)
 	return
 }

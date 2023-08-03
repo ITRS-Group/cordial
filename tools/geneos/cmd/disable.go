@@ -58,24 +58,26 @@ var disableCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names := TypeNames(cmd)
-		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, disableInstance)
+		responses := instance.Do(geneos.GetHost(Hostname), ct, names, disableInstance)
+		instance.WriteResponseStrings(os.Stdout, responses)
 		return
 	},
 }
 
-func disableInstance(c geneos.Instance) (result any, err error) {
+func disableInstance(c geneos.Instance) (result instance.Response) {
 	if instance.IsDisabled(c) {
 		return
 	}
 
 	if instance.IsProtected(c) {
-		err = geneos.ErrProtected
+		result.Err = geneos.ErrProtected
 		return
 	}
 
 	if disableCmdStop {
 		if c.Type().RealComponent {
-			if err = instance.Stop(c, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
+			if err := instance.Stop(c, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
+				result.Err = err
 				return
 			}
 		}
@@ -87,12 +89,12 @@ func disableInstance(c geneos.Instance) (result any, err error) {
 	}
 
 	if !instance.IsProtected(c) || disableCmdForce {
-		if err = instance.Disable(c); err == nil {
-			fmt.Printf("%s disabled\n", c)
+		if result.Err = instance.Disable(c); result.Err == nil {
+			result.String = fmt.Sprintf("%s disabled", c)
 			return
 		}
 	}
 
-	err = fmt.Errorf("not disabled. Instances must not be running or use the '--force'/'-F' option")
+	result.Err = fmt.Errorf("not disabled. Instances must not be running or use the '--force'/'-F' option")
 	return
 }

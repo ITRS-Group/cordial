@@ -42,27 +42,27 @@ import (
 )
 
 type listCertType struct {
-	Type       string
-	Name       string
-	Host       string
-	Remaining  time.Duration
-	Expires    time.Time
-	CommonName string
-	Verified   bool
+	Type       string        `json:"type,omitempty"`
+	Name       string        `json:"name,omitempty"`
+	Host       string        `json:"host,omitempty"`
+	Remaining  time.Duration `json:"remaining,omitempty"`
+	Expires    time.Time     `json:"expires,omitempty"`
+	CommonName string        `json:"common_name,omitempty"`
+	Verified   bool          `json:"verified,omitempty"`
 }
 
 type listCertLongType struct {
-	Type        string
-	Name        string
-	Host        string
-	Remaining   time.Duration
-	Expires     time.Time
-	CommonName  string
-	Verified    bool
-	Issuer      string
-	SubAltNames []string
-	IPs         []net.IP
-	Signature   string
+	Type        string        `json:"type,omitempty"`
+	Name        string        `json:"name,omitempty"`
+	Host        string        `json:"host,omitempty"`
+	Remaining   time.Duration `json:"remaining,omitempty"`
+	Expires     time.Time     `json:"expires,omitempty"`
+	CommonName  string        `json:"common_name,omitempty"`
+	Verified    bool          `json:"verified,omitempty"`
+	Issuer      string        `json:"issuer,omitempty"`
+	SubAltNames []string      `json:"sans,omitempty"`
+	IPs         []net.IP      `json:"ip_addresses,omitempty"`
+	Signature   string        `json:"signature,omitempty"`
 }
 
 var listCmdAll, listCmdCSV, listCmdJSON, listCmdIndent, listCmdLong bool
@@ -142,11 +142,12 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 				})
 			}
 		}
-		results2, _ := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertJSON)
+		results2 := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertJSON)
 		for _, r := range results2 {
-			results = append(results, r.(listCertType))
+			results = append(results, r.Value.(listCertType))
 		}
 		listJSONEncoder.Encode(results)
+
 	case listCmdCSV:
 		listCSVWriter = csv.NewWriter(os.Stdout)
 		listCSVWriter.Write([]string{
@@ -182,12 +183,11 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 				})
 			}
 		}
-		var results []any
-		results, err = instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV)
-		instance.WriteResultsToCSVWriter(listCSVWriter, results)
+		results := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV)
+		instance.WriteResponsesToCSVWriter(listCSVWriter, results)
 		listCSVWriter.Flush()
 	default:
-		results, err := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert)
+		results := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert)
 		if err != nil {
 			return err
 		}
@@ -213,9 +213,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 					verifyCert(geneosCert))
 			}
 		}
-		for _, r := range results {
-			fmt.Fprint(listTabWriter, r)
-		}
+		instance.WriteResponsesToTabWriter(listTabWriter, results)
 		listTabWriter.Flush()
 	}
 	return
@@ -223,7 +221,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 
 func listCertsLongCommand(ct *geneos.Component, names []string, params []string) (err error) {
 	switch {
-	case listCmdJSON:
+	case listCmdJSON, listCmdIndent:
 		var results []listCertLongType
 		listJSONEncoder = json.NewEncoder(os.Stdout)
 		if listCmdIndent {
@@ -261,10 +259,11 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 				})
 			}
 		}
-		results2, _ := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertJSON)
+		results2 := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertJSON)
 		for _, r := range results2 {
-			results = append(results, r.(listCertLongType))
+			results = append(results, r.Value.(listCertLongType))
 		}
+		listJSONEncoder.Encode(results)
 	case listCmdCSV:
 		listCSVWriter = csv.NewWriter(os.Stdout)
 		listCSVWriter.Write([]string{
@@ -312,12 +311,11 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 				})
 			}
 		}
-		var results []any
-		results, err = instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV)
-		instance.WriteResultsToCSVWriter(listCSVWriter, results)
+		results := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV)
+		instance.WriteResponsesToCSVWriter(listCSVWriter, results)
 		listCSVWriter.Flush()
 	default:
-		results, err := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert)
+		results := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert)
 		if err != nil {
 			return err
 		}
@@ -347,45 +345,40 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					sha1.Sum(geneosCert.Raw))
 			}
 		}
-		for _, r := range results {
-			fmt.Fprint(listTabWriter, r)
-		}
+		instance.WriteResponsesToTabWriter(listTabWriter, results)
 		listTabWriter.Flush()
 	}
 	return
 }
 
-func listCmdInstanceCert(c geneos.Instance) (result any, err error) {
-	var output string
-
+func listCmdInstanceCert(c geneos.Instance) (result instance.Response) {
 	cert, valid, err := instance.ReadCert(c)
 	if err == os.ErrNotExist {
 		// this is OK - instance.ReadCert() reports no configured cert this way
-		return "", nil
+		return
 	}
 	if cert == nil && err != nil {
 		return
 	}
 
 	expires := cert.NotAfter
-	output = fmt.Sprintf("%s\t%s\t%s\t%.f\t%q\t%q\t%v\t", c.Type(), c.Name(), c.Host(), time.Until(expires).Seconds(), expires, cert.Subject.CommonName, valid)
+	result.String = fmt.Sprintf("%s\t%s\t%s\t%.f\t%q\t%q\t%v\t", c.Type(), c.Name(), c.Host(), time.Until(expires).Seconds(), expires, cert.Subject.CommonName, valid)
 
 	if listCmdLong {
-		output += fmt.Sprintf("%q\t", cert.Issuer.CommonName)
+		result.String += fmt.Sprintf("%q\t", cert.Issuer.CommonName)
 		if len(cert.DNSNames) > 0 {
-			output += fmt.Sprint(cert.DNSNames)
+			result.String += fmt.Sprint(cert.DNSNames)
 		}
-		output += "\t"
+		result.String += "\t"
 		if len(cert.IPAddresses) > 0 {
-			output += fmt.Sprint(cert.IPAddresses)
+			result.String += fmt.Sprint(cert.IPAddresses)
 		}
-		output += fmt.Sprintf("\t%X", sha1.Sum(cert.Raw))
+		result.String += fmt.Sprintf("\t%X", sha1.Sum(cert.Raw))
 	}
-	output += "\n"
-	return output, nil
+	return
 }
 
-func listCmdInstanceCertCSV(c geneos.Instance) (result any, err error) {
+func listCmdInstanceCertCSV(c geneos.Instance) (result instance.Response) {
 	cert, valid, err := instance.ReadCert(c)
 	if err == os.ErrNotExist {
 		// this is OK
@@ -405,11 +398,11 @@ func listCmdInstanceCertCSV(c geneos.Instance) (result any, err error) {
 		cols = append(cols, fmt.Sprintf("%X", sha1.Sum(cert.Raw)))
 	}
 
-	result = cols
+	result.Strings = cols
 	return
 }
 
-func listCmdInstanceCertJSON(c geneos.Instance) (result any, err error) {
+func listCmdInstanceCertJSON(c geneos.Instance) (result instance.Response) {
 	cert, valid, err := instance.ReadCert(c)
 	if err == os.ErrNotExist {
 		// this is OK
@@ -420,7 +413,7 @@ func listCmdInstanceCertJSON(c geneos.Instance) (result any, err error) {
 		return
 	}
 	if listCmdLong {
-		result = listCertLongType{
+		result.Value = listCertLongType{
 			c.Type().String(),
 			c.Name(),
 			c.Host().String(),
@@ -435,7 +428,7 @@ func listCmdInstanceCertJSON(c geneos.Instance) (result any, err error) {
 		}
 		return
 	}
-	result = listCertType{
+	result.Value = listCertType{
 		c.Type().String(),
 		c.Name(),
 		c.Host().String(),

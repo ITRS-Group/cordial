@@ -91,49 +91,40 @@ geneos aes ls -S gateway -H localhost -c
 
 		switch {
 		case listCmdJSON, listCmdIndent:
-			var results []interface{}
+			var results instance.Responses
 			if listCmdShared {
 				results, _ = aesListSharedJSON(ct, h)
 			} else {
-				results, err = instance.Do(h, ct, names, aesListInstanceJSON)
-				if err != nil {
-					return
-				}
+				results = instance.Do(h, ct, names, aesListInstanceJSON)
 			}
-			instance.WriteResultsAsJSON(os.Stdout, results, listCmdIndent)
+			instance.WriteResponsesAsJSON(os.Stdout, results, listCmdIndent)
 		case listCmdCSV:
 			aesListCSVWriter = csv.NewWriter(os.Stdout)
 			aesListCSVWriter.Write([]string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
+
 			if listCmdShared {
-				var results [][]string
-				results, err = aesListSharedCSV(ct, h)
-				aesListCSVWriter.WriteAll(results)
+				instance.WriteResponsesToCSVWriter(aesListCSVWriter, instance.Responses{aesListSharedCSV(ct, h)})
 			} else {
-				var results []any
-				results, err = instance.Do(h, ct, names, aesListInstanceCSV)
-				if err != nil {
-					return
-				}
-				if err = instance.WriteResultsToCSVWriter(aesListCSVWriter, results); err != nil {
+				results := instance.Do(h, ct, names, aesListInstanceCSV)
+				if err = instance.WriteResponsesToCSVWriter(aesListCSVWriter, results); err != nil {
 					return
 				}
 			}
+
 			aesListCSVWriter.Flush()
 		default:
-			var results []interface{}
-			if listCmdShared {
-				results, err = aesListShared(ct, h)
-			} else {
-				results, err = instance.Do(h, ct, names, aesListInstance)
-			}
-			if err != nil {
-				return
-			}
+			var responses instance.Responses
 			aesListTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(aesListTabWriter, "Type\tName\tHost\tKeyfile\tCRC32\tModtime\n")
-			for _, r := range results {
-				fmt.Fprint(aesListTabWriter, r)
+
+			if listCmdShared {
+				responses, err = aesListShared(ct, h)
+			} else {
+				responses = instance.Do(h, ct, names, aesListInstance)
 			}
+
+			instance.WriteResponsesToTabWriter(aesListTabWriter, responses)
+
 			aesListTabWriter.Flush()
 		}
 		if err == os.ErrNotExist {
@@ -143,43 +134,37 @@ geneos aes ls -S gateway -H localhost -c
 	},
 }
 
-func aesListPath(ct *geneos.Component, h *geneos.Host, name string, path config.KeyFile) (output string, err error) {
+func aesListPath(ct *geneos.Component, h *geneos.Host, name string, path config.KeyFile) (output string) {
 	if path == "" {
 		return
 	}
 
 	s, err := h.Stat(path.String())
 	if err != nil {
-		return fmt.Sprintf("%s\t%s\t%s\t%s\t-\t-\n", ct, name, h, path), nil
+		return fmt.Sprintf("%s\t%s\t%s\t%s\t-\t-", ct, name, h, path)
 	}
 
 	crc, _, err := path.Check(false)
 	if err != nil {
-		return fmt.Sprintf("%s\t%s\t%s\t%s\t-\t%s\n", ct, name, h, path, s.ModTime().Format(time.RFC3339)), nil
+		return fmt.Sprintf("%s\t%s\t%s\t%s\t-\t%s", ct, name, h, path, s.ModTime().Format(time.RFC3339))
 	}
-	return fmt.Sprintf("%s\t%s\t%s\t%s\t%08X\t%s\n", ct, name, h, path, crc, s.ModTime().Format(time.RFC3339)), nil
+	return fmt.Sprintf("%s\t%s\t%s\t%s\t%08X\t%s", ct, name, h, path, crc, s.ModTime().Format(time.RFC3339))
 }
 
-func aesListInstance(c geneos.Instance) (result any, err error) {
-	var output, outputprev string
+func aesListInstance(c geneos.Instance) (result instance.Response) {
 	path := config.KeyFile(instance.PathOf(c, "keyfile"))
+	if path != "" {
+		result.Strings = append(result.Strings, aesListPath(c.Type(), c.Host(), c.Name(), path))
+	}
+
 	prev := config.KeyFile(instance.PathOf(c, "prevkeyfile"))
-	if path == "" {
-		return
+	if path != "" {
+		result.Strings = append(result.Strings, aesListPath(c.Type(), c.Host(), c.Name()+" (prev)", prev))
 	}
-	output, err = aesListPath(c.Type(), c.Host(), c.Name(), path)
-	if err != nil {
-		return
-	}
-	outputprev, err = aesListPath(c.Type(), c.Host(), c.Name()+" (prev)", prev)
-	if err != nil {
-		return
-	}
-	output += outputprev
-	return output, nil
+	return
 }
 
-func aesListShared(ct *geneos.Component, h *geneos.Host) (results []interface{}, err error) {
+func aesListShared(ct *geneos.Component, h *geneos.Host) (results instance.Responses, err error) {
 	for _, h := range h.OrList(geneos.AllHosts()...) {
 		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 			var dirs []fs.DirEntry
@@ -191,76 +176,58 @@ func aesListShared(ct *geneos.Component, h *geneos.Host) (results []interface{},
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				output, err := aesListPath(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name())))
-				if err != nil {
-					continue
-				}
-				results = append(results, output)
+				results = append(results, instance.Response{String: aesListPath(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name())))})
 			}
 		}
 	}
 	return
 }
 
-func aesListPathCSV(ct *geneos.Component, h *geneos.Host, name string, path config.KeyFile) (result []string, err error) {
+func aesListPathCSV(ct *geneos.Component, h *geneos.Host, name string, path config.KeyFile) (row []string) {
 	if path == "" {
 		return
 	}
 	s, err := h.Stat(path.String())
 	if err != nil {
-		return []string{ct.String(), name, h.String(), path.String(), "-", "-"}, nil
+		return []string{ct.String(), name, h.String(), path.String(), "-", "-"}
 	}
 
 	crc, _, err := path.Check(false)
 	if err != nil {
-		return []string{ct.String(), name, h.String(), path.String(), "-", s.ModTime().Format(time.RFC3339)}, nil
+		return []string{ct.String(), name, h.String(), path.String(), "-", s.ModTime().Format(time.RFC3339)}
 	}
 	crcstr := fmt.Sprintf("%08X", crc)
-	result = []string{ct.String(), name, h.String(), path.String(), crcstr, s.ModTime().Format(time.RFC3339)}
-	return
+	return []string{ct.String(), name, h.String(), path.String(), crcstr, s.ModTime().Format(time.RFC3339)}
 }
 
-func aesListInstanceCSV(c geneos.Instance) (results any, err error) {
-	rows := [][]string{}
-	var row []string
-
+func aesListInstanceCSV(c geneos.Instance) (result instance.Response) {
 	path := config.KeyFile(instance.PathOf(c, "keyfile"))
-	row, err = aesListPathCSV(c.Type(), c.Host(), c.Name(), path)
-	if err != nil {
-		return
+	if path != "" {
+		row := aesListPathCSV(c.Type(), c.Host(), c.Name(), path)
+		result.Rows = append(result.Rows, row)
 	}
-	rows = append(rows, row)
 
 	prev := config.KeyFile(instance.PathOf(c, "prevkeyfile"))
 	if prev != "" {
-		row, err = aesListPathCSV(c.Type(), c.Host(), c.Name()+" (prev)", prev)
-		if err != nil {
-			return
-		}
-		rows = append(rows, row)
+		row := aesListPathCSV(c.Type(), c.Host(), c.Name()+" (prev)", prev)
+		result.Rows = append(result.Rows, row)
 	}
-	results = rows
+
 	return
 }
 
-func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (results [][]string, err error) {
+func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (result instance.Response) {
 	for _, h := range h.OrList(geneos.AllHosts()...) {
 		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-			var dirs []fs.DirEntry
-			dirs, err = h.ReadDir(ct.Shared(h, "keyfiles"))
+			dirs, err := h.ReadDir(ct.Shared(h, "keyfiles"))
 			if err != nil {
-				return
+				continue
 			}
 			for _, dir := range dirs {
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				var result []string
-				result, err = aesListPathCSV(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name())))
-				if err != nil {
-					return
-				}
-				results = append(results, result)
+				result.Rows = append(result.Rows, aesListPathCSV(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name()))))
 			}
 		}
 	}
@@ -269,8 +236,9 @@ func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (results [][]string,
 
 // aesListPathJSON fills in a listCmdType struct. paths is either one or
 // two paths, the second being a previous keyfile.
-func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, paths ...config.KeyFile) (result []any, err error) {
+func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, paths ...config.KeyFile) (result instance.Response) {
 	var keyfile, prevkeyfile *config.KeyFile
+	results := []listCmdType{}
 
 	if len(paths) == 0 {
 		return
@@ -300,8 +268,7 @@ func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, paths ..
 				r.CRC32 = crcstr
 			}
 		}
-		err = nil
-		result = append(result, r)
+		results = append(results, r)
 	}
 
 	if prevkeyfile != nil && len(*prevkeyfile) != 0 {
@@ -325,15 +292,14 @@ func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, paths ..
 				r.CRC32 = crcstr
 			}
 		}
-		err = nil
-		result = append(result, r)
+		results = append(results, r)
 	}
 
+	result.Value = results
 	return
 }
 
-func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results []any, err error) {
-	results = []interface{}{}
+func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results instance.Responses, err error) {
 	for _, h := range h.OrList(geneos.AllHosts()...) {
 		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 			var dirs []fs.DirEntry
@@ -345,24 +311,16 @@ func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results []any, err
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				result, err := aesListPathJSON(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name())))
-				if err != nil {
-					continue
+				result := aesListPathJSON(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name())))
+				if result.Value != nil {
+					results = append(results, result)
 				}
-				results = append(results, result...)
 			}
 		}
 	}
 	return
 }
 
-func aesListInstanceJSON(c geneos.Instance) (result any, err error) {
-	keys := []any{}
-
-	k, err := aesListPathJSON(c.Type(), c.Host(), c.Name(), config.KeyFile(instance.PathOf(c, "keyfile")), config.KeyFile(instance.PathOf(c, "prevkeyfile")))
-	if err == nil {
-		keys = append(keys, k...)
-	}
-	result = keys
-	return
+func aesListInstanceJSON(c geneos.Instance) (result instance.Response) {
+	return aesListPathJSON(c.Type(), c.Host(), c.Name(), config.KeyFile(instance.PathOf(c, "keyfile")), config.KeyFile(instance.PathOf(c, "prevkeyfile")))
 }

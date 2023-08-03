@@ -63,14 +63,14 @@ var migrateCmd = &cobra.Command{
 				log.Error().Err(err).Msg("migrating old executables failed")
 			}
 		}
-		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, migrateInstance)
+		instance.Do(geneos.GetHost(Hostname), ct, names, migrateInstance)
 		return
 	},
 }
 
-func migrateInstance(c geneos.Instance) (result any, err error) {
-	if err = instance.Migrate(c); err != nil {
-		log.Error().Err(err).Msgf("%s cannot migrate configuration", c)
+func migrateInstance(c geneos.Instance) (result instance.Response) {
+	if result.Err = instance.Migrate(c); result.Err != nil {
+		log.Error().Err(result.Err).Msgf("%s cannot migrate configuration", c)
 	}
 	return
 }

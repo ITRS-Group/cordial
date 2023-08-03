@@ -24,6 +24,7 @@ package cmd
 
 import (
 	_ "embed"
+	"os"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -70,20 +71,19 @@ geneos unset san -g Gateway1
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
+	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 && cmd.Flags().NFlag() == 0 {
-			return cmd.Usage()
+			cmd.Usage()
+			return
 		}
 		ct, names := TypeNames(cmd)
-		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, unsetInstance)
-		return
+		responses := instance.Do(geneos.GetHost(Hostname), ct, names, unsetInstance)
+		instance.WriteResponseStrings(os.Stdout, responses)
 	},
 }
 
-func unsetInstance(c geneos.Instance) (result any, err error) {
-	var changed bool
-
-	changed, err = instance.UnsetInstanceValues(c, unsetCmdValues)
+func unsetInstance(c geneos.Instance) (response instance.Response) {
+	changed := instance.UnsetInstanceValues(c, unsetCmdValues)
 
 	s := c.Config().AllSettings()
 
@@ -115,9 +115,6 @@ func unsetInstance(c geneos.Instance) (result any, err error) {
 		return
 	}
 
-	if err = instance.WriteConfigValues(c, s); err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
+	response.Err = instance.WriteConfigValues(c, s)
 	return
 }

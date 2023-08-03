@@ -59,24 +59,25 @@ var revertCmd = &cobra.Command{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := TypeNames(cmd)
 		if revertCmdExecutables {
-			return revertCommands()
+			revertCommands()
+			return
 		}
-		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, revertInstance)
-		return
+		responses := instance.Do(geneos.GetHost(Hostname), ct, names, revertInstance)
+		instance.WriteResponseStrings(os.Stdout, responses)
 	},
 }
 
-func revertInstance(c geneos.Instance) (result any, err error) {
+func revertInstance(c geneos.Instance) (response instance.Response) {
 	if instance.IsProtected(c) {
-		err = geneos.ErrProtected
+		response.Err = geneos.ErrProtected
 		return
 	}
 
 	// if *.rc file exists, remove rc.orig+new, continue
-	if _, err = c.Host().Stat(instance.ComponentFilepath(c, "rc")); err == nil {
+	if _, err := c.Host().Stat(instance.ComponentFilepath(c, "rc")); err == nil { // found ?
 		// ignore errors
 		if c.Host().Remove(instance.ComponentFilepath(c, "rc", "orig")) == nil || c.Host().Remove(instance.ComponentFilepath(c)) == nil {
 			log.Debug().Msgf("%s removed extra config file(s)", c)
@@ -84,24 +85,23 @@ func revertInstance(c geneos.Instance) (result any, err error) {
 		return
 	}
 
-	if err = c.Host().Rename(instance.ComponentFilepath(c, "rc", "orig"), instance.ComponentFilepath(c, "rc")); err != nil {
+	if err := c.Host().Rename(instance.ComponentFilepath(c, "rc", "orig"), instance.ComponentFilepath(c, "rc")); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			err = nil
 			return
 		}
+		response.Err = err
 		return
 	}
 
-	if err = c.Host().Remove(instance.ComponentFilepath(c)); err != nil {
+	if err := c.Host().Remove(instance.ComponentFilepath(c)); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			err = nil
 			return
 		}
+		response.Err = err
 		return
 	}
 
-	log.Debug().Msgf("%s reverted to RC config", c)
-	err = nil
+	response.String = fmt.Sprintf("%s reverted to RC config", c)
 	return
 }
 

@@ -56,15 +56,15 @@ var renewCmd = &cobra.Command{
 		cmd.AnnotationWildcard:  "true",
 		cmd.AnnotationNeedsHome: "true",
 	},
-	RunE: func(command *cobra.Command, _ []string) (err error) {
+	Run: func(command *cobra.Command, _ []string) {
 		ct, names := cmd.TypeNames(command)
-		_, err = instance.Do(geneos.GetHost(cmd.Hostname), ct, names, renewInstanceCert)
-		return
+		responses := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, renewInstanceCert)
+		instance.WriteResponseStrings(os.Stdout, responses)
 	},
 }
 
 // renew an instance certificate, use private key if it exists
-func renewInstanceCert(c geneos.Instance) (result any, err error) {
+func renewInstanceCert(c geneos.Instance) (response instance.Response) {
 	hostname, _ := os.Hostname()
 	if !c.Host().IsLocal() {
 		hostname = c.Host().GetString("hostname")
@@ -90,32 +90,34 @@ func renewInstanceCert(c geneos.Instance) (result any, err error) {
 	}
 
 	intrCert, err := config.ParseCertificate(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".pem"))
-	if err != nil {
+	response.Err = err
+	if response.Err != nil {
 		return
 	}
 	intrKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
-	if err != nil {
+	response.Err = err
+	if response.Err != nil {
 		return
 	}
 
 	// read existing key or create a new one
 	existingKey, _ := instance.ReadKey(c)
 	cert, key, err := config.CreateCertificateAndKey(&template, intrCert, intrKey, existingKey)
-	if err != nil {
+	response.Err = err
+	if response.Err != nil {
 		return
 	}
 
-	if err = instance.WriteCert(c, cert); err != nil {
+	if response.Err = instance.WriteCert(c, cert); response.Err != nil {
 		return
 	}
 
 	if existingKey == nil {
-		if err = instance.WriteKey(c, key); err != nil {
+		if response.Err = instance.WriteKey(c, key); response.Err != nil {
 			return
 		}
 	}
 
-	fmt.Printf("certificate renewed for %s (expires %s)\n", c, expires)
-
+	response.String = fmt.Sprintf("certificate renewed for %s (expires %s)", c, expires)
 	return
 }

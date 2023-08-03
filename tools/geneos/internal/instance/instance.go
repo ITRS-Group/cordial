@@ -35,6 +35,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -287,10 +288,9 @@ func ByKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (confs 
 // The slice is sorted by host, type and name. Errors are printed on
 // STDOUT for each call and the only error returned ErrNotExist if there
 // are no matches.
-func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance) (any, error)) (results []any, err error) {
+func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance) Response) (responses Responses) {
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
-	var instanceList []geneos.Instance
 
 	instances, err := ByNames(h, ct, names...)
 	if err != nil {
@@ -298,28 +298,28 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Ins
 	}
 
 	for _, c := range instances {
-		instanceList = make([]geneos.Instance, 0, len(instances))
 		wg.Add(1)
 		go func(c geneos.Instance) {
-			var result interface{}
 			defer wg.Done()
-			result, err = fn(c)
-			if err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
-				fmt.Printf("%s: %s\n", c, err)
-			}
 
-			if result != nil {
-				mutex.Lock()
-				instanceList = append(instanceList, c)
-				results = appendUnrolledResults(results, result)
-				mutex.Unlock()
+			start := time.Now()
+			result := fn(c)
+			if result.Err != nil && !errors.Is(result.Err, os.ErrProcessDone) && !errors.Is(result.Err, geneos.ErrNotSupported) {
+				fmt.Printf("%s: %s\n", c, result.Err)
 			}
+			result.Instance = c
+			result.Start = start
+			result.Finish = time.Now()
+
+			mutex.Lock()
+			responses = append(responses, result)
+			mutex.Unlock()
 		}(c)
 	}
 	wg.Wait()
 
-	sort.Sort(SortInstanceResults{Instances: instanceList, Results: results})
-	return results, nil
+	sort.Sort(responses)
+	return
 }
 
 // DoWithStringSlice calls function fn with the string slice
@@ -329,10 +329,9 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Ins
 //
 // It sends any returned error on STDOUT and the only error returned is
 // os.ErrNotExist if there are no matching instances.
-func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, []string) (any, error), params []string) (results []any, err error) {
+func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, []string) Response, params []string) (responses Responses) {
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
-	var instanceList []geneos.Instance
 
 	instances, err := ByNames(h, ct, names...)
 	if err != nil {
@@ -340,26 +339,28 @@ func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn 
 	}
 
 	for _, c := range instances {
-		instanceList = make([]geneos.Instance, 0, len(instances))
 		wg.Add(1)
 		go func(c geneos.Instance) {
-			var result interface{}
 			defer wg.Done()
-			if result, err = fn(c, params); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, geneos.ErrNotSupported) {
-				fmt.Printf("%s: %s\n", c, err)
+
+			start := time.Now()
+			result := fn(c, params)
+			if result.Err != nil && !errors.Is(result.Err, os.ErrProcessDone) && !errors.Is(result.Err, geneos.ErrNotSupported) {
+				fmt.Printf("%s: %s\n", c, result.Err)
 			}
-			if result != nil {
-				mutex.Lock()
-				instanceList = append(instanceList, c)
-				results = appendUnrolledResults(results, result)
-				mutex.Unlock()
-			}
+			result.Instance = c
+			result.Start = start
+			result.Finish = time.Now()
+
+			mutex.Lock()
+			responses = append(responses, result)
+			mutex.Unlock()
 		}(c)
 	}
 	wg.Wait()
 
-	sort.Sort(SortInstanceResults{Instances: instanceList, Results: results})
-	return results, nil
+	sort.Sort(responses)
+	return
 }
 
 // DoWithValues calls function fn for each matching instance and
@@ -370,7 +371,7 @@ func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn 
 // os.ErrNotExist if there are no matching instances. params are passed
 // as a variadic list of any type. The called function should validate
 // and cast params for use.
-func DoWithValues(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, ...any) Result, values ...any) (results Results, err error) {
+func DoWithValues(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, ...any) Response, values ...any) (responses Responses) {
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
 
@@ -383,21 +384,26 @@ func DoWithValues(h *geneos.Host, ct *geneos.Component, names []string, fn func(
 		wg.Add(1)
 		go func(c geneos.Instance) {
 			defer wg.Done()
+
+			start := time.Now()
 			result := fn(c, values...)
 			if result.Err != nil && !errors.Is(result.Err, os.ErrProcessDone) && !errors.Is(result.Err, geneos.ErrNotSupported) {
 				fmt.Printf("%s: %s\n", c, result.Err)
 				return
 			}
 			result.Instance = c
+			result.Start = start
+			result.Finish = time.Now()
+
 			mutex.Lock()
-			results = append(results, result)
+			responses = append(responses, result)
 			mutex.Unlock()
 		}(c)
 	}
 	wg.Wait()
 
-	sort.Sort(results)
-	return results, nil
+	sort.Sort(responses)
+	return
 }
 
 // Names returns a slice of all instance names for a given component ct

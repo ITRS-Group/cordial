@@ -24,6 +24,7 @@ package cmd
 
 import (
 	_ "embed"
+	"os"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -62,14 +63,14 @@ geneos clean --full netprobe
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := TypeNames(cmd)
-		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, cleanInstance)
-		return
+		responses := instance.Do(geneos.GetHost(Hostname), ct, names, cleanInstance)
+		instance.WriteResponseStrings(os.Stdout, responses)
 	},
 }
 
-func cleanInstance(c geneos.Instance) (result any, err error) {
-	err = instance.Clean(c, cleanCmdFull)
+func cleanInstance(c geneos.Instance) (response instance.Response) {
+	response.Err = instance.Clean(c, cleanCmdFull)
 	return
 }

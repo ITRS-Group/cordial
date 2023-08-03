@@ -70,13 +70,14 @@ var startCmd = &cobra.Command{
 // Start() is being called as part of a group of instances - this is for
 // use by autostart checking.
 func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string, params []string) (err error) {
-	_, err = instance.Do(geneos.GetHost(Hostname), ct, names, func(c geneos.Instance) (result any, err error) {
-		if instance.IsAutoStart(c) || autostart {
-			err = instance.Start(c)
+	instance.Do(geneos.GetHost(Hostname), ct, names,
+		func(c geneos.Instance) (result instance.Response) {
+			if instance.IsAutoStart(c) || autostart {
+				err = instance.Start(c)
+				return
+			}
 			return
-		}
-		return
-	})
+		})
 	if err != nil {
 		return
 	}

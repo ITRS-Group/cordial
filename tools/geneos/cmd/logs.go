@@ -98,12 +98,14 @@ var logsCmd = &cobra.Command{
 
 		switch {
 		case logCmdCat:
-			_, err = instance.Do(geneos.GetHost(Hostname), ct, names, logCatInstance)
+			responses := instance.Do(geneos.GetHost(Hostname), ct, names, logCatInstance)
+			instance.WriteResponseStrings(os.Stdout, responses)
 		case logCmdFollow:
 			// never returns
 			err = followLogs(ct, names, logCmdStderr)
 		default:
-			_, err = instance.Do(geneos.GetHost(Hostname), ct, names, logTailInstance)
+			responses := instance.Do(geneos.GetHost(Hostname), ct, names, logTailInstance)
+			instance.WriteResponseStrings(os.Stdout, responses)
 		}
 
 		return
@@ -113,8 +115,8 @@ var logsCmd = &cobra.Command{
 func followLog(c geneos.Instance) (err error) {
 	done := make(chan bool)
 	tails = watchLogs()
-	if _, err = logFollowInstance(c); err != nil {
-		log.Error().Err(err).Msg("")
+	if result := logFollowInstance(c); result.Err != nil {
+		log.Error().Err(result.Err).Msg("")
 	}
 	<-done
 	return
@@ -124,9 +126,7 @@ func followLogs(ct *geneos.Component, args []string, stderr bool) (err error) {
 	logCmdStderr = stderr
 	done := make(chan bool)
 	tails = watchLogs()
-	if _, err = instance.Do(geneos.GetHost(Hostname), ct, args, logFollowInstance); err != nil {
-		log.Error().Err(err).Msg("")
-	}
+	instance.Do(geneos.GetHost(Hostname), ct, args, logFollowInstance)
 	<-done
 	return
 }
@@ -145,26 +145,45 @@ func outHeader(c geneos.Instance, path string) {
 	lastout = path
 }
 
-func logTailInstance(c geneos.Instance) (result any, err error) {
-	if logCmdStderr {
-		if err = logTailInstanceFile(c, instance.ComponentFilepath(c, "txt")); err != nil {
-			return
-		}
+func outHeaderString(c geneos.Instance, path string) (lines []string) {
+	if lastout == path {
+		return
 	}
-	if !logCmdNoNormal {
-		if err = logTailInstanceFile(c, instance.LogFilePath(c)); err != nil {
+	if lastout != "" {
+		lines = append(lines, "")
+	}
+	lines = append(lines, fmt.Sprintf("===> %s %s <===", c, path))
+	lastout = path
+	return
+}
+
+func logTailInstance(c geneos.Instance) (result instance.Response) {
+	if logCmdStderr {
+		lines, err := logTailInstanceFile(c, instance.ComponentFilepath(c, "txt"))
+		if err != nil {
+			result.Err = err
 			return
 		}
+		result.Strings = lines
+	}
+
+	if !logCmdNoNormal {
+		lines, err := logTailInstanceFile(c, instance.LogFilePath(c))
+		if err != nil {
+			result.Err = err
+			return
+		}
+		result.Strings = append(result.Strings, lines...)
 	}
 	return
 }
 
-func logTailInstanceFile(c geneos.Instance, logfile string) (err error) {
+func logTailInstanceFile(c geneos.Instance, logfile string) (lines []string, err error) {
 	_, err = c.Host().Stat(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			fmt.Printf("===> %s log file %s not found <===\n", c, logfile)
-			return nil
+			lines = []string{fmt.Sprintf("===> %s log file %s not found <===\n", c, logfile)}
+			return
 		}
 		return
 	}
@@ -179,10 +198,10 @@ func logTailInstanceFile(c geneos.Instance, logfile string) (err error) {
 		log.Error().Err(err).Msg("")
 	}
 	if len(text) != 0 {
-		filterOutput(c, logfile, strings.NewReader(text+"\n"))
+		lines = filterOutputStrings(c, logfile, strings.NewReader(text+"\n"))
 	}
 
-	return nil
+	return
 }
 
 const charsPerLine = 132
@@ -240,6 +259,39 @@ func isLineSep(r rune) bool {
 	return unicode.Is(unicode.Zp, r)
 }
 
+func filterOutputStrings(c geneos.Instance, path string, r io.Reader) (lines []string) {
+	switch {
+	case logCmdMatch != "":
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.Contains(line, logCmdMatch) {
+				lines = append(lines, line)
+			}
+		}
+	case logCmdIgnore != "":
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if !strings.Contains(line, logCmdIgnore) {
+				lines = append(lines, line)
+			}
+		}
+	default:
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			lines = append(lines, scanner.Text())
+		}
+	}
+
+	// if we read any lines, check for header change
+	if len(lines) > 0 {
+		header := outHeaderString(c, path)
+		lines = append(header, lines...)
+	}
+	return
+}
+
 func filterOutput(c geneos.Instance, path string, reader io.ReadSeeker) (sz int64) {
 	switch {
 	case logCmdMatch != "":
@@ -270,32 +322,34 @@ func filterOutput(c geneos.Instance, path string, reader io.ReadSeeker) (sz int6
 	return
 }
 
-func logCatInstance(c geneos.Instance) (result any, err error) {
+func logCatInstance(c geneos.Instance) (result instance.Response) {
 	if !logCmdStderr {
-		if err = logCatInstanceFile(c, instance.ComponentFilepath(c, "txt")); err != nil {
+		if result.Strings, result.Err = logCatInstanceFile(c, instance.ComponentFilepath(c, "txt")); result.Err != nil {
 			return
 		}
 	}
 	if !logCmdNoNormal {
-		if err = logCatInstanceFile(c, instance.LogFilePath(c)); err != nil {
-			err = logCatInstanceFile(c, instance.LogFilePath(c))
+		lines, err := logCatInstanceFile(c, instance.LogFilePath(c))
+		if err != nil {
+			result.Err = err
 			return
 		}
+		result.Strings = append(result.Strings, lines...)
 	}
 	return
 }
 
-func logCatInstanceFile(c geneos.Instance, logfile string) (err error) {
-	lines, err := c.Host().Open(logfile)
+func logCatInstanceFile(c geneos.Instance, logfile string) (lines []string, err error) {
+	r, err := c.Host().Open(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			fmt.Printf("===> %s log file not found <===\n", c)
-			return nil
+			lines = []string{fmt.Sprintf("===> %s log file not found <===\n", c)}
+			return
 		}
 		return
 	}
-	defer lines.Close()
-	filterOutput(c, logfile, lines)
+	defer r.Close()
+	lines = filterOutputStrings(c, logfile, r)
 
 	return
 }
@@ -303,14 +357,16 @@ func logCatInstanceFile(c geneos.Instance, logfile string) (err error) {
 // add local logs to a watcher list
 // for remote logs, spawn a go routine for each log, watch using stat etc.
 // and output changes
-func logFollowInstance(c geneos.Instance) (result any, err error) {
+func logFollowInstance(c geneos.Instance) (result instance.Response) {
 	if logCmdStderr {
-		if err = logFollowInstanceFile(c, instance.ComponentFilepath(c, "txt")); err != nil {
+		if err := logFollowInstanceFile(c, instance.ComponentFilepath(c, "txt")); err != nil {
+			result.Err = err
 			return
 		}
 	}
 	if !logCmdNoNormal {
-		if err = logFollowInstanceFile(c, instance.LogFilePath(c)); err != nil {
+		if err := logFollowInstanceFile(c, instance.LogFilePath(c)); err != nil {
+			result.Err = err
 			return
 		}
 	}

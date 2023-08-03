@@ -28,7 +28,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -65,10 +64,7 @@ var restartCmd = &cobra.Command{
 }
 
 func commandRestart(ct *geneos.Component, args []string) (err error) {
-	if _, err = instance.Do(geneos.GetHost(Hostname), ct, args, restartInstance); err != nil {
-		log.Debug().Err(err).Msg("")
-		return
-	}
+	instance.Do(geneos.GetHost(Hostname), ct, args, restartInstance)
 
 	if restartCmdLogs {
 		// also watch STDERR on start-up
@@ -78,13 +74,13 @@ func commandRestart(ct *geneos.Component, args []string) (err error) {
 	return
 }
 
-func restartInstance(c geneos.Instance) (result any, err error) {
+func restartInstance(c geneos.Instance) (result instance.Response) {
 	if !instance.IsAutoStart(c) {
 		return
 	}
-	err = instance.Stop(c, restartCmdForce, false)
-	if err == nil || restartCmdAll {
-		err = instance.Start(c)
+	result.Err = instance.Stop(c, restartCmdForce, false)
+	if result.Err == nil || restartCmdAll {
+		result.Err = instance.Start(c)
 	}
 	return
 }

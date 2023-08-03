@@ -455,7 +455,7 @@ type UnsetConfigValues struct {
 }
 
 // XXX abstract this for a general case
-func UnsetInstanceValues(c geneos.Instance, unset UnsetConfigValues) (changed bool, err error) {
+func UnsetInstanceValues(c geneos.Instance, unset UnsetConfigValues) (changed bool) {
 	if unsetMap(c, "gateways", unset.Gateways) {
 		changed = true
 	}

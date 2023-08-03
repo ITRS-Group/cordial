@@ -108,15 +108,14 @@ var showCmd = &cobra.Command{
 			// 	params = append(params, showCmdHooksDir)
 			// }
 
-			var results instance.Results
-			results, err = instance.DoWithValues(geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir)
+			responses := instance.DoWithValues(geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir)
 
 			if err != nil {
 				if err == os.ErrNotExist {
 					return fmt.Errorf("no matching instance found")
 				}
 			}
-			for _, r := range results {
+			for _, r := range responses {
 				result, ok := r.Value.(showConfig)
 				if !ok {
 					return
@@ -127,14 +126,13 @@ var showCmd = &cobra.Command{
 		}
 
 		if showCmdSetup {
-			var results instance.Results
-			results, err = instance.DoWithValues(geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge)
+			responses := instance.DoWithValues(geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge)
 			if err != nil {
 				if err == os.ErrNotExist {
 					return fmt.Errorf("no matching instance found")
 				}
 			}
-			for _, r := range results {
+			for _, r := range responses {
 				result, ok := r.Value.(*showConfig)
 				if !ok {
 					return
@@ -143,8 +141,8 @@ var showCmd = &cobra.Command{
 			}
 			return
 		}
-		results, err := instance.Do(geneos.GetHost(Hostname), ct, names, showInstance)
-		if err != nil {
+		results := instance.Do(geneos.GetHost(Hostname), ct, names, showInstance)
+		if len(results) == 0 {
 			if err == os.ErrNotExist {
 				return fmt.Errorf("no matching instance found")
 			}
@@ -156,7 +154,7 @@ var showCmd = &cobra.Command{
 	},
 }
 
-func showValidateInstance(c geneos.Instance, params ...any) (result instance.Result) {
+func showValidateInstance(c geneos.Instance, params ...any) (result instance.Response) {
 	setup := c.Config().GetString("setup")
 	if setup == "" {
 		return
@@ -214,7 +212,7 @@ type showConfig struct {
 }
 
 // showInstanceConfig returns a slice of showConfig structs per instance
-func showInstanceConfig(c geneos.Instance, params ...any) (result instance.Result) {
+func showInstanceConfig(c geneos.Instance, params ...any) (result instance.Response) {
 	setup := c.Config().GetString("setup")
 	if setup == "" {
 		return
@@ -263,7 +261,7 @@ func showInstanceConfig(c geneos.Instance, params ...any) (result instance.Resul
 	return
 }
 
-func showInstance(c geneos.Instance) (result any, err error) {
+func showInstance(c geneos.Instance) (result instance.Response) {
 	// remove aliases
 	nv := config.New()
 	aliases := c.Type().LegacyParameters
@@ -291,6 +289,6 @@ func showInstance(c geneos.Instance) (result any, err error) {
 		Configuration: as,
 	}
 
-	result = cf
+	result.Value = cf
 	return
 }
