@@ -100,28 +100,19 @@ var psCmd = &cobra.Command{
 func CommandPS(ct *geneos.Component, names []string, params []string) (err error) {
 	switch {
 	case psCmdJSON, psCmdIndent:
-		psJSONEncoder = json.NewEncoder(os.Stdout)
-		if psCmdIndent {
-			psJSONEncoder.SetIndent("", "    ")
-		}
-		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceJSON)
+		responses := instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceJSON)
+		instance.WriteResponsesAsJSON(os.Stdout, responses, psCmdIndent)
 	case psCmdCSV:
-		var results []any
 		psCSVWriter = csv.NewWriter(os.Stdout)
 		psCSVWriter.Write([]string{"Type", "Name", "Host", "PID", "Ports", "User", "Group", "Starttime", "Version", "Home"})
-		results, err = instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV)
-		instance.WriteResultsToCSVWriter(psCSVWriter, results)
+		results := instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV)
+		instance.WriteResponsesToCSVWriter(psCSVWriter, results)
 		psCSVWriter.Flush()
 	default:
-		results, err := instance.Do(geneos.GetHost(Hostname), ct, names, psInstancePlain)
-		if err != nil {
-			return err
-		}
+		results := instance.Do(geneos.GetHost(Hostname), ct, names, psInstancePlain)
 		psTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\n")
-		for _, r := range results {
-			fmt.Fprint(psTabWriter, r)
-		}
+		instance.WriteResponsesToTabWriter(psTabWriter, results)
 		psTabWriter.Flush()
 	}
 	if err == os.ErrNotExist {
@@ -130,9 +121,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) (err error
 	return
 }
 
-func psInstancePlain(c geneos.Instance) (result any, err error) {
-	var output string
-
+func psInstancePlain(c geneos.Instance) (result instance.Response) {
 	if instance.IsDisabled(c) {
 		return
 	}
@@ -171,15 +160,15 @@ func psInstancePlain(c geneos.Instance) (result any, err error) {
 		base += "*"
 	}
 
-	output = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s:%s\t%s\n", c.Type(), c.Name(), c.Host(), pid, portlist, username, groupname, mtime.Local().Format(time.RFC3339), base, actual, c.Home())
+	result.String = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s:%s\t%s", c.Type(), c.Name(), c.Host(), pid, portlist, username, groupname, mtime.Local().Format(time.RFC3339), base, actual, c.Home())
 
 	// if psCmdShowFiles {
 	// 	listOpenFiles(c)
 	// }
-	return output, nil
+	return
 }
 
-func psInstanceCSV(c geneos.Instance) (result any, err error) {
+func psInstanceCSV(c geneos.Instance) (result instance.Response) {
 	if instance.IsDisabled(c) {
 		return
 	}
@@ -212,19 +201,18 @@ func psInstanceCSV(c geneos.Instance) (result any, err error) {
 	if underlying != actual {
 		base += "*"
 	}
-	result = []string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), portlist, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()}
+	result.Strings = []string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), portlist, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()}
 
-	err = nil // may still be set from above
 	return
 }
 
-func psInstanceJSON(c geneos.Instance) (result any, err error) {
+func psInstanceJSON(c geneos.Instance) (result instance.Response) {
 	if instance.IsDisabled(c) {
 		return
 	}
 	pid, uid, gid, mtime, err := instance.GetPIDInfo(c)
 	if err != nil {
-		err = nil // skip
+		// skip errors for now
 		return
 	}
 
@@ -250,8 +238,19 @@ func psInstanceJSON(c geneos.Instance) (result any, err error) {
 	if underlying != actual {
 		base += "*"
 	}
-	psJSONEncoder.Encode(psType{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), ports, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()})
 
-	err = nil // may still be set from above
+	result.Value = psType{
+		Type:      c.Type().String(),
+		Name:      c.Name(),
+		Host:      c.Host().String(),
+		PID:       fmt.Sprint(pid),
+		Ports:     ports,
+		User:      username,
+		Group:     groupname,
+		Starttime: mtime.Local().Format(time.RFC3339),
+		Version:   fmt.Sprintf("%s:%s", base, actual),
+		Home:      c.Home(),
+	}
+
 	return
 }

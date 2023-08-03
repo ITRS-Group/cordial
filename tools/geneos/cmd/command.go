@@ -24,7 +24,6 @@ package cmd
 
 import (
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -58,25 +57,17 @@ var commandCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names := TypeNames(cmd)
 		if commandCmdJSON {
-			results, err := instance.Do(geneos.GetHost(Hostname), ct, names, commandInstanceJSON)
-			if err != nil {
-				return err
-			}
-			b, err := json.MarshalIndent(results, "", "    ")
-			if err != nil {
-				return err
-			}
-			fmt.Println(string(b))
+			results := instance.Do(geneos.GetHost(Hostname), ct, names, commandInstanceJSON)
+			instance.WriteResponsesAsJSON(os.Stdout, results, true)
 			return nil
 		}
-		var results []any
-		results, err = instance.Do(geneos.GetHost(Hostname), ct, names, commandInstance)
-		instance.WriteResultsStrings(os.Stdout, results)
+		results := instance.Do(geneos.GetHost(Hostname), ct, names, commandInstance)
+		instance.WriteResponseStrings(os.Stdout, results)
 		return
 	},
 }
 
-func commandInstance(c geneos.Instance) (result any, err error) {
+func commandInstance(c geneos.Instance) (result instance.Response) {
 	lines := []string{fmt.Sprintf("=== %s ===", c)}
 
 	cmd, env, home := instance.BuildCmd(c, true)
@@ -84,22 +75,22 @@ func commandInstance(c geneos.Instance) (result any, err error) {
 		lines = append(lines,
 			"command line:",
 			fmt.Sprint("\t", cmd.String()),
-			"\n",
+			"",
 			"working directory:",
 			fmt.Sprint("\t", home),
-			"\n",
+			"",
 			"environment:",
 		)
 		for _, e := range env {
 			lines = append(lines, fmt.Sprint("\t", e))
 		}
-		lines = append(lines, "\n")
+		lines = append(lines, "")
 	}
-	result = lines
+	result.Strings = lines
 	return
 }
 
-func commandInstanceJSON(c geneos.Instance) (result any, err error) {
+func commandInstanceJSON(c geneos.Instance) (result instance.Response) {
 	cmd, env, home := instance.BuildCmd(c, true)
 	command := &command{
 		Instance: c.Name(),
@@ -112,7 +103,8 @@ func commandInstanceJSON(c geneos.Instance) (result any, err error) {
 	if len(cmd.Args) > 1 {
 		command.Args = cmd.Args[1:]
 	}
-	return command, nil
+	result.Value = command
+	return
 }
 
 type command struct {

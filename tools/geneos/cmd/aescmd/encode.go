@@ -26,6 +26,7 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -97,13 +98,14 @@ var encodeCmd = &cobra.Command{
 
 		ct, args := cmd.TypeNames(command)
 		pw, _ := plaintext.Open()
-		_, err = instance.DoWithStringSlice(geneos.GetHost(cmd.Hostname), ct, args, aesEncodeInstance, []string{base64.StdEncoding.EncodeToString(pw.Bytes())})
+		responses := instance.DoWithStringSlice(geneos.GetHost(cmd.Hostname), ct, args, aesEncodeInstance, []string{base64.StdEncoding.EncodeToString(pw.Bytes())})
 		pw.Destroy()
+		instance.WriteResponseStrings(os.Stdout, responses)
 		return
 	},
 }
 
-func aesEncodeInstance(c geneos.Instance, params []string) (result any, err error) {
+func aesEncodeInstance(c geneos.Instance, params []string) (result instance.Response) {
 	if !c.Type().UsesKeyfiles {
 		return
 	}
@@ -116,8 +118,9 @@ func aesEncodeInstance(c geneos.Instance, params []string) (result any, err erro
 	plaintext := config.NewPlaintext(pw)
 	e, err := keyfile.Encode(plaintext, encodeCmdExpandable)
 	if err != nil {
+		result.Err = err
 		return
 	}
-	fmt.Printf("%s: %s\n", c, e)
+	result.String = fmt.Sprintf("%s: %s", c, e)
 	return
 }

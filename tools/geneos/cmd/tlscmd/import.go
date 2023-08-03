@@ -133,7 +133,7 @@ func tlsWriteChainLocal(chain []*x509.Certificate) (err error) {
 	return
 }
 
-func tlsWriteInstance(c geneos.Instance, params ...any) (result instance.Result) {
+func tlsWriteInstance(c geneos.Instance, params ...any) (result instance.Response) {
 	if len(params) != 2 {
 		result.Err = geneos.ErrInvalidArgs
 		return

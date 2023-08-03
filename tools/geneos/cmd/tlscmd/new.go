@@ -24,6 +24,7 @@ package tlscmd
 
 import (
 	_ "embed"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -48,14 +49,14 @@ var newCmd = &cobra.Command{
 		cmd.AnnotationWildcard:  "true",
 		cmd.AnnotationNeedsHome: "true",
 	},
-	RunE: func(command *cobra.Command, _ []string) (err error) {
+	Run: func(command *cobra.Command, _ []string) {
 		ct, names := cmd.TypeNames(command)
-		_, err = instance.Do(geneos.GetHost(cmd.Hostname), ct, names, newInstanceCert)
-		return
+		responses := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, newInstanceCert)
+		instance.WriteResponseStrings(os.Stdout, responses)
 	},
 }
 
-func newInstanceCert(c geneos.Instance) (result any, err error) {
-	err = instance.CreateCert(c)
+func newInstanceCert(c geneos.Instance) (response instance.Response) {
+	response.Err = instance.CreateCert(c)
 	return
 }

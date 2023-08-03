@@ -25,6 +25,7 @@ package aescmd
 import (
 	_ "embed"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -109,7 +110,8 @@ geneos aes new -S gateway
 						return
 					}
 					params := []string{crcstr + ".aes"}
-					instance.DoWithStringSlice(h, ct, names, aesNewSetInstance, params)
+					responses := instance.DoWithStringSlice(h, ct, names, aesNewSetInstance, params)
+					instance.WriteResponseStrings(os.Stdout, responses)
 				}
 			}
 
@@ -119,7 +121,7 @@ geneos aes new -S gateway
 	},
 }
 
-func aesNewSetInstance(c geneos.Instance, params []string) (result any, err error) {
+func aesNewSetInstance(c geneos.Instance, params []string) (result instance.Response) {
 	var rolled bool
 	cf := c.Config()
 
@@ -133,19 +135,17 @@ func aesNewSetInstance(c geneos.Instance, params []string) (result any, err erro
 	cf.Set("keyfile", instance.Shared(c, "keyfiles", params[0]))
 
 	if cf.Type == "rc" {
-		err = instance.Migrate(c)
+		result.Err = instance.Migrate(c)
 	} else {
-		err = instance.SaveConfig(c)
+		result.Err = instance.SaveConfig(c)
 	}
-	if err != nil {
+	if result.Err != nil {
 		return
 	}
 
-	fmt.Printf("%s keyfile %s set", c, params[0])
+	result.String = fmt.Sprintf("%s keyfile %s set", c, params[0])
 	if rolled {
-		fmt.Printf(", existing keyfile moved to prevkeyfile\n")
-	} else {
-		fmt.Println()
+		result.String += ", existing keyfile moved to prevkeyfile"
 	}
 	return
 }

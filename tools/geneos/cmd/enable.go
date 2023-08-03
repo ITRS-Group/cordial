@@ -25,6 +25,7 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
+	"os"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -54,21 +55,21 @@ var enableCmd = &cobra.Command{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := TypeNames(cmd)
-		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, enableInstance)
-		return
+		responses := instance.Do(geneos.GetHost(Hostname), ct, names, enableInstance)
+		instance.WriteResponseStrings(os.Stdout, responses)
 	},
 }
 
-func enableInstance(c geneos.Instance) (result any, err error) {
+func enableInstance(c geneos.Instance) (response instance.Response) {
 	if !instance.IsDisabled(c) {
 		return
 	}
-	if err = instance.Enable(c); err == nil {
-		fmt.Printf("%s enabled\n", c)
+	if response.Err = instance.Enable(c); response.Err == nil {
+		response.String = fmt.Sprintf("%s enabled", c)
 		if enableCmdStart {
-			err = instance.Start(c)
+			response.Err = instance.Start(c)
 			return
 		}
 	}

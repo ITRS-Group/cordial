@@ -61,22 +61,22 @@ var deleteCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, allargs []string) (err error) {
 		ct, names := TypeNames(cmd)
 
-		var results []any
-		results, err = instance.Do(geneos.GetHost(Hostname), ct, names, deleteInstance)
-		instance.WriteResultsStrings(os.Stdout, results)
+		results := instance.Do(geneos.GetHost(Hostname), ct, names, deleteInstance)
+		instance.WriteResponseStrings(os.Stdout, results)
 		return
 	},
 }
 
-func deleteInstance(c geneos.Instance) (result any, err error) {
+func deleteInstance(c geneos.Instance) (result instance.Response) {
 	if instance.IsProtected(c) {
-		err = geneos.ErrProtected
+		result.Err = geneos.ErrProtected
 		return
 	}
 
 	if deleteCmdStop {
 		if c.Type().RealComponent {
-			if err = instance.Stop(c, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
+			if err := instance.Stop(c, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
+				result.Err = err
 				return
 			}
 		}
@@ -84,18 +84,18 @@ func deleteInstance(c geneos.Instance) (result any, err error) {
 
 	if !instance.IsRunning(c) || deleteCmdForce {
 		if instance.IsRunning(c) {
-			if err = instance.Stop(c, true, false); err != nil {
+			if result.Err = instance.Stop(c, true, false); result.Err != nil {
 				return
 			}
 		}
-		if err = c.Host().RemoveAll(c.Home()); err != nil {
+		if result.Err = c.Host().RemoveAll(c.Home()); result.Err != nil {
 			return
 		}
-		fmt.Printf("%s deleted %s:%s\n", c, c.Host().String(), c.Home())
+		result.String = fmt.Sprintf("%s deleted %s:%s", c, c.Host().String(), c.Home())
 		c.Unload()
 		return
 	}
 
-	err = fmt.Errorf("not deleted. Instances must not be running or use the '--force'/'-F' option")
+	result.Err = fmt.Errorf("not deleted. Instances must not be running or use the '--force'/'-F' option")
 	return
 }

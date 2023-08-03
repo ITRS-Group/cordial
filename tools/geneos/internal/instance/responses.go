@@ -29,30 +29,34 @@ import (
 	"io"
 	"reflect"
 	"sort"
+	"text/tabwriter"
+	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/rs/zerolog/log"
 )
 
-type Results []Result
+type Responses []Response
 
-type Result struct {
+type Response struct {
 	Instance geneos.Instance
 	String   string
 	Strings  []string
+	Rows     [][]string
 	Value    any
+	Start    time.Time
+	Finish   time.Time
 	Err      error
 }
 
-var _ sort.Interface = (Results)(nil)
+var _ sort.Interface = (Responses)(nil)
 
-func (r Results) Len() int { return len(r) }
+func (r Responses) Len() int { return len(r) }
 
-func (r Results) Swap(i, j int) {
+func (r Responses) Swap(i, j int) {
 	r[i], r[j] = r[j], r[i]
 }
 
-func (r Results) Less(i, j int) bool {
+func (r Responses) Less(i, j int) bool {
 	ci := r[i].Instance
 	cj := r[j].Instance
 
@@ -68,19 +72,19 @@ func (r Results) Less(i, j int) bool {
 	}
 }
 
-type SortInstanceResults struct {
+type SortInstanceResponses struct {
 	Instances []geneos.Instance
 	Results   []interface{}
 }
 
-func (s SortInstanceResults) Len() int { return len(s.Instances) }
+func (s SortInstanceResponses) Len() int { return len(s.Instances) }
 
-func (s SortInstanceResults) Swap(i, j int) {
+func (s SortInstanceResponses) Swap(i, j int) {
 	s.Instances[i], s.Instances[j] = s.Instances[j], s.Instances[i]
 	s.Results[i], s.Results[j] = s.Results[j], s.Results[i]
 }
 
-func (s SortInstanceResults) Less(i, j int) bool {
+func (s SortInstanceResponses) Less(i, j int) bool {
 	ci := s.Instances[i]
 	cj := s.Instances[j]
 
@@ -96,109 +100,99 @@ func (s SortInstanceResults) Less(i, j int) bool {
 	}
 }
 
-// appendUnrolledResults checks the type of result and appends to results
-// appropriately.
+// WriteResponsesToCSVWriter sends all slices of strings to the writer w
 //
-// If result is a slice of a basic type it is appended as-is, as are non
-// slice types
-//
-// If result is a slice of any other type then each element is appended
-// individually
-//
-// Any nil values (or invalid values) are skipped
-func appendUnrolledResults(in []any, result any) (out []any) {
-	t := reflect.TypeOf(result)
-	v := reflect.ValueOf(result)
-	if !v.IsValid() {
-		return
-	}
-	if t.Kind() != reflect.Slice {
-		return append(in, result)
-	}
-	if t.Elem().Kind() == reflect.String {
-		return append(in, result)
-	}
-	if v.IsZero() {
-		return
-	}
-	out = in
-	for i := 0; i < v.Len(); i++ {
-		if !v.Index(i).IsValid() || v.Index(i).IsZero() {
-			continue
-		}
-		out = append(out, v.Index(i).Interface())
-	}
-	return
-}
-
-// WriteResultsToCSVWriter sends all slices of strings to the writer w
-//
-// results can be a slice or a slice of slices or a mix of both, it will
-// recurse into those
-func WriteResultsToCSVWriter(w *csv.Writer, results []any) (err error) {
+// results can be one row in Strings or multiple rows in Rows, if both
+// are set then Strings is output first
+func WriteResponsesToCSVWriter(w *csv.Writer, results Responses) (err error) {
 	for _, result := range results {
-		switch row := result.(type) {
-		case []string:
-			if err = w.Write(row); err != nil {
-				return
-			}
-		case [][]string:
-			for _, r := range row {
-				if len(r) == 0 {
-					continue
-				}
-				if err = w.Write(r); err != nil {
-					return
-				}
-			}
-		default:
-			log.Error().Msgf("unexpected row type %T", result)
+		if len(result.Strings) > 0 {
+			w.Write(result.Strings)
+		}
+		if len(result.Rows) > 0 {
+			w.WriteAll(result.Rows)
 		}
 	}
 	return
 }
 
-// WriteResultsAsJSON writes the JSON encoding of results to writer w
+// WriteResponsesToTabWriter sends all slices of strings to the writer
+// w, terminating each line with a newline (`\n`)
+//
+// responses can contain both a String and a Strings slice, both are
+// written if the contents are not empty
+func WriteResponsesToTabWriter(w *tabwriter.Writer, responses Responses) (err error) {
+	for _, result := range responses {
+		if result.String != "" {
+			fmt.Fprintf(w, "%s\n", result.String)
+		}
+		for _, line := range result.Strings {
+			if line != "" {
+				fmt.Fprintf(w, "%s\n", line)
+			}
+		}
+	}
+	return
+}
+
+// WriteResponsesAsJSON writes the JSON encoding of the Value field of
+// each response in responses to writer w. If Value is a slice then it
+// is unrolled, so it is not possible to JSON encode arrays (beyond the
+// responses slice itself) with this method.
 //
 // HTML escaping is turned off. If indent is true then the output is
 // indented by four spaces per level for human presentation.
-func WriteResultsAsJSON(w io.Writer, results any, indent bool) (err error) {
+func WriteResponsesAsJSON(w io.Writer, results Responses, indent bool) (err error) {
+	values := []any{}
+	for _, v := range results {
+		if v.Value == nil {
+			continue
+		}
+
+		// unroll any slices to the underlying elements
+		if reflect.TypeOf(v.Value).Kind() == reflect.Slice {
+			s := reflect.ValueOf(v.Value)
+			for i := 0; i < s.Len(); i++ {
+				if s.Index(i).IsValid() {
+					values = append(values, s.Index(i).Interface())
+				}
+
+			}
+		} else {
+			values = append(values, v.Value)
+		}
+	}
+
 	j := json.NewEncoder(w)
 	j.SetEscapeHTML(false)
 	if indent {
 		j.SetIndent("", "    ")
 	}
-	return j.Encode(results)
+	return j.Encode(values)
 }
 
-// WriteResultsStrings writes the elements of results to the writer w.
+// WriteResponseStrings writes the elements of results to the writer w.
 // If the element is a plain string then it is written with a trailing
 // newline unless the string is only a newline, in which case only the
 // newline is written. If the element is a slice of strings then each
 // one is written out using the same rules.
-func WriteResultsStrings(w io.Writer, results []any) (err error) {
-	for _, result := range results {
+func WriteResponseStrings(w io.Writer, responses Responses) (err error) {
+	for _, result := range responses {
+		if result.String == "\n" {
+			fmt.Fprintln(w, "")
+		} else if result.String != "" {
+			fmt.Fprintln(w, result.String)
+		}
 
-		switch row := result.(type) {
-		case string:
-			if row == "\n" {
+		for _, r := range result.Strings {
+			// if len(r) == 0 {
+			// 	continue
+			// }
+			if r == "\n" {
 				fmt.Fprintln(w, "")
 			} else {
-				fmt.Fprintln(w, row)
+				fmt.Fprintln(w, r)
 			}
-		case []string:
-			for _, r := range row {
-				if len(r) == 0 {
-					continue
-				}
-				if r == "\n" {
-					fmt.Fprintln(w, "")
-				} else {
-					fmt.Fprintln(w, r)
-				}
-			}
-		default:
-			log.Error().Msgf("unexpected result type %T", result)
 		}
 	}
 	return

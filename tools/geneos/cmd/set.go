@@ -74,45 +74,47 @@ geneos set ...
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
+	Run: func(cmd *cobra.Command, args []string) {
+		var err error
 		if len(args) == 0 && cmd.Flags().NFlag() == 0 {
-			return cmd.Usage()
+			cmd.Usage()
+			return
 		}
 		ct, names, params := TypeNamesParams(cmd)
 
 		// check if secure args are set, prompt once for each without a supplied value
 
 		if err = promptForSecrets("Parameter", setCmdValues.SecureParams); err != nil {
-			return nil
+			return
 		}
 		if err = promptForSecrets("Environment Variable", setCmdValues.SecureEnvs); err != nil {
-			return nil
+			return
 		}
 
-		return Set(ct, names, params)
+		Set(ct, names, params)
 	},
 }
 
 func Set(ct *geneos.Component, args, params []string) (err error) {
-	_, err = instance.DoWithStringSlice(geneos.GetHost(Hostname), ct, args, setInstance, params)
+	instance.DoWithStringSlice(geneos.GetHost(Hostname), ct, args, setInstance, params)
 	return
 }
 
-func setInstance(c geneos.Instance, params []string) (result any, err error) {
+func setInstance(c geneos.Instance, params []string) (response instance.Response) {
 	log.Debug().Msgf("c %s params %v", c, params)
 
 	cf := c.Config()
 
 	setCmdValues.Params = params
 
-	if err = instance.SetInstanceValues(c, setCmdValues, setCmdKeyfile); err != nil {
+	if response.Err = instance.SetInstanceValues(c, setCmdValues, setCmdKeyfile); response.Err != nil {
 		return
 	}
 
 	if cf.Type == "rc" {
-		err = instance.Migrate(c)
+		response.Err = instance.Migrate(c)
 	} else {
-		err = instance.SaveConfig(c)
+		response.Err = instance.SaveConfig(c)
 	}
 
 	return

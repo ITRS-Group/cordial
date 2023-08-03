@@ -25,6 +25,7 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -50,18 +51,16 @@ var reloadCmd = &cobra.Command{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := TypeNames(cmd)
-		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, reloadInstance)
-		return
+		responses := instance.Do(geneos.GetHost(Hostname), ct, names, reloadInstance)
+		instance.WriteResponseStrings(os.Stdout, responses)
 	},
 }
 
-func reloadInstance(c geneos.Instance) (result any, err error) {
-	err = c.Reload()
-	if err == nil {
-		fmt.Printf("%s: reload signal sent\n", c)
+func reloadInstance(c geneos.Instance) (result instance.Response) {
+	if err := c.Reload(); err == nil {
+		result.String = fmt.Sprintf("%s: reload signal sent", c)
 	}
-	err = nil // ignore
 	return
 }

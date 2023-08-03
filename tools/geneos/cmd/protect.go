@@ -52,15 +52,14 @@ var protectCmd = &cobra.Command{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
 	},
-	RunE: func(command *cobra.Command, _ []string) (err error) {
+	Run: func(command *cobra.Command, _ []string) {
 		ct, args := TypeNames(command)
 
-		_, err = instance.DoWithStringSlice(geneos.GetHost(Hostname), ct, args, protectInstance, []string{fmt.Sprintf("%v", !protectCmdUnprotect)})
-		return
+		instance.DoWithStringSlice(geneos.GetHost(Hostname), ct, args, protectInstance, []string{fmt.Sprintf("%v", !protectCmdUnprotect)})
 	},
 }
 
-func protectInstance(c geneos.Instance, params []string) (result any, err error) {
+func protectInstance(c geneos.Instance, params []string) (response instance.Response) {
 	cf := c.Config()
 
 	var protect bool
@@ -70,18 +69,18 @@ func protectInstance(c geneos.Instance, params []string) (result any, err error)
 	cf.Set("protected", protect)
 
 	if cf.Type == "rc" {
-		err = instance.Migrate(c)
+		response.Err = instance.Migrate(c)
 	} else {
-		err = instance.SaveConfig(c)
+		response.Err = instance.SaveConfig(c)
 	}
-	if err != nil {
+	if response.Err != nil {
 		return
 	}
 
 	if protect {
-		fmt.Printf("%s set to protected\n", c)
+		response.String = fmt.Sprintf("%s set to protected", c)
 	} else {
-		fmt.Printf("%s set to unprotected\n", c)
+		response.String = fmt.Sprintf("%s set to unprotected", c)
 	}
 
 	return

@@ -24,6 +24,7 @@ package cmd
 
 import (
 	_ "embed"
+	"os"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -56,13 +57,14 @@ var rebuildCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names := TypeNames(cmd)
-		_, err = instance.Do(geneos.GetHost(Hostname), ct, names, rebuildInstance)
+		responses := instance.Do(geneos.GetHost(Hostname), ct, names, rebuildInstance)
+		instance.WriteResponseStrings(os.Stdout, responses)
 		return
 	},
 }
 
-func rebuildInstance(c geneos.Instance) (result any, err error) {
-	if err = c.Rebuild(rebuildCmdForce); err != nil {
+func rebuildInstance(c geneos.Instance) (response instance.Response) {
+	if response.Err = c.Rebuild(rebuildCmdForce); response.Err != nil {
 		return
 	}
 	log.Debug().Msgf("%s configuration rebuilt (if supported)", c)
