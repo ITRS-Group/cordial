@@ -95,9 +95,9 @@ THE SOFTWARE.
 //
 //	  The contents of the referenced file will be read. Multiline files
 //	  are used as-is; this can, for example, be used to read PEM
-//	  certificate files or keys. If the path is prefixed with "~/" (or
-//	  as an addition to a standard file url, if the first "/" is
-//	  replaced with a tilde "~") then the path is relative to the home
+//	  certificate files or keys. If the path is prefixed with `~/` (or
+//	  as an addition to a standard file url, if the first `/` is
+//	  replaced with a tilde `~`) then the path is relative to the home
 //	  directory of the user running the process.
 //
 //	  Any name that contains a `/` but not a `:` will be treated as a
