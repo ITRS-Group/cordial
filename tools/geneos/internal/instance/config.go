@@ -190,7 +190,7 @@ func SaveConfig(c geneos.Instance) (err error) {
 // command line options are common to all core Geneos components except
 // the gateway, which is special-cased
 func SetSecureArgs(c geneos.Instance) (args []string) {
-	files := Filepaths(c, "certificate", "privatekey")
+	files := Filepaths(c, "certificate", "privatekey", "certchain")
 	if len(files) == 0 {
 		return
 	}
@@ -204,8 +204,13 @@ func SetSecureArgs(c geneos.Instance) (args []string) {
 		args = append(args, "-ssl-certificate-key", files[1])
 	}
 
-	// promote old files that may exist
-	chainfile := config.PromoteFile(c.Host(), c.Host().PathTo("tls", geneos.ChainCertFile), c.Host().PathTo("tls", "chain.pem"))
+	var chainfile string
+	if len(files) > 2 {
+		chainfile = files[2]
+	} else {
+		// promote old files that may exist
+		chainfile = config.PromoteFile(c.Host(), c.Host().PathTo("tls", geneos.ChainCertFile), c.Host().PathTo("tls", "chain.pem"))
+	}
 	s, err := c.Host().Stat(chainfile)
 	if err == nil && !s.IsDir() {
 		args = append(args, "-ssl-certificate-chain", chainfile)

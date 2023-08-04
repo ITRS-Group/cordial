@@ -23,7 +23,6 @@ THE SOFTWARE.
 package tlscmd
 
 import (
-	"bytes"
 	"crypto"
 	"crypto/x509"
 	_ "embed"
@@ -67,7 +66,7 @@ var importCmd = &cobra.Command{
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
+		cmd.AnnotationWildcard:  "explicit",
 		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
@@ -79,46 +78,55 @@ var importCmd = &cobra.Command{
 		}
 
 		if importCmdSigner != "" {
-			chain, cert, privkey, err := tlsDecompose(importCmdSigner, importCmdCertKey)
+			cert, privkey, chain, err := tlsDecompose(importCmdSigner, importCmdCertKey)
 			if err != nil {
 				return err
 			}
-			instance.DoWithValues(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, cert, privkey)
-			if importCmdChain == "" {
-				if err = tlsWriteChainLocal(chain); err != nil {
+			// basic validation
+			if !(cert.BasicConstraintsValid && cert.IsCA) {
+				return geneos.ErrInvalidArgs
+			}
+
+			if err = config.WriteCert(geneos.LOCAL, geneos.LOCAL.PathTo("tls", geneos.SigningCertFile+".pem"), cert); err != nil {
+				return err
+			}
+
+			if err = config.WritePrivateKey(geneos.LOCAL, geneos.LOCAL.PathTo("tls", geneos.SigningCertFile+".key"), privkey); err != nil {
+				return err
+			}
+
+			if importCmdChain == "" && len(chain) > 0 {
+				if err = tlsWriteChainLocal("", chain); err != nil {
 					return err
 				}
 			}
 		}
 
 		if importCmdCert != "" {
-			chain, cert, privkey, err := tlsDecompose(importCmdCert, importCmdCertKey)
+			cert, privkey, chain, err := tlsDecompose(importCmdCert, importCmdCertKey)
 			if err != nil {
 				return err
 			}
-			instance.DoWithValues(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, cert, privkey)
-			if importCmdChain == "" {
-				if err = tlsWriteChainLocal(chain); err != nil {
-					return err
-				}
-			}
+			responses := instance.DoWithValues(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, cert, privkey, chain)
+			instance.WriteResponseStrings(os.Stdout, responses)
 		}
 
 		if importCmdChain != "" {
-			chain, _, _, err := tlsDecompose(importCmdChain, "")
+			_, _, chain, err := tlsDecompose(importCmdChain, "")
 			if err != nil {
 				return err
 			}
-			if err = tlsWriteChainLocal(chain); err != nil {
+			if err = tlsWriteChainLocal("", chain); err != nil {
 				return err
 			}
+			fmt.Println("local certificate chain written")
 		}
 
 		return
 	},
 }
 
-func tlsWriteChainLocal(chain []*x509.Certificate) (err error) {
+func tlsWriteChainLocal(chainpath string, chain []*x509.Certificate) (err error) {
 	if len(chain) == 0 {
 		return
 	}
@@ -126,7 +134,9 @@ func tlsWriteChainLocal(chain []*x509.Certificate) (err error) {
 	if err = geneos.LOCAL.MkdirAll(tlsPath, 0775); err != nil {
 		return err
 	}
-	chainpath := path.Join(geneos.LOCAL.PathTo("tls"), geneos.ChainCertFile)
+	if chainpath == "" {
+		chainpath = path.Join(geneos.LOCAL.PathTo("tls"), geneos.ChainCertFile)
+	}
 	if err = config.WriteCertChain(geneos.LOCAL, chainpath, chain...); err != nil {
 		return err
 	}
@@ -134,10 +144,15 @@ func tlsWriteChainLocal(chain []*x509.Certificate) (err error) {
 }
 
 func tlsWriteInstance(c geneos.Instance, params ...any) (result instance.Response) {
-	if len(params) != 2 {
+	var chain []*x509.Certificate
+
+	cf := c.Config()
+
+	if len(params) < 2 {
 		result.Err = geneos.ErrInvalidArgs
 		return
 	}
+
 	cert, ok := params[0].(*x509.Certificate)
 	if !ok {
 		result.Err = geneos.ErrInvalidArgs
@@ -150,45 +165,62 @@ func tlsWriteInstance(c geneos.Instance, params ...any) (result instance.Respons
 		return
 	}
 
+	if len(params) > 2 {
+		c, ok := params[2].([]*x509.Certificate)
+		if ok {
+			chain = c
+		}
+	}
+
 	if result.Err = instance.WriteCert(c, cert); result.Err != nil {
 		return
 	}
-	fmt.Printf("%s certificate written\n", c)
+	result.Strings = append(result.Strings, fmt.Sprintf("%s certificate written", c))
 
 	if result.Err = instance.WriteKey(c, key); result.Err != nil {
 		return
 	}
-	fmt.Printf("%s private key written\n", c)
+	result.Strings = append(result.Strings, fmt.Sprintf("%s private key written", c))
+
+	if len(chain) > 0 {
+		chainfile := path.Join(c.Home(), "chain.pem")
+		if err := config.WriteCertChain(c.Host(), chainfile, chain...); err == nil {
+			result.Strings = append(result.Strings, fmt.Sprintf("%s certificate chain written", c))
+			if cf.GetString("certchain") == chainfile {
+				return
+			}
+			cf.Set("certchain", chainfile)
+			result.Err = instance.SaveConfig(c)
+		}
+	}
 
 	return
 }
 
-// tlsDecompose takes a certificate file and an optional key file path.
-// It returns any parent certificates in chain, the (first) leaf
-// certificate in cert and, if found, the private key for the leaf
-// certificate. If the key is found in the cert file then the keyfile
-// arg is ignored.
+// tlsDecompose reads a PEM file and extracts the first valid
+// certificates and an optional PEM private key file path. It returns
+// any CA certificates in chain, the certificate in cert and, if found,
+// the DER encoded private key for the leaf certificate. If the key is
+// found in the cert file then the keyfile arg is ignored. Only
+// certificates with the BasicConstraints extension and valid are
+// supported. All certificates in chain will have IsCA set. The cert may
+// or may not be a leaf certificate.
 //
-// privkey may be encrypted, the caller has to decrypt on return
-//
-// certfile may be a local file path, a url or '-' for stdin
-// keyfile must be a local file path
-func tlsDecompose(certfile, keyfile string) (chain []*x509.Certificate, cert *x509.Certificate, privkey *memguard.Enclave, err error) {
-	// save certs and keys into memory, then check certs for root / etc.
-	// and then validate private keys against certs before saving
-	// anything to disk
+// certfile may be a local file path, a url or '-' for stdin while keyfile
+// must be a local file path
+func tlsDecompose(certfile, keyfile string) (cert *x509.Certificate, der *memguard.Enclave, chain []*x509.Certificate, err error) {
 	var certs []*x509.Certificate
-	var keys []*memguard.Enclave
-	var f []byte
+	var leaf *x509.Certificate
+	var derkeys []*memguard.Enclave
+	var pembytes []byte
 
-	log.Debug().Msgf("importing %s", certfile)
-	if f, err = geneos.ReadFrom(certfile); err != nil {
+	if pembytes, err = geneos.ReadFrom(certfile); err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
 
 	for {
-		block, rest := pem.Decode(f)
+		block, rest := pem.Decode(pembytes)
 		if block == nil {
 			break
 		}
@@ -199,55 +231,64 @@ func tlsDecompose(certfile, keyfile string) (chain []*x509.Certificate, cert *x5
 			if err != nil {
 				return
 			}
-			certs = append(certs, c)
+			if !c.BasicConstraintsValid {
+				return
+			}
+			if c.IsCA {
+				certs = append(certs, c)
+			} else if leaf == nil {
+				// save first leaf
+				leaf = c
+			}
 		case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
-			keys = append(keys, memguard.NewEnclave(block.Bytes))
+			// save all private keys for later matching
+			derkeys = append(derkeys, memguard.NewEnclave(block.Bytes))
 		default:
 			err = fmt.Errorf("unsupported PEM type found: %s", block.Type)
 			return
 		}
-		f = rest
+		pembytes = rest
 	}
 
-	if len(certs) == 0 {
+	if leaf == nil && len(certs) == 0 {
 		err = fmt.Errorf("no certificates found in %s", certfile)
 		return
 	}
 
-	cert = certs[0]
+	// if we got this far then we can start setting returns
+	cert = leaf
+	chain = certs
 
-	// is the first cert a leaf or self-signed?
-	if bytes.Equal(cert.RawSubject, cert.RawIssuer) || !cert.IsCA {
-		var i int
+	// if we have no leaf certificate then user the first cert from the
+	// chain BUT leave do not remove from the chain. order is not checked
+	if cert == nil {
+		cert = chain[0]
+	}
 
-		// are we good? check key and return the rest as the chain
-		i, err = matchKey(cert, keys)
-		if err != nil {
-			// try provided keyfile if no match in cert file
-			privkey, err = config.ReadPrivateKey(geneos.LOCAL, keyfile)
+	var i int
+
+	// are we good? check key and return a chain of valid CA certs
+	i, err = matchKey(cert, derkeys)
+	if err != nil {
+		// try provided keyfile if no match in cert file
+		// no keyfile arg is valid
+		if keyfile != "" {
+			der, err = config.ReadPrivateKey(geneos.LOCAL, keyfile)
 			if err != nil {
 				cert = nil
 				return
 			}
-		} else {
-			privkey = keys[i]
 		}
-		if len(certs) > 1 {
-			chain = certs[1:]
-		}
-		return
+	} else {
+		der = derkeys[i]
 	}
-
-	// no leaf ? return a chain but no cert, no privkey
-	chain = certs
-	cert = nil
 
 	return
 }
 
-func matchKey(cert *x509.Certificate, keys []*memguard.Enclave) (index int, err error) {
-	for i, key := range keys {
-		if pubkey, err := config.PublicKey(key); err == nil { // if ok then compare
+func matchKey(cert *x509.Certificate, derkeys []*memguard.Enclave) (index int, err error) {
+	for i, der := range derkeys {
+		if pubkey, err := config.PublicKey(der); err == nil { // if ok then compare
 			// ensure we have an Equal() method on the opaque key
 			if k, ok := pubkey.(interface{ Equal(crypto.PublicKey) bool }); ok {
 				if k.Equal(cert.PublicKey) {

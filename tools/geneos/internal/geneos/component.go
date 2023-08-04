@@ -59,7 +59,7 @@ var RootComponent = Component{
 
 		// Path List separated additions to the reserved names list, over and above
 		// any words matched by FindComponent()
-		"reservednames": "",
+		"reservednames": "all",
 
 		"privatekeys": "id_rsa,id_ecdsa,id_ecdsa_sk,id_ed25519,id_ed25519_sk,id_dsa",
 	},
