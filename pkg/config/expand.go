@@ -257,15 +257,15 @@ func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
 	opts := evalExpandOptions(c, options...)
 	if opts.rawstring {
 		if input != "" {
-			return []byte(input)
+			return bytes.Clone([]byte(input))
 		}
 		if opts.initialValue != nil {
 			if b, ok := opts.initialValue.([]byte); ok {
-				return b
+				return bytes.Clone(b)
 			}
-			return []byte(fmt.Sprint(opts.initialValue))
+			return fmt.Append(value, opts.initialValue)
 		}
-		return []byte(fmt.Sprint(opts.defaultValue))
+		return fmt.Append(value, opts.defaultValue)
 	}
 
 	if input == "" && opts.initialValue != nil {
@@ -307,20 +307,20 @@ func (c *Config) ExpandToEnclave(input string, options ...ExpandOptions) (value 
 	opts := evalExpandOptions(c, options...)
 	if opts.rawstring {
 		if input != "" {
-			l := memguard.NewBufferFromBytes([]byte(input))
-			return l.Seal()
-		}
-		var l *memguard.LockedBuffer
-		if opts.initialValue != nil {
-			if b, ok := opts.initialValue.([]byte); ok {
-				l = memguard.NewBufferFromBytes(b)
-			} else {
-				l = memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.initialValue)))
-			}
+			return memguard.NewEnclave([]byte(input))
 		}
 
-		l = memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.defaultValue)))
-		return l.Seal()
+		// fallback to any default value or, failing that, an initial value
+		if opts.defaultValue != nil {
+			return memguard.NewEnclave([]byte(fmt.Sprint(opts.defaultValue)))
+		} else if opts.initialValue != nil {
+			if b, ok := opts.initialValue.([]byte); ok {
+				return memguard.NewEnclave(b)
+			} else {
+				return memguard.NewEnclave([]byte(fmt.Sprint(opts.initialValue)))
+			}
+		}
+		return &memguard.Enclave{}
 	}
 
 	if input == "" && opts.initialValue != nil {
