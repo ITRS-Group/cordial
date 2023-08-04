@@ -35,29 +35,33 @@ import (
 )
 
 const (
-	AnnotationWildcard   = "wildcard" // "true", "false" or "explicit" (to match "all")
-	AnnotationNames      = "names"
-	AnnotationParams     = "params"
-	AnnotationNeedsHome  = "needshomedir"
-	AnnotationComponent  = "ct"
-	AnnotationReplacedBy = "replacedby"
-	AnnotationAliasFor   = "aliasfor"
+	AnnotationAliasFor   = "aliasfor"     // mapping alias
+	AnnotationComponent  = "ct"           // specific component name
+	AnnotationNames      = "names"        // json encoded array of instance names
+	AnnotationNeedsHome  = "needshomedir" // "true" or "false"
+	AnnotationReplacedBy = "replacedby"   // deprecated command alias
+	AnnotationWildcard   = "wildcard"     // "true", "false" or "explicit" (to match "all")
 )
 
+// parseArgs does the heavy lifting of sorting out non-flag command line
+// ares for the various commands.
+//
 // given a list of args (after command has been seen), check if first
 // arg is a component type and de-dup the names. A name of "all" will
 // will override the rest and result in a lookup being done
 //
-// args with an '=' should be checked and only allowed if there are names?
+// args with an '=' should be checked and only allowed if there are
+// names?
 //
-// support glob style wildcards for instance names - allow through, let loopCommand*
-// deal with them
+// support glob style wildcards for instance names - allow through, let
+// loopCommand* deal with them
 //
-// process command args in a standard way
-// flags will have been handled by another function before this one
-// any args with '=' are treated as parameters
+// process command args in a standard way flags will have been handled
+// by another function before this one any args with '=' are treated as
+// parameters
 //
-// a bare argument with a '@' prefix means all instance of type on a host
+// a bare argument with a '@' prefix means all instance of type on a
+// host
 func parseArgs(command *cobra.Command, args []string) (err error) {
 	var wild bool
 	var newnames []string
