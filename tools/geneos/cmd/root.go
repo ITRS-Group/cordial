@@ -270,16 +270,18 @@ func initConfig() {
 	Execname, _ = filepath.EvalSymlinks(Execname)
 	Execname = path.Base(filepath.ToSlash(Execname))
 
-	// strip the VERSION, if found, prefixed by a dash, on the end of the basename
-	//
-	// this way you can run a versioned binary and still see the right config files
-	Execname = strings.TrimSuffix(Execname, "-"+cordial.VERSION)
-
-	// finally strip any extension from the binary, to allow windows .EXE
+	// strip any extension from the binary, to allow windows .EXE
 	// binary to work. Note we get the extension first, it may be
 	// capitalised. This will also remove any other extensions, users
 	// should use '-' or '_' instead.
 	Execname = strings.TrimSuffix(Execname, path.Ext(Execname))
+
+	// finally strip the VERSION, if found, prefixed by a dash, on the
+	// end of the basename
+	//
+	// this way you can run a versioned binary and still see the right
+	// config files
+	Execname = strings.TrimSuffix(Execname, "-"+cordial.VERSION)
 
 	log.Debug().Msgf("cordial 'geneos' running as '%s', version %s", Execname, cordial.VERSION)
 
