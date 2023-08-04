@@ -39,6 +39,7 @@ const (
 	AnnotationComponent  = "ct"           // specific component name
 	AnnotationNames      = "names"        // json encoded array of instance names
 	AnnotationNeedsHome  = "needshomedir" // "true" or "false"
+	AnnotationParams     = "params"       // json encoded array of parameters
 	AnnotationReplacedBy = "replacedby"   // deprecated command alias
 	AnnotationWildcard   = "wildcard"     // "true", "false" or "explicit" (to match "all")
 )
