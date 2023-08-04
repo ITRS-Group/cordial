@@ -196,6 +196,9 @@ func Default(value any) ExpandOptions {
 // item is empty (or nil) to start. This differs from Default() which
 // supplies a value to use if the value if empty after expansion. The
 // initial value, if used, is expanded as would any configuration value.
+//
+// If config.NoExpand() is also used then this initial value is used as a
+// secondary default - i.e. if config.Default() is empty.
 func Initial(value any) ExpandOptions {
 	return func(e *expandOptions) {
 		e.initialValue = value
