@@ -20,117 +20,117 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package config
-
-import (
-	"bytes"
-	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"strings"
-
-	"github.com/awnumar/memguard"
-	"github.com/maja42/goval"
-)
-
-// The Expand* functions return the input with all occurrences of the
-// form ${name} replaced using an [os.Expand]-like function (but without
-// support for $name in the input) for the built-in and optional formats
-// (in the order of priority) below. The caller can use options to
-// define additional expansion functions based on a "prefix:", disable
-// external lookups and also to pass in lookup tables referred to as
-// value maps.
+// # Expandable Formats
 //
-//  ${enc:keyfile[|keyfile...]:encodedvalue}
+// The Expand family of functions return the input with all occurrences
+// of the form ${name} replaced using an [os.Expand]-like function (but
+// without support for $name in the input) for the built-in and optional
+// formats (in the order of priority) below. The caller can use options
+// to define additional expansion functions based on a "prefix:",
+// disable external lookups and also to pass in lookup tables referred
+// to as value maps.
 //
-//    "encodedvalue" is an AES256 ciphertext in Geneos format - or, if
-//    not prefixed with `+encs+` then it is processed as an expandable
-//    string itself and can be a reference to another configuration key
-//    or a file or remote url containing one - which will be decoded
-//    using the key file(s) given. Each "keyfile" must be one of either
-//    an absolute path, a path relative to the working directory of the
-//    program, or if prefixed with "~/" then relative to the home
-//    directory of the user running the program. The first valid decode
-//    (see below) is returned.
+//	${enc:keyfile[|keyfile...]:encodedvalue}
 //
-//    To minimise (but not wholly eliminate) any false-positive decodes
-//    that occur in some circumstances when using the wrong key file,
-//    the decoded value is only returned if it is a valid UTF-8 string
-//    as per [utf8.Valid].
+//	  "encodedvalue" is an AES256 ciphertext in Geneos format - or, if
+//	  not prefixed with `+encs+` then it is processed as an expandable
+//	  string itself and can be a reference to another configuration key
+//	  or a file or remote url containing one - which will be decoded
+//	  using the key file(s) given. Each "keyfile" must be one of either
+//	  an absolute path, a path relative to the working directory of the
+//	  program, or if prefixed with "~/" then relative to the home
+//	  directory of the user running the program. The first valid decode
+//	  (see below) is returned.
 //
-//    This prefix can be disabled with the `config.NoDecode()` option.
+//	  To minimise (but not wholly eliminate) any false-positive decodes
+//	  that occur in some circumstances when using the wrong key file,
+//	  the decoded value is only returned if it is a valid UTF-8 string
+//	  as per [utf8.Valid].
 //
-//    Examples:
+//	  This prefix can be disabled with the `config.NoDecode()` option.
 //
-//    - password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
-//    - password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
-//    - password: ${enc:~/.config/geneos/keyfile1.aes:app.password}
-//    - password: ${enc:~/.keyfile.aes:config:mySecret}
+//	  Note: The keyfile(s) can be in Windows file path format as the
+//	  fields for keyfiles and the encoded value are split based on the
+//	  last colon (`:`) in the string and not any contained in a drive
+//	  letter path. On Windows paths may also contain normal backslashes,
+//	  they are not considered escape characters once extracted from the
+//	  underlying configuration syntax (which may impose it's own rules,
+//	  e.g. JSON)
 //
-//  ${config:key} or ${path.to.config}
+//	  Examples:
 //
-//     Fetch the "key" configuration value (for single layered
-//     configurations, where a sub-level dot cannot be used) or if any
-//     value containing one or more dots "." will be looked-up in the
-//     existing configuration that the method is called on. The
-//     underlying configuration is not changed and values are resolved
-//     each time ExpandString() is called. No locking of the
-//     configuration is done.
+//	  - password: ${enc:~/.keyfile:+encs+9F2C3871E105EC21E4F0D5A7921A937D}
+//	  - password: ${enc:/etc/geneos/keyfile.aes:env:ENCODED_PASSWORD}
+//	  - password: ${enc:~/.config/geneos/keyfile1.aes:app.password}
+//	  - password: ${enc:~/.keyfile.aes:config:mySecret}
 //
-//  ${key}
+//	${config:key} or ${path.to.config}
 //
-//    "key" will be substituted with the value of the first matching key
-//    from the tables set using config.LookupTable(), in the order passed
-//    to the function. If no lookup tables are set (as opposed to the
-//    key not being found in any of the tables) then name is looked up
-//    as an environment variable, as below.
+//	   Fetch the "key" configuration value (for single layered
+//	   configurations, where a sub-level dot cannot be used) or if any
+//	   value containing one or more dots "." will be looked-up in the
+//	   existing configuration that the method is called on. The
+//	   underlying configuration is not changed and values are resolved
+//	   each time ExpandString() is called. No locking of the
+//	   configuration is done.
 //
-//  ${env:name}
+//	${key}
 //
-//    "name" will be substituted with the contents of the environment
-//    variable of the same name. If no environment variable with name
-//    exists then the value returned is an empty string.
+//	  "key" will be substituted with the value of the first matching key
+//	  from the tables set using config.LookupTable(), in the order passed
+//	  to the function. If no lookup tables are set (as opposed to the
+//	  key not being found in any of the tables) then name is looked up
+//	  as an environment variable, as below.
 //
-//  The additional prefixes below are enabled by default. They can be
-//  disabled using the config.ExternalLookups() option.
+//	${env:name}
 //
-//  ${.../path/to/file} or ${~/file} or ${file://path/to/file} or ${file:~/path/to/file}
+//	  "name" will be substituted with the contents of the environment
+//	  variable of the same name. If no environment variable with name
+//	  exists then the value returned is an empty string.
 //
-//    The contents of the referenced file will be read. Multiline files
-//    are used as-is; this can, for example, be used to read PEM
-//    certificate files or keys. If the path is prefixed with "~/" (or
-//    as an addition to a standard file url, if the first "/" is
-//    replaced with a tilde "~") then the path is relative to the home
-//    directory of the user running the process.
+//	The additional prefixes below are enabled by default. They can be
+//	disabled using the config.ExternalLookups() option.
 //
-//    Any name that contains a `/` but not a `:` will be treated as a
-//    file, if file reading is enabled. File paths can be absolute or
-//    relative to the working directory (or relative to the home
-//    directory, as above)
+//	${.../path/to/file} or ${~/file} or ${file://path/to/file} or ${file:~/path/to/file}
 //
-//    Examples:
+//	  The contents of the referenced file will be read. Multiline files
+//	  are used as-is; this can, for example, be used to read PEM
+//	  certificate files or keys. If the path is prefixed with "~/" (or
+//	  as an addition to a standard file url, if the first "/" is
+//	  replaced with a tilde "~") then the path is relative to the home
+//	  directory of the user running the process.
 //
-//    - certfile: ${file://etc/ssl/cert.pem}
-//    - template: ${file:~/templates/autogen.gotmpl}
-//    - relative: ${./file.txt}
+//	  Any name that contains a `/` but not a `:` will be treated as a
+//	  file, if file reading is enabled. File paths can be absolute or
+//	  relative to the working directory (or relative to the home
+//	  directory, as above)
 //
-//  ${https://host/path} or ${http://host/path}
+//	  For Windows file paths you must use the URL style `${file:...}`
+//	  formats, otherwise any drive identifier will be treated as a
+//	  partial expansion type and cause unexpected behaviour.
 //
-//    The contents of the URL are fetched and used similarly as for
-//    local files above. The URL is passed to [http.Get] and supports
-//    proxies, embedded Basic Authentication and other features from
-//    that function.
+//	  Examples:
 //
-//  The prefix below can be enabled with the config.Expressions() option.
+//	  - certfile: ${file://etc/ssl/cert.pem}
+//	  - template: ${file:~/templates/autogen.gotmpl}
+//	  - relative: ${./file.txt}
 //
-//  ${expr:EXPRESSION}
+//	${https://host/path} or ${http://host/path}
 //
-//    EXPRESSION is evaluated using https://github.com/maja42/goval. Inside
-//    the expression all configuration items are available as variables
-//    with the top level map `env` set to the environment variables
-//    available. All results are returned as strings. An empty string
-//    may mean there was an error in evaluating the expression.
+//	  The contents of the URL are fetched and used similarly as for
+//	  local files above. The URL is passed to [http.Get] and supports
+//	  proxies, embedded Basic Authentication and other features from
+//	  that function.
+//
+//	The prefix below can be enabled with the config.Expressions() option.
+//
+//	${expr:EXPRESSION}
+//
+//	  EXPRESSION is evaluated using https://github.com/maja42/goval. Inside
+//	  the expression all configuration items are available as variables
+//	  with the top level map `env` set to the environment variables
+//	  available. All results are returned as strings. An empty string
+//	  may mean there was an error in evaluating the expression.
 //
 // Additional custom prefixes can be added with the config.Prefix()
 // option.
@@ -157,12 +157,25 @@ import (
 // item to the value and refer to it using the dotted syntax, e.g. for
 // YAML
 //
-//  config:
-//    real: ${config.literal}
-//    literal: "${unchanged}"
+//	config:
+//	  real: ${config.literal}
+//	  literal: "${unchanged}"
 //
 // In the above a reference to ${config.real} will return the literal
 // string ${unchanged} as there is no recursive lookups.
+package config
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strings"
+
+	"github.com/awnumar/memguard"
+	"github.com/maja42/goval"
+)
 
 // ExpandString returns the global configuration value for input as an
 // expanded string. The returned string is always a freshly allocated
@@ -405,23 +418,50 @@ func (c *Config) ExpandAllSettings(options ...ExpandOptions) (all map[string]int
 
 }
 
+// splitEncFields breaks the string enc into two strings, the first the
+// keyfile(s) and the second the ciphertext. The split is done on the
+// *last* colon and not the first, otherwise Windows drive letter paths
+// would be considered the split point.
+func splitEncFields(enc string) (keyfiles, ciphertext string) {
+	c := strings.LastIndexByte(enc, ':')
+	if c == -1 {
+		return
+	}
+	keyfiles = enc[:c]
+	if len(enc) > c+1 {
+		ciphertext = enc[c+1:]
+	}
+	return
+}
+
+// splitEncFieldsBytes breaks the string enc into two strings, the first the
+// keyfile(s) and the second the ciphertext. The split is done on the
+// *last* colon and not the first, otherwise Windows drive letter paths
+// would be considered the split point.
+func splitEncFieldsBytes(enc []byte) (keyfiles, ciphertext []byte) {
+	c := bytes.LastIndexByte(enc, ':')
+	if c == -1 {
+		return
+	}
+	keyfiles = enc[:c]
+	if len(enc) > c+1 {
+		ciphertext = enc[c+1:]
+	}
+	return
+}
+
 // expandEncodedString accepts input of the form:
 //
 //	[enc:]keyfile[,keyfile...]:[+encs+HEX|external]
 //
-// `enc:` is removed if passed. Each keyfile is tried until the first
-// that does not return a decoding error. `keyfile` may be prefixed `~/`
-// in which case the file is relative to the user's home directory. If
-// the encoded string is prefixed with `+encs+` (standard Geneos usage)
-// then it is used directly, otherwise the value is looked-up using the
-// normal conventions for external access, e.g. file or URL.
+// Each keyfile is tried until the first that does not return a decoding
+// error. `keyfile` may be prefixed `~/` in which case the file is
+// relative to the user's home directory. If the encoded string is
+// prefixed with `+encs+` (standard Geneos usage) then it is used
+// directly, otherwise the value is looked-up using the normal
+// conventions for external access, e.g. file or URL.
 func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value string) {
-	s = strings.TrimPrefix(s, "enc:")
-	p := strings.SplitN(s, ":", 2)
-	if len(p) != 2 {
-		return ""
-	}
-	keyfiles, encodedValue := p[0], p[1]
+	keyfiles, encodedValue := splitEncFields(s)
 
 	if !strings.HasPrefix(encodedValue, "+encs+") {
 		encodedValue, _ = c.ExpandRawString(encodedValue, options...)
@@ -447,11 +487,7 @@ func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value 
 }
 
 func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value []byte) {
-	p := bytes.SplitN(s, []byte(":"), 2)
-	if len(p) != 2 {
-		return
-	}
-	keyfiles, encodedValue := p[0], p[1]
+	keyfiles, encodedValue := splitEncFieldsBytes(s)
 
 	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
 		str, _ := c.ExpandRawString(string(encodedValue), options...)
@@ -477,11 +513,7 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 }
 
 func (c *Config) expandEncodedBytesEnclave(s []byte, options ...ExpandOptions) (value *memguard.Enclave) {
-	p := bytes.SplitN(s, []byte(":"), 2)
-	if len(p) != 2 {
-		return
-	}
-	keyfiles, encodedValue := p[0], p[1]
+	keyfiles, encodedValue := splitEncFieldsBytes(s)
 
 	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
 		str, _ := c.ExpandRawString(string(encodedValue), options...)
@@ -507,11 +539,7 @@ func (c *Config) expandEncodedBytesEnclave(s []byte, options ...ExpandOptions) (
 }
 
 func (c *Config) expandEncodedBytesLockedBuffer(s []byte, options ...ExpandOptions) (value *memguard.LockedBuffer) {
-	p := bytes.SplitN(s, []byte(":"), 2)
-	if len(p) != 2 {
-		return
-	}
-	keyfiles, encodedValue := p[0], p[1]
+	keyfiles, encodedValue := splitEncFieldsBytes(s)
 
 	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
 		str, _ := c.ExpandRawString(string(encodedValue), options...)
