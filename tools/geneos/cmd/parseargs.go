@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	AnnotationWildcard   = "wildcard"
+	AnnotationWildcard   = "wildcard" // "true", "false" or "explicit" (to match "all")
 	AnnotationNames      = "names"
 	AnnotationParams     = "params"
 	AnnotationNeedsHome  = "needshomedir"
@@ -76,6 +76,16 @@ func parseArgs(command *cobra.Command, args []string) (err error) {
 
 	if len(args) == 0 && annotations[AnnotationWildcard] != "true" {
 		return nil
+	}
+
+	// shortcut - if the first non-component arg is "all" and the
+	// wildcard type is "explicit" then treat it as a wildcard, but only
+	// when given "all" as the first argument
+	if len(args) > 0 && args[0] == "all" && annotations[AnnotationWildcard] == "explicit" {
+		annotations[AnnotationWildcard] = "true"
+		if len(args) > 1 {
+			args = args[1:]
+		}
 	}
 
 	log.Debug().Msgf("rawargs: %s", args)

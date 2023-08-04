@@ -176,7 +176,10 @@ func ReadCert(c geneos.Instance) (cert *x509.Certificate, valid bool, err error)
 
 	// validate against certificate chain file on the same host, expiry
 	// etc.
-	chainfile := config.PromoteFile(c.Host(), c.Host().PathTo("tls", geneos.ChainCertFile), c.Host().PathTo("tls", "chain.pem"))
+	chainfile := PathOf(c, "certchain")
+	if chainfile == "" {
+		chainfile = config.PromoteFile(c.Host(), c.Host().PathTo("tls", geneos.ChainCertFile), c.Host().PathTo("tls", "chain.pem"))
+	}
 	if chain, err := c.Host().ReadFile(chainfile); err == nil {
 		cp := x509.NewCertPool()
 		cp.AppendCertsFromPEM(chain)

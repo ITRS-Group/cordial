@@ -44,23 +44,25 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
+const DefaultKeyType = "ecdh"
+
 // ParseCertificate reads a PEM encoded cert from path on host h, return the
 // first found as a parsed certificate
 func ParseCertificate(h host.Host, pt string) (cert *x509.Certificate, err error) {
-	certPEM, err := h.ReadFile(pt)
+	pembytes, err := h.ReadFile(pt)
 	if err != nil {
 		return
 	}
 
 	for {
-		p, rest := pem.Decode(certPEM)
+		p, rest := pem.Decode(pembytes)
 		if p == nil {
 			return nil, fmt.Errorf("cannot locate certificate in %s", pt)
 		}
 		if p.Type == "CERTIFICATE" {
 			return x509.ParseCertificate(p.Bytes)
 		}
-		certPEM = rest
+		pembytes = rest
 	}
 }
 
@@ -68,47 +70,28 @@ func ParseCertificate(h host.Host, pt string) (cert *x509.Certificate, err error
 // all the certificates found (using the same rules as
 // x509.ParseCertificates).
 func ParseCertificates(h host.Host, p string) (certs []*x509.Certificate, err error) {
-	certPEM, err := h.ReadFile(p)
+	pembytes, err := h.ReadFile(p)
 	if err != nil {
 		return
 	}
 
-	return x509.ParseCertificates(certPEM)
+	return x509.ParseCertificates(pembytes)
 }
 
-// ReadPrivateKey reads a unencrypted, PEM-encoded private key and saves
-// the decoded, but unparsed, key in a memguard.Enclave
-func ReadPrivateKey(h host.Host, pt string) (key *memguard.Enclave, err error) {
-	keyPEM, err := h.ReadFile(pt)
-	if err != nil {
-		return
-	}
-
-	for {
-		p, rest := pem.Decode(keyPEM)
-		if p == nil {
-			return nil, fmt.Errorf("cannot locate private key in %s", pt)
-		}
-		if strings.HasSuffix(p.Type, "PRIVATE KEY") {
-			key = memguard.NewEnclave(p.Bytes)
-			return
-		}
-		keyPEM = rest
-	}
-}
-
-// ParseKey tries to parse the PEM encoded private key first as PKCS#8
-// and then PKCS#1 if that fails. It returns the private and public keys
-// or an error
-func ParseKey(keyPEM *memguard.Enclave) (privateKey any, publickey crypto.PublicKey, err error) {
-	k, err := keyPEM.Open()
+// ParseKey tries to parse the DER encoded private key enclave, first as
+// PKCS#8 and then as a PKCS#1 and finally as SEC1 (EC) if that fails.
+// It returns the private and public keys or an error
+func ParseKey(der *memguard.Enclave) (privateKey any, publickey crypto.PublicKey, err error) {
+	k, err := der.Open()
 	if err != nil {
 		return
 	}
 	defer k.Destroy()
 	if privateKey, err = x509.ParsePKCS8PrivateKey(k.Bytes()); err != nil {
 		if privateKey, err = x509.ParsePKCS1PrivateKey(k.Bytes()); err != nil {
-			return
+			if privateKey, err = x509.ParseECPrivateKey(k.Bytes()); err != nil {
+				return
+			}
 		}
 	}
 	if k, ok := privateKey.(crypto.Signer); ok {
@@ -117,44 +100,48 @@ func ParseKey(keyPEM *memguard.Enclave) (privateKey any, publickey crypto.Public
 	return
 }
 
-// PublicKey parses the PEM encoded private key and returns the public
-// key if successful. It will first try as PKCS#8 and then PKCS#1 if
-// that fails. Using this over ParseKey() ensures the decoded private
-// key is not returned to the caller when not required.
-func PublicKey(keyPEM *memguard.Enclave) (publickey crypto.PublicKey, err error) {
+// PublicKey parses the DER encoded private key enclave and returns the
+// public key if successful. It will first try as PKCS#8 and then PKCS#1
+// if that fails. Using this over the more general ParseKey() ensures
+// the decoded private key is not returned to the caller when not
+// required.
+func PublicKey(der *memguard.Enclave) (publickey crypto.PublicKey, err error) {
 	var pkey any
 
-	k, err := keyPEM.Open()
+	k, err := der.Open()
 	if err != nil {
 		return
 	}
 	defer k.Destroy()
 	if pkey, err = x509.ParsePKCS8PrivateKey(k.Bytes()); err != nil {
 		if pkey, err = x509.ParsePKCS1PrivateKey(k.Bytes()); err != nil {
-			return
+			if pkey, err = x509.ParseECPrivateKey(k.Bytes()); err != nil {
+				return
+			}
 		}
 	}
 	if k, ok := pkey.(crypto.Signer); ok {
 		publickey = k.Public()
 	}
+
 	return
 }
 
-// WriteCert writes cert as PEM to path on host h
+// WriteCert writes cert as PEM to file p on host h
 func WriteCert(h host.Host, p string, cert *x509.Certificate) (err error) {
 	log.Debug().Msgf("write cert to %s", p)
-	certPEM := pem.EncodeToMemory(&pem.Block{
+	pembytes := pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: cert.Raw,
 	})
 
-	return h.WriteFile(p, certPEM, 0644)
+	return h.WriteFile(p, pembytes, 0644)
 }
 
 // WriteCertChain concatenate certs and writes to path on host h
 func WriteCertChain(h host.Host, p string, certs ...*x509.Certificate) (err error) {
 	log.Debug().Msgf("write certs to %s", p)
-	var certsPEM []byte
+	var pembytes []byte
 	for _, cert := range certs {
 		if cert == nil {
 			continue
@@ -163,103 +150,124 @@ func WriteCertChain(h host.Host, p string, certs ...*x509.Certificate) (err erro
 			Type:  "CERTIFICATE",
 			Bytes: cert.Raw,
 		})
-		certsPEM = append(certsPEM, p...)
+		pembytes = append(pembytes, p...)
 	}
-	return h.WriteFile(p, certsPEM, 0644)
+	return h.WriteFile(p, pembytes, 0644)
 }
 
-// WritePrivateKey writes a private key as PEM to path on host h. sets file
-// permissions to 0600 (before umask)
+// ReadPrivateKey reads a unencrypted, PEM-encoded private key and saves
+// the der format key in a memguard.Enclave
+func ReadPrivateKey(h host.Host, pt string) (key *memguard.Enclave, err error) {
+	pembytes, err := h.ReadFile(pt)
+	if err != nil {
+		return
+	}
+
+	for {
+		p, rest := pem.Decode(pembytes)
+		if p == nil {
+			return nil, fmt.Errorf("cannot locate private key in %s", pt)
+		}
+		if strings.HasSuffix(p.Type, "PRIVATE KEY") {
+			key = memguard.NewEnclave(p.Bytes)
+			return
+		}
+		pembytes = rest
+	}
+}
+
+// WritePrivateKey writes a DER encoded private key as a PKCS#8 encoded
+// PEM file to path on host h. sets file permissions to 0600 (before
+// umask)
 func WritePrivateKey(h host.Host, pt string, key *memguard.Enclave) (err error) {
 	l, _ := key.Open()
 	defer l.Destroy()
-	p := pem.EncodeToMemory(&pem.Block{
+	pembytes := pem.EncodeToMemory(&pem.Block{
 		Type:  "PRIVATE KEY",
 		Bytes: l.Bytes(),
 	})
-	return h.WriteFile(pt, p, 0600)
+	return h.WriteFile(pt, pembytes, 0600)
 }
-
-const DefaultKeyType = "ecdh"
 
 // CreateCertificateAndKey is a wrapper to create a new certificate
 // given the signing cert and key and an optional private key to (re)use
 // for the certificate creation. Returns a certificate and private key.
 // Keys are usually PKCS#8 encoded and so need parsing after unsealing.
-func CreateCertificateAndKey(template, parent *x509.Certificate, signingKeyPEM, existingKeyPEM *memguard.Enclave) (cert *x509.Certificate, certKeyPEM *memguard.Enclave, err error) {
+func CreateCertificateAndKey(template, parent *x509.Certificate, signingKeyDER, existingKeyDER *memguard.Enclave) (cert *x509.Certificate, certKeyDER *memguard.Enclave, err error) {
 	var certBytes []byte
 	// var certKey *rsa.PrivateKey
 
-	if template != parent && signingKeyPEM == nil {
+	if template != parent && signingKeyDER == nil {
 		err = errors.New("parent key empty but not self-signing")
 		return
 	}
 
-	certKeyPEM = existingKeyPEM
-	if certKeyPEM == nil {
-		keytype := KeyType(signingKeyPEM)
+	certKeyDER = existingKeyDER
+	if certKeyDER == nil {
+		keytype := PrivateKeyType(signingKeyDER)
 		if keytype == "" {
 			keytype = DefaultKeyType
 		}
-		certKeyPEM, err = NewPrivateKey(keytype)
+		certKeyDER, err = NewPrivateKey(keytype)
 		if err != nil {
 			panic(err)
 		}
 	}
 
 	// default the signingKey to the certKey (for self-signed root)
-	signingKey, certPubKey, err := ParseKey(certKeyPEM)
+	signingKey, certPubKey, err := ParseKey(certKeyDER)
 	if err != nil {
 		return
 	}
 
-	if signingKeyPEM != nil {
-		signingKey, _, err = ParseKey(signingKeyPEM)
+	if signingKeyDER != nil {
+		signingKey, _, err = ParseKey(signingKeyDER)
 		if err != nil {
-			certKeyPEM = nil
+			certKeyDER = nil
 			return
 		}
 	}
 
 	if certBytes, err = x509.CreateCertificate(rand.Reader, template, parent, certPubKey, signingKey); err != nil {
-		certKeyPEM = nil
+		certKeyDER = nil
 		return
 	}
 
 	if cert, err = x509.ParseCertificate(certBytes); err != nil {
-		certKeyPEM = nil
+		certKeyDER = nil
 		return
 	}
 
 	return
 }
 
-// KeyType returns the type of key, suitable for use to NewPrivateKey
-func KeyType(key *memguard.Enclave) (keytype string) {
-	if key == nil {
+// PrivateKeyType returns the type of the DER encoded private key,
+// suitable for use to NewPrivateKey
+func PrivateKeyType(der *memguard.Enclave) (keytype string) {
+	if der == nil {
 		return
 	}
-	privateKey, _, err := ParseKey(key)
+	key, _, err := ParseKey(der)
 	if err != nil {
 		return
 	}
 
-	switch privateKey.(type) {
+	switch key.(type) {
 	case *rsa.PrivateKey:
 		return "rsa"
 	case *ecdsa.PrivateKey:
 		return "ecdsa"
 	case *ecdh.PrivateKey:
 		return "ecdh"
-	case ed25519.PrivateKey:
+	case ed25519.PrivateKey: // not a pointer
 		return "ed2559"
 	default:
 		return ""
 	}
 }
 
-// NewPrivateKey returns a PKCS8 encoded private key as an enclave.
-func NewPrivateKey(keytype string) (k *memguard.Enclave, err error) {
+// NewPrivateKey returns a PKCS#8 DER encoded private key as an enclave.
+func NewPrivateKey(keytype string) (der *memguard.Enclave, err error) {
 	var privateKey any
 	switch keytype {
 	case "rsa":
@@ -294,7 +302,7 @@ func NewPrivateKey(keytype string) (k *memguard.Enclave, err error) {
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
-	k = memguard.NewEnclave(key)
+	der = memguard.NewEnclave(key)
 	return
 }
 

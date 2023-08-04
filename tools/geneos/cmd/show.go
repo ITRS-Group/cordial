@@ -25,7 +25,6 @@ package cmd
 import (
 	"bytes"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -148,8 +147,7 @@ var showCmd = &cobra.Command{
 			}
 			return
 		}
-		b, _ := json.MarshalIndent(results, "", "    ")
-		fmt.Fprintln(output, string(b))
+		instance.WriteResponsesAsJSON(os.Stdout, results, true)
 		return
 	},
 }
