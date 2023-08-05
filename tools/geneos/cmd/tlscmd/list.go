@@ -364,18 +364,18 @@ func listCmdInstanceCert(c geneos.Instance) (resp *instance.Response) {
 	}
 
 	expires := cert.NotAfter
-	resp.Result = fmt.Sprintf("%s\t%s\t%s\t%.f\t%q\t%q\t%v\t", c.Type(), c.Name(), c.Host(), time.Until(expires).Seconds(), expires, cert.Subject.CommonName, valid)
+	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%.f\t%q\t%q\t%v\t", c.Type(), c.Name(), c.Host(), time.Until(expires).Seconds(), expires, cert.Subject.CommonName, valid)
 
 	if listCmdLong {
-		resp.Result += fmt.Sprintf("%q\t", cert.Issuer.CommonName)
+		resp.Line += fmt.Sprintf("%q\t", cert.Issuer.CommonName)
 		if len(cert.DNSNames) > 0 {
-			resp.Result += fmt.Sprint(cert.DNSNames)
+			resp.Line += fmt.Sprint(cert.DNSNames)
 		}
-		resp.Result += "\t"
+		resp.Line += "\t"
 		if len(cert.IPAddresses) > 0 {
-			resp.Result += fmt.Sprint(cert.IPAddresses)
+			resp.Line += fmt.Sprint(cert.IPAddresses)
 		}
-		resp.Result += fmt.Sprintf("\t%X", sha1.Sum(cert.Raw))
+		resp.Line += fmt.Sprintf("\t%X", sha1.Sum(cert.Raw))
 	}
 	return
 }

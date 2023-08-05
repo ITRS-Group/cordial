@@ -44,16 +44,16 @@ type Responses []*Response
 
 // Response is a consolidated set of responses from commands
 type Response struct {
-	Instance   geneos.Instance
-	Result     string     // single line response,
-	Lines      []string   // Lines of output
-	Row        []string   // row of values (for CSV)
-	Rows       [][]string // rows of values (for CSV)
-	Value      any
-	Start      time.Time
-	Finish     time.Time
-	Preterites []string // simple past tense verbs of completed actions, e.g. "stopped", "started" etc.
-	Err        error
+	Instance  geneos.Instance
+	Line      string     // single line response,
+	Lines     []string   // Lines of output
+	Row       []string   // row of values (for CSV)
+	Rows      [][]string // rows of values (for CSV)
+	Value     any
+	Start     time.Time
+	Finish    time.Time
+	Completed []string // simple past tense verbs of completed actions, e.g. "stopped", "started" etc.
+	Err       error
 }
 
 // NewResponse returns a pointer to an intialised Response structure,
@@ -165,8 +165,8 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 
 		switch w := writer.(type) {
 		case *tabwriter.Writer:
-			if r.Result != "" {
-				fmt.Fprintf(w, "%s\n", r.Result)
+			if r.Line != "" {
+				fmt.Fprintf(w, "%s\n", r.Line)
 			}
 			for _, line := range r.Lines {
 				if line != "" {
@@ -235,8 +235,12 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 			}
 
 			// string(s) - append a newline unless one is present
-			if r.Result != "" {
-				fmt.Fprintln(w, strings.TrimSuffix(r.Result, "\n"))
+			if r.Line != "" {
+				fmt.Fprintf(w, "%s %s\n", r.Instance, strings.TrimSuffix(r.Line, "\n"))
+			}
+
+			if len(r.Completed) > 0 {
+				fmt.Fprintf(w, "%s %s\n", r.Instance, joinNatural(r.Completed...))
 			}
 
 			for _, s := range r.Lines {
@@ -276,6 +280,22 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 				fmt.Fprintf(opts.stderr, opts.timesformat, r.Instance, s)
 			}
 		}
+	}
+}
+
+// joinNatural joins words with commas except the last pair, which are
+// joined with an 'and'. No words results in empty string, one word is
+// returned as-is and two words with 'and' etc.
+func joinNatural(words ...string) string {
+	switch len(words) {
+	case 0:
+		return ""
+	case 1:
+		return words[0]
+	// case 2:
+	// 	return words[0] + " and " + words[1]
+	default:
+		return strings.Join(words[:len(words)-1], ", ") + " and " + words[len(words)-1]
 	}
 }
 

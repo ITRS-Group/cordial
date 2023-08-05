@@ -123,6 +123,6 @@ func aesEncodeInstance(c geneos.Instance, params []string) (resp *instance.Respo
 		resp.Err = err
 		return
 	}
-	resp.Result = fmt.Sprintf("%s: %s", c, e)
+	resp.Completed = append(resp.Completed, e)
 	return
 }

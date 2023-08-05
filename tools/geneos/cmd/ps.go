@@ -25,7 +25,6 @@ package cmd
 import (
 	_ "embed"
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/user"
@@ -56,7 +55,6 @@ var psCmdLong, psCmdShowFiles, psCmdJSON, psCmdIndent, psCmdCSV, psCmdNoLookups 
 
 var psTabWriter *tabwriter.Writer
 var psCSVWriter *csv.Writer
-var psJSONEncoder *json.Encoder
 
 func init() {
 	GeneosCmd.AddCommand(psCmd)
@@ -162,7 +160,7 @@ func psInstancePlain(c geneos.Instance) (resp *instance.Response) {
 		base += "*"
 	}
 
-	resp.Result = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s:%s\t%s", c.Type(), c.Name(), c.Host(), pid, portlist, username, groupname, mtime.Local().Format(time.RFC3339), base, actual, c.Home())
+	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s:%s\t%s", c.Type(), c.Name(), c.Host(), pid, portlist, username, groupname, mtime.Local().Format(time.RFC3339), base, actual, c.Home())
 
 	// if psCmdShowFiles {
 	// 	listOpenFiles(c)

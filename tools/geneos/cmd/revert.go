@@ -103,7 +103,7 @@ func revertInstance(c geneos.Instance) (resp *instance.Response) {
 		return
 	}
 
-	resp.Result = fmt.Sprintf("%s reverted to RC config", c)
+	resp.Completed = append(resp.Completed, "reverted to RC config")
 	return
 }
 
