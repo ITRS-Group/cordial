@@ -65,7 +65,7 @@ func LogInit(prefix string) {
 		return fmt.Sprintf("%s:%d %s()", file, line, fnName)
 	}
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339, NoColor: true,
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339,
 		FormatLevel: func(i interface{}) string {
 			return strings.ToUpper(fmt.Sprintf("%s:", i))
 		},
