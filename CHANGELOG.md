@@ -2,9 +2,19 @@
 
 ## Version v1.8.0
 
-> **Released 2023-08-02**
+> **Released 2023-08-04**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.8.0 Changes
+
+* `tools/geneos` - Extensive rework to the internal handling of loops-over-instances to pass-back an `instance.Response` struct and handle output at the caller. This is preparation for work on non-CLI interfaces (think: REST API and web). This may break some output formatting, please report via github issues.
+
+* `tools/geneos` - `tls import` has changed to support the import of instance certificate, signing certs and chains in a more organised way. It is unlikely anyone was using the previous incarnation which was highly limited but just in case, this is a **breaking change** to the syntax and functionality of `tls import`.
+
+## v1.8.0 Fixes
+
+* `pkg/config` - [#176](https://github.com/ITRS-Group/cordial/issues/176) fix support for Windows paths in `${enc:...}` expansion formats
 
 ## Version v1.7.2
 

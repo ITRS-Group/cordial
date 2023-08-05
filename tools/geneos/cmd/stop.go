@@ -58,7 +58,11 @@ var stopCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names := TypeNames(cmd)
 		results := instance.Do(geneos.GetHost(Hostname), ct, names, stopInstance)
-		instance.WriteResponseStrings(os.Stdout, results)
+		results.Write(os.Stdout,
+			instance.WriterStderr(os.Stderr),
+			instance.WriterIgnoreErrs(os.ErrProcessDone, geneos.ErrNotSupported),
+			instance.WriterSkipOnErr(true),
+		)
 		return
 	},
 }
