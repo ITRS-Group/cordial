@@ -23,7 +23,6 @@ THE SOFTWARE.
 package instance
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -304,9 +303,6 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Ins
 
 			start := time.Now()
 			result := fn(c)
-			if result.Err != nil && !errors.Is(result.Err, os.ErrProcessDone) && !errors.Is(result.Err, geneos.ErrNotSupported) {
-				fmt.Printf("%s: %s\n", c, result.Err)
-			}
 			result.Instance = c
 			result.Start = start
 			result.Finish = time.Now()
@@ -345,9 +341,6 @@ func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn 
 
 			start := time.Now()
 			result := fn(c, params)
-			if result.Err != nil && !errors.Is(result.Err, os.ErrProcessDone) && !errors.Is(result.Err, geneos.ErrNotSupported) {
-				fmt.Printf("%s: %s\n", c, result.Err)
-			}
 			result.Instance = c
 			result.Start = start
 			result.Finish = time.Now()
@@ -387,10 +380,6 @@ func DoWithValues(h *geneos.Host, ct *geneos.Component, names []string, fn func(
 
 			start := time.Now()
 			result := fn(c, values...)
-			if result.Err != nil && !errors.Is(result.Err, os.ErrProcessDone) && !errors.Is(result.Err, geneos.ErrNotSupported) {
-				fmt.Printf("%s: %s\n", c, result.Err)
-				return
-			}
 			result.Instance = c
 			result.Start = start
 			result.Finish = time.Now()
