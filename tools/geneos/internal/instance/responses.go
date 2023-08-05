@@ -29,6 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -104,77 +105,6 @@ func (s SortInstanceResponses) Less(i, j int) bool {
 	}
 }
 
-// WriteResponsesToCSVWriter sends all slices of strings to the writer w
-//
-// results can be one row in Strings or multiple rows in Rows, if both
-// are set then Strings is output first
-func WriteResponsesToCSVWriter(w *csv.Writer, results Responses) (err error) {
-	for _, result := range results {
-		if len(result.Strings) > 0 {
-			w.Write(result.Strings)
-		}
-		if len(result.Rows) > 0 {
-			w.WriteAll(result.Rows)
-		}
-	}
-	return
-}
-
-// WriteResponsesToTabWriter sends all slices of strings to the writer
-// w, terminating each line with a newline (`\n`)
-//
-// responses can contain both a String and a Strings slice, both are
-// written if the contents are not empty
-func WriteResponsesToTabWriter(w *tabwriter.Writer, responses Responses) (err error) {
-	for _, result := range responses {
-		if result.String != "" {
-			fmt.Fprintf(w, "%s\n", result.String)
-		}
-		for _, line := range result.Strings {
-			if line != "" {
-				fmt.Fprintf(w, "%s\n", line)
-			}
-		}
-	}
-	return
-}
-
-// WriteResponsesAsJSON writes the JSON encoding of the Value field of
-// each response in responses to writer w. If Value is a slice then it
-// is unrolled, so it is not possible to JSON encode arrays (beyond the
-// responses slice itself) with this method.
-//
-// HTML escaping is turned off. If indent is true then the output is
-// indented by four spaces per level for human presentation.
-func WriteResponsesAsJSON(w io.Writer, results Responses, indent bool) (err error) {
-	values := []any{}
-	for _, v := range results {
-		if v.Value == nil {
-			continue
-		}
-
-		// unroll any slices to the underlying elements
-		if reflect.TypeOf(v.Value).Kind() == reflect.Slice {
-			s := reflect.ValueOf(v.Value)
-			for i := 0; i < s.Len(); i++ {
-				if s.Index(i).IsValid() {
-					values = append(values, s.Index(i).Interface())
-				}
-
-			}
-		} else {
-			values = append(values, v.Value)
-		}
-	}
-
-	j := json.NewEncoder(w)
-	j.SetEscapeHTML(false)
-	if indent {
-		j.SetIndent("", "    ")
-	}
-	return j.Encode(values)
-}
-
 // WriteResponseStrings writes the elements of results to the writer w.
 // If the element is a plain string then it is written with a trailing
 // newline unless the string is only a newline, in which case only the
@@ -207,10 +137,10 @@ func WriteResponseStrings(w io.Writer, responses Responses) (err error) {
 // other outputs are skipped (even if the error writer is the default
 // io.Discard). Errors then written as described below.
 //
-// If writer is a tabwriter then String and Strings are written with a
+// If writer is a [*tabwriter.Writer] String and Strings are written with a
 // trailing newline.
 //
-// If writer is a csv writer then Strings and Rows are written.
+// If writer is a [*csv.Writer] then Strings and Rows are written.
 //
 // Otherwise if Value is not nil then it is treated as a slice of any
 // values which are marshalled as a JSON array and written to writer. If
@@ -230,7 +160,7 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 	}
 	opts := evalWriterOptions(options...)
 
-	n := 0
+	started := false
 
 	for _, r := range responses {
 		if r.Err != nil && opts.skiponerr {
@@ -266,36 +196,51 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 			// json from values, a bit painful - fix later
 			// only support for an array of "Values", which is unrolled
 			if r.Value != nil {
+				// encode to a buffer so we can strip the trailing newline
 				var b bytes.Buffer
 				j := json.NewEncoder(&b)
 				j.SetEscapeHTML(false)
 				if opts.indent {
 					j.SetIndent("    ", "    ")
 				}
-				if n == 0 {
-					fmt.Fprint(w, "[")
-				} else {
-					fmt.Fprint(w, ",")
-				}
-				if opts.indent {
-					fmt.Fprint(w, "\n    ")
-				}
 
 				if reflect.TypeOf(r.Value).Kind() == reflect.Slice {
 					s := reflect.ValueOf(r.Value)
 					for i := 0; i < s.Len(); i++ {
 						if s.Index(i).IsValid() {
+							if !started {
+								fmt.Fprint(w, "[")
+								started = true
+							} else {
+								fmt.Fprint(w, ",")
+							}
+							if opts.indent {
+								fmt.Fprint(w, "\n    ")
+							}
 							j.Encode(s.Index(i).Interface())
+							if b.Len() > 1 {
+								b.Truncate(b.Len() - 1)
+								b.WriteTo(w)
+							}
 						}
 					}
 				} else {
+					if !started {
+						fmt.Fprint(w, "[")
+						started = true
+					} else {
+						fmt.Fprint(w, ",")
+					}
+					if opts.indent {
+						fmt.Fprint(w, "\n    ")
+					}
 					j.Encode(r.Value)
+
+					if b.Len() > 1 {
+						b.Truncate(b.Len() - 1)
+						b.WriteTo(w)
+					}
 				}
-				if b.Len() > 1 {
-					b.Truncate(b.Len() - 1)
-					b.WriteTo(w)
-				}
-				n++
 			}
 
 			// string(s) - append a newline unless one is present
@@ -311,7 +256,7 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 			log.Fatal().Msgf("unknown writer type %T", writer)
 		}
 	}
-	if n > 0 {
+	if started {
 		if opts.indent {
 			fmt.Fprint(writer.(io.Writer), "\n")
 		}
@@ -340,17 +285,32 @@ type writeOptions struct {
 	skiponerr bool
 }
 
+var globalWriteOptions = writeOptions{
+	stderr:    os.Stderr,
+	ignoreerr: []error{os.ErrProcessDone, geneos.ErrNotSupported},
+	skiponerr: true,
+}
+
 // WriterOptions controls to behaviour of the instance.Write method
 type WriterOptions func(*writeOptions)
 
 func evalWriterOptions(options ...WriterOptions) *writeOptions {
-	opts := &writeOptions{
-		stderr: io.Discard,
-	}
+	opts := globalWriteOptions
 	for _, o := range options {
-		o(opts)
+		o(&opts)
 	}
-	return opts
+	return &opts
+}
+
+// WriterDefaultOptions sets and defaults for calls to instance.Write
+//
+// The defaults, unless otherwise set are to write errors to os.Stderr
+// and to ignore os.ErrProcessDone and geneos.ErrNotSupported errors and
+// to skip other outputs for each response on non-ignored errors.
+func WriterDefaultOptions(options ...WriterOptions) {
+	for _, o := range options {
+		o(&globalWriteOptions)
+	}
 }
 
 // WriterIndent sets the JSON indentation to true or false for the
@@ -362,7 +322,7 @@ func WriterIndent(indent bool) WriterOptions {
 }
 
 // WriteStderr sets the writer to use for errors. It defaults to
-// io.Discard
+// os.Stderr
 func WriterStderr(stderr io.Writer) WriterOptions {
 	return func(wo *writeOptions) {
 		wo.stderr = stderr

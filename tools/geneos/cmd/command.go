@@ -58,11 +58,11 @@ var commandCmd = &cobra.Command{
 		ct, names := TypeNames(cmd)
 		if commandCmdJSON {
 			results := instance.Do(geneos.GetHost(Hostname), ct, names, commandInstanceJSON)
-			instance.WriteResponsesAsJSON(os.Stdout, results, true)
+			results.Write(os.Stdout, instance.WriterIndent(true))
 			return nil
 		}
 		results := instance.Do(geneos.GetHost(Hostname), ct, names, commandInstance)
-		instance.WriteResponseStrings(os.Stdout, results)
+		results.Write(os.Stdout)
 		return
 	},
 }

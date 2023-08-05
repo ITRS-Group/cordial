@@ -97,18 +97,16 @@ geneos aes ls -S gateway -H localhost -c
 			} else {
 				results = instance.Do(h, ct, names, aesListInstanceJSON)
 			}
-			instance.WriteResponsesAsJSON(os.Stdout, results, listCmdIndent)
+			results.Write(os.Stdout, instance.WriterIndent(listCmdIndent))
 		case listCmdCSV:
 			aesListCSVWriter = csv.NewWriter(os.Stdout)
 			aesListCSVWriter.Write([]string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
 
 			if listCmdShared {
-				instance.WriteResponsesToCSVWriter(aesListCSVWriter, instance.Responses{aesListSharedCSV(ct, h)})
+				instance.Responses{aesListSharedCSV(ct, h)}.Write(aesListCSVWriter)
 			} else {
 				results := instance.Do(h, ct, names, aesListInstanceCSV)
-				if err = instance.WriteResponsesToCSVWriter(aesListCSVWriter, results); err != nil {
-					return
-				}
+				results.Write(aesListCSVWriter)
 			}
 
 			aesListCSVWriter.Flush()
@@ -122,9 +120,7 @@ geneos aes ls -S gateway -H localhost -c
 			} else {
 				responses = instance.Do(h, ct, names, aesListInstance)
 			}
-
-			instance.WriteResponsesToTabWriter(aesListTabWriter, responses)
-
+			responses.Write(aesListTabWriter)
 			aesListTabWriter.Flush()
 		}
 		if err == os.ErrNotExist {
@@ -295,7 +291,9 @@ func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, paths ..
 		results = append(results, r)
 	}
 
-	result.Value = results
+	if len(results) > 0 {
+		result.Value = results
+	}
 	return
 }
 

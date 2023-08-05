@@ -101,18 +101,18 @@ func CommandPS(ct *geneos.Component, names []string, params []string) (err error
 	switch {
 	case psCmdJSON, psCmdIndent:
 		responses := instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceJSON)
-		instance.WriteResponsesAsJSON(os.Stdout, responses, psCmdIndent)
+		responses.Write(os.Stdout, instance.WriterIndent(psCmdIndent))
 	case psCmdCSV:
 		psCSVWriter = csv.NewWriter(os.Stdout)
 		psCSVWriter.Write([]string{"Type", "Name", "Host", "PID", "Ports", "User", "Group", "Starttime", "Version", "Home"})
 		results := instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV)
-		instance.WriteResponsesToCSVWriter(psCSVWriter, results)
+		results.Write(psCSVWriter)
 		psCSVWriter.Flush()
 	default:
 		results := instance.Do(geneos.GetHost(Hostname), ct, names, psInstancePlain)
 		psTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\n")
-		instance.WriteResponsesToTabWriter(psTabWriter, results)
+		results.Write(psTabWriter)
 		psTabWriter.Flush()
 	}
 	if err == os.ErrNotExist {
