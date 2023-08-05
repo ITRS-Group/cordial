@@ -67,7 +67,7 @@ var commandCmd = &cobra.Command{
 	},
 }
 
-func commandInstance(c geneos.Instance) (resp *instance.Response) {
+func commandInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	lines := []string{fmt.Sprintf("=== %s ===", c)}
@@ -92,7 +92,7 @@ func commandInstance(c geneos.Instance) (resp *instance.Response) {
 	return
 }
 
-func commandInstanceJSON(c geneos.Instance) (resp *instance.Response) {
+func commandInstanceJSON(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	cmd, env, home := instance.BuildCmd(c, true)

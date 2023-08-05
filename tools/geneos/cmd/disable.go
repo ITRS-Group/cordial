@@ -64,7 +64,7 @@ var disableCmd = &cobra.Command{
 	},
 }
 
-func disableInstance(c geneos.Instance) (resp *instance.Response) {
+func disableInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	if instance.IsDisabled(c) {

@@ -109,8 +109,7 @@ geneos aes new -S gateway
 					if err = geneos.SaveKeyFileShared(h, ct, kv); err != nil {
 						return
 					}
-					params := []string{crcstr + ".aes"}
-					responses := instance.DoWithStringSlice(h, ct, names, aesNewSetInstance, params)
+					responses := instance.Do(h, ct, names, aesNewSetInstance, crcstr+".aes")
 					responses.Write(os.Stdout)
 				}
 			}
@@ -121,9 +120,18 @@ geneos aes new -S gateway
 	},
 }
 
-func aesNewSetInstance(c geneos.Instance, params []string) (resp *instance.Response) {
+func aesNewSetInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
+	if len(params) == 0 {
+		resp.Err = geneos.ErrInvalidArgs
+		return
+	}
+
+	keyfile, ok := params[0].(string)
+	if !ok {
+		panic("wrong type")
+	}
 	var rolled bool
 	cf := c.Config()
 
@@ -134,7 +142,7 @@ func aesNewSetInstance(c geneos.Instance, params []string) (resp *instance.Respo
 		cf.Set("prevkeyfile", p)
 		rolled = true
 	}
-	cf.Set("keyfile", instance.Shared(c, "keyfiles", params[0]))
+	cf.Set("keyfile", instance.Shared(c, "keyfiles", keyfile))
 
 	if cf.Type == "rc" {
 		resp.Err = instance.Migrate(c)
@@ -145,7 +153,7 @@ func aesNewSetInstance(c geneos.Instance, params []string) (resp *instance.Respo
 		return
 	}
 
-	resp.Completed = append(resp.Completed, fmt.Sprintf("keyfile %s set", params[0]))
+	resp.Completed = append(resp.Completed, fmt.Sprintf("keyfile %s set", keyfile))
 	if rolled {
 		resp.Completed = append(resp.Completed, "existing keyfile moved to prevkeyfile")
 	}

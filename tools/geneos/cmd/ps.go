@@ -119,7 +119,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) (err error
 	return
 }
 
-func psInstancePlain(c geneos.Instance) (resp *instance.Response) {
+func psInstancePlain(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	if instance.IsDisabled(c) {
@@ -168,7 +168,7 @@ func psInstancePlain(c geneos.Instance) (resp *instance.Response) {
 	return
 }
 
-func psInstanceCSV(c geneos.Instance) (resp *instance.Response) {
+func psInstanceCSV(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	if instance.IsDisabled(c) {
@@ -208,7 +208,7 @@ func psInstanceCSV(c geneos.Instance) (resp *instance.Response) {
 	return
 }
 
-func psInstanceJSON(c geneos.Instance) (resp *instance.Response) {
+func psInstanceJSON(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	if instance.IsDisabled(c) {

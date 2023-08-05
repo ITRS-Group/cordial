@@ -102,7 +102,7 @@ var listCmd = &cobra.Command{
 	},
 }
 
-func listInstancePlain(c geneos.Instance) (resp *instance.Response) {
+func listInstancePlain(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	var flags string
@@ -127,7 +127,7 @@ func listInstancePlain(c geneos.Instance) (resp *instance.Response) {
 	return
 }
 
-func listInstanceCSV(c geneos.Instance) (resp *instance.Response) {
+func listInstanceCSV(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	disabled := "N"
@@ -148,7 +148,7 @@ func listInstanceCSV(c geneos.Instance) (resp *instance.Response) {
 	return
 }
 
-func listInstanceJSON(c geneos.Instance) (resp *instance.Response) {
+func listInstanceJSON(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	base, underlying, _ := instance.Version(c)

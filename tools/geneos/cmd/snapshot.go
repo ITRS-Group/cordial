@@ -106,13 +106,23 @@ var snapshotCmd = &cobra.Command{
 
 		// at this point snapshotCmdUsername/Password contain global or
 		// command line values. These can be overridden per-instance.
-		responses := instance.DoWithStringSlice(geneos.GetHost(Hostname), ct, names, snapshotInstance, params)
+		responses := instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstance, params)
 		responses.Write(os.Stdout, instance.WriterIndent(true))
 	},
 }
 
-func snapshotInstance(c geneos.Instance, params []string) (resp *instance.Response) {
+func snapshotInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
+
+	if len(params) == 0 {
+		resp.Err = geneos.ErrInvalidArgs
+		return
+	}
+
+	paths, ok := params[0].([]string)
+	if !ok {
+		panic("wrong type")
+	}
 
 	if !instance.AtLeastVersion(c, "5.14") {
 		resp.Err = fmt.Errorf("%s is too old (5.14 or above required)", c)
@@ -120,7 +130,7 @@ func snapshotInstance(c geneos.Instance, params []string) (resp *instance.Respon
 	}
 	values := []any{}
 	log.Debug().Msgf("snapshot on %s", c)
-	for _, path := range params {
+	for _, path := range paths {
 		var x *xpath.XPath
 		x, resp.Err = xpath.Parse(path)
 		if resp.Err != nil {

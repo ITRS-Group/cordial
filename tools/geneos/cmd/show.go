@@ -107,7 +107,7 @@ var showCmd = &cobra.Command{
 			// 	params = append(params, showCmdHooksDir)
 			// }
 
-			responses := instance.DoWithValues(geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir)
+			responses := instance.Do(geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir)
 
 			if err != nil {
 				if err == os.ErrNotExist {
@@ -125,7 +125,7 @@ var showCmd = &cobra.Command{
 		}
 
 		if showCmdSetup {
-			responses := instance.DoWithValues(geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge)
+			responses := instance.Do(geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge)
 			if err != nil {
 				if err == os.ErrNotExist {
 					return fmt.Errorf("no matching instance found")
@@ -154,6 +154,11 @@ var showCmd = &cobra.Command{
 
 func showValidateInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
+
+	if len(params) == 0 {
+		resp.Err = geneos.ErrInvalidArgs
+		return
+	}
 
 	setup := c.Config().GetString("setup")
 	if setup == "" {
@@ -215,11 +220,21 @@ type showConfig struct {
 func showInstanceConfig(c geneos.Instance, params ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
+	if len(params) == 0 {
+		resp.Err = geneos.ErrInvalidArgs
+		return
+	}
+
+	merge, ok := params[0].(bool)
+	if !ok {
+		panic("wrong type")
+	}
+
 	setup := c.Config().GetString("setup")
 	if setup == "" {
 		return
 	}
-	if c.Type().String() == "gateway" && len(params) > 0 && params[0].(bool) {
+	if c.Type().String() == "gateway" && merge {
 		// run a gateway with -dump-xml and consume the result, discard the heading
 		cmd, env, home := instance.BuildCmd(c, false)
 		// replace args with a more limited set
@@ -263,7 +278,7 @@ func showInstanceConfig(c geneos.Instance, params ...any) (resp *instance.Respon
 	return
 }
 
-func showInstance(c geneos.Instance) (resp *instance.Response) {
+func showInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	// remove aliases

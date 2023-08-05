@@ -157,7 +157,7 @@ func outHeaderString(c geneos.Instance, path string) (lines []string) {
 	return
 }
 
-func logTailInstance(c geneos.Instance) (resp *instance.Response) {
+func logTailInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	if logCmdStderr {
@@ -324,7 +324,7 @@ func filterOutput(c geneos.Instance, path string, reader io.ReadSeeker) (sz int6
 	return
 }
 
-func logCatInstance(c geneos.Instance) (resp *instance.Response) {
+func logCatInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	if !logCmdStderr {
@@ -361,7 +361,7 @@ func logCatInstanceFile(c geneos.Instance, logfile string) (lines []string, err 
 // add local logs to a watcher list
 // for remote logs, spawn a go routine for each log, watch using stat etc.
 // and output changes
-func logFollowInstance(c geneos.Instance) (resp *instance.Response) {
+func logFollowInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	if logCmdStderr {

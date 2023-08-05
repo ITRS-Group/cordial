@@ -351,7 +351,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 	return
 }
 
-func listCmdInstanceCert(c geneos.Instance) (resp *instance.Response) {
+func listCmdInstanceCert(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	cert, valid, err := instance.ReadCert(c)
@@ -380,7 +380,7 @@ func listCmdInstanceCert(c geneos.Instance) (resp *instance.Response) {
 	return
 }
 
-func listCmdInstanceCertCSV(c geneos.Instance) (resp *instance.Response) {
+func listCmdInstanceCertCSV(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	cert, valid, err := instance.ReadCert(c)
@@ -406,7 +406,7 @@ func listCmdInstanceCertCSV(c geneos.Instance) (resp *instance.Response) {
 	return
 }
 
-func listCmdInstanceCertJSON(c geneos.Instance) (resp *instance.Response) {
+func listCmdInstanceCertJSON(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	cert, valid, err := instance.ReadCert(c)

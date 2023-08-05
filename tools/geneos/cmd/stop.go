@@ -63,7 +63,7 @@ var stopCmd = &cobra.Command{
 	},
 }
 
-func stopInstance(c geneos.Instance) (resp *instance.Response) {
+func stopInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 	resp.Err = instance.Stop(c, stopCmdForce, stopCmdKill)
 	return

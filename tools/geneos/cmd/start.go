@@ -72,7 +72,7 @@ var startCmd = &cobra.Command{
 // use by autostart checking.
 func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string, params []string) (err error) {
 	responses := instance.Do(geneos.GetHost(Hostname), ct, names,
-		func(c geneos.Instance) (resp *instance.Response) {
+		func(c geneos.Instance, _ ...any) (resp *instance.Response) {
 			resp = instance.NewResponse(c)
 			if instance.IsAutoStart(c) || autostart {
 				resp.Err = instance.Start(c)

@@ -26,7 +26,6 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -96,18 +95,26 @@ geneos set ...
 }
 
 func Set(ct *geneos.Component, args, params []string) (err error) {
-	instance.DoWithStringSlice(geneos.GetHost(Hostname), ct, args, setInstance, params)
+	instance.Do(geneos.GetHost(Hostname), ct, args, setInstance, params)
 	return
 }
 
-func setInstance(c geneos.Instance, params []string) (resp *instance.Response) {
+func setInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
-	log.Debug().Msgf("c %s params %v", c, params)
+	if len(params) == 0 {
+		resp.Err = geneos.ErrInvalidArgs
+		return
+	}
 
 	cf := c.Config()
 
-	setCmdValues.Params = params
+	p, ok := params[0].([]string)
+	if !ok {
+		panic("wrong type")
+	}
+
+	setCmdValues.Params = p
 
 	if resp.Err = instance.SetInstanceValues(c, setCmdValues, setCmdKeyfile); resp.Err != nil {
 		return

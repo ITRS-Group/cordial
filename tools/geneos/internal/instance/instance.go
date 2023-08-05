@@ -280,81 +280,7 @@ func ByKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (confs 
 	return
 }
 
-// Do calls the function fn for each matching instance and gathers
-// the return values into a slice for handling upstream. The functions are
-// called in go routine and must be concurrency safe.
-//
-// The slice is sorted by host, type and name. Errors are printed on
-// STDOUT for each call and the only error returned ErrNotExist if there
-// are no matches.
-func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance) *Response) (responses Responses) {
-	var wg sync.WaitGroup
-
-	instances, err := ByNames(h, ct, names...)
-	if err != nil {
-		return
-	}
-
-	ch := make(chan *Response, len(instances))
-	for _, c := range instances {
-		wg.Add(1)
-		go func(c geneos.Instance) {
-			defer wg.Done()
-
-			resp := fn(c)
-			resp.Finish = time.Now()
-			ch <- resp
-		}(c)
-	}
-	wg.Wait()
-	close(ch)
-
-	for resp := range ch {
-		responses = append(responses, resp)
-	}
-
-	sort.Sort(responses)
-	return
-}
-
-// DoWithStringSlice calls function fn with the string slice
-// params for each matching instance and gathers the return values into
-// a slice for handling upstream. The functions are called in go
-// routine and must be concurrency safe.
-//
-// It sends any returned error on STDOUT and the only error returned is
-// os.ErrNotExist if there are no matching instances.
-func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, []string) *Response, params []string) (responses Responses) {
-	var wg sync.WaitGroup
-
-	instances, err := ByNames(h, ct, names...)
-	if err != nil {
-		return
-	}
-
-	ch := make(chan *Response, len(instances))
-	for _, c := range instances {
-		wg.Add(1)
-		go func(c geneos.Instance) {
-			defer wg.Done()
-
-			resp := fn(c, params)
-			resp.Finish = time.Now()
-			ch <- resp
-		}(c)
-	}
-	wg.Wait()
-	close(ch)
-
-	for resp := range ch {
-		responses = append(responses, resp)
-	}
-
-	sort.Sort(responses)
-	return
-}
-
-// DoWithValues calls function fn for each matching instance and
+// Do calls function fn for each matching instance and
 // gathers the return values into a slice for handling upstream. The
 // functions are called in go routine and must be concurrency safe.
 //
@@ -362,7 +288,7 @@ func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn 
 // os.ErrNotExist if there are no matching instances. params are passed
 // as a variadic list of any type. The called function should validate
 // and cast params for use.
-func DoWithValues(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, ...any) *Response, values ...any) (responses Responses) {
+func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, ...any) *Response, values ...any) (responses Responses) {
 	var wg sync.WaitGroup
 
 	instances, err := ByNames(h, ct, names...)

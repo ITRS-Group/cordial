@@ -70,7 +70,7 @@ var revertCmd = &cobra.Command{
 	},
 }
 
-func revertInstance(c geneos.Instance) (resp *instance.Response) {
+func revertInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	if instance.IsProtected(c) {
