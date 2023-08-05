@@ -100,7 +100,7 @@ var encodeCmd = &cobra.Command{
 		pw, _ := plaintext.Open()
 		responses := instance.DoWithStringSlice(geneos.GetHost(cmd.Hostname), ct, args, aesEncodeInstance, []string{base64.StdEncoding.EncodeToString(pw.Bytes())})
 		pw.Destroy()
-		instance.WriteResponseStrings(os.Stdout, responses)
+		responses.Write(os.Stdout)
 		return
 	},
 }

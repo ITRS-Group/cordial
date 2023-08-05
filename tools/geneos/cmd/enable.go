@@ -58,7 +58,7 @@ var enableCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := TypeNames(cmd)
 		responses := instance.Do(geneos.GetHost(Hostname), ct, names, enableInstance)
-		instance.WriteResponseStrings(os.Stdout, responses)
+		responses.Write(os.Stdout)
 	},
 }
 

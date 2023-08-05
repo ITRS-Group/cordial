@@ -66,7 +66,7 @@ geneos clean --full netprobe
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := TypeNames(cmd)
 		responses := instance.Do(geneos.GetHost(Hostname), ct, names, cleanInstance)
-		instance.WriteResponseStrings(os.Stdout, responses)
+		responses.Write(os.Stdout)
 	},
 }
 
