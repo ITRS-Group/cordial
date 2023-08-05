@@ -107,7 +107,7 @@ var importCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			responses := instance.DoWithValues(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, cert, privkey, chain)
+			responses := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, cert, privkey, chain)
 			responses.Write(os.Stdout)
 		}
 

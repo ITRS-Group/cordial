@@ -74,7 +74,7 @@ func commandRestart(ct *geneos.Component, args []string) (err error) {
 	return
 }
 
-func restartInstance(c geneos.Instance) (resp *instance.Response) {
+func restartInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	if !instance.IsAutoStart(c) {

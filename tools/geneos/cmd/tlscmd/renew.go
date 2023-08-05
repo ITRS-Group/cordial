@@ -64,7 +64,7 @@ var renewCmd = &cobra.Command{
 }
 
 // renew an instance certificate, use private key if it exists
-func renewInstanceCert(c geneos.Instance) (resp *instance.Response) {
+func renewInstanceCert(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	hostname, _ := os.Hostname()

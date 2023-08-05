@@ -63,7 +63,7 @@ var rebuildCmd = &cobra.Command{
 	},
 }
 
-func rebuildInstance(c geneos.Instance) (resp *instance.Response) {
+func rebuildInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	if resp.Err = c.Rebuild(rebuildCmdForce); resp.Err != nil {

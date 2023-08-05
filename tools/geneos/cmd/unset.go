@@ -82,7 +82,7 @@ geneos unset san -g Gateway1
 	},
 }
 
-func unsetInstance(c geneos.Instance) (resp *instance.Response) {
+func unsetInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	changed := instance.UnsetInstanceValues(c, unsetCmdValues)

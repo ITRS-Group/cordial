@@ -24,7 +24,6 @@ package cmd
 
 import (
 	_ "embed"
-	"fmt"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -55,19 +54,23 @@ var protectCmd = &cobra.Command{
 	Run: func(command *cobra.Command, _ []string) {
 		ct, args := TypeNames(command)
 
-		instance.DoWithStringSlice(geneos.GetHost(Hostname), ct, args, protectInstance, []string{fmt.Sprintf("%v", !protectCmdUnprotect)})
+		instance.Do(geneos.GetHost(Hostname), ct, args, protectInstance, !protectCmdUnprotect)
 	},
 }
 
-func protectInstance(c geneos.Instance, params []string) (resp *instance.Response) {
+func protectInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
-
 	cf := c.Config()
 
-	var protect bool
-	if len(params) > 0 {
-		protect = params[0] == "true"
+	if len(params) == 0 {
+		resp.Err = geneos.ErrInvalidArgs
+		return
 	}
+	protect, ok := params[0].(bool)
+	if !ok {
+		panic("wrong param")
+	}
+
 	cf.Set("protected", protect)
 
 	if cf.Type == "rc" {
