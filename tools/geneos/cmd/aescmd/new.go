@@ -145,9 +145,9 @@ func aesNewSetInstance(c geneos.Instance, params []string) (resp *instance.Respo
 		return
 	}
 
-	resp.Result = fmt.Sprintf("%s keyfile %s set", c, params[0])
+	resp.Completed = append(resp.Completed, fmt.Sprintf("keyfile %s set", params[0]))
 	if rolled {
-		resp.Result += ", existing keyfile moved to prevkeyfile"
+		resp.Completed = append(resp.Completed, "existing keyfile moved to prevkeyfile")
 	}
 	return
 }

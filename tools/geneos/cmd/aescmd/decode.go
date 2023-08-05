@@ -161,6 +161,6 @@ func aesDecodeInstance(c geneos.Instance, params []string) (resp *instance.Respo
 	if err != nil {
 		return
 	}
-	resp.Result = fmt.Sprintf("%s: %q", c, e)
+	resp.Completed = append(resp.Completed, fmt.Sprintf("%q", e))
 	return
 }

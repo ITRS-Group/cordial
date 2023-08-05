@@ -120,6 +120,6 @@ func renewInstanceCert(c geneos.Instance) (resp *instance.Response) {
 		}
 	}
 
-	resp.Result = fmt.Sprintf("%s: certificate renewed (expires %s)", c, expires)
+	resp.Completed = append(resp.Completed, fmt.Sprintf("certificate renewed (expires %s)", expires))
 	return
 }

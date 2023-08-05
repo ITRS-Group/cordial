@@ -92,7 +92,7 @@ func disableInstance(c geneos.Instance) (resp *instance.Response) {
 
 	if !instance.IsProtected(c) || disableCmdForce {
 		if resp.Err = instance.Disable(c); resp.Err == nil {
-			resp.Result = fmt.Sprintf("%s disabled", c)
+			resp.Completed = append(resp.Completed, "disabled")
 			return
 		}
 	}

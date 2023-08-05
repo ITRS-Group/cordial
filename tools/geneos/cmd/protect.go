@@ -80,9 +80,9 @@ func protectInstance(c geneos.Instance, params []string) (resp *instance.Respons
 	}
 
 	if protect {
-		resp.Result = fmt.Sprintf("%s set to protected", c)
+		resp.Completed = append(resp.Completed, "protected")
 	} else {
-		resp.Result = fmt.Sprintf("%s set to unprotected", c)
+		resp.Completed = append(resp.Completed, "unprotected")
 	}
 
 	return

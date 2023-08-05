@@ -174,7 +174,9 @@ func aesListShared(ct *geneos.Component, h *geneos.Host) (results instance.Respo
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				results = append(results, &instance.Response{Result: aesListPath(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name())))})
+				results = append(results, &instance.Response{
+					Line: aesListPath(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name()))),
+				})
 			}
 		}
 	}

@@ -93,7 +93,7 @@ func deleteInstance(c geneos.Instance) (resp *instance.Response) {
 		if resp.Err = c.Host().RemoveAll(c.Home()); resp.Err != nil {
 			return
 		}
-		resp.Result = fmt.Sprintf("%s deleted %s:%s", c, c.Host().String(), c.Home())
+		resp.Completed = append(resp.Completed, fmt.Sprintf("deleted %s:%s", c.Host().String(), c.Home()))
 		c.Unload()
 		return
 	}

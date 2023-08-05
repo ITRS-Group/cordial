@@ -123,7 +123,7 @@ func listInstancePlain(c geneos.Instance) (resp *instance.Response) {
 		base = path.Join(pkgtype, base)
 	}
 
-	resp.Result = fmt.Sprintf("%s\t%s\t%s\t%s\t%d\t%s:%s\t%s", c.Type(), c.Name(), c.Host(), flags, c.Config().GetInt("port"), base, underlying, c.Home())
+	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%s\t%d\t%s:%s\t%s", c.Type(), c.Name(), c.Host(), flags, c.Config().GetInt("port"), base, underlying, c.Home())
 	return
 }
 

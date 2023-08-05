@@ -24,7 +24,6 @@ package cmd
 
 import (
 	_ "embed"
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -62,7 +61,7 @@ func reloadInstance(c geneos.Instance) (resp *instance.Response) {
 	resp = instance.NewResponse(c)
 
 	if err := c.Reload(); err == nil {
-		resp.Result = fmt.Sprintf("%s: reload signal sent", c)
+		resp.Completed = append(resp.Completed, "reload signal sent")
 	}
 	return
 }

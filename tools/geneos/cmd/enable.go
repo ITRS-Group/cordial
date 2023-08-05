@@ -24,7 +24,6 @@ package cmd
 
 import (
 	_ "embed"
-	"fmt"
 	"os"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -69,7 +68,7 @@ func enableInstance(c geneos.Instance) (resp *instance.Response) {
 		return
 	}
 	if resp.Err = instance.Enable(c); resp.Err == nil {
-		resp.Result = fmt.Sprintf("%s enabled", c)
+		resp.Completed = append(resp.Completed, "enabled")
 		if enableCmdStart {
 			resp.Err = instance.Start(c)
 			return
