@@ -81,20 +81,18 @@ var listCmd = &cobra.Command{
 		switch {
 		case listCmdJSON, listCmdIndent:
 			results := instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceJSON)
-			instance.WriteResponsesAsJSON(os.Stdout, results, listCmdIndent)
+			results.Write(os.Stdout, instance.WriterIndent(listCmdIndent))
 		case listCmdCSV:
 			listCSVWriter = csv.NewWriter(os.Stdout)
 			listCSVWriter.Write([]string{"Type", "Name", "Host", "Disabled", "Protected", "AutoStart", "Port", "Version", "Home"})
 			results := instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV)
-			if err = instance.WriteResponsesToCSVWriter(listCSVWriter, results); err != nil {
-				return
-			}
+			results.Write(listCSVWriter)
 			listCSVWriter.Flush()
 		default:
 			results := instance.Do(geneos.GetHost(Hostname), ct, names, listInstancePlain)
 			listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(listTabWriter, "Type\tNames\tHost\tFlag\tPort\tVersion\tHome\n")
-			instance.WriteResponsesToTabWriter(listTabWriter, results)
+			results.Write(listTabWriter)
 			listTabWriter.Flush()
 		}
 		if err == os.ErrNotExist {
