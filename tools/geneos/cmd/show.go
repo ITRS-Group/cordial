@@ -147,7 +147,7 @@ var showCmd = &cobra.Command{
 			}
 			return
 		}
-		instance.WriteResponsesAsJSON(os.Stdout, results, true)
+		results.Write(os.Stdout, instance.WriterIndent(true))
 		return
 	},
 }
