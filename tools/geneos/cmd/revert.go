@@ -66,7 +66,7 @@ var revertCmd = &cobra.Command{
 			return
 		}
 		responses := instance.Do(geneos.GetHost(Hostname), ct, names, revertInstance)
-		instance.WriteResponseStrings(os.Stdout, responses)
+		responses.Write(os.Stdout)
 	},
 }
 

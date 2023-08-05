@@ -111,7 +111,7 @@ geneos aes new -S gateway
 					}
 					params := []string{crcstr + ".aes"}
 					responses := instance.DoWithStringSlice(h, ct, names, aesNewSetInstance, params)
-					instance.WriteResponseStrings(os.Stdout, responses)
+					responses.Write(os.Stdout)
 				}
 			}
 

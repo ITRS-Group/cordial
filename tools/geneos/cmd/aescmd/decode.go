@@ -134,7 +134,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 		ct, names, _ := cmd.TypeNamesParams(command)
 		params := []string{ciphertext}
 		responses := instance.DoWithStringSlice(geneos.GetHost(cmd.Hostname), ct, names, aesDecodeInstance, params)
-		instance.WriteResponseStrings(os.Stdout, responses)
+		responses.Write(os.Stdout)
 		return
 	},
 }

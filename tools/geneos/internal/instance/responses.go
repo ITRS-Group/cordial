@@ -105,30 +105,6 @@ func (s SortInstanceResponses) Less(i, j int) bool {
 	}
 }
 
-// WriteResponseStrings writes the elements of results to the writer w.
-// If the element is a plain string then it is written with a trailing
-// newline unless the string is only a newline, in which case only the
-// newline is written. If the element is a slice of strings then each
-// one is written out using the same rules.
-func WriteResponseStrings(w io.Writer, responses Responses) (err error) {
-	for _, result := range responses {
-		if result.String == "\n" {
-			fmt.Fprintln(w, "")
-		} else if result.String != "" {
-			fmt.Fprintln(w, result.String)
-		}
-
-		for _, r := range result.Strings {
-			if r == "\n" {
-				fmt.Fprintln(w, "")
-			} else {
-				fmt.Fprintln(w, r)
-			}
-		}
-	}
-	return
-}
-
 // Write iterates over responses and outputs the response to writer.
 //
 // If instance.WriterSkipOnErr(true) is set then any response with a

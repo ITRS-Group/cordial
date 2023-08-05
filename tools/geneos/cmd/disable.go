@@ -59,7 +59,7 @@ var disableCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names := TypeNames(cmd)
 		responses := instance.Do(geneos.GetHost(Hostname), ct, names, disableInstance)
-		instance.WriteResponseStrings(os.Stdout, responses)
+		responses.Write(os.Stdout)
 		return
 	},
 }

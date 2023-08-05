@@ -99,13 +99,13 @@ var logsCmd = &cobra.Command{
 		switch {
 		case logCmdCat:
 			responses := instance.Do(geneos.GetHost(Hostname), ct, names, logCatInstance)
-			instance.WriteResponseStrings(os.Stdout, responses)
+			responses.Write(os.Stdout)
 		case logCmdFollow:
 			// never returns
 			err = followLogs(ct, names, logCmdStderr)
 		default:
 			responses := instance.Do(geneos.GetHost(Hostname), ct, names, logTailInstance)
-			instance.WriteResponseStrings(os.Stdout, responses)
+			responses.Write(os.Stdout)
 		}
 
 		return

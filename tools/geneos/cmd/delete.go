@@ -62,7 +62,7 @@ var deleteCmd = &cobra.Command{
 		ct, names := TypeNames(cmd)
 
 		results := instance.Do(geneos.GetHost(Hostname), ct, names, deleteInstance)
-		instance.WriteResponseStrings(os.Stdout, results)
+		results.Write(os.Stdout)
 		return
 	},
 }
