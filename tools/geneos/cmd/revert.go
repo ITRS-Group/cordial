@@ -70,9 +70,11 @@ var revertCmd = &cobra.Command{
 	},
 }
 
-func revertInstance(c geneos.Instance) (response instance.Response) {
+func revertInstance(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	if instance.IsProtected(c) {
-		response.Err = geneos.ErrProtected
+		resp.Err = geneos.ErrProtected
 		return
 	}
 
@@ -89,7 +91,7 @@ func revertInstance(c geneos.Instance) (response instance.Response) {
 		if errors.Is(err, fs.ErrNotExist) {
 			return
 		}
-		response.Err = err
+		resp.Err = err
 		return
 	}
 
@@ -97,11 +99,11 @@ func revertInstance(c geneos.Instance) (response instance.Response) {
 		if errors.Is(err, fs.ErrNotExist) {
 			return
 		}
-		response.Err = err
+		resp.Err = err
 		return
 	}
 
-	response.String = fmt.Sprintf("%s reverted to RC config", c)
+	resp.Result = fmt.Sprintf("%s reverted to RC config", c)
 	return
 }
 

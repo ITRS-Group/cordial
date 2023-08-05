@@ -121,7 +121,9 @@ geneos aes new -S gateway
 	},
 }
 
-func aesNewSetInstance(c geneos.Instance, params []string) (result instance.Response) {
+func aesNewSetInstance(c geneos.Instance, params []string) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	var rolled bool
 	cf := c.Config()
 
@@ -135,17 +137,17 @@ func aesNewSetInstance(c geneos.Instance, params []string) (result instance.Resp
 	cf.Set("keyfile", instance.Shared(c, "keyfiles", params[0]))
 
 	if cf.Type == "rc" {
-		result.Err = instance.Migrate(c)
+		resp.Err = instance.Migrate(c)
 	} else {
-		result.Err = instance.SaveConfig(c)
+		resp.Err = instance.SaveConfig(c)
 	}
-	if result.Err != nil {
+	if resp.Err != nil {
 		return
 	}
 
-	result.String = fmt.Sprintf("%s keyfile %s set", c, params[0])
+	resp.Result = fmt.Sprintf("%s keyfile %s set", c, params[0])
 	if rolled {
-		result.String += ", existing keyfile moved to prevkeyfile"
+		resp.Result += ", existing keyfile moved to prevkeyfile"
 	}
 	return
 }

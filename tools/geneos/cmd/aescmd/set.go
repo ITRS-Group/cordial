@@ -85,7 +85,9 @@ var setCmd = &cobra.Command{
 	},
 }
 
-func aesSetAESInstance(c geneos.Instance, params ...any) (response instance.Response) {
+func aesSetAESInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	cf := c.Config()
 
 	path := instance.Shared(c, "keyfiles", params[0])
@@ -111,9 +113,9 @@ func aesSetAESInstance(c geneos.Instance, params ...any) (response instance.Resp
 	}
 
 	if cf.Type == "rc" {
-		response.Err = instance.Migrate(c)
+		resp.Err = instance.Migrate(c)
 	} else {
-		response.Err = instance.SaveConfig(c)
+		resp.Err = instance.SaveConfig(c)
 	}
 
 	return

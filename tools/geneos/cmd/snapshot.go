@@ -24,11 +24,9 @@ package cmd
 
 import (
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
-	"strings"
 
 	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -108,23 +106,25 @@ var snapshotCmd = &cobra.Command{
 
 		// at this point snapshotCmdUsername/Password contain global or
 		// command line values. These can be overridden per-instance.
-		instance.DoWithStringSlice(geneos.GetHost(Hostname), ct, names, snapshotInstance, params)
-		return
+		responses := instance.DoWithStringSlice(geneos.GetHost(Hostname), ct, names, snapshotInstance, params)
+		responses.Write(os.Stdout, instance.WriterIndent(true))
 	},
 }
 
-func snapshotInstance(c geneos.Instance, params []string) (response instance.Response) {
+func snapshotInstance(c geneos.Instance, params []string) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	if !instance.AtLeastVersion(c, "5.14") {
-		response.Err = fmt.Errorf("%s is too old (5.14 or above required)", c)
+		resp.Err = fmt.Errorf("%s is too old (5.14 or above required)", c)
 		return
 	}
-	dvs := []string{}
+	values := []any{}
 	log.Debug().Msgf("snapshot on %s", c)
 	for _, path := range params {
 		var x *xpath.XPath
-		x, response.Err = xpath.Parse(path)
-		if response.Err != nil {
-			log.Error().Msgf("%s: %q", response.Err, path)
+		x, resp.Err = xpath.Parse(path)
+		if resp.Err != nil {
+			log.Error().Msgf("%s: %q", resp.Err, path)
 			continue
 		}
 
@@ -153,17 +153,17 @@ func snapshotInstance(c geneos.Instance, params []string) (response instance.Res
 
 		log.Debug().Msgf("dialling %s", gatewayURL(c))
 		var gw *commands.Connection
-		gw, response.Err = commands.DialGateway(gatewayURL(c),
+		gw, resp.Err = commands.DialGateway(gatewayURL(c),
 			commands.AllowInsecureCertificates(true),
 			commands.SetBasicAuth(username, password))
-		if response.Err != nil {
+		if resp.Err != nil {
 			return
 		}
 		d := x.ResolveTo(&xpath.Dataview{})
 		log.Debug().Msgf("matching xpath %s", d)
 		var views []*xpath.XPath
-		views, response.Err = gw.Match(d, 0)
-		if response.Err != nil {
+		views, resp.Err = gw.Match(d, 0)
+		if resp.Err != nil {
 			return
 		}
 		if snapshotCmdMaxitems > 0 && len(views) > snapshotCmdMaxitems {
@@ -171,22 +171,21 @@ func snapshotInstance(c geneos.Instance, params []string) (response instance.Res
 		}
 		if snapshotCmdXpathsonly {
 			for _, x := range views {
-				dvs = append(dvs, fmt.Sprintf("%q", x))
+				values = append(values, x)
 			}
 		} else {
 			for _, view := range views {
 				var data *commands.Dataview
-				data, response.Err = gw.Snapshot(view)
-				if response.Err != nil {
+				data, resp.Err = gw.Snapshot(view)
+				if resp.Err != nil {
 					return
 				}
-				j, _ := json.MarshalIndent(data, "    ", "    ")
-				dvs = append(dvs, string(j))
+				values = append(values, data)
 			}
 		}
 	}
-	if len(dvs) > 0 {
-		response.String = fmt.Sprintf("[\n    %s\n]\n", strings.Join(dvs, ",\n    "))
+	if len(values) > 0 {
+		resp.Value = values
 	}
 	return
 }

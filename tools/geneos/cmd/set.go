@@ -100,21 +100,23 @@ func Set(ct *geneos.Component, args, params []string) (err error) {
 	return
 }
 
-func setInstance(c geneos.Instance, params []string) (response instance.Response) {
+func setInstance(c geneos.Instance, params []string) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	log.Debug().Msgf("c %s params %v", c, params)
 
 	cf := c.Config()
 
 	setCmdValues.Params = params
 
-	if response.Err = instance.SetInstanceValues(c, setCmdValues, setCmdKeyfile); response.Err != nil {
+	if resp.Err = instance.SetInstanceValues(c, setCmdValues, setCmdKeyfile); resp.Err != nil {
 		return
 	}
 
 	if cf.Type == "rc" {
-		response.Err = instance.Migrate(c)
+		resp.Err = instance.Migrate(c)
 	} else {
-		response.Err = instance.SaveConfig(c)
+		resp.Err = instance.SaveConfig(c)
 	}
 
 	return

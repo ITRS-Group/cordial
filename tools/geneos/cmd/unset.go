@@ -82,7 +82,9 @@ geneos unset san -g Gateway1
 	},
 }
 
-func unsetInstance(c geneos.Instance) (response instance.Response) {
+func unsetInstance(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	changed := instance.UnsetInstanceValues(c, unsetCmdValues)
 
 	s := c.Config().AllSettings()
@@ -115,6 +117,6 @@ func unsetInstance(c geneos.Instance) (response instance.Response) {
 		return
 	}
 
-	response.Err = instance.WriteConfigValues(c, s)
+	resp.Err = instance.WriteConfigValues(c, s)
 	return
 }

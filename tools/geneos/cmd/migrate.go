@@ -68,9 +68,11 @@ var migrateCmd = &cobra.Command{
 	},
 }
 
-func migrateInstance(c geneos.Instance) (result instance.Response) {
-	if result.Err = instance.Migrate(c); result.Err != nil {
-		log.Error().Err(result.Err).Msgf("%s cannot migrate configuration", c)
+func migrateInstance(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
+	if resp.Err = instance.Migrate(c); resp.Err != nil {
+		log.Error().Err(resp.Err).Msgf("%s cannot migrate configuration", c)
 	}
 	return
 }

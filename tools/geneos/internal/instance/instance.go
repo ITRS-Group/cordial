@@ -287,7 +287,7 @@ func ByKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (confs 
 // The slice is sorted by host, type and name. Errors are printed on
 // STDOUT for each call and the only error returned ErrNotExist if there
 // are no matches.
-func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance) Response) (responses Responses) {
+func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance) *Response) (responses Responses) {
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
 
@@ -301,14 +301,11 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Ins
 		go func(c geneos.Instance) {
 			defer wg.Done()
 
-			start := time.Now()
-			result := fn(c)
-			result.Instance = c
-			result.Start = start
-			result.Finish = time.Now()
+			resp := fn(c)
+			resp.Finish = time.Now()
 
 			mutex.Lock()
-			responses = append(responses, result)
+			responses = append(responses, resp)
 			mutex.Unlock()
 		}(c)
 	}
@@ -325,7 +322,7 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Ins
 //
 // It sends any returned error on STDOUT and the only error returned is
 // os.ErrNotExist if there are no matching instances.
-func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, []string) Response, params []string) (responses Responses) {
+func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, []string) *Response, params []string) (responses Responses) {
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
 
@@ -339,14 +336,11 @@ func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn 
 		go func(c geneos.Instance) {
 			defer wg.Done()
 
-			start := time.Now()
-			result := fn(c, params)
-			result.Instance = c
-			result.Start = start
-			result.Finish = time.Now()
+			resp := fn(c, params)
+			resp.Finish = time.Now()
 
 			mutex.Lock()
-			responses = append(responses, result)
+			responses = append(responses, resp)
 			mutex.Unlock()
 		}(c)
 	}
@@ -364,7 +358,7 @@ func DoWithStringSlice(h *geneos.Host, ct *geneos.Component, names []string, fn 
 // os.ErrNotExist if there are no matching instances. params are passed
 // as a variadic list of any type. The called function should validate
 // and cast params for use.
-func DoWithValues(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, ...any) Response, values ...any) (responses Responses) {
+func DoWithValues(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, ...any) *Response, values ...any) (responses Responses) {
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
 
@@ -378,14 +372,11 @@ func DoWithValues(h *geneos.Host, ct *geneos.Component, names []string, fn func(
 		go func(c geneos.Instance) {
 			defer wg.Done()
 
-			start := time.Now()
-			result := fn(c, values...)
-			result.Instance = c
-			result.Start = start
-			result.Finish = time.Now()
+			resp := fn(c, values...)
+			resp.Finish = time.Now()
 
 			mutex.Lock()
-			responses = append(responses, result)
+			responses = append(responses, resp)
 			mutex.Unlock()
 		}(c)
 	}
