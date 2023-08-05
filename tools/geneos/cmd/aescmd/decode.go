@@ -139,7 +139,9 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 	},
 }
 
-func aesDecodeInstance(c geneos.Instance, params []string) (result instance.Response) {
+func aesDecodeInstance(c geneos.Instance, params []string) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	log.Debug().Msgf("trying to decode for instance %s", c)
 	if !c.Type().UsesKeyfiles {
 		return
@@ -150,7 +152,7 @@ func aesDecodeInstance(c geneos.Instance, params []string) (result instance.Resp
 	}
 	r, err := c.Host().Open(path)
 	if err != nil {
-		result.Err = err
+		resp.Err = err
 		return
 	}
 	defer r.Close()
@@ -159,6 +161,6 @@ func aesDecodeInstance(c geneos.Instance, params []string) (result instance.Resp
 	if err != nil {
 		return
 	}
-	result.String = fmt.Sprintf("%s: %q", c, e)
+	resp.Result = fmt.Sprintf("%s: %q", c, e)
 	return
 }

@@ -105,7 +105,9 @@ var encodeCmd = &cobra.Command{
 	},
 }
 
-func aesEncodeInstance(c geneos.Instance, params []string) (result instance.Response) {
+func aesEncodeInstance(c geneos.Instance, params []string) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	if !c.Type().UsesKeyfiles {
 		return
 	}
@@ -118,9 +120,9 @@ func aesEncodeInstance(c geneos.Instance, params []string) (result instance.Resp
 	plaintext := config.NewPlaintext(pw)
 	e, err := keyfile.Encode(plaintext, encodeCmdExpandable)
 	if err != nil {
-		result.Err = err
+		resp.Err = err
 		return
 	}
-	result.String = fmt.Sprintf("%s: %s", c, e)
+	resp.Result = fmt.Sprintf("%s: %s", c, e)
 	return
 }

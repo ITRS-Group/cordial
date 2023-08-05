@@ -40,17 +40,29 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type Responses []Response
+type Responses []*Response
 
+// Response is a consolidated set of responses from commands
 type Response struct {
-	Instance geneos.Instance
-	String   string
-	Strings  []string
-	Rows     [][]string
-	Value    any
-	Start    time.Time
-	Finish   time.Time
-	Err      error
+	Instance   geneos.Instance
+	Result     string     // single line response,
+	Lines      []string   // Lines of output
+	Row        []string   // row of values (for CSV)
+	Rows       [][]string // rows of values (for CSV)
+	Value      any
+	Start      time.Time
+	Finish     time.Time
+	Preterites []string // simple past tense verbs of completed actions, e.g. "stopped", "started" etc.
+	Err        error
+}
+
+// NewResponse returns a pointer to an intialised Response structure,
+// using instance c. The Start time is set to time.Now().
+func NewResponse(c geneos.Instance) *Response {
+	return &Response{
+		Instance: c,
+		Start:    time.Now(),
+	}
 }
 
 var _ sort.Interface = (Responses)(nil)
@@ -153,17 +165,20 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 
 		switch w := writer.(type) {
 		case *tabwriter.Writer:
-			if r.String != "" {
-				fmt.Fprintf(w, "%s\n", r.String)
+			if r.Result != "" {
+				fmt.Fprintf(w, "%s\n", r.Result)
 			}
-			for _, line := range r.Strings {
+			for _, line := range r.Lines {
 				if line != "" {
 					fmt.Fprintf(w, "%s\n", line)
 				}
 			}
 		case *csv.Writer:
-			if len(r.Strings) > 0 {
-				w.Write(r.Strings)
+			if len(r.Lines) > 0 {
+				w.Write(r.Lines)
+			}
+			if len(r.Row) > 0 {
+				w.Write(r.Row)
 			}
 			if len(r.Rows) > 0 {
 				w.WriteAll(r.Rows)
@@ -220,11 +235,11 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 			}
 
 			// string(s) - append a newline unless one is present
-			if r.String != "" {
-				fmt.Fprintln(w, strings.TrimSuffix(r.String, "\n"))
+			if r.Result != "" {
+				fmt.Fprintln(w, strings.TrimSuffix(r.Result, "\n"))
 			}
 
-			for _, s := range r.Strings {
+			for _, s := range r.Lines {
 				fmt.Fprintln(w, strings.TrimSuffix(s, "\n"))
 			}
 
@@ -240,31 +255,44 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 	}
 
 	if opts.stderr != io.Discard {
-	ERRORS:
 		for _, r := range responses {
+			errored := false
+			ignored := false
 			if r.Err != nil {
 				for _, i := range opts.ignoreerr {
 					if errors.Is(r.Err, i) {
-						continue ERRORS
+						ignored = true
+						break
 					}
 				}
-				fmt.Fprintf(opts.stderr, "%s: %s\n", r.Instance, r.Err)
+				if !ignored {
+					fmt.Fprintf(opts.stderr, "%s: %s\n", r.Instance, r.Err)
+					errored = true
+				}
+			}
+
+			if !errored && !ignored && opts.showtimes {
+				s := r.Finish.Sub(r.Start).Seconds()
+				fmt.Fprintf(opts.stderr, opts.timesformat, r.Instance, s)
 			}
 		}
 	}
 }
 
 type writeOptions struct {
-	indent    bool
-	stderr    io.Writer
-	ignoreerr []error
-	skiponerr bool
+	indent      bool
+	stderr      io.Writer
+	ignoreerr   []error
+	skiponerr   bool
+	showtimes   bool
+	timesformat string // first arg instance, second arg duration
 }
 
 var globalWriteOptions = writeOptions{
-	stderr:    os.Stderr,
-	ignoreerr: []error{os.ErrProcessDone, geneos.ErrNotSupported},
-	skiponerr: true,
+	stderr:      os.Stderr,
+	ignoreerr:   []error{os.ErrProcessDone, geneos.ErrNotSupported},
+	skiponerr:   true,
+	timesformat: "%s: command finished in %.3fs\n",
 }
 
 // WriterOptions controls to behaviour of the instance.Write method
@@ -328,5 +356,17 @@ func WriterIgnoreErrs(errs ...error) WriterOptions {
 func WriterSkipOnErr(skip bool) WriterOptions {
 	return func(wo *writeOptions) {
 		wo.skiponerr = skip
+	}
+}
+
+func WriterShowTimes() WriterOptions {
+	return func(wo *writeOptions) {
+		wo.showtimes = true
+	}
+}
+
+func WriterTimingFormat(format string) WriterOptions {
+	return func(wo *writeOptions) {
+		wo.timesformat = format
 	}
 }

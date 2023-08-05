@@ -70,7 +70,8 @@ geneos clean --full netprobe
 	},
 }
 
-func cleanInstance(c geneos.Instance) (response instance.Response) {
-	response.Err = instance.Clean(c, cleanCmdFull)
+func cleanInstance(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+	resp.Err = instance.Clean(c, cleanCmdFull)
 	return
 }

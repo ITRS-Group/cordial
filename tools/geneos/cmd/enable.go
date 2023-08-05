@@ -62,14 +62,16 @@ var enableCmd = &cobra.Command{
 	},
 }
 
-func enableInstance(c geneos.Instance) (response instance.Response) {
+func enableInstance(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	if !instance.IsDisabled(c) {
 		return
 	}
-	if response.Err = instance.Enable(c); response.Err == nil {
-		response.String = fmt.Sprintf("%s enabled", c)
+	if resp.Err = instance.Enable(c); resp.Err == nil {
+		resp.Result = fmt.Sprintf("%s enabled", c)
 		if enableCmdStart {
-			response.Err = instance.Start(c)
+			resp.Err = instance.Start(c)
 			return
 		}
 	}

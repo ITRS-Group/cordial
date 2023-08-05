@@ -121,7 +121,9 @@ func CommandPS(ct *geneos.Component, names []string, params []string) (err error
 	return
 }
 
-func psInstancePlain(c geneos.Instance) (result instance.Response) {
+func psInstancePlain(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	if instance.IsDisabled(c) {
 		return
 	}
@@ -160,7 +162,7 @@ func psInstancePlain(c geneos.Instance) (result instance.Response) {
 		base += "*"
 	}
 
-	result.String = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s:%s\t%s", c.Type(), c.Name(), c.Host(), pid, portlist, username, groupname, mtime.Local().Format(time.RFC3339), base, actual, c.Home())
+	resp.Result = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s:%s\t%s", c.Type(), c.Name(), c.Host(), pid, portlist, username, groupname, mtime.Local().Format(time.RFC3339), base, actual, c.Home())
 
 	// if psCmdShowFiles {
 	// 	listOpenFiles(c)
@@ -168,7 +170,9 @@ func psInstancePlain(c geneos.Instance) (result instance.Response) {
 	return
 }
 
-func psInstanceCSV(c geneos.Instance) (result instance.Response) {
+func psInstanceCSV(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	if instance.IsDisabled(c) {
 		return
 	}
@@ -201,12 +205,14 @@ func psInstanceCSV(c geneos.Instance) (result instance.Response) {
 	if underlying != actual {
 		base += "*"
 	}
-	result.Strings = []string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), portlist, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()}
+	resp.Row = []string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), portlist, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()}
 
 	return
 }
 
-func psInstanceJSON(c geneos.Instance) (result instance.Response) {
+func psInstanceJSON(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	if instance.IsDisabled(c) {
 		return
 	}
@@ -239,7 +245,7 @@ func psInstanceJSON(c geneos.Instance) (result instance.Response) {
 		base += "*"
 	}
 
-	result.Value = psType{
+	resp.Value = psType{
 		Type:      c.Type().String(),
 		Name:      c.Name(),
 		Host:      c.Host().String(),

@@ -102,7 +102,9 @@ var listCmd = &cobra.Command{
 	},
 }
 
-func listInstancePlain(c geneos.Instance) (result instance.Response) {
+func listInstancePlain(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	var flags string
 	if instance.IsDisabled(c) {
 		flags += "D"
@@ -121,11 +123,13 @@ func listInstancePlain(c geneos.Instance) (result instance.Response) {
 		base = path.Join(pkgtype, base)
 	}
 
-	result.String = fmt.Sprintf("%s\t%s\t%s\t%s\t%d\t%s:%s\t%s", c.Type(), c.Name(), c.Host(), flags, c.Config().GetInt("port"), base, underlying, c.Home())
+	resp.Result = fmt.Sprintf("%s\t%s\t%s\t%s\t%d\t%s:%s\t%s", c.Type(), c.Name(), c.Host(), flags, c.Config().GetInt("port"), base, underlying, c.Home())
 	return
 }
 
-func listInstanceCSV(c geneos.Instance) (result instance.Response) {
+func listInstanceCSV(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	disabled := "N"
 	protected := "N"
 	autostart := "N"
@@ -140,13 +144,15 @@ func listInstanceCSV(c geneos.Instance) (result instance.Response) {
 		autostart = "Y"
 	}
 	base, underlying, _ := instance.Version(c)
-	result.Strings = []string{c.Type().String(), c.Name(), c.Host().String(), disabled, protected, autostart, fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()}
+	resp.Row = []string{c.Type().String(), c.Name(), c.Host().String(), disabled, protected, autostart, fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()}
 	return
 }
 
-func listInstanceJSON(c geneos.Instance) (result instance.Response) {
+func listInstanceJSON(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	base, underlying, _ := instance.Version(c)
-	result.Value = listCmdType{
+	resp.Value = listCmdType{
 		Type:      c.Type().String(),
 		Name:      c.Name(),
 		Host:      c.Host().String(),

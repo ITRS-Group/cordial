@@ -58,9 +58,11 @@ var reloadCmd = &cobra.Command{
 	},
 }
 
-func reloadInstance(c geneos.Instance) (result instance.Response) {
+func reloadInstance(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	if err := c.Reload(); err == nil {
-		result.String = fmt.Sprintf("%s: reload signal sent", c)
+		resp.Result = fmt.Sprintf("%s: reload signal sent", c)
 	}
 	return
 }

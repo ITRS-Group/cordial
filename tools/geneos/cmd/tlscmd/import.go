@@ -143,25 +143,27 @@ func tlsWriteChainLocal(chainpath string, chain []*x509.Certificate) (err error)
 	return
 }
 
-func tlsWriteInstance(c geneos.Instance, params ...any) (result instance.Response) {
+func tlsWriteInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	var chain []*x509.Certificate
 
 	cf := c.Config()
 
 	if len(params) < 2 {
-		result.Err = geneos.ErrInvalidArgs
+		resp.Err = geneos.ErrInvalidArgs
 		return
 	}
 
 	cert, ok := params[0].(*x509.Certificate)
 	if !ok {
-		result.Err = geneos.ErrInvalidArgs
+		resp.Err = geneos.ErrInvalidArgs
 		return
 	}
 
 	key, ok := params[1].(*memguard.Enclave)
 	if !ok {
-		result.Err = geneos.ErrInvalidArgs
+		resp.Err = geneos.ErrInvalidArgs
 		return
 	}
 
@@ -172,25 +174,25 @@ func tlsWriteInstance(c geneos.Instance, params ...any) (result instance.Respons
 		}
 	}
 
-	if result.Err = instance.WriteCert(c, cert); result.Err != nil {
+	if resp.Err = instance.WriteCert(c, cert); resp.Err != nil {
 		return
 	}
-	result.Strings = append(result.Strings, fmt.Sprintf("%s certificate written", c))
+	resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate written", c))
 
-	if result.Err = instance.WriteKey(c, key); result.Err != nil {
+	if resp.Err = instance.WriteKey(c, key); resp.Err != nil {
 		return
 	}
-	result.Strings = append(result.Strings, fmt.Sprintf("%s private key written", c))
+	resp.Lines = append(resp.Lines, fmt.Sprintf("%s private key written", c))
 
 	if len(chain) > 0 {
 		chainfile := path.Join(c.Home(), "chain.pem")
 		if err := config.WriteCertChain(c.Host(), chainfile, chain...); err == nil {
-			result.Strings = append(result.Strings, fmt.Sprintf("%s certificate chain written", c))
+			resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate chain written", c))
 			if cf.GetString("certchain") == chainfile {
 				return
 			}
 			cf.Set("certchain", chainfile)
-			result.Err = instance.SaveConfig(c)
+			resp.Err = instance.SaveConfig(c)
 		}
 	}
 

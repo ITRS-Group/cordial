@@ -147,15 +147,17 @@ func aesListPath(ct *geneos.Component, h *geneos.Host, name string, path config.
 	return fmt.Sprintf("%s\t%s\t%s\t%s\t%08X\t%s", ct, name, h, path, crc, s.ModTime().Format(time.RFC3339))
 }
 
-func aesListInstance(c geneos.Instance) (result instance.Response) {
+func aesListInstance(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	path := config.KeyFile(instance.PathOf(c, "keyfile"))
 	if path != "" {
-		result.Strings = append(result.Strings, aesListPath(c.Type(), c.Host(), c.Name(), path))
+		resp.Lines = append(resp.Lines, aesListPath(c.Type(), c.Host(), c.Name(), path))
 	}
 
 	prev := config.KeyFile(instance.PathOf(c, "prevkeyfile"))
 	if path != "" {
-		result.Strings = append(result.Strings, aesListPath(c.Type(), c.Host(), c.Name()+" (prev)", prev))
+		resp.Lines = append(resp.Lines, aesListPath(c.Type(), c.Host(), c.Name()+" (prev)", prev))
 	}
 	return
 }
@@ -172,7 +174,7 @@ func aesListShared(ct *geneos.Component, h *geneos.Host) (results instance.Respo
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				results = append(results, instance.Response{String: aesListPath(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name())))})
+				results = append(results, &instance.Response{Result: aesListPath(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name())))})
 			}
 		}
 	}
@@ -196,23 +198,27 @@ func aesListPathCSV(ct *geneos.Component, h *geneos.Host, name string, path conf
 	return []string{ct.String(), name, h.String(), path.String(), crcstr, s.ModTime().Format(time.RFC3339)}
 }
 
-func aesListInstanceCSV(c geneos.Instance) (result instance.Response) {
+func aesListInstanceCSV(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	path := config.KeyFile(instance.PathOf(c, "keyfile"))
 	if path != "" {
 		row := aesListPathCSV(c.Type(), c.Host(), c.Name(), path)
-		result.Rows = append(result.Rows, row)
+		resp.Rows = append(resp.Rows, row)
 	}
 
 	prev := config.KeyFile(instance.PathOf(c, "prevkeyfile"))
 	if prev != "" {
 		row := aesListPathCSV(c.Type(), c.Host(), c.Name()+" (prev)", prev)
-		result.Rows = append(result.Rows, row)
+		resp.Rows = append(resp.Rows, row)
 	}
 
 	return
 }
 
-func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (result instance.Response) {
+func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (resp *instance.Response) {
+	resp = instance.NewResponse(nil)
+
 	for _, h := range h.OrList(geneos.AllHosts()...) {
 		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 			dirs, err := h.ReadDir(ct.Shared(h, "keyfiles"))
@@ -223,7 +229,7 @@ func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (result instance.Res
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				result.Rows = append(result.Rows, aesListPathCSV(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name()))))
+				resp.Rows = append(resp.Rows, aesListPathCSV(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name()))))
 			}
 		}
 	}
@@ -232,7 +238,9 @@ func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (result instance.Res
 
 // aesListPathJSON fills in a listCmdType struct. paths is either one or
 // two paths, the second being a previous keyfile.
-func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, paths ...config.KeyFile) (result instance.Response) {
+func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, paths ...config.KeyFile) (resp *instance.Response) {
+	resp = instance.NewResponse(nil)
+
 	var keyfile, prevkeyfile *config.KeyFile
 	results := []listCmdType{}
 
@@ -292,7 +300,7 @@ func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, paths ..
 	}
 
 	if len(results) > 0 {
-		result.Value = results
+		resp.Value = results
 	}
 	return
 }
@@ -309,9 +317,9 @@ func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results instance.R
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				result := aesListPathJSON(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name())))
-				if result.Value != nil {
-					results = append(results, result)
+				resp := aesListPathJSON(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name())))
+				if resp.Value != nil {
+					results = append(results, resp)
 				}
 			}
 		}
@@ -319,6 +327,6 @@ func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results instance.R
 	return
 }
 
-func aesListInstanceJSON(c geneos.Instance) (result instance.Response) {
+func aesListInstanceJSON(c geneos.Instance) (result *instance.Response) {
 	return aesListPathJSON(c.Type(), c.Host(), c.Name(), config.KeyFile(instance.PathOf(c, "keyfile")), config.KeyFile(instance.PathOf(c, "prevkeyfile")))
 }

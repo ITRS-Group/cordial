@@ -59,7 +59,9 @@ var protectCmd = &cobra.Command{
 	},
 }
 
-func protectInstance(c geneos.Instance, params []string) (response instance.Response) {
+func protectInstance(c geneos.Instance, params []string) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	cf := c.Config()
 
 	var protect bool
@@ -69,18 +71,18 @@ func protectInstance(c geneos.Instance, params []string) (response instance.Resp
 	cf.Set("protected", protect)
 
 	if cf.Type == "rc" {
-		response.Err = instance.Migrate(c)
+		resp.Err = instance.Migrate(c)
 	} else {
-		response.Err = instance.SaveConfig(c)
+		resp.Err = instance.SaveConfig(c)
 	}
-	if response.Err != nil {
+	if resp.Err != nil {
 		return
 	}
 
 	if protect {
-		response.String = fmt.Sprintf("%s set to protected", c)
+		resp.Result = fmt.Sprintf("%s set to protected", c)
 	} else {
-		response.String = fmt.Sprintf("%s set to unprotected", c)
+		resp.Result = fmt.Sprintf("%s set to unprotected", c)
 	}
 
 	return

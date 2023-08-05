@@ -152,7 +152,9 @@ var showCmd = &cobra.Command{
 	},
 }
 
-func showValidateInstance(c geneos.Instance, params ...any) (result instance.Response) {
+func showValidateInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	setup := c.Config().GetString("setup")
 	if setup == "" {
 		return
@@ -189,12 +191,12 @@ func showValidateInstance(c geneos.Instance, params ...any) (result instance.Res
 		if err != nil {
 			log.Debug().Msgf("error: %s", output)
 		}
-		output, result.Err = os.ReadFile(tempfile)
-		if result.Err != nil {
+		output, resp.Err = os.ReadFile(tempfile)
+		if resp.Err != nil {
 			return
 		}
 
-		result.Value = &showConfig{
+		resp.Value = &showConfig{
 			c:    c,
 			file: output,
 		}
@@ -210,7 +212,9 @@ type showConfig struct {
 }
 
 // showInstanceConfig returns a slice of showConfig structs per instance
-func showInstanceConfig(c geneos.Instance, params ...any) (result instance.Response) {
+func showInstanceConfig(c geneos.Instance, params ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	setup := c.Config().GetString("setup")
 	if setup == "" {
 		return
@@ -240,7 +244,7 @@ func showInstanceConfig(c geneos.Instance, params ...any) (result instance.Respo
 		if i == -1 {
 			return
 		}
-		result.Value = &showConfig{
+		resp.Value = &showConfig{
 			c:    c,
 			file: output[i:],
 		}
@@ -248,10 +252,10 @@ func showInstanceConfig(c geneos.Instance, params ...any) (result instance.Respo
 	}
 	file, err := os.ReadFile(setup)
 	if err != nil {
-		result.Err = err
+		resp.Err = err
 		return
 	}
-	result.Value = &showConfig{
+	resp.Value = &showConfig{
 		c:    c,
 		file: file,
 	}
@@ -259,7 +263,9 @@ func showInstanceConfig(c geneos.Instance, params ...any) (result instance.Respo
 	return
 }
 
-func showInstance(c geneos.Instance) (result instance.Response) {
+func showInstance(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	// remove aliases
 	nv := config.New()
 	aliases := c.Type().LegacyParameters
@@ -287,6 +293,6 @@ func showInstance(c geneos.Instance) (result instance.Response) {
 		Configuration: as,
 	}
 
-	result.Value = cf
+	resp.Value = cf
 	return
 }

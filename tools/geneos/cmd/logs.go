@@ -115,8 +115,8 @@ var logsCmd = &cobra.Command{
 func followLog(c geneos.Instance) (err error) {
 	done := make(chan bool)
 	tails = watchLogs()
-	if result := logFollowInstance(c); result.Err != nil {
-		log.Error().Err(result.Err).Msg("")
+	if resp := logFollowInstance(c); resp.Err != nil {
+		log.Error().Err(resp.Err).Msg("")
 	}
 	<-done
 	return
@@ -157,23 +157,25 @@ func outHeaderString(c geneos.Instance, path string) (lines []string) {
 	return
 }
 
-func logTailInstance(c geneos.Instance) (result instance.Response) {
+func logTailInstance(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	if logCmdStderr {
 		lines, err := logTailInstanceFile(c, instance.ComponentFilepath(c, "txt"))
 		if err != nil {
-			result.Err = err
+			resp.Err = err
 			return
 		}
-		result.Strings = lines
+		resp.Lines = lines
 	}
 
 	if !logCmdNoNormal {
 		lines, err := logTailInstanceFile(c, instance.LogFilePath(c))
 		if err != nil {
-			result.Err = err
+			resp.Err = err
 			return
 		}
-		result.Strings = append(result.Strings, lines...)
+		resp.Lines = append(resp.Lines, lines...)
 	}
 	return
 }
@@ -322,19 +324,21 @@ func filterOutput(c geneos.Instance, path string, reader io.ReadSeeker) (sz int6
 	return
 }
 
-func logCatInstance(c geneos.Instance) (result instance.Response) {
+func logCatInstance(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	if !logCmdStderr {
-		if result.Strings, result.Err = logCatInstanceFile(c, instance.ComponentFilepath(c, "txt")); result.Err != nil {
+		if resp.Lines, resp.Err = logCatInstanceFile(c, instance.ComponentFilepath(c, "txt")); resp.Err != nil {
 			return
 		}
 	}
 	if !logCmdNoNormal {
 		lines, err := logCatInstanceFile(c, instance.LogFilePath(c))
 		if err != nil {
-			result.Err = err
+			resp.Err = err
 			return
 		}
-		result.Strings = append(result.Strings, lines...)
+		resp.Lines = append(resp.Lines, lines...)
 	}
 	return
 }
@@ -357,16 +361,18 @@ func logCatInstanceFile(c geneos.Instance, logfile string) (lines []string, err 
 // add local logs to a watcher list
 // for remote logs, spawn a go routine for each log, watch using stat etc.
 // and output changes
-func logFollowInstance(c geneos.Instance) (result instance.Response) {
+func logFollowInstance(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	if logCmdStderr {
 		if err := logFollowInstanceFile(c, instance.ComponentFilepath(c, "txt")); err != nil {
-			result.Err = err
+			resp.Err = err
 			return
 		}
 	}
 	if !logCmdNoNormal {
 		if err := logFollowInstanceFile(c, instance.LogFilePath(c)); err != nil {
-			result.Err = err
+			resp.Err = err
 			return
 		}
 	}

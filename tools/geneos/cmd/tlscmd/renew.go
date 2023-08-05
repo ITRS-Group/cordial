@@ -64,7 +64,9 @@ var renewCmd = &cobra.Command{
 }
 
 // renew an instance certificate, use private key if it exists
-func renewInstanceCert(c geneos.Instance) (response instance.Response) {
+func renewInstanceCert(c geneos.Instance) (resp *instance.Response) {
+	resp = instance.NewResponse(c)
+
 	hostname, _ := os.Hostname()
 	if !c.Host().IsLocal() {
 		hostname = c.Host().GetString("hostname")
@@ -90,34 +92,34 @@ func renewInstanceCert(c geneos.Instance) (response instance.Response) {
 	}
 
 	intrCert, err := config.ParseCertificate(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".pem"))
-	response.Err = err
-	if response.Err != nil {
+	resp.Err = err
+	if resp.Err != nil {
 		return
 	}
 	intrKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
-	response.Err = err
-	if response.Err != nil {
+	resp.Err = err
+	if resp.Err != nil {
 		return
 	}
 
 	// read existing key or create a new one
 	existingKey, _ := instance.ReadKey(c)
 	cert, key, err := config.CreateCertificateAndKey(&template, intrCert, intrKey, existingKey)
-	response.Err = err
-	if response.Err != nil {
+	resp.Err = err
+	if resp.Err != nil {
 		return
 	}
 
-	if response.Err = instance.WriteCert(c, cert); response.Err != nil {
+	if resp.Err = instance.WriteCert(c, cert); resp.Err != nil {
 		return
 	}
 
 	if existingKey == nil {
-		if response.Err = instance.WriteKey(c, key); response.Err != nil {
+		if resp.Err = instance.WriteKey(c, key); resp.Err != nil {
 			return
 		}
 	}
 
-	response.String = fmt.Sprintf("certificate renewed for %s (expires %s)", c, expires)
+	resp.Result = fmt.Sprintf("%s: certificate renewed (expires %s)", c, expires)
 	return
 }

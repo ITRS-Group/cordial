@@ -24,6 +24,7 @@ package cmd
 
 import (
 	_ "embed"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -70,17 +71,15 @@ var startCmd = &cobra.Command{
 // Start() is being called as part of a group of instances - this is for
 // use by autostart checking.
 func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string, params []string) (err error) {
-	instance.Do(geneos.GetHost(Hostname), ct, names,
-		func(c geneos.Instance) (result instance.Response) {
+	responses := instance.Do(geneos.GetHost(Hostname), ct, names,
+		func(c geneos.Instance) (resp *instance.Response) {
+			resp = instance.NewResponse(c)
 			if instance.IsAutoStart(c) || autostart {
-				err = instance.Start(c)
-				return
+				resp.Err = instance.Start(c)
 			}
 			return
 		})
-	if err != nil {
-		return
-	}
+	responses.Write(os.Stdout, instance.WriterIgnoreErr(geneos.ErrRunning))
 
 	if watchlogs {
 		// also watch STDERR on start-up
