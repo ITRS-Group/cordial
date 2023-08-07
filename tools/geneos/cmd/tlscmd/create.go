@@ -51,8 +51,8 @@ func init() {
 	tlsCmd.AddCommand(createCmd)
 
 	hostname, _ := os.Hostname()
-	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", hostname, "Common Name for certificate. Defaults to hostname.")
-	createCmd.Flags().VarP(&createCmdSANs, "san", "s", "Subject-Alternative-Name (repeat for each one required). Defaults to hostname if none given.")
+	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", hostname, "Common Name for certificate. Defaults to hostname")
+	createCmd.Flags().VarP(&createCmdSANs, "san", "s", "Subject-Alternative-Name (repeat for each one required). Defaults to hostname if none given")
 	createCmd.Flags().BoolVarP(&createCmdOverwrite, "force", "F", false, "Force overwrite existing certificate (but not root and intermediate)")
 }
 
@@ -61,7 +61,7 @@ var createCmdDescription string
 
 var createCmd = &cobra.Command{
 	Use:          "create",
-	Short:        "Create new certificates",
+	Short:        "Create new certificates, independent of instances",
 	Long:         createCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

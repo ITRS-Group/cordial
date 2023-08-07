@@ -24,6 +24,7 @@ THE SOFTWARE.
 package ac2
 
 import (
+	"fmt"
 	"os"
 	"regexp"
 	"sync"
@@ -181,11 +182,10 @@ func (n *AC2s) Add(tmpl string, port uint16) (err error) {
 		return
 	}
 
-	// check tls config, create certs if found
-	if _, err = instance.ReadSigningCert(); err == nil {
-		if err = instance.CreateCert(n); err != nil {
-			return
-		}
+	// create certs, report success only
+	resp := instance.CreateCert(n)
+	if resp.Err == nil {
+		fmt.Println(resp.Line)
 	}
 
 	dir, err := os.Getwd()

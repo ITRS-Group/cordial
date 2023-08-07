@@ -25,6 +25,7 @@ package aescmd
 import (
 	_ "embed"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -77,9 +78,9 @@ var setCmd = &cobra.Command{
 			return
 		}
 		crc = geneos.KeyFileNormalise(crc)
-		// params[0] is the CRC
 		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-			instance.Do(h, ct, names, aesSetAESInstance, crc)
+			responses := instance.Do(h, ct, names, aesSetAESInstance, crc)
+			responses.Write(os.Stdout)
 		}
 		return nil
 	},
@@ -93,28 +94,32 @@ func aesSetAESInstance(c geneos.Instance, params ...any) (resp *instance.Respons
 		return
 	}
 
-	cf := c.Config()
+	crc, ok := params[0].(string)
+	if !ok {
+		panic("wront type")
+	}
 
-	path := instance.Shared(c, "keyfiles", params[0])
+	cf := c.Config()
+	path := instance.Shared(c, "keyfiles", crc)
 
 	// roll old file
 	if !setCmdNoRoll {
 		p := cf.GetString("keyfile")
 		if p != "" {
 			if p == path {
-				fmt.Printf("%s: new and existing keyfile have same CRC. Not updating\n", c)
+				resp.Line = fmt.Sprintf("%s: new and existing keyfile have same CRC. Not updating\n", c)
 			} else {
 				cf.Set("keyfile", path)
 				cf.Set("prevkeyfile", p)
-				fmt.Printf("%s keyfile %s set, existing keyfile moved to prevkeyfile\n", c, params[0])
+				resp.Line = fmt.Sprintf("%s keyfile %s set, existing keyfile moved to prevkeyfile\n", c, params[0])
 			}
 		} else {
 			cf.Set("keyfile", path)
-			fmt.Printf("%s keyfile %s set\n", c, params[0])
+			resp.Line = fmt.Sprintf("%s keyfile %s set\n", c, params[0])
 		}
 	} else {
 		cf.Set("keyfile", path)
-		fmt.Printf("%s keyfile %s set\n", c, params[0])
+		resp.Line = fmt.Sprintf("%s keyfile %s set\n", c, params[0])
 	}
 
 	if cf.Type == "rc" {

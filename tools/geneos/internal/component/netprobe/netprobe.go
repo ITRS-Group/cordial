@@ -23,6 +23,7 @@ THE SOFTWARE.
 package netprobe
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -175,13 +176,11 @@ func (n *Netprobes) Add(tmpl string, port uint16) (err error) {
 		return
 	}
 
-	// check tls config, create certs if found
-	if _, err = instance.ReadSigningCert(); err == nil {
-		if err = instance.CreateCert(n); err != nil {
-			return
-		}
+	// create certs, report success only
+	resp := instance.CreateCert(n)
+	if resp.Err == nil {
+		fmt.Println(resp.Line)
 	}
-
 	// default config XML etc.
 	return nil
 }

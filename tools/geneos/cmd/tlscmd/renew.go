@@ -91,12 +91,18 @@ func renewInstanceCert(c geneos.Instance, _ ...any) (resp *instance.Response) {
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	intrCert, err := config.ParseCertificate(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".pem"))
+	rootCert, err := instance.ReadRootCert()
 	resp.Err = err
 	if resp.Err != nil {
 		return
 	}
-	intrKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
+
+	signingCert, err := instance.ReadSigningCert()
+	resp.Err = err
+	if resp.Err != nil {
+		return
+	}
+	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
 	resp.Err = err
 	if resp.Err != nil {
 		return
@@ -104,7 +110,7 @@ func renewInstanceCert(c geneos.Instance, _ ...any) (resp *instance.Response) {
 
 	// read existing key or create a new one
 	existingKey, _ := instance.ReadKey(c)
-	cert, key, err := config.CreateCertificateAndKey(&template, intrCert, intrKey, existingKey)
+	cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey, existingKey)
 	resp.Err = err
 	if resp.Err != nil {
 		return
@@ -118,6 +124,20 @@ func renewInstanceCert(c geneos.Instance, _ ...any) (resp *instance.Response) {
 		if resp.Err = instance.WriteKey(c, key); resp.Err != nil {
 			return
 		}
+	}
+
+	chainfile := instance.PathOf(c, "certchain")
+	if chainfile == "" {
+		chainfile = path.Join(c.Home(), "chain.pem")
+		c.Config().Set("certchain", chainfile)
+	}
+
+	if resp.Err = config.WriteCertChain(c.Host(), chainfile, signingCert, rootCert); resp.Err != nil {
+		return
+	}
+
+	if resp.Err = instance.SaveConfig(c); resp.Err != nil {
+		return
 	}
 
 	resp.Completed = append(resp.Completed, fmt.Sprintf("certificate renewed (expires %s)", expires))
