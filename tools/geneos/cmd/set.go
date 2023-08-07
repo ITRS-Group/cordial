@@ -25,6 +25,7 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -95,37 +96,35 @@ geneos set ...
 }
 
 func Set(ct *geneos.Component, args, params []string) (err error) {
-	instance.Do(geneos.GetHost(Hostname), ct, args, setInstance, params)
-	return
-}
+	instance.Do(geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *instance.Response) {
+		resp = instance.NewResponse(i)
 
-func setInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+		if len(params) == 0 {
+			resp.Err = geneos.ErrInvalidArgs
+			return
+		}
 
-	if len(params) == 0 {
-		resp.Err = geneos.ErrInvalidArgs
+		cf := i.Config()
+
+		p, ok := params[0].([]string)
+		if !ok {
+			panic("wrong type")
+		}
+
+		setCmdValues.Params = p
+
+		if resp.Err = instance.SetInstanceValues(i, setCmdValues, setCmdKeyfile); resp.Err != nil {
+			return
+		}
+
+		if cf.Type == "rc" {
+			resp.Err = instance.Migrate(i)
+		} else {
+			resp.Err = instance.SaveConfig(i)
+		}
+
 		return
-	}
-
-	cf := c.Config()
-
-	p, ok := params[0].([]string)
-	if !ok {
-		panic("wrong type")
-	}
-
-	setCmdValues.Params = p
-
-	if resp.Err = instance.SetInstanceValues(c, setCmdValues, setCmdKeyfile); resp.Err != nil {
-		return
-	}
-
-	if cf.Type == "rc" {
-		resp.Err = instance.Migrate(c)
-	} else {
-		resp.Err = instance.SaveConfig(c)
-	}
-
+	}, params).Write(os.Stdout)
 	return
 }
 

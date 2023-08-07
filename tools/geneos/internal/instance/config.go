@@ -245,7 +245,7 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 
 // Migrate is a helper that checks if the configuration was loaded from
 // a legacy .rc file and if it has it then saves the current
-// configuration (it does not convert the .rc file) in a new format file
+// configuration (it does not reload the .rc file) in a new format file
 // and renames the .rc file to .rc.orig to allow Revert to work.
 //
 // Also now check if instance directory path has changed. If so move it.

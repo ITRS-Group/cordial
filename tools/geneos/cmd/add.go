@@ -95,7 +95,8 @@ geneos add netprobe infraprobe12 --start --log
 	},
 }
 
-// AddInstance add an instance of ct the the option extra configuration values addCmdExtras
+// AddInstance add an instance of component type ct the the optional
+// extra configuration values addCmdExtras
 func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, items []string, names ...string) (err error) {
 	// check validity and reserved words here
 	name := names[0]

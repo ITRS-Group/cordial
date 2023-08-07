@@ -58,8 +58,8 @@ var deleteCmd = &cobra.Command{
 		AnnotationWildcard:  "explicit",
 		AnnotationNeedsHome: "true",
 	},
-	Run: func(cmd *cobra.Command, _ []string) {
-		ct, names := TypeNames(cmd)
+	Run: func(command *cobra.Command, _ []string) {
+		ct, names := TypeNames(command)
 		results := instance.Do(geneos.GetHost(Hostname), ct, names, deleteInstance)
 		results.Write(os.Stdout)
 	},

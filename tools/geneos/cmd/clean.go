@@ -63,15 +63,12 @@ geneos clean --full netprobe
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
 	},
-	Run: func(cmd *cobra.Command, _ []string) {
-		ct, names := TypeNames(cmd)
-		responses := instance.Do(geneos.GetHost(Hostname), ct, names, cleanInstance)
-		responses.Write(os.Stdout)
+	Run: func(command *cobra.Command, _ []string) {
+		ct, names := TypeNames(command)
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
+			resp = instance.NewResponse(i)
+			resp.Err = instance.Clean(i, cleanCmdFull)
+			return
+		}).Write(os.Stdout)
 	},
-}
-
-func cleanInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
-	resp.Err = instance.Clean(c, cleanCmdFull)
-	return
 }

@@ -65,46 +65,43 @@ var revertCmd = &cobra.Command{
 			revertCommands()
 			return
 		}
-		responses := instance.Do(geneos.GetHost(Hostname), ct, names, revertInstance)
-		responses.Write(os.Stdout)
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
+			resp = instance.NewResponse(i)
+
+			if instance.IsProtected(i) {
+				resp.Err = geneos.ErrProtected
+				return
+			}
+
+			// if *.rc file exists, remove rc.orig+new, continue
+			if _, err := i.Host().Stat(instance.ComponentFilepath(i, "rc")); err == nil { // found ?
+				// ignore errors
+				if i.Host().Remove(instance.ComponentFilepath(i, "rc", "orig")) == nil || i.Host().Remove(instance.ComponentFilepath(i)) == nil {
+					log.Debug().Msgf("%s removed extra config file(s)", i)
+				}
+				return
+			}
+
+			if err := i.Host().Rename(instance.ComponentFilepath(i, "rc", "orig"), instance.ComponentFilepath(i, "rc")); err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					return
+				}
+				resp.Err = err
+				return
+			}
+
+			if err := i.Host().Remove(instance.ComponentFilepath(i)); err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					return
+				}
+				resp.Err = err
+				return
+			}
+
+			resp.Completed = append(resp.Completed, "reverted to RC config")
+			return
+		}).Write(os.Stdout)
 	},
-}
-
-func revertInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
-
-	if instance.IsProtected(c) {
-		resp.Err = geneos.ErrProtected
-		return
-	}
-
-	// if *.rc file exists, remove rc.orig+new, continue
-	if _, err := c.Host().Stat(instance.ComponentFilepath(c, "rc")); err == nil { // found ?
-		// ignore errors
-		if c.Host().Remove(instance.ComponentFilepath(c, "rc", "orig")) == nil || c.Host().Remove(instance.ComponentFilepath(c)) == nil {
-			log.Debug().Msgf("%s removed extra config file(s)", c)
-		}
-		return
-	}
-
-	if err := c.Host().Rename(instance.ComponentFilepath(c, "rc", "orig"), instance.ComponentFilepath(c, "rc")); err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return
-		}
-		resp.Err = err
-		return
-	}
-
-	if err := c.Host().Remove(instance.ComponentFilepath(c)); err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return
-		}
-		resp.Err = err
-		return
-	}
-
-	resp.Completed = append(resp.Completed, "reverted to RC config")
-	return
 }
 
 // search PATH for *ctl commands, and if they are links to 'geneos'
@@ -131,7 +128,7 @@ func revertCommands() (err error) {
 		}
 
 		if err = os.Remove(path); err != nil {
-			log.Fatal().Err(err).Msgf("cannot remove symlink %p, please take action to resolve", path)
+			log.Fatal().Err(err).Msgf("cannot remove symlink %s, please take action to resolve", path)
 		}
 		if err = os.Rename(path+".orig", path); err != nil {
 			log.Fatal().Err(err).Msgf("cannot rename %s.orig, please take action to resolve", path)

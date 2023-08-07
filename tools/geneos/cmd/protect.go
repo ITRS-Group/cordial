@@ -54,40 +54,37 @@ var protectCmd = &cobra.Command{
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, args := TypeNames(command)
-		responses := instance.Do(geneos.GetHost(Hostname), ct, args, protectInstance, !protectCmdUnprotect)
-		responses.Write(os.Stdout)
+		instance.Do(geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *instance.Response) {
+			resp = instance.NewResponse(i)
+			cf := i.Config()
+
+			if len(params) == 0 {
+				resp.Err = geneos.ErrInvalidArgs
+				return
+			}
+			protect, ok := params[0].(bool)
+			if !ok {
+				panic("wrong param")
+			}
+
+			cf.Set("protected", protect)
+
+			if cf.Type == "rc" {
+				resp.Err = instance.Migrate(i)
+			} else {
+				resp.Err = instance.SaveConfig(i)
+			}
+			if resp.Err != nil {
+				return
+			}
+
+			if protect {
+				resp.Completed = append(resp.Completed, "protected")
+			} else {
+				resp.Completed = append(resp.Completed, "unprotected")
+			}
+
+			return
+		}, !protectCmdUnprotect).Write(os.Stdout)
 	},
-}
-
-func protectInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
-	cf := c.Config()
-
-	if len(params) == 0 {
-		resp.Err = geneos.ErrInvalidArgs
-		return
-	}
-	protect, ok := params[0].(bool)
-	if !ok {
-		panic("wrong param")
-	}
-
-	cf.Set("protected", protect)
-
-	if cf.Type == "rc" {
-		resp.Err = instance.Migrate(c)
-	} else {
-		resp.Err = instance.SaveConfig(c)
-	}
-	if resp.Err != nil {
-		return
-	}
-
-	if protect {
-		resp.Completed = append(resp.Completed, "protected")
-	} else {
-		resp.Completed = append(resp.Completed, "unprotected")
-	}
-
-	return
 }

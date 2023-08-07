@@ -98,19 +98,16 @@ var psCmd = &cobra.Command{
 func CommandPS(ct *geneos.Component, names []string, params []string) {
 	switch {
 	case psCmdJSON, psCmdIndent:
-		responses := instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceJSON)
-		responses.Write(os.Stdout, instance.WriterIndent(psCmdIndent))
+		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceJSON).Write(os.Stdout, instance.WriterIndent(psCmdIndent))
 	case psCmdCSV:
 		psCSVWriter = csv.NewWriter(os.Stdout)
 		psCSVWriter.Write([]string{"Type", "Name", "Host", "PID", "Ports", "User", "Group", "Starttime", "Version", "Home"})
-		results := instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV)
-		results.Write(psCSVWriter)
+		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV).Write(psCSVWriter)
 		psCSVWriter.Flush()
 	default:
-		results := instance.Do(geneos.GetHost(Hostname), ct, names, psInstancePlain)
 		psTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\n")
-		results.Write(psTabWriter)
+		instance.Do(geneos.GetHost(Hostname), ct, names, psInstancePlain).Write(psTabWriter)
 		psTabWriter.Flush()
 	}
 }

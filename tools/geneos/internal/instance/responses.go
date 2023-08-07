@@ -187,60 +187,70 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 			// json from values, a bit painful - fix later
 			// only support for an array of "Values", which is unrolled
 			if r.Value != nil {
-				// encode to a buffer so we can strip the trailing newline
-				var b bytes.Buffer
-				j := json.NewEncoder(&b)
-				j.SetEscapeHTML(false)
-				if opts.indent {
-					j.SetIndent("    ", "    ")
-				}
+				if opts.valuesasJSON {
+					// encode to a buffer so we can strip the trailing newline
+					var b bytes.Buffer
+					j := json.NewEncoder(&b)
+					j.SetEscapeHTML(false)
+					if opts.indent {
+						j.SetIndent("    ", "    ")
+					}
 
-				if reflect.TypeOf(r.Value).Kind() == reflect.Slice {
-					s := reflect.ValueOf(r.Value)
-					for i := 0; i < s.Len(); i++ {
-						if s.Index(i).IsValid() {
-							if !started {
-								fmt.Fprint(w, "[")
-								started = true
-							} else {
-								fmt.Fprint(w, ",")
+					if reflect.TypeOf(r.Value).Kind() == reflect.Slice {
+						s := reflect.ValueOf(r.Value)
+						for i := 0; i < s.Len(); i++ {
+							if s.Index(i).IsValid() {
+								if !started {
+									fmt.Fprint(w, "[")
+									started = true
+								} else {
+									fmt.Fprint(w, ",")
+								}
+								if opts.indent {
+									fmt.Fprint(w, "\n    ")
+								}
+								j.Encode(s.Index(i).Interface())
+								if b.Len() > 1 {
+									b.Truncate(b.Len() - 1)
+									b.WriteTo(w)
+								}
 							}
-							if opts.indent {
-								fmt.Fprint(w, "\n    ")
-							}
-							j.Encode(s.Index(i).Interface())
-							if b.Len() > 1 {
-								b.Truncate(b.Len() - 1)
-								b.WriteTo(w)
-							}
+						}
+					} else {
+						if !started {
+							fmt.Fprint(w, "[")
+							started = true
+						} else {
+							fmt.Fprint(w, ",")
+						}
+						if opts.indent {
+							fmt.Fprint(w, "\n    ")
+						}
+						j.Encode(r.Value)
+
+						if b.Len() > 1 {
+							b.Truncate(b.Len() - 1)
+							b.WriteTo(w)
 						}
 					}
 				} else {
-					if !started {
-						fmt.Fprint(w, "[")
-						started = true
-					} else {
-						fmt.Fprint(w, ",")
-					}
-					if opts.indent {
-						fmt.Fprint(w, "\n    ")
-					}
-					j.Encode(r.Value)
-
-					if b.Len() > 1 {
-						b.Truncate(b.Len() - 1)
-						b.WriteTo(w)
-					}
+					fmt.Fprintf(w, opts.prefixformat, r.Instance)
+					fmt.Fprintf(w, "%s", r.Value)
+					fmt.Fprint(w, opts.suffix)
 				}
 			}
 
 			// string(s) - append a newline unless one is present
 			if r.Line != "" {
-				fmt.Fprintf(w, "%s %s\n", r.Instance, strings.TrimSuffix(r.Line, "\n"))
+				fmt.Fprintf(w, opts.prefixformat, r.Instance)
+				fmt.Fprint(w, strings.TrimSuffix(r.Line, "\n"))
+				fmt.Fprint(w, opts.suffix)
 			}
 
 			if len(r.Completed) > 0 {
-				fmt.Fprintf(w, "%s %s\n", r.Instance, joinNatural(r.Completed...))
+				fmt.Fprintf(w, opts.prefixformat, r.Instance)
+				fmt.Fprint(w, joinNatural(r.Completed...))
+				fmt.Fprint(w, opts.suffix)
 			}
 
 			for _, s := range r.Lines {
@@ -300,19 +310,25 @@ func joinNatural(words ...string) string {
 }
 
 type writeOptions struct {
-	indent      bool
-	stderr      io.Writer
-	ignoreerr   []error
-	skiponerr   bool
-	showtimes   bool
-	timesformat string // first arg instance, second arg duration
+	indent       bool
+	stderr       io.Writer
+	ignoreerr    []error
+	skiponerr    bool
+	showtimes    bool
+	timesformat  string // first arg instance, second arg duration
+	prefixformat string // prefix plain output with this format, parameter is instance name
+	suffix       string // trailing suffix after each response, default "\n"
+	valuesasJSON bool   // output each value as (unrolled) JSON. false is output using plain Print()
 }
 
 var globalWriteOptions = writeOptions{
-	stderr:      os.Stderr,
-	ignoreerr:   []error{os.ErrProcessDone, geneos.ErrNotSupported},
-	skiponerr:   true,
-	timesformat: "%s: command finished in %.3fs\n",
+	stderr:       os.Stderr,
+	ignoreerr:    []error{os.ErrProcessDone, geneos.ErrNotSupported},
+	skiponerr:    true,
+	timesformat:  "%s: command finished in %.3fs\n",
+	prefixformat: "%s ",
+	suffix:       "\n",
+	valuesasJSON: true,
 }
 
 // WriterOptions controls to behaviour of the instance.Write method
@@ -388,5 +404,23 @@ func WriterShowTimes() WriterOptions {
 func WriterTimingFormat(format string) WriterOptions {
 	return func(wo *writeOptions) {
 		wo.timesformat = format
+	}
+}
+
+func WriterPrefix(prefix string) WriterOptions {
+	return func(wo *writeOptions) {
+		wo.prefixformat = prefix
+	}
+}
+
+func WriterSuffix(suffix string) WriterOptions {
+	return func(wo *writeOptions) {
+		wo.suffix = suffix
+	}
+}
+
+func WriterPlainValue() WriterOptions {
+	return func(wo *writeOptions) {
+		wo.valuesasJSON = false
 	}
 }

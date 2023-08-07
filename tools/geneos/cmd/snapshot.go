@@ -104,10 +104,7 @@ var snapshotCmd = &cobra.Command{
 			}
 		}
 
-		// at this point snapshotCmdUsername/Password contain global or
-		// command line values. These can be overridden per-instance.
-		responses := instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstance, params)
-		responses.Write(os.Stdout, instance.WriterIndent(true))
+		instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstance, params).Write(os.Stdout, instance.WriterIndent(true))
 	},
 }
 

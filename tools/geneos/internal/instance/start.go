@@ -86,7 +86,7 @@ func BuildCmd(c geneos.Instance, noDecode bool) (cmd *exec.Cmd, env []string, ho
 	opts := strings.Fields(c.Config().GetString("options"))
 	args = append(args, opts...)
 
-	envs := c.Config().GetStringSlice("Env", config.NoDecode(noDecode))
+	envs := c.Config().GetStringSlice("env", config.NoDecode(noDecode))
 	libs := []string{}
 	if c.Config().GetString("libpaths") != "" {
 		libs = append(libs, c.Config().GetString("libpaths"))
