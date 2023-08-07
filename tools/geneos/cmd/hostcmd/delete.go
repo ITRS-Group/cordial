@@ -67,7 +67,7 @@ var deleteCmd = &cobra.Command{
 			return geneos.ErrInvalidArgs
 		}
 
-		// check args are hosts ('all' means all non-local ?)
+		// check args are hosts ('any' means all non-local ?)
 		var hosts []*geneos.Host
 		for _, hostname := range args {
 			h := geneos.GetHost(hostname)

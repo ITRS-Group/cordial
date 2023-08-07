@@ -68,7 +68,7 @@ var encodeCmd = &cobra.Command{
 		cmd.AnnotationWildcard:  "true",
 		cmd.AnnotationNeedsHome: "true",
 	},
-	RunE: func(command *cobra.Command, origargs []string) (err error) {
+	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var plaintext *config.Plaintext
 		if !encodeCmdString.IsNil() {
 			plaintext = encodeCmdString

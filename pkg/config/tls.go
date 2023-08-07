@@ -46,10 +46,12 @@ import (
 
 const DefaultKeyType = "ecdh"
 
-// ParseCertificate reads a PEM encoded cert from path on host h, return the
-// first found as a parsed certificate
-func ParseCertificate(h host.Host, pt string) (cert *x509.Certificate, err error) {
-	pembytes, err := h.ReadFile(pt)
+// ParseCertificate reads a PEM encoded cert from path on host h, return
+// the first found as a parsed certificate. The returned certificate is
+// not verified or validated beyond that of the underlying Go x509
+// package parsing functions.
+func ParseCertificate(h host.Host, certfile string) (cert *x509.Certificate, err error) {
+	pembytes, err := h.ReadFile(certfile)
 	if err != nil {
 		return
 	}
@@ -57,7 +59,7 @@ func ParseCertificate(h host.Host, pt string) (cert *x509.Certificate, err error
 	for {
 		p, rest := pem.Decode(pembytes)
 		if p == nil {
-			return nil, fmt.Errorf("cannot locate certificate in %s", pt)
+			return nil, fmt.Errorf("cannot locate certificate in %s", certfile)
 		}
 		if p.Type == "CERTIFICATE" {
 			return x509.ParseCertificate(p.Bytes)
@@ -68,7 +70,9 @@ func ParseCertificate(h host.Host, pt string) (cert *x509.Certificate, err error
 
 // ParseCertificates reads a PEM encoded file from host h and returns
 // all the certificates found (using the same rules as
-// x509.ParseCertificates).
+// x509.ParseCertificates). The returned certificates are not verified
+// or validated beyond that of the underlying Go x509 package parsing
+// functions.
 func ParseCertificates(h host.Host, p string) (certs []*x509.Certificate, err error) {
 	pembytes, err := h.ReadFile(p)
 	if err != nil {

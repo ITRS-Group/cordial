@@ -78,7 +78,7 @@ var (
 // initialised outside a function as there would be a definition loop.
 func InitHosts(app string) {
 	LOCAL = NewHost(LOCALHOST)
-	ALL = nil // NewHost(ALLHOSTS)
+	ALL = NewHost(ALLHOSTS)
 	LoadHostConfig()
 }
 

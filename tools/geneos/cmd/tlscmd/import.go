@@ -192,10 +192,10 @@ func tlsWriteInstance(c geneos.Instance, params ...any) (resp *instance.Response
 				return
 			}
 			cf.Set("certchain", chainfile)
-			resp.Err = instance.SaveConfig(c)
 		}
 	}
 
+	resp.Err = instance.SaveConfig(c)
 	return
 }
 

@@ -23,6 +23,7 @@ THE SOFTWARE.
 package webserver
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -195,11 +196,10 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 		return
 	}
 
-	// check tls config, create certs if found
-	if _, err = instance.ReadSigningCert(); err == nil {
-		if err = instance.CreateCert(w); err != nil {
-			return
-		}
+	// create certs, report success only
+	resp := instance.CreateCert(w)
+	if resp.Err == nil {
+		fmt.Println(resp.Line)
 	}
 
 	// copy default configs

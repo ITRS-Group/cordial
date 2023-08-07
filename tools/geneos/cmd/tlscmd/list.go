@@ -28,6 +28,7 @@ import (
 	_ "embed"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -98,10 +99,16 @@ var listCmd = &cobra.Command{
 		cmd.AnnotationWildcard:  "true",
 		cmd.AnnotationNeedsHome: "true",
 	},
-	RunE: func(command *cobra.Command, _ []string) error {
+	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, names, params := cmd.TypeNamesParams(command)
-		rootCert, _ = instance.ReadRootCert()
-		geneosCert, _ = instance.ReadSigningCert()
+		rootCert, err = instance.ReadRootCert(true)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return
+		}
+		geneosCert, err = instance.ReadSigningCert()
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return
+		}
 
 		if listCmdLong {
 			return listCertsLongCommand(ct, names, params)
@@ -448,13 +455,21 @@ func listCmdInstanceCertJSON(c geneos.Instance, _ ...any) (resp *instance.Respon
 
 // verifyCert checks cert against the global rootCert and geneosCert
 // (initialised in the main RunE()) and if that fails then against
-// system certs.
+// system certs. It does NOT check any explicit chain file.
 func verifyCert(cert *x509.Certificate) bool {
-	rootCertPool := x509.NewCertPool()
-	rootCertPool.AddCert(rootCert)
+	var rootCertPool, geneosCertPool *x509.CertPool
 
-	geneosCertPool := x509.NewCertPool()
-	geneosCertPool.AddCert(geneosCert)
+	if rootCert != nil {
+		rootCertPool = x509.NewCertPool()
+		rootCertPool.AddCert(rootCert)
+	} else {
+		rootCertPool, _ = x509.SystemCertPool()
+	}
+
+	if geneosCert != nil {
+		geneosCertPool = x509.NewCertPool()
+		geneosCertPool.AddCert(geneosCert)
+	}
 
 	opts := x509.VerifyOptions{
 		Roots:         rootCertPool,
@@ -464,7 +479,9 @@ func verifyCert(cert *x509.Certificate) bool {
 	chains, err := cert.Verify(opts)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
+		return false
 	}
+
 	if len(chains) > 0 {
 		log.Debug().Msgf("cert %q verified", cert.Subject.CommonName)
 		return true
