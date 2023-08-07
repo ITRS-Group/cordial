@@ -1,12 +1,14 @@
 # `geneos tls create`
 
-Create new certificates
+Create new certificates, independent of instances
 
 ```text
 geneos tls create [flags]
 ```
 
-Create a new certificate
+Create a new certificate, independent of instances
+
+The `tls create` command differs from `tls new` by creating a certificate in the current working directory based on the common name, and not for instances directly. You can use this command when you need to create certificates for manual configuration or transfer to another location.
 
 By default a new root and intermediate certificate are created along with private keys in your user configuration directory unless they already exist and a certificate with a Common Name (CN) and a Subject Alternative Name (SAN) set to the system hostname is created, with the CN used as the base filename unless one exists. Any spaces in the CN are replaced with dashes (`-`)
 
@@ -17,9 +19,9 @@ If a file exists with the resulting CN with a `.pem` extension then it, and the 
 ### Options
 
 ```text
-  -c, --cname string   Common Name for certificate. Defaults to hostname. (default "thinkpad")
+  -c, --cname string   Common Name for certificate. Defaults to hostname (default "thinkpad")
   -F, --force          Force overwrite existing certificate (but not root and intermediate)
-  -s, --san SAN        Subject-Alternative-Name (repeat for each one required). Defaults to hostname if none given.
+  -s, --san SAN        Subject-Alternative-Name (repeat for each one required). Defaults to hostname if none given
 ```
 
 ## SEE ALSO
