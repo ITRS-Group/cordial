@@ -24,10 +24,9 @@ package cmd
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 	"strings"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -77,46 +76,43 @@ geneos unset san -g Gateway1
 			return
 		}
 		ct, names := TypeNames(cmd)
-		responses := instance.Do(geneos.GetHost(Hostname), ct, names, unsetInstance)
-		responses.Write(os.Stdout)
-	},
-}
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
+			resp = instance.NewResponse(i)
 
-func unsetInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+			changed := instance.UnsetInstanceValues(i, unsetCmdValues)
 
-	changed := instance.UnsetInstanceValues(c, unsetCmdValues)
+			s := i.Config().AllSettings()
 
-	s := c.Config().AllSettings()
+			if len(unsetCmdValues.Keys) > 0 {
+				for _, k := range unsetCmdValues.Keys {
+					// check and delete one level of maps
+					// XXX not sure if we need to allow other delimiters here
+					if strings.Contains(k, ".") {
+						p := strings.SplitN(k, ".", 2)
+						switch x := s[p[0]].(type) {
+						case map[string]interface{}:
+							instance.DeleteSettingFromMap(i, x, p[1])
+							s[p[0]] = x
+							changed = true
+						default:
+							// nothing yet
+						}
+						continue
+					}
 
-	if len(unsetCmdValues.Keys) > 0 {
-		for _, k := range unsetCmdValues.Keys {
-			// check and delete one level of maps
-			// XXX not sure if we need to allow other delimiters here
-			if strings.Contains(k, ".") {
-				p := strings.SplitN(k, ".", 2)
-				switch x := s[p[0]].(type) {
-				case map[string]interface{}:
-					instance.DeleteSettingFromMap(c, x, p[1])
-					s[p[0]] = x
+					instance.DeleteSettingFromMap(i, s, k)
 					changed = true
-				default:
-					// nothing yet
 				}
-				continue
 			}
 
-			instance.DeleteSettingFromMap(c, s, k)
-			changed = true
-		}
-	}
+			if !changed && !unsetCmdWarned {
+				resp.Err = fmt.Errorf("nothing unset. perhaps you forgot to use -k KEY or one of the other options?")
+				unsetCmdWarned = true
+				return
+			}
 
-	if !changed && !unsetCmdWarned {
-		log.Error().Msg("nothing unset. perhaps you forgot to use -k KEY or one of the other options?")
-		unsetCmdWarned = true
-		return
-	}
-
-	resp.Err = instance.WriteConfigValues(c, s)
-	return
+			resp.Err = instance.WriteConfigValues(i, s)
+			return
+		}).Write(os.Stdout)
+	},
 }

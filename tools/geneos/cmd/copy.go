@@ -58,6 +58,7 @@ var copyCmd = &cobra.Command{
 		if len(names) == 1 && len(params) == 1 && strings.HasPrefix(params[0], "@") {
 			names = append(names, params[0])
 		}
+
 		if len(names) != 2 {
 			return geneos.ErrInvalidArgs
 		}

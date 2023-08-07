@@ -57,20 +57,17 @@ var rebuildCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := TypeNames(cmd)
-		responses := instance.Do(geneos.GetHost(Hostname), ct, names, rebuildInstance)
-		responses.Write(os.Stdout)
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
+			resp = instance.NewResponse(i)
+
+			if resp.Err = i.Rebuild(rebuildCmdForce); resp.Err != nil {
+				return
+			}
+			log.Debug().Msgf("%s configuration rebuilt (if supported)", i)
+			if !rebuildCmdReload {
+				return
+			}
+			return ReloadInstance(i)
+		}).Write(os.Stdout)
 	},
-}
-
-func rebuildInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
-
-	if resp.Err = c.Rebuild(rebuildCmdForce); resp.Err != nil {
-		return
-	}
-	log.Debug().Msgf("%s configuration rebuilt (if supported)", c)
-	if !rebuildCmdReload {
-		return
-	}
-	return reloadInstance(c)
 }

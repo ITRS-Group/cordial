@@ -56,23 +56,20 @@ var enableCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := TypeNames(cmd)
-		responses := instance.Do(geneos.GetHost(Hostname), ct, names, enableInstance)
-		responses.Write(os.Stdout)
-	},
-}
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
+			resp = instance.NewResponse(i)
 
-func enableInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
-
-	if !instance.IsDisabled(c) {
-		return
-	}
-	if resp.Err = instance.Enable(c); resp.Err == nil {
-		resp.Completed = append(resp.Completed, "enabled")
-		if enableCmdStart {
-			resp.Err = instance.Start(c)
+			if !instance.IsDisabled(i) {
+				return
+			}
+			if resp.Err = instance.Enable(i); resp.Err == nil {
+				resp.Completed = append(resp.Completed, "enabled")
+				if enableCmdStart {
+					resp.Err = instance.Start(i)
+					return
+				}
+			}
 			return
-		}
-	}
-	return
+		}).Write(os.Stdout)
+	},
 }

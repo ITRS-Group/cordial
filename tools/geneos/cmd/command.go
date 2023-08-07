@@ -73,23 +73,31 @@ func commandInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	lines := []string{fmt.Sprintf("=== %s ===", c)}
 
 	cmd, env, home := instance.BuildCmd(c, true)
-	if cmd != nil {
-		lines = append(lines,
-			"command line:",
-			fmt.Sprint("\t", cmd.String()),
-			"",
-			"working directory:",
-			fmt.Sprint("\t", home),
-			"",
-			"environment:",
-		)
-		for _, e := range env {
-			lines = append(lines, fmt.Sprint("\t", e))
-		}
-		lines = append(lines, "")
+	lines = append(lines,
+		"command line:",
+		fmt.Sprint("\t", cmd.String()),
+		"",
+		"working directory:",
+		fmt.Sprint("\t", home),
+		"",
+		"environment:",
+	)
+	for _, e := range env {
+		lines = append(lines, fmt.Sprint("\t", e))
 	}
+	lines = append(lines, "")
 	resp.Lines = lines
 	return
+}
+
+type command struct {
+	Instance string   `json:"instance"`
+	Type     string   `json:"type"`
+	Host     string   `json:"host"`
+	Path     string   `json:"path"`
+	Args     []string `json:"arguments,omitempty"`
+	Env      []string `json:"environment,omitempty"`
+	Home     string   `json:"directory"`
 }
 
 func commandInstanceJSON(c geneos.Instance, _ ...any) (resp *instance.Response) {
@@ -109,14 +117,4 @@ func commandInstanceJSON(c geneos.Instance, _ ...any) (resp *instance.Response) 
 	}
 	resp.Value = command
 	return
-}
-
-type command struct {
-	Instance string   `json:"instance"`
-	Type     string   `json:"type"`
-	Host     string   `json:"host"`
-	Path     string   `json:"path"`
-	Args     []string `json:"arguments,omitempty"`
-	Env      []string `json:"environment,omitempty"`
-	Home     string   `json:"directory"`
 }

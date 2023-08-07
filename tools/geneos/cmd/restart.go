@@ -24,6 +24,7 @@ package cmd
 
 import (
 	_ "embed"
+	"os"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -57,32 +58,25 @@ var restartCmd = &cobra.Command{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := TypeNames(cmd)
-		return commandRestart(ct, names)
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *instance.Response) {
+			resp = instance.NewResponse(i)
+
+			if !instance.IsAutoStart(i) {
+				return
+			}
+			resp.Err = instance.Stop(i, restartCmdForce, false)
+			if resp.Err == nil || restartCmdAll {
+				resp.Err = instance.Start(i)
+			}
+			return
+		}).Write(os.Stdout)
+
+		if restartCmdLogs {
+			// also watch STDERR on start-up
+			// never returns
+			followLogs(ct, names, true)
+		}
 	},
-}
-
-func commandRestart(ct *geneos.Component, args []string) (err error) {
-	instance.Do(geneos.GetHost(Hostname), ct, args, restartInstance)
-
-	if restartCmdLogs {
-		// also watch STDERR on start-up
-		// never returns
-		return followLogs(ct, args, true)
-	}
-	return
-}
-
-func restartInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
-
-	if !instance.IsAutoStart(c) {
-		return
-	}
-	resp.Err = instance.Stop(c, restartCmdForce, false)
-	if resp.Err == nil || restartCmdAll {
-		resp.Err = instance.Start(c)
-	}
-	return
 }

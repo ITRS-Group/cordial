@@ -52,15 +52,15 @@ var reloadCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := TypeNames(cmd)
-		responses := instance.Do(geneos.GetHost(Hostname), ct, names, reloadInstance)
+		responses := instance.Do(geneos.GetHost(Hostname), ct, names, ReloadInstance)
 		responses.Write(os.Stdout)
 	},
 }
 
-func reloadInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func ReloadInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
-	if err := c.Reload(); err == nil {
+	if err := i.Reload(); err == nil {
 		resp.Completed = append(resp.Completed, "reload signal sent")
 	}
 	return

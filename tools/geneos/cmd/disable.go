@@ -58,44 +58,41 @@ var disableCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := TypeNames(cmd)
-		responses := instance.Do(geneos.GetHost(Hostname), ct, names, disableInstance)
-		responses.Write(os.Stdout)
-	},
-}
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *instance.Response) {
+			resp = instance.NewResponse(i)
 
-func disableInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
-
-	if instance.IsDisabled(c) {
-		return
-	}
-
-	if instance.IsProtected(c) {
-		resp.Err = geneos.ErrProtected
-		return
-	}
-
-	if disableCmdStop {
-		if c.Type().RealComponent {
-			if err := instance.Stop(c, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
-				resp.Err = err
+			if instance.IsDisabled(i) {
 				return
 			}
-		}
-	}
 
-	if !disableCmdForce && instance.IsRunning(c) {
-		fmt.Printf("%s is running, skipping. Use the `--stop` option to stop running instances\n", c)
-		return
-	}
+			if instance.IsProtected(i) {
+				resp.Err = geneos.ErrProtected
+				return
+			}
 
-	if !instance.IsProtected(c) || disableCmdForce {
-		if resp.Err = instance.Disable(c); resp.Err == nil {
-			resp.Completed = append(resp.Completed, "disabled")
+			if disableCmdStop {
+				if i.Type().RealComponent {
+					if err := instance.Stop(i, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
+						resp.Err = err
+						return
+					}
+				}
+			}
+
+			if !disableCmdForce && instance.IsRunning(i) {
+				fmt.Printf("%s is running, skipping. Use the `--stop` option to stop running instances\n", i)
+				return
+			}
+
+			if !instance.IsProtected(i) || disableCmdForce {
+				if resp.Err = instance.Disable(i); resp.Err == nil {
+					resp.Completed = append(resp.Completed, "disabled")
+					return
+				}
+			}
+
+			resp.Err = fmt.Errorf("not disabled. Instances must not be running or use the '--force'/'-F' option")
 			return
-		}
-	}
-
-	resp.Err = fmt.Errorf("not disabled. Instances must not be running or use the '--force'/'-F' option")
-	return
+		}).Write(os.Stdout)
+	},
 }

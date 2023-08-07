@@ -64,8 +64,8 @@ func init() {
 	showCmd.Flags().BoolVarP(&showCmdSetup, "setup", "s", false, "Show the instance Geneos configuration file, if any")
 	showCmd.Flags().BoolVarP(&showCmdMerge, "merge", "m", false, "Merge Gateway configurations using the Gateway -dump-xml flag")
 
-	showCmd.Flags().BoolVarP(&showCmdValidate, "validate", "v", false, "Validate Gateway configurations using the Gateway -validate flag")
-	showCmd.Flags().StringVar(&showCmdHooksDir, "hooks", "", "Hooks directory (may clash with instance options)")
+	showCmd.Flags().BoolVarP(&showCmdValidate, "validate", "V", false, "Validate Gateway configurations using the Gateway -validate flag")
+	showCmd.Flags().StringVar(&showCmdHooksDir, "hooks", "", "Hooks directory\n(may clash with instance parameters if set for normal execution)")
 
 	showCmd.Flags().SortFlags = false
 }
@@ -84,8 +84,8 @@ var showCmd = &cobra.Command{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, names []string) (err error) {
-		ct, names := TypeNames(cmd)
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, names := TypeNames(command)
 		output := os.Stdout
 		if showCmdOutput != "" {
 			output, err = os.Create(showCmdOutput)
@@ -103,96 +103,63 @@ var showCmd = &cobra.Command{
 		}
 
 		if showCmdValidate {
-			// if showCmdHooksDir != "" {
-			// 	params = append(params, showCmdHooksDir)
-			// }
-
-			responses := instance.Do(geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir)
-
-			if err != nil {
-				if err == os.ErrNotExist {
-					return fmt.Errorf("no matching instance found")
-				}
-			}
-			for _, r := range responses {
-				result, ok := r.Value.(showConfig)
-				if !ok {
-					return
-				}
-				fmt.Fprintf(output, "### validation results for %s\n\n%s\n\n", result.c, result.file)
-			}
+			instance.Do(geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir).Write(output,
+				instance.WriterPrefix("### validation results for %s\n\n"),
+				instance.WriterSuffix("\n\n"),
+				instance.WriterPlainValue(),
+			)
 			return
 		}
 
 		if showCmdSetup {
-			responses := instance.Do(geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge)
-			if err != nil {
-				if err == os.ErrNotExist {
-					return fmt.Errorf("no matching instance found")
-				}
-			}
-			for _, r := range responses {
-				result, ok := r.Value.(*showConfig)
-				if !ok {
-					return
-				}
-				fmt.Fprintf(output, "<!-- configuration for %s -->\n\n%s\n\n", result.c, result.file)
-			}
+			instance.Do(geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge).Write(output,
+				instance.WriterPrefix("<!-- configuration for %s -->\n\n"),
+				instance.WriterSuffix("\n\n"),
+				instance.WriterPlainValue(),
+			)
 			return
 		}
-		results := instance.Do(geneos.GetHost(Hostname), ct, names, showInstance)
-		if len(results) == 0 {
-			if err == os.ErrNotExist {
-				return fmt.Errorf("no matching instance found")
-			}
-			return
-		}
-		results.Write(os.Stdout, instance.WriterIndent(true))
+		instance.Do(geneos.GetHost(Hostname), ct, names, showInstance).Write(os.Stdout, instance.WriterIndent(true))
 		return
 	},
 }
 
-func showValidateInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func showValidateInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
-	if len(params) == 0 {
-		resp.Err = geneos.ErrInvalidArgs
-		return
-	}
-
-	setup := c.Config().GetString("setup")
+	setup := i.Config().GetString("setup")
 	if setup == "" {
 		return
 	}
-	if c.Type().String() == "gateway" {
+	if i.Type().String() == "gateway" {
 		// temp file for JSON output
-		tempfile := path.Join(c.Host().TempDir(), "validate-"+c.Name()+".json")
-		defer c.Host().Remove(tempfile)
+		tempfile := path.Join(i.Host().TempDir(), "validate-"+i.Name()+".json")
+		defer i.Host().Remove(tempfile)
 
 		// run a gateway with -dump-xml and consume the result, discard the heading
-		cmd, env, home := instance.BuildCmd(c, false)
+		cmd, env, home := instance.BuildCmd(i, false)
 		// replace args with a more limited set
 		cmd.Args = []string{
 			cmd.Path,
 			"-resources-dir",
-			path.Join(instance.BaseVersion(c), "resources"),
+			path.Join(instance.BaseVersion(i), "resources"),
 			"-nolog",
 			"-skip-cache",
 			"-setup",
-			c.Config().GetString("setup"),
+			i.Config().GetString("setup"),
 			"-validate-json-output",
 			tempfile,
 			"-silent",
 			"-hub-validation-rules",
 		}
-		cmd.Args = append(cmd.Args, instance.SetSecureArgs(c)...)
+		cmd.Args = append(cmd.Args, instance.SetSecureArgs(i)...)
 		if len(params) > 0 {
 			cmd.Args = append(cmd.Args, fmt.Sprintf("-hooks-dir %s", params[0]))
 		}
 
 		var output []byte
 		// we don't care about errors, just the output
-		_, err := c.Host().Run(cmd, env, home, "errors.txt")
+		_, err := i.Host().Run(cmd, env, home, "errors.txt")
 		if err != nil {
 			log.Debug().Msgf("error: %s", output)
 		}
@@ -201,24 +168,15 @@ func showValidateInstance(c geneos.Instance, params ...any) (resp *instance.Resp
 			return
 		}
 
-		resp.Value = &showConfig{
-			c:    c,
-			file: output,
-		}
-
+		resp.Value = output
 		return
 	}
 	return
 }
 
-type showConfig struct {
-	c    geneos.Instance
-	file []byte
-}
-
 // showInstanceConfig returns a slice of showConfig structs per instance
-func showInstanceConfig(c geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func showInstanceConfig(i geneos.Instance, params ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs
@@ -230,39 +188,36 @@ func showInstanceConfig(c geneos.Instance, params ...any) (resp *instance.Respon
 		panic("wrong type")
 	}
 
-	setup := c.Config().GetString("setup")
+	setup := i.Config().GetString("setup")
 	if setup == "" {
 		return
 	}
-	if c.Type().String() == "gateway" && merge {
+	if i.Type().String() == "gateway" && merge {
 		// run a gateway with -dump-xml and consume the result, discard the heading
-		cmd, env, home := instance.BuildCmd(c, false)
+		cmd, env, home := instance.BuildCmd(i, false)
 		// replace args with a more limited set
 		cmd.Args = []string{
 			cmd.Path,
 			"-resources-dir",
-			path.Join(instance.BaseVersion(c), "resources"),
+			path.Join(instance.BaseVersion(i), "resources"),
 			"-nolog",
 			"-skip-cache",
 			"-setup",
-			c.Config().GetString("setup"),
+			i.Config().GetString("setup"),
 			"-dump-xml",
 		}
-		cmd.Args = append(cmd.Args, instance.SetSecureArgs(c)...)
+		cmd.Args = append(cmd.Args, instance.SetSecureArgs(i)...)
 		var output []byte
 		// we don't care about errors, just the output
-		output, err := c.Host().Run(cmd, env, home, "errors.txt")
+		output, err := i.Host().Run(cmd, env, home, "errors.txt")
 		if err != nil {
 			log.Debug().Msgf("error: %s", output)
 		}
-		i := bytes.Index(output, []byte("<?xml"))
-		if i == -1 {
+		idx := bytes.Index(output, []byte("<?xml"))
+		if idx == -1 {
 			return
 		}
-		resp.Value = &showConfig{
-			c:    c,
-			file: output[i:],
-		}
+		resp.Value = output[idx:]
 		return
 	}
 	file, err := os.ReadFile(setup)
@@ -270,26 +225,23 @@ func showInstanceConfig(c geneos.Instance, params ...any) (resp *instance.Respon
 		resp.Err = err
 		return
 	}
-	resp.Value = &showConfig{
-		c:    c,
-		file: file,
-	}
 
+	resp.Value = file
 	return
 }
 
-func showInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func showInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
 	// remove aliases
 	nv := config.New()
-	aliases := c.Type().LegacyParameters
-	for _, k := range c.Config().AllKeys() {
+	aliases := i.Type().LegacyParameters
+	for _, k := range i.Config().AllKeys() {
 		// skip any names in the alias table
 		log.Debug().Msgf("checking %s", k)
 		if _, ok := aliases[k]; !ok {
 			log.Debug().Msgf("setting %s", k)
-			nv.Set(k, c.Config().Get(k))
+			nv.Set(k, i.Config().Get(k))
 		}
 	}
 
@@ -299,11 +251,11 @@ func showInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	}
 	cf := &showCmdConfig{
 		Instance: showCmdInstanceConfig{
-			Name:      c.Name(),
-			Host:      c.Host().String(),
-			Type:      c.Type().String(),
-			Disabled:  instance.IsDisabled(c),
-			Protected: instance.IsProtected(c),
+			Name:      i.Name(),
+			Host:      i.Host().String(),
+			Type:      i.Type().String(),
+			Disabled:  instance.IsDisabled(i),
+			Protected: instance.IsProtected(i),
 		},
 		Configuration: as,
 	}
