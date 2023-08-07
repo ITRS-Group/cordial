@@ -116,18 +116,18 @@ func CreateCert(dir string, overwrite bool, cn string, san ...string) (err error
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	intrCert, err := instance.ReadSigningCert()
+	signingCert, err := instance.ReadSigningCert()
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
-	intrKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
+	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
 
-	cert, key, err := config.CreateCertificateAndKey(&template, intrCert, intrKey, nil)
+	cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey, nil)
 	if err != nil {
 		return
 	}
