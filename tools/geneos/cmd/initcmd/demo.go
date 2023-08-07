@@ -124,5 +124,6 @@ func initDemo(h *geneos.Host, options ...geneos.Options) (err error) {
 		return
 	}
 	time.Sleep(time.Second * 2)
-	return cmd.CommandPS(nil, e, e)
+	cmd.CommandPS(nil, e, e)
+	return
 }

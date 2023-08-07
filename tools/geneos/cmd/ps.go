@@ -86,16 +86,16 @@ var psCmd = &cobra.Command{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names, params := TypeNamesParams(cmd)
-		return CommandPS(ct, names, params)
+		CommandPS(ct, names, params)
 	},
 }
 
 // CommandPS writes running instance information to STDOUT
 //
 // XXX relies on global flags
-func CommandPS(ct *geneos.Component, names []string, params []string) (err error) {
+func CommandPS(ct *geneos.Component, names []string, params []string) {
 	switch {
 	case psCmdJSON, psCmdIndent:
 		responses := instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceJSON)
@@ -113,10 +113,6 @@ func CommandPS(ct *geneos.Component, names []string, params []string) (err error
 		results.Write(psTabWriter)
 		psTabWriter.Flush()
 	}
-	if err == os.ErrNotExist {
-		err = nil
-	}
-	return
 }
 
 func psInstancePlain(c geneos.Instance, _ ...any) (resp *instance.Response) {

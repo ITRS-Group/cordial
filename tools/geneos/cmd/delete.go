@@ -55,15 +55,13 @@ var deleteCmd = &cobra.Command{
 	Long:         deleteCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationWildcard:  "true",
+		AnnotationWildcard:  "explicit",
 		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, allargs []string) (err error) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := TypeNames(cmd)
-
 		results := instance.Do(geneos.GetHost(Hostname), ct, names, deleteInstance)
 		results.Write(os.Stdout)
-		return
 	},
 }
 

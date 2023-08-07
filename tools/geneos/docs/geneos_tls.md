@@ -6,7 +6,7 @@ TLS Certificate Operations
 ## Commands
 
 * [`geneos tls create`](geneos_tls_create.md)	 - Create new certificates
-* [`geneos tls import`](geneos_tls_import.md)	 - Import root and signing certificates
+* [`geneos tls import`](geneos_tls_import.md)	 - Import certificates
 * [`geneos tls init`](geneos_tls_init.md)	 - Initialise the TLS environment
 * [`geneos tls list`](geneos_tls_list.md)	 - List certificates
 * [`geneos tls new`](geneos_tls_new.md)	 - Create new certificates
@@ -16,6 +16,8 @@ TLS Certificate Operations
 # `geneos tls` Subsystem Commands
 
 Manage certificates for [Geneos Secure Communications](https://docs.itrsgroup.com/docs/geneos/current/SSL/ssl_ug.html).
+
+You can import and manage your own certificates or create your own certificates with your own certificate authority (also known, incorrectly, as "self-signed" certificates).
 
 Commands allow for initialisation, create and renewal of certificates as well as listing details and copying a certificate chain to all other hosts.
 

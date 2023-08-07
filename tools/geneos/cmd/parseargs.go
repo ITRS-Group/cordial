@@ -110,9 +110,9 @@ func parseArgs(command *cobra.Command, args []string) (err error) {
 
 	log.Debug().Msgf("rawargs %v, params %v, ct %s", args, params, annotations[AnnotationComponent])
 
-	if _, ok := annotations[AnnotationComponent]; !ok {
-		annotations[AnnotationComponent] = ""
-	}
+	// if _, ok := annotations[AnnotationComponent]; !ok {
+	// 	annotations[AnnotationComponent] = ""
+	// }
 	jsonargs, _ := json.Marshal(params)
 	annotations[AnnotationParams] = string(jsonargs)
 
