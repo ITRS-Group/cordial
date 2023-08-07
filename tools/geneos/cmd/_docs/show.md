@@ -1,7 +1,5 @@
 Show the configuration for matching instances or show the Geneos configuration used by an instance (depending on options selected below).
 
-
-
 By default the configuration used to manage the matching instances is output as a JSON array of objects. Each instance object contains
 `instance` metadata and a `configuration` object.
 
