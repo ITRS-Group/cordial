@@ -24,6 +24,7 @@ package cmd
 
 import (
 	_ "embed"
+	"os"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -53,8 +54,8 @@ var protectCmd = &cobra.Command{
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, args := TypeNames(command)
-
-		instance.Do(geneos.GetHost(Hostname), ct, args, protectInstance, !protectCmdUnprotect)
+		responses := instance.Do(geneos.GetHost(Hostname), ct, args, protectInstance, !protectCmdUnprotect)
+		responses.Write(os.Stdout)
 	},
 }
 

@@ -55,11 +55,10 @@ var rebuildCmd = &cobra.Command{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := TypeNames(cmd)
 		responses := instance.Do(geneos.GetHost(Hostname), ct, names, rebuildInstance)
 		responses.Write(os.Stdout)
-		return
 	},
 }
 

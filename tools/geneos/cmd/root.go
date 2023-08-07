@@ -157,51 +157,57 @@ geneos restart
 		// file, debug etc.
 		command.Root().ParseFlags(args)
 
+		// if we have no args and have explicit set, then go bang. check component type
+		if command.Annotations[AnnotationWildcard] == "explicit" {
+			rootargs := command.Root().Flags().Args()
+			if len(rootargs) == 0 {
+				return fmt.Errorf("%w: %q requires at least TYPE or one or more NAME arguments", geneos.ErrInvalidArgs, command.Name())
+			}
+		}
+
 		// check for AnnotationReplacedBy annotation, warn the user, run the new
 		// command later (after prerun) but if the help flag is set
 		// output the help for the new command and cleanly exit.
-		var newcmd *cobra.Command
+		var realcmd *cobra.Command
 
 		if r, ok := command.Annotations[AnnotationReplacedBy]; ok {
 			var newargs []string
-			// args := strings.Split(r, " ")
-			newcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
+			realcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
 			if err != nil {
 				log.Fatal().Err(err).Msg("")
 			}
-			if newcmd != nil {
-				fmt.Printf("*** Please note that the %q command has been replaced by %q\n\n", command.CommandPath(), newcmd.CommandPath())
+			if realcmd != nil {
+				fmt.Printf("*** Please note that the %q command has been replaced by %q\n\n", command.CommandPath(), realcmd.CommandPath())
 				command.RunE = func(cmd *cobra.Command, args []string) error {
-					newcmd.ParseFlags(newargs)
-					parseArgs(newcmd, newargs)
-					return newcmd.RunE(newcmd, newcmd.Flags().Args())
+					realcmd.ParseFlags(newargs)
+					parseArgs(realcmd, newargs)
+					return realcmd.RunE(realcmd, realcmd.Flags().Args())
 				}
 			}
 		}
 
-		// same as above, but no warning message
+		// same as above, but no warning message (XXX - can't recall why, indirection?)
 		if r, ok := command.Annotations[AnnotationReplacedBy]; ok {
 			var newargs []string
-			// args := strings.Split(r, " ")
-			newcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
+			realcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
 			if err != nil {
 				log.Fatal().Err(err).Msg("")
 			}
-			if newcmd != nil {
+			if realcmd != nil {
 				command.RunE = func(cmd *cobra.Command, args []string) error {
-					newcmd.ParseFlags(newargs)
-					parseArgs(newcmd, newargs)
-					return newcmd.RunE(newcmd, newcmd.Flags().Args())
+					realcmd.ParseFlags(newargs)
+					parseArgs(realcmd, newargs)
+					return realcmd.RunE(realcmd, realcmd.Flags().Args())
 				}
 			}
 		}
 
-		if newcmd != nil {
+		if realcmd != nil {
 			if t, _ := command.Flags().GetBool("help"); t {
 				command.RunE = nil
 				// Run cannot be nil
 				command.Run = func(cmd *cobra.Command, args []string) {
-					newcmd.Usage()
+					realcmd.Usage()
 				}
 				return nil
 			}

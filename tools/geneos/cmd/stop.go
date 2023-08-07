@@ -55,11 +55,13 @@ var stopCmd = &cobra.Command{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := TypeNames(cmd)
 		results := instance.Do(geneos.GetHost(Hostname), ct, names, stopInstance)
-		results.Write(os.Stdout, instance.WriterShowTimes(), instance.WriterTimingFormat("%s stopped in %.2fs\n"))
-		return
+		results.Write(os.Stdout,
+			instance.WriterShowTimes(),
+			instance.WriterTimingFormat("%s stopped in %.2fs\n"),
+		)
 	},
 }
 

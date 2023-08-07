@@ -51,7 +51,7 @@ var enableCmd = &cobra.Command{
 	Long:         enableCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationWildcard:  "true",
+		AnnotationWildcard:  "explicit",
 		AnnotationNeedsHome: "true",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {

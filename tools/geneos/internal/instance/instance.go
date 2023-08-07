@@ -280,15 +280,18 @@ func ByKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (confs 
 	return
 }
 
-// Do calls function fn for each matching instance and
-// gathers the return values into a slice for handling upstream. The
-// functions are called in go routine and must be concurrency safe.
+// Do calls function f for each matching instance and gathers the return
+// values into a slice of Response for handling by the caller. The
+// functions are executed in goroutines and must be concurrency safe.
 //
-// It sends any returned error on STDOUT and the only error returned is
-// os.ErrNotExist if there are no matching instances. params are passed
-// as a variadic list of any type. The called function should validate
-// and cast params for use.
-func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Instance, ...any) *Response, values ...any) (responses Responses) {
+// The values are passed to each function called and must not be changes
+// by the called function. The called function should validate and cast
+// values for use.
+//
+// Do calls ByNames() to resolve the names given to a list of matching
+// instances on host h (which can be geneos.ALL to look on all hosts)
+// and for type ct, which can be nil to look across all component types.
+func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *Response, values ...any) (responses Responses) {
 	var wg sync.WaitGroup
 
 	instances, err := ByNames(h, ct, names...)
@@ -302,7 +305,7 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, fn func(geneos.Ins
 		go func(c geneos.Instance) {
 			defer wg.Done()
 
-			resp := fn(c, values...)
+			resp := f(c, values...)
 			resp.Finish = time.Now()
 			ch <- resp
 		}(c)
