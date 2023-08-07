@@ -84,20 +84,19 @@ geneos aes ls -S gateway -H localhost -c
 		cmd.AnnotationWildcard:  "true",
 		cmd.AnnotationNeedsHome: "true",
 	},
-	RunE: func(command *cobra.Command, _ []string) (err error) {
+	Run: func(command *cobra.Command, _ []string) {
 		ct, names := cmd.TypeNames(command)
 
 		h := geneos.GetHost(cmd.Hostname)
 
 		switch {
 		case listCmdJSON, listCmdIndent:
-			var results instance.Responses
 			if listCmdShared {
-				results, _ = aesListSharedJSON(ct, h)
+				results, _ := aesListSharedJSON(ct, h)
+				results.Write(os.Stdout, instance.WriterIndent(listCmdIndent))
 			} else {
-				results = instance.Do(h, ct, names, aesListInstanceJSON)
+				instance.Do(h, ct, names, aesListInstanceJSON).Write(os.Stdout, instance.WriterIndent(listCmdIndent))
 			}
-			results.Write(os.Stdout, instance.WriterIndent(listCmdIndent))
 		case listCmdCSV:
 			aesListCSVWriter = csv.NewWriter(os.Stdout)
 			aesListCSVWriter.Write([]string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
@@ -105,28 +104,22 @@ geneos aes ls -S gateway -H localhost -c
 			if listCmdShared {
 				instance.Responses{aesListSharedCSV(ct, h)}.Write(aesListCSVWriter)
 			} else {
-				results := instance.Do(h, ct, names, aesListInstanceCSV)
-				results.Write(aesListCSVWriter)
+				instance.Do(h, ct, names, aesListInstanceCSV).Write(aesListCSVWriter)
 			}
 
 			aesListCSVWriter.Flush()
 		default:
-			var responses instance.Responses
 			aesListTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(aesListTabWriter, "Type\tName\tHost\tKeyfile\tCRC32\tModtime\n")
 
 			if listCmdShared {
-				responses, err = aesListShared(ct, h)
+				responses, _ := aesListShared(ct, h)
+				responses.Write(aesListTabWriter)
 			} else {
-				responses = instance.Do(h, ct, names, aesListInstance)
+				instance.Do(h, ct, names, aesListInstance).Write(aesListTabWriter)
 			}
-			responses.Write(aesListTabWriter)
 			aesListTabWriter.Flush()
 		}
-		if err == os.ErrNotExist {
-			err = nil
-		}
-		return
 	},
 }
 

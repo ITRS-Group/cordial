@@ -94,6 +94,9 @@ geneos aes new -S gateway
 		}
 
 		crc, err = kv.Checksum()
+		if err != nil {
+			return
+		}
 
 		crcstr := fmt.Sprintf("%08X", crc)
 		if newCmdKeyfile != "" {
@@ -109,12 +112,9 @@ geneos aes new -S gateway
 					if err = geneos.SaveKeyFileShared(h, ct, kv); err != nil {
 						return
 					}
-					responses := instance.Do(h, ct, names, aesNewSetInstance, crcstr+".aes")
-					responses.Write(os.Stdout)
+					instance.Do(h, ct, names, aesNewSetInstance, crcstr+".aes").Write(os.Stdout)
 				}
 			}
-
-			return
 		}
 		return
 	},
