@@ -58,8 +58,7 @@ var renewCmd = &cobra.Command{
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, names := cmd.TypeNames(command)
-		responses := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, renewInstanceCert)
-		responses.Write(os.Stdout)
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, renewInstanceCert).Write(os.Stdout)
 	},
 }
 

@@ -96,37 +96,34 @@ var encodeCmd = &cobra.Command{
 		}
 
 		ct, args := cmd.TypeNames(command)
-		responses := instance.Do(geneos.GetHost(cmd.Hostname), ct, args, aesEncodeInstance, plaintext)
-		responses.Write(os.Stdout)
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *instance.Response) {
+			resp = instance.NewResponse(i)
+
+			if len(params) == 0 {
+				resp.Err = geneos.ErrInvalidArgs
+				return
+			}
+
+			if !i.Type().UsesKeyfiles {
+				return
+			}
+			keyfile := config.KeyFile(instance.PathOf(i, "keyfile"))
+			if keyfile == "" {
+				return
+			}
+
+			plaintext, ok := params[0].(*config.Plaintext)
+			if !ok {
+				panic("wrong type")
+			}
+			e, err := keyfile.Encode(plaintext, encodeCmdExpandable)
+			if err != nil {
+				resp.Err = err
+				return
+			}
+			resp.Completed = append(resp.Completed, e)
+			return
+		}, plaintext).Write(os.Stdout)
 		return
 	},
-}
-
-func aesEncodeInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
-
-	if len(params) == 0 {
-		resp.Err = geneos.ErrInvalidArgs
-		return
-	}
-
-	if !c.Type().UsesKeyfiles {
-		return
-	}
-	keyfile := config.KeyFile(instance.PathOf(c, "keyfile"))
-	if keyfile == "" {
-		return
-	}
-
-	plaintext, ok := params[0].(*config.Plaintext)
-	if !ok {
-		panic("wrong type")
-	}
-	e, err := keyfile.Encode(plaintext, encodeCmdExpandable)
-	if err != nil {
-		resp.Err = err
-		return
-	}
-	resp.Completed = append(resp.Completed, e)
-	return
 }

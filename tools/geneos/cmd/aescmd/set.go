@@ -79,8 +79,7 @@ var setCmd = &cobra.Command{
 		}
 		crc = geneos.KeyFileNormalise(crc)
 		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-			responses := instance.Do(h, ct, names, aesSetAESInstance, crc)
-			responses.Write(os.Stdout)
+			instance.Do(h, ct, names, aesSetAESInstance, crc).Write(os.Stdout)
 		}
 		return nil
 	},

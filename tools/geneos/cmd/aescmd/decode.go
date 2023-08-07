@@ -132,42 +132,39 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 		}
 
 		ct, names, _ := cmd.TypeNamesParams(command)
-		responses := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, aesDecodeInstance, ciphertext)
-		responses.Write(os.Stdout)
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, func(i geneos.Instance, params ...any) (resp *instance.Response) {
+			resp = instance.NewResponse(i)
+
+			if len(params) == 0 {
+				resp.Err = geneos.ErrInvalidArgs
+				return
+			}
+			ciphertext, ok := params[0].(string)
+			if !ok {
+				panic("wrong type")
+			}
+			log.Debug().Msgf("trying to decode for instance %s", i)
+			if !i.Type().UsesKeyfiles {
+				return
+			}
+			path := instance.PathOf(i, "keyfile")
+			if path == "" {
+				return
+			}
+			r, err := i.Host().Open(path)
+			if err != nil {
+				resp.Err = err
+				return
+			}
+			defer r.Close()
+			a := config.Read(r)
+			e, err := a.DecodeString(ciphertext)
+			if err != nil {
+				return
+			}
+			resp.Completed = append(resp.Completed, fmt.Sprintf("%q", e))
+			return
+		}, ciphertext).Write(os.Stdout)
 		return
 	},
-}
-
-func aesDecodeInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
-
-	if len(params) == 0 {
-		resp.Err = geneos.ErrInvalidArgs
-		return
-	}
-	ciphertext, ok := params[0].(string)
-	if !ok {
-		panic("wrong type")
-	}
-	log.Debug().Msgf("trying to decode for instance %s", c)
-	if !c.Type().UsesKeyfiles {
-		return
-	}
-	path := instance.PathOf(c, "keyfile")
-	if path == "" {
-		return
-	}
-	r, err := c.Host().Open(path)
-	if err != nil {
-		resp.Err = err
-		return
-	}
-	defer r.Close()
-	a := config.Read(r)
-	e, err := a.DecodeString(ciphertext)
-	if err != nil {
-		return
-	}
-	resp.Completed = append(resp.Completed, fmt.Sprintf("%q", e))
-	return
 }
