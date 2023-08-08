@@ -81,11 +81,11 @@ func ReservedName(name string) (ok bool) {
 		log.Debug().Msg("matches a reserved word")
 		return true
 	}
-	if config.GetString("reservednames") != "" {
-		list := strings.Split(name, ",")
+	if reserved := config.GetString("reservednames"); reserved != "" {
+		list := strings.Split(reserved, ",")
 		for _, n := range list {
 			if strings.EqualFold(name, strings.TrimSpace(n)) {
-				log.Debug().Msg("matches a user defined reserved name")
+				log.Debug().Msgf("%s matches a user defined reserved name %s", name, n)
 				return true
 			}
 		}
