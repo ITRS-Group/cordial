@@ -34,20 +34,20 @@ import (
 )
 
 // Stop an instance
-func Stop(c geneos.Instance, force, kill bool) (err error) {
-	if !force && IsProtected(c) {
+func Stop(i geneos.Instance, force, kill bool) (err error) {
+	if !force && IsProtected(i) {
 		return geneos.ErrProtected
 	}
 
-	if !IsRunning(c) {
-		log.Debug().Msgf("%s not running", c)
+	if !IsRunning(i) {
+		log.Debug().Msgf("%s not running", i)
 		return os.ErrProcessDone
 	}
 
 	// start := time.Now()
 
 	if !kill {
-		if err = Signal(c, syscall.SIGTERM); err == os.ErrProcessDone {
+		if err = Signal(i, syscall.SIGTERM); err == os.ErrProcessDone {
 			return nil
 		}
 
@@ -55,24 +55,24 @@ func Stop(c geneos.Instance, force, kill bool) (err error) {
 			return os.ErrPermission
 		}
 
-		for i := 0; i < 10; i++ {
+		for j := 0; j < 10; j++ {
 			time.Sleep(250 * time.Millisecond)
-			if err = Signal(c, syscall.SIGTERM); err == os.ErrProcessDone {
+			if err = Signal(i, syscall.SIGTERM); err == os.ErrProcessDone {
 				return nil
 			}
 		}
 
-		if !IsRunning(c) {
+		if !IsRunning(i) {
 			return nil
 		}
 	}
 
-	if err = Signal(c, syscall.SIGKILL); err == os.ErrProcessDone {
+	if err = Signal(i, syscall.SIGKILL); err == os.ErrProcessDone {
 		return nil
 	}
 
 	time.Sleep(250 * time.Millisecond)
-	if !IsRunning(c) {
+	if !IsRunning(i) {
 		return nil
 	}
 	return

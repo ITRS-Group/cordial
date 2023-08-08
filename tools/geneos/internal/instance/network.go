@@ -47,12 +47,12 @@ var tcpfiles = []string{
 // as gateway setup or netprobe collection agent
 //
 // returns a map
-func GetPorts(r *geneos.Host) (ports map[uint16]*geneos.Component) {
-	if r == geneos.ALL {
+func GetPorts(h *geneos.Host) (ports map[uint16]*geneos.Component) {
+	if h == geneos.ALL {
 		log.Fatal().Msg("getports() call with all hosts")
 	}
 	ports = make(map[uint16]*geneos.Component)
-	for _, c := range GetAll(r, nil) {
+	for _, c := range GetAll(h, nil) {
 		if !c.Loaded() {
 			log.Error().Msgf("cannot load configuration for %s", c)
 			continue
@@ -86,9 +86,9 @@ func GetPorts(r *geneos.Host) (ports map[uint16]*geneos.Component) {
 // some limits based on https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
 //
 // not concurrency safe at this time
-func NextPort(r *geneos.Host, ct *geneos.Component) uint16 {
+func NextPort(h *geneos.Host, ct *geneos.Component) uint16 {
 	from := config.GetString(ct.PortRange)
-	used := GetPorts(r)
+	used := GetPorts(h)
 	ps := strings.Split(from, ",")
 	for _, p := range ps {
 		// split on comma or ".."
@@ -182,20 +182,20 @@ func allTCPListenPorts(h *geneos.Host, ports map[int]int) (err error) {
 // ListeningPorts returns all TCP ports currently open for the process
 // running as the instance. An empty slice is returned if the process
 // cannot be found. The instance may be on a remote host.
-func ListeningPorts(c geneos.Instance) (ports []int) {
+func ListeningPorts(i geneos.Instance) (ports []int) {
 	var err error
 
-	if !IsRunning(c) {
+	if !IsRunning(i) {
 		return
 	}
 
-	sockets := sockets(c)
+	sockets := sockets(i)
 	if len(sockets) == 0 {
 		return
 	}
 
 	tcpports := make(map[int]int) // key = socket inode
-	if err = allTCPListenPorts(c.Host(), tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err = allTCPListenPorts(i.Host(), tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		log.Error().Err(err).Msg("continuing")
 	}
 
@@ -212,20 +212,20 @@ func ListeningPorts(c geneos.Instance) (ports []int) {
 // ListeningPorts returns all TCP ports currently open for the process
 // running as the instance. An empty slice is returned if the process
 // cannot be found. The instance may be on a remote host.
-func ListeningPortsStrings(c geneos.Instance) (ports []string) {
+func ListeningPortsStrings(i geneos.Instance) (ports []string) {
 	var err error
 
-	if !IsRunning(c) {
+	if !IsRunning(i) {
 		return
 	}
 
-	sockets := sockets(c)
+	sockets := sockets(i)
 	if len(sockets) == 0 {
 		return
 	}
 
 	tcpports := make(map[int]int) // key = socket inode
-	if err = allTCPListenPorts(c.Host(), tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err = allTCPListenPorts(i.Host(), tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		log.Error().Err(err).Msg("continuing")
 	}
 
@@ -263,21 +263,21 @@ func AllListeningPorts(h *geneos.Host, min, max int) (ports []int) {
 // sockets returns a map[int]int of file descriptor to socket inode for all open
 // files for the process running as the instance. An empty map is
 // returned if the process cannot be found.
-func sockets(c geneos.Instance) (links map[int]int) {
+func sockets(i geneos.Instance) (links map[int]int) {
 	var inode int
 	links = make(map[int]int)
-	pid, err := GetPID(c)
+	pid, err := GetPID(i)
 	if err != nil {
 		return
 	}
 	file := fmt.Sprintf("/proc/%d/fd", pid)
-	fds, err := c.Host().ReadDir(file)
+	fds, err := i.Host().ReadDir(file)
 	if err != nil {
 		return
 	}
 	for _, ent := range fds {
 		fd := ent.Name()
-		dest, err := c.Host().Readlink(path.Join(file, fd))
+		dest, err := i.Host().Readlink(path.Join(file, fd))
 		if err != nil {
 			continue
 		}

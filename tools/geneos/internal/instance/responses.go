@@ -57,9 +57,9 @@ type Response struct {
 
 // NewResponse returns a pointer to an intialised Response structure,
 // using instance c. The Start time is set to time.Now().
-func NewResponse(c geneos.Instance) *Response {
+func NewResponse(i geneos.Instance) *Response {
 	return &Response{
-		Instance: c,
+		Instance: i,
 		Start:    time.Now(),
 	}
 }
@@ -116,7 +116,8 @@ func (s SortInstanceResponses) Less(i, j int) bool {
 	}
 }
 
-// Write iterates over responses and outputs the response to writer.
+// Write iterates over responses and outputs a formatted response to
+// writer.
 //
 // If instance.WriterSkipOnErr(true) is set then any response with a
 // non-nil Err field, where errors are not ignored with
@@ -124,8 +125,8 @@ func (s SortInstanceResponses) Less(i, j int) bool {
 // other outputs are skipped (even if the error writer is the default
 // io.Discard). Errors then written as described below.
 //
-// If writer is a [*tabwriter.Writer] String and Strings are written with a
-// trailing newline.
+// If writer is a [*tabwriter.Writer] String and Strings are written
+// with a trailing newline.
 //
 // If writer is a [*csv.Writer] then Strings and Rows are written.
 //

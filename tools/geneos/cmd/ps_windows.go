@@ -26,6 +26,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-func listOpenFiles(c geneos.Instance) {
+func listOpenFiles(i geneos.Instance) {
 	// nothing
 }

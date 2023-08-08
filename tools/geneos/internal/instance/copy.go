@@ -121,9 +121,9 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 			if err = Stop(src, true, false); err == nil {
 				stopped = true
 				// defer a call to restart the original if not "done"
-				defer func(c geneos.Instance) {
+				defer func(i geneos.Instance) {
 					if !done {
-						Start(c)
+						Start(i)
 					}
 				}(src)
 			} else {

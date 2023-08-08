@@ -67,12 +67,12 @@ var commandCmd = &cobra.Command{
 	},
 }
 
-func commandInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func commandInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
-	lines := []string{fmt.Sprintf("=== %s ===", c)}
+	lines := []string{fmt.Sprintf("=== %s ===", i)}
 
-	cmd, env, home := instance.BuildCmd(c, true)
+	cmd, env, home := instance.BuildCmd(i, true)
 	lines = append(lines,
 		"command line:",
 		fmt.Sprint("\t", cmd.String()),
@@ -100,14 +100,14 @@ type command struct {
 	Home     string   `json:"directory"`
 }
 
-func commandInstanceJSON(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func commandInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
-	cmd, env, home := instance.BuildCmd(c, true)
+	cmd, env, home := instance.BuildCmd(i, true)
 	command := &command{
-		Instance: c.Name(),
-		Type:     c.Type().Name,
-		Host:     c.Host().String(),
+		Instance: i.Name(),
+		Type:     i.Type().Name,
+		Host:     i.Host().String(),
 		Path:     cmd.Path,
 		Env:      env,
 		Home:     home,

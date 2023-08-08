@@ -120,8 +120,8 @@ geneos aes new -S gateway
 	},
 }
 
-func aesNewSetInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func aesNewSetInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs
@@ -133,7 +133,7 @@ func aesNewSetInstance(c geneos.Instance, params ...any) (resp *instance.Respons
 		panic("wrong type")
 	}
 	var rolled bool
-	cf := c.Config()
+	cf := i.Config()
 
 	// roll old file
 	// XXX - check keyfile still exists, do not update if not
@@ -142,12 +142,12 @@ func aesNewSetInstance(c geneos.Instance, params ...any) (resp *instance.Respons
 		cf.Set("prevkeyfile", p)
 		rolled = true
 	}
-	cf.Set("keyfile", instance.Shared(c, "keyfiles", keyfile))
+	cf.Set("keyfile", instance.Shared(i, "keyfiles", keyfile))
 
 	if cf.Type == "rc" {
-		resp.Err = instance.Migrate(c)
+		resp.Err = instance.Migrate(i)
 	} else {
-		resp.Err = instance.SaveConfig(c)
+		resp.Err = instance.SaveConfig(i)
 	}
 	if resp.Err != nil {
 		return

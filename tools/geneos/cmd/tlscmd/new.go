@@ -55,6 +55,6 @@ var newCmd = &cobra.Command{
 	},
 }
 
-func newInstanceCert(c geneos.Instance, _ ...any) *instance.Response {
-	return instance.CreateCert(c)
+func newInstanceCert(i geneos.Instance, _ ...any) *instance.Response {
+	return instance.CreateCert(i)
 }

@@ -120,8 +120,8 @@ func ImportFiles(ct *geneos.Component, args []string, sources []string) (err err
 // 'geneos import netprobe example3 scripts/=myscript.sh'
 //
 // local directories are created
-func importInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func importInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs
@@ -132,7 +132,7 @@ func importInstance(c geneos.Instance, params ...any) (resp *instance.Response) 
 		panic("wront type")
 	}
 
-	if !c.Type().RealComponent {
+	if !i.Type().RealComponent {
 		resp.Err = geneos.ErrNotSupported
 		return
 	}
@@ -142,7 +142,7 @@ func importInstance(c geneos.Instance, params ...any) (resp *instance.Response) 
 	}
 
 	for _, source := range sources {
-		if _, resp.Err = geneos.ImportFile(c.Host(), c.Home(), source); resp.Err != nil && resp.Err != geneos.ErrExists {
+		if _, resp.Err = geneos.ImportFile(i.Host(), i.Home(), source); resp.Err != nil && resp.Err != geneos.ErrExists {
 			return
 		}
 	}

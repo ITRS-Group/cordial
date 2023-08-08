@@ -108,8 +108,8 @@ var snapshotCmd = &cobra.Command{
 	},
 }
 
-func snapshotInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func snapshotInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs
@@ -121,12 +121,12 @@ func snapshotInstance(c geneos.Instance, params ...any) (resp *instance.Response
 		panic("wrong type")
 	}
 
-	if !instance.AtLeastVersion(c, "5.14") {
-		resp.Err = fmt.Errorf("%s is too old (5.14 or above required)", c)
+	if !instance.AtLeastVersion(i, "5.14") {
+		resp.Err = fmt.Errorf("%s is too old (5.14 or above required)", i)
 		return
 	}
 	values := []any{}
-	log.Debug().Msgf("snapshot on %s", c)
+	log.Debug().Msgf("snapshot on %s", i)
 	for _, path := range paths {
 		var x *xpath.XPath
 		x, resp.Err = xpath.Parse(path)
@@ -138,8 +138,8 @@ func snapshotInstance(c geneos.Instance, params ...any) (resp *instance.Response
 		// always use auth details in per-instance config, but if not
 		// given use those from the command line or user/global config
 		// or credentials file
-		username := c.Config().GetString(config.Join("snapshot", "username"))
-		password := c.Config().GetPassword(config.Join("snapshot", "password"))
+		username := i.Config().GetString(config.Join("snapshot", "username"))
+		password := i.Config().GetPassword(config.Join("snapshot", "password"))
 
 		if username == "" {
 			username = snapshotCmdUsername
@@ -151,16 +151,16 @@ func snapshotInstance(c geneos.Instance, params ...any) (resp *instance.Response
 
 		// if username is still unset then look for credentials
 		if username == "" {
-			creds := config.FindCreds(c.Type().String()+":"+c.Name(), config.SetAppName(Execname))
+			creds := config.FindCreds(i.Type().String()+":"+i.Name(), config.SetAppName(Execname))
 			if creds != nil {
 				username = creds.GetString("username")
 				password = creds.GetPassword("password")
 			}
 		}
 
-		log.Debug().Msgf("dialling %s", gatewayURL(c))
+		log.Debug().Msgf("dialling %s", gatewayURL(i))
 		var gw *commands.Connection
-		gw, resp.Err = commands.DialGateway(gatewayURL(c),
+		gw, resp.Err = commands.DialGateway(gatewayURL(i),
 			commands.AllowInsecureCertificates(true),
 			commands.SetBasicAuth(username, password))
 		if resp.Err != nil {
@@ -197,19 +197,19 @@ func snapshotInstance(c geneos.Instance, params ...any) (resp *instance.Response
 	return
 }
 
-func gatewayURL(c geneos.Instance) (u *url.URL) {
-	if c.Type().String() != "gateway" {
+func gatewayURL(i geneos.Instance) (u *url.URL) {
+	if i.Type().String() != "gateway" {
 		return
 	}
 	u = &url.URL{}
-	hostname := c.Host().GetString("hostname")
+	hostname := i.Host().GetString("hostname")
 	if hostname == "" {
 		hostname = "localhost"
 	}
-	port := c.Config().GetInt("port")
+	port := i.Config().GetInt("port")
 	u.Host = fmt.Sprintf("%s:%d", hostname, port)
 	u.Scheme = "http"
-	if instance.FileOf(c, "certificate") != "" {
+	if instance.FileOf(i, "certificate") != "" {
 		u.Scheme = "https"
 	}
 	return

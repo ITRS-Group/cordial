@@ -137,17 +137,17 @@ func aesListPath(ct *geneos.Component, h *geneos.Host, name string, path config.
 	return fmt.Sprintf("%s\t%s\t%s\t%s\t%08X\t%s", ct, name, h, path, crc, s.ModTime().Format(time.RFC3339))
 }
 
-func aesListInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func aesListInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
-	path := config.KeyFile(instance.PathOf(c, "keyfile"))
+	path := config.KeyFile(instance.PathOf(i, "keyfile"))
 	if path != "" {
-		resp.Lines = append(resp.Lines, aesListPath(c.Type(), c.Host(), c.Name(), path))
+		resp.Lines = append(resp.Lines, aesListPath(i.Type(), i.Host(), i.Name(), path))
 	}
 
-	prev := config.KeyFile(instance.PathOf(c, "prevkeyfile"))
+	prev := config.KeyFile(instance.PathOf(i, "prevkeyfile"))
 	if path != "" {
-		resp.Lines = append(resp.Lines, aesListPath(c.Type(), c.Host(), c.Name()+" (prev)", prev))
+		resp.Lines = append(resp.Lines, aesListPath(i.Type(), i.Host(), i.Name()+" (prev)", prev))
 	}
 	return
 }
@@ -190,18 +190,18 @@ func aesListPathCSV(ct *geneos.Component, h *geneos.Host, name string, path conf
 	return []string{ct.String(), name, h.String(), path.String(), crcstr, s.ModTime().Format(time.RFC3339)}
 }
 
-func aesListInstanceCSV(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func aesListInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
-	path := config.KeyFile(instance.PathOf(c, "keyfile"))
+	path := config.KeyFile(instance.PathOf(i, "keyfile"))
 	if path != "" {
-		row := aesListPathCSV(c.Type(), c.Host(), c.Name(), path)
+		row := aesListPathCSV(i.Type(), i.Host(), i.Name(), path)
 		resp.Rows = append(resp.Rows, row)
 	}
 
-	prev := config.KeyFile(instance.PathOf(c, "prevkeyfile"))
+	prev := config.KeyFile(instance.PathOf(i, "prevkeyfile"))
 	if prev != "" {
-		row := aesListPathCSV(c.Type(), c.Host(), c.Name()+" (prev)", prev)
+		row := aesListPathCSV(i.Type(), i.Host(), i.Name()+" (prev)", prev)
 		resp.Rows = append(resp.Rows, row)
 	}
 
@@ -319,6 +319,6 @@ func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results instance.R
 	return
 }
 
-func aesListInstanceJSON(c geneos.Instance, _ ...any) (result *instance.Response) {
-	return aesListPathJSON(c.Type(), c.Host(), c.Name(), config.KeyFile(instance.PathOf(c, "keyfile")), config.KeyFile(instance.PathOf(c, "prevkeyfile")))
+func aesListInstanceJSON(i geneos.Instance, _ ...any) (result *instance.Response) {
+	return aesListPathJSON(i.Type(), i.Host(), i.Name(), config.KeyFile(instance.PathOf(i, "keyfile")), config.KeyFile(instance.PathOf(i, "prevkeyfile")))
 }

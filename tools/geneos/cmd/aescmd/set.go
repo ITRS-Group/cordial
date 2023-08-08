@@ -85,8 +85,8 @@ var setCmd = &cobra.Command{
 	},
 }
 
-func aesSetAESInstance(c geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func aesSetAESInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs
@@ -98,33 +98,33 @@ func aesSetAESInstance(c geneos.Instance, params ...any) (resp *instance.Respons
 		panic("wront type")
 	}
 
-	cf := c.Config()
-	path := instance.Shared(c, "keyfiles", crc)
+	cf := i.Config()
+	path := instance.Shared(i, "keyfiles", crc)
 
 	// roll old file
 	if !setCmdNoRoll {
 		p := cf.GetString("keyfile")
 		if p != "" {
 			if p == path {
-				resp.Line = fmt.Sprintf("%s: new and existing keyfile have same CRC. Not updating\n", c)
+				resp.Line = fmt.Sprintf("%s: new and existing keyfile have same CRC. Not updating\n", i)
 			} else {
 				cf.Set("keyfile", path)
 				cf.Set("prevkeyfile", p)
-				resp.Line = fmt.Sprintf("%s keyfile %s set, existing keyfile moved to prevkeyfile\n", c, params[0])
+				resp.Line = fmt.Sprintf("%s keyfile %s set, existing keyfile moved to prevkeyfile\n", i, params[0])
 			}
 		} else {
 			cf.Set("keyfile", path)
-			resp.Line = fmt.Sprintf("%s keyfile %s set\n", c, params[0])
+			resp.Line = fmt.Sprintf("%s keyfile %s set\n", i, params[0])
 		}
 	} else {
 		cf.Set("keyfile", path)
-		resp.Line = fmt.Sprintf("%s keyfile %s set\n", c, params[0])
+		resp.Line = fmt.Sprintf("%s keyfile %s set\n", i, params[0])
 	}
 
 	if cf.Type == "rc" {
-		resp.Err = instance.Migrate(c)
+		resp.Err = instance.Migrate(i)
 	} else {
-		resp.Err = instance.SaveConfig(c)
+		resp.Err = instance.SaveConfig(i)
 	}
 
 	return

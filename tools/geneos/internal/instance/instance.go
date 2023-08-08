@@ -55,21 +55,21 @@ type Instance struct {
 // IsA returns true if instance c has a type that is component of the
 // type name. If name is not a known component type then false is
 // returned without checking the instance.
-func IsA(c geneos.Instance, name string) bool {
+func IsA(i geneos.Instance, name string) bool {
 	ct := geneos.ParseComponent(name)
 	if ct == nil {
 		return false
 	}
-	return ct.IsA(c.Type().String())
+	return ct.IsA(i.Type().String())
 }
 
 // DisplayName returns the type, name and non-local host as a string
 // suitable for display.
-func DisplayName(c geneos.Instance) string {
-	if c.Host().IsLocal() {
-		return fmt.Sprintf("%s %q", c.Type(), c.Name())
+func DisplayName(i geneos.Instance) string {
+	if i.Host().IsLocal() {
+		return fmt.Sprintf("%s %q", i.Type(), i.Name())
 	}
-	return fmt.Sprintf("%s \"%s@%s\"", c.Type(), c.Name(), c.Host())
+	return fmt.Sprintf("%s \"%s@%s\"", i.Type(), i.Name(), i.Host())
 }
 
 // ReservedName returns true if name is a reserved word. Reserved names
@@ -112,44 +112,44 @@ func ValidName(name string) (ok bool) {
 }
 
 // LogFilePath returns the full path to the log file for the instance.
-func LogFilePath(c geneos.Instance) (logfile string) {
-	logdir := path.Clean(c.Config().GetString("logdir"))
+func LogFilePath(i geneos.Instance) (logfile string) {
+	logdir := path.Clean(i.Config().GetString("logdir"))
 	switch {
 	case logdir == "":
-		logfile = c.Home()
+		logfile = i.Home()
 	case filepath.IsAbs(logdir):
 		logfile = logdir
 	default:
-		logfile = path.Join(c.Home(), logdir)
+		logfile = path.Join(i.Home(), logdir)
 	}
-	logfile = path.Join(logfile, c.Config().GetString("logfile"))
+	logfile = path.Join(logfile, i.Config().GetString("logfile"))
 	return
 }
 
 // Signal sends the signal to the instance
-func Signal(c geneos.Instance, signal syscall.Signal) (err error) {
-	pid, err := GetPID(c)
+func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
+	pid, err := GetPID(i)
 	if err != nil {
 		return os.ErrProcessDone
 	}
 
-	if err = c.Host().Signal(pid, signal); err != nil {
+	if err = i.Host().Signal(pid, signal); err != nil {
 		return
 	}
 
-	_, err = GetPID(c)
+	_, err = GetPID(i)
 	return
 }
 
 // Get return an instance of component ct, and loads the config. It is
 // an error if the config cannot be loaded.
-func Get(ct *geneos.Component, name string) (c geneos.Instance, err error) {
+func Get(ct *geneos.Component, name string) (i geneos.Instance, err error) {
 	if ct == nil || name == "" {
 		return nil, geneos.ErrInvalidArgs
 	}
 
-	c = ct.New(name)
-	if c == nil {
+	i = ct.New(name)
+	if i == nil {
 		// if no instance is created, check why
 		_, _, h := SplitName(name, geneos.LOCAL)
 		if h == geneos.LOCAL && geneos.Root() == "" {
@@ -159,15 +159,15 @@ func Get(ct *geneos.Component, name string) (c geneos.Instance, err error) {
 		err = geneos.ErrInvalidArgs
 		return
 	}
-	err = c.Load()
+	err = i.Load()
 	return
 }
 
 // GetAll returns a slice of instances for a given component type on remote h
-func GetAll(h *geneos.Host, ct *geneos.Component) (confs []geneos.Instance) {
+func GetAll(h *geneos.Host, ct *geneos.Component) (instances []geneos.Instance) {
 	if ct == nil {
 		for _, c := range geneos.RealComponents() {
-			confs = append(confs, GetAll(h, c)...)
+			instances = append(instances, GetAll(h, c)...)
 		}
 		return
 	}
@@ -176,7 +176,7 @@ func GetAll(h *geneos.Host, ct *geneos.Component) (confs []geneos.Instance) {
 		if err != nil {
 			continue
 		}
-		confs = append(confs, i)
+		instances = append(instances, i)
 	}
 
 	return
@@ -184,14 +184,14 @@ func GetAll(h *geneos.Host, ct *geneos.Component) (confs []geneos.Instance) {
 
 // ByName looks for exactly one matching instance across types and hosts
 // returns Invalid Args if zero of more than 1 match
-func ByName(h *geneos.Host, ct *geneos.Component, name string) (instances geneos.Instance, err error) {
+func ByName(h *geneos.Host, ct *geneos.Component, name string) (i geneos.Instance, err error) {
 	list := ByNameAll(h, ct, name)
 	if len(list) == 0 {
 		err = os.ErrNotExist
 		return
 	}
 	if len(list) == 1 {
-		instances = list[0]
+		i = list[0]
 		return
 	}
 	err = geneos.ErrInvalidArgs
@@ -302,10 +302,10 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 	ch := make(chan *Response, len(instances))
 	for _, c := range instances {
 		wg.Add(1)
-		go func(c geneos.Instance) {
+		go func(i geneos.Instance) {
 			defer wg.Done()
 
-			resp := f(c, values...)
+			resp := f(i, values...)
 			resp.Finish = time.Now()
 			ch <- resp
 		}(c)
@@ -400,14 +400,14 @@ func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name 
 
 // Disable the instance c. Does not try to stop a running instance and
 // returns an error if it is running.
-func Disable(c geneos.Instance) (err error) {
-	if IsRunning(c) {
-		return fmt.Errorf("instance %s running", c)
+func Disable(i geneos.Instance) (err error) {
+	if IsRunning(i) {
+		return fmt.Errorf("instance %s running", i)
 	}
 
-	disablePath := ComponentFilepath(c, geneos.DisableExtension)
+	disablePath := ComponentFilepath(i, geneos.DisableExtension)
 
-	h := c.Host()
+	h := i.Host()
 
 	f, err := h.Create(disablePath, 0664)
 	if err != nil {
@@ -418,12 +418,12 @@ func Disable(c geneos.Instance) (err error) {
 }
 
 // Enable removes the disabled flag, if any,m from instance c.
-func Enable(c geneos.Instance) (err error) {
-	disableFile := ComponentFilepath(c, geneos.DisableExtension)
-	if _, err = c.Host().Stat(disableFile); err != nil {
+func Enable(i geneos.Instance) (err error) {
+	disableFile := ComponentFilepath(i, geneos.DisableExtension)
+	if _, err = i.Host().Stat(disableFile); err != nil {
 		return nil
 	}
-	return c.Host().Remove(disableFile)
+	return i.Host().Remove(disableFile)
 }
 
 type OpenFiles struct {
@@ -437,14 +437,14 @@ type OpenFiles struct {
 // (InstanceProcFiles) for all open, real, files for the process running
 // as the instance. All paths that are not absolute paths are ignored.
 // An empty map is returned if the process cannot be found.
-func Files(c geneos.Instance) (openfiles map[int]OpenFiles) {
-	pid, err := GetPID(c)
+func Files(i geneos.Instance) (openfiles map[int]OpenFiles) {
+	pid, err := GetPID(i)
 	if err != nil {
 		return
 	}
 
 	file := fmt.Sprintf("/proc/%d/fd", pid)
-	fds, err := c.Host().ReadDir(file)
+	fds, err := i.Host().ReadDir(file)
 	if err != nil {
 		return
 	}
@@ -453,7 +453,7 @@ func Files(c geneos.Instance) (openfiles map[int]OpenFiles) {
 
 	for _, ent := range fds {
 		fd := ent.Name()
-		dest, err := c.Host().Readlink(path.Join(file, fd))
+		dest, err := i.Host().Readlink(path.Join(file, fd))
 		if err != nil {
 			continue
 		}
@@ -463,12 +463,12 @@ func Files(c geneos.Instance) (openfiles map[int]OpenFiles) {
 		n, _ := strconv.Atoi(fd)
 
 		fdPath := path.Join(file, fd)
-		fdMode, err := c.Host().Lstat(fdPath)
+		fdMode, err := i.Host().Lstat(fdPath)
 		if err != nil {
 			continue
 		}
 
-		s, err := c.Host().Stat(dest)
+		s, err := i.Host().Stat(dest)
 		if err != nil {
 			continue
 		}

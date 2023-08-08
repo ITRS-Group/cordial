@@ -36,39 +36,39 @@ import (
 )
 
 // IsDisabled returns true if the instance c is disabled.
-func IsDisabled(c geneos.Instance) bool {
-	d := ComponentFilepath(c, geneos.DisableExtension)
-	if f, err := c.Host().Stat(d); err == nil && f.Mode().IsRegular() {
+func IsDisabled(i geneos.Instance) bool {
+	d := ComponentFilepath(i, geneos.DisableExtension)
+	if f, err := i.Host().Stat(d); err == nil && f.Mode().IsRegular() {
 		return true
 	}
 	return false
 }
 
 // IsProtected returns true if instance c is marked protected
-func IsProtected(c geneos.Instance) bool {
-	return c.Config().GetBool("protected")
+func IsProtected(i geneos.Instance) bool {
+	return i.Config().GetBool("protected")
 }
 
 // IsRunning returns true if the instance is running
-func IsRunning(c geneos.Instance) bool {
-	_, err := GetPID(c)
+func IsRunning(i geneos.Instance) bool {
+	_, err := GetPID(i)
 	return err != os.ErrProcessDone
 }
 
 // IsAutoStart returns true is the instance is set to autostart
-func IsAutoStart(c geneos.Instance) bool {
-	return c.Config().GetBool("autostart")
+func IsAutoStart(i geneos.Instance) bool {
+	return i.Config().GetBool("autostart")
 }
 
 // BaseVersion returns the absolute path of the base package directory
 // for the instance c.
-func BaseVersion(c geneos.Instance) (dir string) {
-	t := c.Type().String()
-	if c.Type().ParentType != nil && len(c.Type().RelatedTypes) > 0 {
-		t = c.Type().ParentType.String()
+func BaseVersion(i geneos.Instance) (dir string) {
+	t := i.Type().String()
+	if i.Type().ParentType != nil && len(i.Type().RelatedTypes) > 0 {
+		t = i.Type().ParentType.String()
 	}
-	pkgtype := c.Config().GetString("pkgtype", config.Default(t))
-	return c.Host().PathTo("packages", pkgtype, c.Config().GetString("version"))
+	pkgtype := i.Config().GetString("pkgtype", config.Default(t))
+	return i.Host().PathTo("packages", pkgtype, i.Config().GetString("version"))
 }
 
 // Version returns the base package name, the underlying package version
@@ -78,17 +78,17 @@ func BaseVersion(c geneos.Instance) (dir string) {
 // and err set to syscall.ELOOP to prevent infinite loops. If the
 // instance is not running or the executable path cannot be determined
 // then actual will be returned as "unknown".
-func Version(c geneos.Instance) (base string, version string, err error) {
-	cf := c.Config()
+func Version(i geneos.Instance) (base string, version string, err error) {
+	cf := i.Config()
 	base = cf.GetString("version")
-	t := c.Type().String()
-	if c.Type().ParentType != nil && len(c.Type().RelatedTypes) > 0 {
-		t = c.Type().ParentType.String()
+	t := i.Type().String()
+	if i.Type().ParentType != nil && len(i.Type().RelatedTypes) > 0 {
+		t = i.Type().ParentType.String()
 	}
 	pkgtype := cf.GetString("pkgtype", config.Default(t))
 	ct := geneos.ParseComponent(pkgtype)
 
-	version, err = geneos.CurrentVersion(c.Host(), ct, cf.GetString("version"))
+	version, err = geneos.CurrentVersion(i.Host(), ct, cf.GetString("version"))
 	return
 }
 
@@ -99,31 +99,31 @@ func Version(c geneos.Instance) (base string, version string, err error) {
 // and err set to syscall.ELOOP to prevent infinite loops. If the
 // instance is not running or the executable path cannot be determined
 // then actual will be returned as "unknown".
-func LiveVersion(c geneos.Instance, pid int) (base string, version string, actual string, err error) {
+func LiveVersion(i geneos.Instance, pid int) (base string, version string, actual string, err error) {
 	actual = "unknown"
-	cf := c.Config()
+	cf := i.Config()
 	base = cf.GetString("version")
 
-	t := c.Type().String()
-	if c.Type().RelatedTypes != nil && c.Type().ParentType != nil {
-		t = c.Type().ParentType.String()
+	t := i.Type().String()
+	if i.Type().RelatedTypes != nil && i.Type().ParentType != nil {
+		t = i.Type().ParentType.String()
 	}
 	pkgtype := cf.GetString("pkgtype", config.Default(t))
 	ct := geneos.ParseComponent(pkgtype)
 
-	version, err = geneos.CurrentVersion(c.Host(), ct, cf.GetString("version"))
+	version, err = geneos.CurrentVersion(i.Host(), ct, cf.GetString("version"))
 	if err != nil {
 		return
 	}
 
 	// This is the path on the target host, and only linux is supported anyway
-	actual, err = c.Host().Readlink(fmt.Sprintf("/proc/%d/exe", pid))
+	actual, err = i.Host().Readlink(fmt.Sprintf("/proc/%d/exe", pid))
 	if err != nil {
 		actual = "unknown"
 		return
 	}
 	log.Debug().Msgf("actual=%s pkgtype=%s", actual, pkgtype)
-	actual = strings.TrimPrefix(actual, c.Host().PathTo("packages", pkgtype)+"/")
+	actual = strings.TrimPrefix(actual, i.Host().PathTo("packages", pkgtype)+"/")
 	if strings.Contains(actual, "/") {
 		actual = actual[:strings.Index(actual, "/")]
 	}
@@ -136,8 +136,8 @@ func LiveVersion(c geneos.Instance, pid int) (base string, version string, actua
 // AtLeastVersion returns true if the installed version for instance c
 // is version or greater. If the version of the instance is somehow
 // unparseable then this returns false.
-func AtLeastVersion(c geneos.Instance, version string) bool {
-	_, iv, err := Version(c)
+func AtLeastVersion(i geneos.Instance, version string) bool {
+	_, iv, err := Version(i)
 	if err != nil {
 		return false
 	}
@@ -149,19 +149,19 @@ func AtLeastVersion(c geneos.Instance, version string) bool {
 //
 // The process is identified by checking the conventions used to start
 // Geneos processes.
-func GetPID(c geneos.Instance) (pid int, err error) {
-	return process.GetPID(c.Host(), c.Config().GetString("binary"), c.Type().GetPID, c, c.Name())
+func GetPID(i geneos.Instance) (pid int, err error) {
+	return process.GetPID(i.Host(), i.Config().GetString("binary"), i.Type().GetPID, i, i.Name())
 }
 
 // GetPIDInfo returns the PID of the process for the instance c along
 // with the owner uid and gid and the start time.
-func GetPIDInfo(c geneos.Instance) (pid int, uid int, gid int, mtime time.Time, err error) {
-	if pid, err = GetPID(c); err != nil {
+func GetPIDInfo(i geneos.Instance) (pid int, uid int, gid int, mtime time.Time, err error) {
+	if pid, err = GetPID(i); err != nil {
 		return
 	}
 
 	var st os.FileInfo
-	st, err = c.Host().Stat(fmt.Sprintf("/proc/%d", pid))
-	s := c.Host().GetFileOwner(st)
+	st, err = i.Host().Stat(fmt.Sprintf("/proc/%d", pid))
+	s := i.Host().GetFileOwner(st)
 	return pid, s.Uid, s.Gid, st.ModTime(), err
 }
