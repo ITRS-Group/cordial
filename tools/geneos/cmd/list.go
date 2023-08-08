@@ -49,9 +49,6 @@ type listCmdType struct {
 
 var listCmdJSON, listCmdCSV, listCmdIndent bool
 
-var listTabWriter *tabwriter.Writer
-var listCSVWriter *csv.Writer
-
 func init() {
 	GeneosCmd.AddCommand(listCmd)
 
@@ -82,11 +79,11 @@ var listCmd = &cobra.Command{
 		case listCmdJSON, listCmdIndent:
 			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceJSON).Write(os.Stdout, instance.WriterIndent(listCmdIndent))
 		case listCmdCSV:
-			listCSVWriter = csv.NewWriter(os.Stdout)
+			listCSVWriter := csv.NewWriter(os.Stdout)
 			listCSVWriter.Write([]string{"Type", "Name", "Host", "Disabled", "Protected", "AutoStart", "Port", "Version", "Home"})
 			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV).Write(listCSVWriter)
 		default:
-			listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+			listTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(listTabWriter, "Type\tNames\tHost\tFlag\tPort\tVersion\tHome\n")
 			instance.Do(geneos.GetHost(Hostname), ct, names, listInstancePlain).Write(listTabWriter)
 		}
