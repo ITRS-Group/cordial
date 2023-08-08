@@ -72,10 +72,10 @@ type SetConfigValues struct {
 // SetInstanceValues applies the settings in values to instance c by
 // iterating through the fields and calling the appropriate helper
 // function. SecureEnvs overwrite any set by Envs earlier.
-func SetInstanceValues(c geneos.Instance, set SetConfigValues, keyfile config.KeyFile) (err error) {
+func SetInstanceValues(i geneos.Instance, set SetConfigValues, keyfile config.KeyFile) (err error) {
 	var secrets []string
 
-	cf := c.Config()
+	cf := i.Config()
 
 	// only bother with keyfile if we need it later?
 	if len(set.SecureEnvs) > 0 || len(set.SecureParams) > 0 {
@@ -84,7 +84,7 @@ func SetInstanceValues(c geneos.Instance, set SetConfigValues, keyfile config.Ke
 		}
 
 		if keyfile == "" {
-			return fmt.Errorf("%s: no keyfile", c)
+			return fmt.Errorf("%s: no keyfile", i)
 		}
 	}
 
@@ -101,11 +101,11 @@ func SetInstanceValues(c geneos.Instance, set SetConfigValues, keyfile config.Ke
 	}
 	cf.SetKeyValues(secrets...)
 
-	setSlice(c, set.Attributes, "attributes", func(a string) string {
+	setSlice(i, set.Attributes, "attributes", func(a string) string {
 		return strings.SplitN(a, "=", 2)[0]
 	})
 
-	setSlice(c, set.Envs, "env", func(a string) string {
+	setSlice(i, set.Envs, "env", func(a string) string {
 		return strings.SplitN(a, "=", 2)[0]
 	})
 
@@ -113,29 +113,29 @@ func SetInstanceValues(c geneos.Instance, set SetConfigValues, keyfile config.Ke
 	if err != nil {
 		return
 	}
-	setSlice(c, secrets, "env", func(a string) string {
+	setSlice(i, secrets, "env", func(a string) string {
 		return strings.SplitN(a, "=", 2)[0]
 	})
 
-	setSlice(c, set.Types, "types", func(a string) string {
+	setSlice(i, set.Types, "types", func(a string) string {
 		return a
 	})
 
-	setMap(c, set.Gateways, "gateways")
-	setMap(c, set.Includes, "includes")
-	setMap(c, set.Variables, "variables")
+	setMap(i, set.Gateways, "gateways")
+	setMap(i, set.Includes, "includes")
+	setMap(i, set.Variables, "variables")
 
 	return
 }
 
 // setMap sets the values in items, which is a map of string to
 // anything, in instance c's setting value setting
-func setMap[V any](c geneos.Instance, items map[string]V, setting string) {
-	s := c.Config().GetStringMap(setting)
+func setMap[V any](i geneos.Instance, items map[string]V, setting string) {
+	s := i.Config().GetStringMap(setting)
 	for k, v := range items {
 		s[k] = v
 	}
-	c.Config().Set(setting, s)
+	i.Config().Set(setting, s)
 }
 
 // setEncoded takes a slice of SecureValue.
@@ -167,8 +167,8 @@ func setEncoded(values SecureValues, keyfile config.KeyFile) (params []string, e
 
 // setSlice sets items view merging in the instance configuration key
 // setting. Anything with the key returned by the key function is overwritten.
-func setSlice(c geneos.Instance, items []string, setting string, key func(string) string) (changed bool) {
-	cf := c.Config()
+func setSlice(i geneos.Instance, items []string, setting string, key func(string) string) (changed bool) {
+	cf := i.Config()
 
 	if len(items) == 0 {
 		return
@@ -455,32 +455,32 @@ type UnsetConfigValues struct {
 }
 
 // XXX abstract this for a general case
-func UnsetInstanceValues(c geneos.Instance, unset UnsetConfigValues) (changed bool) {
-	if unsetMap(c, "gateways", unset.Gateways) {
+func UnsetInstanceValues(i geneos.Instance, unset UnsetConfigValues) (changed bool) {
+	if unsetMap(i, "gateways", unset.Gateways) {
 		changed = true
 	}
 
-	if unsetMap(c, "includes", unset.Includes) {
+	if unsetMap(i, "includes", unset.Includes) {
 		changed = true
 	}
 
-	if unsetMapHex(c, "variables", unset.Variables) {
+	if unsetMapHex(i, "variables", unset.Variables) {
 		changed = true
 	}
 
-	if unsetSlice(c, "attributes", unset.Attributes, func(a, b string) bool {
+	if unsetSlice(i, "attributes", unset.Attributes, func(a, b string) bool {
 		return strings.HasPrefix(a, b+"=")
 	}) {
 		changed = true
 	}
 
-	if unsetSlice(c, "env", unset.Envs, func(a, b string) bool {
+	if unsetSlice(i, "env", unset.Envs, func(a, b string) bool {
 		return strings.HasPrefix(a, b+"=")
 	}) {
 		changed = true
 	}
 
-	if unsetSlice(c, "types", unset.Types, func(a, b string) bool {
+	if unsetSlice(i, "types", unset.Types, func(a, b string) bool {
 		return a == b
 	}) {
 		changed = true
@@ -489,12 +489,12 @@ func UnsetInstanceValues(c geneos.Instance, unset UnsetConfigValues) (changed bo
 	return
 }
 
-func unsetMap(c geneos.Instance, key string, items UnsetValues) (changed bool) {
-	cf := c.Config()
+func unsetMap(i geneos.Instance, key string, items UnsetValues) (changed bool) {
+	cf := i.Config()
 
 	x := cf.GetStringMap(key)
 	for _, k := range items {
-		DeleteSettingFromMap(c, x, k)
+		DeleteSettingFromMap(i, x, k)
 		changed = true
 	}
 	if changed {
@@ -503,15 +503,15 @@ func unsetMap(c geneos.Instance, key string, items UnsetValues) (changed bool) {
 	return
 }
 
-func unsetMapHex(c geneos.Instance, key string, items UnsetVars) (changed bool) {
-	cf := c.Config()
+func unsetMapHex(i geneos.Instance, key string, items UnsetVars) (changed bool) {
+	cf := i.Config()
 
 	x := cf.GetStringMap(key)
 	if key == "variables" {
 		convertVars(x)
 	}
 	for _, k := range items {
-		DeleteSettingFromMap(c, x, k)
+		DeleteSettingFromMap(i, x, k)
 		changed = true
 	}
 	if changed {
@@ -520,8 +520,8 @@ func unsetMapHex(c geneos.Instance, key string, items UnsetVars) (changed bool) 
 	return
 }
 
-func unsetSlice(c geneos.Instance, key string, items []string, cmp func(string, string) bool) (changed bool) {
-	cf := c.Config()
+func unsetSlice(i geneos.Instance, key string, items []string, cmp func(string, string) bool) (changed bool) {
+	cf := i.Config()
 
 	newvals := []string{}
 	vals := cf.GetStringSlice(key)

@@ -41,49 +41,49 @@ import (
 // stopped and the entries in FullClean are removed. Any instances
 // stopped are started up, but any that were already stopped will be
 // left stopped.
-func Clean(c geneos.Instance, full bool) (err error) {
+func Clean(i geneos.Instance, full bool) (err error) {
 	var stopped bool
 
-	cleanlist := config.GetString(c.Type().CleanList)
-	purgelist := config.GetString(c.Type().PurgeList)
+	cleanlist := config.GetString(i.Type().CleanList)
+	purgelist := config.GetString(i.Type().PurgeList)
 
 	if !full {
 		if cleanlist != "" {
-			if err = RemovePaths(c, cleanlist); err == nil {
-				log.Debug().Msgf("%s cleaned", c)
+			if err = RemovePaths(i, cleanlist); err == nil {
+				log.Debug().Msgf("%s cleaned", i)
 			}
 		}
 		return
 	}
 
-	if !IsRunning(c) {
+	if !IsRunning(i) {
 		stopped = false
 		// stop failed?
-	} else if err = Stop(c, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
+	} else if err = Stop(i, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
 		return
 	} else {
 		stopped = true
 	}
 
 	if cleanlist != "" {
-		if err = RemovePaths(c, cleanlist); err != nil {
+		if err = RemovePaths(i, cleanlist); err != nil {
 			return
 		}
 	}
 	if purgelist != "" {
-		if err = RemovePaths(c, purgelist); err != nil {
+		if err = RemovePaths(i, purgelist); err != nil {
 			return
 		}
 	}
-	log.Debug().Msgf("%s fully cleaned", c)
+	log.Debug().Msgf("%s fully cleaned", i)
 	if stopped {
-		err = Start(c)
+		err = Start(i)
 	}
 	return
 }
 
 // RemovePaths removes all files and directories in paths, each file or directory is separated by ListSeperator
-func RemovePaths(c geneos.Instance, paths string) (err error) {
+func RemovePaths(i geneos.Instance, paths string) (err error) {
 	list := filepath.SplitList(paths)
 	for _, p := range list {
 		// clean path, error on absolute or parent paths, like 'import'
@@ -92,16 +92,16 @@ func RemovePaths(c geneos.Instance, paths string) (err error) {
 			return fmt.Errorf("%s %w", p, err)
 		}
 		// glob here
-		m, err := c.Host().Glob(path.Join(c.Home(), p))
+		m, err := i.Host().Glob(path.Join(i.Home(), p))
 		if err != nil {
 			return err
 		}
 		for _, f := range m {
-			if err = c.Host().RemoveAll(f); err != nil {
+			if err = i.Host().RemoveAll(f); err != nil {
 				log.Error().Err(err).Msg("")
 				continue
 			}
-			fmt.Printf("removed %s\n", c.Host().Path(f))
+			fmt.Printf("removed %s\n", i.Host().Path(f))
 		}
 	}
 	return

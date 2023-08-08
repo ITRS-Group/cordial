@@ -110,13 +110,13 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 	}
 }
 
-func psInstancePlain(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
-	if instance.IsDisabled(c) {
+	if instance.IsDisabled(i) {
 		return
 	}
-	pid, uid, gid, mtime, err := instance.GetPIDInfo(c)
+	pid, uid, gid, mtime, err := instance.GetPIDInfo(i)
 	if err != nil {
 		return
 	}
@@ -135,23 +135,23 @@ func psInstancePlain(c geneos.Instance, _ ...any) (resp *instance.Response) {
 			groupname = g.Name
 		}
 	}
-	base, underlying, actual, _ := instance.LiveVersion(c, pid)
-	if pkgtype := c.Config().GetString("pkgtype"); pkgtype != "" {
+	base, underlying, actual, _ := instance.LiveVersion(i, pid)
+	if pkgtype := i.Config().GetString("pkgtype"); pkgtype != "" {
 		base = path.Join(pkgtype, base)
 	}
 
 	var portlist string
-	if c.Host().IsLocal() || psCmdLong {
-		portlist = strings.Join(instance.ListeningPortsStrings(c), " ")
+	if i.Host().IsLocal() || psCmdLong {
+		portlist = strings.Join(instance.ListeningPortsStrings(i), " ")
 	}
-	if !c.Host().IsLocal() && portlist == "" {
+	if !i.Host().IsLocal() && portlist == "" {
 		portlist = "..."
 	}
 	if underlying != actual {
 		base += "*"
 	}
 
-	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s:%s\t%s", c.Type(), c.Name(), c.Host(), pid, portlist, username, groupname, mtime.Local().Format(time.RFC3339), base, actual, c.Home())
+	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s:%s\t%s", i.Type(), i.Name(), i.Host(), pid, portlist, username, groupname, mtime.Local().Format(time.RFC3339), base, actual, i.Home())
 
 	// if psCmdShowFiles {
 	// 	listOpenFiles(c)
@@ -159,13 +159,13 @@ func psInstancePlain(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	return
 }
 
-func psInstanceCSV(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
-	if instance.IsDisabled(c) {
+	if instance.IsDisabled(i) {
 		return
 	}
-	pid, uid, gid, mtime, err := instance.GetPIDInfo(c)
+	pid, uid, gid, mtime, err := instance.GetPIDInfo(i)
 	if err != nil {
 		err = nil // skip
 		return
@@ -186,26 +186,26 @@ func psInstanceCSV(c geneos.Instance, _ ...any) (resp *instance.Response) {
 		}
 	}
 	ports := []string{}
-	if c.Host().IsLocal() || psCmdLong {
-		ports = instance.ListeningPortsStrings(c)
+	if i.Host().IsLocal() || psCmdLong {
+		ports = instance.ListeningPortsStrings(i)
 	}
 	portlist := strings.Join(ports, ":")
-	base, underlying, actual, _ := instance.LiveVersion(c, pid)
+	base, underlying, actual, _ := instance.LiveVersion(i, pid)
 	if underlying != actual {
 		base += "*"
 	}
-	resp.Rows = append(resp.Rows, []string{c.Type().String(), c.Name(), c.Host().String(), fmt.Sprint(pid), portlist, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), c.Home()})
+	resp.Rows = append(resp.Rows, []string{i.Type().String(), i.Name(), i.Host().String(), fmt.Sprint(pid), portlist, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), i.Home()})
 
 	return
 }
 
-func psInstanceJSON(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
-	if instance.IsDisabled(c) {
+	if instance.IsDisabled(i) {
 		return
 	}
-	pid, uid, gid, mtime, err := instance.GetPIDInfo(c)
+	pid, uid, gid, mtime, err := instance.GetPIDInfo(i)
 	if err != nil {
 		// skip errors for now
 		return
@@ -226,25 +226,25 @@ func psInstanceJSON(c geneos.Instance, _ ...any) (resp *instance.Response) {
 		}
 	}
 	ports := []int{}
-	if c.Host().IsLocal() || psCmdLong {
-		ports = instance.ListeningPorts(c)
+	if i.Host().IsLocal() || psCmdLong {
+		ports = instance.ListeningPorts(i)
 	}
-	base, underlying, actual, _ := instance.LiveVersion(c, pid)
+	base, underlying, actual, _ := instance.LiveVersion(i, pid)
 	if underlying != actual {
 		base += "*"
 	}
 
 	resp.Value = psType{
-		Type:      c.Type().String(),
-		Name:      c.Name(),
-		Host:      c.Host().String(),
+		Type:      i.Type().String(),
+		Name:      i.Name(),
+		Host:      i.Host().String(),
 		PID:       fmt.Sprint(pid),
 		Ports:     ports,
 		User:      username,
 		Group:     groupname,
 		Starttime: mtime.Local().Format(time.RFC3339),
 		Version:   fmt.Sprintf("%s:%s", base, actual),
-		Home:      c.Home(),
+		Home:      i.Home(),
 	}
 
 	return

@@ -65,34 +65,34 @@ var deleteCmd = &cobra.Command{
 	},
 }
 
-func deleteInstance(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func deleteInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
-	if instance.IsProtected(c) {
+	if instance.IsProtected(i) {
 		resp.Err = geneos.ErrProtected
 		return
 	}
 
 	if deleteCmdStop {
-		if c.Type().RealComponent {
-			if err := instance.Stop(c, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
+		if i.Type().RealComponent {
+			if err := instance.Stop(i, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
 				resp.Err = err
 				return
 			}
 		}
 	}
 
-	if !instance.IsRunning(c) || deleteCmdForce {
-		if instance.IsRunning(c) {
-			if resp.Err = instance.Stop(c, true, false); resp.Err != nil {
+	if !instance.IsRunning(i) || deleteCmdForce {
+		if instance.IsRunning(i) {
+			if resp.Err = instance.Stop(i, true, false); resp.Err != nil {
 				return
 			}
 		}
-		if resp.Err = c.Host().RemoveAll(c.Home()); resp.Err != nil {
+		if resp.Err = i.Host().RemoveAll(i.Home()); resp.Err != nil {
 			return
 		}
-		resp.Completed = append(resp.Completed, fmt.Sprintf("deleted %s:%s", c.Host().String(), c.Home()))
-		c.Unload()
+		resp.Completed = append(resp.Completed, fmt.Sprintf("deleted %s:%s", i.Host().String(), i.Home()))
+		i.Unload()
 		return
 	}
 

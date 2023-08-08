@@ -63,12 +63,12 @@ var renewCmd = &cobra.Command{
 }
 
 // renew an instance certificate, use private key if it exists
-func renewInstanceCert(c geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(c)
+func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
 
 	hostname, _ := os.Hostname()
-	if !c.Host().IsLocal() {
-		hostname = c.Host().GetString("hostname")
+	if !i.Host().IsLocal() {
+		hostname = i.Host().GetString("hostname")
 	}
 
 	serial, err := rand.Prime(rand.Reader, 64)
@@ -79,7 +79,7 @@ func renewInstanceCert(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	template := x509.Certificate{
 		SerialNumber: serial,
 		Subject: pkix.Name{
-			CommonName: fmt.Sprintf("geneos %s %s", c.Type(), c.Name()),
+			CommonName: fmt.Sprintf("geneos %s %s", i.Type(), i.Name()),
 		},
 		NotBefore:      time.Now().Add(-60 * time.Second),
 		NotAfter:       expires,
@@ -108,34 +108,34 @@ func renewInstanceCert(c geneos.Instance, _ ...any) (resp *instance.Response) {
 	}
 
 	// read existing key or create a new one
-	existingKey, _ := instance.ReadKey(c)
+	existingKey, _ := instance.ReadKey(i)
 	cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey, existingKey)
 	resp.Err = err
 	if resp.Err != nil {
 		return
 	}
 
-	if resp.Err = instance.WriteCert(c, cert); resp.Err != nil {
+	if resp.Err = instance.WriteCert(i, cert); resp.Err != nil {
 		return
 	}
 
 	if existingKey == nil {
-		if resp.Err = instance.WriteKey(c, key); resp.Err != nil {
+		if resp.Err = instance.WriteKey(i, key); resp.Err != nil {
 			return
 		}
 	}
 
-	chainfile := instance.PathOf(c, "certchain")
+	chainfile := instance.PathOf(i, "certchain")
 	if chainfile == "" {
-		chainfile = path.Join(c.Home(), "chain.pem")
-		c.Config().Set("certchain", chainfile)
+		chainfile = path.Join(i.Home(), "chain.pem")
+		i.Config().Set("certchain", chainfile)
 	}
 
-	if resp.Err = config.WriteCertChain(c.Host(), chainfile, signingCert, rootCert); resp.Err != nil {
+	if resp.Err = config.WriteCertChain(i.Host(), chainfile, signingCert, rootCert); resp.Err != nil {
 		return
 	}
 
-	if resp.Err = instance.SaveConfig(c); resp.Err != nil {
+	if resp.Err = instance.SaveConfig(i); resp.Err != nil {
 		return
 	}
 

@@ -77,22 +77,22 @@ var fnmap = template.FuncMap{
 // ExecuteTemplate loads templates from TYPE/templates/[tmpl]* and parse them,
 // using the instance data write it out to a single file. If tmpl is
 // empty, load all files
-func ExecuteTemplate(c geneos.Instance, p string, name string, defaultTemplate []byte) (err error) {
+func ExecuteTemplate(i geneos.Instance, p string, name string, defaultTemplate []byte) (err error) {
 	var out io.WriteCloser
 	// var t *template.Template
 
-	cf := c.Config()
+	cf := i.Config()
 
 	t := template.New("").Funcs(fnmap).Option("missingkey=zero")
-	if t, err = t.ParseGlob(c.Host().PathTo(c.Type(), "templates", "*.gotmpl")); err != nil {
+	if t, err = t.ParseGlob(i.Host().PathTo(i.Type(), "templates", "*.gotmpl")); err != nil {
 		t = template.New(name).Funcs(fnmap).Option("missingkey=zero")
 		// if there are no templates, use internal as a fallback
-		log.Warn().Msgf("No templates found in %s, using internal defaults", c.Host().PathTo(c.Type(), "templates"))
+		log.Warn().Msgf("No templates found in %s, using internal defaults", i.Host().PathTo(i.Type(), "templates"))
 		t = template.Must(t.Parse(string(defaultTemplate)))
 	}
 
-	if out, err = c.Host().Create(p, 0660); err != nil {
-		log.Warn().Msgf("Cannot create configuration file for %s %s", c, p)
+	if out, err = i.Host().Create(p, 0660); err != nil {
+		log.Warn().Msgf("Cannot create configuration file for %s %s", i, p)
 		return err
 	}
 	defer out.Close()
@@ -100,11 +100,11 @@ func ExecuteTemplate(c geneos.Instance, p string, name string, defaultTemplate [
 	// viper insists this is a float64, manually override
 	m["port"] = uint16(cf.GetUint("port"))
 	// set high level defaults
-	m["root"] = c.Host().GetString("geneos")
-	m["name"] = c.Name()
+	m["root"] = i.Host().GetString("geneos")
+	m["name"] = i.Name()
 	// remove aliases
 	for _, k := range cf.AllKeys() {
-		if _, ok := c.Type().LegacyParameters[k]; ok {
+		if _, ok := i.Type().LegacyParameters[k]; ok {
 			delete(m, k)
 		}
 	}
@@ -124,14 +124,14 @@ func ExecuteTemplate(c geneos.Instance, p string, name string, defaultTemplate [
 // support cache?
 //
 // error check core values - e.g. Name
-func LoadConfig(c geneos.Instance) (err error) {
+func LoadConfig(i geneos.Instance) (err error) {
 	start := time.Now()
-	r := c.Host()
-	prefix := c.Type().LegacyPrefix
-	aliases := c.Type().LegacyParameters
+	r := i.Host()
+	prefix := i.Type().LegacyPrefix
+	aliases := i.Type().LegacyParameters
 
-	home := Home(c)
-	cf, err := config.Load(c.Type().Name,
+	home := Home(i)
+	cf, err := config.Load(i.Type().Name,
 		config.Host(r),
 		config.FromDir(home),
 		config.UseDefaults(false),
@@ -139,17 +139,17 @@ func LoadConfig(c geneos.Instance) (err error) {
 	)
 	// override the home from the config file and use the directory the
 	// config was found in
-	c.Config().Set("home", home)
+	i.Config().Set("home", home)
 
 	if err != nil {
 		// log.Debug().Err(err).Msg("")
-		if err = cf.ReadRCConfig(r, ComponentFilepath(c, "rc"), prefix, aliases); err != nil {
+		if err = cf.ReadRCConfig(r, ComponentFilepath(i, "rc"), prefix, aliases); err != nil {
 			return
 		}
 	}
 
 	// not we have them, merge them into main instance config
-	c.Config().MergeConfigMap(cf.AllSettings())
+	i.Config().MergeConfigMap(cf.AllSettings())
 
 	// aliases have to be set AFTER loading from file (https://github.com/spf13/viper/issues/560)
 	for a, k := range aliases {
@@ -158,27 +158,27 @@ func LoadConfig(c geneos.Instance) (err error) {
 
 	if err != nil {
 		// generic error as no .json or .rc found
-		return fmt.Errorf("no configuration files for %s in %s: %w", c, c.Home(), os.ErrNotExist)
+		return fmt.Errorf("no configuration files for %s in %s: %w", i, i.Home(), os.ErrNotExist)
 	}
-	log.Debug().Msgf("config for %s from %s %q loaded in %.4fs", c, r.String(), cf.ConfigFileUsed(), time.Since(start).Seconds())
+	log.Debug().Msgf("config for %s from %s %q loaded in %.4fs", i, r.String(), cf.ConfigFileUsed(), time.Since(start).Seconds())
 	return
 }
 
 // SaveConfig writes the instance configuration to the standard file for
 // that instance
-func SaveConfig(c geneos.Instance) (err error) {
-	cf := c.Config()
+func SaveConfig(i geneos.Instance) (err error) {
+	cf := i.Config()
 
-	if err = cf.Save(c.Type().String(),
-		config.Host(c.Host()),
-		config.AddDirs(Home(c)),
-		config.SetAppName(c.Name()),
+	if err = cf.Save(i.Type().String(),
+		config.Host(i.Host()),
+		config.AddDirs(Home(i)),
+		config.SetAppName(i.Name()),
 	); err != nil {
 		return
 	}
 
 	// rebuild on every save, but skip errors from any components that do not support rebuilds
-	if err = c.Rebuild(false); err != nil && err == geneos.ErrNotSupported {
+	if err = i.Rebuild(false); err != nil && err == geneos.ErrNotSupported {
 		err = nil
 	}
 
@@ -189,13 +189,13 @@ func SaveConfig(c geneos.Instance) (err error) {
 // connections if the correct configuration values are set. These
 // command line options are common to all core Geneos components except
 // the gateway, which is special-cased
-func SetSecureArgs(c geneos.Instance) (args []string) {
-	files := Filepaths(c, "certificate", "privatekey", "certchain")
+func SetSecureArgs(i geneos.Instance) (args []string) {
+	files := Filepaths(i, "certificate", "privatekey", "certchain")
 	if len(files) == 0 {
 		return
 	}
 	if files[0] != "" {
-		if !c.Type().IsA("gateway", "san", "floating") {
+		if !i.Type().IsA("gateway", "san", "floating") {
 			args = append(args, "-secure")
 		}
 		args = append(args, "-ssl-certificate", files[0])
@@ -209,9 +209,9 @@ func SetSecureArgs(c geneos.Instance) (args []string) {
 		chainfile = files[2]
 	} else {
 		// promote old files that may exist
-		chainfile = config.PromoteFile(c.Host(), c.Host().PathTo("tls", geneos.ChainCertFile), c.Host().PathTo("tls", "chain.pem"))
+		chainfile = config.PromoteFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
 	}
-	s, err := c.Host().Stat(chainfile)
+	s, err := i.Host().Stat(chainfile)
 	if err == nil && !s.IsDir() {
 		args = append(args, "-ssl-certificate-chain", chainfile)
 	}
@@ -220,23 +220,23 @@ func SetSecureArgs(c geneos.Instance) (args []string) {
 
 // WriteConfigValues writes the given values to the configuration file for
 // instance c. It does not merge values with the existing configuration values.
-func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err error) {
+func WriteConfigValues(i geneos.Instance, values map[string]interface{}) (err error) {
 	// speculatively migrate the config, in case there is a legacy .rc
 	// file in place. Migrate() returns an error only for real errors
 	// and returns nil if there is no .rc file to migrate.
-	if err = Migrate(c); err != nil {
+	if err = Migrate(i); err != nil {
 		return
 	}
-	file := ComponentFilepath(c)
+	file := ComponentFilepath(i)
 	nv := config.New()
 	for k, v := range values {
 		// skip aliases
-		if _, ok := c.Type().LegacyParameters[k]; ok {
+		if _, ok := i.Type().LegacyParameters[k]; ok {
 			continue
 		}
 		nv.Set(k, v)
 	}
-	nv.SetFs(c.Host().GetFs())
+	nv.SetFs(i.Host().GetFs())
 	if err = nv.WriteConfigAs(file); err != nil {
 		return err
 	}
@@ -249,20 +249,20 @@ func WriteConfigValues(c geneos.Instance, values map[string]interface{}) (err er
 // and renames the .rc file to .rc.orig to allow Revert to work.
 //
 // Also now check if instance directory path has changed. If so move it.
-func Migrate(c geneos.Instance) (err error) {
-	cf := c.Config()
+func Migrate(i geneos.Instance) (err error) {
+	cf := i.Config()
 
 	// check if instance directory is up-to date
-	current := path.Dir(c.Home())
-	shouldbe := c.Type().Dir(c.Host())
+	current := path.Dir(i.Home())
+	shouldbe := i.Type().Dir(i.Host())
 	if current != shouldbe {
-		if err = c.Host().MkdirAll(shouldbe, 0775); err != nil {
+		if err = i.Host().MkdirAll(shouldbe, 0775); err != nil {
 			return
 		}
-		if err = c.Host().Rename(c.Home(), path.Join(shouldbe, c.Name())); err != nil {
+		if err = i.Host().Rename(i.Home(), path.Join(shouldbe, i.Name())); err != nil {
 			return
 		}
-		fmt.Printf("%s moved from %s to %s\n", c, current, shouldbe)
+		fmt.Printf("%s moved from %s to %s\n", i, current, shouldbe)
 	}
 
 	// only migrate if labelled as a .rc file
@@ -271,19 +271,19 @@ func Migrate(c geneos.Instance) (err error) {
 	}
 
 	// if no .rc, return
-	if _, err = c.Host().Stat(ComponentFilepath(c, "rc")); errors.Is(err, fs.ErrNotExist) {
+	if _, err = i.Host().Stat(ComponentFilepath(i, "rc")); errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}
 
 	// if new file exists, return
-	if _, err = c.Host().Stat(ComponentFilepath(c)); err == nil {
+	if _, err = i.Host().Stat(ComponentFilepath(i)); err == nil {
 		return nil
 	}
 
 	// remove type label before save
 	cf.Type = ""
 
-	if err = SaveConfig(c); err != nil {
+	if err = SaveConfig(i); err != nil {
 		// restore label on error
 		cf.Type = "rc"
 		log.Error().Err(err).Msg("failed to write new configuration file")
@@ -291,11 +291,11 @@ func Migrate(c geneos.Instance) (err error) {
 	}
 
 	// back-up .rc
-	if err = c.Host().Rename(ComponentFilepath(c, "rc"), ComponentFilepath(c, "rc", "orig")); err != nil {
+	if err = i.Host().Rename(ComponentFilepath(i, "rc"), ComponentFilepath(i, "rc", "orig")); err != nil {
 		log.Error().Err(err).Msg("failed to rename old config")
 	}
 
-	log.Debug().Msgf("migrated %s to JSON config", c)
+	log.Debug().Msgf("migrated %s to JSON config", i)
 	return
 }
 
@@ -306,15 +306,15 @@ var textJoinFuncs = template.FuncMap{"join": path.Join}
 // functions to iterate over the component specific instance
 // struct and set the defaults as defined in the 'defaults'
 // struct tags.
-func SetDefaults(c geneos.Instance, name string) (err error) {
-	cf := c.Config()
+func SetDefaults(i geneos.Instance, name string) (err error) {
+	cf := i.Config()
 	if cf == nil {
 		log.Error().Err(err).Msg("no config found")
 		return fmt.Errorf("no configuration initialised")
 	}
 
-	aliases := c.Type().LegacyParameters
-	root := c.Host().GetString("geneos")
+	aliases := i.Type().LegacyParameters
+	root := i.Host().GetString("geneos")
 	cf.SetDefault("name", name)
 
 	// add a bootstrap for 'root'
@@ -323,17 +323,17 @@ func SetDefaults(c geneos.Instance, name string) (err error) {
 	settings["root"] = root
 
 	// set bootstrap values used by templates
-	for _, s := range c.Type().Defaults {
+	for _, s := range i.Type().Defaults {
 		var b bytes.Buffer
 		p := strings.SplitN(s, "=", 2)
 		k, v := p[0], p[1]
 		t, err := template.New(k).Funcs(textJoinFuncs).Parse(v)
 		if err != nil {
-			log.Error().Err(err).Msgf("%s parse error: %s", c, v)
+			log.Error().Err(err).Msgf("%s parse error: %s", i, v)
 			return err
 		}
 		if err = t.Execute(&b, settings); err != nil {
-			log.Error().Msgf("%s cannot set defaults: %s", c, v)
+			log.Error().Msgf("%s cannot set defaults: %s", i, v)
 			return err
 		}
 		// if default is an alias, resolve it here
@@ -352,8 +352,8 @@ func SetDefaults(c geneos.Instance, name string) (err error) {
 
 // DeleteSettingFromMap removes key from the map from and if it is
 // registered as an alias it also removes the key that alias refers to.
-func DeleteSettingFromMap(c geneos.Instance, from map[string]interface{}, key string) {
-	if a, ok := c.Type().LegacyParameters[key]; ok {
+func DeleteSettingFromMap(i geneos.Instance, from map[string]interface{}, key string) {
+	if a, ok := i.Type().LegacyParameters[key]; ok {
 		// delete any setting this is an alias for, as well as the alias
 		delete(from, a)
 	}

@@ -35,8 +35,8 @@ import (
 // instance c with the extensions appended, joined with a ".". If no
 // extensions are given then the current configuration file type is
 // used, e.g. "json" or "yaml".
-func ComponentFilename(c geneos.Instance, extensions ...string) string {
-	parts := []string{c.Type().String()}
+func ComponentFilename(i geneos.Instance, extensions ...string) string {
+	parts := []string{i.Type().String()}
 	if len(extensions) > 0 {
 		parts = append(parts, extensions...)
 	} else {
@@ -60,16 +60,16 @@ func ComponentFilename(c geneos.Instance, extensions ...string) string {
 //	path := instance.ComponentPath(c)
 //
 // will return /path/to/netprobe/netprobe.json
-func ComponentFilepath(c geneos.Instance, extensions ...string) string {
-	return path.Join(c.Home(), ComponentFilename(c, extensions...))
+func ComponentFilepath(i geneos.Instance, extensions ...string) string {
+	return path.Join(i.Home(), ComponentFilename(i, extensions...))
 }
 
 // FileOf returns the basename of the file identified by the
 // configuration parameter name.
 //
 // If the parameter is unset or empty then an empty path is returned.
-func FileOf(c geneos.Instance, name string) (filename string) {
-	cf := c.Config()
+func FileOf(i geneos.Instance, name string) (filename string) {
+	cf := i.Config()
 
 	if cf == nil {
 		return
@@ -89,8 +89,8 @@ func FileOf(c geneos.Instance, name string) (filename string) {
 // useful on the host that instance c is on.
 //
 // If the parameter is unset or empty then an empty path is returned.
-func PathOf(c geneos.Instance, name string) string {
-	cf := c.Config()
+func PathOf(i geneos.Instance, name string) string {
+	cf := i.Config()
 
 	if cf == nil {
 		return ""
@@ -104,17 +104,17 @@ func PathOf(c geneos.Instance, name string) string {
 		return filename
 	}
 
-	return path.Join(c.Home(), filename)
+	return path.Join(i.Home(), filename)
 }
 
 // Abs returns an absolute path to file prepended with the instance
 // working directory if file is not already an absolute path.
-func Abs(c geneos.Instance, file string) (result string) {
+func Abs(i geneos.Instance, file string) (result string) {
 	result = path.Clean(file)
 	if filepath.IsAbs(result) {
 		return
 	}
-	return path.Join(c.Home(), result)
+	return path.Join(i.Home(), result)
 }
 
 // Filepaths returns the full paths to the files identified by the list
@@ -122,8 +122,8 @@ func Abs(c geneos.Instance, file string) (result string) {
 //
 // If the instance configuration is valid an empty slice is returned. If
 // a parameter is unset or empty then an empty path is returned.
-func Filepaths(c geneos.Instance, names ...string) (filenames []string) {
-	cf := c.Config()
+func Filepaths(i geneos.Instance, names ...string) (filenames []string) {
+	cf := i.Config()
 
 	if cf == nil {
 		return
@@ -135,7 +135,7 @@ func Filepaths(c geneos.Instance, names ...string) (filenames []string) {
 		if !cf.IsSet(name) {
 			continue
 		}
-		filenames = append(filenames, Abs(c, cf.GetString(name)))
+		filenames = append(filenames, Abs(i, cf.GetString(name)))
 	}
 	return
 }
@@ -164,26 +164,26 @@ func ConfigFileTypes() []string {
 //     legacy instances directory
 //
 // If no directory is found then a default built using PathTo() is returned
-func Home(c geneos.Instance) (home string) {
-	if c.Config() == nil {
+func Home(i geneos.Instance) (home string) {
+	if i.Config() == nil {
 		return ""
 	}
 
-	ct := c.Type()
-	h := c.Host()
+	ct := i.Type()
+	h := i.Host()
 
 	// can't use c.Home() as this function is called from there!
-	if c.Config().IsSet("home") {
-		home = c.Config().GetString("home")
+	if i.Config().IsSet("home") {
+		home = i.Config().GetString("home")
 		if d, err := h.Stat(home); err == nil && d.IsDir() {
 			return
 		}
 	}
 
 	// second, does the instance exist in the default instances parentDir?
-	parentDir := c.Type().Dir(h)
+	parentDir := i.Type().Dir(h)
 	if parentDir != "" {
-		home = path.Join(parentDir, c.Name())
+		home = path.Join(parentDir, i.Name())
 		if d, err := h.Stat(home); err == nil && d.IsDir() {
 			return
 		}
@@ -191,17 +191,17 @@ func Home(c geneos.Instance) (home string) {
 
 	// third, look in any "legacy" location, but only if parent type is
 	// non nil
-	if c.Type().ParentType != nil {
-		parentDir := h.PathTo(c.Type().String(), c.Type().String()+"s")
+	if i.Type().ParentType != nil {
+		parentDir := h.PathTo(i.Type().String(), i.Type().String()+"s")
 		if parentDir != "" {
-			home = path.Join(parentDir, c.Name())
+			home = path.Join(parentDir, i.Name())
 			if d, err := h.Stat(home); err == nil && d.IsDir() {
 				return
 			}
 		}
 	}
 
-	home = h.PathTo(ct, ct.String()+"s", c.Name())
+	home = h.PathTo(ct, ct.String()+"s", i.Name())
 	return
 }
 
@@ -209,9 +209,9 @@ func Home(c geneos.Instance) (home string) {
 // component type shared directory joined to any parts subs - the last
 // element can be a filename. If the instance is not loaded then "." is
 // returned for the current directory.
-func Shared(c geneos.Instance, subs ...interface{}) string {
-	if !c.Loaded() {
+func Shared(i geneos.Instance, subs ...interface{}) string {
+	if !i.Loaded() {
 		return "."
 	}
-	return c.Type().Shared(c.Host(), subs...)
+	return i.Type().Shared(i.Host(), subs...)
 }

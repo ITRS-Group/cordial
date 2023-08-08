@@ -33,17 +33,17 @@ import (
 )
 
 // listOpenFiles is a placeholder for functionality to come later
-func listOpenFiles(c geneos.Instance) {
+func listOpenFiles(i geneos.Instance) {
 
 	// list open files (test code)
 
-	instdir := c.Home()
-	files := instance.Files(c)
+	instdir := i.Home()
+	files := instance.Files(i)
 	fds := make([]int, len(files))
-	i := 0
+	j := 0
 	for f := range files {
-		fds[i] = f
-		i++
+		fds[j] = f
+		j++
 	}
 	sort.Ints(fds)
 	for _, n := range fds {

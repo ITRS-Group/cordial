@@ -32,42 +32,42 @@ import (
 )
 
 // Start runs the instance.
-func Start(c geneos.Instance) (err error) {
-	if IsRunning(c) {
+func Start(i geneos.Instance) (err error) {
+	if IsRunning(i) {
 		return geneos.ErrRunning
 	}
 
-	if IsDisabled(c) {
+	if IsDisabled(i) {
 		return geneos.ErrDisabled
 	}
 
 	// changing users is not supported
-	username := c.Host().Username()
-	instanceUsername := c.Config().GetString("user")
+	username := i.Host().Username()
+	instanceUsername := i.Config().GetString("user")
 
 	if instanceUsername != "" && username != instanceUsername {
-		return fmt.Errorf("%s is configured with a different user to the one trying to start it (instance user %q != %q (you))", c, instanceUsername, username)
+		return fmt.Errorf("%s is configured with a different user to the one trying to start it (instance user %q != %q (you))", i, instanceUsername, username)
 	}
 
-	binary := c.Config().GetString("program")
-	if _, err = c.Host().Stat(binary); err != nil {
+	binary := i.Config().GetString("program")
+	if _, err = i.Host().Stat(binary); err != nil {
 		return fmt.Errorf("%q %w", binary, err)
 	}
 
-	cmd, env, home := BuildCmd(c, false)
+	cmd, env, home := BuildCmd(i, false)
 	if cmd == nil {
 		return fmt.Errorf("BuildCmd() returned nil")
 	}
 
 	// set underlying user for child proc
-	errfile := ComponentFilepath(c, "txt")
+	errfile := ComponentFilepath(i, "txt")
 
-	c.Host().Start(cmd, env, home, errfile)
-	pid, err := GetPID(c)
+	i.Host().Start(cmd, env, home, errfile)
+	pid, err := GetPID(i)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s started with PID %d\n", c, pid)
+	fmt.Printf("%s started with PID %d\n", i, pid)
 	return nil
 }
 
@@ -78,18 +78,18 @@ func Start(c geneos.Instance) (err error) {
 //
 // If noDecode is set then any secure environment variables are not decoded,
 // so can be used for display
-func BuildCmd(c geneos.Instance, noDecode bool) (cmd *exec.Cmd, env []string, home string) {
-	binary := PathOf(c, "program")
+func BuildCmd(i geneos.Instance, noDecode bool) (cmd *exec.Cmd, env []string, home string) {
+	binary := PathOf(i, "program")
 
-	args, env, home := c.Command()
+	args, env, home := i.Command()
 
-	opts := strings.Fields(c.Config().GetString("options"))
+	opts := strings.Fields(i.Config().GetString("options"))
 	args = append(args, opts...)
 
-	envs := c.Config().GetStringSlice("env", config.NoDecode(noDecode))
+	envs := i.Config().GetStringSlice("env", config.NoDecode(noDecode))
 	libs := []string{}
-	if c.Config().GetString("libpaths") != "" {
-		libs = append(libs, c.Config().GetString("libpaths"))
+	if i.Config().GetString("libpaths") != "" {
+		libs = append(libs, i.Config().GetString("libpaths"))
 	}
 
 	for _, e := range envs {
