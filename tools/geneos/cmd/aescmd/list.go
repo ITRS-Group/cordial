@@ -106,8 +106,6 @@ geneos aes ls -S gateway -H localhost -c
 			} else {
 				instance.Do(h, ct, names, aesListInstanceCSV).Write(aesListCSVWriter)
 			}
-
-			aesListCSVWriter.Flush()
 		default:
 			aesListTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(aesListTabWriter, "Type\tName\tHost\tKeyfile\tCRC32\tModtime\n")
@@ -118,7 +116,6 @@ geneos aes ls -S gateway -H localhost -c
 			} else {
 				instance.Do(h, ct, names, aesListInstance).Write(aesListTabWriter)
 			}
-			aesListTabWriter.Flush()
 		}
 	},
 }
