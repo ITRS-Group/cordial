@@ -153,7 +153,7 @@ func LoadConfig(i geneos.Instance) (err error) {
 
 	// aliases have to be set AFTER loading from file (https://github.com/spf13/viper/issues/560)
 	for a, k := range aliases {
-		cf.RegisterAlias(a, k)
+		i.Config().RegisterAlias(a, k)
 	}
 
 	if err != nil {
