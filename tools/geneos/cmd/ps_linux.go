@@ -33,7 +33,7 @@ import (
 )
 
 // listOpenFiles is a placeholder for functionality to come later
-func listOpenFiles(i geneos.Instance) {
+func listOpenFiles(i geneos.Instance) (lines []string) {
 
 	// list open files (test code)
 
@@ -62,6 +62,7 @@ func listOpenFiles(i geneos.Instance) {
 		if strings.HasPrefix(path, instdir) {
 			path = strings.Replace(path, instdir, ".", 1)
 		}
-		fmt.Fprintf(psTabWriter, "\t%d:%s (%d bytes) %s\n", n, perms, files[n].Stat.Size(), path)
+		lines = append(lines, fmt.Sprintf("\t%d:%s (%d bytes) %s\n", n, perms, files[n].Stat.Size(), path))
 	}
+	return
 }
