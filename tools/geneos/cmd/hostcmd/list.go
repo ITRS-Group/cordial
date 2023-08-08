@@ -92,12 +92,10 @@ var listCmd = &cobra.Command{
 			hostListCSVWriter = csv.NewWriter(os.Stdout)
 			hostListCSVWriter.Write([]string{"Type", "Name", "Disabled", "Username", "Hostname", "Port", "Directory"})
 			err = loopHosts(hostListInstanceCSVHosts, listCmdShowHidden)
-			hostListCSVWriter.Flush()
 		default:
 			hostListTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(hostListTabWriter, "Name\tUsername\tHostname\tPort\tDirectory\n")
 			err = loopHosts(hostListInstancePlainHosts, listCmdShowHidden)
-			hostListTabWriter.Flush()
 		}
 		if err == os.ErrNotExist {
 			err = nil

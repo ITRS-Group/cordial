@@ -47,7 +47,6 @@ type Response struct {
 	Instance  geneos.Instance
 	Line      string     // single line response,
 	Lines     []string   // Lines of output
-	Row       []string   // row of values (for CSV)
 	Rows      [][]string // rows of values (for CSV)
 	Value     any
 	Start     time.Time
@@ -142,6 +141,8 @@ func (s SortInstanceResponses) Less(i, j int) bool {
 // non-ignored errors are written out, prefixed with the
 // Instance.String() and a colon. Note that this format may change if
 // and when structured logging is introduced.
+//
+// Write calls Flush() after writing to CSV or Tab writers.
 func (responses Responses) Write(writer any, options ...WriterOptions) {
 	if len(responses) == 0 {
 		return
@@ -174,15 +175,7 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 				}
 			}
 		case *csv.Writer:
-			if len(r.Lines) > 0 {
-				w.Write(r.Lines)
-			}
-			if len(r.Row) > 0 {
-				w.Write(r.Row)
-			}
-			if len(r.Rows) > 0 {
-				w.WriteAll(r.Rows)
-			}
+			w.WriteAll(r.Rows) // WriteAll calls Flush()
 		case io.Writer:
 			// json from values, a bit painful - fix later
 			// only support for an array of "Values", which is unrolled
@@ -269,6 +262,10 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 		fmt.Fprintln(writer.(io.Writer), "]")
 	}
 
+	if w, ok := writer.(*tabwriter.Writer); ok {
+		w.Flush()
+	}
+
 	if opts.stderr != io.Discard {
 		for _, r := range responses {
 			errored := false
@@ -292,6 +289,14 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 			}
 		}
 	}
+}
+
+func (responses Responses) WriteHTML(writer any, options ...WriterOptions) {
+	if len(responses) == 0 {
+		return
+	}
+	// opts := evalWriterOptions(options...)
+
 }
 
 // joinNatural joins words with commas except the last pair, which are

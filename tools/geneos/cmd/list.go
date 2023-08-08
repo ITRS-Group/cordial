@@ -85,12 +85,10 @@ var listCmd = &cobra.Command{
 			listCSVWriter = csv.NewWriter(os.Stdout)
 			listCSVWriter.Write([]string{"Type", "Name", "Host", "Disabled", "Protected", "AutoStart", "Port", "Version", "Home"})
 			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV).Write(listCSVWriter)
-			listCSVWriter.Flush()
 		default:
 			listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(listTabWriter, "Type\tNames\tHost\tFlag\tPort\tVersion\tHome\n")
 			instance.Do(geneos.GetHost(Hostname), ct, names, listInstancePlain).Write(listTabWriter)
-			listTabWriter.Flush()
 		}
 		if err == os.ErrNotExist {
 			err = nil
@@ -141,7 +139,7 @@ func listInstanceCSV(c geneos.Instance, _ ...any) (resp *instance.Response) {
 		autostart = "Y"
 	}
 	base, underlying, _ := instance.Version(c)
-	resp.Row = []string{c.Type().String(), c.Name(), c.Host().String(), disabled, protected, autostart, fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()}
+	resp.Rows = append(resp.Rows, []string{c.Type().String(), c.Name(), c.Host().String(), disabled, protected, autostart, fmt.Sprint(c.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), c.Home()})
 	return
 }
 

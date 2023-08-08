@@ -191,7 +191,6 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 			}
 		}
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Write(listCSVWriter)
-		listCSVWriter.Flush()
 	default:
 		listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintln(listTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tVerified")
@@ -216,7 +215,6 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 			}
 		}
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Write(listTabWriter)
-		listTabWriter.Flush()
 	}
 	return
 }
@@ -314,7 +312,6 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			}
 		}
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Write(listCSVWriter)
-		listCSVWriter.Flush()
 	default:
 		listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintln(listTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tVerified\tIssuer\tSubjAltNames\tIPs\tFingerprint")
@@ -343,7 +340,6 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			}
 		}
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Write(listTabWriter)
-		listTabWriter.Flush()
 	}
 	return
 }
@@ -399,7 +395,7 @@ func listCmdInstanceCertCSV(c geneos.Instance, _ ...any) (resp *instance.Respons
 		cols = append(cols, fmt.Sprintf("%X", sha1.Sum(cert.Raw)))
 	}
 
-	resp.Row = cols
+	resp.Rows = append(resp.Rows, cols)
 	return
 }
 
