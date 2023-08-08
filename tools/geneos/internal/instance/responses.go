@@ -148,7 +148,7 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 	}
 	opts := evalWriterOptions(options...)
 
-	started := false
+	startedJSON := false
 
 	for _, r := range responses {
 		if r.Err != nil && opts.skiponerr {
@@ -200,9 +200,9 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 						s := reflect.ValueOf(r.Value)
 						for i := 0; i < s.Len(); i++ {
 							if s.Index(i).IsValid() {
-								if !started {
+								if !startedJSON {
 									fmt.Fprint(w, "[")
-									started = true
+									startedJSON = true
 								} else {
 									fmt.Fprint(w, ",")
 								}
@@ -217,9 +217,9 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 							}
 						}
 					} else {
-						if !started {
+						if !startedJSON {
 							fmt.Fprint(w, "[")
-							started = true
+							startedJSON = true
 						} else {
 							fmt.Fprint(w, ",")
 						}
@@ -261,7 +261,8 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 			log.Fatal().Msgf("unknown writer type %T", writer)
 		}
 	}
-	if started {
+
+	if startedJSON {
 		if opts.indent {
 			fmt.Fprint(writer.(io.Writer), "\n")
 		}
@@ -395,30 +396,44 @@ func WriterSkipOnErr(skip bool) WriterOptions {
 	}
 }
 
+// WriterShowTimes enables the output of the duration of each call. The
+// format of the output can be changed using WriterTimingFormat.
 func WriterShowTimes() WriterOptions {
 	return func(wo *writeOptions) {
 		wo.showtimes = true
 	}
 }
 
+// WriterTimingFormat sets the output format of any timing information.
+// It is a Printf-style format with the instance (as a geneos.Instance)
+// and the duration (as a time.Duration) as the two arguments.
 func WriterTimingFormat(format string) WriterOptions {
 	return func(wo *writeOptions) {
 		wo.timesformat = format
 	}
 }
 
+// WriterPrefix is the Printf-style format to prefix plain text output
+// (only once per Lines). It can have one argument, the instance asd a
+// geneos.Instance. The default is `"%s "`.
 func WriterPrefix(prefix string) WriterOptions {
 	return func(wo *writeOptions) {
 		wo.prefixformat = prefix
 	}
 }
 
+// WriterSuffix is the suffix added to plain text output. The default is
+// a single newline (`\n`).
 func WriterSuffix(suffix string) WriterOptions {
 	return func(wo *writeOptions) {
 		wo.suffix = suffix
 	}
 }
 
+// WriterPlainValue overrides the output of Value as JSON and instead it
+// is written as a string, in the format `prefix + value as %s +
+// suffix`, where prefix and suffix can be set ising WriterPrefix and
+// WriterSuffix respectively, if the defaults are not suitable.
 func WriterPlainValue() WriterOptions {
 	return func(wo *writeOptions) {
 		wo.valuesasJSON = false
