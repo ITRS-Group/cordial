@@ -69,9 +69,6 @@ type listCertLongType struct {
 var listCmdAll, listCmdCSV, listCmdJSON, listCmdIndent, listCmdLong bool
 var listJSONEncoder *json.Encoder
 
-var listTabWriter *tabwriter.Writer
-var listCSVWriter *csv.Writer
-
 func init() {
 	tlsCmd.AddCommand(listCmd)
 
@@ -156,7 +153,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 		results.Write(os.Stdout, instance.WriterIndent(listCmdIndent))
 
 	case listCmdCSV:
-		listCSVWriter = csv.NewWriter(os.Stdout)
+		listCSVWriter := csv.NewWriter(os.Stdout)
 		listCSVWriter.Write([]string{
 			"Type",
 			"Name",
@@ -192,7 +189,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 		}
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Write(listCSVWriter)
 	default:
-		listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+		listTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintln(listTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tVerified")
 		if listCmdAll {
 			if rootCert != nil {
@@ -265,7 +262,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 		results = append(results, results2...)
 		results.Write(os.Stdout, instance.WriterIndent(listCmdIndent))
 	case listCmdCSV:
-		listCSVWriter = csv.NewWriter(os.Stdout)
+		listCSVWriter := csv.NewWriter(os.Stdout)
 		listCSVWriter.Write([]string{
 			"Type",
 			"Name",
@@ -313,7 +310,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 		}
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Write(listCSVWriter)
 	default:
-		listTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+		listTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintln(listTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tVerified\tIssuer\tSubjAltNames\tIPs\tFingerprint")
 		if listCmdAll {
 			if rootCert != nil {

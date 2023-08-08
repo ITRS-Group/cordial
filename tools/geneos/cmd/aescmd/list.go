@@ -40,11 +40,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var aesListTabWriter *tabwriter.Writer
 var listCmdCSV, listCmdJSON, listCmdIndent bool
 var listCmdShared bool
-
-var aesListCSVWriter *csv.Writer
 
 type listCmdType struct {
 	Name        string          `json:"name,omitempty"`
@@ -98,7 +95,7 @@ geneos aes ls -S gateway -H localhost -c
 				instance.Do(h, ct, names, aesListInstanceJSON).Write(os.Stdout, instance.WriterIndent(listCmdIndent))
 			}
 		case listCmdCSV:
-			aesListCSVWriter = csv.NewWriter(os.Stdout)
+			aesListCSVWriter := csv.NewWriter(os.Stdout)
 			aesListCSVWriter.Write([]string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
 
 			if listCmdShared {
@@ -107,7 +104,7 @@ geneos aes ls -S gateway -H localhost -c
 				instance.Do(h, ct, names, aesListInstanceCSV).Write(aesListCSVWriter)
 			}
 		default:
-			aesListTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+			aesListTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(aesListTabWriter, "Type\tName\tHost\tKeyfile\tCRC32\tModtime\n")
 
 			if listCmdShared {

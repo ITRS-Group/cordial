@@ -40,9 +40,6 @@ import (
 
 var listCmdJSON, listCmdIndent, listCmdCSV bool
 
-var packageListTabWriter *tabwriter.Writer
-var packageListCSVWriter *csv.Writer
-
 func init() {
 	packageCmd.AddCommand(listCmd)
 
@@ -98,14 +95,14 @@ var listCmd = &cobra.Command{
 			}
 			fmt.Println(string(b))
 		case listCmdCSV:
-			packageListCSVWriter = csv.NewWriter(os.Stdout)
+			packageListCSVWriter := csv.NewWriter(os.Stdout)
 			packageListCSVWriter.Write([]string{"Component", "Host", "Version", "Latest", "Links", "LastModified", "Path"})
 			for _, d := range versions {
 				packageListCSVWriter.Write([]string{d.Component, d.Host, d.Version, fmt.Sprintf("%v", d.Latest), strings.Join(d.Links, ", "), d.ModTime.Format(time.RFC3339), d.Path})
 			}
 			packageListCSVWriter.Flush()
 		default:
-			packageListTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+			packageListTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(packageListTabWriter, "Component\tHost\tVersion\tLinks\tLastModified\tPath\n")
 			for _, d := range versions {
 				name := d.Version

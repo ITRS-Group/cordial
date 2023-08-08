@@ -53,9 +53,6 @@ type psType struct {
 
 var psCmdLong, psCmdShowFiles, psCmdJSON, psCmdIndent, psCmdCSV, psCmdNoLookups bool
 
-var psTabWriter *tabwriter.Writer
-var psCSVWriter *csv.Writer
-
 func init() {
 	GeneosCmd.AddCommand(psCmd)
 
@@ -100,11 +97,11 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 	case psCmdJSON, psCmdIndent:
 		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceJSON).Write(os.Stdout, instance.WriterIndent(psCmdIndent))
 	case psCmdCSV:
-		psCSVWriter = csv.NewWriter(os.Stdout)
+		psCSVWriter := csv.NewWriter(os.Stdout)
 		psCSVWriter.Write([]string{"Type", "Name", "Host", "PID", "Ports", "User", "Group", "Starttime", "Version", "Home"})
 		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV).Write(psCSVWriter)
 	default:
-		psTabWriter = tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+		psTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\n")
 		instance.Do(geneos.GetHost(Hostname), ct, names, psInstancePlain).Write(psTabWriter)
 	}
