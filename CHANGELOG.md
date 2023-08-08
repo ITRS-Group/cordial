@@ -1,8 +1,8 @@
 # Change Log
 
-## Version v1.8.0
+## Version v1.8.0-beta
 
-> **Released 2023-08-04**
+> **Released 2023-08-08**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
@@ -15,6 +15,8 @@
 ## v1.8.0 Fixes
 
 * `pkg/config` - [#176](https://github.com/ITRS-Group/cordial/issues/176) fix support for Windows paths in `${enc:...}` expansion formats
+
+* `tools/geneos` - A fix for a long time bug in an internal routine that checked reserved names. This was found during the refactoring of code above. Oddly this doesn't appear to have been noticed, not sure why.
 
 ## Version v1.7.2
 
