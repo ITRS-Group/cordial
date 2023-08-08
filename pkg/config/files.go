@@ -23,11 +23,7 @@ THE SOFTWARE.
 package config
 
 import (
-	"bufio"
-	"bytes"
-	"fmt"
 	"path"
-	"strings"
 
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/rs/zerolog/log"
@@ -104,70 +100,5 @@ func PromoteFile(r host.Host, paths ...string) (final string) {
 	}
 
 	log.Debug().Msgf("returning path %s", final)
-	return
-}
-
-// ReadRCConfig reads an old-style, legacy Geneos "ctl" layout
-// configuration file and sets values in cf corresponding to updated
-// equivalents.
-//
-// All empty lines and those beginning with "#" comments are ignored.
-//
-// The rest of the lines are treated as `name=value` pairs and are
-// processed as follows:
-//
-//   - If `name` is either `binsuffix` (case-insensitive) or
-//     `prefix`+`name` then it saved as a config item. This is looked up
-//     in the `aliases` map and if there is a match then this new name is
-//     used.
-//   - All other `name=value` entries are saved as environment variables
-//     in the configuration for the instance under the `Env` key.
-func (cf *Config) ReadRCConfig(r host.Host, p string, prefix string, aliases map[string]string) (err error) {
-	data, err := r.ReadFile(p)
-	if err != nil {
-		return
-	}
-	log.Debug().Msgf("loading config from %q", p)
-
-	confs := make(map[string]string)
-
-	scanner := bufio.NewScanner(bytes.NewBuffer(data))
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if len(line) == 0 || strings.HasPrefix(line, "#") {
-			continue
-		}
-		s := strings.SplitN(line, "=", 2)
-		if len(s) != 2 {
-			return fmt.Errorf("invalid line (must be key=value) %q", line)
-		}
-		key, value := s[0], s[1]
-		// trim double and single quotes and tabs and spaces from value
-		value = strings.Trim(value, "\"' \t")
-		confs[key] = value
-	}
-
-	var env []string
-	for k, v := range confs {
-		lk := strings.ToLower(k)
-		if lk == "binsuffix" || strings.HasPrefix(lk, prefix) {
-			if nk, ok := aliases[lk]; ok {
-				cf.Set(nk, v)
-			} else {
-				cf.Set(lk, v)
-			}
-		} else {
-			// set env var
-			env = append(env, fmt.Sprintf("%s=%s", k, v))
-		}
-	}
-
-	if len(env) > 0 {
-		cf.Set("env", env)
-	}
-
-	// label the type as an "rc" to make it easy to check later
-	cf.Type = "rc"
-
 	return
 }
