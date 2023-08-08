@@ -151,11 +151,11 @@ func (cf *Config) ReadRCConfig(r host.Host, p string, prefix string, aliases map
 	for k, v := range confs {
 		lk := strings.ToLower(k)
 		if lk == "binsuffix" || strings.HasPrefix(lk, prefix) {
-			nk, ok := aliases[lk]
-			if !ok {
-				nk = lk
+			if nk, ok := aliases[lk]; ok {
+				cf.Set(nk, v)
+			} else {
+				cf.Set(lk, v)
 			}
-			cf.Set(nk, v)
 		} else {
 			// set env var
 			env = append(env, fmt.Sprintf("%s=%s", k, v))
@@ -163,7 +163,7 @@ func (cf *Config) ReadRCConfig(r host.Host, p string, prefix string, aliases map
 	}
 
 	if len(env) > 0 {
-		cf.Set("Env", env)
+		cf.Set("env", env)
 	}
 
 	// label the type as an "rc" to make it easy to check later
