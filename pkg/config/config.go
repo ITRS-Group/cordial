@@ -112,6 +112,16 @@ func (c *Config) Join(parts ...string) string {
 	return strings.Join(append(elems, parts...), c.delimiter)
 }
 
+// Delimiter returns the global config key delimiter
+func Delimiter() string {
+	return global.delimiter
+}
+
+// Delimiter returns the config c key delimiter
+func (c *Config) Delimiter() string {
+	return c.delimiter
+}
+
 // Sub returns a Config instance rooted at the key passed
 func (c *Config) Sub(key string) *Config {
 	return &Config{Viper: c.Viper.Sub(key)}

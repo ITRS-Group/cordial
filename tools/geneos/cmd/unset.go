@@ -82,13 +82,13 @@ geneos unset san -g Gateway1
 			changed := instance.UnsetInstanceValues(i, unsetCmdValues)
 
 			s := i.Config().AllSettings()
+			d := i.Config().Delimiter()
 
 			if len(unsetCmdValues.Keys) > 0 {
 				for _, k := range unsetCmdValues.Keys {
 					// check and delete one level of maps
-					// XXX not sure if we need to allow other delimiters here
-					if strings.Contains(k, ".") {
-						p := strings.SplitN(k, ".", 2)
+					if strings.Contains(k, d) {
+						p := strings.SplitN(k, d, 2)
 						switch x := s[p[0]].(type) {
 						case map[string]interface{}:
 							instance.DeleteSettingFromMap(i, x, p[1])
