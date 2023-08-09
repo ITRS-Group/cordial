@@ -5,11 +5,11 @@
 # image for glibc compatibility with Gateway on older systems.
 #
 
-ARG GOVERSION=1.20.5
+ARG GOVERSION=1.21.0
 
 # build Linux executables statically. Also build any Windows binaries
 # here for completeness.
-FROM golang:alpine AS build
+FROM golang:${GOVERSION}-alpine AS build
 LABEL stage=cordial-build
 
 COPY go.mod go.sum cordial.go VERSION /app/cordial/
