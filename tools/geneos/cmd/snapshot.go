@@ -198,7 +198,7 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *instance.Response
 }
 
 func gatewayURL(i geneos.Instance) (u *url.URL) {
-	if i.Type().String() != "gateway" {
+	if !instance.IsA(i, "gateway") {
 		return
 	}
 	u = &url.URL{}
