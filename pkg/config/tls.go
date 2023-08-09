@@ -159,6 +159,18 @@ func WriteCertChain(h host.Host, p string, certs ...*x509.Certificate) (err erro
 	return h.WriteFile(p, pembytes, 0644)
 }
 
+// ReadCertChain returns a certificate pool loaded from the file on host
+// h at path p. If there is any error a nil pointer is returned.
+func ReadCertChain(h host.Host, p string) (pool *x509.CertPool) {
+	pool = x509.NewCertPool()
+	if chain, err := h.ReadFile(p); err == nil {
+		if ok := pool.AppendCertsFromPEM(chain); !ok {
+			return nil
+		}
+	}
+	return
+}
+
 // ReadPrivateKey reads a unencrypted, PEM-encoded private key and saves
 // the der format key in a memguard.Enclave
 func ReadPrivateKey(h host.Host, pt string) (key *memguard.Enclave, err error) {

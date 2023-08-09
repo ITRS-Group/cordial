@@ -252,12 +252,8 @@ func ReadCert(i geneos.Instance) (cert *x509.Certificate, valid bool, err error)
 	if chainfile == "" {
 		chainfile = config.PromoteFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
 	}
-	if chain, err := i.Host().ReadFile(chainfile); err == nil {
-		cp := x509.NewCertPool()
-		if !cp.AppendCertsFromPEM(chain) {
-			panic("cannot append certs")
-		}
 
+	if cp := config.ReadCertChain(i.Host(), chainfile); cp != nil {
 		opts := x509.VerifyOptions{
 			Roots:         cp,
 			Intermediates: cp,

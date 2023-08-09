@@ -23,9 +23,11 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"crypto/tls"
 	_ "embed"
 	"encoding/csv"
 	"fmt"
+	"net/http"
 	"os"
 	"os/user"
 	"path"
@@ -33,22 +35,24 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
 
 type psType struct {
-	Type      string
-	Name      string
-	Host      string
-	PID       string
-	Ports     []int
-	User      string
-	Group     string
-	Starttime string
-	Version   string
-	Home      string
+	Type      string `json:"type,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Host      string `json:"host,omitempty"`
+	PID       string `json:"pid,omitempty"`
+	Ports     []int  `json:"ports,omitempty"`
+	User      string `json:"user,omitempty"`
+	Group     string `json:"group,omitempty"`
+	Starttime string `json:"starttime,omitempty"`
+	Version   string `json:"version,omitempty"`
+	Home      string `json:"home,omitempty"`
+	// Live      bool   `json:"live,omitempty"`
 }
 
 var psCmdLong, psCmdShowFiles, psCmdJSON, psCmdIndent, psCmdCSV, psCmdNoLookups bool
@@ -245,4 +249,35 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	}
 
 	return
+}
+
+func live(i geneos.Instance) bool {
+	cf := i.Config()
+	h := i.Host()
+	port := cf.GetInt("port")
+	cert := cf.GetString("certificate")
+	chain := cf.GetString("certchain", config.Default(h.PathTo("tls", geneos.ChainCertFile)))
+
+	scheme := "http"
+	client := http.DefaultClient
+
+	if cert != "" {
+		scheme = "https"
+		roots := config.ReadCertChain(h, chain)
+
+		client.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: roots,
+			},
+		}
+	}
+
+	resp, err := client.Get(fmt.Sprintf("%s://%s:%d/liveness", scheme, h.Hostname(), port))
+	if err == nil {
+		resp.Body.Close()
+		if resp.StatusCode == 200 {
+			return true
+		}
+	}
+	return false
 }
