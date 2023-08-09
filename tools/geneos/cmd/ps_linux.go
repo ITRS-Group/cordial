@@ -62,7 +62,7 @@ func listOpenFiles(i geneos.Instance) (lines []string) {
 		if strings.HasPrefix(path, instdir) {
 			path = strings.Replace(path, instdir, ".", 1)
 		}
-		lines = append(lines, fmt.Sprintf("\t%d:%s (%d bytes) %s\n", n, perms, files[n].Stat.Size(), path))
+		lines = append(lines, fmt.Sprintf("\t%d:%s (%d bytes) %s", n, perms, files[n].Stat.Size(), path))
 	}
 	return
 }
