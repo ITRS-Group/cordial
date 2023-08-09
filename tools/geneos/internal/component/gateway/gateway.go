@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"path"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -182,22 +183,21 @@ func (g *Gateways) String() string {
 }
 
 func (g *Gateways) Load() (err error) {
-	if g.ConfigLoaded {
-		return
-	}
-	err = instance.LoadConfig(g)
-	g.ConfigLoaded = err == nil
-	return
+	return instance.LoadConfig(g)
 }
 
 func (g *Gateways) Unload() (err error) {
 	gateways.Delete(g.Name() + "@" + g.Host().String())
-	g.ConfigLoaded = false
+	g.ConfigLoaded = time.Time{}
 	return
 }
 
-func (g *Gateways) Loaded() bool {
+func (g *Gateways) Loaded() time.Time {
 	return g.ConfigLoaded
+}
+
+func (g *Gateways) SetLoaded(t time.Time) {
+	g.ConfigLoaded = t
 }
 
 func (g *Gateways) Config() *config.Config {

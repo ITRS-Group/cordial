@@ -28,6 +28,7 @@ import (
 	"os"
 	"regexp"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -147,22 +148,21 @@ func (n *AC2s) String() string {
 }
 
 func (n *AC2s) Load() (err error) {
-	if n.ConfigLoaded {
-		return
-	}
-	err = instance.LoadConfig(n)
-	n.ConfigLoaded = err == nil
-	return
+	return instance.LoadConfig(n)
 }
 
 func (n *AC2s) Unload() (err error) {
 	ac2s.Delete(n.Name() + "@" + n.Host().String())
-	n.ConfigLoaded = false
+	n.ConfigLoaded = time.Time{}
 	return
 }
 
-func (n *AC2s) Loaded() bool {
+func (n *AC2s) Loaded() time.Time {
 	return n.ConfigLoaded
+}
+
+func (n *AC2s) SetLoaded(t time.Time) {
+	n.ConfigLoaded = t
 }
 
 func (n *AC2s) Config() *config.Config {

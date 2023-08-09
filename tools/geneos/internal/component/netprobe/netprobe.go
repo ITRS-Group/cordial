@@ -25,6 +25,7 @@ package netprobe
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -144,24 +145,22 @@ func (n *Netprobes) String() string {
 }
 
 func (n *Netprobes) Load() (err error) {
-	if n.ConfigLoaded {
-		return
-	}
-	err = instance.LoadConfig(n)
-	n.ConfigLoaded = err == nil
-	return
+	return instance.LoadConfig(n)
 }
 
 func (n *Netprobes) Unload() (err error) {
 	netprobes.Delete(n.Name() + "@" + n.Host().String())
-	n.ConfigLoaded = false
+	n.ConfigLoaded = time.Time{}
 	return
 }
 
-func (n *Netprobes) Loaded() bool {
+func (n *Netprobes) Loaded() time.Time {
 	return n.ConfigLoaded
 }
 
+func (n *Netprobes) SetLoaded(t time.Time) {
+	n.ConfigLoaded = t
+}
 func (n *Netprobes) Config() *config.Config {
 	return n.Conf
 }

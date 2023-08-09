@@ -53,7 +53,7 @@ func GetPorts(h *geneos.Host) (ports map[uint16]*geneos.Component) {
 	}
 	ports = make(map[uint16]*geneos.Component)
 	for _, c := range GetAll(h, nil) {
-		if !c.Loaded() {
+		if c.Loaded().IsZero() {
 			log.Error().Msgf("cannot load configuration for %s", c)
 			continue
 		}

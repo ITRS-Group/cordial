@@ -25,6 +25,7 @@ package fa2
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -146,22 +147,21 @@ func (n *FA2s) String() string {
 }
 
 func (n *FA2s) Load() (err error) {
-	if n.ConfigLoaded {
-		return
-	}
-	err = instance.LoadConfig(n)
-	n.ConfigLoaded = err == nil
-	return
+	return instance.LoadConfig(n)
 }
 
 func (n *FA2s) Unload() (err error) {
 	fa2s.Delete(n.Name() + "@" + n.Host().String())
-	n.ConfigLoaded = false
+	n.ConfigLoaded = time.Time{}
 	return
 }
 
-func (n *FA2s) Loaded() bool {
+func (n *FA2s) Loaded() time.Time {
 	return n.ConfigLoaded
+}
+
+func (n *FA2s) SetLoaded(t time.Time) {
+	n.ConfigLoaded = t
 }
 
 func (n *FA2s) Config() *config.Config {

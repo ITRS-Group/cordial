@@ -141,7 +141,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	cf := c.Config()
 
 	// check if instance already exists
-	if c.Loaded() {
+	if !c.Loaded().IsZero() {
 		log.Error().Msgf("%s already exists", c)
 		return
 	}

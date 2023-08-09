@@ -25,6 +25,7 @@ package fileagent
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -151,22 +152,21 @@ func (n *FileAgents) String() string {
 }
 
 func (n *FileAgents) Load() (err error) {
-	if n.ConfigLoaded {
-		return
-	}
-	err = instance.LoadConfig(n)
-	n.ConfigLoaded = err == nil
-	return
+	return instance.LoadConfig(n)
 }
 
 func (n *FileAgents) Unload() (err error) {
 	fileagents.Delete(n.Name() + "@" + n.Host().String())
-	n.ConfigLoaded = false
+	n.ConfigLoaded = time.Time{}
 	return
 }
 
-func (n *FileAgents) Loaded() bool {
+func (n *FileAgents) Loaded() time.Time {
 	return n.ConfigLoaded
+}
+
+func (n *FileAgents) SetLoaded(t time.Time) {
+	n.ConfigLoaded = t
 }
 
 func (n *FileAgents) Config() *config.Config {

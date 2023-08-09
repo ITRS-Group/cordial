@@ -26,6 +26,7 @@ import (
 	_ "embed"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -175,22 +176,21 @@ func (s *Sans) String() string {
 }
 
 func (s *Sans) Load() (err error) {
-	if s.ConfigLoaded {
-		return
-	}
-	err = instance.LoadConfig(s)
-	s.ConfigLoaded = err == nil
-	return
+	return instance.LoadConfig(s)
 }
 
 func (s *Sans) Unload() (err error) {
 	sans.Delete(s.Name() + "@" + s.Host().String())
-	s.ConfigLoaded = false
+	s.ConfigLoaded = time.Time{}
 	return
 }
 
-func (s *Sans) Loaded() bool {
+func (s *Sans) Loaded() time.Time {
 	return s.ConfigLoaded
+}
+
+func (s *Sans) SetLoaded(t time.Time) {
+	s.ConfigLoaded = t
 }
 
 func (s *Sans) Config() *config.Config {

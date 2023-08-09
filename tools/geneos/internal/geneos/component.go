@@ -25,6 +25,7 @@ package geneos
 import (
 	"path"
 	"strings"
+	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -164,7 +165,8 @@ type Instance interface {
 	// config
 	Load() error
 	Unload() error
-	Loaded() bool
+	Loaded() time.Time
+	SetLoaded(time.Time)
 
 	// actions
 	Add(template string, port uint16) error
