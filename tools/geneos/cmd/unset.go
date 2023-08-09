@@ -111,7 +111,7 @@ geneos unset san -g Gateway1
 				return
 			}
 
-			resp.Err = instance.WriteConfigValues(i, s)
+			resp.Err = instance.SaveConfig(i, s)
 			return
 		}).Write(os.Stdout)
 	},
