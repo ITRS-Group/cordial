@@ -25,6 +25,7 @@ package licd
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -143,22 +144,21 @@ func (l *Licds) String() string {
 }
 
 func (l *Licds) Load() (err error) {
-	if l.ConfigLoaded {
-		return
-	}
-	err = instance.LoadConfig(l)
-	l.ConfigLoaded = err == nil
-	return
+	return instance.LoadConfig(l)
 }
 
 func (l *Licds) Unload() (err error) {
 	licds.Delete(l.Name() + "@" + l.Host().String())
-	l.ConfigLoaded = false
+	l.ConfigLoaded = time.Time{}
 	return
 }
 
-func (l *Licds) Loaded() bool {
+func (l *Licds) Loaded() time.Time {
 	return l.ConfigLoaded
+}
+
+func (l *Licds) SetLoaded(t time.Time) {
+	l.ConfigLoaded = t
 }
 
 func (l *Licds) Config() *config.Config {

@@ -28,6 +28,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -167,22 +168,21 @@ func (w *Webservers) String() string {
 }
 
 func (w *Webservers) Load() (err error) {
-	if w.ConfigLoaded {
-		return
-	}
-	err = instance.LoadConfig(w)
-	w.ConfigLoaded = err == nil
-	return
+	return instance.LoadConfig(w)
 }
 
 func (w *Webservers) Unload() (err error) {
 	webservers.Delete(w.Name() + "@" + w.Host().String())
-	w.ConfigLoaded = false
+	w.ConfigLoaded = time.Time{}
 	return
 }
 
-func (w *Webservers) Loaded() bool {
+func (w *Webservers) Loaded() time.Time {
 	return w.ConfigLoaded
+}
+
+func (w *Webservers) SetLoaded(t time.Time) {
+	w.ConfigLoaded = t
 }
 
 func (w *Webservers) Config() *config.Config {

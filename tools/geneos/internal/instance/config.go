@@ -120,8 +120,11 @@ func ExecuteTemplate(i geneos.Instance, p string, name string, defaultTemplate [
 	return
 }
 
-// LoadConfig will load the JSON config file if available, otherwise
-// try to load the "legacy" .rc file
+// LoadConfig will load the JSON config file if available, otherwise try
+// to load the "legacy" .rc file
+//
+// The modtime of the underlying config file is recorded in ConfigLoaded
+// and checked before re-loading
 //
 // support cache?
 //
@@ -129,10 +132,26 @@ func ExecuteTemplate(i geneos.Instance, p string, name string, defaultTemplate [
 func LoadConfig(i geneos.Instance) (err error) {
 	start := time.Now()
 	h := i.Host()
+	home := Home(i)
+
+	// have we loaded a file with the same modtime before?
+	if !i.Loaded().IsZero() {
+		conf := config.Path(i.Type().Name,
+			config.Host(h),
+			config.FromDir(home),
+			config.UseDefaults(false),
+			config.MustExist(),
+		)
+		st, err := h.Stat(conf)
+		if err == nil && st.ModTime().Equal(i.Loaded()) {
+			log.Debug().Msg("conf file with same modtime already loaded")
+			return nil
+		}
+	}
+
 	prefix := i.Type().LegacyPrefix
 	aliases := i.Type().LegacyParameters
 
-	home := Home(i)
 	cf, err := config.Load(i.Type().Name,
 		config.Host(h),
 		config.FromDir(home),
@@ -161,6 +180,12 @@ func LoadConfig(i geneos.Instance) (err error) {
 		// generic error as no .json or .rc found
 		return fmt.Errorf("no configuration files for %s in %s: %w", i, i.Home(), os.ErrNotExist)
 	}
+
+	st, err := h.Stat(cf.ConfigFileUsed())
+	if err == nil {
+		i.SetLoaded(st.ModTime())
+	}
+
 	log.Debug().Msgf("config for %s from %s %q loaded in %.4fs", i, h.String(), cf.ConfigFileUsed(), time.Since(start).Seconds())
 	return
 }

@@ -49,7 +49,7 @@ type Instance struct {
 	Conf            *config.Config    `json:"-"`
 	InstanceHost    *geneos.Host      `json:"-"`
 	Component       *geneos.Component `json:"-"`
-	ConfigLoaded    bool              `json:"-"`
+	ConfigLoaded    time.Time         `json:"-"`
 }
 
 // IsA returns true if instance c has a type that is component of the

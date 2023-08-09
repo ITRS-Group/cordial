@@ -210,7 +210,7 @@ func Home(i geneos.Instance) (home string) {
 // element can be a filename. If the instance is not loaded then "." is
 // returned for the current directory.
 func Shared(i geneos.Instance, subs ...interface{}) string {
-	if !i.Loaded() {
+	if i.Loaded().IsZero() {
 		return "."
 	}
 	return i.Type().Shared(i.Host(), subs...)

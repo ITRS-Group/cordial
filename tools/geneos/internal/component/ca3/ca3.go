@@ -29,6 +29,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -152,22 +153,21 @@ func (n *CA3s) String() string {
 }
 
 func (n *CA3s) Load() (err error) {
-	if n.ConfigLoaded {
-		return
-	}
-	err = instance.LoadConfig(n)
-	n.ConfigLoaded = err == nil
-	return
+	return instance.LoadConfig(n)
 }
 
 func (n *CA3s) Unload() (err error) {
 	ca3s.Delete(n.Name() + "@" + n.Host().String())
-	n.ConfigLoaded = false
+	n.ConfigLoaded = time.Time{}
 	return
 }
 
-func (n *CA3s) Loaded() bool {
+func (n *CA3s) Loaded() time.Time {
 	return n.ConfigLoaded
+}
+
+func (n *CA3s) SetLoaded(t time.Time) {
+	n.ConfigLoaded = t
 }
 
 func (n *CA3s) Config() *config.Config {

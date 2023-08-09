@@ -26,6 +26,7 @@ import (
 	_ "embed"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -160,22 +161,21 @@ func (s *Floatings) String() string {
 }
 
 func (s *Floatings) Load() (err error) {
-	if s.ConfigLoaded {
-		return
-	}
-	err = instance.LoadConfig(s)
-	s.ConfigLoaded = err == nil
-	return
+	return instance.LoadConfig(s)
 }
 
 func (s *Floatings) Unload() (err error) {
 	floatings.Delete(s.Name() + "@" + s.Host().String())
-	s.ConfigLoaded = false
+	s.ConfigLoaded = time.Time{}
 	return
 }
 
-func (s *Floatings) Loaded() bool {
+func (s *Floatings) Loaded() time.Time {
 	return s.ConfigLoaded
+}
+
+func (s *Floatings) SetLoaded(t time.Time) {
+	s.ConfigLoaded = t
 }
 
 func (s *Floatings) Config() *config.Config {
