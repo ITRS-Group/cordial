@@ -131,7 +131,7 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *instance.Resp
 	if setup == "" {
 		return
 	}
-	if i.Type().String() == "gateway" {
+	if instance.IsA(i, "gateway") {
 		// temp file for JSON output
 		tempfile := path.Join(i.Host().TempDir(), "validate-"+i.Name()+".json")
 		defer i.Host().Remove(tempfile)
@@ -192,7 +192,7 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *instance.Respon
 	if setup == "" {
 		return
 	}
-	if i.Type().String() == "gateway" && merge {
+	if instance.IsA(i, "gateway") && merge {
 		// run a gateway with -dump-xml and consume the result, discard the heading
 		cmd, env, home := instance.BuildCmd(i, false)
 		// replace args with a more limited set
