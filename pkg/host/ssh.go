@@ -633,11 +633,6 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, env []string, home, errfile string) (er
 	fmt.Fprintf(pipe, "%s > %q 2>&1 &\n", cmdstr, errfile)
 	fmt.Fprintln(pipe, "exit")
 	return sess.Wait()
-
-	// wait a short while for remote to catch-up
-	// time.Sleep(250 * time.Millisecond)
-
-	// return
 }
 
 // Run starts a process on an SSH attached remote host h. It uses a
