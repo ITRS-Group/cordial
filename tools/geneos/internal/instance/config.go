@@ -293,6 +293,13 @@ func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
 		return
 	}
 
+	if len(values) == 0 {
+		st, err := i.Host().Stat(i.Config().ConfigFileUsed())
+		if err == nil {
+			i.SetLoaded(st.ModTime())
+		}
+	}
+
 	// rebuild on every save, but skip errors from any components that do not support rebuilds
 	if err = i.Rebuild(false); err != nil && err == geneos.ErrNotSupported {
 		err = nil
