@@ -18,6 +18,10 @@
 
 * `tools/geneos` - A fix for a long time bug in an internal routine that checked reserved names. This was found during the refactoring of code above. Oddly this doesn't appear to have been noticed, not sure why.
 
+* `tools/geneos` - Fix closing of open file descriptors when starting a local instance. This needed cmd.Extrafiles slice having empty nils added through the the largest FD.
+
+* `tools/geneos` - Fix merging of aliases during instance config load.
+
 ## Version v1.7.2
 
 > **Released 2023-07-28**
