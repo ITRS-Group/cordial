@@ -155,7 +155,7 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s:%s\t%s", i.Type(), i.Name(), i.Host(), pid, portlist, username, groupname, mtime.Local().Format(time.RFC3339), base, actual, i.Home())
 
 	// if psCmdShowFiles {
-	// 	listOpenFiles(c)
+	// resp.Lines = listOpenFiles(i)
 	// }
 	return
 }
