@@ -230,9 +230,9 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 	return
 }
 
-// SaveConfig writes the instance configuration to the standard file for
-// that instance. All legacy parameter (aliases) are removed from the
-// set of values saved.
+// SaveConfig writes the first values map or, if none, the instance
+// configuration to the standard file for that instance. All legacy
+// parameter (aliases) are removed from the set of values saved.
 func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
 	var settings map[string]any
 
