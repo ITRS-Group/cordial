@@ -231,11 +231,36 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 }
 
 // SaveConfig writes the instance configuration to the standard file for
-// that instance
-func SaveConfig(i geneos.Instance) (err error) {
-	cf := i.Config()
+// that instance. All legacy parameter (aliases) are removed from the
+// set of values saved.
+func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
+	var settings map[string]any
 
-	if err = cf.Save(i.Type().String(),
+	// speculatively migrate the config, in case there is a legacy .rc
+	// file in place. Migrate() returns an error only for real errors
+	// and returns nil if there is no .rc file to migrate.
+	if err = Migrate(i); err != nil {
+		return
+	}
+
+	if len(values) > 0 {
+		settings = values[0]
+	} else {
+		settings = i.Config().AllSettings()
+	}
+
+	nv := config.New()
+	lp := i.Type().LegacyParameters
+	for k, v := range settings {
+		// skip aliases
+		if _, ok := lp[k]; ok {
+			continue
+		}
+		nv.Set(k, v)
+	}
+
+	log.Debug().Msgf("saving: %v", nv.AllKeys())
+	if err = nv.Save(i.Type().String(),
 		config.Host(i.Host()),
 		config.AddDirs(Home(i)),
 		config.SetAppName(i.Name()),
@@ -280,31 +305,6 @@ func SetSecureArgs(i geneos.Instance) (args []string) {
 	s, err := i.Host().Stat(chainfile)
 	if err == nil && !s.IsDir() {
 		args = append(args, "-ssl-certificate-chain", chainfile)
-	}
-	return
-}
-
-// WriteConfigValues writes the given values to the configuration file for
-// instance c. It does not merge values with the existing configuration values.
-func WriteConfigValues(i geneos.Instance, values map[string]interface{}) (err error) {
-	// speculatively migrate the config, in case there is a legacy .rc
-	// file in place. Migrate() returns an error only for real errors
-	// and returns nil if there is no .rc file to migrate.
-	if err = Migrate(i); err != nil {
-		return
-	}
-	file := ComponentFilepath(i)
-	nv := config.New()
-	for k, v := range values {
-		// skip aliases
-		if _, ok := i.Type().LegacyParameters[k]; ok {
-			continue
-		}
-		nv.Set(k, v)
-	}
-	nv.SetFs(i.Host().GetFs())
-	if err = nv.WriteConfigAs(file); err != nil {
-		return err
 	}
 	return
 }
