@@ -42,7 +42,7 @@ var Floating = geneos.Component{
 	Name:          "floating",
 	LegacyPrefix:  "flt",
 	RelatedTypes:  []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
-	Aliases:       []string{"float", "floating"},
+	Names:         []string{"float", "floating"},
 	ParentType:    &netprobe.Netprobe,
 	RealComponent: true,
 	UsesKeyfiles:  true,

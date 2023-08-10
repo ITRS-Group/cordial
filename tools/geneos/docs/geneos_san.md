@@ -57,6 +57,11 @@ to a Gateway as long as each has it's own, unique name.
   as the underlying package. Any future special purpose Netprobes can
   also be supported in this way.
 
+
+* Secure Connections
+
+If a "certificate", a "chainfile" or the "secure" parameters exist then
+Gateway connections are done using TLS.
 ## SEE ALSO
 
 * [geneos](geneos.md)	 - Take control of your Geneos environments

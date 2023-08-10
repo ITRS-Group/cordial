@@ -14,3 +14,4 @@ A certificate chain file containing multiple certificates in PEM format can be i
 
 If the private key is encrypted then it must be decrypted manually before import. Keys will be imported without encryption as they must be stored unprotected (except for file system permissions) in order that Geneos components to be able to use them.
 
+⚠ Warning: While you can import certificates and keys for `webservers` they will not be used directly as you need to manually import them into the configured truststore/keystore.

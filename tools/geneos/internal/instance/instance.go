@@ -52,15 +52,16 @@ type Instance struct {
 	ConfigLoaded    time.Time         `json:"-"`
 }
 
-// IsA returns true if instance c has a type that is component of the
-// type name. If name is not a known component type then false is
-// returned without checking the instance.
-func IsA(i geneos.Instance, name string) bool {
-	ct := geneos.ParseComponent(name)
-	if ct == nil {
-		return false
+// IsA returns true if instance c has a type that is component of one of
+// names. Any name that does not
+func IsA(i geneos.Instance, names ...string) bool {
+	it := i.Type().String()
+	for _, name := range names {
+		if ct := geneos.ParseComponent(name); ct != nil && ct.IsA(it) {
+			return true
+		}
 	}
-	return ct.IsA(i.Type().String())
+	return false
 }
 
 // DisplayName returns the type, name and non-local host as a string
