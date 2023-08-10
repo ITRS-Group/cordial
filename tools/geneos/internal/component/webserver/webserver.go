@@ -42,7 +42,7 @@ var Webserver = geneos.Component{
 	Name:          "webserver",
 	LegacyPrefix:  "webs",
 	RelatedTypes:  nil,
-	Aliases:       []string{"web-server", "webserver", "webservers", "webdashboard", "dashboards"},
+	Names:         []string{"web-server", "webserver", "webservers", "webdashboard", "dashboards"},
 	RealComponent: true,
 	DownloadBase:  geneos.DownloadBases{Resources: "Web+Dashboard", Nexus: "geneos-web-server"},
 	DownloadInfix: "web-server",
@@ -230,21 +230,22 @@ func (w *Webservers) Rebuild(initial bool) error {
 }
 
 func (w *Webservers) Command() (args, env []string, home string) {
-	WebsBase := instance.BaseVersion(w)
+	cf := w.Config()
+	base := instance.BaseVersion(w)
 	home = w.Home()
 
 	args = []string{
 		// "-Duser.home=" + c.WebsHome,
 		"-XX:+UseConcMarkSweepGC",
-		"-Xmx" + w.Config().GetString("maxmem"),
+		"-Xmx" + cf.GetString("maxmem"),
 		"-server",
 		"-Djava.io.tmpdir=" + home + "/webapps",
 		"-Djava.awt.headless=true",
 		"-DsecurityConfig=" + home + "/config/security.xml",
 		"-Dcom.itrsgroup.configuration.file=" + home + "/config/config.xml",
 		// "-Dcom.itrsgroup.dashboard.dir=<Path to dashboards directory>",
-		"-Dcom.itrsgroup.dashboard.resources.dir=" + WebsBase + "/resources",
-		"-Djava.library.path=" + w.Config().GetString("libpaths"),
+		"-Dcom.itrsgroup.dashboard.resources.dir=" + base + "/resources",
+		"-Djava.library.path=" + cf.GetString("libpaths"),
 		"-Dlog4j2.configurationFile=file:" + home + "/config/log4j2.properties",
 		"-Dworking.directory=" + home,
 		"-Dcom.itrsgroup.legacy.database.maxconnections=100",
@@ -256,9 +257,9 @@ func (w *Webservers) Command() (args, env []string, home string) {
 		// "-Dcom.sun.management.jmxremote.port=$JMX_PORT -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false",
 		"-XX:+HeapDumpOnOutOfMemoryError",
 		"-XX:HeapDumpPath=/tmp",
-		"-jar", WebsBase + "/geneos-web-server.jar",
-		"-dir", WebsBase + "/webapps",
-		"-port", w.Config().GetString("port"),
+		"-jar", base + "/geneos-web-server.jar",
+		"-dir", base + "/webapps",
+		"-port", cf.GetString("port"),
 		// "-ssl true",
 		"-maxThreads 254",
 		// "-log", LogFile(c),

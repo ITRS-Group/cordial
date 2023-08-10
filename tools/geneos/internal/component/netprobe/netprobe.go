@@ -38,7 +38,7 @@ var Netprobe = geneos.Component{
 	Name:          "netprobe",
 	LegacyPrefix:  "netp",
 	RelatedTypes:  nil,
-	Aliases:       []string{"netprobe", "probe", "netprobes", "probes"},
+	Names:         []string{"netprobe", "probe", "netprobes", "probes"},
 	RealComponent: true,
 	UsesKeyfiles:  true,
 	DownloadBase:  geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},

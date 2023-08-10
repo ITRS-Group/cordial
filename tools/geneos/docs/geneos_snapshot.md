@@ -6,9 +6,9 @@ Capture a snapshot of each matching dataview
 geneos snapshot [flags] [gateway] [NAME] XPATH...
 ```
 
-Snapshot one or more dataviews using the REST Commands API endpoint introduced in GA5.14. The TYPE, if given, must be `gateway`.
+Snapshot one or more dataviews using the REST Commands API endpoint introduced in GA5.14. The TYPE, if given, must be `gateway`. A Gateway instance name must be given or the wildcard `all`. Not providing a Gateway name or explicit wildcard will result in no snapshots being attempted.
 
-Authentication to the Gateway is through a combination of command line flags and configuration parameters. If either of the parameters `snapshot.username` or `snapshot.password` is defined for the Gateway or globally then this is used as a default unless overridden on the command line by the `-u` and `-P` options. The user is only prompted for a password if it cannot be located in either of the previous places.
+Authentication to the Gateway is through a combination of command line flags and configuration parameters. If the parameters `snapshot.username` or `snapshot.password` are defined for the Gateway or globally then this is used as a default unless overridden on the command line by the `-u`. The user is only prompted for a password if it cannot be located in the configuration or in saved credentials. As the Gateway may be configured to not require authentication, the absence of a username and password is valid and you will not be prompted for a username if one is not found.
 
 <!-- CREDENTIALS - also, fix them, gateway:NAME@HOST (if not local) -->
 
@@ -28,7 +28,6 @@ To help capture diagnostic information the `-x` option can be used to capture ma
   -Z, --snooze            Request cell snooze info
   -U, --userassignment    Request cell user assignment info
   -u, --username string   Username
-  -P, --pwfile string     Password
   -l, --limit int         limit matching items to display. default is unlimited. results unsorted.
   -x, --xpaths            just show matching xpaths
 ```

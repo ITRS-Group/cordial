@@ -52,7 +52,8 @@ func init() {
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdUserAssignments, "userassignment", "U", false, "Request cell user assignment info")
 
 	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username")
-	snapshotCmd.Flags().StringVarP(&snapshotCmdPwFile, "pwfile", "P", "", "Password")
+	snapshotCmd.Flags().StringVarP(&snapshotCmdPwFile, "pwfile", "P", "", "File containing cleartext password (deprecated)")
+	snapshotCmd.Flags().MarkHidden("pwfile")
 
 	snapshotCmd.Flags().IntVarP(&snapshotCmdMaxitems, "limit", "l", 0, "limit matching items to display. default is unlimited. results unsorted.")
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdXpathsonly, "xpaths", "x", false, "just show matching xpaths")
@@ -71,12 +72,16 @@ var snapshotCmd = &cobra.Command{
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		AnnotationComponent: "gateway",
-		AnnotationWildcard:  "true",
+		AnnotationWildcard:  "explicit",
 		AnnotationNeedsHome: "true",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		var err error
 		ct, names, params := TypeNamesParams(cmd)
+		if len(names) == 0 {
+			fmt.Println(`no gateway name(s) supplied. Use a NAME of "all" as an explicit wildcard`)
+			return
+		}
 		if len(params) == 0 {
 			fmt.Printf("no dataview xpath(s) supplied")
 			return
@@ -135,9 +140,9 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *instance.Response
 			continue
 		}
 
-		// always use auth details in per-instance config, but if not
-		// given use those from the command line or user/global config
-		// or credentials file
+		// always use auth details in per-instance config, default to
+		// from the command line or user/global config or credentials
+		// file
 		username := i.Config().GetString(config.Join("snapshot", "username"))
 		password := i.Config().GetPassword(config.Join("snapshot", "password"))
 
@@ -150,11 +155,18 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *instance.Response
 		}
 
 		// if username is still unset then look for credentials
+		//
+		// credential domain is gateway:NAME or gateway:* for wildcard
 		if username == "" {
 			creds := config.FindCreds(i.Type().String()+":"+i.Name(), config.SetAppName(Execname))
 			if creds != nil {
 				username = creds.GetString("username")
 				password = creds.GetPassword("password")
+			} else {
+				if creds = config.FindCreds(i.Type().String()+":*", config.SetAppName(Execname)); creds != nil {
+					username = creds.GetString("username")
+					password = creds.GetPassword("password")
+				}
 			}
 		}
 

@@ -39,7 +39,7 @@ var FA2 = geneos.Component{
 	Name:          "fa2",
 	LegacyPrefix:  "fa2",
 	RelatedTypes:  nil,
-	Aliases:       []string{"fa2", "fixanalyser", "fixanalyzer", "fixanalyser2-netprobe"},
+	Names:         []string{"fa2", "fixanalyser", "fixanalyzer", "fixanalyser2-netprobe"},
 	ParentType:    &netprobe.Netprobe,
 	RealComponent: true,
 	DownloadBase:  geneos.DownloadBases{Resources: "Fix+Analyser+2+Netprobe", Nexus: "geneos-fixanalyser2-netprobe"},

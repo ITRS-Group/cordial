@@ -48,7 +48,7 @@ const sharedSuffix = "_shared"
 var RootComponent = Component{
 	Name:          RootComponentName,
 	RelatedTypes:  nil,
-	Aliases:       []string{"any"},
+	Names:         []string{"any"},
 	RealComponent: false,
 	DownloadBase:  DownloadBases{Resources: "", Nexus: ""},
 	GlobalSettings: map[string]string{
@@ -91,8 +91,8 @@ type Component struct {
 	// Name of a component
 	Name string
 
-	// Aliases are any aliases for component
-	Aliases []string
+	// Names are any names for the component (including the Name, above)
+	Names []string
 
 	// Defaults are name=value templates that are "run" for each new
 	// instance
@@ -196,10 +196,10 @@ func (ct *Component) String() (name string) {
 }
 
 // IsA returns true is any of the names match the any of the names
-// defined in ComponentMatches.
-func (ct *Component) IsA(name ...string) bool {
-	for _, a := range ct.Aliases {
-		for _, b := range name {
+// defined in ComponentMatches. The check is case-insensitive.
+func (ct *Component) IsA(names ...string) bool {
+	for _, a := range ct.Names {
+		for _, b := range names {
 			if strings.EqualFold(a, b) {
 				return true
 			}
@@ -321,7 +321,7 @@ func UsesKeyFiles() (cts []*Component) {
 // component does not match any known name.
 func ParseComponent(component string) *Component {
 	for _, v := range registeredComponents {
-		for _, m := range v.Aliases {
+		for _, m := range v.Names {
 			if strings.EqualFold(m, component) {
 				return v
 			}

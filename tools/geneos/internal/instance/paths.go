@@ -108,8 +108,12 @@ func PathOf(i geneos.Instance, name string) string {
 }
 
 // Abs returns an absolute path to file prepended with the instance
-// working directory if file is not already an absolute path.
+// working directory if file is not already an absolute path. If file is
+// empty then an empty result is returned.
 func Abs(i geneos.Instance, file string) (result string) {
+	if file == "" {
+		return
+	}
 	result = path.Clean(file)
 	if filepath.IsAbs(result) {
 		return
@@ -129,12 +133,8 @@ func Filepaths(i geneos.Instance, names ...string) (filenames []string) {
 		return
 	}
 
-	// dir := HomeDir(c)
-
 	for _, name := range names {
-		if !cf.IsSet(name) {
-			continue
-		}
+		// note: Abs(i, "") returns ""
 		filenames = append(filenames, Abs(i, cf.GetString(name)))
 	}
 	return

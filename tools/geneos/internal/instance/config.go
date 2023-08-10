@@ -104,17 +104,17 @@ func ExecuteTemplate(i geneos.Instance, p string, name string, defaultTemplate [
 	// set high level defaults
 	m["root"] = i.Host().GetString("geneos")
 	m["name"] = i.Name()
+	m["home"] = i.Home()
 	// remove aliases
 	for _, k := range cf.AllKeys() {
 		if _, ok := i.Type().LegacyParameters[k]; ok {
 			delete(m, k)
 		}
 	}
-	log.Debug().Msgf("template data: %#v", m)
+	// log.Debug().Msgf("template data: %#v", m)
 
 	if err = t.ExecuteTemplate(out, name, m); err != nil {
 		log.Error().Err(err).Msg("Cannot create configuration from template(s)")
-		return err
 	}
 
 	return
@@ -309,34 +309,32 @@ func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
 }
 
 // SetSecureArgs returns a slice of arguments to enable secure
-// connections if the correct configuration values are set. These
-// command line options are common to all core Geneos components except
-// the gateway, which is special-cased
+// connections if the correct configuration values are set. The private
+// key may be in the certificate file and the chain is optional.
 func SetSecureArgs(i geneos.Instance) (args []string) {
 	files := Filepaths(i, "certificate", "privatekey", "certchain")
 	if len(files) == 0 {
 		return
 	}
-	if files[0] != "" {
-		if !i.Type().IsA("gateway", "san", "floating") {
+	cert, privkey, chain := files[0], files[1], files[2]
+
+	if cert != "" {
+		if IsA(i, "netprobe", "licd") {
 			args = append(args, "-secure")
 		}
-		args = append(args, "-ssl-certificate", files[0])
+		args = append(args, "-ssl-certificate", cert)
 	}
-	if files[1] != "" {
-		args = append(args, "-ssl-certificate-key", files[1])
+	if privkey != "" {
+		args = append(args, "-ssl-certificate-key", privkey)
 	}
 
-	var chainfile string
-	if len(files) > 2 {
-		chainfile = files[2]
-	} else {
+	if chain == "" {
 		// promote old files that may exist
-		chainfile = config.PromoteFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
+		chain = config.PromoteFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
 	}
-	s, err := i.Host().Stat(chainfile)
+	s, err := i.Host().Stat(chain)
 	if err == nil && !s.IsDir() {
-		args = append(args, "-ssl-certificate-chain", chainfile)
+		args = append(args, "-ssl-certificate-chain", chain)
 	}
 	return
 }

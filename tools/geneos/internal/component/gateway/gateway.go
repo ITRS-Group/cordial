@@ -41,7 +41,7 @@ var Gateway = geneos.Component{
 	Name:          "gateway",
 	LegacyPrefix:  "gate",
 	RelatedTypes:  nil,
-	Aliases:       []string{"gateway", "gateways"},
+	Names:         []string{"gateway", "gateways"},
 	RealComponent: true,
 	UsesKeyfiles:  true,
 	Templates: []geneos.Templates{

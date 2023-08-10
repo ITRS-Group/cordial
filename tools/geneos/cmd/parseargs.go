@@ -86,9 +86,14 @@ func parseArgs(command *cobra.Command, args []string) (err error) {
 	// shortcut - if the first non-component arg is "all" and the
 	// wildcard type is "explicit" then treat it as a wildcard, but only
 	// when given "all" as the first argument
-	if len(args) > 0 && args[0] == "all" && annotations[AnnotationWildcard] == "explicit" {
-		annotations[AnnotationWildcard] = "true"
-		if len(args) > 1 {
+	if len(args) > 0 {
+		// first strip component if given and specified
+		if annotations[AnnotationComponent] == args[0] {
+			args = args[1:]
+		}
+		// now check first non component arg
+		if annotations[AnnotationWildcard] == "explicit" && args[0] == "all" {
+			annotations[AnnotationWildcard] = "true"
 			args = args[1:]
 		}
 	}
@@ -110,13 +115,10 @@ func parseArgs(command *cobra.Command, args []string) (err error) {
 
 	log.Debug().Msgf("rawargs %v, params %v, ct %s", args, params, annotations[AnnotationComponent])
 
-	// if _, ok := annotations[AnnotationComponent]; !ok {
-	// 	annotations[AnnotationComponent] = ""
-	// }
 	jsonargs, _ := json.Marshal(params)
 	annotations[AnnotationParams] = string(jsonargs)
 
-	if annotations[AnnotationWildcard] == "false" {
+	if annotations[AnnotationWildcard] != "true" {
 		if len(args) == 0 {
 			return nil
 		}

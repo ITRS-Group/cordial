@@ -41,7 +41,7 @@ var AC2 = geneos.Component{
 	Name:             "ac2",
 	LegacyPrefix:     "",
 	RelatedTypes:     nil,
-	Aliases:          []string{"ac2", "active-console", "activeconsole", "desktop-activeconsole"},
+	Names:            []string{"ac2", "active-console", "activeconsole", "desktop-activeconsole"},
 	RealComponent:    true,
 	DownloadBase:     geneos.DownloadBases{Resources: "Active+Console", Nexus: "geneos-desktop-activeconsole"},
 	DownloadInfix:    "desktop-activeconsole",
