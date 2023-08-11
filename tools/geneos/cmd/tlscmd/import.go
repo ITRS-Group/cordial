@@ -100,6 +100,7 @@ var importCmd = &cobra.Command{
 					return err
 				}
 			}
+			return err
 		}
 
 		if importCmdCert != "" {
@@ -110,16 +111,18 @@ var importCmd = &cobra.Command{
 			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, cert, privkey, chain).Write(os.Stdout)
 		}
 
-		if importCmdChain != "" {
-			_, _, chain, err := tlsDecompose(importCmdChain, "")
-			if err != nil {
-				return err
-			}
-			if err = tlsWriteChainLocal("", chain); err != nil {
-				return err
-			}
-			fmt.Println("local certificate chain written")
+		if importCmdChain == "" {
+			return
 		}
+
+		_, _, chain, err := tlsDecompose(importCmdChain, "")
+		if err != nil {
+			return err
+		}
+		if err = tlsWriteChainLocal("", chain); err != nil {
+			return err
+		}
+		fmt.Printf("%s certificate chain written\n", cmd.Execname)
 
 		return
 	},
@@ -134,7 +137,7 @@ func tlsWriteChainLocal(chainpath string, chain []*x509.Certificate) (err error)
 		return err
 	}
 	if chainpath == "" {
-		chainpath = path.Join(geneos.LOCAL.PathTo("tls"), geneos.ChainCertFile)
+		chainpath = path.Join(tlsPath, geneos.ChainCertFile)
 	}
 	if err = config.WriteCertChain(geneos.LOCAL, chainpath, chain...); err != nil {
 		return err
@@ -142,36 +145,14 @@ func tlsWriteChainLocal(chainpath string, chain []*x509.Certificate) (err error)
 	return
 }
 
+// tlsWriteInstance expects 3 params, of *x509.Certificate,
+// *memguard.Enclave and a []*x509.Certificate or it will panic.
 func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	var chain []*x509.Certificate
-
 	cf := i.Config()
 
-	if len(params) < 2 {
-		resp.Err = geneos.ErrInvalidArgs
-		return
-	}
-
-	cert, ok := params[0].(*x509.Certificate)
-	if !ok {
-		resp.Err = geneos.ErrInvalidArgs
-		return
-	}
-
-	key, ok := params[1].(*memguard.Enclave)
-	if !ok {
-		resp.Err = geneos.ErrInvalidArgs
-		return
-	}
-
-	if len(params) > 2 {
-		c, ok := params[2].([]*x509.Certificate)
-		if ok {
-			chain = c
-		}
-	}
+	cert, key, chain := params[0].(*x509.Certificate), params[1].(*memguard.Enclave), params[2].([]*x509.Certificate)
 
 	if resp.Err = instance.WriteCert(i, cert); resp.Err != nil {
 		return
@@ -233,6 +214,7 @@ func tlsDecompose(certfile, keyfile string) (cert *x509.Certificate, der *memgua
 				return
 			}
 			if !c.BasicConstraintsValid {
+				err = geneos.ErrInvalidArgs
 				return
 			}
 			if c.IsCA {
@@ -284,6 +266,7 @@ func tlsDecompose(certfile, keyfile string) (cert *x509.Certificate, der *memgua
 		der = derkeys[i]
 	}
 
+	err = nil
 	return
 }
 
