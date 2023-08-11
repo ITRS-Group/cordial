@@ -274,20 +274,20 @@ var deployCmd = &cobra.Command{
 
 		// we are installed and ready to go, drop through to code from `add`
 
-		c, err := instance.Get(ct, name)
+		i, err := instance.Get(ct, name)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return
 		}
-		cf := c.Config()
+		cf := i.Config()
 
 		// check if instance already exists
-		if !c.Loaded().IsZero() {
-			log.Error().Msgf("%s already exists", c)
+		if !i.Loaded().IsZero() {
+			log.Error().Msgf("%s already exists", i)
 			return
 		}
 
 		// call components specific Add()
-		if err = c.Add(deployCmdTemplate, deployCmdPort); err != nil {
+		if err = i.Add(deployCmdTemplate, deployCmdPort); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 
@@ -295,45 +295,54 @@ var deployCmd = &cobra.Command{
 			cf.Set("version", deployCmdBase)
 		}
 
-		if ct.UsesKeyfiles {
-			crc, err := geneos.UseKeyFile(c.Host(), c.Type(), deployCmdKeyfile, deployCmdKeyfileCRC)
+		if ct.IsA("gateway") {
+			// override the instance generated keyfile if options given
+			crc, err := geneos.UseKeyFile(i.Host(), i.Type(), deployCmdKeyfile, deployCmdKeyfileCRC)
 			if err == nil {
-				cf.Set("keyfile", instance.Shared(c, "keyfiles", crc+".aes"))
+				cf.Set("keyfile", instance.Shared(i, "keyfiles", crc+".aes"))
+			}
+			// set usekeyfile for all new instances 5.14 and above
+			if _, version, err := instance.Version(i); err == nil {
+				if geneos.CompareVersion(version, "5.14.0") >= 0 {
+					// use keyfiles
+					log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
+					cf.Set("usekeyfile", "true")
+				}
 			}
 		}
 
-		instance.SetInstanceValues(c, deployCmdExtras, "")
+		instance.SetInstanceValues(i, deployCmdExtras, "")
 		cf.SetKeyValues(params...)
 		// update home so save is correct
-		cf.Set("home", instance.Home(c))
+		cf.Set("home", instance.Home(i))
 
-		if err = instance.SaveConfig(c); err != nil {
+		if err = instance.SaveConfig(i); err != nil {
 			return
 		}
 
 		// reload config as instance data is not updated by Add() as an interface value
-		c.Unload()
-		c.Load()
-		log.Debug().Msgf("home is now %s", c.Home())
-		c.Rebuild(true)
+		i.Unload()
+		i.Load()
+		log.Debug().Msgf("home is now %s", i.Home())
+		i.Rebuild(true)
 
-		for _, i := range deployCmdImportFiles {
-			if _, err = geneos.ImportFile(c.Host(), c.Home(), i); err != nil && err != geneos.ErrExists {
+		for _, importfile := range deployCmdImportFiles {
+			if _, err = geneos.ImportFile(i.Host(), i.Home(), importfile); err != nil && err != geneos.ErrExists {
 				return err
 			}
 		}
 		err = nil
 
-		fmt.Printf("%s added, port %d\n", c, cf.GetInt("port"))
+		fmt.Printf("%s added, port %d\n", i, cf.GetInt("port"))
 
 		if deployCmdStart || deployCmdLogs {
-			if err = instance.Start(c); err != nil {
+			if err = instance.Start(i); err != nil {
 				if errors.Is(err, os.ErrProcessDone) {
 					err = nil
 				}
 			}
 			if deployCmdLogs {
-				return followLog(c)
+				return followLog(i)
 			}
 		}
 
