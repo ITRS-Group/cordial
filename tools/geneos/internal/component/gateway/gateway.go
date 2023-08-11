@@ -86,6 +86,7 @@ var Gateway = geneos.Component{
 		`gatewayname={{.name}}`,
 		`setup={{join "${config:home}" "gateway.setup.xml"}}`,
 		`autostart=true`,
+		`usekeyfile=false`,
 	},
 	GlobalSettings: map[string]string{
 		"GatewayPortRange": "7039,7100-",
@@ -238,7 +239,7 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 		return
 	}
 
-	return nil // g.Rebuild(true)
+	return nil
 }
 
 func (g *Gateways) Rebuild(initial bool) (err error) {
@@ -332,17 +333,13 @@ func (g *Gateways) Command() (args, env []string, home string) {
 		}
 
 	}
-	// check version
-	// base, underlying, _ := instance.Version(g)
-	// if underlying ... { }
-	// "-gateway-name",
 
 	if cf.GetString("gatewayname") != g.Name() {
 		args = append([]string{cf.GetString("gatewayname")}, args...)
 	}
 
-	// We should not set port on command line. This is now done in the
-	// instance template.
+	// Do not set port on command line. This is now done in the instance
+	// template.
 
 	// if cf.IsSet("port") {
 	//  args = append([]string{"-port", fmt.Sprint(cf.GetString("port"))}, args...)
