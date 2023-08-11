@@ -32,7 +32,7 @@ import (
 )
 
 // Start runs the instance.
-func Start(i geneos.Instance) (err error) {
+func Start(i geneos.Instance, options ...StartOptions) (err error) {
 	if IsRunning(i) {
 		return geneos.ErrRunning
 	}
@@ -54,7 +54,7 @@ func Start(i geneos.Instance) (err error) {
 		return fmt.Errorf("%q %w", binary, err)
 	}
 
-	cmd, env, home := BuildCmd(i, false)
+	cmd, env, home := BuildCmd(i, false, options...)
 	if cmd == nil {
 		return fmt.Errorf("BuildCmd() returned nil")
 	}
@@ -78,13 +78,18 @@ func Start(i geneos.Instance) (err error) {
 //
 // If noDecode is set then any secure environment variables are not decoded,
 // so can be used for display
-func BuildCmd(i geneos.Instance, noDecode bool) (cmd *exec.Cmd, env []string, home string) {
+//
+// Any extras arguments are appended without further checks
+func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *exec.Cmd, env []string, home string) {
 	binary := PathOf(i, "program")
 
+	so := evalStartOptions(options...)
 	args, env, home := i.Command()
 
 	opts := strings.Fields(i.Config().GetString("options"))
 	args = append(args, opts...)
+
+	args = append(args, so.extras...)
 
 	envs := i.Config().GetStringSlice("env", config.NoDecode(noDecode))
 	libs := []string{}
@@ -103,7 +108,41 @@ func BuildCmd(i geneos.Instance, noDecode bool) (cmd *exec.Cmd, env []string, ho
 	if len(libs) > 0 {
 		env = append(env, "LD_LIBRARY_PATH="+strings.Join(libs, ":"))
 	}
+	env = append(env, so.envs...)
 	cmd = exec.Command(binary, args...)
 
 	return
+}
+
+type startOptions struct {
+	envs   []string
+	extras []string
+}
+
+type StartOptions func(*startOptions)
+
+func evalStartOptions(options ...StartOptions) (d *startOptions) {
+	// defaults
+	d = &startOptions{}
+	for _, opt := range options {
+		opt(d)
+	}
+	return
+}
+
+// StartingExtras sets extra command line parameters by splitting extras
+// on spaces. Quotes, escaping and other shell-like separators are
+// ignored.
+func StartingExtras(extras string) StartOptions {
+	return func(so *startOptions) {
+		so.extras = strings.Fields(extras)
+	}
+}
+
+// StartingEnvs takes a NameValues list of extra environment variables
+// to append to the standard list for the instance.
+func StartingEnvs(envs NameValues) StartOptions {
+	return func(so *startOptions) {
+		so.envs = envs
+	}
 }

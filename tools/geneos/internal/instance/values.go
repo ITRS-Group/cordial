@@ -45,10 +45,10 @@ type SetConfigValues struct {
 	Gateways Gateways
 
 	// Attributes are name=value pairs for attributes for Gateway templates
-	Attributes NameValue
+	Attributes NameValues
 
 	// Environment variables for all instances as name=value pairs
-	Envs NameValue
+	Envs NameValues
 
 	// Variables for SAN templates, keyed by variable name
 	Variables Vars
@@ -318,21 +318,21 @@ func (i *Gateways) Type() string {
 }
 
 // attribute - name=value
-type NameValue []string
+type NameValues []string
 
 const AttributesOptionsText = "An attribute in the format NAME=VALUE\n(Repeat as required, san only)"
 const EnvsOptionsText = "An environment variable for instance start-up\n(Repeat as required)"
 
-func (i *NameValue) String() string {
+func (i *NameValues) String() string {
 	return ""
 }
 
-func (i *NameValue) Set(value string) error {
+func (i *NameValues) Set(value string) error {
 	*i = append(*i, value)
 	return nil
 }
 
-func (i *NameValue) Type() string {
+func (i *NameValues) Type() string {
 	return "NAME=VALUE"
 }
 

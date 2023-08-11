@@ -136,10 +136,6 @@ func parseArgs(command *cobra.Command, args []string) (err error) {
 		if defaultComponent == "" && len(args) > 0 {
 			defaultComponent = args[0]
 		}
-		// work through wildcard options
-		// if len(rawargs) == 0 {
-		// 	// nothing
-		// } else
 		if ct = geneos.ParseComponent(defaultComponent); ct == nil {
 			// first arg is not a known type, so treat the rest as instance names
 			names = args

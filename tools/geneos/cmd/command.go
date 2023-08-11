@@ -34,10 +34,14 @@ import (
 )
 
 var commandCmdJSON bool
+var commandCmdExtras string
+var commandCmdEnvs instance.NameValues
 
 func init() {
 	GeneosCmd.AddCommand(commandCmd)
 
+	commandCmd.Flags().StringVarP(&commandCmdExtras, "extras", "x", "", "Extra args passed to process, split on spaces and quoting ignored")
+	commandCmd.Flags().VarP(&commandCmdEnvs, "env", "e", "Extra environment variable (Repeat as required)")
 	commandCmd.Flags().BoolVarP(&commandCmdJSON, "json", "j", false, "JSON formatted output")
 }
 
@@ -67,12 +71,12 @@ var commandCmd = &cobra.Command{
 	},
 }
 
-func commandInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
+func commandInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
 	lines := []string{fmt.Sprintf("=== %s ===", i)}
 
-	cmd, env, home := instance.BuildCmd(i, true)
+	cmd, env, home := instance.BuildCmd(i, true, instance.StartingExtras(commandCmdExtras), instance.StartingEnvs(commandCmdEnvs))
 	lines = append(lines,
 		"command line:",
 		fmt.Sprint("\t", cmd.String()),
@@ -82,6 +86,7 @@ func commandInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		"",
 		"environment:",
 	)
+
 	for _, e := range env {
 		lines = append(lines, fmt.Sprint("\t", e))
 	}
@@ -103,7 +108,7 @@ type command struct {
 func commandInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	cmd, env, home := instance.BuildCmd(i, true)
+	cmd, env, home := instance.BuildCmd(i, true, instance.StartingExtras(commandCmdExtras), instance.StartingEnvs(commandCmdEnvs))
 	command := &command{
 		Instance: i.Name(),
 		Type:     i.Type().Name,

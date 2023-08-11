@@ -8,9 +8,14 @@
 
 ## v1.8.0 Changes
 
-* `tools/geneos` - Extensive rework to the internal handling of loops-over-instances to pass-back an `instance.Response` struct and handle output at the caller. This is preparation for work on non-CLI interfaces (think: REST API and web). This may break some output formatting, please report via github issues.
+* `tools/geneos`
+    * Enable the use of external key-files for all *new* Gateways running on version GA5.14 and above. Existing Gateways will not be affected as the default is `usekeyfile=false`. If you do not want to use an external key-file set `usekeyfile=false` before starting for the first time. If a Gateway has been started with or without a keyfile and created a cache directory then you must follow the instructions in the documentation, <https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm#How_to_change_the_key_file_of_your_Gateway>, otherwise your Gateway will not start-up.
 
-* `tools/geneos` - `tls import` has changed to support the import of instance certificate, signing certs and chains in a more organised way. It is unlikely anyone was using the previous incarnation which was highly limited but just in case, this is a **breaking change** to the syntax and functionality of `tls import`.
+    * New options to the `start`, `restart` and `command` sub-commands allow you to add one-off command line arguments and environment variables to an instance. This is useful, for example, to pass a `-skip-cache` argument to a Gateway.
+
+    * Extensive rework to the internal handling of loops-over-instances to pass-back an `instance.Response` struct and handle output at the caller. This is preparation for work on non-CLI interfaces (think: REST API and web). This may break some output formatting, please report via github issues.
+
+    * `tls import` has changed to support the import of instance certificate, signing certs and chains in a more organised way. It is unlikely anyone was using the previous incarnation which was highly limited but just in case, this is a **breaking change** to the syntax and functionality of `tls import`.
 
 ## v1.8.0 Fixes
 

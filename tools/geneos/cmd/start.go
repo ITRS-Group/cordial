@@ -33,10 +33,14 @@ import (
 )
 
 var startCmdLogs bool
+var startCmdExtras string
+var startCmdEnvs instance.NameValues
 
 func init() {
 	GeneosCmd.AddCommand(startCmd)
 
+	startCmd.Flags().StringVarP(&startCmdExtras, "extras", "x", "", "Extra args passed to process, split on spaces and quoting ignored")
+	startCmd.Flags().VarP(&startCmdEnvs, "env", "e", "Extra environment variable (Repeat as required)")
 	startCmd.Flags().BoolVarP(&startCmdLogs, "log", "l", false, "Follow logs after starting instance")
 	startCmd.Flags().SortFlags = false
 }
@@ -74,7 +78,7 @@ func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string,
 	instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		resp = instance.NewResponse(i)
 		if instance.IsAutoStart(i) || autostart {
-			resp.Err = instance.Start(i)
+			resp.Err = instance.Start(i, instance.StartingExtras(startCmdExtras), instance.StartingEnvs(startCmdEnvs))
 		}
 		return
 	}).Write(os.Stdout, instance.WriterIgnoreErr(geneos.ErrRunning))
