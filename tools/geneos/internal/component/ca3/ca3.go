@@ -178,6 +178,9 @@ func (n *CA3s) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(n.Host(), &CA3)
 	}
+	if port == 0 {
+		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
+	}
 
 	baseDir := path.Join(instance.BaseVersion(n), "collection_agent")
 	n.Config().Set("port", port)

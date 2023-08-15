@@ -174,6 +174,9 @@ func (n *AC2s) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(n.Host(), &AC2)
 	}
+	if port == 0 {
+		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
+	}
 
 	baseDir := instance.BaseVersion(n)
 	n.Config().Set("port", port)

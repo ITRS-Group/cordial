@@ -211,6 +211,9 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(g.InstanceHost, &Gateway)
 	}
+	if port == 0 {
+		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
+	}
 	cf.Set("port", port)
 	cf.Set(cf.Join("config", "rebuild"), "initial")
 
@@ -278,6 +281,9 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	// use getPorts() to check valid change, else go up one
 	ports := instance.GetPorts(g.Host())
 	nextport := instance.NextPort(g.Host(), &Gateway)
+	if nextport == 0 {
+		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
+	}
 	if secure && cf.GetInt64("port") == 7039 {
 		if _, ok := ports[7038]; !ok {
 			cf.Set("port", 7038)

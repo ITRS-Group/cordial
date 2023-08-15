@@ -98,6 +98,10 @@ geneos add netprobe infraprobe12 --start --log
 // AddInstance add an instance of component type ct the the optional
 // extra configuration values addCmdExtras
 func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, items []string, names ...string) (err error) {
+	if ct == nil {
+		return fmt.Errorf("%w: unsupported or no component type specified", geneos.ErrInvalidArgs)
+	}
+
 	// check validity and reserved words here
 	name := names[0]
 

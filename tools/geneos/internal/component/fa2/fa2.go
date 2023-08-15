@@ -172,6 +172,9 @@ func (n *FA2s) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(n.InstanceHost, &FA2)
 	}
+	if port == 0 {
+		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
+	}
 	n.Config().Set("port", port)
 
 	if err = instance.SaveConfig(n); err != nil {
