@@ -188,11 +188,11 @@ PIDS:
 	return 0, os.ErrProcessDone
 }
 
-// Program is a highly simplified representation of a program to
-// manage with Start or Batch.
+// Program is a highly simplified representation of a program to manage
+// with Start or Batch.
 //
-// Args and Env can be either a string, which is split on whitespace or
-// a slice of strings which is used as-is
+// Args and Env can be either a comma delimited string, which is split
+// by viper/mapstructure, or a slice of strings which is used as-is
 type Program struct {
 	Executable string        `json:"executable,omitempty"` // Path to program, passed through exec.LookPath
 	Username   string        `json:"username,omitempty"`   // The name of the user, if empty use current
@@ -214,11 +214,7 @@ func retErrIfFalse(ret bool, err error) error {
 }
 
 // Start runs a process on host h. It is run detached in the background
-// unless Foreground is true. username should be am empty string (for
-// now). home is the working directory for the process, defaults to the
-// home dir of the user if empty. out is the log to write stdout and
-// stderr to. args are process args, env is a slice of key=value env
-// vars.
+// unless Foreground is true.
 //
 // TODO: return error windows
 // TODO: look at remote processes
@@ -302,7 +298,6 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 			for {
 				cmd := exec.Command(program.Executable, program.Args...)
 				setCredentialsFromUsername(cmd, program.Username)
-
 				h.Run(cmd, program.Env, program.WorkingDir, program.ErrLog)
 				if program.Wait != 0 {
 					time.Sleep(program.Wait)

@@ -4,6 +4,7 @@ package process
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"os/user"
 	"strconv"
@@ -37,6 +38,12 @@ func setCredentials(cmd *exec.Cmd, user, group any) {
 }
 
 func setCredentialsFromUsername(cmd *exec.Cmd, username string) (err error) {
+	// setting the Credential struct causes errors and confusion if you
+	// are not privileged
+	if os.Getuid() != 0 && os.Geteuid() != 0 {
+		return os.ErrPermission
+	}
+
 	u, err := user.Lookup(username)
 	if err != nil {
 		return
