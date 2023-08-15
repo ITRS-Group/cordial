@@ -169,6 +169,9 @@ func (l *Licds) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(l.InstanceHost, &Licd)
 	}
+	if port == 0 {
+		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
+	}
 	l.Config().Set("port", port)
 
 	if err = instance.SaveConfig(l); err != nil {

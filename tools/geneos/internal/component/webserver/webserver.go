@@ -190,8 +190,13 @@ func (w *Webservers) Config() *config.Config {
 }
 
 func (w *Webservers) Add(tmpl string, port uint16) (err error) {
-	w.Config().Set("port", instance.NextPort(w.InstanceHost, &Webserver))
-
+	if port == 0 {
+		port = instance.NextPort(w.InstanceHost, &Webserver)
+	}
+	if port == 0 {
+		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
+	}
+	w.Config().Set("port", port)
 	if err = instance.SaveConfig(w); err != nil {
 		return
 	}

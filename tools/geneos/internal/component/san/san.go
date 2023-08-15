@@ -203,6 +203,9 @@ func (s *Sans) Add(template string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(s.InstanceHost, &San)
 	}
+	if port == 0 {
+		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
+	}
 
 	cf.Set("port", port)
 	cf.Set(cf.Join("config", "rebuild"), "always")

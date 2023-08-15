@@ -177,6 +177,9 @@ func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
 		port = instance.NextPort(n.Host(), &FileAgent)
 	}
+	if port == 0 {
+		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
+	}
 	n.Config().Set("port", port)
 
 	if err = instance.SaveConfig(n); err != nil {
