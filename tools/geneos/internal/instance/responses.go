@@ -88,6 +88,54 @@ func (r Responses) Less(i, j int) bool {
 	}
 }
 
+// MergeResponse merges r1 and r2 and returns a single response pointer.
+// Instance is set to r1.Instance, and the r2.Instance value is ignored.
+// Single value fields are turned into multi-value fields if both r1 and
+// r2 have them set. if both Value fields are set them they are turned
+// into a slice of both. The Finish time from r2 is copied to r1, the
+// Start time is only copied if r1.Start is unset. The Err fields are
+// joined using errors.Join()
+//
+// This should only be used where a sequence of actions are being
+// performed and a single response is expected.
+func MergeResponse(r1, r2 *Response) (resp *Response) {
+	resp = NewResponse(r1.Instance)
+	resp.Completed = append(r1.Completed, r2.Completed...)
+	resp.Rows = append(r1.Rows, r2.Rows...)
+	resp.Err = errors.Join(r1.Err, r2.Err)
+
+	resp.Start = r1.Start
+	if resp.Start.IsZero() {
+		resp.Start = r2.Start
+	}
+
+	resp.Finish = r2.Finish
+	if resp.Finish.IsZero() {
+		resp.Finish = r1.Finish
+	}
+
+	switch {
+	case r1.Value == nil:
+		resp.Value = r2.Value
+	case r1.Value != nil && r2.Value != nil:
+		resp.Value = []any{r1.Value, r2.Value}
+	default:
+		resp.Value = r1.Value
+	}
+
+	switch {
+	case r1.Line != "" && r2.Line != "":
+		resp.Lines = append(resp.Lines, r1.Line, r2.Line)
+	case r1.Line != "":
+		resp.Line = r1.Line
+	case r2.Line != "":
+		resp.Line = r2.Line
+	}
+
+	r1.Lines = append(r1.Lines, r2.Lines...)
+	return
+}
+
 type SortInstanceResponses struct {
 	Instances []geneos.Instance
 	Results   []interface{}
