@@ -1,11 +1,10 @@
-# `cordial` - ITRS Geneos Utilities Written In Go
+# `cordial` - Geneos Utilities, Integrations and Packages
 
-Cordial is a collection of utilities, integrations and support packages for
-ITRS Geneos.
+Cordial is a collection of utilities, integrations and support packages for ITRS Geneos.
 
-> **Current Version: v1.7.2**
+> **Current Version: v1.8.0**
 >
-> Released 2023-07-28
+> Released 2023-08-16
 >
 > See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 
@@ -13,14 +12,13 @@ ITRS Geneos.
 
 * [`geneos`](tools/geneos/) - Manage Your Geneos environment
 
-* [`dv2email`](tools/dv2email) - Send a Dataview as an EMail
+* [`dv2email`](tools/dv2email/) - Send a Dataview as an EMail
 
-* [`libemail`](libraries/libemail/) - Enhanced Drop-In Replacement for `libemail`
+* [`libemail`](libraries/libemail/) - Drop-In Updated Replacement for `libemail`
 
 ## Integrations
 
-* [ServiceNow](integrations/servicenow/) - Send Geneos
-  Alerts to ServiceNow
+* [ServiceNow](integrations/servicenow/) - Send Geneos Alerts to ServiceNow
 
 * [PagerDuty](integrations/pagerduty/) - Send Geneos to PagerDuty
 
@@ -46,6 +44,10 @@ These packages provide Go interfaces to ITRS Geneos as well as utilities to help
   
   The Geneos schema is not, and cannot be, fully implemented at this stage as the mappings have been hand-rolled rather than any attempt as machine translation.
 
+  * [`geneos/api`](pkg/geneos/api/README.md)
+
+    An updated API package for sending data into Geneos. This is work in progress and is not ready for real-world use. This package will provide a unified API for both XML-RPC and REST APIs, within the constraints of the features of both.
+
 * [`host`](pkg/host/README.md)
 
   Remote host integration extracted from `geneos` internal packages and turned into an extensible interface that supports local OS and remote SSH/SFTP operations. The API is still in flux and could do with more review and structure.
@@ -59,11 +61,11 @@ These packages provide Go interfaces to ITRS Geneos as well as utilities to help
 
 * [`process`](pkg/process/README.md)
 
-  Process management functions. There is a `Daemon()` function to background a process and the beginnings of program and batch managers. While the `Daemon()` function is relatively stable the other methods in this package are new and liable to change as usage dictates.
+  Process management functions. There is a `Daemon()` function to background a process and the beginnings of program and batch managers. While the `Daemon()` function is relatively stable the other methods in this package are new and liable to change as their use matures.
 
 * [`commands`](pkg/commands/README.md)
 
-  Geneos Gateway REST API Commands including programmatic support for `snapshots` of Dataviews. When used with the `xpath` package (below) this package provides a simple way of executing REST commands on Geneos Gateways.
+  Geneos Gateway REST API Commands including programmatic support for `snapshots` of Dataviews. When used with the `xpath` package below it provides a simple way of executing REST commands on Geneos Gateways.
 
 * [`xpath`](pkg/xpath/README.md)
 
@@ -71,5 +73,4 @@ These packages provide Go interfaces to ITRS Geneos as well as utilities to help
 
 * [`pkg/icp`](pkg/icp) and [`pkg/gwhub`](pkg/gwhub)
 
-  These two packages are the start of Go APIs to ITRS Capacity Planner and Gateway Hub respectively. They are work in progress and should not be used for anything other than testing for the moment.
-
+  These two packages are the start of APIs to ITRS Capacity Planner and Gateway Hub respectively. They are work in progress and should not be used for anything other than testing for the moment.

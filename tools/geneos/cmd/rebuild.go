@@ -63,11 +63,13 @@ var rebuildCmd = &cobra.Command{
 			if resp.Err = i.Rebuild(rebuildCmdForce); resp.Err != nil {
 				return
 			}
+			resp.Completed = append(resp.Completed, "configuration rebuilt")
 			log.Debug().Msgf("%s configuration rebuilt (if supported)", i)
 			if !rebuildCmdReload {
 				return
 			}
-			return ReloadInstance(i)
+			resp2 := ReloadInstance(i)
+			return instance.MergeResponse(resp, resp2)
 		}).Write(os.Stdout)
 	},
 }
