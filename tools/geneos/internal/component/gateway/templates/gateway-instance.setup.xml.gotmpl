@@ -4,7 +4,7 @@
 	<operatingEnvironment>
 		<gatewayName>{{.gatewayname}}</gatewayName>
 		<listenPorts>
-		{{- if .certificate}}
+		{{- if and .certificate .privatekey}}
 			{{if eq .port 7039 -}}
 			<secure>
 				<listenPort>7038</listenPort>
