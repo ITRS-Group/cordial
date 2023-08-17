@@ -1,6 +1,11 @@
 package api
 
-import "errors"
+import (
+	"context"
+	"errors"
+
+	"github.com/itrs-group/cordial/pkg/rest"
+)
 
 // Documentation: https://docs.itrsgroup.com/docs/geneos/current/api/rest-api/?v=%252Fv1%252Frest-api.yaml
 
@@ -14,17 +19,21 @@ import "errors"
 // - Healthcheck
 
 type RESTClient struct {
+	*rest.Client
 }
 
 // check we implement all methods
 var _ APIClient = (*RESTClient)(nil)
 
-func NewRESTClient(endpoint string, options ...Options) (c APIClient, err error) {
-	return
+func NewRESTClient(endpoint string, options ...rest.Options) (c APIClient, err error) {
+	return &RESTClient{Client: rest.NewClient(options...)}, nil
 }
 
 func (c *RESTClient) Healthy() bool {
-	// get /healthcheck -> 200 OK
+	resp, err := c.Get(context.Background(), "/liveness", nil, nil)
+	if err != nil || resp.StatusCode != 200 {
+		return false
+	}
 	return true
 }
 
