@@ -373,7 +373,7 @@ func (g *Gateways) Command() (args, env []string, home string) {
 		}
 
 		prevkeyfile := instance.PathOf(g, "prevkeyfile")
-		if keyfile != "" {
+		if prevkeyfile != "" {
 			args = append(args, "-previous-key-file", prevkeyfile)
 		}
 
