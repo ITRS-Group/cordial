@@ -19,14 +19,6 @@ type APIClient interface {
 	DataviewExists(entity, sampler, name string) (bool, error)
 }
 
-type Client struct {
-	host         string
-	port         int
-	tls          bool
-	verify       bool
-	roundtripper http.RoundTripper
-}
-
 type roundTripper struct {
 	transport http.RoundTripper
 }
@@ -35,5 +27,5 @@ func (r *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	return r.transport.RoundTrip(req)
 }
 
-// compile time check for interface validty
+// compile time check for interface validity
 var _ http.RoundTripper = (*roundTripper)(nil)
