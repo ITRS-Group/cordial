@@ -10,6 +10,8 @@
 
 This version changes the way [`geneos tls import`](tools/geneos/docs/geneos_tls_import.md) works to add support for the import of external "real" certificates into your Geneos environment. You can now supply a PEM formatted certificate and key with an options verification chain and add these to existing instances.
 
+Key files are now enabled for use by default for all new Gateway instances. Key files have been automatically created for some time now, but not automatically enabled in the starting environment of the Gateway.
+
 ## v1.8.0 Changes
 
 * [`tools/geneos`](tools/geneos/README.md)
