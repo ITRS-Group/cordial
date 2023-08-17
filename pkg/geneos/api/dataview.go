@@ -22,7 +22,7 @@ type Dataview struct {
 // NewDataview returns a Dataview view. If the connection to the API
 // fails then a nil pointer is returned. If the dataview does not exist
 // in the Netprobe it is also created.
-func NewDataview(c Client, entity, sampler, typeName, viewName, groupHeading string) (view *Dataview, err error) {
+func NewDataview(c APIClient, entity, sampler, typeName, groupHeading, viewName string) (view *Dataview, err error) {
 	if typeName != "" {
 		sampler += "(" + typeName + ")"
 	}
@@ -59,28 +59,24 @@ func (view *Dataview) Update() (err error) {
 	return
 }
 
-/*
-UpdateTableFromMap - Given a map of structs representing rows of data,
-render a simple table update by converting all data and sorting the rows
-by the sort column in the initialised ColumnNames member of the Sampler
+// UpdateTableFromMap - Given a map of structs representing rows of data,
+// render a simple table update by converting all data and sorting the rows
+// by the sort column in the initialised ColumnNames member of the Sampler
 
-Sorting the data is only to define the "natural sort order" of the data
-as it appears in a Geneos Dataview without further client-side sorting.
-*/
+// Sorting the data is only to define the "natural sort order" of the data
+// as it appears in a Geneos Dataview without further client-side sorting.
 func (view *Dataview) UpdateTableFromMap(data interface{}) error {
 	table, _ := view.RowsFromMap(data)
 	return view.UpdateDataview(view.Entity, view.Sampler, view.Name, append([][]string{view.columnnames}, table...))
 }
 
-/*
-RowFromMap is a helper function that takes a tagged (flat) struct as input
-and formats a row (slice of strings) using tags. TBD, but selecting the
-rowname, the sorting, the format and type conversion, scaling and labels (percent,
-MB etc.)
+// RowFromMap is a helper function that takes a tagged (flat) struct as input
+// and formats a row (slice of strings) using tags. TBD, but selecting the
+// rowname, the sorting, the format and type conversion, scaling and labels (percent,
+// MB etc.)
 
-The data passed should NOT include column heading slice as it will be
-regenerated from the Columns data
-*/
+// The data passed should NOT include column heading slice as it will be
+// regenerated from the Columns data
 func (view *Dataview) RowsFromMap(rowdata interface{}) (rows [][]string, err error) {
 	c := view.columns
 	r := reflect.Indirect(reflect.ValueOf(rowdata))
