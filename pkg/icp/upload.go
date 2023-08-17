@@ -53,5 +53,5 @@ func (i *ICP) Upload(ctx context.Context, request UploadRequest, filename string
 	}
 	req.URL.RawQuery = v.Encode()
 
-	return icp.client.Do(req)
+	return icp.Client.HTTPClient.Do(req)
 }

@@ -1,18 +1,18 @@
-package gwhub
+package rest
 
 import "net/http"
 
 // Options are used to control behaviour of ICP functions
-type Options func(*gwhubOptions)
+type Options func(*restOptions)
 
-type gwhubOptions struct {
+type restOptions struct {
 	baseURL string
 	client  *http.Client
 }
 
-func evalOptions(options ...Options) (opts *gwhubOptions) {
-	opts = &gwhubOptions{
-		baseURL: "https://localhost:8443",
+func evalOptions(options ...Options) (opts *restOptions) {
+	opts = &restOptions{
+		baseURL: "https://localhost:443",
 		client:  &http.Client{},
 	}
 	for _, opt := range options {
@@ -22,9 +22,9 @@ func evalOptions(options ...Options) (opts *gwhubOptions) {
 }
 
 // BaseURL sets the root of the REST API URL. The default is
-// "https://localhost:8443"
+// "https://localhost:443"
 func BaseURL(baseurl string) Options {
-	return func(io *gwhubOptions) {
+	return func(io *restOptions) {
 		io.baseURL = baseurl
 	}
 }
@@ -32,7 +32,7 @@ func BaseURL(baseurl string) Options {
 // HTTPClient sets the http.Client to use for requests. The default is
 // the default http package client.
 func HTTPClient(client *http.Client) Options {
-	return func(io *gwhubOptions) {
+	return func(io *restOptions) {
 		io.client = client
 	}
 }
