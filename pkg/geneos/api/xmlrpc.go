@@ -122,7 +122,7 @@ func (c *XMLRPCClient) CreateRow(entity, sampler, view, name string) (err error)
 }
 
 func (c *XMLRPCClient) UpdateRow(entity, sampler, view, name string, values []string) (err error) {
-	return c.UpdateRow(entity, sampler, view, name, append([]string{name}, values...))
+	return c.UpdateTableRow(entity, sampler, view, name, append([]string{name}, values...))
 }
 
 func (c *XMLRPCClient) DeleteRow(entity, sampler, view, name string) (err error) {
