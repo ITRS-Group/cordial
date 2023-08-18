@@ -456,35 +456,47 @@ type UnsetConfigValues struct {
 
 // XXX abstract this for a general case
 func UnsetInstanceValues(i geneos.Instance, unset UnsetConfigValues) (changed bool) {
-	if unsetMap(i, "gateways", unset.Gateways) {
+	if len(unset.Gateways) > 0 {
 		changed = true
 	}
+	unsetMap(i, "gateways", unset.Gateways)
 
-	if unsetMap(i, "includes", unset.Includes) {
+	if len(unset.Includes) > 0 {
 		changed = true
 	}
+	unsetMap(i, "includes", unset.Includes)
 
-	if unsetMapHex(i, "variables", unset.Variables) {
+	if len(unset.Variables) > 0 {
 		changed = true
 	}
+	unsetMapHex(i, "variables", unset.Variables)
 
-	if unsetSlice(i, "attributes", unset.Attributes, func(a, b string) bool {
-		return strings.HasPrefix(a, b+"=")
-	}) {
+	if len(unset.Attributes) > 0 {
 		changed = true
 	}
+	unsetSlice(i, "attributes", unset.Attributes,
+		func(a, b string) bool {
+			return strings.HasPrefix(a, b+"=")
+		},
+	)
 
-	if unsetSlice(i, "env", unset.Envs, func(a, b string) bool {
-		return strings.HasPrefix(a, b+"=")
-	}) {
+	if len(unset.Envs) > 0 {
 		changed = true
 	}
+	unsetSlice(i, "env", unset.Envs,
+		func(a, b string) bool {
+			return strings.HasPrefix(a, b+"=")
+		},
+	)
 
-	if unsetSlice(i, "types", unset.Types, func(a, b string) bool {
-		return a == b
-	}) {
+	if len(unset.Types) > 0 {
 		changed = true
 	}
+	unsetSlice(i, "types", unset.Types,
+		func(a, b string) bool {
+			return a == b
+		},
+	)
 
 	return
 }
@@ -575,7 +587,7 @@ func (i *UnsetVars) Type() string {
 	return "SETTING"
 }
 
-// ImportFiles fulfills the Var interface for pflag
+// ImportFiles fulfils the Var interface for pflag
 type ImportFiles []string
 
 func (i *ImportFiles) String() string {
