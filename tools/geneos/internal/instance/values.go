@@ -501,21 +501,17 @@ func UnsetInstanceValues(i geneos.Instance, unset UnsetConfigValues) (changed bo
 	return
 }
 
-func unsetMap(i geneos.Instance, key string, items UnsetValues) (changed bool) {
+func unsetMap(i geneos.Instance, key string, items UnsetValues) {
 	cf := i.Config()
 
 	x := cf.GetStringMap(key)
 	for _, k := range items {
 		DeleteSettingFromMap(i, x, k)
-		changed = true
 	}
-	if changed {
-		cf.Set(key, x)
-	}
-	return
+	cf.Set(key, x)
 }
 
-func unsetMapHex(i geneos.Instance, key string, items UnsetVars) (changed bool) {
+func unsetMapHex(i geneos.Instance, key string, items UnsetVars) {
 	cf := i.Config()
 
 	x := cf.GetStringMap(key)
@@ -524,15 +520,11 @@ func unsetMapHex(i geneos.Instance, key string, items UnsetVars) (changed bool) 
 	}
 	for _, k := range items {
 		DeleteSettingFromMap(i, x, k)
-		changed = true
 	}
-	if changed {
-		cf.Set(key, x)
-	}
-	return
+	cf.Set(key, x)
 }
 
-func unsetSlice(i geneos.Instance, key string, items []string, cmp func(string, string) bool) (changed bool) {
+func unsetSlice(i geneos.Instance, key string, items []string, cmp func(string, string) bool) {
 	cf := i.Config()
 
 	newvals := []string{}
@@ -541,14 +533,12 @@ OUTER:
 	for _, t := range vals {
 		for _, v := range items {
 			if cmp(t, v) {
-				changed = true
 				continue OUTER
 			}
 		}
 		newvals = append(newvals, t)
 	}
 	cf.Set(key, newvals)
-	return
 }
 
 // unset Var flags take just the key, either a name or a priority for include files
