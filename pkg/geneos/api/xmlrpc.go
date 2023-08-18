@@ -53,6 +53,9 @@ import (
 	"github.com/kolo/xmlrpc"
 )
 
+// XMLRPCClient is a client for the XML-RPC API. It can be used to
+// connect to multiple entities and samplers on the same Netprobe and so
+// does not hold details at that level.
 type XMLRPCClient struct {
 	*xmlrpc.Client
 }
@@ -129,12 +132,24 @@ func (c *XMLRPCClient) DeleteRow(entity, sampler, view, name string) (err error)
 	return c.RemoveTableRow(entity, sampler, view, name)
 }
 
+func (c *XMLRPCClient) CreateColumn(entity, sampler, view, name string) (err error) {
+	return c.AddTableColumn(entity, sampler, view, name)
+}
+
+func (c *XMLRPCClient) CreateHeadline(entity, sampler, view, name string) (err error) {
+	return c.AddHeadline(entity, sampler, view, name)
+}
+
+func (c *XMLRPCClient) DeleteHeadline(entity, sampler, view, name string) (err error) {
+	return c.RemoveHeadline(entity, sampler, view, name)
+}
+
 func (c *XMLRPCClient) CreateStream(entity, sampler, name string) (err error) {
 	return errors.ErrUnsupported
 }
 
-func (c *XMLRPCClient) UpdateStream(entity, sampler, name, message string) (err error) {
-	return c.AddMessage(entity, sampler, name, message)
+func (c *XMLRPCClient) UpdateStream(entity, sampler, name string, message any) (err error) {
+	return c.AddMessage(entity, sampler, name, fmt.Sprint(message))
 }
 
 func (c *XMLRPCClient) DataviewExists(entity, sampler, name string) (bool, error) {

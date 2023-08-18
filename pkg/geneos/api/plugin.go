@@ -5,33 +5,49 @@ import (
 	"time"
 )
 
-type Plugin interface {
-	Init()
+// Sampler is the method set for a Plugin instance
+type Sampler interface {
+	// actions
+	Open() error
+	Start() error
+	Pause() error
+	Close() error
+	SampleNow() error
+
+	// info
 	Interval() time.Duration
 	SetInterval(time.Duration)
-	Start() error
-	Stop() error
-	SampleNow() error
 }
 
 var plugins sync.Map
 
-func RegisterPlugin(name string, plugin Plugin) {
+func RegisterPlugin(name string, plugin Sampler) {
 	plugins.Store(name, plugin)
 }
 
-func FindPlugin(name string) (plugin Plugin) {
+func FindPlugin(name string) (plugin Sampler) {
 	p, ok := plugins.Load(name)
 	if ok {
-		plugin = p.(Plugin)
+		plugin = p.(Sampler)
 	}
 	return
 }
 
-func Attach(c APIClient, name, entity, sampler, group string) {
-	p := FindPlugin(name)
-	if p == nil {
-		return
+// Plugin is an instance of a plugin
+type Plugin struct {
+	APIClient
+	Sampler
+	views map[string]Dataview
+
+	Interval time.Duration
+}
+
+func NewSampler(c APIClient, name, entity, sampler string) (s *Plugin) {
+	s = &Plugin{
+		APIClient: c,
+		Sampler:   FindPlugin(name),
+		views:     make(map[string]Dataview),
 	}
-	p.Init()
+
+	return
 }
