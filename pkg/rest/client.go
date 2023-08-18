@@ -11,10 +11,12 @@ import (
 	"net/url"
 	"reflect"
 
+	"github.com/clbanning/mxj/v2"
 	"github.com/google/go-querystring/query"
-	"github.com/itrs-group/cordial/pkg/config"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
+
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 // Package rest provides simple client interfaces for REST calls with
@@ -26,8 +28,6 @@ type Client struct {
 	authHeader string
 	authValue  string
 }
-
-var ErrServerError = errors.New("server error")
 
 func NewClient(options ...Options) *Client {
 	opts := evalOptions(options...)
@@ -64,7 +64,7 @@ func (c *Client) Auth(ctx context.Context, clientid string, clientsecret *config
 }
 
 // Get method. On successful return the response body will be closed.
-func (c *Client) Get(ctx context.Context, endpoint string, request interface{}, response interface{}) (resp *http.Response, err error) {
+func (c *Client) Get(ctx context.Context, endpoint string, request any, response any) (resp *http.Response, err error) {
 	dest, err := url.JoinPath(c.BaseURL, endpoint)
 	if err != nil {
 		return
@@ -87,12 +87,12 @@ func (c *Client) Get(ctx context.Context, endpoint string, request interface{}, 
 	if err != nil {
 		return
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode > 299 {
 		b, _ := io.ReadAll(resp.Body)
-		err = fmt.Errorf("%w: %s", ErrServerError, string(b))
+		err = fmt.Errorf("%s %s", resp.Status, string(b))
 		return
 	}
-	defer resp.Body.Close()
 	if response == nil {
 		return
 	}
@@ -101,16 +101,12 @@ func (c *Client) Get(ctx context.Context, endpoint string, request interface{}, 
 }
 
 // Post method
-func (c *Client) Post(ctx context.Context, endpoint string, request interface{}, response interface{}) (resp *http.Response, err error) {
+func (c *Client) Post(ctx context.Context, endpoint string, request any, response any) (resp *http.Response, err error) {
 	dest, err := url.JoinPath(c.BaseURL, endpoint)
 	if err != nil {
 		return
 	}
-	j, err := json.Marshal(request)
-	if err != nil {
-		return
-	}
-	req, err := http.NewRequestWithContext(ctx, "POST", dest, bytes.NewReader(j))
+	req, err := http.NewRequestWithContext(ctx, "POST", dest, encodeRequest(request))
 	if err != nil {
 		return
 	}
@@ -119,12 +115,46 @@ func (c *Client) Post(ctx context.Context, endpoint string, request interface{},
 	}
 	req.Header.Add("content-type", "application/json")
 	resp, err = c.HTTPClient.Do(req)
-	if resp.StatusCode > 299 {
-		b, _ := io.ReadAll(resp.Body)
-		err = fmt.Errorf("%w: %s", ErrServerError, string(b))
+	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode > 299 {
+		b, _ := io.ReadAll(resp.Body)
+		err = fmt.Errorf("%s %s", resp.Status, string(b))
+		return
+	}
+	if response == nil {
+		return
+	}
+	err = decodeResponse(resp, response)
+	return
+}
+
+// PUT method
+func (c *Client) Put(ctx context.Context, endpoint string, request any, response any) (resp *http.Response, err error) {
+	dest, err := url.JoinPath(c.BaseURL, endpoint)
+	if err != nil {
+		return
+	}
+	req, err := http.NewRequestWithContext(ctx, "PUT", dest, encodeRequest(request))
+	if err != nil {
+		return
+	}
+	if c.authHeader != "" {
+		req.Header.Add(c.authHeader, c.authValue)
+	}
+	req.Header.Add("content-type", "application/json")
+	resp, err = c.HTTPClient.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode > 299 {
+		b, _ := io.ReadAll(resp.Body)
+		err = fmt.Errorf("%s %s", resp.Status, string(b))
+		return
+	}
 	if response == nil {
 		return
 	}
@@ -133,7 +163,7 @@ func (c *Client) Post(ctx context.Context, endpoint string, request interface{},
 }
 
 // Delete Method
-func (c *Client) Delete(ctx context.Context, endpoint string, request interface{}) (resp *http.Response, err error) {
+func (c *Client) Delete(ctx context.Context, endpoint string, request any) (resp *http.Response, err error) {
 	dest, err := url.JoinPath(c.BaseURL, endpoint)
 	if err != nil {
 		return
@@ -153,47 +183,87 @@ func (c *Client) Delete(ctx context.Context, endpoint string, request interface{
 		req.URL.RawQuery = v.Encode()
 	}
 	resp, err = c.HTTPClient.Do(req)
-	if resp.StatusCode > 299 {
-		err = ErrServerError
+	if err != nil {
 		return
 	}
-	// discard any body
-	resp.Body.Close()
+	defer resp.Body.Close()
+	if resp.StatusCode > 299 {
+		b, _ := io.ReadAll(resp.Body)
+		err = fmt.Errorf("%s %s", resp.Status, string(b))
+		return
+	}
 	return
 }
 
+func encodeRequest(request any) io.Reader {
+	if request == nil {
+		return nil
+	}
+	if s, ok := request.(string); ok {
+		return bytes.NewReader([]byte(s))
+	}
+	if b, ok := request.([]byte); ok {
+		return bytes.NewReader(b)
+	}
+	if j, err := json.Marshal(request); err == nil {
+		return bytes.NewReader(j)
+	}
+	return nil
+}
+
+// decodeResponse checks the content-type and decodes based on that.
+// This could be better done in a http handler, but this is simple to
+// understand
 func decodeResponse(resp *http.Response, response interface{}) (err error) {
-	d := json.NewDecoder(resp.Body)
-	rt := reflect.TypeOf(response)
-	switch rt.Kind() {
-	case reflect.Slice:
-		rv := reflect.ValueOf(response)
-		var t json.Token
-		t, err = d.Token()
-		if err != nil {
-			return
+	switch resp.Header.Get("content-type") {
+	case "text/plain":
+		// decode as plain string
+		var b []byte
+		if b, err = io.ReadAll(resp.Body); err == nil { // all good?
+			response = string(b)
 		}
-		if t != "[" {
-			err = errors.New("not an array")
-			return
-		}
-		for d.More() {
-			var s interface{}
-			if err = d.Decode(&s); err != nil {
+		return
+	case "application/json":
+		// stream JSON
+		d := json.NewDecoder(resp.Body)
+		rt := reflect.TypeOf(response)
+		switch rt.Kind() {
+		case reflect.Slice:
+			rv := reflect.ValueOf(response)
+			var t json.Token
+			t, err = d.Token()
+			if err != nil {
 				return
 			}
-			rv = reflect.Append(rv, reflect.ValueOf(s))
+			if t != "[" {
+				err = errors.New("not an array")
+				return
+			}
+			for d.More() {
+				var s interface{}
+				if err = d.Decode(&s); err != nil {
+					return
+				}
+				rv = reflect.Append(rv, reflect.ValueOf(s))
+			}
+			t, err = d.Token()
+			if err != nil {
+				return
+			}
+			if t != "]" {
+				err = errors.New("array not terminated")
+				return
+			}
+		default:
+			err = d.Decode(&response)
 		}
-		t, err = d.Token()
-		if err != nil {
-			return
-		}
-		if t != "]" {
-			err = errors.New("array not terminated")
-			return
+	case "text/xml", "application/xml":
+		var mv mxj.Map
+		if mv, err = mxj.NewMapXmlReader(resp.Body); err == nil { // all good ?
+			response = mv
 		}
 	default:
-		err = d.Decode(&response)
+		err = errors.ErrUnsupported
 	}
 	return
 }

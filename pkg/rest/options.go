@@ -1,6 +1,8 @@
 package rest
 
-import "net/http"
+import (
+	"net/http"
+)
 
 // Options are used to control behaviour of ICP functions
 type Options func(*restOptions)
