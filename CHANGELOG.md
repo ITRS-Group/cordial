@@ -1,5 +1,18 @@
 # Change Log
 
+## Version v1.8.1
+
+> **Released 2023-08-xx**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.8.1 Fixes
+
+* [`tools/geneos`](tools/geneos/README.md)
+  - `unset` should not present a warning if special parameters are passed but not actions, e.g. removing a non-existing environment variable
+
+---
+
 ## Version v1.8.0
 
 > **Released 2023-08-16**

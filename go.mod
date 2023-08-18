@@ -9,8 +9,12 @@ require (
 	github.com/awnumar/memguard v0.22.3
 	github.com/aymerick/douceur v0.2.0
 	github.com/charmbracelet/glamour v0.6.0
+	github.com/clbanning/mxj v1.8.4
+	github.com/clbanning/mxj/v2 v2.7.0
+	github.com/docker/docker v24.0.5+incompatible
 	github.com/go-ldap/ldap/v3 v3.4.5
 	github.com/go-mail/mail/v2 v2.3.0
+	github.com/go-python/cpy3 v0.2.0
 	github.com/google/go-querystring v1.1.0
 	github.com/gurkankaymak/hocon v1.2.16
 	github.com/hashicorp/go-reap v0.0.0-20230117204525-bf69c61a7b71
@@ -45,9 +49,13 @@ require (
 	github.com/awnumar/memcall v0.1.2 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/dlclark/regexp2 v1.10.0 // indirect
+	github.com/docker/distribution v2.8.2+incompatible // indirect
+	github.com/docker/go-connections v0.4.0 // indirect
+	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.4 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
@@ -67,10 +75,15 @@ require (
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.25 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
+	github.com/moby/term v0.5.0 // indirect
+	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
+	github.com/opencontainers/go-digest v1.0.0 // indirect
+	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
@@ -92,4 +105,5 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/mail.v2 v2.3.1 // indirect
+	gotest.tools/v3 v3.5.0 // indirect
 )
