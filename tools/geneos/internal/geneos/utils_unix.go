@@ -1,3 +1,5 @@
+//go:build !windows
+
 /*
 Copyright © 2022 ITRS Group
 
@@ -20,26 +22,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package host
+package geneos
 
 import (
-	"net"
-	"os"
+	"io/fs"
+	"syscall"
 
-	"github.com/rs/zerolog/log"
-	"golang.org/x/crypto/ssh/agent"
+	"github.com/pkg/sftp"
 )
 
-func sshConnectAgent() (agentClient agent.ExtendedAgent) {
-	socket := os.Getenv("SSH_AUTH_SOCK")
-	if socket != "" {
-		log.Debug().Msgf("connecting to agent on %s", socket)
-		sshAgent, err := net.Dial("unix", socket)
-		if err != nil {
-			log.Error().Msgf("Failed to connect to ssh agent: %v", err)
-		} else {
-			agentClient = agent.NewClient(sshAgent)
-		}
+// FileOwner is only available on Linux localhost
+type FileOwner struct {
+	Uid int
+	Gid int
+}
+
+func (h *Host) GetFileOwner(info fs.FileInfo) (s FileOwner) {
+	switch h.GetString("name") {
+	case LOCALHOST:
+		s.Uid = int(info.Sys().(*syscall.Stat_t).Uid)
+		s.Gid = int(info.Sys().(*syscall.Stat_t).Gid)
+	default:
+		s.Uid = int(info.Sys().(*sftp.FileStat).UID)
+		s.Gid = int(info.Sys().(*sftp.FileStat).GID)
 	}
 	return
 }

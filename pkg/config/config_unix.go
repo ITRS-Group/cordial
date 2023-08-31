@@ -1,3 +1,5 @@
+//go:build !windows
+
 /*
 Copyright © 2022 ITRS Group
 
@@ -20,29 +22,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package process
+package config
 
 import (
-	"os/exec"
-	"syscall"
+	"os"
+	"os/user"
+	"path"
 )
 
-func prepareCmd(cmd *exec.Cmd) {
-	if cmd.SysProcAttr == nil {
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
-		}
-	} else {
-		cmd.SysProcAttr.CreationFlags = syscall.CREATE_NEW_PROCESS_GROUP
+func UserConfigDir(username ...string) (p string, err error) {
+	if len(username) == 0 {
+		return os.UserConfigDir()
 	}
-}
-
-// user and group are sids
-func setCredentials(cmd *exec.Cmd, user, group any) {
-	// not implemented
-}
-
-func setCredentialsFromUsername(cmd *exec.Cmd, username string) (err error) {
-	// not implemented
+	u, err := user.Lookup(username[0])
+	if err != nil {
+		return
+	}
+	p = path.Join(u.HomeDir, ".config")
 	return
 }

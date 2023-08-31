@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 ITRS Group
+Copyright © 2023 ITRS Group
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,49 +20,66 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package cmd
+package instance
 
 import (
 	"fmt"
-	"sort"
-	"strings"
+	"path"
+	"path/filepath"
+	"strconv"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/rs/zerolog/log"
 )
 
-// listOpenFiles is a placeholder for functionality to come later
-func listOpenFiles(i geneos.Instance) (lines []string) {
-
-	// list open files (test code)
-
-	instdir := i.Home()
-	files := instance.Files(i)
-	fds := make([]int, len(files))
-	j := 0
-	for f := range files {
-		fds[j] = f
-		j++
+// Files returns a map of file descriptor (int) to file details
+// (InstanceProcFiles) for all open, real, files for the process running
+// as the instance. All paths that are not absolute paths are ignored.
+// An empty map is returned if the process cannot be found.
+func Files(i geneos.Instance) (openfiles map[int]OpenFiles) {
+	pid, err := GetPID(i)
+	if err != nil {
+		return
 	}
-	sort.Ints(fds)
-	for _, n := range fds {
-		fdPath := files[n].FD
-		perms := ""
-		p := files[n].FDMode & 0700
-		log.Debug().Msgf("%s perms %o", fdPath, p)
-		if p&0400 == 0400 {
-			perms += "r"
+
+	file := fmt.Sprintf("/proc/%d/fd", pid)
+	fds, err := i.Host().ReadDir(file)
+	if err != nil {
+		return
+	}
+
+	openfiles = make(map[int]OpenFiles, len(fds))
+
+	for _, ent := range fds {
+		fd := ent.Name()
+		dest, err := i.Host().Readlink(path.Join(file, fd))
+		if err != nil {
+			continue
 		}
-		if p&0200 == 0200 {
-			perms += "w"
+		if !filepath.IsAbs(dest) {
+			continue
+		}
+		n, _ := strconv.Atoi(fd)
+
+		fdPath := path.Join(file, fd)
+		fdMode, err := i.Host().Lstat(fdPath)
+		if err != nil {
+			continue
 		}
 
-		path := files[n].Path
-		if strings.HasPrefix(path, instdir) {
-			path = strings.Replace(path, instdir, ".", 1)
+		s, err := i.Host().Stat(dest)
+		if err != nil {
+			continue
 		}
-		lines = append(lines, fmt.Sprintf("\t%d:%s (%d bytes) %s", n, perms, files[n].Stat.Size(), path))
+
+		openfiles[n] = OpenFiles{
+			Path:   dest,
+			Stat:   s,
+			FD:     fdPath,
+			FDMode: fdMode.Mode(),
+		}
+
+		log.Debug().Msgf("\tfd %s points to %q", fd, dest)
 	}
 	return
 }

@@ -1,5 +1,7 @@
+//go:build !windows
+
 /*
-Copyright © 2023 ITRS Group
+Copyright © 2022 ITRS Group
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,42 +25,23 @@ THE SOFTWARE.
 package host
 
 import (
-	"cmp"
-	"io/fs"
+	"net"
 	"os"
-	"os/exec"
-	"slices"
-	"strconv"
-	"syscall"
 
 	"github.com/rs/zerolog/log"
+	"golang.org/x/crypto/ssh/agent"
 )
 
-func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) {
-	var err error
-
-	// if we've set-up privs at all, set the redirection output file to the same
-	if cmd.SysProcAttr != nil && cmd.SysProcAttr.Credential != nil {
-		if err = out.Chown(int(cmd.SysProcAttr.Credential.Uid), int(cmd.SysProcAttr.Credential.Gid)); err != nil {
-			log.Error().Err(err).Msg("chown")
+func sshConnectAgent() (agentClient agent.ExtendedAgent) {
+	socket := os.Getenv("SSH_AUTH_SOCK")
+	if socket != "" {
+		log.Debug().Msgf("connecting to agent on %s", socket)
+		sshAgent, err := net.Dial("unix", socket)
+		if err != nil {
+			log.Error().Msgf("Failed to connect to ssh agent: %v", err)
+		} else {
+			agentClient = agent.NewClient(sshAgent)
 		}
 	}
-	if detach {
-		// detach process by creating a session (fixed start + log)
-		if cmd.SysProcAttr == nil {
-			cmd.SysProcAttr = &syscall.SysProcAttr{}
-		}
-		cmd.SysProcAttr.Setsid = true
-	}
-
-	// mark all fds unshared
-	fds, _ := os.ReadDir("/proc/self/fd")
-	maxdir := slices.MaxFunc(fds, func(a, b fs.DirEntry) int {
-		return cmp.Compare(a.Name(), b.Name())
-	})
-	maxfd, _ := strconv.ParseInt(maxdir.Name(), 10, 64)
-	maxfd -= 3
-	for fd := int64(0); fd < maxfd; fd++ {
-		cmd.ExtraFiles = append(cmd.ExtraFiles, nil)
-	}
+	return
 }
