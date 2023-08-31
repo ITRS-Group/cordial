@@ -56,7 +56,7 @@ var logoutCmd = &cobra.Command{
 			config.DeleteAllCreds(config.SetAppName(Execname))
 			return
 		}
-		if len(args) == 0 {
+		if len(args) != 0 {
 			for _, d := range args {
 				config.DeleteCreds(d, config.SetAppName(Execname))
 			}
