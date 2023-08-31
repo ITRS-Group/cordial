@@ -313,7 +313,7 @@ func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
 // key may be in the certificate file and the chain is optional.
 func SetSecureArgs(i geneos.Instance) (args []string) {
 	files := Filepaths(i, "certificate", "privatekey", "certchain")
-	if len(files) == 0 {
+	if len(files) == 0 || files[0] == "" {
 		return
 	}
 	cert, privkey, chain := files[0], files[1], files[2]
