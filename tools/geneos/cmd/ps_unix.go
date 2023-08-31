@@ -1,3 +1,5 @@
+//go:build !windows
+
 /*
 Copyright © 2022 ITRS Group
 
@@ -20,29 +22,49 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package geneos
+package cmd
 
 import (
-	"io/fs"
-	"syscall"
+	"fmt"
+	"sort"
+	"strings"
 
-	"github.com/pkg/sftp"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 )
 
-// FileOwner is only available on Linux localhost
-type FileOwner struct {
-	Uid int
-	Gid int
-}
+// listOpenFiles is a placeholder for functionality to come later
+func listOpenFiles(i geneos.Instance) (lines []string) {
 
-func (h *Host) GetFileOwner(info fs.FileInfo) (s FileOwner) {
-	switch h.GetString("name") {
-	case LOCALHOST:
-		s.Uid = int(info.Sys().(*syscall.Stat_t).Uid)
-		s.Gid = int(info.Sys().(*syscall.Stat_t).Gid)
-	default:
-		s.Uid = int(info.Sys().(*sftp.FileStat).UID)
-		s.Gid = int(info.Sys().(*sftp.FileStat).GID)
+	// list open files (test code)
+
+	instdir := i.Home()
+	files := instance.Files(i)
+	fds := make([]int, len(files))
+	j := 0
+	for f := range files {
+		fds[j] = f
+		j++
+	}
+	sort.Ints(fds)
+	for _, n := range fds {
+		fdPath := files[n].FD
+		perms := ""
+		p := files[n].FDMode & 0700
+		log.Debug().Msgf("%s perms %o", fdPath, p)
+		if p&0400 == 0400 {
+			perms += "r"
+		}
+		if p&0200 == 0200 {
+			perms += "w"
+		}
+
+		path := files[n].Path
+		if strings.HasPrefix(path, instdir) {
+			path = strings.Replace(path, instdir, ".", 1)
+		}
+		lines = append(lines, fmt.Sprintf("\t%d:%s (%d bytes) %s", n, perms, files[n].Stat.Size(), path))
 	}
 	return
 }

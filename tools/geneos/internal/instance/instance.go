@@ -30,7 +30,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -432,56 +431,4 @@ type OpenFiles struct {
 	Stat   fs.FileInfo
 	FD     string
 	FDMode fs.FileMode
-}
-
-// Files returns a map of file descriptor (int) to file details
-// (InstanceProcFiles) for all open, real, files for the process running
-// as the instance. All paths that are not absolute paths are ignored.
-// An empty map is returned if the process cannot be found.
-func Files(i geneos.Instance) (openfiles map[int]OpenFiles) {
-	pid, err := GetPID(i)
-	if err != nil {
-		return
-	}
-
-	file := fmt.Sprintf("/proc/%d/fd", pid)
-	fds, err := i.Host().ReadDir(file)
-	if err != nil {
-		return
-	}
-
-	openfiles = make(map[int]OpenFiles, len(fds))
-
-	for _, ent := range fds {
-		fd := ent.Name()
-		dest, err := i.Host().Readlink(path.Join(file, fd))
-		if err != nil {
-			continue
-		}
-		if !filepath.IsAbs(dest) {
-			continue
-		}
-		n, _ := strconv.Atoi(fd)
-
-		fdPath := path.Join(file, fd)
-		fdMode, err := i.Host().Lstat(fdPath)
-		if err != nil {
-			continue
-		}
-
-		s, err := i.Host().Stat(dest)
-		if err != nil {
-			continue
-		}
-
-		openfiles[n] = OpenFiles{
-			Path:   dest,
-			Stat:   s,
-			FD:     fdPath,
-			FDMode: fdMode.Mode(),
-		}
-
-		log.Debug().Msgf("\tfd %s points to %q", fd, dest)
-	}
-	return
 }
