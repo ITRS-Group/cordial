@@ -157,6 +157,8 @@ PIDS:
 		if err != nil {
 			continue
 		}
+		// remove deleted suffix if underlying binary is gone
+		ls = strings.TrimSuffix(ls, " (deleted)")
 		if path.Base(ls) != binary {
 			continue
 		}
