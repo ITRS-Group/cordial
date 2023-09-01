@@ -2,7 +2,7 @@
 
 ## Version v1.8.1
 
-> **Released 2023-08-xx**
+> **Released 2023-09-01**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
@@ -10,6 +10,8 @@
 
 * [`tools/geneos`](tools/geneos/README.md)
   - `unset` should not present a warning if special parameters are passed but not actions, e.g. removing a non-existing environment variable
+  - [#181](https://github.com/ITRS-Group/cordial/issues/181) - now build on MacOS, primarily for remote admin. Not fully tested
+  - [#182](https://github.com/ITRS-Group/cordial/issues/182) - a slew of issues around the order of actions during package install, uninstall and update fixed
 
 ---
 
