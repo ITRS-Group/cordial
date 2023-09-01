@@ -558,6 +558,19 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 		return nil
 	}
 
+	if opts.start != nil && opts.stop != nil {
+		for _, c := range opts.restart {
+			// only stop selected instances using components on the host we are working on
+			if !(c.Host() == h && c.Type() == ct) {
+				continue
+			}
+			if err = opts.stop(c, opts.force, false); err == nil {
+				// only restart instances that we stopped, regardless of success of install/update
+				defer opts.start(c)
+			}
+		}
+	}
+
 	if err = h.Remove(basepath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}

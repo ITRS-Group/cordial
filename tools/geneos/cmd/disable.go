@@ -65,12 +65,12 @@ var disableCmd = &cobra.Command{
 				return
 			}
 
-			if instance.IsProtected(i) {
+			if instance.IsProtected(i) && !disableCmdForce {
 				resp.Err = geneos.ErrProtected
 				return
 			}
 
-			if disableCmdStop {
+			if disableCmdStop || disableCmdForce {
 				if i.Type().RealComponent {
 					if err := instance.Stop(i, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
 						resp.Err = err

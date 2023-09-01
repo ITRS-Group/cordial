@@ -32,7 +32,7 @@ import (
 )
 
 // Start runs the instance.
-func Start(i geneos.Instance, options ...StartOptions) (err error) {
+func Start(i geneos.Instance, opts ...any) (err error) {
 	if IsRunning(i) {
 		return geneos.ErrRunning
 	}
@@ -54,6 +54,12 @@ func Start(i geneos.Instance, options ...StartOptions) (err error) {
 		return fmt.Errorf("%q %w", binary, err)
 	}
 
+	options := []StartOptions{}
+	for _, o := range opts {
+		if option, ok := o.(StartOptions); ok {
+			options = append(options, option)
+		}
+	}
 	cmd, env, home := BuildCmd(i, false, options...)
 	if cmd == nil {
 		return fmt.Errorf("BuildCmd() returned nil")

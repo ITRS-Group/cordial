@@ -42,7 +42,9 @@ type geneosOptions struct {
 	override     string
 	password     *config.Plaintext
 	platformId   string
-	restart      bool
+	restart      []Instance
+	start        func(Instance, ...any) error
+	stop         func(Instance, bool, bool) error
 	username     string
 	version      string
 }
@@ -92,15 +94,26 @@ func OverrideVersion(s string) Options {
 }
 
 // Restart sets the instances to be restarted around the update
-func Restart(r bool) Options {
-	return func(d *geneosOptions) { d.restart = r }
+func Restart(i ...Instance) Options {
+	return func(d *geneosOptions) {
+		d.restart = append(d.restart, i...)
+	}
 }
 
-// Restart returns the value of the Restart option. This is a helper to
-// allow checking outside the cmd package.
-// XXX Currently doesn't work.
-func (d *geneosOptions) Restart() bool {
-	return d.restart
+// StartFunc sets the start function to call for each instance given in
+// Restart(). It is required to avoid import loops.
+func StartFunc(start func(Instance, ...any) error) Options {
+	return func(d *geneosOptions) {
+		d.start = start
+	}
+}
+
+// StopFunc sets the start function to call for each instance given in
+// Restart(). It is required to avoid import loops.
+func StopFunc(stop func(Instance, bool, bool) error) Options {
+	return func(d *geneosOptions) {
+		d.stop = stop
+	}
 }
 
 // Version sets the desired version number, defaults to "latest" in most
