@@ -181,12 +181,16 @@ geneos install netprobe -b active_dev -U
 		// stop instances early. once we get to components, we don't know about instances
 		if installCmdUpdate {
 			instances := instance.ByKeyValue(h, ct, "version", installCmdBase)
-			for _, c := range instances {
-				if err = instance.Stop(c, installCmdForce, false); err == nil {
-					// only restart instances that we stopped, regardless of success of install/update
-					defer instance.Start(c)
-				}
-			}
+			options = append(options,
+				geneos.Restart(instances...),
+				geneos.StartFunc(instance.Start),
+				geneos.StopFunc(instance.Stop))
+			// for _, c := range instances {
+			// 	if err = instance.Stop(c, installCmdForce, false); err == nil {
+			// 		// only restart instances that we stopped, regardless of success of install/update
+			// 		defer instance.Start(c)
+			// 	}
+			// }
 		}
 
 		args = append(args, params...)
@@ -226,7 +230,7 @@ func install(h *geneos.Host, ct *geneos.Component, options ...geneos.Options) (e
 		if err = ct.MakeDirs(h); err != nil {
 			return err
 		}
-		for _, ct := range ct.OrList(geneos.RealComponents()...) {
+		for _, ct := range ct.OrList() {
 			if err = geneos.Install(h, ct, options...); err != nil {
 				if errors.Is(err, fs.ErrExist) {
 					fmt.Printf("%s installation already exists, skipping", ct)

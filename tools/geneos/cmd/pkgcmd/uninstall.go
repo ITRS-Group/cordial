@@ -72,8 +72,8 @@ geneos uninstall --version 5.14.1
 		ct, _ := cmd.TypeNames(command)
 		h := geneos.GetHost(cmd.Hostname)
 
-		for _, h := range h.OrList(geneos.AllHosts()...) {
-			for _, ct := range ct.OrList(geneos.RealComponents()...) {
+		for _, h := range h.OrList() {
+			for _, ct := range ct.OrList() {
 				if ct.RelatedTypes != nil {
 					log.Debug().Msgf("skipping %s as has related types, remove those instead", ct)
 					continue
@@ -136,6 +136,13 @@ geneos uninstall --version 5.14.1
 						instance.Stop(c, true, false)
 						stopped = append(stopped, c)
 					}
+					// remove the release
+					if err = h.RemoveAll(path.Join(basedir, version)); err != nil {
+						log.Error().Err(err)
+						continue
+					}
+					fmt.Printf("removed %s release %s in %s\n", ct, version, basedir)
+
 					if len(release.Links) != 0 {
 						if uninstallCmdAll {
 							// remove all links to this release if given --all flag
@@ -149,16 +156,10 @@ geneos uninstall --version 5.14.1
 								log.Error().Err(err).Msg("")
 								continue
 							}
-							updateLinks(h, basedir, release, version, latest)
+							updateLinks(h, ct, basedir, release, version, latest)
 						}
 					}
 
-					// remove the release
-					if err = h.RemoveAll(path.Join(basedir, version)); err != nil {
-						log.Error().Err(err)
-						continue
-					}
-					fmt.Printf("removed %s release %s in %s\n", ct, version, basedir)
 				}
 
 				// restart instances previously stopped, if possible
@@ -179,7 +180,7 @@ geneos uninstall --version 5.14.1
 // updateLinks removes the base symlink for oldVersion and recreates a
 // new one pointing to target. It also updates all other links in the
 // map to the same old target to the new one.
-func updateLinks(h *geneos.Host, releaseDir string, release geneos.ReleaseDetails, oldVersion, newVersion string) (err error) {
+func updateLinks(h *geneos.Host, ct *geneos.Component, releaseDir string, release geneos.ReleaseDetails, oldVersion, newVersion string) (err error) {
 	for _, l := range release.Links {
 		link := path.Join(releaseDir, l)
 		if err = h.Remove(link); err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -190,7 +191,7 @@ func updateLinks(h *geneos.Host, releaseDir string, release geneos.ReleaseDetail
 			log.Error().Err(err)
 			continue
 		}
-		fmt.Printf("updated %s, now linked to %s\n", l, newVersion)
+		fmt.Printf("updated %s %s, now linked to %s\n", ct, l, newVersion)
 	}
 
 	return

@@ -340,6 +340,8 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 	}
 }
 
+// WriteHTML will structure the responses in a way that can be displayed
+// well in an HTML container. Currently does nothing.
 func (responses Responses) WriteHTML(writer any, options ...WriterOptions) {
 	if len(responses) == 0 {
 		return

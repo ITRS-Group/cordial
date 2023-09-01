@@ -50,6 +50,8 @@ func init() {
 	updateCmd.Flags().StringVarP(&updateCmdBase, "base", "b", "active_prod", "Base name for the symlink, defaults to active_prod")
 	updateCmd.Flags().BoolVarP(&updateCmdRestart, "restart", "R", true, "Restart all instances that may have an update applied")
 
+	updateCmd.Flags().BoolVarP(&updateCmdForce, "force", "F", false, "Will also update and restart protected instances")
+
 	updateCmd.Flags().SortFlags = false
 }
 
@@ -116,21 +118,17 @@ geneos package update netprobe 5.13.2
 		if len(args) > 0 {
 			version = args[0]
 		}
+		var instances []geneos.Instance
 		if updateCmdRestart {
-			cs := instance.ByKeyValue(h, ct, "version", updateCmdBase)
-			log.Debug().Msgf("instances to stop: %v", cs)
-			for _, c := range cs {
-				if err = instance.Stop(c, updateCmdForce, false); err == nil {
-					// only restart instances that we stopped
-					defer instance.Start(c)
-				}
-			}
+			instances = instance.ByKeyValue(h, ct, "version", updateCmdBase)
 		}
 		if err = geneos.Update(h, ct,
 			geneos.Version(version),
 			geneos.Basename(updateCmdBase),
 			geneos.Force(true),
-			geneos.Restart(updateCmdRestart)); err != nil && errors.Is(err, os.ErrNotExist) {
+			geneos.Restart(instances...),
+			geneos.StartFunc(instance.Start),
+			geneos.StopFunc(instance.Stop)); err != nil && errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
 		return
