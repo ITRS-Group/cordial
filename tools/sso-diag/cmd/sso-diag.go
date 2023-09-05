@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -69,7 +68,7 @@ func start() {
 	}
 
 	krb5conf := vc.GetString("kerberos.krb5_conf")
-	if !filepath.IsAbs(krb5conf) {
+	if !path.IsAbs(krb5conf) {
 		krb5conf = path.Join(confDir, krb5conf)
 	}
 	cf, err := krb5config.Load(krb5conf)
@@ -171,7 +170,7 @@ func initServer(vc *config.Config, kt *keytab.Keytab, username string) {
 
 func loadSSOkey(cf *config.Config) *rsa.PrivateKey {
 	ks := cf.GetString("server.key_store.location")
-	if !filepath.IsAbs(ks) {
+	if !path.IsAbs(ks) {
 		ks = path.Join(confDir, ks)
 	}
 	pw := []byte(cf.GetString("server.key_store.password"))
