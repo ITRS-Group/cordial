@@ -20,9 +20,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package geneos
+package netprobe
 
-import "encoding/xml"
+import (
+	"encoding/xml"
+
+	"github.com/itrs-group/cordial/pkg/geneos"
+)
 
 // These types represent those found in a netprobe setup file (SAN or
 // floating) and not a probe config in the gateway
@@ -39,46 +43,46 @@ type Netprobe struct {
 }
 
 type FloatingNetprobe struct {
-	Enabled                  bool       `xml:"enabled"`
-	RetryInterval            int        `xml:"retryInterval,omitempty"`
-	RequireReverseConnection bool       `xml:"requireReverseConnection,omitempty"`
-	ProbeName                string     `xml:"probeName"`
-	Gateways                 []Gateways `xml:"gateways"`
+	Enabled                  bool      `xml:"enabled"`
+	RetryInterval            int       `xml:"retryInterval,omitempty"`
+	RequireReverseConnection bool      `xml:"requireReverseConnection,omitempty"`
+	ProbeName                string    `xml:"probeName"`
+	Gateways                 []Gateway `xml:"gateways"`
 }
 
 type SelfAnnounce struct {
-	Enabled                  bool               `xml:"enabled"`
-	RetryInterval            int                `xml:"retryInterval,omitempty"`
-	RequireReverseConnection bool               `xml:"requireReverseConnection,omitempty"`
-	ProbeName                string             `xml:"probeName"`
-	EncodedPassword          string             `xml:"encodedPassword,omitempty"`
-	RESTAPIHTTPPort          int                `xml:"restApiHttpPort,omitempty"`
-	RESTAPIHTTPSPort         int                `xml:"restApiHttpsPort,omitempty"`
-	CyberArkApplicationID    string             `xml:"cyberArkApplicationID,omitempty"`
-	CyberArkSDKPath          string             `xml:"cyberArkSdkPath,omitempty"`
-	ManagedEntity            *SANManagedEntity  `xml:"managedEntity,omitempty"`
-	ManagedEntities          []SANManagedEntity `xml:"managedEntities,omitempty"`
-	CollectionAgent          *CollectionAgent   `xml:"collectionAgent,omitempty"`
-	DynamicEntities          *DynamicEntities   `xml:"dynamicEntities,omitempty"`
-	Gateways                 []Gateways         `xml:"gateways"`
+	Enabled                  bool             `xml:"enabled"`
+	RetryInterval            int              `xml:"retryInterval,omitempty"`
+	RequireReverseConnection bool             `xml:"requireReverseConnection,omitempty"`
+	ProbeName                string           `xml:"probeName"`
+	EncodedPassword          string           `xml:"encodedPassword,omitempty"`
+	RESTAPIHTTPPort          int              `xml:"restApiHttpPort,omitempty"`
+	RESTAPIHTTPSPort         int              `xml:"restApiHttpsPort,omitempty"`
+	CyberArkApplicationID    string           `xml:"cyberArkApplicationID,omitempty"`
+	CyberArkSDKPath          string           `xml:"cyberArkSdkPath,omitempty"`
+	ManagedEntity            *ManagedEntity   `xml:"managedEntity,omitempty"`
+	ManagedEntities          []ManagedEntity  `xml:"managedEntities,omitempty"`
+	CollectionAgent          *CollectionAgent `xml:"collectionAgent,omitempty"`
+	DynamicEntities          *DynamicEntities `xml:"dynamicEntities,omitempty"`
+	Gateways                 []Gateway        `xml:"gateways"`
 }
 
-type Gateways struct {
+type Gateway struct {
 	XMLName  xml.Name `xml:"gateway"`
 	Hostname string   `xml:"hostname"`
 	Port     int      `xml:"port,omitempty"`
 	Secure   bool     `xml:"secure,omitempty"`
 }
 
-type SANManagedEntity struct {
-	XMLName    xml.Name    `xml:"managedEntity"`
-	Name       string      `xml:"name"`
-	Attributes []Attribute `xml:"attributes,omitempty"`
-	Vars       []Vars      `xml:"variables,omitempty"`
-	Types      []PlainType `xml:"types,omitempty"`
+type ManagedEntity struct {
+	XMLName    xml.Name           `xml:"managedEntity"`
+	Name       string             `xml:"name"`
+	Attributes []geneos.Attribute `xml:"attributes,omitempty"`
+	Vars       []geneos.Vars      `xml:"variables,omitempty"`
+	Types      []Type             `xml:"types,omitempty"`
 }
 
-type PlainType struct {
+type Type struct {
 	Type string `xml:"type"`
 }
 
