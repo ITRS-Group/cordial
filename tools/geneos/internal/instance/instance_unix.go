@@ -25,7 +25,6 @@ package instance
 import (
 	"fmt"
 	"path"
-	"path/filepath"
 	"strconv"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -56,7 +55,7 @@ func Files(i geneos.Instance) (openfiles map[int]OpenFiles) {
 		if err != nil {
 			continue
 		}
-		if !filepath.IsAbs(dest) {
+		if !path.IsAbs(dest) {
 			continue
 		}
 		n, _ := strconv.Atoi(fd)

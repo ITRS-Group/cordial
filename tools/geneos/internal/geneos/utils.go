@@ -24,7 +24,6 @@ package geneos
 
 import (
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -37,7 +36,7 @@ import (
 // tree then return an error
 func CleanRelativePath(p string) (clean string, err error) {
 	clean = path.Clean(p)
-	if filepath.IsAbs(clean) || strings.HasPrefix(clean, "../") {
+	if path.IsAbs(clean) || strings.HasPrefix(clean, "../") {
 		log.Debug().Msgf("path %q must be relative and descending only", clean)
 		return "", host.ErrInvalidArgs
 	}

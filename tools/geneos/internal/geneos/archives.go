@@ -35,7 +35,6 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -322,7 +321,7 @@ func untar(h *Host, dir string, t io.Reader, stripPrefix func(string) string) (e
 			}
 
 		case tar.TypeSymlink, tar.TypeGNULongLink:
-			if filepath.IsAbs(hdr.Linkname) {
+			if path.IsAbs(hdr.Linkname) {
 				err = fmt.Errorf("archive contains absolute symlink target")
 				return
 			}

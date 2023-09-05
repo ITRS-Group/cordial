@@ -24,7 +24,6 @@ package instance
 
 import (
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -100,7 +99,7 @@ func PathOf(i geneos.Instance, name string) string {
 		return ""
 	}
 
-	if filepath.IsAbs(filename) {
+	if path.IsAbs(filename) {
 		return filename
 	}
 
@@ -115,7 +114,7 @@ func Abs(i geneos.Instance, file string) (result string) {
 		return
 	}
 	result = path.Clean(file)
-	if filepath.IsAbs(result) {
+	if path.IsAbs(result) {
 		return
 	}
 	return path.Join(i.Home(), result)
