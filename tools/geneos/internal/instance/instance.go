@@ -27,7 +27,6 @@ import (
 	"io/fs"
 	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -117,7 +116,7 @@ func LogFilePath(i geneos.Instance) (logfile string) {
 	switch {
 	case logdir == "":
 		logfile = i.Home()
-	case filepath.IsAbs(logdir):
+	case path.IsAbs(logdir):
 		logfile = logdir
 	default:
 		logfile = path.Join(i.Home(), logdir)
