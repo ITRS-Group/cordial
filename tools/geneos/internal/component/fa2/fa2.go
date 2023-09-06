@@ -69,7 +69,7 @@ var FA2 = geneos.Component{
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=fa2.log`,
-		`port=7036`,
+		`port=7030`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 		`autostart=true`,
 	},
