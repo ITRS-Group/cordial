@@ -41,7 +41,7 @@ var San = geneos.Component{
 	Initialise:   Init,
 	Name:         "san",
 	LegacyPrefix: "san",
-	RelatedTypes: []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
+	PackageTypes: []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
 	Names:        []string{"san", "sans"},
 	ParentType:   &netprobe.Netprobe,
 	UsesKeyfiles: true,

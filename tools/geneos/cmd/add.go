@@ -117,7 +117,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	}
 
 	if pkgct == nil {
-		if ct.ParentType != nil && len(ct.RelatedTypes) > 0 {
+		if ct.ParentType != nil && len(ct.PackageTypes) > 0 {
 			pkgct = ct.ParentType
 		} else {
 			pkgct = ct

@@ -47,7 +47,7 @@ const sharedSuffix = "_shared"
 
 var RootComponent = Component{
 	Name:         RootComponentName,
-	RelatedTypes: nil,
+	PackageTypes: nil,
 	Names:        []string{"any"},
 	DownloadBase: DownloadBases{Resources: "", Nexus: ""},
 	GlobalSettings: map[string]string{
@@ -109,12 +109,14 @@ type Component struct {
 	LegacyParameters map[string]string
 
 	// ParentType, if set, is the parent component that the component is
-	// under, e.g. san has a parent of netprobe
+	// under, e.g. 'fa2' has a parent of 'netprobe'. See PackageTypes
+	// below.
 	ParentType *Component
 
-	// RelatedTypes are any related component types. This could also be
-	// derived from ParentType
-	RelatedTypes []*Component
+	// PackageTypes is a list of packages that can be used to support
+	// this component. For example, a 'san' could be either a plain
+	// 'netprobe' or an 'fa2'.
+	PackageTypes []*Component
 
 	UsesKeyfiles bool
 

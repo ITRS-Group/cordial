@@ -35,7 +35,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-// IsDisabled returns true if the instance c is disabled.
+// IsDisabled returns true if the instance i is disabled.
 func IsDisabled(i geneos.Instance) bool {
 	d := ComponentFilepath(i, geneos.DisableExtension)
 	if f, err := i.Host().Stat(d); err == nil && f.Mode().IsRegular() {
@@ -44,7 +44,7 @@ func IsDisabled(i geneos.Instance) bool {
 	return false
 }
 
-// IsProtected returns true if instance c is marked protected
+// IsProtected returns true if instance i is marked protected
 func IsProtected(i geneos.Instance) bool {
 	return i.Config().GetBool("protected")
 }
@@ -61,10 +61,10 @@ func IsAutoStart(i geneos.Instance) bool {
 }
 
 // BaseVersion returns the absolute path of the base package directory
-// for the instance c.
+// for the instance i.
 func BaseVersion(i geneos.Instance) (dir string) {
 	t := i.Type().String()
-	if i.Type().ParentType != nil && len(i.Type().RelatedTypes) > 0 {
+	if i.Type().ParentType != nil && len(i.Type().PackageTypes) > 0 {
 		t = i.Type().ParentType.String()
 	}
 	pkgtype := i.Config().GetString("pkgtype", config.Default(t))
@@ -72,7 +72,7 @@ func BaseVersion(i geneos.Instance) (dir string) {
 }
 
 // Version returns the base package name, the underlying package version
-// and the actual version in use for the instance c. If base is not a
+// and the actual version in use for the instance i. If base is not a
 // link, then base is also returned as the symlink. If there are more
 // than 10 levels of symlink then return symlink set to "loop-detected"
 // and err set to syscall.ELOOP to prevent infinite loops. If the
@@ -82,36 +82,36 @@ func Version(i geneos.Instance) (base string, version string, err error) {
 	cf := i.Config()
 	base = cf.GetString("version")
 	t := i.Type().String()
-	if i.Type().ParentType != nil && len(i.Type().RelatedTypes) > 0 {
+	if i.Type().ParentType != nil && len(i.Type().PackageTypes) > 0 {
 		t = i.Type().ParentType.String()
 	}
 	pkgtype := cf.GetString("pkgtype", config.Default(t))
 	ct := geneos.ParseComponent(pkgtype)
 
-	version, err = geneos.CurrentVersion(i.Host(), ct, cf.GetString("version"))
+	version, err = geneos.CurrentVersion(i.Host(), ct, base)
 	return
 }
 
-// LiveVersion returns the base package name, the underlying package version
-// and the actual version in use for the instance c. If base is not a
-// link, then base is also returned as the symlink. If there are more
-// than 10 levels of symlink then return symlink set to "loop-detected"
-// and err set to syscall.ELOOP to prevent infinite loops. If the
-// instance is not running or the executable path cannot be determined
-// then actual will be returned as "unknown".
+// LiveVersion returns the base package name, the underlying package
+// version and the actual version in use for the instance i. If base is
+// not a link, then base is also returned as the symlink. If there are
+// more than 10 levels of symlink then return symlink set to
+// "loop-detected" and err set to syscall.ELOOP to prevent infinite
+// loops. If the instance is not running or the executable path cannot
+// be determined then actual will be returned as "unknown".
 func LiveVersion(i geneos.Instance, pid int) (base string, version string, actual string, err error) {
 	actual = "unknown"
 	cf := i.Config()
 	base = cf.GetString("version")
 
 	t := i.Type().String()
-	if i.Type().ParentType != nil && len(i.Type().RelatedTypes) > 0 {
+	if i.Type().ParentType != nil && len(i.Type().PackageTypes) > 0 {
 		t = i.Type().ParentType.String()
 	}
 	pkgtype := cf.GetString("pkgtype", config.Default(t))
 	ct := geneos.ParseComponent(pkgtype)
 
-	version, err = geneos.CurrentVersion(i.Host(), ct, cf.GetString("version"))
+	version, err = geneos.CurrentVersion(i.Host(), ct, base)
 	if err != nil {
 		return
 	}
@@ -133,7 +133,7 @@ func LiveVersion(i geneos.Instance, pid int) (base string, version string, actua
 	return
 }
 
-// AtLeastVersion returns true if the installed version for instance c
+// AtLeastVersion returns true if the installed version for instance i
 // is version or greater. If the version of the instance is somehow
 // unparseable then this returns false.
 func AtLeastVersion(i geneos.Instance, version string) bool {
@@ -153,7 +153,7 @@ func GetPID(i geneos.Instance) (pid int, err error) {
 	return process.GetPID(i.Host(), i.Config().GetString("binary"), i.Type().GetPID, i, i.Name())
 }
 
-// GetPIDInfo returns the PID of the process for the instance c along
+// GetPIDInfo returns the PID of the process for the instance i along
 // with the owner uid and gid and the start time.
 func GetPIDInfo(i geneos.Instance) (pid int, uid int, gid int, mtime time.Time, err error) {
 	if pid, err = GetPID(i); err != nil {

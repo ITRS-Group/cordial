@@ -41,7 +41,7 @@ var Floating = geneos.Component{
 	Initialise:   Init,
 	Name:         "floating",
 	LegacyPrefix: "flt",
-	RelatedTypes: []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
+	PackageTypes: []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
 	Names:        []string{"float", "floating"},
 	ParentType:   &netprobe.Netprobe,
 	UsesKeyfiles: true,

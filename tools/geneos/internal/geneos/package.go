@@ -417,7 +417,7 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 		return ErrInvalidArgs
 	}
 
-	for _, ct := range ct.RelatedTypes {
+	for _, ct := range ct.PackageTypes {
 		if err = Install(h, ct, options...); err != nil {
 			return
 		}
@@ -503,7 +503,7 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 		return nil
 	}
 
-	for _, ct := range ct.RelatedTypes {
+	for _, ct := range ct.PackageTypes {
 		if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
 			log.Error().Err(err).Msg("")
 		}

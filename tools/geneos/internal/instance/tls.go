@@ -126,7 +126,7 @@ func CreateCert(i geneos.Instance) (resp *Response) {
 	return
 }
 
-// WriteCert writes the certificate for the instance c and updates the
+// WriteCert writes the certificate for the instance i and updates the
 // "certificate" instance parameter. It does not save the instance
 // configuration.
 func WriteCert(i geneos.Instance, cert *x509.Certificate) (err error) {
@@ -146,7 +146,7 @@ func WriteCert(i geneos.Instance, cert *x509.Certificate) (err error) {
 	return
 }
 
-// WriteKey writes the key for the instance c and updates the
+// WriteKey writes the key for the instance i and updates the
 // "privatekey" instance parameter. It does not save the instance
 // configuration.
 func WriteKey(i geneos.Instance, key *memguard.Enclave) (err error) {

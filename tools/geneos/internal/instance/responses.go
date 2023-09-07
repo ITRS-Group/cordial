@@ -56,7 +56,7 @@ type Response struct {
 }
 
 // NewResponse returns a pointer to an intialised Response structure,
-// using instance c. The Start time is set to time.Now().
+// using instance i. The Start time is set to time.Now().
 func NewResponse(i geneos.Instance) *Response {
 	return &Response{
 		Instance: i,

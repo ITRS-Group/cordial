@@ -69,7 +69,7 @@ type SetConfigValues struct {
 	SecureEnvs SecureValues
 }
 
-// SetInstanceValues applies the settings in values to instance c by
+// SetInstanceValues applies the settings in values to instance i by
 // iterating through the fields and calling the appropriate helper
 // function. SecureEnvs overwrite any set by Envs earlier.
 func SetInstanceValues(i geneos.Instance, set SetConfigValues, keyfile config.KeyFile) (err error) {
@@ -129,7 +129,7 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, keyfile config.Ke
 }
 
 // setMap sets the values in items, which is a map of string to
-// anything, in instance c's setting value setting
+// anything, in instance i's setting value setting
 func setMap[V any](i geneos.Instance, items map[string]V, setting string) {
 	s := i.Config().GetStringMap(setting)
 	for k, v := range items {

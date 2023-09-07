@@ -31,7 +31,7 @@ import (
 )
 
 // ComponentFilename returns the filename for the component used by the
-// instance c with the extensions appended, joined with a ".". If no
+// instance i with the extensions appended, joined with a ".". If no
 // extensions are given then the current configuration file type is
 // used, e.g. "json" or "yaml".
 func ComponentFilename(i geneos.Instance, extensions ...string) string {
@@ -85,7 +85,7 @@ func FileOf(i geneos.Instance, name string) (filename string) {
 // configuration parameter name. If the parameters value is already an
 // absolute path then it is returned as-is, otherwise it is joined with
 // the home directory of the instance and returned. The path is only
-// useful on the host that instance c is on.
+// useful on the host that instance i is on.
 //
 // If the parameter is unset or empty then an empty path is returned.
 func PathOf(i geneos.Instance, name string) string {
