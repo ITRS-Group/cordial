@@ -132,7 +132,7 @@ func importInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 		panic("wront type")
 	}
 
-	if !i.Type().RealComponent {
+	if i.Type() == &geneos.RootComponent {
 		resp.Err = geneos.ErrNotSupported
 		return
 	}

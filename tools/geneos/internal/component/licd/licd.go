@@ -35,15 +35,14 @@ import (
 )
 
 var Licd = geneos.Component{
-	Name:          "licd",
-	LegacyPrefix:  "licd",
-	RelatedTypes:  nil,
-	Names:         []string{"licd", "licds"},
-	RealComponent: true,
-	DownloadBase:  geneos.DownloadBases{Resources: "Licence+Daemon", Nexus: "geneos-licd"},
-	PortRange:     "LicdPortRange",
-	CleanList:     "LicdCleanList",
-	PurgeList:     "LicdPurgeList",
+	Name:         "licd",
+	LegacyPrefix: "licd",
+	RelatedTypes: nil,
+	Names:        []string{"licd", "licds"},
+	DownloadBase: geneos.DownloadBases{Resources: "Licence+Daemon", Nexus: "geneos-licd"},
+	PortRange:    "LicdPortRange",
+	CleanList:    "LicdCleanList",
+	PurgeList:    "LicdPurgeList",
 	LegacyParameters: map[string]string{
 		"binsuffix": "binary",
 		"licdhome":  "home",
