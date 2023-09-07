@@ -38,14 +38,13 @@ import (
 )
 
 var Floating = geneos.Component{
-	Initialise:    Init,
-	Name:          "floating",
-	LegacyPrefix:  "flt",
-	RelatedTypes:  []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
-	Names:         []string{"float", "floating"},
-	ParentType:    &netprobe.Netprobe,
-	RealComponent: true,
-	UsesKeyfiles:  true,
+	Initialise:   Init,
+	Name:         "floating",
+	LegacyPrefix: "flt",
+	RelatedTypes: []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
+	Names:        []string{"float", "floating"},
+	ParentType:   &netprobe.Netprobe,
+	UsesKeyfiles: true,
 	Templates: []geneos.Templates{
 		{Filename: templateName, Content: template},
 	},

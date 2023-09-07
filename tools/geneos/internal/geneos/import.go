@@ -188,7 +188,7 @@ func ImportFile(h *Host, dir string, source string) (filename string, err error)
 
 // ImportCommons copies a file to an instance common directory.
 func ImportCommons(r *Host, ct *Component, common string, params []string) (filenames []string, err error) {
-	if ct == nil || !ct.RealComponent {
+	if ct == nil || ct == &RootComponent {
 		err = ErrNotSupported
 		return
 	}

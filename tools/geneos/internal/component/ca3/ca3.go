@@ -45,7 +45,6 @@ var CA3 = geneos.Component{
 	RelatedTypes:     []*geneos.Component{&netprobe.Netprobe},
 	Names:            []string{"ca3", "collection-agent", "ca3s", "collector"},
 	ParentType:       &netprobe.Netprobe,
-	RealComponent:    true,
 	DownloadBase:     geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
 	PortRange:        "CA3PortRange",
 	CleanList:        "CA3CleanList",

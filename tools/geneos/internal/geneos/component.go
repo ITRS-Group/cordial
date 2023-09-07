@@ -46,11 +46,10 @@ const RootComponentName = "root"
 const sharedSuffix = "_shared"
 
 var RootComponent = Component{
-	Name:          RootComponentName,
-	RelatedTypes:  nil,
-	Names:         []string{"any"},
-	RealComponent: false,
-	DownloadBase:  DownloadBases{Resources: "", Nexus: ""},
+	Name:         RootComponentName,
+	RelatedTypes: nil,
+	Names:        []string{"any"},
+	DownloadBase: DownloadBases{Resources: "", Nexus: ""},
 	GlobalSettings: map[string]string{
 		// Root directory for all operations
 		execname: "",
@@ -109,16 +108,15 @@ type Component struct {
 	// to new parameter names
 	LegacyParameters map[string]string
 
-	// RelatedTypes are any related component types. This could also be
-	// derived from ParentType
-	RelatedTypes []*Component
-
 	// ParentType, if set, is the parent component that the component is
 	// under, e.g. san has a parent of netprobe
 	ParentType *Component
 
-	RealComponent bool
-	UsesKeyfiles  bool
+	// RelatedTypes are any related component types. This could also be
+	// derived from ParentType
+	RelatedTypes []*Component
+
+	UsesKeyfiles bool
 
 	// Directories to be created (under Geneos home) on initialisation
 	Directories []string
@@ -297,7 +295,7 @@ func AllComponents() (cts []*Component) {
 // their `RealComponent` field set to true.
 func RealComponents() (cts []*Component) {
 	for _, c := range registeredComponents {
-		if c.RealComponent {
+		if c != &RootComponent {
 			cts = append(cts, c)
 		}
 	}

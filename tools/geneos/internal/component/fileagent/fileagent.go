@@ -39,7 +39,6 @@ var FileAgent = geneos.Component{
 	LegacyPrefix:  "fa",
 	RelatedTypes:  nil,
 	Names:         []string{"fileagent", "fileagents", "file-agent"},
-	RealComponent: true,
 	DownloadBase:  geneos.DownloadBases{Resources: "Fix+Analyser+File+Agent", Nexus: "geneos-file-agent"},
 	DownloadInfix: "file-agent",
 	PortRange:     "FAPortRange",

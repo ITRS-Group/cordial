@@ -71,7 +71,7 @@ var disableCmd = &cobra.Command{
 			}
 
 			if disableCmdStop || disableCmdForce {
-				if i.Type().RealComponent {
+				if i.Type() != &geneos.RootComponent {
 					if err := instance.Stop(i, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
 						resp.Err = err
 						return
