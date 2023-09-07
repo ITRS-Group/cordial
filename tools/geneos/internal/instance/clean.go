@@ -36,7 +36,7 @@ import (
 )
 
 // Clean removes all the files and directories listed in the component
-// type of the instance c for removal. First all entries in the
+// type of the instance i for removal. First all entries in the
 // CleanList are removed and then, if full is true, the instance is
 // stopped and the entries in FullClean are removed. Any instances
 // stopped are started up, but any that were already stopped will be

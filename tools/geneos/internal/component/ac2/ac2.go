@@ -40,7 +40,7 @@ import (
 var AC2 = geneos.Component{
 	Name:             "ac2",
 	LegacyPrefix:     "",
-	RelatedTypes:     nil,
+	PackageTypes:     nil,
 	Names:            []string{"ac2", "active-console", "activeconsole", "desktop-activeconsole"},
 	DownloadBase:     geneos.DownloadBases{Resources: "Active+Console", Nexus: "geneos-desktop-activeconsole"},
 	DownloadInfix:    "desktop-activeconsole",

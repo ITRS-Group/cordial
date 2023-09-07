@@ -37,7 +37,7 @@ import (
 var FileAgent = geneos.Component{
 	Name:          "fileagent",
 	LegacyPrefix:  "fa",
-	RelatedTypes:  nil,
+	PackageTypes:  nil,
 	Names:         []string{"fileagent", "fileagents", "file-agent"},
 	DownloadBase:  geneos.DownloadBases{Resources: "Fix+Analyser+File+Agent", Nexus: "geneos-file-agent"},
 	DownloadInfix: "file-agent",

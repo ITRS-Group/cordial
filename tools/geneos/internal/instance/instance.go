@@ -50,7 +50,7 @@ type Instance struct {
 	ConfigLoaded    time.Time         `json:"-"`
 }
 
-// IsA returns true if instance c has a type that is component of one of
+// IsA returns true if instance i has a type that is component of one of
 // names. Any name that does not
 func IsA(i geneos.Instance, names ...string) bool {
 	it := i.Type().String()
@@ -397,7 +397,7 @@ func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name 
 	return
 }
 
-// Disable the instance c. Does not try to stop a running instance and
+// Disable the instance i. Does not try to stop a running instance and
 // returns an error if it is running.
 func Disable(i geneos.Instance) (err error) {
 	if IsRunning(i) {
@@ -416,7 +416,7 @@ func Disable(i geneos.Instance) (err error) {
 	return
 }
 
-// Enable removes the disabled flag, if any,m from instance c.
+// Enable removes the disabled flag, if any,m from instance i.
 func Enable(i geneos.Instance) (err error) {
 	disableFile := ComponentFilepath(i, geneos.DisableExtension)
 	if _, err = i.Host().Stat(disableFile); err != nil {

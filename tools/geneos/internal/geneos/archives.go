@@ -87,7 +87,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 				// log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
 				check := ct.String()
 
-				if ct.ParentType != nil && len(ct.RelatedTypes) > 0 {
+				if ct.ParentType != nil && len(ct.PackageTypes) > 0 {
 					check = ct.ParentType.String()
 				}
 

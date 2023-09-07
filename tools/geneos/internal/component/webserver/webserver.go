@@ -41,7 +41,7 @@ import (
 var Webserver = geneos.Component{
 	Name:          "webserver",
 	LegacyPrefix:  "webs",
-	RelatedTypes:  nil,
+	PackageTypes:  nil,
 	Names:         []string{"web-server", "webserver", "webservers", "webdashboard", "dashboards"},
 	DownloadBase:  geneos.DownloadBases{Resources: "Web+Dashboard", Nexus: "geneos-web-server"},
 	DownloadInfix: "web-server",

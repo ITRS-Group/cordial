@@ -74,7 +74,7 @@ geneos uninstall --version 5.14.1
 
 		for _, h := range h.OrList() {
 			for _, ct := range ct.OrList() {
-				if len(ct.RelatedTypes) > 0 {
+				if len(ct.PackageTypes) > 0 {
 					log.Debug().Msgf("skipping %s as has related types, remove those instead", ct)
 					continue
 				}
