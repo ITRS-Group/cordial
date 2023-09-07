@@ -417,14 +417,12 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 		return ErrInvalidArgs
 	}
 
-	if ct.RelatedTypes != nil {
-		for _, ct := range ct.RelatedTypes {
-			if err = Install(h, ct, options...); err != nil {
-				return
-			}
+	for _, ct := range ct.RelatedTypes {
+		if err = Install(h, ct, options...); err != nil {
+			return
 		}
-		return
 	}
+	return
 
 	options = append(options, PlatformID(h.GetString(h.Join("osinfo", "platform_id"))))
 
@@ -505,14 +503,12 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 		return nil
 	}
 
-	if ct.RelatedTypes != nil {
-		for _, ct := range ct.RelatedTypes {
-			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
-				log.Error().Err(err).Msg("")
-			}
+	for _, ct := range ct.RelatedTypes {
+		if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
+			log.Error().Err(err).Msg("")
 		}
-		return nil
 	}
+	return nil
 
 	// from here hosts and component types must be specified
 
@@ -553,8 +549,10 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 		return fmt.Errorf("%q version of %s on %s: %w", opts.version, ct, h, os.ErrNotExist)
 	}
 
-	if (existing != "" && !opts.force) || existing == opts.version {
-		log.Debug().Msgf("existing=%s, version=%s, force=%v", existing, opts.version, opts.force)
+	// if we get here from a package install then that will have already
+	// been filtered for "force" in the caller
+	if existing == opts.version {
+		log.Debug().Msgf("existing=%s == version=%s", existing, opts.version)
 		return nil
 	}
 
