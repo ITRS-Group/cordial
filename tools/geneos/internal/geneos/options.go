@@ -83,7 +83,8 @@ func LocalOnly(l bool) Options {
 	return func(d *geneosOptions) { d.local = l }
 }
 
-// Force ignores existing directories or files
+// Force ignores existing directories or files and also overrides
+// protection for running instances in upgrades
 func Force(o bool) Options {
 	return func(d *geneosOptions) { d.force = o }
 }

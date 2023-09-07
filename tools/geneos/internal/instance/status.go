@@ -105,7 +105,7 @@ func LiveVersion(i geneos.Instance, pid int) (base string, version string, actua
 	base = cf.GetString("version")
 
 	t := i.Type().String()
-	if i.Type().RelatedTypes != nil && i.Type().ParentType != nil {
+	if i.Type().ParentType != nil && len(i.Type().RelatedTypes) > 0 {
 		t = i.Type().ParentType.String()
 	}
 	pkgtype := cf.GetString("pkgtype", config.Default(t))

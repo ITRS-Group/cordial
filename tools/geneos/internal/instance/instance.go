@@ -322,7 +322,7 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 
 // Names returns a slice of all instance names for a given component ct
 // on host h. No checking is done to validate that the directory is a
-// populated instance.
+// populated instance. Names are qualified with the host name.
 //
 // To support the move to parent types we do a little more, looking for
 // legacy locations in here

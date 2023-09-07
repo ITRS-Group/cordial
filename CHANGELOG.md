@@ -1,5 +1,23 @@
 # Change Log
 
+## Version v1.8.2
+
+> **Released 2023-09-05**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.8.2 Fixes
+
+* [`tools/geneos`](tools/geneos/README.md)
+  - Use `path.IsAbs()` and not `filepath.IsAbs()` so that constructing paths on a Windows host works for remote Linux systems. Fixes process start from Windows to Linux.
+
+## v1.8.2 Changes
+
+* `pkg/geneos`
+  - Move Netprobe XML structs to their own package `pkg/geneos/netprobe`
+
+---
+
 ## Version v1.8.1
 
 > **Released 2023-09-01**
@@ -9,7 +27,7 @@
 ## v1.8.1 Fixes
 
 * [`tools/geneos`](tools/geneos/README.md)
-  - `unset` should not present a warning if special parameters are passed but not actions, e.g. removing a non-existing environment variable
+  - `unset` should not present a warning if special parameters are passed but no actions performed, e.g. removing a non-existing environment variable
   - [#181](https://github.com/ITRS-Group/cordial/issues/181) - now build on MacOS, primarily for remote admin. Not fully tested
   - [#182](https://github.com/ITRS-Group/cordial/issues/182) - a slew of issues around the order of actions during package install, uninstall and update fixed
 
