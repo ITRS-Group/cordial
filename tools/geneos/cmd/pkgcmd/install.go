@@ -185,12 +185,6 @@ geneos install netprobe -b active_dev -U
 				geneos.Restart(instances...),
 				geneos.StartFunc(instance.Start),
 				geneos.StopFunc(instance.Stop))
-			// for _, c := range instances {
-			// 	if err = instance.Stop(c, installCmdForce, false); err == nil {
-			// 		// only restart instances that we stopped, regardless of success of install/update
-			// 		defer instance.Start(c)
-			// 	}
-			// }
 		}
 
 		args = append(args, params...)
