@@ -36,11 +36,11 @@ import (
 )
 
 var FA2 = geneos.Component{
-	Name:          "fa2",
-	LegacyPrefix:  "fa2",
-	PackageTypes:  nil,
-	Names:         []string{"fa2", "fixanalyser", "fixanalyzer", "fixanalyser2-netprobe"},
-	ParentType:    &netprobe.Netprobe,
+	Name:         "fa2",
+	Aliases:      []string{"fixanalyser", "fixanalyzer", "fixanalyser2-netprobe"},
+	LegacyPrefix: "fa2",
+	ParentType:   &netprobe.Netprobe,
+	// PackageTypes:  nil,
 	DownloadBase:  geneos.DownloadBases{Resources: "Fix+Analyser+2+Netprobe", Nexus: "geneos-fixanalyser2-netprobe"},
 	DownloadInfix: "fixanalyser2-netprobe",
 	PortRange:     "FA2PortRange",

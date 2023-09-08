@@ -40,10 +40,10 @@ import (
 var San = geneos.Component{
 	Initialise:   Init,
 	Name:         "san",
+	Aliases:      []string{"sans"},
 	LegacyPrefix: "san",
-	PackageTypes: []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
-	Names:        []string{"san", "sans"},
 	ParentType:   &netprobe.Netprobe,
+	PackageTypes: []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
 	UsesKeyfiles: true,
 	Templates:    []geneos.Templates{{Filename: templateName, Content: template}},
 	DownloadBase: geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},

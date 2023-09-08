@@ -40,10 +40,10 @@ import (
 var Floating = geneos.Component{
 	Initialise:   Init,
 	Name:         "floating",
+	Aliases:      []string{"float"},
 	LegacyPrefix: "flt",
-	PackageTypes: []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
-	Names:        []string{"float", "floating"},
 	ParentType:   &netprobe.Netprobe,
+	PackageTypes: []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
 	UsesKeyfiles: true,
 	Templates: []geneos.Templates{
 		{Filename: templateName, Content: template},
