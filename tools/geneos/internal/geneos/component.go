@@ -108,7 +108,8 @@ type Component struct {
 
 	// PackageTypes is a list of packages that can be used to support
 	// this component. For example, a 'san' could be either a plain
-	// 'netprobe' or an 'fa2'.
+	// 'netprobe' or an 'fa2'. The entries must reference components
+	// that do not have PackageTypes set to avoid recursion.
 	PackageTypes []*Component
 
 	// Defaults are name=value templates that are "run" for each new
@@ -223,7 +224,7 @@ func (ct *Component) MakeDirs(h *Host) (err error) {
 	geneos := h.GetString(execname) // root for host h
 	for _, d := range initDirs[name] {
 		dir := path.Join(geneos, d)
-		log.Debug().Msgf("mkdirall %s", dir)
+		log.Debug().Msgf("%s: mkdirall %s", h, dir)
 		if err = h.MkdirAll(dir, 0775); err != nil {
 			return
 		}
@@ -293,11 +294,13 @@ func AllComponents() (cts []*Component) {
 	return
 }
 
-// RealComponents returns a slice of all registered components that have
-// their `RealComponent` field set to true.
+// RealComponents returns a slice of all registered components that are
+// not the root
 func RealComponents() (cts []*Component) {
+	log.Debug().Msgf("registered components: %v", registeredComponents)
 	for _, c := range registeredComponents {
 		if c != &RootComponent {
+			log.Debug().Msgf("adding %s", c)
 			cts = append(cts, c)
 		}
 	}
