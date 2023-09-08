@@ -118,9 +118,27 @@ geneos package update netprobe 5.13.2
 		if len(args) > 0 {
 			version = args[0]
 		}
-		var instances []geneos.Instance
+		instances := []geneos.Instance{}
 		if updateCmdRestart {
-			instances = instance.ByKeyValue(h, ct, "version", updateCmdBase)
+			allInstances := instance.GetAll(h, nil)
+
+			for _, ct := range ct.OrList() {
+				for _, i := range allInstances {
+					if i.Config().GetString("version") != updateCmdBase {
+						log.Debug().Msgf("%s base different", i)
+						continue
+					}
+					pkg := i.Config().GetString("pkgtype")
+					if pkg != "" && pkg == ct.String() {
+						instances = append(instances, i)
+						continue
+					}
+					if i.Type() == ct {
+						instances = append(instances, i)
+					}
+				}
+			}
+			log.Debug().Msgf("instances to restart: %v", instances)
 		}
 		if err = geneos.Update(h, ct,
 			geneos.Version(version),

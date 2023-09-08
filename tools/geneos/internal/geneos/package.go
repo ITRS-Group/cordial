@@ -418,14 +418,10 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 		return ErrInvalidArgs
 	}
 
-	cts := ct.PackageTypes
-	if len(cts) > 0 {
-		if ct.ParentType != nil {
-			cts = append([]*Component{ct.ParentType}, cts...)
-		}
-		for _, ct := range cts {
+	if len(ct.PackageTypes) > 0 {
+		for _, ct := range ct.PackageTypes {
 			if err = Install(h, ct, options...); err != nil {
-				return
+				log.Error().Err(err).Msg("")
 			}
 		}
 		return
@@ -467,6 +463,7 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 		if errors.Is(err, fs.ErrExist) {
 			log.Debug().Msgf("%s on %s already installed as %q\n", ct, h, dir)
 			if opts.doupdate {
+				log.Debug().Msg("update true")
 				return Update(h, ct, options...)
 			}
 			return nil
@@ -475,6 +472,7 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 	}
 
 	if opts.doupdate {
+		log.Debug().Msg("update true")
 		return Update(h, ct, options...)
 	}
 	return
@@ -510,12 +508,8 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 		return nil
 	}
 
-	cts := ct.PackageTypes
-	if len(cts) > 0 {
-		if ct.ParentType != nil {
-			cts = append([]*Component{ct.ParentType}, cts...)
-		}
-		for _, ct := range cts {
+	if len(ct.PackageTypes) > 0 {
+		for _, ct := range ct.PackageTypes {
 			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
 				log.Error().Err(err).Msg("")
 			}
@@ -565,14 +559,18 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 	// if we get here from a package install then that will have already
 	// been filtered for "force" in the caller
 	if existing == opts.version {
-		log.Debug().Msgf("existing=%s == version=%s", existing, opts.version)
+		log.Debug().Msgf("existing == version %s", opts.version)
 		return nil
 	}
 
 	if opts.start != nil && opts.stop != nil {
 		for _, c := range opts.restart {
 			// only stop selected instances using components on the host we are working on
-			if !(c.Host() == h && c.Type() == ct) {
+			if c.Host() != h {
+				continue
+			}
+			// check for plain type or package type
+			if c.Type() != ct && c.Config().GetString("pkgtype") != ct.String() {
 				continue
 			}
 			if err = opts.stop(c, opts.force, false); err == nil {

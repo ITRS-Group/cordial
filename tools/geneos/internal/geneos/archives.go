@@ -262,8 +262,23 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 	}
 
 	fmt.Printf("installed %q to %q\n", filename, h.Path(basedir))
-	options = append(options, Version(version))
-	return h.Path(basedir), Update(h, ct, options...)
+	// options = append(options, Version(version))
+	// only create a new base link, not overwrite
+	basedir = h.PathTo("packages", ct.String())
+	basepath := path.Join(h.Path(basedir), opts.basename)
+
+	log.Debug().Msgf("basepath: %s, version: %s", basepath, version)
+
+	if _, err = h.Stat(basepath); err == nil {
+		return h.Path(basedir), nil
+	}
+
+	if err = h.Symlink(version, basepath); err != nil {
+		return h.Path(basedir), err
+	}
+
+	fmt.Printf("%s %q on %s set to %s\n", ct, path.Base(basepath), h, version)
+	return h.Path(basedir), nil
 }
 
 // untar the archive from an io.Reader onto host h in directory dir.
