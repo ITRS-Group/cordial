@@ -419,10 +419,10 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 	}
 
 	cts := ct.PackageTypes
-	if ct.ParentType != nil {
-		cts = append([]*Component{ct.ParentType}, cts...)
-	}
 	if len(cts) > 0 {
+		if ct.ParentType != nil {
+			cts = append([]*Component{ct.ParentType}, cts...)
+		}
 		for _, ct := range cts {
 			if err = Install(h, ct, options...); err != nil {
 				return
@@ -511,10 +511,10 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 	}
 
 	cts := ct.PackageTypes
-	if ct.ParentType != nil {
-		cts = append([]*Component{ct.ParentType}, cts...)
-	}
 	if len(cts) > 0 {
+		if ct.ParentType != nil {
+			cts = append([]*Component{ct.ParentType}, cts...)
+		}
 		for _, ct := range cts {
 			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
 				log.Error().Err(err).Msg("")
