@@ -37,11 +37,11 @@ import (
 )
 
 var Gateway = geneos.Component{
-	Initialise:   initialise,
-	Name:         "gateway",
+	Initialise: initialise,
+	Name:       "gateway",
+	Aliases:    []string{"gateways"},
+	// PackageTypes: nil,
 	LegacyPrefix: "gate",
-	PackageTypes: nil,
-	Names:        []string{"gateway", "gateways"},
 	UsesKeyfiles: true,
 	Templates: []geneos.Templates{
 		{Filename: templateName, Content: template},

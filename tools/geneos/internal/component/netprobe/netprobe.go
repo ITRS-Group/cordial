@@ -36,9 +36,9 @@ import (
 
 var Netprobe = geneos.Component{
 	Name:         "netprobe",
+	Aliases:      []string{"probe", "netprobes", "probes"},
 	LegacyPrefix: "netp",
-	PackageTypes: nil,
-	Names:        []string{"netprobe", "probe", "netprobes", "probes"},
+	// PackageTypes: nil,
 	UsesKeyfiles: true,
 	DownloadBase: geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
 	PortRange:    "NetprobePortRange",

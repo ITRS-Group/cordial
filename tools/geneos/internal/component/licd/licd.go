@@ -36,9 +36,9 @@ import (
 
 var Licd = geneos.Component{
 	Name:         "licd",
+	Aliases:      []string{"licds"},
 	LegacyPrefix: "licd",
-	PackageTypes: nil,
-	Names:        []string{"licd", "licds"},
+	// PackageTypes: nil,
 	DownloadBase: geneos.DownloadBases{Resources: "Licence+Daemon", Nexus: "geneos-licd"},
 	PortRange:    "LicdPortRange",
 	CleanList:    "LicdCleanList",
