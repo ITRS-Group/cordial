@@ -40,11 +40,11 @@ import (
 )
 
 var CA3 = geneos.Component{
-	Name:             "ca3",
-	Aliases:          []string{"collection-agent", "ca3s", "collector"},
-	LegacyPrefix:     "",
-	ParentType:       &netprobe.Netprobe,
-	PackageTypes:     []*geneos.Component{&netprobe.Netprobe},
+	Name:         "ca3",
+	Aliases:      []string{"collection-agent", "ca3s", "collector"},
+	LegacyPrefix: "",
+	ParentType:   &netprobe.Netprobe,
+	// PackageTypes:     []*geneos.Component{},
 	DownloadBase:     geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
 	PortRange:        "CA3PortRange",
 	CleanList:        "CA3CleanList",

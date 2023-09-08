@@ -43,7 +43,7 @@ var San = geneos.Component{
 	Aliases:      []string{"sans"},
 	LegacyPrefix: "san",
 	ParentType:   &netprobe.Netprobe,
-	PackageTypes: []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
+	PackageTypes: []*geneos.Component{&fa2.FA2},
 	UsesKeyfiles: true,
 	Templates:    []geneos.Templates{{Filename: templateName, Content: template}},
 	DownloadBase: geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
