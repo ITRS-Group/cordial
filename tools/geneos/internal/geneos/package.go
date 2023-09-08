@@ -413,16 +413,23 @@ func CompareVersion(version1, version2 string) int {
 // component type ct must be given. options controls behaviour like
 // local only and restarts of affected instances.
 func Install(h *Host, ct *Component, options ...Options) (err error) {
+	log.Debug().Msgf("host %s, component %s", h, ct)
 	if h == ALL || ct == nil {
 		return ErrInvalidArgs
 	}
 
-	for _, ct := range ct.PackageTypes {
-		if err = Install(h, ct, options...); err != nil {
-			return
-		}
+	cts := ct.PackageTypes
+	if ct.ParentType != nil {
+		cts = append([]*Component{ct.ParentType}, cts...)
 	}
-	return
+	if len(cts) > 0 {
+		for _, ct := range cts {
+			if err = Install(h, ct, options...); err != nil {
+				return
+			}
+		}
+		return
+	}
 
 	options = append(options, PlatformID(h.GetString(h.Join("osinfo", "platform_id"))))
 
@@ -503,12 +510,18 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 		return nil
 	}
 
-	for _, ct := range ct.PackageTypes {
-		if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
-			log.Error().Err(err).Msg("")
-		}
+	cts := ct.PackageTypes
+	if ct.ParentType != nil {
+		cts = append([]*Component{ct.ParentType}, cts...)
 	}
-	return nil
+	if len(cts) > 0 {
+		for _, ct := range cts {
+			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
+				log.Error().Err(err).Msg("")
+			}
+		}
+		return nil
+	}
 
 	// from here hosts and component types must be specified
 
