@@ -133,6 +133,8 @@ geneos install netprobe -b active_dev -U
 			}
 		}
 
+		log.Debug().Msgf("update=%v force=%v", installCmdUpdate, installCmdForce)
+
 		if installCmdForce {
 			installCmdUpdate = true
 		}
@@ -178,9 +180,27 @@ geneos install netprobe -b active_dev -U
 			return
 		}
 
-		// stop instances early. once we get to components, we don't know about instances
+		// record which instances to stop early. once we get to components, we don't know about instances
 		if installCmdUpdate {
-			instances := instance.ByKeyValue(h, ct, "version", installCmdBase)
+			instances := []geneos.Instance{}
+			allInstances := instance.GetAll(h, nil)
+
+			for _, ct := range ct.OrList() {
+				for _, i := range allInstances {
+					if i.Config().GetString("version") != installCmdBase {
+						continue
+					}
+					pkg := i.Config().GetString("pkgtype")
+					if pkg != "" && pkg == ct.String() {
+						instances = append(instances, i)
+						continue
+					}
+					if i.Type() == ct {
+						instances = append(instances, i)
+					}
+				}
+			}
+			log.Debug().Msgf("instances to restart: %v", instances)
 			options = append(options,
 				geneos.Restart(instances...),
 				geneos.StartFunc(instance.Start),

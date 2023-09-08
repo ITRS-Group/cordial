@@ -193,6 +193,9 @@ func (ct *Component) Register(factory func(string) Instance) {
 }
 
 func (ct *Component) String() (name string) {
+	if ct == nil {
+		return ""
+	}
 	return ct.Name
 }
 

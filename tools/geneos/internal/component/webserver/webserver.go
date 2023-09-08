@@ -39,10 +39,9 @@ import (
 )
 
 var Webserver = geneos.Component{
-	Name:         "webserver",
-	Aliases:      []string{"web-server", "webservers", "webdashboard", "dashboards"},
-	LegacyPrefix: "webs",
-	// PackageTypes:  nil,
+	Name:          "webserver",
+	Aliases:       []string{"web-server", "webservers", "webdashboard", "dashboards"},
+	LegacyPrefix:  "webs",
 	DownloadBase:  geneos.DownloadBases{Resources: "Web+Dashboard", Nexus: "geneos-web-server"},
 	DownloadInfix: "web-server",
 	PortRange:     "WebserverPortRange",

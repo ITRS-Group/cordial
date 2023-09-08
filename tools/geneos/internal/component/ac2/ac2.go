@@ -38,10 +38,9 @@ import (
 )
 
 var AC2 = geneos.Component{
-	Name:         "ac2",
-	Aliases:      []string{"active-console", "activeconsole", "desktop-activeconsole"},
-	LegacyPrefix: "",
-	// PackageTypes:     nil,
+	Name:             "ac2",
+	Aliases:          []string{"active-console", "activeconsole", "desktop-activeconsole"},
+	LegacyPrefix:     "",
 	DownloadBase:     geneos.DownloadBases{Resources: "Active+Console", Nexus: "geneos-desktop-activeconsole"},
 	DownloadInfix:    "desktop-activeconsole",
 	PortRange:        "AC2PortRange",
