@@ -277,7 +277,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	}
 
 	// use getPorts() to check valid change, else go up one
-	ports := instance.GetPorts(g.Host())
+	ports := instance.GetAllPorts(g.Host())
 	nextport := instance.NextPort(g.Host(), &Gateway)
 	if nextport == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
