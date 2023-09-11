@@ -32,9 +32,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/rs/zerolog/log"
 )
 
 var tcpfiles = []string{
@@ -71,26 +72,22 @@ func GetAllPorts(h *geneos.Host) (ports map[uint16]bool) {
 	return
 }
 
-// syntax of ranges of ints:
-// x,y,a-b,c..d m n o-p
-// also open ended A,N-,B
-// command or space seperated?
-// - or .. = inclusive range
+// NextPort returns the next available (unallocated and unused) TCP
+// listening port for component ct on host h.
 //
-// how to represent
-// split, for range, check min-max -> max > min
-// repeats ignored
-// special ports? - nah
+// The range of ports available for a component is defined in the
+// configuration for the user and for each component type. A port is
+// available if it is neither allocated to any other instance on the
+// same host (of any component type) and also is not in use by any other
+// process which may not be a Geneos instance.
 //
-
-// given a range, find the first unused port
+// Each range is a comma separated list of single port number, e.g.
+// "7036", a min-max inclusive range, e.g. "7036-8036" or a 'start-'
+// open ended range, e.g. "7041-". Ranges can also be denoted by
+// double-dot in addition to single dashes '-'.
 //
-// range is comma or two-dot separated list of
-// single number, e.g. "7036"
-// min-max inclusive range, e.g. "7036-8036"
-// start- open ended range, e.g. "7041-"
-//
-// some limits based on https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
+// some limits based on
+// https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
 //
 // not concurrency safe at this time
 func NextPort(h *geneos.Host, ct *geneos.Component) uint16 {
@@ -98,7 +95,7 @@ func NextPort(h *geneos.Host, ct *geneos.Component) uint16 {
 	used := GetAllPorts(h)
 	ps := strings.Split(from, ",")
 	for _, p := range ps {
-		// split on comma or ".."
+		// split on dash or ".."
 		m := strings.SplitN(p, "-", 2)
 		if len(m) == 1 {
 			m = strings.SplitN(p, "..", 2)
@@ -220,52 +217,15 @@ func ListeningPorts(i geneos.Instance) (ports []int) {
 // running as the instance. An empty slice is returned if the process
 // cannot be found. The instance may be on a remote host.
 func ListeningPortsStrings(i geneos.Instance) (ports []string) {
-	var err error
-
-	if !IsRunning(i) {
+	intports := ListeningPorts(i)
+	if len(intports) == 0 {
 		return
 	}
-
-	sockets := sockets(i)
-	if len(sockets) == 0 {
-		return
+	for _, p := range intports {
+		ports = append(ports, fmt.Sprint(p))
 	}
-
-	tcpports := make(map[int]int) // key = socket inode
-	if err = allTCPListenPorts(i.Host(), tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		log.Error().Err(err).Msg("continuing")
-	}
-
-	for _, s := range sockets {
-		if port, ok := tcpports[s]; ok {
-			ports = append(ports, fmt.Sprint(port))
-		}
-	}
-	sort.Strings(ports)
 	return
 }
-
-// AllListeningPorts returns a sorted list of all listening TCP ports on
-// host h between min and max (inclusive). If min or max is -1 then no
-// limit is imposed.
-// func AllListeningPorts(h *geneos.Host, min, max int) (ports []int) {
-// 	var err error
-
-// 	tcpports := make(map[int]int) // key = socket inode, value port
-// 	if err = allTCPListenPorts(h, tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
-// 		log.Debug().Err(err).Msg("continuing")
-// 	}
-// 	for v := range tcpports {
-// 		if min == -1 || v >= min {
-// 			if max == -1 || v <= max {
-// 				ports = append(ports, v)
-// 			}
-// 		}
-// 	}
-// 	sort.Ints(ports)
-
-// 	return
-// }
 
 // sockets returns a map[int]int of file descriptor to socket inode for all open
 // files for the process running as the instance. An empty map is
