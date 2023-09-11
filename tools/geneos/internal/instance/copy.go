@@ -179,9 +179,9 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 		}
 	} else {
 		sPort := src.Config().GetUint16("port")
-		dPortsInUse := GetPorts(dHost)
+		dPortsInUse := GetAllPorts(dHost)
 		if _, ok := dPortsInUse[sPort]; ok {
-			log.Debug().Msgf("found port in use: %d -> %s", sPort, dPortsInUse[sPort])
+			log.Debug().Msgf("found port in use: %d", sPort)
 			dPort := NextPort(dHost, dst.Type())
 			newdst.Config().Set("port", dPort)
 		} else {

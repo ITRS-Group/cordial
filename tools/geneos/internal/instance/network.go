@@ -42,24 +42,31 @@ var tcpfiles = []string{
 	"/proc/net/tcp6",
 }
 
-// GetPorts gets all used ports in config files on a specific remote
-// this will not work for ports assigned in component config files, such
-// as gateway setup or netprobe collection agent
-//
-// returns a map
-func GetPorts(h *geneos.Host) (ports map[uint16]*geneos.Component) {
+// GetAllPorts gets all used ports in config files on a specific remote
+// and also all listening ports on the same host. Returns a map of port
+// to bool "true" for each lookup.
+func GetAllPorts(h *geneos.Host) (ports map[uint16]bool) {
 	if h == geneos.ALL {
 		log.Fatal().Msg("getports() call with all hosts")
 	}
-	ports = make(map[uint16]*geneos.Component)
+	ports = make(map[uint16]bool)
 	for _, c := range GetAll(h, nil) {
 		if c.Loaded().IsZero() {
 			log.Error().Msgf("cannot load configuration for %s", c)
 			continue
 		}
 		if port := c.Config().GetInt("port"); port != 0 {
-			ports[uint16(port)] = c.Type()
+			ports[uint16(port)] = true
 		}
+	}
+
+	// add all listening ports
+	listening := make(map[int]int)
+	if err := allTCPListenPorts(h, listening); err != nil {
+		return
+	}
+	for _, v := range listening {
+		ports[uint16(v)] = true
 	}
 	return
 }
@@ -88,7 +95,7 @@ func GetPorts(h *geneos.Host) (ports map[uint16]*geneos.Component) {
 // not concurrency safe at this time
 func NextPort(h *geneos.Host, ct *geneos.Component) uint16 {
 	from := config.GetString(ct.PortRange)
-	used := GetPorts(h)
+	used := GetAllPorts(h)
 	ps := strings.Split(from, ",")
 	for _, p := range ps {
 		// split on comma or ".."
@@ -241,24 +248,24 @@ func ListeningPortsStrings(i geneos.Instance) (ports []string) {
 // AllListeningPorts returns a sorted list of all listening TCP ports on
 // host h between min and max (inclusive). If min or max is -1 then no
 // limit is imposed.
-func AllListeningPorts(h *geneos.Host, min, max int) (ports []int) {
-	var err error
+// func AllListeningPorts(h *geneos.Host, min, max int) (ports []int) {
+// 	var err error
 
-	tcpports := make(map[int]int) // key = socket inode, value port
-	if err = allTCPListenPorts(h, tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		log.Debug().Err(err).Msg("continuing")
-	}
-	for v := range tcpports {
-		if min == -1 || v >= min {
-			if max == -1 || v <= max {
-				ports = append(ports, v)
-			}
-		}
-	}
-	sort.Ints(ports)
+// 	tcpports := make(map[int]int) // key = socket inode, value port
+// 	if err = allTCPListenPorts(h, tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
+// 		log.Debug().Err(err).Msg("continuing")
+// 	}
+// 	for v := range tcpports {
+// 		if min == -1 || v >= min {
+// 			if max == -1 || v <= max {
+// 				ports = append(ports, v)
+// 			}
+// 		}
+// 	}
+// 	sort.Ints(ports)
 
-	return
-}
+// 	return
+// }
 
 // sockets returns a map[int]int of file descriptor to socket inode for all open
 // files for the process running as the instance. An empty map is
