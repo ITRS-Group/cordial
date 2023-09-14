@@ -120,11 +120,11 @@ var sans sync.Map
 // If the name has a TYPE prefix then that type is used as the "pkgtype"
 // parameter to select other Netprobe types, such as fa2
 func factory(name string) geneos.Instance {
-	ct, local, r := instance.SplitName(name, geneos.LOCAL)
-	if local == "" || r == geneos.LOCAL && geneos.Root() == "" {
+	ct, local, h := instance.SplitName(name, geneos.LOCAL)
+	if local == "" || h == nil || (h == geneos.LOCAL && geneos.Root() == "") {
 		return nil
 	}
-	s, ok := sans.Load(r.FullName(local))
+	s, ok := sans.Load(h.FullName(local))
 	if ok {
 		sn, ok := s.(*Sans)
 		if ok {
@@ -133,7 +133,7 @@ func factory(name string) geneos.Instance {
 	}
 	san := &Sans{}
 	san.Conf = config.New()
-	san.InstanceHost = r
+	san.InstanceHost = h
 	san.Component = &San
 	san.Config().SetDefault("pkgtype", "netprobe")
 	if ct != nil {
@@ -144,7 +144,7 @@ func factory(name string) geneos.Instance {
 	}
 	// set the home dir based on where it might be, default to one above
 	san.Config().Set("home", instance.Home(san))
-	sans.Store(r.FullName(local), san)
+	sans.Store(h.FullName(local), san)
 	return san
 }
 

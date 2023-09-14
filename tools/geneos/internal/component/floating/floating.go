@@ -106,7 +106,7 @@ var floatings sync.Map
 
 func factory(name string) geneos.Instance {
 	ct, local, h := instance.SplitName(name, geneos.LOCAL)
-	if local == "" || h == geneos.LOCAL && geneos.Root() == "" {
+	if local == "" || h == nil || (h == geneos.LOCAL && geneos.Root() == "") {
 		return nil
 	}
 	s, ok := floatings.Load(h.FullName(local))

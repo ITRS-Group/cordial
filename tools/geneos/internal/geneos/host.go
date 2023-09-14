@@ -123,6 +123,9 @@ func NewHost(name string, options ...any) (h *Host) {
 }
 
 func (h *Host) String() string {
+	if h == nil {
+		return ""
+	}
 	return h.GetString("name")
 }
 

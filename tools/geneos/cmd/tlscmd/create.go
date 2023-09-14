@@ -35,7 +35,6 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -76,7 +75,7 @@ var createCmd = &cobra.Command{
 		tlsInit(false)
 		err = CreateCert(".", createCmdOverwrite, createCmdCN, createCmdSANs...)
 		if err != nil {
-			if errors.Is(err, host.ErrExists) && !createCmdOverwrite {
+			if errors.Is(err, os.ErrExist) && !createCmdOverwrite {
 				fmt.Printf("Certficate already exists for CN=%q, use --force to overwrite\n", createCmdCN)
 				return nil
 			}
@@ -95,7 +94,7 @@ var createCmd = &cobra.Command{
 func CreateCert(dir string, overwrite bool, cn string, san ...string) (err error) {
 	basepath := path.Join(dir, strings.ReplaceAll(cn, " ", "-"))
 	if _, err = os.Stat(basepath + ".pem"); err == nil && !overwrite {
-		return host.ErrExists
+		return os.ErrExist
 	}
 	serial, err := rand.Prime(rand.Reader, 64)
 	if err != nil {
