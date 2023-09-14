@@ -144,7 +144,7 @@ If set, it is used as the directory for the log file below. If not set (the defa
 
 #### `options`
 
-Additional options to pass on the command line to the Gateway. For example, when you create a "demo" environment using `geneos init demo` the Gateway gets a `option` of `-demo`.
+A space separated set of additional options to append to the command line of the Gateway. For example, when you create a "demo" environment using `geneos init demo` the Gateway gets a `option` of `-demo`. The contents are split on space before being passed as individual arguments; this means that it is not possible to use arguments containing spaces, such as a file path.
 
 #### `licdsecure`
 

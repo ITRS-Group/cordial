@@ -87,8 +87,8 @@ var (
 	ErrInvalidArgs  = errors.New("invalid arguments")
 	ErrNotSupported = errors.New("not supported")
 	ErrNotAvailable = errors.New("not available")
-	ErrExists       = errors.New("exists")
-	ErrNotExists    = errors.New("not exists")
+	ErrExist        = errors.New("already exists")
+	ErrNotExist     = errors.New("does not exist")
 )
 
 // CopyFile copies a file between two locations. Destination can be a

@@ -23,8 +23,8 @@ THE SOFTWARE.
 package instance
 
 import (
+	"errors"
 	"fmt"
-	"os"
 	"path"
 	"strings"
 
@@ -50,7 +50,7 @@ import (
 func Copy(ct *geneos.Component, source, destination string, move bool) (err error) {
 	var stopped, done bool
 	if source == destination {
-		return fmt.Errorf("source and destination must have different names and/or locations")
+		return fmt.Errorf("%w: source and destination must have different names and/or locations", geneos.ErrInvalidArgs)
 	}
 
 	log.Debug().Msgf("%s %s %s", ct, source, destination)
@@ -59,18 +59,18 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 		if !strings.HasPrefix(destination, "@") {
 			return fmt.Errorf("%w: destination must be a host when source is a host", geneos.ErrInvalidArgs)
 		}
-		sHostName := strings.TrimPrefix(source, "@")
-		dHostName := strings.TrimPrefix(destination, "@")
+		sHostName := source[1:]      // strings.TrimPrefix(source, "@")
+		dHostName := destination[1:] // strings.TrimPrefix(destination, "@")
 		if sHostName == dHostName {
 			return fmt.Errorf("%w: src and destination host must be different", geneos.ErrInvalidArgs)
 		}
 		sHost := geneos.GetHost(sHostName)
 		if !sHost.Exists() {
-			return fmt.Errorf("%w: source host %q not found", os.ErrNotExist, sHostName)
+			return fmt.Errorf("%w: source host %q not found", host.ErrNotExist, sHostName)
 		}
 		dHost := geneos.GetHost(dHostName)
 		if !dHost.Exists() {
-			return fmt.Errorf("%w: destination host %q not found", os.ErrNotExist, dHostName)
+			return fmt.Errorf("%w: destination host %q not found", host.ErrNotExist, dHostName)
 		}
 		// they both exist, now loop through all instances on src and try to move/copy
 		for _, name := range Names(sHost, ct) {
@@ -82,9 +82,12 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 	}
 
 	if ct == nil {
-		for _, t := range geneos.RealComponents() {
-			if err = Copy(t, source, destination, move); err != nil {
+		for _, ct := range geneos.RealComponents() {
+			if err = Copy(ct, source, destination, move); err != nil {
 				log.Debug().Err(err).Msg("")
+				if errors.Is(err, host.ErrNotExist) {
+					return
+				}
 				continue
 			}
 		}
@@ -106,6 +109,11 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 		destination = src.Name() + destination
 	}
 
+	_, _, dHost := SplitName(destination, geneos.LOCAL)
+	if !dHost.Exists() {
+		return fmt.Errorf("%w: destination host for %q not found", host.ErrNotExist, destination)
+	}
+
 	log.Debug().Msgf("checking %s", destination)
 	dst, err := Get(ct, destination)
 	if err == nil && !dst.Loaded().IsZero() {
@@ -114,7 +122,9 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 	}
 	log.Debug().Msg("not found")
 	// otherwise carry on
-	dst.Unload()
+	if dst != nil {
+		dst.Unload()
+	}
 
 	if move {
 		if IsRunning(src) {

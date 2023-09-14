@@ -35,6 +35,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -332,7 +333,7 @@ func CreateRootCert(h host.Host, basefilepath string, cn string, overwrite bool,
 
 	if !overwrite {
 		if _, err = ParseCertificate(h, basefilepath+".pem"); err == nil {
-			return host.ErrExists
+			return os.ErrExist
 		}
 	}
 	serial, err := rand.Prime(rand.Reader, 64)
@@ -381,7 +382,7 @@ func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string
 
 	if !overwrite {
 		if _, err = ParseCertificate(h, basefilepath+".pem"); err == nil {
-			return host.ErrExists
+			return os.ErrExist
 		}
 	}
 

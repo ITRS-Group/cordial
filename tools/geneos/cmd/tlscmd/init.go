@@ -32,7 +32,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/spf13/cobra"
@@ -85,7 +84,7 @@ func tlsInit(overwrite bool) (err error) {
 		cmd.Execname+" root certificate",
 		overwrite,
 		initCmdKeyType); err != nil {
-		if errors.Is(err, host.ErrExists) {
+		if errors.Is(err, os.ErrExist) {
 			// fmt.Println("root certificate already exists in", config.AppConfigDir())
 			return nil
 		}
@@ -98,7 +97,7 @@ func tlsInit(overwrite bool) (err error) {
 		path.Join(config.AppConfigDir(), geneos.RootCAFile),
 		cmd.Execname+" intermediate certificate",
 		overwrite); err != nil {
-		if errors.Is(err, host.ErrExists) {
+		if errors.Is(err, os.ErrExist) {
 			// fmt.Println("signing certificate already exists in", config.AppConfigDir())
 			return nil
 		}
