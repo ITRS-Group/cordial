@@ -88,11 +88,18 @@ func initConfig() {
 		config.SetConfigFile(cfgFile),
 		config.MergeSettings(),
 		config.SetFileExtension("yaml"),
+		config.WithEnvs("ITRS", "_"),
 	)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		cfg := config.Path(execname,
+			config.SetAppName("geneos"),
+			config.SetConfigFile(cfgFile),
+			config.MergeSettings(),
+			config.SetFileExtension("yaml"),
+			config.WithEnvs("ITRS", "_"),
+		)
+		log.Fatal().Err(err).Msgf("loading from file: %s", cfg)
 	}
-	cf.AutomaticEnv()
 }
 
 type dv2emailData struct {
