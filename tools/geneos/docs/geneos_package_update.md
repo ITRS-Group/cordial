@@ -25,6 +25,7 @@ Otherwise, by default any running instances that use the base link that is being
   -I, --install          Install package updates if necessary
   -b, --base string      Base name for the symlink, defaults to active_prod (default "active_prod")
   -R, --restart          Restart all instances that may have an update applied (default true)
+  -F, --force            Will also update and restart protected instances
 ```
 
 ## Examples

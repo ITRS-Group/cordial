@@ -19,7 +19,7 @@ If a file exists with the resulting CN with a `.pem` extension then it, and the 
 ### Options
 
 ```text
-  -c, --cname string   Common Name for certificate. Defaults to hostname (default "thinkpad")
+  -c, --cname string   Common Name for certificate. Defaults to hostname
   -F, --force          Force overwrite existing certificate (but not root and intermediate)
   -s, --san SAN        Subject-Alternative-Name (repeat for each one required). Defaults to hostname if none given
 ```
