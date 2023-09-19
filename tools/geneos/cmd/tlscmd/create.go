@@ -34,12 +34,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 var createCmdCN string
@@ -49,8 +50,7 @@ var createCmdSANs createCmdSAN
 func init() {
 	tlsCmd.AddCommand(createCmd)
 
-	hostname, _ := os.Hostname()
-	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", hostname, "Common Name for certificate. Defaults to hostname")
+	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", "", "Common Name for certificate. Defaults to hostname")
 	createCmd.Flags().VarP(&createCmdSANs, "san", "s", "Subject-Alternative-Name (repeat for each one required). Defaults to hostname if none given")
 	createCmd.Flags().BoolVarP(&createCmdOverwrite, "force", "F", false, "Force overwrite existing certificate (but not root and intermediate)")
 }
@@ -73,6 +73,9 @@ var createCmd = &cobra.Command{
 			createCmdSANs = []string{hostname}
 		}
 		tlsInit(false)
+		if createCmdCN == "" {
+			createCmdCN, _ = os.Hostname()
+		}
 		err = CreateCert(".", createCmdOverwrite, createCmdCN, createCmdSANs...)
 		if err != nil {
 			if errors.Is(err, os.ErrExist) && !createCmdOverwrite {
