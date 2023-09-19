@@ -79,7 +79,7 @@ var createCmd = &cobra.Command{
 		err = CreateCert(".", createCmdOverwrite, createCmdCN, createCmdSANs...)
 		if err != nil {
 			if errors.Is(err, os.ErrExist) && !createCmdOverwrite {
-				fmt.Printf("Certficate already exists for CN=%q, use --force to overwrite\n", createCmdCN)
+				fmt.Printf("Certificate already exists for CN=%q, use --force to overwrite\n", createCmdCN)
 				return nil
 			}
 			return
