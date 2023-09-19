@@ -261,6 +261,9 @@ func (c *Config) GetStringSlice(s string, options ...ExpandOptions) (slice []str
 }
 
 func isStringMapInterface(val interface{}) bool {
+	if val == nil {
+		return false
+	}
 	vt := reflect.TypeOf(val)
 	return vt.Kind() == reflect.Map &&
 		vt.Key().Kind() == reflect.String &&
