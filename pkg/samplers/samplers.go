@@ -197,6 +197,9 @@ tags and doesn't care about the data
 */
 func (s Samplers) ColumnInfo(rowdata interface{}) (cols Columns,
 	columnnames []string, sorting string, err error) {
+	if rowdata == nil {
+		return
+	}
 	rv := reflect.Indirect(reflect.ValueOf(rowdata))
 	if rv.Kind() != reflect.Struct {
 		err = fmt.Errorf("rowdata is not a struct")
@@ -259,6 +262,9 @@ The data passed should NOT include column heading slice as it will be
 regenerated from the Columns data
 */
 func (s Samplers) RowsFromMap(rowdata interface{}) (rows [][]string, err error) {
+	if rowdata == nil {
+		return
+	}
 	c := s.Columns()
 	r := reflect.Indirect(reflect.ValueOf(rowdata))
 	if r.Kind() != reflect.Map {
@@ -299,6 +305,9 @@ func (s Samplers) UpdateTableFromSlice(rowdata interface{}) error {
 // RowsFromSlice - results are not resorted, they are assumed to be in the order
 // required
 func (s Samplers) RowsFromSlice(rowdata interface{}) (rows [][]string, err error) {
+	if rowdata == nil {
+		return
+	}
 	c := s.Columns()
 
 	rd := reflect.Indirect(reflect.ValueOf(rowdata))
@@ -345,7 +354,9 @@ func (s *Samplers) UpdateTableFromMapDelta(newdata, olddata interface{}, interva
 // time
 func (s Samplers) RowsFromMapDelta(newrowdata, oldrowdata interface{},
 	interval time.Duration) (rows [][]string, err error) {
-
+	if newrowdata == nil || oldrowdata == nil {
+		return
+	}
 	c := s.Columns()
 
 	// if no interval is supplied - the same as an interval of zero

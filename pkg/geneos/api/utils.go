@@ -51,6 +51,9 @@ The input is a type or an zero-ed struct as this method only checks the struct
 tags and doesn't care about the data
 */
 func ColumnInfo(rowdata interface{}) (cols Columns, columnnames []string, sorting string, err error) {
+	if rowdata == nil {
+		return
+	}
 	rv := reflect.Indirect(reflect.ValueOf(rowdata))
 	if rv.Kind() != reflect.Struct {
 		err = fmt.Errorf("rowdata is not a struct")
