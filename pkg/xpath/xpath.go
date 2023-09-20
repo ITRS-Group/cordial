@@ -145,6 +145,10 @@ func NewHeadlinePath(name string) (x *XPath) {
 //	x := x.ResolveTo(&Dataview{})
 //	y := xpath.ResolveTo(&Headline{Name: "headlineName"})
 func (x *XPath) ResolveTo(element interface{}) *XPath {
+	if element == nil {
+		return nil
+	}
+
 	// copy the xpath
 	var nx XPath
 

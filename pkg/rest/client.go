@@ -215,6 +215,9 @@ func encodeRequest(request any) io.Reader {
 // This could be better done in a http handler, but this is simple to
 // understand
 func decodeResponse(resp *http.Response, response interface{}) (err error) {
+	if response == nil {
+		return
+	}
 	switch resp.Header.Get("content-type") {
 	case "text/plain":
 		// decode as plain string

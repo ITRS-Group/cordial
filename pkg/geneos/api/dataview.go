@@ -78,6 +78,9 @@ func (view *Dataview) UpdateTableFromMap(data interface{}) error {
 // The data passed should NOT include column heading slice as it will be
 // regenerated from the Columns data
 func (view *Dataview) RowsFromMap(rowdata interface{}) (rows [][]string, err error) {
+	if rowdata == nil {
+		return
+	}
 	c := view.columns
 	r := reflect.Indirect(reflect.ValueOf(rowdata))
 	if r.Kind() != reflect.Map {
@@ -116,6 +119,10 @@ func (view *Dataview) UpdateTableFromSlice(rowdata interface{}) error {
 // RowsFromSlice - results are not resorted, they are assumed to be in the order
 // required
 func (view *Dataview) RowsFromSlice(rowdata interface{}) (rows [][]string, err error) {
+	if rowdata == nil {
+		return
+	}
+
 	c := view.columns
 
 	rd := reflect.Indirect(reflect.ValueOf(rowdata))
@@ -161,6 +168,9 @@ func (view *Dataview) UpdateTableFromMapDelta(newdata, olddata interface{}, inte
 // time
 func (view Dataview) RowsFromMapDelta(newrowdata, oldrowdata interface{},
 	interval time.Duration) (rows [][]string, err error) {
+	if newrowdata == nil || oldrowdata == nil {
+		return
+	}
 
 	c := view.columns
 
