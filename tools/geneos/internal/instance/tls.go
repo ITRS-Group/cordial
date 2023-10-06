@@ -75,13 +75,13 @@ func CreateCert(i geneos.Instance) (resp *Response) {
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	rootCert, err := ReadRootCert()
+	rootCert, _, err := ReadRootCert()
 	if err != nil {
 		resp.Err = err
 		return
 	}
 
-	signingCert, err := ReadSigningCert()
+	signingCert, _, err := ReadSigningCert()
 	if err != nil {
 		resp.Err = err
 		return
@@ -173,8 +173,8 @@ func WriteKey(i geneos.Instance, key *memguard.Enclave) (err error) {
 // directory if files do not already exist in the user app config
 // directory. If verify is true then the certificate is verified against
 // itself as a root and if it fails an error is returned.
-func ReadRootCert(verify ...bool) (cert *x509.Certificate, err error) {
-	file := config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.PathTo("tls"), geneos.RootCAFile+".pem")
+func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err error) {
+	file = config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.PathTo("tls"), geneos.RootCAFile+".pem")
 	log.Debug().Msgf("reading %s", file)
 	if file == "" {
 		err = fmt.Errorf("%w: root certificate file %s not found in %s", os.ErrNotExist, geneos.RootCAFile+".pem", config.AppConfigDir())
@@ -200,8 +200,8 @@ func ReadRootCert(verify ...bool) (cert *x509.Certificate, err error) {
 // previous tls directory if files do not already exist in the user app
 // config directory. If verify is true then the signing certificate is
 // checked and verified against the default root certificate.
-func ReadSigningCert(verify ...bool) (cert *x509.Certificate, err error) {
-	file := config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.PathTo("tls", geneos.SigningCertFile+".pem"))
+func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err error) {
+	file = config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.PathTo("tls", geneos.SigningCertFile+".pem"))
 	log.Debug().Msgf("reading %s", file)
 	if file == "" {
 		err = fmt.Errorf("%w: signing certificate file %s not found in %s", os.ErrNotExist, geneos.SigningCertFile+".pem", config.AppConfigDir())
@@ -218,7 +218,7 @@ func ReadSigningCert(verify ...bool) (cert *x509.Certificate, err error) {
 			return
 		}
 		var root *x509.Certificate
-		root, err = ReadRootCert(verify...)
+		root, _, err = ReadRootCert(verify...)
 		if err != nil {
 			return
 		}

@@ -86,6 +86,7 @@ func init() {
 var listCmdDescription string
 
 var rootCert, geneosCert *x509.Certificate
+var rootCertFile, geneosCertFile string
 
 var listCmd = &cobra.Command{
 	Use:          "list [flags] [TYPE] [NAME...]",
@@ -99,11 +100,11 @@ var listCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, names, params := cmd.TypeNamesParams(command)
-		rootCert, err = instance.ReadRootCert(true)
+		rootCert, rootCertFile, err = instance.ReadRootCert(true)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return
 		}
-		geneosCert, err = instance.ReadSigningCert()
+		geneosCert, geneosCertFile, err = instance.ReadSigningCert()
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return
 		}
@@ -236,7 +237,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 						rootCert.NotAfter,
 						rootCert.Subject.CommonName,
 						verifyCert(rootCert),
-						"",
+						rootCertFile,
 						rootCert.Issuer.CommonName,
 						nil,
 						nil,
@@ -253,7 +254,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 						geneosCert.NotAfter,
 						geneosCert.Subject.CommonName,
 						verifyCert(geneosCert),
-						"",
+						rootCertFile,
 						geneosCert.Issuer.CommonName,
 						nil,
 						nil,
@@ -274,6 +275,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			"Expires",
 			"CommonName",
 			"Valid",
+			"ChainFile",
 			"Issuer",
 			"SubjAltNames",
 			"IPs",
@@ -289,6 +291,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					rootCert.NotAfter.String(),
 					rootCert.Subject.CommonName,
 					fmt.Sprint(verifyCert(rootCert)),
+					rootCertFile,
 					rootCert.Issuer.CommonName,
 					"[]",
 					"[]",
@@ -304,6 +307,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					geneosCert.NotAfter.String(),
 					geneosCert.Subject.CommonName,
 					fmt.Sprint(verifyCert(geneosCert)),
+					rootCertFile,
 					geneosCert.Issuer.CommonName,
 					"[]",
 					"[]",
@@ -314,27 +318,29 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Write(listCSVWriter)
 	default:
 		listTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-		fmt.Fprintln(listTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tValid\tIssuer\tSubjAltNames\tIPs\tFingerprint")
+		fmt.Fprintln(listTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tValid\tChainFile\tIssuer\tSubjAltNames\tIPs\tFingerprint")
 		if listCmdAll {
 			if rootCert != nil {
-				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t\t\t%X\n",
+				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t%q\t\t\t%X\n",
 					geneos.RootCAFile,
 					geneos.LOCALHOST,
 					time.Until(rootCert.NotAfter).Seconds(),
 					rootCert.NotAfter,
 					rootCert.Subject.CommonName,
 					verifyCert(rootCert),
+					rootCertFile,
 					rootCert.Issuer.CommonName,
 					sha1.Sum(rootCert.Raw))
 			}
 			if geneosCert != nil {
-				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t\t\t%X\n",
+				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t%q\t\t\t%X\n",
 					geneos.SigningCertFile,
 					geneos.LOCALHOST,
 					time.Until(geneosCert.NotAfter).Seconds(),
 					geneosCert.NotAfter,
 					geneosCert.Subject.CommonName,
 					verifyCert(geneosCert),
+					rootCertFile,
 					geneosCert.Issuer.CommonName,
 					sha1.Sum(geneosCert.Raw))
 			}
@@ -360,7 +366,7 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) 
 	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%.f\t%q\t%q\t%v\t", i.Type(), i.Name(), i.Host(), time.Until(expires).Seconds(), expires, cert.Subject.CommonName, valid)
 
 	if listCmdLong {
-		resp.Line += fmt.Sprintf("%s\t", chainfile)
+		resp.Line += fmt.Sprintf("%q\t", chainfile)
 		resp.Line += fmt.Sprintf("%q\t", cert.Issuer.CommonName)
 		if len(cert.DNSNames) > 0 {
 			resp.Line += fmt.Sprint(cert.DNSNames)

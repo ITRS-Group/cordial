@@ -68,11 +68,11 @@ var syncCmd = &cobra.Command{
 // from it, otherwise copy the chain file (using the configured name) to
 // all remotes.
 func tlsSync() (err error) {
-	rootCert, err := instance.ReadRootCert(true)
+	rootCert, _, err := instance.ReadRootCert(true)
 	if err != nil {
 		rootCert = nil
 	}
-	geneosCert, err := instance.ReadSigningCert()
+	geneosCert, _, err := instance.ReadSigningCert()
 	if err != nil {
 		return os.ErrNotExist
 	}

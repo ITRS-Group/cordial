@@ -1,12 +1,12 @@
 # Change Log
 
-## Version v1.9.0
+## Version v1.9.1
 
 > **Released 2023-10-06**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-## v1.9.0 Fixes
+## v1.9.1 Fixes
 
 * The release build process has been reworked to use Debian Bullseye images to maximise compatibility for shared libraries and also to build static binaries cleanly. A change in the Go toolchain at some point has made the build of the dynamically linked _centos7_ binary of `geneos` not work. This has now been removed while investigations into how to do this properly continue. This means that for users who have network directories for users there will be errors looking up users for `ls` and `ps` commands, at minimum.
 * [`tools/geneos`](tools/geneos/README.md)
@@ -17,7 +17,7 @@
   - Change TLS cert verification to validation and document better
   - Add chain file path to `geneos tls ls -l` output
 
-## v1.9.0 Changes
+## v1.9.1 Changes
 
 * `pkg/geneos`
   - Move Netprobe XML structs to their own package `pkg/geneos/netprobe`
