@@ -45,6 +45,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
+// DefaultKeyType is the default key type
 const DefaultKeyType = "ecdh"
 
 // ParseCertificate reads a PEM encoded cert from path on host h, return
@@ -160,6 +161,26 @@ func WriteCertChain(h host.Host, p string, certs ...*x509.Certificate) (err erro
 	return h.WriteFile(p, pembytes, 0644)
 }
 
+// ReadCertificatePEM reads a PEM encoded certificate from file at path p
+// on host h and returns the block
+func ReadCertificatePEM(h host.Host, pt string) (data []byte, err error) {
+	pembytes, err := h.ReadFile(pt)
+	if err != nil {
+		return
+	}
+
+	for {
+		p, rest := pem.Decode(pembytes)
+		if p == nil {
+			return nil, fmt.Errorf("cannot locate certificate in %s", p)
+		}
+		if p.Type == "CERTIFICATE" {
+			return pem.EncodeToMemory(p), nil
+		}
+		pembytes = rest
+	}
+}
+
 // ReadCertChain returns a certificate pool loaded from the file on host
 // h at path p. If there is any error a nil pointer is returned.
 func ReadCertChain(h host.Host, p string) (pool *x509.CertPool) {
@@ -187,6 +208,26 @@ func ReadPrivateKey(h host.Host, pt string) (key *memguard.Enclave, err error) {
 		}
 		if strings.HasSuffix(p.Type, "PRIVATE KEY") {
 			key = memguard.NewEnclave(p.Bytes)
+			return
+		}
+		pembytes = rest
+	}
+}
+
+// ReadPrivateKeyPEM reads a unencrypted, PEM-encoded private key as a memguard Enclave
+func ReadPrivateKeyPEM(h host.Host, pt string) (key *memguard.Enclave, err error) {
+	pembytes, err := h.ReadFile(pt)
+	if err != nil {
+		return
+	}
+
+	for {
+		p, rest := pem.Decode(pembytes)
+		if p == nil {
+			return nil, fmt.Errorf("cannot locate private key in %s", pt)
+		}
+		if strings.HasSuffix(p.Type, "PRIVATE KEY") {
+			key = memguard.NewEnclave(pem.EncodeToMemory(p))
 			return
 		}
 		pembytes = rest

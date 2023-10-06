@@ -1,17 +1,23 @@
 # Change Log
 
-## Version v1.8.2
+## Version v1.9.0
 
-> **Released 2023-09-05**
+> **Released 2023-10-06**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-## v1.8.2 Fixes
+## v1.9.0 Fixes
 
+* The release build process has been reworked to use Debian Bullseye images to maximise compatibility for shared libraries and also to build static binaries cleanly. A change in the Go toolchain at some point has made the build of the dynamically linked _centos7_ binary of `geneos` not work. This has now been removed while investigations into how to do this properly continue. This means that for users who have network directories for users there will be errors looking up users for `ls` and `ps` commands, at minimum.
 * [`tools/geneos`](tools/geneos/README.md)
   - Use `path.IsAbs()` and not `filepath.IsAbs()` so that constructing paths on a Windows host works for remote Linux systems. Fixes process start from Windows to Linux.
+  - Allow deletion of protected instances with the `--force`/`-F` flags, as intended originally
+  - When creating instances check all listening ports, not just those reserved in instance configurations
+  - More fixes to package handling around component types with parent types
+  - Change TLS cert verification to validation and document better
+  - Add chain file path to `geneos tls ls -l` output
 
-## v1.8.2 Changes
+## v1.9.0 Changes
 
 * `pkg/geneos`
   - Move Netprobe XML structs to their own package `pkg/geneos/netprobe`

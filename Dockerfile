@@ -1,53 +1,29 @@
 # Dockerfile to build cordial components and tar.gz files
-#
-# Build executables statically on alpine for maximum compatibility, but
-# then buils libemail.so (and future shared libraries) on a centos7
-# image for glibc compatibility with Gateway on older systems.
-#
 
-ARG GOVERSION=1.21.0
+ARG GOVERSION=1.21.1
 
-# build Linux executables statically. Also build any Windows binaries
-# here for completeness.
-FROM golang:${GOVERSION}-alpine AS build
+# The bullseye image seems to offer the most compatibility, including
+# libemail.so dependencies
+FROM golang:${GOVERSION}-bullseye AS build
 LABEL stage=cordial-build
-
 COPY go.mod go.sum cordial.go VERSION /app/cordial/
+COPY libraries /app/cordial/libraries/
 COPY integrations /app/cordial/integrations/
 COPY pkg /app/cordial/pkg
 COPY tools /app/cordial/tools
-
 RUN set -eux; \
-    apk add build-base; \
+    apt update; \
+    apt install -y \
+        build-essential; \
     cd /app/cordial/tools/geneos; \
-    go build --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
     GOOS=windows go build --ldflags '-s -w'; \
     cd /app/cordial/tools/dv2email; \
-    go build --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
     cd /app/cordial/integrations/servicenow; \
-    go build --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
     cd /app/cordial/integrations/pagerduty; \
-    go build --ldflags '-s -w -linkmode external -extldflags=-static'
-
-# special centos7 build environment for shared libs and a version of the
-# geneos program that is dynamic enough to communicate with a domain
-# controller
-FROM centos:7 AS build-libs
-LABEL stage=cordial-build
-RUN yum install -y gcc make
-ARG GOVERSION
-ARG BUILDOS
-ARG BUILDARCH
-ADD https://go.dev/dl/go${GOVERSION}.${BUILDOS}-${BUILDARCH}.tar.gz /tmp/
-RUN tar -C /usr/local -xzf /tmp/go${GOVERSION}.${BUILDOS}-${BUILDARCH}.tar.gz
-ENV PATH=$PATH:/usr/local/go/bin
-COPY go.mod go.sum cordial.go VERSION /app/cordial/
-COPY libraries /app/cordial/libraries/
-COPY pkg /app/cordial/pkg
-COPY tools /app/cordial/tools
-RUN set -eux; \
-    cd /app/cordial/tools/geneos; \
-    go build --ldflags '-s -w'; \
+    go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
     cd /app/cordial/libraries/libemail; \
     make; \
     cd /app/cordial/libraries/libalert; \
@@ -62,7 +38,7 @@ FROM node AS build-docs
 LABEL stage=cordial-build
 RUN set -eux; \
     apt update; \
-    apt install -y \
+    apt install -y --no-install-recommends \
         libnss3 \
         libnspr4 \
         libatk1.0-0 \
@@ -78,13 +54,11 @@ RUN set -eux; \
         libasound2; \
     npm install --global mdpdf; \
     npm install --global @mermaid-js/mermaid-cli
-
 COPY go.mod go.sum cordial.go VERSION /app/cordial/
 COPY integrations /app/cordial/integrations/
 COPY libraries /app/cordial/libraries/
 COPY pkg /app/cordial/pkg
 COPY tools /app/cordial/tools
-
 WORKDIR /app/cordial/doc-output
 COPY tools/geneos/README.md geneos.md
 COPY tools/dv2email/README.md dv2email.md
@@ -92,7 +66,6 @@ COPY integrations/servicenow/README.md servicenow.md
 COPY integrations/pagerduty/README.md pagerduty.md
 COPY libraries/libemail/README.md libemail.md
 COPY libraries/libalert/README.md libalert.md
-
 ARG MERMAID=".mermaid"
 ARG READMEDIRS="tools/geneos tools/dv2email integrations/servicenow integrations/pagerduty libraries/libemail libraries/libalert"
 RUN set -eux; \
@@ -117,46 +90,52 @@ COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
 COPY --from=build-docs /app/cordial/doc-output /cordial/docs
 COPY --from=build /app/cordial/integrations/servicenow/servicenow /app/cordial/integrations/pagerduty/pagerduty /cordial/bin/
 COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /app/cordial/integrations/pagerduty/cmd/pagerduty.defaults.yaml /cordial/etc/geneos/
-COPY --from=build-libs /app/cordial/tools/geneos/geneos /cordial/bin/geneos.centos7-x86_64
-COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /cordial/lib/
-COPY --from=build-libs /app/cordial/libraries/libalert/libalert.so /cordial/lib/
-
+COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/lib/
+COPY --from=build /app/cordial/libraries/libalert/libalert.so /cordial/lib/
 RUN set -eux; \
-        apk add upx; \
-        upx -q /cordial/bin/*; \
-        mv /cordial /cordial-$(cat /VERSION); \
-        tar czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION)
-
+    apk add upx; \
+    upx -q /cordial/bin/*; \
+    cp -r /cordial /cordial-$(cat /VERSION); \
+    tar czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION)
 CMD [ "bash" ]
 
-#
-# create a runnable test image
-#
-FROM debian AS cordial-run
-COPY --from=build /app/cordial/tools/geneos/geneos /bin/
-COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
-COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /lib/
+# create a runnable test image using basic debian
+FROM debian AS cordial-run-debian
+COPY --from=cordial-build /cordial/bin/geneos /bin/
+COPY --from=cordial-build /cordial/bin/dv2email /bin/
+COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
 RUN set -eux; \
     apt update; \
-    apt install -y \
+    apt install -y --no-install-recommends \
         fontconfig \
         ca-certificates \
         ; \
     useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
-
 CMD [ "bash" ]
 
-#
-# Without fontconfig the webserver will not start, but adding repos to
-# centos8 is too hard for basic testing.
-#
-FROM centos:centos8 AS cordial-run-el8
+# build a (non-updated) centos8 image for testing
+FROM centos:centos8 AS cordial-run-centos8
+COPY --from=cordial-build /cordial/bin/geneos /bin/
+COPY --from=cordial-build /cordial/bin/dv2email /bin/
+COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
+RUN useradd -ms /bin/bash geneos
+WORKDIR /home/geneos
+USER geneos
+CMD [ "bash" ]
+
+# build a centos7 image for testing
+FROM centos:7 AS cordial-run-centos7
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
-COPY --from=build-libs /app/cordial/libraries/libemail/libemail.so /lib/
-RUN useradd -ms /bin/bash geneos
+COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
+RUN set -eux; \
+    yum update -y; \
+    yum install -y \
+        fontconfig \
+        ca-certificates; \
+    useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
 CMD [ "bash" ]

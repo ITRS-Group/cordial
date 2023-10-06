@@ -4,8 +4,9 @@ export DOCKER_BUILDKIT = 1
 all: release
 
 images:
-	docker build --tag cordial --tag cordial:$(VERSION)-el8 --target cordial-run-el8 .
-	docker build --tag cordial --tag cordial:$(VERSION) --target cordial-run .
+	docker build --tag cordial --tag cordial:$(VERSION)-centos8 --target cordial-run-centos8 .
+	docker build --tag cordial --tag cordial:$(VERSION)-centos7 --target cordial-run-centos7 .
+	docker build --tag cordial --tag cordial:$(VERSION) --target cordial-run-debian .
 
 release: images
 	docker build --tag cordial-build:$(VERSION) --target cordial-build .
@@ -14,9 +15,9 @@ release: images
 	mkdir -p releases/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).tar.gz releases/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/geneos releases/geneos
-	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/geneos.centos7-x86_64 releases/geneos.centos7-x86_64
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/geneos.exe releases/geneos.exe
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/dv2email releases/dv2email
+	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/lib/libemail.so releases/libemail.so
 
 clean:
 	-docker rm cordial-build-$(VERSION)
