@@ -24,6 +24,7 @@ package instance
 
 import (
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
@@ -48,7 +49,7 @@ import (
 func CreateCert(i geneos.Instance) (resp *Response) {
 	resp = NewResponse(i)
 	// skip if we can load an existing certificate
-	if _, _, err := ReadCert(i); err == nil {
+	if _, _, _, err := ReadCert(i); err == nil {
 		return
 	}
 
@@ -233,22 +234,41 @@ func ReadSigningCert(verify ...bool) (cert *x509.Certificate, err error) {
 // ReadCert reads the instance certificate for c. It verifies the
 // certificate against any chain file and, if that fails, against system
 // certificates.
-func ReadCert(i geneos.Instance) (cert *x509.Certificate, valid bool, err error) {
+func ReadCert(i geneos.Instance) (cert *x509.Certificate, valid bool, chainfile string, err error) {
 	if i.Type() == nil {
-		return nil, false, geneos.ErrInvalidArgs
+		return nil, false, "", geneos.ErrInvalidArgs
 	}
 
 	if FileOf(i, "certificate") == "" {
-		return nil, false, os.ErrNotExist
+		return nil, false, "", os.ErrNotExist
 	}
 	cert, err = config.ParseCertificate(i.Host(), PathOf(i, "certificate"))
 	if err != nil {
 		return
 	}
 
+	// first check if we have a valid private key
+	c, err := config.ReadCertificatePEM(i.Host(), PathOf(i, "certificate"))
+	if err != nil {
+		return
+	}
+	pk, err := config.ReadPrivateKeyPEM(i.Host(), PathOf(i, "privatekey"))
+	if err != nil {
+		return
+	}
+	k, err := pk.Open()
+	if err != nil {
+		return
+	}
+	defer k.Destroy()
+	_, err = tls.X509KeyPair(c, k.Bytes())
+	if err != nil {
+		return
+	}
+
 	// validate against certificate chain file on the same host, expiry
 	// etc.
-	chainfile := PathOf(i, "certchain")
+	chainfile = PathOf(i, "certchain")
 	if chainfile == "" {
 		chainfile = config.PromoteFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
 	}
@@ -260,8 +280,9 @@ func ReadCert(i geneos.Instance) (cert *x509.Certificate, valid bool, err error)
 		}
 
 		if _, err = cert.Verify(opts); err == nil { // return if no error
+			valid = true
 			log.Debug().Msgf("cert %q verified", cert.Subject.CommonName)
-			return cert, true, err
+			return
 		}
 		log.Debug().Err(err).Msg("")
 	}
