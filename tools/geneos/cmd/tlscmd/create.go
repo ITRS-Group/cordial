@@ -118,7 +118,7 @@ func CreateCert(dir string, overwrite bool, cn string, san ...string) (err error
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	signingCert, err := instance.ReadSigningCert()
+	signingCert, _, err := instance.ReadSigningCert()
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return

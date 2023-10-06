@@ -90,13 +90,13 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	rootCert, err := instance.ReadRootCert()
+	rootCert, _, err := instance.ReadRootCert()
 	resp.Err = err
 	if resp.Err != nil {
 		return
 	}
 
-	signingCert, err := instance.ReadSigningCert()
+	signingCert, _, err := instance.ReadSigningCert()
 	resp.Err = err
 	if resp.Err != nil {
 		return
