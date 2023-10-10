@@ -128,9 +128,9 @@ func Envelope(conf *config.Config) (m *mail.Message, err error) {
 // are given they MUST have the same number of members otherwise it's a fatal error
 func addAddresses(m *mail.Message, conf *config.Config, header string) error {
 	upperHeader := strings.ToUpper(header)
-	addrs := splitCommaTrimSpace(conf.GetString(fmt.Sprintf("_%s", upperHeader)))
-	names := splitCommaTrimSpace(conf.GetString(fmt.Sprintf("_%s_NAME", upperHeader)))
-	infotypes := splitCommaTrimSpace(conf.GetString(fmt.Sprintf("_%s_INFO_TYPE", upperHeader)))
+	addrs := splitCommaTrimSpace(conf.GetString("_" + upperHeader))
+	names := splitCommaTrimSpace(conf.GetString("_" + upperHeader + "_NAME"))
+	infotypes := splitCommaTrimSpace(conf.GetString("_" + upperHeader + "_INFO_TYPE"))
 
 	if len(names) > 0 && len(addrs) != len(names) {
 		return fmt.Errorf("\"%s\" header items mismatch: addrs=%d != names=%d", header, len(addrs), len(names))
