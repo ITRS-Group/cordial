@@ -42,7 +42,9 @@ type DataItem struct {
 // [Snapshot]. The Columns field is an ordered slice of column names
 // obtained from the ordered JSON data returned from the REST endpoint
 // to allow the Table field to be iterated over in the same order as the
-// Geneos dataview table.
+// Geneos dataview table. The Rows field is an unordered slice of
+// rownames. The caller can order this in anyway desired for use as a
+// range loop.
 type Dataview struct {
 	Name             string                         `json:"name"`
 	XPath            *xpath.XPath                   `json:"xpath"`
@@ -52,6 +54,7 @@ type Dataview struct {
 	Headlines        map[string]DataItem            `json:"headlines,omitempty"`
 	Table            map[string]map[string]DataItem `json:"table,omitempty"`
 	Columns          []string                       `json:"-"`
+	Rows             []string                       `json:"-"`
 }
 
 // Snapshot fetches the contents of the dataview identified by the
@@ -90,6 +93,7 @@ func (c *Connection) Snapshot(target *xpath.XPath, scope ...Scope) (dataview *Da
 			Headlines: map[string]DataItem{},
 			Table:     map[string]map[string]DataItem{},
 			Columns:   []string{},
+			Rows:      []string{},
 		}
 		return
 	}
@@ -107,6 +111,10 @@ func (c *Connection) Snapshot(target *xpath.XPath, scope ...Scope) (dataview *Da
 
 	// XXX until the first column is supplied, prepend a constant
 	dataview.Columns = append([]string{"rowname"}, dataview.Columns...)
+
+	for rowname := range dataview.Table {
+		dataview.Rows = append(dataview.Rows, rowname)
+	}
 
 	dataview.Name = target.Dataview.Name
 	dataview.XPath = target
