@@ -1,5 +1,27 @@
 # Change Log
 
+## Version v1.9.2
+
+> **Released 2023-10-10**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.9.2 Fixes
+
+* `tools/dv2email`
+  - Fix environment handling, which was broken in an earlier update to the `config` package
+  - Add command line args for use from a Geneos Command
+  - Update Dataview Row handling
+  - Fix HTML template for multiple Dataviews
+  - Update docs
+
+## v1.9.2 Changes
+
+* `pkg/config`
+  - Add a `SetConfigReader()` option to Load to be able to load configuration from an io.Reader. Untested, work in progress for a project.
+
+---
+
 ## Version v1.9.1
 
 > **Released 2023-10-06**
