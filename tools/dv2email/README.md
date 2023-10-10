@@ -11,22 +11,33 @@
   * [REST Service 🔗](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#REST_Service)
   * [Authentication 🔗](https://docs.itrsgroup.com/docs/geneos/6.3.0/Gateway_Reference_Guide/geneos_authentication_tr.html)
 
-* Install `dv2email` and `geneos` (optional) somewhere in your execution path (or use the full path to where you install them)
+* Install `dv2email` and `geneos` (optional) somewhere in your execution path (or use the full path to where you install them).
 
-  Next configure your dv2email YAML files:
+  Next create your `dv2email` YAML configuration files. You need at least one configuration file for the program to locate your Gateway and SMTP server:
 
-  * `dv2email.yaml` in the working directory of each Gateway
+  * `${HOME}/.config/geneos/dv2email.yaml` - where `${HOME}` is the home directory of the user running the Gateway(s) - which may not be your own user (optional)
 
-    This configuration file (see details below) should contain all customisations for the Gateway and the format of the emails you want to send.
+    This configuration file should contain common configuration that applies across all Gateways and also shared email server configurations and credentials.
 
-  * `${HOME}/.config/geneos/dv2email.yaml` - where `${HOME}` is the home
-     directory of the user running the Gateway(s)
+  * `dv2email.yaml` in the working directory (e.g. `geneos home gateway MyGateway`) of each Gateway (optional)
 
-    This configuration file should contain common configuration that applies across all Gateways and also email server configuration and credentials, as appropriate. If this file contains credentials, even when AES256 encrypted, should be only readable by the Gateway user; that is `chmod 0400 dv2email.yaml`
+    This configuration file (see details below) should contain all customisations for the Gateway and the format of the emails you want to send. The contents of this file are merged with the file above, if it exists. Settings in this file take precedence.
+
+  If either file contains credentials, even when AES256 encrypted, they should be only readable by the Gateway user; that is `chmod 0400 dv2email.yaml`.
 
 * Store credentials (optional)
 
-  Next, optionally store any credentials in the user's `geneos` managed `credentials.yaml` file using `geneos login`. This is not necessary if you embed credentials in the dv2email.yaml files.
+  Next, optionally store any credentials in the Gateway user's `geneos` managed `credentials.yaml` file using `geneos login`. This is not necessary if you embed credentials in the dv2email.yaml files. The two kinds of credential you can store are for the Gateway REST Command API and for the SMTP server:
+
+  * `geneos login gateway:GATEWAYNAME -u READONLYUSER` or `geneos login gateway -u READONLYUSER`
+
+    This will store credentials either for the gateway `GATEWAYNAME` or for all gateways and for the user `READONLYUSER`. You will be prompted to enter the password for the user twice.
+
+  * `geneos login smtp.example.com -u USERNAME`
+
+    This will store credentials for your SMTP server for user `USERNAME`. You will br prompted for the password twice.
+
+  If you do not store your credentials this way then you must provide them directly in the `dv2email.yaml` configuration file.
 
 * Test
 
@@ -74,6 +85,76 @@ else
 ```
 
 The contents of the email are assembled from the two templates (text and HTML) and any image attachments. The resulting HTML is also run through an "inliner" to ensure that any CSS defined in the HTML `<head>` section is inlined to the tags that need the settings as many email clients (GMail and others) only support a simple HTML5/CSS3 format. If you wnt to save data then you can disable this inlining with the `--inline-css=false` command line flag.
+
+### Running As a Command
+
+To run the `dv2email` program as a right-click style command, allowing users to email dataviews, you have to use command line arguments to extract the XPath components from the command target. These command line arguments are:
+
+```bash
+  -E, --entity string     entity name
+  -S, --sampler string    sampler name
+  -T, --type string       type name
+  -D, --dataview string   dataview name
+
+  -t, --to string         To as comma-separated emails
+  -c, --cc string         Cc as comma-separated emails
+  -b, --bcc string        Bcc as comma-separated emails
+```
+
+A typical command (XML below) would be set-up like this. Remember to set the path to the program correctly!
+
+![Send Dataview Command](README/image.png)
+
+```xml
+<command name="Send Dataview">
+  <targets>
+    <target>//dataview</target>
+  </targets>
+  <userCommand>
+    <type>script</type>
+    <runLocation>gateway</runLocation>
+    <args>
+      <arg>
+        <static>/path/to/dv2email</static>
+      </arg>
+      <arg>
+        <static>-E</static>
+      </arg>
+      <arg>
+        <xpath>ancestor::managedEntity</xpath>
+      </arg>
+      <arg>
+        <static>-S</static>
+      </arg>
+      <arg>
+        <xpath>ancestor::sampler</xpath>
+      </arg>
+      <arg>
+        <static>-T</static>
+      </arg>
+      <arg>
+        <xpath>ancestor::sampler/parameters/@Type</xpath>
+      </arg>
+      <arg>
+        <static>-D</static>
+      </arg>
+      <arg>
+        <xpath>ancestor::dataview</xpath>
+      </arg>
+      <arg>
+        <static>-t</static>
+      </arg>
+      <arg>
+        <userInput>
+          <description>To</description>
+          <singleLineString>user@example.com</singleLineString>
+          <requiredArgument>true</requiredArgument>
+        </userInput>
+      </arg>
+    </args>
+  </userCommand>
+</command>
+```
 
 ## Configuration Reference
 
@@ -201,19 +282,203 @@ The configuration is in three parts; Gateway connectivity, EMail server connecti
   In a future release it may be possible to refer to images using URLs or other "expandable" formats but for now they must be file paths and if relative they must be accessibkle from the working directory of the
   process.
 
-* `text-template`
+* Templates
 
-  A template in Go [text/template](https://pkg.go.dev/text/template) format to be used to generate the plain text to be used as the `text/plain` alternative part in the email. This part of the email is not normally visible in modern email clients but it is used for assistive text readers and other accessibility tools and should be used to describe the contents of the email.
+  The two templates are used to build a multipart alternative MIME message. You should ensure that changes in one template are correctly reflected in the other as both are always used and an unchanged text template, for example, may expose data that is not rendered in an updated HTML template and visa versa.
 
-* `html-template`
+  The templates are passed the following data structure:
 
-  A template in Go [html/template](https://pkg.go.dev/html/template) format to be used to generate the HTML to be used as the `text/html` alternative part of the email.
+  ```go
+  type dv2emailData struct {
+    // Dataviews is a slice of each Dataview's data, including Columns and Rows which are ordered names for the columns and rows respectively, suitable for range loops. See https://pkg.go.dev/github.com/itrs-group/cordial/pkg/commands#Dataview for details
+    Dataviews []*commands.Dataview
 
-  The data available to the template (and the text template above) is details in the `dv2email.yaml` file.
-
-  For both template types it is possible to include the contents of a file or a URL using "expandable" syntax, like this:
-
-  ```yaml
-  text-template: ${https://myserver.example.com/files/txt.gotmpl}
-  html-template: ${file:/path/to/template.gotmpl}
+    // Env is a map of environment variable names to values
+    Env       map[string]string
+  }
   ```
+
+  * `text-template`
+
+    A template in Go [text/template](https://pkg.go.dev/text/template) format to be used to generate the plain text to be used as the `text/plain` alternative part in the email. This part of the email is not normally visible in modern email clients but it is used for assistive text readers and other accessibility tools and should be used to describe the contents of the email.
+
+    The default, embedded text template is:
+
+    ```gotmpl
+    This email has been generated by the ITRS Geneos system using the
+    dv2email program. If you did not expect to received this email then
+    please contact the sender.
+
+    Environment Variables:
+    {{range $key, $value := .Env}}
+    * {{$key}}={{$value -}}
+    {{end}}
+    ```
+
+  * `html-template`
+
+    A template in Go [html/template](https://pkg.go.dev/html/template) format to be used to generate the HTML to be used as the `text/html` alternative part of the email.
+
+    The data available to the template (and the text template above) is details in the `dv2email.yaml` file.
+
+    For both template types it is possible to include the contents of a file or a URL using "expandable" syntax, like this:
+
+    ```yaml
+    text-template: ${https://myserver.example.com/files/txt.gotmpl}
+    html-template: ${file:/path/to/template.gotmpl}
+    ```
+
+    The default, embedded HTML template is:
+
+    ```gotmpl
+    <html>
+    <head>
+      <style>
+        .CRITICAL {
+          background-color: crimson;
+          color: white;
+        }
+
+        .WARNING {
+          background-color: gold;
+          color: black;
+        }
+
+        .OK {
+          background-color: limegreen;
+          color: white;
+        }
+
+        .UNDEFINED {
+          background-color: lightgrey;
+          color: black;
+        }
+
+        table, th, td {
+          table-layout: fixed;
+          font-family: Lucida Console, monospace;
+          border: 1px solid black;
+          border-collapse: collapse;
+          padding: 5px;
+          text-align: left;
+          vertical-align: top;
+        }
+
+        td {
+          word-wrap: break-word;
+        }
+
+        .envname {
+          width: 25%;
+        }
+
+        dt {
+          font-weight: bold;
+        }
+
+        .dataview {
+          /* border: 1px solid black; */
+          padding: 5px;
+        }
+
+        .headlines {
+          border: 1px solid white;
+        }
+
+        .rows {
+          font-size: 0.8em;
+        }
+
+        .target {
+          border: 3px solid blue;
+        }
+      </style>
+    </head>
+    <body>
+      <a href="https://www.itrsgroup.com/products/geneos"><img src="cid:logo.png"/></a>
+
+      <h1>ITRS Geneos DV2EMAIL Default Template</h1>
+
+      <p>This content has been generated by the default template built
+      into the dv2email program from the ITRS <a
+      href="https://github.com/ITRS-Group/cordial">cordial</a> tool set.
+      It is normally only seen when testing. If you did not expect to
+      receive this please contact the sender and let them know.</p>
+
+      <h2>Dataviews</h2>
+
+      <p>These Dataviews matched the input <b>_VARIABLEPATH</b>:
+      <code>{{.Env._VARIABLEPATH}}</code></p>
+
+      <p></p>
+
+      {{range $index, $dataview := .Dataviews}}
+
+      <table class="dataview">
+        <tbody>
+          <tr><th>Dataview</th><td>{{.Name}}</td></tr>
+          <tr><th>XPath</th><td>{{.XPath}}</td></tr>
+          <tr><th>Last Sample</th><td>{{.SampleTime}}</td></tr>
+          <tr>
+            <th>Headlines</th>
+            <td>
+              <table class="headlines">
+                <tbody>
+                  {{range $headline, $values := .Headlines}}<tr>
+                    <th class="headlines">{{$headline}}</th>
+                    <td class="headlines {{.Severity}} {{if and (eq $.Env._HEADLINE $headline)}} target{{end}}">{{$values.Value}}</td>
+                  </tr>
+                  {{end}}
+                </tbody>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <th>Rows</th>
+            <td>
+              <table class="rows">
+                <thead>
+                  {{range .Columns}}<th>{{.}}</th>{{end}}
+                </thead>
+                <tbody>
+                  {{range $row := .Rows}}
+                  <tr>
+                    <th>{{$row}}</th>
+                    {{range $i, $column := $dataview.Columns}}
+                        {{if ne $i 0}}
+                          {{with (index $dataview.Table $row $column)}}
+                            <td class="cells {{.Severity}}{{if and (eq $.Env._ROWNAME $row) (eq $.Env._COLUMN $column)}} target{{end}}">{{.Value}}</td>
+                          {{end}}
+                        {{end}}
+                    {{end}}
+                  </tr>
+                  {{end}}
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <hr>
+
+      {{end}}
+
+      <h2>Environment Variables</h2>
+      <table style="width: 100%;">
+        <thead>
+          <th class="envname">Name</th>
+          <th>Value</th>
+        </thead>
+        <tbody>
+          {{range $key, $value := .Env}}<tr>
+            <th class="envname">{{$key}}</th>
+            <td style="word-wrap: break-word;">{{$value}}</td>
+          </tr>{{end}}
+        </tbody>
+      </table>
+    </body>
+    </html>
+    ```
+
+

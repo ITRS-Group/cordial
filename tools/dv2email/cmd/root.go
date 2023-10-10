@@ -54,6 +54,9 @@ var execname string
 var debug, quiet bool
 var inlineCSS bool
 
+var entityArg, samplerArg, typeArg, dataviewArg string
+var toArg, ccArg, bccArg string
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
@@ -66,6 +69,17 @@ func init() {
 	// how to remove the help flag help text from the help output! Sigh...
 	DV2EMAILCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
 	DV2EMAILCmd.PersistentFlags().MarkHidden("help")
+
+	DV2EMAILCmd.Flags().StringVarP(&entityArg, "entity", "E", "", "entity name")
+	DV2EMAILCmd.Flags().StringVarP(&samplerArg, "sampler", "S", "", "sampler name")
+	DV2EMAILCmd.Flags().StringVarP(&typeArg, "type", "T", "", "type name")
+	DV2EMAILCmd.Flags().StringVarP(&dataviewArg, "dataview", "D", "", "dataview name")
+
+	DV2EMAILCmd.Flags().StringVarP(&toArg, "to", "t", "", "To as comma-separated emails")
+	DV2EMAILCmd.Flags().StringVarP(&ccArg, "cc", "c", "", "Cc as comma-separated emails")
+	DV2EMAILCmd.Flags().StringVarP(&bccArg, "bcc", "b", "", "Bcc as comma-separated emails")
+
+	DV2EMAILCmd.Flags().SortFlags = false
 
 	execname = path.Base(os.Args[0])
 	cordial.LogInit(execname)
@@ -88,7 +102,6 @@ func initConfig() {
 		config.SetConfigFile(cfgFile),
 		config.MergeSettings(),
 		config.SetFileExtension("yaml"),
-		config.WithEnvs("ITRS", "_"),
 	)
 	if err != nil {
 		cfg := config.Path(execname,
@@ -96,7 +109,6 @@ func initConfig() {
 			config.SetConfigFile(cfgFile),
 			config.MergeSettings(),
 			config.SetFileExtension("yaml"),
-			config.WithEnvs("ITRS", "_"),
 		)
 		log.Fatal().Err(err).Msgf("loading from file: %s", cfg)
 	}
@@ -104,7 +116,6 @@ func initConfig() {
 
 type dv2emailData struct {
 	Dataviews []*commands.Dataview
-	Rows      []string
 	Env       map[string]string
 }
 
@@ -147,8 +158,13 @@ var DV2EMAILCmd = &cobra.Command{
 			password = gwcf.GetPassword("password")
 		}
 
-		if username == "" && gateway != "" {
-			creds := config.FindCreds("gateway:"+gateway, config.SetAppName("geneos"))
+		if username == "" {
+			var creds *config.Config
+			if gateway != "" {
+				creds = config.FindCreds("gateway:"+gateway, config.SetAppName("geneos"))
+			} else {
+				creds = config.FindCreds("gateway", config.SetAppName("geneos"))
+			}
 			if creds != nil {
 				username = creds.GetString("username")
 				password = creds.GetPassword("password")
@@ -177,16 +193,34 @@ var DV2EMAILCmd = &cobra.Command{
 
 		tmplData := dv2emailData{
 			Dataviews: []*commands.Dataview{},
-			Rows:      []string{},
 			Env:       make(map[string]string, len(os.Environ())),
 		}
 
+		// import all environment vars into both the template data and
+		// also the config structure (config.WithEnvs doesn't work for
+		// empty prefixes)
 		for _, e := range os.Environ() {
 			n := strings.SplitN(e, "=", 2)
 			tmplData.Env[n[0]] = n[1]
+			cf.Set(n[0], n[1])
 		}
 
-		dv, err := xpath.Parse(cf.GetString("_variablepath"))
+		varpath := cf.GetString("_variablepath")
+		if varpath == "" {
+			varpath = "//managedEntity"
+			if entityArg != "" {
+				varpath += fmt.Sprintf("[(@name=%q)]", entityArg)
+			}
+			varpath += "/sampler"
+			if samplerArg != "" {
+				varpath += fmt.Sprintf("[(@name=%q)][(@type=%q)]", samplerArg, typeArg)
+			}
+			varpath += "/dataview"
+			if dataviewArg != "" {
+				varpath += fmt.Sprintf("[(@name=%q)]", dataviewArg)
+			}
+		}
+		dv, err := xpath.Parse(varpath)
 		dv = dv.ResolveTo(&xpath.Dataview{})
 
 		if err != nil {
@@ -235,11 +269,24 @@ var DV2EMAILCmd = &cobra.Command{
 		em.SetDefault("_smtp_port", emcf.GetInt("port", config.Default(25)))
 		em.SetDefault("_from", emcf.GetString("from"))
 		em.SetDefault("_to", emcf.GetString("to"))
+		em.SetDefault("_cc", emcf.GetString("cc"))
+		em.SetDefault("_bcc", emcf.GetString("bcc"))
 		em.SetDefault("_subject", emcf.GetString("subject", config.Default("Geneos Alert")))
 
 		for _, e := range os.Environ() {
 			n := strings.SplitN(e, "=", 2)
 			em.Set(n[0], n[1])
+		}
+
+		// override with args
+		if toArg != "" {
+			em.Set("_to", toArg)
+		}
+		if ccArg != "" {
+			em.Set("_cc", ccArg)
+		}
+		if bccArg != "" {
+			em.Set("_bcc", bccArg)
 		}
 
 		for _, dataview := range dataviews {
@@ -248,8 +295,6 @@ var DV2EMAILCmd = &cobra.Command{
 				log.Error().Err(err).Msg("")
 				continue
 			}
-
-			tmplData.Dataviews = append(tmplData.Dataviews, data)
 
 			// filter here
 
@@ -276,7 +321,7 @@ var DV2EMAILCmd = &cobra.Command{
 			if len(defaultRowName) > 0 {
 				rowname = defaultRowName[0]
 			} else {
-				rowname = em.GetString("_FIRSTCOLUMN", config.Default("rowname"))
+				rowname = em.GetString("_firstcolumn", config.Default("rowname"))
 			}
 			// set the default, may be overridden below but then reset
 			// to the same value
@@ -314,10 +359,8 @@ var DV2EMAILCmd = &cobra.Command{
 				data.Table = nr
 			}
 
-			// default unordered rownames after filtering
-			for k := range data.Table {
-				tmplData.Rows = append(tmplData.Rows, k)
-			}
+			// default sort rows
+			sort.Strings(data.Rows)
 
 			asc := true
 			matches := matchForName(data.Name, "row-order")
@@ -336,19 +379,19 @@ var DV2EMAILCmd = &cobra.Command{
 
 				// if the row-order is for a column that is used as the
 				// rowname (decided above in Column ordering) then sort
-				// the tmplData.Rows slice directly based on value and
+				// the data.Rows slice directly based on value and
 				// not a cell in the row
 				if m == "rowname" || m == data.Columns[0] {
-					sort.Slice(tmplData.Rows, func(i, j int) bool {
+					sort.Slice(data.Rows, func(i, j int) bool {
 						if asc {
-							return tmplData.Rows[i] < tmplData.Rows[j]
+							return data.Rows[i] < data.Rows[j]
 						} else {
-							return tmplData.Rows[j] < tmplData.Rows[i]
+							return data.Rows[j] < data.Rows[i]
 						}
 					})
 				} else {
-					sort.Slice(tmplData.Rows, func(i, j int) bool {
-						r := tmplData.Rows
+					sort.Slice(data.Rows, func(i, j int) bool {
+						r := data.Rows
 						a := data.Table[r[i]][m].Value
 						af, _ := strconv.ParseFloat(a, 64)
 						b := data.Table[r[j]][m].Value
@@ -368,10 +411,13 @@ var DV2EMAILCmd = &cobra.Command{
 				}
 			}
 
+			tmplData.Dataviews = append(tmplData.Dataviews, data)
+
 			if err != nil {
 				log.Error().Err(err).Msg("")
 				continue
 			}
+
 		}
 
 		d, err := email.Dial(em)

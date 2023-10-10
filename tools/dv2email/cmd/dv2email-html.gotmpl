@@ -108,7 +108,7 @@
               {{range .Columns}}<th>{{.}}</th>{{end}}
             </thead>
             <tbody>
-              {{range $row := $.Rows}}
+              {{range $row := .Rows}}
               <tr>
                 <th>{{$row}}</th>
                 {{range $i, $column := $dataview.Columns}}
@@ -122,11 +122,14 @@
               {{end}}
             </tbody>
           </table>
-          {{end}}
         </td>
       </tr>
     </tbody>
   </table>
+
+  <hr>
+
+  {{end}}
 
   <h2>Environment Variables</h2>
   <table style="width: 100%;">
