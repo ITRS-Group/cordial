@@ -66,9 +66,10 @@ email:
 # this section to match (using shell globbing rules and not regular
 # expressions) the name of the dataview to select the columns to output
 # and in which order. The first column is always set to the environment
-# variable `_FIRSTCOLUMN` or `rowname`. Note that if an environment
-# variable '__columns' (case insensitive name, comma separated values)
-# is passed to the program that will override these settings.
+# variable `_FIRSTCOLUMN` or it defaults to the literal string
+# `rowname`. Note that if an environment variable '__COLUMNS' (case
+# sensitive name, comma separated values) is passed to the program
+# that will override these settings.
 #
 # `_FIRSTCOLUMN` is only set by the Gateway for Actions or Alerts on
 # table cells and will not be set for headline cells or rules on non
@@ -116,16 +117,12 @@ images:
 #
 # type dv2emailData struct {
 #  Dataviews []*commands.Dataview
-#  Rows      []string
 #  Env       map[string]string
 # }
 
 # These fields have the following meaning:
 #
 # * Dataviews is a slice of any dataview data
-# * Rows is an ordered slice of rownames based on row-order above. This
-#   has to be a separate slice as the Dataview contents cannot be
-#   ordered
 # * Env is a map of all the environment variables in the processes view.
 #   This will normally contain all the Geneos defined values for an
 #   Action or Alert/Effect.
@@ -163,17 +160,17 @@ html-template: |+
   <head>
     <style>
       .CRITICAL {
-        background-color: #FF5668;
+        background-color: crimson;
         color: white;
       }
 
       .WARNING {
-        background-color: #F9B057;
+        background-color: gold;
         color: black;
       }
 
       .OK {
-        background-color: 5BB25C;
+        background-color: limegreen;
         color: white;
       }
 
@@ -218,7 +215,7 @@ html-template: |+
       }
 
       .target {
-        border: 5px dashed black;
+        border: 3px solid blue;
       }
     </style>
   </head>
@@ -269,7 +266,7 @@ html-template: |+
                 {{range .Columns}}<th>{{.}}</th>{{end}}
               </thead>
               <tbody>
-                {{range $row := $.Rows}}
+                {{range $row := .Rows}}
                 <tr>
                   <th>{{$row}}</th>
                   {{range $i, $column := $dataview.Columns}}
@@ -283,11 +280,14 @@ html-template: |+
                 {{end}}
               </tbody>
             </table>
-            {{end}}
           </td>
         </tr>
       </tbody>
     </table>
+
+    <hr>
+
+    {{end}}
 
     <h2>Environment Variables</h2>
     <table style="width: 100%;">
