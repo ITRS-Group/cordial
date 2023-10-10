@@ -55,8 +55,8 @@ import (
 // for defaults see:
 // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 //
-// Regardless of errors loading configurations a configuration object
-// is always returned.
+// Regardless of errors loading configurations a configuration object is
+// always returned.
 //
 // The returned config object may be made up from multiple sources so
 // there is no simple way of getting the name of the final configuration
@@ -65,6 +65,11 @@ import (
 // If the LoadFrom() option is set then all file access is via the given
 // remote. Defaults and the primary configuration cannot be loaded from
 // different remotes. The default is "localhost".
+//
+// Is the SetConfigReader() option is passed to load the configuration
+// from an io.Reader then this takes precedence over file discovery or
+// SetConfigFile(). The configuration file format should be set with
+// SetFileExtension() or it defaults as above.
 //
 // TBD: windows equiv of above
 func Load(name string, options ...FileOptions) (c *Config, err error) {
@@ -180,7 +185,12 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 	}
 
 	// fixed configuration file, skip directory search
-	if opts.configFile != "" {
+	if opts.configFileReader != nil {
+		if err = vp.ReadConfig(opts.configFileReader); err != nil {
+			return c, fmt.Errorf("error reading config: %w", err)
+		}
+		return c, nil
+	} else if opts.configFile != "" {
 		vp.SetConfigFile(opts.configFile)
 		if err = vp.ReadInConfig(); err != nil {
 			if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {

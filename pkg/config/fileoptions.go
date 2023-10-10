@@ -23,6 +23,7 @@ THE SOFTWARE.
 package config
 
 import (
+	"io"
 	"path"
 	"strings"
 
@@ -38,6 +39,7 @@ type fileOptions struct {
 	appname                string
 	configDirs             []string
 	configFile             string
+	configFileReader       io.Reader
 	extension              string // extension without "."
 	delimiter              string
 	envprefix              string
@@ -213,6 +215,16 @@ func SetAppName(name string) FileOptions {
 func SetConfigFile(p string) FileOptions {
 	return func(c *fileOptions) {
 		c.configFile = p
+	}
+}
+
+// SetConfigReader sets Load to read the main configuration from an
+// io.Reader in. The input is read until EOF or error.
+//
+// The caller must close the reader on return.
+func SetConfigReader(in io.Reader) FileOptions {
+	return func(fo *fileOptions) {
+		fo.configFileReader = in
 	}
 }
 
