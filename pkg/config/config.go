@@ -122,9 +122,15 @@ func (c *Config) Delimiter() string {
 	return c.delimiter
 }
 
-// Sub returns a Config instance rooted at the key passed
+// Sub returns a Config instance rooted at the key passed. If key does
+// not exist then an empty config structure is returned, unlike viper
+// which returns nil.
 func (c *Config) Sub(key string) *Config {
-	return &Config{Viper: c.Viper.Sub(key)}
+	vcf := c.Viper.Sub(key)
+	if vcf == nil {
+		vcf = viper.New()
+	}
+	return &Config{Viper: vcf}
 }
 
 // Set sets the key to value
