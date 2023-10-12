@@ -75,16 +75,31 @@ type Gateway struct {
 }
 
 type ManagedEntity struct {
-	XMLName    xml.Name           `xml:"managedEntity"`
-	Name       string             `xml:"name"`
-	Attributes []geneos.Attribute `xml:"attributes,omitempty"`
-	Vars       []geneos.Vars      `xml:"variables,omitempty"`
-	Types      []Type             `xml:"types,omitempty"`
+	XMLName    xml.Name    `xml:"managedEntity"`
+	Name       string      `xml:"name"`
+	Attributes *Attributes `xml:"attributes,omitempty"`
+	Vars       *Vars       `xml:"variables,omitempty"`
+	Types      *Types      `xml:"types,omitempty"`
 }
 
-type Type struct {
-	Type string `xml:"type"`
+type Attributes struct {
+	XMLName    xml.Name `xml:"attributes"`
+	Attributes []geneos.Attribute
 }
+
+type Vars struct {
+	XMLName xml.Name `xml:"variables"`
+	Vars    []geneos.Vars
+}
+
+type Types struct {
+	XMLName xml.Name `xml:"types"`
+	Types   []string `xml:"type"`
+}
+
+// type Type struct {
+// 	Type string `xml:"type"`
+// }
 
 type CollectionAgent struct {
 	Start        bool   `xml:"start,omitempty"`
