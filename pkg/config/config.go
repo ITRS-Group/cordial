@@ -396,7 +396,7 @@ func (c *Config) GetSliceStringMapString(s string, options ...ExpandOptions) (re
 	}
 	for _, m := range result {
 		for k, v := range m {
-			m[k] = ExpandString(v, options...)
+			m[k] = c.ExpandString(v, options...)
 		}
 	}
 	return
