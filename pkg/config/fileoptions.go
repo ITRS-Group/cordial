@@ -53,6 +53,7 @@ type fileOptions struct {
 	systemdir              string
 	usedefaults            bool
 	userconfdir            string
+	watchconfig            bool
 	workingdir             string
 }
 
@@ -101,6 +102,11 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 	// if not cleared by options...
 	if c.userconfdir == "placeholder" {
 		c.userconfdir, _ = UserConfigDir()
+	}
+
+	// merge overrides watchconfig
+	if c.watchconfig && c.merge {
+		c.watchconfig = false
 	}
 
 	return
@@ -330,5 +336,14 @@ func WithEnvs(prefix string, delimiter string) FileOptions {
 	return func(fo *fileOptions) {
 		fo.envprefix = prefix
 		fo.envdelimiter = delimiter
+	}
+}
+
+// WatchConfig enables the underlying viper instance to watch the
+// finally loaded config file. Does nothing if MergeSettings() is used
+// and does no watch default files.
+func WatchConfig() FileOptions {
+	return func(fo *fileOptions) {
+		fo.watchconfig = true
 	}
 }
