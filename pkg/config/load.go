@@ -255,6 +255,10 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 
 	}
 
+	if opts.watchconfig {
+		c.WatchConfig()
+	}
+
 	return c, nil
 }
 
