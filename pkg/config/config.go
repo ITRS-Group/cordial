@@ -138,8 +138,8 @@ func Set(key string, value interface{}) {
 	global.Set(key, value)
 }
 
-// SetMap iterates over a map[string]string and sets each key to the
-// value given. Viper's Set() doesn't support maps until the
+// SetStringMapString iterates over a map[string]string and sets each
+// key to the value given. Viper's Set() doesn't support maps until the
 // configuration is written to and read back from a file.
 func (c *Config) SetStringMapString(m string, vals map[string]string) {
 	for k, v := range vals {
@@ -147,7 +147,7 @@ func (c *Config) SetStringMapString(m string, vals map[string]string) {
 	}
 }
 
-// SetMap iterates over a map[string]string and sets each key to the
+// SetStringMapString iterates over a map[string]string and sets each key to the
 // value given. Viper's Set() doesn't support maps until the
 // configuration is written to and read back from a file.
 func SetStringMapString(m string, vals map[string]string) {
@@ -319,10 +319,6 @@ func (c *Config) GetStringMapString(key string, options ...ExpandOptions) (m map
 		m[k] = c.ExpandString(fmt.Sprint(v), options...)
 	}
 
-	// r := c.Viper.GetStringMapString(key)
-	// for k, v := range r {
-	// 	m[k] = c.ExpandString(v, options...)
-	// }
 	return
 }
 
