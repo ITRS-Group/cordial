@@ -103,57 +103,57 @@ To run the `dv2email` program as a right-click style command, allowing users to 
 
 A typical command (XML below) would be set-up like this. Remember to set the path to the program correctly!
 
-![Send Dataview Command](README/image.png)
+![Send Dataview Command](README/image-1.png)
 
 ```xml
+
 <command name="Send Dataview">
-  <targets>
-    <target>//dataview</target>
-  </targets>
-  <userCommand>
-    <type>script</type>
-    <runLocation>gateway</runLocation>
-    <args>
-      <arg>
-        <static>/path/to/dv2email</static>
-      </arg>
-      <arg>
-        <static>-E</static>
-      </arg>
-      <arg>
-        <xpath>ancestor::managedEntity</xpath>
-      </arg>
-      <arg>
-        <static>-S</static>
-      </arg>
-      <arg>
-        <xpath>ancestor::sampler</xpath>
-      </arg>
-      <arg>
-        <static>-T</static>
-      </arg>
-      <arg>
-        <xpath>ancestor::sampler/parameters/@Type</xpath>
-      </arg>
-      <arg>
-        <static>-D</static>
-      </arg>
-      <arg>
-        <xpath>ancestor::dataview</xpath>
-      </arg>
-      <arg>
-        <static>-t</static>
-      </arg>
-      <arg>
-        <userInput>
-          <description>To</description>
-          <singleLineString>user@example.com</singleLineString>
-          <requiredArgument>true</requiredArgument>
-        </userInput>
-      </arg>
-    </args>
-  </userCommand>
-</command>
+	<targets>
+		<target>//dataview</target>
+	</targets>
+	<userCommand>
+		<type>script</type>
+		<runLocation>gateway</runLocation>
+		<args>
+			<arg>
+				<static>./dv2email</static>
+			</arg>
+			<arg>
+				<static>-E</static>
+			</arg>
+			<arg>
+				<xpath>ancestor::managedEntity</xpath>
+			</arg>
+			<arg>
+				<static>-S</static>
+			</arg>
+			<arg>
+				<xpath>ancestor::sampler</xpath>
+			</arg>
+			<arg>
+				<static>-T</static>
+			</arg>
+			<arg>
+				<xpath>ancestor::sampler/@type</xpath>
+			</arg>
+			<arg>
+				<static>-D</static>
+			</arg>
+			<arg>
+				<xpath>ancestor-or-self::dataview</xpath>
+			</arg>
+			<arg>
+				<static>-t</static>
+			</arg>
+			<arg>
+				<userInput>
+					<description>To</description>
+					<singleLineString>user@example.com</singleLineString>
+					<requiredArgument>true</requiredArgument>
+				</userInput>
+			</arg>
+		</args>
+	</userCommand>
 ```
 
 ## Configuration Reference
