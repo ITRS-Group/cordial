@@ -587,7 +587,9 @@ func (c *Config) ExpandRawString(s string, options ...ExpandOptions) (value stri
 		if strings.HasPrefix(s, "config:") || strings.Contains(s, ".") {
 			s = strings.TrimPrefix(s, "config:")
 			// this call to GetString() must NOT be recursive
+			c.mutex.RLock()
 			value = c.Viper.GetString(s)
+			c.mutex.RUnlock()
 			if opts.trimSpace {
 				value = strings.TrimSpace(value)
 			}

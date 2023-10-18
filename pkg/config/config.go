@@ -30,6 +30,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
@@ -38,7 +39,8 @@ import (
 // Config embeds Viper
 type Config struct {
 	*viper.Viper
-	Type                 string // The type of configuration file loaded
+	mutex                sync.RWMutex // mutex for access to the above viper
+	Type                 string       // The type of configuration file loaded
 	defaultExpandOptions []ExpandOptions
 	delimiter            string
 	appUserConfDir       string
@@ -61,9 +63,13 @@ func GetConfig() *Config {
 // settings will be copied over. This is primarily to be able to change
 // the default delimiter after start-up.
 func ResetConfig(options ...FileOptions) {
+	var mt sync.Mutex
+
+	mt.Lock()
 	tmp := global.AllSettings()
 	global = New(options...)
 	global.MergeConfigMap(tmp)
+	mt.Unlock()
 }
 
 // New returns a Config instance initialised with a new viper instance.
@@ -99,8 +105,9 @@ func (c *Config) AppConfigDir() string {
 // Join returns a configuration key made up of parts joined with the
 // default delimiter for the global configuration object.
 func Join(parts ...string) string {
-	elems := []string{}
-	return strings.Join(append(elems, parts...), global.delimiter)
+	return global.Join(parts...)
+	// elems := []string{}
+	// return strings.Join(append(elems, parts...), global.delimiter)
 }
 
 // Join returns a configuration settings key joined with the delimiter
@@ -112,7 +119,7 @@ func (c *Config) Join(parts ...string) string {
 
 // Delimiter returns the global config key delimiter
 func Delimiter() string {
-	return global.delimiter
+	return global.Delimiter()
 }
 
 // Delimiter returns the config c key delimiter
@@ -124,7 +131,10 @@ func (c *Config) Delimiter() string {
 // not exist then an empty config structure is returned, unlike viper
 // which returns nil.
 func (c *Config) Sub(key string) *Config {
+	c.mutex.RLock()
 	vcf := c.Viper.Sub(key)
+	c.mutex.RUnlock()
+
 	if vcf == nil {
 		vcf = viper.New()
 	}
@@ -138,7 +148,9 @@ func Set(key string, value interface{}) {
 
 // Set sets the key to value
 func (c *Config) Set(key string, value interface{}) {
+	c.mutex.Lock()
 	c.Viper.Set(key, value)
+	c.mutex.Unlock()
 }
 
 // SetString sets the key to the string given after processing options.
@@ -249,7 +261,11 @@ func GetString(s string, options ...ExpandOptions) string {
 // additionally calls [ExpandString] with the configuration value, passing
 // any "values" maps
 func (c *Config) GetString(s string, options ...ExpandOptions) string {
-	return c.ExpandString(c.Viper.GetString(s), options...)
+	c.mutex.RLock()
+	str := c.Viper.GetString(s)
+	c.mutex.RUnlock()
+
+	return c.ExpandString(str, options...)
 }
 
 // GetPassword returns a sealed enclave containing the configuration item
@@ -263,7 +279,11 @@ func GetPassword(s string, options ...ExpandOptions) *Plaintext {
 // identified by key and expanded using the Expand function with the
 // options supplied.
 func (c *Config) GetPassword(key string, options ...ExpandOptions) *Plaintext {
-	return &Plaintext{c.ExpandToEnclave(c.Viper.GetString(key), options...)}
+	c.mutex.RLock()
+	str := c.Viper.GetString(key)
+	c.mutex.RUnlock()
+
+	return &Plaintext{c.ExpandToEnclave(str, options...)}
 }
 
 // GetInt functions like [viper.GetInt] but additionally calls
@@ -281,7 +301,11 @@ func GetInt(s string, options ...ExpandOptions) int {
 // the conversion fails then the value returned will be the one from
 // [strconv.ParseInt] - typically 0 but can be the maximum integer value
 func (c *Config) GetInt(s string, options ...ExpandOptions) (i int) {
-	value := c.ExpandString(c.Viper.GetString(s), options...)
+	c.mutex.RLock()
+	str := c.Viper.GetString(s)
+	c.mutex.RUnlock()
+
+	value := c.ExpandString(str, options...)
 	i, _ = strconv.Atoi(value)
 	return
 }
@@ -301,7 +325,11 @@ func GetInt64(s string, options ...ExpandOptions) int64 {
 // the conversion fails then the value returned will be the one from
 // [strconv.ParseInt] - typically 0 but can be the maximum integer value
 func (c *Config) GetInt64(s string, options ...ExpandOptions) (i int64) {
-	value := c.ExpandString(c.Viper.GetString(s), options...)
+	c.mutex.RLock()
+	str := c.Viper.GetString(s)
+	c.mutex.RUnlock()
+
+	value := c.ExpandString(str, options...)
 	i, _ = strconv.ParseInt(value, 10, 64)
 	return
 }
@@ -317,7 +345,11 @@ func GetBytes(s string, options ...ExpandOptions) []byte {
 // additionally calls [Expand] with the configuration value, passing
 // any "values" maps and returning a byte slice
 func (c *Config) GetBytes(s string, options ...ExpandOptions) []byte {
-	return c.Expand(c.Viper.GetString(s), options...)
+	c.mutex.RLock()
+	str := c.Viper.GetString(s)
+	c.mutex.RUnlock()
+
+	return c.Expand(str, options...)
 }
 
 // GetStringSlice functions like [viper.GetStringSlice] but additionally calls
@@ -333,8 +365,14 @@ func (c *Config) GetStringSlice(s string, options ...ExpandOptions) (slice []str
 	var result []string
 	opts := evalExpandOptions(c, options...)
 
-	if c.Viper.IsSet(s) {
+	c.mutex.RLock()
+	is := c.Viper.IsSet(s)
+	c.mutex.RUnlock()
+
+	if is {
+		c.mutex.RLock()
 		result = c.Viper.GetStringSlice(s)
+		c.mutex.RUnlock()
 	} else if init, ok := opts.initialValue.([]string); ok {
 		result = init
 	}
@@ -378,7 +416,10 @@ func (c *Config) GetStringMapString(key string, options ...ExpandOptions) (m map
 	key = strings.ToLower(key)
 	prefix := key + c.delimiter
 
+	c.mutex.RLock()
 	i := c.Viper.Get(key)
+	c.mutex.RUnlock()
+
 	if !isStringMapInterface(i) {
 		return
 	}
@@ -442,7 +483,10 @@ func (c *Config) UnmarshalKey(key string, rawVal interface{}, opts ...viper.Deco
 	key = strings.ToLower(key)
 	prefix := key + c.delimiter
 
+	c.mutex.RLock()
 	i := c.Viper.Get(key)
+	c.mutex.RUnlock()
+
 	if isStringMapInterface(i) {
 		val := i.(map[string]interface{})
 		keys := c.AllKeys()
@@ -508,4 +552,15 @@ func (c *Config) SetKeyValues(items ...string) {
 // are skipped.
 func SetKeyValues(items ...string) {
 	global.SetKeyValues(items...)
+}
+
+func (c *Config) MergeConfigMap(vals map[string]any) (err error) {
+	c.mutex.Lock()
+	err = c.Viper.MergeConfigMap(vals)
+	c.mutex.Unlock()
+	return
+}
+
+func MergeConfigMap(vals map[string]any) error {
+	return global.MergeConfigMap(vals)
 }

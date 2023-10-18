@@ -92,6 +92,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 		return
 	}
 
+	// since c is the constructed return value, locks may not be needed
 	vp := c.Viper
 	vp.SetFs(r.GetFs())
 
