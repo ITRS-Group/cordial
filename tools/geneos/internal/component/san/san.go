@@ -25,6 +25,7 @@ package san
 import (
 	_ "embed"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -250,6 +251,12 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 		return
 	}
 
+	setup := cf.GetString("setup")
+	if strings.HasPrefix(setup, "http:") || strings.HasPrefix(setup, "https:") {
+		log.Debug().Msg("not rebuilding URL bases setup")
+		return
+	}
+
 	// recheck check certs/keys
 	var changed bool
 	secure := instance.FileOf(s, "certificate") != "" && instance.FileOf(s, "privatekey") != ""
@@ -272,7 +279,7 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 		}
 	}
 	return instance.ExecuteTemplate(s,
-		cf.GetString("setup"),
+		setup,
 		instance.FileOf(s, "config::template"),
 		template)
 }

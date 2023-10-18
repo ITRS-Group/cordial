@@ -26,6 +26,7 @@ import (
 	_ "embed"
 	"fmt"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -263,6 +264,12 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 		return
 	}
 
+	setup := cf.GetString("setup")
+	if strings.HasPrefix(setup, "http:") || strings.HasPrefix(setup, "https:") {
+		log.Debug().Msg("not rebuilding URL bases setup")
+		return
+	}
+
 	// recheck check certs/keys
 	var changed bool
 	secure := instance.FileOf(g, "certificate") != "" && instance.FileOf(g, "privatekey") != ""
@@ -305,7 +312,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	}
 
 	return instance.ExecuteTemplate(g,
-		cf.GetString("setup"),
+		setup,
 		instance.FileOf(g, "config::template"),
 		template)
 }
