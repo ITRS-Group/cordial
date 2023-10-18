@@ -277,7 +277,7 @@ func (s *Floatings) Command() (args, env []string, home string) {
 		"-listenip", "none",
 		"-port", cf.GetString("port"),
 		"-setup", cf.GetString("setup"),
-		"-setup-interval", "300",
+		// "-setup-interval", "300",
 	}
 	args = append(args, instance.SetSecureArgs(s)...)
 	env = append(env, "LOG_FILENAME="+logFile)
