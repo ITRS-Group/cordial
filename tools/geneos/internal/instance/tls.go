@@ -111,7 +111,7 @@ func CreateCert(i geneos.Instance) (resp *Response) {
 	chainfile := PathOf(i, "certchain")
 	if chainfile == "" {
 		chainfile = path.Join(i.Home(), "chain.pem")
-		i.Config().SetString("certchain", chainfile, config.Replace("name"))
+		i.Config().SetString("certchain", chainfile, config.Replace("home"))
 	}
 	if err = config.WriteCertChain(i.Host(), chainfile, signingCert, rootCert); err != nil {
 		resp.Err = err
@@ -143,7 +143,7 @@ func WriteCert(i geneos.Instance, cert *x509.Certificate) (err error) {
 	if cf.GetString("certificate") == certfile {
 		return
 	}
-	cf.SetString("certificate", certfile, config.Replace("name"))
+	cf.SetString("certificate", certfile, config.Replace("home"))
 	return
 }
 
@@ -164,7 +164,7 @@ func WriteKey(i geneos.Instance, key *memguard.Enclave) (err error) {
 	if cf.GetString("privatekey") == keyfile {
 		return
 	}
-	cf.SetString("privatekey", keyfile, config.Replace("name"))
+	cf.SetString("privatekey", keyfile, config.Replace("home"))
 	return
 }
 
