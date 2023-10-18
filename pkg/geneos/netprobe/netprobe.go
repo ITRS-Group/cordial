@@ -47,7 +47,7 @@ type FloatingNetprobe struct {
 	RetryInterval            int       `xml:"retryInterval,omitempty"`
 	RequireReverseConnection bool      `xml:"requireReverseConnection,omitempty"`
 	ProbeName                string    `xml:"probeName"`
-	Gateways                 []Gateway `xml:"gateways"`
+	Gateways                 []Gateway `xml:"gateways>gateway"`
 }
 
 type SelfAnnounce struct {
@@ -61,10 +61,10 @@ type SelfAnnounce struct {
 	CyberArkApplicationID    string           `xml:"cyberArkApplicationID,omitempty"`
 	CyberArkSDKPath          string           `xml:"cyberArkSdkPath,omitempty"`
 	ManagedEntity            *ManagedEntity   `xml:"managedEntity,omitempty"`
-	ManagedEntities          []ManagedEntity  `xml:"managedEntities,omitempty"`
+	ManagedEntities          []ManagedEntity  `xml:"managedEntities>managedEntity,omitempty"`
 	CollectionAgent          *CollectionAgent `xml:"collectionAgent,omitempty"`
 	DynamicEntities          *DynamicEntities `xml:"dynamicEntities,omitempty"`
-	Gateways                 []Gateway        `xml:"gateways"`
+	Gateways                 []Gateway        `xml:"gateways>gateway"`
 }
 
 type Gateway struct {
