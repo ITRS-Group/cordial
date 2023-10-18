@@ -220,7 +220,7 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *instance.Respon
 		resp.Value = output[idx:]
 		return
 	}
-	file, err := os.ReadFile(setup)
+	file, err := i.Host().ReadFile(setup)
 	if err != nil {
 		resp.Err = err
 		return
