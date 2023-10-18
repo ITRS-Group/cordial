@@ -128,7 +128,6 @@ var loginCmd = &cobra.Command{
 			return err
 		}
 
-		log.Debug().Msgf("conf: %+v", config.GetConfig().AllSettings())
 		return
 	},
 }

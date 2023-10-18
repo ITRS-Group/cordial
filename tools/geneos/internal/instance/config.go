@@ -98,14 +98,14 @@ func ExecuteTemplate(i geneos.Instance, p string, name string, defaultTemplate [
 		return err
 	}
 	defer out.Close()
-	m := cf.AllSettings()
+	m := cf.ExpandAllSettings(config.NoDecode(true))
 	// viper insists this is a float64, manually override
 	m["port"] = uint16(cf.GetUint("port"))
 	// set high level defaults
 	m["root"] = i.Host().GetString("geneos")
 	m["name"] = i.Name()
 	m["home"] = i.Home()
-	// remove aliases
+	// remove aliases and expand the rest
 	for _, k := range cf.AllKeys() {
 		if _, ok := i.Type().LegacyParameters[k]; ok {
 			delete(m, k)
@@ -415,7 +415,7 @@ func SetDefaults(i geneos.Instance, name string) (err error) {
 
 	// add a bootstrap for 'root'
 	// data to a template must be renewed each time
-	settings := cf.AllSettings()
+	settings := cf.ExpandAllSettings(config.NoDecode(true))
 	settings["root"] = root
 
 	// set bootstrap values used by templates
