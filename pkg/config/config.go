@@ -20,10 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-This package adds local extensions to viper as well as supporting Geneos
-encryption key files and basic encryption and decryption.
-*/
+// Package config adds local extensions to viper as well as supporting Geneos
+// encryption key files and basic encryption and decryption.
 package config
 
 import (
@@ -138,20 +136,105 @@ func Set(key string, value interface{}) {
 	global.Set(key, value)
 }
 
+// Set sets the key to value
+func (c *Config) Set(key string, value interface{}) {
+	c.Viper.Set(key, value)
+}
+
+// SetString sets the key to the string given after processing options.
+// Options include replacing substrings with configuration items that
+// match *at the time of the SetString call*. This allows the
+// abstraction of a static string based on the other config values
+// given. E.g.
+//
+//	cf.SetString("setup", "/path/to/myname/setup.json", config.Replace("name"))
+//
+// This would check the value of the "name" key in cf and do a global
+// replace. Multiple Replace options are processed in order. If "name"
+// was "myname" at the time of the call then the resulting value is
+// `/path/to/${config:name}/setup.json`
+//
+// Existing expand options are left unchanged. All replacements are case
+// sensitive.
+func (c *Config) SetString(key, value string, options ...ExpandOptions) {
+	value = c.replaceString(value, options...)
+	c.Set(key, value)
+}
+
+// SetString sets the key to the value with options applied. This
+// applies to the global configuration struct. See the other SetString
+// for detailed behaviour.
+func SetString(key, value string, options ...ExpandOptions) {
+	global.SetString(key, value, options...)
+}
+
+// replaceString does the string replacement for the Set* functions
+func (c *Config) replaceString(value string, options ...ExpandOptions) string {
+	opts := evalExpandOptions(c, options...)
+
+	if len(opts.replacements) == 0 {
+		return value
+	}
+
+	for _, r := range opts.replacements {
+		sub := c.GetString(r)
+
+		// simple case, no expand substrings
+		if !strings.Contains(value, "${") {
+			value = strings.ReplaceAll(value, sub, "${config:"+r+"}")
+			continue
+		}
+
+		// iterate over value, skipping expand substrings
+		var newval string
+		for remval := value; ; {
+			start := strings.Index(remval, "${")
+			end := strings.Index(remval, "}")
+			if start == -1 || end == -1 {
+				// finished with expand options. an unterminated substring is treated as ending the string
+				value = newval + remval
+				break
+			}
+			// append substituted nonexpand substring
+			newval += strings.ReplaceAll(remval[:start], sub, "${config:"+r+"}")
+			// append expand substring
+			newval += remval[start : end+1]
+			// remove above from remaining
+			remval = remval[end+1:]
+		}
+	}
+	return value
+}
+
+// SetStringSlice sets the key to a slice of strings applying the
+// replacement options as for SetString to each member of the slice
+func (c *Config) SetStringSlice(key string, values []string, options ...ExpandOptions) {
+	for i, v := range values {
+		values[i] = c.replaceString(v, options...)
+	}
+	c.Set(key, values)
+}
+
+// SetStringSlice sets the key to a slice of strings applying the
+// replacement options as for SetString to each member of the slice
+func SetStringSlice(key string, values []string, options ...ExpandOptions) {
+	global.SetStringSlice(key, values, options...)
+}
+
 // SetStringMapString iterates over a map[string]string and sets each
 // key to the value given. Viper's Set() doesn't support maps until the
 // configuration is written to and read back from a file.
-func (c *Config) SetStringMapString(m string, vals map[string]string) {
+func (c *Config) SetStringMapString(m string, vals map[string]string, options ...ExpandOptions) {
 	for k, v := range vals {
-		c.Set(m+c.delimiter+k, v)
+		c.SetString(m+c.delimiter+k, v)
 	}
 }
 
 // SetStringMapString iterates over a map[string]string and sets each key to the
 // value given. Viper's Set() doesn't support maps until the
 // configuration is written to and read back from a file.
-func SetStringMapString(m string, vals map[string]string) {
-	global.SetStringMapString(m, vals)
+func SetStringMapString(m string, vals map[string]string, options ...ExpandOptions) {
+	global.SetStringMapString(m, vals, options...)
 }
 
 // GetString functions like [viper.GetString] but additionally calls

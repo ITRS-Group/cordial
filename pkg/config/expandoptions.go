@@ -31,6 +31,7 @@ type expandOptions struct {
 	lookupTables     []map[string]string
 	nodecode         bool
 	rawstring        bool
+	replacements     []string
 	trimPrefix       bool
 	trimSpace        bool
 }
@@ -53,8 +54,9 @@ var defaultFuncMaps = map[string]func(*Config, string, bool) (string, error){
 
 func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
 	e = &expandOptions{
-		funcMaps:         map[string]func(*Config, string, bool) (string, error){},
 		externalFuncMaps: true,
+		funcMaps:         map[string]func(*Config, string, bool) (string, error){},
+		replacements:     []string{},
 		trimSpace:        true,
 	}
 
@@ -202,5 +204,21 @@ func Default(value any) ExpandOptions {
 func Initial(value any) ExpandOptions {
 	return func(e *expandOptions) {
 		e.initialValue = value
+	}
+}
+
+// Replace is used by config.Set* (except config.Set itself) functions
+// to replace substrings with the configuration item given as name with
+// an equivalent expand string, where the value of the name key is only
+// tested as Set time.
+//
+// Replace can be used multiple times, each name being checked in order.
+//
+// Expand strings in the value are never substituted.
+//
+// name is not checked for self-referencing
+func Replace(name string) ExpandOptions {
+	return func(eo *expandOptions) {
+		eo.replacements = append(eo.replacements, name)
 	}
 }
