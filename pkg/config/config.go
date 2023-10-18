@@ -31,6 +31,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
@@ -38,7 +39,7 @@ import (
 
 // Config embeds Viper
 type Config struct {
-	*viper.Viper
+	Viper                *viper.Viper
 	mutex                sync.RWMutex // mutex for access to the above viper
 	Type                 string       // The type of configuration file loaded
 	defaultExpandOptions []ExpandOptions
@@ -554,6 +555,20 @@ func SetKeyValues(items ...string) {
 	global.SetKeyValues(items...)
 }
 
+// The methods below are to put locks around viper methods we use. Needs
+// to be completed for any methods not covered in normal use
+
+func (c *Config) Get(key string) (value any) {
+	c.mutex.RLock()
+	value = c.Viper.Get(key)
+	c.mutex.RUnlock()
+	return
+}
+
+func Get(key string) any {
+	return global.Get(key)
+}
+
 func (c *Config) MergeConfigMap(vals map[string]any) (err error) {
 	c.mutex.Lock()
 	err = c.Viper.MergeConfigMap(vals)
@@ -563,4 +578,154 @@ func (c *Config) MergeConfigMap(vals map[string]any) (err error) {
 
 func MergeConfigMap(vals map[string]any) error {
 	return global.MergeConfigMap(vals)
+}
+
+func (c *Config) AllKeys() (keys []string) {
+	c.mutex.RLock()
+	keys = c.Viper.AllKeys()
+	c.mutex.RUnlock()
+	return
+}
+
+func AllKeys() []string {
+	return global.AllKeys()
+}
+
+func (c *Config) AllSettings() (value map[string]any) {
+	c.mutex.RLock()
+	value = c.Viper.AllSettings()
+	c.mutex.RUnlock()
+	return
+}
+
+func AllSettings() map[string]any {
+	return global.AllSettings()
+}
+
+func (c *Config) SetEnvPrefix(prefix string) {
+	c.mutex.Lock()
+	c.Viper.SetEnvPrefix(prefix)
+	c.mutex.Unlock()
+}
+
+func SetEnvPrefix(prefix string) {
+	global.SetEnvPrefix(prefix)
+}
+
+func (c *Config) GetStringMap(key string) (value map[string]any) {
+	c.mutex.RLock()
+	value = c.Viper.GetStringMap(key)
+	c.mutex.RUnlock()
+	return
+}
+
+func GetStringMap(key string) any {
+	return global.GetStringMap(key)
+}
+
+func (c *Config) AutomaticEnv() {
+	c.mutex.Lock()
+	c.Viper.AutomaticEnv()
+	c.mutex.Unlock()
+}
+
+func AutomaticEnv() {
+	global.AutomaticEnv()
+}
+
+func (c *Config) SetDefault(key string, value any) {
+	c.mutex.Lock()
+	c.Viper.SetDefault(key, value)
+	c.mutex.Unlock()
+}
+
+func SetDefault(key string, value any) {
+	global.SetDefault(key, value)
+}
+
+func (c *Config) GetBool(key string) (value bool) {
+	c.mutex.RLock()
+	value = c.Viper.GetBool(key)
+	c.mutex.RUnlock()
+	return
+}
+
+func GetBool(key string) bool {
+	return global.GetBool(key)
+}
+
+func (c *Config) GetUint16(key string) (value uint16) {
+	c.mutex.RLock()
+	value = c.Viper.GetUint16(key)
+	c.mutex.RUnlock()
+	return
+}
+
+func GetUint16(key string) uint16 {
+	return global.GetUint16(key)
+}
+
+func (c *Config) GetUint(key string) (value uint) {
+	c.mutex.RLock()
+	value = c.Viper.GetUint(key)
+	c.mutex.RUnlock()
+	return
+}
+
+func GetUint(key string) uint {
+	return global.GetUint(key)
+}
+
+func (c *Config) GetDuration(key string) (value time.Duration) {
+	c.mutex.RLock()
+	value = c.Viper.GetDuration(key)
+	c.mutex.RUnlock()
+	return
+}
+
+func GetDuration(key string) time.Duration {
+	return global.GetDuration(key)
+}
+
+func (c *Config) IsSet(key string) (value bool) {
+	c.mutex.RLock()
+	value = c.Viper.IsSet(key)
+	c.mutex.RUnlock()
+	return
+}
+
+func IsSet(key string) bool {
+	return global.IsSet(key)
+}
+
+func (c *Config) ConfigFileUsed() (f string) {
+	c.mutex.RLock()
+	f = c.Viper.ConfigFileUsed()
+	c.mutex.RUnlock()
+	return
+}
+
+func ConfigFileUsed() string {
+	return global.ConfigFileUsed()
+}
+
+func (c *Config) RegisterAlias(alias, key string) {
+	c.mutex.Lock()
+	c.Viper.RegisterAlias(alias, key)
+	c.mutex.Unlock()
+}
+
+func RegisterAlias(alias, key string) {
+	global.RegisterAlias(alias, key)
+}
+
+func (c *Config) BindEnv(input ...string) (err error) {
+	c.mutex.Lock()
+	err = c.Viper.BindEnv(input...)
+	c.mutex.Unlock()
+	return
+}
+
+func BindEnv(input ...string) error {
+	return global.BindEnv(input...)
 }

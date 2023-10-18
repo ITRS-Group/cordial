@@ -101,10 +101,10 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 
 	if opts.usedefaults && len(opts.internalDefaults) > 0 {
 		buf := bytes.NewBuffer(opts.internalDefaults)
-		internalDefaults.SetConfigType(opts.internalDefaultsFormat)
-		internalDefaults.SetFs(r.GetFs())
+		internalDefaults.Viper.SetConfigType(opts.internalDefaultsFormat)
+		internalDefaults.Viper.SetFs(r.GetFs())
 		// ignore errors
-		internalDefaults.ReadConfig(buf)
+		internalDefaults.Viper.ReadConfig(buf)
 
 		// now set any internal default values as real defaults, cannot use Merge here
 		for k, v := range internalDefaults.AllSettings() {
@@ -146,9 +146,9 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 		if opts.merge {
 			for _, dir := range confDirs {
 				d := New(options...)
-				d.SetFs(r.GetFs())
-				d.SetConfigFile(path.Join(dir, name+".defaults."+opts.extension))
-				if err = d.ReadInConfig(); err != nil {
+				d.Viper.SetFs(r.GetFs())
+				d.Viper.SetConfigFile(path.Join(dir, name+".defaults."+opts.extension))
+				if err = d.Viper.ReadInConfig(); err != nil {
 					if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 						// not found is fine
 						continue
@@ -162,8 +162,8 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 			}
 		} else if len(confDirs) > 0 {
 			for _, dir := range confDirs {
-				defaults.SetConfigFile(path.Join(dir, name+".defaults."+opts.extension))
-				if err = defaults.ReadInConfig(); err != nil {
+				defaults.Viper.SetConfigFile(path.Join(dir, name+".defaults."+opts.extension))
+				if err = defaults.Viper.ReadInConfig(); err != nil {
 					if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 						continue
 					} else {
@@ -187,6 +187,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 
 	// fixed configuration file, skip directory search
 	if opts.configFileReader != nil {
+		vp.SetConfigType(opts.extension)
 		if err = vp.ReadConfig(opts.configFileReader); err != nil {
 			return c, fmt.Errorf("error reading config: %w", err)
 		}
@@ -211,14 +212,14 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 		found := 0
 		for _, dir := range confDirs {
 			d := New(options...)
-			d.SetFs(r.GetFs())
-			d.SetConfigFile(path.Join(dir, name+"."+opts.extension))
-			if err = d.ReadInConfig(); err != nil {
+			d.Viper.SetFs(r.GetFs())
+			d.Viper.SetConfigFile(path.Join(dir, name+"."+opts.extension))
+			if err = d.Viper.ReadInConfig(); err != nil {
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 					// not found is fine, we are merging
 					continue
 				} else {
-					return c, fmt.Errorf("error reading config (%s): %w", d.ConfigFileUsed(), err)
+					return c, fmt.Errorf("error reading config (%s): %w", d.Viper.ConfigFileUsed(), err)
 				}
 			}
 			found++
@@ -257,7 +258,7 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 	}
 
 	if opts.watchconfig {
-		c.WatchConfig()
+		c.Viper.WatchConfig()
 	}
 
 	return c, nil
