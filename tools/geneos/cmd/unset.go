@@ -81,18 +81,18 @@ geneos unset san -g Gateway1
 
 			changed := instance.UnsetInstanceValues(i, unsetCmdValues)
 
-			s := i.Config().AllSettings()
-			d := i.Config().Delimiter()
+			settings := i.Config().AllSettings()
+			delimiter := i.Config().Delimiter()
 
 			if len(unsetCmdValues.Keys) > 0 {
 				for _, k := range unsetCmdValues.Keys {
 					// check and delete one level of maps
-					if strings.Contains(k, d) {
-						p := strings.SplitN(k, d, 2)
-						switch x := s[p[0]].(type) {
+					if strings.Contains(k, delimiter) {
+						p := strings.SplitN(k, delimiter, 2)
+						switch x := settings[p[0]].(type) {
 						case map[string]interface{}:
 							instance.DeleteSettingFromMap(i, x, p[1])
-							s[p[0]] = x
+							settings[p[0]] = x
 							changed = true
 						default:
 							// nothing yet
@@ -100,7 +100,7 @@ geneos unset san -g Gateway1
 						continue
 					}
 
-					instance.DeleteSettingFromMap(i, s, k)
+					instance.DeleteSettingFromMap(i, settings, k)
 					changed = true
 				}
 			}
@@ -111,7 +111,7 @@ geneos unset san -g Gateway1
 				return
 			}
 
-			resp.Err = instance.SaveConfig(i, s)
+			resp.Err = instance.SaveConfig(i, settings)
 			return
 		}).Write(os.Stdout)
 	},

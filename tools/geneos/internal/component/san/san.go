@@ -76,7 +76,7 @@ var San = geneos.Component{
 		`logfile=san.log`,
 		`port=7036`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
-		`sanname={{.name}}`,
+		`sanname={{"${config:name}"}}`,
 		`setup={{join "${config:home}" "netprobe.setup.xml"}}`,
 		`autostart=true`,
 	},

@@ -27,7 +27,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -72,7 +71,6 @@ var unsetCmd = &cobra.Command{
 		}
 
 		if changed {
-			log.Debug().Msgf("%v", orig.AllSettings())
 			return new.Save(cmd.Execname)
 		}
 		return nil
