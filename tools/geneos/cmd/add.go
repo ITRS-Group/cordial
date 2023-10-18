@@ -88,7 +88,6 @@ geneos add netprobe infraprobe12 --start --log
 		AnnotationWildcard:  "false",
 		AnnotationNeedsHome: "true",
 	},
-	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, names, params := TypeNamesParams(cmd)
 		return AddInstance(ct, addCmdExtras, params, names...)
