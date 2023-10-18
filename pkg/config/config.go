@@ -191,7 +191,9 @@ func (c *Config) replaceString(value string, options ...ExpandOptions) string {
 			start := strings.Index(remval, "${")
 			end := strings.Index(remval, "}")
 			if start == -1 || end == -1 {
-				// finished with expand options. an unterminated substring is treated as ending the string
+				// finished with expand options. any unterminated
+				// substring is treated as ending the string, so just
+				// return the concatenated string
 				value = newval + remval
 				break
 			}
