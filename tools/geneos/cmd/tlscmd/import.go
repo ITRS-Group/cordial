@@ -171,7 +171,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response
 			if cf.GetString("certchain") == chainfile {
 				return
 			}
-			cf.Set("certchain", chainfile)
+			cf.SetString("certchain", chainfile, config.Replace("name"))
 		}
 	}
 
