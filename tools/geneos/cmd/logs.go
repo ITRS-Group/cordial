@@ -223,9 +223,9 @@ func tailLines(f io.ReadSeekCloser, linecount int) (text string, err error) {
 		return
 	}
 
-	pos, _ := f.Seek(0, os.SEEK_CUR)
-	end, _ := f.Seek(0, os.SEEK_END)
-	f.Seek(pos, os.SEEK_SET)
+	pos, _ := f.Seek(0, io.SeekCurrent)
+	end, _ := f.Seek(0, io.SeekEnd)
+	f.Seek(pos, io.SeekStart)
 
 	for i = 1 + end/chunk; i > 0; i-- {
 		f.Seek((i-1)*chunk, io.SeekStart)
@@ -238,6 +238,7 @@ func tailLines(f io.ReadSeekCloser, linecount int) (text string, err error) {
 		// split buffer, count lines, if enough shortcut a return
 		// else keep alllines[0] (partial end of previous line), save the rest and
 		// repeat until beginning of file or N lines
+		log.Debug().Msgf("len(alllines) = %d", len(alllines))
 		newlines := strings.FieldsFunc(buffer+alllines[0], isLineSep)
 		alllines = append(newlines, alllines[1:]...)
 		if len(alllines) > linecount {
