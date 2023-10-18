@@ -341,7 +341,8 @@ func WithEnvs(prefix string, delimiter string) FileOptions {
 
 // WatchConfig enables the underlying viper instance to watch the
 // finally loaded config file. Does nothing if MergeSettings() is used
-// and does no watch default files.
+// and does no watch default files. Using this option is not concurrency
+// safe on future calls to config methods, use carefully.
 func WatchConfig() FileOptions {
 	return func(fo *fileOptions) {
 		fo.watchconfig = true

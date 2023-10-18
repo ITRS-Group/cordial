@@ -62,9 +62,12 @@ func (cf *Config) Save(name string, options ...FileOptions) (err error) {
 		return
 	}
 
-	cf.SetFs(r.GetFs())
+	cf.mutex.Lock()
+	cf.Viper.SetFs(r.GetFs())
 	log.Debug().Msgf("saving configuration to %s", p)
-	return cf.WriteConfigAs(p)
+	err = cf.Viper.WriteConfigAs(p)
+	cf.mutex.Unlock()
+	return
 }
 
 // Save writes the global configuration to a configuration file defined
