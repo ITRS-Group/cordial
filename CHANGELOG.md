@@ -1,5 +1,36 @@
 # Change Log
 
+## Version v1.10.0
+
+ **Released 2023-10-19**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.10.0 Fixes
+
+## v1.10.0 Changes
+
+* `pkg/config`
+
+  Extensive changes to how the underlying viper is accessed. All access
+  through the config package is now protected by a sync.RWMutex. All Get
+  operations use a RLock while all Set operations use a Lock. This
+  includes utility methods like AllKeys and MergeConfigMap. There are
+  still many viper methods that have not been implemented, but now with
+  a named, not embedded, viper object any unimplemented methods will
+  show as compile errors. Methods can be added without breaking existing
+  API.
+
+  These changes were necessary as it became obvious that vipers lack of
+  concurrency support mixed with use inside a web server process was
+  causing crashes.
+
+  Calls inside config.Load() etc. are not protected by a mutex as they
+  are factory methods and do not expose the new config struct until the
+  return to the caller.
+
+---
+
 ## Version v1.9.2
 
 > **Released 2023-10-10**
