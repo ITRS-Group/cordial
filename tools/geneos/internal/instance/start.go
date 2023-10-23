@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -69,6 +70,8 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 	errfile := ComponentFilepath(i, "txt")
 
 	i.Host().Start(cmd, env, home, errfile)
+	// wait a bit for the process to start before checking
+	time.Sleep(250 * time.Millisecond)
 	pid, err := GetPID(i)
 	if err != nil {
 		return err
