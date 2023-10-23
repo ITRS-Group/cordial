@@ -729,3 +729,14 @@ func (c *Config) BindEnv(input ...string) (err error) {
 func BindEnv(input ...string) error {
 	return global.BindEnv(input...)
 }
+
+func (c *Config) GetStringMapStringSlice(key string) (values map[string][]string) {
+	c.mutex.RLock()
+	values = c.Viper.GetStringMapStringSlice(key)
+	c.mutex.RUnlock()
+	return
+}
+
+func GetStringMapStringSlice(key string) map[string][]string {
+	return global.GetStringMapStringSlice(key)
+}
