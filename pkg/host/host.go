@@ -148,23 +148,26 @@ func CopyAll(srcHost Host, srcDir string, dstHost Host, dstDir string) (err erro
 		return
 	}
 
-	s, err := &sftp.Client{}, nil // srcHost.DialSFTP()
-	if err != nil {
-		return err
+	if sf, ok := srcHost.(*SSHRemote); ok {
+		var s *sftp.Client
+		s, err = sf.DialSFTP()
+		if err != nil {
+			return
+		}
+		w := s.Walk(srcDir)
+		for w.Step() {
+			if w.Err() != nil {
+				return
+			}
+			fi := w.Stat()
+			srcPath := w.Path()
+			dstPath := path.Join(dstDir, strings.TrimPrefix(w.Path(), srcDir))
+			if err = processDirEntry(fi, srcHost, srcPath, dstHost, dstPath); err != nil {
+				return
+			}
+		}
 	}
 
-	w := s.Walk(srcDir)
-	for w.Step() {
-		if w.Err() != nil {
-			return
-		}
-		fi := w.Stat()
-		srcPath := w.Path()
-		dstPath := path.Join(dstDir, strings.TrimPrefix(w.Path(), srcDir))
-		if err = processDirEntry(fi, srcHost, srcPath, dstHost, dstPath); err != nil {
-			return
-		}
-	}
 	return
 }
 
