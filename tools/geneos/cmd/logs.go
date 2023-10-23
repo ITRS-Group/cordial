@@ -87,9 +87,10 @@ var logsCmd = &cobra.Command{
 	Annotations: map[string]string{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, names := TypeNames(cmd)
+		ct, names := ParseTypeNames(cmd)
 
 		// if we have match or exclude with other defaults, then turn on logcat
 		if (logCmdMatch != "" || logCmdIgnore != "") && !logCmdFollow {

@@ -49,9 +49,10 @@ var copyCmd = &cobra.Command{
 	Annotations: map[string]string{
 		AnnotationWildcard:  "false",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, names, params := TypeNamesParams(cmd)
+		ct, names, params := ParseTypeNamesParams(cmd)
 		if len(names) == 0 && len(params) == 2 && strings.HasPrefix(params[0], "@") && strings.HasPrefix(params[1], "@") {
 			names = params
 		}

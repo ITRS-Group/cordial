@@ -101,7 +101,7 @@ geneos install netprobe -b active_dev -U
 			}
 		}
 
-		ct, args, params := cmd.TypeNamesParams(command)
+		ct, args, params := cmd.ParseTypeNamesParams(command)
 
 		for _, p := range params {
 			if strings.HasPrefix(p, "@") {

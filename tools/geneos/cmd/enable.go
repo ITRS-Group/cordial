@@ -53,9 +53,10 @@ var enableCmd = &cobra.Command{
 	Annotations: map[string]string{
 		AnnotationWildcard:  "explicit",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
-		ct, names := TypeNames(cmd)
+		ct, names := ParseTypeNames(cmd)
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			resp = instance.NewResponse(i)
 

@@ -180,7 +180,7 @@ geneos restart
 				fmt.Printf("*** Please note that the %q command has been replaced by %q\n\n", command.CommandPath(), realcmd.CommandPath())
 				command.RunE = func(cmd *cobra.Command, args []string) error {
 					realcmd.ParseFlags(newargs)
-					parseArgs(realcmd, newargs)
+					ParseArgs(realcmd, newargs)
 					return realcmd.RunE(realcmd, realcmd.Flags().Args())
 				}
 			}
@@ -196,7 +196,7 @@ geneos restart
 			if realcmd != nil {
 				command.RunE = func(cmd *cobra.Command, args []string) error {
 					realcmd.ParseFlags(newargs)
-					parseArgs(realcmd, newargs)
+					ParseArgs(realcmd, newargs)
 					return realcmd.RunE(realcmd, realcmd.Flags().Args())
 				}
 			}
@@ -234,7 +234,7 @@ geneos restart
 			return nil
 		}
 
-		return parseArgs(command, args)
+		return ParseArgs(command, args)
 	},
 }
 
@@ -342,7 +342,7 @@ func RunE(root *cobra.Command, path []string, args []string) (err error) {
 		return
 	}
 	alias.ParseFlags(newargs)
-	parseArgs(alias, newargs)
+	ParseArgs(alias, newargs)
 
 	return alias.RunE(alias, alias.Flags().Args())
 }

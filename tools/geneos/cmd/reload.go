@@ -49,9 +49,10 @@ var reloadCmd = &cobra.Command{
 	Annotations: map[string]string{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
-		ct, names := TypeNames(cmd)
+		ct, names := ParseTypeNames(cmd)
 		responses := instance.Do(geneos.GetHost(Hostname), ct, names, ReloadInstance)
 		responses.Write(os.Stdout)
 	},

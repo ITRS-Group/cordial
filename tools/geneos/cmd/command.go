@@ -57,9 +57,10 @@ var commandCmd = &cobra.Command{
 	Annotations: map[string]string{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, names := TypeNames(cmd)
+		ct, names := ParseTypeNames(cmd)
 		if commandCmdJSON {
 			results := instance.Do(geneos.GetHost(Hostname), ct, names, commandInstanceJSON)
 			results.Write(os.Stdout, instance.WriterIndent(true))

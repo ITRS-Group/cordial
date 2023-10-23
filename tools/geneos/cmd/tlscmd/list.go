@@ -97,9 +97,10 @@ var listCmd = &cobra.Command{
 	Annotations: map[string]string{
 		cmd.AnnotationWildcard:  "true",
 		cmd.AnnotationNeedsHome: "true",
+		cmd.AnnotationExpand:    "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, names, params := cmd.TypeNamesParams(command)
+		ct, names, params := cmd.ParseTypeNamesParams(command)
 		rootCert, rootCertFile, err = instance.ReadRootCert(true)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return

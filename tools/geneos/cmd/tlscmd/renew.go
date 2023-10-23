@@ -55,9 +55,10 @@ var renewCmd = &cobra.Command{
 	Annotations: map[string]string{
 		cmd.AnnotationWildcard:  "true",
 		cmd.AnnotationNeedsHome: "true",
+		cmd.AnnotationExpand:    "true",
 	},
 	Run: func(command *cobra.Command, _ []string) {
-		ct, names := cmd.TypeNames(command)
+		ct, names := cmd.ParseTypeNames(command)
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, renewInstanceCert).Write(os.Stdout)
 	},
 }

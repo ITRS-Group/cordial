@@ -69,13 +69,14 @@ geneos unset san -g Gateway1
 	Annotations: map[string]string{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 && cmd.Flags().NFlag() == 0 {
 			cmd.Usage()
 			return
 		}
-		ct, names := TypeNames(cmd)
+		ct, names := ParseTypeNames(cmd)
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			resp = instance.NewResponse(i)
 

@@ -53,7 +53,7 @@ geneos config set geneos="/opt/geneos"
 		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
-		_, _, params := cmd.TypeNamesParams(command)
+		_, _, params := cmd.ParseTypeNamesParams(command)
 		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
 			return command.Usage()
 		}

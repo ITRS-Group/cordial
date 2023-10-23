@@ -55,7 +55,7 @@ cat $(geneos home gateway example2)/gateway.txt
 		AnnotationNeedsHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, names, _ := TypeNamesParams(cmd)
+		ct, names, _ := ParseTypeNamesParams(cmd)
 
 		if len(names) == 0 {
 			if ct == nil {

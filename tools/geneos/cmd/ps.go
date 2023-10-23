@@ -86,9 +86,10 @@ var psCmd = &cobra.Command{
 	Annotations: map[string]string{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
-		ct, names, params := TypeNamesParams(cmd)
+		ct, names, params := ParseTypeNamesParams(cmd)
 		CommandPS(ct, names, params)
 	},
 }

@@ -57,10 +57,12 @@ var setCmd = &cobra.Command{
 	Long:         setCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard: "true",
+		cmd.AnnotationWildcard:  "true",
+		cmd.AnnotationNeedsHome: "true",
+		cmd.AnnotationExpand:    "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, names := cmd.TypeNames(command)
+		ct, names := cmd.ParseTypeNames(command)
 
 		h := geneos.GetHost(cmd.Hostname)
 

@@ -73,6 +73,7 @@ geneos set ...
 	Annotations: map[string]string{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
@@ -80,7 +81,7 @@ geneos set ...
 			cmd.Usage()
 			return
 		}
-		ct, names, params := TypeNamesParams(cmd)
+		ct, names, params := ParseTypeNamesParams(cmd)
 
 		// check if secure args are set, prompt once for each without a supplied value
 

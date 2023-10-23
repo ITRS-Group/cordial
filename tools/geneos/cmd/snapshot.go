@@ -77,7 +77,7 @@ var snapshotCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		var err error
-		ct, names, params := TypeNamesParams(cmd)
+		ct, names, params := ParseTypeNamesParams(cmd)
 		if len(names) == 0 {
 			fmt.Println(`no gateway name(s) supplied. Use a NAME of "all" as an explicit wildcard`)
 			return
