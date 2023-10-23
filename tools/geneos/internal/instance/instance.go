@@ -28,6 +28,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -370,6 +371,33 @@ func Names(h *geneos.Host, ct *geneos.Component) (names []string) {
 		}
 	}
 
+	return
+}
+
+// Match applies file glob patterns to all instance names (stripped of
+// hostname) on the host h and of the component type ct and returns all
+// matches. Valid patterns are the same as for path.Match.
+//
+// The returned slice is sorted and duplicates are removed.
+//
+// Patterns that resolve to empty (e.g. @hostname) are returned
+// unchanged and unchecked against valid names.
+func Match(h *geneos.Host, ct *geneos.Component, patterns ...string) (names []string) {
+	for _, pattern := range patterns {
+		_, p, _ := SplitName(pattern, h)
+		if p == "" {
+			names = append(names, pattern)
+			continue
+		}
+		for _, name := range Names(h, ct) {
+			_, n, _ := SplitName(name, h)
+			if match, _ := path.Match(pattern, n); match {
+				names = append(names, n)
+			}
+		}
+	}
+	sort.Strings(names)
+	names = slices.Compact(names)
 	return
 }
 
