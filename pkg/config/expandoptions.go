@@ -136,7 +136,8 @@ func LookupTables(values []map[string]string) ExpandOptions {
 // ":". If the configuration prefix matches during expansion then the
 // function is called with the config data and the contents of the
 // expansion including the prefix (for URLs) but stripped of the opening
-// `${` and closing `}`
+// `${` and closing `}`. A boolean parameter trims white space from the
+// result if true.
 func Prefix(prefix string, fn func(*Config, string, bool) (string, error)) ExpandOptions {
 	return func(e *expandOptions) {
 		e.funcMaps[prefix] = fn
