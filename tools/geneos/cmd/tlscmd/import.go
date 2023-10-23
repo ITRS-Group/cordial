@@ -70,7 +70,7 @@ var importCmd = &cobra.Command{
 		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, names, params := cmd.TypeNamesParams(command)
+		ct, names, params := cmd.ParseTypeNamesParams(command)
 		log.Debug().Msgf("ct=%s args=%v params=%v", ct, names, params)
 
 		if importCmdCert != "" && importCmdSigner != "" {

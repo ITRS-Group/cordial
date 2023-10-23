@@ -62,7 +62,7 @@ var deleteCmd = &cobra.Command{
 		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		_, args := cmd.TypeNames(command)
+		_, args := cmd.ParseTypeNames(command)
 		if len(args) == 0 {
 			return geneos.ErrInvalidArgs
 		}

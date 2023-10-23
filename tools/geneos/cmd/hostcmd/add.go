@@ -79,7 +79,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		_, args := cmd.TypeNames(command)
+		_, args := cmd.ParseTypeNames(command)
 
 		hostcf := config.New()
 

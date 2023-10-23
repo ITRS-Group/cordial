@@ -83,9 +83,10 @@ var showCmd = &cobra.Command{
 	Annotations: map[string]string{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, names := TypeNames(command)
+		ct, names := ParseTypeNames(command)
 		output := os.Stdout
 		if showCmdOutput != "" {
 			output, err = os.Create(showCmdOutput)

@@ -80,9 +80,10 @@ geneos aes ls -S gateway -H localhost -c
 	Annotations: map[string]string{
 		cmd.AnnotationWildcard:  "true",
 		cmd.AnnotationNeedsHome: "true",
+		cmd.AnnotationExpand:    "true",
 	},
 	Run: func(command *cobra.Command, _ []string) {
-		ct, names := cmd.TypeNames(command)
+		ct, names := cmd.ParseTypeNames(command)
 
 		h := geneos.GetHost(cmd.Hostname)
 

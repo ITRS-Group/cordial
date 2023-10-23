@@ -113,7 +113,7 @@ geneos init
 	//
 	// XXX Call any registered initializer funcs from components
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args := cmd.TypeNames(command)
+		ct, args := cmd.ParseTypeNames(command)
 		log.Debug().Msgf("%s %v", ct, args)
 		// none of the arguments can be a reserved type
 		if ct != nil {

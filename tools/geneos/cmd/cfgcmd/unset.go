@@ -52,7 +52,7 @@ var unsetCmd = &cobra.Command{
 			return command.Usage()
 		}
 
-		_, args := cmd.TypeNames(command)
+		_, args := cmd.ParseTypeNames(command)
 		orig, _ := config.Load(cmd.Execname,
 			config.IgnoreWorkingDir(),
 			config.IgnoreSystemDir(),

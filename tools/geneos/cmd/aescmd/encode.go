@@ -67,6 +67,7 @@ var encodeCmd = &cobra.Command{
 	Annotations: map[string]string{
 		cmd.AnnotationWildcard:  "true",
 		cmd.AnnotationNeedsHome: "true",
+		cmd.AnnotationExpand:    "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var plaintext *config.Plaintext
@@ -95,7 +96,7 @@ var encodeCmd = &cobra.Command{
 			return nil
 		}
 
-		ct, args := cmd.TypeNames(command)
+		ct, args := cmd.ParseTypeNames(command)
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *instance.Response) {
 			resp = instance.NewResponse(i)
 

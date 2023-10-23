@@ -80,9 +80,10 @@ geneos import gateway -c shared common_include.xml
 	Annotations: map[string]string{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, names, params := TypeNamesParams(cmd)
+		ct, names, params := ParseTypeNamesParams(cmd)
 		return ImportFiles(ct, names, params)
 	},
 }

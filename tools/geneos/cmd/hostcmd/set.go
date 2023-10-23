@@ -68,7 +68,7 @@ var setCmd = &cobra.Command{
 		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
 			return command.Usage()
 		}
-		_, args, params := cmd.TypeNamesParams(command)
+		_, args, params := cmd.ParseTypeNamesParams(command)
 		var password string
 		var hosts []*geneos.Host
 

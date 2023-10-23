@@ -58,9 +58,10 @@ var revertCmd = &cobra.Command{
 	Annotations: map[string]string{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
-		ct, names := TypeNames(cmd)
+		ct, names := ParseTypeNames(cmd)
 		if revertCmdExecutables {
 			revertCommands()
 			return

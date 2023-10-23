@@ -72,6 +72,7 @@ geneos aes new -S gateway
 	Annotations: map[string]string{
 		cmd.AnnotationWildcard:  "true",
 		cmd.AnnotationNeedsHome: "true",
+		cmd.AnnotationExpand:    "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var crc uint32
@@ -104,7 +105,7 @@ geneos aes new -S gateway
 		}
 
 		if newCmdImportShared {
-			ct, names, _ := cmd.TypeNamesParams(command)
+			ct, names, _ := cmd.ParseTypeNamesParams(command)
 			h := geneos.GetHost(cmd.Hostname)
 
 			for _, h := range h.OrList(geneos.AllHosts()...) {

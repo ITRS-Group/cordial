@@ -51,9 +51,10 @@ var protectCmd = &cobra.Command{
 	Annotations: map[string]string{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	Run: func(command *cobra.Command, _ []string) {
-		ct, args := TypeNames(command)
+		ct, args := ParseTypeNames(command)
 		instance.Do(geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *instance.Response) {
 			resp = instance.NewResponse(i)
 			cf := i.Config()

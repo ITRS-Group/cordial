@@ -57,9 +57,10 @@ var startCmd = &cobra.Command{
 	Annotations: map[string]string{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	RunE: func(cmd *cobra.Command, origargs []string) error {
-		ct, names, params := TypeNamesParams(cmd)
+		ct, names, params := ParseTypeNamesParams(cmd)
 		var autostart bool
 		// if we have a TYPE and at least one NAME then autostart is on
 		if ct != nil && len(origargs) > 1 {

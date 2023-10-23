@@ -62,9 +62,10 @@ geneos clean --full netprobe
 	Annotations: map[string]string{
 		AnnotationWildcard:  "true",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	Run: func(command *cobra.Command, _ []string) {
-		ct, names := TypeNames(command)
+		ct, names := ParseTypeNames(command)
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			resp = instance.NewResponse(i)
 			resp.Err = instance.Clean(i, cleanCmdFull)

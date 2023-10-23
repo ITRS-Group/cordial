@@ -69,7 +69,7 @@ geneos uninstall --version 5.14.1
 		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, _ := cmd.TypeNames(command)
+		ct, _ := cmd.ParseTypeNames(command)
 		h := geneos.GetHost(cmd.Hostname)
 
 		for _, h := range h.OrList() {

@@ -67,7 +67,7 @@ geneos aes import -k https://myserver.example.com/secure/keyfile.aes -H remote1
 		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, _ := cmd.TypeNames(command)
+		ct, _ := cmd.ParseTypeNames(command)
 		h := geneos.GetHost(cmd.Hostname)
 
 		crc32, err := geneos.ImportKeyFile(h, ct, importCmdKeyfile)
