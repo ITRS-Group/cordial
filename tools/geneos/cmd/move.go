@@ -24,6 +24,7 @@ package cmd
 
 import (
 	_ "embed"
+	"errors"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -54,13 +55,10 @@ var moveCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names, params := ParseTypeNamesParams(cmd)
-		if len(names) == 0 && len(params) == 2 && strings.HasPrefix(params[0], "@") && strings.HasPrefix(params[1], "@") {
-			names = params
-		}
-		if len(params) == 1 && strings.HasPrefix(params[0], "@") {
-			names = append(names, params[0])
-		}
 		if len(names) > 2 {
+			if !strings.HasPrefix(names[len(names)-1], "@") {
+				return errors.New("when moving more than one instance the last argument must be of the form @HOST")
+			}
 			for _, n := range names[:len(names)-1] {
 				log.Debug().Msgf("move %s to %s", n, names[len(names)-1])
 				if err = instance.Copy(ct, n, names[len(names)-1], true); err != nil {
@@ -68,6 +66,12 @@ var moveCmd = &cobra.Command{
 				}
 			}
 			return
+		}
+		if len(names) == 0 && len(params) == 2 && strings.HasPrefix(params[0], "@") && strings.HasPrefix(params[1], "@") {
+			names = params
+		}
+		if len(names) == 1 && len(params) == 1 && strings.HasPrefix(params[0], "@") {
+			names = append(names, params[0])
 		}
 		if len(names) != 2 {
 			return geneos.ErrInvalidArgs

@@ -24,8 +24,10 @@ package cmd
 
 import (
 	_ "embed"
+	"errors"
 	"strings"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -51,8 +53,20 @@ var copyCmd = &cobra.Command{
 		AnnotationNeedsHome: "true",
 		AnnotationExpand:    "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names, params := ParseTypeNamesParams(cmd)
+		if len(names) > 2 {
+			if !strings.HasPrefix(names[len(names)-1], "@") {
+				return errors.New("when copying more than one instance the last argument must be of the form @HOST")
+			}
+			for _, n := range names[:len(names)-1] {
+				log.Debug().Msgf("copy %s to %s", n, names[len(names)-1])
+				if err = instance.Copy(ct, n, names[len(names)-1], false); err != nil {
+					return
+				}
+			}
+			return
+		}
 		if len(names) == 0 && len(params) == 2 && strings.HasPrefix(params[0], "@") && strings.HasPrefix(params[1], "@") {
 			names = params
 		}
