@@ -1,16 +1,5 @@
 # `geneos host`
 
-Remote Host Operations
-
-
-## Commands
-
-* [`geneos host add`](geneos_host_add.md)	 - Add a remote host
-* [`geneos host delete`](geneos_host_delete.md)	 - Delete a remote host configuration
-* [`geneos host list`](geneos_host_list.md)	 - List hosts, optionally in CSV or JSON format
-* [`geneos host set`](geneos_host_set.md)	 - Set host configuration value
-* [`geneos host show`](geneos_host_show.md)	 - Show details of remote host configuration
-
 # `geneos host` Subsystem
 
 The `geneos` program can seamlessly manage Geneos instances across multiple servers. By transparently and securely connecting to other Linux systems running Geneos components you can do all the same things as with other Geneos instance that you have created locally.
@@ -70,6 +59,15 @@ The remote connections over SSH mean there are limitations to the features avail
 * Control over instance processes is done via shell commands and little error checking is done, so it is possible to cause damage and/or processes not to to start or stop as expected.
 
 * All actions are taken as the user given in the SSH URL (which should NEVER be `root`) and so instances that are meant to run as other users cannot be controlled. Files and directories may not be available if the user does not have suitable permissions.
+
+
+## Commands
+
+* [`geneos host add`](geneos_host_add.md)	 - Add a remote host
+* [`geneos host delete`](geneos_host_delete.md)	 - Delete a remote host configuration
+* [`geneos host list`](geneos_host_list.md)	 - List hosts, optionally in CSV or JSON format
+* [`geneos host set`](geneos_host_set.md)	 - Set host configuration value
+* [`geneos host show`](geneos_host_show.md)	 - Show details of remote host configuration
 
 ## SEE ALSO
 

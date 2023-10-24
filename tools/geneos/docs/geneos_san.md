@@ -1,11 +1,5 @@
 # `geneos san`
 
-Self-Announcing Netprobes
-
-```text
-geneos san
-```
-
 # `geneos` Self-Announcing Netprobe Comopnents
 
 A Self-Announcing Netprobe (SAN) uses the standard Netprobe installation
@@ -62,6 +56,10 @@ to a Gateway as long as each has it's own, unique name.
 
 If a "certificate", a "chainfile" or the "secure" parameters exist then
 Gateway connections are done using TLS.
+```text
+geneos san
+```
+
 ## SEE ALSO
 
 * [geneos](geneos.md)	 - Take control of your Geneos environments

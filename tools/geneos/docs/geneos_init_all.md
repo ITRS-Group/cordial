@@ -1,11 +1,5 @@
 # `geneos init all`
 
-Initialise a more complete Geneos environment
-
-```text
-geneos init all [flags] [USERNAME] [DIRECTORY]
-```
-
 Initialise a typical Geneos installation.
 
 This command initialises a Geneos installation by:
@@ -20,6 +14,10 @@ A license file is required and should be given using option `-L`. If a license f
 Authentication will most-likely be required to download the installation software packages and, as this is a new Geneos installation, it is unlikely that the download credentials are saved in a local config file. Use option `-u email@example.com` to define the username for downloading software packages.
 
 If packages are already downloaded locally, use option `-A Path_To_Archive` to refer to the directory containing the package archives.  Package files must be named in the same format as those downloaded from the [ITRS download portal](https://resources.itrsgroup.com/downloads). If no version is given using option `-V`, then the latest version of each component is installed.
+```text
+geneos init all [flags] [USERNAME] [DIRECTORY]
+```
+
 ### Options
 
 ```text

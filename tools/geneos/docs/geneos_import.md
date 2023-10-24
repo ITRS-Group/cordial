@@ -1,11 +1,5 @@
 # `geneos import`
 
-Import Files To Instances Or Components
-
-```text
-geneos import [flags] [TYPE] [NAME...] [DEST=]SOURCE...
-```
-
 Import each `SOURCE` to instance directories. With the `--common`/`-c` option the imports are to a TYPE component sub-directory `TYPE_` suffixed with the value to the `--common`/`-c` option. See examples below.
 
 The `SOURCE` can be the path to a local file, a URL or '-' for `STDIN`. `SOURCE` may not be a directory.
@@ -19,6 +13,10 @@ Without an explicit `DEST` for the destination file only the base name of the `S
 If the `--common`/`-c` option is used then a TYPE must also be specified. Each component of TYPE has a base directory. That directory may contain, in addition to instances of that TYPE, a number of other directories that can be used for shared resources. These may be scripts, include files and so on. Using a TYPE `gateway` as an example and using a `--common config` option the destination for `SOURCE` would be `gateway/gateway_config`
 
 Future releases may add support for directories and.or unarchiving of `tar.gz`/`zip` and other file archives.
+
+```text
+geneos import [flags] [TYPE] [NAME...] [DEST=]SOURCE...
+```
 
 ### Options
 

@@ -1,12 +1,10 @@
 # `geneos host set`
 
-Set host configuration value
+Set options on remote host configurations.
 
 ```text
 geneos host set [flags] [NAME...] [KEY=VALUE...]
 ```
-
-Set options on remote host configurations.
 
 ### Options
 

@@ -1,15 +1,5 @@
 # `geneos package`
 
-Package Operations
-
-
-## Commands
-
-* [`geneos package install`](geneos_package_install.md)	 - Install Geneos releases
-* [`geneos package list`](geneos_package_list.md)	 - List packages available for update command
-* [`geneos package uninstall`](geneos_package_uninstall.md)	 - Uninstall Geneos releases
-* [`geneos package update`](geneos_package_update.md)	 - Update the active version of installed Geneos package
-
 # `geneos package` Subsystem Commands
 
 The `geneos package` commands help you manage ITRS Geneos software releases.
@@ -27,6 +17,14 @@ For those commands that use them, `VERSION` options are based on the ITRS Geneos
 `[GA]X.Y.Z`
 
 Where X, Y, Z are each ordered in ascending numerical order. If a directory starts `GA` it will be selected over a directory with the same numerical versions. All other directories name formats will result in unexpected behaviour. If multiple installed versions match then the lexically latest match will be used. The chosen match may be much higher than that given on the command line as only installed packages are used in the search.
+
+
+## Commands
+
+* [`geneos package install`](geneos_package_install.md)	 - Install Geneos releases
+* [`geneos package list`](geneos_package_list.md)	 - List packages available for update command
+* [`geneos package uninstall`](geneos_package_uninstall.md)	 - Uninstall Geneos releases
+* [`geneos package update`](geneos_package_update.md)	 - Update the active version of installed Geneos package
 
 ### Options inherited from parent commands
 

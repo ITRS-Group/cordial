@@ -1,11 +1,5 @@
 # `geneos package update`
 
-Update the active version of installed Geneos package
-
-```text
-geneos package update [flags] [TYPE] [VERSION]
-```
-
 The `package update` command sets the base link for the given component `TYPE`, or all types if not given, to the latest version found in the same package directory.
 
 Use `package list` to see which versions are installed. To install general releases use the `package install` command or, for more limited uses, you can also use the `--install`/`-I` option to download and install packages that match the options given to `update`. To make things simpler, the `--install`/`-I` option only works with predefined credentials (via `geneos login`) and the official download site, but it will use the version given with the `--version`/`-V` option below.
@@ -17,6 +11,10 @@ The `package update` command will create new base links given with the `--base`/
 Base links that are in use by protected instance are not updated without the `--force`/`-F` option. Because multiple instances of a component often share the same base link, if any instance is protected then no update is done without `--force`/`-F`.
 
 Otherwise, by default any running instances that use the base link that is being upgraded will be restarted around the update. While not recommended you can prevent this by passing a false value to the `--restart`/`-R` option (`--restart=false`). 
+
+```text
+geneos package update [flags] [TYPE] [VERSION]
+```
 
 ### Options
 

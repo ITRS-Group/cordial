@@ -1,11 +1,5 @@
 # `geneos set`
 
-Set Instance Parameters
-
-```text
-geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
-```
-
 Set one or more configuration parameters for matching instances.
 
 Set will also update existing parameters, including setting them to empty values. To remove a parameter use the `geneos unset` command instead.
@@ -33,6 +27,10 @@ Types are set using `--type`/`-t` and are just the NAME of the type. To remove a
 Variables are set using `--variable`/`-v` and have the format [TYPE]:NAME=VALUE, where TYPE in this case is the type of content the variable stores. The supported variable TYPEs are: (`string`, `integer`, `double`, `boolean`, `activeTime`, `externalConfigFile`). These TYPE names are case sensitive and so, for example, `String` is not a valid variable TYPE. Other TYPEs may be supported in the future. Variable NAMEs must be unique and setting a variable with the name of an existing one will overwrite not just the VALUE but also the TYPE.
 
 Future releases may add other special options and also may offer a simpler way of configuring SANs and Floating Netprobes to connect to Gateway also managed by the same `geneos` program.
+
+```text
+geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
+```
 
 ### Options
 

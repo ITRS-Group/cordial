@@ -1,11 +1,5 @@
 # `geneos aes set`
 
-Set active keyfile for instances
-
-```text
-geneos aes set [flags] [TYPE] [NAME...]
-```
-
 Set a key file for matching instances. The key file is saved to each matching component's (default: `all`) shared directory and the configuration set to that path.
 
 The key file can be given as an existing CRC (with or without `.aes` file extension) with the `--crc`/`-c` option or as a file path (which can be prefixed `~/` for the user's home directory) or a URL with `--keyfile`/`-k`. If neither option is given then the user's default key file is used, if it exists.
@@ -19,6 +13,10 @@ For each instance any existing `keyfile` path is copied to a `prevkeyfile` setti
 Key files are only set on components that support them.
 
 Only local key files, unless given as a URL, can be copied to remote hosts, not visa versa. Referencing a key file by CRC on a remote host will not result in that file being copies to other hosts.
+
+```text
+geneos aes set [flags] [TYPE] [NAME...]
+```
 
 ### Options
 

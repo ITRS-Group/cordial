@@ -1,11 +1,5 @@
 # `geneos show`
 
-Show Instance Configuration
-
-```text
-geneos show [flags] [TYPE] [NAME...]
-```
-
 Show the configuration for matching instances or show the Geneos configuration used by an instance (depending on options selected below).
 
 By default the configuration used to manage the matching instances is output as a JSON array of objects. Each instance object contains
@@ -24,6 +18,10 @@ For normal output each instance's underlying configuration is in an object key `
 By default the interpolated ("expandable" values are expanded) values are shown. The see the underlying value use the `--raw`/`-r` option.
 
 No values that are encrypted are shown decrypted with or without the `--raw`/`-r` option.
+```text
+geneos show [flags] [TYPE] [NAME...]
+```
+
 ### Options
 
 ```text

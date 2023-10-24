@@ -1,11 +1,5 @@
 # `geneos restart`
 
-Restart Instances
-
-```text
-geneos restart [flags] [TYPE] [NAME...]
-```
-
 Restart the matching instances.
 
 By default this is identical to running `geneos stop` followed by `geneos start`.
@@ -19,6 +13,10 @@ Normal behaviour is to send, on Linux, a `SIGTERM` to the process and wait for a
 If the `--log`/`-l` option is given then the logs of all instances that are started are followed until interrupted by the user.
 
 The options `--extras`/`-x` and `--env`/`-e` can be used to add one-off extra command line parameters and environment variables to the start-up of the process. This can be useful when you may need to run a Gateway with an option like `-skip-cache` after rotating key-files, e.g. `geneos restart gateway Example -x -skip-cache`.
+
+```text
+geneos restart [flags] [TYPE] [NAME...]
+```
 
 ### Options
 

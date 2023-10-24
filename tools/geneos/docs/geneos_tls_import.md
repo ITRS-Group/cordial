@@ -1,11 +1,5 @@
 # `geneos tls import`
 
-Import certificates
-
-```text
-geneos tls import [flags] [TYPE] [NAME...]
-```
-
 # Import TLS certificates and keys
 
 You can import certificates that you have generated or obtained externally along with their private keys.
@@ -27,6 +21,10 @@ A separate certificate chain file containing multiple certificates in PEM format
 If the private key is encrypted then it must be decrypted manually before import. Keys will be imported without encryption as they must be stored unprotected (except for file system permissions) in order that Geneos components to be able to use them.
 
 ⚠ Warning: While you can import certificates and keys for `webservers` they will not be used directly as you need to manually import them into the configured truststore/keystore.
+
+```text
+geneos tls import [flags] [TYPE] [NAME...]
+```
 
 ### Options
 

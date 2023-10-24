@@ -1,12 +1,10 @@
 # `geneos host delete`
 
-Delete a remote host configuration
+Delete the local configuration referring to a remote host.
 
 ```text
 geneos host delete [flags] NAME...
 ```
-
-Delete the local configuration referring to a remote host.
 
 ### Options
 

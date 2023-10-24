@@ -1,11 +1,5 @@
 # `geneos login`
 
-Enter Credentials
-
-```text
-geneos login [flags] [DOMAIN]
-```
-
 The login command will store credentials in your local configuration directory for use with `geneos` and other tools from `cordial`. Passwords are encrypted using a key file which is created if it does not already exist.
 
 If not given `DOMAIN` defaults to `itrsgroup.com`. When credentials are used, the destination is checked against all stored credentials and the longest match is selected.
@@ -23,6 +17,10 @@ The credentials cannot be used without the original key file and each set of cre
 The credentials file itself can be world readable as the security is through the use of a protected key file. Running `geneos.exe` on Windows does not currently protect the key file on creation.
 
 Future releases will support extended credential sets, for example SSH and 2-legged OAuth ClientID/ClientSecret (such as application keys from cloud providers). Another addition may be the automatic encryption of non-password data in credentials.
+
+```text
+geneos login [flags] [DOMAIN]
+```
 
 ### Options
 

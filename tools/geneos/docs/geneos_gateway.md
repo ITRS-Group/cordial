@@ -1,11 +1,5 @@
 # `geneos gateway`
 
-Gateways
-
-```text
-geneos gateway
-```
-
 # `geneos` Gateways
 
 A `gateway` instance is a Geneos Gateway.
@@ -173,6 +167,10 @@ geneos set gateway example2 -i 100:/path/to/include
 ```
 
 The setting value is `priority:path` and path can be a relative or absolute path or a URL. In the case of a URL the source is NOT downloaded but instead the URL is written as-is in the template output.
+
+```text
+geneos gateway
+```
 
 ## SEE ALSO
 

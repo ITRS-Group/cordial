@@ -1,11 +1,5 @@
 # `geneos add`
 
-Add a new instance
-
-```text
-geneos add [flags] TYPE NAME [KEY=VALUE...]
-```
-
 # `geneos add`
 
 Add a new instance of a component `TYPE` with the name `NAME`.
@@ -31,6 +25,10 @@ Gateways, SANs and Floating probes are given a configuration file based on the t
 Any additional command line arguments are used to set configuration values. Any arguments not in the form `NAME=VALUE` are ignored. Note that `NAME` must be a plain word and must not contain dots (`.`) or double colons (`::`) as these are used as internal delimiters. No component uses hierarchical configuration names except those that can be set by the options above.
 
 You can select the distribution of SAN or Floating Netprobe using the special syntax for the `NAME` in the form `TYPE:NAME`. The only supported `TYPE` at the moment, in addition to the default `netprobe`, is `fa2` allowing you to deploy Fix Analyser 2 based SAN and Floating probes.
+
+```text
+geneos add [flags] TYPE NAME [KEY=VALUE...]
+```
 
 ### Options
 

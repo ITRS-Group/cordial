@@ -1,12 +1,10 @@
 # `geneos reload`
 
-Reload Instance Configurations
+Send a reload signal to all matching instances whose `TYPE` supports them.
 
 ```text
 geneos reload [TYPE] [NAME...] [flags]
 ```
-
-Send a reload signal to all matching instances whose `TYPE` supports them.
 
 ## SEE ALSO
 

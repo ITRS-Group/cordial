@@ -1,11 +1,5 @@
 # `geneos netprobe`
 
-Netprobes
-
-```text
-geneos netprobe
-```
-
 # `geneos` Netprobes
 
 <https://docs.itrsgroup.com/docs/geneos/current/Netprobe/index.html>
@@ -77,6 +71,10 @@ Netprobe instances are set to be started with the default `geneos start` command
 > Default: `false`
 
 
+
+```text
+geneos netprobe
+```
 
 ## SEE ALSO
 

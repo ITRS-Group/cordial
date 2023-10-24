@@ -1,12 +1,10 @@
 # `geneos host list`
 
-List hosts, optionally in CSV or JSON format
+List the matching remote hosts.
 
 ```text
 geneos host list [flags] [NAME...]
 ```
-
-List the matching remote hosts.
 
 ### Options
 

@@ -1,11 +1,5 @@
 # `geneos aes encode`
 
-Encode plaintext to a Geneos AES256 password using a key file
-
-```text
-geneos aes encode [flags] [TYPE] [NAME...]
-```
-
 Encode plaintext to a Geneos AES256 format password using a key file.
 
 A key file must either be provided using the `-k` option or otherwise all matching instances that have a configured key file are used to produce an encrypted password.
@@ -27,6 +21,10 @@ Rather than:
 ```bash
 $ echo -n "test" | geneos aes encode -s -
 ```
+```text
+geneos aes encode [flags] [TYPE] [NAME...]
+```
+
 ### Options
 
 ```text

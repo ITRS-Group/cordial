@@ -1,11 +1,5 @@
 # `geneos deploy`
 
-Deploy a new Geneos instance
-
-```text
-geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
-```
-
 Deploy a new instance of component `TYPE`.
 
 The difference between `deploy` and `add` or `init` commands is that deploy will check and create the Geneos directory hierarchy if required, then download and/or install packages for the component type and add the instance, optionally starting it.
@@ -45,6 +39,10 @@ The `deploy` command support fewer TLS related options than `add` or `import` an
 For a `TYPE` that supports key files have one created unless one is supplied via the `--keyfile` or `--keycrc` options. The `--keyfile` option uses the file given while the `--keycrc` sets the key file path to a key file with the value given (with or with the `.aes` extension).
 
 See the `add` command for more details about other, less used, options.
+
+```text
+geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
+```
 
 ### Options
 
