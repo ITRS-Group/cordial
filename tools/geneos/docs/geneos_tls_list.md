@@ -1,11 +1,5 @@
 # `geneos tls list`
 
-List certificates
-
-```text
-geneos tls list [flags] [TYPE] [NAME...]
-```
-
 List certificates and their details. The root and signing certs are only shown if the `--all`/`-a` flag is given. A list with more details can be seen with the `--long`/`-l` flag, otherwise options are the same as for the main ls command.
 
 Certificates for each instance are validated and the "Valid" column or field contains the boolean result. An instance certificate is valid if **all** the following are true:
@@ -20,6 +14,10 @@ Certificates for each instance are validated and the "Valid" column or field con
 * The certificate also conforms to other checks done by <https://pkg.go.dev/crypto/x509#Certificate.Verify>
 
 The Common Name (`CN`) and the Subject Alternative Names (`SAN`) values in the certificate are not otherwise checked as Geneos does not use these.
+
+```text
+geneos tls list [flags] [TYPE] [NAME...]
+```
 
 ### Options
 

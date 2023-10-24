@@ -1,11 +1,5 @@
 # `geneos aes new`
 
-Create a new key file
-
-```text
-geneos aes new [flags] [TYPE] [NAME...]
-```
-
 Create a new key file. With no other options this is written to STDOUT.
 
 To write to a specific file use the `--keyfile`/`-k` option or to write to your user's default key file location use the `--user`/`-u` flag. These options are mutually exclusive.
@@ -15,6 +9,10 @@ If the `--shared`/`-S` flag is set then the newly created key file is also saved
 When saving key files to shared component directories the contents of the key file are not written to STDOUT in the absence of `--keyfile` or `--user` options.
 
 An existing key file with the same name will be backed-up using the suffix given with the `--backup`/`-b` option which defaults to `.old`. This is only likely to apply to key files being saved to explicit paths with the `--keyfile` or `--user` options.
+
+```text
+geneos aes new [flags] [TYPE] [NAME...]
+```
 
 ### Options
 

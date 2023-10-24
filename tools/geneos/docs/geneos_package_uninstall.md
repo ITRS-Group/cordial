@@ -1,11 +1,5 @@
 # `geneos package uninstall`
 
-Uninstall Geneos releases
-
-```text
-geneos package uninstall [flags] [TYPE]
-```
-
 The `package uninstall` commands removes installed Geneos releases. By default all releases that are not used by any enabled or running instance are removed with the exception of the "latest" release.
 
 If `TYPE` is given then only releases for that component are removed. Similarly, if `--version VERSION` is given then only that version is removed. `VERSION` must be an exact match and multiple versions or version wildcards are not yet supported.
@@ -21,6 +15,10 @@ If the `-all` flag is passed then all matching releases are removed and all runn
 If a host is not selected with the `--host HOST` flags then the uninstall applies to all configured hosts. 
 
 Use `geneos update list` to see which releases are installed.
+
+```text
+geneos package uninstall [flags] [TYPE]
+```
 
 ### Options
 

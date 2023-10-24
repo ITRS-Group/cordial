@@ -1,14 +1,5 @@
 # `geneos config`
 
-Configure Command Behaviour
-
-
-## Commands
-
-* [`geneos config set`](geneos_config_set.md)	 - Set program configuration
-* [`geneos config show`](geneos_config_show.md)	 - Show program configuration
-* [`geneos config unset`](geneos_config_unset.md)	 - Unset a program parameter
-
 # `geneos config` Subsystem Commands
 
 The commands in the `config` subsystem allow you to control the
@@ -59,6 +50,13 @@ The base URL for downloads for automating installations. Not yet used. If files 
 
 ...
 
+
+
+## Commands
+
+* [`geneos config set`](geneos_config_set.md)	 - Set program configuration
+* [`geneos config show`](geneos_config_show.md)	 - Show program configuration
+* [`geneos config unset`](geneos_config_unset.md)	 - Unset a program parameter
 
 ## Examples
 

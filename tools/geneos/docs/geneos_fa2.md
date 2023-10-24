@@ -1,13 +1,11 @@
 # `geneos fa2`
 
-Fix Analyser 2
+# `geneos` Fix Analysers
+
 
 ```text
 geneos fa2
 ```
-
-# `geneos` Fix Analysers
-
 
 ## SEE ALSO
 

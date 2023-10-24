@@ -1,11 +1,5 @@
 # `geneos aes import`
 
-Import key files for component TYPE
-
-```text
-geneos aes import [flags] [TYPE] [NAME...]
-```
-
 Import key files to the `TYPE/keyfiles` directory in each matching component TYPE shared directory.
 
 A key file must be provided with the `--keyfile`/`-k` option. The option value can be a path or a URL or a '-' to read from STDIN. A prefix of `~/` to the path interprets the rest relative to the user's home directory.
@@ -19,6 +13,10 @@ If a `TYPE` is given then the key is only imported for that component, otherwise
 Key files are imported to all configured hosts unless `--host`/`-H` is used to limit to a specific host.
 
 Instance names can be given to indirectly identify the component type.
+
+```text
+geneos aes import [flags] [TYPE] [NAME...]
+```
 
 ### Options
 

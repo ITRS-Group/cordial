@@ -1,19 +1,5 @@
 # `geneos init`
 
-Initialise The Installation
-
-```text
-geneos init [flags] [DIRECTORY]
-```
-
-## Commands
-
-* [`geneos init all`](geneos_init_all.md)	 - Initialise a more complete Geneos environment
-* [`geneos init demo`](geneos_init_demo.md)	 - Initialise a Geneos Demo environment
-* [`geneos init floating`](geneos_init_floating.md)	 - Initialise a Geneos Floating Netprobe environment
-* [`geneos init san`](geneos_init_san.md)	 - Initialise a Geneos SAN (Self-Announcing Netprobe) environment
-* [`geneos init template`](geneos_init_template.md)	 - Initialise or overwrite templates
-
 # `geneos init` Subsystem Commands
 
 The `init` commands initialise your Geneos install environment ready to run Geneos instances.
@@ -149,6 +135,18 @@ You still have to configure the Gateway to connect to the Netprobe, but all thre
 ```bash
 geneos ps
 ```
+
+```text
+geneos init [flags] [DIRECTORY]
+```
+
+## Commands
+
+* [`geneos init all`](geneos_init_all.md)	 - Initialise a more complete Geneos environment
+* [`geneos init demo`](geneos_init_demo.md)	 - Initialise a Geneos Demo environment
+* [`geneos init floating`](geneos_init_floating.md)	 - Initialise a Geneos Floating Netprobe environment
+* [`geneos init san`](geneos_init_san.md)	 - Initialise a Geneos SAN (Self-Announcing Netprobe) environment
+* [`geneos init template`](geneos_init_template.md)	 - Initialise or overwrite templates
 
 ### Options
 

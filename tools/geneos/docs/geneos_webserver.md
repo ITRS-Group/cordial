@@ -1,13 +1,11 @@
 # `geneos webserver`
 
-Web Dashboard Servers
+# `geneos` Web Dashboard Servers
+
 
 ```text
 geneos webserver
 ```
-
-# `geneos` Web Dashboard Servers
-
 
 ## SEE ALSO
 
