@@ -2,32 +2,49 @@
 
 ## Version v1.10.0
 
- **Released 2023-10-19**
+> **Released 2023-10-25**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
 ## v1.10.0 Fixes
 
+* `pkg/config`
+
+  The `Sub()` methods will now return an empty Config struct and not nil if the key is not found. This is a divergence from viper.
+
+  The non-global `GetSliceStringMapString` method returned values from the global config object. Found while implementing changes to noe use embedded viper, see below.
+
+* `pkg/geneos/netprobe`
+
+  Updates to the structs to produce valid XML when rendered as XML through the Go xml package.
+
+* `tools/geneos`
+
+  * Do not automatically try to `rebuild` component config files if the `setup` parameters is to a remote configuration.
+
+  * Fix the `show -s` command to read instance configurations from their potentially remote host and not localhost.
+
+  * Add a 250ms delay after starting an instance to allow for the process to fully start and update OS args so that the `GetPID` call works more often and can report the successful start-up.
+
 ## v1.10.0 Changes
 
 * `pkg/config`
 
-  Extensive changes to how the underlying viper is accessed. All access
-  through the config package is now protected by a sync.RWMutex. All Get
-  operations use a RLock while all Set operations use a Lock. This
-  includes utility methods like AllKeys and MergeConfigMap. There are
-  still many viper methods that have not been implemented, but now with
-  a named, not embedded, viper object any unimplemented methods will
-  show as compile errors. Methods can be added without breaking existing
-  API.
+  Potential *API Changes* - to allow safer concurrent access to the underlying viper configuration objects the original embedded viper instance in the Config struct has been promoted to be named as `Viper`. This removes access to embedded methods and the intermediate methods have been updated to use a RWMutex around every call to viper. This however means that not all viper methods are transparently available and new shims have been added for the most common ones found. If dependent code now fails to compile because of missing methods they will need to be added to `config.go` along with the appropriate mutex wrappers.
 
-  These changes were necessary as it became obvious that vipers lack of
-  concurrency support mixed with use inside a web server process was
-  causing crashes.
+  Added a `WatchConfig()` option to enable auto-reloading final config files found during `Load()`. Note that `WatchConfig` is not concurrency safe. This may change if we implement our own callback.
 
-  Calls inside config.Load() etc. are not protected by a mutex as they
-  are factory methods and do not expose the new config struct until the
-  return to the caller.
+* `tools/geneos`
+
+  * Add "glob" style wildcard support for instance names (and names only, not remote hosts) to most command. This should always be used with quoting to avoid shell expansion. This allows commands line `geneos start gateway 'LDN*'` and so on. Also add support to `move` and `copy` to act on multiple wildcarded sources as long as the destination is a `@HOST`.
+
+  * Some instance configuration parameters are no tested for the instance `home` path and this is replaced with `${config:home}` so that moves and copies have paths auto updated. This include certificates, keys and set-up files.
+
+  * Lower the auto-generated `instance.setup.xml` Gateway include file priority value so it is loaded before other typical includes.
+
+  * For Gateway and SAN change default parameters `gatewayname` and `sanname` respectively to use `name` in an `GetString` expansion. This makes the parameters auto-update if the instance name changes (for example using `move` or `copy`) until and unless the user sets a fixed name.
+
+  * Remove the `-setup-interval` from SAN command lines (which was using the default anyway) to allow it to be overridden in the `options` parameter.
 
 ---
 
