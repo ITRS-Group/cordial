@@ -2,9 +2,9 @@
 
 Cordial is a collection of utilities, integrations and support packages for ITRS Geneos.
 
-> **Current Version: v1.9.2**
->
-> Released 2023-10-10
+> **Current Version v1.10.0**
+
+> Released 2023-10-25
 >
 > See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 
@@ -36,7 +36,7 @@ These packages provide Go interfaces to ITRS Geneos as well as utilities to help
 
 * [`email`](pkg/email/README.md)
 
-  Functions extracted from the original libemail to be more generally available, initially for the `dv2email` program but also for additional tools in the future. `libemail` has not been changed so that it remains fully backward compatible.
+  Functions extracted from the `libemail` sources to be more generally available, initially for the `dv2email` program but also for additional tools in the future. `libemail` has not been changed so that it remains fully backward compatible.
 
 * [`geneos`](pkg/geneos/README.md)
 
