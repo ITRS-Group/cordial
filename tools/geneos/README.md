@@ -5,13 +5,14 @@ The `geneos` utility will help you manage your Geneos environment.
 > The documentation for commands and their options is
 [here](docs/geneos.md)
 
+⚠ Please note that the details on this specific page may be out-of-date and the pages linked in the previous paragraph will be closer to reality. We intend to review and update the documentation on this page very soon.
+
 ## Features
 
 * Initialise a new installation with a single command
 * Adopt an existing installation created using older tools
 * Operate Geneos across a group of servers with a single command
-* Create Geneos compatible AES256 encoded passwords and other
-  credentials
+* Create Geneos compatible AES256 encoded passwords and other credentials
 * Manage certificates for TLS connectivity between Geneos components
 * Change instance settings without editing files
 * Download, install and update Geneos software
@@ -20,8 +21,7 @@ The `geneos` utility will help you manage your Geneos environment.
 ## Aims
 
 * To make your life easier; at least the Geneos part
-* Keep it simple through the [Principle of least
-  astonishment](https://en.wikipedia.org/wiki/Principle_of_least_astonishment)
+* Keep it simple through the [Principle of least astonishment](https://en.wikipedia.org/wiki/Principle_of_least_astonishment)
 * Help you use automation tools with Geneos
 
 ## Getting Started
