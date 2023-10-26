@@ -27,6 +27,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
@@ -48,6 +49,7 @@ type fileOptions struct {
 	internalDefaultsFormat string
 	merge                  bool
 	mustexist              bool
+	notifyonchange         func(fsnotify.Event)
 	remote                 host.Host
 	setglobals             bool
 	systemdir              string
@@ -343,8 +345,14 @@ func WithEnvs(prefix string, delimiter string) FileOptions {
 // finally loaded config file. Does nothing if MergeSettings() is used
 // and does no watch default files. Using this option is not concurrency
 // safe on future calls to config methods, use carefully.
-func WatchConfig() FileOptions {
+//
+// If a notify function is specified then this is passed to
+// viper.OnConfigChange. Only the first notify function is used.
+func WatchConfig(notify ...func(fsnotify.Event)) FileOptions {
 	return func(fo *fileOptions) {
 		fo.watchconfig = true
+		if len(notify) > 0 {
+			fo.notifyonchange = notify[0]
+		}
 	}
 }
