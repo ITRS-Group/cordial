@@ -258,6 +258,9 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 	}
 
 	if opts.watchconfig {
+		if opts.notifyonchange != nil {
+			c.Viper.OnConfigChange(opts.notifyonchange)
+		}
 		c.Viper.WatchConfig()
 	}
 
