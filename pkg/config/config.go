@@ -516,8 +516,7 @@ func (c *Config) UnmarshalKey(key string, rawVal interface{}, opts ...viper.Deco
 // it iterates over all values in all maps and applies the ExpandString
 // with the options given
 func (c *Config) GetSliceStringMapString(s string, options ...ExpandOptions) (result []map[string]string) {
-	err := c.UnmarshalKey(s, &result)
-	if err != nil {
+	if err := c.UnmarshalKey(s, &result); err != nil {
 		return
 	}
 	for _, m := range result {
