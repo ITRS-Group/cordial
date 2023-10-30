@@ -484,9 +484,10 @@ func (c *Config) UnmarshalKey(key string, rawVal interface{}, opts ...viper.Deco
 	key = strings.ToLower(key)
 	prefix := key + c.delimiter
 
-	c.mutex.RLock()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	i := c.Viper.Get(key)
-	c.mutex.RUnlock()
 
 	if isStringMapInterface(i) {
 		val := i.(map[string]interface{})
