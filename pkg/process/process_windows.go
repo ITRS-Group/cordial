@@ -25,15 +25,17 @@ package process
 import (
 	"os/exec"
 	"syscall"
+
+	"golang.org/x/sys/windows"
 )
 
 func prepareCmd(cmd *exec.Cmd) {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{
-			CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
+			CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS,
 		}
 	} else {
-		cmd.SysProcAttr.CreationFlags = syscall.CREATE_NEW_PROCESS_GROUP
+		cmd.SysProcAttr.CreationFlags = syscall.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS
 	}
 }
 
