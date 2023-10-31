@@ -22,6 +22,8 @@ THE SOFTWARE.
 
 package config
 
+import "sync"
+
 type expandOptions struct {
 	defaultValue     any
 	expressions      bool
@@ -46,6 +48,8 @@ type expandOptions struct {
 //	s := config.GetString("config.value", ExternalLookups(false), LookupTable(configMap), Prefix("myconf", myFunc))
 type ExpandOptions func(*expandOptions)
 
+var defaultFuncMapsMutex sync.Mutex
+
 var defaultFuncMaps = map[string]func(*Config, string, bool) (string, error){
 	"http":  fetchURL,
 	"https": fetchURL,
@@ -69,10 +73,12 @@ func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
 	}
 
 	if e.externalFuncMaps {
+		defaultFuncMapsMutex.Lock()
 		for k, v := range e.funcMaps {
 			defaultFuncMaps[k] = v
 		}
 		e.funcMaps = defaultFuncMaps
+		defaultFuncMapsMutex.Unlock()
 	}
 
 	if e.expressions {
