@@ -215,10 +215,11 @@ func (h *SSHRemote) Dial() (sc *ssh.Client, err error) {
 		return
 	}
 
-	if h.failed != nil {
+	if h.failed != nil && !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) < 5*time.Second {
 		err = h.failed
 		return
 	}
+
 	if h.username == "" {
 		log.Error().Msgf("username not set for remote %s", h)
 		return nil, ErrInvalidArgs
@@ -232,8 +233,7 @@ func (h *SSHRemote) Dial() (sc *ssh.Client, err error) {
 	}
 
 	dest := fmt.Sprintf("%s:%d", h.hostname, h.port)
-	val, ok := sshSessions.Load(h.name)
-	if ok {
+	if val, ok := sshSessions.Load(h.name); ok {
 		sc = val.(*ssh.Client)
 	} else {
 		start := time.Now()
@@ -577,17 +577,45 @@ func (h *SSHRemote) GetFs() afero.Fs {
 }
 
 func (h *SSHRemote) Signal(pid int, signal syscall.Signal) (err error) {
-	rem, err := h.Dial()
-	if err != nil {
-		return
-	}
-	sess, err := rem.NewSession()
+	sess, err := h.NewSession()
 	if err != nil {
 		return
 	}
 	defer sess.Close()
 
 	sess.CombinedOutput(fmt.Sprintf("kill -s %d %d", signal, pid))
+	return
+}
+
+// NewSession wraps ssh.NewSession but does some retries
+func (h *SSHRemote) NewSession() (sess *ssh.Session, err error) {
+	rem, err := h.Dial()
+	if err != nil {
+		err = fmt.Errorf("Start: %w during Dial()", err)
+		return
+	}
+
+	// the number of sessions is always limited by config on the remote
+	// server, but we don't know what that limit is, so retry a few
+	// times with a small delay
+	var i int
+	for i = 0; i < 10; i++ {
+		sess, err = rem.NewSession()
+		if err == nil {
+			break
+		}
+		var ocerr *ssh.OpenChannelError
+		if errors.As(err, &ocerr) {
+			log.Debug().Err(err).Msg("open channel error, wait and retry")
+		} else {
+			break
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+	if err != nil {
+		err = fmt.Errorf("Start: %w during NewSession()", err)
+		return
+	}
 	return
 }
 
@@ -599,11 +627,7 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, env []string, home, errfile string) (er
 		err = errors.New("cannot run remote commands on windows")
 	}
 
-	rem, err := h.Dial()
-	if err != nil {
-		return
-	}
-	sess, err := rem.NewSession()
+	sess, err := h.NewSession()
 	if err != nil {
 		return
 	}
@@ -644,11 +668,7 @@ func (h *SSHRemote) Run(cmd *exec.Cmd, env []string, home, errfile string) (outp
 		err = errors.New("cannot run remote commands on windows")
 	}
 
-	rem, err := h.Dial()
-	if err != nil {
-		return
-	}
-	sess, err := rem.NewSession()
+	sess, err := h.NewSession()
 	if err != nil {
 		return
 	}
