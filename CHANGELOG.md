@@ -1,14 +1,19 @@
 # Change Log
 
-## Version v1.10.1
+## Version v1.10.2
 
 > **Released 2023-10-31**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-## v1.10.1 Fixes
+⚠️ Note: The previous patch version was removed after finding the fix for wildcards was only partial. This second patch release addresses that issue.
 
-* `tools/geneos` - The recently introduced wildcarding for instance names was causing non-matching instance names to be evaluated all "all", so `geneos stop test` would stop all instances. Fix this by checking the list of names returned from the pattern match and if empty assume the input is not a pattern and leave it alone.
+## v1.10.2 Fixes
+
+* `tools/geneos`
+
+  * The recently introduced wildcarding for instance names was causing non-matching instance names to be evaluated all "all", so `geneos stop test` would stop all instances. Fix this by checking the list of names returned from the pattern match and if empty assume the input is not a pattern and leave it alone.
+  * The fix to `pkg/host` below tries to ensure that running multiple sessions to remote hosts works more reliably, especially those where commands take some time to return, like for `start`
 
 * `pkg/process` - Fix Daemon() for Windows by adding a `DETACHED_PROCESS` flag to new proc attributes.
 
@@ -16,6 +21,8 @@
 
   * Protect global map access with a mutex in `expandoptions.go`
   * Make the viper mutex a plain one, not RWLock. Reorder calls to Unlock to cover decode()
+
+* `pkh/host` - Allow for remote SSH session limits, retry NewSession() up to 10 times with a 250ms delay. This limit is in the remote server, so cannot be overridden.
 
 ---
 

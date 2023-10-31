@@ -69,7 +69,9 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 	// set underlying user for child proc
 	errfile := ComponentFilepath(i, "txt")
 
-	i.Host().Start(cmd, env, home, errfile)
+	if err = i.Host().Start(cmd, env, home, errfile); err != nil {
+		return
+	}
 	// wait a bit for the process to start before checking
 	time.Sleep(250 * time.Millisecond)
 	pid, err := GetPID(i)
