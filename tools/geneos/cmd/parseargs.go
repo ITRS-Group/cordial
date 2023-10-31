@@ -134,7 +134,9 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 		}
 		names = args[1:]
 		if annotations[AnnotationExpand] == "true" {
-			names = instance.Match(h, ct, names...)
+			if newnames = instance.Match(h, ct, names...); len(newnames) > 0 {
+				names = newnames
+			}
 		}
 	} else {
 		defaultComponent := annotations[AnnotationComponent]
@@ -145,7 +147,11 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 			// first arg is not a known type, so treat the rest as instance names
 			names = args
 			if annotations[AnnotationExpand] == "true" {
-				names = instance.Match(h, ct, names...)
+				log.Debug().Msgf("matching %v", names)
+				if newnames := instance.Match(h, ct, names...); len(newnames) > 0 {
+					names = newnames
+				}
+
 			}
 		} else {
 			if annotations[AnnotationComponent] == "" {
@@ -155,7 +161,9 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 				names = args
 			}
 			if annotations[AnnotationExpand] == "true" {
-				names = instance.Match(h, ct, names...)
+				if newnames = instance.Match(h, ct, names...); len(newnames) > 0 {
+					names = newnames
+				}
 			}
 		}
 
