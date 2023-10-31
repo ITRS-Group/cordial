@@ -300,10 +300,8 @@ func AllComponents() (cts []*Component) {
 // RealComponents returns a slice of all registered components that are
 // not the root
 func RealComponents() (cts []*Component) {
-	log.Debug().Msgf("registered components: %v", registeredComponents)
 	for _, c := range registeredComponents {
 		if c != &RootComponent {
-			log.Debug().Msgf("adding %s", c)
 			cts = append(cts, c)
 		}
 	}
