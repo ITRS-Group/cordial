@@ -302,10 +302,10 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 	ch := make(chan *Response, len(instances))
 	for _, c := range instances {
 		wg.Add(1)
-		go func(i geneos.Instance) {
+		go func(c geneos.Instance) {
 			defer wg.Done()
 
-			resp := f(i, values...)
+			resp := f(c, values...)
 			resp.Finish = time.Now()
 			ch <- resp
 		}(c)
@@ -384,15 +384,19 @@ func Names(h *geneos.Host, ct *geneos.Component) (names []string) {
 // unchanged and unchecked against valid names.
 func Match(h *geneos.Host, ct *geneos.Component, patterns ...string) (names []string) {
 	for _, pattern := range patterns {
-		_, p, _ := SplitName(pattern, h)
+		_, p, h := SplitName(pattern, h) // override 'h' inside loop
 		if p == "" {
 			names = append(names, pattern)
 			continue
 		}
 		for _, name := range Names(h, ct) {
 			_, n, _ := SplitName(name, h)
-			if match, _ := path.Match(pattern, n); match {
-				names = append(names, n)
+			if match, _ := path.Match(p, n); match {
+				if h == geneos.ALL {
+					names = append(names, n)
+				} else {
+					names = append(names, n+"@"+h.String())
+				}
 			}
 		}
 	}
