@@ -48,13 +48,14 @@ type expandOptions struct {
 //	s := config.GetString("config.value", ExternalLookups(false), LookupTable(configMap), Prefix("myconf", myFunc))
 type ExpandOptions func(*expandOptions)
 
-var defaultFuncMapsMutex sync.Mutex
-
+// use a normal map, protected with mutex and not sync.Map as this is
+// copied into a normal map later on
 var defaultFuncMaps = map[string]func(*Config, string, bool) (string, error){
 	"http":  fetchURL,
 	"https": fetchURL,
 	"file":  fetchFile,
 }
+var defaultFuncMapsMutex sync.Mutex
 
 func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
 	e = &expandOptions{
@@ -225,7 +226,7 @@ func Initial(value any) ExpandOptions {
 //
 // name is not checked for self-referencing
 func Replace(name string) ExpandOptions {
-	return func(eo *expandOptions) {
-		eo.replacements = append(eo.replacements, name)
+	return func(e *expandOptions) {
+		e.replacements = append(e.replacements, name)
 	}
 }
