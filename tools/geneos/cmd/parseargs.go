@@ -67,7 +67,6 @@ const (
 // host
 func ParseArgs(command *cobra.Command, args []string) (err error) {
 	var wild bool
-	var newnames []string
 
 	var ct *geneos.Component
 	var names, params []string
@@ -134,7 +133,7 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 		}
 		names = args[1:]
 		if annotations[AnnotationExpand] == "true" {
-			if newnames = instance.Match(h, ct, names...); len(newnames) > 0 {
+			if newnames := instance.Match(h, ct, names...); len(newnames) > 0 {
 				names = newnames
 			}
 		}
@@ -161,7 +160,7 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 				names = args
 			}
 			if annotations[AnnotationExpand] == "true" {
-				if newnames = instance.Match(h, ct, names...); len(newnames) > 0 {
+				if newnames := instance.Match(h, ct, names...); len(newnames) > 0 {
 					names = newnames
 				}
 			}
@@ -234,6 +233,7 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 	log.Debug().Msgf("ct %s, args %v, params %v", ct, names, params)
 
 	m := make(map[string]bool, len(names))
+	var newnames []string
 	// traditional loop because we can't modify args in a loop to skip
 	for i := 0; i < len(names); i++ {
 		name := names[i]
