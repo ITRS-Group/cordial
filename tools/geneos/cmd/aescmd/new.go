@@ -37,7 +37,7 @@ import (
 
 var newCmdKeyfile config.KeyFile
 var newCmdBackupSuffix string
-var newCmdImportShared, newCmdSaveUser, newCmdOverwriteKeyfile bool
+var newCmdImportShared, newCmdSaveUser, newCmdOverwriteKeyfile, newCmdImportUpdate bool
 
 // var aesDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
 
@@ -45,15 +45,14 @@ func init() {
 	aesCmd.AddCommand(newCmd)
 
 	newCmd.Flags().VarP(&newCmdKeyfile, "keyfile", "k", "Path to key file, defaults to STDOUT")
-	newCmd.Flags().BoolVarP(&newCmdSaveUser, "user", "U", false, `New user key file (typically "${HOME}/.config/geneos/keyfile.aes")`)
-
+	newCmd.Flags().BoolVarP(&newCmdSaveUser, "user", "U", false, `Write to user key file (typically "${HOME}/.config/geneos/keyfile.aes")`)
 	newCmd.Flags().StringVarP(&newCmdBackupSuffix, "backup", "b", ".old", "Backup existing keyfile with extension given")
-
 	newCmd.Flags().BoolVarP(&newCmdOverwriteKeyfile, "force", "F", false, "Force overwriting an existing key file")
-
-	newCmd.Flags().BoolVarP(&newCmdImportShared, "shared", "S", false, "Import the keyfile to component shared directories and set on instances")
+	newCmd.Flags().BoolVarP(&newCmdImportShared, "shared", "S", false, "Import the keyfile to component shared directories")
+	newCmd.Flags().BoolVar(&newCmdImportUpdate, "update", false, "Update shared keyfile on matching instances")
 
 	newCmd.MarkFlagsMutuallyExclusive("keyfile", "user")
+	newCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/new.md
@@ -105,14 +104,17 @@ geneos aes new -S gateway
 		}
 
 		if newCmdImportShared {
-			ct, names, _ := cmd.ParseTypeNamesParams(command)
+			ct, names := cmd.ParseTypeNames(command)
 			h := geneos.GetHost(cmd.Hostname)
 
-			for _, h := range h.OrList(geneos.AllHosts()...) {
+			crc32, err := geneos.ImportSharedKeyValues(h, ct, kv)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("imported keyfile with CRC %08X\n", crc32)
+
+			if newCmdImportUpdate {
 				for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-					if err = geneos.SaveKeyFileShared(h, ct, kv); err != nil {
-						return
-					}
 					instance.Do(h, ct, names, aesNewSetInstance, crcstr+".aes").Write(os.Stdout)
 				}
 			}
