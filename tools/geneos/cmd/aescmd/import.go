@@ -29,20 +29,18 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var importCmdKeyfile config.KeyFile
+var importCmdKeyfileSource string
 
 func init() {
 	aesCmd.AddCommand(importCmd)
 
-	importCmdKeyfile = cmd.DefaultUserKeyfile
+	importCmdKeyfileSource = string(cmd.DefaultUserKeyfile)
 
-	importCmd.Flags().VarP(&importCmdKeyfile, "keyfile", "k", "Keyfile to use `PATH|URL|-`")
-	importCmd.MarkFlagRequired("keyfile")
+	importCmd.Flags().StringVarP(&importCmdKeyfileSource, "keyfile", "k", "-", "Path to key-file")
 	importCmd.Flags().SortFlags = false
 
 }
@@ -55,11 +53,8 @@ var importCmd = &cobra.Command{
 	Short: "Import key files for component TYPE",
 	Long:  importCmdDescription,
 	Example: strings.ReplaceAll(`
-# import local keyfile.aes to GENEOS/gateway/gateway_shared/DEADBEEF.aes
+# import keyfile.aes to GENEOS/gateway/gateway_shared/DEADBEEF.aes
 geneos aes import --keyfile ~/keyfile.aes gateway
-
-# import a remote keyfile to the remote Geneos host named |remote1|
-geneos aes import -k https://myserver.example.com/secure/keyfile.aes -H remote1
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -68,9 +63,8 @@ geneos aes import -k https://myserver.example.com/secure/keyfile.aes -H remote1
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, _ := cmd.ParseTypeNames(command)
-		h := geneos.GetHost(cmd.Hostname)
 
-		crc32, err := geneos.ImportKeyFile(h, ct, importCmdKeyfile)
+		crc32, err := geneos.ImportSharedKey(geneos.GetHost(cmd.Hostname), ct, importCmdKeyfileSource)
 		fmt.Printf("imported keyfile with CRC %08X\n", crc32)
 		return
 	},

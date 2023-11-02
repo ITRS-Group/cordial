@@ -24,6 +24,8 @@ package geneos
 
 import (
 	"fmt"
+	"net/http"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -40,7 +42,7 @@ func UseKeyFile(h *Host, ct *Component, keyfile config.KeyFile, keycrc string) (
 
 	if keycrc == "" {
 		var crc32 uint32
-		crc32, err = ImportKeyFile(h, ct, keyfile)
+		crc32, err = ImportSharedKey(h, ct, string(keyfile))
 		crc = fmt.Sprintf("%08X", crc32)
 		return
 	}
@@ -76,31 +78,61 @@ func UseKeyFile(h *Host, ct *Component, keyfile config.KeyFile, keycrc string) (
 	defer k.Close()
 	kv := config.Read(k)
 
-	crc32, err := ImportKeyValues(h, ct, kv)
+	crc32, err := ImportSharedKeyValues(h, ct, kv)
 	crc = fmt.Sprintf("%08X", crc32)
 	return
 }
 
-// ImportKeyFile copies the keyfile to the host h and component type ct
-// shared directory. Host can be ALL and ct can be nil, in which
-// case they are treated as wildcards.
-func ImportKeyFile(h *Host, ct *Component, keyfile config.KeyFile) (crc uint32, err error) {
-	crc, _, err = keyfile.Check(false)
-	if err != nil {
+// ImportSharedKey writes the contents of source to a shared keyfile on
+// host h, component type ct. Host can be `ALL` and ct can be nil, in
+// which case they are treated as wildcards. source can be a local file
+// ("~/" relative to user home), a remote URL or "-" for STDIN.
+func ImportSharedKey(h *Host, ct *Component, source string) (crc uint32, err error) {
+	switch {
+	case source == "":
+		err = ErrInvalidArgs
 		return
-	}
-	kv, err := keyfile.Read()
-	if err != nil {
-		return
-	}
+	case source == "-":
+		// STDIN
+		return ImportSharedKeyValues(h, ct, config.Read(os.Stdin))
 
-	return ImportKeyValues(h, ct, kv)
+	case strings.HasPrefix(source, "https://"), strings.HasPrefix(source, "http://"):
+		// remote
+		resp, err := http.Get(source)
+		if err != nil {
+			return crc, err
+		}
+		defer resp.Body.Close()
+		return ImportSharedKeyValues(h, ct, config.Read(resp.Body))
+	case strings.HasPrefix(source, "~/"):
+		// relative to home
+		home, _ := os.UserHomeDir()
+		source = strings.Replace(source, "~", home, 1)
+		fallthrough
+	default:
+		// local file
+		keyfile := config.KeyFile(source)
+		crc, _, err = keyfile.Check(false)
+		if err != nil {
+			return
+		}
+		kv, err := keyfile.Read()
+		if err != nil {
+			return crc, err
+		}
+
+		return ImportSharedKeyValues(h, ct, kv)
+	}
 }
 
-// ImportKeyValues saves a keyfile with values kv to the host h and
-// component type ct shared directory. Host can be ALL and ct can
-// be nil, in which case they are treated as wildcards.
-func ImportKeyValues(h *Host, ct *Component, kv *config.KeyValues) (crc uint32, err error) {
+// ImportSharedKeyValues writes key values kv to the host h and
+// component type ct shared directory. Host can be ALL and ct can be
+// nil, in which case they are treated as wildcards.
+func ImportSharedKeyValues(h *Host, ct *Component, kv *config.KeyValues) (crc uint32, err error) {
+	if kv == nil {
+		err = ErrInvalidArgs
+		return
+	}
 	crc, err = kv.Checksum()
 	if err != nil {
 		return
@@ -110,7 +142,7 @@ func ImportKeyValues(h *Host, ct *Component, kv *config.KeyValues) (crc uint32, 
 	// the filename base. create 'keyfiles' directory as required
 	for _, h := range h.OrList(AllHosts()...) {
 		for _, ct := range ct.OrList(UsesKeyFiles()...) {
-			if err = SaveKeyFileShared(h, ct, kv); err != nil {
+			if err = WriteSharedKey(h, ct, kv); err != nil {
 				return
 			} else if err == nil {
 				log.Debug().Msgf("not importing existing %q CRC named keyfile on %s", crc, h)
@@ -120,14 +152,15 @@ func ImportKeyValues(h *Host, ct *Component, kv *config.KeyValues) (crc uint32, 
 	return
 }
 
-// SaveKeyFileShared saves a key file with values a to the shared
-// keyfile directory for component ct on host h
-func SaveKeyFileShared(h *Host, ct *Component, a *config.KeyValues) (err error) {
-	if ct == nil || h == nil || a == nil {
+// WriteSharedKey writes key values kv to the shared keyfile directory
+// for component ct on host h using the CRC32 checksum of the values as
+// the base name. Both host h and component ct must be specific.
+func WriteSharedKey(h *Host, ct *Component, kv *config.KeyValues) (err error) {
+	if ct == nil || h == nil || h == ALL || kv == nil {
 		return ErrInvalidArgs
 	}
 
-	crc, err := a.Checksum()
+	crc, err := kv.Checksum()
 	if err != nil {
 		return err
 	}
@@ -150,7 +183,7 @@ func SaveKeyFileShared(h *Host, ct *Component, a *config.KeyValues) (err error) 
 	}
 	defer w.Close()
 
-	if err = a.Write(w); err != nil {
+	if err = kv.Write(w); err != nil {
 		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
 	}
 	fmt.Printf("keyfile %s.aes saved to %s shared directory on %s\n", crcstr, ct, h)

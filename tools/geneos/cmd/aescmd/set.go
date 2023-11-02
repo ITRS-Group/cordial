@@ -57,7 +57,7 @@ var setCmd = &cobra.Command{
 	Long:         setCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "true",
+		cmd.AnnotationWildcard:  "explicit",
 		cmd.AnnotationNeedsHome: "true",
 		cmd.AnnotationExpand:    "true",
 	},
