@@ -40,8 +40,8 @@ import (
 // Config embeds Viper
 type Config struct {
 	Viper                *viper.Viper
-	mutex                sync.RWMutex // mutex for access to the above viper
-	Type                 string       // The type of configuration file loaded
+	mutex                *sync.RWMutex // mutex to protect concurrent access to the above viper
+	Type                 string        // The type of configuration file loaded
 	defaultExpandOptions []ExpandOptions
 	delimiter            string
 	appUserConfDir       string
@@ -51,7 +51,6 @@ type Config struct {
 var global *Config
 
 func init() {
-	// global = &Config{Viper: viper.NewWithOptions()}
 	global = New()
 }
 
@@ -83,6 +82,7 @@ func New(options ...FileOptions) *Config {
 		Viper: viper.NewWithOptions(
 			viper.KeyDelimiter(opts.delimiter),
 			viper.EnvKeyReplacer(strings.NewReplacer(opts.delimiter, opts.envdelimiter))),
+		mutex:          &sync.RWMutex{},
 		delimiter:      opts.delimiter,
 		appUserConfDir: path.Join(userConfDir, opts.appname),
 	}
@@ -130,7 +130,8 @@ func (c *Config) Delimiter() string {
 
 // Sub returns a Config instance rooted at the key passed. If key does
 // not exist then an empty config structure is returned, unlike viper
-// which returns nil.
+// which returns nil. It uses the mutex pointer from the caller so that
+// locking of sub-config objects also applies to the original.
 func (c *Config) Sub(key string) *Config {
 	c.mutex.RLock()
 	vcf := c.Viper.Sub(key)
@@ -139,7 +140,14 @@ func (c *Config) Sub(key string) *Config {
 	if vcf == nil {
 		vcf = viper.New()
 	}
-	return &Config{Viper: vcf}
+	return &Config{
+		Viper:                vcf,
+		mutex:                c.mutex,
+		Type:                 c.Type,
+		delimiter:            c.delimiter,
+		defaultExpandOptions: c.defaultExpandOptions,
+		appUserConfDir:       c.appUserConfDir,
+	}
 }
 
 // Set sets the key to value

@@ -1,5 +1,19 @@
 # Change Log
 
+## Version v1.10.3
+
+> **Released 2023-11-02**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.10.3 Fixes
+
+* `tools/geneos` - Fix duplication of non-host qualified names introduced in last fixes - a string list was re-used instead of being locally allocated inside blocks.
+
+* `pkg/config` - In Sub() copy the pointer to the mutex from the parent so that locks apply to the whole config object. Fixes concurrent access panic when methods are called on both the parent and the new sub-config. While here, also copy the other config fields, like delimiter.
+
+---
+
 ## Version v1.10.2
 
 > **Released 2023-10-31**
