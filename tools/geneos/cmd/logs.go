@@ -321,14 +321,10 @@ func filterOutput(i geneos.Instance, path string, reader io.ReadSeeker) (sz int6
 		if e > s {
 			outHeader(i, path)
 		}
-		// something odd about the file offset after io.Copy on sftp
-		// remote files, so instead calculate the position and update
-		// manually. fixes broken logging on remotes.
-		n, err := io.Copy(os.Stdout, reader)
+		_, err := io.Copy(os.Stdout, reader)
 		if err != nil {
 			log.Error().Err(err).Msg("")
 		}
-		reader.Seek(s+n, io.SeekStart)
 	}
 	sz, _ = reader.Seek(0, io.SeekCurrent)
 	return
