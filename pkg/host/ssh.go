@@ -286,7 +286,8 @@ func (h *SSHRemote) DialSFTP() (f *sftp.Client, err error) {
 			h.lastAttempt = time.Now()
 			return
 		}
-		if f, err = sftp.NewClient(s); err != nil {
+		// disable concurrent reads as they mess with file offsets when using io.Copy()
+		if f, err = sftp.NewClient(s, sftp.UseConcurrentReads(false)); err != nil {
 			h.failed = err
 			h.lastAttempt = time.Now()
 			return
