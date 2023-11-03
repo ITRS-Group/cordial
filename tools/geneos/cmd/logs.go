@@ -47,9 +47,9 @@ var logCmdStderr, logCmdNoNormal, logCmdFollow, logCmdCat bool
 var logCmdMatch, logCmdIgnore string
 
 type files struct {
-	c   geneos.Instance
-	r   io.ReadSeekCloser
-	pos int64
+	instance geneos.Instance
+	reader   io.ReadSeekCloser
+	offset   int64
 }
 
 // global watchers for logs
@@ -134,25 +134,25 @@ func followLogs(ct *geneos.Component, args []string, stderr bool) (err error) {
 var lastout string
 
 func outHeader(i geneos.Instance, path string) {
-	if lastout == path {
+	if lastout == i.String()+":"+path {
 		return
 	}
 	if lastout != "" {
 		fmt.Println()
 	}
 	fmt.Printf("===> %s %s <===\n", i, path)
-	lastout = path
+	lastout = i.String() + ":" + path
 }
 
 func outHeaderString(i geneos.Instance, path string) (lines []string) {
-	if lastout == path {
+	if lastout == i.String()+":"+path {
 		return
 	}
 	if lastout != "" {
 		lines = append(lines, "")
 	}
 	lines = append(lines, fmt.Sprintf("===> %s %s <===", i, path))
-	lastout = path
+	lastout = i.String() + ":" + path
 	return
 }
 
@@ -213,7 +213,7 @@ func tailLines(f io.ReadSeekCloser, linecount int) (text string, err error) {
 	// reasonable guess at bytes per line to use as a multiplier
 	chunk := int64(linecount * charsPerLine)
 	buf := make([]byte, chunk)
-	alllines := []string{""}
+	allLines := []string{""}
 
 	if f == nil {
 		return
@@ -237,19 +237,18 @@ func tailLines(f io.ReadSeekCloser, linecount int) (text string, err error) {
 		buffer := string(buf[:n])
 
 		// split buffer, count lines, if enough shortcut a return
-		// else keep alllines[0] (partial end of previous line), save the rest and
+		// else keep allLines[0] (partial end of previous line), save the rest and
 		// repeat until beginning of file or N lines
-		log.Debug().Msgf("len(alllines) = %d", len(alllines))
-		newlines := strings.FieldsFunc(buffer+alllines[0], isLineSep)
-		alllines = append(newlines, alllines[1:]...)
-		if len(alllines) > linecount {
-			text = strings.Join(alllines[len(alllines)-linecount:], "\n")
+		newlines := strings.FieldsFunc(buffer+allLines[0], isLineSep)
+		allLines = append(newlines, allLines[1:]...)
+		if len(allLines) > linecount {
+			text = strings.Join(allLines[len(allLines)-linecount:], "\n")
 			f.Seek(end, io.SeekStart)
 			return text, err
 		}
 	}
 
-	text = strings.Join(alllines, "\n")
+	text = strings.Join(allLines, "\n")
 	f.Seek(end, io.SeekStart)
 	return
 }
@@ -315,10 +314,21 @@ func filterOutput(i geneos.Instance, path string, reader io.ReadSeeker) (sz int6
 			}
 		}
 	default:
-		outHeader(i, path)
-		if _, err := io.Copy(os.Stdout, reader); err != nil {
+		s, _ := reader.Seek(0, io.SeekCurrent)
+		e, _ := reader.Seek(0, io.SeekEnd)
+		reader.Seek(s, io.SeekStart)
+
+		if e > s {
+			outHeader(i, path)
+		}
+		// something odd about the file offset after io.Copy on sftp
+		// remote files, so instead calculate the position and update
+		// manually. fixes broken logging on remotes.
+		n, err := io.Copy(os.Stdout, reader)
+		if err != nil {
 			log.Error().Err(err).Msg("")
 		}
+		reader.Seek(s+n, io.SeekStart)
 	}
 	sz, _ = reader.Seek(0, io.SeekCurrent)
 	return
@@ -382,7 +392,8 @@ func logFollowInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 func logFollowInstanceFile(i geneos.Instance, logfile string) (err error) {
 	// store a placeholder, records interest for this instance even if
 	// file does not exist at start
-	tails.Store(logfile, &files{i, nil, 0})
+	key := i.Host().String() + ":" + logfile
+	tails.Store(key, &files{i, nil, 0})
 
 	f, err := i.Host().Open(logfile)
 	if err != nil {
@@ -398,10 +409,12 @@ func logFollowInstanceFile(i geneos.Instance, logfile string) (err error) {
 			filterOutput(i, logfile, strings.NewReader(text+"\n"))
 		}
 
-		sz, _ := f.Seek(0, os.SEEK_CUR)
-		tails.Store(logfile, &files{i, f, sz})
+		offset, _ := f.Seek(0, io.SeekCurrent)
+		tails.Store(key, &files{i, f, offset})
 	}
-	log.Debug().Msgf("watching %s", logfile)
+	fl, _ := tails.Load(key)
+	offset, _ := f.Seek(0, io.SeekCurrent)
+	log.Debug().Msgf("watching %s from offset %d - %v", key, offset, fl)
 
 	return nil
 }
@@ -417,46 +430,47 @@ func watchLogs() (tails *sync.Map) {
 				if value == nil {
 					return true
 				}
+				l := strings.SplitN(key.(string), ":", 2)
+				logfile := l[1]
 
-				logfile := key.(string)
 				tail := value.(*files)
 
-				st, err := tail.c.Host().Stat(logfile)
+				st, err := tail.instance.Host().Stat(logfile)
 				if err != nil {
 					return true
 				}
-				newsize := st.Size()
+				size := st.Size()
 
-				if newsize == tail.pos {
+				if size == tail.offset {
 					// no change
 					return true
 				}
 
 				// if we have an existing file and it appears
 				// to have grown then output whatever is new
-				if tail.r != nil {
-					newsize = filterOutput(tail.c, logfile, tail.r)
-					if newsize > tail.pos {
-						tail.pos = newsize
+				if tail.reader != nil {
+					size = filterOutput(tail.instance, logfile, tail.reader)
+					if size >= tail.offset {
+						tail.offset = size
 						tails.Store(key, tail)
 						return true
 					}
 
-					if newsize < tail.pos {
-						// if the file seems to have shrunk, then
-						// we are here, so close the old one
-						tail.r.Close()
-						tails.Store(key, &files{tail.c, nil, 0})
-						fmt.Printf("===> %s %s Rolled, re-opening <===\n", tail.c, logfile)
-
+					if size < tail.offset {
+						// if the file seems to have shrunk, then close
+						// the old one, store a marker for next time
+						tail.reader.Close()
+						tails.Store(key, &files{tail.instance, nil, 0})
+						fmt.Printf("===> %s %s Rolled, re-opening <===\n", tail.instance, logfile)
+						// drop through to re-open
 					}
 				}
 
 				// open new file, read to the end, return
-				if tail.r, err = tail.c.Host().Open(logfile); err != nil {
+				if tail.reader, err = tail.instance.Host().Open(logfile); err != nil {
 					log.Error().Err(err).Msg("cannot (re)open")
 				}
-				tail.pos = filterOutput(tail.c, logfile, tail.r)
+				tail.offset = filterOutput(tail.instance, logfile, tail.reader)
 				tails.Store(key, tail)
 				return true
 			})
