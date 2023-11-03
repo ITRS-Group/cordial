@@ -1,5 +1,22 @@
 # Change Log
 
+## Version v1.10.4
+
+> **Released 2023-11-03**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.10.4 Fixes
+
+* `pkg/hosts` - disable sftp concurrent reads as this seems to mess with the file offset after io.Copy() and causes `geneos logs` to do strange things with remote log files
+
+* `tools/geneos`
+
+  * Fix a number of issues with `geneos logs`, including the results of the above but also how log file references are stored so that when you are tailing the same named instance on two hosts they get mixed up.
+
+  * Update `aes` commands to be less error prone, change `import` to not automatically update key files in instances, but require a new `--update` flag. Update docs.
+
+
 ## Version v1.10.3
 
 > **Released 2023-11-02**
