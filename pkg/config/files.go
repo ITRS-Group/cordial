@@ -26,7 +26,6 @@ import (
 	"path"
 
 	"github.com/itrs-group/cordial/pkg/host"
-	"github.com/rs/zerolog/log"
 )
 
 // PromoteFile iterates over paths and finds the first regular file that
@@ -41,7 +40,6 @@ import (
 // other arguments is returned (this avoids the second call returning
 // nothing).
 func PromoteFile(r host.Host, paths ...string) (final string) {
-	log.Debug().Msgf("paths: %v", paths)
 	if len(paths) == 0 {
 		return
 	}
@@ -62,15 +60,12 @@ func PromoteFile(r host.Host, paths ...string) (final string) {
 			continue
 		}
 
-		log.Debug().Msgf("here: %s", p)
 		final = p
 		if i == 0 || paths[0] == "" {
-			log.Debug().Msgf("returning paths[0]")
 			return
 		}
 		if dir == "" {
 			if err = r.Rename(p, paths[0]); err != nil {
-				log.Debug().Msgf("renaming path %s to path %s", p, paths[0])
 				return
 			}
 			final = paths[0]
@@ -81,12 +76,10 @@ func PromoteFile(r host.Host, paths ...string) (final string) {
 				return final
 			}
 			if err = r.Rename(p, final); err != nil {
-				log.Debug().Msgf("renaming path %s to dir %s", p, final)
 				return
 			}
 		}
 
-		log.Debug().Msgf("returning path %s", final)
 		return
 	}
 
@@ -99,6 +92,5 @@ func PromoteFile(r host.Host, paths ...string) (final string) {
 		}
 	}
 
-	log.Debug().Msgf("returning path %s", final)
 	return
 }

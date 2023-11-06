@@ -32,17 +32,13 @@ import (
 	"slices"
 	"strconv"
 	"syscall"
-
-	"github.com/rs/zerolog/log"
 )
 
-func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) {
-	var err error
-
+func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) (err error) {
 	// if we've set-up privs at all, set the redirection output file to the same
 	if cmd.SysProcAttr != nil && cmd.SysProcAttr.Credential != nil {
 		if err = out.Chown(int(cmd.SysProcAttr.Credential.Uid), int(cmd.SysProcAttr.Credential.Gid)); err != nil {
-			log.Error().Err(err).Msg("chown")
+			return
 		}
 	}
 	if detach {
@@ -63,4 +59,5 @@ func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) {
 	for fd := int64(0); fd < maxfd; fd++ {
 		cmd.ExtraFiles = append(cmd.ExtraFiles, nil)
 	}
+	return
 }

@@ -40,7 +40,6 @@ import (
 	"time"
 
 	"github.com/awnumar/memguard"
-	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/host"
 )
@@ -135,7 +134,6 @@ func PublicKey(der *memguard.Enclave) (publickey crypto.PublicKey, err error) {
 
 // WriteCert writes cert as PEM to file p on host h
 func WriteCert(h host.Host, p string, cert *x509.Certificate) (err error) {
-	log.Debug().Msgf("write cert to %s", p)
 	pembytes := pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: cert.Raw,
@@ -146,7 +144,6 @@ func WriteCert(h host.Host, p string, cert *x509.Certificate) (err error) {
 
 // WriteCertChain concatenate certs and writes to path on host h
 func WriteCertChain(h host.Host, p string, certs ...*x509.Certificate) (err error) {
-	log.Debug().Msgf("write certs to %s", p)
 	var pembytes []byte
 	for _, cert := range certs {
 		if cert == nil {
@@ -331,34 +328,36 @@ func NewPrivateKey(keytype string) (der *memguard.Enclave, err error) {
 	case "rsa":
 		privateKey, err = rsa.GenerateKey(rand.Reader, 4096)
 		if err != nil {
-			log.Fatal().Err(err).Msg("")
+			return
 		}
 	case "ecdsa":
 		privateKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
-			log.Fatal().Err(err).Msg("")
+			return
 		}
 	case "ed25519":
 		_, privateKey, err = ed25519.GenerateKey(nil)
 		if err != nil {
-			log.Fatal().Err(err).Msg("")
+			return
 		}
 	case "ecdh":
-		ecdsaKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		var ecdsaKey *ecdsa.PrivateKey
+		ecdsaKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
-			log.Fatal().Err(err).Msg("")
+			return
 		}
 		privateKey, err = ecdsaKey.ECDH()
 		if err != nil {
-			log.Fatal().Err(err).Msg("")
+			return
 		}
 	default:
-		log.Fatal().Msgf("unsupported key type %s", keytype)
+		err = fmt.Errorf("%w unsupported key type %s", os.ErrInvalid, keytype)
+		return
 	}
 
 	key, err := x509.MarshalPKCS8PrivateKey(privateKey)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		return
 	}
 	der = memguard.NewEnclave(key)
 	return

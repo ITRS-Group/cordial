@@ -30,7 +30,6 @@ import (
 	"path"
 
 	"github.com/itrs-group/cordial/pkg/host"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
@@ -224,9 +223,8 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 				}
 			}
 			found++
-			if err = vp.MergeConfigMap(d.AllSettings()); err != nil {
-				log.Debug().Err(err).Msgf("merge of %s/%s failed, continuing.", dir, name)
-			}
+			// merge, continue on failure
+			vp.MergeConfigMap(d.AllSettings())
 		}
 		// return an error if no files read and MustExist() set
 		if found == 0 && opts.mustexist {

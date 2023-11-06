@@ -24,8 +24,6 @@ package geneos
 
 import (
 	"reflect"
-
-	"github.com/rs/zerolog/log"
 )
 
 // utility interfaces and functions
@@ -550,7 +548,6 @@ func unrollRuleGroups(in *RuleGroup, parentpath string) (rules map[string]Rule, 
 // position for defaults.
 func setDefaults(from any, to any) {
 	if reflect.TypeOf(to).Kind() != reflect.Pointer {
-		log.Error().Msg("'to' not a pointer")
 		return
 	}
 	sv := reflect.ValueOf(to).Elem()
@@ -578,7 +575,6 @@ func setDefaults(from any, to any) {
 		default:
 			// ignore RemoveTypes and RemoveSamplers in managed entities and
 			// groups - they are not "inherited"
-			// log.Debug().Msgf("unknown type %v", fv.Type())
 		}
 	}
 }
