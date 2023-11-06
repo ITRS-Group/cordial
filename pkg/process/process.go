@@ -36,8 +36,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/hashicorp/go-reap"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -56,7 +54,7 @@ import (
 // written to writepid, if not nil. Remember to only open the file
 // inside the test for daemon mode in the caller, otherwise on
 // re-execution the file will be re-opened and overwrite the one from
-// the parent.
+// the parent. writepid is closed in the parent.
 //
 // On failure the function does return with an error.
 //
@@ -77,19 +75,18 @@ func Daemon(writepid io.WriteCloser, processArgs func([]string, ...string) []str
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 
-	// OS specific (compile time/build constraint) change to cmd
+	// OS specific (compile time/build constraint) changes to cmd
 	prepareCmd(cmd)
 
 	if err = cmd.Start(); err != nil {
 		return
 	}
+
+	// write the resulting PID to writepid if non-nil. close writepid
 	if writepid != nil {
-		if _, err = fmt.Fprintln(writepid, cmd.Process.Pid); err != nil {
-			// too late to return now, just try to log
-			log.Error().Err(err).Msgf("pid %d", cmd.Process.Pid)
-		}
+		fmt.Fprintln(writepid, cmd.Process.Pid)
+		writepid.Close()
 	}
-	writepid.Close()
 	if cmd.Process != nil {
 		cmd.Process.Release()
 	}
@@ -291,7 +288,6 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 		cmd := exec.Command(program.Executable, program.Args...)
 		setCredentialsFromUsername(cmd, program.Username)
 		if _, err := h.Run(cmd, program.Env, program.WorkingDir, program.ErrLog); err != nil {
-			log.Fatal().Err(err).Msg("")
 			return 0, retErrIfFalse(program.IgnoreErr, err)
 		}
 	case program.Restart:

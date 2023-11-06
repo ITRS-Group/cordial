@@ -27,7 +27,6 @@ import (
 	"path"
 
 	"github.com/itrs-group/cordial/pkg/host"
-	"github.com/rs/zerolog/log"
 )
 
 // Save a configuration file for the module name.
@@ -64,7 +63,6 @@ func (cf *Config) Save(name string, options ...FileOptions) (err error) {
 
 	cf.mutex.Lock()
 	cf.Viper.SetFs(r.GetFs())
-	log.Debug().Msgf("saving configuration to %s", p)
 	err = cf.Viper.WriteConfigAs(p)
 	cf.mutex.Unlock()
 	return

@@ -213,7 +213,9 @@ func (h *Local) Start(cmd *exec.Cmd, env []string, home, errfile string) (err er
 	}
 	defer out.Close()
 
-	procSetupOS(cmd, out, true)
+	if err = procSetupOS(cmd, out, true); err != nil {
+		return
+	}
 
 	cmd.Stdout = out
 	cmd.Stderr = out
@@ -249,7 +251,9 @@ func (h *Local) Run(cmd *exec.Cmd, env []string, home, errfile string) (output [
 	}
 	defer out.Close()
 
-	procSetupOS(cmd, out, false)
+	if err = procSetupOS(cmd, out, false); err != nil {
+		return
+	}
 
 	cmd.Stderr = out
 	cmd.Dir = home

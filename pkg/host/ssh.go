@@ -43,7 +43,6 @@ import (
 	"github.com/spf13/afero/sftpfs"
 
 	"github.com/pkg/sftp"
-	"github.com/rs/zerolog/log"
 	"github.com/skeema/knownhosts"
 	"golang.org/x/crypto/ssh"
 )
@@ -133,29 +132,15 @@ func Keys(paths ...string) SSHOptions {
 
 // load any/all the known private keys with no passphrase
 func readSSHkeys(homedir string, files ...string) (signers []ssh.Signer) {
-	// files := strings.Split(config.GetString("privateKeys"), ",")
-	// for i, f := range files {
-	// 	files[i] = path.Join(homedir, userSSHdir, f)
-	// }
-	// files := []string{}
-	// for _, k := range morekeys {
-	// 	if k != "" {
-	// 		files = append(files, k)
-	// 	}
-	// }
-
 	for _, p := range files {
-		log.Debug().Msgf("trying to read private key %s", p)
 		key, err := os.ReadFile(p)
 		if err != nil {
 			continue
 		}
 		signer, err := ssh.ParsePrivateKey(key)
 		if err != nil {
-			log.Debug().Err(err).Msg("")
 			continue
 		}
-		log.Debug().Msgf("loaded private key from %s", p)
 		signers = append(signers, signer)
 	}
 	return
@@ -167,7 +152,6 @@ func sshConnect(dest, user string, password *memguard.Enclave, keyfiles ...strin
 
 	homedir, err = os.UserHomeDir()
 	if err != nil {
-		log.Debug().Msg("user has no home directory, ssh will not be available.")
 		return
 	}
 
@@ -175,25 +159,21 @@ func sshConnect(dest, user string, password *memguard.Enclave, keyfiles ...strin
 	// https://github.com/golang/go/issues/29286#issuecomment-1160958614
 	kh, err := knownhosts.New(path.Join(homedir, userSSHdir, "known_hosts"))
 	if err != nil {
-		log.Debug().Msg("cannot load ssh known_hosts file, ssh will not be available.")
 		return
 	}
 
 	if agentClient := sshConnectAgent(); agentClient != nil {
 		authmethods = append(authmethods, ssh.PublicKeysCallback(agentClient.Signers))
-		log.Debug().Msg("added ssh agent to auth methods")
 	}
 
 	if signers := readSSHkeys(homedir, keyfiles...); len(signers) > 0 {
 		authmethods = append(authmethods, ssh.PublicKeys(signers...))
-		log.Debug().Msgf("added %d private key(s) to auth methods", len(signers))
 	}
 
 	if password != nil && password.Size() > 0 {
 		l, _ := password.Open()
 		defer l.Destroy()
 		authmethods = append(authmethods, ssh.Password(l.String()))
-		log.Debug().Msg("added password to auth methods")
 	}
 
 	config := &ssh.ClientConfig{
@@ -221,12 +201,10 @@ func (h *SSHRemote) Dial() (sc *ssh.Client, err error) {
 	}
 
 	if h.username == "" {
-		log.Error().Msgf("username not set for remote %s", h)
-		return nil, ErrInvalidArgs
+		return nil, fmt.Errorf("%w username not set for remote %s", ErrInvalidArgs, h)
 	}
 	if h.hostname == "" {
-		log.Panic().Msgf("hostname not set for remote %s", h)
-		return nil, ErrInvalidArgs
+		return nil, fmt.Errorf("%w hostname not set for remote %s", ErrInvalidArgs, h)
 	}
 	if h.port == 0 {
 		h.port = 22
@@ -236,16 +214,12 @@ func (h *SSHRemote) Dial() (sc *ssh.Client, err error) {
 	if val, ok := sshSessions.Load(h.name); ok {
 		sc = val.(*ssh.Client)
 	} else {
-		start := time.Now()
-		log.Debug().Msgf("ssh connect to %s as %s", dest, h.username)
 		sc, err = sshConnect(dest, h.username, h.password, h.keys...)
 		if err != nil {
-			log.Error().Err(err).Msg("(note: you MUST add remote keys manually to known_hosts)")
 			h.failed = err
 			h.lastAttempt = time.Now()
-			return
+			return sc, fmt.Errorf("%w (note: you MUST add remote keys manually to known_hosts)")
 		}
-		log.Debug().Msgf("ssh connect opened %s %s %s in %.3fs", h.name, dest, h.username, time.Since(start).Seconds())
 		sshSessions.Store(h.name, sc)
 	}
 	return
@@ -280,7 +254,6 @@ func (h *SSHRemote) DialSFTP() (f *sftp.Client, err error) {
 		f = val.(*sftp.Client)
 	} else {
 		var s *ssh.Client
-		start := time.Now()
 		if s, err = h.Dial(); err != nil {
 			h.failed = err
 			h.lastAttempt = time.Now()
@@ -292,7 +265,6 @@ func (h *SSHRemote) DialSFTP() (f *sftp.Client, err error) {
 			h.lastAttempt = time.Now()
 			return
 		}
-		log.Debug().Msgf("sftp remote %s opened %.3fs", h.name, time.Since(start).Seconds())
 		sftpSessions.Store(h.name, f)
 	}
 	return
@@ -571,7 +543,6 @@ func (h *SSHRemote) ServerVersion() string {
 func (h *SSHRemote) GetFs() afero.Fs {
 	client, err := h.DialSFTP()
 	if err != nil {
-		log.Error().Msgf("connection to %s failed", h)
 		return nil
 	}
 	return sftpfs.New(client)
@@ -606,9 +577,7 @@ func (h *SSHRemote) NewSession() (sess *ssh.Session, err error) {
 			break
 		}
 		var ocerr *ssh.OpenChannelError
-		if errors.As(err, &ocerr) {
-			log.Debug().Err(err).Msg("open channel error, wait and retry")
-		} else {
+		if !errors.As(err, &ocerr) {
 			break
 		}
 		time.Sleep(250 * time.Millisecond)

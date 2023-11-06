@@ -27,6 +27,6 @@ import (
 	"os/exec"
 )
 
-func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) {
-
+func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) (err error) {
+	return
 }
