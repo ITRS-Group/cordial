@@ -90,16 +90,23 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 					// }
 					if !cmdHeader {
 						buf.WriteString("## " + group.Title + "\n\n")
+						buf.WriteString("| Command | Description |\n")
+						buf.WriteString("|-------|-------|\n")
 						cmdHeader = true
 					}
 
+					// cname := name + " " + child.Name()
+					// link := cname + ".md"
+					// link = strings.ReplaceAll(link, " ", "_")
+					// buf.WriteString(fmt.Sprintf("* [`%s`](%s)\t - %s\n", cname, linkHandler(link), child.Short))
+
 					cname := name + " " + child.Name()
-					link := cname + ".md"
-					link = strings.ReplaceAll(link, " ", "_")
-					buf.WriteString(fmt.Sprintf("* [`%s`](%s)\t - %s\n", cname, linkHandler(link), child.Short))
+					link := strings.ReplaceAll(name+" "+child.Name()+".md", " ", "_")
+					buf.WriteString(fmt.Sprintf("| [`%s`](%s)\t | %s |\n", cname, linkHandler(link), child.Short))
 				}
 				if i != len(groups)-1 {
-					buf.WriteString("\n")
+					// buf.WriteString("\n")
+					buf.WriteString("\n---\n\n")
 				}
 			}
 		} else {
