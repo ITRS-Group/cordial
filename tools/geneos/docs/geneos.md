@@ -31,9 +31,9 @@ The subsystems below group related functions together and have their own sub-com
 
 ## Control Instances
 
-| Command | Description |
+| Command / Aliases | Description |
 |-------|-------|
-| [`geneos reload`](geneos_reload.md)	 | Reload Instance Configurations |
+| [`geneos reload / refresh`](geneos_reload.md)	 | Reload Instance Configurations |
 | [`geneos restart`](geneos_restart.md)	 | Restart Instances |
 | [`geneos start`](geneos_start.md)	 | Start Instances |
 | [`geneos stop`](geneos_stop.md)	 | Stop Instances |
@@ -42,36 +42,36 @@ The subsystems below group related functions together and have their own sub-com
 
 ## Inspect Instances
 
-| Command | Description |
+| Command / Aliases | Description |
 |-------|-------|
 | [`geneos command`](geneos_command.md)	 | Show Instance Start-up Details |
 | [`geneos home`](geneos_home.md)	 | Display Instance and Component Home Directories |
-| [`geneos list`](geneos_list.md)	 | List Instances |
-| [`geneos logs`](geneos_logs.md)	 | View Instance Logs |
-| [`geneos ps`](geneos_ps.md)	 | List Running Instance Details |
-| [`geneos show`](geneos_show.md)	 | Show Instance Configuration |
+| [`geneos list / ls`](geneos_list.md)	 | List Instances |
+| [`geneos logs / log`](geneos_logs.md)	 | View Instance Logs |
+| [`geneos ps / status`](geneos_ps.md)	 | List Running Instance Details |
+| [`geneos show / details`](geneos_show.md)	 | Show Instance Configuration |
 
 ---
 
 ## Manage Instances
 
-| Command | Description |
+| Command / Aliases | Description |
 |-------|-------|
 | [`geneos clean`](geneos_clean.md)	 | Clean-up Instance Directories |
-| [`geneos copy`](geneos_copy.md)	 | Copy instances |
+| [`geneos copy / cp`](geneos_copy.md)	 | Copy instances |
 | [`geneos disable`](geneos_disable.md)	 | Disable instances |
 | [`geneos enable`](geneos_enable.md)	 | Enable instance |
-| [`geneos move`](geneos_move.md)	 | Move instances |
+| [`geneos move / mv / rename`](geneos_move.md)	 | Move instances |
 | [`geneos protect`](geneos_protect.md)	 | Mark instances as protected |
 
 ---
 
 ## Configure Instances
 
-| Command | Description |
+| Command / Aliases | Description |
 |-------|-------|
 | [`geneos add`](geneos_add.md)	 | Add a new instance |
-| [`geneos delete`](geneos_delete.md)	 | Delete Instances |
+| [`geneos delete / rm`](geneos_delete.md)	 | Delete Instances |
 | [`geneos deploy`](geneos_deploy.md)	 | Deploy a new Geneos instance |
 | [`geneos import`](geneos_import.md)	 | Import Files To Instances Or Components |
 | [`geneos migrate`](geneos_migrate.md)	 | Migrate Instance Configurations |

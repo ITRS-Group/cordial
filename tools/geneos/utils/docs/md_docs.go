@@ -81,21 +81,34 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 		if len(groups) > 0 {
 			for i, group := range groups {
 				cmdHeader := false
+				hasAliases := false
 				for _, child := range children {
 					if child.GroupID != group.ID {
 						continue
 					}
-					// if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
-					// 	continue
-					// }
+					if len(child.Aliases) > 0 {
+						hasAliases = true
+					}
+				}
+				for _, child := range children {
+					if child.GroupID != group.ID {
+						continue
+					}
 					if !cmdHeader {
 						buf.WriteString("## " + group.Title + "\n\n")
-						buf.WriteString("| Command | Description |\n")
+						if hasAliases {
+							buf.WriteString("| Command / Aliases | Description |\n")
+						} else {
+							buf.WriteString("| Command | Description |\n")
+						}
 						buf.WriteString("|-------|-------|\n")
 						cmdHeader = true
 					}
 
 					cname := name + " " + child.Name()
+					for _, alias := range child.Aliases {
+						cname += " / " + alias
+					}
 					link := strings.ReplaceAll(name+" "+child.Name()+".md", " ", "_")
 					buf.WriteString(fmt.Sprintf("| [`%s`](%s)\t | %s |\n", cname, linkHandler(link), child.Short))
 				}
@@ -105,17 +118,30 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 			}
 		} else {
 			hadChildren := true
+			hasAliases := false
+			for _, child := range children {
+				if len(child.Aliases) > 0 {
+					hasAliases = true
+				}
+			}
 			for _, child := range children {
 				if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
 					continue
 				}
 				if !child.HasAvailableSubCommands() && hadChildren {
 					buf.WriteString("\n## Commands\n\n")
-					buf.WriteString("| Command | Description |\n")
+					if hasAliases {
+						buf.WriteString("| Command / Aliases | Description |\n")
+					} else {
+						buf.WriteString("| Command | Description |\n")
+					}
 					buf.WriteString("|-------|-------|\n")
 					hadChildren = false
 				}
 				cname := name + " " + child.Name()
+				for _, alias := range child.Aliases {
+					cname += " / " + alias
+				}
 				link := strings.ReplaceAll(name+" "+child.Name()+".md", " ", "_")
 				buf.WriteString(fmt.Sprintf("| [`%s`](%s)\t | %s |\n", cname, linkHandler(link), child.Short))
 			}
