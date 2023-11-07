@@ -68,6 +68,6 @@ func init() {
 	})
 	GeneosCmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupComponents,
-		Title: "Recognised Component Types",
+		Title: "Component Types",
 	})
 }
