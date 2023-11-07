@@ -1,5 +1,3 @@
-# `geneos config` Subsystem Commands
-
 The commands in the `config` subsystem allow you to control the
 environment of the `geneos` program itself.
 

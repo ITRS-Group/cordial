@@ -1,7 +1,5 @@
 # `geneos init`
 
-# `geneos init` Subsystem Commands
-
 The `init` commands initialise your Geneos install environment ready to run Geneos instances.
 
 On it's own the `init` command will create a new directory (or use an existing one if it's considered empty) based on the options used. By default it will create a directory named `geneos` in your user's home directory unless your home directory ends in `geneos` (e.g. `/home/geneos`) in which case it tries that to avoid stuttering in the path.
@@ -142,11 +140,13 @@ geneos init [flags] [DIRECTORY]
 
 ## Commands
 
-* [`geneos init all`](geneos_init_all.md)	 - Initialise a more complete Geneos environment
-* [`geneos init demo`](geneos_init_demo.md)	 - Initialise a Geneos Demo environment
-* [`geneos init floating`](geneos_init_floating.md)	 - Initialise a Geneos Floating Netprobe environment
-* [`geneos init san`](geneos_init_san.md)	 - Initialise a Geneos SAN (Self-Announcing Netprobe) environment
-* [`geneos init template`](geneos_init_template.md)	 - Initialise or overwrite templates
+| Command | Description |
+|-------|-------|
+| [`geneos init all`](geneos_init_all.md)	 | Initialise a more complete Geneos environment |
+| [`geneos init demo`](geneos_init_demo.md)	 | Initialise a Geneos Demo environment |
+| [`geneos init floating`](geneos_init_floating.md)	 | Initialise a Geneos Floating Netprobe environment |
+| [`geneos init san`](geneos_init_san.md)	 | Initialise a Geneos SAN (Self-Announcing Netprobe) environment |
+| [`geneos init template`](geneos_init_template.md)	 | Initialise or overwrite templates |
 
 ### Options
 
