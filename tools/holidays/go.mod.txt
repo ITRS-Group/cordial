@@ -1,0 +1,5 @@
+module github.com/itrs-group/cordial/tools/holidays
+
+go 1.21
+
+replace github.com/itrs-group/cordial/tools/holidays/ => ./
