@@ -61,11 +61,11 @@ The remote connections over SSH mean there are limitations to the features avail
 
 ## Commands
 
-| Command | Description |
+| Command / Aliases | Description |
 |-------|-------|
 | [`geneos host add`](geneos_host_add.md)	 | Add a remote host |
-| [`geneos host delete`](geneos_host_delete.md)	 | Delete a remote host configuration |
-| [`geneos host list`](geneos_host_list.md)	 | List hosts, optionally in CSV or JSON format |
+| [`geneos host delete / rm / remove`](geneos_host_delete.md)	 | Delete a remote host configuration |
+| [`geneos host list / ls`](geneos_host_list.md)	 | List hosts, optionally in CSV or JSON format |
 | [`geneos host set`](geneos_host_set.md)	 | Set host configuration value |
 | [`geneos host show`](geneos_host_show.md)	 | Show details of remote host configuration |
 
