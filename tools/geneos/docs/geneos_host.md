@@ -1,7 +1,5 @@
 # `geneos host`
 
-# `geneos host` Subsystem
-
 The `geneos` program can seamlessly manage Geneos instances across multiple servers. By transparently and securely connecting to other Linux systems running Geneos components you can do all the same things as with other Geneos instance that you have created locally.
 
 This can be as simple at:
@@ -63,11 +61,13 @@ The remote connections over SSH mean there are limitations to the features avail
 
 ## Commands
 
-* [`geneos host add`](geneos_host_add.md)	 - Add a remote host
-* [`geneos host delete`](geneos_host_delete.md)	 - Delete a remote host configuration
-* [`geneos host list`](geneos_host_list.md)	 - List hosts, optionally in CSV or JSON format
-* [`geneos host set`](geneos_host_set.md)	 - Set host configuration value
-* [`geneos host show`](geneos_host_show.md)	 - Show details of remote host configuration
+| Command | Description |
+|-------|-------|
+| [`geneos host add`](geneos_host_add.md)	 | Add a remote host |
+| [`geneos host delete`](geneos_host_delete.md)	 | Delete a remote host configuration |
+| [`geneos host list`](geneos_host_list.md)	 | List hosts, optionally in CSV or JSON format |
+| [`geneos host set`](geneos_host_set.md)	 | Set host configuration value |
+| [`geneos host show`](geneos_host_show.md)	 | Show details of remote host configuration |
 
 ## SEE ALSO
 

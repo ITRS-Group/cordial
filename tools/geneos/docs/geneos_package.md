@@ -1,7 +1,5 @@
 # `geneos package`
 
-# `geneos package` Subsystem Commands
-
 The `geneos package` commands help you manage ITRS Geneos software releases.
 
 To download and unarchive releases use `geneos package install`. You can also install releases from files you have already downloaded.
@@ -21,10 +19,12 @@ Where X, Y, Z are each ordered in ascending numerical order. If a directory star
 
 ## Commands
 
-* [`geneos package install`](geneos_package_install.md)	 - Install Geneos releases
-* [`geneos package list`](geneos_package_list.md)	 - List packages available for update command
-* [`geneos package uninstall`](geneos_package_uninstall.md)	 - Uninstall Geneos releases
-* [`geneos package update`](geneos_package_update.md)	 - Update the active version of installed Geneos package
+| Command | Description |
+|-------|-------|
+| [`geneos package install`](geneos_package_install.md)	 | Install Geneos releases |
+| [`geneos package list`](geneos_package_list.md)	 | List packages available for update command |
+| [`geneos package uninstall`](geneos_package_uninstall.md)	 | Uninstall Geneos releases |
+| [`geneos package update`](geneos_package_update.md)	 | Update the active version of installed Geneos package |
 
 ### Options inherited from parent commands
 

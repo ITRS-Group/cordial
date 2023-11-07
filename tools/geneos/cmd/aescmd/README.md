@@ -1,5 +1,3 @@
-# `geneos aes` Subsystem
-
 The `aes` subsystem allows you to manage AES256 keyfiles and perform encryption and decryption.
 
 The `aes` commands provide tools to manage Geneos AES256 key files as documented in the [Secure Passwords](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm) section of the manuals.

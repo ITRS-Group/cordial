@@ -1,5 +1,3 @@
-# `geneos package` Subsystem Commands
-
 The `geneos package` commands help you manage ITRS Geneos software releases.
 
 To download and unarchive releases use `geneos package install`. You can also install releases from files you have already downloaded.

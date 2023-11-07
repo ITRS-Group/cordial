@@ -1,5 +1,3 @@
-# `geneos host` Subsystem
-
 The `geneos` program can seamlessly manage Geneos instances across multiple servers. By transparently and securely connecting to other Linux systems running Geneos components you can do all the same things as with other Geneos instance that you have created locally.
 
 This can be as simple at:
