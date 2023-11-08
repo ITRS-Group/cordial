@@ -50,7 +50,7 @@ func init() {
 var revertCmdDescription string
 
 var revertCmd = &cobra.Command{
-	Use:          "revert [TYPE] [NAME...]",
+	Use:          "revert [--executables|-X] | [TYPE] [NAME...]",
 	GroupID:      CommandGroupConfig,
 	Short:        "Revert Migrated Instance Configuration",
 	Long:         revertCmdDescription,
@@ -60,6 +60,7 @@ var revertCmd = &cobra.Command{
 		AnnotationNeedsHome: "true",
 		AnnotationExpand:    "true",
 	},
+	DisableFlagsInUseLine: true,
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := ParseTypeNames(cmd)
 		if revertCmdExecutables {

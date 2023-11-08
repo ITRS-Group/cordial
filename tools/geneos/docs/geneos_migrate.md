@@ -5,7 +5,7 @@ By default the `migrate` command will move instances from old directories to new
 The `--executables`/`-X` option instead creates symbolic links in the ${GENEOS_HOME}/bin directory for names that match the original `ctl` scripts pointing back to the `geneos` program.
 
 ```text
-geneos migrate [TYPE] [NAME...] [flags]
+geneos migrate [--executables|-X] | [TYPE] [NAME...]
 ```
 
 ### Options

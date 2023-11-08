@@ -7,7 +7,7 @@ If given the `--json`/`-j` flag then the output is an array of objects with the 
 The options `--extras`/`-x` and `--env`/`-e` can be used to add one-off extra command line parameters and environment variables to the command constructors. This is primarily to match the `start` and `restart` commands and for diagnostics and debugging
 
 ```text
-geneos command [TYPE] [NAME...] [flags]
+geneos command [TYPE] [NAME...]
 ```
 
 ### Options

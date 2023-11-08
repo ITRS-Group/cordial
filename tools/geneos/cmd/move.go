@@ -42,7 +42,7 @@ func init() {
 var moveCmdDescription string
 
 var moveCmd = &cobra.Command{
-	Use:          "move [TYPE] SOURCE DESTINATION",
+	Use:          "move [TYPE] SOURCE DESTINATION [KEY=VALUE...]",
 	GroupID:      CommandGroupManage,
 	Aliases:      []string{"mv", "rename"},
 	Short:        "Move instances",
@@ -53,6 +53,7 @@ var moveCmd = &cobra.Command{
 		AnnotationNeedsHome: "true",
 		AnnotationExpand:    "true",
 	},
+	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names, params := ParseTypeNamesParams(cmd)
 		if len(names) > 2 {
@@ -61,22 +62,23 @@ var moveCmd = &cobra.Command{
 			}
 			for _, n := range names[:len(names)-1] {
 				log.Debug().Msgf("move %s to %s", n, names[len(names)-1])
-				if err = instance.Copy(ct, n, names[len(names)-1], true); err != nil {
+				if err = instance.Copy(ct, n, names[len(names)-1], instance.Move()); err != nil {
 					return
 				}
 			}
 			return
 		}
-		if len(names) == 0 && len(params) == 2 && strings.HasPrefix(params[0], "@") && strings.HasPrefix(params[1], "@") {
-			names = params
-		}
-		if len(names) == 1 && len(params) == 1 && strings.HasPrefix(params[0], "@") {
+		if len(names) == 0 && len(params) >= 2 && strings.HasPrefix(params[0], "@") && strings.HasPrefix(params[1], "@") {
+			names = params[0:2]
+			params = params[2:]
+		} else if len(names) == 1 && len(params) >= 1 && strings.HasPrefix(params[0], "@") {
 			names = append(names, params[0])
+			params = params[1:]
 		}
 		if len(names) != 2 {
 			return geneos.ErrInvalidArgs
 		}
 
-		return instance.Copy(ct, names[0], names[1], true)
+		return instance.Copy(ct, names[0], names[1], instance.Move(), instance.Params(params...))
 	},
 }

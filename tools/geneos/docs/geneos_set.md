@@ -58,8 +58,8 @@ geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
 ```bash
 geneos set gateway MyGateway licdsecure=false
 geneos set infraprobe -e JAVA_HOME=/usr/lib/java8/jre -e TNS_ADMIN=/etc/ora/network/admin
-geneos set -p secret netprobe local1
-geneos set ...
+geneos set -s secret netprobe local1
+geneos set netprobe cloudapps1 -e SOME_CLIENT_ID=abcde -E SOME_CLIENT_SECRET
 
 ```
 
