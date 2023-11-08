@@ -47,7 +47,7 @@ func init() {
 var migrateCmdDescription string
 
 var migrateCmd = &cobra.Command{
-	Use:          "migrate [TYPE] [NAME...]",
+	Use:          "migrate [--executables|-X] | [TYPE] [NAME...]",
 	GroupID:      CommandGroupConfig,
 	Short:        "Migrate Instance Configurations",
 	Long:         migrateCmdDescription,
@@ -57,6 +57,7 @@ var migrateCmd = &cobra.Command{
 		AnnotationNeedsHome: "true",
 		AnnotationExpand:    "true",
 	},
+	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names := ParseTypeNames(cmd)
 		if migrateCmdExecutables {

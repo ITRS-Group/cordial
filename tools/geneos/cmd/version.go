@@ -49,6 +49,7 @@ var versionCmd = &cobra.Command{
 		AnnotationWildcard:  "false",
 		AnnotationNeedsHome: "false",
 	},
+	DisableFlagsInUseLine: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("%s version %s\n", Execname, cmd.Version)
 		if debug {

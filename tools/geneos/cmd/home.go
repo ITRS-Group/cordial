@@ -40,7 +40,7 @@ func init() {
 var homeCmdDescription string
 
 var homeCmd = &cobra.Command{
-	Use:     "home [flags] [TYPE] [NAME]",
+	Use:     "home [TYPE] [NAME]",
 	GroupID: CommandGroupView,
 	Short:   "Display Instance and Component Home Directories",
 	Long:    homeCmdDescription,
@@ -54,6 +54,7 @@ cat $(geneos home gateway example2)/gateway.txt
 		AnnotationWildcard:  "false",
 		AnnotationNeedsHome: "true",
 	},
+	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, names, _ := ParseTypeNamesParams(cmd)
 

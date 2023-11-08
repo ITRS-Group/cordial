@@ -59,6 +59,7 @@ var commandCmd = &cobra.Command{
 		AnnotationNeedsHome: "true",
 		AnnotationExpand:    "true",
 	},
+	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names := ParseTypeNames(cmd)
 		if commandCmdJSON {

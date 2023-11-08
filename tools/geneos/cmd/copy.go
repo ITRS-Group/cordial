@@ -36,13 +36,14 @@ import (
 
 func init() {
 	GeneosCmd.AddCommand(copyCmd)
+
 }
 
 //go:embed _docs/copy.md
 var copyCmdDescription string
 
 var copyCmd = &cobra.Command{
-	Use:          "copy [TYPE] SOURCE DESTINATION",
+	Use:          "copy [TYPE] SOURCE DESTINATION [KEY=VALUE...]",
 	GroupID:      CommandGroupManage,
 	Aliases:      []string{"cp"},
 	Short:        "Copy instances",
@@ -53,6 +54,7 @@ var copyCmd = &cobra.Command{
 		AnnotationNeedsHome: "true",
 		AnnotationExpand:    "true",
 	},
+	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names, params := ParseTypeNamesParams(cmd)
 		if len(names) > 2 {
@@ -61,23 +63,24 @@ var copyCmd = &cobra.Command{
 			}
 			for _, n := range names[:len(names)-1] {
 				log.Debug().Msgf("copy %s to %s", n, names[len(names)-1])
-				if err = instance.Copy(ct, n, names[len(names)-1], false); err != nil {
+				if err = instance.Copy(ct, n, names[len(names)-1]); err != nil {
 					return
 				}
 			}
 			return
 		}
-		if len(names) == 0 && len(params) == 2 && strings.HasPrefix(params[0], "@") && strings.HasPrefix(params[1], "@") {
-			names = params
-		}
-		if len(names) == 1 && len(params) == 1 && strings.HasPrefix(params[0], "@") {
+		if len(names) == 0 && len(params) >= 2 && strings.HasPrefix(params[0], "@") && strings.HasPrefix(params[1], "@") {
+			names = params[0:2]
+			params = params[2:]
+		} else if len(names) == 1 && len(params) >= 1 && strings.HasPrefix(params[0], "@") {
 			names = append(names, params[0])
+			params = params[1:]
 		}
 
 		if len(names) != 2 {
 			return geneos.ErrInvalidArgs
 		}
 
-		return instance.Copy(ct, names[0], names[1], false)
+		return instance.Copy(ct, names[0], names[1], instance.Params(params...))
 	},
 }

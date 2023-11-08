@@ -47,13 +47,15 @@ import (
 // files and directories normally.
 //
 // If ct is nil that all component types are considered
-func Copy(ct *geneos.Component, source, destination string, move bool) (err error) {
+func Copy(ct *geneos.Component, source, destination string, options ...CopyOptions) (err error) {
 	var stopped, done bool
 	if source == destination {
 		return fmt.Errorf("%w: source and destination must have different names and/or locations", geneos.ErrInvalidArgs)
 	}
 
 	log.Debug().Msgf("%s %s %s", ct, source, destination)
+
+	opts := evalCopyOptions(options...)
 
 	if strings.HasPrefix(source, "@") {
 		if !strings.HasPrefix(destination, "@") {
@@ -74,7 +76,7 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 		}
 		// they both exist, now loop through all instances on src and try to move/copy
 		for _, name := range Names(sHost, ct) {
-			if err = Copy(ct, name, destination, move); err != nil {
+			if err = Copy(ct, name, destination, options...); err != nil {
 				fmt.Println("Error:", err)
 			}
 		}
@@ -83,7 +85,7 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 
 	if ct == nil {
 		for _, ct := range geneos.RealComponents() {
-			if err = Copy(ct, source, destination, move); err != nil {
+			if err = Copy(ct, source, destination, options...); err != nil {
 				log.Debug().Err(err).Msg("")
 				if errors.Is(err, host.ErrNotExist) {
 					return
@@ -126,7 +128,7 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 		dst.Unload()
 	}
 
-	if move {
+	if opts.move {
 		if IsRunning(src) {
 			if err = Stop(src, true, false); err == nil {
 				stopped = true
@@ -146,12 +148,16 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 
 	// do a dance here to deep copy-ish the dst
 	newdst := src.Type().New(destination)
+	ncf := newdst.Config()
 
 	// copy over settings from source
-	newdst.Config().MergeConfigMap(src.Config().AllSettings())
+	ncf.MergeConfigMap(src.Config().AllSettings())
 	// set the port to zero so that subsequent test for valid ports
 	// doesn't match this one
-	newdst.Config().Set("port", 0)
+	ncf.Set("port", 0)
+
+	// set override parameters here
+	ncf.SetKeyValues(opts.params...)
 
 	// copy directory
 	if err = host.CopyAll(src.Host(), src.Home(), dHost, dst.Home()); err != nil {
@@ -159,10 +165,10 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 		return
 	}
 
-	// delete one or the other, depending
+	// delete one or the other, depending, after finishing other ops
 	defer func(srcname string, srcrem *geneos.Host, srchome string, dst geneos.Instance) {
 		if done {
-			if move {
+			if opts.move {
 				// once we are done, try to delete old instance
 				log.Debug().Msgf("removing old instance %s", srcname)
 				srcrem.RemoveAll(srchome)
@@ -178,34 +184,37 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 	}(src.String(), src.Host(), src.Home(), dst)
 
 	// XXX update *Home manually, as it's not just the prefix
-	newdst.Config().Set("home", path.Join(dst.Type().Dir(dHost), dName))
+	ncf.Set("home", path.Join(dst.Type().Dir(dHost), dName))
 
-	if src.Host() == dHost {
-		if !move {
-			dPort := NextPort(dHost, dst.Type())
-			newdst.Config().Set("port", dPort)
+	// only set a new port if not set through command line parameters
+	if ncf.GetInt("port") == 0 {
+		if src.Host() == dHost {
+			if !opts.move {
+				dPort := NextPort(dHost, dst.Type())
+				ncf.Set("port", dPort)
+			} else {
+				ncf.Set("port", src.Config().GetUint16("port"))
+			}
 		} else {
-			newdst.Config().Set("port", src.Config().GetUint16("port"))
-		}
-	} else {
-		sPort := src.Config().GetUint16("port")
-		dPortsInUse := GetAllPorts(dHost)
-		if _, ok := dPortsInUse[sPort]; ok {
-			log.Debug().Msgf("found port in use: %d", sPort)
-			dPort := NextPort(dHost, dst.Type())
-			newdst.Config().Set("port", dPort)
-		} else {
-			newdst.Config().Set("port", src.Config().GetUint16("port"))
+			sPort := src.Config().GetUint16("port")
+			dPortsInUse := GetAllPorts(dHost)
+			if _, ok := dPortsInUse[sPort]; ok {
+				log.Debug().Msgf("found port in use: %d", sPort)
+				dPort := NextPort(dHost, dst.Type())
+				ncf.Set("port", dPort)
+			} else {
+				ncf.Set("port", src.Config().GetUint16("port"))
+			}
 		}
 	}
 
 	// update any component name only if the same as the instance name
 	log.Debug().Msgf("src name: %s, setting dst to %s", src.Config().GetString("name"), destination)
 	_, newname, _ := SplitName(destination, geneos.LOCAL)
-	newdst.Config().Set("name", newname)
+	ncf.Set("name", newname)
 
 	// config changes don't matter until writing config succeeds
-	log.Debug().Msgf("writing: %v", newdst.Config().AllSettings())
+	log.Debug().Msgf("writing: %v", ncf.AllSettings())
 	if err = SaveConfig(newdst); err != nil {
 		log.Debug().Err(err).Msg("")
 		return
@@ -228,4 +237,36 @@ func Copy(ct *geneos.Component, source, destination string, move bool) (err erro
 		return Start(newdst)
 	}
 	return nil
+}
+
+type copyOptions struct {
+	move   bool
+	params []string
+}
+
+func evalCopyOptions(options ...CopyOptions) (co *copyOptions) {
+	co = &copyOptions{}
+
+	for _, opt := range options {
+		opt(co)
+	}
+	return
+}
+
+type CopyOptions func(*copyOptions)
+
+// Move tells Copy to remove the source instance(s) after the copy.
+func Move() CopyOptions {
+	return func(co *copyOptions) {
+		co.move = true
+	}
+}
+
+// Params add key=value parameters to the copied/moved destination,
+// overriding the values of the source. Currently only supports plain
+// paramaters, not structured ones like environments.
+func Params(p ...string) CopyOptions {
+	return func(co *copyOptions) {
+		co.params = append(co.params, p...)
+	}
 }

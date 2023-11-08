@@ -43,7 +43,7 @@ func init() {
 var protectCmdDescription string
 
 var protectCmd = &cobra.Command{
-	Use:          "protect [TYPE] [NAME...]",
+	Use:          "protect [flags] [TYPE] [NAME...]",
 	GroupID:      CommandGroupManage,
 	Short:        "Mark instances as protected",
 	Long:         protectCmdDescription,
@@ -53,6 +53,7 @@ var protectCmd = &cobra.Command{
 		AnnotationNeedsHome: "true",
 		AnnotationExpand:    "true",
 	},
+	DisableFlagsInUseLine: true,
 	Run: func(command *cobra.Command, _ []string) {
 		ct, args := ParseTypeNames(command)
 		instance.Do(geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *instance.Response) {

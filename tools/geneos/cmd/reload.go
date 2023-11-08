@@ -51,6 +51,7 @@ var reloadCmd = &cobra.Command{
 		AnnotationNeedsHome: "true",
 		AnnotationExpand:    "true",
 	},
+	DisableFlagsInUseLine: true,
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := ParseTypeNames(cmd)
 		responses := instance.Do(geneos.GetHost(Hostname), ct, names, ReloadInstance)

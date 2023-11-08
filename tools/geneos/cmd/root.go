@@ -147,9 +147,10 @@ geneos restart
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
-	Version:            cordial.VERSION,
-	DisableAutoGenTag:  true,
-	DisableSuggestions: true,
+	Version:               cordial.VERSION,
+	DisableAutoGenTag:     true,
+	DisableSuggestions:    true,
+	DisableFlagsInUseLine: true,
 	// SilenceErrors:      true, // this blocks all child errors too...
 	// don't uncomment it
 	PersistentPreRunE: func(command *cobra.Command, args []string) (err error) {
