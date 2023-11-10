@@ -194,6 +194,7 @@ func (n *CA3s) Add(tmpl string, port uint16) (err error) {
 		fmt.Println(resp.Line)
 	}
 
+	// copy default configs
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
 	if err = os.Chdir(baseDir); err != nil {
@@ -221,13 +222,13 @@ func (n *CA3s) Command() (args, env []string, home string) {
 	// locate jar file
 	baseDir := path.Join(instance.BaseVersion(n), "collection_agent")
 
-	d, err := os.ReadDir(baseDir)
+	ca3dir, err := n.Host().ReadDir(baseDir)
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
 	latest := ""
-	for _, n := range d {
+	for _, n := range ca3dir {
 		parts := ca3jarRE.FindStringSubmatch(n.Name())
 		log.Debug().Msgf("found %d parts: %v", len(parts), parts)
 		if len(parts) > 1 {
