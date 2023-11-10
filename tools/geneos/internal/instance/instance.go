@@ -183,7 +183,7 @@ func GetAll(h *geneos.Host, ct *geneos.Component) (instances []geneos.Instance) 
 }
 
 // ByName looks for exactly one matching instance across types and hosts
-// returns Invalid Args if zero of more than 1 match
+// returns Invalid Args if zero if there is more than a single match
 func ByName(h *geneos.Host, ct *geneos.Component, name string) (i geneos.Instance, err error) {
 	list := ByNameAll(h, ct, name)
 	if len(list) == 0 {
