@@ -164,7 +164,7 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *instance.Resp
 		if err != nil {
 			log.Debug().Msgf("error: %s", output)
 		}
-		output, resp.Err = os.ReadFile(tempfile)
+		output, resp.Err = i.Host().ReadFile(tempfile)
 		if resp.Err != nil {
 			return
 		}
