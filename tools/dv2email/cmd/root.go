@@ -81,7 +81,7 @@ func init() {
 
 	DV2EMAILCmd.Flags().SortFlags = false
 
-	execname = path.Base(os.Args[0])
+	execname = cordial.ExecutableName()
 	cordial.LogInit(execname)
 }
 

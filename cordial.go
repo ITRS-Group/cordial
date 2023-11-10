@@ -30,6 +30,7 @@ import (
 	"html"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -116,4 +117,38 @@ func RenderHelpAsMD(command *cobra.Command) {
 		
 		{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}
 `)
+}
+
+// ExecutableName returns a processed executable name. Symlinks are
+// resolved and the basename of the resulting file has, at most, one
+// extension removed and then if there is a '-' followed by the matching
+// cordial version string. Note this final version string must match
+// first version argument or the cordial one compiled into the binary.
+//
+// For example:
+//
+//	`geneos.exe` -> `geneos`
+//	`dv2email-v1.10.0` -> `dv2email`
+func ExecutableName(version ...string) (execname string) {
+	execname, _ = os.Executable()
+	execname, _ = filepath.EvalSymlinks(execname)
+	execname = path.Base(filepath.ToSlash(execname))
+
+	// strip any extension from the binary, to allow windows .EXE
+	// binary to work. Note we get the extension first, it may be
+	// capitalised. This will also remove any other extensions, users
+	// should use '-' or '_' instead.
+	execname = strings.TrimSuffix(execname, path.Ext(execname))
+
+	// finally strip the VERSION, if found, prefixed by a dash, on the
+	// end of the basename
+	//
+	// this way you can run a versioned binary and still see the right
+	// config files
+	if len(version) > 0 {
+		execname = strings.TrimSuffix(execname, "-"+version[0])
+	} else {
+		execname = strings.TrimSuffix(execname, "-"+VERSION)
+	}
+	return
 }

@@ -28,8 +28,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial"
@@ -273,22 +271,7 @@ func initConfig() {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-	Execname, _ = os.Executable()
-	Execname, _ = filepath.EvalSymlinks(Execname)
-	Execname = path.Base(filepath.ToSlash(Execname))
-
-	// strip any extension from the binary, to allow windows .EXE
-	// binary to work. Note we get the extension first, it may be
-	// capitalised. This will also remove any other extensions, users
-	// should use '-' or '_' instead.
-	Execname = strings.TrimSuffix(Execname, path.Ext(Execname))
-
-	// finally strip the VERSION, if found, prefixed by a dash, on the
-	// end of the basename
-	//
-	// this way you can run a versioned binary and still see the right
-	// config files
-	Execname = strings.TrimSuffix(Execname, "-"+cordial.VERSION)
+	Execname = cordial.ExecutableName()
 
 	log.Debug().Msgf("cordial 'geneos' running as '%s', version %s", Execname, cordial.VERSION)
 
