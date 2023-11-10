@@ -197,17 +197,13 @@ func UnrollEntities(in *ManagedEntities, types map[string]Type) (entities map[st
 		entities[entity.Name] = entity
 	}
 
-	for _, childGroup := range in.ManagedEntityGroups {
-		unrolledEntities := unrollEntityGroup(&childGroup, types)
+	for _, group := range in.ManagedEntityGroups {
+		resolveGroup(&group, types)
+		unrolledEntities := unrollEntityGroup(&group, types)
 		for _, entity := range unrolledEntities {
 			if entity.Disabled {
 				continue
 			}
-
-			// remove dups from the unrolling process
-			// entity.ManagedEntityInfo.Attributes = RemoveDuplicates(entity.ManagedEntityInfo.Attributes)
-			// entity.ManagedEntityInfo.Vars = RemoveDuplicates(entity.ManagedEntityInfo.Vars)
-
 			entities[entity.Name] = entity
 		}
 	}
@@ -223,12 +219,15 @@ func unrollEntityGroup(group *ManagedEntityGroup, types map[string]Type) (entiti
 		return
 	}
 
+	// fix-up group here - resolve samplers etc.
+
 	for _, entity := range group.Entities {
 		if entity.Disabled {
 			continue
 		}
 
 		setDefaults(group.ManagedEntityInfo, &entity.ManagedEntityInfo)
+
 		// remove dups from merged slices in setDefaults
 		entity.ManagedEntityInfo.Attributes = RemoveDuplicates(entity.ManagedEntityInfo.Attributes)
 		entity.ManagedEntityInfo.Vars = RemoveDuplicates(entity.ManagedEntityInfo.Vars)
@@ -256,6 +255,23 @@ func unrollEntityGroup(group *ManagedEntityGroup, types map[string]Type) (entiti
 	}
 
 	return
+}
+
+func resolveGroup(group *ManagedEntityGroup, types map[string]Type) {
+	if group.ResolvedSamplers == nil {
+		group.ResolvedSamplers = map[string]bool{}
+	}
+
+	if group.AddTypes != nil {
+		for _, at := range group.AddTypes.Types {
+			for _, sampler := range types[at.Type].Samplers {
+				if !sampler.Disabled {
+					group.ResolvedSamplers[at.Type+":"+sampler.Name] = true
+				}
+			}
+		}
+	}
+
 }
 
 // resolveSamplersFromGroup processes RemoveTypes, RemoveSamplers and AddTypes in
@@ -546,16 +562,16 @@ func unrollRuleGroups(in *RuleGroup, parentpath string) (rules map[string]Rule, 
 // loop over fields and if the default is not a nil pointer or a nil
 // values and the field is not set then assign. uses field name not
 // position for defaults.
-func setDefaults(from any, to any) {
-	if reflect.TypeOf(to).Kind() != reflect.Pointer {
+func setDefaults(source any, dest any) {
+	if reflect.TypeOf(dest).Kind() != reflect.Pointer {
 		return
 	}
-	sv := reflect.ValueOf(to).Elem()
+	sv := reflect.ValueOf(dest).Elem()
 
 	for i := 0; i < sv.NumField(); i++ {
 		fv := sv.Field(i)
 		fn := sv.Type().Field(i).Name
-		dv := reflect.ValueOf(from).FieldByName(fn)
+		dv := reflect.ValueOf(source).FieldByName(fn)
 
 		switch {
 		case fv.Type() == reflect.PointerTo(reflect.TypeOf((bool)(false))):
