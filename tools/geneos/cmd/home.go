@@ -67,14 +67,18 @@ cat $(geneos home gateway example2)/gateway.txt
 			return nil
 		}
 
-		i, err := instance.ByName(geneos.GetHost(Hostname), ct, names[0])
+		_, n, h := instance.SplitName(names[0], geneos.GetHost(Hostname))
+		if h == geneos.LOCAL || h == geneos.ALL {
+			i, err := instance.ByName(geneos.LOCAL, ct, n+"@localhost")
 
-		if err != nil || !i.Host().IsLocal() {
+			if err != nil {
+				fmt.Println(geneos.Root())
+				return nil
+			}
+			fmt.Println(i.Home())
+		} else {
 			fmt.Println(geneos.Root())
-			return nil
 		}
-
-		fmt.Println(i.Home())
 		return nil
 	},
 }
