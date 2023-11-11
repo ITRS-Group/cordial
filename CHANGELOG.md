@@ -1,5 +1,42 @@
 # Change Log
 
+## Version v1.11.0
+
+> **Released 2023-11-11**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.11.0 Changes
+
+* New [`gateway-reporter`](tools/gateway-reporter/README.md)
+
+  A new tool to build monitoring coverage reports from static Gateway configurations. This is a new tool and support is limited to a core set of plugins and the data reported for each. The tool does not interrogate running Gateways and so does not attempt to resolve dynamic parts of the configuration. Output is in XLSX, CSV and JSON formats.
+
+  This is a new work in progress based on an internal project for a client and we welcome suggestions and contributions. Please use the links above to send us feedback!
+
+* New [`hoildays`](tools/holidays/README.md)
+
+  Another new tool, but very early in development. This uses the Python holiday module (which seems the only reliable, free source of global holiday data) to generate a list of holidays and their names in Go. It has to run in a docker container as the `cpy3` Go package only supports Python 3.7. It may prove simpler just to write the whole tool in Python and avoid Go, but the local skills are sadly lacking at the moment. Also, we have Go based tools in `pkg/geneos` to build Gateway configuration XML in a nice, clean way.
+
+  The aim is to be able to create Gateway include files with predefined Active Times of holidays that can be incorporated into more general monitoring.
+
+  Again, suggestions and, more importantly, contributions welcomed.
+
+## v1.11.0 Fixes
+
+* `pkg/`
+
+  - Removal of all logging in packages. This was left over from early development and is considered bad practice.
+
+* `tools/geneos`
+
+  - Fix a mistake in handling remote hosts in `geneos show -V` for validation runs.
+
+  - Fix `geneos home` matching of instances when the same name existed on local and remote hosts.
+
+
+---
+
 ## Version v1.10.4
 
 > **Released 2023-11-03**

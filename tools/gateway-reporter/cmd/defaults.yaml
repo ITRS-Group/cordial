@@ -1,0 +1,112 @@
+site: ITRS
+
+output:
+  directory: /tmp/gateway-reporter
+
+  # if true and there are no entries for any of the single-column or
+  # two-column reports then do not create sheets or CSV files for them
+  skip-empty-reports: true
+
+  formats:
+    json: ${gateway}-Report-${datetime}.json
+    xml: ${gateway}-Merged-${datetime}.xml
+    csv: ${gateway}-Report-${datetime}.zip
+    xlsx: ${gateway}-Report-${datetime}.xlsx
+
+  # plugins filters which plugins to report on and whether they are one
+  # or two columns data types
+  #
+  # for xlsx output the order here controls the order of the sheets in
+  # the workbook
+  plugins:
+    single-column:
+      [
+        control-m,
+        disk,
+        fkm,
+        ftm,
+        gateway-sql,
+        processes,
+        stateTracker,
+        toolkit,
+        win-services,
+        x-ping,
+      ]
+    two-column: 
+      [
+        sql-toolkit,
+        tcp-links,
+      ]
+
+  reports:
+    # each report is a self-contained section for the output file type
+    # selected. they all share common settings:
+    #
+    # * filename - the base filename (without extension) if a file is
+    #   generated
+    # * sheetname - the sheet name for XLSX output
+    # * columns - an ordered array of column names to use for the output
+    #   data
+    #
+    # The summary report is intended as a header page of information
+    # about the report generation, including the date, program version,
+    # gateway name and so on.
+    summary:
+      filename: summary
+      sheetname: Summary
+    entities:
+      filename: entities
+      sheetname: Entities
+      columns: [ "Managed Entity", "Netprobe Name", "Hostname", "Port" ]
+      # attributes: [ENVIRONMENT, DATACENTER, OS]
+      # plugins: [fkm, toolkit, x-ping]
+
+    control-m:
+      filename: control-m
+      sheetname: Control-M
+      columns: [ "Managed Entity", Type, Sampler, "View : Parameter : Criteria" ]
+    disk:
+      filename: disks
+      sheetname: Disks
+      columns: [ "Managed Entity", Type, Sampler, "Disk (x=eXclude)" ]
+    fkm:
+      filename: fkm
+      sheetname: FKM
+      columns: [ "Managed Entity", Type, Sampler, "File / Source" ]
+    ftm:
+      filename: ftm
+      sheetname: FTM
+      columns: [ "Managed Entity", Type, Sampler, "File" ]
+    gateway-sql:
+      filename: gateway-sql
+      sheetname: Gateway SQL
+      columns: [ "Managed Entity", Type, Sampler, "Query Name" ]
+    processes:
+      filename: processes
+      sheetname: Processes
+      columns: [ "Managed Entity", Type, Sampler, "Process Alias" ]
+    stateTracker:
+      filename: statetracker
+      sheetname: State Tracker
+      columns: [ "Managed Entity", Type, Sampler, "Group : Tracker : File" ]
+    toolkit:
+      filename: toolkit
+      sheetname: Toolkits
+      columns: [ "Managed Entity", Type, Sampler, "Toolkit Script" ]
+    win-services:
+      filename: win-services
+      sheetname: Windows Services
+      columns: [ "Managed Entity", Type, Sampler, "Service Description [Service Name]" ]
+    x-ping:
+      filename: x-ping
+      sheetname: X-Ping
+      columns: [ "Managed Entity", Type, Sampler, "Remote Target" ]
+
+    sql-toolkit:
+      filename: sql-toolkit
+      sheetname: SQL Toolkit
+      columns: [ "Managed Entity", Type, Sampler, "Database", "Query Name" ]
+    tcp-links:
+      filename: tcp-links
+      sheetname: TCP Links
+      columns: [ "Managed Entity", Type, Sampler, "Local Port", "Remote Port" ]
