@@ -25,12 +25,8 @@ THE SOFTWARE.
 package host
 
 import (
-	"cmp"
-	"io/fs"
 	"os"
 	"os/exec"
-	"slices"
-	"strconv"
 	"syscall"
 )
 
@@ -49,15 +45,7 @@ func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) (err error) {
 		cmd.SysProcAttr.Setsid = true
 	}
 
-	// mark all fds unshared
-	fds, _ := os.ReadDir("/proc/self/fd")
-	maxdir := slices.MaxFunc(fds, func(a, b fs.DirEntry) int {
-		return cmp.Compare(a.Name(), b.Name())
-	})
-	maxfd, _ := strconv.ParseInt(maxdir.Name(), 10, 64)
-	maxfd -= 3
-	for fd := int64(0); fd < maxfd; fd++ {
-		cmd.ExtraFiles = append(cmd.ExtraFiles, nil)
-	}
+	// mark all non-std fds unshared
+	cmd.ExtraFiles = nil
 	return
 }

@@ -61,7 +61,7 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 			options = append(options, option)
 		}
 	}
-	cmd, env, home := BuildCmd(i, false, options...)
+	cmd := BuildCmd(i, false, options...)
 	if cmd == nil {
 		return fmt.Errorf("BuildCmd() returned nil")
 	}
@@ -69,7 +69,7 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 	// set underlying user for child proc
 	errfile := ComponentFilepath(i, "txt")
 
-	if err = i.Host().Start(cmd, env, home, errfile); err != nil {
+	if err = i.Host().Start(cmd, errfile); err != nil {
 		return
 	}
 	// wait a bit for the process to start before checking
@@ -91,7 +91,10 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 // so can be used for display
 //
 // Any extras arguments are appended without further checks
-func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *exec.Cmd, env []string, home string) {
+func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *exec.Cmd) {
+	var env []string
+	var home string
+
 	binary := PathOf(i, "program")
 
 	so := evalStartOptions(options...)
@@ -120,7 +123,10 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *e
 		env = append(env, "LD_LIBRARY_PATH="+strings.Join(libs, ":"))
 	}
 	env = append(env, so.envs...)
+
 	cmd = exec.Command(binary, args...)
+	cmd.Env = env
+	cmd.Dir = home
 
 	return
 }

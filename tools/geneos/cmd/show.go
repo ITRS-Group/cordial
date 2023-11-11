@@ -127,8 +127,9 @@ var showCmd = &cobra.Command{
 
 func showValidateInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
+	cf := i.Config()
 
-	setup := i.Config().GetString("setup")
+	setup := cf.GetString("setup")
 	if setup == "" {
 		return
 	}
@@ -138,31 +139,39 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *instance.Resp
 		defer i.Host().Remove(tempfile)
 
 		// run a gateway with -dump-xml and consume the result, discard the heading
-		cmd, env, home := instance.BuildCmd(i, false)
+		cmd := instance.BuildCmd(i, false)
+
 		// replace args with a more limited set
 		cmd.Args = []string{
 			cmd.Path,
+			i.Name(),
 			"-resources-dir",
 			path.Join(instance.BaseVersion(i), "resources"),
+			"-setup",
+			cf.GetString("setup"),
 			"-nolog",
 			"-skip-cache",
-			"-setup",
-			i.Config().GetString("setup"),
 			"-validate-json-output",
 			tempfile,
 			"-silent",
 			"-hub-validation-rules",
 		}
 		cmd.Args = append(cmd.Args, instance.SetSecureArgs(i)...)
-		if len(params) > 0 {
-			cmd.Args = append(cmd.Args, fmt.Sprintf("-hooks-dir %s", params[0]))
+		if len(params) > 0 && params[0] != "" {
+			hooksdir, _ := i.Host().Abs(params[0].(string))
+			log.Debug().Msgf("hooksdir: %s", hooksdir)
+			if st, err := i.Host().Stat(hooksdir); err != nil || !st.IsDir() {
+				resp.Err = fmt.Errorf("resolved hooks dir %s:%s is not a directory", i.Host(), hooksdir)
+				return
+			}
+			cmd.Args = append(cmd.Args, "-hooks-dir", hooksdir)
 		}
 
 		var output []byte
-		// we don't care about errors, just the output
-		_, err := i.Host().Run(cmd, env, home, "errors.txt")
+		// err is set for validation errors, they are not errors in running
+		_, err := i.Host().Run(cmd, "errors.txt")
 		if err != nil {
-			log.Debug().Msgf("error: %s", output)
+			log.Debug().Err(err).Msg("run")
 		}
 		output, resp.Err = i.Host().ReadFile(tempfile)
 		if resp.Err != nil {
@@ -195,7 +204,7 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *instance.Respon
 	}
 	if instance.IsA(i, "gateway") && merge {
 		// run a gateway with -dump-xml and consume the result, discard the heading
-		cmd, env, home := instance.BuildCmd(i, false)
+		cmd := instance.BuildCmd(i, false)
 		// replace args with a more limited set
 		cmd.Args = []string{
 			cmd.Path,
@@ -210,7 +219,7 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *instance.Respon
 		cmd.Args = append(cmd.Args, instance.SetSecureArgs(i)...)
 		var output []byte
 		// we don't care about errors, just the output
-		output, err := i.Host().Run(cmd, env, home, "errors.txt")
+		output, err := i.Host().Run(cmd, "errors.txt")
 		if err != nil {
 			log.Debug().Msgf("error: %s", output)
 		}

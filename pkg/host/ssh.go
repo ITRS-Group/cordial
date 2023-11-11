@@ -592,7 +592,7 @@ func (h *SSHRemote) NewSession() (sess *ssh.Session, err error) {
 // Start starts a process on an SSH attached remote host h. It uses a
 // shell and backgrounds and redirects. May not work on all remotes and
 // for all processes.
-func (h *SSHRemote) Start(cmd *exec.Cmd, env []string, home, errfile string) (err error) {
+func (h *SSHRemote) Start(cmd *exec.Cmd, errfile string) (err error) {
 	if strings.Contains(h.ServerVersion(), "windows") {
 		err = errors.New("cannot run remote commands on windows")
 	}
@@ -620,8 +620,8 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, env []string, home, errfile string) (er
 	if err = sess.Shell(); err != nil {
 		return
 	}
-	fmt.Fprintln(pipe, "cd", home)
-	for _, e := range env {
+	fmt.Fprintf(pipe, "cd %q\n", cmd.Dir)
+	for _, e := range cmd.Env {
 		fmt.Fprintln(pipe, "export", e)
 	}
 	fmt.Fprintf(pipe, "%s > %q 2>&1 &\n", cmdstr, errfile)
@@ -633,7 +633,7 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, env []string, home, errfile string) (er
 // shell and waits for the process status before returning. It returns
 // the output and any error. errfile is an optional (remote) file for
 // stderr output
-func (h *SSHRemote) Run(cmd *exec.Cmd, env []string, home, errfile string) (output []byte, err error) {
+func (h *SSHRemote) Run(cmd *exec.Cmd, errfile string) (output []byte, err error) {
 	if strings.Contains(h.ServerVersion(), "windows") {
 		err = errors.New("cannot run remote commands on windows")
 	}
@@ -660,7 +660,7 @@ func (h *SSHRemote) Run(cmd *exec.Cmd, env []string, home, errfile string) (outp
 
 	if errfile != "" {
 		if !path.IsAbs(errfile) {
-			errfile = path.Join(home, errfile)
+			errfile = path.Join(cmd.Dir, errfile)
 		}
 		e, err := h.Create(errfile, 0664)
 		if err != nil {
@@ -671,10 +671,10 @@ func (h *SSHRemote) Run(cmd *exec.Cmd, env []string, home, errfile string) (outp
 	}
 
 	envs := []string{}
-	for _, e := range env {
+	for _, e := range cmd.Env {
 		envs = append(envs, strconv.Quote(e))
 	}
-	cmdstr = fmt.Sprintf("cd %s && %s %s", home, strings.Join(env, " "), cmdstr)
+	cmdstr = fmt.Sprintf("cd %q && %s %s", cmd.Dir, strings.Join(cmd.Env, " "), cmdstr)
 
 	return sess.Output(cmdstr)
 }

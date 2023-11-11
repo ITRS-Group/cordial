@@ -78,18 +78,18 @@ func commandInstance(i geneos.Instance, params ...any) (resp *instance.Response)
 
 	lines := []string{fmt.Sprintf("=== %s ===", i)}
 
-	cmd, env, home := instance.BuildCmd(i, true, instance.StartingExtras(commandCmdExtras), instance.StartingEnvs(commandCmdEnvs))
+	cmd := instance.BuildCmd(i, true, instance.StartingExtras(commandCmdExtras), instance.StartingEnvs(commandCmdEnvs))
 	lines = append(lines,
 		"command line:",
 		fmt.Sprint("\t", cmd.String()),
 		"",
 		"working directory:",
-		fmt.Sprint("\t", home),
+		fmt.Sprint("\t", cmd.Dir),
 		"",
 		"environment:",
 	)
 
-	for _, e := range env {
+	for _, e := range cmd.Env {
 		lines = append(lines, fmt.Sprint("\t", e))
 	}
 	lines = append(lines, "")
@@ -110,14 +110,14 @@ type command struct {
 func commandInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	cmd, env, home := instance.BuildCmd(i, true, instance.StartingExtras(commandCmdExtras), instance.StartingEnvs(commandCmdEnvs))
+	cmd := instance.BuildCmd(i, true, instance.StartingExtras(commandCmdExtras), instance.StartingEnvs(commandCmdEnvs))
 	command := &command{
 		Instance: i.Name(),
 		Type:     i.Type().Name,
 		Host:     i.Host().String(),
 		Path:     cmd.Path,
-		Env:      env,
-		Home:     home,
+		Env:      cmd.Env,
+		Home:     cmd.Dir,
 	}
 	if len(cmd.Args) > 1 {
 		command.Args = cmd.Args[1:]
