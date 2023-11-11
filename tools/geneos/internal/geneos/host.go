@@ -193,7 +193,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 		h.Set("os", "windows")
 		osinfo["id"] = "windows"
 		cmd := exec.Command("systeminfo")
-		output, _ := h.Run(cmd, []string{}, "", "")
+		output, _ := h.Run(cmd, "")
 		// if err == nil {
 		// 	log.Debug().Msg(string(output))
 		// }
@@ -222,7 +222,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 		}
 		if !h.IsLocal() {
 			cmd := exec.Command("cmd", "/c", "echo", "%USERPROFILE%")
-			output, err := h.Run(cmd, []string{}, "", "")
+			output, err := h.Run(cmd, "")
 			if err != nil {
 				log.Error().Err(err).Msg("")
 			} else {

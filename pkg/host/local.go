@@ -197,14 +197,11 @@ func (h *Local) Signal(pid int, signal syscall.Signal) (err error) {
 	return nil
 }
 
-func (h *Local) Start(cmd *exec.Cmd, env []string, home, errfile string) (err error) {
-	cmd.Env = append(os.Environ(), env...)
-
+func (h *Local) Start(cmd *exec.Cmd, errfile string) (err error) {
 	if errfile == "" {
 		errfile = os.DevNull
-	}
-	if !path.IsAbs(errfile) {
-		errfile = path.Join(home, errfile)
+	} else if !path.IsAbs(errfile) {
+		errfile = path.Join(cmd.Dir, errfile)
 	}
 
 	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_WRONLY, 0644)
@@ -219,7 +216,6 @@ func (h *Local) Start(cmd *exec.Cmd, env []string, home, errfile string) (err er
 
 	cmd.Stdout = out
 	cmd.Stderr = out
-	cmd.Dir = home
 
 	if err = cmd.Start(); err != nil {
 		return
@@ -234,15 +230,11 @@ func (h *Local) Start(cmd *exec.Cmd, env []string, home, errfile string) (err er
 
 // Run starts a program, waits for completion and returns the output
 // and/or any error. errfile is either absolute or relative to home.
-func (h *Local) Run(cmd *exec.Cmd, env []string, home, errfile string) (output []byte, err error) {
-	cmd.Env = append(os.Environ(), env...)
-
+func (h *Local) Run(cmd *exec.Cmd, errfile string) (output []byte, err error) {
 	if errfile == "" {
 		errfile = os.DevNull
-	}
-
-	if !path.IsAbs(errfile) {
-		errfile = path.Join(home, errfile)
+	} else if !path.IsAbs(errfile) {
+		errfile = path.Join(cmd.Dir, errfile)
 	}
 
 	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_WRONLY, 0644)
@@ -256,7 +248,6 @@ func (h *Local) Run(cmd *exec.Cmd, env []string, home, errfile string) (output [
 	}
 
 	cmd.Stderr = out
-	cmd.Dir = home
 
 	return cmd.Output()
 }

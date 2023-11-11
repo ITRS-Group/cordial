@@ -287,7 +287,9 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 	case program.Foreground:
 		cmd := exec.Command(program.Executable, program.Args...)
 		setCredentialsFromUsername(cmd, program.Username)
-		if _, err := h.Run(cmd, program.Env, program.WorkingDir, program.ErrLog); err != nil {
+		cmd.Env = program.Env
+		cmd.Dir = program.WorkingDir
+		if _, err := h.Run(cmd, program.ErrLog); err != nil {
 			return 0, retErrIfFalse(program.IgnoreErr, err)
 		}
 	case program.Restart:
@@ -296,7 +298,9 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 			for {
 				cmd := exec.Command(program.Executable, program.Args...)
 				setCredentialsFromUsername(cmd, program.Username)
-				h.Run(cmd, program.Env, program.WorkingDir, program.ErrLog)
+				cmd.Env = program.Env
+				cmd.Dir = program.WorkingDir
+				h.Run(cmd, program.ErrLog)
 				if program.Wait != 0 {
 					time.Sleep(program.Wait)
 				} else {
@@ -307,7 +311,9 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 	default:
 		cmd := exec.Command(program.Executable, program.Args...)
 		setCredentialsFromUsername(cmd, program.Username)
-		if err = h.Start(cmd, program.Env, program.WorkingDir, program.ErrLog); err != nil {
+		cmd.Env = program.Env
+		cmd.Dir = program.WorkingDir
+		if err = h.Start(cmd, program.ErrLog); err != nil {
 			return 0, retErrIfFalse(program.IgnoreErr, err)
 		}
 	}
