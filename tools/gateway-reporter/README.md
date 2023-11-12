@@ -4,7 +4,7 @@ The `geneos-reporter` tool creates ITRS Geneos monitoring coverage reports using
 
 This tool works with the Gateway configuration only and does not interact with the running Gateway. This is to mitigate any potential performance impact on production Gateways. The level of information available is limited by the complexities introduced by the dynamically changing monitoring environment in a typical, extensive Geneos deployment.
 
-⚠️ Note: Because of the above, the coverage report is based on configured Netprobes and the Managed Entities attached to them. If you use Self-Announcing Netprobes then there are cannot be included in the reports.
+⚠️ Note: In light of the above, the coverage reports are based on statically configured Netprobes and the Managed Entities attached to them. If you use Self-Announcing Netprobes then they are not included in the reports.
 
 The reports support a limited number of the most common plugins and more can and ill be added over time. If you have specific requirements, please either raise a Github issue under the `cordial` repo or contact the ITRS Professional Services team.
 
