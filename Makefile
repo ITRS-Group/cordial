@@ -16,6 +16,7 @@ release: images
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).tar.gz releases/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/geneos releases/geneos
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/geneos.exe releases/geneos.exe
+	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/gateway-reporter releases/gateway-reporter
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/dv2email releases/dv2email
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/lib/libemail.so releases/libemail.so
 

@@ -14,8 +14,15 @@ Settings for the Gateway REST connection and defaults for the EMail gateway can 
 ### Options
 
 ```text
-  -f, --config string   config file (default is $HOME/.config/geneos/dv2email.yaml)
-  -d, --debug           enable extra debug output
-  -i, --inline-css      inline CSS for better mail client support (default true)
+  -E, --entity string     entity name
+  -S, --sampler string    sampler name
+  -T, --type string       type name
+  -D, --dataview string   dataview name
+  -t, --to string         To as comma-separated emails
+  -c, --cc string         Cc as comma-separated emails
+  -b, --bcc string        Bcc as comma-separated emails
+  -f, --config string     config file (default is $HOME/.config/geneos/dv2email.yaml)
+  -d, --debug             enable extra debug output
+  -i, --inline-css        inline CSS for better mail client support (default true)
 ```
 
