@@ -31,6 +31,7 @@ import (
 	pdCmd "github.com/itrs-group/cordial/integrations/pagerduty/cmd"
 	snowCmd "github.com/itrs-group/cordial/integrations/servicenow/cmd"
 	dv2email "github.com/itrs-group/cordial/tools/dv2email/cmd"
+	gatewayReporter "github.com/itrs-group/cordial/tools/gateway-reporter/cmd"
 
 	"github.com/spf13/cobra"
 )
@@ -42,6 +43,7 @@ type docs struct {
 
 var doclist = []docs{
 	{dv2email.DV2EMAILCmd, "../../tools/dv2email/docs"},
+	{gatewayReporter.RootCmd, "../../tools/gateway-reporter/docs"},
 
 	{snowCmd.RootCmd, "../../integrations/servicenow/docs"},
 	{pdCmd.RootCmd, "../../integrations/pagerduty/docs"},
