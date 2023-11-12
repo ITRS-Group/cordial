@@ -53,20 +53,10 @@ geneos-reporter report /path/to/gateway.setup.xml /path/to/another/gateway.setup
 There are a number of options as can be seen from the usage message (use `--help` or `-h` to get up-to-date help):
 
 ```text
-Report on Geneos Gateway XML files
-
-Usage:
-  geneos-reporter report [flags] [SETUP...]
-
-Flags:
-  -g, --gateway string   Path to the gateway binary (--install can be derived from this)
-  -i, --install string   Path to the gateway installation directory
-  -m, --merge            Try to create a merged config file, --gateway or --install must be set
-  -o, --out DIRECTORY    The output DIRECTORY (not file!)
-
-Global Flags:
-  -f, --config string   config file (default is $HOME/.config/geneos/geneos-reporter.yaml)
-  -d, --debug           enable extra debug output
+  -o, --out DIRECTORY        Write reports to DIRECTORY. Default `/tmp/gateway-reporter`
+  -m, --merge                Create a merged config file. --install must be set
+  -i, --install BINARY|DIR   Path to the gateway installation BINARY|DIR
+  -p, --prefix name          Report prefix for configurations without a Gateway name
 ```
 
 In most cases you will not have a pre-merged Gateway configuration file so you can use the options to launch a Gateway to create one for you.
@@ -345,11 +335,18 @@ output:
   # two-column reports then do not create sheets or CSV files for them
   skip-empty-reports: true
 
+  # The names for the different report formats. Set to an empty string
+  # to disable - "". If an absolute path then output directory above is
+  # ignored. To put each Gateway into it's own directory use a relative
+  # path and repeat `${gateway}`
+  #
+  # `${gateway}` and `${datetime}` are replaced with the Gateway name
+  # and the time of the report (`YYYYMMDDhhmmss`) respectively.
   formats:
+    xlsx: ${gateway}-Report-${datetime}.xlsx
+    csv: ${gateway}-Report-${datetime}.zip
     json: ${gateway}-Report-${datetime}.json
     xml: ${gateway}-Merged-${datetime}.xml
-    csv: ${gateway}-Report-${datetime}.zip
-    xlsx: ${gateway}-Report-${datetime}.xlsx
 
   # plugins filters which plugins to report on and whether they are one
   # or two columns data types
@@ -386,7 +383,12 @@ output:
     # * columns - an ordered array of column names to use for the output
     #   data
     #
-    # Each 
+    # The summary report is intended as a header page of information
+    # about the report generation, including the date, program version,
+    # gateway name and so on.
+    summary:
+      filename: summary
+      sheetname: Summary
     entities:
       filename: entities
       sheetname: Entities
