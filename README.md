@@ -16,6 +16,8 @@ Cordial is a collection of utilities, integrations and support packages for ITRS
 
 * [`libemail`](libraries/libemail/) - Drop-In Updated Replacement for `libemail`
 
+* [`gateway-reporter`](tools/gateway-reporter/) - Generate monitoring coverage reports from setup files
+
 ## Integrations
 
 * [ServiceNow](integrations/servicenow/) - Send Geneos Alerts to ServiceNow
