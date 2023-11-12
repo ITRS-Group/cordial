@@ -51,6 +51,9 @@ var startTimestamp string
 //go:embed defaults.yaml
 var defaults []byte
 
+//go:embed _docs/root.md
+var rootCmdDescription string
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
@@ -60,12 +63,12 @@ func init() {
 	execname = cordial.ExecutableName(cordial.VERSION)
 	cordial.LogInit(execname)
 
-	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/"+execname+".yaml)")
+	RootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/"+execname+".yaml)")
 
 	// how to remove the help flag help text from the help output! Sigh...
-	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	rootCmd.PersistentFlags().MarkHidden("help")
+	RootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	RootCmd.PersistentFlags().MarkHidden("help")
 
 }
 
@@ -93,11 +96,11 @@ func initConfig() {
 	cf.AutomaticEnv()
 }
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:          execname,
+// RootCmd represents the base command when called without any subcommands
+var RootCmd = &cobra.Command{
+	Use:          "gateway-reporter",
 	Short:        "Report on Geneos Gateway XML files",
-	Long:         `If run without a subcommand then function as a Geneos Gateway validation hook`,
+	Long:         rootCmdDescription,
 	SilenceUsage: true,
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
@@ -167,7 +170,7 @@ var rootCmd = &cobra.Command{
 			}
 			switch format {
 			case "json":
-				if err = outputJSON(cf, gateway, entities); err != nil {
+				if err = outputJSON(cf, gateway, entities, probes); err != nil {
 					break
 				}
 			case "csv":
@@ -220,7 +223,9 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the listCmd.
 func Execute() {
-	err := rootCmd.Execute()
+	cordial.RenderHelpAsMD(RootCmd)
+
+	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}

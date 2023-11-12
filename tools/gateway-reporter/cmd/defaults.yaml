@@ -7,11 +7,18 @@ output:
   # two-column reports then do not create sheets or CSV files for them
   skip-empty-reports: true
 
+  # The names for the different report formats. Set to an empty string
+  # to disable - "". If an absolute path then output directory above is
+  # ignored. To put each Gateway into it's own directory use a relative
+  # path and repeat `${gateway}`
+  #
+  # `${gateway}` and `${datetime}` are replaced with the Gateway name
+  # and the time of the report (`YYYYMMDDhhmmss`) respectively.
   formats:
+    xlsx: ${gateway}-Report-${datetime}.xlsx
+    csv: ${gateway}-Report-${datetime}.zip
     json: ${gateway}-Report-${datetime}.json
     xml: ${gateway}-Merged-${datetime}.xml
-    csv: ${gateway}-Report-${datetime}.zip
-    xlsx: ${gateway}-Report-${datetime}.xlsx
 
   # plugins filters which plugins to report on and whether they are one
   # or two columns data types

@@ -15,24 +15,32 @@ import (
 const gatewayBinary = "gateway2.linux_64"
 
 // merge a gateway config and return the result for parsing
-func mergeConfig(installDir, gatewayBin, setupFile string) (output []byte, err error) {
+func mergeConfig(install, setup string) (output []byte, err error) {
+	var gatewayPath string
+
 	// run a gateway with -dump-xml and consume the result, discard the heading
-	gatewayPath := path.Join(installDir, gatewayBinary)
-	if gatewayBin != "" {
-		gatewayPath = gatewayBin
+	st, err := os.Stat(install)
+	if err != nil {
+		return
+	}
+	if st.IsDir() {
+		gatewayPath = path.Join(install, gatewayBinary)
+	} else {
+		gatewayPath = install
+		install = filepath.Dir(install)
 	}
 	cmd := exec.Command(
 		gatewayPath,
 		"-resources-dir",
-		path.Join(installDir, "resources"),
+		path.Join(install, "resources"),
 		"-nolog",
 		"-skip-cache",
 		"-setup",
-		setupFile,
+		setup,
 		"-dump-xml",
 	)
 
-	cmd.Dir = filepath.Dir(setupFile)
+	cmd.Dir = filepath.Dir(setup)
 	cmd.Env = os.Environ()
 
 	var err2 error
