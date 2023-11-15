@@ -9,17 +9,20 @@
 # configuration file, which can be protected with permissions 0400,
 # should contain all authentication and email server information.
 
-gateway:
+# ⚠ if you uncomment the default "gateway" without sub-keys, it
+# overrides ALL gateway settings
+
+# gateway:
   # host and port indicate the gateway to connect to
-  host: localhost
-  port: 7038
+  # host: localhost
+  # port: 7038
   # if use-tls is true then only a secure connection will be used for the
   # REST command
-  use-tls: true
+  # use-tls: true
   # allow-insecure permits connections where the server certificate cannot
   # be verified. It is not yet possible to supply a custom certificate
   # chain file or PEM.
-  allow-insecure: true
+  # allow-insecure: true
 
   # Gateway Authentication
   #
@@ -58,7 +61,18 @@ email:
 #   to: destination-email
 #   subject: Default Subject
 
-# include: text+html, text, html, xlsx, csvzip
+# which attachments to include, default is text+html (multipart
+# alternate)
+#
+# plain text is always included as the main body. The html part(s) can
+# also be included as separate attachments for archiving or forwarding.
+# The formatting of text from template and/or tables is controlled in
+# the `attachments` section below. images are taken from the images
+# section
+#
+#   contents: [ text, text+html, html, xlsx, images ]
+#
+    contents: [ text+html, images ]
 
 # Data matching and filtering
 
@@ -84,12 +98,12 @@ email:
 # the output
 column-filter:
   # dvname*: [ list, of, columns ]
-  toolkit: [ passwd, uid, gid, gcos, homedir, shell ]
+  # toolkit: [ passwd, uid, gid, gcos, homedir, shell ]
   # '*': [ unknown ]
 
 first-column:
   # dvname*: something
-  toolkit: username
+  # toolkit: username
   '*': rowname
 
 # similar to the above, these settings let you filter rows from being
@@ -100,7 +114,7 @@ row-filter:
   # '*': [ sys*, root ]
 
 row-order:
-  toolkit: username+
+  # toolkit: username+
 
 # similar to the above, these settings let you filter headlines from
 # being included in the email. No ordering is possible.
@@ -110,7 +124,36 @@ headline-filter:
 # embed these images and give them the (short) name on the left these
 # can then be referenced in the HTML as <img href="cid:logo.png"/> etc.
 images:
-  logo.png: ./cmd/icon_OurSolutions-geneos-image.png
+  # logo.png: ./cmd/icon_OurSolutions-geneos-image.png
+
+# settings for the different attachment types. The choice of attachments
+# to send is in the `email` section above.
+attachments:
+  text+html:
+    # multipart/alternative
+    filename: # not used
+  text:
+    # content-type: text/plain  # from template and/or tables
+    filename: dataview.txt
+    template: ${config:text-template}
+    type: single # / multiple (per dataview)
+  html:
+    # content-type: text/html # from template - single or per-dataview
+    filename: dataview.html
+    template: ${config:html-template}
+    type: single # / multiple (per dataview)
+  xlsx:
+    # content-type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+    filename: dataviews.xlsx
+    sheetname: ${dataview}
+    type: single # / multiple (per dataview)
+    style: TableStyleMedium2 # standard but also from https://xuri.me/excelize/en/utils.html#AddTable
+    row-stripes: true
+    column-stripes: false
+    password: ""
+    column-width: 20.0
+  table:
+    content-type: text/plain # table driven text
 
 # Templates
 #
