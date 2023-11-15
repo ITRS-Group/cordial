@@ -39,22 +39,30 @@ type DataItem struct {
 }
 
 // Dataview represents the contents of a Geneos dataview as returned by
-// [Snapshot]. The Columns field is an ordered slice of column names
-// obtained from the ordered JSON data returned from the REST endpoint
-// to allow the Table field to be iterated over in the same order as the
-// Geneos dataview table. The Rows field is an unordered slice of
-// rownames. The caller can order this in anyway desired for use as a
-// range loop.
+// [Snapshot].
 type Dataview struct {
-	Name             string                         `json:"name"`
-	XPath            *xpath.XPath                   `json:"xpath"`
-	SampleTime       time.Time                      `json:"sample-time,omitempty"`
-	Snoozed          bool                           `json:"snoozed,omitempty"`
-	SnoozedAncestors bool                           `json:"snoozed-ancestors,omitempty"`
-	Headlines        map[string]DataItem            `json:"headlines,omitempty"`
-	Table            map[string]map[string]DataItem `json:"table,omitempty"`
-	Columns          []string                       `json:"-"`
-	Rows             []string                       `json:"-"`
+	Name             string       `json:"name"`
+	XPath            *xpath.XPath `json:"xpath"`
+	SampleTime       time.Time    `json:"sample-time,omitempty"`
+	Snoozed          bool         `json:"snoozed,omitempty"`
+	SnoozedAncestors bool         `json:"snoozed-ancestors,omitempty"`
+
+	// Headlines is a map of headline names to data items
+	Headlines map[string]DataItem `json:"headlines,omitempty"`
+
+	// Table is a map of row names to column names to data items, the
+	// first column (row name) not included in the map
+	Table map[string]map[string]DataItem `json:"table,omitempty"`
+
+	// Columns is an ordered slice of column names obtained from the
+	// JSON data returned from the REST endpoint to allow the Table
+	// field to be iterated over in the same order as the Geneos
+	// dataview table
+	Columns []string `json:"-"`
+
+	// The Rows field is an unordered slice of rownames. The caller can
+	// order this in anyway desired for use as a range loop.
+	Rows []string `json:"-"`
 }
 
 // Snapshot fetches the contents of the dataview identified by the
@@ -67,9 +75,10 @@ type Dataview struct {
 // Snapshot support is only available in Geneos GA5.14 and above
 // Gateways and requires the REST command API to be enabled.
 //
-// In GA5.14.x the first column name is not exported and is set to
-// "rowname"
-func (c *Connection) Snapshot(target *xpath.XPath, scope ...Scope) (dataview *Dataview, err error) {
+// In existing releases the first column name is not exported and is set
+// to rowname, which defaults to the literal "rowname" if passed an
+// empty rowname.
+func (c *Connection) Snapshot(target *xpath.XPath, rowname string, scope ...Scope) (dataview *Dataview, err error) {
 	// override endpoint for snapshots
 	const endpoint = "/rest/snapshot/dataview"
 	s := Scope{Value: true}
@@ -92,25 +101,30 @@ func (c *Connection) Snapshot(target *xpath.XPath, scope ...Scope) (dataview *Da
 		dataview = &Dataview{
 			Headlines: map[string]DataItem{},
 			Table:     map[string]map[string]DataItem{},
-			Columns:   []string{},
-			Rows:      []string{},
+			// Columns:   []string{},
+			// Rows:      []string{},
 		}
 		return
 	}
 
 	dataview = cr.Dataview
-	var row map[string]DataItem
+
+	// grab any row, it's the keys we actually want
 	for k := range dataview.Table {
-		row = dataview.Table[k]
+		rowmap := dataview.Table[k]
+		// get the column names from the first row returned
+		for k := range rowmap {
+			dataview.Columns = append(dataview.Columns, k)
+		}
+		// exit after one iteration
 		break
 	}
 
-	for k := range row {
-		dataview.Columns = append(dataview.Columns, k)
+	if rowname == "" {
+		rowname = "rowname"
 	}
-
 	// XXX until the first column is supplied, prepend a constant
-	dataview.Columns = append([]string{"rowname"}, dataview.Columns...)
+	dataview.Columns = append([]string{rowname}, dataview.Columns...)
 
 	for rowname := range dataview.Table {
 		dataview.Rows = append(dataview.Rows, rowname)

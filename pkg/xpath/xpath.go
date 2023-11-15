@@ -55,18 +55,19 @@ import (
 var ErrInvalidPath = errors.New("invalid Geneos XPath")
 var ErrRelativePath = errors.New("unsupported relative Geneos XPath")
 
-// A Geneos Gateway XPath
+// XPath represents a Geneos Gateway XPath
 //
-// Each field is a pointer, which if nil means the Xpath terminates at that point
-// The "rows" boolean indicates in lower level components are headlines or rows
+// Each field (except Rows)  is a pointer, which if nil means the Xpath
+// terminates at that point, not that the value is unset. The "Rows"
+// boolean indicates in lower level components are rows or headlines
 type XPath struct {
 	Gateway  *Gateway  `json:"gateway,omitempty"`
 	Probe    *Probe    `json:"probe,omitempty"`
 	Entity   *Entity   `json:"entity,omitempty"`
 	Sampler  *Sampler  `json:"sampler,omitempty"`
 	Dataview *Dataview `json:"dataview,omitempty"`
-	Headline *Headline `json:"headline,omitempty"`
 	Rows     bool      `json:"-"`
+	Headline *Headline `json:"headline,omitempty"`
 	Row      *Row      `json:"row,omitempty"`
 	Column   *Column   `json:"column,omitempty"`
 }
@@ -105,21 +106,22 @@ type Column struct {
 	Name string `json:"name,omitempty"`
 }
 
-// return an XPath to the level of the element passed,
-// which can be populated with fields.
+// New returns an XPath to the level of the element passed, which can be
+// populated with fields.
 func New(element interface{}) *XPath {
 	x := &XPath{}
 	return x.ResolveTo(element)
 }
 
-// return an xpath populated to the dataview, with name dv
-// if no name is passed, create a wildcard dataview path
+// NewDataviewPath returns an xpath populated to the dataview, with name
+// dv if no name is passed, create a wildcard dataview path
 func NewDataviewPath(name string) (x *XPath) {
 	x = New(&Dataview{Name: name})
 	return
 }
 
-// return an xpath populated to the table cell identifies by row and column
+// NewTableCellPath returns an xpath populated to the table cell
+// identifies by row and column
 func NewTableCellPath(row, column string) (x *XPath) {
 	x = New(&Column{Name: column})
 	x.Rows = true
@@ -127,7 +129,8 @@ func NewTableCellPath(row, column string) (x *XPath) {
 	return
 }
 
-// return an xpath populated to the headline cell, identified by headline
+// NewHeadlinePath returns an xpath populated to the headline cell,
+// identified by headline
 func NewHeadlinePath(name string) (x *XPath) {
 	x = New(&Headline{Name: name})
 	return
@@ -340,16 +343,19 @@ func (x *XPath) ResolveTo(element interface{}) *XPath {
 	return &nx
 }
 
-// return true is the XPath appears to be empty
+// IsEmpty returns true is the XPath appears to be empty
 func (x *XPath) IsEmpty() bool {
 	return x.Gateway == nil
 }
 
-// do we need setters? validation?
+// SetGatewayName sets the Gateway name
+//
+// ?do we need setters? validation?
 func (x *XPath) SetGatewayName(gateway string) {
 	x.Gateway = &Gateway{Name: gateway}
 }
 
+// IsTableCell returns true if x represents a table cell
 func (x *XPath) IsTableCell() bool {
 	return x.Rows && x.Row != nil && x.Column != nil
 }
@@ -706,5 +712,64 @@ func getAttributes(s string) (attrs map[string]string) {
 		}
 		attrs[n[1]] = n[2]
 	}
+	return
+}
+
+// LookupValues returns a map of the components of x to their values,
+// suitable for use as an Expand LookupTable. Only components of x that
+// are set are added to the returned map and processing stops as soon as
+// an XPath struct field is nil. The returned map is always initialised.
+//
+// The potential keys set are gateway, probe, entity, sampler, type,
+// dataview, row, column, headline. Entity attributes in the XPath are
+// ignored.
+func (x *XPath) LookupValues() (lookup map[string]string) {
+	lookup = map[string]string{}
+	if x == nil || x.Gateway == nil {
+		return
+	}
+	lookup["gateway"] = x.Gateway.Name
+
+	if x.Probe == nil {
+		return
+	}
+	lookup["probe"] = x.Probe.Name
+
+	if x.Entity == nil {
+		return
+	}
+	lookup["entity"] = x.Entity.Name
+
+	if x.Sampler == nil {
+		return
+	}
+	lookup["sampler"] = x.Sampler.Name
+
+	if x.Sampler.Type != nil {
+		lookup["type"] = *x.Sampler.Type
+	}
+
+	if x.Dataview == nil {
+		return
+	}
+	lookup["dataview"] = x.Dataview.Name
+
+	if x.Rows {
+		if x.Row == nil {
+			return
+		}
+		lookup["row"] = x.Row.Name
+
+		if x.Column == nil {
+			return
+		}
+		lookup["column"] = x.Column.Name
+	} else {
+		if x.Headline == nil {
+			return
+		}
+		lookup["headline"] = x.Headline.Name
+	}
+
 	return
 }
