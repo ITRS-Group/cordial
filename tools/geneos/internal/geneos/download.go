@@ -129,7 +129,7 @@ func open(source string, options ...Options) (from io.ReadCloser, filename strin
 		filename = "STDIN"
 	default:
 		if strings.HasPrefix(source, "~/") {
-			home, _ := os.UserHomeDir()
+			home, _ := config.UserHomeDir()
 			source = path.Join(home, strings.TrimPrefix(source, "~/"))
 		}
 		var s os.FileInfo
