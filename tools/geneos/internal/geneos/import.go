@@ -32,6 +32,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/rs/zerolog/log"
 )
 
@@ -135,7 +136,7 @@ func ImportFile(h *Host, dir string, source string) (filename string, err error)
 	// test for same source and dest, return err
 	if isPlain && h.IsLocal() {
 		if strings.HasPrefix(source, "~/") {
-			home, _ := os.UserHomeDir()
+			home, _ := config.UserHomeDir()
 			source = path.Join(home, strings.TrimPrefix(source, "~/"))
 		}
 		sfi, err := h.Stat(source)

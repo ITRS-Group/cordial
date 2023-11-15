@@ -106,7 +106,7 @@ func ImportSharedKey(h *Host, ct *Component, source string) (crc uint32, err err
 		return ImportSharedKeyValues(h, ct, config.Read(resp.Body))
 	case strings.HasPrefix(source, "~/"):
 		// relative to home
-		home, _ := os.UserHomeDir()
+		home, _ := config.UserHomeDir()
 		source = strings.Replace(source, "~", home, 1)
 		fallthrough
 	default:

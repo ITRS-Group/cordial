@@ -184,7 +184,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 	osinfo := make(map[string]string)
 	serverVersion := h.ServerVersion()
 	if h.IsLocal() {
-		home, _ := os.UserHomeDir()
+		home, _ := config.UserHomeDir()
 		h.Set("homedir", home)
 	}
 
