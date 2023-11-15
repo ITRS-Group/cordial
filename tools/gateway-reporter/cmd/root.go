@@ -43,7 +43,7 @@ import (
 var cf *config.Config
 
 var cfgFile string
-var execname string
+var execname = cordial.ExecutableName(cordial.VERSION)
 var debug, quiet bool
 var startTime time.Time
 var startTimestamp string
@@ -60,7 +60,6 @@ func init() {
 	startTime = time.Now()
 	startTimestamp = startTime.Format("20060102150405")
 
-	execname = cordial.ExecutableName(cordial.VERSION)
 	cordial.LogInit(execname)
 
 	RootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
@@ -69,7 +68,6 @@ func init() {
 	// how to remove the help flag help text from the help output! Sigh...
 	RootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
 	RootCmd.PersistentFlags().MarkHidden("help")
-
 }
 
 func initConfig() {
@@ -82,14 +80,16 @@ func initConfig() {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-	cf, err = config.Load(execname,
+	opts := []config.FileOptions{
 		config.SetAppName("geneos"),
 		config.SetConfigFile(cfgFile),
 		config.MergeSettings(),
 		config.SetFileExtension("yaml"),
 		config.WithDefaults(defaults, "yaml"),
 		config.WithEnvs("GENEOS", "_"),
-	)
+	}
+
+	cf, err = config.Load(execname, opts...)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}

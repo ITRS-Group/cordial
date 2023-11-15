@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -85,7 +86,7 @@ var reportCmd = &cobra.Command{
 				}
 				input = resp.Body
 			case strings.HasPrefix(setup, "~/"):
-				home, _ := os.UserHomeDir()
+				home, _ := config.UserHomeDir()
 				setup = filepath.Join(home, strings.TrimPrefix(setup, "~/"))
 				fallthrough
 			default:
