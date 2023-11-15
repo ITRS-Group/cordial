@@ -397,6 +397,7 @@ func logFollowInstanceFile(i geneos.Instance, logfile string) (err error) {
 			return
 		}
 		fmt.Printf("===> %s log file not found <===\n", i)
+		return nil
 	} else {
 		// output up to this point
 		text, _ := tailLines(f, logCmdLines)
