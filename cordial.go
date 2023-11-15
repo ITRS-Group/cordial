@@ -28,6 +28,7 @@ import (
 	_ "embed" // embed the VERSION in the top-level package
 	"fmt"
 	"html"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -37,6 +38,7 @@ import (
 
 	"github.com/charmbracelet/glamour"
 	"golang.org/x/term"
+	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -49,7 +51,7 @@ import (
 var VERSION string
 
 // LogInit is called to set-up zerolog the way we like it
-func LogInit(prefix string) {
+func LogInit(prefix string, logfile ...string) {
 	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
 		fnName := "UNKNOWN"
 		fn := runtime.FuncForPC(pc)
@@ -66,9 +68,26 @@ func LogInit(prefix string) {
 		return fmt.Sprintf("%s:%d %s()", file, line, fnName)
 	}
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339,
+	var nocolor bool
+	var out io.WriteCloser
+	out = os.Stderr
+	if len(logfile) > 0 {
+		l := &lumberjack.Logger{
+			Filename: logfile[0],
+		}
+		out = l
+		nocolor = true
+	}
+
+	log.Logger = log.Output(zerolog.ConsoleWriter{
+		Out:        out,
+		TimeFormat: time.RFC3339,
+		NoColor:    nocolor,
 		FormatLevel: func(i interface{}) string {
 			return strings.ToUpper(fmt.Sprintf("%s:", i))
+		},
+		FormatMessage: func(i interface{}) string {
+			return fmt.Sprintf("%s: %s", prefix, i)
 		},
 	}).With().Caller().Logger()
 }
