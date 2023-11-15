@@ -146,13 +146,18 @@ func readSSHkeys(homedir string, files ...string) (signers []ssh.Signer) {
 	return
 }
 
-func sshConnect(dest, user string, password *memguard.Enclave, keyfiles ...string) (client *ssh.Client, err error) {
+func sshConnect(dest, username string, password *memguard.Enclave, keyfiles ...string) (client *ssh.Client, err error) {
 	var authmethods []ssh.AuthMethod
 	var homedir string
 
 	homedir, err = os.UserHomeDir()
 	if err != nil {
-		return
+		var u *user.User
+		u, err = user.Current()
+		if err != nil {
+			return
+		}
+		homedir = u.HomeDir
 	}
 
 	// XXX we need this because:
@@ -177,7 +182,7 @@ func sshConnect(dest, user string, password *memguard.Enclave, keyfiles ...strin
 	}
 
 	config := &ssh.ClientConfig{
-		User:              user,
+		User:              username,
 		Auth:              authmethods,
 		HostKeyCallback:   kh.HostKeyCallback(),
 		HostKeyAlgorithms: kh.HostKeyAlgorithms(dest),

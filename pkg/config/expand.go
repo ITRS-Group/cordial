@@ -472,7 +472,7 @@ func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value 
 
 	for _, k := range strings.Split(keyfiles, "|") {
 		if strings.HasPrefix(k, "~/") {
-			home, _ := os.UserHomeDir()
+			home, _ := UserHomeDir()
 			k = strings.Replace(k, "~", home, 1)
 		}
 
@@ -499,7 +499,7 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 
 	for _, k := range bytes.Split(keyfiles, []byte("|")) {
 		if bytes.HasPrefix(k, []byte("~/")) {
-			home, _ := os.UserHomeDir()
+			home, _ := UserHomeDir()
 			k = bytes.Replace(k, []byte("~"), []byte(home), 1)
 		}
 		keyfile := KeyFile(k)
@@ -525,7 +525,7 @@ func (c *Config) expandEncodedBytesEnclave(s []byte, options ...ExpandOptions) (
 
 	for _, k := range bytes.Split(keyfiles, []byte("|")) {
 		if bytes.HasPrefix(k, []byte("~/")) {
-			home, _ := os.UserHomeDir()
+			home, _ := UserHomeDir()
 			k = bytes.Replace(k, []byte("~"), []byte(home), 1)
 		}
 		keyfile := KeyFile(k)
@@ -551,7 +551,7 @@ func (c *Config) expandEncodedBytesLockedBuffer(s []byte, options ...ExpandOptio
 
 	for _, k := range bytes.Split(keyfiles, []byte("|")) {
 		if bytes.HasPrefix(k, []byte("~/")) {
-			home, _ := os.UserHomeDir()
+			home, _ := UserHomeDir()
 			k = bytes.Replace(k, []byte("~"), []byte(home), 1)
 		}
 		keyfile := KeyFile(k)
@@ -663,7 +663,7 @@ func fetchURL(cf *Config, url string, trim bool) (s string, err error) {
 func fetchFile(cf *Config, p string, trim bool) (s string, err error) {
 	p = strings.TrimPrefix(p, "file:")
 	if strings.HasPrefix(p, "~/") {
-		home, _ := os.UserHomeDir()
+		home, _ := UserHomeDir()
 		p = strings.Replace(p, "~", home, 1)
 	}
 	b, err := os.ReadFile(p)
@@ -708,7 +708,7 @@ func mapEnv(e string) (s string) {
 	}
 	switch e {
 	case "HOME":
-		h, err := os.UserHomeDir()
+		h, err := UserHomeDir()
 		if err == nil {
 			s = h
 		}
