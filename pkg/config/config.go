@@ -26,6 +26,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"os/user"
 	"path"
 	"reflect"
 	"strconv"
@@ -132,6 +134,8 @@ func (c *Config) Delimiter() string {
 // not exist then an empty config structure is returned, unlike viper
 // which returns nil. It uses the mutex pointer from the caller so that
 // locking of sub-config objects also applies to the original.
+//
+// Note that viper.Sub() does NOT merge defaults
 func (c *Config) Sub(key string) *Config {
 	c.mutex.RLock()
 	vcf := c.Viper.Sub(key)
@@ -148,6 +152,16 @@ func (c *Config) Sub(key string) *Config {
 		defaultExpandOptions: c.defaultExpandOptions,
 		appUserConfDir:       c.appUserConfDir,
 	}
+}
+
+// Sub returns a Config instance rooted at the key passed. If key does
+// not exist then an empty config structure is returned, unlike viper
+// which returns nil. It uses the mutex pointer from the caller so that
+// locking of sub-config objects also applies to the original.
+//
+// Note that viper.Sub() does NOT merge defaults
+func Sub(key string) *Config {
+	return global.Sub(key)
 }
 
 // Set sets the key to value
@@ -684,6 +698,17 @@ func GetUint(key string) uint {
 	return global.GetUint(key)
 }
 
+func (c *Config) GetFloat64(key string) (value float64) {
+	c.mutex.RLock()
+	value = c.Viper.GetFloat64(key)
+	c.mutex.RUnlock()
+	return
+}
+
+func GetFloat64(key string) float64 {
+	return global.GetFloat64(key)
+}
+
 func (c *Config) GetDuration(key string) (value time.Duration) {
 	c.mutex.RLock()
 	value = c.Viper.GetDuration(key)
@@ -747,4 +772,25 @@ func (c *Config) GetStringMapStringSlice(key string) (values map[string][]string
 
 func GetStringMapStringSlice(key string) map[string][]string {
 	return global.GetStringMapStringSlice(key)
+}
+
+// UserHomeDir returns the home directory for username, or if none given
+// then the current user. This works around empty environments by
+// falling back to looking up the user.
+func UserHomeDir(username ...string) (home string, err error) {
+	if len(username) == 0 {
+		if home, err = os.UserHomeDir(); err == nil { // all ok
+			return
+		}
+		u, err := user.Current()
+		if err != nil {
+			return home, err
+		}
+		return u.HomeDir, nil
+	}
+	u, err := user.Lookup(username[0])
+	if err != nil {
+		return
+	}
+	return u.HomeDir, nil
 }

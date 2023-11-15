@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
+
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
@@ -60,7 +61,7 @@ type fileOptions struct {
 }
 
 // FileOptions can be passed to the Load or Save functions to
-// influence behaviour.
+// set values.
 type FileOptions func(*fileOptions)
 
 func evalFileOptions(options ...FileOptions) (c *fileOptions) {
@@ -103,7 +104,11 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 
 	// if not cleared by options...
 	if c.userconfdir == "placeholder" {
-		c.userconfdir, _ = UserConfigDir()
+		var err error
+		c.userconfdir, err = UserConfigDir()
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	// merge overrides watchconfig
@@ -221,8 +226,8 @@ func SetAppName(name string) FileOptions {
 // also means it can be called with a command line flag value which can
 // default to an empty string
 func SetConfigFile(p string) FileOptions {
-	return func(c *fileOptions) {
-		c.configFile = p
+	return func(fo *fileOptions) {
+		fo.configFile = p
 	}
 }
 
@@ -243,9 +248,9 @@ func SetConfigReader(in io.Reader) FileOptions {
 // embedded defaults). The default is "json". Any leading "." is
 // ignored.
 func SetFileExtension(extension string) FileOptions {
-	return func(c *fileOptions) {
+	return func(fo *fileOptions) {
 		extension = strings.TrimLeft(extension, ".")
-		c.extension = extension
+		fo.extension = extension
 	}
 }
 
@@ -309,16 +314,16 @@ func IgnoreSystemDir() FileOptions {
 // separately, i.e. all defaults are first merged and applied then the
 // main configuration files are merged and loaded.
 func MergeSettings() FileOptions {
-	return func(c *fileOptions) {
-		c.merge = true
+	return func(fo *fileOptions) {
+		fo.merge = true
 	}
 }
 
 // Host sets the source/destination for the configuration file. It
 // defaults to localhost
 func Host(r host.Host) FileOptions {
-	return func(lo *fileOptions) {
-		lo.remote = r
+	return func(fo *fileOptions) {
+		fo.remote = r
 	}
 }
 

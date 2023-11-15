@@ -30,14 +30,26 @@ import (
 	"path"
 )
 
-func UserConfigDir(username ...string) (p string, err error) {
+// UserConfigDir returns the configuration directory for username, or is
+// none given then the current user. If os.UserConfigDir() fails then we
+// lookup the user and return a path relative to the homedir (which
+// works around empty environments)
+func UserConfigDir(username ...string) (confdir string, err error) {
 	if len(username) == 0 {
-		return os.UserConfigDir()
+		if confdir, err = os.UserConfigDir(); err == nil {
+			return
+		}
+		u, err := user.Current()
+		if err != nil {
+			return confdir, err
+		}
+		confdir = path.Join(u.HomeDir, ".config")
+		return confdir, nil
 	}
 	u, err := user.Lookup(username[0])
 	if err != nil {
 		return
 	}
-	p = path.Join(u.HomeDir, ".config")
+	confdir = path.Join(u.HomeDir, ".config")
 	return
 }

@@ -180,7 +180,7 @@ func (k *KeyFile) EncodeString(plaintext string, expandable bool) (out string, e
 	}
 
 	if expandable {
-		home, _ := os.UserHomeDir()
+		home, _ := UserHomeDir()
 		cfdir, _ := UserConfigDir()
 		if strings.HasPrefix(k.String(), cfdir) {
 			*k = KeyFile("~" + strings.TrimPrefix(k.String(), home))
@@ -213,7 +213,7 @@ func (k *KeyFile) Encode(plaintext *Plaintext, expandable bool) (out string, err
 	}
 
 	if expandable {
-		home, _ := os.UserHomeDir()
+		home, _ := UserHomeDir()
 		cfdir, _ := UserConfigDir()
 		if strings.HasPrefix(k.String(), cfdir) {
 			*k = KeyFile("~" + strings.TrimPrefix(k.String(), home))
