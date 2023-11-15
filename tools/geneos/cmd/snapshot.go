@@ -195,7 +195,7 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *instance.Response
 		} else {
 			for _, view := range views {
 				var data *commands.Dataview
-				data, resp.Err = gw.Snapshot(view)
+				data, resp.Err = gw.Snapshot(view, "")
 				if resp.Err != nil {
 					return
 				}
