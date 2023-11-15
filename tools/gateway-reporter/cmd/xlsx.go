@@ -131,7 +131,7 @@ func outputXLSX(cf *config.Config, gateway string, entities []Entity, probes map
 		len(entities),
 	})
 
-	xlsx.SetCellStyle(summary, "B5", "B5", dateStyle)
+	xlsx.SetCellStyle(summary, "B4", "B4", dateStyle)
 
 	// entities
 	if err = outputXLSXEntities(xlsx, entities, cf, conftable); err != nil {
