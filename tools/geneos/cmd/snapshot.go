@@ -74,6 +74,7 @@ var snapshotCmd = &cobra.Command{
 		AnnotationComponent: "gateway",
 		AnnotationWildcard:  "explicit",
 		AnnotationNeedsHome: "true",
+		AnnotationExpand:    "true",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		var err error
