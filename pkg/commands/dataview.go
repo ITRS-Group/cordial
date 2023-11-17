@@ -79,6 +79,10 @@ type Dataview struct {
 // to rowname, which defaults to the literal "rowname" if passed an
 // empty rowname.
 func (c *Connection) Snapshot(target *xpath.XPath, rowname string, scope ...Scope) (dataview *Dataview, err error) {
+	if rowname == "" {
+		rowname = "rowname"
+	}
+
 	// override endpoint for snapshots
 	const endpoint = "/rest/snapshot/dataview"
 	s := Scope{Value: true}
@@ -108,6 +112,7 @@ func (c *Connection) Snapshot(target *xpath.XPath, rowname string, scope ...Scop
 	}
 
 	dataview = cr.Dataview
+	dataview.Columns = []string{rowname}
 
 	// grab any row, it's the keys we actually want
 	for k := range dataview.Table {
@@ -120,11 +125,8 @@ func (c *Connection) Snapshot(target *xpath.XPath, rowname string, scope ...Scop
 		break
 	}
 
-	if rowname == "" {
-		rowname = "rowname"
-	}
 	// XXX until the first column is supplied, prepend a constant
-	dataview.Columns = append([]string{rowname}, dataview.Columns...)
+	// dataview.Columns = append([]string{rowname}, dataview.Columns...)
 
 	for rowname := range dataview.Table {
 		dataview.Rows = append(dataview.Rows, rowname)
