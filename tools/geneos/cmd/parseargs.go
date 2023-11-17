@@ -114,7 +114,7 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 	}
 	args = args[:n]
 
-	log.Debug().Msgf("rawargs %v, params %v, ct %s", args, params, annotations[AnnotationComponent])
+	log.Debug().Msgf("args %v, params %v, ct %s", args, params, annotations[AnnotationComponent])
 
 	jsonargs, _ := json.Marshal(params)
 	annotations[AnnotationParams] = string(jsonargs)
@@ -123,16 +123,29 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 		if len(args) == 0 {
 			return nil
 		}
+		// check the first non-flag arg for a component, or fall back to
+		// command annotation, if set.
 		if ct = geneos.ParseComponent(args[0]); ct == nil {
-			jsonargs, _ := json.Marshal(args)
-			annotations[AnnotationNames] = string(jsonargs)
-			return
+			if annotations[AnnotationComponent] != "" {
+				if ct = geneos.ParseComponent(annotations[AnnotationComponent]); ct == nil {
+					jsonargs, _ := json.Marshal(args)
+					annotations[AnnotationNames] = string(jsonargs)
+					return
+				}
+			} else {
+				jsonargs, _ := json.Marshal(args)
+				annotations[AnnotationNames] = string(jsonargs)
+				return
+			}
 		}
 		if annotations[AnnotationComponent] == "" {
 			annotations[AnnotationComponent] = args[0]
+			names = args[1:]
+		} else {
+			names = args
 		}
-		names = args[1:]
 		if annotations[AnnotationExpand] == "true" {
+			log.Debug().Msgf("matching %v", names)
 			if newnames := instance.Match(h, ct, names...); len(newnames) > 0 {
 				names = newnames
 			}
@@ -160,6 +173,7 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 				names = args
 			}
 			if annotations[AnnotationExpand] == "true" {
+				log.Debug().Msgf("matching %v", names)
 				if newnames := instance.Match(h, ct, names...); len(newnames) > 0 {
 					names = newnames
 				}
@@ -279,7 +293,6 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 // Pre run and returns the ct and a slice of names. Parameters are
 // ignored.
 func ParseTypeNames(command *cobra.Command) (ct *geneos.Component, args []string) {
-	log.Debug().Msgf("%s %v", command.Annotations, ct)
 	ct = geneos.ParseComponent(command.Annotations[AnnotationComponent])
 	if err := json.Unmarshal([]byte(command.Annotations[AnnotationNames]), &args); err != nil {
 		log.Debug().Err(err).Msg("")
