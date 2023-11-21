@@ -239,8 +239,10 @@ func tailLines(f io.ReadSeekCloser, linecount int) (text string, err error) {
 		// split buffer, count lines, if enough shortcut a return
 		// else keep allLines[0] (partial end of previous line), save the rest and
 		// repeat until beginning of file or N lines
-		newlines := strings.FieldsFunc(buffer+allLines[0], isLineSep)
-		allLines = append(newlines, allLines[1:]...)
+		if len(allLines) > 0 {
+			newlines := strings.FieldsFunc(buffer+allLines[0], isLineSep)
+			allLines = append(newlines, allLines[1:]...)
+		}
 		if len(allLines) > linecount {
 			text = strings.Join(allLines[len(allLines)-linecount:], "\n")
 			f.Seek(end, io.SeekStart)
