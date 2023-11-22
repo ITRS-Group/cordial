@@ -160,7 +160,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 
 	if ct.IsA("gateway") {
 		// override the instance generated keyfile if options given
-		crc, err := geneos.UseKeyFile(i.Host(), i.Type(), addCmdKeyfile, addCmdKeyfileCRC)
+		crc, err := geneos.ImportKeyFile(i.Host(), i.Type(), addCmdKeyfile, addCmdKeyfileCRC)
 		if err == nil {
 			cf.Set("keyfile", instance.Shared(i, "keyfiles", crc+".aes"))
 		}

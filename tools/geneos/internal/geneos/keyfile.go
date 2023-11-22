@@ -35,9 +35,9 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-// UseKeyFile sets the keyfile for component ct from either the given
+// ImportKeyFile sets the keyfile for component ct from either the given
 // (local) keyfile or the CRC for an existing file.
-func UseKeyFile(h *Host, ct *Component, keyfile config.KeyFile, keycrc string) (crc string, err error) {
+func ImportKeyFile(h *Host, ct *Component, keyfile config.KeyFile, keycrc string) (crc string, err error) {
 	var path string
 
 	if keycrc == "" {
@@ -55,19 +55,20 @@ func UseKeyFile(h *Host, ct *Component, keyfile config.KeyFile, keycrc string) (
 	crcfile := KeyFileNormalise(keycrc)
 
 	onHost := h
+HOST:
 	for _, h := range h.OrList(ALL) {
 		for _, ct := range ct.OrList(UsesKeyFiles()...) {
 			path = ct.Shared(h, "keyfiles", crcfile)
 			log.Debug().Msgf("looking for keyfile %s on %s", path, h)
 			if _, err := h.Stat(path); err == nil {
 				onHost = h
-				break
+				break HOST
 			}
 			path = ""
 		}
 	}
 	if path == "" {
-		err = fmt.Errorf("keyfile (%q) with CRC %q not found", crcfile, keycrc)
+		err = fmt.Errorf("keyfile %q or CRC %q not found", crcfile, keycrc)
 		return
 	}
 
@@ -145,7 +146,7 @@ func ImportSharedKeyValues(h *Host, ct *Component, kv *config.KeyValues) (crc ui
 			if err = WriteSharedKey(h, ct, kv); err != nil {
 				return
 			} else if err == nil {
-				log.Debug().Msgf("not importing existing %q CRC named keyfile on %s", crc, h)
+				log.Debug().Msgf("skip importing existing %08X CRC named keyfile for %s on %s", crc, ct, h)
 			}
 		}
 	}
