@@ -288,6 +288,18 @@ func (ct *Component) OrList(cts ...*Component) []*Component {
 	return cts
 }
 
+// KeyFilePath returns the absolute path to either the given keyfile or
+// a shared keyfile with the CRC of keycrc, if keyfile is not set. If ct
+// is nil then the first matching keyfile from all components is
+// returned. If h is ALL then only localhost is checked.
+func (ct *Component) KeyFilePath(h *Host, keyfile config.KeyFile, keycrc string) (path string, err error) {
+	if keyfile != "" {
+		return h.Abs(string(keyfile))
+	}
+
+	return ct.Shared(h, "keyfiles", keycrc+".aes"), nil
+}
+
 // AllComponents returns a slice of all registered components, include
 // the Root component type
 func AllComponents() (cts []*Component) {
