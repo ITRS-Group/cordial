@@ -297,7 +297,7 @@ var deployCmd = &cobra.Command{
 
 		if ct.IsA("gateway") {
 			// override the instance generated keyfile if options given
-			crc, err := geneos.UseKeyFile(i.Host(), i.Type(), deployCmdKeyfile, deployCmdKeyfileCRC)
+			crc, err := geneos.ImportKeyFile(i.Host(), i.Type(), deployCmdKeyfile, deployCmdKeyfileCRC)
 			if err == nil {
 				cf.Set("keyfile", instance.Shared(i, "keyfiles", crc+".aes"))
 			}
