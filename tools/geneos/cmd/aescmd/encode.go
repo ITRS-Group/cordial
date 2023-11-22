@@ -87,25 +87,23 @@ var encodeCmd = &cobra.Command{
 			if encodeCmdProvider != "ssoAgent" && encodeCmdProvider != "obcerv" && encodeCmdProvider != "gatewayHub" {
 				return errors.New("--app-key PROVIDER must be one of `obcerv`, `ssoAgent` or `gatewayHub`")
 			}
-			if encodeCmdClientID.IsNil() {
-				encodeCmdClientID, err = config.ReadPasswordInput(false, 3, "Client ID")
-				if err != nil {
-					return
-				}
-			}
-			if encodeCmdClientSecret.IsNil() {
-				encodeCmdClientSecret, err = config.ReadPasswordInput(false, 3, "Client Secret")
-				if err != nil {
-					return
-				}
-			}
+
 			ct, args := cmd.ParseTypeNames(command)
+			if ct == nil {
+				ct = geneos.ParseComponent("gateway")
+			}
+
+			if !ct.IsA("gateway") {
+				return fmt.Errorf("app keys are only valid for gateways")
+			}
 
 			if encodeCmdAppKeyFile == "" {
 				// to stdout
 				keyfilepath, _ := ct.KeyFilePath(h, encodeCmdKeyfile, encodeCmdCRC)
 
-				log.Debug().Msgf("keyfilepath=%s", keyfilepath)
+				if _, err := os.Stat(keyfilepath); err != nil {
+					return err
+				}
 
 				var keyfile config.KeyFile
 				keyfile = config.KeyFile(keyfilepath)
@@ -113,6 +111,19 @@ var encodeCmd = &cobra.Command{
 					return
 				}
 
+				if encodeCmdClientID.IsNil() {
+					encodeCmdClientID, err = config.ReadPasswordInput(false, 3, "Client ID")
+					if err != nil {
+						return
+					}
+				}
+
+				if encodeCmdClientSecret.IsNil() {
+					encodeCmdClientSecret, err = config.ReadPasswordInput(false, 3, "Client Secret")
+					if err != nil {
+						return
+					}
+				}
 				e, err := keyfile.Encode(encodeCmdClientSecret, false)
 				if err != nil {
 					return err
@@ -124,13 +135,19 @@ var encodeCmd = &cobra.Command{
 				return nil
 			}
 
-			if ct == nil {
-				ct = geneos.ParseComponent("gateway")
-			}
-			if !ct.IsA("gateway") {
-				return fmt.Errorf("app keys are only valid for gateways")
+			if encodeCmdClientID.IsNil() {
+				encodeCmdClientID, err = config.ReadPasswordInput(false, 3, "Client ID")
+				if err != nil {
+					return
+				}
 			}
 
+			if encodeCmdClientSecret.IsNil() {
+				encodeCmdClientSecret, err = config.ReadPasswordInput(false, 3, "Client Secret")
+				if err != nil {
+					return
+				}
+			}
 			instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *instance.Response) {
 				resp = instance.NewResponse(i)
 				if !i.Type().UsesKeyfiles {
