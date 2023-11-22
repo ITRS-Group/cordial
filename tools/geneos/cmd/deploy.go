@@ -40,7 +40,7 @@ import (
 )
 
 var deployCmdTemplate, deployCmdBase, deployCmdKeyfileCRC string
-var deployCmdGeneosHome, deployCmdUsername, deployCmdName string
+var deployCmdGeneosHome, deployCmdUsername, deployCmdName, deployCmdExtraOpts string
 var deployCmdStart, deployCmdLogs, deployCmdLocal, deployCmdNexus, deployCmdSnapshot bool
 var deployCmdSecure bool
 var deployCmdPort uint16
@@ -56,6 +56,8 @@ func init() {
 	deployCmdPassword = &config.Plaintext{}
 	deployCmd.Flags().StringVarP(&deployCmdGeneosHome, "geneos", "D", "", "`GENEOS_HOME` directory. No default if not found\nin user configuration or environment")
 	deployCmd.Flags().BoolVarP(&deployCmdStart, "start", "S", false, "Start new instance after creation")
+	deployCmd.Flags().StringVarP(&deployCmdExtraOpts, "extras", "x", "", "Extra args passed to initial start, split on spaces and quoting ignored\nUse this option for bootstrapping instances, such as with Centralised Config")
+
 	deployCmd.Flags().BoolVarP(&deployCmdLogs, "log", "l", false, "Follow the logs after starting the instance.\nImplies --start to start the instance")
 	deployCmd.Flags().Uint16VarP(&deployCmdPort, "port", "p", 0, "Override the default port selection")
 	deployCmd.Flags().StringVarP(&deployCmdBase, "base", "b", "active_prod", "Select the base version for the instance")
@@ -77,7 +79,7 @@ func init() {
 	deployCmd.Flags().BoolVar(&deployCmdSnapshot, "snapshots", false, "Download from nexus snapshots\nImplies --nexus")
 
 	deployCmd.Flags().StringVar(&deployCmdTemplate, "template", "", "Template file to use (if supported for TYPE). `PATH|URL|-`")
-	deployCmd.Flags().Var(&deployCmdKeyfile, "keyfile", "Keyfile `PATH` to use. Default is\nto create one for TYPEs that support them")
+	deployCmd.Flags().Var(&deployCmdKeyfile, "keyfile", "Keyfile `PATH` to use. Default is to create one\nfor TYPEs that support them")
 	deployCmd.Flags().StringVar(&deployCmdKeyfileCRC, "keycrc", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory to use (extension optional)")
 
 	deployCmd.Flags().VarP(&deployCmdImportFiles, "import", "I", "import file(s) to instance. DEST defaults to the base\nname of the import source or if given it must be\nrelative to and below the instance directory\n(Repeat as required)")
@@ -336,7 +338,7 @@ var deployCmd = &cobra.Command{
 		fmt.Printf("%s added, port %d\n", i, cf.GetInt("port"))
 
 		if deployCmdStart || deployCmdLogs {
-			if err = instance.Start(i); err != nil {
+			if err = instance.Start(i, instance.StartingExtras(deployCmdExtraOpts)); err != nil {
 				if errors.Is(err, os.ErrProcessDone) {
 					err = nil
 				}
