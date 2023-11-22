@@ -80,7 +80,9 @@ The full path to the Gateway executable. The items in the default of the form `$
 
 #### `setup`
 
-The Gateway setup file. This should normally not be changed.
+The Gateway setup file.
+
+If this is set to `none` or an empty string then no `-setup` option is passed on the command line. This allows for Centralised Config with Gateway Hub or Obcerv.
 
 > Default: `${config:home}/gateway.setup.xml`
 
@@ -89,6 +91,24 @@ The Gateway setup file. This should normally not be changed.
 The version of the Gateway in the the `install` directory above. This is normally the name of a symbolic version which is maintained as a link to a real installation version directory. You can create new symbolic version or tie an instance to an exact installed version.
 
 > Default: `active_prod`
+
+### Centralised Configuration
+
+To use Centralised Configuration with either Gateway Hub or Obcerv, you should set the following parameters appropriately. They do not have defaults.
+
+Also, you should set `setup` to either an empty value or the literal `none` to trigger Centralised Configuration on the Gateway.
+
+#### `gateway-hub` or `obcerv`
+
+One of these two parameters should be set to the URL of the Centralised Configuration store. Setting both is not a valid configuration.
+
+#### `app-key`
+
+To authenticate with an application key, set this parameter to the file path. Note that the application key file should be generated with the AES keyfile used by the Gateway **and** updated if the key file is changed.
+
+#### `kerberos-principal` and `kerberos-keytab`
+
+To authenticate using Kerberos, set these parameters as documented in the Gateway Installation Guide.
 
 ### Special Parameters
 
