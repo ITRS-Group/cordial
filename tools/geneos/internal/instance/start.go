@@ -30,6 +30,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/rs/zerolog/log"
 )
 
 // Start runs the instance.
@@ -69,6 +70,7 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 	// set underlying user for child proc
 	errfile := ComponentFilepath(i, "txt")
 
+	log.Debug().Msgf("starting '%s'", cmd.String())
 	if err = i.Host().Start(cmd, errfile); err != nil {
 		return
 	}
@@ -97,12 +99,12 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *e
 
 	binary := PathOf(i, "program")
 
-	so := evalStartOptions(options...)
 	args, env, home := i.Command()
 
 	opts := strings.Fields(i.Config().GetString("options"))
 	args = append(args, opts...)
 
+	so := evalStartOptions(options...)
 	args = append(args, so.extras...)
 
 	envs := i.Config().GetStringSlice("env", config.NoDecode(noDecode))
