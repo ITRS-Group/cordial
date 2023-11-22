@@ -24,6 +24,7 @@ package gateway
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -256,7 +257,8 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 
 	configrebuild := cf.GetString("config::rebuild")
 
-	if configrebuild == "never" {
+	setup := cf.GetString("setup")
+	if configrebuild == "never" || setup == "" || setup == "none" {
 		return
 	}
 
@@ -264,7 +266,6 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 		return
 	}
 
-	setup := cf.GetString("setup")
 	if strings.HasPrefix(setup, "http:") || strings.HasPrefix(setup, "https:") {
 		log.Debug().Msg("not rebuilding URL bases setup")
 		return
@@ -320,41 +321,50 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 func (g *Gateways) Command() (args, env []string, home string) {
 	cf := g.Config()
 
-	// get opts from
-	// from https://docs.itrsgroup.com/docs/geneos/5.10.0/Gateway_Reference_Guide/gateway_installation_guide.html#Gateway_command_line_options
-	//
-	args = []string{
-		g.Name(),
+	// first, get the correct name, using the "gatewayname" parameter if
+	// it is different to the instance name. It may not be set, hence
+	// the test.
+	name := g.Name()
+	if cf.GetString("gatewayname") != g.Name() {
+		name = cf.GetString("gatewayname")
+	}
+
+	// if we have a valid version test for additional features
+	_, version, err := instance.Version(g)
+	if err == nil {
+		switch {
+		case geneos.CompareVersion(version, "5.10.0") >= 0:
+			args = append(args, "-gateway-name", name)
+		}
+	} else {
+		// fallback to older settings
+		args = append(args,
+			name,
+		)
+	}
+
+	// always required
+	args = append(args,
 		"-resources-dir",
 		path.Join(instance.BaseVersion(g), "resources"),
 		"-log",
 		instance.LogFilePath(g),
-		"-setup",
-		g.Config().GetString("setup"),
-		// enable stats by default
-		"-stats",
+	)
+
+	if cf.IsSet("gateway-hub") && cf.IsSet("obcerv") {
+		err = errors.New("only one of 'obcerv' or 'gateway-hub' can be set")
+		return
 	}
 
-	_, version, err := instance.Version(g)
-	if err == nil { // if we have a valid version test for additional features
-		switch {
-		case geneos.CompareVersion(version, "6.0.0") >= 0:
-			log.Debug().Msg("version 6.0.0 or above, doing stuff")
-			// use keyfiles etc.
+	for _, k := range []string{"obcerv", "gateway-hub", "app-key", "kerberos-principal", "kerberos-keytab"} {
+		if cf.IsSet(k) {
+			args = append(args, "-"+k, cf.GetString(k))
 		}
-
 	}
 
-	if cf.GetString("gatewayname") != g.Name() {
-		args = append([]string{cf.GetString("gatewayname")}, args...)
+	if setup := cf.GetString("setup"); !(setup == "" || setup == "none") {
+		args = append(args, "-setup", setup)
 	}
-
-	// Do not set port on command line. This is now done in the instance
-	// template.
-
-	// if cf.IsSet("port") {
-	//  args = append([]string{"-port", fmt.Sprint(cf.GetString("port"))}, args...)
-	// }
 
 	if cf.GetString("licdhost") != "" {
 		args = append(args, "-licd-host", cf.GetString("licdhost"))
