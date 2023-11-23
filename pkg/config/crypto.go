@@ -132,9 +132,9 @@ func (kv *KeyValues) Write(w io.Writer) error {
 	return nil
 }
 
-// Read KeyValues from the io.Reader r and return a locked buffer keyvalues kv. m should be
-// destroyed after use.
-func Read(r io.Reader) (kv *KeyValues) {
+// ReadKeyValues from the io.Reader r and return a locked buffer
+// key values kv.
+func ReadKeyValues(r io.Reader) (kv *KeyValues) {
 	var k *keyvalues
 	m := memguard.NewBuffer(int(unsafe.Sizeof(*k)))
 	k = lockedBufferTo[keyvalues](m)

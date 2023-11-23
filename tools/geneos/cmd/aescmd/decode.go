@@ -158,7 +158,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 				return
 			}
 			defer r.Close()
-			a := config.Read(r)
+			a := config.ReadKeyValues(r)
 			e, err := a.DecodeString(ciphertext)
 			if err != nil {
 				return
