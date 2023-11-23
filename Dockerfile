@@ -67,6 +67,7 @@ COPY libraries /app/cordial/libraries/
 COPY pkg /app/cordial/pkg
 COPY tools /app/cordial/tools
 WORKDIR /app/cordial/doc-output
+COPY CHANGELOG.md /app/cordial/CHANGELOG.md
 COPY tools/geneos/README.md geneos.md
 COPY tools/gateway-reporter/README.md gateway-reporter.md
 COPY tools/dv2email/README.md dv2email.md
@@ -82,7 +83,9 @@ RUN set -eux; \
     do \
             mmdc -p /puppeteer.json -i /app/cordial/$i/README.md -o /app/cordial/$i/README${MERMAID}.md; \
             mdpdf --border=15mm /app/cordial/$i/README${MERMAID}.md ${i##*/}.pdf; \
-    done
+    done; \
+    mmdc -p /puppeteer.json -i /app/cordial/CHANGELOG.md -o /app/cordial/CHANGELOG${MERMAID}.md; \
+    mdpdf --border=15mm /app/cordial/CHANGELOG${MERMAID}.md CHANGELOG.pdf
 
 #
 # assemble files from previous stages into a .tar.gz ready for extraction in the
@@ -96,6 +99,7 @@ COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/bin/
 COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /cordial/bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
 COPY --from=build-docs /app/cordial/doc-output /cordial/docs
+COPY --from=build-docs /app/cordial/CHANGELOG.md /cordial/docs
 COPY --from=build /app/cordial/integrations/servicenow/servicenow /app/cordial/integrations/pagerduty/pagerduty /cordial/bin/
 COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /app/cordial/integrations/pagerduty/cmd/pagerduty.defaults.yaml /cordial/etc/geneos/
 COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/lib/

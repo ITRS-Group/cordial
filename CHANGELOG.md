@@ -2,11 +2,15 @@
 
 ## Version v1.11.0
 
-> **Released 2023-11-11**
+> **Released 2023-11-23**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
 ## v1.11.0 Changes
+
+* Major updates to [`dv2email`](tools/dv2email/README.md)
+
+  `dv2email` has has a major work-over. In addition to fixing numerous bugs we've also added the ability to send dataviews as XLSX or Text Table attachments, splitting multiple Dataviews into either individual attachments or per-Entity. The `export` sub-command allows to you save Dataviews as files in XLSX, HTML or Text Table formats. Take a look and let us know what you think.
 
 * New [`gateway-reporter`](tools/gateway-reporter/README.md)
 
@@ -14,13 +18,17 @@
 
   This is a new work in progress based on an internal project for a client and we welcome suggestions and contributions. Please use the links above to send us feedback!
 
-* New [`hoildays`](tools/holidays/README.md)
+* New example [`holidays`](tools/holidays/README.md)
 
   Another new tool, but very early in development. This uses the Python holiday module (which seems the only reliable, free source of global holiday data) to generate a list of holidays and their names in Go. It has to run in a docker container as the `cpy3` Go package only supports Python 3.7. It may prove simpler just to write the whole tool in Python and avoid Go, but the local skills are sadly lacking at the moment. Also, we have Go based tools in `pkg/geneos` to build Gateway configuration XML in a nice, clean way.
 
   The aim is to be able to create Gateway include files with predefined Active Times of holidays that can be incorporated into more general monitoring.
 
   Again, suggestions and, more importantly, contributions welcomed.
+
+* [`geneos`](tools/geneos/README.md) has had a number of enhancements (and bug fixes, of course).
+
+  The `geneos aes encode` command can now also create "app key" files for use with Gateway Hub and Obcerv Centralised Configs. To help with that the logic around how the Gateway command line is constructed has also had a refresh, with new options for the Centralised Config options. See the documentation for [`encode`](tools/geneos/docs/geneos_aes_encode.md) and the [`gateway`](tools/geneos/docs/geneos_gateway.md#centralised-configuration) for more information.
 
 ## v1.11.0 Fixes
 
@@ -34,6 +42,7 @@
 
   - Fix `geneos home` matching of instances when the same name existed on local and remote hosts.
 
+  - Fix issues in `geneos package` sub-system commands. They should now work more consistently and do what you expect.
 
 ---
 
