@@ -40,6 +40,17 @@ For a `TYPE` that supports key files have one created unless one is supplied via
 
 See the `add` command for more details about other, less used, options.
 
+## Centralised Config Support
+
+To deploy a Gateway instance that supports app keys for authentication you can do something like this:
+
+```bash
+$ geneos aes new -S gateway
+keyfile 03CA5FA1.aes saved to gateway shared directory on localhost
+$ geneos aes encode -A gatewayHub /tmp/app.key
+$ geneos deploy gateway central1 -I /tmp/app.key -x "-port 7103" --keyfile ${HOME}/.config/geneos/keyfile.aes gateway-hub=https://hub.example.com:8081 app-key=app.key setup='none'
+```
+
 ```text
 geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
 ```
@@ -50,6 +61,8 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
   -D, --geneos GENEOS_HOME            GENEOS_HOME directory. No default if not found
                                       in user configuration or environment
   -S, --start                         Start new instance after creation
+  -x, --extras string                 Extra args passed to initial start, split on spaces and quoting ignored
+                                      Use this option for bootstrapping instances, such as with Centralised Config
   -l, --log                           Follow the logs after starting the instance.
                                       Implies --start to start the instance
   -p, --port uint16                   Override the default port selection
@@ -71,8 +84,8 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
       --snapshots                     Download from nexus snapshots
                                       Implies --nexus
       --template PATH|URL|-           Template file to use (if supported for TYPE). PATH|URL|-
-      --keyfile PATH                  Keyfile PATH to use. Default is
-                                      to create one for TYPEs that support them
+      --keyfile PATH                  Keyfile PATH to use. Default is to create one
+                                      for TYPEs that support them
       --keycrc CRC                    CRC of key file in the component's shared "keyfiles" 
                                       directory to use (extension optional)
   -I, --import [DEST=]PATH|URL        import file(s) to instance. DEST defaults to the base

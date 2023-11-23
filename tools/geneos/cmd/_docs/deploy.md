@@ -37,3 +37,14 @@ The `deploy` command support fewer TLS related options than `add` or `import` an
 For a `TYPE` that supports key files have one created unless one is supplied via the `--keyfile` or `--keycrc` options. The `--keyfile` option uses the file given while the `--keycrc` sets the key file path to a key file with the value given (with or with the `.aes` extension).
 
 See the `add` command for more details about other, less used, options.
+
+## Centralised Config Support
+
+To deploy a Gateway instance that supports app keys for authentication you can do something like this:
+
+```bash
+$ geneos aes new -S gateway
+keyfile 03CA5FA1.aes saved to gateway shared directory on localhost
+$ geneos aes encode -A gatewayHub /tmp/app.key
+$ geneos deploy gateway central1 -I /tmp/app.key -x "-port 7103" --keyfile ${HOME}/.config/geneos/keyfile.aes gateway-hub=https://hub.example.com:8081 app-key=app.key setup='none'
+```

@@ -297,6 +297,10 @@ func (ct *Component) KeyFilePath(h *Host, keyfile config.KeyFile, keycrc string)
 		return h.Abs(string(keyfile))
 	}
 
+	if keycrc == "" {
+		return "", ErrNotExist
+	}
+
 	return ct.Shared(h, "keyfiles", keycrc+".aes"), nil
 }
 

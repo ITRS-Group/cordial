@@ -4,6 +4,8 @@ Encode plaintext to a Geneos AES256 format password using a key file, or create 
 
 A key file should be provided using the `-keyfile`/`-k` option for a file path, the `--crc`/`-c` option for the CRC of a shared keyfile, or otherwise all matching instances that have a configured key file are used to produce an encrypted password.
 
+Without matching `TYPE` or `NAME` the encode command with not update all instances. To force this, use `all` as an explicit wildcard.
+
 ## Encoding Passwords
 
 For encoding passwords, the plaintext password can be provided in one three ways:

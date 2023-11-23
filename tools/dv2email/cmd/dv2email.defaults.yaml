@@ -12,17 +12,17 @@
 # ⚠ if you uncomment the default "gateway" without sub-keys, it
 # overrides ALL gateway settings
 
-# gateway:
+gateway:
   # host and port indicate the gateway to connect to
-  # host: localhost
-  # port: 7038
+  host: localhost
+  port: 7038
   # if use-tls is true then only a secure connection will be used for the
   # REST command
-  # use-tls: true
+  use-tls: true
   # allow-insecure permits connections where the server certificate cannot
   # be verified. It is not yet possible to supply a custom certificate
   # chain file or PEM.
-  # allow-insecure: true
+  allow-insecure: false
 
   # Gateway Authentication
   #
@@ -53,26 +53,46 @@
 #
 
 email:
-#   smtp: smtp.gmail.com
-#   port: 465
-#   username: user-email
-#   password: ${enc:~/.config/geneos/keyfile.aes:+encs+XXX}
-#   from: from-email
-#   to: destination-email
-#   subject: Default Subject
+  smtp: localhost
+  port: 25
+  use-tls: default
+  # username: user-email
+  # password: ${enc:~/.config/geneos/keyfile.aes:+encs+XXX}
+  # from: from-email
+  # to: destination-email
+  subject: Geneos Alert
 
-# which attachments to include, default is text+html (multipart
-# alternate)
-#
-# plain text is always included as the main body. The html part(s) can
-# also be included as separate attachments for archiving or forwarding.
-# The formatting of text from template and/or tables is controlled in
-# the `attachments` section below. images are taken from the images
-# section
-#
-#   contents: [ text, text+html, html, xlsx, images ]
-#
-    contents: [ text+html, images ]
+  # which attachments to include, default is text+html (multipart
+  # alternate)
+  #
+  # plain text is always included as the main body. The html part(s) can
+  # also be included as separate attachments for archiving or forwarding.
+  # The formatting of text from template and/or tables is controlled in
+  # the `attachments` section below. images are taken from the images
+  # section
+  #
+  #   contents: [ text, text+html, html, xlsx, images ]
+  #
+  contents: [ text+html, images ]
+
+  # split sets how to split matching dataviews over one or more emails.
+  #
+  # the default (any value except the two below) sends one email with
+  # all the content, and the individual content type setting of `split`
+  # will then influence how the attachments are split.
+  #
+  # `dataview` sends one email per dataview, sending as many emails as
+  # required for all matching items. The content type `split` setting is
+  # ignored.
+  #
+  # `entity` sends one email per set of dataviews in a single entity.
+  # The content type `split` may control how the attachments are
+  # structures per email.
+  split: none # / dataview / entity
+
+# types of file to write out with the export command
+files: [ xlsx, html ]
+
 
 # Data matching and filtering
 
@@ -97,14 +117,18 @@ email:
 # to match multiple columns and any columns not listed are excluded from
 # the output
 column-filter:
-  # dvname*: [ list, of, columns ]
+  # 'dvname*': [ list, of, columns ]
   # toolkit: [ passwd, uid, gid, gcos, homedir, shell ]
+  # '*disk': [ percentageUsed, freeSpace ]
   # '*': [ unknown ]
 
 first-column:
   # dvname*: something
   # toolkit: username
   '*': rowname
+
+# column-order:
+  # '*': ascending
 
 # similar to the above, these settings let you filter rows from being
 # used. Each string is matched against the rowname (first column) and if
@@ -128,32 +152,53 @@ images:
 
 # settings for the different attachment types. The choice of attachments
 # to send is in the `email` section above.
-attachments:
-  text+html:
-    # multipart/alternative
-    filename: # not used
-  text:
-    # content-type: text/plain  # from template and/or tables
-    filename: dataview.txt
-    template: ${config:text-template}
-    type: single # / multiple (per dataview)
-  html:
-    # content-type: text/html # from template - single or per-dataview
-    filename: dataview.html
-    template: ${config:html-template}
-    type: single # / multiple (per dataview)
-  xlsx:
-    # content-type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
-    filename: dataviews.xlsx
-    sheetname: ${dataview}
-    type: single # / multiple (per dataview)
-    style: TableStyleMedium2 # standard but also from https://xuri.me/excelize/en/utils.html#AddTable
-    row-stripes: true
-    column-stripes: false
-    password: ""
-    column-width: 20.0
-  table:
-    content-type: text/plain # table driven text
+#
+# For value expansion the following items are available:
+#
+# * `gateway`
+# * `probe`
+# * `entity`
+# * `sampler`
+# * `type`
+# * `dataview`
+#
+# * `date`
+# * `time`
+# * `datetime`
+# * `serial` - offset in list, from 1. digits increase for each order of magnitude of dataviews
+#
+
+text:
+  # content-type: text/plain  # from template and/or tables
+  # filename: auto # dataviews-${date}${time}.txt
+  template: ${config:text-template}
+  # split text attachments or files (not the main body text)
+  split: single # / dataview / entity
+
+texttable:
+  filename: auto
+  split: single
+
+html:
+  # content-type: text/html # from template - single or per-dataview
+  filename: auto # dataviews-${date}${time}.html
+  template: ${config:html-template}
+  # split HTML attachements or files (not the MIME multipart/alternative)
+  split: single # / dataview / entity
+
+xlsx:
+  # content-type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+  filename: auto #  dataviews-${date}${time}.xlsx
+  sheetname: auto
+  # sheetname: ${serial}-${entity}-${sampler}-${dataview} # truncated to 31 chars
+  # split XLSX attachments or files
+  split: single # / dataview / entity
+
+  style: TableStyleMedium2 # standard but also from https://xuri.me/excelize/en/utils.html#AddTable
+  row-stripes: true
+  column-stripes: false
+  password: ""
+  column-width: 20.0
 
 # Templates
 #
