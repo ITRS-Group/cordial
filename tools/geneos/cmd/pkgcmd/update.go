@@ -27,7 +27,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -110,7 +109,7 @@ geneos package update netprobe 5.13.2
 		}
 
 		version := updateCmdVersion
-		cs := instance.ByKeyValue(h, ct, "protected", "true")
+		cs := instance.ByKeyValues(h, ct, "protected=true", "version="+updateCmdBase)
 		if len(cs) > 0 && !updateCmdForce {
 			fmt.Println("There are one or more protected instances using the current version. Use `--force` to override")
 			return
@@ -140,15 +139,12 @@ geneos package update netprobe 5.13.2
 			}
 			log.Debug().Msgf("instances to restart: %v", instances)
 		}
-		if err = geneos.Update(h, ct,
+		return geneos.Update(h, ct,
 			geneos.Version(version),
 			geneos.Basename(updateCmdBase),
 			geneos.Force(true),
 			geneos.Restart(instances...),
 			geneos.StartFunc(instance.Start),
-			geneos.StopFunc(instance.Stop)); err != nil && errors.Is(err, os.ErrNotExist) {
-			return nil
-		}
-		return
+			geneos.StopFunc(instance.Stop))
 	},
 }

@@ -75,21 +75,26 @@ geneos uninstall --version 5.14.1
 		h := geneos.GetHost(cmd.Hostname)
 
 		for _, h := range h.OrList() {
-			// remove cached packages, but only locally
-			if h == geneos.LOCAL && !uninstallCmdKeep {
-				files, err := filepath.Glob(h.PathTo("packages", "downloads", "*"))
-				if err != nil {
-					fmt.Printf("cannot find any cached downloads to remove in %q - %s\n", h.PathTo("packages", "downloads", "*"), err)
-				}
-				for _, f := range files {
-					if err = h.Remove(f); err == nil {
-						fmt.Printf("removed %q\n", f)
-					} else {
-						fmt.Printf("cannot remove %q - %s", f, err)
+
+			for _, ct := range ct.OrList() {
+				// remove cached packages, but only locally
+				if h == geneos.LOCAL && !uninstallCmdKeep {
+					pattern := ct.DownloadInfix
+					if pattern == "" {
+						pattern = ct.Name
+					}
+					files, err := filepath.Glob(h.PathTo("packages", "downloads", "*"+pattern+"*"))
+					if err != nil {
+						fmt.Printf("cannot find any cached downloads to remove in %q - %s\n", h.PathTo("packages", "downloads", "*"), err)
+					}
+					for _, f := range files {
+						if err = h.Remove(f); err == nil {
+							fmt.Printf("removed %q\n", f)
+						} else {
+							fmt.Printf("cannot remove %q - %s", f, err)
+						}
 					}
 				}
-			}
-			for _, ct := range ct.OrList() {
 				if len(ct.PackageTypes) > 0 {
 					log.Debug().Msgf("skipping %s as has related types, remove those instead", ct)
 					continue

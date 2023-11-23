@@ -488,24 +488,22 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 	// other items if a single update fails?
 	//
 
-	// XXX this is a common pattern, should abstract it a bit like loopCommand
-
-	if h == ALL {
-		for _, h := range h.OrList() {
-			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
-				log.Error().Err(err).Msg("")
+	for _, h := range h.OrList() {
+		for _, ct := range ct.OrList() {
+			if err = update(h, ct, options...); err != nil {
+				fmt.Println(err)
 			}
 		}
-		return nil
 	}
 
-	if ct == nil {
-		for _, ct := range ct.OrList() {
-			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
-				log.Error().Err(err).Msg("")
-			}
-		}
-		return nil
+	return nil
+}
+
+// update is the core function and must be called with non-wild ct and
+// host
+func update(h *Host, ct *Component, options ...Options) (err error) {
+	if ct == nil || h == ALL {
+		return ErrInvalidArgs
 	}
 
 	if len(ct.PackageTypes) > 0 {
@@ -542,7 +540,7 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 	}
 
 	if opts.version == "" {
-		return fmt.Errorf("%q version of %s on %s: %w", originalVersion, ct, h, os.ErrNotExist)
+		return fmt.Errorf("%s version %q on %s: %w", ct, originalVersion, h, os.ErrNotExist)
 	}
 
 	// does the version directory exist?
