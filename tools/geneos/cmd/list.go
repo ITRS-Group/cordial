@@ -42,6 +42,7 @@ type listCmdType struct {
 	Disabled  bool   `json:"disabled"`
 	Protected bool   `json:"protected"`
 	AutoStart bool   `json:"autostart"`
+	TLS       bool   `json:"tls"`
 	Port      int64  `json:"port,omitempty"`
 	Version   string `json:"version,omitempty"`
 	Home      string `json:"home,omitempty"`
@@ -81,7 +82,7 @@ var listCmd = &cobra.Command{
 			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceJSON).Write(os.Stdout, instance.WriterIndent(listCmdIndent))
 		case listCmdCSV:
 			listCSVWriter := csv.NewWriter(os.Stdout)
-			listCSVWriter.Write([]string{"Type", "Name", "Host", "Disabled", "Protected", "AutoStart", "Port", "Version", "Home"})
+			listCSVWriter.Write([]string{"Type", "Name", "Host", "Disabled", "Protected", "AutoStart", "TLS", "Port", "Version", "Home"})
 			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV).Write(listCSVWriter)
 		default:
 			listTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
@@ -108,6 +109,9 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	if instance.IsAutoStart(i) {
 		flags += "A"
 	}
+	if len(instance.SetSecureArgs(i)) > 0 {
+		flags += "T"
+	}
 	if flags == "" {
 		flags = "-"
 	}
@@ -126,6 +130,7 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	disabled := "N"
 	protected := "N"
 	autostart := "N"
+	tls := "N"
 
 	if instance.IsDisabled(i) {
 		disabled = "Y"
@@ -136,8 +141,11 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	if instance.IsAutoStart(i) {
 		autostart = "Y"
 	}
+	if len(instance.SetSecureArgs(i)) > 0 {
+		tls = "Y"
+	}
 	base, underlying, _ := instance.Version(i)
-	resp.Rows = append(resp.Rows, []string{i.Type().String(), i.Name(), i.Host().String(), disabled, protected, autostart, fmt.Sprint(i.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), i.Home()})
+	resp.Rows = append(resp.Rows, []string{i.Type().String(), i.Name(), i.Host().String(), disabled, protected, autostart, tls, fmt.Sprint(i.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), i.Home()})
 	return
 }
 
@@ -152,6 +160,7 @@ func listInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		Disabled:  instance.IsDisabled(i),
 		Protected: instance.IsProtected(i),
 		AutoStart: instance.IsAutoStart(i),
+		TLS:       len(instance.SetSecureArgs(i)) > 0,
 		Port:      i.Config().GetInt64("port"),
 		Version:   fmt.Sprintf("%s:%s", base, underlying),
 		Home:      i.Home(),
