@@ -274,6 +274,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 	}
 
 	if err = h.Symlink(version, basepath); err != nil {
+		log.Debug().Err(err).Msgf("version %s base %s", version, basepath)
 		return h.Path(basedir), err
 	}
 

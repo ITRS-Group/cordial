@@ -262,15 +262,37 @@ func ByNameAll(h *geneos.Host, ct *geneos.Component, name string) (instances []g
 	return
 }
 
-// ByKeyValue returns a slice of instances where the instance
-// configuration key matches the value given.
-func ByKeyValue(h *geneos.Host, ct *geneos.Component, key, value string) (confs []geneos.Instance) {
+// ByKeyValues returns a slice of instances where the instance
+// configuration matches all the given parameter values in the form
+// "parameter=value".
+func ByKeyValues(h *geneos.Host, ct *geneos.Component, values ...string) (confs []geneos.Instance) {
+	if len(values) == 0 {
+		return
+	}
+
 	confs = GetAll(h, ct)
+
+	params := map[string]string{}
+	for _, v := range values {
+		if v == "" {
+			continue
+		}
+		s := strings.SplitN(v, "=", 2)
+		if len(s) == 2 {
+			params[s[0]] = s[1]
+		}
+	}
 
 	// filter in place
 	n := 0
 	for _, c := range confs {
-		if c.Config().GetString(key) == value {
+		match := true
+		for p, v := range params {
+			if c.Config().GetString(p) != v {
+				match = false
+			}
+		}
+		if match {
 			confs[n] = c
 			n++
 		}
