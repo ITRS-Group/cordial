@@ -1,6 +1,8 @@
 # `geneos package uninstall`
 
-The `package uninstall` commands removes installed Geneos releases. By default all releases that are not used by any enabled or running instance are removed with the exception of the "latest" release.
+The `package uninstall` commands removes installed Geneos releases and the original downloaded release files. By default all releases that are not used by any enabled or running instance are removed with the exception of the "latest" release.
+
+To keep the downloaded archives (in `${GENEOS}/packages/download`) use the `--keep`/`-k` flag, otherwise **all** files in that directory are removed.
 
 If `TYPE` is given then only releases for that component are removed. Similarly, if `--version VERSION` is given then only that version is removed. `VERSION` must be an exact match and multiple versions or version wildcards are not yet supported.
 
@@ -26,6 +28,7 @@ geneos package uninstall [flags] [TYPE]
   -V, --version VERSION   Uninstall VERSION
   -A, --all               Uninstall all releases, stopping and disabling running instances
   -f, --force             Force uninstall, stopping protected instances first
+  -k, --keep              Keep cached downloads
 ```
 
 ## Examples
