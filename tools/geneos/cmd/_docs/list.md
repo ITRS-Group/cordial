@@ -9,5 +9,6 @@ In plain (human readable) format the Flags column contains:
   * `D` - Disabled
   * `P` - Protected
   * `A` - Auto Start
+  * `T` - TLS enabled (for at last one connection type)
 
 In other output formats each flag gets it's own column or field.
