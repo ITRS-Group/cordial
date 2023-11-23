@@ -36,7 +36,7 @@ import (
 )
 
 // ImportKeyFile sets the keyfile for component ct from either the given
-// (local) keyfile or the CRC for an existing file.
+// (local) keyfile or the CRC for an existing shared file.
 func ImportKeyFile(h *Host, ct *Component, keyfile config.KeyFile, keycrc string) (crc string, err error) {
 	var path string
 
@@ -77,7 +77,7 @@ HOST:
 		return
 	}
 	defer k.Close()
-	kv := config.Read(k)
+	kv := config.ReadKeyValues(k)
 
 	crc32, err := ImportSharedKeyValues(h, ct, kv)
 	crc = fmt.Sprintf("%08X", crc32)
@@ -95,7 +95,7 @@ func ImportSharedKey(h *Host, ct *Component, source string) (crc uint32, err err
 		return
 	case source == "-":
 		// STDIN
-		return ImportSharedKeyValues(h, ct, config.Read(os.Stdin))
+		return ImportSharedKeyValues(h, ct, config.ReadKeyValues(os.Stdin))
 
 	case strings.HasPrefix(source, "https://"), strings.HasPrefix(source, "http://"):
 		// remote
@@ -104,7 +104,7 @@ func ImportSharedKey(h *Host, ct *Component, source string) (crc uint32, err err
 			return crc, err
 		}
 		defer resp.Body.Close()
-		return ImportSharedKeyValues(h, ct, config.Read(resp.Body))
+		return ImportSharedKeyValues(h, ct, config.ReadKeyValues(resp.Body))
 	case strings.HasPrefix(source, "~/"):
 		// relative to home
 		home, _ := config.UserHomeDir()

@@ -102,7 +102,7 @@ func (k *KeyFile) Read() (kv *KeyValues, err error) {
 		return
 	}
 	defer r.Close()
-	kv = Read(r)
+	kv = ReadKeyValues(r)
 	return
 }
 
