@@ -1,14 +1,10 @@
-# `dv2email`
+# `dv2email export`
 
-Email a Dataview following Geneos Action/Effect conventions
+Export dataview(s) to local files
 
 ```text
-dv2email
+dv2email export [flags]
 ```
-
-## Commands
-
-* [`dv2email export`](dv2email_export.md)	 - Export dataview(s) to local files
 
 Email a Dataview following Geneos Action/Effect conventions.
 
@@ -19,10 +15,16 @@ Settings for the Gateway REST connection and defaults for the EMail gateway can 
 ### Options
 
 ```text
-  -i, --inline-css        inline CSS for better mail client support (default true)
-  -t, --to string         To as comma-separated emails
-  -c, --cc string         Cc as comma-separated emails
-  -b, --bcc string        Bcc as comma-separated emails
+      --columns string     filter columns, comma-separated string
+      --dir directory      destination directory, defaults to current
+      --headlines string   filter headlines, comma-separated string
+      --rowname name       set row name
+      --rows string        filter rows, comma-separated string
+```
+
+### Options inherited from parent commands
+
+```text
   -f, --config string     config file (default is $HOME/.config/geneos/dv2email.yaml)
   -D, --dataview string   dataview name, ignored if _VARIBLEPATH set in environment
   -E, --entity string     entity name, ignored if _VARIBLEPATH set in environment
@@ -32,3 +34,4 @@ Settings for the Gateway REST connection and defaults for the EMail gateway can 
 
 ## SEE ALSO
 
+* [dv2email](dv2email.md)	 - Email a Dataview following Geneos Action/Effect conventions

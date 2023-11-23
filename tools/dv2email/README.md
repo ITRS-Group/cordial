@@ -1,92 +1,161 @@
-# dv2email - Dataview To HTML
+# dv2email - Dataview To EMail
 
-`dv2email` is a lightweight program to capture and transform Geneos Dataviews to HTML suitable for inclusion in email and other messaging systems.
+`dv2email` is a lightweight program to capture and transform Geneos Dataviews to HTML or XLSX for sending as email.
 
-## Usage
+You can also write the same data to local files using the `dv2email export` command.
 
-* Configure Your Gateways
+## Requirements
 
-  You have to enable the REST Command API in your Gateways. You should have a user account on the Gateways that support password authentication and is limited to `data` permissions, i.e. a read-only account. How to do this can be found in the following documentation:
+The `dv2email` program is self-contained and needs external packages or libraries installed. You have to enable the REST Command API on your Geneos Gateways, for the dataview snapshots, and have the details for you SMTP EMail relay, including authentication details.
 
-  * [REST Service 🔗](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#REST_Service)
-  * [Authentication 🔗](https://docs.itrsgroup.com/docs/geneos/6.3.0/Gateway_Reference_Guide/geneos_authentication_tr.html)
+All credentials, both for the REST connection to the Gateway and the SMTP connection, can be stored encrypted in the configuration file or in a `cordial` credentials file.
 
-* Install `dv2email` and `geneos` (optional) somewhere in your execution path (or use the full path to where you install them).
+The emails that `dv2email` sends can have a variety of attachment formations including:
 
-  Next create your `dv2email` YAML configuration files. You need at least one configuration file for the program to locate your Gateway and SMTP server:
+* `text+html` - A standard HTML Email with a text alternative (for accessibility and more)
+* `xlsx` - An XLSX spreadsheet
+* `html` - Self-contained HTML from the HTML template
+* `texttable` - Text-only formatted tables
 
-  * `${HOME}/.config/geneos/dv2email.yaml` - where `${HOME}` is the home directory of the user running the Gateway(s) - which may not be your own user (optional)
+Local files can be any combination of the above, except `text+html`, which is an email specific structure.
 
-    This configuration file should contain common configuration that applies across all Gateways and also shared email server configurations and credentials.
+## Getting Started
 
-  * `dv2email.yaml` in the working directory (e.g. `geneos home gateway MyGateway`) of each Gateway (optional)
+### Configure Your Gateways
 
-    This configuration file (see details below) should contain all customisations for the Gateway and the format of the emails you want to send. The contents of this file are merged with the file above, if it exists. Settings in this file take precedence.
+You have to enable the REST Command API in your Gateways. You should have a user account on the Gateways that support password authentication and is limited to `data` permissions, i.e. a read-only account. How to do this can be found in the following documentation:
 
-  If either file contains credentials, even when AES256 encrypted, they should be only readable by the Gateway user; that is `chmod 0400 dv2email.yaml`.
+* [REST Service 🔗](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#REST_Service)
+* [Authentication 🔗](https://docs.itrsgroup.com/docs/geneos/6.3.0/Gateway_Reference_Guide/geneos_authentication_tr.html)
 
-* Store credentials (optional)
+For the examples in this documentation we will use the `readonly` account name, but you can use any valid Genoes user name.
 
-  Next, optionally store any credentials in the Gateway user's `geneos` managed `credentials.yaml` file using `geneos login`. This is not necessary if you embed credentials in the dv2email.yaml files. The two kinds of credential you can store are for the Gateway REST Command API and for the SMTP server:
+### Install `dv2email`
 
-  * `geneos login gateway:GATEWAYNAME -u READONLYUSER` or `geneos login gateway -u READONLYUSER`
+Install `dv2email` and, optionally, `geneos` by downloading and copying them to somewhere in your execution path (or you will have to use the full path to where they are installed). Note that `geneos` may be a existing directory name on your system, so it's wise to create a temporary directory for the download, like this:
 
-    This will store credentials either for the gateway `GATEWAYNAME` or for all gateways and for the user `READONLYUSER`. You will be prompted to enter the password for the user twice.
+```bash
+mkdir /tmp/cordial
+cd /tmp/cordial
+curl -OL https://github.com/ITRS-Group/cordial/releases/latest/download/dv2email
+curl -OL https://github.com/ITRS-Group/cordial/releases/latest/download/geneos
+chmod +x dv2email geneos
+sudo mv dv2email geneos /usr/local/bin
+```
 
-  * `geneos login smtp.example.com -u USERNAME`
+### Configure `dv2email`
 
-    This will store credentials for your SMTP server for user `USERNAME`. You will br prompted for the password twice.
+Now create `dv2email.yaml` configuration file(s). You will need at least one file for the program to locate your Gateway and SMTP servers. In normal operation you should use these files:
 
-  If you do not store your credentials this way then you must provide them directly in the `dv2email.yaml` configuration file.
+* `${HOME}/.config/geneos/dv2email.yaml` - where `${HOME}` is the home directory of the user running the Gateway(s)
 
-* Test
+  This configuration file should contain common configuration that applies across all Gateways and also shared email server configurations and credentials.
 
-  You should now be able to test your configuration. You can do this by simulating a minimal alert on the command line:
+* `dv2email.yaml` in the working directory (e.g. `geneos home gateway MyGateway`) of each Gateway
 
-  ```bash
-  cd $(geneos home MyGateway)
-  _VARIABLEPATH='//dataview[(@name="SOMEDATAVIEWNAME")]' dv2email
-  ```
+  This configuration file (see details below) should contain all customisations for the Gateway and the format of the emails you want to send. The contents of this file are merged with the file above, if it exists. Settings in this file take precedence.
 
-  Replace `SOMEDATAVIEWNAME` above with the name of a Dataview on your Gateway that is likely to match exactly one Dataview. If it matches more than one Dataview then in the test template all matching Dataviews will be included in the email.
+If either file contains credentials, even when AES256 encrypted, they should be only readable by the Gateway user; that is `chmod 0400 dv2email.yaml`.
 
-  If the program returns with no output then it has succeeded in sending an email, otherwise review the errors and resolve them as needed. Most issues will be related to authentication, either to the Gateways or to the email server.
+A very basic configuration file would look like this:
 
-* Update Templates
+```yaml
+gateway:
+  host: localhost
+  port: 7038
+  use-tls: true
+  allow-insecure: true
+  name: GATEWAYEXAMPLE
 
-  Update your templates to suite you requirements. The built-in template produces output which says clearly that it is for testing and should be edited for local requirements. The templates (there is both an HTML and a plain text template) embedded into the binary are identical to the ones in the example configuration file included alongside the binary.
+email:
+  smtp: smtp.example.com
+  port: 465
+  from: geneos@example.com
+  to: alerts@example.com
+  contents: [ text+html, images, xlsx ]
 
-* Use
+files: [ xlsx ]
+```
 
-  If you are happy with the results of your testing then you should be able to create and Action or Effect that is simply the program, like this:
+There are many more configuration options, see further below for a complete reference.
 
-  ```bash
-  dv2email
-  ```
+### Store Credentials (optional)
 
-  While there are some command line flags you should not need to use them in normal operation as all the details are either in the configuration file(s) and the environment variables set by Geneos.
+Next, you can store credentials using the `geneos` program in the user's `credentials.yaml` file using `geneos login`. This is not necessary if you embed credentials in the `dv2email.yaml` files. There are two kinds of credential you can store, one set for the Gateway REST Command API and one for the SMTP server:
+
+* `geneos login gateway:GATEWAYNAME -u READONLYUSER` or `geneos login gateway -u READONLYUSER`
+
+  This will store credentials either for the gateway `GATEWAYNAME` or for all gateways and for the user `READONLYUSER`. You will be prompted to enter the password, twice.
+
+* `geneos login smtp.example.com -u USERNAME`
+
+  This will store credentials for your SMTP server for user `USERNAME`. You will be prompted for the password twice.
+
+If you do not store your credentials this way then you must provide them directly in the `dv2email.yaml` configuration file.
+
+### Test `dv2email`
+
+You should now be able to test your configuration. You can do this by simulating a minimal alert on the command line, writing to a local file:
+
+```bash
+$ cd $(geneos home MyGateway)
+$ _VARIABLEPATH='//dataview[(@name="SOMEDATAVIEWNAME")]' dv2email export
+written dataviews-20231123112233.txt
+written dataviews-20231123112233.xlsx
+```
+
+> ❕ Replace `SOMEDATAVIEWNAME` above with the name of a Dataview on your Gateway that is likely to match exactly one Dataview. If it matches more than one Dataview then `dv2email` will fetch and process each one.
+
+You should see a list of file(s) written, or appropriate errors if there were problems connecting to the Gateway or locating the desired dataview. You should address any errors and try again before moving on to the next test.
+
+Now, try the same but send the simulated alert as an email - which is the same but without the `export` command name:
+
+```bash
+$ cd $(geneos home MyGateway)
+$ _VARIABLEPATH='//dataview[(@name="SOMEDATAVIEWNAME")]' dv2email
+```
+
+If the program returns with no output then it has succeeded in sending an email, otherwise review the errors and resolve them. Most issues will be related to authentication, either to the Gateways or to the email server.
+
+### Update Templates
+
+Update your templates to suite your needs. The built-in template produces output which state clearly that they are for testing and should be edited for local requirements. The templates (there is both an HTML and a plain text template) embedded into the binary are identical to the ones in the example configuration file included alongside the binary. See the `text-template` and `html-template` settings below.
+
+### Set-up For Gateway Use
+
+If you are happy with the results of your testing then you should be able to create and Action or Effect that is simply the program, like this:
+
+```bash
+/PATH-TO/dv2email
+```
+
+Replace `PATH-TO` with the installation directory, or if you have put the binary in the Gateway working directory then just use `./dv2email`
+
+While there are some command line flags, you will not need to use them in normal operation as all the details are either in the configuration file(s) and the environment variables set by Geneos for Actions and Effects.
 
 ## How It Works
 
-The program has been designed to run under a Geneos Gateway and process the standard environment variables that the Gateway sets when running an Action from a Rule or an Effect from an Alerting hierarchy. The precise list of values differs based on which mechanism is used and also the data item that the Action or Effect is run against. Details are documented here:
+The program has been designed to primarily run from a Geneos Gateway Action or Effect and work with the environment variables that the Gateway sets when running an Action from a Rule or an Effect from an Alert. The full list of environment variables and their values differ slightly based on which trigger is used and also the data item that the Action or Effect is run against. Full details are documented here:
 
-* [Actions 🔗](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_rulesactionsalerts_tr.html#Action_Configuration)
-* [Effects 🔗](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_rulesactionsalerts_tr.html#Alerting-Effects)
+* [`Actions` 🔗](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_rulesactionsalerts_tr.html#Action_Configuration)
+* [`Effects` 🔗](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_rulesactionsalerts_tr.html#Alerting-Effects)
 
-The primary difference for `dv2email` is that when running from an Alert and Effect some of the email headers are automatically set based on the Notification set-up. `dv2email` will recognise these and process them as expected. For Actions the `To`, `From`, `Subject` items must be set. You can define the defaults in the configuration files and override them using `userdata` functions in the Rule Block, e.g. (in Geneos):
+The primary difference for `dv2email` is that when running from an `Alert` and `Effect` some of the email headers are automatically set based on the Notification set-up. `dv2email` will recognise these and process them as expected. For `Actions` the `To`, `From`, `Subject` items must be set. You can define defaults in the configuration files and override them using `userdata` functions in the Rule, e.g. (in the Geneos configuration):
 
 ```text
-if value > 100 then
+if value < 1 then
     userdata "_TO" "manager@example.com"
-    userdata "_SUBJECT" "HELP! It's Broken!"
+    userdata "_SUBJECT" "ALERT! System ABC is Broken!"
     run "dv2email Action"
 else
 ...
 ```
 
-The contents of the email are assembled from the two templates (text and HTML) and any image attachments. The resulting HTML is also run through an "inliner" to ensure that any CSS defined in the HTML `<head>` section is inlined to the tags that need the settings as many email clients (GMail and others) only support a simple HTML5/CSS3 format. If you wnt to save data then you can disable this inlining with the `--inline-css=false` command line flag.
+The contents of the email are assembled from the two templates (text and HTML), any image attachments and a dynamically created XLSX file.
 
-### Running As a Command
+> ⚠ Note: The resulting HTML is also run through an "inliner" to ensure that any CSS defined in the HTML `<head>` section is inlined to the tags that need the settings as many email clients (GMail and others) only support a simple HTML5/CSS3 format. If you wnt to save data then you can disable this inlining with the `--inline-css=false` command line flag.
+
+### Running As A Geneos Command
 
 To run the `dv2email` program as a right-click style command, allowing users to email dataviews, you have to use command line arguments to extract the XPath components from the command target. These command line arguments are:
 
@@ -122,25 +191,25 @@ A typical command (XML below) would be set-up like this. Remember to set the pat
 				<static>-E</static>
 			</arg>
 			<arg>
-				<xpath>ancestor::managedEntity</xpath>
+				<xpath>ancestor.managedEntity</xpath>
 			</arg>
 			<arg>
 				<static>-S</static>
 			</arg>
 			<arg>
-				<xpath>ancestor::sampler</xpath>
+				<xpath>ancestor.sampler</xpath>
 			</arg>
 			<arg>
 				<static>-T</static>
 			</arg>
 			<arg>
-				<xpath>ancestor::sampler/@type</xpath>
+				<xpath>ancestor.sampler/@type</xpath>
 			</arg>
 			<arg>
 				<static>-D</static>
 			</arg>
 			<arg>
-				<xpath>ancestor-or-self::dataview</xpath>
+				<xpath>ancestor-or-self.dataview</xpath>
 			</arg>
 			<arg>
 				<static>-t</static>
@@ -156,23 +225,29 @@ A typical command (XML below) would be set-up like this. Remember to set the pat
 	</userCommand>
 ```
 
+### Exporting to Local Files
+
+The other mode of operation is to write the Dataview(s) to 
+
 ## Configuration Reference
 
 ### File locations
 
-The `dv2email` program will look in three directories for a `dv2email.yaml` file and merge the contents in the following order (last version of a value "wins"):
+The `dv2email` program will look in three locations for a `dv2email.yaml` file and merge the contents in the following order (later versions of a value overrides previous ones):
 
-1. `/etc/geneos` - a global configuration directory for `geneos`. These are general, global settings and in many instances this directory does not exist.
+1. `/etc/geneos` - a global configuration directory for `geneos`. These are general, global settings and in many instances this file is not used.
+
 2. `${HOME}/.config/geneos` - the user's `geneos` configuration directory. This is the user running the program, which again will be typically the Gateway user.
-3. Working directory of process - i.e. where you are when you run it, not the installation directory (`pwd`). This is normally the same as the working directory of the Gateway running it.
+
+3. `${PWD}` - Working directory of process - i.e. where you are when you run it, not the installation directory (`pwd`). This is normally the same as the working directory of the Gateway running it.
 
 Additionally there is support for "defaults" files for all the above. You can have `dv2email.defaults.yaml` files in any of the above directories and these are read before the main configurations but after built-in defaults. They make a good option for complex templates that would otherwise pollute the visibility of other configuration options.
 
-Note: If the program is renamed then the base name of all the files above is also changed. e.g. if you rename the program `dv2mailserver` then the configuration files that the program searches for will be `dv2mailserver.yaml` etc.
+Note: If the program is renamed then the base name of the files above are also changed. e.g. if you rename the program `dv2mailserver` then the configuration files that the program searches for will be `dv2mailserver.yaml` and so on.
 
 ### Configuration Options
 
-The configuration is in three parts; Gateway connectivity, EMail server connectivity and everything else. These are described below along with the defaults (except the templates which can be quite large):
+The configuration is in three parts; Gateway connectivity, EMail server connectivity and everything else. These are described below along with their defaults - a full copy of the default settings is at the end of this file, including the text and HTML templates:
 
 * `gateway`
 
@@ -234,9 +309,29 @@ The configuration is in three parts; Gateway connectivity, EMail server connecti
 
     In a future release there may be support for fetching these values from the `cordial` credentials store but for now they must be in one of the `dv2email` configuration files.
 
+  * `contents` - default `[ text+html, images ]`
+
+    This setting controls which content formats are sent in the resulting email. Future releases should add support for `text` and `html` attachments as files and perhaps textual tables.
+    
+    ⚠ Note: A plain text body is **always** included and built from the `text-template`. The currently supported formats are:
+
+    * `text+html`
+
+      A MIME `multipart/alternative` HTML attachment is built from the `html-template`. Modern email clients will present only the HTML part, but the text body should match and is there to provide for accessibility and machine processing.
+
+    * `images`
+
+      Images are attached for reference from the HTML template above. They are defined in the separate `images` configuration section and are referred to in the HTML template using `cid` image references. See the default template for an example.
+
+    * `xlsx`
+
+      An XLSX format spreadsheet is attached and, depending on the configuration further below, will contain a worksheet (tab) for each Dataview which in turn will contain three tables of data; Metadata about the source of the Dataview, the Headings and the main data table.
+
   * `from` - no default
   * `to` - no default
   * `subject` - default `Geneos Alert`
+
+#### Filters, Ordering and First Column
 
 * `column-filter` - default from Environment Variable `__COLUMNS` (two underscores)
 * `row-filter` - default from Environment Variable `__ROWS` (two underscores)
@@ -269,9 +364,104 @@ The configuration is in three parts; Gateway connectivity, EMail server connecti
 
   Rows can be ordered by one column, including the name of the first column (or `rowname` if none is defined) using a similar pattern match to the filters above. Only the first item is used and it must be an exact match for a column name followed by an option '+' or '-' to indicate ascending or descending order, respectively.
 
+#### Output Formats
+
+Settings for each type of email attachment.
+
+For all the settings in this section, lookup tables are dynamically built for each dataview processed and can be referenced in "expandable" format, e.g. `${gateway}`.
+
+From the XPath to the Dataview:
+
+| Name | Description |
+|------|-------|
+| `gateway` | The Gateway name |
+| `probe` | The Probe name |
+| `entity` | The Managed Enitity name |
+| `sampler` | The Sampler name |
+| `type` | The Type name (can be empty) |
+| `dataview` | The Dataview Name |
+
+Time and date, for use to distinguish values, all in the local timezone:
+
+| Name | Description |
+|------|-------|
+| `date` | The date in the format `YYYYMMDD` |
+| `time` | The time in the format `HHMMSS` |
+| `datetime` | The time in ISO8601 format |
+
+* `text`
+
+  * `filename` - default `dataviews-${date}${time}.txt`
+
+  When a text attachment is also used, not yet implemented, this is the name of the attachment.
+
+  * `template` - default `${config:text-template}`
+  
+  The contents of the text template, see [Templates](#templates) below. 
+
+  * `type` - default `single`
+  
+  The type of text attachments and their content. The default `single` produces a single text block which aggregates all the Dataviews matched by the XPath or command line arguments. Not yet implemented, but a `multiple` value would result in one text attachment per Dataview. The main body of the EMail in this mode is yet to be defined.
+
+* `html`
+
+  * `filename` - default `dataviews-${date}${time}.html`
+
+    When an HTML attachment is also used, not yet implemented, this is the name of the attachment.
+
+  * `template` - default `${config:html-template}`
+
+    The contents of the HTML template, see [Templates](#templates) below.
+
+  * `type` - default `single`
+
+    The type of HTML attachments and their content. The default `single` produces a single HTML block which aggregates all the Dataviews matched by the XPath or command line arguments. Not yet implemented, but a `multiple` value would result in one HTML attachment per Dataview.
+
+* `xlsx`
+
+  * `filename` - default `dataviews-${date}${time}.xlsx`
+
+    The name of the attachment.
+
+  * `sheetname` - default `auto`
+
+    This setting controls how sheets (worksheets) in each XLSX file are named. The default `auto` setting applies the following rules:
+
+    | Dataviews | Entities | Naming |
+    |-----------|----------|--------|
+    | Single | Single | The worksheet is named for the Dataview, truncated to a maximum of 31 characters |
+    | Multiple | Single | Each worksheet is named for the Dataview, truncated to 31 characters |
+    | Multiple | Multiple | Each worksheet is named `${entity}-${dataview}`, truncated to 31 characters |
+
+    Any other value is used to name each worksheet, but names are limited to 31 characters.
+
+  * `type` - default `single` # / multiple (per dataview)
+
+    The type of XLSX attachments and their content. The default `single` produces a single XLSX attachment with one worksheet per Dataview, named as above. Not yet implemented, but a `multiple` value would result in one XLSX attachment per Dataview.
+
+  * `password` - no default
+
+    If defined then each XLSX attachment is protected with the password given. This can be used to protect confidential information in the Dataview from unintentional sharing or accidental viewing by unauthorised recipients. The encryption used is AES-256 as per the Open XML standards.
+
+  * `column-width` - default `20.0`
+
+    The default column is fixed at 20.0, but if set to 0 (zero) then the `dv2email` program tries to set each column width based on the widest content over the Headline and the columns of the main data table. As columns are shared by three tables per worksheet this can result in difficult to view results.
+
+  * `style` - default `TableStyleMedium2`
+  
+    The style for the data table part of the worksheet. These follow the standard name for XLSX Tables, as list can be seen here: <https://xuri.me/excelize/en/utils.html#AddTable>
+
+  * `row-stripes` - default `true`
+
+    If set to `true` then rows in the main data table are striped light and dark, depending on the `style` chosen above.
+
+  * `column-stripes` - default `false`
+
+    If set to `true` then columns in the main data table are striped light and dark, depending on the `style` chosen above.
+
 * `images`
 
-  A list of image files to embed into the resulting email. The name (on the left) is used as the href `cid` value. e.g.
+  A list of image files to embed into the resulting email. The name, on the left, is used as the href `cid` value. e.g.
 
   ```yaml
   images:
@@ -279,206 +469,211 @@ The configuration is in three parts; Gateway connectivity, EMail server connecti
     alert.png: /path/to/another/image.png
   ```
 
-  In a future release it may be possible to refer to images using URLs or other "expandable" formats but for now they must be file paths and if relative they must be accessibkle from the working directory of the
-  process.
+  The path to the images should always be absolute paths, as relative paths may not evaluate as expected depending on the working directory when `dv2email` is executed.
 
-* Templates
+  ⚠ In future releases it may be possible to refer to images using URLs or other "expandable" formats.
 
-  The two templates are used to build a multipart alternative MIME message. You should ensure that changes in one template are correctly reflected in the other as both are always used and an unchanged text template, for example, may expose data that is not rendered in an updated HTML template and visa versa.
+#### Templates
 
-  The templates are passed the following data structure:
+The two templates below are used to build the text body and, by default, a MIME `multipart/alternative` HTML message. You should ensure that changes in one template are correctly reflected in the other as normally both are used and an unchanged text template, for example, may expose data that is not rendered in an updated HTML template and visa versa.
 
-  ```go
-  type dv2emailData struct {
-    // Dataviews is a slice of each Dataview's data, including Columns and Rows which are ordered names for the columns and rows respectively, suitable for range loops. See https://pkg.go.dev/github.com/itrs-group/cordial/pkg/commands#Dataview for details
-    Dataviews []*commands.Dataview
+⚠ Note: The two top-level configuration names below are not used directly bu instead are referenced from `attachments.text.template` and `attachments.html.template` (see above). This can be used to defined multiple templates in a defaults configuration file and then reference different templates in Gateway specific `dv2email.yaml` files without having to duplicate the template contents.
 
-    // Env is a map of environment variable names to values
-    Env       map[string]string
-  }
+The templates are passed the following data structure:
+
+```go
+type DV2EMailData struct {
+  // Dataviews is a slice of each Dataview's data, including Columns
+  // and Rows which are ordered names for the columns and rows
+  // respectively, suitable for range loops. See
+  // https://pkg.go.dev/github.com/itrs-group/cordial/pkg/commands#Dataview
+  // for details
+  Dataviews []*commands.Dataview
+
+  // Env is a map of environment variable, names to values
+  Env       map[string]string
+}
+```
+
+* `text-template`
+
+  A template in [text/template](https://pkg.go.dev/text/template) format to be used to generate the plain text to be used as the `text/plain` alternative part in the email. This part of the email is not normally visible in modern email clients but it is used for assistive text readers and other accessibility tools and should be used to describe the contents of the email.
+
+  The default, embedded text template is very simple:
+
+  ```gotmpl
+  This email has been generated by the ITRS Geneos system using the
+  dv2email program. If you did not expect to received this email then
+  please contact the sender.
+
+  Environment Variables:
+  {{range $key, $value := .Env}}
+  * {{$key}}={{$value -}}
+  {{end}}
   ```
 
-  * `text-template`
+* `html-template`
 
-    A template in Go [text/template](https://pkg.go.dev/text/template) format to be used to generate the plain text to be used as the `text/plain` alternative part in the email. This part of the email is not normally visible in modern email clients but it is used for assistive text readers and other accessibility tools and should be used to describe the contents of the email.
+  A template in [html/template](https://pkg.go.dev/html/template) format to be used to generate the HTML to be used as the `text/html` alternative part of the email.
 
-    The default, embedded text template is:
+  The data available to the template (and the text template above) is detailed in the `dv2email.yaml` file.
 
-    ```gotmpl
-    This email has been generated by the ITRS Geneos system using the
-    dv2email program. If you did not expect to received this email then
-    please contact the sender.
+  For both template types it is possible to include the contents of a file or a URL using "expandable" syntax, like this:
 
-    Environment Variables:
-    {{range $key, $value := .Env}}
-    * {{$key}}={{$value -}}
-    {{end}}
-    ```
+  ```yaml
+  text-template: ${https://myserver.example.com/files/txt.gotmpl}
+  html-template: ${file:/path/to/template.gotmpl}
+  ```
 
-  * `html-template`
+  The default, embedded HTML template is:
 
-    A template in Go [html/template](https://pkg.go.dev/html/template) format to be used to generate the HTML to be used as the `text/html` alternative part of the email.
+  ```gotmpl
+  <html>
+  <head>
+    <style>
+      .CRITICAL {
+        background-color: crimson;
+        color: white;
+      }
 
-    The data available to the template (and the text template above) is details in the `dv2email.yaml` file.
+      .WARNING {
+        background-color: gold;
+        color: black;
+      }
 
-    For both template types it is possible to include the contents of a file or a URL using "expandable" syntax, like this:
+      .OK {
+        background-color: limegreen;
+        color: white;
+      }
 
-    ```yaml
-    text-template: ${https://myserver.example.com/files/txt.gotmpl}
-    html-template: ${file:/path/to/template.gotmpl}
-    ```
+      .UNDEFINED {
+        background-color: lightgrey;
+        color: black;
+      }
 
-    The default, embedded HTML template is:
+      table, th, td {
+        table-layout: fixed;
+        font-family: Lucida Console, monospace;
+        border: 1px solid black;
+        border-collapse: collapse;
+        padding: 5px;
+        text-align: left;
+        vertical-align: top;
+      }
 
-    ```gotmpl
-    <html>
-    <head>
-      <style>
-        .CRITICAL {
-          background-color: crimson;
-          color: white;
-        }
+      td {
+        word-wrap: break-word;
+      }
 
-        .WARNING {
-          background-color: gold;
-          color: black;
-        }
+      .envname {
+        width: 25%;
+      }
 
-        .OK {
-          background-color: limegreen;
-          color: white;
-        }
+      dt {
+        font-weight: bold;
+      }
 
-        .UNDEFINED {
-          background-color: lightgrey;
-          color: black;
-        }
+      .dataview {
+        /* border: 1px solid black; */
+        padding: 5px;
+      }
 
-        table, th, td {
-          table-layout: fixed;
-          font-family: Lucida Console, monospace;
-          border: 1px solid black;
-          border-collapse: collapse;
-          padding: 5px;
-          text-align: left;
-          vertical-align: top;
-        }
+      .headlines {
+        border: 1px solid white;
+      }
 
-        td {
-          word-wrap: break-word;
-        }
+      .rows {
+        font-size: 0.8em;
+      }
 
-        .envname {
-          width: 25%;
-        }
+      .target {
+        border: 3px solid blue;
+      }
+    </style>
+  </head>
+  <body>
+    <a href="https://www.itrsgroup.com/products/geneos"><img src="cid:logo.png"/></a>
 
-        dt {
-          font-weight: bold;
-        }
+    <h1>ITRS Geneos DV2EMAIL Default Template</h1>
 
-        .dataview {
-          /* border: 1px solid black; */
-          padding: 5px;
-        }
+    <p>This content has been generated by the default template built
+    into the dv2email program from the ITRS <a
+    href="https://github.com/ITRS-Group/cordial">cordial</a> tool set.
+    It is normally only seen when testing. If you did not expect to
+    receive this please contact the sender and let them know.</p>
 
-        .headlines {
-          border: 1px solid white;
-        }
+    <h2>Dataviews</h2>
 
-        .rows {
-          font-size: 0.8em;
-        }
+    <p>These Dataviews matched the input <b>_VARIABLEPATH</b>:
+    <code>{{.Env._VARIABLEPATH}}</code></p>
 
-        .target {
-          border: 3px solid blue;
-        }
-      </style>
-    </head>
-    <body>
-      <a href="https://www.itrsgroup.com/products/geneos"><img src="cid:logo.png"/></a>
+    <p></p>
 
-      <h1>ITRS Geneos DV2EMAIL Default Template</h1>
+    {{range $index, $dataview := .Dataviews}}
 
-      <p>This content has been generated by the default template built
-      into the dv2email program from the ITRS <a
-      href="https://github.com/ITRS-Group/cordial">cordial</a> tool set.
-      It is normally only seen when testing. If you did not expect to
-      receive this please contact the sender and let them know.</p>
-
-      <h2>Dataviews</h2>
-
-      <p>These Dataviews matched the input <b>_VARIABLEPATH</b>:
-      <code>{{.Env._VARIABLEPATH}}</code></p>
-
-      <p></p>
-
-      {{range $index, $dataview := .Dataviews}}
-
-      <table class="dataview">
-        <tbody>
-          <tr><th>Dataview</th><td>{{.Name}}</td></tr>
-          <tr><th>XPath</th><td>{{.XPath}}</td></tr>
-          <tr><th>Last Sample</th><td>{{.SampleTime}}</td></tr>
-          <tr>
-            <th>Headlines</th>
-            <td>
-              <table class="headlines">
-                <tbody>
-                  {{range $headline, $values := .Headlines}}<tr>
-                    <th class="headlines">{{$headline}}</th>
-                    <td class="headlines {{.Severity}} {{if and (eq $.Env._HEADLINE $headline)}} target{{end}}">{{$values.Value}}</td>
-                  </tr>
-                  {{end}}
-                </tbody>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <th>Rows</th>
-            <td>
-              <table class="rows">
-                <thead>
-                  {{range .Columns}}<th>{{.}}</th>{{end}}
-                </thead>
-                <tbody>
-                  {{range $row := .Rows}}
-                  <tr>
-                    <th>{{$row}}</th>
-                    {{range $i, $column := $dataview.Columns}}
-                        {{if ne $i 0}}
-                          {{with (index $dataview.Table $row $column)}}
-                            <td class="cells {{.Severity}}{{if and (eq $.Env._ROWNAME $row) (eq $.Env._COLUMN $column)}} target{{end}}">{{.Value}}</td>
-                          {{end}}
+    <table class="dataview">
+      <tbody>
+        <tr><th>Dataview</th><td>{{.Name}}</td></tr>
+        <tr><th>XPath</th><td>{{.XPath}}</td></tr>
+        <tr><th>Last Sample</th><td>{{.SampleTime}}</td></tr>
+        <tr>
+          <th>Headlines</th>
+          <td>
+            <table class="headlines">
+              <tbody>
+                {{range $headline, $values := .Headlines}}<tr>
+                  <th class="headlines">{{$headline}}</th>
+                  <td class="headlines {{.Severity}} {{if and (eq $.Env._HEADLINE $headline)}} target{{end}}">{{$values.Value}}</td>
+                </tr>
+                {{end}}
+              </tbody>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <th>Rows</th>
+          <td>
+            <table class="rows">
+              <thead>
+                {{range .Columns}}<th>{{.}}</th>{{end}}
+              </thead>
+              <tbody>
+                {{range $row := .Rows}}
+                <tr>
+                  <th>{{$row}}</th>
+                  {{range $i, $column := $dataview.Columns}}
+                      {{if ne $i 0}}
+                        {{with (index $dataview.Table $row $column)}}
+                          <td class="cells {{.Severity}}{{if and (eq $.Env._ROWNAME $row) (eq $.Env._COLUMN $column)}} target{{end}}">{{.Value}}</td>
                         {{end}}
-                    {{end}}
-                  </tr>
+                      {{end}}
                   {{end}}
-                </tbody>
-              </table>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                </tr>
+                {{end}}
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody>
+    </table>
 
-      <hr>
+    <hr>
 
-      {{end}}
+    {{end}}
 
-      <h2>Environment Variables</h2>
-      <table style="width: 100%;">
-        <thead>
-          <th class="envname">Name</th>
-          <th>Value</th>
-        </thead>
-        <tbody>
-          {{range $key, $value := .Env}}<tr>
-            <th class="envname">{{$key}}</th>
-            <td style="word-wrap: break-word;">{{$value}}</td>
-          </tr>{{end}}
-        </tbody>
-      </table>
-    </body>
-    </html>
-    ```
-
-
+    <h2>Environment Variables</h2>
+    <table style="width: 100%;">
+      <thead>
+        <th class="envname">Name</th>
+        <th>Value</th>
+      </thead>
+      <tbody>
+        {{range $key, $value := .Env}}<tr>
+          <th class="envname">{{$key}}</th>
+          <td style="word-wrap: break-word;">{{$value}}</td>
+        </tr>{{end}}
+      </tbody>
+    </table>
+  </body>
+  </html>
+  ```

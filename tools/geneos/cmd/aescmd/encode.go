@@ -101,14 +101,18 @@ var encodeCmd = &cobra.Command{
 				// to stdout
 				keyfilepath, _ := ct.KeyFilePath(h, encodeCmdKeyfile, encodeCmdCRC)
 
-				if _, err := os.Stat(keyfilepath); err != nil {
-					return err
-				}
-
 				var keyfile config.KeyFile
-				keyfile = config.KeyFile(keyfilepath)
-				if keyfile == "" {
-					return
+				if keyfilepath == "" {
+					keyfile = cmd.DefaultUserKeyfile
+				} else {
+					if _, err := os.Stat(keyfilepath); err != nil {
+						return err
+					}
+
+					keyfile = config.KeyFile(keyfilepath)
+					if keyfile == "" {
+						keyfile = cmd.DefaultUserKeyfile
+					}
 				}
 
 				if encodeCmdClientID.IsNil() {

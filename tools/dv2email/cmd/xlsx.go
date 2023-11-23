@@ -2,16 +2,20 @@ package cmd
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/xuri/excelize/v2"
 
+	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
+// Hardwired cell defaults
 var (
 	CriticalCellStyle = excelize.Style{
 		Fill: excelize.Fill{
@@ -64,12 +68,12 @@ const (
 var (
 	infoNames = []string{
 		"Source",
-		"Sample Time",
 		"Gateway",
 		"Probe",
 		"Entity",
 		"Sampler",
 		"Dataview",
+		"Sample Time",
 		"XPath",
 	}
 
@@ -80,11 +84,11 @@ var (
 	rownamesStart, _ = excelize.CoordinatesToCellName(dataviewColumn, dataviewRow+1)
 )
 
-func createXLSX(cf *config.Config, data dv2emailData) (buf *bytes.Buffer, err error) {
-	rowStripes := cf.GetBool("attachments::xlsx::row-stripes")
+func createXLSX(cf *config.Config, data DV2EMailData) (buf *bytes.Buffer, err error) {
+	rowStripes := cf.GetBool("xlsx.row-stripes")
 
 	// if zero then auto-size based on widest value, else fixed
-	columnWidth := cf.GetFloat64("attachments::xlsx::column-width")
+	columnWidth := cf.GetFloat64("xlsx.column-width")
 
 	x := excelize.NewFile()
 
@@ -93,11 +97,36 @@ func createXLSX(cf *config.Config, data dv2emailData) (buf *bytes.Buffer, err er
 	warningStyle, _ := x.NewStyle(&WarningCellStyle)
 	okStyle, _ := x.NewStyle(&OKCellStyle)
 
-	for _, dv := range data.Dataviews {
-		lookup := dv.XPath.LookupValues()
+	t := time.Now()
 
-		sheetname := cf.GetString("attachments::xlsx::sheetname", config.LookupTable(lookup))
+	// number of digits needed for "serial" - the length of string of the number of the length of dataviews
+	digits := len(strconv.Itoa(len(data.Dataviews)))
+
+	// sort by entity and dataview
+	sort.Slice(data.Dataviews, func(i, j int) bool {
+		return data.Dataviews[i].XPath.String() < data.Dataviews[j].XPath.String()
+	})
+
+	for di, dv := range data.Dataviews {
+		var sheetname string
+		lookup := dv.XPath.LookupValues()
+		lookup["date"] = t.Local().Format("20060102")
+		lookup["time"] = t.Local().Format("150405")
+		lookup["datetime"] = t.Local().Format(time.RFC3339)
+		lookup["serial"] = fmt.Sprintf("%0*d", digits, di)
+
+		// if sheetname is "auto" then apply some heuristics
+
+		sheetname = cf.GetString("xlsx.sheetname", config.LookupTable(lookup))
+		sheetname = buildName(sheetname, lookup)
+
+		if len(sheetname) > 31 {
+			log.Debug().Msgf("truncating %s to %s", sheetname, sheetname[:31])
+			sheetname = sheetname[:31]
+		}
+
 		if _, err = x.NewSheet(sheetname); err != nil {
+			log.Error().Err(err).Msgf(`new sheet "%s"`, sheetname)
 			continue
 		}
 
@@ -110,14 +139,14 @@ func createXLSX(cf *config.Config, data dv2emailData) (buf *bytes.Buffer, err er
 		if err = x.SetSheetRow(sheetname, infoTable, &infoNames); err != nil {
 			log.Error().Err(err).Msg("")
 		}
-		info := []any{
+		info := []string{
 			"Geneos dv2email",
-			dv.SampleTime.Format(time.RFC3339),
 			lookup["gateway"],
 			lookup["probe"],
 			lookup["entity"],
 			lookup["sampler"],
 			lookup["dataview"],
+			dv.SampleTime.Format(time.RFC3339),
 			dv.XPath.String(),
 		}
 
@@ -192,11 +221,11 @@ func createXLSX(cf *config.Config, data dv2emailData) (buf *bytes.Buffer, err er
 		err = x.AddTable(sheetname, &excelize.Table{
 			Range:             dataviewTable + ":" + end,
 			Name:              tablename,
-			StyleName:         cf.GetString("attachments::xlsx::style", config.Default("TableStyleMedium2")),
+			StyleName:         cf.GetString("xlsx.style", config.Default("TableStyleMedium2")),
 			ShowFirstColumn:   true,
 			ShowLastColumn:    false,
 			ShowRowStripes:    &rowStripes,
-			ShowColumnStripes: cf.GetBool("attachments::xlsx::column-stripes"),
+			ShowColumnStripes: cf.GetBool("xlsx.column-stripes"),
 		})
 		if err != nil {
 			log.Error().Err(err).Msg("")
@@ -237,7 +266,9 @@ func createXLSX(cf *config.Config, data dv2emailData) (buf *bytes.Buffer, err er
 	x.DeleteSheet("Sheet1")
 
 	buf = &bytes.Buffer{}
-	if err = x.Write(buf, excelize.Options{Password: cf.GetString("attachments::xlsx::password")}); err != nil {
+	if err = x.Write(buf, excelize.Options{
+		Password: cf.GetString("xlsx.password"),
+	}); err != nil {
 		return
 	}
 	if err = x.Close(); err != nil {
@@ -296,5 +327,88 @@ func validTablename(sheetname, prefix string) (tablename string) {
 	default:
 		tablename = "_" + tablename
 	}
+	return
+}
+
+func buildXLSXFiles(cf *config.Config, data DV2EMailData, timestamp time.Time) (files []dataFile, err error) {
+	lookupDateTime := map[string]string{
+		"date":     timestamp.Local().Format("20060102"),
+		"time":     timestamp.Local().Format("150405"),
+		"datetime": timestamp.Local().Format(time.RFC3339),
+	}
+	switch cf.GetString("xlsx.split") {
+	case "entity":
+		entities := map[string][]*commands.Dataview{}
+		for _, d := range data.Dataviews {
+			if len(entities[d.XPath.Entity.Name]) == 0 {
+				entities[d.XPath.Entity.Name] = []*commands.Dataview{}
+			}
+			entities[d.XPath.Entity.Name] = append(entities[d.XPath.Entity.Name], d)
+		}
+		for entity, e := range entities {
+			many := DV2EMailData{
+				Dataviews: e,
+				Env:       data.Env,
+			}
+			lookup := map[string]string{
+				"default":   "dataviews",
+				"entity":    entity,
+				"sampler":   "",
+				"dataview":  "",
+				"timestamp": timestamp.Local().Format("20060102150405"),
+			}
+			buf, err := createXLSX(cf, many)
+			if err != nil {
+				return files, err
+			}
+			filename := buildName(cf.GetString("xlsx.filename", config.LookupTable(lookupDateTime)), lookup) + ".xlsx"
+			files = append(files, dataFile{
+				name:    filename,
+				content: buf,
+			})
+		}
+	case "dataview":
+		for _, d := range data.Dataviews {
+			one := DV2EMailData{
+				Dataviews: []*commands.Dataview{d},
+				Env:       data.Env,
+			}
+			lookup := map[string]string{
+				"default":   "dataviews",
+				"entity":    d.XPath.Entity.Name,
+				"sampler":   d.XPath.Sampler.Name,
+				"dataview":  d.XPath.Dataview.Name,
+				"timestamp": timestamp.Local().Format("20060102150405"),
+			}
+			buf, err := createXLSX(cf, one)
+			if err != nil {
+				return files, err
+			}
+			filename := buildName(cf.GetString("xlsx.filename", config.LookupTable(lookupDateTime)), lookup) + ".xlsx"
+			files = append(files, dataFile{
+				name:    filename,
+				content: buf,
+			})
+		}
+	default:
+		lookup := map[string]string{
+			"default":   "dataviews",
+			"entity":    "",
+			"sampler":   "",
+			"dataview":  "",
+			"timestamp": timestamp.Local().Format("20060102150405"),
+		}
+
+		buf, err := createXLSX(cf, data)
+		if err != nil {
+			return files, err
+		}
+		filename := buildName(cf.GetString("xlsx.filename", config.LookupTable(lookupDateTime)), lookup) + ".xlsx"
+		files = append(files, dataFile{
+			name:    filename,
+			content: buf,
+		})
+	}
+
 	return
 }
