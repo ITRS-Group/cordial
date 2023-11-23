@@ -157,7 +157,7 @@ geneos uninstall --version 5.14.1
 						log.Error().Err(err)
 						continue
 					}
-					fmt.Printf("removed %s release %s in %s\n", ct, version, basedir)
+					fmt.Printf("removed %s release %s from %s:%s\n", ct, version, h, basedir)
 
 					if len(release.Links) != 0 {
 						if uninstallCmdAll {
@@ -207,7 +207,7 @@ func updateLinks(h *geneos.Host, ct *geneos.Component, releaseDir string, releas
 			log.Error().Err(err)
 			continue
 		}
-		fmt.Printf("updated %s %s, now linked to %s\n", ct, l, newVersion)
+		fmt.Printf("updated %s %s on %s, now linked to %s\n", ct, l, h, newVersion)
 	}
 
 	return
