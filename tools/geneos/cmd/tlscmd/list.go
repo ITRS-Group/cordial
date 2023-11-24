@@ -173,7 +173,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 					geneos.RootCAFile,
 					geneos.LOCALHOST,
 					fmt.Sprintf("%0f", time.Until(rootCert.NotAfter).Seconds()),
-					rootCert.NotAfter.String(),
+					rootCert.NotAfter.Format(time.RFC3339),
 					rootCert.Subject.CommonName,
 					fmt.Sprint(verifyCert(rootCert)),
 				})
@@ -184,7 +184,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 					geneos.SigningCertFile,
 					geneos.LOCALHOST,
 					fmt.Sprintf("%0f", time.Until(geneosCert.NotAfter).Seconds()),
-					geneosCert.NotAfter.String(),
+					geneosCert.NotAfter.Format(time.RFC3339),
 					geneosCert.Subject.CommonName,
 					fmt.Sprint(verifyCert(geneosCert)),
 				})
@@ -200,7 +200,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 					geneos.RootCAFile,
 					geneos.LOCALHOST,
 					time.Until(rootCert.NotAfter).Seconds(),
-					rootCert.NotAfter,
+					rootCert.NotAfter.Format(time.RFC3339),
 					rootCert.Subject.CommonName,
 					verifyCert(rootCert))
 			}
@@ -209,7 +209,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 					geneos.SigningCertFile,
 					geneos.LOCALHOST,
 					time.Until(geneosCert.NotAfter).Seconds(),
-					geneosCert.NotAfter,
+					geneosCert.NotAfter.Format(time.RFC3339),
 					geneosCert.Subject.CommonName,
 					verifyCert(geneosCert))
 			}
@@ -289,7 +289,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					geneos.RootCAFile,
 					geneos.LOCALHOST,
 					fmt.Sprintf("%.f", time.Until(rootCert.NotAfter).Seconds()),
-					rootCert.NotAfter.String(),
+					rootCert.NotAfter.Format(time.RFC3339),
 					rootCert.Subject.CommonName,
 					fmt.Sprint(verifyCert(rootCert)),
 					rootCertFile,
@@ -305,7 +305,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					geneos.SigningCertFile,
 					geneos.LOCALHOST,
 					fmt.Sprintf("%.f", time.Until(geneosCert.NotAfter).Seconds()),
-					geneosCert.NotAfter.String(),
+					geneosCert.NotAfter.Format(time.RFC3339),
 					geneosCert.Subject.CommonName,
 					fmt.Sprint(verifyCert(geneosCert)),
 					rootCertFile,
@@ -326,7 +326,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					geneos.RootCAFile,
 					geneos.LOCALHOST,
 					time.Until(rootCert.NotAfter).Seconds(),
-					rootCert.NotAfter,
+					rootCert.NotAfter.Format(time.RFC3339),
 					rootCert.Subject.CommonName,
 					verifyCert(rootCert),
 					rootCertFile,
@@ -338,7 +338,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					geneos.SigningCertFile,
 					geneos.LOCALHOST,
 					time.Until(geneosCert.NotAfter).Seconds(),
-					geneosCert.NotAfter,
+					geneosCert.NotAfter.Format(time.RFC3339),
 					geneosCert.Subject.CommonName,
 					verifyCert(geneosCert),
 					rootCertFile,
@@ -364,7 +364,7 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) 
 	}
 
 	expires := cert.NotAfter
-	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%.f\t%q\t%q\t%v\t", i.Type(), i.Name(), i.Host(), time.Until(expires).Seconds(), expires, cert.Subject.CommonName, valid)
+	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%.f\t%q\t%q\t%v\t", i.Type(), i.Name(), i.Host(), time.Until(expires).Seconds(), expires.Format(time.RFC3339), cert.Subject.CommonName, valid)
 
 	if listCmdLong {
 		resp.Line += fmt.Sprintf("%q\t", chainfile)
@@ -395,7 +395,7 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *instance.Respons
 	}
 	expires := cert.NotAfter
 	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
-	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.String(), cert.Subject.CommonName, fmt.Sprint(valid)}
+	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.Format(time.RFC3339), cert.Subject.CommonName, fmt.Sprint(valid)}
 	if listCmdLong {
 		cols = append(cols, chainfile)
 		cols = append(cols, cert.Issuer.CommonName)
