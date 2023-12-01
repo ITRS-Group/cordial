@@ -125,7 +125,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		hostcf.SetDefault("username", username)
 		hostcf.SetDefault("port", 22)
 		// XXX default to remote user's home dir, not local
-		hostcf.SetDefault(cmd.Execname, geneos.Root())
+		hostcf.SetDefault(cmd.Execname, geneos.LocalRoot())
 
 		var password string
 		var pw = &config.Plaintext{}

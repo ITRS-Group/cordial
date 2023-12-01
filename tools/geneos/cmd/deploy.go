@@ -150,7 +150,7 @@ var deployCmd = &cobra.Command{
 		name = fmt.Sprintf("%s:%s@%s", pkgct, local, h)
 
 		if h == geneos.LOCAL {
-			if geneos.Root() == "" {
+			if geneos.LocalRoot() == "" {
 				if deployCmdGeneosHome == "" {
 					var input, root string
 					if u, err := user.Current(); err == nil {

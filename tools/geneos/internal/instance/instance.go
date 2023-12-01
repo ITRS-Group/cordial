@@ -152,7 +152,7 @@ func Get(ct *geneos.Component, name string) (i geneos.Instance, err error) {
 	if i == nil {
 		// if no instance is created, check why
 		_, _, h := SplitName(name, geneos.LOCAL)
-		if h == geneos.LOCAL && geneos.Root() == "" {
+		if h == geneos.LOCAL && geneos.LocalRoot() == "" {
 			err = geneos.ErrRootNotSet
 			return
 		}
