@@ -72,7 +72,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 			log.Debug().Msg("source is a directory, setting local")
 			opts.local = true
 		} else {
-			opts.archive = path.Join(Root(), "packages", "downloads")
+			opts.archive = path.Join(LocalRoot(), "packages", "downloads")
 		}
 	}
 

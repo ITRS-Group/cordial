@@ -122,7 +122,7 @@ var sans sync.Map
 // parameter to select other Netprobe types, such as fa2
 func factory(name string) geneos.Instance {
 	ct, local, h := instance.SplitName(name, geneos.LOCAL)
-	if local == "" || h == nil || (h == geneos.LOCAL && geneos.Root() == "") {
+	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
 	s, ok := sans.Load(h.FullName(local))

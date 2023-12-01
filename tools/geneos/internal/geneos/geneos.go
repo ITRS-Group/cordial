@@ -139,9 +139,9 @@ func Init(app string) {
 	RootComponent.Register(nil)
 }
 
-// Root return the absolute path to the local Geneos installation. If
+// LocalRoot return the absolute path to the local Geneos installation. If
 // run on an older installation it may return the value from the legacy
 // configuration item `itrshome` if `geneos` is not set.
-func Root() string {
+func LocalRoot() string {
 	return config.GetString(execname, config.Default(config.GetString("itrshome")))
 }

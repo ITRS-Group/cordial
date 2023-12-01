@@ -95,7 +95,7 @@ geneos install netprobe -b active_dev -U
 			// force localhost
 			cmd.Hostname = geneos.LOCALHOST
 		} else {
-			if geneos.Root() == "" {
+			if geneos.LocalRoot() == "" {
 				command.SetUsageTemplate(" ")
 				return cmd.GeneosUnsetError
 			}

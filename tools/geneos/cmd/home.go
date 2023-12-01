@@ -60,7 +60,7 @@ cat $(geneos home gateway example2)/gateway.txt
 
 		if len(names) == 0 {
 			if ct == nil {
-				fmt.Println(geneos.Root())
+				fmt.Println(geneos.LocalRoot())
 				return nil
 			}
 			fmt.Println(geneos.LOCAL.PathTo(ct))
@@ -72,12 +72,12 @@ cat $(geneos home gateway example2)/gateway.txt
 			i, err := instance.ByName(geneos.LOCAL, ct, n+"@localhost")
 
 			if err != nil {
-				fmt.Println(geneos.Root())
+				fmt.Println(geneos.LocalRoot())
 				return nil
 			}
 			fmt.Println(i.Home())
 		} else {
-			fmt.Println(geneos.Root())
+			fmt.Println(geneos.LocalRoot())
 		}
 		return nil
 	},

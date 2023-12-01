@@ -93,7 +93,7 @@ var netprobes sync.Map
 
 func factory(name string) geneos.Instance {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
-	if local == "" || h == nil || (h == geneos.LOCAL && geneos.Root() == "") {
+	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
 	n, ok := netprobes.Load(h.FullName(local))

@@ -106,7 +106,7 @@ func tlsInit(overwrite bool) (err error) {
 	fmt.Printf("Signing certificate created for %s\n", geneos.SigningCertFile)
 
 	// sync if geneos root exists
-	if d, err := os.Stat(geneos.Root()); err == nil && d.IsDir() {
+	if d, err := os.Stat(geneos.LocalRoot()); err == nil && d.IsDir() {
 		return tlsSync()
 	}
 	return nil

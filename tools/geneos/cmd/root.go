@@ -222,7 +222,7 @@ geneos restart
 		}
 
 		// check initialisation
-		if geneos.Root() == "" && len(geneos.RemoteHosts(false)) == 0 {
+		if geneos.LocalRoot() == "" && len(geneos.RemoteHosts(false)) == 0 {
 			if command.Annotations[AnnotationNeedsHome] == "true" {
 				command.SetUsageTemplate(" ")
 				return GeneosUnsetError
