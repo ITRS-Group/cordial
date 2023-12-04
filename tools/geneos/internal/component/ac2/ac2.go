@@ -56,6 +56,7 @@ var AC2 = geneos.Component{
 		`logfile=ActiveConsole.log`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}`,
 		`config={{join .home "ActiveConsol.gci"}}`,
+		`options="-wsp {{.home}}"`,
 		`autostart=false`,
 	},
 	GlobalSettings: map[string]string{
@@ -217,6 +218,18 @@ func (n *AC2s) Command() (args, env []string, home string) {
 
 	env = []string{
 		"_JAVA_OPTIONS=-Dawt.useSystemAAFontSettings=lcd",
+	}
+
+	// add these to the environment, if they exist. not sure if ac2 on Linux works without them.
+	list := []string{
+		"DISPLAY",
+		"XAUTHORITY",
+	}
+
+	for _, e := range list {
+		if v, ok := os.LookupEnv(e); ok {
+			env = append(env, e+"="+v)
+		}
 	}
 
 	return
