@@ -6,7 +6,7 @@
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-## v1.11.0 Fixes
+## v1.11.1 Fixes
 
 * `tools/geneos`
 
