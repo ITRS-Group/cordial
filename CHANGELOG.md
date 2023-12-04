@@ -1,5 +1,21 @@
 # Change Log
 
+## Version v1.11.1
+
+> **Released 2023-12-05**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.11.0 Fixes
+
+* `tools/geneos`
+
+  - Fix `ac2` start-up on Linux by passing on `DISPLAY` and `XAUTHORITY` envs to process, when they are defined
+
+  - Output ISO8601 date/times in `geneos tls ls` outputs, not Go default format
+
+---
+
 ## Version v1.11.0
 
 > **Released 2023-11-23**
