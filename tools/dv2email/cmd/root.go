@@ -63,7 +63,7 @@ func init() {
 
 	DV2EMAILCmd.PersistentFlags().StringVarP(&entityArg, "entity", "E", "", "entity name, ignored if _VARIBLEPATH set in environment")
 	DV2EMAILCmd.PersistentFlags().StringVarP(&samplerArg, "sampler", "S", "", "sampler name, ignored if _VARIBLEPATH set in environment")
-	DV2EMAILCmd.PersistentFlags().StringVarP(&typeArg, "type", "T", "", "type name, ignored if _VARIBLEPATH set in environment")
+	DV2EMAILCmd.PersistentFlags().StringVarP(&typeArg, "type", "T", "", "type name, ignored if _VARIBLEPATH set in environment\nTo explicitly select empty/no type use --type/-T \"\"")
 	DV2EMAILCmd.PersistentFlags().StringVarP(&dataviewArg, "dataview", "D", "", "dataview name, ignored if _VARIBLEPATH set in environment")
 
 	DV2EMAILCmd.Flags().BoolVarP(&inlineCSS, "inline-css", "i", true, "inline CSS for better mail client support")
@@ -142,7 +142,7 @@ var DV2EMAILCmd = &cobra.Command{
 		// we need to pass filters etc. to fetchDataviews
 		em := setupEmail(toArg, ccArg, bccArg)
 
-		data, err := fetchDataviews(gw,
+		data, err := fetchDataviews(cmd, gw,
 			em.GetString("_firstcolumn"),
 			em.GetString("__headlines"),
 			em.GetString("__rows"),
