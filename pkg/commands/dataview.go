@@ -44,7 +44,9 @@ type DataItem struct {
 }
 
 // Dataview represents the contents of a Geneos dataview as returned by
-// [commands.Snapshot].
+// [commands.Snapshot]. Name and XPath are populated from the request to
+// Snapshot while the three "Order" slices are constructed from the order
+// of the received JSON data.
 type Dataview struct {
 	Name             string       `json:"name"`
 	XPath            *xpath.XPath `json:"xpath"`
@@ -56,7 +58,8 @@ type Dataview struct {
 	Headlines map[string]DataItem `json:"headlines,omitempty"`
 
 	// Table is a map of row names to column names to data items, the
-	// first column (row name) not included in the map
+	// first column (row name) not included in the map. A specific
+	// DataItem is Table["row"]["column"].
 	Table map[string]map[string]DataItem `json:"table,omitempty"`
 
 	// HeadlineOrder, ColumnOrder and RowOrder are slice of the
@@ -82,8 +85,9 @@ type dataviewRaw struct {
 }
 
 // UnmarshalJSON preserves the order of the Headline, Rows and Columns
-// from a snapshot. If the input is empty an os.ErrInvalid is returned
-// as an empty Dataview object should not be used.
+// from a snapshot in dv Order fields. If the input is empty an
+// os.ErrInvalid is returned as an empty Dataview object should not be
+// used.
 func (dv *Dataview) UnmarshalJSON(d []byte) (err error) {
 	if len(d) == 0 {
 		return os.ErrInvalid
@@ -191,6 +195,9 @@ NEXTROW:
 				}
 				continue
 			}
+
+			// just decode further rows, we already have ColumnOrder
+			// after the first row
 			var di map[string]DataItem
 			if err = tdec.Decode(&di); err != nil {
 				return err
