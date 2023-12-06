@@ -14,24 +14,26 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-
-	"github.com/itrs-group/cordial/pkg/commands"
 )
 
 //go:embed _docs/root.md
 var exportCmdDescription string
 
 var exportCmdDir string
-var exportCmdFirstColumn, exportCmdHeadlines, exportCmdRows, exportCmdColumns string
+var exportCmdFirstColumn, exportCmdHeadlines, exportCmdRows, exportCmdColumns, exportCmdRowOrder string
 
 func init() {
 	DV2EMAILCmd.AddCommand(exportCmd)
 
 	exportCmd.Flags().StringVar(&exportCmdDir, "dir", "", "destination `directory`, defaults to current")
-	exportCmd.Flags().StringVar(&exportCmdFirstColumn, "rowname", "", "set row `name`")
-	exportCmd.Flags().StringVar(&exportCmdHeadlines, "headlines", "", "filter headlines, comma-separated string")
-	exportCmd.Flags().StringVar(&exportCmdRows, "rows", "", "filter rows, comma-separated string")
-	exportCmd.Flags().StringVar(&exportCmdColumns, "columns", "", "filter columns, comma-separated string")
+
+	exportCmd.Flags().StringVarP(&exportCmdFirstColumn, "rowname", "N", "", "set row `name`")
+	exportCmd.Flags().StringVarP(&exportCmdHeadlines, "headlines", "H", "", "order and filter headlines, comma-separated")
+	exportCmd.Flags().StringVarP(&exportCmdRows, "rows", "R", "", "filter rows, comma-separated")
+	exportCmd.Flags().StringVarP(&exportCmdRowOrder, "order", "O", "", "order rows, comma-separated column names with optional '+'/'-' suffixes")
+	exportCmd.Flags().StringVarP(&exportCmdColumns, "columns", "C", "", "order and filter columns, comma-separated")
+
+	exportCmd.Flags().SortFlags = false
 }
 
 // exportCmd represents the write command
@@ -48,40 +50,15 @@ var exportCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
-		data, err := fetchDataviews(gw, exportCmdFirstColumn, exportCmdHeadlines, exportCmdRows, exportCmdColumns)
+		data, err := fetchDataviews(gw, exportCmdFirstColumn, exportCmdHeadlines, exportCmdRows, exportCmdColumns, exportCmdRowOrder)
 
-		switch cf.GetString("email.split") {
-		case "entity":
-			entities := map[string][]*commands.Dataview{}
-			for _, d := range data.Dataviews {
-				if len(entities[d.XPath.Entity.Name]) == 0 {
-					entities[d.XPath.Entity.Name] = []*commands.Dataview{}
-				}
-				entities[d.XPath.Entity.Name] = append(entities[d.XPath.Entity.Name], d)
-			}
-			for _, e := range entities {
-				many := DV2EMailData{
-					Dataviews: e,
-					Env:       data.Env,
-				}
-				if err = writeFiles(exportCmdDir, many); err != nil {
-					log.Fatal().Err(err).Msg("")
-				}
-			}
-		case "dataview":
-			for _, d := range data.Dataviews {
-				one := DV2EMailData{
-					Dataviews: []*commands.Dataview{d},
-					Env:       data.Env,
-				}
-				if err = writeFiles(exportCmdDir, one); err != nil {
-					log.Fatal().Err(err).Msg("")
-				}
-			}
-		default:
-			if err = writeFiles(exportCmdDir, data); err != nil {
-				log.Fatal().Err(err).Msg("")
-			}
+		if len(data.Dataviews) == 0 {
+			fmt.Println("no matching dataviews")
+			return
+		}
+
+		if err = writeFiles(exportCmdDir, data); err != nil {
+			log.Fatal().Err(err).Msg("")
 		}
 	},
 }

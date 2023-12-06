@@ -100,13 +100,13 @@ func createTextTables(cf *config.Config, data DV2EMailData) (buf *bytes.Buffer, 
 		tab.Style().Format.Header = text.FormatDefault
 
 		headings := table.Row{}
-		for _, h := range dv.Columns {
+		for _, h := range dv.ColumnOrder {
 			headings = append(headings, h)
 		}
 		tab.AppendHeader(headings)
-		for _, rn := range dv.Rows {
+		for _, rn := range dv.RowOrder {
 			row := table.Row{rn}
-			for _, cn := range dv.Columns[1:] {
+			for _, cn := range dv.ColumnOrder[1:] {
 				row = append(row, dv.Table[rn][cn].Value)
 			}
 			tab.AppendRow(row)

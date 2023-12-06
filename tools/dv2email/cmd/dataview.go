@@ -8,7 +8,6 @@ import (
 	"path"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -23,7 +22,7 @@ type dataFile struct {
 	content *bytes.Buffer
 }
 
-func fetchDataviews(gw *commands.Connection, firstcolumn, headlineList, rowList, columnList string) (data DV2EMailData, err error) {
+func fetchDataviews(gw *commands.Connection, firstcolumn, headlineList, rowList, columnList, rowOrder string) (data DV2EMailData, err error) {
 	data = DV2EMailData{
 		Dataviews: []*commands.Dataview{},
 		Env:       make(map[string]string, len(os.Environ())),
@@ -70,7 +69,7 @@ func fetchDataviews(gw *commands.Connection, firstcolumn, headlineList, rowList,
 	}
 
 	for _, d := range dataviews {
-		dataview, err := getDataview(gw, d, firstcolumn, headlineList, rowList, columnList)
+		dataview, err := getDataview(gw, d, firstcolumn, headlineList, rowList, columnList, rowOrder)
 		if err != nil {
 			log.Error().Err(err).Msg("")
 			continue
@@ -82,7 +81,7 @@ func fetchDataviews(gw *commands.Connection, firstcolumn, headlineList, rowList,
 	return
 }
 
-func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headlineList, rowList, columnList string) (dataview *commands.Dataview, err error) {
+func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headlineList, rowList, columnList, rowOrder string) (dataview *commands.Dataview, err error) {
 	dataview, err = gw.Snapshot(dv, "", commands.Scope{Value: true, Severity: true})
 	if err != nil {
 		log.Error().Err(err).Msg("")
@@ -116,16 +115,19 @@ func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headline
 	} else {
 		rowname = "rowname"
 	}
+
 	// set the default, may be overridden below but then reset
 	// to the same value
-	dataview.Columns[0] = rowname
+	if len(dataview.ColumnOrder) > 0 {
+		dataview.ColumnOrder[0] = rowname
+	}
 
 	cols := match(dataview.Name, "column-filter", columnList)
 	if len(cols) > 0 {
 		nc := []string{rowname}
 		for _, c := range cols {
 			c = strings.TrimSpace(c)
-			for _, oc := range dataview.Columns {
+			for _, oc := range dataview.ColumnOrder {
 				if oc == rowname {
 					continue
 				}
@@ -135,17 +137,17 @@ func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headline
 			}
 		}
 
-		dataview.Columns = nc
+		dataview.ColumnOrder = nc
 	} else {
-		matches := matchForName(dataview.Name, "column-order")
+		matches := match(dataview.Name, "column-order", "")
 		if len(matches) > 0 {
 			m := matches[0]
 			switch {
 			case strings.HasPrefix(m, "desc"):
-				slices.Sort(dataview.Columns[1:])
-				slices.Reverse(dataview.Columns[1:])
+				slices.Sort(dataview.ColumnOrder[1:])
+				slices.Reverse(dataview.ColumnOrder[1:])
 			case strings.HasPrefix(m, "asc"):
-				slices.Sort(dataview.Columns[1:])
+				slices.Sort(dataview.ColumnOrder[1:])
 			}
 		}
 	}
@@ -164,19 +166,16 @@ func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headline
 		dataview.Table = nr
 	}
 
-	// default sort rows
-	sort.Strings(dataview.Rows)
-
 	asc := true
-	matches := matchForName(dataview.Name, "row-order")
+	matches := match(dataview.Name, "row-order", rowOrder)
 	if len(matches) > 0 {
-		m := matches[0]
+		colname := matches[0]
 		switch {
-		case strings.HasSuffix(m, "-"):
+		case strings.HasSuffix(colname, "-"):
 			asc = false
-			m = m[:len(m)-1]
-		case strings.HasSuffix(m, "+"):
-			m = m[:len(m)-1]
+			colname = colname[:len(colname)-1]
+		case strings.HasSuffix(colname, "+"):
+			colname = colname[:len(colname)-1]
 			fallthrough
 		default:
 			asc = true
@@ -186,31 +185,22 @@ func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headline
 		// rowname (decided above in Column ordering) then sort
 		// the data.Rows slice directly based on value and
 		// not a cell in the row
-		if m == "rowname" || m == dataview.Columns[0] {
-			sort.Slice(dataview.Rows, func(i, j int) bool {
-				if asc {
-					return dataview.Rows[i] < dataview.Rows[j]
-				}
-				return dataview.Rows[j] < dataview.Rows[i]
-			})
+		if colname == "rowname" || colname == dataview.ColumnOrder[0] {
+			sort.Sort(NatsortStringSlice(dataview.RowOrder)) // natural sort
+			if !asc {
+				slices.Reverse(dataview.RowOrder)
+			}
 		} else {
-			sort.Slice(dataview.Rows, func(i, j int) bool {
-				r := dataview.Rows
-				a := dataview.Table[r[i]][m].Value
-				af, _ := strconv.ParseFloat(a, 64)
-				b := dataview.Table[r[j]][m].Value
-				bf, _ := strconv.ParseFloat(b, 64)
-				if a == b {
-					if asc {
-						return a < b
-					} else {
-						return a > b
-					}
-				}
+			// indirect sort of rownames based on the values in a given column (that isn't rowname)
+			r := dataview.RowOrder
+			sort.Slice(r, func(i, j int) bool {
+				a := dataview.Table[r[i]][colname].Value
+				b := dataview.Table[r[j]][colname].Value
 				if asc {
-					return af < bf
+					return Less(a, b)
+				} else {
+					return Less(b, a)
 				}
-				return bf < af
 			})
 		}
 	}
