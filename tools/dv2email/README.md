@@ -227,7 +227,7 @@ A typical command (XML below) would be set-up like this. Remember to set the pat
 
 ### Exporting to Local Files
 
-The other mode of operation is to write the Dataview(s) to 
+The other mode of operation is to write the Dataview(s) to local files. To do this use the `dv2email export` sub-command.
 
 ## Configuration Reference
 

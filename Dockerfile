@@ -1,6 +1,6 @@
 # Dockerfile to build cordial components and tar.gz files
 
-ARG GOVERSION=1.21.4
+ARG GOVERSION=1.21.5
 
 # The bullseye image seems to offer the most compatibility, including
 # libemail.so dependencies

@@ -157,7 +157,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (buf *bytes.Buffer, err er
 			log.Error().Err(err).Msg("")
 		}
 
-		colwidths := make([]float64, max(len(dv.Headlines), len(dv.Columns), len(info)))
+		colwidths := make([]float64, max(len(dv.Headlines), len(dv.ColumnOrder), len(info)))
 
 		// build two rows of headlines, which always have at least a samplingStatus
 
@@ -191,24 +191,24 @@ func createXLSX(cf *config.Config, data DV2EMailData) (buf *bytes.Buffer, err er
 		// build main dataview table
 
 		// set columns names as the first row
-		if err = x.SetSheetRow(sheetname, dataviewTable, &dv.Columns); err != nil {
+		if err = x.SetSheetRow(sheetname, dataviewTable, &dv.ColumnOrder); err != nil {
 			log.Error().Err(err).Msg("")
 		}
 
-		for i, c := range dv.Columns {
+		for i, c := range dv.ColumnOrder {
 			colwidths[i] = max(colWidth(len(c), minColWidth), colwidths[i])
 		}
 
 		// set rownames in first column, starting on second row (below headings)
-		if err = x.SetSheetCol(sheetname, rownamesStart, &dv.Rows); err != nil {
+		if err = x.SetSheetCol(sheetname, rownamesStart, &dv.RowOrder); err != nil {
 			log.Error().Err(err).Msg("")
 		}
 
-		for ri, r := range dv.Rows {
+		for ri, r := range dv.RowOrder {
 			// update the width of the first column based on each rowname
 			colwidths[0] = max(colWidth(len(r), minColWidth), colwidths[0])
 
-			for ci, c := range dv.Columns[1:] { // skip rowname column
+			for ci, c := range dv.ColumnOrder[1:] { // skip rowname column
 				cell, _ := excelize.CoordinatesToCellName(dataviewColumn+ci+1, dataviewRow+ri+1)
 				value := dv.Table[r][c].Value
 				x.SetCellStr(sheetname, cell, value)
@@ -216,7 +216,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (buf *bytes.Buffer, err er
 			}
 		}
 
-		end, _ := excelize.CoordinatesToCellName(dataviewColumn+len(dv.Columns)-1, dataviewRow+len(dv.Rows))
+		end, _ := excelize.CoordinatesToCellName(dataviewColumn+len(dv.ColumnOrder)-1, dataviewRow+len(dv.RowOrder))
 		tablename := validTablename(sheetname, "Dataview")
 		err = x.AddTable(sheetname, &excelize.Table{
 			Range:             dataviewTable + ":" + end,
@@ -231,8 +231,8 @@ func createXLSX(cf *config.Config, data DV2EMailData) (buf *bytes.Buffer, err er
 			log.Error().Err(err).Msg("")
 		}
 
-		for ri, r := range dv.Rows {
-			for ci, c := range dv.Columns[1:] { // skip rowname column
+		for ri, r := range dv.RowOrder {
+			for ci, c := range dv.ColumnOrder[1:] { // skip rowname column
 				cell, _ := excelize.CoordinatesToCellName(dataviewColumn+ci+1, dataviewRow+ri+1)
 				switch dv.Table[r][c].Severity {
 				case "CRITICAL":

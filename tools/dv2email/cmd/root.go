@@ -147,6 +147,7 @@ var DV2EMAILCmd = &cobra.Command{
 			em.GetString("__headlines"),
 			em.GetString("__rows"),
 			em.GetString("__columns"),
+			em.GetString("__roworder"),
 		)
 
 		switch cf.GetString("email.split") {
@@ -202,16 +203,8 @@ func Execute() {
 // separated override or, if override is empty, it will search for a
 // section in the global configuration instance for `confkey` and return
 // the values for the longest matching key (using globbing rules)
-func match(name, confkey, override string) (matches []string) {
-	if override != "" {
-		matches = strings.Split(override, ",")
-	} else {
-		matches = matchForName(name, confkey)
-	}
-	return
-}
-
-// matchForName returns a the first slice of values of the member of
+//
+// match returns a the first slice of values of the member of
 // confkey that matches name using globbing rules, longest match wins.
 // e.g. for
 //
@@ -221,7 +214,12 @@ func match(name, confkey, override string) (matches []string) {
 //	columnFullName: only, these
 //
 // and if name is 'columnFullName' then [ 'only', 'these' ] is returned.
-func matchForName(name, confkey string) (matches []string) {
+func match(name, confkey, override string) (matches []string) {
+	if override != "" {
+		matches = strings.Split(override, ",")
+		return
+	}
+
 	name = strings.ToLower(name)
 	checks := cf.GetStringMapStringSlice(confkey)
 	if len(checks) == 0 {

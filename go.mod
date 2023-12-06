@@ -1,12 +1,12 @@
 module github.com/itrs-group/cordial
 
-go 1.21
+go 1.21.5
 
 require (
 	github.com/Microsoft/go-winio v0.6.1
 	github.com/PagerDuty/go-pagerduty v1.7.0
 	github.com/StackExchange/wmi v1.2.1
-	github.com/awnumar/memguard v0.22.3
+	github.com/awnumar/memguard v0.22.4
 	github.com/aymerick/douceur v0.2.0
 	github.com/charmbracelet/glamour v0.6.0
 	github.com/clbanning/mxj/v2 v2.7.0
