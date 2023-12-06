@@ -23,7 +23,12 @@ THE SOFTWARE.
 package commands
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"reflect"
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/xpath"
@@ -39,13 +44,13 @@ type DataItem struct {
 }
 
 // Dataview represents the contents of a Geneos dataview as returned by
-// [Snapshot].
+// [commands.Snapshot].
 type Dataview struct {
 	Name             string       `json:"name"`
 	XPath            *xpath.XPath `json:"xpath"`
-	SampleTime       time.Time    `json:"sample-time,omitempty"`
-	Snoozed          bool         `json:"snoozed,omitempty"`
-	SnoozedAncestors bool         `json:"snoozed-ancestors,omitempty"`
+	SampleTime       time.Time    `json:"sample-time"`
+	Snoozed          bool         `json:"snoozed"`
+	SnoozedAncestors bool         `json:"snoozed-ancestors"`
 
 	// Headlines is a map of headline names to data items
 	Headlines map[string]DataItem `json:"headlines,omitempty"`
@@ -54,15 +59,154 @@ type Dataview struct {
 	// first column (row name) not included in the map
 	Table map[string]map[string]DataItem `json:"table,omitempty"`
 
-	// Columns is an ordered slice of column names obtained from the
-	// JSON data returned from the REST endpoint to allow the Table
-	// field to be iterated over in the same order as the Geneos
-	// dataview table
-	Columns []string `json:"-"`
+	// HeadlineOrder, ColumnOrder and RowOrder are slice of the
+	// respective names based on the order in the Gateway REST response
+	//
+	// While JSON does not support fixed orders for objects, the Geneos
+	// Gateway responds with the "natural" (i.e. internal) order for
+	// these object maps
+	HeadlineOrder []string `json:"-"`
+	ColumnOrder   []string `json:"-"`
+	RowOrder      []string `json:"-"`
+}
 
-	// The Rows field is an unordered slice of rownames. The caller can
-	// order this in anyway desired for use as a range loop.
-	Rows []string `json:"-"`
+// dataviewRaw contains json.RawMessage fields for further processing
+// for ordered objects
+type dataviewRaw struct {
+	Name             string          `json:"name"`
+	SampleTime       time.Time       `json:"sample-time,omitempty"`
+	Snoozed          bool            `json:"snoozed,omitempty"`
+	SnoozedAncestors bool            `json:"snoozed-ancestors,omitempty"`
+	Headlines        json.RawMessage `json:"headlines,omitempty"`
+	Table            json.RawMessage `json:"table,omitempty"`
+}
+
+// UnmarshalJSON preserves the order of the Headline, Rows and Columns
+// from a snapshot. If the input is empty an os.ErrInvalid is returned
+// as an empty Dataview object should not be used.
+func (dv *Dataview) UnmarshalJSON(d []byte) (err error) {
+	if len(d) == 0 {
+		return os.ErrInvalid
+	}
+
+	dvr := dataviewRaw{}
+	if err = json.Unmarshal(d, &dvr); err != nil {
+		return
+	}
+
+	dv.SampleTime = dvr.SampleTime
+	dv.Snoozed = dvr.Snoozed
+	dv.SnoozedAncestors = dvr.SnoozedAncestors
+	dv.ColumnOrder = []string{"rowname"}
+
+	// decode the headlines object
+	dv.Headlines = map[string]DataItem{}
+	hdec := json.NewDecoder(bytes.NewReader(dvr.Headlines))
+	for hdec.More() {
+		t, err := hdec.Token()
+		if err != nil {
+			return err
+		}
+		switch v := t.(type) {
+		case json.Delim:
+			// skip opening and closing
+			continue
+		case string:
+			dv.HeadlineOrder = append(dv.HeadlineOrder, v)
+
+			var di DataItem
+			if err = hdec.Decode(&di); err != nil {
+				return err
+			}
+			dv.Headlines[v] = di
+		default:
+			return &json.UnmarshalTypeError{
+				Value:  "",
+				Type:   reflect.TypeOf(dv),
+				Offset: hdec.InputOffset(),
+				Struct: "Dataview",
+				Field:  "Headlines",
+			}
+		}
+	}
+
+	// decode table, grab column order from first row, just decode the reset directly
+	dv.Table = map[string]map[string]DataItem{}
+	tdec := json.NewDecoder(bytes.NewReader(dvr.Table))
+	first := true
+
+NEXTROW:
+	for {
+		t, err := tdec.Token()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+
+		switch v := t.(type) {
+		case json.Delim:
+			if v == '}' {
+				break NEXTROW
+			}
+			continue
+		case string:
+			dv.RowOrder = append(dv.RowOrder, v)
+
+			if first {
+				first = false
+				dv.Table[v] = map[string]DataItem{}
+			NEXTCELL:
+				for {
+					t, err := tdec.Token()
+					if err != nil {
+						if err == io.EOF {
+							return nil
+						}
+						return err
+					}
+					switch c := t.(type) {
+					case json.Delim:
+						if c == '}' {
+							break NEXTCELL
+						}
+						continue
+					case string:
+						dv.ColumnOrder = append(dv.ColumnOrder, c)
+						var di DataItem
+						if err = tdec.Decode(&di); err != nil {
+							return err
+						}
+						dv.Table[v][c] = di
+					default:
+						return &json.UnmarshalTypeError{
+							Value:  "",
+							Type:   reflect.TypeOf(dv),
+							Offset: tdec.InputOffset(),
+							Struct: "Dataview",
+							Field:  "Table",
+						}
+					}
+				}
+				continue
+			}
+			var di map[string]DataItem
+			if err = tdec.Decode(&di); err != nil {
+				return err
+			}
+			dv.Table[v] = di
+		default:
+			return &json.UnmarshalTypeError{
+				Value:  "",
+				Type:   reflect.TypeOf(dv),
+				Offset: tdec.InputOffset(),
+				Struct: "Dataview",
+				Field:  "Table",
+			}
+		}
+	}
+	return nil
 }
 
 // Snapshot fetches the contents of the dataview identified by the
@@ -112,28 +256,29 @@ func (c *Connection) Snapshot(target *xpath.XPath, rowname string, scope ...Scop
 	}
 
 	dataview = cr.Dataview
-	dataview.Columns = []string{rowname}
-
-	// grab any row, it's the keys we actually want
-	for k := range dataview.Table {
-		rowmap := dataview.Table[k]
-		// get the column names from the first row returned
-		for k := range rowmap {
-			dataview.Columns = append(dataview.Columns, k)
-		}
-		// exit after one iteration
-		break
-	}
-
-	// XXX until the first column is supplied, prepend a constant
-	// dataview.Columns = append([]string{rowname}, dataview.Columns...)
-
-	for rowname := range dataview.Table {
-		dataview.Rows = append(dataview.Rows, rowname)
-	}
-
 	dataview.Name = target.Dataview.Name
 	dataview.XPath = target
-
 	return
+
+	// dataview.ColumnOrder = []string{rowname}
+
+	// // grab any row, it's the keys we actually want
+	// for k := range dataview.Table {
+	// 	rowmap := dataview.Table[k]
+	// 	// get the column names from the first row returned
+	// 	for k := range rowmap {
+	// 		dataview.ColumnOrder = append(dataview.ColumnOrder, k)
+	// 	}
+	// 	// exit after one iteration
+	// 	break
+	// }
+
+	// // XXX until the first column is supplied, prepend a constant
+	// // dataview.Columns = append([]string{rowname}, dataview.Columns...)
+
+	// for rowname := range dataview.Table {
+	// 	dataview.RowOrder = append(dataview.RowOrder, rowname)
+	// }
+
+	// return
 }
