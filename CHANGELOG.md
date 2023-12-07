@@ -1,5 +1,30 @@
 # Change Log
 
+## Version v1.11.2
+
+> **Released 2023-12-07**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.11.2 Fixes
+
+* `pkg/commands`
+
+  - add custom UnmarshalJSON to Dataview type to record the received order of headlines, rows and columns
+
+* `tools/dv2email`
+
+  - use dataview ordering (above) to render dataviews as seen from the Gateway, matching the normal Active Console
+  - add support to differentiate between unset and empty `--type` on command line
+
+## v1.11.2 Changes
+
+* `tools/geneos`
+
+  - add support for secure arguments for fileagent releases 6.6 and higher
+
+---
+
 ## Version v1.11.1
 
 > **Released 2023-12-05**
