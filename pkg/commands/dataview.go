@@ -251,13 +251,11 @@ func (c *Connection) Snapshot(target *xpath.XPath, rowname string, scope ...Scop
 		return
 	}
 
-	// no error but no dataview?
+	// no error but no dataview? return a dataview with no content
 	if cr.Dataview == nil {
 		dataview = &Dataview{
 			Headlines: map[string]DataItem{},
 			Table:     map[string]map[string]DataItem{},
-			// Columns:   []string{},
-			// Rows:      []string{},
 		}
 		return
 	}
@@ -266,26 +264,4 @@ func (c *Connection) Snapshot(target *xpath.XPath, rowname string, scope ...Scop
 	dataview.Name = target.Dataview.Name
 	dataview.XPath = target
 	return
-
-	// dataview.ColumnOrder = []string{rowname}
-
-	// // grab any row, it's the keys we actually want
-	// for k := range dataview.Table {
-	// 	rowmap := dataview.Table[k]
-	// 	// get the column names from the first row returned
-	// 	for k := range rowmap {
-	// 		dataview.ColumnOrder = append(dataview.ColumnOrder, k)
-	// 	}
-	// 	// exit after one iteration
-	// 	break
-	// }
-
-	// // XXX until the first column is supplied, prepend a constant
-	// // dataview.Columns = append([]string{rowname}, dataview.Columns...)
-
-	// for rowname := range dataview.Table {
-	// 	dataview.RowOrder = append(dataview.RowOrder, rowname)
-	// }
-
-	// return
 }
