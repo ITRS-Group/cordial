@@ -229,6 +229,28 @@ A typical command (XML below) would be set-up like this. Remember to set the pat
 
 The other mode of operation is to write the Dataview(s) to local files. To do this use the `dv2email export` sub-command.
 
+The `dv2email export` command will accept the same environment variables settings, allowing it to be run as an Action or Effect, or you can also set additional parameters for headline/row/column selection and ordering through command line flags, as below:
+
+```text
+Flags:
+      --dir directory      destination directory, defaults to current
+  -N, --rowname name       set row name
+  -H, --headlines string   order and filter headlines, comma-separated
+  -R, --rows string        filter rows, comma-separated
+  -O, --order string       order rows, comma-separated column names with optional '+'/'-' suffixes
+  -C, --columns string     order and filter columns, comma-separated
+
+Global Flags:
+  -f, --config string     config file (default is $HOME/.config/geneos/dv2email.yaml)
+  -D, --dataview string   dataview name, ignored if _VARIBLEPATH set in environment
+  -E, --entity string     entity name, ignored if _VARIBLEPATH set in environment
+  -S, --sampler string    sampler name, ignored if _VARIBLEPATH set in environment
+  -T, --type string       type name, ignored if _VARIBLEPATH set in environment
+                          To explicitly select empty/no type use --type/-T ""
+```
+
+The list of file formats written is set through the top-level `files` option in the configuration file, see below.
+
 ## Configuration Reference
 
 ### File locations
@@ -331,6 +353,12 @@ The configuration is in three parts; Gateway connectivity, EMail server connecti
   * `to` - no default
   * `subject` - default `Geneos Alert`
 
+* `files`- default `[ xlsx, html ]`
+
+  A list of file formats to write using the `dv2email export` command. The available formats are: `texttable`, `html`, `xlsx`. There is no plain `text` or `text+html` formats as these are specific to email.
+
+  File names are controlled by the respective format settings, see [Output Formats](#output-formats) below and have the same names as attachments in emails would. The destination directory is controlled through the `--dir` command line flag and cannot be set in the configuration file; the default is the current working directory.
+
 #### Filters, Ordering and First Column
 
 * `column-filter` - default from Environment Variable `__COLUMNS` (two underscores)
@@ -374,20 +402,20 @@ From the XPath to the Dataview:
 
 | Name | Description |
 |------|-------|
-| `gateway` | The Gateway name |
-| `probe` | The Probe name |
-| `entity` | The Managed Enitity name |
-| `sampler` | The Sampler name |
-| `type` | The Type name (can be empty) |
-| `dataview` | The Dataview Name |
+| `${gateway}` | The Gateway name |
+| `${probe}` | The Probe name |
+| `${entity}` | The Managed Enitity name |
+| `${sampler}` | The Sampler name |
+| `${type}` | The Type name (can be empty) |
+| `${dataview}` | The Dataview Name |
 
 Time and date, for use to distinguish values, all in the local timezone:
 
 | Name | Description |
 |------|-------|
-| `date` | The date in the format `YYYYMMDD` |
-| `time` | The time in the format `HHMMSS` |
-| `datetime` | The time in ISO8601 format |
+| `${date}` | The date in the format `YYYYMMDD` |
+| `${time}` | The time in the format `HHMMSS` |
+| `${datetime}` | The time in ISO8601 format |
 
 * `text`
 
