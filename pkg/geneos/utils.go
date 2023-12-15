@@ -24,6 +24,12 @@ package geneos
 
 import (
 	"reflect"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/lestrrat-go/strftime"
 )
 
 // utility interfaces and functions
@@ -612,4 +618,47 @@ func GetPlugin(plugin *Plugin) interface{} {
 		}
 	}
 	return nil
+}
+
+var dateRE = regexp.MustCompile(`<today\s*([+-]\d+)?([^>]*)?>`)
+
+// ExpandFileDates substitutes Geneos formatted dates in the input for
+// the time t and returns the result.
+//
+// The dates in the input are in the form "<today>" etc. as per the FKM
+// path Date generation:
+// <https://docs.itrsgroup.com/docs/geneos/current/collection/fkm-config/index.html#date-generation>
+//
+// Only <today...> is supported as there is no support (yet) for
+// monitored days. The full format is <today[-N |+N ]FORMAT> where
+// FORMAT is strftime-style patterns and spaces around the offsets are
+// ignored but at least one is required between the offset and FORMAT if
+// both are given. The strftime patterns are those from the defaults in
+// the Go package <https://github.com/lestrrat-go/strftime>
+func ExpandFileDates(in string, t time.Time) (out string, err error) {
+	if !strings.Contains(in, "<") {
+		out = in
+		return
+	}
+
+	out = dateRE.ReplaceAllStringFunc(in, func(s string) (r string) {
+		m := dateRE.FindStringSubmatch(s)
+		if len(m) != 3 {
+			return
+		}
+		// parsing error means zero offset
+		offset, _ := strconv.Atoi(strings.TrimSpace(m[1]))
+		t2 := t.AddDate(0, 0, offset)
+		format := strings.TrimSpace(m[2])
+		if format == "" {
+			format = "%F"
+		}
+		r, err = strftime.Format(format, t2)
+		if err != nil {
+			return ""
+		}
+		return
+	})
+
+	return
 }
