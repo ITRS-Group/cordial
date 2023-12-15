@@ -117,21 +117,25 @@ func NoDecode(n bool) ExpandOptions {
 	}
 }
 
-// LookupTable adds a lookup map to the Expand functions. If there are
-// no maps defined then `${item}` is looked up as an environment
-// variable. When string expansion is done to a plain word, ie. without
-// a prefix, then `${item}` is looked up in each map, in the order the
-// LookupTable options are given, and first match, if any, wins. If
-// there is no match in any of the lookup maps then a nil value is
-// returned and the environment variables are not checked.
-func LookupTable(values map[string]string) ExpandOptions {
+// LookupTable adds lookup maps, of name/value pairs, to the Expand
+// functions. If there are no lookup tables defined then `${item}` is
+// treated as an environment variable. When string expansion is done to
+// a plain word, ie. without a prefix, then `${item}` is looked up in
+// each map, in the order the LookupTable options are given, and first
+// match, if any, wins. If there is no match in any of the lookup maps
+// then a nil value is returned and environment variables are not
+// checked.
+func LookupTable(values ...map[string]string) ExpandOptions {
 	return func(e *expandOptions) {
-		e.lookupTables = append(e.lookupTables, values)
+		e.lookupTables = append(e.lookupTables, values...)
 	}
 }
 
 // LookupTables sets the expansion lookup tables to the slice of maps
 // passed as values. Any existing lookup tables are discarded.
+//
+// Deprecated: Use the singular LookupTable with a variadic list of
+// tables instead.
 func LookupTables(values []map[string]string) ExpandOptions {
 	return func(e *expandOptions) {
 		e.lookupTables = values

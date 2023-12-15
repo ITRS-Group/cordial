@@ -265,11 +265,11 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 
 	// check for expand options
 	if opts.expandArgs {
-		program.Args = config.ExpandStringSlice(program.Args, config.LookupTables(opts.lookup))
+		program.Args = config.ExpandStringSlice(program.Args, config.LookupTable(opts.lookup...))
 	}
 
 	if opts.expandEnv {
-		program.Env = config.ExpandStringSlice(program.Env, config.LookupTables(opts.lookup))
+		program.Env = config.ExpandStringSlice(program.Env, config.LookupTable(opts.lookup...))
 	}
 
 	if program.ErrLog == "" {
