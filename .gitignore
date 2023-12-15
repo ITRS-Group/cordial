@@ -45,3 +45,5 @@ tools/geneos/utils/docs/docs
 utils/docs/docs
 tools/gateway-reporter/gateway-reporter
 tools/gateway-reporter/validate-setup
+tools/files2dv/samples/file.txt
+tools/files2dv/files2dv
