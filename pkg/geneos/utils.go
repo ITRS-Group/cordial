@@ -651,7 +651,7 @@ func ExpandFileDates(in string, t time.Time) (out string, err error) {
 		t2 := t.AddDate(0, 0, offset)
 		format := strings.TrimSpace(m[2])
 		if format == "" {
-			format = "%F"
+			format = "%Y%m%d"
 		}
 		r, err = strftime.Format(format, t2)
 		if err != nil {
