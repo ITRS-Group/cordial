@@ -1,0 +1,85 @@
+# For `toolkit` mode the selected dataview is output and the program
+# exists. For `push` mode you need to configure the details of the
+# Netprobe, the Managed Entity and the Sampler that the program will
+# push data to.
+#
+# ⚠ `push` mode is not yet implemented
+push:
+  type: xmlrpc
+  netprobe: https://localhost:7036/xmlrpc
+  secure: false
+  interval: 20s # non toolkit, API etc
+
+# dataviews is a list of distinct dataviews to gather information for
+#
+# for the default, toolkit, command you can specify the index. for the
+# push command each dataview results in it's own dataview created - as
+# the name suggests
+dataviews:
+  - name: test files
+    # show info for each matching file
+    mode: info
+    info:
+      # limit matches to 200
+      limit: 2000
+      types: [ file, symlink ] # file, directory, symlink, other
+    paths:
+      - /tmp/dir-<today>/file-<today+1%A>.log
+      - /tmp/file<today-1>.log
+      - /tmp/file<today+1>.log
+      - /tmp/file-<today %Y-%m-%d>.log
+      - /tmp/doesnotexist
+    ignore-file-errors:
+      match: false
+      exist: false
+      access: false
+      other: false
+    columns: [ path, status, type, size, lastModified, owner, target, inode, device, pattern, filename ]
+    values: ${path} ${status} ${type} ${size} ${modtime} ${uid}:${gid} ${target} ${inode} ${device} ${pattern} ${filename}
+ 
+  - name: swift
+    # list of paths to search for files
+    mode: file
+    file:
+      # types: [ file, directory ]
+
+    paths: [ ./samples/*.txt, ./samples/mustexist.log ]
+
+    # hide error lines on no match
+    ignore-file-errors:
+      match: true
+
+    # ignore-lines lines that match any of these regexp patterns. Patterns are
+    # tested in order, so put the most common pattern first.
+    ignore-lines: [ '^{1:', y ]
+
+    # headlines, written at end
+    headlines:
+      - name: x
+        match: xyz
+        value: ${xxx} # logic ? or use rules
+
+    on-fail:
+      status: ERROR
+
+    # columns to output, metadata and pattern matches/extractors
+    columns:
+      - name: path
+        value: ${path}
+      - name: status
+        value: ${status}
+      - name: lastModified
+        value: ${modtime}
+      - name: size
+        value: ${size}
+      - name: orderID
+        match: '^:20E::(.*?),?$'
+        value: ${1}
+      - name: amount
+        match: '^:19A::(EXEC)//(?P<named>.*)'
+        value: ${named}
+      - name: indicator
+        match: ':22F::PFRE'
+        value: OK
+        fail: ERROR
+
