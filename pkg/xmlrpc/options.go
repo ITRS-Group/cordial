@@ -14,7 +14,17 @@ func evalOptions(c *xmlrpcOptions, options ...Options) {
 
 // InsecureSkipVerify
 func InsecureSkipVerify() Options {
-	return func(c *xmlrpcOptions) {
-		c.insecureSkipVerify = true
+	return func(xo *xmlrpcOptions) {
+		xo.insecureSkipVerify = true
+	}
+}
+
+// Secure takes an argument to force checking of the Netprobe
+// certificate if the connection is HTTPS. Unlike InsecureSkipVerify,
+// this can be used with a boolean variable passed in from the command
+// line or in a config file without further tests.
+func Secure(secure bool) Options {
+	return func(xo *xmlrpcOptions) {
+		xo.insecureSkipVerify = !secure
 	}
 }
