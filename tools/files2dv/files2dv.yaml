@@ -40,12 +40,7 @@ dataviews:
   - name: swift
     # list of paths to search for files
     mode: file
-    file:
-      # types: [ file, directory ]
-
     paths: [ ./samples/*.txt, ./samples/mustexist.log ]
-
-    # hide error lines on no match
     ignore-file-errors:
       match: true
 
@@ -58,9 +53,6 @@ dataviews:
       - name: x
         match: xyz
         value: ${xxx} # logic ? or use rules
-
-    on-fail:
-      status: ERROR
 
     # columns to output, metadata and pattern matches/extractors
     columns:
@@ -83,3 +75,5 @@ dataviews:
         value: OK
         fail: ERROR
 
+    on-fail:
+      status: ERROR
