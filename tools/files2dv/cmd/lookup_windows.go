@@ -28,6 +28,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"syscall"
 	"time"
@@ -38,9 +39,10 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func buildFileLookupTable(dv *config.Config, path string, filetypes map[string]bool) (lookup map[string]string, skip bool) {
+func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[string]string, skip bool) {
 	lookup = map[string]string{
 		"path":     path,
+		"pattern":  pattern,
 		"filename": filepath.Base(path),
 		"status":   "OK",
 	}
@@ -48,25 +50,25 @@ func buildFileLookupTable(dv *config.Config, path string, filetypes map[string]b
 	if err != nil {
 		switch {
 		case errors.Is(err, fs.ErrNotExist):
-			if dv.GetBool("ignore-file-errors.exist") {
+			if slices.Contains(dv.GetStringSlice("ignore-file-errors"), "match") {
 				skip = true
 				return
 			}
 			lookup["status"] = "NOT_FOUND"
 		case errors.Is(err, fs.ErrPermission):
-			if dv.GetBool("ignore-file-errors.access") {
+			if slices.Contains(dv.GetStringSlice("ignore-file-errors"), "access") {
 				skip = true
 				return
 			}
 			lookup["status"] = "ACCESS_DENIED"
 		case errors.Is(err, fs.ErrInvalid):
-			if dv.GetBool("ignore-file-errors.other") {
+			if slices.Contains(dv.GetStringSlice("ignore-file-errors"), "other") {
 				skip = true
 				return
 			}
 			lookup["status"] = "INVALID"
 		default:
-			if dv.GetBool("ignore-file-errors.other") {
+			if slices.Contains(dv.GetStringSlice("ignore-file-errors"), "other") {
 				skip = true
 				return
 			}
@@ -80,21 +82,22 @@ func buildFileLookupTable(dv *config.Config, path string, filetypes map[string]b
 	mode := st.Mode()
 
 	lookup["mode"] = mode.String()
+	types := dv.GetStringSlice("types", config.Default([]string{"file", "directory", "symlink", "other"}))
 	switch {
 	case mode.IsDir():
-		if !filetypes["directory"] {
+		if !slices.Contains(types, "directory") {
 			skip = true
 			return
 		}
 		lookup["type"] = "directory"
 	case mode.IsRegular():
-		if !filetypes["file"] {
+		if !slices.Contains(types, "file") {
 			skip = true
 			return
 		}
 		lookup["type"] = "file"
 	case mode&fs.ModeSymlink != 0:
-		if !filetypes["symlink"] {
+		if !slices.Contains(types, "symlink") {
 			skip = true
 			return
 		}
@@ -103,7 +106,7 @@ func buildFileLookupTable(dv *config.Config, path string, filetypes map[string]b
 			lookup["target"] = target
 		}
 	default:
-		if !filetypes["other"] {
+		if !slices.Contains(types, "other") {
 			skip = true
 			return
 		}
