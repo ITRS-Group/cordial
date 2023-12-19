@@ -22,31 +22,27 @@ dataviews:
     info:
       # limit matches to 200
       limit: 2000
-      types: [ file, symlink ] # file, directory, symlink, other
     paths:
       - /tmp/dir-<today>/file-<today+1%A>.log
       - /tmp/file<today-1>.log
       - /tmp/file<today+1>.log
       - /tmp/file-<today %Y-%m-%d>.log
-      - /tmp/doesnotexist
-    ignore-file-errors:
-      match: false
-      exist: false
-      access: false
-      other: false
+      - /tmp/doesnotexist*
+    types: [ file, symlink ] # file, directory, symlink, other
+    ignore-file-errors: [  ] # match access other
     columns: [ path, status, type, size, lastModified, owner, target, inode, device, pattern, filename ]
     values: ${path} ${status} ${type} ${size} ${modtime} ${uid}:${gid} ${target} ${inode} ${device} ${pattern} ${filename}
  
   - name: swift
     # list of paths to search for files
     mode: file
+    file:
+      max-lines: 200
+      # ignore-lines lines that match any of these regexp patterns. Patterns are
+      # tested in order, so put the most common pattern first.
+      ignore-lines: [ '22X', y ]
     paths: [ ./samples/*.txt, ./samples/mustexist.log ]
-    ignore-file-errors:
-      match: true
-
-    # ignore-lines lines that match any of these regexp patterns. Patterns are
-    # tested in order, so put the most common pattern first.
-    ignore-lines: [ '^{1:', y ]
+    ignore-file-errors: match
 
     # headlines, written at end
     headlines:

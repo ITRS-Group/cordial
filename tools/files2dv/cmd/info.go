@@ -24,6 +24,7 @@ package cmd
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -43,13 +44,6 @@ func processInfo(dv *config.Config) (dataview Dataview, err error) {
 	// get raw values, expand later, with lookups for each file
 	values := dv.GetStringSlice("values", config.NoExpand())
 
-	// list of wanted file types to a map
-	ft := dv.GetStringSlice("info.types", config.Default([]string{"file", "directory", "symlink", "other"}))
-	filetypes := make(map[string]bool, len(ft))
-	for _, f := range ft {
-		filetypes[f] = true
-	}
-
 	for _, pattern := range dv.GetStringSlice("paths") {
 		var path string
 		path, err = geneos.ExpandFileDates(pattern, time.Now())
@@ -65,12 +59,12 @@ func processInfo(dv *config.Config) (dataview Dataview, err error) {
 			}
 
 			if len(files) == 0 {
-				if dv.GetBool("ignore-file-errors.match") {
+				if slices.Contains(dv.GetStringSlice("ignore-file-errors"), "match") {
 					continue
 				}
 				lookup := map[string]string{
 					"path":     path,
-					"filename": filepath.Base(path),
+					"filename": "",
 					"status":   "NO_MATCH",
 				}
 				columns := []string{}
@@ -86,17 +80,16 @@ func processInfo(dv *config.Config) (dataview Dataview, err error) {
 			files = append(files, path)
 		}
 
-		for _, f := range files {
+		for _, file := range files {
 			if n >= max {
 				return
 			}
 			n++
 
-			lookup, skip := buildFileLookupTable(dv, f, filetypes)
+			lookup, skip := buildFileLookupTable(dv, file, pattern)
 			if skip {
 				continue
 			}
-			lookup["pattern"] = pattern
 
 			columns := []string{}
 			for _, c := range values {
