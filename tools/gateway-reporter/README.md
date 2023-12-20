@@ -1,6 +1,6 @@
 # Gateway Reporter Tool
 
-The `geneos-reporter` tool creates ITRS Geneos monitoring coverage reports using Gateway configurations.
+The `gateway-reporter` tool creates ITRS Geneos monitoring coverage reports using Gateway configurations.
 
 This tool works with the Gateway configuration only and does not interact with the running Gateway. This is to mitigate any potential performance impact on production Gateways. The level of information available is limited by the complexities introduced by the dynamically changing monitoring environment in a typical, extensive Geneos deployment.
 
@@ -20,21 +20,21 @@ In both cases the reporter ONLY works on a merged configuration file create by t
 
 ### Prerequisites
 
-`geneos-reporter`, like other standalone tools in the `cordial` repo, it is built so that it has no external dependencies when run on a 64-bit Intel/AMD Linux system, the same architecture as the ITRS Geneos Gateway supports.
+`gateway-reporter`, like other standalone tools in the `cordial` repo, it is built so that it has no external dependencies when run on a 64-bit Intel/AMD Linux system, the same architecture as the ITRS Geneos Gateway supports.
 
-When run as a validation hook, the Gateway itself prepares a merged setup file before invoking `geneos-reporter` as the validation program. Apart from a suitable YAML configuration file and permissions to write the reports to the configured directory there should be no other pre-requisites.
+When run as a validation hook, the Gateway itself prepares a merged setup file before invoking `gateway-reporter` as the validation program. Apart from a suitable YAML configuration file and permissions to write the reports to the configured directory there should be no other pre-requisites.
 
-When run from the command line `geneos-reporter` can either read prepared, merged setup file(s) or it can invoke a one-shot instance of a Gateway to create a merged set-up but in this case it **must** be run on one of the same systems (Primary of Standby) as the Gateway(s) being reported. This is so that the merge process runs in the same environment as the Gateway, for access to include files and Gateway version consistency.
+When run from the command line `gateway-reporter` can either read prepared, merged setup file(s) or it can invoke a one-shot instance of a Gateway to create a merged set-up but in this case it **must** be run on one of the same systems (Primary of Standby) as the Gateway(s) being reported. This is so that the merge process runs in the same environment as the Gateway, for access to include files and Gateway version consistency.
 
 ### Installation
 
-The `geneos-reporter` program consists of a single binary, which should have no external dependencies beyond the Gateway being reported on, and an optional configuration file that can customise the operations and output formats.
+The `gateway-reporter` program consists of a single binary, which should have no external dependencies beyond the Gateway being reported on, and an optional configuration file that can customise the operations and output formats.
 
-By default the program is called `geneos-reporter` and the configuration file will use the same name with a `.yaml` suffix. The configuration file can be located in any of the following directories:
+By default the program is called `gateway-reporter` and the configuration file will use the same name with a `.yaml` suffix. The configuration file can be located in any of the following places:
 
-* `/etc/itrs`
-* `${HOME}/.config/itrs`
-* `.` (the current working directory)
+* `/etc/geneos/gateway-reporter.yaml`
+* `${HOME}/.config/geneos/gateway-reporter.yaml`
+* `./gateway-reporter.yaml` (in the current working directory)
 
 If there are configuration files in more than one of the search directories above then they are read in the order above and settings in later files will override the settings from earlier files.
 
@@ -47,7 +47,7 @@ The program can be located anywhere, but is normally placed in either a system b
 To run the tool manually you have to use the `report` sub-command with the appropriate options, like this:
 
 ```bash
-geneos-reporter report /path/to/gateway.setup.xml /path/to/another/gateway.setup.xml
+gateway-reporter report /path/to/gateway.setup.xml /path/to/another/gateway.setup.xml
 ```
 
 There are a number of options as can be seen from the usage message (use `--help` or `-h` to get up-to-date help):
@@ -64,7 +64,7 @@ In most cases you will not have a pre-merged Gateway configuration file so you c
 For example:
 
 ```bash
-$ geneos-reporter report --gateway /opt/itrs/packages/gateway/active_prod/gateway2.linux_64 \
+$ gateway-reporter report --install /opt/itrs/packages/gateway/active_prod/gateway2.linux_64 \
                         --merge /opt/itrs/gateway/gateways/MyGateway/gateway.setup.xml
 ```
 
@@ -72,7 +72,7 @@ To override a setting without editing the configuration file you can use environ
 
 ```bash
 $ export GENEOS_OUTPUT_DIRECTORY=${HOME}/reports
-$ geneos-reporter report --gateway /opt/itrs/packages/gateway/active_prod/gateway2.linux_64 \
+$ gateway-reporter report --install /opt/itrs/packages/gateway/active_prod/gateway2.linux_64 \
                         --merge /opt/itrs/gateway/gateways/MyGateway/gateway.setup.xml
 ```
 
@@ -82,11 +82,11 @@ When run like this you can pass any number of setups on the command line and eac
 
 Running as a [Gateway Validation Hook](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_advancedfeatures_tr.html#Gateway_Hooks) allows you to control reporting through your Geneos Gateways using the commands you are used to and produce reports with the addition of one or two command line options.
 
-To do this you must either wrap the `geneos-reporter` binary in a shell script, rename the program or (the suggested method) use a symbolic link so that the Gateway sees a hook file called `validate-setup` in a directory you choose. For example:
+To do this you must either wrap the `gateway-reporter` binary in a shell script, rename the program or (the suggested method) use a symbolic link so that the Gateway sees a hook file called `validate-setup` in a directory you choose. For example:
 
 ```bash
 cd ${HOME}/bin
-ln -s geneos-reporter validate-setup
+ln -s gateway-reporter validate-setup
 ```
 
 Then run a copy of the Gateway with most of the same options as normal but remove `-log FILENAME` and add the following to the command line:
@@ -311,7 +311,7 @@ The following settings are available, along with their default values:
 
       * `attributes`
 
-        An array of Geneos Attribute names to show. If not set then all Attributes are listed. Attributes include those found through containing Managed Entity Groups and `geneos-reporter` tries to match the rules used by the Gateway for precedence and inheritance.
+        An array of Geneos Attribute names to show. If not set then all Attributes are listed. Attributes include those found through containing Managed Entity Groups and `gateway-reporter` tries to match the rules used by the Gateway for precedence and inheritance.
 
       * `plugins`
 
