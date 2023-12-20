@@ -62,8 +62,14 @@ func processInfo(dv *config.Config) (dataview Dataview, err error) {
 				if slices.Contains(dv.GetStringSlice("ignore-file-errors"), "match") {
 					continue
 				}
+				fullpath, err := filepath.Abs(path)
+				if err != nil {
+					fullpath = path
+				}
 				lookup := map[string]string{
+					"fullpath": fullpath,
 					"path":     path,
+					"pattern":  pattern,
 					"filename": "",
 					"status":   "NO_MATCH",
 				}

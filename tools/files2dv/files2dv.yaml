@@ -31,7 +31,18 @@ dataviews:
     types: [ file, symlink ] # file, directory, symlink, other
     ignore-file-errors: [  ] # match access other
     columns: [ path, status, type, size, lastModified, owner, target, inode, device, pattern, filename ]
-    values: ${path} ${status} ${type} ${size} ${modtime} ${uid}:${gid} ${target} ${inode} ${device} ${pattern} ${filename}
+    values:
+      - ${path}
+      - ${status}
+      - ${type}
+      - ${size}
+      - ${modtime}
+      - ${owner}
+      - ${target}
+      - ${inode}
+      - ${device}
+      - ${pattern}
+      - ${filename}
  
   - name: swift
     # list of paths to search for files
