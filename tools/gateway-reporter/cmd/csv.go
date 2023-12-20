@@ -26,6 +26,7 @@ import (
 	"archive/zip"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -36,9 +37,10 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/geneos"
+	"github.com/rs/zerolog/log"
 )
 
-// outputCSV writes the slice of Entity structs to a zip files in
+// outputCSVZip writes the slice of Entity structs to a zip files
 //
 // the default files are:
 //
@@ -47,7 +49,7 @@ import (
 // order. Also, one column per plugin type (not sampler) and total of instances
 // - file plugins (fkm, ftm, stateTracker)
 // - processes.csv
-func outputCSV(cf *config.Config, gateway string, Entities []Entity, probes map[string]geneos.Probe) (err error) {
+func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes map[string]geneos.Probe) (err error) {
 	dir := cf.GetString("output.directory")
 	_ = os.MkdirAll(dir, 0775)
 
@@ -67,17 +69,62 @@ func outputCSV(cf *config.Config, gateway string, Entities []Entity, probes map[
 	z := zip.NewWriter(zipfile)
 
 	// output a summary file
-	outputCSVSummary(z, cf, gateway, Entities, probes)
+	w, err := createCSVZip(cf, z, cf.GetString("output.reports.summary.filename", conftable)+".csv")
+	if err != nil {
+		log.Error().Err(err).Msg("")
+		return
+	}
+	outputCSVSummary(w, cf, gateway, Entities, probes)
 
 	// entities.csv
-	outputCVSEntities(z, Entities, cf, conftable)
+	w, err = createCSVZip(cf, z, cf.GetString("output.reports.entities.filename", conftable)+".csv")
+	if err != nil {
+		log.Error().Err(err).Msg("")
+		return
+	}
+	outputCVSEntities(w, Entities, cf, conftable)
 
-	for _, f := range cf.GetStringSlice("output.plugins.single-column") {
-		outputCSVSinglePlugin(z, Entities, cf, conftable, f)
+	for _, plugin := range cf.GetStringSlice("output.plugins.single-column") {
+		rows := 0
+		for _, e := range Entities {
+			for _, s := range e.Samplers {
+				if s.Plugin == plugin {
+					rows += len(s.Column1)
+				}
+			}
+		}
+		if rows == 0 && cf.GetBool("output.skip-empty-reports") {
+			continue
+		}
+
+		w, err = createCSVZip(cf, z, cf.GetString(config.Join("output", "reports", plugin, "filename"), conftable)+".csv")
+		if err != nil {
+			log.Error().Err(err).Msg("")
+			continue
+		}
+		outputCSVSinglePlugin(w, Entities, cf, conftable, plugin)
 	}
 
-	for _, f := range cf.GetStringSlice("output.plugins.two-column") {
-		outputCSVTwoColumnPlugin(z, Entities, cf, conftable, f)
+	for _, plugin := range cf.GetStringSlice("output.plugins.two-column") {
+		rows := 0
+		for _, e := range Entities {
+			for _, s := range e.Samplers {
+				if s.Plugin == plugin {
+					rows += len(s.Column1) + len(s.Column2)
+				}
+			}
+		}
+		if rows == 0 && cf.GetBool("output.skip-empty-reports") {
+			continue
+		}
+
+		w, err = createCSVZip(cf, z, cf.GetString(config.Join("output", "reports", plugin, "filename"), conftable)+".csv")
+		if err != nil {
+			log.Error().Err(err).Msg("")
+			continue
+		}
+
+		outputCSVTwoColumnPlugin(w, Entities, cf, conftable, plugin)
 	}
 
 	z.Close()
@@ -85,17 +132,104 @@ func outputCSV(cf *config.Config, gateway string, Entities []Entity, probes map[
 	return
 }
 
-func outputCSVSummary(z *zip.Writer, cf *config.Config, gateway string, entities []Entity, probes map[string]geneos.Probe) (err error) {
+func createCSVZip(cf *config.Config, z *zip.Writer, filename string) (w io.Writer, err error) {
+	return z.Create(filename)
+}
+
+func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes map[string]geneos.Probe) (err error) {
 	conftable := config.LookupTable(map[string]string{
 		"gateway":  gateway,
 		"datetime": startTimestamp,
 	})
 
-	filename := cf.GetString("output.reports.summary.filename", conftable) + ".csv"
-	w, err := z.Create(filename)
+	dir := cf.GetString("output.directory")
+	subdir := cf.GetString("output.formats.csvdir", conftable)
+	if !filepath.IsAbs(subdir) {
+		subdir = path.Join(dir, subdir)
+	}
+	_ = os.MkdirAll(subdir, 0775)
+
+	// output a summary file
+	w, err := createCSVFile(cf, subdir, cf.GetString("output.reports.summary.filename", conftable)+".csv")
 	if err != nil {
+		log.Error().Err(err).Msg("")
 		return
 	}
+	outputCSVSummary(w, cf, gateway, Entities, probes)
+	w.Close()
+
+	// entities.csv
+	w, err = createCSVFile(cf, subdir, cf.GetString("output.reports.entities.filename", conftable)+".csv")
+	if err != nil {
+		log.Error().Err(err).Msg("")
+		return
+	}
+	outputCVSEntities(w, Entities, cf, conftable)
+	w.Close()
+
+	skipEmpty := cf.GetBool("output.skip-empty-reports")
+	showEmpty := cf.GetBool("output.show-empty-samplers")
+
+	for _, plugin := range cf.GetStringSlice("output.plugins.single-column") {
+		rows := 0
+		for _, e := range Entities {
+			for _, s := range e.Samplers {
+				if s.Plugin == plugin {
+					if len(s.Column1) > 0 {
+						rows += len(s.Column1)
+					} else if showEmpty {
+						rows++
+					}
+				}
+			}
+		}
+		if rows == 0 && skipEmpty {
+			continue
+		}
+
+		w, err = createCSVFile(cf, subdir, cf.GetString(config.Join("output", "reports", plugin, "filename"), conftable)+".csv")
+		if err != nil {
+			log.Error().Err(err).Msg("")
+			continue
+		}
+		outputCSVSinglePlugin(w, Entities, cf, conftable, plugin)
+		w.Close()
+	}
+
+	for _, plugin := range cf.GetStringSlice("output.plugins.two-column") {
+		rows := 0
+		for _, e := range Entities {
+			for _, s := range e.Samplers {
+				if s.Plugin == plugin {
+					if len(s.Column1)+len(s.Column2) > 0 {
+						rows += len(s.Column1) + len(s.Column2)
+					} else if showEmpty {
+						rows++
+					}
+				}
+			}
+		}
+		if rows == 0 && skipEmpty {
+			continue
+		}
+
+		w, err = createCSVFile(cf, subdir, cf.GetString(config.Join("output", "reports", plugin, "filename"), conftable)+".csv")
+		if err != nil {
+			log.Error().Err(err).Msg("")
+			continue
+		}
+		outputCSVTwoColumnPlugin(w, Entities, cf, conftable, plugin)
+		w.Close()
+	}
+
+	return
+}
+
+func createCSVFile(cf *config.Config, dir, filename string) (w io.WriteCloser, err error) {
+	return os.Create(filepath.Join(dir, filename))
+}
+
+func outputCSVSummary(w io.Writer, cf *config.Config, gateway string, entities []Entity, probes map[string]geneos.Probe) (err error) {
 	scsv := csv.NewWriter(w)
 	hostname, _ := os.Hostname()
 	scsv.WriteAll([][]string{
@@ -134,18 +268,12 @@ func outputEntityColumns(Entities []Entity, cf *config.Config, conftable config.
 	return
 }
 
-func outputCVSEntities(z *zip.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions) (err error) {
+func outputCVSEntities(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions) (err error) {
 	cols, attrs, plugins, err := outputEntityColumns(Entities, cf, conftable)
 
-	filename := cf.GetString("output.reports.entities.filename", conftable) + ".csv"
-	w, err := z.Create(filename)
-	if err != nil {
-		return
-	}
 	ecsv := csv.NewWriter(w)
 
 	if err = ecsv.Write(cols); err != nil {
-		z.Close()
 		return
 	}
 	for _, e := range Entities {
@@ -193,26 +321,7 @@ func outputCVSEntities(z *zip.Writer, Entities []Entity, cf *config.Config, conf
 	return
 }
 
-func outputCSVSinglePlugin(z *zip.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
-	rows := 0
-	for _, e := range Entities {
-		for _, s := range e.Samplers {
-			if s.Plugin == plugin {
-				rows += len(s.Column1)
-			}
-		}
-	}
-	if rows == 0 && cf.GetBool("output.skip-empty-reports") {
-		return
-	}
-
-	filename := cf.GetString(config.Join("output", "reports", plugin, "filename"), conftable) + ".csv"
-
-	w, err := z.Create(filename)
-	if err != nil {
-		return
-	}
-
+func outputCSVSinglePlugin(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
 	fcsv := csv.NewWriter(w)
 
 	fcsv.Write(cf.GetStringSlice(
@@ -243,29 +352,11 @@ func outputCSVSinglePlugin(z *zip.Writer, Entities []Entity, cf *config.Config, 
 	return
 }
 
-func outputCSVTwoColumnPlugin(z *zip.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
-	rows := 0
-	for _, e := range Entities {
-		for _, s := range e.Samplers {
-			if s.Plugin == plugin {
-				rows += len(s.Column1) + len(s.Column2)
-			}
-		}
-	}
-	if rows == 0 && cf.GetBool("output.skip-empty-reports") {
-		return
-	}
-
-	filename := cf.GetString(config.Join("output", "reports", plugin, "filename"), conftable) + ".csv"
-	w, err := z.Create(filename)
-	if err != nil {
-		return
-	}
-
+func outputCSVTwoColumnPlugin(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
 	fcsv := csv.NewWriter(w)
 
 	fcsv.Write(cf.GetStringSlice(
-		config.Join("output", "reports", "files", plugin, "columns"),
+		config.Join("output", "reports", plugin, "columns"),
 		config.Default([]string{
 			"managedEntity",
 			"samplerType",

@@ -155,6 +155,14 @@ The following settings are available, along with their default values:
 
     If any reports in either CSV or XLSX files would result in no rows then do not include the file or sheet, respectively.
 
+  * `show-empty-samplers` - Default `true`
+
+    If samplers would not otherwise create a row in the report (e.g. an FKM with no File/Sources in the XML) then insert a placeholder so that the report can be used to identify misconfigured samplers.
+
+    Also see the `empty` configuration key, to customise the text in these rows, for reports below.
+
+    ⚠️ Note that there is no support for Sampler Includes at this time, and any Sampler that is seen as empty may in fact be part of a Sampler Includes configuration - for FKM, Disk, Processes and Win-Services plugins.
+
   * `formats`
 
     The `formats` section controls which report files are created and the filename, under the `output.directory`, to create. To disable a report use an empty filename (e.g. `""`). If a format is an absolute path then the `directory` value is ignored.
@@ -176,6 +184,10 @@ The following settings are available, along with their default values:
     * `csv` - Default `${gateway}-Report-${datetime}.zip`
 
       The `csv` file format is created as a ZIP file containing one CSV files per report (see below).
+
+    * `csvdir` - Default `${gateway}-CSV-Report-${datetime}`
+
+      The `csvdir` format creates a directory and adds reports in that directory using the same naming as for the `csv` ZIP format. This can be useful where you need to pull the resulting CSV files directly back into Geneos or another system without having to unpack a ZIP file.
 
     * `json` - Default `${gateway}-Report-${datetime}.json`
 
@@ -303,6 +315,12 @@ The following settings are available, along with their default values:
 
       This is an list of column names to use for each report. They do not control which columns are included, but change the text heading. Any heading with special characters or spaces should be quoted using YAML rules.
 
+    * `empty`
+
+      When a plugin is seen as having no configuration, which varies depending on each plugin, then the `empty` key can be used to in pace of the text representing the configuration. e.g. for FKM the default `empty` value is `NO FILES`.
+
+      ⚠️ Not all plugins support the concept of an empty configuration, e.g. win-Services with no additional configuration shows all Windows Services. See the default configuration below to see which plugins support the `empty` option.
+
     The reports available, and their specific options, are: 
 
     * `entities`
@@ -335,6 +353,10 @@ output:
   # two-column reports then do not create sheets or CSV files for them
   skip-empty-reports: true
 
+  # if true then include rows for samplers with no content (e.g. FKM
+  # with no files)
+  show-empty-samplers: true
+
   # The names for the different report formats. Set to an empty string
   # to disable - "". If an absolute path then output directory above is
   # ignored. To put each Gateway into it's own directory use a relative
@@ -345,6 +367,7 @@ output:
   formats:
     xlsx: ${gateway}-Report-${datetime}.xlsx
     csv: ${gateway}-Report-${datetime}.zip
+    csvdir: ${gateway}-CSV-Report-${datetime}
     json: ${gateway}-Report-${datetime}.json
     xml: ${gateway}-Merged-${datetime}.xml
 
@@ -378,7 +401,8 @@ output:
     # selected. they all share common settings:
     #
     # * filename - the base filename (without extension) if a file is
-    #   generated
+    #   generated. filename must only be a plain file and not a file
+    #   path.
     # * sheetname - the sheet name for XLSX output
     # * columns - an ordered array of column names to use for the output
     #   data
@@ -387,10 +411,11 @@ output:
     # about the report generation, including the date, program version,
     # gateway name and so on.
     summary:
-      filename: summary
+      filename: 0-summary # numeric prefix to influence order
       sheetname: Summary
+
     entities:
-      filename: entities
+      filename: 1-entities # # numeric prefix to influence order
       sheetname: Entities
       columns: [ "Managed Entity", "Netprobe Name", "Hostname", "Port" ]
       # attributes: [ENVIRONMENT, DATACENTER, OS]
@@ -400,34 +425,42 @@ output:
       filename: control-m
       sheetname: Control-M
       columns: [ "Managed Entity", Type, Sampler, "View : Parameter : Criteria" ]
+      empty: NO DATAVIEWS
     disk:
       filename: disks
       sheetname: Disks
       columns: [ "Managed Entity", Type, Sampler, "Disk (x=eXclude)" ]
+      empty: NO DISKS
     fkm:
       filename: fkm
       sheetname: FKM
       columns: [ "Managed Entity", Type, Sampler, "File / Source" ]
+      empty: NO FILES
     ftm:
       filename: ftm
       sheetname: FTM
       columns: [ "Managed Entity", Type, Sampler, "File" ]
+      empty: NO FILES
     gateway-sql:
       filename: gateway-sql
       sheetname: Gateway SQL
       columns: [ "Managed Entity", Type, Sampler, "Query Name" ]
+      empty: NO VIEWS
     processes:
       filename: processes
       sheetname: Processes
       columns: [ "Managed Entity", Type, Sampler, "Process Alias" ]
+      empty: NO PROCESSES
     stateTracker:
       filename: statetracker
       sheetname: State Tracker
       columns: [ "Managed Entity", Type, Sampler, "Group : Tracker : File" ]
+      empty: NO FILES
     toolkit:
       filename: toolkit
       sheetname: Toolkits
       columns: [ "Managed Entity", Type, Sampler, "Toolkit Script" ]
+      empty: NO SCRIPT
     win-services:
       filename: win-services
       sheetname: Windows Services
@@ -436,11 +469,14 @@ output:
       filename: x-ping
       sheetname: X-Ping
       columns: [ "Managed Entity", Type, Sampler, "Remote Target" ]
+      empty: NO TARGETS
 
     sql-toolkit:
       filename: sql-toolkit
       sheetname: SQL Toolkit
       columns: [ "Managed Entity", Type, Sampler, "Database", "Query Name" ]
+      empty: NO QUERIES
+
     tcp-links:
       filename: tcp-links
       sheetname: TCP Links
