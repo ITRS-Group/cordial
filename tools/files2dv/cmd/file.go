@@ -78,7 +78,6 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 		columns = append(columns, col)
 	}
 	dataview.Table = append(dataview.Table, colNames)
-	split := dv.GetString("split")
 
 	fileCount := 0
 	// fileErrors := 0
@@ -101,8 +100,14 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 			if slices.Contains(dv.GetStringSlice("ignore-file-errors"), "match") {
 				continue
 			}
+			fullpath, err := filepath.Abs(path)
+			if err != nil {
+				fullpath = path
+			}
 			lookup := map[string]string{
+				"fullpath": fullpath,
 				"path":     path,
+				"pattern":  pattern,
 				"filename": "",
 				"status":   "NO_MATCH",
 			}
@@ -135,14 +140,9 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 
 			values := make([]string, len(colNames))
 
-			// fill in non-match columns once per file, unless "split" is used
 			for i, c := range columns {
 				if c.Regexp == nil {
-					// if we are using the split option, don't
-					// update values with expand strings until later
-					if split == "" || (split != "" && strings.Contains(c.Value, "${")) {
-						values[i] = cf.ExpandString(c.Value, config.LookupTable(lookup))
-					}
+					values[i] = cf.ExpandString(c.Value, config.LookupTable(lookup))
 				}
 			}
 

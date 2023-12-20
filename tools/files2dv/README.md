@@ -33,7 +33,47 @@ When FKM, FTM, Statetracker or `grep` isn't quite enough... try `files2dv`.
 
 In `file` mode the program will scan the given paths for files and then process the contents of each file in order to build a single row of data per file. If a path does not result in any matches then a row is created to show no matches unless this is ignored. Each file is processes, line by line, and for each column the program will look for a match and set the column contents based on that. Also, if no matches are found by the end of the file (or the line limit) then an optional failure string can be used instead.
 
+
+
 ### Info Mode
+
+### Dynamic Values
+
+The following values are available for each path in all modes. In some cases, such as paths not matching files, certain values will be empty and this will be detailed below.
+
+* `${fullpath}`
+
+    The full (absolute) path to the file, or the underlying path if no files match. This is recommended for the first column (the Geneos row name) as it should always be unique with no duplicates. The full path is obtained using the Go `filepath.Abs()` function and if there is an error processing the path then `${fullpath}` is set to the same as the `${path}`.
+
+* `${path}`
+
+    The path to the file, or the underlying path if there are no matches.
+
+* `${status}`
+
+    The status of the file, which should be `OK` when all is well. The other built-in values are `NO_MATCH`, `NOT_FOUND`, `ACCESS_DENIED`, `INVALID` and `UNKNOWN_ERROR`.
+
+    In `file` mode the `${status}` value can also be set by the configuration item `on-fail.status` which is triggered is any column contains a `fail` key and the match fails.
+
+* `${pattern}`
+
+    This is the original path/pattern used for this row. When multiple files match a path/pattern then the `${path}` and `${fullpath}` are set based on the underlying file, while `${pattern}` is the unchanged value in the configuration file.
+
+* `${filename}`
+
+    The `${filename}` is the base file name for the row. It may be empty if the path contains wildcard pattern(s) and does not match a file. If the path does not contain wildcard pattern(s) then `${filename}` will contain a value.
+
+* `${type}`
+
+* `${size}`
+
+* `${modtime}`
+
+* `${owner}`
+
+* `${group}` - Linux/UNIX only
+
+In `info` mode
 
 
 ## Files

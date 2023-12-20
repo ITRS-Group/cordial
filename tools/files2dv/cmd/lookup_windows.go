@@ -40,8 +40,12 @@ import (
 )
 
 func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[string]string, skip bool) {
+	fullpath, err := filepath.Abs(path)
+	if err != nil {
+		fullpath = path
+	}
 	lookup = map[string]string{
-		"path":     path,
+		"fullpath": fullpath,
 		"pattern":  pattern,
 		"filename": filepath.Base(path),
 		"status":   "OK",
