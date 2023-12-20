@@ -172,7 +172,11 @@ func generateReports(input io.Reader, prefix string) (gateway string, err error)
 				break
 			}
 		case "csv":
-			if err = outputCSV(cf, gateway, entities, probes); err != nil {
+			if err = outputCSVZip(cf, gateway, entities, probes); err != nil {
+				break
+			}
+		case "csvdir":
+			if err = outputCSVDir(cf, gateway, entities, probes); err != nil {
 				break
 			}
 		case "xlsx":

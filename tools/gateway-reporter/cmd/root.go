@@ -174,7 +174,11 @@ var RootCmd = &cobra.Command{
 					break
 				}
 			case "csv":
-				if err = outputCSV(cf, gateway, entities, probes); err != nil {
+				if err = outputCSVZip(cf, gateway, entities, probes); err != nil {
+					break
+				}
+			case "csvdir":
+				if err = outputCSVDir(cf, gateway, entities, probes); err != nil {
 					break
 				}
 			case "xlsx":

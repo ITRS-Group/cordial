@@ -69,7 +69,6 @@ func mergeConfig(install, setup string) (output []byte, err error) {
 	output, err = host.Localhost.Run(cmd, "merge-errors.txt")
 	if err != nil {
 		// skip errors for now
-		log.Debug().Err(err).Msg(string(output))
 		err2 = err
 		err = nil
 	}
