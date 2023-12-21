@@ -37,43 +37,43 @@ In `file` mode the program will scan the given paths for files and then process 
 
 ### Info Mode
 
-### Dynamic Values
+### Configuration Variables
 
-The following values are available for each path in all modes. In some cases, such as paths not matching files, certain values will be empty and this will be detailed below.
+The following variables are available for each path in all modes:
 
-* `${fullpath}`
+| Variable      | Description |
+|---------------|-------------|
+| `${fullpath}` | The full (absolute) path to the file, or the underlying path if no files match. This is recommended for the first column (the Geneos row name) as it should always be unique with no duplicates. The full path is obtained using the Go `filepath.Abs()` function and if there is an error processing the path then `${fullpath}` is set to the same as the `${path}`. |
+| `${path}`     | The path to the file, or the underlying path if there are no matches. |
+| `${status}`   | The status of the file, which should be `OK` when all is well. The other built-in values are `NO_MATCH`, `NOT_FOUND`, `ACCESS_DENIED`, `INVALID` and `UNKNOWN_ERROR`.<br><br>In `file` mode the `${status}` value can also be set by the configuration item `on-fail.status` which is triggered is any column contains a `fail` key and the match fails. |
+| `${pattern}`  | This is the original path/pattern used for this row. When multiple files match a path/pattern then the `${path}` and `${fullpath}` are set based on the underlying file, while `${pattern}` is the unchanged value in the configuration file. |
+| `${filename}` | The `${filename}` is the base file name for the row. It may be empty if the path contains wildcard pattern(s) and does not match a file. If the path does not contain wildcard pattern(s) then `${filename}` will contain a value. |
 
-    The full (absolute) path to the file, or the underlying path if no files match. This is recommended for the first column (the Geneos row name) as it should always be unique with no duplicates. The full path is obtained using the Go `filepath.Abs()` function and if there is an error processing the path then `${fullpath}` is set to the same as the `${path}`.
+The variables below only have values when files are found:
 
-* `${path}`
+| Variable      | Description |
+|---------------|-------------|
+| `${type}` | The file type. One of `file`, `symlink`, `directory` or `other` |
+| `${size}` | The file size, in bytes |
+| `${modtime}` | The last modification time, in ISO8601 format. The time-zone will depend on the local time-zone of the server |
+| `${mode}` | The file mode in POSIX/UNIX format |
+| `${device}` | The filesystem ID based on the local OS value. On Linux this is a decimal value while on Windows this is in hexadeciaml, to align with local conventions |
 
-    The path to the file, or the underlying path if there are no matches.
+The variables below only have values when files are found on a Linux system:
 
-* `${status}`
+| Variable      | Description |
+|---------------|-------------|
+|  `${uid}` / `${gid}` | The numeric values for the UID and GID of the file |
+| `${user}` / `${group}` | The human-readable user and group owners of the file. If these cannot be found then these are set to the UID and GID, as above |
+| `${inode}` | The inode of the file, in decimal format |
 
-    The status of the file, which should be `OK` when all is well. The other built-in values are `NO_MATCH`, `NOT_FOUND`, `ACCESS_DENIED`, `INVALID` and `UNKNOWN_ERROR`.
+The variables below only have values when files are found on a Windows system:
 
-    In `file` mode the `${status}` value can also be set by the configuration item `on-fail.status` which is triggered is any column contains a `fail` key and the match fails.
-
-* `${pattern}`
-
-    This is the original path/pattern used for this row. When multiple files match a path/pattern then the `${path}` and `${fullpath}` are set based on the underlying file, while `${pattern}` is the unchanged value in the configuration file.
-
-* `${filename}`
-
-    The `${filename}` is the base file name for the row. It may be empty if the path contains wildcard pattern(s) and does not match a file. If the path does not contain wildcard pattern(s) then `${filename}` will contain a value.
-
-* `${type}`
-
-* `${size}`
-
-* `${modtime}`
-
-* `${owner}`
-
-* `${group}` - Linux/UNIX only
-
-In `info` mode
+| Variable      | Description |
+|---------------|-------------|
+| `${sid}` | The SID of the file owner |
+| `${owner}` | The account name for the owner of the file in `DOMAIN\USERNAME` format. If the account name cannot be found then the SID is used. |
+| `${index}` | The 64-bit Windows File Index ID in hexadecimal format |
 
 
 ## Files
