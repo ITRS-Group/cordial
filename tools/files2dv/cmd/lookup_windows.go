@@ -134,10 +134,12 @@ func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[s
 	)
 	if err == nil {
 		defer windows.LocalFree(secDesc)
-		account, domain, accType, _ := owner.LookupAccount("")
-		log.Debug().Msgf("account/domain/accType: %s/%s/%v", account, domain, accType)
-		lookup["owner"] = domain + "\\\\" + account
 		lookup["sid"] = owner.String()
+		lookup["owner"] = owner.String()
+		if account, domain, accType, err := owner.LookupAccount(""); err == nil {
+			log.Debug().Msgf("account/domain/accType: %s/%s/%v", account, domain, accType)
+			lookup["owner"] = domain + "\\\\" + account
+		}
 	}
 
 	info, err := fileinfoWindows(path)

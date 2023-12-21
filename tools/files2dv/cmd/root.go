@@ -135,7 +135,7 @@ var FILE2DVCmd = &cobra.Command{
 
 var cf *config.Config
 
-//go:embed files2dv.defaults.yaml
+//go:embed defaults.yaml
 var defaults []byte
 
 func initConfig() {
