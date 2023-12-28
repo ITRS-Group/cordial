@@ -22,7 +22,9 @@ THE SOFTWARE.
 
 package main
 
-import "github.com/itrs-group/cordial/tools/files2dv/cmd"
+import (
+	"github.com/itrs-group/cordial/tools/files2dv/cmd"
+)
 
 func main() {
 	cmd.Execute()

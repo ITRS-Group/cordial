@@ -17,17 +17,13 @@ push:
 # the name suggests
 dataviews:
   - name: test files
-    # show info for each matching file
-    mode: info
-    info:
-      # limit matches to 200
-      limit: 2000
+    row-limit: 200
     paths:
       - /tmp/dir-<today>/file-<today+1%A>.log
       - /tmp/file<today-1>.log
       - /tmp/file<today+1>.log
       - /tmp/file-<today %Y-%m-%d>.log
-      - /tmp/doesnotexist*
+      - /tmp/*
     types: [ file, symlink ] # file, directory, symlink, other
     ignore-file-errors: [  ] # match access other
     columns: [ path, status, type, size, lastModified, owner, target, inode, device, pattern, filename ]
@@ -46,14 +42,12 @@ dataviews:
  
   - name: swift
     # list of paths to search for files
-    mode: file
-    file:
-      max-lines: 200
-      # ignore-lines lines that match any of these regexp patterns. Patterns are
-      # tested in order, so put the most common pattern first.
-      ignore-lines: [ '22X', y ]
     paths: [ ./samples/*.txt, ./samples/mustexist.log ]
-    ignore-file-errors: match
+    ignore-file-errors: [ match ]
+    # ignore-lines lines that match any of these regexp patterns. Patterns are
+    # tested in order, so put the most common pattern first.
+    ignore-lines: [ '22X', y ]
+    max-lines: 200
 
     # headlines, written at end
     headlines:

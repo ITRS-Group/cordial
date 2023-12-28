@@ -24,6 +24,7 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,14 +35,22 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/geneos"
+	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 )
 
 func processFiles(dv *config.Config) (dataview Dataview, err error) {
 	dataview.Name = dv.GetString("name")
-	ignores := []*regexp.Regexp{}
+	columns := []Column{}
 
-	for _, i := range dv.GetStringSlice("file.ignore-lines") {
+	max := dv.GetInt("row-limit")
+	var n int
+
+	ignores := []*regexp.Regexp{}
+	var matches bool
+
+	for _, i := range dv.GetStringSlice("ignore-lines") {
 		if r, err := regexp.Compile(i); err != nil {
 			log.Error().Err(err).Msgf("compile of '%s' failed", i)
 		} else {
@@ -49,33 +58,35 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 		}
 	}
 
-	columns := []Column{}
+	// try direct unmarshal, fall back to slice of strings
+	err = dv.UnmarshalKey("columns", &columns, viper.DecodeHook(mapstructure.TextUnmarshallerHookFunc()))
+	if err != nil {
+		// reset columns
+		columns = []Column{}
+		cols := dv.GetStringSlice("columns", config.NoExpand())
+		if len(cols) == 0 {
+			err = errors.New("columns is not either an array or strings or maps of the right type")
+			return
+		}
+		values := dv.GetStringSlice("values", config.NoExpand())
+		if len(values) != len(cols) {
+			err = errors.New("number of columns does not match number of values")
+			return
+		}
+		for i, c := range cols {
+			columns = append(columns, Column{
+				Name:  c,
+				Value: values[i],
+			})
+		}
+	}
 
 	colNames := []string{}
-	colSpec := dv.GetSliceStringMapString("columns", config.NoExpand())
-	for i, c := range colSpec {
-		name, ok := c["name"]
-		if !ok {
-			log.Error().Msgf("no column name found for entry %d", i)
+	for _, c := range columns {
+		colNames = append(colNames, c.Name)
+		if c.Match != nil {
+			matches = true
 		}
-		colNames = append(colNames, name)
-		value, ok := c["value"]
-		if !ok {
-			log.Error().Msgf("no value found for entry %d", i)
-		}
-		col := Column{
-			Name:  name,
-			Value: value,
-			Check: c["check"],
-		}
-		match, ok := c["match"]
-		if ok {
-			col.Regexp, err = regexp.Compile(match)
-			if err != nil {
-				log.Error().Err(err).Msg("")
-			}
-		}
-		columns = append(columns, col)
 	}
 	dataview.Table = append(dataview.Table, colNames)
 
@@ -84,14 +95,20 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 	// fileFails := 0
 
 	for _, pattern := range dv.GetStringSlice("paths") {
-		path, err := geneos.ExpandFileDates(pattern, time.Now())
+		var path string
+		path, err = geneos.ExpandFileDates(pattern, time.Now())
 		if err != nil {
 			continue
 		}
-		files, err := filepath.Glob(path)
-		if err != nil {
-			log.Error().Err(err).Msgf("match of pattern %q failed", path)
-			continue
+		var files []string
+		if strings.ContainsAny(path, "*?[\\") {
+			files, err = filepath.Glob(path)
+			if err != nil {
+				log.Error().Err(err).Msgf("match of pattern %q failed", path)
+				continue
+			}
+		} else {
+			files = append(files, path)
 		}
 
 		fileCount += len(files)
@@ -111,37 +128,52 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 				"filename": "",
 				"status":   "NO_MATCH",
 			}
-			columns := make([]string, len(colSpec))
-			for i, c := range colSpec {
-				if c["match"] == "" {
-					v := dv.ExpandString(c["value"], config.LookupTable(lookup))
-					columns[i] = v
+			cols := make([]string, len(columns))
+
+			for i, c := range columns {
+				if c.Match == nil {
+					cols[i] = dv.ExpandString(c.Value, config.LookupTable(lookup))
 				}
 			}
 
-			dataview.Table = append(dataview.Table, columns)
+			dataview.Table = append(dataview.Table, cols)
 			continue
 		}
 
-		dv.Set("types", []string{"file", "symlink"})
+		// dv.Set("types", []string{"file", "symlink"})
 
 		for _, file := range files {
+			if max > 0 && n >= max {
+				return
+			}
+			n++
+
 			lookup, skip := buildFileLookupTable(dv, file, pattern)
 			if skip {
-				columns := []string{}
-				for _, c := range colSpec {
-					v := dv.ExpandString(c["value"], config.LookupTable(lookup))
-					columns = append(columns, v)
+				cols := []string{}
+				for _, c := range columns {
+					cols = append(cols, dv.ExpandString(c.Value, config.LookupTable(lookup)))
 				}
 
-				dataview.Table = append(dataview.Table, columns)
+				dataview.Table = append(dataview.Table, cols)
 				continue
 			}
 
-			values := make([]string, len(colNames))
+			if !matches {
+				cols := []string{}
+				for _, c := range columns {
+					cols = append(cols, dv.ExpandString(c.Value, config.LookupTable(lookup)))
+				}
 
+				dataview.Table = append(dataview.Table, cols)
+				continue
+			}
+
+			// open file and scan for matches
+
+			values := make([]string, len(colNames))
 			for i, c := range columns {
-				if c.Regexp == nil {
+				if c.Match == nil {
 					values[i] = cf.ExpandString(c.Value, config.LookupTable(lookup))
 				}
 			}
@@ -151,7 +183,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 				log.Error().Err(err).Msgf("cannot open %s", file)
 				continue
 			}
-			maxlines := dv.GetInt("file.max-lines")
+			maxlines := dv.GetInt("max-lines")
 
 			s := bufio.NewScanner(inp)
 		LINE:
@@ -172,11 +204,11 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 						continue
 					}
 
-					if c.Regexp != nil {
-						num := c.Regexp.NumSubexp()
-						names := c.Regexp.SubexpNames()
+					if c.Match != nil {
+						num := c.Match.NumSubexp()
+						names := c.Match.SubexpNames()
 						submatchLookup := make(map[string]string, num+len(names))
-						if matches := c.Regexp.FindStringSubmatchIndex(line); len(matches) > 0 {
+						if matches := c.Match.FindStringSubmatchIndex(line); len(matches) > 0 {
 							// add indexes to colLookup (inc ${0} for whole match)
 							for j := 0; j <= num; j++ {
 								start, end := matches[j*2], matches[j*2+1]
@@ -188,7 +220,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 								if n == "" {
 									continue
 								}
-								i := c.Regexp.SubexpIndex(n)
+								i := c.Match.SubexpIndex(n)
 								submatchLookup[n] = line[matches[i*2]:matches[i*2+1]]
 							}
 
@@ -202,19 +234,19 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 			onFail := dv.GetString("on-fail.status", config.NoExpand())
 
 			for i, col := range values {
-				if col == "" && colSpec[i]["fail"] != "" {
+				if col == "" && columns[i].Fail != "" {
 					// set status to "on-fail.status"
 					if onFail != "" && finalStatus == "" {
 						finalStatus = dv.ExpandString(onFail, config.LookupTable(map[string]string{"status": onFail}, lookup))
 					}
-					values[i] = dv.ExpandString(colSpec[i]["fail"], config.LookupTable(lookup))
+					values[i] = dv.ExpandString(columns[i].Fail, config.LookupTable(lookup))
 				}
 			}
 
 			if finalStatus != "" {
-				for i, col := range colSpec {
-					if strings.Contains(col["value"], "${status}") {
-						values[i] = dv.ExpandString(col["value"], config.LookupTable(map[string]string{"status": finalStatus}, lookup))
+				for i, col := range columns {
+					if strings.Contains(col.Value, "${status}") {
+						values[i] = dv.ExpandString(col.Value, config.LookupTable(map[string]string{"status": finalStatus}, lookup))
 					}
 				}
 			}
