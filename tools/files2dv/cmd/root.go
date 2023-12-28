@@ -63,11 +63,15 @@ func init() {
 
 // Column holds the options for each column in the output
 type Column struct {
-	Name   string
-	Value  string
-	Regexp *regexp.Regexp
-	Check  string
+	Name  string         `mapstructure:"name"`
+	Value string         `mapstructure:"value"`
+	Match *regexp.Regexp `mapstructure:"match,omitempty"`
+	Fail  string         `mapstructure:"fail,omitempty"`
 }
+
+// func (c *Column) UnmarshalJSON(d []byte) (err error) {
+// 	return json.Unmarshal(d, c)
+// }
 
 type Headline struct {
 	Name  string
@@ -101,17 +105,7 @@ var FILE2DVCmd = &cobra.Command{
 
 		dv := cf.Sub(d)
 
-		var dataview Dataview
-		mode := dv.GetString("mode", config.Default("file"))
-		switch mode {
-		case "info":
-			dataview, err = processInfo(dv)
-		case "file":
-			dataview, err = processFiles(dv)
-		case "line":
-			fmt.Println("line mode not supported yet")
-			return
-		}
+		dataview, err := processFiles(dv)
 
 		if err != nil {
 			return

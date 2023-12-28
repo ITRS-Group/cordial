@@ -31,11 +31,13 @@ When FKM, FTM, Statetracker or `grep` isn't quite enough... try `files2dv`.
 
 ### File Mode
 
-In `file` mode the program will scan the given paths for files and then process the contents of each file in order to build a single row of data per file. If a path does not result in any matches then a row is created to show no matches unless this is ignored. Each file is processes, line by line, and for each column the program will look for a match and set the column contents based on that. Also, if no matches are found by the end of the file (or the line limit) then an optional failure string can be used instead.
+In `file` mode the program will scan the given paths for files and then scan the contents of each file in order to build a single row of data for each file. If a path does not result in any matches then a status row is created to show no matches unless the configuration value `ignore-file-errors` includes `match`.
 
-
+Each file is scanned, line by line, and for each unfilled column the program will look for a match and set the column contents based on that. Once a column has a value it will not be updated further. If no matches are found by the end of the file (or the line limit) then an optional failure string can be used instead.
 
 ### Info Mode
+
+In `info` mode the program will scan the given paths and add a row for each file found. 
 
 ### Configuration Variables
 

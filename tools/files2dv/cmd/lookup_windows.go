@@ -138,7 +138,7 @@ func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[s
 		lookup["owner"] = owner.String()
 		if account, domain, accType, err := owner.LookupAccount(""); err == nil {
 			log.Debug().Msgf("account/domain/accType: %s/%s/%v", account, domain, accType)
-			lookup["owner"] = domain + "\\\\" + account
+			lookup["owner"] = domain + "\\" + account
 		}
 	}
 
