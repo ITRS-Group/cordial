@@ -48,7 +48,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 	var n int
 
 	ignores := []*regexp.Regexp{}
-	var matches bool
+	var matches int
 
 	for _, i := range dv.GetStringSlice("ignore-lines") {
 		if r, err := regexp.Compile(i); err != nil {
@@ -85,7 +85,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 	for _, c := range columns {
 		colNames = append(colNames, c.Name)
 		if c.Match != nil {
-			matches = true
+			matches++
 		}
 	}
 	dataview.Table = append(dataview.Table, colNames)
@@ -159,7 +159,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 				continue
 			}
 
-			if !matches {
+			if matches == 0 {
 				cols := []string{}
 				for _, c := range columns {
 					cols = append(cols, dv.ExpandString(c.Value, config.LookupTable(lookup)))
@@ -189,7 +189,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 		LINE:
 			// loop until end of file or maxlines scanned - if maxlines
 			// is zero or less, then no limit
-			for i := 0; s.Scan() && (maxlines < 1 || i < maxlines); i++ {
+			for i := 0; s.Scan() && (maxlines < 1 || i < maxlines) && matches > 0; i++ {
 				line := s.Text()
 				// skip ignored matches
 				for _, ignore := range ignores {
@@ -198,7 +198,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 					}
 				}
 
-				// check for matches, skip non-empty (first match wins, initially)
+				// check for matches, skip columns with existing values (first match wins)
 				for i, c := range columns {
 					if values[i] != "" {
 						continue
@@ -208,10 +208,10 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 						num := c.Match.NumSubexp()
 						names := c.Match.SubexpNames()
 						submatchLookup := make(map[string]string, num+len(names))
-						if matches := c.Match.FindStringSubmatchIndex(line); len(matches) > 0 {
+						if numMatches := c.Match.FindStringSubmatchIndex(line); len(numMatches) > 0 {
 							// add indexes to colLookup (inc ${0} for whole match)
 							for j := 0; j <= num; j++ {
-								start, end := matches[j*2], matches[j*2+1]
+								start, end := numMatches[j*2], numMatches[j*2+1]
 								submatchLookup[strconv.Itoa(j)] = line[start:end]
 							}
 
@@ -221,14 +221,16 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 									continue
 								}
 								i := c.Match.SubexpIndex(n)
-								submatchLookup[n] = line[matches[i*2]:matches[i*2+1]]
+								submatchLookup[n] = line[numMatches[i*2]:numMatches[i*2+1]]
 							}
 
 							values[i] = dv.ExpandString(c.Value, config.LookupTable(submatchLookup, lookup))
+							matches--
 						}
 					}
 				}
 			}
+			inp.Close()
 
 			finalStatus := ""
 			onFail := dv.GetString("on-fail.status", config.NoExpand())
