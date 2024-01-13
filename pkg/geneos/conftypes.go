@@ -157,6 +157,7 @@ func NewSingleLineString(in string) (s *SingleLineStringVar) {
 // ensure that Value satisfies xml.Unmarshaler interface
 var _ xml.Unmarshaler = (*SingleLineStringVar)(nil)
 
+// UnmarshalXML satisfies the XML Unmarshaler interface
 func (v *SingleLineStringVar) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
 	if v == nil {
 		v = &SingleLineStringVar{}
@@ -320,7 +321,6 @@ func (v *Value) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error)
 				return err
 			}
 			v.Data = &t
-			// v.Data = append(v.Data, t)
 		case "var":
 			t := &Var{}
 			err = d.DecodeElement(&t, &element)
@@ -336,7 +336,6 @@ func (v *Value) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error)
 		case "stdAES":
 			err = d.DecodeElement(&v.StdAES, &element)
 			if err != nil {
-				panic(err)
 				return err
 			}
 		}

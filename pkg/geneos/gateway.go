@@ -36,6 +36,7 @@ package geneos
 
 import (
 	"encoding/xml"
+	"io"
 )
 
 // Gateway is for reading a Gateway configuration
@@ -72,6 +73,54 @@ type DataviewAdditions struct {
 	Headlines DataviewAdditionHeadlines `xml:"var-headlines,omitempty"`
 	Columns   DataviewAdditionColumns   `xml:"var-columns,omitempty"`
 	Rows      DataviewAdditionRows      `xml:"var-rows,omitempty"`
+}
+
+var _ xml.Unmarshaler = (*DataviewAdditions)(nil)
+
+// UnmarshalXML deals with the case where merged XML configs have the
+// "var-" prefix of the tags removed
+func (v *DataviewAdditions) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
+	if v == nil {
+		v = &DataviewAdditions{}
+	}
+
+	for {
+		tok, err := d.Token()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+		element, ok := tok.(xml.StartElement)
+		if !ok {
+			continue
+		}
+
+		switch element.Name.Local {
+		case "var-headlines", "headlines":
+			s := DataviewAdditionHeadlines{}
+			err = d.DecodeElement(&s, &element)
+			if err != nil {
+				return err
+			}
+			v.Headlines = s
+		case "var-columns", "columns":
+			s := DataviewAdditionColumns{}
+			err = d.DecodeElement(&s, &element)
+			if err != nil {
+				return err
+			}
+			v.Columns = s
+		case "var-rows", "rows":
+			s := DataviewAdditionRows{}
+			err = d.DecodeElement(&s, &element)
+			if err != nil {
+				return err
+			}
+			v.Rows = s
+		}
+	}
 }
 
 type DataviewAddition struct {
