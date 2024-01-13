@@ -48,6 +48,7 @@ type Sampler struct {
 	Disabled               bool                    `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 	Comment                string                  `xml:",comment" json:",omitempty" yaml:",omitempty"`
 	Group                  *SingleLineStringVar    `xml:"var-group,omitempty" json:",omitempty" yaml:",omitempty"`
+	GroupNoVar             *SingleLineStringVar    `xml:"group,omitempty" json:",omitempty" yaml:",omitempty"`
 	Interval               *Value                  `xml:"sampleInterval,omitempty" json:",omitempty" yaml:",omitempty"`
 	SampleOnStartup        bool                    `xml:"sampleOnStartup" json:",omitempty" yaml:",omitempty"`
 	Plugin                 *Plugin                 `xml:"plugin,omitempty" json:"plugin,omitempty" yaml:"plugin,omitempty"`
