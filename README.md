@@ -2,9 +2,9 @@
 
 Cordial is a collection of utilities, integrations and support packages for ITRS Geneos.
 
-> **Current Version v1.11.2**
+> **Current Version v1.12.0**
 
-> Released 2023-12-07
+> Released 2024-01-15
 >
 > See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 
@@ -14,9 +14,11 @@ Cordial is a collection of utilities, integrations and support packages for ITRS
 
 * [`dv2email`](tools/dv2email/) - Send a Dataview as an EMail
 
-* [`libemail`](libraries/libemail/) - Drop-In Updated Replacement for `libemail`
+* [`files2dv`](tools/files2dv/) - Scan directories and files for information (not an FKM substitute!)
 
 * [`gateway-reporter`](tools/gateway-reporter/) - Generate monitoring coverage reports from setup files
+
+* [`libemail`](libraries/libemail/) - Drop-In Updated Replacement for `libemail`
 
 ## Integrations
 

@@ -82,6 +82,13 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 	procdesc := geneos.UnrollProcessDescriptors(g.ProcessDescriptors)
 	entityMap := geneos.UnrollEntities(g.ManagedEntities, types)
 	samplers := geneos.UnrollSamplers(g.Samplers)
+	// fix-up clashing tags
+	for _, s := range samplers {
+		if s.GroupNoVar != nil && s.Group == nil {
+			s.Group = s.GroupNoVar
+			s.GroupNoVar = nil
+		}
+	}
 	// rules := geneos.UnrollRules(g.Rules)
 	// printStructJSON(os.Stderr, rules)
 
@@ -351,6 +358,7 @@ func pluginInfo(sampler *Sampler, in interface{}, procdesc map[string]geneos.Pro
 	case *geneos.SQLToolkitPlugin:
 		sampler.Column1 = []string{plugin.Connection.String()}
 		for _, q := range plugin.Queries {
+			log.Debug().Msgf("name, query: %s = %s", q.Name, q.SQL)
 			n, _ := strconv.Unquote(q.Name.String())
 			if n == "" || strings.TrimSpace(q.SQL.String()) == "" {
 				if cf.GetBool("output.show-empty-samplers") {
@@ -360,6 +368,7 @@ func pluginInfo(sampler *Sampler, in interface{}, procdesc map[string]geneos.Pro
 			}
 			sampler.Column2 = append(sampler.Column2, fmt.Sprintf("%q: [\n%.*s\n]", q.Name, 32000, strings.TrimSpace(q.SQL.String())))
 		}
+		log.Debug().Msgf("col1: %v, col2: %v", sampler.Column1, sampler.Column2)
 
 	case *geneos.ControlMPlugin:
 		for _, d := range plugin.Dataviews {

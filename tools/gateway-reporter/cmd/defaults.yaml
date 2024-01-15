@@ -12,18 +12,64 @@ output:
   show-empty-samplers: true
 
   # The names for the different report formats. Set to an empty string
-  # to disable - "". If an absolute path then output directory above is
-  # ignored. To put each Gateway into it's own directory use a relative
-  # path and repeat `${gateway}`
+  # to disable, i.e. "". If an absolute path then output directory above
+  # is ignored. To put each Gateway into it's own directory use a
+  # relative path and repeat `${gateway}`
   #
   # `${gateway}` and `${datetime}` are replaced with the Gateway name
   # and the time of the report (`YYYYMMDDhhmmss`) respectively.
   formats:
+    # Create a multi-worksheet XLSX file, using `sheetname` from the
+    # enabled `reports` for each worksheet
     xlsx: ${gateway}-Report-${datetime}.xlsx
+
+    # Create a ZIP file of CSV files, using `filename` from the enabled
+    # `reports` (with a `.csv` extension)
     csv: ${gateway}-Report-${datetime}.zip
-    csvdir: ${gateway}-CSV-Report-${datetime}
+
+    # Create a JSON format report for further processing
     json: ${gateway}-Report-${datetime}.json
+
+    # Save a copy of the merged XML that was used to produce the
+    # reports. This is replay and diagnostic purposes.
     xml: ${gateway}-Merged-${datetime}.xml
+
+    # Create a directory of CSV files, using `filename` from ther
+    # `reports` below. Note `csvdir` default has no datetime to allow
+    # updating existing files in place.
+    #
+    # Not all reports will produce well formatted CSV for toolkit
+    # consumption as the first column is not alwasy unique.
+    csvdir: ${gateway}-CSV-Reports
+
+  # If `csvdir` format is selected above and `toolkit-include.enable` is
+  # true then create an include file with toolkit samplers to read in
+  # all the files to be displayed as dataviews.
+  #
+  # One managed entity is created using the probe and entity names
+  # given. All the samplers are given the group name `sampler-group` and
+  # named using the `sampler-name` value.
+  #
+  toolkit-include:
+    enable: true
+
+    # `${gateway}` and `${datetime}` have the same meaning as for
+    # `formats` above.
+    #
+    # if `include-file` is relative then it is resolved relative to
+    # `csvdir`, not the working directory
+    include-file: ${gateway}-report.setup.xml
+    probe-name: localhost
+    entity-name: ${gateway} Report
+
+    # In addition to `${gateway}` and `${datetime}` values, the
+    # `sampler-` prefixed items can also use `${csvfile}`,
+    # `${sheetname}` and `${filename}`. Here `${csvfile}` is the full
+    # path to the file, typically for use on the command line, while
+    # `${filename}` is the value from the report configuration.
+    sampler-group: ${gateway} Report
+    sampler-name: ${sheetname} Report
+    sampler-script: /bin/cat "${csvfile}"
 
   # plugins filters which plugins to report on and whether they are one
   # or two columns data types
@@ -66,11 +112,11 @@ output:
     # gateway name and so on.
     summary:
       filename: 0-summary # numeric prefix to influence order
-      sheetname: Summary
+      sheetname: 0-Summary
 
     entities:
       filename: 1-entities # # numeric prefix to influence order
-      sheetname: Entities
+      sheetname: 1-Entities
       columns: [ "Managed Entity", "Netprobe Name", "Hostname", "Port" ]
       # attributes: [ENVIRONMENT, DATACENTER, OS]
       # plugins: [fkm, toolkit, x-ping]

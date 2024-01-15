@@ -17,9 +17,6 @@ COPY integrations /app/cordial/integrations/
 COPY pkg /app/cordial/pkg
 COPY tools /app/cordial/tools
 RUN set -eux; \
-    apt update; \
-    apt install -y \
-        build-essential; \
     cd /app/cordial/tools/geneos; \
     go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
     GOOS=windows go build --ldflags '-s -w'; \
