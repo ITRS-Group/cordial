@@ -136,21 +136,28 @@ func createCSVZip(cf *config.Config, z *zip.Writer, filename string) (w io.Write
 	return z.Create(filename)
 }
 
-func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes map[string]geneos.Probe) (err error) {
+type csvFiles struct {
+	path      string
+	filename  string
+	sheetname string
+}
+
+func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes map[string]geneos.Probe) (csvfiles []csvFiles, subdir string, err error) {
 	conftable := config.LookupTable(map[string]string{
 		"gateway":  gateway,
 		"datetime": startTimestamp,
 	})
 
 	dir := cf.GetString("output.directory")
-	subdir := cf.GetString("output.formats.csvdir", conftable)
+	subdir = cf.GetString("output.formats.csvdir", conftable)
 	if !filepath.IsAbs(subdir) {
 		subdir = path.Join(dir, subdir)
 	}
 	_ = os.MkdirAll(subdir, 0775)
 
 	// output a summary file
-	w, err := createCSVFile(cf, subdir, cf.GetString("output.reports.summary.filename", conftable)+".csv")
+	summaryFile := cf.GetString("output.reports.summary.filename", conftable) + ".csv"
+	w, err := createCSVFile(cf, subdir, summaryFile)
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
@@ -158,14 +165,27 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 	outputCSVSummary(w, cf, gateway, Entities, probes)
 	w.Close()
 
+	csvfiles = append(csvfiles, csvFiles{
+		path:      filepath.Join(subdir, summaryFile),
+		filename:  cf.GetString("output.reports.summary.filename", config.NoExpand()),
+		sheetname: cf.GetString("output.reports.summary.sheetname", config.NoExpand()),
+	})
+
 	// entities.csv
-	w, err = createCSVFile(cf, subdir, cf.GetString("output.reports.entities.filename", conftable)+".csv")
+	entitiesFile := cf.GetString("output.reports.entities.filename", conftable) + ".csv"
+	w, err = createCSVFile(cf, subdir, entitiesFile)
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
 	outputCVSEntities(w, Entities, cf, conftable)
 	w.Close()
+
+	csvfiles = append(csvfiles, csvFiles{
+		path:      filepath.Join(subdir, entitiesFile),
+		filename:  cf.GetString("output.reports.entities.filename", config.NoExpand()),
+		sheetname: cf.GetString("output.reports.entities.sheetname", config.NoExpand()),
+	})
 
 	skipEmpty := cf.GetBool("output.skip-empty-reports")
 	showEmpty := cf.GetBool("output.show-empty-samplers")
@@ -187,13 +207,20 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 			continue
 		}
 
-		w, err = createCSVFile(cf, subdir, cf.GetString(config.Join("output", "reports", plugin, "filename"), conftable)+".csv")
+		pluginFile := cf.GetString(config.Join("output", "reports", plugin, "filename"), conftable) + ".csv"
+		w, err = createCSVFile(cf, subdir, pluginFile)
 		if err != nil {
 			log.Error().Err(err).Msg("")
 			continue
 		}
-		outputCSVSinglePlugin(w, Entities, cf, conftable, plugin)
+		outputCSVSinglePluginWithRowname(w, Entities, cf, conftable, plugin)
 		w.Close()
+
+		csvfiles = append(csvfiles, csvFiles{
+			path:      filepath.Join(subdir, pluginFile),
+			filename:  cf.GetString(config.Join("output", "reports", plugin, "filename"), config.NoExpand()),
+			sheetname: cf.GetString(config.Join("output", "reports", plugin, "sheetname"), config.NoExpand()),
+		})
 	}
 
 	for _, plugin := range cf.GetStringSlice("output.plugins.two-column") {
@@ -213,13 +240,20 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 			continue
 		}
 
-		w, err = createCSVFile(cf, subdir, cf.GetString(config.Join("output", "reports", plugin, "filename"), conftable)+".csv")
+		pluginFile := cf.GetString(config.Join("output", "reports", plugin, "filename"), conftable) + ".csv"
+		w, err = createCSVFile(cf, subdir, pluginFile)
 		if err != nil {
 			log.Error().Err(err).Msg("")
 			continue
 		}
-		outputCSVTwoColumnPlugin(w, Entities, cf, conftable, plugin)
+		outputCSVTwoColumnPluginWithRowname(w, Entities, cf, conftable, plugin)
 		w.Close()
+
+		csvfiles = append(csvfiles, csvFiles{
+			path:      filepath.Join(subdir, pluginFile),
+			filename:  cf.GetString(config.Join("output", "reports", plugin, "filename"), config.NoExpand()),
+			sheetname: cf.GetString(config.Join("output", "reports", plugin, "sheetname"), config.NoExpand()),
+		})
 	}
 
 	return
@@ -375,6 +409,102 @@ func outputCSVTwoColumnPlugin(w io.Writer, Entities []Entity, cf *config.Config,
 				}
 				for i := 0; i < items; i++ {
 					row := []string{
+						e.Name,
+						s.Type,
+						s.Name,
+					}
+					if len(s.Column1) > i {
+						row = append(row, s.Column1[i])
+					} else {
+						row = append(row, "")
+					}
+					if len(s.Column2) > i {
+						row = append(row, s.Column2[i])
+					} else {
+						row = append(row, "")
+					}
+					fcsv.Write(row)
+				}
+
+			}
+		}
+	}
+	fcsv.Flush()
+	return
+}
+
+func outputCSVSinglePluginWithRowname(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
+	fcsv := csv.NewWriter(w)
+
+	heading := []string{"rowname"}
+	heading = append(heading, cf.GetStringSlice(
+		config.Join("output", "reports", plugin, "columns"),
+		config.Default([]string{
+			"rowname",
+			"managedEntity",
+			"samplerType",
+			"samplerName",
+			"data",
+		}),
+	)...)
+	fcsv.Write(heading)
+
+	for _, e := range Entities {
+		for _, s := range e.Samplers {
+			if s.Plugin == plugin {
+				for _, data := range s.Column1 {
+					rowname := e.Name + "-" + s.Name
+					if s.Type != "" {
+						rowname += " (" + s.Type + ")"
+					}
+					rowname += "-" + data
+					fcsv.Write([]string{
+						rowname,
+						e.Name,
+						s.Type,
+						s.Name,
+						data,
+					})
+				}
+			}
+		}
+	}
+	fcsv.Flush()
+	return
+}
+
+func outputCSVTwoColumnPluginWithRowname(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
+	fcsv := csv.NewWriter(w)
+
+	heading := []string{"rowname"}
+	heading = append(heading, cf.GetStringSlice(
+		config.Join("output", "reports", plugin, "columns"),
+		config.Default([]string{
+			"rowname",
+			"managedEntity",
+			"samplerType",
+			"samplerName",
+			"data1",
+			"data2",
+		}),
+	)...)
+	fcsv.Write(heading)
+
+	for _, e := range Entities {
+		for _, s := range e.Samplers {
+			if s.Plugin == plugin {
+				items := len(s.Column1)
+				if len(s.Column2) > items {
+					items = len(s.Column2)
+				}
+				for i := 0; i < items; i++ {
+					rowname := e.Name + "-" + s.Name
+					if s.Type != "" {
+						rowname += " (" + s.Type + ")"
+					}
+
+					row := []string{
+						rowname,
 						e.Name,
 						s.Type,
 						s.Name,

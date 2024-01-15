@@ -25,15 +25,18 @@ package cmd
 import (
 	"bytes"
 	_ "embed"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/geneos"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -176,8 +179,13 @@ func generateReports(input io.Reader, prefix string) (gateway string, err error)
 				break
 			}
 		case "csvdir":
-			if err = outputCSVDir(cf, gateway, entities, probes); err != nil {
+			csvFiles, destdir, err := outputCSVDir(cf, gateway, entities, probes)
+			if err != nil {
 				break
+			}
+			if cf.GetBool("output.toolkit-include.enable") {
+				log.Debug().Msg("building include")
+				err = outputToolkitInclude(cf, gateway, destdir, csvFiles)
 			}
 		case "xlsx":
 			if err = outputXLSX(cf, gateway, entities, probes); err != nil {
@@ -190,6 +198,85 @@ func generateReports(input io.Reader, prefix string) (gateway string, err error)
 		default:
 			// unknown
 		}
+	}
+	return
+}
+
+func outputToolkitInclude(cf *config.Config, gateway string, destdir string, csvFiles []csvFiles) (err error) {
+	conftable := config.LookupTable(map[string]string{
+		"gateway":  gateway,
+		"datetime": startTimestamp,
+	})
+
+	includeFile := cf.GetString("output.toolkit-include.include-file", conftable)
+	if !filepath.IsAbs(includeFile) {
+		includeFile = filepath.Join(destdir, includeFile)
+	}
+	log.Debug().Msgf("include: %s", includeFile)
+
+	samplers := make([]geneos.Sampler, len(csvFiles))
+	for i, c := range csvFiles {
+		samplerConftable := config.LookupTable(map[string]string{
+			"gateway":   gateway,
+			"datetime":  startTimestamp,
+			"csvfile":   c.path,
+			"filename":  c.filename,
+			"sheetname": c.sheetname,
+		})
+
+		samplers[i] = geneos.Sampler{
+			Name:            cf.GetString("output.toolkit-include.sampler-name", samplerConftable),
+			SampleOnStartup: true,
+			Group:           geneos.NewSingleLineString(cf.GetString("output.toolkit-include.sampler-group", samplerConftable)),
+			Plugin: &geneos.Plugin{Toolkit: &geneos.ToolkitPlugin{
+				SamplerScript: geneos.NewSingleLineString(cf.GetString("output.toolkit-include.sampler-script", samplerConftable)),
+			}},
+		}
+	}
+
+	samplerRefs := []geneos.SamplerRef{}
+	for _, s := range samplers {
+		samplerRefs = append(samplerRefs, geneos.SamplerRef{
+			Name: s.Name,
+		})
+	}
+	include := geneos.Gateway{
+		Compatibility: 1,
+		XMLNs:         "http://www.w3.org/2001/XMLSchema-instance",
+		XSI:           "http://schema.itrsgroup.com/GA5.14.2-220707/gateway.xsd",
+		ManagedEntities: &geneos.ManagedEntities{
+			Entities: []geneos.ManagedEntity{{
+				Name:     cf.GetString("output.toolkit-include.entity-name", conftable),
+				Probe:    &geneos.Reference{Name: cf.GetString("output.toolkit-include.probe-name", conftable)},
+				Samplers: samplerRefs,
+			}},
+		},
+		Samplers: &geneos.Samplers{Samplers: samplers},
+	}
+
+	outfile, err := os.CreateTemp(filepath.Dir(includeFile), filepath.Base(includeFile))
+	if err != nil {
+		return
+	}
+	tmpfile := outfile.Name()
+	defer os.Remove(tmpfile)
+	defer outfile.Close()
+
+	fmt.Fprint(outfile, xml.Header)
+	b, err := xml.MarshalIndent(include, "", "    ")
+	if err != nil {
+		return
+	}
+	if _, err = outfile.Write(b); err != nil {
+		return
+	}
+	// windows cannot rename an open file
+	// this is a small race condition, but otherwise it doesn't work
+	if runtime.GOOS == "windows" {
+		outfile.Close()
+	}
+	if err = os.Rename(tmpfile, includeFile); err != nil {
+		return
 	}
 	return
 }

@@ -2,27 +2,26 @@
 
 The `gateway-reporter` tool creates ITRS Geneos monitoring coverage reports using Gateway configurations.
 
-This tool works with the Gateway configuration only and does not interact with the running Gateway. This is to mitigate any potential performance impact on production Gateways. The level of information available is limited by the complexities introduced by the dynamically changing monitoring environment in a typical, extensive Geneos deployment.
+This tool works with the Gateway configuration only and does not interact with the running Gateway. This is to mitigate any potential performance impact on production Gateways. Hence the level of information available is limited by the complexities introduced by the dynamically changing monitoring environment in a typical, extensive Geneos deployment.
 
-⚠️ Note: In light of the above, the coverage reports are based on statically configured Netprobes and the Managed Entities attached to them. If you use Self-Announcing Netprobes then they are not included in the reports.
+⚠️ Note: The reports are based on statically configured Netprobes and the Managed Entities attached to them. If you use Self-Announcing Netprobes then they are not included in the reports.
 
-The reports support a limited number of the most common plugins and more can and ill be added over time. If you have specific requirements, please either raise a Github issue under the `cordial` repo or contact the ITRS Professional Services team.
-
+The reports support a limited number of the most common plugins and more can and will be added over time. If you have specific requirements, please either raise a Github issue under the [`cordial`](https://github.com/ITRS-Group/cordial/issues) repo or contact the ITRS Professional Services team.
 
 ## Getting Started
 
-The tool can run in two modes:
+`gateway-reporter` can run in two modes:
 
 1. As a *[Gateway Validation Hook](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_advancedfeatures_tr.html#Gateway_Hooks)*
 2. From the command line using the `report` option
 
-In both cases the reporter ONLY works on a merged configuration file create by the Gateway. In the first mode, as a validation hook, the Gateway creates a merged setup file during validation, while for the second mode the user can choose to either read a pre-merged configuration or have the reporter program run a one-off instance of the Gateway to produce a merged file.
+In both cases `gateway-reporter` ONLY works on a merged configuration file create by the Gateway. In the first mode, as a validation hook, the Gateway creates a merged setup file during validation, while for the second mode the user can choose to either read a pre-merged configuration or have `gateway-reporter` run a one-off instance of the Gateway to produce a merged file.
 
 ### Prerequisites
 
 `gateway-reporter`, like other standalone tools in the `cordial` repo, it is built so that it has no external dependencies when run on a 64-bit Intel/AMD Linux system, the same architecture as the ITRS Geneos Gateway supports.
 
-When run as a validation hook, the Gateway itself prepares a merged setup file before invoking `gateway-reporter` as the validation program. Apart from a suitable YAML configuration file and permissions to write the reports to the configured directory there should be no other pre-requisites.
+When run as a validation hook, the Gateway itself prepares a merged setup file before invoking `gateway-reporter` as the validation program. Apart from a YAML configuration file and permissions to write the reports to the configured directory there should be no other prerequisites.
 
 When run from the command line `gateway-reporter` can either read prepared, merged setup file(s) or it can invoke a one-shot instance of a Gateway to create a merged set-up but in this case it **must** be run on one of the same systems (Primary of Standby) as the Gateway(s) being reported. This is so that the merge process runs in the same environment as the Gateway, for access to include files and Gateway version consistency.
 
@@ -34,11 +33,11 @@ By default the program is called `gateway-reporter` and the configuration file w
 
 * `/etc/geneos/gateway-reporter.yaml`
 * `${HOME}/.config/geneos/gateway-reporter.yaml`
-* `./gateway-reporter.yaml` (in the current working directory)
+* `./gateway-reporter.yaml` (i.e. in the current working directory)
 
 If there are configuration files in more than one of the search directories above then they are read in the order above and settings in later files will override the settings from earlier files.
 
-⚠️ Note: If you rename the binary then the configuration file will also need to be renamed to match, e.g. if the tool is renamed `ITRSAuditTool` then the configuration file(s) will only be read if they are called `ITRSAuditTool.yaml`. All names are case sensitive. This naming rule ignores the first file extension (e.g. `.exe` if a Windows binary existed) and any suffix of the form `-VERSION`, where VERSION matches the `cordial` release the program was released with.
+⚠️ Note: If you rename the binary then the configuration file will also need to be renamed to match, e.g. if the tool is renamed `ITRSAuditTool` then the configuration file(s) will only be read if they are called `ITRSAuditTool.yaml`. All names are case sensitive. This naming rule ignores the final file extension (e.g. `.exe` if a Windows binary existed) and any suffix of the form `-VERSION`, where VERSION matches the `cordial` release the program was included in.
 
 The program can be located anywhere, but is normally placed in either a system binary directory (`/usr/local/bin` for example) or your user's own `${HOME}/bin`. Just make sure that the directory is in your `PATH` for execution.
 
@@ -64,19 +63,21 @@ In most cases you will not have a pre-merged Gateway configuration file so you c
 For example:
 
 ```bash
-$ gateway-reporter report --install /opt/itrs/packages/gateway/active_prod/gateway2.linux_64 \
-                        --merge /opt/itrs/gateway/gateways/MyGateway/gateway.setup.xml
+$ gateway-reporter report --merge \
+    --install /opt/itrs/packages/gateway/active_prod/gateway2.linux_64 \
+    /opt/itrs/gateway/gateways/MyGateway/gateway.setup.xml
 ```
 
-To override a setting without editing the configuration file you can use environment variables for any setting if you use the format `GENEOS_SETTING` where `SETTING` is the upper-case configuration key with levels indicated with underscores. e.g. to update `output.directory` use:
+To override a setting without editing the configuration file you can use environment variables for any setting if you use the format `GENEOS_config` where `config` is the upper-case configuration key with levels indicated with underscores. e.g. to update `output.directory` use:
 
 ```bash
 $ export GENEOS_OUTPUT_DIRECTORY=${HOME}/reports
-$ gateway-reporter report --install /opt/itrs/packages/gateway/active_prod/gateway2.linux_64 \
-                        --merge /opt/itrs/gateway/gateways/MyGateway/gateway.setup.xml
+$ gateway-reporter report --merge \
+    --install /opt/itrs/packages/gateway/active_prod/gateway2.linux_64 \
+    /opt/itrs/gateway/gateways/MyGateway/gateway.setup.xml
 ```
 
-When run like this you can pass any number of setups on the command line and each will be processed (and merged, if selected). Using the default configuration each input setup will result in one or more report files with the Gateway name as found in the Operating Environment used as a file prefix.
+When run like this you can pass any number of setups on the command line and each will be processed (and merged, if selected). Using the default configuration each input setup will result in one or more report files with the Gateway name as found in the Operating Environment used as a file prefix. For those configurations where the Gateway name is set on the command line and is not in any of the source XML configuration files you can use the `--prefix`/`-p` flag to set the name, but this will only work correctly for a single input file.
 
 ### Running as a Gateway Validation Hook
 
@@ -101,13 +102,13 @@ The next option "`-hooks-dir /path/to/hooks`" should be set to point to the dire
 
 The other to options tell the Gateway not to open a listening port and also to ignore some other settings which are not required and also the invoke the `validate-setup` hook with the right `_VALIDATE_TYPE` setting.
 
-Note: If you use the `cordial` Geneos tool `geneos` to manage your Geneos environment then you can do the above using:
+Note: If you use `geneos` from the `cordial` repo to manage your Geneos environment then you can do the above using:
 
 ```bash
 geneos show --validate gateway GATEWAYNAME
 ```
 
-Note: The above **only** works if you are on `cordial` version v1.6.5 or later.
+Note: The above **only** works if you are on `cordial` version v1.6.5 or later, which is all version that include this `gateway-reporter` program.
 
 ## Results
 
@@ -121,15 +122,19 @@ When the program finished running you should have one or more output files in th
 
     Each file in the ZIP corresponds to a sheet in the above XLSX file.
 
-3. A JSON file which is the parsed data in machine readable format.
+3. A directory containing CSV files
+
+    The directory will contain a CSV file per configured report and an optional Gateway include file to use reporting back into a Geneos "Gateway of Gateways".
+
+4. A JSON file which is the parsed data in machine readable format.
 
     The structure is not defined at this time but should be straight forward to infer from inspection.
 
-4. An XML file which is the merged Gateway setup file used for the report
+5. An XML file which is the merged Gateway setup file used for the report
 
     This merged configuration is intended for diagnostics but can also be used for further processing or manual inspection to clarify any monitoring coverage identified in other reports above.
 
-The reporting tool only has access to the Gateway configuration through a merged set-up file. It has no access to live, dynamic state of the Gateway and so is limited in what kind of data it can analyse. While the Gateway configuration is an XML file with a published schema (`gateway.xsd`) file this is only the syntactic part of the configuration. The semantics of the configuration are normally only driven by the Gateway and any reporting is subject to attempting to duplicate the same evaluation process on the setup file.
+The reporting tool only has access to the Gateway configuration through a merged set-up file. It has no access to live, dynamic state of the Gateway and so is limited in what kind of data it can analyse. While the Gateway configuration is an XML file with a published schema (`gateway.xsd`) file this is only the syntactic part of the configuration. The semantics of the configuration are driven by the Gateway and any reporting is subject to attempting to duplicate the same evaluation process on the setup file.
 
 ## Configuration Reference
 
@@ -196,6 +201,38 @@ The following settings are available, along with their default values:
     * `xml` - Default `${gateway}-Merged-${datetime}.xml`
 
       The `xml` output format is intended for audit and debugging. The file is the merged set-up file that the rest of the report is based on. It can be used as the final arbiter of why something is (or is not) in the report, could be used to re-run the report manually after changing configurations and also for passing to the developers for debugging any potential issues.
+
+  * `toolkit-include`
+
+    If the `csvdir` format is configured and `enable` is `true` then create an include file in the `csvdir` which creates a Managed Entity and attaches toolkit samplers for each report file (including summary and managed entities).
+
+    * `enable` - Default `true`
+
+    * `include-file` - Default `${gateway}-report.setup.xml`
+
+      The destination path to the include file to create. If
+      the value is a relative path then it is resolved relative to
+      `csvdir`, not the working directory
+    
+    * `probe-name` - Default `localhost`
+
+      The name of the Probe to which to attach the Managed Entity (below). No probe is configured in the include file but instead relies on an existing local probe in the Gateway.
+    
+    * `entity-name` - Default `${gateway} Report`
+    
+      The Managed Entity to create to attach the toolkit samplers to.
+
+    * `sampler-group` - Default `${gateway} Report`
+
+      The (optional) sampler group for the toolkit samplers.
+    
+    * `sampler-name` - Default `${sheetname} Report`
+
+      The sampler name, which must be different for each report.
+    
+    * `sampler-script` - Default `/bin/cat "${csvfile}"`
+
+      The value of the `Sampler Script` in the toolkit for each report. Note the quotes around the file value in the default - this is to allow for paths that may contain spaces.
 
   * `plugins`
 
