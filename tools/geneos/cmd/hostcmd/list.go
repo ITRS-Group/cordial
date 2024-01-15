@@ -42,6 +42,7 @@ type listCmdType struct {
 	Name      string
 	Username  string
 	Hostname  string
+	Flags     string
 	Port      int64
 	Directory string
 }
@@ -88,12 +89,12 @@ var listCmd = &cobra.Command{
 			fmt.Println(string(b))
 		case listCmdCSV:
 			hostListCSVWriter := csv.NewWriter(os.Stdout)
-			hostListCSVWriter.Write([]string{"Type", "Name", "Disabled", "Username", "Hostname", "Port", "Directory"})
+			hostListCSVWriter.Write([]string{"Name", "Username", "Hostname", "Flags", "Port", "Directory"})
 			err = loopHosts(hostListInstanceCSVHosts, hostListCSVWriter, listCmdShowHidden)
 			hostListCSVWriter.Flush()
 		default:
 			hostListTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-			fmt.Fprintf(hostListTabWriter, "Name\tUsername\tHostname\tPort\tDirectory\n")
+			fmt.Fprintf(hostListTabWriter, "Name\tUsername\tHostname\tFlags\tPort\tDirectory\n")
 			err = loopHosts(hostListInstancePlainHosts, hostListTabWriter, listCmdShowHidden)
 			hostListTabWriter.Flush()
 		}
@@ -112,17 +113,29 @@ func loopHosts(fn func(*geneos.Host, any) error, w any, showHidden bool) error {
 }
 
 func hostListInstancePlainHosts(h *geneos.Host, w any) (err error) {
-	fmt.Fprintf(w.(io.Writer), "%s\t%s\t%s\t%d\t%s\n", h.GetString("name"), h.GetString("username"), h.GetString("hostname"), h.GetInt("port", config.Default(22)), h.GetString(cmd.Execname))
+	flags := "-"
+	if h.Hidden() {
+		flags = "H"
+	}
+	fmt.Fprintf(w.(io.Writer), "%s\t%s\t%s\t%s\t%d\t%s\n", h.GetString("name"), h.GetString("username"), h.GetString("hostname"), flags, h.GetInt("port", config.Default(22)), h.GetString(cmd.Execname))
 	return
 }
 
 func hostListInstanceCSVHosts(h *geneos.Host, w any) (err error) {
+	flags := "-"
+	if h.Hidden() {
+		flags = "H"
+	}
 	c := w.(*csv.Writer)
-	c.Write([]string{h.String(), h.GetString("username"), h.GetString("hostname"), fmt.Sprint(h.GetInt("port", config.Default(22))), h.GetString(cmd.Execname)})
+	c.Write([]string{h.String(), h.GetString("username"), h.GetString("hostname"), flags, fmt.Sprint(h.GetInt("port", config.Default(22))), h.GetString(cmd.Execname)})
 	return
 }
 
 func hostListInstanceJSONHosts(h *geneos.Host, w any) (err error) {
-	listCmdEntries = append(listCmdEntries, listCmdType{h.String(), h.GetString("username"), h.GetString("hostname"), h.GetInt64("port", config.Default(22)), h.GetString(cmd.Execname)})
+	flags := "-"
+	if h.Hidden() {
+		flags = "H"
+	}
+	listCmdEntries = append(listCmdEntries, listCmdType{h.String(), h.GetString("username"), h.GetString("hostname"), flags, h.GetInt64("port", config.Default(22)), h.GetString(cmd.Execname)})
 	return
 }
