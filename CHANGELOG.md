@@ -1,5 +1,47 @@
 # Change Log
 
+## Version v1.12.0
+
+> **Released 2024-01-15**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.12.0 Changes
+
+* `tools/files2dv` **New**
+
+  A new program that can be run as a Toolkit (soon as an API sampler) to scan files and directories and create one row per file. The contents of files can be checked and extracted into columns - the difference between the standard Geneos FKM and Statetracker plugins and using `files2dv` is that the whole file is scanned until each column is either filled in or no matches found, in the latter case a failure value can also be substituted. This is not a line-by-line scanner, like FKM.
+
+  If no contents are checked then just the matching file's metadata is used.
+
+* `tools/gateway-reporter`
+
+  `gateway-reporter` has had a number of issues fixed but also gets a new `csvdir` output format, which can be used to create a "live" directory of CSV files and an optional Gateway include file to read back reports into a Gateway-of-Gateways.
+
+* `pkg/geneos`
+
+  Added an `ExpandFileDates()` function to emulate Geneos expansion of file paths including `<today ...>` placeholders. Currently only `today` is supported.
+
+* `pkg/config`
+
+  Change `LookupTable()` options to take variadic args and deprecate `LookupTables()`
+
+  Map dashes (`-`) to underscored (`_`) when using environment variable lookups, so configuration items like `file-name` can be references as `FILE_NAME` in an env var.
+
+## v1.12.0 Fixes
+
+* `pkg/geneos`
+
+  Fixes around the handling of merged output files (where the `var-` prefix is dropped by the Gateway on some XML) so thet `gateway-reporter` works again.
+
+* `tools/geneos`
+
+  Fix `fa2` start-up to include `-secure` when in secure mode.
+
+  Better handling of remote hosts and display of a Flags column to show if hosts have been "hidden" (disabled). While documentation needs to be updated, the difference between hiding a host and disabling it (which is not yet possible) is that a hidden host can still be referenced explicitly on the command line, but is not included in any "all" lookups, such as `geneos start`
+
+---
+
 ## Version v1.11.2
 
 > **Released 2023-12-07**
