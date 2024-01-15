@@ -362,7 +362,7 @@ func RemoteHosts(includeHidden bool) (hs []*Host) {
 
 	hosts.Range(func(k, v interface{}) bool {
 		h := GetHost(k.(string))
-		if h.IsAvailable() && (includeHidden || !h.hidden) {
+		if h.Exists() && (includeHidden || !h.hidden) {
 			hs = append(hs, h)
 		}
 		return true
