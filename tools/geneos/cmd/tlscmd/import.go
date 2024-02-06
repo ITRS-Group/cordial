@@ -47,11 +47,11 @@ var importCmdCert, importCmdSigner, importCmdChain, importCmdCertKey string
 func init() {
 	tlsCmd.AddCommand(importCmd)
 
-	importCmd.Flags().StringVarP(&importCmdCert, "cert", "c", "", "Instance certificate to import, PEM format")
-	importCmd.Flags().StringVarP(&importCmdSigner, "signing", "s", "", "Signing certificate to import, PEM format")
-	importCmd.Flags().StringVarP(&importCmdCertKey, "privkey", "k", "", "Private key for certificate, PEM format")
+	importCmd.Flags().StringVarP(&importCmdCert, "cert", "c", "", "Instance certificate `file` to import, PEM format")
+	importCmd.Flags().StringVarP(&importCmdSigner, "signing", "s", "", "Signing certificate `file` to import, PEM format")
+	importCmd.Flags().StringVarP(&importCmdCertKey, "privkey", "k", "", "Private key `file` for certificate, PEM format")
 
-	importCmd.Flags().StringVarP(&importCmdChain, "chain", "C", "", "Certificate chain to import, PEM format")
+	importCmd.Flags().StringVarP(&importCmdChain, "chain", "C", "", "Certificate chain `file` to import, PEM format")
 
 	importCmd.Flags().SortFlags = false
 }
@@ -70,8 +70,7 @@ var importCmd = &cobra.Command{
 		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, names, params := cmd.ParseTypeNamesParams(command)
-		log.Debug().Msgf("ct=%s args=%v params=%v", ct, names, params)
+		ct, names := cmd.ParseTypeNames(command)
 
 		if importCmdCert != "" && importCmdSigner != "" {
 			return errors.New("you can only import an instance *or* a signing certificate, not both")
@@ -87,18 +86,28 @@ var importCmd = &cobra.Command{
 				return geneos.ErrInvalidArgs
 			}
 
-			if err = config.WriteCert(geneos.LOCAL, geneos.LOCAL.PathTo("tls", geneos.SigningCertFile+".pem"), cert); err != nil {
+			if err = config.WriteCert(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".pem"), cert); err != nil {
 				return err
 			}
 
-			if err = config.WritePrivateKey(geneos.LOCAL, geneos.LOCAL.PathTo("tls", geneos.SigningCertFile+".key"), privkey); err != nil {
+			if err = config.WritePrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"), privkey); err != nil {
 				return err
 			}
 
-			if importCmdChain == "" && len(chain) > 0 {
+			if importCmdChain != "" {
+				_, _, chain, err := tlsDecompose(importCmdChain, "")
+				if err != nil {
+					return err
+				}
 				if err = tlsWriteChainLocal("", chain); err != nil {
 					return err
 				}
+				fmt.Printf("%s certificate chain written using %s\n", cmd.Execname, importCmdChain)
+			} else if len(chain) > 0 {
+				if err = tlsWriteChainLocal("", chain); err != nil {
+					return err
+				}
+				fmt.Printf("%s certificate chain written using %s\n", cmd.Execname, importCmdSigner)
 			}
 			return err
 		}
@@ -122,7 +131,7 @@ var importCmd = &cobra.Command{
 		if err = tlsWriteChainLocal("", chain); err != nil {
 			return err
 		}
-		fmt.Printf("%s certificate chain written\n", cmd.Execname)
+		fmt.Printf("%s certificate chain written using %s\n", cmd.Execname, importCmdChain)
 
 		return
 	},
@@ -146,11 +155,17 @@ func tlsWriteChainLocal(chainpath string, chain []*x509.Certificate) (err error)
 }
 
 // tlsWriteInstance expects 3 params, of *x509.Certificate,
-// *memguard.Enclave and a []*x509.Certificate or it will panic.
+// *memguard.Enclave and a []*x509.Certificate or it will return an
+// error or panic.
 func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
 	cf := i.Config()
+
+	if len(params) != 3 {
+		resp.Err = geneos.ErrInvalidArgs
+		return
+	}
 
 	cert, key, chain := params[0].(*x509.Certificate), params[1].(*memguard.Enclave), params[2].([]*x509.Certificate)
 
