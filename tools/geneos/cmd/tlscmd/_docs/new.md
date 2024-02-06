@@ -2,6 +2,8 @@ The `tls new` command creates new certificates for matching instances. It overwr
 
 To create new certificates there must be a valid signing certificate and matching private key. These can be created using the `tls init` command or you can import them using `tls import`.
 
-The `tls new` command differs from `tls create` as the latter creates new certificates in your current directory for later use, while this command creates certificates for matching instances and sets the Common Name based on the component type and name for simple identification.
+The `tls new` command differs from `tls create` as the latter creates new certificates in your current directory for later use, while this command creates certificates for matching instances and sets the Common Name based on the component type and name for simple identification. Geneos components do not check the Common Name or related field in the certificate.
 
-⚠ Warning: While you can create certificates and keys for `webservers` they will not be used directly as you need to manually import them into the configured truststore/keystore.
+💡The command will skip any instances that have an existing, valid certificate file and key. To overwrite existing certificates and keys use the `tls renew` command.
+
+⚠️ Warning: While you can create certificates and keys for `webservers`, they will not be used directly as you need to import them into the Java truststore/keystore.
