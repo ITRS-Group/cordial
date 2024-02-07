@@ -1,4 +1,6 @@
-The `geneos` program can seamlessly manage Geneos instances across multiple servers. By transparently and securely connecting to other Linux systems running Geneos components you can do all the same things as with other Geneos instance that you have created locally.
+The `host` sub-system allows you to manage connections to remote Geneos servers.
+
+The `geneos` program can seamlessly manage Geneos instances transparently and securely by connecting to other Linux systems running Geneos components. You can do all the same things as with other Geneos instance that you have created locally.
 
 This can be as simple at:
 
@@ -16,11 +18,11 @@ The host name, as opposed to _hostname_, that you use when you add a host to `ge
 
 ## Adding Hosts
 
-Currently only SSH is supported.
+Currently only the SSH protocol is supported.
 
 The recommended way to ensure secure connectivity is to use and agent with SSH keys. If this is not available then you can also use locally stored, unprotected (as in without a passphrase) private keys and finally locally stored encrypted passwords.
 
-Future releases may add support for protected private keys (through the local encrypted storage of passphrases) or for Kerberos (GSS-API) authentication. An SSH agent will still remain the recommended method.
+Future releases may add support for protected private keys (through the local encrypted storage of passphrases) or for Kerberos (GSS-API) authentication.
 
 Please note that any configuration in your `ssh_config` file(s) is ignored. Also, you must have already added the remote SSH server key to your `known_hosts` file or connections will fail with an error.
 

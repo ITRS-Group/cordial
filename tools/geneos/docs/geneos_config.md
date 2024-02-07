@@ -1,30 +1,18 @@
 # `geneos config`
 
-The commands in the `config` subsystem allow you to control the
-environment of the `geneos` program itself.
+The config sub-system allow you to control the environment of the `geneos` program itself.
 
-`config show` will display the configuration.
-
-`config set` will set parameters.
-
-`config unset` will unset (remove) parameters.
-
-
-
-## Program Configuration
-
-### General Configuration
+## General Configuration
 
 * `/etc/geneos/geneos.json` - Global options
 * `${HOME}/.config/geneos/geneos.json` - User options
-* Environment variables ITRS_`option` - where `.` is replaced by `_`,
-  e.g. `ITRS_DOWNLOAD_USERNAME`
+* Environment variables ITRS_`option` - where `.` is replaced by `_`, e.g. `ITRS_DOWNLOAD_USERNAME`
 
-General options are loaded from the global config file first, then the user one and any environment variables override both files. The current options are:
+General options are loaded from the global file first, then the user file and any environment variables override both files. The currently supported options are:
 
 * `geneos`
 
-The home directory for all other commands. See [Directory Layout](#directory-layout) below. If set the environment variable ITRS_HOME overrides any settings in the files. This is to maintain backward compatibility with older tools. The default, if not set anywhere else, is the home directory of the user running the command or, if running as root, the home directory of the `geneos` or `itrs` users (in that order). (To be fully implemented) This value is also set by the environment variables `ITRS_HOME` or `ITRS_GENEOS`
+The home directory for all other commands. See [Directory Layout](#directory-layout) below. If set, the environment variable ITRS_HOME overrides any settings in the files. This is to maintain backward compatibility with older tools. The default, if not set anywhere else, is the home directory of the user running the command or, if running as root, the home directory of the `geneos` or `itrs` users (in that order). (To be fully implemented) This value is also set by the environment variables `ITRS_HOME` or `ITRS_GENEOS`
 
 * `download.url`
 
@@ -45,8 +33,6 @@ The base URL for downloads for automating installations. Not yet used. If files 
   * `ITRS_SNAPSHOT_PASSWORD`
 
 * `GatewayPortRange` & `NetprobePortRange` & `LicdPortRange`
-
-...
 
 
 
