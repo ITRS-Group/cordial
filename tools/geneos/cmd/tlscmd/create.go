@@ -60,7 +60,7 @@ var createCmdDescription string
 
 var createCmd = &cobra.Command{
 	Use:          "create",
-	Short:        "Create new certificates, independent of instances",
+	Short:        "Create new standalone certificates and keys",
 	Long:         createCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
