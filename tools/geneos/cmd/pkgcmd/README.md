@@ -1,12 +1,4 @@
-The `geneos package` commands help you manage ITRS Geneos software releases.
-
-To download and unarchive releases use `geneos package install`. You can also install releases from files you have already downloaded.
-
-Use `geneos package list` to show installed versions and which are linked to which base names (symlinks like `active_prod`).
-
-The `geneos package update` command allows you to select which installed releases to link to which base names and to create new base names.
-
-Finally use `geneos package uninstall` to remove installed packages.
+The `package` sub-system commands help you manage Geneos software releases.
 
 For those commands that use them, `VERSION` options are based on the ITRS Geneos release versioning which is now semantic versioning but older versions will have `GA` and `RA` prefixes:
 
