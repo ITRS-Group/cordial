@@ -42,7 +42,7 @@ var newCmdDescription string
 
 var newCmd = &cobra.Command{
 	Use:          "new [TYPE] [NAME...]",
-	Short:        "Create new certificates",
+	Short:        "Create new instance certificates and keys",
 	Long:         newCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{

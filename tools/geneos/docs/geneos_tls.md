@@ -12,11 +12,11 @@ Commands allow for initialisation, create and renewal of certificates as well as
 
 | Command / Aliases | Description |
 |-------|-------|
-| [`geneos tls create`](geneos_tls_create.md)	 | Create new certificates, independent of instances |
+| [`geneos tls create`](geneos_tls_create.md)	 | Create new standalone certificates and keys |
 | [`geneos tls import`](geneos_tls_import.md)	 | Import certificates |
 | [`geneos tls init`](geneos_tls_init.md)	 | Initialise the TLS environment |
 | [`geneos tls list / ls`](geneos_tls_list.md)	 | List certificates |
-| [`geneos tls new`](geneos_tls_new.md)	 | Create new certificates |
+| [`geneos tls new`](geneos_tls_new.md)	 | Create new instance certificates and keys |
 | [`geneos tls renew`](geneos_tls_renew.md)	 | Renew instance certificates |
 | [`geneos tls sync`](geneos_tls_sync.md)	 | Sync remote hosts certificate chain files |
 
