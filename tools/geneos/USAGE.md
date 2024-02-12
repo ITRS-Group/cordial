@@ -122,15 +122,17 @@ Disabled instances show in the `geneos list` output with a `D` flag.
 
 ## Managing Installed Software
 
-The `geneos` program features a range of commands to help manage the installed Geneos releases for each component type. These are all found in the `geneos package` sub-system.
+The `geneos` program includes commands to help manage the installed Geneos releases for each component type. These are all found in the `geneos package` sub-system.
 
-As you have seen, each Geneos instance is of a specific component type. Each of these components is associated with a software release available on the ITRS Downloads site. To allow you to manage which version is used for which instance we use the concept of a symbolic "base version". In most cases you will see this listed as `active_prod`.
+As you have seen, each instance is of a specific component type. Each of these components is associated with a software release available on the [ITRS Downloads](https://resources.itrsgroup.com/downloads) sub-site. To allow you to manage which version is used for which instance we use the concept of a symbolic "base version". In most cases you will see this listed as `active_prod`.
 
-> ⚠ Note that installed packages are only related to their component types and not specific instances. You manage packages per component and the symbolic base version. Each instance then uses a specific base version, and commonly all share the same one, per component. All of the commands below only work with components and symbolic base versions, not instances.
+> ⚠ Note that installed packages are only related to their component types and not specific instances. You manage packages _per component_ and additionally with the symbolic _base version_. Each instance then uses a base version, and most commonly all share the same one, per component. All of the commands below only work with components and base versions, not instances.
 
-### `geneos package list` (alias `geneos package ls`)
+### `geneos package list`
 
-You can see what packages are installed using the `geneos package list` command. You can also limit this to a specific TYPE, which is especially useful if you have many installed versions.
+> Alias `geneos package ls`
+
+You can see what packages are installed using the `geneos package list` command. You can also limit this to a specific TYPE, which can be useful if you have many installed versions.
 
 ```bash
 $ geneos package ls gateway
@@ -153,13 +155,13 @@ In the output above you will see the following columns:
 | `LastModified` | The modification time of the top-level directory for the release. This is a fair indication of when it was installed |
 | `Path` | The installation path |
 
-
 ### `geneos package install`
 
-You can download and install Geneos releases directly from the command line, without the need to use a web browser and then copy files between systems, as long as you can reach the download site from the server you are working on. You may need to configure details for you corporate web proxy - you can read more about this in the `geneos` documentation either by running [`geneos help package install`](https://github.com/ITRS-Group/cordial/blob/main/tools/geneos/docs/geneos_package_install.md).
+You can download and install Geneos releases directly from the command line without a web browser, and then copy files between systems, as long as you can reach the download site from the server you are working on. You may need to configure details for your corporate web proxy - you can read more about this in the `geneos` documentation by following this link or running [`geneos help package install`](https://github.com/ITRS-Group/cordial/blob/main/tools/geneos/docs/geneos_package_install.md).
+
+💡The `geneos package install` command will not, by default, change any running instance - it will only download and install releases. To also update which release version an instance uses you must also either use additional flags, such as `--update` or use the `geneos package update` command.
 
 To download ITRS software you must have a registered account and use these to access the releases. `geneos package install` can accept your user name with the `--username EMAIL` / `-u EMAIL` flag and will then prompt you for your password, or you can use the `geneos login` command to securely save your credentials in an encrypted file.
-
 
 With no other arguments the command will download and install the latest available version of all supported components. This is normally too many, so you should specify the component type on the command line:
 
@@ -170,31 +172,32 @@ geneos-netprobe-6.6.0-linux-x64.tar.gz 100% |███████████�
 installed "geneos-netprobe-6.6.0-linux-x64.tar.gz" to "/opt/geneos/packages/netprobe/6.6.0"
 ```
 
-The `--update` / `-U` flag also lets you trigger an update of the symbolic base version, which will also stop instances and restart them as needed, unless they are protected. See the `geneos package update` command below for more.
+The `--update` / `-U` flag also lets you trigger an update of the symbolic base version, which will stop and restart instances as needed, unless they are protected. See the `geneos package update` command below for more. If any protected instances match the base version you want to update then it will skip the update and output a warning telling you this.
 
-> 💡 If you cannot access the ITRS Download site directly from your server you can instead manually download and copy to your server. Then install from those local copies, like this: 
->
-> ```bash
-> $ geneos package install -L /tmp/downloads/geneos-gateway-5.14.3-linux-x64.tar.gz 
-> installed "geneos-gateway-5.14.3-linux-x64.tar.gz" to "/opt/geneos/packages/gateway/5.14.3"
-> ```
-> Conversely, the `--download` / `-D` flag tells the command to only download the release but not to install it. You will then be able to find the release in the current directory.
->
-> The `geneos package install` command has a number of other useful options, too many to mention in this guide. Please use the `geneos help COMMAND` or `--help`/`-h` flags to find out more.
+If you cannot access the ITRS Download site directly from your server you can instead download and copy them to your server from another location. You can then install from local copies:
+
+```bash
+$ geneos package install -L /tmp/downloads/geneos-gateway-5.14.3-linux-x64.tar.gz 
+installed "geneos-gateway-5.14.3-linux-x64.tar.gz" to "/opt/geneos/packages/gateway/5.14.3"
+```
+
+Conversely, the `--download` / `-D` flag tells the command to only download the release but not to install. You will then be able to find the downloaded release in the current directory.
+
+The `geneos package install` command has a number of other useful options, too many to mention in this guide. Please use the `geneos help COMMAND` or `--help`/`-h` flags to find out more.
 
 ### `geneos package update`
 
-The `geneos package update` command lets you control when instances are updated, which installed releases to use and more.
+The `geneos package update` command lets you control when instances are updated, which installed release versions to use and more.
 
-A basic update can be run at the same time as installation, but the update command let's you control the versions of already installed components and releases.
+A basic update can be run at the same time as installation using the `--update` flags to the `geneos package install` command, but the `geneos package update` command let's you exert a finer level of control over specific base versions and releases.
 
-Once you know the version and symbolic base name for the component you want, then it's as simple as:
+Once you know the version and symbolic base name for the component you want, then:
 
 ```bash
 $ geneos package update gateway -V 6.6.0 -b dev
 ```
 
-> ⚠ Remember that all of the `geneos package` commands work on component types and symbolic versions and not on individual instances.
+> ⚠ Remember that all of the `geneos package` commands work on component types and base versions and not on individual instances.
 
 Any Gateway instance that uses the symbolic base `dev` will be stopped, the link updated and the same instances started. If any of the instances are protected then the command will stop and not update the link or stop any of the other matching instances. This is one of the uses for the protected label. If you are sure you want to update, then also supply the `--force`/`-F` flag:
 
@@ -206,7 +209,9 @@ $ geneos package update gateway -V 6.6.0 -b dev --force
 
 ### `geneos package uninstall`
 
-To remove old releases and to clean-up the downloaded release files you can use `geneos package uninstall`. Without any options the command removes older, unused releases and all downloaded archive files. The  `geneos package uninstall` command will **not** remove the latest release for any component type or any release that is in use by a named instance through a symbolic base version. It will also update any unused symbolic versions to the latest available release so that it can remove older releases.
+To remove old releases and to clean-up the downloaded release files you can use `geneos package uninstall`.
+
+Without any options the command removes older, unused releases and all downloaded archive files. The `geneos package uninstall` command will **not** remove the latest release for any component type or any release that is in use by an instance through a symbolic base version. So that it can remove older releases, the command will also keep any unused symbolic base versions by updating them to the latest available release.
 
 ```bash
 $ geneos package uninstall
@@ -222,13 +227,13 @@ removed gateway release 5.14.3 from ubuntu:/opt/geneos/packages/gateway
 removed gateway release 6.3.1 from ubuntu:/opt/geneos/packages/gateway
 ```
 
-## Instances
+> 💡As for other commands, if an instance is labelled protected then no action will be taken without the `--force`/`-F` flag.
 
-You can add new instances with the `geneos add` command, delete with the `geneos delete` command and more.
+## Managing Instances
 
 ### `geneos add`
 
-The `geneos add` command lets you add a new Geneos instance. You have to supply at least the component type and the name of the new instance, like this:
+The `geneos add` command lets you add a new Geneos instance. You must supply at least the component type and a name for the new instance, like this:
 
 ```bash
 $ geneos add netprobe myProbe
@@ -238,15 +243,22 @@ netprobe "myProbe" added, port 7114
 
 ### `geneos deploy`
 
-The `geneos deploy` command combines `geneos add` and `geneos package install` in an intelligent way to allow you to implement a working Geneos component in a single command. This is especially useful for scripting and automation.
+The `geneos deploy` command combines `geneos add` and `geneos package install` to allow you to implement a working Geneos component in a single command. This is especially useful for scripting and automation.
+
+### `geneos delete`
+
+A command that you will not use very often is the `geneos delete` command. 
+
+### `geneos copy` and `geneos move`
+
+> Also aliased as `geneos cp` and `geneos mv`, respectively.
+
+
 
 ### `geneos set` and `geneos unset`
 
 The instances you create and manage may, over time, need settings changed. Those settings that are not automatically managed by commands can be updated with these commands. You can change simple parameters, which are KEY=VALUE pairs and also more complex parameters like lists of environment variables and more. 
 
-### `geneos delete`
-
-A command that you will not use very often is the `geneos delete` command. 
 
 ### `geneos rebuild`
 
@@ -260,7 +272,7 @@ If you change any instance settings then you may need to rebuild the configurati
 
 Geneos components can use TLS to encrypt traffic between each other and also for external access. The creation and maintenance of public certificates has improved with LetsEncrypt but as the vast majority of Geneos implementations will be on private networks this is not a real option. Instead the `geneos tls` sub-system lets you work with local certificates, create a certificate authority and instance certificates and keys and renew them when required.
 
-Supporting internal corporate certificates is currently limited, the commands in this section are intended to be for a self-contained set of certificates and keys.
+Supporting internal corporate certificates is currently limited, and the commands in this guide are intended for self-contained set of certificates and keys.
 
 ### `geneos tls list`
 
