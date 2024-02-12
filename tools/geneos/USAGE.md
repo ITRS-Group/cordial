@@ -1,16 +1,32 @@
-# Using `geneos`
+# Using `geneos` to Manage Geneos
 
 This guide gives examples of common commands you will likely use day-to-day to manage your Geneos installation.
 
-You should already have installed the `geneos` program in a location that makes it simple to run from the command line. If you need to do this, please see the [README](README.md) or [INSTALL](INSTALL.md) guides. You will also find details of how to [Adopt An Existing Installation](README.md#adopting-an-existing-installation) in the README guide, if you have a Geneos installation that uses `gatewayctl` and similar shell script commands.
+You should already have installed the `geneos` program in a location that makes it simple to run from the command line. If, however, you still need to do this, please see the [README](README.md) or [INSTALL](INSTALL.md) guides. You will also find details of how to [Adopt An Existing Installation](README.md#adopting-an-existing-installation) in the README guide, if you have a Geneos installation that uses `gatewayctl` and related shell script commands.
 
-## Basic Commands
+## Core Commands
 
-Let's start with some basic commands.
+Let's start with some core commands, but first let's take a short look at the typical command line.
 
-### `geneos list` (alias `geneos ls`)
+> 💡Most commands will accept a similar set of optional arguments. The normal format is:
+>
+>  `geneos COMMAND [flags] [TYPE] [NAME...]`
+>
+> The square brackets denote optional arguments and the ellipsis means that the option `NAME` argument can be repeated.
+>
+> The options `flags` argument(s) will vary from command to command, and you should use the `--help` (or `-h`) flag to see help for a specific command, e.g. `geneos ls --help`
+>
+> The optional `TYPE` argument can restrict a command to a specific component type, e.g. `gateway` or `netprobe`. For a full list of currently supported component types use `geneos help`.
+>
+> The optional list of `NAMES` for instance can also restrict commands to only apply to a selected set of instance names. These names can also use wildcards, e.g. `name*` but be careful to quote these as your command line shell may instead apply them first to files in the current directory.
+>
+> Without `TYPE` or `NAMES` the command will apply to all instances.
 
-To see which Geneos instances exist, including information about what component type they are and the version of release installed, use the `list` command (or the simpler, for UNIX/Linux users, alias `ls`):
+### `geneos list`
+
+> Also available as the alias `geneos ls`
+
+To see a list of Geneos instances, including information about the component type and the version of release installed, use the `list` command (or, for UNIX/Linux users,  the shorter alias `ls`):
 
 ```bash
 $ geneos ls
@@ -21,24 +37,27 @@ netprobe  localhost            localhost  PA    7036  active_prod:6.5.0         
 san       hdci-ecr1adh01a      localhost  A     7103  netprobe/active_prod:6.5.0  /opt/geneos/netprobe/sans/hdci-ecr1adh01a
 ```
 
-> 💡 You can also choose to have this information in CSV or JSON formats, for further processing. Use the `--help` or `-h` flag to any command to see the options available.
+> 💡 You can also change this output to CSV or JSON formats, for further processing. For all commands you can use the `--help` or `-h` flag to any command to see the options available.
 
-Here you can see columns for:
+Above you can see these columns:
 
 | Column | Descriptions |
 |--------|--------------|
 | `Type` | The component type |
 | `Name` | The instance name |
 | `Host` | The host the instance is configured on |
-| `Flags` | Flags that show if the instance is `P`rotected, `A`uto-start, `D`isabled, `T`LS Enabled |
+| `Flags` | Flags that show if the instance is `P`rotected, `A`uto-start, `D`isabled, `T`LS Configured ("Secure Communications") |
 | `Port` | The TCP port the instance is configured to listen on |
 | `Version` | The component package type, base name and underlying version. For the `san` type the `netprobe/` prefix tells you that the underlying release is a normal Netprobe |
 | `Home` | The working (run time) directory |
 
 
-### `geneos status` (alias `geneos ps`)
 
-To see which Geneos instances are running use the `status` command (or, again, the simpler alias `ps`):
+### `geneos status`
+
+> Also available as the alias `geneos ps`
+
+To see which instances are running use the `status` command (or, again, the shorter alias `ps`):
 
 ```bash
 $ geneos ps
@@ -49,11 +68,11 @@ netprobe  localhost            localhost  1016     [7036]       peter  peter  20
 san       hdci-ecr1adh01a      localhost  1028     []           peter  peter  2023-11-15T11:31:06Z  netprobe/active_prod:6.5.0  /opt/geneos/netprobe/sans/hdci-ecr1adh01a
 ```
 
-> 💡 You can also choose to have this information in CSV or JSON formats, for further processing. Use the `--help` or `-h` flag to any command to see the options available.
+> 💡 As for the `list` command, you can also change this output to CSV or JSON formats, for further processing.
 
 The output looks similar to the `list` / `ls` command but with some important differences. Notably the `Ports` column contains the actual TCP ports the running process is listening on and these might not be the same as those that may be configured - knowing this can be important in some situations.
 
-The first three - `Type`, `Name` and `Host` - and last two columns - `Version` and `Home` have the same meaning, but then we also have:
+The first three - `Type`, `Name` and `Host` - and last two columns - `Version` and `Home` have the same meaning, but then there are these additional columns:
 
 | Column | Descriptions |
 |--------|--------------|
@@ -62,20 +81,20 @@ The first three - `Type`, `Name` and `Host` - and last two columns - `Version` a
 | `User` and `Group` | The User and Group of the user running the process |
 | `Starttime` | The process start time |
 
-Remember that you can also limit the results by giving additional arguments on the command line, for example:
+> 💡You can also limit the results by giving additional arguments on the command line, for example:
 
 ```bash
 geneos ps gateway
-geneos ps "text*"
+geneos ps "LDN*"
 ```
 
 ### `geneos start`, `geneos stop` and `geneos restart`
 
-We can control each Geneos instance using the three sub-command `geneos start`, `geneos stop` and `geneos restart`. Each command does what the name suggests.
+You can control instances using the three commands `geneos start`, `geneos stop` and `geneos restart`. Each command does what the name suggests.
 
-> ⚠ It's very important to now recall that if you do not specify a `TYPE` or a list of instance `NAMEs` then most commands will operate on all matching instances. This is especially important with these three commands and you can unintentionally impact Geneos components that you didn't expect.
+> ⚠ It is important to recall that if you do not specify a `TYPE` or instance `NAMEs` then commands will operate on all matching instances. This is especially important with these three commands and you can, unintentionally, affect instances that you didn't intend to change.
 
-While there are a variety of options to these commands, it is probably worth mentioning a couple:
+While there are a variety of options to these commands, all visible with the `--help`/`-h` flag, it is worth mentioning these:
 
 * The `--log` / `-l` flag to `geneos start` and `geneos restart` will start watching the log files of all the instances that have been started and will continue to do so until you interrupt it using CTRL-C (which will not affect the running instances).
 
@@ -85,11 +104,11 @@ While there are a variety of options to these commands, it is probably worth men
 
 ### `geneos protect`
 
-To help avoid unintentional actions affecting more of your instances than you intended, you can label any of them as _protected_ with the `geneos protect` command. Any instance that is protected will not be affected by commands with side-effects, such as the ones above. Instead you have to explicitly force actions using the `--force` or `-F` flags for these instances.
+To help avoid commands affecting more of your instances than you intended, you can label any of them as _protected_ with the `geneos protect` command. Any instance that is protected will not be affected by commands with side-effects, such as the ones above. Instead, you have to run commands using the `--force` or `-F` flag.
 
-Protecting an instance also prevents unintentional deletion and other similar actions.
+Protecting an instance also prevents accidental deletion and other impacting changes.
 
-As you may recall from the `geneos ls` command, the `Flags` column will show a `P` for each protected instance.
+You can see which instances are currently protected using the `geeneos list` command; the `Flags` column will show a `P` for each protected instance.
 
 > ⚠ There is no `geneos unprotect` command and this is intentional. Instead there is an `--unprotect` or `-U` to this command to reverse it's affects.
 
@@ -97,7 +116,7 @@ As you may recall from the `geneos ls` command, the `Flags` column will show a `
 
 Another way to control how instances behave is through the `geneos disable` and `geneos enable` commands. The principal difference between `geneos protect` and `geneos disable` is that if you disable an instance then you cannot override this state per command with `--force`, unlike a protected instance.
 
-Disabling an instance is useful when you want to perform maintenance or you want to create a manual backup copy of an instance and disable it as a placeholder.
+Disabling an instance is useful when you want to perform maintenance or you want to create a backup copy of an instance and disable it to ensure it is not started by accident.
 
 Disabled instances show in the `geneos list` output with a `D` flag.
 
