@@ -231,6 +231,8 @@ removed gateway release 6.3.1 from ubuntu:/opt/geneos/packages/gateway
 
 ## Managing Instances
 
+
+
 ### `geneos add`
 
 The `geneos add` command lets you add a new Geneos instance. You must supply at least the component type and a name for the new instance, like this:
@@ -268,17 +270,56 @@ If you change any instance settings then you may need to rebuild the configurati
 
 ### `geneos clean`
 
+All components generate log, temporary and other files. You can use the `geneos clean` command to remove the files each component creates but is no longer likely to be useful. The set of files removed is different for each component type and can also be changed for your specific requirements. It's also possible to perform a more complete clean-up, called a purge, when an instance is not running.
+
+
+
 ## Secure Connections
 
-Geneos components can use TLS to encrypt traffic between each other and also for external access. The creation and maintenance of public certificates has improved with LetsEncrypt but as the vast majority of Geneos implementations will be on private networks this is not a real option. Instead the `geneos tls` sub-system lets you work with local certificates, create a certificate authority and instance certificates and keys and renew them when required.
+Instances can use TLS to encrypt traffic between each other and also for external access.The `geneos tls` sub-system lets you work with local certificates, create a certificate authority and instance certificates (and keys) and renew them as and when required.
 
-Supporting internal corporate certificates is currently limited, and the commands in this guide are intended for self-contained set of certificates and keys.
+Imported certificate support is currently limited, and the commands in this guide are intended for self-contained set of certificates and keys.
+
+### `geneos tls init`
+
+Unless you included option for the initialisation of TLS support when you first deployed your Geneos environment using one of the `geneos init` commands then you will have to use `geneos tls init` to do so. Just run the command like this:
+
+```bash
+$ geneos tls init
+```
+
+💡Once your TLS sub-system is initialised all subsequently created **new** instances will have their own certificate and private key, but no existing instances will be updated. To create certificates and keys for existing instances use the `geneos tls new` after initialisation.
+
+When run, the command creates a root certificate and key as well as a signing certificate and key, both pairs of files in your `${HOME}/.config/geneos` directory. The root certificate is only used to sign itself and the 2nd level signing certificate. It is this signing, or intermediate, certificate that is used to sign instance certificates. The command also creates a global chain file which contains both certificates, for verification of instance certificates by components.
+
+You can run `geneos tls init` without affecting an existing TLS environment as it will not overwrite the root and signing certificates unless called with the `--force`/`-F` flag.
+
+### `geneos tls new` and `geneos tls renew`
+
+If you have instances without certificates and you have initialised the TLS sub-system, as above, then you can use `geneos tls new` to create new certificates and keys and also update the starting parameters for instances. Running `geneos tls new` on instances that already have certificates and private keys doesn't change them, so it is generally safe to simply run:
+
+```bash
+$ geneos tls new
+```
+
+You can, like with other commands, restrict the actions to specific component types and instances names (even though this is unlikely to be necessary), e.g.:
+
+```bash
+$ geneos tls new netprobe
+$ geneos tls new 'PROD*'
+```
+
+To replace existing certificates, either because they have expired or you have created new signing certificates for your installation, use the `geneos tls renew` command. This will replace existing certificates, but reuse any existing private keys, so you may want to restrict this by specifying component types and names, like this:
+
+```bash
+$ geneos tls renew gateway LDN_1
+```
 
 ### `geneos tls list`
 
 > Also aliased as `geneos tls ls`
 
-If your Geneos installation already has TLS configured then you can list the certificates any their details using the `geneos tls list` command:
+You can list the certificates any their details using the `geneos tls list` command:
 
 ```bash
 $ geneos tls list
@@ -326,18 +367,15 @@ The extra columns shown are:
 |--------|--------------|
 | ChainFile | The certificate chain file used for the instance. The chain file normally contains copies of the root and signing certificates and can be used to verify that a certificate was issued by a valid authority |
 | Issuer | The Common Name of the issuer of the certificate |
-| SubjAltNames | A list of Subject Alternative Names in the certificate. This is in the format of a command separated list encloded in `[ ... ]` |
+| SubjAltNames | A list of Subject Alternative Names in the certificate. This is in the format of a comma separated list enclosed in `[ ... ]` |
 | IPs | A list of IP addresses in the certificate, usually empty |
-| Fingerprint | The certificate finger print. This is used to verify the identity of a client if they present a certificate, as mentioned in the [documentation](https://docs.itrsgroup.com/docs/geneos/6.6.0/Gateway_Reference_Guide/geneos_authentication_tr.html#authentication__users__user__sslIdentities__id__fingerprint) |
-
-### `geneos tls new` and `geneos tls renew`
+| Fingerprint | The certificate finger print. This is used to verify the identity of a client if they present a certificate, as mentioned in the [documentation](https://docs.itrsgroup.com/docs/geneos/6.6.0/security/access-controls/geneos_authentication_tr/index.html#authentication--users--user--sslidentities--id--fingerprint) |
 
 
-
-### `geneos tls init`
 
 ### `geneos tls sync`
 
+When using [remote hosts](#remote-hosts) you can use `geneos tls sync` to copy chain file
 
 ## Diagnostics
 
@@ -356,3 +394,25 @@ It's also possible to see the whole log file with the `--cat` or `-c` flag, to "
 
 
 
+## Remote Hosts
+
+You can manage Geneos instances across multiple Linux servers transparently and simultaneously using SSH connections.
+
+### `geneos host add`
+
+### `geneos host list`
+
+
+## AES256 Encrypted Secrets
+
+### `geneos aes new`
+
+### `geneos aes password`
+
+### `geneos aes encode` and `geneos aes decode`
+
+## Miscellaneous
+
+### `geneos login`
+
+### `geneos migrate` and `geneos revert`
