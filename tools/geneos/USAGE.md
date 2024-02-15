@@ -92,7 +92,7 @@ geneos ps "LDN*"
 
 You can control instances using the three commands `geneos start`, `geneos stop` and `geneos restart`. Each command does what the name suggests.
 
-> ⚠ It is important to recall that if you do not specify a `TYPE` or instance `NAMEs` then commands will operate on all matching instances. This is especially important with these three commands and you can, unintentionally, affect instances that you didn't intend to change.
+> ⚠ It's important to realise that if you don't specify a `TYPE` or instance `NAMEs` then commands will operate on all matching instances. This is especially important with these three commands and you can, unintentionally, affect instances that you didn't intend to change.
 
 While there are a variety of options to these commands, all visible with the `--help`/`-h` flag, it is worth mentioning these:
 
@@ -102,37 +102,21 @@ While there are a variety of options to these commands, all visible with the `--
 
 * The `--force` / `-F` flag tells the command to override protection labels - see below.
 
-### `geneos protect`
+* The `--extras`/`-x` and `--env`/`-e` to both `geneos start` and `geneos restart` allow you to temporarily alter the starting environment of the instance, for example if the process is not behaving as expected. See the help for the commands for more information.
 
-To help avoid commands affecting more of your instances than you intended, you can label any of them as _protected_ with the `geneos protect` command. Any instance that is protected will not be affected by commands with side-effects, such as the ones above. Instead, you have to run commands using the `--force` or `-F` flag.
+## Managing Software Releases
 
-Protecting an instance also prevents accidental deletion and other impacting changes.
+The `geneos` program includes commands to help manage the installed releases for each component type. These commands are all found in the `geneos package` sub-system.
 
-You can see which instances are currently protected using the `geeneos list` command; the `Flags` column will show a `P` for each protected instance.
+As you have seen, each instance is of a specific component type. Each of these component types is associated with a software release available on the [ITRS Downloads](https://resources.itrsgroup.com/downloads) site. To allow you to manage which version is used for which instance we use the concept of a symbolic "base version". In most cases you will see this listed as the default, `active_prod`.
 
-> ⚠ There is no `geneos unprotect` command and this is intentional. Instead there is an `--unprotect` or `-U` to this command to reverse it's affects.
-
-### `geneos disable` and `geneos enable`
-
-Another way to control how instances behave is through the `geneos disable` and `geneos enable` commands. The principal difference between `geneos protect` and `geneos disable` is that if you disable an instance then you cannot override this state per command with `--force`, unlike a protected instance.
-
-Disabling an instance is useful when you want to perform maintenance or you want to create a backup copy of an instance and disable it to ensure it is not started by accident.
-
-Disabled instances show in the `geneos list` output with a `D` flag.
-
-## Managing Installed Software
-
-The `geneos` program includes commands to help manage the installed Geneos releases for each component type. These are all found in the `geneos package` sub-system.
-
-As you have seen, each instance is of a specific component type. Each of these components is associated with a software release available on the [ITRS Downloads](https://resources.itrsgroup.com/downloads) sub-site. To allow you to manage which version is used for which instance we use the concept of a symbolic "base version". In most cases you will see this listed as `active_prod`.
-
-> ⚠ Note that installed packages are only related to their component types and not specific instances. You manage packages _per component_ and additionally with the symbolic _base version_. Each instance then uses a base version, and most commonly all share the same one, per component. All of the commands below only work with components and base versions, not instances.
+> ⚠️Note that installed releases are **only** related to their component types and not individual instances. You manage packages _per component_ and with the symbolic _base version_. Each instance then uses a base version, and most commonly all share the same one, per component. All of the commands below only work with components and base versions, not instances.
 
 ### `geneos package list`
 
 > Alias `geneos package ls`
 
-You can see what packages are installed using the `geneos package list` command. You can also limit this to a specific TYPE, which can be useful if you have many installed versions.
+You can see what releases are installed using the `geneos package list` command. You can also limit this to a specific TYPE, which can be useful if you have many installed versions.
 
 ```bash
 $ geneos package ls gateway
@@ -142,7 +126,7 @@ gateway    localhost  6.4.0                        2023-09-01T08:08:15Z  /opt/ge
 gateway    localhost  5.14.3          current      2023-09-05T11:02:15Z  /opt/geneos/packages/gateway/5.14.3
 ```
 
-> 💡 You can also choose to have this information in CSV or JSON formats, for further processing. Use the `--help` or `-h` flag to any command to see the options available.
+> 💡 You can also output this information in CSV or JSON formats, for further processing. Use the `--help` or `-h` flag to any command to see the options available.
 
 In the output above you will see the following columns:
 
@@ -157,7 +141,7 @@ In the output above you will see the following columns:
 
 ### `geneos package install`
 
-You can download and install Geneos releases directly from the command line without a web browser, and then copy files between systems, as long as you can reach the download site from the server you are working on. You may need to configure details for your corporate web proxy - you can read more about this in the `geneos` documentation by following this link or running [`geneos help package install`](https://github.com/ITRS-Group/cordial/blob/main/tools/geneos/docs/geneos_package_install.md).
+With this command you can download and install Geneos releases from the command line, without a web browser, and then copy files between systems as long as you can reach the download site from the server you are working on. You may need to configure details for your corporate web proxy - you can read more about this in the `geneos` documentation by following this link or running [`geneos help package install`](https://github.com/ITRS-Group/cordial/blob/main/tools/geneos/docs/geneos_package_install.md).
 
 💡The `geneos package install` command will not, by default, change any running instance - it will only download and install releases. To also update which release version an instance uses you must also either use additional flags, such as `--update` or use the `geneos package update` command.
 
@@ -227,15 +211,15 @@ removed gateway release 5.14.3 from ubuntu:/opt/geneos/packages/gateway
 removed gateway release 6.3.1 from ubuntu:/opt/geneos/packages/gateway
 ```
 
-> 💡As for other commands, if an instance is labelled protected then no action will be taken without the `--force`/`-F` flag.
+> 💡Like for many other commands, if an instance is labelled protected then no action will be taken without the `--force`/`-F` flag.
 
 ## Managing Instances
 
-
+Each instance you create has to have a unique name that is also not the same as any of the special reserved words, such as the component types and their aliases as well as the special "all" and "any". You can have two instances with the same name as long as they are of different component types, such as a Gateway and a Netprobe.
 
 ### `geneos add`
 
-The `geneos add` command lets you add a new Geneos instance. You must supply at least the component type and a name for the new instance, like this:
+The `geneos add` command lets you add a new instance. You must supply at least the component type and a name for the new instance, like this:
 
 ```bash
 $ geneos add netprobe myProbe
@@ -243,36 +227,73 @@ certificate created for netprobe "myProbe" (expires 2024-11-24 00:00:00 +0000 UT
 netprobe "myProbe" added, port 7114
 ```
 
+There are a large number of options to the `geneos add` command and you should take time to review them using the `--help`/`-h` flag. Some of the more commonly used ones are:
+
+* `--start`/`-S` can be used to start the instance immediately after creation
+
+* `--log`/`-l` will start the instance after creation and also follow the resulting log file(s) untill you interrupt with CTRL-C (which will not stop the instance, just the log output)
+
+* `--import [DEST=]PATH|URL` lets you add file(s) to the working directory of the new instance. This can be used, for example, to import a license file when creqating a licence daemon instance, like this:
+
+    ```bash
+    $ geneos add licd perm --import geneos.lic=mylicence.txt
+    ```
+
+    `DEST` can be either a file name or a directory, if it ends with a `/`. The source for the import can be a local file (where a `~/` prefix means from your home directory) or a URL for a remote file.
+
+    You can repeat this flag multiple times to import multiple files.
+
+* `--env NAME=VALUE`/`-e NAME=VALUE` can be used to set environment variables for the start-up of the instance, e.g.:
+
+    ```bash
+    $ geneos add netprobe myJMXprobe --env JAVA_HOME=/usr/local/java11/jre
+    ```
+
+    You can see which environment variables are set for the start-up of an instance with the `geneos show` and `geneos command` commands, below.
+
+* `--port N`/`-p N` can be used to override the automatically allocated listening port for the new instance.
+
+* A number of options allow you to influence the creation of default configuration files, which is particularly important for Gateways, Self-Announcing and Floating Netprobes. Please see the component documentation (⚠️not finished!) from [`geneos help gateway`🔗](/tools/geneos/docs/geneos_gateway.md), [`geneos help san`🔗](/tools/geneos/docs/geneos_san.md) and [`geneos help floating`🔗](/tools/geneos/docs/geneos_floating.md) for more detailed information.
+
 ### `geneos deploy`
 
-The `geneos deploy` command combines `geneos add` and `geneos package install` to allow you to implement a working Geneos component in a single command. This is especially useful for scripting and automation.
+The `geneos deploy` command combines `geneos add` and `geneos package install` to allow you to implement a working Geneos component in a single command. This is especially useful for scripting and automation. Similar options to both the `geneos add` and `geneos package install` commands let you control how the new instance behaves.
 
-### `geneos delete`
+In effect you use a similar command line as for `geneos add` but also add options for where to obtain the release software in case it is not already installed.
 
-A command that you will not use very often is the `geneos delete` command. 
+For example, to deploy a Self-Announcing Netprobe, using the default SAN template configuration, you can use something like this:
 
-### `geneos copy` and `geneos move`
-
-> Also aliased as `geneos cp` and `geneos mv`, respectively.
-
-
+```bash
+$ geneos deploy san LDN_APP1A --gateway gatewayhost1 --gateway gatewayhost2 --type "Infrastructure Defaults" --type "Linux Defaults" --attribute ENVIRONMENT=Production --attribute COMPONENT=Appl -l -u email@example.com
+```
 
 ### `geneos set` and `geneos unset`
 
-The instances you create and manage may, over time, need settings changed. Those settings that are not automatically managed by commands can be updated with these commands. You can change simple parameters, which are KEY=VALUE pairs and also more complex parameters like lists of environment variables and more. 
+The instances you create may, over time, need settings changed. Those settings that are not directly managed by commands (e.g. the TLS and AES sub-systems) can be updated with these commands. You can change simple parameters, which are KEY=VALUE pairs and also more complex parameters like lists of environment variables and so on.
 
+`geneos set` allows commands like this:
+
+```bash
+geneos set gateway LDN1_PROD param1=value
+```
+
+To remove a parameter, as opposed to updating it, you should use the `geneos unset` command with the `--key`/`-k` option, like this:
+
+```bash
+geneos unset gateway LDN1_PRD -k param1
+```
+
+The `-k` is necessary for unsetting a parameter as otherwise the program would not be able to distinguish between an instance name (e.g. `LDN1_PRD`) and the parameter `param1`.
+
+Any instances that have their configurations updated by either command and have their rebuild configuration value set to `auto` will also rebuild configuration files. See below.
 
 ### `geneos rebuild`
 
-Certain Geneos components use configuration files; the Gateway and Self-Announcing / Floating Netprobes. When you create a new instance of these types they also have default configuration files created for them. These files are built from templates and have the details filled in depending on the instance configuration, for example the name and port numbers.
+Some components use configuration files; the Gateway, Self-Announcing and Floating Netprobes. When you create a new instance of these types they also have default configuration files created for them. These files are built from templates and have the details filled in depending on the instance configuration, for example the name and port numbers.
 
 If you change any instance settings then you may need to rebuild the configuration files to reflect these changes.
 
-### `geneos clean`
-
-All components generate log, temporary and other files. You can use the `geneos clean` command to remove the files each component creates but is no longer likely to be useful. The set of files removed is different for each component type and can also be changed for your specific requirements. It's also possible to perform a more complete clean-up, called a purge, when an instance is not running.
-
-
+Use `geneos rebuild` after setting any of the 
 
 ## Secure Connections
 
@@ -282,7 +303,7 @@ Imported certificate support is currently limited, and the commands in this guid
 
 ### `geneos tls init`
 
-Unless you included option for the initialisation of TLS support when you first deployed your Geneos environment using one of the `geneos init` commands then you will have to use `geneos tls init` to do so. Just run the command like this:
+Unless you used the `--makecerts`/`-C` option for the initialisation of TLS support when you first deployed your Geneos environment using one of the `geneos init` commands, then you will have to use `geneos tls init` to do so. Just run the command like this:
 
 ```bash
 $ geneos tls init
@@ -413,6 +434,38 @@ You can manage Geneos instances across multiple Linux servers transparently and 
 
 ## Miscellaneous
 
+### `geneos protect`
+
+To help avoid commands affecting more of your instances than you intended, you can label any of them as _protected_ with the `geneos protect` command. Any instance that is protected will not be affected by commands with side-effects, such as the ones above. Instead, you have to run commands using the `--force` or `-F` flag.
+
+Protecting an instance also prevents accidental deletion and other impacting changes.
+
+You can see which instances are currently protected using the `geeneos list` command; the `Flags` column will show a `P` for each protected instance.
+
+> ⚠ There is no `geneos unprotect` command and this is intentional. Instead there is an `--unprotect` or `-U` to this command to reverse it's affects.
+
+### `geneos disable` and `geneos enable`
+
+Another way to control how instances behave is through the `geneos disable` and `geneos enable` commands. The principal difference between `geneos protect` and `geneos disable` is that if you disable an instance then you cannot override this state per command with `--force`, unlike a protected instance.
+
+Disabling an instance is useful when you want to perform maintenance or you want to create a backup copy of an instance and disable it to ensure it is not started by accident.
+
+Disabled instances show in the `geneos list` output with a `D` flag.
+
 ### `geneos login`
 
 ### `geneos migrate` and `geneos revert`
+
+### `geneos clean`
+
+All components generate log, temporary and other files. You can use the `geneos clean` command to remove the files each component creates but is no longer likely to be useful. The set of files removed is different for each component type and can also be changed for your specific requirements. It's also possible to perform a more complete clean-up, called a purge, when an instance is not running.
+
+### `geneos delete`
+
+A command that you will not use very often is the `geneos delete` command.
+
+### `geneos copy` and `geneos move`
+
+> Also aliased as `geneos cp` and `geneos mv`, respectively.
+
+Instance can be duplicated using the `geneos copy` command or renamed or moved between servers using `geneos move`. While these commands are useful on your local server, they become more so between servers. See [Remote Hosts](#remote-hosts) for more examples.
