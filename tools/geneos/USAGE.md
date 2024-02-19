@@ -320,20 +320,20 @@ You can run `geneos tls init` without affecting an existing TLS environment as i
 If you have instances without certificates and you have initialised the TLS sub-system, as above, then you can use `geneos tls new` to create new certificates and keys and also update the starting parameters for instances. Running `geneos tls new` on instances that already have certificates and private keys doesn't change them, so it is generally safe to simply run:
 
 ```bash
-$ geneos tls new
+geneos tls new
 ```
 
 You can, like with other commands, restrict the actions to specific component types and instances names (even though this is unlikely to be necessary), e.g.:
 
 ```bash
-$ geneos tls new netprobe
-$ geneos tls new 'PROD*'
+geneos tls new netprobe
+geneos tls new 'PROD*'
 ```
 
-To replace existing certificates, either because they have expired or you have created new signing certificates for your installation, use the `geneos tls renew` command. This will replace existing certificates, but reuse any existing private keys, so you may want to restrict this by specifying component types and names, like this:
+To replace existing certificates, either because they have expired or you have new signing certificates for your installation, use the `geneos tls renew` command. This will replace existing certificates (but reuse any existing private keys) so you may want to limit this by specifying component types and names, like this:
 
 ```bash
-$ geneos tls renew gateway LDN_1
+geneos tls renew gateway LDN_1
 ```
 
 ### `geneos tls list`
@@ -396,7 +396,7 @@ The extra columns shown are:
 
 ### `geneos tls sync`
 
-When using [remote hosts](#remote-hosts) you can use `geneos tls sync` to copy chain file
+When using [remote hosts](#remote-hosts) you can use `geneos tls sync` to copy verification chain file to other servers. The root and signing certificate are contained in the chain file but not the private keys, so you can still only create or renew certificates from the local server.
 
 ## Diagnostics
 
@@ -412,6 +412,63 @@ It's also possible to see the whole log file with the `--cat` or `-c` flag, to "
 
 ### `geneos show` and `geneos command`
 
+The `geneos show` command will display various aspects of instance configuration. Without options it will output instance configuration in a JSON format. This configuration included the values of all parameters as well as metadata about the instance itself, e.g.:
+
+```bash
+$ geneos show gateway "Demo Gateway"
+[
+    {
+        "instance": {
+            "name": "Demo Gateway",
+            "host": "localhost",
+            "type": "gateway",
+            "disabled": false,
+            "protected": false
+        },
+        "configuration": {
+            "autostart": "true",
+            "binary": "gateway2.linux_64",
+            "certchain": "/opt/geneos/gateway/gateways/Demo Gateway/chain.pem",
+            "certificate": "/opt/geneos/gateway/gateways/Demo Gateway/gateway.pem",
+            "config": {
+                "rebuild": "initial",
+                "template": "gateway.setup.xml.gotmpl"
+            },
+            "gatewayname": "Demo Gateway",
+            "home": "/opt/geneos/gateway/gateways/Demo Gateway",
+            "install": "/opt/geneos/packages/gateway",
+            "keyfile": "gateway.aes",
+            "libpaths": "/opt/geneos/packages/gateway/active_prod/lib64:/usr/lib64",
+            "logfile": "gateway.log",
+            "name": "Demo Gateway",
+            "options": "-demo",
+            "port": 7039,
+            "privatekey": "/opt/geneos/gateway/gateways/Demo Gateway/gateway.key",
+            "program": "/opt/geneos/packages/gateway/active_prod/gateway2.linux_64",
+            "setup": "/opt/geneos/gateway/gateways/Demo Gateway/gateway.setup.xml",
+            "usekeyfile": "false",
+            "version": "active_prod"
+        }
+    }
+]
+```
+
+All the values in the `configuration` section can be set or changed using `geneos show`.
+
+The command `geneos command` outputs a representation of the command line used to start the instance along with working directory and environment variables in that starting environment, e.g.:
+
+```bash
+$ geneos command gateway "Demo Gateway"
+=== gateway "Demo Gateway" ===
+command line:
+        /opt/geneos/packages/gateway/active_prod/gateway2.linux_64 -gateway-name Demo Gateway -resources-dir /opt/geneos/packages/gateway/active_prod/resources -log /opt/geneos/gateway/gateways/Demo Gateway/gateway.log -setup /opt/geneos/gateway/gateways/Demo Gateway/gateway.setup.xml -ssl-certificate /opt/geneos/gateway/gateways/Demo Gateway/gateway.pem -ssl-certificate-key /opt/geneos/gateway/gateways/Demo Gateway/gateway.key -ssl-certificate-chain /opt/geneos/gateway/gateways/Demo Gateway/chain.pem -licd-secure -demo
+
+working directory:
+        /opt/geneos/gateway/gateways/Demo Gateway
+
+environment:
+        LD_LIBRARY_PATH=/opt/geneos/packages/gateway/active_prod/lib64:/usr/lib64
+```
 
 
 
@@ -433,6 +490,8 @@ You can manage Geneos instances across multiple Linux servers transparently and 
 ### `geneos aes encode` and `geneos aes decode`
 
 ## Miscellaneous
+
+### `geneos import`
 
 ### `geneos protect`
 
