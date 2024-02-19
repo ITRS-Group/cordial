@@ -11,6 +11,23 @@ output:
   # with no files)
   show-empty-samplers: true
 
+  # If `csvdir` format is selected and `enable` is true then create an
+  # include file with toolkit samplers to read in all the files to be
+  # displayed as dataviews.
+  #
+  # One managed entity is created using the probe and entity names
+  # given. All the samplers are given the group name `sampler-group` and
+  # named using the `sampler-name` value.
+  toolkit-include:
+    enable: true
+    include-file: ${gateway}-report.setup.xml # if relative then relative to `csvdir`
+    probe-name: localhost
+    entity-name: ${gateway} Report
+    sampler-group: ${gateway} Report
+    sampler-name: ${sheetname} Report
+    sampler-script: /bin/cat "${csvfile}"
+
+
   # The names for the different report formats. Set to an empty string
   # to disable, i.e. "". If an absolute path then output directory above
   # is ignored. To put each Gateway into it's own directory use a
@@ -26,8 +43,9 @@ output:
     # Create a ZIP file of CSV files, using `filename` from the enabled
     # `reports` (with a `.csv` extension)
     csv: ${gateway}-Report-${datetime}.zip
-
-    # Create a JSON format report for further processing
+    # note `csvdir` default has no datetime to allow updating existing
+    # files in place
+    csvdir: ${gateway}-CSV-Reports
     json: ${gateway}-Report-${datetime}.json
 
     # Save a copy of the merged XML that was used to produce the
