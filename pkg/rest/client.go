@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"strings"
 
 	"github.com/clbanning/mxj/v2"
 	"github.com/google/go-querystring/query"
@@ -25,15 +26,20 @@ import (
 type Client struct {
 	BaseURL    string
 	HTTPClient *http.Client
-	authHeader string
-	authValue  string
+	// if not nil, call SetUpRequest() just before the Do() call
+	SetupRequest func(req *http.Request, c *Client, endpoint string, body []byte)
+	authHeader   string
+	authValue    string
 }
 
+// NewClient returns a *Client struct, ready to use. Unless options are
+// supplied the base URL defaults to `https://localhost:443`.
 func NewClient(options ...Options) *Client {
 	opts := evalOptions(options...)
 	return &Client{
-		BaseURL:    opts.baseURL,
-		HTTPClient: opts.client,
+		BaseURL:      opts.baseURL,
+		HTTPClient:   opts.client,
+		SetupRequest: opts.setupRequest,
 	}
 }
 
@@ -63,7 +69,7 @@ func (c *Client) Auth(ctx context.Context, clientid string, clientsecret *config
 	c.HTTPClient = conf.Client(ctx)
 }
 
-// Get method. On successful return the response body will be closed.
+// GET method. On successful return the response body will be closed.
 func (c *Client) Get(ctx context.Context, endpoint string, request any, response any) (resp *http.Response, err error) {
 	dest, err := url.JoinPath(c.BaseURL, endpoint)
 	if err != nil {
@@ -83,6 +89,9 @@ func (c *Client) Get(ctx context.Context, endpoint string, request any, response
 		}
 		req.URL.RawQuery = v.Encode()
 	}
+	if c.SetupRequest != nil {
+		c.SetupRequest(req, c, endpoint, nil)
+	}
 	resp, err = c.HTTPClient.Do(req)
 	if err != nil {
 		return
@@ -100,13 +109,14 @@ func (c *Client) Get(ctx context.Context, endpoint string, request any, response
 	return
 }
 
-// Post method
+// POST method
 func (c *Client) Post(ctx context.Context, endpoint string, request any, response any) (resp *http.Response, err error) {
 	dest, err := url.JoinPath(c.BaseURL, endpoint)
 	if err != nil {
 		return
 	}
-	req, err := http.NewRequestWithContext(ctx, "POST", dest, encodeRequest(request))
+	r, body := encodeBody(request)
+	req, err := http.NewRequestWithContext(ctx, "POST", dest, r)
 	if err != nil {
 		return
 	}
@@ -114,6 +124,10 @@ func (c *Client) Post(ctx context.Context, endpoint string, request any, respons
 		req.Header.Add(c.authHeader, c.authValue)
 	}
 	req.Header.Add("content-type", "application/json")
+
+	if c.SetupRequest != nil {
+		c.SetupRequest(req, c, endpoint, body)
+	}
 	resp, err = c.HTTPClient.Do(req)
 	if err != nil {
 		return
@@ -137,7 +151,8 @@ func (c *Client) Put(ctx context.Context, endpoint string, request any, response
 	if err != nil {
 		return
 	}
-	req, err := http.NewRequestWithContext(ctx, "PUT", dest, encodeRequest(request))
+	r, body := encodeBody(request)
+	req, err := http.NewRequestWithContext(ctx, "PUT", dest, r)
 	if err != nil {
 		return
 	}
@@ -145,6 +160,9 @@ func (c *Client) Put(ctx context.Context, endpoint string, request any, response
 		req.Header.Add(c.authHeader, c.authValue)
 	}
 	req.Header.Add("content-type", "application/json")
+	if c.SetupRequest != nil {
+		c.SetupRequest(req, c, endpoint, body)
+	}
 	resp, err = c.HTTPClient.Do(req)
 	if err != nil {
 		return
@@ -182,6 +200,9 @@ func (c *Client) Delete(ctx context.Context, endpoint string, request any) (resp
 		}
 		req.URL.RawQuery = v.Encode()
 	}
+	if c.SetupRequest != nil {
+		c.SetupRequest(req, c, endpoint, nil)
+	}
 	resp, err = c.HTTPClient.Do(req)
 	if err != nil {
 		return
@@ -195,20 +216,20 @@ func (c *Client) Delete(ctx context.Context, endpoint string, request any) (resp
 	return
 }
 
-func encodeRequest(request any) io.Reader {
+func encodeBody(request any) (r io.Reader, body []byte) {
 	if request == nil {
-		return nil
+		return nil, nil
 	}
 	if s, ok := request.(string); ok {
-		return bytes.NewReader([]byte(s))
+		return bytes.NewReader([]byte(s)), []byte(s)
 	}
 	if b, ok := request.([]byte); ok {
-		return bytes.NewReader(b)
+		return bytes.NewReader(b), b
 	}
 	if j, err := json.Marshal(request); err == nil {
-		return bytes.NewReader(j)
+		return bytes.NewReader(j), j
 	}
-	return nil
+	return nil, nil
 }
 
 // decodeResponse checks the content-type and decodes based on that.
@@ -218,12 +239,15 @@ func decodeResponse(resp *http.Response, response interface{}) (err error) {
 	if response == nil {
 		return
 	}
-	switch resp.Header.Get("content-type") {
-	case "text/plain":
-		// decode as plain string
+	// we only care about the main value, not char sets etc.
+	ct := resp.Header.Get("content-type")
+	ct, _, _ = strings.Cut(ct, ";")
+	switch ct {
+	case "text/plain", "text/html":
+		// decode as plain string and return as the err
 		var b []byte
 		if b, err = io.ReadAll(resp.Body); err == nil { // all good?
-			response = string(b)
+			err = errors.New(string(b))
 		}
 		return
 	case "application/json":
