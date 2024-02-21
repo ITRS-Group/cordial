@@ -8,8 +8,9 @@ import (
 type Options func(*restOptions)
 
 type restOptions struct {
-	baseURL string
-	client  *http.Client
+	baseURL      string
+	client       *http.Client
+	setupRequest func(req *http.Request, c *Client, endpoint string, body []byte)
 }
 
 func evalOptions(options ...Options) (opts *restOptions) {
@@ -36,5 +37,11 @@ func BaseURL(baseurl string) Options {
 func HTTPClient(client *http.Client) Options {
 	return func(io *restOptions) {
 		io.client = client
+	}
+}
+
+func SetupRequestFunc(f func(req *http.Request, c *Client, endpoint string, body []byte)) Options {
+	return func(ro *restOptions) {
+		ro.setupRequest = f
 	}
 }
