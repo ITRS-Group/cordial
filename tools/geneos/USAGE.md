@@ -10,7 +10,9 @@ Let's start with some core commands, but first let's take a short look at the ty
 
 > 💡Most commands will accept a similar set of optional arguments. The normal format is:
 >
->  `geneos COMMAND [flags] [TYPE] [NAME...]`
+>  ```bash
+>  geneos COMMAND [flags] [TYPE] [NAME...]
+>  ```
 >
 > The square brackets denote optional arguments and the ellipsis means that the option `NAME` argument can be repeated.
 >
@@ -186,7 +188,7 @@ $ geneos package update gateway -V 6.6.0 -b dev
 Any Gateway instance that uses the symbolic base `dev` will be stopped, the link updated and the same instances started. If any of the instances are protected then the command will stop and not update the link or stop any of the other matching instances. This is one of the uses for the protected label. If you are sure you want to update, then also supply the `--force`/`-F` flag:
 
 ```bash
-$ geneos package update gateway -V 6.6.0 -b dev --force
+geneos package update gateway -V 6.6.0 -b dev --force
 ```
 
 > ⚠️ The update will still stop even if the protected instances are not running. The protected label is not just to prevent the instance being stopped but also changed.
@@ -211,7 +213,7 @@ removed gateway release 5.14.3 from ubuntu:/opt/geneos/packages/gateway
 removed gateway release 6.3.1 from ubuntu:/opt/geneos/packages/gateway
 ```
 
-> 💡Like for many other commands, if an instance is labelled protected then no action will be taken without the `--force`/`-F` flag.
+>💡Like for many other commands, if an instance is labelled protected then no action will be taken without the `--force`/`-F` flag.
 
 ## Managing Instances
 
@@ -512,6 +514,17 @@ Disabling an instance is useful when you want to perform maintenance or you want
 Disabled instances show in the `geneos list` output with a `D` flag.
 
 ### `geneos login`
+
+You can store encrypted credentials using `geneos login` for a number of uses:
+
+1. Downloading Geneos releases
+2. Use by other tools, including libemail.so and dv2email for both Gateway and SMTP Relay authentication
+3. Gateway REST Command API authentication
+    * e.g. the `geneos snapshot` command
+
+The credentials are encrypted using an AES256 key-file, which defaults to your user key-file; See the section above for more details. The credentials file itself is in JSON format and without the key-file to encrypt the included credentials it is not at risk of revealing the plain text versions of them.
+
+At the time of writing the only types of credential supported is username / password combinations. Each credential is associated with a domain, which helps identify which credential to use for a given request.
 
 ### `geneos migrate` and `geneos revert`
 
