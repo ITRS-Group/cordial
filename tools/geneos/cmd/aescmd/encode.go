@@ -46,6 +46,7 @@ func init() {
 	aesCmd.AddCommand(encodeCmd)
 
 	encodeCmdString = &config.Plaintext{}
+	encodeCmdKeyfile = cmd.UserKeyFile
 
 	encodeCmd.Flags().BoolVarP(&encodeCmdExpandable, "expandable", "e", false, "Output in 'expandable' format")
 	encodeCmd.Flags().VarP(&encodeCmdKeyfile, "keyfile", "k", "Path to keyfile")
@@ -99,7 +100,13 @@ var encodeCmd = &cobra.Command{
 
 			if encodeCmdAppKeyFile == "" {
 				// to stdout
-				keyfilepath, _ := ct.KeyFilePath(h, encodeCmdKeyfile, encodeCmdCRC)
+				keyfilepath, err2 := ct.KeyFilePath(h, encodeCmdKeyfile, encodeCmdCRC)
+				if err2 != nil {
+					if errors.Is(err2, geneos.ErrNotExist) {
+						return fmt.Errorf("keyfile does not exist")
+					}
+					return err2
+				}
 
 				var keyfile config.KeyFile
 				if keyfilepath == "" {
@@ -158,8 +165,15 @@ var encodeCmd = &cobra.Command{
 					return
 				}
 
-				keyfilepath, _ := i.Type().KeyFilePath(i.Host(), encodeCmdKeyfile, encodeCmdCRC)
-
+				keyfilepath, err2 := i.Type().KeyFilePath(i.Host(), encodeCmdKeyfile, encodeCmdCRC)
+				if err2 != nil {
+					if errors.Is(err2, geneos.ErrNotExist) {
+						resp.Err = fmt.Errorf("keyfile does not exist")
+						return
+					}
+					resp.Err = err2
+					return
+				}
 				log.Debug().Msgf("keyfilepath=%s", keyfilepath)
 
 				var keyfile config.KeyFile
