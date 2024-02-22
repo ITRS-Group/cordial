@@ -68,6 +68,16 @@ func (secret *Plaintext) String() string {
 	return strings.Clone(l.String())
 }
 
+// Bytes returns the secret as a byte slice
+func (secret *Plaintext) Bytes() []byte {
+	if secret == nil || secret.Enclave == nil {
+		return nil
+	}
+	l, _ := secret.Open()
+	defer l.Destroy()
+	return bytes.Clone(l.Bytes())
+}
+
 // Set is required to satisfy the pflag Values interface
 func (secret *Plaintext) Set(value string) error {
 	if secret != nil {
