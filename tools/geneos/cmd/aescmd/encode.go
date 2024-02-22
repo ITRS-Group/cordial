@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -46,7 +45,6 @@ func init() {
 	aesCmd.AddCommand(encodeCmd)
 
 	encodeCmdString = &config.Plaintext{}
-	encodeCmdKeyfile = cmd.UserKeyFile
 
 	encodeCmd.Flags().BoolVarP(&encodeCmdExpandable, "expandable", "e", false, "Output in 'expandable' format")
 	encodeCmd.Flags().VarP(&encodeCmdKeyfile, "keyfile", "k", "Path to keyfile")
@@ -100,15 +98,10 @@ var encodeCmd = &cobra.Command{
 
 			if encodeCmdAppKeyFile == "" {
 				// to stdout
-				keyfilepath, err2 := ct.KeyFilePath(h, encodeCmdKeyfile, encodeCmdCRC)
-				if err2 != nil {
-					if errors.Is(err2, geneos.ErrNotExist) {
-						return fmt.Errorf("keyfile does not exist")
-					}
-					return err2
-				}
-
 				var keyfile config.KeyFile
+
+				keyfilepath, _ := ct.KeyFilePath(h, encodeCmdKeyfile, encodeCmdCRC)
+
 				if keyfilepath == "" {
 					keyfile = cmd.DefaultUserKeyfile
 				} else {
@@ -159,29 +152,26 @@ var encodeCmd = &cobra.Command{
 					return
 				}
 			}
+
 			instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *instance.Response) {
 				resp = instance.NewResponse(i)
 				if !i.Type().UsesKeyfiles {
 					return
 				}
 
-				keyfilepath, err2 := i.Type().KeyFilePath(i.Host(), encodeCmdKeyfile, encodeCmdCRC)
-				if err2 != nil {
-					if errors.Is(err2, geneos.ErrNotExist) {
-						resp.Err = fmt.Errorf("keyfile does not exist")
-						return
-					}
-					resp.Err = err2
-					return
-				}
-				log.Debug().Msgf("keyfilepath=%s", keyfilepath)
+				keyfilepath, _ := i.Type().KeyFilePath(i.Host(), encodeCmdKeyfile, encodeCmdCRC)
 
 				var keyfile config.KeyFile
-				keyfile = config.KeyFile(keyfilepath)
-				if keyfile == "" {
-					keyfile = config.KeyFile(instance.PathOf(i, "keyfile"))
+
+				if keyfilepath == "" {
+					keyfile = cmd.DefaultUserKeyfile
+				} else {
+					keyfile = config.KeyFile(keyfilepath)
 					if keyfile == "" {
-						return
+						keyfile = config.KeyFile(instance.PathOf(i, "keyfile"))
+						if keyfile == "" {
+							return
+						}
 					}
 				}
 
