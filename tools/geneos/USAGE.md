@@ -100,7 +100,7 @@ While there are a variety of options to these commands, all visible with the `--
 
 * The `--log` / `-l` flag to `geneos start` and `geneos restart` will start watching the log files of all the instances that have been started and will continue to do so until you interrupt it using CTRL-C (which will not affect the running instances).
 
-* The `--all` / `-a` flag to `geneos restart` tells the command to start all matching instances, even if they were already stopped. This is useful when you have a set of instances, e.g. all netprobes, that you need to start but also stop any running instances first.
+* The `--all` / `-a` flag to `geneos restart` tells the command to start all matching instances, even if they were already stopped. This is useful when you have a set of instances, e.g. all Netprobes, that you need to start but also stop any running instances first.
 
 * The `--force` / `-F` flag tells the command to override protection labels - see below.
 
@@ -233,9 +233,9 @@ There are a large number of options to the `geneos add` command and you should t
 
 * `--start`/`-S` can be used to start the instance immediately after creation
 
-* `--log`/`-l` will start the instance after creation and also follow the resulting log file(s) untill you interrupt with CTRL-C (which will not stop the instance, just the log output)
+* `--log`/`-l` will start the instance after creation and also follow the resulting log file(s) until you interrupt with CTRL-C (which will not stop the instance, just the log output)
 
-* `--import [DEST=]PATH|URL` lets you add file(s) to the working directory of the new instance. This can be used, for example, to import a license file when creqating a licence daemon instance, like this:
+* `--import [DEST=]PATH|URL` lets you add file(s) to the working directory of the new instance. This can be used, for example, to import a license file when creating a licence daemon instance, like this:
 
     ```bash
     $ geneos add licd perm --import geneos.lic=mylicence.txt
@@ -285,7 +285,7 @@ To remove a parameter, as opposed to updating it, you should use the `geneos uns
 geneos unset gateway LDN1_PRD -k param1
 ```
 
-The `-k` is necessary for unsetting a parameter as otherwise the program would not be able to distinguish between an instance name (e.g. `LDN1_PRD`) and the parameter `param1`.
+The `-k` is necessary for un-setting a parameter as otherwise the program would not be able to distinguish between an instance name (e.g. `LDN1_PRD`) and the parameter `param1`.
 
 Any instances that have their configurations updated by either command and have their rebuild configuration value set to `auto` will also rebuild configuration files. See below.
 
