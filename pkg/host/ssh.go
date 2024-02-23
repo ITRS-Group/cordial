@@ -146,18 +146,28 @@ func readSSHkeys(homedir string, files ...string) (signers []ssh.Signer) {
 	return
 }
 
+// sshConnect does the work of connecting to the given remote by
+// assembling the authentication methods and dialling. dest is in the
+// format of `HOST|IP[:PORT]` where PORT defaults to 22. username is the
+// remote login to use and if empty defaults to the local username as
+// found by [user.Current]
 func sshConnect(dest, username string, password *memguard.Enclave, keyfiles ...string) (client *ssh.Client, err error) {
 	var authmethods []ssh.AuthMethod
 	var homedir string
 
+	var u *user.User
+	u, err = user.Current()
+	if err != nil {
+		return
+	}
+
 	homedir, err = os.UserHomeDir()
 	if err != nil {
-		var u *user.User
-		u, err = user.Current()
-		if err != nil {
-			return
-		}
 		homedir = u.HomeDir
+	}
+
+	if username == "" {
+		username = u.Username
 	}
 
 	// XXX we need this because:
@@ -205,9 +215,6 @@ func (h *SSHRemote) Dial() (sc *ssh.Client, err error) {
 		return
 	}
 
-	if h.username == "" {
-		return nil, fmt.Errorf("%w username not set for remote %s", ErrInvalidArgs, h)
-	}
 	if h.hostname == "" {
 		return nil, fmt.Errorf("%w hostname not set for remote %s", ErrInvalidArgs, h)
 	}
@@ -223,7 +230,7 @@ func (h *SSHRemote) Dial() (sc *ssh.Client, err error) {
 		if err != nil {
 			h.failed = err
 			h.lastAttempt = time.Now()
-			return sc, fmt.Errorf("%w (note: you MUST add remote keys manually to known_hosts)")
+			return sc, fmt.Errorf("%w (note: you MUST add remote keys manually to known_hosts)", err)
 		}
 		sshSessions.Store(h.name, sc)
 	}
