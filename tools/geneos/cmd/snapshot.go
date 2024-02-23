@@ -84,7 +84,7 @@ var snapshotCmd = &cobra.Command{
 			return
 		}
 		if len(params) == 0 {
-			fmt.Printf("no dataview xpath(s) supplied")
+			fmt.Printf("no dataview xpath(s) supplied\n")
 			return
 		}
 
