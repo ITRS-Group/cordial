@@ -93,19 +93,22 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 			args = args[1:]
 		}
 		// now check first non component arg
-		if annotations[AnnotationWildcard] == "explicit" && args[0] == "all" {
-			annotations[AnnotationWildcard] = "true"
-			args = args[1:]
+		if annotations[AnnotationWildcard] == "explicit" {
+			if len(args) > 0 && args[0] == "all" {
+				annotations[AnnotationWildcard] = "true"
+				args = args[1:]
+			}
 		}
 	}
 
 	log.Debug().Msgf("rawargs: %s", args)
 
-	// filter in place - pull out all args containing '=' into params
+	// filter in place - pull out all args that are not valid instance names into params
 	// after rebuild this should only apply to 'import'
 	n := 0
 	for _, a := range args {
-		if strings.Contains(a, "=") {
+		if !instance.ValidName(a) {
+			// if strings.Contains(a, "=") {
 			params = append(params, a)
 		} else {
 			args[n] = a
