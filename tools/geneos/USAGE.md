@@ -4,6 +4,50 @@ This guide gives examples of common commands you will likely use day-to-day to m
 
 You should already have installed the `geneos` program in a location that makes it simple to run from the command line. If, however, you still need to do this, please see the [README](README.md) or [INSTALL](INSTALL.md) guides. You will also find details of how to [Adopt An Existing Installation](README.md#adopting-an-existing-installation) in the README guide, if you have a Geneos installation that uses `gatewayctl` and related shell script commands.
 
+<!-- TOC -->
+
+* [Core Commands](#core-commands)
+    * [geneos list](#geneos-list)
+    * [geneos status](#geneos-status)
+    * [geneos start, geneos stop and geneos restart](#geneos-start-geneos-stop-and-geneos-restart)
+* [Managing Software Releases](#managing-software-releases)
+    * [geneos package list](#geneos-package-list)
+    * [geneos package install](#geneos-package-install)
+    * [geneos package update](#geneos-package-update)
+    * [geneos package uninstall](#geneos-package-uninstall)
+* [Managing Instances](#managing-instances)
+    * [geneos add](#geneos-add)
+    * [geneos deploy](#geneos-deploy)
+    * [geneos set and geneos unset](#geneos-set-and-geneos-unset)
+    * [geneos rebuild](#geneos-rebuild)
+* [Secure Connections](#secure-connections)
+    * [geneos tls init](#geneos-tls-init)
+    * [geneos tls new and geneos tls renew](#geneos-tls-new-and-geneos-tls-renew)
+    * [geneos tls list](#geneos-tls-list)
+    * [geneos tls sync](#geneos-tls-sync)
+* [Diagnostics](#diagnostics)
+    * [geneos logs](#geneos-logs)
+    * [geneos show and geneos command](#geneos-show-and-geneos-command)
+* [Remote Hosts](#remote-hosts)
+    * [geneos host list](#geneos-host-list)
+    * [geneos host add](#geneos-host-add)
+* [AES256 Encrypted Secrets](#aes256-encrypted-secrets)
+    * [geneos aes new](#geneos-aes-new)
+    * [geneos aes encode and geneos aes decode](#geneos-aes-encode-and-geneos-aes-decode)
+        * [App Keys](#app-keys)
+    * [geneos aes password](#geneos-aes-password)
+* [Miscellaneous](#miscellaneous)
+    * [geneos import](#geneos-import)
+    * [geneos protect](#geneos-protect)
+    * [geneos disable and geneos enable](#geneos-disable-and-geneos-enable)
+    * [geneos login](#geneos-login)
+    * [geneos migrate and geneos revert](#geneos-migrate-and-geneos-revert)
+    * [geneos clean](#geneos-clean)
+    * [geneos delete](#geneos-delete)
+    * [geneos copy and geneos move](#geneos-copy-and-geneos-move)
+
+<!-- /TOC -->
+
 ## Core Commands
 
 Let's start with some core commands, but first let's take a short look at the typical command line.
@@ -52,8 +96,6 @@ Above you can see these columns:
 | `Port` | The TCP port the instance is configured to listen on |
 | `Version` | The component package type, base name and underlying version. For the `san` type the `netprobe/` prefix tells you that the underlying release is a normal Netprobe |
 | `Home` | The working (run time) directory |
-
-
 
 ### `geneos status`
 
@@ -472,24 +514,79 @@ environment:
         LD_LIBRARY_PATH=/opt/geneos/packages/gateway/active_prod/lib64:/usr/lib64
 ```
 
-
-
 ## Remote Hosts
 
-You can manage Geneos instances across multiple Linux servers transparently and simultaneously using SSH connections.
+You can manage Geneos instances across multiple Linux servers transparently using SSH. In many production environments this feature will not be allowed by your local security policies, as most Geneos installations are managed using service accounts and direct access to service accounts is, typically, blocked. If this is not the case for you then these features will make managing even a moderately sized Geneos estate much simpler.
 
-### `geneos host add`
+The `geneos host` feature works by using SSH to connect remote servers, using public/private keys for password-less access, typically through a local SSH Agent to safely hold your credentials, or through locally encrypted username/password credentials. You should use `ssh-agent` where possible, and this should be implemented on your local system / desktop for the appropriate security. While beyond the scope of this guide, it is worth noting that all modern Windows desktops support the OpenSSH Agent as a service, but it is disabled by default.
+
+You will have seen in earlier examples the `Host` column in the outputs of `geneos list` and `geneos status`. This is the `geneos` label for each host and not the server hostname - but they could be the same. `localhost` and `all` as reserved names. When referring to a specific instance you can use the format `NAME@HOST`, where `NAME` is the instance name and `HOST` is the host label. If you do not specify one or the other then this is treated as a wildcard and means either all instance on `HOST` or `NAME` on all hosts, respectively. In addition to this name format you can also limit commands to specific hosts using the `--host HOST` or `-H HOST` option, as some commands may not accept instance names, such as the `geneos package` sub-system.
 
 ### `geneos host list`
 
+Use this command to show a list of existing remote hosts. The command will only list remote hosts and will not show details of the `localhost`.
 
-## AES256 Encrypted Secrets
+```bash
+$ ./geneos host list
+Name    Username  Hostname  Flags  Port  Directory
+ubuntu            ubuntu    -      22    /home/user/geneos
+```
 
+### `geneos host add`
+
+To add a new remote server use the `geneos host add` command. A host must have a local name and information about the remote server connection. You must supply either a `NAME` or an `SSHURL` or both. If you give just the `NAME` then the `SSHURL` will use that as the host name and use defaults for the other values, or if you only supply the `SSHURL`, then the local name will be set to the host name of the remote server, like this:
+
+```bash
+geneos host add server1
+geneos host add ssh://server2.example.com
+geneos host add server3 ssh://user@server3.example.com/opt/itrs
+geneos host add server4 -p
+```
+
+All of these examples will add a remote host, but with different options.
+
+1. `geneos host add server1`
+
+This command adds a remote host called `server1` using the same host name and uses the default SSH port 22 and the user name of the one running the command. Authentication will assume and SSH Agent as no password is given. The remote Geneos installation will be located in the user's home directory using the same rules as for a local installation, i.e. if the user name is `geneos` then directly in the home directory, otherwise in a sub-directory called `geneos`.
+
+> 💡More strictly, the directory should match the command name, so if you have renamed `geneos` to something else then that user name will be checked or a sub-directory with that name will be used.
+
+2. `geneos host add ssh://server2.example.com`
+
+This command adds a remote host called `server2.example.com`, as no shorter name is given, again with defaults and using SSH Agent for authentication and install directory.
+
+3. `geneos host add server3 ssh://user@server3.example.com/opt/itrs`
+
+This command adds a remote host called `server3` on a remote server with the full hostname of `server3.example.com` in a directory `/opt/itrs`. The port number and authentication are as for the examples above.
+
+4. `geneos host add server4 -p`
+
+This command is similar to 1. above but will prompt for a password which is stored in the hosts configuration file encrypted using AES256 with your default user key file.
+
+## AES256 Encrypted Secrets and Credential Storage
+
+Geneos Gateways support customer AES256 key files for the transparent encryption and decryption of passwords in configuration files. These key file can also be used with Toolkit samplers to support Secure Environment Variables. All instances created by `geneos` also get a new key file unless you have specified an existing one in advance. 
+  
 ### `geneos aes new`
+
+### `geneos aes encode` and `geneos aes decode`
+
+#### App Keys
 
 ### `geneos aes password`
 
-### `geneos aes encode` and `geneos aes decode`
+### `geneos login`
+
+You can store encrypted credentials using `geneos login` for a number of uses:
+
+1. Downloading Geneos releases
+2. Use by other tools, including libemail.so and dv2email for both Gateway and SMTP Relay authentication
+3. Gateway REST Command API authentication
+    * e.g. the `geneos snapshot` command
+
+The credentials are encrypted using an AES256 key-file, which defaults to your user key-file; See the section above for more details. The credentials file itself is in JSON format and without the key-file to encrypt the included credentials it is not at risk of revealing the plain text versions of them.
+
+At the time of writing the only types of credential supported is username / password combinations. Each credential is associated with a domain, which helps identify which credential to use for a given request.
 
 ## Miscellaneous
 
@@ -512,19 +609,6 @@ Another way to control how instances behave is through the `geneos disable` and 
 Disabling an instance is useful when you want to perform maintenance or you want to create a backup copy of an instance and disable it to ensure it is not started by accident.
 
 Disabled instances show in the `geneos list` output with a `D` flag.
-
-### `geneos login`
-
-You can store encrypted credentials using `geneos login` for a number of uses:
-
-1. Downloading Geneos releases
-2. Use by other tools, including libemail.so and dv2email for both Gateway and SMTP Relay authentication
-3. Gateway REST Command API authentication
-    * e.g. the `geneos snapshot` command
-
-The credentials are encrypted using an AES256 key-file, which defaults to your user key-file; See the section above for more details. The credentials file itself is in JSON format and without the key-file to encrypt the included credentials it is not at risk of revealing the plain text versions of them.
-
-At the time of writing the only types of credential supported is username / password combinations. Each credential is associated with a domain, which helps identify which credential to use for a given request.
 
 ### `geneos migrate` and `geneos revert`
 
