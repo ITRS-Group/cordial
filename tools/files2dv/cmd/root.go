@@ -46,7 +46,6 @@ var d int
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// execname = cordial.ExecutableName()
 	cordial.LogInit(execname)
 
 	FILE2DVCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2email.yaml)")
