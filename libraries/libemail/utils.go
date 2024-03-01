@@ -24,6 +24,7 @@ package main
 
 import "C"
 import (
+	"crypto/tls"
 	"fmt"
 	"os"
 	"strconv"
@@ -98,8 +99,9 @@ func dialServer(conf EMailConfig) (d *mail.Dialer, err error) {
 
 	var tlsPolicy mail.StartTLSPolicy
 
-	tls := getWithDefault("_SMTP_TLS", conf, "default")
-	switch strings.ToLower(tls) {
+	tlsEnabled := getWithDefault("_SMTP_TLS", conf, "default")
+	tlsInsecure := getWithDefault("_SMTP_TLS_INSECURE", conf, "false")
+	switch strings.ToLower(tlsEnabled) {
 	case "force":
 		tlsPolicy = mail.MandatoryStartTLS
 	case "none":
@@ -125,6 +127,12 @@ func dialServer(conf EMailConfig) (d *mail.Dialer, err error) {
 		// the password can be empty at this point. this is valid, even if a bit dumb.
 
 		d = mail.NewDialer(server, port, username, password)
+		t, err := strconv.ParseBool(tlsInsecure)
+		if err == nil && t {
+			d.TLSConfig = &tls.Config{
+				InsecureSkipVerify: true,
+			}
+		}
 	} else {
 		// no auth - initialise Dialer directly
 		d = &mail.Dialer{Host: server, Port: port}
