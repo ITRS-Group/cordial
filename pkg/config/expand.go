@@ -660,7 +660,7 @@ func fetchURL(cf *Config, url string, trim bool) (s string, err error) {
 	return
 }
 
-func fetchFile(cf *Config, p string, trim bool) (s string, err error) {
+func fetchFile(_ *Config, p string, trim bool) (s string, err error) {
 	p = strings.TrimPrefix(p, "file:")
 	if strings.HasPrefix(p, "~/") {
 		home, _ := UserHomeDir()
