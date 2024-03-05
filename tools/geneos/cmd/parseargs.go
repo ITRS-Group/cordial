@@ -107,8 +107,8 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 	// after rebuild this should only apply to 'import'
 	n := 0
 	for _, a := range args {
-		if !instance.ValidName(a) {
-			// if strings.Contains(a, "=") {
+		// if !instance.ValidName(a) {
+		if strings.Contains(a, "=") {
 			params = append(params, a)
 		} else {
 			args[n] = a
