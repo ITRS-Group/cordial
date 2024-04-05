@@ -15,11 +15,12 @@ Settings for the Gateway REST connection and defaults for the EMail gateway can 
 ### Options
 
 ```text
-      --columns string     filter columns, comma-separated string
       --dir directory      destination directory, defaults to current
-      --headlines string   filter headlines, comma-separated string
-      --rowname name       set row name
-      --rows string        filter rows, comma-separated string
+  -N, --rowname name       set row name
+  -H, --headlines string   order and filter headlines, comma-separated
+  -R, --rows string        filter rows, comma-separated
+  -O, --order string       order rows, comma-separated column names with optional '+'/'-' suffixes
+  -C, --columns string     order and filter columns, comma-separated
 ```
 
 ### Options inherited from parent commands
@@ -30,6 +31,7 @@ Settings for the Gateway REST connection and defaults for the EMail gateway can 
   -E, --entity string     entity name, ignored if _VARIBLEPATH set in environment
   -S, --sampler string    sampler name, ignored if _VARIBLEPATH set in environment
   -T, --type string       type name, ignored if _VARIBLEPATH set in environment
+                          To explicitly select empty/no type use --type/-T ""
 ```
 
 ## SEE ALSO

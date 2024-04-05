@@ -4,6 +4,8 @@ You can control the basic behaviour of the command with three options. The `--li
 
 The `--stderr`/`-E` option controls whether the separate `STDERR` log (if there is one) for each matching instance is also shown along with the main log. If used with the `--nostandard`/`-N` option to suppress normal log files then only error output is shown.
 
+The `--ca`/`-C` option controls the inclusion of Collection Agent logs for Netprobes.
+
 The `--match`/`-g` and `--ignore`/`-v` options will filter lines the output based on a case sensitive search over the whole line. As can be expected `--match`/`-g` behaves somewhat like `grep` and `--ignore`/`-v` like `grep -v`. Case-insensitive filtering is avoided for performance.
 
 Only on `--match`/`-g` or `--ignore`/`-v` is allowed.

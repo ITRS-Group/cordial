@@ -28,6 +28,7 @@ Settings for the Gateway REST connection and defaults for the EMail gateway can 
   -E, --entity string     entity name, ignored if _VARIBLEPATH set in environment
   -S, --sampler string    sampler name, ignored if _VARIBLEPATH set in environment
   -T, --type string       type name, ignored if _VARIBLEPATH set in environment
+                          To explicitly select empty/no type use --type/-T ""
 ```
 
 ## SEE ALSO
