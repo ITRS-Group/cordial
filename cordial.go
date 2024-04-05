@@ -71,7 +71,7 @@ func LogInit(prefix string, logfile ...string) {
 	var nocolor bool
 	var out io.WriteCloser
 	out = os.Stderr
-	if len(logfile) > 0 {
+	if len(logfile) > 0 && logfile[0] != "" {
 		l := &lumberjack.Logger{
 			Filename: logfile[0],
 		}
