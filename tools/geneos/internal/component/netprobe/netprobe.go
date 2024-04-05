@@ -65,13 +65,14 @@ var Netprobe = geneos.Component{
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=netprobe.log`,
+		`calogfile=collection-agent.log`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 		`autostart=true`,
 	},
 	GlobalSettings: map[string]string{
 		"NetprobePortRange": "7036,7100-",
 		"NetprobeCleanList": "*.old",
-		"NetprobePurgeList": "netprobe.log:netprobe.txt:*.snooze:*.user_assignment",
+		"NetprobePurgeList": "netprobe.log:netprobe.txt:*.snooze:*.user_assignment:collection-agent.log",
 	},
 	Directories: []string{
 		"packages/netprobe",

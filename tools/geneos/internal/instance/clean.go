@@ -91,12 +91,14 @@ func RemovePaths(i geneos.Instance, paths string) (err error) {
 		if p, err = geneos.CleanRelativePath(p); err != nil {
 			return fmt.Errorf("%s %w", p, err)
 		}
+		log.Debug().Msgf("going to remove %s", path.Join(i.Home(), p))
 		// glob here
 		m, err := i.Host().Glob(path.Join(i.Home(), p))
 		if err != nil {
 			return err
 		}
 		for _, f := range m {
+			log.Debug().Msgf("trying to RemoveAll(%s)", f)
 			if err = i.Host().RemoveAll(f); err != nil {
 				log.Error().Err(err).Msg("")
 				continue

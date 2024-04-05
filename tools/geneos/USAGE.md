@@ -27,7 +27,8 @@ You should already have installed the `geneos` program in a location that makes 
     * [geneos tls sync](#geneos-tls-sync)
 * [Diagnostics](#diagnostics)
     * [geneos logs](#geneos-logs)
-    * [geneos show and geneos command](#geneos-show-and-geneos-command)
+    * [geneos show](#geneos-show)
+    * [geneos command](#geneos-command)
 * [Remote Hosts](#remote-hosts)
     * [geneos host list](#geneos-host-list)
     * [geneos host add](#geneos-host-add)
@@ -297,7 +298,7 @@ There are a large number of options to the `geneos add` command and you should t
 
 * `--port N`/`-p N` can be used to override the automatically allocated listening port for the new instance.
 
-* A number of options allow you to influence the creation of default configuration files, which is particularly important for Gateways, Self-Announcing and Floating Netprobes. Please see the component documentation (⚠️not finished!) from [`geneos help gateway`🔗](/tools/geneos/docs/geneos_gateway.md), [`geneos help san`🔗](/tools/geneos/docs/geneos_san.md) and [`geneos help floating`🔗](/tools/geneos/docs/geneos_floating.md) for more detailed information.
+* A number of options allow you to influence the creation of default configuration files, which is particularly important for Gateways, Self-Announcing and Floating Netprobes. Please see the component documentation (⚠️not yet complete!) from [`geneos help gateway`🔗](/tools/geneos/docs/geneos_gateway.md), [`geneos help san`🔗](/tools/geneos/docs/geneos_san.md) and [`geneos help floating`🔗](/tools/geneos/docs/geneos_floating.md) for more detailed information.
 
 ### `geneos deploy`
 
@@ -454,9 +455,9 @@ If you use the `--follow` or `-f` flag then the command will follow all the matc
 
 It's also possible to see the whole log file with the `--cat` or `-c` flag, to "grep" (search for matching lines) with the `--match STRING` or `-g STRING` flag, or the opposite and ignore lines with `--ignore STRING` or `-v STRING` flag.
 
-### `geneos show` and `geneos command`
+### `geneos show`
 
-The `geneos show` command will display various aspects of instance configuration. Without options it will output instance configuration in a JSON format. This configuration included the values of all parameters as well as metadata about the instance itself, e.g.:
+The `geneos show` command will display various aspects of instance configurations. Without other options it will output the configuration (used by `geneos` to manage the instance, not the component specific configuration) in a JSON format. This configuration included the values of all parameters as well as metadata about the instance itself, e.g.:
 
 ```bash
 $ geneos show gateway "Demo Gateway"
@@ -497,9 +498,21 @@ $ geneos show gateway "Demo Gateway"
 ]
 ```
 
-All the values in the `configuration` section can be set or changed using `geneos show`.
+The parameters in the `configuration` section can be set or changed using `geneos set`.
 
-The command `geneos command` outputs a representation of the command line used to start the instance along with working directory and environment variables in that starting environment, e.g.:
+The underlying configuration file may actually contain variable values in some parameters and you can see these using the `--raw`/`-r` option, as the default output expands these variables. e.g. for the above the raw output may look like this:
+
+```json
+            "libpaths": "${config:install}/${config:version}/lib64:/usr/lib64",
+```
+
+💡 Note that the use of `config:` prefix in the variables instead of `configuration:` to match the displayed output is a side effect of how the `geneos show` command synthesises the `instance` and `configuration` elements, and the real ("raw") values are whatever is output by `--raw`.
+
+The `geneos show` command can also be used to display the component configuration file, if there is one, with the `--setup`/`-s` option as well as the Gateway specific merged configuration using the `--merge`/`-m` option and more. See the [full documentation](/tools/geneos/docs/geneos_show.md) for the command for more details.
+
+### `geneos command`
+
+The command `geneos command` outputs details of the command line used to start the instance, along with the working (starting) directory and environment variables in that starting environment, e.g.:
 
 ```bash
 $ geneos command gateway "Demo Gateway"
@@ -513,6 +526,16 @@ working directory:
 environment:
         LD_LIBRARY_PATH=/opt/geneos/packages/gateway/active_prod/lib64:/usr/lib64
 ```
+
+### `geneos home`
+
+The `geneos home` command prints the home directory of the matching instance. This is useful as a shell command, like this:
+
+```bash
+cd $(geneos home gateway LDN_PROD1)
+```
+
+If there is no matching instance or too many then the output will be a parent of the nearest matching item, e.g. `geneos home gateway` will output the directory that all the Gateway sub-directories and other configurations are kept in, and `geneos home` or a no-match will output the directory of the overall Geneos installation.
 
 ## Remote Hosts
 
@@ -529,7 +552,7 @@ Use this command to show a list of existing remote hosts. The command will only 
 ```bash
 $ ./geneos host list
 Name    Username  Hostname  Flags  Port  Directory
-ubuntu            ubuntu    -      22    /home/user/geneos
+ubuntu  -         ubuntu    -      22    /home/user/geneos
 ```
 
 ### `geneos host add`
@@ -591,6 +614,8 @@ At the time of writing the only types of credential supported is username / pass
 ## Miscellaneous
 
 ### `geneos import`
+
+The `geneos import` command let's you copy files into instance directories from a variety of sources. As for many other commands this also applies to multiple instances. Using this command instead of de facto Linux commands like `cp` or `mv` ensures that the files are placed in the correct location and also have appropriate permissions for access by your user account and hence any instances you start.
 
 ### `geneos protect`
 

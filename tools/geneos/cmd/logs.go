@@ -43,7 +43,7 @@ import (
 )
 
 var logCmdLines int
-var logCmdStderr, logCmdNoNormal, logCmdFollow, logCmdCat bool
+var logCmdStderr, logCmdNoNormal, logCmdCALog, logCmdFollow, logCmdCat bool
 var logCmdMatch, logCmdIgnore string
 
 type files struct {
@@ -64,6 +64,7 @@ func init() {
 
 	logsCmd.Flags().BoolVarP(&logCmdStderr, "stderr", "E", false, "Show STDERR output files")
 	logsCmd.Flags().BoolVarP(&logCmdNoNormal, "nostandard", "N", false, "Do not show standard log files")
+	logsCmd.Flags().BoolVarP(&logCmdCALog, "ca", "C", false, "Include Collection Agent log for Netprobe instances")
 
 	logsCmd.Flags().StringVarP(&logCmdMatch, "match", "g", "", "Match lines with STRING")
 	logsCmd.Flags().StringVarP(&logCmdIgnore, "ignore", "v", "", "Match lines without STRING")
@@ -176,6 +177,16 @@ func logTailInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		}
 		resp.Lines = append(resp.Lines, lines...)
 	}
+
+	if logCmdCALog && i.Type().IsA("netprobe") {
+		lines, err := logTailInstanceFile(i, instance.PathOf(i, "calogfile"))
+		if err != nil {
+			resp.Err = err
+			return
+		}
+		resp.Lines = append(resp.Lines, lines...)
+	}
+
 	return
 }
 
@@ -348,6 +359,14 @@ func logCatInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		}
 		resp.Lines = append(resp.Lines, lines...)
 	}
+	if logCmdCALog && i.Type().IsA("netprobe") {
+		lines, err := logCatInstanceFile(i, instance.PathOf(i, "calogfile"))
+		if err != nil {
+			resp.Err = err
+			return
+		}
+		resp.Lines = append(resp.Lines, lines...)
+	}
 	return
 }
 
@@ -380,6 +399,12 @@ func logFollowInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	}
 	if !logCmdNoNormal {
 		if err := logFollowInstanceFile(i, instance.LogFilePath(i)); err != nil {
+			resp.Err = err
+			return
+		}
+	}
+	if logCmdCALog && i.Type().IsA("netprobe") {
+		if err := logFollowInstanceFile(i, instance.PathOf(i, "calogfile")); err != nil {
 			resp.Err = err
 			return
 		}
