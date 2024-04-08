@@ -50,7 +50,19 @@ import (
 //go:embed VERSION
 var VERSION string
 
-// LogInit is called to set-up zerolog the way we like it
+type discardCloser struct {
+	io.Writer
+}
+
+func (discardCloser) Close() error { return nil }
+
+// LogInit is called to set-up zerolog with our chosen defaults. The
+// default is to log to STDERR.
+//
+// If logfile is passed and the first element is not empty, then use
+// that as the log file unless it is either "-" (which means use STDOUT
+// (not STDERR) or equal to the [os.DevNull] value, in which case is
+// [io.Discard].
 func LogInit(prefix string, logfile ...string) {
 	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
 		fnName := "UNKNOWN"
@@ -72,11 +84,18 @@ func LogInit(prefix string, logfile ...string) {
 	var out io.WriteCloser
 	out = os.Stderr
 	if len(logfile) > 0 && logfile[0] != "" {
-		l := &lumberjack.Logger{
-			Filename: logfile[0],
+		switch logfile[0] {
+		case "-":
+			out = os.Stdout
+		case os.DevNull:
+			out = discardCloser{io.Discard}
+		default:
+			l := &lumberjack.Logger{
+				Filename: logfile[0],
+			}
+			out = l
+			nocolor = true
 		}
-		out = l
-		nocolor = true
 	}
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{
