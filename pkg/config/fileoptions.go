@@ -38,26 +38,27 @@ var (
 )
 
 type fileOptions struct {
-	appname                string
-	configDirs             []string
-	configFile             string
-	configFileReader       io.Reader
-	extension              string // extension without "."
-	delimiter              string
-	envprefix              string
-	envdelimiter           string
-	internalDefaults       []byte
-	internalDefaultsFormat string
-	merge                  bool
-	mustexist              bool
-	notifyonchange         func(fsnotify.Event)
-	remote                 host.Host
-	setglobals             bool
-	systemdir              string
-	usedefaults            bool
-	userconfdir            string
-	watchconfig            bool
-	workingdir             string
+	appname                     string
+	configDirs                  []string
+	configFile                  string
+	configFileReader            io.Reader
+	extension                   string // extension without "."
+	delimiter                   string
+	envprefix                   string
+	envdelimiter                string
+	internalDefaults            []byte
+	internalDefaultsFormat      string
+	internalDefaultsCheckErrors bool
+	merge                       bool
+	mustexist                   bool
+	notifyonchange              func(fsnotify.Event)
+	remote                      host.Host
+	setglobals                  bool
+	systemdir                   string
+	usedefaults                 bool
+	userconfdir                 string
+	watchconfig                 bool
+	workingdir                  string
 }
 
 // FileOptions can be passed to the Load or Save functions to
@@ -359,5 +360,15 @@ func WatchConfig(notify ...func(fsnotify.Event)) FileOptions {
 		if len(notify) > 0 {
 			fo.notifyonchange = notify[0]
 		}
+	}
+}
+
+// StopOnInternalDefaultsErrors returns an error if the internal
+// defaults cause a parsing error. This can be because the file contains
+// repeated keys or has format errors for the chosen format. Off by
+// default, and errors in the defaults are ignored.
+func StopOnInternalDefaultsErrors() FileOptions {
+	return func(fo *fileOptions) {
+		fo.internalDefaultsCheckErrors = true
 	}
 }
