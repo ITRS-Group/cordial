@@ -103,8 +103,10 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 		buf := bytes.NewBuffer(opts.internalDefaults)
 		internalDefaults.Viper.SetConfigType(opts.internalDefaultsFormat)
 		internalDefaults.Viper.SetFs(r.GetFs())
-		// ignore errors
-		internalDefaults.Viper.ReadConfig(buf)
+		// TODO: check or ignore errors?
+		if err = internalDefaults.Viper.ReadConfig(buf); err != nil && opts.internalDefaultsCheckErrors {
+			return
+		}
 
 		// now set any internal default values as real defaults, cannot use Merge here
 		for k, v := range internalDefaults.AllSettings() {
