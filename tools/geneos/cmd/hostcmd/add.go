@@ -181,9 +181,10 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			return fmt.Errorf("host %q already exists", name)
 		}
 
-		if !h.IsAvailable() {
+		var ok bool
+		if ok, err = h.IsAvailable(); !ok {
 			log.Debug().Err(err).Msg("cannot connect to remote host, not adding.")
-			return err
+			return
 		}
 
 		// once we are bootstrapped, read os-release info and re-write config

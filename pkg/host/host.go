@@ -50,7 +50,7 @@ type Host interface {
 	Path(p string) string
 	Hostname() string
 	ServerVersion() string
-	IsAvailable() bool
+	IsAvailable() (bool, error)
 	IsLocal() bool
 	LastError() error
 	Username() string
