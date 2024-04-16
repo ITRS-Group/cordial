@@ -65,8 +65,8 @@ func (h *Local) IsLocal() bool {
 }
 
 // IsAvailable returns true for Local
-func (h *Local) IsAvailable() bool {
-	return true
+func (h *Local) IsAvailable() (bool, error) {
+	return true, nil
 }
 
 func (h *Local) String() string {

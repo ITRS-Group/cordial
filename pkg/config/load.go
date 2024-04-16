@@ -29,7 +29,6 @@ import (
 	"io/fs"
 	"path"
 
-	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/spf13/viper"
 )
 
@@ -86,8 +85,8 @@ func Load(name string, options ...FileOptions) (c *Config, err error) {
 
 	// return first error after initialising the config structure.
 	// Always return a config object.
-	if !r.IsAvailable() {
-		err = host.ErrNotAvailable
+	var ok bool
+	if ok, err = r.IsAvailable(); !ok {
 		return
 	}
 

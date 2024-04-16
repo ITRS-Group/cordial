@@ -25,8 +25,6 @@ package config
 import (
 	"fmt"
 	"path"
-
-	"github.com/itrs-group/cordial/pkg/host"
 )
 
 // Save a configuration file for the module name.
@@ -41,8 +39,8 @@ import (
 func (cf *Config) Save(name string, options ...FileOptions) (err error) {
 	opts := evalSaveOptions(name, options...)
 	r := opts.remote
-	if !r.IsAvailable() {
-		err = host.ErrNotAvailable
+	var ok bool
+	if ok, err = r.IsAvailable(); !ok {
 		return
 	}
 

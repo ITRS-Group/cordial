@@ -38,7 +38,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -234,8 +233,8 @@ func ByNames(h *geneos.Host, ct *geneos.Component, names ...string) (instances [
 // full name of the instance, if given.
 func ByNameAll(h *geneos.Host, ct *geneos.Component, name string) (instances []geneos.Instance) {
 	_, local, r := SplitName(name, h)
-	if !r.IsAvailable() {
-		log.Debug().Err(host.ErrNotAvailable).Msgf("host %s", r)
+	if ok, err := r.IsAvailable(); !ok {
+		log.Debug().Err(err).Msg("cannot connect")
 		return
 	}
 

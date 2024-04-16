@@ -37,8 +37,6 @@ import (
 
 	"github.com/hashicorp/go-version"
 	"github.com/rs/zerolog/log"
-
-	"github.com/itrs-group/cordial/pkg/host"
 )
 
 // list of platform in release package names
@@ -81,8 +79,9 @@ func (r Releases) Swap(i, j int) {
 //
 // No validation is done on the contents, only that a directory exists.
 func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
-	if !h.IsAvailable() {
-		return nil, host.ErrNotAvailable
+	var ok bool
+	if ok, err = h.IsAvailable(); !ok {
+		return
 	}
 	basedir := h.PathTo("packages", ct.String())
 	dirs, err := h.ReadDir(basedir)

@@ -39,7 +39,6 @@ import (
 	"time"
 
 	"github.com/awnumar/memguard"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/sftpfs"
 
@@ -302,16 +301,13 @@ func (h *SSHRemote) IsLocal() bool {
 }
 
 // IsAvailable returns true is the remote host can be contacted
-func (h *SSHRemote) IsAvailable() bool {
+func (h *SSHRemote) IsAvailable() (ok bool, err error) {
 	if h == nil || (h.failed != nil && !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) < 5*time.Second) {
 		// not available for 5 seconds since last error
-		return false
+		return false, ErrNotAvailable
 	}
-	_, err := h.Dial()
-	if err != nil {
-		log.Debug().Err(err).Msg("dial failed")
-	}
-	return err == nil
+	_, err = h.Dial()
+	return err == nil, err
 }
 
 func (h *SSHRemote) String() string {
