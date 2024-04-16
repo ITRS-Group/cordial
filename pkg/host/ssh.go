@@ -39,6 +39,7 @@ import (
 	"time"
 
 	"github.com/awnumar/memguard"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/sftpfs"
 
@@ -307,6 +308,9 @@ func (h *SSHRemote) IsAvailable() bool {
 		return false
 	}
 	_, err := h.Dial()
+	if err != nil {
+		log.Debug().Err(err).Msg("dial failed")
+	}
 	return err == nil
 }
 
