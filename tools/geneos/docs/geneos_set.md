@@ -4,7 +4,7 @@ Set one or more configuration parameters for matching instances.
 
 Set will also update existing parameters, including setting them to empty values. To remove a parameter use the `geneos unset` command instead.
 
-The command supports simple parameters given as `KEY=VALUE` pairs on the command line as well as options for structured or repeatable keys. Each simple parameter uses a case-insensitive `KEY`, unlike the options below.
+The command supports simple parameters given as `KEY=VALUE` pairs on the command line as well as options for structured or repeatable keys. Each simple parameter uses a case-insensitive `KEY`, unlike the options below. You can also use `+=` or `+` to append values to an exist parameter (or create a parameter if it does not exist), e.g. `options+="-extra option"`.
 
 Parameters can be encoded so that secrets do not appear in plain text in configuration files. Use the `--secure`/`-s` option with a parameter name and optional plaintext value. If no value is given then you will be prompted to enter the secret.
 
