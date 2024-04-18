@@ -30,6 +30,7 @@ import (
 	"os/user"
 	"path"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -556,16 +557,28 @@ func GetSliceStringMapString(s string, options ...ExpandOptions) (result []map[s
 	return global.GetSliceStringMapString(s, options...)
 }
 
+var itemRE = regexp.MustCompile(`^(\w+)([+=]=?)(.*)`)
+
 // SetKeyValues takes a list of `key=value` pairs as strings and applies
 // them to the config object. Any item without an `=` is skipped.
 func (c *Config) SetKeyValues(items ...string) {
 	for _, item := range items {
-		if !strings.Contains(item, "=") {
+		fields := itemRE.FindStringSubmatch(item)
+		if len(fields) != 4 {
 			continue
 		}
-		s := strings.SplitN(item, "=", 2)
-		k, v := s[0], s[1]
-		c.Set(k, v)
+		switch fields[2] {
+		case "=":
+			c.Set(fields[1], fields[3])
+		case "+=", "+":
+			if c.IsSet(fields[1]) {
+				c.Set(fields[1], c.GetString(fields[1])+" "+fields[3])
+			} else {
+				c.Set(fields[1], fields[3])
+			}
+		default:
+			continue
+		}
 	}
 }
 
