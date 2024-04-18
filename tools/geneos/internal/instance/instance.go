@@ -406,7 +406,7 @@ func Names(h *geneos.Host, ct *geneos.Component) (names []string) {
 func Match(h *geneos.Host, ct *geneos.Component, patterns ...string) (names []string) {
 	for _, pattern := range patterns {
 		_, p, h := SplitName(pattern, h) // override 'h' inside loop
-		if p == "" {
+		if p == "" || !ValidName(p) {
 			names = append(names, pattern)
 			continue
 		}
