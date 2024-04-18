@@ -423,7 +423,7 @@ func logFollowInstanceFile(i geneos.Instance, logfile string) (err error) {
 		if !errors.Is(err, fs.ErrNotExist) {
 			return
 		}
-		fmt.Printf("===> %s log file not found <===\n", i)
+		fmt.Printf("===> %s log-file %q not found, watching <===\n", i, logfile)
 		return nil
 	} else {
 		// output up to this point
