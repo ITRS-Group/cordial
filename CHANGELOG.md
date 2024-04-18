@@ -1,5 +1,56 @@
 # Change Log
 
+## Version v1.12.1
+
+> **Released 2024-04-18**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## v1.12.1 Changes
+
+* General
+
+  * Update Go used to 1.22.2
+
+* `tools/geneos`
+
+  * Add support for Collection Agent logs to `log` command
+  * [#195](https://github.com/ITRS-Group/cordial/issues/195) - Add append capability to set command
+
+* `pkg/rest`
+
+  * Add a `SetupRequest` function to allow for custom HTTP client settings
+
+* `pkg/config`
+
+  * Fix a deadlock in `UnmarshalKey` wrapper
+  * Add a `Bytes` method for encryption
+  * Add `StopOnInternalDefaultsErrors()` option to bail when loading bad internal defaults
+
+* `libraries/libemail`
+
+  * Add a (deliberately undocumented) `_SMTP_TLS_INSECURE` environment variable to allow for edge cases in TLS testing
+  * Build using Go DNS resolver and user lookup packages
+
+## v1.12.1 Fixes
+
+* `tools/geneos`
+
+  * Fix `tls import` command and update docs
+  * Deal with missing key files as errors in `aes` sub-system
+
+* `pkg/host`
+
+  * Allow no username for SSH config, which then defaults to the user running the command
+  * Return an error from IsAvailable() on failure, and use this to send Dial() errors up the stack
+  * Log a debug level message if Dial fails
+
+* `cordial` (top level package)
+
+  * Add support in `LogInit` for `-` and `/dev/null`/`NUL` as log destinations - STDOUT and discard, respectively
+
+---
+
 ## Version v1.12.0
 
 > **Released 2024-01-15**
