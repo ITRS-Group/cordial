@@ -123,6 +123,10 @@ Note: If you use any of the non-FILE settings then the Gateway will log the full
 
 In a future version it is expected that multiple files will be loadable using Go's embed FS features.
 
+When called from an [Action](https://docs.itrsgroup.com/docs/geneos/current/processing/monitoring-and-alerts/geneos_rulesactionsalerts_tr/index.html#script-actions) or an [Alert/Effect](https://docs.itrsgroup.com/docs/geneos/current/processing/monitoring-and-alerts/geneos_rulesactionsalerts_tr/index.html#alert-information) all the standard parameters are made available as template variables named exactly as in the Geneos documentation. As in the example template these can be accessed like this: `{{._Variable}}`.
+
+⚠ Note: Variables are case-sensitive and if you to variable with a space in the name (i.e. where a source column in a Dataview contains spaces) then you should use the `index` function, like this: `{{index . "_Column Name"}}`.
+
 ### Debug
 
 There is one built in `_DEBUG` parameter but you can also add your own to the template logic and `_TEMPLATE_DEBUG` has been included in the built-in templates to demonstrate this.
