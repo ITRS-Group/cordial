@@ -125,7 +125,7 @@ In a future version it is expected that multiple files will be loadable using Go
 
 When called from an [Action](https://docs.itrsgroup.com/docs/geneos/current/processing/monitoring-and-alerts/geneos_rulesactionsalerts_tr/index.html#script-actions) or an [Alert/Effect](https://docs.itrsgroup.com/docs/geneos/current/processing/monitoring-and-alerts/geneos_rulesactionsalerts_tr/index.html#alert-information) all the standard parameters are made available as template variables named exactly as in the Geneos documentation. As in the example template these can be accessed like this: `{{._Variable}}`.
 
-⚠ Note: Variables are case-sensitive and if you to variable with a space in the name (i.e. where a source column in a Dataview contains spaces) then you should use the `index` function, like this: `{{index . "_Column Name"}}`.
+⚠ Note: Variables are case-sensitive and to access a variable with a space in the name (i.e. where a source column in a Dataview contains spaces) then you should use the `index` function, like this: `{{index . "_Column Name"}}`.
 
 ### Debug
 
