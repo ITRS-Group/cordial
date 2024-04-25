@@ -5,9 +5,9 @@ ARG GOVERSION=1.22.2
 # The bullseye image seems to offer the most compatibility, including
 # libemail.so dependencies
 #
-# Note to build an executable for a modern Mac use something like:
+# Note: To build an executable for a modern Mac use something like:
 #
-# GOOS=darwin GOARCH=arm64 && go build -o geneos-config-server.${GOOS}-${GOARCH} --ldflags='-s -w'
+# GOOS=darwin GOARCH=arm64 go build -o geneos.${GOOS}-${GOARCH} -tags netgo,osusergo --ldflags '-s -w'
 # 
 FROM golang:${GOVERSION}-bullseye AS build
 LABEL stage=cordial-build
