@@ -75,6 +75,8 @@ var Webserver = geneos.Component{
 		`libpaths={{join "${config:install}" "${config:version}" "JRE/lib"}}:{{join "${config:install}" "${config:version}" "lib64"}}`,
 		`maxmem=1024m`,
 		`autostart=true`,
+		// customised cacerts - can be to a shared one if required
+		`truststore={{join .home "cacerts"}}`,
 	},
 	GlobalSettings: map[string]string{
 		"WebserverPortRange": "8080,8100-",
@@ -127,16 +129,22 @@ func factory(name string) geneos.Instance {
 // list of file patterns to copy?
 // from WebBins + WebBase + /config
 
+// webserverFiles is a list of files to import from the "read-only"
+// package.
+//
+// `config/=config/file` means import file into config/ with no name
+// change
 var webserverFiles = []string{
-	"config/config.xml=config.xml.min.tmpl",
-	"config/=log4j.properties",
-	"config/=log4j2.properties",
-	"config/=logging.properties",
-	"config/=login.conf",
-	"config/=security.properties",
-	"config/=security.xml",
-	"config/=sso.properties",
-	"config/=users.properties",
+	"config/config.xml=config/config.xml.min.tmpl",
+	"config/=config/log4j.properties",
+	"config/=config/log4j2.properties",
+	"config/=config/logging.properties",
+	"config/=config/login.conf",
+	"config/=config/security.properties",
+	"config/=config/security.xml",
+	"config/=config/sso.properties",
+	"config/=config/users.properties",
+	"cacerts=JRE/lib/security/cacerts",
 }
 
 // interface method set
@@ -208,8 +216,9 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	// copy default configs
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
-	configSrc := path.Join(instance.BaseVersion(w), "config")
-	if err = os.Chdir(configSrc); err != nil {
+
+	importFrom := instance.BaseVersion(w)
+	if err = os.Chdir(importFrom); err != nil {
 		return
 	}
 
@@ -228,8 +237,29 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	return
 }
 
-func (w *Webservers) Rebuild(initial bool) error {
-	return geneos.ErrNotSupported
+func (w *Webservers) Rebuild(initial bool) (err error) {
+	// rebuild cacerts if we have a `truststore` and `certchain` defined
+	cf := w.Config()
+	if cf.IsSet("truststore") && cf.IsSet("certchain") {
+		log.Debug().Msgf("%s: rebuilding truststore: %q", w.String(), cf.GetString("truststore"))
+		certs := config.ReadCertificates(w.Host(), cf.GetString("certchain"))
+		k, err := geneos.ReadKeystore(cf.GetString("truststore"), cf.GetPassword("truststore-password", config.Default("changeit")))
+		if err != nil {
+			return err
+		}
+		for _, cert := range certs {
+			alias := cert.Subject.CommonName
+			log.Debug().Msgf("%s: replacing entry for %q", w.String(), alias)
+			k.DeleteEntry(alias)
+			if err = k.AddCertKeystore(alias, cert); err != nil {
+				return err
+			}
+		}
+		// TODO: temp file dance, after testing
+		log.Debug().Msgf("%s: writing new truststore to %q", w.String(), cf.GetString("truststore"))
+		return k.WriteKeystore(cf.GetString("truststore"), cf.GetPassword("truststore-password", config.Default("changeit")))
+	}
+	return
 }
 
 func (w *Webservers) Command() (args, env []string, home string) {
@@ -263,9 +293,27 @@ func (w *Webservers) Command() (args, env []string, home string) {
 		"-jar", base + "/geneos-web-server.jar",
 		"-dir", base + "/webapps",
 		"-port", cf.GetString("port"),
-		// "-ssl true",
 		"-maxThreads 254",
 		// "-log", LogFile(c),
+	}
+
+	tlsFiles := instance.Filepaths(w, "certificate", "privatekey")
+	if len(tlsFiles) == 0 || tlsFiles[0] == "" {
+		return
+	}
+	cert, privkey := tlsFiles[0], tlsFiles[1]
+	if cert != "" && privkey != "" {
+		// the instance specific truststore should have been created by `rebuild`
+		args = append(args, "-ssl true")
+	}
+
+	if truststorePath := cf.GetString("truststore"); truststorePath != "" {
+		args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
+	}
+
+	// fetch password as string as it has to be exposed on the command line anyway
+	if truststorePassword := cf.GetString("truststore-password"); truststorePassword != "" {
+		args = append(args, "-Djavax.net.ssl.trustStorePassword="+truststorePassword)
 	}
 
 	return
