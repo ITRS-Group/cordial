@@ -248,11 +248,11 @@ func ReadCert(i geneos.Instance) (cert *x509.Certificate, valid bool, chainfile 
 	}
 
 	// first check if we have a valid private key
-	c, err := config.ReadCertificatePEM(i.Host(), PathOf(i, "certificate"))
+	c, err := config.ExtractCertificatePEM(i.Host(), PathOf(i, "certificate"))
 	if err != nil {
 		return
 	}
-	pk, err := config.ReadPrivateKeyPEM(i.Host(), PathOf(i, "privatekey"))
+	pk, err := config.ExtractPrivateKeyPEM(i.Host(), PathOf(i, "privatekey"))
 	if err != nil {
 		return
 	}
