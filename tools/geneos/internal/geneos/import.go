@@ -42,8 +42,11 @@ import (
 //
 // source can be a path to a file or a http/https URL.
 //
-// If source is a (local) file and it is the same as the destination then an
-// ErrExists is returned.
+// If source is a (local) file and it is the same as the destination
+// then an ErrExists is returned.
+//
+// TODO: add templating option - perhaps ImportFileTemplated() - to tun
+// through text/template with given data (probabl instance config)
 func ImportFile(h *Host, dir string, source string) (filename string, err error) {
 	var backuppath string
 	var from io.ReadCloser
