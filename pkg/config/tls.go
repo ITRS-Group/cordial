@@ -158,10 +158,10 @@ func WriteCertChain(h host.Host, p string, certs ...*x509.Certificate) (err erro
 	return h.WriteFile(p, pembytes, 0644)
 }
 
-// ReadCertificatePEM reads a PEM encoded certificate from file at path p
-// on host h and returns the block
-func ReadCertificatePEM(h host.Host, pt string) (data []byte, err error) {
-	pembytes, err := h.ReadFile(pt)
+// ExtractCertificatePEM reads the first PEM encoded certificate from
+// file at path p on host h and returns the block
+func ExtractCertificatePEM(h host.Host, path string) (data []byte, err error) {
+	pembytes, err := h.ReadFile(path)
 	if err != nil {
 		return
 	}
@@ -172,6 +172,7 @@ func ReadCertificatePEM(h host.Host, pt string) (data []byte, err error) {
 			return nil, fmt.Errorf("cannot locate certificate in %s", p)
 		}
 		if p.Type == "CERTIFICATE" {
+			// reencode for use
 			return pem.EncodeToMemory(p), nil
 		}
 		pembytes = rest
@@ -179,14 +180,38 @@ func ReadCertificatePEM(h host.Host, pt string) (data []byte, err error) {
 }
 
 // ReadCertChain returns a certificate pool loaded from the file on host
-// h at path p. If there is any error a nil pointer is returned.
-func ReadCertChain(h host.Host, p string) (pool *x509.CertPool) {
+// h at path. If there is any error a nil pointer is returned.
+func ReadCertChain(h host.Host, path string) (pool *x509.CertPool) {
 	pool = x509.NewCertPool()
-	if chain, err := h.ReadFile(p); err == nil {
+	if chain, err := h.ReadFile(path); err == nil {
 		if ok := pool.AppendCertsFromPEM(chain); !ok {
 			return nil
 		}
 	}
+	return
+}
+
+// ReadCerts reads and decodes all certificates from the PEM file on
+// host h at path.
+func ReadCertificates(h host.Host, path string) (certs []*x509.Certificate) {
+	pembytes, err := h.ReadFile(path)
+	if err != nil {
+		return
+	}
+
+	for {
+		p, rest := pem.Decode(pembytes)
+		if p == nil {
+			break
+		}
+		if p.Type == "CERTIFICATE" {
+			if c, err := x509.ParseCertificate(p.Bytes); err == nil { // no error
+				certs = append(certs, c)
+			}
+		}
+		pembytes = rest
+	}
+
 	return
 }
 
@@ -211,8 +236,8 @@ func ReadPrivateKey(h host.Host, pt string) (key *memguard.Enclave, err error) {
 	}
 }
 
-// ReadPrivateKeyPEM reads a unencrypted, PEM-encoded private key as a memguard Enclave
-func ReadPrivateKeyPEM(h host.Host, pt string) (key *memguard.Enclave, err error) {
+// ExtractPrivateKeyPEM reads a unencrypted, PEM-encoded private key as a memguard Enclave
+func ExtractPrivateKeyPEM(h host.Host, pt string) (key *memguard.Enclave, err error) {
 	pembytes, err := h.ReadFile(pt)
 	if err != nil {
 		return
