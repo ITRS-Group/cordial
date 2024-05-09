@@ -215,6 +215,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 			}
 		}
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Write(listTabWriter)
+		listTabWriter.Flush()
 	}
 	return
 }
@@ -347,6 +348,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			}
 		}
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Write(listTabWriter)
+		listTabWriter.Flush()
 	}
 	return
 }
