@@ -273,7 +273,7 @@ func initConfig() {
 
 	Execname = cordial.ExecutableName()
 
-	log.Debug().Msgf("cordial 'geneos' running as '%s', version %s", Execname, cordial.VERSION)
+	log.Debug().Msgf("cordial 'geneos' running as execname '%s', version %s", Execname, cordial.VERSION)
 
 	// `oldConfDir` is the original path to the user configuration,
 	// typically directly in `~/geneos`. The LoadConfig() function
@@ -291,6 +291,14 @@ func initConfig() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
+	log.Debug().Msgf("configuration loaded from %s", config.Path(Execname,
+		config.SetConfigFile(cfgFile),
+		config.UseGlobal(),
+		config.AddDirs(oldConfDir),
+		config.MergeSettings(),
+		config.IgnoreWorkingDir(),
+		config.WithEnvs("ITRS", "_"),
+	))
 
 	// support old set-ups
 	cf.BindEnv(Execname, "GENEOS_HOME", "ITRS_HOME")
