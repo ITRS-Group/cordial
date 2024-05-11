@@ -61,9 +61,6 @@ var syncCmd = &cobra.Command{
 // tlsSync creates and copies a certificate chain file to all remote
 // hosts
 //
-// the cert chain is kept in the geneos tls directory, not the app
-// config directory
-//
 // If a signing cert and/or a root cert exist, refresh the chain file
 // from it, otherwise copy the chain file (using the configured name) to
 // all remotes.
