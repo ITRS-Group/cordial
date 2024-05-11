@@ -132,6 +132,23 @@ func PublicKey(der *memguard.Enclave) (publickey crypto.PublicKey, err error) {
 	return
 }
 
+// MatchKey tests the slice derkeys of private keys against the x509
+// cert and returns the index of the first match, or -1 if none of the
+// keys match.
+func MatchKey(cert *x509.Certificate, derkeys []*memguard.Enclave) int {
+	for i, der := range derkeys {
+		if pubkey, err := PublicKey(der); err == nil { // if ok then compare
+			// ensure we have an Equal() method on the opaque key
+			if k, ok := pubkey.(interface{ Equal(crypto.PublicKey) bool }); ok {
+				if k.Equal(cert.PublicKey) {
+					return i
+				}
+			}
+		}
+	}
+	return -1
+}
+
 // WriteCert writes cert as PEM to file p on host h
 func WriteCert(h host.Host, p string, cert *x509.Certificate) (err error) {
 	pembytes := pem.EncodeToMemory(&pem.Block{
