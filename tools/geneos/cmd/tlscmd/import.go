@@ -23,7 +23,6 @@ THE SOFTWARE.
 package tlscmd
 
 import (
-	"crypto"
 	"crypto/x509"
 	_ "embed"
 	"encoding/pem"
@@ -65,6 +64,10 @@ var importCmd = &cobra.Command{
 	Long:                  importCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
+	Example: `
+# import file.pem and extract parts
+$ geneos tls import file.pem
+`,
 	Annotations: map[string]string{
 		cmd.AnnotationWildcard:  "explicit",
 		cmd.AnnotationNeedsHome: "true",
@@ -266,8 +269,7 @@ func tlsDecompose(certfile, keyfile string) (cert *x509.Certificate, der *memgua
 	var i int
 
 	// are we good? check key and return a chain of valid CA certs
-	i, err = matchKey(cert, derkeys)
-	if err != nil {
+	if i = config.MatchKey(cert, derkeys); i == -1 {
 		// try provided keyfile if no match in cert file
 		// no keyfile arg is valid
 		if keyfile != "" {
@@ -283,18 +285,4 @@ func tlsDecompose(certfile, keyfile string) (cert *x509.Certificate, der *memgua
 
 	err = nil
 	return
-}
-
-func matchKey(cert *x509.Certificate, derkeys []*memguard.Enclave) (index int, err error) {
-	for i, der := range derkeys {
-		if pubkey, err := config.PublicKey(der); err == nil { // if ok then compare
-			// ensure we have an Equal() method on the opaque key
-			if k, ok := pubkey.(interface{ Equal(crypto.PublicKey) bool }); ok {
-				if k.Equal(cert.PublicKey) {
-					return i, nil
-				}
-			}
-		}
-	}
-	return -1, os.ErrNotExist
 }
