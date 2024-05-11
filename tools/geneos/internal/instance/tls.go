@@ -48,8 +48,8 @@ import (
 // skip if certificate exists and is valid
 func CreateCert(i geneos.Instance) (resp *Response) {
 	resp = NewResponse(i)
-	// skip if we can load an existing certificate
-	if _, _, _, err := ReadCert(i); err == nil {
+	// skip if we can load an existing and valid certificate
+	if _, valid, _, err := ReadCert(i); err == nil && valid {
 		return
 	}
 
@@ -186,6 +186,10 @@ func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err erro
 		return
 	}
 	if len(verify) > 0 && verify[0] {
+		if !cert.BasicConstraintsValid || !cert.IsCA {
+			err = errors.New("root certificate not valid as a signing certificate")
+			return
+		}
 		roots := x509.NewCertPool()
 		roots.AddCert(cert)
 		_, err = cert.Verify(x509.VerifyOptions{
