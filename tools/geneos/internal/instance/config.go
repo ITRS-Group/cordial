@@ -143,6 +143,7 @@ func LoadConfig(i geneos.Instance) (err error) {
 			config.MustExist(),
 		)
 		st, err := h.Stat(conf)
+
 		if err == nil && st.ModTime().Equal(i.Loaded()) {
 			log.Debug().Msg("conf file with same modtime already loaded")
 			return nil
@@ -158,17 +159,26 @@ func LoadConfig(i geneos.Instance) (err error) {
 		config.UseDefaults(false),
 		config.MustExist(),
 	)
+
 	// override the home from the config file and use the directory the
 	// config was found in
 	i.Config().Set("home", home)
+
+	used := config.Path(i.Type().Name,
+		config.Host(h),
+		config.FromDir(home),
+		config.UseDefaults(false),
+		config.MustExist(),
+	)
 
 	if err != nil {
 		if err = ReadRCConfig(h, cf, ComponentFilepath(i, "rc"), prefix, aliases); err != nil {
 			return
 		}
+		used = ComponentFilepath(i, "rc")
 	}
 
-	// not we have them, merge them into main instance config
+	// now we have them, merge them into main instance config
 	i.Config().MergeConfigMap(cf.AllSettings())
 
 	// aliases have to be set AFTER loading from file (https://github.com/spf13/viper/issues/560)
@@ -181,13 +191,13 @@ func LoadConfig(i geneos.Instance) (err error) {
 		return fmt.Errorf("no configuration files for %s in %s: %w", i, i.Home(), os.ErrNotExist)
 	}
 
-	st, err := h.Stat(cf.ConfigFileUsed())
+	st, err := h.Stat(used)
 	if err == nil {
 		i.SetLoaded(st.ModTime())
 	}
 
-	log.Debug().Msgf("config for %s from %s %q loaded in %.4fs", i, h.String(), cf.ConfigFileUsed(), time.Since(start).Seconds())
-	return
+	log.Debug().Msgf("config for %s from %s %q loaded in %.4fs", i, h.String(), used, time.Since(start).Seconds())
+	return nil
 }
 
 // ReadRCConfig reads an old-style, legacy Geneos "ctl" layout
