@@ -40,8 +40,12 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+var renewCmdDays int
+
 func init() {
 	tlsCmd.AddCommand(renewCmd)
+
+	renewCmd.Flags().IntVarP(&renewCmdDays, "days", "D", 365, "Certificate duration in days")
 }
 
 //go:embed _docs/renew.md
@@ -76,7 +80,11 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	if err != nil {
 		return
 	}
-	expires := time.Now().AddDate(1, 0, 0).Truncate(24 * time.Hour)
+	duration := 365 * 24 * time.Hour
+	if renewCmdDays != 0 {
+		duration = 24 * time.Hour * time.Duration(renewCmdDays)
+	}
+	expires := time.Now().Add(duration)
 	template := x509.Certificate{
 		SerialNumber: serial,
 		Subject: pkix.Name{
@@ -91,13 +99,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	rootCert, _, err := instance.ReadRootCert()
-	resp.Err = err
-	if resp.Err != nil {
-		return
-	}
-
-	signingCert, _, err := instance.ReadSigningCert()
+	signingCert, _, err := geneos.ReadSigningCert()
 	resp.Err = err
 	if resp.Err != nil {
 		return
@@ -126,20 +128,26 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		}
 	}
 
-	chainfile := instance.PathOf(i, "certchain")
-	if chainfile == "" {
-		chainfile = path.Join(i.Home(), "chain.pem")
-		i.Config().SetString("certchain", chainfile, config.Replace("home"))
-	}
+	// root cert optional to create instance specific chain file
+	rootCert, _, _ := geneos.ReadRootCert()
+	if rootCert == nil {
+		i.Config().SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
+	} else {
+		chainfile := instance.PathOf(i, "certchain")
+		if chainfile == "" {
+			chainfile = path.Join(i.Home(), "chain.pem")
+			i.Config().SetString("certchain", chainfile, config.Replace("home"))
+		}
 
-	if resp.Err = config.WriteCertChain(i.Host(), chainfile, signingCert, rootCert); resp.Err != nil {
-		return
+		if resp.Err = config.WriteCertChain(i.Host(), chainfile, signingCert, rootCert); resp.Err != nil {
+			return
+		}
 	}
 
 	if resp.Err = instance.SaveConfig(i); resp.Err != nil {
 		return
 	}
 
-	resp.Completed = append(resp.Completed, fmt.Sprintf("certificate renewed (expires %s)", expires))
+	resp.Completed = append(resp.Completed, fmt.Sprintf("certificate renewed (expires %s)", expires.UTC().Format(time.RFC3339)))
 	return
 }

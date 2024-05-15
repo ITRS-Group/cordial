@@ -25,6 +25,7 @@ package tlscmd
 import (
 	_ "embed"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -33,8 +34,12 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+var newCmdDays int
+
 func init() {
 	tlsCmd.AddCommand(newCmd)
+
+	newCmd.Flags().IntVarP(&newCmdDays, "days", "D", 365, "Certificate duration in days")
 }
 
 //go:embed _docs/new.md
@@ -57,5 +62,5 @@ var newCmd = &cobra.Command{
 }
 
 func newInstanceCert(i geneos.Instance, _ ...any) *instance.Response {
-	return instance.CreateCert(i)
+	return instance.CreateCert(i, 24*time.Hour*time.Duration(newCmdDays))
 }

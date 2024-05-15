@@ -1,3 +1,5 @@
+# `geneos deploy`
+
 Deploy a new instance of component `TYPE`.
 
 The difference between `deploy` and `add` or `init` commands is that deploy will check and create the Geneos directory hierarchy if required, then download and/or install packages for the component type and add the instance, optionally starting it.
@@ -32,7 +34,13 @@ The underlying package used by each instance is referenced by a `basename` param
 
 Any additional command line arguments are used to set configuration values. Any arguments not in the form `NAME=VALUE` are ignored. Note that `NAME` must be a plain word and must not contain dots (`.`) or double colons (`::`) as these are used as internal delimiters. No component uses hierarchical configuration names except those that can be set by the options above.
 
-The `deploy` command support fewer TLS related options than `add` or `import` and there is just a `--secure`/`-T` option to enable secure connections through the option creation of a local certificate authority and intermediate signing key (if they do not already exist) and the creation of certificates for the instance. If a local CA and signing cert already exist then `--secure`/`-T` is the default and cannot be disabled.
+## TLS Secured Instances
+
+To deploy a TLS enabled instance on a new server you can use the `--import-cert`/`-c` and, optionally `--import-key`/`-k` flags. The file containing the required certificates and private key for signing new certificates can be obtained using `geneos tls export` on your main Geneos server. If you have been give a certificate and key file from a non-Geneos system then you have to make sure they are in PEM format and you can pass them in using the separate flags. The certificate file should also contain any parent certificates required for verification.
+
+You can also create a new TLS root and signing certificate/key set with the `--secure`/`-T` flags.
+
+## AES Key Files
 
 For a `TYPE` that supports key files have one created unless one is supplied via the `--keyfile` or `--keycrc` options. The `--keyfile` option uses the file given while the `--keycrc` sets the key file path to a key file with the value given (with or with the `.aes` extension).
 

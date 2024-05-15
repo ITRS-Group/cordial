@@ -240,10 +240,17 @@ func ReadPrivateKey(h host.Host, pt string) (key *memguard.Enclave, err error) {
 		return
 	}
 
+	return ReadPrivateKeyBytes(pembytes)
+}
+
+// ReadPrivateKeyBytes looks for the first "PRIVATE KEY" in the PEM
+// formatted data slice and returns it as a memguard enclave. If no key
+// is found an error is returned.
+func ReadPrivateKeyBytes(pembytes []byte) (key *memguard.Enclave, err error) {
 	for {
 		p, rest := pem.Decode(pembytes)
 		if p == nil {
-			return nil, fmt.Errorf("cannot locate private key in %s", pt)
+			return nil, fmt.Errorf("cannot locate private key")
 		}
 		if strings.HasSuffix(p.Type, "PRIVATE KEY") {
 			key = memguard.NewEnclave(p.Bytes)

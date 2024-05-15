@@ -1,3 +1,5 @@
+# `geneos init`
+
 The `init` sub-system commands initialise your Geneos install environment ready to run Geneos instances.
 
 On it's own the `init` command will create a new directory (or use an existing one if it's considered empty) based on the options used. By default it will create a directory named `geneos` in your user's home directory unless your home directory ends in `geneos` (e.g. `/home/geneos`) in which case it tries that to avoid stuttering in the path.

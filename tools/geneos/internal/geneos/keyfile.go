@@ -37,12 +37,12 @@ import (
 
 // ImportKeyFile sets the keyfile for component ct from either the given
 // (local) keyfile or the CRC for an existing shared file.
-func ImportKeyFile(h *Host, ct *Component, keyfile config.KeyFile, keycrc string) (crc string, err error) {
+func ImportKeyFile(h *Host, ct *Component, keyfile config.KeyFile, keycrc string, prompt ...string) (crc string, err error) {
 	var path string
 
 	if keycrc == "" {
 		var crc32 uint32
-		crc32, err = ImportSharedKey(h, ct, string(keyfile))
+		crc32, err = ImportSharedKey(h, ct, string(keyfile), prompt...)
 		crc = fmt.Sprintf("%08X", crc32)
 		return
 	}
@@ -88,13 +88,16 @@ HOST:
 // host h, component type ct. Host can be `ALL` and ct can be nil, in
 // which case they are treated as wildcards. source can be a local file
 // ("~/" relative to user home), a remote URL or "-" for STDIN.
-func ImportSharedKey(h *Host, ct *Component, source string) (crc uint32, err error) {
+func ImportSharedKey(h *Host, ct *Component, source string, prompt ...string) (crc uint32, err error) {
 	switch {
 	case source == "":
 		err = ErrInvalidArgs
 		return
 	case source == "-":
-		// STDIN
+		// STDIN, prefix with prompt if given
+		if len(prompt) > 0 {
+			fmt.Println(prompt[0])
+		}
 		return ImportSharedKeyValues(h, ct, config.ReadKeyValues(os.Stdin))
 
 	case strings.HasPrefix(source, "https://"), strings.HasPrefix(source, "http://"):

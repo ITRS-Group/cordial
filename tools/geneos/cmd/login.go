@@ -81,7 +81,7 @@ var loginCmd = &cobra.Command{
 		}
 
 		if loginCmdUsername == "" {
-			if loginCmdUsername, err = config.ReadUserInput("Username: "); err != nil {
+			if loginCmdUsername, err = config.ReadUserInputLine("Username: "); err != nil {
 				return
 			}
 		}

@@ -75,7 +75,7 @@ var setCmd = &cobra.Command{
 			fmt.Printf("%s created, checksum %08X\n", setCmdKeyfile, crc32)
 		}
 
-		crc, err := geneos.ImportKeyFile(h, ct, setCmdKeyfile, setCmdCRC)
+		crc, err := geneos.ImportKeyFile(h, ct, setCmdKeyfile, setCmdCRC, "Paste AES key file contents, end with newline and CTRL+D:")
 		if err != nil {
 			return
 		}

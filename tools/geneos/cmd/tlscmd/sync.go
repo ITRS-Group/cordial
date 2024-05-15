@@ -33,7 +33,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
 )
 
@@ -65,11 +64,11 @@ var syncCmd = &cobra.Command{
 // from it, otherwise copy the chain file (using the configured name) to
 // all remotes.
 func tlsSync() (err error) {
-	rootCert, _, err := instance.ReadRootCert(true)
+	rootCert, _, err := geneos.ReadRootCert(true)
 	if err != nil {
 		rootCert = nil
 	}
-	geneosCert, _, err := instance.ReadSigningCert()
+	geneosCert, _, err := geneos.ReadSigningCert()
 	if err != nil {
 		return os.ErrNotExist
 	}
