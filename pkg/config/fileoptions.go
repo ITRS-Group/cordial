@@ -220,8 +220,8 @@ func SetAppName(name string) FileOptions {
 
 // SetConfigFile forces Load to load only the configuration at the given
 // path. This path must include the file extension. Defaults are still
-// loaded from all the normal directories unless [IgnoreDefaults] is
-// also passed as an option.
+// loaded from all the normal directories unless [config.IgnoreDefaults]
+// is also passed as an option.
 //
 // If the argument is an empty string then the option is not used. This
 // also means it can be called with a command line flag value which can
@@ -348,9 +348,9 @@ func WithEnvs(prefix string, delimiter string) FileOptions {
 }
 
 // WatchConfig enables the underlying viper instance to watch the
-// finally loaded config file. Does nothing if MergeSettings() is used
-// and does no watch default files. Using this option is not concurrency
-// safe on future calls to config methods, use carefully.
+// finally loaded config file. Is disabled if MergeSettings() is used.
+// Using this option is not concurrency safe on future calls to config
+// methods, use carefully.
 //
 // If a notify function is specified then this is passed to
 // viper.OnConfigChange. Only the first notify function is used.
