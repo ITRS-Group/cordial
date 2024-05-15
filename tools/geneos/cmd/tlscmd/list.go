@@ -23,6 +23,7 @@ THE SOFTWARE.
 package tlscmd
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"crypto/x509"
 	_ "embed"
@@ -35,6 +36,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -101,11 +103,11 @@ var listCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, names, params := cmd.ParseTypeNamesParams(command)
-		rootCert, rootCertFile, err = instance.ReadRootCert(true)
+		rootCert, rootCertFile, err = geneos.ReadRootCert(true)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return
 		}
-		geneosCert, geneosCertFile, err = instance.ReadSigningCert()
+		geneosCert, geneosCertFile, err = geneos.ReadSigningCert()
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return
 		}
@@ -453,7 +455,8 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *instance.Respon
 
 // verifyCert checks cert against the global rootCert and geneosCert
 // (initialised in the main RunE()) and if that fails then against
-// system certs. It does NOT check any explicit chain file.
+// system certs. It also loads the Geneos global chain file and adds the
+// certs to the verification pools after some basic validation.
 func verifyCert(cert *x509.Certificate) bool {
 	var rootCertPool, geneosCertPool *x509.CertPool
 
@@ -467,6 +470,26 @@ func verifyCert(cert *x509.Certificate) bool {
 	if geneosCert != nil {
 		geneosCertPool = x509.NewCertPool()
 		geneosCertPool.AddCert(geneosCert)
+	}
+
+	// load chain, split into root and other
+	chaincerts := config.ReadCertificates(geneos.LOCAL, geneos.LOCAL.PathTo("tls", geneos.ChainCertFile))
+	for _, cert := range chaincerts {
+		if bytes.Equal(cert.RawIssuer, cert.RawSubject) && cert.IsCA {
+			// check root validity against itself
+			selfRootPool := x509.NewCertPool()
+			selfRootPool.AddCert(cert)
+			if _, err := cert.Verify(x509.VerifyOptions{Roots: selfRootPool}); err != nil {
+				log.Error().Err(err).Msg("root cert not valid")
+				return false
+			}
+			rootCertPool.AddCert(cert)
+		} else {
+			if !cert.BasicConstraintsValid {
+				continue
+			}
+			geneosCertPool.AddCert(cert)
+		}
 	}
 
 	opts := x509.VerifyOptions{

@@ -42,7 +42,7 @@ const (
 	AnnotationNeedsHome  = "needshomedir" // "true" or "false"
 	AnnotationParams     = "params"       // json encoded array of parameters
 	AnnotationReplacedBy = "replacedby"   // deprecated command alias
-	AnnotationWildcard   = "wildcard"     // "true", "false" or "explicit" (to match "all")
+	AnnotationWildcard   = "wildcard"     // "true", "false", "explicit" (to match "all") or "explicit-none"
 	AnnotationExpand     = "expand"       // "true" or "false" - pass all names through a path.Match style lookup
 )
 
@@ -93,7 +93,7 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 			args = args[1:]
 		}
 		// now check first non component arg
-		if annotations[AnnotationWildcard] == "explicit" {
+		if annotations[AnnotationWildcard] == "explicit" || annotations[AnnotationWildcard] == "explicit-none" {
 			if len(args) > 0 && args[0] == "all" {
 				annotations[AnnotationWildcard] = "true"
 				args = args[1:]

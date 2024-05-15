@@ -27,7 +27,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -37,16 +36,20 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/host"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-// CreateCert creates a new certificate for an instance
+// CreateCert creates a new certificate for an instance.
+//
+// If the root and signing certs are readable then create an instance
+// specific chain file, otherwise set the instance to point to the
+// system chain file.
 //
 // this also creates a new private key
 //
 // skip if certificate exists and is valid
-func CreateCert(i geneos.Instance) (resp *Response) {
+func CreateCert(i geneos.Instance, duration time.Duration) (resp *Response) {
 	resp = NewResponse(i)
 	// skip if we can load an existing and valid certificate
 	if _, valid, _, err := ReadCert(i); err == nil && valid {
@@ -60,7 +63,10 @@ func CreateCert(i geneos.Instance) (resp *Response) {
 		resp.Err = err
 		return
 	}
-	expires := time.Now().AddDate(1, 0, 0).Truncate(24 * time.Hour)
+	if duration == 0 {
+		duration = 365 * 24 * time.Hour
+	}
+	expires := time.Now().Add(duration)
 	template := x509.Certificate{
 		SerialNumber: serial,
 		Subject: pkix.Name{
@@ -75,13 +81,7 @@ func CreateCert(i geneos.Instance) (resp *Response) {
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	rootCert, _, err := ReadRootCert()
-	if err != nil {
-		resp.Err = err
-		return
-	}
-
-	signingCert, _, err := ReadSigningCert()
+	signingCert, _, err := geneos.ReadSigningCert()
 	if err != nil {
 		resp.Err = err
 		return
@@ -108,14 +108,21 @@ func CreateCert(i geneos.Instance) (resp *Response) {
 		return
 	}
 
-	chainfile := PathOf(i, "certchain")
-	if chainfile == "" {
-		chainfile = path.Join(i.Home(), "chain.pem")
-		i.Config().SetString("certchain", chainfile, config.Replace("home"))
-	}
-	if err = config.WriteCertChain(i.Host(), chainfile, signingCert, rootCert); err != nil {
-		resp.Err = err
-		return
+	// optional root for instance specific chain
+	rootCert, _, _ := geneos.ReadRootCert()
+	if rootCert == nil {
+		i.Config().SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
+	} else {
+		chainfile := PathOf(i, "certchain")
+		if chainfile == "" {
+			chainfile = path.Join(i.Home(), "chain.pem")
+			i.Config().SetString("certchain", chainfile, config.Replace("home"))
+		}
+
+		if err = config.WriteCertChain(i.Host(), chainfile, signingCert, rootCert); err != nil {
+			resp.Err = err
+			return
+		}
 	}
 
 	if err = SaveConfig(i); err != nil {
@@ -123,7 +130,7 @@ func CreateCert(i geneos.Instance) (resp *Response) {
 		return
 	}
 
-	resp.Line = fmt.Sprintf("certificate created for %s (expires %s)", i, expires.UTC())
+	resp.Line = fmt.Sprintf("certificate created for %s (expires %s)", i, expires.UTC().Format(time.RFC3339))
 	return
 }
 
@@ -165,73 +172,6 @@ func WriteKey(i geneos.Instance, key *memguard.Enclave) (err error) {
 		return
 	}
 	cf.SetString("privatekey", keyfile, config.Replace("home"))
-	return
-}
-
-// ReadRootCert reads the root certificate from the user's app config
-// directory. It "promotes" old cert and key files from the previous tls
-// directory if files do not already exist in the user app config
-// directory. If verify is true then the certificate is verified against
-// itself as a root and if it fails an error is returned.
-func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err error) {
-	file = config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.PathTo("tls"), geneos.RootCAFile+".pem")
-	log.Debug().Msgf("reading %s", file)
-	if file == "" {
-		err = fmt.Errorf("%w: root certificate file %s not found in %s", os.ErrNotExist, geneos.RootCAFile+".pem", config.AppConfigDir())
-		return
-	}
-	config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.PathTo("tls"), geneos.RootCAFile+".key")
-	cert, err = config.ParseCertificate(geneos.LOCAL, file)
-	if err != nil {
-		return
-	}
-	if len(verify) > 0 && verify[0] {
-		if !cert.BasicConstraintsValid || !cert.IsCA {
-			err = errors.New("root certificate not valid as a signing certificate")
-			return
-		}
-		roots := x509.NewCertPool()
-		roots.AddCert(cert)
-		_, err = cert.Verify(x509.VerifyOptions{
-			Roots: roots,
-		})
-	}
-	return
-}
-
-// ReadSigningCert reads the signing certificate from the user's app
-// config directory. It "promotes" old cert and key files from the
-// previous tls directory if files do not already exist in the user app
-// config directory. If verify is true then the signing certificate is
-// checked and verified against the default root certificate.
-func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err error) {
-	file = config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.PathTo("tls", geneos.SigningCertFile+".pem"))
-	log.Debug().Msgf("reading %s", file)
-	if file == "" {
-		err = fmt.Errorf("%w: signing certificate file %s not found in %s", os.ErrNotExist, geneos.SigningCertFile+".pem", config.AppConfigDir())
-		return
-	}
-	config.PromoteFile(host.Localhost, config.AppConfigDir(), geneos.LOCAL.PathTo("tls", geneos.SigningCertFile+".key"))
-	cert, err = config.ParseCertificate(geneos.LOCAL, file)
-	if err != nil {
-		return
-	}
-	if len(verify) > 0 && verify[0] {
-		if !cert.BasicConstraintsValid || !cert.IsCA {
-			err = errors.New("certificate not valid as a signing certificate")
-			return
-		}
-		var root *x509.Certificate
-		root, _, err = ReadRootCert(verify...)
-		if err != nil {
-			return
-		}
-		roots := x509.NewCertPool()
-		roots.AddCert(root)
-		_, err = cert.Verify(x509.VerifyOptions{
-			Roots: roots,
-		})
-	}
 	return
 }
 

@@ -40,7 +40,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
 var createCmdCN string
@@ -118,7 +117,7 @@ func CreateCert(dir string, overwrite bool, cn string, san ...string) (err error
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	signingCert, _, err := instance.ReadSigningCert()
+	signingCert, _, err := geneos.ReadSigningCert()
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return

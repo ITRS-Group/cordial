@@ -208,7 +208,7 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCert(w)
+	resp := instance.CreateCert(w, 0)
 	if resp.Err == nil {
 		fmt.Println(resp.Line)
 	}

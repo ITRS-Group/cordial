@@ -1,5 +1,7 @@
 # `geneos init`
 
+# `geneos init`
+
 The `init` sub-system commands initialise your Geneos install environment ready to run Geneos instances.
 
 On it's own the `init` command will create a new directory (or use an existing one if it's considered empty) based on the options used. By default it will create a directory named `geneos` in your user's home directory unless your home directory ends in `geneos` (e.g. `/home/geneos`) in which case it tries that to avoid stuttering in the path.
@@ -140,9 +142,9 @@ geneos init [flags] [DIRECTORY]
   -l, --log                       Follow logs after starting instance(s)
   -F, --force                     Be forceful, ignore existing directories.
   -n, --name string               Use name for instances and configurations instead of the hostname
-  -C, --makecerts                 Create default certificates for TLS support
-  -c, --importcert string         signing certificate file with optional embedded private key
-  -k, --importkey string          signing private key file
+  -C, --secure                    Create default certificates for TLS support
+  -c, --import-cert string        signing certificate with optional root cert and private key, PEM format
+  -k, --import-key string         signing private key file, PEM format
   -N, --nexus                     Download from nexus.itrsgroup.com. Requires ITRS internal credentials
   -S, --snapshots                 Download from nexus snapshots. Requires -N
   -V, --version VERSION           Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")

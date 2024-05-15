@@ -13,6 +13,7 @@ Commands allow for initialisation, create and renewal of certificates as well as
 | Command / Aliases | Description |
 |-------|-------|
 | [`geneos tls create`](geneos_tls_create.md)	 | Create standalone certificates and keys |
+| [`geneos tls export`](geneos_tls_export.md)	 | Export certificates |
 | [`geneos tls import`](geneos_tls_import.md)	 | Import certificates |
 | [`geneos tls init`](geneos_tls_init.md)	 | Initialise the TLS environment |
 | [`geneos tls list / ls`](geneos_tls_list.md)	 | List certificates |

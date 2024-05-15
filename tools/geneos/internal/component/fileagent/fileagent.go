@@ -185,7 +185,7 @@ func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCert(n)
+	resp := instance.CreateCert(n, 0)
 	if resp.Err == nil {
 		fmt.Println(resp.Line)
 	}

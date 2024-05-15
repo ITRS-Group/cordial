@@ -34,6 +34,7 @@ import (
 	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -47,12 +48,22 @@ func init() {
 	tlsCmd.AddCommand(importCmd)
 
 	importCmd.Flags().StringVarP(&importCmdCert, "cert", "c", "", "Instance certificate `file` to import, PEM format")
-	importCmd.Flags().StringVarP(&importCmdSigner, "signing", "s", "", "Signing certificate `file` to import, PEM format")
-	importCmd.Flags().StringVarP(&importCmdCertKey, "privkey", "k", "", "Private key `file` for certificate, PEM format")
+	importCmd.Flags().StringVarP(&importCmdSigner, "signer", "s", "", "Signing certificate `file` to import, PEM format")
+	importCmd.Flags().StringVarP(&importCmdCertKey, "key", "k", "", "Private key `file` for certificate, PEM format")
 
 	importCmd.Flags().StringVarP(&importCmdChain, "chain", "C", "", "Certificate chain `file` to import, PEM format")
 
 	importCmd.Flags().SortFlags = false
+
+	importCmd.PersistentFlags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+		switch name {
+		case "privkey":
+			name = "key"
+		case "signing":
+			name = "signer"
+		}
+		return pflag.NormalizedName(name)
+	})
 }
 
 //go:embed _docs/import.md
@@ -66,10 +77,11 @@ var importCmd = &cobra.Command{
 	DisableFlagsInUseLine: true,
 	Example: `
 # import file.pem and extract parts
-$ geneos tls import file.pem
+$ geneos tls import netprobe file.pem
+$ geneos tls import --signer file.pem
 `,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "explicit",
+		cmd.AnnotationWildcard:  "explicit-none",
 		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
@@ -79,8 +91,20 @@ $ geneos tls import file.pem
 			return errors.New("you can only import an instance *or* a signing certificate, not both")
 		}
 
+		log.Debug().Msgf("importCmdSigner=%s", importCmdSigner)
 		if importCmdSigner != "" {
-			cert, privkey, chain, err := tlsDecompose(importCmdSigner, importCmdCertKey)
+			signer, err := config.ReadInputPEMString(importCmdSigner, "signing certificate(s)")
+			if err != nil {
+				return err
+			}
+			log.Debug().Msgf("signer=%s", signer)
+
+			signerkey, err := config.ReadInputPEMString(importCmdCertKey, "signing key")
+			if err != nil {
+				return err
+			}
+
+			cert, key, chain, err := tlsDecompose2(signer, signerkey)
 			if err != nil {
 				return err
 			}
@@ -92,26 +116,27 @@ $ geneos tls import file.pem
 			if err = config.WriteCert(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".pem"), cert); err != nil {
 				return err
 			}
+			fmt.Printf("%s signing certificate written to %s\n", cmd.Execname, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".pem"))
 
-			if err = config.WritePrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"), privkey); err != nil {
+			if err = config.WritePrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"), key); err != nil {
 				return err
 			}
+			fmt.Printf("%s signing certificate key written to %s\n", cmd.Execname, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
 
 			if importCmdChain != "" {
 				_, _, chain, err := tlsDecompose(importCmdChain, "")
 				if err != nil {
 					return err
 				}
-				if err = tlsWriteChainLocal("", chain); err != nil {
+				if err = tlsWriteChainLocal(chain); err != nil {
 					return err
 				}
-				fmt.Printf("%s certificate chain written using %s\n", cmd.Execname, importCmdChain)
 			} else if len(chain) > 0 {
-				if err = tlsWriteChainLocal("", chain); err != nil {
+				if err = tlsWriteChainLocal(chain); err != nil {
 					return err
 				}
-				fmt.Printf("%s certificate chain written using %s\n", cmd.Execname, importCmdSigner)
 			}
+			fmt.Printf("%s certificate chain written to %s\n", cmd.Execname, path.Join(geneos.LOCAL.PathTo("tls"), geneos.ChainCertFile))
 			return err
 		}
 
@@ -131,7 +156,7 @@ $ geneos tls import file.pem
 		if err != nil {
 			return err
 		}
-		if err = tlsWriteChainLocal("", chain); err != nil {
+		if err = tlsWriteChainLocal(chain); err != nil {
 			return err
 		}
 		fmt.Printf("%s certificate chain written using %s\n", cmd.Execname, importCmdChain)
@@ -140,7 +165,7 @@ $ geneos tls import file.pem
 	},
 }
 
-func tlsWriteChainLocal(chainpath string, chain []*x509.Certificate) (err error) {
+func tlsWriteChainLocal(chain []*x509.Certificate) (err error) {
 	if len(chain) == 0 {
 		return
 	}
@@ -148,10 +173,7 @@ func tlsWriteChainLocal(chainpath string, chain []*x509.Certificate) (err error)
 	if err = geneos.LOCAL.MkdirAll(tlsPath, 0775); err != nil {
 		return err
 	}
-	if chainpath == "" {
-		chainpath = path.Join(tlsPath, geneos.ChainCertFile)
-	}
-	if err = config.WriteCertChain(geneos.LOCAL, chainpath, chain...); err != nil {
+	if err = config.WriteCertChain(geneos.LOCAL, path.Join(tlsPath, geneos.ChainCertFile), chain...); err != nil {
 		return err
 	}
 	return
@@ -209,50 +231,76 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response
 // certfile may be a local file path, a url or '-' for stdin while keyfile
 // must be a local file path
 func tlsDecompose(certfile, keyfile string) (cert *x509.Certificate, der *memguard.Enclave, chain []*x509.Certificate, err error) {
+	var data []string
+	var b []byte
+	if certfile != "" {
+		b, err = os.ReadFile(certfile)
+		if err != nil {
+			log.Error().Err(err).Msg("")
+			return
+		}
+		data = append(data, string(b))
+	}
+
+	if keyfile != "" {
+		b, err = os.ReadFile(keyfile)
+		if err != nil {
+			log.Error().Err(err).Msg("")
+			return
+		}
+		data = append(data, string(b))
+	}
+
+	return tlsDecompose2(data...)
+}
+
+func tlsDecompose2(data ...string) (cert *x509.Certificate, der *memguard.Enclave, chain []*x509.Certificate, err error) {
 	var certs []*x509.Certificate
 	var leaf *x509.Certificate
 	var derkeys []*memguard.Enclave
-	var pembytes []byte
 
-	if pembytes, err = geneos.ReadFrom(certfile); err != nil {
-		log.Error().Err(err).Msg("")
+	if len(data) == 0 {
+		err = fmt.Errorf("no PEM data process")
 		return
 	}
 
-	for {
-		block, rest := pem.Decode(pembytes)
-		if block == nil {
-			break
-		}
-		switch block.Type {
-		case "CERTIFICATE":
-			var c *x509.Certificate
-			c, err = x509.ParseCertificate(block.Bytes)
-			if err != nil {
+	for _, pemstring := range data {
+		pembytes := []byte(pemstring)
+		for {
+			block, rest := pem.Decode(pembytes)
+			if block == nil {
+				break
+			}
+			switch block.Type {
+			case "CERTIFICATE":
+				var c *x509.Certificate
+				c, err = x509.ParseCertificate(block.Bytes)
+				if err != nil {
+					return
+				}
+				if !c.BasicConstraintsValid {
+					err = geneos.ErrInvalidArgs
+					return
+				}
+				if c.IsCA {
+					certs = append(certs, c)
+				} else if leaf == nil {
+					// save first leaf
+					leaf = c
+				}
+			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
+				// save all private keys for later matching
+				derkeys = append(derkeys, memguard.NewEnclave(block.Bytes))
+			default:
+				err = fmt.Errorf("unsupported PEM type found: %s", block.Type)
 				return
 			}
-			if !c.BasicConstraintsValid {
-				err = geneos.ErrInvalidArgs
-				return
-			}
-			if c.IsCA {
-				certs = append(certs, c)
-			} else if leaf == nil {
-				// save first leaf
-				leaf = c
-			}
-		case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
-			// save all private keys for later matching
-			derkeys = append(derkeys, memguard.NewEnclave(block.Bytes))
-		default:
-			err = fmt.Errorf("unsupported PEM type found: %s", block.Type)
-			return
+			pembytes = rest
 		}
-		pembytes = rest
 	}
 
 	if leaf == nil && len(certs) == 0 {
-		err = fmt.Errorf("no certificates found in %s", certfile)
+		err = fmt.Errorf("no certificates found")
 		return
 	}
 
@@ -266,20 +314,8 @@ func tlsDecompose(certfile, keyfile string) (cert *x509.Certificate, der *memgua
 		cert = chain[0]
 	}
 
-	var i int
-
 	// are we good? check key and return a chain of valid CA certs
-	if i = config.MatchKey(cert, derkeys); i == -1 {
-		// try provided keyfile if no match in cert file
-		// no keyfile arg is valid
-		if keyfile != "" {
-			der, err = config.ReadPrivateKey(geneos.LOCAL, keyfile)
-			if err != nil {
-				cert = nil
-				return
-			}
-		}
-	} else {
+	if i := config.MatchKey(cert, derkeys); i != -1 {
 		der = derkeys[i]
 	}
 

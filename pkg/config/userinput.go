@@ -25,9 +25,11 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
+	"github.com/rs/zerolog/log"
 	"golang.org/x/term"
 )
 
@@ -35,11 +37,11 @@ import (
 // named pipe
 var ErrNotInteractive = errors.New("not an interactive session")
 
-// ReadUserInput reads input from Stdin and returns the input unless
+// ReadUserInputLine reads input from Stdin and returns the line unless
 // there is an error. The prompt is made up from format and args (passed
 // to fmt.Sprintf) and then shown to the user as-is. If STDIN is a named
 // pipe (and not interactive) then a syscall.ENOTTY is returned.
-func ReadUserInput(format string, args ...any) (input string, err error) {
+func ReadUserInputLine(format string, args ...any) (input string, err error) {
 	var oldState *term.State
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		err = ErrNotInteractive
@@ -52,6 +54,49 @@ func ReadUserInput(format string, args ...any) (input string, err error) {
 
 	t := term.NewTerminal(os.Stdin, fmt.Sprintf(format, args...))
 	return t.ReadLine()
+}
+
+// ReadInputPEMString reads and returns a PEM formatted input (without
+// validation) from one of these sources:
+//
+//   - If `from` is empty then an empty string is returned
+//   - If `from` is a dash (`-`) then data is read from STDIN the after
+//     the user is prompted with `Paste PEM formatted [PROMPT], end
+//     with newline + CTRL-D:` where `[PROMPT]` is taken from
+//     the prompt argument.
+//   - If `from` has the prefix `pem:` then the data is taken from the
+//     remainder of the argument.
+//   - Otherwise the file at the path pointed to by `from` is read and
+//     returned
+//
+// Any error when reading the input is returned.
+func ReadInputPEMString(from, prompt string) (data string, err error) {
+	if from == "" {
+		return
+	}
+	switch {
+	case from == "":
+		break
+	case strings.HasPrefix(from, "pem:"):
+		data = strings.TrimPrefix(from, "pem:")
+		return
+	case from == "-":
+		fmt.Printf("Paste PEM formatted %s, end with newline + CTRL-D:\n", prompt)
+		b, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			log.Error().Err(err).Msg("user input")
+		}
+		data = string(b)
+		fmt.Println()
+	default:
+		b, err := os.ReadFile(from)
+		if err != nil {
+			log.Error().Err(err).Msg("cannot read file")
+		}
+		data = string(b)
+	}
+
+	return
 }
 
 // ReadPasswordInput prompts the user for a password without echoing the input.

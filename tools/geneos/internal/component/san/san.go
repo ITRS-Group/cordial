@@ -226,7 +226,7 @@ func (s *Sans) Add(template string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCert(s)
+	resp := instance.CreateCert(s, 0)
 	if resp.Err == nil {
 		fmt.Println(resp.Line)
 	}
