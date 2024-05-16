@@ -47,7 +47,8 @@ const (
 )
 
 // ParseArgs does the heavy lifting of sorting out non-flag command line
-// ares for the various commands.
+// ares for the various commands. The results are passed back in the
+// command Annotations map as `AnnotationNames` and `AnnotationsParams`
 //
 // given a list of args (after command has been seen), check if first
 // arg is a component type and de-dup the names. A name of "all" will
@@ -67,9 +68,10 @@ const (
 // host
 func ParseArgs(command *cobra.Command, args []string) (err error) {
 	var wild bool
-
 	var ct *geneos.Component
 	var names, params []string
+
+	// default host
 	h := geneos.GetHost(Hostname)
 
 	if command.Annotations == nil {
@@ -149,8 +151,15 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 		}
 		if annotations[AnnotationExpand] == "true" {
 			log.Debug().Msgf("matching %v", names)
-			if newnames := instance.Match(h, ct, names...); len(newnames) > 0 {
-				names = newnames
+			if len(names) > 0 {
+				newnames := instance.Match(h, ct, names...)
+				if len(newnames) == 0 {
+					jsonargs, _ = json.Marshal(names)
+					annotations[AnnotationNames] = string(jsonargs)
+					return fmt.Errorf("%v - %w", names, geneos.ErrNotExist)
+				} else {
+					names = newnames
+				}
 			}
 		}
 	} else {
@@ -163,10 +172,17 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 			names = args
 			if annotations[AnnotationExpand] == "true" {
 				log.Debug().Msgf("matching %v", names)
-				if newnames := instance.Match(h, ct, names...); len(newnames) > 0 {
-					names = newnames
+				if len(names) > 0 {
+					newnames := instance.Match(h, ct, names...)
+					if len(newnames) == 0 {
+						log.Debug().Msgf("no names match %v", names)
+						jsonargs, _ = json.Marshal(names)
+						annotations[AnnotationNames] = string(jsonargs)
+						return fmt.Errorf("%v - %w", names, geneos.ErrNotExist)
+					} else {
+						names = newnames
+					}
 				}
-
 			}
 		} else {
 			if annotations[AnnotationComponent] == "" {
@@ -177,8 +193,15 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 			}
 			if annotations[AnnotationExpand] == "true" {
 				log.Debug().Msgf("matching %v", names)
-				if newnames := instance.Match(h, ct, names...); len(newnames) > 0 {
-					names = newnames
+				if len(names) > 0 {
+					newnames := instance.Match(h, ct, names...)
+					if len(newnames) == 0 {
+						jsonargs, _ = json.Marshal(names)
+						annotations[AnnotationNames] = string(jsonargs)
+						return fmt.Errorf("%v - %w", names, geneos.ErrNotExist)
+					} else {
+						names = newnames
+					}
 				}
 			}
 		}
