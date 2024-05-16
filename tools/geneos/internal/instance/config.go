@@ -31,6 +31,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"slices"
 	"strings"
 	"text/template"
 	"time"
@@ -159,6 +160,9 @@ func LoadConfig(i geneos.Instance) (err error) {
 		config.UseDefaults(false),
 		config.MustExist(),
 	)
+	if err != nil {
+		log.Debug().Err(err).Msg(h.String())
+	}
 
 	// override the home from the config file and use the directory the
 	// config was found in
@@ -216,19 +220,26 @@ func LoadConfig(i geneos.Instance) (err error) {
 //   - All other `name=value` entries are saved as environment variables
 //     in the configuration for the instance under the `Env` key.
 func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, aliases map[string]string) (err error) {
-	confs, err := ReadKVConfig(r, p)
+	rcf, err := config.Load("rc",
+		config.Host(r),
+		config.SetConfigFile(p),
+		config.SetFileExtension("env"),
+		config.UseDefaults(false),
+	)
+
 	if err != nil {
+		log.Error().Err(err).Msg("loading rc")
 		return
 	}
 
 	var env []string
-	for k, v := range confs {
-		lk := strings.ToLower(k)
-		if lk == "binsuffix" || strings.HasPrefix(lk, prefix) {
-			if nk, ok := aliases[lk]; ok {
+	for _, k := range rcf.AllKeys() {
+		v := rcf.GetString(k)
+		if k == "binsuffix" || strings.HasPrefix(k, prefix) {
+			if nk, ok := aliases[k]; ok {
 				cf.Set(nk, v)
 			} else {
-				cf.Set(lk, v)
+				cf.Set(k, v)
 			}
 		} else {
 			// set env var
@@ -246,6 +257,10 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 	return
 }
 
+// ReadKVConfig reads a file containing key=value lines, returning a map
+// of key to value. We need this to preserve the case of keys, which
+// viper forces to lowercase, when writing this file back out via
+// WriteKVConfig().
 func ReadKVConfig(r host.Host, p string) (kvs map[string]string, err error) {
 	data, err := r.ReadFile(p)
 	if err != nil {
@@ -269,6 +284,26 @@ func ReadKVConfig(r host.Host, p string) (kvs map[string]string, err error) {
 		// trim double and single quotes and tabs and spaces from value
 		value = strings.Trim(value, "\"' \t")
 		kvs[key] = value
+	}
+	return
+}
+
+// WriteKVConfig writes out the map kvs to the file on host r at path p.
+//
+// TODO: write to tmp file and rotate to protect
+func WriteKVConfig(r host.Host, p string, kvs map[string]string) (err error) {
+	f, err := r.Create(p, 0664)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	var keys []string
+	for k := range kvs {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+	for _, k := range keys {
+		fmt.Fprintf(f, "%s=%s\n", k, kvs[k])
 	}
 	return
 }
