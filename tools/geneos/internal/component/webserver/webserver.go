@@ -240,6 +240,16 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 }
 
 func (w *Webservers) Rebuild(initial bool) (err error) {
+	// load the security.properties file, update the port and use the keystor values later
+	sp, err := instance.ReadKVConfig(w.Host(), path.Join(w.Home(), "config/security.properties"))
+	if err != nil {
+		return nil
+	}
+	sp["port"] = w.Config().GetString("port")
+	if err = instance.WriteKVConfig(w.Host(), path.Join(w.Home(), "config/security.properties"), sp); err != nil {
+		panic(err)
+	}
+
 	// rebuild the truststore (local cacerts) if we have a `truststore`
 	// and `certchain` defined. This is used for connection *to* other
 	// components, such as secure gateways and SSO agent.
@@ -288,20 +298,15 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 		if cf.IsSet("certchain") {
 			chain = append(chain, config.ReadCertificates(w.Host(), cf.GetString("certchain"))...)
 		}
-		confs, err := instance.ReadKVConfig(w.Host(), path.Join(w.Home(), "config/security.properties"))
-		if err != nil {
-			return err
-		}
-		keyStore, ok := confs["keyStore"]
+		keyStore, ok := sp["keyStore"]
 		if !ok {
 			return fmt.Errorf("keyStore not defined in security.properties")
 		}
-		keyStorePassword, ok := confs["keyStorePassword"]
-		if !ok {
+		if _, ok = sp["keyStorePassword"]; !ok {
 			return fmt.Errorf("keyStorePassword not defined in security.properties")
 		}
-		p := config.NewPlaintext([]byte(keyStorePassword))
-		k, err := geneos.ReadKeystore(w.Host(), path.Join(w.Home(), keyStore), p)
+		keyStorePassword := cf.ExpandToPassword(sp["keyStorePassword"])
+		k, err := geneos.ReadKeystore(w.Host(), path.Join(w.Home(), keyStore), keyStorePassword)
 		if err != nil {
 			// new, empty keystore
 			k = geneos.KeyStore{
@@ -310,8 +315,8 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 		}
 		alias := geneos.ALL.Hostname()
 		k.DeleteEntry(alias)
-		k.AddKeystoreKey(alias, key, p, chain)
-		return k.WriteKeystore(w.Host(), path.Join(w.Home(), keyStore), p)
+		k.AddKeystoreKey(alias, key, keyStorePassword, chain)
+		return k.WriteKeystore(w.Host(), path.Join(w.Home(), keyStore), keyStorePassword)
 	}
 	return
 }
