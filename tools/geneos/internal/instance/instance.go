@@ -105,7 +105,7 @@ var validStringRE = regexp.MustCompile(`^\w[\w-]?[:@\.\w -]*$`)
 func ValidName(name string) (ok bool) {
 	ok = validStringRE.MatchString(name)
 	if !ok {
-		log.Debug().Msgf("no rexexp match: %s", name)
+		log.Debug().Msgf("not a valid instance name: %s", name)
 	}
 	return
 }
@@ -405,11 +405,11 @@ func Names(h *geneos.Host, ct *geneos.Component) (names []string) {
 // unchanged and unchecked against valid names.
 func Match(h *geneos.Host, ct *geneos.Component, patterns ...string) (names []string) {
 	for _, pattern := range patterns {
-		_, p, h := SplitName(pattern, h) // override 'h' inside loop
-		if p == "" || !ValidName(p) {
-			names = append(names, pattern)
-			continue
+		// a host only name implies a wildcard
+		if strings.HasPrefix(pattern, "@") {
+			pattern = "*" + pattern
 		}
+		_, p, h := SplitName(pattern, h) // override 'h' inside loop
 		for _, name := range Names(h, ct) {
 			_, n, _ := SplitName(name, h)
 			if match, _ := path.Match(p, n); match {
@@ -421,8 +421,8 @@ func Match(h *geneos.Host, ct *geneos.Component, patterns ...string) (names []st
 			}
 		}
 	}
-	sort.Strings(names)
-	names = slices.Compact(names)
+	slices.Sort(names)
+	_ = slices.Compact(names)
 	return
 }
 
