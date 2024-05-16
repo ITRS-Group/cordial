@@ -43,7 +43,7 @@ var deployCmdTemplate, deployCmdBase, deployCmdKeyfileCRC string
 var deployCmdGeneosHome, deployCmdUsername, deployCmdName, deployCmdExtraOpts string
 var deployCmdStart, deployCmdLogs, deployCmdLocal, deployCmdNexus, deployCmdSnapshot bool
 var deployCmdSecure bool
-var deployCmdImportCert, deployCmdImportKey string
+var deployCmdSigningCert, deployCmdInstanceCert string
 var deployCmdPort uint16
 var deployCmdArchive, deployCmdVersion, deployCmdOverride string
 var deployCmdPassword *config.Plaintext
@@ -67,8 +67,8 @@ func init() {
 	deployCmd.Flags().MarkHidden("name")
 
 	deployCmd.Flags().BoolVarP(&deployCmdSecure, "secure", "T", false, "Use secure connects\nInitialise TLS subsystem if required")
-	deployCmd.PersistentFlags().StringVarP(&deployCmdImportCert, "import-cert", "c", "", "signing certificate file with optional root cert and private key, PEM format")
-	deployCmd.PersistentFlags().StringVarP(&deployCmdImportKey, "import-key", "k", "", "signing private key file, PEM format")
+	deployCmd.PersistentFlags().StringVarP(&deployCmdInstanceCert, "instance-cert", "c", "", "instance certificate file (with optional parent certs) and private key, PEM format")
+	deployCmd.PersistentFlags().StringVarP(&deployCmdSigningCert, "signing-cert", "C", "", "signing certificate file with optional root cert and private key, PEM format")
 
 	deployCmd.Flags().StringVarP(&deployCmdUsername, "username", "u", "", "Username for downloads\nCredentials used if not given.")
 	deployCmd.Flags().VarP(deployCmdPassword, "password", "P", "Password for downloads\nPrompted if required and not given")
@@ -154,6 +154,7 @@ var deployCmd = &cobra.Command{
 
 		if h == geneos.LOCAL {
 			if geneos.LocalRoot() == "" {
+				// make best guess
 				if deployCmdGeneosHome == "" {
 					var input, root string
 					if u, err := user.Current(); err == nil {
@@ -164,14 +165,19 @@ var deployCmd = &cobra.Command{
 					if path.Base(root) != Execname {
 						root = path.Join(root, Execname)
 					}
-					input, err = config.ReadUserInputLine("Geneos Directory (default %q): ", root)
-					if err == nil {
+					if input, err = config.ReadUserInputLine("Geneos Directory (default %q): ", root); err == nil {
 						root = input
 						// } else if err != config.ErrNotInteractive {
 						// 	return
 					}
 					err = nil
+					if path.Base(root) == execname {
+						deployCmdGeneosHome = root
+					} else {
+						deployCmdGeneosHome = path.Join(root, execname)
+					}
 				}
+
 				// create base install
 				deployCmdGeneosHome, _ = h.Abs(deployCmdGeneosHome)
 				config.Set(execname, deployCmdGeneosHome)
@@ -277,7 +283,7 @@ var deployCmd = &cobra.Command{
 			}
 		}
 
-		signer, err := config.ReadInputPEMString(deployCmdImportCert, "signing certificate(s)")
+		signer, err := config.ReadInputPEMString(deployCmdSigningCert, "signing certificate(s)")
 		if err != nil {
 			return err
 		}
@@ -285,16 +291,7 @@ var deployCmd = &cobra.Command{
 			RunE(cmd.Root(), []string{"tls", "import", "--signer"}, []string{"pem:" + signer})
 		}
 
-		signerkey, err := config.ReadInputPEMString(deployCmdImportKey, "signing key")
-		if err != nil {
-			return err
-		}
-		if signerkey != "" {
-			RunE(cmd.Root(), []string{"tls", "import", "--key"}, []string{"pem:" + signerkey})
-		}
-
 		// we are installed and ready to go, drop through to code from `add`
-
 		i, err := instance.Get(ct, name)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return
@@ -305,6 +302,43 @@ var deployCmd = &cobra.Command{
 		if !i.Loaded().IsZero() {
 			log.Error().Msgf("%s already exists", i)
 			return
+		}
+
+		if err = instance.SaveConfig(i); err != nil {
+			return
+		}
+
+		if deployCmdInstanceCert != "" {
+			certs, err := config.ReadInputPEMString(deployCmdInstanceCert, "instance certificate(s)")
+			if err != nil {
+				return err
+			}
+
+			cert, key, chain, err := geneos.DecomposePEM(certs)
+			if err != nil {
+				return err
+			}
+
+			if err = instance.WriteCert(i, cert); err != nil {
+				return err
+			}
+			fmt.Printf("%s certificate written", i)
+
+			if err = instance.WriteKey(i, key); err != nil {
+				return err
+			}
+			fmt.Printf("%s private key written", i)
+
+			if len(chain) > 0 {
+				chainfile := path.Join(i.Home(), "chain.pem")
+				if err = config.WriteCertChain(i.Host(), chainfile, chain...); err == nil {
+					fmt.Printf("%s certificate chain written", i)
+					if i.Config().GetString("certchain") == chainfile {
+						return err
+					}
+					i.Config().SetString("certchain", chainfile, config.Replace("home"))
+				}
+			}
 		}
 
 		// call components specific Add()
