@@ -25,7 +25,6 @@ package tlscmd
 import (
 	"crypto/x509"
 	_ "embed"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
@@ -91,20 +90,18 @@ $ geneos tls import --signer file.pem
 			return errors.New("you can only import an instance *or* a signing certificate, not both")
 		}
 
-		log.Debug().Msgf("importCmdSigner=%s", importCmdSigner)
 		if importCmdSigner != "" {
 			signer, err := config.ReadInputPEMString(importCmdSigner, "signing certificate(s)")
 			if err != nil {
 				return err
 			}
-			log.Debug().Msgf("signer=%s", signer)
 
 			signerkey, err := config.ReadInputPEMString(importCmdCertKey, "signing key")
 			if err != nil {
 				return err
 			}
 
-			cert, key, chain, err := tlsDecompose2(signer, signerkey)
+			cert, key, chain, err := geneos.DecomposePEM(signer, signerkey)
 			if err != nil {
 				return err
 			}
@@ -141,11 +138,20 @@ $ geneos tls import --signer file.pem
 		}
 
 		if importCmdCert != "" {
-			cert, privkey, chain, err := tlsDecompose(importCmdCert, importCmdCertKey)
+			certs, err := config.ReadInputPEMString(importCmdSigner, "instance certificate(s)")
 			if err != nil {
 				return err
 			}
-			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, cert, privkey, chain).Write(os.Stdout)
+			key, err := config.ReadInputPEMString(importCmdCertKey, "instance key")
+			if err != nil {
+				return err
+			}
+			c, k, chain, err := geneos.DecomposePEM(certs, key)
+			if err != nil {
+				return err
+			}
+
+			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, c, k, chain).Write(os.Stdout)
 		}
 
 		if importCmdChain == "" {
@@ -251,74 +257,5 @@ func tlsDecompose(certfile, keyfile string) (cert *x509.Certificate, der *memgua
 		data = append(data, string(b))
 	}
 
-	return tlsDecompose2(data...)
-}
-
-func tlsDecompose2(data ...string) (cert *x509.Certificate, der *memguard.Enclave, chain []*x509.Certificate, err error) {
-	var certs []*x509.Certificate
-	var leaf *x509.Certificate
-	var derkeys []*memguard.Enclave
-
-	if len(data) == 0 {
-		err = fmt.Errorf("no PEM data process")
-		return
-	}
-
-	for _, pemstring := range data {
-		pembytes := []byte(pemstring)
-		for {
-			block, rest := pem.Decode(pembytes)
-			if block == nil {
-				break
-			}
-			switch block.Type {
-			case "CERTIFICATE":
-				var c *x509.Certificate
-				c, err = x509.ParseCertificate(block.Bytes)
-				if err != nil {
-					return
-				}
-				if !c.BasicConstraintsValid {
-					err = geneos.ErrInvalidArgs
-					return
-				}
-				if c.IsCA {
-					certs = append(certs, c)
-				} else if leaf == nil {
-					// save first leaf
-					leaf = c
-				}
-			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
-				// save all private keys for later matching
-				derkeys = append(derkeys, memguard.NewEnclave(block.Bytes))
-			default:
-				err = fmt.Errorf("unsupported PEM type found: %s", block.Type)
-				return
-			}
-			pembytes = rest
-		}
-	}
-
-	if leaf == nil && len(certs) == 0 {
-		err = fmt.Errorf("no certificates found")
-		return
-	}
-
-	// if we got this far then we can start setting returns
-	cert = leaf
-	chain = certs
-
-	// if we have no leaf certificate then user the first cert from the
-	// chain BUT leave do not remove from the chain. order is not checked
-	if cert == nil {
-		cert = chain[0]
-	}
-
-	// are we good? check key and return a chain of valid CA certs
-	if i := config.MatchKey(cert, derkeys); i != -1 {
-		der = derkeys[i]
-	}
-
-	err = nil
-	return
+	return geneos.DecomposePEM(data...)
 }
