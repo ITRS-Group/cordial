@@ -75,8 +75,6 @@ import (
 // from an io.Reader then this takes precedence over file discovery or
 // SetConfigFile(). The configuration file format should be set with
 // SetFileExtension() or it defaults as above.
-//
-// TBD: windows equiv of above
 func Load(name string, options ...FileOptions) (cf *Config, err error) {
 	opts := evalLoadOptions(name, options...)
 	r := opts.remote
@@ -184,6 +182,9 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		return cf, nil
 	} else if opts.configFile != "" {
 		cf.Viper.SetConfigFile(opts.configFile)
+		if opts.extension != "" {
+			cf.Viper.SetConfigType(opts.extension)
+		}
 		if err = cf.Viper.ReadInConfig(); err != nil {
 			if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 				if opts.mustexist {
@@ -224,6 +225,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 
 	if len(confDirs) > 0 {
 		ncf := New(options...)
+		ncf.Viper.SetFs(r.GetFs())
 		for _, dir := range confDirs {
 			ncf.Viper.SetConfigFile(path.Join(dir, name+"."+opts.extension))
 			if err = ncf.Viper.ReadInConfig(); err != nil {
