@@ -24,10 +24,12 @@ package geneos
 
 import (
 	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
 
+	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -101,5 +103,78 @@ func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err e
 			Roots: roots,
 		})
 	}
+	return
+}
+
+// DecomposePEM parses PEM formatted data and extracts the leaf
+// certificate, any CA certs as a chain and a private key as a DER
+// encoded *memguard.Enclave. The key is matched to the leaf
+// certificate.
+func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave, chain []*x509.Certificate, err error) {
+	var certs []*x509.Certificate
+	var leaf *x509.Certificate
+	var derkeys []*memguard.Enclave
+
+	if len(data) == 0 {
+		err = fmt.Errorf("no PEM data process")
+		return
+	}
+
+	for _, pemstring := range data {
+		pembytes := []byte(pemstring)
+		for {
+			block, rest := pem.Decode(pembytes)
+			if block == nil {
+				break
+			}
+			switch block.Type {
+			case "CERTIFICATE":
+				var c *x509.Certificate
+				c, err = x509.ParseCertificate(block.Bytes)
+				if err != nil {
+					return
+				}
+				if !c.BasicConstraintsValid {
+					err = ErrInvalidArgs
+					return
+				}
+				if c.IsCA {
+					certs = append(certs, c)
+				} else if leaf == nil {
+					// save first leaf
+					leaf = c
+				}
+			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
+				// save all private keys for later matching
+				derkeys = append(derkeys, memguard.NewEnclave(block.Bytes))
+			default:
+				err = fmt.Errorf("unsupported PEM type found: %s", block.Type)
+				return
+			}
+			pembytes = rest
+		}
+	}
+
+	if leaf == nil && len(certs) == 0 {
+		err = fmt.Errorf("no certificates found")
+		return
+	}
+
+	// if we got this far then we can start setting returns
+	cert = leaf
+	chain = certs
+
+	// if we have no leaf certificate then user the first cert from the
+	// chain BUT leave do not remove from the chain. order is not checked
+	if cert == nil {
+		cert = chain[0]
+	}
+
+	// are we good? check key and return a chain of valid CA certs
+	if i := config.MatchKey(cert, derkeys); i != -1 {
+		der = derkeys[i]
+	}
+
+	err = nil
 	return
 }
