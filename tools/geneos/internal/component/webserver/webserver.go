@@ -23,6 +23,7 @@ THE SOFTWARE.
 package webserver
 
 import (
+	"crypto/x509"
 	"fmt"
 	"os"
 	"path"
@@ -30,6 +31,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -238,12 +240,17 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 }
 
 func (w *Webservers) Rebuild(initial bool) (err error) {
-	// rebuild cacerts if we have a `truststore` and `certchain` defined
+	// rebuild the truststore (local cacerts) if we have a `truststore`
+	// and `certchain` defined. This is used for connection *to* other
+	// components, such as secure gateways and SSO agent.
 	cf := w.Config()
 	if cf.IsSet("truststore") && cf.IsSet("certchain") {
 		log.Debug().Msgf("%s: rebuilding truststore: %q", w.String(), cf.GetString("truststore"))
 		certs := config.ReadCertificates(w.Host(), cf.GetString("certchain"))
-		k, err := geneos.ReadKeystore(cf.GetString("truststore"), cf.GetPassword("truststore-password", config.Default("changeit")))
+		k, err := geneos.ReadKeystore(w.Host(),
+			cf.GetString("truststore"),
+			cf.GetPassword("truststore-password", config.Default("changeit")),
+		)
 		if err != nil {
 			return err
 		}
@@ -251,13 +258,60 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 			alias := cert.Subject.CommonName
 			log.Debug().Msgf("%s: replacing entry for %q", w.String(), alias)
 			k.DeleteEntry(alias)
-			if err = k.AddCertKeystore(alias, cert); err != nil {
+			if err = k.AddKeystoreCert(alias, cert); err != nil {
 				return err
 			}
 		}
 		// TODO: temp file dance, after testing
 		log.Debug().Msgf("%s: writing new truststore to %q", w.String(), cf.GetString("truststore"))
-		return k.WriteKeystore(cf.GetString("truststore"), cf.GetPassword("truststore-password", config.Default("changeit")))
+		if err = k.WriteKeystore(w.Host(),
+			cf.GetString("truststore"),
+			cf.GetPassword("truststore-password", config.Default("changeit")),
+		); err != nil {
+			return err
+		}
+	}
+
+	// rebuild the keystore (config/ketstore.db) is certificate and
+	// privatekey are defined. This is for client connections to the web
+	// dashboard and will typically be a "real" certificate.
+	if cf.IsSet("certificate") && cf.IsSet("privatekey") {
+		cert, err := config.ParseCertificate(w.Host(), cf.GetString("certificate"))
+		if err != nil {
+			return err
+		}
+		key, err := config.ReadPrivateKey(w.Host(), cf.GetString("privatekey"))
+		if err != nil {
+			return err
+		}
+		chain := []*x509.Certificate{cert}
+		if cf.IsSet("certchain") {
+			chain = append(chain, config.ReadCertificates(w.Host(), cf.GetString("certchain"))...)
+		}
+		confs, err := instance.ReadKVConfig(w.Host(), path.Join(w.Home(), "config/security.properties"))
+		if err != nil {
+			return err
+		}
+		keyStore, ok := confs["keyStore"]
+		if !ok {
+			return fmt.Errorf("keyStore not defined in security.properties")
+		}
+		keyStorePassword, ok := confs["keyStorePassword"]
+		if !ok {
+			return fmt.Errorf("keyStorePassword not defined in security.properties")
+		}
+		p := config.NewPlaintext([]byte(keyStorePassword))
+		k, err := geneos.ReadKeystore(w.Host(), path.Join(w.Home(), keyStore), p)
+		if err != nil {
+			// new, empty keystore
+			k = geneos.KeyStore{
+				KeyStore: keystore.New(),
+			}
+		}
+		alias := geneos.ALL.Hostname()
+		k.DeleteEntry(alias)
+		k.AddKeystoreKey(alias, key, p, chain)
+		return k.WriteKeystore(w.Host(), path.Join(w.Home(), keyStore), p)
 	}
 	return
 }
@@ -304,7 +358,7 @@ func (w *Webservers) Command() (args, env []string, home string) {
 	cert, privkey := tlsFiles[0], tlsFiles[1]
 	if cert != "" && privkey != "" {
 		// the instance specific truststore should have been created by `rebuild`
-		args = append(args, "-ssl true")
+		args = append(args, "-ssl", "true")
 	}
 
 	if truststorePath := cf.GetString("truststore"); truststorePath != "" {

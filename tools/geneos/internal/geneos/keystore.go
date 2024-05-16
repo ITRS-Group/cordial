@@ -2,10 +2,9 @@ package geneos
 
 import (
 	"crypto/x509"
-	"encoding/pem"
-	"os"
 	"time"
 
+	"github.com/awnumar/memguard"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
 )
@@ -18,8 +17,8 @@ type KeyStore struct {
 }
 
 // OpenKeystore returns a keystore
-func ReadKeystore(path string, password *config.Plaintext) (k KeyStore, err error) {
-	r, err := os.Open(path)
+func ReadKeystore(h *Host, path string, password *config.Plaintext) (k KeyStore, err error) {
+	r, err := h.Open(path)
 	if err != nil {
 		return
 	}
@@ -31,11 +30,11 @@ func ReadKeystore(path string, password *config.Plaintext) (k KeyStore, err erro
 	return
 }
 
-func (k *KeyStore) WriteKeystore(path string, password *config.Plaintext) (err error) {
+func (k *KeyStore) WriteKeystore(h *Host, path string, password *config.Plaintext) (err error) {
 	if k == nil {
 		return ErrInvalidArgs
 	}
-	w, err := os.Create(path)
+	w, err := h.Create(path, 0644)
 	if err != nil {
 		return
 	}
@@ -43,15 +42,34 @@ func (k *KeyStore) WriteKeystore(path string, password *config.Plaintext) (err e
 	return k.Store(w, password.Bytes())
 }
 
-func (k *KeyStore) AddCertKeystore(alias string, cert *x509.Certificate) (err error) {
+func (k *KeyStore) AddKeystoreCert(alias string, cert *x509.Certificate) (err error) {
 	k.DeleteEntry(alias)
 	c := keystore.Certificate{
-		Type: "X509",
-		Content: pem.EncodeToMemory(&pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: cert.Raw,
-		}),
+		Type:    "X509",
+		Content: cert.Raw,
 	}
 	k.SetTrustedCertificateEntry(alias, keystore.TrustedCertificateEntry{CreationTime: time.Now(), Certificate: c})
+	return
+}
+
+func (k *KeyStore) AddKeystoreKey(alias string, key *memguard.Enclave, password *config.Plaintext, chain []*x509.Certificate) (err error) {
+	k.DeleteEntry(alias)
+	l, err := key.Open()
+	if err != nil {
+		return
+	}
+	var ch []keystore.Certificate
+	for _, c := range chain {
+		ch = append(ch, keystore.Certificate{
+			Type:    "X509",
+			Content: c.Raw,
+		})
+	}
+	c := keystore.PrivateKeyEntry{
+		CreationTime:     time.Now(),
+		PrivateKey:       l.Bytes(),
+		CertificateChain: ch,
+	}
+	k.SetPrivateKeyEntry(alias, c, password.Bytes())
 	return
 }

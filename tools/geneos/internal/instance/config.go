@@ -216,28 +216,9 @@ func LoadConfig(i geneos.Instance) (err error) {
 //   - All other `name=value` entries are saved as environment variables
 //     in the configuration for the instance under the `Env` key.
 func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, aliases map[string]string) (err error) {
-	data, err := r.ReadFile(p)
+	confs, err := ReadKVConfig(r, p)
 	if err != nil {
 		return
-	}
-	log.Debug().Msgf("loading config from %q", p)
-
-	confs := make(map[string]string)
-
-	scanner := bufio.NewScanner(bytes.NewBuffer(data))
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if len(line) == 0 || strings.HasPrefix(line, "#") {
-			continue
-		}
-		s := strings.SplitN(line, "=", 2)
-		if len(s) != 2 {
-			return fmt.Errorf("invalid line (must be key=value) %q", line)
-		}
-		key, value := s[0], s[1]
-		// trim double and single quotes and tabs and spaces from value
-		value = strings.Trim(value, "\"' \t")
-		confs[key] = value
 	}
 
 	var env []string
@@ -262,6 +243,33 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 	// label the type as an "rc" to make it easy to check later
 	cf.Type = "rc"
 
+	return
+}
+
+func ReadKVConfig(r host.Host, p string) (kvs map[string]string, err error) {
+	data, err := r.ReadFile(p)
+	if err != nil {
+		return
+	}
+
+	kvs = make(map[string]string)
+
+	scanner := bufio.NewScanner(bytes.NewBuffer(data))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if len(line) == 0 || strings.HasPrefix(line, "#") {
+			continue
+		}
+		s := strings.SplitN(line, "=", 2)
+		if len(s) != 2 {
+			err = fmt.Errorf("invalid line (must be key=value) %q", line)
+			return
+		}
+		key, value := s[0], s[1]
+		// trim double and single quotes and tabs and spaces from value
+		value = strings.Trim(value, "\"' \t")
+		kvs[key] = value
+	}
 	return
 }
 
