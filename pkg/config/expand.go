@@ -295,9 +295,21 @@ func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
 	return
 }
 
+// ExpandPassword expands the input string and returns a *Plaintext. The
+// TrimSPace option is ignored.
+func ExpandToPassword(input string, options ...ExpandOptions) *Plaintext {
+	return &Plaintext{global.ExpandToEnclave(input, options...)}
+}
+
+// ExpandPassword expands the input string and returns a *Plaintext. The
+// TrimSPace option is ignored.
+func (c *Config) ExpandToPassword(input string, options ...ExpandOptions) *Plaintext {
+	return &Plaintext{c.ExpandToEnclave(input, options...)}
+}
+
 // ExpandToEnclave expands the input string and returns a sealed
 // enclave. The option TrimSpace is ignored.
-func ExpandToEnclave(input string, options ...ExpandOptions) (value *memguard.Enclave) {
+func ExpandToEnclave(input string, options ...ExpandOptions) *memguard.Enclave {
 	return global.ExpandToEnclave(input, options...)
 }
 
