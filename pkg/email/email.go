@@ -26,26 +26,29 @@ THE SOFTWARE.
 package email
 
 import (
+	"crypto/tls"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
-	"github.com/go-mail/mail/v2"
+	"github.com/wneessen/go-mail"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-// Params is a map of key/value pairs that conform to the Geneos
+// Geneos email params is a map of key/value pairs that conform to the
 // libemail Email formats enhanced with changes to support SMTP
 // Authentication and TLS
 //
-// The original libemail documentation is <https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_rulesactionsalerts_tr.html#Libemail>
+// The original libemail documentation is:
+// <https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_rulesactionsalerts_tr.html#Libemail>
 //
 // The additions/changes are:
 //
-//	_SMTP_USERNAME - Username for SMTP Authentication
-//	_SMTP_PASSWORD - Password for SMTP Authentication. May be encrypted using [ExpandString] format.
-//	_SMTP_TLS
+//  _SMTP_USERNAME - Username for SMTP Authentication
+//  _SMTP_PASSWORD - Password for SMTP Authentication. May be encrypted using [ExpandString] format.
+//  _SMTP_TLS
 //
 // Other parameters
 
@@ -54,68 +57,75 @@ import (
 // All the parameters in the official docs are supported and have the same
 // defaults
 //
-// Additional parameters are
+// Additional parameters are (which are case insensitive):
+//
 // * _SMTP_TLS - default / force / none (case insensitive)
 // * _SMTP_USERNAME - if defined authentication attempted
 // * _SMTP_PASSWORD - password in [ExpandString] format
-func Dial(conf *config.Config) (d *mail.Dialer, err error) {
-	server := conf.GetString("_SMTP_SERVER", config.Default("localhost"))
-	port := conf.GetInt("_SMTP_PORT", config.Default(25))
-	timeout := conf.GetInt("_SMTP_TIMEOUT", config.Default(10))
+func Dial(conf *config.Config) (d *mail.Client, err error) {
+	var tlsPolicy mail.TLSPolicy
 
-	var tlsPolicy mail.StartTLSPolicy
-
-	tls := conf.GetString("_SMTP_TLS", config.Default("default"))
-	switch strings.ToLower(tls) {
+	switch strings.ToLower(conf.GetString("_smtp_tls", config.Default("default"))) {
 	case "force":
-		tlsPolicy = mail.MandatoryStartTLS
+		tlsPolicy = mail.TLSMandatory
 	case "none":
-		tlsPolicy = mail.NoStartTLS
+		tlsPolicy = mail.NoTLS
 	default:
-		tlsPolicy = mail.OpportunisticStartTLS
+		tlsPolicy = mail.TLSOpportunistic
 	}
 
-	if conf.IsSet("_SMTP_USERNAME") {
-		username := conf.GetString("_SMTP_USERNAME")
-		// get the password from the file given or continue with
-		// an empty string
-		password := conf.GetPassword("_SMTP_PASSWORD")
-		// the password can be empty at this point. this is valid, even
-		// if a bit dumb.
-
-		d = mail.NewDialer(server, port, username, password.String())
-	} else {
-		// no auth - initialise Dialer directly
-		d = &mail.Dialer{Host: server, Port: port}
+	mailOpts := []mail.Option{
+		mail.WithTLSPortPolicy(tlsPolicy),
+		mail.WithUsername(conf.GetString("_smtp_username")),
+		mail.WithPassword(conf.GetPassword("_smtp_password").String()),
+		mail.WithSMTPAuth(mail.SMTPAuthPlain),
+		mail.WithTimeout(time.Duration(conf.GetInt("_smtp_timeout", config.Default(10))) * time.Second),
 	}
-	d.Timeout = time.Duration(timeout) * time.Second
-	d.StartTLSPolicy = tlsPolicy
+
+	// override port policy if we are told to, but zero skips through
+	// sometimes, so check that too
+	if conf.IsSet("_smtp_port") && conf.GetInt("_smtp_port") != 0 {
+		mailOpts = append(mailOpts, mail.WithPort(conf.GetInt("_smtp_port")))
+	}
+
+	if conf.GetBool("_smtp_tls_insecure") {
+		mailOpts = append(mailOpts, mail.WithTLSConfig(&tls.Config{
+			InsecureSkipVerify: true,
+		}))
+	}
+
+	d, err = mail.NewClient(conf.GetString("_smtp_server", config.Default("localhost")), mailOpts...)
+	if err != nil {
+		return
+	}
+
+	d.SetTLSPolicy(tlsPolicy)
 
 	return d, nil
 }
 
-// Envelope processes the Geneos libemail parameters for _FROM, _TO, _CC
+// UpdateEnvelope processes the Geneos libemail parameters for _FROM, _TO, _CC
 // and _BCC and their related parameters stored in conf and returns a
 // populated mail.Message structure or an error.
-func Envelope(conf *config.Config) (m *mail.Message, err error) {
-	m = mail.NewMessage()
+func UpdateEnvelope(conf *config.Config, inlineCSS bool) (m *mail.Msg, err error) {
+	m = mail.NewMsg()
 
-	var from = conf.GetString("_FROM", config.Default("geneos@localhost"))
-	var fromName = conf.GetString("_FROM_NAME", config.Default("Geneos"))
+	var from = conf.GetString("_from", config.Default("geneos@localhost"))
+	var fromName = conf.GetString("_from_name", config.Default("Geneos"))
 
-	m.SetAddressHeader("From", from, fromName)
+	m.FromFormat(fromName, from)
 
-	err = addAddresses(m, conf, "To")
+	err = addAddresses(m, conf, "to")
 	if err != nil {
 		return
 	}
 
-	err = addAddresses(m, conf, "Cc")
+	err = addAddresses(m, conf, "cc")
 	if err != nil {
 		return
 	}
 
-	err = addAddresses(m, conf, "Bcc")
+	err = addAddresses(m, conf, "bcc")
 	if err != nil {
 		return
 	}
@@ -126,11 +136,10 @@ func Envelope(conf *config.Config) (m *mail.Message, err error) {
 // The Geneos libemail supports an optional text name per address and also the info type,
 // if given, must match "email" or "e-mail" (case insensitive). If either names or info types
 // are given they MUST have the same number of members otherwise it's a fatal error
-func addAddresses(m *mail.Message, conf *config.Config, header string) error {
-	upperHeader := strings.ToUpper(header)
-	addrs := splitCommaTrimSpace(conf.GetString("_" + upperHeader))
-	names := splitCommaTrimSpace(conf.GetString("_" + upperHeader + "_NAME"))
-	infotypes := splitCommaTrimSpace(conf.GetString("_" + upperHeader + "_INFO_TYPE"))
+func addAddresses(m *mail.Msg, conf *config.Config, header string) (err error) {
+	addrs := splitCommaTrimSpace(conf.GetString("_" + header))
+	names := splitCommaTrimSpace(conf.GetString("_" + header + "_name"))
+	infotypes := splitCommaTrimSpace(conf.GetString("_" + header + "_info_type"))
 
 	if len(names) > 0 && len(addrs) != len(names) {
 		return fmt.Errorf("\"%s\" header items mismatch: addrs=%d != names=%d", header, len(addrs), len(names))
@@ -139,8 +148,6 @@ func addAddresses(m *mail.Message, conf *config.Config, header string) error {
 	if len(infotypes) > 0 && len(addrs) != len(infotypes) {
 		return fmt.Errorf("\"%s\" header items mismatch: addrs=%d != infotypes=%d", header, len(addrs), len(infotypes))
 	}
-
-	var addresses []string
 
 	for i, to := range addrs {
 		var name string
@@ -153,9 +160,18 @@ func addAddresses(m *mail.Message, conf *config.Config, header string) error {
 		if len(names) > 0 {
 			name = names[i]
 		}
-		addresses = append(addresses, m.FormatAddress(to, name))
+		switch header {
+		case "to":
+			err = m.AddToFormat(name, to)
+		case "cc":
+			err = m.AddCcFormat(name, to)
+		case "bcc":
+			err = m.AddBccFormat(name, to)
+		}
+		if err != nil {
+			return
+		}
 	}
-	m.SetHeader(header, addresses...)
 
 	return nil
 }
@@ -172,4 +188,61 @@ func splitCommaTrimSpace(s string) []string {
 		fields[i] = strings.TrimSpace(field)
 	}
 	return fields
+}
+
+// NewEmailConfig sets up a config.Config containing Geneos specific email settings, ready to use with
+func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg string) (em *config.Config) {
+	em = config.New()
+	// set default from yaml file, can be overridden from Geneos as
+	// environment variables
+
+	// creds can come from `geneos` credentials for the mail server
+	// domain
+
+	epassword := &config.Plaintext{}
+
+	eusername := cf.GetString("email.username")
+	smtpserver := cf.GetString("email.smtp")
+
+	if eusername != "" {
+		epassword = cf.GetPassword("email.password")
+	}
+
+	if eusername == "" {
+		creds := config.FindCreds(smtpserver, config.SetAppName("geneos"))
+		if creds != nil {
+			eusername = creds.GetString("username")
+			epassword = creds.GetPassword("password")
+		}
+	}
+
+	em.SetDefault("_smtp_username", eusername)
+	em.SetDefault("_smtp_password", epassword.String())
+	em.SetDefault("_smtp_server", smtpserver)
+	em.SetDefault("_smtp_tls", cf.GetString("email.use-tls"))
+	em.SetDefault("_smtp_tls_insecure", cf.GetBool("email.tls-skip-verify"))
+	em.SetDefault("_smtp_port", cf.GetInt("email.port"))
+	em.SetDefault("_from", cf.GetString("email.from"))
+	em.SetDefault("_to", cf.GetString("email.to"))
+	em.SetDefault("_cc", cf.GetString("email.cc"))
+	em.SetDefault("_bcc", cf.GetString("email.bcc"))
+	em.SetDefault("_subject", cf.GetString("email.subject"))
+
+	for _, e := range os.Environ() {
+		n := strings.SplitN(e, "=", 2)
+		em.Set(n[0], n[1])
+	}
+
+	// override with args
+	if toArg != "" {
+		em.Set("_to", toArg)
+	}
+	if ccArg != "" {
+		em.Set("_cc", ccArg)
+	}
+	if bccArg != "" {
+		em.Set("_bcc", bccArg)
+	}
+
+	return
 }

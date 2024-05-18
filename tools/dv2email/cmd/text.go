@@ -25,6 +25,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -38,7 +39,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-func createTextTemplate(cf *config.Config, data DV2EMailData, textTemplate string) (text string, err error) {
+func createTextTemplate(cf *config.Config, data any, textTemplate string) (text string, err error) {
 	tt, err := template.New("dataview").Parse(textTemplate)
 	if err != nil {
 		return
@@ -53,8 +54,8 @@ func createTextTemplate(cf *config.Config, data DV2EMailData, textTemplate strin
 	return
 }
 
-func createTextTables(cf *config.Config, data DV2EMailData) (buf *bytes.Buffer, err error) {
-	buf = &bytes.Buffer{}
+func createTextTables(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err error) {
+	buf := &bytes.Buffer{}
 
 	t := time.Now()
 	digits := len(strconv.Itoa(len(data.Dataviews)))
@@ -142,10 +143,16 @@ func createTextTables(cf *config.Config, data DV2EMailData) (buf *bytes.Buffer, 
 
 	fmt.Fprintln(buf)
 
+	out = bytes.NewReader(buf.Bytes())
 	return
 }
 
-func buildTextTableFiles(cf *config.Config, data DV2EMailData, timestamp time.Time) (files []dataFile, err error) {
+func buildTextTableFiles(cf *config.Config, d any, timestamp time.Time) (files []dataFile, err error) {
+	data, ok := d.(DV2EMailData)
+	if !ok {
+		err = os.ErrInvalid
+		return
+	}
 	lookupDateTime := map[string]string{
 		"date":     timestamp.Local().Format("20060102"),
 		"time":     timestamp.Local().Format("150405"),

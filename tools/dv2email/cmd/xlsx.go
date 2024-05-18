@@ -25,6 +25,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -107,7 +108,7 @@ var (
 	rownamesStart, _ = excelize.CoordinatesToCellName(dataviewColumn, dataviewRow+1)
 )
 
-func createXLSX(cf *config.Config, data DV2EMailData) (buf *bytes.Buffer, err error) {
+func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err error) {
 	rowStripes := cf.GetBool("xlsx.row-stripes")
 
 	// if zero then auto-size based on widest value, else fixed
@@ -288,12 +289,13 @@ func createXLSX(cf *config.Config, data DV2EMailData) (buf *bytes.Buffer, err er
 	// now remove the default sheet
 	x.DeleteSheet("Sheet1")
 
-	buf = &bytes.Buffer{}
+	buf := &bytes.Buffer{}
 	if err = x.Write(buf, excelize.Options{
 		Password: cf.GetString("xlsx.password"),
 	}); err != nil {
 		return
 	}
+	out = bytes.NewReader(buf.Bytes())
 	if err = x.Close(); err != nil {
 		return
 	}
@@ -353,7 +355,13 @@ func validTablename(sheetname, prefix string) (tablename string) {
 	return
 }
 
-func buildXLSXFiles(cf *config.Config, data DV2EMailData, timestamp time.Time) (files []dataFile, err error) {
+func buildXLSXFiles(cf *config.Config, d any, timestamp time.Time) (files []dataFile, err error) {
+	data, ok := d.(DV2EMailData)
+	if !ok {
+		err = os.ErrInvalid
+		return
+	}
+
 	lookupDateTime := map[string]string{
 		"date":     timestamp.Local().Format("20060102"),
 		"time":     timestamp.Local().Format("150405"),

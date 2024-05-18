@@ -223,6 +223,7 @@ A typical command (XML below) would be set-up like this. Remember to set the pat
 			</arg>
 		</args>
 	</userCommand>
+</command>
 ```
 
 ### Exporting to Local Files
