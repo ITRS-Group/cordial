@@ -36,6 +36,7 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/email"
 )
 
 var cfgFile string
@@ -47,10 +48,7 @@ var entityArg, samplerArg, typeArg, dataviewArg string
 var toArg, ccArg, bccArg string
 
 func init() {
-	cobra.OnInitialize(initConfig)
-
-	// execname = cordial.ExecutableName()
-	cordial.LogInit(execname)
+	// cobra.OnInitialize(initConfig)
 
 	DV2EMAILCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2email.yaml)")
 
@@ -74,10 +72,14 @@ func init() {
 	DV2EMAILCmd.Flags().SortFlags = false
 }
 
+// global config
 var cf *config.Config
 
 func initConfig() {
 	var err error
+
+	cordial.LogInit(execname)
+
 	if quiet {
 		zerolog.SetGlobalLevel(zerolog.Disabled)
 	} else if debug {
@@ -133,6 +135,9 @@ var DV2EMAILCmd = &cobra.Command{
 	DisableAutoGenTag:     true,
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		initConfig()
+	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		gw, err := dialGateway(cf)
 		if err != nil {
@@ -140,7 +145,7 @@ var DV2EMAILCmd = &cobra.Command{
 		}
 
 		// we need to pass filters etc. to fetchDataviews
-		em := setupEmail(toArg, ccArg, bccArg)
+		em := email.NewEmailConfig(cf, toArg, ccArg, bccArg)
 
 		data, err := fetchDataviews(cmd, gw,
 			em.GetString("_firstcolumn"),
@@ -149,6 +154,10 @@ var DV2EMAILCmd = &cobra.Command{
 			em.GetString("__columns"),
 			em.GetString("__roworder"),
 		)
+		if err != nil {
+			log.Error().Err(err).Msg("")
+			return
+		}
 
 		switch cf.GetString("email.split") {
 		case "entity":
@@ -164,7 +173,7 @@ var DV2EMAILCmd = &cobra.Command{
 					Dataviews: e,
 					Env:       data.Env,
 				}
-				if err = sendEmail(em, many, inlineCSS); err != nil {
+				if err = sendEmail(cf, em, many, inlineCSS); err != nil {
 					log.Fatal().Err(err).Msg("")
 				}
 			}
@@ -174,12 +183,12 @@ var DV2EMAILCmd = &cobra.Command{
 					Dataviews: []*commands.Dataview{d},
 					Env:       data.Env,
 				}
-				if err = sendEmail(em, one, inlineCSS); err != nil {
+				if err = sendEmail(cf, em, one, inlineCSS); err != nil {
 					log.Fatal().Err(err).Msg("")
 				}
 			}
 		default:
-			if err = sendEmail(em, data, inlineCSS); err != nil {
+			if err = sendEmail(cf, em, data, inlineCSS); err != nil {
 				log.Fatal().Err(err).Msg("")
 			}
 		}

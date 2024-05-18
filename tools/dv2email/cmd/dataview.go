@@ -42,7 +42,7 @@ import (
 // dataFile is a name and content as a buffer, returned from various builders
 type dataFile struct {
 	name    string
-	content *bytes.Buffer
+	content *bytes.Reader
 }
 
 func fetchDataviews(cmd *cobra.Command, gw *commands.Connection, firstcolumn, headlineList, rowList, columnList, rowOrder string) (data DV2EMailData, err error) {

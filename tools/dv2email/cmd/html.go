@@ -23,18 +23,19 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"bytes"
 	"html/template"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/aymerick/douceur/inliner"
+	"github.com/wneessen/go-mail"
 
 	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-func createHTML(cf *config.Config, data DV2EMailData, htmlTemplate string, inlineCSS bool) (html string, err error) {
+func createHTML(_ *config.Config, data any, htmlTemplate string, inlineCSS bool) (html string, err error) {
 	ht, err := template.New("dataview").Parse(htmlTemplate)
 	if err != nil {
 		return
@@ -55,12 +56,22 @@ func createHTML(cf *config.Config, data DV2EMailData, htmlTemplate string, inlin
 	return
 }
 
-func buildHTMLFiles(cf *config.Config, data DV2EMailData, timestamp time.Time, inlineCSS bool) (files []dataFile, err error) {
+func buildHTMLAttachments(cf *config.Config, m *mail.Msg, d any, timestamp time.Time) (err error) {
+	data, ok := d.(DV2EMailData)
+	if !ok {
+		err = os.ErrInvalid
+		return
+	}
 	lookupDateTime := map[string]string{
 		"date":     timestamp.Local().Format("20060102"),
 		"time":     timestamp.Local().Format("150405"),
 		"datetime": timestamp.Local().Format(time.RFC3339),
 	}
+	ht, err := template.New("dataview").Parse(cf.GetString("html.template"))
+	if err != nil {
+		return err
+	}
+
 	switch cf.GetString("html.split") {
 	case "entity":
 		entities := map[string][]*commands.Dataview{}
@@ -75,10 +86,6 @@ func buildHTMLFiles(cf *config.Config, data DV2EMailData, timestamp time.Time, i
 				Dataviews: e,
 				Env:       data.Env,
 			}
-			htmlString, err := createHTML(cf, many, cf.GetString("html.template"), inlineCSS)
-			if err != nil {
-				return files, err
-			}
 			lookup := map[string]string{
 				"default":   "dataviews",
 				"entity":    entity,
@@ -87,21 +94,13 @@ func buildHTMLFiles(cf *config.Config, data DV2EMailData, timestamp time.Time, i
 				"timestamp": timestamp.Local().Format("20060102150405"),
 			}
 			filename := buildName(cf.GetString("html.filename", config.LookupTable(lookupDateTime)), lookup) + ".html"
-			files = append(files, dataFile{
-				name:    filename,
-				content: bytes.NewBufferString(htmlString),
-			})
-			// m.AttachReader(filename, bytes.NewBufferString(htmlString))
+			m.AttachHTMLTemplate(filename, ht, many)
 		}
 	case "dataview":
 		for _, d := range data.Dataviews {
 			one := DV2EMailData{
 				Dataviews: []*commands.Dataview{d},
 				Env:       data.Env,
-			}
-			htmlString, err := createHTML(cf, one, cf.GetString("html.template"), inlineCSS)
-			if err != nil {
-				return files, err
 			}
 			lookup := map[string]string{
 				"default":   "dataviews",
@@ -111,17 +110,9 @@ func buildHTMLFiles(cf *config.Config, data DV2EMailData, timestamp time.Time, i
 				"timestamp": timestamp.Local().Format("20060102150405"),
 			}
 			filename := buildName(cf.GetString("html.filename", config.LookupTable(lookupDateTime)), lookup) + ".html"
-			files = append(files, dataFile{
-				name:    filename,
-				content: bytes.NewBufferString(htmlString),
-			})
-			// m.AttachReader(filename, bytes.NewBufferString(htmlString))
+			m.AttachHTMLTemplate(filename, ht, one)
 		}
 	default:
-		htmlString, err := createHTML(cf, data, cf.GetString("html.template"), inlineCSS)
-		if err != nil {
-			return files, err
-		}
 		lookup := map[string]string{
 			"default":   "dataviews",
 			"entity":    "",
@@ -130,11 +121,7 @@ func buildHTMLFiles(cf *config.Config, data DV2EMailData, timestamp time.Time, i
 			"timestamp": timestamp.Local().Format("20060102150405"),
 		}
 		filename := buildName(cf.GetString("html.filename", config.LookupTable(lookupDateTime)), lookup) + ".html"
-		files = append(files, dataFile{
-			name:    filename,
-			content: bytes.NewBufferString(htmlString),
-		})
-		// m.AttachReader(filename, bytes.NewBufferString(htmlString))
+		m.AttachHTMLTemplate(filename, ht, data)
 	}
 
 	return

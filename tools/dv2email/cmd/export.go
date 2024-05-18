@@ -33,6 +33,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"github.com/wneessen/go-mail"
 )
 
 //go:embed _docs/root.md
@@ -60,7 +61,7 @@ var exportCmd = &cobra.Command{
 	Use:   "export",
 	Short: "Export dataview(s) to local files",
 	Long:  exportCmdDescription,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		if exportCmdDir == "" {
 			exportCmdDir = "."
 		}
@@ -70,15 +71,15 @@ var exportCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("")
 		}
 		data, err := fetchDataviews(cmd, gw, exportCmdFirstColumn, exportCmdHeadlines, exportCmdRows, exportCmdColumns, exportCmdRowOrder)
-
+		if err != nil {
+			return
+		}
 		if len(data.Dataviews) == 0 {
 			fmt.Println("no matching dataviews")
 			return
 		}
 
-		if err = writeFiles(exportCmdDir, data); err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
+		return writeFiles(exportCmdDir, data)
 	},
 }
 
@@ -111,21 +112,25 @@ func writeFiles(dir string, data DV2EMailData) (err error) {
 	}
 
 	if slices.Contains(cf.GetStringSlice("files"), "html") {
-		var files []dataFile
-		files, err = buildHTMLFiles(cf, data, run, inlineCSS)
-		if err != nil {
+		m := mail.NewMsg()
+
+		if err = buildHTMLAttachments(cf, m, data, run); err != nil {
 			return err
 		}
+
+		files := m.GetAttachments()
+
 		for _, file := range files {
 			var f *os.File
-			f, err = os.Create(filepath.Join(dir, file.name))
+			f, err = os.Create(filepath.Join(dir, file.Name))
 			if err != nil {
 				return
 			}
-			if _, err = io.Copy(f, file.content); err != nil {
+
+			if _, err = file.Writer(f); err != nil {
 				return
 			}
-			fmt.Printf("written %s\n", filepath.Join(dir, file.name))
+			fmt.Printf("written %s\n", filepath.Join(dir, file.Name))
 			f.Close()
 		}
 	}

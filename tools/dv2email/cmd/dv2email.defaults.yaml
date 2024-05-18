@@ -54,7 +54,7 @@ gateway:
 
 email:
   smtp: localhost
-  port: 25
+  # port: 25
   use-tls: default
   # username: user-email
   # password: ${enc:~/.config/geneos/keyfile.aes:+encs+XXX}
