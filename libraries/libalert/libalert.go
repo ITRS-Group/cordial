@@ -95,7 +95,7 @@ func SendMail(n C.int, args **C.char) C.int {
 		return 1
 	}
 
-	m, err := email.Envelope(conf)
+	m, err := email.UpdateEnvelope(conf, true)
 	if err != nil {
 		log.Println(err)
 		return 1
@@ -144,8 +144,8 @@ func SendMail(n C.int, args **C.char) C.int {
 	}
 
 	body := replArgs(format, conf)
-	m.SetHeader("Subject", subject)
-	m.SetBody("text/plain", body)
+	m.SetGenHeader("Subject", subject)
+	m.SetBodyString("text/plain", body)
 
 	if err = d.DialAndSend(m); err != nil {
 		log.Println(err)
@@ -178,7 +178,7 @@ func GoSendMail(n C.int, args **C.char) C.int {
 		return 1
 	}
 
-	m, err := email.Envelope(conf)
+	m, err := email.UpdateEnvelope(conf, true)
 	if err != nil {
 		log.Println(err)
 		return 1
@@ -284,10 +284,11 @@ func GoSendMail(n C.int, args **C.char) C.int {
 			m.EmbedReader("logo.png", logofile)
 		} else {
 			// use var path and a default of the embedded logo
-			m.Embed("logo.png", mail.SetCopyFunc(func(w io.Writer) error {
+			mail.SetCopyFunc(func(w io.Writer) error {
 				_, err := w.Write(logo)
 				return err
-			}))
+			})
+			m.EmbedReadSeeker("logo.png", bytes.NewReader(logo))
 		}
 	}
 
@@ -300,7 +301,7 @@ func GoSendMail(n C.int, args **C.char) C.int {
 		log.Println(err)
 		return 1
 	}
-	m.SetBody("text/plain", output.String())
+	m.SetBodyString("text/plain", output.String())
 
 	if !conf.GetBool("_TEMPLATE_TEXT_ONLY") {
 		var htmlBody bytes.Buffer
@@ -309,7 +310,7 @@ func GoSendMail(n C.int, args **C.char) C.int {
 			log.Println(err)
 			return 1
 		}
-		m.AddAlternative("text/html", htmlBody.String())
+		m.AddAlternativeString("text/html", htmlBody.String())
 	}
 
 	err = d.DialAndSend(m)
