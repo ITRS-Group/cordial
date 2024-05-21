@@ -31,6 +31,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -128,7 +129,7 @@ var encodeCmd = &cobra.Command{
 						return
 					}
 				}
-				e, err := keyfile.Encode(encodeCmdClientSecret, false)
+				e, err := keyfile.Encode(host.Localhost, encodeCmdClientSecret, false)
 				if err != nil {
 					return err
 				}
@@ -175,7 +176,7 @@ var encodeCmd = &cobra.Command{
 					}
 				}
 
-				e, err := keyfile.Encode(encodeCmdClientSecret, false)
+				e, err := keyfile.Encode(host.Localhost, encodeCmdClientSecret, false)
 				if err != nil {
 					resp.Err = err
 					return
@@ -226,7 +227,7 @@ var encodeCmd = &cobra.Command{
 					if keyfilepath != "" {
 						keyfile := config.KeyFile(keyfilepath)
 						// encode using specific file
-						e, err := keyfile.Encode(plaintext, encodeCmdExpandable)
+						e, err := keyfile.Encode(host.Localhost, plaintext, encodeCmdExpandable)
 						if err != nil {
 							continue
 						}
@@ -258,7 +259,7 @@ var encodeCmd = &cobra.Command{
 			if !ok {
 				panic("wrong type")
 			}
-			e, err := keyfile.Encode(plaintext, encodeCmdExpandable)
+			e, err := keyfile.Encode(host.Localhost, plaintext, encodeCmdExpandable)
 			if err != nil {
 				resp.Err = err
 				return

@@ -27,9 +27,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -37,7 +39,7 @@ import (
 
 var newCmdKeyfile config.KeyFile
 var newCmdBackupSuffix string
-var newCmdImportShared, newCmdSaveUser, newCmdOverwriteKeyfile, newCmdImportUpdate bool
+var newCmdShared, newCmdSaveUser, newCmdOverwriteKeyfile, newCmdUpdate bool
 
 // var aesDefaultKeyfile = geneos.UserConfigFilePaths("keyfile.aes")[0]
 
@@ -45,13 +47,14 @@ func init() {
 	aesCmd.AddCommand(newCmd)
 
 	newCmd.Flags().VarP(&newCmdKeyfile, "keyfile", "k", "Path to key file, defaults to STDOUT")
-	newCmd.Flags().BoolVarP(&newCmdSaveUser, "user", "U", false, `Write to user key file (typically "${HOME}/.config/geneos/keyfile.aes")`)
-	newCmd.Flags().StringVarP(&newCmdBackupSuffix, "backup", "b", ".old", "Backup existing keyfile with extension given")
-	newCmd.Flags().BoolVarP(&newCmdOverwriteKeyfile, "force", "F", false, "Force overwriting an existing key file")
-	newCmd.Flags().BoolVarP(&newCmdImportShared, "shared", "S", false, "Import the keyfile to component shared directories")
-	newCmd.Flags().BoolVar(&newCmdImportUpdate, "update", false, "Update shared keyfile on matching instances")
+	newCmd.Flags().BoolVar(&newCmdSaveUser, "user", false, `Write to user key file (typically "${HOME}/.config/geneos/keyfile.aes")`)
+	newCmd.Flags().StringVarP(&newCmdBackupSuffix, "backup", "b", "-prev", "Backup existing keyfile with extension given")
 
-	newCmd.MarkFlagsMutuallyExclusive("keyfile", "user")
+	newCmd.Flags().BoolVarP(&newCmdOverwriteKeyfile, "force", "F", false, "Force overwriting an existing key file")
+
+	newCmd.Flags().BoolVarP(&newCmdShared, "shared", "S", false, "Write the keyfile to matching component shared directories")
+	newCmd.Flags().BoolVarP(&newCmdUpdate, "update", "U", false, "Update keyfile settings on matching instances")
+
 	newCmd.Flags().SortFlags = false
 }
 
@@ -74,8 +77,7 @@ geneos aes new -S gateway
 		cmd.AnnotationExpand:    "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		var crc uint32
-
+		// create new key values, may be overwritten later
 		kv := config.NewRandomKeyValues()
 
 		if newCmdSaveUser {
@@ -83,47 +85,75 @@ geneos aes new -S gateway
 		}
 
 		if newCmdKeyfile != "" {
-			if _, err = newCmdKeyfile.RollKeyfile(newCmdBackupSuffix); err != nil {
+			if _, err = newCmdKeyfile.CreateWithBackup(host.Localhost, newCmdBackupSuffix); err != nil {
 				return
 			}
-			if kv, err = newCmdKeyfile.Read(); err != nil {
+			if kv, err = newCmdKeyfile.Read(host.Localhost); err != nil {
 				return
 			}
-		} else if !newCmdImportShared {
-			fmt.Print(kv.String())
+			fmt.Printf("keyfile written to %s\n", newCmdKeyfile)
 		}
 
-		crc, err = kv.Checksum()
-		if err != nil {
-			return
-		}
-
-		crcstr := fmt.Sprintf("%08X", crc)
-		if newCmdKeyfile != "" {
-			fmt.Printf("%s created, checksum %s\n", newCmdKeyfile, crcstr)
-		}
-
-		if newCmdImportShared {
+		if newCmdShared {
+			log.Debug().Msg("new shared keyfile")
 			ct, names := cmd.ParseTypeNames(command)
 			h := geneos.GetHost(cmd.Hostname)
 
-			crc32, err := geneos.ImportSharedKeyValues(h, ct, kv)
+			paths, _, err := geneos.WriteSharedKeyValues(h, ct, kv)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("imported keyfile with CRC %08X\n", crc32)
+			for _, p := range paths {
+				fmt.Printf("keyfile written to %s\n", p)
+			}
 
-			if newCmdImportUpdate {
+			if newCmdUpdate {
+				crc, err := kv.Checksum()
+				if err != nil {
+					return err
+				}
 				for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-					instance.Do(h, ct, names, aesNewSetInstance, crcstr+".aes").Write(os.Stdout)
+					instance.Do(h, ct, names, aesNewSetInstanceShared, crc).Write(os.Stdout)
 				}
 			}
+		} else if newCmdUpdate {
+			ct, names := cmd.ParseTypeNames(command)
+			h := geneos.GetHost(cmd.Hostname)
+
+			for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
+				instance.Do(h, ct, names, aesNewSetInstance, kv).Write(os.Stdout)
+			}
+		} else {
+			fmt.Print(kv.String())
 		}
+
 		return
 	},
 }
 
 func aesNewSetInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
+	if len(params) == 0 {
+		resp.Err = geneos.ErrInvalidArgs
+		return
+	}
+
+	kv, ok := params[0].(*config.KeyValues)
+	if !ok {
+		resp.Err = fmt.Errorf("wrong parameter type %T", kv)
+	}
+
+	keyfile, _, err := instance.RollAESKeyFile(i, kv, newCmdBackupSuffix)
+	if err != nil {
+		resp.Err = err
+		return
+	}
+
+	resp.Line = fmt.Sprintf("keyfile written to %q", keyfile)
+	return
+}
+
+func aesNewSetInstanceShared(i geneos.Instance, params ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
 	if len(params) == 0 {
@@ -131,34 +161,26 @@ func aesNewSetInstance(i geneos.Instance, params ...any) (resp *instance.Respons
 		return
 	}
 
-	keyfile, ok := params[0].(string)
+	crc, ok := params[0].(uint32)
 	if !ok {
-		panic("wrong type")
+		resp.Err = fmt.Errorf("wrong parameter type %T", crc)
+		return
 	}
-	var rolled bool
-	cf := i.Config()
+	kp := instance.Shared(i, "keyfiles", fmt.Sprintf("%d.aes", crc))
 
-	// roll old file
-	// XXX - check keyfile still exists, do not update if not
-	p := cf.GetString("keyfile")
-	if p != "" {
-		cf.Set("prevkeyfile", p)
-		rolled = true
-	}
-	cf.Set("keyfile", instance.Shared(i, "keyfiles", keyfile))
-
-	if cf.Type == "rc" {
-		resp.Err = instance.Migrate(i)
-	} else {
-		resp.Err = instance.SaveConfig(i)
-	}
-	if resp.Err != nil {
+	keyfile := config.KeyFile(kp)
+	kv, err := keyfile.Read(i.Host())
+	if err != nil {
+		resp.Err = err
 		return
 	}
 
-	resp.Completed = append(resp.Completed, fmt.Sprintf("keyfile %s set", keyfile))
-	if rolled {
-		resp.Completed = append(resp.Completed, "existing keyfile moved to prevkeyfile")
+	instance.RollAESKeyFile(i, kv, "-prev")
+	pkp := i.Config().GetString("prevkeyfile")
+	if pkp != "" {
+		resp.Line = fmt.Sprintf("keyfile %q written, existing keyfile renamed to %q and marked a previous keyfile", keyfile, pkp)
+	} else {
+		resp.Line = fmt.Sprintf("keyfile %q written\n", keyfile)
 	}
 	return
 }

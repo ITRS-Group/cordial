@@ -29,6 +29,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -59,7 +60,7 @@ var passwordCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var plaintext *config.Plaintext
 
-		crc, created, err := cmd.DefaultUserKeyfile.Check(true)
+		crc, created, err := cmd.DefaultUserKeyfile.ReadOrCreate(host.Localhost, true)
 		if err != nil {
 			return
 		}
@@ -83,7 +84,7 @@ var passwordCmd = &cobra.Command{
 				return
 			}
 		}
-		e, err := cmd.DefaultUserKeyfile.Encode(plaintext, true)
+		e, err := cmd.DefaultUserKeyfile.Encode(host.Localhost, plaintext, true)
 		if err != nil {
 			return err
 		}

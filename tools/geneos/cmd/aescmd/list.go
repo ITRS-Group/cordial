@@ -35,6 +35,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -128,7 +129,7 @@ func aesListPath(ct *geneos.Component, h *geneos.Host, name string, path config.
 		return fmt.Sprintf("%s\t%s\t%s\t%s\t-\t-", ct, name, h, path)
 	}
 
-	crc, _, err := path.Check(false)
+	crc, _, err := path.ReadOrCreate(h, false)
 	if err != nil {
 		return fmt.Sprintf("%s\t%s\t%s\t%s\t-\t%s", ct, name, h, path, s.ModTime().Format(time.RFC3339))
 	}
@@ -180,7 +181,7 @@ func aesListPathCSV(ct *geneos.Component, h *geneos.Host, name string, path conf
 		return []string{ct.String(), name, h.String(), path.String(), "-", "-"}
 	}
 
-	crc, _, err := path.Check(false)
+	crc, _, err := path.ReadOrCreate(host.Localhost, false)
 	if err != nil {
 		return []string{ct.String(), name, h.String(), path.String(), "-", s.ModTime().Format(time.RFC3339)}
 	}
@@ -256,7 +257,7 @@ func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, paths ..
 		if err == nil {
 			r.Modtime = s.ModTime().Format(time.RFC3339)
 
-			crc, _, err := keyfile.Check(false)
+			crc, _, err := keyfile.ReadOrCreate(h, false)
 			if err == nil {
 				crcstr := fmt.Sprintf("%08X", crc)
 				r.CRC32 = crcstr
@@ -280,7 +281,7 @@ func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, paths ..
 		if err == nil {
 			r.Modtime = s.ModTime().Format(time.RFC3339)
 
-			crc, _, err := prevkeyfile.Check(false)
+			crc, _, err := prevkeyfile.ReadOrCreate(h, false)
 			if err == nil {
 				crcstr := fmt.Sprintf("%08X", crc)
 				r.CRC32 = crcstr

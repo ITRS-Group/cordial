@@ -1,5 +1,7 @@
-Encode a password using the user's keyfile. If no keyfile exists it is created. Output is in `expandable` format.
+# `geneos aes password`
 
-You will be prompted to enter the password (twice, for validation) unless on of the flags is set.
+Encode a password using the user's key file. If no key file exists it is created. Output is in `expandable` format.
 
-To encode a plaintext password using a specific key file please use the `geneos aes encode` command
+You will be prompted to enter the password (twice, for validation) unless one of the flags is set to select an alternative source for the plaintext.
+
+⚠ To encode a plaintext password using a specific key file please use the `geneos aes encode` command
