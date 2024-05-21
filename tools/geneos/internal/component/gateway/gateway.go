@@ -238,7 +238,7 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 	}
 
 	// always create a keyfile ?
-	if err = createAESKeyFile(g); err != nil {
+	if err = instance.CreateAESKeyFile(g); err != nil {
 		return
 	}
 
@@ -396,23 +396,5 @@ func (g *Gateways) Command() (args, env []string, home string) {
 
 	home = g.Home()
 
-	return
-}
-
-// create a gateway key file for secure passwords as per
-// https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm
-func createAESKeyFile(i geneos.Instance) (err error) {
-	a := config.NewRandomKeyValues()
-
-	w, err := i.Host().Create(instance.ComponentFilepath(i, "aes"), 0600)
-	if err != nil {
-		return
-	}
-	defer w.Close()
-	if err = a.Write(w); err != nil {
-		return
-	}
-
-	i.Config().Set("keyfile", instance.ComponentFilename(i, "aes"))
 	return
 }
