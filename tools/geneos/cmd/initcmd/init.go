@@ -96,7 +96,7 @@ func init() {
 	initCmd.PersistentFlags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
 		switch name {
 		case "makecerts":
-			name = "secure"
+			name = "tls"
 		case "importcert":
 			name = "import-cert"
 		case "importkey":

@@ -33,6 +33,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -42,8 +43,8 @@ import (
 var deployCmdTemplate, deployCmdBase, deployCmdKeyfileCRC string
 var deployCmdGeneosHome, deployCmdUsername, deployCmdName, deployCmdExtraOpts string
 var deployCmdStart, deployCmdLogs, deployCmdLocal, deployCmdNexus, deployCmdSnapshot bool
-var deployCmdSecure bool
-var deployCmdSigningCert, deployCmdInstanceCert string
+var deployCmdTLS bool
+var deployCmdSigningBundle, deployCmdInstanceBundle string
 var deployCmdPort uint16
 var deployCmdArchive, deployCmdVersion, deployCmdOverride string
 var deployCmdPassword *config.Plaintext
@@ -67,9 +68,9 @@ func init() {
 	deployCmd.Flags().StringVarP(&deployCmdName, "name", "n", "", "Use name for instances and configurations instead of the hostname")
 	deployCmd.Flags().MarkHidden("name")
 
-	deployCmd.Flags().BoolVarP(&deployCmdSecure, "secure", "T", false, "Initialise TLS subsystem if required.\nUse options below to import existing certificate bundles")
-	deployCmd.Flags().StringVarP(&deployCmdSigningCert, "signing-bundle", "C", "", "Signing certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
-	deployCmd.Flags().StringVarP(&deployCmdInstanceCert, "instance-bundle", "c", "", "Instance certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
+	deployCmd.Flags().BoolVarP(&deployCmdTLS, "tls", "T", false, "Initialise TLS subsystem if required.\nUse options below to import existing certificate bundles")
+	deployCmd.Flags().StringVarP(&deployCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
+	deployCmd.Flags().StringVarP(&deployCmdInstanceBundle, "instance-bundle", "c", "", "Instance certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
 
 	deployCmd.Flags().StringVar(&deployCmdKeyfile, "keyfile", "", "Keyfile `PATH` to use. Default is to create one\nfor TYPEs that support them")
 	deployCmd.Flags().StringVar(&deployCmdKeyfileCRC, "keycrc", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory to use (extension optional)")
@@ -81,7 +82,7 @@ func init() {
 	deployCmd.Flags().StringVarP(&deployCmdVersion, "version", "V", "latest", "Use this `VERSION`\nDoesn't work for EL8 archives.")
 	deployCmd.Flags().BoolVarP(&deployCmdLocal, "local", "L", false, "Install from local archives only")
 	deployCmd.Flags().StringVarP(&deployCmdArchive, "archive", "A", "", "File or directory to search for local release archives")
-	deployCmd.Flags().StringVar(&deployCmdOverride, "override", "", "Override the `[TYPE:]VERSION` for archive\nfiles with non-standard names")
+	deployCmd.Flags().StringVarP(&deployCmdOverride, "override", "O", "", "Override the `[TYPE:]VERSION` for archive\nfiles with non-standard names")
 
 	deployCmd.Flags().BoolVar(&deployCmdNexus, "nexus", false, "Download from nexus.itrsgroup.com\nRequires ITRS internal credentials")
 	deployCmd.Flags().BoolVar(&deployCmdSnapshot, "snapshots", false, "Download from nexus snapshots\nImplies --nexus")
@@ -98,6 +99,14 @@ func init() {
 	deployCmd.Flags().VarP(&deployCmdExtras.Variables, "variable", "v", instance.VarsOptionsText)
 
 	deployCmd.Flags().SortFlags = false
+
+	deployCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+		switch name {
+		case "secure":
+			name = "tls"
+		}
+		return pflag.NormalizedName(name)
+	})
 }
 
 //go:embed _docs/deploy.md
@@ -280,18 +289,18 @@ var deployCmd = &cobra.Command{
 		}
 
 		// TLS check and init
-		if deployCmdSecure {
-			if err = RunE(cmd.Root(), []string{"tls", "init"}, []string{}); err != nil {
+		if deployCmdTLS {
+			if err = geneos.TLSInit(true, "ecdh"); err != nil {
 				return
 			}
 		}
 
-		signer, err := config.ReadInputPEMString(deployCmdSigningCert, "signing certificate(s)")
+		signingBundle, err := config.ReadInputPEMString(deployCmdSigningBundle, "signing certificate(s)")
 		if err != nil {
 			return err
 		}
-		if signer != "" {
-			RunE(cmd.Root(), []string{"tls", "import", "--signer"}, []string{"pem:" + signer})
+		if signingBundle != "" {
+			RunE(cmd.Root(), []string{"tls", "import", "--signing-bundle"}, []string{"pem:" + signingBundle})
 		}
 
 		// we are installed and ready to go, drop through to code from `add`
@@ -311,8 +320,8 @@ var deployCmd = &cobra.Command{
 			return
 		}
 
-		if deployCmdInstanceCert != "" {
-			certs, err := config.ReadInputPEMString(deployCmdInstanceCert, "instance certificate(s)")
+		if deployCmdInstanceBundle != "" {
+			certs, err := config.ReadInputPEMString(deployCmdInstanceBundle, "instance certificate(s)")
 			if err != nil {
 				return err
 			}

@@ -14,7 +14,7 @@ The `--force`/`-F` flags implies `--update`.
 
 By default the latest version found will be the one installed, either from the download site or locally. To install a specific version from the use the `--version`/`-V` option with a version in the form `MAJOR.MINOR.PATCH` where omitting `PATCH` will get the latest patch release for `MAJOR.MINOR` and omitting `MINOR.PATCH` will get the latest version in the `MAJOR` set. Versions cannot be selected for remote `el8` archives because of a restriction in indexing releases. Specifying a version with either a local only or with a directory name on the command line will apply the same rules to all matching local files.
 
-If you have downloaded a release but have changed the file name format then you must use the `--override`/`-T` option to tell the `install` command what component type and release the archive contains, e.g. `-T gateway:5.12.1`. The command will not validate your option and will simply unarchive the file, if it can, in the directory that would be created for that component and version.
+If you have downloaded a release but have changed the file name format then you must use the `--override`/`-O` option to tell the `install` command what component type and release the archive contains, e.g. `-T gateway:5.12.1`. The command will not validate your option and will simply unarchive the file, if it can, in the directory that would be created for that component and version.
 
 For internal ITRS users there are the `--nexus`/`-N` and `--snapshot`/`-S` options to download archives from the internal nexus server. The `--snapshot`/`-S` option implies `--nexus`/`-N`. You may need to supply different credentials for these downloads.
 
@@ -40,7 +40,7 @@ geneos package install [flags] [TYPE] [FILE|URL...]
   -F, --force             Will also restart protected instances, implies --update
   -b, --base string       Override the base active_prod link name (default "active_prod")
   -V, --version string    Download this version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
-  -T, --override string   Override (set) the TYPE:VERSION for archive files with non-standard names
+  -O, --override string   Override (set) the TYPE:VERSION for archive files with non-standard names
   -N, --nexus             Download from nexus.itrsgroup.com. Requires auth.
   -S, --snapshots         Download from nexus snapshots (pre-releases), not releases. Requires -N
 ```

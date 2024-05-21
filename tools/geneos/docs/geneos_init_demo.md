@@ -20,8 +20,8 @@ geneos init demo [flags] [USERNAME] [DIRECTORY]
 
 ```text
   -A, --archive string                Directory of releases for installation
-  -i, --include PRIORITY:{URL|PATH}   A gateway connection in the format HOSTNAME:PORT
-                                      (Repeat as required, san and floating only)
+  -i, --include PRIORITY:[PATH|URL]   An include file in the format PRIORITY:[PATH|URL]
+                                      (Repeat as required, gateway only)
 ```
 
 ## SEE ALSO

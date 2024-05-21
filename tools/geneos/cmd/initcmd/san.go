@@ -42,7 +42,7 @@ func init() {
 
 	sanCmd.Flags().StringVarP(&sanCmdVersion, "version", "V", "latest", "Download this `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
 	sanCmd.Flags().StringVarP(&sanCmdArchive, "archive", "A", "", archiveOptionsText)
-	sanCmd.Flags().StringVarP(&sanCmdOverride, "override", "T", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
+	sanCmd.Flags().StringVarP(&sanCmdOverride, "override", "O", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
 
 	sanCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", instance.GatewaysOptionstext)
 	sanCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", instance.AttributesOptionsText)
