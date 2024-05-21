@@ -85,7 +85,7 @@ geneos ps
 You can install a Self-Announcing Netprobe (SAN) in one line, like this:
 
 ```bash
-geneos init san -n SAN123 -c /path/to/signingcertkey \
+geneos init san -n SAN123 -C /path/to/signing-bundle \
     -g gateway1 -g gateway2 -t Infrastructure -t App1 -t App2 \
     -a ENVIRONMENT=Prod -a LOCATION=London -u email@example.com
 ```
@@ -139,12 +139,11 @@ geneos init [flags] [DIRECTORY]
 ### Options
 
 ```text
-  -l, --log                       Follow logs after starting instance(s)
   -F, --force                     Be forceful, ignore existing directories.
+  -l, --log                       Follow logs after starting instance(s)
   -n, --name string               Use name for instances and configurations instead of the hostname
-  -C, --secure                    Create default certificates for TLS support
-  -c, --import-cert string        signing certificate with optional root cert and private key, PEM format
-  -k, --import-key string         signing private key file, PEM format
+  -C, --signing-bundle string     signing bundle including private key, PEM format
+  -T, --tls                       Create internal certificates for TLS support
   -N, --nexus                     Download from nexus.itrsgroup.com. Requires ITRS internal credentials
   -S, --snapshots                 Download from nexus snapshots. Requires -N
   -V, --version VERSION           Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")

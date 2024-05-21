@@ -83,7 +83,7 @@ geneos ps
 You can install a Self-Announcing Netprobe (SAN) in one line, like this:
 
 ```bash
-geneos init san -n SAN123 -c /path/to/signingcertkey \
+geneos init san -n SAN123 -C /path/to/signing-bundle \
     -g gateway1 -g gateway2 -t Infrastructure -t App1 -t App2 \
     -a ENVIRONMENT=Prod -a LOCATION=London -u email@example.com
 ```

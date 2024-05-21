@@ -19,7 +19,7 @@ geneos init floating [flags] [USERNAME] [DIRECTORY]
 ```text
   -V, --version VERSION              Download this VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
   -A, --archive string               Directory of releases for installation
-  -T, --override [TYPE:]VERSION      Override the [TYPE:]VERSION for archive files with non-standard names
+  -O, --override [TYPE:]VERSION      Override the [TYPE:]VERSION for archive files with non-standard names
   -g, --gateway HOSTNAME:PORT        A gateway connection in the format HOSTNAME:PORT
                                      (Repeat as required, san and floating only)
   -a, --attribute NAME=VALUE         An attribute in the format NAME=VALUE

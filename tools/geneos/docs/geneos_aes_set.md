@@ -1,18 +1,18 @@
 # `geneos aes set`
 
-Set a key file for matching instances. The key file is saved to each matching component's (default: `all`) shared directory and the configuration set to that path.
+# `geneos aes set`
 
-The key file can be given as an existing CRC (with or without `.aes` file extension) with the `--crc`/`-c` option or as a file path (which can be prefixed `~/` for the user's home directory) or a URL with `--keyfile`/`-k`. If neither option is given then the user's default key file is used, if it exists.
+Import a key file and set parameters on matching instances.
 
-If the `--keycrc` flag is given it is first converted to upper-case and then if it matches an existing key file in the component shared directory then that is used for matching instances. When `TYPE` is not given, the key file will also be copied to the shared directories of other component types if not already present.
+To create a key file with new contents use the `aes new` command.
 
-The `--keyfile` flag value can be a local file (including a prefix of `~/` to represent the user's home directory), a URL or a dash `-` for `STDIN`. The given key file is evaluated and its CRC32 checksum checked against existing key files in the matching component shared directories. The key file is only saved if one with the same checksum does not already exist. 
+If the `--shared`/`-s` flag is set then the provided key file is imported to matching component shared key file directories and matching instances have their key file parameters set to point to the new location.
 
-For each instance any existing `keyfile` path is copied to a `prevkeyfile` setting, unless the `--noroll`/`-N` option if given, to support key file updating in Geneos GA6 and above.
+If `--crc CRC`/`-c CRC` is given then the 8 hex-digit CRC is used to look up an existing key file in the component's shared key file directory and if found then the matching instances are updated to use this. In this case no key files are changed.
+
+Depending on the `--no-roll`/`-N` flag, any matching instances may have their `prevkeyfile` parameter updated to reference any original key file and, if a new key file is written in a non-shared location the previous file is also renamed using the suffix in the `--backup`/`-b` flag.
 
 Key files are only set on components that support them.
-
-Only local key files, unless given as a URL, can be copied to remote hosts, not visa versa. Referencing a key file by CRC on a remote host will not result in that file being copies to other hosts.
 
 ```text
 geneos aes set [flags] [TYPE] [NAME...]
@@ -21,9 +21,12 @@ geneos aes set [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -c, --crc string        CRC of existing component shared keyfile to use (extension optional)
-  -k, --keyfile KEYFILE   Key file to import and use (default /home/peter/.config/geneos/keyfile.aes)
-  -N, --noroll            Do not roll any existing keyfile to previous keyfile setting
+  -k, --keyfile PATH|URL|-   Key file to use. PATH|URL|-
+                             Path to a local file, a URL or a dash for STDIN. (default "-")
+  -c, --crc CRC              CRC of an existing shared keyfile to use
+  -b, --backup string        Backup any existing keyfile with extension given (default "-prev")
+  -N, --no-roll              Do not roll any existing keyfile to previous keyfile setting
+  -s, --shared               Set as a shared keyfile, using the CRC as the file name prefix
 ```
 
 ## SEE ALSO

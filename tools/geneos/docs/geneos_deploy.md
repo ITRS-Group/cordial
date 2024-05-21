@@ -16,7 +16,7 @@ The stages that deploy goes through will help you choose the options you need:
 
    If the destination for the deployment is a configured remote host then the GENEOS_HONE path configured for that host is always used and the `--geneos`/`-D` option will result in an error if the path is different to the one configured for the remote.
 
-2. If an existing release is installed for the component `TYPE` and a base link (set with `--base`/`-b`, defaulting to `active_prod`) is present then this is used, otherwise `deploy` will install the release selected with the `--version`/`-V` option (default `latest`) either from the official download site or from a local archive. If `--archive`/`-A` is a directory then it is searched for a suitable release archive using the standard naming convention for downloads. If you need to install from a specific file that does not conform to the normal naming conventions then you can override the TYPE and VERSION with the `--override`/`-o` option.
+2. If an existing release is installed for the component `TYPE` and a base link (set with `--base`/`-b`, defaulting to `active_prod`) is present then this is used, otherwise `deploy` will install the release selected with the `--version`/`-V` option (default `latest`) either from the official download site or from a local archive. If `--archive`/`-A` is a directory then it is searched for a suitable release archive using the standard naming convention for downloads. If you need to install from a specific file that does not conform to the normal naming conventions then you can override the TYPE and VERSION with the `--override`/`-O` option.
 
    Please note that if there is already an instance installed but using a separate version then the base link will **NOT** be updated automatically. The release will be downloaded and installed but you will have to also perform a `geneos update` to ensure that other instances are restarted in a controlled way.
 
@@ -38,9 +38,9 @@ Any additional command line arguments are used to set configuration values. Any 
 
 ## TLS Secured Instances
 
-To deploy a TLS enabled instance on a new server you can use the `--import-cert`/`-c` and, optionally `--import-key`/`-k` flags. The file containing the required certificates and private key for signing new certificates can be obtained using `geneos tls export` on your main Geneos server. If you have been give a certificate and key file from a non-Geneos system then you have to make sure they are in PEM format and you can pass them in using the separate flags. The certificate file should also contain any parent certificates required for verification.
+To deploy a TLS enabled instance on a new server you can use the `--signing-bundle`/`-C`. The PEM formatted data containing the required certificates and private key for signing new certificates can be obtained using `geneos tls export` on your main Geneos server. If you have been give a certificate and key file from a non-Geneos system then you have to make sure they are in PEM format and you can pass them in using the separate flags. The certificate file should also contain any parent certificates required for verification.
 
-You can also create a new TLS root and signing certificate/key set with the `--secure`/`-T` flags.
+You can also create a new TLS root and signing certificate/key set with the `--tls`/`-T` flags.
 
 ## AES Key Files
 
@@ -66,36 +66,40 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
 ### Options
 
 ```text
-  -D, --geneos GENEOS_HOME            GENEOS_HOME directory. No default if not found
-                                      in user configuration or environment
+  -D, --geneos GENEOS_HOME            Installation directory. Prompted if not given and not found
+                                      in existing user configuration or environment ${GENEOS_HOME}
   -S, --start                         Start new instance after creation
+  -l, --log                           Start created instance and follow logs.
+                                      (Implies --start to start the instance)
   -x, --extras string                 Extra args passed to initial start, split on spaces and quoting ignored
                                       Use this option for bootstrapping instances, such as with Centralised Config
-  -l, --log                           Follow the logs after starting the instance.
-                                      Implies --start to start the instance
-  -p, --port uint16                   Override the default port selection
-  -b, --base string                   Select the base version for the instance (default "active_prod")
-  -T, --secure                        Use secure connects
-                                      Initialise TLS subsystem if required
+  -p, --port port                     Override the default port selection
+  -T, --tls                           Initialise TLS subsystem if required.
+                                      Use options below to import existing certificate bundles
+  -C, --signing-bundle PEM            Signing certificate bundle file, in PEM format.
+                                      Use a dash (`-`) to be prompted for PEM from console
+  -c, --instance-bundle PEM           Instance certificate bundle file, in PEM format.
+                                      Use a dash (`-`) to be prompted for PEM from console
+      --keyfile PATH                  Keyfile PATH to use. Default is to create one
+                                      for TYPEs that support them
+      --keycrc CRC                    CRC of key file in the component's shared "keyfiles" 
+                                      directory to use (extension optional)
   -u, --username string               Username for downloads
                                       Credentials used if not given.
   -P, --password PLAINTEXT            Password for downloads
                                       Prompted if required and not given
+  -b, --base string                   Select the base version for the instance (default "active_prod")
   -V, --version VERSION               Use this VERSION
                                       Doesn't work for EL8 archives. (default "latest")
-  -L, --local                         Install from local files only
+  -L, --local                         Install from local archives only
   -A, --archive string                File or directory to search for local release archives
-      --override [TYPE:]VERSION       Override the [TYPE:]VERSION for archive
+  -O, --override [TYPE:]VERSION       Override the [TYPE:]VERSION for archive
                                       files with non-standard names
       --nexus                         Download from nexus.itrsgroup.com
                                       Requires ITRS internal credentials
       --snapshots                     Download from nexus snapshots
                                       Implies --nexus
       --template PATH|URL|-           Template file to use (if supported for TYPE). PATH|URL|-
-      --keyfile PATH                  Keyfile PATH to use. Default is to create one
-                                      for TYPEs that support them
-      --keycrc CRC                    CRC of key file in the component's shared "keyfiles" 
-                                      directory to use (extension optional)
   -I, --import [DEST=]PATH|URL        import file(s) to instance. DEST defaults to the base
                                       name of the import source or if given it must be
                                       relative to and below the instance directory
@@ -112,8 +116,6 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       (Repeat as required, san only)
   -v, --variable [TYPE:]NAME=VALUE    A variable in the format [TYPE:]NAME=VALUE
                                       (Repeat as required, san only)
-  -c, --import-cert string            signing certificate file with optional root cert and private key, PEM format
-  -k, --import-key string             signing private key file, PEM format
 ```
 
 ## Examples

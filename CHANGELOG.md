@@ -1,5 +1,97 @@
 # Change Log
 
+## Version v1.13.0
+
+> **Released 2024-05-21**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+⚠️ In addition to the breaking changes below please note that some documentation is still out-of-date, and the details in this changelog are more likely to be up-to-date.
+
+## v1.13.0 BREAKING CHANGES
+
+⚠️ Note there are a significant number of **BREAKING CHANGES** in this release both for the `geneos` program, specifically around TLS and AES command line options and behaviour, but also for some of the `pkg` APIs.
+
+* `tools/geneos`
+
+  * `tls` Subsystem
+
+    After reviewing the usability of the TLS subsystem commands to manage secure connections with users, we've re-worked some of the functionality and added a new `tls export` command. The command line flags for the `tls import`, `deploy` and `init` command have been revisited and an attempt been made to align them more closely. Now, the following flags have common meanings:
+    
+      * `--tls`/`-T` - enable TLS secured connections. This applies to all the `init` commands and the the `deploy` command. Was previously `--secure`/`-C` in `deploy` and `--makecerts`/`-C` in `init` commands. Both long forms are aliased to the new flag.
+      * `--signing-bundle`/`-C` - specifies the source of signing certificate and private key and optional verification chain. This is new to `deploy` and replaces some of the functionality of `--importcert` for `init` commands where the short form has changed case for consistency.
+      * `--instance-bundle`/`-c` - specifies the source of an instance certificate and private key and optional verification chain. This is new to `deploy` and replaces the rest of the functionality of `--importcert` for `init` commands.
+
+    Other flags have been deprecated, such as `--importkey`/`-k`, whose functionality has been merged with the above.
+
+    The new `tls export` command has been added to help extract those parts of the local TLS configuration signing certificate and private key that you need to push to a remote server to be able to create and manage certificates with a common trust relationship. Use the output of `tls export` with the other commands above and their `--signing-bundle` flags to do this.
+
+    What this means for you is that if you need to manage Geneos instances across multiple servers (remote probes, standby Gateways etc.) but cannot use the existing SSH `host` features, then you can more easily keep the installation in sync for TLS certificates. Typical usage may be like this:
+
+    On your main server run this, and copy the output to your clipboard (or output to a file with the `--output`/`-o` option):
+
+    ```bash
+    $ geneos tls export 
+    --- BEGIN CERTIFICATE ---
+    ...
+    ```
+
+    Then, log in to the new remote system and
+
+    ```bash
+    $ geneos deploy san -u downloaduser@example.com -C -
+    [follow-prompts]
+    Paste PEM formatted certificate bundle:
+    [CTRL-V ENTER CTRL-D]
+    ```
+
+    Now your new Self-Announcing Netprobe will have a certificate created signed by the signing certificate and key you have exported on the central server.
+
+  * `aes` Subsystem
+
+    The AES subsystem was inconsistent and the functionality incomplete and, in reality, a mess. In this release we have reviewed the functionality of all of the AES commands. The support for AES keyfile creation, importing and management on remote hosts has been improved, but some issues may remain.
+
+    The `aes ls`, `aes encode`, `aes decode` and `aes password` commands are largely the same while their internal implementations have been cleand-up. The other commands - `aes new`, `aes import` and `aes set` have all been rethought and their functionality and command line flags have changed. Please review the help text or documentation for full details. They should be more consistent and useful now, but as always please let us know if anything doesn't work as you would expect.
+
+  * `deploy`
+
+    As mentioned in the `tls` subsystem changes above, the command lin flags for the `deploy` command have changed, especially the `-C` and `-c` have been swapped around for consistency. Please note this if you have previously used `deploy` to create TLS protected Geneos deployments. The short form for `--override` is now `-O`.
+
+  * `package` and `init` Subsystems
+
+    The commands that support an `--override` flag have had the short form changed to `-O` to free the `-T` in `deploy` to be hort form for `--tls`.
+
+* `pkg/config`
+
+  The `config` package 
+
+## v1.13.0 Changes
+
+* Go dependency updated to 1.22.3
+
+* `tools/geneos`
+
+  In addition to the breaking changes, there have been a number of added features and functional improvements:
+
+  * `webserver` instances will now automatically manage TLS though a custom `cacerts` file and a local keystore and `security.properties` file changes. This allows for both client and server TLS with trust chains. The instance chain file is added to the Java `cacerts` to add trust of other Geneos components, such as Gateways and SSO Agent while instance certificate and private key can be "real" PKI ones to offer a trusted TLS web interface.
+
+* Use a new SMTP package - <github.com/wneessen/go-mail> - Swap out the old SMTP email package used to a newer, actively maintained one. The changes should not be user visible. The affected components are `pkg/email` and `tools/dv2mail`. There have been no changes to `libraries/libemail` as the changes required have not yet been tested and will be completed in a later release.
+
+## v1.13.0 Fixes
+
+Many of the changes above were prompted while tracking down and fixing issues around existing APIs and features in `geneos`.
+
+* `tools/dv2email`
+
+  Fix the default HTML template to use the correct, new names for data identifying columns and rows.
+
+* `tools/geneos`
+
+  * Fix support for legacy `.rc` files, which was broken in a previous release.
+  * Fix `tls ls -a` to show root and signing certificates even without instance certificates created.
+
+---
+
 ## Version v1.12.1
 
 > **Released 2024-04-18**

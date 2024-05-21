@@ -42,7 +42,7 @@ func init() {
 
 	floatingCmd.Flags().StringVarP(&floatingCmdVersion, "version", "V", "latest", "Download this `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
 	floatingCmd.Flags().StringVarP(&floatingCmdArchive, "archive", "A", "", archiveOptionsText)
-	floatingCmd.Flags().StringVarP(&floatingCmdOverride, "override", "T", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
+	floatingCmd.Flags().StringVarP(&floatingCmdOverride, "override", "O", "", "Override the `[TYPE:]VERSION` for archive files with non-standard names")
 
 	floatingCmd.Flags().VarP(&initCmdExtras.Gateways, "gateway", "g", instance.GatewaysOptionstext)
 	floatingCmd.Flags().VarP(&initCmdExtras.Attributes, "attribute", "a", instance.AttributesOptionsText)

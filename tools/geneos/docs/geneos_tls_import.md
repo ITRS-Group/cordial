@@ -45,10 +45,8 @@ geneos tls import [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -c, --cert file     Instance certificate file to import, PEM format
-  -s, --signer file   Signing certificate file to import, PEM format
-  -k, --key file      Private key file for certificate, PEM format
-  -C, --chain file    Certificate chain file to import, PEM format
+  -c, --instance-bundle string   Instance certificate bundle to import, PEM format
+  -C, --signing-bundle string    Signing certificate bundle to import, PEM format
 ```
 
 ## Examples
