@@ -33,62 +33,64 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 )
 
-// ImportKeyFile sets the keyfile for component ct from either the given
-// (local) keyfile or the CRC for an existing shared file.
-func ImportKeyFile(h *Host, ct *Component, keyfile config.KeyFile, keycrc string, prompt ...string) (crc string, err error) {
-	var path string
-
-	if keycrc == "" {
-		var crc32 uint32
-		crc32, err = ImportSharedKey(h, ct, string(keyfile), prompt...)
-		crc = fmt.Sprintf("%08X", crc32)
+// ReadKeyValues returns a memguard enclave in kv containing the key
+// values from the source. `source` can be a path to a file, a `-` for
+// STDIN (in which case an optional prompt is output) or a remote URL.
+func ReadKeyValues(source string, prompt ...string) (kv *config.KeyValues, err error) {
+	switch {
+	case source == "":
+		err = ErrInvalidArgs
 		return
-	}
-
-	// if no CRC given then use the keyfile or the user's default one
-	// search for existing CRC in all shared dirs
-
-	// the crc may have come from a different host, check and remember.
-	// look local first/only?
-	crcfile := KeyFileNormalise(keycrc)
-
-	onHost := h
-HOST:
-	for _, h := range h.OrList(ALL) {
-		for _, ct := range ct.OrList(UsesKeyFiles()...) {
-			path = ct.Shared(h, "keyfiles", crcfile)
-			log.Debug().Msgf("looking for keyfile %s on %s", path, h)
-			if _, err := h.Stat(path); err == nil {
-				onHost = h
-				break HOST
-			}
-			path = ""
+	case source == "-":
+		// STDIN, prefix with prompt if given
+		if len(prompt) > 0 && prompt[0] != "" {
+			fmt.Println(prompt[0])
 		}
-	}
-	if path == "" {
-		err = fmt.Errorf("keyfile %q or CRC %q not found", crcfile, keycrc)
-		return
+		kv, err = config.ReadKeyValues(os.Stdin)
+		if err != nil {
+			return kv, err
+		}
+	case strings.HasPrefix(string(source), "https://"), strings.HasPrefix(string(source), "http://"):
+		// remote
+		resp, err := http.Get(string(source))
+		if err != nil {
+			return kv, err
+		}
+		defer resp.Body.Close()
+		kv, err = config.ReadKeyValues(resp.Body)
+		if err != nil {
+			return kv, err
+		}
+	case strings.HasPrefix(string(source), "~/"):
+		// relative to home
+		home, _ := config.UserHomeDir()
+		source = strings.Replace(source, "~", home, 1)
+		fallthrough
+	default:
+		// local file, read and write to new locations
+		keyfile := config.KeyFile(source)
+		_, _, err = keyfile.ReadOrCreate(host.Localhost, false)
+		if err != nil {
+			return
+		}
+		kv, err = keyfile.Read(host.Localhost)
+		if err != nil {
+			return kv, err
+		}
+
 	}
 
-	k, err := onHost.Open(path)
-	if err != nil {
-		return
-	}
-	defer k.Close()
-	kv := config.ReadKeyValues(k)
-
-	crc32, err := ImportSharedKeyValues(h, ct, kv)
-	crc = fmt.Sprintf("%08X", crc32)
 	return
 }
 
 // ImportSharedKey writes the contents of source to a shared keyfile on
 // host h, component type ct. Host can be `ALL` and ct can be nil, in
-// which case they are treated as wildcards. source can be a local file
+// which case they are treated as wildcards. keyfile can be a local file
 // ("~/" relative to user home), a remote URL or "-" for STDIN.
-func ImportSharedKey(h *Host, ct *Component, source string, prompt ...string) (crc uint32, err error) {
+func ImportSharedKey(h *Host, ct *Component, source string, prompt ...string) (paths []string, crc uint32, err error) {
 	switch {
 	case source == "":
 		err = ErrInvalidArgs
@@ -98,47 +100,50 @@ func ImportSharedKey(h *Host, ct *Component, source string, prompt ...string) (c
 		if len(prompt) > 0 {
 			fmt.Println(prompt[0])
 		}
-		return ImportSharedKeyValues(h, ct, config.ReadKeyValues(os.Stdin))
-
-	case strings.HasPrefix(source, "https://"), strings.HasPrefix(source, "http://"):
-		// remote
-		resp, err := http.Get(source)
+		kv, err := config.ReadKeyValues(os.Stdin)
 		if err != nil {
-			return crc, err
+			return paths, crc, err
+		}
+		return WriteSharedKeyValues(h, ct, kv)
+
+	case strings.HasPrefix(string(source), "https://"), strings.HasPrefix(string(source), "http://"):
+		// remote
+		resp, err := http.Get(string(source))
+		if err != nil {
+			return paths, crc, err
 		}
 		defer resp.Body.Close()
-		return ImportSharedKeyValues(h, ct, config.ReadKeyValues(resp.Body))
-	case strings.HasPrefix(source, "~/"):
+		kv, err := config.ReadKeyValues(resp.Body)
+		if err != nil {
+			return paths, crc, err
+		}
+		return WriteSharedKeyValues(h, ct, kv)
+	case strings.HasPrefix(string(source), "~/"):
 		// relative to home
 		home, _ := config.UserHomeDir()
 		source = strings.Replace(source, "~", home, 1)
 		fallthrough
 	default:
-		// local file
+		// local file, read and write to new locations
 		keyfile := config.KeyFile(source)
-		crc, _, err = keyfile.Check(false)
+		_, _, err = keyfile.ReadOrCreate(host.Localhost, false)
 		if err != nil {
 			return
 		}
-		kv, err := keyfile.Read()
+		kv, err := keyfile.Read(host.Localhost)
 		if err != nil {
-			return crc, err
+			return paths, crc, err
 		}
 
-		return ImportSharedKeyValues(h, ct, kv)
+		return WriteSharedKeyValues(h, ct, kv)
 	}
 }
 
-// ImportSharedKeyValues writes key values kv to the host h and
-// component type ct shared directory. Host can be ALL and ct can be
-// nil, in which case they are treated as wildcards.
-func ImportSharedKeyValues(h *Host, ct *Component, kv *config.KeyValues) (crc uint32, err error) {
-	if kv == nil {
-		err = ErrInvalidArgs
-		return
-	}
-	crc, err = kv.Checksum()
-	if err != nil {
+// WriteSharedKeyValues writes key values kv to the host h and component
+// type ct shared directory in a file `CRC.aes`. Host can be ALL and ct
+// can be nil, in which case they are treated as wildcards.
+func WriteSharedKeyValues(h *Host, ct *Component, kv *config.KeyValues) (paths []string, crc uint32, err error) {
+	if crc, err = kv.Checksum(); err != nil {
 		return
 	}
 
@@ -146,41 +151,41 @@ func ImportSharedKeyValues(h *Host, ct *Component, kv *config.KeyValues) (crc ui
 	// the filename base. create 'keyfiles' directory as required
 	for _, h := range h.OrList(AllHosts()...) {
 		for _, ct := range ct.OrList(UsesKeyFiles()...) {
-			if err = WriteSharedKey(h, ct, kv); err != nil {
+			var p string
+			if p, err = writeSharedKey(h, ct, kv); err != nil {
 				return
-			} else if err == nil {
-				log.Debug().Msgf("skip importing existing %08X CRC named keyfile for %s on %s", crc, ct, h)
 			}
+			paths = append(paths, p)
 		}
 	}
 	return
 }
 
-// WriteSharedKey writes key values kv to the shared keyfile directory
+// writeSharedKey writes key values kv to the shared keyfile directory
 // for component ct on host h using the CRC32 checksum of the values as
 // the base name. Both host h and component ct must be specific.
-func WriteSharedKey(h *Host, ct *Component, kv *config.KeyValues) (err error) {
+func writeSharedKey(h *Host, ct *Component, kv *config.KeyValues) (p string, err error) {
 	if ct == nil || h == nil || h == ALL || kv == nil {
-		return ErrInvalidArgs
+		return "", ErrInvalidArgs
 	}
 
 	crc, err := kv.Checksum()
 	if err != nil {
-		return err
+		return
 	}
 	crcstr := fmt.Sprintf("%08X", crc)
 
 	// save given keyfile
-	file := ct.Shared(h, "keyfiles", crcstr+".aes")
-	if _, err := h.Stat(file); err == nil {
+	p = ct.Shared(h, "keyfiles", crcstr+".aes")
+	if _, err = h.Stat(p); err == nil {
 		fmt.Printf("keyfile %s.aes already exists in %s shared directory on %s\n", crcstr, ct, h)
-		return nil
+		return
 	}
-	if err := h.MkdirAll(path.Dir(file), 0775); err != nil {
+	if err = h.MkdirAll(path.Dir(p), 0775); err != nil {
 		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
-		return err
+		return
 	}
-	w, err := h.Create(file, 0600)
+	w, err := h.Create(p, 0600)
 	if err != nil {
 		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
 		return
@@ -190,7 +195,7 @@ func WriteSharedKey(h *Host, ct *Component, kv *config.KeyValues) (err error) {
 	if err = kv.Write(w); err != nil {
 		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
 	}
-	fmt.Printf("keyfile %s.aes saved to %s shared directory on %s\n", crcstr, ct, h)
+	log.Debug().Msgf("keyfile saved to %s on %s", p, h)
 	return
 }
 
