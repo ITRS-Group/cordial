@@ -242,6 +242,14 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 		return
 	}
 
+	if _, version, err := instance.Version(g); err == nil {
+		if geneos.CompareVersion(version, "5.14.0") >= 0 {
+			// use keyfiles
+			log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
+			cf.Set("usekeyfile", "true")
+		}
+	}
+
 	return nil
 }
 

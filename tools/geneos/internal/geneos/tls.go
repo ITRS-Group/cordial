@@ -27,11 +27,14 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"path"
 
 	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 )
@@ -176,5 +179,158 @@ func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave
 	}
 
 	err = nil
+	return
+}
+
+func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) (err error) {
+	signingBundle, err := config.ReadInputPEMString(signingBundleSource, "signing certificate(s)")
+	if err != nil {
+		return err
+	}
+
+	privateKey, err := config.ReadInputPEMString(privateKeySource, "signing key")
+	if err != nil {
+		return err
+	}
+
+	cert, key, chain, err := DecomposePEM(signingBundle, privateKey)
+	if err != nil {
+		return err
+	}
+	// basic validation
+	if !(cert.BasicConstraintsValid && cert.IsCA) {
+		return ErrInvalidArgs
+	}
+
+	if err = config.WriteCert(LOCAL, path.Join(config.AppConfigDir(), SigningCertFile+".pem"), cert); err != nil {
+		return err
+	}
+	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), path.Join(config.AppConfigDir(), SigningCertFile+".pem"))
+
+	if err = config.WritePrivateKey(LOCAL, path.Join(config.AppConfigDir(), SigningCertFile+".key"), key); err != nil {
+		return err
+	}
+	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(config.AppConfigDir(), SigningCertFile+".key"))
+	if chainSource != "" {
+		b, err := os.ReadFile(chainSource)
+		if err != nil {
+			log.Error().Err(err).Msg("")
+			return err
+		}
+		_, _, chain, err = DecomposePEM(string(b))
+		if err != nil {
+			return err
+		}
+		if err = WriteChainLocal(chain); err != nil {
+			return err
+		}
+	} else if len(chain) > 0 {
+		if err = WriteChainLocal(chain); err != nil {
+			return err
+		}
+	}
+	fmt.Printf("%s certificate chain written to %s\n", cordial.ExecutableName(), path.Join(LOCAL.PathTo("tls"), ChainCertFile))
+	return err
+}
+
+func WriteChainLocal(chain []*x509.Certificate) (err error) {
+	if len(chain) == 0 {
+		return
+	}
+	tlsPath := LOCAL.PathTo("tls")
+	if err = LOCAL.MkdirAll(tlsPath, 0775); err != nil {
+		return err
+	}
+	if err = config.WriteCertChain(LOCAL, path.Join(tlsPath, ChainCertFile), chain...); err != nil {
+		return err
+	}
+	return
+}
+
+// create the tls/ directory in Geneos and a CA / DCA as required
+//
+// later options to allow import of a DCA
+//
+// This is also called from `init`
+func TLSInit(overwrite bool, keytype string) (err error) {
+	// directory permissions do not need to be restrictive
+	err = LOCAL.MkdirAll(config.AppConfigDir(), 0775)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
+	if err := config.CreateRootCert(
+		LOCAL,
+		path.Join(config.AppConfigDir(), RootCAFile),
+		cordial.ExecutableName()+" root certificate",
+		overwrite,
+		keytype); err != nil {
+		if errors.Is(err, os.ErrExist) {
+			// fmt.Println("root certificate already exists in", config.AppConfigDir())
+			return nil
+		}
+		return err
+	}
+	fmt.Printf("CA created for %s\n", RootCAFile)
+
+	if err := config.CreateSigningCert(
+		LOCAL, path.Join(config.AppConfigDir(), SigningCertFile),
+		path.Join(config.AppConfigDir(), RootCAFile),
+		cordial.ExecutableName()+" intermediate certificate",
+		overwrite); err != nil {
+		if errors.Is(err, os.ErrExist) {
+			// fmt.Println("signing certificate already exists in", config.AppConfigDir())
+			return nil
+		}
+		return err
+	}
+	fmt.Printf("Signing certificate created for %s\n", SigningCertFile)
+
+	// sync if geneos root exists
+	if d, err := os.Stat(LocalRoot()); err == nil && d.IsDir() {
+		return TLSSync()
+	}
+	return nil
+}
+
+// TLSSync creates and copies a certificate chain file to all remote
+// hosts
+//
+// If a signing cert and/or a root cert exist, refresh the chain file
+// from it, otherwise copy the chain file (using the configured name) to
+// all remotes.
+func TLSSync() (err error) {
+	rootCert, _, err := ReadRootCert(true)
+	if err != nil {
+		rootCert = nil
+	}
+	geneosCert, _, err := ReadSigningCert()
+	if err != nil {
+		return os.ErrNotExist
+	}
+
+	if rootCert == nil && geneosCert == nil {
+		tlsPath := LOCAL.PathTo("tls")
+		chainpath := path.Join(tlsPath, ChainCertFile)
+		if s, err := LOCAL.Stat(chainpath); err != nil && (s.Mode().IsRegular() || (s.Mode()&fs.ModeSymlink != 0)) {
+			for _, r := range RemoteHosts(false) {
+				host.CopyFile(LOCAL, tlsPath, r, r.PathTo("tls"))
+			}
+		}
+		return
+	}
+
+	for _, r := range AllHosts() {
+		tlsPath := r.PathTo("tls")
+		if err = r.MkdirAll(tlsPath, 0775); err != nil {
+			return
+		}
+		chainpath := path.Join(tlsPath, ChainCertFile)
+		if err = config.WriteCertChain(r, chainpath, geneosCert, rootCert); err != nil {
+			return
+		}
+
+		fmt.Printf("Updated certificate chain %s pem on %s\n", chainpath, r.String())
+	}
 	return
 }
