@@ -174,6 +174,7 @@ import (
 	"strings"
 
 	"github.com/awnumar/memguard"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/maja42/goval"
 )
 
@@ -489,7 +490,7 @@ func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value 
 		}
 
 		keyfile := KeyFile(k)
-		p, err := keyfile.DecodeString(encodedValue)
+		p, err := keyfile.DecodeString(host.Localhost, encodedValue)
 		if err != nil {
 			continue
 		}
@@ -515,7 +516,7 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 			k = bytes.Replace(k, []byte("~"), []byte(home), 1)
 		}
 		keyfile := KeyFile(k)
-		p, err := keyfile.Decode(encodedValue)
+		p, err := keyfile.Decode(host.Localhost, encodedValue)
 		if err != nil {
 			continue
 		}
@@ -541,7 +542,7 @@ func (c *Config) expandEncodedBytesEnclave(s []byte, options ...ExpandOptions) (
 			k = bytes.Replace(k, []byte("~"), []byte(home), 1)
 		}
 		keyfile := KeyFile(k)
-		p, err := keyfile.DecodeEnclave(encodedValue)
+		p, err := keyfile.DecodeEnclave(host.Localhost, encodedValue)
 		if err != nil {
 			continue
 		}
@@ -567,7 +568,7 @@ func (c *Config) expandEncodedBytesLockedBuffer(s []byte, options ...ExpandOptio
 			k = bytes.Replace(k, []byte("~"), []byte(home), 1)
 		}
 		keyfile := KeyFile(k)
-		p, err := keyfile.DecodeEnclave(encodedValue)
+		p, err := keyfile.DecodeEnclave(host.Localhost, encodedValue)
 		if err != nil {
 			continue
 		}
