@@ -31,6 +31,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -94,11 +95,11 @@ var setCmd = &cobra.Command{
 
 		// check for passwords
 		if setCmdPrompt {
-			if password, err = setCmdKeyfile.EncodePasswordInput(true); err != nil {
+			if password, err = setCmdKeyfile.EncodePasswordInput(host.Localhost, true); err != nil {
 				return
 			}
 		} else if !setCmdPassword.IsNil() {
-			if password, err = setCmdKeyfile.Encode(setCmdPassword, true); err != nil {
+			if password, err = setCmdKeyfile.Encode(host.Localhost, setCmdPassword, true); err != nil {
 				return
 			}
 		}
