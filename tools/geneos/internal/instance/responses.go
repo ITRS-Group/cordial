@@ -470,7 +470,7 @@ func WriterTimingFormat(format string) WriterOptions {
 }
 
 // WriterPrefix is the Printf-style format to prefix plain text output
-// (only once per Lines). It can have one argument, the instance asd a
+// (only once per Lines). It can have one argument, the instance as a
 // geneos.Instance. The default is `"%s "`.
 func WriterPrefix(prefix string) WriterOptions {
 	return func(wo *writeOptions) {
