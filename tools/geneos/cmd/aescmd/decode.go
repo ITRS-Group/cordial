@@ -32,6 +32,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -120,7 +121,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 				continue
 			}
 
-			e, err := k.DecodeString(ciphertext)
+			e, err := k.DecodeString(host.Localhost, ciphertext)
 			if err != nil {
 				continue
 			}
@@ -158,7 +159,10 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 				return
 			}
 			defer r.Close()
-			a := config.ReadKeyValues(r)
+			a, err := config.ReadKeyValues(r)
+			if err != nil {
+				return
+			}
 			e, err := a.DecodeString(ciphertext)
 			if err != nil {
 				return

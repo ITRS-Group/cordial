@@ -24,13 +24,11 @@ package aescmd
 
 import (
 	_ "embed"
-	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 var importCmdKeyfileSource string
@@ -40,7 +38,8 @@ func init() {
 
 	importCmdKeyfileSource = string(cmd.DefaultUserKeyfile)
 
-	importCmd.Flags().StringVarP(&importCmdKeyfileSource, "keyfile", "k", "-", "Path to key-file")
+	importCmd.Flags().StringVarP(&importCmdKeyfileSource, "keyfile", "k", "", "`PATH` to key file. Use a dash (`-`) to be prompted for the contents of the key file on the console")
+
 	importCmd.Flags().SortFlags = false
 
 }
@@ -49,23 +48,16 @@ func init() {
 var importCmdDescription string
 
 var importCmd = &cobra.Command{
-	Use:   "import [flags] [TYPE] [NAME...]",
-	Short: "Import key files for component TYPE",
-	Long:  importCmdDescription,
-	Example: strings.ReplaceAll(`
-# import keyfile.aes to GENEOS/gateway/gateway_shared/DEADBEEF.aes
-geneos aes import --keyfile ~/keyfile.aes gateway
-`, "|", "`"),
+	Use:          "import [flags] [TYPE] [NAME...]",
+	Short:        "Import key files for component TYPE",
+	Long:         importCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		cmd.AnnotationWildcard:  "false",
 		cmd.AnnotationNeedsHome: "true",
 	},
+	Deprecated: "Please use the `" + cordial.ExecutableName() + " aes set` command instead",
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, _ := cmd.ParseTypeNames(command)
-
-		crc32, err := geneos.ImportSharedKey(geneos.GetHost(cmd.Hostname), ct, importCmdKeyfileSource)
-		fmt.Printf("imported keyfile with CRC %08X\n", crc32)
 		return
 	},
 }
