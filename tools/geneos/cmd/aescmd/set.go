@@ -135,10 +135,15 @@ func aesSetAESInstance(i geneos.Instance, params ...any) (resp *instance.Respons
 		if pkp != "" {
 			resp.Line = fmt.Sprintf("keyfile %s written, existing keyfile renamed to %s and marked a previous keyfile\n", keyfile, pkp)
 		} else {
-			resp.Line = fmt.Sprintf("keyfile %s written\n", keyfile)
+			resp.Line = fmt.Sprintf("keyfile %s written", keyfile)
 		}
 	} else {
-		i.Config().Set("keyfile", kp)
+		keyfile, _, err := instance.WriteAESKeyFile(i, kv)
+		if err != nil {
+			resp.Err = err
+			return
+		}
+		i.Config().Set("keyfile", keyfile)
 		resp.Line = fmt.Sprintf("keyfile %s written", keyfile)
 	}
 	return
