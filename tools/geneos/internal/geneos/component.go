@@ -258,8 +258,8 @@ func (ct *Component) InstancesDir(h *Host) (dirs []string) {
 	return
 }
 
-// Shared return the shared directory for the component on host h
-// joined to subdirectories and file given as subs.
+// Shared return a path to a location in the shared directory for the
+// component on host h joined to subdirectories and file given as subs.
 func (ct *Component) Shared(h *Host, subs ...interface{}) string {
 	if ct == nil {
 		return ""
