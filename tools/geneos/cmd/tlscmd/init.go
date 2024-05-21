@@ -45,6 +45,7 @@ func init() {
 
 	initCmd.Flags().StringVarP(&initCmdKeyType, "keytype", "K", "ecdh", "Key type for root, one of ecdh, ecdsa, ec15529 or rsa")
 	initCmd.Flags().BoolVarP(&initCmdOverwrite, "force", "F", false, "Overwrite any existing certificates")
+
 	initCmd.Flags().SortFlags = false
 }
 

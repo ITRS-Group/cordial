@@ -28,11 +28,11 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
@@ -41,7 +41,7 @@ var addCmdTemplate, addCmdBase, addCmdKeyfileCRC string
 var addCmdStart, addCmdLogs bool
 var addCmdPort uint16
 var addCmdImportFiles instance.ImportFiles
-var addCmdKeyfile config.KeyFile
+var addCmdKeyfile string
 
 var addCmdExtras = instance.SetConfigValues{}
 
@@ -54,7 +54,7 @@ func init() {
 	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", instance.EnvsOptionsText)
 	addCmd.Flags().StringVarP(&addCmdBase, "base", "b", "active_prod", "Select the base version for the\ninstance")
 
-	addCmd.Flags().Var(&addCmdKeyfile, "keyfile", "Keyfile `PATH`")
+	addCmd.Flags().StringVar(&addCmdKeyfile, "keyfile", "", "Keyfile `PATH`")
 	addCmd.Flags().StringVar(&addCmdKeyfileCRC, "keycrc", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory (extension optional)")
 
 	addCmd.Flags().StringVarP(&addCmdTemplate, "template", "T", "", "Template file to use `PATH|URL|-`")
@@ -160,16 +160,29 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 
 	if ct.IsA("gateway") {
 		// override the instance generated keyfile if options given
-		crc, err := geneos.ImportKeyFile(i.Host(), i.Type(), addCmdKeyfile, addCmdKeyfileCRC, "Paste AES key file contents, end with newline and CTRL+D:")
-		if err == nil {
-			cf.Set("keyfile", instance.Shared(i, "keyfiles", crc+".aes"))
+		var sharedPath string
+		if addCmdKeyfileCRC != "" {
+			crcFile := strings.TrimSuffix(addCmdKeyfileCRC, ".aes") + ".aes"
+			sharedPath = i.Type().Shared(i.Host(), "keyfiles", crcFile)
+		} else if addCmdKeyfile != "" {
+			paths, _, err := geneos.ImportSharedKey(i.Host(), i.Type(), addCmdKeyfile, "Paste AES key file contents, end with newline and CTRL+D:")
+			if err != nil {
+				return err
+			}
+			sharedPath = paths[0]
 		}
-		// set usekeyfile for all new instances 5.14 and above
-		if _, version, err := instance.Version(i); err == nil {
-			if geneos.CompareVersion(version, "5.14.0") >= 0 {
-				// use keyfiles
-				log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
-				cf.Set("usekeyfile", "true")
+
+		if sharedPath != "" {
+			cf.Set("keyfile", sharedPath)
+			fmt.Printf("%s: keyfile written to %s", i, sharedPath)
+
+			// set usekeyfile for all new instances 5.14 and above
+			if _, version, err := instance.Version(i); err == nil {
+				if geneos.CompareVersion(version, "5.14.0") >= 0 {
+					// use keyfiles
+					log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
+					cf.Set("usekeyfile", "true")
+				}
 			}
 		}
 	}

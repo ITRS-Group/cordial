@@ -48,33 +48,38 @@ var deployCmdPort uint16
 var deployCmdArchive, deployCmdVersion, deployCmdOverride string
 var deployCmdPassword *config.Plaintext
 var deployCmdImportFiles instance.ImportFiles
-var deployCmdKeyfile config.KeyFile
+var deployCmdKeyfile string
 var deployCmdExtras = instance.SetConfigValues{}
 
 func init() {
 	GeneosCmd.AddCommand(deployCmd)
 
 	deployCmdPassword = &config.Plaintext{}
-	deployCmd.Flags().StringVarP(&deployCmdGeneosHome, "geneos", "D", "", "`GENEOS_HOME` directory. No default if not found\nin user configuration or environment")
+
+	deployCmd.Flags().StringVarP(&deployCmdGeneosHome, "geneos", "D", "", "Installation directory. Prompted if not given and not found\nin existing user configuration or environment ${`GENEOS_HOME`}")
 	deployCmd.Flags().BoolVarP(&deployCmdStart, "start", "S", false, "Start new instance after creation")
+	deployCmd.Flags().BoolVarP(&deployCmdLogs, "log", "l", false, "Start created instance and follow logs.\n(Implies --start to start the instance)")
+
 	deployCmd.Flags().StringVarP(&deployCmdExtraOpts, "extras", "x", "", "Extra args passed to initial start, split on spaces and quoting ignored\nUse this option for bootstrapping instances, such as with Centralised Config")
 
-	deployCmd.Flags().BoolVarP(&deployCmdLogs, "log", "l", false, "Follow the logs after starting the instance.\nImplies --start to start the instance")
-	deployCmd.Flags().Uint16VarP(&deployCmdPort, "port", "p", 0, "Override the default port selection")
-	deployCmd.Flags().StringVarP(&deployCmdBase, "base", "b", "active_prod", "Select the base version for the instance")
+	deployCmd.Flags().Uint16VarP(&deployCmdPort, "port", "p", 0, "Override the default `port` selection")
 
 	deployCmd.Flags().StringVarP(&deployCmdName, "name", "n", "", "Use name for instances and configurations instead of the hostname")
 	deployCmd.Flags().MarkHidden("name")
 
-	deployCmd.Flags().BoolVarP(&deployCmdSecure, "secure", "T", false, "Use secure connects\nInitialise TLS subsystem if required")
-	deployCmd.PersistentFlags().StringVarP(&deployCmdInstanceCert, "instance-cert", "c", "", "instance certificate file (with optional parent certs) and private key, PEM format")
-	deployCmd.PersistentFlags().StringVarP(&deployCmdSigningCert, "signing-cert", "C", "", "signing certificate file with optional root cert and private key, PEM format")
+	deployCmd.Flags().BoolVarP(&deployCmdSecure, "secure", "T", false, "Initialise TLS subsystem if required.\nUse options below to import existing certificate bundles")
+	deployCmd.Flags().StringVarP(&deployCmdSigningCert, "signing-bundle", "C", "", "Signing certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
+	deployCmd.Flags().StringVarP(&deployCmdInstanceCert, "instance-bundle", "c", "", "Instance certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
+
+	deployCmd.Flags().StringVar(&deployCmdKeyfile, "keyfile", "", "Keyfile `PATH` to use. Default is to create one\nfor TYPEs that support them")
+	deployCmd.Flags().StringVar(&deployCmdKeyfileCRC, "keycrc", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory to use (extension optional)")
 
 	deployCmd.Flags().StringVarP(&deployCmdUsername, "username", "u", "", "Username for downloads\nCredentials used if not given.")
 	deployCmd.Flags().VarP(deployCmdPassword, "password", "P", "Password for downloads\nPrompted if required and not given")
 
+	deployCmd.Flags().StringVarP(&deployCmdBase, "base", "b", "active_prod", "Select the base version for the instance")
 	deployCmd.Flags().StringVarP(&deployCmdVersion, "version", "V", "latest", "Use this `VERSION`\nDoesn't work for EL8 archives.")
-	deployCmd.Flags().BoolVarP(&deployCmdLocal, "local", "L", false, "Install from local files only")
+	deployCmd.Flags().BoolVarP(&deployCmdLocal, "local", "L", false, "Install from local archives only")
 	deployCmd.Flags().StringVarP(&deployCmdArchive, "archive", "A", "", "File or directory to search for local release archives")
 	deployCmd.Flags().StringVar(&deployCmdOverride, "override", "", "Override the `[TYPE:]VERSION` for archive\nfiles with non-standard names")
 
@@ -82,8 +87,6 @@ func init() {
 	deployCmd.Flags().BoolVar(&deployCmdSnapshot, "snapshots", false, "Download from nexus snapshots\nImplies --nexus")
 
 	deployCmd.Flags().StringVar(&deployCmdTemplate, "template", "", "Template file to use (if supported for TYPE). `PATH|URL|-`")
-	deployCmd.Flags().Var(&deployCmdKeyfile, "keyfile", "Keyfile `PATH` to use. Default is to create one\nfor TYPEs that support them")
-	deployCmd.Flags().StringVar(&deployCmdKeyfileCRC, "keycrc", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory to use (extension optional)")
 
 	deployCmd.Flags().VarP(&deployCmdImportFiles, "import", "I", "import file(s) to instance. DEST defaults to the base\nname of the import source or if given it must be\nrelative to and below the instance directory\n(Repeat as required)")
 
@@ -352,16 +355,18 @@ var deployCmd = &cobra.Command{
 
 		if ct.IsA("gateway") {
 			// override the instance generated keyfile if options given
-			crc, err := geneos.ImportKeyFile(i.Host(), i.Type(), deployCmdKeyfile, deployCmdKeyfileCRC, "Paste AES key file contents, end with newline and CTRL+D:")
-			if err == nil {
-				cf.Set("keyfile", instance.Shared(i, "keyfiles", crc+".aes"))
-			}
-			// set usekeyfile for all new instances 5.14 and above
-			if _, version, err := instance.Version(i); err == nil {
-				if geneos.CompareVersion(version, "5.14.0") >= 0 {
-					// use keyfiles
-					log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
-					cf.Set("usekeyfile", "true")
+			_, crc, err := geneos.ImportSharedKey(i.Host(), i.Type(), deployCmdKeyfile, deployCmdKeyfileCRC, "Paste AES key file contents, end with newline and CTRL+D:")
+			if err != nil {
+				log.Error().Err(err).Msg("cannot import keyfile, ignoring")
+			} else {
+				cf.Set("keyfile", instance.Shared(i, "keyfiles", fmt.Sprintf("%d.aes", crc)))
+				// set usekeyfile for all new instances 5.14 and above
+				if _, version, err := instance.Version(i); err == nil {
+					if geneos.CompareVersion(version, "5.14.0") >= 0 {
+						// use keyfiles
+						log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
+						cf.Set("usekeyfile", "true")
+					}
 				}
 			}
 		}

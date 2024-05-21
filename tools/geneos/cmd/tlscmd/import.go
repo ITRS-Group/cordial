@@ -46,20 +46,27 @@ var importCmdCert, importCmdSigner, importCmdChain, importCmdCertKey string
 func init() {
 	tlsCmd.AddCommand(importCmd)
 
-	importCmd.Flags().StringVarP(&importCmdCert, "cert", "c", "", "Instance certificate `file` to import, PEM format")
-	importCmd.Flags().StringVarP(&importCmdSigner, "signer", "s", "", "Signing certificate `file` to import, PEM format")
-	importCmd.Flags().StringVarP(&importCmdCertKey, "key", "k", "", "Private key `file` for certificate, PEM format")
+	importCmd.Flags().StringVarP(&importCmdCert, "instance-bundle", "c", "", "Instance certificate bundle to import, PEM format")
+	importCmd.Flags().StringVarP(&importCmdSigner, "signing-bundle", "C", "", "Signing certificate bundle to import, PEM format")
 
-	importCmd.Flags().StringVarP(&importCmdChain, "chain", "C", "", "Certificate chain `file` to import, PEM format")
+	importCmd.Flags().StringVarP(&importCmdCertKey, "key", "k", "", "Private key `file` for certificate, PEM format")
+	importCmd.Flags().MarkDeprecated("key", "include the private key in either the instance or signing bundles")
+	importCmd.Flags().StringVar(&importCmdChain, "chain", "", "Certificate chain `file` to import, PEM format")
+	importCmd.Flags().MarkDeprecated("chain", "include the trust chain in either the instance or signing bundles")
 
 	importCmd.Flags().SortFlags = false
+
+	importCmd.MarkFlagsMutuallyExclusive("instance-bundle", "signing-bundle")
+	importCmd.MarkFlagsOneRequired("instance-bundle", "signing-bundle")
 
 	importCmd.PersistentFlags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
 		switch name {
 		case "privkey":
 			name = "key"
 		case "signing":
-			name = "signer"
+			name = "signing-bundle"
+		case "cert":
+			name = "instance-bundle"
 		}
 		return pflag.NormalizedName(name)
 	})
