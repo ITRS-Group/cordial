@@ -204,6 +204,16 @@ func (kv *KeyValues) Checksum() (c uint32, err error) {
 	return
 }
 
+// Checksum returns the CRC32 checksum of the KeyValues
+func (kv *KeyValues) ChecksumString() (c string, err error) {
+	if kv == nil {
+		err = os.ErrInvalid
+		return
+	}
+	c = fmt.Sprintf("%08X", crc32.ChecksumIEEE([]byte(kv.String())))
+	return
+}
+
 func (kv *KeyValues) encode(plaintext *Plaintext) (out []byte, err error) {
 	kl, _ := kv.Open()
 	defer kl.Destroy()
