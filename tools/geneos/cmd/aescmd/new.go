@@ -108,7 +108,7 @@ geneos aes new -S gateway
 			}
 
 			if newCmdUpdate {
-				crc, err := kv.Checksum()
+				crc, err := kv.ChecksumString()
 				if err != nil {
 					return err
 				}
@@ -161,12 +161,12 @@ func aesNewSetInstanceShared(i geneos.Instance, params ...any) (resp *instance.R
 		return
 	}
 
-	crc, ok := params[0].(uint32)
+	crc, ok := params[0].(string)
 	if !ok {
 		resp.Err = fmt.Errorf("wrong parameter type %T", crc)
 		return
 	}
-	kp := instance.Shared(i, "keyfiles", fmt.Sprintf("%d.aes", crc))
+	kp := instance.Shared(i, "keyfiles", crc+".aes")
 
 	keyfile := config.KeyFile(kp)
 	kv, err := keyfile.Read(i.Host())
