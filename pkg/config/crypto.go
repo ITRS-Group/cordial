@@ -144,8 +144,9 @@ func (kv *KeyValues) Write(w io.Writer) error {
 
 // ReadKeyValues from the io.Reader r and return a locked buffer
 // key values kv.
-func ReadKeyValues(r io.Reader) (kv *KeyValues) {
+func ReadKeyValues(r io.Reader) (kv *KeyValues, err error) {
 	var k *keyvalues
+	var gotkey, gotiv bool
 	m := memguard.NewBuffer(int(unsafe.Sizeof(*k)))
 	k = lockedBufferTo[keyvalues](m)
 
@@ -157,7 +158,7 @@ func ReadKeyValues(r io.Reader) (kv *KeyValues) {
 		}
 		s := strings.SplitN(line, "=", 2)
 		if len(s) != 2 {
-			// err = fmt.Errorf("invalid line (must be key=value) %q", line)
+			err = fmt.Errorf("invalid line (must be key=value) %q", line)
 			return
 		}
 		key, value := strings.TrimSpace(s[0]), strings.TrimSpace(s[1])
@@ -165,15 +166,27 @@ func ReadKeyValues(r io.Reader) (kv *KeyValues) {
 		case "salt":
 			// ignore
 		case "key":
-			key, _ := hex.DecodeString(value)
+			key, err := hex.DecodeString(value)
+			if err != nil {
+				return nil, err
+			}
 			copy(k.key[:], key)
+			gotkey = true
 		case "iv":
-			iv, _ := hex.DecodeString(value)
+			iv, err := hex.DecodeString(value)
+			if err != nil {
+				return nil, err
+			}
 			copy(k.iv[:], iv)
+			gotiv = true
 		default:
-			// err = fmt.Errorf("unknown entry in file: %q", key)
+			err = fmt.Errorf("unknown entry in file: %q", key)
 			return
 		}
+	}
+
+	if !gotkey || !gotiv {
+		return nil, fmt.Errorf("invalid keyfile contents")
 	}
 	kv = &KeyValues{
 		m.Seal(),

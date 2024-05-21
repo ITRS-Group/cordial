@@ -26,11 +26,12 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/awnumar/memguard"
+	"github.com/itrs-group/cordial/pkg/host"
 )
 
 // KeyFile is a type that represents the path to a keyfile
@@ -52,26 +53,30 @@ func (k *KeyFile) Type() string {
 	return "KEYFILE"
 }
 
-// RollKeyfile will create a new keyfile at path. It will backup any
-// existing file with the suffix backup unless the argument is an empty
-// string, in which case any existing file is overwritten and no backup
-// made.
-func (k *KeyFile) RollKeyfile(backup string) (crc uint32, err error) {
-	if _, _, err = k.Check(false); err != nil {
+// CreateWithBackup will create a new keyfile at path. It will rename
+// any existing file with backup appended to the filename before the
+// extension, unless backup is an empty string, in which case any
+// existing file is overwritten and no backup made.
+func (k *KeyFile) CreateWithBackup(h host.Host, backup string) (crc uint32, err error) {
+	if _, _, err = k.ReadOrCreate(h, false); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			// if is doesn't exist just try to create it
-			crc, _, err = k.Check(true)
+			// if is doesn't exist just try to create it, no backup
+			crc, _, err = k.ReadOrCreate(h, true)
 		}
 		return
 	}
 
 	if backup != "" {
-		if err = os.Rename(k.String(), k.Concat(backup)); err != nil {
-			err = fmt.Errorf("keyfile backup failed: %w", err)
-			return
+		kp := string(*k)
+		ext := filepath.Ext(kp)
+		basename := strings.TrimSuffix(filepath.Base(kp), ext)
+		dir := filepath.Dir(kp)
+		bkp := filepath.Join(dir, basename+backup+ext)
+		if err = h.Rename(kp, bkp); err != nil {
+			return 0, err
 		}
 	}
-	crc, _, err = k.Check(true)
+	crc, _, err = k.ReadOrCreate(h, true)
 	return
 }
 
@@ -96,18 +101,17 @@ func (k *KeyFile) Dir() string {
 // Read returns an KeyValues struct populated with the contents of the
 // file passed as path. If the keyfile is not in a valid format and err
 // is returned.
-func (k *KeyFile) Read() (kv *KeyValues, err error) {
-	r, err := os.Open(k.String())
+func (k *KeyFile) Read(h host.Host) (kv *KeyValues, err error) {
+	r, err := h.Open(k.String())
 	if err != nil {
 		return
 	}
 	defer r.Close()
-	kv = ReadKeyValues(r)
-	return
+	return ReadKeyValues(r)
 }
 
-func (k *KeyFile) Write(kv KeyValues) (err error) {
-	w, err := os.Create(k.String())
+func (k *KeyFile) Write(h host.Host, kv *KeyValues) (err error) {
+	w, err := h.Create(k.String(), 0600)
 	if err != nil {
 		return
 	}
@@ -123,29 +127,30 @@ func (k *KeyFile) Write(kv KeyValues) (err error) {
 	return nil
 }
 
-// Check will return the CRC32 checksum of the keyfile at path. If the
-// file does not exist and create is true then a new keyfile will be
-// created along with any intermediate directories and the checksum of
-// the new file will be returned. On error the checksum is undefined and
-// err will be set appropriately. If create is true then directories and
-// a file may have been created even on error.
-func (k *KeyFile) Check(create bool) (crc32 uint32, created bool, err error) {
-	if kv, err := k.Read(); err == nil { // ok?
+// ReadOrCreate will either return the CRC32 checksum of an existing
+// keyfile or, if the file does not exist and create is true then a
+// keyfile will be created with new contents along with any intermediate
+// directories, and the checksum of the new file will be returned. On
+// error the checksum is undefined and err will indicate why. If create
+// is true then directories and a file may have been created even on
+// error.
+func (k *KeyFile) ReadOrCreate(h host.Host, create bool) (crc32 uint32, created bool, err error) {
+	if kv, err := k.Read(h); err == nil { // ok?
 		crc32, err = kv.Checksum()
 		return crc32, false, err
 	}
 
 	// only try to create if the file error is a not exists
-	if _, err = os.Stat(k.String()); err != nil && errors.Is(err, fs.ErrNotExist) {
+	if _, err = h.Stat(k.String()); err != nil && errors.Is(err, fs.ErrNotExist) {
 		if !create {
 			return
 		}
-		if err = os.MkdirAll(k.Dir(), 0775); err != nil {
+		if err = h.MkdirAll(k.Dir(), 0775); err != nil {
 			err = fmt.Errorf("failed to create keyfile directory %q: %w", k.Dir(), err)
 			return
 		}
 		kv := NewRandomKeyValues()
-		if err = os.WriteFile(k.String(), []byte(kv.String()), 0600); err != nil {
+		if err = h.WriteFile(k.String(), []byte(kv.String()), 0600); err != nil {
 			err = fmt.Errorf("failed to write keyfile to %q: %w", k, err)
 			return
 		}
@@ -168,8 +173,8 @@ func (k *KeyFile) Check(create bool) (crc32 uint32, created bool, err error) {
 // If the keyfile is located under the user's configuration directory,
 // as defined by UserConfigDir, then the function will replace any home
 // directory prefix with `~/' to shorten the keyfile path.
-func (k *KeyFile) EncodeString(plaintext string, expandable bool) (out string, err error) {
-	a, err := k.Read()
+func (k *KeyFile) EncodeString(h host.Host, plaintext string, expandable bool) (out string, err error) {
+	a, err := k.Read(h)
 	if err != nil {
 		return "", err
 	}
@@ -201,24 +206,19 @@ func (k *KeyFile) EncodeString(plaintext string, expandable bool) (out string, e
 // If the keyfile is located under the user's configuration directory,
 // as defined by UserConfigDir, then the function will replace any home
 // directory prefix with `~/' to shorten the keyfile path.
-func (k *KeyFile) Encode(plaintext *Plaintext, expandable bool) (out string, err error) {
-	a, err := k.Read()
+func (k *KeyFile) Encode(h host.Host, plaintext *Plaintext, expandable bool) (out string, err error) {
+	kv, err := k.Read(h)
 	if err != nil {
 		return
 	}
 
-	e, err := a.Encode(plaintext)
+	e, err := kv.Encode(plaintext)
 	if err != nil {
 		return
 	}
 
 	if expandable {
-		home, _ := UserHomeDir()
-		cfdir, _ := UserConfigDir()
-		if strings.HasPrefix(k.String(), cfdir) {
-			*k = KeyFile("~" + strings.TrimPrefix(k.String(), home))
-		}
-		out = fmt.Sprintf("${enc:%s:+encs+%s}", k, e)
+		out = fmt.Sprintf("${enc:%s:+encs+%s}", KeyFile(AbbreviateHome(k.String())), e)
 	} else {
 		out = fmt.Sprintf("+encs+%s", e)
 	}
@@ -227,8 +227,8 @@ func (k *KeyFile) Encode(plaintext *Plaintext, expandable bool) (out string, err
 
 // DecodeString decodes the input as a string using keyfile and return
 // plaintext. An error is returned if the keyfile is not readable.
-func (k *KeyFile) DecodeString(input string) (plaintext string, err error) {
-	a, err := k.Read()
+func (k *KeyFile) DecodeString(h host.Host, input string) (plaintext string, err error) {
+	a, err := k.Read(h)
 	if err != nil {
 		return
 	}
@@ -237,8 +237,8 @@ func (k *KeyFile) DecodeString(input string) (plaintext string, err error) {
 
 // Decode input as a byte slice using keyfile and return byte slice
 // plaintext. An error is returned if the keyfile is not readable.
-func (k *KeyFile) Decode(input []byte) (plaintext []byte, err error) {
-	a, err := k.Read()
+func (k *KeyFile) Decode(h host.Host, input []byte) (plaintext []byte, err error) {
+	a, err := k.Read(h)
 	if err != nil {
 		return
 	}
@@ -247,8 +247,8 @@ func (k *KeyFile) Decode(input []byte) (plaintext []byte, err error) {
 
 // DecodeEnclave decodes the input using the keyfile k and returns a
 // memguard.Enclave
-func (k *KeyFile) DecodeEnclave(input []byte) (plaintext *memguard.Enclave, err error) {
-	a, err := k.Read()
+func (k *KeyFile) DecodeEnclave(h host.Host, input []byte) (plaintext *memguard.Enclave, err error) {
+	a, err := k.Read(h)
 	if err != nil {
 		return
 	}
@@ -261,11 +261,11 @@ func (k *KeyFile) DecodeEnclave(input []byte) (plaintext *memguard.Enclave, err 
 // expandable is true then the encoded password is returned in a format
 // useable by the Expand function which includes a path to the keyfile
 // used at the time.
-func (k *KeyFile) EncodePasswordInput(expandable bool) (out string, err error) {
+func (k *KeyFile) EncodePasswordInput(h host.Host, expandable bool) (out string, err error) {
 	plaintext, err := ReadPasswordInput(true, 3)
 	if err != nil {
 		return
 	}
-	out, err = k.Encode(plaintext, expandable)
+	out, err = k.Encode(h, plaintext, expandable)
 	return
 }
