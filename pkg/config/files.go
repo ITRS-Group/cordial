@@ -24,6 +24,8 @@ package config
 
 import (
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/host"
 )
@@ -93,4 +95,36 @@ func PromoteFile(r host.Host, paths ...string) (final string) {
 	}
 
 	return
+}
+
+// AbbreviateHome replaces the user's home directory prefix on path p
+// with `~/` and cleans the result. If the home directory is not
+// present, or there is an error resolving it, then a cleaned copy of
+// the original string is returned.
+func AbbreviateHome(p string) string {
+	home, err := UserHomeDir()
+	if err != nil {
+		return filepath.Clean(p)
+	}
+	if strings.HasPrefix(p, home) {
+		return "~" + strings.TrimPrefix(p, home)
+	}
+	return filepath.Clean(p)
+}
+
+// ExpandHome replaces a leading `~/` on p with the user's home
+// directory. If p does not have a prefix of `~/` then a cleaned copy is
+// returned. If there is an error resolving the user's home directory
+// then the path is returned relative to the root directory, i.e. with
+// just the `~` removed (and cleaned).
+func ExpandHome(p string) string {
+	if !strings.HasPrefix(p, "~/") {
+		return p
+	}
+	home, err := UserHomeDir()
+	if err != nil {
+		return strings.TrimPrefix(p, "~")
+	}
+	return filepath.Join(home, strings.TrimPrefix(p, "~"))
+
 }
