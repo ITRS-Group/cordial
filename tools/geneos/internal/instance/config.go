@@ -228,7 +228,15 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 	)
 
 	if err != nil {
-		log.Error().Err(err).Msg("loading rc")
+		if errors.Is(err, host.ErrNotAvailable) {
+			return nil
+		}
+		log.Error().Err(err).Msgf("loading rc %s:%s", r, config.Path("rc",
+			config.Host(r),
+			config.SetConfigFile(p),
+			config.SetFileExtension("env"),
+			config.UseDefaults(false),
+		))
 		return
 	}
 
