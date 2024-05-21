@@ -130,14 +130,14 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		if !pw.IsNil() && pw.Size() > 0 {
 			var crc uint32
 			var created bool
-			crc, created, err = addCmdKeyfile.Check(true)
+			crc, created, err = addCmdKeyfile.ReadOrCreate(host.Localhost, true)
 			if err != nil {
 				return
 			}
 			if created {
 				fmt.Printf("%s created, checksum %08X\n", addCmdKeyfile, crc)
 			}
-			if password, err = addCmdKeyfile.Encode(pw, true); err != nil {
+			if password, err = addCmdKeyfile.Encode(host.Localhost, pw, true); err != nil {
 				return
 			}
 
