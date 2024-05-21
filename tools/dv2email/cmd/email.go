@@ -61,12 +61,6 @@ func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (
 			return err
 		}
 		_ = m.AddAlternativeHTMLTemplate(ht, data)
-
-		// htmlString, err := createHTML(cf, data, cf.GetString("html.template"), inlineCSS)
-		// if err != nil {
-		// 	return err
-		// }
-		// m.AddAlternativeString(mail.TypeTextHTML, htmlString)
 	}
 
 	if slices.Contains(cf.GetStringSlice("email.contents"), "texttable") {
