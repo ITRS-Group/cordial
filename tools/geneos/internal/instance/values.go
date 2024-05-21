@@ -95,7 +95,7 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, keyfile config.Ke
 
 	cf.SetKeyValues(set.Params...)
 
-	secrets, err = setEncoded(set.SecureParams, keyfile)
+	secrets, err = setEncoded(i, set.SecureParams, keyfile)
 	if err != nil {
 		return
 	}
@@ -109,7 +109,7 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, keyfile config.Ke
 		return strings.SplitN(a, "=", 2)[0]
 	})
 
-	secrets, err = setEncoded(set.SecureEnvs, keyfile)
+	secrets, err = setEncoded(i, set.SecureEnvs, keyfile)
 	if err != nil {
 		return
 	}
@@ -139,12 +139,12 @@ func setMap[V any](i geneos.Instance, items map[string]V, setting string) {
 }
 
 // setEncoded takes a slice of SecureValue.
-func setEncoded(values SecureValues, keyfile config.KeyFile) (params []string, err error) {
+func setEncoded(i geneos.Instance, values SecureValues, keyfile config.KeyFile) (params []string, err error) {
 	if len(values) == 0 {
 		return
 	}
 
-	if _, _, err = keyfile.Check(false); err != nil {
+	if _, _, err = keyfile.ReadOrCreate(i.Host(), false); err != nil {
 		return
 	}
 
@@ -155,7 +155,7 @@ func setEncoded(values SecureValues, keyfile config.KeyFile) (params []string, e
 		if s.Plaintext.IsNil() {
 			log.Fatal().Msg("plaintext is not set")
 		}
-		s.Ciphertext, err = keyfile.Encode(s.Plaintext, true)
+		s.Ciphertext, err = keyfile.Encode(i.Host(), s.Plaintext, true)
 		if err != nil {
 			return
 		}
