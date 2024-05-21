@@ -81,7 +81,7 @@ var floatingCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("")
 		}
 
-		if err = initMisc(command); err != nil {
+		if err = initCommon(command); err != nil {
 			return
 		}
 

@@ -41,15 +41,15 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var importCmdCert, importCmdSigner, importCmdChain, importCmdCertKey string
+var importCmdCert, importCmdSigningBundle, importCmdChain, importCmdPrivateKey string
 
 func init() {
 	tlsCmd.AddCommand(importCmd)
 
 	importCmd.Flags().StringVarP(&importCmdCert, "instance-bundle", "c", "", "Instance certificate bundle to import, PEM format")
-	importCmd.Flags().StringVarP(&importCmdSigner, "signing-bundle", "C", "", "Signing certificate bundle to import, PEM format")
+	importCmd.Flags().StringVarP(&importCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle to import, PEM format")
 
-	importCmd.Flags().StringVarP(&importCmdCertKey, "key", "k", "", "Private key `file` for certificate, PEM format")
+	importCmd.Flags().StringVarP(&importCmdPrivateKey, "key", "k", "", "Private key `file` for certificate, PEM format")
 	importCmd.Flags().MarkDeprecated("key", "include the private key in either the instance or signing bundles")
 	importCmd.Flags().StringVar(&importCmdChain, "chain", "", "Certificate chain `file` to import, PEM format")
 	importCmd.Flags().MarkDeprecated("chain", "include the trust chain in either the instance or signing bundles")
@@ -93,63 +93,20 @@ $ geneos tls import --signer file.pem
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, names := cmd.ParseTypeNames(command)
 
-		if importCmdCert != "" && importCmdSigner != "" {
+		if importCmdCert != "" && importCmdSigningBundle != "" {
 			return errors.New("you can only import an instance *or* a signing certificate, not both")
 		}
 
-		if importCmdSigner != "" {
-			signer, err := config.ReadInputPEMString(importCmdSigner, "signing certificate(s)")
-			if err != nil {
-				return err
-			}
-
-			signerkey, err := config.ReadInputPEMString(importCmdCertKey, "signing key")
-			if err != nil {
-				return err
-			}
-
-			cert, key, chain, err := geneos.DecomposePEM(signer, signerkey)
-			if err != nil {
-				return err
-			}
-			// basic validation
-			if !(cert.BasicConstraintsValid && cert.IsCA) {
-				return geneos.ErrInvalidArgs
-			}
-
-			if err = config.WriteCert(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".pem"), cert); err != nil {
-				return err
-			}
-			fmt.Printf("%s signing certificate written to %s\n", cmd.Execname, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".pem"))
-
-			if err = config.WritePrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"), key); err != nil {
-				return err
-			}
-			fmt.Printf("%s signing certificate key written to %s\n", cmd.Execname, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
-
-			if importCmdChain != "" {
-				_, _, chain, err := tlsDecompose(importCmdChain, "")
-				if err != nil {
-					return err
-				}
-				if err = tlsWriteChainLocal(chain); err != nil {
-					return err
-				}
-			} else if len(chain) > 0 {
-				if err = tlsWriteChainLocal(chain); err != nil {
-					return err
-				}
-			}
-			fmt.Printf("%s certificate chain written to %s\n", cmd.Execname, path.Join(geneos.LOCAL.PathTo("tls"), geneos.ChainCertFile))
-			return err
+		if importCmdSigningBundle != "" {
+			return geneos.TLSImportBundle(importCmdSigningBundle, importCmdPrivateKey, importCmdChain)
 		}
 
 		if importCmdCert != "" {
-			certs, err := config.ReadInputPEMString(importCmdSigner, "instance certificate(s)")
+			certs, err := config.ReadInputPEMString(importCmdCert, "instance certificate(s)")
 			if err != nil {
 				return err
 			}
-			key, err := config.ReadInputPEMString(importCmdCertKey, "instance key")
+			key, err := config.ReadInputPEMString(importCmdPrivateKey, "instance key")
 			if err != nil {
 				return err
 			}
@@ -165,31 +122,22 @@ $ geneos tls import --signer file.pem
 			return
 		}
 
-		_, _, chain, err := tlsDecompose(importCmdChain, "")
+		b, err := os.ReadFile(importCmdChain)
+		if err != nil {
+			log.Error().Err(err).Msg("")
+			return err
+		}
+		_, _, chain, err := geneos.DecomposePEM(string(b))
 		if err != nil {
 			return err
 		}
-		if err = tlsWriteChainLocal(chain); err != nil {
+		if err = geneos.WriteChainLocal(chain); err != nil {
 			return err
 		}
 		fmt.Printf("%s certificate chain written using %s\n", cmd.Execname, importCmdChain)
 
 		return
 	},
-}
-
-func tlsWriteChainLocal(chain []*x509.Certificate) (err error) {
-	if len(chain) == 0 {
-		return
-	}
-	tlsPath := geneos.LOCAL.PathTo("tls")
-	if err = geneos.LOCAL.MkdirAll(tlsPath, 0775); err != nil {
-		return err
-	}
-	if err = config.WriteCertChain(geneos.LOCAL, path.Join(tlsPath, geneos.ChainCertFile), chain...); err != nil {
-		return err
-	}
-	return
 }
 
 // tlsWriteInstance expects 3 params, of *x509.Certificate,
@@ -230,39 +178,4 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response
 
 	resp.Err = instance.SaveConfig(i)
 	return
-}
-
-// tlsDecompose reads a PEM file and extracts the first valid
-// certificates and an optional PEM private key file path. It returns
-// any CA certificates in chain, the certificate in cert and, if found,
-// the DER encoded private key for the leaf certificate. If the key is
-// found in the cert file then the keyfile arg is ignored. Only
-// certificates with the BasicConstraints extension and valid are
-// supported. All certificates in chain will have IsCA set. The cert may
-// or may not be a leaf certificate.
-//
-// certfile may be a local file path, a url or '-' for stdin while keyfile
-// must be a local file path
-func tlsDecompose(certfile, keyfile string) (cert *x509.Certificate, der *memguard.Enclave, chain []*x509.Certificate, err error) {
-	var data []string
-	var b []byte
-	if certfile != "" {
-		b, err = os.ReadFile(certfile)
-		if err != nil {
-			log.Error().Err(err).Msg("")
-			return
-		}
-		data = append(data, string(b))
-	}
-
-	if keyfile != "" {
-		b, err = os.ReadFile(keyfile)
-		if err != nil {
-			log.Error().Err(err).Msg("")
-			return
-		}
-		data = append(data, string(b))
-	}
-
-	return geneos.DecomposePEM(data...)
 }

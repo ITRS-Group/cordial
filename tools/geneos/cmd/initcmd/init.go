@@ -44,8 +44,8 @@ import (
 const archiveOptionsText = "Directory of releases for installation"
 
 var initCmdAll string
-var initCmdLogs, initCmdSecure, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
-var initCmdName, initCmdImportCert, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdFloatingTemplate, initCmdVersion string
+var initCmdLogs, initCmdTLS, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
+var initCmdName, initCmdSigningBundle, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdFloatingTemplate, initCmdVersion string
 var initCmdDLUsername, initCmdPwFile string
 var initCmdDLPassword *config.Plaintext
 
@@ -67,9 +67,12 @@ func init() {
 	initCmd.PersistentFlags().BoolVarP(&initCmdForce, "force", "F", false, "Be forceful, ignore existing directories.")
 	initCmd.PersistentFlags().StringVarP(&initCmdName, "name", "n", "", "Use name for instances and configurations instead of the hostname")
 
-	initCmd.PersistentFlags().BoolVarP(&initCmdSecure, "secure", "C", false, "Create default certificates for TLS support")
-	initCmd.PersistentFlags().StringVarP(&initCmdImportCert, "import-cert", "c", "", "signing certificate with optional root cert and private key, PEM format")
+	initCmd.PersistentFlags().BoolVarP(&initCmdTLS, "tls", "T", false, "Create internal certificates for TLS support")
+	initCmd.PersistentFlags().StringVarP(&initCmdSigningBundle, "signing-bundle", "C", "", "signing bundle including private key, PEM format")
 	initCmd.PersistentFlags().StringVarP(&initCmdImportKey, "import-key", "k", "", "signing private key file, PEM format")
+	initCmd.PersistentFlags().MarkDeprecated("import-key", "please use --signing-bundle")
+
+	initCmd.MarkFlagsMutuallyExclusive("tls", "signing-bundle")
 
 	initCmd.PersistentFlags().BoolVarP(&initCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires ITRS internal credentials")
 	initCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "S", false, "Download from nexus snapshots. Requires -N")
@@ -147,7 +150,7 @@ geneos init
 			log.Fatal().Err(err).Msg("")
 		}
 
-		if err = initMisc(command); err != nil {
+		if err = initCommon(command); err != nil {
 			return
 		}
 
@@ -268,27 +271,15 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 	return
 }
 
-func initMisc(command *cobra.Command) (err error) {
+func initCommon(command *cobra.Command) (err error) {
 	initTemplates(geneos.LOCAL)
 
-	if initCmdSecure {
-		return cmd.RunE(command.Root(), []string{"tls", "init"}, []string{})
-	}
-
-	signer, err := config.ReadInputPEMString(initCmdImportCert, "signing certificate(s)")
-	if err != nil {
-		return err
-	}
-	if signer != "" {
-		cmd.RunE(command.Root(), []string{"tls", "import", "--signer"}, []string{"pem:" + signer})
-	}
-
-	signerkey, err := config.ReadInputPEMString(initCmdImportKey, "signing key")
-	if err != nil {
-		return err
-	}
-	if signerkey != "" {
-		cmd.RunE(command.Root(), []string{"tls", "import", "--key"}, []string{"pem:" + signerkey})
+	if initCmdTLS {
+		if err = geneos.TLSInit(true, "ecdh"); err != nil {
+			return
+		}
+	} else if initCmdSigningBundle != "" {
+		return geneos.TLSImportBundle(initCmdSigningBundle, initCmdImportKey, "")
 	}
 
 	return

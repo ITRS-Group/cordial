@@ -169,16 +169,15 @@ func writeSharedKey(h *Host, ct *Component, kv *config.KeyValues) (p string, err
 		return "", ErrInvalidArgs
 	}
 
-	crc, err := kv.Checksum()
+	crc, err := kv.ChecksumString()
 	if err != nil {
 		return
 	}
-	crcstr := fmt.Sprintf("%08X", crc)
 
 	// save given keyfile
-	p = ct.Shared(h, "keyfiles", crcstr+".aes")
+	p = ct.Shared(h, "keyfiles", crc+".aes")
 	if _, err = h.Stat(p); err == nil {
-		fmt.Printf("keyfile %s.aes already exists in %s shared directory on %s\n", crcstr, ct, h)
+		fmt.Printf("keyfile %s.aes already exists in %s shared directory on %s\n", crc, ct, h)
 		return
 	}
 	if err = h.MkdirAll(path.Dir(p), 0775); err != nil {

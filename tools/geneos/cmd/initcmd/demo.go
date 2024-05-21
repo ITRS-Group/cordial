@@ -40,7 +40,7 @@ func init() {
 	initCmd.AddCommand(demoCmd)
 
 	demoCmd.Flags().StringVarP(&demoCmdArchive, "archive", "A", "", archiveOptionsText)
-	demoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewaysOptionstext)
+	demoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
 	demoCmd.Flags().SortFlags = false
 }
 
@@ -73,7 +73,7 @@ var demoCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("")
 		}
 
-		if err = initMisc(command); err != nil {
+		if err = initCommon(command); err != nil {
 			return
 		}
 

@@ -71,7 +71,7 @@ var createCmd = &cobra.Command{
 			hostname, _ := os.Hostname()
 			createCmdSANs = []string{hostname}
 		}
-		tlsInit(false)
+		geneos.TLSInit(false, initCmdKeyType)
 		if createCmdCN == "" {
 			createCmdCN, _ = os.Hostname()
 		}
