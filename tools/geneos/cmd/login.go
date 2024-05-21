@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 )
 
 var loginCmdUsername string
@@ -95,7 +96,7 @@ var loginCmd = &cobra.Command{
 
 		log.Debug().Msgf("checking keyfile %q, default file %q", loginKeyfile, DefaultUserKeyfile)
 
-		if crc, created, err := loginKeyfile.Check(createKeyfile); err != nil {
+		if crc, created, err := loginKeyfile.ReadOrCreate(host.Localhost, createKeyfile); err != nil {
 			return err
 		} else if created {
 			fmt.Printf("%s created, checksum %08X\n", loginKeyfile, crc)
@@ -104,12 +105,12 @@ var loginCmd = &cobra.Command{
 		var enc string
 		if loginCmdPassword.IsNil() {
 			// prompt for password
-			enc, err = loginKeyfile.EncodePasswordInput(true)
+			enc, err = loginKeyfile.EncodePasswordInput(host.Localhost, true)
 			if err != nil {
 				return
 			}
 		} else {
-			enc, err = loginKeyfile.Encode(loginCmdPassword, true)
+			enc, err = loginKeyfile.Encode(host.Localhost, loginCmdPassword, true)
 			if err != nil {
 				return
 			}
