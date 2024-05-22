@@ -65,6 +65,9 @@ func (discardCloser) Close() error { return nil }
 // [io.Discard].
 func LogInit(prefix string, logfile ...string) {
 	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
+		if zerolog.GlobalLevel() > zerolog.DebugLevel {
+			return ""
+		}
 		fnName := "UNKNOWN"
 		fn := runtime.FuncForPC(pc)
 		if fn != nil {
