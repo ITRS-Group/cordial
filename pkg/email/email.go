@@ -78,7 +78,7 @@ func Dial(conf *config.Config) (d *mail.Client, err error) {
 		mail.WithTLSPortPolicy(tlsPolicy),
 		mail.WithUsername(conf.GetString("_smtp_username")),
 		mail.WithPassword(conf.GetPassword("_smtp_password").String()),
-		mail.WithSMTPAuth(mail.SMTPAuthPlain),
+		mail.WithSMTPAuth(mail.SMTPAuthLogin),
 		mail.WithTimeout(time.Duration(conf.GetInt("_smtp_timeout", config.Default(10))) * time.Second),
 	}
 
