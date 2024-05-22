@@ -40,15 +40,16 @@ import (
 )
 
 var uninstallCmdVersion string
-var uninstallCmdAll, uninstallCmdForce, uninstallCmdKeep bool
+var uninstallCmdAll, uninstallCmdForce, uninstallCmdKeep, uninstallCmdUpdate bool
 
 func init() {
 	packageCmd.AddCommand(uninstallCmd)
 
 	uninstallCmd.Flags().StringVarP(&uninstallCmdVersion, "version", "V", "", "Uninstall `VERSION`")
 	uninstallCmd.Flags().BoolVarP(&uninstallCmdAll, "all", "A", false, "Uninstall all releases, stopping and disabling running instances")
-	uninstallCmd.Flags().BoolVarP(&uninstallCmdForce, "force", "f", false, "Force uninstall, stopping protected instances first")
 	uninstallCmd.Flags().BoolVarP(&uninstallCmdKeep, "keep", "k", false, "Keep cached downloads")
+	uninstallCmd.Flags().BoolVarP(&uninstallCmdUpdate, "update", "U", false, "Update base links for instances to latest before restarting and removing")
+	uninstallCmd.Flags().BoolVarP(&uninstallCmdForce, "force", "f", false, "Force uninstall, stopping protected instances first. Also requires --update")
 
 	uninstallCmd.Flags().SortFlags = false
 }
@@ -75,7 +76,6 @@ geneos uninstall --version 5.14.1
 		h := geneos.GetHost(cmd.Hostname)
 
 		for _, h := range h.OrList() {
-
 			for _, ct := range ct.OrList() {
 				// remove cached packages, but only locally
 				if h == geneos.LOCAL && !uninstallCmdKeep {
@@ -100,14 +100,14 @@ geneos uninstall --version 5.14.1
 					continue
 				}
 
-				r, err := geneos.GetReleases(h, ct)
+				releases, err := geneos.GetReleases(h, ct)
 				if err != nil {
 					return err
 				}
 
 				// save candidates for removal
 				removeReleases := map[string]geneos.ReleaseDetails{}
-				for _, i := range r {
+				for _, i := range releases {
 					if uninstallCmdAll || // --all
 						(uninstallCmdVersion == "" && !i.Latest) || // default leave 'latest'
 						uninstallCmdVersion == i.Version { // specific --version
@@ -121,29 +121,40 @@ geneos uninstall --version 5.14.1
 				//
 				// also save a list of instances to restart
 				restart := map[string][]geneos.Instance{}
-				for _, c := range instance.GetAll(h, ct) {
-					if instance.IsDisabled(c) {
-						fmt.Printf("%s is disabled, not skipping\n", c)
+				for _, i := range instance.GetAll(h, ct) {
+					if instance.IsDisabled(i) {
+						fmt.Printf("%s is disabled, treating as an update\n", i)
 						continue
 					}
 
-					_, version, err := instance.Version(c)
+					_, version, err := instance.Version(i)
 					if err != nil {
 						log.Debug().Err(err).Msg("")
 						continue
 					}
 
-					if instance.IsProtected(c) && !uninstallCmdForce {
-						fmt.Printf("%s is marked protected and uses version %s, skipping\n", c, version)
-					} else if !instance.IsProtected(c) || uninstallCmdForce {
-						if instance.IsRunning(c) {
-							restart[version] = append(restart[version], c)
-						}
+					// if we are not updating then do not remove any
+					// package referenced by an instance - except those
+					// disabled as above
+					if !uninstallCmdUpdate {
+						delete(removeReleases, version)
 						continue
 					}
 
-					// none of the above, remove from list
-					delete(removeReleases, version)
+					// if we are updating and the instance is protected
+					// then only update if forced
+					if instance.IsProtected(i) {
+						if !uninstallCmdForce {
+							fmt.Printf("%s is marked protected and uses version %s, skipping\n", i, version)
+							delete(removeReleases, version)
+							continue
+						}
+					}
+
+					if instance.IsRunning(i) {
+						restart[version] = append(restart[version], i)
+						continue
+					}
 				}
 
 				// directory that contains releases for this component
