@@ -23,6 +23,7 @@ THE SOFTWARE.
 package config
 
 import (
+	"bytes"
 	"path"
 	"path/filepath"
 	"strings"
@@ -126,4 +127,27 @@ func ExpandHome(p string) string {
 		return strings.TrimPrefix(p, "~")
 	}
 	return path.Join(home, strings.TrimPrefix(p, "~"))
+}
+
+var (
+	homePrefix         = "~"
+	homePrefixDir      = "~/"
+	homePrefixBytes    = []byte(homePrefix)
+	homePrefixDirBytes = []byte(homePrefixDir)
+)
+
+// ExpandHomeBytes replaces a leading `~/` on p with the user's home
+// directory. If p does not have a prefix of `~/` then a cleaned copy is
+// returned. If there is an error resolving the user's home directory
+// then the path is returned relative to the root directory, i.e. with
+// just the `~` removed (and cleaned).
+func ExpandHomeBytes(p []byte) []byte {
+	if !bytes.HasPrefix(p, homePrefixDirBytes) {
+		return p
+	}
+	home, err := UserHomeDir()
+	if err != nil {
+		return bytes.TrimPrefix(p, homePrefixBytes)
+	}
+	return []byte(path.Join(home, strings.TrimPrefix(string(p), homePrefix)))
 }

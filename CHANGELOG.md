@@ -1,16 +1,16 @@
 # Change Log
 
-## Version v1.13.1
+## Version v1.13.2
 
-> **Released 2024-05-22**
+> **Released 2024-05-23**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-**⚠️ This release replaces v1.13.0 and addresses two issues found after release, one for `dv2email` not authenticating with all SMTP servers correctly and changes to `geneos package uninstall` to protect against unintended updates**
+**⚠️ This release replaces v1.13.0 and v1.13.1 and addresses two issues found after release, one for `dv2email` not authenticating with all SMTP servers correctly and changes to `geneos package uninstall` to protect against unintended updates**
 
 ⚠️ In addition to the breaking changes below please note that some documentation is still out-of-date, and the details in this changelog are more likely to be up-to-date.
 
-## v1.13.1 BREAKING CHANGES
+## v1.13.2 BREAKING CHANGES
 
 ⚠️ Note there are a significant number of **BREAKING CHANGES** in this release both for the `geneos` program, specifically around TLS and AES command line options and behaviour, but also for some of the `pkg` APIs.
 
@@ -67,7 +67,7 @@
 
   The `config` package 
 
-## v1.13.0 Changes
+## v1.13.2 Changes
 
 * Go dependency updated to 1.22.3
 
@@ -79,9 +79,13 @@
 
   * `webserver` instances will now automatically manage TLS though a custom `cacerts` file and a local keystore and `security.properties` file changes. This allows for both client and server TLS with trust chains. The instance chain file is added to the Java `cacerts` to add trust of other Geneos components, such as Gateways and SSO Agent while instance certificate and private key can be "real" PKI ones to offer a trusted TLS web interface.
 
+* `cordial`
+
+  * The top-level `cordial` package provides convenience functions, like `LogInit()`. This has been updated to not log source file and function unless the global log level if debug or trace.
+
 * Use a new SMTP package - <github.com/wneessen/go-mail> - Swap out the old SMTP email package used to a newer, actively maintained one. The changes should not be user visible. The affected components are `pkg/email` and `tools/dv2mail`. There have been no changes to `libraries/libemail` as the changes required have not yet been tested and will be completed in a later release.
 
-## v1.13.0 Fixes
+## v1.13.2 Fixes
 
 Many of the changes above were prompted while tracking down and fixing issues around existing APIs and features in `geneos`.
 
@@ -95,6 +99,14 @@ Many of the changes above were prompted while tracking down and fixing issues ar
 
   * Fix support for legacy `.rc` files, which was broken in a previous release.
   * Fix `tls ls -a` to show root and signing certificates even without instance certificates created.
+
+  * Fix the handling of file paths on Windows with the `geneos.exe` binary.
+
+* `pkg/config`
+
+  * Fix the handling of file paths on Windows.
+
+  * Use the newer `AbbreviateHome` / `ExpandHome` / `ExpandHomeBytes` functions to remove common code.
 
 ---
 

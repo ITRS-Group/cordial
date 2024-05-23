@@ -484,12 +484,7 @@ func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value 
 	}
 
 	for _, k := range strings.Split(keyfiles, "|") {
-		if strings.HasPrefix(k, "~/") {
-			home, _ := UserHomeDir()
-			k = strings.Replace(k, "~", home, 1)
-		}
-
-		keyfile := KeyFile(k)
+		keyfile := KeyFile(ExpandHome(k))
 		p, err := keyfile.DecodeString(host.Localhost, encodedValue)
 		if err != nil {
 			continue
@@ -511,11 +506,7 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 	}
 
 	for _, k := range bytes.Split(keyfiles, []byte("|")) {
-		if bytes.HasPrefix(k, []byte("~/")) {
-			home, _ := UserHomeDir()
-			k = bytes.Replace(k, []byte("~"), []byte(home), 1)
-		}
-		keyfile := KeyFile(k)
+		keyfile := KeyFile(ExpandHomeBytes(k))
 		p, err := keyfile.Decode(host.Localhost, encodedValue)
 		if err != nil {
 			continue
@@ -537,11 +528,7 @@ func (c *Config) expandEncodedBytesEnclave(s []byte, options ...ExpandOptions) (
 	}
 
 	for _, k := range bytes.Split(keyfiles, []byte("|")) {
-		if bytes.HasPrefix(k, []byte("~/")) {
-			home, _ := UserHomeDir()
-			k = bytes.Replace(k, []byte("~"), []byte(home), 1)
-		}
-		keyfile := KeyFile(k)
+		keyfile := KeyFile(ExpandHomeBytes(k))
 		p, err := keyfile.DecodeEnclave(host.Localhost, encodedValue)
 		if err != nil {
 			continue
@@ -563,11 +550,7 @@ func (c *Config) expandEncodedBytesLockedBuffer(s []byte, options ...ExpandOptio
 	}
 
 	for _, k := range bytes.Split(keyfiles, []byte("|")) {
-		if bytes.HasPrefix(k, []byte("~/")) {
-			home, _ := UserHomeDir()
-			k = bytes.Replace(k, []byte("~"), []byte(home), 1)
-		}
-		keyfile := KeyFile(k)
+		keyfile := KeyFile(ExpandHomeBytes(k))
 		p, err := keyfile.DecodeEnclave(host.Localhost, encodedValue)
 		if err != nil {
 			continue
@@ -674,12 +657,7 @@ func fetchURL(cf *Config, url string, trim bool) (s string, err error) {
 }
 
 func fetchFile(_ *Config, p string, trim bool) (s string, err error) {
-	p = strings.TrimPrefix(p, "file:")
-	if strings.HasPrefix(p, "~/") {
-		home, _ := UserHomeDir()
-		p = strings.Replace(p, "~", home, 1)
-	}
-	b, err := os.ReadFile(p)
+	b, err := os.ReadFile(ExpandHome(strings.TrimPrefix(p, "file:")))
 	if err != nil {
 		return
 	}

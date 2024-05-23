@@ -184,12 +184,7 @@ func (k *KeyFile) EncodeString(h host.Host, plaintext string, expandable bool) (
 	}
 
 	if expandable {
-		home, _ := UserHomeDir()
-		cfdir, _ := UserConfigDir()
-		if strings.HasPrefix(k.String(), cfdir) {
-			*k = KeyFile("~" + strings.TrimPrefix(k.String(), home))
-		}
-		out = fmt.Sprintf("${enc:%s:+encs+%s}", k, e)
+		out = fmt.Sprintf("${enc:%s:+encs+%s}", ExpandHome(string(*k)), e)
 	} else {
 		out = fmt.Sprintf("+encs+%s", e)
 	}
