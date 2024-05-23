@@ -104,12 +104,12 @@ func PromoteFile(r host.Host, paths ...string) (final string) {
 func AbbreviateHome(p string) string {
 	home, err := UserHomeDir()
 	if err != nil {
-		return filepath.Clean(p)
+		return path.Clean(p)
 	}
 	if strings.HasPrefix(p, home) {
-		return "~" + strings.TrimPrefix(p, home)
+		return filepath.ToSlash("~" + strings.TrimPrefix(p, home))
 	}
-	return filepath.Clean(p)
+	return path.Clean(p)
 }
 
 // ExpandHome replaces a leading `~/` on p with the user's home
@@ -125,6 +125,5 @@ func ExpandHome(p string) string {
 	if err != nil {
 		return strings.TrimPrefix(p, "~")
 	}
-	return filepath.Join(home, strings.TrimPrefix(p, "~"))
-
+	return path.Join(home, strings.TrimPrefix(p, "~"))
 }

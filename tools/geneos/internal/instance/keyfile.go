@@ -1,7 +1,7 @@
 package instance
 
 import (
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -81,7 +81,7 @@ func RollAESKeyFile(i geneos.Instance, nkv *config.KeyValues, backup string) (ke
 
 	// if existing keyfile is in a shared keyfile folder do not backup
 	// and write new keyfile in instance folder
-	if filepath.Dir(kp) == i.Type().Shared(i.Host(), "keyfiles") {
+	if path.Dir(kp) == i.Type().Shared(i.Host(), "keyfiles") {
 		i.Config().Set("prevkeyfile", kp)
 		return WriteAESKeyFile(i, nkv)
 	}
@@ -89,10 +89,10 @@ func RollAESKeyFile(i geneos.Instance, nkv *config.KeyValues, backup string) (ke
 	// read any existing keyfile, backup if suffix given and not in
 	// component shared directory with CRC prefix
 	if backup != "" {
-		ext := filepath.Ext(kp)
-		basename := strings.TrimSuffix(filepath.Base(kp), ext)
-		dir := filepath.Dir(kp)
-		bkp := filepath.Join(dir, basename+backup+ext)
+		ext := path.Ext(kp)
+		basename := strings.TrimSuffix(path.Base(kp), ext)
+		dir := path.Dir(kp)
+		bkp := path.Join(dir, basename+backup+ext)
 		if err = i.Host().Rename(kp, bkp); err != nil {
 			return "", 0, err
 		}

@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/awnumar/memguard"
@@ -68,10 +67,10 @@ func (k *KeyFile) CreateWithBackup(h host.Host, backup string) (crc uint32, err 
 
 	if backup != "" {
 		kp := string(*k)
-		ext := filepath.Ext(kp)
-		basename := strings.TrimSuffix(filepath.Base(kp), ext)
-		dir := filepath.Dir(kp)
-		bkp := filepath.Join(dir, basename+backup+ext)
+		ext := path.Ext(kp)
+		basename := strings.TrimSuffix(path.Base(kp), ext)
+		dir := path.Dir(kp)
+		bkp := path.Join(dir, basename+backup+ext)
 		if err = h.Rename(kp, bkp); err != nil {
 			return 0, err
 		}
