@@ -29,7 +29,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/rs/zerolog/log"
 	"golang.org/x/term"
 )
 
@@ -84,14 +83,14 @@ func ReadInputPEMString(from, prompt string) (data string, err error) {
 		fmt.Printf("Paste PEM formatted %s, end with newline + CTRL-D:\n", prompt)
 		b, err := io.ReadAll(os.Stdin)
 		if err != nil {
-			log.Error().Err(err).Msg("user input")
+			return data, err
 		}
 		data = string(b)
 		fmt.Println()
 	default:
 		b, err := os.ReadFile(from)
 		if err != nil {
-			log.Error().Err(err).Msg("cannot read file")
+			return data, err
 		}
 		data = string(b)
 	}
