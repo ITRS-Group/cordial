@@ -26,22 +26,15 @@ package cordial
 
 import (
 	_ "embed" // embed the VERSION in the top-level package
-	"fmt"
 	"html"
-	"io"
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/glamour"
 	"golang.org/x/term"
-	"gopkg.in/natefinch/lumberjack.v2"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -49,70 +42,6 @@ import (
 //
 //go:embed VERSION
 var VERSION string
-
-type discardCloser struct {
-	io.Writer
-}
-
-func (discardCloser) Close() error { return nil }
-
-// LogInit is called to set-up zerolog with our chosen defaults. The
-// default is to log to STDERR.
-//
-// If logfile is passed and the first element is not empty, then use
-// that as the log file unless it is either "-" (which means use STDOUT
-// (not STDERR) or equal to the [os.DevNull] value, in which case is
-// [io.Discard].
-func LogInit(prefix string, logfile ...string) {
-	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
-		if zerolog.GlobalLevel() > zerolog.DebugLevel {
-			return ""
-		}
-		fnName := "UNKNOWN"
-		fn := runtime.FuncForPC(pc)
-		if fn != nil {
-			fnName = fn.Name()
-		}
-		fnName = path.Base(fnName)
-		// fnName = strings.TrimPrefix(fnName, "main.")
-
-		s := strings.SplitAfterN(file, prefix+"/", 2)
-		if len(s) == 2 {
-			file = s[1]
-		}
-		return fmt.Sprintf("%s:%d %s()", file, line, fnName)
-	}
-
-	var nocolor bool
-	var out io.WriteCloser
-	out = os.Stderr
-	if len(logfile) > 0 && logfile[0] != "" {
-		switch logfile[0] {
-		case "-":
-			out = os.Stdout
-		case os.DevNull:
-			out = discardCloser{io.Discard}
-		default:
-			l := &lumberjack.Logger{
-				Filename: logfile[0],
-			}
-			out = l
-			nocolor = true
-		}
-	}
-
-	log.Logger = log.Output(zerolog.ConsoleWriter{
-		Out:        out,
-		TimeFormat: time.RFC3339,
-		NoColor:    nocolor,
-		FormatLevel: func(i interface{}) string {
-			return strings.ToUpper(fmt.Sprintf("%s:", i))
-		},
-		FormatMessage: func(i interface{}) string {
-			return fmt.Sprintf("%s: %s", prefix, i)
-		},
-	}).With().Caller().Logger()
-}
 
 func renderMD(in string) (out string) {
 	var width int = 80
