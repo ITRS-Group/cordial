@@ -112,11 +112,6 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 		}
 	}
 
-	// merge overrides watchconfig
-	if c.watchconfig && c.merge {
-		c.watchconfig = false
-	}
-
 	return
 }
 

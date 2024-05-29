@@ -213,6 +213,9 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 				}
 			}
 			found++
+			// set the config file we found and loaded, so WatchConfig works
+			cf.Viper.SetConfigFile(path.Join(dir, name+"."+opts.extension))
+
 			// merge, continue on failure
 			cf.MergeConfigMap(d.AllSettings())
 		}
@@ -220,10 +223,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		if found == 0 && opts.mustexist {
 			return cf, fs.ErrNotExist
 		}
-		return cf, nil
-	}
-
-	if len(confDirs) > 0 {
+	} else if len(confDirs) > 0 {
 		ncf := New(options...)
 		ncf.Viper.SetFs(r.GetFs())
 		for _, dir := range confDirs {
@@ -238,6 +238,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 
 			// set the config file we found and loaded, so WatchConfig works
 			cf.Viper.SetConfigFile(path.Join(dir, name+"."+opts.extension))
+
 			// merge into main config
 			cf.MergeConfigMap(ncf.AllSettings())
 
