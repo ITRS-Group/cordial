@@ -142,6 +142,9 @@ func SetLogfile(logfile string) LogOptions {
 
 func LumberjackOptions(lj *lumberjack.Logger) LogOptions {
 	return func(lo *logOpts) {
+		if lj.Filename != "" {
+			lj.Filename = config.ExpandHome(lj.Filename)
+		}
 		lo.lj = lj
 	}
 }
