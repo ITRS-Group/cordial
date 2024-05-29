@@ -145,7 +145,7 @@ geneos install netprobe -b active_dev -U
 			geneos.DoUpdate(installCmdUpdate),
 			geneos.Force(installCmdForce),
 			geneos.LocalOnly(installCmdLocal),
-			geneos.NoSave(installCmdNoSave),
+			geneos.NoSave(installCmdNoSave || installCmdLocal),
 			geneos.Version(installCmdVersion),
 			geneos.OverrideVersion(installCmdOverride),
 			geneos.Password(installCmdPassword),

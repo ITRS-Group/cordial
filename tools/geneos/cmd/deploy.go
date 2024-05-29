@@ -41,8 +41,8 @@ import (
 )
 
 var deployCmdTemplate, deployCmdBase, deployCmdKeyfileCRC string
-var deployCmdGeneosHome, deployCmdUsername, deployCmdName, deployCmdExtraOpts string
-var deployCmdStart, deployCmdLogs, deployCmdLocal, deployCmdNexus, deployCmdSnapshot bool
+var deployCmdGeneosHome, deployCmdUsername, deployCmdExtraOpts string
+var deployCmdStart, deployCmdLogs, deployCmdLocal, deployCmdNexus, deployCmdSnapshot, deployCmdNoSave bool
 var deployCmdTLS bool
 var deployCmdSigningBundle, deployCmdInstanceBundle string
 var deployCmdPort uint16
@@ -65,8 +65,7 @@ func init() {
 
 	deployCmd.Flags().Uint16VarP(&deployCmdPort, "port", "p", 0, "Override the default `port` selection")
 
-	deployCmd.Flags().StringVarP(&deployCmdName, "name", "n", "", "Use name for instances and configurations instead of the hostname")
-	deployCmd.Flags().MarkHidden("name")
+	deployCmd.Flags().BoolVarP(&deployCmdNoSave, "nosave", "n", false, "Do not save a local copy of any downloads")
 
 	deployCmd.Flags().BoolVarP(&deployCmdTLS, "tls", "T", false, "Initialise TLS subsystem if required.\nUse options below to import existing certificate bundles")
 	deployCmd.Flags().StringVarP(&deployCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
@@ -133,10 +132,7 @@ var deployCmd = &cobra.Command{
 			return nil
 		}
 
-		// name is from hidden --name, then NAME and finally use hostname
-		if deployCmdName != "" {
-			name = deployCmdName
-		} else if len(names) > 0 {
+		if len(names) > 0 {
 			name = names[0]
 		}
 
@@ -263,6 +259,7 @@ var deployCmd = &cobra.Command{
 				geneos.Basename(deployCmdBase),
 				geneos.UseRoot(h.GetString(Execname)),
 				geneos.LocalOnly(deployCmdLocal),
+				geneos.NoSave(deployCmdNoSave || deployCmdLocal),
 				geneos.OverrideVersion(deployCmdOverride),
 				geneos.Password(deployCmdPassword),
 				geneos.Username(deployCmdUsername),
