@@ -36,6 +36,22 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
+// KeyFilePath returns the absolute path to either the given keyfile or
+// a shared keyfile with the CRC of keycrc, if keyfile is not set. If ct
+// is nil then the first matching keyfile from all components is
+// returned. If h is ALL then only localhost is checked.
+func (ct *Component) KeyFilePath(h *Host, keyfile config.KeyFile, keycrc string) (path string, err error) {
+	if keyfile != "" {
+		return h.Abs(string(keyfile))
+	}
+
+	if keycrc == "" {
+		return "", ErrNotExist
+	}
+
+	return ct.Shared(h, "keyfiles", keycrc+".aes"), nil
+}
+
 // ReadKeyValues returns a memguard enclave in kv containing the key
 // values from the source. `source` can be a path to a file, a `-` for
 // STDIN (in which case an optional prompt is output) or a remote URL.
