@@ -56,7 +56,7 @@ type downloadauth struct {
 // openArchive locates and returns an io.ReadCloser for an archive for
 // the component ct. The source of the archive is given as an option. If
 // no options are set then the "latest" release from the ITRS releases
-// web site is downloaded and returned.
+// web site is downloaded and returned using stored credentials.
 func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filename string, err error) {
 	var resp *http.Response
 
