@@ -37,6 +37,8 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 type discardCloser struct {
@@ -134,7 +136,7 @@ func evalLoggerOptions(options ...LogOptions) *logOpts {
 
 func SetLogfile(logfile string) LogOptions {
 	return func(lo *logOpts) {
-		lo.logfile = logfile
+		lo.logfile = config.ExpandHome(logfile)
 	}
 }
 
