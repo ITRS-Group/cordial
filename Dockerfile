@@ -11,7 +11,7 @@ ARG GOVERSION=1.22.3
 # 
 FROM golang:${GOVERSION}-bullseye AS build
 LABEL stage=cordial-build
-COPY go.mod go.sum cordial.go VERSION /app/cordial/
+COPY go.mod go.sum cordial.go logging.go VERSION /app/cordial/
 COPY libraries /app/cordial/libraries/
 COPY integrations /app/cordial/integrations/
 COPY pkg /app/cordial/pkg
@@ -58,7 +58,7 @@ RUN set -eux; \
         libasound2; \
     npm install --global mdpdf; \
     npm install --global @mermaid-js/mermaid-cli
-COPY go.mod go.sum cordial.go VERSION /app/cordial/
+COPY go.mod go.sum cordial.go logging.go VERSION /app/cordial/
 COPY integrations /app/cordial/integrations/
 COPY libraries /app/cordial/libraries/
 COPY pkg /app/cordial/pkg
