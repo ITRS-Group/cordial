@@ -359,7 +359,7 @@ var deployCmd = &cobra.Command{
 			cf.Set("version", deployCmdBase)
 		}
 
-		if ct.IsA("gateway") {
+		if ct.IsA("gateway") && (deployCmdKeyfile != "" || deployCmdKeyfileCRC != "") {
 			// override the instance generated keyfile if options given
 			_, crc, err := geneos.ImportSharedKey(i.Host(), i.Type(), deployCmdKeyfile, deployCmdKeyfileCRC, "Paste AES key file contents, end with newline and CTRL+D:")
 			if err != nil {
