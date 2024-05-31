@@ -277,7 +277,9 @@ func initConfig() {
 
 	// `oldConfDir` is the original path to the user configuration,
 	// typically directly in `~/geneos`. The LoadConfig() function
-	// already looks in standardised user and global directories.
+	// already looks in standardised user and global directories. If
+	// user lookup fails we get an empty path, which is fine - so ignore
+	// errors.
 	oldConfDir, _ := config.UserConfigDir()
 
 	cf, err := config.Load(Execname,

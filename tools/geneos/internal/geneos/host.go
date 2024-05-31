@@ -379,13 +379,17 @@ func (h *Host) Hidden() bool {
 // configuration file.
 func LoadHostConfig() {
 	var err error
-	userConfDir, _ := config.UserConfigDir()
-	oldConfigFile := path.Join(userConfDir, OldUserHostFile)
+	var confFile string
+	userConfDir, err := config.UserConfigDir()
+	if err != nil {
+		log.Error().Err(err).Msg("user lookup failed, skipping user config directory")
+	} else {
+		confFile = config.PromoteFile(host.Localhost, path.Join(userConfDir, execname), path.Join(userConfDir, OldUserHostFile))
+	}
 	// note that SetAppName only matters when PromoteFile returns an empty path
-	confpath := path.Join(userConfDir, execname)
 	h, err := config.Load("hosts",
 		config.SetAppName(execname),
-		config.SetConfigFile(config.PromoteFile(host.Localhost, confpath, oldConfigFile)),
+		config.SetConfigFile(confFile),
 		config.UseDefaults(false),
 		config.IgnoreWorkingDir(),
 	)

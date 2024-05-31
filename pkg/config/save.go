@@ -24,6 +24,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"path"
 )
 
@@ -46,13 +47,21 @@ func (cf *Config) Save(name string, options ...FileOptions) (err error) {
 
 	filename := fmt.Sprintf("%s.%s", name, opts.extension)
 
-	p := path.Join(opts.userconfdir, opts.appname, filename)
+	var p string
+	if opts.userconfdir != "" {
+		p = path.Join(opts.userconfdir, opts.appname, filename)
+	}
+
 	if len(opts.configDirs) > 0 {
 		p = path.Join(opts.configDirs[0], filename)
 	}
 
 	if opts.configFile != "" {
 		p = opts.configFile
+	}
+
+	if p == "" {
+		return fmt.Errorf("cannot resolve save location: %w", os.ErrNotExist)
 	}
 
 	if err = r.MkdirAll(path.Dir(p), 0775); err != nil {

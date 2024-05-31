@@ -122,6 +122,10 @@ var createCmd = &cobra.Command{
 //
 // skip if certificate exists and is valid
 func CreateCert(destination string, overwrite bool, duration time.Duration, cn string, san ...string) (err error) {
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		return config.ErrNoUserConfigDir
+	}
 	basepath := path.Join(destination, strings.ReplaceAll(cn, " ", "-"))
 	if _, err = os.Stat(basepath + ".pem"); err == nil && !overwrite {
 		return os.ErrExist
@@ -153,7 +157,8 @@ func CreateCert(destination string, overwrite bool, duration time.Duration, cn s
 		log.Error().Err(err).Msg("")
 		return
 	}
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
+
+	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertFile+".key"))
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return

@@ -45,16 +45,21 @@ import (
 // directory. If verify is true then the certificate is verified against
 // itself as a root and if it fails an error is returned.
 func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err error) {
-	file = config.PromoteFile(host.Localhost, config.AppConfigDir(), LOCAL.PathTo("tls"), RootCAFile+".pem")
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		err = config.ErrNoUserConfigDir
+		return
+	}
+	file = config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls"), RootCAFile+".pem")
 	if file == "" {
 		return
 	}
 	log.Debug().Msgf("reading %s", file)
 	if file == "" {
-		err = fmt.Errorf("%w: root certificate file %s not found in %s", os.ErrNotExist, RootCAFile+".pem", config.AppConfigDir())
+		err = fmt.Errorf("%w: root certificate file %s not found in %s", os.ErrNotExist, RootCAFile+".pem", confDir)
 		return
 	}
-	config.PromoteFile(host.Localhost, config.AppConfigDir(), LOCAL.PathTo("tls"), RootCAFile+".key")
+	config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls"), RootCAFile+".key")
 	cert, err = config.ParseCertificate(LOCAL, file)
 	if err != nil {
 		return
@@ -79,13 +84,18 @@ func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err erro
 // config directory. If verify is true then the signing certificate is
 // checked and verified against the default root certificate.
 func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err error) {
-	file = config.PromoteFile(host.Localhost, config.AppConfigDir(), LOCAL.PathTo("tls", SigningCertFile+".pem"))
-	log.Debug().Msgf("reading %s", file)
-	if file == "" {
-		err = fmt.Errorf("%w: signing certificate file %s not found in %s", os.ErrNotExist, SigningCertFile+".pem", config.AppConfigDir())
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		err = config.ErrNoUserConfigDir
 		return
 	}
-	config.PromoteFile(host.Localhost, config.AppConfigDir(), LOCAL.PathTo("tls", SigningCertFile+".key"))
+	file = config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertFile+".pem"))
+	log.Debug().Msgf("reading %s", file)
+	if file == "" {
+		err = fmt.Errorf("%w: signing certificate file %s not found in %s", os.ErrNotExist, SigningCertFile+".pem", confDir)
+		return
+	}
+	config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertFile+".key"))
 	cert, err = config.ParseCertificate(LOCAL, file)
 	if err != nil {
 		return
@@ -183,6 +193,10 @@ func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave
 }
 
 func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) (err error) {
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		return config.ErrNoUserConfigDir
+	}
 	signingBundle, err := config.ReadInputPEMString(signingBundleSource, "signing certificate(s)")
 	if err != nil {
 		return err
@@ -202,15 +216,15 @@ func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) 
 		return ErrInvalidArgs
 	}
 
-	if err = config.WriteCert(LOCAL, path.Join(config.AppConfigDir(), SigningCertFile+".pem"), cert); err != nil {
+	if err = config.WriteCert(LOCAL, path.Join(confDir, SigningCertFile+".pem"), cert); err != nil {
 		return err
 	}
-	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), path.Join(config.AppConfigDir(), SigningCertFile+".pem"))
+	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertFile+".pem"))
 
-	if err = config.WritePrivateKey(LOCAL, path.Join(config.AppConfigDir(), SigningCertFile+".key"), key); err != nil {
+	if err = config.WritePrivateKey(LOCAL, path.Join(confDir, SigningCertFile+".key"), key); err != nil {
 		return err
 	}
-	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(config.AppConfigDir(), SigningCertFile+".key"))
+	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertFile+".key"))
 	if chainSource != "" {
 		b, err := os.ReadFile(chainSource)
 		if err != nil {
@@ -253,20 +267,25 @@ func WriteChainLocal(chain []*x509.Certificate) (err error) {
 //
 // This is also called from `init`
 func TLSInit(overwrite bool, keytype string) (err error) {
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		err = config.ErrNoUserConfigDir
+		return
+	}
 	// directory permissions do not need to be restrictive
-	err = LOCAL.MkdirAll(config.AppConfigDir(), 0775)
+	err = LOCAL.MkdirAll(confDir, 0775)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
 	if err := config.CreateRootCert(
 		LOCAL,
-		path.Join(config.AppConfigDir(), RootCAFile),
+		path.Join(confDir, RootCAFile),
 		cordial.ExecutableName()+" root certificate",
 		overwrite,
 		keytype); err != nil {
 		if errors.Is(err, os.ErrExist) {
-			// fmt.Println("root certificate already exists in", config.AppConfigDir())
+			// fmt.Println("root certificate already exists in", confDir)
 			return nil
 		}
 		return err
@@ -274,12 +293,12 @@ func TLSInit(overwrite bool, keytype string) (err error) {
 	fmt.Printf("CA created for %s\n", RootCAFile)
 
 	if err := config.CreateSigningCert(
-		LOCAL, path.Join(config.AppConfigDir(), SigningCertFile),
-		path.Join(config.AppConfigDir(), RootCAFile),
+		LOCAL, path.Join(confDir, SigningCertFile),
+		path.Join(confDir, RootCAFile),
 		cordial.ExecutableName()+" intermediate certificate",
 		overwrite); err != nil {
 		if errors.Is(err, os.ErrExist) {
-			// fmt.Println("signing certificate already exists in", config.AppConfigDir())
+			// fmt.Println("signing certificate already exists in", confDir)
 			return nil
 		}
 		return err

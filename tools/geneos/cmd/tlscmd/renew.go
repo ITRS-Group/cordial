@@ -71,6 +71,12 @@ var renewCmd = &cobra.Command{
 func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		resp.Err = config.ErrNoUserConfigDir
+		return
+	}
+
 	hostname, _ := os.Hostname()
 	if !i.Host().IsLocal() {
 		hostname = i.Host().GetString("hostname")
@@ -104,7 +110,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	if resp.Err != nil {
 		return
 	}
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
+	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertFile+".key"))
 	resp.Err = err
 	if resp.Err != nil {
 		return

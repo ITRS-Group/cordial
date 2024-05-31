@@ -82,8 +82,10 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 	if opts.setglobals {
 		ResetConfig(options...)
 		cf = global
-		// update config directory
-		cf.appUserConfDir = path.Join(opts.userconfdir, opts.appname)
+		// update config directory if available
+		if opts.userconfdir != "" {
+			cf.appUserConfDir = path.Join(opts.userconfdir, opts.appname)
+		}
 	} else {
 		cf = New(options...)
 	}
