@@ -84,7 +84,7 @@ func New(options ...FileOptions) *Config {
 	cf := &Config{
 		Viper: viper.NewWithOptions(
 			viper.KeyDelimiter(opts.delimiter),
-			viper.EnvKeyReplacer(strings.NewReplacer(opts.delimiter, opts.envdelimiter, "-", "_"))),
+			viper.EnvKeyReplacer(strings.NewReplacer(opts.delimiter, opts.envdelimiter, "-", opts.envdelimiter))),
 		mutex:          &sync.RWMutex{},
 		delimiter:      opts.delimiter,
 		appUserConfDir: path.Join(userConfDir, opts.appname),
