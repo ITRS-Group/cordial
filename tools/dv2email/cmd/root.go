@@ -189,7 +189,7 @@ var DV2EMAILCmd = &cobra.Command{
 			}
 		default:
 			if err = sendEmail(cf, em, data, inlineCSS); err != nil {
-				log.Fatal().Err(err).Msg("")
+				log.Fatal().Err(err).Msg("sending failed")
 			}
 		}
 
