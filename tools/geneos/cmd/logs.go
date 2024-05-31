@@ -40,6 +40,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var logCmdLines int
@@ -63,7 +64,7 @@ func init() {
 	logsCmd.Flags().BoolVarP(&logCmdCat, "cat", "c", false, "Output whole file")
 
 	logsCmd.Flags().BoolVarP(&logCmdStderr, "stderr", "E", false, "Show STDERR output files")
-	logsCmd.Flags().BoolVarP(&logCmdNoNormal, "nostandard", "N", false, "Do not show standard log files")
+	logsCmd.Flags().BoolVarP(&logCmdNoNormal, "no-stdout", "N", false, "Do not show STDOUT log files")
 	logsCmd.Flags().BoolVarP(&logCmdCALog, "ca", "C", false, "Include Collection Agent log for Netprobe instances")
 
 	logsCmd.Flags().StringVarP(&logCmdMatch, "match", "g", "", "Match lines with STRING")
@@ -73,6 +74,14 @@ func init() {
 	logsCmd.MarkFlagsMutuallyExclusive("cat", "follow")
 
 	logsCmd.Flags().SortFlags = false
+
+	logsCmd.PersistentFlags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+		switch name {
+		case "nostandard":
+			name = "no-stdout"
+		}
+		return pflag.NormalizedName(name)
+	})
 }
 
 //go:embed _docs/logs.md
