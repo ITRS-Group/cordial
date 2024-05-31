@@ -155,7 +155,7 @@ func outputXLSX(cf *config.Config, gateway string, entities []Entity, probes map
 	if !filepath.IsAbs(filename) {
 		filename = path.Join(dir, filename)
 	}
-	return xlsx.SaveAs(filename)
+	return xlsx.SaveAs(filename, excelize.Options{Password: cf.GetPassword("output.xlsx-password").String()})
 }
 
 func colWidth(chars int, min float64) float64 {

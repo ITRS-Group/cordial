@@ -27,7 +27,8 @@ output:
     sampler-name: ${sheetname} Report
     sampler-script: /bin/cat "${csvfile}"
 
-
+  xlsx-password: ""
+  
   # The names for the different report formats. Set to an empty string
   # to disable, i.e. "". If an absolute path then output directory above
   # is ignored. To put each Gateway into it's own directory use a
