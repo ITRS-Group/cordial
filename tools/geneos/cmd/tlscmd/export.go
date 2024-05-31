@@ -66,6 +66,10 @@ $ geneos tls export --output file.pem
 		cmd.AnnotationNeedsHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
+		confDir := config.AppConfigDir()
+		if confDir == "" {
+			return config.ErrNoUserConfigDir
+		}
 		// gather the rootCA cert, the geneos cert and key
 		root, rootFile, err := geneos.ReadRootCert(true)
 		if err != nil {
@@ -77,7 +81,7 @@ $ geneos tls export --output file.pem
 			err = fmt.Errorf("local signing root certificate (%s) not valid: %w", signerFile, err)
 			return
 		}
-		signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
+		signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertFile+".key"))
 		if err != nil {
 			return
 		}

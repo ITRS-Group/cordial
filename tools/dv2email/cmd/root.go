@@ -89,7 +89,9 @@ func initConfig() {
 	}
 
 	// config.DefaultKeyDelimiter("::")
-
+	if config.AppConfigDir() == "" {
+		log.Warn().Err(config.ErrNoUserConfigDir)
+	}
 	opts := []config.FileOptions{
 		config.SetAppName("geneos"),
 		config.SetConfigFile(cfgFile),

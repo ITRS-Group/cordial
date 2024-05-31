@@ -25,6 +25,7 @@ THE SOFTWARE.
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -79,15 +80,19 @@ func ResetConfig(options ...FileOptions) {
 // Can be called with config.DefaultExpandOptions(...) to set defaults for
 // future calls that use Expand.
 func New(options ...FileOptions) *Config {
+	var appUserConfDir string
 	opts := evalFileOptions(options...)
-	userConfDir, _ := UserConfigDir()
+	if userConfDir, err := UserConfigDir(); err == nil {
+		// only set of no error, else ignore
+		appUserConfDir = path.Join(userConfDir, opts.appname)
+	}
 	cf := &Config{
 		Viper: viper.NewWithOptions(
 			viper.KeyDelimiter(opts.delimiter),
 			viper.EnvKeyReplacer(strings.NewReplacer(opts.delimiter, opts.envdelimiter, "-", opts.envdelimiter))),
 		mutex:          &sync.RWMutex{},
 		delimiter:      opts.delimiter,
-		appUserConfDir: path.Join(userConfDir, opts.appname),
+		appUserConfDir: appUserConfDir,
 	}
 	if opts.envprefix != "" {
 		cf.SetEnvPrefix(opts.envprefix)
@@ -95,6 +100,8 @@ func New(options ...FileOptions) *Config {
 	}
 	return cf
 }
+
+var ErrNoUserConfigDir = errors.New("cannot resolve user config directory, check $USER and $HOME exist")
 
 // AppConfigDir returns the application configuration directory
 func AppConfigDir() string {

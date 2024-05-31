@@ -107,8 +107,11 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 	if c.userconfdir == "placeholder" {
 		var err error
 		c.userconfdir, err = UserConfigDir()
+		// if lookup fails, for example a domain account and we are
+		// built without CGO for static linking, then set none.
 		if err != nil {
-			panic(err)
+			c.userconfdir = ""
+			return
 		}
 	}
 

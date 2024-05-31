@@ -51,6 +51,13 @@ import (
 // skip if certificate exists and is valid
 func CreateCert(i geneos.Instance, duration time.Duration) (resp *Response) {
 	resp = NewResponse(i)
+
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		resp.Err = config.ErrNoUserConfigDir
+		return
+	}
+
 	// skip if we can load an existing and valid certificate
 	if _, valid, _, err := ReadCert(i); err == nil && valid {
 		return
