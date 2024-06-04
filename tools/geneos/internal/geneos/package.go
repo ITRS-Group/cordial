@@ -40,7 +40,7 @@ import (
 )
 
 // list of platform in release package names
-var platformToMetaList = []string{
+var platformSuffixList = []string{
 	"el8",
 	"el9",
 }
@@ -316,17 +316,20 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 
 // LatestVersion returns the name of the latest release for component
 // type ct on host h. The comparison is done using semantic versioning
-// and any metadata is ignored. The matching is limited by the optional
-// prefix filter. An error is returned if there are problems accessing
-// the directories or parsing any names as semantic versions.
-func LatestVersion(r *Host, ct *Component, prefix string) (v string, err error) {
-	dir := r.PathTo("packages", ct.String())
-	dirs, err := r.ReadDir(dir)
+// and any metadata is checked against the host platform_id - if they do
+// not match then it is not latest - unless the prefix contains it. The
+// matching is limited by the optional prefix filter. An error is
+// returned if there are problems accessing the directories or parsing
+// any names as semantic versions.
+func LatestVersion(h *Host, ct *Component, prefix string) (v string, err error) {
+	dir := h.PathTo("packages", ct.String())
+	dirs, err := h.ReadDir(dir)
 	if err != nil {
 		return
 	}
 
 	semver, _ := version.NewVersion("0.0.0")
+	platformid := h.GetString("platform_id")
 
 	for _, d := range dirs {
 		if !d.IsDir() {
@@ -341,6 +344,10 @@ func LatestVersion(r *Host, ct *Component, prefix string) (v string, err error) 
 		sv, err := version.NewVersion(d.Name())
 		if err != nil {
 			return v, err
+		}
+		meta := sv.Metadata()
+		if meta != "" && meta != platformid && !strings.HasSuffix(prefix, "+"+meta) {
+			continue
 		}
 		if sv.LessThan(semver) {
 			continue

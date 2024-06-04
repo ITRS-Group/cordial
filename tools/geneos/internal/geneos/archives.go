@@ -36,6 +36,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -542,30 +543,24 @@ func matchVersion(v string) bool {
 // host r based on semver. A prefix filter can be used to limit matches
 // and a filter function to further refine matches.
 //
-// If there is semver metadata, check for platform_id on host and remove
-// any non-platform metadata from list before sorting
-func LatestArchive(r *Host, dir, filterString string, filterFunc func(os.DirEntry) bool) (latest string, err error) {
-	ents, err := r.ReadDir(dir)
+// TODO: If there is semver metadata, check for platform_id on host and
+// remove any non-platform metadata from list before sorting
+func LatestArchive(h *Host, dir, filterString string, filterFunc func(os.DirEntry) bool) (latest string, err error) {
+	ents, err := h.ReadDir(dir)
 	if err != nil {
 		return
 	}
 
-	// remove (in place) all entries that do not contain 'filterString'
 	if filterString != "" {
-		i := 0
-		for _, d := range ents {
-			if strings.Contains(d.Name(), filterString) {
-				ents[i] = d
-				i++
-			}
-		}
-		ents = ents[:i]
+		ents = slices.DeleteFunc(ents, func(d fs.DirEntry) bool { return strings.Contains(d.Name(), filterString) })
 	}
 
 	log.Debug().Msgf("looking for %q in %s", filterString, dir)
 
 	var versions = make(map[string]*version.Version)
 	var originals = make(map[string]string, len(ents)) // map of processed names to original entries
+
+	platformid := h.GetString("platform_id")
 
 	for _, d := range ents {
 		// skip if fails filter function (when set)
@@ -580,31 +575,17 @@ func LatestArchive(r *Host, dir, filterString string, filterFunc func(os.DirEntr
 		if err == nil {
 			log.Debug().Msgf("found archive of %s with version %s", ct, v)
 			nv, _ := version.NewVersion(v)
+			// skip nonmatching metadata *unless* the filter string
+			// includes it after a "+", e.g. if a user says "use this
+			// metadata" then we do
+			meta := nv.Metadata()
+			if meta != "" && meta != platformid && !strings.HasSuffix(filterString, "+"+meta) {
+				continue
+			}
 			versions[n] = nv
 			originals[nv.Original()] = n
 			continue
 		}
-
-		// originals[n] = n
-
-		// // get the first non numeric part, remove it
-		// // this deals with "RA" vs "GA"
-		// v1p := strings.FieldsFunc(n, func(r rune) bool {
-		// 	return !unicode.IsLetter(r)
-		// })
-		// if len(v1p) > 0 && v1p[0] != "" {
-		// 	p := strings.TrimPrefix(n, v1p[0])
-		// 	originals[p] = n
-		// 	n = p
-		// }
-
-		// v1, err := version.NewVersion(n)
-		// if err == nil { // valid version
-		// 	if v1.Metadata() != "" {
-		// 		delete(versions, v1.Core().String())
-		// 	}
-		// 	versions[n] = v1
-		// }
 	}
 
 	if len(versions) == 0 {
@@ -635,7 +616,7 @@ func filenameToComponent(filename string) (ct *Component, version string, err er
 	}
 	version = parts[2]
 	// replace '-' prefix of recognised platform suffixes with '+' so work with semver as metadata
-	for _, m := range platformToMetaList {
+	for _, m := range platformSuffixList {
 		version = strings.ReplaceAll(version, "-"+m, "+"+m)
 	}
 
