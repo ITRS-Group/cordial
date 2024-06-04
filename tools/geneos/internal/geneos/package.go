@@ -42,6 +42,7 @@ import (
 // list of platform in release package names
 var platformToMetaList = []string{
 	"el8",
+	"el9",
 }
 
 // ReleaseDetails is a set of values for a release
