@@ -19,7 +19,7 @@ require (
 	github.com/google/go-querystring v1.1.0
 	github.com/gurkankaymak/hocon v1.2.19
 	github.com/hashicorp/go-reap v0.0.0-20230117204525-bf69c61a7b71
-	github.com/hashicorp/go-version v1.6.0
+	github.com/hashicorp/go-version v1.7.0
 	github.com/hectane/go-acl v0.0.0-20230122075934-ca0b05cb1adb
 	github.com/jcmturner/goidentity/v6 v6.0.1
 	github.com/jcmturner/gokrb5/v8 v8.4.4
