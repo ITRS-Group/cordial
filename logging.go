@@ -111,6 +111,9 @@ func LogInit(prefix string, options ...LogOptions) {
 			return strings.ToUpper(fmt.Sprintf("%s:", i))
 		},
 		FormatMessage: func(i interface{}) string {
+			if i == nil {
+				return fmt.Sprintf("%s:", prefix)
+			}
 			return fmt.Sprintf("%s: %s", prefix, i)
 		},
 	}).With().Caller().Logger()
