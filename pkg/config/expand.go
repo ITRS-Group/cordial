@@ -474,7 +474,11 @@ func splitEncFieldsBytes(enc []byte) (keyfiles, ciphertext []byte) {
 // directly, otherwise the value is looked-up using the normal
 // conventions for external access, e.g. file or URL.
 func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value string) {
+	opts := evalExpandOptions(c, options...)
 	keyfiles, encodedValue := splitEncFields(s)
+	if opts.usekeyfile != "" {
+		keyfiles = opts.usekeyfile
+	}
 
 	if !strings.HasPrefix(encodedValue, "+encs+") {
 		encodedValue, _ = c.ExpandRawString(encodedValue, options...)
@@ -495,7 +499,11 @@ func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value 
 }
 
 func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value []byte) {
+	opts := evalExpandOptions(c, options...)
 	keyfiles, encodedValue := splitEncFieldsBytes(s)
+	if opts.usekeyfile != "" {
+		keyfiles = []byte(opts.usekeyfile)
+	}
 
 	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
 		str, _ := c.ExpandRawString(string(encodedValue), options...)
@@ -517,7 +525,11 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 }
 
 func (c *Config) expandEncodedBytesEnclave(s []byte, options ...ExpandOptions) (value *memguard.Enclave) {
+	opts := evalExpandOptions(c, options...)
 	keyfiles, encodedValue := splitEncFieldsBytes(s)
+	if opts.usekeyfile != "" {
+		keyfiles = []byte(opts.usekeyfile)
+	}
 
 	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
 		str, _ := c.ExpandRawString(string(encodedValue), options...)
@@ -539,7 +551,11 @@ func (c *Config) expandEncodedBytesEnclave(s []byte, options ...ExpandOptions) (
 }
 
 func (c *Config) expandEncodedBytesLockedBuffer(s []byte, options ...ExpandOptions) (value *memguard.LockedBuffer) {
+	opts := evalExpandOptions(c, options...)
 	keyfiles, encodedValue := splitEncFieldsBytes(s)
+	if opts.usekeyfile != "" {
+		keyfiles = []byte(opts.usekeyfile)
+	}
 
 	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
 		str, _ := c.ExpandRawString(string(encodedValue), options...)
