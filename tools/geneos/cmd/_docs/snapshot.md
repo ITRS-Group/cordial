@@ -6,7 +6,7 @@ Authentication to the Gateway is through a combination of command line flags and
 
 The output is in JSON format as an array of dataviews, where each dataview is in the format defined in the Gateway documentation at
 
-<https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#fetch_dataviews>
+<https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#fetch-a-dataview>
 
 Flags to select which properties of data items are available: `-V`, `-S`, `-Z`, `-U` for value, severity, snooze and user-assignment respectively. If none is given then the default is to fetch values only.
 
