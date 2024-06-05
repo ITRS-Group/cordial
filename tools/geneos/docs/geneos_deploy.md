@@ -74,6 +74,7 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
   -x, --extras string                 Extra args passed to initial start, split on spaces and quoting ignored
                                       Use this option for bootstrapping instances, such as with Centralised Config
   -p, --port port                     Override the default port selection
+  -n, --nosave                        Do not save a local copy of any downloads
   -T, --tls                           Initialise TLS subsystem if required.
                                       Use options below to import existing certificate bundles
   -C, --signing-bundle PEM            Signing certificate bundle file, in PEM format.

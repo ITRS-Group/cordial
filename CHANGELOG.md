@@ -1,5 +1,51 @@
 # Change Log
 
+## Version v1.14.0
+
+> **Released 2024-06-05**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+⚠️ You will need to update to this version if you use `geneos` to install Netprobe releases direct from the ITRS website as the base name of the redirect URL has changed and the old version no longer works.
+
+### v1.14.0 Changes
+
+* Update Go toolchain to use 1.22.4
+
+* `tools/geneos`
+
+  * Add options to `tls create` to specify destination directory, outputting certificate bundles and setting the expiry period in days. Also, do not initialise the TLS subsystem if it's not found unless the `--force` flag is used.
+
+  * Hide `--name` option in `deploy`, repurpose short-form `-n` for new `--nosave` option
+
+  * Rename `logs` option `--nostandard` to `--no-stdout` (with alias) for consistency
+
+* `cordial` package
+
+  * Only log file and function if logging at `Debug` level or greater
+
+  * Split logging methods into their own file, add options to `LogInit()` to specify filename and/or [`lunberjack`](https://pkg.go.dev/gopkg.in/natefinch/lumberjack.v2) settings. Log filenames can also include `~/` prefix for home directory.
+
+* `tools/gateway-reporter`
+
+  * Add an optional XLSX password in `output` config section
+
+### v1.14.0 Fixes
+
+* `tools/geneos`
+
+  * Fix download base name for Netprobes to new value.
+
+  * Fix `deploy` importing of keyfiles (only import if given on command line)
+
+  * `package install` and `package update` - Fix the handling of package metadata (e.g. `+el8`) suffixes to that they are treated the same as a package without a metadata suffix - and the right one is selected for the system being installed
+
+* `pkg/config`
+
+  * Better recovery on failing to find the user's config directory, return an error instead of panic-ing
+
+---
+
 ## Version v1.13.2
 
 > **Released 2024-05-23**

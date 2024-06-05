@@ -2,9 +2,11 @@
 
 Cordial is a collection of utilities, integrations and support packages for ITRS Geneos.
 
-> **Current Version v1.13.1**
+> **Current Version v1.14.0**
 
-> Released 2024-05-22
+⚠️ You will need to update to this version if you use `geneos` to install Netprobe releases direct from the ITRS website as the base name of the redirect URL has changed and the old version no longer works.
+
+> Released 2024-06-05
 >
 > See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 

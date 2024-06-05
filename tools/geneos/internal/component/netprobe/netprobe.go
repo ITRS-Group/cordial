@@ -39,7 +39,7 @@ var Netprobe = geneos.Component{
 	Aliases:      []string{"probe", "netprobes", "probes"},
 	LegacyPrefix: "netp",
 	UsesKeyfiles: true,
-	DownloadBase: geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
+	DownloadBase: geneos.DownloadBases{Resources: "Netprobe+-+Standard", Nexus: "geneos-netprobe"},
 	PortRange:    "NetprobePortRange",
 	CleanList:    "NetprobeCleanList",
 	PurgeList:    "NetprobePurgeList",

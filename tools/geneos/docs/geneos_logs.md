@@ -27,7 +27,7 @@ geneos logs [flags] [TYPE] [NAME...]
   -n, --lines int       Lines to tail (default 10)
   -c, --cat             Output whole file
   -E, --stderr          Show STDERR output files
-  -N, --nostandard      Do not show standard log files
+  -N, --no-stdout       Do not show STDOUT log files
   -C, --ca              Include Collection Agent log for Netprobe instances
   -g, --match string    Match lines with STRING
   -v, --ignore string   Match lines without STRING
