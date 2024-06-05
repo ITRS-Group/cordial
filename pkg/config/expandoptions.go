@@ -36,6 +36,7 @@ type expandOptions struct {
 	replacements     []string
 	trimPrefix       bool
 	trimSpace        bool
+	usekeyfile       string
 }
 
 // ExpandOptions control the way configuration options undergo string
@@ -239,5 +240,14 @@ func Initial(value any) ExpandOptions {
 func Replace(name string) ExpandOptions {
 	return func(e *expandOptions) {
 		e.replacements = append(e.replacements, name)
+	}
+}
+
+// UseKeyfile overrides the path to the embedded keyfile in the
+// `${enc:/path:xxx}` value. This can be useful when the keyfile is
+// placed in an alternative location.
+func UseKeyfile(file string) ExpandOptions {
+	return func(eo *expandOptions) {
+		eo.usekeyfile = file
 	}
 }
