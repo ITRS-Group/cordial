@@ -172,22 +172,34 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 			// file or not found one. clear err
 			err = nil
 		}
+
+		// merge all defaults into main config - internal defaults always,
+		// but any from the above too
 		cf.MergeConfigMap(defaults.AllSettings())
 	}
 
 	// fixed configuration file, skip directory search
 	if opts.configFileReader != nil {
-		cf.Viper.SetConfigType(opts.extension)
-		if err = cf.Viper.ReadConfig(opts.configFileReader); err != nil {
+		ncf := New(options...)
+		ncf.Viper.SetFs(r.GetFs())
+		ncf.Viper.SetConfigType(opts.extension)
+
+		if err = ncf.Viper.ReadConfig(opts.configFileReader); err != nil {
 			return cf, fmt.Errorf("error reading config: %w", err)
 		}
+
+		// merge into main config
+		cf.MergeConfigMap(ncf.AllSettings())
 		return cf, nil
 	} else if opts.configFile != "" {
-		cf.Viper.SetConfigFile(opts.configFile)
+		ncf := New(options...)
+		ncf.Viper.SetFs(r.GetFs())
+
+		ncf.Viper.SetConfigFile(opts.configFile)
 		if opts.extension != "" {
-			cf.Viper.SetConfigType(opts.extension)
+			ncf.Viper.SetConfigType(opts.extension)
 		}
-		if err = cf.Viper.ReadInConfig(); err != nil {
+		if err = ncf.Viper.ReadInConfig(); err != nil {
 			if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 				if opts.mustexist {
 					return
@@ -196,6 +208,12 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 				return cf, fmt.Errorf("error reading config (%s): %w", opts.configFile, err)
 			}
 		}
+
+		// set the config file we found and loaded, so WatchConfig works
+		cf.Viper.SetConfigFile(opts.configFile)
+
+		// merge into main config
+		cf.MergeConfigMap(ncf.AllSettings())
 		return cf, nil
 	}
 
