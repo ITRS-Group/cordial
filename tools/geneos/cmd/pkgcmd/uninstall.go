@@ -170,7 +170,7 @@ geneos uninstall --version 5.14.1
 					}
 					// remove the release
 					if err = h.RemoveAll(path.Join(basedir, version)); err != nil {
-						log.Error().Err(err)
+						log.Error().Err(err).Msg("")
 						continue
 					}
 					fmt.Printf("removed %s release %s from %s:%s\n", ct, version, h, basedir)
@@ -216,11 +216,11 @@ func updateLinks(h *geneos.Host, ct *geneos.Component, releaseDir string, releas
 	for _, l := range release.Links {
 		link := path.Join(releaseDir, l)
 		if err = h.Remove(link); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			log.Error().Err(err)
+			log.Error().Err(err).Msg("")
 			continue
 		}
 		if err = h.Symlink(newVersion, link); err != nil {
-			log.Error().Err(err)
+			log.Error().Err(err).Msg("")
 			continue
 		}
 		fmt.Printf("updated %s %s on %s, now linked to %s\n", ct, l, h, newVersion)
