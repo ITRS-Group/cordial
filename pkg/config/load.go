@@ -100,10 +100,10 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 	cf.Viper.SetFs(r.GetFs())
 
 	defaults := New(options...)
-	internalDefaults := New(options...)
 
 	if opts.usedefaults && len(opts.internalDefaults) > 0 {
 		buf := bytes.NewBuffer(opts.internalDefaults)
+		internalDefaults := New(options...)
 		internalDefaults.Viper.SetConfigType(opts.internalDefaultsFormat)
 		if err = internalDefaults.Viper.ReadConfig(buf); err != nil && opts.internalDefaultsCheckErrors {
 			return
