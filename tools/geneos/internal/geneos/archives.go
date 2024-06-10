@@ -131,6 +131,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 
 	// transient download
 	if opts.nosave {
+		err = nil
 		body = resp.Body
 		return
 	}
