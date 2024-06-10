@@ -83,9 +83,10 @@ func renderMD(in string) (out string) {
 func RenderHelpAsMD(command *cobra.Command) {
 	// render help with glamour
 	cobra.AddTemplateFunc("md", renderMD)
-	command.SetHelpTemplate(`{{with (or .Long .Short)}}{{. | md | trimTrailingWhitespaces}}
-		
-		{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}
+	// start on first line, one line gap, usage without leading spaces
+	command.SetHelpTemplate(`{{with (or .Long .Short)}}{{. | md | trimTrailingWhitespaces}}{{end}}
+
+{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}
 `)
 }
 
