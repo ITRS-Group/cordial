@@ -84,7 +84,7 @@ func RenderHelpAsMD(command *cobra.Command) {
 	// render help with glamour
 	cobra.AddTemplateFunc("md", renderMD)
 	// start on first line, one line gap, usage without leading spaces
-	command.SetHelpTemplate(`{{with (or .Long .Short)}}{{. | md | trimTrailingWhitespaces}}{{end}}
+	command.SetHelpTemplate(`{{with (or .Long .Short)}}{{. | md}}{{end}}
 
 {{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}
 `)
