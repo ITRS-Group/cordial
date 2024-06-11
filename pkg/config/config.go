@@ -568,6 +568,9 @@ var itemRE = regexp.MustCompile(`^(\w+)([+=]=?)(.*)`)
 
 // SetKeyValues takes a list of `key=value` pairs as strings and applies
 // them to the config object. Any item without an `=` is skipped.
+//
+// If the separator is either `+=` or `+` then the given value is
+// appended to any existing setting with a space.
 func (c *Config) SetKeyValues(items ...string) {
 	for _, item := range items {
 		fields := itemRE.FindStringSubmatch(item)
