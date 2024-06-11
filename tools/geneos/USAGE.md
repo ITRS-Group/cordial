@@ -137,7 +137,7 @@ geneos ps "LDN*"
 
 You can control instances using the three commands `geneos start`, `geneos stop` and `geneos restart`. Each command does what the name suggests.
 
-> ⚠ It's important to realise that if you don't specify a `TYPE` or instance `NAMEs` then commands will operate on all matching instances. This is especially important with these three commands and you can, unintentionally, affect instances that you didn't intend to change.
+> 💡 It's important to realise that if you don't specify a `TYPE` or instance `NAMEs` then commands will operate on all matching instances. This is especially important with these three commands and you can, unintentionally, affect instances that you didn't intend to change.
 
 While there are a variety of options to these commands, all visible with the `--help`/`-h` flag, it is worth mentioning these:
 
@@ -155,7 +155,7 @@ The `geneos` program includes commands to help manage the installed releases for
 
 As you have seen, each instance is of a specific component type. Each of these component types is associated with a software release available on the [ITRS Downloads](https://resources.itrsgroup.com/downloads) site. To allow you to manage which version is used for which instance we use the concept of a symbolic "base version". In most cases you will see this listed as the default, `active_prod`.
 
-> ⚠️Note that installed releases are **only** related to their component types and not individual instances. You manage packages _per component_ and with the symbolic _base version_. Each instance then uses a base version, and most commonly all share the same one, per component. All of the commands below only work with components and base versions, not instances.
+> 💡️ Installed releases are **only** related to their component types and not individual instances. You manage packages _per component_ and with the symbolic _base version_. Each instance then uses a base version, and most commonly all share the same one, per component. All of the commands below only work with components and base versions, not instances.
 
 ### `geneos package list`
 
@@ -226,7 +226,7 @@ Once you know the version and symbolic base name for the component you want, the
 $ geneos package update gateway -V 6.6.0 -b dev
 ```
 
-> ⚠ Remember that all of the `geneos package` commands work on component types and base versions and not on individual instances.
+> 💡 Remember that all of the `geneos package` commands work on component types and base versions and not on individual instances.
 
 Any Gateway instance that uses the symbolic base `dev` will be stopped, the link updated and the same instances started. If any of the instances are protected then the command will stop and not update the link or stop any of the other matching instances. This is one of the uses for the protected label. If you are sure you want to update, then also supply the `--force`/`-F` flag:
 
@@ -234,7 +234,7 @@ Any Gateway instance that uses the symbolic base `dev` will be stopped, the link
 geneos package update gateway -V 6.6.0 -b dev --force
 ```
 
-> ⚠️ The update will still stop even if the protected instances are not running. The protected label is not just to prevent the instance being stopped but also changed.
+> 💡️ The update will still stop even if the protected instances are not running. The protected label is not just to prevent the instance being stopped but also changed.
 
 ### `geneos package uninstall`
 
@@ -298,7 +298,7 @@ There are a large number of options to the `geneos add` command and you should t
 
 * `--port N`/`-p N` can be used to override the automatically allocated listening port for the new instance.
 
-* A number of options allow you to influence the creation of default configuration files, which is particularly important for Gateways, Self-Announcing and Floating Netprobes. Please see the component documentation (⚠️not yet complete!) from [`geneos help gateway`🔗](/tools/geneos/docs/geneos_gateway.md), [`geneos help san`🔗](/tools/geneos/docs/geneos_san.md) and [`geneos help floating`🔗](/tools/geneos/docs/geneos_floating.md) for more detailed information.
+* A number of options allow you to influence the creation of default configuration files, which is particularly important for Gateways, Self-Announcing and Floating Netprobes. Please see the component documentation (❗ not yet complete!) from [`geneos help gateway`🔗](/tools/geneos/docs/geneos_gateway.md), [`geneos help san`🔗](/tools/geneos/docs/geneos_san.md) and [`geneos help floating`🔗](/tools/geneos/docs/geneos_floating.md) for more detailed information.
 
 ### `geneos deploy`
 
@@ -625,7 +625,7 @@ Protecting an instance also prevents accidental deletion and other impacting cha
 
 You can see which instances are currently protected using the `geeneos list` command; the `Flags` column will show a `P` for each protected instance.
 
-> ⚠ There is no `geneos unprotect` command and this is intentional. Instead there is an `--unprotect` or `-U` to this command to reverse it's affects.
+> 💡 There is no `geneos unprotect` command and this is intentional. Instead there is an `--unprotect` or `-U` to this command to reverse it's affects.
 
 ### `geneos disable` and `geneos enable`
 

@@ -10,7 +10,7 @@ When FKM, FTM, Statetracker or `grep` isn't quite enough... try `files2dv`.
 
     The program can run in single-shot mode and output a Geneos Toolkit compatible CSV of the selected Dataview. You can select which of the configured dataview using command line options, otherwise the first dataview in the configuration will be used.
 
-* Push Mode - ⚠ This mode is not yet implemented
+* Push Mode - 💡 This mode is not yet implemented
 
     The program can run as a background process, examining files and pushing data into Geneos using one of the two available Netprobe APIs, either REST or XML-RPC. The choice of API is governed by local requirements and limitations which are discussed below.
 

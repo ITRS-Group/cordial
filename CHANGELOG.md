@@ -6,7 +6,7 @@
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-⚠️ You will need to update to this version if you use `geneos` to install Netprobe releases direct from the ITRS website as the base name of the redirect URL has changed and the old version no longer works.
+💡️ You will need to update to this version if you use `geneos` to install Netprobe releases direct from the ITRS website as the base name of the redirect URL has changed and the old version no longer works.
 
 ### v1.14.0 Changes
 
@@ -52,13 +52,13 @@
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-**⚠️ This release replaces v1.13.0 and v1.13.1 and addresses two issues found after release, one for `dv2email` not authenticating with all SMTP servers correctly and changes to `geneos package uninstall` to protect against unintended updates**
+**💡️ This release replaces v1.13.0 and v1.13.1 and addresses two issues found after release, one for `dv2email` not authenticating with all SMTP servers correctly and changes to `geneos package uninstall` to protect against unintended updates**
 
-⚠️ In addition to the breaking changes below please note that some documentation is still out-of-date, and the details in this changelog are more likely to be up-to-date.
+💡️ In addition to the breaking changes below please note that some documentation is still out-of-date, and the details in this changelog are more likely to be up-to-date.
 
 ## v1.13.2 BREAKING CHANGES
 
-⚠️ Note there are a significant number of **BREAKING CHANGES** in this release both for the `geneos` program, specifically around TLS and AES command line options and behaviour, but also for some of the `pkg` APIs.
+💡️ There are a significant number of **BREAKING CHANGES** in this release both for the `geneos` program, specifically around TLS and AES command line options and behaviour, but also for some of the `pkg` APIs.
 
 * `tools/geneos`
 
@@ -373,7 +373,7 @@ Many of the changes above were prompted while tracking down and fixing issues ar
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-⚠️ Note: The previous patch version was removed after finding the fix for wildcards was only partial. This second patch release addresses that issue.
+💡️ The previous patch version was removed after finding the fix for wildcards was only partial. This second patch release addresses that issue.
 
 ## v1.10.2 Fixes
 

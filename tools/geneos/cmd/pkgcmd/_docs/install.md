@@ -1,6 +1,10 @@
-The `install` command will, with no other options, download and unarchive the latest releases of each supported component from the official ITRS download server. Downloads require an ITRS client login and credentials must be provided.
+The `install` command will, with no other options, download and unarchive the latest releases of each supported Geneos component from the official ITRS download servers.
 
-Download credentials can be provided on the command line with the --`username`|`-u` option, which will prompt for a password unless one is supplied with `--pwfile`/`-P` option that is a local file containing the password. Download credentials could also have been stored with the `login` command. Before the `login` command you may have saved your download username and password to your `geneos` program configuration which will be used and preferred over `login` command credentials.
+💡 Downloads require an ITRS client login and credentials must be provided.
+
+Download credentials can be from those stored locally by running the `geneos login` command before `geneos package install` or they supplied on the command line with the --`username`|`-u` option, which will prompt for a password. In previous versions of cordial you may have also stored credentials in the `geneos` program's own configuration, which will still be used if available.
+
+The deprecated `--pwfile`/`-P` option can be used to refer to a local file containing the password.
 
 If you have already downloaded the release archives then you can use the `--local`/`-L` option to use local files. If you do not supply a file name or directory on the command line then the command will look in the `packages/downloads` directory under the Geneos installation directory.
 

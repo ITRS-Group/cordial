@@ -3,7 +3,7 @@
 # Netprobe, the Managed Entity and the Sampler that the program will
 # push data to.
 #
-# ⚠ `push` mode is not yet implemented
+# 💡 `push` mode is not yet implemented
 push:
   type: xmlrpc
   netprobe: https://localhost:7036/xmlrpc
