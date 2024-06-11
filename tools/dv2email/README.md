@@ -153,7 +153,7 @@ else
 
 The contents of the email are assembled from the two templates (text and HTML), any image attachments and a dynamically created XLSX file.
 
-> ⚠ Note: The resulting HTML is also run through an "inliner" to ensure that any CSS defined in the HTML `<head>` section is inlined to the tags that need the settings as many email clients (GMail and others) only support a simple HTML5/CSS3 format. If you wnt to save data then you can disable this inlining with the `--inline-css=false` command line flag.
+> 💡 The resulting HTML is also run through an "inliner" to ensure that any CSS defined in the HTML `<head>` section is inlined to the tags that need the settings as many email clients (GMail and others) only support a simple HTML5/CSS3 format. If you wnt to save data then you can disable this inlining with the `--inline-css=false` command line flag.
 
 ### Running As A Geneos Command
 
@@ -336,7 +336,7 @@ The configuration is in three parts; Gateway connectivity, EMail server connecti
 
     This setting controls which content formats are sent in the resulting email. Future releases should add support for `text` and `html` attachments as files and perhaps textual tables.
     
-    ⚠ Note: A plain text body is **always** included and built from the `text-template`. The currently supported formats are:
+    💡 A plain text body is **always** included and built from the `text-template`. The currently supported formats are:
 
     * `text+html`
 
@@ -500,13 +500,13 @@ Time and date, for use to distinguish values, all in the local timezone:
 
   The path to the images should always be absolute paths, as relative paths may not evaluate as expected depending on the working directory when `dv2email` is executed.
 
-  ⚠ In future releases it may be possible to refer to images using URLs or other "expandable" formats.
+  💡 In future releases it may be possible to refer to images using URLs or other "expandable" formats.
 
 #### Templates
 
 The two templates below are used to build the text body and, by default, a MIME `multipart/alternative` HTML message. You should ensure that changes in one template are correctly reflected in the other as normally both are used and an unchanged text template, for example, may expose data that is not rendered in an updated HTML template and visa versa.
 
-⚠ Note: The two top-level configuration names below are not used directly bu instead are referenced from `attachments.text.template` and `attachments.html.template` (see above). This can be used to defined multiple templates in a defaults configuration file and then reference different templates in Gateway specific `dv2email.yaml` files without having to duplicate the template contents.
+💡 The two top-level configuration names below are not used directly bu instead are referenced from `attachments.text.template` and `attachments.html.template` (see above). This can be used to defined multiple templates in a defaults configuration file and then reference different templates in Gateway specific `dv2email.yaml` files without having to duplicate the template contents.
 
 The templates are passed the following data structure:
 

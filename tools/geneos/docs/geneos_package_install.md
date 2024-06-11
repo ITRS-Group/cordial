@@ -1,8 +1,12 @@
 # `geneos package install`
 
-The `install` command will, with no other options, download and unarchive the latest releases of each supported component from the official ITRS download server. Downloads require an ITRS client login and credentials must be provided.
+The `install` command will, with no other options, download and unarchive the latest releases of each supported Geneos component from the official ITRS download servers.
 
-Download credentials can be provided on the command line with the --`username`|`-u` option, which will prompt for a password unless one is supplied with `--pwfile`/`-P` option that is a local file containing the password. Download credentials could also have been stored with the `login` command. Before the `login` command you may have saved your download username and password to your `geneos` program configuration which will be used and preferred over `login` command credentials.
+💡 Downloads require an ITRS client login and credentials must be provided.
+
+Download credentials can be from those stored locally by running the `geneos login` command before `geneos package install` or they supplied on the command line with the --`username`|`-u` option, which will prompt for a password. In previous versions of cordial you may have also stored credentials in the `geneos` program's own configuration, which will still be used if available.
+
+The deprecated `--pwfile`/`-P` option can be used to refer to a local file containing the password.
 
 If you have already downloaded the release archives then you can use the `--local`/`-L` option to use local files. If you do not supply a file name or directory on the command line then the command will look in the `packages/downloads` directory under the Geneos installation directory.
 
@@ -32,15 +36,14 @@ geneos package install [flags] [TYPE] [FILE|URL...]
 
 ```text
   -u, --username string   Username for downloads, defaults to configuration value in download.username
-  -P, --pwfile string     Password file to read for downloads, defaults to configuration value in download::password or otherwise prompts
   -L, --local             Install from local files only
   -n, --nosave            Do not save a local copy of any downloads
   -D, --download          Download only
   -U, --update            Update the base directory symlink, will restart unprotected instances
-  -F, --force             Will also restart protected instances, implies --update
+  -F, --force             Force restart of protected instances, implies --update
   -b, --base string       Override the base active_prod link name (default "active_prod")
   -V, --version string    Download this version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
-  -O, --override string   Override (set) the TYPE:VERSION for archive files with non-standard names
+  -O, --override string   Override the TYPE:VERSION for archive files with non-standard names
   -N, --nexus             Download from nexus.itrsgroup.com. Requires auth.
   -S, --snapshots         Download from nexus snapshots (pre-releases), not releases. Requires -N
 ```

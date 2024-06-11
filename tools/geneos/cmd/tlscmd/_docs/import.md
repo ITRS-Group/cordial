@@ -28,9 +28,9 @@ If the certificate file contains other certificates that are labelled as certifi
 
 If the private key is encrypted then it must be decrypted manually before import. Keys must be unencrypted as they must be stored unprotected (except for file system permissions) in order that Geneos components to be able to use them.
 
-⚠️Warning: importing a certificate and key without a verification chain will leave any existing `certchain` parameter unchanged, which may be incorrect for the new certificate.
+❗ Importing a certificate and key without a verification chain will leave any existing `certchain` parameter unchanged, which may be incorrect for the new certificate.
 
-💡Note: While you can import certificates and keys for `webservers` instances, they will not be used directly as you will then need to import them into the Java truststore/keystore.
+💡 While you can import certificates and keys for `webservers` instances, they will not be used directly as you will then need to import them into the Java truststore/keystore.
 
 ## Certificate Chain File
 

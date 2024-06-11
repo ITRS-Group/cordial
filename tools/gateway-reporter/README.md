@@ -4,7 +4,7 @@ The `gateway-reporter` tool creates ITRS Geneos monitoring coverage reports usin
 
 This tool works with the Gateway configuration only and does not interact with the running Gateway. This is to mitigate any potential performance impact on production Gateways. Hence the level of information available is limited by the complexities introduced by the dynamically changing monitoring environment in a typical, extensive Geneos deployment.
 
-⚠️ Note: The reports are based on statically configured Netprobes and the Managed Entities attached to them. If you use Self-Announcing Netprobes then they are not included in the reports.
+💡️ The reports are based on statically configured Netprobes and the Managed Entities attached to them. If you use Self-Announcing Netprobes then they are not included in the reports.
 
 The reports support a limited number of the most common plugins and more can and will be added over time. If you have specific requirements, please either raise a Github issue under the [`cordial`](https://github.com/ITRS-Group/cordial/issues) repo or contact the ITRS Professional Services team.
 
@@ -37,7 +37,7 @@ By default the program is called `gateway-reporter` and the configuration file w
 
 If there are configuration files in more than one of the search directories above then they are read in the order above and settings in later files will override the settings from earlier files.
 
-⚠️ Note: If you rename the binary then the configuration file will also need to be renamed to match, e.g. if the tool is renamed `ITRSAuditTool` then the configuration file(s) will only be read if they are called `ITRSAuditTool.yaml`. All names are case sensitive. This naming rule ignores the final file extension (e.g. `.exe` if a Windows binary existed) and any suffix of the form `-VERSION`, where VERSION matches the `cordial` release the program was included in.
+💡️ If you rename the binary then the configuration file will also need to be renamed to match, e.g. if the tool is renamed `ITRSAuditTool` then the configuration file(s) will only be read if they are called `ITRSAuditTool.yaml`. All names are case sensitive. This naming rule ignores the final file extension (e.g. `.exe` if a Windows binary existed) and any suffix of the form `-VERSION`, where VERSION matches the `cordial` release the program was included in.
 
 The program can be located anywhere, but is normally placed in either a system binary directory (`/usr/local/bin` for example) or your user's own `${HOME}/bin`. Just make sure that the directory is in your `PATH` for execution.
 
@@ -166,7 +166,7 @@ The following settings are available, along with their default values:
 
     Also see the `empty` configuration key, to customise the text in these rows, for reports below.
 
-    ⚠️ Note that there is no support for Sampler Includes at this time, and any Sampler that is seen as empty may in fact be part of a Sampler Includes configuration - for FKM, Disk, Processes and Win-Services plugins.
+    💡️ There is no support for Sampler Includes at this time, and any Sampler that is seen as empty may in fact be part of a Sampler Includes configuration - for FKM, Disk, Processes and Win-Services plugins.
 
   * `formats`
 
@@ -238,7 +238,7 @@ The following settings are available, along with their default values:
 
     The `plugins` section allows control of which supported plugins are considered in-scope for reports. The two configuration items, `single-column` and `two-column` must be given as YAML lists.
 
-    ⚠️ Note that the names used must match those in the Gateway configuration for each plugin and must not be changed from the name given, which is case-sensitive.
+    💡️ The names used must match those in the Gateway configuration for each plugin and must not be changed from the name given, which is case-sensitive.
 
     All reports include the Managed Entity, the Type and the Sampler names as the first three columns.
 
@@ -356,7 +356,7 @@ The following settings are available, along with their default values:
 
       When a plugin is seen as having no configuration, which varies depending on each plugin, then the `empty` key can be used to in pace of the text representing the configuration. e.g. for FKM the default `empty` value is `NO FILES`.
 
-      ⚠️ Not all plugins support the concept of an empty configuration, e.g. win-Services with no additional configuration shows all Windows Services. See the default configuration below to see which plugins support the `empty` option.
+      💡️ Not all plugins support the concept of an empty configuration, e.g. win-Services with no additional configuration shows all Windows Services. See the default configuration below to see which plugins support the `empty` option.
 
     The reports available, and their specific options, are: 
 

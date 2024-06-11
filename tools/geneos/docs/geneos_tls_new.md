@@ -10,9 +10,8 @@ Use the `--days`/`-D` flag to set the expiry of the certificate, in 24 hour days
 
 The `tls new` command differs from `tls create` as the latter creates new certificates in your current directory for later use, while this command creates certificates for matching instances and sets the Common Name based on the component type and name for simple identification. Geneos components do not check the Common Name or related field in the certificate.
 
-💡The command will skip any instances that have an existing, valid certificate file and key. To overwrite existing certificates and keys use the `tls renew` command.
+💡 The command will skip any instances that have an existing, valid certificate file and key. To overwrite existing certificates and keys use the `tls renew` command.
 
-⚠️ Warning: While you can create certificates and keys for `webservers`, they will not be used directly as you need to import them into the Java truststore/keystore.
 
 ```text
 geneos tls new [TYPE] [NAME...] [flags]

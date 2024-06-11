@@ -2,7 +2,7 @@
 
 Create a standalone certificate and private key, with optional bundle including parent certificates.
 
-⚠ The `tls create` command differs from `tls new` and `tls renew` by creating a certificate in the current working directory based on the Common Name given. You can use this command when you need to create certificates for manual configuration or transfer to another location. You will probably want to use `tls new` and `tls renew` for most Geneos certificate management.
+💡 The `tls create` command differs from `tls new` and `tls renew` by creating a certificate in the current working directory based on the Common Name given. You can use this command when you need to create certificates for manual configuration or transfer to another location. You will probably want to use `tls new` and `tls renew` for most Geneos certificate management.
 
 Without other options `tls create` will create certificate and private key files (using extensions `.pem` and `.key` respectively) in the current directory, using an existing Geneos signing certificate, for use with Geneos components. The file names will be based on the certificate Common Name (`CN`), which will default to the local hostname.
 

@@ -9,7 +9,7 @@
 # configuration file, which can be protected with permissions 0400,
 # should contain all authentication and email server information.
 
-# ⚠ if you uncomment the default "gateway" without sub-keys, it
+# 💡 if you uncomment the default "gateway" without sub-keys, it
 # overrides ALL gateway settings
 
 gateway:
