@@ -419,7 +419,7 @@ func CompareVersion(version1, version2 string) int {
 // Install a Geneos software release. The destination host h and the
 // component type ct must be given. options controls behaviour like
 // local only and restarts of affected instances.
-func Install(h *Host, ct *Component, options ...Options) (err error) {
+func Install(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	log.Debug().Msgf("host %s, component %s", h, ct)
 	if h == ALL || ct == nil {
 		return ErrInvalidArgs
@@ -444,12 +444,12 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 	if err != nil {
 		if errors.Is(err, ErrNotExist) {
 			var dir bool
-			if opts.archive != "" {
-				u, _ := url.Parse(opts.archive)
+			if opts.localArchive != "" {
+				u, _ := url.Parse(opts.localArchive)
 				if u.Scheme == "https" || u.Scheme == "http" {
 					return
 				}
-				if s, err := h.Stat(opts.archive); err == nil && s.IsDir() {
+				if s, err := h.Stat(opts.localArchive); err == nil && s.IsDir() {
 					dir = true
 				}
 			}
@@ -489,7 +489,7 @@ func Install(h *Host, ct *Component, options ...Options) (err error) {
 // the base link exists then the force option must be used to update it,
 // otherwise it is created as expected. When called from unarchive()
 // this allows new installs to work without explicitly calling update.
-func Update(h *Host, ct *Component, options ...Options) (err error) {
+func Update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	// before updating a specific type on a specific host, loop
 	// through related types, hosts and components. continue to
 	// other items if a single update fails?
@@ -508,7 +508,7 @@ func Update(h *Host, ct *Component, options ...Options) (err error) {
 
 // update is the core function and must be called with non-wild ct and
 // host
-func update(h *Host, ct *Component, options ...Options) (err error) {
+func update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	if ct == nil || h == ALL {
 		return ErrInvalidArgs
 	}

@@ -187,10 +187,10 @@ var initTLSCmd = &cobra.Command{
 
 // initProcessArgs works through the parsed arguments and returns a
 // geneos.GeneosOptions slice to be passed to worker functions
-func initProcessArgs(args []string) (options []geneos.Options, err error) {
+func initProcessArgs(args []string) (options []geneos.PackageOptions, err error) {
 	var root string
 
-	options = []geneos.Options{
+	options = []geneos.PackageOptions{
 		geneos.Version(initCmdVersion),
 		geneos.Basename("active_prod"),
 		geneos.Force(initCmdForce),
@@ -199,7 +199,7 @@ func initProcessArgs(args []string) (options []geneos.Options, err error) {
 	if initCmdNexus {
 		options = append(options, geneos.UseNexus())
 		if initCmdSnapshot {
-			options = append(options, geneos.UseSnapshots())
+			options = append(options, geneos.UseNexusSnapshots())
 		}
 	}
 
@@ -286,7 +286,7 @@ func initCommon(command *cobra.Command) (err error) {
 }
 
 // XXX this is a duplicate of the function in pkgcmd/install.go
-func install(comp string, target string, options ...geneos.Options) (err error) {
+func install(comp string, target string, options ...geneos.PackageOptions) (err error) {
 	ct := geneos.ParseComponent(comp)
 	if ct == nil {
 		return geneos.ErrInvalidArgs

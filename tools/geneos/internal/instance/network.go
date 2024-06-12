@@ -51,7 +51,11 @@ func GetAllPorts(h *geneos.Host) (ports map[uint16]bool) {
 		log.Fatal().Msg("getports() call with all hosts")
 	}
 	ports = make(map[uint16]bool)
-	for _, c := range GetAll(h, nil) {
+	instances, err := Instances(h, nil)
+	if err != nil {
+		panic(err)
+	}
+	for _, c := range instances {
 		if c.Loaded().IsZero() {
 			log.Error().Msgf("cannot load configuration for %s", c)
 			continue

@@ -58,14 +58,14 @@ type downloadauth struct {
 // the component ct. The source of the archive is given as an option. If
 // no options are set then the "latest" release from the ITRS releases
 // web site is downloaded and returned using stored credentials.
-func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filename string, err error) {
+func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, filename string, err error) {
 	var resp *http.Response
 
 	opts := evalOptions(options...)
 
 	if !opts.downloadonly {
-		if opts.archive != "" {
-			body, filename, err = open(opts.archive, options...)
+		if opts.localArchive != "" {
+			body, filename, err = open(opts.localArchive, options...)
 			if err == nil || !errors.Is(err, ErrIsADirectory) {
 				// if success or it's not a directory, return
 				return
@@ -73,7 +73,8 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 			log.Debug().Msg("source is a directory, setting local")
 			opts.local = true
 		} else {
-			opts.archive = path.Join(LocalRoot(), "packages", "downloads")
+			// default location
+			opts.localArchive = path.Join(LocalRoot(), "packages", "downloads")
 		}
 	}
 
@@ -83,7 +84,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 			opts.version = ""
 		}
 		// matching rules for local files
-		filename, err = LatestArchive(LOCAL, opts.archive, opts.version,
+		filename, err = LatestLocalArchive(LOCAL, opts.localArchive, opts.version,
 			func(v os.DirEntry) bool {
 				// log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
 				check := ct.String()
@@ -106,7 +107,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 			return
 		}
 		var f io.ReadSeekCloser
-		if f, err = LOCAL.Open(path.Join(opts.archive, filename)); err != nil {
+		if f, err = LOCAL.Open(path.Join(opts.localArchive, filename)); err != nil {
 			err = fmt.Errorf("local installation selected but no suitable file found for %s (%w)", ct, err)
 			return
 		}
@@ -118,8 +119,8 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 		return
 	}
 
-	LOCAL.MkdirAll(opts.archive, 0775)
-	archivePath := path.Join(opts.archive, filename)
+	LOCAL.MkdirAll(opts.localArchive, 0775)
+	archivePath := path.Join(opts.localArchive, filename)
 	s, err := LOCAL.Stat(archivePath)
 	if err == nil && s.Size() == resp.ContentLength {
 		if f, err := LOCAL.Open(archivePath); err == nil {
@@ -184,7 +185,7 @@ func openArchive(ct *Component, options ...Options) (body io.ReadCloser, filenam
 // unarchive unpacks the gzipped archive passed as an io.Reader on the
 // host given for the component. If there is an error then the caller
 // must close the io.Reader
-func unarchive(h *Host, ct *Component, archive io.Reader, filename string, options ...Options) (dir string, err error) {
+func unarchive(h *Host, ct *Component, archive io.Reader, filename string, options ...PackageOptions) (dir string, err error) {
 	var version string
 
 	opts := evalOptions(options...)
@@ -364,7 +365,7 @@ func untar(h *Host, dir string, t io.Reader, stripPrefix func(string) string) (e
 // GeneosOptions supported are PlatformID, UseNexus, UseSnapshots,
 // Version, Username and Password. PlatformID and Version cannot be set
 // at the same time.
-func openRemoteArchive(ct *Component, options ...Options) (filename string, resp *http.Response, err error) {
+func openRemoteArchive(ct *Component, options ...PackageOptions) (filename string, resp *http.Response, err error) {
 	var source string
 
 	opts := evalOptions(options...)
@@ -540,67 +541,71 @@ func matchVersion(v string) bool {
 	return anchoredVersRE.MatchString(v)
 }
 
-// LatestArchive returns the latest archive file for component ct on
-// host r based on semver. A prefix filter can be used to limit matches
-// and a filter function to further refine matches.
+// LatestLocalArchive returns the name of the latest archive file for
+// component ct on host h based on semantic versioning. A prefix filter
+// can be used to limit matches and a filter function to further refine
+// matches.
 //
-// TODO: If there is semver metadata, check for platform_id on host and
-// remove any non-platform metadata from list before sorting
-func LatestArchive(h *Host, dir, filterString string, filterFunc func(os.DirEntry) bool) (latest string, err error) {
-	ents, err := h.ReadDir(dir)
+// If the archive contains metadata then this is checked against the
+// host platform_id and if they do not match then the file is skipped
+// *unless* the versionFilter has a suffix of "+[meta]", e.g.
+// "6.7.0+el8" - note the changes from '-' to '+' in the versionFilter.
+func LatestLocalArchive(h *Host, dir, versionFilter string, filterFunc func(os.DirEntry) bool) (latest string, err error) {
+	// read all entries from dir and remove any that doe not match versionFilter if it is non-empty
+	log.Debug().Msgf("looking in %s (with version filter '%s')", dir, versionFilter)
+	entries, err := h.ReadDir(dir)
 	if err != nil {
 		return
 	}
-
-	if filterString != "" {
-		ents = slices.DeleteFunc(ents, func(d fs.DirEntry) bool { return strings.Contains(d.Name(), filterString) })
+	if versionFilter != "" {
+		entries = slices.DeleteFunc(entries, func(d fs.DirEntry) bool { return strings.Contains(d.Name(), versionFilter) })
 	}
 
-	log.Debug().Msgf("looking for %q in %s", filterString, dir)
-
-	var versions = make(map[string]*version.Version)
-	var originals = make(map[string]string, len(ents)) // map of processed names to original entries
+	var matchingVersions = make(map[string]*version.Version)
+	var originals = make(map[string]string, len(entries)) // map of processed names to original entries
 
 	platformid := h.GetString("platform_id")
 
-	for _, d := range ents {
+	for _, dirent := range entries {
 		// skip if fails filter function (when set)
-		if filterFunc != nil && !filterFunc(d) {
+		if filterFunc != nil && !filterFunc(dirent) {
 			continue
 		}
 
-		n := d.Name()
+		name := dirent.Name()
 
 		// check if this is a valid release archive
-		ct, v, err := filenameToComponent(n)
+		ct, v, err := filenameToComponent(name)
 		if err == nil {
 			log.Debug().Msgf("found archive of %s with version %s", ct, v)
 			nv, _ := version.NewVersion(v)
-			// skip nonmatching metadata *unless* the filter string
+
+			// skip non-matching metadata *unless* the filter string
 			// includes it after a "+", e.g. if a user says "use this
 			// metadata" then we do
 			meta := nv.Metadata()
-			if meta != "" && meta != platformid && !strings.HasSuffix(filterString, "+"+meta) {
+			if meta != "" && meta != platformid && !strings.HasSuffix(versionFilter, "+"+meta) {
 				continue
 			}
-			versions[n] = nv
-			originals[nv.Original()] = n
+
+			matchingVersions[name] = nv
+			originals[nv.Original()] = name
 			continue
 		}
 	}
 
-	if len(versions) == 0 {
+	if len(matchingVersions) == 0 {
 		return "", nil
 	}
 
-	// map to slice for sorting
-	vers := []*version.Version{}
-	for _, v := range versions {
-		vers = append(vers, v)
+	// map to Collection for sorting
+	versions := version.Collection{}
+	for _, v := range matchingVersions {
+		versions = append(versions, v)
 	}
-	sort.Sort(version.Collection(vers))
+	sort.Sort(versions)
 
-	return originals[vers[len(vers)-1].Original()], nil
+	return originals[versions[len(versions)-1].Original()], nil
 }
 
 // split an package archive name into type and version

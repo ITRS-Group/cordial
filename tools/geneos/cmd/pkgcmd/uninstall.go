@@ -121,7 +121,11 @@ geneos uninstall --version 5.14.1
 				//
 				// also save a list of instances to restart
 				restart := map[string][]geneos.Instance{}
-				for _, i := range instance.GetAll(h, ct) {
+				instances, err := instance.Instances(h, nil)
+				if err != nil {
+					panic(err)
+				}
+				for _, i := range instances {
 					if instance.IsDisabled(i) {
 						fmt.Printf("%s is disabled, treating as an update\n", i)
 						continue

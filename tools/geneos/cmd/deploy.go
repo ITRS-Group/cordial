@@ -254,7 +254,7 @@ var deployCmd = &cobra.Command{
 				}
 			}
 
-			options := []geneos.Options{
+			options := []geneos.PackageOptions{
 				geneos.Version(deployCmdVersion),
 				geneos.Basename(deployCmdBase),
 				geneos.UseRoot(h.GetString(Execname)),
@@ -263,12 +263,12 @@ var deployCmd = &cobra.Command{
 				geneos.OverrideVersion(deployCmdOverride),
 				geneos.Password(deployCmdPassword),
 				geneos.Username(deployCmdUsername),
-				geneos.Archive(deployCmdArchive),
+				geneos.LocalArchive(deployCmdArchive),
 			}
 
 			if deployCmdSnapshot {
 				deployCmdNexus = true
-				options = append(options, geneos.UseSnapshots())
+				options = append(options, geneos.UseNexusSnapshots())
 			}
 			if deployCmdNexus {
 				options = append(options, geneos.UseNexus())

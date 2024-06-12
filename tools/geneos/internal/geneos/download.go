@@ -86,7 +86,7 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 // If source is a path to a directory then `geneos.ErrIsADirectory` is
 // returned. If any other stage fails then err is returned from the
 // underlying package.
-func open(source string, options ...Options) (from io.ReadCloser, filename string, err error) {
+func open(source string, options ...PackageOptions) (from io.ReadCloser, filename string, err error) {
 	opts := evalOptions(options...)
 
 	u, err := url.Parse(source)
@@ -151,7 +151,7 @@ func open(source string, options ...Options) (from io.ReadCloser, filename strin
 // ReadFrom opens and, if successful, reads the contents of the source
 // passed, returning a byte slice of the contents or an error. source
 // can be a local file or a URL.
-func ReadFrom(source string, options ...Options) (b []byte, err error) {
+func ReadFrom(source string, options ...PackageOptions) (b []byte, err error) {
 	var from io.ReadCloser
 	from, _, err = open(source, options...)
 	if err != nil {

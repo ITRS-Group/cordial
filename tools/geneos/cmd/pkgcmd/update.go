@@ -87,7 +87,10 @@ geneos package update netprobe 5.13.2
 		// try to install the wanted version, latest (the default) means check
 		if updateCmdInstall {
 			types := make(map[string]bool)
-			cs := instance.GetAll(h, ct)
+			cs, err := instance.Instances(h, ct)
+			if err != nil {
+				panic(err)
+			}
 			for _, c := range cs {
 				if pt := c.Config().GetString("pkgtype"); pt != "" {
 					types[pt] = true
@@ -109,7 +112,10 @@ geneos package update netprobe 5.13.2
 		}
 
 		version := updateCmdVersion
-		cs := instance.ByKeyValues(h, ct, "protected=true", "version="+updateCmdBase)
+		cs, err := instance.Instances(h, ct, instance.FilterParameters("protected=true", "version="+updateCmdBase))
+		if err != nil {
+			panic(err)
+		}
 		if len(cs) > 0 && !updateCmdForce {
 			fmt.Println("There are one or more protected instances using the current version. Use `--force` to override")
 			return
@@ -119,7 +125,10 @@ geneos package update netprobe 5.13.2
 		}
 		instances := []geneos.Instance{}
 		if updateCmdRestart {
-			allInstances := instance.GetAll(h, nil)
+			allInstances, err := instance.Instances(h, nil)
+			if err != nil {
+				panic(err)
+			}
 
 			for _, ct := range ct.OrList() {
 				for _, i := range allInstances {

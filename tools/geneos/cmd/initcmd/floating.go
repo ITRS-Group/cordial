@@ -91,7 +91,7 @@ var floatingCmd = &cobra.Command{
 		}
 
 		options = append(options,
-			geneos.Archive(floatingCmdArchive),
+			geneos.LocalArchive(floatingCmdArchive),
 			geneos.Version(floatingCmdVersion),
 			geneos.OverrideVersion(floatingCmdOverride),
 		)
@@ -99,7 +99,7 @@ var floatingCmd = &cobra.Command{
 	},
 }
 
-func initFloating(h *geneos.Host, options ...geneos.Options) (err error) {
+func initFloating(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 	var floatingname string
 
 	e := []string{}

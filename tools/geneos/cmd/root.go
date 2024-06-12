@@ -116,6 +116,9 @@ func init() {
 	GeneosCmd.SetHelpFunc(func(c *cobra.Command, s []string) {
 		if b, _ := c.Flags().GetBool("help"); b {
 			c.Usage()
+			fmt.Println("")
+			fmt.Println("💡 Use the `help` command to get more detailed help, instead of the `-h` flag, e.g. `" + strings.Replace(c.CommandPath(), Execname, Execname+" help", 1) + "`")
+
 		} else {
 			helpfunc(c, []string{})
 		}
