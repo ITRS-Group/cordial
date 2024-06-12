@@ -244,9 +244,6 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions)
 
 	opts := evalInstanceOptions(options...)
 
-	log.Debug().Msgf("instances: %v", instances)
-	log.Debug().Msgf("opts.names: %v", opts.names)
-
 	if len(opts.names) > 0 {
 		instances = slices.DeleteFunc(instances, func(i geneos.Instance) bool {
 			for _, v := range opts.names {
