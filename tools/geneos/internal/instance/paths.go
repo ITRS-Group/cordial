@@ -180,7 +180,7 @@ func Home(i geneos.Instance) (home string) {
 	}
 
 	// second, does the instance exist in the default instances parentDir?
-	parentDir := i.Type().Dir(h)
+	parentDir := i.Type().InstancesDir(h)
 	if parentDir != "" {
 		home = path.Join(parentDir, i.Name())
 		if d, err := h.Stat(home); err == nil && d.IsDir() {

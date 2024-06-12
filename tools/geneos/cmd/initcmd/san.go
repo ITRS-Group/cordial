@@ -91,7 +91,7 @@ var sanCmd = &cobra.Command{
 		}
 
 		options = append(options,
-			geneos.Archive(sanCmdArchive),
+			geneos.LocalArchive(sanCmdArchive),
 			geneos.Version(sanCmdVersion),
 			geneos.OverrideVersion(sanCmdOverride),
 		)
@@ -99,7 +99,7 @@ var sanCmd = &cobra.Command{
 	},
 }
 
-func initSan(h *geneos.Host, options ...geneos.Options) (err error) {
+func initSan(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 	var sanname string
 
 	e := []string{}

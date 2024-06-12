@@ -24,7 +24,6 @@ package instance
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path"
 	"regexp"
@@ -140,167 +139,6 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 	return
 }
 
-// Get return an instance of component ct, and loads the config. It is
-// an error if the config cannot be loaded.
-func Get(ct *geneos.Component, name string) (i geneos.Instance, err error) {
-	if ct == nil || name == "" {
-		return nil, geneos.ErrInvalidArgs
-	}
-
-	i = ct.New(name)
-	if i == nil {
-		// if no instance is created, check why
-		_, _, h := SplitName(name, geneos.LOCAL)
-		if h == geneos.LOCAL && geneos.LocalRoot() == "" {
-			err = geneos.ErrRootNotSet
-			return
-		}
-		err = geneos.ErrInvalidArgs
-		return
-	}
-	err = i.Load()
-	return
-}
-
-// GetAll returns a slice of instances for a given component type on remote h
-func GetAll(h *geneos.Host, ct *geneos.Component) (instances []geneos.Instance) {
-	if ct == nil {
-		for _, c := range geneos.RealComponents() {
-			instances = append(instances, GetAll(h, c)...)
-		}
-		return
-	}
-	for _, name := range Names(h, ct) {
-		i, err := Get(ct, name)
-		if err != nil {
-			continue
-		}
-		instances = append(instances, i)
-	}
-
-	return
-}
-
-// ByName looks for exactly one matching instance across types and hosts
-// returns Invalid Args if zero if there is more than a single match
-func ByName(h *geneos.Host, ct *geneos.Component, name string) (i geneos.Instance, err error) {
-	list := ByNameAll(h, ct, name)
-	if len(list) == 0 {
-		err = os.ErrNotExist
-		return
-	}
-	if len(list) == 1 {
-		i = list[0]
-		return
-	}
-	err = geneos.ErrInvalidArgs
-	return
-}
-
-// ByNames returns a slice of instances that match any of the names
-// given, using the host h as a validation check against names with a
-// host qualification
-func ByNames(h *geneos.Host, ct *geneos.Component, names ...string) (instances []geneos.Instance, err error) {
-	n := 0
-	// if args is empty, get all matching instances. this allows internal
-	// calls with an empty arg list without having to do the parseArgs()
-	// dance
-	// h := geneos.GetHost(hostname)
-	if h == nil {
-		h = geneos.ALL
-	}
-
-	if len(names) == 0 {
-		instances = GetAll(h, ct)
-	} else {
-		for _, name := range names {
-			cs := ByNameAll(h, ct, name)
-			if len(cs) == 0 {
-				continue
-			}
-			n++
-			instances = append(instances, cs...)
-		}
-		if n == 0 {
-			return nil, os.ErrNotExist
-		}
-	}
-	return
-}
-
-// ByNameAll constructs and returns a slice of instances that have a
-// matching name. Host h is used to validate the host portion of the
-// full name of the instance, if given.
-func ByNameAll(h *geneos.Host, ct *geneos.Component, name string) (instances []geneos.Instance) {
-	_, local, r := SplitName(name, h)
-	if ok, err := r.IsAvailable(); !ok {
-		log.Debug().Err(err).Msg("cannot connect")
-		return
-	}
-
-	if h != geneos.ALL && r.String() != h.String() {
-		return
-	}
-
-	if ct == nil {
-		for _, ct := range geneos.RealComponents() {
-			instances = append(instances, ByNameAll(h, ct, name)...)
-		}
-		return
-	}
-
-	for _, name := range Names(r, ct) {
-		_, ldir, _ := SplitName(name, geneos.ALL)
-		if path.Base(ldir) == local {
-			if i, err := Get(ct, name); err == nil {
-				instances = append(instances, i)
-			}
-		}
-	}
-
-	return
-}
-
-// ByKeyValues returns a slice of instances where the instance
-// configuration matches all the given parameter values in the form
-// "parameter=value".
-func ByKeyValues(h *geneos.Host, ct *geneos.Component, values ...string) (confs []geneos.Instance) {
-	if len(values) == 0 {
-		return
-	}
-
-	confs = GetAll(h, ct)
-
-	params := map[string]string{}
-	for _, v := range values {
-		if v == "" {
-			continue
-		}
-		s := strings.SplitN(v, "=", 2)
-		if len(s) == 2 {
-			params[s[0]] = s[1]
-		}
-	}
-
-	// filter in place
-	n := 0
-	for _, c := range confs {
-		match := true
-		for p, v := range params {
-			if c.Config().GetString(p) != v {
-				match = false
-			}
-		}
-		if match {
-			confs[n] = c
-			n++
-		}
-	}
-	confs = confs[:n]
-
-	return
-}
-
 // Do calls function f for each matching instance and gathers the return
 // values into a slice of Response for handling by the caller. The
 // functions are executed in goroutines and must be concurrency safe.
@@ -315,7 +153,7 @@ func ByKeyValues(h *geneos.Host, ct *geneos.Component, values ...string) (confs 
 func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *Response, values ...any) (responses Responses) {
 	var wg sync.WaitGroup
 
-	instances, err := ByNames(h, ct, names...)
+	instances, err := Instances(h, ct, FilterNames(names...))
 	if err != nil {
 		return
 	}
@@ -339,114 +177,6 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 	}
 
 	sort.Sort(responses)
-	return
-}
-
-// Names returns a slice of all instance names for a given component ct
-// on host h. No checking is done to validate that the directory is a
-// populated instance. Names are qualified with the host name.
-//
-// To support the move to parent types we do a little more, looking for
-// legacy locations in here
-func Names(h *geneos.Host, ct *geneos.Component) (names []string) {
-	var files []fs.DirEntry
-
-	if h == nil {
-		h = geneos.ALL
-	}
-
-	if h == geneos.ALL {
-		for _, h := range geneos.AllHosts() {
-			names = append(names, Names(h, ct)...)
-		}
-		return
-	}
-
-	if ct == nil {
-		for _, ct := range geneos.RealComponents() {
-			// ignore errors, we only care about any files found
-			for _, dir := range ct.InstancesDir(h) {
-				d, _ := h.ReadDir(dir)
-				files = append(files, d...)
-			}
-		}
-	} else {
-		// ignore errors, we only care about any files found
-		for _, dir := range ct.InstancesDir(h) {
-			d, _ := h.ReadDir(dir)
-			files = append(files, d...)
-		}
-	}
-
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Name() < files[j].Name()
-	})
-
-	for i, file := range files {
-		// skip for values with the same name as previous
-		if i > 0 && i < len(files) && file.Name() == files[i-1].Name() {
-			continue
-		}
-		if file.IsDir() {
-			names = append(names, file.Name()+"@"+h.String())
-		}
-	}
-
-	return
-}
-
-// Match applies file glob patterns to all instance names (stripped of
-// hostname) on the host h and of the component type ct and returns all
-// matches. Valid patterns are the same as for path.Match.
-//
-// The returned slice is sorted and duplicates are removed.
-//
-// Patterns that resolve to empty (e.g. @hostname) are returned
-// unchanged and unchecked against valid names.
-func Match(h *geneos.Host, ct *geneos.Component, patterns ...string) (names []string) {
-	for _, pattern := range patterns {
-		// a host only name implies a wildcard
-		if strings.HasPrefix(pattern, "@") {
-			pattern = "*" + pattern
-		}
-		_, p, h := SplitName(pattern, h) // override 'h' inside loop
-		for _, name := range Names(h, ct) {
-			_, n, _ := SplitName(name, h)
-			if match, _ := path.Match(p, n); match {
-				if h == geneos.ALL {
-					names = append(names, n)
-				} else {
-					names = append(names, n+"@"+h.String())
-				}
-			}
-		}
-	}
-	slices.Sort(names)
-	_ = slices.Compact(names)
-	return
-}
-
-// SplitName returns the parts of an instance name given an instance
-// name in the format [TYPE:]NAME[@HOST] and a default host, return a
-// *geneos.Component for the TYPE if given, a string for the NAME and a
-// *geneos.Host - the latter being either from the name or the default
-// provided
-func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name string, h *geneos.Host) {
-	if defaultHost == nil {
-		h = geneos.ALL
-	} else {
-		h = defaultHost
-	}
-	parts := strings.SplitN(in, "@", 2)
-	name = parts[0]
-	if len(parts) > 1 {
-		h = geneos.GetHost(parts[1])
-	}
-	parts = strings.SplitN(name, ":", 2)
-	if len(parts) > 1 {
-		ct = geneos.ParseComponent(parts[0])
-		name = parts[1]
-	}
 	return
 }
 
@@ -478,9 +208,193 @@ func Enable(i geneos.Instance) (err error) {
 	return i.Host().Remove(disableFile)
 }
 
-type OpenFiles struct {
-	Path   string
-	Stat   fs.FileInfo
-	FD     string
-	FDMode fs.FileMode
+// Get return instance name of component type ct, and loads the config.
+// It is an error if the config cannot be loaded. The instance is loaded
+// from the host given in the name after any '@' or, if none, localhost
+// is used.
+func Get(ct *geneos.Component, name string) (instance geneos.Instance, err error) {
+	if ct == nil || name == "" {
+		return nil, geneos.ErrInvalidArgs
+	}
+
+	instance = ct.New(name)
+	if instance == nil {
+		// if no instance is created, check why
+		_, _, h := SplitName(name, geneos.LOCAL)
+		if h == geneos.LOCAL && geneos.LocalRoot() == "" {
+			err = geneos.ErrRootNotSet
+			return
+		}
+		err = geneos.ErrInvalidArgs
+		return
+	}
+	err = instance.Load()
+	return
+}
+
+// Instances returns a slice of all instances on host h of component
+// type ct, where both can be nil in which case all hosts or component
+// types are used respectively. The options allow filtering based on
+// names or parameter matches.
+func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions) (instances []geneos.Instance, err error) {
+	for _, ct := range ct.OrList() {
+		for _, name := range InstanceNames(h, ct) {
+			instance, err := Get(ct, name)
+			if err != nil {
+				continue
+			}
+			instances = append(instances, instance)
+		}
+	}
+
+	opts := evalInstanceOptions(options...)
+
+	log.Debug().Msgf("instances: %v", instances)
+	log.Debug().Msgf("opts.names: %v", opts.names)
+
+	if len(opts.names) > 0 {
+		instances = slices.DeleteFunc(instances, func(i geneos.Instance) bool {
+			for _, v := range opts.names {
+				_, name, h := SplitName(v, h)
+				if name == i.Name() && h == i.Host() {
+					return false
+				}
+			}
+			return true
+		})
+	}
+
+	if len(opts.parameters) > 0 {
+		params := map[string]string{}
+		for _, v := range opts.parameters {
+			if v == "" {
+				continue
+			}
+			s := strings.SplitN(v, "=", 2)
+			if len(s) == 2 {
+				params[s[0]] = s[1]
+			}
+		}
+
+		instances = slices.DeleteFunc(instances, func(i geneos.Instance) bool {
+			for p, v := range params {
+				if i.Config().GetString(p) != v {
+					return true
+				}
+			}
+			return false
+		})
+	}
+
+	return
+}
+
+type instanceOptions struct {
+	names      []string
+	parameters []string
+}
+type InstanceOptions func(*instanceOptions)
+
+func evalInstanceOptions(options ...InstanceOptions) (opts *instanceOptions) {
+	opts = &instanceOptions{}
+	for _, opt := range options {
+		opt(opts)
+	}
+	return
+}
+
+func FilterNames(names ...string) InstanceOptions {
+	return func(io *instanceOptions) {
+		io.names = names
+	}
+}
+
+func FilterParameters(parameters ...string) InstanceOptions {
+	return func(io *instanceOptions) {
+		io.parameters = parameters
+	}
+}
+
+// InstanceNames returns a slice of all the base names for instance
+// directories for a given component ct on host h. No checking is done
+// to validate that the directory contains a valid instance.
+// InstanceNames are qualified with the host name. Regular files are
+// ignored.
+//
+// To support the move to parent types we do a little more, looking for
+// legacy locations in here
+func InstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
+	for _, h := range h.OrList() {
+		for _, ct := range ct.OrList() {
+			for _, dir := range ct.InstancesBaseDirs(h) {
+				d, err := h.ReadDir(dir)
+				if err != nil {
+					continue
+				}
+				for _, f := range d {
+					if f.IsDir() {
+						names = append(names, f.Name()+"@"+h.String())
+					}
+				}
+			}
+		}
+	}
+
+	return
+}
+
+// Match applies file glob patterns to all instance names (stripped of
+// hostname) on the host h and of the component type ct and returns all
+// matches. Valid patterns are the same as for path.Match.
+//
+// The returned slice is sorted and duplicates are removed.
+//
+// Patterns that resolve to empty (e.g. @hostname) are returned
+// unchanged and unchecked against valid names.
+func Match(h *geneos.Host, ct *geneos.Component, patterns ...string) (names []string) {
+	for _, pattern := range patterns {
+		// a host only name implies a wildcard
+		if strings.HasPrefix(pattern, "@") {
+			pattern = "*" + pattern
+		}
+		_, p, h := SplitName(pattern, h) // override 'h' inside loop
+		for _, name := range InstanceNames(h, ct) {
+			_, n, _ := SplitName(name, h)
+			if match, _ := path.Match(p, n); match {
+				if h == geneos.ALL {
+					names = append(names, n)
+				} else {
+					names = append(names, n+"@"+h.String())
+				}
+			}
+		}
+	}
+	slices.Sort(names)
+	_ = slices.Compact(names)
+	return
+}
+
+// SplitName returns the parts of an instance name given an instance
+// name in the format [TYPE:]NAME[@HOST] and a default host, return a
+// *geneos.Component for the TYPE if given, a string for the NAME and a
+// *geneos.Host - the latter being either from the name or the default
+// provided
+func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name string, h *geneos.Host) {
+	if defaultHost == nil {
+		h = geneos.ALL
+	} else {
+		h = defaultHost
+	}
+
+	parts := strings.SplitN(in, "@", 2)
+	name = parts[0]
+	if len(parts) > 1 {
+		h = geneos.GetHost(parts[1])
+	}
+	parts = strings.SplitN(name, ":", 2)
+	if len(parts) > 1 {
+		ct = geneos.ParseComponent(parts[0])
+		name = parts[1]
+	}
+	return
 }

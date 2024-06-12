@@ -177,9 +177,12 @@ func LoadConfig(i geneos.Instance) (err error) {
 
 	if err != nil {
 		if err = ReadRCConfig(h, cf, ComponentFilepath(i, "rc"), prefix, aliases); err != nil {
-			return
+			if !errors.Is(err, host.ErrNotAvailable) {
+				return
+			}
+		} else {
+			used = ComponentFilepath(i, "rc")
 		}
-		used = ComponentFilepath(i, "rc")
 	}
 
 	// now we have them, merge them into main instance config
@@ -197,6 +200,7 @@ func LoadConfig(i geneos.Instance) (err error) {
 
 	st, err := h.Stat(used)
 	if err == nil {
+		log.Debug().Msgf("setting ConfigLoaded to %v", st.ModTime())
 		i.SetLoaded(st.ModTime())
 	}
 
@@ -223,13 +227,14 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 	rcf, err := config.Load("rc",
 		config.Host(r),
 		config.SetConfigFile(p),
+		config.MustExist(),
 		config.SetFileExtension("env"),
 		config.UseDefaults(false),
 	)
 
 	if err != nil {
-		if errors.Is(err, host.ErrNotAvailable) {
-			return nil
+		if errors.Is(err, fs.ErrNotExist) {
+			return
 		}
 		log.Error().Err(err).Msgf("loading rc %s:%s", r, config.Path("rc",
 			config.Host(r),
@@ -345,7 +350,6 @@ func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
 		nv.Set(k, v)
 	}
 
-	log.Debug().Msgf("saving: %v", nv.AllKeys())
 	if err = nv.Save(i.Type().String(),
 		config.Host(i.Host()),
 		config.AddDirs(Home(i)),
@@ -357,6 +361,7 @@ func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
 	if len(values) == 0 {
 		st, err := i.Host().Stat(i.Config().ConfigFileUsed())
 		if err == nil {
+			log.Debug().Msg("setting modtime")
 			i.SetLoaded(st.ModTime())
 		}
 	}
@@ -411,7 +416,7 @@ func Migrate(i geneos.Instance) (err error) {
 
 	// check if instance directory is up-to date
 	current := path.Dir(i.Home())
-	shouldbe := i.Type().Dir(i.Host())
+	shouldbe := i.Type().InstancesDir(i.Host())
 	if current != shouldbe {
 		if err = i.Host().MkdirAll(shouldbe, 0775); err != nil {
 			return

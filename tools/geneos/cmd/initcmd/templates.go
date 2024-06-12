@@ -64,7 +64,7 @@ var templatesCmd = &cobra.Command{
 	},
 }
 
-func initTemplates(h *geneos.Host, options ...geneos.Options) (err error) {
+func initTemplates(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 	for _, ct := range geneos.RealComponents() {
 		if len(ct.Templates) == 0 {
 			continue

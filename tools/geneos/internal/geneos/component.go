@@ -156,11 +156,21 @@ type Component struct {
 type Instance interface {
 	Config() *config.Config
 
-	// getters and setters
+	// Name returns the base instance name
 	Name() string
+
+	// Home returns the path to the instance directory
 	Home() string
+
+	// Type returns a Component type for the instance
 	Type() *Component
+
+	// Host returns the Host for the instance
 	Host() *Host
+
+	// String returns the display name of the instance in the form `TYPE
+	// NAME` for local instances and `TYPE NAME@HOST` for those on
+	// remote hosts
 	String() string
 
 	// config
@@ -235,8 +245,9 @@ func (ct *Component) MakeDirs(h *Host) (err error) {
 	return
 }
 
-// Dir return the parent directory for the instances of a component
-func (ct *Component) Dir(h *Host) (dir string) {
+// InstancesDir return the parent directory for the instances of a
+// component
+func (ct *Component) InstancesDir(h *Host) (dir string) {
 	if ct == nil {
 		return ""
 	}
@@ -244,9 +255,9 @@ func (ct *Component) Dir(h *Host) (dir string) {
 	return
 }
 
-// InstancesDir returns a list of possible instance directories to look for
-// an instance.
-func (ct *Component) InstancesDir(h *Host) (dirs []string) {
+// InstancesBaseDirs returns a list of possible instance directories to
+// look for an instance.
+func (ct *Component) InstancesBaseDirs(h *Host) (dirs []string) {
 	if ct == nil {
 		return
 	}
@@ -273,9 +284,10 @@ func (ct *Component) Shared(h *Host, subs ...interface{}) string {
 	return h.PathTo(parts...)
 }
 
-// OrList will return receiver, if not nil, or the list of component types
-// passed as args. If no arguments are passed then all 'real' components (those
-// with the `RealComponent` field set to true) are returned.
+// OrList will return the method receiver, if not nil, or the list of
+// component types passed as args. If no arguments are passed then all
+// 'real' components (those with the `RealComponent` field set to true)
+// are returned.
 func (ct *Component) OrList(cts ...*Component) []*Component {
 	if ct != nil {
 		return []*Component{ct}

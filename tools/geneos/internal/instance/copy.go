@@ -75,7 +75,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 			return fmt.Errorf("%w: destination host %q not found", host.ErrNotExist, dHostName)
 		}
 		// they both exist, now loop through all instances on src and try to move/copy
-		for _, name := range Names(sHost, ct) {
+		for _, name := range InstanceNames(sHost, ct) {
 			if err = Copy(ct, name, destination, options...); err != nil {
 				fmt.Println("Error:", err)
 			}
@@ -96,7 +96,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		return nil
 	}
 
-	src, err := ByName(geneos.ALL, ct, source)
+	src, err := Get(ct, source)
 	if err != nil {
 		return fmt.Errorf("%w: %q %q", err, ct, source)
 	}
@@ -184,7 +184,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	}(src.String(), src.Host(), src.Home(), dst)
 
 	// XXX update *Home manually, as it's not just the prefix
-	ncf.Set("home", path.Join(dst.Type().Dir(dHost), dName))
+	ncf.Set("home", path.Join(dst.Type().InstancesDir(dHost), dName))
 
 	// only set a new port if not set through command line parameters
 	if ncf.GetInt("port") == 0 {

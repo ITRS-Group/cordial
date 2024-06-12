@@ -24,12 +24,20 @@ package instance
 
 import (
 	"fmt"
+	"io/fs"
 	"path"
 	"strconv"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/rs/zerolog/log"
 )
+
+type OpenFiles struct {
+	Path   string
+	Stat   fs.FileInfo
+	FD     string
+	FDMode fs.FileMode
+}
 
 // Files returns a map of file descriptor (int) to file details
 // (InstanceProcFiles) for all open, real, files for the process running

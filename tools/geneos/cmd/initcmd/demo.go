@@ -77,13 +77,13 @@ var demoCmd = &cobra.Command{
 			return
 		}
 
-		options = append(options, geneos.Archive(demoCmdArchive))
+		options = append(options, geneos.LocalArchive(demoCmdArchive))
 		return initDemo(geneos.LOCAL, options...)
 	},
 }
 
-func initDemo(h *geneos.Host, options ...geneos.Options) (err error) {
-	e := []string{}
+func initDemo(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
+	empty := []string{}
 	g := []string{"Demo Gateway@" + h.String()}
 
 	if err = install("gateway", geneos.LOCALHOST, options...); err != nil {
@@ -120,10 +120,10 @@ func initDemo(h *geneos.Host, options ...geneos.Options) (err error) {
 		}
 	}
 
-	if err = cmd.Start(nil, initCmdLogs, true, e, e); err != nil {
+	if err = cmd.Start(nil, initCmdLogs, true, empty, empty); err != nil {
 		return
 	}
 	time.Sleep(time.Second * 2)
-	cmd.CommandPS(nil, e, e)
+	cmd.CommandPS(nil, empty, empty)
 	return
 }
