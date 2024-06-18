@@ -150,6 +150,7 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 
 	instances, err := Instances(h, ct, FilterNames(names...))
 	if err != nil {
+		log.Error().Err(err).Msg("")
 		return
 	}
 
@@ -248,7 +249,7 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions)
 		instances = slices.DeleteFunc(instances, func(i geneos.Instance) bool {
 			for _, v := range opts.names {
 				_, name, h := SplitName(v, h)
-				if name == i.Name() && h == i.Host() {
+				if name == i.Name() && (h == geneos.ALL || h == i.Host()) {
 					return false
 				}
 			}
