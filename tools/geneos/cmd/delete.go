@@ -56,8 +56,7 @@ var deleteCmd = &cobra.Command{
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, names := ParseTypeNames(command)
-		results := instance.Do(geneos.GetHost(Hostname), ct, names, deleteInstance)
-		results.Write(os.Stdout)
+		instance.Do(geneos.GetHost(Hostname), ct, names, deleteInstance).Write(os.Stdout)
 	},
 }
 
