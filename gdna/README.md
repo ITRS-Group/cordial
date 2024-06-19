@@ -118,7 +118,7 @@ name: gdna
 
 services:
   gdna:
-    image: docker.itrsgroup.com/gdna:latest
+    image: docker.itrsgroup.com/gdna:${VERSION:-release}
     ports:
       # This is the default Web Server port. Using this, the two included
       # dashboard will be available at:
