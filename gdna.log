@@ -1,0 +1,842 @@
+2024-06-15T10:17:01+01:00 INFO: gdna: version v1.15.0-alpha built with go1.22.4
+2024-06-15T10:17:01+01:00 INFO: gdna: final configuration loaded from /home/peter/.config/geneos/gdna.yaml
+2024-06-15T10:17:01+01:00 INFO: gdna: opening database using DSN `file:/home/peter/gdna.sqlite`
+2024-06-17T13:37:45+01:00 INFO: gdna: version v1.15.0-SNAPSHOT-alpha built with go1.22.4
+2024-06-17T13:37:45+01:00 INFO: gdna: final configuration loaded from /home/peter/.config/geneos/gdna.yaml
+2024-06-17T13:38:48+01:00 INFO: cmd/root.go:166 cmd.initConfig() > gdna: version v1.15.0-SNAPSHOT-alpha built with go1.22.4
+2024-06-17T13:38:48+01:00 INFO: cmd/root.go:167 cmd.initConfig() > gdna: final configuration loaded from /home/peter/.config/geneos/gdna.yaml
+2024-06-18T15:48:15+01:00 INFO: gdna: version v1.15.0-SNAPSHOT-alpha built with go1.22.4
+2024-06-18T15:48:15+01:00 INFO: gdna: final configuration loaded from /home/peter/.config/geneos/gdna.yaml
+2024-06-18T15:48:15+01:00 INFO: gdna: opening database using DSN `file:/home/peter/gdna.sqlite`
+2024-06-18T15:49:28+01:00 INFO: cmd/root.go:166 cmd.initConfig() > gdna: version v1.15.0-SNAPSHOT-alpha built with go1.22.4
+2024-06-18T15:49:28+01:00 INFO: cmd/root.go:167 cmd.initConfig() > gdna: final configuration loaded from /home/peter/.config/geneos/gdna.yaml
+2024-06-18T15:49:28+01:00 INFO: cmd/db.go:51 cmd.openDB() > gdna: opening database using DSN `file:/home/peter/gdna.sqlite`
+2024-06-18T15:49:28+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS ignore_servers (
+  server TEXT NOT NULL COLLATE NOCASE
+);
+2024-06-18T15:49:28+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS ignore_gateways (
+  gateway TEXT NOT NULL COLLATE NOCASE
+);
+2024-06-18T15:49:28+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS ignore_plugins (
+  plugin TEXT NOT NULL COLLATE NOCASE
+);
+2024-06-18T15:49:28+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS ignore_sources (
+  source TEXT NOT NULL COLLATE NOCASE
+);
+2024-06-18T15:49:28+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS ignore_hostids (
+  hostid TEXT NOT NULL COLLATE NOCASE
+);
+2024-06-18T15:49:28+01:00 DEBUG: cmd/ignore.go:49 cmd.loadIgnores() > gdna: trying to load ignores from ignore-hostids.txt
+2024-06-18T15:49:28+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'ignore-hostids.txt'
+2024-06-18T15:49:28+01:00 DEBUG: cmd/ignore.go:49 cmd.loadIgnores() > gdna: trying to load ignores from ignore-servers.txt
+2024-06-18T15:49:28+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'ignore-servers.txt'
+2024-06-18T15:49:28+01:00 DEBUG: cmd/ignore.go:49 cmd.loadIgnores() > gdna: trying to load ignores from ignore-gateways.txt
+2024-06-18T15:49:28+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'ignore-gateways.txt'
+2024-06-18T15:49:28+01:00 DEBUG: cmd/ignore.go:49 cmd.loadIgnores() > gdna: trying to load ignores from ignore-plugins.txt
+2024-06-18T15:49:28+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'ignore-plugins.txt'
+2024-06-18T15:49:28+01:00 DEBUG: cmd/ignore.go:49 cmd.loadIgnores() > gdna: trying to load ignores from ignore-sources.txt
+2024-06-18T15:49:28+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'ignore-sources.txt'
+2024-06-18T15:49:28+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS grouping_servers (
+  grouping TEXT NOT NULL,
+  server TEXT NOT NULL
+);
+2024-06-18T15:49:28+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS grouping_hostids (
+  grouping TEXT NOT NULL,
+  hostid TEXT NOT NULL
+);
+2024-06-18T15:49:28+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS grouping_plugins (
+  grouping TEXT NOT NULL,
+  plugin TEXT NOT NULL
+);
+2024-06-18T15:49:28+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS grouping_sources (
+  grouping TEXT NOT NULL,
+  source TEXT NOT NULL
+);
+2024-06-18T15:49:28+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS grouping_gateways (
+  grouping TEXT NOT NULL,
+  gateway TEXT NOT NULL
+);
+2024-06-18T15:49:28+01:00 DEBUG: cmd/groupings.go:46 cmd.loadGroupings() > gdna: trying to load groupings from grouping-gateways.txt
+2024-06-18T15:49:28+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'grouping-gateways.txt'
+2024-06-18T15:49:28+01:00 DEBUG: cmd/groupings.go:46 cmd.loadGroupings() > gdna: trying to load groupings from grouping-servers.txt
+2024-06-18T15:49:28+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'grouping-servers.txt'
+2024-06-18T15:49:28+01:00 DEBUG: cmd/groupings.go:46 cmd.loadGroupings() > gdna: trying to load groupings from grouping-hostids.txt
+2024-06-18T15:49:28+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'grouping-hostids.txt'
+2024-06-18T15:49:28+01:00 DEBUG: cmd/groupings.go:46 cmd.loadGroupings() > gdna: trying to load groupings from grouping-plugins.txt
+2024-06-18T15:49:28+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'grouping-plugins.txt'
+2024-06-18T15:49:28+01:00 DEBUG: cmd/groupings.go:104 cmd.loadGroupings() > gdna: read 9 lines from grouping-plugins.txt and added to grouping_plugins
+2024-06-18T15:49:28+01:00 DEBUG: cmd/groupings.go:46 cmd.loadGroupings() > gdna: trying to load groupings from grouping-sources.txt
+2024-06-18T15:49:28+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'grouping-sources.txt'
+2024-06-18T15:49:28+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS probes; CREATE  TABLE probes AS
+  SELECT gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
+    FROM probes_all
+   WHERE lastSeen = (SELECT lastSeen FROM sources WHERE source = probes_all.source AND valid)
+     AND hostid NOT IN ignore_hostids AND server NOT IN ignore_servers AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources;
+CREATE INDEX IF NOT EXISTS probes_idx1 ON probes (server);
+2024-06-18T15:49:28+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS samplers; CREATE  TABLE samplers AS
+  SELECT gateway, plugin, probeName, probePort, server, hostID, number, source, individual, firstSeen, lastSeen
+    FROM samplers_all
+   WHERE lastSeen = (SELECT lastSeen FROM sources WHERE source = samplers_all.source AND valid)
+     AND hostid NOT IN ignore_hostids AND server NOT IN ignore_servers AND gateway NOT IN ignore_gateways AND plugin NOT IN ignore_plugins AND source NOT IN ignore_sources
+; CREATE INDEX IF NOT EXISTS samplers_idx_1 ON samplers (server); CREATE INDEX IF NOT EXISTS samplers_idx_2 ON samplers (probeName, probePort);
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS ca_samplers; CREATE  TABLE ca_samplers AS
+  SELECT gateway, plugin, entity, number, firstSeen, lastSeen, source
+    FROM ca_samplers_all
+   WHERE lastSeen = (SELECT lastSeen FROM sources WHERE source = ca_samplers_all.source AND valid)
+     AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources
+;
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS gw_samplers; CREATE  TABLE gw_samplers AS
+  SELECT gateway, plugin, number, firstSeen, lastSeen, source
+    FROM gw_samplers_all
+   WHERE lastSeen = (SELECT lastSeen FROM sources WHERE source = gw_samplers_all.source AND valid)
+     AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources;
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS gw_components; CREATE  TABLE gw_components AS
+  SELECT gateway, component, number, firstSeen, lastSeen, source
+    FROM gw_components_all
+   WHERE lastSeen = (SELECT lastSeen FROM sources WHERE source = gw_components_all.source AND valid)
+     AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources
+;
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS gateways; CREATE TABLE gateways AS SELECT distinct gateway, firstSeen, lastSeen, source
+  FROM gw_components_all
+ WHERE component = 'gateway'
+   AND gateway IN (
+     SELECT distinct gateway AS gateway FROM samplers_all
+     UNION
+     SELECT distinct gateway AS gateway FROM ca_samplers_all
+     UNION
+     SELECT distinct gateway AS gateway FROM gw_samplers_all
+     UNION
+     SELECT distinct gateway AS gateway FROM probes_all
+   )
+   AND lastSeen = (SELECT lastSeen FROM sources WHERE source = gw_components_all.source AND valid)
+   AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources
+;
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS probes_previous; CREATE  TABLE probes_previous AS
+  SELECT gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
+    FROM probes_all
+   WHERE lastSeen <> (SELECT lastSeen FROM sources WHERE source = probes_all.source AND valid)
+     AND hostid NOT IN ignore_hostids AND server NOT IN ignore_servers AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources;
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS samplers_previous; CREATE  TABLE samplers_previous AS
+  SELECT gateway, plugin, probeName, probePort, server, hostID, number, source, individual, firstSeen, lastSeen
+    FROM samplers_all
+   WHERE lastSeen <> (SELECT lastSeen FROM sources WHERE source = samplers_all.source AND valid)
+     AND server NOT IN ignore_servers AND gateway NOT IN ignore_gateways AND plugin NOT IN ignore_plugins AND source NOT IN ignore_sources AND hostid NOT IN ignore_hostids
+;
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS ca_samplers_previous; CREATE  TABLE ca_samplers_previous AS
+  SELECT gateway, plugin, entity, number, firstSeen, lastSeen, source
+    FROM ca_samplers_all
+   WHERE lastSeen <> (SELECT lastSeen FROM sources WHERE source = ca_samplers_all.source AND valid)
+     AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources
+;
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS gw_samplers_previous; CREATE  TABLE gw_samplers_previous AS
+  SELECT gateway, plugin, number, firstSeen, lastSeen, source
+    FROM gw_samplers_all
+   WHERE lastSeen <> (SELECT lastSeen FROM sources WHERE source = gw_samplers_all.source AND valid)
+     AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources;
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS gw_components_previous; CREATE  TABLE gw_components_previous AS
+  SELECT gateway, component, number, firstSeen, lastSeen, source
+    FROM gw_components_all
+   WHERE lastSeen <> (SELECT lastSeen FROM sources WHERE source = gw_components_all.source AND valid)
+     AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources
+;
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS gateways_previous; CREATE TABLE gateways_previous AS SELECT distinct gateway, firstSeen, lastSeen, source
+  FROM gw_components_all
+ WHERE component = 'gateway'
+   AND gateway IN (
+     SELECT distinct gateway AS gateway FROM samplers_all
+     UNION
+     SELECT distinct gateway AS gateway FROM ca_samplers_all
+     UNION
+     SELECT distinct gateway AS gateway FROM gw_samplers_all
+     UNION
+     SELECT distinct gateway AS gateway FROM probes_all
+   )
+   AND lastSeen <> (SELECT lastSeen FROM sources WHERE source = gw_components_all.source AND valid)
+   AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources
+;
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE TABLE IF NOT EXISTS level1_plugins (
+  plugin            TEXT UNIQUE ON CONFLICT IGNORE NOT NULL
+);
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE TABLE IF NOT EXISTS level2_plugins (
+  plugin            TEXT UNIQUE ON CONFLICT IGNORE NOT NULL
+);
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE TABLE IF NOT EXISTS level1_optional_plugins (
+  plugin            TEXT UNIQUE ON CONFLICT IGNORE NOT NULL
+);
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS servers; CREATE  TABLE servers AS
+  SELECT gateway, server, hostID, firstSeen, lastSeen, source, os, version
+    FROM probes_all
+   WHERE lastSeen = (SELECT lastSeen FROM sources WHERE source = probes_all.source AND valid)
+     AND hostid NOT IN ignore_hostids AND server NOT IN ignore_servers AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources
+   GROUP BY gateway, server
+; CREATE INDEX IF NOT EXISTS servers_idx_1 ON servers(server, gateway); CREATE INDEX IF NOT EXISTS servers_idx_2 ON servers(gateway, server);
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l1_plugins; CREATE  TABLE l1_plugins AS
+  SELECT gateway, plugin, probeName, probePort, server, hostID, number, source, individual, firstSeen, lastSeen
+    FROM samplers
+  WHERE plugin IN level1_plugins
+  GROUP BY gateway, server, plugin;
+CREATE INDEX IF NOT EXISTS l1_plugins_idx_1 ON l1_plugins(server); CREATE INDEX IF NOT EXISTS l1_plugins_idx_2 ON l1_plugins(probeName, probePort);
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l1covered_probes; CREATE  TABLE l1covered_probes AS SELECT gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM probes
+ WHERE (probeName, probePort) IN (
+  SELECT probeName, probePort
+    FROM l1_plugins
+   GROUP BY probeName, probePort
+  HAVING count(distinct plugin) = (SELECT count(*) FROM level1_plugins)
+ )
+ GROUP BY gateway, probeName, probePort;
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l1covered_servers; CREATE  TABLE l1covered_servers AS SELECT gateway, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM servers
+ WHERE server IN (
+    SELECT server
+      FROM l1_plugins
+     GROUP BY server
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level1_plugins)
+ )
+ GROUP BY gateway, server;
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l1covered_gateways; CREATE  TABLE l1covered_gateways AS SELECT gateway, firstSeen, lastSeen, source
+  FROM servers
+  WHERE gateway IN (
+    SELECT gateway FROM (
+      SELECT gateway
+        FROM l1_plugins
+        GROUP BY gateway, server
+      HAVING count(distinct plugin) = (SELECT count(*) FROM level1_plugins)
+    ) AS l1a
+     GROUP BY gateway
+    HAVING count(*) = (SELECT count(*) FROM servers p WHERE p.gateway = l1a.gateway)
+  )
+  GROUP BY gateway;
+2024-06-18T15:49:29+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l2_plugins; CREATE  TABLE l2_plugins AS
+  SELECT gateway, plugin, probeName, probePort, server, hostID, number, source, individual, firstSeen, lastSeen
+    FROM samplers
+  WHERE plugin IN level2_plugins
+  GROUP BY gateway, server, plugin;
+CREATE INDEX IF NOT EXISTS l2_plugins_idx_1 ON l2_plugins(server); CREATE INDEX IF NOT EXISTS l2_plugins_idx_2 ON l2_plugins(probeName, probePort);
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l2covered_probes; CREATE  TABLE l2covered_probes AS SELECT gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM probes
+ WHERE (probeName, probePort) IN (
+  SELECT probeName, probePort
+    FROM l2_plugins
+   GROUP BY probeName, probePort
+  HAVING count(distinct plugin) = (SELECT count(*) FROM level2_plugins)
+ )
+ GROUP BY gateway, probeName, probePort;
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l2covered_servers; CREATE  TABLE l2covered_servers AS SELECT gateway, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM servers
+ WHERE server IN (
+  SELECT server
+    FROM l2_plugins
+   GROUP BY server
+  HAVING count(distinct plugin) = (SELECT count(*) FROM level2_plugins)
+ )
+ GROUP BY gateway, server;
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l2covered_gateways; CREATE  TABLE l2covered_gateways AS SELECT gateway, firstSeen, lastSeen, source
+  FROM servers
+  WHERE gateway IN (
+    SELECT gateway FROM (
+      SELECT gateway
+        FROM l2_plugins
+        GROUP BY gateway, server
+      HAVING count(distinct plugin) = (SELECT count(*) FROM level2_plugins)
+    ) AS l2a
+      GROUP BY gateway
+    HAVING count(*) = (SELECT count(*) FROM servers WHERE gateway = l2a.gateway)
+  )
+  GROUP BY gateway;
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l3_plugins; CREATE  TABLE l3_plugins AS
+  SELECT gateway, plugin, probeName, probePort, server, hostID, number, source, individual, firstSeen, lastSeen
+    FROM samplers
+  WHERE plugin NOT IN level1_plugins
+    AND plugin NOT IN level1_optional_plugins
+    AND plugin NOT IN level2_plugins
+  GROUP BY gateway, server, plugin;
+CREATE INDEX IF NOT EXISTS l3_plugins_idx_1 ON l3_plugins(server); CREATE INDEX IF NOT EXISTS l3_plugins_idx_2 ON l3_plugins(probeName, probePort);
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l3covered_probes; CREATE  TABLE l3covered_probes AS SELECT gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM probes
+ WHERE (probeName, probePort) IN (SELECT DISTINCT probeName, probePort FROM l3_plugins)
+ GROUP BY gateway, probeName, probePort;
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l3covered_servers; CREATE  TABLE l3covered_servers AS SELECT gateway, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM servers
+ WHERE server IN (SELECT server FROM l3_plugins GROUP BY server)
+ GROUP BY gateway, server;
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l3covered_gateways; CREATE  TABLE l3covered_gateways AS SELECT gateway, firstSeen, lastSeen, source
+  FROM servers
+ WHERE gateway IN (
+    SELECT gateway FROM (
+      SELECT gateway
+        FROM l3_plugins
+        GROUP BY gateway, server
+    ) AS l3a
+      GROUP BY gateway
+    HAVING count(*) = (SELECT count(*) FROM servers WHERE gateway = l3a.gateway)
+ )
+ GROUP BY gateway;
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS unused_gateways; CREATE  TABLE unused_gateways AS SELECT distinct gateway, firstSeen, lastSeen, source
+  FROM gw_components q
+ WHERE gateway NOT IN (SELECT distinct gateway FROM servers)
+   AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources;
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS empty_gateways; CREATE  TABLE empty_gateways AS SELECT gateway, firstSeen, lastSeen, source
+  FROM gateways q
+  WHERE q.gateway NOT IN (SELECT distinct gateway FROM samplers)
+    AND q.gateway NOT IN (SELECT distinct gateway FROM ca_samplers)
+  GROUP BY q.gateway;
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS covered_gateways; CREATE  TABLE covered_gateways AS WITH l1 AS (
+  SELECT gateway FROM (
+    SELECT gateway
+      FROM l1_plugins
+    GROUP BY gateway, server
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level1_plugins)
+  ) AS l1a
+  GROUP BY gateway
+  HAVING count(*) = (SELECT count(*) FROM servers p WHERE p.gateway = l1a.gateway)
+), l2 AS (
+  SELECT gateway FROM (
+    SELECT gateway
+      FROM l2_plugins
+    GROUP BY gateway, server
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level2_plugins)
+  ) AS l2
+  GROUP BY gateway
+  HAVING count(*) = (SELECT count(*) FROM servers p WHERE p.gateway = l2.gateway)
+), l3 AS (
+  SELECT gateway FROM (
+    SELECT gateway
+      FROM l3_plugins
+      GROUP BY gateway, server
+  ) as l3
+  GROUP BY gateway
+  HAVING count(*) = (SELECT count(*) FROM servers p WHERE p.gateway = l3.gateway)
+) SELECT gateway, firstSeen, lastSeen, source
+  FROM servers
+  WHERE gateway IN l1 AND gateway IN l2 AND gateway IN l3
+ GROUP BY gateway
+HAVING count(*) = (SELECT count(*) FROM servers p WHERE p.gateway = servers.gateway);
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS covered_servers; CREATE  TABLE covered_servers AS
+  WITH
+  l1 AS (
+    SELECT server
+      FROM l1_plugins
+      GROUP BY server
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level1_plugins)
+  ), l2 AS (
+    SELECT server
+      FROM l2_plugins
+      GROUP BY server
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level2_plugins)
+  ), l3 AS (
+    SELECT server
+      FROM l3_plugins
+      GROUP BY server
+  )
+  SELECT gateway, server, hostID, firstSeen, lastSeen, source, os, version
+    FROM probes
+    WHERE server IN l1
+      AND server IN l2
+      AND server IN l3;
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS uncovered_servers; CREATE  TABLE uncovered_servers AS
+  WITH
+  l1 AS (
+    SELECT server
+      FROM l1_plugins
+      GROUP BY server
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level1_plugins)
+  ), l2 AS (
+    SELECT server
+      FROM l2_plugins
+      GROUP BY server
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level2_plugins)
+  ), l3 AS (
+    SELECT server
+      FROM l3_plugins
+      GROUP BY server
+  )
+  SELECT gateway, server, hostID, firstSeen, lastSeen, source, os, version
+    FROM probes
+   WHERE server NOT IN l1
+      OR server NOT IN l2
+      OR server NOT IN l3;
+  CREATE INDEX IF NOT EXISTS uncovered_servers_idx_1 ON uncovered_servers(server);
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS empty_servers; CREATE  TABLE empty_servers AS SELECT gateway, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM servers
+  WHERE server NOT IN (SELECT server FROM samplers);
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS covered_probes; CREATE  TABLE covered_probes AS
+  WITH
+  l1 AS (
+    SELECT probeName, probePort
+      FROM l1_plugins
+      GROUP BY probeName, probePort
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level1_plugins)
+  ), l2 AS (
+    SELECT probeName, probePort
+      FROM l2_plugins
+      GROUP BY probeName, probePort
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level2_plugins)
+  ), l3 AS (
+    SELECT probeName, probePort
+      FROM l3_plugins
+      GROUP BY probeName, probePort
+  )
+  SELECT gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
+    FROM probes
+    WHERE (probeName, probePort) IN l1
+      AND (probeName, probePort) IN l2
+      AND (probeName, probePort) IN l3;
+2024-06-18T15:49:30+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS empty_probes; CREATE  TABLE empty_probes AS SELECT gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM probes
+  WHERE (probeName, probePort) NOT IN (SELECT probeName, probePort FROM samplers);
+2024-06-18T15:49:32+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS match_gateways; CREATE  TABLE match_gateways AS
+  SELECT distinct grouping, gw.gateway
+    FROM grouping_gateways grouping
+    LEFT JOIN gateways gw ON glob(grouping.gateway, gw.gateway);
+2024-06-18T15:49:32+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS match_servers; CREATE  TABLE match_servers AS
+  SELECT distinct grouping, srv.server
+    FROM grouping_servers grouping
+    LEFT JOIN servers srv ON glob(grouping.server, srv.server);
+2024-06-18T15:49:32+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS match_server_hostids; CREATE  TABLE match_server_hostids AS
+  SELECT distinct grouping, hid.hostid
+    FROM grouping_hostids grouping
+    LEFT JOIN servers hid ON glob(grouping.hostid, hid.hostid);
+2024-06-18T15:49:32+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS match_gateway_sources; CREATE  TABLE match_gateway_sources AS
+  SELECT distinct grouping, gw.source
+    FROM grouping_sources grouping
+    LEFT JOIN gateways gw ON glob(grouping.source, gw.source);
+2024-06-18T15:49:32+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS match_sampler_plugins; CREATE  TABLE match_sampler_plugins AS
+  SELECT distinct grouping, s.plugin
+    FROM grouping_plugins grouping
+    LEFT JOIN samplers s ON glob(grouping.plugin, s.plugin);
+2024-06-18T15:49:32+01:00 DEBUG: cmd/report.go:309 cmd.runReports() > gdna: running report missing-coverage
+2024-06-18T15:49:32+01:00 TRACE: cmd/report.go:393 cmd.publishReport() > gdna: query:
+SELECT server,
+       replace(server, ':'||hostID, ''),
+       (SELECT count(*) FROM probes WHERE server = u.server) probes,
+       (SELECT count(*) FROM samplers WHERE server = u.server) samplers,
+       (SELECT CASE WHEN server IN (SELECT server FROM l1covered_servers) THEN 'OK' ELSE '' END) as l1covered,
+       COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM level1_plugins WHERE plugin NOT IN (SELECT plugin FROM l1_plugins WHERE server = u.server))), ''),
+       (SELECT CASE WHEN server IN (SELECT server FROM l2covered_servers) THEN 'OK' ELSE '' END) as l2covered,
+       COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM level2_plugins WHERE plugin NOT IN (SELECT plugin FROM l2_plugins WHERE server = u.server))), ''),
+       (SELECT CASE WHEN server IN (SELECT server FROM l3covered_servers) THEN 'OK' ELSE '' END) as l3covered,
+       group_concat(gateway, ', ')
+  FROM uncovered_servers u
+ GROUP BY server
+ ORDER BY samplers, l1covered, l2covered, l3covered;
+2024-06-18T15:49:32+01:00 DEBUG: cmd/report.go:321 cmd.runReports() > gdna: report missing-coverage completed in 0.23 seconds
+2024-06-18T15:49:33+01:00 DEBUG: cmd/report.go:173 cmd.init.func7() > gdna: closing database
+2024-06-18T15:49:50+01:00 INFO: cmd/root.go:166 cmd.initConfig() > gdna: version v1.15.0-SNAPSHOT-alpha built with go1.22.4
+2024-06-18T15:49:50+01:00 INFO: cmd/root.go:167 cmd.initConfig() > gdna: final configuration loaded from /home/peter/.config/geneos/gdna.yaml
+2024-06-18T15:49:50+01:00 INFO: cmd/db.go:51 cmd.openDB() > gdna: opening database using DSN `file:/home/peter/gdna.sqlite`
+2024-06-18T15:49:50+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS ignore_servers (
+  server TEXT NOT NULL COLLATE NOCASE
+);
+2024-06-18T15:49:50+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS ignore_gateways (
+  gateway TEXT NOT NULL COLLATE NOCASE
+);
+2024-06-18T15:49:50+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS ignore_hostids (
+  hostid TEXT NOT NULL COLLATE NOCASE
+);
+2024-06-18T15:49:50+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS ignore_sources (
+  source TEXT NOT NULL COLLATE NOCASE
+);
+2024-06-18T15:49:50+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS ignore_plugins (
+  plugin TEXT NOT NULL COLLATE NOCASE
+);
+2024-06-18T15:49:50+01:00 DEBUG: cmd/ignore.go:49 cmd.loadIgnores() > gdna: trying to load ignores from ignore-hostids.txt
+2024-06-18T15:49:50+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'ignore-hostids.txt'
+2024-06-18T15:49:50+01:00 DEBUG: cmd/ignore.go:49 cmd.loadIgnores() > gdna: trying to load ignores from ignore-sources.txt
+2024-06-18T15:49:50+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'ignore-sources.txt'
+2024-06-18T15:49:50+01:00 DEBUG: cmd/ignore.go:49 cmd.loadIgnores() > gdna: trying to load ignores from ignore-plugins.txt
+2024-06-18T15:49:50+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'ignore-plugins.txt'
+2024-06-18T15:49:50+01:00 DEBUG: cmd/ignore.go:49 cmd.loadIgnores() > gdna: trying to load ignores from ignore-servers.txt
+2024-06-18T15:49:50+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'ignore-servers.txt'
+2024-06-18T15:49:50+01:00 DEBUG: cmd/ignore.go:49 cmd.loadIgnores() > gdna: trying to load ignores from ignore-gateways.txt
+2024-06-18T15:49:50+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'ignore-gateways.txt'
+2024-06-18T15:49:50+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS grouping_plugins (
+  grouping TEXT NOT NULL,
+  plugin TEXT NOT NULL
+);
+2024-06-18T15:49:50+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS grouping_servers (
+  grouping TEXT NOT NULL,
+  server TEXT NOT NULL
+);
+2024-06-18T15:49:50+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS grouping_sources (
+  grouping TEXT NOT NULL,
+  source TEXT NOT NULL
+);
+2024-06-18T15:49:50+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS grouping_gateways (
+  grouping TEXT NOT NULL,
+  gateway TEXT NOT NULL
+);
+2024-06-18T15:49:50+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE  TABLE IF NOT EXISTS grouping_hostids (
+  grouping TEXT NOT NULL,
+  hostid TEXT NOT NULL
+);
+2024-06-18T15:49:50+01:00 DEBUG: cmd/groupings.go:46 cmd.loadGroupings() > gdna: trying to load groupings from grouping-sources.txt
+2024-06-18T15:49:50+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'grouping-sources.txt'
+2024-06-18T15:49:50+01:00 DEBUG: cmd/groupings.go:46 cmd.loadGroupings() > gdna: trying to load groupings from grouping-gateways.txt
+2024-06-18T15:49:50+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'grouping-gateways.txt'
+2024-06-18T15:49:50+01:00 DEBUG: cmd/groupings.go:46 cmd.loadGroupings() > gdna: trying to load groupings from grouping-hostids.txt
+2024-06-18T15:49:50+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'grouping-hostids.txt'
+2024-06-18T15:49:50+01:00 DEBUG: cmd/groupings.go:46 cmd.loadGroupings() > gdna: trying to load groupings from grouping-plugins.txt
+2024-06-18T15:49:50+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'grouping-plugins.txt'
+2024-06-18T15:49:50+01:00 DEBUG: cmd/groupings.go:104 cmd.loadGroupings() > gdna: read 9 lines from grouping-plugins.txt and added to grouping_plugins
+2024-06-18T15:49:50+01:00 DEBUG: cmd/groupings.go:46 cmd.loadGroupings() > gdna: trying to load groupings from grouping-servers.txt
+2024-06-18T15:49:50+01:00 TRACE: cmd/files.go:96 cmd.openSource() > gdna: reading data from file 'grouping-servers.txt'
+2024-06-18T15:49:50+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS probes; CREATE  TABLE probes AS
+  SELECT gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
+    FROM probes_all
+   WHERE lastSeen = (SELECT lastSeen FROM sources WHERE source = probes_all.source AND valid)
+     AND hostid NOT IN ignore_hostids AND source NOT IN ignore_sources AND server NOT IN ignore_servers AND gateway NOT IN ignore_gateways;
+CREATE INDEX IF NOT EXISTS probes_idx1 ON probes (server);
+2024-06-18T15:49:50+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS samplers; CREATE  TABLE samplers AS
+  SELECT gateway, plugin, probeName, probePort, server, hostID, number, source, individual, firstSeen, lastSeen
+    FROM samplers_all
+   WHERE lastSeen = (SELECT lastSeen FROM sources WHERE source = samplers_all.source AND valid)
+     AND source NOT IN ignore_sources AND plugin NOT IN ignore_plugins AND server NOT IN ignore_servers AND gateway NOT IN ignore_gateways AND hostid NOT IN ignore_hostids
+; CREATE INDEX IF NOT EXISTS samplers_idx_1 ON samplers (server); CREATE INDEX IF NOT EXISTS samplers_idx_2 ON samplers (probeName, probePort);
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS ca_samplers; CREATE  TABLE ca_samplers AS
+  SELECT gateway, plugin, entity, number, firstSeen, lastSeen, source
+    FROM ca_samplers_all
+   WHERE lastSeen = (SELECT lastSeen FROM sources WHERE source = ca_samplers_all.source AND valid)
+     AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources
+;
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS gw_samplers; CREATE  TABLE gw_samplers AS
+  SELECT gateway, plugin, number, firstSeen, lastSeen, source
+    FROM gw_samplers_all
+   WHERE lastSeen = (SELECT lastSeen FROM sources WHERE source = gw_samplers_all.source AND valid)
+     AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources;
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS gw_components; CREATE  TABLE gw_components AS
+  SELECT gateway, component, number, firstSeen, lastSeen, source
+    FROM gw_components_all
+   WHERE lastSeen = (SELECT lastSeen FROM sources WHERE source = gw_components_all.source AND valid)
+     AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources
+;
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS gateways; CREATE TABLE gateways AS SELECT distinct gateway, firstSeen, lastSeen, source
+  FROM gw_components_all
+ WHERE component = 'gateway'
+   AND gateway IN (
+     SELECT distinct gateway AS gateway FROM samplers_all
+     UNION
+     SELECT distinct gateway AS gateway FROM ca_samplers_all
+     UNION
+     SELECT distinct gateway AS gateway FROM gw_samplers_all
+     UNION
+     SELECT distinct gateway AS gateway FROM probes_all
+   )
+   AND lastSeen = (SELECT lastSeen FROM sources WHERE source = gw_components_all.source AND valid)
+   AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources
+;
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS probes_previous; CREATE  TABLE probes_previous AS
+  SELECT gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
+    FROM probes_all
+   WHERE lastSeen <> (SELECT lastSeen FROM sources WHERE source = probes_all.source AND valid)
+     AND gateway NOT IN ignore_gateways AND hostid NOT IN ignore_hostids AND source NOT IN ignore_sources AND server NOT IN ignore_servers;
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS samplers_previous; CREATE  TABLE samplers_previous AS
+  SELECT gateway, plugin, probeName, probePort, server, hostID, number, source, individual, firstSeen, lastSeen
+    FROM samplers_all
+   WHERE lastSeen <> (SELECT lastSeen FROM sources WHERE source = samplers_all.source AND valid)
+     AND server NOT IN ignore_servers AND gateway NOT IN ignore_gateways AND hostid NOT IN ignore_hostids AND source NOT IN ignore_sources AND plugin NOT IN ignore_plugins
+;
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS ca_samplers_previous; CREATE  TABLE ca_samplers_previous AS
+  SELECT gateway, plugin, entity, number, firstSeen, lastSeen, source
+    FROM ca_samplers_all
+   WHERE lastSeen <> (SELECT lastSeen FROM sources WHERE source = ca_samplers_all.source AND valid)
+     AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources
+;
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS gw_samplers_previous; CREATE  TABLE gw_samplers_previous AS
+  SELECT gateway, plugin, number, firstSeen, lastSeen, source
+    FROM gw_samplers_all
+   WHERE lastSeen <> (SELECT lastSeen FROM sources WHERE source = gw_samplers_all.source AND valid)
+     AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources;
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS gw_components_previous; CREATE  TABLE gw_components_previous AS
+  SELECT gateway, component, number, firstSeen, lastSeen, source
+    FROM gw_components_all
+   WHERE lastSeen <> (SELECT lastSeen FROM sources WHERE source = gw_components_all.source AND valid)
+     AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources
+;
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS gateways_previous; CREATE TABLE gateways_previous AS SELECT distinct gateway, firstSeen, lastSeen, source
+  FROM gw_components_all
+ WHERE component = 'gateway'
+   AND gateway IN (
+     SELECT distinct gateway AS gateway FROM samplers_all
+     UNION
+     SELECT distinct gateway AS gateway FROM ca_samplers_all
+     UNION
+     SELECT distinct gateway AS gateway FROM gw_samplers_all
+     UNION
+     SELECT distinct gateway AS gateway FROM probes_all
+   )
+   AND lastSeen <> (SELECT lastSeen FROM sources WHERE source = gw_components_all.source AND valid)
+   AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources
+;
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE TABLE IF NOT EXISTS level2_plugins (
+  plugin            TEXT UNIQUE ON CONFLICT IGNORE NOT NULL
+);
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE TABLE IF NOT EXISTS level1_plugins (
+  plugin            TEXT UNIQUE ON CONFLICT IGNORE NOT NULL
+);
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: CREATE TABLE IF NOT EXISTS level1_optional_plugins (
+  plugin            TEXT UNIQUE ON CONFLICT IGNORE NOT NULL
+);
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS servers; CREATE  TABLE servers AS
+  SELECT gateway, server, hostID, firstSeen, lastSeen, source, os, version
+    FROM probes_all
+   WHERE lastSeen = (SELECT lastSeen FROM sources WHERE source = probes_all.source AND valid)
+     AND server NOT IN ignore_servers AND gateway NOT IN ignore_gateways AND hostid NOT IN ignore_hostids AND source NOT IN ignore_sources
+   GROUP BY gateway, server
+; CREATE INDEX IF NOT EXISTS servers_idx_1 ON servers(server, gateway); CREATE INDEX IF NOT EXISTS servers_idx_2 ON servers(gateway, server);
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l1_plugins; CREATE  TABLE l1_plugins AS
+  SELECT gateway, plugin, probeName, probePort, server, hostID, number, source, individual, firstSeen, lastSeen
+    FROM samplers
+  WHERE plugin IN level1_plugins
+  GROUP BY gateway, server, plugin;
+CREATE INDEX IF NOT EXISTS l1_plugins_idx_1 ON l1_plugins(server); CREATE INDEX IF NOT EXISTS l1_plugins_idx_2 ON l1_plugins(probeName, probePort);
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l1covered_probes; CREATE  TABLE l1covered_probes AS SELECT gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM probes
+ WHERE (probeName, probePort) IN (
+  SELECT probeName, probePort
+    FROM l1_plugins
+   GROUP BY probeName, probePort
+  HAVING count(distinct plugin) = (SELECT count(*) FROM level1_plugins)
+ )
+ GROUP BY gateway, probeName, probePort;
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l1covered_servers; CREATE  TABLE l1covered_servers AS SELECT gateway, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM servers
+ WHERE server IN (
+    SELECT server
+      FROM l1_plugins
+     GROUP BY server
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level1_plugins)
+ )
+ GROUP BY gateway, server;
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l1covered_gateways; CREATE  TABLE l1covered_gateways AS SELECT gateway, firstSeen, lastSeen, source
+  FROM servers
+  WHERE gateway IN (
+    SELECT gateway FROM (
+      SELECT gateway
+        FROM l1_plugins
+        GROUP BY gateway, server
+      HAVING count(distinct plugin) = (SELECT count(*) FROM level1_plugins)
+    ) AS l1a
+     GROUP BY gateway
+    HAVING count(*) = (SELECT count(*) FROM servers p WHERE p.gateway = l1a.gateway)
+  )
+  GROUP BY gateway;
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l2_plugins; CREATE  TABLE l2_plugins AS
+  SELECT gateway, plugin, probeName, probePort, server, hostID, number, source, individual, firstSeen, lastSeen
+    FROM samplers
+  WHERE plugin IN level2_plugins
+  GROUP BY gateway, server, plugin;
+CREATE INDEX IF NOT EXISTS l2_plugins_idx_1 ON l2_plugins(server); CREATE INDEX IF NOT EXISTS l2_plugins_idx_2 ON l2_plugins(probeName, probePort);
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l2covered_probes; CREATE  TABLE l2covered_probes AS SELECT gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM probes
+ WHERE (probeName, probePort) IN (
+  SELECT probeName, probePort
+    FROM l2_plugins
+   GROUP BY probeName, probePort
+  HAVING count(distinct plugin) = (SELECT count(*) FROM level2_plugins)
+ )
+ GROUP BY gateway, probeName, probePort;
+2024-06-18T15:49:51+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l2covered_servers; CREATE  TABLE l2covered_servers AS SELECT gateway, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM servers
+ WHERE server IN (
+  SELECT server
+    FROM l2_plugins
+   GROUP BY server
+  HAVING count(distinct plugin) = (SELECT count(*) FROM level2_plugins)
+ )
+ GROUP BY gateway, server;
+2024-06-18T15:49:52+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l2covered_gateways; CREATE  TABLE l2covered_gateways AS SELECT gateway, firstSeen, lastSeen, source
+  FROM servers
+  WHERE gateway IN (
+    SELECT gateway FROM (
+      SELECT gateway
+        FROM l2_plugins
+        GROUP BY gateway, server
+      HAVING count(distinct plugin) = (SELECT count(*) FROM level2_plugins)
+    ) AS l2a
+      GROUP BY gateway
+    HAVING count(*) = (SELECT count(*) FROM servers WHERE gateway = l2a.gateway)
+  )
+  GROUP BY gateway;
+2024-06-18T15:49:52+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l3_plugins; CREATE  TABLE l3_plugins AS
+  SELECT gateway, plugin, probeName, probePort, server, hostID, number, source, individual, firstSeen, lastSeen
+    FROM samplers
+  WHERE plugin NOT IN level1_plugins
+    AND plugin NOT IN level1_optional_plugins
+    AND plugin NOT IN level2_plugins
+  GROUP BY gateway, server, plugin;
+CREATE INDEX IF NOT EXISTS l3_plugins_idx_1 ON l3_plugins(server); CREATE INDEX IF NOT EXISTS l3_plugins_idx_2 ON l3_plugins(probeName, probePort);
+2024-06-18T15:49:52+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l3covered_probes; CREATE  TABLE l3covered_probes AS SELECT gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM probes
+ WHERE (probeName, probePort) IN (SELECT DISTINCT probeName, probePort FROM l3_plugins)
+ GROUP BY gateway, probeName, probePort;
+2024-06-18T15:49:52+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l3covered_servers; CREATE  TABLE l3covered_servers AS SELECT gateway, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM servers
+ WHERE server IN (SELECT server FROM l3_plugins GROUP BY server)
+ GROUP BY gateway, server;
+2024-06-18T15:49:52+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS l3covered_gateways; CREATE  TABLE l3covered_gateways AS SELECT gateway, firstSeen, lastSeen, source
+  FROM servers
+ WHERE gateway IN (
+    SELECT gateway FROM (
+      SELECT gateway
+        FROM l3_plugins
+        GROUP BY gateway, server
+    ) AS l3a
+      GROUP BY gateway
+    HAVING count(*) = (SELECT count(*) FROM servers WHERE gateway = l3a.gateway)
+ )
+ GROUP BY gateway;
+2024-06-18T15:49:52+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS unused_gateways; CREATE  TABLE unused_gateways AS SELECT distinct gateway, firstSeen, lastSeen, source
+  FROM gw_components q
+ WHERE gateway NOT IN (SELECT distinct gateway FROM servers)
+   AND gateway NOT IN ignore_gateways AND source NOT IN ignore_sources;
+2024-06-18T15:49:52+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS empty_gateways; CREATE  TABLE empty_gateways AS SELECT gateway, firstSeen, lastSeen, source
+  FROM gateways q
+  WHERE q.gateway NOT IN (SELECT distinct gateway FROM samplers)
+    AND q.gateway NOT IN (SELECT distinct gateway FROM ca_samplers)
+  GROUP BY q.gateway;
+2024-06-18T15:49:52+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS covered_gateways; CREATE  TABLE covered_gateways AS WITH l1 AS (
+  SELECT gateway FROM (
+    SELECT gateway
+      FROM l1_plugins
+    GROUP BY gateway, server
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level1_plugins)
+  ) AS l1a
+  GROUP BY gateway
+  HAVING count(*) = (SELECT count(*) FROM servers p WHERE p.gateway = l1a.gateway)
+), l2 AS (
+  SELECT gateway FROM (
+    SELECT gateway
+      FROM l2_plugins
+    GROUP BY gateway, server
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level2_plugins)
+  ) AS l2
+  GROUP BY gateway
+  HAVING count(*) = (SELECT count(*) FROM servers p WHERE p.gateway = l2.gateway)
+), l3 AS (
+  SELECT gateway FROM (
+    SELECT gateway
+      FROM l3_plugins
+      GROUP BY gateway, server
+  ) as l3
+  GROUP BY gateway
+  HAVING count(*) = (SELECT count(*) FROM servers p WHERE p.gateway = l3.gateway)
+) SELECT gateway, firstSeen, lastSeen, source
+  FROM servers
+  WHERE gateway IN l1 AND gateway IN l2 AND gateway IN l3
+ GROUP BY gateway
+HAVING count(*) = (SELECT count(*) FROM servers p WHERE p.gateway = servers.gateway);
+2024-06-18T15:49:52+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS covered_servers; CREATE  TABLE covered_servers AS
+  WITH
+  l1 AS (
+    SELECT server
+      FROM l1_plugins
+      GROUP BY server
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level1_plugins)
+  ), l2 AS (
+    SELECT server
+      FROM l2_plugins
+      GROUP BY server
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level2_plugins)
+  ), l3 AS (
+    SELECT server
+      FROM l3_plugins
+      GROUP BY server
+  )
+  SELECT gateway, server, hostID, firstSeen, lastSeen, source, os, version
+    FROM probes
+    WHERE server IN l1
+      AND server IN l2
+      AND server IN l3;
+2024-06-18T15:49:52+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS uncovered_servers; CREATE  TABLE uncovered_servers AS
+  WITH
+  l1 AS (
+    SELECT server
+      FROM l1_plugins
+      GROUP BY server
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level1_plugins)
+  ), l2 AS (
+    SELECT server
+      FROM l2_plugins
+      GROUP BY server
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level2_plugins)
+  ), l3 AS (
+    SELECT server
+      FROM l3_plugins
+      GROUP BY server
+  )
+  SELECT gateway, server, hostID, firstSeen, lastSeen, source, os, version
+    FROM probes
+   WHERE server NOT IN l1
+      OR server NOT IN l2
+      OR server NOT IN l3;
+  CREATE INDEX IF NOT EXISTS uncovered_servers_idx_1 ON uncovered_servers(server);
+2024-06-18T15:49:52+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS empty_servers; CREATE  TABLE empty_servers AS SELECT gateway, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM servers
+  WHERE server NOT IN (SELECT server FROM samplers);
+2024-06-18T15:49:52+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS covered_probes; CREATE  TABLE covered_probes AS
+  WITH
+  l1 AS (
+    SELECT probeName, probePort
+      FROM l1_plugins
+      GROUP BY probeName, probePort
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level1_plugins)
+  ), l2 AS (
+    SELECT probeName, probePort
+      FROM l2_plugins
+      GROUP BY probeName, probePort
+    HAVING count(distinct plugin) = (SELECT count(*) FROM level2_plugins)
+  ), l3 AS (
+    SELECT probeName, probePort
+      FROM l3_plugins
+      GROUP BY probeName, probePort
+  )
+  SELECT gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
+    FROM probes
+    WHERE (probeName, probePort) IN l1
+      AND (probeName, probePort) IN l2
+      AND (probeName, probePort) IN l3;
+2024-06-18T15:49:52+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS empty_probes; CREATE  TABLE empty_probes AS SELECT gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
+  FROM probes
+  WHERE (probeName, probePort) NOT IN (SELECT probeName, probePort FROM samplers);
+2024-06-18T15:49:54+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS match_gateways; CREATE  TABLE match_gateways AS
+  SELECT distinct grouping, gw.gateway
+    FROM grouping_gateways grouping
+    LEFT JOIN gateways gw ON glob(grouping.gateway, gw.gateway);
+2024-06-18T15:49:54+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS match_servers; CREATE  TABLE match_servers AS
+  SELECT distinct grouping, srv.server
+    FROM grouping_servers grouping
+    LEFT JOIN servers srv ON glob(grouping.server, srv.server);
+2024-06-18T15:49:54+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS match_server_hostids; CREATE  TABLE match_server_hostids AS
+  SELECT distinct grouping, hid.hostid
+    FROM grouping_hostids grouping
+    LEFT JOIN servers hid ON glob(grouping.hostid, hid.hostid);
+2024-06-18T15:49:54+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS match_gateway_sources; CREATE  TABLE match_gateway_sources AS
+  SELECT distinct grouping, gw.source
+    FROM grouping_sources grouping
+    LEFT JOIN gateways gw ON glob(grouping.source, gw.source);
+2024-06-18T15:49:54+01:00 TRACE: cmd/db.go:437 cmd.createTables() > gdna: DROP TABLE IF EXISTS match_sampler_plugins; CREATE  TABLE match_sampler_plugins AS
+  SELECT distinct grouping, s.plugin
+    FROM grouping_plugins grouping
+    LEFT JOIN samplers s ON glob(grouping.plugin, s.plugin);
+2024-06-18T15:49:54+01:00 DEBUG: cmd/report.go:309 cmd.runReports() > gdna: running report missing-coverage
+2024-06-18T15:49:54+01:00 TRACE: cmd/report.go:393 cmd.publishReport() > gdna: query:
+SELECT server,
+       replace(server, ':'||hostID, ''),
+       (SELECT count(*) FROM probes WHERE server = u.server) probes,
+       (SELECT count(*) FROM samplers WHERE server = u.server) samplers,
+       (SELECT CASE WHEN server IN (SELECT server FROM l1covered_servers) THEN 'OK' ELSE '' END) as l1covered,
+       COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM level1_plugins WHERE plugin NOT IN (SELECT plugin FROM l1_plugins WHERE server = u.server))), ''),
+       (SELECT CASE WHEN server IN (SELECT server FROM l2covered_servers) THEN 'OK' ELSE '' END) as l2covered,
+       COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM level2_plugins WHERE plugin NOT IN (SELECT plugin FROM l2_plugins WHERE server = u.server))), ''),
+       (SELECT CASE WHEN server IN (SELECT server FROM l3covered_servers) THEN 'OK' ELSE '' END) as l3covered,
+       group_concat(gateway, ', ')
+  FROM uncovered_servers u
+ GROUP BY server
+ ORDER BY samplers, l1covered, l2covered, l3covered;
+2024-06-18T15:49:54+01:00 DEBUG: cmd/report.go:321 cmd.runReports() > gdna: report missing-coverage completed in 0.23 seconds
+2024-06-18T15:49:55+01:00 DEBUG: cmd/report.go:173 cmd.init.func7() > gdna: closing database
+2024-06-19T13:35:04+01:00 INFO: gdna: version v1.15.0-SNAPSHOT-alpha built with go1.22.4
+2024-06-19T13:35:04+01:00 INFO: gdna: final configuration loaded from /home/peter/.config/geneos/gdna.yaml
+2024-06-19T13:35:44+01:00 INFO: gdna: version v1.15.0-SNAPSHOT-alpha built with go1.22.4
+2024-06-19T13:35:44+01:00 INFO: gdna: final configuration loaded from /home/peter/.config/geneos/gdna.yaml

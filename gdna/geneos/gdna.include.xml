@@ -1,0 +1,856 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA6.8.1-240517/gateway.xsd">
+	<probes>
+		<probe name="gdna">
+			<hostname>localhost</hostname>
+			<port>8101</port>
+			<secure>true</secure>
+		</probe>
+	</probes>
+	<managedEntities>
+		<managedEntityGroup name="GDNA">
+			<managedEntity name="GDNA">
+				<probe ref="gdna"/>
+				<attribute name="DASHBOARD">PROD</attribute>
+				<addTypes>
+					<type ref="GDNA">
+						<environment ref="GDNA"/>
+					</type>
+				</addTypes>
+			</managedEntity>
+		</managedEntityGroup>
+	</managedEntities>
+	<types>
+		<typeGroup name="GDNA">
+			<type name="GDNA">
+				<environment ref="GDNA Defaults"/>
+				<sampler ref="GDNA"/>
+				<sampler ref="GDNA Process"/>
+			</type>
+		</typeGroup>
+	</types>
+	<samplers>
+		<sampler name="GDNA">
+			<plugin>
+				<api>
+					<showSummaryView>
+						<always>
+							<viewName>
+								<data>API Summary</data>
+							</viewName>
+						</always>
+					</showSummaryView>
+				</api>
+			</plugin>
+			<dataviews>
+				<dataview name="Plugin Summary">
+					<expectRowsVar>
+						<var ref="plugins"/>
+					</expectRowsVar>
+				</dataview>
+			</dataviews>
+		</sampler>
+		<sampler name="GDNA Process">
+			<var-group>
+				<data>GDNA</data>
+			</var-group>
+			<plugin>
+				<processes>
+					<processes>
+						<process>
+							<data>
+								<alias>
+									<data>gdna</data>
+								</alias>
+								<ID>
+									<searchString>
+										<data>gdna start</data>
+									</searchString>
+								</ID>
+							</data>
+						</process>
+					</processes>
+				</processes>
+			</plugin>
+			<dataviews>
+				<dataview name="GDNA Process">
+					<additions>
+						<var-headlines>
+							<data>
+								<headline>
+									<data>timeStamp</data>
+								</headline>
+							</data>
+						</var-headlines>
+					</additions>
+				</dataview>
+			</dataviews>
+		</sampler>
+	</samplers>
+	<rules>
+		<ruleGroup name="GDNA">
+			<rule name="Plugin Groups">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)]/dataview[(@name=&quot;Plugin Groups&quot;)]/rows/row/cell[(@column=&quot;servers&quot;)]</target>
+				</targets>
+				<priority>1</priority>
+				<pathAliases>
+					<pathAlias name="total">../../headlines/cell[(@name=&quot;totalServers&quot;)]</pathAlias>
+					<pathAlias name="availability">../cell[(@column=&quot;Availability&quot;)]</pathAlias>
+					<pathAlias name="level">../cell[(@column=&quot;level&quot;)]</pathAlias>
+					<pathAlias name="require">../cell[(@column=&quot;require&quot;)]</pathAlias>
+				</pathAliases>
+				<block>
+					<if>
+						<gt>
+							<dataItem>
+								<property>@value</property>
+							</dataItem>
+							<integer>0</integer>
+						</gt>
+						<transaction>
+							<update>
+								<property>state/@severity</property>
+								<severity>ok</severity>
+							</update>
+						</transaction>
+						<transaction>
+							<update>
+								<property>state/@severity</property>
+								<severity>undefined</severity>
+							</update>
+						</transaction>
+					</if>
+				</block>
+			</rule>
+			<rule name="Plugin Summary - instances">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)]/dataview[(@name=&quot;Plugin Summary&quot;)]/rows/row/cell[(@column=&quot;instances&quot;)]</target>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)]/dataview[(@name=&quot;Plugin Summary&quot;)]/rows/row/cell[(@column=&quot;previousServers&quot;)]</target>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)]/dataview[(@name=&quot;Plugin Summary&quot;)]/rows/row/cell[(@column=&quot;previousInstances&quot;)]</target>
+				</targets>
+				<priority>1</priority>
+				<pathAliases>
+					<pathAlias name="availability">../cell[(@column=&quot;Availability&quot;)]</pathAlias>
+				</pathAliases>
+				<block>
+					<if>
+						<equal>
+							<dataItem>
+								<pathAlias ref="availability"/>
+								<property>@value</property>
+							</dataItem>
+							<string>absent</string>
+						</equal>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<integer>0</integer>
+							</update>
+						</transaction>
+					</if>
+				</block>
+			</rule>
+			<rule name="Plugin Summary - servers">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)]/dataview[(@name=&quot;Plugin Summary&quot;)]/rows/row/cell[(@column=&quot;servers&quot;)]</target>
+				</targets>
+				<priority>1</priority>
+				<pathAliases>
+					<pathAlias name="total">../../../headlines/cell[(@name=&quot;totalServers&quot;)]</pathAlias>
+					<pathAlias name="availability">../cell[(@column=&quot;Availability&quot;)]</pathAlias>
+					<pathAlias name="require">../cell[(@column=&quot;required&quot;)]</pathAlias>
+				</pathAliases>
+				<block>
+					<if>
+						<equal>
+							<dataItem>
+								<pathAlias ref="availability"/>
+								<property>@value</property>
+							</dataItem>
+							<string>absent</string>
+						</equal>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<integer>0</integer>
+							</update>
+							<update>
+								<property>state/@severity</property>
+								<severity>undefined</severity>
+							</update>
+						</transaction>
+						<if>
+							<and>
+								<equal>
+									<dataItem>
+										<pathAlias ref="require"/>
+										<property>@value</property>
+									</dataItem>
+									<string>Required</string>
+								</equal>
+								<notEqual>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<dataItem>
+										<pathAlias ref="total"/>
+										<property>@value</property>
+									</dataItem>
+								</notEqual>
+							</and>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>warning</severity>
+								</update>
+							</transaction>
+							<if>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>0</integer>
+								</gt>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</if>
+				</block>
+			</rule>
+			<rule name="Processes Timestamp">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA Process&quot;)]/dataview[(@name=&quot;GDNA Process&quot;)]/headlines/cell[(@name=&quot;timeStamp&quot;)]</target>
+				</targets>
+				<priority>1</priority>
+				<block>
+					<transaction>
+						<update>
+							<property>@value</property>
+							<printDate>
+								<string>%Y-%m-%d %H:%M:%S %Z</string>
+								<now/>
+							</printDate>
+						</update>
+					</transaction>
+				</block>
+			</rule>
+			<ruleGroup name="Coverage Per Gateway">
+				<rule name="Coverage Per Gateway Empty Probe">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Coverage Per Gateway&quot;)]/rows/row[contains(@name,&quot;#&quot;)]/cell[(@column=&quot;probeName&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Coverage Per Gateway&quot;)]/rows/row[contains(@name,&quot;#&quot;)]/cell[(@column=&quot;probePort&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="level1">../cell[(@column=&quot;l1missing&quot;)]</pathAlias>
+						<pathAlias name="level2">../cell[(@column=&quot;l2missing&quot;)]</pathAlias>
+						<pathAlias name="level3">../cell[(@column=&quot;l3covered&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<set>
+							<var ref="level1"/>
+							<dataItem>
+								<pathAlias ref="level1"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<set>
+							<var ref="level2"/>
+							<dataItem>
+								<pathAlias ref="level2"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<set>
+							<var ref="level3"/>
+							<dataItem>
+								<pathAlias ref="level3"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<if>
+							<and>
+								<and>
+									<notEqual>
+										<var ref="level1"/>
+										<string/>
+									</notEqual>
+									<notEqual>
+										<var ref="level2"/>
+										<string/>
+									</notEqual>
+								</and>
+								<notEqual>
+									<var ref="level3"/>
+									<string>Y</string>
+								</notEqual>
+							</and>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<var ref="noCoverageSeverity"/>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+				<rule name="Coverage Per Gateway Complete">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Coverage Per Gateway&quot;)]/headlines/cell[(@name=&quot;complete&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="servers">../cell[(@name=&quot;servers&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<set>
+							<var ref="servers"/>
+							<dataItem>
+								<pathAlias ref="servers"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<var ref="servers"/>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>ok</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+				<rule name="Coverage Per Gateway Server Samplers">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Coverage Per Gateway&quot;)]/rows/row[not(contains(@name,&quot;#&quot;))]/cell[(@column=&quot;samplers&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="dynamicEntities">ancestor::dataview/headlines/cell[(@name=&quot;dynamicEntities&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<set>
+							<var ref="dynamicEntities"/>
+							<dataItem>
+								<pathAlias ref="dynamicEntities"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<if>
+							<and>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>0</integer>
+								</equal>
+								<equal>
+									<var ref="dynamicEntities"/>
+									<integer>0</integer>
+								</equal>
+							</and>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<var ref="noServerSamplersSeverity"/>
+								</update>
+							</transaction>
+							<if>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>0</integer>
+								</equal>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<var ref="noServerSamplerDynasSeverity"/>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>undefined</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="Coverage Per Gateway Probe Samplers">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Coverage Per Gateway&quot;)]/rows/row[contains(@name,&quot;#&quot;)]/cell[(@column=&quot;samplers&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>0</integer>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<var ref="noProbeSamplersSeverity"/>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+				<rule name="Coverage Per Gateway Empty Servers">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Coverage Per Gateway&quot;)]/headlines/cell[(@name=&quot;empty&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="dynamicEntities">../cell[(@name=&quot;dynamicEntities&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<set>
+							<var ref="dynamicEntities"/>
+							<dataItem>
+								<pathAlias ref="dynamicEntities"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<if>
+							<and>
+								<notEqual>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>0</integer>
+								</notEqual>
+								<equal>
+									<var ref="dynamicEntities"/>
+									<integer>0</integer>
+								</equal>
+							</and>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<var ref="noServerSamplersSeverity"/>
+								</update>
+							</transaction>
+							<if>
+								<notEqual>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>0</integer>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<var ref="noServerSamplerDynasSeverity"/>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>undefined</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="Coverage Per Gateway Levels">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Coverage Per Gateway&quot;)]/rows/row[not(contains(@name,&quot;#&quot;))]/cell[(@column=&quot;l1missing&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Coverage Per Gateway&quot;)]/rows/row[not(contains(@name,&quot;#&quot;))]/cell[(@column=&quot;l2missing&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Coverage Per Gateway&quot;)]/rows/row[not(contains(@name,&quot;#&quot;))]/cell[(@column=&quot;l3missing&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string/>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>ok</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<var ref="missingCoverageSeverity"/>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+				<rule disabled="true" name="Coverage Per Gateway Level 3">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Coverage Per Gateway&quot;)]/rows/row[not(contains(@name,&quot;#&quot;))]/cell[(@column=&quot;l3covered&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string>Y</string>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>ok</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<var ref="missingCoverageSeverity"/>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Missing Coverage">
+				<rule disabled="true" name="Missing Coverage Empty Probe">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Missing Coverage&quot;)]/rows/row/cell[(@column=&quot;server&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="level1">../cell[(@column=&quot;l1missing&quot;)]</pathAlias>
+						<pathAlias name="level2">../cell[(@column=&quot;l2missing&quot;)]</pathAlias>
+						<pathAlias name="level3">../cell[(@column=&quot;l3covered&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<set>
+							<var ref="level1"/>
+							<dataItem>
+								<pathAlias ref="level1"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<set>
+							<var ref="level2"/>
+							<dataItem>
+								<pathAlias ref="level2"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<set>
+							<var ref="level3"/>
+							<dataItem>
+								<pathAlias ref="level3"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<if>
+							<and>
+								<and>
+									<notEqual>
+										<var ref="level1"/>
+										<string/>
+									</notEqual>
+									<notEqual>
+										<var ref="level2"/>
+										<string/>
+									</notEqual>
+								</and>
+								<equal>
+									<var ref="level3"/>
+									<string>N</string>
+								</equal>
+							</and>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<var ref="noCoverageSeverity"/>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+				<rule name="Missing Coverage Server Samplers">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Missing Coverage&quot;)]/rows/row/cell[(@column=&quot;samplers&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>0</integer>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<var ref="noServerSamplersSeverity"/>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+				<rule name="Missing Coverage Levels">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Missing Coverage&quot;)]/rows/row/cell[(@column=&quot;l1missing&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Missing Coverage&quot;)]/rows/row/cell[(@column=&quot;l2missing&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Missing Coverage&quot;)]/rows/row/cell[(@column=&quot;l3missing&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string/>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>ok</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<var ref="missingCoverageSeverity"/>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+				<rule disabled="true" name="Missing Coverage Levels 3">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Missing Coverage&quot;)]/rows/row/cell[(@column=&quot;l3covered&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string>Y</string>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>ok</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<var ref="missingCoverageSeverity"/>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+		</ruleGroup>
+	</rules>
+	<authentication>
+		<users>
+			<user name="gdna-dashboard">
+				<password>
+					<plaintext>geneos</plaintext>
+				</password>
+			</user>
+		</users>
+	</authentication>
+	<environments>
+		<environmentGroup name="GDNA">
+			<environment name="GDNA Defaults">
+				<var name="plugins">
+					<stringList>
+						<string>alerting</string>
+						<string>api</string>
+						<string>api-streams</string>
+						<string>aws-plugin</string>
+						<string>azure-plugin</string>
+						<string>bloomberg-bpipe</string>
+						<string>clearvision-status</string>
+						<string>compute-engine</string>
+						<string>control-m</string>
+						<string>cpu</string>
+						<string>desktop-pc-monitoring</string>
+						<string>deviceio</string>
+						<string>disk</string>
+						<string>dynamic-entities-health</string>
+						<string>e4jms-bridges</string>
+						<string>e4jms-connections</string>
+						<string>e4jms-durables</string>
+						<string>e4jms-non-durables</string>
+						<string>e4jms-queues</string>
+						<string>e4jms-routes</string>
+						<string>e4jms-server</string>
+						<string>e4jms-topics</string>
+						<string>e4jms-usersummary</string>
+						<string>extractor</string>
+						<string>fidessa</string>
+						<string>fidessa-dq</string>
+						<string>fix-analyser2</string>
+						<string>fkm</string>
+						<string>flm</string>
+						<string>floating-probes</string>
+						<string>fluentdforward-plugin</string>
+						<string>ftm</string>
+						<string>gcp-plugin</string>
+						<string>gl-router</string>
+						<string>hardware</string>
+						<string>ibmi-file-member</string>
+						<string>ibmi-jdbc</string>
+						<string>ibmi-job</string>
+						<string>ibmi-logreader</string>
+						<string>ibmi-member-record</string>
+						<string>ibmi-message</string>
+						<string>ibmi-pool</string>
+						<string>ibmi-queue</string>
+						<string>ibmi-subsystem</string>
+						<string>ibmi-system</string>
+						<string>ipc</string>
+						<string>ix-ma</string>
+						<string>jdbc-plugin</string>
+						<string>jmx-server</string>
+						<string>jmx-threadinfo</string>
+						<string>kafka-plugin</string>
+						<string>kubernetes-plugin</string>
+						<string>market-data-monitor</string>
+						<string>message-tracker</string>
+						<string>mibmon</string>
+						<string>mongodb-plugin</string>
+						<string>mq-channel</string>
+						<string>mq-qinfo</string>
+						<string>mq-queue</string>
+						<string>mysql</string>
+						<string>net-ping</string>
+						<string>network</string>
+						<string>nyxt-papastats</string>
+						<string>op5monitor</string>
+						<string>opentelemetry-plugin</string>
+						<string>oracle</string>
+						<string>orc</string>
+						<string>perfmon</string>
+						<string>postgres-plugin</string>
+						<string>processes</string>
+						<string>prometheus-plugin</string>
+						<string>prometheus-target-plugin</string>
+						<string>publisher</string>
+						<string>reporting</string>
+						<string>rest-api</string>
+						<string>rest-extractor</string>
+						<string>rmc-interface</string>
+						<string>self-announcing-probes</string>
+						<string>sql-toolkit</string>
+						<string>statetracker</string>
+						<string>statsd-plugin</string>
+						<string>sybase</string>
+						<string>sybase-server</string>
+						<string>system-plugin</string>
+						<string>tcp-links</string>
+						<string>tib-rv</string>
+						<string>tib-rvpublisher</string>
+						<string>tib-rvstream</string>
+						<string>toolkit</string>
+						<string>top</string>
+						<string>tradeview</string>
+						<string>trading-technologies</string>
+						<string>trapmon</string>
+						<string>unix-users</string>
+						<string>uptrends</string>
+						<string>veritas-cluster-server</string>
+						<string>web-mon</string>
+						<string>winapps</string>
+						<string>win-cluster</string>
+						<string>win-services</string>
+						<string>wmi</string>
+						<string>wts-licenses</string>
+						<string>wts-processes</string>
+						<string>wts-sessions</string>
+						<string>wts-summary</string>
+						<string>x-broadcast</string>
+						<string>x-mcast</string>
+						<string>x-multicast</string>
+						<string>x-ping</string>
+						<string>x-route</string>
+						<string>x-services</string>
+						<string>x-top</string>
+						<string>x-traffic</string>
+						<string>zookeeper-plugin</string>
+					</stringList>
+				</var>
+				<var name="noCoverageSeverity">
+					<integer>3</integer>
+				</var>
+				<var name="missingCoverageSeverity">
+					<integer>2</integer>
+				</var>
+				<var name="noServerSamplersSeverity">
+					<integer>3</integer>
+				</var>
+				<var name="noServerSamplerDynasSeverity">
+					<integer>2</integer>
+				</var>
+				<var name="noProbeSamplersSeverity">
+					<integer>2</integer>
+				</var>
+			</environment>
+		</environmentGroup>
+	</environments>
+	<operatingEnvironment>
+		<numRuleEvaluationThreads>4</numRuleEvaluationThreads>
+		<insecurePasswordLevel>none</insecurePasswordLevel>
+	</operatingEnvironment>
+</gateway>

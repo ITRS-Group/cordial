@@ -19,31 +19,44 @@
 *.pem
 *.key
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
-libraries/libemail/libemail.h
-tools/geneos/geneos
+.vscode
+cordial.code-workspace
 
+# Dependency directories (remove the comment below to include it)
+vendor/
 releases/
-integrations/servicenow/snow_router/snow_router
-integrations/servicenow/snow_router/snow_router.yaml
-integrations/servicenow/snow_client/snow_client
-integrations/servicenow/snow_client/snow_client.yaml
-integrations/servicenow/servicenow
+
+examples/api/api
 examples/commands
 examples/xpath
-libraries/libemail/libemail
-examples/api/api
-cordial.code-workspace
-integrations/servicenow/servicenow.yaml
+
+gdna/docker-compose.yml
+gdna/docs/docs
+gdna/gdna
+gdna/gdna.log
+gdna/gdna.sqlite*
+
 integrations/pagerduty/pagerduty
-.vscode
-tools/sso-diag/sso-diag
+
+integrations/servicenow/servicenow
+integrations/servicenow/servicenow.yaml
+integrations/servicenow/snow_client/snow_client
+integrations/servicenow/snow_client/snow_client.yaml
+integrations/servicenow/snow_router/snow_router
+integrations/servicenow/snow_router/snow_router.yaml
+
+libraries/libemail/libemail
+libraries/libemail/libemail.h
+
 tools/decode-aes256/decode-aes256
 tools/dv2email/dv2email
-tools/geneos/utils/docs/docs
-utils/docs/docs
+tools/files2dv/files2dv
+tools/files2dv/samples/file.txt
 tools/gateway-reporter/gateway-reporter
 tools/gateway-reporter/validate-setup
-tools/files2dv/samples/file.txt
-tools/files2dv/files2dv
+tools/geneos/geneos
+tools/geneos/utils/docs/docs
+tools/sso-diag/sso-diag
+
+utils/docs/docs
+gdna/docs/*.md

@@ -172,7 +172,7 @@ To run the `dv2email` program as a right-click style command, allowing users to 
 
 A typical command (XML below) would be set-up like this. Remember to set the path to the program correctly!
 
-![Send Dataview Command](README/image-1.png)
+![Send Dataview Command](screenshots/dv2email-1.png)
 
 ```xml
 
