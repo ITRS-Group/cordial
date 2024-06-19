@@ -19,6 +19,7 @@ release: build base gdna docs
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/. releases/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/docs/. releases/docs/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/lib/libemail.so releases/
+	docker image tag gdna $(NAMESPACE)/gdna:release
 
 .PHONY: build gdna
 
@@ -29,7 +30,7 @@ base:
 	docker build --tag cordial --tag cordial:$(VERSION) --target cordial-run-debian .
 
 gdna:
-	docker build --tag $(NAMESPACE)/$@ --tag $(NAMESPACE)/$@:$(VERSION) --tag $@ --tag $@:$(VERSION) --secret id=keyfile.aes,src=${KEYFILE} --secret id=credentials.json,src=${CREDENTIALS}  --target gdna . 
+	docker build --tag $(NAMESPACE)/$@:$(VERSION) --tag $@ --tag $@:$(VERSION) --secret id=keyfile.aes,src=${KEYFILE} --secret id=credentials.json,src=${CREDENTIALS}  --target gdna . 
 
 docs:
 	docker build --tag cordial-docs:$(VERSION) --target cordial-docs .
