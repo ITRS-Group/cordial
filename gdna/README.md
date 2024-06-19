@@ -111,7 +111,7 @@ GDNA uses license usage data and this can be from either (or both):
 
 GDNA has been built and tested using `docker-ce` version 26.1.4 on amd64 architecture Linus using Debian and Ubuntu distributions. We intend to also test using other version of docker as well as `podman`, but these will be confirmed in future releases.
 
-Create a `docker-compose.yml` file using this template and edit, changing at least the `LICDHOST` to the name of he server running the `licd` process, which can be `localhost` for the host machine running the container.
+Create a `docker-compose.yml` file using this template and edit, changing at least the `LICDHOST` to the name of the server running the `licd` process, which can be `localhost` for the host machine running the container.
 
 ```yaml
 name: gdna
