@@ -1,0 +1,516 @@
+# This is the `gdna` program configuration file. Most settings are shown
+# with their built-in default value. Edit the settings as required and
+# use it to deploy GDNA as either a docker container or as a standalone
+# program.
+#
+# You can either create a new file containing only the settings you have
+# changed, remembering that YAML is hierarchical and you must copy any
+# upper-level section names, or you can copy and rename this file and
+# edit any setting overriding the default value given.
+#
+# The program will look for a `gdna.yaml` file in these locations,
+# loading the first one it finds:
+#
+# * `./gdna.yaml`
+# * `${HOME}/.config/geneos/gdna.yaml`
+# * `/etc/geneos/gdna.yaml`
+#
+# You can also specify the exact path to a configuration file with the
+# `-f /path/to/file` command line option. While the file does not have
+# to then have a `yaml` extension, the contents must be in YAML format,
+# like this one.
+#
+# If you make no changes to the configuration settings in this file then
+# the `gdna start` command will do the following:
+#
+# * Create a SQLite database and log file in the working directory
+# * Connect to a Netprobe on port 8101 on the same server (localhost)
+# * Expect to find a `GDNA` Managed Entity and a `GDNA` api Sampler
+# * Collect license token data, every 15 minutes, from a `licd` process
+#   listening on port 7041 on the same server (again, `localhost`)
+#   trying both TLS and non-TLS
+# * Publish all standard reports on the same schedule to the Netprobe
+# * Any `ignore-*.txt` and `grouping-*.txt` files in the working
+#   directory for the types supported will be loaded on each run
+#
+# The Netprobe port has been selected to match the one included in the
+# `gdna.include.xml` Gateway include file in the distribution, which
+# also define the `GDNA` Managed Entity and Sampler as well as some
+# default Rules etc.
+#
+# For basic usage you may only need to add license daemon details in the
+# `gdna.licd-sources` section below.
+
+# `gdna` controls the overall behaviour of the program
+gdna:
+  # `site-name` is used in the Summary report to indicate where this
+  # GDNA is running. Change this to the organization and team that's
+  # running GDNA.
+  site-name: ITRS
+
+  # `licd-sources` is a list of paths to license daemon endpoints to
+  # fetch a "detail" report or to local files in the same format. `licd`
+  # must be running with the `-report detail` command line option.
+  #
+  # The path to remote report endpoints is appended to the given URL,
+  # but for local files a full path is required. File paths can include
+  # wildcards, using standard UNIX globbing format.
+  #
+  # The default is to attempt to connect to a local `licd` instance on
+  # either HTTP or HTTPS.
+  licd-sources:
+    - "http://localhost:7041"
+    - "https://localhost:7041"
+
+  # `licd-reports` is a list of paths to licd generated report files.
+  #
+  # These are created automatically every 6 hours by `licd` from version
+  # 6.7.0. These reports contain more information than the standard
+  # `licd` detail report above and so can expose OS and Netprobe version
+  # details in reports.
+  #
+  # The default is to look for matching files in the user's `geneos` and
+  # `licd` directories using cordial directory layouts.
+  licd-reports:
+    - "~/geneos/licd/licds/*/reporting/summary*"
+    - "~/licd/licds/*/reporting/summary*"
+
+  # `schedule` is a crontab-like schedule for `start`. The format
+  # supported is that given here:
+  # <https://pkg.go.dev/github.com/robfig/cron/v3#hdr-CRON_Expression_Format>
+  #
+  # The default is to collect data every 15 minutes, on the hour and
+  # each 15 minute interval after that:
+  schedule: "*/15 * * * *"
+
+  # `email-schedule` is the crontab-like schedule for sending email
+  # reports from the `start` command. The email settings must be
+  # configured correctly in the top-level `email` section (below).
+  #
+  # For example, to send an email report once a week, at 02:45 on a
+  # Sunday, use:
+  #
+  # email-schedule: "45 2 * * 0"
+  #
+  # Leaving this empty results in no automatic emails being sent.
+  email-schedule: ""
+
+  # `stale-after` is the amount of time that license data is considered
+  # valid. After this time the data is not included in active reports.
+  # This accounts for files not being available or updated and old files
+  # being processed and being presented as active data.
+  #
+  # The format is parsed as a Go time.Duration.
+  stale-after: 12h
+
+  # `licd-timeout` is how long to wait for a connection to the license
+  # daemon endpoint.
+  #
+  # The format is parsed as a Go time.Duration.
+  licd-timeout: 10s
+
+  # `licd-chain` is a path to a PEM encoded file containing one or more
+  # certificates that are added to the system certificate pool to verify
+  # the connection to each licd instance. If more that one set of
+  # certificate chains is required then these should be concatenated
+  # into one file.
+  #
+  # The default is to only use system certificates.
+  licd-chain: ""
+
+  # `licd-skip-verify` makes the program ignore certificate verification
+  # errors when using TLS, which are normal in a self-signed certificate
+  # environment. Set to `true` to ignore validation errors.
+  licd-skip-verify: false
+
+  # `log` controls how the `gdna` program logs it's output.
+  #
+  # See <https://pkg.go.dev/gopkg.in/natefinch/lumberjack.v2#Logger> for
+  # the meaning of the similarly named fields (but not using the field
+  # tags) except for `rotate-on-start` which does what the name
+  # suggests.
+  log:
+    filename: ./gdna.log
+    max-size: 10
+    max-backups: 50
+    max-age: 14
+    compress: true
+    rotate-on-start: true
+
+# `geneos` controls the way the program interacts with Geneos via the
+# XML-RPC API. If given on the command line to the start command, these
+# are overridden.
+geneos:
+  # `netprobe` settings indicate where to connect to (and how) to push
+  # data in via the XML-RPC API.
+  netprobe:
+    # `hostname` should be a resolvable name or an IP address.
+    hostname: localhost
+
+    # `port` is the TCP port the Netprobe is listening on.
+    port: 8101
+
+    # `secure` indicates if the connection is TLS protected.
+    secure: true
+
+    # `skip-verify` indicates if certificate checks for TLS connections
+    # should be skipped.
+    skip-verify: true
+
+  # `entity` and `sampler` are the names of the Geneos Managed Entity
+  # and Sampler, respectively, that must be configured in the Gateway
+  # and attached to the Netprobe above.
+  #
+  # Note: These items are at the same level (indent) as `netprobe` above
+  # and should not be nested inside the `netprobe` section.
+  entity: GDNA
+  sampler: GDNA
+
+  # `max-rows` limits the maximum number of rows pushed to any single
+  # report dataview. To disable this limit, exercising appropriate
+  # caution, use a value of of 0 (zero).
+  max-rows: 500
+
+
+# `db` contains the database configuration settings
+#
+# In the default/internal configuration it also contains a number of
+# other settings that should not be overridden without care. See the
+# `gdna.defaults.yaml` file in the distribution for more information.
+db:
+  # `temporary-table` should be either `TEMPORARY` or an empty string
+  # as it is used in CREATE statements to select if reporting tables
+  # should be temporary or not. Only change this for diagnostics.
+  temporary-table: TEMPORARY
+
+  # `file` is the path to the SQLite database to store the collected
+  # data. The program will also create a WAL file(s) using this file
+  # path with the suffices "-wal" and "-shm" while running, and you must
+  # ensure that permissions on the directory containing the given file
+  # path allows for these.
+  #
+  # For a typical Geneos estate each these files will not grow beyond a
+  # few tens of MBs at most. On very large estates they may reach the
+  # order of a hundred MB, rarely more.
+  #
+  # To use an in-memory only database use ":memory:?cache=shared"
+  # (carefully ensuring to use this exact value)
+  #
+  file: gdna.sqlite
+
+# `xlsx` defines configuration values for the generation of XLSX files,
+# either locally or as email attachments. Note that you cannot specify a
+# default file name in this configuration section, which is controlled
+# by the `report` command options or the `email` settings below.
+xlsx:
+  # `summary-report` is the name of the report to run to create the
+  # "Summary" sheet in the resulting XLSX file.
+  #
+  # The default `gdna-summary` can be found in the `reports` section.
+  summary-report: gdna-summary
+
+  # `password` allows you to set basic password protection to the XLSX
+  # output. Leave empty to not use a password.
+  password: ""
+
+  # `formats` controls some of the formatting aspects of the cell data
+  # in the XLSX workbook. The formats are the standard values used by
+  # XLSX files, and are listed in the `NumFmt` table here:
+  # <https://pkg.go.dev/github.com/xuri/excelize/v2#File.NewStyle>,
+  # custom formats - such as for datetime - are also supported.
+  #
+  # It is unlikely that you would need to change the defaults.
+  formats:
+    # `int` is the style value used for normal integer number,
+    # defaulting to 1
+    int: 1
+
+    # `percent` is the style used for cells containing floating point
+    # values, defaulting to 9
+    percent: 9
+
+    # `datetime` is used as the style for cells that contain `time.Time`
+    # values, which are generally found when the underlying cell value
+    # can be parsed as an ISO date/time. The default format does not
+    # include a timezone.
+    datetime: "yyyy-mm-ddThh:MM:ss"
+
+# `email` contains the email settings for use with either the `gdna
+# email` command or with the `gdna start` command using the schedule
+# defined in `gdna.email-schedule` above.
+#
+# Credentials should not, in general, be stored in this file. Using the
+# `geneos` command from cordial you can save credentials to separate
+# files with the password / application key saved encrypted using AES256
+# and a protected key file. Use something like this:
+#
+# `$ geneos login -u sender@example.com smtp.example.com`
+#
+# You will be prompted for the password / application key and `gdna`
+# will use these details through cordial credentials and key files.
+#
+# If required however, you can store encrypted credentials directly in
+# this file using `geneos aes password` to create an "expandable" value
+# to use in this file, which cannot be decrypted without access to the
+# key file in the output.
+#
+# There are no useable defaults for the SMTP part of the `email`
+# section, and these should be fully specified.
+email:
+  # `subject` is the text to include in the Subject line of each email.
+  subject: ITRS GDNA EMail Report
+
+  # `from` sets the sender of the email. This is different to the
+  # authentication username, even though these are commonly the same,
+  # and must be set separately. The default is intentionally not a valid
+  # email address.
+  from: sender@example.com
+
+  # `to`, `cc` and `bcc` are used to specify the different types of
+  # recipients.
+  #
+  # Each one can be a YAML list or a quoted, comma-separated lists, e.g.
+  #
+  #   to:
+  #     - user1@example.com
+  #     - user2@example.com
+  #   cc: user3@examples.com
+  #   bcc: "user4@example.com, user5@example.com"
+  #
+  # There are no useable defaults set.
+  to: recipient@example.com
+  cc: ""
+  bcc: ""
+
+  # `smtp-server` is the host name or IP address of the SMTP server to
+  # use
+  #
+  # The default will intentionally not resolve to a valid host.
+  smtp-server: smtp.example.com
+
+  # `port` is the TCP port to connect to. Normally the port is
+  # automatically chosen based on the variety of SMTP used and should
+  # not need to be changed from the default 0 (zero) value.
+  port: 0
+
+  # `tls` controls the use of TLS on the SMTP connection. The valid
+  # values are `default`, `force` or `none`, with the default being
+  # `default` which tries to use TLS if available and selects the port
+  # based on the protocol used.
+  tls: default
+
+  # `tls-insecure` can override the validation of certificates when
+  # connecting using TLS. In general it should not be changes from the
+  # default `false`, which requires valid certificates. In the limited
+  # case where you are connecting to an internal SMTP server that you
+  # can trust the network path to and it uses a non-standard certificate
+  # then set this value to `true`.
+  #
+  # Note that this is named differently to the `netprobe.skip-verify`
+  # setting as it is less likely that you should change this and the
+  # name is indicative of the importance of not changing it.
+  tls-insecure: false
+
+  # `timeout` controls how long to wait to a connection to be
+  # established. The default 10 seconds is normally long enough to allow
+  # slow connections without causing delays in processing.
+  #
+  # The value is parsed as a Go time.Duration
+  timeout: 10s
+
+  # `username` and `password` can be used to provide SMTP authentication
+  # credentials directly in the configuration file, which is normally
+  # not advisable. See the comments at the top of the `email` section
+  # for more information.
+  username: ""
+  password: ""
+
+  # `key-file` and `credentials-file` can be used to override the
+  # locations of the cordial `credential.json` file and the associated AES
+  # key file. In most cases these should not be changed, but can be
+  # useful when using docker compose `secrets` to mount the files into
+  # the container.
+  key-file: ""
+  credentials-file: ""
+
+  # `contents` is a list of which formats to include as attachments in
+  # the email. The supported formats are:
+  #
+  # * `html` attaches an HTML file, containing all matching reports in
+  #   table format.
+  # * `xlsx` attaches an XLSX workbook with a "Summary" sheet (see the
+  #   `xlsx` section for more details) and one sheet per report
+  #   generated. See `xlsx-name` to control the attachment name
+  #
+  # The default is to create a multipart MIME email (with text and HTML
+  # body parts) and an XLSX workbook attachment
+  contents: [ xlsx ]
+
+  # `body-reports` is a report (or report name pattern) of what to
+  # include in the body of the email as opposed to as attachments
+  body-reports: gdna-summary
+
+  # `xlsx-name` and `html-name` are the names used for any XLSX workbook
+  # and HTML attachments, respectively. The following values can be used
+  # to insert date/time information:
+  #
+  # * `${date}` - The date in YYYYMMDD format
+  # * `${time}` - The time in HHMMSS format
+  # * `${datetime}` - The time and date in ISO8601 format
+  #
+  # For example:
+  #
+  # xlsx-name: gdna-report-${date}.xlsx
+  #
+  # The defaults are as below:
+  xlsx-name: itrs-gdna-report.xlsx
+  html-name: itrs-gdna-report.html
+
+  # `scramble` controls the opaquing of potentially confidential
+  # or sensitive names in the output. These are subsequently controlled
+  # for each report by the `scramble-columns` settings. This setting
+  # turns on the overall function for email attachments, where the
+  # per-report settings controls which columns may contain data needing
+  # to be opaqued.
+  scramble: true
+
+  # `html-preamble` and `html-postscript` are used to sandwich the HTML
+  # body as well as any HTML attachment file.
+  #
+  # The preamble should include the opening `<html>` tags and any
+  # `<head>` including styles, which the postscript should close any
+  # tags left open in the preamble. No other HTML, such as a `<div>` is
+  # added to the HTML reports produced and these should be included
+  # here.
+
+  # The defaults are below. If you copy and uncomment these into your
+  # run-time configuration file then take care with YAML indents to
+  # ensure that the multiline content is correctly parsed.
+
+  # External files, which are less probe to YAML syntax issues, can be
+  # used with cordial "expandable" syntax:
+  #
+  # html-preamble: ${file:/path/to/file.html}
+
+  # html-preamble: |
+  #   <html>
+  #   <head>
+  #     <style>
+  #     table.gdna-headlines,
+  #     table.gdna-headlines th,
+  #     table.gdna-headlines td,
+  #     table.gdna-dataview,
+  #     table.gdna-dataview th,
+  #     table.gdna-dataview td {
+  #       table-layout: fixed;
+  #       font-family: Lucida Console, monospace;
+  #       border: 1px solid black;
+  #       border-collapse: collapse;
+  #       padding: 5px;
+  #       text-align: left;
+  #       vertical-align: top;
+  #     }
+  #     td.gdna-dataview {
+  #       word-wrap: break-word;
+  #     }
+  #
+  #     </style>
+  #   </head>
+  #   <body>
+  #     <h1>ITRS Geneos GDNA Default Template</h1>
+  #
+  #     <p>This content has been generated by the default template built
+  #     into the gdna program from the ITRS <a
+  #     href="https://github.com/ITRS-Group/cordial">cordial</a> tools.
+  #     It is normally only seen when testing. If you did not expect to
+  #     receive this please contact the sender and let them know.</p>
+  #
+  #     <h2>Report Summary</h2>
+  #
+  #     <p></p>
+
+  # html-postscript: |
+  #   </body>
+  #   </html>
+
+# `groupings` allow you to define named groups for various collections
+# of data that can subsequently be used in reports to categorise those
+# collections. At this time only two built-in reports, `plugin-groups`
+# and `gateways-coverage-by-group`, use these values - using `plugins`
+# and `gateways` below.
+#
+# Each data grouping can come from an embedded default value defined by
+# `content` as a YAML text block with newlines, or the path to an
+# external file. If the file is readable it take precedence over
+# embedded content, allowing defaults to be overridden without changing
+# the configuration.
+#
+# Each line consists of two comma-separated fields:
+#
+# name,pattern
+#
+# `name` is the group name and is used in the existing reports to build
+# the row name. `pattern` is a SQLite `glob()` pattern that is used to
+# `GROUP BY` the results in the report SQL. The rest of the underlying
+# configuration also defines which input data column this group acts on
+# and more, but these are beyond the scope of the documentation in this
+# file.
+groupings:
+  gateways:
+    source: grouping-gateways.txt
+    content: |
+      APAC,APAC*
+      EMEA,EMEA*
+  servers:
+    source: grouping-servers.txt
+  hostids:
+    source: grouping-hostids.txt
+  sources:
+    source: grouping-sources.txt
+  plugins:
+    source: grouping-plugins.txt
+
+    # the default plugin groups are shown below.
+    content: |
+      e4jms-plugins,e4jms-*
+      ibmi-plugins,ibmi-*
+      mq-plugins,mq-*
+      wts-plugins,wts-*
+      x-plugins,x-*
+      sybase-plugins,sybase*
+      prometheus-plugins,prometheus*
+      tib-plugins,tib*
+      jmx-plugins,jmx*
+
+# `ignore` settings allow you to ignore certain sets of data while
+# producing reports. Like `groupings` above they can be stored in an
+# external file `source` or given in the configuration in a `content`
+# setting, which must be a newline separated YAML block.
+#
+# Ignore values are one per line and currently do not support wildcards.
+ignore:
+  gateways:
+    source: ignore-gateways.txt
+    content: |
+      EXAMPLE_GW
+  servers:
+    source: ignore-servers.txt
+  hostids:
+    source: ignore-hostids.txt
+  sources:
+    source: ignore-sources.txt
+  plugins:
+    source: ignore-plugins.txt
+
+# There are other configuration sections in the built-in defaults and
+# you must not change any settings in the below:
+
+# `plugins` define which Geneos plugins are classified as level 1, 2 or
+# 3 (or level 1 optional). You will probably not need to ever change
+# these, but if you do then you will be given more details by an ITRS
+# staff member.
+plugins:
+
+# `reports` is where you can create (or override existing) reports. How
+# to create reports are covered in their own documentation.
+reports:

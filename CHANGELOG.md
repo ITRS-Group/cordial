@@ -1,12 +1,55 @@
 # Change Log
 
-## Version v1.14.0
+## Version v1.15.0-beta
 
-> **Released 2024-06-05**
+> [!NOTE]
+> **Released 2024-06-19**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-💡️ You will need to update to this version if you use `geneos` to install Netprobe releases direct from the ITRS website as the base name of the redirect URL has changed and the old version no longer works.
+### v1.15.0 Changes
+
+> 🎁 Introducing GDNA 🎈
+>
+> GDNA (Geneos Dynamic Netprobe Analysis) gives an overview of the levels of Geneos monitoring coverage in your I.T. estate and prompts action to ensure that there are no gaps in the visibility of the health of your applications and systems. It does this through analysing Geneos license allocation data and applying heuristics to plugin usage information to present visual indications of coverage levels through two dashboards.
+>
+> For many users installing GDNA is as easy as starting up a docker container after configuring the data sources.
+>
+> See the [`gdna`](gdna/README.md) README for more details.
+
+* General / Miscellaneous
+
+  * Move to Apache 2 license, from MIT, for clarity and conforming to ITRS company guidance
+  * Move cron Centos 8/9 test images to UBI 8/9 respectively
+  * Change all warning triangles in docs and comments ("⚠️") to to more friendly bulb ("💡")
+
+* `tools/geneos`
+
+  * Refactor internal routines to iterate over instances. Reduces the number of similar functions and inter-dependencies.
+
+  * Refactor other function names for clarity
+
+* `pkg/config`
+
+  Add a `UseKeyFile()` option to expand functions to allow overriding the key file to use
+
+### v1.15.0 Fixes
+
+* `tools/geneos`
+
+  * Fix the incorrect selection of archive directories in `package install` when using the `-L` option
+  * Fix the `--nosave` option by resetting error in return to nil, as it was a "valid" failure
+
+* `pkg/config`
+
+  * Fix use of "internal defaults" in Load() when using the SetConfigFile() option
+
+* Documentation
+
+  * Fix emoji in generated PDF files in Dockerfile by adding an appropriate font
+  * Fix missing screenshots in markdown files exported to releases by merging all screenshots directories and shipping that too. PDFs not affected.
+
+---
 
 ### v1.14.0 Changes
 

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<geneosWebServer>
+    <dashboardDefaults>
+        <updateRate>5</updateRate>
+        <dashboardRefreshRate>3</dashboardRefreshRate>
+        <tileSize>
+            <width>96</width>
+            <height>96</height>
+        </tileSize>
+        <deleteUnusedDashboards>true</deleteUnusedDashboards>
+    </dashboardDefaults>
+    <tree>
+        <dashboard name="Monitoring Coverage"/>
+        <dashboard name="Plugin Utilization"/>
+    </tree>
+    <slideshows/>
+    <gatewayConnections>
+        <gatewayConnection name="Gateway">
+            <enabled>true</enabled>
+            <secure>true</secure>
+            <primary>
+                <host>localhost</host>
+                <port>8100</port>
+            </primary>
+            <secondary>
+                <host/>
+                <port/>
+            </secondary>
+            <description/>
+            <user>gdna-dashboard</user>
+            <password type="plaintext">geneos</password>
+            <sslEnabled>false</sslEnabled>
+        </gatewayConnection>
+    </gatewayConnections>
+    <dashboards>
+        <dashboard name="Monitoring Coverage" path="/etc/geneos/gdna/monitoring-coverage-PROD.adb"/>
+        <dashboard name="Plugin Utilization" path="/etc/geneos/gdna/plugin-utilization-PROD.adb"/>
+    </dashboards>
+</geneosWebServer>

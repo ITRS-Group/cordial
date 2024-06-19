@@ -1,0 +1,125 @@
+name: gdna
+
+services:
+  gdna:
+    image: docker.itrsgroup.com/gdna:latest
+    ports:
+      # This is the default Web Server port. Using this, the two included
+      # dashboard will be available at:
+      #
+      # <https://HOSTNAME:8443/?fullscreen#WebDashboard:Monitoring%20Coverage>
+      #
+      # <https://HOSTNAME:8443/?fullscreen#WebDashboard:Plugin%20Utilization>
+      #
+      # To prevent access to the web-dashboard, for example if you only want emailed
+      # reports, just comment out this line and recreate the composer container.
+      - "8443:8443"
+
+      # Uncomment this line if you want access to the Gateway in the container.
+      #
+      # You will want to do this to access more details in the GDNA Dataviews.
+      #
+      # Please note that the Gateway has no authentication configured beyond a
+      # read-only account "gdna-dashboard" with the cleartext password of "geneos"
+      # in order to allow both the internal and any external Web Dashboard servers
+      # to consume report dataviews. All other connections are treated as fully
+      # authorized but generic accounts. You will need to change this to prevent
+      # unauthorized access.
+      # - "8100:8100"
+
+    configs:
+      # this creates a `/gdna.yaml` configuration file using the YAML-in-YAML content
+      # below.
+      - gdna.yaml
+
+    # if you want to send email reports via an SMTP server that requires
+    # authentication then you will need to create secrets using `geneos login`
+    # before running the container and then uncomment the next three lines, being
+    # careful to maintain the correct indentation. They are then referenced as
+    # /run/secrets/NAME and used in the `gdna.yaml` configuration below.
+
+    # secrets:
+    #   - keyfile.aes
+    #   - credentials.json
+
+    volumes:
+      # `gdna-data` is the persistent volume for collected data
+      - gdna-data:/home/geneos/gdna
+
+      # add any other volume mounts to local licd files you want to use,
+      # which must be referenced in the `gdna.yaml` sections below:
+
+      # - "${HOME}/geneos/licd/licds/perm/reporting:/home/geneos/licd-reporting"
+      # - "./licdfiles:/home/geneos/licdfiles"
+
+configs:
+  # `gdna.yaml` is the main configuration file for GDNA. The main changes
+  # you are likely to make are to the `licd-sources` list of licd URLS or local
+  # files (mounted using the volumes above), `licd-skip-verify` if your license
+  # daemon is in secure mode but using self-managed certificates and `licd-reports`
+  # is a list of file patterns to newer licd report files.
+  #
+  # If you want to enable email reports then uncomment (and update) the
+  # `email-schedule` line and update the `email` section as appropriate. Remember
+  # to create suitable credentials to access to access your SMTP server using
+  # `geneos login`.
+
+  gdna.yaml:
+    # For more complex configurations, including customised reports, you will
+    # probably want to maintain this as an external file and replace the
+    # `content` section with a `file` setting instead, like this:
+    #
+    # file: /host/path/to/gdna.yaml
+    content: |
+      gdna:
+        licd-sources:
+          - "https://LICDHOST:7041"
+        licd-skip-verify: true
+
+        # licd-reports:
+        #   - "./licd-reporting/summary*"
+
+        # the schedule below sends a report every morning at 2am
+
+        # email-schedule: "0 2 * * *"
+      db:
+        file: ./gdna/gdna.sqlite
+      email:
+        subject: "ITRS GDNA Report"
+        from: from@example.com
+        to: to@example.com
+        cc: ""
+        bcc: ""
+        smtp-server: smtp.example.com
+
+        # don't change these two settings unless you also change the
+        # other settings in this config file
+        key-file: /run/secrets/keyfile.aes
+        credentials-file: /run/secrets/credentials.json
+
+        # to change the email HTML body text around the reports you can
+        # supply a preamble and a postscript either from a file or
+        # in-line using these settings:
+
+        # html-preamble: ${file:/path/to/preamble.html}
+
+        # or, in-line: 
+
+        # html-preamble: |
+        #   <html>
+        #   <head>
+        #   ...
+
+        # html-postscript: ${file:/path/to/postscript.html}
+
+        # see the full `gdna.yaml` example file for more details
+
+secrets:
+  keyfile.aes:
+    file: ${HOME}/.config/geneos/keyfile.aes
+  credentials.json:
+    file: ${HOME}/.config/geneos/credentials.json
+
+# a persistent volume to save collected data between restarts
+volumes:
+  gdna-data:
