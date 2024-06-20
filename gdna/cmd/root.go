@@ -91,7 +91,7 @@ var GDNACmd = &cobra.Command{
 			return process.Daemon(nil, process.RemoveArgs, "-D", "--daemon")
 		}
 
-		initConfig()
+		initConfig(cmd)
 
 		if !cf.IsSet("gdna.version") {
 			cf.Set("gdna.version", cordial.VERSION)
@@ -112,7 +112,7 @@ func Execute() {
 	}
 }
 
-func initConfig() {
+func initConfig(cmd *cobra.Command) {
 	var err error
 	var deferredlog string
 
@@ -136,8 +136,12 @@ func initConfig() {
 		deferredlog = fmt.Sprintf("final configuration loaded from %s", config.Path(execname, opts...))
 	}
 
-	if logFile == "" {
-		logFile = cf.GetString("gdna.log.filename")
+	// check if logfile is set on the command line, which overrides config
+	if cmd != nil {
+		f := cmd.Flag("logfile")
+		if f != nil && !f.Changed {
+			logFile = cf.GetString("gdna.log.filename")
+		}
 	}
 	cordial.LogInit(execname,
 		cordial.SetLogfile(logFile),
@@ -170,7 +174,7 @@ func initConfig() {
 func configReloaded(e fsnotify.Event) {
 	// XXX protect this
 	cf = nil
-	initConfig()
+	initConfig(nil)
 	log.Info().Msg("config reloaded")
 	updateJobs()
 }
