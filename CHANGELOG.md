@@ -1,9 +1,9 @@
 # Change Log
 
-## Version v1.15.0-beta
+## Version v1.15.0-beta2
 
 > [!NOTE]
-> **Released 2024-06-19**
+> **Released 2024-06-20**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
@@ -34,6 +34,11 @@
   Add a `UseKeyFile()` option to expand functions to allow overriding the key file to use
 
 ### v1.15.0 Fixes
+
+* `gdna`
+
+  * Fix broken modifiers that result in no data visibility with updated sampler name
+  * While fixing above also fix references to old `t1` column to use `100` to indicate complete coverage
 
 * `tools/geneos`
 
