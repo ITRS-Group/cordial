@@ -11,6 +11,9 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# log files
+*.log
+
 # archives
 *.tar.gz
 *.zip
@@ -33,7 +36,6 @@ examples/xpath
 gdna/docker-compose.yml
 gdna/docs/docs
 gdna/gdna
-gdna/gdna.log
 gdna/gdna.sqlite*
 
 integrations/pagerduty/pagerduty
@@ -60,3 +62,4 @@ tools/sso-diag/sso-diag
 
 utils/docs/docs
 gdna/docs/*.md
+*.xml_*.history
