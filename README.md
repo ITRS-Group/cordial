@@ -2,7 +2,7 @@
 
 > [!NOTE]
 >
-> This is **Version v1.15.0-beta** - Released 2024-06-19 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
+> This is **Version v1.15.0-beta2** - Released 2024-06-20 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 
 > 🎁 Introducing GDNA 🎈
 >
