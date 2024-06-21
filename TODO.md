@@ -8,6 +8,7 @@ These should be moved into github issues, but not yet
 
     - [ ] Gateway commands to add items to ignore lists
     - [ ] Email per-gateway reports to specific recipients
+    - [ ] Document how to write new reports
 
 - [ ] Ideas
 
