@@ -81,7 +81,6 @@ func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, 
 		// matching rules for local files
 		filename, err = LatestLocalArchive(LOCAL, opts.localArchive, opts.version,
 			func(v os.DirEntry) bool {
-				// log.Debug().Msgf("check %s for %s", v.Name(), ct.String())
 				check := ct.String()
 
 				if ct.ParentType != nil && len(ct.PackageTypes) > 0 {
