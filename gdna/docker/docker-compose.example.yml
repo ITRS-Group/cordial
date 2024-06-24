@@ -12,12 +12,14 @@ services:
       # <https://HOSTNAME:8443/?fullscreen#WebDashboard:Plugin%20Utilization>
       #
       # To prevent access to the web-dashboard, for example if you only want emailed
-      # reports, just comment out this line and recreate the composer container.
+      # reports, just comment out this line and recreate the container.
       - "8443:8443"
 
       # Uncomment this line if you want access to the Gateway in the container.
       #
-      # You will want to do this to access more details in the GDNA Dataviews.
+      # You will want to do this to access more details in the GDNA Gateway's
+      # Dataviews and/or to access the Gateway to populate external web dashboard
+      # servers.
       #
       # Please note that the Gateway has no authentication configured beyond a
       # read-only account "gdna-dashboard" with the cleartext password of "geneos"
@@ -43,44 +45,51 @@ services:
     #   - credentials.json
 
     volumes:
-      # `gdna-data` is the persistent volume for collected data
+      # `gdna-data` is the persistent volume for collected data. This should
+      # not be changed.
       - gdna-data:/home/geneos/gdna
 
       # add any other volume mounts to local licd files you want to use,
-      # which must be referenced in the `gdna.yaml` sections below:
+      # which must be referenced by container paths in the `gdna.yaml`
+      # sections below. Be careful not to mount anything into the stardard
+      # Best Practise directories, otherwise the embedded `geneos` will get
+      # confused and may not start; i.e. DO NOT usr `/home/geneos/licd/`:
 
       # - "${HOME}/geneos/licd/licds/perm/reporting:/home/geneos/licd-reporting"
       # - "./licdfiles:/home/geneos/licdfiles"
 
 configs:
-  # `gdna.yaml` is the main configuration file for GDNA. The main changes
-  # you are likely to make are to the `licd-sources` list of licd URLS or local
-  # files (mounted using the volumes above), `licd-skip-verify` if your license
-  # daemon is in secure mode but using self-managed certificates and `licd-reports`
-  # is a list of file patterns to newer licd report files.
+  # `gdna.yaml` is the configuration file for GDNA. The changes you are
+  # likely to make are to the `licd-sources` list of URLs or local files
+  # (mounted using the volumes above), `licd-skip-verify` if your license
+  # daemon is in secure mode but using self-managed certificates and the
+  # `licd-reports` list of file patterns to newer licd report files.
   #
-  # If you want to enable email reports then uncomment (and update) the
-  # `email-schedule` line and update the `email` section as appropriate. Remember
-  # to create suitable credentials to access to access your SMTP server using
-  # `geneos login`.
-
+  # If you want to enable email reports then uncomment and update the
+  # `email-schedule` line and update the `email` sections. Remember to
+  # create suitable credentials, if required, to access to access your
+  # SMTP server using `geneos login`.
+  #
+  # For more complex configurations, including customised reports, you will
+  # probably want to maintain this as an external file and replace the
+  # entire `content` section with a `file` setting instead, like this:
+  #
+  # configs:
+  #   gdna.yaml:
+  #     file: /host/path/to/gdna.yaml
+  #
   gdna.yaml:
-    # For more complex configurations, including customised reports, you will
-    # probably want to maintain this as an external file and replace the
-    # `content` section with a `file` setting instead, like this:
-    #
-    # file: /host/path/to/gdna.yaml
     content: |
       gdna:
         licd-sources:
-          - "https://LICDHOST:7041"
+          - "https://LICDHOST:7041"  
         licd-skip-verify: true
 
         # licd-reports:
         #   - "./licd-reporting/summary*"
 
         # the schedule below sends a report every morning at 2am
-
+        #
         # email-schedule: "0 2 * * *"
       db:
         file: ./gdna/gdna.sqlite
@@ -93,7 +102,8 @@ configs:
         smtp-server: smtp.example.com
 
         # don't change these two settings unless you also change the
-        # other settings in this config file
+        # other settings in the secrets section of the docker compose
+        # config file
         key-file: /run/secrets/keyfile.aes
         credentials-file: /run/secrets/credentials.json
 
@@ -102,6 +112,7 @@ configs:
         # in-line using these settings:
 
         # html-preamble: ${file:/path/to/preamble.html}
+        # html-postscript: ${file:/path/to/postscript.html}
 
         # or, in-line: 
 
@@ -109,8 +120,6 @@ configs:
         #   <html>
         #   <head>
         #   ...
-
-        # html-postscript: ${file:/path/to/postscript.html}
 
         # see the full `gdna.yaml` example file for more details
 

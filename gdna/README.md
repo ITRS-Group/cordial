@@ -2,7 +2,7 @@
 
 The GDNA (Geneos Dynamic Netprobe Analysis) tool provides an overview of Geneos monitoring coverage within your I.T. estate. GDNA prompts action to ensure that there are no gaps in the visibility of the health of your applications and systems. It does this through analysing Geneos license usage data to present reports and visual indicators of monitoring coverage levels through two supplied dashboards.
 
-For many users installing GDNA this is as straight forward as starting up a docker container, after configuring the data sources.
+For many users installing GDNA this is as straight forward as creating a `docker-compose.yml` file, adding data sources and starting it up.
 
 We include two out-of-the-box dashboards to show you how effectively Geneos is being used within your I.T. estate as well as detailed data in both the Active Console and via emailed XLSX workbooks.
 
@@ -14,11 +14,11 @@ The first dashboard, Monitoring Coverage, gives an overview of all your Geneos G
 
 ![Monitoring Coverage Example](screenshots/gdna-2.png)
 
-* Level 1 - Basic infrastructure monitoring, the plugin names can be seen in the left had part of the Plugin Utilization area above. (There are also optional Level 1 plugins, which can be seen in the second dashboard below)
+* Level 1 - Core compute infrastructure monitoring; The plugin names can be seen in the left had part of the Plugin Utilization area above. (There are also optional Level 1 plugins, which can be seen in the second dashboard below)
 
-* Level 2 - Basic application monitoring, the plugin names can be seen in the middle part of the Plugin Utilization area above
+* Level 2 - Basic Application monitoring, the plugin names can be seen in the middle part of the Plugin Utilization area above
 
-* Level 3 - This covers other technology and application specific plugins.
+* Level 3 - All other technology and application specific plugins.
 
 ## Plugin Utilization Dashboard
 
@@ -30,11 +30,13 @@ Each hexagon represents a specific plugin, grouped into logical segments.
 
 ## Gateway Dataviews
 
-On the Gateway you can see Dataviews from GDNA, some of which provide the data to drive the dashboards above but there are also more detailed views of monitoring coverage. There are more details of the meaning of the cells in these non-dashboard Dataviews in the [Gateway Dataview Details](#gateway-dataview-details) section further below, which look like this:
+On the Gateway you can see Dataviews from GDNA, some of which provide the data to drive the dashboards above but there are also more detailed views of monitoring coverage. There are more details of the meaning of the cells in these Dataviews in the [Gateway Dataview Details](#gateway-dataview-details) section further below.
+
+The Dataview look like this:
 
 * Missing Coverage
 
-  These **Missing Coverage** report contain a list of servers (including all Probes across all Gateways) that have incomplete monitoring coverage
+  These **Missing Coverage** report contain a list of servers (a _server_ includes all Probes across all Gateways, which is identified by the same _host ID_) that have incomplete monitoring coverage
 
   ![Missing Coverage Dataview](screenshots/gdna-8.png)
 
@@ -56,9 +58,9 @@ On the Gateway you can see Dataviews from GDNA, some of which provide the data t
 
   ![Plugin Summary](screenshots/gdna-12.png)
 
-## EMail Reports
+## Email Reports
 
-GDNA can be configured to send regular reports via email. The email contains a simple cover-page summary and an XLSX workbook attachment that contains similar report data to the Dataviews above.
+GDNA can be configured to send regular reports via email. The email contains a selectable cover-page summary and an XLSX workbook attachment that contains similar report data to the Dataviews above.
 
 💡 To protect against the accidental exposure of potentially sensitive or confidential system identifiers, the default reports in the XLSX workbook scramble server names, host IDs and some other data. This can be changed in the configuration.
 
@@ -66,7 +68,7 @@ To configure email please see the installation specific details below as well as
 
 ## Getting Started
 
-The easiest way to get GDNA up and running is using docker. We show you how to use _docker compose_ to get up and running in minutes as well as making future updates simple to deploy. You can also run GDNA as a stand-alone process, but that takes a little more effort. Both of these methods are described below.
+The easiest way to get GDNA up and running is using _docker compose_. We show you how to use _docker compose_ to get up and running in minutes as well as making future updates easier to deploy. You can also run GDNA as a stand-alone process without _docker_, but that takes a little more effort. Both of these methods are described below.
 
 > 💡 All the commands used to manage Geneos in this guide rely on the [`geneos`](../tools/geneos/) program. If you use other tools to manage your Geneos environment then you will need to adapt the examples below.
 >
@@ -74,44 +76,47 @@ The easiest way to get GDNA up and running is using docker. We show you how to u
 
 ### General Prerequisites
 
-Before you start there are some prerequisites:
+> [!IMPORTANT]
+>
+> Before you start there are some prerequisites:
 
 GDNA uses license usage data and this can be from either (or both):
 
 * Report access via `licd` TCP endpoint
 
-  You have to be able to connect to the `licd` process port, normally port 7041.
+  You have to be able to connect to the `licd` port, normally port 7041, from the location that GDNA will be running. You may need to have firewall or network permissions changed.
 
-  Your `licd` (after release 5.7.0, which was a while back) must be running with `-report detail` command line options. Check this with:
-
-    ```text
-    $ geneos show licd | grep options
-    ```
-
-    or
-
-    ```text
-    $ geneos command licd
-    ```
-
-  If you cannot see the the settings in the options field or in the command output then you can add this to an existing `licd` with:
-
-    ```text
-    $ geneos set licd options+="-report detail"
-    $ geneos restart licd
-    ```
-
-    > 💡 Restarting the `licd` process should have no effects on your Geneos installation as Gateways cache license tokens for when the license daemon is not available.
+  > [!IMPORTANT]
+  > Your `licd` (after release 5.7.0, which was a while back) must be running with `-report detail` command line options. Check this with:
+  >
+  >  ```text
+  >  $ geneos show licd | grep options
+  >  ```
+  >
+  >  or
+  >
+  >  ```text
+  >  $ geneos command licd
+  >  ```
+  >
+  > If you cannot see the the settings in the options field or in the command output then you can add this to an existing `licd` with:
+  >
+  >  ```text
+  >  $ geneos set licd options+="-report detail"
+  >  $ geneos restart licd
+  >  ```
+  >
+  > 💡 Restarting the `licd` process should have no effects on your Geneos installation as Gateways cache license tokens for when the license daemon is not available.
 
 * Access to newer `licd` summary reports
 
   If you are running GDNA on the same server as the `licd` process or have access to it's working directory via a file share then this option provides more information but requires an updated `licd`. In Geneos releases after 6.7.0 the `licd` process creates summary files in a `reporting/` sub-directory. These are created every 6 hours. When combined with the first option, you can get both additional data and more frequent reporting.
 
-### Using Docker
+### Using Docker Compose
 
 GDNA has been built and tested using `docker-ce` version 26.1.4 on amd64 architecture Linux using Debian and Ubuntu distributions. We intend to also test using other version of docker as well as `podman`, but these will be confirmed in future releases.
 
-Create a `docker-compose.yml` file using this template and edit, changing at least the `LICDHOST` to the name of the server running the `licd` process, which can be `localhost` for the host machine running the container.
+Create a `docker-compose.yml` file using the template below and edit, changing at minimum the `LICDHOST` to the name of the server running the `licd` process, which can be `localhost` for the host machine running the container.
 
 ```yaml
 name: gdna
@@ -128,12 +133,14 @@ services:
       # <https://HOSTNAME:8443/?fullscreen#WebDashboard:Plugin%20Utilization>
       #
       # To prevent access to the web-dashboard, for example if you only want emailed
-      # reports, just comment out this line and recreate the composer container.
+      # reports, just comment out this line and recreate the container.
       - "8443:8443"
 
       # Uncomment this line if you want access to the Gateway in the container.
       #
-      # You will want to do this to access more details in the GDNA Dataviews.
+      # You will want to do this to access more details in the GDNA Gateway's
+      # Dataviews and/or to access the Gateway to populate external web dashboard
+      # servers.
       #
       # Please note that the Gateway has no authentication configured beyond a
       # read-only account "gdna-dashboard" with the cleartext password of "geneos"
@@ -159,44 +166,51 @@ services:
     #   - credentials.json
 
     volumes:
-      # `gdna-data` is the persistent volume for collected data
+      # `gdna-data` is the persistent volume for collected data. This should
+      # not be changed.
       - gdna-data:/home/geneos/gdna
 
       # add any other volume mounts to local licd files you want to use,
-      # which must be referenced in the `gdna.yaml` sections below:
+      # which must be referenced by container paths in the `gdna.yaml`
+      # sections below. Be careful not to mount anything into the stardard
+      # Best Practise directories, otherwise the embedded `geneos` will get
+      # confused and may not start; i.e. DO NOT usr `/home/geneos/licd/`:
 
       # - "${HOME}/geneos/licd/licds/perm/reporting:/home/geneos/licd-reporting"
       # - "./licdfiles:/home/geneos/licdfiles"
 
 configs:
-  # `gdna.yaml` is the main configuration file for GDNA. The main changes
-  # you are likely to make are to the `licd-sources` list of licd URLS or local
-  # files (mounted using the volumes above), `licd-skip-verify` if your license
-  # daemon is in secure mode but using self-managed certificates and `licd-reports`
-  # is a list of file patterns to newer licd report files.
+  # `gdna.yaml` is the configuration file for GDNA. The changes you are
+  # likely to make are to the `licd-sources` list of URLs or local files
+  # (mounted using the volumes above), `licd-skip-verify` if your license
+  # daemon is in secure mode but using self-managed certificates and the
+  # `licd-reports` list of file patterns to newer licd report files.
   #
-  # If you want to enable email reports then uncomment (and update) the
-  # `email-schedule` line and update the `email` section as appropriate. Remember
-  # to create suitable credentials to access to access your SMTP server using
-  # `geneos login`.
-
+  # If you want to enable email reports then uncomment and update the
+  # `email-schedule` line and update the `email` sections. Remember to
+  # create suitable credentials, if required, to access to access your
+  # SMTP server using `geneos login`.
+  #
+  # For more complex configurations, including customised reports, you will
+  # probably want to maintain this as an external file and replace the
+  # entire `content` section with a `file` setting instead, like this:
+  #
+  # configs:
+  #   gdna.yaml:
+  #     file: /host/path/to/gdna.yaml
+  #
   gdna.yaml:
-    # For more complex configurations, including customised reports, you will
-    # probably want to maintain this as an external file and replace the
-    # `content` section with a `file` setting instead, like this:
-    #
-    # file: /host/path/to/gdna.yaml
     content: |
       gdna:
         licd-sources:
-          - "https://LICDHOST:7041"
+          - "https://LICDHOST:7041"  
         licd-skip-verify: true
 
         # licd-reports:
         #   - "./licd-reporting/summary*"
 
         # the schedule below sends a report every morning at 2am
-
+        #
         # email-schedule: "0 2 * * *"
       db:
         file: ./gdna/gdna.sqlite
@@ -209,7 +223,8 @@ configs:
         smtp-server: smtp.example.com
 
         # don't change these two settings unless you also change the
-        # other settings in this config file
+        # other settings in the secrets section of the docker compose
+        # config file
         key-file: /run/secrets/keyfile.aes
         credentials-file: /run/secrets/credentials.json
 
@@ -218,6 +233,7 @@ configs:
         # in-line using these settings:
 
         # html-preamble: ${file:/path/to/preamble.html}
+        # html-postscript: ${file:/path/to/postscript.html}
 
         # or, in-line: 
 
@@ -225,8 +241,6 @@ configs:
         #   <html>
         #   <head>
         #   ...
-
-        # html-postscript: ${file:/path/to/postscript.html}
 
         # see the full `gdna.yaml` example file for more details
 
