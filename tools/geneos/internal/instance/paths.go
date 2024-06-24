@@ -59,7 +59,7 @@ func ComponentFilepath(i geneos.Instance, extensions ...string) string {
 }
 
 // FileOf returns the basename of the file identified by the
-// configuration parameter name.
+// instance parameter name.
 //
 // If the parameter is unset or empty then an empty path is returned.
 func FileOf(i geneos.Instance, name string) (filename string) {
