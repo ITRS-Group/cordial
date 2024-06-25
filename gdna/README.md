@@ -369,7 +369,7 @@ The program looks for a `gdna.yaml` configuration file in the following director
 * `${HOME}/.config/geneos/gdna.yaml`
 * `/etc/geneos/gdna.yaml`
 
-Copy the example [`gdna.yaml`](gdna.yaml) file from the release archive in `./etc/geneos/gdna.yaml` to one of the locations above. If you are not sure use the second option, into your Geneos user configuration directory.
+You can start without one or with just an empty `gdna.yaml` file and only add sections for the settings you want to change. If however you want a more complete reference in place then copy the example [`gdna.yaml`](gdna.yaml) file from the release archive in `./etc/geneos/gdna.yaml` to one of the locations above. If you are not sure use the second option, into your Geneos user configuration directory.
 
 Even without a `gdna.yaml` configuration file, the program will run and produce useful reports, assuming you have set-up your Geneos environment using the `gdna.include.xml` file. This default behaviour includes:
 
@@ -379,6 +379,12 @@ Even without a `gdna.yaml` configuration file, the program will run and produce 
 * Publishing reports as Dataviews to a local Netprobe, using TLS, on port 8101 to a Managed Entity `GDNA` and an `api` Sampler named `GDNA`
 
 To change the default behaviour either use command line options (run `gdna [COMMAND] -h` for a list) or edit the `gdna.yaml` file. See the comments in the file for more information.
+
+```yaml
+gdna:
+  site: YOUR SITE NAME
+  
+```
 
 #### Test
 
@@ -629,16 +635,16 @@ Each of the reports above will have it's own documentation outside this guide, b
 
   ---
 
-  | Columns             | Description |
-  | ------------------- | ----------- |
-  | `plugin`            |             |
-  | `servers`           |             |
-  | `instances`         |             |
-  | `previousServers`   |             |
-  | `previousInstances` |             |
-  | `location`          |             |
-  | `required`          |             |
-  | `level`             |             |
-  | `license`           |             |
-  | `t1`                |             |
-  | `Availability`      |             |
+  | Columns             | Description                                                                                     |
+  | ------------------- | ----------------------------------------------------------------------------------------------- |
+  | `plugin`            | Plugin name.                                                                                    |
+  | `servers`           | Servers using this plugin.                                                                      |
+  | `instances`         | Instances of this plugin.                                                                       |
+  | `previousServers`   | Servers that this plugin was in use on in the past.                                             |
+  | `previousInstances` | Instances of this plugin in use in the past.                                                    |
+  | `location`          | Where this plugin is deployed, one of `netprobe`, `collectionAgent` or `gateway`                |
+  | `required`          | Is this a required level 1 or 2 plugin?                                                         |
+  | `level`             | Which coverage level this plugin supports                                                       |
+  | `license`           | Plugin license type, one of `server` or `instance`                                              |
+  | `t1`                | For use with dashboards to drive a transparency modifier. Do not change.                        |
+  | `Availability`      | Column created by expect rows to create empty rows for plugins not found in license usage data. |
