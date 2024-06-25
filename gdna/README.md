@@ -433,15 +433,15 @@ You can now run `gdna` in the background, collecting data and reporting accordin
 
 ```bash
 cd .../suitable/working/directory
-gdna start --daemon
+gdna start --daemon --on-start
 ```
 
-This will run the process in the background, detached from your console session. Logs will be written to the file you have configured and the SQLite database will be written to the file(s) in the directory you have selected.
+This will run the process in the background, detached from your console session. Logs will be written to the file you have configured and the SQLite database will be written to the file(s) in the directory you have selected. The `--on-start` flag tells the program to immediately run a fetch/report cycle on start-up, otherwise it would wait for the next session. This is most useful when initialising a system or after a restart of the entire environment, else the GDNA Managed Entity would remain mostly empty until the next scheduled run.
 
 To ensure GDNA runs when the system is restarted, you can create a `systemd` unit file or add a `cron` entry like this:
 
 ```cron
-@reboot (cd /path/to/gdna/working/directory; gdna start --daemon)
+@reboot (cd /path/to/gdna/working/directory; gdna start --daemon --on-start)
 ```
 
 > [!NOTE]
