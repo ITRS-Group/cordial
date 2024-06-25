@@ -847,6 +847,7 @@
 					<integer>2</integer>
 				</var>
 			</environment>
+			<environment name="GDNA"/>
 		</environmentGroup>
 	</environments>
 	<operatingEnvironment>
