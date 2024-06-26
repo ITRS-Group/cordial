@@ -1,9 +1,9 @@
 # Change Log
 
-## Version v1.15.0-beta2
+## Version v1.15.0
 
 > [!NOTE]
-> **Released 2024-06-20**
+> **Released 2024-06-26**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
@@ -19,40 +19,40 @@
 
 * General / Miscellaneous
 
-  * Move to Apache 2 license, from MIT, for clarity and conforming to ITRS company guidance
-  * Move cron Centos 8/9 test images to UBI 8/9 respectively
-  * Change all warning triangles in docs and comments ("⚠️") to to more friendly bulb ("💡")
+    * Move to Apache 2 license, from MIT, for clarity and conforming to ITRS company guidance
+    * Move cron Centos 8/9 test images to UBI 8/9 respectively
+    * Change all warning triangles in docs and comments ("⚠️") to to more friendly bulb ("💡")
 
 * `tools/geneos`
 
-  * Refactor internal routines to iterate over instances. Reduces the number of similar functions and inter-dependencies.
-
-  * Refactor other function names for clarity
+    * Refactor internal routines to iterate over instances. Reduces the number of similar functions and inter-dependencies.
+    * Refactor other function names for clarity
 
 * `pkg/config`
 
-  Add a `UseKeyFile()` option to expand functions to allow overriding the key file to use
+    * Add a `UseKeyFile()` option to expand functions to allow overriding the key file to use
 
 ### v1.15.0 Fixes
 
 * `gdna`
 
-  * Fix broken modifiers that result in no data visibility with updated sampler name
-  * While fixing above also fix references to old `t1` column to use `100` to indicate complete coverage
+    * Fix broken modifiers that result in no data visibility with updated sampler name
+    * While fixing above also fix references to old `t1` column to use `100` to indicate complete coverage
+    * Fix logfile selection from command line
 
 * `tools/geneos`
 
-  * Fix the incorrect selection of archive directories in `package install` when using the `-L` option
-  * Fix the `--nosave` option by resetting error in return to nil, as it was a "valid" failure
+    * Fix the incorrect selection of archive directories in `package install` when using the `-L` option
+    * Fix the `--nosave` option by resetting error in return to nil, as it was a "valid" failure
 
 * `pkg/config`
 
-  * Fix use of "internal defaults" in Load() when using the SetConfigFile() option
+    * Fix use of "internal defaults" in Load() when using the SetConfigFile() option
 
 * Documentation
 
-  * Fix emoji in generated PDF files in Dockerfile by adding an appropriate font
-  * Fix missing screenshots in markdown files exported to releases by merging all screenshots directories and shipping that too. PDFs not affected.
+    * Fix emoji in generated PDF files in Dockerfile by adding an appropriate font
+    * Fix missing screenshots in markdown files exported to releases by merging all screenshots directories and shipping that too. PDFs not affected.
 
 ---
 
@@ -62,35 +62,30 @@
 
 * `tools/geneos`
 
-  * Add options to `tls create` to specify destination directory, outputting certificate bundles and setting the expiry period in days. Also, do not initialise the TLS subsystem if it's not found unless the `--force` flag is used.
-
-  * Hide `--name` option in `deploy`, repurpose short-form `-n` for new `--nosave` option
-
-  * Rename `logs` option `--nostandard` to `--no-stdout` (with alias) for consistency
+    * Add options to `tls create` to specify destination directory, outputting certificate bundles and setting the expiry period in days. Also, do not initialise the TLS subsystem if it's not found unless the `--force` flag is used.
+    * Hide `--name` option in `deploy`, repurpose short-form `-n` for new `--nosave` option
+    * Rename `logs` option `--nostandard` to `--no-stdout` (with alias) for consistency
 
 * `cordial` package
 
-  * Only log file and function if logging at `Debug` level or greater
-
-  * Split logging methods into their own file, add options to `LogInit()` to specify filename and/or [`lunberjack`](https://pkg.go.dev/gopkg.in/natefinch/lumberjack.v2) settings. Log filenames can also include `~/` prefix for home directory.
+    * Only log file and function if logging at `Debug` level or greater
+    * Split logging methods into their own file, add options to `LogInit()` to specify filename and/or [`lunberjack`](https://pkg.go.dev/gopkg.in/natefinch/lumberjack.v2) settings. Log filenames can also include `~/` prefix for home directory.
 
 * `tools/gateway-reporter`
 
-  * Add an optional XLSX password in `output` config section
+    * Add an optional XLSX password in `output` config section
 
 ### v1.14.0 Fixes
 
 * `tools/geneos`
 
-  * Fix download base name for Netprobes to new value.
-
-  * Fix `deploy` importing of keyfiles (only import if given on command line)
-
-  * `package install` and `package update` - Fix the handling of package metadata (e.g. `+el8`) suffixes to that they are treated the same as a package without a metadata suffix - and the right one is selected for the system being installed
+    * Fix download base name for Netprobes to new value.
+    * Fix `deploy` importing of keyfiles (only import if given on command line)
+    * `package install` and `package update` - Fix the handling of package metadata (e.g. `+el8`) suffixes to that they are treated the same as a package without a metadata suffix - and the right one is selected for the system being installed
 
 * `pkg/config`
 
-  * Better recovery on failing to find the user's config directory, return an error instead of panic-ing
+    * Better recovery on failing to find the user's config directory, return an error instead of panic-ing
 
 ---
 

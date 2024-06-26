@@ -80,7 +80,17 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     npm install --global mdpdf; \
     npm install --global @mermaid-js/mermaid-cli
 
-COPY --from=build /app/cordial /app/cordial
+# base files
+COPY VERSION README.md CHANGELOG.md /app/cordial/
+COPY pkg /app/cordial/pkg
+# geneos, dv2email, gateway-reporter
+COPY tools /app/cordial/tools
+# servicenow, pagerduty
+COPY integrations /app/cordial/integrations/
+# libemail, libalerts
+COPY libraries /app/cordial/libraries/
+# gdna
+COPY gdna /app/cordial/gdna
 
 WORKDIR /app/cordial/doc-output
 COPY tools/geneos/README.md geneos.md

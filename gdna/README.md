@@ -87,7 +87,9 @@ GDNA uses license usage data and this can be from either (or both):
   You have to be able to connect to the `licd` port, normally port 7041, from the location that GDNA will be running. You may need to have firewall or network permissions changed.
 
   > [!IMPORTANT]
-  > Your `licd` (after release 5.7.0, which was a while back) must be running with `-report detail` command line options. Check this with:
+  > Your `licd` (after release 5.7.0, which was a while back) _**must**_ be running with `-report detail` command line options.
+  >
+  > Check this with:
   >
   >  ```text
   >  $ geneos show licd | grep options
@@ -270,13 +272,44 @@ geneos login smtp.example.com -u username@example.com
 
 You will be prompted for the password to use and these details are saved in the `credentials.json` file referred to in the `docker-compose.yml` file above. The password is encrypted using AES256 and the key file it uses it created if one doesn't exist. The security is in the key file, and this should be only accessible to the user (permissions 0400).
 
-Then, to pull the latest image and run it in the foreground (which you want to do to test it first time):
+Then, to pull the latest image and run it in the foreground (which you will want to do to, to test it at least the first time as the configuration can be challenging):
 
 ```bash
-docker compose up
+$ docker compose up
+[+] Running 12/12
+ ✔ gdna Pulled                                                                                                                                                      133.4s 
+   ✔ 206929d2bade Pull complete                      19.3s 
+   ✔ d01d4f154b5f Pull complete                      19.6s 
+   ✔ ef79835647c9 Pull complete                      20.0s 
+   ✔ 4f9fcfb6878f Pull complete                      20.0s 
+   ✔ b8966d9c36d4 Pull complete                      20.1s 
+   ✔ 438367799e46 Pull complete                      20.1s 
+   ✔ f5417fb571ae Pull complete                      20.1s 
+   ✔ 8f3dafe1280c Pull complete                      20.9s 
+   ✔ 4f4fb700ef54 Pull complete                      20.9s 
+   ✔ 363de8354d10 Pull complete                      20.9s 
+   ✔ a1ec82f79fb6 Pull complete                     129.6s 
+[+] Running 2/2
+ ✔ Network gdna_default   Created                     0.1s 
+ ✔ Container gdna-gdna-1  Created                     1.9s 
+Attaching to gdna-1
+gdna-1  | + geneos start
+gdna-1  | gateway "Demo Gateway" started with PID 20
+gdna-1  | netprobe "GDNA" started with PID 21
+gdna-1  | webserver "GDNA" started with PID 19
+gdna-1  | + sleep 3
+gdna-1  | + gdna start --on-start -l - -f /gdna.yaml
+gdna-1  | 2024-06-25T23:28:35Z INFO: gdna: version v1.15.0 built with go1.22.4
+gdna-1  | 2024-06-25T23:28:35Z INFO: gdna: final configuration loaded from /gdna.yaml
+gdna-1  | 2024-06-25T23:28:35Z INFO: gdna: opening database using DSN `file:./gdna/gdna.sqlite`
+gdna-1  | 2024-06-25T23:28:35Z INFO: gdna: next scheduled report job 2024-06-25 23:30:00 +0000 UTC
+gdna-1  | 2024-06-25T23:28:35Z INFO: gdna: running on start-up
+gdna-1  | 2024-06-25T23:28:35Z ERROR: gdna: readLicenseReports for https://localhost:7041 failed error="Get \"https://localhost:7041/licensing/all_licences.csv\": dial tcp [::1]:7041: connect: connection refused"
+gdna-1  | 2024-06-25T23:28:35Z INFO: gdna: no matches found for /home/geneos/geneos/licd/licds/*/reporting/summary*
+gdna-1  | 2024-06-25T23:28:36Z INFO: gdna: finished on start-up
 ```
 
-It takes a few seconds for the components to start up, and you should be able to access the web dashboards on port 8443. If you have allowed access to the Geneos Gateway on port 8100 then connect your Active Console to see the `GDNA` Managed Entity and data as it is being reported.
+It takes a few seconds for the components to start up, and you should be able to access the web dashboards on port 8443. If you have enabled access to the Gateway on port 8100 then connect your Active Console to see the `GDNA` Managed Entity and data as it is being reported.
 
 > [!IMPORTANT]
 > Remember that your Active Console can only connect to a named Gateway once, so if you are already connected to a `Demo Gateway` then this new connection will fail; disconnect from the other `Demo Gateway` connection and try again.
@@ -313,8 +346,8 @@ To run GDNA with your existing Geneos components you'll need the following from 
 
 * `./etc/geneos/gdna.yaml` - configuration file
 
-  The `gdna` program uses a configuration file to control behaviour. By default it also creates a number of files in it's working directory, so you should find a suitable location where it can run and create SQLite database files and log files. There are also optional files you can create for ignore and groupings of ...
-
+  The `gdna` program uses a configuration file called `gdna.yaml` to control behaviour. The supplied file, above, is intended to document all the settings that you may want to change. It is probably easier to start with an empty file and only add those settings you need to change. See the section below on [Configuring GDNA](#configure-gdna).
+  
 * `./etc/geneos/gdna/monitoring-coverage-PROD.adb` and `./etc/geneos/gdna/plugin-utilization-PROD.adb` - dashboard files
 
   These two Dashboard files should be imported into your Geneos visualisation tool, ie. the Active Console and/or Web Dashboard.
@@ -336,6 +369,8 @@ Copy the `gdna` program somewhere suitable in your execution path, for example t
 ```bash
 $ cp bin/gdna ${HOME}/bin/
 ```
+
+When GDNA runs, with default configuration settings, it creates a number of files in the working directory (where you started it), so you should find a suitable location where it can run and create SQLite database files and log files. The SQLite database files and the log file can be placed anywhere by updating the configuration file.
 
 #### Configure Geneos
 
@@ -369,7 +404,14 @@ The program looks for a `gdna.yaml` configuration file in the following director
 * `${HOME}/.config/geneos/gdna.yaml`
 * `/etc/geneos/gdna.yaml`
 
-You can start without one or with just an empty `gdna.yaml` file and only add sections for the settings you want to change. If however you want a more complete reference in place then copy the example [`gdna.yaml`](gdna.yaml) file from the release archive in `./etc/geneos/gdna.yaml` to one of the locations above. If you are not sure use the second option, into your Geneos user configuration directory.
+You can also specify an alternative location with the `--config PATH`/`-f PATH` command line option to any of the `gdna` commands.
+
+You can start without a configuration file or with just an empty `gdna.yaml` file and only add sections for the settings you want to change. If however you want a more complete reference in place then copy the example [`gdna.yaml`](gdna.yaml) file from the release archive in `./etc/geneos/gdna.yaml` to one of the locations above. If you are not sure where to put the configuration file then you should put it into your Geneos user configuration directory, which may need creating if it does not exist:
+
+```bash
+$ mkdir -p ${HOME}/.config/geneos
+$ echo > ${HOME}/.config/geneos/gdna.yaml
+```
 
 Even without a `gdna.yaml` configuration file, the program will run and produce useful reports, assuming you have set-up your Geneos environment using the `gdna.include.xml` file. This default behaviour includes:
 
@@ -380,17 +422,31 @@ Even without a `gdna.yaml` configuration file, the program will run and produce 
 
 To change the default behaviour either use command line options (run `gdna [COMMAND] -h` for a list) or edit the `gdna.yaml` file. See the comments in the file for more information.
 
+A very simple configuration to start with would be like this:
+
 ```yaml
 gdna:
   site: YOUR SITE NAME
-  
+  licd-sources:
+    - "http://localhost:7041"
+    - "https://localhost:7041"
+  licd-skip-verify: true
+  log:
+    filename: ./gdna.log
+geneos:
+  netprobe:
+    hostname: localhost
+    port: 8101
+    secure: true
+db:
+  file: ./gdna.sqlite
 ```
 
 #### Test
 
-The `gdna` program supports a number of commands. Once everything is configured you will use the `gdna start` command to run the program as a daemon process, regularly collecting and reporting your monitoring coverage.
+The `gdna` program supports a number of commands. Once you have everything configured and tested you will use the `gdna start --daemon --on-start` command to run the program as a daemon process, regularly collecting and reporting your monitoring coverage.
 
-To test the set-up you can break this down into several stages, by using `geneos fetch` and `geneos report` commands to make sure that the license data is available and the Geneos Gateway and Netprobe are set-up correctly.
+First, to test the set-up you can break this down into several stages, by using `geneos fetch` and `geneos report` commands to make sure that the license data is available and the Geneos Gateway and Netprobe are set-up correctly.
 
 * First, run `geneos fetch` like this:
 
@@ -467,6 +523,9 @@ $ docker compose up -d --force-recreate
 
 This will restart the container with the new configuration in the background.
 
+> [!TIP]
+> On rare occasions the `--force-recreate` flag doesn't seem to fully work. In these cases you will need to `docker compose rm` to remove the old containers and then start up the new one.
+
 ### Dashboards
 
 The two dashboards included with GDNA are largely agnostic to the source of data as long as the Dataview names are the same as those produced by default `gdna` reports. The only exception is that there is a Managed Entity Attribute ("`DASHBOARD`") in use, to allow the filtering of data based on the chosen environment. By default the value is `PROD` but if you want to run multiple instances of GDNA, for example one in a development environment and another in your production one, then you can copy and update the dashboards to match the new configuration.
@@ -530,7 +589,7 @@ Here are the current built-in reports courtesy of the `gdna list` command (with 
 | server-coverage              | Server Coverage              |          | Y        | N    |
 | sources                      | Sources                      |          | Y        | Y    |
 
-Each of the reports above will have it's own documentation outside this guide, but to highlight those reports that are the ones most likely to be useful in working through any coverage gaps; These will be `missing-coverage`, `plugin-summary` plus one of the two optional per-Gateway reports `coverage-per-gateway-summary` or `coverage-per-gateway-detail`.
+Each of the reports above will, later, have it's own documentation outside this guide, but to highlight those reports that are the ones most likely to be useful in working through any coverage gaps; These will be `missing-coverage`, `plugin-summary` plus one of the two optional per-Gateway reports `coverage-per-gateway-summary` or `coverage-per-gateway-detail`.
 
 * Missing Coverage
 
@@ -648,3 +707,7 @@ Each of the reports above will have it's own documentation outside this guide, b
   | `license`           | Plugin license type, one of `server` or `instance`                                              |
   | `t1`                | For use with dashboards to drive a transparency modifier. Do not change.                        |
   | `Availability`      | Column created by expect rows to create empty rows for plugins not found in license usage data. |
+
+## Troubleshooting and Issues
+
+This is the first public release of GDNA and while we hope you find it useful and we have tested it as much as is possible in limited environments we appreciate that there will be issues and missing features. Please let us know what you think, report an issues and suggest new features via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).

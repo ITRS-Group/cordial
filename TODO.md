@@ -15,11 +15,9 @@ These should be moved into github issues, but not yet
     - [ ] Web interface for reports
     - [ ] Web interface for admin, edit some config, e.g. sources and intervals
     - [ ] Historical data handling
+    - [ ] Track maximum usage for planning
     - [ ] Consume licd "Summary" info for total available info
-    - [ ] Auto config reload and reconfiguration on changes
-
-        This is not proving straight forward, back burner for now
-    
+    - [ ] Auto config reload and reconfiguration on changes. (This is not proving straight forward, back burner for now)
     - [ ] Add contact column for each grouping "table" for emails to owners
 
 ## `geneos` tool
