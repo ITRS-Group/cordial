@@ -105,7 +105,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	if resp.Err != nil {
 		return
 	}
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertFile+".key"))
+	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
 	resp.Err = err
 	if resp.Err != nil {
 		return

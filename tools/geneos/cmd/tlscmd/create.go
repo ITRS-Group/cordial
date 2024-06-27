@@ -153,7 +153,7 @@ func CreateCert(destination string, overwrite bool, duration time.Duration, cn s
 		return
 	}
 
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertFile+".key"))
+	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
@@ -216,7 +216,7 @@ func CreateCertBundle(destination string, overwrite bool, duration time.Duration
 		err = fmt.Errorf("local signing root certificate (%s) not valid: %w", signerFile, err)
 		return
 	}
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
+	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertBasename+".key"))
 	if err != nil {
 		return
 	}

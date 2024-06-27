@@ -76,7 +76,7 @@ $ geneos tls export --output file.pem
 			err = fmt.Errorf("local signing root certificate (%s) not valid: %w", signerFile, err)
 			return
 		}
-		signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertFile+".key"))
+		signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
 		if err != nil {
 			return
 		}

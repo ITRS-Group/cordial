@@ -127,7 +127,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 				results = append(results, &instance.Response{
 					Value: listCertType{
 						"global",
-						geneos.RootCAFile,
+						geneos.RootCABasename,
 						geneos.LOCALHOST,
 						time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
 						rootCert.NotAfter,
@@ -139,7 +139,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 				results = append(results, &instance.Response{
 					Value: listCertType{
 						"global",
-						geneos.SigningCertFile,
+						geneos.SigningCertBasename,
 						geneos.LOCALHOST,
 						time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
 						geneosCert.NotAfter,
@@ -167,7 +167,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 			if rootCert != nil {
 				listCSVWriter.Write([]string{
 					"global",
-					geneos.RootCAFile,
+					geneos.RootCABasename,
 					geneos.LOCALHOST,
 					fmt.Sprintf("%0f", time.Until(rootCert.NotAfter).Seconds()),
 					rootCert.NotAfter.Format(time.RFC3339),
@@ -178,7 +178,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 			if geneosCert != nil {
 				listCSVWriter.Write([]string{
 					"global",
-					geneos.SigningCertFile,
+					geneos.SigningCertBasename,
 					geneos.LOCALHOST,
 					fmt.Sprintf("%0f", time.Until(geneosCert.NotAfter).Seconds()),
 					geneosCert.NotAfter.Format(time.RFC3339),
@@ -194,7 +194,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 		if listCmdAll {
 			if rootCert != nil {
 				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\n",
-					geneos.RootCAFile,
+					geneos.RootCABasename,
 					geneos.LOCALHOST,
 					time.Until(rootCert.NotAfter).Seconds(),
 					rootCert.NotAfter.Format(time.RFC3339),
@@ -203,7 +203,7 @@ func listCertsCommand(ct *geneos.Component, names []string, params []string) (er
 			}
 			if geneosCert != nil {
 				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\n",
-					geneos.SigningCertFile,
+					geneos.SigningCertBasename,
 					geneos.LOCALHOST,
 					time.Until(geneosCert.NotAfter).Seconds(),
 					geneosCert.NotAfter.Format(time.RFC3339),
@@ -230,7 +230,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 				results = append(results, &instance.Response{
 					Value: listCertLongType{
 						"global",
-						geneos.RootCAFile,
+						geneos.RootCABasename,
 						geneos.LOCALHOST,
 						time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
 						rootCert.NotAfter,
@@ -247,7 +247,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 				results = append(results, &instance.Response{
 					Value: listCertLongType{
 						"global",
-						geneos.SigningCertFile,
+						geneos.SigningCertBasename,
 						geneos.LOCALHOST,
 						time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
 						geneosCert.NotAfter,
@@ -284,7 +284,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			if rootCert != nil {
 				listCSVWriter.Write([]string{
 					"global",
-					geneos.RootCAFile,
+					geneos.RootCABasename,
 					geneos.LOCALHOST,
 					fmt.Sprintf("%.f", time.Until(rootCert.NotAfter).Seconds()),
 					rootCert.NotAfter.Format(time.RFC3339),
@@ -300,7 +300,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			if geneosCert != nil {
 				listCSVWriter.Write([]string{
 					"global",
-					geneos.SigningCertFile,
+					geneos.SigningCertBasename,
 					geneos.LOCALHOST,
 					fmt.Sprintf("%.f", time.Until(geneosCert.NotAfter).Seconds()),
 					geneosCert.NotAfter.Format(time.RFC3339),
@@ -321,7 +321,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 		if listCmdAll {
 			if rootCert != nil {
 				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t%q\t\t\t%X\n",
-					geneos.RootCAFile,
+					geneos.RootCABasename,
 					geneos.LOCALHOST,
 					time.Until(rootCert.NotAfter).Seconds(),
 					rootCert.NotAfter.Format(time.RFC3339),
@@ -333,7 +333,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			}
 			if geneosCert != nil {
 				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t%q\t\t\t%X\n",
-					geneos.SigningCertFile,
+					geneos.SigningCertBasename,
 					geneos.LOCALHOST,
 					time.Until(geneosCert.NotAfter).Seconds(),
 					geneosCert.NotAfter.Format(time.RFC3339),

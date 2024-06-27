@@ -45,16 +45,16 @@ func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err erro
 		err = config.ErrNoUserConfigDir
 		return
 	}
-	file = config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls"), RootCAFile+".pem")
+	file = config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls"), RootCABasename+".pem")
 	if file == "" {
 		return
 	}
 	log.Debug().Msgf("reading %s", file)
 	if file == "" {
-		err = fmt.Errorf("%w: root certificate file %s not found in %s", os.ErrNotExist, RootCAFile+".pem", confDir)
+		err = fmt.Errorf("%w: root certificate file %s not found in %s", os.ErrNotExist, RootCABasename+".pem", confDir)
 		return
 	}
-	config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls"), RootCAFile+".key")
+	config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls"), RootCABasename+".key")
 	cert, err = config.ParseCertificate(LOCAL, file)
 	if err != nil {
 		return
@@ -84,13 +84,13 @@ func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err e
 		err = config.ErrNoUserConfigDir
 		return
 	}
-	file = config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertFile+".pem"))
+	file = config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".pem"))
 	log.Debug().Msgf("reading %s", file)
 	if file == "" {
-		err = fmt.Errorf("%w: signing certificate file %s not found in %s", os.ErrNotExist, SigningCertFile+".pem", confDir)
+		err = fmt.Errorf("%w: signing certificate file %s not found in %s", os.ErrNotExist, SigningCertBasename+".pem", confDir)
 		return
 	}
-	config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertFile+".key"))
+	config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".key"))
 	cert, err = config.ParseCertificate(LOCAL, file)
 	if err != nil {
 		return
@@ -211,15 +211,15 @@ func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) 
 		return ErrInvalidArgs
 	}
 
-	if err = config.WriteCert(LOCAL, path.Join(confDir, SigningCertFile+".pem"), cert); err != nil {
+	if err = config.WriteCert(LOCAL, path.Join(confDir, SigningCertBasename+".pem"), cert); err != nil {
 		return err
 	}
-	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertFile+".pem"))
+	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+".pem"))
 
-	if err = config.WritePrivateKey(LOCAL, path.Join(confDir, SigningCertFile+".key"), key); err != nil {
+	if err = config.WritePrivateKey(LOCAL, path.Join(confDir, SigningCertBasename+".key"), key); err != nil {
 		return err
 	}
-	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertFile+".key"))
+	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+".key"))
 	if chainSource != "" {
 		b, err := os.ReadFile(chainSource)
 		if err != nil {
@@ -275,7 +275,7 @@ func TLSInit(overwrite bool, keytype string) (err error) {
 
 	if err := config.CreateRootCert(
 		LOCAL,
-		path.Join(confDir, RootCAFile),
+		path.Join(confDir, RootCABasename),
 		cordial.ExecutableName()+" root certificate",
 		overwrite,
 		keytype); err != nil {
@@ -285,11 +285,11 @@ func TLSInit(overwrite bool, keytype string) (err error) {
 		}
 		return err
 	}
-	fmt.Printf("CA created for %s\n", RootCAFile)
+	fmt.Printf("CA created for %s\n", RootCABasename)
 
 	if err := config.CreateSigningCert(
-		LOCAL, path.Join(confDir, SigningCertFile),
-		path.Join(confDir, RootCAFile),
+		LOCAL, path.Join(confDir, SigningCertBasename),
+		path.Join(confDir, RootCABasename),
 		cordial.ExecutableName()+" intermediate certificate",
 		overwrite); err != nil {
 		if errors.Is(err, os.ErrExist) {
@@ -298,7 +298,7 @@ func TLSInit(overwrite bool, keytype string) (err error) {
 		}
 		return err
 	}
-	fmt.Printf("Signing certificate created for %s\n", SigningCertFile)
+	fmt.Printf("Signing certificate created for %s\n", SigningCertBasename)
 
 	// sync if geneos root exists
 	if d, err := os.Stat(LocalRoot()); err == nil && d.IsDir() {

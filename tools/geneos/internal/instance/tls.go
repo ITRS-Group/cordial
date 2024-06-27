@@ -88,7 +88,7 @@ func CreateCert(i geneos.Instance, duration time.Duration) (resp *Response) {
 		resp.Err = err
 		return
 	}
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertFile+".key"))
+	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertBasename+".key"))
 	if err != nil {
 		resp.Err = err
 		return
