@@ -52,8 +52,7 @@ var demoCmd = &cobra.Command{
 		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmd.ParseTypeNamesParams(command)
-		log.Debug().Msgf("%s %v %v", ct, args, params)
+		ct, args := cmd.ParseTypeNames(command)
 		// none of the arguments can be a reserved type
 		if ct != nil {
 			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())

@@ -33,6 +33,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+const Name = "floating"
+
 var Floating = geneos.Component{
 	Initialise:   Init,
 	Name:         "floating",
@@ -45,9 +47,28 @@ var Floating = geneos.Component{
 		{Filename: templateName, Content: template},
 	},
 	DownloadBase: geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
-	PortRange:    "FloatingPortRange",
-	CleanList:    "FloatingCleanList",
-	PurgeList:    "FloatingPurgeList",
+
+	GlobalSettings: map[string]string{
+		config.Join(Name, "ports"): "7036,7100-",
+		config.Join(Name, "clean"): strings.Join([]string{
+			"*.old",
+		}, ":"),
+		config.Join(Name, "purge"): strings.Join([]string{
+			"*.log",
+			"*.txt",
+			"*.snooze",
+			"*.user_assignment",
+		}, ":"),
+	},
+	PortRange: config.Join(Name, "ports"),
+	CleanList: config.Join(Name, "clean"),
+	PurgeList: config.Join(Name, "purge"),
+	ConfigAliases: map[string]string{
+		config.Join(Name, "ports"): Name + "portrange",
+		config.Join(Name, "clean"): Name + "cleanlist",
+		config.Join(Name, "purge"): Name + "purgelist",
+	},
+
 	LegacyParameters: map[string]string{
 		"floatingtype": "pkgtype",
 	},
@@ -64,11 +85,7 @@ var Floating = geneos.Component{
 		`setup={{join "${config:home}" "netprobe.setup.xml"}}`,
 		`autostart=true`,
 	},
-	GlobalSettings: map[string]string{
-		"FloatingPortRange": "7036,7100-",
-		"FloatingCleanList": "*.old",
-		"FloatingPurgeList": "floating.log:floating.txt:*.snooze:*.user_assignment",
-	},
+
 	Directories: []string{
 		"packages/netprobe",
 		"netprobe/netprobes_shared",
@@ -183,7 +200,7 @@ func (s *Floatings) Add(template string, port uint16) (err error) {
 	cf.SetDefault(cf.Join("config", "template"), templateName)
 
 	if port == 0 {
-		port = instance.NextPort(s.InstanceHost, &Floating)
+		port = instance.NextFreePort(s.InstanceHost, &Floating)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)

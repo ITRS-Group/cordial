@@ -185,7 +185,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	if ncf.GetInt("port") == 0 {
 		if src.Host() == dHost {
 			if !opts.move {
-				dPort := NextPort(dHost, dst.Type())
+				dPort := NextFreePort(dHost, dst.Type())
 				ncf.Set("port", dPort)
 			} else {
 				ncf.Set("port", src.Config().GetUint16("port"))
@@ -195,7 +195,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 			dPortsInUse := GetAllPorts(dHost)
 			if _, ok := dPortsInUse[sPort]; ok {
 				log.Debug().Msgf("found port in use: %d", sPort)
-				dPort := NextPort(dHost, dst.Type())
+				dPort := NextFreePort(dHost, dst.Type())
 				ncf.Set("port", dPort)
 			} else {
 				ncf.Set("port", src.Config().GetUint16("port"))

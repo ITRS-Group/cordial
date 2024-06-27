@@ -49,13 +49,13 @@ var (
 // them disabled
 const DisableExtension = "disabled"
 
-// RootCAFile is the file base name for the root certificate authority
+// RootCABasename is the file base name for the root certificate authority
 // created with the TLS commands
-var RootCAFile = "rootCA"
+var RootCABasename = "rootCA"
 
-// SigningCertFile is the file base name for the signing certificate
+// SigningCertBasename is the file base name for the signing certificate
 // created with the TLS commands
-var SigningCertFile string
+var SigningCertBasename string
 
 // ChainCertFile the is file name (including extension, as this does not
 // need to be used for keys) for the consolidated chain file used to
@@ -104,7 +104,7 @@ func Initialise(h *Host, options ...PackageOptions) (err error) {
 
 	if h.IsLocal() {
 		config.Set(execname, opts.geneosdir)
-		if err = config.Save(execname); err != nil {
+		if err = SaveConfig(execname); err != nil {
 			return err
 		}
 
@@ -129,7 +129,7 @@ func Initialise(h *Host, options ...PackageOptions) (err error) {
 // Init is called from the main command initialisation
 func Init(app string) {
 	execname = app
-	SigningCertFile = execname
+	SigningCertBasename = execname
 	ChainCertFile = execname + "-chain.pem"
 	RootComponent.Register(nil)
 }
@@ -139,4 +139,36 @@ func Init(app string) {
 // configuration item `itrshome` if `geneos` is not set.
 func LocalRoot() string {
 	return config.GetString(execname, config.Default(config.GetString("itrshome")))
+}
+
+// SaveConfig saves the global configuration (in config.Global) but
+// excludes any values that still have their defaults, by iterating
+// through registered components and checking.
+func SaveConfig(execname string) error {
+	cf := config.New()
+	globalsettings := make(map[string]string)
+	for _, ct := range AllComponents() {
+		for k, v := range ct.GlobalSettings {
+			// add main setting
+			globalsettings[k] = v
+			// also add aliases
+			globalsettings[ct.ConfigAliases[k]] = v
+
+		}
+	}
+
+	for _, k := range config.AllKeys() {
+		if k == "" {
+			continue
+		}
+
+		if v, ok := globalsettings[k]; ok {
+			if config.GetString(k) != v {
+				cf.Set(k, v)
+			}
+		} else {
+			cf.Set(k, config.GetString(k))
+		}
+	}
+	return cf.Save(execname)
 }

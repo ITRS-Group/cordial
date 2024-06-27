@@ -71,7 +71,7 @@ func GetAllPorts(h *geneos.Host) (ports map[uint16]bool) {
 	return
 }
 
-// NextPort returns the next available (unallocated and unused) TCP
+// NextFreePort returns the next available (unallocated and unused) TCP
 // listening port for component ct on host h.
 //
 // The range of ports available for a component is defined in the
@@ -89,8 +89,9 @@ func GetAllPorts(h *geneos.Host) (ports map[uint16]bool) {
 // https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
 //
 // not concurrency safe at this time
-func NextPort(h *geneos.Host, ct *geneos.Component) uint16 {
-	from := config.GetString(ct.PortRange)
+func NextFreePort(h *geneos.Host, ct *geneos.Component) uint16 {
+	log.Debug().Msgf("looking for %s, default %s", ct.PortRange, ct.ConfigAliases[ct.PortRange])
+	from := config.GetString(ct.PortRange, config.Default(ct.ConfigAliases[ct.PortRange]))
 	used := GetAllPorts(h)
 	ps := strings.Split(from, ",")
 	for _, p := range ps {

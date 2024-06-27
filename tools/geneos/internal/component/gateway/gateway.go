@@ -33,6 +33,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+const Name = "gateway"
+
 var Gateway = geneos.Component{
 	Initialise:   initialise,
 	Name:         "gateway",
@@ -44,9 +46,32 @@ var Gateway = geneos.Component{
 		{Filename: instanceTemplateName, Content: instanceTemplate},
 	},
 	DownloadBase: geneos.DownloadBases{Resources: "Gateway+2", Nexus: "geneos-gateway"},
-	PortRange:    "GatewayPortRange",
-	CleanList:    "GatewayCleanList",
-	PurgeList:    "GatewayPurgeList",
+
+	GlobalSettings: map[string]string{
+		config.Join(Name, "ports"): "7039,7100-",
+		config.Join(Name, "clean"): strings.Join([]string{
+			"*.old",
+			"*.history",
+		}, ":"),
+		config.Join(Name, "purge"): strings.Join([]string{
+			"*.log",
+			"*.txt",
+			"*.snooze",
+			"*.user_assignment",
+			"licences.cache",
+			"cache/",
+			"database/",
+		}, ":"),
+	},
+	PortRange: config.Join(Name, "ports"),
+	CleanList: config.Join(Name, "clean"),
+	PurgeList: config.Join(Name, "purge"),
+	ConfigAliases: map[string]string{
+		config.Join(Name, "ports"): Name + "portrange",
+		config.Join(Name, "clean"): Name + "cleanlist",
+		config.Join(Name, "purge"): Name + "purgelist",
+	},
+
 	LegacyParameters: map[string]string{
 		"binsuffix": "binary",
 		"gatehome":  "home",
@@ -83,11 +108,7 @@ var Gateway = geneos.Component{
 		`autostart=true`,
 		`usekeyfile=false`,
 	},
-	GlobalSettings: map[string]string{
-		"GatewayPortRange": "7039,7100-",
-		"GatewayCleanList": "*.old:*.history",
-		"GatewayPurgeList": "gateway.log:gateway.txt:gateway.snooze:gateway.user_assignment:licences.cache:cache/:database/",
-	},
+
 	Directories: []string{
 		"packages/gateway",
 		"gateway/gateways",
@@ -204,7 +225,7 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 	cf := g.Config()
 
 	if port == 0 {
-		port = instance.NextPort(g.InstanceHost, &Gateway)
+		port = instance.NextFreePort(g.InstanceHost, &Gateway)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -289,7 +310,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 
 	// use getPorts() to check valid change, else go up one
 	ports := instance.GetAllPorts(g.Host())
-	nextport := instance.NextPort(g.Host(), &Gateway)
+	nextport := instance.NextFreePort(g.Host(), &Gateway)
 	if nextport == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}

@@ -125,7 +125,6 @@ geneos init
 	// XXX Call any registered initializer funcs from components
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, args := cmd.ParseTypeNames(command)
-		log.Debug().Msgf("%s %v", ct, args)
 		// none of the arguments can be a reserved type
 		if ct != nil {
 			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
@@ -205,7 +204,6 @@ func initProcessArgs(args []string) (options []geneos.PackageOptions, err error)
 		homedir = os.Getenv("HOME")
 	}
 
-	log.Debug().Msgf("%d %v", len(args), args)
 	switch len(args) {
 	case 0:
 		// default home + geneos, but check with user if it's an

@@ -19,6 +19,7 @@ package netprobe
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,15 +30,38 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+const Name = "netprobe"
+
 var Netprobe = geneos.Component{
-	Name:         "netprobe",
+	Name:         Name,
 	Aliases:      []string{"probe", "netprobes", "probes"},
 	LegacyPrefix: "netp",
 	UsesKeyfiles: true,
 	DownloadBase: geneos.DownloadBases{Resources: "Netprobe+-+Standard", Nexus: "geneos-netprobe"},
-	PortRange:    "NetprobePortRange",
-	CleanList:    "NetprobeCleanList",
-	PurgeList:    "NetprobePurgeList",
+
+	GlobalSettings: map[string]string{
+		config.Join(Name, "ports"): "7036,7100-",
+		config.Join(Name, "clean"): strings.Join([]string{
+			"*.old",
+		}, ":"),
+		config.Join(Name, "purge"): strings.Join([]string{
+			"*.log",
+			"*.txt",
+			"*.snooze",
+			"*.user_assignment",
+			"Workflow/",
+			"ca.pid.*",
+		}, ":"),
+	},
+	PortRange: config.Join(Name, "ports"),
+	CleanList: config.Join(Name, "clean"),
+	PurgeList: config.Join(Name, "purge"),
+	ConfigAliases: map[string]string{
+		config.Join(Name, "ports"): Name + "portrange",
+		config.Join(Name, "clean"): Name + "cleanlist",
+		config.Join(Name, "purge"): Name + "purgelist",
+	},
+
 	LegacyParameters: map[string]string{
 		"binsuffix": "binary",
 		"netphome":  "home",
@@ -64,11 +88,7 @@ var Netprobe = geneos.Component{
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 		`autostart=true`,
 	},
-	GlobalSettings: map[string]string{
-		"NetprobePortRange": "7036,7100-",
-		"NetprobeCleanList": "*.old",
-		"NetprobePurgeList": "netprobe.log:netprobe.txt:*.snooze:*.user_assignment:collection-agent.log",
-	},
+
 	Directories: []string{
 		"packages/netprobe",
 		"netprobe/netprobes",
@@ -161,7 +181,7 @@ func (n *Netprobes) Config() *config.Config {
 
 func (n *Netprobes) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
-		port = instance.NextPort(n.Host(), &Netprobe)
+		port = instance.NextFreePort(n.Host(), &Netprobe)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)

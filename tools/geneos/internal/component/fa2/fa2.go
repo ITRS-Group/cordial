@@ -19,6 +19,7 @@ package fa2
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,6 +31,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+const Name = "fa2"
+
 var FA2 = geneos.Component{
 	Name:          "fa2",
 	Aliases:       []string{"fixanalyser", "fixanalyzer", "fixanalyser2-netprobe"},
@@ -37,9 +40,28 @@ var FA2 = geneos.Component{
 	ParentType:    &netprobe.Netprobe,
 	DownloadBase:  geneos.DownloadBases{Resources: "Fix+Analyser+2+Netprobe", Nexus: "geneos-fixanalyser2-netprobe"},
 	DownloadInfix: "fixanalyser2-netprobe",
-	PortRange:     "FA2PortRange",
-	CleanList:     "FA2CleanList",
-	PurgeList:     "FA2PurgeList",
+
+	GlobalSettings: map[string]string{
+		config.Join(Name, "ports"): "7030,7100-",
+		config.Join(Name, "clean"): strings.Join([]string{
+			"*.old",
+		}, ":"),
+		config.Join(Name, "purge"): strings.Join([]string{
+			"*.log",
+			"*.txt",
+			"*.snooze",
+			"*.user_assignment",
+		}, ":"),
+	},
+	PortRange: config.Join(Name, "ports"),
+	CleanList: config.Join(Name, "clean"),
+	PurgeList: config.Join(Name, "purge"),
+	ConfigAliases: map[string]string{
+		config.Join(Name, "ports"): Name + "portrange",
+		config.Join(Name, "clean"): Name + "cleanlist",
+		config.Join(Name, "purge"): Name + "purgelist",
+	},
+
 	LegacyParameters: map[string]string{
 		"binsuffix": "binary",
 		"fa2home":   "home",
@@ -66,11 +88,7 @@ var FA2 = geneos.Component{
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 		`autostart=true`,
 	},
-	GlobalSettings: map[string]string{
-		"FA2PortRange": "7030,7100-",
-		"FA2CleanList": "*.old",
-		"FA2PurgeList": "fa2.log:fa2.txt:*.snooze:*.user_assignment",
-	},
+
 	Directories: []string{
 		"packages/fa2",
 		"netprobe/fa2s",
@@ -163,7 +181,7 @@ func (n *FA2s) Config() *config.Config {
 
 func (n *FA2s) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
-		port = instance.NextPort(n.InstanceHost, &FA2)
+		port = instance.NextFreePort(n.InstanceHost, &FA2)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)

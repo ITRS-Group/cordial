@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,15 +33,33 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+const Name = "ac2"
+
 var AC2 = geneos.Component{
-	Name:             "ac2",
-	Aliases:          []string{"active-console", "activeconsole", "desktop-activeconsole"},
-	LegacyPrefix:     "",
-	DownloadBase:     geneos.DownloadBases{Resources: "Active+Console", Nexus: "geneos-desktop-activeconsole"},
-	DownloadInfix:    "desktop-activeconsole",
-	PortRange:        "AC2PortRange",
-	CleanList:        "AC2CleanList",
-	PurgeList:        "AC2PurgeList",
+	Name:          Name,
+	Aliases:       []string{"active-console", "activeconsole", "desktop-activeconsole"},
+	LegacyPrefix:  "",
+	DownloadBase:  geneos.DownloadBases{Resources: "Active+Console", Nexus: "geneos-desktop-activeconsole"},
+	DownloadInfix: "desktop-activeconsole",
+
+	GlobalSettings: map[string]string{
+		config.Join(Name, "ports"): "7040-",
+		config.Join(Name, "clean"): strings.Join([]string{
+			"*.old",
+		}, ":"),
+		config.Join(Name, "purge"): strings.Join([]string{
+			"*.log",
+		}, ":"),
+	},
+	PortRange: config.Join(Name, "ports"),
+	CleanList: config.Join(Name, "clean"),
+	PurgeList: config.Join(Name, "purge"),
+	ConfigAliases: map[string]string{
+		config.Join(Name, "ports"): Name + "portrange",
+		config.Join(Name, "clean"): Name + "cleanlist",
+		config.Join(Name, "purge"): Name + "purgelist",
+	},
+
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
 		`binary=ActiveConsole`,
@@ -53,11 +72,6 @@ var AC2 = geneos.Component{
 		`config={{join .home "ActiveConsol.gci"}}`,
 		`options="-wsp {{.home}}"`,
 		`autostart=false`,
-	},
-	GlobalSettings: map[string]string{
-		"AC2PortRange": "7040-",
-		"AC2CleanList": "*.old",
-		"AC2PurgeList": "*.log",
 	},
 	Directories: []string{
 		"packages/ac2",
@@ -166,7 +180,7 @@ func (n *AC2s) Config() *config.Config {
 // Add created a new instance of AC2
 func (n *AC2s) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
-		port = instance.NextPort(n.Host(), &AC2)
+		port = instance.NextFreePort(n.Host(), &AC2)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)

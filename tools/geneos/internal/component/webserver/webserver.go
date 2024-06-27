@@ -35,15 +35,35 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+const Name = "webserver"
+
 var Webserver = geneos.Component{
 	Name:          "webserver",
 	Aliases:       []string{"web-server", "webservers", "webdashboard", "dashboards"},
 	LegacyPrefix:  "webs",
 	DownloadBase:  geneos.DownloadBases{Resources: "Web+Dashboard", Nexus: "geneos-web-server"},
 	DownloadInfix: "web-server",
-	PortRange:     "WebserverPortRange",
-	CleanList:     "WebserverCleanList",
-	PurgeList:     "WebserverPurgeList",
+
+	GlobalSettings: map[string]string{
+		config.Join(Name, "ports"): "8080,8100-",
+		config.Join(Name, "clean"): strings.Join([]string{
+			"*.old",
+		}, ":"),
+		config.Join(Name, "purge"): strings.Join([]string{
+			"*.log",
+			"*.txt",
+			"logs/*.log",
+		}, ":"),
+	},
+	PortRange: config.Join(Name, "ports"),
+	CleanList: config.Join(Name, "clean"),
+	PurgeList: config.Join(Name, "purge"),
+	ConfigAliases: map[string]string{
+		config.Join(Name, "ports"): Name + "portrange",
+		config.Join(Name, "clean"): Name + "cleanlist",
+		config.Join(Name, "purge"): Name + "purgelist",
+	},
+
 	LegacyParameters: map[string]string{
 		"binsuffix": "binary",
 		"webshome":  "home",
@@ -75,11 +95,7 @@ var Webserver = geneos.Component{
 		// customised cacerts - can be to a shared one if required
 		`truststore={{join .home "cacerts"}}`,
 	},
-	GlobalSettings: map[string]string{
-		"WebserverPortRange": "8080,8100-",
-		"WebserverCleanList": "*.old",
-		"WebserverPurgeList": "logs/*.log:webserver.txt",
-	},
+
 	Directories: []string{
 		"packages/webserver",
 		"webserver/webservers",
@@ -194,7 +210,7 @@ func (w *Webservers) Config() *config.Config {
 
 func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
-		port = instance.NextPort(w.InstanceHost, &Webserver)
+		port = instance.NextFreePort(w.InstanceHost, &Webserver)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)

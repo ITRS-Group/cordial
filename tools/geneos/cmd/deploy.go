@@ -184,7 +184,7 @@ var deployCmd = &cobra.Command{
 				// create base install
 				deployCmdGeneosHome, _ = h.Abs(deployCmdGeneosHome)
 				config.Set(execname, deployCmdGeneosHome)
-				if err = config.Save(execname); err != nil {
+				if err = geneos.SaveConfig(execname); err != nil {
 					return err
 				}
 

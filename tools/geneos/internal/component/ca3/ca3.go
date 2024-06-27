@@ -34,16 +34,34 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+const Name = "ca3"
+
 var CA3 = geneos.Component{
-	Name:             "ca3",
-	Aliases:          []string{"collection-agent", "ca3s", "collector"},
-	LegacyPrefix:     "",
-	ParentType:       &netprobe.Netprobe,
-	PackageTypes:     []*geneos.Component{&netprobe.Netprobe},
-	DownloadBase:     geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
-	PortRange:        "CA3PortRange",
-	CleanList:        "CA3CleanList",
-	PurgeList:        "CA3PurgeList",
+	Name:         Name,
+	Aliases:      []string{"collection-agent", "ca3s", "collector"},
+	LegacyPrefix: "",
+	ParentType:   &netprobe.Netprobe,
+	PackageTypes: []*geneos.Component{&netprobe.Netprobe},
+	DownloadBase: geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
+
+	GlobalSettings: map[string]string{
+		config.Join(Name, "ports"): "7137-",
+		config.Join(Name, "clean"): strings.Join([]string{
+			"*.old",
+		}, ":"),
+		config.Join(Name, "purge"): strings.Join([]string{
+			"*.log",
+		}, ":"),
+	},
+	PortRange: config.Join(Name, "ports"),
+	CleanList: config.Join(Name, "clean"),
+	PurgeList: config.Join(Name, "purge"),
+	ConfigAliases: map[string]string{
+		config.Join(Name, "ports"): Name + "portrange",
+		config.Join(Name, "clean"): Name + "cleanlist",
+		config.Join(Name, "purge"): Name + "purgelist",
+	},
+
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
 		`binary=java`, // needed for 'ps' matching
@@ -59,11 +77,7 @@ var CA3 = geneos.Component{
 		`maxheap=512M`,
 		`autostart=true`,
 	},
-	GlobalSettings: map[string]string{
-		"CA3PortRange": "7137-",
-		"CA3CleanList": "*.old",
-		"CA3PurgeList": "*.log",
-	},
+
 	Directories: []string{
 		"packages/ca3",
 		"netprobe/netprobes_shared",
@@ -170,7 +184,7 @@ func (n *CA3s) Config() *config.Config {
 
 func (n *CA3s) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
-		port = instance.NextPort(n.Host(), &CA3)
+		port = instance.NextFreePort(n.Host(), &CA3)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)

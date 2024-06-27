@@ -33,10 +33,6 @@ import (
 
 const defaultURL = "https://resources.itrsgroup.com/download/latest/"
 
-func init() {
-	config.GetConfig().SetDefault(config.Join("download", "url"), defaultURL)
-}
-
 // FilenameFromHTTPResp decodes and returns the filename from the
 // HTTP(S) request. It tried to extract the filename from the
 // COntent-Disposition header and if that fails returns the basename of

@@ -35,14 +35,10 @@ var configCmdDescription string
 
 // configCmd represents the config command
 var configCmd = &cobra.Command{
-	Use:     "config",
-	GroupID: cmd.CommandGroupSubsystems,
-	Short:   "Configure Command Behaviour",
-	Long:    configCmdDescription,
-	Example: `
-geneos config
-geneos config geneos=/opt/itrs
-`,
+	Use:          "config",
+	GroupID:      cmd.CommandGroupSubsystems,
+	Short:        "Configure Command Behaviour",
+	Long:         configCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		cmd.AnnotationWildcard:  "false",
@@ -50,16 +46,4 @@ geneos config geneos=/opt/itrs
 	},
 	DisableFlagParsing:    true,
 	DisableFlagsInUseLine: true,
-	// RunE: func(command *cobra.Command, args []string) (err error) {
-	// 	var doSet bool
-	// 	for _, a := range args {
-	// 		if strings.Contains(a, "=") {
-	// 			doSet = true
-	// 		}
-	// 	}
-	// 	if doSet {
-	// 		return cmd.RunE(command.Root(), []string{"config", "set"}, args)
-	// 	}
-	// 	return cmd.RunE(command.Root(), []string{"config", "show"}, args)
-	// },
 }

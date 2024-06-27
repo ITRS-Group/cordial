@@ -19,6 +19,7 @@ package fileagent
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,15 +30,34 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+const Name = "fa"
+
 var FileAgent = geneos.Component{
 	Name:          "fileagent",
 	Aliases:       []string{"fileagents", "file-agent"},
 	LegacyPrefix:  "fa",
 	DownloadBase:  geneos.DownloadBases{Resources: "Fix+Analyser+File+Agent", Nexus: "geneos-file-agent"},
 	DownloadInfix: "file-agent",
-	PortRange:     "FAPortRange",
-	CleanList:     "FACleanList",
-	PurgeList:     "FAPurgeList",
+
+	GlobalSettings: map[string]string{
+		config.Join(Name, "ports"): "7030,7100-",
+		config.Join(Name, "clean"): strings.Join([]string{
+			"*.old",
+		}, ":"),
+		config.Join(Name, "purge"): strings.Join([]string{
+			"*.log",
+			"*.txt",
+		}, ":"),
+	},
+	PortRange: config.Join(Name, "ports"),
+	CleanList: config.Join(Name, "clean"),
+	PurgeList: config.Join(Name, "purge"),
+	ConfigAliases: map[string]string{
+		config.Join(Name, "ports"): Name + "portrange",
+		config.Join(Name, "clean"): Name + "cleanlist",
+		config.Join(Name, "purge"): Name + "purgelist",
+	},
+
 	LegacyParameters: map[string]string{
 		"binsuffix":  "binary",
 		"fahome":     "home",
@@ -71,11 +91,7 @@ var FileAgent = geneos.Component{
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 		`autostart=true`,
 	},
-	GlobalSettings: map[string]string{
-		"FAPortRange": "7030,7100-",
-		"FACleanList": "*.old",
-		"FAPurgeList": "fileagent.log:fileagent.txt",
-	},
+
 	Directories: []string{
 		"packages/fileagent",
 		"fileagent/fileagents",
@@ -168,7 +184,7 @@ func (n *FileAgents) Config() *config.Config {
 
 func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
-		port = instance.NextPort(n.Host(), &FileAgent)
+		port = instance.NextFreePort(n.Host(), &FileAgent)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)

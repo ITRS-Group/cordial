@@ -50,7 +50,8 @@ var RootComponent = Component{
 		execname: "",
 
 		// Root URL for all downloads of software archives
-		config.Join("download", "url"): "https://resources.itrsgroup.com/download/latest/",
+		// hardwire delimiters because config may not be initialised for config.Join()
+		"download::url": defaultURL,
 
 		// Path List separated additions to the reserved names list, over and above
 		// any words matched by FindComponent()
@@ -131,6 +132,13 @@ type Component struct {
 	PortRange string
 	CleanList string
 	PurgeList string
+
+	// ConfigAliases maps new configuration parameters to the original
+	// names, e.g. "netprobe::ports" -> "netprobeportrange"
+	//
+	// We can use this to support older geneos.json config while
+	// migrating
+	ConfigAliases map[string]string
 
 	// Functions
 
@@ -232,7 +240,6 @@ func (ct *Component) MakeDirs(h *Host) (err error) {
 	geneos := h.GetString(execname) // root for host h
 	for _, d := range initDirs[name] {
 		dir := path.Join(geneos, d)
-		log.Debug().Msgf("%s: mkdirall %s", h, dir)
 		if err = h.MkdirAll(dir, 0775); err != nil {
 			return
 		}

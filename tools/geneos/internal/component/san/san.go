@@ -33,6 +33,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+const Name = "san"
+
 var San = geneos.Component{
 	Initialise:   Init,
 	Name:         "san",
@@ -43,9 +45,27 @@ var San = geneos.Component{
 	UsesKeyfiles: true,
 	Templates:    []geneos.Templates{{Filename: templateName, Content: template}},
 	DownloadBase: geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
-	PortRange:    "SanPortRange",
-	CleanList:    "SanCleanList",
-	PurgeList:    "SanPurgeList",
+	GlobalSettings: map[string]string{
+		config.Join(Name, "ports"): "7036,7100-",
+		config.Join(Name, "clean"): strings.Join([]string{
+			"*.old",
+		}, ":"),
+		config.Join(Name, "purge"): strings.Join([]string{
+			"*.log",
+			"*.txt",
+			"*.snooze",
+			"*.user_assignment",
+		}, ":"),
+	},
+	PortRange: config.Join(Name, "ports"),
+	CleanList: config.Join(Name, "clean"),
+	PurgeList: config.Join(Name, "purge"),
+	ConfigAliases: map[string]string{
+		config.Join(Name, "ports"): Name + "portrange",
+		config.Join(Name, "clean"): Name + "cleanlist",
+		config.Join(Name, "purge"): Name + "purgelist",
+	},
+
 	LegacyParameters: map[string]string{
 		"binsuffix": "binary",
 		"sanhome":   "home",
@@ -75,11 +95,7 @@ var San = geneos.Component{
 		`setup={{join "${config:home}" "netprobe.setup.xml"}}`,
 		`autostart=true`,
 	},
-	GlobalSettings: map[string]string{
-		"SanPortRange": "7036,7100-",
-		"SanCleanList": "*.old",
-		"SanPurgeList": "san.log:san.txt:*.snooze:*.user_assignment",
-	},
+
 	Directories: []string{
 		"packages/netprobe",
 		"netprobe/netprobes_shared",
@@ -196,7 +212,7 @@ func (s *Sans) Add(template string, port uint16) (err error) {
 	cf := s.Config()
 
 	if port == 0 {
-		port = instance.NextPort(s.InstanceHost, &San)
+		port = instance.NextFreePort(s.InstanceHost, &San)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)

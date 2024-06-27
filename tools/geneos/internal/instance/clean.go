@@ -39,8 +39,8 @@ import (
 func Clean(i geneos.Instance, full bool) (err error) {
 	var stopped bool
 
-	cleanlist := config.GetString(i.Type().CleanList)
-	purgelist := config.GetString(i.Type().PurgeList)
+	cleanlist := config.GetString(i.Type().CleanList, config.Default(i.Type().ConfigAliases[i.Type().CleanList]))
+	purgelist := config.GetString(i.Type().PurgeList, config.Default(i.Type().ConfigAliases[i.Type().PurgeList]))
 
 	if !full {
 		if cleanlist != "" {

@@ -19,6 +19,7 @@ package licd
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,14 +30,33 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+const Name = "licd"
+
 var Licd = geneos.Component{
 	Name:         "licd",
 	Aliases:      []string{"licds"},
 	LegacyPrefix: "licd",
 	DownloadBase: geneos.DownloadBases{Resources: "Licence+Daemon", Nexus: "geneos-licd"},
-	PortRange:    "LicdPortRange",
-	CleanList:    "LicdCleanList",
-	PurgeList:    "LicdPurgeList",
+
+	GlobalSettings: map[string]string{
+		config.Join(Name, "ports"): "7041,7100-",
+		config.Join(Name, "clean"): strings.Join([]string{
+			"*.old",
+		}, ":"),
+		config.Join(Name, "purge"): strings.Join([]string{
+			"*.log",
+			"*.txt",
+		}, ":"),
+	},
+	PortRange: config.Join(Name, "ports"),
+	CleanList: config.Join(Name, "clean"),
+	PurgeList: config.Join(Name, "purge"),
+	ConfigAliases: map[string]string{
+		config.Join(Name, "ports"): Name + "portrange",
+		config.Join(Name, "clean"): Name + "cleanlist",
+		config.Join(Name, "purge"): Name + "purgelist",
+	},
+
 	LegacyParameters: map[string]string{
 		"binsuffix": "binary",
 		"licdhome":  "home",
@@ -63,11 +83,7 @@ var Licd = geneos.Component{
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}`,
 		`autostart=true`,
 	},
-	GlobalSettings: map[string]string{
-		"LicdPortRange": "7041,7100-",
-		"LicdCleanList": "*.old",
-		"LicdPurgeList": "licd.log:licd.txt",
-	},
+
 	Directories: []string{
 		"packages/licd",
 		"licd/licds",
@@ -160,7 +176,7 @@ func (l *Licds) Config() *config.Config {
 
 func (l *Licds) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
-		port = instance.NextPort(l.InstanceHost, &Licd)
+		port = instance.NextFreePort(l.InstanceHost, &Licd)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)

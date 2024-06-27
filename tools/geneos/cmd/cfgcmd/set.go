@@ -24,6 +24,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 func init() {
@@ -66,6 +67,6 @@ geneos config set geneos="/opt/geneos"
 			cf.Set("itrshome", nil)
 		}
 
-		return cf.Save(cmd.Execname)
+		return geneos.SaveConfig(cmd.Execname)
 	},
 }
