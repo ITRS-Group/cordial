@@ -565,21 +565,29 @@ var itemRE = regexp.MustCompile(`^(\w+)([+=]=?)(.*)`)
 // them to the config object. Any item without an `=` is skipped.
 //
 // If the separator is either `+=` or `+` then the given value is
-// appended to any existing setting with a space.
+// appended to any existing setting. If the value is starts with a dash
+// then it is considered a command line option and is appended with a
+// space separator, otherwise it is simply concatenated.
 func (c *Config) SetKeyValues(items ...string) {
 	for _, item := range items {
 		fields := itemRE.FindStringSubmatch(item)
 		if len(fields) != 4 {
 			continue
 		}
+
 		switch fields[2] {
 		case "=":
 			c.Set(fields[1], fields[3])
 		case "+=", "+":
-			if c.IsSet(fields[1]) {
+			if !c.IsSet(fields[1]) {
+				c.Set(fields[1], fields[3])
+				continue
+			}
+
+			if strings.HasPrefix(fields[3], "-") {
 				c.Set(fields[1], c.GetString(fields[1])+" "+fields[3])
 			} else {
-				c.Set(fields[1], fields[3])
+				c.Set(fields[1], c.GetString(fields[1])+fields[3])
 			}
 		default:
 			continue

@@ -1,8 +1,12 @@
+# `geneos set`
+
 Set one or more configuration parameters for matching instances.
 
 Set will also update existing parameters, including setting them to empty values. To remove a parameter use the `geneos unset` command instead.
 
-The command supports simple parameters given as `KEY=VALUE` pairs on the command line as well as options for structured or repeatable keys. Each simple parameter uses a case-insensitive `KEY`, unlike the options below. You can also use `+=` or `+` to append values to an exist parameter (or create a parameter if it does not exist), e.g. `options+="-extra option"`.
+The command supports simple parameters given as `KEY=VALUE` pairs on the command line as well as options for structured or repeatable keys. Each simple parameter uses a case-insensitive `KEY`, unlike the options below.
+
+You can also use `+=` or `+` to append values to an exist parameter (or create a parameter if it does not exist), e.g. `options+="-extra option"`. If the value starts with a dash it is assumed to be a new command line parameter and is appended with a space, otherwise it is appended as-is and you are responsible for ensuring the resulting parameter is correctly formatted, e.g. paths having ":" separators.
 
 Parameters can be encoded so that secrets do not appear in plain text in configuration files. Use the `--secure`/`-s` option with a parameter name and optional plaintext value. If no value is given then you will be prompted to enter the secret.
 
@@ -22,6 +26,6 @@ Attributes are set using `--attribute`/`-a` with a value in the form `NAME=VALUE
 
 Types are set using `--type`/`-t` and are just the NAME of the type. To remove a type use `geneos unset`.
 
-Variables are set using `--variable`/`-v` and have the format [TYPE]:NAME=VALUE, where TYPE in this case is the type of content the variable stores. The supported variable TYPEs are: (`string`, `integer`, `double`, `boolean`, `activeTime`, `externalConfigFile`). These TYPE names are case sensitive and so, for example, `String` is not a valid variable TYPE. Other TYPEs may be supported in the future. Variable NAMEs must be unique and setting a variable with the name of an existing one will overwrite not just the VALUE but also the TYPE.
+Geneos User Variables are set using `--variable`/`-v` and have the format `[TYPE]:NAME=VALUE`, where `TYPE` in this case is the type of content the variable stores. The supported variable `TYPEs` are: (`string`, `integer`, `double`, `boolean`, `activeTime`, `externalConfigFile`). These `TYPE` names are case sensitive and so, for example, `String` is not a valid variable `TYPE`. Other TYPEs may be supported in the future. Variable `NAMEs` must be unique and setting a variable with the name of an existing one will overwrite not just the VALUE but also the `TYPE`.
 
 Future releases may add other special options and also may offer a simpler way of configuring SANs and Floating Netprobes to connect to Gateway also managed by the same `geneos` program.
