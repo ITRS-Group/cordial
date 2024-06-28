@@ -10,7 +10,6 @@ ARG GOVERSION=1.22.4
 # GOOS=darwin GOARCH=arm64 go build -o geneos.${GOOS}-${GOARCH} -tags netgo,osusergo --ldflags '-s -w'
 # 
 FROM golang:${GOVERSION}-bullseye AS build
-LABEL stage=cordial-build
 # base files
 COPY go.mod go.sum cordial.go logging.go VERSION README.md CHANGELOG.md /app/cordial/
 COPY pkg /app/cordial/pkg
@@ -123,7 +122,6 @@ RUN set -eux; \
 # Makefile
 #
 FROM alpine AS cordial-build
-LABEL stage=cordial-build
 
 COPY --from=build /app/cordial/VERSION /
 COPY --from=build /app/cordial/CHANGELOG.md /cordial/docs/
@@ -170,10 +168,11 @@ CMD [ "bash" ]
 
 # create a runnable test image using basic debian
 FROM debian AS cordial-run-debian
-COPY --from=cordial-build /cordial/bin/geneos /bin/
-COPY --from=cordial-build /cordial/bin/gateway-reporter /bin/
-COPY --from=cordial-build /cordial/bin/dv2email /bin/
-COPY --from=cordial-build /cordial/lib/libemail.so /lib/
+COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
+COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /cordial/bin/
+COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
+COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/lib/
+COPY --from=build /app/cordial/gdna/gdna /cordial/bin/
 RUN --mount=type=cache,target=/var/cache/apt \
     set -eux; \
     apt update; \
@@ -188,11 +187,11 @@ CMD [ "bash" ]
 
 # build a UBI8 for testing
 FROM redhat/ubi8 AS cordial-run-ubi8
-COPY --from=cordial-build /cordial/bin/geneos /bin/
-COPY --from=cordial-build /cordial/bin/gdna /bin/
-COPY --from=cordial-build /cordial/bin/gateway-reporter /bin/
-COPY --from=cordial-build /cordial/bin/dv2email /bin/
-COPY --from=cordial-build /cordial/lib/libemail.so /lib/
+COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
+COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /cordial/bin/
+COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
+COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/lib/
+COPY --from=build /app/cordial/gdna/gdna /cordial/bin/
 RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
@@ -200,11 +199,11 @@ CMD [ "bash" ]
 
 # build a UBI9
 FROM redhat/ubi9 AS cordial-run-ubi9
-COPY --from=cordial-build /cordial/bin/geneos /bin/
-COPY --from=cordial-build /cordial/bin/gdna /bin/
-COPY --from=cordial-build /cordial/bin/gateway-reporter /bin/
-COPY --from=cordial-build /cordial/bin/dv2email /bin/
-COPY --from=cordial-build /cordial/lib/libemail.so /lib/
+COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
+COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /cordial/bin/
+COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
+COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/lib/
+COPY --from=build /app/cordial/gdna/gdna /cordial/bin/
 RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
@@ -212,10 +211,11 @@ CMD [ "bash" ]
 
 # build a centos7 image for testing
 FROM centos:7 AS cordial-run-centos7
-COPY --from=cordial-build /cordial/bin/geneos /bin/
-COPY --from=cordial-build /cordial/bin/gateway-reporter /bin/
-COPY --from=cordial-build /cordial/bin/dv2email /bin/
-COPY --from=cordial-build /cordial/lib/libemail.so /lib/
+COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
+COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /cordial/bin/
+COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
+COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/lib/
+COPY --from=build /app/cordial/gdna/gdna /cordial/bin/
 RUN --mount=type=cache,target=/var/rpm \
     set -eux; \
     yum update -y; \
