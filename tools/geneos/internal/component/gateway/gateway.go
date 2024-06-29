@@ -45,7 +45,7 @@ var Gateway = geneos.Component{
 		{Filename: templateName, Content: template},
 		{Filename: instanceTemplateName, Content: instanceTemplate},
 	},
-	DownloadBase: geneos.DownloadBases{Resources: "Gateway+2", Nexus: "geneos-gateway"},
+	DownloadBase: geneos.DownloadBases{Default: "Gateway+2", Nexus: "geneos-gateway"},
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "7039,7100-",

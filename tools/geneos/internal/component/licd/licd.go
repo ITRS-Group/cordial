@@ -36,7 +36,7 @@ var Licd = geneos.Component{
 	Name:         "licd",
 	Aliases:      []string{"licds"},
 	LegacyPrefix: "licd",
-	DownloadBase: geneos.DownloadBases{Resources: "Licence+Daemon", Nexus: "geneos-licd"},
+	DownloadBase: geneos.DownloadBases{Default: "Licence+Daemon", Nexus: "geneos-licd"},
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "7041,7100-",

@@ -22,7 +22,19 @@ These should be moved into github issues, but not yet
 
 ## `geneos` tool
 
-(unordered)
+* target next release
+
+- [X] Support for new minimal netprobe distro
+
+    This needs reworking of PackageTypes and DownloadBase in the Component struct and the package code with it
+
+- [X] Revisit the `geneos.json` config, break the config elements up into a hierarchy, so that things like port ranges, clean/purge patterns etc. can be set/unset based on component types
+
+    Ensure that support for original format/names is complete. Do not assume that users will update all versions of `geneos` at the same time. Consider a manual migration process for a few releases?
+
+- [ ] Config Export/Import
+
+* the rest
 
 - [ ] Windows build, in stages:
     - [X] Initially for remote management (ssh etc)

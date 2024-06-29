@@ -28,6 +28,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
+	"github.com/itrs-group/cordial/tools/geneos/internal/component/minimal"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -40,11 +41,14 @@ var San = geneos.Component{
 	Name:         "san",
 	Aliases:      []string{"sans"},
 	LegacyPrefix: "san",
+
 	ParentType:   &netprobe.Netprobe,
-	PackageTypes: []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
+	PackageTypes: []*geneos.Component{&netprobe.Netprobe, &minimal.Minimal, &fa2.FA2},
+	DownloadBase: geneos.DownloadBases{Default: "Netprobe", Nexus: "geneos-netprobe"},
+
 	UsesKeyfiles: true,
 	Templates:    []geneos.Templates{{Filename: templateName, Content: template}},
-	DownloadBase: geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
+
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "7036,7100-",
 		config.Join(Name, "clean"): strings.Join([]string{

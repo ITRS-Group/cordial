@@ -37,12 +37,15 @@ import (
 
 const Name = "webserver"
 
+var prefix = ""
+
 var Webserver = geneos.Component{
-	Name:          "webserver",
-	Aliases:       []string{"web-server", "webservers", "webdashboard", "dashboards"},
-	LegacyPrefix:  "webs",
-	DownloadBase:  geneos.DownloadBases{Resources: "Web+Dashboard", Nexus: "geneos-web-server"},
-	DownloadInfix: "web-server",
+	Name:               "webserver",
+	Aliases:            []string{"web-server", "webservers", "webdashboard", "dashboards"},
+	LegacyPrefix:       "webs",
+	DownloadBase:       geneos.DownloadBases{Default: "Web+Dashboard", Nexus: "geneos-web-server"},
+	DownloadInfix:      "web-server",
+	StripArchivePrefix: &prefix,
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "8080,8100-",

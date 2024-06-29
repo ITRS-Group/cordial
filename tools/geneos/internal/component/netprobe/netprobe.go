@@ -37,7 +37,7 @@ var Netprobe = geneos.Component{
 	Aliases:      []string{"probe", "netprobes", "probes"},
 	LegacyPrefix: "netp",
 	UsesKeyfiles: true,
-	DownloadBase: geneos.DownloadBases{Resources: "Netprobe+-+Standard", Nexus: "geneos-netprobe"},
+	DownloadBase: geneos.DownloadBases{Default: "Netprobe+-+Standard, Netprobe", Nexus: "geneos-netprobe-standard, geneos-netprobe"},
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "7036,7100-",

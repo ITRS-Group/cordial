@@ -42,7 +42,7 @@ var CA3 = geneos.Component{
 	LegacyPrefix: "",
 	ParentType:   &netprobe.Netprobe,
 	PackageTypes: []*geneos.Component{&netprobe.Netprobe},
-	DownloadBase: geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
+	DownloadBase: geneos.DownloadBases{Default: "Netprobe", Nexus: "geneos-netprobe"},
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "7137-",

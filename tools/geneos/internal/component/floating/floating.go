@@ -46,7 +46,7 @@ var Floating = geneos.Component{
 	Templates: []geneos.Templates{
 		{Filename: templateName, Content: template},
 	},
-	DownloadBase: geneos.DownloadBases{Resources: "Netprobe", Nexus: "geneos-netprobe"},
+	DownloadBase: geneos.DownloadBases{Default: "Netprobe", Nexus: "geneos-netprobe"},
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "7036,7100-",

@@ -35,6 +35,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/hashicorp/go-version"
 	"github.com/rs/zerolog/log"
@@ -227,7 +228,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 		return
 	}
 
-	var fnname func(string) string
+	// var fnname func(string) string
 
 	t, err := gzip.NewReader(archive)
 	if err != nil {
@@ -237,20 +238,12 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 	defer t.Close()
 	t.Multistream(false)
 
-	switch ct.Name {
-	case "webserver":
-		fnname = func(name string) string { return name }
-	case "fa2":
+	fnname := func(name string) string {
+		return strings.TrimPrefix(name, ct.String()+"/")
+	}
+	if ct.StripArchivePrefix != nil {
 		fnname = func(name string) string {
-			return strings.TrimPrefix(name, "fix-analyser2/")
-		}
-	case "fileagent":
-		fnname = func(name string) string {
-			return strings.TrimPrefix(name, "agent/")
-		}
-	default:
-		fnname = func(name string) string {
-			return strings.TrimPrefix(name, ct.String()+"/")
+			return strings.TrimPrefix(name, *ct.StripArchivePrefix)
 		}
 	}
 
@@ -364,150 +357,21 @@ func openRemoteArchive(ct *Component, options ...PackageOptions) (filename strin
 
 	opts := evalOptions(options...)
 
-	// cannot fetch partial versions for el8 - restriction on download search interface
-	platform := ""
-	if opts.platformId != "" {
-		s := strings.Split(opts.platformId, ":")
-		if len(s) > 1 {
-			platform = s[1]
-		}
-	}
-
 	switch opts.downloadtype {
 	case "nexus":
-		baseurl := "https://nexus.itrsgroup.com/service/rest/v1/search/assets/download"
-		downloadURL, _ := url.Parse(baseurl)
-		v := url.Values{}
-
-		v.Set("maven.groupId", "com.itrsgroup.geneos")
-		v.Set("maven.extension", "tar.gz")
-		v.Set("sort", "version")
-
-		v.Set("repository", opts.downloadbase)
-		v.Set("maven.artifactId", ct.DownloadBase.Nexus)
-		v.Set("maven.classifier", "linux-x64")
-		if platform != "" {
-			v.Set("maven.classifier", platform+"-linux-x64")
-		}
-
-		if opts.version != "latest" {
-			v.Set("maven.baseVersion", opts.version)
-		}
-
-		downloadURL.RawQuery = v.Encode()
-		source = downloadURL.String()
-
-		log.Debug().Msgf("nexus url: %s", source)
-
-		// check for fallback creds
-		if opts.username == "" {
-			creds := config.FindCreds(source, config.SetAppName(execname))
-			if creds != nil {
-				opts.username = creds.GetString("username")
-				opts.password = creds.GetPassword("password")
-			}
-		}
-
-		if opts.username != "" {
-			var req *http.Request
-			client := &http.Client{}
-			if req, err = http.NewRequest("GET", source, nil); err != nil {
-				return
-			}
-			req.SetBasicAuth(opts.username, opts.password.String())
-			if resp, err = client.Do(req); err != nil {
-				return
-			}
-		} else {
-			if resp, err = http.Get(source); err != nil {
-				return
-			}
-		}
-
-	default:
-		baseurl := config.GetString(config.Join("download", "url"))
-		downloadURL, _ := url.Parse(baseurl)
-		realpath, _ := url.Parse(ct.DownloadBase.Resources)
-		v := url.Values{}
-
-		v.Set("os", "linux")
-		if opts.version != "latest" {
-			if platform != "" {
-				log.Error().Msgf("cannot download specific version for this platform (%q) - please download manually", platform)
-				err = ErrInvalidArgs
-				return
-			}
-			v.Set("title", opts.version)
-		} else if platform != "" {
-			v.Set("title", "-"+platform)
-		}
-
-		realpath.RawQuery = v.Encode()
-		source = downloadURL.ResolveReference(realpath).String()
-
-		log.Debug().Msgf("source url: %s", source)
-
-		if resp, err = http.Get(source); err != nil {
+		source, resp, err = openRemoteNexusArchive(ct, opts)
+		if err != nil {
 			return
 		}
 
-		if resp.StatusCode == 404 && platform != "" {
-			resp.Body.Close()
-			v.Del("title")
-			realpath.RawQuery = v.Encode()
-			source = downloadURL.ResolveReference(realpath).String()
-
-			log.Debug().Msgf("platform download failed, retry source url: %q", source)
-			if resp, err = http.Get(source); err != nil {
-				return
-			}
-		}
-
-		// check for fallback creds
-		if opts.username == "" {
-			creds := config.FindCreds(source, config.SetAppName(execname))
-			if creds != nil {
-				opts.username = creds.GetString("username")
-				opts.password = creds.GetPassword("password")
-			}
-		}
-
-		// only use auth if required - but save auth for potential reuse below
-		var authBody []byte
-		if resp.StatusCode == 401 || resp.StatusCode == 403 {
-			if opts.username != "" {
-				da := downloadauth{
-					Username: opts.username,
-					Password: opts.password.String(),
-				}
-				authBody, err = json.Marshal(da)
-				if err != nil {
-					return
-				}
-				// make a copy as bytes.NewBuffer() takes ownership
-				ba := bytes.Clone(authBody)
-				authReader := bytes.NewBuffer(ba)
-				if resp, err = http.Post(source, "application/json", authReader); err != nil {
-					return
-				}
-			}
-		}
-
-		if resp.StatusCode == 404 && platform != "" {
-			resp.Body.Close()
-			// try without platform type (e.g. no '-el8')
-			v.Del("title")
-			realpath.RawQuery = v.Encode()
-			source = downloadURL.ResolveReference(realpath).String()
-
-			log.Debug().Msgf("platform download failed, retry source url: %q", source)
-			authReader := bytes.NewBuffer(authBody)
-			if resp, err = http.Post(source, "application/json", authReader); err != nil {
-				return
-			}
+	default:
+		source, resp, err = openRemoteDefaultArchive(ct, opts)
+		if err != nil {
+			return
 		}
 	}
 
+	// process both nexus and resources status codes below
 	if resp.StatusCode > 299 {
 		resp.Body.Close()
 		switch resp.StatusCode {
@@ -526,6 +390,194 @@ func openRemoteArchive(ct *Component, options ...PackageOptions) (filename strin
 	}
 
 	log.Debug().Msgf("download check for %s versions %q returned %s (%d bytes)", ct, opts.version, filename, resp.ContentLength)
+	return
+}
+
+func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string, resp *http.Response, err error) {
+	// cannot fetch partial versions for el8 - restriction on download search interface
+	platform := ""
+	if opts.platformId != "" {
+		s := strings.Split(opts.platformId, ":")
+		if len(s) > 1 {
+			platform = s[1]
+		}
+	}
+
+	baseurl := config.GetString(config.Join("download", "url"))
+	downloadURL, _ := url.Parse(baseurl)
+	v := url.Values{}
+
+	v.Set("os", "linux")
+	if opts.version != "latest" {
+		if platform != "" {
+			log.Error().Msgf("cannot download specific version for this platform (%q) - please download manually", platform)
+			err = ErrInvalidArgs
+			return
+		}
+		v.Set("title", opts.version)
+	} else if platform != "" {
+		v.Set("title", "-"+platform)
+	}
+
+	basepaths := strings.FieldsFunc(ct.DownloadBase.Default, func(r rune) bool {
+		return unicode.IsSpace(r) || r == ','
+	})
+
+	for _, bp := range basepaths {
+		// first try plain unauthenticated GET
+		basepath, _ := url.Parse(bp)
+		basepath.RawQuery = v.Encode()
+		source = downloadURL.ResolveReference(basepath).String()
+
+		log.Debug().Msgf("source url: %s", source)
+
+		if resp, err = http.Get(source); err != nil {
+			log.Error().Err(err).Msg("source, trying next if configured")
+			continue
+		}
+
+		if resp.StatusCode < 300 {
+			return
+		}
+
+		if resp.StatusCode == 404 && platform != "" {
+			resp.Body.Close()
+			v.Del("title")
+			basepath.RawQuery = v.Encode()
+			source = downloadURL.ResolveReference(basepath).String()
+
+			log.Debug().Msgf("platform download failed, retry source url: %q", source)
+			if resp, err = http.Get(source); err != nil {
+				log.Error().Err(err).Msg("source, trying next if configured")
+				continue
+			}
+			if resp.StatusCode < 300 {
+				return
+			}
+		}
+
+		// if that fails, check for creds
+		if opts.username == "" {
+			creds := config.FindCreds(source, config.SetAppName(execname))
+			if creds != nil {
+				opts.username = creds.GetString("username")
+				opts.password = creds.GetPassword("password")
+			}
+		}
+
+		// only use auth if required - but save auth for potential reuse below
+		var authBody []byte
+		if resp.StatusCode == 401 || resp.StatusCode == 403 {
+			if opts.username != "" {
+				da := downloadauth{
+					Username: opts.username,
+					Password: opts.password.String(),
+				}
+				authBody, err = json.Marshal(da)
+				if err != nil {
+					log.Error().Err(err).Msg("source, trying next if configured")
+					continue
+				}
+				// make a copy as bytes.NewBuffer() takes ownership
+				ba := bytes.Clone(authBody)
+				authReader := bytes.NewBuffer(ba)
+				if resp, err = http.Post(source, "application/json", authReader); err != nil {
+					log.Error().Err(err).Msg("source, trying next if configured")
+					continue
+				}
+				if resp.StatusCode < 300 {
+					return
+				}
+			}
+		}
+
+		if resp.StatusCode == 404 && platform != "" {
+			resp.Body.Close()
+			// try without platform type (e.g. no '-el8')
+			v.Del("title")
+			basepath.RawQuery = v.Encode()
+			source = downloadURL.ResolveReference(basepath).String()
+
+			log.Debug().Msgf("platform download failed, retry source url: %q", source)
+			authReader := bytes.NewBuffer(authBody)
+			if resp, err = http.Post(source, "application/json", authReader); err != nil {
+				log.Error().Err(err).Msg("source, trying next if configured")
+				continue
+			}
+			if resp.StatusCode < 300 {
+				return
+			}
+		}
+		log.Debug().Msgf("%s not found, trying next if configured", source)
+	}
+	return
+}
+
+func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, resp *http.Response, err error) {
+	platform := ""
+	if opts.platformId != "" {
+		s := strings.Split(opts.platformId, ":")
+		if len(s) > 1 {
+			platform = s[1]
+		}
+	}
+
+	baseurl := "https://nexus.itrsgroup.com/service/rest/v1/search/assets/download"
+	downloadURL, _ := url.Parse(baseurl)
+
+	v := url.Values{}
+
+	v.Set("maven.groupId", "com.itrsgroup.geneos")
+	v.Set("maven.extension", "tar.gz")
+	v.Set("sort", "version")
+
+	v.Set("repository", opts.downloadbase)
+	v.Set("maven.classifier", "linux-x64")
+	if platform != "" {
+		v.Set("maven.classifier", platform+"-linux-x64")
+	}
+
+	if opts.version != "latest" {
+		v.Set("maven.baseVersion", opts.version)
+	}
+
+	// check for fallback creds
+	if opts.username == "" {
+		creds := config.FindCreds(baseurl, config.SetAppName(execname))
+		if creds != nil {
+			opts.username = creds.GetString("username")
+			opts.password = creds.GetPassword("password")
+		}
+	}
+
+	client := &http.Client{}
+	var req *http.Request
+
+	artifacts := strings.FieldsFunc(ct.DownloadBase.Nexus, func(r rune) bool {
+		return unicode.IsSpace(r) || r == ','
+	})
+
+	for _, artifactId := range artifacts {
+		v.Set("maven.artifactId", artifactId)
+		downloadURL.RawQuery = v.Encode()
+		source = downloadURL.String()
+		log.Debug().Msgf("nexus url: %s", source)
+		if req, err = http.NewRequest("GET", source, nil); err != nil {
+			return
+		}
+		if opts.username != "" {
+			log.Debug().Msgf("setting creds for %s", opts.username)
+			req.SetBasicAuth(opts.username, opts.password.String())
+		}
+		if resp, err = client.Do(req); err != nil {
+			log.Debug().Err(err).Msg("req failed")
+			return
+		}
+		log.Debug().Msg(resp.Status)
+		if resp.StatusCode < 300 {
+			return
+		}
+	}
 	return
 }
 

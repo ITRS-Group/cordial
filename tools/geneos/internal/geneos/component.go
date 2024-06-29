@@ -44,7 +44,7 @@ var RootComponent = Component{
 	Name:         RootComponentName,
 	PackageTypes: nil,
 	Aliases:      []string{"any"},
-	DownloadBase: DownloadBases{Resources: "", Nexus: ""},
+	DownloadBase: DownloadBases{Default: "", Nexus: ""},
 	GlobalSettings: map[string]string{
 		// Root directory for all operations
 		execname: "",
@@ -71,8 +71,8 @@ type componentsMap map[string]*Component
 // DownloadBases define the base names for the download archived for
 // standard and nexus downloads
 type DownloadBases struct {
-	Resources string
-	Nexus     string
+	Default string
+	Nexus   string
 }
 
 // Templates define the filename and embedded content for template files
@@ -108,6 +108,19 @@ type Component struct {
 	// that do not have PackageTypes set to avoid recursion.
 	PackageTypes []*Component
 
+	// DownloadBase lists, for each download source, the path to append
+	// to the download URL (without any query string)
+	DownloadBase DownloadBases
+
+	// DownloadInfix is the component name in the downloaded file and if
+	// set replace this string with component name for download matches,
+	// e.g. `geneos-["desktop-activeconsole"]-VERSION...` -> `ac2`
+	DownloadInfix string
+
+	// StripArchivePrefix, if not nil, is the strings removed from the
+	// path of each file in the release archive. This is a pointer so that an empty string can be used (i.e. for webservers)
+	StripArchivePrefix *string
+
 	// Defaults are name=value templates that are "run" for each new
 	// instance
 	//
@@ -123,9 +136,6 @@ type Component struct {
 	// Templates are any templates for the component. Each Template has
 	// a filename and default content
 	Templates []Templates
-
-	DownloadBase  DownloadBases
-	DownloadInfix string // if set replace this string with component name for download matches
 
 	GlobalSettings map[string]string
 

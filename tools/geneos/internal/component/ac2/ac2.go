@@ -36,10 +36,11 @@ import (
 const Name = "ac2"
 
 var AC2 = geneos.Component{
-	Name:          Name,
-	Aliases:       []string{"active-console", "activeconsole", "desktop-activeconsole"},
-	LegacyPrefix:  "",
-	DownloadBase:  geneos.DownloadBases{Resources: "Active+Console", Nexus: "geneos-desktop-activeconsole"},
+	Name:         Name,
+	Aliases:      []string{"active-console", "activeconsole", "desktop-activeconsole"},
+	LegacyPrefix: "",
+
+	DownloadBase:  geneos.DownloadBases{Default: "Active+Console", Nexus: "geneos-desktop-activeconsole"},
 	DownloadInfix: "desktop-activeconsole",
 
 	GlobalSettings: map[string]string{

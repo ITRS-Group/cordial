@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package fileagent
+package minimal
 
 import (
 	"fmt"
@@ -26,30 +26,35 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-const Name = "fa"
+const Name = "minimal"
 
-var prefix = "agent/"
+var prefix = "netprobe/"
 
-var FileAgent = geneos.Component{
-	Name:               "fileagent",
-	Aliases:            []string{"fileagents", "file-agent"},
-	LegacyPrefix:       "fa",
-	DownloadBase:       geneos.DownloadBases{Default: "Fix+Analyser+File+Agent", Nexus: "geneos-file-agent"},
-	DownloadInfix:      "file-agent",
+var Minimal = geneos.Component{
+	Name:         "minimal",
+	Aliases:      []string{"netprobe-mini", "netprobe-minimal", "mini-netprobe"},
+	LegacyPrefix: "mini",
+	ParentType:   &netprobe.Netprobe,
+
+	DownloadBase:       geneos.DownloadBases{Default: "Netprobe+-+Minimal", Nexus: "geneos-netprobe-minimal"},
+	DownloadInfix:      "netprobe",
 	StripArchivePrefix: &prefix,
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "7030,7100-",
+		config.Join(Name, "ports"): "7036,7100-",
 		config.Join(Name, "clean"): strings.Join([]string{
 			"*.old",
 		}, ":"),
 		config.Join(Name, "purge"): strings.Join([]string{
 			"*.log",
 			"*.txt",
+			"*.snooze",
+			"*.user_assignment",
 		}, ":"),
 	},
 	PortRange: config.Join(Name, "ports"),
@@ -62,132 +67,125 @@ var FileAgent = geneos.Component{
 	},
 
 	LegacyParameters: map[string]string{
-		"binsuffix":  "binary",
-		"fahome":     "home",
-		"fabins":     "install",
-		"fagentbins": "install",
-		"fabase":     "version",
-		"fagentbase": "version",
-		"faexec":     "program",
-		"falogd":     "logdir",
-		"fagentlogd": "logdir",
-		"falogf":     "logfile",
-		"fagentlogf": "logfile",
-		"faport":     "port",
-		"fagentport": "port",
-		"falibs":     "libpaths",
-		"fagentlibs": "libpaths",
-		"facert":     "certificate",
-		"fakey":      "privatekey",
-		"fauser":     "user",
-		"faopts":     "options",
-		"fagentopts": "options",
+		"binsuffix": "binary",
+		"minihome":  "home",
+		"minibins":  "install",
+		"minibase":  "version",
+		"miniexec":  "program",
+		"minilogd":  "logdir",
+		"minilogf":  "logfile",
+		"miniport":  "port",
+		"minilibs":  "libpaths",
+		"minicert":  "certificate",
+		"minikey":   "privatekey",
+		"miniuser":  "user",
+		"miniopts":  "options",
 	},
 	Defaults: []string{
-		`binary=agent.linux_64`,
-		`home={{join .root "fileagent" "fileagents" .name}}`,
-		`install={{join .root "packages" "fileagent"}}`,
+		`binary=netprobe.linux_64`,
+		`home={{join .root "netprobe" "netprobes" .name}}`,
+		`install={{join .root "packages" "minimal"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
-		`logfile=fileagent.log`,
+		`logfile=minimal.log`,
 		`port=7030`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 		`autostart=true`,
 	},
 
 	Directories: []string{
-		"packages/fileagent",
-		"fileagent/fileagents",
+		"packages/minimal",
+		"netprobe/netprobes",
 	},
 }
 
-type FileAgents instance.Instance
+type Minimals instance.Instance
 
-// ensure that FileAgents satisfies geneos.Instance interface
-var _ geneos.Instance = (*FileAgents)(nil)
+// ensure that minimals satisfies geneos.Instance interface
+var _ geneos.Instance = (*Minimals)(nil)
 
 func init() {
-	FileAgent.Register(factory)
+	Minimal.Register(factory)
 }
 
-var fileagents sync.Map
+var minimals sync.Map
 
 func factory(name string) geneos.Instance {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
-	f, ok := fileagents.Load(h.FullName(local))
+	f, ok := minimals.Load(h.FullName(local))
 	if ok {
-		fa, ok := f.(*FileAgents)
+		fa, ok := f.(*Minimals)
 		if ok {
 			return fa
 		}
 	}
-	fileagent := &FileAgents{}
-	fileagent.Conf = config.New()
-	fileagent.InstanceHost = h
-	fileagent.Component = &FileAgent
-	if err := instance.SetDefaults(fileagent, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", fileagent)
+	minimal := &Minimals{}
+	minimal.Conf = config.New()
+	minimal.InstanceHost = h
+	minimal.Component = &Minimal
+	if err := instance.SetDefaults(minimal, local); err != nil {
+		log.Fatal().Err(err).Msgf("%s setDefaults()", minimal)
 	}
 	// set the home dir based on where it might be, default to one above
-	fileagent.Config().Set("home", instance.Home(fileagent))
-	fileagents.Store(h.FullName(local), fileagent)
-	return fileagent
+	minimal.Config().Set("home", instance.Home(minimal))
+	minimals.Store(h.FullName(local), minimal)
+	return minimal
 }
 
 // interface method set
 
 // Return the Component for an Instance
-func (n *FileAgents) Type() *geneos.Component {
+func (n *Minimals) Type() *geneos.Component {
 	return n.Component
 }
 
-func (n *FileAgents) Name() string {
+func (n *Minimals) Name() string {
 	if n.Config() == nil {
 		return ""
 	}
 	return n.Config().GetString("name")
 }
 
-func (n *FileAgents) Home() string {
+func (n *Minimals) Home() string {
 	return instance.Home(n)
 }
 
-func (n *FileAgents) Host() *geneos.Host {
+func (n *Minimals) Host() *geneos.Host {
 	return n.InstanceHost
 }
 
-func (n *FileAgents) String() string {
+func (n *Minimals) String() string {
 	return instance.DisplayName(n)
 }
 
-func (n *FileAgents) Load() (err error) {
+func (n *Minimals) Load() (err error) {
 	return instance.LoadConfig(n)
 }
 
-func (n *FileAgents) Unload() (err error) {
-	fileagents.Delete(n.Name() + "@" + n.Host().String())
+func (n *Minimals) Unload() (err error) {
+	minimals.Delete(n.Name() + "@" + n.Host().String())
 	n.ConfigLoaded = time.Time{}
 	return
 }
 
-func (n *FileAgents) Loaded() time.Time {
+func (n *Minimals) Loaded() time.Time {
 	return n.ConfigLoaded
 }
 
-func (n *FileAgents) SetLoaded(t time.Time) {
+func (n *Minimals) SetLoaded(t time.Time) {
 	n.ConfigLoaded = t
 }
 
-func (n *FileAgents) Config() *config.Config {
+func (n *Minimals) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
+func (n *Minimals) Add(tmpl string, port uint16) (err error) {
 	if port == 0 {
-		port = instance.NextFreePort(n.Host(), &FileAgent)
+		port = instance.NextFreePort(n.InstanceHost, &Minimal)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -195,7 +193,7 @@ func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 	n.Config().Set("port", port)
 
 	if err = instance.SaveConfig(n); err != nil {
-		log.Fatal().Err(err).Msg("")
+		return
 	}
 
 	// create certs, report success only
@@ -208,28 +206,23 @@ func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 	return nil
 }
 
-func (c *FileAgents) Command() (args, env []string, home string) {
-	logFile := instance.LogFilePath(c)
+func (n *Minimals) Command() (args, env []string, home string) {
+	logFile := instance.LogFilePath(n)
 	args = []string{
-		c.Name(),
-		"-port", c.Config().GetString("port"),
+		n.Name(),
+		"-port", n.Config().GetString("port"),
 	}
-	_, version, err := instance.Version(c)
-	if err == nil {
-		switch {
-		case geneos.CompareVersion(version, "6.6.0") >= 0:
-			args = append(args, instance.SetSecureArgs(c)...)
-		}
-	}
+	args = append(args, instance.SetSecureArgs(n)...)
 	env = append(env, "LOG_FILENAME="+logFile)
-	home = c.Home()
+	home = n.Home()
+
 	return
 }
 
-func (c *FileAgents) Reload() (err error) {
+func (n *Minimals) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func (c *FileAgents) Rebuild(initial bool) error {
+func (n *Minimals) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }
