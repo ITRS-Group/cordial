@@ -89,7 +89,7 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 		if annotations[AnnotationComponent] == args[0] {
 			args = args[1:]
 		}
-		// now check first non component arg
+		// now check first non-component arg
 		if annotations[AnnotationWildcard] == "explicit" || annotations[AnnotationWildcard] == "explicit-none" {
 			if len(args) > 0 && args[0] == "all" {
 				annotations[AnnotationWildcard] = "true"
