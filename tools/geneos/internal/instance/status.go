@@ -143,7 +143,8 @@ func AtLeastVersion(i geneos.Instance, version string) bool {
 // not found then an err of os.ErrProcessDone is returned.
 //
 // The process is identified by checking the conventions used to start
-// Geneos processes.
+// Geneos processes. If a component type defines it's own GetPID()
+// customer check then that is used instead.
 func GetPID(i geneos.Instance) (pid int, err error) {
 	return process.GetPID(i.Host(), i.Config().GetString("binary"), i.Type().GetPID, i, i.Name())
 }

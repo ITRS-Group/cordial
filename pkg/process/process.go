@@ -26,6 +26,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -90,11 +91,10 @@ func Daemon(writepid io.WriteCloser, processArgs func([]string, ...string) []str
 }
 
 // RemoveArgs is a helper function for Daemon(). Daemon calls the
-// function with os.Args[1;] as in and removes any arguments
-// matching members of the slice remove and returns out. Only bare
-// arguments are removed and no pattern matching or adjacent values are
-// removed. If this is required then pass your own function with the
-// same signature.
+// function with os.Args[1;] and removes any arguments matching members
+// of the slice `remove` and returns the result. Only bare arguments are
+// removed and no pattern matching or adjacent values are removed. If
+// this is required then pass your own function with the same signature.
 func RemoveArgs(in []string, remove ...string) (out []string) {
 OUTER:
 	for _, a := range in {
@@ -112,6 +112,10 @@ OUTER:
 // all args (in any order) on host h. If not found then an err of
 // os.ErrProcessDone is returned.
 //
+// checkfn() is a custom function to validate the args against the each
+// process found and checkargs is passed to the function as a parameter.
+// If the function returns true then the process is a match.
+//
 // walk the /proc directory (local or remote) and find the matching pid.
 // This is subject to races, but not much we can do
 //
@@ -120,7 +124,7 @@ OUTER:
 //
 // TODO: cache /proc entries for a period, this is very likely to be
 // used over and over in the same proc
-func GetPID(h host.Host, binary string, checkfn func(string, interface{}, string, [][]byte) bool, checkarg interface{}, args ...string) (pid int, err error) {
+func GetPID(h host.Host, binaryPrefix string, customCheckFunc func(arg any, cmdline ...[]byte) bool, checkarg any, args ...string) (pid int, err error) {
 	if strings.Contains(h.ServerVersion(), "windows") {
 		return 0, os.ErrProcessDone
 	}
@@ -143,35 +147,38 @@ func GetPID(h host.Host, binary string, checkfn func(string, interface{}, string
 
 	var data []byte
 PIDS:
+	// `pid` is the return value, not a local var
 	for _, pid = range pids {
-		var ls string
-		ls, err = h.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
+		var exe string
+		exe, err = h.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
 		if err != nil {
 			continue
 		}
 		// remove deleted suffix if underlying binary is gone
-		ls = strings.TrimSuffix(ls, " (deleted)")
-		if path.Base(ls) != binary {
+		exe = strings.TrimSuffix(exe, " (deleted)")
+		if path.Base(exe) != binaryPrefix {
 			continue
 		}
 		if data, err = h.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid)); err != nil {
 			// process may disappear by this point, perms denied etc., ignore error
 			continue
 		}
-		procargs := bytes.Split(data, []byte("\000"))
-		execfile := path.Base(string(procargs[0]))
-		if checkfn != nil {
-			if checkfn(binary, checkarg, execfile, procargs) {
+		cmdline := bytes.Split(data, []byte("\000"))
+		if len(args) > len(cmdline)-1 {
+			// not enough arguments to test, so it can't match all args
+			continue
+		}
+		execfile := path.Base(string(cmdline[0]))
+		if customCheckFunc != nil {
+			if customCheckFunc(checkarg, cmdline...) {
 				return
 			}
 		} else {
-			if strings.HasPrefix(execfile, binary) {
-				argmap := make(map[string]bool)
-				for _, arg := range procargs[1:] {
-					argmap[string(arg)] = true
-				}
+			if strings.HasPrefix(execfile, binaryPrefix) {
 				for _, arg := range args {
-					if !argmap[arg] {
+					if !slices.ContainsFunc(cmdline[1:], func(a []byte) bool {
+						return bytes.Equal(a, []byte(arg))
+					}) {
 						continue PIDS
 					}
 				}

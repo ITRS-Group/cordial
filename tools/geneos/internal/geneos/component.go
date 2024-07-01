@@ -161,7 +161,7 @@ type Component struct {
 
 	// GetPID returns the process ID of an instance - if nil a standard
 	// function is used
-	GetPID func(string, interface{}, string, [][]byte) bool // if set, use this to get the PID of an instance
+	GetPID func(arg any, cmdline ...[]byte) bool // if set, use this to get the PID of an instance
 }
 
 // Instance interfaces contains the method set for an instance of a

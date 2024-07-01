@@ -396,16 +396,18 @@ func (w *Webservers) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func pidCheckFn(binary string, check interface{}, execfile string, args [][]byte) bool {
+func pidCheckFn(arg any, cmdline ...[]byte) bool {
 	var wdOK, jarOK bool
-	w, ok := check.(*Webservers)
+	w, ok := arg.(*Webservers)
 	if !ok {
 		return false
 	}
-	if execfile != "java" {
+
+	if path.Base(string(cmdline[0])) != "java" {
 		return false
 	}
-	for _, arg := range args[1:] {
+
+	for _, arg := range cmdline[1:] {
 		if string(arg) == "-Dworking.directory="+w.Home() {
 			wdOK = true
 		}

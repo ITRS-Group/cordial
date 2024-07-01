@@ -21,6 +21,7 @@ package ac2
 import (
 	"fmt"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 	"sync"
@@ -249,12 +250,12 @@ func (n *AC2s) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func pidCheckFn(binary string, check interface{}, execfile string, args [][]byte) bool {
-	c, ok := check.(*AC2s)
+func pidCheckFn(arg any, cmdline ...[]byte) bool {
+	c, ok := arg.(*AC2s)
 	if !ok {
 		return false
 	}
-	if execfile == c.Config().GetString("program") {
+	if path.Base(string(cmdline[0])) == c.Config().GetString("program") {
 		return true
 	}
 	return false
