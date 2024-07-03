@@ -7,7 +7,6 @@ export DOCKER_BUILDKIT = 1
 all: release
 
 test-images:
-	docker build --tag cordial/centos7 --tag cordial/centos8:$(VERSION) --target cordial-run-centos7 .
 	docker build --tag cordial/ubi8 --tag cordial/ubi8:$(VERSION) --target cordial-run-ubi8 .
 	docker build --tag cordial/ubi9 --tag cordial/ubi9:$(VERSION) --target cordial-run-ubi9 .
 

@@ -168,11 +168,11 @@ CMD [ "bash" ]
 
 # create a runnable test image using basic debian
 FROM debian AS cordial-run-debian
-COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
-COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /cordial/bin/
-COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
-COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/lib/
-COPY --from=build /app/cordial/gdna/gdna /cordial/bin/
+COPY --from=build /app/cordial/tools/geneos/geneos /bin/
+COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
+COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
+COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
+COPY --from=build /app/cordial/gdna/gdna /bin/
 RUN --mount=type=cache,target=/var/cache/apt \
     set -eux; \
     apt update; \
@@ -187,11 +187,11 @@ CMD [ "bash" ]
 
 # build a UBI8 for testing
 FROM redhat/ubi8 AS cordial-run-ubi8
-COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
-COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /cordial/bin/
-COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
-COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/lib/
-COPY --from=build /app/cordial/gdna/gdna /cordial/bin/
+COPY --from=build /app/cordial/tools/geneos/geneos /bin/
+COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
+COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
+COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
+COPY --from=build /app/cordial/gdna/gdna /bin/
 RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
@@ -199,33 +199,34 @@ CMD [ "bash" ]
 
 # build a UBI9
 FROM redhat/ubi9 AS cordial-run-ubi9
-COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
-COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /cordial/bin/
-COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
-COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/lib/
-COPY --from=build /app/cordial/gdna/gdna /cordial/bin/
+COPY --from=build /app/cordial/tools/geneos/geneos /bin/
+COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
+COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
+COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
+COPY --from=build /app/cordial/gdna/gdna /bin/
 RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
 CMD [ "bash" ]
 
 # build a centos7 image for testing
-FROM centos:7 AS cordial-run-centos7
-COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
-COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /cordial/bin/
-COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
-COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/lib/
-COPY --from=build /app/cordial/gdna/gdna /cordial/bin/
-RUN --mount=type=cache,target=/var/rpm \
-    set -eux; \
-    yum update -y; \
-    yum install -y \
-        fontconfig \
-        ca-certificates; \
-    useradd -ms /bin/bash geneos
-WORKDIR /home/geneos
-USER geneos
-CMD [ "bash" ]
+# Centos 7 went EOL 30/6/2024
+# FROM centos:7 AS cordial-run-centos7
+# COPY --from=build /app/cordial/tools/geneos/geneos /bin/
+# COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
+# COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
+# COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
+# COPY --from=build /app/cordial/gdna/gdna /bin/
+# RUN --mount=type=cache,target=/var/rpm \
+#     set -eux; \
+#     yum update -y; \
+#     yum install -y \
+#         fontconfig \
+#         ca-certificates; \
+#     useradd -ms /bin/bash geneos
+# WORKDIR /home/geneos
+# USER geneos
+# CMD [ "bash" ]
 
 # create a runnable gdna test image using basic debian
 FROM debian:stable AS gdna
