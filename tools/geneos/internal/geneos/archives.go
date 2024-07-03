@@ -188,6 +188,9 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 	if opts.override == "" {
 		var ctFromFile *Component
 		ctFromFile, version, err = filenameToComponent(filename)
+		if err != nil {
+			return
+		}
 		// check the component in the filename
 		// special handling for SANs
 		switch ct.Name {
@@ -655,7 +658,7 @@ func LatestLocalArchive(h *Host, dir, versionFilter string, filterFunc func(os.D
 }
 
 // split an package archive name into type and version
-var archiveRE = regexp.MustCompile(`^geneos-(\w+-\w+|\w+)-([\w\.-]+?)[\.-]?linux`)
+var archiveRE = regexp.MustCompile(`^geneos-(?<component>[\w-]+)-(?<version>[\d\.]+)[\.-]?linux`)
 
 // filenameToComponent transforms an archive filename and returns the
 // component and version or an error if the file format is not

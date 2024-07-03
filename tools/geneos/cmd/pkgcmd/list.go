@@ -60,7 +60,6 @@ var listCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		ct, _ := cmd.ParseTypeNames(command)
-
 		h := geneos.GetHost(cmd.Hostname)
 		versions := []geneos.ReleaseDetails{}
 

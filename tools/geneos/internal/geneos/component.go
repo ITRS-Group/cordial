@@ -348,8 +348,15 @@ func UsesKeyFiles() (cts []*Component) {
 // matches. The comparison is case-insensitive. nil is returned if the
 // component does not match any known name.
 func ParseComponent(component string) *Component {
+	if component == "" {
+		return nil
+	}
 	for _, ct := range registeredComponents {
-		for _, m := range append([]string{ct.Name}, ct.Aliases...) {
+		names := []string{ct.Name}
+		if ct.DownloadInfix != "" {
+			names = append(names, ct.DownloadInfix)
+		}
+		for _, m := range append(names, ct.Aliases...) {
 			if strings.EqualFold(m, component) {
 				return ct
 			}

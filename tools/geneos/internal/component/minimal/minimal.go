@@ -42,7 +42,7 @@ var Minimal = geneos.Component{
 	ParentType:   &netprobe.Netprobe,
 
 	DownloadBase:       geneos.DownloadBases{Default: "Netprobe+-+Minimal", Nexus: "geneos-netprobe-minimal"},
-	DownloadInfix:      "netprobe",
+	DownloadInfix:      "netprobe-minimal",
 	StripArchivePrefix: &prefix,
 
 	GlobalSettings: map[string]string{

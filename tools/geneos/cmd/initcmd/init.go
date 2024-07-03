@@ -38,9 +38,8 @@ import (
 
 const archiveOptionsText = "Directory of releases for installation"
 
-var initCmdAll string
-var initCmdLogs, initCmdTLS, initCmdDemo, initCmdForce, initCmdSAN, initCmdTemplates, initCmdNexus, initCmdSnapshot bool
-var initCmdName, initCmdSigningBundle, initCmdImportKey, initCmdGatewayTemplate, initCmdSANTemplate, initCmdFloatingTemplate, initCmdVersion string
+var initCmdLogs, initCmdTLS, initCmdForce, initCmdNexus, initCmdSnapshot bool
+var initCmdName, initCmdSigningBundle, initCmdImportKey, initCmdGatewayTemplate, initCmdVersion string
 var initCmdDLUsername, initCmdPwFile string
 var initCmdDLPassword *config.Plaintext
 
@@ -79,9 +78,7 @@ func init() {
 	initCmd.PersistentFlags().StringVarP(&initCmdPwFile, "pwfile", "P", "", "")
 	initCmd.PersistentFlags().MarkHidden("pwfile")
 
-	initCmd.PersistentFlags().StringVarP(&initCmdGatewayTemplate, "gatewaytemplate", "w", "", "A gateway template file")
-	initCmd.PersistentFlags().StringVarP(&initCmdSANTemplate, "santemplate", "s", "", "SAN template file")
-	initCmd.PersistentFlags().StringVarP(&initCmdFloatingTemplate, "floatingtemplate", "f", "", "Floating probe template file")
+	initCmd.PersistentFlags().StringVarP(&initCmdGatewayTemplate, "gateway-template", "w", "", "A gateway template file")
 
 	initCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", instance.EnvsOptionsText)
 
@@ -96,6 +93,8 @@ func init() {
 			name = "import-cert"
 		case "importkey":
 			name = "import-key"
+		case "gatewaytemplate":
+			name = "gateway-template"
 		}
 		return pflag.NormalizedName(name)
 	})
@@ -136,10 +135,6 @@ geneos init
 			return err
 		}
 
-		if initCmdTemplates {
-			return initTemplates(geneos.LOCAL)
-		}
-
 		if err = geneos.Initialise(geneos.LOCAL, options...); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
@@ -147,18 +142,7 @@ geneos init
 		if err = initCommon(command); err != nil {
 			return
 		}
-
-		switch {
-		case initCmdDemo:
-			return initDemo(geneos.LOCAL, options...)
-		case initCmdSAN:
-			return initSan(geneos.LOCAL, options...)
-		case initCmdAll != "":
-			allCmdLicenseFile = initCmdAll
-			return initAll(geneos.LOCAL, options...)
-		default:
-			return
-		}
+		return
 	},
 }
 

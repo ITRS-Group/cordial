@@ -37,7 +37,7 @@ var prefix = "fix-analyser2/"
 
 var FA2 = geneos.Component{
 	Name:               "fa2",
-	Aliases:            []string{"fixanalyser", "fixanalyzer", "fixanalyser2-netprobe"},
+	Aliases:            []string{"fixanalyser", "fixanalyzer"},
 	LegacyPrefix:       "fa2",
 	ParentType:         &netprobe.Netprobe,
 	DownloadBase:       geneos.DownloadBases{Default: "Fix+Analyser+2+Netprobe", Nexus: "geneos-fixanalyser2-netprobe"},

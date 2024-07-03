@@ -19,14 +19,11 @@ package initcmd
 
 import (
 	_ "embed"
-	"strings"
-	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
@@ -59,65 +56,5 @@ var floatingCmd = &cobra.Command{
 		cmd.AnnotationWildcard:  "false",
 		cmd.AnnotationNeedsHome: "false",
 	},
-	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmd.ParseTypeNamesParams(command)
-		log.Debug().Msgf("%s %v %v", ct, args, params)
-		// none of the arguments can be a reserved type
-		if ct != nil {
-			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
-			return geneos.ErrInvalidArgs
-		}
-		options, err := initProcessArgs(args)
-		if err != nil {
-			return
-		}
-
-		if err = geneos.Initialise(geneos.LOCAL, options...); err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
-
-		if err = initCommon(command); err != nil {
-			return
-		}
-
-		// prefix with netprobe
-		if floatingCmdOverride != "" && !strings.Contains(floatingCmdOverride, ":") {
-			floatingCmdOverride = "netprobe:" + floatingCmdOverride
-		}
-
-		options = append(options,
-			geneos.LocalArchive(floatingCmdArchive),
-			geneos.Version(floatingCmdVersion),
-			geneos.OverrideVersion(floatingCmdOverride),
-		)
-		return initFloating(geneos.LOCAL, options...)
-	},
-}
-
-func initFloating(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
-	var floatingname string
-
-	e := []string{}
-
-	if initCmdName != "" {
-		floatingname = initCmdName
-	} else {
-		floatingname = h.Hostname()
-	}
-	if !h.IsLocal() {
-		floatingname = floatingname + "@" + geneos.LOCALHOST
-	}
-	if err = install("floating", geneos.LOCALHOST, options...); err != nil {
-		return
-	}
-
-	if err = cmd.AddInstance(geneos.ParseComponent("floating"), initCmdExtras, []string{}, floatingname); err != nil {
-		return
-	}
-	if err = cmd.Start(nil, initCmdLogs, true, e, e); err != nil {
-		return
-	}
-	time.Sleep(time.Second * 2)
-	cmd.CommandPS(nil, e, e)
-	return
+	Deprecated: "Please use the `" + cordial.ExecutableName() + " deploy floating` command instead",
 }

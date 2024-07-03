@@ -33,11 +33,12 @@ import (
 const Name = "netprobe"
 
 var Netprobe = geneos.Component{
-	Name:         Name,
-	Aliases:      []string{"probe", "netprobes", "probes"},
-	LegacyPrefix: "netp",
-	UsesKeyfiles: true,
-	DownloadBase: geneos.DownloadBases{Default: "Netprobe+-+Standard, Netprobe", Nexus: "geneos-netprobe-standard, geneos-netprobe"},
+	Name:          Name,
+	Aliases:       []string{"probe", "netprobes", "probes"},
+	LegacyPrefix:  "netp",
+	UsesKeyfiles:  true,
+	DownloadBase:  geneos.DownloadBases{Default: "Netprobe+-+Standard, Netprobe", Nexus: "geneos-netprobe-standard, geneos-netprobe"},
+	DownloadInfix: "netprobe-standard",
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "7036,7100-",

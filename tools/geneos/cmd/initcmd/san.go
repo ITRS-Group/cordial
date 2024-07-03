@@ -19,14 +19,11 @@ package initcmd
 
 import (
 	_ "embed"
-	"strings"
-	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
@@ -59,64 +56,5 @@ var sanCmd = &cobra.Command{
 		cmd.AnnotationWildcard:  "false",
 		cmd.AnnotationNeedsHome: "false",
 	},
-	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmd.ParseTypeNamesParams(command)
-		log.Debug().Msgf("%s %v %v", ct, args, params)
-		// none of the arguments can be a reserved type
-		if ct != nil {
-			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
-			return geneos.ErrInvalidArgs
-		}
-		options, err := initProcessArgs(args)
-		if err != nil {
-			return
-		}
-
-		if err = geneos.Initialise(geneos.LOCAL, options...); err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
-
-		if err = initCommon(command); err != nil {
-			return
-		}
-
-		// prefix with netprobe
-		if sanCmdOverride != "" && !strings.Contains(sanCmdOverride, ":") {
-			sanCmdOverride = "netprobe:" + sanCmdOverride
-		}
-
-		options = append(options,
-			geneos.LocalArchive(sanCmdArchive),
-			geneos.Version(sanCmdVersion),
-			geneos.OverrideVersion(sanCmdOverride),
-		)
-		return initSan(geneos.LOCAL, options...)
-	},
-}
-
-func initSan(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
-	var sanname string
-
-	e := []string{}
-
-	if initCmdName != "" {
-		sanname = initCmdName
-	} else {
-		sanname = h.Hostname()
-	}
-	if !h.IsLocal() {
-		sanname = sanname + "@" + geneos.LOCALHOST
-	}
-	if err = install("san", geneos.LOCALHOST, options...); err != nil {
-		return
-	}
-	if err = cmd.AddInstance(geneos.ParseComponent("san"), initCmdExtras, []string{}, sanname); err != nil {
-		return
-	}
-	if err = cmd.Start(nil, initCmdLogs, true, e, e); err != nil {
-		return
-	}
-	time.Sleep(time.Second * 2)
-	cmd.CommandPS(nil, e, e)
-	return
+	Deprecated: "Please use the `" + cordial.ExecutableName() + " deploy san` command instead",
 }
