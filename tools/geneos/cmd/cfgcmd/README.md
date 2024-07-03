@@ -1,3 +1,5 @@
+# `geneos config`
+
 The config sub-system allow you to control the environment of the `geneos` program itself.
 
 ## General Configuration
@@ -20,15 +22,14 @@ The base URL for downloads for automating installations. Not yet used. If files 
 
   These specify the username and password to use when downloading packages. They can also be set as the environment variables, but the environment variables are not subject to expansion and so cannot contain Geneos encoded passwords (see below):
 
-  * `ITRS_DOWNLOAD_USERNAME`
-  * `ITRS_DOWNLOAD_PASSWORD`
+    * `ITRS_DOWNLOAD_USERNAME`
+    * `ITRS_DOWNLOAD_PASSWORD`
 
 * `snapshot.username` `snapshot.password`
 
   Similarly to the above, these specify the username and password to use when taking dataview snapshots. They can also be set as the environment variables, with the same restrictions as above:
 
-  * `ITRS_SNAPSHOT_USERNAME`
-  * `ITRS_SNAPSHOT_PASSWORD`
+    * `ITRS_SNAPSHOT_USERNAME`
+    * `ITRS_SNAPSHOT_PASSWORD`
 
 * `GatewayPortRange` & `NetprobePortRange` & `LicdPortRange`
-
