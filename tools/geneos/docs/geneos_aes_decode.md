@@ -1,7 +1,5 @@
 # `geneos aes decode`
 
-# `geneos aes decode`
-
 Decode a Geneos AES256 format password using the key file(s) given.
 
 If an `expandable` string is given with the `--expandable`/`-e` option it must be of the form `${enc:...}` (be careful to single-quote this string when using a shell) and is then decoded using the key file(s) listed and the ciphertext in the value. All other flags and arguments are ignored.

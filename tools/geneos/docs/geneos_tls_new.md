@@ -1,7 +1,5 @@
 # `geneos tls new`
 
-# `geneos tls new`
-
 The `tls new` command creates new certificates for matching instances. It does not overwrite existing certificates, use `tls renew` to do that.
 
 To create new certificates there must be a valid signing certificate and private key. These can be created using the `tls init` command or you can import them using `tls import --signer`.

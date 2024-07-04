@@ -1,5 +1,3 @@
-# `geneos set`
-
 Set one or more configuration parameters for matching instances.
 
 Set will also update existing parameters, including setting them to empty values. To remove a parameter use the `geneos unset` command instead.

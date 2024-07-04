@@ -1,11 +1,37 @@
 # Change Log
 
-## Version v1.15.0
+## Version v1.15.1
 
 > [!NOTE]
-> **Released 2024-06-26**
+> **Released 2024-07-04**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+### v1.15.1 Fixes
+
+    * Fix handling of new Netprobe release archive names in 6.9.0
+
+### v1.15.1 Changes
+
+* `tools/geneos`
+
+    * add support for a `minimal` component type, which is a Netprobe without Collection Agent
+    * `geneos init demo` now supports the `--minimal`/`-M` flag to use the minimal Netprobe in the deployment
+    * the global configuration file (typically `${HOME}/.config/geneos/geneos.json`) now only saves chasnges to defaults. This allows defaults to be updated in the code without needing manual changes. Note that you may need to edit the file to clear out saved parameters that were the default but have the defaults have now changed.
+    * changes `geneos set x+="y"` behaviour such that a space is only prefixed to the new option if it starts with a dash (`-`). This allows paths and other parameters that are not space separated to work
+    * the `geneos init san` and `geneos init floating` commands have been deprecated in favour of `geneos deploy san` and `geneos deploy floating`, respectively
+    * add the start of a `geneos config export` command that archives instances either as a back-up or for re-import later, once the matching `geneos config import` command is added. This is work-in-progress.
+
+* `gdna`
+
+    * Update to Geneos 6.9.0 and use the `minimal` Netprobe to reduce image size
+    * Add a `gdna stop` command, to stop background GDNA processes. An initially empty `gdna restart` command has been added for later completion.
+
+* General
+
+    * Centos 7 has gone EOL so no test images can be built, remove them
+
+---
 
 ### v1.15.0 Changes
 

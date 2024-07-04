@@ -30,12 +30,15 @@ import (
 )
 
 var demoCmdArchive string
+var demoCmdMinimal bool
 
 func init() {
 	initCmd.AddCommand(demoCmd)
 
+	demoCmd.Flags().BoolVarP(&demoCmdMinimal, "minimal", "M", false, "use a minimal Netprobe release")
 	demoCmd.Flags().StringVarP(&demoCmdArchive, "archive", "A", "", archiveOptionsText)
 	demoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
+
 	demoCmd.Flags().SortFlags = false
 }
 
@@ -90,10 +93,15 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 		return
 	}
 
-	if err = install("netprobe", geneos.LOCALHOST, options...); err != nil {
+	npTarget := "netprobe"
+	if demoCmdMinimal {
+		npTarget = "minimal"
+	}
+
+	if err = install(npTarget, geneos.LOCALHOST, options...); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(geneos.ParseComponent("netprobe"), initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
+	if err = cmd.AddInstance(geneos.ParseComponent(npTarget), initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
 		return
 	}
 

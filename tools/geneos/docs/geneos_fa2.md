@@ -1,8 +1,6 @@
 # `geneos fa2`
 
-# `geneos` Fix Analysers
-
-
+An `fa2` is a Fix-Analyser2 Netprobe
 ```text
 geneos fa2
 ```

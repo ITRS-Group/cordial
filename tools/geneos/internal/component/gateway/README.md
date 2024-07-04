@@ -1,5 +1,3 @@
-# `geneos` Gateways
-
 A `gateway` instance is a Geneos Gateway.
 
 <https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_introduction.htm>

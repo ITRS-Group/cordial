@@ -1,5 +1,3 @@
-# `geneos deploy`
-
 Deploy a new instance of component `TYPE`.
 
 The difference between `deploy` and `add` or `init` commands is that deploy will check and create the Geneos directory hierarchy if required, then download and/or install packages for the component type and add the instance, optionally starting it.

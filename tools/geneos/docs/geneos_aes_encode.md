@@ -1,7 +1,5 @@
 # `geneos aes encode`
 
-# `geneos aes encode`
-
 Encode plaintext to a Geneos AES256 format password using a key file, or create a Gateway "app key" file.
 
 A key file should be provided using the `-keyfile`/`-k` option for a file path, the `--crc`/`-c` option for the CRC of a shared key file, or otherwise all matching instances that have a configured key file are used to produce an encrypted password.

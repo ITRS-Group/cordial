@@ -45,7 +45,7 @@ type Instance struct {
 }
 
 // IsA returns true if instance i has a type that is component of one of
-// names. Any name that does not
+// names.
 func IsA(i geneos.Instance, names ...string) bool {
 	it := i.Type().String()
 	for _, name := range names {

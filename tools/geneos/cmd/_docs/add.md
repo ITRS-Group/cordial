@@ -1,5 +1,3 @@
-# `geneos add`
-
 Add a new instance of a component `TYPE` with the name `NAME`.
 
 The applicability of the options vary by component `TYPE` and are stored in a configuration file in the instance directory.

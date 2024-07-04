@@ -1,7 +1,5 @@
 # `geneos aes set`
 
-# `geneos aes set`
-
 Import a key file and set parameters on matching instances.
 
 To create a key file with new contents use the `aes new` command.

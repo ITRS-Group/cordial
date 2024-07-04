@@ -132,8 +132,6 @@ geneos init [flags] [DIRECTORY]
 |-------|-------|
 | [`geneos init all`](geneos_init_all.md)	 | Initialise a more complete Geneos environment |
 | [`geneos init demo`](geneos_init_demo.md)	 | Initialise a Geneos Demo environment |
-| [`geneos init floating`](geneos_init_floating.md)	 | Initialise a Geneos Floating Netprobe environment |
-| [`geneos init san`](geneos_init_san.md)	 | Initialise a Geneos SAN (Self-Announcing Netprobe) environment |
 | [`geneos init template / templates`](geneos_init_template.md)	 | Initialise or overwrite templates |
 
 ### Options
@@ -148,9 +146,7 @@ geneos init [flags] [DIRECTORY]
   -S, --snapshots                 Download from nexus snapshots. Requires -N
   -V, --version VERSION           Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
   -u, --username string           Username for downloads
-  -w, --gatewaytemplate string    A gateway template file
-  -s, --santemplate string        SAN template file
-  -f, --floatingtemplate string   Floating probe template file
+  -w, --gateway-template string   A gateway template file
   -e, --env NAME=VALUE            An environment variable for instance start-up
                                   (Repeat as required)
 ```

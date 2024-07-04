@@ -24,6 +24,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/go-co-op/gocron/v2"
 	"github.com/google/uuid"
@@ -88,90 +89,97 @@ var startCmd = &cobra.Command{
 		cf.Viper.BindPFlag("geneos.sampler", cmd.Flags().Lookup("sampler"))
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		// Handle SIGINT (CTRL+C) gracefully.
-		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-		defer stop()
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, syscall.SIGHUP)
+		return start()
+	},
+}
 
-		db, err := openDB(ctx, cf.GetString("db.dsn"))
-		if err != nil {
-			return
-		}
-		defer db.Close()
+func start() (err error) {
+	// Handle SIGINT (CTRL+C) gracefully.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 
-		if once {
-			return do(ctx, cf, db)
-		}
+	db, err := openDB(ctx, cf.GetString("db.dsn"))
+	if err != nil {
+		return
+	}
+	defer db.Close()
 
-		sched, err = gocron.NewScheduler(gocron.WithLimitConcurrentJobs(1, gocron.LimitModeWait))
-		if err != nil {
-			return
-		}
+	if once {
+		return do(ctx, cf, db)
+	}
 
-		sched.Start()
+	sched, err = gocron.NewScheduler(gocron.WithLimitConcurrentJobs(1, gocron.LimitModeWait))
+	if err != nil {
+		return
+	}
 
-		// save these as a global for config updates
-		maintask = gocron.NewTask(do, ctx, cf, db)
-		emailtask = gocron.NewTask(doEmail, ctx, cf, db, reportNames)
+	sched.Start()
 
-		if onStartEMail || onStart {
-			sched.NewJob(gocron.OneTimeJob(gocron.OneTimeJobStartImmediately()),
-				maintask,
-				gocron.WithName("on start-up"),
-				gocron.WithSingletonMode(gocron.LimitModeReschedule),
-				listeners,
-			)
-			if onStartEMail {
-				sched.NewJob(gocron.OneTimeJob(gocron.OneTimeJobStartImmediately()),
-					emailtask,
-					gocron.WithName("on start-up email"),
-					gocron.WithSingletonMode(gocron.LimitModeReschedule),
-					listeners,
-				)
-			}
-		} else {
-			sched.NewJob(gocron.OneTimeJob(gocron.OneTimeJobStartImmediately()),
-				gocron.NewTask(fetch, ctx, cf, db),
-				gocron.WithName("initial fetch"),
-				gocron.WithSingletonMode(gocron.LimitModeReschedule),
-				listeners,
-			)
-		}
+	// save these as a global for config updates
+	maintask = gocron.NewTask(do, ctx, cf, db)
+	emailtask = gocron.NewTask(doEmail, ctx, cf, db, reportNames)
 
-		mainjob, err = sched.NewJob(
-			gocron.CronJob(cf.GetString("gdna.schedule"), false),
+	if onStartEMail || onStart {
+		sched.NewJob(gocron.OneTimeJob(gocron.OneTimeJobStartImmediately()),
 			maintask,
-			gocron.WithName("main"),
+			gocron.WithName("on start-up"),
+			gocron.WithSingletonMode(gocron.LimitModeReschedule),
+			listeners,
+		)
+		if onStartEMail {
+			sched.NewJob(gocron.OneTimeJob(gocron.OneTimeJobStartImmediately()),
+				emailtask,
+				gocron.WithName("on start-up email"),
+				gocron.WithSingletonMode(gocron.LimitModeReschedule),
+				listeners,
+			)
+		}
+	} else {
+		sched.NewJob(gocron.OneTimeJob(gocron.OneTimeJobStartImmediately()),
+			gocron.NewTask(fetch, ctx, cf, db),
+			gocron.WithName("initial fetch"),
+			gocron.WithSingletonMode(gocron.LimitModeReschedule),
+			listeners,
+		)
+	}
+
+	mainjob, err = sched.NewJob(
+		gocron.CronJob(cf.GetString("gdna.schedule"), false),
+		maintask,
+		gocron.WithName("main"),
+		gocron.WithSingletonMode(gocron.LimitModeReschedule),
+		listeners,
+	)
+	if err != nil {
+		return
+	}
+
+	rjt, _ := mainjob.NextRun()
+	log.Info().Msgf("next scheduled report job %v", rjt)
+
+	if es := cf.GetString("gdna.email-schedule"); es != "" {
+		emailjob, err = sched.NewJob(
+			gocron.CronJob(es, false),
+			emailtask,
+			gocron.WithName("email"),
 			gocron.WithSingletonMode(gocron.LimitModeReschedule),
 			listeners,
 		)
 		if err != nil {
-			return
+			return err
+		} else {
+			ejt, _ := emailjob.NextRun()
+			log.Info().Msgf("next scheduled email job %v", ejt)
 		}
+	}
 
-		rjt, _ := mainjob.NextRun()
-		log.Info().Msgf("next scheduled report job %v", rjt)
+	defer sched.Shutdown()
 
-		if es := cf.GetString("gdna.email-schedule"); es != "" {
-			emailjob, err = sched.NewJob(
-				gocron.CronJob(es, false),
-				emailtask,
-				gocron.WithName("email"),
-				gocron.WithSingletonMode(gocron.LimitModeReschedule),
-				listeners,
-			)
-			if err != nil {
-				return err
-			} else {
-				ejt, _ := emailjob.NextRun()
-				log.Info().Msgf("next scheduled email job %v", ejt)
-			}
-		}
+	<-ctx.Done()
 
-		defer sched.Shutdown()
-		<-ctx.Done()
-
-		return
-	},
+	return
 }
 
 func updateJobs() {

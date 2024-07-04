@@ -1,5 +1,3 @@
-# `gdna report`
-
 The `gdna report` command runs the configured reports and publishes them to the configured Netprobe to be displayed in the Geneos Active Console.
 
 Command line flags allow you to control the destination as well as the format and which reports to run.

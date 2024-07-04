@@ -35,9 +35,9 @@ func init() {
 }
 
 var helpDocCmd = &cobra.Command{
-	Use:                   "`minimal",
+	Use:                   "minimal",
 	GroupID:               cmd.CommandGroupComponents,
-	Short:                 "Fix Analyser 2",
+	Short:                 "Minimal Netprobes",
 	Long:                  minimalDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,

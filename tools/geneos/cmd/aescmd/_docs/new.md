@@ -1,5 +1,3 @@
-# `geneos aes new`
-
 Create a new key file. With no other options the contents are written to STDOUT.
 
 To write to a specific file use the `--keyfile`/`-k` option. To write to your user's default key file location use the `--user`/`-u` flag. If both these options are used then the `--user` flag takes precedence.

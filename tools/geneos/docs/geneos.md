@@ -110,6 +110,7 @@ The subsystems below group related functions together and have their own sub-com
 | [`geneos floating`](geneos_floating.md)	 | Floating Netprobes |
 | [`geneos gateway`](geneos_gateway.md)	 | Gateways |
 | [`geneos licd`](geneos_licd.md)	 | Licence Daemon |
+| [`geneos minimal`](geneos_minimal.md)	 | Minimal Netprobes |
 | [`geneos netprobe`](geneos_netprobe.md)	 | Netprobes |
 | [`geneos san`](geneos_san.md)	 | Self-Announcing Netprobes |
 | [`geneos webserver`](geneos_webserver.md)	 | Web Dashboard Servers |

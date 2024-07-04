@@ -380,7 +380,7 @@ func SetSecureArgs(i geneos.Instance) (args []string) {
 	cert, privkey, chain := files[0], files[1], files[2]
 
 	if cert != "" {
-		if IsA(i, "netprobe", "fa2", "fileagent", "licd") {
+		if IsA(i, "minimal", "netprobe", "fa2", "fileagent", "licd") {
 			args = append(args, "-secure")
 		}
 		args = append(args, "-ssl-certificate", cert)
