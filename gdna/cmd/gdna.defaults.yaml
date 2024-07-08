@@ -354,8 +354,7 @@ db:
     table: gateways_all
     columns: gateway, firstSeen, lastSeen, source
     create:
-      DROP TABLE IF EXISTS ${db.gateways.table};
-      CREATE TABLE ${db.gateways.table} (
+      CREATE TABLE IF NOT EXISTS ${db.gateways.table} (
         gateway           TEXT NOT NULL COLLATE NOCASE UNIQUE,
         firstSeen         TIMESTAMP NOT NULL,
         lastSeen          TIMESTAMP NOT NULL,
