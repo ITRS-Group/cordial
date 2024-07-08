@@ -315,8 +315,15 @@ db:
       ON CONFLICT (source)
         DO UPDATE SET sourceType=@sourceType, path=@path, lastSeen=@lastSeen, status=@status, valid=@valid;
     update-valid: >
-      UPDATE ${db.sources.table} SET valid = unixepoch(lastSeen) >= @oldestValidTime;
-      UPDATE ${db.sources.table} SET status = "NOT VALID: Not updated for more than " ||@maxAge WHERE unixepoch(lastSeen) < @oldestValidTime AND status = "OK";
+      UPDATE ${db.sources.table} SET
+          valid = unixepoch(lastSeen) >= @oldestValidTime,
+          status = 
+            CASE WHEN unixepoch(lastSeen) < @oldestValidTime AND status = "OK"
+                  THEN "NOT VALID: Not updated for more than " ||@maxAge
+                WHEN unixepoch(lastSeen) >= @oldestValidTime AND status like 'NOT VALID:%'
+                  THEN "OK"
+                ELSE status
+                END;
 
   # `reporting-updates` stores the time of the latest time from the last
   # fetch run. It cannot be a temporary table as it stores historical
