@@ -478,19 +478,26 @@ func watchLogs() (tails *sync.Map) {
 				// to have grown then output whatever is new
 				if tail.reader != nil {
 					size = filterOutput(tail.instance, logfile, tail.reader)
-					if size >= tail.offset {
+
+					switch {
+					// check stat for real size, re-open if changed else return
+					case size == tail.offset:
+						var st fs.FileInfo
+						if st, err = tail.instance.Host().Stat(logfile); err != nil {
+							log.Error().Err(err).Msg("cannot stat file")
+						} else if st.Size() == size {
+							return true
+						}
+					case size > tail.offset:
 						tail.offset = size
 						tails.Store(key, tail)
 						return true
-					}
-
-					if size < tail.offset {
+					case size < tail.offset:
 						// if the file seems to have shrunk, then close
 						// the old one, store a marker for next time
 						tail.reader.Close()
 						tails.Store(key, &files{tail.instance, nil, 0})
 						fmt.Printf("===> %s %s Rolled, re-opening <===\n", tail.instance, logfile)
-						// drop through to re-open
 					}
 				}
 
