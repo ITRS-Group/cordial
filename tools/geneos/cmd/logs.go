@@ -480,8 +480,9 @@ func watchLogs() (tails *sync.Map) {
 					size = filterOutput(tail.instance, logfile, tail.reader)
 
 					switch {
-					// check stat for real size, re-open if changed else return
 					case size == tail.offset:
+						// check stat for real size, drop through to
+						// re-open if changed else return
 						var st fs.FileInfo
 						if st, err = tail.instance.Host().Stat(logfile); err != nil {
 							log.Error().Err(err).Msg("cannot stat file")
