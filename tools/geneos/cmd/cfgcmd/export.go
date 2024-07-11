@@ -30,13 +30,14 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 var exportCmdOutput string
@@ -60,8 +61,8 @@ func init() {
 var exportCmdDescription string
 
 var exportCmd = &cobra.Command{
-	Use:   "export [flags] [TYPE] [NAME...] [DEST=]SOURCE...",
-	Short: "Export Files To Instances Or Components",
+	Use:   "export [flags] [TYPE] [NAME...]",
+	Short: "Export Instances",
 	Long:  exportCmdDescription,
 	Example: strings.ReplaceAll(`
 `, "|", "`"),

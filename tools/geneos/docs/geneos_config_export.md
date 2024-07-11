@@ -16,7 +16,7 @@ The contents of the archive are relative to the root of the Geneos installation.
 geneos export gateway GATEWAY1
 ```
 ```text
-geneos config export [flags] [TYPE] [NAME...] [DEST=]SOURCE...
+geneos config export [flags] [TYPE] [NAME...]
 ```
 
 ### Options

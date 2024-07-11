@@ -41,7 +41,7 @@ The base URL for downloads for automating installations. Not yet used. If files 
 
 | Command | Description |
 |-------|-------|
-| [`geneos config export`](geneos_config_export.md)	 | Export Files To Instances Or Components |
+| [`geneos config export`](geneos_config_export.md)	 | Export Instances |
 | [`geneos config set`](geneos_config_set.md)	 | Set program configuration |
 | [`geneos config show`](geneos_config_show.md)	 | Show program configuration |
 | [`geneos config unset`](geneos_config_unset.md)	 | Unset a program parameter |
