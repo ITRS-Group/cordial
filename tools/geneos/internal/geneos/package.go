@@ -316,7 +316,7 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 // matching is limited by the optional prefix filter. An error is
 // returned if there are problems accessing the directories or parsing
 // any names as semantic versions.
-func LatestVersion(h *Host, ct *Component, prefix string) (v string, err error) {
+func LatestVersion(h *Host, ct *Component, versionPrefix string) (latest string, err error) {
 	dir := h.PathTo("packages", ct.String())
 	dirs, err := h.ReadDir(dir)
 	if err != nil {
@@ -324,31 +324,31 @@ func LatestVersion(h *Host, ct *Component, prefix string) (v string, err error) 
 	}
 
 	semver, _ := version.NewVersion("0.0.0")
-	platformid := h.GetString("platform_id")
+	platformid := getPlatformId(h.GetString(h.Join("osinfo", "platform_id")))
 
 	for _, d := range dirs {
 		if !d.IsDir() {
 			continue
 		}
-		if prefix != "" {
-			if !strings.HasPrefix(d.Name(), prefix) {
+		if versionPrefix != "" {
+			if !strings.HasPrefix(d.Name(), versionPrefix) {
 				continue
 			}
 		}
 
 		sv, err := version.NewVersion(d.Name())
 		if err != nil {
-			return v, err
+			return latest, err
 		}
 		meta := sv.Metadata()
-		if meta != "" && meta != platformid && !strings.HasSuffix(prefix, "+"+meta) {
+		if meta != "" && meta != platformid {
 			continue
 		}
 		if sv.LessThan(semver) {
 			continue
 		}
 		semver = sv
-		v = semver.Original()
+		latest = semver.Original()
 	}
 
 	return
@@ -426,7 +426,7 @@ func Install(h *Host, ct *Component, options ...PackageOptions) (err error) {
 				log.Error().Err(err).Msg("")
 			}
 		}
-		return
+		return nil
 	}
 
 	options = append(options, PlatformID(h.GetString(h.Join("osinfo", "platform_id"))))

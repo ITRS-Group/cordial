@@ -52,7 +52,7 @@ geneos package install [flags] [TYPE] [FILE|URL...]
 
 ```bash
 geneos install gateway
-geneos install fa2 5.5 -U
+geneos install fa2 -V 6.5 -U
 geneos install netprobe -b active_dev -U
 
 ```

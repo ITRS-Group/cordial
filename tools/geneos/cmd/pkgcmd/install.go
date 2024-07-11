@@ -79,7 +79,7 @@ var installCmd = &cobra.Command{
 	Long:  installCmdDescription,
 	Example: strings.ReplaceAll(`
 geneos install gateway
-geneos install fa2 5.5 -U
+geneos install fa2 -V 6.5 -U
 geneos install netprobe -b active_dev -U
 `, "|", "`"),
 	SilenceUsage: true,
@@ -220,7 +220,7 @@ geneos install netprobe -b active_dev -U
 		//
 		// overrides do not work in this case as the version and type
 		// have to be part of the archive file name
-		if ct != nil && len(args) == 0 {
+		if ct != nil || len(args) == 0 {
 			log.Debug().Msgf("installing %q version of %s to %s host(s)", installCmdVersion, ct, cmd.Hostname)
 
 			if installCmdSnapshot {
@@ -236,6 +236,7 @@ geneos install netprobe -b active_dev -U
 		// work through command line args and try to install each
 		// argument using the naming format of standard downloads
 		for _, source := range args {
+			log.Debug().Msgf("installing %q version of %s to %s host(s)", installCmdVersion, ct, cmd.Hostname)
 			if err = install(h, ct, append(options, geneos.LocalArchive(source))...); err != nil {
 				return err
 			}

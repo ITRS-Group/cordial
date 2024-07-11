@@ -396,15 +396,17 @@ func openRemoteArchive(ct *Component, options ...PackageOptions) (filename strin
 	return
 }
 
+func getPlatformId(value string) (id string) {
+	s := strings.Split(value, ":")
+	if len(s) > 1 {
+		id = s[1]
+	}
+	return
+}
+
 func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string, resp *http.Response, err error) {
 	// cannot fetch partial versions for el8 - restriction on download search interface
-	platform := ""
-	if opts.platformId != "" {
-		s := strings.Split(opts.platformId, ":")
-		if len(s) > 1 {
-			platform = s[1]
-		}
-	}
+	platform := getPlatformId(opts.platformId)
 
 	baseurl := config.GetString(config.Join("download", "url"))
 	downloadURL, _ := url.Parse(baseurl)
@@ -613,7 +615,7 @@ func LatestLocalArchive(h *Host, dir, versionFilter string, filterFunc func(os.D
 	var matchingVersions = make(map[string]*version.Version)
 	var originals = make(map[string]string, len(entries)) // map of processed names to original entries
 
-	platformid := h.GetString("platform_id")
+	platformid := getPlatformId(h.GetString(h.Join("osinfo", "platform_id")))
 
 	for _, dirent := range entries {
 		// skip if fails filter function (when set)
@@ -658,15 +660,15 @@ func LatestLocalArchive(h *Host, dir, versionFilter string, filterFunc func(os.D
 }
 
 // split an package archive name into type and version
-var archiveRE = regexp.MustCompile(`^geneos-(?<component>[\w-]+)-(?<version>[\d\.]+)[\.-]?linux`)
+var archiveRE = regexp.MustCompile(`^geneos-(?<component>[\w-]+)-(?<version>[\d\.]+(?:-\w+)?)?-linux`)
 
 // filenameToComponent transforms an archive filename and returns the
 // component and version or an error if the file format is not
 // recognised
 func filenameToComponent(filename string) (ct *Component, version string, err error) {
 	parts := archiveRE.FindStringSubmatch(filename)
-	if len(parts) != 3 {
-		err = fmt.Errorf("%q: %w", filename, ErrInvalidArgs)
+	if len(parts) < 3 {
+		err = fmt.Errorf("%q: regex match failure, only %d parts found: %w", filename, len(parts), ErrInvalidArgs)
 		return
 	}
 	version = parts[2]
