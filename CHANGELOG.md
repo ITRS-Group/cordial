@@ -1,35 +1,56 @@
 # Change Log
 
-## Version v1.15.1
+## Version v1.15.2
 
 > [!NOTE]
-> **Released 2024-07-04**
+> **Released 2024-07-11**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
+### v1.15.2 Fixes
+
+* `tools/geneos`
+
+  * Fix handling of `-el8` and `-el9` package installs that were broken when updating for new Netprobe package file names
+  * Fix matching of instances to properly account for wildcards and non existing hosts
+
+* `gdna`
+
+  * Keep `gateways_all` table, not as a potential temporary one. Fixes sources report when sources go stale amongst other things
+  * Fix logic in `sources` report to evaluate and update status correctly when `valid` changes
+
+### v1.15.2 Changes
+
+* `gdna`
+
+  * Add an `unused-gateways` report
+  * Add headlines to `gateway-coverage` to make clear how many unused gateways exist
+
+---
+
 ### v1.15.1 Fixes
 
-    * Fix handling of new Netprobe release archive names in 6.9.0
+  * Fix handling of new Netprobe release archive names in 6.9.0
 
 ### v1.15.1 Changes
 
 * `tools/geneos`
 
-    * add support for a `minimal` component type, which is a Netprobe without Collection Agent
-    * `geneos init demo` now supports the `--minimal`/`-M` flag to use the minimal Netprobe in the deployment
-    * the global configuration file (typically `${HOME}/.config/geneos/geneos.json`) now only saves chasnges to defaults. This allows defaults to be updated in the code without needing manual changes. Note that you may need to edit the file to clear out saved parameters that were the default but have the defaults have now changed.
-    * changes `geneos set x+="y"` behaviour such that a space is only prefixed to the new option if it starts with a dash (`-`). This allows paths and other parameters that are not space separated to work
-    * the `geneos init san` and `geneos init floating` commands have been deprecated in favour of `geneos deploy san` and `geneos deploy floating`, respectively
-    * add the start of a `geneos config export` command that archives instances either as a back-up or for re-import later, once the matching `geneos config import` command is added. This is work-in-progress.
+  * add support for a `minimal` component type, which is a Netprobe without Collection Agent
+  * `geneos init demo` now supports the `--minimal`/`-M` flag to use the minimal Netprobe in the deployment
+  * the global configuration file (typically `${HOME}/.config/geneos/geneos.json`) now only saves chasnges to defaults. This allows defaults to be updated in the code without needing manual changes. Note that you may need to edit the file to clear out saved parameters that were the default but have the defaults have now changed.
+  * changes `geneos set x+="y"` behaviour such that a space is only prefixed to the new option if it starts with a dash (`-`). This allows paths and other parameters that are not space separated to work
+  * the `geneos init san` and `geneos init floating` commands have been deprecated in favour of `geneos deploy san` and `geneos deploy floating`, respectively
+  * add the start of a `geneos config export` command that archives instances either as a back-up or for re-import later, once the matching `geneos config import` command is added. This is work-in-progress.
 
 * `gdna`
 
-    * Update to Geneos 6.9.0 and use the `minimal` Netprobe to reduce image size
-    * Add a `gdna stop` command, to stop background GDNA processes. An initially empty `gdna restart` command has been added for later completion.
+  * Update to Geneos 6.9.0 and use the `minimal` Netprobe to reduce image size
+  * Add a `gdna stop` command, to stop background GDNA processes. An initially empty `gdna restart` command has been added for later completion.
 
 * General
 
-    * Centos 7 has gone EOL so no test images can be built, remove them
+  * Centos 7 has gone EOL so no test images can be built, remove them
 
 ---
 
@@ -45,40 +66,40 @@
 
 * General / Miscellaneous
 
-    * Move to Apache 2 license, from MIT, for clarity and conforming to ITRS company guidance
-    * Move cron Centos 8/9 test images to UBI 8/9 respectively
-    * Change all warning triangles in docs and comments ("⚠️") to to more friendly bulb ("💡")
+  * Move to Apache 2 license, from MIT, for clarity and conforming to ITRS company guidance
+  * Move cron Centos 8/9 test images to UBI 8/9 respectively
+  * Change all warning triangles in docs and comments ("⚠️") to to more friendly bulb ("💡")
 
 * `tools/geneos`
 
-    * Refactor internal routines to iterate over instances. Reduces the number of similar functions and inter-dependencies.
-    * Refactor other function names for clarity
+  * Refactor internal routines to iterate over instances. Reduces the number of similar functions and inter-dependencies.
+  * Refactor other function names for clarity
 
 * `pkg/config`
 
-    * Add a `UseKeyFile()` option to expand functions to allow overriding the key file to use
+  * Add a `UseKeyFile()` option to expand functions to allow overriding the key file to use
 
 ### v1.15.0 Fixes
 
 * `gdna`
 
-    * Fix broken modifiers that result in no data visibility with updated sampler name
-    * While fixing above also fix references to old `t1` column to use `100` to indicate complete coverage
-    * Fix logfile selection from command line
+  * Fix broken modifiers that result in no data visibility with updated sampler name
+  * While fixing above also fix references to old `t1` column to use `100` to indicate complete coverage
+  * Fix logfile selection from command line
 
 * `tools/geneos`
 
-    * Fix the incorrect selection of archive directories in `package install` when using the `-L` option
-    * Fix the `--nosave` option by resetting error in return to nil, as it was a "valid" failure
+  * Fix the incorrect selection of archive directories in `package install` when using the `-L` option
+  * Fix the `--nosave` option by resetting error in return to nil, as it was a "valid" failure
 
 * `pkg/config`
 
-    * Fix use of "internal defaults" in Load() when using the SetConfigFile() option
+  * Fix use of "internal defaults" in Load() when using the SetConfigFile() option
 
 * Documentation
 
-    * Fix emoji in generated PDF files in Dockerfile by adding an appropriate font
-    * Fix missing screenshots in markdown files exported to releases by merging all screenshots directories and shipping that too. PDFs not affected.
+  * Fix emoji in generated PDF files in Dockerfile by adding an appropriate font
+  * Fix missing screenshots in markdown files exported to releases by merging all screenshots directories and shipping that too. PDFs not affected.
 
 ---
 
@@ -88,30 +109,30 @@
 
 * `tools/geneos`
 
-    * Add options to `tls create` to specify destination directory, outputting certificate bundles and setting the expiry period in days. Also, do not initialise the TLS subsystem if it's not found unless the `--force` flag is used.
-    * Hide `--name` option in `deploy`, repurpose short-form `-n` for new `--nosave` option
-    * Rename `logs` option `--nostandard` to `--no-stdout` (with alias) for consistency
+  * Add options to `tls create` to specify destination directory, outputting certificate bundles and setting the expiry period in days. Also, do not initialise the TLS subsystem if it's not found unless the `--force` flag is used.
+  * Hide `--name` option in `deploy`, repurpose short-form `-n` for new `--nosave` option
+  * Rename `logs` option `--nostandard` to `--no-stdout` (with alias) for consistency
 
 * `cordial` package
 
-    * Only log file and function if logging at `Debug` level or greater
-    * Split logging methods into their own file, add options to `LogInit()` to specify filename and/or [`lunberjack`](https://pkg.go.dev/gopkg.in/natefinch/lumberjack.v2) settings. Log filenames can also include `~/` prefix for home directory.
+  * Only log file and function if logging at `Debug` level or greater
+  * Split logging methods into their own file, add options to `LogInit()` to specify filename and/or [`lunberjack`](https://pkg.go.dev/gopkg.in/natefinch/lumberjack.v2) settings. Log filenames can also include `~/` prefix for home directory.
 
 * `tools/gateway-reporter`
 
-    * Add an optional XLSX password in `output` config section
+  * Add an optional XLSX password in `output` config section
 
 ### v1.14.0 Fixes
 
 * `tools/geneos`
 
-    * Fix download base name for Netprobes to new value.
-    * Fix `deploy` importing of keyfiles (only import if given on command line)
-    * `package install` and `package update` - Fix the handling of package metadata (e.g. `+el8`) suffixes to that they are treated the same as a package without a metadata suffix - and the right one is selected for the system being installed
+  * Fix download base name for Netprobes to new value.
+  * Fix `deploy` importing of keyfiles (only import if given on command line)
+  * `package install` and `package update` - Fix the handling of package metadata (e.g. `+el8`) suffixes to that they are treated the same as a package without a metadata suffix - and the right one is selected for the system being installed
 
 * `pkg/config`
 
-    * Better recovery on failing to find the user's config directory, return an error instead of panic-ing
+  * Better recovery on failing to find the user's config directory, return an error instead of panic-ing
 
 ---
 
