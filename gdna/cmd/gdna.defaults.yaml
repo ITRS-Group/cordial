@@ -2349,3 +2349,12 @@ reports:
              (SELECT count(*) FROM ${db.samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen)
         FROM ${db.sources.table} src
        ORDER BY source;
+
+  unused-gateways:
+    name: Unused Gateways
+    group: Monitoring Coverage
+    columns: [ gateway, lastSeen, sources ]
+    query: >
+      SELECT gateway, max(lastSeen), group_concat(source, ',')
+        FROM ${db.unused-gateways.table}
+       GROUP BY gateway
