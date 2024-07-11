@@ -1591,7 +1591,17 @@ reports:
     enable-for-xlsx: false
     columns: [ coverage, percent, gateways, remaining, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, description ]
     headlines: >
-      SELECT 'totalGateways', (SELECT count(*) FROM ${db.gateways.active});
+      SELECT 'totalGateways', (SELECT count(*) FROM ${db.gateways.active})
+
+      UNION
+
+      SELECT 'allGateways', (SELECT count(*) FROM ${db.gateways.table})
+
+      UNION
+
+      SELECT 'unusedGateways', (SELECT count(*) FROM ${db.unused-gateways.table})
+
+      ;
     query: >
       WITH gw AS (
         SELECT (SELECT count(*) FROM ${db.gateways.active}) total,
@@ -1788,7 +1798,8 @@ reports:
              IIF(empty * 100.0 / total > 95, 1, 0),
              IIF(empty * 100.0 / total = 100, 1, 0),
              'gateways where no servers have any level of coverage'
-          FROM w;
+          FROM w
+        ;
 
   server-coverage:
     name: Server Coverage
