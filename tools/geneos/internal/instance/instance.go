@@ -88,8 +88,12 @@ func ReservedName(name string) (ok bool) {
 
 // spaces are valid - dumb, but valid - for now. If the name starts with
 // number then the next character cannot be a number or '.' to help
-// distinguish from versions
-var validStringRE = regexp.MustCompile(`^\w[\w-]?[:@\.\w -]*$`)
+// distinguish from versions.
+//
+// # In addition to static names we also allow glob-style characters through
+//
+// look for "[flavour:]name[@host]" - only name can contain glob chars
+var validNameRE = regexp.MustCompile(`^(\w+:)?([\w\*\?\[\]\^\]]+)?(@[\w\.]*)?$`)
 
 // ValidName returns true if name is considered a valid instance
 // name. It is not checked against the list of reserved names.
@@ -97,7 +101,7 @@ var validStringRE = regexp.MustCompile(`^\w[\w-]?[:@\.\w -]*$`)
 // XXX used to consume instance names until parameters are then passed
 // down
 func ValidName(name string) (ok bool) {
-	ok = validStringRE.MatchString(name)
+	ok = validNameRE.MatchString(name)
 	if !ok {
 		log.Debug().Msgf("not a valid instance name: %s", name)
 	}
@@ -142,7 +146,7 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 // by the called function. The called function should validate and cast
 // values for use.
 //
-// Do calls ByNames() to resolve the names given to a list of matching
+// Do calls Instances() to resolve the names given to a list of matching
 // instances on host h (which can be geneos.ALL to look on all hosts)
 // and for type ct, which can be nil to look across all component types.
 func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *Response, values ...any) (responses Responses) {

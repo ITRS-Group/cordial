@@ -56,15 +56,17 @@ var hosts sync.Map
 
 // Default host labels that always exist
 const (
-	LOCALHOST = "localhost"
-	ALLHOSTS  = "all"
+	LOCALHOST   = "localhost"
+	ALLHOSTS    = "all"
+	UNKNOWNHOST = "UNKNOWN"
 )
 
 // LOCAL and ALL are the global Host values that represent LOCALHOST and
 // ALLHOSTS from above, and must always exist
 var (
-	LOCAL *Host
-	ALL   *Host
+	LOCAL   *Host
+	ALL     *Host
+	UNKNOWN *Host
 )
 
 // InitHosts initialises the host settings and is only called from the
@@ -74,12 +76,14 @@ var (
 func InitHosts(app string) {
 	LOCAL = NewHost(LOCALHOST)
 	ALL = NewHost(ALLHOSTS)
+	UNKNOWN = NewHost(UNKNOWNHOST)
 	LoadHostConfig()
 }
 
 // NewHost is a factory method for Host. It returns an initialised Host
-// and will store it in the global map. If name is "localhost" or
-// "all" then it returns pseudo-hosts used for testing and ranges.
+// and will store it in the global map. If name is "localhost" or "all"
+// or "unknown" then it returns pseudo-hosts used for testing and
+// ranges.
 func NewHost(name string, options ...any) (h *Host) {
 	switch name {
 	case "":
@@ -99,6 +103,12 @@ func NewHost(name string, options ...any) (h *Host) {
 		}
 		h = &Host{host.NewLocal(), config.New(), false, true}
 		h.Set("name", ALLHOSTS)
+	case UNKNOWNHOST:
+		if UNKNOWN != nil {
+			return UNKNOWN
+		}
+		h = &Host{host.NewLocal(), config.New(), false, true}
+		h.Set("name", UNKNOWNHOST)
 	default:
 		r, ok := hosts.Load(name)
 		if ok {
@@ -124,12 +134,13 @@ func (h *Host) String() string {
 	return h.GetString("name")
 }
 
-// GetHost returns a pointer to Host value. If passed an empty name, returns
-// nil. If passed the special values LOCALHOST or ALLHOSTS then it will
-// return the respective special values LOCAL or ALL. Otherwise it tries
-// to lookup an existing host with the given name.
+// GetHost returns a pointer to Host value. If passed an empty name,
+// returns nil. If passed the special values LOCALHOST or ALLHOSTS then
+// it will return the respective special values LOCAL or ALL. Otherwise
+// it tries to lookup an existing host with the given name.
 //
-// It will return nil if the named host is not found. Use NewHost() to initialise a new host
+// It will return UNKNOWN if the named host is not found. Use NewHost()
+// to initialise a new host
 func GetHost(name string) (h *Host) {
 	switch name {
 	case "":
@@ -146,7 +157,7 @@ func GetHost(name string) (h *Host) {
 				return
 			}
 		}
-		return nil
+		return UNKNOWN
 	}
 }
 
@@ -290,6 +301,8 @@ func (h *Host) OrList(hosts ...*Host) []*Host {
 		return hosts
 	case ALL:
 		return AllHosts()
+	case UNKNOWN:
+		return []*Host{}
 	default:
 		return []*Host{h}
 	}

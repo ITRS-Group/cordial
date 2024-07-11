@@ -104,8 +104,7 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 	// after rebuild this should only apply to 'import'
 	n := 0
 	for _, a := range args {
-		// if !instance.ValidName(a) {
-		if strings.Contains(a, "=") {
+		if !instance.ValidName(a) {
 			params = append(params, a)
 		} else {
 			args[n] = a
@@ -169,6 +168,7 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 				log.Debug().Msgf("matching %v", names)
 				if len(names) > 0 {
 					newnames := instance.Match(h, ct, names...)
+					log.Debug().Msgf("match returned %v", newnames)
 					if len(newnames) == 0 {
 						log.Debug().Msgf("no names match %v", names)
 						jsonargs, _ = json.Marshal(names)
