@@ -1,13 +1,13 @@
 # Change Log
 
-## Version v1.15.2
+## Version v1.15.3
 
 > [!NOTE]
 > **Released 2024-07-11**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-### v1.15.2 Fixes
+### v1.15.3 Fixes
 
 * `tools/geneos`
 
@@ -19,12 +19,18 @@
   * Keep `gateways_all` table, not as a potential temporary one. Fixes sources report when sources go stale amongst other things
   * Fix logic in `sources` report to evaluate and update status correctly when `valid` changes
 
-### v1.15.2 Changes
+### v1.15.3 Changes
 
 * `gdna`
 
   * Add an `unused-gateways` report
   * Add headlines to `gateway-coverage` to make clear how many unused gateways exist
+
+---
+
+## v1.15.2
+
+Replaced by v1.15.3 to fix a one character typo in a regexp.
 
 ---
 
@@ -46,7 +52,7 @@
 * `gdna`
 
   * Update to Geneos 6.9.0 and use the `minimal` Netprobe to reduce image size
-  * Add a `gdna stop` command, to stop background GDNA processes. An initially empty `gdna restart` command has been added for later completion.
+  * Add a `gdna stop` comma\nd, to stop background GDNA processes. An initially empty `gdna restart` command has been added for later completion.
 
 * General
 

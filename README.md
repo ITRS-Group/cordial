@@ -2,7 +2,7 @@
 
 > [!NOTE]
 >
-> This is **Version v1.15.2** - Released 2024-07-11 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
+> This is **Version v1.15.3** - Released 2024-07-11 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 
 > 🎁 Introducing GDNA 🎈
 >
