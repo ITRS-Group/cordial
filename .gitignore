@@ -63,3 +63,4 @@ tools/sso-diag/sso-diag
 utils/docs/docs
 gdna/docs/*.md
 *.xml_*.history
+gdna/gdna-test.yaml
