@@ -229,7 +229,7 @@ func readLicenseReports(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 		u = u.JoinPath(DetailsPath)
 		req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 		if err != nil {
-			updateSources(ctx, cf, tx, "https:"+u.Hostname(), "https", source, false, t, err)
+			updateSources(ctx, cf, tx, "http:"+u.Hostname(), "http", source, false, t, err)
 			return err
 		}
 		resp, err := client.Do(req)
@@ -240,7 +240,7 @@ func readLicenseReports(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 		if resp.StatusCode > 299 {
 			resp.Body.Close()
 			err = fmt.Errorf("server returned %s", resp.Status)
-			updateSources(ctx, cf, tx, "https:"+u.Hostname(), "https", source, false, t, err)
+			updateSources(ctx, cf, tx, "http:"+u.Hostname(), "http", source, false, t, err)
 			return err
 		}
 		defer resp.Body.Close()
