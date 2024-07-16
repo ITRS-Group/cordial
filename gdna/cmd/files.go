@@ -121,7 +121,7 @@ func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
 // readers, one per section, the basename of the source file and the
 // modtime as well as any error
 func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source string,
-	fn func(context.Context, *config.Config, *sql.Tx, *csv.Reader, string, string, string, time.Time) error) (err error) {
+	fn func(context.Context, *config.Config, *sql.Tx, *csv.Reader, string, string, string, time.Time) error) (sources []string, err error) {
 	source = config.ExpandHome(source)
 	matches, err := filepath.Glob(source)
 	if err != nil {
@@ -139,14 +139,14 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 		st, err := os.Stat(source)
 		if err != nil {
 			log.Error().Err(err).Msg("")
-			updateSources(ctx, cf, tx, "licd:"+source, "licd", source, false, time.Now(), err)
+			// updateSources(ctx, cf, tx, "licd:"+source, "licd", source, false, time.Now(), err)
 			continue
 		}
 		sourceTimestamp := st.ModTime()
 		s, _, c, err := readLicdReport(source)
 		if err != nil {
 			log.Error().Err(err).Msg("")
-			updateSources(ctx, cf, tx, "licd:"+source, "licd", source, false, time.Now(), err)
+			// updateSources(ctx, cf, tx, "licd:"+source, "licd", source, false, time.Now(), err)
 			continue
 		}
 
@@ -167,16 +167,18 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 			}
 		}
 
-		sourceName = source
-
-		if expiry != "" || licenceName != "" {
-			t, err := time.Parse("02 January 2006", expiry)
-			if err != nil {
-				log.Error().Err(err).Msgf("cannot parse %s", expiry)
-			}
-
-			sourceName = "licd:" + licenceName + "_" + t.Format(time.DateOnly)
+		// need both
+		if expiry == "" || licenceName == "" {
+			continue
 		}
+
+		t, err := time.Parse("02 January 2006", expiry)
+		if err != nil {
+			log.Error().Err(err).Msgf("cannot parse %s", expiry)
+		}
+
+		sourceName = "licd:" + licenceName + "_" + t.Format(time.DateOnly)
+		sources = append(sources, sourceName)
 
 		log.Debug().Msgf("processing licd report file %s using label %s", source, sourceName)
 		if err = fn(ctx, cf, tx, c, sourceName, "licd", source, sourceTimestamp); err != nil {

@@ -32,6 +32,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -103,19 +104,37 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (err error) {
 		return
 	}
 
+	var sources []string
 	log.Debug().Msgf("licd-sources: %v", cf.GetStringSlice("gdna.licd-sources"))
 	for _, source := range cf.GetStringSlice("gdna.licd-sources") {
+		var s []string
 		log.Debug().Msgf("reading from %s", source)
-		if err = readLicenseReports(ctx, cf, tx, source, licenseReportToDB); err != nil {
+		if s, err = readLicenseReports(ctx, cf, tx, source, licenseReportToDB); err != nil {
 			log.Error().Err(err).Msgf("readLicenseReports for %s failed", source)
 		}
+		sources = append(sources, s...)
 	}
 
 	for _, source := range cf.GetStringSlice("gdna.licd-reports") {
+		var s []string
 		log.Debug().Msgf("reading licd report file(s): %s", source)
-		if err := readLicdReports(ctx, cf, tx, source, licenseReportToDB); err != nil {
+		if s, err = readLicdReports(ctx, cf, tx, source, licenseReportToDB); err != nil {
 			return err
 		}
+		sources = append(sources, s...)
+	}
+
+	slices.Sort(sources)
+	sources = slices.Compact(sources)
+	for i, s := range sources {
+		sources[i] = "'" + s + "'"
+	}
+	s := strings.Join(sources, ", ")
+	query := cf.GetString(config.Join("db.sources", "remove-unknown-sources"), config.LookupTable(map[string]string{
+		"sources": s,
+	}))
+	if _, err = tx.ExecContext(ctx, query); err != nil {
+		log.Debug().Err(err).Msg(query)
 	}
 
 	if err = runPostInsertHooks(ctx, cf, tx); err != nil {
@@ -155,7 +174,7 @@ func updateSources(ctx context.Context, cf *config.Config, tx *sql.Tx, source, s
 // Support for http/https/file and plain paths as well as "~/" prefix to
 // mean home directory.
 func readLicenseReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source string,
-	fn func(context.Context, *config.Config, *sql.Tx, *csv.Reader, string, string, string, time.Time) error) (err error) {
+	fn func(context.Context, *config.Config, *sql.Tx, *csv.Reader, string, string, string, time.Time) error) (sources []string, err error) {
 	source = config.ExpandHome(source)
 	u, err := url.Parse(source)
 	if err != nil {
@@ -164,6 +183,7 @@ func readLicenseReports(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 
 	switch u.Scheme {
 	case "https":
+		sources = append(sources, "https:"+u.Hostname())
 		t := time.Now()
 		skip := cf.GetBool("gdna.licd-skip-verify")
 		roots, err := x509.SystemCertPool()
@@ -192,18 +212,18 @@ func readLicenseReports(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 		req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 		if err != nil {
 			updateSources(ctx, cf, tx, "https:"+u.Hostname(), "https", source, false, t, err)
-			return err
+			return sources, err
 		}
 		resp, err := client.Do(req)
 		if err != nil {
 			updateSources(ctx, cf, tx, "https:"+u.Hostname(), "https", source, false, t, err)
-			return err
+			return sources, err
 		}
 		if resp.StatusCode > 299 {
 			resp.Body.Close()
 			err = fmt.Errorf("server returned %s", resp.Status)
 			updateSources(ctx, cf, tx, "https:"+u.Hostname(), "https", source, false, t, err)
-			return err
+			return sources, err
 		}
 		defer resp.Body.Close()
 
@@ -221,27 +241,28 @@ func readLicenseReports(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 
 		if err = fn(ctx, cf, tx, c, "https:"+u.Hostname(), "https", source, t); err != nil {
 			updateSources(ctx, cf, tx, "https:"+u.Hostname(), "https", source, false, t, err)
-			return err
+			return sources, err
 		}
 	case "http":
+		sources = append(sources, "http:"+u.Hostname())
 		t := time.Now()
 		client := &http.Client{Timeout: cf.GetDuration("gdna.licd-timeout")}
 		u = u.JoinPath(DetailsPath)
 		req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 		if err != nil {
 			updateSources(ctx, cf, tx, "http:"+u.Hostname(), "http", source, false, t, err)
-			return err
+			return sources, err
 		}
 		resp, err := client.Do(req)
 		if err != nil {
 			updateSources(ctx, cf, tx, "http:"+u.Hostname(), "http", source, false, t, err)
-			return err
+			return sources, err
 		}
 		if resp.StatusCode > 299 {
 			resp.Body.Close()
 			err = fmt.Errorf("server returned %s", resp.Status)
 			updateSources(ctx, cf, tx, "http:"+u.Hostname(), "http", source, false, t, err)
-			return err
+			return sources, err
 		}
 		defer resp.Body.Close()
 
@@ -259,7 +280,7 @@ func readLicenseReports(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 
 		if err = fn(ctx, cf, tx, c, "http:"+u.Hostname(), "http", source, t); err != nil {
 			updateSources(ctx, cf, tx, "http:"+u.Hostname(), "http", source, false, t, err)
-			return err
+			return sources, err
 		}
 	default:
 		log.Debug().Msgf("looking for files matching '%s'", source)
@@ -271,12 +292,12 @@ func readLicenseReports(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 
 		files, err := filepath.Glob(source)
 		if err != nil {
-			return err
+			return sources, err
 		}
 
 		if len(files) == 0 {
 			log.Warn().Msgf("no matches for %s", source)
-			return nil
+			return sources, nil
 		}
 
 		for _, source := range files {
@@ -284,18 +305,20 @@ func readLicenseReports(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 			t := time.Now()
 			source, _ = filepath.Abs(source)
 			source = filepath.ToSlash(source)
+
 			sourceName := "file:" + strings.TrimSuffix(filepath.Base(source), filepath.Ext(source))
+			sources = append(sources, sourceName)
 			s, err = os.Stat(source)
 			if err != nil {
 				log.Error().Err(err).Msg("")
 				// record the failure
 				updateSources(ctx, cf, tx, sourceName, "file", source, false, t, err)
-				return err
+				return sources, err
 			}
 			if s.IsDir() {
 				// record failure as source file is a directory
 				updateSources(ctx, cf, tx, sourceName, "file", source, false, t, os.ErrInvalid)
-				return os.ErrInvalid // geneos.ErrIsADirectory
+				return sources, os.ErrInvalid // geneos.ErrIsADirectory
 			}
 			if !overrideFiletime {
 				t = s.ModTime()
@@ -335,8 +358,8 @@ func readLicenseReports(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 				updateSources(ctx, cf, tx, sourceName, "file", source, false, t, err)
 			}
 		}
-		return nil
+		return sources, nil
 	}
 
-	return nil
+	return sources, nil
 }

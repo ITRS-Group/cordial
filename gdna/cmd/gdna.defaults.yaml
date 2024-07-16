@@ -314,6 +314,8 @@ db:
         VALUES (@source, @status, @sourceType, @firstSeen, @lastSeen, @path, @valid)
       ON CONFLICT (source)
         DO UPDATE SET sourceType=@sourceType, path=@path, lastSeen=@lastSeen, status=@status, valid=@valid;
+    remove-unknown-sources: >
+      DELETE FROM ${db.sources.table} WHERE source NOT IN (${sources})
     update-valid: >
       UPDATE ${db.sources.table} SET
           valid = unixepoch(lastSeen) >= @oldestValidTime,
@@ -336,7 +338,7 @@ db:
       );
     update: >
       DELETE FROM ${db.reporting-updates.table};
-      INSERT INTO ${db.reporting-updates.table} SELECT max(lastSeen) FROM ${db.sources.table};
+      INSERT INTO ${db.reporting-updates.table} SELECT COALESCE(max(lastSeen), 'now') FROM ${db.sources.table};
 
   # `gdna-version` stores the version of gdna that the database was
   # created with. This will be used to perform schema updates in future
