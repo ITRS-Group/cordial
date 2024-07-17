@@ -291,6 +291,9 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 				sql.Named("os", os),
 				sql.Named("version", version),
 			)
+			if err != nil {
+				log.Error().Err(err).Msg("inserting probe")
+			}
 
 		case "plugin":
 			// 21,gateway:LOB_GATEWAY_1102,gateway:LOB_GATEWAY_1102,binary,netprobe,itrsrh002111:7036 [410a355f],1
@@ -310,6 +313,9 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 				sql.Named("time", isoTime),
 				sql.Named("source", source),
 			)
+			if err != nil {
+				log.Error().Err(err).Msg("inserting sampler")
+			}
 
 		case "ca_plugin":
 			// 2851,gateway:LOB_GATEWAY_1085,gateway:LOB_GATEWAY_1085,ca_plugin,prometheus-plugin,position-cd-transformer-c1-6-gem,1
@@ -321,6 +327,9 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 				sql.Named("time", isoTime),
 				sql.Named("source", source),
 			)
+			if err != nil {
+				log.Error().Err(err).Msg("inserting CA sampler")
+			}
 
 		case "gateway_component":
 			// 1,gateway:LOB_GATEWAY_1102,gateway:LOB_GATEWAY_1102,gateway_component,database-logging,,1
@@ -331,6 +340,9 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 				sql.Named("time", isoTime),
 				sql.Named("source", source),
 			)
+			if err != nil {
+				log.Error().Err(err).Msg("inserting gateway component")
+			}
 
 			// also add gateways directly to a gateways table
 			if fields[4] == "gateway" {
@@ -339,6 +351,9 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 					sql.Named("time", isoTime),
 					sql.Named("source", source),
 				)
+				if err != nil {
+					log.Error().Err(err).Msg("inserting gateway")
+				}
 			}
 
 		case "gateway-plugin":
@@ -350,6 +365,9 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 				sql.Named("time", isoTime),
 				sql.Named("source", source),
 			)
+			if err != nil {
+				log.Error().Err(err).Msg("inserting gateway sampler")
+			}
 
 		default:
 			// error
