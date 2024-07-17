@@ -122,7 +122,8 @@ ignore:
     content:
     column: gateway
     create: >
-      CREATE ${db.temporary-table} TABLE IF NOT EXISTS ${ignore.gateways.table} (
+      DROP TABLE IF EXISTS ${ignore.gateways.table};
+      CREATE ${db.temporary-table} TABLE ${ignore.gateways.table} (
         ${ignore.gateways.column} TEXT NOT NULL COLLATE NOCASE
       );
   servers:
@@ -130,7 +131,8 @@ ignore:
     source: ignore-servers.txt
     column: server
     create: >
-      CREATE ${db.temporary-table} TABLE IF NOT EXISTS ${ignore.servers.table} (
+      DROP TABLE IF EXISTS ${ignore.servers.table};
+      CREATE ${db.temporary-table} TABLE ${ignore.servers.table} (
         ${ignore.servers.column} TEXT NOT NULL COLLATE NOCASE
       );
   hostids:
@@ -138,7 +140,8 @@ ignore:
     source: ignore-hostids.txt
     column: hostid
     create: >
-      CREATE ${db.temporary-table} TABLE IF NOT EXISTS ${ignore.hostids.table} (
+      DROP TABLE IF EXISTS ${ignore.hostids.table};
+      CREATE ${db.temporary-table} TABLE ${ignore.hostids.table} (
         ${ignore.hostids.column} TEXT NOT NULL COLLATE NOCASE
       );
   sources:
@@ -146,7 +149,8 @@ ignore:
     source: ignore-sources.txt
     column: source
     create: >
-      CREATE ${db.temporary-table} TABLE IF NOT EXISTS ${ignore.sources.table} (
+      DROP TABLE IF EXISTS ${ignore.sources.table};
+      CREATE ${db.temporary-table} TABLE ${ignore.sources.table} (
         ${ignore.sources.column} TEXT NOT NULL COLLATE NOCASE
       );
   plugins:
@@ -154,7 +158,8 @@ ignore:
     source: ignore-plugins.txt
     column: plugin
     create: >
-      CREATE ${db.temporary-table} TABLE IF NOT EXISTS ${ignore.plugins.table} (
+      DROP TABLE IF EXISTS ${ignore.plugins.table};
+      CREATE ${db.temporary-table} TABLE ${ignore.plugins.table} (
         ${ignore.plugins.column} TEXT NOT NULL COLLATE NOCASE
       );
 
@@ -164,7 +169,8 @@ groupings:
     source: grouping-gateways.txt
     column: gateway
     create: >
-      CREATE ${db.temporary-table} TABLE IF NOT EXISTS ${groupings.gateways.table} (
+      DROP TABLE IF EXISTS ${groupings.gateways.table};
+      CREATE ${db.temporary-table} TABLE ${groupings.gateways.table} (
         grouping TEXT NOT NULL,
         gateway TEXT NOT NULL
       );
@@ -173,7 +179,8 @@ groupings:
     source: grouping-servers.txt
     column: server
     create: >
-      CREATE ${db.temporary-table} TABLE IF NOT EXISTS ${groupings.servers.table} (
+      DROP TABLE IF EXISTS ${groupings.servers.table};
+      CREATE ${db.temporary-table} TABLE ${groupings.servers.table} (
         grouping TEXT NOT NULL,
         server TEXT NOT NULL
       );
@@ -182,7 +189,8 @@ groupings:
     source: grouping-hostids.txt
     column: hostid
     create: >
-      CREATE ${db.temporary-table} TABLE IF NOT EXISTS ${groupings.hostids.table} (
+      DROP TABLE IF EXISTS ${groupings.hostids.table};
+      CREATE ${db.temporary-table} TABLE ${groupings.hostids.table} (
         grouping TEXT NOT NULL,
         hostid TEXT NOT NULL
       );
@@ -191,7 +199,8 @@ groupings:
     source: grouping-sources.txt
     column: source
     create: >
-      CREATE ${db.temporary-table} TABLE IF NOT EXISTS ${groupings.sources.table} (
+      DROP TABLE IF EXISTS ${groupings.sources.table};
+      CREATE ${db.temporary-table} TABLE ${groupings.sources.table} (
         grouping TEXT NOT NULL,
         source TEXT NOT NULL
       );
@@ -205,12 +214,16 @@ groupings:
       wts-plugins,wts-*
       x-plugins,x-*
       sybase-plugins,sybase*
-      prometheus-plugins,prometheus*
+      prometheus-plugins,*prometheus*
       tib-plugins,tib*
       jmx-plugins,jmx*
+      cloud-plugins,aws-plugin
+      cloud-plugins,azure-plugin
+      cloud-plugins,gcp-plugin
     column: plugin
     create: >
-      CREATE ${db.temporary-table} TABLE IF NOT EXISTS ${groupings.plugins.table} (
+      DROP TABLE IF EXISTS ${groupings.plugins.table};
+      CREATE ${db.temporary-table} TABLE ${groupings.plugins.table} (
         grouping TEXT NOT NULL,
         plugin TEXT NOT NULL
       );
@@ -1107,7 +1120,7 @@ db:
     create: >
       DROP TABLE IF EXISTS ${db.match-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.match-gateways.table} AS
-        SELECT distinct grouping, gw.gateway
+        SELECT DISTINCT grouping, gw.gateway
           FROM ${groupings.gateways.table} grouping
           LEFT JOIN ${db.gateways.active} gw ON glob(grouping.gateway, gw.gateway);
 
@@ -1116,7 +1129,7 @@ db:
     create: >
       DROP TABLE IF EXISTS ${db.match-servers.table};
       CREATE ${db.temporary-table} TABLE ${db.match-servers.table} AS
-        SELECT distinct grouping, srv.server
+        SELECT DISTINCT grouping, srv.server
           FROM ${groupings.servers.table} grouping
           LEFT JOIN ${db.servers.table} srv ON glob(grouping.server, srv.server);
 
@@ -1125,7 +1138,7 @@ db:
     create: >
       DROP TABLE IF EXISTS ${db.match-server-hostids.table};
       CREATE ${db.temporary-table} TABLE ${db.match-server-hostids.table} AS
-        SELECT distinct grouping, hid.hostid
+        SELECT DISTINCT grouping, hid.hostid
           FROM ${groupings.hostids.table} grouping
           LEFT JOIN ${db.servers.table} hid ON glob(grouping.hostid, hid.hostid);
 
@@ -1134,7 +1147,7 @@ db:
     create: >
       DROP TABLE IF EXISTS ${db.match-gateway-sources.table};
       CREATE ${db.temporary-table} TABLE ${db.match-gateway-sources.table} AS
-        SELECT distinct grouping, gw.source
+        SELECT DISTINCT grouping, gw.source
           FROM ${groupings.sources.table} grouping
           LEFT JOIN ${db.gateways.active} gw ON glob(grouping.source, gw.source);
 
@@ -1143,9 +1156,13 @@ db:
     create: >
       DROP TABLE IF EXISTS ${db.match-sampler-plugins.table};
       CREATE ${db.temporary-table} TABLE ${db.match-sampler-plugins.table} AS
-        SELECT distinct grouping, s.plugin
+        SELECT DISTINCT grouping, COALESCE(s.plugin, c.plugin, g.plugin) plugin
           FROM ${groupings.plugins.table} grouping
-          LEFT JOIN ${db.samplers.active} s ON glob(grouping.plugin, s.plugin);
+          LEFT JOIN ${db.samplers.active} s ON glob(grouping.plugin, s.plugin)
+          LEFT JOIN ${db.ca-samplers.active} c ON glob(grouping.plugin, c.plugin)
+          LEFT JOIN ${db.gw-samplers.active} g ON glob(grouping.plugin, g.plugin)
+        GROUP BY COALESCE(s.gateway, c.gateway, g.gateway), COALESCE(s.plugin, c.plugin, g.plugin)
+      ;
 
 # plugins is a list of the tables to create for levels of plugin
 # coverage.
@@ -1363,12 +1380,24 @@ reports:
     enable-for-xlsx: false
     columns: [ pluginGroup, servers, instances ]
     query: >
+      WITH
+        plugins AS (
+          SELECT * FROM (
+            SELECT DISTINCT gateway, plugin, server FROM ${db.samplers.table}
+            UNION ALL
+            SELECT DISTINCT gateway, plugin, entity server FROM ${db.ca-samplers.table}
+            UNION ALL
+            SELECT DISTINCT gateway, plugin, 1 server FROM ${db.gw-samplers.table}
+           )
+        )
       SELECT grouping,
-             COALESCE(count(distinct server), 0) servers,
+             COALESCE(count(distinct gateway||":"||server), 0) servers,
              COALESCE(count(server), 0) instances
-        FROM ${db.samplers.active}
-       RIGHT JOIN ${db.match-sampler-plugins.table} USING (plugin)
-       GROUP BY grouping;
+        FROM plugins
+        RIGHT JOIN ${db.match-sampler-plugins.table} USING (plugin)
+       GROUP BY grouping
+       ORDER BY grouping
+      ;
 
   plugins-per-gateway:
     name: Plugins Per Gateway
@@ -1475,9 +1504,9 @@ reports:
       
       SELECT
         ca.plugin,
-        COALESCE((SELECT count(distinct entity) FROM ${db.ca-samplers.active} WHERE plugin = ca.plugin), 0) servers,
+        COALESCE((SELECT count(*) FROM ${db.ca-samplers.active} WHERE plugin = ca.plugin), 0) servers,
         COALESCE((SELECT total(number) FROM ${db.ca-samplers.active} WHERE plugin = ca.plugin), 0) instances,
-        COALESCE((SELECT count(distinct entity) FROM ${db.ca-samplers.inactive} WHERE plugin = ca.plugin), 0) previousServers,
+        COALESCE((SELECT count(*) FROM ${db.ca-samplers.inactive} WHERE plugin = ca.plugin), 0) previousServers,
         COALESCE((SELECT total(number) FROM ${db.ca-samplers.inactive} WHERE plugin = ca.plugin), 0) previousInstances,
         'collectionAgent',
         'Optional',
