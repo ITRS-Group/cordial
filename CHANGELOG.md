@@ -1,5 +1,24 @@
 # Change Log
 
+## Version v1.15.4
+
+> [!NOTE]
+> **Released 2024-07-17**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+### v1.15.4 Fixes
+
+* `gdna`
+
+  * Fix `sources` HTTP schema name, instead of using HTTPS
+  * Remove `sources` entries when configuration changes or files are removed
+  * Remove unused plugins from `expectRows` in include file
+  * Fix plugin grouping for CA and GW samplers and resolve numeric inconsistencies in queries
+  * Update bundled dashboards to include `Unused Gateways` and to add missing plugins
+
+---
+
 ## Version v1.15.3
 
 > [!NOTE]
