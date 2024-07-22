@@ -93,7 +93,7 @@ func ReservedName(name string) (ok bool) {
 // # In addition to static names we also allow glob-style characters through
 //
 // look for "[flavour:]name[@host]" - only name can contain glob chars
-var validNameRE = regexp.MustCompile(`^(\w+:)?([\w\.\-\ \_\*\?\[\]\^\]]+)?(@[\w\.]*)?$`)
+var validNameRE = regexp.MustCompile(`^(\w+:)?([\w\.\-\ _\*\?\[\]\^\]]+)?(@[\w\-_\.]*)?$`)
 
 // ValidName returns true if name is considered a valid instance
 // name. It is not checked against the list of reserved names.
