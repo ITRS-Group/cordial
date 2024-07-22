@@ -1,5 +1,21 @@
 # Change Log
 
+## Version v1.15.5
+
+> [!NOTE]
+> **Released 2024-07-22**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+### v1.15.5 Fixes
+
+* `tools/geneos`
+
+  * Restore validity check regexp to allow dashes and underscored in remote host names
+  * Merge parsed params back into args to fix `geneos host add` with an ssh URL
+
+---
+
 ## Version v1.15.4
 
 > [!NOTE]
