@@ -71,7 +71,8 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		cmd.AnnotationNeedsHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		_, args := cmd.ParseTypeNames(command)
+		_, args, params := cmd.ParseTypeNamesParams(command)
+		args = append(args, params...)
 
 		hostcf := config.New()
 
@@ -94,6 +95,8 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 				log.Error().Msgf("invalid ssh url %q", args[1])
 				return
 			}
+		default:
+			log.Fatal().Msgf("wrong number of args: %d", len(args))
 		}
 
 		// validate name - almost anything but no double colons
