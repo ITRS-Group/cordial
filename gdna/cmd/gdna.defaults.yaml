@@ -121,7 +121,7 @@ ignore:
     source: ignore-gateways.txt
     content:
     column: gateway
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${ignore.gateways.table};
       CREATE ${db.temporary-table} TABLE ${ignore.gateways.table} (
         ${ignore.gateways.column} TEXT NOT NULL COLLATE NOCASE
@@ -130,7 +130,7 @@ ignore:
     table: ignore_servers
     source: ignore-servers.txt
     column: server
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${ignore.servers.table};
       CREATE ${db.temporary-table} TABLE ${ignore.servers.table} (
         ${ignore.servers.column} TEXT NOT NULL COLLATE NOCASE
@@ -139,7 +139,7 @@ ignore:
     table: ignore_hostids
     source: ignore-hostids.txt
     column: hostid
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${ignore.hostids.table};
       CREATE ${db.temporary-table} TABLE ${ignore.hostids.table} (
         ${ignore.hostids.column} TEXT NOT NULL COLLATE NOCASE
@@ -148,7 +148,7 @@ ignore:
     table: ignore_sources
     source: ignore-sources.txt
     column: source
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${ignore.sources.table};
       CREATE ${db.temporary-table} TABLE ${ignore.sources.table} (
         ${ignore.sources.column} TEXT NOT NULL COLLATE NOCASE
@@ -157,7 +157,7 @@ ignore:
     table: ignore_plugins
     source: ignore-plugins.txt
     column: plugin
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${ignore.plugins.table};
       CREATE ${db.temporary-table} TABLE ${ignore.plugins.table} (
         ${ignore.plugins.column} TEXT NOT NULL COLLATE NOCASE
@@ -168,7 +168,7 @@ groupings:
     table: grouping_gateways
     source: grouping-gateways.txt
     column: gateway
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${groupings.gateways.table};
       CREATE ${db.temporary-table} TABLE ${groupings.gateways.table} (
         grouping TEXT NOT NULL,
@@ -178,7 +178,7 @@ groupings:
     table: grouping_servers
     source: grouping-servers.txt
     column: server
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${groupings.servers.table};
       CREATE ${db.temporary-table} TABLE ${groupings.servers.table} (
         grouping TEXT NOT NULL,
@@ -188,7 +188,7 @@ groupings:
     table: grouping_hostids
     source: grouping-hostids.txt
     column: hostid
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${groupings.hostids.table};
       CREATE ${db.temporary-table} TABLE ${groupings.hostids.table} (
         grouping TEXT NOT NULL,
@@ -198,7 +198,7 @@ groupings:
     table: grouping_sources
     source: grouping-sources.txt
     column: source
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${groupings.sources.table};
       CREATE ${db.temporary-table} TABLE ${groupings.sources.table} (
         grouping TEXT NOT NULL,
@@ -221,7 +221,7 @@ groupings:
       cloud-plugins,azure-plugin
       cloud-plugins,gcp-plugin
     column: plugin
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${groupings.plugins.table};
       CREATE ${db.temporary-table} TABLE ${groupings.plugins.table} (
         grouping TEXT NOT NULL,
@@ -232,7 +232,7 @@ db:
   temporary-table: TEMPORARY
   file: gdna.sqlite
   dsn: "file:${db.file}"
-  on-open: >
+  on-open: > #sql
     PRAGMA journal_mode='wal';
     PRAGMA synchronous='normal';
     PRAGMA temp_store='memory';
@@ -311,7 +311,7 @@ db:
   sources:
     table: sources
     columns: source, status, firstSeen, lastSeen, sourceType, path, valid
-    create: >
+    create: > #sql
       CREATE TABLE IF NOT EXISTS ${db.sources.table} (
         source            TEXT NOT NULL UNIQUE,
         status            TEXT NOT NULL,
@@ -321,15 +321,15 @@ db:
         path              TEXT NOT NULL,
         valid             BOOL
       );
-    insert: >
+    insert: > #sql
       INSERT INTO ${db.sources.table}
                (source, status, sourceType, firstSeen, lastSeen, path, valid)
         VALUES (@source, @status, @sourceType, @firstSeen, @lastSeen, @path, @valid)
       ON CONFLICT (source)
         DO UPDATE SET sourceType=@sourceType, path=@path, lastSeen=@lastSeen, status=@status, valid=@valid;
-    remove-unknown-sources: >
+    remove-unknown-sources: > #sql
       DELETE FROM ${db.sources.table} WHERE source NOT IN (${sources})
-    update-valid: >
+    update-valid: > #sql
       UPDATE ${db.sources.table} SET
           valid = unixepoch(lastSeen) >= @oldestValidTime,
           status = 
@@ -345,11 +345,11 @@ db:
   # data
   reporting-updates:
     table: reporting_updates
-    create: >
+    create: > #sql
       CREATE TABLE IF NOT EXISTS ${db.reporting-updates.table} (
         lastUpdate        TIMESTAMP NOT NULL
       );
-    update: >
+    update: > #sql
       DELETE FROM ${db.reporting-updates.table};
       INSERT INTO ${db.reporting-updates.table} SELECT COALESCE(max(lastSeen), 'now') FROM ${db.sources.table};
 
@@ -358,16 +358,16 @@ db:
   # releases.
   gdna-version:
     table: gdna_version
-    create: >
+    create: > #sql
       CREATE TABLE IF NOT EXISTS ${db.gdna-version.table} (
         version        TEXT NOT NULL UNIQUE
       );
-    insert: >
+    insert: > #sql
       INSERT INTO ${db.gdna-version.table} (version)
         VALUES (@version)
         ON CONFLICT (version)
           DO UPDATE SET version = @version;
-    query: >
+    query: > #sql
       SELECT version FROM ${db.gdna-version.table};
 
   # gateways returns a single column table containing all known gateways
@@ -375,14 +375,14 @@ db:
   gateways:
     table: gateways_all
     columns: gateway, firstSeen, lastSeen, source
-    create:
+    create: > #sql
       CREATE TABLE IF NOT EXISTS ${db.gateways.table} (
         gateway           TEXT NOT NULL COLLATE NOCASE UNIQUE,
         firstSeen         TIMESTAMP NOT NULL,
         lastSeen          TIMESTAMP NOT NULL,
         source            TEXT NOT NULL
       );
-    insert: >
+    insert: > #sql
       INSERT INTO ${db.gateways.table}
               (gateway, firstSeen, lastSeen, source)
       VALUES (@gateway, @time, @time, @source)
@@ -390,7 +390,7 @@ db:
         DO UPDATE SET lastSeen=@time, source=@source
       ;
     active: gateways
-    create-active: >
+    create-active: > #sql
       DROP TABLE IF EXISTS ${db.gateways.active};
       CREATE TABLE ${db.gateways.active} AS
       SELECT distinct ${db.gateways.columns}
@@ -409,7 +409,7 @@ db:
          AND ${ignore-gateway-source}
       ;
     inactive: gateways_previous
-    create-inactive: >
+    create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.gateways.inactive};
       CREATE TABLE ${db.gateways.inactive} AS
       SELECT distinct ${db.gateways.columns}
@@ -433,7 +433,7 @@ db:
     # component = "binary" and item = "netprobe"
     table: probes_all
     columns: gateway, probeName, probePort, server, hostID, firstSeen, lastSeen, source, os, version
-    create: >
+    create: > #sql
       CREATE TABLE IF NOT EXISTS ${db.probes.table} (
         gateway           TEXT NOT NULL COLLATE NOCASE,
         probeName         TEXT COLLATE NOCASE,
@@ -454,7 +454,7 @@ db:
       CREATE INDEX IF NOT EXISTS ${db.probes.table}_idx4 ON ${db.probes.table} (tokenID, probeName DESC);
       CREATE INDEX IF NOT EXISTS ${db.probes.table}_idx5 ON ${db.probes.table} (probeName);
       CREATE INDEX IF NOT EXISTS ${db.probes.table}_idx6 ON ${db.probes.table} (server);
-    insert: >
+    insert: > #sql
       INSERT INTO ${db.probes.table}
                (gateway, probeName, probePort, tokenID, firstSeen, lastSeen, source, os, version)
         VALUES (@gateway, @probeName, @probePort, @tokenID, @time, @time, @source, @os, @version)
@@ -462,7 +462,7 @@ db:
           DO UPDATE SET lastSeen=@time, source=@source, os=COALESCE(@os, os), version=COALESCE(@version, version)
               WHERE excluded.source >= source;
     # NOTE: we append the hostid so that multiple containers on the same host are distinguished
-    post-insert: >
+    post-insert: > #sql
       UPDATE ${db.probes.table} AS p
          SET hostID = tokenID,
              server = (SELECT lower(probeName)
@@ -472,7 +472,7 @@ db:
                        LIMIT 1)
                       || ':' || tokenID;
     active: probes
-    create-active: >
+    create-active: > #sql
       DROP TABLE IF EXISTS ${db.probes.active};
       CREATE ${db.temporary-table} TABLE ${db.probes.active} AS
         SELECT ${db.probes.columns}
@@ -482,7 +482,7 @@ db:
       CREATE INDEX IF NOT EXISTS ${db.probes.active}_idx1 ON ${db.probes.active} (server);
 
     inactive: probes_previous
-    create-inactive: >
+    create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.probes.inactive};
       CREATE ${db.temporary-table} TABLE ${db.probes.inactive} AS
         SELECT ${db.probes.columns}
@@ -497,7 +497,7 @@ db:
     columns: gateway, plugin, probeName, probePort, server, hostID, number, source, individual, firstSeen, lastSeen
     # the indexes below were suggested by SQLite ".expert" mode during
     # development and may need to be updated based on changes since
-    create: >
+    create: > #sql
       CREATE TABLE IF NOT EXISTS ${db.samplers.table} (
         gateway           TEXT NOT NULL COLLATE NOCASE,
         plugin            TEXT NOT NULL,
@@ -522,7 +522,7 @@ db:
       CREATE INDEX IF NOT EXISTS ${db.samplers.table}_idx6 ON ${db.samplers.table} (probeName, gateway, server);
       CREATE INDEX IF NOT EXISTS ${db.samplers.table}_idx7 ON ${db.samplers.table} (server, plugin);
       CREATE INDEX IF NOT EXISTS ${db.samplers.table}_idx8 ON ${db.samplers.table} (probeName, probePort, plugin);
-    insert: >
+    insert: > #sql
       INSERT INTO ${db.samplers.table}
              (gateway, plugin, probeName, probePort, tokenID, number, firstSeen, lastSeen, source)
       VALUES (@gateway, @plugin, @probeName, @probePort, @tokenID, @number, @time, @time, @source)
@@ -532,7 +532,7 @@ db:
           DO UPDATE SET number=@number, source=@source, lastSeen=@time
               WHERE excluded.source >= source
       ;
-    post-insert: >
+    post-insert: > #sql
       UPDATE ${db.samplers.table} AS s
          SET individual = false,
              hostID = tokenID,
@@ -564,9 +564,8 @@ db:
          SET hostID = server
        WHERE hostID IS NULL
       ;
-       
     active: samplers
-    create-active: >
+    create-active: > #sql
       DROP TABLE IF EXISTS ${db.samplers.active};
       CREATE ${db.temporary-table} TABLE ${db.samplers.active} AS
         SELECT ${db.samplers.columns}
@@ -577,7 +576,7 @@ db:
       CREATE INDEX IF NOT EXISTS ${db.samplers.active}_idx_1 ON ${db.samplers.active} (server);
       CREATE INDEX IF NOT EXISTS ${db.samplers.active}_idx_2 ON ${db.samplers.active} (probeName, probePort);
     inactive: samplers_previous
-    create-inactive: >
+    create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.samplers.inactive};
       CREATE ${db.temporary-table} TABLE ${db.samplers.inactive} AS
         SELECT ${db.samplers.columns}
@@ -591,7 +590,7 @@ db:
     # the "ca-plugin" component, the plugin column being set to the "item"
     table: ca_samplers_all
     columns: gateway, plugin, entity, number, firstSeen, lastSeen, source
-    create: >
+    create: > #sql
       CREATE TABLE IF NOT EXISTS ${db.ca-samplers.table} (
         gateway           TEXT NOT NULL COLLATE NOCASE,
         plugin            TEXT NOT NULL,
@@ -603,7 +602,7 @@ db:
         UNIQUE (gateway, plugin, entity)
       );
       CREATE INDEX IF NOT EXISTS ${db.ca-samplers.table}_idx1 ON ${db.ca-samplers.table} (source, lastSeen DESC);
-    insert: >
+    insert: > #sql
       INSERT INTO ${db.ca-samplers.table}
                (gateway, plugin, entity, number, firstSeen, lastSeen, source)
         VALUES (@gateway, @plugin, @entity, @number, @time, @time, @source)
@@ -612,7 +611,7 @@ db:
               WHERE excluded.source >= source
       ;
     active: ca_samplers
-    create-active: >
+    create-active: > #sql
       DROP TABLE IF EXISTS ${db.ca-samplers.active};
       CREATE ${db.temporary-table} TABLE ${db.ca-samplers.active} AS
         SELECT ${db.ca-samplers.columns}
@@ -621,7 +620,7 @@ db:
            AND ${ignore-gateway-source}
       ;
     inactive: ca_samplers_previous
-    create-inactive: >
+    create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.ca-samplers.inactive};
       CREATE ${db.temporary-table} TABLE ${db.ca-samplers.inactive} AS
         SELECT ${db.ca-samplers.columns}
@@ -636,7 +635,7 @@ db:
     # being set to the "item"
     table: gw_samplers_all
     columns: gateway, plugin, number, firstSeen, lastSeen, source
-    create: >
+    create: > #sql
       CREATE TABLE IF NOT EXISTS ${db.gw-samplers.table} (
         gateway           TEXT NOT NULL COLLATE NOCASE,
         plugin            TEXT NOT NULL,
@@ -647,7 +646,7 @@ db:
         UNIQUE (gateway, plugin)
       );
       CREATE INDEX IF NOT EXISTS ${db.gw-samplers.table}_idx1 ON ${db.gw-samplers.table} (source, lastSeen DESC);
-    insert: >
+    insert: > #sql
       INSERT INTO ${db.gw-samplers.table}
                (gateway, plugin, number, firstSeen, lastSeen, source)
         VALUES (@gateway, @plugin, @number, @time, @time, @source)
@@ -655,7 +654,7 @@ db:
           DO UPDATE SET number=@number, source=@source, lastSeen=@time
               WHERE excluded.source >= source;
     active: gw_samplers
-    create-active: >
+    create-active: > #sql
       DROP TABLE IF EXISTS ${db.gw-samplers.active};
       CREATE ${db.temporary-table} TABLE ${db.gw-samplers.active} AS
         SELECT ${db.gw-samplers.columns}
@@ -663,7 +662,7 @@ db:
          WHERE lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.gw-samplers.table}.source AND valid)
            AND ${ignore-gateway-source};
     inactive: gw_samplers_previous
-    create-inactive: >
+    create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.gw-samplers.inactive};
       CREATE ${db.temporary-table} TABLE ${db.gw-samplers.inactive} AS
         SELECT ${db.gw-samplers.columns}
@@ -677,7 +676,7 @@ db:
     # being set to the "item"
     table: gw_components_all
     columns: gateway, component, number, firstSeen, lastSeen, source
-    create: >
+    create: > #sql
       CREATE TABLE IF NOT EXISTS ${db.gw-components.table} (
         gateway           TEXT NOT NULL COLLATE NOCASE,
         component         TEXT NOT NULL,
@@ -688,7 +687,7 @@ db:
         UNIQUE (gateway, component)
       );
       CREATE INDEX IF NOT EXISTS ${db.gw-components.table}_idx1 ON ${db.gw-components.table} (source, lastSeen DESC);
-    insert: >
+    insert: > #sql
       INSERT INTO ${db.gw-components.table}
                (gateway, component, number, firstSeen, lastSeen, source)
         VALUES (@gateway, @component, @number, @time, @time, @source)
@@ -696,7 +695,7 @@ db:
           DO UPDATE SET number=@number, source=@source, lastSeen=@time
               WHERE excluded.source >= source;
     active: gw_components
-    create-active: >
+    create-active: > #sql
       DROP TABLE IF EXISTS ${db.gw-components.active};
       CREATE ${db.temporary-table} TABLE ${db.gw-components.active} AS
         SELECT ${db.gw-components.columns}
@@ -705,7 +704,7 @@ db:
            AND ${ignore-gateway-source}
       ;
     inactive: gw_components_previous
-    create-inactive: >
+    create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.gw-components.inactive};
       CREATE ${db.temporary-table} TABLE ${db.gw-components.inactive} AS
         SELECT ${db.gw-components.columns}
@@ -719,7 +718,7 @@ db:
   servers:
     table: servers
     columns: gateway, server, hostID, firstSeen, lastSeen, source, os, version
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.servers.table};
       CREATE ${db.temporary-table} TABLE ${db.servers.table} AS
         SELECT ${db.servers.columns}
@@ -737,10 +736,10 @@ db:
   l1plugins-per-server:
     table: l1_plugins_server
     columns: gateway, plugin, server, hostID, number, source, individual, firstSeen, lastSeen
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l1plugins-per-server.table};
       CREATE ${db.temporary-table} TABLE ${db.l1plugins-per-server.table} AS
-        SELECT ${db.l1plugins-per-server.columns}
+        SELECT gateway, plugin, server, hostID, sum(number) as number, source, individual, firstSeen, lastSeen
           FROM ${db.samplers.active}
         WHERE plugin IN ${plugins.level1.table}
         GROUP BY gateway, server, plugin;
@@ -751,7 +750,7 @@ db:
   # grouped by gateway, probeName, probePort and plugin.
   l1plugins-per-probe:
     table: l1_plugins_probe
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l1plugins-per-probe.table};
       CREATE ${db.temporary-table} TABLE ${db.l1plugins-per-probe.table} AS
         SELECT ${db.samplers.columns}
@@ -767,7 +766,7 @@ db:
 
   l1covered-probes:
     table: l1covered_probes
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l1covered-probes.table};
       CREATE ${db.temporary-table} TABLE ${db.l1covered-probes.table} AS
       SELECT ${db.probes.columns}
@@ -782,7 +781,7 @@ db:
 
   l1covered-servers:
     table: l1covered_servers
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l1covered-servers.table};
       CREATE ${db.temporary-table} TABLE ${db.l1covered-servers.table} AS
       SELECT ${db.servers.columns}
@@ -797,7 +796,7 @@ db:
 
   l1covered-gateways:
     table: l1covered_gateways
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l1covered-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.l1covered-gateways.table} AS
       SELECT ${db.gateways.columns}
@@ -817,10 +816,10 @@ db:
   l2plugins-per-server:
     table: l2_plugins_server
     columns: gateway, plugin, server, hostID, number, source, individual, firstSeen, lastSeen
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l2plugins-per-server.table};
       CREATE ${db.temporary-table} TABLE ${db.l2plugins-per-server.table} AS
-        SELECT ${db.samplers.columns}
+        SELECT gateway, plugin, server, hostID, sum(number) as number, source, individual, firstSeen, lastSeen
           FROM ${db.samplers.active}
         WHERE plugin IN ${plugins.level2.table}
         GROUP BY gateway, server, plugin;
@@ -828,7 +827,7 @@ db:
 
   l2plugins-per-probe:
     table: l2_plugins_probe
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l2plugins-per-probe.table};
       CREATE ${db.temporary-table} TABLE ${db.l2plugins-per-probe.table} AS
         SELECT ${db.samplers.columns}
@@ -839,7 +838,7 @@ db:
 
   l2covered-probes:
     table: l2covered_probes
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l2covered-probes.table};
       CREATE ${db.temporary-table} TABLE ${db.l2covered-probes.table} AS
       SELECT ${db.probes.columns}
@@ -854,7 +853,7 @@ db:
 
   l2covered-servers:
     table: l2covered_servers
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l2covered-servers.table};
       CREATE ${db.temporary-table} TABLE ${db.l2covered-servers.table} AS
       SELECT ${db.servers.columns}
@@ -869,7 +868,7 @@ db:
 
   l2covered-gateways:
     table: l2covered_gateways
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l2covered-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.l2covered-gateways.table} AS
       SELECT ${db.gateways.columns}
@@ -889,10 +888,10 @@ db:
   l3plugins-per-server:
     table: l3_plugins_server
     columns: gateway, plugin, server, hostID, number, source, individual, firstSeen, lastSeen
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l3plugins-per-server.table};
       CREATE ${db.temporary-table} TABLE ${db.l3plugins-per-server.table} AS
-        SELECT ${db.l3plugins-per-server.columns}
+        SELECT gateway, plugin, server, hostID, sum(number) as number, source, individual, firstSeen, lastSeen
           FROM ${db.samplers.active}
         WHERE plugin NOT IN ${plugins.level1.table}
           AND plugin NOT IN ${plugins.level1-optional.table}
@@ -902,7 +901,7 @@ db:
 
   l3plugins-per-probe:
     table: l3_plugins_probe
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l3plugins-per-probe.table};
       CREATE ${db.temporary-table} TABLE ${db.l3plugins-per-probe.table} AS
         SELECT ${db.samplers.columns}
@@ -915,7 +914,7 @@ db:
 
   l3covered-probes:
     table: l3covered_probes
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l3covered-probes.table};
       CREATE ${db.temporary-table} TABLE ${db.l3covered-probes.table} AS
       SELECT ${db.probes.columns}
@@ -925,7 +924,7 @@ db:
 
   l3covered-servers:
     table: l3covered_servers
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l3covered-servers.table};
       CREATE ${db.temporary-table} TABLE ${db.l3covered-servers.table} AS
       SELECT ${db.servers.columns}
@@ -935,7 +934,7 @@ db:
 
   l3covered-gateways:
     table: l3covered_gateways
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.l3covered-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.l3covered-gateways.table} AS
       SELECT ${db.gateways.columns}
@@ -953,7 +952,7 @@ db:
 
   covered-probes:
     table: covered_probes
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.covered-probes.table};
       CREATE ${db.temporary-table} TABLE ${db.covered-probes.table} AS
         WITH
@@ -980,7 +979,7 @@ db:
 
   covered-servers:
     table: covered_servers
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.covered-servers.table};
       CREATE ${db.temporary-table} TABLE ${db.covered-servers.table} AS
         WITH
@@ -1007,7 +1006,7 @@ db:
 
   covered-gateways:
     table: covered_gateways
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.covered-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.covered-gateways.table} AS
       WITH
@@ -1046,7 +1045,7 @@ db:
 
   uncovered-servers:
     table: uncovered_servers
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.uncovered-servers.table};
       CREATE ${db.temporary-table} TABLE ${db.uncovered-servers.table} AS
         WITH
@@ -1074,7 +1073,7 @@ db:
 
   empty-probes:
     table: empty_probes
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.empty-probes.table};
       CREATE ${db.temporary-table} TABLE ${db.empty-probes.table} AS
       SELECT ${db.probes.columns}
@@ -1083,7 +1082,7 @@ db:
 
   empty-servers:
     table: empty_servers
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.empty-servers.table};
       CREATE ${db.temporary-table} TABLE ${db.empty-servers.table} AS
       SELECT ${db.servers.columns}
@@ -1092,7 +1091,7 @@ db:
 
   empty-gateways:
     table: empty_gateways
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.empty-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.empty-gateways.table} AS
       SELECT ${db.gateways.columns}
@@ -1105,7 +1104,7 @@ db:
   # an active server
   unused-gateways:
     table: unused_gateways
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.unused-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.unused-gateways.table} AS
       SELECT distinct ${db.gateways.columns}
@@ -1117,7 +1116,7 @@ db:
 
   match-gateways:
     table: match_gateways
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.match-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.match-gateways.table} AS
         SELECT DISTINCT grouping, gw.gateway
@@ -1126,7 +1125,7 @@ db:
 
   match-servers:
     table: match_servers
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.match-servers.table};
       CREATE ${db.temporary-table} TABLE ${db.match-servers.table} AS
         SELECT DISTINCT grouping, srv.server
@@ -1135,7 +1134,7 @@ db:
 
   match-server-hostids:
     table: match_server_hostids
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.match-server-hostids.table};
       CREATE ${db.temporary-table} TABLE ${db.match-server-hostids.table} AS
         SELECT DISTINCT grouping, hid.hostid
@@ -1144,7 +1143,7 @@ db:
 
   match-gateway-sources:
     table: match_gateway_sources
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.match-gateway-sources.table};
       CREATE ${db.temporary-table} TABLE ${db.match-gateway-sources.table} AS
         SELECT DISTINCT grouping, gw.source
@@ -1153,7 +1152,7 @@ db:
 
   match-sampler-plugins:
     table: match_sampler_plugins
-    create: >
+    create: > #sql
       DROP TABLE IF EXISTS ${db.match-sampler-plugins.table};
       CREATE ${db.temporary-table} TABLE ${db.match-sampler-plugins.table} AS
         SELECT DISTINCT grouping, COALESCE(s.plugin, c.plugin, g.plugin) plugin
@@ -1175,7 +1174,7 @@ plugins:
   # to remove those plugins from the level 3 tests further below.
   level1:
     table: level1_plugins
-    create: >
+    create: > #sql
       CREATE TABLE IF NOT EXISTS ${plugins.level1.table} (
         plugin            TEXT UNIQUE ON CONFLICT IGNORE NOT NULL
       );
@@ -1183,7 +1182,7 @@ plugins:
 
   level1-optional:
     table: level1_optional_plugins
-    create: >
+    create: > #sql
       CREATE TABLE IF NOT EXISTS ${plugins.level1-optional.table} (
         plugin            TEXT UNIQUE ON CONFLICT IGNORE NOT NULL
       );
@@ -1192,7 +1191,7 @@ plugins:
   # level 2 plugins are actively fkm (logs) and processes
   level2:
     table: level2_plugins
-    create: >
+    create: > #sql
       CREATE TABLE IF NOT EXISTS ${plugins.level2.table} (
         plugin            TEXT UNIQUE ON CONFLICT IGNORE NOT NULL
       );
@@ -1207,7 +1206,7 @@ reports:
     name: GDNA Summary
     columns: [ Item, Description ]
     type: summary
-    query: >
+    query: > #sql
       SELECT 'ITRS GDNA', 'Version ${gdna.version}'
 
       UNION ALL
@@ -1253,9 +1252,9 @@ reports:
     group: Monitoring Coverage
     enable-for-xlsx: false
     columns: [ "level # plugin", instances, servers, "servers %", remainingServers, "remainingServers %" ]
-    headlines: >
+    headlines: > #sql
       SELECT 'totalServers', (SELECT count(distinct server) FROM ${db.servers.table});
-    query: >
+    query: > #sql
       WITH totals AS (
         SELECT
              (SELECT count(distinct server) FROM ${db.l1plugins-per-server.table}) l1count,
@@ -1278,11 +1277,6 @@ reports:
              (SELECT count(*) FROM ${db.l2plugins-per-server.table}) count,
              (SELECT count(*) FROM (SELECT distinct server FROM ${db.l2plugins-per-server.table} WHERE plugin = l2.plugin)) covered
           FROM ${plugins.level2.table} l2
-      ), l3 AS (
-        SELECT
-             plugin,
-             (SELECT count(*) FROM ${db.l3plugins-per-server.table}) count
-          FROM ${plugins.level2.table} l3
       )
       SELECT 'level1',
              totals.l1count,
@@ -1338,7 +1332,7 @@ reports:
     name: Gateway Coverage By Group
     group: Monitoring Coverage
     columns: [ group, gateways, complete, "complete %", empty, "empty %", "remaining", "remaining %", "l1complete", "l1complete %", "l1remaining", "l2complete", "l2complete %", "l2remaining", "l3complete", "l3complete %" ]
-    query: >
+    query: > #sql
       WITH v AS (
         SELECT grouping,
                count(distinct a.gateway) total,
@@ -1379,7 +1373,7 @@ reports:
     group: Monitoring Coverage
     enable-for-xlsx: false
     columns: [ pluginGroup, servers, instances ]
-    query: >
+    query: > #sql
       WITH
         plugins AS (
           SELECT * FROM (
@@ -1409,7 +1403,7 @@ reports:
     # source data
     #
     # Collect *all* plugins ever seen, ignore active and valid filtering
-    query: >
+    query: > #sql
       WITH
         plugins AS (
           SELECT * FROM (
@@ -1446,9 +1440,9 @@ reports:
     name: Plugin Summary
     group: Monitoring Coverage
     columns: [ "plugin", "servers", "instances", "previousServers", "previousInstances", "location", "required", "level", "license", "t1" ]
-    headlines: >
+    headlines: > #sql
       SELECT 'totalServers', (SELECT count(distinct server) FROM ${db.servers.table});
-    query: >
+    query: > #sql
       WITH s AS (
         SELECT plugin, hostID, individual
           FROM (SELECT plugin, hostID, individual FROM ${db.samplers.active} UNION SELECT plugin, hostID, individual FROM ${db.samplers.inactive})
@@ -1525,7 +1519,7 @@ reports:
     # Note: The COALESCE() in the percentage lines is necessary in the
     # (rare) case that once all the items are covered we avoid a divide
     # by zero returning NULL.
-    query: >
+    query: > #sql
       WITH gw AS (
         SELECT (SELECT count(*) FROM ${db.gateways.active}) total,
                (SELECT count(*) FROM ${db.covered-gateways.table}) covered,
@@ -1621,7 +1615,7 @@ reports:
     group: Monitoring Coverage
     enable-for-xlsx: false
     columns: [ coverage, percent, gateways, remaining, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, description ]
-    headlines: >
+    headlines: > #sql
       SELECT 'totalGateways', (SELECT count(*) FROM ${db.gateways.active})
 
       UNION
@@ -1633,7 +1627,7 @@ reports:
       SELECT 'unusedGateways', (SELECT count(*) FROM ${db.unused-gateways.table})
 
       ;
-    query: >
+    query: > #sql
       WITH gw AS (
         SELECT (SELECT count(*) FROM ${db.gateways.active}) total,
                (SELECT count(*) FROM ${db.covered-gateways.table}) covered,
@@ -1837,9 +1831,9 @@ reports:
     group: Monitoring Coverage
     enable-for-xlsx: false
     columns: [ coverage, percent, servers, remaining, width300, 100, description ]
-    headlines: >
+    headlines: > #sql
       SELECT 'totalServers', (SELECT count(distinct server) FROM ${db.servers.table});
-    query: >
+    query: > #sql
       WITH v AS (
         SELECT (SELECT count(distinct server) FROM ${db.servers.table}) total,
                (SELECT count(distinct server) FROM ${db.covered-servers.table}) covered,
@@ -1961,7 +1955,7 @@ reports:
     columns: [ serverID, server, probes, samplers, l1missing, l2missing, l3missing, gateways ]
     freeze-to-column: server
     scramble-columns: [ serverID, server, gateways ]
-    headlines: >
+    headlines: > #sql
       WITH t AS (
         SELECT
           (SELECT count(distinct server) FROM ${db.servers.table}) as total
@@ -1982,7 +1976,7 @@ reports:
       SELECT 'l3Incomplete', total - (SELECT count(distinct server) FROM ${db.l3covered-servers.table}) FROM t
 
       ;
-    query: >
+    query: > #sql
       SELECT server,
              replace(server, ':'||hostID, ''),
              (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
@@ -2050,7 +2044,7 @@ reports:
     type: split
     split-column: gateway
     split-values-query: SELECT ${reports.coverage-per-gateway-summary.split-column} FROM ${db.gateways.active}
-    headlines: >
+    headlines: > #sql
       WITH t AS (
         SELECT
           (SELECT count(distinct server) FROM ${db.servers.table} WHERE ${split-column} = '${value}') as total
@@ -2075,7 +2069,7 @@ reports:
       SELECT 'dynamicEntities', (SELECT count(*) FROM ${db.ca-samplers.active} WHERE ${split-column} = '${value}')
 
       ;
-    query: >
+    query: > #sql
       SELECT server,
              replace(server, ':'||hostID, ''),
              (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
@@ -2147,7 +2141,7 @@ reports:
     type: split
     split-column: gateway
     split-values-query: SELECT ${reports.coverage-per-gateway-detail.split-column} FROM ${db.gateways.active}
-    headlines: >
+    headlines: > #sql
       WITH t AS (
         SELECT
           (SELECT count(distinct server) FROM ${db.servers.table} WHERE ${split-column} = '${value}') as total
@@ -2172,7 +2166,7 @@ reports:
       SELECT 'dynamicEntities', (SELECT count(*) FROM ${db.ca-samplers.active} WHERE ${split-column} = '${value}')
 
       ;
-    query: >
+    query: > #sql
       SELECT server serverID,
              replace(server, ':'||hostID, '') server,
              (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
@@ -2266,9 +2260,9 @@ reports:
     group: Monitoring Coverage
     enable-for-xlsx: false
     columns: [ coverage, percent, servers, width300, 100, remaining, description ]
-    headlines: >
+    headlines: > #sql
       SELECT 'totalServers', (SELECT count(distinct server) FROM ${db.servers.table});
-    query: >
+    query: > #sql
       WITH v AS (
         SELECT (SELECT count(distinct server) FROM ${db.servers.table}) total,
                (SELECT count(distinct server) FROM ${db.covered-servers.table}) covered,
@@ -2350,7 +2344,7 @@ reports:
     name: Sources
     group: Monitoring Coverage
     columns: [ source, status, firstSeen, lastSeen, sourceType, path, valid, gateways, probes, plugins ]
-    headlines: >
+    headlines: > #sql
       SELECT 'lastestUpdate', max(lastSeen)
         FROM ${db.sources.table}
 
@@ -2384,7 +2378,7 @@ reports:
        
       ;
 
-    query: >
+    query: > #sql
       SELECT ${db.sources.columns},
              (SELECT count(*) FROM ${db.gateways.table} WHERE source = src.source AND lastSeen = src.lastSeen),
              (SELECT count(*) FROM ${db.probes.table}   WHERE source = src.source AND lastSeen = src.lastSeen),
@@ -2396,7 +2390,7 @@ reports:
     name: Unused Gateways
     group: Monitoring Coverage
     columns: [ gateway, lastSeen, sources ]
-    query: >
+    query: > #sql
       SELECT gateway, max(lastSeen), group_concat(source, ',')
         FROM ${db.unused-gateways.table}
        GROUP BY gateway
