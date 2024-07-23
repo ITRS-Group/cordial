@@ -446,9 +446,9 @@ db:
 
 The `gdna` program supports a number of commands. Once you have everything configured and tested you will use the `gdna start --daemon --on-start` command to run the program as a daemon process, regularly collecting and reporting your monitoring coverage.
 
-First, to test the set-up you can break this down into several stages, by using `geneos fetch` and `geneos report` commands to make sure that the license data is available and the Geneos Gateway and Netprobe are set-up correctly.
+First, to test the set-up you can break this down into several stages, by using `gdna fetch` and `gdna report` commands to make sure that the license data is available and the Geneos Gateway and Netprobe are set-up correctly.
 
-* First, run `geneos fetch` like this:
+* First, run `gdna fetch` like this:
 
   ```bash
   $ gdna fetch -l -
@@ -462,7 +462,7 @@ First, to test the set-up you can break this down into several stages, by using 
 
   Any other issues will need to be checked and corrected before proceeding.
 
-* Next, run `geneos report` to process the collected data from the previous test and to publish it to the Netprobe:
+* Next, run `gdna report` to process the collected data from the previous test and to publish it to the Netprobe:
 
   ```bash
   $ gdna report -l -
