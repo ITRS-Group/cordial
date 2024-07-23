@@ -354,10 +354,11 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) 
 	resp = instance.NewResponse(i)
 
 	cert, valid, chainfile, err := instance.ReadCert(i)
-	if err == os.ErrNotExist {
+	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
 	}
+
 	if cert == nil && err != nil {
 		return
 	}
@@ -384,14 +385,15 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *instance.Respons
 	resp = instance.NewResponse(i)
 
 	cert, valid, chainfile, err := instance.ReadCert(i)
-	if err == os.ErrNotExist {
-		// this is OK
-		err = nil
+	if err != nil && errors.Is(err, os.ErrNotExist) {
+		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
 	}
-	if err != nil {
+
+	if cert == nil && err != nil {
 		return
 	}
+
 	expires := cert.NotAfter
 	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
 	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.Format(time.RFC3339), cert.Subject.CommonName, fmt.Sprint(valid)}
@@ -411,14 +413,15 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *instance.Respon
 	resp = instance.NewResponse(i)
 
 	cert, valid, chainfile, err := instance.ReadCert(i)
-	if err == os.ErrNotExist {
-		// this is OK
-		err = nil
+	if err != nil && errors.Is(err, os.ErrNotExist) {
+		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
 	}
-	if err != nil {
+
+	if cert == nil && err != nil {
 		return
 	}
+
 	if listCmdLong {
 		resp.Value = listCertLongType{
 			i.Type().String(),
