@@ -195,7 +195,6 @@ func LoadConfig(i geneos.Instance) (err error) {
 
 	st, err := h.Stat(used)
 	if err == nil {
-		log.Debug().Msgf("setting ConfigLoaded to %v", st.ModTime())
 		i.SetLoaded(st.ModTime())
 	}
 
