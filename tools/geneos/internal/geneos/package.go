@@ -59,8 +59,14 @@ func (r Releases) Len() int {
 }
 
 func (r Releases) Less(i, j int) bool {
-	vi, _ := version.NewVersion(r[i].Version)
-	vj, _ := version.NewVersion(r[j].Version)
+	vi, err := version.NewVersion(strings.TrimLeftFunc(r[i].Version, func(r rune) bool { return !unicode.IsNumber(r) }))
+	if err != nil {
+		log.Debug().Err(err).Msg("")
+	}
+	vj, err := version.NewVersion(strings.TrimLeftFunc(r[j].Version, func(r rune) bool { return !unicode.IsNumber(r) }))
+	if err != nil {
+		log.Debug().Err(err).Msg("")
+	}
 	return vi.LessThan(vj)
 }
 
@@ -80,13 +86,13 @@ func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
 		return
 	}
 	basedir := h.PathTo("packages", ct.String())
-	dirs, err := h.ReadDir(basedir)
+	ents, err := h.ReadDir(basedir)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
 	}
 
 	var links = make(map[string][]string)
-	for _, dir := range dirs {
+	for _, dir := range ents {
 		if dir.Type()&fs.ModeSymlink != 0 {
 			if link, err := h.Readlink(path.Join(basedir, dir.Name())); err == nil {
 				links[link] = append(links[link], dir.Name())
@@ -95,9 +101,9 @@ func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
 	}
 
 	latest, _ := LatestVersion(h, ct, "")
-	for _, dir := range dirs {
-		if dir.IsDir() {
-			info, err := dir.Info()
+	for _, ent := range ents {
+		if ent.IsDir() {
+			info, err := ent.Info()
 			if err != nil {
 				// skip entries with errors
 				log.Debug().Err(err).Msg("skipping")
@@ -106,11 +112,11 @@ func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
 			releases = append(releases, ReleaseDetails{
 				Component: ct.String(),
 				Host:      h.String(),
-				Version:   dir.Name(),
-				Latest:    dir.Name() == latest,
-				Links:     links[dir.Name()],
+				Version:   ent.Name(),
+				Latest:    ent.Name() == latest,
+				Links:     links[ent.Name()],
 				ModTime:   info.ModTime().UTC(),
-				Path:      path.Join(basedir, dir.Name()),
+				Path:      path.Join(basedir, ent.Name()),
 			})
 		}
 	}
@@ -118,143 +124,6 @@ func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
 	sort.Sort(releases)
 
 	return releases, nil
-}
-
-func getVersions(r *Host, ct *Component) (versions map[string]*version.Version, originals map[string]string) {
-	dir := r.PathTo("packages", ct.String())
-	ents, err := r.ReadDir(dir)
-	if err != nil {
-		return
-	}
-
-	i := 0
-	for _, d := range ents {
-		if d.IsDir() {
-			ents[i] = d
-			i++
-		}
-	}
-	ents = ents[:i]
-
-	versions = make(map[string]*version.Version)
-	originals = make(map[string]string, len(ents)) // map processed to original entry
-
-	for _, d := range ents {
-		n := d.Name()
-		v1p := strings.FieldsFunc(n, func(r rune) bool {
-			return !unicode.IsLetter(r)
-		})
-		originals[n] = n
-		if len(v1p) > 0 && v1p[0] != "" {
-			p := strings.TrimPrefix(n, v1p[0])
-			originals[p] = n
-			n = p
-		}
-		v1, err := version.NewVersion(n)
-		if err == nil { // valid version
-			if v1.Metadata() != "" {
-				delete(versions, v1.Core().String())
-			}
-			versions[n] = v1
-		}
-	}
-	return
-}
-
-func adjacentVersions(r *Host, ct *Component, current string) (prev string, next string, err error) {
-	if current == "" {
-		log.Debug().Msg("current version must be set, ignoring")
-		return
-	}
-	cv, err := version.NewVersion(current)
-	if err != nil {
-		log.Debug().Err(err).Msgf("unable to parse version '%s', ignoring", current)
-		return
-	}
-
-	versions, originals := getVersions(r, ct)
-	if len(versions) == 0 {
-		return "", "", nil
-	}
-	prevVers := []*version.Version{}
-	for _, v := range versions {
-		if cv.GreaterThan(v) {
-			prevVers = append(prevVers, v)
-		}
-	}
-	sort.Sort(version.Collection(prevVers))
-	if len(prevVers) > 0 {
-		prev = originals[prevVers[len(prevVers)-1].Original()]
-	}
-	NextVers := []*version.Version{}
-	for _, v := range versions {
-		if cv.LessThan(v) {
-			NextVers = append(NextVers, v)
-		}
-	}
-	sort.Sort(version.Collection(NextVers))
-	if len(NextVers) > 0 {
-		next = originals[NextVers[0].Original()]
-	}
-	return
-}
-
-// previousVersion returns the latest installed package that is earlier than version current
-func previousVersion(r *Host, ct *Component, current string) (prev string, err error) {
-	if current == "" {
-		log.Debug().Msg("current version must be set, ignoring")
-		return
-	}
-	cv, err := version.NewVersion(current)
-	if err != nil {
-		log.Debug().Err(err).Msgf("unable to parse version '%s', ignoring", current)
-		return
-	}
-
-	versions, originals := getVersions(r, ct)
-	if len(versions) == 0 {
-		return "", nil
-	}
-	vers := []*version.Version{}
-	for _, v := range versions {
-		if cv.GreaterThan(v) {
-			vers = append(vers, v)
-		}
-	}
-	sort.Sort(version.Collection(vers))
-	if len(vers) > 0 {
-		prev = originals[vers[len(vers)-1].Original()]
-	}
-	return
-}
-
-func nextVersion(r *Host, ct *Component, current string) (next string, err error) {
-	if current == "" {
-		log.Debug().Msg("current version must be set, ignoring")
-		return
-	}
-	cv, err := version.NewVersion(current)
-	if err != nil {
-		log.Debug().Err(err).Msgf("unable to parse version '%s', ignoring", current)
-		return
-	}
-
-	versions, originals := getVersions(r, ct)
-	if len(versions) == 0 {
-		return "", nil
-	}
-
-	vers := []*version.Version{}
-	for _, v := range versions {
-		if cv.LessThan(v) {
-			vers = append(vers, v)
-		}
-	}
-	sort.Sort(version.Collection(vers))
-	if len(vers) > 0 {
-		next = originals[vers[0].Original()]
-	}
-	return
 }
 
 // CurrentVersion returns the version that base points to for the
@@ -318,7 +187,7 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 // any names as semantic versions.
 func LatestVersion(h *Host, ct *Component, versionPrefix string) (latest string, err error) {
 	dir := h.PathTo("packages", ct.String())
-	dirs, err := h.ReadDir(dir)
+	ents, err := h.ReadDir(dir)
 	if err != nil {
 		return
 	}
@@ -326,17 +195,17 @@ func LatestVersion(h *Host, ct *Component, versionPrefix string) (latest string,
 	semver, _ := version.NewVersion("0.0.0")
 	platformid := getPlatformId(h.GetString(h.Join("osinfo", "platform_id")))
 
-	for _, d := range dirs {
-		if !d.IsDir() {
+	for _, ent := range ents {
+		if !ent.IsDir() {
 			continue
 		}
 		if versionPrefix != "" {
-			if !strings.HasPrefix(d.Name(), versionPrefix) {
+			if !strings.HasPrefix(ent.Name(), versionPrefix) {
 				continue
 			}
 		}
 
-		sv, err := version.NewVersion(d.Name())
+		sv, err := version.NewVersion(strings.TrimLeftFunc(ent.Name(), func(r rune) bool { return !unicode.IsNumber(r) }))
 		if err != nil {
 			return latest, err
 		}
