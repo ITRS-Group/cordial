@@ -18,6 +18,7 @@ limitations under the License.
 package config
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdh"
 	"crypto/ecdsa"
@@ -265,10 +266,14 @@ func ExtractPrivateKeyPEM(h host.Host, pt string) (key *memguard.Enclave, err er
 	for {
 		p, rest := pem.Decode(pembytes)
 		if p == nil {
-			return nil, fmt.Errorf("cannot locate private key in %s", pt)
+			return nil, fmt.Errorf("cannot locate private key in %s:%s", h, pt)
 		}
 		if strings.HasSuffix(p.Type, "PRIVATE KEY") {
-			key = memguard.NewEnclave(pem.EncodeToMemory(p))
+			b := &bytes.Buffer{}
+			if err = pem.Encode(b, p); err != nil {
+				return
+			}
+			key = memguard.NewEnclave(b.Bytes())
 			return
 		}
 		pembytes = rest
