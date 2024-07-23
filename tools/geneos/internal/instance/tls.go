@@ -196,19 +196,23 @@ func ReadCert(i geneos.Instance) (cert *x509.Certificate, valid bool, chainfile 
 	// first check if we have a valid private key
 	c, err := config.ExtractCertificatePEM(i.Host(), PathOf(i, "certificate"))
 	if err != nil {
+		log.Debug().Err(err).Msg("")
 		return
 	}
 	pk, err := config.ExtractPrivateKeyPEM(i.Host(), PathOf(i, "privatekey"))
 	if err != nil {
+		log.Debug().Err(err).Msg("")
 		return
 	}
 	k, err := pk.Open()
 	if err != nil {
+		log.Debug().Err(err).Msg("")
 		return
 	}
 	defer k.Destroy()
 	_, err = tls.X509KeyPair(c, k.Bytes())
 	if err != nil {
+		log.Debug().Err(err).Msg("")
 		return
 	}
 
