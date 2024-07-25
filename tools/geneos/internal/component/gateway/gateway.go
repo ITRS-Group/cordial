@@ -358,13 +358,13 @@ func (g *Gateways) Command() (args, env []string, home string) {
 	if err == nil {
 		switch {
 		case geneos.CompareVersion(version, "5.10.0") >= 0:
-			args = append(args, "-gateway-name", name)
+			args = append(args, g.Name(), "-gateway-name", name)
+		default:
+			// fallback to older settings
+			args = append(args, name)
 		}
 	} else {
-		// fallback to older settings
-		args = append(args,
-			name,
-		)
+		args = append(args, name)
 	}
 
 	// always required

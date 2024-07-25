@@ -21,6 +21,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -74,9 +75,17 @@ func commandInstance(i geneos.Instance, params ...any) (resp *instance.Response)
 	lines := []string{fmt.Sprintf("=== %s ===", i)}
 
 	cmd := instance.BuildCmd(i, true, instance.StartingExtras(commandCmdExtras), instance.StartingEnvs(commandCmdEnvs))
+	cmdLine := ""
+	for _, a := range cmd.Args {
+		if strings.Contains(a, " ") {
+			cmdLine += ` "` + a + `"`
+		} else {
+			cmdLine += " " + a
+		}
+	}
 	lines = append(lines,
 		"command line:",
-		fmt.Sprint("\t", cmd.String()),
+		fmt.Sprint("\t", cmdLine),
 		"",
 		"working directory:",
 		fmt.Sprint("\t", cmd.Dir),

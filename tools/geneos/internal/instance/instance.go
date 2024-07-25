@@ -367,7 +367,7 @@ func Match(h *geneos.Host, ct *geneos.Component, patterns ...string) (names []st
 		}
 	}
 	slices.Sort(names)
-	_ = slices.Compact(names)
+	names = slices.Compact(names)
 	return
 }
 
