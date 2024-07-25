@@ -1,5 +1,26 @@
 # Change Log
 
+## Version v1.15.6
+
+> [!NOTE]
+> **Released 2024-07-25**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+### v1.15.6 Fixes
+
+* `tools/geneos`
+
+  * Fix matching of names, which because we didn't use the return value of `slices.Compact()` meant an extra "all" was effectively added to all commands
+  * Remove non-numeric prefixes of directory version naming to all "ra6.9.0" etc
+
+* `gdna`
+
+  * Fix counts for plugins over servers with multiple probes
+  * Update docs to fix references to `geneos` which are meant to be `gdna`
+  
+---
+
 ## Version v1.15.5
 
 > [!NOTE]
