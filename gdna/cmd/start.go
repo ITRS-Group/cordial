@@ -252,7 +252,8 @@ func afterjoberr(_ uuid.UUID, jobName string, err error) {
 }
 
 func do(ctx context.Context, cf *config.Config, db *sql.DB) (err error) {
-	if err = fetch(ctx, cf, db); err != nil {
+	sources, err := fetch(ctx, cf, db)
+	if err != nil {
 		return
 	}
 
@@ -263,7 +264,7 @@ func do(ctx context.Context, cf *config.Config, db *sql.DB) (err error) {
 	}
 	defer tx.Rollback()
 
-	if err = updateReportingDatabase(ctx, cf, tx); err != nil {
+	if err = updateReportingDatabase(ctx, cf, tx, sources); err != nil {
 		return
 	}
 

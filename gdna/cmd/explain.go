@@ -84,7 +84,7 @@ var explainCmd = &cobra.Command{
 		}
 		defer tx.Rollback()
 
-		if err = updateReportingDatabase(ctx, cf, tx); err != nil {
+		if err = updateReportingDatabase(ctx, cf, tx, nil); err != nil {
 			return
 		}
 

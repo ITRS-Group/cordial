@@ -545,7 +545,7 @@ func runPostInsertHooks(ctx context.Context, cf *config.Config, tx *sql.Tx) (err
 	for _, table := range cf.GetStringSlice("db.main-tables") {
 		if postInsertQuery := cf.GetString(config.Join("db", table, "post-insert")); postInsertQuery != "" {
 			log.Trace().Msgf("post-insert %s:\n%s", table, postInsertQuery)
-			if _, err = tx.QueryContext(ctx, postInsertQuery); err != nil {
+			if _, err = tx.ExecContext(ctx, postInsertQuery); err != nil {
 				log.Error().Err(err).Msgf("post-insert for %s failed", table)
 				return err
 			}
@@ -556,7 +556,7 @@ func runPostInsertHooks(ctx context.Context, cf *config.Config, tx *sql.Tx) (err
 }
 
 // updateReportingDatabase
-func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx) (err error) {
+func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx, validSources []string) (err error) {
 	// update sources `valid` column
 	var oldestTime time.Time
 	var oldestTimeUnix int64
@@ -566,7 +566,32 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx)
 		oldestTime = time.Now().Add(-maxAge)
 		oldestTimeUnix = oldestTime.Unix()
 	}
-	if err = execSQL(ctx, cf, tx, "db.sources", "update-valid",
+
+	log.Debug().Msgf("validSources = %v", validSources)
+	if validSources == nil {
+		log.Debug().Msg("validSources is nil")
+		rows, err := tx.QueryContext(ctx, "SELECT source FROM sources WHERE valid = 1")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		var source string
+		for rows.Next() {
+			if err = rows.Scan(&source); err != nil {
+				return err
+			}
+			validSources = append(validSources, source)
+		}
+	}
+
+	for i, s := range validSources {
+		validSources[i] = "'" + s + "'"
+	}
+
+	s := strings.Join(validSources, ", ")
+
+	log.Debug().Msgf("update-valid with sources: %s", s)
+	if err = execSQL(ctx, cf, tx, "db.sources", "update-valid", map[string]string{"sources": s},
 		sql.Named("oldestValidTime", oldestTimeUnix),
 		sql.Named("oldestValueTimeISO", oldestTime.UTC().Format(time.RFC3339)),
 		sql.Named("maxAge", maxAge.String()),
@@ -607,14 +632,14 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx)
 		return
 	}
 
-	return execSQL(ctx, cf, tx, "db.reporting-updates", "update")
+	return execSQL(ctx, cf, tx, "db.reporting-updates", "update", nil)
 }
 
 // execSQL is a simple wrapper to run ExecContext for the transaction tx
 // and query found in cf under `root`.`queryName` passing the arguments
 // in args. Any error is returned.
-func execSQL(ctx context.Context, cf *config.Config, tx *sql.Tx, root, queryName string, args ...any) (err error) {
-	query := cf.GetString(config.Join(root, queryName))
+func execSQL(ctx context.Context, cf *config.Config, tx *sql.Tx, root, queryName string, lookupTable map[string]string, args ...any) (err error) {
+	query := cf.GetString(config.Join(root, queryName), config.LookupTable(lookupTable))
 	if _, err = tx.ExecContext(ctx, query, args...); err != nil {
 		log.Debug().Err(err).Msg(query)
 	}

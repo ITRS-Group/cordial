@@ -114,7 +114,7 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 	}
 	defer tx.Rollback()
 
-	if err = updateReportingDatabase(ctx, cf, tx); err != nil {
+	if err = updateReportingDatabase(ctx, cf, tx, nil); err != nil {
 		return
 	}
 

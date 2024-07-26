@@ -31,6 +31,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -132,6 +133,9 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 		log.Info().Msgf("no matches found for %s", source)
 		return
 	}
+
+	// assume files include date times and they are ordered lexically
+	slices.Sort(matches)
 
 	// source = slices.Max(matches)
 	for _, source := range matches {

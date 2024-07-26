@@ -72,7 +72,7 @@ var fetchCmd = &cobra.Command{
 		defer db.Close()
 
 		log.Debug().Msg("fetching data")
-		if err = fetch(ctx, cf, db); err != nil {
+		if _, err = fetch(ctx, cf, db); err != nil {
 			return
 		}
 
@@ -92,7 +92,7 @@ func init() {
 	fetchCmd.Flags().SortFlags = false
 }
 
-func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (err error) {
+func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string, err error) {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Error().Msgf("cannot BEGIN transaction: %s", err)
@@ -104,7 +104,6 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (err error) {
 		return
 	}
 
-	var sources []string
 	log.Debug().Msgf("licd-sources: %v", cf.GetStringSlice("gdna.licd-sources"))
 	for _, source := range cf.GetStringSlice("gdna.licd-sources") {
 		var s []string
@@ -119,35 +118,25 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (err error) {
 		var s []string
 		log.Debug().Msgf("reading licd report file(s): %s", source)
 		if s, err = readLicdReports(ctx, cf, tx, source, licenseReportToDB); err != nil {
-			return err
+			return
 		}
 		sources = append(sources, s...)
 	}
 
 	slices.Sort(sources)
-	sources = slices.Compact(sources)
-	for i, s := range sources {
-		sources[i] = "'" + s + "'"
-	}
-	s := strings.Join(sources, ", ")
-	query := cf.GetString(config.Join("db.sources", "remove-unknown-sources"), config.LookupTable(map[string]string{
-		"sources": s,
-	}))
-	if _, err = tx.ExecContext(ctx, query); err != nil {
-		log.Debug().Err(err).Msg(query)
-	}
 
 	if err = runPostInsertHooks(ctx, cf, tx); err != nil {
 		return
 	}
 
 	if postProcess {
-		if err = updateReportingDatabase(ctx, cf, tx); err != nil {
+		if err = updateReportingDatabase(ctx, cf, tx, sources); err != nil {
 			return
 		}
 	}
 
-	return tx.Commit()
+	err = tx.Commit()
+	return
 }
 
 func updateSources(ctx context.Context, cf *config.Config, tx *sql.Tx, source, sourceType, path string, valid bool, t time.Time, status any) error {
@@ -158,7 +147,7 @@ func updateSources(ctx context.Context, cf *config.Config, tx *sql.Tx, source, s
 	if ok {
 		status = fmt.Errorf("ERROR: %w", errors.Unwrap(s))
 	}
-	return execSQL(ctx, cf, tx, "db.sources", "insert",
+	return execSQL(ctx, cf, tx, "db.sources", "insert", nil,
 		sql.Named("source", source),
 		sql.Named("sourceType", sourceType),
 		sql.Named("path", path),
