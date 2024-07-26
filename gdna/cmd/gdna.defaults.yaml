@@ -377,55 +377,57 @@ db:
     columns: gateway, firstSeen, lastSeen, source
     create: > #sql
       CREATE TABLE IF NOT EXISTS ${db.gateways.table} (
-        gateway           TEXT NOT NULL COLLATE NOCASE UNIQUE,
+        gateway           TEXT NOT NULL COLLATE NOCASE,
         firstSeen         TIMESTAMP NOT NULL,
         lastSeen          TIMESTAMP NOT NULL,
-        source            TEXT NOT NULL
+        source            TEXT NOT NULL,
+
+        UNIQUE (gateway, source)
       );
     insert: > #sql
       INSERT INTO ${db.gateways.table}
               (gateway, firstSeen, lastSeen, source)
       VALUES (@gateway, @time, @time, @source)
-      ON CONFLICT (gateway)
+      ON CONFLICT (gateway, source)
         DO UPDATE SET lastSeen=@time, source=@source
       ;
     active: gateways
     create-active: > #sql
       DROP TABLE IF EXISTS ${db.gateways.active};
       CREATE TABLE ${db.gateways.active} AS
-      SELECT distinct ${db.gateways.columns}
-        FROM ${db.gw-components.table}
-       WHERE component = 'gateway'
-         AND gateway IN (
-           SELECT distinct gateway AS gateway FROM ${db.samplers.table}
+      SELECT gateway, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
+        FROM ${db.gateways.table}
+       WHERE gateway IN (
+           SELECT distinct gateway AS gateway FROM ${db.samplers.active}
            UNION
-           SELECT distinct gateway AS gateway FROM ${db.ca-samplers.table}
+           SELECT distinct gateway AS gateway FROM ${db.ca-samplers.active}
            UNION
-           SELECT distinct gateway AS gateway FROM ${db.gw-samplers.table}
+           SELECT distinct gateway AS gateway FROM ${db.gw-samplers.active}
            UNION
-           SELECT distinct gateway AS gateway FROM ${db.probes.table}
+           SELECT distinct gateway AS gateway FROM ${db.probes.active}
          )
-         AND lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.gw-components.table}.source AND valid)
+         AND lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.gateways.table}.source AND valid)
          AND ${ignore-gateway-source}
+        GROUP BY gateway
       ;
     inactive: gateways_previous
     create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.gateways.inactive};
       CREATE TABLE ${db.gateways.inactive} AS
-      SELECT distinct ${db.gateways.columns}
-        FROM ${db.gw-components.table}
-       WHERE component = 'gateway'
-         AND gateway IN (
-           SELECT distinct gateway AS gateway FROM ${db.samplers.table}
+      SELECT gateway, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
+        FROM ${db.gateways.table}
+       WHERE gateway IN (
+           SELECT distinct gateway AS gateway FROM ${db.samplers.active}
            UNION
-           SELECT distinct gateway AS gateway FROM ${db.ca-samplers.table}
+           SELECT distinct gateway AS gateway FROM ${db.ca-samplers.active}
            UNION
-           SELECT distinct gateway AS gateway FROM ${db.gw-samplers.table}
+           SELECT distinct gateway AS gateway FROM ${db.gw-samplers.active}
            UNION
-           SELECT distinct gateway AS gateway FROM ${db.probes.table}
+           SELECT distinct gateway AS gateway FROM ${db.probes.active}
          )
-         AND lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.gw-components.table}.source AND valid)
+         AND lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.gateways.table}.source AND valid)
          AND ${ignore-gateway-source}
+        GROUP BY gateway
       ;
 
   probes:
@@ -722,8 +724,8 @@ db:
       DROP TABLE IF EXISTS ${db.servers.table};
       CREATE ${db.temporary-table} TABLE ${db.servers.table} AS
         SELECT ${db.servers.columns}
-          FROM ${db.probes.table}
-         WHERE lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.probes.table}.source AND valid)
+          FROM ${db.probes.active}
+         WHERE lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.probes.active}.source AND valid)
            AND ${ignore-all-no-plugin}
          GROUP BY gateway, server
       ;
@@ -1094,11 +1096,12 @@ db:
     create: > #sql
       DROP TABLE IF EXISTS ${db.empty-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.empty-gateways.table} AS
-      SELECT ${db.gateways.columns}
-        FROM ${db.gateways.active} q
-        WHERE q.gateway NOT IN (SELECT distinct gateway FROM ${db.samplers.active})
-          AND q.gateway NOT IN (SELECT distinct gateway FROM ${db.ca-samplers.active})
-        GROUP BY q.gateway;
+      SELECT gateway, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
+        FROM ${db.gateways.active}
+        WHERE gateway NOT IN (SELECT distinct gateway FROM ${db.samplers.active})
+          AND gateway NOT IN (SELECT distinct gateway FROM ${db.ca-samplers.active})
+          AND gateway NOT IN (SELECT distinct gateway FROM ${db.gw-samplers.active})
+        GROUP BY gateway;
 
   # `unused-gateways` includes all gateways that are not referenced by
   # an active server
@@ -1107,10 +1110,14 @@ db:
     create: > #sql
       DROP TABLE IF EXISTS ${db.unused-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.unused-gateways.table} AS
-      SELECT distinct ${db.gateways.columns}
-        FROM ${db.gw-components.active} q
+      SELECT gateway, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
+        FROM ${db.gateways.table}
        WHERE gateway NOT IN (SELECT distinct gateway FROM ${db.servers.table})
-         AND ${ignore-gateway-source};
+         AND gateway NOT IN (SELECT distinct gateway FROM ${db.samplers.active})
+         AND gateway NOT IN (SELECT distinct gateway FROM ${db.ca-samplers.active})
+         AND gateway NOT IN (SELECT distinct gateway FROM ${db.gw-samplers.active})
+         AND ${ignore-gateway-source}
+       GROUP BY gateway;
 
   # the `match` tables ...
 
@@ -1155,12 +1162,12 @@ db:
     create: > #sql
       DROP TABLE IF EXISTS ${db.match-sampler-plugins.table};
       CREATE ${db.temporary-table} TABLE ${db.match-sampler-plugins.table} AS
-        SELECT DISTINCT grouping, COALESCE(s.plugin, c.plugin, g.plugin) plugin
-          FROM ${groupings.plugins.table} grouping
-          LEFT JOIN ${db.samplers.active} s ON glob(grouping.plugin, s.plugin)
-          LEFT JOIN ${db.ca-samplers.active} c ON glob(grouping.plugin, c.plugin)
-          LEFT JOIN ${db.gw-samplers.active} g ON glob(grouping.plugin, g.plugin)
-        GROUP BY COALESCE(s.gateway, c.gateway, g.gateway), COALESCE(s.plugin, c.plugin, g.plugin)
+        SELECT grouping, COALESCE(s.plugin, c.plugin, g.plugin) plugin
+            FROM grouping_plugins grouping
+            LEFT JOIN samplers s ON glob(grouping.plugin, s.plugin)
+            LEFT JOIN ca_samplers c ON glob(grouping.plugin, c.plugin)
+            LEFT OUTER JOIN gw_samplers g ON glob(grouping.plugin, g.plugin)
+          GROUP BY grouping, COALESCE(s.plugin, c.plugin, g.plugin, "")
       ;
 
 # plugins is a list of the tables to create for levels of plugin
@@ -1227,24 +1234,35 @@ reports:
 
       UNION ALL
 
-      SELECT "Valid/OK Sources", (SELECT count(*) FROM ${db.sources.table} WHERE valid AND status = "OK")
+      SELECT 'Valid/OK Sources', (SELECT count(*) FROM ${db.sources.table} WHERE valid AND status = 'OK')
 
       UNION ALL
 
-      SELECT "Gateways", (SELECT count(*) FROM ${db.gateways.active})
+      SELECT 'Gateways', (SELECT count(*) FROM ${db.gateways.active})
 
       UNION ALL
 
-      SELECT "Servers", (SELECT count(distinct server) FROM ${db.servers.table})
+      SELECT 'Gateways - Unused', (SELECT count(distinct gateway) FROM ${db.unused-gateways.table})
 
       UNION ALL
 
-      SELECT "Probes", (SELECT count(*) FROM ${db.probes.active})
+      SELECT 'Servers', (SELECT count(distinct server) FROM ${db.servers.table})
 
       UNION ALL
 
-      SELECT "Samplers", (SELECT total(number) FROM ${db.samplers.active})
+      SELECT 'Probes', (SELECT count(*) FROM ${db.probes.active})
 
+      UNION ALL
+
+      SELECT 'Samplers', (SELECT total(number) FROM ${db.samplers.active})
+
+      UNION ALL
+
+      SELECT 'Dynamic Entities', (SELECT total(number) FROM ${db.ca-samplers.active})
+
+      UNION ALL
+
+      SELECT 'Gateway Samplers', (SELECT total(number) FROM ${db.gw-samplers.active})
       ;
 
   coverage-by-level-and-plugin:
@@ -1377,11 +1395,11 @@ reports:
       WITH
         plugins AS (
           SELECT * FROM (
-            SELECT DISTINCT gateway, plugin, server FROM ${db.samplers.table}
+            SELECT DISTINCT gateway, plugin, server FROM ${db.samplers.active}
             UNION ALL
-            SELECT DISTINCT gateway, plugin, entity server FROM ${db.ca-samplers.table}
+            SELECT DISTINCT gateway, plugin, entity server FROM ${db.ca-samplers.active}
             UNION ALL
-            SELECT DISTINCT gateway, plugin, 1 server FROM ${db.gw-samplers.table}
+            SELECT DISTINCT gateway, plugin, 1 server FROM ${db.gw-samplers.active}
            )
         )
       SELECT grouping,
@@ -1407,18 +1425,18 @@ reports:
       WITH
         plugins AS (
           SELECT * FROM (
-            SELECT DISTINCT plugin FROM ${db.samplers.table}
+            SELECT DISTINCT plugin FROM ${db.samplers.active}
             UNION ALL
-            SELECT DISTINCT plugin FROM ${db.ca-samplers.table}
+            SELECT DISTINCT plugin FROM ${db.ca-samplers.active}
             UNION ALL
-            SELECT DISTINCT plugin FROM ${db.gw-samplers.table}
+            SELECT DISTINCT plugin FROM ${db.gw-samplers.active}
            )
            ORDER BY (SELECT CASE
                       WHEN plugin IN ${plugins.level1.table} THEN 1
                       WHEN plugin IN ${plugins.level2.table} THEN 2
                       WHEN plugin IN ${plugins.level1-optional.table} THEN 3
-                      WHEN plugin IN (SELECT DISTINCT plugin FROM ${db.gw-samplers.table}) THEN 5
-                      WHEN plugin IN (SELECT DISTINCT plugin FROM ${db.ca-samplers.table}) THEN 6
+                      WHEN plugin IN (SELECT DISTINCT plugin FROM ${db.gw-samplers.active}) THEN 5
+                      WHEN plugin IN (SELECT DISTINCT plugin FROM ${db.ca-samplers.active}) THEN 6
                       ELSE 4 END), plugin
           
         ),
@@ -1620,7 +1638,7 @@ reports:
 
       UNION
 
-      SELECT 'allGateways', (SELECT count(*) FROM ${db.gateways.table})
+      SELECT 'allGateways', (SELECT count(distinct gateway) FROM ${db.gateways.table})
 
       UNION
 
