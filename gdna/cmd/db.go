@@ -26,6 +26,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -47,25 +48,39 @@ const dbtype = "sqlite"
 //
 // check if a `gdna-version` table already exists and then do version
 // specific updates as necessary. currently none, just update version
-func openDB(ctx context.Context, dsn string) (db *sql.DB, err error) {
+func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly bool) (db *sql.DB, err error) {
+	dsn := cf.GetString(dsnBase)
 	log.Info().Msgf("opening database using DSN `%s`", dsn)
 	db, err = sql.Open(dbtype, dsn)
 	if err != nil {
 		log.Error().Msgf("cannot connect to database `%s`: %s", dsn, err)
 		return
 	}
-	err = db.PingContext(ctx)
+
+	if err = db.PingContext(ctx); err != nil {
+		return
+	}
+
+	if readonly {
+		return
+	}
+
 	// if `db.on-open` exists, run it
 	onOpen := cf.GetString("db.on-open")
 	if onOpen != "" {
-		_, err = db.ExecContext(ctx, onOpen)
+		if _, err = db.ExecContext(ctx, onOpen); err != nil {
+			return
+		}
+	}
+
+	if err = updateSchema(ctx, db, cf); err != nil {
+		return
 	}
 
 	versionQuery := cf.GetString("db.gdna-version.query")
 	if versionQuery != "" {
 		var version string
-		err = db.QueryRowContext(ctx, versionQuery).Scan(&version)
-		if err != nil {
+		if err = db.QueryRowContext(ctx, versionQuery).Scan(&version); err != nil {
 			// assume, poorly, that this is because the table does not
 			// yet exist (as the ping and on-open did not error above)
 			//
@@ -77,7 +92,67 @@ func openDB(ctx context.Context, dsn string) (db *sql.DB, err error) {
 		}
 		insertVersion := cf.GetString("db.gdna-version.insert")
 		_, err = db.ExecContext(ctx, insertVersion, sql.Named("version", cordial.VERSION))
+	}
 
+	return
+}
+
+func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error) {
+	// update schema as required
+	userVersionQuery := "PRAGMA user_version"
+	userVersionUpdate := "PRAGMA user_version = %d"
+	var userVersion int64
+	if err = db.QueryRowContext(ctx, userVersionQuery).Scan(&userVersion); err != nil {
+		return
+	}
+	log.Debug().Msgf("user_version = %d", userVersion)
+
+	// now look for larger values in config
+	for i := userVersion + 1; ; i++ {
+		updateBase := config.Join("db", "schema-updates", strconv.FormatInt(i, 10))
+		if !cf.IsSet(updateBase) {
+			break
+		}
+		log.Debug().Msgf("found update %d", i)
+		checkQuery := cf.GetString(config.Join(updateBase, "check"))
+		updateQuery := cf.GetString(config.Join(updateBase, "update"))
+
+		if updateQuery == "" {
+			err = fmt.Errorf("no update query for version %d", i)
+			return
+		}
+
+		var checked int
+		if err = db.QueryRowContext(ctx, checkQuery).Scan(&checked); err != nil {
+			return
+		}
+
+		if checked > 0 {
+			var tx *sql.Tx
+			tx, err = db.BeginTx(ctx, nil)
+			if err != nil {
+				return
+			}
+			defer tx.Rollback()
+
+			log.Trace().Msgf("updateQuery:\n%s", updateQuery)
+			if _, err = tx.ExecContext(ctx, updateQuery); err != nil {
+				return
+			}
+
+			// update user_version
+			log.Trace().Msgf("userVersionQuery:\n%s", userVersionQuery)
+			if _, err = tx.ExecContext(ctx, fmt.Sprintf(userVersionUpdate, i)); err != nil {
+				return
+			}
+
+			if err = tx.Commit(); err != nil {
+				return
+			}
+			log.Debug().Msgf("completed update to version %d", i)
+		} else {
+			log.Debug().Msgf("update %d not required", i)
+		}
 	}
 
 	return

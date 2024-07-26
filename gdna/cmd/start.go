@@ -100,7 +100,7 @@ func start() (err error) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	db, err := openDB(ctx, cf.GetString("db.dsn"))
+	db, err := openDB(ctx, cf, "db.dsn", false)
 	if err != nil {
 		return
 	}

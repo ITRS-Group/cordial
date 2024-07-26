@@ -370,6 +370,28 @@ db:
     query: > #sql
       SELECT version FROM ${db.gdna-version.table};
 
+  # updates are run based on the current value of PRAGMAN user_version
+  #
+  # each set of updates for values greater than the current value are
+  # run and the value updated. each update is run in it's own
+  # transaction and failure results in program termination.
+  schema-updates:
+    1:
+      check: |
+        SELECT count(*) FROM pragma_table_info('${db.gateways.table}')
+      update: |
+        CREATE TABLE ${db.gateways.table}_new (
+          gateway           TEXT NOT NULL COLLATE NOCASE,
+          firstSeen         TIMESTAMP NOT NULL,
+          lastSeen          TIMESTAMP NOT NULL,
+          source            TEXT NOT NULL,
+
+          UNIQUE (gateway, source)
+        );
+        INSERT INTO ${db.gateways.table}_new SELECT * FROM ${db.gateways.table};
+        DROP TABLE ${db.gateways.table};
+        ALTER TABLE ${db.gateways.table}_new RENAME TO ${db.gateways.table};
+
   # gateways returns a single column table containing all known gateways
   # from the four samplers and probes tables
   gateways:
@@ -384,6 +406,7 @@ db:
 
         UNIQUE (gateway, source)
       );
+
     insert: > #sql
       INSERT INTO ${db.gateways.table}
               (gateway, firstSeen, lastSeen, source)
