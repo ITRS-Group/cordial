@@ -86,34 +86,83 @@ GDNA uses license usage data and this can be from either (or both):
 
   You have to be able to connect to the `licd` port, normally port 7041, from the location that GDNA will be running. You may need to have firewall or network permissions changed.
 
-  > [!IMPORTANT]
-  > Your `licd` (after release 5.7.0, which was a while back) _**must**_ be running with `-report detail` command line options.
-  >
-  > Check this with:
-  >
-  >  ```text
-  >  $ geneos show licd | grep options
-  >  ```
-  >
-  >  or
-  >
-  >  ```text
-  >  $ geneos command licd
-  >  ```
-  >
-  > If you cannot see the the settings in the options field or in the command output then you can add this to an existing `licd` with:
-  >
-  >  ```text
-  >  $ geneos set licd options+="-report detail"
-  >  $ geneos restart licd
-  >  ```
+> [!IMPORTANT]
+> Your `licd` (after release 5.7.0, which was a while back) _**must**_ be running with `-report detail` command line options.
+>
+> Check this with:
+>
+>  ```text
+>  $ geneos show licd | grep options
+>  ```
+>
+>  or
+>
+>  ```text
+>  $ geneos command licd
+>  ```
+>
+> If you cannot see the the settings in the options field or in the command output then you can add this to an existing `licd` with:
+>
+>  ```text
+>  $ geneos set licd options+="-report detail"
+>  $ geneos restart licd
+>  ```
 
-  > [!NOTE]
-  > Restarting the `licd` process should have no effects on your Geneos installation as Gateways cache license tokens for when the license daemon is not available.
+> [!NOTE]
+> Restarting the `licd` process should have no effects on your Geneos installation as Gateways cache license tokens for when the license daemon is not available.
 
 * Access to newer `licd` summary reports
 
   If you are running GDNA on the same server as the `licd` process or have access to it's working directory via a file share then this option provides more information but requires an updated `licd`. In Geneos releases after 6.7.0 the `licd` process creates summary files in a `reporting/` sub-directory. These are created every 6 hours. When combined with the first option, you can get both additional data and more frequent reporting.
+
+### Connectivity
+
+```mermaid
+---
+title: GDNA Docker Compose Block Diagram
+---
+
+flowchart LR
+  subgraph licd[licds]
+    direction LR
+    licd1(licd)
+    licd2(licd)
+    licd3(...)
+  end
+
+  config>"docker-compose.yml\n(inc. gdna.yaml)"]
+
+  subgraph docker [Docker Container]
+    direction TB
+    webdashboard(Web Server)
+    gateway("#quot;Demo Gateway#quot;")
+    netprobe("Netprobe\n(API Plugin)")
+    gdna(gdna start --daemon)
+    sqlite[("SQLite\n(persistent\nvolume)")]
+  end
+
+  subgraph visualisation [Visualisation]
+    direction LR
+    browser(Desktop Browser)
+    activeconsole(Active Console)
+  end
+
+  classDef subgraphs fill:#bbb,stroke:#333,stroke-width:4px
+  class licd,docker,visualisation subgraphs;
+
+  email("email")
+  
+
+visualisation <--> docker
+docker -- "HTTP/HTTPS" --> licd
+docker -. "SMTP" -.-> email
+config --> docker
+
+gdna --> netprobe
+gdna --> sqlite
+netprobe --> gateway
+gateway --> webdashboard
+```
 
 ### Using Docker Compose
 
@@ -337,6 +386,59 @@ Docker will not always be available on the server where you want to run GDNA. It
 * You will also need somewhere to display the included dashboards; This can directly in your Active Console or, preferably, in a Web Dashboard Server. For a Web Dashboard Server, this should already be connected to your selected Gateway.
 
 * You will either need to add a new Netprobe, as in the instructions below, or if you want to use an existing Netprobe you will have to adjust the configuration to suit, including the TCP connection details and perhaps the Managed Entity and Sampler names. If you want to change the latter two then more complex changes may be required to make the dashboards work - see the section below.
+
+#### Standalone Connectivity
+
+```mermaid
+---
+title: GDNA Standalone Block Diagram
+---
+
+flowchart LR
+  subgraph licd[licds]
+    direction LR
+    licd1(licd)
+    licd2(licd)
+    licd3(...)
+  end
+
+  subgraph gdna
+    direction TB
+    gdnad(gdna start --daemon)
+    sqlite[("gdna.sqlite")]
+    config>"gdna.yaml"]
+    gdnad --> sqlite
+    config --> gdnad
+  end
+
+  subgraph geneos [Existing Geneos]
+    direction TB
+    webdashboard(Web Server)
+    gateway("#quot;Demo Gateway#quot;")
+    netprobe("Netprobe\n(API Plugin)")
+
+    netprobe --> gateway --> webdashboard
+  end
+  
+  subgraph visualisation [Visualisation]
+    direction LR
+    browser(Desktop Browser)
+    activeconsole(Active Console)
+  end
+
+  classDef subgraphs fill:#bbb,stroke:#333,stroke-width:4px
+  class licd,gdna,visualisation,geneos subgraphs;
+
+  email("email")
+
+
+
+visualisation <--> geneos
+
+gdna -- "HTTP/HTTPS" --> licd
+gdna -. "SMTP" -.-> email
+geneos <--> gdna
+```
 
 #### Unpack and Install
 
