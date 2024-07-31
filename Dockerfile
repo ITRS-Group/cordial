@@ -47,7 +47,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     make; \
     # gdna
     cd /app/cordial/gdna; \
-    go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    go build -tags sqlite_omit_load_extension,netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
     GOOS=windows go build --ldflags '-s -w';
 
 #

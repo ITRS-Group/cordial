@@ -30,14 +30,15 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/rs/zerolog/log"
-	_ "modernc.org/sqlite"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-const dbtype = "sqlite"
+const dbtype = "sqlite3"
 
 // openDB opens the given DSN and returns both a *sql.DB object and a
 // ready to go single *sql.Conn object. Remember to close the conn
@@ -567,9 +568,7 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx,
 		oldestTimeUnix = oldestTime.Unix()
 	}
 
-	log.Debug().Msgf("validSources = %v", validSources)
 	if validSources == nil {
-		log.Debug().Msg("validSources is nil")
 		rows, err := tx.QueryContext(ctx, "SELECT source FROM sources WHERE valid = 1")
 		if err != nil {
 			return err
@@ -590,7 +589,6 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx,
 
 	s := strings.Join(validSources, ", ")
 
-	log.Debug().Msgf("update-valid with sources: %s", s)
 	if err = execSQL(ctx, cf, tx, "db.sources", "update-valid", map[string]string{"sources": s},
 		sql.Named("oldestValidTime", oldestTimeUnix),
 		sql.Named("oldestValueTimeISO", oldestTime.UTC().Format(time.RFC3339)),
