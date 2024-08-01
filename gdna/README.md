@@ -634,8 +634,8 @@ The two dashboards included with GDNA are largely agnostic to the source of data
 
 * Load the dashboard files into your Active Console using the `File` -> `Import` menu option.
 
-    > [!NOTE]
-    > Your Active Console should be relatively recent as the `.adb` file format can change with new releases and older AC2 release may not work correctly. You will normally see a warning dialogue when importing the file in this case.
+> [!NOTE]
+> Your Active Console should be relatively recent as the `.adb` file format can change with new releases and older AC2 release may not work correctly. You will normally see a warning dialogue when importing the file in this case.
 
 * Open the `Tools` -> `Refactor Paths` window:
 
