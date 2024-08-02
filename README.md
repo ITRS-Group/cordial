@@ -2,16 +2,7 @@
 
 > [!NOTE]
 >
-> This is **Version v1.15.6** - Released 2024-07-25 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
-
-> 🎁 Introducing GDNA 🎈
->
-> GDNA (Geneos Dynamic Netprobe Analysis) gives an overview of the levels of Geneos monitoring coverage in your I.T. estate and prompts action to ensure that there are no gaps in the visibility of the health of your applications and systems. It does this through analysing Geneos license allocation data and applying heuristics to plugin usage information to present visual indications of coverage levels through two dashboards.
->
-> For many users installing GDNA is as easy as starting up a docker container after configuring the data sources.
->
-> See the [`gdna`](gdna/README.md) README for more details.
-
+> This is **Version v1.160** - Released 2024-08-02 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 
 ## Tools and Utilities
 

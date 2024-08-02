@@ -1,5 +1,41 @@
 # Change Log
 
+## Version v1.16.0
+
+> [!NOTE]
+> **Released 2024-08-02**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+### v1.16.0 Changes
+
+* `gdna`
+
+  * Updates to Dashboards to present more focused information to users
+  * Improve documentation, add block diagrams and update screenshots
+  * Added a `gdna version` command, when combined with `--debug` will report dependencies used during build
+  * Move to using `github.com/mattn/go-sqlite3` instead of pure Go `modernc.org/sqlite`
+
+* Build
+
+  * Use Go 1.22.5
+
+### v1.16.0 Fixes
+
+* `gdna`
+
+  * Fix some SQL queries used in temporary table construction to give more accurate numbers for servers with multiple probes
+  * Fix dashboard XPaths to remove unnecessary Gateway and Managed Entity names
+
+* `tools/geneos`
+
+  * Fix `geneos package install` (and `geneos init` etc.) to have better support for local installation sources and to distinguish between el8/el9 platform specific archives over non-platform specific ones
+
+* Build
+
+  * Fix Makefile/Dockerfile interdependencies and speed up documentation builds by downloading Chrome outside on underlying puppeteer installation
+---
+
 ## Version v1.15.6
 
 > [!NOTE]
