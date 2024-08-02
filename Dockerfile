@@ -55,13 +55,29 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 # writers the support for relative links to files is broken, so
 # documents with links to other docs in the same repo will be wrong.
 #
-FROM node AS cordial-docs
+FROM node:lts AS cordial-docs
+ARG NODE_ENV=production
+ENV NODE_ENV $NODE_ENV
+ENV PUPPETEER_SKIP_DOWNLOAD true
+ENV PUPPETEER_EXECUTABLE_PATH /usr/bin/google-chrome-stable
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     set -eux; \
     apt update; \
     apt install -y --no-install-recommends \
+        wget \
+        gnupg; \
+    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -; \
+    sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list'; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
         fonts-noto-color-emoji \
+        fonts-ipafont-gothic \
+        fonts-wqy-zenhei \
+        fonts-thai-tlwg \
+        fonts-kacst \
+        fonts-freefont-ttf \
+        google-chrome-stable \
         libnss3 \
         libnspr4 \
         libatk1.0-0 \
@@ -74,9 +90,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libxfixes3 \
         libxrandr2 \
         libgbm1 \
-        libasound2; \
-    rm -fr /var/lib/apt/lists/*; \
-    npm install --global mdpdf; \
+        libasound2 \
+        libxss1; \
+    rm -fr /var/lib/apt/lists/*;
+RUN set -eux; \
+    mkdir node_modules; \
+    npm install --verbose --global mdpdf; \
     npm install --global @mermaid-js/mermaid-cli
 
 # base files
@@ -106,7 +125,7 @@ COPY libraries/libalert/README.md libalert.md
 ARG MERMAID=".mermaid"
 ARG READMEDIRS="tools/geneos tools/gateway-reporter tools/dv2email gdna integrations/servicenow integrations/pagerduty libraries/libemail libraries/libalert"
 RUN set -eux; \
-    echo '{  "args": ["--no-sandbox"] }' > /puppeteer.json; \
+    echo '{ "args": ["--no-sandbox"] }' > /puppeteer.json; \
     for i in ${READMEDIRS}; \
     do \
             mmdc -p /puppeteer.json -i /app/cordial/$i/README.md -o /app/cordial/$i/README${MERMAID}.md; \
