@@ -80,8 +80,8 @@ geneos add netprobe infraprobe12 --start --log
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationWildcard:  "false",
-		AnnotationNeedsHome: "true",
+		CmdNoneMeansAll: "false",
+		CmdRequireHome:  "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, names, params := ParseTypeNamesParams(cmd)
@@ -93,7 +93,11 @@ geneos add netprobe infraprobe12 --start --log
 // extra configuration values addCmdExtras
 func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, items []string, names ...string) (err error) {
 	if ct == nil {
-		return fmt.Errorf("%w: unsupported or no component type specified", geneos.ErrInvalidArgs)
+		return fmt.Errorf("%w: unknown or no component type given", geneos.ErrInvalidArgs)
+	}
+	if len(names) == 0 {
+		return fmt.Errorf("%w: no instance name given", geneos.ErrInvalidArgs)
+
 	}
 
 	// check validity and reserved words here

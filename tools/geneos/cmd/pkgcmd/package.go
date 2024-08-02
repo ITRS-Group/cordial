@@ -40,8 +40,8 @@ var packageCmd = &cobra.Command{
 	Short:   "Package Operations",
 	Long:    packageCmdDescription,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "true",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "true",
 	},
 	DisableFlagParsing:    true,
 	DisableFlagsInUseLine: true,

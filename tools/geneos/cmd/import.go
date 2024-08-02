@@ -73,9 +73,9 @@ geneos import gateway -c shared common_include.xml
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationWildcard:  "true",
-		AnnotationNeedsHome: "true",
-		AnnotationExpand:    "true",
+		CmdNoneMeansAll: "true",
+		CmdRequireHome:  "true",
+		CmdGlobNames:    "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, names, params := ParseTypeNamesParams(cmd)

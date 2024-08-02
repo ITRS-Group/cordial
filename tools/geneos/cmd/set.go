@@ -66,9 +66,9 @@ geneos set netprobe cloudapps1 -e SOME_CLIENT_ID=abcde -E SOME_CLIENT_SECRET
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationWildcard:  "true",
-		AnnotationNeedsHome: "true",
-		AnnotationExpand:    "true",
+		CmdNoneMeansAll: "true",
+		CmdRequireHome:  "true",
+		CmdGlobNames:    "true",
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		if len(args) == 0 && cmd.Flags().NFlag() == 0 {

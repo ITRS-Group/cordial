@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -48,9 +50,9 @@ func init() {
 	installCmd.Flags().StringVarP(&installCmdPwFile, "pwfile", "P", "", "Password file to read for downloads, defaults to configuration value in download::password or otherwise prompts")
 	installCmd.Flags().MarkHidden("pwfile")
 
-	installCmd.Flags().BoolVarP(&installCmdLocal, "local", "L", false, "Install from local files only")
-	installCmd.Flags().BoolVarP(&installCmdNoSave, "nosave", "n", false, "Do not save a local copy of any downloads")
-	installCmd.Flags().BoolVarP(&installCmdDownloadOnly, "download", "D", false, "Download only")
+	installCmd.Flags().BoolVarP(&installCmdLocal, "local", "L", false, "Install from local files only.\n* Implied if files or directories are given on command line.")
+	installCmd.Flags().BoolVarP(&installCmdNoSave, "nosave", "n", false, "Do not save a local copy of any downloads.\n* Implied if files or directories are given on command line.")
+	installCmd.Flags().BoolVarP(&installCmdDownloadOnly, "download", "D", false, "Download only, to the current directory.\nCannot be combined with --nosave")
 
 	// note that "local" and "nosave" together are fine. illogical, but fine.
 	installCmd.MarkFlagsMutuallyExclusive("nosave", "download")
@@ -63,6 +65,7 @@ func init() {
 
 	installCmd.Flags().StringVarP(&installCmdVersion, "version", "V", "latest", "Download this version, defaults to latest. Doesn't work for EL8 archives.")
 	installCmd.Flags().StringVarP(&installCmdOverride, "override", "O", "", "Override the TYPE:VERSION for archive files with non-standard names")
+	installCmd.MarkFlagsMutuallyExclusive("version", "override")
 
 	installCmd.Flags().BoolVarP(&installCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires auth.")
 	installCmd.Flags().BoolVarP(&installCmdSnapshot, "snapshots", "S", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
@@ -84,8 +87,8 @@ geneos install netprobe -b active_dev -U
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "false",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		if installCmdDownloadOnly {
@@ -103,6 +106,8 @@ geneos install netprobe -b active_dev -U
 
 		ct, args, params := cmd.ParseTypeNamesParams(command)
 
+		log.Debug().Msgf("args %v params: %v", args, params)
+		params = append(args, params...)
 		for _, p := range params {
 			if strings.HasPrefix(p, "@") {
 				return fmt.Errorf("the @HOST format is not valid here, perhaps you meant `-H HOST`?")
@@ -111,25 +116,118 @@ geneos install netprobe -b active_dev -U
 
 		h := geneos.GetHost(cmd.Hostname)
 
-		if installCmdUsername == "" {
-			installCmdUsername = config.GetString(config.Join("download", "username"))
-		}
+		// if params contains files and not directories then those
+		// override/filter component types, so resolve those first
+		//
+		// if params contains directories then filter contents using
+		// given ct, if version if given then filter on that
+		if len(params) > 0 {
+			log.Debug().Msg("parameters found, local install only")
+			if installCmdOverride != "" {
+				if len(params) > 1 {
+					return fmt.Errorf("`--override` is only valid with a single file parameter")
+				}
 
-		if installCmdPwFile != "" {
-			var pp []byte
-			if pp, err = os.ReadFile(installCmdPwFile); err != nil {
-				return
+				st, err := h.Stat(params[0])
+				if err != nil {
+					return fmt.Errorf("%w: `--override` only valid with a single file parameter", err)
+				}
+
+				if st.IsDir() {
+					return fmt.Errorf("%s is a directory: `--override` only valid with a single file parameter", params[0])
+				}
 			}
-			installCmdPassword = config.NewPlaintext(pp)
-		} else {
-			installCmdPassword = config.GetPassword(config.Join("download", "password"))
+
+			// use ct as a filter, if set
+
+			// base options
+			options := []geneos.PackageOptions{
+				geneos.Basename(installCmdBase),
+				geneos.DoUpdate(installCmdUpdate || installCmdForce),
+				geneos.Force(installCmdForce),
+				geneos.LocalOnly(true),
+				geneos.NoSave(true),
+				geneos.OverrideVersion(installCmdOverride),
+			}
+
+			var installed bool
+			// work through command line params and try to install each
+			// argument using the naming format of standard downloads
+			for _, source := range params {
+				// check if source is a file, and then extract type and version unless override set
+				st, err := h.Stat(source)
+				if err != nil {
+					log.Debug().Err(err).Msg("skipping")
+					continue
+				}
+				nct := ct
+				v := installCmdVersion
+
+				var p string
+
+				// for non-directories, try to match the filename to ct
+				// and version unless override is set
+				if !st.IsDir() {
+					p, err = filepath.EvalSymlinks(source)
+					if err != nil {
+						log.Debug().Err(err).Msg("skipping")
+						continue
+					}
+					if installCmdOverride != "" {
+						nct, v, err = geneos.OverrideToComponentVersion(installCmdOverride)
+					} else {
+						nct, v, err = geneos.FilenameToComponentVersion(path.Base(p))
+						if installCmdVersion != "latest" && installCmdVersion != v {
+							log.Debug().Msgf("selected version %s and file version %s do not match, skipping", installCmdVersion, v)
+							continue
+						}
+					}
+					if err != nil {
+						log.Debug().Err(err).Msg("skipping")
+						continue
+					}
+					if ct != nil && ct != nct {
+						log.Debug().Msgf("ct %s and file ct %s do not match, skipping", ct, nct)
+						continue
+					}
+				}
+
+				options = append(options, geneos.Version(v))
+
+				log.Debug().Msgf("installing from %s as %q version of %s to %s host(s)", source, installCmdVersion, ct, cmd.Hostname)
+				if err = Install(h, nct, append(options, geneos.LocalArchive(source))...); err != nil {
+					return err
+				}
+				installed = true
+			}
+			if !installed {
+				return fmt.Errorf("no matching archives found")
+			}
+			return nil
 		}
 
-		if installCmdUsername != "" && (installCmdPassword.IsNil() || installCmdPassword.Size() == 0) {
-			installCmdPassword, err = config.ReadPasswordInput(false, 0)
-			if err == config.ErrNotInteractive {
-				err = fmt.Errorf("%w and password required", err)
-				return
+		// don't look for credentials if we are only installing fom local sources
+		if !installCmdLocal {
+			if installCmdUsername == "" {
+				installCmdUsername = config.GetString(config.Join("download", "username"))
+			}
+
+			if installCmdPwFile != "" {
+				var pp []byte
+				if pp, err = os.ReadFile(installCmdPwFile); err != nil {
+					return
+				}
+				installCmdPassword = config.NewPlaintext(pp)
+			} else {
+				installCmdPassword = config.GetPassword(config.Join("download", "password"))
+			}
+
+			if installCmdUsername != "" && (installCmdPassword.IsNil() || installCmdPassword.Size() == 0) {
+				installCmdPassword, err = config.ReadPasswordInput(false, 0)
+				if err == config.ErrNotInteractive {
+					err = fmt.Errorf("%w and password required", err)
+					return
+				}
 			}
 		}
 
@@ -153,9 +251,7 @@ geneos install netprobe -b active_dev -U
 
 		if installCmdDownloadOnly {
 			archive := "."
-			if len(args) > 0 {
-				archive = args[0]
-			} else if len(params) > 0 {
+			if len(params) > 0 {
 				archive = params[0]
 			}
 			log.Debug().Msgf("downloading %q version of %s to %s", installCmdVersion, ct, archive)
@@ -169,7 +265,7 @@ geneos install netprobe -b active_dev -U
 			if installCmdNexus {
 				options = append(options, geneos.UseNexus())
 			}
-			return install(h, ct, options...)
+			return Install(h, ct, options...)
 		}
 
 		cs, err := instance.Instances(h, ct, instance.FilterParameters("protected=true", "version="+installCmdBase))
@@ -211,8 +307,6 @@ geneos install netprobe -b active_dev -U
 				geneos.StopFunc(instance.Stop))
 		}
 
-		args = append(args, params...)
-
 		// if we have a component on the command line then use an
 		// archive from packages/downloads or download from official web
 		// site unless -L is given. version numbers checked. default to
@@ -220,7 +314,7 @@ geneos install netprobe -b active_dev -U
 		//
 		// overrides do not work in this case as the version and type
 		// have to be part of the archive file name
-		if ct != nil || len(args) == 0 {
+		if ct != nil {
 			log.Debug().Msgf("installing %q version of %s to %s host(s)", installCmdVersion, ct, cmd.Hostname)
 
 			if installCmdSnapshot {
@@ -230,22 +324,20 @@ geneos install netprobe -b active_dev -U
 			if installCmdNexus {
 				options = append(options, geneos.UseNexus())
 			}
-			return install(h, ct, options...)
+			return Install(h, ct, options...)
 		}
 
-		// work through command line args and try to install each
-		// argument using the naming format of standard downloads
-		for _, source := range args {
-			log.Debug().Msgf("installing %q version of %s to %s host(s)", installCmdVersion, ct, cmd.Hostname)
-			if err = install(h, ct, append(options, geneos.LocalArchive(source))...); err != nil {
-				return err
-			}
+		log.Debug().Msgf("installing version %q of %s to %s host(s)", installCmdVersion, ct, cmd.Hostname)
+		if err = Install(h, ct, options...); err != nil {
+			return err
 		}
+
 		return nil
 	},
 }
 
-func install(h *geneos.Host, ct *geneos.Component, options ...geneos.PackageOptions) (err error) {
+func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.PackageOptions) (err error) {
+	installed := 0
 	for _, h := range h.OrList() {
 		if err = ct.MakeDirs(h); err != nil {
 			return err
@@ -255,15 +347,21 @@ func install(h *geneos.Host, ct *geneos.Component, options ...geneos.PackageOpti
 				if errors.Is(err, fs.ErrExist) {
 					fmt.Printf("%s installation already exists, skipping", ct)
 					err = nil
+					installed++
 					continue
 				}
 				if errors.Is(err, fs.ErrNotExist) && installCmdVersion != "latest" {
 					err = nil
+					installed++
 					continue
 				}
 				return err
 			}
+			installed++
 		}
+	}
+	if installed == 0 {
+		return fmt.Errorf("no matching release installed")
 	}
 	return
 }

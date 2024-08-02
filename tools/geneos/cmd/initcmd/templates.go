@@ -43,8 +43,8 @@ var templatesCmd = &cobra.Command{
 	Aliases:      []string{"templates"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "true",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, args, params := cmd.ParseTypeNamesParams(command)
@@ -59,7 +59,7 @@ var templatesCmd = &cobra.Command{
 	},
 }
 
-func initTemplates(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
+func initTemplates(h *geneos.Host) (err error) {
 	for _, ct := range geneos.RealComponents() {
 		if len(ct.Templates) == 0 {
 			continue
@@ -70,7 +70,7 @@ func initTemplates(h *geneos.Host, options ...geneos.PackageOptions) (err error)
 		for _, t := range ct.Templates {
 			tmpl := t.Content
 			if initCmdGatewayTemplate != "" {
-				if tmpl, err = geneos.ReadFrom(initCmdGatewayTemplate); err != nil {
+				if tmpl, err = geneos.ReadAll(initCmdGatewayTemplate); err != nil {
 					return
 				}
 			}

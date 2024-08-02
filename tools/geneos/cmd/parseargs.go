@@ -18,7 +18,6 @@ limitations under the License.
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -29,17 +28,22 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-// Annotation types for command behaviour
+// Command annotation types for command behaviour
+//
+// Annotations should be read-only. Currently they are not completely.
 const (
-	AnnotationAliasFor   = "aliasfor"     // mapping alias
-	AnnotationComponent  = "ct"           // specific component name
-	AnnotationNames      = "names"        // json encoded array of instance names
-	AnnotationNeedsHome  = "needshomedir" // "true" or "false"
-	AnnotationParams     = "params"       // json encoded array of parameters
-	AnnotationReplacedBy = "replacedby"   // deprecated command alias
-	AnnotationWildcard   = "wildcard"     // "true", "false", "explicit" (to match "all") or "explicit-none"
-	AnnotationExpand     = "expand"       // "true" or "false" - pass all names through a path.Match style lookup
+	CmdGlobNames    = "expand"       // "true" or "false" - pass all names through a path.Match style lookup
+	CmdReplacedBy   = "replacedby"   // deprecated command alias
+	CmdRequireHome  = "needshomedir" // "true" or "false"
+	CmdNoneMeansAll = "wildcard"     // "true", "false", "explicit" (to match "all") or "none-or-all"
 )
+
+// type CommandFeatures struct {
+// 	Glob         bool
+// 	ReplacedBy   string
+// 	RequireHome  bool
+// 	NoneMeansAll string
+// }
 
 // ParseArgs does the heavy lifting of sorting out non-flag command line
 // ares for the various commands. The results are passed back in the
@@ -66,33 +70,41 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 	var ct *geneos.Component
 	var names, params []string
 
+	cd := cmddata(command)
+	if cd == nil {
+		return fmt.Errorf("command context not found")
+	}
+
 	// default host
 	h := geneos.GetHost(Hostname)
 
 	if command.Annotations == nil {
 		command.Annotations = make(map[string]string)
 	}
-	annotations := command.Annotations
-	// args and params are JSON arrays, initialise
-	annotations[AnnotationNames] = "[]"
-	annotations[AnnotationParams] = "[]"
 
-	if len(args) == 0 && annotations[AnnotationWildcard] != "true" {
+	an := command.Annotations
+
+	if len(args) == 0 && an[CmdNoneMeansAll] != "true" {
 		return nil
 	}
 
-	// shortcut - if the first non-component arg is "all" and the
-	// wildcard type is "explicit" then treat it as a wildcard, but only
-	// when given "all" as the first argument
+	if an[CmdNoneMeansAll] == "true" {
+		cd.Lock()
+		cd.wildcards = true
+		cd.Unlock()
+	}
+
+	// if the first non-component arg is "all" and the wildcard type is
+	// "explicit" then treat it as a wildcard, but only when given "all"
+	// as the first argument
 	if len(args) > 0 {
-		// first strip component if given and specified
-		if annotations[AnnotationComponent] == args[0] {
-			args = args[1:]
-		}
-		// now check first non-component arg
-		if annotations[AnnotationWildcard] == "explicit" || annotations[AnnotationWildcard] == "explicit-none" {
+		// check first non-component arg
+		if an[CmdNoneMeansAll] == "explicit" || an[CmdNoneMeansAll] == "none-or-all" {
 			if len(args) > 0 && args[0] == "all" {
-				annotations[AnnotationWildcard] = "true"
+				// an[CmdNoneMeansAll] = "true"
+				cd.Lock()
+				cd.wildcards = true
+				cd.Unlock()
 				args = args[1:]
 			}
 		}
@@ -100,8 +112,9 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 
 	log.Debug().Msgf("rawargs: %s", args)
 
-	// filter in place - pull out all args that are not valid instance names into params
-	// after rebuild this should only apply to 'import'
+	// filter in place - pull out all args that are not valid instance
+	// names into params after rebuild this should only apply to
+	// 'import'
 	n := 0
 	for _, a := range args {
 		if !instance.ValidName(a) {
@@ -113,43 +126,39 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 	}
 	args = args[:n]
 
-	log.Debug().Msgf("args %v, params %v, ct %s", args, params, annotations[AnnotationComponent])
+	log.Debug().Msgf("args %v, params %v, ct %q", args, params, ct)
 
-	jsonargs, _ := json.Marshal(params)
-	annotations[AnnotationParams] = string(jsonargs)
+	cd.Lock()
+	cd.params = params
+	cd.Unlock()
 
-	if annotations[AnnotationWildcard] != "true" {
+	if !cd.wildcards {
 		if len(args) == 0 {
 			return nil
 		}
-		// check the first non-flag arg for a component, or fall back to
-		// command annotation, if set.
+
+		// check the first arg for a component, or fall back to command
+		// annotation, if set.
 		if ct = geneos.ParseComponent(args[0]); ct == nil {
-			if annotations[AnnotationComponent] != "" {
-				if ct = geneos.ParseComponent(annotations[AnnotationComponent]); ct == nil {
-					jsonargs, _ := json.Marshal(args)
-					annotations[AnnotationNames] = string(jsonargs)
-					return
-				}
-			} else {
-				jsonargs, _ := json.Marshal(args)
-				annotations[AnnotationNames] = string(jsonargs)
-				return
-			}
+			cd.Lock()
+			cd.names = args
+			cd.Unlock()
+			return
 		}
-		if annotations[AnnotationComponent] == "" {
-			annotations[AnnotationComponent] = args[0]
-			names = args[1:]
-		} else {
-			names = args
-		}
-		if annotations[AnnotationExpand] == "true" {
+
+		cd.Lock()
+		cd.ct = geneos.ParseComponent(args[0])
+		cd.Unlock()
+		names = args[1:]
+
+		if an[CmdGlobNames] == "true" {
 			log.Debug().Msgf("matching %v", names)
 			if len(names) > 0 {
 				newnames := instance.Match(h, ct, names...)
 				if len(newnames) == 0 {
-					jsonargs, _ = json.Marshal(names)
-					annotations[AnnotationNames] = string(jsonargs)
+					cd.Lock()
+					cd.names = names
+					cd.Unlock()
 					return fmt.Errorf("%v - %w", names, geneos.ErrNotExist)
 				} else {
 					names = newnames
@@ -157,22 +166,26 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 			}
 		}
 	} else {
-		defaultComponent := annotations[AnnotationComponent]
-		if defaultComponent == "" && len(args) > 0 {
+		defaultComponent := ""
+		if len(args) > 0 {
 			defaultComponent = args[0]
 		}
+
 		if ct = geneos.ParseComponent(defaultComponent); ct == nil {
 			// first arg is not a known type, so treat the rest as instance names
 			names = args
-			if annotations[AnnotationExpand] == "true" {
+			if an[CmdGlobNames] == "true" {
 				log.Debug().Msgf("matching %v", names)
-				if len(names) > 0 {
+				if len(names) == 1 && names[0] == "all" && (an[CmdNoneMeansAll] == "true" || an[CmdNoneMeansAll] == "explicit") {
+					names = instance.InstanceNames(h, ct)
+				} else if len(names) > 0 {
 					newnames := instance.Match(h, ct, names...)
 					log.Debug().Msgf("match returned %v", newnames)
 					if len(newnames) == 0 {
 						log.Debug().Msgf("no names match %v", names)
-						jsonargs, _ = json.Marshal(names)
-						annotations[AnnotationNames] = string(jsonargs)
+						cd.Lock()
+						cd.names = names
+						cd.Unlock()
 						return fmt.Errorf("%v - %w", names, geneos.ErrNotExist)
 					} else {
 						names = newnames
@@ -180,19 +193,19 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 				}
 			}
 		} else {
-			if annotations[AnnotationComponent] == "" {
-				annotations[AnnotationComponent] = args[0]
-				names = args[1:]
-			} else {
-				names = args
-			}
-			if annotations[AnnotationExpand] == "true" {
+			cd.Lock()
+			cd.ct = geneos.ParseComponent(args[0])
+			cd.Unlock()
+
+			names = args[1:]
+			if an[CmdGlobNames] == "true" {
 				log.Debug().Msgf("matching %v", names)
 				if len(names) > 0 {
 					newnames := instance.Match(h, ct, names...)
 					if len(newnames) == 0 {
-						jsonargs, _ = json.Marshal(names)
-						annotations[AnnotationNames] = string(jsonargs)
+						cd.Lock()
+						cd.names = names
+						cd.Unlock()
 						return fmt.Errorf("%v - %w", names, geneos.ErrNotExist)
 					} else {
 						names = newnames
@@ -269,6 +282,7 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 
 	m := make(map[string]bool, len(names))
 	var newnames []string
+
 	// traditional loop because we can't modify args in a loop to skip
 	for i := 0; i < len(names); i++ {
 		name := names[i]
@@ -290,20 +304,21 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 	}
 	names = newnames
 
-	jsonargs, _ = json.Marshal(names)
-	annotations[AnnotationNames] = string(jsonargs)
-	jsonparams, _ := json.Marshal(params)
-	annotations[AnnotationParams] = string(jsonparams)
+	cd.Lock()
+	cd.names = names
+	cd.params = params
+	cd.Unlock()
 
-	if annotations[AnnotationWildcard] == "false" {
+	if !cd.wildcards {
 		return
 	}
 
 	// if args is empty, find them all again. ct == None too?
 	if len(names) == 0 && (geneos.LocalRoot() != "" || len(geneos.RemoteHosts(false)) > 0) && !wild {
 		names = instance.InstanceNames(h, ct)
-		jsonargs, _ := json.Marshal(names)
-		annotations[AnnotationNames] = string(jsonargs)
+		cd.Lock()
+		cd.names = names
+		cd.Unlock()
 	}
 
 	log.Debug().Msgf("ct %s, args %v, params %v", ct, names, params)
@@ -314,10 +329,12 @@ func ParseArgs(command *cobra.Command, args []string) (err error) {
 // Pre run and returns the ct and a slice of names. Parameters are
 // ignored.
 func ParseTypeNames(command *cobra.Command) (ct *geneos.Component, args []string) {
-	ct = geneos.ParseComponent(command.Annotations[AnnotationComponent])
-	if err := json.Unmarshal([]byte(command.Annotations[AnnotationNames]), &args); err != nil {
-		log.Debug().Err(err).Msg("")
+	d := cmddata(command)
+	if d == nil {
+		return
 	}
+	ct = d.ct
+	args = d.names
 	return
 }
 
@@ -326,8 +343,10 @@ func ParseTypeNames(command *cobra.Command) (ct *geneos.Component, args []string
 // params.
 func ParseTypeNamesParams(command *cobra.Command) (ct *geneos.Component, args, params []string) {
 	ct, args = ParseTypeNames(command)
-	if err := json.Unmarshal([]byte(command.Annotations[AnnotationParams]), &params); err != nil {
-		log.Debug().Err(err).Msg("")
+	d := cmddata(command)
+	if d == nil {
+		return
 	}
+	params = d.params
 	return
 }

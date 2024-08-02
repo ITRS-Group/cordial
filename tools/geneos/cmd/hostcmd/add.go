@@ -67,8 +67,8 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 	SilenceUsage: true,
 	Args:         cobra.RangeArgs(1, 2),
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "false",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		_, args, params := cmd.ParseTypeNamesParams(command)

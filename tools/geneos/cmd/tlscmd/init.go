@@ -48,8 +48,8 @@ var initCmd = &cobra.Command{
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "false",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		return geneos.TLSInit(initCmdOverwrite, initCmdKeyType)

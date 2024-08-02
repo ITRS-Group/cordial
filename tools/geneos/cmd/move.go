@@ -44,9 +44,9 @@ var moveCmd = &cobra.Command{
 	Long:         moveCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationWildcard:  "false",
-		AnnotationNeedsHome: "true",
-		AnnotationExpand:    "true",
+		CmdNoneMeansAll: "false",
+		CmdRequireHome:  "true",
+		CmdGlobNames:    "true",
 	},
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {

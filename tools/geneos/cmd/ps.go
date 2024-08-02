@@ -79,9 +79,9 @@ var psCmd = &cobra.Command{
 	Aliases:      []string{"status"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationWildcard:  "true",
-		AnnotationNeedsHome: "true",
-		AnnotationExpand:    "true",
+		CmdNoneMeansAll: "true",
+		CmdRequireHome:  "true",
+		CmdGlobNames:    "true",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names, params := ParseTypeNamesParams(cmd)

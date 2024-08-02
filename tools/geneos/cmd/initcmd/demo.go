@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/cmd/pkgcmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/rs/zerolog/log"
@@ -51,8 +52,8 @@ var demoCmd = &cobra.Command{
 	Long:         demoCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "false",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, args := cmd.ParseTypeNames(command)
@@ -83,13 +84,14 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 	empty := []string{}
 	g := []string{"Demo Gateway@" + h.String()}
 
-	if err = install("gateway", geneos.LOCALHOST, options...); err != nil {
+	ct := geneos.ParseComponent("gateway")
+	if err = pkgcmd.Install(h, ct, options...); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(geneos.ParseComponent("gateway"), initCmdExtras, []string{}, "Demo Gateway@"+h.String()); err != nil {
+	if err = cmd.AddInstance(ct, initCmdExtras, []string{}, "Demo Gateway@"+h.String()); err != nil {
 		return
 	}
-	if err = cmd.Set(geneos.ParseComponent("gateway"), g, []string{"options=-demo"}); err != nil {
+	if err = cmd.Set(ct, g, []string{"options=-demo"}); err != nil {
 		return
 	}
 
@@ -98,26 +100,29 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 		npTarget = "minimal"
 	}
 
-	if err = install(npTarget, geneos.LOCALHOST, options...); err != nil {
+	ct = geneos.ParseComponent(npTarget)
+	if err = pkgcmd.Install(h, ct, options...); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(geneos.ParseComponent(npTarget), initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
+	if err = cmd.AddInstance(ct, initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
 		return
 	}
 
-	if err = install("webserver", geneos.LOCALHOST, options...); err != nil {
+	ct = geneos.ParseComponent("webserver")
+	if err = pkgcmd.Install(h, ct, options...); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(geneos.ParseComponent("webserver"), initCmdExtras, []string{}, "demo@"+h.String()); err != nil {
+	if err = cmd.AddInstance(ct, initCmdExtras, []string{}, "demo@"+h.String()); err != nil {
 		return
 	}
 
 	disp := os.Getenv("DISPLAY")
-	if disp != "" {
-		if err = install("ac2", geneos.LOCALHOST, options...); err != nil {
+	if h == geneos.LOCAL && disp != "" {
+		ct = geneos.ParseComponent("ac2")
+		if err = pkgcmd.Install(h, ct, options...); err != nil {
 			return
 		}
-		if err = cmd.AddInstance(geneos.ParseComponent("ac2"), initCmdExtras, []string{}, "demo@"+h.String()); err != nil {
+		if err = cmd.AddInstance(ct, initCmdExtras, []string{}, "demo@"+h.String()); err != nil {
 			return
 		}
 	}

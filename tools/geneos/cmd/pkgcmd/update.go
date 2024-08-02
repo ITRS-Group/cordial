@@ -64,8 +64,8 @@ geneos package update netprobe 5.13.2
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "true",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "true",
 	},
 	Args: cobra.RangeArgs(0, 2),
 	RunE: func(command *cobra.Command, _ []string) (err error) {

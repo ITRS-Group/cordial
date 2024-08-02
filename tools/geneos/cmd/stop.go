@@ -47,9 +47,9 @@ var stopCmd = &cobra.Command{
 	Long:         stopCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationWildcard:  "true",
-		AnnotationNeedsHome: "true",
-		AnnotationExpand:    "true",
+		CmdNoneMeansAll: "true",
+		CmdRequireHome:  "true",
+		CmdGlobNames:    "true",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := ParseTypeNames(cmd)

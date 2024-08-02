@@ -116,7 +116,7 @@ func ImportFile(h *Host, dir string, source string) (filename string, err error)
 		}
 	}
 
-	from, filename, err = open(source)
+	from, filename, err = openSourceFile(source)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}

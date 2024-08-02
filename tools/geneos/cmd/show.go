@@ -76,9 +76,9 @@ var showCmd = &cobra.Command{
 	Aliases:      []string{"details"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationWildcard:  "true",
-		AnnotationNeedsHome: "true",
-		AnnotationExpand:    "true",
+		CmdNoneMeansAll: "true",
+		CmdRequireHome:  "true",
+		CmdGlobNames:    "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, names := ParseTypeNames(command)

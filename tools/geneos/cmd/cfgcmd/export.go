@@ -68,9 +68,9 @@ var exportCmd = &cobra.Command{
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "true",
-		cmd.AnnotationNeedsHome: "true",
-		cmd.AnnotationExpand:    "true",
+		cmd.CmdNoneMeansAll: "true",
+		cmd.CmdRequireHome:  "true",
+		cmd.CmdGlobNames:    "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var archive string

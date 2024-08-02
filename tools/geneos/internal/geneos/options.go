@@ -32,7 +32,7 @@ type geneosOptions struct {
 	downloadtype string
 	force        bool
 	geneosdir    string
-	local        bool
+	localOnly    bool
 	nosave       bool
 	override     string
 	password     *config.Plaintext
@@ -63,93 +63,105 @@ func evalOptions(options ...PackageOptions) (d *geneosOptions) {
 // DownloadOnly prevents the unarchiving of the selected packages.
 // Downloads are stored in the directory given to Source() or the
 // default `packages/download` directory. NoSave and DownloadOnly
-// together are an error.
-func DownloadOnly(o bool) PackageOptions {
+// are mutually exclusive.
+func DownloadOnly(download bool) PackageOptions {
 	return func(d *geneosOptions) {
-		d.downloadonly = o
+		d.downloadonly = download
 	}
 }
 
 // NoSave stops downloads from being saved in the archive directory.
-// NoSave and DownloadOnly together are an error.
-func NoSave(n bool) PackageOptions {
-	return func(d *geneosOptions) { d.nosave = n }
+// NoSave and DownloadOnly are mutually exclusive.
+func NoSave(nosave bool) PackageOptions {
+	return func(d *geneosOptions) { d.nosave = nosave }
 }
 
 // LocalOnly uses only existing archives and prevents attempts to
 // download releases
-func LocalOnly(l bool) PackageOptions {
-	return func(d *geneosOptions) { d.local = l }
+func LocalOnly(local bool) PackageOptions {
+	return func(d *geneosOptions) { d.localOnly = local }
+}
+
+// LocalArchive is the local archive location or the specific release
+// file. It can be a directory, in which case that directory is used for
+// the appropriate archive file(s)
+func LocalArchive(path string) PackageOptions {
+	return func(d *geneosOptions) { d.localArchive = path }
 }
 
 // Force ignores existing directories or files and also overrides
 // protection for running instances in upgrades
-func Force(o bool) PackageOptions {
-	return func(d *geneosOptions) { d.force = o }
+func Force(force bool) PackageOptions {
+	return func(d *geneosOptions) { d.force = force }
 }
 
 // OverrideVersion forces a specific version to be used and fails if not
 // available
-func OverrideVersion(s string) PackageOptions {
-	return func(d *geneosOptions) { d.override = s }
+func OverrideVersion(version string) PackageOptions {
+	return func(d *geneosOptions) { d.override = version }
 }
 
 // Restart sets the instances to be restarted around the update
-func Restart(i ...Instance) PackageOptions {
+func Restart(instance ...Instance) PackageOptions {
 	return func(d *geneosOptions) {
-		d.restart = append(d.restart, i...)
+		d.restart = append(d.restart, instance...)
 	}
+}
+
+// DoUpdate sets the option to also do an update after an install
+func DoUpdate(update bool) PackageOptions {
+	return func(d *geneosOptions) { d.doupdate = update }
 }
 
 // StartFunc sets the start function to call for each instance given in
 // Restart(). It is required to avoid import loops.
-func StartFunc(start func(Instance, ...any) error) PackageOptions {
+func StartFunc(fn func(Instance, ...any) error) PackageOptions {
 	return func(d *geneosOptions) {
-		d.start = start
+		d.start = fn
 	}
 }
 
 // StopFunc sets the start function to call for each instance given in
 // Restart(). It is required to avoid import loops.
-func StopFunc(stop func(Instance, bool, bool) error) PackageOptions {
+func StopFunc(fn func(Instance, bool, bool) error) PackageOptions {
 	return func(d *geneosOptions) {
-		d.stop = stop
+		d.stop = fn
 	}
 }
 
 // Version sets the desired version number, defaults to "latest" in most
 // cases. The version number is in the form `[GA]X.Y.Z` (or `RA` for
 // snapshots)
-func Version(v string) PackageOptions {
-	return func(d *geneosOptions) { d.version = v }
+func Version(version string) PackageOptions {
+	return func(d *geneosOptions) { d.version = version }
 }
 
 // Basename sets the package binary basename, defaults to active_prod,
 // for symlinks for update.
-func Basename(b string) PackageOptions {
-	return func(d *geneosOptions) { d.basename = b }
-}
-
-// UseRoot sets the Geneos installation home directory (aka `geneos` in
-// the settings)
-func UseRoot(h string) PackageOptions {
-	return func(d *geneosOptions) { d.geneosdir = h }
-}
-
-// Username is the remote access username for downloads
-func Username(u string) PackageOptions {
-	return func(d *geneosOptions) { d.username = u }
-}
-
-// Password is the remote access password for downloads
-func Password(p *config.Plaintext) PackageOptions {
-	return func(d *geneosOptions) { d.password = p }
+func Basename(basename string) PackageOptions {
+	return func(d *geneosOptions) { d.basename = basename }
 }
 
 // PlatformID sets the (Linux) platform ID from the OS release info.
 // Currently used to distinguish RHEL8/9 releases from others.
-func PlatformID(id string) PackageOptions {
-	return func(d *geneosOptions) { d.platformId = id }
+func PlatformID(platform string) PackageOptions {
+	return func(d *geneosOptions) { d.platformId = platform }
+}
+
+// UseRoot sets the Geneos installation home directory (aka `geneos` in
+// the settings)
+func UseRoot(root string) PackageOptions {
+	return func(d *geneosOptions) { d.geneosdir = root }
+}
+
+// Username is the remote access username for downloads
+func Username(username string) PackageOptions {
+	return func(d *geneosOptions) { d.username = username }
+}
+
+// Password is the remote access password for downloads
+func Password(password *config.Plaintext) PackageOptions {
+	return func(d *geneosOptions) { d.password = password }
 }
 
 // UseNexus sets the flag to use nexus.itrsgroup.com for internal
@@ -164,16 +176,4 @@ func UseNexus() PackageOptions {
 // Releases.
 func UseNexusSnapshots() PackageOptions {
 	return func(d *geneosOptions) { d.downloadbase = "snapshots" }
-}
-
-// LocalArchive is the local archive location or the specific release
-// file. It can be a directory, in which case that directory is used for
-// the appropriate archive file(s)
-func LocalArchive(f string) PackageOptions {
-	return func(d *geneosOptions) { d.localArchive = f }
-}
-
-// DoUpdate sets the option to also do an update after an install
-func DoUpdate(r bool) PackageOptions {
-	return func(d *geneosOptions) { d.doupdate = r }
 }

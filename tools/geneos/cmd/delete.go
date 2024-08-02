@@ -50,9 +50,9 @@ var deleteCmd = &cobra.Command{
 	Long:         deleteCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationWildcard:  "explicit",
-		AnnotationNeedsHome: "true",
-		AnnotationExpand:    "true",
+		CmdNoneMeansAll: "explicit",
+		CmdRequireHome:  "true",
+		CmdGlobNames:    "true",
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, names := ParseTypeNames(command)

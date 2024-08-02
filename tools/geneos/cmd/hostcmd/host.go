@@ -41,8 +41,8 @@ var hostCmd = &cobra.Command{
 	Long:         hostCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "false",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "false",
 	},
 	DisableFlagParsing:    true,
 	DisableFlagsInUseLine: true,

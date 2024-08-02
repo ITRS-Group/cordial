@@ -71,9 +71,9 @@ var encodeCmd = &cobra.Command{
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "true",
-		cmd.AnnotationNeedsHome: "true",
-		cmd.AnnotationExpand:    "true",
+		cmd.CmdNoneMeansAll: "true",
+		cmd.CmdRequireHome:  "true",
+		cmd.CmdGlobNames:    "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		h := geneos.GetHost(cmd.Hostname)
@@ -201,7 +201,7 @@ var encodeCmd = &cobra.Command{
 		if !encodeCmdString.IsNil() {
 			plaintext = encodeCmdString
 		} else if encodeCmdSource != "" {
-			pt, err := geneos.ReadFrom(encodeCmdSource)
+			pt, err := geneos.ReadAll(encodeCmdSource)
 			if err != nil {
 				return err
 			}

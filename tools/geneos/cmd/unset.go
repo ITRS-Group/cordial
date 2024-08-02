@@ -62,9 +62,9 @@ geneos unset san -g Gateway1
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
-		AnnotationWildcard:  "true",
-		AnnotationNeedsHome: "true",
-		AnnotationExpand:    "true",
+		CmdNoneMeansAll: "true",
+		CmdRequireHome:  "true",
+		CmdGlobNames:    "true",
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 && cmd.Flags().NFlag() == 0 {

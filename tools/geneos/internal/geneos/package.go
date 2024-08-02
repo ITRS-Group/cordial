@@ -302,11 +302,10 @@ func Install(h *Host, ct *Component, options ...PackageOptions) (err error) {
 
 	opts := evalOptions(options...)
 
-	// open and unarchive if given a tar.gz
-
+	// open an unarchive if given a tar.gz
 	archive, filename, err := openArchive(ct, options...)
 	if err != nil {
-		if errors.Is(err, ErrNotExist) {
+		if errors.Is(err, fs.ErrNotExist) {
 			var dir bool
 			if opts.localArchive != "" {
 				u, _ := url.Parse(opts.localArchive)
@@ -317,8 +316,8 @@ func Install(h *Host, ct *Component, options ...PackageOptions) (err error) {
 					dir = true
 				}
 			}
-			if opts.local || (!opts.downloadonly && dir) {
-				fmt.Printf("%s archive not found but local install selected, skipping\n", ct)
+			if opts.localOnly || (!opts.downloadonly && dir) {
+				log.Debug().Msgf("%s not found at/in %s but local install only selected, skipping", ct, opts.localArchive)
 				return nil
 			}
 		}

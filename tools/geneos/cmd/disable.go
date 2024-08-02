@@ -48,9 +48,9 @@ var disableCmd = &cobra.Command{
 	Long:         disableCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationWildcard:  "explicit",
-		AnnotationNeedsHome: "true",
-		AnnotationExpand:    "true",
+		CmdNoneMeansAll: "explicit",
+		CmdRequireHome:  "true",
+		CmdGlobNames:    "true",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := ParseTypeNames(cmd)

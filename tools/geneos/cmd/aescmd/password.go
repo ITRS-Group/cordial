@@ -49,8 +49,8 @@ var passwordCmd = &cobra.Command{
 	Aliases:      []string{"passwd"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "false",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "false",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var plaintext *config.Plaintext
@@ -68,7 +68,7 @@ var passwordCmd = &cobra.Command{
 			plaintext = passwordCmdString
 		} else if passwordCmdSource != "" {
 			var pt []byte
-			pt, err = geneos.ReadFrom(passwordCmdSource)
+			pt, err = geneos.ReadAll(passwordCmdSource)
 			if err != nil {
 				return
 			}

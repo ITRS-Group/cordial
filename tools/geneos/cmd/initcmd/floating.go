@@ -53,8 +53,8 @@ var floatingCmd = &cobra.Command{
 	Long:         floatingCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "false",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "false",
 	},
 	Deprecated: "Please use the `" + cordial.ExecutableName() + " deploy floating` command instead",
 }

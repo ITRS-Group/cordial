@@ -82,9 +82,9 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "true",
-		cmd.AnnotationNeedsHome: "true",
-		cmd.AnnotationExpand:    "true",
+		cmd.CmdNoneMeansAll: "true",
+		cmd.CmdRequireHome:  "true",
+		cmd.CmdGlobNames:    "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var ciphertext string
@@ -102,7 +102,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 		if decodeCmdPassword != "" {
 			ciphertext = decodeCmdPassword
 		} else if decodeCmdSource != "" {
-			b, err := geneos.ReadFrom(decodeCmdSource)
+			b, err := geneos.ReadAll(decodeCmdSource)
 			if err != nil {
 				return err
 			}

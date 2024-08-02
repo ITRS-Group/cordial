@@ -52,9 +52,9 @@ var renewCmd = &cobra.Command{
 	Long:         renewCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "true",
-		cmd.AnnotationNeedsHome: "true",
-		cmd.AnnotationExpand:    "true",
+		cmd.CmdNoneMeansAll: "true",
+		cmd.CmdRequireHome:  "true",
+		cmd.CmdGlobNames:    "true",
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, names := cmd.ParseTypeNames(command)

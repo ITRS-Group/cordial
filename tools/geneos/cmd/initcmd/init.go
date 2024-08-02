@@ -113,8 +113,8 @@ geneos init
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "false",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "false",
 	},
 	// initialise a geneos installation
 	//
@@ -153,9 +153,9 @@ var initTLSCmd = &cobra.Command{
 	Long:         "Alias for `geneos tls init`",
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "true",
-		cmd.AnnotationAliasFor:  "tls init",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "true",
+		// cmd.CmdAliasFor:    "tls init",
 	},
 	Hidden:                true,
 	DisableFlagParsing:    true,
@@ -259,22 +259,5 @@ func initCommon(command *cobra.Command) (err error) {
 		return geneos.TLSImportBundle(initCmdSigningBundle, initCmdImportKey, "")
 	}
 
-	return
-}
-
-// XXX this is a duplicate of the function in pkgcmd/install.go
-func install(comp string, target string, options ...geneos.PackageOptions) (err error) {
-	ct := geneos.ParseComponent(comp)
-	if ct == nil {
-		return geneos.ErrInvalidArgs
-	}
-	for _, h := range geneos.Match(target) {
-		if err = ct.MakeDirs(h); err != nil {
-			return err
-		}
-		if err = geneos.Install(h, ct, options...); err != nil {
-			return
-		}
-	}
 	return
 }

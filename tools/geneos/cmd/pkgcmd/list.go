@@ -55,8 +55,8 @@ var listCmd = &cobra.Command{
 	Aliases:      []string{"ls"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "true",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "true",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		ct, _ := cmd.ParseTypeNames(command)

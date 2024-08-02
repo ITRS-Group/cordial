@@ -66,14 +66,21 @@ var snapshotCmd = &cobra.Command{
 	Long:         snapshotCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationComponent: "gateway",
-		AnnotationWildcard:  "explicit",
-		AnnotationNeedsHome: "true",
-		AnnotationExpand:    "true",
+		// CmdComponent:   "gateway",
+		CmdNoneMeansAll: "explicit",
+		CmdRequireHome:  "true",
+		CmdGlobNames:    "true",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		var err error
 		ct, names, params := ParseTypeNamesParams(cmd)
+		if ct == nil {
+			ct = geneos.ParseComponent("gateway")
+		} else if !ct.IsA("gateway") {
+			fmt.Println("snapshots are only valid for gateways")
+			return
+		}
+
 		if len(names) == 0 {
 			fmt.Println(`no gateway name(s) supplied. Use a NAME of "all" as an explicit wildcard`)
 			return

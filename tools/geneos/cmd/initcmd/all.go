@@ -31,12 +31,15 @@ import (
 )
 
 var allCmdLicenseFile, allCmdArchive string
+var allCmdMinimal bool
 
 func init() {
 	initCmd.AddCommand(allCmd)
 
 	allCmd.Flags().StringVarP(&allCmdLicenseFile, "licence", "L", "geneos.lic", "Licence file location")
 	allCmd.MarkFlagRequired("licence")
+
+	allCmd.Flags().BoolVarP(&allCmdMinimal, "minimal", "M", false, "use a minimal Netprobe release")
 
 	allCmd.Flags().StringVarP(&allCmdArchive, "archive", "A", "", archiveOptionsText)
 	allCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewaysOptionstext)
@@ -58,8 +61,8 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "false",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, args, params := cmd.ParseTypeNamesParams(command)
@@ -94,35 +97,43 @@ func initAll(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 		initCmdName = h.Hostname()
 	}
 
-	if err = install("licd", h.String(), options...); err != nil {
+	licdCT := geneos.ParseComponent("licd")
+	gatewayCT := geneos.ParseComponent("gateway")
+	netprobeCT := geneos.ParseComponent("netprobe")
+	if allCmdMinimal {
+		netprobeCT = geneos.ParseComponent("minimal")
+	}
+	webserverCT := geneos.ParseComponent("webserver")
+
+	if err = geneos.Install(h, licdCT, options...); err != nil {
 		return
 	}
-	if err = install("gateway", h.String(), options...); err != nil {
+	if err = geneos.Install(h, gatewayCT, options...); err != nil {
 		return
 	}
-	if err = install("netprobe", h.String(), options...); err != nil {
+	if err = geneos.Install(h, netprobeCT, options...); err != nil {
 		return
 	}
-	if err = install("webserver", h.String(), options...); err != nil {
+	if err = geneos.Install(h, webserverCT, options...); err != nil {
 		return
 	}
 
-	if err = cmd.AddInstance(geneos.ParseComponent("licd"), initCmdExtras, []string{}, initCmdName); err != nil {
+	if err = cmd.AddInstance(licdCT, initCmdExtras, []string{}, initCmdName); err != nil {
 		return
 	}
-	if err = cmd.ImportFiles(geneos.ParseComponent("licd"), []string{initCmdName}, []string{"geneos.lic=" + allCmdLicenseFile}); err != nil {
+	if err = cmd.ImportFiles(licdCT, []string{initCmdName}, []string{"geneos.lic=" + allCmdLicenseFile}); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(geneos.ParseComponent("gateway"), initCmdExtras, []string{}, initCmdName); err != nil {
+	if err = cmd.AddInstance(gatewayCT, initCmdExtras, []string{}, initCmdName); err != nil {
 		return
 	}
 	// if len(initCmdExtras.Gateways) == 0 {
 	// 	initCmdExtras.Gateways.Set("localhost")
 	// }
-	if err = cmd.AddInstance(geneos.ParseComponent("netprobe"), initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
+	if err = cmd.AddInstance(netprobeCT, initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(geneos.ParseComponent("webserver"), initCmdExtras, []string{}, initCmdName); err != nil {
+	if err = cmd.AddInstance(webserverCT, initCmdExtras, []string{}, initCmdName); err != nil {
 		return
 	}
 	if err = cmd.Start(nil, initCmdLogs, true, e, e); err != nil {

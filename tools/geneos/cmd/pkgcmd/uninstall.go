@@ -63,8 +63,8 @@ geneos uninstall --version 5.14.1
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.AnnotationWildcard:  "false",
-		cmd.AnnotationNeedsHome: "true",
+		cmd.CmdNoneMeansAll: "false",
+		cmd.CmdRequireHome:  "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, _ := cmd.ParseTypeNames(command)

@@ -60,7 +60,21 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 	return
 }
 
-// open returns an io.ReadCloser and the base filename for the
+// ReadAll opens and, if successful, reads the contents of the source
+// passed, returning a byte slice of the contents or an error. source
+// can be a local file or a URL. While ReadAll calls the internal
+// openSourceFile(), no options are supported
+func ReadAll(source string) (b []byte, err error) {
+	var from io.ReadCloser
+	from, _, err = openSourceFile(source)
+	if err != nil {
+		return
+	}
+	defer from.Close()
+	return io.ReadAll(from)
+}
+
+// openSourceFile returns an io.ReadCloser and the base filename for the
 // given source. The source can be a `https` or `http“ URL or a path to
 // a file or '-' for STDIN.
 //
@@ -77,7 +91,7 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 // If source is a path to a directory then `geneos.ErrIsADirectory` is
 // returned. If any other stage fails then err is returned from the
 // underlying package.
-func open(source string, options ...PackageOptions) (from io.ReadCloser, filename string, err error) {
+func openSourceFile(source string, options ...PackageOptions) (from io.ReadCloser, filename string, err error) {
 	opts := evalOptions(options...)
 
 	u, err := url.Parse(source)
@@ -137,17 +151,4 @@ func open(source string, options ...PackageOptions) (from io.ReadCloser, filenam
 		filename = path.Base(source)
 	}
 	return
-}
-
-// ReadFrom opens and, if successful, reads the contents of the source
-// passed, returning a byte slice of the contents or an error. source
-// can be a local file or a URL.
-func ReadFrom(source string, options ...PackageOptions) (b []byte, err error) {
-	var from io.ReadCloser
-	from, _, err = open(source, options...)
-	if err != nil {
-		return
-	}
-	defer from.Close()
-	return io.ReadAll(from)
 }

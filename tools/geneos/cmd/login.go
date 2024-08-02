@@ -57,8 +57,8 @@ var loginCmd = &cobra.Command{
 	Long:         loginCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationWildcard:  "false",
-		AnnotationNeedsHome: "false",
+		CmdNoneMeansAll: "false",
+		CmdRequireHome:  "false",
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		urlMatch := "itrsgroup.com"

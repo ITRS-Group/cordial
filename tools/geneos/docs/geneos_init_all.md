@@ -22,6 +22,7 @@ geneos init all [flags] [USERNAME] [DIRECTORY]
 
 ```text
   -L, --licence string                Licence file location (default "geneos.lic")
+  -M, --minimal                       use a minimal Netprobe release
   -A, --archive string                Directory of releases for installation
   -i, --include PRIORITY:{URL|PATH}   A gateway connection in the format HOSTNAME:PORT
                                       (Repeat as required, san and floating only)

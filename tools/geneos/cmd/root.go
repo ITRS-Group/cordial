@@ -19,11 +19,13 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -126,6 +128,36 @@ func init() {
 //go:embed _docs/geneos.md
 var geneosCmdDescription string
 
+type CmdKeyType string
+
+const CmdKey = CmdKeyType("data")
+
+type CmdValType struct {
+	sync.Mutex
+
+	// the resolved component type, nil if none found
+	ct *geneos.Component
+
+	// if true the absence of instance names or patterns means "all" instances
+	wildcards bool
+
+	// the list of instance names, build based on wildcarding and globs as applicable
+	names []string
+
+	// the list of non-instance names on the command line (invalid names, not match failures)
+	params []string
+}
+
+func cmddata(command *cobra.Command) *CmdValType {
+	ctx := command.Context()
+	if a := ctx.Value(CmdKey); a != nil {
+		if b, ok := a.(*CmdValType); ok {
+			return b
+		}
+	}
+	return nil
+}
+
 // GeneosCmd represents the base command when called without any subcommands
 var GeneosCmd = &cobra.Command{
 	Use:   Execname + " COMMAND [flags] [TYPE] [NAME...] [parameters...]",
@@ -138,7 +170,7 @@ geneos restart
 `, "|", "`"),
 	// SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationNeedsHome: "true",
+		CmdRequireHome: "true",
 	},
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
@@ -147,18 +179,20 @@ geneos restart
 	DisableAutoGenTag:     true,
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
-	// SilenceErrors:      true, // this blocks all child errors too...
-	// don't uncomment it
+	// SilenceErrors:      true, - this blocks all child errors too, don't uncomment it
 	PersistentPreRunE: func(command *cobra.Command, args []string) (err error) {
+		ctx := context.WithValue(context.Background(), CmdKey, &CmdValType{})
+		command.SetContext(ctx)
+
 		// "manually" parse root flags so that legacy commands get conf
 		// file, debug etc.
 		command.Root().ParseFlags(args)
 
-		// if we have no args and have explicit set, then go bang. check component type
-		if command.Annotations[AnnotationWildcard] == "explicit" {
+		// if we have no args and have explicit set, then go bang!. check component type
+		if command.Annotations[CmdNoneMeansAll] == "explicit" {
 			rootargs := command.Root().Flags().Args()
 			if len(rootargs) == 0 {
-				return fmt.Errorf("%w: %q requires at least TYPE or one or more NAME arguments", geneos.ErrInvalidArgs, command.Name())
+				return fmt.Errorf("%q requires at least TYPE or one or more NAME arguments", Execname+" "+command.Name())
 			}
 		}
 
@@ -167,7 +201,7 @@ geneos restart
 		// output the help for the new command and cleanly exit.
 		var realcmd *cobra.Command
 
-		if r, ok := command.Annotations[AnnotationReplacedBy]; ok {
+		if r, ok := command.Annotations[CmdReplacedBy]; ok {
 			var newargs []string
 			realcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
 			if err != nil {
@@ -184,7 +218,7 @@ geneos restart
 		}
 
 		// same as above, but no warning message (XXX - can't recall why, indirection?)
-		if r, ok := command.Annotations[AnnotationReplacedBy]; ok {
+		if r, ok := command.Annotations[CmdReplacedBy]; ok {
 			var newargs []string
 			realcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
 			if err != nil {
@@ -220,11 +254,9 @@ geneos restart
 		}
 
 		// check initialisation
-		if geneos.LocalRoot() == "" && len(geneos.RemoteHosts(false)) == 0 {
-			if command.Annotations[AnnotationNeedsHome] == "true" {
-				command.SetUsageTemplate(" ")
-				return GeneosUnsetError
-			}
+		if command.Annotations[CmdRequireHome] == "true" && geneos.LocalRoot() == "" && len(geneos.RemoteHosts(false)) == 0 {
+			command.SetUsageTemplate(" ")
+			return GeneosUnsetError
 		}
 		if command.Name() == "help" {
 			// don't parse args if the command is a help

@@ -115,8 +115,8 @@ var deployCmd = &cobra.Command{
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		AnnotationWildcard:  "false",
-		AnnotationNeedsHome: "false",
+		CmdNoneMeansAll: "false",
+		CmdRequireHome:  "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		var name string
@@ -226,7 +226,7 @@ var deployCmd = &cobra.Command{
 					continue
 				}
 				if deployCmdTemplate != "" {
-					if tmpl, err = geneos.ReadFrom(deployCmdTemplate); err != nil {
+					if tmpl, err = geneos.ReadAll(deployCmdTemplate); err != nil {
 						return
 					}
 				}
