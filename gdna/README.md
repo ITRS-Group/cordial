@@ -12,7 +12,7 @@ To dive right in, head to the [Getting Started](#getting-started) section but we
 
 The first dashboard, Monitoring Coverage, gives an overview of all your Geneos Gateways, the servers they are monitoring and the high-level plugin utilization, broken down into 3 coverage levels:
 
-![Monitoring Coverage Example](screenshots/gdna-2.png)
+![Monitoring Coverage Example](screenshots/gdna-2.jpg)
 
 * Level 1 - Core compute infrastructure monitoring; The plugin names can be seen in the left had part of the Plugin Utilization area above. (There are also optional Level 1 plugins, which can be seen in the second dashboard below)
 
@@ -24,7 +24,7 @@ The first dashboard, Monitoring Coverage, gives an overview of all your Geneos G
 
 The second dashboard, known as the "beehive", shows you a more in-depth view of individual plugin utilization:
 
-![Plugin Utilization Example](screenshots/gdna-3.png)
+![Plugin Utilization Example](screenshots/gdna-3.jpg)
 
 Each hexagon represents a specific plugin, grouped into logical segments.
 
