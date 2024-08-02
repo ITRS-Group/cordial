@@ -38,7 +38,6 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/rs/zerolog/log"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
@@ -61,7 +60,7 @@ func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: cf.GetBool("gdna.licd-skip-verify")},
 		}
-		client := &http.Client{Transport: otelhttp.NewTransport(tr), Timeout: cf.GetDuration("gdna.licd-timeout")}
+		client := &http.Client{Transport: tr, Timeout: cf.GetDuration("gdna.licd-timeout")}
 		u = u.JoinPath(DetailsPath)
 		req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 		if err != nil {
@@ -78,7 +77,7 @@ func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
 		return resp.Body, nil
 	case "http":
 		log.Trace().Msgf("reading data from %s", source)
-		client := &http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport), Timeout: cf.GetDuration("gdna.licd-timeout")}
+		client := &http.Client{Timeout: cf.GetDuration("gdna.licd-timeout")}
 		u = u.JoinPath(DetailsPath)
 		req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 		if err != nil {
