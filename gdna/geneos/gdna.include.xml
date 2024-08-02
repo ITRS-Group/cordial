@@ -54,6 +54,9 @@
 			<var-group>
 				<data>GDNA</data>
 			</var-group>
+			<sampleInterval>
+				<data>5</data>
+			</sampleInterval>
 			<plugin>
 				<processes>
 					<processes>
