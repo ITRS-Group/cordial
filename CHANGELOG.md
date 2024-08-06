@@ -33,7 +33,8 @@
 
 * Build
 
-  * Fix Makefile/Dockerfile interdependencies and speed up documentation builds by downloading Chrome outside on underlying puppeteer installation
+  * Fix Makefile/Dockerfile interdependencies and speed up documentation builds by downloading Chrome outside of underlying puppeteer installation
+
 ---
 
 ## Version v1.15.6
