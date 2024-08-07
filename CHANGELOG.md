@@ -1,5 +1,20 @@
 # Change Log
 
+## Version v1.16.1
+
+> [!NOTE]
+> **Released 2024-08-08**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+### v1.16.1 Fixes
+
+* `gdna`
+
+  * Update Monitoring Coverage dashboard to remove references to `Demo Gateway` and improve visibility of per-plugin vertical bars.
+
+---
+
 ## Version v1.16.0
 
 > [!NOTE]
