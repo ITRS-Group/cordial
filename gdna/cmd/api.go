@@ -62,6 +62,15 @@ var _ Reporter = (*APIReporter)(nil)
 func NewAPIReporter(cf *config.Config, options ...APIReporterOptions) (a *APIReporter, err error) {
 	opts := evalAPIOptions(options...)
 
+	var (
+		hostname   = cf.GetString(config.Join("geneos", "netprobe", "hostname"))
+		port       = cf.GetInt(config.Join("geneos", "netprobe", "port"))
+		secure     = cf.GetBool(config.Join("geneos", "netprobe", "secure"))
+		skipVerify = cf.GetBool(config.Join("geneos", "netprobe", "skip-verify"))
+		entity     = cf.GetString(config.Join("geneos", "entity"))
+		sampler    = cf.GetString(config.Join("geneos", "sampler"))
+	)
+
 	a = &APIReporter{
 		reset:    opts.reset,
 		scramble: opts.scramble,
@@ -69,28 +78,31 @@ func NewAPIReporter(cf *config.Config, options ...APIReporterOptions) (a *APIRep
 	}
 
 	scheme := "http"
-	if cf.GetBool("geneos.netprobe.secure") {
+	if secure {
 		scheme = "https"
 	}
 
 	u := &url.URL{
 		Scheme: scheme,
-		Host:   fmt.Sprintf("%s:%d", cf.GetString("geneos.netprobe.hostname"), cf.GetInt("geneos.netprobe.port")),
+		Host:   fmt.Sprintf("%s:%d", hostname, port),
 		Path:   "/xmlrpc",
 	}
-	a.a, err = plugins.Open(u, cf.GetString("geneos.entity"), cf.GetString("geneos.sampler"))
+	a.a, err = plugins.Open(u, entity, sampler)
 
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
 
-	if cf.GetBool("geneos.netprobe.skip-verify") {
+	if skipVerify {
 		a.a.InsecureSkipVerify()
 	}
 
 	if !a.a.Exists() {
-		err = fmt.Errorf("no such entity/sampler %s/%s on %s:%d (secure=%v, skip-verify=%v)", cf.GetString("geneos.entity"), cf.GetString("geneos.sampler"), cf.GetString("geneos.netprobe.hostname"), cf.GetInt("geneos.netprobe.port"), cf.GetBool("geneos.netprobe.secure"), cf.GetBool("geneos.netprobe.skip-verify"))
+		err = fmt.Errorf(
+			"no such entity/sampler %s/%s on %s:%d (secure=%v, skip-verify=%v)",
+			entity, sampler, hostname, port, secure, skipVerify,
+		)
 	}
 
 	return
