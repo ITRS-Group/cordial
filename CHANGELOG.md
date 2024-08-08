@@ -1,13 +1,17 @@
 # Change Log
 
-## Version v1.16.1
+## Version v1.16.2
 
 > [!NOTE]
 > **Released 2024-08-08**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-### v1.16.1 Fixes
+> [!IMPORTANT]
+>
+> Release v1.16.2 replaces v1.16.1 which still included an incorrect GDNA dashboard
+
+### v1.16.2 Fixes
 
 * `gdna`
 
