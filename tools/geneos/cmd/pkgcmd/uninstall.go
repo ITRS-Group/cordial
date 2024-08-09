@@ -44,7 +44,7 @@ func init() {
 	uninstallCmd.Flags().BoolVarP(&uninstallCmdAll, "all", "A", false, "Uninstall all releases, stopping and disabling running instances")
 	uninstallCmd.Flags().BoolVarP(&uninstallCmdKeep, "keep", "k", false, "Keep cached downloads")
 	uninstallCmd.Flags().BoolVarP(&uninstallCmdUpdate, "update", "U", false, "Update base links for instances to latest before restarting and removing")
-	uninstallCmd.Flags().BoolVarP(&uninstallCmdForce, "force", "f", false, "Force uninstall, stopping protected instances first. Also requires --update")
+	uninstallCmd.Flags().BoolVarP(&uninstallCmdForce, "force", "F", false, "Force uninstall, stopping protected instances first. Also requires --update")
 
 	uninstallCmd.Flags().SortFlags = false
 }
