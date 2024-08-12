@@ -164,7 +164,7 @@ func (h *Local) Open(name string) (f io.ReadSeekCloser, err error) {
 	return os.Open(name)
 }
 
-func (h *Local) Path(p string) string {
+func (h *Local) HostPath(p string) string {
 	return p
 }
 

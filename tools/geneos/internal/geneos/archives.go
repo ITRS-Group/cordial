@@ -204,7 +204,7 @@ func getbar(console *os.File, name string, size int64) (bar *progressbar.Progres
 // unarchive unpacks the gzipped archive passed as an io.Reader on the
 // host given for the component. If there is an error then the caller
 // must close the io.Reader
-func unarchive(h *Host, ct *Component, archive io.Reader, filename string, options ...PackageOptions) (dir string, err error) {
+func unarchive(h *Host, ct *Component, archive io.Reader, filename string, options ...PackageOptions) (dest string, err error) {
 	var version string
 
 	opts := evalOptions(options...)
@@ -240,7 +240,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 	basedir := h.PathTo("packages", ct.String(), version)
 	log.Debug().Msgf("basedir=%s ct=%s version=%s", basedir, ct, version)
 	if _, err = h.Stat(basedir); err == nil {
-		return h.Path(basedir), fs.ErrExist
+		return h.HostPath(basedir), fs.ErrExist
 	}
 	if err = h.MkdirAll(basedir, 0775); err != nil {
 		return
@@ -288,25 +288,25 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 		return
 	}
 
-	fmt.Printf("installed %q to %q\n", filename, h.Path(basedir))
+	fmt.Printf("installed %q to %q\n", filename, h.HostPath(basedir))
 	// options = append(options, Version(version))
 	// only create a new base link, not overwrite
 	basedir = h.PathTo("packages", ct.String())
-	basepath := path.Join(h.Path(basedir), opts.basename)
+	basepath := path.Join(basedir, opts.basename)
 
 	log.Debug().Msgf("basepath: %s, version: %s", basepath, version)
 
 	if _, err = h.Stat(basepath); err == nil {
-		return h.Path(basedir), nil
+		return h.HostPath(basedir), nil
 	}
 
 	if err = h.Symlink(version, basepath); err != nil {
 		log.Debug().Err(err).Msgf("version %s base %s", version, basepath)
-		return h.Path(basedir), err
+		return h.HostPath(basedir), err
 	}
 
 	fmt.Printf("%s %q on %s set to %s\n", ct, path.Base(basepath), h, version)
-	return h.Path(basedir), nil
+	return h.HostPath(basedir), nil
 }
 
 // untar the archive from an io.Reader onto host h in directory dir.

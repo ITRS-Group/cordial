@@ -42,7 +42,7 @@ type Host interface {
 	// informational
 	String() string
 	GetFs() afero.Fs
-	Path(p string) string
+	HostPath(p string) string // return the path as a string, prefixed with "host:" if not local
 	Hostname() string
 	ServerVersion() string
 	IsAvailable() (bool, error)

@@ -516,7 +516,7 @@ func (h *SSHRemote) Open(name string) (io.ReadSeekCloser, error) {
 	}
 }
 
-func (h *SSHRemote) Path(p string) string {
+func (h *SSHRemote) HostPath(p string) string {
 	return fmt.Sprintf("%s:%s", h, p)
 }
 
