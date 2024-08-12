@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 
@@ -33,7 +34,7 @@ var rootCmd = &cobra.Command{
 		docker, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 
 		ctx := context.Background()
-		allContainers, err := docker.ContainerList(ctx, types.ContainerListOptions{})
+		allContainers, err := docker.ContainerList(ctx, container.ListOptions{})
 		if err != nil {
 			return
 		}
@@ -50,7 +51,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		for _, i := range allContainers {
-			r, err := docker.ContainerLogs(ctx, i.ID, types.ContainerLogsOptions{
+			r, err := docker.ContainerLogs(ctx, i.ID, container.LogsOptions{
 				Follow:     true,
 				Timestamps: true,
 				ShowStderr: true,
