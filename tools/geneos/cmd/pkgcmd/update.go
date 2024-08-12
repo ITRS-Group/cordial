@@ -41,6 +41,8 @@ func init() {
 	updateCmd.Flags().StringVarP(&updateCmdVersion, "version", "V", "latest", "Update to this version, defaults to latest")
 
 	updateCmd.Flags().BoolVarP(&updateCmdInstall, "install", "I", false, "Install package updates if necessary")
+	updateCmd.Flags().MarkDeprecated("install", "please use the `package install` command instead")
+
 	updateCmd.Flags().StringVarP(&updateCmdBase, "base", "b", "active_prod", "Base name for the symlink, defaults to active_prod")
 	updateCmd.Flags().BoolVarP(&updateCmdRestart, "restart", "R", true, "Restart all instances that may have an update applied")
 
