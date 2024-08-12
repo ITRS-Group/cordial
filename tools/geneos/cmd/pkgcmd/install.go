@@ -63,7 +63,7 @@ func init() {
 
 	installCmd.Flags().StringVarP(&installCmdBase, "base", "b", "active_prod", "Override the base active_prod link name")
 
-	installCmd.Flags().StringVarP(&installCmdVersion, "version", "V", "latest", "Download this version, defaults to latest. Doesn't work for EL8 archives.")
+	installCmd.Flags().StringVarP(&installCmdVersion, "version", "V", "latest", "Download this version, defaults to latest. Doesn't work for EL8 archives.\nIgnored if local file(s) - not directories - are given to install on command-line")
 	installCmd.Flags().StringVarP(&installCmdOverride, "override", "O", "", "Override the TYPE:VERSION for archive files with non-standard names")
 	installCmd.MarkFlagsMutuallyExclusive("version", "override")
 
@@ -177,10 +177,11 @@ geneos install netprobe -b active_dev -U
 						nct, v, err = geneos.OverrideToComponentVersion(installCmdOverride)
 					} else {
 						nct, v, err = geneos.FilenameToComponentVersion(path.Base(p))
-						if installCmdVersion != "latest" && installCmdVersion != v {
-							log.Debug().Msgf("selected version %s and file version %s do not match, skipping", installCmdVersion, v)
-							continue
-						}
+						// log.Debug().Msgf("comparison: %d", geneos.CompareVersion(installCmdVersion, v))
+						// if installCmdVersion != "latest" && geneos.CompareVersion(installCmdVersion, v) != 0 {
+						// 	log.Debug().Msgf("selected version %s and file version %s do not match, skipping", installCmdVersion, v)
+						// 	continue
+						// }
 					}
 					if err != nil {
 						log.Debug().Err(err).Msg("skipping")
@@ -194,7 +195,7 @@ geneos install netprobe -b active_dev -U
 
 				options = append(options, geneos.Version(v))
 
-				log.Debug().Msgf("installing from %s as %q version of %s to %s host(s)", source, installCmdVersion, ct, cmd.Hostname)
+				log.Debug().Msgf("installing from %s as %q version of %s to %s host(s)", source, v, ct, cmd.Hostname)
 				if err = Install(h, nct, append(options, geneos.LocalArchive(source))...); err != nil {
 					return err
 				}
