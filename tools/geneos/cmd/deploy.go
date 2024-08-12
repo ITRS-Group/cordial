@@ -362,12 +362,10 @@ var deployCmd = &cobra.Command{
 			} else {
 				cf.Set("keyfile", instance.Shared(i, "keyfiles", fmt.Sprintf("%d.aes", crc)))
 				// set usekeyfile for all new instances 5.14 and above
-				if _, version, err := instance.Version(i); err == nil {
-					if geneos.CompareVersion(version, "5.14.0") >= 0 {
-						// use keyfiles
-						log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
-						cf.Set("usekeyfile", "true")
-					}
+				if instance.CompareVersion(i, "5.14.0") >= 0 {
+					// use keyfiles
+					log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
+					cf.Set("usekeyfile", "true")
 				}
 			}
 		}

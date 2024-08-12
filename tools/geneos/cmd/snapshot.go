@@ -129,7 +129,7 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *instance.Response
 		panic("wrong type")
 	}
 
-	if !instance.AtLeastVersion(i, "5.14") {
+	if instance.CompareVersion(i, "5.14") >= 0 {
 		resp.Err = fmt.Errorf("%s is too old (5.14 or above required)", i)
 		return
 	}

@@ -214,12 +214,8 @@ func (c *FileAgents) Command() (args, env []string, home string) {
 		c.Name(),
 		"-port", c.Config().GetString("port"),
 	}
-	_, version, err := instance.Version(c)
-	if err == nil {
-		switch {
-		case geneos.CompareVersion(version, "6.6.0") >= 0:
-			args = append(args, instance.SetSecureArgs(c)...)
-		}
+	if instance.CompareVersion(c, "6.6.0") >= 0 {
+		args = append(args, instance.SetSecureArgs(c)...)
 	}
 	env = append(env, "LOG_FILENAME="+logFile)
 	home = c.Home()

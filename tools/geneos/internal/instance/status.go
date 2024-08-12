@@ -87,6 +87,17 @@ func Version(i geneos.Instance) (base string, version string, err error) {
 	return
 }
 
+// CompareVersion returns -1, 0 or +1 if the version of the instance is
+// less than, equal or greater than version respectively.
+func CompareVersion(i geneos.Instance, version string) int {
+	_, iv, err := Version(i)
+	if err != nil {
+		return -1
+	}
+
+	return geneos.CompareVersion(iv, version)
+}
+
 // LiveVersion returns the base package name, the underlying package
 // version and the actual version in use for the instance i. If base is
 // not a link, then base is also returned as the symlink. If there are
@@ -126,17 +137,6 @@ func LiveVersion(i geneos.Instance, pid int) (base string, version string, actua
 		actual = "unknown"
 	}
 	return
-}
-
-// AtLeastVersion returns true if the installed version for instance i
-// is version or greater. If the version of the instance is somehow
-// unparseable then this returns false.
-func AtLeastVersion(i geneos.Instance, version string) bool {
-	_, iv, err := Version(i)
-	if err != nil {
-		return false
-	}
-	return geneos.CompareVersion(iv, version) >= 0
 }
 
 // GetPID returns the PID of the process running for the instance. If

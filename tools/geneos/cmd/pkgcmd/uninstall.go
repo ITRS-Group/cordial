@@ -219,7 +219,7 @@ func updateLinks(h *geneos.Host, ct *geneos.Component, releaseDir string, releas
 			continue
 		}
 		if err = h.Symlink(newVersion, link); err != nil {
-			log.Error().Err(err).Msg("")
+			log.Error().Err(err).Msgf("cannot link %s to %s", link, newVersion)
 			continue
 		}
 		fmt.Printf("updated %s %s on %s, now linked to %s\n", ct, l, h, newVersion)

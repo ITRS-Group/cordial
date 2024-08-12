@@ -142,9 +142,9 @@ func Basename(basename string) PackageOptions {
 	return func(d *geneosOptions) { d.basename = basename }
 }
 
-// PlatformID sets the (Linux) platform ID from the OS release info.
+// SetPlatformID sets the (Linux) platform ID from the OS release info.
 // Currently used to distinguish RHEL8/9 releases from others.
-func PlatformID(platform string) PackageOptions {
+func SetPlatformID(platform string) PackageOptions {
 	return func(d *geneosOptions) { d.platformId = platform }
 }
 

@@ -275,6 +275,16 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 	return
 }
 
+// PlatformID returns the platform ID for the host h.
+func PlatformID(h *Host) (platformID string) {
+	p := h.GetString(h.Join("osinfo", "platform_id"))
+	s := strings.Split(p, ":")
+	if len(s) > 1 {
+		platformID = s[1]
+	}
+	return
+}
+
 // Match returns a slice of all matching Hosts. Intended for use in
 // range loops where the host could be specific or 'all'. If passed
 // an empty string then returns an empty slice.

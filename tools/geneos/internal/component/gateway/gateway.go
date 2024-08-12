@@ -19,7 +19,6 @@ package gateway
 
 import (
 	_ "embed"
-	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -258,12 +257,10 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 		return
 	}
 
-	if _, version, err := instance.Version(g); err == nil {
-		if geneos.CompareVersion(version, "5.14.0") >= 0 {
-			// use keyfiles
-			log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
-			cf.Set("usekeyfile", "true")
-		}
+	if instance.CompareVersion(g, "5.14.0") >= 0 {
+		// use keyfiles
+		log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
+		cf.Set("usekeyfile", "true")
 	}
 
 	return nil
@@ -354,16 +351,10 @@ func (g *Gateways) Command() (args, env []string, home string) {
 	}
 
 	// if we have a valid version test for additional features
-	_, version, err := instance.Version(g)
-	if err == nil {
-		switch {
-		case geneos.CompareVersion(version, "5.10.0") >= 0:
-			args = append(args, g.Name(), "-gateway-name", name)
-		default:
-			// fallback to older settings
-			args = append(args, name)
-		}
+	if instance.CompareVersion(g, "5.10.0") >= 0 {
+		args = append(args, g.Name(), "-gateway-name", name)
 	} else {
+		// fallback to older settings
 		args = append(args, name)
 	}
 
@@ -376,7 +367,7 @@ func (g *Gateways) Command() (args, env []string, home string) {
 	)
 
 	if cf.IsSet("gateway-hub") && cf.IsSet("obcerv") {
-		err = errors.New("only one of 'obcerv' or 'gateway-hub' can be set")
+		log.Debug().Msg("only one of 'obcerv' or 'gateway-hub' can be set")
 		return
 	}
 
