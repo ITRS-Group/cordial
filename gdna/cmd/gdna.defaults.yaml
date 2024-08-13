@@ -244,7 +244,13 @@ db:
   # derived information that does not need to be recreated before each
   # report run.
   #
-  # The tables are created in the order given
+  # The tables are created in the order given.
+  #
+  # Each one may also define an `active` and/or an `inactive` table,
+  # which are both created later, but before `report-tables` below.
+  #
+  # Filters, when defined, act on these active/inactive temporary tables
+  # during their build time.
   main-tables:
     - sources
     - reporting-updates
@@ -413,43 +419,66 @@ db:
       ON CONFLICT (gateway, source)
         DO UPDATE SET lastSeen=@time, source=@source
       ;
+    filter:
+      # include MUST default to a wildcard
+      include: "*"
+      # exclude MUST default to nothing
+      exclude:
     active: gateways
     create-active: > #sql
       DROP TABLE IF EXISTS ${db.gateways.active};
       CREATE TABLE ${db.gateways.active} AS
-      SELECT gateway, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
-        FROM ${db.gateways.table}
-       WHERE gateway IN (
-           SELECT distinct gateway AS gateway FROM ${db.samplers.active}
-           UNION
-           SELECT distinct gateway AS gateway FROM ${db.ca-samplers.active}
-           UNION
-           SELECT distinct gateway AS gateway FROM ${db.gw-samplers.active}
-           UNION
-           SELECT distinct gateway AS gateway FROM ${db.probes.active}
-         )
-         AND lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.gateways.table}.source AND valid)
-         AND ${ignore-gateway-source}
-        GROUP BY gateway
+        WITH ig(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.include}
+        ), eg(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.exclude}
+        )
+        SELECT gateway, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
+          FROM ${db.gateways.table} t
+        WHERE gateway IN (
+            SELECT distinct gateway AS gateway FROM ${db.samplers.active}
+            UNION
+            SELECT distinct gateway AS gateway FROM ${db.ca-samplers.active}
+            UNION
+            SELECT distinct gateway AS gateway FROM ${db.gw-samplers.active}
+            UNION
+            SELECT distinct gateway AS gateway FROM ${db.probes.active}
+          )
+          AND lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = t.source AND valid)
+          AND ${ignore-gateway-source}
+          AND EXISTS (SELECT 1 FROM ig WHERE t.gateway GLOB ig.gateway)
+          AND NOT EXISTS (SELECT 1 FROM eg WHERE t.gateway GLOB eg.gateway)
+          GROUP BY gateway
       ;
     inactive: gateways_previous
     create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.gateways.inactive};
       CREATE TABLE ${db.gateways.inactive} AS
-      SELECT gateway, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
-        FROM ${db.gateways.table}
-       WHERE gateway IN (
-           SELECT distinct gateway AS gateway FROM ${db.samplers.active}
-           UNION
-           SELECT distinct gateway AS gateway FROM ${db.ca-samplers.active}
-           UNION
-           SELECT distinct gateway AS gateway FROM ${db.gw-samplers.active}
-           UNION
-           SELECT distinct gateway AS gateway FROM ${db.probes.active}
-         )
-         AND lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.gateways.table}.source AND valid)
-         AND ${ignore-gateway-source}
-        GROUP BY gateway
+        WITH ig(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.include}
+        ), eg(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.exclude}
+        )
+        SELECT gateway, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
+          FROM ${db.gateways.table} t
+        WHERE gateway IN (
+            SELECT distinct gateway AS gateway FROM ${db.samplers.active}
+            UNION
+            SELECT distinct gateway AS gateway FROM ${db.ca-samplers.active}
+            UNION
+            SELECT distinct gateway AS gateway FROM ${db.gw-samplers.active}
+            UNION
+            SELECT distinct gateway AS gateway FROM ${db.probes.active}
+          )
+          AND lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = t.source AND valid)
+          AND ${ignore-gateway-source}
+          AND EXISTS (SELECT 1 FROM ig WHERE t.gateway GLOB ig.gateway)
+          AND NOT EXISTS (SELECT 1 FROM eg WHERE t.gateway GLOB eg.gateway)
+          GROUP BY gateway
       ;
 
   probes:
@@ -498,20 +527,40 @@ db:
     create-active: > #sql
       DROP TABLE IF EXISTS ${db.probes.active};
       CREATE ${db.temporary-table} TABLE ${db.probes.active} AS
+        WITH ig(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.include}
+        ), eg(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.exclude}
+        )
         SELECT ${db.probes.columns}
-          FROM ${db.probes.table}
-         WHERE lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.probes.table}.source AND valid)
-           AND ${ignore-all-no-plugin};
+          FROM ${db.probes.table} t
+         WHERE lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = t.source AND valid)
+           AND ${ignore-all-no-plugin}
+           AND EXISTS (SELECT 1 FROM ig WHERE t.gateway GLOB ig.gateway)
+           AND NOT EXISTS (SELECT 1 FROM eg WHERE t.gateway GLOB eg.gateway)
+        ;
       CREATE INDEX IF NOT EXISTS ${db.probes.active}_idx1 ON ${db.probes.active} (server);
 
     inactive: probes_previous
     create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.probes.inactive};
       CREATE ${db.temporary-table} TABLE ${db.probes.inactive} AS
+        WITH ig(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.include}
+        ), eg(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.exclude}
+        )
         SELECT ${db.probes.columns}
-          FROM ${db.probes.table}
-         WHERE lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.probes.table}.source AND valid)
-           AND ${ignore-all-no-plugin};
+          FROM ${db.probes.table} t
+         WHERE lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = t.source AND valid)
+           AND ${ignore-all-no-plugin}
+           AND EXISTS (SELECT 1 FROM ig WHERE t.gateway GLOB ig.gateway)
+           AND NOT EXISTS (SELECT 1 FROM eg WHERE t.gateway GLOB eg.gateway)
+        ;
 
   samplers:
     # The samplers table contains all entries from the license daemon for
@@ -589,10 +638,19 @@ db:
     create-active: > #sql
       DROP TABLE IF EXISTS ${db.samplers.active};
       CREATE ${db.temporary-table} TABLE ${db.samplers.active} AS
+        WITH ig(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.include}
+        ), eg(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.exclude}
+        )
         SELECT ${db.samplers.columns}
-          FROM ${db.samplers.table}
-         WHERE lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.samplers.table}.source AND valid)
+          FROM ${db.samplers.table} t
+         WHERE lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = t.source AND valid)
            AND ${ignore-all}
+           AND EXISTS (SELECT 1 FROM ig WHERE t.gateway GLOB ig.gateway)
+           AND NOT EXISTS (SELECT 1 FROM eg WHERE t.gateway GLOB eg.gateway)
       ;
       CREATE INDEX IF NOT EXISTS ${db.samplers.active}_idx_1 ON ${db.samplers.active} (server);
       CREATE INDEX IF NOT EXISTS ${db.samplers.active}_idx_2 ON ${db.samplers.active} (probeName, probePort);
@@ -600,10 +658,18 @@ db:
     create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.samplers.inactive};
       CREATE ${db.temporary-table} TABLE ${db.samplers.inactive} AS
-        SELECT ${db.samplers.columns}
-          FROM ${db.samplers.table}
-         WHERE lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.samplers.table}.source AND valid)
+        WITH ig(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.include}
+        ), eg(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.exclude}
+        )        SELECT ${db.samplers.columns}
+          FROM ${db.samplers.table} t
+         WHERE lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = t.source AND valid)
            AND ${ignore-all}
+           AND EXISTS (SELECT 1 FROM ig WHERE t.gateway GLOB ig.gateway)
+           AND NOT EXISTS (SELECT 1 FROM eg WHERE t.gateway GLOB eg.gateway)
       ;
 
   ca-samplers:
@@ -633,19 +699,37 @@ db:
     create-active: > #sql
       DROP TABLE IF EXISTS ${db.ca-samplers.active};
       CREATE ${db.temporary-table} TABLE ${db.ca-samplers.active} AS
+        WITH ig(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.include}
+        ), eg(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.exclude}
+        )
         SELECT ${db.ca-samplers.columns}
-          FROM ${db.ca-samplers.table}
-         WHERE lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.ca-samplers.table}.source AND valid)
+          FROM ${db.ca-samplers.table} t
+         WHERE lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = t.source AND valid)
            AND ${ignore-gateway-source}
+           AND EXISTS (SELECT 1 FROM ig WHERE t.gateway GLOB ig.gateway)
+           AND NOT EXISTS (SELECT 1 FROM eg WHERE t.gateway GLOB eg.gateway)
       ;
     inactive: ca_samplers_previous
     create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.ca-samplers.inactive};
       CREATE ${db.temporary-table} TABLE ${db.ca-samplers.inactive} AS
+        WITH ig(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.include}
+        ), eg(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.exclude}
+        )
         SELECT ${db.ca-samplers.columns}
-          FROM ${db.ca-samplers.table}
-         WHERE lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.ca-samplers.table}.source AND valid)
+          FROM ${db.ca-samplers.table} t
+         WHERE lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = t.source AND valid)
            AND ${ignore-gateway-source}
+           AND EXISTS (SELECT 1 FROM ig WHERE t.gateway GLOB ig.gateway)
+           AND NOT EXISTS (SELECT 1 FROM eg WHERE t.gateway GLOB eg.gateway)
       ;
 
   gw-samplers:
@@ -675,18 +759,38 @@ db:
     create-active: > #sql
       DROP TABLE IF EXISTS ${db.gw-samplers.active};
       CREATE ${db.temporary-table} TABLE ${db.gw-samplers.active} AS
+        WITH ig(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.include}
+        ), eg(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.exclude}
+        )
         SELECT ${db.gw-samplers.columns}
-          FROM ${db.gw-samplers.table}
-         WHERE lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.gw-samplers.table}.source AND valid)
-           AND ${ignore-gateway-source};
+          FROM ${db.gw-samplers.table} t
+         WHERE lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = t.source AND valid)
+           AND ${ignore-gateway-source}
+           AND EXISTS (SELECT 1 FROM ig WHERE t.gateway GLOB ig.gateway)
+           AND NOT EXISTS (SELECT 1 FROM eg WHERE t.gateway GLOB eg.gateway)
+      ;
     inactive: gw_samplers_previous
     create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.gw-samplers.inactive};
       CREATE ${db.temporary-table} TABLE ${db.gw-samplers.inactive} AS
+        WITH ig(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.include}
+        ), eg(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.exclude}
+        )
         SELECT ${db.gw-samplers.columns}
-          FROM ${db.gw-samplers.table}
-         WHERE lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.gw-samplers.table}.source AND valid)
-           AND ${ignore-gateway-source};
+          FROM ${db.gw-samplers.table} t
+         WHERE lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = t.source AND valid)
+           AND ${ignore-gateway-source}
+           AND EXISTS (SELECT 1 FROM ig WHERE t.gateway GLOB ig.gateway)
+           AND NOT EXISTS (SELECT 1 FROM eg WHERE t.gateway GLOB eg.gateway)
+      ;
 
   gw-components:
     # The `gw-components` table contains all entries from the license
@@ -715,23 +819,43 @@ db:
     create-active: > #sql
       DROP TABLE IF EXISTS ${db.gw-components.active};
       CREATE ${db.temporary-table} TABLE ${db.gw-components.active} AS
+        WITH ig(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.include}
+        ), eg(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.exclude}
+        )
         SELECT ${db.gw-components.columns}
-          FROM ${db.gw-components.table}
-         WHERE lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.gw-components.table}.source AND valid)
+          FROM ${db.gw-components.table} t 
+         WHERE lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = t.source AND valid)
            AND ${ignore-gateway-source}
+           AND EXISTS (SELECT 1 FROM ig WHERE t.gateway GLOB ig.gateway)
+           AND NOT EXISTS (SELECT 1 FROM eg WHERE t.gateway GLOB eg.gateway)
       ;
     inactive: gw_components_previous
     create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.gw-components.inactive};
       CREATE ${db.temporary-table} TABLE ${db.gw-components.inactive} AS
+        WITH ig(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.include}
+        ), eg(gateway) AS (
+            SELECT 1 WHERE 1 == 0
+            ${values:db.gateways.filter.exclude}
+        )
         SELECT ${db.gw-components.columns}
-          FROM ${db.gw-components.table}
-         WHERE lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = ${db.gw-components.table}.source AND valid)
+          FROM ${db.gw-components.table} t
+         WHERE lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = t.source AND valid)
            AND ${ignore-gateway-source}
+           AND EXISTS (SELECT 1 FROM ig WHERE t.gateway GLOB ig.gateway)
+           AND NOT EXISTS (SELECT 1 FROM eg WHERE t.gateway GLOB eg.gateway)
       ;
 
   # The `servers` table is built from the probes on all valid sources
-  # grouped by gateway and source.
+  # grouped by gateway and source. The server name is resolved in the
+  # `db.probes.post-insert` query which is run after all probes are
+  # loaded.
   servers:
     table: servers
     columns: gateway, server, hostID, firstSeen, lastSeen, source, os, version
@@ -1126,7 +1250,7 @@ db:
       DROP TABLE IF EXISTS ${db.unused-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.unused-gateways.table} AS
       SELECT gateway, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
-        FROM ${db.gateways.table}
+        FROM ${db.gateways.active}
        WHERE gateway NOT IN (SELECT distinct gateway FROM ${db.servers.table})
          AND gateway NOT IN (SELECT distinct gateway FROM ${db.samplers.active})
          AND gateway NOT IN (SELECT distinct gateway FROM ${db.ca-samplers.active})
@@ -1653,7 +1777,7 @@ reports:
 
       UNION
 
-      SELECT 'allGateways', (SELECT count(distinct gateway) FROM ${db.gateways.table})
+      SELECT 'allGateways', (SELECT count(distinct gateway) FROM ${db.gateways.active})
 
       UNION
 
@@ -2111,7 +2235,7 @@ reports:
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server))), ''),
              (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table}) THEN '' ELSE 'yes' END) as l3missing,
              COALESCE((SELECT group_concat(gateway, ', ') FROM ${db.servers.table} WHERE server = u.server AND gateway <> u.gateway), '') otherGateways,
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT distinct plugin FROM ${db.samplers.table} WHERE server = u.server ORDER BY 1)), '') plugins
+             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT distinct plugin FROM ${db.samplers.active} WHERE server = u.server ORDER BY 1)), '') plugins
         FROM ${db.servers.table} u
        WHERE ${split-column} = '${value}'
        GROUP BY server
@@ -2210,7 +2334,7 @@ reports:
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server))), '') l1missing,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server))), '') l2missing,
              (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table}) THEN '' ELSE 'yes' END) as l3missing,
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT distinct plugin FROM ${db.samplers.table} WHERE server = u.server ORDER BY 1)), '') plugins,
+             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT distinct plugin FROM ${db.samplers.active} WHERE server = u.server ORDER BY 1)), '') plugins,
              '' os,
              '' version
         FROM ${db.servers.table} u
@@ -2229,7 +2353,7 @@ reports:
               '' l1missing,
               '' l2missing,
               '' l3missing,
-              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT distinct plugin FROM ${db.samplers.table} WHERE probeName = p.probeName AND probePort = p.probePort ORDER BY 1)), '') plugins,
+              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT distinct plugin FROM ${db.samplers.active} WHERE probeName = p.probeName AND probePort = p.probePort ORDER BY 1)), '') plugins,
               COALESCE(os, '') os,
               COALESCE(version, '') version
         FROM ${db.probes.active} p

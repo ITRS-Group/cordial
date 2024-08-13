@@ -93,6 +93,9 @@ func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly boo
 		}
 		insertVersion := cf.GetString("db.gdna-version.insert")
 		_, err = db.ExecContext(ctx, insertVersion, sql.Named("version", cordial.VERSION))
+		if err != nil {
+			log.Error().Err(err).Msg("updating gdna_version")
+		}
 	}
 
 	return
@@ -276,7 +279,7 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 
 	gatewaysInsertStmt, err := tx.PrepareContext(ctx, cf.GetString("db.gateways.insert"))
 	if err != nil {
-		log.Error().Msgf("cannot prepare statement: %s", err)
+		log.Error().Msgf("cannot prepare statement: %s\n%s", err, cf.GetString("db.gateways.insert"))
 		return
 	}
 	defer gatewaysInsertStmt.Close()
@@ -527,7 +530,40 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 			continue
 		}
 
-		query := cf.GetString(q, ignore)
+		// add a ${values:} prefix that returns SQL that can be
+		// combines like this:
+		//
+		//    WITH ig(gateway) AS (
+		//      SELECT 1 WHERE 1 == 0
+		//      ${values:db.gateways.filter.include}
+		//    )
+		//
+		// to create a CTE that can then be tested with EXISTS like
+		// this:
+		//
+		//    WHERE EXISTS (SELECT 1 FROM ig WHERE ${db.gateways.table}.gateway GLOB ig.gateway)
+		//
+		// The `SELECT 1 WHERE 1 == 0` is needed if the ${values}
+		// return is empty, so the CTE returns no rows.
+		//
+		values := config.Prefix("values", func(cf *config.Config, s string, b bool) (result string, err error) {
+			s = strings.TrimPrefix(s, "values:")
+			l := cf.GetStringSlice(s)
+			if len(l) == 0 {
+				return
+			}
+			m := []string{}
+			for _, v := range l {
+				m = append(m, "('"+v+"')")
+			}
+			result = "UNION ALL VALUES " + strings.Join(m, ", ")
+			if b {
+				result = strings.TrimSpace(result)
+			}
+			return
+		})
+
+		query := cf.GetString(q, ignore, values)
 		log.Trace().Msg(query)
 		if _, err = tx.ExecContext(ctx, query); err != nil {
 			return

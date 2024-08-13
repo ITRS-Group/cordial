@@ -198,6 +198,24 @@ db:
   #
   file: gdna.sqlite
 
+  # Filters can be defined for gateways and they are applied to the
+  # lists of active gateways, probes, servers and samplers during the
+  # creation of the reporting tables.
+  #
+  # The filters, `include` and `exclude`, can be given as a plain string
+  # pattern or an array of patterns. The patterns supported are those
+  # for the SQLite `GLOB` operator and generally match UNIX shell
+  # wildcards. Regular expressions are NOT supported. e.g.
+  #
+  #     include: [ "pattern*", "pattern*" ]
+  #
+  # The built-in defaults, shown below, include everything and exclude
+  # nothing. The two checks are AND-ed together.
+  gateways:
+    filter:
+      include: "*"
+      exclude:
+
 # `xlsx` defines configuration values for the generation of XLSX files,
 # either locally or as email attachments. Note that you cannot specify a
 # default file name in this configuration section, which is controlled
