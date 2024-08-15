@@ -41,7 +41,8 @@ func ReadAESKeyFile(i geneos.Instance, setting ...string) (keyfile config.KeyFil
 }
 
 // WriteAESKeyFile writes key values to a an instance key file, for
-// secure passwords as per
+// secure passwords as per:
+//
 // https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm
 //
 // If the instance config is updated then it is also saved.
@@ -61,7 +62,10 @@ func WriteAESKeyFile(i geneos.Instance, kv *config.KeyValues) (keyfile config.Ke
 		return
 	}
 
-	i.Config().Set("keyfile", keyfile)
+	// make the underlying keyfile path independent of the instance home
+	// path
+	k := strings.Replace(string(keyfile), Home(i), "${config:home}", 1)
+	i.Config().Set("keyfile", k)
 
 	err = SaveConfig(i)
 	return
