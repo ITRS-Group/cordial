@@ -230,7 +230,7 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 		if errors.Is(err, fs.ErrNotExist) {
 			return
 		}
-		log.Error().Err(err).Msgf("loading rc %s:%s", r, config.Path("rc",
+		log.Debug().Err(err).Msgf("loading rc %s:%s", r, config.Path("rc",
 			config.Host(r),
 			config.SetConfigFile(p),
 			config.SetFileExtension("env"),
