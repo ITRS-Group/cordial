@@ -243,9 +243,7 @@ func showInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	aliases := i.Type().LegacyParameters
 	for _, k := range i.Config().AllKeys() {
 		// skip any names in the alias table
-		log.Debug().Msgf("checking %s", k)
 		if _, ok := aliases[k]; !ok {
-			log.Debug().Msgf("setting %s", k)
 			nv.Set(k, i.Config().Get(k))
 		}
 	}
