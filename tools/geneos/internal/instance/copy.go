@@ -114,10 +114,9 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	log.Debug().Msgf("checking %s", destination)
 	dst, err := Get(ct, destination)
 	if err == nil && !dst.Loaded().IsZero() {
-		log.Debug().Msg("already exists")
 		return fmt.Errorf("%s already exists", dst)
 	}
-	log.Debug().Msg("not found")
+	log.Debug().Msg("destination does not already exist")
 	// otherwise carry on
 	if dst != nil {
 		dst.Unload()
