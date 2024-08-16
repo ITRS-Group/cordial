@@ -598,7 +598,8 @@ func (h *SSHRemote) NewSession() (sess *ssh.Session, err error) {
 
 // Start starts a process on an SSH attached remote host h. It uses a
 // shell and backgrounds and redirects. May not work on all remotes and
-// for all processes.
+// for all processes. errfile has stdout/stderr appended to it, use
+// '/dev/null' if no errfile is wanted.
 func (h *SSHRemote) Start(cmd *exec.Cmd, errfile string) (err error) {
 	if strings.Contains(h.ServerVersion(), "windows") {
 		err = errors.New("cannot run remote commands on windows")
@@ -631,7 +632,7 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, errfile string) (err error) {
 	for _, e := range cmd.Env {
 		fmt.Fprintln(pipe, "export", e)
 	}
-	fmt.Fprintf(pipe, "%s > %q 2>&1 &\n", cmdstr, errfile)
+	fmt.Fprintf(pipe, "%s >> %q 2>&1 &\n", cmdstr, errfile)
 	fmt.Fprintln(pipe, "exit")
 	return sess.Wait()
 }

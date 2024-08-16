@@ -199,7 +199,7 @@ func (h *Local) Start(cmd *exec.Cmd, errfile string) (err error) {
 		errfile = path.Join(cmd.Dir, errfile)
 	}
 
-	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_WRONLY, 0644)
+	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return
 	}
