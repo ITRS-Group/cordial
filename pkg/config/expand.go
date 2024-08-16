@@ -162,6 +162,7 @@ package config
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -578,6 +579,13 @@ func (c *Config) expandEncodedBytesLockedBuffer(s []byte, options ...ExpandOptio
 // expansion but is also exported for use without the decoration
 // required for configuration values, allowing use against command line
 // flag values, for example.
+//
+// With the ExpandNonStringToCSV() or ExpandNonStringToJSON() options,
+// if the item to be expanded is a configuration value (either `config:`
+// prefixed or without a prefix but containing a `.`) and the value
+// resolved is not a plain string then it is either, for a slice of
+// values, returned as a string containing comma-separated strings found
+// or as a JSON encoded representation of the value.
 func (c *Config) ExpandRawString(s string, options ...ExpandOptions) (value string, err error) {
 	opts := evalExpandOptions(c, options...)
 	switch {
@@ -593,13 +601,60 @@ func (c *Config) ExpandRawString(s string, options ...ExpandOptions) (value stri
 	case strings.HasPrefix(s, "config:"), !strings.Contains(s, ":"):
 		if strings.HasPrefix(s, "config:") || strings.Contains(s, ".") {
 			s = strings.TrimPrefix(s, "config:")
-			// this call to GetString() must NOT be recursive
-			c.mutex.RLock()
-			value = c.Viper.GetString(s)
-			c.mutex.RUnlock()
-			if opts.trimSpace {
-				value = strings.TrimSpace(value)
+			if !opts.expandNonString {
+				// this call to GetString() must NOT be recursive
+				c.mutex.RLock()
+				value = c.Viper.GetString(s)
+				c.mutex.RUnlock()
+				if opts.trimSpace {
+					value = strings.TrimSpace(value)
+				}
+				return
 			}
+
+			c.mutex.RLock()
+			v := c.Viper.Get(s)
+			c.mutex.RUnlock()
+
+			switch w := v.(type) {
+			case string:
+				// strings still get returned "as-is"
+				value = w
+				if opts.trimSpace {
+					value = strings.TrimSpace(value)
+				}
+			case []any:
+				if opts.expandNonStringCSV {
+					var u []string
+					for _, i := range w {
+						s, ok := i.(string)
+						if ok {
+							u = append(u, s)
+						}
+					}
+					value = strings.Join(u, ",")
+				} else {
+					// type switches do not support fallthrough, so
+					// duplicate code here
+					u, err := json.Marshal(w)
+					if err != nil {
+						return "", err
+					}
+					value = string(u)
+				}
+			default:
+				// if caller has asked for CSV then do not return JSON
+				if opts.expandNonStringCSV {
+					value = ""
+					return
+				}
+				u, err := json.Marshal(w)
+				if err != nil {
+					return "", err
+				}
+				value = string(u)
+			}
+
 			return
 		}
 

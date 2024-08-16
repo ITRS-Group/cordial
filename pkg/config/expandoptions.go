@@ -20,18 +20,20 @@ package config
 import "sync"
 
 type expandOptions struct {
-	defaultValue     any
-	expressions      bool
-	externalFuncMaps bool
-	funcMaps         map[string]func(*Config, string, bool) (string, error)
-	initialValue     any
-	lookupTables     []map[string]string
-	nodecode         bool
-	rawstring        bool
-	replacements     []string
-	trimPrefix       bool
-	trimSpace        bool
-	usekeyfile       string
+	defaultValue       any
+	expandNonString    bool
+	expandNonStringCSV bool
+	expressions        bool
+	externalFuncMaps   bool
+	funcMaps           map[string]func(*Config, string, bool) (string, error)
+	initialValue       any
+	lookupTables       []map[string]string
+	nodecode           bool
+	rawstring          bool
+	replacements       []string
+	trimPrefix         bool
+	trimSpace          bool
+	usekeyfile         string
 }
 
 // ExpandOptions control the way configuration options undergo string
@@ -244,5 +246,23 @@ func Replace(name string) ExpandOptions {
 func UseKeyfile(file string) ExpandOptions {
 	return func(eo *expandOptions) {
 		eo.usekeyfile = file
+	}
+}
+
+// ExpandNonStringToCSV causes any non-string configuration item
+// expansions of lists to return a comma-separated list of any strings
+// in that list. Non-string values are skipped.
+func ExpandNonStringToCSV() ExpandOptions {
+	return func(eo *expandOptions) {
+		eo.expandNonString = true
+		eo.expandNonStringCSV = true
+	}
+}
+
+// ExpandNonStringToJSON causes any non-string configuration expansions
+// to be returned as a JSON encoded string of the item
+func ExpandNonStringToJSON() ExpandOptions {
+	return func(eo *expandOptions) {
+		eo.expandNonString = true
 	}
 }
