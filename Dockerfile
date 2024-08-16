@@ -1,6 +1,6 @@
 # Dockerfile to build cordial components and tar.gz files
 
-ARG GOVERSION=1.22.5
+ARG GOVERSION=1.23.0
 
 # The bullseye image seems to offer the most compatibility, including
 # libemail.so dependencies
@@ -95,7 +95,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     rm -fr /var/lib/apt/lists/*;
 RUN set -eux; \
     mkdir node_modules; \
-    npm install --verbose --global mdpdf; \
+    npm install --verbose --global git+https://github.com/elliotblackburn/mdpdf.git#3.0.4; \
     npm install --global @mermaid-js/mermaid-cli
 
 # base files
