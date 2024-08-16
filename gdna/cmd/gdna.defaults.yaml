@@ -1377,7 +1377,7 @@ reports:
 
       UNION ALL
 
-      SELECT 'Gateways', (SELECT count(*) FROM ${db.gateways.active})
+      SELECT 'Gateways', (SELECT count(*) FROM ${db.gateways.active}) || " (" || (SELECT count(*) FROM ${db.gateways.table}) || ")"
 
       UNION ALL
 
@@ -1389,7 +1389,7 @@ reports:
 
       UNION ALL
 
-      SELECT 'Probes', (SELECT count(*) FROM ${db.probes.active})
+      SELECT 'Probes', (SELECT count(*) FROM ${db.probes.active}) || " ("|| (SELECT count(*) FROM ${db.probes.table}) || ")"
 
       UNION ALL
 
@@ -1402,6 +1402,10 @@ reports:
       UNION ALL
 
       SELECT 'Gateway Samplers', (SELECT total(number) FROM ${db.gw-samplers.active})
+
+      UNION ALL
+
+      SELECT 'Gateway Filters', ' include: ${db.gateways.filter.include}, exclude: ${db.gateways.filter.exclude}'
       ;
 
   coverage-by-level-and-plugin:
