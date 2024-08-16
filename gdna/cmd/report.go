@@ -390,7 +390,7 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, reporter 
 	}
 	lookup := config.LookupTable(reportLookupTable(report.Group, report.Name))
 
-	query := cf.ExpandString(report.Query, lookup)
+	query := cf.ExpandString(report.Query, lookup, config.ExpandNonStringToCSV())
 	log.Trace().Msgf("query:\n%s", query)
 	table, err := queryToTable(ctx, tx, report.Columns, query)
 	if err != nil {
@@ -399,7 +399,7 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, reporter 
 	}
 	reporter.WriteTable(table...)
 
-	if query := cf.ExpandString(report.Headlines, lookup); query != "" {
+	if query := cf.ExpandString(report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
 		if err != nil {
 			log.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
@@ -421,7 +421,7 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 	}
 	lookup := config.LookupTable(reportLookupTable(report.Group, report.Name))
 
-	prequery := cf.ExpandString(report.Query, lookup)
+	prequery := cf.ExpandString(report.Query, lookup, config.ExpandNonStringToCSV())
 	r := tx.QueryRowContext(ctx, prequery)
 	var query string
 	if err := r.Scan(&query); err != nil {
@@ -443,7 +443,7 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 		return
 	}
 	reporter.WriteTable(table...)
-	if query := cf.ExpandString(report.Headlines, lookup); query != "" {
+	if query := cf.ExpandString(report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
 		if err != nil {
 			log.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
@@ -464,7 +464,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, repo
 
 	// get list of split values (typically gateways)
 	lookup := config.LookupTable(reportLookupTable(report.Group, report.Name))
-	splitquery := cf.ExpandString(report.SplitValues, lookup)
+	splitquery := cf.ExpandString(report.SplitValues, lookup, config.ExpandNonStringToCSV())
 	log.Trace().Msgf("query:\n%s", splitquery)
 	rows, err := tx.QueryContext(ctx, splitquery)
 	if err != nil {
@@ -492,13 +492,13 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, repo
 			"value":        v,
 		}
 		origname := report.Name
-		report.Name = cf.ExpandString(report.Name, config.LookupTable(split), lookup)
+		report.Name = cf.ExpandString(report.Name, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
 		if err = reporter.SetReport(report); err != nil {
 			log.Debug().Err(err).Msg("")
 		}
 		report.Name = origname
 
-		if query := cf.ExpandString(report.Headlines, config.LookupTable(split), lookup); query != "" {
+		if query := cf.ExpandString(report.Headlines, config.LookupTable(split), lookup, config.ExpandNonStringToCSV()); query != "" {
 			names, headlines, err := queryHeadlines(ctx, tx, query)
 			if err != nil {
 				log.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
@@ -509,7 +509,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, repo
 			}
 		}
 
-		query := cf.ExpandString(report.Query, config.LookupTable(split), lookup)
+		query := cf.ExpandString(report.Query, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
 		log.Trace().Msgf("query:\n%s ->\n%s", report.Query, query)
 		t, err := queryToTable(ctx, tx, report.Columns, query)
 		if err != nil {
@@ -544,7 +544,7 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 		query := cf.ExpandString(report.Query, lookup, config.LookupTable(map[string]string{
 			"group":  group,
 			"filter": groups[group],
-		}))
+		}), config.ExpandNonStringToCSV())
 		log.Trace().Msgf("query:\n%s", query)
 		t, err := queryToTable(ctx, tx, report.Columns, query)
 		if err != nil {
@@ -560,7 +560,7 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 
 	reporter.WriteTable(table...)
 
-	if query := cf.ExpandString(report.Headlines, lookup); query != "" {
+	if query := cf.ExpandString(report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
 		if err != nil {
 			log.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
