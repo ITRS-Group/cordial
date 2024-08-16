@@ -20,7 +20,6 @@ package tlscmd
 import (
 	"crypto/x509"
 	_ "embed"
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -77,9 +76,8 @@ var importCmd = &cobra.Command{
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Example: `
-# import file.pem and extract parts
-$ geneos tls import netprobe file.pem
-$ geneos tls import --signer file.pem
+$ geneos tls import -c netprobe localhost file.pem
+$ geneos tls import --signing-bundle file.pem
 `,
 	Annotations: map[string]string{
 		cmd.CmdNoneMeansAll: "none-or-all",
@@ -87,10 +85,6 @@ $ geneos tls import --signer file.pem
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, names := cmd.ParseTypeNames(command)
-
-		if importCmdCert != "" && importCmdSigningBundle != "" {
-			return errors.New("you can only import an instance *or* a signing certificate, not both")
-		}
 
 		if importCmdSigningBundle != "" {
 			return geneos.TLSImportBundle(importCmdSigningBundle, importCmdPrivateKey, importCmdChain)
@@ -148,7 +142,21 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response
 		return
 	}
 
-	cert, key, chain := params[0].(*x509.Certificate), params[1].(*memguard.Enclave), params[2].([]*x509.Certificate)
+	cert, ok := params[0].(*x509.Certificate)
+	if !ok {
+		resp.Err = fmt.Errorf("%w: params[0] not a certificate", geneos.ErrInvalidArgs)
+		return
+	}
+	key, ok := params[1].(*memguard.Enclave)
+	if !ok {
+		resp.Err = fmt.Errorf("%w: params[1] not a secure enclave", geneos.ErrInvalidArgs)
+		return
+	}
+	chain, ok := params[2].([]*x509.Certificate)
+	if !ok {
+		resp.Err = fmt.Errorf("%w: params[2] not a slice of certificates", geneos.ErrInvalidArgs)
+		return
+	}
 
 	if resp.Err = instance.WriteCert(i, cert); resp.Err != nil {
 		return
