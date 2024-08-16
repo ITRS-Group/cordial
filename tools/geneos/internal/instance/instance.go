@@ -348,8 +348,15 @@ func InstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 //
 // Patterns that resolve to empty (e.g. @hostname) are returned
 // unchanged and unchecked against valid names.
+//
+// Patterns that have no globbing special characters are returned as-is
+// and the caller is expected to validate them.
 func Match(h *geneos.Host, ct *geneos.Component, patterns ...string) (names []string) {
 	for _, pattern := range patterns {
+		// check for glob chars
+		if !strings.ContainsAny(pattern, `*?[`) {
+			names = append(names, pattern)
+		}
 		// a host only name implies a wildcard
 		if strings.HasPrefix(pattern, "@") {
 			pattern = "*" + pattern
