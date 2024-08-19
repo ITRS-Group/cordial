@@ -53,8 +53,8 @@ var sanCmd = &cobra.Command{
 	Long:         sanCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdNoneMeansAll: "false",
-		cmd.CmdRequireHome:  "false",
+		cmd.CmdGlobal:      "false",
+		cmd.CmdRequireHome: "false",
 	},
 	Deprecated: "Please use the `" + cordial.ExecutableName() + " deploy san` command instead",
 }

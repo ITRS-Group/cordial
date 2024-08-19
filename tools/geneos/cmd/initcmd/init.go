@@ -113,8 +113,8 @@ geneos init
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdNoneMeansAll: "false",
-		cmd.CmdRequireHome:  "false",
+		cmd.CmdGlobal:      "false",
+		cmd.CmdRequireHome: "false",
 	},
 	// initialise a geneos installation
 	//
@@ -153,8 +153,8 @@ var initTLSCmd = &cobra.Command{
 	Long:         "Alias for `geneos tls init`",
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdNoneMeansAll: "false",
-		cmd.CmdRequireHome:  "true",
+		cmd.CmdGlobal:      "false",
+		cmd.CmdRequireHome: "true",
 		// cmd.CmdAliasFor:    "tls init",
 	},
 	Hidden:                true,

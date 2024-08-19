@@ -55,9 +55,9 @@ geneos clean --full netprobe
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdNoneMeansAll: "true",
-		CmdRequireHome:  "true",
-		CmdGlobNames:    "true",
+		CmdGlobal:        "true",
+		CmdRequireHome:   "true",
+		CmdWildcardNames: "true",
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, names := ParseTypeNames(command)

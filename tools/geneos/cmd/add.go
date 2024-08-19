@@ -80,8 +80,8 @@ geneos add netprobe infraprobe12 --start --log
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdNoneMeansAll: "false",
-		CmdRequireHome:  "true",
+		CmdGlobal:      "false",
+		CmdRequireHome: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ct, names, params := ParseTypeNamesParams(cmd)

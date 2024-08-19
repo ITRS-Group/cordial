@@ -40,8 +40,8 @@ var aesCmd = &cobra.Command{
 	Long:         aesCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdNoneMeansAll: "false",
-		cmd.CmdRequireHome:  "true",
+		cmd.CmdGlobal:      "false",
+		cmd.CmdRequireHome: "true",
 	},
 	DisableFlagParsing:    true,
 	DisableFlagsInUseLine: true,

@@ -58,9 +58,9 @@ var setCmd = &cobra.Command{
 	Long:         setCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdNoneMeansAll: "explicit",
-		cmd.CmdRequireHome:  "true",
-		cmd.CmdGlobNames:    "true",
+		cmd.CmdGlobal:        "explicit",
+		cmd.CmdRequireHome:   "true",
+		cmd.CmdWildcardNames: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, names := cmd.ParseTypeNames(command)

@@ -48,8 +48,8 @@ var importCmd = &cobra.Command{
 	Long:         importCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdNoneMeansAll: "false",
-		cmd.CmdRequireHome:  "true",
+		cmd.CmdGlobal:      "false",
+		cmd.CmdRequireHome: "true",
 	},
 	Deprecated: "Please use the `" + cordial.ExecutableName() + " aes set` command instead",
 	RunE: func(command *cobra.Command, _ []string) (err error) {

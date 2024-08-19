@@ -71,9 +71,9 @@ var encodeCmd = &cobra.Command{
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdNoneMeansAll: "true",
-		cmd.CmdRequireHome:  "true",
-		cmd.CmdGlobNames:    "true",
+		cmd.CmdGlobal:        "true",
+		cmd.CmdRequireHome:   "true",
+		cmd.CmdWildcardNames: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		h := geneos.GetHost(cmd.Hostname)

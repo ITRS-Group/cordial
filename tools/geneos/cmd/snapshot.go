@@ -67,9 +67,9 @@ var snapshotCmd = &cobra.Command{
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		// CmdComponent:   "gateway",
-		CmdNoneMeansAll: "explicit",
-		CmdRequireHome:  "true",
-		CmdGlobNames:    "true",
+		CmdGlobal:        "explicit",
+		CmdRequireHome:   "true",
+		CmdWildcardNames: "true",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		var err error

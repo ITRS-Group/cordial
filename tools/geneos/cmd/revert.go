@@ -51,9 +51,9 @@ var revertCmd = &cobra.Command{
 	Long:         revertCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdNoneMeansAll: "true",
-		CmdRequireHome:  "true",
-		CmdGlobNames:    "true",
+		CmdGlobal:        "true",
+		CmdRequireHome:   "true",
+		CmdWildcardNames: "true",
 	},
 	DisableFlagsInUseLine: true,
 	Run: func(cmd *cobra.Command, _ []string) {

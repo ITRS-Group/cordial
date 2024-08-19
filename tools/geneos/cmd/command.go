@@ -51,9 +51,9 @@ var commandCmd = &cobra.Command{
 	Long:         commandCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdNoneMeansAll: "true",
-		CmdRequireHome:  "true",
-		CmdGlobNames:    "true",
+		CmdGlobal:        "true",
+		CmdRequireHome:   "true",
+		CmdWildcardNames: "true",
 	},
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {

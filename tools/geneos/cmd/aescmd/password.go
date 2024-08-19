@@ -49,8 +49,8 @@ var passwordCmd = &cobra.Command{
 	Aliases:      []string{"passwd"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdNoneMeansAll: "false",
-		cmd.CmdRequireHome:  "false",
+		cmd.CmdGlobal:      "false",
+		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var plaintext *config.Plaintext

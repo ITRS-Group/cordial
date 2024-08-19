@@ -57,8 +57,8 @@ var exportCmd = &cobra.Command{
 $ geneos tls export --output file.pem
 `,
 	Annotations: map[string]string{
-		cmd.CmdNoneMeansAll: "false",
-		cmd.CmdRequireHome:  "true",
+		cmd.CmdGlobal:      "false",
+		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		confDir := config.AppConfigDir()

@@ -115,8 +115,8 @@ var deployCmd = &cobra.Command{
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdNoneMeansAll: "false",
-		CmdRequireHome:  "false",
+		CmdGlobal:      "false",
+		CmdRequireHome: "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		var name string

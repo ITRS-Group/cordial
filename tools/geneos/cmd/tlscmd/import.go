@@ -80,8 +80,8 @@ $ geneos tls import -c netprobe localhost file.pem
 $ geneos tls import --signing-bundle file.pem
 `,
 	Annotations: map[string]string{
-		cmd.CmdNoneMeansAll: "none-or-all",
-		cmd.CmdRequireHome:  "true",
+		cmd.CmdGlobal:      "none-or-all",
+		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, names := cmd.ParseTypeNames(command)

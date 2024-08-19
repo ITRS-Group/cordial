@@ -32,10 +32,10 @@ import (
 //
 // Annotations should be read-only. Currently they are not completely.
 const (
-	CmdGlobNames    = "expand"       // "true" or "false" - pass all names through a path.Match style lookup
-	CmdReplacedBy   = "replacedby"   // deprecated command alias
-	CmdRequireHome  = "needshomedir" // "true" or "false"
-	CmdNoneMeansAll = "wildcard"     // "true", "false", "explicit" (to match "all") or "none-or-all"
+	CmdWildcardNames = "wildcard"     // "true" or "false" - pass all names through a path.Match style lookup
+	CmdReplacedBy    = "replacedby"   // deprecated command alias
+	CmdRequireHome   = "needshomedir" // "true" or "false"
+	CmdGlobal        = "global"       // "true", "false", "explicit" (to match "all") or "none-or-all"
 )
 
 // type CommandFeatures struct {

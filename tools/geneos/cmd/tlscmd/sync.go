@@ -39,8 +39,8 @@ var syncCmd = &cobra.Command{
 	Long:         syncCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdNoneMeansAll: "false",
-		cmd.CmdRequireHome:  "true",
+		cmd.CmdGlobal:      "false",
+		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) error {
 		return geneos.TLSSync()

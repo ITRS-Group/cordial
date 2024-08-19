@@ -44,9 +44,9 @@ var protectCmd = &cobra.Command{
 	Long:         protectCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdNoneMeansAll: "true",
-		CmdRequireHome:  "true",
-		CmdGlobNames:    "true",
+		CmdGlobal:        "true",
+		CmdRequireHome:   "true",
+		CmdWildcardNames: "true",
 	},
 	DisableFlagsInUseLine: true,
 	Run: func(command *cobra.Command, _ []string) {

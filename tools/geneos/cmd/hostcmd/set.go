@@ -57,8 +57,8 @@ var setCmd = &cobra.Command{
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Annotations: map[string]string{
-		cmd.CmdNoneMeansAll: "false",
-		cmd.CmdRequireHome:  "false",
+		cmd.CmdGlobal:      "false",
+		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
 		if len(origargs) == 0 && command.Flags().NFlag() == 0 {

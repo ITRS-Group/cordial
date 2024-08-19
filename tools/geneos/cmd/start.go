@@ -50,9 +50,9 @@ var startCmd = &cobra.Command{
 	Long:         startCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdNoneMeansAll: "true",
-		CmdRequireHome:  "true",
-		CmdGlobNames:    "true",
+		CmdGlobal:        "true",
+		CmdRequireHome:   "true",
+		CmdWildcardNames: "true",
 	},
 	RunE: func(cmd *cobra.Command, origargs []string) error {
 		ct, names, params := ParseTypeNamesParams(cmd)

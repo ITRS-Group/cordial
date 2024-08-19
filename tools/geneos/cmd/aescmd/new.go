@@ -67,9 +67,9 @@ geneos aes new -S gateway
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdNoneMeansAll: "true",
-		cmd.CmdRequireHome:  "true",
-		cmd.CmdGlobNames:    "true",
+		cmd.CmdGlobal:        "true",
+		cmd.CmdRequireHome:   "true",
+		cmd.CmdWildcardNames: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		// create new key values, may be overwritten later
