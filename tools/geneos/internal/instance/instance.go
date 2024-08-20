@@ -353,13 +353,17 @@ func InstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 // and the caller is expected to validate them.
 func Match(h *geneos.Host, ct *geneos.Component, patterns ...string) (names []string) {
 	for _, pattern := range patterns {
-		// check for glob chars
-		if !strings.ContainsAny(pattern, `*?[`) {
-			names = append(names, pattern)
+		if pattern == "all" {
+			pattern = "*"
 		}
 		// a host only name implies a wildcard
 		if strings.HasPrefix(pattern, "@") {
 			pattern = "*" + pattern
+		}
+		// check for glob chars
+		if !strings.ContainsAny(pattern, `*?[`) {
+			names = append(names, pattern)
+			continue
 		}
 		_, p, h := SplitName(pattern, h) // override 'h' inside loop
 		for _, name := range InstanceNames(h, ct) {
@@ -373,8 +377,15 @@ func Match(h *geneos.Host, ct *geneos.Component, patterns ...string) (names []st
 			}
 		}
 	}
-	slices.Sort(names)
-	names = slices.Compact(names)
+
+	// sort and compact if the number of patterns differs from the
+	// number of resulting names (else leave input and output in the
+	// same order, even if single patterns expand to single instance
+	// names)
+	if len(names) != len(patterns) {
+		slices.Sort(names)
+		names = slices.Compact(names)
+	}
 	return
 }
 

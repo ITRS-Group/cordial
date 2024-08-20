@@ -50,7 +50,7 @@ var deleteCmd = &cobra.Command{
 	Long:         deleteCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "explicit",
+		CmdGlobal:        "false",
 		CmdRequireHome:   "true",
 		CmdWildcardNames: "true",
 	},

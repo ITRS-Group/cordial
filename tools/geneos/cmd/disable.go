@@ -48,7 +48,7 @@ var disableCmd = &cobra.Command{
 	Long:         disableCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "explicit",
+		CmdGlobal:        "false",
 		CmdRequireHome:   "true",
 		CmdWildcardNames: "true",
 	},

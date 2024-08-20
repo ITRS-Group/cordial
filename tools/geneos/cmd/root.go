@@ -136,10 +136,10 @@ type CmdValType struct {
 	sync.Mutex
 
 	// the resolved component type, nil if none found
-	ct *geneos.Component
+	component *geneos.Component
 
-	// if true the absence of instance names or patterns means "all" instances
-	wildcards bool
+	// if true the absence of instance names or patterns means all instances
+	globals bool
 
 	// the list of instance names, build based on wildcarding and globs as applicable
 	names []string
@@ -187,14 +187,6 @@ geneos restart
 		// "manually" parse root flags so that legacy commands get conf
 		// file, debug etc.
 		command.Root().ParseFlags(args)
-
-		// if we have no args and have explicit set, then go bang!. check component type
-		if command.Annotations[CmdNoneMeansAll] == "explicit" {
-			rootargs := command.Root().Flags().Args()
-			if len(rootargs) == 0 {
-				return fmt.Errorf("%q requires at least TYPE or one or more NAME arguments", Execname+" "+command.Name())
-			}
-		}
 
 		// check for AnnotationReplacedBy annotation, warn the user, run the new
 		// command later (after prerun) but if the help flag is set
