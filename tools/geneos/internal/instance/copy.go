@@ -213,14 +213,18 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	keyfile := ncf.GetString("keyfile")
 	log.Debug().Msgf("keyfile: %q", keyfile)
 	if keyfile != "" {
+		// cannot use SetString(..., config.Replace("home") here as we
+		// need the *source* home directory
 		k := strings.Replace(keyfile, src.Home(), "${config:home}", 1)
 		log.Debug().Msgf("setting keyfile: %q", k)
-		ncf.Set("keyfile", k)
+		ncf.SetString("keyfile", k)
 	}
 	prevkeyfile := ncf.GetString("prevkeyfile")
 	if keyfile != "" {
+		// cannot use SetString(..., config.Replace("home") here as we
+		// need the *source* home directory
 		k := strings.Replace(prevkeyfile, src.Home(), "${config:home}", 1)
-		ncf.Set("prevkeyfile", k)
+		ncf.SetString("prevkeyfile", k)
 	}
 
 	// config changes don't matter until writing config succeeds
