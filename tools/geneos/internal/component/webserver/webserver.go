@@ -56,6 +56,8 @@ var Webserver = geneos.Component{
 			"*.log",
 			"*.txt",
 			"logs/*.log",
+			"logs/*.gz",
+			"webapps/*",
 		}, ":"),
 	},
 	PortRange: config.Join(Name, "ports"),
