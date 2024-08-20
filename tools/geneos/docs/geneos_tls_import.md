@@ -52,9 +52,8 @@ geneos tls import [flags] [TYPE] [NAME...]
 ## Examples
 
 ```bash
-# import file.pem and extract parts
-$ geneos tls import netprobe file.pem
-$ geneos tls import --signer file.pem
+$ geneos tls import -c netprobe localhost file.pem
+$ geneos tls import --signing-bundle file.pem
 
 ```
 

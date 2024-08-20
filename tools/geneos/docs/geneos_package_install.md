@@ -20,7 +20,7 @@ With the `--update`/`-U` option the command will also update the active versions
 
 The `--force`/`-F` flags implies `--update`.
 
-By default the latest version found will be the one installed, either from the download site or locally. To install a specific version from the use the `--version`/`-V` option with a version in the form `MAJOR.MINOR.PATCH` where omitting `PATCH` will get the latest patch release for `MAJOR.MINOR` and omitting `MINOR.PATCH` will get the latest version in the `MAJOR` set. Versions cannot be selected for remote `el8` archives because of a restriction in indexing releases. Specifying a version with either a local only or with a directory name on the command line will apply the same rules to all matching local files.
+By default the latest version found will be the one installed, either from the download site or locally. To install a specific version from the use the `--version`/`-V` option with a version in the form `MAJOR.MINOR.PATCH` where omitting `PATCH` will get the latest patch release for `MAJOR.MINOR` and omitting `MINOR.PATCH` will get the latest version in the `MAJOR` set. Versions cannot be selected for remote `el8` archives because of a restriction in indexing releases. Specifying a version with either a local only or with a directory name on the command line will apply the same rules to all matching local files. This flag is ignored if specific archive files are given on the command line.
 
 If you have downloaded a release but have changed the file name from the original then you must use the `--override`/`-O` option to inform the `install` command which component type and release version the archive contains, e.g. `-T gateway:5.12.1`. The command will not validate your option and will simply unarchive the file, if it can, in the directory that would be created for that component and version. If this option is used with either more than on file or a directory on the command line then that is an error.
 
@@ -49,7 +49,8 @@ geneos package install [flags] [TYPE] [FILE|URL...]
   -U, --update            Update the base directory symlink, will restart unprotected instances
   -F, --force             Force restart of protected instances, implies --update
   -b, --base string       Override the base active_prod link name (default "active_prod")
-  -V, --version string    Download this version, defaults to latest. Doesn't work for EL8 archives. (default "latest")
+  -V, --version string    Download this version, defaults to latest. Doesn't work for EL8 archives.
+                          Ignored if local file(s) - not directories - are given to install on command-line (default "latest")
   -O, --override string   Override the TYPE:VERSION for archive files with non-standard names
   -N, --nexus             Download from nexus.itrsgroup.com. Requires auth.
   -S, --snapshots         Download from nexus snapshots (pre-releases), not releases. Requires -N
