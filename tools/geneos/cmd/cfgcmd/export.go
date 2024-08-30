@@ -121,24 +121,20 @@ var exportCmd = &cobra.Command{
 
 			if len(names) == 1 {
 				// single instance
-				if ct == nil {
-					is, err := instance.Instances(h, nil, instance.FilterNames(names...))
-					if err != nil {
-						return err
-					}
-					i = is[0]
-					archive += "-" + i.Type().String()
-				} else {
-					i, err = instance.Get(ct, names[0])
-					if err != nil {
-						return err
-					}
+				instances, err := instance.Instances(h, ct, instance.FilterNames(names...))
+				if err != nil {
+					return err
 				}
+				if len(instances) == 0 {
+					return geneos.ErrNotExist
+				}
+				i = instances[0]
+				archive += "-" + i.Type().String()
 				archive += "-" + strings.ReplaceAll(i.Name(), " ", "_")
 				h = i.Host()
 			} else {
 				// more than one, error if not (a) all the same type and (b) all on the same host
-				instances, err := instance.Instances(h, nil, instance.FilterNames(names...))
+				instances, err := instance.Instances(h, ct, instance.FilterNames(names...))
 				if err != nil {
 					return err
 				}
