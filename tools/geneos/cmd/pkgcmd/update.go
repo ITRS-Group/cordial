@@ -62,7 +62,7 @@ var updateCmd = &cobra.Command{
 geneos package update gateway -b active_prod
 geneos package update gateway -b active_dev -V 5.11
 geneos package update
-geneos package update netprobe 5.13.2
+geneos package update netprobe --version 5.13.2
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -120,14 +120,14 @@ geneos package update netprobe 5.13.2
 		if len(args) > 0 {
 			version = args[0]
 		}
+
 		instances := []geneos.Instance{}
 		if updateCmdRestart {
-			allInstances, err := instance.Instances(h, nil)
-			if err != nil {
-				panic(err)
-			}
-
 			for _, ct := range ct.OrList() {
+				allInstances, err := instance.Instances(h, ct)
+				if err != nil {
+					panic(err)
+				}
 				for _, i := range allInstances {
 					if i.Config().GetString("version") != updateCmdBase {
 						log.Debug().Msgf("%s base different", i)
@@ -138,13 +138,12 @@ geneos package update netprobe 5.13.2
 						instances = append(instances, i)
 						continue
 					}
-					if i.Type() == ct {
-						instances = append(instances, i)
-					}
+					instances = append(instances, i)
 				}
 			}
 			log.Debug().Msgf("instances to restart: %v", instances)
 		}
+
 		return geneos.Update(h, ct,
 			geneos.Version(version),
 			geneos.Basename(updateCmdBase),

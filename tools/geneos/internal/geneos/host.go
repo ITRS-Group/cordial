@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"slices"
 	"strings"
 	"sync"
 
@@ -374,7 +375,8 @@ func AllHosts() (hs []*Host) {
 	return
 }
 
-// RemoteHosts returns a slice of all valid (loaded and reachable) remote hosts
+// RemoteHosts returns a slice of all valid (loaded and reachable)
+// remote hosts sorted by name
 func RemoteHosts(includeHidden bool) (hs []*Host) {
 	hs = []*Host{}
 
@@ -385,6 +387,7 @@ func RemoteHosts(includeHidden bool) (hs []*Host) {
 		}
 		return true
 	})
+	slices.SortFunc(hs, func(i, j *Host) int { return strings.Compare(i.String(), j.String()) })
 	return
 }
 

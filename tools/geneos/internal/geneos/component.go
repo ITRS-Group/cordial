@@ -19,6 +19,7 @@ package geneos
 
 import (
 	"path"
+	"slices"
 	"strings"
 	"time"
 
@@ -322,13 +323,15 @@ func AllComponents() (cts []*Component) {
 }
 
 // RealComponents returns a slice of all registered components that are
-// not the root
+// not the root, sorted by name
 func RealComponents() (cts []*Component) {
 	for _, c := range registeredComponents {
 		if c != &RootComponent {
 			cts = append(cts, c)
 		}
 	}
+	slices.SortFunc(cts, func(i, j *Component) int { return strings.Compare(i.Name, j.Name) })
+
 	return
 }
 

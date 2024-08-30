@@ -161,7 +161,7 @@ geneos install netprobe -b active_dev -U
 					continue
 				}
 				nct := ct
-				v := installCmdVersion
+				version := installCmdVersion
 
 				var p string
 
@@ -174,14 +174,13 @@ geneos install netprobe -b active_dev -U
 						continue
 					}
 					if installCmdOverride != "" {
-						nct, v, err = geneos.OverrideToComponentVersion(installCmdOverride)
+						nct, version, err = geneos.OverrideToComponentVersion(installCmdOverride)
 					} else {
-						nct, v, err = geneos.FilenameToComponentVersion(path.Base(p))
-						// log.Debug().Msgf("comparison: %d", geneos.CompareVersion(installCmdVersion, v))
-						// if installCmdVersion != "latest" && geneos.CompareVersion(installCmdVersion, v) != 0 {
-						// 	log.Debug().Msgf("selected version %s and file version %s do not match, skipping", installCmdVersion, v)
-						// 	continue
-						// }
+						var platform string
+						nct, version, platform, err = geneos.FilenameToComponentVersion(path.Base(p))
+						if platform != "" {
+							version += "+" + platform
+						}
 					}
 					if err != nil {
 						log.Debug().Err(err).Msg("skipping")
@@ -193,9 +192,9 @@ geneos install netprobe -b active_dev -U
 					}
 				}
 
-				options = append(options, geneos.Version(v))
+				options = append(options, geneos.Version(version))
 
-				log.Debug().Msgf("installing from %s as %q version of %s to %s host(s)", source, v, ct, cmd.Hostname)
+				log.Debug().Msgf("installing from %s as %q version of %s to %s host(s)", source, version, ct, cmd.Hostname)
 				if err = Install(h, nct, append(options, geneos.LocalArchive(source))...); err != nil {
 					return err
 				}
@@ -281,12 +280,11 @@ geneos install netprobe -b active_dev -U
 		// record which instances to stop early. once we get to components, we don't know about instances
 		if installCmdUpdate {
 			instances := []geneos.Instance{}
-			allInstances, err := instance.Instances(h, nil)
-			if err != nil {
-				panic(err)
-			}
-
 			for _, ct := range ct.OrList() {
+				allInstances, err := instance.Instances(h, ct)
+				if err != nil {
+					panic(err)
+				}
 				for _, i := range allInstances {
 					if i.Config().GetString("version") != installCmdBase {
 						continue
@@ -296,9 +294,7 @@ geneos install netprobe -b active_dev -U
 						instances = append(instances, i)
 						continue
 					}
-					if i.Type() == ct {
-						instances = append(instances, i)
-					}
+					instances = append(instances, i)
 				}
 			}
 			log.Debug().Msgf("instances to restart: %v", instances)

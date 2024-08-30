@@ -105,7 +105,7 @@ geneos uninstall --version 5.14.1
 				for _, i := range releases {
 					if uninstallCmdAll || // --all
 						(uninstallCmdVersion == "" && !i.Latest) || // default leave 'latest'
-						uninstallCmdVersion == i.Version { // specific --version
+						strings.HasPrefix(i.Version, uninstallCmdVersion) { // specific --version prefix
 						removeReleases[i.Version] = i
 					}
 				}
@@ -116,7 +116,7 @@ geneos uninstall --version 5.14.1
 				//
 				// also save a list of instances to restart
 				restart := map[string][]geneos.Instance{}
-				instances, err := instance.Instances(h, nil)
+				instances, err := instance.Instances(h, ct)
 				if err != nil {
 					panic(err)
 				}
@@ -182,11 +182,22 @@ geneos uninstall --version 5.14.1
 							}
 						} else {
 							// update to latest version, remove all others
-							latest, err := geneos.LatestVersion(h, ct, "")
+							latest := ""
+							versions, err := geneos.InstalledReleases(h, ct)
 							if err != nil {
-								log.Error().Err(err).Msg("")
+								if !errors.Is(err, fs.ErrNotExist) {
+									log.Error().Err(err).Msg("")
+								}
 								continue
 							}
+							if len(versions) > 0 {
+								latest = versions[len(versions)-1]
+							}
+							// latest, err := geneos.LatestInstalledVersion(h, ct, "")
+							// if err != nil {
+							// 	log.Error().Err(err).Msg("")
+							// 	continue
+							// }
 							updateLinks(h, ct, basedir, release, version, latest)
 						}
 					}
