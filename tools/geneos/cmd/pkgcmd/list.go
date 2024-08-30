@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -70,9 +71,8 @@ var listCmd = &cobra.Command{
 					return err
 				}
 				// append in reverse order
-				for i := len(v) - 1; i >= 0; i-- {
-					versions = append(versions, v[i])
-				}
+				slices.Reverse(v)
+				versions = append(versions, v...)
 			}
 		}
 
