@@ -96,7 +96,7 @@ geneos aes ls -S gateway -H localhost -c
 			aesListCSVWriter.Write([]string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
 
 			if listCmdShared {
-				instance.Responses{aesListSharedCSV(ct, h)}.Write(aesListCSVWriter)
+				aesListSharedCSV(ct, h).Write(aesListCSVWriter)
 			} else {
 				instance.Do(h, ct, names, aesListInstanceCSV).Write(aesListCSVWriter)
 			}
@@ -147,6 +147,8 @@ func aesListInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 }
 
 func aesListShared(ct *geneos.Component, h *geneos.Host) (results instance.Responses, err error) {
+	results = make(instance.Responses)
+	var lines []string
 	for _, h := range h.OrList(geneos.AllHosts()...) {
 		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 			var dirs []fs.DirEntry
@@ -158,12 +160,11 @@ func aesListShared(ct *geneos.Component, h *geneos.Host) (results instance.Respo
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				results = append(results, &instance.Response{
-					Line: aesListPath(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name()))),
-				})
+				lines = append(lines, aesListPath(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name()))))
 			}
 		}
 	}
+	results["shared"] = &instance.Response{Lines: lines}
 	return
 }
 
@@ -202,8 +203,9 @@ func aesListInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	return
 }
 
-func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (resp *instance.Response) {
-	resp = instance.NewResponse(nil)
+func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (responses instance.Responses) {
+	responses = make(instance.Responses)
+	var rows [][]string
 
 	for _, h := range h.OrList(geneos.AllHosts()...) {
 		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
@@ -215,10 +217,12 @@ func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (resp *instance.Resp
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				resp.Rows = append(resp.Rows, aesListPathCSV(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name()))))
+				rows = append(rows, aesListPathCSV(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name()))))
 			}
 		}
 	}
+	responses["shared"] = &instance.Response{Rows: rows}
+
 	return
 }
 
@@ -292,6 +296,9 @@ func aesListPathJSON(ct *geneos.Component, h *geneos.Host, name string, paths ..
 }
 
 func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results instance.Responses, err error) {
+	results = make(instance.Responses)
+	var values []*instance.Response
+
 	for _, h := range h.OrList(geneos.AllHosts()...) {
 		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 			var dirs []fs.DirEntry
@@ -305,11 +312,12 @@ func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results instance.R
 				}
 				resp := aesListPathJSON(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name())))
 				if resp.Value != nil {
-					results = append(results, resp)
+					values = append(values, resp)
 				}
 			}
 		}
 	}
+	results["shared"] = &instance.Response{Value: values}
 	return
 }
 

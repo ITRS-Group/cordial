@@ -24,9 +24,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"reflect"
-	"sort"
+	"slices"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -35,7 +36,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type Responses []*Response
+// Responses is a collection of command responses, the key is typically
+// an instance name (from i.String()) but can be any other label that is
+// suitable in the circumstances.
+type Responses map[string]*Response
 
 // Response is a consolidated set of responses from commands
 type Response struct {
@@ -50,36 +54,12 @@ type Response struct {
 	Err       error
 }
 
-// NewResponse returns a pointer to an intialised Response structure,
+// NewResponse returns a pointer to an initialised Response structure,
 // using instance i. The Start time is set to time.Now().
 func NewResponse(i geneos.Instance) *Response {
 	return &Response{
 		Instance: i,
 		Start:    time.Now(),
-	}
-}
-
-var _ sort.Interface = (Responses)(nil)
-
-func (r Responses) Len() int { return len(r) }
-
-func (r Responses) Swap(i, j int) {
-	r[i], r[j] = r[j], r[i]
-}
-
-func (r Responses) Less(i, j int) bool {
-	ci := r[i].Instance
-	cj := r[j].Instance
-
-	switch {
-	case ci.Host().String() != cj.Host().String():
-		return ci.Host().String() < cj.Host().String()
-	case ci.Type().String() != cj.Type().String():
-		return ci.Type().String() < cj.Type().String()
-	case ci.Name() != cj.Name():
-		return ci.Name() < cj.Name()
-	default:
-		return false
 	}
 }
 
@@ -131,34 +111,6 @@ func MergeResponse(r1, r2 *Response) (resp *Response) {
 	return
 }
 
-type SortInstanceResponses struct {
-	Instances []geneos.Instance
-	Results   []interface{}
-}
-
-func (s SortInstanceResponses) Len() int { return len(s.Instances) }
-
-func (s SortInstanceResponses) Swap(i, j int) {
-	s.Instances[i], s.Instances[j] = s.Instances[j], s.Instances[i]
-	s.Results[i], s.Results[j] = s.Results[j], s.Results[i]
-}
-
-func (s SortInstanceResponses) Less(i, j int) bool {
-	ci := s.Instances[i]
-	cj := s.Instances[j]
-
-	switch {
-	case ci.Host().String() != cj.Host().String():
-		return ci.Host().String() < cj.Host().String()
-	case ci.Type().String() != cj.Type().String():
-		return ci.Type().String() < cj.Type().String()
-	case ci.Name() != cj.Name():
-		return ci.Name() < cj.Name()
-	default:
-		return false
-	}
-}
-
 // Write iterates over responses and outputs a formatted response to
 // writer.
 //
@@ -175,9 +127,9 @@ func (s SortInstanceResponses) Less(i, j int) bool {
 //
 // Otherwise if Value is not nil then it is treated as a slice of any
 // values which are marshalled as a JSON array and written to writer. If
-// any value is a slice then it is unrolled and each element is instead
-// written as a top-level array element, allowing values to contain
-// their own arrays of responses. Any non-empty String or any Strings
+// Value is a slice then it is unrolled and each element is instead
+// written as a top-level array element, allowing Value to contain
+// an arrays of responses. Any non-empty String or any Strings
 // elements are output with a trailing newline. Any newline already
 // present is removed to ensure only one newline between lines.
 //
@@ -195,7 +147,8 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 
 	startedJSON := false
 
-	for _, r := range responses {
+	for _, k := range slices.Sorted(maps.Keys(responses)) {
+		r := responses[k]
 		if r.Err != nil && opts.skiponerr {
 			var ignored bool
 			for _, i := range opts.ignoreerr {
@@ -311,7 +264,8 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 	}
 
 	if opts.stderr != io.Discard {
-		for _, r := range responses {
+		for _, k := range slices.Sorted(maps.Keys(responses)) {
+			r := responses[k]
 			errored := false
 			ignored := false
 			if r.Err != nil {

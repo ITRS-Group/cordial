@@ -22,7 +22,6 @@ import (
 	"os"
 	"path"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -135,7 +134,9 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 		return
 	}
 
+	responses = make(Responses, len(instances))
 	ch := make(chan *Response, len(instances))
+
 	for _, c := range instances {
 		wg.Add(1)
 		go func(c geneos.Instance) {
@@ -150,10 +151,9 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 	close(ch)
 
 	for resp := range ch {
-		responses = append(responses, resp)
+		responses[resp.Instance.String()] = resp
 	}
 
-	sort.Sort(responses)
 	return
 }
 
