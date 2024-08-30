@@ -177,6 +177,7 @@ func LoadConfig(i geneos.Instance) (err error) {
 			}
 		} else {
 			used = ComponentFilepath(i, "rc")
+			i.Config().Type = "rc"
 		}
 	}
 
@@ -324,7 +325,7 @@ func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
 	// speculatively migrate the config, in case there is a legacy .rc
 	// file in place. Migrate() returns an error only for real errors
 	// and returns nil if there is no .rc file to migrate.
-	if err = Migrate(i); err != nil {
+	if resp := Migrate(i); resp.Err != nil {
 		return
 	}
 
@@ -405,20 +406,22 @@ func SetSecureArgs(i geneos.Instance) (args []string) {
 // and renames the .rc file to .rc.orig to allow Revert to work.
 //
 // Also now check if instance directory path has changed. If so move it.
-func Migrate(i geneos.Instance) (err error) {
+func Migrate(i geneos.Instance) (resp *Response) {
+	resp = NewResponse(i)
+
 	cf := i.Config()
 
 	// check if instance directory is up-to date
 	current := path.Dir(i.Home())
 	shouldbe := i.Type().InstancesDir(i.Host())
 	if current != shouldbe {
-		if err = i.Host().MkdirAll(shouldbe, 0775); err != nil {
+		if resp.Err = i.Host().MkdirAll(shouldbe, 0775); resp.Err != nil {
 			return
 		}
-		if err = i.Host().Rename(i.Home(), path.Join(shouldbe, i.Name())); err != nil {
+		if resp.Err = i.Host().Rename(i.Home(), path.Join(shouldbe, i.Name())); resp.Err != nil {
 			return
 		}
-		fmt.Printf("%s moved from %s to %s\n", i, current, shouldbe)
+		resp.Line = fmt.Sprintf("%s moved from %s to %s\n", i, current, shouldbe)
 	}
 
 	// only migrate if labelled as a .rc file
@@ -427,31 +430,34 @@ func Migrate(i geneos.Instance) (err error) {
 	}
 
 	// if no .rc, return
-	if _, err = i.Host().Stat(ComponentFilepath(i, "rc")); errors.Is(err, fs.ErrNotExist) {
-		return nil
+	if _, resp.Err = i.Host().Stat(ComponentFilepath(i, "rc")); errors.Is(resp.Err, fs.ErrNotExist) {
+		resp.Err = nil
+		return
 	}
 
 	// if new file exists, return
-	if _, err = i.Host().Stat(ComponentFilepath(i)); err == nil {
-		return nil
+	if _, resp.Err = i.Host().Stat(ComponentFilepath(i)); resp.Err == nil {
+		resp.Err = nil
+		return
 	}
 
 	// remove type label before save
 	cf.Type = ""
 
-	if err = SaveConfig(i); err != nil {
+	if resp.Err = SaveConfig(i); resp.Err != nil {
 		// restore label on error
 		cf.Type = "rc"
-		log.Error().Err(err).Msg("failed to write new configuration file")
+		log.Error().Err(resp.Err).Msg("failed to write new configuration file")
 		return
 	}
 
 	// back-up .rc
-	if err = i.Host().Rename(ComponentFilepath(i, "rc"), ComponentFilepath(i, "rc", "orig")); err != nil {
-		log.Error().Err(err).Msg("failed to rename old config")
+	if resp.Err = i.Host().Rename(ComponentFilepath(i, "rc"), ComponentFilepath(i, "rc", "orig")); resp.Err != nil {
+		log.Error().Err(resp.Err).Msg("failed to rename old config")
 	}
 
 	log.Debug().Msgf("migrated %s to JSON config", i)
+	resp.Completed = append(resp.Completed, "migrated")
 	return
 }
 

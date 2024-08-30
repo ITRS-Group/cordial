@@ -96,7 +96,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		return fmt.Errorf("%w: %q %q", err, ct, source)
 	}
 
-	if err = Migrate(src); err != nil {
+	if resp := Migrate(src); resp.Err != nil {
 		return fmt.Errorf("%s %s cannot be migrated to new configuration format", ct, source)
 	}
 
