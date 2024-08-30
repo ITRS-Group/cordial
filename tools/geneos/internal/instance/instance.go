@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -82,28 +81,6 @@ func ReservedName(name string) (ok bool) {
 				return true
 			}
 		}
-	}
-	return
-}
-
-// spaces are valid - dumb, but valid - for now. If the name starts with
-// number then the next character cannot be a number or '.' to help
-// distinguish from versions.
-//
-// # In addition to static names we also allow glob-style characters through
-//
-// look for "[flavour:]name[@host]" - only name can contain glob chars
-var validNameRE = regexp.MustCompile(`^(\w+:)?([\w\.\-\ _\*\?\[\]\^\]]+)?(@[\w\-_\.]*)?$`)
-
-// ValidName returns true if name is considered a valid instance
-// name. It is not checked against the list of reserved names.
-//
-// XXX used to consume instance names until parameters are then passed
-// down
-func ValidName(name string) (ok bool) {
-	ok = validNameRE.MatchString(name)
-	if !ok {
-		log.Debug().Msgf("not a valid instance name: %s", name)
 	}
 	return
 }
@@ -237,28 +214,36 @@ func Get(ct *geneos.Component, name string) (instance geneos.Instance, err error
 // types are used respectively. The options allow filtering based on
 // names or parameter matches.
 func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions) (instances []geneos.Instance, err error) {
+	var instanceNames []string
+
 	for _, ct := range ct.OrList() {
 		for _, name := range InstanceNames(h, ct) {
-			instance, err := Get(ct, name)
-			if err != nil {
-				continue
-			}
-			instances = append(instances, instance)
+			instanceNames = append(instanceNames, ct.String()+":"+name)
 		}
 	}
 
 	opts := evalInstanceOptions(options...)
 
 	if len(opts.names) > 0 {
-		instances = slices.DeleteFunc(instances, func(i geneos.Instance) bool {
+		instanceNames = slices.DeleteFunc(instanceNames, func(n string) bool {
+			_, in, ih := SplitName(n, h)
 			for _, v := range opts.names {
 				_, name, h := SplitName(v, h)
-				if name == i.Name() && (h == geneos.ALL || h == i.Host()) {
+				if name == in && (h == geneos.ALL || h == ih) {
 					return false
 				}
 			}
 			return true
 		})
+	}
+
+	for _, name := range instanceNames {
+		ct, name, h := SplitName(name, h)
+		instance, err := Get(ct, name+"@"+h.String())
+		if err != nil {
+			continue
+		}
+		instances = append(instances, instance)
 	}
 
 	if len(opts.parameters) > 0 {
