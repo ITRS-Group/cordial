@@ -38,7 +38,7 @@ var updateCmdForce, updateCmdRestart, updateCmdInstall bool
 func init() {
 	packageCmd.AddCommand(updateCmd)
 
-	updateCmd.Flags().StringVarP(&updateCmdVersion, "version", "V", "latest", "Update to this version, defaults to latest")
+	updateCmd.Flags().StringVarP(&updateCmdVersion, "version", "V", "", "Update to this version, defaults to latest")
 
 	updateCmd.Flags().BoolVarP(&updateCmdInstall, "install", "I", false, "Install package updates if necessary")
 	updateCmd.Flags().MarkDeprecated("install", "please use the `package install` command instead")
@@ -117,7 +117,7 @@ geneos package update netprobe --version 5.13.2
 			fmt.Println("There are one or more protected instances using the current version. Use `--force` to override")
 			return
 		}
-		if len(args) > 0 {
+		if updateCmdVersion == "" && len(args) > 0 {
 			version = args[0]
 		}
 

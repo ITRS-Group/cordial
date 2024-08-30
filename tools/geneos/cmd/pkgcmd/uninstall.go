@@ -53,7 +53,7 @@ func init() {
 var uninstallCmdDescription string
 
 var uninstallCmd = &cobra.Command{
-	Use:     "uninstall [flags] [TYPE]",
+	Use:     "uninstall [flags] [TYPE] [VERSION]",
 	Short:   "Uninstall Geneos releases",
 	Long:    uninstallCmdDescription,
 	Aliases: []string{"delete", "remove", "rm"},
@@ -67,8 +67,14 @@ geneos uninstall --version 5.14.1
 		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, _ := cmd.ParseTypeNames(command)
+		ct, args := cmd.ParseTypeNames(command)
 		h := geneos.GetHost(cmd.Hostname)
+
+		// allow version to be the first arg unless the flag is given
+		version := uninstallCmdVersion
+		if version == "" && len(args) > 0 {
+			version = args[0]
+		}
 
 		for _, h := range h.OrList() {
 			for _, ct := range ct.OrList() {
@@ -104,8 +110,8 @@ geneos uninstall --version 5.14.1
 				removeReleases := map[string]geneos.ReleaseDetails{}
 				for _, i := range releases {
 					if uninstallCmdAll || // --all
-						(uninstallCmdVersion == "" && !i.Latest) || // default leave 'latest'
-						strings.HasPrefix(i.Version, uninstallCmdVersion) { // specific --version prefix
+						(version == "" && !i.Latest) || // default leave 'latest'
+						strings.HasPrefix(i.Version, version) { // specific --version prefix
 						removeReleases[i.Version] = i
 					}
 				}

@@ -175,6 +175,10 @@ geneos install netprobe -b active_dev -U
 					}
 					if installCmdOverride != "" {
 						nct, version, err = geneos.OverrideToComponentVersion(installCmdOverride)
+						if err != nil {
+							fmt.Printf("cannot user override: %s\n", err)
+							return nil
+						}
 					} else {
 						var platform string
 						nct, version, platform, err = geneos.FilenameToComponentVersion(path.Base(p))
