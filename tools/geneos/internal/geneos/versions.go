@@ -20,7 +20,10 @@ package geneos
 import (
 	"fmt"
 	"io/fs"
+	"os"
 	"path"
+	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"unicode"
@@ -81,47 +84,119 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 	return
 }
 
-// LatestVersion returns the name of the latest release for component
-// type ct on host h. The comparison is done using semantic versioning
-// and any metadata is checked against the host platform_id - if they do
-// not match then it is not latest - unless the prefix contains it. The
-// matching is limited by the optional prefix filter. An error is
-// returned if there are problems accessing the directories or parsing
-// any names as semantic versions.
-func LatestVersion(h *Host, ct *Component, versionPrefix string) (latest string, err error) {
+// InstalledReleases returns a sorted slice of all the installed version
+// of component ct on host h as strings. No filtering is done for
+// platform ID etc. as these are already installed on theo host given.
+func InstalledReleases(h *Host, ct *Component) (versions []string, err error) {
+	if h == nil || h == ALL || ct == nil {
+		err = ErrInvalidArgs
+		return
+	}
 	dir := h.PathTo("packages", ct.String())
 	ents, err := h.ReadDir(dir)
 	if err != nil {
 		return
 	}
 
-	semver, _ := version.NewVersion("0.0.0")
-	platformid := getPlatformId(h.GetString(h.Join("osinfo", "platform_id")))
+	// remove non-directories
+	ents = slices.DeleteFunc(ents, func(d fs.DirEntry) bool {
+		st, err := h.Lstat(filepath.Join(dir, d.Name()))
+		return err != nil || !st.IsDir()
+	})
 
 	for _, ent := range ents {
-		if !ent.IsDir() {
-			continue
+		versions = append(versions, ent.Name())
+	}
+	slices.Sort(versions)
+
+	return
+}
+
+// LocalArchives returns a slice of file names for release archives for
+// component ct in the location given by options or the default packages
+// download directory. If a platform ID is set using options then
+// include those otherwise only non-platform specific releases are
+// included.
+func LocalArchives(ct *Component, options ...PackageOptions) (archives []string, err error) {
+	opts := evalOptions(options...)
+
+	dir := opts.localArchive
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+
+	// remove non-files from the list
+	entries = slices.DeleteFunc(entries, func(d fs.DirEntry) bool {
+		st, err := os.Lstat(filepath.Join(dir, d.Name()))
+		return err != nil || !st.Mode().IsRegular()
+	})
+
+	for _, d := range entries {
+		archives = append(archives, d.Name())
+	}
+
+	archives = slices.DeleteFunc(archives, func(n string) bool {
+		check := ct.String()
+		if ct.ParentType != nil && len(ct.PackageTypes) > 0 {
+			check = ct.ParentType.String()
 		}
-		if versionPrefix != "" {
-			if !strings.HasPrefix(ent.Name(), versionPrefix) {
-				continue
+
+		if ct.DownloadInfix != "" {
+			check = ct.DownloadInfix
+		}
+
+		return !strings.Contains(n, check)
+	})
+
+	log.Debug().Msgf("archives before platform filter: %v", archives)
+
+	if opts.platformId == "" {
+		archives = slices.DeleteFunc(archives, func(n string) bool {
+			for _, p := range platformSuffixList {
+				if strings.Contains(n, "-"+p+"-") {
+					return true
+				}
+			}
+			return false
+		})
+	} else {
+		platformID := getPlatformId(opts.platformId)
+		archives = slices.DeleteFunc(archives, func(n string) bool {
+			if strings.Contains(n, "-"+platformID+"-") {
+				return false
+			}
+			for _, p := range platformSuffixList {
+				if strings.Contains(n, "-"+p+"-") {
+					return true
+				}
+			}
+			return false
+		})
+	}
+
+	slices.SortFunc(archives, func(a, b string) int {
+		var ap, bp bool
+		for _, p := range platformSuffixList {
+			if strings.Contains(a, "-"+p+"-") {
+				ap = true
+			}
+			if strings.Contains(b, "-"+p+"-") {
+				bp = true
 			}
 		}
 
-		sv, err := version.NewVersion(strings.TrimLeftFunc(ent.Name(), func(r rune) bool { return !unicode.IsNumber(r) }))
-		if err != nil {
-			return latest, err
+		switch {
+		case ap && !bp:
+			return 1
+		case !ap && bp:
+			return -1
+		default:
+			return strings.Compare(a, b)
 		}
-		meta := sv.Metadata()
-		if meta != "" && meta != platformid {
-			continue
-		}
-		if sv.LessThan(semver) {
-			continue
-		}
-		semver = sv
-		latest = semver.Original()
-	}
+	})
+
+	log.Debug().Msgf("archives after platform filter: %v", archives)
 
 	return
 }

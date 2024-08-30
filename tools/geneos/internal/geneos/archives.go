@@ -33,12 +33,10 @@ import (
 	"path"
 	"regexp"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 	"unicode"
 
-	"github.com/hashicorp/go-version"
 	"github.com/rs/zerolog/log"
 	"github.com/schollz/progressbar/v3"
 	"golang.org/x/term"
@@ -97,22 +95,37 @@ func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, 
 			opts.version = ""
 		}
 		// matching rules for local files
-		filename, err = LatestLocalArchive(func(v os.DirEntry) bool {
-			check := ct.String()
-
-			if ct.ParentType != nil && len(ct.PackageTypes) > 0 {
-				check = ct.ParentType.String()
-			}
-
-			if ct.DownloadInfix != "" {
-				check = ct.DownloadInfix
-			}
-
-			return strings.Contains(v.Name(), check)
-		}, options...)
+		var archives []string
+		archives, err = LocalArchives(ct, options...)
 		if err != nil {
-			log.Debug().Err(err).Msg("latest() returned err")
+			log.Error().Err(err).Msg("")
+			return
 		}
+		log.Debug().Msgf("archives: %v", archives)
+		archives = slices.DeleteFunc(archives, func(n string) bool {
+			return !strings.Contains(n, opts.version)
+		})
+		log.Debug().Msgf("archives (filters by version): %v", archives)
+		if len(archives) > 0 {
+			filename = archives[len(archives)-1]
+		}
+
+		// filename, err = LatestLocalArchive(func(v os.DirEntry) bool {
+		// 	check := ct.String()
+
+		// 	if ct.ParentType != nil && len(ct.PackageTypes) > 0 {
+		// 		check = ct.ParentType.String()
+		// 	}
+
+		// 	if ct.DownloadInfix != "" {
+		// 		check = ct.DownloadInfix
+		// 	}
+
+		// 	return strings.Contains(v.Name(), check)
+		// }, options...)
+		// if err != nil {
+		// 	log.Debug().Err(err).Msg("latest() returned err")
+		// }
 		if filename == "" {
 			err = fmt.Errorf("local installation selected but no suitable file found for %s (%w)", ct, fs.ErrNotExist)
 			return
@@ -205,15 +218,18 @@ func getbar(console *os.File, name string, size int64) (bar *progressbar.Progres
 // host given for the component. If there is an error then the caller
 // must close the io.Reader
 func unarchive(h *Host, ct *Component, archive io.Reader, filename string, options ...PackageOptions) (dest string, err error) {
-	var version string
+	var version, platform string
 
 	opts := evalOptions(options...)
 
 	if opts.override == "" {
 		var ctFromFile *Component
-		ctFromFile, version, err = FilenameToComponentVersion(filename)
+		ctFromFile, version, platform, err = FilenameToComponentVersion(filename)
 		if err != nil {
 			return
+		}
+		if platform != "" {
+			version += "+" + platform
 		}
 		// check the component in the filename
 		// special handling for SANs
@@ -636,141 +652,41 @@ func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, 
 	return
 }
 
-var anchoredVersRE = regexp.MustCompile(`^(\d+(\.\d+){0,2})$`)
-
-func matchVersion(v string) bool {
-	return anchoredVersRE.MatchString(v)
-}
-
-// LatestLocalArchive returns the name of the latest archive file for
-// component ct on host h based on semantic versioning. A prefix filter
-// can be used to limit matches and a filter function to further refine
-// matches.
-//
-// If the archive contains metadata then this is checked against the
-// host platform_id and if they do not match then the file is skipped
-// *unless* the versionFilter has a suffix of "+[meta]", e.g.
-// "6.7.0+el8" - note the changes from '-' to '+' in the versionFilter.
-//
-// If the options define a PlatformId then and archive that includes the
-// platform ID will always be considered newer than any without, but if
-// no archive is found with the platform ID then the latest other
-// archive is returned. This is so that components that are not platform
-// specific can be installed.
-func LatestLocalArchive(filterFunc func(os.DirEntry) bool, options ...PackageOptions) (latest string, err error) {
-	// read all entries from dir and remove any that doe not match versionFilter if it is non-empty
-	opts := evalOptions(options...)
-
-	h := LOCAL
-	dir := opts.localArchive
-	versionFilter := opts.version
-
-	log.Debug().Msgf("looking on %s in %s with version filter '%s' platform %q", h, dir, versionFilter, opts.platformId)
-
-	entries, err := h.ReadDir(dir)
-	if err != nil {
-		return
-	}
-	if versionFilter != "" {
-		entries = slices.DeleteFunc(entries, func(d fs.DirEntry) bool { return strings.Contains(d.Name(), versionFilter) })
-	}
-
-	var matchingVersions = make(map[string]*version.Version)
-	var originals = make(map[string]string, len(entries)) // map of processed names to original entries
-
-	systemPlatformID := getPlatformId(opts.platformId)
-
-	for _, dirent := range entries {
-		// skip if fails filter function (when set)
-		if filterFunc != nil && !filterFunc(dirent) {
-			continue
-		}
-
-		name := dirent.Name()
-
-		// check if this is a valid release archive
-		ct, v, err := FilenameToComponentVersion(name)
-		if err != nil {
-			log.Debug().Err(err).Msgf("cannot parse type and version in %q, skipping", name)
-			continue
-		}
-
-		log.Debug().Msgf("found archive of %s with version %s", ct, v)
-		nv, _ := version.NewVersion(v)
-
-		// skip non-matching metadata *unless* the filter string
-		// includes it after a "+", e.g. if a user says "use this
-		// metadata" then we do
-		archivePlatformID := nv.Metadata()
-
-		// skip any archive that has a platform metadata that doesn't match the wanted one
-		if archivePlatformID != "" && archivePlatformID != systemPlatformID && !strings.HasSuffix(versionFilter, "+"+archivePlatformID) {
-			log.Debug().Msgf("skipping archive with PlatformID on system without one: %q", archivePlatformID)
-			continue
-		}
-
-		log.Debug().Msgf("archivePlatformID=%q, systemPlatformID=%q, nv.Original()=%q, nv.Core().String()=%q", archivePlatformID, systemPlatformID, nv.Original(), nv.Core().String())
-
-		log.Debug().Msgf("looking for existing archive %q in %v", nv.Original()+"+"+systemPlatformID, originals)
-		_, ok := originals[nv.Original()+"+"+systemPlatformID]
-		if ok {
-			log.Debug().Msg("found")
-		} else {
-			log.Debug().Msg("not found")
-		}
-
-		if archivePlatformID == "" && systemPlatformID != "" && originals[nv.Original()+"+"+systemPlatformID] != "" {
-			log.Debug().Msgf("have existing PlatformID specific archive, skipping one without: %q", name)
-			continue
-		}
-
-		if systemPlatformID != "" {
-			log.Debug().Msgf("check for previous non-platformid archive version %q (vs %q)", nv.Core().String(), nv.Original())
-			if _, ok := originals[nv.Core().String()]; ok {
-				log.Debug().Msgf("existing non-platformid version found, replacing")
-				delete(matchingVersions, originals[nv.Core().String()])
-				delete(originals, nv.Core().String())
-			}
-		}
-
-		matchingVersions[name] = nv
-		originals[nv.Original()] = name
-	}
-
-	if len(matchingVersions) == 0 {
-		return "", nil
-	}
-
-	// map to Collection for sorting
-	versions := version.Collection{}
-	for _, v := range matchingVersions {
-		versions = append(versions, v)
-	}
-	sort.Sort(versions)
-
-	return originals[versions[len(versions)-1].Original()], nil
-}
-
 // split an package archive name into type and version
-var archiveRE = regexp.MustCompile(`^geneos-(?<component>[\w-]+)-(?<version>[\d\.]+(?:-\w+)?)?-linux`)
+//
+// geneos-gateway-7.1.0-20240828.194610-12-linux-x64.tar.gz
+var archiveRE = regexp.MustCompile(`^geneos-(?<component>[\w-]+)-(?<version>[\d\-\.]+)(-(?<platform>\w+))?-linux`)
 
 // FilenameToComponentVersion transforms an archive filename and returns
 // the component and version or an error if the file format is not
 // recognised
-func FilenameToComponentVersion(filename string) (ct *Component, version string, err error) {
+func FilenameToComponentVersion(filename string) (ct *Component, version, platform string, err error) {
 	parts := archiveRE.FindStringSubmatch(filename)
-	if len(parts) < 3 {
-		err = fmt.Errorf("%q: regex match failure, only %d parts found: %w", filename, len(parts), ErrInvalidArgs)
+	versionIndex := archiveRE.SubexpIndex("version")
+	componentIndex := archiveRE.SubexpIndex("component")
+
+	if versionIndex == -1 || componentIndex == -1 || len(parts) < versionIndex+1 {
+		err = fmt.Errorf("%q: filename not in expected format: %w", filename, ErrInvalidArgs)
 		return
 	}
-	version = parts[2]
+	version = parts[versionIndex]
 	// replace '-' prefix of recognised platform suffixes with '+' so work with semver as metadata
 	for _, m := range platformSuffixList {
 		version = strings.ReplaceAll(version, "-"+m, "+"+m)
 	}
 
-	ct = ParseComponent(parts[1])
+	ct = ParseComponent(parts[componentIndex])
+	platformIndex := archiveRE.SubexpIndex("platform")
+	if platformIndex != -1 && len(parts) > platformIndex {
+		platform = parts[platformIndex]
+	}
 	return
+}
+
+var anchoredVersRE = regexp.MustCompile(`^(\d+(\.\d+){0,2})$`)
+
+func matchVersion(v string) bool {
+	return anchoredVersRE.MatchString(v)
 }
 
 func OverrideToComponentVersion(override string) (ct *Component, version string, err error) {

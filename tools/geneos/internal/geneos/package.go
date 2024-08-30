@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -99,7 +100,20 @@ func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
 		}
 	}
 
-	latest, _ := LatestVersion(h, ct, "")
+	latest := ""
+	versions, err := InstalledReleases(h, ct)
+	if err != nil {
+		// not found is ok, just return an empty slice
+		if errors.Is(err, fs.ErrNotExist) {
+			err = nil
+		}
+		return
+	}
+	if len(versions) > 0 {
+		latest = versions[len(versions)-1]
+	}
+
+	// latest, _ := LatestInstalledVersion(h, ct, "")
 	for _, ent := range ents {
 		if ent.IsDir() {
 			info, err := ent.Info()
@@ -221,6 +235,7 @@ func update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 		return ErrInvalidArgs
 	}
 
+	// update each associated package type for a parent component
 	if len(ct.PackageTypes) > 0 {
 		for _, ct := range ct.PackageTypes {
 			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -249,12 +264,27 @@ func update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 		opts.version = ""
 	}
 
-	opts.version, err = LatestVersion(h, ct, opts.version)
+	// version, err := LatestInstalledVersion(h, ct, opts.version)
+	// if err != nil {
+	// 	log.Debug().Err(err).Msg("")
+	// }
+	// log.Debug().Msgf("latest version matching %q found is %q", opts.version, version)
+
+	version := ""
+	versions, err := InstalledReleases(h, ct)
 	if err != nil {
-		log.Debug().Err(err).Msg("")
+		// not found is ok, just return an empty slice
+		if errors.Is(err, fs.ErrNotExist) {
+			err = nil
+		}
+		return
+	}
+	versions = slices.DeleteFunc(versions, func(version string) bool { return !strings.HasPrefix(version, opts.version) })
+	if len(versions) > 0 {
+		version = versions[len(versions)-1]
 	}
 
-	if opts.version == "" {
+	if version == "" {
 		return fmt.Errorf("%s version %q on %s: %w", ct, originalVersion, h, os.ErrNotExist)
 	}
 
@@ -265,14 +295,14 @@ func update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	}
 
 	// before removing existing link, check there is something to link to
-	if _, err = h.Stat(path.Join(basedir, opts.version)); err != nil {
-		return fmt.Errorf("%q version of %s on %s: %w", opts.version, ct, h, os.ErrNotExist)
+	if _, err = h.Stat(path.Join(basedir, version)); err != nil {
+		return fmt.Errorf("cannot update %s on %s using filter %q: %w", ct, h, opts.version, os.ErrNotExist)
 	}
 
 	// if we get here from a package install then that will have already
 	// been filtered for "force" in the caller
-	if existing == opts.version {
-		log.Debug().Msgf("existing == version %s", opts.version)
+	if existing == version {
+		log.Debug().Msgf("existing == version %s", version)
 		return nil
 	}
 
@@ -296,9 +326,9 @@ func update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	if err = h.Remove(basepath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	if err = h.Symlink(opts.version, basepath); err != nil {
+	if err = h.Symlink(version, basepath); err != nil {
 		return err
 	}
-	fmt.Printf("%s %q on %s updated to %s\n", ct, path.Base(basepath), h, opts.version)
+	fmt.Printf("%s %q on %s updated to %s\n", ct, path.Base(basepath), h, version)
 	return nil
 }
