@@ -559,7 +559,7 @@ func GetSliceStringMapString(s string, options ...ExpandOptions) (result []map[s
 	return global.GetSliceStringMapString(s, options...)
 }
 
-var itemRE = regexp.MustCompile(`^(\w+)([+=]=?)(.*)`)
+var itemRE = regexp.MustCompile(`^([\w-]+)([+=]=?)(.*)`)
 
 // SetKeyValues takes a list of `key=value` pairs as strings and applies
 // them to the config object. Any item without an `=` is skipped.
@@ -568,11 +568,11 @@ var itemRE = regexp.MustCompile(`^(\w+)([+=]=?)(.*)`)
 // appended to any existing setting. If the value is starts with a dash
 // then it is considered a command line option and is appended with a
 // space separator, otherwise it is simply concatenated.
-func (c *Config) SetKeyValues(items ...string) {
+func (c *Config) SetKeyValues(items ...string) (err error) {
 	for _, item := range items {
 		fields := itemRE.FindStringSubmatch(item)
 		if len(fields) != 4 {
-			continue
+			return fmt.Errorf("item %q is not a valid setting", item)
 		}
 
 		switch fields[2] {
@@ -593,6 +593,7 @@ func (c *Config) SetKeyValues(items ...string) {
 			continue
 		}
 	}
+	return
 }
 
 // SetKeyValues takes a list of `key-value` pairs as strings and
