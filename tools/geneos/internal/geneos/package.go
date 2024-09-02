@@ -220,7 +220,9 @@ func Update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	for _, h := range h.OrList() {
 		for _, ct := range ct.OrList() {
 			if err = update(h, ct, options...); err != nil {
-				fmt.Println(err)
+				if !errors.Is(err, os.ErrNotExist) {
+					fmt.Println(err)
+				}
 			}
 		}
 	}
@@ -263,12 +265,6 @@ func update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	if opts.version == "latest" {
 		opts.version = ""
 	}
-
-	// version, err := LatestInstalledVersion(h, ct, opts.version)
-	// if err != nil {
-	// 	log.Debug().Err(err).Msg("")
-	// }
-	// log.Debug().Msgf("latest version matching %q found is %q", opts.version, version)
 
 	version := ""
 	versions, err := InstalledReleases(h, ct)
