@@ -79,7 +79,7 @@ var Netprobe = geneos.Component{
 		"netpopts":  "options",
 	},
 	Defaults: []string{
-		`binary=netprobe.linux_64`,
+		`binary={{if eq .pkgtype "fa2"}}fix-analyser2-{{end}}netprobe.linux_64`,
 		`home={{join .root "netprobe" "netprobes" .name}}`,
 		`install={{join .root "packages" .pkgtype}}`,
 		`version=active_prod`,
