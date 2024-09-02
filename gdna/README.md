@@ -730,7 +730,6 @@ Each of the reports above will, later, have it's own documentation outside this 
 
   ![Coverage Per Gateway Summary](screenshots/gdna-10.png)
 
-  > [!TIP]
   > To enable this report set one or both of the following "enable" options in the `gdna.yaml` file you have used:
   >
   > ```yaml
@@ -761,7 +760,6 @@ Each of the reports above will, later, have it's own documentation outside this 
 
   ![Coverage Per Gateway Detail](screenshots/gdna-11.png)
 
-  > [!TIP]
   > To enable this report set one or both of the following "enable" options in the `gdna.yaml` file you have used:
   >
   > ```yaml
