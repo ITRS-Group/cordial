@@ -19,7 +19,7 @@ If a host is not selected with the `--host HOST` flags then the uninstall applie
 Use `geneos package list` to see which releases are installed.
 
 ```text
-geneos package uninstall [flags] [TYPE]
+geneos package uninstall [flags] [TYPE] [VERSION]
 ```
 
 ### Options
