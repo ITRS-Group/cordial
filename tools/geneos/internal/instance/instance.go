@@ -245,6 +245,7 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions)
 		}
 		instances = append(instances, instance)
 	}
+	err = nil
 
 	if len(opts.parameters) > 0 {
 		params := map[string]string{}
