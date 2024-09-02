@@ -394,7 +394,8 @@ func SetSecureArgs(i geneos.Instance) (args []string) {
 		chain = config.PromoteFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
 	}
 	s, err := i.Host().Stat(chain)
-	if err == nil && !s.IsDir() {
+	log.Debug().Msgf("use-chain: %v / %v", i.Config().IsSet("use-chain"), i.Config().GetBool("use-chain"))
+	if err == nil && !s.IsDir() && !(i.Config().IsSet("use-chain") && !i.Config().GetBool("use-chain")) {
 		args = append(args, "-ssl-certificate-chain", chain)
 	}
 	return
