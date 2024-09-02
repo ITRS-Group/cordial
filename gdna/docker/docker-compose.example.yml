@@ -111,8 +111,8 @@ configs:
         # supply a preamble and a postscript either from a file or
         # in-line using these settings:
 
-        # html-preamble: ${file:/path/to/preamble.html}
-        # html-postscript: ${file:/path/to/postscript.html}
+        # html-preamble: $${file:/path/to/preamble.html}
+        # html-postscript: $${file:/path/to/postscript.html}
 
         # or, in-line: 
 
