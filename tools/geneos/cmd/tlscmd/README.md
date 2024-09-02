@@ -9,7 +9,7 @@ Each instance may use the following parameters:
 * `certificate` - the path to a certificate file in PEM format
 * `privatekey` - the path to a private key file for the certificate above
 * `certchain` - the path to a file containing one or more PEM formatted certificates that form a trust chains
-* `use-chain` - a boolean parameter that controls the use off the chain file above
+* `use-chain` - a boolean parameter that controls the use of the chain file above
 
 Those components which may offer TLS protected services on a listening port will do so if the `certificate` and `privatekey` parameters are defined and point to valid files.
 
