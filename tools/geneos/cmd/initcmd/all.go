@@ -100,9 +100,7 @@ func initAll(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 	licdCT := geneos.ParseComponent("licd")
 	gatewayCT := geneos.ParseComponent("gateway")
 	netprobeCT := geneos.ParseComponent("netprobe")
-	if allCmdMinimal {
-		netprobeCT = geneos.ParseComponent("minimal")
-	}
+	minimalCT := geneos.ParseComponent("minimal")
 	webserverCT := geneos.ParseComponent("webserver")
 
 	if err = geneos.Install(h, licdCT, options...); err != nil {
@@ -111,8 +109,14 @@ func initAll(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 	if err = geneos.Install(h, gatewayCT, options...); err != nil {
 		return
 	}
-	if err = geneos.Install(h, netprobeCT, options...); err != nil {
-		return
+	if allCmdMinimal {
+		if err = geneos.Install(h, minimalCT, options...); err != nil {
+			return
+		}
+	} else {
+		if err = geneos.Install(h, netprobeCT, options...); err != nil {
+			return
+		}
 	}
 	if err = geneos.Install(h, webserverCT, options...); err != nil {
 		return
@@ -127,10 +131,12 @@ func initAll(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 	if err = cmd.AddInstance(gatewayCT, initCmdExtras, []string{}, initCmdName); err != nil {
 		return
 	}
-	// if len(initCmdExtras.Gateways) == 0 {
-	// 	initCmdExtras.Gateways.Set("localhost")
-	// }
-	if err = cmd.AddInstance(netprobeCT, initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
+
+	probename := "localhost"
+	if allCmdMinimal {
+		probename = "minimal:" + probename
+	}
+	if err = cmd.AddInstance(netprobeCT, initCmdExtras, []string{}, probename+"@"+h.String()); err != nil {
 		return
 	}
 	if err = cmd.AddInstance(webserverCT, initCmdExtras, []string{}, initCmdName); err != nil {

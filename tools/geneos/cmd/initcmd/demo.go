@@ -95,16 +95,23 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 		return
 	}
 
-	npTarget := "netprobe"
-	if demoCmdMinimal {
-		npTarget = "minimal"
-	}
+	netprobeCT := geneos.ParseComponent("netprobe")
+	minimalCT := geneos.ParseComponent("minimal")
 
-	ct = geneos.ParseComponent(npTarget)
-	if err = pkgcmd.Install(h, ct, options...); err != nil {
-		return
+	if demoCmdMinimal {
+		if err = pkgcmd.Install(h, minimalCT, options...); err != nil {
+			return
+		}
+	} else {
+		if err = pkgcmd.Install(h, netprobeCT, options...); err != nil {
+			return
+		}
 	}
-	if err = cmd.AddInstance(ct, initCmdExtras, []string{}, "localhost@"+h.String()); err != nil {
+	probename := "localhost"
+	if demoCmdMinimal {
+		probename = "minimal:" + probename
+	}
+	if err = cmd.AddInstance(netprobeCT, initCmdExtras, []string{}, probename+"@"+h.String()); err != nil {
 		return
 	}
 

@@ -81,7 +81,7 @@ var Netprobe = geneos.Component{
 	Defaults: []string{
 		`binary=netprobe.linux_64`,
 		`home={{join .root "netprobe" "netprobes" .name}}`,
-		`install={{join .root "packages" "netprobe"}}`,
+		`install={{join .root "packages" .pkgtype}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=netprobe.log`,
@@ -109,7 +109,7 @@ func init() {
 var netprobes sync.Map
 
 func factory(name string) geneos.Instance {
-	_, local, h := instance.SplitName(name, geneos.LOCAL)
+	ct, local, h := instance.SplitName(name, geneos.LOCAL)
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
@@ -124,6 +124,10 @@ func factory(name string) geneos.Instance {
 	netprobe.Conf = config.New()
 	netprobe.InstanceHost = h
 	netprobe.Component = &Netprobe
+	netprobe.Config().SetDefault("pkgtype", "netprobe")
+	if ct != nil {
+		netprobe.Config().SetDefault("pkgtype", ct.Name)
+	}
 	if err := instance.SetDefaults(netprobe, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", netprobe)
 	}
