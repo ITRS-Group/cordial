@@ -64,11 +64,15 @@ var loginCmd = &cobra.Command{
 		urlMatch := "itrsgroup.com"
 
 		if loginCmdList {
-			cr, _ := config.Load("credentials",
+			var err2 error
+			cr, err2 := config.Load("credentials",
 				config.SetAppName(Execname),
 				config.UseDefaults(false),
 				config.IgnoreWorkingDir(),
 			)
+			if err2 != nil {
+				return err2
+			}
 			for d := range cr.GetStringMap("credentials") {
 				fmt.Println(d)
 			}

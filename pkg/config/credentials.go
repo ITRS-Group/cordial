@@ -40,6 +40,10 @@ type Credentials struct {
 // key "credentials" and returns the longest match, if any. creds
 // is nil if no matching credentials found.
 func (cf *Config) FindCreds(p string) (creds *Config) {
+	if cf == nil {
+		return nil
+	}
+
 	cr := cf.GetStringMap("credentials")
 	if cr == nil {
 		return
@@ -68,7 +72,10 @@ func (cf *Config) FindCreds(p string) (creds *Config) {
 // URLs. The longest match wins.
 func FindCreds(p string, options ...FileOptions) (creds *Config) {
 	options = append(options, KeyDelimiter("::"))
-	cf, _ := Load("credentials", options...)
+	cf, err := Load("credentials", options...)
+	if err != nil {
+		return nil
+	}
 	return cf.FindCreds(p)
 }
 

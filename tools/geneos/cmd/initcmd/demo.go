@@ -71,7 +71,7 @@ var demoCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("")
 		}
 
-		if err = initCommon(command); err != nil {
+		if err = initCommon(); err != nil {
 			return
 		}
 

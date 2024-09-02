@@ -20,11 +20,11 @@ package cfgcmd
 import (
 	_ "embed"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 func init() {
@@ -53,10 +53,14 @@ geneos config set geneos="/opt/geneos"
 		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
 			return command.Usage()
 		}
-		cf, _ := config.Load(cmd.Execname,
+		cf, err := config.Load(cmd.Execname,
 			config.IgnoreSystemDir(),
 			config.IgnoreWorkingDir(),
 		)
+		if err != nil {
+			return
+		}
+		log.Debug().Msgf("setting params: %v", params)
 		cf.SetKeyValues(params...)
 
 		// fix breaking change
@@ -67,6 +71,7 @@ geneos config set geneos="/opt/geneos"
 			cf.Set("itrshome", nil)
 		}
 
-		return geneos.SaveConfig(cmd.Execname)
+		log.Debug().Msgf("save config %q", cmd.Execname)
+		return cf.Save(cmd.Execname)
 	},
 }

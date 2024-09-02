@@ -48,10 +48,13 @@ var unsetCmd = &cobra.Command{
 		}
 
 		_, args := cmd.ParseTypeNames(command)
-		orig, _ := config.Load(cmd.Execname,
+		orig, err := config.Load(cmd.Execname,
 			config.IgnoreWorkingDir(),
 			config.IgnoreSystemDir(),
 		)
+		if err != nil {
+			return err
+		}
 		new := config.New()
 
 	OUTER:

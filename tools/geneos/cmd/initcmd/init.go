@@ -139,7 +139,7 @@ geneos init
 			log.Fatal().Err(err).Msg("")
 		}
 
-		if err = initCommon(command); err != nil {
+		if err = initCommon(); err != nil {
 			return
 		}
 		return
@@ -181,30 +181,33 @@ func initProcessArgs(args []string) (options []geneos.PackageOptions, err error)
 		}
 	}
 
+	// always have a home directory. the logic below is required in case
+	// the user look-up and the environment variable loo-up both fail
+	// (which can happen when the users are in an external directory and
+	// the program is built fully static)
 	homedir := "/"
 	if u, err := user.Current(); err == nil {
 		homedir = u.HomeDir
 	} else {
-		homedir = os.Getenv("HOME")
+		home, ok := os.LookupEnv("HOME")
+		if ok {
+			homedir = home
+		}
 	}
 
 	switch len(args) {
 	case 0:
 		// default home + geneos, but check with user if it's an
 		// interactive session
-		var input string
 		root = homedir
 		if path.Base(homedir) != cmd.Execname {
 			root = path.Join(homedir, cmd.Execname)
 		}
-		input, err = config.ReadUserInputLine("Geneos Directory (default %q): ", root)
-		if err == nil {
+		if input, err := config.ReadUserInputLine("Geneos Directory (default %q): ", root); err == nil {
 			if strings.TrimSpace(input) != "" {
 				log.Debug().Msgf("set root to %s", input)
 				root = input
 			}
-			// } else if err != config.ErrNotInteractive {
-			// 	return
 		}
 		err = nil
 	case 1: // home = abs path
@@ -248,7 +251,7 @@ func initProcessArgs(args []string) (options []geneos.PackageOptions, err error)
 	return
 }
 
-func initCommon(command *cobra.Command) (err error) {
+func initCommon() (err error) {
 	initTemplates(geneos.LOCAL)
 
 	if initCmdTLS {

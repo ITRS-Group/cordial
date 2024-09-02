@@ -81,7 +81,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 			log.Fatal().Err(err).Msg("")
 		}
 
-		if err = initCommon(command); err != nil {
+		if err = initCommon(); err != nil {
 			return
 		}
 
