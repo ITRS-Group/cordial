@@ -289,7 +289,7 @@ RUN --mount=type=secret,id=credentials.json,mode=0444,required,target=/home/gene
     set -eux; \
     mkdir gdna; \
     geneos deploy gateway "Demo Gateway" --geneos /home/geneos --nosave --port 8100 --tls options="-demo" --include 100:/etc/geneos/gdna/gdna.include.xml; \
-    geneos deploy minimal GDNA --nosave --port 8101; \
+    geneos deploy netprobe minimal:GDNA --nosave --port 8101; \
     geneos deploy webserver GDNA --nosave --port 8443 --import config/config.xml=/etc/geneos/gdna/web-config.xml;
 ENTRYPOINT [ "/etc/geneos/gdna/start-up.sh" ]
 CMD [ "bash" ]
