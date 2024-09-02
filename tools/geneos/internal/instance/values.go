@@ -88,7 +88,9 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, keyfile config.Ke
 	convertVars(vars)
 	cf.Set("variables", vars)
 
-	cf.SetKeyValues(set.Params...)
+	if err = cf.SetKeyValues(set.Params...); err != nil {
+		return
+	}
 
 	secrets, err = setEncoded(i, set.SecureParams, keyfile)
 	if err != nil {
