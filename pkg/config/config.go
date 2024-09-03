@@ -559,7 +559,7 @@ func GetSliceStringMapString(s string, options ...ExpandOptions) (result []map[s
 	return global.GetSliceStringMapString(s, options...)
 }
 
-var itemRE = regexp.MustCompile(`^([\w-]+)([+=]=?)(.*)`)
+var itemRE = regexp.MustCompile(`^([\w\.\:-]+)([+=]=?)(.*)`)
 
 // SetKeyValues takes a list of `key=value` pairs as strings and applies
 // them to the config object. Any item without an `=` is skipped.
