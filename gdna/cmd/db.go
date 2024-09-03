@@ -26,6 +26,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -131,6 +132,7 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 			return
 		}
 
+		log.Info().Msgf("checked: %q -> %d", checkQuery, checked)
 		if checked > 0 {
 			var tx *sql.Tx
 			tx, err = db.BeginTx(ctx, nil)
@@ -265,6 +267,7 @@ func queryHeadlines(ctx context.Context, tx *sql.Tx, query string) (names []stri
 // modification time while for http/https is either the `Last-Modified`
 // header value or the time of the request.
 func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv.Reader, source, sourceType, sourcePath string, sourceTimestamp time.Time) (err error) {
+	var licdExtended bool
 	isoTime := sourceTimestamp.UTC().Format(time.RFC3339)
 
 	// read column names
@@ -272,9 +275,17 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 	if err == io.EOF {
 		return
 	}
+	// remember to clone colNames as reuserecords is in use
+	colNames = slices.Clone(colNames)
+
+	if len(colNames) >= 22 {
+		// reporting file or licd >= 7.0.0, new columns available
+		licdExtended = true
+	}
+
 	columns := map[string]int{}
 	for i, c := range colNames {
-		columns[c] = i
+		columns[strings.ToLower(c)] = i
 	}
 
 	gatewaysInsertStmt, err := tx.PrepareContext(ctx, cf.GetString("db.gateways.insert"))
@@ -331,44 +342,44 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 			return err
 		}
 
-		switch fields[3] {
-		case "binary":
-			// 5,gateway:LOB_GATEWAY_1102,gateway:LOB_GATEWAY_1102,binary,netprobe,itrsrh6005160:7036 [240a1690],1
-			if fields[4] != "netprobe" {
-				line, col := c.FieldPos(4)
-				return fmt.Errorf("unknown binary type %q at line %d, column %d: %q", fields[4], line, col, source)
-			}
-			matches := re.FindStringSubmatch(fields[5])
+		if len(fields) != len(colNames) {
+			panic("number of fields in CSV differs from heading for " + source)
+		}
+
+		values := make(map[string]string, len(colNames))
+		for i, c := range colNames {
+			values[strings.ToLower(c)] = fields[i]
+		}
+
+		var host_name, port, host_id string
+		if licdExtended {
+			host_name, port, host_id = values["host_name"], values["port"], values["host_id"]
+		} else {
+			matches := re.FindStringSubmatch(values["description"])
 			if len(matches) != 4 {
-				line, col := c.FieldPos(5)
+				line, col := c.FieldPos(columns["Description"])
 				return fmt.Errorf("only found %d at line %d, column %d: %q", len(matches), line, col, source)
 			}
+			host_name, port, host_id = matches[1], matches[2], matches[3]
+		}
 
-			// set os and version if they are available, else NULL
-			os := sql.NullString{}
-			if v, ok := columns["os"]; ok {
-				os = sql.NullString{
-					Valid:  true,
-					String: fields[v],
-				}
-			}
-			version := sql.NullString{}
-			if v, ok := columns["version"]; ok {
-				version = sql.NullString{
-					Valid:  true,
-					String: fields[v],
-				}
+		switch values["component"] {
+		case "binary":
+			// 5,gateway:LOB_GATEWAY_1102,gateway:LOB_GATEWAY_1102,binary,netprobe,itrsrh6005160:7036 [240a1690],1
+			if values["item"] != "netprobe" {
+				line, col := c.FieldPos(4)
+				return fmt.Errorf("unknown binary type %q at line %d, column %d: %q", values["item"], line, col, source)
 			}
 
 			_, err = probesInsertStmt.ExecContext(ctx,
-				sql.Named("gateway", strings.TrimPrefix(fields[2], "gateway:")),
-				sql.Named("probeName", matches[1]),
-				sql.Named("probePort", matches[2]),
-				sql.Named("tokenID", matches[3]),
+				sql.Named("gateway", strings.TrimPrefix(values["requestingcomponent"], "gateway:")),
+				sql.Named("probeName", host_name),
+				sql.Named("probePort", port),
+				sql.Named("tokenID", host_id),
 				sql.Named("time", isoTime),
 				sql.Named("source", source),
-				sql.Named("os", os),
-				sql.Named("version", version),
+				sql.Named("os", colOrNull("os", columns, fields)),
+				sql.Named("version", colOrNull("version", columns, fields)),
 			)
 			if err != nil {
 				log.Error().Err(err).Msg("inserting probe")
@@ -376,19 +387,13 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 
 		case "plugin":
 			// 21,gateway:LOB_GATEWAY_1102,gateway:LOB_GATEWAY_1102,binary,netprobe,itrsrh002111:7036 [410a355f],1
-			matches := re.FindStringSubmatch(fields[5])
-			if len(matches) != 4 {
-				line, col := c.FieldPos(5)
-				return fmt.Errorf("only found %d at line %d, column %d: %q", len(matches), line, col, source)
-			}
-
 			_, err = samplersInsertStmt.ExecContext(ctx,
-				sql.Named("gateway", strings.TrimPrefix(fields[2], "gateway:")),
-				sql.Named("plugin", fields[4]),
-				sql.Named("probeName", matches[1]),
-				sql.Named("probePort", matches[2]),
-				sql.Named("tokenID", matches[3]),
-				sql.Named("number", fields[6]),
+				sql.Named("gateway", strings.TrimPrefix(values["requestingcomponent"], "gateway:")),
+				sql.Named("plugin", values["item"]),
+				sql.Named("probeName", host_name),
+				sql.Named("probePort", port),
+				sql.Named("tokenID", host_id),
+				sql.Named("number", values["number"]),
 				sql.Named("time", isoTime),
 				sql.Named("source", source),
 			)
@@ -398,11 +403,20 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 
 		case "ca_plugin":
 			// 2851,gateway:LOB_GATEWAY_1085,gateway:LOB_GATEWAY_1085,ca_plugin,prometheus-plugin,position-cd-transformer-c1-6-gem,1
+			var entity string
+			if licdExtended {
+				entity = values["managed_entity"]
+			} else {
+				entity = values["description"]
+			}
 			_, err = caSamplersInsertStmt.ExecContext(ctx,
-				sql.Named("gateway", strings.TrimPrefix(fields[2], "gateway:")),
-				sql.Named("plugin", fields[4]),
-				sql.Named("entity", fields[5]),
-				sql.Named("number", fields[6]),
+				sql.Named("gateway", strings.TrimPrefix(values["requestingcomponent"], "gateway:")),
+				sql.Named("plugin", values["item"]),
+				sql.Named("entity", entity),
+				sql.Named("probeName", colOrNull("host_name", columns, fields)),
+				sql.Named("probePort", colOrNull("port", columns, fields)),
+				sql.Named("tokenID", colOrNull("host_id", columns, fields)),
+				sql.Named("number", values["number"]),
 				sql.Named("time", isoTime),
 				sql.Named("source", source),
 			)
@@ -413,9 +427,9 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 		case "gateway_component":
 			// 1,gateway:LOB_GATEWAY_1102,gateway:LOB_GATEWAY_1102,gateway_component,database-logging,,1
 			_, err = gwComponentsInsertStmt.ExecContext(ctx,
-				sql.Named("gateway", strings.TrimPrefix(fields[2], "gateway:")),
-				sql.Named("component", fields[4]),
-				sql.Named("number", fields[6]),
+				sql.Named("gateway", strings.TrimPrefix(values["requestingcomponent"], "gateway:")),
+				sql.Named("component", values["item"]),
+				sql.Named("number", values["number"]),
 				sql.Named("time", isoTime),
 				sql.Named("source", source),
 			)
@@ -426,7 +440,7 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 			// also add gateways directly to a gateways table
 			if fields[4] == "gateway" {
 				_, err = gatewaysInsertStmt.ExecContext(ctx,
-					sql.Named("gateway", strings.TrimPrefix(fields[2], "gateway:")),
+					sql.Named("gateway", strings.TrimPrefix(values["requestingcomponent"], "gateway:")),
 					sql.Named("time", isoTime),
 					sql.Named("source", source),
 				)
@@ -438,9 +452,9 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 		case "gateway-plugin":
 			// 8188,EQ,gateway:LOB_GATEWAY_1165,gateway-plugin,gateway-breachpredictor,,1
 			_, err = gwSamplersInsertStmt.ExecContext(ctx,
-				sql.Named("gateway", strings.TrimPrefix(fields[2], "gateway:")),
-				sql.Named("plugin", fields[4]),
-				sql.Named("number", fields[6]),
+				sql.Named("gateway", strings.TrimPrefix(values["requestingcomponent"], "gateway:")),
+				sql.Named("plugin", values["item"]),
+				sql.Named("number", values["number"]),
 				sql.Named("time", isoTime),
 				sql.Named("source", source),
 			)
@@ -465,6 +479,16 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 	}
 
 	return updateSources(ctx, cf, tx, source, sourceType, sourcePath, valid, sourceTimestamp, "OK")
+}
+
+func colOrNull(column string, columns map[string]int, fields []string) (val sql.NullString) {
+	if v, ok := columns[column]; ok {
+		val = sql.NullString{
+			Valid:  true,
+			String: fields[v],
+		}
+	}
+	return
 }
 
 // createTables iterates over the top-level settings in root and runs

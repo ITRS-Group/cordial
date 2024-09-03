@@ -375,7 +375,7 @@ db:
     query: > #sql
       SELECT version FROM ${db.gdna-version.table};
 
-  # updates are run based on the current value of PRAGMAN user_version
+  # updates are run based on the current value of PRAGMA user_version
   #
   # each set of updates for values greater than the current value are
   # run and the value updated. each update is run in it's own
@@ -396,7 +396,33 @@ db:
         INSERT INTO ${db.gateways.table}_new SELECT * FROM ${db.gateways.table};
         DROP TABLE ${db.gateways.table};
         ALTER TABLE ${db.gateways.table}_new RENAME TO ${db.gateways.table};
-
+    2:
+      check: |
+        SELECT count(*) FROM pragma_table_info('${db.ca-samplers.table}');
+      update: |
+        CREATE TABLE ${db.ca-samplers.table}_new (
+          gateway           TEXT NOT NULL COLLATE NOCASE,
+          plugin            TEXT NOT NULL,
+          entity            TEXT,
+          number            INT NOT NULL,
+          probeName         TEXT COLLATE NOCASE,
+          probePort         INT,
+          tokenID           TEXT,
+          server            TEXT COLLATE NOCASE,
+          hostID            TEXT,
+          os                TEXT,
+          version           TEXT,
+          firstSeen         TIMESTAMP NOT NULL,
+          lastSeen          TIMESTAMP NOT NULL,
+          source            TEXT NOT NULL,
+          UNIQUE (gateway, plugin, entity)
+        );
+        INSERT INTO ${db.ca-samplers.table}_new
+          SELECT gateway, plugin, entity, number, NULL AS probeName, NULL AS probePort, NULL AS tokenID, NULL AS server, NULL AS hostID, NULL AS os, NULL AS version, firstSeen, lastSeen, source
+            FROM ${db.ca-samplers.table};
+        DROP TABLE ${db.ca-samplers.table};
+        ALTER TABLE ${db.ca-samplers.table}_new RENAME TO ${db.ca-samplers.table};
+        CREATE INDEX ${db.ca-samplers.table}_idx1 ON ${db.ca-samplers.table} (source, lastSeen DESC);
   # gateways returns a single column table containing all known gateways
   # from the four samplers and probes tables
   gateways:
@@ -676,13 +702,20 @@ db:
     # The ca-samplers table contains all entries from the license daemon for
     # the "ca-plugin" component, the plugin column being set to the "item"
     table: ca_samplers_all
-    columns: gateway, plugin, entity, number, firstSeen, lastSeen, source
+    columns: gateway, plugin, entity, number, probeName, probePort, server, hostID, firstSeen, lastSeen, source
     create: > #sql
       CREATE TABLE IF NOT EXISTS ${db.ca-samplers.table} (
         gateway           TEXT NOT NULL COLLATE NOCASE,
         plugin            TEXT NOT NULL,
         entity            TEXT,
         number            INT NOT NULL,
+        probeName         TEXT COLLATE NOCASE,
+        probePort         INT,
+        tokenID           TEXT,
+        server            TEXT COLLATE NOCASE,
+        hostID            TEXT,
+        os                TEXT,
+        version           TEXT,
         firstSeen         TIMESTAMP NOT NULL,
         lastSeen          TIMESTAMP NOT NULL,
         source            TEXT NOT NULL,
@@ -691,10 +724,20 @@ db:
       CREATE INDEX IF NOT EXISTS ${db.ca-samplers.table}_idx1 ON ${db.ca-samplers.table} (source, lastSeen DESC);
     insert: > #sql
       INSERT INTO ${db.ca-samplers.table}
-               (gateway, plugin, entity, number, firstSeen, lastSeen, source)
-        VALUES (@gateway, @plugin, @entity, @number, @time, @time, @source)
+               (gateway, plugin, entity, probeName, probePort, tokenID, hostID, number, firstSeen, lastSeen, source)
+        VALUES (@gateway, @plugin, @entity, @probeName, @probePort, @tokenID, @tokenID, @number, @time, @time, @source)
         ON CONFLICT (gateway, plugin, entity)
           DO UPDATE SET number=@number, source=@source, lastSeen=@time;
+    post-insert: > #sql
+      UPDATE ${db.ca-samplers.table} AS s
+         SET server = (SELECT server
+                         FROM ${db.probes.table}
+                        WHERE gateway = s.gateway
+                          AND probeName = s.probeName
+                          AND probePort = s.probePort
+                        LIMIT 1)
+      ;
+
     active: ca_samplers
     create-active: > #sql
       DROP TABLE IF EXISTS ${db.ca-samplers.active};
@@ -1302,10 +1345,10 @@ db:
       DROP TABLE IF EXISTS ${db.match-sampler-plugins.table};
       CREATE ${db.temporary-table} TABLE ${db.match-sampler-plugins.table} AS
         SELECT grouping, COALESCE(s.plugin, c.plugin, g.plugin) plugin
-            FROM grouping_plugins grouping
-            LEFT JOIN samplers s ON glob(grouping.plugin, s.plugin)
-            LEFT JOIN ca_samplers c ON glob(grouping.plugin, c.plugin)
-            LEFT OUTER JOIN gw_samplers g ON glob(grouping.plugin, g.plugin)
+            FROM ${groupings.plugins.table} grouping
+            LEFT JOIN ${db.samplers.table} s ON glob(grouping.plugin, s.plugin)
+            LEFT JOIN ${db.ca-samplers.table} c ON glob(grouping.plugin, c.plugin)
+            LEFT OUTER JOIN ${db.gw-samplers.table} g ON glob(grouping.plugin, g.plugin)
           GROUP BY grouping, COALESCE(s.plugin, c.plugin, g.plugin, "")
       ;
 
