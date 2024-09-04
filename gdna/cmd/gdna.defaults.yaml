@@ -384,7 +384,7 @@ db:
     1:
       # if table already exists, then recreate it
       check: |
-        SELECT count(*) FROM pragma_table_info('${db.gateways.table}')
+        SELECT count(*) BETWEEN 1 AND 4 FROM pragma_table_info('${db.gateways.table}')
       update: |
         CREATE TABLE ${db.gateways.table}_new (
           gateway           TEXT NOT NULL COLLATE NOCASE,
@@ -400,7 +400,7 @@ db:
     2:
       # if ca_samplers_all has less than the expected columns, recreate
       check: |
-        SELECT count(*) < 14 FROM pragma_table_info('${db.ca-samplers.table}');
+        SELECT count(*) BETWEEN 1 AND 14 FROM pragma_table_info('${db.ca-samplers.table}');
       update: |
         CREATE TABLE ${db.ca-samplers.table}_new (
           gateway           TEXT NOT NULL COLLATE NOCASE,
@@ -425,15 +425,38 @@ db:
         DROP TABLE ${db.ca-samplers.table};
         ALTER TABLE ${db.ca-samplers.table}_new RENAME TO ${db.ca-samplers.table};
         CREATE INDEX ${db.ca-samplers.table}_idx1 ON ${db.ca-samplers.table} (source, lastSeen DESC);
+    3:
+      check: |
+        SELECT count(*) = 4 FROM pragma_table_info('${db.gateways.table}')
+      update: |
+        CREATE TABLE ${db.gateways.table}_new (
+          gateway           TEXT NOT NULL COLLATE NOCASE,
+          gatewayHost       TEXT,
+          gatewayPort       INT,
+          version           TEXT,
+          firstSeen         TIMESTAMP NOT NULL,
+          lastSeen          TIMESTAMP NOT NULL,
+          source            TEXT NOT NULL,
+
+          UNIQUE (gateway, source)
+        );
+        INSERT INTO ${db.gateways.table}_new
+          SELECT gateway, NULL AS gatewayHost, NULL AS gatewayPort, NULL AS version, firstSeen, lastSeen, source
+            FROM ${db.gateways.table};
+        DROP TABLE ${db.gateways.table};
+        ALTER TABLE ${db.gateways.table}_new RENAME TO ${db.gateways.table};
 
   # gateways returns a single column table containing all known gateways
   # from the four samplers and probes tables
   gateways:
     table: gateways_all
-    columns: gateway, firstSeen, lastSeen, source
+    columns: gateway, gatewayHost, gatewayPort, version, firstSeen, lastSeen, source
     create: > #sql
       CREATE TABLE IF NOT EXISTS ${db.gateways.table} (
         gateway           TEXT NOT NULL COLLATE NOCASE,
+        gatewayHost       TEXT,
+        gatewayPort       INT,
+        version           TEXT,
         firstSeen         TIMESTAMP NOT NULL,
         lastSeen          TIMESTAMP NOT NULL,
         source            TEXT NOT NULL,
@@ -443,10 +466,10 @@ db:
 
     insert: > #sql
       INSERT INTO ${db.gateways.table}
-              (gateway, firstSeen, lastSeen, source)
-      VALUES (@gateway, @time, @time, @source)
+              (gateway, gatewayHost, gatewayPort, version, firstSeen, lastSeen, source)
+      VALUES (@gateway, @host, @port, @version, @time, @time, @source)
       ON CONFLICT (gateway, source)
-        DO UPDATE SET lastSeen=@time, source=@source
+        DO UPDATE SET gatewayHost=@host, gatewayPort=@port, version=@version, lastSeen=@time, source=@source
       ;
     filter:
       # include MUST default to a wildcard
@@ -464,7 +487,7 @@ db:
             SELECT 1 WHERE 1 == 0
             ${values:db.gateways.filter.exclude}
         )
-        SELECT gateway, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
+        SELECT gateway, gatewayHost, gatewayPort, version, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
           FROM ${db.gateways.table} t
         WHERE gateway IN (
             SELECT distinct gateway AS gateway FROM ${db.samplers.active}
@@ -492,7 +515,7 @@ db:
             SELECT 1 WHERE 1 == 0
             ${values:db.gateways.filter.exclude}
         )
-        SELECT gateway, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
+        SELECT gateway, gatewayHost, gatewayPort, version, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
           FROM ${db.gateways.table} t
         WHERE gateway IN (
             SELECT distinct gateway AS gateway FROM ${db.samplers.active}
@@ -2258,6 +2281,12 @@ reports:
           (SELECT count(distinct server) FROM ${db.servers.table} WHERE ${split-column} = '${value}') as total
       )
 
+      SELECT 'gatewayHost', (SELECT COALESCE(gatewayHost, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+      UNION
+      SELECT 'gatewayPort', (SELECT COALESCE(gatewayPort, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+      UNION
+      SELECT 'gatewayVersion', (SELECT COALESCE(version, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+      UNION
       SELECT 'servers', total FROM t
       UNION
       SELECT 'relatedProbes', (SELECT count(*) FROM ${db.probes.active} WHERE server IN (SELECT server FROM ${db.servers.table} WHERE ${split-column} = '${value}')) - total FROM t
@@ -2361,6 +2390,12 @@ reports:
           (SELECT count(distinct server) FROM ${db.servers.table} WHERE ${split-column} = '${value}') as total
       )
 
+      SELECT 'gatewayHost', (SELECT COALESCE(gatewayHost, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+      UNION
+      SELECT 'gatewayPort', (SELECT COALESCE(gatewayPort, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+      UNION
+      SELECT 'gatewayVersion', (SELECT COALESCE(version, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+      UNION
       SELECT 'servers', total FROM t
       UNION
       SELECT 'relatedProbes', (SELECT count(*) FROM ${db.probes.active} WHERE server IN (SELECT server FROM ${db.servers.table} WHERE ${split-column} = '${value}')) - total FROM t
@@ -2636,3 +2671,20 @@ reports:
       SELECT gateway, max(lastSeen), group_concat(source, ',')
         FROM ${db.unused-gateways.table}
        GROUP BY gateway
+
+  gateway-summary:
+    name: Gateway Summary
+    group: Monitored Estate
+    columns: [ gateway, gatewayHost, gatewayPort, version, source ]
+    query: | #sql
+      SELECT gateway, COALESCE(gatewayHost, ''), COALESCE(gatewayPort, ''), COALESCE(version, ''), source
+        FROM ${db.gateways.active}
+
+  server-summary:
+    name: Server Summary
+    group: Monitored Estate
+    columns: [ server, os, gateways ]
+    query: > #sql
+      SELECT server, COALESCE(os, ''), group_concat(gateway, ',')
+        FROM ${db.servers.table}
+       GROUP BY server

@@ -146,12 +146,6 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 				return
 			}
 
-			// update user_version
-			log.Trace().Msgf("userVersionQuery:\n%s", userVersionQuery)
-			if _, err = tx.ExecContext(ctx, fmt.Sprintf(userVersionUpdate, i)); err != nil {
-				return
-			}
-
 			if err = tx.Commit(); err != nil {
 				return
 			}
@@ -160,6 +154,12 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 			log.Debug().Msgf("completed update to version %d", i)
 		} else {
 			log.Debug().Msgf("update %d not required", i)
+		}
+
+		// update user_version
+		log.Debug().Msgf("set user_version=%d", i)
+		if _, err = db.ExecContext(ctx, fmt.Sprintf(userVersionUpdate, i)); err != nil {
+			return
 		}
 	}
 
@@ -448,6 +448,9 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 			if fields[4] == "gateway" {
 				_, err = gatewaysInsertStmt.ExecContext(ctx,
 					sql.Named("gateway", strings.TrimPrefix(values["requestingcomponent"], "gateway:")),
+					sql.Named("host", colOrNull("gateway_host", columns, fields)),
+					sql.Named("port", colOrNull("gateway_port", columns, fields)),
+					sql.Named("version", colOrNull("version", columns, fields)),
 					sql.Named("time", isoTime),
 					sql.Named("source", source),
 				)
