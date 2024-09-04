@@ -382,6 +382,7 @@ db:
   # transaction and failure results in program termination.
   schema-updates:
     1:
+      # if table already exists, then recreate it
       check: |
         SELECT count(*) FROM pragma_table_info('${db.gateways.table}')
       update: |
@@ -397,8 +398,9 @@ db:
         DROP TABLE ${db.gateways.table};
         ALTER TABLE ${db.gateways.table}_new RENAME TO ${db.gateways.table};
     2:
+      # if ca_samplers_all has less than the expected columns, recreate
       check: |
-        SELECT count(*) FROM pragma_table_info('${db.ca-samplers.table}');
+        SELECT count(*) < 14 FROM pragma_table_info('${db.ca-samplers.table}');
       update: |
         CREATE TABLE ${db.ca-samplers.table}_new (
           gateway           TEXT NOT NULL COLLATE NOCASE,
@@ -423,6 +425,7 @@ db:
         DROP TABLE ${db.ca-samplers.table};
         ALTER TABLE ${db.ca-samplers.table}_new RENAME TO ${db.ca-samplers.table};
         CREATE INDEX ${db.ca-samplers.table}_idx1 ON ${db.ca-samplers.table} (source, lastSeen DESC);
+
   # gateways returns a single column table containing all known gateways
   # from the four samplers and probes tables
   gateways:
@@ -727,7 +730,7 @@ db:
                (gateway, plugin, entity, probeName, probePort, tokenID, hostID, number, firstSeen, lastSeen, source)
         VALUES (@gateway, @plugin, @entity, @probeName, @probePort, @tokenID, @tokenID, @number, @time, @time, @source)
         ON CONFLICT (gateway, plugin, entity)
-          DO UPDATE SET number=@number, source=@source, lastSeen=@time;
+          DO UPDATE SET number=@number, source=@source, lastSeen=@time, probeName=@probeName, probePort=@probePort, tokenID=@tokenID, hostID=@tokenID;
     post-insert: > #sql
       UPDATE ${db.ca-samplers.table} AS s
          SET server = (SELECT server
@@ -2156,7 +2159,7 @@ reports:
   missing-coverage:
     name: Missing Coverage
     group: Monitoring Coverage
-    columns: [ serverID, server, probes, samplers, l1missing, l2missing, l3missing, gateways ]
+    columns: [ serverID, server, probes, samplers, dynamicEntites, l1missing, l2missing, l3missing, gateways ]
     freeze-to-column: server
     scramble-columns: [ serverID, server, gateways ]
     headlines: > #sql
@@ -2185,6 +2188,7 @@ reports:
              replace(server, ':'||hostID, ''),
              (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
              (SELECT total(CASE WHEN individual = true THEN number ELSE 1 END) FROM ${db.samplers.active} WHERE server = u.server) samplers,
+             (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server))), '') l1missing,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server))), '') l2missing,
              (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table}) THEN '' ELSE 'yes' END) as l3missing,
@@ -2242,7 +2246,7 @@ reports:
     group: Coverage Per Gateway
     enable-for-dataview: false
     enable-for-xlsx: false
-    columns: [ serverID, server, probes, samplers, l1missing, l2missing, l3missing, otherGateways, plugins ]
+    columns: [ serverID, server, probes, samplers, dynamicEntities, l1missing, l2missing, l3missing, otherGateways, plugins ]
     freeze-to-column: server
     scramble-columns: [ serverID, server ]
     type: split
@@ -2278,11 +2282,17 @@ reports:
              replace(server, ':'||hostID, ''),
              (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
              (SELECT total(CASE WHEN individual = true THEN number ELSE 1 END) FROM ${db.samplers.active} WHERE server = u.server) samplers,
+             (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server))), ''),
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server))), ''),
              (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table}) THEN '' ELSE 'yes' END) as l3missing,
              COALESCE((SELECT group_concat(gateway, ', ') FROM ${db.servers.table} WHERE server = u.server AND gateway <> u.gateway), '') otherGateways,
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT distinct plugin FROM ${db.samplers.active} WHERE server = u.server ORDER BY 1)), '') plugins
+             COALESCE((SELECT group_concat(plugin, ', ') FROM (
+                          SELECT distinct plugin FROM ${db.samplers.active} WHERE server = u.server
+                          UNION     
+                          SELECT distinct plugin FROM ${db.ca-samplers.active} WHERE server = u.server
+                          ORDER BY 1
+                     )), '') plugins
         FROM ${db.servers.table} u
        WHERE ${split-column} = '${value}'
        GROUP BY server
@@ -2339,7 +2349,7 @@ reports:
     group: Coverage Per Gateway
     enable-for-dataview: false
     enable-for-xlsx: false
-    columns: [ serverID, server, probes, probeName, probePort, otherGateways, samplers, l1missing, l2missing, l3missing, plugins, os, version ]
+    columns: [ serverID, server, probes, probeName, probePort, otherGateways, samplers, dynamicEntities, l1missing, l2missing, l3missing, plugins, os, version ]
     freeze-to-column: probePort
     scramble-columns: [ serverID, server, probeName, os ]
     type: split
@@ -2377,11 +2387,17 @@ reports:
              '' probeName,
              '' probePort,
              '' otherGateways,
-             (SELECT total(CASE WHEN individual = true THEN number ELSE 1 END) FROM ${db.samplers.active} WHERE server = u.server) samplers, 
+             (SELECT total(CASE WHEN individual = true THEN number ELSE 1 END) FROM ${db.samplers.active} WHERE server = u.server) samplers,
+             (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server))), '') l1missing,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server))), '') l2missing,
              (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table}) THEN '' ELSE 'yes' END) as l3missing,
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT distinct plugin FROM ${db.samplers.active} WHERE server = u.server ORDER BY 1)), '') plugins,
+             COALESCE((SELECT group_concat(plugin, ', ') FROM (
+                          SELECT distinct plugin FROM ${db.samplers.active} WHERE server = u.server
+                          UNION     
+                          SELECT distinct plugin FROM ${db.ca-samplers.active} WHERE server = u.server
+                          ORDER BY 1
+                     )), '') plugins,
              '' os,
              '' version
         FROM ${db.servers.table} u
@@ -2397,10 +2413,16 @@ reports:
               probePort,
               (SELECT CASE WHEN p.gateway <> '${value}' THEN p.Gateway ELSE '' END) otherGateways,
               (SELECT total(CASE WHEN individual = true THEN number ELSE 1 END) FROM ${db.samplers.active} WHERE probeName = p.probeName AND probePort = p.probePort) samplers,
+              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE probeName = p.probeName AND probePort = p.probePort) as dynamicEntities,
               '' l1missing,
               '' l2missing,
               '' l3missing,
-              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT distinct plugin FROM ${db.samplers.active} WHERE probeName = p.probeName AND probePort = p.probePort ORDER BY 1)), '') plugins,
+              COALESCE((SELECT group_concat(plugin, ', ') FROM (
+                          SELECT distinct plugin FROM ${db.samplers.active} WHERE probeName = p.probeName AND probePort = p.probePort
+                          UNION     
+                          SELECT distinct plugin FROM ${db.ca-samplers.active} WHERE probeName = p.probeName AND probePort = p.probePort
+                          ORDER BY 1
+                     )), '') plugins,
               COALESCE(os, '') os,
               COALESCE(version, '') version
         FROM ${db.probes.active} p
@@ -2547,7 +2569,7 @@ reports:
   sources:
     name: Sources
     group: Monitoring Coverage
-    columns: [ source, status, firstSeen, lastSeen, sourceType, path, valid, gateways, probes, plugins ]
+    columns: [ source, status, firstSeen, lastSeen, sourceType, path, valid, extendedFormat, gateways, probes, plugins, dynamicEntities ]
     headlines: > #sql
       SELECT 'lastestUpdate', max(lastSeen)
         FROM ${db.sources.table}
@@ -2583,16 +2605,21 @@ reports:
       ;
 
     query: > #sql
+      WITH os(os, source, lastSeen) AS (SELECT os, source, lastSeen FROM ${db.probes.table})
       SELECT ${db.sources.columns},
-             (SELECT count(*) FROM ${db.gateways.table} WHERE source = src.source AND lastSeen = src.lastSeen),
-             (SELECT count(*) FROM ${db.probes.table}   WHERE source = src.source AND lastSeen = src.lastSeen),
-             (SELECT count(*) FROM ${db.samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen)
+             (SELECT CASE WHEN (SELECT count(os) FROM os WHERE source = src.source AND lastSeen = src.lastSeen) THEN 1 ELSE 0 END) as extendedFormat,
+             (SELECT count(*) FROM ${db.gateways.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS gateways,
+             (SELECT count(*) FROM ${db.probes.table}   WHERE source = src.source AND lastSeen = src.lastSeen) AS probes,
+             (SELECT count(*) FROM ${db.samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS plugins,
+             (SELECT count(*) FROM ${db.ca-samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS dynamicEntities
         FROM ${db.sources.table} src
        WHERE valid = 1
 
       UNION ALL
 
       SELECT ${db.sources.columns},
+             0,
+             0,
              0,
              0,
              0

@@ -170,6 +170,8 @@ func readLicenseReports(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 		return
 	}
 
+	dbUpdated := cf.GetBool("db.updated")
+
 	switch u.Scheme {
 	case "https":
 		sources = append(sources, "https:"+u.Hostname())
@@ -326,7 +328,7 @@ func readLicenseReports(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 					// drop through, time is nil
 				}
 
-				if t.Truncate(time.Second).Equal(last) && !(onStart || onStartEMail) {
+				if t.Truncate(time.Second).Equal(last) && !(onStart || onStartEMail) && !dbUpdated {
 					log.Debug().Msgf("no update since %s", tm.String)
 					continue
 				}

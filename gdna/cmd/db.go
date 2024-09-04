@@ -155,6 +155,8 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 			if err = tx.Commit(); err != nil {
 				return
 			}
+			// flag an update has happened, force reload of file sources later on, which then clears it
+			cf.Set("db.updated", true)
 			log.Debug().Msgf("completed update to version %d", i)
 		} else {
 			log.Debug().Msgf("update %d not required", i)
@@ -283,6 +285,11 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 		licdExtended = true
 	}
 
+	// column names in the old output includes space separators
+	for i, c := range colNames {
+		colNames[i] = strings.TrimSpace(c)
+	}
+
 	columns := map[string]int{}
 	for i, c := range colNames {
 		columns[strings.ToLower(c)] = i
@@ -348,17 +355,17 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 
 		values := make(map[string]string, len(colNames))
 		for i, c := range colNames {
-			values[strings.ToLower(c)] = fields[i]
+			values[strings.ToLower(c)] = strings.TrimSpace(fields[i])
 		}
 
 		var host_name, port, host_id string
 		if licdExtended {
 			host_name, port, host_id = values["host_name"], values["port"], values["host_id"]
-		} else {
+		} else if len(values["description"]) > 0 {
 			matches := re.FindStringSubmatch(values["description"])
 			if len(matches) != 4 {
 				line, col := c.FieldPos(columns["Description"])
-				return fmt.Errorf("only found %d at line %d, column %d: %q", len(matches), line, col, source)
+				return fmt.Errorf("only found %d matches in 'description' column at line %d, column %d: %q", len(matches), line, col, source)
 			}
 			host_name, port, host_id = matches[1], matches[2], matches[3]
 		}
@@ -465,7 +472,7 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 		default:
 			// error
 			line, col := c.FieldPos(1)
-			log.Error().Msgf("ignoring unknown entry on line %d column %d in %s", line, col, source)
+			log.Error().Msgf("ignoring unknown entry %q on line %d column %d in %s", values["component"], line, col, source)
 		}
 
 		if err != nil {
