@@ -987,7 +987,7 @@ db:
       DROP TABLE IF EXISTS ${db.l1covered-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.l1covered-gateways.table} AS
       SELECT ${db.gateways.columns}
-        FROM ${db.servers.table}
+        FROM ${db.gateways.table}
         WHERE gateway IN (
           SELECT gateway FROM (
             SELECT gateway
@@ -1059,7 +1059,7 @@ db:
       DROP TABLE IF EXISTS ${db.l2covered-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.l2covered-gateways.table} AS
       SELECT ${db.gateways.columns}
-        FROM ${db.servers.table}
+        FROM ${db.gateways.table}
         WHERE gateway IN (
           SELECT gateway FROM (
             SELECT gateway
@@ -1125,7 +1125,7 @@ db:
       DROP TABLE IF EXISTS ${db.l3covered-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.l3covered-gateways.table} AS
       SELECT ${db.gateways.columns}
-        FROM ${db.servers.table}
+        FROM ${db.gateways.table}
        WHERE gateway IN (
           SELECT gateway FROM (
             SELECT gateway
@@ -1225,10 +1225,10 @@ db:
         HAVING count(*) = (SELECT count(*) FROM ${db.servers.table} p WHERE p.gateway = l3.gateway)
       )
       SELECT ${db.gateways.columns}
-        FROM ${db.servers.table}
+        FROM ${db.gateways.table}
         WHERE gateway IN l1 AND gateway IN l2 AND gateway IN l3
        GROUP BY gateway
-      HAVING count(*) = (SELECT count(*) FROM ${db.servers.table} p WHERE p.gateway = ${db.servers.table}.gateway);
+      HAVING count(*) = (SELECT count(*) FROM ${db.servers.table} p WHERE p.gateway = ${db.gateways.table}.gateway);
 
   uncovered-servers:
     table: uncovered_servers
