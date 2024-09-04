@@ -91,22 +91,13 @@ geneos set netprobe cloudapps1 -e SOME_CLIENT_ID=abcde -E SOME_CLIENT_SECRET
 }
 
 func Set(ct *geneos.Component, args, params []string) (err error) {
+	// set params only once
+	setCmdValues.Params = params
+
 	instance.Do(geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *instance.Response) {
 		resp = instance.NewResponse(i)
 
-		if len(params) == 0 {
-			resp.Err = geneos.ErrInvalidArgs
-			return
-		}
-
 		cf := i.Config()
-
-		p, ok := params[0].([]string)
-		if !ok {
-			panic("wrong type")
-		}
-
-		setCmdValues.Params = p
 
 		if resp.Err = instance.SetInstanceValues(i, setCmdValues, setCmdKeyfile); resp.Err != nil {
 			return
