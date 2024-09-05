@@ -2603,8 +2603,8 @@ reports:
 
   sources:
     name: Sources
-    group: Monitoring Coverage
-    columns: [ source, status, firstSeen, lastSeen, sourceType, path, valid, extendedFormat, gateways, probes, plugins, dynamicEntities ]
+    group: Monitored Estate
+    columns: [ source, status, firstSeen, lastSeen, sourceType, path, valid, extendedFormat, gateways, probes, samplers, dynamicEntities ]
     headlines: > #sql
       SELECT 'lastestUpdate', max(lastSeen)
         FROM ${db.sources.table}
@@ -2645,8 +2645,8 @@ reports:
              (SELECT CASE WHEN (SELECT count(os) FROM os WHERE source = src.source AND lastSeen = src.lastSeen) THEN 1 ELSE 0 END) as extendedFormat,
              (SELECT count(*) FROM ${db.gateways.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS gateways,
              (SELECT count(*) FROM ${db.probes.table}   WHERE source = src.source AND lastSeen = src.lastSeen) AS probes,
-             (SELECT count(*) FROM ${db.samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS plugins,
-             (SELECT count(*) FROM ${db.ca-samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS dynamicEntities
+             (SELECT total(number) FROM ${db.samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS samplers,
+             (SELECT total(number) FROM ${db.ca-samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS dynamicEntities
         FROM ${db.sources.table} src
        WHERE valid = 1
 
@@ -2673,18 +2673,73 @@ reports:
        GROUP BY gateway
 
   gateway-summary:
-    name: Gateway Summary
+    name: Gateways
     group: Monitored Estate
-    columns: [ gateway, gatewayHost, gatewayPort, version, source ]
+    columns: [ gateway, gatewayHost, gatewayPort, version, probes, samplers, dynamicEntities, source ]
     query: | #sql
-      SELECT gateway, COALESCE(gatewayHost, ''), COALESCE(gatewayPort, ''), COALESCE(version, ''), source
-        FROM ${db.gateways.active}
+      SELECT gateway,
+             COALESCE(gatewayHost, ''),
+             COALESCE(gatewayPort, ''),
+             COALESCE(version, ''),
+             (SELECT count(*) FROM ${db.probes.active} WHERE gateway = g.gateway),
+             (SELECT total(number) FROM ${db.samplers.active} WHERE gateway = g.gateway),
+             (SELECT total(number) FROM ${db.ca-samplers.active} WHERE gateway = g.gateway),
+             source
+        FROM ${db.gateways.active} g
+      ;
 
   server-summary:
-    name: Server Summary
+    name: Servers
     group: Monitored Estate
-    columns: [ server, os, gateways ]
+    enable-for-dataview: false
+    columns: [ server, os, probes, samplers, dynamicEntities, gateways, plugins ]
     query: > #sql
-      SELECT server, COALESCE(os, ''), group_concat(gateway, ',')
-        FROM ${db.servers.table}
+      SELECT server,
+             COALESCE(os, ''),
+             (SELECT count(*) FROM ${db.probes.active} WHERE server = s.server),
+             (SELECT total(number) FROM ${db.samplers.active} WHERE server = s.server),
+             (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = s.server),
+             group_concat(gateway, ',') gateways,
+             COALESCE((SELECT group_concat(plugin, ', ') FROM (
+                          SELECT distinct plugin FROM ${db.samplers.active} WHERE server = s.server
+                          UNION     
+                          SELECT distinct plugin FROM ${db.ca-samplers.active} WHERE server = s.server
+                          ORDER BY 1
+                     )), '') plugins
+        FROM ${db.servers.table} s
        GROUP BY server
+      ;
+
+  os-summary:
+    name: Operating Systems
+    group: Monitored Estate
+    columns: [ os, count ]
+    query: | #sql
+      SELECT os, count(*)
+        FROM ${db.servers.table}
+       WHERE os IS NOT NULL
+       GROUP BY os
+
+      UNION
+
+      SELECT 'Unknown', count(*)
+        FROM ${db.servers.table}
+       WHERE os IS NULL
+      ;
+
+  netprobe-summary:
+    name: Netprobes
+    group: Monitored Estate
+    columns: [ release, count ]
+    query: | #sql
+      SELECT version, count(*)
+        FROM ${db.probes.active}
+       WHERE version IS NOT NULL
+       GROUP BY version
+
+      UNION
+
+      SELECT 'Unknown', count(*)
+        FROM ${db.probes.active}
+       WHERE version IS NULL
+      ;
