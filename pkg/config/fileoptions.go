@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/spf13/viper"
 
 	"github.com/itrs-group/cordial/pkg/host"
 )
@@ -75,7 +76,6 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 	// init defaults
 	c = &fileOptions{
 		envdelimiter: "_",
-		extension:    defaultFileExtension,
 		remote:       host.Localhost,
 		configDirs:   []string{},
 		workingdir:   ".",
@@ -107,6 +107,19 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 		if err != nil {
 			c.userconfdir = ""
 			return
+		}
+	}
+
+	if c.extension == "" {
+		c.extension = defaultFileExtension
+
+		if ext := path.Ext(c.configFile); ext != "" {
+			for _, e := range viper.SupportedExts {
+				if ext == "."+e {
+					c.extension = e
+					break
+				}
+			}
 		}
 	}
 

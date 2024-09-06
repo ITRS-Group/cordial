@@ -120,7 +120,6 @@ func initConfig(cmd *cobra.Command) {
 		opts := []config.FileOptions{
 			config.SetAppName("geneos"),
 			config.SetConfigFile(cfgFile),
-			config.SetFileExtension("yaml"),
 			config.WithDefaults(defaults, "yaml"),
 			config.StopOnInternalDefaultsErrors(),
 			// config.WatchConfig(configReloaded),
