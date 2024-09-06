@@ -53,7 +53,7 @@ func init() {
 	decodeCmd.Flags().StringVarP(&decodeCmdExpandString, "expandable", "e", "", "The keyfile and ciphertext in expandable format (including '${...}')")
 	decodeCmd.Flags().VarP(&decodeCmdAESFILE, "keyfile", "k", "Path to keyfile")
 	decodeCmd.Flags().VarP(&decodeCmdPrevAESFILE, "previous", "v", "Path to previous keyfile")
-	decodeCmd.Flags().StringVarP(&decodeCmdPassword, "password", "p", "", "'Geneos formatted AES256 password")
+	decodeCmd.Flags().StringVarP(&decodeCmdPassword, "password", "p", "", "Geneos formatted AES256 password")
 	decodeCmd.Flags().StringVarP(&decodeCmdSource, "source", "s", "", "Alternative source for password")
 
 	decodeCmd.Flags().SortFlags = false
@@ -150,7 +150,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 			}
 			r, err := i.Host().Open(path)
 			if err != nil {
-				resp.Err = err
+				resp.Err = fmt.Errorf("%q: %w", path, err)
 				return
 			}
 			defer r.Close()
@@ -162,7 +162,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 			if err != nil {
 				return
 			}
-			resp.Completed = append(resp.Completed, fmt.Sprintf("%q", e))
+			resp.Completed = append(resp.Completed, fmt.Sprintf("decoded as %q", e))
 			return
 		}, ciphertext).Write(os.Stdout)
 		return
