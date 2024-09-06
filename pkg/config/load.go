@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"path/filepath"
 	"slices"
 
 	"github.com/spf13/viper"
@@ -281,19 +282,32 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 	return cf, nil
 }
 
-// Path returns the full path to the first regular file found
-// (potentially on a remote host if config.Remote() is used) that would
-// be opened by Load given the same options. If no file is found then
-// a path to the expected file in the first configured directory is
-// returned. This allows for a default value to be returned for new
-// files. If no directories are used then the plain filename is
-// returned.
+// Path returns the full path to the that would be opened by Load given
+// the same options.
+//
+// If the config.MustExist() option is used then configuration files are
+// tested for readability and the first matching path, base on other
+// options, is returned.
+//
+// If no file is found but internal default have been defined then the
+// string "internal defaults" is returned.
+//
+// If no internal defaults are defined then the string "none" is
+// returned (unless config.MustExist() is used, in which case an empty
+// string is returned).
 func Path(name string, options ...FileOptions) string {
 	opts := evalLoadOptions(name, options...)
 	r := opts.remote
 
 	if opts.configFile != "" {
-		return opts.configFile
+		if !opts.mustexist {
+			return opts.configFile
+		}
+
+		if f, err := r.Open(opts.configFile); err == nil {
+			f.Close()
+			return opts.configFile
+		}
 	}
 
 	confDirs := opts.configDirs
@@ -315,15 +329,27 @@ func Path(name string, options ...FileOptions) string {
 	if opts.extension != "" {
 		filename = fmt.Sprintf("%s.%s", filename, opts.extension)
 	}
+
 	if len(confDirs) > 0 {
 		for _, dir := range confDirs {
 			p := path.Join(dir, filename)
-			if st, err := r.Stat(p); err == nil && st.Mode().IsRegular() {
+			if f, err := r.Open(p); err == nil {
+				f.Close()
 				return p
 			}
 		}
-		return path.Join(confDirs[0], filename)
+		if !opts.mustexist {
+			return filepath.Join(confDirs[0], filename)
+		}
 	}
 
-	return filename
+	if opts.internalDefaults != nil {
+		return "internal defaults"
+	}
+
+	if opts.mustexist {
+		return ""
+	}
+
+	return "none"
 }
