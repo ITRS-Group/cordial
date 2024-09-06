@@ -30,10 +30,9 @@ import (
 
 	"gopkg.in/natefinch/lumberjack.v2"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-
-	"github.com/itrs-group/cordial/pkg/config"
 )
 
 type discardCloser struct {
@@ -89,6 +88,8 @@ func LogInit(prefix string, options ...LogOptions) {
 	case os.DevNull:
 		out = discardCloser{io.Discard}
 	default:
+		// if given a filename, use the default lumberjack but override
+		// the filename
 		if opts.lj == nil {
 			opts.lj = &lumberjack.Logger{}
 		}
@@ -138,12 +139,15 @@ func SetLogfile(logfile string) LogOptions {
 	}
 }
 
+// LumberJackOptions set the log writer to the configured lumberjack
+// settings but only if the lj.Filename field is not empty, otherwise it
+// is ignored.
 func LumberjackOptions(lj *lumberjack.Logger) LogOptions {
 	return func(lo *logOpts) {
 		if lj.Filename != "" {
 			lj.Filename = config.ExpandHome(lj.Filename)
+			lo.lj = lj
 		}
-		lo.lj = lj
 	}
 }
 
