@@ -28,49 +28,14 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/glamour"
-	"golang.org/x/term"
-
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // VERSION is a semi-global string variable
 //
 //go:embed VERSION
 var VERSION string
-
-func renderMD(in string) (out string) {
-	var width int = 80
-	var err error
-
-	style := glamour.WithAutoStyle()
-	if !term.IsTerminal(int(os.Stdout.Fd())) {
-		style = glamour.WithStandardStyle("ascii")
-	} else {
-		width, _, err = term.GetSize(int(os.Stdout.Fd()))
-		if err != nil {
-			width = 80
-		}
-		if width > 132 {
-			width = 132
-		}
-	}
-
-	tr, err := glamour.NewTermRenderer(
-		style,
-		glamour.WithStylesFromJSONBytes([]byte(`{ "document": { "margin": 2 } }`)),
-		glamour.WithWordWrap(width-4),
-		glamour.WithEmoji(),
-	)
-	if err != nil {
-		return in
-	}
-	out, err = tr.Render(in)
-	if err != nil {
-		return in
-	}
-	out = html.UnescapeString(out)
-	return
-}
 
 // RenderHelpAsMD updated the given command to use glamour to render the
 // command's Long description as markdown formatted text to an ANSI
@@ -115,5 +80,39 @@ func ExecutableName(version ...string) (execname string) {
 	} else {
 		execname = strings.TrimSuffix(execname, "-"+VERSION)
 	}
+	return
+}
+
+func renderMD(in string) (out string) {
+	var width int = 80
+	var err error
+
+	style := glamour.WithAutoStyle()
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		style = glamour.WithStandardStyle("ascii")
+	} else {
+		width, _, err = term.GetSize(int(os.Stdout.Fd()))
+		if err != nil {
+			width = 80
+		}
+		if width > 132 {
+			width = 132
+		}
+	}
+
+	tr, err := glamour.NewTermRenderer(
+		style,
+		glamour.WithStylesFromJSONBytes([]byte(`{ "document": { "margin": 2 } }`)),
+		glamour.WithWordWrap(width-4),
+		glamour.WithEmoji(),
+	)
+	if err != nil {
+		return in
+	}
+	out, err = tr.Render(in)
+	if err != nil {
+		return in
+	}
+	out = html.UnescapeString(out)
 	return
 }
