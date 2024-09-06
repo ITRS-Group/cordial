@@ -77,6 +77,7 @@ func initConfig() {
 	cf, err = config.Load(execname,
 		config.SetAppName("geneos"),
 		config.UseGlobal(),
+		config.SetFileExtension("yaml"),
 		config.SetConfigFile(conffile))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to load configuration")

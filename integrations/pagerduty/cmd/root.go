@@ -110,6 +110,7 @@ func initConfig() {
 
 	cf, err = config.Load(execname,
 		config.SetAppName("geneos"),
+		config.SetFileExtension("yaml"),
 		config.WithDefaults(defaults, "yaml"),
 		config.SetConfigFile(configFile))
 	if err != nil {

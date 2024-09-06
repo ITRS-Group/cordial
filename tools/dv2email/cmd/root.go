@@ -91,6 +91,7 @@ func initConfig() {
 		config.SetAppName("geneos"),
 		config.SetConfigFile(cfgFile),
 		config.MergeSettings(),
+		config.SetFileExtension("yaml"),
 		config.WithDefaults(defaults, "yaml"),
 	}
 
