@@ -248,10 +248,10 @@ func SetConfigReader(in io.Reader) FileOptions {
 	}
 }
 
-// SetFileExtension sets the file extension and, by implication, the
-// format for the configuration. If the type is not set and the
-// configuration file loaded has an extension then that is used. This
-// applies to both defaults and main configuration files (but not
+// SetFileExtension sets the expected file extension and, by
+// implication, the format for the configuration. If this is not set and
+// the configuration file loaded has an extension then that is used.
+// This applies to both defaults and main configuration files (but not
 // embedded defaults). The default is "json". Any leading "." is
 // ignored.
 func SetFileExtension(extension string) FileOptions {
