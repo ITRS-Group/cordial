@@ -65,7 +65,9 @@ var DefaultUserKeyfile = config.KeyFile(
 	config.Path("keyfile",
 		config.SetAppName(Execname),
 		config.SetFileExtension("aes"),
-		config.IgnoreWorkingDir()),
+		config.IgnoreWorkingDir(),
+		config.MustExist(),
+	),
 )
 
 var GeneosUnsetError = errors.New(strings.ReplaceAll(`Geneos location not set.

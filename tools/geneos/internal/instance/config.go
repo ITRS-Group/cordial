@@ -167,7 +167,6 @@ func LoadConfig(i geneos.Instance) (err error) {
 		config.Host(h),
 		config.FromDir(home),
 		config.UseDefaults(false),
-		config.MustExist(),
 	)
 
 	if err != nil {

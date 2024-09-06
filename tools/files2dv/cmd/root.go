@@ -147,7 +147,7 @@ func initConfig() {
 
 	cf, err = config.Load(execname, opts...)
 	if err != nil {
-		log.Fatal().Err(err).Msgf("loading from file %s", config.Path(execname, opts...))
+		log.Fatal().Err(err).Msgf("loading from %s", config.Path(execname, opts...))
 	}
 }
 

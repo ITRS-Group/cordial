@@ -129,10 +129,12 @@ func initConfig(cmd *cobra.Command) {
 
 		cf, err = config.Load(execname, opts...)
 		if err != nil {
-			log.Fatal().Err(err).Msgf("loading from file %s", config.Path(execname, opts...))
+			log.Fatal().Err(err).Msgf("loading from %s", config.Path(execname, opts...))
 		}
 
-		deferredlog = fmt.Sprintf("final configuration loaded from %s", config.Path(execname, opts...))
+		// use MustExists() to check for actual files
+		opts = append(opts, config.MustExist())
+		deferredlog = fmt.Sprintf("configuration loaded from %s", config.Path(execname, opts...))
 	}
 
 	// check if logfile is set on the command line, which overrides config
