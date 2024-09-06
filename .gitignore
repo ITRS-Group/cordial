@@ -59,6 +59,7 @@ tools/gateway-reporter/validate-setup
 tools/geneos/geneos
 tools/geneos/utils/docs/docs
 tools/sso-diag/sso-diag
+tools/san-config/san-config
 
 utils/docs/docs
 *.xml_*.history

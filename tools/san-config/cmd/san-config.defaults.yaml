@@ -1,0 +1,360 @@
+
+# server settings
+#
+# NOTE: settings in the `server` section are NOT automatically updated
+# on configuration file change. If you change any settings below you
+# must restart the program.
+server:
+  host: 0.0.0.0
+  port: 6543
+
+  # config-path is the URL path to the configuration endpoint. The
+  # endpoint requires a hostname and an optional component type. The two
+  # formats supported are:
+  #
+  #   `/config-path/:hostname`
+  #   `/config-path/:hostname/:type`
+  #
+  # Authentication is not possible (for Self-Announcing Netprobes) and
+  # so is not supported
+  config-path: /netprobe/config
+
+  # connections-path, if set, is an endpoint to return a list of
+  # available gateways formatted as an Active Console remote connection
+  # file.
+  #
+  # Authentication is not possible from the Active Console and so is not
+  # supported
+  connections-path: /connections
+
+  tls:
+    # if enable is true then there must be a certificate and a private
+    # key configured below. 
+    enable: false
+
+    # both the `certificate` and `privatekey` can be either a path to
+    # files or a PEM encoded string. Using `${file:path}` to derive the
+    # contents of `path` is the same as using `path` directly. A raw
+    # file path can use a "~/" prefix to indicate relative to the user's
+    # home directory.
+    #
+    # By default no certificate or privatekey is set. Examples of
+    # supported formats below.
+
+    # YAML multiline PEM:
+    #
+    # certificate: |
+    #   -----BEGIN CERTIFICATE-----
+    #   MIIEqDCCA5CgAwIBAgISAwIMkuxlOeXFOMdGnq+lVS8FMA0GCSqGSIb3DQEBCwUA
+    #   ...
+    #   LLflvjYXzEuUz4WrZnuJk+K4YuA7l/CNwNGwPToG9O5kQ2kqsrfgAsl5RhI=
+    #   -----END CERTIFICATE-----
+    
+    # Direct file path
+    #
+    # certificate: ./cert.pem
+
+    # Remote copy
+    #
+    # certificate: ${https://certstore.example.com/path/to/cert.pem}
+
+    # to use an expandable encoded private key (the example below is useless without the aes file used) run
+    #
+    #    `geneos aes password -p 'MULTILINEKEY'`
+    #
+    # you cannot paste a multiline PEM file to a 'Password:' prompt.
+    #
+    # Note: YAML multiline formats will not work as expected as each newline is replaced by a space and these embedded spaces will not be parsed by the Expand functions.
+    #
+    # privatekey: ${enc:~/.config/geneos/keyfile.aes:+encs+4D5F698E47A694B031E1B96BE4762B5671A6940D48B664C3CE647117468A0160E34A53AB4AFFD1FE3D0F7A8E8857B1A9CEE0E9CA49028B6559D0CF8DBEB31A97BEE125B15DD6B3D335CF22AFC8BB773700F73B935A8EB8D579C7A617678C8F60DEF96CAA23ADA21515FC95A869C070561A3B050D4864F19C7AEB40DBFE1D1C9E5746A40CAB3242521A0DC8EF02C0E67472267BF0EFCE3D9516D8853586AACE7613317E3FA7F7464E811833C4117CB2D3855CEB4DF7BF1C066DCEFFA6F62B4B080E571E530FE888460B79E17719F65720048B246E3CCD82C550EB679D8128A1BE53E0424EF02CD5E01E9BC51BD9E6D02F38F0503DAFE4FDBE7CA5628991E8FB1C}
+
+  # `namespace-uuid` is a random UUID used as a namespace for all
+  # subsequent UUID generation. It can be updated with the output of the
+  # Linux `uuidgen` command, but once set should not change for an
+  # installation. If running multiple instances of the program for
+  # resilience or for load-balancing then this value MUST be the same
+  # across all instances (otherwise Gateway selection will continually
+  # change, amongst other things)
+  namespace-uuid: c2d9757c-e274-401d-a9b0-0a4a7d65d4b1
+
+  # logging settings
+  logs:
+    # path to log file when not passed on command line. The default, if
+    # not set on command line or here, is to log to STDERR (useful for
+    # containers), but this is closed if running as a daemon
+    path: "" # default (empty string) is STDERR and no rotation (useful for containers)
+
+    # size (in MB) before rotating log file
+    size: 100
+
+    # maximum number of backup files
+    backups: 10
+
+    # maximum age for backup files
+    age: 7
+
+    # should backup files be compress with gzip?
+    compress: true
+
+    # should existing logfile be rotated on start-up?
+    rotate-at-start: false
+
+# The geneos section defines Geneos specific values, both for Gateways and for SANs
+geneos:
+  # check-interval is the period between Gateway liveness checks. It is
+  # the time that the go routine sleeps between completed checks and so
+  # the liveness checks will happen between `check-interval` and
+  # `check-interval` + `timeout` times apart.
+  check-interval: 60s
+
+  # the timeout for the Gateway liveness check before marking a Gateway
+  # as unavailable
+  timeout: 10s
+
+  # gateways in a list of Gateway *pairs* that are checked for
+  # availability and used as a pool for SAN connections
+  gateways:
+    # Each Gateway has a name (which defaults to the primary host and
+    # port if not set), the primary host:port, and optional standby
+    # host:port and an optional secure flag.
+    #
+    # The details can be specified in either YAML format, as in the examples below
+    # - name: example1
+    #   primary: hostA:7038
+    #   standby: hostB:7038
+    #   secure: true
+    # - { name: example2, primary: hostC:7100, standby: hostD:7100, secure: true }
+
+  # When there are no available gateways or the request lookup returns
+  # none, use this Gateway set.
+  #
+  # these are normally used along with components.unknown for probes
+  # that cannot be found in the inventory
+  #
+  # The defined default is intended to result in errors being logged in the SAN
+  fallback-gateway:
+    name: Fallback
+    primary: no-gateway-defined.example.com
+
+  # The definition can also be in the YAML single line object format, like this:
+  # fallback-gateway: { name: Fallback, primary: thinkpad:8100, standby: ubuntu:8100, secure: true }
+  
+  # configuration for SAN set-up
+  sans:
+    # The `grouping` regular expression is used to direct requests to
+    # same Gateway sets grouped by the first capture group. If unset or
+    # unmatched then the full hostname is used to select gateways.
+    #
+    # This example removes an "a" or "b" suffix from the hostname:
+    # grouping: "^(.*?)[ab]?$"
+
+    # These settings are used in the header of the SAN XML configuration
+    retry-interval: 60s
+    reverse-connections: true
+    xmlns: http://www.w3.org/2001/XMLSchema-instance
+    xsi: http://schema.itrsgroup.com/GA5.12.0-220125/netprobe.xsd
+
+# inventory section - where to get hostname to host type mappings
+inventory:
+  # How often to fetch inventories - default 5 minutes
+  check-interval: 300s
+
+  # If check-modified is true then a check is done if the inventory has
+  # changed. For local files this is done by comparing the size and last
+  # modified time and for remote inventories the HTTP requests has the
+  # If-Modified-Since header set and the resulting status code checked.
+  #
+  # NOTE: This does not currently work for gitlab sources
+  check-modified: false
+
+  # The inventories can be in only one formats currently: `yaml`.
+  type: yaml
+  
+  # `mappings` are used for configuration expansion in both inventory
+  # and component sections. Note that if you define *any* mapping in
+  # your configuration then none of the defaults below will be visible
+  # as it is the `inventory.mappings` key that is accessed, not specific
+  # subkeys.
+  #
+  # Additional mappings for `hostname` and `hosttype` are always defined
+  # based on the request and cannot be overridden in the configuration
+  # files. The dynamic mapping of `index` is set to each value in the
+  # `indices` list for each iteration of inventory access.
+  mappings:
+    company: ITRS
+    environment: DEV
+    region: EMEA
+
+  # When reading inventories the program iterates over the `indices`
+  # list, setting the `index` mapping to the value from the list.
+  indices: [ main ]
+
+  # The inventory source. `http://` and `https://` URLs optionally use
+  # authentication below. A file path can be a `file://` url or an
+  # absolute or relative path, including the use of a `~/` prefix for
+  # home directory.
+  #
+  # The path is expanded and the mappings above are available as values.
+  # Use ${env:NAME} for environment variables, and more.
+  source: inventory.yaml
+  # source: https://gitlab.com/api/v4/projects/123456/repository/files/examples%2F${site}-${environment}-${index}.json/raw?ref=${index}
+  # source: ./example-files/xml_and_json_files/${site}-${environment}-${index}.json
+
+  # the values below are only for remote inventories
+
+  # If set then save a copy of a remote inventory to the local path.
+  # This tries to atomically ovewrites any existing file using a rename
+  # and only writes the file if the inventory load is successful.
+  # Intermediate directories are created as required, permissions
+  # permitting. Any errors result in the cache write being script and an
+  # error logged.
+
+  # cache: ./cache-files/${site}-${environment}-${index}.json
+
+  # the timeout for fetching a remote inventory
+  timeeout: 10s
+
+  # For https:// URLs should the server certificates be verified or
+  # ignored. Change to true if remote server doesn't have publicly
+  # verifiable certificates (e.g. self-signed)
+  insecure: false
+
+  # optional authentication, currently limited to setting a specific
+  # header or Basic authentication using a username and password.
+  authentication:
+
+    # type: header
+    # header: PRIVATE-TOKEN
+    # value: ${enc:~/.config/geneos/keyfile.aes:+encs+8F8F1FCACB5EBED9FE99E76291F88F38349120EC94EA9AA8077F0D0D1B11791B}
+
+    # type: basic
+    # user: xyz
+    # pass: abc
+
+# component type definitions
+#
+# There are two reserved component names: `defaults` and `unknown`.
+# Any other name can be used as a host type in the inventory. Component
+# types names are case-insensitive
+components:
+
+  # No gloabl defaults are defined, this just ensures there is an empty
+  # key in the configuration. Once defined, defaults cannot be undefined
+  # only overridden. (Note for future: perhaps use empty value to remove
+  # setting further down)
+  defaults:
+
+    # The three types of defaults and their configuration format are
+    # below:
+
+    # attributes are simple name/value pairs are are applies to all
+    # Managed Entities configured for the SAN. If defined as a YAML
+    # object then any expansion brackets must be quoted to avoid
+    # conflict with the YAML closing bracket, as below.
+
+    # attributes:
+    #   - name: Company
+    #     value: ${company}
+    #   - { name: Hostname, value: "${hostname}"}
+
+    # types are a list of Type names
+
+    # types: [ Type1, "Type with space" ]
+
+    # variables can be defined for a limited set of Geneos variable
+    # types (with aliases to avoid common errors):
+    #
+    #   * integer (alias int)
+    #   * string
+    #   * stringList (all lowercase "stringlist" also accepted)
+    #   * double (alias float)
+    #   * boolean (alias bool)
+    #   * regex (alias regexp)
+    #
+    # Both string and stringList values are passed through expansion and
+    # can use any of the mappings from above as well at all other
+    # standard options. All other values are used literally. The boolean
+    # type supports all the true/false values supported by Go's
+    # [strconv.ParseBool] function.
+    #
+    # Regular expressions support both plain strings, e.g. "match.*this"
+    # (remember to quote strings using special character in YAML) and
+    # also "/match.*this/FLAGS" to allow for "i" (case-insensitive) and
+    # "s" (single line, dot matches newlines) flags. Note the mandatory
+    # closing "/"
+    #
+    # variables are made up of a name, type and value. With the
+    # exception of "stringList" all values should be expressed as their
+    # YAML equivalents. A "stringList" vaue should be a YAML list of
+    # strings.
+
+    # variables:
+    #   - name: ExampleInteger
+    #     type: integer
+    #     value: 23
+    #   - { name: ExampleDouble, type: double, value: 1.2345 }
+    #   - name: ExampleStringList
+    #     type: stringList
+    #     value: [ item1, item2, "item with space" ]
+
+  # the `unknown` component is where requests for hosts not found in the
+  # inventory are directed. The Gateways selects are in the
+  # `geneos.fallback-gateway` configuration key
+  unknown:
+
+    # probe-name is set in the SAN XML <probeName> tag
+    probe-name: ${hostname}
+
+    # entities is a list of Managed Entities in the resulting XML
+    entities:
+
+      # Each entity must have a name
+      - name: "${hostname} unknown"
+
+        # attributes, types and variables are configured the same way as
+        # for the global defaults above
+        attributes:
+          - name: Component
+            value: Unknown
+
+          # ${uuid:abcd} is a special expansion function and must be
+          # defined inside each entity and cannot use defaults. The
+          # right hand side is the name of a configuration item in the
+          # entity definition, in this case the `name` from above. To
+          # create a more complex initial value you can add a new item
+          # to the entity and refer to that, e.g.
+          #
+          # entities:
+          #   - name: "${hostname} app1"
+          #     uuidsource: "${hostname}-${region}-${environment}"
+          #     variables:
+          #       - { name: UUID, value: "${uuid:uuidsource}" }
+          #
+          # The result is a Type 5 (SHA1) UUID that is created using the
+          # `namespace-uuid` as the NS component.
+          - name: UUID
+            value: ${uuid:name}
+
+  # `windows` contains some sensible defaults for a Windows host type
+  windows:
+    probe-name: "${hostname}"
+    entities:
+      - name: ${hostname}
+        types: [ "Windows Defaults", "Infrastructure Defaults" ]
+        attributes:
+          - name: Platform
+            value: Hardware
+          - name: Component
+            value: Windows
+
+  # `linux` contains some sensible defaults for a Linux host type
+  linux:
+    probe-name: "${hostname}"
+    entities:
+      - name: ${hostname}
+        types: [ "Linux Defaults", "Infrastructure Defaults" ]
+        attributes:
+          - name: Platform
+            value: Hardware
+          - name: Component
+            value: Linux
