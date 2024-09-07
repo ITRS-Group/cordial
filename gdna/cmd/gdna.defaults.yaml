@@ -345,6 +345,13 @@ db:
                 ELSE status
                 END;
 
+    # get a list of invalid files for further checking and status updates
+    invalid-files: | #sql
+      SELECT path FROM ${db.sources.table} WHERE valid = 0 AND sourceType = 'file';
+
+    update-file-status: | #sql
+      UPDATE ${db.sources.table} SET status = @status WHERE sourceType = 'file' AND path = @path;
+
   # `reporting-updates` stores the time of the latest time from the last
   # fetch run. It cannot be a temporary table as it stores historical
   # data
