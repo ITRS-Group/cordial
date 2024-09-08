@@ -1,15 +1,69 @@
 # Change Log
 
+## Version v1.17.0
+
+> [!NOTE]
+> **Released 2024-09-08**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+### v1.17.0 Changes
+
+* `tools/geneos`
+
+  * Add a `minimal` Netprobe flavour that can be added either as it's own component type or, more commonly, as a flavour of a normal Netprobe, e.g. `geneos add netprobe minimal:probeName` - this extends the way you install a Fix Analyser probe as a SAN, e.g. `geneos add san fa2:myFixSAN`
+  * Add a `use-chain` parameter for all instances which defaults to `true`. Set this to `false` using `geneos set ... use-chain=false` to disable certificate validation using a configure chain file.
+
+* `gdna`
+
+  * Add support for GA7.0.0 updates to `licd` reports and additional details from corresponding Gateways. This includes OS and component version information as well as enriched data for dynamic entities.
+  * Add schema updates for the new table columns. Rollback should work - untested at time of writing - as no existing columns have changes, just new ones added.
+  * Add extra reports using the above data to a `Monitored Estate` groups, moving `Sources` to the same group.
+  * Add new headlines for Gateway summary and detail Dataview and reports to show host, port and version - when available.
+  * Add new columns to `Missing Coverage` and Gateway summary and details to expose new data when available and rename existing columns (not used in dashboards) to better align with each other.
+  * Update `Sources` Dataview and report to report a status of `STALE` when a file is invalid. A remote source is always either up-to-date or inaccessible, which is a different status.
+
+* `tools/san-config`
+
+  * Initial commit of a SAN remote configuration file server that allows dynamic building of SAN XML files using an YAML based inventory as well as autodetection of live Gateways from a preconfigured list.
+  * This tool is not yet in the main build as further changes and documentation are required for it to be more useful.  
+
+### v1.17.0 Fixes
+
+* `tools/geneos`
+
+  * `geneos package` subsystem gets a wide review and a number of changes and fixes:
+
+    * `uninstall` - change `-f` to `-F` for short form `--force` for consistency
+    * `update` no longer supports the `--install` flag
+    * `install` - local files now ignore the `--version` flag for file (non-directory) paths. For systems with a platform type (el8/el9) only install that platform type of non-platform specific archives. This allows components like web dashboard servers, which have no platform specific releases, to be installed.
+    * `install` - many other changes around the handling of local files to improve what gets installed
+    * Fix instance iteration so that only affected instances are updated and so on. 
+
+  * Fix `migrate` and `set` and `config set` to actually work with changes to parseargs() function.
+
+  * When adding components with key file support use the `${config:home}` value to pin key-file to working directories. Also, when saving a component configuration, such as during `move` or `copy` update the key-file and previous key-file paths to use `${config:home}` when source path matches the instance home directory. 
+
+* `gdna`
+
+  * Fix misuse of source tables when building active gateway table (no actual data change as the servers table has the same data)
+
+* `pkg/config`
+
+  * Update `Path()` to better reflect the likely sources used by `Load()`. Pass `config.MustExist()` as an option to `config.Path()` to get a result based on actual files rather than the likely file to be used.
+
+* `integrations/servicenow`
+
+  * Fix loading of configuration file in use of `config.Load()` options (explicitly use YAML)
+
+---
+
 ## Version v1.16.2
 
 > [!NOTE]
 > **Released 2024-08-08**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
-
-> [!IMPORTANT]
->
-> Release v1.16.2 replaces v1.16.1 which still included an incorrect GDNA dashboard
 
 ### v1.16.2 Fixes
 

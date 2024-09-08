@@ -2,7 +2,7 @@
 
 > [!NOTE]
 >
-> This is **Version v1.16.2** - Released 2024-08-08 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
+> This is **Version v1.17.0** - Released 2024-09-08 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 
 ## Tools and Utilities
 
@@ -14,6 +14,7 @@
 | [`files2dv`](tools/files2dv/README.md)                 | Scan directories and files for information (not an FKM substitute!) |
 | [`gateway-reporter`](tools/gateway-reporter/README.md) | Generate monitoring coverage reports from setup files               |
 | [`libemail`](libraries/libemail/README.md)             | Drop-In Updated Replacement for `libemail`                          |
+| [`san-config`](tools/san-config/README.md)             | Dynamic SAN configuration file server (not yet fully integrated)            |                                                                     
 
 ## Integrations
 
