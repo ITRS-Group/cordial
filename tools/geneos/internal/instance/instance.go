@@ -337,13 +337,13 @@ func InstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 //
 // Patterns that have no globbing special characters are returned as-is
 // and the caller is expected to validate them.
-func Match(h *geneos.Host, ct *geneos.Component, patterns ...string) (names []string) {
+func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, patterns ...string) (names []string) {
 	for _, pattern := range patterns {
 		if pattern == "all" {
 			pattern = "*"
 		}
 		// a host only name implies a wildcard
-		if strings.HasPrefix(pattern, "@") {
+		if !keepHosts && strings.HasPrefix(pattern, "@") {
 			pattern = "*" + pattern
 		}
 		// check for glob chars
@@ -364,14 +364,16 @@ func Match(h *geneos.Host, ct *geneos.Component, patterns ...string) (names []st
 		}
 	}
 
-	// sort and compact if the number of patterns differs from the
-	// number of resulting names (else leave input and output in the
-	// same order, even if single patterns expand to single instance
-	// names)
-	if len(names) != len(patterns) {
-		slices.Sort(names)
-		names = slices.Compact(names)
+	// remove duplicates in the slice of names without changing order
+	newNames := []string{}
+	mapNames := map[string]bool{}
+	for _, n := range names {
+		if _, ok := mapNames[n]; !ok {
+			mapNames[n] = true
+			newNames = append(newNames, n)
+		}
 	}
+	names = newNames
 	return
 }
 

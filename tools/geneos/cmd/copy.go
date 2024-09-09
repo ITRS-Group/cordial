@@ -48,6 +48,7 @@ var copyCmd = &cobra.Command{
 		CmdGlobal:        "false",
 		CmdRequireHome:   "true",
 		CmdWildcardNames: "true",
+		CmdKeepHosts:     "true",
 	},
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {

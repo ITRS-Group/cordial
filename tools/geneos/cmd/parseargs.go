@@ -20,6 +20,7 @@ package cmd
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -30,9 +31,10 @@ import (
 
 // Command annotation types for command behaviour
 //
-// Annotations should be read-only. Currently they are not completely.
+// Annotations must be read-only.
 const (
 	CmdWildcardNames = "wildcard"     // "true" or "false" - pass all names through a path.Match style lookup
+	CmdKeepHosts     = "hosts"        // do not expand "@host", for command like copy/move
 	CmdReplacedBy    = "replacedby"   // deprecated command alias
 	CmdRequireHome   = "needshomedir" // "true" or "false"
 	CmdGlobal        = "global"       // "true" if an empty list of instances should mean all instances.
@@ -90,6 +92,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 
 	cmdGlobal := c.Annotations[CmdGlobal]
 	cmdWildcardNames := c.Annotations[CmdWildcardNames]
+	cmdKeepHosts := c.Annotations[CmdKeepHosts]
 
 	cd := cmddata(c)
 	if cd == nil {
@@ -137,6 +140,10 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	// glob patterns) put then rest into params
 	var names, params []string
 	for i, a := range args {
+		if cmdKeepHosts == "true" && strings.HasPrefix(a, "@") {
+			names = append(names, a)
+			continue
+		}
 		if !validNameRE.MatchString(a) {
 			log.Debug().Msgf("not a valid instance name, moving %q to parameters", a)
 			params = args[i:]
@@ -147,7 +154,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 
 	// names is now a list of instance names or patterns, process and remove dups
 	if cmdWildcardNames == "true" {
-		names = instance.Match(h, ct, names...)
+		names = instance.Match(h, ct, cmdKeepHosts == "true", names...)
 	}
 
 	cd.Lock()
