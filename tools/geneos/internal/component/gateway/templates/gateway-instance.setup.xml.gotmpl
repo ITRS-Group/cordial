@@ -16,6 +16,11 @@
 			<secure>
 				<listenPort>{{.port}}</listenPort>
 			</secure>
+			{{- if .insecureport}}
+			<insecure>
+				<listenPort>{{.insecureport}}</listenPort>
+			</insecure>
+			{{- end}}
 			{{- end}}
 		{{- else}}
 			<insecure>
