@@ -37,10 +37,10 @@ func init() {
 var templatesCmdDescription string
 
 var templatesCmd = &cobra.Command{
-	Use:          "template",
+	Use:          "templates",
 	Short:        "Initialise or overwrite templates",
 	Long:         templatesCmdDescription,
-	Aliases:      []string{"templates"},
+	Aliases:      []string{"template"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		cmd.CmdGlobal:      "false",
