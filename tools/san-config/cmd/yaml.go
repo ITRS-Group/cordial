@@ -23,7 +23,6 @@ import (
 	"io"
 	"maps"
 	"net/http"
-	"os"
 	"slices"
 	"strings"
 	"time"
@@ -69,11 +68,11 @@ func ParseInventoryYAML(cf *config.Config, cacheFile string, in io.Reader) (inv 
 	return
 }
 
-// LoadHostsYAML loads all the inventories referenced in the YAML
+// ReadHostsYAML read all the inventories referenced in the YAML
 // configuration and returns a consolidated map of hostname to mappings.
 // If the slice "loop" exists it runs for each value, setting the
 // mapping "index" to the loop value.
-func LoadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error) {
+func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error) {
 	hosts = make(map[string]HostMappings)
 
 	timeout := cf.GetDuration("inventory.timeout")
@@ -142,15 +141,8 @@ func LoadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 			source = strings.TrimPrefix(source, "file:")
 			fallthrough
 		default:
-			if strings.HasPrefix(source, "~/") {
-				home, err := os.UserHomeDir()
-				if err != nil {
-					continue
-				}
-				inv, err = ReadInventory(cf, strings.Replace(source, "~/", home+"/", 1))
-			} else {
-				inv, err = ReadInventory(cf, source)
-			}
+			source = config.ExpandHome(source)
+			inv, err = ReadInventory(cf, source)
 		}
 
 		if err != nil {

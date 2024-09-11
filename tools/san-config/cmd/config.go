@@ -18,11 +18,10 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
 	"maps"
 	"reflect"
 	"regexp"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -35,73 +34,42 @@ import (
 )
 
 // NetprobeConfig returns a netprobe.Netprobe struct for output via XML
-// marshalling. finalHosttype and finalGateways are for logging in the
-// caller.
+// marshalling. The returned `finalComponentType` is for logging in the
+// caller for those cases where the type changes from the requested
+// one..
 //
 // If hostname is not found in hosts then return the unknown component
-// settings and the fallback gateways
+// settings and the fallback gateway(s)
 //
 // If no gateways are available then do the same as above for hardware
 // probes - not sure about apps at this stage
-func (cs *ConfigServer) NetprobeConfig(hostname string, hosttypeOverride string) (np *netprobe.Netprobe, finalHosttype string, finalGateways []string) {
-	var gatewayName string
-	var gateway GatewaySet
-
+func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string) (np *netprobe.Netprobe, finalComponentType string) {
+	cs.RLock()
 	conf := cs.conf
 	hostmap := cs.hosts
-	gateways := cs.gateways
+	cs.RUnlock()
 
 	// build `unknown` mappings table as default, use inventory.mappings
 	mappings := conf.GetStringMapString("inventory.mappings")
 	mappings["hostname"] = hostname
 	mappings["hosttype"] = "unknown"
 
-	gatewayName = conf.GetString("geneos.fallback-gateway.name")
-	if gatewayName == "" {
-		gatewayName = conf.GetString("geneos.fallback-gateway.primary")
-		if gatewayName == "" {
-			log.Error().Msg("fallback gateway not configured correctly")
-			return
-		}
-	}
-	gateway = GatewayDetails(gatewayName, []map[string]string{
-		conf.GetStringMapString("geneos.fallback-gateway"),
-	})
-
-	// extract the part of the hostname used for grouping, default to hostname
-	grouping := hostname
-	if g := conf.GetString("geneos.sans.grouping"); g != "" {
-		if r, err := regexp.Compile(g); err != nil {
-			log.Error().Err(err).Msg("ignoring grouping")
-		} else {
-			if m := r.FindStringSubmatch(hostname); len(m) > 0 {
-				grouping = m[1]
-			} else {
-				log.Warn().Msgf("grouping for %s did not match, using full hostname", hostname)
-			}
-		}
-	}
-
 	_, hostmapOK := hostmap[hostname]
 
-	if hosttypeOverride != "" {
-		if conf.IsSet("components." + hosttypeOverride) {
+	if componentOverride != "" {
+		if conf.IsSet("components." + componentOverride) {
 			if hostmapOK {
 				mappings = maps.Clone(hostmap[hostname])
 			}
-			mappings["hosttype"] = hosttypeOverride
-			gatewayName = SelectGateway(grouping, gateways)
-			gateway = GatewayDetails(gatewayName, conf.GetSliceStringMapString("geneos.gateways"))
+			mappings["hosttype"] = componentOverride
 		}
 	} else if hostmapOK {
 		mappings = maps.Clone(hostmap[hostname])
-		gatewayName = SelectGateway(grouping, gateways)
-		gateway = GatewayDetails(gatewayName, conf.GetSliceStringMapString("geneos.gateways"))
 	}
 
-	firstHosttype := mappings["hosttype"]
-	component := conf.Sub("components." + mappings["hosttype"])
-	// support aliases like symlinks, limit the number of levels
+	initialComponentType := mappings["hosttype"]
+	component := conf.Sub(config.Join("components", mappings["hosttype"]))
+	// support aliases much like symlinks, limiting the number of levels
 	var i int
 	for i = 0; i < 10; i++ {
 		if !component.IsSet("alias") {
@@ -112,19 +80,19 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, hosttypeOverride string)
 		component = conf.Sub("components." + mappings["hosttype"])
 	}
 	if i == 10 {
-		log.Warn().Msgf("component alias loop for %s, skipping", firstHosttype)
+		log.Warn().Msgf("component alias loop for %s, skipping", initialComponentType)
 		return
 	}
-	finalHosttype = mappings["hosttype"]
+	finalComponentType = mappings["hosttype"]
 
+	// a SAN can have multiple Entities, so first build some default
+	// sets of attributes, types and variables to use later on
 	globalAttrs := map[string]string{}
 	for _, a := range conf.GetSliceStringMapString("components.defaults.attributes", config.LookupTable(mappings)) {
 		globalAttrs[a["name"]] = a["value"]
 	}
 	globalTypes := conf.GetStringSlice("components.defaults.types", config.LookupTable(mappings))
 	globalVars := getVars(conf, "components.defaults.variables", config.LookupTable(mappings))
-
-	probe := component.GetString("probe-name", config.LookupTable(mappings))
 
 	np = &netprobe.Netprobe{
 		Compatibility: 1,
@@ -134,13 +102,14 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, hosttypeOverride string)
 			Enabled:                  true,
 			RetryInterval:            int(conf.GetDuration("geneos.sans.retry-interval").Seconds()),
 			RequireReverseConnection: conf.GetBool("geneos.sans.reverse-connection"),
-			ProbeName:                probe,
+			ProbeName:                component.GetString("probe-name", config.LookupTable(mappings)),
+			Gateways:                 cs.Gateways(hostname),
 		},
 	}
 
 	entities := component.Get("entities")
 	if entities == nil {
-		log.Error().Msgf("skipping %s: entities not defined for component type %s", hostname, mappings["hosttype"])
+		log.Error().Msgf("skipping %s: no entities defined for component type %s", hostname, mappings["hosttype"])
 		return
 	}
 	t := reflect.TypeOf(entities)
@@ -148,8 +117,7 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, hosttypeOverride string)
 		log.Fatal().Msgf("entities is not a slice: %T -> %v", entities, entities)
 	}
 
-	// extract default attributes and types, if they exist
-
+	// extract defaults for this component, if they exist
 	defAttrs := maps.Clone(globalAttrs)
 	for _, a := range component.GetSliceStringMapString("attributes", config.LookupTable(mappings)) {
 		defAttrs[a["name"]] = a["value"]
@@ -157,17 +125,16 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, hosttypeOverride string)
 	defTypes := append(globalTypes, component.GetStringSlice("types", config.LookupTable(mappings))...)
 	defVars := append(globalVars, getVars(component, "variables", config.LookupTable(mappings))...)
 
+	// iterate over Entities, filling in defaults as defined
 	for i, em := range entities.([]any) {
 		_, ok := em.(map[string]any)
 		if !ok {
 			continue
 		}
 
-		entity := component.Sub("entities." + strconv.Itoa(i))
-
-		name := entity.GetString("name", config.LookupTable(mappings))
+		entity := component.Sub(config.Join("entities", strconv.Itoa(i)))
 		ent := netprobe.ManagedEntity{
-			Name: name,
+			Name: entity.GetString("name", config.LookupTable(mappings)),
 		}
 
 		attrs := entity.GetSliceStringMapString("attributes",
@@ -185,11 +152,7 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, hosttypeOverride string)
 			attributes[a["name"]] = a["value"]
 		}
 
-		var a []string
-		for k := range attributes {
-			a = append(a, k)
-		}
-		sort.Strings(a)
+		a := slices.Sorted(maps.Keys(attributes))
 		if len(a) > 0 {
 			ent.Attributes = &netprobe.Attributes{}
 			for _, attr := range a {
@@ -219,22 +182,64 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, hosttypeOverride string)
 		np.SelfAnnounce.ManagedEntities = append(np.SelfAnnounce.ManagedEntities, ent)
 	}
 
-	// now gateways
-	log.Debug().Msgf("selecting gateway for host %s with prefix %s", hostname, grouping)
+	return
+}
 
-	np.SelfAnnounce.Gateways = []netprobe.Gateway{
-		{Hostname: gateway.Primary, Port: gateway.PrimaryPort, Secure: gateway.Secure},
-	}
-	finalGateways = []string{
-		gatewayName,
-		fmt.Sprintf("%s:%d", gateway.Primary, gateway.PrimaryPort),
+// Gateways returns a slice of all the gateways that this SAN should try
+// to connect to.
+//
+// When a named gateway is configured with both a primary and standby
+// host then this counts as one gateway but results in two slice
+// elements. The number of named gateways is limited by the
+// `geneos.sans.gateways` value which defaults to 1.
+func (cs *ConfigServer) Gateways(hostname string) (NPgateways []netprobe.Gateway) {
+	gateways := []GatewaySet{}
+
+	cs.RLock()
+	conf := cs.conf
+	allGateways := cs.gateways
+	cs.RUnlock()
+
+	allGatewayDetails := conf.GetSliceStringMapString("geneos.gateways")
+
+	netprobeID := netprobeID(conf, hostname)
+	gatewayNames := OrderGateways(netprobeID, allGateways)
+	if len(gatewayNames) > 0 {
+		for _, g := range gatewayNames {
+			gateways = append(gateways, GatewayDetails(g, allGatewayDetails))
+		}
+	} else {
+		gatewayNames = []string{conf.GetString("geneos.fallback-gateway.name", config.Default(conf.GetString("geneos.fallback-gateway.primary")))}
+		if len(gatewayNames) == 0 {
+			log.Error().Msg("fallback gateway not configured correctly")
+			return
+		}
+
+		gateways = append(gateways, GatewayDetails(gatewayNames[0], []map[string]string{conf.GetStringMapString("geneos.fallback-gateway")}))
 	}
 
-	if gateway.Standby != "" {
-		np.SelfAnnounce.Gateways = append(np.SelfAnnounce.Gateways,
-			netprobe.Gateway{Hostname: gateway.Standby, Port: gateway.StandbyPort, Secure: gateway.Secure},
+	maxGateways := cf.GetInt("geneos.sans.gateways", config.Default(1))
+	log.Debug().Msgf("selecting up to %d gateways for host %s with prefix %s", maxGateways, hostname, netprobeID)
+
+	i := 0
+	for _, gateway := range gateways {
+		// if maxGateways is not 0 and we've been around the loop at
+		// least that many times, quit
+		if maxGateways > 0 && i >= maxGateways {
+			break
+		}
+
+		NPgateways = append(NPgateways,
+			netprobe.Gateway{Hostname: gateway.Primary, Port: gateway.PrimaryPort, Secure: gateway.Secure},
 		)
-		finalGateways = append(finalGateways, fmt.Sprintf("%s:%d", gateway.Standby, gateway.StandbyPort))
+
+		if gateway.Standby != "" {
+			NPgateways = append(NPgateways,
+				netprobe.Gateway{Hostname: gateway.Standby, Port: gateway.StandbyPort, Secure: gateway.Secure},
+			)
+		}
+
+		i++
 	}
 
 	return
@@ -333,6 +338,23 @@ func getVars(conf *config.Config, key string, options ...config.ExpandOptions) (
 			log.Warn().Msgf("variable type %s not supported, skipping", v.Type)
 		}
 		vars = append(vars, vr)
+	}
+	return
+}
+
+func netprobeID(conf *config.Config, hostname string) (id string) {
+	// extract the part of the hostname used for netprobeID, default to hostname
+	id = hostname
+	if g := conf.GetString("geneos.sans.grouping"); g != "" {
+		if r, err := regexp.Compile(g); err != nil {
+			log.Error().Err(err).Msg("ignoring grouping")
+		} else {
+			if m := r.FindStringSubmatch(hostname); len(m) > 0 {
+				id = m[1]
+			} else {
+				log.Warn().Msgf("grouping for %s did not match, using full hostname", hostname)
+			}
+		}
 	}
 	return
 }

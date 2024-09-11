@@ -44,7 +44,7 @@ type Inventory struct {
 	cksum        string // (gitlab) cksum of file contents, for when if-modified-since r size don't work
 }
 
-// ReadInventory reads the inventory from file source
+// ReadInventory reads the inventory from a file source
 func ReadInventory(cf *config.Config, file string, options ...FetchOptions) (inv *Inventory, err error) {
 	fo := evalFetchOptions(options...)
 

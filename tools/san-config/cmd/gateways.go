@@ -19,8 +19,14 @@ package cmd
 
 import (
 	"crypto/tls"
+	"encoding/csv"
+	"errors"
+	"io"
+	"maps"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -32,6 +38,21 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
+// GatewaySet is a Gateway instance with standby details if required
+type GatewaySet struct {
+	Name        string
+	Primary     string
+	PrimaryPort int
+	Standby     string
+	StandbyPort int
+	Secure      bool
+}
+
+type gatewayList struct {
+	sync.Mutex
+	gateways []string
+}
+
 // CheckGateways uses a liveness endpoint to see if gateway is
 // reachable. primary and standby gateways should normally respond the
 // same, and as long as one of each pair is "up" we respond OK for the
@@ -39,7 +60,7 @@ import (
 //
 // all gateways are checked in their own go routines
 func CheckGateways(cf *config.Config) (liveGateways []string) {
-	var mutex sync.Mutex
+	var gateways gatewayList
 	var wg sync.WaitGroup
 	var totalCount int
 
@@ -55,22 +76,40 @@ func CheckGateways(cf *config.Config) (liveGateways []string) {
 		Timeout: cf.GetDuration("geneos.timeout"),
 	}
 
-	for _, g := range cf.GetSliceStringMapString("geneos.gateways") {
+	for i, g := range cf.GetSliceStringMapString("geneos.gateways") {
+		if g["name"] == "" && g["primary"] == "" {
+			log.Debug().Msgf("no name or primary defined for gateway %d, skipping", i)
+		}
+
 		primary := g["primary"]
 		if primary == "" {
-			continue
+			// "name" must be defined else we would have failed to check above
+			primary = g["name"]
 		}
 		totalCount++
+
 		standby := g["standby"]
-		secure := g["secure"]
 		name, ok := g["name"]
 		if !ok {
 			name = primary
-		} else {
-			totalCount++
 		}
 
-		log.Debug().Msgf("primary %s, standby %s, secure %s", primary, standby, secure)
+		secure, err := strconv.ParseBool(g["secure"])
+		if err != nil {
+			log.Debug().Msgf("gateway %q secure setting unknown, assuming false", name)
+			secure = false
+		}
+
+		log.Debug().Msgf("primary %s, standby %s, secure %v", primary, standby, secure)
+
+		if !strings.Contains(primary, ":") {
+			// append default port depending on secure flag
+			if secure {
+				primary += ":7038"
+			} else {
+				primary += ":7039"
+			}
+		}
 
 		primaryURL := url.URL{
 			Scheme: "https",
@@ -79,18 +118,26 @@ func CheckGateways(cf *config.Config) (liveGateways []string) {
 		}
 		client := httpsClient
 
-		if secure != "1" {
+		if !secure {
 			primaryURL.Scheme = "http"
 			client = httpClient
 		}
 
 		wg.Add(1)
-		go checkGateway(client, &wg, &mutex, &liveGateways, name, primaryURL)
+		go checkGateway(client, &wg, &gateways, name, "primary", primaryURL)
 
 		if standby == "" {
 			continue
 		}
 
+		if !strings.Contains(standby, ":") {
+			// append default port depending on secure flag
+			if secure {
+				standby += ":7038"
+			} else {
+				standby += ":7039"
+			}
+		}
 		standbyURL := url.URL{
 			Scheme: "https",
 			Host:   standby,
@@ -98,55 +145,59 @@ func CheckGateways(cf *config.Config) (liveGateways []string) {
 		}
 		client = httpsClient
 
-		if secure != "1" {
+		if !secure {
 			standbyURL.Scheme = "http"
 			client = httpClient
 		}
 
 		wg.Add(1)
-		go checkGateway(client, &wg, &mutex, &liveGateways, name, standbyURL)
+		go checkGateway(client, &wg, &gateways, name, "standby", standbyURL)
 	}
 
 	wg.Wait()
+	liveGateways = gateways.gateways
+
 	if len(liveGateways) == totalCount {
-		log.Info().Msgf("%d/%d gateways are available", len(liveGateways), totalCount)
+		log.Info().Msgf("%d/%d gateway sets are available", len(liveGateways), totalCount)
 	} else {
-		log.Warn().Msgf("%d/%d gateways are available", len(liveGateways), totalCount)
+		log.Warn().Msgf("%d/%d gateway sets are available", len(liveGateways), totalCount)
 
 	}
 
 	return
 }
 
-func checkGateway(client http.Client, wg *sync.WaitGroup, mutex *sync.Mutex, liveGateways *[]string, name string, livenessURL url.URL) {
+func checkGateway(client http.Client, wg *sync.WaitGroup, gateways *gatewayList, name, role string, livenessURL url.URL) {
 	defer wg.Done()
 
 	resp, err := client.Get(livenessURL.String())
 	if err != nil {
-		log.Warn().Msgf("gateway %s %s not responding", name, livenessURL.Host)
+		log.Warn().Msgf("gateway %s %s %s not responding", name, role, livenessURL.Host)
 		return
 	}
 	resp.Body.Close()
 	if resp.StatusCode != 200 {
-		log.Warn().Msgf("gateway %s %s returned: %d %s", name, livenessURL.Host, resp.StatusCode, resp.Status)
+		log.Warn().Msgf("gateway %s %s %s returned: %d %s", name, role, livenessURL.Host, resp.StatusCode, resp.Status)
 		return
 	}
 	// add to list
-	log.Debug().Msgf("gateway %s %s responding to liveness check", name, livenessURL.Host)
-	mutex.Lock()
-	*liveGateways = append(*liveGateways, name)
-	mutex.Unlock()
+	log.Debug().Msgf("gateway %s %s %s responding to liveness check", name, role, livenessURL.Host)
+	gateways.Lock()
+	if !slices.Contains(gateways.gateways, name) {
+		gateways.gateways = append(gateways.gateways, name)
+	}
+	gateways.Unlock()
 }
 
-// SelectGateway creates an ordered list of the hash of probe and
-// gateway names and returns the first one. The hash is created through
-// UUIDs based on the configuration namespace uuid.
-func SelectGateway(probename string, gateways []string) (gateway string) {
+// OrderGateways creates an ordered list of the hash of probe and
+// gateway names. The hash is created through UUIDs based on the
+// configuration namespace uuid.
+func OrderGateways(netprobe string, gateways []string) (selection []string) {
 	if len(gateways) == 0 {
 		return
 	}
 
-	probeUUID := uuid.NewSHA1(uuidNS, []byte(probename))
+	probeUUID := uuid.NewSHA1(uuidNS, []byte(netprobe))
 
 	gws := map[string]string{}
 	gwUUIDs := []string{}
@@ -158,20 +209,12 @@ func SelectGateway(probename string, gateways []string) (gateway string) {
 	}
 
 	log.Debug().Msgf("uuids: %v", gwUUIDs)
-	first := slices.Min(gwUUIDs)
 
-	log.Debug().Msgf("selecting %s -> %s", first, gws[first])
-	return gws[first]
-}
+	for _, k := range slices.Sorted(maps.Keys(gws)) {
+		selection = append(selection, gws[k])
+	}
 
-// GatewaySet is a Gateway instance with standby details if required
-type GatewaySet struct {
-	Name        string
-	Primary     string
-	PrimaryPort int
-	Standby     string
-	StandbyPort int
-	Secure      bool
+	return
 }
 
 // GatewayDetails searches for and returns the details for Gateway name
@@ -206,8 +249,89 @@ func GatewayDetails(name string, gateways []map[string]string) (gateway GatewayS
 					gateway.StandbyPort = 7039
 				}
 			}
-			break
+
+			return
 		}
+	}
+	return
+}
+
+type gatewayEntry struct {
+	Name    string `json:"name" yaml:"name"`
+	Primary string `json:"primary" yaml:"primary"`
+	Standby string `json:"standby" yaml:"standby"`
+	Secure  bool   `json:"secure" yaml:"secure"`
+}
+
+// ReadGateways reads an local file for gateway details. Paths can use
+// the "~/" prefix for the user's home directory.
+//
+// CSV, JSON and YAML are supported. The file type is wholly determined
+// by the source file extension, which defaults to YAML if not given, so
+// ".yml" will work too.
+//
+// CSV files must have a first line with column names, and the column
+// "name" is required while "primary", "standby" and "secure" are
+// optional. The format of each field is as for the main configuration
+// file.
+//
+// JSON files must be an array of objects, where each object has a
+// required "name" field and optional fields as for CSV.
+//
+// YAML files must have a top-level "gateways" parameter and an array of
+// object as per the main configuration file.
+func ReadGateways(source string) (gateways []map[string]string) {
+	source = config.ExpandHome(source)
+	// try to open file
+	r, err := os.Open(source)
+	if err != nil {
+		log.Error().Err(err).Msgf("opening gateways file %q", source)
+		return
+	}
+	defer r.Close()
+
+	switch filepath.Ext(source) {
+	case ".csv":
+		c := csv.NewReader(r)
+		columns, err := c.Read()
+		if err != nil {
+			if !errors.Is(err, io.EOF) {
+				log.Error().Err(err).Msg("")
+			}
+			return
+		}
+		colNames := make(map[int]string)
+		for i, cn := range columns {
+			colNames[i] = cn
+		}
+		for {
+			row, err := c.Read()
+			if err != nil {
+				if !errors.Is(err, io.EOF) {
+					log.Error().Err(err).Msg("")
+				}
+				return
+			}
+			gw := make(map[string]string)
+			for i, f := range row {
+				switch colNames[i] {
+				case "name", "primary", "standby", "secure":
+					gw[colNames[i]] = f
+				default:
+					// do nothing
+				}
+
+			}
+			if gw["name"] == "" {
+				line, _ := c.FieldPos(1)
+				log.Error().Msgf("no gateway name in %s on line %d", source, line)
+			}
+			gateways = append(gateways, gw)
+		}
+	case ".json":
+
+	default:
+		// everything else is treated as YAML
 	}
 	return
 }

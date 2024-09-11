@@ -34,7 +34,7 @@ var Inventories sync.Map
 func LoadHosts(cf *config.Config) (hosts map[string]HostMappings, err error) {
 	switch cf.GetString("inventory.type") {
 	case "yaml":
-		hosts, err = LoadHostsYAML(cf)
+		hosts, err = ReadHostsYAML(cf)
 	}
 	return
 }

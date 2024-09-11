@@ -118,12 +118,15 @@ geneos:
     # port if not set), the primary host:port, and optional standby
     # host:port and an optional secure flag.
     #
-    # The details can be specified in either YAML format, as in the examples below
-    # - name: example1
-    #   primary: hostA:7038
-    #   standby: hostB:7038
-    #   secure: true
-    # - { name: example2, primary: hostC:7100, standby: hostD:7100, secure: true }
+    # Port defaults to 7039 or 7038 depending on the secure flag, false
+    # or true respectively.
+    #
+    # The details can be specified in either YAML format, as in the
+    # examples below
+    # - name: example1 primary: hostA:7038 standby: hostB:7038 secure:
+    #   true
+    # - { name: example2, primary: hostC:7100, standby: hostD:7100,
+    #   secure: true }
 
   # When there are no available gateways or the request lookup returns
   # none, use this Gateway set.
@@ -135,6 +138,8 @@ geneos:
   fallback-gateway:
     name: Fallback
     primary: no-gateway-defined.example.com
+    standby: no-gateway-defined.example.com
+    secure: true
 
   # The definition can also be in the YAML single line object format, like this:
   # fallback-gateway: { name: Fallback, primary: thinkpad:8100, standby: ubuntu:8100, secure: true }
@@ -148,7 +153,19 @@ geneos:
     # This example removes an "a" or "b" suffix from the hostname:
     # grouping: "^(.*?)[ab]?$"
 
-    # These settings are used in the header of the SAN XML configuration
+    # `gateways` is the number of gateway sets to return. The default is
+    # 1, which results in the same single gateway set being returned
+    # (which is a pair per primary/standby pair) for each SAN if the
+    # pool of available gateways does not change. Set to 0 to return all
+    # available gateways or a specific number as a maximum.
+    #
+    # When no gateways are available then the fallback gateway details
+    # are always returned to ensure the XML is valid.
+    gateways: 1
+
+    # These settings are used in the header of the SAN XML
+    # configuration. Apart from the `retry-interval` these should not be
+    # changed.
     retry-interval: 60s
     reverse-connections: true
     xmlns: http://www.w3.org/2001/XMLSchema-instance

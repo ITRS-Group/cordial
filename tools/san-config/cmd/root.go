@@ -114,7 +114,7 @@ var rootCmd = &cobra.Command{
 			}
 		}
 		var b []byte
-		np, _, _ := cs.NetprobeConfig(hostname, hosttype)
+		np, _ := cs.NetprobeConfig(hostname, hosttype)
 		fmt.Fprint(out, xml.Header)
 		b, err = xml.MarshalIndent(np, "", "    ")
 		fmt.Fprintln(out, string(b))

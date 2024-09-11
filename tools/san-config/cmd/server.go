@@ -24,7 +24,6 @@ import (
 	"os"
 	"slices"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -56,36 +55,29 @@ var serverCmd = &cobra.Command{
 	Short: "Run server for config request",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		if logfile == "" {
-			logfile = cf.GetString("server.logs.path")
-		}
-		if strings.HasPrefix(logfile, "~/") {
-			homedir, _ := os.UserHomeDir()
-			logfile = homedir + "/" + strings.TrimPrefix(logfile, "~/")
-		}
-
 		if daemon {
 			process.Daemon(os.Stdout, process.RemoveArgs, "-D", "--daemon")
 		}
+
+		if logfile == "" {
+			logfile = cf.GetString("server.logs.path")
+		}
+
+		logfile = config.ExpandHome(logfile)
 
 		done := make(chan bool)
 
 		if logfile == "-" {
 			logfile = ""
 		}
-
 		initConfig(cmd)
+
 		var usetls string
 		if cf.GetBool("server.tls.enable") {
 			usetls = "s"
 		}
-		log.Info().Msgf("starting. version %s. listening for %s connections on %s:%d", cordial.VERSION, "http"+usetls, cf.GetString("server.host"), cf.GetInt("server.port"))
+		log.Info().Msgf("starting %s version %s. listening for %s connections on %s:%d", execname, cordial.VERSION, "http"+usetls, cf.GetString("server.host"), cf.GetInt("server.port"))
 		cs, e := initServer(cf)
-
-		if err != nil {
-			return
-		}
-
 		go cs.startServer(e)
 		<-done
 		return
@@ -116,7 +108,7 @@ func initServer(cf *config.Config) (cs *ConfigServer, e *echo.Echo) {
 // ConfigServer encapsulates the data required to server config (and
 // connection) requests
 type ConfigServer struct {
-	mutex    sync.RWMutex
+	sync.RWMutex
 	conf     *config.Config
 	gateways []string                // live gateways
 	hosts    map[string]HostMappings // known host mappings - always Clone HostMappings before changing!
@@ -125,7 +117,8 @@ type ConfigServer struct {
 func (cs *ConfigServer) startServer(e *echo.Echo) {
 	var err error
 
-	// initialise both at least once before starting listener
+	// initialise both at least once before starting listener, mutex not
+	// yet required
 	for {
 		cs.hosts, err = LoadHosts(cs.conf)
 		if err == nil {
@@ -150,28 +143,33 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 
 			time.Sleep(check)
 
-			cs.mutex.Lock()
+			cs.Lock()
 			cs.gateways = CheckGateways(cs.conf)
-			cs.mutex.Unlock()
+			cs.Unlock()
 		}
 	}(cs)
 
 	// load inventories
 	go func(cs *ConfigServer) {
 		for {
+			// update each time in case configuration has changed
 			check := cs.conf.GetDuration("inventory.check-interval")
 			if check == 0 {
 				check = 60 * time.Second
 			}
 			time.Sleep(check)
 
-			cs.mutex.Lock()
+			cs.Lock()
 			cs.hosts, err = LoadHosts(cs.conf)
-			cs.mutex.Unlock()
+			cs.Unlock()
 		}
 	}(cs)
 
 	cf := cs.conf
+
+	if !cf.IsSet("server.config-path") {
+		log.Fatal().Msg("no configuration path (`server.config-path`) set, exiting")
+	}
 
 	e.GET(cf.GetString("server.config-path")+"/:hostname", cs.ServeConfig)
 	e.GET(cf.GetString("server.config-path")+"/:hostname/:type", cs.ServeConfig)
@@ -185,7 +183,7 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 		if !cf.GetBool("server.tls.enable") {
 			err = e.Start(fmt.Sprintf("%s:%d", cf.GetString("server.host"), cf.GetInt("server.port")))
 			if err != nil {
-				log.Error().Err(err).Msg("restarting http server in 5 seconds")
+				log.Error().Err(err).Msg("retrying in 5 seconds")
 				time.Sleep(5 * time.Second)
 			}
 			continue
@@ -200,35 +198,27 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 		cert = []byte(certstr)
 
 		if certpem, _ := pem.Decode([]byte(certstr)); certpem == nil {
-			cert = certstr
-			if strings.HasPrefix(certstr, "~/") {
-				homedir, _ := os.UserHomeDir()
-				cert = homedir + "/" + strings.TrimPrefix(certstr, "~/")
-			}
+			cert = config.ExpandHome(certstr)
 		}
 
 		keystr := cf.GetString("server.tls.privatekey")
 		key = []byte(keystr)
 
 		if keypem, _ := pem.Decode([]byte(keystr)); keypem == nil {
-			key = keystr
-			if strings.HasPrefix(keystr, "~/") {
-				homedir, _ := os.UserHomeDir()
-				key = homedir + "/" + strings.TrimPrefix(keystr, "~/")
-			}
+			key = config.ExpandHome(keystr)
 		}
 
 		listen := fmt.Sprintf("%s:%d", cf.GetString("server.host", config.Default("0.0.0.0")), cf.GetInt("server.port", config.Default(6543)))
 		err = e.StartTLS(listen, cert, key)
 
 		if err != nil {
-			log.Error().Err(err).Msg("restarting https server in 5 seconds")
+			log.Error().Err(err).Msg("retrying in 5 seconds")
 			time.Sleep(5 * time.Second)
 		}
 	}
 }
 
-// ServeConfig is the main handler to return a SAN SML config
+// ServeConfig is the main handler to return a SAN XML config
 func (cs *ConfigServer) ServeConfig(c echo.Context) (err error) {
 	hosttype := c.Param("type")
 	hostname := c.Param("hostname")
@@ -237,14 +227,12 @@ func (cs *ConfigServer) ServeConfig(c echo.Context) (err error) {
 	}
 	log.Debug().Msgf("serve: hostname %s type %s", hostname, hosttype)
 
-	cs.mutex.RLock() // NetprobeConfig fiddles around with the viper config data, mutex it
-	np, finalHosttype, finalGateways := cs.NetprobeConfig(hostname, hosttype)
-	cs.mutex.RUnlock()
+	np, finalHosttype := cs.NetprobeConfig(hostname, hosttype)
 
-	if len(finalGateways) == 0 {
+	if len(np.SelfAnnounce.Gateways) == 0 {
 		return echo.ErrInternalServerError
 	}
-	log.Info().Msgf("sending config for '%s' type '%s' gateways %s%v", hostname, finalHosttype, finalGateways[0], finalGateways[1:])
+	log.Info().Msgf("sending config for '%s' type '%s'", hostname, finalHosttype)
 	return c.XMLPretty(http.StatusOK, np, "    ")
 }
 
@@ -260,9 +248,9 @@ func (cs *ConfigServer) ServeConfig(c echo.Context) (err error) {
 func (cs *ConfigServer) ServeConnection(c echo.Context) (err error) {
 	var lines string
 
-	cs.mutex.Lock()
+	cs.Lock()
 	gwlist := cs.gateways
-	cs.mutex.Unlock()
+	cs.Unlock()
 
 	sort.Strings(gwlist)
 	gwlist = slices.Compact(gwlist)
@@ -273,7 +261,12 @@ func (cs *ConfigServer) ServeConnection(c echo.Context) (err error) {
 	for _, gw := range gwlist {
 		gateway := GatewayDetails(gw, allGateways)
 
-		lines += fmt.Sprintf("%s~%d~%s~%s~%d~*~", gateway.Primary, gateway.PrimaryPort, gw, gateway.Standby, gateway.StandbyPort)
+		lines += fmt.Sprintf("%s~%d~%s~", gateway.Primary, gateway.PrimaryPort, gw)
+		if gateway.Standby != "" && gateway.StandbyPort != 0 {
+			lines += fmt.Sprintf("%s~%d~*~", gateway.Standby, gateway.StandbyPort)
+		} else {
+			lines += "~~*~"
+		}
 		if !gateway.Secure {
 			lines += "LM_IN"
 		}
