@@ -1216,7 +1216,7 @@ db:
             GROUP BY server
         )
         SELECT ${db.servers.columns}
-          FROM ${db.probes.active}
+          FROM ${db.servers.table}
           WHERE server IN l1
             AND server IN l2
             AND server IN l3;
@@ -1282,7 +1282,7 @@ db:
             GROUP BY server
         )
         SELECT ${db.servers.columns}
-          FROM ${db.probes.active}
+          FROM ${db.servers.table}
          WHERE server NOT IN l1
             OR server NOT IN l2
             OR server NOT IN l3;
@@ -2189,7 +2189,7 @@ reports:
   missing-coverage:
     name: Missing Coverage
     group: Monitoring Coverage
-    columns: [ serverID, server, probes, samplers, dynamicEntites, l1missing, l2missing, l3missing, gateways ]
+    columns: [ serverID, server, probes, samplers, dynamicEntities, l1missing, l2missing, l3missing, gateways ]
     freeze-to-column: server
     scramble-columns: [ serverID, server, gateways ]
     headlines: > #sql
@@ -2221,19 +2221,33 @@ reports:
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server))), '') l1missing,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server))), '') l2missing,
-             (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table}) THEN '' ELSE 'yes' END) as l3missing,
+             (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table}) THEN '' ELSE 'missing' END) as l3missing,
              group_concat(gateway, ', ')
         FROM ${db.uncovered-servers.table} u
        GROUP BY server
        ORDER BY samplers ASC, probes DESC, length(l1missing) DESC, length(l2missing) DESC, l3missing DESC;
     conditional-format:
       - test:
-          columns: [ samplers ]
+          columns: [ samplers, dynamicEntities ]
           condition: "="
           type: number
           value: 0
         set:
-          - format: critical
+          - format: warning
+      - test:
+          columns: samplers
+          condition: ">"
+          type: number
+          value: 0
+        set:
+          - format: ok
+      - test:
+          columns: dynamicEntities
+          condition: ">"
+          type: number
+          value: 0
+        set:
+          - format: ok
       - test:
           columns: l1missing
           condition: "="
@@ -2261,19 +2275,19 @@ reports:
       - test:
           columns: l3missing
           condition: "<>"
-          value: "yes"
+          value: "missing"
         set:
           - format: ok
       - test:
           columns: l3missing
           condition: "="
-          value: "yes"
+          value: "missing"
         set:
           - format: warning
 
   coverage-per-gateway-summary:
     name: ${value} Overview
-    group: Coverage Per Gateway
+    group: Gateways
     enable-for-dataview: false
     enable-for-xlsx: false
     columns: [ serverID, server, osVersion, probes, probeVersion, samplers, dynamicEntities, l1missing, l2missing, l3missing, otherGateways, plugins ]
@@ -2326,16 +2340,16 @@ reports:
                            THEN (SELECT version FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
                            ELSE 'multiple'
                            END, '') probeVersions,
-             (SELECT total(CASE WHEN individual = true THEN number ELSE 1 END) FROM ${db.samplers.active} WHERE server = u.server AND ${split-column} = '${value}') samplers,
+             (SELECT total(IIF(individual, number, 1)) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server AND ${split-column} = '${value}') as dynamicEntities,
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server AND ${split-column} = '${value}'))), '') l1missing,
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server AND ${split-column} = '${value}'))), '') l2missing,
-             (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}') THEN '' ELSE 'yes' END) as l3missing,
+             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server))), '') l1missing,
+             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server))), '') l2missing,
+             (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table}) THEN '' ELSE 'missing' END) as l3missing,
              COALESCE((SELECT group_concat(gateway, ', ') FROM ${db.servers.table} WHERE server = u.server AND gateway <> u.gateway), '') otherGateways,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (
-                          SELECT distinct plugin FROM ${db.samplers.active} WHERE server = u.server AND ${split-column} = '${value}'
+                          SELECT distinct plugin FROM ${db.samplers.active} WHERE server = u.server
                           UNION     
-                          SELECT distinct plugin FROM ${db.ca-samplers.active} WHERE server = u.server AND ${split-column} = '${value}'
+                          SELECT distinct plugin FROM ${db.ca-samplers.active} WHERE server = u.server
                           ORDER BY 1
                      )), '') plugins
         FROM ${db.servers.table} u
@@ -2346,13 +2360,27 @@ reports:
       ;
     conditional-format:
       - test:
-          columns: [ samplers ]
+          columns: [ samplers, dynamicEntities ]
           condition: "="
           type: number
           value: 0
         set:
           - format: warning
       - test:
+          columns: samplers
+          condition: ">"
+          type: number
+          value: 0
+        set:
+          - format: ok
+      - test:
+          columns: dynamicEntities
+          condition: ">"
+          type: number
+          value: 0
+        set:
+          - format: ok
+      - test:
           columns: l1missing
           condition: "="
           value: ""
@@ -2379,19 +2407,19 @@ reports:
       - test:
           columns: l3missing
           condition: "<>"
-          value: "yes"
+          value: "missing"
         set:
           - format: ok
       - test:
           columns: l3missing
           condition: "="
-          value: "yes"
+          value: "missing"
         set:
           - format: warning
 
   coverage-per-gateway-detail:
     name: ${value} Detail
-    group: Coverage Per Gateway
+    group: Gateways
     enable-for-dataview: false
     enable-for-xlsx: false
     columns: [ serverID, server, osVersion, probes, probeName, probePort, probeVersion, otherGateways, samplers, dynamicEntities, l1missing, l2missing, l3missing, plugins ]
@@ -2448,15 +2476,15 @@ reports:
                            ELSE 'multiple'
                            END, '') probeVersions,
              '' otherGateways,
-             (SELECT total(CASE WHEN individual = true THEN number ELSE 1 END) FROM ${db.samplers.active} WHERE server = u.server AND ${split-column} = '${value}') samplers,
-             (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server AND ${split-column} = '${value}') as dynamicEntities,
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server AND ${split-column} = '${value}'))), '') l1missing,
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server AND ${split-column} = '${value}'))), '') l2missing,
-             (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}') THEN '' ELSE 'yes' END) as l3missing,
+             (SELECT total(IIF(individual, number, 1)) FROM ${db.samplers.active} WHERE server = u.server) samplers,
+             (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
+             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server))), '') l1missing,
+             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server))), '') l2missing,
+             (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}') THEN '' ELSE 'missing' END) as l3missing,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (
-                          SELECT distinct plugin FROM ${db.samplers.active} WHERE server = u.server AND ${split-column} = '${value}'
+                          SELECT distinct plugin FROM ${db.samplers.active} WHERE server = u.server
                           UNION     
-                          SELECT distinct plugin FROM ${db.ca-samplers.active} WHERE server = u.server AND ${split-column} = '${value}'
+                          SELECT distinct plugin FROM ${db.ca-samplers.active} WHERE server = u.server
                           ORDER BY 1
                      )), '') plugins
         FROM ${db.servers.table} u
@@ -2472,16 +2500,16 @@ reports:
               probeName,
               probePort,
               COALESCE(version, '') probeVersion,
-              (SELECT CASE WHEN p.gateway <> '${value}' THEN p.Gateway ELSE '' END) otherGateways,
-              (SELECT total(CASE WHEN individual = true THEN number ELSE 1 END) FROM ${db.samplers.active} WHERE probeName = p.probeName AND probePort = p.probePort AND ${split-column} = '${value}') samplers,
-              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE probeName = p.probeName AND probePort = p.probePort AND ${split-column} = '${value}') as dynamicEntities,
+              IIF(p.gateway <> '${value}', p.gateway, '') otherGateways,
+              (SELECT total(IIF(individual, number, 1)) FROM ${db.samplers.active} WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort) samplers,
+              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort) as dynamicEntities,
               '' l1missing,
               '' l2missing,
               '' l3missing,
               COALESCE((SELECT group_concat(plugin, ', ') FROM (
-                          SELECT distinct plugin FROM ${db.samplers.active} WHERE probeName = p.probeName AND probePort = p.probePort AND ${split-column} = '${value}'
+                          SELECT distinct plugin FROM ${db.samplers.active} WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort
                           UNION     
-                          SELECT distinct plugin FROM ${db.ca-samplers.active} WHERE probeName = p.probeName AND probePort = p.probePort AND ${split-column} = '${value}'
+                          SELECT distinct plugin FROM ${db.ca-samplers.active} WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort
                           ORDER BY 1
                      )), '') plugins
         FROM ${db.probes.active} p
@@ -2491,13 +2519,27 @@ reports:
       ;
     conditional-format:
       - test:
-          columns: [ samplers ]
+          columns: [ samplers, dynamicEntities ]
           condition: "="
           type: number
           value: 0
         set:
           - format: warning
       - test:
+          columns: samplers
+          condition: ">"
+          type: number
+          value: 0
+        set:
+          - format: ok
+      - test:
+          columns: dynamicEntities
+          condition: ">"
+          type: number
+          value: 0
+        set:
+          - format: ok
+      - test:
           columns: l1missing
           condition: "="
           value: ""
@@ -2528,14 +2570,14 @@ reports:
       - test:
           columns: l3missing
           condition: "<>"
-          value: "yes"
+          value: "missing"
         set:
           - not-rows: "*#*"
             format: ok
       - test:
           columns: l3missing
           condition: "="
-          value: "yes"
+          value: "missing"
         set:
           - not-rows: "*#*"
             format: warning
@@ -2701,7 +2743,7 @@ reports:
     name: Gateways
     group: Monitored Estate
     columns: [ gateway, gatewayHost, gatewayPort, gatewayVersion, probes, samplers, dynamicEntities, source ]
-    scramble-columns: [ gateway, gatewayHost ]
+    scramble-columns: [ gatewayHost ]
     query: | #sql
       SELECT gateway,
              COALESCE(gatewayHost, ''),
@@ -2718,8 +2760,8 @@ reports:
     name: Servers
     group: Monitored Estate
     enable-for-dataview: false
-    columns: [ serverID, server, osVersion, probes, samplers, dynamicEntities, gateways, plugins ]
-    scramble-columns: [ serverID, server, osVersion, gateways ]
+    columns: [ serverID, server, osVersion, probes, samplers, dynamicEntities, l1missing, l2missing, l3missing, gateways, plugins ]
+    scramble-columns: [ serverID, server ]
     query: > #sql
       SELECT server AS serverID,
              replace(server, ':'||hostID, '') server,
@@ -2727,6 +2769,9 @@ reports:
              (SELECT count(*) FROM ${db.probes.active} WHERE server = s.server),
              (SELECT total(number) FROM ${db.samplers.active} WHERE server = s.server),
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = s.server),
+             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = s.server))), '') l1missing,
+             COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = s.server))), '') l2missing,
+             (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table}) THEN '' ELSE 'missing' END) as l3missing,
              group_concat(gateway, ','),
              COALESCE((SELECT group_concat(plugin, ', ') FROM (
                           SELECT distinct plugin FROM ${db.samplers.active} WHERE server = s.server
@@ -2737,9 +2782,67 @@ reports:
         FROM ${db.servers.table} s
        GROUP BY server
       ;
+    conditional-format:
+      - test:
+          columns: [ samplers, dynamicEntities ]
+          condition: "="
+          type: number
+          value: 0
+        set:
+          - format: warning
+      - test:
+          columns: samplers
+          condition: ">"
+          type: number
+          value: 0
+        set:
+          - format: ok
+      - test:
+          columns: dynamicEntities
+          condition: ">"
+          type: number
+          value: 0
+        set:
+          - format: ok
+      - test:
+          columns: l1missing
+          condition: "="
+          value: ""
+        set:
+          - format: ok
+      - test:
+          columns: l1missing
+          condition: "<>"
+          value: ""
+        set:
+          - format: warning
+      - test:
+          columns: l2missing
+          condition: "="
+          value: ""
+        set:
+          - format: ok
+      - test:
+          columns: l2missing
+          condition: "<>"
+          value: ""
+        set:
+          - format: warning
+      - test:
+          columns: l3missing
+          condition: "<>"
+          value: "missing"
+        set:
+          - format: ok
+      - test:
+          columns: l3missing
+          condition: "="
+          value: "missing"
+        set:
+          - format: warning
 
-  os-summary:
-    name: Operating Systems
+  os-versions:
+    name: Operating System Versions
     group: Monitored Estate
     columns: [ osVersion, count ]
     query: | #sql
@@ -2755,8 +2858,8 @@ reports:
        WHERE os IS NULL
       ;
 
-  netprobe-summary:
-    name: Netprobes
+  netprobe-versions:
+    name: Netprobe Versions
     group: Monitored Estate
     columns: [ probeVersion, count ]
     query: | #sql
