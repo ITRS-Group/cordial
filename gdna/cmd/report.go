@@ -101,6 +101,7 @@ type ConditionalFormat struct {
 
 type ConditionalFormatTest struct {
 	Columns   []string `mapstructure:"columns,omitempty"`
+	Logical   string   `mapstructure:"logical,omitempty"` // "and", "all" or "or", "any"
 	Condition string   `mapstructure:"condition,omitempty"`
 	Type      string   `mapstructure:"type,omitempty"`
 	Value     string   `mapstructure:"value,omitempty"`

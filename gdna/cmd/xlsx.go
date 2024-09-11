@@ -264,6 +264,10 @@ func (x *XLSXReporter) WriteTable(data ...[]string) {
 			colwidths[j] = limitWidth(len(fmt.Sprint(c)), colwidths[j], maxColWidth)
 		}
 
+		// apply condition formatting
+		//
+		// each condition can have a `test` section, but must have a `set` section
+
 	CONDFORMAT:
 		for _, c := range x.conditionalFormat {
 			// validate conditions allowed
@@ -329,7 +333,8 @@ func (x *XLSXReporter) WriteTable(data ...[]string) {
 				}
 			}
 
-			formula := "AND(" + strings.Join(tc, ",") + ")"
+			logic := logicalWrapper(c.Test.Logical)
+			formula := logic + "(" + strings.Join(tc, ",") + ")"
 
 			r := []string{}
 			for _, col := range cols {
@@ -405,6 +410,15 @@ func (x *XLSXReporter) WriteTable(data ...[]string) {
 		}); err != nil {
 			log.Error().Err(err).Msg("freeze top row")
 		}
+	}
+}
+
+func logicalWrapper(logic string) string {
+	switch strings.ToLower(logic) {
+	case "or", "any":
+		return "OR"
+	default:
+		return "AND"
 	}
 }
 
