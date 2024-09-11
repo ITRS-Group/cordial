@@ -75,14 +75,9 @@ func ReadKeyValues(source string, prompt ...string) (kv *config.KeyValues, err e
 		if err != nil {
 			return kv, err
 		}
-	case strings.HasPrefix(string(source), "~/"):
-		// relative to home
-		home, _ := config.UserHomeDir()
-		source = strings.Replace(source, "~", home, 1)
-		fallthrough
 	default:
 		// local file, read and write to new locations
-		keyfile := config.KeyFile(source)
+		keyfile := config.KeyFile(config.ExpandHome(source))
 		_, _, err = keyfile.ReadOrCreate(host.Localhost, false)
 		if err != nil {
 			return
@@ -129,14 +124,9 @@ func ImportSharedKey(h *Host, ct *Component, source string, prompt ...string) (p
 			return paths, crc, err
 		}
 		return WriteSharedKeyValues(h, ct, kv)
-	case strings.HasPrefix(string(source), "~/"):
-		// relative to home
-		home, _ := config.UserHomeDir()
-		source = strings.Replace(source, "~", home, 1)
-		fallthrough
 	default:
 		// local file, read and write to new locations
-		keyfile := config.KeyFile(source)
+		keyfile := config.KeyFile(config.ExpandHome(source))
 		_, _, err = keyfile.ReadOrCreate(host.Localhost, false)
 		if err != nil {
 			return

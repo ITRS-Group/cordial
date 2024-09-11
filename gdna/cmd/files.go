@@ -29,10 +29,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -41,14 +39,7 @@ import (
 )
 
 func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
-	if strings.HasPrefix(source, "~/") {
-		var home string
-		home, err := config.UserHomeDir()
-		if err != nil {
-			return nil, err
-		}
-		source = filepath.Join(home, strings.TrimPrefix(source, "~/"))
-	}
+	source = config.ExpandHome(source)
 	u, err := url.Parse(source)
 	if err != nil {
 		return nil, err
@@ -93,14 +84,11 @@ func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
 		}
 		return resp.Body, nil
 	default:
+		var s os.FileInfo
+
 		log.Trace().Msgf("reading data from file '%s'", source)
 
-		if strings.HasPrefix(source, "~/") {
-			home, _ := config.UserHomeDir()
-			source = path.Join(home, strings.TrimPrefix(source, "~/"))
-		}
-
-		var s os.FileInfo
+		source = config.ExpandHome(source)
 		s, err = os.Stat(source)
 		if err != nil {
 			return nil, err

@@ -133,10 +133,7 @@ func ImportFile(h *Host, dir string, source string) (filename string, err error)
 
 	// test for same source and dest, return err
 	if isPlain && h.IsLocal() {
-		if strings.HasPrefix(source, "~/") {
-			home, _ := config.UserHomeDir()
-			source = path.Join(home, strings.TrimPrefix(source, "~/"))
-		}
+		source = config.ExpandHome(source)
 		sfi, err := h.Stat(source)
 		if err != nil {
 			return "", err

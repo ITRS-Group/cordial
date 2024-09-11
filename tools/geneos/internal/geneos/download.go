@@ -26,7 +26,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -133,11 +132,8 @@ func openSourceFile(source string, options ...PackageOptions) (from io.ReadClose
 		from = os.Stdin
 		filename = "STDIN"
 	default:
-		if strings.HasPrefix(source, "~/") {
-			home, _ := config.UserHomeDir()
-			source = path.Join(home, strings.TrimPrefix(source, "~/"))
-		}
 		var s os.FileInfo
+		source = config.ExpandHome(source)
 		s, err = os.Stat(source)
 		if err != nil {
 			return nil, "", err

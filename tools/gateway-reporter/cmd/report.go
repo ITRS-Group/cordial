@@ -105,11 +105,8 @@ var reportCmd = &cobra.Command{
 					return fmt.Errorf("failed to fetch %s - %s", setup, resp.Status)
 				}
 				input = resp.Body
-			case strings.HasPrefix(setup, "~/"):
-				home, _ := config.UserHomeDir()
-				setup = filepath.Join(home, strings.TrimPrefix(setup, "~/"))
-				fallthrough
 			default:
+				setup = config.ExpandHome(setup)
 				if reportCmdMerge {
 					setup, _ = filepath.Abs(setup)
 					merged, err := mergeConfig(reportCmdInstallation, setup)

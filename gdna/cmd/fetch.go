@@ -30,7 +30,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -317,11 +316,7 @@ func readLicenseReports(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 	default:
 		log.Debug().Msgf("looking for files matching '%s'", source)
 
-		if strings.HasPrefix(source, "~/") {
-			home, _ := config.UserHomeDir()
-			source = path.Join(home, strings.TrimPrefix(source, "~/"))
-		}
-
+		source = config.ExpandHome(source)
 		files, err := filepath.Glob(source)
 		if err != nil {
 			return sources, err

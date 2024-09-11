@@ -47,10 +47,7 @@ func InitializeConnection(vc *config.Config) *Connection {
 		if len(passwordfile) == 0 {
 			log.Fatalln("no password or password file configured")
 		}
-		if strings.HasPrefix(passwordfile, "~/") {
-			home, _ := os.UserHomeDir()
-			passwordfile = strings.Replace(passwordfile, "~", home, 1)
-		}
+		passwordfile = config.ExpandHome(passwordfile)
 		if pw, err = os.ReadFile(passwordfile); err != nil {
 			log.Fatalf("cannot read password from file %q", passwordfile)
 		}
