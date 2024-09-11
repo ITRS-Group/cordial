@@ -359,12 +359,26 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 		}
 
 		var host_name, port, host_id string
+		var individual sql.NullBool
+
 		if licdExtended {
 			host_name, port, host_id = values["host_name"], values["port"], values["host_id"]
+			if strings.Contains(values["description"], "[INDIVIDUAL]") {
+				individual = sql.NullBool{
+					Bool:  true,
+					Valid: true,
+				}
+			}
 		} else if len(values["description"]) > 0 {
 			matches := re.FindStringSubmatch(values["description"])
 			if len(matches) == 4 {
 				host_name, port, host_id = matches[1], matches[2], matches[3]
+				if host_id == "[INDIVIDUAL]" {
+					individual = sql.NullBool{
+						Bool:  true,
+						Valid: true,
+					}
+				}
 				// line, col := c.FieldPos(columns["Description"])
 				// return fmt.Errorf("only found %d matches in 'description' column at line %d, column %d: %q", len(matches), line, col, source)
 			}
@@ -401,6 +415,7 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 				sql.Named("probePort", port),
 				sql.Named("tokenID", host_id),
 				sql.Named("number", values["number"]),
+				sql.Named("individual", individual),
 				sql.Named("time", isoTime),
 				sql.Named("source", source),
 			)

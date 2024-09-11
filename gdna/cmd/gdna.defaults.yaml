@@ -655,27 +655,25 @@ db:
       CREATE INDEX IF NOT EXISTS ${db.samplers.table}_idx8 ON ${db.samplers.table} (probeName, probePort, plugin);
     insert: > #sql
       INSERT INTO ${db.samplers.table}
-             (gateway, plugin, probeName, probePort, tokenID, number, firstSeen, lastSeen, source)
-      VALUES (@gateway, @plugin, @probeName, @probePort, @tokenID, @number, @time, @time, @source)
+             (gateway, plugin, probeName, probePort, tokenID, number, individual, firstSeen, lastSeen, source)
+      VALUES (@gateway, @plugin, @probeName, @probePort, @tokenID, @number, @individual, @time, @time, @source)
         ON CONFLICT (gateway, plugin, probeName, probePort, tokenID, lastSeen)
           DO UPDATE SET number=number+@number WHERE hostID IS NULL
         ON CONFLICT (gateway, plugin, probeName, probePort, tokenID)
           DO UPDATE SET number=@number, source=@source, lastSeen=@time, hostID=NULL;
     post-insert: > #sql
       UPDATE ${db.samplers.table} AS s
-         SET individual = false,
-             hostID = tokenID,
+         SET hostID = tokenID,
              server = (SELECT server
                          FROM ${db.probes.table}
                         WHERE gateway = s.gateway
                           AND probeName = s.probeName
                           AND probePort = s.probePort
                         LIMIT 1)
-       WHERE individual IS NULL AND tokenID <> 'INDIVIDUAL'
+       WHERE tokenID <> 'INDIVIDUAL'
       ;
       UPDATE ${db.samplers.table} AS s
-         SET individual = true,
-             hostID = (SELECT tokenID
+         SET hostID = (SELECT tokenID
                          FROM ${db.samplers.table}
                        WHERE (gateway, probeName) IN (SELECT DISTINCT gateway, probeName FROM ${db.samplers.table} WHERE tokenID <> 'INDIVIDUAL')
                          AND probeName = s.probeName
@@ -687,7 +685,11 @@ db:
                           AND probeName = s.probeName
                           AND probePort = s.probePort
                         LIMIT 1)
-       WHERE individual IS NULL AND tokenID = 'INDIVIDUAL'
+       WHERE tokenID = 'INDIVIDUAL'
+      ;
+      UPDATE ${db.samplers.table}
+         SET individual = 1
+       WHERE tokenID = 'INDIVIDUAL'
       ;
       UPDATE ${db.samplers.table}
          SET hostID = server
