@@ -363,11 +363,11 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 			host_name, port, host_id = values["host_name"], values["port"], values["host_id"]
 		} else if len(values["description"]) > 0 {
 			matches := re.FindStringSubmatch(values["description"])
-			if len(matches) != 4 {
-				line, col := c.FieldPos(columns["Description"])
-				return fmt.Errorf("only found %d matches in 'description' column at line %d, column %d: %q", len(matches), line, col, source)
+			if len(matches) == 4 {
+				host_name, port, host_id = matches[1], matches[2], matches[3]
+				// line, col := c.FieldPos(columns["Description"])
+				// return fmt.Errorf("only found %d matches in 'description' column at line %d, column %d: %q", len(matches), line, col, source)
 			}
-			host_name, port, host_id = matches[1], matches[2], matches[3]
 		}
 
 		switch values["component"] {
