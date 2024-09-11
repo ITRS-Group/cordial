@@ -152,6 +152,9 @@ type CmdValType struct {
 
 func cmddata(command *cobra.Command) *CmdValType {
 	ctx := command.Context()
+	if ctx == nil {
+		return nil
+	}
 	if a := ctx.Value(CmdKey); a != nil {
 		if b, ok := a.(*CmdValType); ok {
 			return b
