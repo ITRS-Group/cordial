@@ -506,8 +506,12 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 	return updateSources(ctx, cf, tx, source, sourceType, sourcePath, valid, sourceTimestamp, "OK")
 }
 
+// colOrNull returns a sql.NullString which is populated if the column
+// exists and the value in that column is not an empty string. column is
+// the name, columns is a mapping of column names to field offsets and
+// fields are the values.
 func colOrNull(column string, columns map[string]int, fields []string) (val sql.NullString) {
-	if v, ok := columns[column]; ok {
+	if v, ok := columns[column]; ok && fields[v] != "" {
 		val = sql.NullString{
 			Valid:  true,
 			String: fields[v],
