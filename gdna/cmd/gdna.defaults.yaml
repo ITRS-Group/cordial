@@ -1659,7 +1659,7 @@ reports:
 
           UNION ALL
 
-           SELECT ', total(CASE WHEN individual = true THEN number ELSE 1 END) FILTER (WHERE plugin = ''' || plugin || ''') AS ''' || plugin || ''''
+           SELECT ', total(IIF(individual, number, 1)) FILTER (WHERE plugin = ''' || plugin || ''') AS ''' || plugin || ''''
              FROM plugins
 
           UNION ALL
@@ -1707,7 +1707,7 @@ reports:
                AND plugin NOT IN ${plugins.level2.table} THEN '3'
               ELSE '0'
             END,
-        CASE WHEN individual = true THEN 'Instance' ELSE 'Server' END AS total,
+        IIF(individual, 'Instance', 'Server') AS total,
         1
         FROM s
 
@@ -2212,11 +2212,11 @@ reports:
       SELECT server,
              replace(server, ':'||hostID, ''),
              (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
-             (SELECT total(CASE WHEN individual = true THEN number ELSE 1 END) FROM ${db.samplers.active} WHERE server = u.server) samplers,
+             (SELECT total(IIF(individual, number, 1)) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server))), '') l1missing,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server))), '') l2missing,
-             (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table}) THEN '' ELSE 'missing' END) as l3missing,
+             (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table}), '', 'missing')) as l3missing,
              group_concat(gateway, ', ')
         FROM ${db.uncovered-servers.table} u
        GROUP BY server
@@ -2341,7 +2341,7 @@ reports:
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server AND ${split-column} = '${value}') as dynamicEntities,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server))), '') l1missing,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server))), '') l2missing,
-             (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table}) THEN '' ELSE 'missing' END) as l3missing,
+             (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table}), '', 'missing')) as l3missing,
              COALESCE((SELECT group_concat(gateway, ', ') FROM ${db.servers.table} WHERE server = u.server AND gateway <> u.gateway), '') otherGateways,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (
                           SELECT distinct plugin FROM ${db.samplers.active} WHERE server = u.server
@@ -2479,7 +2479,7 @@ reports:
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server))), '') l1missing,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server))), '') l2missing,
-             (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}') THEN '' ELSE 'missing' END) as l3missing,
+             (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}'), '', 'missing')) as l3missing,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (
                           SELECT distinct plugin FROM ${db.samplers.active} WHERE server = u.server
                           UNION     
@@ -2702,7 +2702,7 @@ reports:
     query: > #sql
       WITH os(os, source, lastSeen) AS (SELECT os, source, lastSeen FROM ${db.probes.table})
       SELECT ${db.sources.columns},
-             (SELECT CASE WHEN (SELECT count(os) FROM os WHERE source = src.source AND lastSeen = src.lastSeen) THEN 1 ELSE 0 END) as extendedFormat,
+             (SELECT IIF((SELECT count(os) FROM os WHERE source = src.source AND lastSeen = src.lastSeen), 1, 0)) as extendedFormat,
              (SELECT count(*) FROM ${db.gateways.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS gateways,
              (SELECT count(*) FROM ${db.probes.table}   WHERE source = src.source AND lastSeen = src.lastSeen) AS probes,
              (SELECT total(number) FROM ${db.samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS samplers,
@@ -2765,7 +2765,7 @@ reports:
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = s.server),
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = s.server))), '') l1missing,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = s.server))), '') l2missing,
-             (SELECT CASE WHEN server IN (SELECT server FROM ${db.l3covered-servers.table}) THEN '' ELSE 'missing' END) as l3missing,
+             (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table}), '', 'missing')) as l3missing,
              group_concat(gateway, ','),
              COALESCE((SELECT group_concat(plugin, ', ') FROM (
                           SELECT distinct plugin FROM ${db.samplers.active} WHERE server = s.server
