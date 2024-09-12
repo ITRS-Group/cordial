@@ -47,7 +47,7 @@ func init() {
 	GDNACmd.AddCommand(reportCmd)
 
 	reportCmd.Flags().StringVarP(&output, "output", "o", "-", "output destination `file`, default is console")
-	reportCmd.Flags().StringVarP(&outputFormat, "format", "F", "dataview", "output `format` (dataview, table, html, toolkit, xslx)")
+	reportCmd.Flags().StringVarP(&outputFormat, "format", "F", "dataview", "output `format` - one of: dataview, table, html, toolkit (or csv), xslx")
 
 	reportCmd.Flags().StringVarP(&reportNames, "reports", "r", "", "Run only matching (file globbing style) reports")
 	reportCmd.Flags().BoolVarP(&scrambleNames, "scramble", "S", false, "Scramble configured column of data in reports with sensitive data")
@@ -183,7 +183,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 	maxreports := -1
 
 	switch format {
-	case "toolkit":
+	case "toolkit", "csv":
 		// we have a custom Toolkit reporter instead of using the
 		// go-pretty CSV output so that we can render headlines in the
 		// Geneos toolkit format
