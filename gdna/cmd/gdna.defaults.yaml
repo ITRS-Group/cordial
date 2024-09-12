@@ -653,7 +653,7 @@ db:
       CREATE INDEX IF NOT EXISTS ${db.samplers.table}_idx6 ON ${db.samplers.table} (probeName, gateway, server);
       CREATE INDEX IF NOT EXISTS ${db.samplers.table}_idx7 ON ${db.samplers.table} (server, plugin);
       CREATE INDEX IF NOT EXISTS ${db.samplers.table}_idx8 ON ${db.samplers.table} (probeName, probePort, plugin);
-    insert: > #sql
+    insert: | #sql
       INSERT INTO ${db.samplers.table}
              (gateway, plugin, probeName, probePort, tokenID, number, individual, firstSeen, lastSeen, source)
       VALUES (@gateway, @plugin, @probeName, @probePort, @tokenID, @number, @individual, @time, @time, @source)
@@ -661,37 +661,27 @@ db:
           DO UPDATE SET number=number+@number WHERE hostID IS NULL
         ON CONFLICT (gateway, plugin, probeName, probePort, tokenID)
           DO UPDATE SET number=@number, source=@source, lastSeen=@time, hostID=NULL;
-    post-insert: > #sql
+    post-insert: | #sql
       UPDATE ${db.samplers.table} AS s
-         SET hostID = tokenID,
-             server = (SELECT server
+         SET server = (SELECT server
                          FROM ${db.probes.table}
                         WHERE gateway = s.gateway
                           AND probeName = s.probeName
                           AND probePort = s.probePort
                         ORDER BY lastSeen DESC
-                        LIMIT 1)
-       WHERE tokenID <> 'INDIVIDUAL'
+                        LIMIT 1),
+             hostID = IIF(tokenID <> 'INDIVIDUAL',
+                          tokenID,
+                          (SELECT tokenID
+                             FROM ${db.samplers.table}
+                            WHERE (gateway, probeName) IN (SELECT DISTINCT gateway, probeName FROM ${db.samplers.table} WHERE tokenID <> 'INDIVIDUAL')
+                              AND probeName = s.probeName
+                              AND tokenID <> 'INDIVIDUAL'
+                            LIMIT 1)
+                         ),
+             individual = IIF(tokenID = 'INDIVIDUAL', 1, NULL)
       ;
-      UPDATE ${db.samplers.table} AS s
-         SET hostID = (SELECT tokenID
-                         FROM ${db.samplers.table}
-                       WHERE (gateway, probeName) IN (SELECT DISTINCT gateway, probeName FROM ${db.samplers.table} WHERE tokenID <> 'INDIVIDUAL')
-                         AND probeName = s.probeName
-                         AND tokenID <> 'INDIVIDUAL'
-                       LIMIT 1),
-             server = (SELECT server
-                         FROM ${db.probes.table}
-                        WHERE gateway = s.gateway
-                          AND probeName = s.probeName
-                          AND probePort = s.probePort
-                        LIMIT 1)
-       WHERE tokenID = 'INDIVIDUAL'
-      ;
-      UPDATE ${db.samplers.table}
-         SET individual = 1
-       WHERE tokenID = 'INDIVIDUAL'
-      ;
+      -- ensure hostID is always set, even if the the subquery returns NULL - but use the final server name
       UPDATE ${db.samplers.table}
          SET hostID = server
        WHERE hostID IS NULL
