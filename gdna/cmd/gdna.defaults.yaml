@@ -37,6 +37,7 @@ geneos:
   sampler: GDNA
   max-rows: 500
   scramble: false
+  dataview-create-delay: 0
 
 xlsx:
   password: ""

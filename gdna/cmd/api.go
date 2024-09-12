@@ -20,6 +20,7 @@ package cmd
 import (
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -36,6 +37,7 @@ type APIReporter struct {
 	reset           bool
 	scramble        bool
 	scrambleColumns []string
+	dvCreateDelay   time.Duration
 	apicf           *config.Config
 }
 
@@ -63,18 +65,22 @@ func NewAPIReporter(cf *config.Config, options ...APIReporterOptions) (a *APIRep
 	opts := evalAPIOptions(options...)
 
 	var (
-		hostname   = cf.GetString(config.Join("geneos", "netprobe", "hostname"))
-		port       = cf.GetInt(config.Join("geneos", "netprobe", "port"))
-		secure     = cf.GetBool(config.Join("geneos", "netprobe", "secure"))
-		skipVerify = cf.GetBool(config.Join("geneos", "netprobe", "skip-verify"))
-		entity     = cf.GetString(config.Join("geneos", "entity"))
-		sampler    = cf.GetString(config.Join("geneos", "sampler"))
+		hostname      = cf.GetString(config.Join("geneos", "netprobe", "hostname"))
+		port          = cf.GetInt(config.Join("geneos", "netprobe", "port"))
+		secure        = cf.GetBool(config.Join("geneos", "netprobe", "secure"))
+		skipVerify    = cf.GetBool(config.Join("geneos", "netprobe", "skip-verify"))
+		entity        = cf.GetString(config.Join("geneos", "entity"))
+		sampler       = cf.GetString(config.Join("geneos", "sampler"))
+		dvCreateDelay = cf.GetDuration(config.Join("geneos", "dataview-create-delay"))
 	)
 
+	log.Debug().Msgf("setting dataview-create-delay to %v", dvCreateDelay)
+
 	a = &APIReporter{
-		reset:    opts.reset,
-		scramble: opts.scramble,
-		apicf:    cf,
+		reset:         opts.reset,
+		scramble:      opts.scramble,
+		apicf:         cf,
+		dvCreateDelay: dvCreateDelay,
 	}
 
 	scheme := "http"
@@ -152,6 +158,9 @@ func (a *APIReporter) SetReport(report Report) (err error) {
 		a.d.Remove()
 	}
 	if !a.d.Exists() {
+		log.Debug().Msgf("sleeping for %v before creating new dataview %s-%s", a.dvCreateDelay, group, title)
+		time.Sleep(a.dvCreateDelay)
+
 		_, err = a.a.NewDataview(group, title)
 		if err != nil {
 			log.Error().Err(err).Msgf("creating dataview '%s-%s' on %s:%d: %s", group, title, cf.GetString("geneos.netprobe.hostname"), cf.GetInt("geneos.netprobe.port"), err)

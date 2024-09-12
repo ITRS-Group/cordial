@@ -171,6 +171,13 @@ geneos:
   # caution, use a value of of 0 (zero).
   max-rows: 500
 
+  # `dataview-create-delay` is a duration to sleep after publishing a dataview.
+  # This is to help lessen the load on Gateways when the volumne of
+  # reports is large, e.g. hundreds of gateway detail reports.
+  #
+  # If the GDNA netprobe is suspended then try setting this to a value
+  # like "250ms"
+  dataview-create-delay: 0
 
 # `db` contains the database configuration settings
 #
