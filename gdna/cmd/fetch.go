@@ -316,7 +316,6 @@ func readLicenseReports(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 	default:
 		log.Debug().Msgf("looking for files matching '%s'", source)
 
-		source = config.ExpandHome(source)
 		files, err := filepath.Glob(source)
 		if err != nil {
 			return sources, err
