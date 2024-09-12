@@ -2326,13 +2326,15 @@ reports:
     query: > #sql
       SELECT server,
              replace(server, ':'||hostID, ''),
-             COALESCE(CASE WHEN (SELECT count(distinct os) FROM ${db.probes.active} WHERE server = u.server) = 1
-                           THEN (SELECT os FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
+             COALESCE(CASE (SELECT count(distinct os) FROM ${db.probes.active} WHERE server = u.server)
+                           WHEN 0 THEN ''
+                           WHEN 1 THEN (SELECT os FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
                            ELSE 'multiple'
                            END, '') osVersion,
              (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
-             COALESCE(CASE WHEN (SELECT count(distinct version) FROM ${db.probes.active} WHERE server = u.server) = 1
-                           THEN (SELECT version FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
+             COALESCE(CASE (SELECT count(distinct version) FROM ${db.probes.active} WHERE server = u.server)
+                           WHEN 0 THEN ''
+                           WHEN 1 THEN (SELECT version FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
                            ELSE 'multiple'
                            END, '') probeVersions,
              (SELECT total(IIF(individual, number, 1)) FROM ${db.samplers.active} WHERE server = u.server) samplers,
@@ -2459,15 +2461,17 @@ reports:
     query: > #sql
       SELECT server serverID,
              replace(server, ':'||hostID, '') server,
-             COALESCE(CASE WHEN (SELECT count(distinct os) FROM ${db.probes.active} WHERE server = u.server) = 1
-                           THEN (SELECT os FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
+            COALESCE(CASE (SELECT count(distinct os) FROM ${db.probes.active} WHERE server = u.server)
+                           WHEN 0 THEN ''
+                           WHEN 1 THEN (SELECT os FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
                            ELSE 'multiple'
                            END, '') osVersion,
              (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
              '' probeName,
              '' probePort,
-             COALESCE(CASE WHEN (SELECT count(distinct version) FROM ${db.probes.active} WHERE server = u.server) = 1
-                           THEN (SELECT version FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
+             COALESCE(CASE (SELECT count(distinct version) FROM ${db.probes.active} WHERE server = u.server)
+                           WHEN 0 THEN ''
+                           WHEN 1 THEN (SELECT version FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
                            ELSE 'multiple'
                            END, '') probeVersions,
              '' otherGateways,
