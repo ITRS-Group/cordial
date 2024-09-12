@@ -669,6 +669,7 @@ db:
                         WHERE gateway = s.gateway
                           AND probeName = s.probeName
                           AND probePort = s.probePort
+                        ORDER BY lastSeen DESC
                         LIMIT 1)
        WHERE tokenID <> 'INDIVIDUAL'
       ;
@@ -770,6 +771,7 @@ db:
                         WHERE gateway = s.gateway
                           AND probeName = s.probeName
                           AND probePort = s.probePort
+                        ORDER BY lastSeen DESC
                         LIMIT 1)
       ;
 
