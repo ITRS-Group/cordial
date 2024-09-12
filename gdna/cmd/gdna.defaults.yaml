@@ -2676,12 +2676,7 @@ reports:
     group: Monitored Estate
     columns: [ source, status, firstSeen, lastSeen, sourceType, path, valid, extendedFormat, gateways, probes, samplers, dynamicEntities ]
     headlines: > #sql
-      SELECT 'lastestUpdate', max(lastSeen)
-        FROM ${db.sources.table}
-
-      UNION ALL
-
-      SELECT 'lastestUpdateAge', unixepoch('now') - unixepoch(max(lastSeen)) || ' (secs)'
+      SELECT 'latestUpdate', max(lastSeen)
         FROM ${db.sources.table}
 
       UNION ALL
