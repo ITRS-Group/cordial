@@ -2868,3 +2868,20 @@ reports:
         FROM ${db.probes.active}
        WHERE version IS NULL
       ;
+
+  gateway-versions:
+    name: Gateway Versions
+    group: Monitored Estate
+    columns: [ gatewayVersion, count ]
+    query: | #sql
+      SELECT version, count(*)
+        FROM ${db.gateways.active}
+       WHERE version IS NOT NULL
+       GROUP BY version
+
+      UNION
+
+      SELECT 'Unknown', count(*)
+        FROM ${db.gateways.active}
+       WHERE version IS NULL
+      ;
