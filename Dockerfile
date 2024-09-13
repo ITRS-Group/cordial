@@ -13,7 +13,7 @@ FROM golang:${GOVERSION}-bullseye AS build
 # base files
 COPY go.mod go.sum cordial.go logging.go VERSION README.md CHANGELOG.md /app/cordial/
 COPY pkg /app/cordial/pkg
-# geneos, dv2email, gateway-reporter
+# geneos, dv2email, gateway-reporter, san-config
 COPY tools /app/cordial/tools
 # servicenow, pagerduty
 COPY integrations /app/cordial/integrations/
@@ -23,16 +23,21 @@ COPY libraries /app/cordial/libraries/
 COPY gdna /app/cordial/gdna
 RUN --mount=type=cache,target=/root/.cache/go-build \
     set -eux; \
-    # build geneos
+    # build geneos (in Windows version)
     cd /app/cordial/tools/geneos; \
     go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
     GOOS=windows go build --ldflags '-s -w'; \
-    # gateway-reporter
+    # gateway-reporter (in Windows version)
     cd /app/cordial/tools/gateway-reporter; \
     go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    GOOS=windows go build --ldflags '-s -w'; \
     # dv2email
     cd /app/cordial/tools/dv2email; \
     go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    # san-config (inc Windows version)
+    cd /app/cordial/tools/san-config; \
+    go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    GOOS=windows go build --ldflags '-s -w'; \
     # servicenow
     cd /app/cordial/integrations/servicenow; \
     go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
@@ -45,7 +50,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     # libalerts
     cd /app/cordial/libraries/libalert; \
     make; \
-    # gdna
+    # gdna (inc Windows version)
     cd /app/cordial/gdna; \
     go build -tags sqlite_omit_load_extension,netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
     GOOS=windows go build --ldflags '-s -w';
@@ -101,7 +106,7 @@ RUN set -eux; \
 # base files
 COPY VERSION README.md CHANGELOG.md /app/cordial/
 COPY pkg /app/cordial/pkg
-# geneos, dv2email, gateway-reporter
+# geneos, dv2email, gateway-reporter, san-config
 COPY tools /app/cordial/tools
 # servicenow, pagerduty
 COPY integrations /app/cordial/integrations/
@@ -115,6 +120,7 @@ COPY tools/geneos/README.md geneos.md
 COPY tools/gateway-reporter/README.md gateway-reporter.md
 COPY tools/dv2email/README.md dv2email.md
 COPY tools/dv2email/screenshots/ screenshots/
+COPY tools/san-config/README.md san-config.md
 COPY gdna/README.md gdna.md
 COPY gdna/screenshots/ screenshots/
 COPY integrations/servicenow/README.md servicenow.md
@@ -123,7 +129,7 @@ COPY libraries/libemail/README.md libemail.md
 COPY libraries/libalert/README.md libalert.md
 
 ARG MERMAID=".mermaid"
-ARG READMEDIRS="tools/geneos tools/gateway-reporter tools/dv2email gdna integrations/servicenow integrations/pagerduty libraries/libemail libraries/libalert"
+ARG READMEDIRS="tools/geneos tools/gateway-reporter tools/dv2email tools/san-config gdna integrations/servicenow integrations/pagerduty libraries/libemail libraries/libalert"
 RUN set -eux; \
     echo '{ "args": ["--no-sandbox"] }' > /puppeteer.json; \
     for i in ${READMEDIRS}; \
@@ -151,6 +157,10 @@ COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
 COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/bin/
 COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /cordial/bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
+
+# san-config and default YAML
+COPY --from=build /app/cordial/tools/san-config/san-config /cordial/bin/
+COPY --from=build /app/cordial/tools/san-config/cmd/san-config.defaults.yaml /cordial/etc/geneos/
 
 # docs
 COPY --from=cordial-docs /app/cordial/doc-output /cordial/docs/
@@ -190,16 +200,17 @@ FROM debian AS cordial-run-debian
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
+COPY --from=build /app/cordial/tools/san-config/san-config /bin/
 COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
 RUN --mount=type=cache,target=/var/cache/apt \
-    set -eux; \
-    apt update; \
-    apt install -y --no-install-recommends \
-        fontconfig \
-        ca-certificates \
-        ; \
-    useradd -ms /bin/bash geneos
+set -eux; \
+apt update; \
+apt install -y --no-install-recommends \
+fontconfig \
+ca-certificates \
+; \
+useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
 CMD [ "bash" ]
@@ -209,6 +220,7 @@ FROM redhat/ubi8 AS cordial-run-ubi8
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
+COPY --from=build /app/cordial/tools/san-config/san-config /bin/
 COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
 RUN useradd -ms /bin/bash geneos
@@ -227,25 +239,6 @@ RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
 CMD [ "bash" ]
-
-# build a centos7 image for testing
-# Centos 7 went EOL 30/6/2024
-# FROM centos:7 AS cordial-run-centos7
-# COPY --from=build /app/cordial/tools/geneos/geneos /bin/
-# COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
-# COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
-# COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
-# COPY --from=build /app/cordial/gdna/gdna /bin/
-# RUN --mount=type=cache,target=/var/rpm \
-#     set -eux; \
-#     yum update -y; \
-#     yum install -y \
-#         fontconfig \
-#         ca-certificates; \
-#     useradd -ms /bin/bash geneos
-# WORKDIR /home/geneos
-# USER geneos
-# CMD [ "bash" ]
 
 # create a runnable gdna test image using basic debian
 FROM debian:stable AS gdna

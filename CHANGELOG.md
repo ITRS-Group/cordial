@@ -1,5 +1,46 @@
 # Change Log
 
+## Version v1.17.1
+
+> [!NOTE]
+> **Released 2024-09-xx**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## Version v1.17.1 Changes
+
+* `tools/geneos`
+
+  * Add an `insecureport` parameter in Gateway instance template to support explicit insecure port when secure port is enabled by certificates. To use this you must update the `gateway-instance.setup.xml.gotmpl` either manually or by using `geneos init templates`
+  * Related to the above, swap the main and alias names for `geneos init template(s)` - both will work.
+
+* `gdna`
+
+  * Changed the text value in the `l3missing` column of various view from `yes` to `missing` to avoid ambiguity after user feedback.
+  * Changed Dataview group name for optional gateway reports from `Coverage by Gateway` to simply `Gateways`
+  * Add a new `logic` field to conditional-format tests to control how multiple column tests are handled; Default to the previous behaviour of "AND" but can be "OR" (or "all" / "any" respectively)
+
+* `tools/san-config`
+
+  * Add support for number of gateway sets to push to each probe, default 1 to maintain existing behaviour
+  * Treat gateway pairs as a single gateway in logging and counting
+  * Connection files can be served without a standby gateway port
+  * Use default ports when gateways in the configuration do not supply them
+
+## Version v1.17.1 Fixes
+
+* `tools/geneos`
+
+  * Fix `copy` and `move` handling of source or destination in the form of `@HOST` by updating command annotation and related changes in `instance.Match()` and `parseargs()`. Before this fix, and after the `parseargs()` review, `geneos copy gw\* @remote` would not work correctly, making the creation of standby gateway sets much harder
+
+* `gdna`
+
+  * Fix filtering of plugins, samplers and dynamic entities for multi-gateway reports, now numbers add up.
+  * Fix table used for building `servers` reporting tables
+  * Fix spelling of `latest` columns in the `sources` report
+
+---
+
 ## Version v1.17.0
 
 > [!NOTE]

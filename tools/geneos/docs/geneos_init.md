@@ -132,7 +132,7 @@ geneos init [flags] [DIRECTORY]
 |-------|-------|
 | [`geneos init all`](geneos_init_all.md)	 | Initialise a more complete Geneos environment |
 | [`geneos init demo`](geneos_init_demo.md)	 | Initialise a Geneos Demo environment |
-| [`geneos init template / templates`](geneos_init_template.md)	 | Initialise or overwrite templates |
+| [`geneos init templates / template`](geneos_init_templates.md)	 | Initialise or overwrite templates |
 
 ### Options
 
