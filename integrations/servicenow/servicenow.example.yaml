@@ -28,6 +28,9 @@ servicenow:
     contact_type: email
     caller_id: admin
   incidenttable: incident
+  incident-user:
+    field: caller_id
+    lookup: true
   incidentstates:
     0: Create
     1: [ New, Update ]
