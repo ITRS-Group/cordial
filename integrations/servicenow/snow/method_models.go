@@ -31,6 +31,7 @@ type Connection struct {
 	Instance string
 	Username string
 	Password string
+	Trace    bool
 }
 
 type RequestTransitive struct {

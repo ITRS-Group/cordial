@@ -20,8 +20,10 @@ package snow
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"net/http/httputil"
+	"os"
 
 	"github.com/labstack/echo/v4"
 )
@@ -40,7 +42,7 @@ type SNOWError struct {
 func (t RequestTransitive) QueryTableDetail(table string) (r ResultDetail, err error) {
 	var i ResultsArray
 	i, err = t.QueryTable(table)
-	if len(i) != 0 {
+	if len(i) > 0 {
 		r = i[0]
 	}
 	return
@@ -52,13 +54,25 @@ func (t RequestTransitive) QueryTable(table string) (i ResultsArray, err error) 
 		return
 	}
 
+	if t.Trace {
+		if reqdump, err := httputil.DumpRequest(req, t.Method != "GET"); err == nil {
+			fmt.Fprintf(os.Stderr, "-- Request --\n\n%s\n\n", string(reqdump))
+		}
+	}
+
 	resp, err := t.Client.Do(req)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	if t.Trace {
+		if respdump, err := httputil.DumpResponse(resp, true); err == nil {
+			fmt.Fprintf(os.Stderr, "-- Response --\n\n%s\n\n", string(respdump))
+		}
+	}
+
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return
 	}
@@ -89,6 +103,12 @@ func (t RequestTransitive) QueryTableSingle(table string) (i ResultDetail, err e
 		return
 	}
 
+	if t.Trace {
+		if reqdump, err := httputil.DumpRequest(req, t.Method != "GET"); err == nil {
+			fmt.Fprintf(os.Stderr, "-- Request --\n\n%s\n\n", string(reqdump))
+		}
+	}
+
 	resp, err := t.Client.Do(req)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)
@@ -96,7 +116,13 @@ func (t RequestTransitive) QueryTableSingle(table string) (i ResultDetail, err e
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	if t.Trace {
+		if respdump, err := httputil.DumpResponse(resp, true); err == nil {
+			fmt.Fprintf(os.Stderr, "-- Response --\n\n%s\n\n", string(respdump))
+		}
+	}
+
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)
 		return

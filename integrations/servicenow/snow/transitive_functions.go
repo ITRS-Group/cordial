@@ -20,6 +20,7 @@ package snow
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -58,6 +59,9 @@ func InitializeConnection(vc *config.Config) *Connection {
 	clientid := vc.GetString("servicenow.clientid")
 	clientsecret := vc.GetString("servicenow.clientsecret")
 	instance := vc.GetString("servicenow.instance")
+	trace := vc.GetBool(config.Join("servicenow", "trace"))
+
+	fmt.Println("trace enabled:", trace)
 
 	if clientid != "" && clientsecret != "" && !strings.Contains(instance, ".") {
 		params := make(url.Values)
@@ -76,6 +80,7 @@ func InitializeConnection(vc *config.Config) *Connection {
 		cachedConnection = &Connection{
 			Client:   conf.Client(context.Background()),
 			Instance: instance,
+			Trace:    trace,
 		}
 		return cachedConnection
 	}
@@ -85,6 +90,7 @@ func InitializeConnection(vc *config.Config) *Connection {
 		Instance: instance,
 		Username: username,
 		Password: password,
+		Trace:    trace,
 	}
 	return cachedConnection
 }
@@ -110,8 +116,7 @@ func AssembleRequest(t RequestTransitive, table string) (req *http.Request, err 
 
 	u.RawQuery = z
 
-	payload := bytes.NewReader(t.Payload)
-	if req, err = http.NewRequest(t.Method, u.String(), payload); err != nil {
+	if req, err = http.NewRequest(t.Method, u.String(), bytes.NewReader(t.Payload)); err != nil {
 		return
 	}
 	if t.Connection.Client == http.DefaultClient {
