@@ -32,11 +32,15 @@ import (
 var cf *config.Config
 
 var conffile, execname string
+var debug bool
 
 func init() {
 	cobra.OnInitialize(initConfig)
 
 	RootCmd.PersistentFlags().StringVarP(&conffile, "conf", "c", "", "override config file")
+
+	RootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	RootCmd.PersistentFlags().MarkHidden("debug")
 
 	// how to remove the help flag help text from the help output! Sigh...
 	RootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
