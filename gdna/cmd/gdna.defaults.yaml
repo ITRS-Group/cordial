@@ -2668,7 +2668,7 @@ reports:
 
   sources:
     name: Sources
-    group: Monitored Estate
+    group: GDNA
     columns: [ source, status, firstSeen, lastSeen, sourceType, path, valid, extendedFormat, gateways, probes, samplers, dynamicEntities ]
     headlines: > #sql
       SELECT 'latestUpdate', max(lastSeen)
@@ -2837,7 +2837,7 @@ reports:
 
   os-versions:
     name: Operating System Versions
-    group: Monitored Estate
+    group: Geneos Versions
     columns: [ osVersion, count ]
     query: | #sql
       SELECT os, count(*)
@@ -2852,9 +2852,9 @@ reports:
        WHERE os IS NULL
       ;
 
-  netprobe-versions:
-    name: Netprobe Versions
-    group: Monitored Estate
+  probe-versions:
+    name: Probe Versions
+    group: Geneos Versions
     columns: [ probeVersion, count ]
     query: | #sql
       SELECT version, count(*)
@@ -2871,7 +2871,7 @@ reports:
 
   gateway-versions:
     name: Gateway Versions
-    group: Monitored Estate
+    group: Geneos Versions
     columns: [ gatewayVersion, count ]
     query: | #sql
       SELECT version, count(*)
