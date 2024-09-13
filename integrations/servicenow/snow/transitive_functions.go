@@ -20,7 +20,6 @@ package snow
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -60,8 +59,6 @@ func InitializeConnection(vc *config.Config) *Connection {
 	clientsecret := vc.GetString("servicenow.clientsecret")
 	instance := vc.GetString("servicenow.instance")
 	trace := vc.GetBool(config.Join("servicenow", "trace"))
-
-	fmt.Println("trace enabled:", trace)
 
 	if clientid != "" && clientsecret != "" && !strings.Contains(instance, ".") {
 		params := make(url.Values)
