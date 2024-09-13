@@ -27,7 +27,7 @@ gdna report
 
 ```text
   -o, --output file         output destination file, default is console (default "-")
-  -F, --format format       output format (dataview, table, html, toolkit, xslx) (default "dataview")
+  -F, --format format       output format - one of: dataview, table, html, toolkit (or csv), xslx (default "dataview")
   -r, --reports string      Run only matching (file globbing style) reports
   -S, --scramble            Scramble configured column of data in reports with sensitive data
   -H, --hostname hostname   Connect to netprobe at hostname (default "localhost")
