@@ -25,6 +25,9 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
+	"github.com/rs/zerolog/log"
+
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 func AcceptEvent(c echo.Context) (err error) {
@@ -99,22 +102,26 @@ func AcceptEvent(c echo.Context) (err error) {
 		}
 	}
 
-	user := vc.GetString("servicenow.username")
-	if _, ok := incident["caller_id"]; ok {
-		user = incident["caller_id"]
-	}
+	if vc.GetBool(config.Join("servicenow", "incident-user", "lookup")) {
+		user := vc.GetString(config.Join("servicenow", "username"))
+		userfield := vc.GetString(config.Join("servicenow", "incident-user", "field"), config.Default("caller_id"))
+		if _, ok := incident[userfield]; ok {
+			user = incident[userfield]
+		}
 
-	// real basic validation of user
-	if !userRE.MatchString(user) {
-		return echo.NewHTTPError(http.StatusBadRequest, "username supplied is invalid")
-	}
+		// basic validation of user
+		if !userRE.MatchString(user) {
+			return echo.NewHTTPError(http.StatusBadRequest, "username supplied is invalid")
+		}
 
-	// only lookup user after all defaults applied
-	u, err := s.GET("1", "sys_id", "", "user_name="+user, "").QueryTableDetail("sys_user")
-	if err != nil || len(u) == 0 {
-		return echo.NewHTTPError(http.StatusNotFound, "User not found")
+		// only lookup user after all defaults applied
+		u, err := s.GET("1", "sys_id", "", "user_name="+user, "").QueryTableDetail("sys_user")
+		if err != nil || len(u) == 0 {
+			log.Error().Err(err).Msgf("user not found")
+			return echo.NewHTTPError(http.StatusNotFound, "User not found")
+		}
+		incident[userfield] = u["sys_id"]
 	}
-	incident["caller_id"] = u["sys_id"]
 
 	if incident_id != "" {
 		incidentID, err := UpdateIncident(vc, incident_id, incident)
