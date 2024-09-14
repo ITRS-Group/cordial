@@ -10,7 +10,7 @@ This Geneos to ServiceNow integration provides a way for you to create or update
 
 The binary provided is for `linux-amd64` as this is the standard architecture supported by the Geneos Gateway, however there should be no restriction on platform if you build from source.
 
-# ServiceNow Flow Diagram
+## ServiceNow Flow Diagram
 
 As a very high level view of how the integration handles Geneos alerts and actions:
 
@@ -164,6 +164,9 @@ servicenow:
   clientsecret: ${enc:~/.keyfile:+encs+6680A7836122519CE44EEE1BA9152900}
   searchtype: simple
   queryresponsefields: number,sys_id,cmdb_ci.name,short_description,description,correlation_id,opened_by,state
+  incident-user:
+    field: class_id
+    lookup: true
   incidenttable: incident
   incidentstates:
     0: create
@@ -314,6 +317,16 @@ Note: All values that are intended to be passed to ServiceNow as a field are unq
   * `queryresponsefields` **Router Only**
 
     A comma separated list of fields to return when calling the request-all-incident endpoint.
+
+  * `incident-user` **Router Only**
+
+    * `field`
+
+      This parameter controls which field is used to set the user on behalf of which to raise or update incidents. The default is `caller_id`.
+
+    * `lookup`
+
+      This parameter controls if the router tries to lookup the user in the `sys_user` table and sends the `sys_id` for the user instead of the literal user identifier. If `true` (the default) then the lookup is performed, looking for the user named in the field above in the `user_name` field of the `sys_user` table. If set to `false` then the field is sent unchanged.
 
   * `incidenttable` **Router Only**
 
