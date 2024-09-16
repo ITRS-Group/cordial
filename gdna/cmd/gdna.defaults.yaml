@@ -1299,7 +1299,8 @@ db:
       CREATE ${db.temporary-table} TABLE ${db.empty-servers.table} AS
       SELECT ${db.servers.columns}
         FROM ${db.servers.table}
-        WHERE server NOT IN (SELECT server FROM ${db.samplers.active});
+        WHERE server NOT IN (SELECT server FROM ${db.samplers.active})
+          AND server NOT IN (SELECT server FROM ${db.ca-samplers.active});
 
   empty-gateways:
     table: empty_gateways
@@ -1419,7 +1420,7 @@ reports:
   # table in the body of emails. Put any required headlines here as they
   # are not added to individual sheets in an XLSX workbook.
   gdna-summary:
-    group: GDNA
+    group: GDNA Information
     name: GDNA Summary
     columns: [ Item, Description ]
     type: summary
@@ -2184,7 +2185,7 @@ reports:
   missing-coverage:
     name: Missing Coverage
     group: Monitoring Coverage
-    columns: [ serverID, server, probes, samplers, dynamicEntities, l1missing, l2missing, l3missing, gateways ]
+    columns: [ serverID, server, osVersion, probes, samplers, dynamicEntities, l1missing, l2missing, l3missing, gateways ]
     freeze-to-column: server
     scramble-columns: [ serverID, server, gateways ]
     headlines: > #sql
@@ -2195,22 +2196,23 @@ reports:
 
       SELECT 'servers', total FROM t
       UNION
-      SELECT 'empty', (SELECT count(distinct server) FROM ${db.empty-servers.table})
+      SELECT 'serversComplete', (SELECT count(distinct server) FROM ${db.covered-servers.table})
       UNION
-      SELECT 'incomplete', (SELECT count(distinct server) FROM ${db.uncovered-servers.table})
+      SELECT 'serversIncomplete', (SELECT count(distinct server) FROM ${db.uncovered-servers.table})
       UNION
-      SELECT 'complete', (SELECT count(distinct server) FROM ${db.covered-servers.table})
+      SELECT 'serversL1Incomplete', total - (SELECT count(distinct server) FROM ${db.l1covered-servers.table}) FROM t
       UNION
-      SELECT 'l1Incomplete', total - (SELECT count(distinct server) FROM ${db.l1covered-servers.table}) FROM t
+      SELECT 'serversL2Incomplete', total - (SELECT count(distinct server) FROM ${db.l2covered-servers.table}) FROM t
       UNION
-      SELECT 'l2Incomplete', total - (SELECT count(distinct server) FROM ${db.l2covered-servers.table}) FROM t
+      SELECT 'serversL3Incomplete', total - (SELECT count(distinct server) FROM ${db.l3covered-servers.table}) FROM t
       UNION
-      SELECT 'l3Incomplete', total - (SELECT count(distinct server) FROM ${db.l3covered-servers.table}) FROM t
+      SELECT 'serversEmpty', (SELECT count(distinct server) FROM ${db.empty-servers.table})
 
       ;
     query: > #sql
       SELECT server,
              replace(server, ':'||hostID, ''),
+             COALESCE(os, ''),
              (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
              (SELECT total(IIF(individual, number, 1)) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
@@ -2307,21 +2309,21 @@ reports:
       UNION
       SELECT 'relatedProbes', (SELECT count(*) FROM ${db.probes.active} WHERE server IN (SELECT server FROM ${db.servers.table} WHERE ${split-column} = '${value}')) - total FROM t
       UNION
-      SELECT 'empty', (SELECT count(distinct server) FROM ${db.empty-servers.table} WHERE ${split-column} = '${value}')
+      SELECT 'serversEmpty', (SELECT count(distinct server) FROM ${db.empty-servers.table} WHERE ${split-column} = '${value}')
       UNION
-      SELECT 'incomplete', (SELECT count(distinct server) FROM ${db.uncovered-servers.table} WHERE ${split-column} = '${value}')
+      SELECT 'serversIncomplete', (SELECT count(distinct server) FROM ${db.uncovered-servers.table} WHERE ${split-column} = '${value}')
       UNION
-      SELECT 'complete', (SELECT count(distinct server) FROM ${db.covered-servers.table} WHERE ${split-column} = '${value}')
+      SELECT 'serversComplete', (SELECT count(distinct server) FROM ${db.covered-servers.table} WHERE ${split-column} = '${value}')
       UNION
-      SELECT 'l1Incomplete', total - (SELECT count(distinct server) FROM ${db.l1covered-servers.table} WHERE ${split-column} = '${value}') FROM t
+      SELECT 'serversL1Incomplete', total - (SELECT count(distinct server) FROM ${db.l1covered-servers.table} WHERE ${split-column} = '${value}') FROM t
       UNION
-      SELECT 'l2Incomplete', total - (SELECT count(distinct server) FROM ${db.l2covered-servers.table} WHERE ${split-column} = '${value}') FROM t
+      SELECT 'serversL2Incomplete', total - (SELECT count(distinct server) FROM ${db.l2covered-servers.table} WHERE ${split-column} = '${value}') FROM t
       UNION
-      SELECT 'l3Incomplete', total - (SELECT count(distinct server) FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}') FROM t
+      SELECT 'serversL3Incomplete', total - (SELECT count(distinct server) FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}') FROM t
       UNION
       SELECT 'dynamicEntities', (SELECT total(number) FROM ${db.ca-samplers.active} WHERE ${split-column} = '${value}')
       UNION
-      SELECT 'dynamicEntitiesUnallocated', (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server IS NULL AND ${split-column} = '${value}')
+      SELECT 'dynamicEntitiesUnknownServer', (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server IS NULL AND ${split-column} = '${value}')
       ;
     query: > #sql
       SELECT server,
@@ -2441,21 +2443,21 @@ reports:
       UNION
       SELECT 'relatedProbes', (SELECT count(*) FROM ${db.probes.active} WHERE server IN (SELECT server FROM ${db.servers.table} WHERE ${split-column} = '${value}')) - total FROM t
       UNION
-      SELECT 'empty', (SELECT count(distinct server) FROM ${db.empty-servers.table} WHERE ${split-column} = '${value}')
+      SELECT 'serversEmpty', (SELECT count(distinct server) FROM ${db.empty-servers.table} WHERE ${split-column} = '${value}')
       UNION
-      SELECT 'incomplete', (SELECT count(distinct server) FROM ${db.uncovered-servers.table} WHERE ${split-column} = '${value}')
+      SELECT 'serversIncomplete', (SELECT count(distinct server) FROM ${db.uncovered-servers.table} WHERE ${split-column} = '${value}')
       UNION
-      SELECT 'complete', (SELECT count(distinct server) FROM ${db.covered-servers.table} WHERE ${split-column} = '${value}')
+      SELECT 'serversComplete', (SELECT count(distinct server) FROM ${db.covered-servers.table} WHERE ${split-column} = '${value}')
       UNION
-      SELECT 'l1Incomplete', total - (SELECT count(distinct server) FROM ${db.l1covered-servers.table} WHERE ${split-column} = '${value}') FROM t
+      SELECT 'serversL1Incomplete', total - (SELECT count(distinct server) FROM ${db.l1covered-servers.table} WHERE ${split-column} = '${value}') FROM t
       UNION
-      SELECT 'l2Incomplete', total - (SELECT count(distinct server) FROM ${db.l2covered-servers.table} WHERE ${split-column} = '${value}') FROM t
+      SELECT 'serversL2Incomplete', total - (SELECT count(distinct server) FROM ${db.l2covered-servers.table} WHERE ${split-column} = '${value}') FROM t
       UNION
-      SELECT 'l3Incomplete', total - (SELECT count(distinct server) FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}') FROM t
+      SELECT 'serversL3Incomplete', total - (SELECT count(distinct server) FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}') FROM t
       UNION
       SELECT 'dynamicEntities', (SELECT total(number) FROM ${db.ca-samplers.active} WHERE ${split-column} = '${value}')
       UNION
-      SELECT 'dynamicEntitiesUnallocated', (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server IS NULL AND ${split-column} = '${value}')
+      SELECT 'dynamicEntitiesUnknownServer', (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server IS NULL AND ${split-column} = '${value}')
 
       ;
     query: > #sql
@@ -2668,7 +2670,7 @@ reports:
 
   sources:
     name: Sources
-    group: GDNA
+    group: GDNA Information
     columns: [ source, status, firstSeen, lastSeen, sourceType, path, valid, extendedFormat, gateways, probes, samplers, dynamicEntities ]
     headlines: > #sql
       SELECT 'latestUpdate', max(lastSeen)
@@ -2736,7 +2738,7 @@ reports:
   gateway-summary:
     name: Gateways
     group: Monitored Estate
-    columns: [ gateway, gatewayHost, gatewayPort, gatewayVersion, probes, samplers, dynamicEntities, source ]
+    columns: [ gateway, gatewayHost, gatewayPort, gatewayVersion, probes, samplers, dynamicEntities, dynamicEntitiesUnknownServer, serversComplete, serversIncomplete, serversEmpty, source ]
     scramble-columns: [ gatewayHost ]
     query: | #sql
       SELECT gateway,
@@ -2746,6 +2748,10 @@ reports:
              (SELECT count(*) FROM ${db.probes.active} WHERE gateway = g.gateway),
              (SELECT total(number) FROM ${db.samplers.active} WHERE gateway = g.gateway),
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE gateway = g.gateway),
+             (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server IS NULL AND gateway = g.gateway),
+             (SELECT count(distinct server) FROM ${db.covered-servers.table} WHERE gateway = g.gateway),
+             (SELECT count(distinct server) FROM ${db.uncovered-servers.table} WHERE gateway = g.gateway),
+             (SELECT count(distinct server) FROM ${db.empty-servers.table} WHERE gateway = g.gateway) AS empty,
              source
         FROM ${db.gateways.active} g
       ;
@@ -2756,6 +2762,27 @@ reports:
     enable-for-dataview: false
     columns: [ serverID, server, osVersion, probes, samplers, dynamicEntities, l1missing, l2missing, l3missing, gateways, plugins ]
     scramble-columns: [ serverID, server ]
+    headlines: > #sql
+      WITH t AS (
+        SELECT
+          (SELECT count(distinct server) FROM ${db.servers.table}) as total
+      )
+
+      SELECT 'servers', total FROM t
+      UNION
+      SELECT 'serversComplete', (SELECT count(distinct server) FROM ${db.covered-servers.table})
+      UNION
+      SELECT 'serversIncomplete', (SELECT count(distinct server) FROM ${db.uncovered-servers.table})
+      UNION
+      SELECT 'serversL1Incomplete', total - (SELECT count(distinct server) FROM ${db.l1covered-servers.table}) FROM t
+      UNION
+      SELECT 'serversL2Incomplete', total - (SELECT count(distinct server) FROM ${db.l2covered-servers.table}) FROM t
+      UNION
+      SELECT 'serversL3Incomplete', total - (SELECT count(distinct server) FROM ${db.l3covered-servers.table}) FROM t
+      UNION
+      SELECT 'serversEmpty', (SELECT count(distinct server) FROM ${db.empty-servers.table})
+
+      ;
     query: > #sql
       SELECT server AS serverID,
              replace(server, ':'||hostID, '') server,
@@ -2837,7 +2864,7 @@ reports:
 
   os-versions:
     name: Operating System Versions
-    group: Geneos Versions
+    group: GDNA Information
     columns: [ osVersion, count ]
     query: | #sql
       SELECT os, count(*)
@@ -2854,7 +2881,7 @@ reports:
 
   probe-versions:
     name: Probe Versions
-    group: Geneos Versions
+    group: GDNA Information
     columns: [ probeVersion, count ]
     query: | #sql
       SELECT version, count(*)
@@ -2871,7 +2898,7 @@ reports:
 
   gateway-versions:
     name: Gateway Versions
-    group: Geneos Versions
+    group: GDNA Information
     columns: [ gatewayVersion, count ]
     query: | #sql
       SELECT version, count(*)

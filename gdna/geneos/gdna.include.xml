@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.0.0-240827 at 2024-09-10 17:31:34 by pgalbavy on ITRSLP257-->
+<!--Edited using Gateway Setup Editor version GA6.8.1-240517 at 2024-09-16 14:19:03 by peter on HPEnvy34-->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.0.0-240827/gateway.xsd">
 	<probes>
 		<probe name="gdna">
@@ -27,6 +27,7 @@
 				<environment ref="GDNA Defaults"/>
 				<sampler ref="GDNA"/>
 				<sampler ref="GDNA Process"/>
+				<sampler ref="Version Summary"/>
 			</type>
 		</typeGroup>
 	</types>
@@ -49,11 +50,16 @@
 						<var ref="plugins"/>
 					</expectRowsVar>
 				</dataview>
+				<dataview name="API Summary">
+					<var-group>
+						<data>GDNA Information</data>
+					</var-group>
+				</dataview>
 			</dataviews>
 		</sampler>
 		<sampler name="GDNA Process">
 			<var-group>
-				<data>GDNA</data>
+				<data>GDNA Information</data>
 			</var-group>
 			<sampleInterval>
 				<data>5</data>
@@ -86,6 +92,182 @@
 								</headline>
 							</data>
 						</var-headlines>
+					</additions>
+				</dataview>
+			</dataviews>
+		</sampler>
+		<sampler name="Version Summary">
+			<var-group>
+				<data/>
+			</var-group>
+			<plugin>
+				<Gateway-sql>
+					<tables>
+						<dataview>
+							<tableName>
+								<data>OS</data>
+							</tableName>
+							<xpath>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Operating System Versions&quot;)]</xpath>
+							<columns>
+								<column>
+									<name>
+										<data>osVersion</data>
+									</name>
+								</column>
+								<column>
+									<name>
+										<data>count</data>
+									</name>
+								</column>
+							</columns>
+						</dataview>
+						<dataview>
+							<tableName>
+								<data>GV</data>
+							</tableName>
+							<xpath>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Gateway Versions&quot;)]</xpath>
+							<columns>
+								<column>
+									<name>
+										<data>gatewayVersion</data>
+									</name>
+								</column>
+								<column>
+									<name>
+										<data>count</data>
+									</name>
+								</column>
+							</columns>
+						</dataview>
+						<dataview>
+							<tableName>
+								<data>NV</data>
+							</tableName>
+							<xpath>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Probe Versions&quot;)]</xpath>
+							<columns>
+								<column>
+									<name>
+										<data>probeVersion</data>
+									</name>
+								</column>
+								<column>
+									<name>
+										<data>count</data>
+									</name>
+								</column>
+							</columns>
+						</dataview>
+					</tables>
+					<views>
+						<view>
+							<name>
+								<data>Operating Systems</data>
+							</name>
+							<sql>
+								<data>SELECT * FROM 
+OS
+ORDER BY osVersion ASC</data>
+							</sql>
+							<showRowID>true</showRowID>
+						</view>
+						<view>
+							<name>
+								<data>Gateways</data>
+							</name>
+							<sql>
+								<data>SELECT * FROM
+GV
+ORDER BY gatewayVersion ASC
+</data>
+							</sql>
+							<showRowID>true</showRowID>
+						</view>
+						<view>
+							<name>
+								<data>Probes</data>
+							</name>
+							<sql>
+								<data>SELECT * FROM
+NV
+ORDER BY probeVersion ASC
+</data>
+							</sql>
+							<showRowID>true</showRowID>
+						</view>
+					</views>
+				</Gateway-sql>
+			</plugin>
+			<dataviews>
+				<dataview name="Operating Systems">
+					<additions>
+						<var-headlines>
+							<data>
+								<headline>
+									<data>linuxVersions</data>
+								</headline>
+								<headline>
+									<data>linuxServers</data>
+								</headline>
+								<headline>
+									<data>windowsVersions</data>
+								</headline>
+								<headline>
+									<data>windowsServers</data>
+								</headline>
+								<headline>
+									<data>unknown</data>
+								</headline>
+							</data>
+						</var-headlines>
+						<var-columns>
+							<data>
+								<column>
+									<data>visible</data>
+								</column>
+							</data>
+						</var-columns>
+					</additions>
+				</dataview>
+				<dataview name="Gateways">
+					<additions>
+						<var-headlines>
+							<data>
+								<headline>
+									<data>releases</data>
+								</headline>
+								<headline>
+									<data>gateways</data>
+								</headline>
+							</data>
+						</var-headlines>
+						<var-columns>
+							<data>
+								<column>
+									<data>visible</data>
+								</column>
+							</data>
+						</var-columns>
+					</additions>
+				</dataview>
+				<dataview name="Probes">
+					<additions>
+						<var-headlines>
+							<data>
+								<headline>
+									<data>releases</data>
+								</headline>
+								<headline>
+									<data>probes</data>
+								</headline>
+							</data>
+						</var-headlines>
+						<var-columns>
+							<data>
+								<column>
+									<data>visible</data>
+								</column>
+							</data>
+						</var-columns>
 					</additions>
 				</dataview>
 			</dataviews>
@@ -312,17 +494,17 @@
 				</rule>
 				<rule name="Empty Servers">
 					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]/headlines/cell[(@name=&quot;empty&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]/headlines/cell[(@name=&quot;serversEmpty&quot;)]</target>
 					</targets>
 					<priority>1</priority>
 					<pathAliases>
-						<pathAlias name="dynamicEntities">../cell[(@name=&quot;dynamicEntities&quot;)]</pathAlias>
+						<pathAlias name="dynamicEntitiesUnknownServer">../cell[(@name=&quot;dynamicEntitiesUnknownServer&quot;)]</pathAlias>
 					</pathAliases>
 					<block>
 						<set>
-							<var ref="dynamicEntities"/>
+							<var ref="dynamicEntitiesUnknownServer"/>
 							<dataItem>
-								<pathAlias ref="dynamicEntities"/>
+								<pathAlias ref="dynamicEntitiesUnknownServer"/>
 								<property>@value</property>
 							</dataItem>
 						</set>
@@ -335,7 +517,7 @@
 									<integer>0</integer>
 								</notEqual>
 								<equal>
-									<var ref="dynamicEntities"/>
+									<var ref="dynamicEntitiesUnknownServer"/>
 									<integer>0</integer>
 								</equal>
 							</and>
@@ -395,92 +577,6 @@
 								<update>
 									<property>state/@severity</property>
 									<severity>ok</severity>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>undefined</severity>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
-				<rule disabled="true" name="Server Samplers">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]/rows/row[not(contains(@name,&quot;#&quot;))]/cell[(@column=&quot;samplers&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<pathAliases>
-						<pathAlias name="dynamicEntities">ancestor::dataview/headlines/cell[(@name=&quot;dynamicEntities&quot;)]</pathAlias>
-					</pathAliases>
-					<block>
-						<set>
-							<var ref="dynamicEntities"/>
-							<dataItem>
-								<pathAlias ref="dynamicEntities"/>
-								<property>@value</property>
-							</dataItem>
-						</set>
-						<if>
-							<and>
-								<equal>
-									<dataItem>
-										<property>@value</property>
-									</dataItem>
-									<integer>0</integer>
-								</equal>
-								<equal>
-									<var ref="dynamicEntities"/>
-									<integer>0</integer>
-								</equal>
-							</and>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<var ref="noServerSamplersSeverity"/>
-								</update>
-							</transaction>
-							<if>
-								<equal>
-									<dataItem>
-										<property>@value</property>
-									</dataItem>
-									<integer>0</integer>
-								</equal>
-								<transaction>
-									<update>
-										<property>state/@severity</property>
-										<var ref="noServerSamplerDynasSeverity"/>
-									</update>
-								</transaction>
-								<transaction>
-									<update>
-										<property>state/@severity</property>
-										<severity>undefined</severity>
-									</update>
-								</transaction>
-							</if>
-						</if>
-					</block>
-				</rule>
-				<rule disabled="true" name="Probe Samplers">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]/rows/row[contains(@name,&quot;#&quot;)]/cell[(@column=&quot;samplers&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<equal>
-								<dataItem>
-									<property>@value</property>
-								</dataItem>
-								<integer>0</integer>
-							</equal>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<var ref="noProbeSamplersSeverity"/>
 								</update>
 							</transaction>
 							<transaction>
@@ -609,98 +705,6 @@
 				</rule>
 			</ruleGroup>
 			<ruleGroup name="Missing Coverage">
-				<rule disabled="true" name="Missing Coverage Empty Probe">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Missing Coverage&quot;)]/rows/row/cell[(@column=&quot;server&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<pathAliases>
-						<pathAlias name="level1">../cell[(@column=&quot;l1missing&quot;)]</pathAlias>
-						<pathAlias name="level2">../cell[(@column=&quot;l2missing&quot;)]</pathAlias>
-						<pathAlias name="level3">../cell[(@column=&quot;l3covered&quot;)]</pathAlias>
-					</pathAliases>
-					<block>
-						<set>
-							<var ref="level1"/>
-							<dataItem>
-								<pathAlias ref="level1"/>
-								<property>@value</property>
-							</dataItem>
-						</set>
-						<set>
-							<var ref="level2"/>
-							<dataItem>
-								<pathAlias ref="level2"/>
-								<property>@value</property>
-							</dataItem>
-						</set>
-						<set>
-							<var ref="level3"/>
-							<dataItem>
-								<pathAlias ref="level3"/>
-								<property>@value</property>
-							</dataItem>
-						</set>
-						<if>
-							<and>
-								<and>
-									<notEqual>
-										<var ref="level1"/>
-										<string/>
-									</notEqual>
-									<notEqual>
-										<var ref="level2"/>
-										<string/>
-									</notEqual>
-								</and>
-								<equal>
-									<var ref="level3"/>
-									<string>N</string>
-								</equal>
-							</and>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<var ref="noCoverageSeverity"/>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>undefined</severity>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
-				<rule disabled="true" name="Missing Coverage Server Samplers">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Missing Coverage&quot;)]/rows/row/cell[(@column=&quot;samplers&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<equal>
-								<dataItem>
-									<property>@value</property>
-								</dataItem>
-								<integer>0</integer>
-							</equal>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<var ref="noServerSamplersSeverity"/>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>undefined</severity>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
 				<rule name="Missing Coverage Levels">
 					<targets>
 						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Missing Coverage&quot;)]/rows/row/cell[(@column=&quot;l1missing&quot;)]</target>
@@ -715,34 +719,6 @@
 									<property>@value</property>
 								</dataItem>
 								<string/>
-							</equal>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>ok</severity>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<var ref="missingCoverageSeverity"/>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
-				<rule disabled="true" name="Missing Coverage Levels 3">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Missing Coverage&quot;)]/rows/row/cell[(@column=&quot;l3covered&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<equal>
-								<dataItem>
-									<property>@value</property>
-								</dataItem>
-								<string>Y</string>
 							</equal>
 							<transaction>
 								<update>
@@ -961,6 +937,234 @@
 						</if>
 					</block>
 				</rule>
+			</ruleGroup>
+			<ruleGroup name="Version Control">
+				<rule name="New Rule">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Version Summary&quot;)][(@type=&quot;GDNA&quot;)]/dataview/rows/row/cell[(@column=&quot;visible&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="visible">/geneos/gateway/directory/probe/managedEntity[(attr(&quot;DASHBOARD&quot;)=&quot;PROD&quot;)]/sampler[(@name=&quot;GDNA Process&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;GDNA Process&quot;)]/rows/row[(@name=&quot;gdna&quot;)]/cell[(@column=&quot;instanceCount&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<first>
+									<dataItems>
+										<pathAlias ref="visible"/>
+										<property>@value</property>
+									</dataItems>
+								</first>
+							</update>
+						</transaction>
+					</block>
+				</rule>
+				<ruleGroup name="OS Versions">
+					<rule name="linuxVersions">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Version Summary&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Operating Systems&quot;)]/headlines/cell[(@name=&quot;linuxVersions&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="count">../../rows/row/cell[wild(@value,&quot;Linux*&quot;)][(@column=&quot;osVersion&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<transaction>
+								<update>
+									<property>@value</property>
+									<count>
+										<dataItems>
+											<pathAlias ref="count"/>
+											<property>@value</property>
+										</dataItems>
+									</count>
+								</update>
+							</transaction>
+						</block>
+					</rule>
+					<rule name="windowsVersions">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Version Summary&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Operating Systems&quot;)]/headlines/cell[(@name=&quot;windowsVersions&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="count">../../rows/row/cell[wild(@value,&quot;Windows*&quot;)][(@column=&quot;osVersion&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<transaction>
+								<update>
+									<property>@value</property>
+									<count>
+										<dataItems>
+											<pathAlias ref="count"/>
+											<property>@value</property>
+										</dataItems>
+									</count>
+								</update>
+							</transaction>
+						</block>
+					</rule>
+					<rule name="unknown">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Version Summary&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Operating Systems&quot;)]/headlines/cell[(@name=&quot;unknown&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="counter">../../rows/row/cell[(@value=&quot;Unknown&quot;)][(@column=&quot;osVersion&quot;)]/../cell[(@column=&quot;count&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<transaction>
+								<update>
+									<property>@value</property>
+									<first>
+										<dataItems>
+											<pathAlias ref="counter"/>
+											<property>@value</property>
+										</dataItems>
+									</first>
+								</update>
+							</transaction>
+						</block>
+					</rule>
+					<rule name="linuxServers">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Version Summary&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Operating Systems&quot;)]/headlines/cell[(@name=&quot;linuxServers&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="count">../../rows/row/cell[wild(@value,&quot;Linux*&quot;)][(@column=&quot;osVersion&quot;)]/../cell[(@column=&quot;count&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<transaction>
+								<update>
+									<property>@value</property>
+									<total>
+										<dataItems>
+											<pathAlias ref="count"/>
+											<property>@value</property>
+										</dataItems>
+									</total>
+								</update>
+							</transaction>
+						</block>
+					</rule>
+					<rule name="windowsServers">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Version Summary&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Operating Systems&quot;)]/headlines/cell[(@name=&quot;windowsServers&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="count">../../rows/row/cell[wild(@value,&quot;Windows*&quot;)][(@column=&quot;osVersion&quot;)]/../cell[(@column=&quot;count&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<transaction>
+								<update>
+									<property>@value</property>
+									<total>
+										<dataItems>
+											<pathAlias ref="count"/>
+											<property>@value</property>
+										</dataItems>
+									</total>
+								</update>
+							</transaction>
+						</block>
+					</rule>
+				</ruleGroup>
+				<ruleGroup name="Probes">
+					<rule name="releases">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Version Summary&quot;)]/dataview[(@name=&quot;Probes&quot;)]/headlines/cell[(@name=&quot;releases&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="count">../../rows/row/cell[(@column=&quot;count&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<transaction>
+								<update>
+									<property>@value</property>
+									<count>
+										<dataItems>
+											<pathAlias ref="count"/>
+											<property>@value</property>
+										</dataItems>
+									</count>
+								</update>
+							</transaction>
+						</block>
+					</rule>
+					<rule name="probes">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Version Summary&quot;)]/dataview[(@name=&quot;Probes&quot;)]/headlines/cell[(@name=&quot;probes&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="count">../../rows/row/cell[(@column=&quot;count&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<transaction>
+								<update>
+									<property>@value</property>
+									<total>
+										<dataItems>
+											<pathAlias ref="count"/>
+											<property>@value</property>
+										</dataItems>
+									</total>
+								</update>
+							</transaction>
+						</block>
+					</rule>
+				</ruleGroup>
+				<ruleGroup name="Gateways">
+					<rule name="releases">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Version Summary&quot;)]/dataview[(@name=&quot;Gateways&quot;)]/headlines/cell[(@name=&quot;releases&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="count">../../rows/row/cell[(@column=&quot;count&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<transaction>
+								<update>
+									<property>@value</property>
+									<count>
+										<dataItems>
+											<pathAlias ref="count"/>
+											<property>@value</property>
+										</dataItems>
+									</count>
+								</update>
+							</transaction>
+						</block>
+					</rule>
+					<rule name="gateways">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Version Summary&quot;)]/dataview[(@name=&quot;Gateways&quot;)]/headlines/cell[(@name=&quot;gateways&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="count">../../rows/row/cell[(@column=&quot;count&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<transaction>
+								<update>
+									<property>@value</property>
+									<total>
+										<dataItems>
+											<pathAlias ref="count"/>
+											<property>@value</property>
+										</dataItems>
+									</total>
+								</update>
+							</transaction>
+						</block>
+					</rule>
+				</ruleGroup>
 			</ruleGroup>
 		</ruleGroup>
 	</rules>

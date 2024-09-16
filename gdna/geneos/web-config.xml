@@ -12,8 +12,15 @@
     <tree>
         <dashboard name="Monitoring Coverage"/>
         <dashboard name="Plugin Utilization"/>
+        <dashboard name="Versions Summary"/>
     </tree>
-    <slideshows/>
+    <slideshows>
+        <slideshow interval="15" name="GDNA">
+                <dashboard name="Monitoring Coverage"/>
+                <dashboard name="Plugin Utilization"/>
+                <dashboard name="Versions Summary"/>
+        </slideshow>
+    </slideshows>
     <gatewayConnections>
         <gatewayConnection name="Gateway">
             <enabled>true</enabled>
@@ -35,5 +42,6 @@
     <dashboards>
         <dashboard name="Monitoring Coverage" path="/etc/geneos/gdna/monitoring-coverage-PROD.adb"/>
         <dashboard name="Plugin Utilization" path="/etc/geneos/gdna/plugin-utilization-PROD.adb"/>
+        <dashboard name="Versions Summary" path="/etc/geneos/gdna/versions-summary-PROD.adb"/>
     </dashboards>
 </geneosWebServer>
