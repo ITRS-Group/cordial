@@ -1,6 +1,6 @@
 # `gdna` Dashboards
 
-The files in this directory are the two standard dashboards to present your collected coverage data.
+The files in this directory are the three standard dashboards to present your collected coverage data.
 
 You should first import them into your Active Console to check everything is working and once you are satisfied all is in order you can then import them into a Web Dashboard Server for wider display.
 
