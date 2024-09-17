@@ -4,17 +4,18 @@ The Geneos Dynamic Netprobe Analysis ("**GDNA**") tool provides an overview of G
 
 For many users installing GDNA this is as straight forward as creating a `docker-compose.yml` file, adding data sources and starting it up.
 
-We include two out-of-the-box dashboards to show you how effectively Geneos is being used within your I.T. estate as well as detailed data in both the Active Console and via emailed XLSX workbooks.
+We include three out-of-the-box dashboards to show you how effectively Geneos is being used within your I.T. estate as well as detailed data in both the Active Console and via emailed XLSX workbooks.
 
 To dive right in, head to the [Getting Started](#getting-started) section but we suggest taking the time to review the features and functionality first.
 
 > [!NOTE]
 > This guide is for the GDNA shipped as part of cordial release v1.17.1 and later.
-
-> [!IMPORTANT]
+>
 > A number of the newer features in GDNA rely on the additional license data introduced in Geneos 7.0.0 and later. For complete data you should have updated to 7.0.0 for both the License Daemon and the Gateways. GDNA will work with older version of both but will not show complete data. We have tried to clearly indicate which data will not be available in the report / Dataview descriptions in this document.
 
-## Monitoring Coverage Dashboard
+## Dashboards
+
+### Monitoring Coverage Dashboard
 
 The first dashboard, Monitoring Coverage, gives an overview of all your Geneos Gateways, the servers they are monitoring and the high-level plugin utilization, broken down into 3 coverage levels:
 
@@ -26,7 +27,7 @@ The first dashboard, Monitoring Coverage, gives an overview of all your Geneos G
 
 * Level 3 - All other technology and application specific plugins.
 
-## Plugin Utilization Dashboard
+### Plugin Utilization Dashboard
 
 The second dashboard, known as the "beehive", shows you a more in-depth view of individual plugin utilization:
 
@@ -34,32 +35,41 @@ The second dashboard, known as the "beehive", shows you a more in-depth view of 
 
 Each hexagon represents a specific plugin, grouped into logical segments.
 
+### Version Summary Dashboard
+
+The third dashboard we include in GDNA works when data is being collected from Geneos 7 release `licd` and Gateways. It shows you version information about the systems that Netprobes are running on as well as Netprobe versions when `licd` is running release 7 or later. Additional Gateway version information becomes available when running Gateway of release 7 or later.
+
+![Version Summary Example](screenshots/version-summary.jpg)
+
 ## Gateway Dataviews
 
-On the Gateway you can see Dataviews from GDNA, some of which provide the data to drive the dashboards, above, but there are also more detailed views of monitoring coverage to help you track down and remediate possible gaps in coverage. There are more details of the meaning of the cells in these Dataviews in the [Gateway Dataview Details](#gateway-dataview-details) section further below.
-
-> [!NOTE]
-> Please note that the screenshots below are taken from the first public release of GDNA (included in cordial v1.16.0) and the latest release adds a number of headlines and new columns when connected to Geneos release 7.0.0 and above. The full description of this new data is included below in the [Gateway Dataview Details](#gateway-dataview-details) section. The screenshots will be updated when the new features are fully implemented.
+On the Gateway you can see Dataviews from GDNA, some of which provide the data to drive the dashboards above, but there are also more detailed views of monitoring coverage to help you track down and remediate any gaps in coverage. There are more details of the meaning of the cells in these Dataviews in the [Gateway Dataview Details](#dataviews-gateway-detail) section further below.
 
 The Dataviews look like this:
 
 * Missing Coverage
 
-  These _**Missing Coverage**_ report contain a list of servers (a _server_ includes usage data for all Probes across all Gateways, which is identified by the same _host ID_) that have incomplete monitoring coverage.
+  These _**Missing Coverage**_ report contain a list of servers (a _server_ includes data for all Probes across all Gateways, which are identified by a common _host ID_) that have incomplete monitoring coverage.
+
+  For more details see [Dataview: Missing Coverage](#dataview-missing-coverage)
 
   ![Missing Coverage Dataview](screenshots/gdna-8.png)
 
-* Coverage Per Gateway Summary
+* Gateway Overviews
 
-  The _**Coverage Per Gateway Summary**_ is an optional report that shows, for each Gateway, a separate Dataview or XLSX worksheet with information about all servers associated with that Gateway.
+  The _**Gateway Overview**_ is an optional report that shows, for each Gateway, a separate Dataview or XLSX worksheet with information about all servers associated with that Gateway.
 
-  ![Coverage Per Gateway Summary](screenshots/gdna-10.png)
+  For more details see [Dataviews: Gateway Overview](#dataviews-gateway-overview)
 
-* Coverage Per Gateway Detail
+  ![Gateway Overview](screenshots/gdna-10.png)
 
-  The _**Coverage Per Gateway Detail**_ optional report, as the name suggests, add more details over and above the _Coverage Per Gateway Summary_ above.
+* Gateway Details
 
-  ![Coverage Per Gateway Detail](screenshots/gdna-11.png)
+  The _**Gateway Detail**_ optional report, as the name suggests, add more details over and above the _Gateway Summary_ above.
+
+  For more details see [Dataviews: Gateway Details](#dataviews-gateway-detail)
+
+  ![Gateway Detail](screenshots/gdna-11.png)
 
 * Plugin Summary
 
@@ -67,7 +77,7 @@ The Dataviews look like this:
 
   ![Plugin Summary](screenshots/gdna-12.png)
 
-## Email Reports
+## Emailed Reports
 
 GDNA can be configured to send regular reports via email. The email contains a selectable cover-page summary and an XLSX workbook attachment that contains similar report data to the Dataviews above.
 
@@ -124,6 +134,10 @@ GDNA uses license usage data and this can be from either (or both):
 
   If you are running GDNA on the same server as the `licd` process or have access to it's working directory via a file share then this option provides more information but requires an updated `licd`. In Geneos releases after 6.7.0 the `licd` process creates summary files in a `reporting/` sub-directory. These are created every 6 hours. When combined with the first option, you can get both additional data and more frequent reporting.
 
+* `licd` and Gateways updated to 7.0.0 or later
+
+  To get the full benefit of the detailed data reports, you should plan to update the `licd` to version 7.0.0 or later and, where possible, you Gateways too. The 7.0.0 `licd` reports Operating System and Netprobe version information while the 7.0.0 Gateway add more data around the Gateway itself and dynamic entities.
+
 ### Connectivity
 
 ```mermaid
@@ -176,9 +190,9 @@ gateway --> webdashboard
 ### Using Docker Compose
 
 > [!NOTE]
-> GDNA has been built and tested using `docker-ce` version 26.1.4 on amd64 architecture Linux using Debian and Ubuntu distributions. We intend to also test using other version of docker as well as `podman`, but these will be confirmed in future releases.
+> GDNA has been built and tested using `docker-ce` version 26.1.4 on amd64 architecture Linux using Debian and Ubuntu distributions. We intend to also test using other version of docker as well as `podman`, which will be detailed in future releases.
 
-Create a `docker-compose.yml` file using the template below and edit, changing at minimum the `LICDHOST` to the name of the server running the first `licd` process.
+First, create a `docker-compose.yml` file using the template below and edit, changing at minimum the `LICDHOST` to the name of the server running the first `licd` process. Add other license daemons here too.
 
 ```yaml
 name: gdna
@@ -317,21 +331,21 @@ volumes:
   gdna-data:
 ```
 
-Next, remember to login to the ITRS docker registry if you have not already done so:
+Next, login to the ITRS docker registry if you have not already done so:
 
 ```bash
 docker login docker.itrsgroup.com -u username@example.com
 ```
 
-If you are going to use the email feature, then you should save encrypted credentials for your email server in your `geneos` credentials file. Do this like this:
+If you are going to use the email feature, then you should now save encrypted credentials for your access to your email server in the `geneos` credentials file. Do this like this:
 
 ```bash
 geneos login smtp.example.com -u username@example.com
 ```
 
-You will be prompted for the password to use and these details are saved in the `credentials.json` file referred to in the `docker-compose.yml` file above. The password is encrypted using AES256 and the key file it uses it created if one doesn't exist. The security is in the key file, and this should be only accessible to the user (permissions 0400).
+You will be prompted for the password to use and these details are saved in the `credentials.json` file referred to in the `docker-compose.yml` file above. The password is encrypted using AES256 and the key file it uses it created if one doesn't exist. The security is in the key file, and this should be only accessible to the user (with default permissions 0400).
 
-Then, to pull the latest image and run it in the foreground (which you will want to do to, to test it at least the first time as the configuration can be challenging):
+Then, pull the latest image and run it in the foreground (which you will want to do to, to test it at least the first time as the configuration can be challenging):
 
 ```bash
 $ docker compose up
@@ -368,7 +382,7 @@ gdna-1  | 2024-06-25T23:28:35Z INFO: gdna: no matches found for /home/geneos/gen
 gdna-1  | 2024-06-25T23:28:36Z INFO: gdna: finished on start-up
 ```
 
-It takes a few seconds for the components to start up, and you should be able to access the web dashboards on port 8443. If you have enabled access to the Gateway on port 8100 then connect your Active Console to see the `GDNA` Managed Entity and data as it is being reported.
+It takes a few seconds for the components to start up, and you should be able to access the web dashboard server on port 8443. If you have enabled access to the Gateway on port 8100 then connect your Active Console to see the `GDNA` Managed Entity and data as it is being reported.
 
 > [!IMPORTANT]
 > Remember that your Active Console can only connect to a named Gateway once, so if you are already connected to a `Demo Gateway` then this new connection will fail; disconnect from the other `Demo Gateway` connection and try again.
@@ -385,13 +399,15 @@ The GDNA dashboards should once again be accessible at the URLs below, replace `
 
 * <https://HOSTNAME:8443/?fullscreen#WebDashboard:Plugin%20Utilization>
 
+* <https://HOSTNAME:8443/?fullscreen#WebDashboard:Version%20Summary>
+
 ### Installing Without Docker
 
 Docker will not always be available on the server where you want to run GDNA. It's almost as easy to set-up step-by-step, but will require a little more work and attention to some other prerequisites.
 
 #### Prerequisites
 
-* You will need a running Geneos Gateway and available licenses for one `api` and one `process` sampler.
+* You will need a running Geneos Gateway and licenses for one `api` and one `process` sampler.
 
 * You will also need somewhere to display the included dashboards; This can directly in your Active Console or, preferably, in a Web Dashboard Server. For a Web Dashboard Server, this should already be connected to your selected Gateway.
 
@@ -441,8 +457,6 @@ flowchart LR
 
   email("email")
 
-
-
 visualisation <--> geneos
 
 gdna -- "HTTP/HTTPS" --> licd
@@ -452,7 +466,7 @@ geneos <--> gdna
 
 #### Unpack and Install
 
-To run GDNA with your existing Geneos components you'll need the following from the `cordial-vN.N.N-tar.gz` release archive:
+To run GDNA on your existing Geneos components you'll need the following from the `cordial-vX.Y.Z-tar.gz` release archive. For the latest release use [this link](https://github.com/ITRS-Group/cordial/releases/latest):
 
 * `./bin/gdna` - program file
 
@@ -500,9 +514,9 @@ imported "etc/geneos/gdna/gdna.include.xml" to localhost:/opt/geneos/gateway/gat
 ```
 
 > [!NOTE]
-> Note the use of the leading `./=` in the `./=etc/geneos/gdna/gdna.include.xml` above. This is so that the path or file name is not interpreted as an instance name. Future version of `geneos` may address this issue through more explicit command line syntax.
+> Note the use of the leading `./=` is not a typo in the `./=etc/geneos/gdna/gdna.include.xml` above. This is so that the path or file name is not interpreted as an instance name. Future version of `geneos` may address this issue through more explicit command line syntax.
 
-Open your GSE and add the new include, using the path `../../gateway_shared/gdna.include.xml` and a _priority that is different_ from all other includes (and the main setup file):
+Open your GSE and add the new include, using the path `../../gateway_shared/gdna.include.xml` and a priority _that is different_ from all other includes (and the main setup file):
 
 ![GSE Add include](screenshots/gdna-1.png)
 
@@ -518,12 +532,24 @@ The program looks for a `gdna.yaml` configuration file in the following director
 
 You can also specify an alternative location with the `--config PATH`/`-f PATH` command line option to any of the `gdna` commands.
 
-You can start without a configuration file or with just an empty `gdna.yaml` file and only add sections for the settings you want to change. If however you want a more complete reference in place then copy the example [`gdna.yaml`](gdna.yaml) file from the release archive in `./etc/geneos/gdna.yaml` to one of the locations above. If you are not sure where to put the configuration file then you should put it into your Geneos user configuration directory, which may need creating if it does not exist:
+You can start without a configuration file or with just an empty `gdna.yaml` and add sections for the settings you want to change. The example below, after you change the URL to your `licd`, is enough to get started:
+
+```yaml
+gdna:
+  licd-sources:
+    - "https://LICDHOST:7041"  
+  licd-skip-verify: true
+```
+
+If you are not sure where to put the configuration file then you should put it into your Geneos user configuration directory, which may need creating if it does not exist:
 
 ```bash
 $ mkdir -p ${HOME}/.config/geneos
 $ echo > ${HOME}/.config/geneos/gdna.yaml
 ```
+
+If however you want a more complete reference in place then copy the example [`gdna.yaml`](gdna.yaml) file from the release archive in `./etc/geneos/gdna.yaml` to one of the locations above.
+
 
 Even without a `gdna.yaml` configuration file, the program will run and produce useful reports, assuming you have set-up your Geneos environment using the `gdna.include.xml` file. This default behaviour includes:
 
@@ -531,34 +557,15 @@ Even without a `gdna.yaml` configuration file, the program will run and produce 
 * Creates a `gdna.sqlite` database (including other temp files) in the current working directory
 * Creates a `gdna.log` file in the current working directory
 * Publishing reports as Dataviews to a local Netprobe, using TLS, on port 8101 to a Managed Entity `GDNA` and an `api` Sampler named `GDNA`
+* The dashboards rely on a `GDNA Process` sampler to indicate that the data in the Gateway is "live" from a running process, otherwise they show `DISCONNECTED`
 
 To change the default behaviour either use command line options (run `gdna [COMMAND] -h` for a list) or edit the `gdna.yaml` file. See the comments in the file for more information.
 
-A very simple configuration to start with would be like this:
-
-```yaml
-gdna:
-  site: YOUR SITE NAME
-  licd-sources:
-    - "http://localhost:7041"
-    - "https://localhost:7041"
-  licd-skip-verify: true
-  log:
-    filename: ./gdna.log
-geneos:
-  netprobe:
-    hostname: localhost
-    port: 8101
-    secure: true
-db:
-  file: ./gdna.sqlite
-```
-
-#### Test
+#### Test `gdna`
 
 The `gdna` program supports a number of commands. Once you have everything configured and tested you will use the `gdna start --daemon --on-start` command to run the program as a daemon process, regularly collecting and reporting your monitoring coverage.
 
-First, to test the set-up you can break this down into several stages, by using `gdna fetch` and `gdna report` commands to make sure that the license data is available and the Geneos Gateway and Netprobe are set-up correctly.
+First, to test the set-up you have created, break this down into several stages, using `gdna fetch` and `gdna report` commands to make sure that the license data is available and the Geneos Gateway and Netprobe are set-up correctly.
 
 * First, run `gdna fetch` like this:
 
@@ -636,11 +643,13 @@ $ docker compose up -d --force-recreate
 This will restart the container with the new configuration in the background.
 
 > [!TIP]
-> On rare occasions the `--force-recreate` flag doesn't seem to fully work. In these cases you will need to `docker compose rm` to remove the old containers and then start up the new one.
+> On rare occasions in testing we found the `--force-recreate` flag doesn't seem to fully work. In these cases you will need to `docker compose rm` to remove the old containers and then start up the new one.
 
-### Dashboards
+For standalone installations there is a `gdna stop` command to terminate any existing background process, then you can restart is after updating the configuration.
 
-The two dashboards included with GDNA are largely agnostic to the source of data as long as the Dataview names are the same as those produced by default `gdna` reports. The only exception is that there is a Managed Entity Attribute ("`DASHBOARD`") in use, to allow the filtering of data based on the chosen environment. By default the value is `PROD` but if you want to run multiple instances of GDNA, for example one in a development environment and another in your production one, then you can copy and update the dashboards to match the new configuration.
+### Dashboard Configuration
+
+The three dashboards included with GDNA are largely agnostic to the source of data as long as the Dataview names are the same as those produced by `gdna` reports. The only exception is that there is a Managed Entity Attribute ("`DASHBOARD`") used, to allow the filtering of data based on your selected environment. By default the value is `PROD` but if you want to run multiple instances of GDNA, for example one in a development environment and another in your production one, then you can copy and update the dashboards to match the new configuration.
 
 * Load the dashboard files into your Active Console using the `File` -> `Import` menu option.
 
@@ -678,18 +687,18 @@ The two dashboards included with GDNA are largely agnostic to the source of data
 
 * You should now `Export` each of your updated dashboards so that you can import them into a Web Server or another user's Active Console. Do this by right-clicking on a blank area of each dashboard and selecting `Export...`. Follow the Save dialogue, picking a suitable new name for the dashboard. It will be saved with an `.adb` extension automatically.
 
-## Dataviews
+## Reports
 
-In addition to the dashboards you can also drill down into the reports themselves through the Dataviews published to the Geneos Gateway. While many of the Dataviews exist to drive the dashboards above there are also more detailed views of your monitoring coverage to help you fill in any gaps you may have.
+In addition to the dashboards you can also drill down into the reports themselves through the Dataviews published by the GDNA connected Gateway. While many of the Dataviews exist to drive the dashboards there are also more detailed views of your monitoring coverage to help you remediate any gaps in coverage.
 
-Below is the list of reports courtesy of the `gdna list` command (with minor edits for clarity).
+Below is the list of reports from the `gdna list` command (with minor edits for clarity).
 
 > [!NOTE]
-> The `Report Name` column is the internal name of the report and can be used with the `gdna report` command. If you are reading this documentation online then you can click on most of the reports to jump to the section giving more details.
+> The `Report Name` column is the internal name of the report and can be used with the `gdna report` command. If you are reading this documentation online then you can also click through most of the report names to go to a section giving more details of that report.
 >
 > The `Title` is the display label of the report.
 >
-> The `Type`, when not blank, indicates that a report is not a simple linear table.
+> The `Type`, when not blank, indicates that a report is not a simple table.
 >
 > The `Dataview` and `XLSX` columns show if they are included in those outputs, and this can be changed in the configuration file.
 
@@ -716,14 +725,12 @@ Below is the list of reports courtesy of the `gdna list` command (with minor edi
 | [sources](#dataview-sources)                                | Sources                      |          | Y        | Y    |
 | unused-gateways                                             | Unused Gateways              |          | Y        | Y    |
 
-Each of the reports will ultimately have it's own documentation, but to highlight those reports that are the ones most likely to be useful in working through any coverage gaps; These will be `missing-coverage`, `plugin-summary` plus the two optional per-Gateway reports `coverage-per-gateway-summary` or `coverage-per-gateway-detail`.
-
 > [!NOTE]
-> Please note that the screenshots below are taken from the first public release of GDNA and the later releases add headlines and new columns which are only populated when connected to Geneos components from the 7.0.0 release and above. The details of the headlines and columns in each Dataview have been updated. The screenshots will be updated when the new features are fully implemented.
+> Reports are not grouped in the XLSX report output
 
-### Dataview Group: GDNA
+### Dataview Group: GDNA Information
 
-The **GDNA** group contains data related to GDNA itself. The reports created by GDNA in this group are `GDNA Summary` and `Sources`. The other Dataviews are an auto-generated `API Summary` and a `GDNA Process` view used to ensure GDNA is running - when the GDNA process is not running the standard dashboards show `DISCONNECTED` to inform viewers that the data is not live.
+The **GDNA Information** Dataview group contains data about GDNA and software versions of Geneos components and Operating Systems.
 
 #### Dataview: GDNA Summary
 
@@ -763,70 +770,14 @@ The `sources` report shows details of all the configured license data, the last 
 | `extendedFormat`  | Set to `1` if GDNA sees extra fields associated with either `licd` report files or Geneos release 7 `licd` and Gateways                                                                                                                                                                                                                                                                             |
 | `gateways`        | The number of Gateways seen in the most recent collection of data from this source                                                                                                                                                                                                                                                                                                                  |
 | `probes`          | The number of probes seen in the most recent collection of data from this source                                                                                                                                                                                                                                                                                                                    |
-| `samplers`        | The number of sampler instances seen in the most recent collection of data from this source. Note this is the total of sampler instances and it does not differentiate between server and instance licensed plugin types when counting                                                                                                                                                              |
-| `dynamicEntities` | The number of dynamicEntities seen in the most recent collection of data from this source |
-
-### Dataview Group: Monitored Estate
-
-The **Monitored Estate** group shows reports with details of the overall 
-
-> [!NOTE]
-> Reports are not grouped in the XLSX report output
-
-#### Dataview: Gateways
-
-| Report Name     | Title    | Type | Dataview | XLSX |
-| --------------- | -------- | ---- | -------- | ---- |
-| gateway-summary | Gateways |      | Y        | Y    |
-
-The `gateway-summary` report shows information about all your active Gateways
-
-| Columns           | Description                                                                                                                                                                                                                                                                                    |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gateway`         | The name of the Gateway                                                                                                                                                                                                                                                                        |
-| `gatewayHost`     | The hostname that the Gateway is currently running on, as reported by the Gateway itself. This may not be the same as your expected host name format, depending on the server configuration.<br>ℹ️ This data is only available when both `licd` and the Gateway are running Geneos 7 or later |
-| `gatewayPort`     | The primary port the Gateway is listening on. Where a Gateway is listening on both secure (TLS) and insecure ports, the secure port is reported.<br>ℹ️ This data is only available when both `licd` and the Gateway are running Geneos 7 or later                                             |
-| `gatewayVersion`  | The Gateway release.<br>ℹ️ This data is only available when both `licd` and the Gateway are running Geneos 7 or later                                                                                                                                                                         |
-| `probes`          | The number of Netprobes attached to this Gateway                                                                                                                                                                                                                                               |
-| `samplers`        | The number of sampler instances across all probes on this Gateway                                                                                                                                                                                                                              |
-| `dynamicEntities` | The number of Collection Agent dynamic entities on this Gateway. Note that this value is always available on a per-Gateway basis, while the same column may be empty in other reports for specific servers and probes, as those requires Geneos 7 and later                                    |
-| `sources`         | The `licd` source of the data for this Gateway                                                                                                                                                                                                                                                 |
-
-#### Dataview: Servers
-
-| Report Name    | Title   | Type | Dataview | XLSX |
-| -------------- | ------- | ---- | -------- | ---- |
-| server-summary | Servers |      | N        | Y    |
-
-This report is disabled by default from creating a Dataview but is included in email XLSX reports as the number of servers in a mid to large estate may regularly exceed the normal row limit of 500.
-
-> [!TIP]
-> As for all other reports, it can be controlled through the `enable-for-dataview` parameter in the `gdna.yaml` file, like this:
->
-> ```yaml
-> reports:
->   # ...
->   server-summary:
->     enable-for-dataview: true
-> ```
-
-| Columns           | Description                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `serverID`        | The row name is a combination of the derived server name (see below) and the host ID                                                                                                                                                                                                                                                                                                                                                     |
-| `server`          | The server name as derived from all the probe names associated with the same host ID. The probe name is what is configured in the Gateway configuration and is the label reported to the `licd` process. For each host ID all the different probe names are sorted and the first existing on of: longest non-IP, non-localhost, an IP address or `localhost`                                                                             |
-| `osVersion`       | The OS version reported by at least one of the probes located on this server.<br>ℹ️ This data is only available if the `licd` is either release 7+ or if you are processing `licd` reporting files directly. Also, if probes are connected to Gateways which are in turn connected to multiple `licd` processes running varying Geneos releases then this data may be incomplete. Note that the Gateway version does *not* need to be 7 |
-| `probes`          | The number of Netprobes on this server                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `samplers`        | The number sampler instances across all Netprobes on this server                                                                                                                                                                                                                                                                                                                                                                         |
-| `dynamicEntities` | The number of Collection Agent dynamic entities  across all Netprobes on this server.<br>ℹ️ This requires both `licd` and Gateways to be running Geneos 7 and later. Where there is a mix of versions these number may be incorrect                                                                                                                                                                                                     |
-| `l1missing`       | This column shows any missing level 1 plugins. When it is empty then all level 1 plugins have been deployed at least once on this server<br><br>ℹ️ Level 1 plugins consist of `cpu`, `disk`, `hardware` and `network`                                                                                                                                                                                                                   |
-| `l2missing`       | This column shows any missing level 2 plugins. When it is empty then all level 2 plugins have been deployed at least once on this server<br><br>ℹ️ Level 2 plugins consist of `fkm` and `processes`                                                                                                                                                                                                                                     |
-| `l3missing`       | This column shows `missing` when no level 3 plugins are found on this server.<br><br>ℹ️ Level 3 plugins are all those that are not in the lists for levels 1 & 2 above or in the list of _optional_ level 1 plugins.                                                                                                                                                                                                                    |
-| `gateway`         | A comma-separated list of all the Gateways that are attached to a Probe on this server.                                                                                                                                                                                                                                                                                                                                                  |
-| `plugins`         | A comma-separated list of the different plugin types found on this server                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `samplers`        | The number of sampler instances seen in the most recent collection of data from this source. This is the total of sampler instances and not the number of licensed instances, as some are per-server and others per-instance                                                                                                                                                                        |
+| `dynamicEntities` | The number of dynamicEntities seen in the most recent collection of data from this source                                                                                                                                                                                                                                                                                                           |
 
 #### Dataview: Gateway Versions
 
 The `gateway-versions` report lists all the known Gateway versions with a count of each one plus an `Unknown` value for those where version information is not available.
+
+![Gateway Versions](screenshots/gdna-15.png)
 
 > [!NOTE]
 > This data is only available if the `licd` **and** Gateway have been upgraded to Geneos release 7 or later
@@ -860,8 +811,72 @@ The `probe-versions` report lists all the known Netprobe versions with a count o
 | `probeVersion` | The release version of the Netprobe                    |
 | `count`        | The total number of Netprobes for each release version |
 
+### Dataview Group: Monitored Estate
+
+The **Monitored Estate** group shows reports with details of the overall 
+
+#### Dataview: Gateways
+
+| Report Name     | Title    | Type | Dataview | XLSX |
+| --------------- | -------- | ---- | -------- | ---- |
+| gateway-summary | Gateways |      | Y        | Y    |
+
+The `gateway-summary` report shows information about all your active Gateways.
+
+![Gateways](screenshots/gdna-13.png)
+
+| Columns                        | Description                                                                                                                                                                                                                                                                                    |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gateway`                      | The name of the Gateway                                                                                                                                                                                                                                                                        |
+| `gatewayHost`                  | The hostname that the Gateway is currently running on, as reported by the Gateway itself. This may not be the same as your expected host name format, depending on the server configuration.<br>ℹ️ This data is only available when both `licd` and the Gateway are running Geneos 7 or later |
+| `gatewayPort`                  | The primary port the Gateway is listening on. Where a Gateway is listening on both secure (TLS) and insecure ports, the secure port is reported.<br>ℹ️ This data is only available when both `licd` and the Gateway are running Geneos 7 or later                                             |
+| `gatewayVersion`               | The Gateway release.<br>ℹ️ This data is only available when both `licd` and the Gateway are running Geneos 7 or later                                                                                                                                                                         |
+| `probes`                       | The number of Netprobes attached to this Gateway                                                                                                                                                                                                                                               |
+| `samplers`                     | The number of samplers across all probes on this Gateway                                                                                                                                                                                                                                       |
+| `dynamicEntities`              | The number of Collection Agent dynamic entities on this Gateway. Note that this value is always available on a per-Gateway basis, while the same column may be empty in other reports for specific servers and probes, as those requires Geneos 7 and later                                    |
+| `dynamicEntitiesUnknownServer` | The number of Collection Agent dynamic entities on this Gateway that do not have server information associated with them.                                                                                                                                                                      |
+| `serversComplete`              | The number of servers on this Gateway that are considered to have complete monitoring coverage, which may be spread over multiple Netprobes connected to multiple Gateways                                                                                                                     |
+| `serversIncomplete`            | The number of servers on this Gateway with incomplete monitoring coverage                                                                                                                                                                                                                      |
+| `serversEmpty`                 | The number of servers on this Gateway that have no associated samplers across all the Netprobes over multiple Gateways. Unless these servers have associated dynamic entities then they may be wasting a server license                                                                        |
+| `sources`                      | The `licd` source of the data for this Gateway                                                                                                                                                                                                                                                 |
+
+#### Dataview: Servers
+
+| Report Name    | Title   | Type | Dataview | XLSX |
+| -------------- | ------- | ---- | -------- | ---- |
+| server-summary | Servers |      | N        | Y    |
+
+This optional report is, by default, included in email XLSX reports as the number of servers in a mid to large estate may regularly exceed the normal row limit of 500.
+
+![Servers](screenshots/gdna-14.png)
+
+> [!TIP]
+> As for all other reports, it can be controlled through the `enable-for-dataview` parameter in the `gdna.yaml` file, like this:
+>
+> ```yaml
+> reports:
+>   # ...
+>   server-summary:
+>     enable-for-dataview: true
+> ```
+
+| Columns           | Description                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `serverID`        | The row name is a combination of the derived server name (see below) and the host ID                                                                                                                                                                                                                                                                                                                                                     |
+| `server`          | The server name as derived from all the probe names associated with the same host ID. The probe name is what is configured in the Gateway configuration and is the label reported to the `licd` process. For each host ID all the different probe names are sorted and the first existing on of: longest non-IP, non-localhost, an IP address or `localhost`                                                                             |
+| `osVersion`       | The OS version reported by at least one of the probes located on this server.<br>ℹ️ This data is only available if the `licd` is either release 7+ or if you are processing `licd` reporting files directly. Also, if probes are connected to Gateways which are in turn connected to multiple `licd` processes running varying Geneos releases then this data may be incomplete. Note that the Gateway version does *not* need to be 7 |
+| `probes`          | The number of Netprobes on this server                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `samplers`        | The number sampler instances across all Netprobes on this server                                                                                                                                                                                                                                                                                                                                                                         |
+| `dynamicEntities` | The number of Collection Agent dynamic entities  across all Netprobes on this server.<br>ℹ️ This requires both `licd` and Gateways to be running Geneos 7 and later. Where there is a mix of versions these number may be incorrect                                                                                                                                                                                                     |
+| `l1missing`       | This column shows any missing level 1 plugins. When it is empty then all level 1 plugins have been deployed at least once on this server<br><br>ℹ️ Level 1 plugins consist of `cpu`, `disk`, `hardware` and `network`                                                                                                                                                                                                                   |
+| `l2missing`       | This column shows any missing level 2 plugins. When it is empty then all level 2 plugins have been deployed at least once on this server<br><br>ℹ️ Level 2 plugins consist of `fkm` and `processes`                                                                                                                                                                                                                                     |
+| `l3missing`       | This column shows `missing` when no level 3 plugins are found on this server.<br><br>ℹ️ Level 3 plugins are all those that are not in the lists for levels 1 & 2 above or in the list of _optional_ level 1 plugins.                                                                                                                                                                                                                    |
+| `gateway`         | A comma-separated list of all the Gateways that are attached to a Probe on this server.                                                                                                                                                                                                                                                                                                                                                  |
+| `plugins`         | A comma-separated list of the different plugin types found on this server                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 ### Dataview Group: Monitoring Coverage
+
+Most if the report Dataviews in this group are used to drive the dashboards.
 
 #### Dataview: Missing Coverage
 
@@ -869,31 +884,30 @@ These `missing-coverage` report contain a list of servers (a _server_ is the dat
 
 ![Missing Coverage Dataview](screenshots/gdna-8.png)
 
-> [!IMPORTANT]
-> Note that in the screenshot above all the names of servers, Geneos Gateways and hostIDs have been scrambled. This is normally off by default for Dataviews but we've turned it on here for demonstration purposes. It is enabled by default for reports sent via email or saved as XLSX workbooks in order to prevent the unintentional disclosure of potentially sensitive information. This can be controlled through various settings which are detailed further below.
-
 What you can see above includes:
 
-| Headlines                                            | Description                                                                             |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `complete`                                           | Servers are considered covered to levels 1, 2 and 3                                     |
-| `empty`                                              | Servers have no samplers configured<br>(this does not include Collection Agent plugins) |
-| `incomplete`                                         | Servers have partial coverage in to at least one of the three level                     |
-| `l1incomplete`,<br>`l2incomplete`,<br>`l3incomplete` | Servers have incomplete level 1,2 or 3 coverage, respectively                           |
-| `servers`                                            | Total Servers (`complete` + `incomplete`)                                               |
+| Headlines                                                                 | Description                                                                                                                                                 |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `servers`                                                                 | Total Servers (`complete` + `incomplete`)                                                                                                                   |
+| `serversComplete`                                                         | Count of servers are have coverage for all three levels                                                                                                     |
+| `serversEmpty`                                                            | Count of servers have no samplers configured<br>ℹ️ This may not include dynamic entities, depending on the version of Geneos `licd` and Gateways installed |
+| `serversIncomplete`                                                       | Count of servers have partial coverage in at least one of the three level                                                                                |
+| `serversL1incomplete`,<br>`serversL2incomplete`,<br>`serversL3incomplete` | Count of servers have incomplete level 1,2 or 3 coverage, respectively                                                                                      |
 
 ---
 
-| Columns     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `serverID`  | The _server name_ plus the _host ID_ separated by a `:`. This is required to maintain the unique row names required by Geneos Dataviews.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| `server`    | The _server name_, which may be different from the _hostname_ used in the Probe settings in the Geneos Gateway.<br><br>💡 The server name is heuristically derived from the longest alphanumeric name for all probes across all Gateways that share the same host ID. It can be an IP address where a name is not found.                                                                                                                                                                                                                                                                                                                            |
-| `probes`    | The number of probes found on this server across all Gateways.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `samplers`  | The total number of sampler licenses issued to this server over all Probes.<br><br>This is not the same as the number of individual samplers as it is based on the total number of separate license tokens issued for plugin instances, where some plugins are licensed _per-server_ and others _per-instance_<br><br>When this is zero, which is shown as a Critical above, it means that a _server_ license is being used to monitor a server with no samplers.<br><br>💡 It is important to note that these servers may be configured with Collection Agent only plugins, but these cannot be linked to specific servers or Probes at this time. |
-| `l1missing` | This column shows any missing level 1 plugins. When it is empty then all level 1 plugins have been deployed at least once on this server<br><br>ℹ️ Level 1 plugins consist of `cpu`, `disk`, `hardware` and `network`                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `l2missing` | This column shows any missing level 2 plugins. When it is empty then all level 2 plugins have been deployed at least once on this server<br><br>ℹ️ Level 2 plugins consist of `fkm` and `processes`                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `l3missing` | This column shows `missing` when no level 3 plugins are found on this server.<br><br>ℹ️ Level 3 plugins are all those that are not in the lists for levels 1 & 2 above or in the list of _optional_ level 1 plugins.                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `gateway`   | A comma-separated list of all the Gateways that are attached to a Probe on this server.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Columns           | Description                                                                                                                                                                                                                                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `serverID`        | The _server name_ plus the _host ID_ separated by a `:`. This is required to maintain the unique row names required by Geneos Dataviews.                                                                                                                                                                                  |
+| `server`          | The _server name_, which may be different from the _hostname_ used in the Probe settings in the Geneos Gateway.<br><br>💡 The server name is heuristically derived from the longest alphanumeric name for all probes across all Gateways that share the same host ID. It can be an IP address where a name is not found. |
+| `osVersion`       | The Operating Systems version reported by the Netprobes on the server.<br>ℹ️ This information is only available if the `licd` version is at least 7.0.0 or the GDNA program has been configured to read on-disk reporting files.                                                                                         |
+| `probes`          | The number of probes found on this server across all Gateways.                                                                                                                                                                                                                                                            |
+| `samplers`        | The total number of sampler instances on this server over all Netprobes and Gateways                                                                                                                                                                                                                                     |
+| `dynamicEntities` | The count of dynamic entities on this server, across all Netprobes and Gateways.<br>ℹ️ This information is only available if both the `licd` and Gateways are running at least release 7.0.0                                                                                                                             |
+| `l1missing`       | This column shows any missing level 1 plugins. When it is empty then all level 1 plugins have been deployed at least once on this server<br><br>ℹ️ Level 1 plugins consist of `cpu`, `disk`, `hardware` and `network`                                                                                                    |
+| `l2missing`       | This column shows any missing level 2 plugins. When it is empty then all level 2 plugins have been deployed at least once on this server<br><br>ℹ️ Level 2 plugins consist of `fkm` and `processes`                                                                                                                      |
+| `l3missing`       | This column shows `missing` when no level 3 plugins are found on this server.<br><br>ℹ️ Level 3 plugins are all those that are not in the lists for levels 1 & 2 above or in the list of _optional_ level 1 plugins.                                                                                                     |
+| `gateway`         | A comma-separated list of all the Gateways that are attached to a Probe on this server.                                                                                                                                                                                                                                   |
 
 ### Dataview Group: Gateways
 
@@ -919,8 +933,9 @@ In addition to the Missing Coverage Dataview details, the Summary Dataview also 
 
 | Headlines         | Description                                                                                                                                                                                                                                                                                                                                    |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dynamicEntities` | The number of Dynamic Entities associated with this Gateway. When this is non-zero then the severity highlights for both the `empty` servers Headline and servers with zero in the `samplers` column changes as there is a good chance that there Dynamic Entities are colocated with at least one of these otherwise unused servers or Probes |
+| `dynamicEntities` | The number of Dynamic Entities associated with this Gateway. When this is non-zero then the severity highlights for both the `empty` servers Headline and servers with zero in the `samplers` column changes as there is a good chance that there Dynamic Entities are co-located with at least one of these otherwise unused servers or Probes |
 | `relatedProbes`   | The number of Probes not shown that are attached to other Gateways, as so visible in other Dataviews                                                                                                                                                                                                                                           |
+
 ---
 
 | Columns         | Description                                                                                                                                                                                                                                                                                         |
