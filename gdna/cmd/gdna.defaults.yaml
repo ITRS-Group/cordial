@@ -1660,7 +1660,7 @@ reports:
 
           UNION ALL
 
-           SELECT ', total(IIF(individual, number, 1)) FILTER (WHERE plugin = ''' || plugin || ''') AS ''' || plugin || ''''
+           SELECT ', total(number) FILTER (WHERE plugin = ''' || plugin || ''') AS ''' || plugin || ''''
              FROM plugins
 
           UNION ALL
@@ -2214,7 +2214,7 @@ reports:
              replace(server, ':'||hostID, ''),
              COALESCE(os, ''),
              (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
-             (SELECT total(IIF(individual, number, 1)) FROM ${db.samplers.active} WHERE server = u.server) samplers,
+             (SELECT total(number) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server))), '') l1missing,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server))), '') l2missing,
@@ -2339,7 +2339,7 @@ reports:
                            WHEN 1 THEN (SELECT version FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
                            ELSE 'multiple'
                            END, '') probeVersions,
-             (SELECT total(IIF(individual, number, 1)) FROM ${db.samplers.active} WHERE server = u.server) samplers,
+             (SELECT total(number) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server AND ${split-column} = '${value}') as dynamicEntities,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server))), '') l1missing,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server))), '') l2missing,
@@ -2477,7 +2477,7 @@ reports:
                            ELSE 'multiple'
                            END, '') probeVersions,
              '' otherGateways,
-             (SELECT total(IIF(individual, number, 1)) FROM ${db.samplers.active} WHERE server = u.server) samplers,
+             (SELECT total(number) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server))), '') l1missing,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server))), '') l2missing,
@@ -2502,7 +2502,7 @@ reports:
               probePort,
               COALESCE(version, '') probeVersion,
               IIF(p.gateway <> '${value}', p.gateway, '') otherGateways,
-              (SELECT total(IIF(individual, number, 1)) FROM ${db.samplers.active} WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort) samplers,
+              (SELECT total(number) FROM ${db.samplers.active} WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort) samplers,
               (SELECT total(number) FROM ${db.ca-samplers.active} WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort) as dynamicEntities,
               '' l1missing,
               '' l2missing,
