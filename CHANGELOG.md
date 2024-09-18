@@ -3,7 +3,7 @@
 ## Version v1.17.1
 
 > [!NOTE]
-> **Released 2024-09-xx**
+> **Released 2024-09-18**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
@@ -19,6 +19,10 @@
   * Changed the text value in the `l3missing` column of various view from `yes` to `missing` to avoid ambiguity after user feedback.
   * Changed Dataview group name for optional gateway reports from `Coverage by Gateway` to simply `Gateways`
   * Add a new `logic` field to conditional-format tests to control how multiple column tests are handled; Default to the previous behaviour of "AND" but can be "OR" (or "all" / "any" respectively)
+  * Add a `geneos.dataview-create-delay` duration to allow smoothing of dataview creation when creating many hundreds of dataviews like for split reports. Only applies when a dataview is created, not during updates to existing ones
+  * Add a "Version Summary" dashboard using new Geneos 7 data
+  * Revisit headline names and some column names for consistency and clarity
+  * Add a dashboard slide show to the docker image web server configuration
 
 * `tools/san-config`
 
@@ -26,6 +30,12 @@
   * Treat gateway pairs as a single gateway in logging and counting
   * Connection files can be served without a standby gateway port
   * Use default ports when gateways in the configuration do not supply them
+
+* `integrations/servicenow`
+
+  * Add extra control over user name field with `incident-user` router parameters
+  * Add a `trace` parameters to output all HTTP request and response data to stderr, for diagnostics
+  * Clean-up some old code
 
 ## Version v1.17.1 Fixes
 
@@ -38,6 +48,8 @@
   * Fix filtering of plugins, samplers and dynamic entities for multi-gateway reports, now numbers add up.
   * Fix table used for building `servers` reporting tables
   * Fix spelling of `latest` columns in the `sources` report
+  * Fixes to some edge cases in probe and sampler counting
+  * When an OS or Version is an empty string, convert it to NULL for later reporting as Unknown
 
 ---
 
