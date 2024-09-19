@@ -374,8 +374,8 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 		} else if len(values["description"]) > 0 {
 			matches := re.FindStringSubmatch(values["description"])
 			if len(matches) == 4 {
-				token_id = host_id
 				host_name, port, host_id = matches[1], matches[2], matches[3]
+				token_id = host_id
 				if host_id == "[INDIVIDUAL]" {
 					individual.Valid = true
 					token_id = "INDIVIDUAL"
