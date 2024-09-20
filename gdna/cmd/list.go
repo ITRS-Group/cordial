@@ -49,6 +49,9 @@ var listCmd = &cobra.Command{
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
+	Annotations: map[string]string{
+		"nolog": "true",
+	},
 	SilenceUsage:          true,
 	DisableAutoGenTag:     true,
 	DisableSuggestions:    true,

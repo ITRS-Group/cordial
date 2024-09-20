@@ -140,9 +140,13 @@ func initConfig(cmd *cobra.Command) {
 
 	// check if logfile is set on the command line, which overrides config
 	if cmd != nil {
-		f := cmd.Flag("logfile")
-		if f != nil && !f.Changed {
-			logFile = cf.GetString("gdna.log.filename")
+		if cmd.Annotations["nolog"] == "true" {
+			logFile = os.DevNull
+		} else {
+			f := cmd.Flag("logfile")
+			if f != nil && !f.Changed {
+				logFile = cf.GetString("gdna.log.filename")
+			}
 		}
 	}
 	cordial.LogInit(execname,
