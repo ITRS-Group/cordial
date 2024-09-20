@@ -21,43 +21,262 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	_ "embed"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"maps"
+	"os"
 	"slices"
 	"strings"
-
-	"github.com/rs/zerolog/log"
+	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
 )
+
+//go:embed _docs/ignores.md
+var ignoresCmdDescription string
+
+//go:embed _docs/ignores_add.md
+var ignoresAddCmdDescription string
+
+//go:embed _docs/ignores_delete.md
+var ignoresDeleteCmdDescription string
+
+//go:embed _docs/ignores_list.md
+var ignoresListCmdDescription string
+
+func init() {
+	GDNACmd.AddCommand(ignoresCmd)
+	ignoresCmd.AddCommand(ignoresAddCmd)
+	ignoresCmd.AddCommand(ignoresDeleteCmd)
+	ignoresCmd.AddCommand(ignoresListCmd)
+}
+
+var ignoresCmd = &cobra.Command{
+	Use:   "ignores",
+	Short: "Commands to manage ignore lists",
+	Long:  ignoresCmdDescription,
+	Args:  cobra.ArbitraryArgs,
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
+	SilenceUsage:          true,
+	DisableAutoGenTag:     true,
+	DisableSuggestions:    true,
+	DisableFlagsInUseLine: true,
+	// no action
+}
+
+var ignoresAddUser, ignoresAddComment, ignoresAddSource string
+
+func init() {
+	ignoresAddCmd.Flags().StringVarP(&ignoresAddUser, "user", "u", "", "user adding these items, required")
+	ignoresAddCmd.Flags().StringVarP(&ignoresAddComment, "comment", "c", "", "comment for these items, required")
+	ignoresAddCmd.Flags().StringVarP(&ignoresAddSource, "source", "s", "", "source for these items, required")
+
+	ignoresAddCmd.MarkFlagRequired("user")
+	ignoresAddCmd.MarkFlagRequired("comment")
+	ignoresAddCmd.MarkFlagRequired("source")
+}
+
+var ignoresAddCmd = &cobra.Command{
+	Use:   "add [FLAGS] CATEGORY NAME...",
+	Short: "Add an item to an ignore list",
+	Long:  ignoresAddCmdDescription,
+	Args:  cobra.MinimumNArgs(2),
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
+	Annotations: map[string]string{
+		"nolog": "true",
+	},
+	SilenceUsage:          true,
+	DisableAutoGenTag:     true,
+	DisableSuggestions:    true,
+	DisableFlagsInUseLine: true,
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		// args[0] must contain a category
+		categories := slices.Sorted(maps.Keys(cf.GetStringMap("ignore")))
+		if !slices.Contains(categories, args[0]) {
+			return fmt.Errorf("first argument must be a valid category, one of %v", categories)
+		}
+		category := args[0]
+		names := args[1:]
+		ts := time.Now().Format(time.RFC3339)
+
+		// load existing
+		ig, err := config.Load("gdna-ignores",
+			config.SetAppName(execname),
+			config.SetConfigFile(cf.GetString("ignores-file")),
+			config.SetFileExtension("yaml"), // default if no file specified
+		)
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return
+		}
+
+		igPath := config.Path("gdna-ignores",
+			config.SetAppName(execname),
+			config.SetConfigFile(cf.GetString("ignores-file")),
+			config.SetFileExtension("yaml"),
+		)
+		log.Debug().Msgf("loaded any existing ignores from %q", igPath)
+
+		existing := ig.GetSliceStringMapString(config.Join("ignore", category))
+		for _, name := range names {
+			newname := map[string]string{
+				"name":      name,
+				"comment":   ignoresAddComment,
+				"user":      ignoresAddUser,
+				"source":    ignoresAddSource,
+				"timestamp": ts,
+			}
+			if i := slices.IndexFunc(existing, func(e map[string]string) bool {
+				if e["name"] == name {
+					return true
+				}
+				return false
+			}); i != -1 {
+				// ... replace
+				existing[i] = newname
+				continue
+			} else {
+				existing = append(existing, newname)
+			}
+		}
+		ig.Set(config.Join("ignore", category), existing)
+
+		// always save the result back
+		defer ig.Save("gdna-ignores",
+			config.SetAppName("geneos"),
+			config.SetConfigFile(igPath),
+			config.SetFileExtension("yaml"), // default if no file specified
+		)
+
+		return
+	},
+}
+
+var ignoresDeleteCmd = &cobra.Command{
+	Use:   "delete CATEGORY NAME|GLOB...",
+	Short: "Delete an item from an ignore list",
+	Long:  ignoresDeleteCmdDescription,
+	Args:  cobra.ArbitraryArgs,
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
+	Annotations: map[string]string{
+		"nolog": "true",
+	},
+	SilenceUsage:          true,
+	DisableAutoGenTag:     true,
+	DisableSuggestions:    true,
+	DisableFlagsInUseLine: true,
+}
+
+var ignoresListFormat string
+
+func init() {
+	ignoresListCmd.Flags().StringVarP(&ignoresListFormat, "format", "F", "", "output format")
+}
+
+var ignoresListCmd = &cobra.Command{
+	Use:   "list [CATEGORY]",
+	Short: "List ignored items",
+	Long:  ignoresListCmdDescription,
+	Args:  cobra.ArbitraryArgs,
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
+	Annotations: map[string]string{
+		"nolog": "true",
+	},
+	SilenceUsage:          true,
+	DisableAutoGenTag:     true,
+	DisableSuggestions:    true,
+	DisableFlagsInUseLine: true,
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		ig, err := config.Load("gdna-ignores",
+			config.SetAppName(execname),
+			config.SetConfigFile(cf.GetString("ignores-file")),
+			config.SetFileExtension("yaml"), // default if no file specified
+		)
+
+		reporter := NewFormattedReporter(os.Stdout, RenderAs(ignoresListFormat))
+
+		if len(args) > 0 {
+			rows := [][]string{}
+			categories := slices.Sorted(maps.Keys(cf.GetStringMap("ignore")))
+			category := args[0]
+
+			if !slices.Contains(categories, category) {
+				return fmt.Errorf("first argument must be a valid category, one of %v", categories)
+			}
+			rows = append(rows, []string{
+				"name", "timeAdded", "username", "comment", "source",
+			})
+			ignores := ig.GetSliceStringMapString(config.Join("ignore", category))
+			for _, ignore := range ignores {
+				rows = append(rows, []string{
+					ignore["name"],
+					ignore["timestamp"],
+					ignore["user"],
+					ignore["comment"],
+					ignore["source"],
+				})
+			}
+
+			reporter.WriteTable(rows...)
+			reporter.Render()
+			return
+		}
+
+		rows := [][]string{
+			{"category:name", "category", "name", "timeAdded", "username", "comment", "source"},
+		}
+		for category := range cf.GetStringMap("ignore") {
+			ignores := ig.GetSliceStringMapString(config.Join("ignore", category))
+			for _, ignore := range ignores {
+				rows = append(rows, []string{
+					category + ":" + ignore["name"],
+					category,
+					ignore["name"],
+					ignore["timestamp"],
+					ignore["user"],
+					ignore["comment"],
+					ignore["source"],
+				})
+			}
+		}
+
+		reporter.WriteTable(rows...)
+		reporter.Render()
+		return
+	},
+}
 
 // ignores are loaded from files/urls defined in the config (or the raw
 // content), and overwrite the contents of the tables given
-func loadIgnores(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
+func processIgnores(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
+	// load persistence file
+	ig, _ := config.Load("gdna-ignores",
+		config.SetAppName(execname),
+		config.SetConfigFile(cf.GetString("ignores-file")),
+		config.SetFileExtension("yaml"), // default if no file specified
+	)
+
+	log.Debug().Msgf("loaded ignores from %s", config.Path("gdna-ignores",
+		config.SetAppName(execname),
+		config.SetConfigFile(cf.GetString("ignores-file")),
+		config.SetFileExtension("yaml"),
+	))
+
 OUTER:
 	for ignore := range cf.GetStringMap("ignore") {
-		var r io.Reader
-		source := cf.GetString(config.Join("ignore", ignore, "source"))
-		content := cf.GetString(config.Join("ignore", ignore, "content"))
-
-		if source == "" && content == "" {
-			log.Debug().Msgf("no ignore for %s, skipping", ignore)
-			continue
-		}
-
-		log.Debug().Msgf("trying to load ignores from %s", source)
-		s, err := openSource(ctx, source)
-		if err != nil {
-			if content == "" {
-				continue
-			}
-			r = bytes.NewBufferString(content)
-		} else {
-			defer s.Close()
-			r = s
-		}
-
 		table, err := cf.ExpandRawString(config.Join("ignore", ignore, "table"))
 		if err != nil {
 			log.Error().Err(err).Msg(config.Join("ignore", ignore, "table"))
@@ -76,6 +295,38 @@ OUTER:
 			continue
 		}
 		defer insertStmt.Close()
+
+		// load from all sources, in this order:
+		//
+		// persistent file config
+		// source / content
+
+		for _, i := range ig.GetSliceStringMapString(config.Join("ignore", ignore)) {
+			name := i["name"]
+			if _, err = insertStmt.ExecContext(ctx, &name); err != nil {
+				log.Error().Err(err).Msgf("insert for %s failed", table)
+				break
+			}
+		}
+		log.Debug().Msgf("added %d entries to ignores for %s", len(ig.GetSliceStringMapString(config.Join("ignore", ignore))), ignore)
+
+		var r io.Reader
+		source := cf.GetString(config.Join("ignore", ignore, "source"))
+		content := cf.GetString(config.Join("ignore", ignore, "content"))
+
+		if source == "" && content == "" {
+			log.Debug().Msgf("no ignore for %s, skipping", ignore)
+			continue
+		}
+
+		log.Debug().Msgf("trying to load ignores from %s", source)
+		s, err := openSource(ctx, source)
+		if err != nil {
+			r = bytes.NewBufferString(content)
+		} else {
+			defer s.Close()
+			r = s
+		}
 
 		// use csv even for a single column for consistency (and comment line ignores)
 		c := csv.NewReader(r)
