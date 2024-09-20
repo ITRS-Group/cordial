@@ -19,12 +19,17 @@ package cmd
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"database/sql"
 	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -254,7 +259,7 @@ func queryHeadlines(ctx context.Context, tx *sql.Tx, query string) (names []stri
 	return
 }
 
-// licenseReportToDB reads lines from a csv.Reader c and based on the
+// detailReportToDB reads lines from a csv.Reader c and based on the
 // contents transforms and inserts them into the database using the
 // active transaction tx. The format of the fields in the csv file are
 // from the detail report documented here:
@@ -268,7 +273,7 @@ func queryHeadlines(ctx context.Context, tx *sql.Tx, query string) (names []stri
 // value of the time the data was generated - for files this is the
 // modification time while for http/https is either the `Last-Modified`
 // header value or the time of the request.
-func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv.Reader, source, sourceType, sourcePath string, sourceTimestamp time.Time) (err error) {
+func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv.Reader, source, sourceType, sourcePath string, sourceTimestamp time.Time) (err error) {
 	var licdExtended bool
 	isoTime := sourceTimestamp.UTC().Format(time.RFC3339)
 
@@ -507,6 +512,144 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 	return updateSources(ctx, cf, tx, source, sourceType, sourcePath, valid, sourceTimestamp, "OK")
 }
 
+func summaryReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv.Reader, source, sourceType, sourcePath string, sourceTimestamp time.Time) (err error) {
+	var expiry time.Time
+	var mode, licencename, hostname, hostid string
+
+	var row []string
+	isoTime := sourceTimestamp.UTC().Format(time.RFC3339)
+
+	for {
+		// consumes lines as name/value pairs until more columns show up, e.g. the "Group,..." as CSV header
+		row, err = c.Read()
+		if err == io.EOF {
+			return
+		}
+		if len(row) > 2 {
+			break
+		}
+		if len(row) != 2 {
+			return os.ErrInvalid
+		}
+
+		switch strings.ToLower(row[0]) {
+		case "expiry":
+			expiry, err = time.Parse("02 January 2006", row[1])
+			if err != nil {
+				log.Error().Err(err).Msgf("license expiry date %q", row[1])
+			}
+		case "mode":
+			mode = strings.ToLower(row[1])
+		case "licencename":
+			licencename = row[1]
+		case "hostname":
+			hostname = row[1]
+		case "hostid":
+			hostid = row[1]
+		default:
+			// ignore
+		}
+	}
+
+	// don't record token information for monitor mode, just metadata
+	if mode == "monitoring" {
+		// update sources with extra info
+		return execSQL(ctx, cf, tx, "db.sources-licence", "insert", nil,
+			sql.Named("source", source),
+			sql.Named("licenceexpiry", expiry),
+			sql.Named("licencemode", mode),
+			sql.Named("licencename", licencename),
+			sql.Named("hostname", hostname),
+			sql.Named("hostid", hostid),
+		)
+	}
+
+	// at this point row should contain the column headings
+
+	columns := map[string]int{}
+	for i, c := range row {
+		columns[strings.ToLower(c)] = i
+	}
+
+	groupsIndex, ok := columns["group"]
+	if !ok {
+		log.Error().Msgf("cannot find `groups` columns in summary report for %s", source)
+		return
+	}
+	tokenIndex, ok := columns["token"]
+	if !ok {
+		log.Error().Msgf("cannot find `token` columns in summary report for %s", source)
+		return
+	}
+	totalIndex, ok := columns["total"]
+	if !ok {
+		log.Error().Msgf("cannot find `total` columns in summary report for %s", source)
+		return
+	}
+	usedIndex, ok := columns["used"]
+	if !ok {
+		log.Error().Msgf("cannot find `used` columns in summary report for %s", source)
+		return
+	}
+	freeIndex, ok := columns["free"]
+	if !ok {
+		log.Error().Msgf("cannot find `free` columns in summary report for %s", source)
+		return
+	}
+
+	tokensInsertStmt, err := tx.PrepareContext(ctx, cf.GetString("db.tokens.insert"))
+	if err != nil {
+		log.Error().Msgf("cannot prepare statement: %s\n%s", err, cf.GetString("db.tokens.insert"))
+		return
+	}
+	defer tokensInsertStmt.Close()
+
+	for {
+		row, err = c.Read()
+		if err == io.EOF {
+			break
+		}
+		if len(row) != len(columns) {
+			line, _ := c.FieldPos(1)
+			log.Error().Msgf("incorrect column count for %q, line %d", source, line)
+		}
+		if row[groupsIndex] != "Overall" {
+			// we ignore all non "Overall" group lines
+			continue
+		}
+
+		// update license token table
+
+		_, err = tokensInsertStmt.ExecContext(ctx,
+			sql.Named("token", row[tokenIndex]),
+			sql.Named("total", sql.NullString{
+				Valid:  row[totalIndex] != "Unlimited",
+				String: row[totalIndex],
+			}),
+			sql.Named("used", row[usedIndex]),
+			sql.Named("free", sql.NullString{
+				Valid:  row[freeIndex] != "Unlimited",
+				String: row[freeIndex],
+			}),
+			sql.Named("time", isoTime),
+			sql.Named("source", source),
+		)
+		if err != nil {
+			log.Error().Err(err).Msg("inserting token")
+		}
+	}
+
+	// update sources with extra info
+	return execSQL(ctx, cf, tx, "db.sources-licence", "insert", nil,
+		sql.Named("source", source),
+		sql.Named("licenceexpiry", expiry),
+		sql.Named("licencemode", mode),
+		sql.Named("licencename", licencename),
+		sql.Named("hostname", hostname),
+		sql.Named("hostid", hostid),
+	)
+}
+
 // colOrNull returns a sql.NullString which is populated if the column
 // exists and the value in that column is not an empty string. column is
 // the name, columns is a mapping of column names to field offsets and
@@ -690,7 +833,7 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx,
 	if err = createTables(ctx, cf, tx, "ignore", "create"); err != nil {
 		return
 	}
-	if err = loadIgnores(ctx, cf, tx); err != nil {
+	if err = processIgnores(ctx, cf, tx); err != nil {
 		return
 	}
 
@@ -729,7 +872,265 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx,
 func execSQL(ctx context.Context, cf *config.Config, tx *sql.Tx, root, queryName string, lookupTable map[string]string, args ...any) (err error) {
 	query := cf.GetString(config.Join(root, queryName), config.LookupTable(lookupTable))
 	if _, err = tx.ExecContext(ctx, query, args...); err != nil {
-		log.Debug().Err(err).Msg(query)
+		log.Error().Err(err).Msg(query)
 	}
 	return
+}
+
+// readLicdReports called a function with a io.ReadCloser to read the
+// contents and process/load them. The caller must close the reader.
+// Support for http/https/file and plain paths as well as "~/" prefix to
+// mean home directory.
+func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source string) (sources []string, err error) {
+	source = config.ExpandHome(source)
+	u, err := url.Parse(source)
+	if err != nil {
+		return
+	}
+
+	dbUpdated := cf.GetBool("db.updated")
+
+	switch u.Scheme {
+	case "https", "http":
+		sources = append(sources, u.Scheme+":"+u.Hostname())
+		t := time.Now()
+		tr := http.DefaultTransport
+		if u.Scheme == "https" {
+			skip := cf.GetBool("gdna.licd-skip-verify")
+			roots, err := x509.SystemCertPool()
+			if err != nil {
+				log.Warn().Err(err).Msg("cannot read system certificates, continuing anyway")
+			}
+
+			if !skip {
+				if chainfile := cf.GetString("gdna.licd-chain"); chainfile != "" {
+					if chainbytes, err := os.ReadFile(chainfile); err != nil {
+						log.Warn().Err(err).Msg("cannot read licd certificate chain, continuing with system certificates only")
+					} else {
+						roots.AppendCertsFromPEM(chainbytes) // ignore ok/not ok
+					}
+				}
+			}
+
+			tr = &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs:            roots,
+					InsecureSkipVerify: skip,
+				},
+			}
+		}
+
+		client := &http.Client{Transport: tr, Timeout: cf.GetDuration("gdna.licd-timeout")}
+
+		// read summary data
+		uSummary := u.JoinPath(SummaryPath)
+		req, err := http.NewRequestWithContext(ctx, "GET", uSummary.String(), nil)
+		if err != nil {
+			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, t, err)
+			return sources, err
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, t, err)
+			return sources, err
+		}
+		if resp.StatusCode > 299 {
+			resp.Body.Close()
+			err = fmt.Errorf("server returned %s", resp.Status)
+			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, t, err)
+			return sources, err
+		}
+		defer resp.Body.Close()
+		// set the source time to either the last-modified header or now
+		if lm := resp.Header.Get("last-modified"); lm != "" {
+			lmt, err := http.ParseTime(lm)
+			if err == nil {
+				t = lmt
+			}
+		}
+
+		c := csv.NewReader(resp.Body)
+		c.ReuseRecord = false
+		c.Comment = '#'
+
+		if err = summaryReportToDB(ctx, cf, tx, c, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, t); err != nil {
+			log.Error().Err(err).Msg("")
+			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, t, err)
+			return sources, err
+		}
+
+		// read detail data
+		uDetail := u.JoinPath(DetailsPath)
+		req, err = http.NewRequestWithContext(ctx, "GET", uDetail.String(), nil)
+		if err != nil {
+			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, t, err)
+			return sources, err
+		}
+		resp, err = client.Do(req)
+		if err != nil {
+			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, t, err)
+			return sources, err
+		}
+		if resp.StatusCode > 299 {
+			resp.Body.Close()
+			err = fmt.Errorf("server returned %s", resp.Status)
+			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, t, err)
+			return sources, err
+		}
+		defer resp.Body.Close()
+
+		// set the source time to either the last-modified header or now
+		if lm := resp.Header.Get("last-modified"); lm != "" {
+			lmt, err := http.ParseTime(lm)
+			if err == nil {
+				t = lmt
+			}
+		}
+
+		c = csv.NewReader(resp.Body)
+		c.ReuseRecord = true
+		c.Comment = '#'
+
+		if err = detailReportToDB(ctx, cf, tx, c, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, t); err != nil {
+			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, t, err)
+			return sources, err
+		}
+
+	case "httpx":
+		sources = append(sources, "http:"+u.Hostname())
+		t := time.Now()
+		client := &http.Client{Timeout: cf.GetDuration("gdna.licd-timeout")}
+		u = u.JoinPath(DetailsPath)
+		req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+		if err != nil {
+			updateSources(ctx, cf, tx, "http:"+u.Hostname(), "http", source, false, t, err)
+			return sources, err
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			updateSources(ctx, cf, tx, "http:"+u.Hostname(), "http", source, false, t, err)
+			return sources, err
+		}
+		if resp.StatusCode > 299 {
+			resp.Body.Close()
+			err = fmt.Errorf("server returned %s", resp.Status)
+			updateSources(ctx, cf, tx, "http:"+u.Hostname(), "http", source, false, t, err)
+			return sources, err
+		}
+		defer resp.Body.Close()
+
+		// set the source time to either the last-modified header or now
+		if lm := resp.Header.Get("last-modified"); lm != "" {
+			lmt, err := http.ParseTime(lm)
+			if err == nil {
+				t = lmt
+			}
+		}
+
+		c := csv.NewReader(resp.Body)
+		c.ReuseRecord = true
+		c.Comment = '#'
+
+		if err = detailReportToDB(ctx, cf, tx, c, "http:"+u.Hostname(), "http", source, t); err != nil {
+			updateSources(ctx, cf, tx, "http:"+u.Hostname(), "http", source, false, t, err)
+			return sources, err
+		}
+	default:
+		log.Debug().Msgf("looking for files matching '%s'", source)
+
+		files, err := filepath.Glob(source)
+		if err != nil {
+			return sources, err
+		}
+
+		if len(files) == 0 {
+			log.Warn().Msgf("no matches for %s", source)
+			return sources, nil
+		}
+
+		for _, source := range files {
+			var s os.FileInfo
+			t := time.Now()
+			source, _ = filepath.Abs(source)
+			source = filepath.ToSlash(source)
+
+			sourceName := "file:" + strings.TrimSuffix(filepath.Base(source), filepath.Ext(source))
+			sources = append(sources, sourceName)
+			s, err = os.Stat(source)
+			if err != nil {
+				log.Error().Err(err).Msg("")
+				// record the failure
+				updateSources(ctx, cf, tx, sourceName, "file", source, false, t, err)
+				return sources, err
+			}
+			if s.IsDir() {
+				// record failure as source file is a directory
+				updateSources(ctx, cf, tx, sourceName, "file", source, false, t, os.ErrInvalid)
+				return sources, os.ErrInvalid // geneos.ErrIsADirectory
+			}
+			if !overrideFiletime {
+				t = s.ModTime()
+			}
+
+			var tm sql.NullString
+			query := cf.ExpandString(`SELECT lastSeen FROM ${db.sources.table} WHERE source = ?`)
+			r1 := tx.QueryRowContext(ctx, query, sourceName)
+			if err := r1.Scan(&tm); err != nil {
+				log.Debug().Err(err).Msgf("no data for query %s (source '%s')", query, sourceName)
+			}
+			if tm.Valid {
+				last, err := time.Parse(time.RFC3339, tm.String)
+				if err != nil {
+					log.Error().Err(err).Msgf("parse time failed for %s", tm.String)
+					// drop through, time is nil
+				}
+
+				if t.Truncate(time.Second).Equal(last) && !(onStart || onStartEMail) && !dbUpdated {
+					log.Debug().Msgf("no update since %s", tm.String)
+					continue
+				}
+			}
+
+			r, err := os.Open(source)
+			if err != nil {
+				log.Error().Err(err).Msg(source)
+				continue
+			}
+			defer r.Close()
+			c := csv.NewReader(r)
+			c.ReuseRecord = true
+			c.Comment = '#'
+			if err = detailReportToDB(ctx, cf, tx, c, sourceName, "file", source, t); err != nil {
+				log.Error().Err(err).Msg(source)
+				// record error
+				updateSources(ctx, cf, tx, sourceName, "file", source, false, t, err)
+			}
+		}
+		return sources, nil
+	}
+
+	return sources, nil
+}
+
+func readSummaryReport() {
+
+}
+
+func updateSources(ctx context.Context, cf *config.Config, tx *sql.Tx, source, sourceType, path string, valid bool, t time.Time, status any) error {
+	isoTime := t.UTC().Format(time.RFC3339)
+	// is source is an error then unwrap it as prefix with a plain
+	// "ERROR:"
+	s, ok := status.(error)
+	if ok {
+		status = fmt.Errorf("ERROR: %w", errors.Unwrap(s))
+	}
+	return execSQL(ctx, cf, tx, "db.sources", "insert", nil,
+		sql.Named("source", source),
+		sql.Named("sourceType", sourceType),
+		sql.Named("path", path),
+		sql.Named("firstSeen", isoTime),
+		sql.Named("lastSeen", isoTime),
+		sql.Named("status", fmt.Sprint(status)),
+		sql.Named("valid", valid),
+	)
 }

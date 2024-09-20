@@ -108,8 +108,7 @@ func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
 // not documented, and this is based on sample files. returns 3 CSV
 // readers, one per section, the basename of the source file and the
 // modtime as well as any error
-func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source string,
-	fn func(context.Context, *config.Config, *sql.Tx, *csv.Reader, string, string, string, time.Time) error) (sources []string, err error) {
+func readLicdReportFile(ctx context.Context, cf *config.Config, tx *sql.Tx, source string) (sources []string, err error) {
 	source = config.ExpandHome(source)
 	matches, err := filepath.Glob(source)
 	if err != nil {
@@ -172,7 +171,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 		sources = append(sources, sourceName)
 
 		log.Debug().Msgf("processing licd report file %s using label %s", source, sourceName)
-		if err = fn(ctx, cf, tx, c, sourceName, "licd", source, sourceTimestamp); err != nil {
+		if err = detailReportToDB(ctx, cf, tx, c, sourceName, "licd", source, sourceTimestamp); err != nil {
 			updateSources(ctx, cf, tx, sourceName, "licd", source, false, sourceTimestamp, err)
 			log.Error().Err(err).Msgf("cannot process licd report file %s", source)
 		}
