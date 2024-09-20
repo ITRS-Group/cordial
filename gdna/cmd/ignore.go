@@ -113,7 +113,6 @@ var ignoresAddCmd = &cobra.Command{
 		ig, err := config.Load("gdna-ignores",
 			config.SetAppName(execname),
 			config.SetConfigFile(cf.GetString("ignores-file")),
-			config.SetFileExtension("yaml"), // default if no file specified
 		)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return
@@ -122,7 +121,6 @@ var ignoresAddCmd = &cobra.Command{
 		igPath := config.Path("gdna-ignores",
 			config.SetAppName(execname),
 			config.SetConfigFile(cf.GetString("ignores-file")),
-			config.SetFileExtension("yaml"),
 		)
 		log.Debug().Msgf("loaded any existing ignores from %q", igPath)
 
@@ -154,7 +152,6 @@ var ignoresAddCmd = &cobra.Command{
 		defer ig.Save("gdna-ignores",
 			config.SetAppName("geneos"),
 			config.SetConfigFile(igPath),
-			config.SetFileExtension("yaml"), // default if no file specified
 		)
 
 		return
@@ -203,7 +200,6 @@ var ignoresListCmd = &cobra.Command{
 		ig, err := config.Load("gdna-ignores",
 			config.SetAppName(execname),
 			config.SetConfigFile(cf.GetString("ignores-file")),
-			config.SetFileExtension("yaml"), // default if no file specified
 		)
 
 		reporter := NewFormattedReporter(os.Stdout, RenderAs(ignoresListFormat))
@@ -266,13 +262,11 @@ func processIgnores(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
 	ig, _ := config.Load("gdna-ignores",
 		config.SetAppName(execname),
 		config.SetConfigFile(cf.GetString("ignores-file")),
-		config.SetFileExtension("yaml"), // default if no file specified
 	)
 
 	log.Debug().Msgf("loaded ignores from %s", config.Path("gdna-ignores",
 		config.SetAppName(execname),
 		config.SetConfigFile(cf.GetString("ignores-file")),
-		config.SetFileExtension("yaml"),
 	))
 
 OUTER:
