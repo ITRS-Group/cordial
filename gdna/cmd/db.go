@@ -358,26 +358,27 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 			values[strings.ToLower(c)] = strings.TrimSpace(fields[i])
 		}
 
-		var host_name, port, host_id string
-		var individual sql.NullBool
+		var host_name, port, token_id, host_id string
+		individual := sql.NullBool{
+			Valid: false,
+			Bool:  true,
+		}
 
 		if licdExtended {
 			host_name, port, host_id = values["host_name"], values["port"], values["host_id"]
+			token_id = host_id
 			if strings.Contains(values["description"], "[INDIVIDUAL]") {
-				individual = sql.NullBool{
-					Bool:  true,
-					Valid: true,
-				}
+				individual.Valid = true
+				token_id = "INDIVIDUAL"
 			}
 		} else if len(values["description"]) > 0 {
 			matches := re.FindStringSubmatch(values["description"])
 			if len(matches) == 4 {
 				host_name, port, host_id = matches[1], matches[2], matches[3]
+				token_id = host_id
 				if host_id == "[INDIVIDUAL]" {
-					individual = sql.NullBool{
-						Bool:  true,
-						Valid: true,
-					}
+					individual.Valid = true
+					token_id = "INDIVIDUAL"
 				}
 				// line, col := c.FieldPos(columns["Description"])
 				// return fmt.Errorf("only found %d matches in 'description' column at line %d, column %d: %q", len(matches), line, col, source)
@@ -396,7 +397,7 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 				sql.Named("gateway", strings.TrimPrefix(values["requestingcomponent"], "gateway:")),
 				sql.Named("probeName", host_name),
 				sql.Named("probePort", port),
-				sql.Named("tokenID", host_id),
+				sql.Named("tokenID", token_id),
 				sql.Named("time", isoTime),
 				sql.Named("source", source),
 				sql.Named("os", colOrNull("os", columns, fields)),
@@ -413,7 +414,7 @@ func licenseReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 				sql.Named("plugin", values["item"]),
 				sql.Named("probeName", host_name),
 				sql.Named("probePort", port),
-				sql.Named("tokenID", host_id),
+				sql.Named("tokenID", token_id),
 				sql.Named("number", values["number"]),
 				sql.Named("individual", individual),
 				sql.Named("time", isoTime),
