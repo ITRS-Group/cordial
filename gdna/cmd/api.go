@@ -20,6 +20,8 @@ package cmd
 import (
 	"fmt"
 	"net/url"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -184,7 +186,27 @@ func (a *APIReporter) WriteTable(data ...[]string) {
 		log.Debug().Msgf("scramble columns %v", a.scrambleColumns)
 		scrambleColumns(a.scrambleColumns, data)
 	}
-	a.d.UpdateTable(data[0], data[1:]...)
+
+	// check if columns have changed
+	columns := data[0]
+	existing, err := a.d.ColumnNames()
+	if err != nil {
+		log.Error().Err(err).Msg("")
+		return
+	}
+
+	if !slices.Equal(existing, columns) {
+		log.Debug().Msg("column changed, resetting dataview")
+		// recreate dataview
+		s := strings.SplitN(a.d.String(), "-", 2)
+		a.d.Remove()
+		time.Sleep(a.dvCreateDelay)
+		_, err = a.a.NewDataview(s[0], s[1])
+	}
+	if err := a.d.UpdateTable(data[0], data[1:]...); err != nil {
+		log.Error().Err(err).Msg("")
+	}
+	return
 }
 
 func (a *APIReporter) WriteHeadline(name, value string) {
