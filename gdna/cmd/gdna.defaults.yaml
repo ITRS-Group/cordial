@@ -116,6 +116,45 @@ email:
     </body>
     </html>
 
+# `ignore-data-file` contains the non-SQLite on-disk list of currently
+# ignored items. It is intended to be created, read and written by the
+# gdna program and not humans. It is used as a persistent store for the
+# data to be loaded into the ignore tables before each run, so as to not
+# require database access outside the main program thread.
+#
+# The file can be YAML or JSON and the contents must be in the form:
+#
+#     ignore:
+#       CATEGORY:
+#         - name: NAME
+#           user: Who
+#           timestamp: ISO8601
+#           comment: Why
+#           source: From
+#
+# or
+#
+#     {
+#        "ignore": {
+#           "CATEGORY": [
+#             {
+#               "comment": "test",
+#               "name": "PROD_02",
+#               "source": "cli",
+#               "timestamp": "2024-09-20T17:05:42+01:00",
+#               "user": "Peter"
+#             }
+#           ]
+#        }
+#     }
+#
+# where `CATEGORY` must match on of the types in the `ignore` section
+# below. The files are read and written using the cordial config.Load(),
+# config.Save() functions.
+#
+# The default is `gdna-ignores.yaml` in the normal config directories
+ignore-data-file: "" 
+
 ignore:
   gateways:
     table: ignore_gateways
@@ -254,6 +293,7 @@ db:
   # during their build time.
   main-tables:
     - sources
+    - sources-licence
     - reporting-updates
     - probes
     - samplers
@@ -261,6 +301,7 @@ db:
     - gw-samplers
     - gw-components
     - gateways
+    - tokens
 
   # `report-tables` is a list of (temporary) tables to create for
   # reporting from the primary source data. These tables are fully
@@ -340,18 +381,30 @@ db:
           valid = unixepoch(lastSeen) >= @oldestValidTime AND source IN (${sources}),
           status = 
             CASE WHEN unixepoch(lastSeen) < @oldestValidTime AND status = "OK"
-                  THEN "NOT VALID: Not updated for more than " ||@maxAge
-                WHEN unixepoch(lastSeen) >= @oldestValidTime AND status like 'NOT VALID:%'
+                  THEN "STALE: Not updated for more than " ||@maxAge
+                WHEN unixepoch(lastSeen) >= @oldestValidTime AND status like 'STALE%'
                   THEN "OK"
                 ELSE status
                 END;
 
-    # get a list of invalid files for further checking and status updates
-    invalid-files: | #sql
-      SELECT path FROM ${db.sources.table} WHERE valid = 0 AND sourceType = 'file';
-
-    update-file-status: | #sql
-      UPDATE ${db.sources.table} SET status = @status WHERE sourceType = 'file' AND path = @path;
+  sources-licence:
+    table: sources_licence
+    columns: source, status, firstSeen, lastSeen, sourceType, path, valid
+    create: > #sql
+      CREATE TABLE IF NOT EXISTS ${db.sources-licence.table} (
+        source            TEXT NOT NULL UNIQUE,
+        licenceexpiry     TIMESTAMP,
+        licencemode       TEXT,
+        licencename       TEXT,
+        hostname          TEXT,
+        hostid            TEXT
+      );
+    insert: | #sql
+      INSERT INTO ${db.sources-licence.table}
+              (source, licenceexpiry, licencemode, licencename, hostname, hostid)
+        VALUES (@source, @licenceexpiry, @licencemode, @licencename, @hostname, @hostid)
+      ON CONFLICT (source)
+        DO UPDATE SET licenceexpiry=@licenceexpiry, licencemode=@licencemode, licencename=@licencename, hostname=@hostname, hostid=@hostid;
 
   # `reporting-updates` stores the time of the latest time from the last
   # fetch run. It cannot be a temporary table as it stores historical
@@ -407,9 +460,9 @@ db:
         ALTER TABLE ${db.gateways.table}_new RENAME TO ${db.gateways.table};
     2:
       # if ca_samplers_all has less than the expected columns, recreate
-      check: |
+      check: | #sql
         SELECT count(*) BETWEEN 1 AND 14 FROM pragma_table_info('${db.ca-samplers.table}');
-      update: |
+      update: | #sql
         CREATE TABLE ${db.ca-samplers.table}_new (
           gateway           TEXT NOT NULL COLLATE NOCASE,
           plugin            TEXT NOT NULL,
@@ -434,9 +487,9 @@ db:
         ALTER TABLE ${db.ca-samplers.table}_new RENAME TO ${db.ca-samplers.table};
         CREATE INDEX ${db.ca-samplers.table}_idx1 ON ${db.ca-samplers.table} (source, lastSeen DESC);
     3:
-      check: |
+      check: | #sql
         SELECT count(*) = 4 FROM pragma_table_info('${db.gateways.table}')
-      update: |
+      update: | #sql
         CREATE TABLE ${db.gateways.table}_new (
           gateway           TEXT NOT NULL COLLATE NOCASE,
           gatewayHost       TEXT,
@@ -453,6 +506,29 @@ db:
             FROM ${db.gateways.table};
         DROP TABLE ${db.gateways.table};
         ALTER TABLE ${db.gateways.table}_new RENAME TO ${db.gateways.table};
+
+  tokens:
+    table: tokens
+    columns: [ token, total, used, free, firstSeen, lastSeen, source ]
+    create: | #sql
+      CREATE TABLE IF NOT EXISTS ${db.tokens.table} (
+        token             TEXT NOT NULL,
+        total             NUMBER,
+        used              NUMBER,
+        free              NUMBER,
+        firstSeen         TIMESTAMP NOT NULL,
+        lastSeen          TIMESTAMP NOT NULL,
+        source            TEXT NOT NULL,
+
+        UNIQUE (token, source)
+      );
+    insert: | #sql
+      INSERT INTO ${db.tokens.table}
+                  (token, total, used, free, firstSeen, lastSeen, source)
+      VALUES (@token, @total, @used, @free, @time, @time, @source)
+      ON CONFLICT (token, source)
+        DO UPDATE SET total=@total, used=@used, free=@free, lastSeen=@time;
+      ;
 
   # gateways returns a single column table containing all known gateways
   # from the four samplers and probes tables
@@ -707,6 +783,9 @@ db:
       ;
       CREATE INDEX IF NOT EXISTS ${db.samplers.active}_idx_1 ON ${db.samplers.active} (server);
       CREATE INDEX IF NOT EXISTS ${db.samplers.active}_idx_2 ON ${db.samplers.active} (probeName, probePort);
+      CREATE INDEX IF NOT EXISTS ${db.samplers.active}_idx_3 ON ${db.samplers.active} (server, plugin);
+      CREATE INDEX IF NOT EXISTS ${db.samplers.active}_idx_4 ON ${db.samplers.active} (gateway, probeName, probePort, plugin);
+
     inactive: samplers_previous
     create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.samplers.inactive};
@@ -784,6 +863,8 @@ db:
            AND EXISTS (SELECT 1 FROM ig WHERE t.gateway GLOB ig.gateway)
            AND NOT EXISTS (SELECT 1 FROM eg WHERE t.gateway GLOB eg.gateway)
       ;
+      CREATE INDEX IF NOT EXISTS ${db.ca-samplers.active}_idx_1 ON ${db.ca-samplers.active} (server, plugin);
+      CREATE INDEX IF NOT EXISTS ${db.ca-samplers.active}_idx_2 ON ${db.ca-samplers.active} (gateway, probeName, probePort, plugin);
     inactive: ca_samplers_previous
     create-inactive: > #sql
       DROP TABLE IF EXISTS ${db.ca-samplers.inactive};
@@ -996,15 +1077,17 @@ db:
     create: > #sql
       DROP TABLE IF EXISTS ${db.l1covered-servers.table};
       CREATE ${db.temporary-table} TABLE ${db.l1covered-servers.table} AS
-      SELECT ${db.servers.columns}
-        FROM ${db.servers.table}
-       WHERE server IN (
-          SELECT server
-            FROM ${db.l1plugins-per-server.table}
-           GROUP BY server
-          HAVING count(distinct plugin) = (SELECT count(*) FROM ${plugins.level1.table})
-       )
-       GROUP BY gateway, server;
+        SELECT ${db.servers.columns}
+          FROM ${db.servers.table}
+        WHERE server IN (
+            SELECT server
+              FROM ${db.l1plugins-per-server.table}
+            GROUP BY server
+            HAVING count(distinct plugin) = (SELECT count(*) FROM ${plugins.level1.table})
+        )
+        GROUP BY gateway, server;
+        CREATE INDEX IF NOT EXISTS ${db.l1covered-servers.table}_idx_1 ON ${db.l1covered-servers.table}(gateway);
+
 
   l1covered-gateways:
     table: l1covered_gateways
@@ -1068,15 +1151,16 @@ db:
     create: > #sql
       DROP TABLE IF EXISTS ${db.l2covered-servers.table};
       CREATE ${db.temporary-table} TABLE ${db.l2covered-servers.table} AS
-      SELECT ${db.servers.columns}
-        FROM ${db.servers.table}
-       WHERE server IN (
-        SELECT server
-          FROM ${db.l2plugins-per-server.table}
-         GROUP BY server
-        HAVING count(distinct plugin) = (SELECT count(*) FROM ${plugins.level2.table})
-       )
-       GROUP BY gateway, server;
+        SELECT ${db.servers.columns}
+          FROM ${db.servers.table}
+        WHERE server IN (
+          SELECT server
+            FROM ${db.l2plugins-per-server.table}
+          GROUP BY server
+          HAVING count(distinct plugin) = (SELECT count(*) FROM ${plugins.level2.table})
+        )
+        GROUP BY gateway, server;
+      CREATE INDEX IF NOT EXISTS ${db.l2covered-servers.table}_idx_1 ON ${db.l2covered-servers.table}(gateway);
 
   l2covered-gateways:
     table: l2covered_gateways
@@ -1139,10 +1223,11 @@ db:
     create: > #sql
       DROP TABLE IF EXISTS ${db.l3covered-servers.table};
       CREATE ${db.temporary-table} TABLE ${db.l3covered-servers.table} AS
-      SELECT ${db.servers.columns}
-        FROM ${db.servers.table}
-       WHERE server IN (SELECT server FROM ${db.l3plugins-per-server.table} GROUP BY server)
-       GROUP BY gateway, server;
+        SELECT ${db.servers.columns}
+          FROM ${db.servers.table}
+        WHERE server IN (SELECT server FROM ${db.l3plugins-per-server.table} GROUP BY server)
+        GROUP BY gateway, server;
+      CREATE INDEX IF NOT EXISTS ${db.l3covered-servers.table}_idx_1 ON ${db.l3covered-servers.table}(gateway);
 
   l3covered-gateways:
     table: l3covered_gateways
@@ -1384,6 +1469,126 @@ db:
 # plugins is a list of the tables to create for levels of plugin
 # coverage.
 plugins:
+  all:
+    table: all_plugins
+    create: | #sql
+      CREATE TABLE IF NOT EXISTS ${plugins.all.table} (
+        plugin            TEXT UNIQUE ON CONFLICT IGNORE NOT NULL
+      );
+    plugins:
+      - alerting
+      - api
+      - api-streams
+      - aws-plugin
+      - azure-plugin
+      - bloomberg-bpipe
+      - clearvision-status
+      - compute-engine
+      - control-m
+      - cpu
+      - desktop-pc-monitoring
+      - deviceio
+      - disk
+      - dynamic-entities-health
+      - e4jms-bridges
+      - e4jms-connections
+      - e4jms-durables
+      - e4jms-non-durables
+      - e4jms-queues
+      - e4jms-routes
+      - e4jms-server
+      - e4jms-topics
+      - e4jms-usersummary
+      - extractor
+      - fidessa
+      - fidessa-dq
+      - fix-analyser2
+      - fkm
+      - flm
+      - floating-probes
+      - fluentdforward-plugin
+      - ftm
+      - gcp-plugin
+      - gl-router
+      - hardware
+      - ibmi-file-member
+      - ibmi-jdbc
+      - ibmi-job
+      - ibmi-logreader
+      - ibmi-member-record
+      - ibmi-message
+      - ibmi-pool
+      - ibmi-queue
+      - ibmi-subsystem
+      - ibmi-system
+      - ipc
+      - ix-ma
+      - jdbc-plugin
+      - jmx-server
+      - jmx-threadinfo
+      - kafka-plugin
+      - kubernetes-plugin
+      - market-data-monitor
+      - message-tracker
+      - mibmon
+      - mongodb-plugin
+      - mq-channel
+      - mq-qinfo
+      - mq-queue
+      - net-ping
+      - network
+      - nyxt-papastats
+      - op5monitor
+      - opentelemetry-plugin
+      - oracle
+      - orc
+      - perfmon
+      - postgres-plugin
+      - processes
+      - prometheus-plugin
+      - prometheus-target-plugin
+      - publisher
+      - reporting
+      - rest-api
+      - rest-extractor
+      - rmc-interface
+      - self-announcing-probes
+      - sql-toolkit
+      - statetracker
+      - statsd-plugin
+      - sybase
+      - sybase-server
+      - system-plugin
+      - tcp-links
+      - tib-rv
+      - tib-rvpublisher
+      - tib-rvstream
+      - toolkit
+      - top
+      - trading-technologies
+      - trapmon
+      - unix-users
+      - uptrends
+      - veritas-cluster-server
+      - web-mon
+      - winapps
+      - win-cluster
+      - win-services
+      - wmi
+      - wts-licenses
+      - wts-processes
+      - wts-sessions
+      - wts-summary
+      - x-broadcast
+      - x-mcast
+      - x-multicast
+      - x-ping
+      - x-route
+      - x-services
+      - x-top
+      - x-traffic
+      - zookeeper-plugin
+
   # level1 is basic hardware / infrastructure
   #
   # there are actively four mandatory plugins and a number of
@@ -1561,7 +1766,7 @@ reports:
              printf('%d %%', 100 - round((totals.l3covered * 100.0 ) / totals.servers))
         FROM totals;
               
-  gateways-coverage-by-group:
+  gateway-coverage-by-group:
     name: Gateway Coverage By Group
     group: Monitoring Coverage
     columns: [ group, gateways, complete, "complete %", empty, "empty %", "remaining", "remaining %", "l1complete", "l1complete %", "l1remaining", "l2complete", "l2complete %", "l2remaining", "l3complete", "l3complete %" ]
@@ -1672,75 +1877,98 @@ reports:
   plugin-summary:
     name: Plugin Summary
     group: Monitoring Coverage
-    columns: [ "plugin", "servers", "instances", "previousServers", "previousInstances", "location", "required", "level", "license", "t1" ]
+    columns: [ "plugin", "servers", "instances", "tokensAvailable", "tokensUsedPct", "previousServers", "previousInstances", "location", "required", "level", "license", "t1" ]
     headlines: > #sql
       SELECT 'totalServers', (SELECT count(distinct server) FROM ${db.servers.table});
-    query: > #sql
-      WITH s AS (
-        SELECT plugin, hostID, individual
-          FROM (SELECT plugin, hostID, individual FROM ${db.samplers.active} UNION SELECT plugin, hostID, individual FROM ${db.samplers.inactive})
-         GROUP BY plugin
-      ), gw AS (
-        SELECT plugin
-          FROM (SELECT plugin FROM ${db.gw-samplers.active} UNION SELECT plugin FROM ${db.gw-samplers.inactive})
-         GROUP BY plugin
-      ), ca AS (
-        SELECT plugin
-          FROM (SELECT plugin FROM ${db.ca-samplers.active} UNION SELECT plugin FROM ${db.ca-samplers.inactive})
-         GROUP BY plugin
+    query: | #sql
+      WITH
+      current(plugin, server, number, individual, location, required, level) AS (
+        SELECT plugin, server, number, IIF(individual, 'Instance', 'Server'), 'netprobe',
+              CASE
+                WHEN plugin IN level1_plugins OR plugin IN level2_plugins THEN 'Required'
+                ELSE 'Optional'
+              END,
+              CASE
+                WHEN plugin IN level1_plugins OR plugin IN level1_optional_plugins THEN '1'
+                WHEN plugin IN level2_plugins THEN '2'
+                WHEN plugin NOT IN level1_plugins
+                  AND plugin NOT IN level1_optional_plugins
+                  AND plugin NOT IN level2_plugins THEN '3'
+                ELSE '0'
+              END
+          FROM ${db.samplers.active}
+
+        UNION ALL
+
+        SELECT plugin, entity, number, 'Server', 'collectionAgent', 'Optional', 0
+          FROM ${db.ca-samplers.active}
+
+        UNION ALL
+
+        SELECT plugin, gateway, number, 'Server', 'gateway', 'Optional', 0
+          FROM ${db.gw-samplers.active}
+      ),
+      previous(plugin, server, number, individual, location, required, level) AS (
+        SELECT plugin, server, number, IIF(individual, 'Instance', 'Server'), 'netprobe',
+              CASE
+                WHEN plugin IN level1_plugins OR plugin IN level2_plugins THEN 'Required'
+                ELSE 'Optional'
+              END,
+              CASE
+                WHEN plugin IN level1_plugins OR plugin IN level1_optional_plugins THEN '1'
+                WHEN plugin IN level2_plugins THEN '2'
+                WHEN plugin NOT IN level1_plugins
+                  AND plugin NOT IN level1_optional_plugins
+                  AND plugin NOT IN level2_plugins THEN '3'
+                ELSE '0'
+              END
+          FROM ${db.samplers.inactive}
+
+        UNION ALL
+
+        SELECT plugin, entity, number, 'Server', 'collectionAgent', 'Optional', 0
+          FROM ${db.ca-samplers.inactive}
+
+        UNION ALL
+
+        SELECT plugin, gateway, number, 'Server', 'gateway', 'Optional', 0
+          FROM ${db.gw-samplers.inactive}
       )
-      SELECT
-        s.plugin,
-        COALESCE((SELECT count(distinct server) FROM ${db.samplers.active} WHERE plugin = s.plugin), 0) servers,
-        COALESCE((SELECT total(number) FROM ${db.samplers.active} WHERE plugin = s.plugin), 0) instances,
-        COALESCE((SELECT count(distinct server) FROM ${db.samplers.inactive} WHERE plugin = s.plugin), 0) previousServers,
-        COALESCE((SELECT total(number) FROM ${db.samplers.inactive} WHERE plugin = s.plugin), 0) previousInstances,
-        'netprobe',
-        CASE
-              WHEN plugin IN ${plugins.level1.table} OR plugin IN ${plugins.level2.table} THEN 'Required'
-              ELSE 'Optional'
-            END,
-        CASE
-              WHEN plugin IN ${plugins.level1.table} OR plugin IN ${plugins.level1-optional.table} THEN '1'
-              WHEN plugin IN ${plugins.level2.table} THEN '2'
-              WHEN plugin NOT IN ${plugins.level1.table}
-               AND plugin NOT IN ${plugins.level1-optional.table}
-               AND plugin NOT IN ${plugins.level2.table} THEN '3'
-              ELSE '0'
-            END,
-        IIF(individual, 'Instance', 'Server') AS total,
-        1
-        FROM s
 
-      UNION ALL
+      SELECT 
+        plugin,
+        count(distinct server) servers,
+        total(number) instances,
+        COALESCE((SELECT COALESCE(sum(total), 'Unlimited') FROM ${db.tokens.table} WHERE token = current.plugin), 0) tokensAvailable,
+        printf('%d %%', COALESCE((SELECT IIF(sum(total) IS NULL, 0, round(total(used) * 100 / total(total))) FROM ${db.tokens.table} WHERE token = current.plugin), 0)) tokensUsedPct,
+        (SELECT count(*) FROM previous WHERE plugin = current.plugin) previousServers,
+        (SELECT total(number) FROM previous WHERE plugin = current.plugin) previousInstances,
+        location,
+        required,
+        level,
+        individual as license,
+        1
+        FROM current
+      GROUP BY plugin
+
+      UNION
 
       SELECT
-        gw.plugin,
-        COALESCE((SELECT count(distinct gateway) FROM ${db.gw-samplers.active} WHERE plugin = gw.plugin), 0) servers,
-        COALESCE((SELECT total(number) FROM ${db.gw-samplers.active} WHERE plugin = gw.plugin), 0) instances,
-        COALESCE((SELECT count(distinct gateway) FROM ${db.gw-samplers.inactive} WHERE plugin = gw.plugin), 0) previousServers,
-        COALESCE((SELECT total(number) FROM ${db.gw-samplers.inactive} WHERE plugin = gw.plugin), 0) previousInstances,
-        'gateway',
-        'Optional',
-        '0',
-        'Server',
+        plugin,
+        0,
+        0,
+        COALESCE((SELECT COALESCE(sum(total), 'Unlimited') FROM ${db.tokens.table} WHERE token = previous.plugin), 0) tokensAvailable,
+        0,
+        count(distinct server),
+        total(number),
+        location,
+        required,
+        level,
+        individual as license,
         1
-        FROM gw
-
-      UNION ALL
-      
-      SELECT
-        ca.plugin,
-        COALESCE((SELECT count(*) FROM ${db.ca-samplers.active} WHERE plugin = ca.plugin), 0) servers,
-        COALESCE((SELECT total(number) FROM ${db.ca-samplers.active} WHERE plugin = ca.plugin), 0) instances,
-        COALESCE((SELECT count(*) FROM ${db.ca-samplers.inactive} WHERE plugin = ca.plugin), 0) previousServers,
-        COALESCE((SELECT total(number) FROM ${db.ca-samplers.inactive} WHERE plugin = ca.plugin), 0) previousInstances,
-        'collectionAgent',
-        'Optional',
-        '0',
-        'Server',
-        1
-        FROM ca;
+        FROM previous
+        WHERE plugin NOT IN (SELECT distinct plugin from current)
+      GROUP BY plugin
 
   coverage-summary:
     name: Coverage Summary
@@ -2671,7 +2899,7 @@ reports:
   sources:
     name: Sources
     group: GDNA Information
-    columns: [ source, status, firstSeen, lastSeen, sourceType, path, valid, extendedFormat, gateways, probes, samplers, dynamicEntities ]
+    columns: [ source, status, firstSeen, lastSeen, sourceType, path, valid, extendedFormat, gateways, probes, samplers, dynamicEntities, licenceName, licenceExpiry, licenceMode, licenceHostname, licenceHostID ]
     headlines: > #sql
       SELECT 'latestUpdate', max(lastSeen)
         FROM ${db.sources.table}
@@ -2708,8 +2936,14 @@ reports:
              (SELECT count(*) FROM ${db.gateways.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS gateways,
              (SELECT count(*) FROM ${db.probes.table}   WHERE source = src.source AND lastSeen = src.lastSeen) AS probes,
              (SELECT total(number) FROM ${db.samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS samplers,
-             (SELECT total(number) FROM ${db.ca-samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS dynamicEntities
+             (SELECT total(number) FROM ${db.ca-samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS dynamicEntities,
+             COALESCE(licenceName, ''),
+             COALESCE(licenceExpiry, ''),
+             COALESCE(licenceMode, ''),
+             COALESCE(hostname, ''),
+             COALESCE(hostID, '')
         FROM ${db.sources.table} src
+        LEFT JOIN ${db.sources-licence.table} USING (source)
        WHERE valid = 1
 
       UNION ALL
@@ -2719,8 +2953,14 @@ reports:
              0,
              0,
              0,
-             0
+             0,
+             COALESCE(licenceName, ''),
+             COALESCE(licenceExpiry, ''),
+             COALESCE(licenceMode, ''),
+             COALESCE(hostname, ''),
+             COALESCE(hostID, '')
         FROM ${db.sources.table}
+        LEFT JOIN ${db.sources-licence.table} USING (source)
        WHERE valid = 0
 
        ORDER BY source;

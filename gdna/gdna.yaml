@@ -461,7 +461,7 @@ email:
 # `groupings` allow you to define named groups for various collections
 # of data that can subsequently be used in reports to categorise those
 # collections. At this time only two built-in reports, `plugin-groups`
-# and `gateways-coverage-by-group`, use these values - using `plugins`
+# and `gateway-coverage-by-group`, use these values - using `plugins`
 # and `gateways` below.
 #
 # Each data grouping can come from an embedded default value defined by

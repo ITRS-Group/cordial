@@ -711,7 +711,7 @@ Below is the list of reports from the `gdna list` command (with minor edits for 
 | gateway-coverage                                            | Gateway Coverage             |          | Y        | N    |
 | [gateway-summary](#dataview-gateways)                       | Gateways                     |          | Y        | Y    |
 | [gateway-versions](#dataview-gateway-versions)              | Gateway Versions             |          | Y        | Y    |
-| gateways-coverage-by-group                                  | Gateway Coverage By Group    |          | Y        | Y    |
+| gateway-coverage-by-group                                  | Gateway Coverage By Group    |          | Y        | Y    |
 | [gdna-summary](#dataview-gdna-summary)                      | GDNA Summary                 | summary  | Y        | Y    |
 | [missing-coverage](#dataview-missing-coverage)              | Missing Coverage             |          | Y        | Y    |
 | [os-versions](#dataview-operating-system-versions)          | Operating System Versions    |          | Y        | Y    |

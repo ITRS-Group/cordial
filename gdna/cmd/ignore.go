@@ -38,30 +38,31 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//go:embed _docs/ignores.md
-var ignoresCmdDescription string
+//go:embed _docs/ignore.md
+var ignoreCmdDescription string
 
-//go:embed _docs/ignores_add.md
-var ignoresAddCmdDescription string
+//go:embed _docs/ignore_add.md
+var ignoreAddCmdDescription string
 
-//go:embed _docs/ignores_delete.md
-var ignoresDeleteCmdDescription string
+//go:embed _docs/ignore_delete.md
+var ignoreDeleteCmdDescription string
 
-//go:embed _docs/ignores_list.md
-var ignoresListCmdDescription string
+//go:embed _docs/ignore_list.md
+var ignoreListCmdDescription string
 
 func init() {
-	GDNACmd.AddCommand(ignoresCmd)
-	ignoresCmd.AddCommand(ignoresAddCmd)
-	ignoresCmd.AddCommand(ignoresDeleteCmd)
-	ignoresCmd.AddCommand(ignoresListCmd)
+	GDNACmd.AddCommand(ignoreCmd)
+	ignoreCmd.AddCommand(ignoreAddCmd)
+	ignoreCmd.AddCommand(ignoreDeleteCmd)
+	ignoreCmd.AddCommand(ignoreListCmd)
 }
 
-var ignoresCmd = &cobra.Command{
-	Use:   "ignores",
-	Short: "Commands to manage ignore lists",
-	Long:  ignoresCmdDescription,
-	Args:  cobra.ArbitraryArgs,
+var ignoreCmd = &cobra.Command{
+	Use:     "ignore",
+	Short:   "Commands to manage ignore lists",
+	Long:    ignoreCmdDescription,
+	Aliases: []string{"ignores"},
+	Args:    cobra.ArbitraryArgs,
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
@@ -72,22 +73,22 @@ var ignoresCmd = &cobra.Command{
 	// no action
 }
 
-var ignoresAddUser, ignoresAddComment, ignoresAddSource string
+var ignoreAddUser, ignoreAddComment, ignoreAddSource string
 
 func init() {
-	ignoresAddCmd.Flags().StringVarP(&ignoresAddUser, "user", "u", "", "user adding these items, required")
-	ignoresAddCmd.Flags().StringVarP(&ignoresAddComment, "comment", "c", "", "comment for these items, required")
-	ignoresAddCmd.Flags().StringVarP(&ignoresAddSource, "source", "s", "", "source for these items, required")
+	ignoreAddCmd.Flags().StringVarP(&ignoreAddUser, "user", "u", "", "user adding these items, required")
+	ignoreAddCmd.Flags().StringVarP(&ignoreAddComment, "comment", "c", "", "comment for these items, required")
+	ignoreAddCmd.Flags().StringVarP(&ignoreAddSource, "source", "s", "", "source for these items, required")
 
-	ignoresAddCmd.MarkFlagRequired("user")
-	ignoresAddCmd.MarkFlagRequired("comment")
-	ignoresAddCmd.MarkFlagRequired("source")
+	ignoreAddCmd.MarkFlagRequired("user")
+	ignoreAddCmd.MarkFlagRequired("comment")
+	ignoreAddCmd.MarkFlagRequired("source")
 }
 
-var ignoresAddCmd = &cobra.Command{
+var ignoreAddCmd = &cobra.Command{
 	Use:   "add [FLAGS] CATEGORY NAME...",
 	Short: "Add an item to an ignore list",
-	Long:  ignoresAddCmdDescription,
+	Long:  ignoreAddCmdDescription,
 	Args:  cobra.MinimumNArgs(2),
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
@@ -110,17 +111,17 @@ var ignoresAddCmd = &cobra.Command{
 		ts := time.Now().Format(time.RFC3339)
 
 		// load existing
-		ig, err := config.Load("gdna-ignores",
+		ig, err := config.Load("gdna-ignore",
 			config.SetAppName(execname),
-			config.SetConfigFile(cf.GetString("ignores-file")),
+			config.SetConfigFile(cf.GetString("ignore-data-file")),
 		)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return
 		}
 
-		igPath := config.Path("gdna-ignores",
+		igPath := config.Path("gdna-ignore",
 			config.SetAppName(execname),
-			config.SetConfigFile(cf.GetString("ignores-file")),
+			config.SetConfigFile(cf.GetString("ignore-data-file")),
 		)
 		log.Debug().Msgf("loaded any existing ignores from %q", igPath)
 
@@ -128,9 +129,9 @@ var ignoresAddCmd = &cobra.Command{
 		for _, name := range names {
 			newname := map[string]string{
 				"name":      name,
-				"comment":   ignoresAddComment,
-				"user":      ignoresAddUser,
-				"source":    ignoresAddSource,
+				"comment":   ignoreAddComment,
+				"user":      ignoreAddUser,
+				"source":    ignoreAddSource,
 				"timestamp": ts,
 			}
 			if i := slices.IndexFunc(existing, func(e map[string]string) bool {
@@ -149,7 +150,7 @@ var ignoresAddCmd = &cobra.Command{
 		ig.Set(config.Join("ignore", category), existing)
 
 		// always save the result back
-		defer ig.Save("gdna-ignores",
+		defer ig.Save("gdna-ignore",
 			config.SetAppName("geneos"),
 			config.SetConfigFile(igPath),
 		)
@@ -158,11 +159,12 @@ var ignoresAddCmd = &cobra.Command{
 	},
 }
 
-var ignoresDeleteCmd = &cobra.Command{
-	Use:   "delete CATEGORY NAME|GLOB...",
-	Short: "Delete an item from an ignore list",
-	Long:  ignoresDeleteCmdDescription,
-	Args:  cobra.ArbitraryArgs,
+var ignoreDeleteCmd = &cobra.Command{
+	Use:     "delete CATEGORY NAME|GLOB...",
+	Short:   "Delete an item from an ignore list",
+	Aliases: []string{"remove", "rm"},
+	Long:    ignoreDeleteCmdDescription,
+	Args:    cobra.ArbitraryArgs,
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
@@ -175,16 +177,16 @@ var ignoresDeleteCmd = &cobra.Command{
 	DisableFlagsInUseLine: true,
 }
 
-var ignoresListFormat string
+var ignoreListFormat string
 
 func init() {
-	ignoresListCmd.Flags().StringVarP(&ignoresListFormat, "format", "F", "", "output format")
+	ignoreListCmd.Flags().StringVarP(&ignoreListFormat, "format", "F", "", "output format")
 }
 
-var ignoresListCmd = &cobra.Command{
+var ignoreListCmd = &cobra.Command{
 	Use:   "list [CATEGORY]",
 	Short: "List ignored items",
-	Long:  ignoresListCmdDescription,
+	Long:  ignoreListCmdDescription,
 	Args:  cobra.ArbitraryArgs,
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
@@ -197,12 +199,12 @@ var ignoresListCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		ig, err := config.Load("gdna-ignores",
+		ig, err := config.Load("gdna-ignore",
 			config.SetAppName(execname),
-			config.SetConfigFile(cf.GetString("ignores-file")),
+			config.SetConfigFile(cf.GetString("ignore-data-file")),
 		)
 
-		reporter := NewFormattedReporter(os.Stdout, RenderAs(ignoresListFormat))
+		reporter := NewFormattedReporter(os.Stdout, RenderAs(ignoreListFormat))
 
 		if len(args) > 0 {
 			rows := [][]string{}
@@ -259,14 +261,14 @@ var ignoresListCmd = &cobra.Command{
 // content), and overwrite the contents of the tables given
 func processIgnores(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
 	// load persistence file
-	ig, _ := config.Load("gdna-ignores",
+	ig, _ := config.Load("gdna-ignore",
 		config.SetAppName(execname),
-		config.SetConfigFile(cf.GetString("ignores-file")),
+		config.SetConfigFile(cf.GetString("ignore-data-file")),
 	)
 
-	log.Debug().Msgf("loaded ignores from %s", config.Path("gdna-ignores",
+	log.Debug().Msgf("loaded ignores from %s", config.Path("gdna-ignore",
 		config.SetAppName(execname),
-		config.SetConfigFile(cf.GetString("ignores-file")),
+		config.SetConfigFile(cf.GetString("ignore-data-file")),
 	))
 
 OUTER:

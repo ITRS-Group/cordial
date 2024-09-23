@@ -21,8 +21,6 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
-	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 	"slices"
@@ -104,48 +102,6 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string
 		}
 		sources = append(sources, s...)
 	}
-
-	// for all file sources in the sources table also check if they still exist
-
-	sourceFilesQuery := cf.GetString("db.sources.invalid-files")
-	log.Trace().Msgf("query:\n%s", sourceFilesQuery)
-	rows, err := tx.QueryContext(ctx, sourceFilesQuery)
-	if err != nil {
-		log.Error().Err(err).Msg("")
-		return
-	}
-	defer rows.Close()
-
-	var sourcePath string
-	for rows.Next() {
-		if err = rows.Scan(&sourcePath); err != nil {
-			return
-		}
-
-		// try to open path
-		log.Debug().Msgf("checking: %q", sourcePath)
-		f, err := os.Open(sourcePath)
-		if err == nil {
-			f.Close()
-			if err = execSQL(ctx, cf, tx, "db.sources", "update-file-status", nil,
-				sql.Named("status", "STALE"),
-				sql.Named("path", sourcePath),
-			); err != nil {
-				return sources, err
-			}
-			continue
-		} else {
-			if err = execSQL(ctx, cf, tx, "db.sources", "update-file-status", nil,
-				sql.Named("status", fmt.Sprintf("ERROR: %s", errors.Unwrap(err))),
-				sql.Named("path", sourcePath),
-			); err != nil {
-				return sources, err
-			}
-
-		}
-
-	}
-	rows.Close()
 
 	for _, source := range cf.GetStringSlice("gdna.licd-reports") {
 		var s []string
