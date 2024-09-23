@@ -57,7 +57,7 @@ func init() {
 	GDNACmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
 	GDNACmd.PersistentFlags().MarkHidden("help")
 
-	GDNACmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "Use configuration file `FILE`")
+	GDNACmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "Use configuration `FILE`")
 	GDNACmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", execname+".log", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
 
 	GDNACmd.Flags().SortFlags = false
