@@ -2802,6 +2802,8 @@ reports:
                      )), '') plugins
         FROM ${db.servers.table} s
        GROUP BY server
+       -- order by the number of sampler plus dynamic entities, so the least monitored appear first
+       ORDER BY (SELECT total(number) FROM ${db.samplers.active} WHERE server = s.server) + (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = s.server)
       ;
     conditional-format:
       - test:
