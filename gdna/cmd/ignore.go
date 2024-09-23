@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -204,7 +205,7 @@ var ignoreListCmd = &cobra.Command{
 			config.SetConfigFile(cf.GetString("ignore-data-file")),
 		)
 
-		reporter := NewFormattedReporter(os.Stdout, RenderAs(ignoreListFormat))
+		r := reporter.NewFormattedReporter(os.Stdout, reporter.RenderAs(ignoreListFormat))
 
 		if len(args) > 0 {
 			rows := [][]string{}
@@ -228,8 +229,8 @@ var ignoreListCmd = &cobra.Command{
 				})
 			}
 
-			reporter.WriteTable(rows...)
-			reporter.Render()
+			r.WriteTable(rows...)
+			r.Render()
 			return
 		}
 
@@ -251,8 +252,8 @@ var ignoreListCmd = &cobra.Command{
 			}
 		}
 
-		reporter.WriteTable(rows...)
-		reporter.Render()
+		r.WriteTable(rows...)
+		r.Render()
 		return
 	},
 }

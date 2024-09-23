@@ -35,6 +35,7 @@ import (
 	"github.com/wneessen/go-mail"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/reporter"
 )
 
 //go:embed _docs/email.md
@@ -92,9 +93,9 @@ var emailCmd = &cobra.Command{
 
 type emailData struct {
 	Timestamp      time.Time
-	CSV            *ToolkitReporter
-	Table          *FormattedReporter
-	XLSX           *XLSXReporter
+	CSV            *reporter.ToolkitReporter
+	Table          *reporter.FormattedReporter
+	XLSX           *reporter.XLSXReporter
 	TextBodyPart   *bytes.Buffer
 	HTMLBodyPart   *bytes.Buffer
 	XLSXAttachment *bytes.Buffer
@@ -125,23 +126,23 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 
 	// always build a multipart body
 	data.HTMLBodyPart = &bytes.Buffer{}
-	reporter := NewFormattedReporter(data.HTMLBodyPart,
-		RenderAs("html"),
-		HTMLPreamble(cf.GetString("email.html-preamble")),
-		HTMLPostscript(cf.GetString("email.html-postscript")),
-		Scramble(cf.GetBool("email.scramble")),
+	r := reporter.NewFormattedReporter(data.HTMLBodyPart,
+		reporter.RenderAs("html"),
+		reporter.HTMLPreamble(cf.GetString("email.html-preamble")),
+		reporter.HTMLPostscript(cf.GetString("email.html-postscript")),
+		reporter.Scramble(cf.GetBool("email.scramble")),
 	)
-	runReports(ctx, cf, tx, reporter, cf.GetString("email.body-reports"), -1)
-	reporter.Render()
-	reporter.Close()
+	runReports(ctx, cf, tx, r, cf.GetString("email.body-reports"), -1)
+	r.Render()
+	r.Close()
 	log.Debug().Msgf("text+HTML report complete, %d bytes", data.HTMLBodyPart.Len())
 
 	data.TextBodyPart = &bytes.Buffer{}
-	reporter.UpdateReporter(WriteTo(data.TextBodyPart),
-		RenderAs("table"),
+	r.UpdateReporter(reporter.Writer(data.TextBodyPart),
+		reporter.RenderAs("table"),
 	)
-	reporter.Render()
-	reporter.Close()
+	r.Render()
+	r.Close()
 	log.Debug().Msgf("TEXT+html report complete, %d bytes", data.TextBodyPart.Len())
 
 	for _, c := range cf.GetStringSlice("email.contents") {
@@ -152,22 +153,37 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 				continue
 			}
 			data.HTMLAttachment = &bytes.Buffer{}
-			reporter := NewFormattedReporter(data.HTMLAttachment,
-				RenderAs("html"),
-				HTMLPreamble(cf.GetString("email.html-preamble")),
-				HTMLPostscript(cf.GetString("email.html-postscript")),
-				Scramble(cf.GetBool("email.scramble")),
+			r := reporter.NewFormattedReporter(data.HTMLAttachment,
+				reporter.RenderAs("html"),
+				reporter.HTMLPreamble(cf.GetString("email.html-preamble")),
+				reporter.HTMLPostscript(cf.GetString("email.html-postscript")),
+				reporter.Scramble(cf.GetBool("email.scramble")),
 			)
-			runReports(ctx, cf, tx, reporter, reports, -1)
-			reporter.Render()
-			reporter.Close()
+			runReports(ctx, cf, tx, r, reports, -1)
+			r.Render()
+			r.Close()
 			log.Debug().Msgf("HTML report complete, %d bytes", data.HTMLAttachment.Len())
 		case "xlsx":
 			data.XLSXAttachment = &bytes.Buffer{}
-			reporter := NewXLSXReporter(data.XLSXAttachment, cf.GetBool("email.scramble"), cf.GetPassword("xlsx.password"))
-			runReports(ctx, cf, tx, reporter, reports, -1)
-			reporter.Render()
-			reporter.Close()
+			r := reporter.NewXLSXReporter(data.XLSXAttachment,
+				reporter.SummarySheetName(cf.GetString("reports.gdna-summary.name")),
+				reporter.XLSXScramble(cf.GetBool("email.scramble")),
+				reporter.XLSXPassword(cf.GetPassword("xlsx.password")),
+				reporter.DateFormat(cf.GetString("xlsx.formats.datetime", config.Default("yyyy-mm-ddThh:MM:ss"))),
+				reporter.IntFormat(cf.GetInt("xlsx.formats.int", config.Default(1))),
+				reporter.PercentFormat(cf.GetInt("xlsx.formats.percent", config.Default(9))),
+				reporter.SeverityColours(
+					cf.GetString("xlsx.conditional-formats.undefined", config.Default("BFBFBF")),
+					cf.GetString("xlsx.conditional-formats.ok", config.Default("5BB25C")),
+					cf.GetString("xlsx.conditional-formats.warning", config.Default("F9B057")),
+					cf.GetString("xlsx.conditional-formats.critical", config.Default("FF5668")),
+				),
+				reporter.MinColumnWidth(cf.GetFloat64("xlsx.formats.min-width")),
+				reporter.MaxColumnWidth(cf.GetFloat64("xlsx.formats.max-width")),
+			)
+			runReports(ctx, cf, tx, r, reports, -1)
+			r.Render()
+			r.Close()
 			log.Debug().Msgf("XLSX report complete, %d bytes", data.XLSXAttachment.Len())
 		default:
 		}

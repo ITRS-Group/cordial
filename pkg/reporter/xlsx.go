@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
+package reporter
 
 import (
 	"fmt"
@@ -36,6 +36,7 @@ type XLSXReporter struct {
 	x                 *excelize.File
 	w                 io.Writer
 	sheet             string // current sheet name
+	summarySheet      string
 	topHeading        int
 	leftHeading       int
 	rightAlign        int
@@ -49,18 +50,43 @@ type XLSXReporter struct {
 	conditionalFormat []ConditionalFormat
 	freezeColumn      string
 	cond              map[string]int
+	minColWidth       float64
+	maxColWidth       float64
 }
 
 // ensure that *Table is a Reporter
 var _ Reporter = (*XLSXReporter)(nil)
 
+type ConditionalFormat struct {
+	Test ConditionalFormatTest  `mapstructure:"test,omitempty"`
+	Set  []ConditionalFormatSet `mapstructure:"set,omitempty"`
+	// Else ConditionalFormatSet   `mapstructure:"else,omitempty"`
+}
+
+type ConditionalFormatTest struct {
+	Columns   []string `mapstructure:"columns,omitempty"`
+	Logical   string   `mapstructure:"logical,omitempty"` // "and", "all" or "or", "any"
+	Condition string   `mapstructure:"condition,omitempty"`
+	Type      string   `mapstructure:"type,omitempty"`
+	Value     string   `mapstructure:"value,omitempty"`
+}
+
+type ConditionalFormatSet struct {
+	Rows    string   `mapstructure:"rows,omitempty"`
+	NotRows string   `mapstructure:"not-rows,omitempty"`
+	Columns []string `mapstructure:"columns,omitempty"`
+	Format  string   `mapstructure:"format,omitempty"`
+}
+
 // NewTableReporter returns a new Table reporter
-func NewXLSXReporter(w io.Writer, scramble bool, password *config.Plaintext) (x *XLSXReporter) {
+func NewXLSXReporter(w io.Writer, options ...XLSXReportOptions) (x *XLSXReporter) {
+	opts := evalXLSXReportOptions(options...)
+
 	x = &XLSXReporter{
 		x:            excelize.NewFile(),
 		w:            w,
-		scambleNames: scramble,
-		password:     password,
+		scambleNames: opts.scramble,
+		password:     opts.password,
 	}
 
 	x.topHeading, _ = x.x.NewStyle(&excelize.Style{
@@ -92,21 +118,19 @@ func NewXLSXReporter(w io.Writer, scramble bool, password *config.Plaintext) (x 
 		},
 	})
 
-	iso := cf.GetString("xlsx.formats.datetime", config.Default("yyyy-mm-ddThh:MM:ss"))
-
 	x.dateStyle, _ = x.x.NewStyle(&excelize.Style{
 		Alignment: &excelize.Alignment{
 			Horizontal: "right",
 		},
-		CustomNumFmt: &iso,
+		CustomNumFmt: &opts.dateFormat,
 	})
 
 	x.intStyle, _ = x.x.NewStyle(&excelize.Style{
-		NumFmt: cf.GetInt("xlsx.formats.int", config.Default(1)),
+		NumFmt: opts.intFormat,
 	})
 
 	x.percentStyle, _ = x.x.NewStyle(&excelize.Style{
-		NumFmt: cf.GetInt("xlsx.formats.percent", config.Default(9)),
+		NumFmt: opts.percentFormat,
 	})
 
 	x.plainStyle, _ = x.x.NewStyle(&excelize.Style{
@@ -119,28 +143,28 @@ func NewXLSXReporter(w io.Writer, scramble bool, password *config.Plaintext) (x 
 	ok, _ := x.x.NewConditionalStyle(&excelize.Style{
 		Fill: excelize.Fill{
 			Type:    "pattern",
-			Color:   []string{cf.GetString("xlsx.conditional-formats.ok", config.Default("5BB25C"))},
+			Color:   []string{opts.okColour},
 			Pattern: 1,
 		},
 	})
 	warning, _ := x.x.NewConditionalStyle(&excelize.Style{
 		Fill: excelize.Fill{
 			Type:    "pattern",
-			Color:   []string{cf.GetString("xlsx.conditional-formats.warning", config.Default("F9B057"))},
+			Color:   []string{opts.warningColour},
 			Pattern: 1,
 		},
 	})
 	critical, _ := x.x.NewConditionalStyle(&excelize.Style{
 		Fill: excelize.Fill{
 			Type:    "pattern",
-			Color:   []string{cf.GetString("xlsx.conditional-formats.critical", config.Default("FF5668"))},
+			Color:   []string{opts.criticalColour},
 			Pattern: 1,
 		},
 	})
 	undefined, _ := x.x.NewConditionalStyle(&excelize.Style{
 		Fill: excelize.Fill{
 			Type:    "pattern",
-			Color:   []string{cf.GetString("xlsx.conditional-formats.undefined", config.Default("BFBFBF"))},
+			Color:   []string{opts.undefinedColour},
 			Pattern: 1,
 		},
 	})
@@ -152,13 +176,108 @@ func NewXLSXReporter(w io.Writer, scramble bool, password *config.Plaintext) (x 
 		"undefined": undefined,
 	}
 
-	summary := cf.GetString("reports.gdna-summary.name")
+	x.summarySheet = opts.summarySheetName
+	x.x.SetSheetName("Sheet1", opts.summarySheetName)
+	x.x.SetColStyle(opts.summarySheetName, "A", x.leftHeading)
+	x.x.SetColStyle(opts.summarySheetName, "B", x.rightAlign)
 
-	x.x.SetSheetName("Sheet1", summary)
-	x.x.SetColStyle(summary, "A", x.leftHeading)
-	x.x.SetColStyle(summary, "B", x.rightAlign)
+	x.minColWidth = opts.minColWidth
+	x.maxColWidth = opts.maxColWidth
 
 	return
+}
+
+type XLSXReportOptions func(*xlsxReportOptions)
+
+type xlsxReportOptions struct {
+	scramble         bool
+	password         *config.Plaintext
+	summarySheetName string
+	dateFormat       string
+	intFormat        int
+	percentFormat    int
+	undefinedColour  string
+	okColour         string
+	warningColour    string
+	criticalColour   string
+	minColWidth      float64
+	maxColWidth      float64
+}
+
+func evalXLSXReportOptions(options ...XLSXReportOptions) (xo *xlsxReportOptions) {
+	xo = &xlsxReportOptions{
+		summarySheetName: "Summary",
+		dateFormat:       "yyyy-mm-ddThh:MM:ss",
+		intFormat:        1,
+		percentFormat:    9,
+		undefinedColour:  "BFBFBF",
+		okColour:         "5BB25C",
+		warningColour:    "F9B057",
+		criticalColour:   "FF5668",
+		minColWidth:      10.0,
+		maxColWidth:      30.0,
+	}
+	for _, opt := range options {
+		opt(xo)
+	}
+	return
+}
+
+func XLSXScramble(scramble bool) XLSXReportOptions {
+	return func(xro *xlsxReportOptions) {
+		xro.scramble = scramble
+	}
+}
+
+func XLSXPassword(password *config.Plaintext) XLSXReportOptions {
+	return func(xro *xlsxReportOptions) {
+		xro.password = password
+	}
+}
+
+func SummarySheetName(name string) XLSXReportOptions {
+	return func(xro *xlsxReportOptions) {
+		xro.summarySheetName = name
+	}
+}
+
+func DateFormat(dateFormat string) XLSXReportOptions {
+	return func(xro *xlsxReportOptions) {
+		xro.dateFormat = dateFormat
+	}
+}
+
+func IntFormat(format int) XLSXReportOptions {
+	return func(xro *xlsxReportOptions) {
+		xro.intFormat = format
+	}
+}
+
+func PercentFormat(format int) XLSXReportOptions {
+	return func(xro *xlsxReportOptions) {
+		xro.percentFormat = format
+	}
+}
+
+func SeverityColours(undefined, ok, warning, critical string) XLSXReportOptions {
+	return func(xro *xlsxReportOptions) {
+		xro.undefinedColour = undefined
+		xro.okColour = ok
+		xro.warningColour = warning
+		xro.criticalColour = critical
+	}
+}
+
+func MinColumnWidth(n float64) XLSXReportOptions {
+	return func(xro *xlsxReportOptions) {
+		xro.minColWidth = n
+	}
+}
+
+func MaxColumnWidth(n float64) XLSXReportOptions {
+	return func(xro *xlsxReportOptions) {
+		xro.maxColWidth = n
+	}
 }
 
 func (x *XLSXReporter) SetReport(report Report) (err error) {
@@ -173,7 +292,7 @@ func (x *XLSXReporter) SetReport(report Report) (err error) {
 		title = title[:31]
 	}
 	idx, _ := x.x.GetSheetIndex(title)
-	if idx != -1 && title != cf.GetString("reports.gdna-summary.name") {
+	if idx != -1 && title != x.summarySheet {
 		log.Error().Msgf("a sheet with the same name already exists, data will clash: '%s'", title)
 	}
 	if _, err = x.x.NewSheet(title); err != nil {
@@ -208,16 +327,8 @@ func (x *XLSXReporter) WriteTable(data ...[]string) {
 	}
 
 	colwidths := []float64{}
-	minColWidth := cf.GetFloat64("xlsx.formats.min-width")
-	if minColWidth == 0.0 {
-		minColWidth = 10.0
-	}
-	maxColWidth := cf.GetFloat64("xlsx.formats.max-width")
-	if maxColWidth == 0.0 {
-		maxColWidth = 30.0
-	}
 	for _, c := range columns {
-		colwidths = append(colwidths, limitWidth(len(c), minColWidth, maxColWidth))
+		colwidths = append(colwidths, limitWidth(len(c), x.minColWidth, x.maxColWidth))
 	}
 
 	rownum := 1
@@ -261,7 +372,7 @@ func (x *XLSXReporter) WriteTable(data ...[]string) {
 			}
 		}
 		for j, c := range rowStrings {
-			colwidths[j] = limitWidth(len(fmt.Sprint(c)), colwidths[j], maxColWidth)
+			colwidths[j] = limitWidth(len(fmt.Sprint(c)), colwidths[j], x.maxColWidth)
 		}
 
 		// apply condition formatting

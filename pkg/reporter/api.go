@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
+package reporter
 
 import (
 	"fmt"
@@ -26,7 +26,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/plugins"
 	"github.com/itrs-group/cordial/pkg/xmlrpc"
 )
@@ -40,7 +39,7 @@ type APIReporter struct {
 	scramble        bool
 	scrambleColumns []string
 	dvCreateDelay   time.Duration
-	apicf           *config.Config
+	maxrows         int
 }
 
 // ensure that *APIReporter conforms to the Reporter interface
@@ -63,82 +62,134 @@ var _ Reporter = (*APIReporter)(nil)
 //
 // If reset is true then Dataviews are reset on the first use from
 // SetReport()
-func NewAPIReporter(cf *config.Config, options ...APIReporterOptions) (a *APIReporter, err error) {
+func NewAPIReporter(options ...APIReportOptions) (a *APIReporter, err error) {
 	opts := evalAPIOptions(options...)
 
-	var (
-		hostname      = cf.GetString(config.Join("geneos", "netprobe", "hostname"))
-		port          = cf.GetInt(config.Join("geneos", "netprobe", "port"))
-		secure        = cf.GetBool(config.Join("geneos", "netprobe", "secure"))
-		skipVerify    = cf.GetBool(config.Join("geneos", "netprobe", "skip-verify"))
-		entity        = cf.GetString(config.Join("geneos", "entity"))
-		sampler       = cf.GetString(config.Join("geneos", "sampler"))
-		dvCreateDelay = cf.GetDuration(config.Join("geneos", "dataview-create-delay"))
-	)
-
-	log.Debug().Msgf("setting dataview-create-delay to %v", dvCreateDelay)
+	log.Debug().Msgf("setting dataview-create-delay to %v", opts.dvCreateDelay)
 
 	a = &APIReporter{
 		reset:         opts.reset,
 		scramble:      opts.scramble,
-		apicf:         cf,
-		dvCreateDelay: dvCreateDelay,
+		dvCreateDelay: opts.dvCreateDelay,
+		maxrows:       opts.maxrows,
 	}
 
 	scheme := "http"
-	if secure {
+	if opts.secure {
 		scheme = "https"
 	}
 
 	u := &url.URL{
 		Scheme: scheme,
-		Host:   fmt.Sprintf("%s:%d", hostname, port),
+		Host:   fmt.Sprintf("%s:%d", opts.hostname, opts.port),
 		Path:   "/xmlrpc",
 	}
-	a.a, err = plugins.Open(u, entity, sampler)
+	a.a, err = plugins.Open(u, opts.entity, opts.sampler)
 
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
 
-	if skipVerify {
+	if opts.skipVerify {
 		a.a.InsecureSkipVerify()
 	}
 
 	if !a.a.Exists() {
 		err = fmt.Errorf(
 			"no such entity/sampler %s/%s on %s:%d (secure=%v, skip-verify=%v)",
-			entity, sampler, hostname, port, secure, skipVerify,
+			opts.entity, opts.sampler, opts.hostname, opts.port, opts.secure, opts.skipVerify,
 		)
 	}
 
 	return
 }
 
-type apiReporterOptions struct {
-	reset    bool
-	scramble bool
+type apiReportOptions struct {
+	hostname      string
+	port          int
+	secure        bool
+	skipVerify    bool
+	entity        string
+	sampler       string
+	dvCreateDelay time.Duration
+	reset         bool
+	scramble      bool
+	maxrows       int
 }
 
-func evalAPIOptions(options ...APIReporterOptions) (fro *apiReporterOptions) {
-	fro = &apiReporterOptions{}
+func evalAPIOptions(options ...APIReportOptions) (fro *apiReportOptions) {
+	fro = &apiReportOptions{
+		hostname:   "localhost",
+		port:       7036,
+		secure:     false,
+		skipVerify: false,
+	}
 	for _, opt := range options {
 		opt(fro)
 	}
 	return
 }
 
-type APIReporterOptions func(*apiReporterOptions)
+type APIReportOptions func(*apiReportOptions)
 
-func ResetDataviews(reset bool) APIReporterOptions {
-	return func(aro *apiReporterOptions) {
+func APIHostname(hostname string) APIReportOptions {
+	return func(aro *apiReportOptions) {
+		aro.hostname = hostname
+	}
+}
+
+func APIPort(port int) APIReportOptions {
+	return func(aro *apiReportOptions) {
+		aro.port = port
+	}
+}
+
+func APISecure(secure bool) APIReportOptions {
+	return func(aro *apiReportOptions) {
+		aro.secure = secure
+	}
+}
+
+func APISkipVerify(skip bool) APIReportOptions {
+	return func(aro *apiReportOptions) {
+		aro.skipVerify = skip
+	}
+}
+
+func APIEntity(entity string) APIReportOptions {
+	return func(aro *apiReportOptions) {
+		aro.entity = entity
+	}
+}
+
+func APISampler(sampler string) APIReportOptions {
+	return func(aro *apiReportOptions) {
+		aro.sampler = sampler
+	}
+}
+
+func DataviewCreateDelay(delay time.Duration) APIReportOptions {
+	return func(aro *apiReportOptions) {
+		aro.dvCreateDelay = delay
+	}
+}
+
+func ResetDataviews(reset bool) APIReportOptions {
+	return func(aro *apiReportOptions) {
 		aro.reset = reset
 	}
 }
-func ScrambleDataviews(scramble bool) APIReporterOptions {
-	return func(aro *apiReporterOptions) {
+
+func ScrambleDataviews(scramble bool) APIReportOptions {
+	return func(aro *apiReportOptions) {
 		aro.scramble = scramble
+	}
+}
+
+func APIMaxRows(n int) APIReportOptions {
+	return func(aro *apiReportOptions) {
+		aro.maxrows = n
 	}
 }
 
@@ -165,7 +216,7 @@ func (a *APIReporter) SetReport(report Report) (err error) {
 
 		_, err = a.a.NewDataview(group, title)
 		if err != nil {
-			log.Error().Err(err).Msgf("creating dataview '%s-%s' on %s:%d: %s", group, title, cf.GetString("geneos.netprobe.hostname"), cf.GetInt("geneos.netprobe.port"), err)
+			log.Error().Err(err).Msgf("")
 			return
 		}
 	}
@@ -177,9 +228,8 @@ func (a *APIReporter) SetReport(report Report) (err error) {
 // slice must be the column names. WriteTable replaces all existing data
 // in the Dataview.
 func (a *APIReporter) WriteTable(data ...[]string) {
-	maxrows := a.apicf.GetInt("geneos.max-rows")
-	if maxrows > 0 && len(data) > maxrows {
-		data = data[:maxrows]
+	if a.maxrows > 0 && len(data) > a.maxrows {
+		data = data[:a.maxrows]
 	}
 
 	if a.scramble {
@@ -195,8 +245,9 @@ func (a *APIReporter) WriteTable(data ...[]string) {
 		return
 	}
 
-	if !slices.Equal(existing, columns) {
-		log.Debug().Msg("column changed, resetting dataview")
+	// "rowNames" is the default first (and only) column name in an empty dataview
+	if !(len(existing) == 1 && existing[0] == "rowNames") && !slices.Equal(existing, columns) {
+		log.Debug().Msgf("column changed, resetting dataview: %v -> %v", existing, columns)
 		// recreate dataview
 		s := strings.SplitN(a.d.String(), "-", 2)
 		a.d.Remove()

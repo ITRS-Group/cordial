@@ -23,6 +23,7 @@ import (
 	"slices"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -57,13 +58,13 @@ var listCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		reporter := NewFormattedReporter(os.Stdout, RenderAs(listCmdFormat))
+		r := reporter.NewFormattedReporter(os.Stdout, reporter.RenderAs(listCmdFormat))
 
-		return listReports(cf, reporter)
+		return listReports(cf, r)
 	},
 }
 
-func listReports(cf *config.Config, reporter Reporter) (err error) {
+func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 	var reports []string
 	for name := range cf.GetStringMap("reports") {
 		reports = append(reports, name)
@@ -75,7 +76,7 @@ func listReports(cf *config.Config, reporter Reporter) (err error) {
 	}
 
 	for _, name := range reports {
-		var rep Report
+		var rep reporter.Report
 
 		if reportNames != "" {
 			if !matchReport(name, reportNames) {
@@ -105,8 +106,8 @@ func listReports(cf *config.Config, reporter Reporter) (err error) {
 		})
 	}
 
-	reporter.WriteTable(rows...)
-	reporter.Render()
+	r.WriteTable(rows...)
+	r.Render()
 
 	return
 }

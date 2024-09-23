@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
+package reporter
 
 import (
 	"fmt"
@@ -65,7 +65,7 @@ func NewFormattedReporter(w io.Writer, options ...FormattedReporterOptions) (tr 
 
 func (tr *FormattedReporter) UpdateReporter(options ...FormattedReporterOptions) {
 	tr.options = options
-	opts := evalOptions(options...)
+	opts := evalFormattedOptions(options...)
 	if opts.writer != nil {
 		tr.w = opts.writer
 		tr.t.SetOutputMirror(opts.writer)
@@ -117,7 +117,7 @@ type formattedReporterOptions struct {
 	scramble         bool
 }
 
-func evalOptions(options ...FormattedReporterOptions) (fro *formattedReporterOptions) {
+func evalFormattedOptions(options ...FormattedReporterOptions) (fro *formattedReporterOptions) {
 	fro = &formattedReporterOptions{
 		renderas:         "table",
 		dvcssclass:       "gdna-dataview",
@@ -131,7 +131,7 @@ func evalOptions(options ...FormattedReporterOptions) (fro *formattedReporterOpt
 
 type FormattedReporterOptions func(*formattedReporterOptions)
 
-func WriteTo(w io.Writer) FormattedReporterOptions {
+func Writer(w io.Writer) FormattedReporterOptions {
 	return func(fro *formattedReporterOptions) {
 		fro.writer = w
 	}
