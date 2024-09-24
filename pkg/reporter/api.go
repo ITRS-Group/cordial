@@ -62,7 +62,7 @@ var _ Reporter = (*APIReporter)(nil)
 //
 // If reset is true then Dataviews are reset on the first use from
 // SetReport()
-func NewAPIReporter(options ...APIReportOptions) (a *APIReporter, err error) {
+func NewAPIReporter(options ...APIReporterOptions) (a *APIReporter, err error) {
 	opts := evalAPIOptions(options...)
 
 	log.Debug().Msgf("setting dataview-create-delay to %v", opts.dvCreateDelay)
@@ -118,7 +118,7 @@ type apiReportOptions struct {
 	maxrows       int
 }
 
-func evalAPIOptions(options ...APIReportOptions) (fro *apiReportOptions) {
+func evalAPIOptions(options ...APIReporterOptions) (fro *apiReportOptions) {
 	fro = &apiReportOptions{
 		hostname:   "localhost",
 		port:       7036,
@@ -131,63 +131,63 @@ func evalAPIOptions(options ...APIReportOptions) (fro *apiReportOptions) {
 	return
 }
 
-type APIReportOptions func(*apiReportOptions)
+type APIReporterOptions func(*apiReportOptions)
 
-func APIHostname(hostname string) APIReportOptions {
+func APIHostname(hostname string) APIReporterOptions {
 	return func(aro *apiReportOptions) {
 		aro.hostname = hostname
 	}
 }
 
-func APIPort(port int) APIReportOptions {
+func APIPort(port int) APIReporterOptions {
 	return func(aro *apiReportOptions) {
 		aro.port = port
 	}
 }
 
-func APISecure(secure bool) APIReportOptions {
+func APISecure(secure bool) APIReporterOptions {
 	return func(aro *apiReportOptions) {
 		aro.secure = secure
 	}
 }
 
-func APISkipVerify(skip bool) APIReportOptions {
+func APISkipVerify(skip bool) APIReporterOptions {
 	return func(aro *apiReportOptions) {
 		aro.skipVerify = skip
 	}
 }
 
-func APIEntity(entity string) APIReportOptions {
+func APIEntity(entity string) APIReporterOptions {
 	return func(aro *apiReportOptions) {
 		aro.entity = entity
 	}
 }
 
-func APISampler(sampler string) APIReportOptions {
+func APISampler(sampler string) APIReporterOptions {
 	return func(aro *apiReportOptions) {
 		aro.sampler = sampler
 	}
 }
 
-func DataviewCreateDelay(delay time.Duration) APIReportOptions {
+func DataviewCreateDelay(delay time.Duration) APIReporterOptions {
 	return func(aro *apiReportOptions) {
 		aro.dvCreateDelay = delay
 	}
 }
 
-func ResetDataviews(reset bool) APIReportOptions {
+func ResetDataviews(reset bool) APIReporterOptions {
 	return func(aro *apiReportOptions) {
 		aro.reset = reset
 	}
 }
 
-func ScrambleDataviews(scramble bool) APIReportOptions {
+func ScrambleDataviews(scramble bool) APIReporterOptions {
 	return func(aro *apiReportOptions) {
 		aro.scramble = scramble
 	}
 }
 
-func APIMaxRows(n int) APIReportOptions {
+func APIMaxRows(n int) APIReporterOptions {
 	return func(aro *apiReportOptions) {
 		aro.maxrows = n
 	}
@@ -223,11 +223,11 @@ func (a *APIReporter) SetReport(report Report) (err error) {
 	return
 }
 
-// WriteTable takes a table of data in the form of a slice of slices of
+// UpdateTable takes a table of data in the form of a slice of slices of
 // strings and writes them to the configured APIReporter. The first
-// slice must be the column names. WriteTable replaces all existing data
+// slice must be the column names. UpdateTable replaces all existing data
 // in the Dataview.
-func (a *APIReporter) WriteTable(data ...[]string) {
+func (a *APIReporter) UpdateTable(data ...[]string) {
 	if a.maxrows > 0 && len(data) > a.maxrows {
 		data = data[:a.maxrows]
 	}
@@ -260,11 +260,11 @@ func (a *APIReporter) WriteTable(data ...[]string) {
 	return
 }
 
-func (a *APIReporter) WriteHeadline(name, value string) {
+func (a *APIReporter) AddHeadline(name, value string) {
 	a.dv.Headline(name, value)
 }
 
-func (a *APIReporter) Render() {
+func (a *APIReporter) Flush() {
 	// nil
 }
 

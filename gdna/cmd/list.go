@@ -106,8 +106,8 @@ func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 		})
 	}
 
-	r.WriteTable(rows...)
-	r.Render()
+	r.UpdateTable(rows...)
+	r.Flush()
 
 	return
 }

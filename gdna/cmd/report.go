@@ -160,19 +160,13 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 			return
 		}
 		maxreports = 1
-		r = reporter.NewToolkitReporter(w)
-	case "table":
-		r = reporter.NewFormattedReporter(w,
-			reporter.RenderAs("table"),
-			reporter.Scramble(scrambleNames),
-		)
-	case "html":
-		r = reporter.NewFormattedReporter(w,
-			reporter.RenderAs("html"),
+		r, _ = reporter.NewReporter("toolkit", w)
+	case "table", "html":
+		r, _ = reporter.NewReporter(format, w,
 			reporter.Scramble(scrambleNames),
 		)
 	case "xlsx":
-		r = reporter.NewXLSXReporter(w,
+		r, _ = reporter.NewReporter("xlsx", w,
 			reporter.SummarySheetName(cf.GetString("reports.gdna-summary.name")),
 			reporter.XLSXScramble(scrambleNames || cf.GetBool("xlsx.scramble")),
 			reporter.XLSXPassword(cf.GetPassword("xlsx.password")),
@@ -191,7 +185,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 	case "dataview":
 		fallthrough
 	default:
-		if r, err = reporter.NewAPIReporter(
+		if r, err = reporter.NewReporter("api", nil,
 			reporter.ResetDataviews(resetViews),
 			reporter.ScrambleDataviews(scrambleNames || cf.GetBool("geneos.scramble")),
 			reporter.APIHostname(cf.GetString(config.Join("geneos", "netprobe", "hostname"))),
@@ -205,7 +199,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 			return
 		}
 	}
-	defer r.Render()
+	defer r.Flush()
 	defer r.Close()
 
 	return runReports(ctx, cf, tx, r, reports, maxreports)
@@ -397,7 +391,7 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 		log.Error().Msgf("failed to execute query: %s\n%s", err, query)
 		return
 	}
-	r.WriteTable(table...)
+	r.UpdateTable(table...)
 
 	if query := cf.ExpandString(report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
@@ -406,7 +400,7 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 			return
 		}
 		for _, h := range names {
-			r.WriteHeadline(h, headlines[h])
+			r.AddHeadline(h, headlines[h])
 		}
 	}
 }
@@ -442,7 +436,7 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 	if len(table) == 1 {
 		return
 	}
-	r2.WriteTable(table...)
+	r2.UpdateTable(table...)
 	if query := cf.ExpandString(report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
 		if err != nil {
@@ -450,7 +444,7 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 			return
 		}
 		for _, h := range names {
-			r2.WriteHeadline(h, headlines[h])
+			r2.AddHeadline(h, headlines[h])
 		}
 	}
 }
@@ -505,7 +499,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 				continue
 			}
 			for _, h := range names {
-				r.WriteHeadline(h, headlines[h])
+				r.AddHeadline(h, headlines[h])
 			}
 		}
 
@@ -516,7 +510,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 			return err
 		}
 
-		r.WriteTable(t...)
+		r.UpdateTable(t...)
 	}
 	return
 }
@@ -558,7 +552,7 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 		table = append(table, t...)
 	}
 
-	r.WriteTable(table...)
+	r.UpdateTable(table...)
 
 	if query := cf.ExpandString(report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
@@ -567,7 +561,7 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 			return
 		}
 		for _, h := range names {
-			r.WriteHeadline(h, headlines[h])
+			r.AddHeadline(h, headlines[h])
 		}
 	}
 }

@@ -47,7 +47,7 @@ func (t *ToolkitReporter) SetReport(report Report) error {
 	return nil
 }
 
-func (t *ToolkitReporter) WriteTable(data ...[]string) {
+func (t *ToolkitReporter) UpdateTable(data ...[]string) {
 	if len(data) == 0 {
 		return
 	}
@@ -61,13 +61,13 @@ func (t *ToolkitReporter) WriteTable(data ...[]string) {
 	t.table = append(t.table, data[1:]...)
 }
 
-// WriteHeadline writes a Geneos Toolkit formatted headline to the
+// AddHeadline writes a Geneos Toolkit formatted headline to the
 // reporter.
-func (t *ToolkitReporter) WriteHeadline(name, value string) {
+func (t *ToolkitReporter) AddHeadline(name, value string) {
 	t.headlines[name] = value
 }
 
-func (t *ToolkitReporter) Render() {
+func (t *ToolkitReporter) Flush() {
 	t.c.WriteAll(t.table)
 	t.c.Flush()
 	for name, value := range t.headlines {

@@ -126,22 +126,22 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 
 	// always build a multipart body
 	data.HTMLBodyPart = &bytes.Buffer{}
-	r := reporter.NewFormattedReporter(data.HTMLBodyPart,
-		reporter.RenderAs("html"),
+	r, _ := reporter.NewReporter("html", data.HTMLBodyPart,
 		reporter.HTMLPreamble(cf.GetString("email.html-preamble")),
 		reporter.HTMLPostscript(cf.GetString("email.html-postscript")),
 		reporter.Scramble(cf.GetBool("email.scramble")),
 	)
 	runReports(ctx, cf, tx, r, cf.GetString("email.body-reports"), -1)
-	r.Render()
+	r.Flush()
 	r.Close()
 	log.Debug().Msgf("text+HTML report complete, %d bytes", data.HTMLBodyPart.Len())
 
 	data.TextBodyPart = &bytes.Buffer{}
-	r.UpdateReporter(reporter.Writer(data.TextBodyPart),
-		reporter.RenderAs("table"),
+	r, _ = reporter.NewReporter("table", data.TextBodyPart,
+		reporter.Scramble(cf.GetBool("email.scramble")),
 	)
-	r.Render()
+	runReports(ctx, cf, tx, r, cf.GetString("email.body-reports"), -1)
+	r.Flush()
 	r.Close()
 	log.Debug().Msgf("TEXT+html report complete, %d bytes", data.TextBodyPart.Len())
 
@@ -160,7 +160,7 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 				reporter.Scramble(cf.GetBool("email.scramble")),
 			)
 			runReports(ctx, cf, tx, r, reports, -1)
-			r.Render()
+			r.Flush()
 			r.Close()
 			log.Debug().Msgf("HTML report complete, %d bytes", data.HTMLAttachment.Len())
 		case "xlsx":
@@ -182,7 +182,7 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 				reporter.MaxColumnWidth(cf.GetFloat64("xlsx.formats.max-width")),
 			)
 			runReports(ctx, cf, tx, r, reports, -1)
-			r.Render()
+			r.Flush()
 			r.Close()
 			log.Debug().Msgf("XLSX report complete, %d bytes", data.XLSXAttachment.Len())
 		default:

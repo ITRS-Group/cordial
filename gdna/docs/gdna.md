@@ -13,10 +13,11 @@ The program logs various actions to a file in the working directory but this can
 
 ## Commands
 
-| Command | Description |
+| Command / Aliases | Description |
 |-------|-------|
 | [`gdna email`](gdna_email.md)	 | Email reports |
 | [`gdna fetch`](gdna_fetch.md)	 | Fetch usage data |
+| [`gdna ignore / ignores`](gdna_ignore.md)	 | Commands to manage ignore lists |
 | [`gdna list`](gdna_list.md)	 | List available reports |
 | [`gdna report`](gdna_report.md)	 | Run ad hoc report(s) |
 | [`gdna restart`](gdna_restart.md)	 | Restart background GDNA process |
@@ -27,7 +28,7 @@ The program logs various actions to a file in the working directory but this can
 ### Options
 
 ```text
-  -f, --config FILE    Use configuration file FILE
+  -f, --config FILE    Use configuration FILE
   -l, --logfile file   Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
 ```
 

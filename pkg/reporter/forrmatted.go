@@ -58,12 +58,34 @@ func NewFormattedReporter(w io.Writer, options ...FormattedReporterOptions) (tr 
 	}
 	tr.t.SetOutputMirror(tr.w)
 
-	tr.UpdateReporter(options...)
+	tr.updateReporter(options...)
 
 	return
 }
 
-func (tr *FormattedReporter) UpdateReporter(options ...FormattedReporterOptions) {
+func (t *FormattedReporter) SetReport(report Report) error {
+	title := report.Name
+	// write the last output
+	if t.renderas != "html" {
+		t.Flush()
+	}
+
+	// reset
+	*t = FormattedReporter{
+		w:               t.w,
+		name:            title,
+		t:               table.NewWriter(),
+		columns:         []string{},
+		options:         t.options,
+		scrambleColumns: report.ScrambleColumns,
+	}
+	t.t.SetOutputMirror(t.w)
+
+	t.updateReporter(t.options...)
+	return nil
+}
+
+func (tr *FormattedReporter) updateReporter(options ...FormattedReporterOptions) {
 	tr.options = options
 	opts := evalFormattedOptions(options...)
 	if opts.writer != nil {
@@ -173,29 +195,7 @@ func Scramble(scramble bool) FormattedReporterOptions {
 	}
 }
 
-func (t *FormattedReporter) SetReport(report Report) error {
-	title := report.Name
-	// write the last output
-	if t.renderas != "html" {
-		t.Render()
-	}
-
-	// reset
-	*t = FormattedReporter{
-		w:               t.w,
-		name:            title,
-		t:               table.NewWriter(),
-		columns:         []string{},
-		options:         t.options,
-		scrambleColumns: report.ScrambleColumns,
-	}
-	t.t.SetOutputMirror(t.w)
-
-	t.UpdateReporter(t.options...)
-	return nil
-}
-
-func (t *FormattedReporter) WriteTable(data ...[]string) {
+func (t *FormattedReporter) UpdateTable(data ...[]string) {
 	if len(data) == 0 {
 		return
 	}
@@ -214,7 +214,7 @@ func (t *FormattedReporter) WriteTable(data ...[]string) {
 	}
 }
 
-func (t *FormattedReporter) WriteHeadline(name, value string) {
+func (t *FormattedReporter) AddHeadline(name, value string) {
 	if len(t.headlineOrder) == 0 {
 		// init map
 		t.headlines = map[string]string{}
@@ -223,9 +223,9 @@ func (t *FormattedReporter) WriteHeadline(name, value string) {
 	t.headlines[name] = value
 }
 
-// Render sends the collected report data to the underlying table.Writer
+// Flush sends the collected report data to the underlying table.Writer
 // as on table of headlines and another or table data
-func (t *FormattedReporter) Render() {
+func (t *FormattedReporter) Flush() {
 	if t.renderas == "html" {
 		t.w.Write([]byte(t.htmlpreamble))
 	}

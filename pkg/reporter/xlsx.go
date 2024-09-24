@@ -79,7 +79,7 @@ type ConditionalFormatSet struct {
 }
 
 // NewTableReporter returns a new Table reporter
-func NewXLSXReporter(w io.Writer, options ...XLSXReportOptions) (x *XLSXReporter) {
+func NewXLSXReporter(w io.Writer, options ...XLSXReporterOptions) (x *XLSXReporter) {
 	opts := evalXLSXReportOptions(options...)
 
 	x = &XLSXReporter{
@@ -187,7 +187,7 @@ func NewXLSXReporter(w io.Writer, options ...XLSXReportOptions) (x *XLSXReporter
 	return
 }
 
-type XLSXReportOptions func(*xlsxReportOptions)
+type XLSXReporterOptions func(*xlsxReportOptions)
 
 type xlsxReportOptions struct {
 	scramble         bool
@@ -204,7 +204,7 @@ type xlsxReportOptions struct {
 	maxColWidth      float64
 }
 
-func evalXLSXReportOptions(options ...XLSXReportOptions) (xo *xlsxReportOptions) {
+func evalXLSXReportOptions(options ...XLSXReporterOptions) (xo *xlsxReportOptions) {
 	xo = &xlsxReportOptions{
 		summarySheetName: "Summary",
 		dateFormat:       "yyyy-mm-ddThh:MM:ss",
@@ -223,43 +223,43 @@ func evalXLSXReportOptions(options ...XLSXReportOptions) (xo *xlsxReportOptions)
 	return
 }
 
-func XLSXScramble(scramble bool) XLSXReportOptions {
+func XLSXScramble(scramble bool) XLSXReporterOptions {
 	return func(xro *xlsxReportOptions) {
 		xro.scramble = scramble
 	}
 }
 
-func XLSXPassword(password *config.Plaintext) XLSXReportOptions {
+func XLSXPassword(password *config.Plaintext) XLSXReporterOptions {
 	return func(xro *xlsxReportOptions) {
 		xro.password = password
 	}
 }
 
-func SummarySheetName(name string) XLSXReportOptions {
+func SummarySheetName(name string) XLSXReporterOptions {
 	return func(xro *xlsxReportOptions) {
 		xro.summarySheetName = name
 	}
 }
 
-func DateFormat(dateFormat string) XLSXReportOptions {
+func DateFormat(dateFormat string) XLSXReporterOptions {
 	return func(xro *xlsxReportOptions) {
 		xro.dateFormat = dateFormat
 	}
 }
 
-func IntFormat(format int) XLSXReportOptions {
+func IntFormat(format int) XLSXReporterOptions {
 	return func(xro *xlsxReportOptions) {
 		xro.intFormat = format
 	}
 }
 
-func PercentFormat(format int) XLSXReportOptions {
+func PercentFormat(format int) XLSXReporterOptions {
 	return func(xro *xlsxReportOptions) {
 		xro.percentFormat = format
 	}
 }
 
-func SeverityColours(undefined, ok, warning, critical string) XLSXReportOptions {
+func SeverityColours(undefined, ok, warning, critical string) XLSXReporterOptions {
 	return func(xro *xlsxReportOptions) {
 		xro.undefinedColour = undefined
 		xro.okColour = ok
@@ -268,13 +268,13 @@ func SeverityColours(undefined, ok, warning, critical string) XLSXReportOptions 
 	}
 }
 
-func MinColumnWidth(n float64) XLSXReportOptions {
+func MinColumnWidth(n float64) XLSXReporterOptions {
 	return func(xro *xlsxReportOptions) {
 		xro.minColWidth = n
 	}
 }
 
-func MaxColumnWidth(n float64) XLSXReportOptions {
+func MaxColumnWidth(n float64) XLSXReporterOptions {
 	return func(xro *xlsxReportOptions) {
 		xro.maxColWidth = n
 	}
@@ -313,7 +313,7 @@ var validcond = []string{
 	"<>",
 }
 
-func (x *XLSXReporter) WriteTable(data ...[]string) {
+func (x *XLSXReporter) UpdateTable(data ...[]string) {
 	if len(data) == 0 {
 		return
 	}
@@ -533,11 +533,11 @@ func logicalWrapper(logic string) string {
 	}
 }
 
-func (x *XLSXReporter) WriteHeadline(name, value string) {
+func (x *XLSXReporter) AddHeadline(name, value string) {
 	// nothing
 }
 
-func (x *XLSXReporter) Render() {
+func (x *XLSXReporter) Flush() {
 	x.x.Write(x.w, excelize.Options{
 		Password: x.password.String(),
 	})

@@ -229,8 +229,8 @@ var ignoreListCmd = &cobra.Command{
 				})
 			}
 
-			r.WriteTable(rows...)
-			r.Render()
+			r.UpdateTable(rows...)
+			r.Flush()
 			return
 		}
 
@@ -252,8 +252,8 @@ var ignoreListCmd = &cobra.Command{
 			}
 		}
 
-		r.WriteTable(rows...)
-		r.Render()
+		r.UpdateTable(rows...)
+		r.Flush()
 		return
 	},
 }
