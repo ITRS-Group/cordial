@@ -996,45 +996,6 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 			return sources, err
 		}
 
-	case "httpx":
-		sources = append(sources, "http:"+u.Hostname())
-		t := time.Now()
-		client := &http.Client{Timeout: cf.GetDuration("gdna.licd-timeout")}
-		u = u.JoinPath(DetailsPath)
-		req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
-		if err != nil {
-			updateSources(ctx, cf, tx, "http:"+u.Hostname(), "http", source, false, t, err)
-			return sources, err
-		}
-		resp, err := client.Do(req)
-		if err != nil {
-			updateSources(ctx, cf, tx, "http:"+u.Hostname(), "http", source, false, t, err)
-			return sources, err
-		}
-		if resp.StatusCode > 299 {
-			resp.Body.Close()
-			err = fmt.Errorf("server returned %s", resp.Status)
-			updateSources(ctx, cf, tx, "http:"+u.Hostname(), "http", source, false, t, err)
-			return sources, err
-		}
-		defer resp.Body.Close()
-
-		// set the source time to either the last-modified header or now
-		if lm := resp.Header.Get("last-modified"); lm != "" {
-			lmt, err := http.ParseTime(lm)
-			if err == nil {
-				t = lmt
-			}
-		}
-
-		c := csv.NewReader(resp.Body)
-		c.ReuseRecord = true
-		c.Comment = '#'
-
-		if err = detailReportToDB(ctx, cf, tx, c, "http:"+u.Hostname(), "http", source, t); err != nil {
-			updateSources(ctx, cf, tx, "http:"+u.Hostname(), "http", source, false, t, err)
-			return sources, err
-		}
 	default:
 		log.Debug().Msgf("looking for files matching '%s'", source)
 
