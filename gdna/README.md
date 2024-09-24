@@ -711,7 +711,7 @@ Below is the list of reports from the `gdna list` command (with minor edits for 
 | gateway-coverage                                            | Gateway Coverage             |          | Y        | N    |
 | [gateway-summary](#dataview-gateways)                       | Gateways                     |          | Y        | Y    |
 | [gateway-versions](#dataview-gateway-versions)              | Gateway Versions             |          | Y        | Y    |
-| gateway-coverage-by-group                                  | Gateway Coverage By Group    |          | Y        | Y    |
+| gateway-coverage-by-group                                   | Gateway Coverage By Group    |          | Y        | Y    |
 | [gdna-summary](#dataview-gdna-summary)                      | GDNA Summary                 | summary  | Y        | Y    |
 | [missing-coverage](#dataview-missing-coverage)              | Missing Coverage             |          | Y        | Y    |
 | [os-versions](#dataview-operating-system-versions)          | Operating System Versions    |          | Y        | Y    |
@@ -722,7 +722,7 @@ Below is the list of reports from the `gdna list` command (with minor edits for 
 | [probe-versions](#dataview-probe-versions)                  | Probe Versions               |          | Y        | Y    |
 | server-coverage                                             | Server Coverage              |          | Y        | N    |
 | [server-summary](#dataview-servers)                         | Servers                      |          | N        | Y    |
-| [sources](#dataview-sources)                                | Sources                      |          | Y        | Y    |
+| [licence-sources](#dataview-licence-sources)                | Licence Sources              |          | Y        | Y    |
 | unused-gateways                                             | Unused Gateways              |          | Y        | Y    |
 
 > [!NOTE]
@@ -740,11 +740,11 @@ The **GDNA Information** Dataview group contains data about GDNA and software ve
 
 The `gdna-summary` report shows a high level overview of GDNA and the moist recent set of data.
 
-#### Dataview: Sources
+#### Dataview: Licence Sources
 
-| Report Name | Title   | Type | Dataview | XLSX |
-| ----------- | ------- | ---- | -------- | ---- |
-| sources     | Sources |      | Y        | Y    |
+| Report Name     | Title           | Type | Dataview | XLSX |
+| --------------- | --------------- | ---- | -------- | ---- |
+| licence-sources | Licence Sources |      | Y        | Y    |
 
 The `sources` report shows details of all the configured license data, the last time it was updated and the status and validity of the source.
 

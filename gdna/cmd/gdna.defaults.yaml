@@ -508,8 +508,8 @@ db:
         ALTER TABLE ${db.gateways.table}_new RENAME TO ${db.gateways.table};
 
   tokens:
-    table: tokens
-    columns: [ token, total, used, free, firstSeen, lastSeen, source ]
+    table: tokens_all
+    columns: token, total, used, free, firstSeen, lastSeen, source
     create: | #sql
       CREATE TABLE IF NOT EXISTS ${db.tokens.table} (
         token             TEXT NOT NULL,
@@ -528,6 +528,14 @@ db:
       VALUES (@token, @total, @used, @free, @time, @time, @source)
       ON CONFLICT (token, source)
         DO UPDATE SET total=@total, used=@used, free=@free, lastSeen=@time;
+      ;
+    active: tokens
+    create-active: | #sql
+      DROP TABLE IF EXISTS ${db.tokens.active};
+      CREATE TABLE ${db.tokens.active} AS
+        SELECT token, total, used, free, t.firstSeen firstSeen, t.lastSeen lastSeen, t.source source -- ${db.tokens.columns}
+          FROM ${db.tokens.table} t, ${db.sources.table} s
+         WHERE t.lastSeen = s.lastSeen AND s.valid = 1
       ;
 
   # gateways returns a single column table containing all known gateways
@@ -1650,7 +1658,7 @@ reports:
 
       UNION ALL
 
-      SELECT 'Valid/OK Sources', (SELECT count(*) FROM ${db.sources.table} WHERE valid AND status = 'OK')
+      SELECT 'Valid/OK Licence Sources', (SELECT count(*) FROM ${db.sources.table} WHERE valid AND status = 'OK')
 
       UNION ALL
 
@@ -2896,10 +2904,10 @@ reports:
              'servers with no level of coverage'
         FROM v;
 
-  sources:
-    name: Sources
+  licence-sources:
+    name: Licence Sources
     group: GDNA Information
-    columns: [ source, status, firstSeen, lastSeen, sourceType, path, valid, extendedFormat, gateways, probes, samplers, dynamicEntities, licenceName, licenceExpiry, licenceMode, licenceHostname, licenceHostID ]
+    columns: [ source, status, firstSeen, lastSeen, sourceType, path, valid, extendedFormat, gateways, probes, samplers, dynamicEntities, serverTokens, serverTokensUsed, serverTokensFree, licenceName, licenceExpiry, licenceMode, licenceHostname, licenceHostID ]
     headlines: > #sql
       SELECT 'latestUpdate', max(lastSeen)
         FROM ${db.sources.table}
@@ -2913,20 +2921,25 @@ reports:
       UNION ALL
 
       SELECT 'totalSources', count(*)
-        FROM sources
+        FROM ${db.sources.table}
 
       UNION ALL
 
       SELECT 'erroredSources', count(*)
-        FROM sources
+        FROM ${db.sources.table}
        WHERE status LIKE 'ERROR:%'
        
       UNION ALL
 
       SELECT 'staleSources', count(*)
-        FROM sources
+        FROM ${db.sources.table}
        WHERE valid = 0
-       
+      
+      UNION ALL
+
+      SELECT 'totalServerTokens', COALESCE(total(total), 0)
+        FROM ${db.tokens.table}
+       WHERE token = 'servers'
       ;
 
     query: > #sql
@@ -2937,6 +2950,9 @@ reports:
              (SELECT count(*) FROM ${db.probes.table}   WHERE source = src.source AND lastSeen = src.lastSeen) AS probes,
              (SELECT total(number) FROM ${db.samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS samplers,
              (SELECT total(number) FROM ${db.ca-samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS dynamicEntities,
+             COALESCE((SELECT COALESCE(total, 'Unlimited') FROM ${db.tokens.table} WHERE token = 'servers' AND source = src.source AND lastSeen = src.lastSeen), 0),
+             COALESCE((SELECT COALESCE(used, 0) FROM ${db.tokens.table} WHERE token = 'servers' AND source = src.source AND lastSeen = src.lastSeen), 0),
+             COALESCE((SELECT COALESCE(free, 'Unlimited') FROM ${db.tokens.table} WHERE token = 'servers' AND source = src.source AND lastSeen = src.lastSeen), 0),
              COALESCE(licenceName, ''),
              COALESCE(licenceExpiry, ''),
              COALESCE(licenceMode, ''),
@@ -2949,6 +2965,9 @@ reports:
       UNION ALL
 
       SELECT ${db.sources.columns},
+             0,
+             0,
+             0,
              0,
              0,
              0,
