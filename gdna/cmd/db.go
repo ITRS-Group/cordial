@@ -1009,6 +1009,8 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 			return sources, nil
 		}
 
+		// any file with the suffix `_summary` before the extension is
+		// loaded as a license summary
 		for _, source := range files {
 			var s os.FileInfo
 			t := time.Now()
@@ -1061,10 +1063,20 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 			c := csv.NewReader(r)
 			c.ReuseRecord = true
 			c.Comment = '#'
-			if err = detailReportToDB(ctx, cf, tx, c, sourceName, "file", source, t); err != nil {
-				log.Error().Err(err).Msg(source)
-				// record error
-				updateSources(ctx, cf, tx, sourceName, "file", source, false, t, err)
+
+			if strings.HasSuffix(strings.TrimSuffix(sourceName, filepath.Ext(sourceName)), "_summary") {
+				sn := strings.TrimSuffix(sourceName, "_summary"+filepath.Ext(sourceName)) + filepath.Ext(sourceName)
+				if err = summaryReportToDB(ctx, cf, tx, c, sn, "file", source, t); err != nil {
+					log.Error().Err(err).Msg("")
+					updateSources(ctx, cf, tx, sn, "file", source, false, t, err)
+					return sources, err
+				}
+			} else {
+				if err = detailReportToDB(ctx, cf, tx, c, sourceName, "file", source, t); err != nil {
+					log.Error().Err(err).Msg(source)
+					// record error
+					updateSources(ctx, cf, tx, sourceName, "file", source, false, t, err)
+				}
 			}
 		}
 		return sources, nil
