@@ -33,18 +33,9 @@ type Report struct {
 	EnableForXLSX     *bool    `mapstructure:"enable-for-xlsx,omitempty"`
 	FreezeColumn      string   `mapstructure:"freeze-to-column"`
 	ScrambleColumns   []string `mapstructure:"scramble-columns,omitempty"`
-	Type              string   `mapstructure:"type,omitempty"`
-	Query             string   `mapstructure:"query,omitempty"`
-	Headlines         string   `mapstructure:"headlines,omitempty"`
 
-	Grouping      string   `mapstructure:"grouping,omitempty"`
-	GroupingOrder []string `mapstructure:"grouping-order,omitempty"`
-
+	// xlsx specific
 	ConditionalFormat []ConditionalFormat `mapstructure:"conditional-format,omitempty"`
-
-	// when Type = "split" then
-	SplitColumn string `mapstructure:"split-column,omitempty"`
-	SplitValues string `mapstructure:"split-values-query,omitempty"`
 }
 
 type ReportOptions func(*reportOptions)

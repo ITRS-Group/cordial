@@ -26,7 +26,6 @@ import (
 	"os/signal"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/thediveo/go-asciitree"
@@ -89,7 +88,7 @@ var explainCmd = &cobra.Command{
 			return
 		}
 
-		var report reporter.Report
+		var report Report
 
 		if err = cf.UnmarshalKey(config.Join("reports", name), &report); err != nil {
 			log.Error().Err(err).Msg("reports configuration format incorrect")
@@ -100,7 +99,7 @@ var explainCmd = &cobra.Command{
 	},
 }
 
-func explainAsTree(ctx context.Context, cf *config.Config, tx *sql.Tx, r string, report reporter.Report) (err error) {
+func explainAsTree(ctx context.Context, cf *config.Config, tx *sql.Tx, r string, report Report) (err error) {
 	if report.Type != "" {
 		fmt.Printf("can only explain basic reports, while %s is a %s\n", r, report.Type)
 		return

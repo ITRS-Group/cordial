@@ -33,9 +33,9 @@ import (
 // An APIReporter connects to a Geneos Netprobe using the XML-RPC API
 // and publishes Dataview with optional Headlines
 type APIReporter struct {
-	a               *plugins.Connection
-	d               *xmlrpc.Dataview
-	reset           bool
+	conn            *plugins.Connection
+	dv              *xmlrpc.Dataview
+	resetDV         bool
 	scramble        bool
 	scrambleColumns []string
 	dvCreateDelay   time.Duration
@@ -68,7 +68,7 @@ func NewAPIReporter(options ...APIReportOptions) (a *APIReporter, err error) {
 	log.Debug().Msgf("setting dataview-create-delay to %v", opts.dvCreateDelay)
 
 	a = &APIReporter{
-		reset:         opts.reset,
+		resetDV:       opts.reset,
 		scramble:      opts.scramble,
 		dvCreateDelay: opts.dvCreateDelay,
 		maxrows:       opts.maxrows,
@@ -84,7 +84,7 @@ func NewAPIReporter(options ...APIReportOptions) (a *APIReporter, err error) {
 		Host:   fmt.Sprintf("%s:%d", opts.hostname, opts.port),
 		Path:   "/xmlrpc",
 	}
-	a.a, err = plugins.Open(u, opts.entity, opts.sampler)
+	a.conn, err = plugins.Open(u, opts.entity, opts.sampler)
 
 	if err != nil {
 		log.Error().Err(err).Msg("")
@@ -92,10 +92,10 @@ func NewAPIReporter(options ...APIReportOptions) (a *APIReporter, err error) {
 	}
 
 	if opts.skipVerify {
-		a.a.InsecureSkipVerify()
+		a.conn.InsecureSkipVerify()
 	}
 
-	if !a.a.Exists() {
+	if !a.conn.Exists() {
 		err = fmt.Errorf(
 			"no such entity/sampler %s/%s on %s:%d (secure=%v, skip-verify=%v)",
 			opts.entity, opts.sampler, opts.hostname, opts.port, opts.secure, opts.skipVerify,
@@ -202,19 +202,19 @@ func (a *APIReporter) SetReport(report Report) (err error) {
 	title := report.Name
 	a.scrambleColumns = report.ScrambleColumns
 
-	a.d = a.a.Dataview(group, title)
-	if a.d == nil {
+	a.dv = a.conn.Dataview(group, title)
+	if a.dv == nil {
 		err = fmt.Errorf("invalid report name: %s - %s", group, title)
 		return
 	}
-	if a.reset {
-		a.d.Remove()
+	if a.resetDV {
+		a.dv.Remove()
 	}
-	if !a.d.Exists() {
+	if !a.dv.Exists() {
 		log.Debug().Msgf("sleeping for %v before creating new dataview %s-%s", a.dvCreateDelay, group, title)
 		time.Sleep(a.dvCreateDelay)
 
-		_, err = a.a.NewDataview(group, title)
+		_, err = a.conn.NewDataview(group, title)
 		if err != nil {
 			log.Error().Err(err).Msgf("")
 			return
@@ -239,7 +239,7 @@ func (a *APIReporter) WriteTable(data ...[]string) {
 
 	// check if columns have changed
 	columns := data[0]
-	existing, err := a.d.ColumnNames()
+	existing, err := a.dv.ColumnNames()
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
@@ -249,19 +249,19 @@ func (a *APIReporter) WriteTable(data ...[]string) {
 	if !(len(existing) == 1 && existing[0] == "rowNames") && !slices.Equal(existing, columns) {
 		log.Debug().Msgf("column changed, resetting dataview: %v -> %v", existing, columns)
 		// recreate dataview
-		s := strings.SplitN(a.d.String(), "-", 2)
-		a.d.Remove()
+		s := strings.SplitN(a.dv.String(), "-", 2)
+		a.dv.Remove()
 		time.Sleep(a.dvCreateDelay)
-		_, err = a.a.NewDataview(s[0], s[1])
+		_, err = a.conn.NewDataview(s[0], s[1])
 	}
-	if err := a.d.UpdateTable(data[0], data[1:]...); err != nil {
+	if err := a.dv.UpdateTable(data[0], data[1:]...); err != nil {
 		log.Error().Err(err).Msg("")
 	}
 	return
 }
 
 func (a *APIReporter) WriteHeadline(name, value string) {
-	a.d.Headline(name, value)
+	a.dv.Headline(name, value)
 }
 
 func (a *APIReporter) Render() {

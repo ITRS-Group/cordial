@@ -76,7 +76,7 @@ func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 	}
 
 	for _, name := range reports {
-		var rep reporter.Report
+		var rep Report
 
 		if reportNames != "" {
 			if !matchReport(name, reportNames) {

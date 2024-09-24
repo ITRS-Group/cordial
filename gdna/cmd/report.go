@@ -44,6 +44,24 @@ var reportCmdDescription string
 var outputFormat, reportNames, output string
 var resetViews, scrambleNames bool
 
+// Reporter is the GDNA specific reporter struct
+type Report struct {
+	// remember to "squash" the embedded struct to UnmarshalKey() works right
+	reporter.Report `mapstructure:",squash"`
+
+	// gdna / SQL query specific
+	Type      string `mapstructure:"type,omitempty"`
+	Query     string `mapstructure:"query,omitempty"`
+	Headlines string `mapstructure:"headlines,omitempty"`
+
+	// when Type = "split" then
+	SplitColumn string `mapstructure:"split-column,omitempty"`
+	SplitValues string `mapstructure:"split-values-query,omitempty"`
+
+	Grouping      string   `mapstructure:"grouping,omitempty"`
+	GroupingOrder []string `mapstructure:"grouping-order,omitempty"`
+}
+
 func init() {
 	GDNACmd.AddCommand(reportCmd)
 
@@ -212,7 +230,7 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.
 
 	var i int
 	for name := range cf.GetStringMap("reports") {
-		var rep reporter.Report
+		var rep Report
 
 		if reports != "" {
 			// always add the summary-report to XLSX files
@@ -263,7 +281,7 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.
 	}
 
 	for _, r := range standardReports {
-		var rep reporter.Report
+		var rep Report
 
 		if err = cf.UnmarshalKey(config.Join("reports", r), &rep); err != nil {
 			log.Error().Err(err).Msgf("skipping report %s: configuration format incorrect", r)
@@ -305,7 +323,7 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.
 	}
 
 	for _, r := range groupedReports {
-		var rep reporter.Report
+		var rep Report
 
 		if err = cf.UnmarshalKey(config.Join("reports", r), &rep); err != nil {
 			log.Error().Err(err).Msgf("skipping report %s: configuration format incorrect", r)
@@ -364,10 +382,10 @@ func reportLookupTable(report, group string) (lookupTable map[string]string) {
 	return
 }
 
-func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report reporter.Report) {
+func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report) {
 	var err error
 
-	if err = r.SetReport(report); err != nil {
+	if err = r.SetReport(report.Report); err != nil {
 		return
 	}
 	lookup := config.LookupTable(reportLookupTable(report.Group, report.Name))
@@ -395,10 +413,10 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 
 // publishReportIndirect runs the *result* of the query as another SQL
 // statement. The column names are always those from the second query
-func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.Reporter, report reporter.Report) {
+func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.Reporter, report Report) {
 	var err error
 
-	if err = r2.SetReport(report); err != nil {
+	if err = r2.SetReport(report.Report); err != nil {
 		return
 	}
 	lookup := config.LookupTable(reportLookupTable(report.Group, report.Name))
@@ -438,7 +456,7 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 }
 
 // create a report per gateway (or other column) and populate with given queries
-func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report reporter.Report) (err error) {
+func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report) (err error) {
 	if report.SplitValues == "" {
 		log.Error().Msg("no split-values-query defined")
 		return
@@ -475,7 +493,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 		}
 		origname := report.Name
 		report.Name = cf.ExpandString(report.Name, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
-		if err = r.SetReport(report); err != nil {
+		if err = r.SetReport(report.Report); err != nil {
 			log.Debug().Err(err).Msg("")
 		}
 		report.Name = origname
@@ -503,11 +521,11 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 	return
 }
 
-func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report reporter.Report) {
+func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report) {
 	var err error
 	table := [][]string{report.Columns}
 
-	if err = r.SetReport(report); err != nil {
+	if err = r.SetReport(report.Report); err != nil {
 		return
 	}
 	lookup := config.LookupTable(reportLookupTable(report.Group, report.Name))
