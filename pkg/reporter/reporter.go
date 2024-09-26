@@ -19,21 +19,33 @@ limitations under the License.
 // dataviews, with headlines and a data table, either though the XML-RPC
 // API, as Toolkit compatible CSV, XLSX workbooks or a number of other
 // formats.
-//
-// First you must create a new Reporter
 package reporter
 
 import (
 	"fmt"
 	"io"
+	"slices"
 )
 
 type Reporter interface {
-	SetReport(report Report) error
+	// Prepare initialises the current report and must be called before AddHeadline() or UpdateTable()
+	Prepare(report Report) error
+
+	// AddHeadline adds a single headline to the current report dataview / sheet etc.
 	AddHeadline(name, value string)
+
+	// UpdateTable sets the main data table to the rows given. The first row must be the column names.
 	UpdateTable(rows ...[]string)
+
+	// Flush writes the current report to the destination selected with Prepare()
 	Flush()
+
+	// Close releases any resources for the whole reporter
 	Close()
+}
+
+type ReporterCommon struct {
+	scrambleFunc func(in string) string
 }
 
 type Report struct {
@@ -51,30 +63,56 @@ type Report struct {
 	ConditionalFormat []ConditionalFormat `mapstructure:"conditional-format,omitempty"`
 }
 
-type ReportOptions func(*reportOptions)
+type ReporterOptions func(*reporterOptions)
 
-type reportOptions struct {
+type reporterOptions struct {
+	scrambleFunc    func(string) string
 	scrambleColumns []string
 }
 
-func evalReportOptions(options ...ReportOptions) (ro *reportOptions) {
-	ro = &reportOptions{}
+func evalReporterOptions(options ...ReporterOptions) (ro *reporterOptions) {
+	ro = &reporterOptions{
+		scrambleFunc: scrambleWords,
+	}
 	for _, opt := range options {
 		opt(ro)
 	}
 	return
 }
 
-func ScrambleColumns(columns []string) ReportOptions {
-	return func(ro *reportOptions) {
+func ScrambleFunc(fn func(in string) string) ReporterOptions {
+	return func(ro *reporterOptions) {
+		ro.scrambleFunc = fn
+	}
+}
+
+func ScrambleColumns(columns []string) ReporterOptions {
+	return func(ro *reporterOptions) {
 		ro.scrambleColumns = columns
 	}
 }
 
+// NewReporter returns a reporter for type t, which must be one of
+// "toolkit", "csv", "api", "dataview", "xlsx", "table" or "html". If a
+// destination writer is appropriate for the reporter type, then w
+// should be the io.Writer to use. options are a list of options of
+// either ReporterOptions or the options for the selected reporter type.
 func NewReporter(t string, w io.Writer, options ...any) (r Reporter, err error) {
+	// pull out general reporter options, which are passed to each
+	// reporter factory method
+	var ro []ReporterOptions
+	options = slices.DeleteFunc(options, func(o any) bool {
+		if a, ok := o.(ReporterOptions); ok {
+			ro = append(ro, a)
+			return true
+		}
+		return false
+	})
+	opts := evalReporterOptions(ro...)
+
 	switch t {
 	case "csv", "toolkit":
-		r = NewToolkitReporter(w)
+		r = newToolkitReporter(w, opts)
 	case "api", "dataview":
 		var apioptions []APIReporterOptions
 		for _, o := range options {
@@ -84,7 +122,7 @@ func NewReporter(t string, w io.Writer, options ...any) (r Reporter, err error) 
 				panic("wrong option type")
 			}
 		}
-		r, err = NewAPIReporter(apioptions...)
+		r, err = newAPIReporter(opts, apioptions...)
 	case "xlsx":
 		var xlsxoptions []XLSXReporterOptions
 		for _, o := range options {
@@ -94,8 +132,8 @@ func NewReporter(t string, w io.Writer, options ...any) (r Reporter, err error) 
 				panic("wrong option type")
 			}
 		}
-		r = NewXLSXReporter(w, xlsxoptions...)
-	case "table", "html":
+		r = newXLSXReporter(w, opts, xlsxoptions...)
+	case "table", "html", "markdown", "md", "tsv":
 		var fmtoptions = []FormattedReporterOptions{
 			RenderAs(t),
 		}
@@ -106,7 +144,7 @@ func NewReporter(t string, w io.Writer, options ...any) (r Reporter, err error) 
 				panic("wrong option type")
 			}
 		}
-		r = NewFormattedReporter(w, fmtoptions...)
+		r = newFormattedReporter(w, opts, fmtoptions...)
 	default:
 		err = fmt.Errorf("unknown report type %q", t)
 		return

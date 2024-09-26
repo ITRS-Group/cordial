@@ -24,6 +24,7 @@ import (
 )
 
 type ToolkitReporter struct {
+	ReporterCommon
 	w               io.Writer
 	c               *csv.Writer
 	table           [][]string
@@ -34,7 +35,8 @@ type ToolkitReporter struct {
 // ensure that *ToolkitReporter conforms to the Reporter interface
 var _ Reporter = (*ToolkitReporter)(nil)
 
-func NewToolkitReporter(w io.Writer) *ToolkitReporter {
+func newToolkitReporter(w io.Writer, opts *reporterOptions) *ToolkitReporter {
+	_ = opts
 	return &ToolkitReporter{
 		w:         w,
 		c:         csv.NewWriter(w),
@@ -42,16 +44,22 @@ func NewToolkitReporter(w io.Writer) *ToolkitReporter {
 	}
 }
 
-func (t *ToolkitReporter) SetReport(report Report) error {
+func (t *ToolkitReporter) Prepare(report Report) error {
 	t.scrambleColumns = report.ScrambleColumns
 	return nil
+}
+
+// AddHeadline writes a Geneos Toolkit formatted headline to the
+// reporter.
+func (t *ToolkitReporter) AddHeadline(name, value string) {
+	t.headlines[name] = value
 }
 
 func (t *ToolkitReporter) UpdateTable(data ...[]string) {
 	if len(data) == 0 {
 		return
 	}
-	scrambleColumns(t.scrambleColumns, data)
+	// scrambleColumns(t.scrambleColumns, data)
 	// set heading first time we see any data
 	if len(t.table) == 0 {
 		t.table = [][]string{
@@ -59,12 +67,6 @@ func (t *ToolkitReporter) UpdateTable(data ...[]string) {
 		}
 	}
 	t.table = append(t.table, data[1:]...)
-}
-
-// AddHeadline writes a Geneos Toolkit formatted headline to the
-// reporter.
-func (t *ToolkitReporter) AddHeadline(name, value string) {
-	t.headlines[name] = value
 }
 
 func (t *ToolkitReporter) Flush() {
@@ -75,8 +77,13 @@ func (t *ToolkitReporter) Flush() {
 	}
 	t.table = [][]string{}
 	t.headlines = map[string]string{}
+
 }
 
-func (c *ToolkitReporter) Close() {
-	//
+// Close will call Close on the writer if it has a Close method
+func (t *ToolkitReporter) Close() {
+
+	if c, ok := t.w.(io.Closer); ok {
+		c.Close()
+	}
 }

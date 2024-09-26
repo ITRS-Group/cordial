@@ -26,6 +26,7 @@ import (
 )
 
 type FormattedReporter struct {
+	ReporterCommon
 	name            string
 	w               io.Writer
 	t               table.Writer
@@ -48,8 +49,8 @@ type FormattedReporter struct {
 // ensure that *Table is a Reporter
 var _ Reporter = (*FormattedReporter)(nil)
 
-// NewFormattedReporter returns a new Table reporter
-func NewFormattedReporter(w io.Writer, options ...FormattedReporterOptions) (tr *FormattedReporter) {
+// newFormattedReporter returns a new Table reporter
+func newFormattedReporter(w io.Writer, ropts *reporterOptions, options ...FormattedReporterOptions) (tr *FormattedReporter) {
 	tr = &FormattedReporter{
 		w:       w,
 		t:       table.NewWriter(),
@@ -63,7 +64,7 @@ func NewFormattedReporter(w io.Writer, options ...FormattedReporterOptions) (tr 
 	return
 }
 
-func (t *FormattedReporter) SetReport(report Report) error {
+func (t *FormattedReporter) Prepare(report Report) error {
 	title := report.Name
 	// write the last output
 	if t.renderas != "html" {
@@ -124,6 +125,7 @@ func (tr *FormattedReporter) updateReporter(options ...FormattedReporterOptions)
 	default:
 		tr.headlinestyle = table.StyleLight
 		tr.tablestyle = table.StyleLight
+		// tr.tablestyle.Options = table.OptionsNoBorders
 		tr.render = tr.t.Render
 	}
 
@@ -277,5 +279,7 @@ func (t *FormattedReporter) Flush() {
 }
 
 func (t *FormattedReporter) Close() {
-	//
+	if c, ok := t.w.(io.Closer); ok {
+		c.Close()
+	}
 }

@@ -33,25 +33,54 @@ import (
 )
 
 type XLSXReporter struct {
-	x                 *excelize.File
-	w                 io.Writer
-	sheet             string // current sheet name
-	summarySheet      string
-	topHeading        int
-	leftHeading       int
-	rightAlign        int
-	dateStyle         int
-	intStyle          int
-	percentStyle      int
-	plainStyle        int
-	scambleNames      bool
-	password          *config.Plaintext
+	ReporterCommon
+	x *excelize.File
+	w io.Writer
+
+	summarySheet string
+
+	// current prepared currentSheet name
+	currentSheet string
+	sheets       map[string]*sheet
+
+	// common styles
+	topHeading   int
+	leftHeading  int
+	rightAlign   int
+	dateStyle    int
+	intStyle     int
+	percentStyle int
+	plainStyle   int
+
+	// top level scramble toggle
+	scambleNames bool
+	password     *config.Plaintext
+
+	// conditional format global styles
+	cond        map[string]int
+	minColWidth float64
+	maxColWidth float64
+}
+
+type sheet struct {
+	// row name mapping
+	rowOrder []string
+
+	// rows of data where the key to the map is the rowname and the string slice is the row data
+	rows map[string][]string
+
+	// offset for first row of data table (column names etc.) 0 means excel row 1
+	rowOffset int
+
+	// the names of the columns for the dataview data
+	columns []string
+
+	// the width to apply to the columns based on min/max and the length of the data in the column
+	columnWidths []float64
+
 	scrambleColumns   []string
 	conditionalFormat []ConditionalFormat
 	freezeColumn      string
-	cond              map[string]int
-	minColWidth       float64
-	maxColWidth       float64
 }
 
 // ensure that *Table is a Reporter
@@ -79,7 +108,7 @@ type ConditionalFormatSet struct {
 }
 
 // NewTableReporter returns a new Table reporter
-func NewXLSXReporter(w io.Writer, options ...XLSXReporterOptions) (x *XLSXReporter) {
+func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporterOptions) (x *XLSXReporter) {
 	opts := evalXLSXReportOptions(options...)
 
 	x = &XLSXReporter{
@@ -87,6 +116,7 @@ func NewXLSXReporter(w io.Writer, options ...XLSXReporterOptions) (x *XLSXReport
 		w:            w,
 		scambleNames: opts.scramble,
 		password:     opts.password,
+		sheets:       map[string]*sheet{},
 	}
 
 	x.topHeading, _ = x.x.NewStyle(&excelize.Style{
@@ -177,6 +207,7 @@ func NewXLSXReporter(w io.Writer, options ...XLSXReporterOptions) (x *XLSXReport
 	}
 
 	x.summarySheet = opts.summarySheetName
+	x.sheets[opts.summarySheetName] = &sheet{}
 	x.x.SetSheetName("Sheet1", opts.summarySheetName)
 	x.x.SetColStyle(opts.summarySheetName, "A", x.leftHeading)
 	x.x.SetColStyle(opts.summarySheetName, "B", x.rightAlign)
@@ -280,25 +311,25 @@ func MaxColumnWidth(n float64) XLSXReporterOptions {
 	}
 }
 
-func (x *XLSXReporter) SetReport(report Report) (err error) {
-	title := report.Name
+func (x *XLSXReporter) Prepare(report Report) (err error) {
+	x.currentSheet = report.Name
+	x.sheets[x.currentSheet] = &sheet{
+		scrambleColumns:   report.ScrambleColumns,
+		conditionalFormat: report.ConditionalFormat,
+		freezeColumn:      report.FreezeColumn,
+		rows:              map[string][]string{},
+	}
 
-	x.scrambleColumns = report.ScrambleColumns
-	x.conditionalFormat = report.ConditionalFormat
-	x.freezeColumn = report.FreezeColumn
+	if len(x.currentSheet) > 31 {
+		log.Error().Msgf("report title '%s' exceeds sheet name limit of 31 chars, truncating", x.currentSheet)
+		x.currentSheet = x.currentSheet[:31]
+	}
+	idx, _ := x.x.GetSheetIndex(x.currentSheet)
+	if idx != -1 && x.currentSheet != x.summarySheet {
+		log.Error().Msgf("a sheet with the same name already exists, data will clash: '%s'", x.currentSheet)
+	}
 
-	if len(title) > 31 {
-		log.Debug().Msgf("report title '%s' exceeds sheet name limit of 31 chars, truncating", title)
-		title = title[:31]
-	}
-	idx, _ := x.x.GetSheetIndex(title)
-	if idx != -1 && title != x.summarySheet {
-		log.Error().Msgf("a sheet with the same name already exists, data will clash: '%s'", title)
-	}
-	if _, err = x.x.NewSheet(title); err != nil {
-		return
-	}
-	x.sheet = title
+	_, err = x.x.NewSheet(x.currentSheet)
 	return
 }
 
@@ -314,212 +345,114 @@ var validcond = []string{
 }
 
 func (x *XLSXReporter) UpdateTable(data ...[]string) {
+	var err error
+
 	if len(data) == 0 {
 		return
 	}
+
+	sheet := x.sheets[x.currentSheet]
+
 	if x.scambleNames {
-		scrambleColumns(x.scrambleColumns, data)
+		scrambleColumns(sheet.scrambleColumns, data)
 	}
-	columns := data[0]
-	var err error
-	if err = x.x.SetSheetRow(x.sheet, "A1", &columns); err != nil {
+	sheet.columns = data[0]
+
+	cellname, err := excelize.CoordinatesToCellName(1, 1+sheet.rowOffset, false)
+	if err != nil {
+		panic(err)
+	}
+	if err = x.x.SetSheetRow(x.currentSheet, cellname, &sheet.columns); err != nil {
 		return
 	}
 
-	colwidths := []float64{}
-	for _, c := range columns {
-		colwidths = append(colwidths, limitWidth(len(c), x.minColWidth, x.maxColWidth))
+	// colwidths := []float64{}
+	for _, c := range sheet.columns {
+		sheet.columnWidths = append(sheet.columnWidths, limitWidth(len(c), x.minColWidth, x.maxColWidth))
 	}
 
-	rownum := 1
-	for _, rowStrings := range data[1:] {
-		row := []any{}
-		for _, cell := range rowStrings {
-			// test for a date/time in either ISO or Go layouts
-			if t, err := time.Parse(time.RFC3339, cell); err == nil {
-				row = append(row, t)
-			} else if t, err := time.Parse(time.Layout, cell); err == nil {
-				row = append(row, t)
-			} else if percentRE.MatchString(cell) {
-				var f float64
-				fmt.Sscan(cell, &f)
-				row = append(row, f/100.0)
-			} else if numRE.MatchString(cell) {
-				var n int64
-				fmt.Sscan(cell, &n)
-				row = append(row, n)
-			} else {
-				row = append(row, cell)
-			}
-		}
-		rownum++ // increment first, starts at A2
-		if err = x.x.SetSheetRow(x.sheet, fmt.Sprintf("A%d", rownum), &row); err != nil {
+	for rownum, cellsString := range data[1:] {
+		sheet.rows[cellsString[0]] = cellsString
+		sheet.rowOrder = append(sheet.rowOrder, cellsString[0])
+
+		cells := stringsToRow(cellsString)
+		if err = x.x.SetSheetRow(x.currentSheet, fmt.Sprintf("A%d", 2+rownum+sheet.rowOffset), &cells); err != nil {
 			return
 		}
 
 		// update styles
-		for i, cell := range row {
-			cellname, _ := excelize.CoordinatesToCellName(i+1, rownum)
+		for i, cell := range cells {
+			cellname, _ := excelize.CoordinatesToCellName(i+1, 2+rownum)
 			switch cell.(type) {
 			case time.Time:
-				x.x.SetCellStyle(x.sheet, cellname, cellname, x.dateStyle)
+				x.x.SetCellStyle(x.currentSheet, cellname, cellname, x.dateStyle)
 			case int64:
-				x.x.SetCellStyle(x.sheet, cellname, cellname, x.intStyle)
+				x.x.SetCellStyle(x.currentSheet, cellname, cellname, x.intStyle)
 			case float64:
-				x.x.SetCellStyle(x.sheet, cellname, cellname, x.percentStyle)
+				x.x.SetCellStyle(x.currentSheet, cellname, cellname, x.percentStyle)
 			default:
-				x.x.SetCellStyle(x.sheet, cellname, cellname, x.plainStyle)
+				x.x.SetCellStyle(x.currentSheet, cellname, cellname, x.plainStyle)
 			}
 		}
-		for j, c := range rowStrings {
-			colwidths[j] = limitWidth(len(fmt.Sprint(c)), colwidths[j], x.maxColWidth)
+		for j, c := range cellsString {
+			sheet.columnWidths[j] = limitWidth(len(fmt.Sprint(c)), sheet.columnWidths[j], x.maxColWidth)
 		}
 
-		// apply condition formatting
-		//
-		// each condition can have a `test` section, but must have a `set` section
+	}
 
-	CONDFORMAT:
-		for _, c := range x.conditionalFormat {
-			// validate conditions allowed
-			if !slices.Contains(validcond, c.Test.Condition) {
-				log.Error().Msgf("sheet %s: invalid condition %s, skipping test", x.sheet, c.Test.Condition)
-				continue
+	x.x.SetRowStyle(x.currentSheet, 1, 1, x.topHeading)
+}
+
+func setColumnWidths(x *XLSXReporter) {
+	for sheetname, sheet := range x.sheets {
+		// set column widths
+		for i, c := range sheet.columnWidths {
+			col, err := excelize.ColumnNumberToName(i + 1)
+			if err != nil {
+				panic(err)
 			}
-
-			rowname := fmt.Sprint(row[0])
-
-			// match is true unless all "Rows/NotRows" fail. if no
-			// tests, then succeed regardless
-			match := true
-			format := "undefined"
-			cols := []string{}
-
-			for _, s := range c.Set {
-				if s.NotRows != "" {
-					match = false
-					if ok, _ := path.Match(s.NotRows, rowname); !ok {
-						format = s.Format
-						cols = s.Columns
-						match = true
-						break
-					}
-				} else if s.Rows != "" {
-					match = false
-					if ok, _ := path.Match(s.Rows, rowname); ok {
-						format = s.Format
-						cols = s.Columns
-						match = true
-						break
-					}
-				} else {
-					format = s.Format
-					cols = s.Columns
-				}
+			if err = x.x.SetColWidth(sheetname, col, col, c); err != nil {
+				return
 			}
+		}
+	}
+}
 
-			if !match {
-				continue
-			}
-
-			tc := []string{}
-
-			// if no set columns set, then use test columns
-			if len(cols) == 0 {
-				cols = c.Test.Columns
-			}
-
-			for _, t := range c.Test.Columns {
-				i := slices.Index(columns, t)
-				if i == -1 {
-					log.Warn().Msgf("unknown column name %q, skipping conditional formatting for sheet %s", t, x.sheet)
-					break CONDFORMAT
-				}
-				cellname, _ := excelize.CoordinatesToCellName(i+1, rownum, true)
-				switch c.Test.Type {
-				case "number":
-					tc = append(tc, fmt.Sprintf("TEXT(%s, \"0\")%s%q", cellname, c.Test.Condition, c.Test.Value))
-				default:
-					tc = append(tc, fmt.Sprintf("%s%s%q", cellname, c.Test.Condition, c.Test.Value))
-				}
-			}
-
-			logic := logicalWrapper(c.Test.Logical)
-			formula := logic + "(" + strings.Join(tc, ",") + ")"
-
-			r := []string{}
-			for _, col := range cols {
-				i := slices.Index(columns, col)
-				if i == -1 {
-					log.Warn().Msgf("unknown column name %q, skipping conditional formatting for sheet %s", col, x.sheet)
-					break CONDFORMAT
-				}
-				cellname, _ := excelize.CoordinatesToCellName(i+1, rownum, true)
-				r = append(r, cellname)
-			}
-
-			if err = x.x.SetConditionalFormat(x.sheet, strings.Join(r, ","), []excelize.ConditionalFormatOptions{
-				{
-					Type:     "formula",
-					Criteria: formula,
-					Format:   x.cond[format],
+func freezePanes(x *XLSXReporter) {
+	for sheetname, sheet := range x.sheets {
+		var err error
+		if sheet.freezeColumn == "" {
+			if err = x.x.SetPanes(sheetname, &excelize.Panes{
+				Freeze:      true,
+				YSplit:      1,
+				TopLeftCell: "A2",
+				ActivePane:  "bottomLeft",
+				Selection: []excelize.Selection{
+					{SQRef: "A2", ActiveCell: "A2", Pane: "bottomLeft"},
 				},
 			}); err != nil {
-				log.Fatal().Err(err).Msgf("formula %s on %s", formula, strings.Join(r, ","))
+				log.Error().Err(err).Msg("freeze top row")
 			}
-		}
-	}
-
-	// // mark up no data
-	// if rownum == 1 {
-	// 	if err = x.x.SetSheetRow(x.sheet, "A2", &[]string{"[No data]"}); err != nil {
-	// 		return
-	// 	}
-	// 	colwidths[1] = colWidth(len("[No data]")*2, colwidths[1], maxColWidth)
-	// }
-
-	// set column widths
-	for i, c := range colwidths {
-		col, _ := excelize.ColumnNumberToName(i + 1)
-		if err = x.x.SetColWidth(x.sheet, col, col, c); err != nil {
-			return
-		}
-	}
-
-	// x.x.SetColStyle(x.sheet, "D", x.dataColumnStyle)
-	x.x.SetRowStyle(x.sheet, 1, 1, x.topHeading)
-
-	if x.freezeColumn == "" {
-		if err = x.x.SetPanes(x.sheet, &excelize.Panes{
-			Freeze:      true,
-			YSplit:      1,
-			TopLeftCell: "A2",
-			ActivePane:  "bottomLeft",
-			Selection: []excelize.Selection{
-				{SQRef: "A2", ActiveCell: "A2", Pane: "bottomLeft"},
-			},
-		}); err != nil {
-			log.Error().Err(err).Msg("freeze top row")
-		}
-	} else {
-		i := slices.Index(columns, x.freezeColumn)
-		if i == -1 {
-			log.Warn().Msgf("unknown column name %q, skipping freeze left pane for sheet %s", x.freezeColumn, x.sheet)
-			return
-		}
-		// cellname is the first unlocked cell (so +2)
-		cellname, _ := excelize.CoordinatesToCellName(i+2, 2, true)
-		if err = x.x.SetPanes(x.sheet, &excelize.Panes{
-			Freeze:      true,
-			XSplit:      i + 1,
-			YSplit:      1,
-			TopLeftCell: cellname,
-			ActivePane:  "topLeft",
-			Selection: []excelize.Selection{
-				{SQRef: cellname, ActiveCell: cellname, Pane: "bottomRight"},
-			},
-		}); err != nil {
-			log.Error().Err(err).Msg("freeze top row")
+		} else {
+			i := slices.Index(sheet.columns, sheet.freezeColumn)
+			if i == -1 {
+				log.Warn().Msgf("unknown column name %q, skipping freeze left pane for sheet %s", sheet.freezeColumn, sheetname)
+				return
+			}
+			// cellname is the first unlocked cell (so +2)
+			cellname, _ := excelize.CoordinatesToCellName(i+2, 2, true)
+			if err = x.x.SetPanes(sheetname, &excelize.Panes{
+				Freeze:      true,
+				XSplit:      i + 1,
+				YSplit:      1,
+				TopLeftCell: cellname,
+				ActivePane:  "topLeft",
+				Selection: []excelize.Selection{
+					{SQRef: cellname, ActiveCell: cellname, Pane: "bottomRight"},
+				},
+			}); err != nil {
+				log.Error().Err(err).Msg("freeze top row")
+			}
 		}
 	}
 }
@@ -538,6 +471,9 @@ func (x *XLSXReporter) AddHeadline(name, value string) {
 }
 
 func (x *XLSXReporter) Flush() {
+	applyConditionalFormat(x)
+	setColumnWidths(x)
+	freezePanes(x)
 	x.x.Write(x.w, excelize.Options{
 		Password: x.password.String(),
 	})
@@ -545,6 +481,134 @@ func (x *XLSXReporter) Flush() {
 
 func (x *XLSXReporter) Close() {
 	x.x.Close()
+}
+
+func stringsToRow(rowStrings []string) (row []any) {
+	for _, cell := range rowStrings {
+		// test for a date/time in either ISO or Go layouts
+		if t, err := time.Parse(time.RFC3339, cell); err == nil {
+			row = append(row, t)
+		} else if t, err := time.Parse(time.Layout, cell); err == nil {
+			row = append(row, t)
+		} else if percentRE.MatchString(cell) {
+			var f float64
+			fmt.Sscan(cell, &f)
+			row = append(row, f/100.0)
+		} else if numRE.MatchString(cell) {
+			var n int64
+			fmt.Sscan(cell, &n)
+			row = append(row, n)
+		} else {
+			row = append(row, cell)
+		}
+	}
+	return
+}
+
+// apply conditional formatting to all sheets as part of the pre-render process
+func applyConditionalFormat(x *XLSXReporter) {
+	for sheetname, sheet := range x.sheets {
+		// conditional formats apply to columns of table data, so create
+		// the format from the config then apply to range
+
+		for _, c := range sheet.conditionalFormat {
+			// validate conditions allowed
+			if !slices.Contains(validcond, c.Test.Condition) {
+				log.Error().Msgf("sheet %s: invalid condition %s, skipping test", sheetname, c.Test.Condition)
+				continue
+			}
+
+			// match defaults to true unless all "Rows/NotRows" fail. if
+			// no tests, then succeed regardless
+			match := true
+			format := "undefined"
+
+			// columns this conditional format will apply to
+			cols := []string{}
+
+			for _, s := range c.Set {
+				if s.NotRows != "" {
+					match = false
+					if ok, _ := path.Match(s.NotRows, sheet.columns[0]); !ok {
+						format = s.Format
+						cols = s.Columns
+						match = true
+						break
+					}
+				} else if s.Rows != "" {
+					match = false
+					if ok, _ := path.Match(s.Rows, sheet.columns[0]); ok {
+						format = s.Format
+						cols = s.Columns
+						match = true
+						break
+					}
+				} else {
+					format = s.Format
+					cols = s.Columns
+				}
+			}
+
+			if !match {
+				continue
+			}
+
+			// range over rows in order, 0 is first data row so add rowOffset when using
+			for rownum := range sheet.rowOrder {
+				tc := []string{}
+
+				// if no set columns set, then use test columns
+				if len(cols) == 0 {
+					cols = c.Test.Columns
+				}
+
+				for _, t := range c.Test.Columns {
+					i := slices.Index(sheet.columns, t)
+					if i == -1 {
+						log.Warn().Msgf("unknown column name %q, skipping conditional formatting for sheet %s", t, sheetname)
+						return
+					}
+					cellname, err := excelize.CoordinatesToCellName(i+1, 2+rownum+sheet.rowOffset, true)
+					if err != nil {
+						panic(err)
+					}
+					switch c.Test.Type {
+					case "number":
+						tc = append(tc, fmt.Sprintf("TEXT(%s, \"0\")%s%q", cellname, c.Test.Condition, c.Test.Value))
+					default:
+						tc = append(tc, fmt.Sprintf("%s%s%q", cellname, c.Test.Condition, c.Test.Value))
+					}
+				}
+
+				logic := logicalWrapper(c.Test.Logical)
+				formula := logic + "(" + strings.Join(tc, ",") + ")"
+
+				r := []string{}
+				for _, col := range cols {
+					i := slices.Index(sheet.columns, col)
+					if i == -1 {
+						log.Warn().Msgf("unknown column name %q, skipping conditional formatting for sheet %s", col, sheetname)
+						return
+					}
+					cellname, err := excelize.CoordinatesToCellName(i+1, 2+rownum+sheet.rowOffset, true)
+					if err != nil {
+						panic(err)
+					}
+					r = append(r, cellname)
+				}
+
+				if err := x.x.SetConditionalFormat(sheetname, strings.Join(r, ","), []excelize.ConditionalFormatOptions{
+					{
+						Type:     "formula",
+						Criteria: formula,
+						Format:   x.cond[format],
+					},
+				}); err != nil {
+					log.Fatal().Err(err).Msgf("formula %s on %s", formula, strings.Join(r, ","))
+				}
+			}
+		}
+	}
 }
 
 // a scale factor for the column width versus string len

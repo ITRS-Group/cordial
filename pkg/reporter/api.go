@@ -45,7 +45,7 @@ type APIReporter struct {
 // ensure that *APIReporter conforms to the Reporter interface
 var _ Reporter = (*APIReporter)(nil)
 
-// NewAPIReporter returns a new APIReporter using the following
+// newAPIReporter returns a new APIReporter using the following
 // configuration settings from cf:
 //
 // * `geneos.netprobe.hostname`
@@ -62,7 +62,7 @@ var _ Reporter = (*APIReporter)(nil)
 //
 // If reset is true then Dataviews are reset on the first use from
 // SetReport()
-func NewAPIReporter(options ...APIReporterOptions) (a *APIReporter, err error) {
+func newAPIReporter(ropts *reporterOptions, options ...APIReporterOptions) (a *APIReporter, err error) {
 	opts := evalAPIOptions(options...)
 
 	log.Debug().Msgf("setting dataview-create-delay to %v", opts.dvCreateDelay)
@@ -106,6 +106,7 @@ func NewAPIReporter(options ...APIReporterOptions) (a *APIReporter, err error) {
 }
 
 type apiReportOptions struct {
+	ReporterCommon
 	hostname      string
 	port          int
 	secure        bool
@@ -193,11 +194,11 @@ func APIMaxRows(n int) APIReporterOptions {
 	}
 }
 
-// SetReport sets the Dataview group and title from the report structure
+// Prepare sets the Dataview group and title from the report structure
 // passed. err is returned if the connection fails or the name is
 // invalid. Note that in the Geneos api sampler the group and title must
 // be different.
-func (a *APIReporter) SetReport(report Report) (err error) {
+func (a *APIReporter) Prepare(report Report) (err error) {
 	group := report.Group
 	title := report.Name
 	a.scrambleColumns = report.ScrambleColumns
@@ -229,7 +230,7 @@ func (a *APIReporter) SetReport(report Report) (err error) {
 // in the Dataview.
 func (a *APIReporter) UpdateTable(data ...[]string) {
 	if a.maxrows > 0 && len(data) > a.maxrows {
-		data = data[:a.maxrows]
+		data = data[:a.maxrows+1]
 	}
 
 	if a.scramble {
