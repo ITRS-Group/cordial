@@ -32,10 +32,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/reporter"
 )
 
 //go:embed _docs/report.md
@@ -194,13 +195,14 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 			reporter.APISkipVerify(cf.GetBool(config.Join("geneos", "netprobe", "skip-verify"))),
 			reporter.APIEntity(cf.GetString(config.Join("geneos", "entity"))),
 			reporter.APISampler(cf.GetString(config.Join("geneos", "sampler"))),
+			reporter.APIMaxRows(cf.GetInt(config.Join("geneos", "max-rows"), config.Default(500))),
 			reporter.DataviewCreateDelay(cf.GetDuration(config.Join("geneos", "dataview-create-delay"))),
 		); err != nil {
 			return
 		}
 	}
-	defer r.Flush()
 	defer r.Close()
+	defer r.Flush()
 
 	return runReports(ctx, cf, tx, r, reports, maxreports)
 }
@@ -225,7 +227,6 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.
 	var i int
 	for name := range cf.GetStringMap("reports") {
 		var rep Report
-
 		if reports != "" {
 			// always add the summary-report to XLSX files
 			if _, ok := r2.(*reporter.XLSXReporter); ok && name == cf.GetString("xlsx.summary-report") {
@@ -379,7 +380,7 @@ func reportLookupTable(report, group string) (lookupTable map[string]string) {
 func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report) {
 	var err error
 
-	if err = r.SetReport(report.Report); err != nil {
+	if err = r.Prepare(report.Report); err != nil {
 		return
 	}
 	lookup := config.LookupTable(reportLookupTable(report.Group, report.Name))
@@ -410,7 +411,7 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.Reporter, report Report) {
 	var err error
 
-	if err = r2.SetReport(report.Report); err != nil {
+	if err = r2.Prepare(report.Report); err != nil {
 		return
 	}
 	lookup := config.LookupTable(reportLookupTable(report.Group, report.Name))
@@ -487,7 +488,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 		}
 		origname := report.Name
 		report.Name = cf.ExpandString(report.Name, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
-		if err = r.SetReport(report.Report); err != nil {
+		if err = r.Prepare(report.Report); err != nil {
 			log.Debug().Err(err).Msg("")
 		}
 		report.Name = origname
@@ -519,7 +520,7 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 	var err error
 	table := [][]string{report.Columns}
 
-	if err = r.SetReport(report.Report); err != nil {
+	if err = r.Prepare(report.Report); err != nil {
 		return
 	}
 	lookup := config.LookupTable(reportLookupTable(report.Group, report.Name))

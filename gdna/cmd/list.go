@@ -58,7 +58,7 @@ var listCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		r := reporter.NewFormattedReporter(os.Stdout, reporter.RenderAs(listCmdFormat))
+		r, _ := reporter.NewReporter("table", os.Stdout, reporter.RenderAs(listCmdFormat))
 
 		return listReports(cf, r)
 	},

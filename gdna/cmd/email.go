@@ -153,8 +153,7 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 				continue
 			}
 			data.HTMLAttachment = &bytes.Buffer{}
-			r := reporter.NewFormattedReporter(data.HTMLAttachment,
-				reporter.RenderAs("html"),
+			r, _ := reporter.NewReporter("html", data.HTMLAttachment,
 				reporter.HTMLPreamble(cf.GetString("email.html-preamble")),
 				reporter.HTMLPostscript(cf.GetString("email.html-postscript")),
 				reporter.Scramble(cf.GetBool("email.scramble")),
@@ -165,7 +164,7 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 			log.Debug().Msgf("HTML report complete, %d bytes", data.HTMLAttachment.Len())
 		case "xlsx":
 			data.XLSXAttachment = &bytes.Buffer{}
-			r := reporter.NewXLSXReporter(data.XLSXAttachment,
+			r, _ := reporter.NewReporter("xlsx", data.XLSXAttachment,
 				reporter.SummarySheetName(cf.GetString("reports.gdna-summary.name")),
 				reporter.XLSXScramble(cf.GetBool("email.scramble")),
 				reporter.XLSXPassword(cf.GetPassword("xlsx.password")),
