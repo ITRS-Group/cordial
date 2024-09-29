@@ -43,6 +43,7 @@ import (
 
 func init() {
 	addCmd.AddCommand(addGroupCmd)
+	removeCmd.AddCommand(removeGroupCmd)
 	listCmd.AddCommand(listGroupCmd)
 }
 
@@ -65,7 +66,7 @@ var addGroupCmd = &cobra.Command{
 		DisableDefaultCmd: true,
 	},
 	Annotations: map[string]string{
-		// "nolog": "true",
+		"defaultlog": os.DevNull,
 	},
 	Args:                  cobra.MinimumNArgs(3),
 	SilenceUsage:          true,
@@ -162,6 +163,110 @@ var addGroupCmd = &cobra.Command{
 	},
 }
 
+var removeGroupCmd = &cobra.Command{
+	Use:   "group [FLAGS] CATEGORY NAME [PATTERN...]",
+	Short: "Remove an item from groups",
+	// Long:    removeGroupCmdDescription,
+	Aliases: []string{"groups", "grouping"},
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
+	Annotations: map[string]string{
+		"defaultlog": os.DevNull,
+	},
+	Args:                  cobra.MinimumNArgs(2),
+	SilenceUsage:          true,
+	DisableAutoGenTag:     true,
+	DisableSuggestions:    true,
+	DisableFlagsInUseLine: true,
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		// args[0] must contain a category
+		if _, ok := categories[args[0]]; !ok {
+			return fmt.Errorf("first argument must be a valid category, one of %v", maps.Keys(categories))
+		}
+		category := args[0]
+		name := args[1]
+		var patterns []string
+		if len(args) > 2 {
+			patterns = args[2:]
+		}
+
+		// load existing
+		ig, err := config.Load(filterBase,
+			config.SetAppName("geneos"),
+			config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+			config.MustExist(),
+		)
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return
+		}
+
+		var igPath string
+		if err != nil {
+			log.Warn().Err(err).Msg("loading")
+			igPath = config.Path(filterBase,
+				config.SetAppName("geneos"),
+				config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+				config.IgnoreSystemDir(),
+				config.IgnoreWorkingDir(),
+			)
+		} else {
+			igPath = config.Path(filterBase,
+				config.SetAppName("geneos"),
+				config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+			)
+		}
+		log.Debug().Msgf("loaded any existing filters from %q", igPath)
+
+		var groups []*group
+		if err = ig.UnmarshalKey(config.Join("filters", "groups", category),
+			&groups,
+			viper.DecodeHook(
+				mapstructure.StringToTimeHookFunc(time.RFC3339),
+			),
+		); err != nil {
+			panic(err)
+		}
+
+		log.Debug().Msgf("groups: %#v", groups)
+		groups = slices.DeleteFunc(groups, func(g *group) bool {
+			if removeCmdAll {
+				return true
+			}
+			if g.Name != name {
+				return false
+			}
+			// if no patterns are given, delete the whole group
+			if len(patterns) == 0 {
+				return true
+			}
+			// delete matching patterns from group
+			g.Patterns = slices.DeleteFunc(g.Patterns, func(p string) bool {
+				if slices.Contains(patterns, p) {
+					return true
+				}
+				return false
+			})
+			// if patterns now empty, delete the group
+			if len(g.Patterns) == 0 {
+				return true
+			}
+			return false
+		})
+		log.Debug().Msgf("groups: %#v", groups)
+
+		ig.Set(config.Join("filters", "groups", category), groups)
+
+		// always save the result back
+		ig.Save(filterBase,
+			config.SetAppName("geneos"),
+			config.SetConfigFile(igPath),
+		)
+
+		return
+	},
+}
+
 var listGroupCmd = &cobra.Command{
 	Use:     "groups [CATEGORY]",
 	Short:   "List groups",
@@ -172,7 +277,7 @@ var listGroupCmd = &cobra.Command{
 		DisableDefaultCmd: true,
 	},
 	Annotations: map[string]string{
-		// "nolog": "true",
+		"defaultlog": os.DevNull,
 	},
 	SilenceUsage:          true,
 	DisableAutoGenTag:     true,

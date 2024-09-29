@@ -52,7 +52,7 @@ var listCmd = &cobra.Command{
 		DisableDefaultCmd: true,
 	},
 	Annotations: map[string]string{
-		"nolog": "true",
+		"defaultlog": os.DevNull,
 	},
 	SilenceUsage:          true,
 	DisableAutoGenTag:     true,
@@ -70,7 +70,7 @@ var listReportCmd = &cobra.Command{
 		DisableDefaultCmd: true,
 	},
 	Annotations: map[string]string{
-		"nolog": "true",
+		"defaultlog": os.DevNull,
 	},
 	SilenceUsage:          true,
 	DisableAutoGenTag:     true,
