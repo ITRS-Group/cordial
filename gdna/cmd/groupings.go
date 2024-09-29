@@ -22,48 +22,237 @@ import (
 	"context"
 	"database/sql"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"maps"
+	"os"
+	"slices"
+	"strings"
+	"time"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/reporter"
 )
 
-// loadGroupings
-func loadGroupings(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
-OUTER:
-	for grouping := range cf.GetStringMap("groupings") {
-		var r io.Reader
-		source := cf.GetString(config.Join("groupings", grouping, "source"))
-		content := cf.GetString(config.Join("groupings", grouping, "content"))
+func init() {
+	addCmd.AddCommand(addGroupCmd)
+	listCmd.AddCommand(listGroupCmd)
+}
 
-		if source == "" && content == "" {
-			log.Debug().Msgf("no groupings for %s, skipping", grouping)
-			continue
+type group struct {
+	Name      string     `mapstructure:"name"`
+	Patterns  []string   `mapstructure:"patterns"`
+	Comment   string     `mapstructure:"comment,omitempty"`
+	User      string     `mapstructure:"user,omitempty"`
+	Source    string     `mapstructure:"sources"`
+	Timestamp *time.Time `mapstructure:"timestamp,omitempty"`
+}
+
+// gdna add group gateway PROD 'PROD*'
+var addGroupCmd = &cobra.Command{
+	Use:     "group [FLAGS] CATEGORY NAME PATTERN...",
+	Short:   "Add an item to an include list",
+	Long:    addExcludeCmdDescription,
+	Aliases: []string{"groups", "grouping"},
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
+	Annotations: map[string]string{
+		// "nolog": "true",
+	},
+	Args:                  cobra.MinimumNArgs(3),
+	SilenceUsage:          true,
+	DisableAutoGenTag:     true,
+	DisableSuggestions:    true,
+	DisableFlagsInUseLine: true,
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		// args[0] must contain a category
+		if _, ok := categories[args[0]]; !ok {
+			return fmt.Errorf("first argument must be a valid category, one of %v", maps.Keys(categories))
 		}
+		category := args[0]
+		name := args[1]
+		patterns := args[2:]
 
-		log.Debug().Msgf("trying to load groupings from %s", source)
-		s, err := openSource(ctx, source)
+		ts := time.Now()
+
+		// load existing
+		ig, err := config.Load(filterBase,
+			config.SetAppName("geneos"),
+			config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+			config.MustExist(),
+		)
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return
+		}
+		var igPath string
 		if err != nil {
-			if content == "" {
-				continue
-			}
-			r = bytes.NewBufferString(content)
+			log.Warn().Err(err).Msg("loading")
+			igPath = config.Path(filterBase,
+				config.SetAppName("geneos"),
+				config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+				config.IgnoreSystemDir(),
+				config.IgnoreWorkingDir(),
+			)
 		} else {
-			defer s.Close()
-			r = s
+			igPath = config.Path(filterBase,
+				config.SetAppName("geneos"),
+				config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+			)
+		}
+		log.Debug().Msgf("loaded any existing filters from %q", igPath)
+
+		var groups []group
+		if err = ig.UnmarshalKey(config.Join("filters", "groups", category),
+			&groups,
+			viper.DecodeHook(
+				mapstructure.StringToTimeHookFunc(time.RFC3339),
+			),
+		); err != nil {
+			panic(err)
 		}
 
-		table, err := cf.ExpandRawString(config.Join("groupings", grouping, "table"))
-		if err != nil {
-			log.Error().Err(err).Msg(config.Join("groupings", grouping, "table"))
-			continue
+		// find existing group, update, write back
+
+		i := slices.IndexFunc(groups, func(g group) bool {
+			if g.Name == name {
+				return true
+			}
+			return false
+		})
+
+		if i == -1 {
+			groups = append(groups, group{
+				Name:      name,
+				Patterns:  patterns,
+				User:      addCmdUser,
+				Comment:   addCmdComment,
+				Source:    addCmdSource,
+				Timestamp: &ts,
+			})
+		} else {
+			g := groups[i]
+			g.Patterns = append(g.Patterns, patterns...)
+			slices.Sort(g.Patterns)
+			g.Patterns = slices.Compact(g.Patterns)
+			// update notes fields, overwrite previous
+			g.User = addCmdUser
+			g.Comment = addCmdComment
+			g.Source = addCmdSource
+			g.Timestamp = &ts
+			groups[i] = g
 		}
 
-		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s;", table)); err != nil {
+		ig.Set(config.Join("filters", "groups", category), groups)
+
+		// always save the result back
+		ig.Save(filterBase,
+			config.SetAppName("geneos"),
+			config.SetConfigFile(igPath),
+		)
+
+		return
+	},
+}
+
+var listGroupCmd = &cobra.Command{
+	Use:     "groups [CATEGORY]",
+	Short:   "List groups",
+	Long:    listExcludeCmdDescription,
+	Aliases: []string{"group", "grouping", "groupings"},
+	Args:    cobra.ArbitraryArgs,
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
+	Annotations: map[string]string{
+		// "nolog": "true",
+	},
+	SilenceUsage:          true,
+	DisableAutoGenTag:     true,
+	DisableSuggestions:    true,
+	DisableFlagsInUseLine: true,
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		// var category string
+		// if len(args) > 0 {
+		// 	category = args[0]
+		// }
+
+		ig, _ := config.Load(filterBase,
+			config.SetAppName("geneos"),
+			config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+		)
+
+		log.Debug().Msgf("loaded groups from %s", config.Path(filterBase,
+			config.SetAppName("geneos"),
+			config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+		))
+
+		r, _ := reporter.NewReporter("table", os.Stdout, reporter.RenderAs(listFormat))
+
+		rows := [][]string{
+			{"category:group", "category", "group", "patterns", "updated", "username", "comment", "source"},
+		}
+		for category := range cf.GetStringMap(config.Join("filters", "groups")) {
+			var groups []group
+			if err = ig.UnmarshalKey(config.Join("filters", "groups", category),
+				&groups,
+				viper.DecodeHook(
+					mapstructure.StringToTimeHookFunc(time.RFC3339),
+				),
+			); err != nil {
+				panic(err)
+			}
+
+			for _, group := range groups {
+				rows = append(rows, []string{
+					category + ":" + group.Name,
+					category,
+					group.Name,
+					strings.Join(group.Patterns, ", "),
+					group.Timestamp.Format(time.RFC3339),
+					group.User,
+					group.Comment,
+					group.Source,
+				})
+			}
+		}
+		slices.SortFunc(rows[1:], func(a, b []string) int {
+			return strings.Compare(a[0], b[0])
+		})
+		r.UpdateTable(rows...)
+		r.Flush()
+
+		return
+	},
+}
+
+// processGroups
+func processGroups(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
+	// load persistence file
+	ig, _ := config.Load(filterBase,
+		config.SetAppName("geneos"),
+		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+	)
+
+	log.Debug().Msgf("loaded groups from %s", config.Path(filterBase,
+		config.SetAppName("geneos"),
+		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+	))
+
+OUTER:
+	for grouping := range cf.GetStringMap(config.Join("filters", "groups")) {
+		table := cf.GetString(config.Join("filters", "groups", grouping, "table"))
+
+		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
 			log.Info().Err(err).Msgf("delete from %s failed", table)
-			// NOT an error
+			// NOT an error in itself
 			err = nil
 		}
 
@@ -74,34 +263,66 @@ OUTER:
 		}
 		defer insertStmt.Close()
 
-		c := csv.NewReader(r)
-		c.ReuseRecord = true
-		c.FieldsPerRecord = -1
-		c.Comment = '#'
-
-		lines := 0
-		for {
-			fields, err := c.Read()
-			if err == io.EOF {
-				// all good, end of CSV input, return
-				break
-			}
-			if err != nil {
-				return err
-			}
-			if len(fields) < 2 {
-				line, _ := c.FieldPos(0)
-				log.Debug().Msgf("source: line %d has an incorrect format, it should be 'name,pattern'", line)
-				continue
-			}
-			if _, err = insertStmt.ExecContext(ctx, sql.Named("grouping", fields[0]), sql.Named("glob", fields[1])); err != nil {
-				log.Error().Err(err).Msgf("insert for %s failed", table)
-				continue OUTER
-			}
-			lines++
+		var groups []group
+		if err = ig.UnmarshalKey(config.Join("filters", "groups", grouping),
+			&groups,
+			viper.DecodeHook(
+				mapstructure.StringToTimeHookFunc(time.RFC3339),
+			),
+		); err != nil {
+			panic(err)
 		}
 
-		log.Debug().Msgf("read %d lines from %s and added to %s", lines, source, table)
+		// check for defaults
+		if len(groups) == 0 {
+			log.Debug().Msgf("%s not in filters file, checking default", grouping)
+
+			defaults := cf.GetBytes(config.Join("filters", "groups", grouping, "default"))
+			if len(defaults) == 0 {
+				log.Debug().Msgf("default %q len 0", config.Join("filters", "groups", grouping, "default"))
+				continue OUTER
+			}
+
+			c := csv.NewReader(bytes.NewBuffer(defaults))
+			c.ReuseRecord = true
+			c.FieldsPerRecord = -1
+			c.Comment = '#'
+
+			lines := 0
+			for {
+				fields, err := c.Read()
+				if err == io.EOF {
+					// all good, end of CSV input, return
+					break
+				}
+				if err != nil {
+					return err
+				}
+				if len(fields) < 2 {
+					line, _ := c.FieldPos(0)
+					log.Debug().Msgf("source: line %d has an incorrect format, it should be 'name,pattern'", line)
+					continue
+				}
+				if _, err = insertStmt.ExecContext(ctx, sql.Named("grouping", fields[0]), sql.Named("glob", fields[1])); err != nil {
+					log.Error().Err(err).Msgf("insert for %s failed", table)
+					continue OUTER
+				}
+				lines++
+			}
+
+			log.Debug().Msgf("read %d lines from defaults and added to %s", lines, table)
+			continue OUTER
+		}
+
+		for _, group := range groups {
+			for _, pattern := range group.Patterns {
+				if _, err = insertStmt.ExecContext(ctx, sql.Named("grouping", group.Name), sql.Named("glob", pattern)); err != nil {
+					log.Error().Err(err).Msgf("insert for %s failed", table)
+					continue OUTER
+				}
+			}
+		}
+
 	}
 	return nil
 }

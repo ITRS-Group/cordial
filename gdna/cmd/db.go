@@ -677,71 +677,63 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 		return
 	}
 
-	// the `root` could be either a slice of strings with named config
-	// items, which are self-contained table configurations or a config
-	// item that contains multiple table configurations, by name
-	var tables []string
+	// split root on dot. If `root` were empty it would have been caught
+	// earlier, so prefixFields is always at least one element long
+	prefixFields := strings.FieldsFunc(root, func(r rune) bool { return r == '.' })
+
+	log.Debug().Msgf("called with root %q and selector %q", root, createSelector)
+
+	// the `root` could be a config item which is either a slice of
+	// strings with named config items, which are self-contained table
+	// configurations or a config item that contains multiple table
+	// configurations, by name
+	var createQueries []string
 	switch r := cf.Get(root).(type) {
-	case []string:
-		// Get() should never return a slice of strings, but just in
-		// case...
-		tables = r
 	case []any:
+		// an indirect list of table names
 		for _, t := range r {
-			tables = append(tables, fmt.Sprint(t))
+			// if `root` is two words or longer (e.g. `db.main-tables`)
+			// then replace the last component (`main-tables`) with the
+			// table name, as the convention is that the list of tables
+			// is at then same level as the table definitions.
+			createQueries = append(createQueries, config.Join(append(prefixFields[0:len(prefixFields)-1], fmt.Sprint(t), createSelector)...))
 		}
 	case map[string]any:
+		// a list of config sections with a table name
 		for t := range r {
-			tables = append(tables, t)
+			createQueries = append(createQueries, config.Join(append(prefixFields, fmt.Sprint(t), createSelector)...))
 		}
 	default:
 		err = fmt.Errorf("createTables: unsupported config type %s", root)
 		return
 	}
 
-	// split root on dot, for use in the loop. If `root` were empty it
-	// would have been caught earlier, so prefixFields is always at
-	// least one element long
-	prefixFields := strings.FieldsFunc(root, func(r rune) bool { return r == '.' })
-	ignore := ignores(cf)
+	fc := buildFilterSQL(cf)
 
-	for _, table := range tables {
-		var q string
-		var l []string
-
-		if len(prefixFields) == 1 {
-			// if `root` is one word (e.g. `plugins`) then use it as a
-			// prefix to the table and create values
-			l = append(prefixFields, table, createSelector)
-		} else {
-			// if `root` is two words or longer (e.g. `db.main-tables`)
-			// then replace the last component (`main-tables`) with the
-			// table name, as the convention is that the list of tables
-			// is at then same level as the table definitions.
-			l = append(prefixFields[0:len(prefixFields)-1], table, createSelector)
-		}
-		// build a config item for the create statement from the list of
-		// levels
-		q = config.Join(l...)
-		if !cf.IsSet(q) {
+	for _, table := range createQueries {
+		if !cf.IsSet(table) {
+			log.Debug().Msg("not set")
 			continue
 		}
 
-		// add a ${values:} prefix that returns SQL that can be
-		// combines like this:
+		// add a ${values:} prefix that returns SQL that can be combined
+		// like this:
 		//
 		//    WITH ig(gateway) AS (
 		//      SELECT 1 WHERE 1 == 0
 		//      ${values:db.gateways.filter.include}
-		//    )
+		//    ),
+		//	  ...
 		//
-		// to create a CTE that can then be tested with EXISTS like
+		// to create a CTE that can then be tested with EXISTS/NOT EXISTS like
 		// this:
 		//
 		//    WHERE EXISTS (SELECT 1 FROM ig WHERE ${db.gateways.table}.gateway GLOB ig.gateway)
+		//      AND NOT EXISTS (SELECT 1 FROM eg WHERE ${db.gateways.table}.gateway GLOB ig.gateway)
 		//
-		// The `SELECT 1 WHERE 1 == 0` is needed if the ${values}
-		// return is empty, so the CTE returns no rows.
+		// The `SELECT 1 WHERE 1 == 0` is needed so that if the
+		// ${values} return is empty, so the CTE returns no rows and not
+		// an error.
 		//
 		values := config.Prefix("values", func(cf *config.Config, s string, b bool) (result string, err error) {
 			s = strings.TrimPrefix(s, "values:")
@@ -760,7 +752,7 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 			return
 		})
 
-		query := cf.GetString(q, ignore, values)
+		query := cf.GetString(table, fc, values)
 		log.Trace().Msg(query)
 		if _, err = tx.ExecContext(ctx, query); err != nil {
 			return
@@ -830,24 +822,31 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx,
 		return
 	}
 
-	if err = createTables(ctx, cf, tx, "ignore", "create"); err != nil {
+	if err = createTables(ctx, cf, tx, config.Join("filters", "include"), "create"); err != nil {
 		return
 	}
-	if err = processIgnores(ctx, cf, tx); err != nil {
-		return
-	}
-
-	if err = createTables(ctx, cf, tx, "groupings", "create"); err != nil {
-		return
-	}
-	if err = loadGroupings(ctx, cf, tx); err != nil {
+	if err = processFilters(ctx, cf, tx, "include"); err != nil {
 		return
 	}
 
-	if err = createTables(ctx, cf, tx, "db.main-tables", "create-active"); err != nil {
+	if err = createTables(ctx, cf, tx, config.Join("filters", "exclude"), "create"); err != nil {
 		return
 	}
-	if err = createTables(ctx, cf, tx, "db.main-tables", "create-inactive"); err != nil {
+	if err = processFilters(ctx, cf, tx, "exclude"); err != nil {
+		return
+	}
+
+	if err = createTables(ctx, cf, tx, config.Join("filters", "groups"), "create"); err != nil {
+		return
+	}
+	if err = processGroups(ctx, cf, tx); err != nil {
+		return
+	}
+
+	if err = createTables(ctx, cf, tx, config.Join("db", "main-tables"), "create-active"); err != nil {
+		return
+	}
+	if err = createTables(ctx, cf, tx, config.Join("db", "main-tables"), "create-inactive"); err != nil {
 		return
 	}
 
@@ -859,11 +858,11 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx,
 		return
 	}
 
-	if err = createTables(ctx, cf, tx, "db.report-tables", "create"); err != nil {
+	if err = createTables(ctx, cf, tx, config.Join("db", "report-tables"), "create"); err != nil {
 		return
 	}
 
-	return execSQL(ctx, cf, tx, "db.reporting-updates", "update", nil)
+	return execSQL(ctx, cf, tx, config.Join("db", "reporting-updates"), "update", nil)
 }
 
 // execSQL is a simple wrapper to run ExecContext for the transaction tx

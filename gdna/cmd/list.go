@@ -35,18 +35,37 @@ var listCmdFormat string
 
 func init() {
 	GDNACmd.AddCommand(listCmd)
+	listCmd.AddCommand(listReportCmd)
 
-	listCmd.Flags().StringVarP(&listCmdFormat, "format", "F", "table", "format output. supported formats: 'html', 'table', 'tsv', 'toolkit', 'markdown'")
-	listCmd.Flags().StringVarP(&reportNames, "report", "r", "", "report names")
+	listCmd.PersistentFlags().StringVarP(&listCmdFormat, "format", "F", "table", "format output. supported formats: 'html', 'table', 'tsv', 'toolkit', 'markdown'")
+	listReportCmd.Flags().StringVarP(&reportNames, "report", "r", "", "report names")
 
-	listCmd.Flags().SortFlags = false
+	listReportCmd.Flags().SortFlags = false
 }
 
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List available reports",
+	Short: "List commands",
 	Long:  listCmdDescription,
 	Args:  cobra.ArbitraryArgs,
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
+	Annotations: map[string]string{
+		"nolog": "true",
+	},
+	SilenceUsage:          true,
+	DisableAutoGenTag:     true,
+	DisableSuggestions:    true,
+	DisableFlagsInUseLine: true,
+}
+
+var listReportCmd = &cobra.Command{
+	Use:     "reports",
+	Short:   "List available reports",
+	Long:    listCmdDescription,
+	Aliases: []string{"report"},
+	Args:    cobra.ArbitraryArgs,
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
