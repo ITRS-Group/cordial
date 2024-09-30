@@ -533,7 +533,7 @@ OUTER:
 				if _, err = insertStmt.ExecContext(ctx,
 					sql.Named("name", entry),
 					sql.Named("user", nil),
-					sql.Named("origin", nil),
+					sql.Named("origin", "default"),
 					sql.Named("comment", nil),
 					sql.Named("timestamp", nil),
 				); err != nil {

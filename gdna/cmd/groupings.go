@@ -111,7 +111,7 @@ var addGroupCmd = &cobra.Command{
 		log.Debug().Msgf("loaded any existing filters from %q", igPath)
 
 		var groups []group
-		if err = ig.UnmarshalKey(config.Join("filters", "groups", category),
+		if err = ig.UnmarshalKey(config.Join("filters", "group", category),
 			&groups,
 			viper.DecodeHook(
 				mapstructure.StringToTimeHookFunc(time.RFC3339),
@@ -151,7 +151,7 @@ var addGroupCmd = &cobra.Command{
 			groups[i] = g
 		}
 
-		ig.Set(config.Join("filters", "groups", category), groups)
+		ig.Set(config.Join("filters", "group", category), groups)
 
 		// always save the result back
 		ig.Save(filterBase,
@@ -219,7 +219,7 @@ var removeGroupCmd = &cobra.Command{
 		log.Debug().Msgf("loaded any existing filters from %q", igPath)
 
 		var groups []*group
-		if err = ig.UnmarshalKey(config.Join("filters", "groups", category),
+		if err = ig.UnmarshalKey(config.Join("filters", "group", category),
 			&groups,
 			viper.DecodeHook(
 				mapstructure.StringToTimeHookFunc(time.RFC3339),
@@ -255,7 +255,7 @@ var removeGroupCmd = &cobra.Command{
 		})
 		log.Debug().Msgf("groups: %#v", groups)
 
-		ig.Set(config.Join("filters", "groups", category), groups)
+		ig.Set(config.Join("filters", "group", category), groups)
 
 		// always save the result back
 		ig.Save(filterBase,
@@ -304,9 +304,9 @@ var listGroupCmd = &cobra.Command{
 		rows := [][]string{
 			{"category:group", "category", "group", "patterns", "updated", "username", "comment", "source"},
 		}
-		for category := range cf.GetStringMap(config.Join("filters", "groups")) {
+		for category := range cf.GetStringMap(config.Join("filters", "group")) {
 			var groups []group
-			if err = ig.UnmarshalKey(config.Join("filters", "groups", category),
+			if err = ig.UnmarshalKey(config.Join("filters", "group", category),
 				&groups,
 				viper.DecodeHook(
 					mapstructure.StringToTimeHookFunc(time.RFC3339),
@@ -352,8 +352,8 @@ func processGroups(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
 	))
 
 OUTER:
-	for grouping := range cf.GetStringMap(config.Join("filters", "groups")) {
-		table := cf.GetString(config.Join("filters", "groups", grouping, "table"))
+	for grouping := range cf.GetStringMap(config.Join("filters", "group")) {
+		table := cf.GetString(config.Join("filters", "group", grouping, "table"))
 
 		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
 			log.Info().Err(err).Msgf("delete from %q %q failed", grouping, table)
@@ -361,7 +361,7 @@ OUTER:
 			err = nil
 		}
 
-		insertStmt, err := tx.PrepareContext(ctx, cf.GetString(config.Join("filters", "groups", grouping, "insert")))
+		insertStmt, err := tx.PrepareContext(ctx, cf.GetString(config.Join("filters", "group", grouping, "insert")))
 		if err != nil {
 			log.Error().Err(err).Msgf("prepare for %s failed", table)
 			continue
@@ -369,7 +369,7 @@ OUTER:
 		defer insertStmt.Close()
 
 		var groups []group
-		if err = ig.UnmarshalKey(config.Join("filters", "groups", grouping),
+		if err = ig.UnmarshalKey(config.Join("filters", "group", grouping),
 			&groups,
 			viper.DecodeHook(
 				mapstructure.StringToTimeHookFunc(time.RFC3339),
@@ -382,9 +382,9 @@ OUTER:
 		if len(groups) == 0 {
 			log.Debug().Msgf("%s not in filters file, checking default", grouping)
 
-			defaults := cf.GetBytes(config.Join("filters", "groups", grouping, "default"))
+			defaults := cf.GetBytes(config.Join("filters", "group", grouping, "default"))
 			if len(defaults) == 0 {
-				log.Debug().Msgf("default %q len 0", config.Join("filters", "groups", grouping, "default"))
+				log.Debug().Msgf("default %q len 0", config.Join("filters", "group", grouping, "default"))
 				continue OUTER
 			}
 
@@ -414,7 +414,7 @@ OUTER:
 					sql.Named("grouping", fields[0]),
 					sql.Named("pattern", fields[1]),
 					sql.Named("user", nil),
-					sql.Named("origin", nil),
+					sql.Named("origin", "default"),
 					sql.Named("comment", nil),
 					sql.Named("timestamp", nil),
 				); err != nil {

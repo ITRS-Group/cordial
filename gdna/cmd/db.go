@@ -836,7 +836,7 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx,
 		return
 	}
 
-	if err = createTables(ctx, cf, tx, config.Join("filters", "groups"), "create"); err != nil {
+	if err = createTables(ctx, cf, tx, config.Join("filters", "group"), "create"); err != nil {
 		return
 	}
 	if err = processGroups(ctx, cf, tx); err != nil {

@@ -312,7 +312,7 @@ filters:
       create: | #sql
         DROP TABLE IF EXISTS ${filters.include.plugin.table};
         CREATE ${db.temporary-table} TABLE ${filters.include.plugin.table} (
-          ${filters.include.plugin.column} TEXT NOT NULL,
+          plugin        TEXT NOT NULL,
           user          TEXT,
           origin        TEXT,
           comment       TEXT,
@@ -323,12 +323,12 @@ filters:
           VALUES (@name, @user, @origin, @comment, @timestamp)
         ;
 
-  groups:
+  group:
     gateway:
       table: grouping_gateways
       create: | #sql
-        DROP TABLE IF EXISTS ${filters.groups.gateway.table};
-        CREATE ${db.temporary-table} TABLE ${filters.groups.gateway.table} (
+        DROP TABLE IF EXISTS ${filters.group.gateway.table};
+        CREATE ${db.temporary-table} TABLE ${filters.group.gateway.table} (
           grouping      TEXT NOT NULL,
           gateway       TEXT NOT NULL,
           user          TEXT,
@@ -337,14 +337,14 @@ filters:
           timestamp     TIMESTAMP DEFAULT 'now'
         );
       insert: | #sql
-        INSERT INTO ${filters.groups.gateway.table}
+        INSERT INTO ${filters.group.gateway.table}
           VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
         ;
     server:
       table: grouping_servers
       create: | #sql
-        DROP TABLE IF EXISTS ${filters.groups.server.table};
-        CREATE ${db.temporary-table} TABLE ${filters.groups.server.table} (
+        DROP TABLE IF EXISTS ${filters.group.server.table};
+        CREATE ${db.temporary-table} TABLE ${filters.group.server.table} (
           grouping      TEXT NOT NULL,
           server        TEXT NOT NULL,
           user          TEXT,
@@ -353,14 +353,14 @@ filters:
           timestamp     TIMESTAMP DEFAULT 'now'
         );
       insert: | #sql
-        INSERT INTO ${filters.groups.server.table}
+        INSERT INTO ${filters.group.server.table}
           VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
         ;
     source:
       table: grouping_sources
       create: | #sql
-        DROP TABLE IF EXISTS ${filters.groups.source.table};
-        CREATE ${db.temporary-table} TABLE ${filters.groups.source.table} (
+        DROP TABLE IF EXISTS ${filters.group.source.table};
+        CREATE ${db.temporary-table} TABLE ${filters.group.source.table} (
           grouping      TEXT NOT NULL,
           source        TEXT NOT NULL,
           user          TEXT,
@@ -369,7 +369,7 @@ filters:
           timestamp     TIMESTAMP DEFAULT 'now'
         );
       insert: | #sql
-        INSERT INTO ${filters.groups.source.table}
+        INSERT INTO ${filters.group.source.table}
           VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
         ;
     plugin:
@@ -388,8 +388,8 @@ filters:
         cloud-plugins,azure-plugin
         cloud-plugins,gcp-plugin
       create: | #sql
-        DROP TABLE IF EXISTS ${filters.groups.plugin.table};
-        CREATE ${db.temporary-table} TABLE ${filters.groups.plugin.table} (
+        DROP TABLE IF EXISTS ${filters.group.plugin.table};
+        CREATE ${db.temporary-table} TABLE ${filters.group.plugin.table} (
           grouping      TEXT NOT NULL,
           plugin        TEXT NOT NULL,
           user          TEXT,
@@ -398,7 +398,7 @@ filters:
           timestamp     TIMESTAMP DEFAULT 'now'
         );
       insert: | #sql
-        INSERT INTO ${filters.groups.plugin.table}
+        INSERT INTO ${filters.group.plugin.table}
           VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
         ;
 
@@ -1472,7 +1472,7 @@ db:
       DROP TABLE IF EXISTS ${db.match-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.match-gateways.table} AS
         SELECT DISTINCT grouping, gw.gateway
-          FROM ${filters.groups.gateway.table} grouping
+          FROM ${filters.group.gateway.table} grouping
           LEFT JOIN ${db.gateways.active} gw ON glob(grouping.gateway, gw.gateway);
 
   match-servers:
@@ -1481,7 +1481,7 @@ db:
       DROP TABLE IF EXISTS ${db.match-servers.table};
       CREATE ${db.temporary-table} TABLE ${db.match-servers.table} AS
         SELECT DISTINCT grouping, srv.server
-          FROM ${filters.groups.server.table} grouping
+          FROM ${filters.group.server.table} grouping
           LEFT JOIN ${db.servers.table} srv ON glob(grouping.server, srv.server);
 
   match-gateway-sources:
@@ -1490,7 +1490,7 @@ db:
       DROP TABLE IF EXISTS ${db.match-gateway-sources.table};
       CREATE ${db.temporary-table} TABLE ${db.match-gateway-sources.table} AS
         SELECT DISTINCT grouping, gw.source
-          FROM ${filters.groups.source.table} grouping
+          FROM ${filters.group.source.table} grouping
           LEFT JOIN ${db.gateways.active} gw ON glob(grouping.source, gw.source);
 
   match-sampler-plugins:
@@ -1499,7 +1499,7 @@ db:
       DROP TABLE IF EXISTS ${db.match-sampler-plugins.table};
       CREATE ${db.temporary-table} TABLE ${db.match-sampler-plugins.table} AS
         SELECT grouping, COALESCE(s.plugin, c.plugin, g.plugin) plugin
-            FROM ${filters.groups.plugin.table} grouping
+            FROM ${filters.group.plugin.table} grouping
             LEFT JOIN ${db.samplers.table} s ON glob(grouping.plugin, s.plugin)
             LEFT JOIN ${db.ca-samplers.table} c ON glob(grouping.plugin, c.plugin)
             LEFT JOIN ${db.gw-samplers.table} g ON glob(grouping.plugin, g.plugin)
@@ -3207,4 +3207,261 @@ reports:
       SELECT 'Unknown', count(*)
         FROM ${db.gateways.active}
        WHERE version IS NULL
+      ;
+
+  list-filters:
+    name: Filters
+    group: GDNA Information
+    enable-for-xlsx: false
+    columns: [ filter, type, category, grouping, pattern, user, origin, comment, timestamp ]
+    query: | #sql
+      SELECT DISTINCT 'exclude-gateway', 'exclude', 'gateway', '', '', '', '', '', ''
+        FROM ${filters.exclude.gateway.table}
+
+      UNION
+
+      SELECT 'exclude-gateway # '||gateway filter,
+             'exclude' type,
+             'gateway' category,
+             '' grouping,
+             gateway pattern,
+             COALESCE(user, "") user,
+             COALESCE(origin, "") origin,
+             COALESCE(comment, "") comment,
+             COALESCE(strftime('%FT%TZ', timestamp), "") timestamp
+        FROM ${filters.exclude.gateway.table}
+
+      UNION
+
+      SELECT DISTINCT 'exclude-server', 'exclude', 'server', '', '', '', '', '', ''
+        FROM ${filters.exclude.server.table}
+
+      UNION
+
+      SELECT 'exclude-server #'||server,
+             'exclude',
+             'server',
+             '',
+             server,
+             COALESCE(user, ""),
+             COALESCE(origin, ""),
+             COALESCE(comment, ""),
+             COALESCE(strftime('%FT%TZ', timestamp), "")
+        FROM ${filters.exclude.server.table}
+
+      UNION
+
+      SELECT DISTINCT 'exclude-source', 'exclude', 'source', '', '', '', '', '', ''
+        FROM ${filters.exclude.source.table}
+
+      UNION
+
+      SELECT 'exclude-source # '||source,
+             'exclude',
+             'source',
+             '',
+             source,
+             COALESCE(user, ""),
+             COALESCE(origin, ""),
+             COALESCE(comment, ""),
+             COALESCE(strftime('%FT%TZ', timestamp), "")
+        FROM ${filters.exclude.source.table}
+
+      UNION
+
+      SELECT DISTINCT 'exclude-plugin', 'exclude', 'plugin', '', '', '', '', '', ''
+        FROM ${filters.exclude.plugin.table}
+
+      UNION
+
+      SELECT 'exclude-plugin # '||plugin,
+             'exclude',
+             'plugin',
+             '',
+             plugin,
+             COALESCE(user, ""),
+             COALESCE(origin, ""),
+             COALESCE(comment, ""),
+             COALESCE(strftime('%FT%TZ', timestamp), "")
+        FROM ${filters.exclude.plugin.table}
+
+      UNION
+
+      SELECT DISTINCT 'exclude-hostid', 'exclude', 'hostid', '', '', '', '', '', ''
+        FROM ${filters.exclude.hostid.table}
+
+      UNION
+
+      SELECT 'exclude-hostid # '||hostid,
+             'exclude',
+             'hostid',
+             '',
+             hostid,
+             COALESCE(user, ""),
+             COALESCE(origin, ""),
+             COALESCE(comment, ""),
+             COALESCE(strftime('%FT%TZ', timestamp), "")
+        FROM ${filters.exclude.hostid.table}
+
+      UNION
+
+      SELECT DISTINCT 'include-gateway', 'include', 'gateway', '', '', '', '', '', ''
+        FROM ${filters.include.gateway.table}
+
+      UNION
+
+      SELECT 'include-gateway # '||gateway,
+             'include',
+             'gateway',
+             '',
+             gateway,
+             COALESCE(user, ""),
+             COALESCE(origin, ""),
+             COALESCE(comment, ""),
+             COALESCE(strftime('%FT%TZ', timestamp), "")
+        FROM ${filters.include.gateway.table}
+      UNION
+
+      SELECT DISTINCT 'include-server', 'include', 'server', '', '', '', '', '', ''
+        FROM ${filters.include.server.table}
+
+      UNION
+
+      SELECT 'include-server # '||server,
+             'include',
+             'server',
+             '',
+             server,
+             COALESCE(user, ""),
+             COALESCE(origin, ""),
+             COALESCE(comment, ""),
+             COALESCE(strftime('%FT%TZ', timestamp), "")
+        FROM ${filters.include.server.table}
+
+      UNION
+
+      SELECT DISTINCT 'include-source', 'include', 'source', '', '', '', '', '', ''
+        FROM ${filters.include.source.table}
+
+      UNION
+
+      SELECT 'include-source # '||source,
+             'include',
+             'source',
+             '',
+             source,
+             COALESCE(user, ""),
+             COALESCE(origin, ""),
+             COALESCE(comment, ""),
+             COALESCE(strftime('%FT%TZ', timestamp), "")
+        FROM ${filters.include.source.table}
+
+      UNION
+
+      SELECT DISTINCT 'include-plugin', 'include', 'plugin', '', '', '', '', '', ''
+        FROM ${filters.include.plugin.table}
+
+      UNION
+
+      SELECT 'include-plugin # '||plugin,
+             'include',
+             'plugin',
+             '',
+             plugin,
+             COALESCE(user, ""),
+             COALESCE(origin, ""),
+             COALESCE(comment, ""),
+             COALESCE(strftime('%FT%TZ', timestamp), "")
+        FROM ${filters.include.plugin.table}
+
+      UNION
+
+      SELECT DISTINCT 'include-hostid', 'include', 'hostid', '', '', '', '', '', ''
+        FROM ${filters.include.hostid.table}
+
+      UNION
+
+      SELECT 'include-hostid # '||hostid,
+             'include',
+             'hostid',
+             '',
+             hostid,
+             COALESCE(user, ""),
+             COALESCE(origin, ""),
+             COALESCE(comment, ""),
+             COALESCE(strftime('%FT%TZ', timestamp), "")
+        FROM ${filters.include.hostid.table}
+
+      UNION
+
+      SELECT DISTINCT 'group-gateway', 'group', 'gateway', '', '', '', '', '', ''
+        FROM ${filters.group.gateway.table}
+
+      UNION
+
+      SELECT 'group-gateway # '||grouping||":"||gateway,
+             'group',
+             'gateway',
+             grouping,
+             gateway,
+             COALESCE(user, ""),
+             COALESCE(origin, ""),
+             COALESCE(comment, ""),
+             COALESCE(strftime('%FT%TZ', timestamp), "")
+        FROM ${filters.group.gateway.table}
+
+      UNION
+
+      SELECT DISTINCT 'group-source', 'group', 'source', '', '', '', '', '', ''
+        FROM ${filters.group.source.table}
+
+      UNION
+
+      SELECT 'group-source # '||grouping||":"||source,
+             'group',
+             'source',
+             grouping,
+             source,
+             COALESCE(user, ""),
+             COALESCE(origin, ""),
+             COALESCE(comment, ""),
+             COALESCE(strftime('%FT%TZ', timestamp), "")
+        FROM ${filters.group.source.table}
+
+      UNION
+
+      SELECT DISTINCT 'group-plugin', 'group', 'plugin', '', '', '', '', '', ''
+        FROM ${filters.group.plugin.table}
+
+      UNION
+
+      SELECT 'group-plugin # '||grouping||":"||plugin,
+             'group',
+             'plugin',
+             grouping,
+             plugin,
+             COALESCE(user, ""),
+             COALESCE(origin, ""),
+             COALESCE(comment, ""),
+             COALESCE(strftime('%FT%TZ', timestamp), "")
+        FROM ${filters.group.plugin.table}
+
+      UNION
+
+      SELECT DISTINCT 'group-server', 'group', 'server', '', '', '', '', '', ''
+        FROM ${filters.group.server.table}
+
+      UNION
+
+      SELECT 'group-server # '||grouping||":"||server,
+             'group',
+             'server',
+             grouping,
+             server,
+             COALESCE(user, ""),
+             COALESCE(origin, ""),
+             COALESCE(comment, ""),
+             COALESCE(strftime('%FT%TZ', timestamp), "")
+        FROM ${filters.group.server.table}
+
       ;
