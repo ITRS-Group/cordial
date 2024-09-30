@@ -135,7 +135,7 @@ var addGroupCmd = &cobra.Command{
 				Patterns:  patterns,
 				User:      addCmdUser,
 				Comment:   addCmdComment,
-				Origin:    addCmdSource,
+				Origin:    addCmdOrigin,
 				Timestamp: &ts,
 			})
 		} else {
@@ -146,7 +146,7 @@ var addGroupCmd = &cobra.Command{
 			// update notes fields, overwrite previous
 			g.User = addCmdUser
 			g.Comment = addCmdComment
-			g.Origin = addCmdSource
+			g.Origin = addCmdOrigin
 			g.Timestamp = &ts
 			groups[i] = g
 		}

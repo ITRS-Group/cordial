@@ -133,19 +133,15 @@ var removeCmd = &cobra.Command{
 
 // listCmd is in list.go
 
-var addCmdUser, addCmdComment, addCmdSource string
+var addCmdUser, addCmdComment, addCmdOrigin string
 
 func init() {
-	addCmd.PersistentFlags().StringVarP(&addCmdUser, "user", "u", "", "user adding these items, required")
-	addCmd.PersistentFlags().StringVarP(&addCmdComment, "comment", "c", "", "comment for these items, required")
-	addCmd.PersistentFlags().StringVarP(&addCmdSource, "source", "s", "", "source for these items, required")
-
-	// addExcludeCmd.MarkFlagRequired("user")
-	// addExcludeCmd.MarkFlagRequired("comment")
-	// addExcludeCmd.MarkFlagRequired("source")
+	addCmd.PersistentFlags().StringVar(&addCmdUser, "user", "", "user adding these items")
+	addCmd.PersistentFlags().StringVar(&addCmdComment, "comment", "", "comment for these items")
+	addCmd.PersistentFlags().StringVar(&addCmdOrigin, "origin", "", "origin for these items")
 }
 
-// category mappings from CLI to config
+// category mappings from CLI to config to allow for plurals etc.
 var categories = map[string]string{
 	"gateway":  "gateway",
 	"gateways": "gateway",
@@ -241,7 +237,7 @@ func addFilter(filterType, category string, names []string) (err error) {
 			Name:      name,
 			Comment:   addCmdComment,
 			User:      addCmdUser,
-			Origin:    addCmdSource,
+			Origin:    addCmdOrigin,
 			Timestamp: &ts,
 		}
 		if i := slices.IndexFunc(filters, func(e filter) bool {
@@ -430,7 +426,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 			return fmt.Errorf("first argument must be a valid category, one of %v", maps.Keys(categories))
 		}
 		rows = append(rows, []string{
-			"name", "timeAdded", "username", "comment", "source",
+			"name", "timeUpdated", "username", "comment", "origin",
 		})
 		var filters []filter
 		if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
@@ -458,7 +454,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 	}
 
 	rows := [][]string{
-		{"category:name", "category", "name", "timeAdded", "username", "comment", "source"},
+		{"category:name", "category", "name", "timeUpdated", "username", "comment", "origin"},
 	}
 	for category := range cf.GetStringMap(config.Join("filters", filterType)) {
 		var filters []filter
