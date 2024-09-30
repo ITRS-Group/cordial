@@ -77,7 +77,7 @@ type filter struct {
 	Pattern   []string   `mapstructure:"pattern"`
 	Comment   string     `mapstructure:"comment,omitempty"`
 	User      string     `mapstructure:"user,omitempty"`
-	Source    string     `mapstructure:"sources"`
+	Origin    string     `mapstructure:"origin"`
 	Timestamp *time.Time `mapstructure:"timestamp,omitempty"`
 }
 
@@ -241,7 +241,7 @@ func addFilter(filterType, category string, names []string) (err error) {
 			Name:      name,
 			Comment:   addCmdComment,
 			User:      addCmdUser,
-			Source:    addCmdSource,
+			Origin:    addCmdSource,
 			Timestamp: &ts,
 		}
 		if i := slices.IndexFunc(filters, func(e filter) bool {
@@ -448,7 +448,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 				filter.Timestamp.Format(time.RFC3339),
 				filter.User,
 				filter.Comment,
-				filter.Source,
+				filter.Origin,
 			})
 		}
 
@@ -478,7 +478,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 				filter.Timestamp.Format(time.RFC3339),
 				filter.User,
 				filter.Comment,
-				filter.Source,
+				filter.Origin,
 			})
 		}
 	}
@@ -488,10 +488,9 @@ func listFilters(filterType string, category string, listFormat string) (err err
 	return
 }
 
-// excludes are loaded from files/urls defined in the config (or the raw
-// content), and overwrite the contents of the tables given
+// process the filters from the on-disk file and recreate the reporting
+// filter table contents
 func processFilters(ctx context.Context, cf *config.Config, tx *sql.Tx, filterType string) error {
-	// load persistence file
 	ig, err := config.Load(filterBase,
 		config.SetAppName("geneos"),
 		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
@@ -508,48 +507,71 @@ func processFilters(ctx context.Context, cf *config.Config, tx *sql.Tx, filterTy
 	))
 
 OUTER:
-	for filter := range cf.GetStringMap(config.Join("filters", filterType)) {
-		table := cf.GetString(config.Join("filters", filterType, filter, "table"))
+	for f := range cf.GetStringMap(config.Join("filters", filterType)) {
+		table := cf.GetString(config.Join("filters", filterType, f, "table"))
 
+		// if we are called between reporting db rebuilds, delete existing contents
 		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
 			log.Info().Err(err).Msgf("delete from %s failed", table)
 			// NOT an error in itself
 			err = nil
 		}
 
-		insertStmt, err := tx.PrepareContext(ctx, fmt.Sprintf("INSERT INTO %s VALUES (?);", table))
+		insertStmt, err := tx.PrepareContext(ctx, cf.GetString(config.Join("filters", filterType, f, "insert")))
 		if err != nil {
 			log.Error().Err(err).Msgf("prepare for %s failed", table)
 			continue
 		}
 		defer insertStmt.Close()
 
-		// load from all sources, in this order:
-		//
-		// persistent file config
-		// source / content
-
-		// shadows global categories
-		categories := ig.GetSliceStringMapString(config.Join("filters", filterType, filter))
-		log.Debug().Msgf("%s filters %q: %#v", filterType, filter, categories)
-		if len(categories) == 0 {
-			for _, entry := range cf.GetStringSlice(config.Join("filters", filterType, filter, "default")) {
-				if _, err = insertStmt.ExecContext(ctx, &entry); err != nil {
+		var x []*filter
+		if err = ig.UnmarshalKey(config.Join("filters", filterType, f), &x,
+			viper.DecodeHook(
+				mapstructure.StringToTimeHookFunc(time.RFC3339),
+			)); err != nil {
+			panic(err)
+		}
+		// if nothing on-disk then load any defaults
+		if len(x) == 0 {
+			for _, entry := range cf.GetStringSlice(config.Join("filters", filterType, f, "default")) {
+				if _, err = insertStmt.ExecContext(ctx,
+					sql.Named("name", entry),
+					sql.Named("user", nil),
+					sql.Named("origin", nil),
+					sql.Named("comment", nil),
+					sql.Named("timestamp", nil),
+				); err != nil {
 					log.Fatal().Err(err).Msgf("insert for %s failed", table)
 				}
 			}
-			log.Debug().Msgf("added %d defaults to %ss for %s", len(cf.GetStringSlice(config.Join("filters", filterType, filter, "default"))), filterType, filter)
 			continue OUTER
 		}
 
-		for _, i := range categories {
-			name := i["name"]
-			if _, err = insertStmt.ExecContext(ctx, &name); err != nil {
+		for _, i := range x {
+			if _, err = insertStmt.ExecContext(ctx,
+				sql.Named("name", i.Name),
+				sql.Named("user", sql.NullString{
+					Valid:  i.User != "",
+					String: i.User,
+				}),
+				sql.Named("origin", sql.NullString{
+					Valid:  i.Origin != "",
+					String: i.Origin,
+				}),
+				sql.Named("comment", sql.NullString{
+					Valid:  i.Comment != "",
+					String: i.Comment,
+				}),
+				sql.Named("timestamp", sql.NullTime{
+					Valid: i.Timestamp == nil || !i.Timestamp.IsZero(),
+					Time:  *i.Timestamp,
+				}),
+			); err != nil {
 				log.Error().Err(err).Msgf("insert for %s failed", table)
 				break
 			}
 		}
-		log.Debug().Msgf("added %d entries to %ss for %s", len(categories), filterType, filter)
+		log.Debug().Msgf("added %d entries to %ss for %s", len(x), filterType, f)
 	}
 	return nil
 }

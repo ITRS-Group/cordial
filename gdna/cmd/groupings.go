@@ -52,7 +52,7 @@ type group struct {
 	Patterns  []string   `mapstructure:"patterns"`
 	Comment   string     `mapstructure:"comment,omitempty"`
 	User      string     `mapstructure:"user,omitempty"`
-	Source    string     `mapstructure:"sources"`
+	Origin    string     `mapstructure:"origin"`
 	Timestamp *time.Time `mapstructure:"timestamp,omitempty"`
 }
 
@@ -135,7 +135,7 @@ var addGroupCmd = &cobra.Command{
 				Patterns:  patterns,
 				User:      addCmdUser,
 				Comment:   addCmdComment,
-				Source:    addCmdSource,
+				Origin:    addCmdSource,
 				Timestamp: &ts,
 			})
 		} else {
@@ -146,7 +146,7 @@ var addGroupCmd = &cobra.Command{
 			// update notes fields, overwrite previous
 			g.User = addCmdUser
 			g.Comment = addCmdComment
-			g.Source = addCmdSource
+			g.Origin = addCmdSource
 			g.Timestamp = &ts
 			groups[i] = g
 		}
@@ -324,7 +324,7 @@ var listGroupCmd = &cobra.Command{
 					group.Timestamp.Format(time.RFC3339),
 					group.User,
 					group.Comment,
-					group.Source,
+					group.Origin,
 				})
 			}
 		}
@@ -356,12 +356,12 @@ OUTER:
 		table := cf.GetString(config.Join("filters", "groups", grouping, "table"))
 
 		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
-			log.Info().Err(err).Msgf("delete from %s failed", table)
+			log.Info().Err(err).Msgf("delete from %q %q failed", grouping, table)
 			// NOT an error in itself
 			err = nil
 		}
 
-		insertStmt, err := tx.PrepareContext(ctx, fmt.Sprintf("INSERT INTO %s VALUES (@grouping, @glob);", table))
+		insertStmt, err := tx.PrepareContext(ctx, cf.GetString(config.Join("filters", "groups", grouping, "insert")))
 		if err != nil {
 			log.Error().Err(err).Msgf("prepare for %s failed", table)
 			continue
@@ -408,7 +408,16 @@ OUTER:
 					log.Debug().Msgf("source: line %d has an incorrect format, it should be 'name,pattern'", line)
 					continue
 				}
-				if _, err = insertStmt.ExecContext(ctx, sql.Named("grouping", fields[0]), sql.Named("glob", fields[1])); err != nil {
+				//           VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
+
+				if _, err = insertStmt.ExecContext(ctx,
+					sql.Named("grouping", fields[0]),
+					sql.Named("pattern", fields[1]),
+					sql.Named("user", nil),
+					sql.Named("origin", nil),
+					sql.Named("comment", nil),
+					sql.Named("timestamp", nil),
+				); err != nil {
 					log.Error().Err(err).Msgf("insert for %s failed", table)
 					continue OUTER
 				}
@@ -421,7 +430,26 @@ OUTER:
 
 		for _, group := range groups {
 			for _, pattern := range group.Patterns {
-				if _, err = insertStmt.ExecContext(ctx, sql.Named("grouping", group.Name), sql.Named("glob", pattern)); err != nil {
+				if _, err = insertStmt.ExecContext(ctx,
+					sql.Named("grouping", group.Name),
+					sql.Named("pattern", pattern),
+					sql.Named("user", sql.NullString{
+						Valid:  group.User != "",
+						String: group.User,
+					}),
+					sql.Named("origin", sql.NullString{
+						Valid:  group.Origin != "",
+						String: group.Origin,
+					}),
+					sql.Named("comment", sql.NullString{
+						Valid:  group.Comment != "",
+						String: group.Comment,
+					}),
+					sql.Named("timestamp", sql.NullTime{
+						Valid: group.Timestamp == nil || !group.Timestamp.IsZero(),
+						Time:  *group.Timestamp,
+					}),
+				); err != nil {
 					log.Error().Err(err).Msgf("insert for %s failed", table)
 					continue OUTER
 				}

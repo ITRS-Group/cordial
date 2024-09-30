@@ -167,120 +167,211 @@ filters:
   exclude:
     gateway:
       table: gateway_exclude
-      column: gateway
       create: > #sql
         DROP TABLE IF EXISTS ${filters.exclude.gateway.table};
         CREATE ${db.temporary-table} TABLE ${filters.exclude.gateway.table} (
-          ${filters.exclude.gateway.column} TEXT NOT NULL COLLATE NOCASE
+          gateway       TEXT NOT NULL,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
         );
+      insert: | #sql
+        INSERT INTO ${filters.exclude.gateway.table}
+          VALUES (@name, @user, @origin, @comment, @timestamp)
+        ;
     server:
       table: server_exclude
-      column: server
       create: > #sql
         DROP TABLE IF EXISTS ${filters.exclude.server.table};
         CREATE ${db.temporary-table} TABLE ${filters.exclude.server.table} (
-          ${filters.exclude.server.column} TEXT NOT NULL COLLATE NOCASE
+          server        TEXT NOT NULL,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
         );
+      insert: | #sql
+        INSERT INTO ${filters.exclude.server.table}
+          VALUES (@name, @user, @origin, @comment, @timestamp)
+        ;
     hostid:
       table: hostid_exclude
-      column: hostid
       create: > #sql
         DROP TABLE IF EXISTS ${filters.exclude.hostid.table};
         CREATE ${db.temporary-table} TABLE ${filters.exclude.hostid.table} (
-          ${filters.exclude.hostid.column} TEXT NOT NULL COLLATE NOCASE
+          hostid        TEXT NOT NULL,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
         );
+      insert: | #sql
+        INSERT INTO ${filters.exclude.hostid.table}
+          VALUES (@name, @user, @origin, @comment, @timestamp)
+        ;
     source:
       table: source_exclude
-      column: source
       create: > #sql
         DROP TABLE IF EXISTS ${filters.exclude.source.table};
         CREATE ${db.temporary-table} TABLE ${filters.exclude.source.table} (
-          ${filters.exclude.source.column} TEXT NOT NULL COLLATE NOCASE
+          source        TEXT NOT NULL,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
         );
+      insert: | #sql
+        INSERT INTO ${filters.exclude.source.table}
+          VALUES (@name, @user, @origin, @comment, @timestamp)
+        ;
     plugin:
       table: plugin_exclude
-      column: plugin
       create: > #sql
         DROP TABLE IF EXISTS ${filters.exclude.plugin.table};
         CREATE ${db.temporary-table} TABLE ${filters.exclude.plugin.table} (
-          ${filters.exclude.plugin.column} TEXT NOT NULL COLLATE NOCASE
+          plugin        TEXT NOT NULL,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
         );
+      insert: | #sql
+        INSERT INTO ${filters.exclude.plugin.table}
+          VALUES (@name, @user, @origin, @comment, @timestamp)
+        ;
 
   include:
     gateway:
       table: gateway_include
-      column: gateway
       default: "*"
       create: | #sql
         DROP TABLE IF EXISTS ${filters.include.gateway.table};
         CREATE ${db.temporary-table} TABLE ${filters.include.gateway.table} (
-          ${filters.include.gateway.column} TEXT NOT NULL COLLATE NOCASE
+          gateway       TEXT NOT NULL,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
         );
+      insert: | #sql
+        INSERT INTO ${filters.include.gateway.table}
+          VALUES (@name, @user, @origin, @comment, @timestamp)
+        ;
     server:
       table: server_include
-      column: server
       default: "*"
       create: | #sql
         DROP TABLE IF EXISTS ${filters.include.server.table};
         CREATE ${db.temporary-table} TABLE ${filters.include.server.table} (
-          ${filters.include.server.column} TEXT NOT NULL COLLATE NOCASE
+          server        TEXT NOT NULL,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
         );
+      insert: | #sql
+        INSERT INTO ${filters.include.server.table}
+          VALUES (@name, @user, @origin, @comment, @timestamp)
+        ;
     hostid:
       table: hostid_include
-      column: hostid
       default: "*"
       create: | #sql
         DROP TABLE IF EXISTS ${filters.include.hostid.table};
         CREATE ${db.temporary-table} TABLE ${filters.include.hostid.table} (
-          ${filters.include.hostid.column} TEXT NOT NULL COLLATE NOCASE
+          hostid        TEXT NOT NULL,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
         );
+      insert: | #sql
+        INSERT INTO ${filters.include.hostid.table}
+          VALUES (@name, @user, @origin, @comment, @timestamp)
+        ;
     source:
       table: source_include
-      column: source
       default: "*"
       create: | #sql
         DROP TABLE IF EXISTS ${filters.include.source.table};
         CREATE ${db.temporary-table} TABLE ${filters.include.source.table} (
-          ${filters.include.source.column} TEXT NOT NULL COLLATE NOCASE
+          source        TEXT NOT NULL,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
         );
+      insert: | #sql
+        INSERT INTO ${filters.include.source.table}
+          VALUES (@name, @user, @origin, @comment, @timestamp)
+        ;
     plugin:
       table: plugin_include
-      column: plugin
       default: "*"
       create: | #sql
         DROP TABLE IF EXISTS ${filters.include.plugin.table};
         CREATE ${db.temporary-table} TABLE ${filters.include.plugin.table} (
-          ${filters.include.plugin.column} TEXT NOT NULL COLLATE NOCASE
+          ${filters.include.plugin.column} TEXT NOT NULL,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
         );
+      insert: | #sql
+        INSERT INTO ${filters.include.plugin.table}
+          VALUES (@name, @user, @origin, @comment, @timestamp)
+        ;
 
   groups:
     gateway:
       table: grouping_gateways
-      column: gateway
       create: | #sql
         DROP TABLE IF EXISTS ${filters.groups.gateway.table};
         CREATE ${db.temporary-table} TABLE ${filters.groups.gateway.table} (
-          grouping TEXT NOT NULL,
-          gateway TEXT NOT NULL
+          grouping      TEXT NOT NULL,
+          gateway       TEXT NOT NULL,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
         );
+      insert: | #sql
+        INSERT INTO ${filters.groups.gateway.table}
+          VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
+        ;
     server:
       table: grouping_servers
-      column: server
       create: | #sql
         DROP TABLE IF EXISTS ${filters.groups.server.table};
         CREATE ${db.temporary-table} TABLE ${filters.groups.server.table} (
-          grouping TEXT NOT NULL,
-          server TEXT NOT NULL
+          grouping      TEXT NOT NULL,
+          server        TEXT NOT NULL,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
         );
+      insert: | #sql
+        INSERT INTO ${filters.groups.server.table}
+          VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
+        ;
     source:
       table: grouping_sources
-      column: source
       create: | #sql
         DROP TABLE IF EXISTS ${filters.groups.source.table};
         CREATE ${db.temporary-table} TABLE ${filters.groups.source.table} (
-          grouping TEXT NOT NULL,
-          source TEXT NOT NULL
+          grouping      TEXT NOT NULL,
+          source        TEXT NOT NULL,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
         );
+      insert: | #sql
+        INSERT INTO ${filters.groups.source.table}
+          VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
+        ;
     plugin:
       table: grouping_plugins
       default: |
@@ -296,13 +387,20 @@ filters:
         cloud-plugins,aws-plugin
         cloud-plugins,azure-plugin
         cloud-plugins,gcp-plugin
-      column: plugin
       create: | #sql
         DROP TABLE IF EXISTS ${filters.groups.plugin.table};
         CREATE ${db.temporary-table} TABLE ${filters.groups.plugin.table} (
-          grouping TEXT NOT NULL,
-          plugin TEXT NOT NULL
+          grouping      TEXT NOT NULL,
+          plugin        TEXT NOT NULL,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
         );
+      insert: | #sql
+        INSERT INTO ${filters.groups.plugin.table}
+          VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
+        ;
 
 db:
   temporary-table: TEMPORARY
