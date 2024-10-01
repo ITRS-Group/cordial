@@ -1806,10 +1806,10 @@ reports:
              printf('%d %%', 100 - round((totals.l3covered * 100.0 ) / totals.servers))
         FROM totals;
               
-  gateway-coverage-by-group:
-    name: Gateway Coverage By Group
-    group: Monitoring Coverage
-    columns: [ group, gateways, complete, "complete %", empty, "empty %", "remaining", "remaining %", "l1complete", "l1complete %", "l1remaining", "l2complete", "l2complete %", "l2remaining", "l3complete", "l3complete %" ]
+  gateway-group-coverage:
+    name: Gateway Group Coverage
+    group: Groups
+    columns: [ group, gateways, servers, complete, "complete %", empty, "empty %", "remaining", "remaining %", "l1complete", "l1complete %", "l1remaining", "l2complete", "l2complete %", "l2remaining", "l3complete", "l3complete %" ]
     query: > #sql
       WITH v AS (
         SELECT grouping,
@@ -1830,6 +1830,10 @@ reports:
       )
       SELECT COALESCE(grouping, "OTHER"),
              total,
+             (SELECT count(distinct server)
+                FROM ${db.servers.table}
+                LEFT JOIN ${db.match-gateways.table} grp USING (gateway)
+               WHERE CASE WHEN grouping IS NULL THEN v.grouping IS NULL ELSE grouping = v.grouping END) servers,
              covered,
              printf('%d %%', round(covered * 100.0 / total)) coveredPercent,
              empty,
@@ -1848,7 +1852,7 @@ reports:
 
   plugin-groups:
     name: Plugin Groups
-    group: Monitoring Coverage
+    group: Groups
     enable-for-xlsx: false
     columns: [ pluginGroup, servers, instances ]
     query: > #sql
@@ -1899,6 +1903,33 @@ reports:
                       WHEN plugin IN (SELECT DISTINCT plugin FROM ${db.ca-samplers.active}) THEN 6
                       ELSE 4 END), plugin
           
+        ),
+        lines AS (
+          SELECT 'SELECT gateway, (SELECT count(*) FROM ${db.servers.table} q WHERE q.gateway = p.gateway) AS servers' AS part
+
+          UNION ALL
+
+           SELECT ', total(number) FILTER (WHERE plugin = ''' || plugin || ''') AS ''' || plugin || ''''
+             FROM plugins
+
+          UNION ALL
+
+          SELECT ' FROM ${db.samplers.active} AS p GROUP BY gateway'
+        )
+      SELECT group_concat(part, '') FROM lines;
+
+  instance-plugins-per-gateway:
+    name: Instance Plugins Per Gateway
+    group: Monitoring Coverage
+    columns: []
+    type: indirect
+    headlines: | #sql
+      SELECT plugin, total(number) FROM ${db.samplers.active} WHERE individual GROUP BY plugin ORDER BY 1
+      ;
+    query: > #sql
+      WITH
+        plugins AS (
+            SELECT distinct plugin FROM ${db.samplers.active} WHERE individual
         ),
         lines AS (
           SELECT 'SELECT gateway, (SELECT count(*) FROM ${db.servers.table} q WHERE q.gateway = p.gateway) AS servers' AS part
@@ -2329,6 +2360,46 @@ reports:
           FROM w
         ;
 
+  server-group-coverage:
+    name: Server Group Coverage
+    group: Groups
+    columns: [ group, servers, complete, "complete %", empty, "empty %", "remaining", "remaining %", "l1complete", "l1complete %", "l1remaining", "l2complete", "l2complete %", "l2remaining", "l3complete", "l3complete %" ]
+    query: > #sql
+      WITH v AS (
+        SELECT grouping,
+               count(distinct a.server) total,
+               count(distinct m.server) covered,
+               count(distinct e.server) empty,
+               count(distinct l1.server) l1covered,
+               count(distinct l2.server) l2covered,
+               count(distinct l3.server) l3covered
+          FROM      ${db.servers.table} a
+          LEFT JOIN ${db.covered-servers.table} m USING (server)
+          LEFT JOIN ${db.empty-servers.table} e USING (server)
+          LEFT JOIN ${db.l1covered-servers.table} l1 USING (server)
+          LEFT JOIN ${db.l2covered-servers.table} l2 USING (server)
+          LEFT JOIN ${db.l3covered-servers.table} l3 USING (server)
+          LEFT JOIN ${db.match-servers.table} grp USING (server)
+        GROUP BY grouping
+      )
+      SELECT COALESCE(grouping, "OTHER"),
+             total,
+             covered,
+             printf('%d %%', round(covered * 100.0 / total)) coveredPercent,
+             empty,
+             printf('%d %%', round(empty * 100.0 / total)) emptyPercent,
+             total - covered - empty remaining,
+             printf('%d %%', round((total - covered - empty) * 100.0 / total)) remainingPercent,
+             l1covered - covered,
+             printf('%d %%', round(COALESCE((l1covered - covered) * 100.0 / (total - covered - empty), 0))) l1completePercent,
+             total - l1covered - empty l1remaining,
+             l2covered - covered,
+             printf('%d %%', round(COALESCE((l2covered - covered) * 100.0 / (total - covered - empty), 0))) l2completePercent,
+             total - l2covered - empty l2remaining,
+             l3covered - covered,
+             printf('%d %%', round(COALESCE((l3covered - covered) * 100.0 / (total - covered - empty), 0))) l3completePercent
+        FROM v;
+
   server-coverage:
     name: Server Coverage
     group: Monitoring Coverage
@@ -2557,7 +2628,7 @@ reports:
     group: Gateways
     enable-for-dataview: false
     enable-for-xlsx: false
-    columns: [ serverID, server, osVersion, probes, probeVersion, samplers, dynamicEntities, l1missing, l2missing, l3missing, otherGateways, plugins ]
+    columns: [ serverID, server, osVersion, probes, probeVersion, licenceSources, samplers, dynamicEntities, l1missing, l2missing, l3missing, otherGateways, plugins ]
     freeze-to-column: server
     scramble-columns: [ serverID, server ]
     type: split
@@ -2569,6 +2640,8 @@ reports:
           (SELECT count(distinct server) FROM ${db.servers.table} WHERE ${split-column} = '${value}') as total
       )
 
+      SELECT 'gatewayName', '${value}'
+      UNION
       SELECT 'gatewayHost', (SELECT COALESCE(gatewayHost, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
       UNION
       SELECT 'gatewayPort', (SELECT COALESCE(gatewayPort, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
@@ -2594,6 +2667,9 @@ reports:
       SELECT 'dynamicEntities', (SELECT total(number) FROM ${db.ca-samplers.active} WHERE ${split-column} = '${value}')
       UNION
       SELECT 'dynamicEntitiesUnknownServer', (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server IS NULL AND ${split-column} = '${value}')
+      UNION
+      SELECT 'licenceSource', (SELECT source FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+
       ;
     query: > #sql
       SELECT server,
@@ -2609,6 +2685,7 @@ reports:
                            WHEN 1 THEN (SELECT version FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
                            ELSE 'multiple'
                            END, '') probeVersions,
+             (SELECT count(distinct source) FROM ${db.servers.table} WHERE server = u.server) licenceSources,
              (SELECT total(number) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server AND ${split-column} = '${value}') as dynamicEntities,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server))), '') l1missing,
@@ -2691,7 +2768,7 @@ reports:
     group: Gateways
     enable-for-dataview: false
     enable-for-xlsx: false
-    columns: [ serverID, server, osVersion, probes, probeName, probePort, probeVersion, otherGateways, samplers, dynamicEntities, l1missing, l2missing, l3missing, plugins ]
+    columns: [ serverID, server, osVersion, probes, probeName, probePort, probeVersion, licenceSources, otherGateways, samplers, dynamicEntities, l1missing, l2missing, l3missing, plugins ]
     freeze-to-column: probePort
     scramble-columns: [ serverID, server, probeName ]
     type: split
@@ -2703,6 +2780,8 @@ reports:
           (SELECT count(distinct server) FROM ${db.servers.table} WHERE ${split-column} = '${value}') as total
       )
 
+      SELECT 'gatewayName', '${value}'
+      UNION
       SELECT 'gatewayHost', (SELECT COALESCE(gatewayHost, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
       UNION
       SELECT 'gatewayPort', (SELECT COALESCE(gatewayPort, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
@@ -2728,11 +2807,14 @@ reports:
       SELECT 'dynamicEntities', (SELECT total(number) FROM ${db.ca-samplers.active} WHERE ${split-column} = '${value}')
       UNION
       SELECT 'dynamicEntitiesUnknownServer', (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server IS NULL AND ${split-column} = '${value}')
+      UNION
+      SELECT 'licenceSource', (SELECT source FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
 
       ;
     query: > #sql
-      SELECT server serverID,
-             replace(server, ':'||hostID, '') server,
+      SELECT
+            server serverID,
+            replace(server, ':'||hostID, '') server,
             COALESCE(CASE (SELECT count(distinct os) FROM ${db.probes.active} WHERE server = u.server)
                            WHEN 0 THEN ''
                            WHEN 1 THEN (SELECT os FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
@@ -2746,6 +2828,7 @@ reports:
                            WHEN 1 THEN (SELECT version FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
                            ELSE 'multiple'
                            END, '') probeVersions,
+             (SELECT count(distinct source) FROM ${db.servers.table} WHERE server = u.server) licenceSources,
              '' otherGateways,
              (SELECT total(number) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
@@ -2771,6 +2854,7 @@ reports:
               probeName,
               probePort,
               COALESCE(version, '') probeVersion,
+              '' licenceSources,
               IIF(p.gateway <> '${value}', p.gateway, '') otherGateways,
               (SELECT total(number) FROM ${db.samplers.active} WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort) samplers,
               (SELECT total(number) FROM ${db.ca-samplers.active} WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort) as dynamicEntities,
@@ -3463,5 +3547,19 @@ reports:
              COALESCE(comment, ""),
              COALESCE(strftime('%FT%TZ', timestamp), "")
         FROM ${filters.group.server.table}
+      ;
 
+  servers-with-multiple-licence-sources:
+    name: Servers Using Multiple Licenses
+    group: Monitoring Coverage
+    columns: [ serverID, server, licenceSources, gateways ]
+    query: | #sql
+      SELECT
+             server,
+             replace(server, ':'||hostID, '') server,
+             count(distinct source),
+             group_concat(gateway, ', ')
+        FROM ${db.servers.table}
+       GROUP BY server
+       HAVING count(distinct source) > 1
       ;
