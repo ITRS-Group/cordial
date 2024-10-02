@@ -70,23 +70,18 @@ func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, 
 	// log.Debug().Msgf("opts: %#v", opts)
 
 	if !opts.downloadonly {
-		if opts.localArchive != "" {
-			body, filename, err = openSourceFile(opts.localArchive, options...)
-			if err == nil {
-				log.Debug().Msgf("source opened, returning")
-				return
-			} else if !errors.Is(err, ErrIsADirectory) {
-				// if success or the error indicates it's a directory,
-				// just return
-				log.Debug().Err(err).Msgf("source not opened, returning error")
-				return
-			}
-			log.Debug().Msg("source is a directory, setting local directory search flag")
-			opts.localOnly = true
-		} else {
-			// default location
-			opts.localArchive = path.Join(LocalRoot(), "packages", "downloads")
+		body, filename, err = openSourceFile(opts.localArchive, options...)
+		if err == nil {
+			log.Debug().Msgf("source opened, returning")
+			return
+		} else if !errors.Is(err, ErrIsADirectory) {
+			// if success or the error indicates it's a directory,
+			// just return
+			log.Debug().Err(err).Msgf("source not opened, returning error")
+			return
 		}
+		log.Debug().Msg("source is a directory, setting local directory search flag")
+		opts.localOnly = true
 	}
 
 	if opts.localOnly {

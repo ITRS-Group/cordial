@@ -120,15 +120,15 @@ func InstalledReleases(h *Host, ct *Component) (versions []string, err error) {
 func LocalArchives(ct *Component, options ...PackageOptions) (archives []string, err error) {
 	opts := evalOptions(options...)
 
-	dir := opts.localArchive
-	entries, err := os.ReadDir(dir)
+	log.Debug().Msgf("opening local archive directory %q", opts.localArchive)
+	entries, err := os.ReadDir(opts.localArchive)
 	if err != nil {
 		return
 	}
 
 	// remove non-files from the list
 	entries = slices.DeleteFunc(entries, func(d fs.DirEntry) bool {
-		st, err := os.Lstat(filepath.Join(dir, d.Name()))
+		st, err := os.Lstat(filepath.Join(opts.localArchive, d.Name()))
 		return err != nil || !st.Mode().IsRegular()
 	})
 

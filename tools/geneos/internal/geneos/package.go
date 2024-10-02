@@ -166,14 +166,12 @@ func Install(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			var dir bool
-			if opts.localArchive != "" {
-				u, _ := url.Parse(opts.localArchive)
-				if u.Scheme == "https" || u.Scheme == "http" {
-					return
-				}
-				if s, err := h.Stat(opts.localArchive); err == nil && s.IsDir() {
-					dir = true
-				}
+			u, _ := url.Parse(opts.localArchive)
+			if u.Scheme == "https" || u.Scheme == "http" {
+				return
+			}
+			if s, err := h.Stat(opts.localArchive); err == nil && s.IsDir() {
+				dir = true
 			}
 			if opts.localOnly || (!opts.downloadonly && dir) {
 				log.Debug().Msgf("%s not found at/in %s but local install only selected, skipping", ct, opts.localArchive)

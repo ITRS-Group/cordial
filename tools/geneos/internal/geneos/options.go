@@ -18,6 +18,8 @@ limitations under the License.
 package geneos
 
 import (
+	"path"
+
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
@@ -53,6 +55,7 @@ func evalOptions(options ...PackageOptions) (d *geneosOptions) {
 	d = &geneosOptions{
 		downloadbase: "releases",
 		downloadtype: "resources",
+		localArchive: path.Join(LocalRoot(), "packages", "downloads"),
 	}
 	for _, opt := range options {
 		opt(d)
