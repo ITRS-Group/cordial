@@ -29,6 +29,7 @@ import (
 	"os/signal"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -42,12 +43,14 @@ import (
 var emailCmdDescription string
 
 var emailCmdSubject, emailCmdFrom, emailCmdTo, emailCmdCc, emailCmdBcc string
+var emailCmdContents string
 
 func init() {
 	GDNACmd.AddCommand(emailCmd)
 
 	emailCmd.Flags().StringVarP(&reportNames, "report", "r", "", "report names")
 
+	emailCmd.Flags().StringVar(&emailCmdContents, "contents", "", "Override configured email contents")
 	emailCmd.Flags().StringVar(&emailCmdSubject, "subject", "", "Override configured email Subject")
 	emailCmd.Flags().StringVar(&emailCmdFrom, "from", "", "Override configured email From")
 	emailCmd.Flags().StringVar(&emailCmdTo, "to", "", "Override configured email To\n(comma separated, but remember to quote as one argument)")
@@ -80,6 +83,9 @@ var emailCmd = &cobra.Command{
 		}
 		defer db.Close()
 
+		if emailCmdContents != "" {
+			cf.Viper.BindPFlag("email.contents", cmd.Flags().Lookup("contents"))
+		}
 		if emailCmdSubject != "" {
 			cf.Viper.BindPFlag("email.subject", cmd.Flags().Lookup("subject"))
 		}
@@ -154,7 +160,19 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 	r.Close()
 	log.Debug().Msgf("TEXT+html report complete, %d bytes", data.TextBodyPart.Len())
 
-	for _, c := range cf.GetStringSlice("email.contents") {
+	var contents []string
+	c := cf.Get("email.contents")
+	switch c2 := c.(type) {
+	case []any:
+		for _, v := range c2 {
+			contents = append(contents, fmt.Sprint(v))
+		}
+	case string:
+		contents = strings.FieldsFunc(c2, func(r rune) bool { return unicode.IsSpace(r) || r == ',' })
+	default:
+		log.Fatal().Msgf("content type %T", c2)
+	}
+	for _, c := range contents {
 		switch c {
 		case "html":
 			if data.HTMLAttachment != nil {
