@@ -2693,6 +2693,7 @@ reports:
     type: split
     split-column: gateway
     split-values-query: SELECT ${reports.coverage-per-gateway-overview.split-column} FROM ${db.gateways.active}
+    split-values-query-all: SELECT ${reports.coverage-per-gateway-overview.split-column} FROM ${db.gateways.table}
     headlines: > #sql
       WITH t AS (
         SELECT
@@ -2833,6 +2834,7 @@ reports:
     type: split
     split-column: gateway
     split-values-query: SELECT ${reports.coverage-per-gateway-detail.split-column} FROM ${db.gateways.active}
+    split-values-query-all: SELECT ${reports.coverage-per-gateway-detail.split-column} FROM ${db.gateways.table}
     headlines: > #sql
       WITH t AS (
         SELECT

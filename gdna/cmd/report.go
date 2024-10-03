@@ -57,8 +57,9 @@ type Report struct {
 	Headlines string `mapstructure:"headlines,omitempty"`
 
 	// when Type = "split" then
-	SplitColumn string `mapstructure:"split-column,omitempty"`
-	SplitValues string `mapstructure:"split-values-query,omitempty"`
+	SplitColumn    string `mapstructure:"split-column,omitempty"`
+	SplitValues    string `mapstructure:"split-values-query,omitempty"`
+	SplitValuesAll string `mapstructure:"split-values-query-all,omitempty"`
 
 	Grouping      string   `mapstructure:"grouping,omitempty"`
 	GroupingOrder []string `mapstructure:"grouping-order,omitempty"`
@@ -164,8 +165,11 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 		maxreports = 1
 		r, _ = reporter.NewReporter("toolkit", w)
 	case "table", "html":
+		log.Info().Msg("here")
 		r, _ = reporter.NewReporter(format, w,
 			reporter.Scramble(scrambleNames),
+			reporter.DataviewCSSClass("gdna-dataview"),
+			reporter.HeadlineCSSClass("gdna-headlines"),
 		)
 	case "xlsx":
 		r, _ = reporter.NewReporter("xlsx", w,
@@ -487,7 +491,49 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 	if err = rows.Err(); err != nil {
 		return
 	}
+	rows.Close()
 	slices.Sort(split)
+
+	// get possible list of all previous views and remove any not in the
+	// new list
+	previouslist := cf.ExpandString(report.SplitValuesAll, lookup, config.ExpandNonStringToCSV())
+	if previouslist != "" {
+		log.Trace().Msgf("query:\n%s", previouslist)
+		rows, err = tx.QueryContext(ctx, previouslist)
+		if err != nil {
+			log.Error().Err(err).Msgf("query: %s", previouslist)
+			return
+		}
+
+		previous := []string{}
+		for rows.Next() {
+			var value string
+			if err = rows.Scan(&value); err != nil {
+				return
+			}
+			previous = append(previous, value)
+		}
+		if err = rows.Err(); err == nil {
+			// no error - process list
+
+			previous = slices.DeleteFunc(previous, func(v string) bool {
+				return slices.Contains(split, v)
+			})
+			for _, p := range previous {
+				group := report.Group
+				title := cf.ExpandString(report.Title, config.LookupTable(map[string]string{
+					"split-column": report.SplitColumn,
+					"value":        p,
+				}), lookup, config.ExpandNonStringToCSV())
+				log.Debug().Msgf("trying to remove potentially old dataview %s-%s", group, title)
+				r.Remove(reporter.Report{
+					Group: group,
+					Title: title,
+				})
+			}
+		}
+		rows.Close()
+	}
 
 	for _, v := range split {
 		split := map[string]string{
