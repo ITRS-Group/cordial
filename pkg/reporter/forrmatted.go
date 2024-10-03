@@ -60,16 +60,17 @@ func newFormattedReporter(w io.Writer, ropts *reporterOptions, options ...Format
 	tr.t.SetOutputMirror(tr.w)
 
 	tr.updateReporter(options...)
-
+	if tr.renderas == "html" {
+		tr.w.Write([]byte(tr.htmlpreamble))
+	}
 	return
 }
 
 func (t *FormattedReporter) Prepare(report Report) error {
 	title := report.Title
+
 	// write the last output
-	if t.renderas != "html" {
-		t.Flush()
-	}
+	t.Flush()
 
 	// reset
 	*t = FormattedReporter{
@@ -95,7 +96,8 @@ func (tr *FormattedReporter) updateReporter(options ...FormattedReporterOptions)
 	}
 	tr.scrambleNames = opts.scramble
 	tr.renderas = opts.renderas
-	switch opts.renderas {
+
+	switch tr.renderas {
 	case "html":
 		tr.tablestyle.HTML = table.HTMLOptions{
 			CSSClass:    opts.dvcssclass,
@@ -228,9 +230,6 @@ func (t *FormattedReporter) AddHeadline(name, value string) {
 // Flush sends the collected report data to the underlying table.Writer
 // as on table of headlines and another or table data
 func (t *FormattedReporter) Flush() {
-	if t.renderas == "html" {
-		t.w.Write([]byte(t.htmlpreamble))
-	}
 	if len(t.headlines) > 0 {
 		// render headers
 		headlines := []table.Row{}
@@ -273,12 +272,12 @@ func (t *FormattedReporter) Flush() {
 	t.t.SetStyle(t.tablestyle)
 	t.render()
 	fmt.Fprintln(t.w)
-	if t.renderas == "html" {
-		t.w.Write([]byte(t.htmlpostscript))
-	}
 }
 
 func (t *FormattedReporter) Close() {
+	if t.renderas == "html" {
+		t.w.Write([]byte(t.htmlpostscript))
+	}
 	if c, ok := t.w.(io.Closer); ok {
 		c.Close()
 	}

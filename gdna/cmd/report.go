@@ -31,6 +31,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -157,7 +158,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 		// go-pretty CSV output so that we can render headlines in the
 		// Geneos toolkit format
 		if reports == "" {
-			err = errors.New("toolkit format requires a specific report name")
+			err = errors.New("toolkit/csv format requires a eport name")
 			return
 		}
 		maxreports = 1
@@ -212,8 +213,8 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 // returns true as soon as a match is found or returns false on no
 // match.
 func matchReport(name, pattern string) bool {
-	for _, p := range strings.Split(pattern, ",") {
-		if ok, _ := path.Match(strings.TrimSpace(p), name); ok {
+	for _, p := range strings.FieldsFunc(pattern, func(r rune) bool { return unicode.IsSpace(r) || r == ',' }) {
+		if ok, _ := path.Match(p, name); ok {
 			return true
 		}
 	}
