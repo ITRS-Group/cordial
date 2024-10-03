@@ -57,7 +57,6 @@ import (
 )
 
 // docs
-var addCmdDescription string
 var addIncludeCmdDescription string
 var addExcludeCmdDescription string
 
@@ -65,14 +64,11 @@ var removeAddCmdDescription string
 var removeIncludeCmdDescription string
 var removeExcludeCmdDescription string
 
-var listIncludeCmdDescription string
-var listExcludeCmdDescription string
-
 var removeCmdAll bool
 
 var filterBase = "gdna-filters"
 
-type filter struct {
+type Filter struct {
 	Name      string     `mapstructure:"name"`
 	Pattern   []string   `mapstructure:"pattern"`
 	Comment   string     `mapstructure:"comment,omitempty"`
@@ -82,63 +78,14 @@ type filter struct {
 }
 
 func init() {
-	GDNACmd.AddCommand(addCmd)
-	GDNACmd.AddCommand(removeCmd)
-
 	addCmd.AddCommand(addExcludeCmd)
 	addCmd.AddCommand(addIncludeCmd)
 
 	removeCmd.AddCommand(removeExcludeCmd)
 	removeCmd.AddCommand(removeIncludeCmd)
 
-	listCmd.AddCommand(listExcludeCmd)
-	listCmd.AddCommand(listIncludeCmd)
-
 	// update in case of exec name change
 	filterBase = execname + "-filters"
-
-	removeCmd.PersistentFlags().BoolVarP(&removeCmdAll, "all", "A", false, "remove all filters or group for a category")
-}
-
-var addCmd = &cobra.Command{
-	Use:   "add",
-	Short: "",
-	Long:  addCmdDescription,
-	Args:  cobra.ArbitraryArgs,
-	CompletionOptions: cobra.CompletionOptions{
-		DisableDefaultCmd: true,
-	},
-	SilenceUsage:          true,
-	DisableAutoGenTag:     true,
-	DisableSuggestions:    true,
-	DisableFlagsInUseLine: true,
-	// no action
-}
-
-var removeCmd = &cobra.Command{
-	Use:     "remove",
-	Short:   "",
-	Long:    addCmdDescription,
-	Aliases: []string{"rm", "delete"},
-	Args:    cobra.ArbitraryArgs,
-	CompletionOptions: cobra.CompletionOptions{
-		DisableDefaultCmd: true,
-	},
-	SilenceUsage:          true,
-	DisableAutoGenTag:     true,
-	DisableSuggestions:    true,
-	DisableFlagsInUseLine: true,
-	// no action
-}
-
-// listCmd is in list.go
-
-var addCmdUser, addCmdComment, addCmdOrigin string
-
-func init() {
-	addCmd.PersistentFlags().StringVar(&addCmdUser, "user", "", "user adding these items")
-	addCmd.PersistentFlags().StringVar(&addCmdComment, "comment", "", "comment for these items")
-	addCmd.PersistentFlags().StringVar(&addCmdOrigin, "origin", "", "origin for these items")
 }
 
 // category mappings from CLI to config to allow for plurals etc.
@@ -205,6 +152,8 @@ var addExcludeCmd = &cobra.Command{
 	},
 }
 
+// add an include or exclude filter. names can contain multiline strings
+// passed from the AC2 commands.
 func addFilter(filterType, category string, names []string) (err error) {
 	ts := time.Now()
 	// load existing
@@ -223,7 +172,7 @@ func addFilter(filterType, category string, names []string) (err error) {
 	log.Debug().Msgf("loaded any existing filters from %q", igPath)
 
 	// filters := ig.GetSliceStringMapString(config.Join("filters", filterType, category))
-	var filters []filter
+	var filters []Filter
 	if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 		&filters,
 		viper.DecodeHook(
@@ -232,15 +181,20 @@ func addFilter(filterType, category string, names []string) (err error) {
 	); err != nil {
 		panic(err)
 	}
+	var newnames []string
 	for _, name := range names {
-		f := filter{
+		newnames = append(newnames, strings.Fields(name)...)
+	}
+
+	for _, name := range newnames {
+		f := Filter{
 			Name:      name,
 			Comment:   addCmdComment,
 			User:      addCmdUser,
 			Origin:    addCmdOrigin,
 			Timestamp: &ts,
 		}
-		if i := slices.IndexFunc(filters, func(e filter) bool {
+		if i := slices.IndexFunc(filters, func(e Filter) bool {
 			if e.Name == name {
 				return true
 			}
@@ -313,6 +267,8 @@ var removeIncludeCmd = &cobra.Command{
 	},
 }
 
+// remove an include or exclude filter. names can be multiline strings,
+// from AC2 command
 func removeFilter(filterType, category string, names []string) (err error) {
 	ig, err := config.Load(filterBase,
 		config.SetAppName("geneos"),
@@ -328,7 +284,7 @@ func removeFilter(filterType, category string, names []string) (err error) {
 	)
 	log.Debug().Msgf("loaded any existing filters from %q", igPath)
 
-	var filters []*filter
+	var filters []*Filter
 	if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 		&filters,
 		viper.DecodeHook(
@@ -337,11 +293,17 @@ func removeFilter(filterType, category string, names []string) (err error) {
 	); err != nil {
 		panic(err)
 	}
-	filters = slices.DeleteFunc(filters, func(f *filter) bool {
+
+	var newnames []string
+	for _, name := range names {
+		newnames = append(newnames, strings.Fields(name)...)
+	}
+
+	filters = slices.DeleteFunc(filters, func(f *Filter) bool {
 		if removeCmdAll {
 			return true
 		}
-		if slices.Contains(names, f.Name) {
+		if slices.Contains(newnames, f.Name) {
 			return true
 		}
 		return false
@@ -354,63 +316,6 @@ func removeFilter(filterType, category string, names []string) (err error) {
 		config.SetConfigFile(igPath),
 	)
 	return
-}
-
-var listFormat string
-
-func init() {
-	listExcludeCmd.Flags().StringVarP(&listFormat, "format", "F", "", "output format")
-	listIncludeCmd.Flags().StringVarP(&listFormat, "format", "F", "", "output format")
-}
-
-var listIncludeCmd = &cobra.Command{
-	Use:     "includes [CATEGORY]",
-	Short:   "List excluded items",
-	Long:    listIncludeCmdDescription,
-	Aliases: []string{"include"},
-	Args:    cobra.ArbitraryArgs,
-	CompletionOptions: cobra.CompletionOptions{
-		DisableDefaultCmd: true,
-	},
-	Annotations: map[string]string{
-		"defaultlog": os.DevNull,
-	},
-	SilenceUsage:          true,
-	DisableAutoGenTag:     true,
-	DisableSuggestions:    true,
-	DisableFlagsInUseLine: true,
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		var category string
-		if len(args) > 0 {
-			category = args[0]
-		}
-		return listFilters("include", category, listFormat)
-	},
-}
-
-var listExcludeCmd = &cobra.Command{
-	Use:     "excludes [CATEGORY]",
-	Short:   "List excluded items",
-	Long:    listExcludeCmdDescription,
-	Aliases: []string{"exclude"},
-	Args:    cobra.ArbitraryArgs,
-	CompletionOptions: cobra.CompletionOptions{
-		DisableDefaultCmd: true,
-	},
-	Annotations: map[string]string{
-		"defaultlog": os.DevNull,
-	},
-	SilenceUsage:          true,
-	DisableAutoGenTag:     true,
-	DisableSuggestions:    true,
-	DisableFlagsInUseLine: true,
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		var category string
-		if len(args) > 0 {
-			category = args[0]
-		}
-		return listFilters("exclude", category, listFormat)
-	},
 }
 
 func listFilters(filterType string, category string, listFormat string) (err error) {
@@ -428,7 +333,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 		rows = append(rows, []string{
 			"name", "timeUpdated", "username", "comment", "origin",
 		})
-		var filters []filter
+		var filters []Filter
 		if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 			&filters,
 			viper.DecodeHook(
@@ -457,7 +362,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 		{"category:name", "category", "name", "timeUpdated", "username", "comment", "origin"},
 	}
 	for category := range cf.GetStringMap(config.Join("filters", filterType)) {
-		var filters []filter
+		var filters []Filter
 		if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 			&filters,
 			viper.DecodeHook(
@@ -520,7 +425,7 @@ OUTER:
 		}
 		defer insertStmt.Close()
 
-		var x []*filter
+		var x []*Filter
 		if err = ig.UnmarshalKey(config.Join("filters", filterType, f), &x,
 			viper.DecodeHook(
 				mapstructure.StringToTimeHookFunc(time.RFC3339),

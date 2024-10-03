@@ -712,7 +712,7 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 
 	for _, table := range createQueries {
 		if !cf.IsSet(table) {
-			log.Debug().Msg("not set")
+			log.Debug().Msgf("table %q not in config, skipping", table)
 			continue
 		}
 
@@ -840,6 +840,13 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx,
 		return
 	}
 	if err = processGroups(ctx, cf, tx); err != nil {
+		return
+	}
+
+	if err = createTables(ctx, cf, tx, config.Join("filters", "allocations"), "create"); err != nil {
+		return
+	}
+	if err = processAllocations(ctx, cf, tx); err != nil {
 		return
 	}
 

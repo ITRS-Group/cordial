@@ -65,7 +65,7 @@ func newFormattedReporter(w io.Writer, ropts *reporterOptions, options ...Format
 }
 
 func (t *FormattedReporter) Prepare(report Report) error {
-	title := report.Name
+	title := report.Title
 	// write the last output
 	if t.renderas != "html" {
 		t.Flush()

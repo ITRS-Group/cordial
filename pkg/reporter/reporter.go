@@ -49,7 +49,8 @@ type ReporterCommon struct {
 }
 
 type Report struct {
-	Name            string   `mapstructure:"name"`
+	Name            string   `mapstructure:"report"`
+	Title           string   `mapstructure:"name"`
 	Group           string   `mapstructure:"group,omitempty"`
 	Columns         []string `mapstructure:"columns,omitempty"`
 	ScrambleColumns []string `mapstructure:"scramble-columns,omitempty"`

@@ -200,7 +200,7 @@ func APIMaxRows(n int) APIReporterOptions {
 // be different.
 func (a *APIReporter) Prepare(report Report) (err error) {
 	group := report.Group
-	title := report.Name
+	title := report.Title
 	a.scrambleColumns = report.ScrambleColumns
 
 	a.dv = a.conn.Dataview(group, title)
@@ -262,7 +262,9 @@ func (a *APIReporter) UpdateTable(data ...[]string) {
 }
 
 func (a *APIReporter) AddHeadline(name, value string) {
-	a.dv.Headline(name, value)
+	if a.dv != nil {
+		a.dv.Headline(name, value)
+	}
 }
 
 func (a *APIReporter) Flush() {

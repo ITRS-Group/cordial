@@ -31,16 +31,26 @@ import (
 //go:embed _docs/list.md
 var listCmdDescription string
 
+var listIncludeCmdDescription string
+var listExcludeCmdDescription string
+
 var listCmdFormat string
+
+var listFormat string
 
 func init() {
 	GDNACmd.AddCommand(listCmd)
 	listCmd.AddCommand(listReportCmd)
+	listCmd.AddCommand(listExcludeCmd)
+	listCmd.AddCommand(listIncludeCmd)
 
 	listCmd.PersistentFlags().StringVarP(&listCmdFormat, "format", "F", "table", "format output. supported formats: 'html', 'table', 'tsv', 'toolkit', 'markdown'")
-	listReportCmd.Flags().StringVarP(&reportNames, "report", "r", "", "report names")
 
+	listReportCmd.Flags().StringVarP(&reportNames, "report", "r", "", "report names")
 	listReportCmd.Flags().SortFlags = false
+
+	listExcludeCmd.Flags().StringVarP(&listFormat, "format", "F", "", "output format")
+	listIncludeCmd.Flags().StringVarP(&listFormat, "format", "F", "", "output format")
 }
 
 var listCmd = &cobra.Command{
@@ -83,6 +93,56 @@ var listReportCmd = &cobra.Command{
 	},
 }
 
+var listIncludeCmd = &cobra.Command{
+	Use:     "includes [CATEGORY]",
+	Short:   "List excluded items",
+	Long:    listIncludeCmdDescription,
+	Aliases: []string{"include"},
+	Args:    cobra.ArbitraryArgs,
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
+	Annotations: map[string]string{
+		"defaultlog": os.DevNull,
+	},
+	SilenceUsage:          true,
+	DisableAutoGenTag:     true,
+	DisableSuggestions:    true,
+	DisableFlagsInUseLine: true,
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		var category string
+		if len(args) > 0 {
+			category = args[0]
+		}
+		return listFilters("include", category, listFormat)
+	},
+}
+
+var listExcludeCmd = &cobra.Command{
+	Use:     "excludes [CATEGORY]",
+	Short:   "List excluded items",
+	Long:    listExcludeCmdDescription,
+	Aliases: []string{"exclude"},
+	Args:    cobra.ArbitraryArgs,
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
+	Annotations: map[string]string{
+		"defaultlog": os.DevNull,
+	},
+	SilenceUsage:          true,
+	DisableAutoGenTag:     true,
+	DisableSuggestions:    true,
+	DisableFlagsInUseLine: true,
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		var category string
+		if len(args) > 0 {
+			category = args[0]
+		}
+		return listFilters("exclude", category, listFormat)
+	},
+}
+
 func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 	var reports []string
 	for name := range cf.GetStringMap("reports") {
@@ -118,7 +178,7 @@ func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 		}
 		rows = append(rows, []string{
 			name,
-			rep.Name,
+			rep.Title,
 			rep.Type,
 			enabledDataview,
 			enabledXLSX,

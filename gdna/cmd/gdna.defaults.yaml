@@ -325,7 +325,7 @@ filters:
 
   group:
     gateway:
-      table: grouping_gateways
+      table: gateway_groups
       create: | #sql
         DROP TABLE IF EXISTS ${filters.group.gateway.table};
         CREATE ${db.temporary-table} TABLE ${filters.group.gateway.table} (
@@ -341,7 +341,7 @@ filters:
           VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
         ;
     server:
-      table: grouping_servers
+      table: server_groups
       create: | #sql
         DROP TABLE IF EXISTS ${filters.group.server.table};
         CREATE ${db.temporary-table} TABLE ${filters.group.server.table} (
@@ -357,7 +357,7 @@ filters:
           VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
         ;
     source:
-      table: grouping_sources
+      table: source_groups
       create: | #sql
         DROP TABLE IF EXISTS ${filters.group.source.table};
         CREATE ${db.temporary-table} TABLE ${filters.group.source.table} (
@@ -373,7 +373,7 @@ filters:
           VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
         ;
     plugin:
-      table: grouping_plugins
+      table: plugin_groups
       default: |
         e4jms-plugins,e4jms-*
         ibmi-plugins,ibmi-*
@@ -400,6 +400,27 @@ filters:
       insert: | #sql
         INSERT INTO ${filters.group.plugin.table}
           VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
+        ;
+
+  allocations:
+    gateway:
+      table: gateway_group_allocations
+      default: |
+        group1,server,2000
+      create: | #sql
+        DROP TABLE IF EXISTS ${filters.allocations.gateway.table};
+        CREATE ${db.temporary-table} TABLE ${filters.allocations.gateway.table} (
+          grouping      TEXT NOT NULL,
+          token         TEXT NOT NULL,
+          allocation    INT,
+          user          TEXT,
+          origin        TEXT,
+          comment       TEXT,
+          timestamp     TIMESTAMP DEFAULT 'now'
+        );
+      insert: | #sql
+        INSERT INTO ${filters.allocations.gateway.table}
+          VALUES (@grouping, @token, @allocation, @user, @origin, @comment, @timestamp)
         ;
 
 db:
@@ -1806,13 +1827,14 @@ reports:
              printf('%d %%', 100 - round((totals.l3covered * 100.0 ) / totals.servers))
         FROM totals;
               
-  gateway-group-coverage:
-    name: Gateway Group Coverage
+  gateway-groups:
+    name: Gateway Groups
     group: Groups
-    columns: [ group, gateways, servers, complete, "complete %", empty, "empty %", "remaining", "remaining %", "l1complete", "l1complete %", "l1remaining", "l2complete", "l2complete %", "l2remaining", "l3complete", "l3complete %" ]
+    columns: [ group, gateways, servers, serverTokenAllocation, "serverTokenUsage %", complete, "complete %", empty, "empty %", "remaining", "remaining %", "l1complete", "l1complete %", "l1remaining", "l2complete", "l2complete %", "l2remaining", "l3complete", "l3complete %" ]
     query: > #sql
-      WITH v AS (
-        SELECT grouping,
+      WITH
+      v(grouping, total, covered, empty, l1covered, l2covered, l3covered) AS (
+        SELECT COALESCE(grouping, 'OTHER'),
                count(distinct a.gateway) total,
                count(distinct m.gateway) covered,
                count(distinct e.gateway) empty,
@@ -1827,13 +1849,33 @@ reports:
           LEFT JOIN ${db.l3covered-gateways.table} l3 USING (gateway)
           LEFT JOIN ${db.match-gateways.table} grp USING (gateway)
         GROUP BY grouping
+      ),
+      s(grouping, servers) AS (
+        SELECT grouping, count(distinct server)
+          FROM ${db.servers.table}
+          LEFT JOIN ${db.match-gateways.table} grp USING (gateway)
+         -- WHERE CASE WHEN grouping IS NULL THEN v.grouping IS NULL ELSE grouping = v.grouping END
+         GROUP BY grouping
+        UNION
+        SELECT 'OTHER', count(distinct server)
+          FROM ${db.servers.table}
+         WHERE gateway NOT IN (SELECT gateway FROM ${db.match-gateways.table})
+      ),
+      a(grouping, allocation) AS (
+        SELECT COALESCE(grouping, 'OTHER'), allocation
+          FROM ${filters.allocations.gateway.table}
+         WHERE token = 'server'
+         GROUP BY grouping
       )
-      SELECT COALESCE(grouping, "OTHER"),
+      SELECT grouping,
              total,
-             (SELECT count(distinct server)
-                FROM ${db.servers.table}
-                LEFT JOIN ${db.match-gateways.table} grp USING (gateway)
-               WHERE CASE WHEN grouping IS NULL THEN v.grouping IS NULL ELSE grouping = v.grouping END) servers,
+             COALESCE(servers, 0),
+             COALESCE(allocation, 0),
+             CASE WHEN allocation > 0 THEN
+              printf('%d %%', round(COALESCE(servers, 0) * 100.0 / allocation))
+             ELSE
+              '0 %'
+             END,
              covered,
              printf('%d %%', round(covered * 100.0 / total)) coveredPercent,
              empty,
@@ -1848,7 +1890,11 @@ reports:
              total - l2covered - empty l2remaining,
              l3covered - covered,
              printf('%d %%', round(COALESCE((l3covered - covered) * 100.0 / (total - covered - empty), 0))) l3completePercent
-        FROM v;
+        FROM v
+        LEFT JOIN s USING (grouping)
+        LEFT JOIN a USING (grouping)
+       ORDER BY CASE grouping WHEN 'OTHER' THEN 'zzzzzz' ELSE grouping END
+      ;
 
   plugin-groups:
     name: Plugin Groups
@@ -1875,21 +1921,18 @@ reports:
        ORDER BY grouping
       ;
 
-  plugins-per-gateway:
-    name: Plugins Per Gateway
-    group: Monitoring Coverage
-    columns: []
+  plugin-licences-per-gateway:
+    name: Plugin Licences Per Gateway
+    group: Licensing
+    enable-for-dataview: false
+    enable-for-xlsx: false
+    columns: [] # none for indirect reports
     type: indirect
-    # The build-plugin-query is used to construct a dynamic query to
-    # build a table of plugins, depending on how many plugins are in the
-    # source data
-    #
-    # Collect *all* plugins ever seen, ignore active and valid filtering
     query: > #sql
       WITH
         plugins AS (
           SELECT * FROM (
-            SELECT DISTINCT plugin FROM ${db.samplers.active}
+            SELECT DISTINCT plugin FROM ${db.samplers.active} WHERE individual IS NULL
             UNION ALL
             SELECT DISTINCT plugin FROM ${db.ca-samplers.active}
             UNION ALL
@@ -1918,18 +1961,15 @@ reports:
         )
       SELECT group_concat(part, '') FROM lines;
 
-  instance-plugins-per-gateway:
-    name: Instance Plugins Per Gateway
-    group: Monitoring Coverage
-    columns: []
+  instance-licences-per-gateway:
+    name: Instance Licences Per Gateway
+    group: Licensing
+    columns: [] # none for indirect reports
     type: indirect
-    headlines: | #sql
-      SELECT plugin, total(number) FROM ${db.samplers.active} WHERE individual GROUP BY plugin ORDER BY 1
-      ;
     query: > #sql
       WITH
         plugins AS (
-            SELECT distinct plugin FROM ${db.samplers.active} WHERE individual
+            SELECT distinct plugin FROM ${db.samplers.active} WHERE individual ORDER by plugin
         ),
         lines AS (
           SELECT 'SELECT gateway, (SELECT count(*) FROM ${db.servers.table} q WHERE q.gateway = p.gateway) AS servers' AS part
@@ -1945,83 +1985,76 @@ reports:
         )
       SELECT group_concat(part, '') FROM lines;
 
-  plugin-summary:
-    name: Plugin Summary
-    group: Monitoring Coverage
+  plugins:
+    name: Plugins
+    group: Geneos Estate
     columns: [ "plugin", "servers", "instances", "tokensAvailable", "tokensUsed", "tokensUsedPct", "previousServers", "previousInstances", "location", "required", "level", "license", "t1" ]
     headlines: > #sql
       SELECT 'totalServers', (SELECT count(distinct server) FROM ${db.servers.table});
     query: | #sql
       WITH
-      current(plugin, server, number, individual, location, required, level) AS (
-        SELECT plugin, server, number, IIF(individual, 'Instance', 'Server'), 'netprobe',
+      levels(plugin, required, level) AS (
+        SELECT plugin,
               CASE
-                WHEN plugin IN level1_plugins OR plugin IN level2_plugins THEN 'Required'
+                WHEN plugin IN ${plugins.level1.table} OR plugin IN ${plugins.level2.table} THEN 'Required'
                 ELSE 'Optional'
               END,
               CASE
-                WHEN plugin IN level1_plugins OR plugin IN level1_optional_plugins THEN '1'
-                WHEN plugin IN level2_plugins THEN '2'
-                WHEN plugin NOT IN level1_plugins
-                  AND plugin NOT IN level1_optional_plugins
-                  AND plugin NOT IN level2_plugins THEN '3'
+                WHEN plugin IN ${plugins.level1.table} OR plugin IN ${plugins.level1-optional.table} THEN '1'
+                WHEN plugin IN ${plugins.level2.table} THEN '2'
+                WHEN plugin NOT IN ${plugins.level1.table}
+                  AND plugin NOT IN ${plugins.level1-optional.table}
+                  AND plugin NOT IN ${plugins.level2.table} THEN '3'
                 ELSE '0'
               END
+          FROM ${plugins.all.table}
+      ),
+      current(plugin, server, number, individual, location) AS (
+        SELECT plugin, server, number, IIF(individual, 'Instance', 'Server'), 'netprobe'
           FROM ${db.samplers.active}
 
         UNION ALL
 
-        SELECT plugin, entity, number, 'Server', 'collectionAgent', 'Optional', 0
+        SELECT plugin, entity, number, 'Server', 'collectionAgent'
           FROM ${db.ca-samplers.active}
 
         UNION ALL
 
-        SELECT plugin, gateway, number, 'Server', 'gateway', 'Optional', 0
+        SELECT plugin, gateway, number, 'Server', 'gateway'
           FROM ${db.gw-samplers.active}
       ),
-      previous(plugin, server, number, individual, location, required, level) AS (
-        SELECT plugin, server, number, IIF(individual, 'Instance', 'Server'), 'netprobe',
-              CASE
-                WHEN plugin IN level1_plugins OR plugin IN level2_plugins THEN 'Required'
-                ELSE 'Optional'
-              END,
-              CASE
-                WHEN plugin IN level1_plugins OR plugin IN level1_optional_plugins THEN '1'
-                WHEN plugin IN level2_plugins THEN '2'
-                WHEN plugin NOT IN level1_plugins
-                  AND plugin NOT IN level1_optional_plugins
-                  AND plugin NOT IN level2_plugins THEN '3'
-                ELSE '0'
-              END
+      previous(plugin, server, number, individual, location) AS (
+        SELECT plugin, server, number, IIF(individual, 'Instance', 'Server'), 'netprobe'
           FROM ${db.samplers.inactive}
 
         UNION ALL
 
-        SELECT plugin, entity, number, 'Server', 'collectionAgent', 'Optional', 0
+        SELECT plugin, entity, number, 'Server', 'collectionAgent'
           FROM ${db.ca-samplers.inactive}
 
         UNION ALL
 
-        SELECT plugin, gateway, number, 'Server', 'gateway', 'Optional', 0
+        SELECT plugin, gateway, number, 'Server', 'gateway'
           FROM ${db.gw-samplers.inactive}
       )
 
-      SELECT 
+      SELECT
         plugin,
         count(distinct server) servers,
         total(number) instances,
-        COALESCE((SELECT COALESCE(sum(total), 'Unlimited') FROM ${db.tokens.table} WHERE token = current.plugin), 0) tokensAvailable,
+        COALESCE((SELECT COALESCE(sum(total), CASE WHEN lastSeen IS NOT NULL THEN 'Unlimited' ELSE NULL END) FROM ${db.tokens.table} WHERE token = current.plugin), 0) tokensAvailable,
         COALESCE((SELECT total(used) FROM ${db.tokens.table} WHERE token = current.plugin AND total IS NOT NULL), 0) tokensUsed,
         printf('%d %%', COALESCE((SELECT IIF(sum(total) IS NULL, 0, round(total(used) * 100 / total(total))) FROM ${db.tokens.table} WHERE token = current.plugin AND total IS NOT NULL), 0)) tokensUsedPct,
         (SELECT count(*) FROM previous WHERE plugin = current.plugin) previousServers,
         (SELECT total(number) FROM previous WHERE plugin = current.plugin) previousInstances,
-        location,
-        required,
-        level,
-        individual as license,
+        COALESCE(location, ''),
+        COALESCE(required, ''),
+        COALESCE(level, ''),
+        COALESCE(individual, '') as license,
         1
         FROM current
-      GROUP BY plugin
+        JOIN levels USING (plugin)
+       GROUP BY plugin
 
       UNION
 
@@ -2029,19 +2062,43 @@ reports:
         plugin,
         0,
         0,
-        COALESCE((SELECT COALESCE(sum(total), 'Unlimited') FROM ${db.tokens.table} WHERE token = previous.plugin), 0) tokensAvailable,
+        COALESCE((SELECT COALESCE(sum(total), CASE WHEN lastSeen IS NOT NULL THEN 'Unlimited' ELSE NULL END) FROM ${db.tokens.table} WHERE token = previous.plugin), 0) tokensAvailable,
         0,
-        0,
+        ' 0%',
         count(distinct server),
         total(number),
-        location,
-        required,
-        level,
-        individual as license,
+        COALESCE(location, ''),
+        COALESCE(required, ''),
+        COALESCE(level, ''),
+        COALESCE(individual, '') as license,
         1
         FROM previous
-        WHERE plugin NOT IN (SELECT distinct plugin from current)
-      GROUP BY plugin
+        JOIN levels USING (plugin)
+       WHERE plugin NOT IN (SELECT distinct plugin from current)
+       GROUP BY plugin
+
+      UNION
+
+      SELECT plugin,
+        0,
+        0,
+        COALESCE((SELECT COALESCE(sum(total), CASE WHEN lastSeen IS NOT NULL THEN 'Unlimited' ELSE NULL END) FROM ${db.tokens.table} WHERE token = a.plugin), 0) tokensAvailable,
+        0,
+        '0 %',
+        0,
+        0,
+        '',
+        COALESCE(required, ''),
+        COALESCE(level, ''),
+        '',
+        1
+        FROM ${plugins.all.table} a
+        JOIN levels USING (plugin)
+       WHERE plugin IN (SELECT distinct plugin from ${db.tokens.table})
+         AND plugin NOT IN (SELECT distinct plugin FROM current)
+         AND plugin NOT IN (SELECT distinct plugin FROM previous)
+       GROUP BY plugin
+      ;
 
   coverage-summary:
     name: Coverage Summary
@@ -2360,8 +2417,8 @@ reports:
           FROM w
         ;
 
-  server-group-coverage:
-    name: Server Group Coverage
+  server-groups:
+    name: Server Groups
     group: Groups
     columns: [ group, servers, complete, "complete %", empty, "empty %", "remaining", "remaining %", "l1complete", "l1complete %", "l1remaining", "l2complete", "l2complete %", "l2remaining", "l3complete", "l3complete %" ]
     query: > #sql
@@ -2382,7 +2439,7 @@ reports:
           LEFT JOIN ${db.match-servers.table} grp USING (server)
         GROUP BY grouping
       )
-      SELECT COALESCE(grouping, "OTHER"),
+      SELECT COALESCE(grouping, 'OTHER'),
              total,
              covered,
              printf('%d %%', round(covered * 100.0 / total)) coveredPercent,
@@ -2398,7 +2455,9 @@ reports:
              total - l2covered - empty l2remaining,
              l3covered - covered,
              printf('%d %%', round(COALESCE((l3covered - covered) * 100.0 / (total - covered - empty), 0))) l3completePercent
-        FROM v;
+        FROM v
+       ORDER BY CASE WHEN grouping IS NULL THEN 'ZZZZZZ' ELSE grouping END
+      ;
 
   server-coverage:
     name: Server Coverage
@@ -2623,7 +2682,7 @@ reports:
         set:
           - format: warning
 
-  coverage-per-gateway-summary:
+  coverage-per-gateway-overview:
     name: ${value} Overview
     group: Gateways
     enable-for-dataview: false
@@ -2633,7 +2692,7 @@ reports:
     scramble-columns: [ serverID, server ]
     type: split
     split-column: gateway
-    split-values-query: SELECT ${reports.coverage-per-gateway-summary.split-column} FROM ${db.gateways.active}
+    split-values-query: SELECT ${reports.coverage-per-gateway-overview.split-column} FROM ${db.gateways.active}
     headlines: > #sql
       WITH t AS (
         SELECT
@@ -3024,7 +3083,7 @@ reports:
 
   licence-sources:
     name: Licence Sources
-    group: GDNA Information
+    group: Licensing
     columns: [ licenceSource, status, firstSeen, lastSeen, sourceType, path, valid, extendedFormat, gateways, probes, samplers, dynamicEntities, serverTokens, serverTokensUsed, serverTokensFree, licenceName, licenceExpiry, licenceMode, licenceHostname, licenceHostID ]
     headlines: > #sql
       SELECT 'latestUpdate', max(lastSeen)
@@ -3112,9 +3171,9 @@ reports:
         FROM ${db.unused-gateways.table}
        GROUP BY gateway
 
-  gateway-summary:
+  gateways:
     name: Gateways
-    group: Monitored Estate
+    group: Geneos Estate
     columns: [ gateway, gatewayHost, gatewayPort, gatewayVersion, servers, probes, samplers, dynamicEntities, dynamicEntitiesUnknownServer, serversComplete, serversIncomplete, serversEmpty, licenseSource ]
     scramble-columns: [ gatewayHost ]
     query: | #sql
@@ -3134,11 +3193,11 @@ reports:
         FROM ${db.gateways.active} g
       ;
 
-  server-summary:
+  servers:
     name: Servers
-    group: Monitored Estate
+    group: Geneos Estate
     enable-for-dataview: false
-    columns: [ serverID, server, osVersion, probes, samplers, dynamicEntities, l1missing, l2missing, l3missing, gateways, plugins ]
+    columns: [ serverID, server, osVersion, probes, samplers, dynamicEntities, l1missing, l2missing, l3missing, licenceSources, gateways, plugins ]
     scramble-columns: [ serverID, server ]
     headlines: > #sql
       WITH t AS (
@@ -3171,6 +3230,7 @@ reports:
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level1.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = s.server))), '') l1missing,
              COALESCE((SELECT group_concat(plugin, ', ') FROM (SELECT plugin FROM ${plugins.level2.table} WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = s.server))), '') l2missing,
              (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table}), '', 'missing')) as l3missing,
+             (SELECT count(distinct source) FROM ${db.servers.table} WHERE server = s.server) licenceSources,
              group_concat(gateway, ','),
              COALESCE((SELECT group_concat(plugin, ', ') FROM (
                           SELECT distinct plugin FROM ${db.samplers.active} WHERE server = s.server
@@ -3244,7 +3304,7 @@ reports:
 
   os-versions:
     name: Operating System Versions
-    group: GDNA Information
+    group: Geneos Estate
     columns: [ osVersion, count ]
     query: | #sql
       SELECT os, count(*)
@@ -3261,7 +3321,7 @@ reports:
 
   probe-versions:
     name: Probe Versions
-    group: GDNA Information
+    group: Geneos Estate
     columns: [ probeVersion, count ]
     query: | #sql
       SELECT version, count(*)
@@ -3278,7 +3338,7 @@ reports:
 
   gateway-versions:
     name: Gateway Versions
-    group: GDNA Information
+    group: Geneos Estate
     columns: [ gatewayVersion, count ]
     query: | #sql
       SELECT version, count(*)
@@ -3293,7 +3353,31 @@ reports:
        WHERE version IS NULL
       ;
 
-  list-filters:
+  licence-allocations:
+    name: Licence Allocations
+    group: Licensing
+    enable-for-xlsx: false
+    columns: [ group, category, grouping, token, allocation, user, origin, comment, timestamp ]
+    query: | #sql
+      SELECT DISTINCT 'group-gateway' 'group', 'gateway' category, '' grouping, '' token, '' allocation, '' user, '' origin, '' comment, '' timestamp
+        FROM ${filters.group.gateway.table}
+
+      UNION
+
+      SELECT 'group-gateway # '||grouping,
+             'gateway',
+             COALESCE(grouping, 'OTHER'),
+             COALESCE(token, 'server'),
+             COALESCE(allocation, 0),
+             COALESCE(a.user, ''),
+             COALESCE(a.origin, ''),
+             COALESCE(a.comment, ''),
+             COALESCE(strftime('%FT%TZ', a.timestamp), '')
+        FROM ${filters.group.gateway.table} g
+        FULL JOIN ${filters.allocations.gateway.table} a USING (grouping)
+      ;
+
+  filters:
     name: Filters
     group: GDNA Information
     enable-for-xlsx: false
@@ -3551,7 +3635,7 @@ reports:
 
   servers-with-multiple-licence-sources:
     name: Servers Using Multiple Licenses
-    group: Monitoring Coverage
+    group: Licensing
     columns: [ serverID, server, licenceSources, gateways ]
     query: | #sql
       SELECT

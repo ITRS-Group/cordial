@@ -312,13 +312,7 @@ func MaxColumnWidth(n float64) XLSXReporterOptions {
 }
 
 func (x *XLSXReporter) Prepare(report Report) (err error) {
-	x.currentSheet = report.Name
-	x.sheets[x.currentSheet] = &sheet{
-		scrambleColumns:   report.ScrambleColumns,
-		conditionalFormat: report.ConditionalFormat,
-		freezeColumn:      report.FreezeColumn,
-		rows:              map[string][]string{},
-	}
+	x.currentSheet = report.Title
 
 	if len(x.currentSheet) > 31 {
 		log.Error().Msgf("report title '%s' exceeds sheet name limit of 31 chars, truncating", x.currentSheet)
@@ -327,6 +321,13 @@ func (x *XLSXReporter) Prepare(report Report) (err error) {
 	idx, _ := x.x.GetSheetIndex(x.currentSheet)
 	if idx != -1 && x.currentSheet != x.summarySheet {
 		log.Error().Msgf("a sheet with the same name already exists, data will clash: '%s'", x.currentSheet)
+	}
+
+	x.sheets[x.currentSheet] = &sheet{
+		scrambleColumns:   report.ScrambleColumns,
+		conditionalFormat: report.ConditionalFormat,
+		freezeColumn:      report.FreezeColumn,
+		rows:              map[string][]string{},
 	}
 
 	_, err = x.x.NewSheet(x.currentSheet)
@@ -352,6 +353,9 @@ func (x *XLSXReporter) UpdateTable(data ...[]string) {
 	}
 
 	sheet := x.sheets[x.currentSheet]
+	if sheet == nil {
+		return
+	}
 
 	if x.scambleNames {
 		scrambleColumns(sheet.scrambleColumns, data)
