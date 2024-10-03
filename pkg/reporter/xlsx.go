@@ -449,6 +449,11 @@ func logicalWrapper(logic string) string {
 	}
 }
 
+func (x *XLSXReporter) Remove(report Report) (err error) {
+	// do nothing, yet
+	return
+}
+
 func (x *XLSXReporter) AddHeadline(name, value string) {
 	// nothing
 }

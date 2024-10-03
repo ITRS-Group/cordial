@@ -218,6 +218,11 @@ func (t *FormattedReporter) UpdateTable(data ...[]string) {
 	}
 }
 
+func (t *FormattedReporter) Remove(report Report) (err error) {
+	// do nothing
+	return
+}
+
 func (t *FormattedReporter) AddHeadline(name, value string) {
 	if len(t.headlineOrder) == 0 {
 		// init map

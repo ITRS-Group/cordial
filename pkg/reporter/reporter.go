@@ -37,6 +37,9 @@ type Reporter interface {
 	// UpdateTable sets the main data table to the rows given. The first row must be the column names.
 	UpdateTable(rows ...[]string)
 
+	// Remove deletes an existing report, e.g. an existing Dataview from a previous run
+	Remove(report Report) error
+
 	// Flush writes the current report to the destination selected with Prepare()
 	Flush()
 

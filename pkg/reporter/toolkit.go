@@ -49,6 +49,11 @@ func (t *ToolkitReporter) Prepare(report Report) error {
 	return nil
 }
 
+func (t *ToolkitReporter) Remove(report Report) (err error) {
+	// do nothing
+	return
+}
+
 // AddHeadline writes a Geneos Toolkit formatted headline to the
 // reporter.
 func (t *ToolkitReporter) AddHeadline(name, value string) {

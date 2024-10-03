@@ -224,6 +224,17 @@ func (a *APIReporter) Prepare(report Report) (err error) {
 	return
 }
 
+func (a *APIReporter) Remove(report Report) error {
+	if a == nil || a.conn == nil {
+		return nil
+	}
+	dv := a.conn.Dataview(report.Group, report.Title)
+	if dv != nil {
+		return dv.Remove()
+	}
+	return nil
+}
+
 // UpdateTable takes a table of data in the form of a slice of slices of
 // strings and writes them to the configured APIReporter. The first
 // slice must be the column names. UpdateTable replaces all existing data
