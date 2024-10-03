@@ -145,6 +145,8 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 		reporter.HTMLPreamble(cf.GetString("email.html-preamble")),
 		reporter.HTMLPostscript(cf.GetString("email.html-postscript")),
 		reporter.Scramble(cf.GetBool("email.scramble")),
+		reporter.DataviewCSSClass("gdna-dataview"),
+		reporter.HeadlineCSSClass("gdna-headlines"),
 	)
 	runReports(ctx, cf, tx, r, cf.GetString("email.body-reports"), -1)
 	r.Flush()
@@ -184,6 +186,8 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 				reporter.HTMLPreamble(cf.GetString("email.html-preamble")),
 				reporter.HTMLPostscript(cf.GetString("email.html-postscript")),
 				reporter.Scramble(cf.GetBool("email.scramble")),
+				reporter.DataviewCSSClass("gdna-dataview"),
+				reporter.HeadlineCSSClass("gdna-headlines"),
 			)
 			runReports(ctx, cf, tx, r, reports, -1)
 			r.Flush()

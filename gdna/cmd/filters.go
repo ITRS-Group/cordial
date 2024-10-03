@@ -324,7 +324,11 @@ func listFilters(filterType string, category string, listFormat string) (err err
 		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
 	)
 
-	r, _ := reporter.NewReporter("table", os.Stdout, reporter.RenderAs(listFormat))
+	r, _ := reporter.NewReporter(listFormat,
+		os.Stdout,
+		reporter.DataviewCSSClass("gdna-dataview"),
+		reporter.HeadlineCSSClass("gdna-headlines"),
+	)
 	if category != "" {
 		rows := [][]string{}
 		if _, ok := categories[category]; !ok {
