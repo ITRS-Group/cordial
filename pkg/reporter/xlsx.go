@@ -86,27 +86,6 @@ type sheet struct {
 // ensure that *Table is a Reporter
 var _ Reporter = (*XLSXReporter)(nil)
 
-type ConditionalFormat struct {
-	Test ConditionalFormatTest  `mapstructure:"test,omitempty"`
-	Set  []ConditionalFormatSet `mapstructure:"set,omitempty"`
-	// Else ConditionalFormatSet   `mapstructure:"else,omitempty"`
-}
-
-type ConditionalFormatTest struct {
-	Columns   []string `mapstructure:"columns,omitempty"`
-	Logical   string   `mapstructure:"logical,omitempty"` // "and", "all" or "or", "any"
-	Condition string   `mapstructure:"condition,omitempty"`
-	Type      string   `mapstructure:"type,omitempty"`
-	Value     string   `mapstructure:"value,omitempty"`
-}
-
-type ConditionalFormatSet struct {
-	Rows    string   `mapstructure:"rows,omitempty"`
-	NotRows string   `mapstructure:"not-rows,omitempty"`
-	Columns []string `mapstructure:"columns,omitempty"`
-	Format  string   `mapstructure:"format,omitempty"`
-}
-
 // NewTableReporter returns a new Table reporter
 func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporterOptions) (x *XLSXReporter) {
 	opts := evalXLSXReportOptions(options...)
@@ -407,7 +386,7 @@ func (x *XLSXReporter) UpdateTable(data ...[]string) {
 	x.x.SetRowStyle(x.currentSheet, 1, 1, x.topHeading)
 }
 
-func setColumnWidths(x *XLSXReporter) {
+func (x *XLSXReporter) setColumnWidths() {
 	for sheetname, sheet := range x.sheets {
 		// set column widths
 		for i, c := range sheet.columnWidths {
@@ -422,7 +401,7 @@ func setColumnWidths(x *XLSXReporter) {
 	}
 }
 
-func freezePanes(x *XLSXReporter) {
+func (x *XLSXReporter) freezePanes() {
 	for sheetname, sheet := range x.sheets {
 		var err error
 		if sheet.freezeColumn == "" {
@@ -475,9 +454,9 @@ func (x *XLSXReporter) AddHeadline(name, value string) {
 }
 
 func (x *XLSXReporter) Flush() {
-	applyConditionalFormat(x)
-	setColumnWidths(x)
-	freezePanes(x)
+	x.applyConditionalFormat()
+	x.setColumnWidths()
+	x.freezePanes()
 	x.x.Write(x.w, excelize.Options{
 		Password: x.password.String(),
 	})
@@ -510,7 +489,7 @@ func stringsToRow(rowStrings []string) (row []any) {
 }
 
 // apply conditional formatting to all sheets as part of the pre-render process
-func applyConditionalFormat(x *XLSXReporter) {
+func (x *XLSXReporter) applyConditionalFormat() {
 	for sheetname, sheet := range x.sheets {
 		// conditional formats apply to columns of table data, so create
 		// the format from the config then apply to range
