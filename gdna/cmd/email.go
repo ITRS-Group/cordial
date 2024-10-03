@@ -69,13 +69,6 @@ var emailCmd = &cobra.Command{
 	DisableAutoGenTag:     true,
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
-	PreRun: func(cmd *cobra.Command, args []string) {
-		cf.Viper.BindPFlag("email.subject", cmd.Flags().Lookup("subject"))
-		cf.Viper.BindPFlag("email.from", cmd.Flags().Lookup("from"))
-		cf.Viper.BindPFlag("email.to", cmd.Flags().Lookup("to"))
-		cf.Viper.BindPFlag("email.cc", cmd.Flags().Lookup("cc"))
-		cf.Viper.BindPFlag("email.bcc", cmd.Flags().Lookup("bcc"))
-	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		// Handle SIGINT (CTRL+C) gracefully.
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -86,6 +79,22 @@ var emailCmd = &cobra.Command{
 			return
 		}
 		defer db.Close()
+
+		if emailCmdSubject != "" {
+			cf.Viper.BindPFlag("email.subject", cmd.Flags().Lookup("subject"))
+		}
+		if emailCmdFrom != "" {
+			cf.Viper.BindPFlag("email.from", cmd.Flags().Lookup("from"))
+		}
+		if emailCmdTo != "" {
+			cf.Viper.BindPFlag("email.to", cmd.Flags().Lookup("to"))
+		}
+		if emailCmdCc != "" {
+			cf.Viper.BindPFlag("email.cc", cmd.Flags().Lookup("cc"))
+		}
+		if emailCmdBcc != "" {
+			cf.Viper.BindPFlag("email.bcc", cmd.Flags().Lookup("bcc"))
+		}
 
 		return doEmail(ctx, cf, db, reportNames)
 	},
