@@ -247,6 +247,8 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.
 			log.Error().Err(err).Msgf("skipping report %s: configuration format incorrect", name)
 			continue
 		}
+		// save report name metadata
+		rep.Name = name
 
 		switch rep.Type {
 		case "split":
@@ -282,6 +284,8 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.
 			log.Error().Err(err).Msgf("skipping report %s: configuration format incorrect", r)
 			continue
 		}
+		// save report name metadata
+		rep.Name = r
 
 		if reports != "" {
 			if matchReport(r, reports) {
@@ -319,6 +323,7 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.
 
 	for _, r := range groupedReports {
 		var rep Report
+		rep.Name = r
 
 		if err = cf.UnmarshalKey(config.Join("reports", r), &rep); err != nil {
 			log.Error().Err(err).Msgf("skipping report %s: configuration format incorrect", r)
@@ -383,7 +388,8 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 	if err = r.Prepare(report.Report); err != nil {
 		return
 	}
-	lookup := config.LookupTable(reportLookupTable(report.Group, report.Name))
+	r.AddHeadline("reportName", report.Name)
+	lookup := config.LookupTable(reportLookupTable(report.Group, report.Title))
 
 	query := cf.ExpandString(report.Query, lookup, config.ExpandNonStringToCSV())
 	log.Trace().Msgf("query:\n%s", query)
@@ -414,18 +420,19 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 	if err = r2.Prepare(report.Report); err != nil {
 		return
 	}
-	lookup := config.LookupTable(reportLookupTable(report.Group, report.Name))
+	r2.AddHeadline("reportName", report.Name)
+	lookup := config.LookupTable(reportLookupTable(report.Group, report.Title))
 
 	prequery := cf.ExpandString(report.Query, lookup, config.ExpandNonStringToCSV())
 	r := tx.QueryRowContext(ctx, prequery)
 	var query string
 	if err := r.Scan(&query); err != nil {
-		log.Error().Err(err).Msgf("failed to execute indirect report %s pre-query:\n%s", report.Name, prequery)
+		log.Error().Err(err).Msgf("failed to execute indirect report %s pre-query:\n%s", report.Title, prequery)
 		return
 	}
 
 	if query == "" {
-		log.Error().Msgf("indirect report %s generated query is empty:\n%s", report.Name, prequery)
+		log.Error().Msgf("indirect report %s generated query is empty:\n%s", report.Title, prequery)
 		return
 	}
 	log.Trace().Msgf("query:\n%s", query)
@@ -458,7 +465,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 	}
 
 	// get list of split values (typically gateways)
-	lookup := config.LookupTable(reportLookupTable(report.Group, report.Name))
+	lookup := config.LookupTable(reportLookupTable(report.Group, report.Title))
 	splitquery := cf.ExpandString(report.SplitValues, lookup, config.ExpandNonStringToCSV())
 	log.Trace().Msgf("query:\n%s", splitquery)
 	rows, err := tx.QueryContext(ctx, splitquery)
@@ -486,12 +493,13 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 			"split-column": report.SplitColumn,
 			"value":        v,
 		}
-		origname := report.Name
-		report.Name = cf.ExpandString(report.Name, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
+		origname := report.Title
+		report.Title = cf.ExpandString(report.Title, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
 		if err = r.Prepare(report.Report); err != nil {
 			log.Debug().Err(err).Msg("")
 		}
-		report.Name = origname
+		r.AddHeadline("reportName", report.Name)
+		report.Title = origname
 
 		if query := cf.ExpandString(report.Headlines, config.LookupTable(split), lookup, config.ExpandNonStringToCSV()); query != "" {
 			names, headlines, err := queryHeadlines(ctx, tx, query)
@@ -523,7 +531,8 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 	if err = r.Prepare(report.Report); err != nil {
 		return
 	}
-	lookup := config.LookupTable(reportLookupTable(report.Group, report.Name))
+	r.AddHeadline("reportName", report.Name)
+	lookup := config.LookupTable(reportLookupTable(report.Group, report.Title))
 
 	groups := cf.GetStringMapString(report.Grouping)
 
