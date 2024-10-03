@@ -146,8 +146,8 @@ type formattedReporterOptions struct {
 func evalFormattedOptions(options ...FormattedReporterOptions) (fro *formattedReporterOptions) {
 	fro = &formattedReporterOptions{
 		renderas:         "table",
-		dvcssclass:       "gdna-dataview",
-		headlinecssclass: "gdna-headlines",
+		dvcssclass:       "table",
+		headlinecssclass: "headlines",
 	}
 	for _, opt := range options {
 		opt(fro)
