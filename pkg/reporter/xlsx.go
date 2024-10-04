@@ -304,8 +304,8 @@ func (x *XLSXReporter) Prepare(report Report) (err error) {
 
 	x.sheets[x.currentSheet] = &sheet{
 		scrambleColumns:   report.ScrambleColumns,
-		conditionalFormat: report.ConditionalFormat,
-		freezeColumn:      report.FreezeColumn,
+		conditionalFormat: report.XLSX.ConditionalFormat,
+		freezeColumn:      report.XLSX.FreezeColumn,
 		rows:              map[string][]string{},
 	}
 
@@ -324,7 +324,7 @@ var validcond = []string{
 	"<>",
 }
 
-func (x *XLSXReporter) UpdateTable(data ...[]string) {
+func (x *XLSXReporter) UpdateTable(columns []string, data [][]string) {
 	var err error
 
 	if len(data) == 0 {
@@ -336,10 +336,10 @@ func (x *XLSXReporter) UpdateTable(data ...[]string) {
 		return
 	}
 
+	sheet.columns = columns
 	if x.scambleNames {
-		scrambleColumns(sheet.scrambleColumns, data)
+		scrambleColumns(columns, sheet.scrambleColumns, data)
 	}
-	sheet.columns = data[0]
 
 	cellname, err := excelize.CoordinatesToCellName(1, 1+sheet.rowOffset, false)
 	if err != nil {
@@ -354,7 +354,7 @@ func (x *XLSXReporter) UpdateTable(data ...[]string) {
 		sheet.columnWidths = append(sheet.columnWidths, limitWidth(len(c), x.minColWidth, x.maxColWidth))
 	}
 
-	for rownum, cellsString := range data[1:] {
+	for rownum, cellsString := range data {
 		sheet.rows[cellsString[0]] = cellsString
 		sheet.rowOrder = append(sheet.rowOrder, cellsString[0])
 

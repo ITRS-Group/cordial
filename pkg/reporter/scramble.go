@@ -7,13 +7,13 @@ import (
 	"slices"
 )
 
-func scrambleColumns(columns []string, table [][]string) {
-	for _, c := range columns {
-		i := slices.Index(table[0], c)
+func scrambleColumns(columns, scrambleColumns []string, table [][]string) {
+	for _, c := range scrambleColumns {
+		i := slices.Index(columns, c)
 		if i == -1 {
 			continue
 		}
-		for _, r := range table[1:] {
+		for _, r := range table {
 			r[i] = scrambleWords(r[i])
 		}
 	}

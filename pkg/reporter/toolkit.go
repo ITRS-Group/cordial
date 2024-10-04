@@ -60,18 +60,11 @@ func (t *ToolkitReporter) AddHeadline(name, value string) {
 	t.headlines[name] = value
 }
 
-func (t *ToolkitReporter) UpdateTable(data ...[]string) {
+func (t *ToolkitReporter) UpdateTable(columns []string, data [][]string) {
 	if len(data) == 0 {
 		return
 	}
-	// scrambleColumns(t.scrambleColumns, data)
-	// set heading first time we see any data
-	if len(t.table) == 0 {
-		t.table = [][]string{
-			data[0],
-		}
-	}
-	t.table = append(t.table, data[1:]...)
+	t.table = append([][]string{columns}, data...)
 }
 
 func (t *ToolkitReporter) Flush() {

@@ -65,8 +65,6 @@ var _ Reporter = (*APIReporter)(nil)
 func newAPIReporter(ropts *reporterOptions, options ...APIReporterOptions) (a *APIReporter, err error) {
 	opts := evalAPIOptions(options...)
 
-	log.Debug().Msgf("setting dataview-create-delay to %v", opts.dvCreateDelay)
-
 	a = &APIReporter{
 		resetDV:       opts.reset,
 		scramble:      opts.scramble,
@@ -199,8 +197,8 @@ func APIMaxRows(n int) APIReporterOptions {
 // invalid. Note that in the Geneos api sampler the group and title must
 // be different.
 func (a *APIReporter) Prepare(report Report) (err error) {
-	group := report.Group
 	title := report.Title
+	group := report.Dataview.Group
 	a.scrambleColumns = report.ScrambleColumns
 
 	a.dv = a.conn.Dataview(group, title)
@@ -212,8 +210,9 @@ func (a *APIReporter) Prepare(report Report) (err error) {
 		a.dv.Remove()
 	}
 	if !a.dv.Exists() {
-		log.Debug().Msgf("sleeping for %v before creating new dataview %s-%s", a.dvCreateDelay, group, title)
-		time.Sleep(a.dvCreateDelay)
+		if a.dvCreateDelay > 0 {
+			time.Sleep(a.dvCreateDelay)
+		}
 
 		_, err = a.conn.NewDataview(group, title)
 		if err != nil {
@@ -228,7 +227,7 @@ func (a *APIReporter) Remove(report Report) error {
 	if a == nil || a.conn == nil {
 		return nil
 	}
-	dv := a.conn.Dataview(report.Group, report.Title)
+	dv := a.conn.Dataview(report.Dataview.Group, report.Title)
 	if dv != nil {
 		return dv.Remove()
 	}
@@ -239,18 +238,17 @@ func (a *APIReporter) Remove(report Report) error {
 // strings and writes them to the configured APIReporter. The first
 // slice must be the column names. UpdateTable replaces all existing data
 // in the Dataview.
-func (a *APIReporter) UpdateTable(data ...[]string) {
+func (a *APIReporter) UpdateTable(columns []string, data [][]string) {
 	if a.maxrows > 0 && len(data) > a.maxrows {
 		data = data[:a.maxrows+1]
 	}
 
 	if a.scramble {
 		log.Debug().Msgf("scramble columns %v", a.scrambleColumns)
-		scrambleColumns(a.scrambleColumns, data)
+		scrambleColumns(columns, a.scrambleColumns, data)
 	}
 
 	// check if columns have changed
-	columns := data[0]
 	existing, err := a.dv.ColumnNames()
 	if err != nil {
 		log.Error().Err(err).Msg("")
@@ -259,14 +257,14 @@ func (a *APIReporter) UpdateTable(data ...[]string) {
 
 	// "rowNames" is the default first (and only) column name in an empty dataview
 	if !(len(existing) == 1 && existing[0] == "rowNames") && !slices.Equal(existing, columns) {
-		log.Debug().Msgf("column changed, resetting dataview: %v -> %v", existing, columns)
+		log.Debug().Msg("dataview columns changed, resetting dataview")
 		// recreate dataview
 		s := strings.SplitN(a.dv.String(), "-", 2)
 		a.dv.Remove()
 		time.Sleep(a.dvCreateDelay)
 		_, err = a.conn.NewDataview(s[0], s[1])
 	}
-	if err := a.dv.UpdateTable(data[0], data[1:]...); err != nil {
+	if err := a.dv.UpdateTable(columns, data...); err != nil {
 		log.Error().Err(err).Msg("")
 	}
 	return

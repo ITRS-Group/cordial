@@ -35,7 +35,7 @@ type Reporter interface {
 	AddHeadline(name, value string)
 
 	// UpdateTable sets the main data table to the rows given. The first row must be the column names.
-	UpdateTable(rows ...[]string)
+	UpdateTable(headings []string, rows [][]string)
 
 	// Remove deletes an existing report, e.g. an existing Dataview from a previous run
 	Remove(report Report) error
@@ -54,17 +54,22 @@ type ReporterCommon struct {
 type Report struct {
 	Name            string   `mapstructure:"report"`
 	Title           string   `mapstructure:"name"`
-	Group           string   `mapstructure:"group,omitempty"`
 	Columns         []string `mapstructure:"columns,omitempty"`
 	ScrambleColumns []string `mapstructure:"scramble-columns,omitempty"`
 
-	// API specific
-	EnableForDataview *bool `mapstructure:"enable-for-dataview,omitempty"`
+	// Report format specific settings
 
-	// xlsx specific
-	EnableForXLSX     *bool               `mapstructure:"enable-for-xlsx,omitempty"`
-	FreezeColumn      string              `mapstructure:"freeze-to-column"`
-	ConditionalFormat []ConditionalFormat `mapstructure:"conditional-format,omitempty"`
+	Dataview struct {
+		Group  string `mapstructure:"group,omitempty"`
+		Enable *bool  `mapstructure:"enable,omitempty"`
+	} `mapstructure:"dataview,omitempty"`
+
+	XLSX struct {
+		// xlsx specific
+		Enable            *bool               `mapstructure:"enable,omitempty"`
+		FreezeColumn      string              `mapstructure:"freeze-to-column"`
+		ConditionalFormat []ConditionalFormat `mapstructure:"conditional-format,omitempty"`
+	} `mapstructure:"xlsx,omitempty"`
 }
 
 type ReporterOptions func(*reporterOptions)

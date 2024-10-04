@@ -199,20 +199,20 @@ func Scramble(scramble bool) FormattedReporterOptions {
 	}
 }
 
-func (t *FormattedReporter) UpdateTable(data ...[]string) {
+func (t *FormattedReporter) UpdateTable(columns []string, data [][]string) {
 	if len(data) == 0 {
 		return
 	}
 	if t.scrambleNames {
-		scrambleColumns(t.scrambleColumns, data)
+		scrambleColumns(columns, t.scrambleColumns, data)
 	}
 	if len(t.columns) == 0 {
 		// init
-		t.columns = data[0]
+		t.columns = columns
 		t.table = map[string][]string{}
 	}
 
-	for _, row := range data[1:] {
+	for _, row := range data {
 		t.tableOrder = append(t.tableOrder, row[0])
 		t.table[row[0]] = row
 	}
