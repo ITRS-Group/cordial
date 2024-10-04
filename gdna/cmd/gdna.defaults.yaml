@@ -623,7 +623,8 @@ db:
                (source, status, sourceType, firstSeen, lastSeen, path, valid)
         VALUES (@source, @status, @sourceType, @firstSeen, @lastSeen, @path, @valid)
       ON CONFLICT (source)
-        DO UPDATE SET sourceType=@sourceType, path=@path, lastSeen=@lastSeen, status=@status, valid=@valid;
+        DO UPDATE SET sourceType=@sourceType, path=@path, lastSeen=@lastSeen, status=@status, valid=@valid
+            WHERE excluded.lastSeen > lastSeen;
 
     update-valid: > #sql
       UPDATE ${db.sources.table} SET
@@ -700,7 +701,8 @@ db:
                (gateway, probeName, probePort, tokenID, firstSeen, lastSeen, source, os, version)
         VALUES (@gateway, @probeName, @probePort, @tokenID, @time, @time, @source, @os, @version)
         ON CONFLICT (gateway, probeName, probePort, tokenID)
-          DO UPDATE SET lastSeen=@time, source=@source, os=COALESCE(@os, os), version=COALESCE(@version, version);
+          DO UPDATE SET lastSeen=@time, source=@source, os=COALESCE(@os, os), version=COALESCE(@version, version)
+              WHERE excluded.lastSeen > lastSeen;
     # NOTE: we append the hostid so that multiple containers on the same host are distinguished
     post-insert: > #sql
       UPDATE ${db.probes.table} AS p
@@ -771,7 +773,8 @@ db:
         ON CONFLICT (gateway, plugin, probeName, probePort, tokenID, lastSeen)
           DO UPDATE SET number=number+@number WHERE hostID IS NULL
         ON CONFLICT (gateway, plugin, probeName, probePort, tokenID)
-          DO UPDATE SET number=@number, source=@source, lastSeen=@time, hostID=NULL;
+          DO UPDATE SET number=@number, source=@source, lastSeen=@time, hostID=NULL
+              WHERE excluded.lastSeen > lastSeen;
     post-insert: | #sql
       UPDATE ${db.samplers.table} AS s
          SET server = (SELECT server
@@ -851,7 +854,8 @@ db:
                (gateway, plugin, entity, probeName, probePort, tokenID, hostID, number, firstSeen, lastSeen, source)
         VALUES (@gateway, @plugin, @entity, @probeName, @probePort, @tokenID, @tokenID, @number, @time, @time, @source)
         ON CONFLICT (gateway, plugin, entity)
-          DO UPDATE SET number=@number, source=@source, lastSeen=@time, probeName=@probeName, probePort=@probePort, tokenID=@tokenID, hostID=@tokenID;
+          DO UPDATE SET number=@number, source=@source, lastSeen=@time, probeName=@probeName, probePort=@probePort, tokenID=@tokenID, hostID=@tokenID
+              WHERE excluded.lastSeen > lastSeen;
     post-insert: > #sql
       UPDATE ${db.ca-samplers.table} AS s
          SET server = (SELECT server
@@ -906,7 +910,8 @@ db:
                (gateway, plugin, number, firstSeen, lastSeen, source)
         VALUES (@gateway, @plugin, @number, @time, @time, @source)
         ON CONFLICT (gateway, plugin)
-          DO UPDATE SET number=@number, source=@source, lastSeen=@time;
+          DO UPDATE SET number=@number, source=@source, lastSeen=@time
+              WHERE excluded.lastSeen > lastSeen;
     active: gw_samplers
     create-active: > #sql
       DROP TABLE IF EXISTS ${db.gw-samplers.active};
@@ -948,7 +953,8 @@ db:
                (gateway, component, number, firstSeen, lastSeen, source)
         VALUES (@gateway, @component, @number, @time, @time, @source)
         ON CONFLICT (gateway, component)
-          DO UPDATE SET number=@number, source=@source, lastSeen=@time;
+          DO UPDATE SET number=@number, source=@source, lastSeen=@time
+              WHERE excluded.lastSeen > lastSeen;
     active: gw_components
     create-active: > #sql
       DROP TABLE IF EXISTS ${db.gw-components.active};
@@ -992,7 +998,7 @@ db:
       VALUES (@gateway, @host, @port, @version, @time, @time, @source)
       ON CONFLICT (gateway, source)
         DO UPDATE SET gatewayHost=@host, gatewayPort=@port, version=@version, lastSeen=@time, source=@source
-      ;
+            WHERE excluded.lastSeen > lastSeen;
     filter:
       # include MUST default to a wildcard
       include: "*"
@@ -1015,7 +1021,7 @@ db:
           )
           AND lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = gw.source AND valid)
           AND ${filters:gw:gateway,source}
-          GROUP BY gateway
+        GROUP BY gateway
       ;
     inactive: gateways_previous
     create-inactive: > #sql
@@ -1057,8 +1063,8 @@ db:
                   (token, total, used, free, firstSeen, lastSeen, source)
       VALUES (@token, @total, @used, @free, @time, @time, @source)
       ON CONFLICT (token, source)
-        DO UPDATE SET total=@total, used=@used, free=@free, lastSeen=@time;
-      ;
+        DO UPDATE SET total=@total, used=@used, free=@free, lastSeen=@time
+            WHERE excluded.lastSeen > lastSeen;
     active: tokens
     create-active: | #sql
       DROP TABLE IF EXISTS ${db.tokens.active};
@@ -1686,8 +1692,9 @@ reports:
   # table in the body of emails. Put any required headlines here as they
   # are not added to individual sheets in an XLSX workbook.
   gdna-summary:
-    group: GDNA Information
     name: GDNA Summary
+    dataview:
+      group: GDNA Information
     columns: [ Item, Description ]
     type: summary
     query: > #sql
@@ -1748,8 +1755,10 @@ reports:
 
   coverage-by-level-and-plugin:
     name: Coverage By Level And Plugin
-    group: Monitoring Coverage
-    enable-for-xlsx: false
+    dataview:
+      group: Monitoring Coverage
+    xlsx:
+      enable: false
     columns: [ "level # plugin", instances, servers, "servers %", remainingServers, "remainingServers %" ]
     headlines: > #sql
       SELECT 'totalServers', (SELECT count(distinct server) FROM ${db.servers.table});
@@ -1829,8 +1838,11 @@ reports:
               
   gateway-groups:
     name: Gateway Groups
-    group: Groups
-    columns: [ group, gateways, servers, serverTokenAllocation, "serverTokenUsage %", complete, "complete %", empty, "empty %", "remaining", "remaining %", "l1complete", "l1complete %", "l1remaining", "l2complete", "l2complete %", "l2remaining", "l3complete", "l3complete %" ]
+    dataview:
+      group: Groups
+    xlsx:
+      freeze-to-column: gateway
+    columns: [ group, gateways, servers, serverTokenAllocation, "serverTokenUsage %", complete, "complete %", empty, "empty %", remaining, "remaining %", l1complete, "l1complete %", l1remaining, l2complete, "l2complete %", l2remaining, l3complete, "l3complete %" ]
     query: > #sql
       WITH
       v(grouping, total, covered, empty, l1covered, l2covered, l3covered) AS (
@@ -1893,13 +1905,15 @@ reports:
         FROM v
         LEFT JOIN s USING (grouping)
         LEFT JOIN a USING (grouping)
-       ORDER BY CASE grouping WHEN 'OTHER' THEN 'zzzzzz' ELSE grouping END
+       ORDER BY CASE grouping WHEN 'OTHER' THEN 'ZZZZZZ' ELSE grouping END COLLATE NOCASE
       ;
 
   plugin-groups:
     name: Plugin Groups
-    group: Groups
-    enable-for-xlsx: false
+    dataview:
+      group: Groups
+    xlsx:
+      enable: false
     columns: [ pluginGroup, servers, instances ]
     query: > #sql
       WITH
@@ -1923,9 +1937,11 @@ reports:
 
   plugin-licences-per-gateway:
     name: Plugin Licences Per Gateway
-    group: Licensing
-    enable-for-dataview: false
-    enable-for-xlsx: false
+    dataview:
+      group: Licensing
+      enable: false
+    xlsx:
+      enable: false
     columns: [] # none for indirect reports
     type: indirect
     query: > #sql
@@ -1963,7 +1979,10 @@ reports:
 
   instance-licences-per-gateway:
     name: Instance Licences Per Gateway
-    group: Licensing
+    dataview:
+      group: Licensing
+    xlsx:
+      freeze-to-column: gateway
     columns: [] # none for indirect reports
     type: indirect
     query: > #sql
@@ -1987,8 +2006,11 @@ reports:
 
   plugins:
     name: Plugins
-    group: Geneos Estate
-    columns: [ "plugin", "servers", "instances", "tokensAvailable", "tokensUsed", "tokensUsedPct", "previousServers", "previousInstances", "location", "required", "level", "license", "t1" ]
+    dataview:
+      group: Geneos Estate
+    xlsx:
+      freeze-to-column: plugin 
+    columns: [ plugin, servers, instances, tokensAvailable, tokensUsed, tokensUsedPct, previousServers, previousInstances, location, required, level, license, t1 ]
     headlines: > #sql
       SELECT 'totalServers', (SELECT count(distinct server) FROM ${db.servers.table});
     query: | #sql
@@ -2102,8 +2124,11 @@ reports:
 
   coverage-summary:
     name: Coverage Summary
-    group: Monitoring Coverage
-    columns: [ coverageBy, total, complete, "complete %", empty, "empty %", "remaining", "remaining %", "l1complete", "l1complete %", "l1remaining", "l2complete", "l2complete %", "l2remaining", "l3complete", "l3complete %", "l3remaining" ]
+    dataview:
+      group: Monitoring Coverage
+    xlsx:
+      freeze-to-column: coverageFor
+    columns: [ coverageFor, total, complete, "complete %", empty, "empty %", remaining, "remaining %", l1complete, "l1complete %", l1remaining, l2complete, "l2complete %", l2remaining, l3complete, "l3complete %", l3remaining ]
     # The coverage-summary query returns one row per type of summary.
     # This is actively for all Gateways and another for all Probes.
     #
@@ -2203,8 +2228,10 @@ reports:
 
   gateway-coverage:
     name: Gateway Coverage
-    group: Monitoring Coverage
-    enable-for-xlsx: false
+    dataview:
+      group: Monitoring Coverage
+    xlsx:
+      enable: false
     columns: [ coverage, percent, gateways, remaining, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, description ]
     headlines: > #sql
       SELECT 'totalGateways', (SELECT count(*) FROM ${db.gateways.active})
@@ -2419,11 +2446,14 @@ reports:
 
   server-groups:
     name: Server Groups
-    group: Groups
-    columns: [ group, servers, complete, "complete %", empty, "empty %", "remaining", "remaining %", "l1complete", "l1complete %", "l1remaining", "l2complete", "l2complete %", "l2remaining", "l3complete", "l3complete %" ]
+    dataview:
+      group: Groups
+    xlsx:
+      freeze-to-column: group
+    columns: [ group, servers, complete, "complete %", empty, "empty %", remaining, "remaining %", l1complete, "l1complete %", l1remaining, l2complete, "l2complete %", l2remaining, l3complete, "l3complete %" ]
     query: > #sql
       WITH v AS (
-        SELECT grouping,
+        SELECT COALESCE(grouping, 'OTHER') grouping,
                count(distinct a.server) total,
                count(distinct m.server) covered,
                count(distinct e.server) empty,
@@ -2439,7 +2469,7 @@ reports:
           LEFT JOIN ${db.match-servers.table} grp USING (server)
         GROUP BY grouping
       )
-      SELECT COALESCE(grouping, 'OTHER'),
+      SELECT grouping,
              total,
              covered,
              printf('%d %%', round(covered * 100.0 / total)) coveredPercent,
@@ -2456,13 +2486,15 @@ reports:
              l3covered - covered,
              printf('%d %%', round(COALESCE((l3covered - covered) * 100.0 / (total - covered - empty), 0))) l3completePercent
         FROM v
-       ORDER BY CASE WHEN grouping IS NULL THEN 'ZZZZZZ' ELSE grouping END
+       ORDER BY CASE grouping WHEN 'OTHER' THEN 'ZZZZZZ' ELSE grouping END COLLATE NOCASE
       ;
 
   server-coverage:
     name: Server Coverage
-    group: Monitoring Coverage
-    enable-for-xlsx: false
+    dataview:
+      group: Monitoring Coverage
+    xlsx:
+      enable: false
     columns: [ coverage, percent, servers, remaining, width300, 100, description ]
     headlines: > #sql
       SELECT 'totalServers', (SELECT count(distinct server) FROM ${db.servers.table});
@@ -2584,9 +2616,69 @@ reports:
 
   missing-coverage:
     name: Missing Coverage
-    group: Monitoring Coverage
+    dataview:
+      group: Monitoring Coverage
+    xlsx:
+      freeze-to-column: serverID
+      conditional-format:
+        - test:
+            columns: [ samplers, dynamicEntities ]
+            condition: "="
+            type: number
+            value: 0
+          set:
+            - format: warning
+        - test:
+            columns: samplers
+            condition: ">"
+            type: number
+            value: 0
+          set:
+            - format: ok
+        - test:
+            columns: dynamicEntities
+            condition: ">"
+            type: number
+            value: 0
+          set:
+            - format: ok
+        - test:
+            columns: l1missing
+            condition: "="
+            value: ""
+          set:
+            - format: ok
+        - test:
+            columns: l1missing
+            condition: "<>"
+            value: ""
+          set:
+            - format: warning
+        - test:
+            columns: l2missing
+            condition: "="
+            value: ""
+          set:
+            - format: ok
+        - test:
+            columns: l2missing
+            condition: "<>"
+            value: ""
+          set:
+            - format: warning
+        - test:
+            columns: l3missing
+            condition: "<>"
+            value: "missing"
+          set:
+            - format: ok
+        - test:
+            columns: l3missing
+            condition: "="
+            value: "missing"
+          set:
+            - format: warning
     columns: [ serverID, server, osVersion, probes, samplers, dynamicEntities, l1missing, l2missing, l3missing, gateways ]
-    freeze-to-column: server
     scramble-columns: [ serverID, server, gateways ]
     headlines: > #sql
       WITH t AS (
@@ -2623,72 +2715,74 @@ reports:
         FROM ${db.uncovered-servers.table} u
        GROUP BY server
        ORDER BY samplers ASC, probes DESC, length(l1missing) DESC, length(l2missing) DESC, l3missing DESC;
-    conditional-format:
-      - test:
-          columns: [ samplers, dynamicEntities ]
-          condition: "="
-          type: number
-          value: 0
-        set:
-          - format: warning
-      - test:
-          columns: samplers
-          condition: ">"
-          type: number
-          value: 0
-        set:
-          - format: ok
-      - test:
-          columns: dynamicEntities
-          condition: ">"
-          type: number
-          value: 0
-        set:
-          - format: ok
-      - test:
-          columns: l1missing
-          condition: "="
-          value: ""
-        set:
-          - format: ok
-      - test:
-          columns: l1missing
-          condition: "<>"
-          value: ""
-        set:
-          - format: warning
-      - test:
-          columns: l2missing
-          condition: "="
-          value: ""
-        set:
-          - format: ok
-      - test:
-          columns: l2missing
-          condition: "<>"
-          value: ""
-        set:
-          - format: warning
-      - test:
-          columns: l3missing
-          condition: "<>"
-          value: "missing"
-        set:
-          - format: ok
-      - test:
-          columns: l3missing
-          condition: "="
-          value: "missing"
-        set:
-          - format: warning
 
   coverage-per-gateway-overview:
     name: ${value} Overview
-    group: Gateways
-    enable-for-dataview: false
-    enable-for-xlsx: false
+    dataview:
+      group: Gateways
+      enable: false
+    xlsx:
+      enable: false
+      freeze-to-column: serverID
+      conditional-format:
+        - test:
+            columns: [ samplers, dynamicEntities ]
+            condition: "="
+            type: number
+            value: 0
+          set:
+            - format: warning
+        - test:
+            columns: samplers
+            condition: ">"
+            type: number
+            value: 0
+          set:
+            - format: ok
+        - test:
+            columns: dynamicEntities
+            condition: ">"
+            type: number
+            value: 0
+          set:
+            - format: ok
+        - test:
+            columns: l1missing
+            condition: "="
+            value: ""
+          set:
+            - format: ok
+        - test:
+            columns: l1missing
+            condition: "<>"
+            value: ""
+          set:
+            - format: warning
+        - test:
+            columns: l2missing
+            condition: "="
+            value: ""
+          set:
+            - format: ok
+        - test:
+            columns: l2missing
+            condition: "<>"
+            value: ""
+          set:
+            - format: warning
+        - test:
+            columns: l3missing
+            condition: "<>"
+            value: "missing"
+          set:
+            - format: ok
+        - test:
+            columns: l3missing
+            condition: "="
+            value: "missing"
+          set:
+            - format: warning
     columns: [ serverID, server, osVersion, probes, probeVersion, licenceSources, samplers, dynamicEntities, l1missing, l2missing, l3missing, otherGateways, plugins ]
-    freeze-to-column: server
     scramble-columns: [ serverID, server ]
     type: split
     split-column: gateway
@@ -2764,72 +2858,80 @@ reports:
        
       ORDER BY 1
       ;
-    conditional-format:
-      - test:
-          columns: [ samplers, dynamicEntities ]
-          condition: "="
-          type: number
-          value: 0
-        set:
-          - format: warning
-      - test:
-          columns: samplers
-          condition: ">"
-          type: number
-          value: 0
-        set:
-          - format: ok
-      - test:
-          columns: dynamicEntities
-          condition: ">"
-          type: number
-          value: 0
-        set:
-          - format: ok
-      - test:
-          columns: l1missing
-          condition: "="
-          value: ""
-        set:
-          - format: ok
-      - test:
-          columns: l1missing
-          condition: "<>"
-          value: ""
-        set:
-          - format: warning
-      - test:
-          columns: l2missing
-          condition: "="
-          value: ""
-        set:
-          - format: ok
-      - test:
-          columns: l2missing
-          condition: "<>"
-          value: ""
-        set:
-          - format: warning
-      - test:
-          columns: l3missing
-          condition: "<>"
-          value: "missing"
-        set:
-          - format: ok
-      - test:
-          columns: l3missing
-          condition: "="
-          value: "missing"
-        set:
-          - format: warning
 
   coverage-per-gateway-detail:
     name: ${value} Detail
-    group: Gateways
-    enable-for-dataview: false
-    enable-for-xlsx: false
+    dataview:
+      group: Gateways
+      enable: false
+    xlsx:
+      enable: false
+      freeze-to-column: serverID
+      conditional-format:
+        - test:
+            columns: [ samplers, dynamicEntities ]
+            condition: "="
+            type: number
+            value: 0
+          set:
+            - format: warning
+        - test:
+            columns: samplers
+            condition: ">"
+            type: number
+            value: 0
+          set:
+            - format: ok
+        - test:
+            columns: dynamicEntities
+            condition: ">"
+            type: number
+            value: 0
+          set:
+            - format: ok
+        - test:
+            columns: l1missing
+            condition: "="
+            value: ""
+          set:
+            - not-rows: "*#*"
+              format: ok
+        - test:
+            columns: l1missing
+            condition: "<>"
+            value: ""
+          set:
+            - not-rows: "*#*"
+              format: warning
+        - test:
+            columns: l2missing
+            condition: "="
+            value: ""
+          set:
+            - not-rows: "*#*"
+              format: ok
+        - test:
+            columns: l2missing
+            condition: "<>"
+            value: ""
+          set:
+            - not-rows: "*#*"
+              format: warning
+        - test:
+            columns: l3missing
+            condition: "<>"
+            value: "missing"
+          set:
+            - not-rows: "*#*"
+              format: ok
+        - test:
+            columns: l3missing
+            condition: "="
+            value: "missing"
+          set:
+            - not-rows: "*#*"
+              format: warning
     columns: [ serverID, server, osVersion, probes, probeName, probePort, probeVersion, licenceSources, otherGateways, samplers, dynamicEntities, l1missing, l2missing, l3missing, plugins ]
-    freeze-to-column: probePort
     scramble-columns: [ serverID, server, probeName ]
     type: split
     split-column: gateway
@@ -2933,75 +3035,13 @@ reports:
 
       ORDER BY 1
       ;
-    conditional-format:
-      - test:
-          columns: [ samplers, dynamicEntities ]
-          condition: "="
-          type: number
-          value: 0
-        set:
-          - format: warning
-      - test:
-          columns: samplers
-          condition: ">"
-          type: number
-          value: 0
-        set:
-          - format: ok
-      - test:
-          columns: dynamicEntities
-          condition: ">"
-          type: number
-          value: 0
-        set:
-          - format: ok
-      - test:
-          columns: l1missing
-          condition: "="
-          value: ""
-        set:
-          - not-rows: "*#*"
-            format: ok
-      - test:
-          columns: l1missing
-          condition: "<>"
-          value: ""
-        set:
-          - not-rows: "*#*"
-            format: warning
-      - test:
-          columns: l2missing
-          condition: "="
-          value: ""
-        set:
-          - not-rows: "*#*"
-            format: ok
-      - test:
-          columns: l2missing
-          condition: "<>"
-          value: ""
-        set:
-          - not-rows: "*#*"
-            format: warning
-      - test:
-          columns: l3missing
-          condition: "<>"
-          value: "missing"
-        set:
-          - not-rows: "*#*"
-            format: ok
-      - test:
-          columns: l3missing
-          condition: "="
-          value: "missing"
-        set:
-          - not-rows: "*#*"
-            format: warning
 
   plugin-coverage:
     name: Plugin Coverage
-    group: Monitoring Coverage
-    enable-for-xlsx: false
+    dataview:
+      group: Monitoring Coverage
+    xlsx:
+      enable: false
     columns: [ coverage, percent, servers, width300, 100, remaining, description ]
     headlines: > #sql
       SELECT 'totalServers', (SELECT count(distinct server) FROM ${db.servers.table});
@@ -3085,7 +3125,10 @@ reports:
 
   licence-sources:
     name: Licence Sources
-    group: Licensing
+    dataview:
+      group: Licensing
+    xlsx:
+      freeze-to-column: licenceSource
     columns: [ licenceSource, status, firstSeen, lastSeen, sourceType, path, valid, extendedFormat, gateways, probes, samplers, dynamicEntities, serverTokens, serverTokensUsed, serverTokensFree, licenceName, licenceExpiry, licenceMode, licenceHostname, licenceHostID ]
     headlines: > #sql
       SELECT 'latestUpdate', max(lastSeen)
@@ -3120,7 +3163,6 @@ reports:
         FROM ${db.tokens.table}
        WHERE token = 'servers'
       ;
-
     query: > #sql
       WITH os(os, source, lastSeen) AS (SELECT os, source, lastSeen FROM ${db.probes.table})
       SELECT ${db.sources.columns},
@@ -3165,7 +3207,10 @@ reports:
 
   unused-gateways:
     name: Unused Gateways
-    group: Monitoring Coverage
+    dataview:
+      group: Monitoring Coverage
+    xlsx:
+      freeze-to-column: gateway
     columns: [ gateway, lastSeen, licenceSources ]
     scramble-columns: [ gateway ]
     query: > #sql
@@ -3175,7 +3220,10 @@ reports:
 
   gateways:
     name: Gateways
-    group: Geneos Estate
+    dataview:
+      group: Geneos Estate
+    xlsx:
+      freeze-to-column: gateway
     columns: [ gateway, gatewayHost, gatewayPort, gatewayVersion, servers, probes, samplers, dynamicEntities, dynamicEntitiesUnknownServer, serversComplete, serversIncomplete, serversEmpty, licenseSource ]
     scramble-columns: [ gatewayHost ]
     query: | #sql
@@ -3197,8 +3245,69 @@ reports:
 
   servers:
     name: Servers
-    group: Geneos Estate
-    enable-for-dataview: false
+    dataview:
+      group: Geneos Estate
+      enable: false
+    xlsx:
+      freeze-to-column: serverID
+      conditional-format:
+        - test:
+            columns: [ samplers, dynamicEntities ]
+            condition: "="
+            type: number
+            value: 0
+          set:
+            - format: warning
+        - test:
+            columns: samplers
+            condition: ">"
+            type: number
+            value: 0
+          set:
+            - format: ok
+        - test:
+            columns: dynamicEntities
+            condition: ">"
+            type: number
+            value: 0
+          set:
+            - format: ok
+        - test:
+            columns: l1missing
+            condition: "="
+            value: ""
+          set:
+            - format: ok
+        - test:
+            columns: l1missing
+            condition: "<>"
+            value: ""
+          set:
+            - format: warning
+        - test:
+            columns: l2missing
+            condition: "="
+            value: ""
+          set:
+            - format: ok
+        - test:
+            columns: l2missing
+            condition: "<>"
+            value: ""
+          set:
+            - format: warning
+        - test:
+            columns: l3missing
+            condition: "<>"
+            value: "missing"
+          set:
+            - format: ok
+        - test:
+            columns: l3missing
+            condition: "="
+            value: "missing"
+          set:
+            - format: warning
     columns: [ serverID, server, osVersion, probes, samplers, dynamicEntities, l1missing, l2missing, l3missing, licenceSources, gateways, plugins ]
     scramble-columns: [ serverID, server ]
     headlines: > #sql
@@ -3245,68 +3354,11 @@ reports:
        -- order by the number of sampler plus dynamic entities, so the least monitored appear first
        ORDER BY (SELECT total(number) FROM ${db.samplers.active} WHERE server = s.server) + (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = s.server)
       ;
-    conditional-format:
-      - test:
-          columns: [ samplers, dynamicEntities ]
-          condition: "="
-          type: number
-          value: 0
-        set:
-          - format: warning
-      - test:
-          columns: samplers
-          condition: ">"
-          type: number
-          value: 0
-        set:
-          - format: ok
-      - test:
-          columns: dynamicEntities
-          condition: ">"
-          type: number
-          value: 0
-        set:
-          - format: ok
-      - test:
-          columns: l1missing
-          condition: "="
-          value: ""
-        set:
-          - format: ok
-      - test:
-          columns: l1missing
-          condition: "<>"
-          value: ""
-        set:
-          - format: warning
-      - test:
-          columns: l2missing
-          condition: "="
-          value: ""
-        set:
-          - format: ok
-      - test:
-          columns: l2missing
-          condition: "<>"
-          value: ""
-        set:
-          - format: warning
-      - test:
-          columns: l3missing
-          condition: "<>"
-          value: "missing"
-        set:
-          - format: ok
-      - test:
-          columns: l3missing
-          condition: "="
-          value: "missing"
-        set:
-          - format: warning
 
   os-versions:
     name: Operating System Versions
-    group: Geneos Estate
+    dataview:
+      group: Geneos Estate
     columns: [ osVersion, count ]
     query: | #sql
       SELECT os, count(*)
@@ -3323,7 +3375,8 @@ reports:
 
   probe-versions:
     name: Probe Versions
-    group: Geneos Estate
+    dataview:
+      group: Geneos Estate
     columns: [ probeVersion, count ]
     query: | #sql
       SELECT version, count(*)
@@ -3340,7 +3393,8 @@ reports:
 
   gateway-versions:
     name: Gateway Versions
-    group: Geneos Estate
+    dataview:
+      group: Geneos Estate
     columns: [ gatewayVersion, count ]
     query: | #sql
       SELECT version, count(*)
@@ -3357,8 +3411,10 @@ reports:
 
   licence-allocations:
     name: Licence Allocations
-    group: Licensing
-    enable-for-xlsx: false
+    dataview:
+      group: Licensing
+    xlsx:
+      enable: false
     columns: [ group, category, grouping, token, allocation, user, origin, comment, timestamp ]
     query: | #sql
       SELECT DISTINCT 'group-gateway' 'group', 'gateway' category, '' grouping, '' token, '' allocation, '' user, '' origin, '' comment, '' timestamp
@@ -3381,8 +3437,10 @@ reports:
 
   filters:
     name: Filters
-    group: GDNA Information
-    enable-for-xlsx: false
+    dataview:
+      group: GDNA Information
+    xlsx:
+      enable: false
     columns: [ filter, type, category, grouping, pattern, user, origin, comment, timestamp ]
     query: | #sql
       SELECT DISTINCT 'exclude-gateway', 'exclude', 'gateway', '', '', '', '', '', ''
@@ -3637,7 +3695,10 @@ reports:
 
   servers-with-multiple-licence-sources:
     name: Servers Using Multiple Licenses
-    group: Licensing
+    dataview:
+      group: Licensing
+    xlsx:
+      freeze-to-column: serverID
     columns: [ serverID, server, licenceSources, gateways ]
     query: | #sql
       SELECT

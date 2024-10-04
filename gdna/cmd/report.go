@@ -165,7 +165,6 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 		maxreports = 1
 		r, _ = reporter.NewReporter("toolkit", w)
 	case "table", "html":
-		log.Info().Msg("here")
 		r, _ = reporter.NewReporter(format, w,
 			reporter.Scramble(scrambleNames),
 			reporter.DataviewCSSClass("gdna-dataview"),
@@ -225,19 +224,19 @@ func matchReport(name, pattern string) bool {
 	return false
 }
 
-func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.Reporter, reports string, maxreports int) (err error) {
+func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, reportNames string, maxreports int) (err error) {
 	var standardReports []string
 	var groupedReports []string
 
 	var i int
 	for name := range cf.GetStringMap("reports") {
 		var rep Report
-		if reports != "" {
+		if reportNames != "" {
 			// always add the summary-report to XLSX files
-			if _, ok := r2.(*reporter.XLSXReporter); ok && name == cf.GetString("xlsx.summary-report") {
+			if _, ok := r.(*reporter.XLSXReporter); ok && name == cf.GetString("xlsx.summary-report") {
 				// do nothing
 			} else {
-				if !matchReport(name, reports) {
+				if !matchReport(name, reportNames) {
 					continue
 				}
 			}
@@ -260,99 +259,99 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.
 			groupedReports = append(groupedReports, name)
 		case "summary":
 			// publish summary report(s) first, if enabled
-			if _, ok := r2.(*reporter.XLSXReporter); ok && rep.EnableForXLSX != nil && !*rep.EnableForXLSX {
+			if _, ok := r.(*reporter.XLSXReporter); ok && rep.XLSX.Enable != nil && !*rep.XLSX.Enable {
 				log.Debug().Msgf("report %s disabled for XLSX output", name)
 				continue
 			}
 
-			if _, ok := r2.(*reporter.APIReporter); ok && rep.EnableForDataview != nil && !*rep.EnableForDataview {
+			if _, ok := r.(*reporter.APIReporter); ok && rep.Dataview.Enable != nil && !*rep.Dataview.Enable {
 				log.Debug().Msgf("report %s disabled for dataview output", name)
 				continue
 			}
 
-			publishReport(ctx, cf, tx, r2, rep)
+			publishReport(ctx, cf, tx, r, rep)
 		default:
 			standardReports = append(standardReports, name)
 		}
 	}
 
 	// only sort reports if we have not had a specific list given
-	if reports == "" {
+	if reportNames == "" {
 		slices.Sort(standardReports)
 		slices.Sort(groupedReports)
 	}
 
-	for _, r := range standardReports {
+	for _, reports := range standardReports {
 		var rep Report
 
-		if err = cf.UnmarshalKey(config.Join("reports", r), &rep); err != nil {
-			log.Error().Err(err).Msgf("skipping report %s: configuration format incorrect", r)
+		if err = cf.UnmarshalKey(config.Join("reports", reports), &rep); err != nil {
+			log.Error().Err(err).Msgf("skipping report %s: configuration format incorrect", reports)
 			continue
 		}
 		// save report name metadata
-		rep.Name = r
+		rep.Name = reports
 
-		if reports != "" {
-			if matchReport(r, reports) {
+		if reportNames != "" {
+			if matchReport(reports, reportNames) {
 				// override reports that may be disabled for the selected format
 				t := true
-				rep.EnableForDataview = &t
-				rep.EnableForXLSX = &t
+				rep.Dataview.Enable = &t
+				rep.XLSX.Enable = &t
 			}
 		}
 
-		if _, ok := r2.(*reporter.XLSXReporter); ok && rep.EnableForXLSX != nil && !*rep.EnableForXLSX {
-			log.Debug().Msgf("report %s disabled for XLSX output", r)
+		if _, ok := r.(*reporter.XLSXReporter); ok && rep.XLSX.Enable != nil && !*rep.XLSX.Enable {
+			log.Debug().Msgf("report %s disabled for XLSX output", reports)
 			continue
 		}
 
-		if _, ok := r2.(*reporter.APIReporter); ok && rep.EnableForDataview != nil && !*rep.EnableForDataview {
-			log.Debug().Msgf("report %s disabled for dataview output", r)
+		if _, ok := r.(*reporter.APIReporter); ok && rep.Dataview.Enable != nil && !*rep.Dataview.Enable {
+			log.Debug().Msgf("report %s disabled for dataview output", reports)
 			continue
 		}
 
-		log.Debug().Msgf("running report %s", r)
+		log.Debug().Msgf("running report %s", reports)
 
 		start := time.Now()
 
 		switch rep.Type {
 		case "plugin-groups":
-			publishReportPluginGroups(ctx, cf, tx, r2, rep)
+			publishReportPluginGroups(ctx, cf, tx, r, rep)
 		case "indirect":
-			publishReportIndirect(ctx, cf, tx, r2, rep)
+			publishReportIndirect(ctx, cf, tx, r, rep)
 		default:
-			publishReport(ctx, cf, tx, r2, rep)
+			publishReport(ctx, cf, tx, r, rep)
 		}
-		log.Debug().Msgf("report %s completed in %.2f seconds", r, time.Since(start).Seconds())
+		log.Debug().Msgf("report %s completed in %.2f seconds", reports, time.Since(start).Seconds())
 	}
 
-	for _, r := range groupedReports {
+	for _, reports := range groupedReports {
 		var rep Report
-		rep.Name = r
+		rep.Name = reports
 
-		if err = cf.UnmarshalKey(config.Join("reports", r), &rep); err != nil {
-			log.Error().Err(err).Msgf("skipping report %s: configuration format incorrect", r)
+		if err = cf.UnmarshalKey(config.Join("reports", reports), &rep); err != nil {
+			log.Error().Err(err).Msgf("skipping report %s: configuration format incorrect", reports)
 			continue
 		}
 
-		if _, ok := r2.(*reporter.XLSXReporter); ok && rep.EnableForXLSX != nil && !*rep.EnableForXLSX {
-			log.Debug().Msgf("report %s disabled for XLSX output", r)
-			continue
-		}
+		// if _, ok := r.(*reporter.XLSXReporter); ok && rep.XLSX.Enable != nil && !*rep.XLSX.Enable {
+		// 	log.Debug().Msgf("report %s disabled for XLSX output", reports)
+		// 	continue
+		// }
 
-		if _, ok := r2.(*reporter.APIReporter); ok && rep.EnableForDataview != nil && !*rep.EnableForDataview {
-			log.Debug().Msgf("report %s disabled for dataview output", r)
-			continue
-		}
+		// if _, ok := r.(*reporter.APIReporter); ok && rep.Dataview.Enable != nil && !*rep.Dataview.Enable {
+		// 	log.Debug().Msgf("report %s disabled for dataview output", reports)
+		// 	continue
+		// }
 
-		log.Debug().Msgf("running split report %s", r)
+		log.Debug().Msgf("running split report %s", reports)
 
 		start := time.Now()
 
-		if err = publishReportSplit(ctx, cf, tx, r2, rep); err != nil {
+		if err = publishReportSplit(ctx, cf, tx, r, rep); err != nil {
 			return
 		}
-		log.Debug().Msgf("report %s completed in %.2f seconds", r, time.Since(start).Seconds())
+		log.Debug().Msgf("report %s completed in %.2f seconds", reports, time.Since(start).Seconds())
 	}
 
 	return nil
@@ -394,7 +393,7 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 		return
 	}
 	r.AddHeadline("reportName", report.Name)
-	lookup := config.LookupTable(reportLookupTable(report.Group, report.Title))
+	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title))
 
 	query := cf.ExpandString(report.Query, lookup, config.ExpandNonStringToCSV())
 	log.Trace().Msgf("query:\n%s", query)
@@ -428,7 +427,7 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 		return
 	}
 	r2.AddHeadline("reportName", report.Name)
-	lookup := config.LookupTable(reportLookupTable(report.Group, report.Title))
+	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title))
 
 	prequery := cf.ExpandString(report.Query, lookup, config.ExpandNonStringToCSV())
 	r := tx.QueryRowContext(ctx, prequery)
@@ -466,115 +465,6 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 	}
 }
 
-// create a report per gateway (or other column) and populate with given queries
-func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report) (err error) {
-	if report.SplitValues == "" {
-		log.Error().Msg("no split-values-query defined")
-		return
-	}
-
-	// get list of split values (typically gateways)
-	lookup := config.LookupTable(reportLookupTable(report.Group, report.Title))
-	splitquery := cf.ExpandString(report.SplitValues, lookup, config.ExpandNonStringToCSV())
-	log.Trace().Msgf("query:\n%s", splitquery)
-	rows, err := tx.QueryContext(ctx, splitquery)
-	if err != nil {
-		log.Error().Err(err).Msgf("query: %s", splitquery)
-		return
-	}
-	defer rows.Close()
-
-	split := []string{}
-	for rows.Next() {
-		var value string
-		if err = rows.Scan(&value); err != nil {
-			return
-		}
-		split = append(split, value)
-	}
-	if err = rows.Err(); err != nil {
-		return
-	}
-	rows.Close()
-	slices.Sort(split)
-
-	// get possible list of all previous views and remove any not in the
-	// new list
-	previouslist := cf.ExpandString(report.SplitValuesAll, lookup, config.ExpandNonStringToCSV())
-	if previouslist != "" {
-		log.Trace().Msgf("query:\n%s", previouslist)
-		rows, err = tx.QueryContext(ctx, previouslist)
-		if err != nil {
-			log.Error().Err(err).Msgf("query: %s", previouslist)
-			return
-		}
-
-		previous := []string{}
-		for rows.Next() {
-			var value string
-			if err = rows.Scan(&value); err != nil {
-				return
-			}
-			previous = append(previous, value)
-		}
-		if err = rows.Err(); err == nil {
-			// no error - process list
-
-			previous = slices.DeleteFunc(previous, func(v string) bool {
-				return slices.Contains(split, v)
-			})
-			for _, p := range previous {
-				group := report.Group
-				title := cf.ExpandString(report.Title, config.LookupTable(map[string]string{
-					"split-column": report.SplitColumn,
-					"value":        p,
-				}), lookup, config.ExpandNonStringToCSV())
-				log.Debug().Msgf("trying to remove potentially old dataview %s-%s", group, title)
-				r.Remove(reporter.Report{
-					Group: group,
-					Title: title,
-				})
-			}
-		}
-		rows.Close()
-	}
-
-	for _, v := range split {
-		split := map[string]string{
-			"split-column": report.SplitColumn,
-			"value":        v,
-		}
-		origname := report.Title
-		report.Title = cf.ExpandString(report.Title, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
-		if err = r.Prepare(report.Report); err != nil {
-			log.Debug().Err(err).Msg("")
-		}
-		r.AddHeadline("reportName", report.Name)
-		report.Title = origname
-
-		if query := cf.ExpandString(report.Headlines, config.LookupTable(split), lookup, config.ExpandNonStringToCSV()); query != "" {
-			names, headlines, err := queryHeadlines(ctx, tx, query)
-			if err != nil {
-				log.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
-				continue
-			}
-			for _, h := range names {
-				r.AddHeadline(h, headlines[h])
-			}
-		}
-
-		query := cf.ExpandString(report.Query, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
-		log.Trace().Msgf("query:\n%s ->\n%s", report.Query, query)
-		t, err := queryToTable(ctx, tx, report.Columns, query)
-		if err != nil {
-			return err
-		}
-
-		r.UpdateTable(t...)
-	}
-	return
-}
-
 func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report) {
 	var err error
 	table := [][]string{report.Columns}
@@ -583,7 +473,7 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 		return
 	}
 	r.AddHeadline("reportName", report.Name)
-	lookup := config.LookupTable(reportLookupTable(report.Group, report.Title))
+	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title))
 
 	groups := cf.GetStringMapString(report.Grouping)
 
