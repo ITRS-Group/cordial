@@ -334,9 +334,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 		if _, ok := categories[category]; !ok {
 			return fmt.Errorf("first argument must be a valid category, one of %v", maps.Keys(categories))
 		}
-		rows = append(rows, []string{
-			"name", "timeUpdated", "username", "comment", "origin",
-		})
+
 		var filters []Filter
 		if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 			&filters,
@@ -356,15 +354,12 @@ func listFilters(filterType string, category string, listFormat string) (err err
 				filter.Origin,
 			})
 		}
-
-		r.UpdateTable(rows...)
+		r.UpdateTable([]string{"name", "timeUpdated", "username", "comment", "origin"}, rows)
 		r.Flush()
 		return
 	}
 
-	rows := [][]string{
-		{"category:name", "category", "name", "timeUpdated", "username", "comment", "origin"},
-	}
+	var rows [][]string
 	for category := range cf.GetStringMap(config.Join("filters", filterType)) {
 		var filters []Filter
 		if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
@@ -388,7 +383,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 		}
 	}
 
-	r.UpdateTable(rows...)
+	r.UpdateTable([]string{"category:name", "category", "name", "timeUpdated", "username", "comment", "origin"}, rows)
 	r.Flush()
 	return
 }

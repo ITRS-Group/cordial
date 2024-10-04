@@ -381,9 +381,7 @@ var listGroupCmd = &cobra.Command{
 
 		r, _ := reporter.NewReporter("table", os.Stdout, reporter.RenderAs(listFormat))
 
-		rows := [][]string{
-			{"category:group", "category", "group", "patterns", "updated", "username", "comment", "source"},
-		}
+		var rows [][]string
 		for category := range cf.GetStringMap(config.Join("filters", "group")) {
 			var groups []Group
 			if err = ig.UnmarshalKey(config.Join("filters", "group", category),
@@ -411,7 +409,7 @@ var listGroupCmd = &cobra.Command{
 		slices.SortFunc(rows[1:], func(a, b []string) int {
 			return strings.Compare(a[0], b[0])
 		})
-		r.UpdateTable(rows...)
+		r.UpdateTable([]string{"category:group", "category", "group", "patterns", "updated", "username", "comment", "source"}, rows)
 		r.Flush()
 
 		return

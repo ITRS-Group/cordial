@@ -150,9 +150,7 @@ func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 	}
 	slices.Sort(reports)
 
-	rows := [][]string{
-		{"Report Name", "Title", "Type", "Dataview", "XLSX"},
-	}
+	var rows [][]string
 
 	for _, name := range reports {
 		var rep Report
@@ -169,11 +167,11 @@ func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 		}
 
 		enabledDataview := "Y"
-		if rep.EnableForDataview != nil && !*rep.EnableForDataview {
+		if rep.Dataview.Enable != nil && !*rep.Dataview.Enable {
 			enabledDataview = "N"
 		}
 		enabledXLSX := "Y"
-		if rep.EnableForXLSX != nil && !*rep.EnableForXLSX {
+		if rep.XLSX.Enable != nil && !*rep.XLSX.Enable {
 			enabledXLSX = "N"
 		}
 		rows = append(rows, []string{
@@ -185,7 +183,7 @@ func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 		})
 	}
 
-	r.UpdateTable(rows...)
+	r.UpdateTable([]string{"Report Name", "Title", "Type", "Dataview", "XLSX"}, rows)
 	r.Flush()
 
 	return

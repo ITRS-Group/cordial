@@ -403,7 +403,9 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 		log.Error().Msgf("failed to execute query: %s\n%s", err, query)
 		return
 	}
-	r.UpdateTable(table...)
+	if len(table) > 1 {
+		r.UpdateTable(table[0], table[1:])
+	}
 
 	if query := cf.ExpandString(report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
@@ -449,7 +451,9 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 	if len(table) == 1 {
 		return
 	}
-	r2.UpdateTable(table...)
+	if len(table) > 1 {
+		r2.UpdateTable(table[0], table[1:])
+	}
 	if query := cf.ExpandString(report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
 		if err != nil {
@@ -608,8 +612,9 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 		}
 		table = append(table, t...)
 	}
-
-	r.UpdateTable(table...)
+	if len(table) > 1 {
+		r.UpdateTable(table[0], table[1:])
+	}
 
 	if query := cf.ExpandString(report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
