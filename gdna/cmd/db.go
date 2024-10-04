@@ -173,7 +173,7 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 
 // queryToTable returns the result of running query, inside the
 // transaction tx, as a table of data as a two dimensional slice of
-// strings. The first row ise always the column names and should be
+// strings. The first row is always the column names and should be
 // discarded if using your own.
 func queryToTable(ctx context.Context, tx *sql.Tx, columns []string, query string) (table [][]string, err error) {
 	rows, err := tx.QueryContext(ctx, query)
