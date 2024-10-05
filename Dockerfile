@@ -181,7 +181,7 @@ COPY --from=build /app/cordial/libraries/libalert/libalert.so /cordial/lib/
 COPY --from=build /app/cordial/gdna/gdna /cordial/bin/
 COPY --from=build /app/cordial/gdna/gdna.exe /cordial/bin/
 COPY --from=build /app/cordial/gdna/cmd/gdna.defaults.yaml /cordial/etc/geneos/
-COPY --from=build /app/cordial/gdna/gdna.yaml /cordial/etc/geneos/gdna.yaml
+COPY --from=build /app/cordial/gdna/gdna.example.yaml /cordial/etc/geneos/gdna.example.yaml
 COPY --from=build /app/cordial/gdna/geneos/* /cordial/etc/geneos/gdna/
 
 # build tar
@@ -247,7 +247,7 @@ COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 
 COPY --from=build /app/cordial/gdna/gdna /bin/
 COPY --from=build /app/cordial/gdna/cmd/gdna.defaults.yaml /etc/geneos/
-COPY --from=build /app/cordial/gdna/gdna.yaml /etc/geneos/
+COPY --from=build /app/cordial/gdna/gdna.example.yaml /etc/geneos/
 COPY --from=build /app/cordial/gdna/geneos/* /etc/geneos/gdna/
 
 COPY --chmod=555 gdna/docker/start-up.sh /etc/geneos/gdna/start-up.sh
@@ -277,8 +277,8 @@ USER geneos
 # RUN --mount=source=downloads,target=/downloads \
 #
 RUN mkdir -p /home/geneos/.config/geneos
-RUN --mount=type=secret,id=credentials.json,mode=0444,required,target=/home/geneos/.config/geneos/credentials.json \
-    --mount=type=secret,id=keyfile.aes,mode=0444,required,target=/home/geneos/.config/geneos/keyfile.aes \
+RUN --mount=type=secret,id=credentials.json,mode=0444,uid=1000,required,target=/home/geneos/.config/geneos/credentials.json \
+    --mount=type=secret,id=keyfile.aes,mode=0444,uid=1000,required,target=/home/geneos/.config/geneos/keyfile.aes \
     set -eux; \
     mkdir gdna; \
     geneos deploy gateway "Demo Gateway" --geneos /home/geneos --nosave --port 8100 --tls options="-demo" --include 100:/etc/geneos/gdna/gdna.include.xml; \
