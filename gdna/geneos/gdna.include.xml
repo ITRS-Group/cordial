@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA6.8.1-240517 at 2024-09-16 14:19:03 by peter on HPEnvy34-->
-<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.0.0-240827/gateway.xsd">
+<!--Edited using Gateway Setup Editor version GA6.8.1-240517 at 2024-10-04 12:16:47 by peter on HPEnvy34-->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/RA7.1.0-240916/gateway.xsd">
 	<probes>
 		<probe name="gdna">
 			<hostname>localhost</hostname>
@@ -45,11 +45,6 @@
 				</api>
 			</plugin>
 			<dataviews>
-				<dataview name="Plugin Summary">
-					<expectRowsVar>
-						<var ref="plugins"/>
-					</expectRowsVar>
-				</dataview>
 				<dataview name="API Summary">
 					<var-group>
 						<data>GDNA Information</data>
@@ -98,7 +93,7 @@
 		</sampler>
 		<sampler name="Version Summary">
 			<var-group>
-				<data/>
+				<data>Dashboard Views</data>
 			</var-group>
 			<plugin>
 				<Gateway-sql>
@@ -273,6 +268,1716 @@ ORDER BY probeVersion ASC
 			</dataviews>
 		</sampler>
 	</samplers>
+	<commands>
+		<commandGroup name="GDNA">
+			<commandGroup name="Filters">
+				<menu>
+					<label>GDNA</label>
+				</menu>
+				<command name="Delete Filter">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]/rows/row[wild(@name,&quot;exclude-*#*&quot;)]/cell</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]/rows/row[wild(@name,&quot;include-*#*&quot;)]/cell</target>
+					</targets>
+					<task>
+						<commands>
+							<commandRef>
+								<command ref="remove filter from filters dataview"/>
+								<stopOnError>true</stopOnError>
+							</commandRef>
+							<commandRef>
+								<command ref="refresh report by dataview name"/>
+								<stopOnError>true</stopOnError>
+							</commandRef>
+						</commands>
+						<silent>true</silent>
+					</task>
+				</command>
+				<commandGroup name="Excludes">
+					<command name="Exclude Gateway - Dataview Gateways">
+						<label>Exclude Gateway</label>
+						<description>Add Gateway to Exclude List</description>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Gateways&quot;)]/rows/row/cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="exclude gateway by rowname"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+					<command name="Exclude Plugin - Dataview Plugin">
+						<label>Exclude Plugin</label>
+						<description>Add Plugin to Exclude List</description>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Plugins&quot;)]/rows/row/cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="exclude plugin by rowname"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+					<command name="Add Exclude Filter">
+						<label>Add Exclude</label>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]/rows/row/cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="add filter"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<args>
+								<arg>
+									<targetArgs>
+										<targetArg>
+											<commandNumber>1</commandNumber>
+											<argNumber>3</argNumber>
+										</targetArg>
+									</targetArgs>
+									<static>exclude</static>
+								</arg>
+							</args>
+							<silent>true</silent>
+						</task>
+					</command>
+				</commandGroup>
+				<commandGroup name="Groups">
+					<command name="Add Gateway To Group - By Group Rowname">
+						<label>Add Gateway To Group</label>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateway Groups&quot;)]/rows/row[not(@name=&quot;OTHER&quot;)]/cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="add gateway to group by group-rowname"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+					<command name="Add Gateway To Group - By Gateway Rowname">
+						<label>Add Gateway To Group</label>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateways&quot;)]/rows/row/cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="add gateway to group by gateway-rowname"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+					<command name="Add Server To Group - By Group Rowname">
+						<label>Add Server To Group</label>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Server Groups&quot;)]/rows/row[not(@name=&quot;OTHER&quot;)]/cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="add serverto group by group-rowname"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+					<command name="Add Server To Group - By Gateway Rowname">
+						<label>Add Server To Group</label>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Servers&quot;)]/rows/row/cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="add server to group by server-rowname"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+					<command name="New Gateway Group">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateway Groups&quot;)]/rows/row/cell</target>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateway Groups&quot;)]/headlines/cell</target>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateway Groups&quot;)]</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="add gateway group"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+					<command name="Remove Group Member">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]/rows/row/cell[not(@value=&quot;default&quot;)][(@column=&quot;origin&quot;)]/../cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="remove group member from filters dataview"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+					<command name="Remove Group">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]/rows/row[wild(@name,&quot;group-*#*&quot;)]/cell[not(@value=&quot;default&quot;)][(@column=&quot;origin&quot;)]/../cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="remove complete group from filters dataview"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+					<command name="Add Group - Dataview Filters">
+						<label>Add Group</label>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]/headlines/cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="add group in filters dataview"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+					<command name="Add Group - Dataview Filters group Rows">
+						<label>Add To Group</label>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]/rows/row[wild(@name,&quot;group-*#*&quot;)]/cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="add group on group row in filters dataview"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+				</commandGroup>
+				<commandGroup name="Includes">
+					<command name="Add Include Filter">
+						<label>Add Include</label>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]/rows/row/cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="add filter"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<args>
+								<arg>
+									<targetArgs>
+										<targetArg>
+											<commandNumber>1</commandNumber>
+											<argNumber>3</argNumber>
+										</targetArg>
+									</targetArgs>
+									<static>include</static>
+								</arg>
+							</args>
+							<silent>true</silent>
+						</task>
+					</command>
+				</commandGroup>
+			</commandGroup>
+			<commandGroup name="EMail">
+				<menu>
+					<label>GDNA</label>
+				</menu>
+				<command name="EMail Report">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview/rows/row/cell</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview/headlines/cell</target>
+					</targets>
+					<task>
+						<commands>
+							<commandRef>
+								<command ref="email report"/>
+								<stopOnError>true</stopOnError>
+							</commandRef>
+						</commands>
+						<silent>true</silent>
+					</task>
+				</command>
+				<command name="EMail Reports">
+					<description>EMail GDNA Reports. (Leave fields blank for defaults)</description>
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]</target>
+					</targets>
+					<task>
+						<commands>
+							<commandRef>
+								<command ref="email all"/>
+								<stopOnError>true</stopOnError>
+							</commandRef>
+						</commands>
+						<silent>true</silent>
+					</task>
+				</command>
+			</commandGroup>
+			<commandGroup name="Misc">
+				<menu>
+					<label>GDNA</label>
+				</menu>
+				<command name="Run Reports Now">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]//*</target>
+					</targets>
+					<task>
+						<commands>
+							<commandRef>
+								<command ref="refresh all reports"/>
+								<stopOnError>true</stopOnError>
+							</commandRef>
+						</commands>
+						<silent>true</silent>
+					</task>
+				</command>
+				<command name="Run Report">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview//*</target>
+					</targets>
+					<task>
+						<commands>
+							<commandRef>
+								<command ref="refresh report by dataview name"/>
+								<stopOnError>true</stopOnError>
+							</commandRef>
+						</commands>
+						<silent>true</silent>
+					</task>
+				</command>
+				<command name="Run GDNA Collection Cycle Now">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]//*</target>
+					</targets>
+					<task>
+						<commands>
+							<commandRef>
+								<command ref="fetch and report"/>
+								<stopOnError>true</stopOnError>
+							</commandRef>
+						</commands>
+						<silent>true</silent>
+					</task>
+				</command>
+			</commandGroup>
+		</commandGroup>
+		<commandGroup name="GDNA backend">
+			<command name="email all">
+				<userCommand>
+					<type>script</type>
+					<runLocation>gateway</runLocation>
+					<args>
+						<arg>
+							<text>
+								<var ref="GDNA_PATH"/>
+							</text>
+						</arg>
+						<arg>
+							<static>email</static>
+						</arg>
+						<arg>
+							<static>--subject</static>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Subject:</description>
+								<singleLineString/>
+							</userInput>
+						</arg>
+						<arg>
+							<static>--to</static>
+						</arg>
+						<arg>
+							<userInput>
+								<description>To:</description>
+								<singleLineString/>
+							</userInput>
+						</arg>
+						<arg>
+							<static>--cc</static>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Cc:</description>
+								<singleLineString/>
+							</userInput>
+						</arg>
+						<arg>
+							<static>--bcc</static>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Bcc:</description>
+								<singleLineString/>
+							</userInput>
+						</arg>
+					</args>
+				</userCommand>
+			</command>
+			<command name="email report">
+				<userCommand>
+					<type>script</type>
+					<runLocation>gateway</runLocation>
+					<args>
+						<arg>
+							<text>
+								<var ref="GDNA_PATH"/>
+							</text>
+						</arg>
+						<arg>
+							<static>email</static>
+						</arg>
+						<arg>
+							<static>-r</static>
+						</arg>
+						<arg>
+							<xpath>ancestor-or-self::dataview/headlines/cell[(@name=&quot;reportName&quot;)]</xpath>
+						</arg>
+						<arg>
+							<static>--subject</static>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Subject. Leave Blank For Default</description>
+								<singleLineString/>
+							</userInput>
+						</arg>
+						<arg>
+							<static>--contents</static>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Report Format</description>
+								<options>
+									<option>
+										<label>XLSX</label>
+										<value>xlsx</value>
+									</option>
+									<option>
+										<label>HTML</label>
+										<value>html</value>
+									</option>
+									<option>
+										<label>HTML+XLSX</label>
+										<value>html,xlsx</value>
+									</option>
+								</options>
+								<requiredArgument>true</requiredArgument>
+							</userInput>
+						</arg>
+					</args>
+				</userCommand>
+			</command>
+			<command name="remove complete group from filters dataview">
+				<userCommand>
+					<type>script</type>
+					<runLocation>gateway</runLocation>
+					<args>
+						<arg>
+							<text>
+								<var ref="GDNA_PATH"/>
+							</text>
+						</arg>
+						<arg>
+							<static>remove</static>
+						</arg>
+						<arg>
+							<xpath>../cell[(@column=&quot;type&quot;)]</xpath>
+						</arg>
+						<arg>
+							<xpath>../cell[(@column=&quot;category&quot;)]</xpath>
+						</arg>
+						<arg>
+							<xpath>../cell[(@column=&quot;grouping&quot;)]</xpath>
+						</arg>
+					</args>
+				</userCommand>
+			</command>
+			<command name="remove filter from filters dataview">
+				<userCommand>
+					<type>script</type>
+					<runLocation>gateway</runLocation>
+					<args>
+						<arg>
+							<text>
+								<var ref="GDNA_PATH"/>
+							</text>
+						</arg>
+						<arg>
+							<static>remove</static>
+						</arg>
+						<arg>
+							<xpath>../cell[(@column=&quot;type&quot;)]</xpath>
+						</arg>
+						<arg>
+							<xpath>../cell[(@column=&quot;category&quot;)]</xpath>
+						</arg>
+						<arg>
+							<xpath>../cell[(@column=&quot;pattern&quot;)]</xpath>
+						</arg>
+					</args>
+				</userCommand>
+			</command>
+			<command name="remove group member from filters dataview">
+				<userCommand>
+					<type>script</type>
+					<runLocation>gateway</runLocation>
+					<args>
+						<arg>
+							<text>
+								<var ref="GDNA_PATH"/>
+							</text>
+						</arg>
+						<arg>
+							<static>remove</static>
+						</arg>
+						<arg>
+							<xpath>../cell[(@column=&quot;type&quot;)]</xpath>
+						</arg>
+						<arg>
+							<xpath>../cell[(@column=&quot;category&quot;)]</xpath>
+						</arg>
+						<arg>
+							<xpath>../cell[(@column=&quot;grouping&quot;)]</xpath>
+						</arg>
+						<arg>
+							<xpath>../cell[(@column=&quot;pattern&quot;)]</xpath>
+						</arg>
+					</args>
+				</userCommand>
+			</command>
+			<command name="add filter">
+				<userCommand>
+					<type>script</type>
+					<runLocation>gateway</runLocation>
+					<args>
+						<arg>
+							<text>
+								<var ref="GDNA_PATH"/>
+							</text>
+						</arg>
+						<arg>
+							<static>add</static>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Include/Exclude</description>
+								<options>
+									<option>
+										<label>Exclude</label>
+										<value>exclude</value>
+									</option>
+									<option>
+										<label>Include</label>
+										<value>include</value>
+									</option>
+								</options>
+								<requiredArgument>true</requiredArgument>
+							</userInput>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Category</description>
+								<options>
+									<option>
+										<label>Gateway</label>
+										<value>gateway</value>
+									</option>
+									<option>
+										<label>Server</label>
+										<value>server</value>
+									</option>
+									<option>
+										<label>Plugin</label>
+										<value>plugin</value>
+									</option>
+									<option>
+										<label>Host ID</label>
+										<value>hostid</value>
+									</option>
+									<option>
+										<label>Licence Soutce</label>
+										<value>source</value>
+									</option>
+								</options>
+								<requiredArgument>true</requiredArgument>
+							</userInput>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Names or Patterns, newline or space separated</description>
+								<multiLineString/>
+								<requiredArgument>true</requiredArgument>
+							</userInput>
+						</arg>
+						<arg>
+							<static>--origin</static>
+						</arg>
+						<arg>
+							<static>Dataview:</static>
+						</arg>
+						<arg>
+							<concatenate>true</concatenate>
+							<xpath>ancestor::dataview</xpath>
+						</arg>
+						<arg>
+							<static>--user</static>
+						</arg>
+						<arg>
+							<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+						</arg>
+						<arg>
+							<concatenate>true</concatenate>
+							<static>\</static>
+						</arg>
+						<arg>
+							<concatenate>true</concatenate>
+							<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+						</arg>
+						<arg>
+							<static>--comment</static>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Comment</description>
+								<multiLineString/>
+							</userInput>
+						</arg>
+					</args>
+				</userCommand>
+			</command>
+			<commandGroup name="excludes">
+				<command name="add exclude" disabled="true">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>add</static>
+							</arg>
+							<arg>
+								<static>exclude</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Category</description>
+									<options>
+										<option>
+											<label>Gateway</label>
+											<value>gateway</value>
+										</option>
+										<option>
+											<label>Server</label>
+											<value>server</value>
+										</option>
+										<option>
+											<label>Plugin</label>
+											<value>plugin</value>
+										</option>
+										<option>
+											<label>Host ID</label>
+											<value>hostid</value>
+										</option>
+										<option>
+											<label>Licence Soutce</label>
+											<value>source</value>
+										</option>
+									</options>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Names or Patterns, newline or space separated</description>
+									<multiLineString/>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<static>--origin</static>
+							</arg>
+							<arg>
+								<static>Dataview:</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>ancestor::dataview</xpath>
+							</arg>
+							<arg>
+								<static>--user</static>
+							</arg>
+							<arg>
+								<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<static>\</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+							</arg>
+							<arg>
+								<static>--comment</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Comment</description>
+									<multiLineString/>
+								</userInput>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<commandGroup name="by rowname">
+					<command name="exclude plugin by rowname">
+						<userCommand>
+							<type>script</type>
+							<runLocation>gateway</runLocation>
+							<args>
+								<arg>
+									<text>
+										<var ref="GDNA_PATH"/>
+									</text>
+								</arg>
+								<arg>
+									<static>add</static>
+								</arg>
+								<arg>
+									<static>exclude</static>
+								</arg>
+								<arg>
+									<static>plugin</static>
+								</arg>
+								<arg>
+									<xpath>@rowname</xpath>
+								</arg>
+								<arg>
+									<static>--origin</static>
+								</arg>
+								<arg>
+									<static>Dataview:</static>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<xpath>ancestor::dataview</xpath>
+								</arg>
+								<arg>
+									<static>--user</static>
+								</arg>
+								<arg>
+									<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<static>\</static>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+								</arg>
+								<arg>
+									<static>--comment</static>
+								</arg>
+								<arg>
+									<userInput>
+										<description>Comment</description>
+										<multiLineString/>
+									</userInput>
+								</arg>
+							</args>
+						</userCommand>
+					</command>
+					<command name="exclude gateway by rowname">
+						<userCommand>
+							<type>script</type>
+							<runLocation>gateway</runLocation>
+							<args>
+								<arg>
+									<text>
+										<var ref="GDNA_PATH"/>
+									</text>
+								</arg>
+								<arg>
+									<static>add</static>
+								</arg>
+								<arg>
+									<static>exclude</static>
+								</arg>
+								<arg>
+									<static>gateway</static>
+								</arg>
+								<arg>
+									<xpath>@rowname</xpath>
+								</arg>
+								<arg>
+									<static>--origin</static>
+								</arg>
+								<arg>
+									<static>Dataview:</static>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<xpath>ancestor::dataview</xpath>
+								</arg>
+								<arg>
+									<static>--user</static>
+								</arg>
+								<arg>
+									<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<static>\</static>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+								</arg>
+								<arg>
+									<static>--comment</static>
+								</arg>
+								<arg>
+									<userInput>
+										<description>Comment</description>
+										<multiLineString/>
+									</userInput>
+								</arg>
+							</args>
+						</userCommand>
+					</command>
+					<command name="exclude server by rowname">
+						<userCommand>
+							<type>script</type>
+							<runLocation>gateway</runLocation>
+							<args>
+								<arg>
+									<text>
+										<var ref="GDNA_PATH"/>
+									</text>
+								</arg>
+								<arg>
+									<static>add</static>
+								</arg>
+								<arg>
+									<static>exclude</static>
+								</arg>
+								<arg>
+									<static>server</static>
+								</arg>
+								<arg>
+									<xpath>@rowname</xpath>
+								</arg>
+								<arg>
+									<static>--origin</static>
+								</arg>
+								<arg>
+									<static>Dataview:</static>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<xpath>ancestor::dataview</xpath>
+								</arg>
+								<arg>
+									<static>--user</static>
+								</arg>
+								<arg>
+									<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<static>\</static>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+								</arg>
+								<arg>
+									<static>--comment</static>
+								</arg>
+								<arg>
+									<userInput>
+										<description>Comment</description>
+										<multiLineString/>
+									</userInput>
+								</arg>
+							</args>
+						</userCommand>
+					</command>
+					<command name="exclude source by rowname">
+						<userCommand>
+							<type>script</type>
+							<runLocation>gateway</runLocation>
+							<args>
+								<arg>
+									<text>
+										<var ref="GDNA_PATH"/>
+									</text>
+								</arg>
+								<arg>
+									<static>add</static>
+								</arg>
+								<arg>
+									<static>exclude</static>
+								</arg>
+								<arg>
+									<static>source</static>
+								</arg>
+								<arg>
+									<xpath>@rowname</xpath>
+								</arg>
+								<arg>
+									<static>--origin</static>
+								</arg>
+								<arg>
+									<static>Dataview:</static>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<xpath>ancestor::dataview</xpath>
+								</arg>
+								<arg>
+									<static>--user</static>
+								</arg>
+								<arg>
+									<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<static>\</static>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+								</arg>
+								<arg>
+									<static>--comment</static>
+								</arg>
+								<arg>
+									<userInput>
+										<description>Comment</description>
+										<multiLineString/>
+									</userInput>
+								</arg>
+							</args>
+						</userCommand>
+					</command>
+				</commandGroup>
+				<commandGroup name="by cell value"/>
+			</commandGroup>
+			<commandGroup name="groups">
+				<command name="add gateway group">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>add</static>
+							</arg>
+							<arg>
+								<static>group</static>
+							</arg>
+							<arg>
+								<static>gateway</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Group Name</description>
+									<singleLineString>group</singleLineString>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Gateway Names or Patterns, Newline or space separated</description>
+									<multiLineString/>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<static>--origin</static>
+							</arg>
+							<arg>
+								<static>Dataview:</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>ancestor::dataview</xpath>
+							</arg>
+							<arg>
+								<static>--user</static>
+							</arg>
+							<arg>
+								<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<static>\</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+							</arg>
+							<arg>
+								<static>--comment</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Comment</description>
+									<multiLineString/>
+								</userInput>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<command name="add gateway to group by group-rowname">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>add</static>
+							</arg>
+							<arg>
+								<static>group</static>
+							</arg>
+							<arg>
+								<static>gateway</static>
+							</arg>
+							<arg>
+								<xpath>@rowname</xpath>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Gateway Names or Patterns. Newline or space separated</description>
+									<multiLineString/>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<static>--origin</static>
+							</arg>
+							<arg>
+								<static>Dataview:</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>ancestor::dataview</xpath>
+							</arg>
+							<arg>
+								<static>--user</static>
+							</arg>
+							<arg>
+								<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<static>\</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+							</arg>
+							<arg>
+								<static>--comment</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Comment</description>
+									<multiLineString/>
+								</userInput>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<command name="add gateway to group by gateway-rowname">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>add</static>
+							</arg>
+							<arg>
+								<static>group</static>
+							</arg>
+							<arg>
+								<static>gateway</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Group Name</description>
+									<singleLineString>group</singleLineString>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<xpath>@rowname</xpath>
+							</arg>
+							<arg>
+								<static>--origin</static>
+							</arg>
+							<arg>
+								<static>Dataview:</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>ancestor::dataview</xpath>
+							</arg>
+							<arg>
+								<static>--user</static>
+							</arg>
+							<arg>
+								<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<static>\</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+							</arg>
+							<arg>
+								<static>--comment</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Comment</description>
+									<multiLineString/>
+								</userInput>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<command name="add group in filters dataview">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>add</static>
+							</arg>
+							<arg>
+								<static>group</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Category</description>
+									<options>
+										<option>
+											<label>Gateway</label>
+											<value>gateway</value>
+										</option>
+										<option>
+											<label>Server</label>
+											<value>server</value>
+										</option>
+										<option>
+											<label>Plugin</label>
+											<value>plugin</value>
+										</option>
+										<option>
+											<label>Host ID</label>
+											<value>hostid</value>
+										</option>
+										<option>
+											<label>Licence Soutce</label>
+											<value>source</value>
+										</option>
+									</options>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Group Name</description>
+									<singleLineString>group</singleLineString>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Names or Patterns, newline or space separated</description>
+									<multiLineString/>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<static>--origin</static>
+							</arg>
+							<arg>
+								<static>Dataview:</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>ancestor-or-self::dataview</xpath>
+							</arg>
+							<arg>
+								<static>--user</static>
+							</arg>
+							<arg>
+								<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<static>\</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+							</arg>
+							<arg>
+								<static>--comment</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Comment</description>
+									<multiLineString/>
+								</userInput>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<command name="add group on group row in filters dataview">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>add</static>
+							</arg>
+							<arg>
+								<xpath>../cell[(@column=&quot;type&quot;)]</xpath>
+							</arg>
+							<arg>
+								<xpath>../cell[(@column=&quot;category&quot;)]</xpath>
+							</arg>
+							<arg>
+								<xpath>../cell[(@column=&quot;grouping&quot;)]</xpath>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Item Names or Patterns. Newline or Space separated.</description>
+									<multiLineString/>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<static>--origin</static>
+							</arg>
+							<arg>
+								<static>Dataview:</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>ancestor-or-self::dataview</xpath>
+							</arg>
+							<arg>
+								<static>--user</static>
+							</arg>
+							<arg>
+								<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<static>\</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+							</arg>
+							<arg>
+								<static>--comment</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Comment</description>
+									<multiLineString/>
+								</userInput>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<command name="add server group">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>add</static>
+							</arg>
+							<arg>
+								<static>group</static>
+							</arg>
+							<arg>
+								<static>server</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Group Name</description>
+									<singleLineString>group</singleLineString>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Server Names or Patterns, newline or space separated.</description>
+									<multiLineString/>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<static>--origin</static>
+							</arg>
+							<arg>
+								<static>Dataview:</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>ancestor::dataview</xpath>
+							</arg>
+							<arg>
+								<static>--user</static>
+							</arg>
+							<arg>
+								<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<static>\</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+							</arg>
+							<arg>
+								<static>--comment</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Comment</description>
+									<multiLineString/>
+								</userInput>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<command name="add serverto group by group-rowname">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>add</static>
+							</arg>
+							<arg>
+								<static>group</static>
+							</arg>
+							<arg>
+								<static>server</static>
+							</arg>
+							<arg>
+								<xpath>@rowname</xpath>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Server Names or Patterns, newline or space separated</description>
+									<multiLineString/>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<static>--origin</static>
+							</arg>
+							<arg>
+								<static>Dataview:</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>ancestor::dataview</xpath>
+							</arg>
+							<arg>
+								<static>--user</static>
+							</arg>
+							<arg>
+								<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<static>\</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+							</arg>
+							<arg>
+								<static>--comment</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Comment</description>
+									<multiLineString/>
+								</userInput>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<command name="add server to group by server-rowname">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>add</static>
+							</arg>
+							<arg>
+								<static>group</static>
+							</arg>
+							<arg>
+								<static>server</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Group Name</description>
+									<singleLineString>group</singleLineString>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<xpath>@rowname</xpath>
+							</arg>
+							<arg>
+								<static>--origin</static>
+							</arg>
+							<arg>
+								<static>Dataview:</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>ancestor::dataview</xpath>
+							</arg>
+							<arg>
+								<static>--user</static>
+							</arg>
+							<arg>
+								<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<static>\</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+							</arg>
+							<arg>
+								<static>--comment</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Comment</description>
+									<multiLineString/>
+								</userInput>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+			</commandGroup>
+			<commandGroup name="includes">
+				<command name="add include" disabled="true">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>add</static>
+							</arg>
+							<arg>
+								<static>include</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Category</description>
+									<options>
+										<option>
+											<label>Gateway</label>
+											<value>gateway</value>
+										</option>
+										<option>
+											<label>Server</label>
+											<value>server</value>
+										</option>
+										<option>
+											<label>Plugin</label>
+											<value>plugin</value>
+										</option>
+										<option>
+											<label>Host ID</label>
+											<value>hostid</value>
+										</option>
+										<option>
+											<label>Licence Soutce</label>
+											<value>source</value>
+										</option>
+									</options>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Names or Patterns, newline or space separated</description>
+									<multiLineString/>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<static>--origin</static>
+							</arg>
+							<arg>
+								<static>Dataview:</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>ancestor::dataview</xpath>
+							</arg>
+							<arg>
+								<static>--user</static>
+							</arg>
+							<arg>
+								<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<static>\</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+							</arg>
+							<arg>
+								<static>--comment</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Comment</description>
+									<multiLineString/>
+								</userInput>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+			</commandGroup>
+			<commandGroup name="run gdna">
+				<command name="refresh report by dataview name">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>report</static>
+							</arg>
+							<arg>
+								<static>-r</static>
+							</arg>
+							<arg>
+								<xpath>ancestor-or-self::dataview/headlines/cell[(@name=&quot;reportName&quot;)]</xpath>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<command name="refresh all reports">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>report</static>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<command name="fetch and report">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>start</static>
+							</arg>
+							<arg>
+								<static>-1</static>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+			</commandGroup>
+		</commandGroup>
+	</commands>
 	<rules>
 		<ruleGroup name="GDNA">
 			<rule name="Plugin Groups">
@@ -309,11 +2014,11 @@ ORDER BY probeVersion ASC
 					</if>
 				</block>
 			</rule>
-			<rule name="Plugin Summary - instances">
+			<rule disabled="true" name="Plugin Summary - instances">
 				<targets>
-					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)]/dataview[(@name=&quot;Plugin Summary&quot;)]/rows/row/cell[(@column=&quot;instances&quot;)]</target>
-					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)]/dataview[(@name=&quot;Plugin Summary&quot;)]/rows/row/cell[(@column=&quot;previousServers&quot;)]</target>
-					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)]/dataview[(@name=&quot;Plugin Summary&quot;)]/rows/row/cell[(@column=&quot;previousInstances&quot;)]</target>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)]/dataview[(@name=&quot;Plugins&quot;)]/rows/row/cell[(@column=&quot;instances&quot;)]</target>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)]/dataview[(@name=&quot;Plugins&quot;)]/rows/row/cell[(@column=&quot;previousServers&quot;)]</target>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)]/dataview[(@name=&quot;Plugins&quot;)]/rows/row/cell[(@column=&quot;previousInstances&quot;)]</target>
 				</targets>
 				<priority>1</priority>
 				<pathAliases>
@@ -339,7 +2044,7 @@ ORDER BY probeVersion ASC
 			</rule>
 			<rule name="Plugin Summary - servers">
 				<targets>
-					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)]/dataview[(@name=&quot;Plugin Summary&quot;)]/rows/row/cell[(@column=&quot;servers&quot;)]</target>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;GDNA&quot;)]/dataview[(@name=&quot;Plugins&quot;)]/rows/row/cell[(@column=&quot;servers&quot;)]</target>
 				</targets>
 				<priority>1</priority>
 				<pathAliases>
@@ -939,7 +2644,7 @@ ORDER BY probeVersion ASC
 				</rule>
 			</ruleGroup>
 			<ruleGroup name="Version Control">
-				<rule name="New Rule">
+				<rule name="Visible">
 					<targets>
 						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Version Summary&quot;)][(@type=&quot;GDNA&quot;)]/dataview/rows/row/cell[(@column=&quot;visible&quot;)]</target>
 					</targets>
@@ -1180,122 +2885,6 @@ ORDER BY probeVersion ASC
 	<environments>
 		<environmentGroup name="GDNA">
 			<environment name="GDNA Defaults">
-				<var name="plugins">
-					<stringList>
-						<string>alerting</string>
-						<string>api</string>
-						<string>api-streams</string>
-						<string>aws-plugin</string>
-						<string>azure-plugin</string>
-						<string>bloomberg-bpipe</string>
-						<string>clearvision-status</string>
-						<string>compute-engine</string>
-						<string>control-m</string>
-						<string>cpu</string>
-						<string>desktop-pc-monitoring</string>
-						<string>deviceio</string>
-						<string>disk</string>
-						<string>dynamic-entities-health</string>
-						<string>e4jms-bridges</string>
-						<string>e4jms-connections</string>
-						<string>e4jms-durables</string>
-						<string>e4jms-non-durables</string>
-						<string>e4jms-queues</string>
-						<string>e4jms-routes</string>
-						<string>e4jms-server</string>
-						<string>e4jms-topics</string>
-						<string>e4jms-usersummary</string>
-						<string>extractor</string>
-						<string>fidessa</string>
-						<string>fidessa-dq</string>
-						<string>fix-analyser2</string>
-						<string>fkm</string>
-						<string>flm</string>
-						<string>floating-probes</string>
-						<string>fluentdforward-plugin</string>
-						<string>ftm</string>
-						<string>gcp-plugin</string>
-						<string>gl-router</string>
-						<string>hardware</string>
-						<string>ibmi-file-member</string>
-						<string>ibmi-jdbc</string>
-						<string>ibmi-job</string>
-						<string>ibmi-logreader</string>
-						<string>ibmi-member-record</string>
-						<string>ibmi-message</string>
-						<string>ibmi-pool</string>
-						<string>ibmi-queue</string>
-						<string>ibmi-subsystem</string>
-						<string>ibmi-system</string>
-						<string>ipc</string>
-						<string>ix-ma</string>
-						<string>jdbc-plugin</string>
-						<string>jmx-server</string>
-						<string>jmx-threadinfo</string>
-						<string>kafka-plugin</string>
-						<string>kubernetes-plugin</string>
-						<string>market-data-monitor</string>
-						<string>message-tracker</string>
-						<string>mibmon</string>
-						<string>mongodb-plugin</string>
-						<string>mq-channel</string>
-						<string>mq-qinfo</string>
-						<string>mq-queue</string>
-						<string>net-ping</string>
-						<string>network</string>
-						<string>nyxt-papastats</string>
-						<string>op5monitor</string>
-						<string>opentelemetry-plugin</string>
-						<string>oracle</string>
-						<string>orc</string>
-						<string>perfmon</string>
-						<string>postgres-plugin</string>
-						<string>processes</string>
-						<string>prometheus-plugin</string>
-						<string>prometheus-target-plugin</string>
-						<string>publisher</string>
-						<string>reporting</string>
-						<string>rest-api</string>
-						<string>rest-extractor</string>
-						<string>rmc-interface</string>
-						<string>self-announcing-probes</string>
-						<string>sql-toolkit</string>
-						<string>statetracker</string>
-						<string>statsd-plugin</string>
-						<string>sybase</string>
-						<string>sybase-server</string>
-						<string>system-plugin</string>
-						<string>tcp-links</string>
-						<string>tib-rv</string>
-						<string>tib-rvpublisher</string>
-						<string>tib-rvstream</string>
-						<string>toolkit</string>
-						<string>top</string>
-						<string>trading-technologies</string>
-						<string>trapmon</string>
-						<string>unix-users</string>
-						<string>uptrends</string>
-						<string>veritas-cluster-server</string>
-						<string>web-mon</string>
-						<string>winapps</string>
-						<string>win-cluster</string>
-						<string>win-services</string>
-						<string>wmi</string>
-						<string>wts-licenses</string>
-						<string>wts-processes</string>
-						<string>wts-sessions</string>
-						<string>wts-summary</string>
-						<string>x-broadcast</string>
-						<string>x-mcast</string>
-						<string>x-multicast</string>
-						<string>x-ping</string>
-						<string>x-route</string>
-						<string>x-services</string>
-						<string>x-top</string>
-						<string>x-traffic</string>
-						<string>zookeeper-plugin</string>
-					</stringList>
-				</var>
 				<var name="noCoverageSeverity">
 					<integer>3</integer>
 				</var>
@@ -1312,11 +2901,16 @@ ORDER BY probeVersion ASC
 					<integer>2</integer>
 				</var>
 			</environment>
-			<environment name="GDNA"/>
+			<environment name="GDNA">
+				
+			</environment>
 		</environmentGroup>
 	</environments>
 	<operatingEnvironment>
 		<numRuleEvaluationThreads>4</numRuleEvaluationThreads>
+		<var name="GDNA_PATH">
+			<string>gdna</string>
+		</var>
 		<insecurePasswordLevel>none</insecurePasswordLevel>
 	</operatingEnvironment>
 </gateway>
