@@ -258,7 +258,11 @@ var deployCmd = &cobra.Command{
 				geneos.OverrideVersion(deployCmdOverride),
 				geneos.Password(deployCmdPassword),
 				geneos.Username(deployCmdUsername),
-				geneos.LocalArchive(deployCmdArchive),
+			}
+			if cmd.Flags().Changed("archive") {
+				options = append(options,
+					geneos.LocalArchive(deployCmdArchive),
+				)
 			}
 
 			if deployCmdSnapshot {

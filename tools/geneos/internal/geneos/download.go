@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/rs/zerolog/log"
 )
 
 const defaultURL = "https://resources.itrsgroup.com/download/latest/"
@@ -95,6 +96,7 @@ func openSourceFile(source string, options ...PackageOptions) (from io.ReadClose
 
 	u, err := url.Parse(source)
 	if err != nil {
+		log.Debug().Err(err).Msg("")
 		return
 	}
 
@@ -134,13 +136,16 @@ func openSourceFile(source string, options ...PackageOptions) (from io.ReadClose
 	default:
 		var s os.FileInfo
 		source = config.ExpandHome(source)
+		log.Debug().Msgf("looking at %q", source)
 		s, err = os.Stat(source)
 		if err != nil {
+			log.Debug().Err(err).Msgf("source %q", source)
 			return nil, "", err
 		}
 		if s.IsDir() {
 			return nil, "", ErrIsADirectory
 		}
+		log.Debug().Msgf("stats doesn't think it's a dir... %#v", s)
 		source, _ = filepath.Abs(source)
 		source = filepath.ToSlash(source)
 		from, err = os.Open(source)
