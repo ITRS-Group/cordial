@@ -57,6 +57,12 @@ const dbtype = "sqlite3"
 // specific updates as necessary. currently none, just update version
 func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly bool) (db *sql.DB, err error) {
 	dsn := cf.GetString(dsnBase)
+	if strings.HasPrefix(dsn, "file:") {
+		// check and replace short form home in a file DSN
+		log.Info().Msgf("dsn has a file: prefix: %q", dsn)
+		dsn = "file:" + config.ExpandHome(strings.TrimPrefix(dsn, "file:"))
+		log.Info().Msgf("dsn after expandhome: %q", dsn)
+	}
 	log.Info().Msgf("opening database using DSN `%s`", dsn)
 	db, err = sql.Open(dbtype, dsn)
 	if err != nil {
