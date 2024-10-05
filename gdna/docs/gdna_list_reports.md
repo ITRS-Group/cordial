@@ -1,4 +1,4 @@
-# `gdna list`
+# `gdna list reports`
 
 `gdna list` displays a list of configured reports along with information about the report title and any restrictions on running for certain types of outputs.
 
@@ -6,22 +6,16 @@ The output is formatted as a text table by default, for display on the console. 
 
 You can limit the list of reports to list using the `--report`/`-r` flag, which supports glob=style wildcards.
 
-
-## Commands
-
-| Command / Aliases | Description |
-|-------|-------|
-| [`gdna list excludes / exclude`](gdna_list_excludes.md)	 | List excluded items |
-| [`gdna list groups / group / grouping / groupings`](gdna_list_groups.md)	 | List groups |
-| [`gdna list includes / include`](gdna_list_includes.md)	 | List excluded items |
-| [`gdna list reports / report`](gdna_list_reports.md)	 | List available reports |
+```text
+gdna list reports
+```
 
 ### Options
 
 ```text
-  -F, --format string   format output. supported formats: 'html', 'table', 'tsv', 'toolkit', 'markdown' (default "table")
+  -r, --report string   report names
 ```
 
 ## SEE ALSO
 
-* [gdna](gdna.md)	 - Process Geneos License Usage Data
+* [gdna list](gdna_list.md)	 - List commands

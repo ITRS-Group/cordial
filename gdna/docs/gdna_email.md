@@ -13,15 +13,16 @@ gdna email
 ### Options
 
 ```text
-  -r, --report string    report names
-      --subject string   Override configured email Subject
-      --from string      Override configured email From
-      --to string        Override configured email To
-                         (comma separated, but remember to quote as one argument)
-      --cc string        Override configured email Cc
-                         (comma separated, but remember to quote as one argument)
-      --bcc string       Override configured email Bcc
-                         (comma separated, but remember to quote as one argument)
+  -r, --report string     report names
+      --contents string   Override configured email contents
+      --subject string    Override configured email Subject
+      --from string       Override configured email From
+      --to string         Override configured email To
+                          (comma separated, but remember to quote as one argument)
+      --cc string         Override configured email Cc
+                          (comma separated, but remember to quote as one argument)
+      --bcc string        Override configured email Bcc
+                          (comma separated, but remember to quote as one argument)
 ```
 
 ## SEE ALSO

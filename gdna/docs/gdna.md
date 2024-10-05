@@ -10,6 +10,7 @@ The configuration file is normally located in `${HOME}/.config/geneos/gdna.yaml`
 
 The program logs various actions to a file in the working directory but this can be changed in the configuration `logging` section or with the `--logfile`/`-l` option, which is set to a dash (`-`) send logging output to STDERR, which is normally your terminal. Using this latter option with the `gdna start -D` is not possible and logging will then go nowhere. Other features of logging, such as auto-rolling log files as they grow and more, can be configured in the `gdna.yaml` file.
 
+| [`gdna add`](gdna_add.md)	 |  |
 
 ## Commands
 
@@ -17,8 +18,8 @@ The program logs various actions to a file in the working directory but this can
 |-------|-------|
 | [`gdna email`](gdna_email.md)	 | Email reports |
 | [`gdna fetch`](gdna_fetch.md)	 | Fetch usage data |
-| [`gdna ignore / ignores`](gdna_ignore.md)	 | Commands to manage ignore lists |
-| [`gdna list`](gdna_list.md)	 | List available reports |
+| [`gdna list`](gdna_list.md)	 | List commands |
+| [`gdna remove / rm / delete`](gdna_remove.md)	 |  |
 | [`gdna report`](gdna_report.md)	 | Run ad hoc report(s) |
 | [`gdna restart`](gdna_restart.md)	 | Restart background GDNA process |
 | [`gdna start`](gdna_start.md)	 | Start cycling though fetch, report etc. |
