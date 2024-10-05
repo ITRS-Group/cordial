@@ -30,9 +30,14 @@ services:
       # - "8100:8100"
 
     configs:
-      # this creates a `/gdna.yaml` configuration file using the YAML-in-YAML content
+      # this creates a `gdna.yaml` configuration file in the geneos
+      # user's .config/geneos directory, using the YAML-in-YAML content #
       # below.
-      - gdna.yaml
+      - source: gdna.yaml
+        target: /home/geneos/.config/geneos/gdna.yaml
+        uid: "1000"
+        gid: "1000"
+        mode: 0644
 
     # if you want to send email reports via an SMTP server that requires
     # authentication then you will need to create secrets using `geneos login`
@@ -79,7 +84,7 @@ configs:
   #     file: /host/path/to/gdna.yaml
   #
   gdna.yaml:
-    content: |
+    content: | #yaml
       gdna:
         licd-sources:
           - "https://LICDHOST:7041"  
@@ -92,7 +97,7 @@ configs:
         #
         # email-schedule: "0 2 * * *"
       db:
-        file: ./gdna/gdna.sqlite
+        file: ~/gdna/gdna.sqlite
       email:
         subject: "ITRS GDNA Report"
         from: from@example.com
