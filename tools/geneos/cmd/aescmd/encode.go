@@ -216,7 +216,7 @@ var encodeCmd = &cobra.Command{
 		ct, args := cmd.ParseTypeNames(command)
 
 		if encodeCmdKeyfile != "" || encodeCmdCRC != "" {
-			for _, h := range h.OrList(geneos.ALL) {
+			for _, h := range h.OrList() {
 				for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 					keyfilepath, _ := ct.KeyFilePath(h, encodeCmdKeyfile, encodeCmdCRC)
 					if keyfilepath != "" {
