@@ -299,8 +299,7 @@ func (ct *Component) Shared(h *Host, subs ...interface{}) string {
 
 // OrList will return the method receiver, if not nil, or the list of
 // component types passed as args. If no arguments are passed then all
-// 'real' components (those with the `RealComponent` field set to true)
-// are returned.
+// non-root components are returned.
 func (ct *Component) OrList(cts ...*Component) []*Component {
 	if ct != nil {
 		return []*Component{ct}
