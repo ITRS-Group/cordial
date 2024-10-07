@@ -25,7 +25,6 @@ import (
 	"os"
 	"path"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -51,36 +50,13 @@ type ReleaseDetails struct {
 	Path      string    `json:"Path"`
 }
 
-// Releases is a slice of ReleaseDetails, used for sorting ReleaseDetails
-type Releases []ReleaseDetails
-
-func (r Releases) Len() int {
-	return len(r)
-}
-
-func (r Releases) Less(i, j int) bool {
-	vi, err := version.NewVersion(strings.TrimLeftFunc(r[i].Version, func(r rune) bool { return !unicode.IsNumber(r) }))
-	if err != nil {
-		log.Debug().Err(err).Msg("")
-	}
-	vj, err := version.NewVersion(strings.TrimLeftFunc(r[j].Version, func(r rune) bool { return !unicode.IsNumber(r) }))
-	if err != nil {
-		log.Debug().Err(err).Msg("")
-	}
-	return vi.LessThan(vj)
-}
-
-func (r Releases) Swap(i, j int) {
-	r[i], r[j] = r[j], r[i]
-}
-
 // GetReleases returns a slice of PackageDetails containing all the
 // directories Geneos packages directory on the given host. Symlinks in
 // the packages directory are matches to any targets and unmatched
 // symlinks are ignored.
 //
 // No validation is done on the contents, only that a directory exists.
-func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
+func GetReleases(h *Host, ct *Component) (releases []ReleaseDetails, err error) {
 	var ok bool
 	if ok, err = h.IsAvailable(); !ok {
 		return
@@ -134,7 +110,17 @@ func GetReleases(h *Host, ct *Component) (releases Releases, err error) {
 		}
 	}
 
-	sort.Sort(releases)
+	slices.SortFunc(releases, func(a, b ReleaseDetails) int {
+		va, err := version.NewVersion(strings.TrimLeftFunc(a.Version, func(r rune) bool { return !unicode.IsNumber(r) }))
+		if err != nil {
+			log.Debug().Err(err).Msg("")
+		}
+		vb, err := version.NewVersion(strings.TrimLeftFunc(b.Version, func(r rune) bool { return !unicode.IsNumber(r) }))
+		if err != nil {
+			log.Debug().Err(err).Msg("")
+		}
+		return va.Compare(vb)
+	})
 
 	return releases, nil
 }
