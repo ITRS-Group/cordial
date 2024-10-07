@@ -125,9 +125,11 @@ func (tr *FormattedReporter) updateReporter(options ...FormattedReporterOptions)
 	case "table":
 		fallthrough
 	default:
-		tr.headlinestyle = table.StyleLight
-		tr.tablestyle = table.StyleLight
-		// tr.tablestyle.Options = table.OptionsNoBorders
+		s := table.StyleLight
+		s.Format.Header = text.FormatDefault
+		tr.headlinestyle = s
+		tr.tablestyle = s
+
 		tr.render = tr.t.Render
 	}
 
