@@ -86,7 +86,10 @@ geneos uninstall --version 5.14.1
 					}
 					files, err := filepath.Glob(h.PathTo("packages", "downloads", "*"+pattern+"*"))
 					if err != nil {
-						fmt.Printf("cannot find any cached downloads to remove in %q - %s\n", h.PathTo("packages", "downloads", "*"), err)
+						panic(err)
+					}
+					if len(files) == 0 {
+						fmt.Printf("cannot find any cached downloads to remove in %q\n", h.PathTo("packages", "downloads", "*"+pattern+"*"))
 					}
 					for _, f := range files {
 						if err = h.Remove(f); err == nil {
@@ -111,7 +114,7 @@ geneos uninstall --version 5.14.1
 				for _, i := range releases {
 					if uninstallCmdAll || // --all
 						(version == "" && !i.Latest) || // default leave 'latest'
-						strings.HasPrefix(i.Version, version) { // specific --version prefix
+						(version != "" && strings.HasPrefix(i.Version, version)) { // specific --version prefix
 						removeReleases[i.Version] = i
 					}
 				}
