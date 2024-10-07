@@ -148,7 +148,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 			names, headlines, err := queryHeadlines(ctx, tx, query)
 			if err != nil {
 				log.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
-				continue
+				return err
 			}
 			for _, h := range names {
 				r.AddHeadline(h, headlines[h])
