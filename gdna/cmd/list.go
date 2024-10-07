@@ -21,6 +21,7 @@ import (
 	_ "embed"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/reporter"
@@ -176,6 +177,7 @@ func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 		}
 		rows = append(rows, []string{
 			name,
+			rep.Dataview.Group,
 			rep.Title,
 			rep.Type,
 			enabledDataview,
@@ -183,7 +185,13 @@ func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 		})
 	}
 
-	r.UpdateTable([]string{"Report Name", "Title", "Type", "Dataview", "XLSX"}, rows)
+	slices.SortFunc(rows, func(a, b []string) int {
+		if a[1] == b[1] {
+			return strings.Compare(a[2], b[2])
+		}
+		return strings.Compare(a[1], b[1])
+	})
+	r.UpdateTable([]string{"Report Name", "Group", "Title", "Type", "Dataview", "XLSX"}, rows)
 	r.Flush()
 
 	return
