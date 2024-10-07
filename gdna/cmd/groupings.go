@@ -106,7 +106,7 @@ var addGroupCmd = &cobra.Command{
 		}
 		var p2 []string
 		for _, name := range patterns {
-			p2 = append(p2, strings.Fields(name)...)
+			p2 = append(p2, strings.FieldsFunc(name, func(r rune) bool { return r == ',' || r == '\n' })...)
 		}
 		patterns = p2
 
@@ -267,7 +267,7 @@ var removeGroupCmd = &cobra.Command{
 
 		var p2 []string
 		for _, name := range patterns {
-			p2 = append(p2, strings.Fields(name)...)
+			p2 = append(p2, strings.FieldsFunc(name, func(r rune) bool { return r == ',' || r == '\n' })...)
 		}
 		patterns = p2
 

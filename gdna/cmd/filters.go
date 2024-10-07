@@ -152,8 +152,10 @@ var addExcludeCmd = &cobra.Command{
 	},
 }
 
-// add an include or exclude filter. names can contain multiline strings
-// passed from the AC2 commands.
+// add an include or exclude filter. names can contain multiline
+// strings, either comma or newline separated, passed from the AC2
+// commands. Spaces are valid in names (e.g. `Demo Gateway`), so do not
+// split on those.
 func addFilter(filterType, category string, names []string) (err error) {
 	ts := time.Now()
 	// load existing
@@ -183,7 +185,7 @@ func addFilter(filterType, category string, names []string) (err error) {
 	}
 	var newnames []string
 	for _, name := range names {
-		newnames = append(newnames, strings.Fields(name)...)
+		newnames = append(newnames, strings.FieldsFunc(name, func(r rune) bool { return r == ',' || r == '\n' })...)
 	}
 
 	for _, name := range newnames {
@@ -296,7 +298,7 @@ func removeFilter(filterType, category string, names []string) (err error) {
 
 	var newnames []string
 	for _, name := range names {
-		newnames = append(newnames, strings.Fields(name)...)
+		newnames = append(newnames, strings.FieldsFunc(name, func(r rune) bool { return r == ',' || r == '\n' })...)
 	}
 
 	filters = slices.DeleteFunc(filters, func(f *Filter) bool {
