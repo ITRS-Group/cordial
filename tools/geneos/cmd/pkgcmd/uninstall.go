@@ -24,7 +24,9 @@ import (
 	"io/fs"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -109,27 +111,37 @@ geneos uninstall --version 5.14.1
 					return err
 				}
 
-				// save candidates for removal
-				removeReleases := map[string]geneos.ReleaseDetails{}
-				for _, i := range releases {
-					if uninstallCmdAll || // --all
-						(version == "" && !i.Latest) || // default leave 'latest'
-						(version != "" && strings.HasPrefix(i.Version, version)) { // specific --version prefix
-						removeReleases[i.Version] = i
+				// create a slice of releases to remove
+				removeReleases := slices.DeleteFunc(releases, func(r geneos.ReleaseDetails) bool {
+					if uninstallCmdAll {
+						return false
 					}
-				}
+					if version == "" && !r.Latest {
+						return false
+					}
+					if version != "" && strings.HasPrefix(strings.TrimLeftFunc(r.Version, func(r rune) bool { return !unicode.IsNumber(r) }), version) {
+						return false
+					}
+					return true
+				})
 
 				// loop over all instances and remove versions from a
 				// list as they are found so we end up with a map
 				// containing only releases to be removed
 				//
 				// also save a list of instances to restart
+				//
+				// get all instances on host h and check type and pkgtype
 				restart := map[string][]geneos.Instance{}
-				instances, err := instance.Instances(h, ct)
+				instances, err := instance.Instances(h, nil)
 				if err != nil {
 					panic(err)
 				}
 				for _, i := range instances {
+					if i.Type() != ct && i.Config().GetString("pkgtype") != ct.String() {
+						log.Debug().Msgf("%q is neither %q or pkgtype %q, skipping", i, ct, i.Config().GetString("pkgtype"))
+						continue
+					}
 					if instance.IsDisabled(i) {
 						fmt.Printf("%s is disabled, treating as an update\n", i)
 						continue
@@ -145,7 +157,7 @@ geneos uninstall --version 5.14.1
 					// package referenced by an instance - except those
 					// disabled as above
 					if !uninstallCmdUpdate {
-						delete(removeReleases, version)
+						removeReleases = slices.DeleteFunc(removeReleases, func(r geneos.ReleaseDetails) bool { return version == r.Version })
 						continue
 					}
 
@@ -154,7 +166,7 @@ geneos uninstall --version 5.14.1
 					if instance.IsProtected(i) {
 						if !uninstallCmdForce {
 							fmt.Printf("%s is marked protected and uses version %s, skipping\n", i, version)
-							delete(removeReleases, version)
+							removeReleases = slices.DeleteFunc(removeReleases, func(r geneos.ReleaseDetails) bool { return version == r.Version })
 							continue
 						}
 					}
@@ -170,18 +182,18 @@ geneos uninstall --version 5.14.1
 				basedir := h.PathTo("packages", ct.String())
 				stopped := []geneos.Instance{}
 
-				for version, release := range removeReleases {
+				for _, release := range removeReleases {
 					for _, c := range restart[version] {
 						log.Debug().Msgf("stopping %s", c)
 						instance.Stop(c, true, false)
 						stopped = append(stopped, c)
 					}
 					// remove the release
-					if err = h.RemoveAll(path.Join(basedir, version)); err != nil {
+					if err = h.RemoveAll(path.Join(basedir, release.Version)); err != nil {
 						log.Error().Err(err).Msg("")
 						continue
 					}
-					fmt.Printf("removed %s release %s from %s:%s\n", ct, version, h, basedir)
+					fmt.Printf("removed %s release %s from %s:%s\n", ct, release.Version, h, basedir)
 
 					if len(release.Links) != 0 {
 						if uninstallCmdAll {
@@ -207,7 +219,7 @@ geneos uninstall --version 5.14.1
 							// 	log.Error().Err(err).Msg("")
 							// 	continue
 							// }
-							updateLinks(h, ct, basedir, release, version, latest)
+							updateLinks(h, ct, basedir, release, release.Version, latest)
 						}
 					}
 

@@ -1,8 +1,10 @@
-The `install` command will, with no other options, download and unarchive the latest releases of each supported Geneos component from the official ITRS download servers.
+The `install` command will, with no other options, download and unarchive the latest releases of each currently installed Geneos component from the official ITRS download servers.
 
 If given directories or file paths on the command line then the install command will only use these as the sources for installation and will not try to download any release. Any values that are not directory paths have symlinks resolved before the underlying filename is checked for component type and version (see `--override` below). This allows, for example, a fixed symlink to the latest version of a local release.
 
-If a component TYPE is given on the command line then installation is limited to that component type, otherwise all components types matching the other criteria are installed.
+If a component TYPE is given on the command line then installation is limited to that component type, otherwise all components types matching existing components are installed.
+
+To install all component types use the `--all`/`-A` flag.
 
 💡 Downloads require an ITRS client login and credentials must be provided.
 

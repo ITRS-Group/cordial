@@ -38,7 +38,7 @@ import (
 
 var installCmdLocal, installCmdNoSave, installCmdUpdate, installCmdForce, installCmdNexus, installCmdSnapshot bool
 var installCmdBase, installCmdOverride, installCmdVersion, installCmdUsername, installCmdPwFile string
-var installCmdDownloadOnly bool
+var installCmdDownloadOnly, installCmdAllTypes bool
 var installCmdPassword *config.Plaintext
 
 func init() {
@@ -69,6 +69,8 @@ func init() {
 
 	installCmd.Flags().BoolVarP(&installCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires auth.")
 	installCmd.Flags().BoolVarP(&installCmdSnapshot, "snapshots", "S", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
+
+	installCmd.Flags().BoolVarP(&installCmdAllTypes, "all", "A", false, "Install all types available, not just those types already installed")
 
 	installCmd.Flags().SortFlags = false
 }
@@ -264,9 +266,11 @@ geneos install netprobe -b active_dev -U
 			)
 			if installCmdSnapshot {
 				installCmdNexus = true
+				log.Debug().Msg("setting nexus snapshots")
 				options = append(options, geneos.UseNexusSnapshots())
 			}
 			if installCmdNexus {
+				log.Debug().Msg("setting nexus")
 				options = append(options, geneos.UseNexus())
 			}
 			return Install(h, ct, options...)
@@ -308,42 +312,38 @@ geneos install netprobe -b active_dev -U
 				geneos.StopFunc(instance.Stop))
 		}
 
-		// if we have a component on the command line then use an
-		// archive from packages/downloads or download from official web
-		// site unless -L is given. version numbers checked. default to
-		// 'latest'
-		//
-		// overrides do not work in this case as the version and type
-		// have to be part of the archive file name
-		if ct != nil {
-			log.Debug().Msgf("installing %q version of %s to %s host(s)", installCmdVersion, ct, cmd.Hostname)
+		log.Debug().Msgf("installing %q version of %s to %s host(s)", installCmdVersion, ct, cmd.Hostname)
 
-			if installCmdSnapshot {
-				installCmdNexus = true
-				options = append(options, geneos.UseNexusSnapshots())
-			}
-			if installCmdNexus {
-				options = append(options, geneos.UseNexus())
-			}
-			return Install(h, ct, options...)
+		if installCmdSnapshot {
+			installCmdNexus = true
+			options = append(options, geneos.UseNexusSnapshots())
+		}
+		if installCmdNexus {
+			options = append(options, geneos.UseNexus())
 		}
 
-		log.Debug().Msgf("installing version %q of %s to %s host(s)", installCmdVersion, ct, cmd.Hostname)
-		if err = Install(h, ct, options...); err != nil {
-			return err
-		}
-
-		return nil
+		return Install(h, ct, options...)
 	},
 }
 
 func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.PackageOptions) (err error) {
 	installed := 0
+	ctSet := ct != nil
+
 	for _, h := range h.OrList() {
-		if err = ct.MakeDirs(h); err != nil {
-			return err
-		}
 		for _, ct := range ct.OrList() {
+			if !ctSet && !installCmdAllTypes {
+				v, err := geneos.GetReleases(h, ct)
+				if err != nil {
+					return err
+				}
+				if len(v) == 0 {
+					continue
+				}
+			}
+			if err = ct.MakeDirs(h); err != nil {
+				return err
+			}
 			if err = geneos.Install(h, ct, options...); err != nil {
 				if errors.Is(err, fs.ErrExist) {
 					fmt.Printf("%s installation already exists, skipping", ct)
