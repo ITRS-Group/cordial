@@ -426,7 +426,7 @@ filters:
 db:
   temporary-table: TEMPORARY
   file: gdna.sqlite
-  dsn: "file:${db.file}"
+  dsn: "file:${db.file}?cache=shared"
   on-open: > #sql
     PRAGMA journal_mode='wal';
     PRAGMA synchronous='normal';
