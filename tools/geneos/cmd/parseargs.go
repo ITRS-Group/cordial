@@ -136,7 +136,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 		return
 	}
 
-	// now range over args, and as soon as any is not a valid name (inv
+	// now range over args, and as soon as any is not a valid name (inc
 	// glob patterns) put then rest into params
 	var names, params []string
 	for i, a := range args {
@@ -156,6 +156,9 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	if cmdWildcardNames == "true" {
 		names = instance.Match(h, ct, cmdKeepHosts == "true", names...)
 	}
+
+	log.Debug().Msgf("names %v", names)
+	log.Debug().Msgf("ct %q, args %v, params %v", ct, args, params)
 
 	cd.Lock()
 	cd.names = names

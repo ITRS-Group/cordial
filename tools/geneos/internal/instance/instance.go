@@ -342,16 +342,20 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, patterns ...str
 		if pattern == "all" {
 			pattern = "*"
 		}
-		// a host only name implies a wildcard
+
+		// a host-only name implies a wildcard at host
 		if !keepHosts && strings.HasPrefix(pattern, "@") {
 			pattern = "*" + pattern
 		}
-		// check for glob chars
+
+		// check for glob chars, if none then just add the pattern as-is and loop
 		if !strings.ContainsAny(pattern, `*?[`) {
 			names = append(names, pattern)
 			continue
 		}
+
 		_, p, h := SplitName(pattern, h) // override 'h' inside loop
+
 		for _, name := range InstanceNames(h, ct) {
 			_, n, _ := SplitName(name, h)
 			if match, _ := path.Match(p, n); match {
@@ -374,6 +378,12 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, patterns ...str
 		}
 	}
 	names = newNames
+
+	// if the result is no matches but we were given patterns, return
+	// those patterns and let the caller fail them when loading
+	if len(names) == 0 && len(patterns) > 0 {
+		return patterns
+	}
 	return
 }
 
