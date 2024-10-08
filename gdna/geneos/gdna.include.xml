@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA6.8.1-240517 at 2024-10-04 12:16:47 by peter on HPEnvy34-->
+<!--Edited using Gateway Setup Editor version GA7.0.0-240827 at 2024-10-08 09:11:12 by pgalbavy on ITRSLP257-->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/RA7.1.0-240916/gateway.xsd">
 	<probes>
 		<probe name="gdna">
@@ -573,6 +573,56 @@ ORDER BY probeVersion ASC
 					</command>
 				</commandGroup>
 			</commandGroup>
+			<commandGroup name="Misc">
+				<menu>
+					<label>GDNA</label>
+				</menu>
+				<command name="Refresh Dataview ">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview//*</target>
+					</targets>
+					<task>
+						<commands>
+							<commandRef>
+								<command ref="refresh report by dataview name"/>
+								<stopOnError>true</stopOnError>
+							</commandRef>
+						</commands>
+						<silent>true</silent>
+					</task>
+				</command>
+				<command name="Refresh All Dataviews">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]//*</target>
+					</targets>
+					<task>
+						<commands>
+							<commandRef>
+								<command ref="refresh all reports"/>
+								<stopOnError>true</stopOnError>
+							</commandRef>
+						</commands>
+						<silent>true</silent>
+					</task>
+				</command>
+				<command name="Update License Data">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]//*</target>
+					</targets>
+					<task>
+						<commands>
+							<commandRef>
+								<command ref="fetch and report"/>
+								<stopOnError>true</stopOnError>
+							</commandRef>
+						</commands>
+						<silent>true</silent>
+					</task>
+				</command>
+			</commandGroup>
 			<commandGroup name="EMail">
 				<menu>
 					<label>GDNA</label>
@@ -602,56 +652,6 @@ ORDER BY probeVersion ASC
 						<commands>
 							<commandRef>
 								<command ref="email all"/>
-								<stopOnError>true</stopOnError>
-							</commandRef>
-						</commands>
-						<silent>true</silent>
-					</task>
-				</command>
-			</commandGroup>
-			<commandGroup name="Misc">
-				<menu>
-					<label>GDNA</label>
-				</menu>
-				<command name="Run Reports Now">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]</target>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]//*</target>
-					</targets>
-					<task>
-						<commands>
-							<commandRef>
-								<command ref="refresh all reports"/>
-								<stopOnError>true</stopOnError>
-							</commandRef>
-						</commands>
-						<silent>true</silent>
-					</task>
-				</command>
-				<command name="Run Report">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview</target>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview//*</target>
-					</targets>
-					<task>
-						<commands>
-							<commandRef>
-								<command ref="refresh report by dataview name"/>
-								<stopOnError>true</stopOnError>
-							</commandRef>
-						</commands>
-						<silent>true</silent>
-					</task>
-				</command>
-				<command name="Run GDNA Collection Cycle Now">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]</target>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]//*</target>
-					</targets>
-					<task>
-						<commands>
-							<commandRef>
-								<command ref="fetch and report"/>
 								<stopOnError>true</stopOnError>
 							</commandRef>
 						</commands>
@@ -946,93 +946,6 @@ ORDER BY probeVersion ASC
 				</userCommand>
 			</command>
 			<commandGroup name="excludes">
-				<command name="add exclude" disabled="true">
-					<userCommand>
-						<type>script</type>
-						<runLocation>gateway</runLocation>
-						<args>
-							<arg>
-								<text>
-									<var ref="GDNA_PATH"/>
-								</text>
-							</arg>
-							<arg>
-								<static>add</static>
-							</arg>
-							<arg>
-								<static>exclude</static>
-							</arg>
-							<arg>
-								<userInput>
-									<description>Category</description>
-									<options>
-										<option>
-											<label>Gateway</label>
-											<value>gateway</value>
-										</option>
-										<option>
-											<label>Server</label>
-											<value>server</value>
-										</option>
-										<option>
-											<label>Plugin</label>
-											<value>plugin</value>
-										</option>
-										<option>
-											<label>Host ID</label>
-											<value>hostid</value>
-										</option>
-										<option>
-											<label>Licence Soutce</label>
-											<value>source</value>
-										</option>
-									</options>
-									<requiredArgument>true</requiredArgument>
-								</userInput>
-							</arg>
-							<arg>
-								<userInput>
-									<description>Names or Patterns, newline or space separated</description>
-									<multiLineString/>
-									<requiredArgument>true</requiredArgument>
-								</userInput>
-							</arg>
-							<arg>
-								<static>--origin</static>
-							</arg>
-							<arg>
-								<static>Dataview:</static>
-							</arg>
-							<arg>
-								<concatenate>true</concatenate>
-								<xpath>ancestor::dataview</xpath>
-							</arg>
-							<arg>
-								<static>--user</static>
-							</arg>
-							<arg>
-								<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
-							</arg>
-							<arg>
-								<concatenate>true</concatenate>
-								<static>\</static>
-							</arg>
-							<arg>
-								<concatenate>true</concatenate>
-								<xpath>/geneos/client/runtimeParameters/@Username</xpath>
-							</arg>
-							<arg>
-								<static>--comment</static>
-							</arg>
-							<arg>
-								<userInput>
-									<description>Comment</description>
-									<multiLineString/>
-								</userInput>
-							</arg>
-						</args>
-					</userCommand>
-				</command>
 				<commandGroup name="by rowname">
 					<command name="exclude plugin by rowname">
 						<userCommand>
@@ -1829,93 +1742,7 @@ ORDER BY probeVersion ASC
 				</command>
 			</commandGroup>
 			<commandGroup name="includes">
-				<command name="add include" disabled="true">
-					<userCommand>
-						<type>script</type>
-						<runLocation>gateway</runLocation>
-						<args>
-							<arg>
-								<text>
-									<var ref="GDNA_PATH"/>
-								</text>
-							</arg>
-							<arg>
-								<static>add</static>
-							</arg>
-							<arg>
-								<static>include</static>
-							</arg>
-							<arg>
-								<userInput>
-									<description>Category</description>
-									<options>
-										<option>
-											<label>Gateway</label>
-											<value>gateway</value>
-										</option>
-										<option>
-											<label>Server</label>
-											<value>server</value>
-										</option>
-										<option>
-											<label>Plugin</label>
-											<value>plugin</value>
-										</option>
-										<option>
-											<label>Host ID</label>
-											<value>hostid</value>
-										</option>
-										<option>
-											<label>Licence Soutce</label>
-											<value>source</value>
-										</option>
-									</options>
-									<requiredArgument>true</requiredArgument>
-								</userInput>
-							</arg>
-							<arg>
-								<userInput>
-									<description>Names or Patterns, newline or space separated</description>
-									<multiLineString/>
-									<requiredArgument>true</requiredArgument>
-								</userInput>
-							</arg>
-							<arg>
-								<static>--origin</static>
-							</arg>
-							<arg>
-								<static>Dataview:</static>
-							</arg>
-							<arg>
-								<concatenate>true</concatenate>
-								<xpath>ancestor::dataview</xpath>
-							</arg>
-							<arg>
-								<static>--user</static>
-							</arg>
-							<arg>
-								<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
-							</arg>
-							<arg>
-								<concatenate>true</concatenate>
-								<static>\</static>
-							</arg>
-							<arg>
-								<concatenate>true</concatenate>
-								<xpath>/geneos/client/runtimeParameters/@Username</xpath>
-							</arg>
-							<arg>
-								<static>--comment</static>
-							</arg>
-							<arg>
-								<userInput>
-									<description>Comment</description>
-									<multiLineString/>
-								</userInput>
-							</arg>
-						</args>
-					</userCommand>
-				</command>
+				
 			</commandGroup>
 			<commandGroup name="run gdna">
 				<command name="refresh report by dataview name">
