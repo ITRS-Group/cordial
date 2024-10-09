@@ -276,7 +276,7 @@ func (a *APIReporter) AddHeadline(name, value string) {
 	}
 }
 
-func (a *APIReporter) Flush() {
+func (a *APIReporter) Render() {
 	// nil
 }
 

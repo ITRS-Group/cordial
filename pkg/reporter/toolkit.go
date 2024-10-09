@@ -61,13 +61,11 @@ func (t *ToolkitReporter) AddHeadline(name, value string) {
 }
 
 func (t *ToolkitReporter) UpdateTable(columns []string, data [][]string) {
-	if len(data) == 0 {
-		return
-	}
+
 	t.table = append([][]string{columns}, data...)
 }
 
-func (t *ToolkitReporter) Flush() {
+func (t *ToolkitReporter) Render() {
 	t.c.WriteAll(t.table)
 	t.c.Flush()
 	for name, value := range t.headlines {

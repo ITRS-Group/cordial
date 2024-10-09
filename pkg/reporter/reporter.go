@@ -40,8 +40,8 @@ type Reporter interface {
 	// Remove deletes an existing report, e.g. an existing Dataview from a previous run
 	Remove(report Report) error
 
-	// Flush writes the current report to the destination selected with Prepare()
-	Flush()
+	// Render writes the current report to the destination selected with Prepare()
+	Render()
 
 	// Close releases any resources for the whole reporter
 	Close()

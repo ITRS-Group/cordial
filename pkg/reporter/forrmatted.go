@@ -70,7 +70,7 @@ func (t *FormattedReporter) Prepare(report Report) error {
 	title := report.Title
 
 	// write the last output
-	t.Flush()
+	t.Render()
 
 	// reset
 	*t = FormattedReporter{
@@ -202,18 +202,18 @@ func Scramble(scramble bool) FormattedReporterOptions {
 }
 
 func (t *FormattedReporter) UpdateTable(columns []string, data [][]string) {
-	if len(data) == 0 {
-		return
-	}
-	if t.scrambleNames {
-		scrambleColumns(columns, t.scrambleColumns, data)
-	}
 	if len(t.columns) == 0 {
 		// init
 		t.columns = columns
 		t.table = map[string][]string{}
 	}
 
+	if len(data) == 0 {
+		return
+	}
+	if t.scrambleNames {
+		scrambleColumns(columns, t.scrambleColumns, data)
+	}
 	for _, row := range data {
 		t.tableOrder = append(t.tableOrder, row[0])
 		t.table[row[0]] = row
@@ -234,9 +234,9 @@ func (t *FormattedReporter) AddHeadline(name, value string) {
 	t.headlines[name] = value
 }
 
-// Flush sends the collected report data to the underlying table.Writer
+// Render sends the collected report data to the underlying table.Writer
 // as on table of headlines and another or table data
-func (t *FormattedReporter) Flush() {
+func (t *FormattedReporter) Render() {
 	if len(t.headlines) > 0 {
 		// render headers
 		headlines := []table.Row{}

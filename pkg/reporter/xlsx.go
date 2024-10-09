@@ -60,6 +60,8 @@ type XLSXReporter struct {
 	cond        map[string]int
 	minColWidth float64
 	maxColWidth float64
+
+	headlinesVertical bool
 }
 
 type sheet struct {
@@ -81,6 +83,9 @@ type sheet struct {
 	scrambleColumns   []string
 	conditionalFormat []ConditionalFormat
 	freezeColumn      string
+
+	headlineOrder []string
+	headlines     map[string]string
 }
 
 // ensure that *Table is a Reporter
@@ -91,11 +96,12 @@ func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporte
 	opts := evalXLSXReportOptions(options...)
 
 	x = &XLSXReporter{
-		x:            excelize.NewFile(),
-		w:            w,
-		scambleNames: opts.scramble,
-		password:     opts.password,
-		sheets:       map[string]*sheet{},
+		x:                 excelize.NewFile(),
+		w:                 w,
+		scambleNames:      opts.scramble,
+		password:          opts.password,
+		sheets:            map[string]*sheet{},
+		headlinesVertical: opts.headlinesVertical,
 	}
 
 	x.topHeading, _ = x.x.NewStyle(&excelize.Style{
@@ -115,6 +121,11 @@ func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporte
 	x.leftHeading, _ = x.x.NewStyle(&excelize.Style{
 		Alignment: &excelize.Alignment{
 			Horizontal: "right",
+		},
+		Fill: excelize.Fill{
+			Type:    "pattern",
+			Color:   []string{"cccccc"},
+			Pattern: 1,
 		},
 		Font: &excelize.Font{
 			Bold: true,
@@ -143,9 +154,9 @@ func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporte
 	})
 
 	x.plainStyle, _ = x.x.NewStyle(&excelize.Style{
-		// Alignment: &excelize.Alignment{
-		// 	Horizontal: "fill",
-		// },
+		Alignment: &excelize.Alignment{
+			Horizontal: "right",
+		},
 	})
 
 	// set conditional formats
@@ -200,18 +211,19 @@ func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporte
 type XLSXReporterOptions func(*xlsxReportOptions)
 
 type xlsxReportOptions struct {
-	scramble         bool
-	password         *config.Plaintext
-	summarySheetName string
-	dateFormat       string
-	intFormat        int
-	percentFormat    int
-	undefinedColour  string
-	okColour         string
-	warningColour    string
-	criticalColour   string
-	minColWidth      float64
-	maxColWidth      float64
+	scramble          bool
+	password          *config.Plaintext
+	summarySheetName  string
+	dateFormat        string
+	intFormat         int
+	percentFormat     int
+	undefinedColour   string
+	okColour          string
+	warningColour     string
+	criticalColour    string
+	minColWidth       float64
+	maxColWidth       float64
+	headlinesVertical bool
 }
 
 func evalXLSXReportOptions(options ...XLSXReporterOptions) (xo *xlsxReportOptions) {
@@ -239,9 +251,21 @@ func XLSXScramble(scramble bool) XLSXReporterOptions {
 	}
 }
 
+// XLSXPassword sets the workbook password
 func XLSXPassword(password *config.Plaintext) XLSXReporterOptions {
 	return func(xro *xlsxReportOptions) {
 		xro.password = password
+	}
+}
+
+// XLSXHeadlinesVertical sets the direction of headlines in a sheet. If
+// vertical is true then the headlines are added as a two column list of
+// name/value pairs. If not set (the default) then headlines are added
+// as two rows with each headlines added as a single column, name above
+// value.
+func XLSXHeadlinesVertical(vertical bool) XLSXReporterOptions {
+	return func(xro *xlsxReportOptions) {
+		xro.headlinesVertical = vertical
 	}
 }
 
@@ -307,83 +331,136 @@ func (x *XLSXReporter) Prepare(report Report) (err error) {
 		conditionalFormat: report.XLSX.ConditionalFormat,
 		freezeColumn:      report.XLSX.FreezeColumn,
 		rows:              map[string][]string{},
+		// rowOffset:         3,
 	}
 
 	_, err = x.x.NewSheet(x.currentSheet)
 	return
 }
 
-var percentRE = regexp.MustCompile(`^\d+\s*%$`)
-var numRE = regexp.MustCompile(`^\d+$`)
-var validcond = []string{
-	"=",
-	">",
-	"<",
-	">=",
-	"<=",
-	"<>",
-}
-
 func (x *XLSXReporter) UpdateTable(columns []string, data [][]string) {
-	var err error
-
-	if len(data) == 0 {
-		return
-	}
-
 	sheet := x.sheets[x.currentSheet]
 	if sheet == nil {
 		return
 	}
 
 	sheet.columns = columns
-	if x.scambleNames {
-		scrambleColumns(columns, sheet.scrambleColumns, data)
-	}
-
-	cellname, err := excelize.CoordinatesToCellName(1, 1+sheet.rowOffset, false)
-	if err != nil {
-		panic(err)
-	}
-	if err = x.x.SetSheetRow(x.currentSheet, cellname, &sheet.columns); err != nil {
-		return
-	}
-
-	// colwidths := []float64{}
 	for _, c := range sheet.columns {
 		sheet.columnWidths = append(sheet.columnWidths, limitWidth(len(c), x.minColWidth, x.maxColWidth))
 	}
 
-	for rownum, cellsString := range data {
+	if len(data) == 0 {
+		return
+	}
+
+	if x.scambleNames {
+		scrambleColumns(columns, sheet.scrambleColumns, data)
+	}
+
+	for _, cellsString := range data {
 		sheet.rows[cellsString[0]] = cellsString
 		sheet.rowOrder = append(sheet.rowOrder, cellsString[0])
 
-		cells := stringsToRow(cellsString)
-		if err = x.x.SetSheetRow(x.currentSheet, fmt.Sprintf("A%d", 2+rownum+sheet.rowOffset), &cells); err != nil {
-			return
-		}
-
-		// update styles
-		for i, cell := range cells {
-			cellname, _ := excelize.CoordinatesToCellName(i+1, 2+rownum)
-			switch cell.(type) {
-			case time.Time:
-				x.x.SetCellStyle(x.currentSheet, cellname, cellname, x.dateStyle)
-			case int64:
-				x.x.SetCellStyle(x.currentSheet, cellname, cellname, x.intStyle)
-			case float64:
-				x.x.SetCellStyle(x.currentSheet, cellname, cellname, x.percentStyle)
-			default:
-				x.x.SetCellStyle(x.currentSheet, cellname, cellname, x.plainStyle)
-			}
-		}
 		for j, c := range cellsString {
 			sheet.columnWidths[j] = limitWidth(len(fmt.Sprint(c)), sheet.columnWidths[j], x.maxColWidth)
 		}
-
 	}
+}
 
-	x.x.SetRowStyle(x.currentSheet, 1, 1, x.topHeading)
+func (x *XLSXReporter) setSheetData() {
+	for sheetname, sheet := range x.sheets {
+		// render headlines first, updating rowOffset as we go if "vertical"
+		if x.headlinesVertical {
+			sheet.rowOffset = 1
+			if len(sheet.columnWidths) < 2 {
+				sheet.columnWidths = []float64{0.0, 0.0}
+			}
+			for i, headline := range sheet.headlineOrder {
+				namecell, _ := excelize.CoordinatesToCellName(1, 1+i)
+				x.x.SetCellStr(sheetname, namecell, headline)
+				x.x.SetCellStyle(sheetname, namecell, namecell, x.leftHeading)
+
+				valuecell, _ := excelize.CoordinatesToCellName(2, i+1)
+				value := stringToCell(sheet.headlines[headline])
+				x.x.SetCellValue(sheetname, valuecell, value)
+				switch value.(type) {
+				case time.Time:
+					x.x.SetCellStyle(sheetname, valuecell, valuecell, x.dateStyle)
+				case int64:
+					x.x.SetCellStyle(sheetname, valuecell, valuecell, x.intStyle)
+				case float64:
+					x.x.SetCellStyle(sheetname, valuecell, valuecell, x.percentStyle)
+				default:
+					x.x.SetCellStyle(sheetname, valuecell, valuecell, x.plainStyle)
+				}
+				sheet.columnWidths[0] = limitWidth(len(headline), sheet.columnWidths[0], x.maxColWidth)
+				sheet.columnWidths[1] = limitWidth(len(fmt.Sprint(value)), sheet.columnWidths[1], x.maxColWidth)
+				sheet.rowOffset++
+			}
+		} else {
+			sheet.rowOffset = 3
+			for i, headline := range sheet.headlineOrder {
+				namecell, _ := excelize.CoordinatesToCellName(i+1, 1)
+				x.x.SetCellStr(sheetname, namecell, headline)
+				x.x.SetCellStyle(sheetname, namecell, namecell, x.leftHeading)
+
+				valuecell, _ := excelize.CoordinatesToCellName(i+1, 2)
+				value := stringToCell(sheet.headlines[headline])
+				x.x.SetCellValue(sheetname, valuecell, value)
+				switch value.(type) {
+				case time.Time:
+					x.x.SetCellStyle(sheetname, valuecell, valuecell, x.dateStyle)
+				case int64:
+					x.x.SetCellStyle(sheetname, valuecell, valuecell, x.intStyle)
+				case float64:
+					x.x.SetCellStyle(sheetname, valuecell, valuecell, x.percentStyle)
+				default:
+					x.x.SetCellStyle(sheetname, valuecell, valuecell, x.plainStyle)
+				}
+				// x.x.SetCellStr(sheetname, valuecell, sheet.headlines[headline])
+
+				if len(sheet.columnWidths) == i {
+					sheet.columnWidths = append(sheet.columnWidths, limitWidth(max(len(headline), len(fmt.Sprint(value))), x.minColWidth, x.maxColWidth))
+				} else {
+					sheet.columnWidths[i] = limitWidth(max(len(headline), len(fmt.Sprint(value))), sheet.columnWidths[i], x.maxColWidth)
+				}
+
+			}
+		}
+
+		// render main table
+		columnsCell, err := excelize.CoordinatesToCellName(1, 1+sheet.rowOffset, false)
+		if err != nil {
+			panic(err)
+		}
+		if err = x.x.SetSheetRow(sheetname, columnsCell, &sheet.columns); err != nil {
+			return
+		}
+
+		for rownum, rowname := range sheet.rowOrder {
+			cellsString := sheet.rows[rowname]
+			cells := stringsToCells(cellsString)
+			if err = x.x.SetSheetRow(sheetname, fmt.Sprintf("A%d", 2+rownum+sheet.rowOffset), &cells); err != nil {
+				return
+			}
+
+			// update styles
+			for i, cell := range cells {
+				cellname, _ := excelize.CoordinatesToCellName(i+1, 2+rownum+sheet.rowOffset)
+				switch cell.(type) {
+				case time.Time:
+					x.x.SetCellStyle(sheetname, cellname, cellname, x.dateStyle)
+				case int64:
+					x.x.SetCellStyle(sheetname, cellname, cellname, x.intStyle)
+				case float64:
+					x.x.SetCellStyle(sheetname, cellname, cellname, x.percentStyle)
+				default:
+					x.x.SetCellStyle(sheetname, cellname, cellname, x.plainStyle)
+				}
+			}
+		}
+		x.x.SetRowStyle(sheetname, 1+sheet.rowOffset, 1+sheet.rowOffset, x.topHeading)
+	}
 }
 
 func (x *XLSXReporter) setColumnWidths() {
@@ -405,13 +482,16 @@ func (x *XLSXReporter) freezePanes() {
 	for sheetname, sheet := range x.sheets {
 		var err error
 		if sheet.freezeColumn == "" {
+			// just row headings / headlines
+			cellname, _ := excelize.CoordinatesToCellName(1, 2+sheet.rowOffset, false)
+
 			if err = x.x.SetPanes(sheetname, &excelize.Panes{
 				Freeze:      true,
-				YSplit:      1,
-				TopLeftCell: "A2",
+				YSplit:      1 + sheet.rowOffset,
+				TopLeftCell: cellname,
 				ActivePane:  "bottomLeft",
 				Selection: []excelize.Selection{
-					{SQRef: "A2", ActiveCell: "A2", Pane: "bottomLeft"},
+					{SQRef: cellname, ActiveCell: cellname, Pane: "bottomLeft"},
 				},
 			}); err != nil {
 				log.Error().Err(err).Msg("freeze top row")
@@ -423,18 +503,18 @@ func (x *XLSXReporter) freezePanes() {
 				return
 			}
 			// cellname is the first unlocked cell (so +2)
-			cellname, _ := excelize.CoordinatesToCellName(i+2, 2, true)
+			cellname, _ := excelize.CoordinatesToCellName(i+2, 2+sheet.rowOffset, false)
 			if err = x.x.SetPanes(sheetname, &excelize.Panes{
 				Freeze:      true,
 				XSplit:      i + 1,
-				YSplit:      1,
+				YSplit:      1 + sheet.rowOffset,
 				TopLeftCell: cellname,
-				ActivePane:  "topLeft",
+				ActivePane:  "bottomRight",
 				Selection: []excelize.Selection{
 					{SQRef: cellname, ActiveCell: cellname, Pane: "bottomRight"},
 				},
 			}); err != nil {
-				log.Error().Err(err).Msg("freeze top row")
+				log.Error().Err(err).Msg("freeze table")
 			}
 		}
 	}
@@ -455,10 +535,18 @@ func (x *XLSXReporter) Remove(report Report) (err error) {
 }
 
 func (x *XLSXReporter) AddHeadline(name, value string) {
-	// nothing
+	sheet := x.sheets[x.currentSheet]
+
+	if len(sheet.headlineOrder) == 0 {
+		sheet.headlines = make(map[string]string)
+	}
+
+	sheet.headlineOrder = append(sheet.headlineOrder, name)
+	sheet.headlines[name] = value
 }
 
-func (x *XLSXReporter) Flush() {
+func (x *XLSXReporter) Render() {
+	x.setSheetData()
 	x.applyConditionalFormat()
 	x.setColumnWidths()
 	x.freezePanes()
@@ -471,24 +559,38 @@ func (x *XLSXReporter) Close() {
 	x.x.Close()
 }
 
-func stringsToRow(rowStrings []string) (row []any) {
+var percentRE = regexp.MustCompile(`^\d+\s*%$`)
+var numRE = regexp.MustCompile(`^\d+$`)
+var validcond = []string{
+	"=",
+	">",
+	"<",
+	">=",
+	"<=",
+	"<>",
+}
+
+func stringToCell(s string) (cell any) {
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t
+	} else if t, err := time.Parse(time.Layout, s); err == nil {
+		return t
+	} else if percentRE.MatchString(s) {
+		var f float64
+		fmt.Sscan(s, &f)
+		return f / 100.0
+	} else if numRE.MatchString(s) {
+		var n int64
+		fmt.Sscan(s, &n)
+		return n
+	} else {
+		return s
+	}
+}
+
+func stringsToCells(rowStrings []string) (row []any) {
 	for _, cell := range rowStrings {
-		// test for a date/time in either ISO or Go layouts
-		if t, err := time.Parse(time.RFC3339, cell); err == nil {
-			row = append(row, t)
-		} else if t, err := time.Parse(time.Layout, cell); err == nil {
-			row = append(row, t)
-		} else if percentRE.MatchString(cell) {
-			var f float64
-			fmt.Sscan(cell, &f)
-			row = append(row, f/100.0)
-		} else if numRE.MatchString(cell) {
-			var n int64
-			fmt.Sscan(cell, &n)
-			row = append(row, n)
-		} else {
-			row = append(row, cell)
-		}
+		row = append(row, stringToCell(cell))
 	}
 	return
 }
