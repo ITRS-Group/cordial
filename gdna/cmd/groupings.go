@@ -49,7 +49,7 @@ func init() {
 	removeCmd.AddCommand(removeGroupCmd)
 	listCmd.AddCommand(listGroupCmd)
 
-	addGroupCmd.Flags().IntVar(&addGroupAllocation, "allocation", 0, "add allocation")
+	addGroupCmd.Flags().IntVar(&addGroupAllocation, "allocation", -1, "add allocation (use -1 for no change)")
 	addGroupCmd.Flags().StringVar(&addGroupAllocationToken, "token", "server", "token to allocate")
 }
 
@@ -182,8 +182,9 @@ var addGroupCmd = &cobra.Command{
 		ig.Set(config.Join("filters", "group", category), groups)
 
 		// update allocation if given
-		if addGroupAllocation > 0 {
+		if addGroupAllocation > -1 {
 			var allocations []Allocation
+
 			if err = ig.UnmarshalKey(config.Join("filters", "allocations", category),
 				&allocations,
 				viper.DecodeHook(
@@ -221,6 +222,7 @@ var addGroupCmd = &cobra.Command{
 				a.Timestamp = &ts
 				allocations[i] = a
 			}
+
 			ig.Set(config.Join("filters", "allocations", category), allocations)
 		}
 
@@ -410,7 +412,7 @@ var listGroupCmd = &cobra.Command{
 			return strings.Compare(a[0], b[0])
 		})
 		r.UpdateTable([]string{"category:group", "category", "group", "patterns", "updated", "username", "comment", "source"}, rows)
-		r.Flush()
+		r.Render()
 
 		return
 	},

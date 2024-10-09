@@ -149,7 +149,7 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 		reporter.HeadlineCSSClass("gdna-headlines"),
 	)
 	runReports(ctx, cf, tx, r, cf.GetString("email.body-reports"), -1)
-	r.Flush()
+	r.Render()
 	r.Close()
 	log.Debug().Msgf("text+HTML report complete, %d bytes", data.HTMLBodyPart.Len())
 
@@ -158,7 +158,7 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 		reporter.Scramble(cf.GetBool("email.scramble")),
 	)
 	runReports(ctx, cf, tx, r, cf.GetString("email.body-reports"), -1)
-	r.Flush()
+	r.Render()
 	r.Close()
 	log.Debug().Msgf("TEXT+html report complete, %d bytes", data.TextBodyPart.Len())
 
@@ -190,7 +190,7 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 				reporter.HeadlineCSSClass("gdna-headlines"),
 			)
 			runReports(ctx, cf, tx, r, reports, -1)
-			r.Flush()
+			r.Render()
 			r.Close()
 			log.Debug().Msgf("HTML report complete, %d bytes", data.HTMLAttachment.Len())
 		case "xlsx":
@@ -210,9 +210,10 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 				),
 				reporter.MinColumnWidth(cf.GetFloat64("xlsx.formats.min-width")),
 				reporter.MaxColumnWidth(cf.GetFloat64("xlsx.formats.max-width")),
+				// reporter.XLSXHeadlinesVertical(true),
 			)
 			runReports(ctx, cf, tx, r, reports, -1)
-			r.Flush()
+			r.Render()
 			r.Close()
 			log.Debug().Msgf("XLSX report complete, %d bytes", data.XLSXAttachment.Len())
 		default:

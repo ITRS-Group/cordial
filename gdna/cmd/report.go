@@ -206,7 +206,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 		}
 	}
 	defer r.Close()
-	defer r.Flush()
+	defer r.Render()
 
 	return runReports(ctx, cf, tx, r, reports, maxreports)
 }
@@ -402,7 +402,7 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 		log.Error().Msgf("failed to execute query: %s\n%s", err, query)
 		return
 	}
-	if len(table) > 1 {
+	if len(table) > 0 {
 		r.UpdateTable(table[0], table[1:])
 	}
 
@@ -450,7 +450,7 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 	if len(table) == 1 {
 		return
 	}
-	if len(table) > 1 {
+	if len(table) > 0 {
 		r2.UpdateTable(table[0], table[1:])
 	}
 	if query := cf.ExpandString(report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
@@ -502,7 +502,7 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 		}
 		table = append(table, t...)
 	}
-	if len(table) > 1 {
+	if len(table) > 0 {
 		r.UpdateTable(table[0], table[1:])
 	}
 

@@ -357,7 +357,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 			})
 		}
 		r.UpdateTable([]string{"name", "timeUpdated", "username", "comment", "origin"}, rows)
-		r.Flush()
+		r.Render()
 		return
 	}
 
@@ -386,7 +386,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 	}
 
 	r.UpdateTable([]string{"category:name", "category", "name", "timeUpdated", "username", "comment", "origin"}, rows)
-	r.Flush()
+	r.Render()
 	return
 }
 

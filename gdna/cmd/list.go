@@ -192,7 +192,7 @@ func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 		return strings.Compare(a[1], b[1])
 	})
 	r.UpdateTable([]string{"Report Name", "Group", "Title", "Type", "Dataview", "XLSX"}, rows)
-	r.Flush()
+	r.Render()
 
 	return
 }

@@ -161,7 +161,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 		if err != nil {
 			return err
 		}
-		if len(t) > 1 {
+		if len(t) > 0 {
 			r.UpdateTable(t[0], t[1:])
 		}
 	}
