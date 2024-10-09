@@ -1841,7 +1841,7 @@ reports:
     dataview:
       group: Groups
     xlsx:
-      freeze-to-column: gateway
+      freeze-to-column: servers
     columns: [ group, gateways, servers, serverTokenAllocation, "serverTokenUsage %", complete, "complete %", empty, "empty %", remaining, "remaining %", l1complete, "l1complete %", l1remaining, l2complete, "l2complete %", l2remaining, l3complete, "l3complete %" ]
     query: > #sql
       WITH
