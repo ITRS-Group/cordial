@@ -34,6 +34,9 @@ func loadPluginTables(ctx context.Context, cf *config.Config, tx *sql.Tx) (err e
 			if stmt, err = tx.PrepareContext(ctx, fmt.Sprintf("INSERT INTO %q VALUES (?);", table)); err != nil {
 				return
 			}
+			if _, err = tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %q", table)); err != nil {
+				return
+			}
 			plugins := cf.GetStringSlice(config.Join("plugins", pluginTable, "plugins"))
 			for _, p := range plugins {
 				if _, err = stmt.ExecContext(ctx, p); err != nil {

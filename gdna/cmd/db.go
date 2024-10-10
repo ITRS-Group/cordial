@@ -84,10 +84,6 @@ func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly boo
 		}
 	}
 
-	if err = updateSchema(ctx, db, cf); err != nil {
-		return
-	}
-
 	versionQuery := cf.GetString("db.gdna-version.query")
 	if versionQuery != "" {
 		var version string
@@ -106,6 +102,10 @@ func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly boo
 		if err != nil {
 			log.Error().Err(err).Msg("updating gdna_version")
 		}
+	}
+
+	if err = updateSchema(ctx, db, cf); err != nil {
+		return
 	}
 
 	return
@@ -136,13 +136,16 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 			return
 		}
 
-		var checked int
-		if err = db.QueryRowContext(ctx, checkQuery).Scan(&checked); err != nil {
-			return
+		required := 1
+
+		if checkQuery != "" {
+			if err = db.QueryRowContext(ctx, checkQuery).Scan(&required); err != nil {
+				return
+			}
 		}
 
-		log.Info().Msgf("checked: %q -> %d", checkQuery, checked)
-		if checked > 0 {
+		log.Info().Msgf("checked: %q -> %d", checkQuery, required)
+		if required > 0 {
 			var tx *sql.Tx
 			tx, err = db.BeginTx(ctx, nil)
 			if err != nil {
@@ -712,7 +715,7 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 		return
 	}
 
-	fc := buildFilterSQL(cf)
+	filters := buildFilterSQL(cf)
 
 	for _, table := range createQueries {
 		if !cf.IsSet(table) {
@@ -720,43 +723,7 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 			continue
 		}
 
-		// add a ${values:} prefix that returns SQL that can be combined
-		// like this:
-		//
-		//    WITH ig(gateway) AS (
-		//      SELECT 1 WHERE 1 == 0
-		//      ${values:db.gateways.filter.include}
-		//    ),
-		//	  ...
-		//
-		// to create a CTE that can then be tested with EXISTS/NOT EXISTS like
-		// this:
-		//
-		//    WHERE EXISTS (SELECT 1 FROM ig WHERE ${db.gateways.table}.gateway GLOB ig.gateway)
-		//      AND NOT EXISTS (SELECT 1 FROM eg WHERE ${db.gateways.table}.gateway GLOB ig.gateway)
-		//
-		// The `SELECT 1 WHERE 1 == 0` is needed so that if the
-		// ${values} return is empty, so the CTE returns no rows and not
-		// an error.
-		//
-		values := config.Prefix("values", func(cf *config.Config, s string, b bool) (result string, err error) {
-			s = strings.TrimPrefix(s, "values:")
-			l := cf.GetStringSlice(s)
-			if len(l) == 0 {
-				return
-			}
-			m := []string{}
-			for _, v := range l {
-				m = append(m, "('"+v+"')")
-			}
-			result = "UNION ALL VALUES " + strings.Join(m, ", ")
-			if b {
-				result = strings.TrimSpace(result)
-			}
-			return
-		})
-
-		query := cf.GetString(table, fc, values)
+		query := cf.GetString(table, filters)
 		log.Trace().Msg(query)
 		if _, err = tx.ExecContext(ctx, query); err != nil {
 			return
