@@ -603,7 +603,8 @@ func stringsToCells(rowStrings []string) (row []any) {
 	return
 }
 
-// apply conditional formatting to all sheets as part of the pre-render process
+// apply conditional formatting to all sheets as part of the render
+// process
 func (x *XLSXReporter) applyConditionalFormat() {
 	for sheetname, sheet := range x.sheets {
 		// conditional formats apply to columns of table data, so create
@@ -651,61 +652,72 @@ func (x *XLSXReporter) applyConditionalFormat() {
 				continue
 			}
 
-			// range over rows in order, 0 is first data row so add rowOffset when using
-			for rownum := range sheet.rowOrder {
-				tc := []string{}
+			rows := len(sheet.rowOrder)
 
-				// if no set columns set, then use test columns
-				if len(cols) == 0 {
-					cols = c.Test.Columns
+			tc := []string{}
+
+			// if no set columns set, then use test columns
+			if len(cols) == 0 {
+				cols = c.Test.Columns
+			}
+
+			// build formulas
+			for _, t := range c.Test.Columns {
+				i := slices.Index(sheet.columns, t)
+				if i == -1 {
+					log.Warn().Msgf("unknown column name %q, skipping conditional formatting for sheet %s", t, sheetname)
+					return
 				}
-
-				for _, t := range c.Test.Columns {
-					i := slices.Index(sheet.columns, t)
-					if i == -1 {
-						log.Warn().Msgf("unknown column name %q, skipping conditional formatting for sheet %s", t, sheetname)
-						return
-					}
-					cellname, err := excelize.CoordinatesToCellName(i+1, 2+rownum+sheet.rowOffset, true)
-					if err != nil {
-						panic(err)
-					}
-					switch c.Test.Type {
-					case "number":
-						tc = append(tc, fmt.Sprintf("TEXT(%s, \"0\")%s%q", cellname, c.Test.Condition, c.Test.Value))
-					default:
-						tc = append(tc, fmt.Sprintf("%s%s%q", cellname, c.Test.Condition, c.Test.Value))
-					}
+				firstcell, err := excelize.CoordinatesToCellName(i+1, 2+sheet.rowOffset, false)
+				if err != nil {
+					panic(err)
 				}
+				// make the column *only* absolute
+				firstcell = "$" + firstcell
 
-				logic := logicalWrapper(c.Test.Logical)
-				formula := logic + "(" + strings.Join(tc, ",") + ")"
-
-				r := []string{}
-				for _, col := range cols {
-					i := slices.Index(sheet.columns, col)
-					if i == -1 {
-						log.Warn().Msgf("unknown column name %q, skipping conditional formatting for sheet %s", col, sheetname)
-						return
-					}
-					cellname, err := excelize.CoordinatesToCellName(i+1, 2+rownum+sheet.rowOffset, true)
-					if err != nil {
-						panic(err)
-					}
-					r = append(r, cellname)
-				}
-
-				if err := x.x.SetConditionalFormat(sheetname, strings.Join(r, ","), []excelize.ConditionalFormatOptions{
-					{
-						Type:     "formula",
-						Criteria: formula,
-						Format:   x.cond[format],
-					},
-				}); err != nil {
-					log.Fatal().Err(err).Msgf("formula %s on %s", formula, strings.Join(r, ","))
+				switch c.Test.Type {
+				case "number":
+					tc = append(tc, fmt.Sprintf("TEXT(%s, \"0\")%s%q", firstcell, c.Test.Condition, c.Test.Value))
+				default:
+					tc = append(tc, fmt.Sprintf("%s%s%q", firstcell, c.Test.Condition, c.Test.Value))
 				}
 			}
+
+			logic := logicalWrapper(c.Test.Logical)
+			formula := logic + "(" + strings.Join(tc, ",") + ")"
+
+			refs := []string{}
+			for _, col := range cols {
+				i := slices.Index(sheet.columns, col)
+				if i == -1 {
+					log.Warn().Msgf("unknown column name %q, skipping conditional formatting for sheet %s", col, sheetname)
+					return
+				}
+				firstcell, err := excelize.CoordinatesToCellName(i+1, 2+sheet.rowOffset, false)
+				if err != nil {
+					panic(err)
+				}
+				lastcell, err := excelize.CoordinatesToCellName(i+1, 1+sheet.rowOffset+rows, false)
+				if err != nil {
+					panic(err)
+				}
+				refs = append(refs, firstcell+":"+lastcell)
+			}
+
+			x.setConditionalFormat(sheetname, formula, format, refs...)
 		}
+	}
+}
+
+func (x *XLSXReporter) setConditionalFormat(sheetname, formula, format string, refs ...string) {
+	if err := x.x.SetConditionalFormat(sheetname, strings.Join(refs, ","), []excelize.ConditionalFormatOptions{
+		{
+			Type:     "formula",
+			Criteria: formula,
+			Format:   x.cond[format],
+		},
+	}); err != nil {
+		log.Fatal().Err(err).Msgf("formula %s on %s", formula, strings.Join(refs, ","))
 	}
 }
 
