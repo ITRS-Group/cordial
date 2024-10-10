@@ -68,8 +68,8 @@ type Report struct {
 func init() {
 	GDNACmd.AddCommand(reportCmd)
 
-	reportCmd.Flags().StringVarP(&output, "output", "o", "-", "output destination `file`, default is console")
-	reportCmd.Flags().StringVarP(&outputFormat, "format", "F", "dataview", "output `format` - one of: dataview, table, html, toolkit (or csv), xslx")
+	reportCmd.Flags().StringVarP(&output, "output", "o", "-", "output destination `file`, default is console (stdout)")
+	reportCmd.Flags().StringVarP(&outputFormat, "format", "F", "dataview", "output `format` - one of: dataview, table, html, markdown, toolkit (or csv), xslx")
 
 	reportCmd.Flags().StringVarP(&reportNames, "reports", "r", "", "Run only matching (file globbing style) reports")
 	reportCmd.Flags().BoolVarP(&scrambleNames, "scramble", "S", false, "Scramble configured column of data in reports with sensitive data")
