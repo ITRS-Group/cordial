@@ -330,6 +330,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 		os.Stdout,
 		reporter.DataviewCSSClass("gdna-dataview"),
 		reporter.HeadlineCSSClass("gdna-headlines"),
+		reporter.XLSXHeadlines(cf.GetInt("xlsx.headlines")),
 	)
 	if category != "" {
 		rows := [][]string{}

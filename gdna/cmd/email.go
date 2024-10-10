@@ -210,7 +210,7 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 				),
 				reporter.MinColumnWidth(cf.GetFloat64("xlsx.formats.min-width")),
 				reporter.MaxColumnWidth(cf.GetFloat64("xlsx.formats.max-width")),
-				// reporter.XLSXHeadlinesVertical(true),
+				reporter.XLSXHeadlines(cf.GetInt("xlsx.headlines")),
 			)
 			runReports(ctx, cf, tx, r, reports, -1)
 			r.Render()

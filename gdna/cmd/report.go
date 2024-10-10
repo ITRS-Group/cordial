@@ -186,6 +186,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 			),
 			reporter.MinColumnWidth(cf.GetFloat64("xlsx.formats.min-width")),
 			reporter.MaxColumnWidth(cf.GetFloat64("xlsx.formats.max-width")),
+			reporter.XLSXHeadlines(cf.GetInt("xlsx.headlines")),
 		)
 	case "dataview":
 		fallthrough
