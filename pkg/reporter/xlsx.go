@@ -61,7 +61,7 @@ type XLSXReporter struct {
 	minColWidth float64
 	maxColWidth float64
 
-	headlinesVertical bool
+	headlines int
 }
 
 type sheet struct {
@@ -96,12 +96,12 @@ func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporte
 	opts := evalXLSXReportOptions(options...)
 
 	x = &XLSXReporter{
-		x:                 excelize.NewFile(),
-		w:                 w,
-		scambleNames:      opts.scramble,
-		password:          opts.password,
-		sheets:            map[string]*sheet{},
-		headlinesVertical: opts.headlinesVertical,
+		x:            excelize.NewFile(),
+		w:            w,
+		scambleNames: opts.scramble,
+		password:     opts.password,
+		sheets:       map[string]*sheet{},
+		headlines:    opts.headlines,
 	}
 
 	x.topHeading, _ = x.x.NewStyle(&excelize.Style{
@@ -199,8 +199,6 @@ func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporte
 	x.summarySheet = opts.summarySheetName
 	x.sheets[opts.summarySheetName] = &sheet{}
 	x.x.SetSheetName("Sheet1", opts.summarySheetName)
-	x.x.SetColStyle(opts.summarySheetName, "A", x.leftHeading)
-	x.x.SetColStyle(opts.summarySheetName, "B", x.rightAlign)
 
 	x.minColWidth = opts.minColWidth
 	x.maxColWidth = opts.maxColWidth
@@ -211,19 +209,19 @@ func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporte
 type XLSXReporterOptions func(*xlsxReportOptions)
 
 type xlsxReportOptions struct {
-	scramble          bool
-	password          *config.Plaintext
-	summarySheetName  string
-	dateFormat        string
-	intFormat         int
-	percentFormat     int
-	undefinedColour   string
-	okColour          string
-	warningColour     string
-	criticalColour    string
-	minColWidth       float64
-	maxColWidth       float64
-	headlinesVertical bool
+	scramble         bool
+	password         *config.Plaintext
+	summarySheetName string
+	dateFormat       string
+	intFormat        int
+	percentFormat    int
+	undefinedColour  string
+	okColour         string
+	warningColour    string
+	criticalColour   string
+	minColWidth      float64
+	maxColWidth      float64
+	headlines        int
 }
 
 func evalXLSXReportOptions(options ...XLSXReporterOptions) (xo *xlsxReportOptions) {
@@ -258,14 +256,21 @@ func XLSXPassword(password *config.Plaintext) XLSXReporterOptions {
 	}
 }
 
-// XLSXHeadlinesVertical sets the direction of headlines in a sheet. If
-// vertical is true then the headlines are added as a two column list of
-// name/value pairs. If not set (the default) then headlines are added
-// as two rows with each headlines added as a single column, name above
-// value.
-func XLSXHeadlinesVertical(vertical bool) XLSXReporterOptions {
+const (
+	XLSXHeadlinesNone = iota
+	XLSXHeadlinesVertical
+	XLSXHeadlinesHorizontal
+)
+
+// XLSXHeadlines sets visibility and the direction of headlines in a
+// sheet. The default is not to include headlines. If passed
+// XLSXHeadlinesVertical then the headlines are added as a two column
+// list of name/value pairs. If passed XLSXHeadlinesHorizontal then headlines
+// are added as two rows with each headlines added as a single column,
+// name above value.
+func XLSXHeadlines(headlines int) XLSXReporterOptions {
 	return func(xro *xlsxReportOptions) {
-		xro.headlinesVertical = vertical
+		xro.headlines = headlines
 	}
 }
 
@@ -370,7 +375,8 @@ func (x *XLSXReporter) UpdateTable(columns []string, data [][]string) {
 func (x *XLSXReporter) setSheetData() {
 	for sheetname, sheet := range x.sheets {
 		// render headlines first, updating rowOffset as we go if "vertical"
-		if x.headlinesVertical {
+		switch x.headlines {
+		case XLSXHeadlinesVertical:
 			sheet.rowOffset = 1
 			if len(sheet.columnWidths) < 2 {
 				sheet.columnWidths = []float64{0.0, 0.0}
@@ -397,7 +403,7 @@ func (x *XLSXReporter) setSheetData() {
 				sheet.columnWidths[1] = limitWidth(len(fmt.Sprint(value)), sheet.columnWidths[1], x.maxColWidth)
 				sheet.rowOffset++
 			}
-		} else {
+		case XLSXHeadlinesHorizontal:
 			sheet.rowOffset = 3
 			for i, headline := range sheet.headlineOrder {
 				namecell, _ := excelize.CoordinatesToCellName(i+1, 1)
@@ -426,6 +432,8 @@ func (x *XLSXReporter) setSheetData() {
 				}
 
 			}
+		default:
+			// nothing
 		}
 
 		// render main table
