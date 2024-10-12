@@ -1168,7 +1168,7 @@ db:
             RIGHT JOIN ${plugins.level1.table} l1
             GROUP BY server, l1.plugin
         )
-        SELECT server, plugin, needed - total(number) missing
+        SELECT server, plugin, printf('%d', needed - total(number)) missing
           FROM baseline
           LEFT JOIN ${db.samplers.active} USING (server, plugin)
         GROUP BY baseline.server, plugin
@@ -1265,7 +1265,7 @@ db:
             RIGHT JOIN ${plugins.level2.table} l2
             GROUP BY server, l2.plugin
         )
-        SELECT server, plugin, needed - total(number) missing
+        SELECT server, plugin, printf('%d', needed - total(number)) missing
           FROM baseline
           LEFT JOIN ${db.samplers.active} USING (server, plugin)
         GROUP BY baseline.server, plugin
@@ -2687,9 +2687,9 @@ reports:
              (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
              (SELECT total(number) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
-             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+             COALESCE((SELECT group_concat(CASE missing WHEN '0' THEN NULL WHEN '1' THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
                          FROM ${db.l1missingplugins-per-server.table} WHERE server = u.server), '') l1missing,
-             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+             COALESCE((SELECT group_concat(CASE missing WHEN '0' THEN NULL WHEN '1' THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
                          FROM ${db.l2missingplugins-per-server.table} WHERE server = u.server), '') l2missing,
              (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table}), '', 'missing')) as l3missing,
              group_concat(gateway, ', '),
@@ -2838,9 +2838,9 @@ reports:
              (SELECT count(distinct source) FROM ${db.servers.table} WHERE server = u.server) licenceSources,
              (SELECT total(number) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server AND ${split-column} = '${value}') as dynamicEntities,
-             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+             COALESCE((SELECT group_concat(CASE missing WHEN '0' THEN NULL WHEN '1' THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
                          FROM ${db.l1missingplugins-per-server.table} WHERE server = u.server), '') l1missing,
-             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+             COALESCE((SELECT group_concat(CASE missing WHEN '0' THEN NULL WHEN '1' THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
                          FROM ${db.l2missingplugins-per-server.table} WHERE server = u.server), '') l2missing,
              (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table}), '', 'missing')) as l3missing,
              COALESCE((SELECT group_concat(gateway, ', ') FROM ${db.servers.table} WHERE server = u.server AND gateway <> u.gateway), '') otherGateways,
@@ -3002,9 +3002,9 @@ reports:
              '' otherGateways,
              (SELECT total(number) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
-             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+             COALESCE((SELECT group_concat(CASE missing WHEN '0' THEN NULL WHEN '1' THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
                          FROM ${db.l1missingplugins-per-server.table} WHERE server = u.server), '') l1missing,
-             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+             COALESCE((SELECT group_concat(CASE missing WHEN '0' THEN NULL WHEN '1' THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
                          FROM ${db.l2missingplugins-per-server.table} WHERE server = u.server), '') l2missing,
              (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}'), '', 'missing')) as l3missing,
              COALESCE((SELECT group_concat(plugins, ', ') FROM (
@@ -3365,9 +3365,9 @@ reports:
              (SELECT count(*) FROM ${db.probes.active} WHERE server = s.server),
              (SELECT total(number) FROM ${db.samplers.active} WHERE server = s.server),
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = s.server),
-             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+             COALESCE((SELECT group_concat(CASE missing WHEN '0' THEN NULL WHEN '1' THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
                          FROM ${db.l1missingplugins-per-server.table} WHERE server = s.server), '') l1missing,
-             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+             COALESCE((SELECT group_concat(CASE missing WHEN '0' THEN NULL WHEN '1' THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
                          FROM ${db.l2missingplugins-per-server.table} WHERE server = s.server), '') l2missing,
              (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table}), '', 'missing')) as l3missing,
              (SELECT count(distinct source) FROM ${db.servers.table} WHERE server = s.server) licenceSources,
