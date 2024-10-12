@@ -1174,6 +1174,7 @@ db:
         GROUP BY baseline.server, plugin
         HAVING needed > COALESCE(number, 0)
       ;
+      CREATE INDEX IF NOT EXISTS ${db.l1missingplugins-per-server.table}_idx_1 ON ${db.l1missingplugins-per-server.table}(server);
 
   # the `l1covered-*` tables are built from active probes / samplers /
   # gateways where the number of distinct plugins match the number in
@@ -1284,6 +1285,7 @@ db:
         GROUP BY baseline.server, plugin
         HAVING needed > COALESCE(number, 0)
       ;
+      CREATE INDEX IF NOT EXISTS ${db.l2missingplugins-per-server.table}_idx_1 ON ${db.l2missingplugins-per-server.table}(server);
 
 
   l2covered-probes:
