@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.0.0-240827 at 2024-10-08 09:11:12 by pgalbavy on ITRSLP257-->
+<!--Edited using Gateway Setup Editor version GA6.8.1-240517 at 2024-10-12 15:50:41 by peter on HPSpectre360-->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/RA7.1.0-240916/gateway.xsd">
 	<probes>
 		<probe name="gdna">
@@ -365,10 +365,31 @@ ORDER BY probeVersion ASC
 							<silent>true</silent>
 						</task>
 					</command>
+					<command name="Exclude Gateway - Gateway Overview or Details">
+						<label>Exclude Gateway</label>
+						<description>Add Gateway to Exclude List</description>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]//*</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="exclude gateway by gatewayName headline"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
 				</commandGroup>
 				<commandGroup name="Groups">
 					<command name="Add Gateway To Group - By Group Rowname">
-						<label>Add Gateway To Group</label>
+						<label>Add Gateway To This Group</label>
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateway Groups&quot;)]/rows/row[not(@name=&quot;OTHER&quot;)]/cell</target>
 						</targets>
@@ -387,7 +408,7 @@ ORDER BY probeVersion ASC
 						</task>
 					</command>
 					<command name="Add Gateway To Group - By Gateway Rowname">
-						<label>Add Gateway To Group</label>
+						<label>Add This Gateway To Group</label>
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateways&quot;)]/rows/row/cell</target>
 						</targets>
@@ -443,11 +464,10 @@ ORDER BY probeVersion ASC
 							<silent>true</silent>
 						</task>
 					</command>
-					<command name="New Gateway Group">
+					<command name="Add or Edit Gateway Group">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateway Groups&quot;)]/rows/row/cell</target>
-							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateway Groups&quot;)]/headlines/cell</target>
 							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateway Groups&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateway Groups&quot;)]//*</target>
 						</targets>
 						<task>
 							<commands>
@@ -463,7 +483,8 @@ ORDER BY probeVersion ASC
 							<silent>true</silent>
 						</task>
 					</command>
-					<command name="Remove Group Member">
+					<command name="Remove Group Member from Filters">
+						<label>Remove This Group Member</label>
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]/rows/row/cell[not(@value=&quot;default&quot;)][(@column=&quot;origin&quot;)]/../cell</target>
 						</targets>
@@ -481,14 +502,15 @@ ORDER BY probeVersion ASC
 							<silent>true</silent>
 						</task>
 					</command>
-					<command name="Remove Group">
+					<command name="Remove Group from Filters">
+						<label>Remove This Group</label>
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]/rows/row[wild(@name,&quot;group-*#*&quot;)]/cell[not(@value=&quot;default&quot;)][(@column=&quot;origin&quot;)]/../cell</target>
 						</targets>
 						<task>
 							<commands>
 								<commandRef>
-									<command ref="remove complete group from filters dataview"/>
+									<command ref="remove group from filters dataview"/>
 									<stopOnError>true</stopOnError>
 								</commandRef>
 								<commandRef>
@@ -499,7 +521,46 @@ ORDER BY probeVersion ASC
 							<silent>true</silent>
 						</task>
 					</command>
-					<command name="Add Group - Dataview Filters">
+					<command name="Remove Gateway Group by Group Rowname">
+						<label>Remove This Group</label>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateway Groups&quot;)]/rows/row[not(@name=&quot;OTHER&quot;)]/cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="remove gateway group by rowname"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+					<command name="Remove Gateway Group">
+						<label>Remove Group</label>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateway Groups&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateway Groups&quot;)]//*</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="remove gateway group"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+					<command name="Add Group in Filters">
 						<label>Add Group</label>
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]</target>
@@ -519,7 +580,7 @@ ORDER BY probeVersion ASC
 							<silent>true</silent>
 						</task>
 					</command>
-					<command name="Add Group - Dataview Filters group Rows">
+					<command name="Add Group in Filters by Group Rowname">
 						<label>Add To Group</label>
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Filters&quot;)]/rows/row[wild(@name,&quot;group-*#*&quot;)]/cell</target>
@@ -528,6 +589,41 @@ ORDER BY probeVersion ASC
 							<commands>
 								<commandRef>
 									<command ref="add group on group row in filters dataview"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+					<command name="Add Gateway to Group - Gateway Overview or Details">
+						<label>Add Gateway To Group</label>
+						<description/>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]//*</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="add gateway to group by gatewayName headline"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
+					<command name="Add or Edit This Gateway Group">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(@name=&quot;Gateway Groups&quot;)]/rows/row/cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="add gateway to group by group-rowname"/>
 									<stopOnError>true</stopOnError>
 								</commandRef>
 								<commandRef>
@@ -628,6 +724,7 @@ ORDER BY probeVersion ASC
 					<label>GDNA</label>
 				</menu>
 				<command name="EMail Report">
+					<description>EMail This GDNA Report. (Leave fields blank for defaults)</description>
 					<targets>
 						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview</target>
 						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview/rows/row/cell</target>
@@ -737,7 +834,31 @@ ORDER BY probeVersion ASC
 						</arg>
 						<arg>
 							<userInput>
-								<description>Subject. Leave Blank For Default</description>
+								<description>Subject:</description>
+								<singleLineString/>
+							</userInput>
+						</arg>
+						<arg>
+							<userInput>
+								<description>To:</description>
+								<singleLineString/>
+							</userInput>
+						</arg>
+						<arg>
+							<static>--cc</static>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Cc:</description>
+								<singleLineString/>
+							</userInput>
+						</arg>
+						<arg>
+							<static>--bcc</static>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Bcc:</description>
 								<singleLineString/>
 							</userInput>
 						</arg>
@@ -767,31 +888,6 @@ ORDER BY probeVersion ASC
 					</args>
 				</userCommand>
 			</command>
-			<command name="remove complete group from filters dataview">
-				<userCommand>
-					<type>script</type>
-					<runLocation>gateway</runLocation>
-					<args>
-						<arg>
-							<text>
-								<var ref="GDNA_PATH"/>
-							</text>
-						</arg>
-						<arg>
-							<static>remove</static>
-						</arg>
-						<arg>
-							<xpath>../cell[(@column=&quot;type&quot;)]</xpath>
-						</arg>
-						<arg>
-							<xpath>../cell[(@column=&quot;category&quot;)]</xpath>
-						</arg>
-						<arg>
-							<xpath>../cell[(@column=&quot;grouping&quot;)]</xpath>
-						</arg>
-					</args>
-				</userCommand>
-			</command>
 			<command name="remove filter from filters dataview">
 				<userCommand>
 					<type>script</type>
@@ -810,34 +906,6 @@ ORDER BY probeVersion ASC
 						</arg>
 						<arg>
 							<xpath>../cell[(@column=&quot;category&quot;)]</xpath>
-						</arg>
-						<arg>
-							<xpath>../cell[(@column=&quot;pattern&quot;)]</xpath>
-						</arg>
-					</args>
-				</userCommand>
-			</command>
-			<command name="remove group member from filters dataview">
-				<userCommand>
-					<type>script</type>
-					<runLocation>gateway</runLocation>
-					<args>
-						<arg>
-							<text>
-								<var ref="GDNA_PATH"/>
-							</text>
-						</arg>
-						<arg>
-							<static>remove</static>
-						</arg>
-						<arg>
-							<xpath>../cell[(@column=&quot;type&quot;)]</xpath>
-						</arg>
-						<arg>
-							<xpath>../cell[(@column=&quot;category&quot;)]</xpath>
-						</arg>
-						<arg>
-							<xpath>../cell[(@column=&quot;grouping&quot;)]</xpath>
 						</arg>
 						<arg>
 							<xpath>../cell[(@column=&quot;pattern&quot;)]</xpath>
@@ -1063,6 +1131,64 @@ ORDER BY probeVersion ASC
 							</args>
 						</userCommand>
 					</command>
+					<command name="exclude gateway by gatewayName headline">
+						<userCommand>
+							<type>script</type>
+							<runLocation>gateway</runLocation>
+							<args>
+								<arg>
+									<text>
+										<var ref="GDNA_PATH"/>
+									</text>
+								</arg>
+								<arg>
+									<static>add</static>
+								</arg>
+								<arg>
+									<static>exclude</static>
+								</arg>
+								<arg>
+									<static>gateway</static>
+								</arg>
+								<arg>
+									<xpath>ancestor-or-self::dataview/headlines/cell[(@name=&quot;gatewayName&quot;)]</xpath>
+								</arg>
+								<arg>
+									<static>--origin</static>
+								</arg>
+								<arg>
+									<static>Dataview:</static>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<xpath>ancestor::dataview</xpath>
+								</arg>
+								<arg>
+									<static>--user</static>
+								</arg>
+								<arg>
+									<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<static>\</static>
+								</arg>
+								<arg>
+									<concatenate>true</concatenate>
+									<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+								</arg>
+								<arg>
+									<static>--comment</static>
+								</arg>
+								<arg>
+									<userInput>
+										<description>Comment</description>
+										<multiLineString/>
+									</userInput>
+								</arg>
+							</args>
+						</userCommand>
+					</command>
 					<command name="exclude server by rowname">
 						<userCommand>
 							<type>script</type>
@@ -1213,6 +1339,16 @@ ORDER BY probeVersion ASC
 								<userInput>
 									<description>Gateway Names or Patterns, Newline or space separated</description>
 									<multiLineString/>
+									<requiredArgument>false</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<static>--allocation</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Total Server Allocation (&quot;-1&quot; for no change)</description>
+									<integer>-1</integer>
 									<requiredArgument>true</requiredArgument>
 								</userInput>
 							</arg>
@@ -1278,6 +1414,16 @@ ORDER BY probeVersion ASC
 								<userInput>
 									<description>Gateway Names or Patterns. Newline or space separated</description>
 									<multiLineString/>
+									<requiredArgument>false</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<static>--allocation</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Total Server Allocation (&quot;-1&quot; for no change)</description>
+									<integer>-1</integer>
 									<requiredArgument>true</requiredArgument>
 								</userInput>
 							</arg>
@@ -1740,6 +1886,178 @@ ORDER BY probeVersion ASC
 						</args>
 					</userCommand>
 				</command>
+				<command name="remove group member from filters dataview">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>remove</static>
+							</arg>
+							<arg>
+								<xpath>../cell[(@column=&quot;type&quot;)]</xpath>
+							</arg>
+							<arg>
+								<xpath>../cell[(@column=&quot;category&quot;)]</xpath>
+							</arg>
+							<arg>
+								<xpath>../cell[(@column=&quot;grouping&quot;)]</xpath>
+							</arg>
+							<arg>
+								<xpath>../cell[(@column=&quot;pattern&quot;)]</xpath>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<command name="remove group from filters dataview">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>remove</static>
+							</arg>
+							<arg>
+								<xpath>../cell[(@column=&quot;type&quot;)]</xpath>
+							</arg>
+							<arg>
+								<xpath>../cell[(@column=&quot;category&quot;)]</xpath>
+							</arg>
+							<arg>
+								<xpath>../cell[(@column=&quot;grouping&quot;)]</xpath>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<command name="remove gateway group">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>remove</static>
+							</arg>
+							<arg>
+								<static>group</static>
+							</arg>
+							<arg>
+								<static>gateway</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Group Name</description>
+									<singleLineString>group</singleLineString>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<command name="remove gateway group by rowname">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>remove</static>
+							</arg>
+							<arg>
+								<static>group</static>
+							</arg>
+							<arg>
+								<static>gateway</static>
+							</arg>
+							<arg>
+								<xpath>@rowname</xpath>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<command name="add gateway to group by gatewayName headline">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>add</static>
+							</arg>
+							<arg>
+								<static>group</static>
+							</arg>
+							<arg>
+								<static>gateway</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Group Name</description>
+									<singleLineString>group</singleLineString>
+									<requiredArgument>true</requiredArgument>
+								</userInput>
+							</arg>
+							<arg>
+								<xpath>ancestor-or-self::dataview/headlines/cell[(@name=&quot;gatewayName&quot;)]</xpath>
+							</arg>
+							<arg>
+								<static>--origin</static>
+							</arg>
+							<arg>
+								<static>Dataview:</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>ancestor::dataview</xpath>
+							</arg>
+							<arg>
+								<static>--user</static>
+							</arg>
+							<arg>
+								<xpath>/geneos/client/runtimeParameters/@Domain</xpath>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<static>\</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>/geneos/client/runtimeParameters/@Username</xpath>
+							</arg>
+							<arg>
+								<static>--comment</static>
+							</arg>
+							<arg>
+								<userInput>
+									<description>Comment</description>
+									<multiLineString/>
+								</userInput>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
 			</commandGroup>
 			<commandGroup name="includes">
 				
@@ -2084,7 +2402,7 @@ ORDER BY probeVersion ASC
 				</rule>
 				<rule name="Complete Coverage">
 					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]/headlines/cell[(@name=&quot;complete&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]/headlines/cell[(@name=&quot;serversComplete&quot;)]</target>
 					</targets>
 					<priority>1</priority>
 					<pathAliases>
@@ -2356,9 +2674,9 @@ ORDER BY probeVersion ASC
 			<ruleGroup name="Servers">
 				<rule name="Levels">
 					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Servers&quot;)][(param(&quot;Group&quot;)=&quot;Monitored Estate&quot;)]/rows/row/cell[(@column=&quot;l1missing&quot;)]</target>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Servers&quot;)][(param(&quot;Group&quot;)=&quot;Monitored Estate&quot;)]/rows/row/cell[(@column=&quot;l2missing&quot;)]</target>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Servers&quot;)][(param(&quot;Group&quot;)=&quot;Monitored Estate&quot;)]/rows/row/cell[(@column=&quot;l3missing&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Servers&quot;)][(param(&quot;Group&quot;)=&quot;Geneos Estate&quot;)]/rows/row/cell[(@column=&quot;l1missing&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Servers&quot;)][(param(&quot;Group&quot;)=&quot;Geneos Estate&quot;)]/rows/row/cell[(@column=&quot;l2missing&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Servers&quot;)][(param(&quot;Group&quot;)=&quot;Geneos Estate&quot;)]/rows/row/cell[(@column=&quot;l3missing&quot;)]</target>
 					</targets>
 					<priority>1</priority>
 					<block>
@@ -2386,8 +2704,8 @@ ORDER BY probeVersion ASC
 				</rule>
 				<rule name="Samplers and Dynamic Entities">
 					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Servers&quot;)][(param(&quot;Group&quot;)=&quot;Monitored Estate&quot;)]/rows/row/cell[(@column=&quot;samplers&quot;)]</target>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Servers&quot;)][(param(&quot;Group&quot;)=&quot;Monitored Estate&quot;)]/rows/row/cell[(@column=&quot;dynamicEntities&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Servers&quot;)][(param(&quot;Group&quot;)=&quot;Geneos Estate&quot;)]/rows/row/cell[(@column=&quot;samplers&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Servers&quot;)][(param(&quot;Group&quot;)=&quot;Geneos Estate&quot;)]/rows/row/cell[(@column=&quot;dynamicEntities&quot;)]</target>
 					</targets>
 					<priority>1</priority>
 					<pathAliases>
