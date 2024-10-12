@@ -1168,11 +1168,11 @@ db:
             RIGHT JOIN ${plugins.level1.table} l1
             GROUP BY server, l1.plugin
         )
-        SELECT server, plugin, needed - COALESCE(number, 0) missing
+        SELECT server, plugin, needed - total(number) missing
           FROM baseline
           LEFT JOIN ${db.samplers.active} USING (server, plugin)
         GROUP BY baseline.server, plugin
-        HAVING needed > COALESCE(number, 0)
+        HAVING needed > total(number)
       ;
       CREATE INDEX IF NOT EXISTS ${db.l1missingplugins-per-server.table}_idx_1 ON ${db.l1missingplugins-per-server.table}(server);
 
@@ -1201,7 +1201,7 @@ db:
               FROM baseline
               LEFT JOIN ${db.l1plugins-per-probe.table} USING (probeName, probePort, plugin)
             GROUP BY baseline.probeName, baseline.probePort, plugin
-            HAVING needed > COALESCE(number, 0)
+            HAVING needed > total(number)
        )
        GROUP BY gateway, probeName, probePort;
 
@@ -1212,22 +1212,8 @@ db:
       CREATE ${db.temporary-table} TABLE ${db.l1covered-servers.table} AS
         SELECT ${db.servers.columns}
           FROM ${db.servers.table}
-        WHERE server NOT IN (
-            WITH baseline(server, plugin, needed) AS (
-              SELECT  server,
-                      l1.plugin,
-                      (SELECT count(*) FROM ${plugins.level1.table} WHERE plugin = l1.plugin )
-                FROM ${db.servers.table}
-               RIGHT JOIN ${plugins.level1.table} l1
-               GROUP BY server, l1.plugin
-            )
-            SELECT server
-              FROM baseline
-              LEFT JOIN ${db.l1plugins-per-server.table} USING (server, plugin)
-            GROUP BY baseline.server, plugin
-            HAVING needed > COALESCE(number, 0)
-        )
-        GROUP BY gateway, server;
+         WHERE server NOT IN (SELECT server FROM ${db.l1missingplugins-per-server.table})
+         GROUP BY gateway, server;
         CREATE INDEX IF NOT EXISTS ${db.l1covered-servers.table}_idx_1 ON ${db.l1covered-servers.table}(gateway);
 
   l1covered-gateways:
@@ -1279,14 +1265,13 @@ db:
             RIGHT JOIN ${plugins.level2.table} l2
             GROUP BY server, l2.plugin
         )
-        SELECT server, plugin, needed - COALESCE(number, 0) missing
+        SELECT server, plugin, needed - total(number) missing
           FROM baseline
           LEFT JOIN ${db.samplers.active} USING (server, plugin)
         GROUP BY baseline.server, plugin
-        HAVING needed > COALESCE(number, 0)
+        HAVING needed > total(number)
       ;
       CREATE INDEX IF NOT EXISTS ${db.l2missingplugins-per-server.table}_idx_1 ON ${db.l2missingplugins-per-server.table}(server);
-
 
   l2covered-probes:
     table: l2covered_probes
@@ -1310,22 +1295,8 @@ db:
       CREATE ${db.temporary-table} TABLE ${db.l2covered-servers.table} AS
         SELECT ${db.servers.columns}
           FROM ${db.servers.table}
-          WHERE server NOT IN (
-            WITH baseline(server, plugin, needed) AS (
-              SELECT  server,
-                      l2.plugin,
-                      (SELECT count(*) FROM ${plugins.level2.table} WHERE plugin = l2.plugin)
-                FROM ${db.servers.table}
-               RIGHT JOIN ${plugins.level2.table} l2
-               GROUP BY server, l2.plugin
-            )
-            SELECT server
-              FROM baseline
-              LEFT JOIN ${db.l2plugins-per-server.table} USING (server, plugin)
-            GROUP BY baseline.server, plugin
-            HAVING needed > COALESCE(number, 0)
-          )
-          GROUP BY gateway, server;
+         WHERE server NOT IN (SELECT server FROM ${db.l2missingplugins-per-server.table})
+         GROUP BY gateway, server;
       CREATE INDEX IF NOT EXISTS ${db.l2covered-servers.table}_idx_1 ON ${db.l2covered-servers.table}(gateway);
 
   l2covered-gateways:
