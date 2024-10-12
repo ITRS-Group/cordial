@@ -472,12 +472,14 @@ db:
     - servers
 
     - l1plugins-per-server
+    - l1missingplugins-per-server
     - l1plugins-per-probe
     - l1covered-probes
     - l1covered-servers
     - l1covered-gateways
 
     - l2plugins-per-server
+    - l2missingplugins-per-server
     - l2plugins-per-probe
     - l2covered-probes
     - l2covered-servers
@@ -1125,21 +1127,6 @@ db:
       CREATE INDEX IF NOT EXISTS ${db.servers.table}_idx_1 ON ${db.servers.table}(server, gateway);
       CREATE INDEX IF NOT EXISTS ${db.servers.table}_idx_2 ON ${db.servers.table}(gateway, server);
 
-  # the `l1plugins-per-server` table is built from all active samplers
-  # that match the plugin names in the `level1` table and is then
-  # grouped by gateway, server and plugin.
-  l1plugins-per-server:
-    table: l1_plugins_server
-    columns: gateway, plugin, server, hostID, number, source, individual, firstSeen, lastSeen
-    create: > #sql
-      DROP TABLE IF EXISTS ${db.l1plugins-per-server.table};
-      CREATE ${db.temporary-table} TABLE ${db.l1plugins-per-server.table} AS
-        SELECT gateway, plugin, server, hostID, sum(number) as number, source, individual, firstSeen, lastSeen
-          FROM ${db.samplers.active}
-        WHERE plugin IN ${plugins.level1.table}
-        GROUP BY gateway, server, plugin;
-      CREATE INDEX IF NOT EXISTS ${db.l1plugins-per-server.table}_idx_1 ON ${db.l1plugins-per-server.table}(server);
-
   # the `l1plugins-per-probe` table is built from all active samplers
   # that match the plugin names in the `level1` table and is then
   # grouped by gateway, probeName, probePort and plugin.
@@ -1154,11 +1141,44 @@ db:
         GROUP BY gateway, probeName, probePort, plugin;
       CREATE INDEX IF NOT EXISTS ${db.l1plugins-per-probe.table}_idx_1 ON ${db.l1plugins-per-probe.table}(probeName, probePort);
 
+  # the `l1plugins-per-server` table is built from all active samplers
+  # that match the plugin names in the `level1` table and is then
+  # grouped by gateway, server and plugin.
+  l1plugins-per-server:
+    table: l1_plugins_server
+    columns: gateway, plugin, server, hostID, number, source, individual, firstSeen, lastSeen
+    create: > #sql
+      DROP TABLE IF EXISTS ${db.l1plugins-per-server.table};
+      CREATE ${db.temporary-table} TABLE ${db.l1plugins-per-server.table} AS
+        SELECT gateway, plugin, server, hostID, sum(number) as number, source, individual, firstSeen, lastSeen
+          FROM ${db.samplers.active}
+        WHERE plugin IN ${plugins.level1.table}
+        GROUP BY server, plugin;
+      CREATE INDEX IF NOT EXISTS ${db.l1plugins-per-server.table}_idx_1 ON ${db.l1plugins-per-server.table}(server);
+
+  l1missingplugins-per-server:
+    table: l1_missing_plugins_server
+    columns: server, plugin, missing
+    create: | #sql
+      DROP TABLE IF EXISTS ${db.l1missingplugins-per-server.table};
+      CREATE ${db.temporary-table} TABLE ${db.l1missingplugins-per-server.table} AS
+        WITH baseline(server, plugin, needed) AS (
+          SELECT server, l1.plugin, (SELECT count(*) FROM ${plugins.level1.table} WHERE plugin = l1.plugin)
+            FROM ${db.servers.table}
+            RIGHT JOIN ${plugins.level1.table} l1
+            GROUP BY server, l1.plugin
+        )
+        SELECT server, plugin, needed - COALESCE(number, 0) missing
+          FROM baseline
+          LEFT JOIN ${db.samplers.active} USING (server, plugin)
+        GROUP BY baseline.server, plugin
+        HAVING needed > COALESCE(number, 0)
+      ;
+
   # the `l1covered-*` tables are built from active probes / samplers /
   # gateways where the number of distinct plugins match the number in
   # the `level1` table. Each is grouped by gateway and then either the
   # probe host & port or server, as appropriate.
-
   l1covered-probes:
     table: l1covered_probes
     create: > #sql
@@ -1166,11 +1186,21 @@ db:
       CREATE ${db.temporary-table} TABLE ${db.l1covered-probes.table} AS
       SELECT ${db.probes.columns}
         FROM ${db.probes.active}
-       WHERE (probeName, probePort) IN (
-        SELECT probeName, probePort
-          FROM ${db.l1plugins-per-probe.table}
-         GROUP BY probeName, probePort
-        HAVING count(plugin) = (SELECT count(*) FROM ${plugins.level1.table})
+       WHERE (probeName, probePort) NOT IN (
+        WITH baseline(probeName, probePort, plugin, needed) AS (
+              SELECT  probeName,
+                      probePort,
+                      l1.plugin,
+                      (SELECT count(*) FROM ${plugins.level1.table} WHERE plugin = l1.plugin )
+                FROM ${db.probes.active}
+               RIGHT JOIN ${plugins.level1.table} l1
+               GROUP BY server, l1.plugin
+            )
+            SELECT probeName, probePort
+              FROM baseline
+              LEFT JOIN ${db.l1plugins-per-probe.table} USING (probeName, probePort, plugin)
+            GROUP BY baseline.probeName, baseline.probePort, plugin
+            HAVING needed > COALESCE(number, 0)
        )
        GROUP BY gateway, probeName, probePort;
 
@@ -1181,15 +1211,23 @@ db:
       CREATE ${db.temporary-table} TABLE ${db.l1covered-servers.table} AS
         SELECT ${db.servers.columns}
           FROM ${db.servers.table}
-        WHERE server IN (
+        WHERE server NOT IN (
+            WITH baseline(server, plugin, needed) AS (
+              SELECT  server,
+                      l1.plugin,
+                      (SELECT count(*) FROM ${plugins.level1.table} WHERE plugin = l1.plugin )
+                FROM ${db.servers.table}
+               RIGHT JOIN ${plugins.level1.table} l1
+               GROUP BY server, l1.plugin
+            )
             SELECT server
-              FROM ${db.l1plugins-per-server.table}
-            GROUP BY server
-            HAVING count(plugin) = (SELECT count(*) FROM ${plugins.level1.table})
+              FROM baseline
+              LEFT JOIN ${db.l1plugins-per-server.table} USING (server, plugin)
+            GROUP BY baseline.server, plugin
+            HAVING needed > COALESCE(number, 0)
         )
         GROUP BY gateway, server;
         CREATE INDEX IF NOT EXISTS ${db.l1covered-servers.table}_idx_1 ON ${db.l1covered-servers.table}(gateway);
-
 
   l1covered-gateways:
     table: l1covered_gateways
@@ -1199,16 +1237,22 @@ db:
       SELECT ${db.gateways.columns}
         FROM ${db.gateways.active}
         WHERE gateway IN (
-          SELECT gateway FROM (
-            SELECT gateway
-              FROM ${db.l1plugins-per-server.table}
-              GROUP BY gateway, server
-            HAVING count(plugin) = (SELECT count(*) FROM ${plugins.level1.table})
-          ) AS l1a
+          SELECT gateway
+            FROM ${db.l1covered-servers.table} l1s
            GROUP BY gateway
-          HAVING count(*) = (SELECT count(*) FROM ${db.servers.table} p WHERE p.gateway = l1a.gateway)
+          HAVING count(*) = (SELECT count(*) FROM servers WHERE gateway = l1s.gateway)
         )
-        GROUP BY gateway;
+
+  l2plugins-per-probe:
+    table: l2_plugins_probe
+    create: > #sql
+      DROP TABLE IF EXISTS ${db.l2plugins-per-probe.table};
+      CREATE ${db.temporary-table} TABLE ${db.l2plugins-per-probe.table} AS
+        SELECT ${db.samplers.columns}
+          FROM ${db.samplers.active}
+        WHERE plugin IN ${plugins.level2.table}
+        GROUP BY gateway, probeName, probePort, plugin;
+      CREATE INDEX IF NOT EXISTS ${db.l2plugins-per-probe.table}_idx_1 ON ${db.l2plugins-per-probe.table}(probeName, probePort);
 
   l2plugins-per-server:
     table: l2_plugins_server
@@ -1222,16 +1266,25 @@ db:
         GROUP BY gateway, server, plugin;
       CREATE INDEX IF NOT EXISTS ${db.l2plugins-per-server.table}_idx_1 ON ${db.l2plugins-per-server.table}(server);
 
-  l2plugins-per-probe:
-    table: l2_plugins_probe
-    create: > #sql
-      DROP TABLE IF EXISTS ${db.l2plugins-per-probe.table};
-      CREATE ${db.temporary-table} TABLE ${db.l2plugins-per-probe.table} AS
-        SELECT ${db.samplers.columns}
-          FROM ${db.samplers.active}
-        WHERE plugin IN ${plugins.level2.table}
-        GROUP BY gateway, probeName, probePort, plugin;
-      CREATE INDEX IF NOT EXISTS ${db.l2plugins-per-probe.table}_idx_1 ON ${db.l2plugins-per-probe.table}(probeName, probePort);
+  l2missingplugins-per-server:
+    table: l2_missing_plugins_server
+    columns: server, plugin, missing
+    create: | #sql
+      DROP TABLE IF EXISTS ${db.l2missingplugins-per-server.table};
+      CREATE ${db.temporary-table} TABLE ${db.l2missingplugins-per-server.table} AS
+        WITH baseline(server, plugin, needed) AS (
+          SELECT server, l2.plugin, (SELECT count(*) FROM ${plugins.level2.table} WHERE plugin = l2.plugin)
+            FROM ${db.servers.table}
+            RIGHT JOIN ${plugins.level2.table} l2
+            GROUP BY server, l2.plugin
+        )
+        SELECT server, plugin, needed - COALESCE(number, 0) missing
+          FROM baseline
+          LEFT JOIN ${db.samplers.active} USING (server, plugin)
+        GROUP BY baseline.server, plugin
+        HAVING needed > COALESCE(number, 0)
+      ;
+
 
   l2covered-probes:
     table: l2covered_probes
@@ -1255,13 +1308,22 @@ db:
       CREATE ${db.temporary-table} TABLE ${db.l2covered-servers.table} AS
         SELECT ${db.servers.columns}
           FROM ${db.servers.table}
-        WHERE server IN (
-          SELECT server
-            FROM ${db.l2plugins-per-server.table}
-          GROUP BY server
-          HAVING count(plugin) = (SELECT count(*) FROM ${plugins.level2.table})
-        )
-        GROUP BY gateway, server;
+          WHERE server NOT IN (
+            WITH baseline(server, plugin, needed) AS (
+              SELECT  server,
+                      l2.plugin,
+                      (SELECT count(*) FROM ${plugins.level2.table} WHERE plugin = l2.plugin)
+                FROM ${db.servers.table}
+               RIGHT JOIN ${plugins.level2.table} l2
+               GROUP BY server, l2.plugin
+            )
+            SELECT server
+              FROM baseline
+              LEFT JOIN ${db.l2plugins-per-server.table} USING (server, plugin)
+            GROUP BY baseline.server, plugin
+            HAVING needed > COALESCE(number, 0)
+          )
+          GROUP BY gateway, server;
       CREATE INDEX IF NOT EXISTS ${db.l2covered-servers.table}_idx_1 ON ${db.l2covered-servers.table}(gateway);
 
   l2covered-gateways:
@@ -1272,14 +1334,10 @@ db:
       SELECT ${db.gateways.columns}
         FROM ${db.gateways.active}
         WHERE gateway IN (
-          SELECT gateway FROM (
-            SELECT gateway
-              FROM ${db.l2plugins-per-server.table}
-              GROUP BY gateway, server
-            HAVING count(plugin) = (SELECT count(*) FROM ${plugins.level2.table})
-          ) AS l2a
-            GROUP BY gateway
-          HAVING count(*) = (SELECT count(*) FROM ${db.servers.table} WHERE gateway = l2a.gateway)
+          SELECT gateway
+            FROM ${db.l2covered-servers.table} l2s
+           GROUP BY gateway
+          HAVING count(*) = (SELECT count(*) FROM servers WHERE gateway = l2s.gateway)
         )
         GROUP BY gateway;
 
@@ -1354,37 +1412,11 @@ db:
     create: > #sql
       DROP TABLE IF EXISTS ${db.covered-gateways.table};
       CREATE ${db.temporary-table} TABLE ${db.covered-gateways.table} AS
-      WITH
-      l1 AS (
-        SELECT gateway FROM (
-          SELECT gateway
-            FROM ${db.l1plugins-per-server.table}
-          GROUP BY gateway, server
-          HAVING count(plugin) = (SELECT count(*) FROM ${plugins.level1.table})
-        ) AS l1a
-        GROUP BY gateway
-        HAVING count(*) = (SELECT count(*) FROM ${db.servers.table} p WHERE p.gateway = l1a.gateway)
-      ), l2 AS (
-        SELECT gateway FROM (
-          SELECT gateway
-            FROM ${db.l2plugins-per-server.table}
-          GROUP BY gateway, server
-          HAVING count(plugin) = (SELECT count(*) FROM ${plugins.level2.table})
-        ) AS l2
-        GROUP BY gateway
-        HAVING count(*) = (SELECT count(*) FROM ${db.servers.table} p WHERE p.gateway = l2.gateway)
-      ), l3 AS (
-        SELECT gateway FROM (
-          SELECT gateway
-            FROM ${db.l3plugins-per-server.table}
-            GROUP BY gateway, server
-        ) as l3
-        GROUP BY gateway
-        HAVING count(*) = (SELECT count(*) FROM ${db.servers.table} p WHERE p.gateway = l3.gateway)
-      )
       SELECT ${db.gateways.columns}
         FROM ${db.gateways.active}
-        WHERE gateway IN l1 AND gateway IN l2 AND gateway IN l3
+        WHERE gateway IN (SELECT gateway FROM ${db.l1covered-gateways.table})
+          AND gateway IN (SELECT gateway FROM ${db.l2covered-gateways.table})
+          AND gateway IN (SELECT gateway FROM ${db.l3covered-gateways.table})
        GROUP BY gateway
       HAVING count(*) = (SELECT count(*) FROM ${db.servers.table} p WHERE p.gateway = ${db.gateways.active}.gateway);
 
@@ -1420,54 +1452,23 @@ db:
     create: > #sql
       DROP TABLE IF EXISTS ${db.covered-servers.table};
       CREATE ${db.temporary-table} TABLE ${db.covered-servers.table} AS
-        WITH
-        l1 AS (
-          SELECT server
-            FROM ${db.l1plugins-per-server.table}
-            GROUP BY server
-          HAVING count(plugin) = (SELECT count(*) FROM ${plugins.level1.table})
-        ), l2 AS (
-          SELECT server
-            FROM ${db.l2plugins-per-server.table}
-            GROUP BY server
-          HAVING count(plugin) = (SELECT count(*) FROM ${plugins.level2.table})
-        ), l3 AS (
-          SELECT server
-            FROM ${db.l3plugins-per-server.table}
-            GROUP BY server
-        )
         SELECT ${db.servers.columns}
           FROM ${db.servers.table}
-          WHERE server IN l1
-            AND server IN l2
-            AND server IN l3;
+          WHERE server IN (SELECT server FROM ${db.l1covered-servers.table})
+            AND server IN (SELECT server FROM ${db.l2covered-servers.table})
+            AND server IN (SELECT server FROM ${db.l3covered-servers.table})
+        ;
 
   uncovered-servers:
     table: uncovered_servers
     create: > #sql
       DROP TABLE IF EXISTS ${db.uncovered-servers.table};
       CREATE ${db.temporary-table} TABLE ${db.uncovered-servers.table} AS
-        WITH
-        l1 AS (
-          SELECT server
-            FROM ${db.l1plugins-per-server.table}
-            GROUP BY server
-          HAVING count(plugin) = (SELECT count(*) FROM ${plugins.level1.table})
-        ), l2 AS (
-          SELECT server
-            FROM ${db.l2plugins-per-server.table}
-            GROUP BY server
-          HAVING count(plugin) = (SELECT count(*) FROM ${plugins.level2.table})
-        ), l3 AS (
-          SELECT server
-            FROM ${db.l3plugins-per-server.table}
-            GROUP BY server
-        )
         SELECT ${db.servers.columns}
           FROM ${db.servers.table}
-         WHERE server NOT IN l1
-            OR server NOT IN l2
-            OR server NOT IN l3;
+         WHERE server NOT IN (SELECT server FROM ${db.l1covered-servers.table})
+            OR server NOT IN (SELECT server FROM ${db.l2covered-servers.table})
+            OR server NOT IN (SELECT server FROM ${db.l3covered-servers.table});
         CREATE INDEX IF NOT EXISTS ${db.uncovered-servers.table}_idx_1 ON ${db.uncovered-servers.table}(server);
 
   empty-servers:
@@ -1485,27 +1486,11 @@ db:
     create: > #sql
       DROP TABLE IF EXISTS ${db.covered-probes.table};
       CREATE ${db.temporary-table} TABLE ${db.covered-probes.table} AS
-        WITH
-        l1 AS (
-          SELECT probeName, probePort
-            FROM ${db.l1plugins-per-probe.table}
-            GROUP BY probeName, probePort
-          HAVING count(plugin) = (SELECT count(*) FROM ${plugins.level1.table})
-        ), l2 AS (
-          SELECT probeName, probePort
-            FROM ${db.l2plugins-per-probe.table}
-            GROUP BY probeName, probePort
-          HAVING count(plugin) = (SELECT count(*) FROM ${plugins.level2.table})
-        ), l3 AS (
-          SELECT probeName, probePort
-            FROM ${db.l3plugins-per-probe.table}
-            GROUP BY probeName, probePort
-        )
         SELECT ${db.probes.columns}
           FROM ${db.probes.active}
-          WHERE (probeName, probePort) IN l1
-            AND (probeName, probePort) IN l2
-            AND (probeName, probePort) IN l3;
+          WHERE (probeName, probePort) IN (SELECT probeName, probePort FROM ${db.l1covered-probes.table})
+            AND (probeName, probePort) IN (SELECT probeName, probePort FROM ${db.l2covered-probes.table})
+            AND (probeName, probePort) IN (SELECT probeName, probePort FROM ${db.l3covered-probes.table});
 
   empty-probes:
     table: empty_probes
@@ -2699,7 +2684,7 @@ reports:
             value: "missing"
           set:
             - format: warning
-    columns: [ serverID, server, osVersion, probes, samplers, dynamicEntities, l1missing, l2missing, l3missing, gateways ]
+    columns: [ serverID, server, osVersion, probes, samplers, dynamicEntities, l1missing, l2missing, l3missing, gateways, plugins ]
     scramble-columns: [ serverID, server, gateways ]
     headlines: > #sql
       WITH t AS (
@@ -2729,20 +2714,27 @@ reports:
              (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
              (SELECT total(number) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (
-                          SELECT CASE count(plugin) WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || count(plugin) || ')' END plugin
-                            FROM ${plugins.level1.table}
-                           WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server)
-                           GROUP BY plugin
-                     )), '') l1missing,
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (
-                          SELECT CASE count(plugin) WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || count(plugin) || ')' END plugin
-                            FROM ${plugins.level2.table}
-                           WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server)
-                           GROUP BY plugin
-                     )), '') l2missing,
+             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+                         FROM ${db.l1missingplugins-per-server.table} WHERE server = u.server), '') l1missing,
+             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+                         FROM ${db.l2missingplugins-per-server.table} WHERE server = u.server), '') l2missing,
              (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table}), '', 'missing')) as l3missing,
-             group_concat(gateway, ', ')
+             group_concat(gateway, ', '),
+             COALESCE((SELECT group_concat(plugins, ', ') FROM (
+                          SELECT plugin || IIF(total(number) > 1, printf('(%d)', total(number)), '') plugins
+                            FROM ${db.samplers.active}
+                           WHERE server = u.server
+                           GROUP BY plugin
+
+                          UNION
+
+                          SELECT plugin || IIF(count(plugin) > 1, printf('(%d)', total(number)), '')
+                            FROM ${db.ca-samplers.active}
+                           WHERE server = u.server
+                           GROUP BY plugin
+
+                          ORDER BY 1
+                     )), '') plugins
         FROM ${db.uncovered-servers.table} u
        GROUP BY server
        ORDER BY samplers ASC, probes DESC, length(l1missing) DESC, length(l2missing) DESC, l3missing DESC;
@@ -2873,18 +2865,10 @@ reports:
              (SELECT count(distinct source) FROM ${db.servers.table} WHERE server = u.server) licenceSources,
              (SELECT total(number) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server AND ${split-column} = '${value}') as dynamicEntities,
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (
-                          SELECT CASE count(plugin) WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || count(plugin) || ')' END plugin
-                            FROM ${plugins.level1.table}
-                           WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server)
-                           GROUP BY plugin
-                     )), '') l1missing,
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (
-                          SELECT CASE count(plugin) WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || count(plugin) || ')' END plugin
-                            FROM ${plugins.level2.table}
-                           WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server)
-                           GROUP BY plugin
-                     )), '') l2missing,
+             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+                         FROM ${db.l1missingplugins-per-server.table} WHERE server = u.server), '') l1missing,
+             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+                         FROM ${db.l2missingplugins-per-server.table} WHERE server = u.server), '') l2missing,
              (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table}), '', 'missing')) as l3missing,
              COALESCE((SELECT group_concat(gateway, ', ') FROM ${db.servers.table} WHERE server = u.server AND gateway <> u.gateway), '') otherGateways,
              COALESCE((SELECT group_concat(plugins, ', ') FROM (
@@ -3045,18 +3029,10 @@ reports:
              '' otherGateways,
              (SELECT total(number) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (
-                          SELECT CASE count(plugin) WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || count(plugin) || ')' END plugin
-                            FROM ${plugins.level1.table}
-                           WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = u.server)
-                           GROUP BY plugin
-                     )), '') l1missing,
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (
-                          SELECT CASE count(plugin) WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || count(plugin) || ')' END plugin
-                            FROM ${plugins.level2.table}
-                           WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = u.server)
-                           GROUP BY plugin
-                     )), '') l2missing,
+             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+                         FROM ${db.l1missingplugins-per-server.table} WHERE server = u.server), '') l1missing,
+             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+                         FROM ${db.l2missingplugins-per-server.table} WHERE server = u.server), '') l2missing,
              (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}'), '', 'missing')) as l3missing,
              COALESCE((SELECT group_concat(plugins, ', ') FROM (
                           SELECT plugin || IIF(total(number) > 1, printf('(%d)', total(number)), '') plugins
@@ -3416,18 +3392,10 @@ reports:
              (SELECT count(*) FROM ${db.probes.active} WHERE server = s.server),
              (SELECT total(number) FROM ${db.samplers.active} WHERE server = s.server),
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = s.server),
-             COALESCE((SELECT group_concat(plugin, ', ') FROM (
-                          SELECT CASE count(plugin) WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || count(plugin) || ')' END plugin
-                            FROM ${plugins.level1.table}
-                           WHERE plugin NOT IN (SELECT plugin FROM ${db.l1plugins-per-server.table} WHERE server = s.server)
-                           GROUP BY plugin
-                      )), '') l1missing,
-                          COALESCE((SELECT group_concat(plugin, ', ') FROM (
-                          SELECT CASE count(plugin) WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || count(plugin) || ')' END plugin
-                            FROM ${plugins.level2.table}
-                           WHERE plugin NOT IN (SELECT plugin FROM ${db.l2plugins-per-server.table} WHERE server = s.server)
-                           GROUP BY plugin
-                     )), '') l2missing,
+             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+                         FROM ${db.l1missingplugins-per-server.table} WHERE server = s.server), '') l1missing,
+             COALESCE((SELECT group_concat(CASE missing WHEN 0 THEN NULL WHEN 1 THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
+                         FROM ${db.l2missingplugins-per-server.table} WHERE server = s.server), '') l2missing,
              (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table}), '', 'missing')) as l3missing,
              (SELECT count(distinct source) FROM ${db.servers.table} WHERE server = s.server) licenceSources,
              group_concat(gateway, ','),
