@@ -677,7 +677,8 @@ func (x *XLSXReporter) applyConditionalFormat() {
 
 				switch c.Test.Type {
 				case "number":
-					tc = append(tc, fmt.Sprintf("TEXT(%s, \"0\")%s%q", firstcell, c.Test.Condition, c.Test.Value))
+					// convert black cells to zero and then text with
+					tc = append(tc, fmt.Sprintf("IF(OR(ISBLANK(%[1]s),%[1]s=\"\"),0,%[1]s)%s%s", firstcell, c.Test.Condition, c.Test.Value))
 				default:
 					tc = append(tc, fmt.Sprintf("%s%s%q", firstcell, c.Test.Condition, c.Test.Value))
 				}
