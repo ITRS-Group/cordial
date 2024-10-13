@@ -520,7 +520,7 @@ db:
         VALUES (@version)
         ON CONFLICT (version)
           DO UPDATE SET version = @version;
-    query: > #sql
+    query: | #sql
       SELECT version FROM ${db.gdna-version.table};
 
   # updates are run based on the current value of PRAGMA user_version
@@ -1036,13 +1036,13 @@ db:
         SELECT gateway, gatewayHost, gatewayPort, version, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
           FROM ${db.gateways.table} gw
         WHERE gateway IN (
-            SELECT distinct gateway FROM ${db.samplers.active}
+            SELECT DISTINCT gateway FROM ${db.samplers.active}
             UNION
-            SELECT distinct gateway FROM ${db.ca-samplers.active}
+            SELECT DISTINCT gateway FROM ${db.ca-samplers.active}
             UNION
-            SELECT distinct gateway FROM ${db.gw-samplers.active}
+            SELECT DISTINCT gateway FROM ${db.gw-samplers.active}
             UNION
-            SELECT distinct gateway FROM ${db.probes.active}
+            SELECT DISTINCT gateway FROM ${db.probes.active}
           )
           AND lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = gw.source AND valid)
           AND ${filters:gw:gateway,source}
@@ -1055,13 +1055,13 @@ db:
         SELECT gateway, gatewayHost, gatewayPort, version, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
           FROM ${db.gateways.table} gw
         WHERE gateway IN (
-            SELECT distinct gateway FROM ${db.samplers.active}
+            SELECT DISTINCT gateway FROM ${db.samplers.active}
             UNION
-            SELECT distinct gateway FROM ${db.ca-samplers.active}
+            SELECT DISTINCT gateway FROM ${db.ca-samplers.active}
             UNION
-            SELECT distinct gateway FROM ${db.gw-samplers.active}
+            SELECT DISTINCT gateway FROM ${db.gw-samplers.active}
             UNION
-            SELECT distinct gateway FROM ${db.probes.active}
+            SELECT DISTINCT gateway FROM ${db.probes.active}
           )
           AND lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = gw.source AND valid)
           AND ${filters:gw:gateway,source}
@@ -1161,7 +1161,7 @@ db:
       CREATE INDEX IF NOT EXISTS ${db.l1missing-plugins-per-server.table}_idx_1 ON ${db.l1missing-plugins-per-server.table}(server);
 
   # the `l1covered-*` tables are built from active probes / samplers /
-  # gateways where the number of distinct plugins match the number in
+  # gateways where the number of DISTINCT plugins match the number in
   # the `level1` table. Each is grouped by gateway and then either the
   # probe host & port or server, as appropriate.
   l1covered-probes:
@@ -1381,7 +1381,7 @@ db:
           AND gateway IN (SELECT gateway FROM ${db.l2covered-gateways.table})
           AND gateway IN (SELECT gateway FROM ${db.l3covered-gateways.table})
        GROUP BY gateway
-      HAVING count(*) = (SELECT count(*) FROM ${db.servers.table} p WHERE p.gateway = ${db.gateways.active}.gateway);
+      HAVING count(*) = (SELECT count(*) FROM ${db.servers.table} WHERE gateway = ${db.gateways.active}.gateway);
 
   empty-gateways:
     table: empty_gateways
@@ -1390,9 +1390,9 @@ db:
       CREATE ${db.temporary-table} TABLE ${db.empty-gateways.table} AS
       SELECT gateway, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
         FROM ${db.gateways.active}
-        WHERE gateway NOT IN (SELECT distinct gateway FROM ${db.samplers.active})
-          AND gateway NOT IN (SELECT distinct gateway FROM ${db.ca-samplers.active})
-          AND gateway NOT IN (SELECT distinct gateway FROM ${db.gw-samplers.active})
+        WHERE gateway NOT IN (SELECT DISTINCT gateway FROM ${db.samplers.active})
+          AND gateway NOT IN (SELECT DISTINCT gateway FROM ${db.ca-samplers.active})
+          AND gateway NOT IN (SELECT DISTINCT gateway FROM ${db.gw-samplers.active})
         GROUP BY gateway;
 
   # `unused-gateways` includes all gateways that are not referenced by
@@ -1404,10 +1404,10 @@ db:
       CREATE ${db.temporary-table} TABLE ${db.unused-gateways.table} AS
       SELECT gateway, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
         FROM ${db.gateways.active}
-       WHERE gateway NOT IN (SELECT distinct gateway FROM ${db.servers.table})
-         AND gateway NOT IN (SELECT distinct gateway FROM ${db.samplers.active})
-         AND gateway NOT IN (SELECT distinct gateway FROM ${db.ca-samplers.active})
-         AND gateway NOT IN (SELECT distinct gateway FROM ${db.gw-samplers.active})
+       WHERE gateway NOT IN (SELECT DISTINCT gateway FROM ${db.servers.table})
+         AND gateway NOT IN (SELECT DISTINCT gateway FROM ${db.samplers.active})
+         AND gateway NOT IN (SELECT DISTINCT gateway FROM ${db.ca-samplers.active})
+         AND gateway NOT IN (SELECT DISTINCT gateway FROM ${db.gw-samplers.active})
        GROUP BY gateway;
 
   covered-servers:
@@ -1670,7 +1670,7 @@ reports:
       group: GDNA Information
     columns: [ Item, Description ]
     type: summary
-    query: > #sql
+    query: | #sql
       SELECT 'ITRS GDNA', 'Version ${gdna.version}'
 
       UNION ALL
@@ -1699,11 +1699,11 @@ reports:
 
       UNION ALL
 
-      SELECT 'Gateways - Unused', (SELECT count(distinct gateway) FROM ${db.unused-gateways.table})
+      SELECT 'Gateways - Unused', (SELECT count(DISTINCT gateway) FROM ${db.unused-gateways.table})
 
       UNION ALL
 
-      SELECT 'Servers', (SELECT count(distinct server) FROM ${db.servers.table})
+      SELECT 'Servers', (SELECT count(DISTINCT server) FROM ${db.servers.table})
 
       UNION ALL
 
@@ -1730,29 +1730,29 @@ reports:
       enable: false
     columns: [ "level # plugin", instances, servers, "servers %", remainingServers, "remainingServers %" ]
     headlines: > #sql
-      SELECT 'totalServers', (SELECT count(distinct server) FROM ${db.servers.table});
-    query: > #sql
+      SELECT 'totalServers', (SELECT count(DISTINCT server) FROM ${db.servers.table});
+    query: | #sql
       WITH totals AS (
         SELECT
-             (SELECT count(distinct server) FROM ${db.l1plugins-per-server.table}) l1count,
-             (SELECT count(distinct server) FROM ${db.l2plugins-per-server.table}) l2count,
-             (SELECT count(distinct server) FROM ${db.l3plugins-per-server.table}) l3count,
-             (SELECT count(distinct server) FROM ${db.l1covered-servers.table}) l1covered,
-             (SELECT count(distinct server) FROM ${db.l2covered-servers.table}) l2covered,
-             (SELECT count(distinct server) FROM ${db.l3covered-servers.table}) l3covered,
-             (SELECT count(distinct server) FROM ${db.servers.table}) servers
+             (SELECT count(DISTINCT server) FROM ${db.l1plugins-per-server.table}) l1count,
+             (SELECT count(DISTINCT server) FROM ${db.l2plugins-per-server.table}) l2count,
+             (SELECT count(DISTINCT server) FROM ${db.l3plugins-per-server.table}) l3count,
+             (SELECT count(DISTINCT server) FROM ${db.l1covered-servers.table}) l1covered,
+             (SELECT count(DISTINCT server) FROM ${db.l2covered-servers.table}) l2covered,
+             (SELECT count(DISTINCT server) FROM ${db.l3covered-servers.table}) l3covered,
+             (SELECT count(DISTINCT server) FROM ${db.servers.table}) servers
       ), l1 AS (
         SELECT
              plugin,
              (SELECT total(number) FROM ${db.l1plugins-per-server.table} WHERE plugin = l1.plugin) total,
-             (SELECT count(distinct server) FROM (SELECT * FROM ${db.l1plugins-per-server.table} WHERE plugin = l1.plugin)) covered
+             (SELECT count(DISTINCT server) FROM (SELECT * FROM ${db.l1plugins-per-server.table} WHERE plugin = l1.plugin)) covered
           FROM ${plugins.level1.table} l1
       ), l2 AS (
         SELECT
              plugin,
              (SELECT total(number) FROM ${db.l2plugins-per-server.table} WHERE plugin = l2.plugin) total,
              (SELECT count(*) FROM ${db.l2plugins-per-server.table}) count,
-             (SELECT count(*) FROM (SELECT distinct server FROM ${db.l2plugins-per-server.table} WHERE plugin = l2.plugin)) covered
+             (SELECT count(*) FROM (SELECT DISTINCT server FROM ${db.l2plugins-per-server.table} WHERE plugin = l2.plugin)) covered
           FROM ${plugins.level2.table} l2
       )
       SELECT 'level1',
@@ -1812,16 +1812,15 @@ reports:
     xlsx:
       freeze-to-column: servers
     columns: [ group, gateways, servers, serverTokenAllocation, "serverTokenUsage %", complete, "complete %", empty, "empty %", remaining, "remaining %", l1complete, "l1complete %", l1remaining, l2complete, "l2complete %", l2remaining, l3complete, "l3complete %" ]
-    query: > #sql
-      WITH
-      v(grouping, total, covered, empty, l1covered, l2covered, l3covered) AS (
+    query: | #sql
+      WITH coverage(grouping, total, covered, empty, l1covered, l2covered, l3covered) AS (
         SELECT COALESCE(grouping, 'OTHER'),
-               count(distinct a.gateway) total,
-               count(distinct m.gateway) covered,
-               count(distinct e.gateway) empty,
-               count(distinct l1.gateway) l1covered,
-               count(distinct l2.gateway) l2covered,
-               count(distinct l3.gateway) l3covered
+               count(DISTINCT a.gateway) total,
+               count(DISTINCT m.gateway) covered,
+               count(DISTINCT e.gateway) empty,
+               count(DISTINCT l1.gateway) l1covered,
+               count(DISTINCT l2.gateway) l2covered,
+               count(DISTINCT l3.gateway) l3covered
           FROM      ${db.gateways.active} a
           LEFT JOIN ${db.covered-gateways.table} m USING (gateway)
           LEFT JOIN ${db.empty-gateways.table} e USING (gateway)
@@ -1832,13 +1831,13 @@ reports:
         GROUP BY grouping
       ),
       s(grouping, servers) AS (
-        SELECT grouping, count(distinct server)
+        SELECT grouping, count(DISTINCT server)
           FROM ${db.servers.table}
           LEFT JOIN ${db.match-gateways.table} grp USING (gateway)
-         -- WHERE CASE WHEN grouping IS NULL THEN v.grouping IS NULL ELSE grouping = v.grouping END
+         -- WHERE CASE WHEN grouping IS NULL THEN coverage.grouping IS NULL ELSE grouping = coverage.grouping END
          GROUP BY grouping
         UNION
-        SELECT 'OTHER', count(distinct server)
+        SELECT 'OTHER', count(DISTINCT server)
           FROM ${db.servers.table}
          WHERE gateway NOT IN (SELECT DISTINCT gateway FROM ${db.match-gateways.table})
       ),
@@ -1871,7 +1870,7 @@ reports:
              total - l2covered - empty l2remaining,
              l3covered - covered,
              printf('%d %%', round(COALESCE((l3covered - covered) * 100.0 / (total - covered - empty), 0))) l3completePercent
-        FROM v
+        FROM coverage
         LEFT JOIN s USING (grouping)
         LEFT JOIN a USING (grouping)
        ORDER BY CASE grouping WHEN 'OTHER' THEN 'ZZZZZZ' ELSE grouping END COLLATE NOCASE
@@ -1884,7 +1883,7 @@ reports:
     xlsx:
       enable: false
     columns: [ pluginGroup, servers, instances ]
-    query: > #sql
+    query: | #sql
       WITH
         plugins AS (
           SELECT * FROM (
@@ -1896,7 +1895,7 @@ reports:
            )
         )
       SELECT grouping,
-             COALESCE(count(distinct gateway||":"||server), 0) servers,
+             COALESCE(count(DISTINCT gateway||":"||server), 0) servers,
              COALESCE(count(server), 0) instances
         FROM plugins
         RIGHT JOIN ${db.match-sampler-plugins.table} USING (plugin)
@@ -1913,7 +1912,7 @@ reports:
       enable: false
     columns: [] # none for indirect reports
     type: indirect
-    query: > #sql
+    query: | #sql
       WITH
         plugins AS (
           SELECT * FROM (
@@ -1933,18 +1932,17 @@ reports:
           
         ),
         lines AS (
-          SELECT 'SELECT gateway, (SELECT count(*) FROM ${db.servers.table} q WHERE q.gateway = p.gateway) AS servers' AS part
+          SELECT 'SELECT gateway, (SELECT count(*) FROM ${db.servers.table} q WHERE q.gateway = p.gateway) AS servers' AS parts
 
           UNION ALL
 
-           SELECT ', total(number) FILTER (WHERE plugin = ''' || plugin || ''') AS ''' || plugin || ''''
-             FROM plugins
+          SELECT ', total(number) FILTER (WHERE plugin = ''' || plugin || ''') AS ''' || plugin || '''' FROM plugins
 
           UNION ALL
 
           SELECT ' FROM ${db.samplers.active} AS p GROUP BY gateway'
         )
-      SELECT group_concat(part, '') FROM lines;
+      SELECT group_concat(parts, '') FROM lines;
 
   instance-licences-per-gateway:
     name: Instance Licences Per Gateway
@@ -1954,24 +1952,23 @@ reports:
       freeze-to-column: gateway
     columns: [] # none for indirect reports
     type: indirect
-    query: > #sql
+    query: | #sql
       WITH
         plugins AS (
-            SELECT distinct plugin FROM ${db.samplers.active} WHERE individual ORDER by plugin
+            SELECT DISTINCT plugin FROM ${db.samplers.active} WHERE individual ORDER by plugin
         ),
         lines AS (
-          SELECT 'SELECT gateway, (SELECT count(*) FROM ${db.servers.table} q WHERE q.gateway = p.gateway) AS servers' AS part
+          SELECT 'SELECT gateway, (SELECT count(*) FROM ${db.servers.table} q WHERE q.gateway = p.gateway) AS servers' AS parts
 
           UNION ALL
 
-           SELECT ', total(number) FILTER (WHERE plugin = ''' || plugin || ''') AS ''' || plugin || ''''
-             FROM plugins
+          SELECT ', total(number) FILTER (WHERE plugin = ''' || plugin || ''') AS ''' || plugin || '''' FROM plugins
 
           UNION ALL
 
           SELECT ' FROM ${db.samplers.active} AS p GROUP BY gateway'
         )
-      SELECT group_concat(part, '') FROM lines;
+      SELECT group_concat(parts, '') FROM lines;
 
   plugins:
     name: Plugins
@@ -1981,7 +1978,7 @@ reports:
       freeze-to-column: plugin 
     columns: [ plugin, servers, instances, tokensAvailable, tokensUsed, tokensUsedPct, previousServers, previousInstances, location, required, level, license, t1 ]
     headlines: > #sql
-      SELECT 'totalServers', (SELECT count(distinct server) FROM ${db.servers.table});
+      SELECT 'totalServers', (SELECT count(DISTINCT server) FROM ${db.servers.table});
     query: | #sql
       WITH
       levels(plugin, required, level) AS (
@@ -2031,7 +2028,7 @@ reports:
 
       SELECT
         plugin,
-        count(distinct server) servers,
+        count(DISTINCT server) servers,
         total(number) instances,
         COALESCE((SELECT COALESCE(sum(total), CASE WHEN lastSeen IS NOT NULL THEN 'Unlimited' ELSE NULL END) FROM ${db.tokens.table} WHERE token = current.plugin), 0) tokensAvailable,
         COALESCE((SELECT total(used) FROM ${db.tokens.table} WHERE token = current.plugin AND total IS NOT NULL), 0) tokensUsed,
@@ -2056,7 +2053,7 @@ reports:
         COALESCE((SELECT COALESCE(sum(total), CASE WHEN lastSeen IS NOT NULL THEN 'Unlimited' ELSE NULL END) FROM ${db.tokens.table} WHERE token = previous.plugin), 0) tokensAvailable,
         0,
         ' 0%',
-        count(distinct server),
+        count(DISTINCT server),
         total(number),
         COALESCE(location, ''),
         COALESCE(required, ''),
@@ -2104,7 +2101,7 @@ reports:
     # Note: The COALESCE() in the percentage lines is necessary in the
     # (rare) case that once all the items are covered we avoid a divide
     # by zero returning NULL.
-    query: > #sql
+    query: | #sql
       WITH gw AS (
         SELECT (SELECT count(*) FROM ${db.gateways.active}) total,
                (SELECT count(*) FROM ${db.covered-gateways.table}) covered,
@@ -2120,12 +2117,12 @@ reports:
                (SELECT count(*) FROM ${db.l2covered-probes.table}) l2covered,
                (SELECT count(*) FROM ${db.l3covered-probes.table}) l3covered
       ), s AS (
-        SELECT (SELECT count(distinct server) FROM ${db.servers.table}) total,
-               (SELECT count(distinct server) FROM ${db.covered-servers.table}) covered,
-               (SELECT count(distinct server) FROM ${db.empty-servers.table}) empty,
-               (SELECT count(distinct server) FROM ${db.l1covered-servers.table}) l1covered,
-               (SELECT count(distinct server) FROM ${db.l2covered-servers.table}) l2covered,
-               (SELECT count(distinct server) FROM ${db.l3covered-servers.table}) l3covered
+        SELECT (SELECT count(DISTINCT server) FROM ${db.servers.table}) total,
+               (SELECT count(DISTINCT server) FROM ${db.covered-servers.table}) covered,
+               (SELECT count(DISTINCT server) FROM ${db.empty-servers.table}) empty,
+               (SELECT count(DISTINCT server) FROM ${db.l1covered-servers.table}) l1covered,
+               (SELECT count(DISTINCT server) FROM ${db.l2covered-servers.table}) l2covered,
+               (SELECT count(DISTINCT server) FROM ${db.l3covered-servers.table}) l3covered
       )
       SELECT 'Gateways',
            total,
@@ -2207,14 +2204,14 @@ reports:
 
       UNION
 
-      SELECT 'allGateways', (SELECT count(distinct gateway) FROM ${db.gateways.active})
+      SELECT 'allGateways', (SELECT count(DISTINCT gateway) FROM ${db.gateways.active})
 
       UNION
 
       SELECT 'unusedGateways', (SELECT count(*) FROM ${db.unused-gateways.table})
 
       ;
-    query: > #sql
+    query: | #sql
       WITH gw AS (
         SELECT (SELECT count(*) FROM ${db.gateways.active}) total,
                (SELECT count(*) FROM ${db.covered-gateways.table}) covered,
@@ -2420,15 +2417,15 @@ reports:
     xlsx:
       freeze-to-column: group
     columns: [ group, servers, complete, "complete %", empty, "empty %", remaining, "remaining %", l1complete, "l1complete %", l1remaining, l2complete, "l2complete %", l2remaining, l3complete, "l3complete %" ]
-    query: > #sql
-      WITH v AS (
+    query: | #sql
+      WITH coverage AS (
         SELECT COALESCE(grouping, 'OTHER') grouping,
-               count(distinct a.server) total,
-               count(distinct m.server) covered,
-               count(distinct e.server) empty,
-               count(distinct l1.server) l1covered,
-               count(distinct l2.server) l2covered,
-               count(distinct l3.server) l3covered
+               count(DISTINCT a.server) total,
+               count(DISTINCT m.server) covered,
+               count(DISTINCT e.server) empty,
+               count(DISTINCT l1.server) l1covered,
+               count(DISTINCT l2.server) l2covered,
+               count(DISTINCT l3.server) l3covered
           FROM      ${db.servers.table} a
           LEFT JOIN ${db.covered-servers.table} m USING (server)
           LEFT JOIN ${db.empty-servers.table} e USING (server)
@@ -2454,7 +2451,7 @@ reports:
              total - l2covered - empty l2remaining,
              l3covered - covered,
              printf('%d %%', round(COALESCE((l3covered - covered) * 100.0 / (total - covered - empty), 0))) l3completePercent
-        FROM v
+        FROM coverage
        ORDER BY CASE grouping WHEN 'OTHER' THEN 'ZZZZZZ' ELSE grouping END COLLATE NOCASE
       ;
 
@@ -2466,22 +2463,22 @@ reports:
       enable: false
     columns: [ coverage, percent, servers, remaining, width300, 100, description ]
     headlines: > #sql
-      SELECT 'totalServers', (SELECT count(distinct server) FROM ${db.servers.table});
-    query: > #sql
-      WITH v AS (
-        SELECT (SELECT count(distinct server) FROM ${db.servers.table}) total,
-               (SELECT count(distinct server) FROM ${db.covered-servers.table}) covered,
-               (SELECT count(distinct server) FROM ${db.empty-servers.table}) empty,
-               (SELECT count(distinct server) FROM ${db.l1covered-servers.table}) l1covered,
-               (SELECT count(distinct server) FROM ${db.l2covered-servers.table}) l2covered,
-               (SELECT count(distinct server) FROM ${db.l3covered-servers.table}) l3covered
+      SELECT 'totalServers', (SELECT count(DISTINCT server) FROM ${db.servers.table});
+    query: | #sql
+      WITH coverage AS (
+        SELECT (SELECT count(DISTINCT server) FROM ${db.servers.table}) total,
+               (SELECT count(DISTINCT server) FROM ${db.covered-servers.table}) covered,
+               (SELECT count(DISTINCT server) FROM ${db.empty-servers.table}) empty,
+               (SELECT count(DISTINCT server) FROM ${db.l1covered-servers.table}) l1covered,
+               (SELECT count(DISTINCT server) FROM ${db.l2covered-servers.table}) l2covered,
+               (SELECT count(DISTINCT server) FROM ${db.l3covered-servers.table}) l3covered
       ), w AS (
         SELECT
                total - covered - empty remaining,
                total - l1covered - empty l1remaining,
                total - l2covered - empty l2remaining,
                total - l3covered - empty l3remaining
-          FROM v
+          FROM coverage
          LIMIT 1
       )
 
@@ -2492,7 +2489,7 @@ reports:
              printf('%d', IIF(covered = 0, 1, covered * 300.0 / total)) width300,
              IIF(covered * 100.0 / total > 99.0, 1, 0),
              'servers with complete coverage of level 1, 2 and 3'
-        FROM v
+        FROM coverage
 
       UNION ALL
 
@@ -2503,7 +2500,7 @@ reports:
              printf('%d', IIF(l1covered = 0, 1, l1covered * 300.0 / total)) width300,
              IIF(l1covered * 100.0 / total > 99.0, 1, 0),
              'servers with level 1 coverage'
-        FROM v, w
+        FROM coverage, w
 
       UNION ALL
 
@@ -2515,7 +2512,7 @@ reports:
              IIF(l2covered * 100.0 / total > 99.0, 1, 0),
              'servers with level 2 coverage'
 
-        FROM v, w
+        FROM coverage, w
 
       UNION ALL
 
@@ -2526,7 +2523,7 @@ reports:
              printf('%d', IIF(l3covered = 0, 1, l3covered * 300.0 / total)) width300,
              IIF(l3covered * 100.0 / total > 99.0, 1, 0),
              'servers with level 3 coverage'
-        FROM v, w
+        FROM coverage, w
 
       UNION ALL
 
@@ -2537,7 +2534,7 @@ reports:
              printf('%d', IIF(remaining = 0, 1, remaining * 300.0 / total)) width300,
              IIF(remaining * 100.0 / total > 99.0, 1, 0),
              'servers with incomplete coverage'
-        FROM v, w
+        FROM coverage, w
 
       UNION ALL
 
@@ -2548,7 +2545,7 @@ reports:
              printf('%d', IIF((l1covered - covered) = 0, 1, (l1covered - covered) * 300.0 / remaining)) width300,
              IIF((l1covered - covered) * 100.0 / total > 99.0, 1, 0),
              'servers with incomplete coverage, but with level 1 covered'
-        FROM v, w
+        FROM coverage, w
 
       UNION ALL
 
@@ -2559,7 +2556,7 @@ reports:
              printf('%d', IIF((l2covered - covered) = 0, 1, (l2covered - covered) * 300.0 / remaining)) width300,
              IIF((l2covered - covered) * 100.0 / total > 99.0, 1, 0),
              'servers with incomplete coverage, but with level 2 covered'
-        FROM v, w
+        FROM coverage, w
 
       UNION ALL
 
@@ -2570,7 +2567,7 @@ reports:
              printf('%d', IIF((l3covered - covered) = 0, 1, (l3covered - covered) * 300.0 / remaining)) width300,
              IIF((l3covered - covered) * 100.0 / total > 99.0, 1, 0),
              'servers with incomplete coverage, but with level 3 covered'
-        FROM v, w
+        FROM coverage, w
 
       UNION ALL
 
@@ -2581,7 +2578,7 @@ reports:
              printf('%d', IIF(empty = 0, 1, empty * 300.0 / total)) width300,
              IIF(empty * 100.0 / total > 99.0, 1, 0),
              'servers with no coverage'
-        FROM v;
+        FROM coverage;
 
   missing-coverage:
     name: Missing Coverage
@@ -2652,25 +2649,25 @@ reports:
     headlines: > #sql
       WITH t AS (
         SELECT
-          (SELECT count(distinct server) FROM ${db.servers.table}) as total
+          (SELECT count(DISTINCT server) FROM ${db.servers.table}) as total
       )
 
       SELECT 'servers', total FROM t
       UNION
-      SELECT 'serversComplete', (SELECT count(distinct server) FROM ${db.covered-servers.table})
+      SELECT 'serversComplete', (SELECT count(DISTINCT server) FROM ${db.covered-servers.table})
       UNION
-      SELECT 'serversIncomplete', (SELECT count(distinct server) FROM ${db.uncovered-servers.table})
+      SELECT 'serversIncomplete', (SELECT count(DISTINCT server) FROM ${db.uncovered-servers.table})
       UNION
-      SELECT 'serversL1Incomplete', total - (SELECT count(distinct server) FROM ${db.l1covered-servers.table}) FROM t
+      SELECT 'serversL1Incomplete', total - (SELECT count(DISTINCT server) FROM ${db.l1covered-servers.table}) FROM t
       UNION
-      SELECT 'serversL2Incomplete', total - (SELECT count(distinct server) FROM ${db.l2covered-servers.table}) FROM t
+      SELECT 'serversL2Incomplete', total - (SELECT count(DISTINCT server) FROM ${db.l2covered-servers.table}) FROM t
       UNION
-      SELECT 'serversL3Incomplete', total - (SELECT count(distinct server) FROM ${db.l3covered-servers.table}) FROM t
+      SELECT 'serversL3Incomplete', total - (SELECT count(DISTINCT server) FROM ${db.l3covered-servers.table}) FROM t
       UNION
-      SELECT 'serversEmpty', (SELECT count(distinct server) FROM ${db.empty-servers.table})
+      SELECT 'serversEmpty', (SELECT count(DISTINCT server) FROM ${db.empty-servers.table})
 
       ;
-    query: > #sql
+    query: | #sql
       SELECT server,
              replace(server, ':'||hostID, ''),
              COALESCE(os, ''),
@@ -2777,7 +2774,7 @@ reports:
     headlines: > #sql
       WITH t AS (
         SELECT
-          (SELECT count(distinct server) FROM ${db.servers.table} WHERE ${split-column} = '${value}') as total
+          (SELECT count(DISTINCT server) FROM ${db.servers.table} WHERE ${split-column} = '${value}') as total
       )
 
       SELECT 'gatewayName', '${value}'
@@ -2792,17 +2789,17 @@ reports:
       UNION
       SELECT 'relatedProbes', (SELECT count(*) FROM ${db.probes.active} WHERE server IN (SELECT server FROM ${db.servers.table} WHERE ${split-column} = '${value}')) - total FROM t
       UNION
-      SELECT 'serversEmpty', (SELECT count(distinct server) FROM ${db.empty-servers.table} WHERE ${split-column} = '${value}')
+      SELECT 'serversEmpty', (SELECT count(DISTINCT server) FROM ${db.empty-servers.table} WHERE ${split-column} = '${value}')
       UNION
-      SELECT 'serversIncomplete', (SELECT count(distinct server) FROM ${db.uncovered-servers.table} WHERE ${split-column} = '${value}')
+      SELECT 'serversIncomplete', (SELECT count(DISTINCT server) FROM ${db.uncovered-servers.table} WHERE ${split-column} = '${value}')
       UNION
-      SELECT 'serversComplete', (SELECT count(distinct server) FROM ${db.covered-servers.table} WHERE ${split-column} = '${value}')
+      SELECT 'serversComplete', (SELECT count(DISTINCT server) FROM ${db.covered-servers.table} WHERE ${split-column} = '${value}')
       UNION
-      SELECT 'serversL1Incomplete', total - (SELECT count(distinct server) FROM ${db.l1covered-servers.table} WHERE ${split-column} = '${value}') FROM t
+      SELECT 'serversL1Incomplete', total - (SELECT count(DISTINCT server) FROM ${db.l1covered-servers.table} WHERE ${split-column} = '${value}') FROM t
       UNION
-      SELECT 'serversL2Incomplete', total - (SELECT count(distinct server) FROM ${db.l2covered-servers.table} WHERE ${split-column} = '${value}') FROM t
+      SELECT 'serversL2Incomplete', total - (SELECT count(DISTINCT server) FROM ${db.l2covered-servers.table} WHERE ${split-column} = '${value}') FROM t
       UNION
-      SELECT 'serversL3Incomplete', total - (SELECT count(distinct server) FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}') FROM t
+      SELECT 'serversL3Incomplete', total - (SELECT count(DISTINCT server) FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}') FROM t
       UNION
       SELECT 'dynamicEntities', (SELECT total(number) FROM ${db.ca-samplers.active} WHERE ${split-column} = '${value}')
       UNION
@@ -2811,21 +2808,21 @@ reports:
       SELECT 'licenceSource', (SELECT source FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
 
       ;
-    query: > #sql
+    query: | #sql
       SELECT server,
              replace(server, ':'||hostID, ''),
-             COALESCE(CASE (SELECT count(distinct os) FROM ${db.probes.active} WHERE server = u.server)
+             COALESCE(CASE (SELECT count(DISTINCT os) FROM ${db.probes.active} WHERE server = u.server)
                            WHEN 0 THEN ''
                            WHEN 1 THEN (SELECT os FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
                            ELSE 'multiple'
                            END, '') osVersion,
              (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
-             COALESCE(CASE (SELECT count(distinct version) FROM ${db.probes.active} WHERE server = u.server)
+             COALESCE(CASE (SELECT count(DISTINCT version) FROM ${db.probes.active} WHERE server = u.server)
                            WHEN 0 THEN ''
                            WHEN 1 THEN (SELECT version FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
                            ELSE 'multiple'
                            END, '') probeVersions,
-             (SELECT count(distinct source) FROM ${db.servers.table} WHERE server = u.server) licenceSources,
+             (SELECT count(DISTINCT source) FROM ${db.servers.table} WHERE server = u.server) licenceSources,
              (SELECT total(number) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server AND ${split-column} = '${value}') as dynamicEntities,
              COALESCE((SELECT group_concat(CASE missing WHEN '0' THEN NULL WHEN '1' THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
@@ -2838,7 +2835,7 @@ reports:
                           SELECT plugin || IIF(total(number) > 1, printf('(%d)', total(number)), '') plugins
                             FROM ${db.samplers.active}
                            WHERE server = u.server
-                           GROUP BY plugins
+                           GROUP BY plugin
 
                           UNION
 
@@ -2866,12 +2863,13 @@ reports:
       freeze-to-column: serverID
       conditional-format:
         - test:
-            columns: [ samplers, dynamicEntities ]
+            columns: [ otherGateways, samplers, dynamicEntities ]
             condition: "="
             type: number
             value: 0
           set:
-            - format: warning
+            - columns: [ samplers, dynamicEntities ]
+              format: warning
         - test:
             columns: samplers
             condition: ">"
@@ -2937,7 +2935,7 @@ reports:
     headlines: > #sql
       WITH t AS (
         SELECT
-          (SELECT count(distinct server) FROM ${db.servers.table} WHERE ${split-column} = '${value}') as total
+          (SELECT count(DISTINCT server) FROM ${db.servers.table} WHERE ${split-column} = '${value}') as total
       )
 
       SELECT 'gatewayName', '${value}'
@@ -2952,17 +2950,17 @@ reports:
       UNION
       SELECT 'relatedProbes', (SELECT count(*) FROM ${db.probes.active} WHERE server IN (SELECT server FROM ${db.servers.table} WHERE ${split-column} = '${value}')) - total FROM t
       UNION
-      SELECT 'serversEmpty', (SELECT count(distinct server) FROM ${db.empty-servers.table} WHERE ${split-column} = '${value}')
+      SELECT 'serversEmpty', (SELECT count(DISTINCT server) FROM ${db.empty-servers.table} WHERE ${split-column} = '${value}')
       UNION
-      SELECT 'serversIncomplete', (SELECT count(distinct server) FROM ${db.uncovered-servers.table} WHERE ${split-column} = '${value}')
+      SELECT 'serversIncomplete', (SELECT count(DISTINCT server) FROM ${db.uncovered-servers.table} WHERE ${split-column} = '${value}')
       UNION
-      SELECT 'serversComplete', (SELECT count(distinct server) FROM ${db.covered-servers.table} WHERE ${split-column} = '${value}')
+      SELECT 'serversComplete', (SELECT count(DISTINCT server) FROM ${db.covered-servers.table} WHERE ${split-column} = '${value}')
       UNION
-      SELECT 'serversL1Incomplete', total - (SELECT count(distinct server) FROM ${db.l1covered-servers.table} WHERE ${split-column} = '${value}') FROM t
+      SELECT 'serversL1Incomplete', total - (SELECT count(DISTINCT server) FROM ${db.l1covered-servers.table} WHERE ${split-column} = '${value}') FROM t
       UNION
-      SELECT 'serversL2Incomplete', total - (SELECT count(distinct server) FROM ${db.l2covered-servers.table} WHERE ${split-column} = '${value}') FROM t
+      SELECT 'serversL2Incomplete', total - (SELECT count(DISTINCT server) FROM ${db.l2covered-servers.table} WHERE ${split-column} = '${value}') FROM t
       UNION
-      SELECT 'serversL3Incomplete', total - (SELECT count(distinct server) FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}') FROM t
+      SELECT 'serversL3Incomplete', total - (SELECT count(DISTINCT server) FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}') FROM t
       UNION
       SELECT 'dynamicEntities', (SELECT total(number) FROM ${db.ca-samplers.active} WHERE ${split-column} = '${value}')
       UNION
@@ -2971,11 +2969,11 @@ reports:
       SELECT 'licenceSource', (SELECT source FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
 
       ;
-    query: > #sql
+    query: | #sql
       SELECT
             server serverID,
             replace(server, ':'||hostID, '') server,
-            COALESCE(CASE (SELECT count(distinct os) FROM ${db.probes.active} WHERE server = u.server)
+            COALESCE(CASE (SELECT count(DISTINCT os) FROM ${db.probes.active} WHERE server = u.server)
                            WHEN 0 THEN ''
                            WHEN 1 THEN (SELECT os FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
                            ELSE 'multiple'
@@ -2983,12 +2981,12 @@ reports:
              (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
              '' probeName,
              '' probePort,
-             COALESCE(CASE (SELECT count(distinct version) FROM ${db.probes.active} WHERE server = u.server)
+             COALESCE(CASE (SELECT count(DISTINCT version) FROM ${db.probes.active} WHERE server = u.server)
                            WHEN 0 THEN ''
                            WHEN 1 THEN (SELECT version FROM ${db.probes.active} WHERE server = u.server LIMIT 1)
                            ELSE 'multiple'
                            END, '') probeVersions,
-             (SELECT count(distinct source) FROM ${db.servers.table} WHERE server = u.server) licenceSources,
+             (SELECT count(DISTINCT source) FROM ${db.servers.table} WHERE server = u.server) licenceSources,
              '' otherGateways,
              (SELECT total(number) FROM ${db.samplers.active} WHERE server = u.server) samplers,
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server = u.server) as dynamicEntities,
@@ -3061,18 +3059,18 @@ reports:
       enable: false
     columns: [ coverage, percent, servers, width300, 100, remaining, description ]
     headlines: > #sql
-      SELECT 'totalServers', (SELECT count(distinct server) FROM ${db.servers.table});
-    query: > #sql
-      WITH v AS (
-        SELECT (SELECT count(distinct server) FROM ${db.servers.table}) total,
-               (SELECT count(distinct server) FROM ${db.covered-servers.table}) covered,
-               (SELECT count(distinct server) FROM ${db.empty-servers.table}) empty,
-               (SELECT count(distinct server) FROM ${db.l1covered-servers.table}) l1covered,
-               COALESCE((SELECT count(distinct server) FROM ${db.l1covered-servers.table}) * 100.0 / (SELECT count(distinct server) FROM ${db.servers.table}), 0) l1coveredPercent,
-               (SELECT count(distinct server) FROM ${db.l2covered-servers.table}) l2covered,
-               COALESCE((SELECT count(distinct server) FROM ${db.l2covered-servers.table}) * 100.0 / (SELECT count(distinct server) FROM ${db.servers.table}), 0) l2coveredPercent,
-               (SELECT count(distinct server) FROM ${db.l3covered-servers.table}) l3covered,
-               COALESCE((SELECT count(distinct server) FROM ${db.l3covered-servers.table}) * 100.0 / (SELECT count(distinct server) FROM ${db.servers.table}), 0) l3coveredPercent
+      SELECT 'totalServers', (SELECT count(DISTINCT server) FROM ${db.servers.table});
+    query: | #sql
+      WITH coverage AS (
+        SELECT (SELECT count(DISTINCT server) FROM ${db.servers.table}) total,
+               (SELECT count(DISTINCT server) FROM ${db.covered-servers.table}) covered,
+               (SELECT count(DISTINCT server) FROM ${db.empty-servers.table}) empty,
+               (SELECT count(DISTINCT server) FROM ${db.l1covered-servers.table}) l1covered,
+               COALESCE((SELECT count(DISTINCT server) FROM ${db.l1covered-servers.table}) * 100.0 / (SELECT count(DISTINCT server) FROM ${db.servers.table}), 0) l1coveredPercent,
+               (SELECT count(DISTINCT server) FROM ${db.l2covered-servers.table}) l2covered,
+               COALESCE((SELECT count(DISTINCT server) FROM ${db.l2covered-servers.table}) * 100.0 / (SELECT count(DISTINCT server) FROM ${db.servers.table}), 0) l2coveredPercent,
+               (SELECT count(DISTINCT server) FROM ${db.l3covered-servers.table}) l3covered,
+               COALESCE((SELECT count(DISTINCT server) FROM ${db.l3covered-servers.table}) * 100.0 / (SELECT count(DISTINCT server) FROM ${db.servers.table}), 0) l3coveredPercent
       )
       
       SELECT 'Complete Coverage',
@@ -3082,7 +3080,7 @@ reports:
              IIF(covered * 100.0 / total = 100, 1, 0),
              '',
              'servers with complete coverage'
-        FROM v
+        FROM coverage
 
       UNION ALL
 
@@ -3093,7 +3091,7 @@ reports:
              IIF(l1coveredPercent = 100, 1, 0),
              total - l1covered remaining,
              'servers with level 1 coverage'
-        FROM v
+        FROM coverage
 
       UNION ALL
 
@@ -3105,7 +3103,7 @@ reports:
              total - l2covered remaining,
              'servers with level 2 coverage'
 
-        FROM v
+        FROM coverage
 
       UNION ALL
 
@@ -3116,7 +3114,7 @@ reports:
              IIF(l3coveredPercent = 100, 1, 0),
              total - l3covered remaining,
              'servers with level 3 coverage'
-        FROM v
+        FROM coverage
 
       UNION ALL
 
@@ -3127,7 +3125,7 @@ reports:
              IIF((total - covered - empty) * 100.0 / total = 100, 1, 0),
              '',
              'servers with some level 1, 2 or 3 coverage'
-        FROM v
+        FROM coverage
 
       UNION ALL
 
@@ -3138,7 +3136,7 @@ reports:
              IIF(empty * 100.0 / total = 100, 1, 0),
              '',
              'servers with no level of coverage'
-        FROM v;
+        FROM coverage;
 
   licence-sources:
     name: Licence Sources
@@ -3180,7 +3178,7 @@ reports:
         FROM ${db.tokens.table}
        WHERE token = 'servers'
       ;
-    query: > #sql
+    query: | #sql
       WITH os(os, source, lastSeen) AS (SELECT os, source, lastSeen FROM ${db.probes.table})
       SELECT ${db.sources.columns},
              (SELECT IIF((SELECT count(os) FROM os WHERE source = src.source AND lastSeen = src.lastSeen), 1, 0)) as extendedFormat,
@@ -3230,7 +3228,7 @@ reports:
       freeze-to-column: gateway
     columns: [ gateway, lastSeen, licenceSources ]
     scramble-columns: [ gateway ]
-    query: > #sql
+    query: | #sql
       SELECT gateway, max(lastSeen), group_concat(source, ',')
         FROM ${db.unused-gateways.table}
        GROUP BY gateway
@@ -3248,14 +3246,14 @@ reports:
              COALESCE(gatewayHost, ''),
              COALESCE(gatewayPort, ''),
              COALESCE(version, ''),
-             (SELECT count(distinct server) FROM ${db.servers.table} WHERE gateway = g.gateway),
+             (SELECT count(DISTINCT server) FROM ${db.servers.table} WHERE gateway = g.gateway),
              (SELECT count(*) FROM ${db.probes.active} WHERE gateway = g.gateway),
              (SELECT total(number) FROM ${db.samplers.active} WHERE gateway = g.gateway),
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE gateway = g.gateway),
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server IS NULL AND gateway = g.gateway),
-             (SELECT count(distinct server) FROM ${db.covered-servers.table} WHERE gateway = g.gateway),
-             (SELECT count(distinct server) FROM ${db.uncovered-servers.table} WHERE gateway = g.gateway),
-             (SELECT count(distinct server) FROM ${db.empty-servers.table} WHERE gateway = g.gateway) AS empty,
+             (SELECT count(DISTINCT server) FROM ${db.covered-servers.table} WHERE gateway = g.gateway),
+             (SELECT count(DISTINCT server) FROM ${db.uncovered-servers.table} WHERE gateway = g.gateway),
+             (SELECT count(DISTINCT server) FROM ${db.empty-servers.table} WHERE gateway = g.gateway) AS empty,
              source
         FROM ${db.gateways.active} g
       ;
@@ -3330,25 +3328,25 @@ reports:
     headlines: > #sql
       WITH t AS (
         SELECT
-          (SELECT count(distinct server) FROM ${db.servers.table}) as total
+          (SELECT count(DISTINCT server) FROM ${db.servers.table}) as total
       )
 
       SELECT 'servers', total FROM t
       UNION
-      SELECT 'serversComplete', (SELECT count(distinct server) FROM ${db.covered-servers.table})
+      SELECT 'serversComplete', (SELECT count(DISTINCT server) FROM ${db.covered-servers.table})
       UNION
-      SELECT 'serversIncomplete', (SELECT count(distinct server) FROM ${db.uncovered-servers.table})
+      SELECT 'serversIncomplete', (SELECT count(DISTINCT server) FROM ${db.uncovered-servers.table})
       UNION
-      SELECT 'serversL1Incomplete', total - (SELECT count(distinct server) FROM ${db.l1covered-servers.table}) FROM t
+      SELECT 'serversL1Incomplete', total - (SELECT count(DISTINCT server) FROM ${db.l1covered-servers.table}) FROM t
       UNION
-      SELECT 'serversL2Incomplete', total - (SELECT count(distinct server) FROM ${db.l2covered-servers.table}) FROM t
+      SELECT 'serversL2Incomplete', total - (SELECT count(DISTINCT server) FROM ${db.l2covered-servers.table}) FROM t
       UNION
-      SELECT 'serversL3Incomplete', total - (SELECT count(distinct server) FROM ${db.l3covered-servers.table}) FROM t
+      SELECT 'serversL3Incomplete', total - (SELECT count(DISTINCT server) FROM ${db.l3covered-servers.table}) FROM t
       UNION
-      SELECT 'serversEmpty', (SELECT count(distinct server) FROM ${db.empty-servers.table})
+      SELECT 'serversEmpty', (SELECT count(DISTINCT server) FROM ${db.empty-servers.table})
 
       ;
-    query: > #sql
+    query: | #sql
       SELECT server AS serverID,
              replace(server, ':'||hostID, '') server,
              COALESCE(os, ''),
@@ -3360,7 +3358,7 @@ reports:
              COALESCE((SELECT group_concat(CASE missing WHEN '0' THEN NULL WHEN '1' THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
                          FROM ${db.l2missing-plugins-per-server.table} WHERE server = s.server), '') l2missing,
              (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table}), '', 'missing')) as l3missing,
-             (SELECT count(distinct source) FROM ${db.servers.table} WHERE server = s.server) licenceSources,
+             (SELECT count(DISTINCT source) FROM ${db.servers.table} WHERE server = s.server) licenceSources,
              group_concat(gateway, ','),
              COALESCE((SELECT group_concat(plugins, ', ') FROM (
                           SELECT plugin || IIF(total(number) > 1, printf('(%d)', total(number)), '') plugins
@@ -3732,9 +3730,9 @@ reports:
       SELECT
              server,
              replace(server, ':'||hostID, '') server,
-             count(distinct source),
+             count(DISTINCT source),
              group_concat(gateway, ', ')
         FROM ${db.servers.table}
        GROUP BY server
-       HAVING count(distinct source) > 1
+       HAVING count(DISTINCT source) > 1
       ;
