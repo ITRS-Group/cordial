@@ -179,6 +179,11 @@ geneos:
   # like "250ms"
   dataview-create-delay: 0
 
+  # `scramble` is normally false for Dataviews but if you only intend to
+  # use GDNA to generate statistics and you want to scramble the names
+  # of servers etc. then set this to true.
+  scramble: false
+
 # `db` contains the database configuration settings
 #
 # In the default/internal configuration it also contains a number of
@@ -200,28 +205,99 @@ db:
   # few tens of MBs at most. On very large estates they may reach the
   # order of a hundred MB, rarely more.
   #
-  # To use an in-memory only database use ":memory:?cache=shared"
-  # (carefully ensuring to use this exact value)
+  # To use an in-memory only database use ":memory:"
   #
+  # The suffix "?cache=shared" is added to the value in the `dsn`
+  # parameter, which you should never need to change
   file: gdna.sqlite
 
-  # Filters can be defined for gateways and they are applied to the
-  # lists of active gateways, probes, servers and samplers during the
-  # creation of the reporting tables.
+# `filters` can be used to include, exclude and group various categories
+# of items, most often gateways, servers and plugins. While this section
+# is used to defined the temporary table schemas and other internal
+# information you can also set default values here.
+#
+# Note: Any defaults you set will be overridden by (and not aggregated
+# with) settings made in the persistent file managed by the `gdna`
+# sub-commands created for that purpose. For example, if you change the
+# groups for plugins in the Active Console using right-click context
+# commands then the existing default list will be completely ignored.
+filters:
+  # `file` is the path to the persistent filters configuration file that
+  # is created and updated by the `gdna` subcommands. It is not intended
+  # for hand editing. If not defined the default is:
   #
-  # The filters, `include` and `exclude`, can be given as a plain string
-  # pattern or an array of patterns. The patterns supported are those
-  # for the SQLite `GLOB` operator and generally match UNIX shell
-  # wildcards. Regular expressions are NOT supported. e.g.
+  #     `${HOME}/.config/geneos/gdna-filters.json`
   #
-  #     include: [ "pattern*", "pattern*" ]
-  #
-  # The built-in defaults, shown below, include everything and exclude
-  # nothing. The two checks are AND-ed together.
-  gateways:
-    filter:
-      include: "*"
-      exclude:
+  # It can be set to a file with the `yaml` suffix and will be created
+  # in that format instead.
+  file: ""
+
+  # `include` sets the initial filter for each category. The default
+  # value is a "*" to include everything. You can define a list of
+  # patterns, one per line, to apply. The patterns are in shell-style
+  # "glob" format, and you can use any pattern allowed by Go's
+  # path.Match() function (https://pkg.go.dev/path#Match)
+  include:
+    gateway:
+      default: "*"
+    server:
+      default: "*"
+    hostid:
+      default: "*"
+    source:
+      default: "*"
+    plugin:
+      default: "*"
+
+  # `exclude` sets the defaults for exclusion for each category of item.
+  # It is applied after `include` above and has the same format and
+  # patterns.
+  exclude:
+    gateway:
+      default: ""
+    server:
+      default: ""
+    hostid:
+      default: ""
+    source:
+      default: ""
+    plugin:
+      default: ""
+
+  # `group` sets the defaults for grouping of categories of items. Each
+  # default can be a CSV style list of lines each in the format
+  # `GROUP,PATTERN`. The group can be repeated multiple times (see the
+  # plugin default) and the pattern takes the same format as for
+  # `include` above.
+  group:
+    gateway:
+      default: ""
+    server:
+      default: ""
+    source:
+      default: ""
+    plugin:
+      default: |
+        e4jms-plugins,e4jms-*
+        ibmi-plugins,ibmi-*
+        mq-plugins,mq-*
+        wts-plugins,wts-*
+        x-plugins,x-*
+        sybase-plugins,sybase*
+        prometheus-plugins,*prometheus*
+        tib-plugins,tib*
+        jmx-plugins,jmx*
+        cloud-plugins,aws-plugin
+        cloud-plugins,azure-plugin
+        cloud-plugins,gcp-plugin
+
+  # `allocations` sets the default allocations for groups of Gateways.
+  # Currently only Gateways and `server` tokens are supported. The
+  # format is CSV with three fields: `GROUP,TOKEN,NUMBER`.
+  allocations:
+    gateway:
+      # default: |
+      #  group1,server,2000
 
 # `xlsx` defines configuration values for the generation of XLSX files,
 # either locally or as email attachments. Note that you cannot specify a
@@ -259,6 +335,14 @@ xlsx:
     # can be parsed as an ISO date/time. The default format does not
     # include a timezone.
     datetime: "yyyy-mm-ddThh:MM:ss"
+
+  # `headlines` sets the visibility and directionality of headlines on
+  # each sheet. The valid values are:
+  #
+  #     0 - Do not include
+  #     1 - Show vertical headlines using two columns, name and value
+  #     2 - Show horizontal headlines as two rows, name above value
+  headlines: 2
 
 # `email` contains the email settings for use with either the `gdna
 # email` command or with the `gdna start` command using the schedule
@@ -458,75 +542,6 @@ email:
   #   </body>
   #   </html>
 
-# `groupings` allow you to define named groups for various collections
-# of data that can subsequently be used in reports to categorise those
-# collections. At this time only two built-in reports, `plugin-groups`
-# and `gateway-coverage-by-group`, use these values - using `plugins`
-# and `gateways` below.
-#
-# Each data grouping can come from an embedded default value defined by
-# `content` as a YAML text block with newlines, or the path to an
-# external file. If the file is readable it take precedence over
-# embedded content, allowing defaults to be overridden without changing
-# the configuration.
-#
-# Each line consists of two comma-separated fields:
-#
-# name,pattern
-#
-# `name` is the group name and is used in the existing reports to build
-# the row name. `pattern` is a SQLite `glob()` pattern that is used to
-# `GROUP BY` the results in the report SQL. The rest of the underlying
-# configuration also defines which input data column this group acts on
-# and more, but these are beyond the scope of the documentation in this
-# file.
-groupings:
-  gateways:
-    source: grouping-gateways.txt
-    content: |
-      APAC,APAC*
-      EMEA,EMEA*
-  servers:
-    source: grouping-servers.txt
-  hostids:
-    source: grouping-hostids.txt
-  sources:
-    source: grouping-sources.txt
-  plugins:
-    source: grouping-plugins.txt
-
-    # the default plugin groups are shown below.
-    content: |
-      e4jms-plugins,e4jms-*
-      ibmi-plugins,ibmi-*
-      mq-plugins,mq-*
-      wts-plugins,wts-*
-      x-plugins,x-*
-      sybase-plugins,sybase*
-      prometheus-plugins,prometheus*
-      tib-plugins,tib*
-      jmx-plugins,jmx*
-
-# `ignore` settings allow you to ignore certain sets of data while
-# producing reports. Like `groupings` above they can be stored in an
-# external file `source` or given in the configuration in a `content`
-# setting, which must be a newline separated YAML block.
-#
-# Ignore values are one per line and currently do not support wildcards.
-ignore:
-  gateways:
-    source: ignore-gateways.txt
-    content: |
-      EXAMPLE_GW
-  servers:
-    source: ignore-servers.txt
-  hostids:
-    source: ignore-hostids.txt
-  sources:
-    source: ignore-sources.txt
-  plugins:
-    source: ignore-plugins.txt
-
 # There are other configuration sections in the built-in defaults and
 # you must not change any settings in the below:
 
@@ -535,6 +550,24 @@ ignore:
 # these, but if you do then you will be given more details by an ITRS
 # staff member.
 plugins:
+  # `all` defines the list of all known (or useful) plugins and is used
+  # to create placeholder rows in the `plugins` report. If new plugin
+  # license tokens are deployed you can redefine the full list to
+  # override the one built-in to GDNA as defaults.
+  all:
+    # plugins: |
+    #   - altering
+    #   - ...
+  # `level1` is a list of all the required plugins to achieve Level 1
+  # Coverage per server. You should not need to change this list.
+  level1:
+    # plugins: [ cpu, disk, network, hardware ]
+  level1-optional:
+    # plugins: [ deviceio, ipc, top, unix-users, winapps, win-cluster, win-services, wmi, wts-licenses, wts-processes, wts-sessions, wts-summary ]
+  level2:
+    # plugins: [ fkm, processes ]
+
+
 
 # `reports` is where you can create (or override existing) reports. How
 # to create reports are covered in their own documentation.
