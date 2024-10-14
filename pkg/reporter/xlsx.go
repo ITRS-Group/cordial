@@ -155,8 +155,9 @@ func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporte
 
 	x.plainStyle, _ = x.x.NewStyle(&excelize.Style{
 		Alignment: &excelize.Alignment{
-			Horizontal: "right",
+			WrapText: true,
 		},
+		NumFmt: 49, // `@` which is `Text`
 	})
 
 	// set conditional formats
@@ -235,7 +236,7 @@ func evalXLSXReportOptions(options ...XLSXReporterOptions) (xo *xlsxReportOption
 		warningColour:    "F9B057",
 		criticalColour:   "FF5668",
 		minColWidth:      10.0,
-		maxColWidth:      30.0,
+		maxColWidth:      60.0,
 	}
 	for _, opt := range options {
 		opt(xo)
@@ -725,17 +726,6 @@ func (x *XLSXReporter) setConditionalFormat(sheetname, formula, format string, r
 // a scale factor for the column width versus string len
 const colScale = 1.25
 
-// minimum column width
-// const minColWidth = 10.0
-
 func limitWidth(chars int, minWidth, maxWidth float64) float64 {
-	w := colScale * float64(chars)
-	if w > 255 {
-		return 255
-	}
-	// if w < minWidth {
-	// 	return minWidth
-	// }
-	w = max(min(w, maxWidth), minWidth)
-	return w
+	return max(min(colScale*float64(chars), maxWidth), minWidth)
 }
