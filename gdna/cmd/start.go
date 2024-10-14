@@ -47,7 +47,7 @@ func init() {
 	startCmd.Flags().BoolVarP(&onStart, "on-start", "O", false, "Run immediately on start-up, then follow schedule")
 	startCmd.Flags().BoolVarP(&onStartEMail, "on-start-email", "E", false, "Run immediately on start-up, send email report, then follow schedule")
 
-	startCmd.Flags().StringVarP(&reportNames, "reports", "r", "", "Run only matching (file globbing style) reports")
+	startCmd.Flags().StringVarP(&reportNames, "reports", "r", "", reportNamesDescription)
 
 	startCmd.Flags().StringVarP(&netprobeHost, "hostname", "H", "localhost", "Connect to netprobe at `hostname`")
 	startCmd.Flags().Int16VarP(&netprobePort, "port", "P", 7036, "Connect to netprobe on `port`")

@@ -29,94 +29,41 @@ import (
 
 // create a report per gateway (or other column) and populate with given queries
 func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report) (err error) {
+	split := []string{}
+	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title))
+
 	if report.SplitValues == "" {
 		log.Error().Msg("no split-values-query defined")
 		return
 	}
 
-	// get list of split values (typically gateways)
-	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title))
-	splitquery := cf.ExpandString(report.SplitValues, lookup, config.ExpandNonStringToCSV())
-	log.Trace().Msgf("query:\n%s", splitquery)
-	rows, err := tx.QueryContext(ctx, splitquery)
-	if err != nil {
-		log.Error().Err(err).Msgf("query: %s", splitquery)
-		return
-	}
-	defer rows.Close()
-
-	split := []string{}
-	for rows.Next() {
-		var value string
-		if err = rows.Scan(&value); err != nil {
-			return
-		}
-		split = append(split, value)
-	}
-	if err = rows.Err(); err != nil {
-		return
-	}
-	rows.Close()
-	slices.Sort(split)
-
-	if _, ok := r.(*reporter.XLSXReporter); ok && report.XLSX.Enable != nil && !*report.XLSX.Enable {
-		log.Debug().Msgf("report %s disabled for XLSX output, removing any old dataviews", report.Name)
-		for _, p := range split {
-			group := report.Dataview.Group
-			title := cf.ExpandString(report.Title, config.LookupTable(map[string]string{
-				"split-column": report.SplitColumn,
-				"value":        p,
-			}), lookup, config.ExpandNonStringToCSV())
-			rep := reporter.Report{}
-			rep.Title = title
-			rep.Dataview.Group = group
-			r.Remove(rep)
-		}
-		return
-	}
-
-	if _, ok := r.(*reporter.APIReporter); ok && report.Dataview.Enable != nil && !*report.Dataview.Enable {
-		log.Debug().Msgf("report %s disabled for dataview output, removing any old dataviews", report.Name)
-		for _, p := range split {
-			group := report.Dataview.Group
-			title := cf.ExpandString(report.Title, config.LookupTable(map[string]string{
-				"split-column": report.SplitColumn,
-				"value":        p,
-			}), lookup, config.ExpandNonStringToCSV())
-			rep := reporter.Report{}
-			rep.Title = title
-			rep.Dataview.Group = group
-			r.Remove(rep)
-		}
-		return
-	}
-
-	// get possible list of all previous views and remove any not in the
-	// new list
-	previouslist := cf.ExpandString(report.SplitValuesAll, lookup, config.ExpandNonStringToCSV())
-	if previouslist != "" {
-		log.Trace().Msgf("query:\n%s", previouslist)
-		rows, err = tx.QueryContext(ctx, previouslist)
+	if report.Subreport == "" {
+		// get list of split values (typically gateways)
+		splitquery := cf.ExpandString(report.SplitValues, lookup, config.ExpandNonStringToCSV())
+		log.Trace().Msgf("query:\n%s", splitquery)
+		rows, err := tx.QueryContext(ctx, splitquery)
 		if err != nil {
-			log.Error().Err(err).Msgf("query: %s", previouslist)
-			return
+			log.Error().Err(err).Msgf("query: %s", splitquery)
+			return err
 		}
+		defer rows.Close()
 
-		previous := []string{}
 		for rows.Next() {
 			var value string
 			if err = rows.Scan(&value); err != nil {
-				return
+				return err
 			}
-			previous = append(previous, value)
+			split = append(split, value)
 		}
-		if err = rows.Err(); err == nil {
-			// no error - process list
+		if err = rows.Err(); err != nil {
+			return err
+		}
+		rows.Close()
+		slices.Sort(split)
 
-			previous = slices.DeleteFunc(previous, func(v string) bool {
-				return slices.Contains(split, v)
-			})
-			for _, p := range previous {
+		if _, ok := r.(*reporter.XLSXReporter); ok && report.XLSX.Enable != nil && !*report.XLSX.Enable {
+			log.Debug().Msgf("report %s disabled for XLSX output, removing any old dataviews", report.Name)
+			for _, p := range split {
 				group := report.Dataview.Group
 				title := cf.ExpandString(report.Title, config.LookupTable(map[string]string{
 					"split-column": report.SplitColumn,
@@ -127,8 +74,66 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 				rep.Dataview.Group = group
 				r.Remove(rep)
 			}
+			return err
 		}
-		rows.Close()
+
+		if _, ok := r.(*reporter.APIReporter); ok && report.Dataview.Enable != nil && !*report.Dataview.Enable {
+			log.Debug().Msgf("report %s disabled for dataview output, removing any old dataviews", report.Name)
+			for _, p := range split {
+				group := report.Dataview.Group
+				title := cf.ExpandString(report.Title, config.LookupTable(map[string]string{
+					"split-column": report.SplitColumn,
+					"value":        p,
+				}), lookup, config.ExpandNonStringToCSV())
+				rep := reporter.Report{}
+				rep.Title = title
+				rep.Dataview.Group = group
+				r.Remove(rep)
+			}
+			return err
+		}
+
+		// get possible list of all previous views and remove any not in the
+		// new list
+		previouslist := cf.ExpandString(report.SplitValuesAll, lookup, config.ExpandNonStringToCSV())
+		if previouslist != "" {
+			log.Trace().Msgf("query:\n%s", previouslist)
+			rows, err := tx.QueryContext(ctx, previouslist)
+			if err != nil {
+				log.Error().Err(err).Msgf("query: %s", previouslist)
+				return err
+			}
+
+			previous := []string{}
+			for rows.Next() {
+				var value string
+				if err = rows.Scan(&value); err != nil {
+					return err
+				}
+				previous = append(previous, value)
+			}
+			if err = rows.Err(); err == nil {
+				// no error - process list
+
+				previous = slices.DeleteFunc(previous, func(v string) bool {
+					return slices.Contains(split, v)
+				})
+				for _, p := range previous {
+					group := report.Dataview.Group
+					title := cf.ExpandString(report.Title, config.LookupTable(map[string]string{
+						"split-column": report.SplitColumn,
+						"value":        p,
+					}), lookup, config.ExpandNonStringToCSV())
+					rep := reporter.Report{}
+					rep.Title = title
+					rep.Dataview.Group = group
+					r.Remove(rep)
+				}
+			}
+			rows.Close()
+		}
+	} else {
+		split = []string{report.Subreport}
 	}
 
 	for _, v := range split {

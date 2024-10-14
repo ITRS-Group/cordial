@@ -27,11 +27,9 @@ import (
 	"os/signal"
 	"os/user"
 	"path"
-	"slices"
 	"sort"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -52,6 +50,7 @@ type Report struct {
 	reporter.Report `mapstructure:",squash"`
 
 	// gdna / SQL query specific
+	Subreport string `mapstructure:"-"`
 	Type      string `mapstructure:"type,omitempty"`
 	Query     string `mapstructure:"query,omitempty"`
 	Headlines string `mapstructure:"headlines,omitempty"`
@@ -65,13 +64,15 @@ type Report struct {
 	GroupingOrder []string `mapstructure:"grouping-order,omitempty"`
 }
 
+const reportNamesDescription = "Run only the matching reports, for multiple reports use a\ncomma-separated list. Report names can include shell-style wildcards.\nSplit reports can be suffixed with ':value' to limit the report\nto the value given."
+
 func init() {
 	GDNACmd.AddCommand(reportCmd)
 
 	reportCmd.Flags().StringVarP(&output, "output", "o", "-", "output destination `file`, default is console (stdout)")
-	reportCmd.Flags().StringVarP(&outputFormat, "format", "F", "dataview", "output `format` - one of: dataview, table, html, markdown, toolkit (or csv), xslx")
+	reportCmd.Flags().StringVarP(&outputFormat, "format", "F", "dataview", "output `format` - one of: dataview, table, html, markdown,\ntoolkit (or csv), xslx")
 
-	reportCmd.Flags().StringVarP(&reportNames, "reports", "r", "", "Run only matching (file globbing style) reports")
+	reportCmd.Flags().StringVarP(&reportNames, "reports", "r", "", reportNamesDescription)
 	reportCmd.Flags().BoolVarP(&scrambleNames, "scramble", "S", false, "Scramble configured column of data in reports with sensitive data")
 
 	reportCmd.Flags().StringVarP(&netprobeHost, "hostname", "H", "localhost", "Connect to netprobe at `hostname`")
@@ -159,7 +160,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 		// go-pretty CSV output so that we can render headlines in the
 		// Geneos toolkit format
 		if reports == "" {
-			err = errors.New("toolkit/csv format requires a eport name")
+			err = errors.New("toolkit/csv format requires a report name")
 			return
 		}
 		maxreports = 1
@@ -215,29 +216,41 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 // matchReport checks if report name matches any component of pattern.
 // pattern is a comma separated list of glob-style strings. The function
 // returns true as soon as a match is found or returns false on no
-// match.
-func matchReport(name, pattern string) bool {
-	for _, p := range strings.FieldsFunc(pattern, func(r rune) bool { return unicode.IsSpace(r) || r == ',' }) {
+// match. The match is done after removing any `:value` suffix to allow
+// for limited split report names.
+func matchReport(name, pattern string) (match bool, subreport string) {
+	for _, p := range strings.FieldsFunc(pattern, func(r rune) bool { return r == ',' }) {
+		// trim anything after a ':'
+		if c := strings.Index(p, ":"); c != -1 {
+			subreport = p[c+1:]
+			p = p[:c]
+		}
+		if p == "" {
+			continue
+		}
 		if ok, _ := path.Match(p, name); ok {
-			return true
+			match = true
+			return
 		}
 	}
-	return false
+	return
 }
 
 func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, reportNames string, maxreports int) (err error) {
-	var standardReports []string
-	var groupedReports []string
+	var standardReports []Report
+	var groupedReports []Report
 
 	var i int
 	for name := range cf.GetStringMap("reports") {
 		var rep Report
+		var subreport string
 		if reportNames != "" {
 			// always add the summary-report to XLSX files
 			if _, ok := r.(*reporter.XLSXReporter); ok && name == cf.GetString("xlsx.summary-report") {
 				// do nothing
 			} else {
-				if !matchReport(name, reportNames) {
+				var match bool
+				if match, subreport = matchReport(name, reportNames); !match {
 					continue
 				}
 			}
@@ -252,12 +265,14 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 			log.Error().Err(err).Msgf("skipping report %s: configuration format incorrect", name)
 			continue
 		}
-		// save report name metadata
+
+		// save report name and subreport metadata over unmarshalled config
 		rep.Name = name
+		rep.Subreport = subreport
 
 		switch rep.Type {
 		case "split":
-			groupedReports = append(groupedReports, name)
+			groupedReports = append(groupedReports, rep)
 		case "summary":
 			// publish summary report(s) first, if enabled
 			if _, ok := r.(*reporter.XLSXReporter); ok && rep.XLSX.Enable != nil && !*rep.XLSX.Enable {
@@ -272,28 +287,19 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 
 			publishReport(ctx, cf, tx, r, rep)
 		default:
-			standardReports = append(standardReports, name)
+			standardReports = append(standardReports, rep)
 		}
 	}
 
 	// only sort reports if we have not had a specific list given
 	if reportNames == "" {
-		slices.Sort(standardReports)
-		slices.Sort(groupedReports)
+		// slices.Sort(standardReports)
+		// slices.Sort(groupedReports)
 	}
 
-	for _, reports := range standardReports {
-		var rep Report
-
-		if err = cf.UnmarshalKey(config.Join("reports", reports), &rep); err != nil {
-			log.Error().Err(err).Msgf("skipping report %s: configuration format incorrect", reports)
-			continue
-		}
-		// save report name metadata
-		rep.Name = reports
-
+	for _, rep := range standardReports {
 		if reportNames != "" {
-			if matchReport(reports, reportNames) {
+			if match, _ := matchReport(rep.Name, reportNames); match {
 				// override reports that may be disabled for the selected format
 				t := true
 				rep.Dataview.Enable = &t
@@ -302,16 +308,16 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 		}
 
 		if _, ok := r.(*reporter.XLSXReporter); ok && rep.XLSX.Enable != nil && !*rep.XLSX.Enable {
-			log.Debug().Msgf("report %s disabled for XLSX output", reports)
+			log.Debug().Msgf("report %s disabled for XLSX output", rep.Name)
 			continue
 		}
 
 		if _, ok := r.(*reporter.APIReporter); ok && rep.Dataview.Enable != nil && !*rep.Dataview.Enable {
-			log.Debug().Msgf("report %s disabled for dataview output", reports)
+			log.Debug().Msgf("report %s disabled for dataview output", rep.Name)
 			continue
 		}
 
-		log.Debug().Msgf("running report %s", reports)
+		log.Debug().Msgf("running report %s", rep.Name)
 
 		start := time.Now()
 
@@ -323,36 +329,18 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 		default:
 			publishReport(ctx, cf, tx, r, rep)
 		}
-		log.Debug().Msgf("report %s completed in %.2f seconds", reports, time.Since(start).Seconds())
+		log.Debug().Msgf("report %s completed in %.2f seconds", rep.Name, time.Since(start).Seconds())
 	}
 
-	for _, reports := range groupedReports {
-		var rep Report
-		rep.Name = reports
-
-		if err = cf.UnmarshalKey(config.Join("reports", reports), &rep); err != nil {
-			log.Error().Err(err).Msgf("skipping report %s: configuration format incorrect", reports)
-			continue
-		}
-
-		// if _, ok := r.(*reporter.XLSXReporter); ok && rep.XLSX.Enable != nil && !*rep.XLSX.Enable {
-		// 	log.Debug().Msgf("report %s disabled for XLSX output", reports)
-		// 	continue
-		// }
-
-		// if _, ok := r.(*reporter.APIReporter); ok && rep.Dataview.Enable != nil && !*rep.Dataview.Enable {
-		// 	log.Debug().Msgf("report %s disabled for dataview output", reports)
-		// 	continue
-		// }
-
-		log.Debug().Msgf("running split report %s", reports)
+	for _, rep := range groupedReports {
+		log.Debug().Msgf("running split report %s", rep.Name)
 
 		start := time.Now()
 
 		if err = publishReportSplit(ctx, cf, tx, r, rep); err != nil {
 			return
 		}
-		log.Debug().Msgf("report %s completed in %.2f seconds", reports, time.Since(start).Seconds())
+		log.Debug().Msgf("report %s completed in %.2f seconds", rep.Name, time.Since(start).Seconds())
 	}
 
 	return nil

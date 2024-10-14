@@ -48,7 +48,7 @@ var emailCmdContents string
 func init() {
 	GDNACmd.AddCommand(emailCmd)
 
-	emailCmd.Flags().StringVarP(&reportNames, "report", "r", "", "report names")
+	emailCmd.Flags().StringVarP(&reportNames, "report", "r", "", reportNamesDescription)
 
 	emailCmd.Flags().StringVar(&emailCmdContents, "contents", "", "Override configured email contents")
 	emailCmd.Flags().StringVar(&emailCmdSubject, "subject", "", "Override configured email Subject")

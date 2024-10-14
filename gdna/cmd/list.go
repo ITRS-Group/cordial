@@ -47,7 +47,7 @@ func init() {
 
 	listCmd.PersistentFlags().StringVarP(&listCmdFormat, "format", "F", "table", "format output. supported formats: 'html', 'table', 'tsv', 'toolkit', 'markdown'")
 
-	listReportCmd.Flags().StringVarP(&reportNames, "report", "r", "", "report names")
+	listReportCmd.Flags().StringVarP(&reportNames, "report", "r", "", reportNamesDescription)
 	listReportCmd.Flags().SortFlags = false
 
 	listExcludeCmd.Flags().StringVarP(&listFormat, "format", "F", "", "output format")
@@ -157,7 +157,7 @@ func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 		var rep Report
 
 		if reportNames != "" {
-			if !matchReport(name, reportNames) {
+			if match, _ := matchReport(name, reportNames); !match {
 				continue
 			}
 		}
