@@ -3239,23 +3239,38 @@ reports:
       group: Geneos Estate
     xlsx:
       freeze-to-column: gateway
-    columns: [ gateway, gatewayHost, gatewayPort, gatewayVersion, servers, probes, samplers, dynamicEntities, dynamicEntitiesUnknownServer, serversComplete, serversIncomplete, serversEmpty, licenseSource ]
+    columns: [ gateway, gatewayHost, gatewayPort, gatewayVersion, servers, probes, samplers, dynamicEntities, dynamicEntitiesUnknownServer, serversComplete, serversIncomplete, serversEmpty, l1incomplete, l2incomplete, l3incomplete, licenseSource ]
     scramble-columns: [ gatewayHost ]
     query: | #sql
+      WITH s AS (
+        SELECT gateway,
+               (SELECT count(DISTINCT server) FROM ${db.servers.table} WHERE gateway = g.gateway) total,
+               (SELECT count(DISTINCT server) FROM ${db.covered-servers.table} WHERE gateway = g.gateway) covered,
+               (SELECT count(DISTINCT server) FROM ${db.empty-servers.table} WHERE gateway = g.gateway) empty,
+               (SELECT count(DISTINCT server) FROM ${db.l1covered-servers.table} WHERE gateway = g.gateway) l1covered,
+               (SELECT count(DISTINCT server) FROM ${db.l2covered-servers.table} WHERE gateway = g.gateway) l2covered,
+               (SELECT count(DISTINCT server) FROM ${db.l3covered-servers.table} WHERE gateway = g.gateway) l3covered
+          FROM ${db.gateways.active} g
+         GROUP BY gateway
+      )
       SELECT gateway,
              COALESCE(gatewayHost, ''),
              COALESCE(gatewayPort, ''),
              COALESCE(version, ''),
-             (SELECT count(DISTINCT server) FROM ${db.servers.table} WHERE gateway = g.gateway),
+             s.total,
              (SELECT count(*) FROM ${db.probes.active} WHERE gateway = g.gateway),
              (SELECT total(number) FROM ${db.samplers.active} WHERE gateway = g.gateway),
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE gateway = g.gateway),
              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server IS NULL AND gateway = g.gateway),
-             (SELECT count(DISTINCT server) FROM ${db.covered-servers.table} WHERE gateway = g.gateway),
-             (SELECT count(DISTINCT server) FROM ${db.uncovered-servers.table} WHERE gateway = g.gateway),
-             (SELECT count(DISTINCT server) FROM ${db.empty-servers.table} WHERE gateway = g.gateway) AS empty,
+             s.covered,
+             s.total - s.covered - s.empty,
+             s.empty,
+             s.total - s.l1covered - s.empty,
+             s.total - s.l2covered - s.empty,
+             s.total - s.l3covered - s.empty,
              source
         FROM ${db.gateways.active} g
+        LEFT JOIN s USING (gateway)
       ;
 
   servers:
