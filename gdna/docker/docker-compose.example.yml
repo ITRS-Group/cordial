@@ -63,6 +63,9 @@ services:
       # - "${HOME}/geneos/licd/licds/perm/reporting:/home/geneos/licd-reporting"
       # - "./licdfiles:/home/geneos/licdfiles"
 
+    extra_hosts:
+      host.docker.internal: host-gateway
+
 configs:
   # `gdna.yaml` is the configuration file for GDNA. The changes you are
   # likely to make are to the `licd-sources` list of URLs or local files
@@ -88,6 +91,8 @@ configs:
       gdna:
         licd-sources:
           - "https://LICDHOST:7041"  
+          # To access the host that the container is running on, use this URL:
+          # - "https://host.docker.internal: host-gateway:7041"
         licd-skip-verify: true
 
         # licd-reports:
