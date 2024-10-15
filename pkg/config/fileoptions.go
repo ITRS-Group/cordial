@@ -234,7 +234,7 @@ func SetAppName(name string) FileOptions {
 // default to an empty string
 func SetConfigFile(p string) FileOptions {
 	return func(fo *fileOptions) {
-		fo.configFile = p
+		fo.configFile = ExpandHome(p)
 	}
 }
 
