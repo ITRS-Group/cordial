@@ -27,6 +27,7 @@ import (
 	"os/signal"
 	"os/user"
 	"path"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -270,6 +271,15 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 		rep.Name = name
 		rep.Subreport = subreport
 
+		if reportNames != "" {
+			if match, _ := matchReport(rep.Name, reportNames); match {
+				// override reports that may be disabled for the selected format
+				t := true
+				rep.Dataview.Enable = &t
+				rep.XLSX.Enable = &t
+			}
+		}
+
 		switch rep.Type {
 		case "split":
 			groupedReports = append(groupedReports, rep)
@@ -293,20 +303,15 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 
 	// only sort reports if we have not had a specific list given
 	if reportNames == "" {
-		// slices.Sort(standardReports)
-		// slices.Sort(groupedReports)
+		slices.SortFunc(standardReports, func(a, b Report) int {
+			return strings.Compare(a.Name, b.Name)
+		})
+		slices.SortFunc(groupedReports, func(a, b Report) int {
+			return strings.Compare(a.Name, b.Name)
+		})
 	}
 
 	for _, rep := range standardReports {
-		if reportNames != "" {
-			if match, _ := matchReport(rep.Name, reportNames); match {
-				// override reports that may be disabled for the selected format
-				t := true
-				rep.Dataview.Enable = &t
-				rep.XLSX.Enable = &t
-			}
-		}
-
 		if _, ok := r.(*reporter.XLSXReporter); ok && rep.XLSX.Enable != nil && !*rep.XLSX.Enable {
 			log.Debug().Msgf("report %s disabled for XLSX output", rep.Name)
 			continue
