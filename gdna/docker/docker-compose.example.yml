@@ -98,6 +98,8 @@ configs:
         # email-schedule: "0 2 * * *"
       db:
         file: ~/gdna/gdna.sqlite
+      filters:
+        file: ~/gdna/gdna-filters.json
       email:
         subject: "ITRS GDNA Report"
         from: from@example.com
