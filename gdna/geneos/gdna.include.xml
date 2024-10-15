@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA6.8.1-240517 at 2024-10-13 13:09:55 by peter on HPSpectre360-->
+<!--Edited using Gateway Setup Editor version GA7.0.0-240827 at 2024-10-14 15:50:47 by pgalbavy on ITRSLP257-->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/RA7.1.0-240916/gateway.xsd">
 	<probes>
 		<probe name="gdna">
@@ -294,6 +294,27 @@ ORDER BY probeVersion ASC
 					</task>
 				</command>
 				<commandGroup name="Excludes">
+					<command name="Exclude Gateway - Gateway Overview or Details">
+						<label>Exclude Gateway</label>
+						<description>Add Gateway to Exclude List</description>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]//*</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="exclude gateway by gatewayName headline"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
 					<command name="Exclude Gateway - Dataview Gateways">
 						<label>Exclude Gateway</label>
 						<description>Add Gateway to Exclude List</description>
@@ -334,6 +355,26 @@ ORDER BY probeVersion ASC
 							<silent>true</silent>
 						</task>
 					</command>
+					<command name="Exclude Server - Dataview Group Gateways">
+						<label>Exclude Server</label>
+						<description>Add Server to Exclude List</description>
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]/rows/row[not(contains(@name,&quot;#&quot;))]/cell</target>
+						</targets>
+						<task>
+							<commands>
+								<commandRef>
+									<command ref="exclude server by rowname"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+								<commandRef>
+									<command ref="refresh gateway report by dataview name"/>
+									<stopOnError>true</stopOnError>
+								</commandRef>
+							</commands>
+							<silent>true</silent>
+						</task>
+					</command>
 					<command name="Add Exclude Filter">
 						<label>Add Exclude</label>
 						<targets>
@@ -362,27 +403,6 @@ ORDER BY probeVersion ASC
 									<static>exclude</static>
 								</arg>
 							</args>
-							<silent>true</silent>
-						</task>
-					</command>
-					<command name="Exclude Gateway - Gateway Overview or Details">
-						<label>Exclude Gateway</label>
-						<description>Add Gateway to Exclude List</description>
-						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]</target>
-							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]//*</target>
-						</targets>
-						<task>
-							<commands>
-								<commandRef>
-									<command ref="exclude gateway by gatewayName headline"/>
-									<stopOnError>true</stopOnError>
-								</commandRef>
-								<commandRef>
-									<command ref="refresh report by dataview name"/>
-									<stopOnError>true</stopOnError>
-								</commandRef>
-							</commands>
 							<silent>true</silent>
 						</task>
 					</command>
@@ -675,13 +695,29 @@ ORDER BY probeVersion ASC
 				</menu>
 				<command name="Refresh Dataview ">
 					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview</target>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview//*</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[not(param(&quot;Group&quot;)=&quot;Gateways&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[not(param(&quot;Group&quot;)=&quot;Gateways&quot;)]//*</target>
 					</targets>
 					<task>
 						<commands>
 							<commandRef>
 								<command ref="refresh report by dataview name"/>
+								<stopOnError>true</stopOnError>
+							</commandRef>
+						</commands>
+						<silent>true</silent>
+					</task>
+				</command>
+				<command name="Refresh Gateways Group Dataview ">
+					<label>Refresh Dataview </label>
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]//*</target>
+					</targets>
+					<task>
+						<commands>
+							<commandRef>
+								<command ref="refresh gateway report by dataview name"/>
 								<stopOnError>true</stopOnError>
 							</commandRef>
 						</commands>
@@ -703,7 +739,7 @@ ORDER BY probeVersion ASC
 						<silent>true</silent>
 					</task>
 				</command>
-				<command name="Update License Data">
+				<command name="Refresh License Data">
 					<targets>
 						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]</target>
 						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]//*</target>
@@ -749,6 +785,23 @@ ORDER BY probeVersion ASC
 						<commands>
 							<commandRef>
 								<command ref="email all"/>
+								<stopOnError>true</stopOnError>
+							</commandRef>
+						</commands>
+						<silent>true</silent>
+					</task>
+				</command>
+				<command name="EMail Gateway Report">
+					<description>EMail This GDNA Report. (Leave fields blank for defaults)</description>
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]/rows/row/cell</target>
+						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]/headlines/cell</target>
+					</targets>
+					<task>
+						<commands>
+							<commandRef>
+								<command ref="email report gateways"/>
 								<stopOnError>true</stopOnError>
 							</commandRef>
 						</commands>
@@ -1008,6 +1061,92 @@ ORDER BY probeVersion ASC
 							<userInput>
 								<description>Comment</description>
 								<multiLineString/>
+							</userInput>
+						</arg>
+					</args>
+				</userCommand>
+			</command>
+			<command name="email report gateways">
+				<userCommand>
+					<type>script</type>
+					<runLocation>gateway</runLocation>
+					<args>
+						<arg>
+							<text>
+								<var ref="GDNA_PATH"/>
+							</text>
+						</arg>
+						<arg>
+							<static>email</static>
+						</arg>
+						<arg>
+							<static>-r</static>
+						</arg>
+						<arg>
+							<xpath>ancestor-or-self::dataview/headlines/cell[(@name=&quot;reportName&quot;)]</xpath>
+						</arg>
+						<arg>
+							<concatenate>true</concatenate>
+							<static>:</static>
+						</arg>
+						<arg>
+							<concatenate>true</concatenate>
+							<xpath>ancestor-or-self::dataview/headlines/cell[(@name=&quot;gatewayName&quot;)]</xpath>
+						</arg>
+						<arg>
+							<static>--subject</static>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Subject:</description>
+								<singleLineString/>
+							</userInput>
+						</arg>
+						<arg>
+							<userInput>
+								<description>To:</description>
+								<singleLineString/>
+							</userInput>
+						</arg>
+						<arg>
+							<static>--cc</static>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Cc:</description>
+								<singleLineString/>
+							</userInput>
+						</arg>
+						<arg>
+							<static>--bcc</static>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Bcc:</description>
+								<singleLineString/>
+							</userInput>
+						</arg>
+						<arg>
+							<static>--contents</static>
+						</arg>
+						<arg>
+							<userInput>
+								<description>Report Format</description>
+								<options>
+									<option>
+										<label>XLSX</label>
+										<value>xlsx</value>
+									</option>
+									<option>
+										<label>HTML</label>
+										<value>html</value>
+									</option>
+									<option>
+										<label>HTML+XLSX</label>
+										<value>html,xlsx</value>
+									</option>
+								</options>
+								<requiredArgument>true</requiredArgument>
 							</userInput>
 						</arg>
 					</args>
@@ -2077,10 +2216,40 @@ ORDER BY probeVersion ASC
 								<static>report</static>
 							</arg>
 							<arg>
-								<static>-r</static>
+								<static>--reports</static>
 							</arg>
 							<arg>
 								<xpath>ancestor-or-self::dataview/headlines/cell[(@name=&quot;reportName&quot;)]</xpath>
+							</arg>
+						</args>
+					</userCommand>
+				</command>
+				<command name="refresh gateway report by dataview name">
+					<userCommand>
+						<type>script</type>
+						<runLocation>gateway</runLocation>
+						<args>
+							<arg>
+								<text>
+									<var ref="GDNA_PATH"/>
+								</text>
+							</arg>
+							<arg>
+								<static>report</static>
+							</arg>
+							<arg>
+								<static>--reports</static>
+							</arg>
+							<arg>
+								<xpath>ancestor-or-self::dataview/headlines/cell[(@name=&quot;reportName&quot;)]</xpath>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<static>:</static>
+							</arg>
+							<arg>
+								<concatenate>true</concatenate>
+								<xpath>ancestor-or-self::dataview/headlines/cell[(@name=&quot;gatewayName&quot;)]</xpath>
 							</arg>
 						</args>
 					</userCommand>
