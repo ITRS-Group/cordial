@@ -301,15 +301,25 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 		}
 	}
 
-	// only sort reports if we have not had a specific list given
+	// only sort reports if we have not been given a specific list given
 	if reportNames == "" {
 		slices.SortFunc(standardReports, func(a, b Report) int {
 			return strings.Compare(a.Name, b.Name)
 		})
+
 		slices.SortFunc(groupedReports, func(a, b Report) int {
 			return strings.Compare(a.Name, b.Name)
 		})
 	}
+
+	// compact report lists, even if not sorted above, to allow for command
+	// line repeats like `-r filters,filters`
+	standardReports = slices.CompactFunc(standardReports, func(a, b Report) bool {
+		return a.Name == b.Name
+	})
+	groupedReports = slices.CompactFunc(groupedReports, func(a, b Report) bool {
+		return a.Name == b.Name
+	})
 
 	for _, rep := range standardReports {
 		if _, ok := r.(*reporter.XLSXReporter); ok && rep.XLSX.Enable != nil && !*rep.XLSX.Enable {
