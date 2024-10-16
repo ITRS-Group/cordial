@@ -653,7 +653,7 @@ func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, 
 // split an package archive name into type and version
 //
 // geneos-gateway-7.1.0-20240828.194610-12-linux-x64.tar.gz
-var archiveRE = regexp.MustCompile(`^geneos-(?<component>[\w-]+)-(?<version>[\d\-\.]+)(-(?<platform>\w+))?-linux`)
+var archiveRE = regexp.MustCompile(`^geneos-(?<component>[\w-]+)-(?<version>[\d\-\.]+)(-(?<platform>\w+))?[\.-]linux`)
 
 // FilenameToComponentVersion transforms an archive filename and returns
 // the component and version or an error if the file format is not
