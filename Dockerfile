@@ -121,7 +121,7 @@ COPY tools/gateway-reporter/README.md gateway-reporter.md
 COPY tools/dv2email/README.md dv2email.md
 COPY tools/dv2email/screenshots/ screenshots/
 COPY tools/san-config/README.md san-config.md
-COPY gdna/README.md gdna.md
+COPY gdna/*.md gdna/
 COPY gdna/screenshots/ screenshots/
 COPY integrations/servicenow/README.md servicenow.md
 COPY integrations/pagerduty/README.md pagerduty.md
@@ -129,13 +129,20 @@ COPY libraries/libemail/README.md libemail.md
 COPY libraries/libalert/README.md libalert.md
 
 ARG MERMAID=".mermaid"
-ARG READMEDIRS="tools/geneos tools/gateway-reporter tools/dv2email tools/san-config gdna integrations/servicenow integrations/pagerduty libraries/libemail libraries/libalert"
+ARG READMEDIRS="tools/geneos tools/gateway-reporter tools/dv2email tools/san-config integrations/servicenow integrations/pagerduty libraries/libemail libraries/libalert"
 RUN set -eux; \
     echo '{ "args": ["--no-sandbox"] }' > /puppeteer.json; \
     for i in ${READMEDIRS}; \
     do \
             mmdc -p /puppeteer.json -i /app/cordial/$i/README.md -o /app/cordial/$i/README${MERMAID}.md; \
             mdpdf /app/cordial/$i/README${MERMAID}.md ${i##*/}.pdf --border=15mm --gh-style; \
+    done; \
+    for i in gdna/*.md; \
+    do \
+            b=$(basename ${i%.md}); \
+            mmdc -p /puppeteer.json -i /app/cordial/$i -o /app/cordial/gdna/${b}${MERMAID}.md; \
+            mdpdf /app/cordial/gdna/${b}${MERMAID}.md gdna/gdna-${b##*/}.pdf --border=15mm --gh-style; \
+            mv gdna/$b.md gdna/gdna-$b.md; \
     done; \
     mmdc -p /puppeteer.json -i /app/cordial/CHANGELOG.md -o /app/cordial/CHANGELOG${MERMAID}.md; \
     mdpdf /app/cordial/CHANGELOG${MERMAID}.md CHANGELOG.pdf --border=15mm --gh-style; \
