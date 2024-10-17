@@ -1847,8 +1847,9 @@ reports:
          WHERE token = 'server'
          GROUP BY grouping
       )
-      SELECT grouping,
-             total,
+      SELECT DISTINCT
+             grouping,
+             COALESCE(total, 0),
              COALESCE(servers, 0),
              COALESCE(allocation, 0),
              CASE WHEN allocation > 0 THEN
@@ -1856,23 +1857,24 @@ reports:
              ELSE
               '0 %'
              END,
-             covered,
+             COALESCE(covered, 0),
              printf('%d %%', round(covered * 100.0 / total)) coveredPercent,
-             empty,
+             COALESCE(empty, 0),
              printf('%d %%', round(empty * 100.0 / total)) emptyPercent,
-             total - covered - empty remaining,
+             COALESCE(total - covered - empty , 0) remaining,
              printf('%d %%', round((total - covered - empty) * 100.0 / total)) remainingPercent,
-             l1covered - covered,
+             COALESCE(l1covered - covered, 0),
              printf('%d %%', round(COALESCE((l1covered - covered) * 100.0 / (total - covered - empty), 0))) l1completePercent,
-             total - l1covered - empty l1remaining,
-             l2covered - covered,
+             COALESCE(total - l1covered - empty, 0) l1remaining,
+             COALESCE(l2covered - covered, 0),
              printf('%d %%', round(COALESCE((l2covered - covered) * 100.0 / (total - covered - empty), 0))) l2completePercent,
-             total - l2covered - empty l2remaining,
-             l3covered - covered,
+             COALESCE(total - l2covered - empty, 0) l2remaining,
+             COALESCE(l3covered - covered, 0),
              printf('%d %%', round(COALESCE((l3covered - covered) * 100.0 / (total - covered - empty), 0))) l3completePercent
         FROM coverage
         LEFT JOIN s USING (grouping)
         LEFT JOIN a USING (grouping)
+       RIGHT JOIN ${db.match-gateways.table} USING (grouping)
        ORDER BY CASE grouping WHEN 'OTHER' THEN 'ZZZZZZ' ELSE grouping END COLLATE NOCASE
       ;
 
@@ -2435,23 +2437,25 @@ reports:
           LEFT JOIN ${db.match-servers.table} grp USING (server)
         GROUP BY grouping
       )
-      SELECT grouping,
-             total,
-             covered,
+      SELECT DISTINCT
+             COALESCE(grouping, 0),
+             COALESCE(total, 0),
+             COALESCE(covered, 0),
              printf('%d %%', round(covered * 100.0 / total)) coveredPercent,
-             empty,
+             COALESCE(empty, 0),
              printf('%d %%', round(empty * 100.0 / total)) emptyPercent,
-             total - covered - empty remaining,
+             COALESCE(total - covered - empty, 0) remaining,
              printf('%d %%', round((total - covered - empty) * 100.0 / total)) remainingPercent,
-             l1covered - covered,
+             COALESCE(l1covered - covered, 0),
              printf('%d %%', round(COALESCE((l1covered - covered) * 100.0 / (total - covered - empty), 0))) l1completePercent,
-             total - l1covered - empty l1remaining,
-             l2covered - covered,
+             COALESCE(total - l1covered - empty, 0) l1remaining,
+             COALESCE(l2covered - covered, 0),
              printf('%d %%', round(COALESCE((l2covered - covered) * 100.0 / (total - covered - empty), 0))) l2completePercent,
-             total - l2covered - empty l2remaining,
-             l3covered - covered,
+             COALESCE(total - l2covered - empty, 0) l2remaining,
+             COALESCE(l3covered - covered, 0),
              printf('%d %%', round(COALESCE((l3covered - covered) * 100.0 / (total - covered - empty), 0))) l3completePercent
         FROM coverage
+       RIGHT JOIN ${db.match-servers.table} USING (grouping)
        ORDER BY CASE grouping WHEN 'OTHER' THEN 'ZZZZZZ' ELSE grouping END COLLATE NOCASE
       ;
 
@@ -3239,7 +3243,7 @@ reports:
       group: Geneos Estate
     xlsx:
       freeze-to-column: gateway
-    columns: [ gateway, gatewayHost, gatewayPort, gatewayVersion, servers, probes, samplers, dynamicEntities, dynamicEntitiesUnknownServer, serversComplete, serversIncomplete, serversEmpty, l1incomplete, l2incomplete, l3incomplete, licenseSource ]
+    columns: [ gateway, gatewayHost, gatewayPort, gatewayVersion, servers, probes, samplers, dynamicEntities, dynamicEntitiesUnknownServer, serversComplete, serversIncomplete, serversEmpty, serversl1incomplete, serversl2incomplete, serversl3incomplete, licenseSource ]
     scramble-columns: [ gatewayHost ]
     query: | #sql
       WITH s AS (
