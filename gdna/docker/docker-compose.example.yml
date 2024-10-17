@@ -31,8 +31,12 @@ services:
 
     configs:
       # this creates a `gdna.yaml` configuration file in the geneos
-      # user's .config/geneos directory, using the YAML-in-YAML content #
+      # user's `.config/geneos` directory, using the YAML-in-YAML content
       # below.
+      #
+      # Please note that you will see a warning that uid/gid/mode are
+      # not valid and ignored. This is not the case, as mentioned in
+      # <https://github.com/docker/compose/issues/12010>
       - source: gdna.yaml
         target: /home/geneos/.config/geneos/gdna.yaml
         uid: "1000"
