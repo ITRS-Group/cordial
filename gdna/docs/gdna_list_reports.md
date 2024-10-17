@@ -13,7 +13,10 @@ gdna list reports
 ### Options
 
 ```text
-  -r, --report string   report names
+  -r, --report string   Run only the matching reports, for multiple reports use a
+                        comma-separated list. Report names can include shell-style wildcards.
+                        Split reports can be suffixed with ':value' to limit the report
+                        to the value given.
 ```
 
 ## SEE ALSO

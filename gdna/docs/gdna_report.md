@@ -26,9 +26,13 @@ gdna report
 ### Options
 
 ```text
-  -o, --output file         output destination file, default is console (default "-")
-  -F, --format format       output format - one of: dataview, table, html, toolkit (or csv), xslx (default "dataview")
-  -r, --reports string      Run only matching (file globbing style) reports
+  -o, --output file         output destination file, default is console (stdout) (default "-")
+  -F, --format format       output format - one of: dataview, table, html, markdown,
+                            toolkit (or csv), xslx (default "dataview")
+  -r, --reports string      Run only the matching reports, for multiple reports use a
+                            comma-separated list. Report names can include shell-style wildcards.
+                            Split reports can be suffixed with ':value' to limit the report
+                            to the value given.
   -S, --scramble            Scramble configured column of data in reports with sensitive data
   -H, --hostname hostname   Connect to netprobe at hostname (default "localhost")
   -P, --port port           Connect to netprobe on port (default 7036)

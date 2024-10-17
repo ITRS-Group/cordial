@@ -14,7 +14,10 @@ gdna start
   -1, --once                Run once and exit
   -O, --on-start            Run immediately on start-up, then follow schedule
   -E, --on-start-email      Run immediately on start-up, send email report, then follow schedule
-  -r, --reports string      Run only matching (file globbing style) reports
+  -r, --reports string      Run only the matching reports, for multiple reports use a
+                            comma-separated list. Report names can include shell-style wildcards.
+                            Split reports can be suffixed with ':value' to limit the report
+                            to the value given.
   -H, --hostname hostname   Connect to netprobe at hostname (default "localhost")
   -P, --port port           Connect to netprobe on port (default 7036)
   -S, --secure              Use TLS connection to Netprobe

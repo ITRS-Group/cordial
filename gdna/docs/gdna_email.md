@@ -13,7 +13,10 @@ gdna email
 ### Options
 
 ```text
-  -r, --report string     report names
+  -r, --report string     Run only the matching reports, for multiple reports use a
+                          comma-separated list. Report names can include shell-style wildcards.
+                          Split reports can be suffixed with ':value' to limit the report
+                          to the value given.
       --contents string   Override configured email contents
       --subject string    Override configured email Subject
       --from string       Override configured email From

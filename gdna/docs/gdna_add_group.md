@@ -9,7 +9,7 @@ gdna add group [FLAGS] CATEGORY NAME PATTERN...
 ### Options
 
 ```text
-      --allocation int   add allocation
+      --allocation int   add allocation (use -1 for no change) (default -1)
       --token string     token to allocate (default "server")
 ```
 
