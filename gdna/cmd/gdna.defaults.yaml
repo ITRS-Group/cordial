@@ -1811,7 +1811,7 @@ reports:
       group: Groups
     xlsx:
       freeze-to-column: servers
-    columns: [ group, gateways, servers, serverTokenAllocation, "serverTokenUsage %", complete, "complete %", empty, "empty %", remaining, "remaining %", l1complete, "l1complete %", l1remaining, l2complete, "l2complete %", l2remaining, l3complete, "l3complete %" ]
+    columns: [ group, gateways, servers, dynamicEntities, serverTokenAllocation, "serverTokenUsage %", complete, "complete %", empty, "empty %", remaining, "remaining %", l1complete, "l1complete %", l1remaining, l2complete, "l2complete %", l2remaining, l3complete, "l3complete %" ]
     query: | #sql
       WITH coverage(grouping, total, covered, empty, l1covered, l2covered, l3covered) AS (
         SELECT COALESCE(grouping, 'OTHER'),
@@ -1851,6 +1851,9 @@ reports:
              grouping,
              COALESCE(total, 0),
              COALESCE(servers, 0),
+             COALESCE((SELECT count(*) FROM ${db.ca-samplers.active} WHERE gateway IN
+                          (SELECT gateway FROM ${db.match-gateways.table} WHERE grouping = m.grouping)
+                      ), 0),
              COALESCE(allocation, 0),
              CASE WHEN allocation > 0 THEN
               printf('%d %%', round(COALESCE(servers, 0) * 100.0 / allocation))
@@ -1874,7 +1877,7 @@ reports:
         FROM coverage
         LEFT JOIN s USING (grouping)
         LEFT JOIN a USING (grouping)
-       RIGHT JOIN ${db.match-gateways.table} USING (grouping)
+        FULL JOIN ${db.match-gateways.table} m USING (grouping)
        ORDER BY CASE grouping WHEN 'OTHER' THEN 'ZZZZZZ' ELSE grouping END COLLATE NOCASE
       ;
 
@@ -2455,7 +2458,7 @@ reports:
              COALESCE(l3covered - covered, 0),
              printf('%d %%', round(COALESCE((l3covered - covered) * 100.0 / (total - covered - empty), 0))) l3completePercent
         FROM coverage
-       RIGHT JOIN ${db.match-servers.table} USING (grouping)
+        FULL JOIN ${db.match-servers.table} USING (grouping)
        ORDER BY CASE grouping WHEN 'OTHER' THEN 'ZZZZZZ' ELSE grouping END COLLATE NOCASE
       ;
 
