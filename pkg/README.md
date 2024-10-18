@@ -14,34 +14,6 @@ The [config](config) package provides a wrapper around [viper](https://pkg.go.de
 
 The [geneos](geneos) package provides a data model for Geneos XML configurations, both Gateway and Netprobe. It is only partially complete at this stage and is being extended as demand requires.
 
-## logger
-
-**Deprecation Note** - It is likely this package will be removed in future releases in favour of more complete external loggers such as `zerolog`
-
-There is a basic logging interface to allow for common logging formats. To use import the [logger](geneos/pkg/logger) package and then make local copies of the Loggers, like this:
-
-```go
-import (
-    "github.com/itrs-group/cordial/pkg/logger"
-)
-
-func init() {
-    logger.EnableDebugLog()
-}
-
-var (
-    Logger      = logger.Logger
-    DebugLogger = logger.DebugLogger
-    ErrorLogger = logger.ErrorLogger
-)
-```
-
-Then all of the normal _log_ package methods will work.
-
-The `DebugLogger` is turned off by default and can be enabled using `logger.EnableDebugLog()` and then disabled again using `logger.DisableDebugLog()`. As Loggers are copies of the ones in the logger package the DebugLogger can be enabled or disabled per package.
-
-For this reason you may want to provide exported package methods to turn debug logging on and off from the calling program.
-
 ## XML-RPC API
 
 These packages wrap the original SOAP XML-RPC API interface:
