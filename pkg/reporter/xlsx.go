@@ -57,7 +57,7 @@ type XLSXReporter struct {
 	password     *config.Plaintext
 
 	// conditional format global styles
-	cond        map[string]int
+	cond        map[string]*int
 	minColWidth float64
 	maxColWidth float64
 
@@ -190,11 +190,11 @@ func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporte
 		},
 	})
 
-	x.cond = map[string]int{
-		"ok":        ok,
-		"warning":   warning,
-		"critical":  critical,
-		"undefined": undefined,
+	x.cond = map[string]*int{
+		"ok":        &ok,
+		"warning":   &warning,
+		"critical":  &critical,
+		"undefined": &undefined,
 	}
 
 	x.summarySheet = opts.summarySheetName
