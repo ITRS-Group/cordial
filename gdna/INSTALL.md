@@ -337,11 +337,11 @@ The GDNA dashboards should once again be accessible at the URLs below, replace `
 
 * <https://HOSTNAME:8443/?fullscreen#WebDashboard:Version%20Summary>
 
-### Installing Without Docker
+## Installing Without Docker
 
 Docker will not always be available on the server where you want to run GDNA. It's almost as easy to set-up step-by-step, but will require a few more steps and attention to additional prerequisites:
 
-#### Additional Prerequisites
+### Additional Prerequisites
 
 * You will need a running Geneos Gateway and licenses for one `api` and one `process` sampler.
 
@@ -349,7 +349,7 @@ Docker will not always be available on the server where you want to run GDNA. It
 
 * You will either need to add a new Netprobe, as in the instructions below, or if you want to use an existing Netprobe you will have to adjust the configuration to suit, including the TCP connection details and perhaps the Managed Entity and Sampler names. If you want to change the latter two then more complex changes may be required to make the dashboards work - see the section below.
 
-#### Standalone Connectivity
+### Standalone Connectivity
 
 ```mermaid
 ---
@@ -400,7 +400,7 @@ gdna -. "SMTP" -.-> email
 geneos <--> gdna
 ```
 
-#### Unpack and Install
+### Unpack and Install
 
 To run GDNA on your existing Geneos components you'll need the following from the `cordial-v1.18.0.tar.gz` release archive. For the latest release use [this link](https://github.com/ITRS-Group/cordial/releases/latest):
 
@@ -439,7 +439,7 @@ When GDNA runs, with default configuration settings, it creates a number of file
 
 ![Operating Environment Variable](screenshots/gdna-binary-variable.png)
 
-#### Configure Geneos
+### Configure Geneos
 
 The include file `gdna.include.xml` assumes there is a Netprobe listening securely on the same server as the Gateway on port 8101. You will either need to add a new Netprobe or change the include file after adding it to your Gateway. You will also need to make matching changes to the `gdna.yaml` file. To add a new Netprobe, assuming that TLS has been set-up, on your Gateway server run:
 
@@ -467,7 +467,7 @@ Validate and save this config, ensuring that the new include can be found and lo
 >
 > The `gdna.include.xml` file makes a number of assumptions about the location of the `gdna` binary and the `gdna.yaml` configuration file that may not match you chosen installation locations.
 
-#### Configure GDNA
+### Configure GDNA
 
 The program looks for its configuration file in the following directories, using the first one found:
 
@@ -505,7 +505,7 @@ Even without a `gdna.yaml` configuration file, the program will run and produce 
 
 To change the default behaviour either use command line options (run `gdna [COMMAND] -h` for a list) or edit the `gdna.yaml` file. See the comments in the file for more information.
 
-#### Test `gdna` Install
+### Test `gdna` Install
 
 The `gdna` program supports a number of commands. Once you have everything configured and tested you will use the `gdna start --daemon --on-start` command to run the program as a daemon process, regularly collecting and reporting your monitoring coverage.
 
@@ -550,7 +550,7 @@ First, to test the set-up you have created, break this down into several stages,
 
   Once again, if you see any errors you need to address them before continuing.
 
-#### Run `gdna`
+### Run `gdna`
 
 If all of the above steps work, you are ready to go!
 
