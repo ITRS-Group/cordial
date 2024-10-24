@@ -71,10 +71,19 @@ func Dial(conf *config.Config) (d *mail.Client, err error) {
 
 	mailOpts := []mail.Option{
 		mail.WithTLSPortPolicy(tlsPolicy),
-		mail.WithUsername(conf.GetString("_smtp_username")),
-		mail.WithPassword(conf.GetPassword("_smtp_password").String()),
-		mail.WithSMTPAuth(mail.SMTPAuthLogin),
 		mail.WithTimeout(time.Duration(conf.GetInt("_smtp_timeout", config.Default(10))) * time.Second),
+	}
+
+	if conf.GetString("_smtp_username") != "" {
+		mailOpts = append(mailOpts,
+			mail.WithUsername(conf.GetString("_smtp_username")),
+			mail.WithPassword(conf.GetPassword("_smtp_password").String()),
+			mail.WithSMTPAuth(mail.SMTPAuthLogin),
+		)
+	} else {
+		mailOpts = append(mailOpts,
+			mail.WithSMTPAuth(mail.SMTPAuthNoAuth),
+		)
 	}
 
 	// override port policy if we are told to, but zero skips through

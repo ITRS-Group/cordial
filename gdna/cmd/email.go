@@ -341,10 +341,19 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 
 	mailOpts := []mail.Option{
 		mail.WithTLSPortPolicy(tlsPolicy),
-		mail.WithUsername(username),
-		mail.WithPassword(password.String()),
-		mail.WithSMTPAuth(mail.SMTPAuthLogin),
-		mail.WithTimeout(cf.GetDuration("email.timeout")),
+		mail.WithTimeout(time.Duration(cf.GetInt("_smtp_timeout", config.Default(10))) * time.Second),
+	}
+
+	if username != "" {
+		mailOpts = append(mailOpts,
+			mail.WithUsername(username),
+			mail.WithPassword(password.String()),
+			mail.WithSMTPAuth(mail.SMTPAuthLogin),
+		)
+	} else {
+		mailOpts = append(mailOpts,
+			mail.WithSMTPAuth(mail.SMTPAuthNoAuth),
+		)
 	}
 
 	// override port policy if we are told to, but zero skips through
