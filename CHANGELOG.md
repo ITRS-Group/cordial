@@ -1,5 +1,35 @@
 # Change Log
 
+## Version v1.18.1
+
+> [!NOTE]
+> **Released 2024-10-28**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## Version v1.18.1 Fixes
+
+* `tools/geneos`
+
+  * Fix webserver starting command for releases after 7.0.4 to account for valid host header configuration, defaults to `.*`
+
+* `tools/dv2email`
+
+  * Fix example command XML to revert overzealous edit of `::` to `.`
+
+* `gdna`
+
+  * Restore the `OTHER` row to Gateway and server group reports
+  * Add `dynamicEntities` column to `gateway-groups` report
+  * Update Gateway include to publish a schema for the `GDNA Process` sampler
+  * Allow for unauthenticated SMTP (when username is empty)
+
+* `pkg/email`
+
+  * Allow for unauthenticated SMTP (when username is empty)
+
+---
+
 ## Version v1.18.0
 
 > [!NOTE]
