@@ -356,6 +356,7 @@ func (w *Webservers) Command() (args, env []string, home string) {
 		"-Djava.library.path=" + cf.GetString("libpaths"),
 		"-Dlog4j2.configurationFile=file:" + home + "/config/log4j2.properties",
 		"-Dworking.directory=" + home,
+		"-Dvalid.host.header=" + cf.GetString("valid-host-header", config.Default(".*")),
 		"-Dcom.itrsgroup.legacy.database.maxconnections=100",
 		// SSO
 		"-Dcom.itrsgroup.sso.config.file=" + home + "/config/sso.properties",
