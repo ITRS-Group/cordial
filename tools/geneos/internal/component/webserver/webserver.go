@@ -98,7 +98,7 @@ var Webserver = geneos.Component{
 		`maxmem=1024m`,
 		`autostart=true`,
 		// customised cacerts - can be to a shared one if required
-		`truststore={{join .home "cacerts"}}`,
+		`truststore={{join "${config:home}" "cacerts"}}`,
 	},
 
 	Directories: []string{
@@ -366,12 +366,28 @@ func (w *Webservers) Command() (args, env []string, home string) {
 		// "-Dcom.sun.management.jmxremote.port=$JMX_PORT -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false",
 		"-XX:+HeapDumpOnOutOfMemoryError",
 		"-XX:HeapDumpPath=/tmp",
-		"-jar", base + "/geneos-web-server.jar",
-		"-dir", base + "/webapps",
+	}
+
+	javaopts := strings.Fields(cf.GetString("java-options"))
+	args = append(args, javaopts...)
+
+	if truststorePath := cf.GetString("truststore"); truststorePath != "" {
+		args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
+	}
+
+	// fetch password as string as it has to be exposed on the command line anyway
+	if truststorePassword := cf.GetString("truststore-password"); truststorePassword != "" {
+		args = append(args, "-Djavax.net.ssl.trustStorePassword="+truststorePassword)
+	}
+
+	// -jar must appear after all options are set otherwise they are
+	// seen as arguments to the application
+	args = append(args,
+		"-jar", base+"/geneos-web-server.jar",
+		"-dir", base+"/webapps",
 		"-port", cf.GetString("port"),
 		"-maxThreads 254",
-		// "-log", LogFile(c),
-	}
+	)
 
 	tlsFiles := instance.Filepaths(w, "certificate", "privatekey")
 	if len(tlsFiles) == 0 || tlsFiles[0] == "" {
@@ -381,15 +397,6 @@ func (w *Webservers) Command() (args, env []string, home string) {
 	if cert != "" && privkey != "" {
 		// the instance specific truststore should have been created by `rebuild`
 		args = append(args, "-ssl", "true")
-	}
-
-	if truststorePath := cf.GetString("truststore"); truststorePath != "" {
-		args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
-	}
-
-	// fetch password as string as it has to be exposed on the command line anyway
-	if truststorePassword := cf.GetString("truststore-password"); truststorePassword != "" {
-		args = append(args, "-Djavax.net.ssl.trustStorePassword="+truststorePassword)
 	}
 
 	return
