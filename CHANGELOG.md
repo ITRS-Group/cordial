@@ -1,17 +1,20 @@
 # Change Log
 
-## Version v1.18.1
+## Version v1.18.2
 
 > [!NOTE]
-> **Released 2024-10-28**
+> This patch release **replaces* v1.18.1 to add a fix for webserver start-up from the `geneos` command
+>
+> **Released 2024-10-29**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
-## Version v1.18.1 Fixes
+## Version v1.18.2 Fixes
 
 * `tools/geneos`
 
   * Fix webserver starting command for releases after 7.0.4 to account for valid host header configuration, defaults to `.*`
+  * Fix webserver command line option ordering
 
 * `tools/dv2email`
 
