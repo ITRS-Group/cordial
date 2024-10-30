@@ -27,6 +27,7 @@ import (
 	"path"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/pkg/sftp"
 	"github.com/spf13/afero"
@@ -54,8 +55,10 @@ type Host interface {
 	Abs(name string) (string, error)
 	Getwd() (dir string, err error)
 	Chown(name string, uid, gid int) (err error)
+	Chtimes(path string, atime time.Time, mtime time.Time) (err error)
 	Glob(pattern string) (paths []string, err error)
 	Lchown(name string, uid, gid int) (err error)
+	Lchtimes(path string, atime time.Time, mtime time.Time) (err error)
 	Lstat(name string) (f fs.FileInfo, err error)
 	MkdirAll(p string, perm os.FileMode) (err error)
 	ReadDir(name string) (dirs []os.DirEntry, err error)

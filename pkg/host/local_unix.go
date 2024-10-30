@@ -23,6 +23,9 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) (err error) {
@@ -43,4 +46,19 @@ func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) (err error) {
 	// mark all non-std fds unshared
 	cmd.ExtraFiles = nil
 	return
+}
+
+func (h *Local) Lchtimes(path string, atime time.Time, mtime time.Time) (err error) {
+	var ua, um int64
+	if !atime.IsZero() {
+		ua = atime.UnixMicro()
+	}
+	if !mtime.IsZero() {
+		um = mtime.UnixMicro()
+	}
+	tv := []unix.Timeval{
+		{Sec: ua / 1000000, Usec: ua % 1000000},
+		{Sec: um / 1000000, Usec: um % 1000000},
+	}
+	return unix.Lutimes(path, tv)
 }

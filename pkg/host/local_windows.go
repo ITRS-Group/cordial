@@ -20,8 +20,13 @@ package host
 import (
 	"os"
 	"os/exec"
+	"time"
 )
 
 func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) (err error) {
+	return
+}
+
+func (h *Local) Lchtimes(path string, atime time.Time, mtime time.Time) (err error) {
 	return
 }
