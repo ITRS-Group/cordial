@@ -3,7 +3,7 @@
 ## Version v1.18.2
 
 > [!NOTE]
-> This patch release **replaces* v1.18.1 to add a fix for webserver start-up from the `geneos` command
+> This patch release **replaces** v1.18.1 to add a fix for webserver start-up from the `geneos` command
 >
 > **Released 2024-10-29**
 >
