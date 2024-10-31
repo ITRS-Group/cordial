@@ -148,7 +148,6 @@ func openSourceFile(source string, options ...PackageOptions) (from io.ReadClose
 		if s.IsDir() {
 			return nil, "", -1, ErrIsADirectory
 		}
-		log.Debug().Msgf("stats doesn't think it's a dir... %#v", s)
 		source, _ = filepath.Abs(source)
 		source = filepath.ToSlash(source)
 		from, err = os.Open(source)

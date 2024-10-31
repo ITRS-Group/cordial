@@ -474,6 +474,7 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 
 		// do not trust tar archives to contain safe paths
 
+		name = hdr.Name
 		if stripPrefix != nil {
 			if name = stripPrefix(hdr.Name); name == "" {
 				continue
