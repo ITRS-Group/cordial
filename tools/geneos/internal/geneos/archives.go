@@ -19,6 +19,7 @@ package geneos
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
@@ -62,16 +63,14 @@ type downloadauth struct {
 //
 // LocalOnly()
 // DownloadOnly()
-func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, filename string, err error) {
+func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, filename string, filesize int64, err error) {
 	var resp *http.Response
 
 	opts := evalOptions(options...)
 
-	// log.Debug().Msgf("opts: %#v", opts)
-
 	if !opts.downloadonly {
 		log.Debug().Msgf("localArchive %q", opts.localArchive)
-		body, filename, err = openSourceFile(opts.localArchive, options...)
+		body, filename, filesize, err = openSourceFile(opts.localArchive, options...)
 		if err == nil {
 			log.Debug().Msgf("source opened, returning")
 			return
@@ -108,32 +107,24 @@ func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, 
 			filename = archives[len(archives)-1]
 		}
 
-		// filename, err = LatestLocalArchive(func(v os.DirEntry) bool {
-		// 	check := ct.String()
-
-		// 	if ct.ParentType != nil && len(ct.PackageTypes) > 0 {
-		// 		check = ct.ParentType.String()
-		// 	}
-
-		// 	if ct.DownloadInfix != "" {
-		// 		check = ct.DownloadInfix
-		// 	}
-
-		// 	return strings.Contains(v.Name(), check)
-		// }, options...)
-		// if err != nil {
-		// 	log.Debug().Err(err).Msg("latest() returned err")
-		// }
 		if filename == "" {
 			err = fmt.Errorf("local installation selected but no suitable file found for %s (%w)", ct, fs.ErrNotExist)
 			return
 		}
 		var f io.ReadSeekCloser
-		if f, err = LOCAL.Open(path.Join(opts.localArchive, filename)); err != nil {
+		filepath := path.Join(opts.localArchive, filename)
+		if f, err = LOCAL.Open(filepath); err != nil {
 			err = fmt.Errorf("local installation selected but no suitable file found for %s (%w)", ct, err)
 			return
 		}
 		body = f
+
+		var s fs.FileInfo
+		s, err = LOCAL.Stat(filepath)
+		if err != nil {
+			// Can this fail?
+		}
+		filesize = s.Size()
 		return
 	}
 
@@ -148,9 +139,11 @@ func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, 
 		if f, err := LOCAL.Open(archivePath); err == nil {
 			log.Debug().Msgf("not downloading, file with same size already exists: %s", archivePath)
 			resp.Body.Close()
-			return f, filename, nil
+			return f, filename, -1, nil
 		}
 	}
+
+	filesize = resp.ContentLength
 
 	// transient download
 	if opts.nosave {
@@ -212,17 +205,22 @@ func getbar(console *os.File, name string, size int64) (bar *progressbar.Progres
 	return
 }
 
+type dirtime struct {
+	Name     string
+	Modified time.Time
+}
+
 // unarchive unpacks the gzipped archive passed as an io.Reader on the
 // host given for the component. If there is an error then the caller
 // must close the io.Reader
-func unarchive(h *Host, ct *Component, archive io.Reader, filename string, options ...PackageOptions) (dest string, err error) {
-	var version, platform string
+func unarchive(h *Host, ct *Component, archive io.Reader, filename string, filesize int64, options ...PackageOptions) (dest string, err error) {
+	var version, platform, suffix string
 
 	opts := evalOptions(options...)
 
 	if opts.override == "" {
 		var ctFromFile *Component
-		ctFromFile, version, platform, err = FilenameToComponentVersion(filename)
+		ctFromFile, version, platform, suffix, err = FilenameToComponentVersion(ct, filename)
 		if err != nil {
 			return
 		}
@@ -248,11 +246,14 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 		if err != nil {
 			return "", err
 		}
+
+		// grab suffix
+		suffix = strings.TrimPrefix(path.Ext(filename), ".")
 	}
 
 	// unarchive in non-parent package dir, e.g. fa2 not netprobe
 	basedir := h.PathTo("packages", ct.String(), version)
-	log.Debug().Msgf("basedir=%s ct=%s version=%s", basedir, ct, version)
+	log.Debug().Msgf("basedir=%s ct=%s version=%s suffix=%s", basedir, ct, version, suffix)
 	if _, err = h.Stat(basedir); err == nil {
 		return h.HostPath(basedir), fs.ErrExist
 	}
@@ -260,50 +261,60 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 		return
 	}
 
-	var gziplen uint32
-	// var fnname func(string) string
-	s, ok := archive.(io.ReadSeeker)
-	if ok {
-		log.Debug().Msg("can read and seek gzip archive")
-		_, err = s.Seek(-4, io.SeekEnd)
-		if err != nil {
-			log.Debug().Err(err).Msg("")
-		} else {
-			err = binary.Read(s, binary.LittleEndian, &gziplen)
+	stripFirstDir := func(name string) string {
+		if s := strings.Index(name, "/"); s != -1 {
+			name = name[s+1:]
+		}
+		return name
+	}
+	if ct.ArchiveLeaveFirstDir {
+		stripFirstDir = nil
+	}
+
+	switch suffix {
+	case "tar.gz", "gz", "tgz":
+		var gziplen uint32
+		s, ok := archive.(io.ReadSeeker)
+		if ok {
+			_, err = s.Seek(-4, io.SeekEnd)
 			if err != nil {
 				log.Debug().Err(err).Msg("")
+			} else {
+				err = binary.Read(s, binary.LittleEndian, &gziplen)
+				if err != nil {
+					log.Debug().Err(err).Msg("")
+				}
 			}
+			// reset
+			_, err = s.Seek(0, io.SeekStart)
 		}
-		// reset
-		_, err = s.Seek(0, io.SeekStart)
-	} else {
-		log.Debug().Msg("cannot read and seek gzip archive")
-	}
-	log.Debug().Msgf("gziplen %d", gziplen)
+		log.Debug().Msgf("gziplen %d", gziplen)
 
-	t, err := gzip.NewReader(archive)
-	if err != nil {
-		// cannot gunzip file
-		return
-	}
-	defer t.Close()
-	t.Multistream(false)
-
-	fnname := func(name string) string {
-		return strings.TrimPrefix(name, ct.String()+"/")
-	}
-	if ct.StripArchivePrefix != nil {
-		fnname = func(name string) string {
-			return strings.TrimPrefix(name, *ct.StripArchivePrefix)
+		var t *gzip.Reader
+		t, err = gzip.NewReader(archive)
+		if err != nil {
+			// cannot gunzip file
+			return
 		}
-	}
+		defer t.Close()
+		t.Multistream(false)
 
-	if err = untar(h, basedir, t, int64(gziplen), fnname); err != nil {
+		if err = untar(h, basedir, t, int64(gziplen), stripFirstDir); err != nil {
+			return
+		}
+
+	case "zip":
+		if err = unzip(h, basedir, archive, filesize, stripFirstDir); err != nil {
+			return
+		}
+
+	default:
+		err = fmt.Errorf("file extension %q not valid", suffix)
 		return
 	}
 
 	fmt.Printf("installed %q to %q\n", filename, h.HostPath(basedir))
-	// options = append(options, Version(version))
+
 	// only create a new base link, not overwrite
 	basedir = h.PathTo("packages", ct.String())
 	basepath := path.Join(basedir, opts.basename)
@@ -321,6 +332,110 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, optio
 
 	fmt.Printf("%s %q on %s set to %s\n", ct, path.Base(basepath), h, version)
 	return h.HostPath(basedir), nil
+
+}
+
+func unzip(h *Host, basedir string, archive io.Reader, filesize int64, stripPrefix func(string) string) (err error) {
+	// zip files are read into memory for now
+	var z *zip.Reader
+	var r []byte
+	r, err = io.ReadAll(archive)
+	if err != nil {
+		panic(err)
+	}
+	b := bytes.NewReader(r)
+	z, err = zip.NewReader(b, int64(len(r)))
+
+	label := "installing"
+	if h != LOCAL {
+		label += " on " + h.String()
+	}
+	bar, isterm := getbar(os.Stdout, label, int64(len(r)))
+
+	defer func() {
+		if !isterm {
+			fmt.Println(bar.String())
+		} else {
+			bar.Finish()
+			bar.Close()
+		}
+	}()
+
+	var dirtimes []dirtime
+
+	for _, f := range z.File {
+		var name string
+		if stripPrefix != nil {
+			if name = stripPrefix(f.Name); name == "" {
+				continue
+			}
+		}
+		name, err = CleanRelativePath(name)
+		if err != nil {
+			panic(err)
+		}
+		fullpath := path.Join(basedir, name)
+
+		// dir
+		if strings.HasSuffix(f.Name, "/") {
+			if err = h.MkdirAll(fullpath, f.Mode()); err != nil {
+				panic(err)
+			}
+			// save the dir to update modified times later
+			dirtimes = append(dirtimes, dirtime{Name: fullpath, Modified: f.Modified})
+			continue
+		}
+
+		var c io.ReadCloser
+		c, err = f.Open()
+		if err != nil {
+			panic(err)
+		}
+
+		dir := path.Dir(fullpath)
+		var st fs.FileInfo
+		if st, err = h.Stat(dir); errors.Is(err, fs.ErrNotExist) {
+			if err = h.MkdirAll(dir, 0775); err != nil {
+				c.Close()
+				return
+			}
+		} else if !st.IsDir() {
+			panic(err)
+		}
+
+		var out io.WriteCloser
+		if out, err = h.Create(fullpath, f.Mode()); err != nil {
+			c.Close()
+			return
+		}
+
+		var n int64
+		n, err = io.CopyN(out, c, int64(f.UncompressedSize64))
+		if err != nil {
+			out.Close()
+			c.Close()
+			return
+		}
+		bar.Add64(int64(f.CompressedSize64))
+		if n != int64(f.UncompressedSize64) {
+			log.Error().Msgf("lengths different: %d %d", f.UncompressedSize64, n)
+		}
+		out.Close()
+		c.Close()
+
+		if err := h.Chtimes(fullpath, time.Time{}, f.Modified); err != nil {
+			log.Debug().Err(err).Msg("cannot update mtime (symlink?)")
+		}
+	}
+
+	slices.Reverse(dirtimes)
+	for _, d := range dirtimes {
+		log.Debug().Msgf("updating %q to %v", d.Name, d.Modified)
+		if err := h.Chtimes(d.Name, time.Time{}, d.Modified); err != nil {
+			log.Warn().Err(err).Msgf("cannot update mtime on %q", d.Name)
+		}
+	}
+	return
 }
 
 // untar the archive from an io.Reader onto host h in directory dir.
@@ -344,6 +459,8 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 		}
 	}()
 
+	var dirtimes []dirtime
+
 	for {
 		var hdr *tar.Header
 		hdr, err = tr.Next()
@@ -357,8 +474,11 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 
 		// do not trust tar archives to contain safe paths
 
-		if name = stripPrefix(hdr.Name); name == "" {
-			continue
+		name = hdr.Name
+		if stripPrefix != nil {
+			if name = stripPrefix(hdr.Name); name == "" {
+				continue
+			}
 		}
 		if name, err = CleanRelativePath(name); err != nil {
 			return
@@ -387,11 +507,14 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 				log.Error().Msgf("lengths different: %d %d", hdr.Size, n)
 			}
 			out.Close()
-
+			if err := h.Chtimes(fullpath, hdr.AccessTime, hdr.ModTime); err != nil {
+				log.Warn().Err(err).Msg("cannot update mtime")
+			}
 		case tar.TypeDir:
 			if err = h.MkdirAll(fullpath, hdr.FileInfo().Mode()); err != nil {
 				return
 			}
+			dirtimes = append(dirtimes, dirtime{Name: fullpath, Modified: hdr.ModTime})
 
 		case tar.TypeSymlink, tar.TypeGNULongLink:
 			if path.IsAbs(hdr.Linkname) {
@@ -404,9 +527,21 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 				}
 
 			}
+			if err := h.Lchtimes(fullpath, hdr.AccessTime, hdr.ModTime); err != nil {
+				log.Debug().Err(err).Msg("cannot update mtime (symlink?)")
+			}
 
 		default:
 			log.Warn().Msgf("unsupported file type %c\n", hdr.Typeflag)
+		}
+
+	}
+
+	slices.Reverse(dirtimes)
+	for _, d := range dirtimes {
+		log.Debug().Msgf("updating %q to %v", d.Name, d.Modified)
+		if err := h.Chtimes(d.Name, time.Time{}, d.Modified); err != nil {
+			log.Warn().Err(err).Msgf("cannot update mtime on %q", d.Name)
 		}
 	}
 	return
@@ -476,7 +611,18 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 	downloadURL, _ := url.Parse(baseurl)
 	v := url.Values{}
 
-	v.Set("os", "linux")
+	if ct.DownloadParams == nil {
+		v.Set("os", "linux")
+	} else {
+		for _, param := range *ct.DownloadParams {
+			s := strings.SplitN(param, "=", 2)
+			if len(s) != 2 {
+				continue
+			}
+			v.Set(s[0], s[1])
+		}
+	}
+
 	if opts.version != "latest" {
 		if platform != "" {
 			log.Error().Msgf("cannot download specific version for this platform (%q) - please download manually", platform)
@@ -595,14 +741,24 @@ func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, 
 	downloadURL, _ := url.Parse(baseurl)
 
 	v := url.Values{}
-
-	v.Set("maven.groupId", "com.itrsgroup.geneos")
-	v.Set("maven.extension", "tar.gz")
 	v.Set("sort", "version")
-
 	v.Set("repository", opts.downloadbase)
-	v.Set("maven.classifier", "linux-x64")
-	if platform != "" {
+
+	if ct.DownloadParamsNexus == nil {
+		v.Set("maven.groupId", "com.itrsgroup.geneos")
+		v.Set("maven.extension", "tar.gz")
+		v.Set("maven.classifier", "linux-x64")
+	} else {
+		for _, param := range *ct.DownloadParamsNexus {
+			s := strings.SplitN(param, "=", 2)
+			if len(s) != 2 {
+				continue
+			}
+			v.Set(s[0], s[1])
+		}
+	}
+
+	if platform != "" && ct.DownloadParamsNexus == nil {
 		v.Set("maven.classifier", platform+"-linux-x64")
 	}
 
@@ -653,17 +809,35 @@ func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, 
 // split an package archive name into type and version
 //
 // geneos-gateway-7.1.0-20240828.194610-12-linux-x64.tar.gz
-var archiveRE = regexp.MustCompile(`^geneos-(?<component>[\w-]+)-(?<version>[\d\-\.]+)(-(?<platform>\w+))?[\.-]linux`)
+var archiveRE = regexp.MustCompile(`^geneos-(?<component>[\w-]+)-(?<version>[\d\-\.]+)(-(?<platform>\w+))?[\.-]linux.*?\.(?<suffix>[\w\.]+)$`)
 
 // FilenameToComponentVersion transforms an archive filename and returns
 // the component and version or an error if the file format is not
 // recognised
-func FilenameToComponentVersion(filename string) (ct *Component, version, platform string, err error) {
-	parts := archiveRE.FindStringSubmatch(filename)
-	versionIndex := archiveRE.SubexpIndex("version")
-	componentIndex := archiveRE.SubexpIndex("component")
+func FilenameToComponentVersion(oct *Component, filename string) (ct *Component, version, platform, suffix string, err error) {
+	var re *regexp.Regexp
+	var parts []string
 
-	if versionIndex == -1 || componentIndex == -1 || len(parts) < versionIndex+1 {
+	for _, nct := range oct.OrList() {
+		re = archiveRE
+		if nct.DownloadNameRegexp != nil {
+			re = nct.DownloadNameRegexp
+		}
+		parts = re.FindStringSubmatch(filename)
+		if len(parts) > 0 {
+			break
+		}
+	}
+
+	if len(parts) == 0 {
+		err = fmt.Errorf("%q: filename not in expected format: %w", filename, ErrInvalidArgs)
+		return
+	}
+	versionIndex := re.SubexpIndex("version")
+	componentIndex := re.SubexpIndex("component")
+	suffixIndex := re.SubexpIndex("suffix")
+
+	if versionIndex == -1 || componentIndex == -1 || suffixIndex == -1 || len(parts) < versionIndex+1 {
 		err = fmt.Errorf("%q: filename not in expected format: %w", filename, ErrInvalidArgs)
 		return
 	}
@@ -674,10 +848,12 @@ func FilenameToComponentVersion(filename string) (ct *Component, version, platfo
 	}
 
 	ct = ParseComponent(parts[componentIndex])
-	platformIndex := archiveRE.SubexpIndex("platform")
+	platformIndex := re.SubexpIndex("platform")
 	if platformIndex != -1 && len(parts) > platformIndex {
 		platform = parts[platformIndex]
 	}
+
+	suffix = parts[suffixIndex]
 	return
 }
 

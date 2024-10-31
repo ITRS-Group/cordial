@@ -66,7 +66,7 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 // openSourceFile(), no options are supported
 func ReadAll(source string) (b []byte, err error) {
 	var from io.ReadCloser
-	from, _, err = openSourceFile(source)
+	from, _, _, err = openSourceFile(source)
 	if err != nil {
 		return
 	}
@@ -91,8 +91,10 @@ func ReadAll(source string) (b []byte, err error) {
 // If source is a path to a directory then `geneos.ErrIsADirectory` is
 // returned. If any other stage fails then err is returned from the
 // underlying package.
-func openSourceFile(source string, options ...PackageOptions) (from io.ReadCloser, filename string, err error) {
+func openSourceFile(source string, options ...PackageOptions) (from io.ReadCloser, filename string, filesize int64, err error) {
 	opts := evalOptions(options...)
+
+	filesize = -1 // unknown
 
 	u, err := url.Parse(source)
 	if err != nil {
@@ -125,11 +127,12 @@ func openSourceFile(source string, options ...PackageOptions) (from io.ReadClose
 		}
 
 		if resp.StatusCode > 299 {
-			return nil, "", fmt.Errorf("server returned %s for %q", resp.Status, source)
+			return nil, "", -1, fmt.Errorf("server returned %s for %q", resp.Status, source)
 		}
 
 		from = resp.Body
 		filename, err = FilenameFromHTTPResp(resp, resp.Request.URL)
+		filesize = resp.ContentLength
 	case source == "-":
 		from = os.Stdin
 		filename = "STDIN"
@@ -140,16 +143,16 @@ func openSourceFile(source string, options ...PackageOptions) (from io.ReadClose
 		s, err = os.Stat(source)
 		if err != nil {
 			log.Debug().Err(err).Msgf("source %q", source)
-			return nil, "", err
+			return nil, "", -1, err
 		}
 		if s.IsDir() {
-			return nil, "", ErrIsADirectory
+			return nil, "", -1, ErrIsADirectory
 		}
-		log.Debug().Msgf("stats doesn't think it's a dir... %#v", s)
 		source, _ = filepath.Abs(source)
 		source = filepath.ToSlash(source)
 		from, err = os.Open(source)
 		filename = path.Base(source)
+		filesize = s.Size()
 	}
 	return
 }

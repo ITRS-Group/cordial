@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/spf13/afero"
 )
@@ -95,6 +96,10 @@ func (h *Local) MkdirAll(p string, perm os.FileMode) (err error) {
 
 func (h *Local) Chown(name string, uid, gid int) (err error) {
 	return os.Chown(name, uid, gid)
+}
+
+func (h *Local) Chtimes(path string, atime time.Time, mtime time.Time) (err error) {
+	return os.Chtimes(path, atime, mtime)
 }
 
 // change the symlink ownership on local system, issue chown for remotes

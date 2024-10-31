@@ -148,7 +148,7 @@ func Install(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	opts := evalOptions(options...)
 
 	// open an unarchive if given a tar.gz
-	archive, filename, err := openArchive(ct, options...)
+	archive, filename, filesize, err := openArchive(ct, options...)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			var dir bool
@@ -172,7 +172,7 @@ func Install(h *Host, ct *Component, options ...PackageOptions) (err error) {
 		return
 	}
 
-	if dest, err := unarchive(h, ct, archive, filename, options...); err != nil {
+	if dest, err := unarchive(h, ct, archive, filename, filesize, options...); err != nil {
 		if errors.Is(err, fs.ErrExist) {
 			log.Debug().Msgf("%s on %s already installed as %q\n", ct, h, dest)
 			if opts.doupdate {

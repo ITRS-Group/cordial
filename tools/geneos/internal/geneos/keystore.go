@@ -26,8 +26,9 @@ func ReadKeystore(h *Host, path string, password *config.Plaintext) (k KeyStore,
 		keystore.New(),
 	}
 
-	err = k.Load(r, password.Bytes())
-	return
+	pw := password.Bytes()
+	defer memguard.WipeBytes(pw)
+	return k, k.Load(r, pw)
 }
 
 func (k *KeyStore) WriteKeystore(h *Host, path string, password *config.Plaintext) (err error) {
@@ -39,7 +40,10 @@ func (k *KeyStore) WriteKeystore(h *Host, path string, password *config.Plaintex
 		return
 	}
 	defer w.Close()
-	return k.Store(w, password.Bytes())
+
+	pw := password.Bytes()
+	defer memguard.WipeBytes(pw)
+	return k.Store(w, pw)
 }
 
 func (k *KeyStore) AddKeystoreCert(alias string, cert *x509.Certificate) (err error) {
@@ -70,6 +74,7 @@ func (k *KeyStore) AddKeystoreKey(alias string, key *memguard.Enclave, password 
 		PrivateKey:       l.Bytes(),
 		CertificateChain: ch,
 	}
-	k.SetPrivateKeyEntry(alias, c, password.Bytes())
-	return
+	pw := password.Bytes()
+	defer memguard.WipeBytes(pw)
+	return k.SetPrivateKeyEntry(alias, c, pw)
 }

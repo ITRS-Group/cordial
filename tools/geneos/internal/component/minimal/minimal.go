@@ -33,17 +33,14 @@ import (
 
 const Name = "minimal"
 
-var prefix = "netprobe/"
-
 var Minimal = geneos.Component{
 	Name:         "minimal",
 	Aliases:      []string{"netprobe-mini", "netprobe-minimal", "mini-netprobe"},
 	LegacyPrefix: "mini",
 	ParentType:   &netprobe.Netprobe,
 
-	DownloadBase:       geneos.DownloadBases{Default: "Netprobe+-+Minimal", Nexus: "geneos-netprobe-minimal"},
-	DownloadInfix:      "netprobe-minimal",
-	StripArchivePrefix: &prefix,
+	DownloadBase:  geneos.DownloadBases{Default: "Netprobe+-+Minimal", Nexus: "geneos-netprobe-minimal"},
+	DownloadInfix: "netprobe-minimal",
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "7036,7100-",

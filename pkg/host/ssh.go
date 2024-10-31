@@ -366,6 +366,23 @@ func (h *SSHRemote) Lchown(name string, uid, gid int) error {
 	}
 }
 
+func (h *SSHRemote) Chtimes(path string, atime time.Time, mtime time.Time) (err error) {
+	if s, err := h.DialSFTP(); err != nil {
+		return err
+	} else {
+		return s.Chtimes(path, atime, mtime)
+	}
+}
+
+func (h *SSHRemote) Lchtimes(path string, atime time.Time, mtime time.Time) (err error) {
+	if s, err := h.DialSFTP(); err != nil {
+		return err
+	} else {
+		// try plain chtimes
+		return s.Chtimes(path, atime, mtime)
+	}
+}
+
 func (h *SSHRemote) Create(p string, perms fs.FileMode) (out io.WriteCloser, err error) {
 	var cf *sftp.File
 	var s *sftp.Client

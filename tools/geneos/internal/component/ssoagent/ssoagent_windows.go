@@ -15,18 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package host
+package ssoagent
 
 import (
 	"os"
-	"os/exec"
-	"time"
 )
 
-func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) (err error) {
-	return
-}
-
-func (h *Local) Lchtimes(path string, atime time.Time, mtime time.Time) (err error) {
-	return
+func ssoagentGetPID(i interface{}) (pid int, err error) {
+	return 0, os.ErrProcessDone
 }
