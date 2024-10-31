@@ -32,15 +32,12 @@ import (
 
 const Name = "fa"
 
-var prefix = "agent/"
-
 var FileAgent = geneos.Component{
-	Name:               "fileagent",
-	Aliases:            []string{"fileagents", "file-agent"},
-	LegacyPrefix:       "fa",
-	DownloadBase:       geneos.DownloadBases{Default: "Fix+Analyser+File+Agent", Nexus: "geneos-file-agent"},
-	DownloadInfix:      "file-agent",
-	StripArchivePrefix: &prefix,
+	Name:          "fileagent",
+	Aliases:       []string{"fileagents", "file-agent"},
+	LegacyPrefix:  "fa",
+	DownloadBase:  geneos.DownloadBases{Default: "Fix+Analyser+File+Agent", Nexus: "geneos-file-agent"},
+	DownloadInfix: "file-agent",
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "7030,7100-",

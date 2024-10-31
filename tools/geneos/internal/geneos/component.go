@@ -19,6 +19,7 @@ package geneos
 
 import (
 	"path"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -118,9 +119,28 @@ type Component struct {
 	// e.g. `geneos-["desktop-activeconsole"]-VERSION...` -> `ac2`
 	DownloadInfix string
 
+	// DownloadNameRegexp is a custom regular expression to extract
+	// archive information from the download file
+	DownloadNameRegexp *regexp.Regexp
+
+	// DownloadParams are custom parameters for the download URL. If nil
+	// (not len zero) then os=linux is used
+	DownloadParams *[]string
+
+	// DownloadParamsNexus are custom parameters for Nexus downloads. If
+	// nil then the defaults are:
+	//
+	//   maven.classifier=linux-x64
+	//   maven.extension=tar.gz
+	//   maven.groupId=com.itrsgroup.geneos
+	DownloadParamsNexus *[]string
+
 	// StripArchivePrefix, if not nil, is the strings removed from the
-	// path of each file in the release archive. This is a pointer so that an empty string can be used (i.e. for webservers)
-	StripArchivePrefix *string
+	// path of each file in the release archive. This is a pointer so
+	// that an empty string can be used (i.e. for webservers)
+	// StripArchivePrefix *string
+
+	ArchiveLeaveFirstDir bool
 
 	// Defaults are name=value templates that are "run" for each new
 	// instance

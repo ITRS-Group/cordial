@@ -183,7 +183,7 @@ geneos install netprobe -b active_dev -U
 						}
 					} else {
 						var platform string
-						nct, version, platform, err = geneos.FilenameToComponentVersion(path.Base(p))
+						nct, version, platform, _, err = geneos.FilenameToComponentVersion(ct, path.Base(p))
 						if platform != "" {
 							version += "+" + platform
 						}
