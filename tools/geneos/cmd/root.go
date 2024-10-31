@@ -66,7 +66,6 @@ var DefaultUserKeyfile = config.KeyFile(
 		config.SetAppName(Execname),
 		config.SetFileExtension("aes"),
 		config.IgnoreWorkingDir(),
-		config.MustExist(),
 	),
 )
 
