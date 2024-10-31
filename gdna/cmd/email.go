@@ -370,7 +370,6 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 
 	d, err := mail.NewClient(server, mailOpts...)
 	if err != nil {
-		log.Debug().Err(err).Msg("here 1a")
 		return
 	}
 
