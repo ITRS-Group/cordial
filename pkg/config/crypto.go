@@ -53,7 +53,10 @@ type Plaintext struct {
 	*memguard.Enclave
 }
 
-// String returns the secret as a string
+// String returns the secret as a string. Use Bytes() where possible and
+// memguard.WipeBytes() after use. This method retruns a cloned string
+// for those cases there a downstream API requires a credential as a
+// string value. In Go you can't securely zero strings after use.
 func (secret *Plaintext) String() string {
 	if secret == nil || secret.Enclave == nil {
 		return ""
@@ -63,7 +66,8 @@ func (secret *Plaintext) String() string {
 	return strings.Clone(l.String())
 }
 
-// Bytes returns the secret as a byte slice
+// Bytes returns the secret as a byte slice. After use, call
+// memguard.WipeBytes() on the buffer
 func (secret *Plaintext) Bytes() []byte {
 	if secret == nil || secret.Enclave == nil {
 		return nil
