@@ -254,7 +254,7 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 }
 
 func (w *Webservers) Rebuild(initial bool) (err error) {
-	// load the security.properties file, update the port and use the keystor values later
+	// load the security.properties file, update the port and use the keystore values later
 	sp, err := instance.ReadKVConfig(w.Host(), path.Join(w.Home(), "config/security.properties"))
 	if err != nil {
 		return nil
@@ -296,7 +296,7 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 		}
 	}
 
-	// rebuild the keystore (config/ketstore.db) is certificate and
+	// rebuild the keystore (config/keystore.db) is certificate and
 	// privatekey are defined. This is for client connections to the web
 	// dashboard and will typically be a "real" certificate.
 	if cf.IsSet("certificate") && cf.IsSet("privatekey") {
