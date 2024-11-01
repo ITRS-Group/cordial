@@ -256,15 +256,19 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 			trustStore,
 			trustStorePassword,
 		)
+		if err != nil {
+			log.Debug().Err(err).Msg("")
+			k = geneos.KeyStore{
+				KeyStore: keystore.New(),
+			}
+		}
+
 		// if trust exists, check for existing cert
-		if err == nil {
-			for _, cert := range certs {
-				alias := cert.Subject.CommonName
-				log.Debug().Msgf("%s: replacing entry for %q", s.String(), alias)
-				k.DeleteEntry(alias)
-				if err = k.AddKeystoreCert(alias, cert); err != nil {
-					return err
-				}
+		for _, cert := range certs {
+			alias := cert.Subject.CommonName
+			k.DeleteEntry(alias)
+			if err = k.AddKeystoreCert(alias, cert); err != nil {
+				return err
 			}
 		}
 
