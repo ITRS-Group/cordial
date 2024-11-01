@@ -24,6 +24,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -31,21 +32,30 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// ImportFile copies the file from source to the directory dir on host
-// h. The destination filename can be given as a "NAME=" prefix in
-// source. If no filename is given then it is derived from the source.
+// ImportSource copies the contents from source to the destination dest
+// on host h. The destination filename can be given as a "NAME=" prefix
+// in source. If no filename is given then it is derived from the
+// source.
 //
 // source can be a path to a file or a http/https URL.
 //
-// If source is a (local) file and it is the same as the destination
-// then an ErrExists is returned.
+// If source is a local file and it is the same as the destination then
+// an ErrExists is returned.
 //
-// TODO: add templating option - perhaps ImportFileTemplated() - to tun
+// If source is a local directory then it is copied to dest only if dest
+// is a directory or does not exist and a directory with that name can
+// be created. If source ends with a '/' then the contents are copied
+// without the source directory prefix, otherwise the final directory
+// component in source is also copied, e.g. 'conf/' means import the
+// contents of the directory 'conf', which 'conf' means a new directory
+// 'conf' is created in dest and the contents copied.
+//
+// TODO: add templating option - perhaps ImportFileTemplated() - to run
 // through text/template with given data (probabl instance config)
-func ImportFile(h *Host, dir string, source string) (filename string, err error) {
+func ImportSource(h *Host, dest string, source string) (filename string, err error) {
 	var backuppath string
 	var from io.ReadCloser
-	var isPlain bool // plain file as source?
+	var noDestPrefix bool // plain file as source?
 
 	if h == ALL {
 		err = ErrInvalidArgs
@@ -53,7 +63,8 @@ func ImportFile(h *Host, dir string, source string) (filename string, err error)
 	}
 
 	// destdir becomes the absolute path for the imported file
-	destdir := dir
+	destdir := dest
+
 	// destfile is the basename of the import path, empty if the source
 	// filename should be kept
 	destfile := ""
@@ -78,21 +89,25 @@ func ImportFile(h *Host, dir string, source string) (filename string, err error)
 			}
 			source = "https://" + s[1]
 		}
+
 		if s[0] == "" {
+			// should this be treated the same as "." ?
 			log.Fatal().Msg("dest path empty")
 		}
+
 		if destfile, err = CleanRelativePath(s[0]); err != nil {
 			log.Fatal().Msg("dest path must be relative to (and in) instance directory")
 		}
+
 		// if the destination exists is it a directory?
-		if s, err := h.Stat(path.Join(dir, destfile)); err == nil {
+		if s, err := h.Stat(path.Join(dest, destfile)); err == nil {
 			if s.IsDir() {
-				destdir = path.Join(dir, destfile)
+				destdir = path.Join(dest, destfile)
 				destfile = ""
 			}
 		}
 	} else {
-		isPlain = true
+		noDestPrefix = true
 		s := strings.SplitN(source, "=", 2)
 		if len(s) > 1 {
 			// do some basic validation on user-supplied destination
@@ -103,9 +118,9 @@ func ImportFile(h *Host, dir string, source string) (filename string, err error)
 				log.Fatal().Msg("dest path must be relative to (and in) instance directory")
 			}
 			// if the destination exists is it a directory?
-			if s, err := h.Stat(path.Join(dir, destfile)); err == nil {
+			if s, err := h.Stat(path.Join(dest, destfile)); err == nil {
 				if s.IsDir() {
-					destdir = path.Join(dir, destfile)
+					destdir = path.Join(dest, destfile)
 					destfile = ""
 				}
 			}
@@ -118,6 +133,63 @@ func ImportFile(h *Host, dir string, source string) (filename string, err error)
 
 	from, filename, _, err = openSourceFile(source)
 	if err != nil {
+		if errors.Is(err, ErrIsADirectory) {
+			err = nil
+			// import directory
+
+			// check dest is a directory
+			if destfile != "" && destdir == "" {
+				err = ErrInvalidArgs
+				log.Debug().Err(err).Msgf("source %q is a directory, destdir is empty and destfile is %q, skipping", source, destfile)
+				return
+			}
+
+			if !strings.HasSuffix(source, "/") {
+				destdir = filepath.Join(destdir, filepath.Base(source))
+			}
+
+			fs.WalkDir(os.DirFS(source), ".", func(file string, di fs.DirEntry, _ error) error {
+				destfile = path.Join(destdir, file)
+
+				st, err := di.Info()
+				if err != nil {
+					return err
+				}
+
+				if di.IsDir() {
+					return h.MkdirAll(destfile, st.Mode().Perm())
+				}
+
+				from, err := os.Open(path.Join(source, file))
+				if err != nil {
+					return err
+				}
+
+				if s, err := h.Stat(destfile); err == nil {
+					if !s.Mode().IsRegular() {
+						log.Fatal().Msg("dest exists and is not a plain file")
+					}
+					datetime := time.Now().UTC().Format("20060102150405")
+					backuppath = destfile + "." + datetime + ".old"
+					if err = h.Rename(destfile, backuppath); err != nil {
+						return err
+					}
+				}
+
+				to, err := h.Create(destfile, st.Mode().Perm())
+				if err != nil {
+					return err
+				}
+				defer to.Close()
+
+				if _, err = io.Copy(to, from); err != nil {
+					return err
+				}
+				fmt.Printf("imported %q to %s:%s\n", path.Join(source, file), h.String(), destfile)
+				return nil
+			})
+			return
+		}
 		log.Fatal().Err(err).Msg("")
 	}
 	defer from.Close()
@@ -132,7 +204,7 @@ func ImportFile(h *Host, dir string, source string) (filename string, err error)
 	filename = path.Base(destfile)
 
 	// test for same source and dest, return err
-	if isPlain && h.IsLocal() {
+	if noDestPrefix && h.IsLocal() {
 		source = config.ExpandHome(source)
 		sfi, err := h.Stat(source)
 		if err != nil {
@@ -196,7 +268,7 @@ func ImportCommons(r *Host, ct *Component, common string, params []string) (file
 	dir := r.PathTo(ct, common)
 	for _, source := range params {
 		var filename string
-		if filename, err = ImportFile(r, dir, source); err != nil && err != ErrExists {
+		if filename, err = ImportSource(r, dir, source); err != nil && err != ErrExists {
 			return
 		}
 		filenames = append(filenames, filename)
