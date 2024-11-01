@@ -138,7 +138,7 @@ func importInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 	}
 
 	for _, source := range sources {
-		if _, resp.Err = geneos.ImportFile(i.Host(), i.Home(), source); resp.Err != nil && resp.Err != geneos.ErrExists {
+		if _, resp.Err = geneos.ImportSource(i.Host(), i.Home(), source); resp.Err != nil && resp.Err != geneos.ErrExists {
 			return
 		}
 	}

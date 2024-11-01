@@ -390,7 +390,7 @@ var deployCmd = &cobra.Command{
 		i.Rebuild(true)
 
 		for _, importfile := range deployCmdImportFiles {
-			if _, err = geneos.ImportFile(i.Host(), i.Home(), importfile); err != nil && err != geneos.ErrExists {
+			if _, err = geneos.ImportSource(i.Host(), i.Home(), importfile); err != nil && err != geneos.ErrExists {
 				return err
 			}
 		}

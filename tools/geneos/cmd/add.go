@@ -196,7 +196,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	i.Rebuild(true)
 
 	for _, importfile := range addCmdImportFiles {
-		if _, err = geneos.ImportFile(i.Host(), i.Home(), importfile); err != nil && err != geneos.ErrExists {
+		if _, err = geneos.ImportSource(i.Host(), i.Home(), importfile); err != nil && err != geneos.ErrExists {
 			return err
 		}
 	}

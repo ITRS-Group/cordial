@@ -211,7 +211,7 @@ func (n *CA3s) Add(tmpl string, port uint16) (err error) {
 	}
 
 	for _, source := range ca3Files {
-		if _, err = geneos.ImportFile(n.Host(), n.Home(), source); err != nil && err != geneos.ErrExists {
+		if _, err = geneos.ImportSource(n.Host(), n.Home(), source); err != nil && err != geneos.ErrExists {
 			return
 		}
 	}

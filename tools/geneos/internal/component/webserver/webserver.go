@@ -244,7 +244,7 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	}
 
 	for _, source := range webserverFiles {
-		if _, err = geneos.ImportFile(w.Host(), w.Home(), source); err != nil && err != geneos.ErrExists {
+		if _, err = geneos.ImportSource(w.Host(), w.Home(), source); err != nil && err != geneos.ErrExists {
 			return
 		}
 	}

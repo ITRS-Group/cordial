@@ -227,7 +227,7 @@ func (s *SSOAgents) Add(tmpl string, port uint16) (err error) {
 	}
 
 	for _, source := range ssoagentFiles {
-		if _, err = geneos.ImportFile(s.Host(), s.Home(), source); err != nil && !errors.Is(err, geneos.ErrExists) {
+		if _, err = geneos.ImportSource(s.Host(), s.Home(), source); err != nil && !errors.Is(err, geneos.ErrExists) {
 			log.Warn().Err(err).Msgf("source file %q may not exist", source)
 			return
 		}
