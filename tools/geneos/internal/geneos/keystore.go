@@ -2,11 +2,16 @@ package geneos
 
 import (
 	"crypto/x509"
+	"errors"
+	"os"
 	"time"
 
 	"github.com/awnumar/memguard"
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
+	"github.com/rs/zerolog/log"
+	jceks "github.com/square/certigo/jceks"
+
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 // functions to manage Java keystore files for webserver, collection
@@ -28,7 +33,14 @@ func ReadKeystore(h *Host, path string, password *config.Plaintext) (k KeyStore,
 
 	pw := password.Bytes()
 	defer memguard.WipeBytes(pw)
-	return k, k.Load(r, pw)
+	if err = k.Load(r, pw); err != nil && !errors.Is(err, os.ErrNotExist) {
+		// speculatively try to convert a JCEKS formatted keystore
+		k, err = convertJCEKS(h, path, password)
+		if err == nil {
+			log.Debug().Msgf("loaded %s:%s as JCEKS keystore", h, path)
+		}
+	}
+	return
 }
 
 func (k *KeyStore) WriteKeystore(h *Host, path string, password *config.Plaintext) (err error) {
@@ -77,4 +89,49 @@ func (k *KeyStore) AddKeystoreKey(alias string, key *memguard.Enclave, password 
 	pw := password.Bytes()
 	defer memguard.WipeBytes(pw)
 	return k.SetPrivateKeyEntry(alias, c, pw)
+}
+
+func convertJCEKS(h *Host, path string, password *config.Plaintext) (k KeyStore, err error) {
+	r, err := h.Open(path)
+	if err != nil {
+		return
+	}
+
+	pw := password.Bytes()
+	defer memguard.WipeBytes(pw)
+
+	jk, err := jceks.LoadFromReader(r, pw)
+	if err != nil {
+		return
+	}
+	k = KeyStore{
+		keystore.New(),
+	}
+
+	for _, p := range jk.ListPrivateKeys() {
+		key, certs, err := jk.GetPrivateKeyAndCerts(p, pw)
+		if err != nil {
+			panic(err)
+		}
+		pkcs8key, err := x509.MarshalPKCS8PrivateKey(key)
+		if err != nil {
+			panic(err)
+		}
+
+		if err = k.AddKeystoreKey(p, memguard.NewEnclave(pkcs8key), password, certs); err != nil {
+			panic(err)
+		}
+	}
+
+	for _, c := range jk.ListCerts() {
+		cert, err := jk.GetCert(c)
+		if err != nil {
+			panic(err)
+		}
+		if err = k.AddKeystoreCert(c, cert); err != nil {
+			panic(err)
+		}
+	}
+
+	return
 }
