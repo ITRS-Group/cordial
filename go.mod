@@ -43,6 +43,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
+	github.com/square/certigo v1.16.0
 	github.com/thediveo/go-asciitree v1.0.2
 	github.com/wneessen/go-mail v0.5.1
 	github.com/xuri/excelize/v2 v2.9.0
