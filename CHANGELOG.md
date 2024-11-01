@@ -1,5 +1,25 @@
 # Change Log
 
+## Version v1.19.0
+
+> [!NOTE]
+> **Released 2024-11-xx**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## Version v1.19.0 Changes
+
+* `tools/geneos`
+
+  * Added `sso-agent` as a component. You can now install and manage SSO Agent instances using `geneos`. When adding a new instance `geneos` also creates an `ssokey` in a keystore file based on the `conf/sso-agent.conf` settings. If the instance is created with a TLS certificate and key then these are also stored in the truststore/keystore alongside any certificate validation chain. At the moment the configuraton file is treated as read-only, but in time we will add capbilities to make changes using the command line.
+  * As part of the work to add ZIP file support for SSO Agent component releases, we've improved how all releases are unarchived and now files and directories have their modification times set based on the archive file data. Symbolic links only have their modification times set when unarchiving locally.
+
+## Version v1.19.0 Fixes
+
+* `tools/geneos`
+
+---
+
 ## Version v1.18.2
 
 > [!NOTE]
