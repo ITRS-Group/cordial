@@ -84,7 +84,7 @@ func ExecutableName(version ...string) (execname string) {
 }
 
 func renderMD(in string) (out string) {
-	var width int = 80
+	var width int = 72
 	var err error
 
 	style := glamour.WithAutoStyle()
@@ -93,17 +93,17 @@ func renderMD(in string) (out string) {
 	} else {
 		width, _, err = term.GetSize(int(os.Stdout.Fd()))
 		if err != nil {
-			width = 80
+			width = 72
 		}
-		if width > 132 {
-			width = 132
+		if width > 96 {
+			width = 96
 		}
 	}
 
 	tr, err := glamour.NewTermRenderer(
 		style,
 		glamour.WithStylesFromJSONBytes([]byte(`{ "document": { "margin": 2 } }`)),
-		glamour.WithWordWrap(width-4),
+		glamour.WithWordWrap(width),
 		glamour.WithEmoji(),
 	)
 	if err != nil {
