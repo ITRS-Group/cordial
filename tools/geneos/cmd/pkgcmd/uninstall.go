@@ -153,10 +153,11 @@ geneos uninstall --version 5.14.1
 						continue
 					}
 
-					// if we are not updating then do not remove any
-					// package referenced by an instance - except those
-					// disabled as above
-					if !uninstallCmdUpdate {
+					// if we are not updating or told to remove "all"
+					// (version filter notwithstanding) then do not
+					// remove any package referenced by an instance -
+					// except those disabled as above
+					if !uninstallCmdUpdate && !uninstallCmdAll {
 						removeReleases = slices.DeleteFunc(removeReleases, func(r geneos.ReleaseDetails) bool { return version == r.Version })
 						continue
 					}
