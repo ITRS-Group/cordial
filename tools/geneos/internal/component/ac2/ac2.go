@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -81,13 +80,6 @@ var AC2 = geneos.Component{
 	},
 	GetPID: pidCheckFn,
 }
-
-const (
-	ac2prefix = "collection-agent-"
-	ac2suffix = "-exec.jar"
-)
-
-var ac2jarRE = regexp.MustCompile(`^` + ac2prefix + `(.+)` + ac2suffix)
 
 var ac2Files = []string{
 	// "ActiveConsole.gci",
