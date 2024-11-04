@@ -213,9 +213,7 @@ func logTailInstanceFile(i geneos.Instance, logfile string) (lines []string, err
 	if err != nil && !errors.Is(err, io.EOF) {
 		log.Error().Err(err).Msg("")
 	}
-	if len(text) != 0 {
-		lines = filterOutputStrings(i, logfile, strings.NewReader(text+"\n"))
-	}
+	lines = filterOutputStrings(i, logfile, strings.NewReader(text+"\n"))
 
 	return
 }
@@ -303,10 +301,8 @@ func filterOutputStrings(i geneos.Instance, path string, r io.Reader) (lines []s
 	}
 
 	// if we read any lines, check for header change
-	if len(lines) > 0 {
-		header := outHeaderString(i, path)
-		lines = append(header, lines...)
-	}
+	header := outHeaderString(i, path)
+	lines = append(header, lines...)
 	return
 }
 
@@ -350,7 +346,7 @@ func filterOutput(i geneos.Instance, path string, reader io.ReadSeeker) (sz int6
 func logCatInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	if !logCmdStderr {
+	if logCmdStderr {
 		if resp.Lines, resp.Err = logCatInstanceFile(i, instance.ComponentFilepath(i, "txt")); resp.Err != nil {
 			return
 		}
