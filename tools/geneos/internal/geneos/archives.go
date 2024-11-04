@@ -539,7 +539,6 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 
 	slices.Reverse(dirtimes)
 	for _, d := range dirtimes {
-		log.Debug().Msgf("updating %q to %v", d.Name, d.Modified)
 		if err := h.Chtimes(d.Name, time.Time{}, d.Modified); err != nil {
 			log.Warn().Err(err).Msgf("cannot update mtime on %q", d.Name)
 		}
