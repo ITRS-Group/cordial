@@ -18,6 +18,8 @@
 
 * `tools/geneos`
 
+  * A recent change meant that the user's AES keyfile would not be created on `geneos login`, this is fixed
+
 ---
 
 ## Version v1.18.2
