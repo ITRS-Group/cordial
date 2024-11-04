@@ -43,7 +43,7 @@ GDNA uses license daemon usage data and this can be from either (or both):
 
 > [!NOTE]
 >
-> To get the full benefit of the detailed data reports, you should plan to update the `licd` to version 7.0.0 or later and, where possible, you Gateways too. The 7.0.0 `licd` reports Operating System and Netprobe version information while the 7.0.0 Gateway add more data around the Gateway itself and dynamic entities.
+> To get the full benefit of the detailed data reports, you should plan to update the `licd` to version 7.0.0 or later and, where possible, your Gateways too. The 7.0.0 `licd` reports Operating System and Netprobe version information while the 7.0.0 Gateway add more data around the Gateway itself and dynamic entities.
 
 * Alternatively: Access to `licd` summary reports
 
