@@ -21,7 +21,6 @@ package ac2
 import (
 	"fmt"
 	"os"
-	"path"
 	"strings"
 	"sync"
 	"time"
@@ -40,8 +39,9 @@ var AC2 = geneos.Component{
 	Aliases:      []string{"active-console", "activeconsole"},
 	LegacyPrefix: "",
 
-	DownloadBase:  geneos.DownloadBases{Default: "Active+Console", Nexus: "geneos-desktop-activeconsole"},
-	DownloadInfix: "desktop-activeconsole",
+	DownloadBase:         geneos.DownloadBases{Default: "Active+Console", Nexus: "geneos-desktop-activeconsole"},
+	DownloadInfix:        "desktop-activeconsole",
+	ArchiveLeaveFirstDir: true,
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "7040-",
@@ -223,7 +223,8 @@ func (n *AC2s) Command() (args, env []string, home string) {
 		"_JAVA_OPTIONS=-Dawt.useSystemAAFontSettings=lcd",
 	}
 
-	// add these to the environment, if they exist. not sure if ac2 on Linux works without them.
+	// add these to the environment, if they exist. ac2 on Linux will
+	// not work without them.
 	list := []string{
 		"DISPLAY",
 		"XAUTHORITY",
@@ -247,7 +248,7 @@ func pidCheckFn(arg any, cmdline ...[]byte) bool {
 	if !ok {
 		return false
 	}
-	if path.Base(string(cmdline[0])) == c.Config().GetString("program") {
+	if string(cmdline[0]) == c.Config().GetString("program") {
 		return true
 	}
 	return false
