@@ -228,6 +228,8 @@ func (n *CA3s) Rebuild(initial bool) error {
 // XXX the is for initial testing - needs cleaning up
 
 func (n *CA3s) Command() (args, env []string, home string) {
+	cf := n.Config()
+
 	// locate jar file
 	baseDir := path.Join(instance.BaseVersion(n), "collection_agent")
 
@@ -253,16 +255,17 @@ func (n *CA3s) Command() (args, env []string, home string) {
 	}
 
 	args = []string{
-		"-Xms" + n.Config().GetString("minheap", config.Default("512M")),
-		"-Xmx" + n.Config().GetString("maxheap", config.Default("512M")),
+		"-Xms" + cf.GetString("minheap", config.Default("512M")),
+		"-Xmx" + cf.GetString("maxheap", config.Default("512M")),
 		"-Dlogback.configurationFile=" + path.Join(baseDir, "logback.xml"),
-		"-jar", jar, n.Config().GetString("config"),
+		"-jar", jar,
+		cf.GetString("config"),
 	}
 
 	env = []string{
-		fmt.Sprintf("CA_PLUGIN_DIR=%s", n.Config().GetString("plugins", config.Default(path.Join(baseDir, "plugins")))),
-		fmt.Sprintf("HEALTH_CHECK_PORT=%d", n.Config().GetInt("health-check-port", config.Default(9136))),
-		fmt.Sprintf("TCP_REPORTER_PORT=%d", n.Config().GetInt("tcp-reporter-port", config.Default(7137))),
+		fmt.Sprintf("CA_PLUGIN_DIR=%s", cf.GetString("plugins", config.Default(path.Join(baseDir, "plugins")))),
+		fmt.Sprintf("HEALTH_CHECK_PORT=%d", cf.GetInt("health-check-port", config.Default(9136))),
+		fmt.Sprintf("TCP_REPORTER_PORT=%d", cf.GetInt("tcp-reporter-port", config.Default(7137))),
 	}
 
 	home = n.Home()
