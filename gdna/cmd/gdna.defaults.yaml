@@ -1036,13 +1036,15 @@ db:
         SELECT gateway, gatewayHost, gatewayPort, version, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
           FROM ${db.gateways.table} gw
         WHERE gateway IN (
-            SELECT DISTINCT gateway FROM ${db.samplers.active}
+            SELECT DISTINCT gateway FROM ${db.samplers.table}
             UNION
-            SELECT DISTINCT gateway FROM ${db.ca-samplers.active}
+            SELECT DISTINCT gateway FROM ${db.ca-samplers.table}
             UNION
-            SELECT DISTINCT gateway FROM ${db.gw-samplers.active}
+            SELECT DISTINCT gateway FROM ${db.gw-samplers.table}
             UNION
-            SELECT DISTINCT gateway FROM ${db.probes.active}
+            SELECT DISTINCT gateway FROM ${db.probes.table}
+            UNION
+            SELECT DISTINCT gateway FROM ${db.gw-components.table}
           )
           AND lastSeen = (SELECT lastSeen FROM ${db.sources.table} WHERE source = gw.source AND valid)
           AND ${filters:gw:gateway,source}
@@ -1055,13 +1057,15 @@ db:
         SELECT gateway, gatewayHost, gatewayPort, version, min(firstSeen) as firstSeen, max(lastSeen) as lastSeen, group_concat(source, ',') as source
           FROM ${db.gateways.table} gw
         WHERE gateway IN (
-            SELECT DISTINCT gateway FROM ${db.samplers.active}
+            SELECT DISTINCT gateway FROM ${db.samplers.table}
             UNION
-            SELECT DISTINCT gateway FROM ${db.ca-samplers.active}
+            SELECT DISTINCT gateway FROM ${db.ca-samplers.table}
             UNION
-            SELECT DISTINCT gateway FROM ${db.gw-samplers.active}
+            SELECT DISTINCT gateway FROM ${db.gw-samplers.table}
             UNION
-            SELECT DISTINCT gateway FROM ${db.probes.active}
+            SELECT DISTINCT gateway FROM ${db.probes.table}
+            UNION
+            SELECT DISTINCT gateway FROM ${db.gw-components.table}
           )
           AND lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = gw.source AND valid)
           AND ${filters:gw:gateway,source}
