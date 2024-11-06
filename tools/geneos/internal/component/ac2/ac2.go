@@ -71,7 +71,7 @@ var AC2 = geneos.Component{
 		`logfile=ActiveConsole.log`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}`,
 		`config={{join .home "ActiveConsol.gci"}}`,
-		`options="-wsp {{.home}}"`,
+		`options=-wsp {{.home}}`,
 		`autostart=false`,
 	},
 	Directories: []string{
@@ -248,8 +248,14 @@ func pidCheckFn(arg any, cmdline ...[]byte) bool {
 	if !ok {
 		return false
 	}
-	if string(cmdline[0]) == c.Config().GetString("program") {
-		return true
+	if string(cmdline[0]) != c.Config().GetString("program") {
+
+		return false
+	}
+	for _, arg := range cmdline[1:] {
+		if string(arg) == c.Home() {
+			return true
+		}
 	}
 	return false
 }
