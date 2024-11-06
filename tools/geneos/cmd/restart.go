@@ -64,10 +64,6 @@ var restartCmd = &cobra.Command{
 		ct, names := ParseTypeNames(cmd)
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *instance.Response) {
 			resp = instance.NewResponse(i)
-
-			if !instance.IsAutoStart(i) {
-				return
-			}
 			resp.Err = instance.Stop(i, restartCmdForce, false)
 			if resp.Err == nil || restartCmdAll {
 				resp.Err = instance.Start(i, instance.StartingExtras(restartCmdExtras), instance.StartingEnvs(restartCmdEnvs))
