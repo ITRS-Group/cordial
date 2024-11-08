@@ -20,6 +20,7 @@ package instance
 import (
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -129,6 +130,15 @@ func LiveVersion(i geneos.Instance, pid int) (base string, version string, actua
 		return
 	}
 	log.Debug().Msgf("actual=%s pkgtype=%s", actual, pkgtype)
+
+	// account for java based components, like webserver, sso-agent and
+	// ca3. just return the version the base points to, which may not be
+	// true during an update but it's the best we can do.
+	if path.Base(actual) == "java" {
+		actual = version
+		return
+	}
+
 	actual = strings.TrimPrefix(actual, i.Host().PathTo("packages", pkgtype)+"/")
 	if strings.Contains(actual, "/") {
 		actual = actual[:strings.Index(actual, "/")]
