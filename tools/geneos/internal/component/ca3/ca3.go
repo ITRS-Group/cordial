@@ -68,9 +68,9 @@ var CA3 = geneos.Component{
 		`home={{join .root "netprobe" "ca3s" .name}}`,
 		`install={{join .root "packages" "netprobe"}}`,
 		`version=active_prod`,
-		`plugins={{join .install .version "collection_agent"}}`,
+		`plugins={{join .install .version "collection_agent" "plugins"}}`,
 		`program={{"/usr/bin/java"}}`,
-		`logdir={{join .home "collection_agent"}}`,
+		`logdir={{join .home}}`,
 		`logfile=collection-agent.log`,
 		`config={{join .home "collection-agent.yml"}}`,
 		`minheap=512M`,
@@ -225,45 +225,24 @@ func (n *CA3s) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }
 
-// XXX the is for initial testing - needs cleaning up
-
 func (n *CA3s) Command() (args, env []string, home string) {
 	cf := n.Config()
 
 	// locate jar file
-	baseDir := path.Join(instance.BaseVersion(n), "collection_agent")
-
-	ca3dir, err := n.Host().ReadDir(baseDir)
-	if err != nil {
-		log.Error().Err(err).Msg("")
-		return
-	}
-	latest := ""
-	for _, n := range ca3dir {
-		parts := ca3jarRE.FindStringSubmatch(n.Name())
-		log.Debug().Msgf("found %d parts: %v", len(parts), parts)
-		if len(parts) > 1 {
-			if geneos.CompareVersion(parts[1], latest) > 0 {
-				latest = parts[1]
-			}
-		}
-	}
-	log.Debug().Msgf("latest version %s", latest)
-	var jar string
-	if latest != "" {
-		jar = path.Join(baseDir, ca3prefix+latest+ca3suffix)
-	}
+	classPath := path.Join(instance.BaseVersion(n), "collection_agent", "*")
 
 	args = []string{
 		"-Xms" + cf.GetString("minheap", config.Default("512M")),
 		"-Xmx" + cf.GetString("maxheap", config.Default("512M")),
-		"-Dlogback.configurationFile=" + path.Join(baseDir, "logback.xml"),
-		"-jar", jar,
+		"-Dlogback.configurationFile=" + path.Join(n.Home(), "logback.xml"),
+		"-cp", classPath,
+		"-DCOLLECTION_AGENT_DIR=" + n.Home(),
+		"com.itrsgroup.collection.ca.Main",
 		cf.GetString("config"),
 	}
 
 	env = []string{
-		fmt.Sprintf("CA_PLUGIN_DIR=%s", cf.GetString("plugins", config.Default(path.Join(baseDir, "plugins")))),
+		fmt.Sprintf("CA_PLUGIN_DIR=%s", cf.GetString("plugins", config.Default(path.Join(classPath, "plugins")))),
 		fmt.Sprintf("HEALTH_CHECK_PORT=%d", cf.GetInt("health-check-port", config.Default(9136))),
 		fmt.Sprintf("TCP_REPORTER_PORT=%d", cf.GetInt("tcp-reporter-port", config.Default(7137))),
 	}
