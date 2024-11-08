@@ -144,11 +144,12 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	if !i.Host().IsLocal() && portlist == "" {
 		portlist = "..."
 	}
+	uptodate := "="
 	if underlying != actual {
-		base += "*"
+		uptodate = "<>"
 	}
 
-	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s:%s\t%s", i.Type(), i.Name(), i.Host(), pid, portlist, username, groupname, mtime.Local().Format(time.RFC3339), base, actual, i.Home())
+	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s%s%s\t%s", i.Type(), i.Name(), i.Host(), pid, portlist, username, groupname, mtime.Local().Format(time.RFC3339), base, uptodate, actual, i.Home())
 
 	// if psCmdShowFiles {
 	// resp.Lines = listOpenFiles(i)
@@ -188,10 +189,14 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	}
 	portlist := strings.Join(ports, ":")
 	base, underlying, actual, _ := instance.LiveVersion(i, pid)
-	if underlying != actual {
-		base += "*"
+	if pkgtype := i.Config().GetString("pkgtype"); pkgtype != "" {
+		base = path.Join(pkgtype, base)
 	}
-	resp.Rows = append(resp.Rows, []string{i.Type().String(), i.Name(), i.Host().String(), fmt.Sprint(pid), portlist, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s:%s", base, actual), i.Home()})
+	uptodate := "="
+	if underlying != actual {
+		uptodate = "<>"
+	}
+	resp.Rows = append(resp.Rows, []string{i.Type().String(), i.Name(), i.Host().String(), fmt.Sprint(pid), portlist, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s%s%s", base, uptodate, actual), i.Home()})
 
 	return
 }
@@ -227,8 +232,12 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		ports = instance.ListeningPorts(i)
 	}
 	base, underlying, actual, _ := instance.LiveVersion(i, pid)
+	if pkgtype := i.Config().GetString("pkgtype"); pkgtype != "" {
+		base = path.Join(pkgtype, base)
+	}
+	uptodate := "="
 	if underlying != actual {
-		base += "*"
+		uptodate = "<>"
 	}
 
 	resp.Value = psType{
@@ -240,7 +249,7 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		User:      username,
 		Group:     groupname,
 		Starttime: mtime.Local().Format(time.RFC3339),
-		Version:   fmt.Sprintf("%s:%s", base, actual),
+		Version:   fmt.Sprintf("%s%s%s", base, uptodate, actual),
 		Home:      i.Home(),
 	}
 
