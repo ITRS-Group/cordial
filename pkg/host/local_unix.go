@@ -22,6 +22,7 @@ package host
 import (
 	"os"
 	"os/exec"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -44,7 +45,26 @@ func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) (err error) {
 	}
 
 	// mark all non-std fds unshared
-	cmd.ExtraFiles = nil
+	cmd.ExtraFiles = []*os.File{}
+
+	// un-inherit all FDs explicitly, leaving Extrafiles nil doesn't work
+	fds, err := os.ReadDir("/proc/self/fd")
+	if err != nil {
+		return
+	}
+	var maxfd int
+	for _, f := range fds {
+		if i, err := strconv.Atoi(f.Name()); err == nil {
+			if i > maxfd {
+				maxfd = i
+			}
+		}
+	}
+
+	for i := 0; i < maxfd-3; i++ {
+		cmd.ExtraFiles = append(cmd.ExtraFiles, nil)
+	}
+
 	return
 }
 
