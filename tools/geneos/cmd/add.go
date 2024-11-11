@@ -35,7 +35,7 @@ import (
 var addCmdTemplate, addCmdBase, addCmdKeyfileCRC string
 var addCmdStart, addCmdLogs bool
 var addCmdPort uint16
-var addCmdImportFiles instance.ImportFiles
+var addCmdImportFiles instance.Filename
 var addCmdKeyfile string
 
 var addCmdExtras = instance.SetConfigValues{}
@@ -195,12 +195,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	i.Load()
 	i.Rebuild(true)
 
-	for _, importfile := range addCmdImportFiles {
-		if _, err = geneos.ImportSource(i.Host(), i.Home(), importfile); err != nil && err != geneos.ErrExists {
-			return err
-		}
-	}
-	err = nil
+	_ = instance.ImportFiles(i, addCmdImportFiles...)
 
 	fmt.Printf("%s added, port %d\n", i, cf.GetInt("port"))
 

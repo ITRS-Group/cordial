@@ -574,18 +574,18 @@ func (i *UnsetVars) Type() string {
 	return "SETTING"
 }
 
-// ImportFiles fulfils the Var interface for pflag
-type ImportFiles []string
+// Filename fulfils the Var interface for pflag
+type Filename []string
 
-func (i *ImportFiles) String() string {
+func (i *Filename) String() string {
 	return ""
 }
 
-func (i *ImportFiles) Set(value string) error {
+func (i *Filename) Set(value string) error {
 	*i = append(*i, value)
 	return nil
 }
 
-func (i *ImportFiles) Type() string {
+func (i *Filename) Type() string {
 	return "[DEST=]PATH|URL"
 }

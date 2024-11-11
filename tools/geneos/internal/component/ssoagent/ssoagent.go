@@ -142,12 +142,12 @@ func factory(name string) geneos.Instance {
 // list of file patterns to copy?
 // from WebBins + WebBase + /config
 
-// ssoagentFiles is a list of files to import from the "read-only"
+// initialFiles is a list of files to import from the "read-only"
 // package.
 //
 // `config/=config/file` means import file into config/ with no name
 // change
-var ssoagentFiles = []string{
+var initialFiles = []string{
 	"conf",
 }
 
@@ -226,14 +226,7 @@ func (s *SSOAgents) Add(tmpl string, port uint16) (err error) {
 		return
 	}
 
-	for _, source := range ssoagentFiles {
-		if _, err = geneos.ImportSource(s.Host(), s.Home(), source); err != nil && !errors.Is(err, geneos.ErrExists) {
-			log.Warn().Err(err).Msgf("source file %q may not exist", source)
-			return
-		}
-	}
-	err = nil
-
+	_ = instance.ImportFiles(s, initialFiles...)
 	return
 }
 

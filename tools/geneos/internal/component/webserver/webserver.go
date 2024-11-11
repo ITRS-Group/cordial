@@ -145,22 +145,15 @@ func factory(name string) geneos.Instance {
 // list of file patterns to copy?
 // from WebBins + WebBase + /config
 
-// webserverFiles is a list of files to import from the "read-only"
+// initialFiles is a list of files to import from the "read-only"
 // package.
 //
 // `config/=config/file` means import file into config/ with no name
 // change
-var webserverFiles = []string{
+var initialFiles = []string{
+	"config",
 	"config/config.xml=config/config.xml.min.tmpl",
-	"config/=config/log4j.properties",
-	"config/=config/log4j2.properties",
-	"config/=config/logging.properties",
-	"config/=config/login.conf",
-	"config/=config/security.properties",
-	"config/=config/security.xml",
-	"config/=config/sso.properties",
-	"config/=config/users.properties",
-	"cacerts=JRE/lib/security/cacerts",
+	"JRE/lib/security/cacerts",
 }
 
 // interface method set
@@ -243,13 +236,7 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 		return
 	}
 
-	for _, source := range webserverFiles {
-		if _, err = geneos.ImportSource(w.Host(), w.Home(), source); err != nil && err != geneos.ErrExists {
-			return
-		}
-	}
-	err = nil
-
+	_ = instance.ImportFiles(w, initialFiles...)
 	return
 }
 

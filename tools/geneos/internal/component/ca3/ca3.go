@@ -93,7 +93,7 @@ const (
 
 var ca3jarRE = regexp.MustCompile(`^` + ca3prefix + `(.+)` + ca3suffix)
 
-var ca3Files = []string{
+var initialFiles = []string{
 	"collection-agent.yml",
 	"logback.xml",
 }
@@ -210,14 +210,7 @@ func (n *CA3s) Add(tmpl string, port uint16) (err error) {
 		return
 	}
 
-	for _, source := range ca3Files {
-		if _, err = geneos.ImportSource(n.Host(), n.Home(), source); err != nil && err != geneos.ErrExists {
-			return
-		}
-	}
-	err = nil
-
-	// default config XML etc.
+	_ = instance.ImportFiles(n, initialFiles...)
 	return
 }
 

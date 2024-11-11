@@ -411,3 +411,12 @@ func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name 
 	}
 	return
 }
+
+func ImportFiles(s geneos.Instance, files ...string) (err error) {
+	for _, source := range files {
+		if _, err = geneos.ImportSource(s.Host(), s.Home(), source); err != nil {
+			return
+		}
+	}
+	return
+}

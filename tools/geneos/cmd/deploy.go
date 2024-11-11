@@ -43,7 +43,7 @@ var deployCmdSigningBundle, deployCmdInstanceBundle string
 var deployCmdPort uint16
 var deployCmdArchive, deployCmdVersion, deployCmdOverride string
 var deployCmdPassword *config.Plaintext
-var deployCmdImportFiles instance.ImportFiles
+var deployCmdImportFiles instance.Filename
 var deployCmdKeyfile string
 var deployCmdExtras = instance.SetConfigValues{}
 
@@ -388,12 +388,7 @@ var deployCmd = &cobra.Command{
 		log.Debug().Msgf("home is now %s", i.Home())
 		i.Rebuild(true)
 
-		for _, importfile := range deployCmdImportFiles {
-			if _, err = geneos.ImportSource(i.Host(), i.Home(), importfile); err != nil && err != geneos.ErrExists {
-				return err
-			}
-		}
-		err = nil
+		_ = instance.ImportFiles(i, deployCmdImportFiles...)
 
 		fmt.Printf("%s added, port %d\n", i, cf.GetInt("port"))
 
