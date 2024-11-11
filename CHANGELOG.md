@@ -2,8 +2,14 @@
 
 ## Version v1.19.0
 
+### Version v1.19.0 Highlights
+
+* Added `sso-agent` to `tools/geneos` so you can now deploy and manage those easier
+* Updated `ca3` unmanaged/standalone Collection Agent component to work with new releases
+
+
 > [!NOTE]
-> **Released 2024-11-xx**
+> **Released 2024-11-11**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
 
@@ -11,14 +17,24 @@
 
 * `tools/geneos`
 
-  * Added `sso-agent` as a component. You can now install and manage SSO Agent instances using `geneos`. When adding a new instance `geneos` also creates an `ssokey` in a keystore file based on the `conf/sso-agent.conf` settings. If the instance is created with a TLS certificate and key then these are also stored in the truststore/keystore alongside any certificate validation chain. At the moment the configuraton file is treated as read-only, but in time we will add capbilities to make changes using the command line.
+  * Added `sso-agent` as a component. You can now install and manage SSO Agent instances using `geneos`. When adding a new instance `geneos` also creates an `ssokey` in a keystore file based on the `conf/sso-agent.conf` settings. If the instance is created with a TLS certificate and key then these are also stored in the truststore/keystore alongside any certificate validation chain. At the moment the configuration file is treated as read-only, but in time we will add capabilities to make changes using the command line.
   * As part of the work to add ZIP file support for SSO Agent component releases, we've improved how all releases are unarchived and now files and directories have their modification times set based on the archive file data. Symbolic links only have their modification times set when unarchiving locally.
+  * Support the import of truststore/keystore files as JCEKS if loading as a JKS fails. Note that all truststore/keystore files are still written as JKS.
+  * Fixed `ca3` starting environment
+  * Changed output of versions in the `geneos ps` command to be easier to read
 
 ## Version v1.19.0 Fixes
 
 * `tools/geneos`
 
-  * A recent change meant that the user's AES keyfile would not be created on `geneos login`, this is fixed
+  * A recent change meant that the user's AES keyfile would not be created when running `geneos login` for the first time, this is fixed
+  * Explicitly disable file descriptor inheritance in started processes
+  * Show a version for Java bases components based on installed version
+  * Fix `deploy` commands to create the correct Geneos home directory, instead of always a `geneos/` directory in the working directory
+
+* `gdna`
+
+  * Include gateways that have no other components listed, fixing reports of unused gateway.
 
 ---
 
