@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/user"
 	"path"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -160,18 +160,17 @@ var deployCmd = &cobra.Command{
 				// make best guess
 				if deployCmdGeneosHome == "" {
 					var input, root string
-					if u, err := user.Current(); err == nil {
-						root = u.HomeDir
-					} else {
-						root = os.Getenv("HOME")
+					if root, err = config.UserHomeDir(); err != nil {
+						log.Warn().Msg("cannot find user home directory")
 					}
 					if path.Base(root) != Execname {
 						root = path.Join(root, Execname)
 					}
 					if input, err = config.ReadUserInputLine("Geneos Directory (default %q): ", root); err == nil {
-						root = input
-						// } else if err != config.ErrNotInteractive {
-						// 	return
+						if strings.TrimSpace(input) != "" {
+							log.Debug().Msgf("set root to %s", input)
+							root = input
+						}
 					}
 					err = nil
 					if path.Base(root) == execname {
