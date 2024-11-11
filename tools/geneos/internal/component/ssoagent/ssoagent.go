@@ -148,7 +148,7 @@ func factory(name string) geneos.Instance {
 // `config/=config/file` means import file into config/ with no name
 // change
 var ssoagentFiles = []string{
-	"conf/sso-agent.conf=conf/sso-agent.conf",
+	"conf",
 }
 
 // interface method set
@@ -279,46 +279,60 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		}
 	}
 
-	// rebuild the keystore (config/keystore.db) is certificate and
-	// privatekey are defined. This is for client connections to the
-	// sso-agent and will typically be a "real" certificate.
-	if ssoconf.IsSet(config.Join("server", "key_store", "location")) && cf.IsSet("privatekey") {
+	// (re)build the keystore (config/keystore.db) ensuring there is
+	// always an "ssokey".
+	if ssoconf.IsSet(config.Join("server", "key_store", "location")) {
+		var changed bool
+
 		keyStore := instance.Abs(s, ssoconf.GetString(config.Join("server", "key_store", "location")))
 		log.Debug().Msgf("%s: rebuilding keystore: %q", s.String(), keyStore)
-		cert, err := config.ParseCertificate(s.Host(), cf.GetString("certificate"))
-		if err != nil {
-			return err
-		}
-		key, err := config.ReadPrivateKey(s.Host(), cf.GetString("privatekey"))
-		if err != nil {
-			return err
-		}
-		chain := []*x509.Certificate{cert}
-		if cf.IsSet("certchain") {
-			chain = append(chain, config.ReadCertificates(s.Host(), cf.GetString("certchain"))...)
-		}
-		keyStorePassword := ssoconf.GetPassword(config.Join("server", "key_store", "password"), config.Default("changeit"))
-		k, err := geneos.ReadKeystore(s.Host(), keyStore, keyStorePassword)
+		ksPassword := ssoconf.GetPassword(config.Join("server", "key_store", "password"), config.Default("changeit"))
+		ks, err := geneos.ReadKeystore(s.Host(), keyStore, ksPassword)
 		if err != nil {
 			// new, empty keystore
-			k = geneos.KeyStore{
+			ks = geneos.KeyStore{
 				KeyStore: keystore.New(),
 			}
+			changed = true
 		}
-		if !slices.Contains(k.Aliases(), "ssokey") {
+
+		if !slices.Contains(ks.Aliases(), "ssokey") {
 			cert, key, err := genkeypair()
 			if err != nil {
 				log.Fatal().Err(err).Msg("")
 			}
 			chain := []*x509.Certificate{cert}
-			if err = k.AddKeystoreKey("ssokey", key, keyStorePassword, chain); err != nil {
+			if err = ks.AddKeystoreKey("ssokey", key, ksPassword, chain); err != nil {
 				log.Fatal().Err(err).Msg("")
 			}
+			changed = true
 		}
-		alias := geneos.ALL.Hostname()
-		k.DeleteEntry(alias)
-		k.AddKeystoreKey(alias, key, keyStorePassword, chain)
-		err = k.WriteKeystore(s.Host(), keyStore, keyStorePassword)
+
+		// If instance has certificate and private key set, then add
+		// this too. This is for client connections to the sso-agent and
+		// will typically be a "real" certificate.
+		if cf.IsSet("certficate") && cf.IsSet("privatekey") {
+			cert, err := config.ParseCertificate(s.Host(), cf.GetString("certificate"))
+			if err != nil {
+				return err
+			}
+			key, err := config.ReadPrivateKey(s.Host(), cf.GetString("privatekey"))
+			if err != nil {
+				return err
+			}
+			chain := []*x509.Certificate{cert}
+			if cf.IsSet("certchain") {
+				chain = append(chain, config.ReadCertificates(s.Host(), cf.GetString("certchain"))...)
+			}
+			alias := geneos.ALL.Hostname()
+			ks.DeleteEntry(alias)
+			ks.AddKeystoreKey(alias, key, ksPassword, chain)
+			changed = true
+		}
+
+		if changed {
+			err = ks.WriteKeystore(s.Host(), keyStore, ksPassword)
+		}
 	}
 	return
 }
@@ -351,8 +365,8 @@ func genkeypair() (cert *x509.Certificate, key *memguard.Enclave, err error) {
 
 func (s *SSOAgents) Command() (args, env []string, home string) {
 	cf := s.Config()
-	base := instance.BaseVersion(s)
 	home = s.Home()
+	base := instance.BaseVersion(s)
 
 	args = []string{
 		"-classpath", home + "/conf:" + base + "/lib/*",
@@ -366,12 +380,13 @@ func (s *SSOAgents) Command() (args, env []string, home string) {
 	args = append(args, javaopts...)
 
 	if truststorePath := cf.GetString("truststore"); truststorePath != "" {
-		args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
-	}
-
-	// fetch password as string as it has to be exposed on the command line anyway
-	if truststorePassword := cf.GetString("truststore-password"); truststorePassword != "" {
-		args = append(args, "-Djavax.net.ssl.trustStorePassword="+truststorePassword)
+		if _, err := s.Host().Stat(truststorePath); err == nil {
+			args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
+			// fetch password as string as it has to be exposed on the command line anyway
+			if truststorePassword := cf.GetString("truststore-password"); truststorePassword != "" {
+				args = append(args, "-Djavax.net.ssl.trustStorePassword="+truststorePassword)
+			}
+		}
 	}
 
 	// -jar must appear after all options are set otherwise they are
