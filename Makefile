@@ -4,13 +4,13 @@ CREDENTIALS = ${HOME}/.config/geneos/credentials.json
 NAMESPACE = docker.itrsgroup.com
 export DOCKER_BUILDKIT = 1
 
-all: release
+all: release gdna
 
 test-images:
 	docker build --tag cordial/ubi8 --tag cordial/ubi8:$(VERSION) --target cordial-run-ubi8 .
 	docker build --tag cordial/ubi9 --tag cordial/ubi9:$(VERSION) --target cordial-run-ubi9 .
 
-release: base gdna docs
+release: base docs
 	mkdir -p releases/
 	-docker rm cordial-build-$(VERSION)
 	docker create --name cordial-build-$(VERSION) cordial-build:$(VERSION)
@@ -18,7 +18,6 @@ release: base gdna docs
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/. releases/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/docs/. releases/docs/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/lib/libemail.so releases/
-	docker image tag gdna $(NAMESPACE)/gdna:release
 
 .PHONY: build gdna
 
@@ -30,6 +29,7 @@ base: build
 
 gdna:
 	docker build --tag $(NAMESPACE)/$@:$(VERSION) --tag $@ --tag $@:$(VERSION) --secret id=keyfile.aes,src=${KEYFILE} --secret id=credentials.json,src=${CREDENTIALS} --target gdna . 
+	docker image tag gdna $(NAMESPACE)/gdna:release
 
 docs:
 	cd utils/docs && go build && ./docs
