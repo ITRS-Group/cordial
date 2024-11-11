@@ -203,7 +203,7 @@ CMD [ "bash" ]
 # hand testing images
 
 # create a runnable test image using basic debian
-FROM debian AS cordial-run-debian
+FROM ubuntu:jammy AS cordial-run-ubuntu
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
@@ -211,13 +211,14 @@ COPY --from=build /app/cordial/tools/san-config/san-config /bin/
 COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
 RUN --mount=type=cache,target=/var/cache/apt \
-set -eux; \
-apt update; \
-apt install -y --no-install-recommends \
-fontconfig \
-ca-certificates \
-; \
-useradd -ms /bin/bash geneos
+    set -eux; \
+    apt update; \
+    apt install -y --no-install-recommends \
+    fontconfig \
+    ca-certificates \
+    openjdk-21-jre-headless \
+    ; \
+    useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
 CMD [ "bash" ]

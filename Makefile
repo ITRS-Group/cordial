@@ -25,7 +25,7 @@ build:
 	docker build --tag cordial-build:$(VERSION) --target cordial-build .
 
 base: build
-	docker build --tag cordial --tag cordial:$(VERSION) --target cordial-run-debian .
+	docker build --tag cordial --tag cordial:$(VERSION) --target cordial-run-ubuntu .
 
 gdna:
 	docker build --tag $(NAMESPACE)/$@:$(VERSION) --tag $@ --tag $@:$(VERSION) --secret id=keyfile.aes,src=${KEYFILE} --secret id=credentials.json,src=${CREDENTIALS} --target gdna . 
