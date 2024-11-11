@@ -45,7 +45,7 @@ var CA3 = geneos.Component{
 	DownloadBase: geneos.DownloadBases{Default: "Netprobe", Nexus: "geneos-netprobe"},
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "7137-",
+		config.Join(Name, "ports"): "9137-",
 		config.Join(Name, "clean"): strings.Join([]string{
 			"*.old",
 		}, ":"),
@@ -241,10 +241,16 @@ func (n *CA3s) Command() (args, env []string, home string) {
 		cf.GetString("config"),
 	}
 
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "localhost"
+	}
+
 	env = []string{
 		fmt.Sprintf("CA_PLUGIN_DIR=%s", cf.GetString("plugins", config.Default(path.Join(classPath, "plugins")))),
 		fmt.Sprintf("HEALTH_CHECK_PORT=%d", cf.GetInt("health-check-port", config.Default(9136))),
-		fmt.Sprintf("TCP_REPORTER_PORT=%d", cf.GetInt("tcp-reporter-port", config.Default(7137))),
+		fmt.Sprintf("TCP_REPORTER_PORT=%d", cf.GetInt("tcp-reporter-port", config.Default(9137))),
+		fmt.Sprintf("HOSTNAME=%s", cf.GetString(("hostname"), config.Default(hostname))),
 	}
 
 	home = n.Home()
