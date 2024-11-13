@@ -654,6 +654,10 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 			return
 		}
 
+		// if we get a not found status and we are looking for a
+		// platform specific archive then also try without the platform
+		// in case the release is not available for the platform, eg
+		// webserver
 		if resp.StatusCode == 404 && platform != "" {
 			resp.Body.Close()
 			v.Del("title")
