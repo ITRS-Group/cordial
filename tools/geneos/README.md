@@ -6,7 +6,7 @@ The reference documentation, included in the program as help text, for all comma
 
 > [!IMPORTANT]
 >
-> `geneos` is currently unable to manage ARM 64 releases as seen with Geneos 7.1. There is also a very slight chance that installation or upgrade of existing `gateway` and `licd` packages on RHEL9 could result in an `aarch64` package being installed. We are working on ensuring this is not possible and will release a patch ASAP. In testing this has not happened, and it is currently only a small risk.
+> `geneos` is currently unable to manage ARM 64 releases as seen with Geneos 7.1. There is also a chance that installation or upgrade of existing `gateway` and `licd` packages on **RHEL9** (only) could result in an `aarch64` package being installed. We are working on ensuring this is not possible and will release a patch ASAP.
 
 ## Aims
 
