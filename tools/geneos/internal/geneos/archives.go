@@ -630,7 +630,7 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 		}
 		v.Set("title", opts.version)
 	} else if platform != "" {
-		v.Set("title", "-"+platform)
+		v.Set("title", "-"+platform+"-linux")
 	}
 
 	basepaths := strings.FieldsFunc(ct.DownloadBase.Default, func(r rune) bool {
