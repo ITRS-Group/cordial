@@ -2,7 +2,11 @@
 
 The `geneos` program will help you manage your Geneos environment.
 
-> The reference documentation, included in the program as help text, for all commands and their options is [here](docs/geneos.md)
+The reference documentation, included in the program as help text, for all commands and their options is [here](docs/geneos.md)
+
+> [!IMPORTANT]
+>
+> `geneos` is currently unable to manage ARM 64 releases as seen with Geneos 7.1. There is also a very slight chance that installation or upgrade of existing `gateway` and `licd` packages on RHEL9 could result in an `aarch64` package being installed. We are working on ensuring this is not possible and will release a patch ASAP. In testing this has not happened, and it is currently only a small risk.
 
 ## Aims
 
