@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -71,6 +72,7 @@ func GetReleases(h *Host, ct *Component) (releases []ReleaseDetails, err error) 
 	for _, dir := range ents {
 		if dir.Type()&fs.ModeSymlink != 0 {
 			if link, err := h.Readlink(path.Join(basedir, dir.Name())); err == nil {
+				link = filepath.Clean(link)
 				links[link] = append(links[link], dir.Name())
 			}
 		}
