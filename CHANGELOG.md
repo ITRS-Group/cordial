@@ -1,5 +1,20 @@
 # Change Log
 
+## Version v1.19.1
+
+> [!NOTE]
+> **Released 2024-11-13**
+>
+> Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+
+## Version v1.19.0 Fixes
+
+* `tools/geneos`
+
+  * Fix (work around) downloading of RHEL9 releases for 7.1 and later that could download the newly added aarch64 files.
+
+---
+
 ## Version v1.19.0
 
 ### Version v1.19.0 Highlights
