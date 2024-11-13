@@ -243,6 +243,11 @@ COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
+RUN set -eux; \
+    dnf install -y libnsl2 \
+    ; \
+    dnf clean all \
+    ;
 RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
