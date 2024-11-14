@@ -1,13 +1,15 @@
 # Change Log
 
-## Version v1.19.1
+## Version v1.19.2
 
 > [!NOTE]
-> **Released 2024-11-13**
+> **Released 2024-11-14**
 >
 > Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/).
+>
+> This patch release replaces v1.19.1 which did not fully address the issue of downloading releases of aarch64 architecture.
 
-## Version v1.19.0 Fixes
+## Version v1.19.2 Fixes
 
 * `tools/geneos`
 

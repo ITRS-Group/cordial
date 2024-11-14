@@ -2,7 +2,7 @@
 
 > [!NOTE]
 >
-> This is **Version v1.19.1** - Released 2024-11-13 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
+> This is **Version v1.19.2** - Released 2024-11-14 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 
 ## Tools and Utilities
 
