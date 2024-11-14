@@ -329,7 +329,7 @@ func (h *Host) OrList(hosts ...*Host) []*Host {
 // If calling this against the "packages" directory remember to use
 // ct.String() to not deference the parent type, which is done if a part
 // is a *Component
-func (h *Host) PathTo(parts ...interface{}) string {
+func (h *Host) PathTo(parts ...any) string {
 	if h == nil {
 		h = LOCAL
 	}
@@ -344,12 +344,14 @@ func (h *Host) PathTo(parts ...interface{}) string {
 			} else {
 				strParts = append(strParts, s.Name)
 			}
-		case []interface{}:
+		case []any:
 			for _, t := range s {
 				strParts = append(strParts, fmt.Sprint(t))
 			}
-		// case string:
-		// 	strParts = append(strParts, s)
+		case string:
+			strParts = append(strParts, s)
+		case fmt.Stringer:
+			strParts = append(strParts, s.String())
 		default:
 			strParts = append(strParts, fmt.Sprint(s))
 		}
