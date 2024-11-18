@@ -527,7 +527,8 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 				}
 
 			}
-			if err := h.Lchtimes(fullpath, hdr.AccessTime, hdr.ModTime); err != nil {
+			if err := h.Lchtimes(fullpath, hdr.AccessTime, hdr.ModTime); h == LOCAL && err != nil {
+				// ignore on remotes, sftp cannot set times on symlinks
 				log.Debug().Err(err).Msg("cannot update mtime (symlink?)")
 			}
 
@@ -602,16 +603,41 @@ func getPlatformId(value string) (id string) {
 	return
 }
 
-func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string, resp *http.Response, err error) {
+var osMap = map[string]string{
+	"amd64":   "x64",
+	"x86_64":  "x64",
+	"x64":     "x64",
+	"arm64":   "aarch64",
+	"aarch64": "aarch64",
+}
+
+func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source string, resp *http.Response, err error) {
 	// cannot fetch partial versions for el8 - restriction on download search interface
 	platform := getPlatformId(opts.platformId)
 
 	baseurl := config.GetString(config.Join("download", "url"))
 	downloadURL, _ := url.Parse(baseurl)
+
+	os := opts.host.GetString("os")
+	arch := osMap[opts.host.GetString("arch")]
+
 	v := url.Values{}
 
 	if ct.DownloadParams == nil {
-		v.Set("os", "linux")
+		v.Set("os", os)
+
+		if opts.version != "latest" {
+			if platform != "" {
+				log.Error().Msgf("cannot download specific version for this platform (%q) - please download manually", platform)
+				err = ErrInvalidArgs
+				return
+			}
+			v.Set("title", opts.version)
+		} else if platform != "" {
+			v.Set("title", "-"+platform+"-"+os+"-"+arch)
+		} else {
+			v.Set("title", os+"-"+arch)
+		}
 	} else {
 		for _, param := range *ct.DownloadParams {
 			s := strings.SplitN(param, "=", 2)
@@ -620,19 +646,9 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 			}
 			v.Set(s[0], s[1])
 		}
-	}
-
-	if opts.version != "latest" {
-		if platform != "" {
-			log.Error().Msgf("cannot download specific version for this platform (%q) - please download manually", platform)
-			err = ErrInvalidArgs
-			return
+		if opts.version != "latest" {
+			v.Set("title", opts.version)
 		}
-		v.Set("title", opts.version)
-	} else if platform != "" {
-		v.Set("title", "-"+platform+"-linux-x64")
-	} else {
-		v.Set("title", "linux-x64")
 	}
 
 	basepaths := strings.FieldsFunc(ct.DownloadBase.Default, func(r rune) bool {
@@ -733,7 +749,10 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 	return
 }
 
-func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, resp *http.Response, err error) {
+func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string, resp *http.Response, err error) {
+	os := opts.host.GetString("os")
+	arch := osMap[opts.host.GetString("arch")]
+
 	platform := ""
 	if opts.platformId != "" {
 		s := strings.Split(opts.platformId, ":")
@@ -752,7 +771,7 @@ func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, 
 	if ct.DownloadParamsNexus == nil {
 		v.Set("maven.groupId", "com.itrsgroup.geneos")
 		v.Set("maven.extension", "tar.gz")
-		v.Set("maven.classifier", "linux-x64")
+		v.Set("maven.classifier", os+"-"+arch)
 	} else {
 		for _, param := range *ct.DownloadParamsNexus {
 			s := strings.SplitN(param, "=", 2)
@@ -764,7 +783,7 @@ func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, 
 	}
 
 	if platform != "" && ct.DownloadParamsNexus == nil {
-		v.Set("maven.classifier", platform+"-linux-x64")
+		v.Set("maven.classifier", platform+"-"+os+"-"+arch)
 	}
 
 	if opts.version != "latest" {

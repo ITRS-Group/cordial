@@ -50,7 +50,9 @@ var SSOAgent = geneos.Component{
 	LegacyPrefix: "sso",
 	// https://resources.itrsgroup.com/download/latest/SSO+Agent?title=sso-agent-1.15.0-bin.zip
 	DownloadNameRegexp: regexp.MustCompile(`^(?<component>[\w-]+)-(?<version>[\d\-\.]+)(-(?<platform>\w+))?[\.-]bin.(?<suffix>zip)$`),
-	DownloadParams:     &[]string{},
+	DownloadParams: &[]string{
+		"title=-bin",
+	},
 	DownloadParamsNexus: &[]string{
 		"maven.classifier=bin",
 		"maven.extension=zip",
