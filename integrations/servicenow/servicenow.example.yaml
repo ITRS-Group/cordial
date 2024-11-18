@@ -1,7 +1,14 @@
 api:
   host: localhost
   port: 3000
-  apikey: RANDOMAPIKEY
+  # the `apikey` can be any string as long as it is the same on both
+  # router and client - the client being either the incident poster or a
+  # GET requests for all incidents. To protect the plain text, if
+  # required, you can use `geneos aes password` to create an encoded
+  # strings that replies on the security of the key file being read-only
+  # to the user. This also allows the configuration file to be shared
+  # without sharing the plaintext of the key.
+  apikey: ${enc:~/.config/geneos/keyfile.aes:+encs+E33C8DFAFED66ED8EE68019DAEE0106E}
 
 servicenow:
   instance: devxxxxx
