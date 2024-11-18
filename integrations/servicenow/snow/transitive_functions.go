@@ -24,20 +24,26 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strings"
+	"sync"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-var cachedConnection *Connection
+var snowMutex sync.RWMutex
+var snowConnection *Connection
 
 func InitializeConnection(vc *config.Config) *Connection {
 	var err error
 
-	if cachedConnection != nil {
-		return cachedConnection
+	snowMutex.RLock()
+	if snowConnection != nil {
+		snowMutex.RUnlock()
+		return snowConnection
 	}
+	snowMutex.RUnlock()
 
 	pw := []byte(vc.GetString("servicenow.password"))
 
@@ -58,6 +64,7 @@ func InitializeConnection(vc *config.Config) *Connection {
 	clientid := vc.GetString("servicenow.clientid")
 	clientsecret := vc.GetString("servicenow.clientsecret")
 	instance := vc.GetString("servicenow.instance")
+	path := vc.GetString("servicenow.path", config.Default("/api/now/v2"))
 	trace := vc.GetBool(config.Join("servicenow", "trace"))
 
 	if clientid != "" && clientsecret != "" && !strings.Contains(instance, ".") {
@@ -73,27 +80,36 @@ func InitializeConnection(vc *config.Config) *Connection {
 			TokenURL:       "https://" + instance + ".service-now.com/oauth_token.do",
 		}
 
+		snowMutex.Lock()
 		// with OAuth we don't need to store the username and password
-		cachedConnection = &Connection{
+		snowConnection = &Connection{
 			Client:   conf.Client(context.Background()),
 			Instance: instance,
+			Path:     path,
 			Trace:    trace,
 		}
-		return cachedConnection
+		snowMutex.Unlock()
+		return snowConnection
 	}
 
-	cachedConnection = &Connection{
+	snowMutex.Lock()
+	snowConnection = &Connection{
 		Client:   http.DefaultClient,
 		Instance: instance,
+		Path:     path,
 		Username: username,
 		Password: password,
 		Trace:    trace,
 	}
-	return cachedConnection
+	snowMutex.Unlock()
+	return snowConnection
 }
 
-func AssembleRequest(t RequestTransitive, table string) (req *http.Request, err error) {
-	host := t.Connection.Instance
+func AssembleRequest(snow TransitiveConnection, table string) (req *http.Request, err error) {
+	snowMutex.RLock()
+	defer snowMutex.RUnlock()
+
+	host := snow.Instance
 	if !strings.Contains(host, ".") {
 		host += ".service-now.com"
 	}
@@ -102,22 +118,22 @@ func AssembleRequest(t RequestTransitive, table string) (req *http.Request, err 
 		return
 	}
 
-	if t.SysID != "" {
-		u.Path += "/api/now/v2/table/" + table + "/" + t.SysID
+	if snow.SysID != "" {
+		u.Path += path.Join(snow.Path, "table", table, snow.SysID)
 	} else {
-		u.Path += "/api/now/v2/table/" + table
+		u.Path += path.Join(snow.Path, "table", table)
 	}
 
-	z := t.Params.Encode()
+	z := snow.Params.Encode()
 	z = strings.ReplaceAll(z, "+", "%20") // XXX ?
 
 	u.RawQuery = z
 
-	if req, err = http.NewRequest(t.Method, u.String(), bytes.NewReader(t.Payload)); err != nil {
+	if req, err = http.NewRequest(snow.Method, u.String(), bytes.NewReader(snow.Payload)); err != nil {
 		return
 	}
-	if t.Connection.Client == http.DefaultClient {
-		req.SetBasicAuth(t.Connection.Username, t.Connection.Password)
+	if snow.Client == http.DefaultClient {
+		req.SetBasicAuth(snow.Username, snow.Password)
 	}
 	req.Header.Add("Accept", "application/json")
 

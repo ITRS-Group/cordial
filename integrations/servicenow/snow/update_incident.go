@@ -25,9 +25,9 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func UpdateIncident(vc *config.Config, incident_id string, incident Incident) (incident_number string, err error) {
+func UpdateIncident(vc *config.Config, incident_id string, incident IncidentFields) (incident_number string, err error) {
 	var postbytes []byte
-	var result ResultDetail
+	var result resultDetail
 
 	// this has to bypass default settings in caller
 	if incident["text"] != "" {
@@ -41,7 +41,7 @@ func UpdateIncident(vc *config.Config, incident_id string, incident Incident) (i
 	}
 
 	s := InitializeConnection(vc)
-	result, err = s.PUT(postbytes, "", "number", "", "", incident_id).QueryTableSingle(vc.GetString("servicenow.incidenttable"))
+	result, err = s.PUT(postbytes, Fields("number"), SysID(incident_id)).QueryTableSingle(vc.GetString("servicenow.incidenttable"))
 	if err != nil {
 		return
 	} else {

@@ -42,14 +42,14 @@ func GetAllIncidents(c echo.Context) (err error) {
 	}
 
 	s := InitializeConnection(vc)
-	u, err := s.GET("1", "sys_id", "", "user_name="+user, "").QueryTableDetail("sys_user")
+	u, err := s.GET(Limit("1"), Fields("sys_id"), Query("user_name="+user)).QueryTableDetail("sys_user")
 	if err != nil || len(u) == 0 {
 		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("user %q not found in sys_user (and needed for lookup)", user))
 	}
 
 	q := fmt.Sprintf(`active=true^opened_by=%s`, u["sys_id"])
 
-	l, _ := s.GET("", vc.GetString("servicenow.queryresponsefields"), "", q, "").QueryTable(vc.GetString("servicenow.incidenttable"))
+	l, _ := s.GET(Fields(vc.GetString("servicenow.queryresponsefields")), Query(q)).QueryTable(vc.GetString("servicenow.incidenttable"))
 
 	return c.JSON(200, l)
 }

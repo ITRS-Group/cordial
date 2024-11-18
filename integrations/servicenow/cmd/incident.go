@@ -80,7 +80,7 @@ ServiceNow API.
 
 func incident(args []string) {
 	// fill in minimal defaults - also get defaults from config
-	incident := make(snow.Incident)
+	incident := make(snow.IncidentFields)
 	if short != "" {
 		incident["short_description"] = short
 	}
@@ -200,7 +200,7 @@ func incident(args []string) {
 // loop through config IncidentDefaults.AllIncidents and set any fields not already set
 //
 // an empty value means delete any value passed - e.g. short_description in an update
-func configDefaults(incident snow.Incident, defaults map[string]string) {
+func configDefaults(incident snow.IncidentFields, defaults map[string]string) {
 	for k, v := range defaults {
 		if _, ok := incident[k]; !ok {
 			// trim spaces and surrounding quotes before unquoting embedded escapes
@@ -215,7 +215,7 @@ func configDefaults(incident snow.Incident, defaults map[string]string) {
 	}
 }
 
-func mapSeverity(severity string, incident snow.Incident, severities map[string]string) {
+func mapSeverity(severity string, incident snow.IncidentFields, severities map[string]string) {
 	mapping, ok := severities[strings.ToLower(severity)]
 	if !ok {
 		// do nothing, but log

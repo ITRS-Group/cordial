@@ -23,11 +23,11 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-type Incident map[string]string
+type IncidentFields map[string]string
 
-func CreateIncident(vc *config.Config, sys_id string, incident Incident) (incident_number string, err error) {
+func CreateIncident(vc *config.Config, sys_id string, incident IncidentFields) (incident_number string, err error) {
 	var postbytes []byte
-	var result ResultDetail
+	var result resultDetail
 
 	// Initialize ServiceNow Connection
 	s := InitializeConnection(vc)
@@ -44,7 +44,7 @@ func CreateIncident(vc *config.Config, sys_id string, incident Incident) (incide
 	if err != nil {
 		return
 	}
-	result, err = s.POST(postbytes, "", "number", "", "", "").QueryTableSingle(vc.GetString("servicenow.incidenttable"))
+	result, err = s.POST(postbytes, Fields("number")).QueryTableSingle(vc.GetString("servicenow.incidenttable"))
 	if err != nil {
 		return
 	} else {

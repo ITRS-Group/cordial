@@ -21,86 +21,137 @@ import (
 	"net/url"
 )
 
-func (c Connection) POST(payload []byte, limit string, fields string, offset string, query string, sysID string) (t RequestTransitive) {
+func (snow Connection) POST(payload []byte, options ...ReqOptions) TransitiveConnection {
+	opts := evalReqOptions(options...)
+
 	parameters := url.Values{}
 
-	if limit != "" {
-		parameters.Add("sysparm_limit", limit)
+	if opts.limit != "" {
+		parameters.Add("sysparm_limit", opts.limit)
 	}
-	if fields != "" {
-		parameters.Add("sysparm_fields", fields)
+	if opts.fields != "" {
+		parameters.Add("sysparm_fields", opts.fields)
 	}
-	if offset != "" {
-		parameters.Add("sysparm_offset", offset)
+	if opts.offset != "" {
+		parameters.Add("sysparm_offset", opts.offset)
 	}
-	if query != "" {
-		parameters.Add("sysparm_query", query)
+	if opts.query != "" {
+		parameters.Add("sysparm_query", opts.query)
 	}
 
 	parameters.Add("sysparm_exclude_reference_link", "true")
 
-	t = RequestTransitive{
-		Connection: c,
+	return TransitiveConnection{
+		Connection: snow,
 		Method:     "POST",
 		Payload:    payload,
 		Params:     parameters,
-		SysID:      sysID,
+		SysID:      opts.sysID,
 	}
-	return
 }
 
-func (c Connection) GET(limit string, fields string, offset string, query string, sysID string) (t RequestTransitive) {
+func (snow Connection) GET(options ...ReqOptions) TransitiveConnection {
+	opts := evalReqOptions(options...)
+
 	parameters := url.Values{}
 
-	if limit != "" {
-		parameters.Add("sysparm_limit", limit)
+	if opts.limit != "" {
+		parameters.Add("sysparm_limit", opts.limit)
 	}
-	if fields != "" {
-		parameters.Add("sysparm_fields", fields)
+	if opts.fields != "" {
+		parameters.Add("sysparm_fields", opts.fields)
 	}
-	if offset != "" {
-		parameters.Add("sysparm_offset", offset)
+	if opts.offset != "" {
+		parameters.Add("sysparm_offset", opts.offset)
 	}
-	if query != "" {
-		parameters.Add("sysparm_query", query)
+	if opts.query != "" {
+		parameters.Add("sysparm_query", opts.query)
 	}
 
 	parameters.Add("sysparm_exclude_reference_link", "true")
 
-	t = RequestTransitive{
-		Connection: c,
+	return TransitiveConnection{
+		Connection: snow,
 		Method:     "GET",
 		Params:     parameters,
-		SysID:      sysID,
+		SysID:      opts.sysID,
 	}
-	return
 }
 
-func (c Connection) PUT(payload []byte, limit string, fields string, offset string, query string, sysID string) (t RequestTransitive) {
+// limit string, fields string, offset string, query string, sysID string
+func (snow Connection) PUT(payload []byte, options ...ReqOptions) TransitiveConnection {
+	opts := evalReqOptions(options...)
+
 	parameters := url.Values{}
 
-	if limit != "" {
-		parameters.Add("sysparm_limit", limit)
+	if opts.limit != "" {
+		parameters.Add("sysparm_limit", opts.limit)
 	}
-	if fields != "" {
-		parameters.Add("sysparm_fields", fields)
+	if opts.fields != "" {
+		parameters.Add("sysparm_fields", opts.fields)
 	}
-	if offset != "" {
-		parameters.Add("sysparm_offset", offset)
+	if opts.offset != "" {
+		parameters.Add("sysparm_offset", opts.offset)
 	}
-	if query != "" {
-		parameters.Add("sysparm_query", query)
+	if opts.query != "" {
+		parameters.Add("sysparm_query", opts.query)
 	}
 
 	parameters.Add("sysparm_exclude_reference_link", "true")
 
-	t = RequestTransitive{
-		Connection: c,
+	return TransitiveConnection{
+		Connection: snow,
 		Method:     "PUT",
 		Payload:    payload,
 		Params:     parameters,
-		SysID:      sysID,
+		SysID:      opts.sysID,
+	}
+}
+
+type reqOptions struct {
+	limit  string
+	fields string
+	offset string
+	query  string
+	sysID  string
+}
+
+type ReqOptions func(*reqOptions)
+
+func evalReqOptions(options ...ReqOptions) (opts *reqOptions) {
+	opts = &reqOptions{}
+	for _, r := range options {
+		r(opts)
 	}
 	return
+}
 
+func Limit(limit string) ReqOptions {
+	return func(ro *reqOptions) {
+		ro.limit = limit
+	}
+}
+
+func Fields(fields string) ReqOptions {
+	return func(ro *reqOptions) {
+		ro.fields = fields
+	}
+}
+
+func Offset(offset string) ReqOptions {
+	return func(ro *reqOptions) {
+		ro.offset = offset
+	}
+}
+
+func Query(query string) ReqOptions {
+	return func(ro *reqOptions) {
+		ro.query = query
+	}
+}
+
+func SysID(sysID string) ReqOptions {
+	return func(ro *reqOptions) {
+		ro.sysID = sysID
+	}
 }

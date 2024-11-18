@@ -34,7 +34,7 @@ func AcceptEvent(c echo.Context) (err error) {
 	cc := c.(*RouterContext)
 	vc := cc.Conf
 
-	var incident Incident
+	var incident IncidentFields
 	var ok bool
 	var cmdb_ci_id, sys_class_name string
 
@@ -45,7 +45,7 @@ func AcceptEvent(c echo.Context) (err error) {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	s := InitializeConnection(vc)
+	snow := InitializeConnection(vc)
 
 	if cmdb_ci_id, ok = incident["sys_id"]; !ok {
 		var search string
@@ -115,7 +115,7 @@ func AcceptEvent(c echo.Context) (err error) {
 		}
 
 		// only lookup user after all defaults applied
-		u, err := s.GET("1", "sys_id", "", "user_name="+user, "").QueryTableDetail("sys_user")
+		u, err := snow.GET(Limit("1"), Fields("sys_id"), Query("user_name="+user)).QueryTableDetail("sys_user")
 		if err != nil || len(u) == 0 {
 			log.Error().Err(err).Msgf("user not found")
 			return echo.NewHTTPError(http.StatusNotFound, "User not found")
@@ -153,7 +153,7 @@ func AcceptEvent(c echo.Context) (err error) {
 }
 
 // an empty value means delete any value passed - e.g. short_description in an update
-func configDefaults(incident Incident, defaults map[string]string) {
+func configDefaults(incident IncidentFields, defaults map[string]string) {
 	for k, v := range defaults {
 		if _, ok := incident[k]; !ok {
 			// trim spaces and surrounding quotes before unquoting embedded escapes

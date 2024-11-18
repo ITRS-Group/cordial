@@ -28,10 +28,10 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type ResultDetail map[string]string
-type ResultsArray []ResultDetail
+type resultDetail map[string]string
+type resultsArray []resultDetail
 
-type SNOWError struct {
+type snowError struct {
 	Error struct {
 		Message string `json:"message"`
 		Detail  string `json:"detail"`
@@ -39,34 +39,34 @@ type SNOWError struct {
 	Status string `json:"status"`
 }
 
-func (t RequestTransitive) QueryTableDetail(table string) (r ResultDetail, err error) {
-	var i ResultsArray
-	i, err = t.QueryTable(table)
+func (snow TransitiveConnection) QueryTableDetail(table string) (r resultDetail, err error) {
+	var i resultsArray
+	i, err = snow.QueryTable(table)
 	if len(i) > 0 {
 		r = i[0]
 	}
 	return
 }
 
-func (t RequestTransitive) QueryTable(table string) (i ResultsArray, err error) {
-	req, err := AssembleRequest(t, table)
+func (snow TransitiveConnection) QueryTable(table string) (i resultsArray, err error) {
+	req, err := AssembleRequest(snow, table)
 	if err != nil {
 		return
 	}
 
-	if t.Trace {
-		if reqdump, err := httputil.DumpRequest(req, t.Method != "GET"); err == nil {
+	if snow.Trace {
+		if reqdump, err := httputil.DumpRequest(req, snow.Method != "GET"); err == nil {
 			fmt.Fprintf(os.Stderr, "-- Request --\n\n%s\n\n", string(reqdump))
 		}
 	}
 
-	resp, err := t.Client.Do(req)
+	resp, err := snow.Client.Do(req)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
 
-	if t.Trace {
+	if snow.Trace {
 		if respdump, err := httputil.DumpResponse(resp, true); err == nil {
 			fmt.Fprintf(os.Stderr, "-- Response --\n\n%s\n\n", string(respdump))
 		}
@@ -78,7 +78,7 @@ func (t RequestTransitive) QueryTable(table string) (i ResultsArray, err error) 
 	}
 
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-		var r map[string]ResultsArray
+		var r map[string]resultsArray
 		err = json.Unmarshal(body, &r)
 		if err != nil {
 			return
@@ -86,7 +86,7 @@ func (t RequestTransitive) QueryTable(table string) (i ResultsArray, err error) 
 		i = r["result"]
 	} else {
 		if json.Valid(body) {
-			var msg SNOWError
+			var msg snowError
 			json.Unmarshal(body, &msg)
 			err = echo.NewHTTPError(resp.StatusCode, fmt.Sprintf("%s: %s", msg.Error.Message, msg.Error.Detail))
 		} else {
@@ -97,26 +97,26 @@ func (t RequestTransitive) QueryTable(table string) (i ResultsArray, err error) 
 	return
 }
 
-func (t RequestTransitive) QueryTableSingle(table string) (i ResultDetail, err error) {
-	req, err := AssembleRequest(t, table)
+func (snow TransitiveConnection) QueryTableSingle(table string) (i resultDetail, err error) {
+	req, err := AssembleRequest(snow, table)
 	if err != nil {
 		return
 	}
 
-	if t.Trace {
-		if reqdump, err := httputil.DumpRequest(req, t.Method != "GET"); err == nil {
+	if snow.Trace {
+		if reqdump, err := httputil.DumpRequest(req, snow.Method != "GET"); err == nil {
 			fmt.Fprintf(os.Stderr, "-- Request --\n\n%s\n\n", string(reqdump))
 		}
 	}
 
-	resp, err := t.Client.Do(req)
+	resp, err := snow.Client.Do(req)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)
 		return
 	}
 	defer resp.Body.Close()
 
-	if t.Trace {
+	if snow.Trace {
 		if respdump, err := httputil.DumpResponse(resp, true); err == nil {
 			fmt.Fprintf(os.Stderr, "-- Response --\n\n%s\n\n", string(respdump))
 		}
@@ -129,7 +129,7 @@ func (t RequestTransitive) QueryTableSingle(table string) (i ResultDetail, err e
 	}
 
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-		var r map[string]ResultDetail
+		var r map[string]resultDetail
 		err = json.Unmarshal(body, &r)
 		if err != nil {
 			err = echo.NewHTTPError(http.StatusInternalServerError, err)
@@ -138,7 +138,7 @@ func (t RequestTransitive) QueryTableSingle(table string) (i ResultDetail, err e
 		i = r["result"]
 	} else {
 		if json.Valid(body) {
-			var msg SNOWError
+			var msg snowError
 			json.Unmarshal(body, &msg)
 			err = echo.NewHTTPError(resp.StatusCode, fmt.Sprintf("%s: %s", msg.Error.Message, msg.Error.Detail))
 		} else {

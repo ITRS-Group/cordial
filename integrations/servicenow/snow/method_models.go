@@ -29,12 +29,13 @@ import (
 type Connection struct {
 	Client   *http.Client
 	Instance string
+	Path     string
 	Username string
 	Password string
 	Trace    bool
 }
 
-type RequestTransitive struct {
+type TransitiveConnection struct {
 	Connection
 	Payload []byte
 	Method  string

@@ -31,7 +31,7 @@ func LookupIncident(vc *config.Config, cmdb_ci_id string, correlation_id string)
 	s := InitializeConnection(vc)
 
 	q := fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s", cmdb_ci_id, correlation_id)
-	results, err := s.GET("", "sys_id,short_description,state", "", q, "").QueryTableDetail(vc.GetString("servicenow.incidenttable"))
+	results, err := s.GET(Fields("sys_id,short_description,state"), Query(q)).QueryTableDetail(vc.GetString("servicenow.incidenttable"))
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("lookup incident: %s", err))
 		return
@@ -64,9 +64,9 @@ func LookupSysIDSimple(vc *config.Config, table, search, cmdb_ci_default string)
 	field = s2[0]
 	value = s2[1]
 
-	var r ResultDetail
+	var r resultDetail
 
-	if r, err = s.GET("", "name,sys_id,sys_class_name", "", field+"="+value, "").QueryTableDetail(table); err != nil {
+	if r, err = s.GET(Fields("name,sys_id,sys_class_name"), Query(field+"="+value)).QueryTableDetail(table); err != nil {
 		err = echo.NewHTTPError(http.StatusNotFound, err)
 		return
 	}
@@ -94,9 +94,9 @@ func LookupSysID(vc *config.Config, table, search, cmdb_ci_default string) (sys_
 		search = s1[1]
 	}
 
-	var r ResultDetail
+	var r resultDetail
 
-	if r, err = s.GET("", "name,sys_id,sys_class_name", "", search, "").QueryTableDetail(table); err != nil {
+	if r, err = s.GET(Fields("name,sys_id,sys_class_name"), Query(search)).QueryTableDetail(table); err != nil {
 		err = echo.NewHTTPError(http.StatusNotFound, err)
 		return
 	}
