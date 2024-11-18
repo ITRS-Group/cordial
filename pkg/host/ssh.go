@@ -18,6 +18,7 @@ limitations under the License.
 package host
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -702,4 +703,32 @@ func (h *SSHRemote) Run(cmd *exec.Cmd, errfile string) (output []byte, err error
 	cmdstr = fmt.Sprintf("cd %q && %s %s", cmd.Dir, strings.Join(cmd.Env, " "), cmdstr)
 
 	return sess.Output(cmdstr)
+}
+
+func (h *SSHRemote) Uname() (os, arch string, err error) {
+	if strings.Contains(h.ServerVersion(), "windows") {
+		err = errors.New("cannot run remote commands on windows")
+	}
+
+	sess, err := h.NewSession()
+	if err != nil {
+		return
+	}
+	defer sess.Close()
+	out, err := sess.Output("/usr/bin/uname -s -m")
+	if err != nil {
+		return
+	}
+	for _, w := range bytes.Fields(out) {
+		switch string(bytes.ToLower(w)) {
+		case "linux":
+			os = "linux"
+		case "x86_64":
+			arch = "x86_64"
+		default:
+			// ignore for now
+		}
+	}
+
+	return
 }

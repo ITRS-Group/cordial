@@ -49,6 +49,7 @@ type Host interface {
 	IsAvailable() (bool, error)
 	IsLocal() bool
 	LastError() error
+	Uname() (string, string, error)
 	Username() string
 
 	// file operations

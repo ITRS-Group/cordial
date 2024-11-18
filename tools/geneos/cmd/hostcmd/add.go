@@ -181,7 +181,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 		var ok bool
 		if ok, err = h.IsAvailable(); !ok {
-			log.Debug().Err(err).Msg("cannot connect to remote host, not adding.")
+			log.Debug().Err(err).Msgf("cannot connect to remote host %s port %d as %s, not adding", hostcf.GetString("hostname"), hostcf.GetInt("port"), hostcf.GetString("username"))
 			return
 		}
 

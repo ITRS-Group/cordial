@@ -82,9 +82,9 @@ func InitHosts(app string) {
 }
 
 // NewHost is a factory method for Host. It returns an initialised Host
-// and will store it in the global map. If name is "localhost" or "all"
-// or "unknown" then it returns pseudo-hosts used for testing and
-// ranges.
+// and will store it in the global map. If name is "localhost", "all" or
+// "unknown" then it returns pseudo-hosts used for testing and ranges.
+// An empty name results in a nil pointer.
 func NewHost(name string, options ...any) (h *Host) {
 	switch name {
 	case "":
@@ -124,6 +124,10 @@ func NewHost(name string, options ...any) (h *Host) {
 		hosts.Store(name, h)
 	}
 
+	if os, arch, err := h.Uname(); err == nil {
+		h.Set("os", os)
+		h.Set("arch", arch)
+	}
 	h.Set(execname, config.GetString(execname, config.Default(config.GetString("itrshome"))))
 	return
 }
@@ -196,8 +200,6 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 	}
 
 	if strings.Contains(strings.ToLower(serverVersion), "windows") {
-		// XXX simulate values? this also applies to "localhost"
-		h.Set("os", "windows")
 		osinfo["id"] = "windows"
 		cmd := exec.Command("systeminfo")
 		output, _ := h.Run(cmd, "")
@@ -240,7 +242,6 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			}
 		}
 	} else {
-		h.Set("os", "linux")
 		f, err := h.ReadFile("/etc/os-release")
 		if err != nil {
 			if f, err = h.ReadFile("/usr/lib/os-release"); err != nil {

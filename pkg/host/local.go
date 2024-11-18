@@ -251,3 +251,7 @@ func (h *Local) Run(cmd *exec.Cmd, errfile string) (output []byte, err error) {
 
 	return cmd.Output()
 }
+
+func (h *Local) Uname() (os, arch string, err error) {
+	return runtime.GOOS, runtime.GOARCH, nil
+}
