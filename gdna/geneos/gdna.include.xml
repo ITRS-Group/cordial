@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.0.0-240827 at 2024-11-06 10:21:27 by pgalbavy on ITRSLP257-->
-<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.0.3-240926/gateway.xsd">
+<!--Edited using Gateway Setup Editor version GA7.0.0-240827 at 2024-11-14 16:18:49 by pgalbavy on ITRSLP257-->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.1.0-241109/gateway.xsd">
 	<probes>
 		<probe name="gdna">
 			<hostname>localhost</hostname>
@@ -2589,7 +2589,7 @@ ORDER BY probeVersion ASC
 				</block>
 			</rule>
 			<ruleGroup name="Gateways">
-				<rule name="Empty Probes">
+				<rule name="Empty Probes" disabled="true">
 					<targets>
 						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]/rows/row[contains(@name,&quot;#&quot;)]/cell[(@column=&quot;probeName&quot;)]</target>
 						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]/rows/row[contains(@name,&quot;#&quot;)]/cell[(@column=&quot;probePort&quot;)]</target>
