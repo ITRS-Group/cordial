@@ -49,6 +49,8 @@ func RenderHelpAsMD(command *cobra.Command) {
 `)
 }
 
+var executableName string
+
 // ExecutableName returns a processed executable name. Symlinks are
 // resolved and the basename of the resulting file has, at most, one
 // extension removed and then if there is a '-' followed by the matching
@@ -60,6 +62,10 @@ func RenderHelpAsMD(command *cobra.Command) {
 //	`geneos.exe` -> `geneos`
 //	`dv2email-v1.10.0` -> `dv2email`
 func ExecutableName(version ...string) (execname string) {
+	if executableName != "" {
+		return executableName
+	}
+
 	execname, _ = os.Executable()
 	execname, _ = filepath.EvalSymlinks(execname)
 	execname = path.Base(filepath.ToSlash(execname))
@@ -80,6 +86,9 @@ func ExecutableName(version ...string) (execname string) {
 	} else {
 		execname = strings.TrimSuffix(execname, "-"+VERSION)
 	}
+
+	// cache
+	executableName = execname
 	return
 }
 
