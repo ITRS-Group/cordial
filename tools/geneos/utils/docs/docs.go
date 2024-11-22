@@ -57,6 +57,7 @@ var doclist = []docs{
 func main() {
 	for _, d := range doclist {
 		os.MkdirAll(d.dir, 0775)
+		d.command.Use = "geneos"
 		if err := GenMarkdownTree(d.command, d.dir); err != nil {
 			panic(err)
 		}
