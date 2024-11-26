@@ -42,6 +42,7 @@ import (
 	"github.com/schollz/progressbar/v3"
 	"golang.org/x/term"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
@@ -694,7 +695,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 
 		// if that fails, check for creds
 		if opts.username == "" {
-			creds := config.FindCreds(source, config.SetAppName(execname))
+			creds := config.FindCreds(source, config.SetAppName(cordial.ExecutableName()))
 			if creds != nil {
 				opts.username = creds.GetString("username")
 				opts.password = creds.GetPassword("password")
@@ -792,7 +793,7 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 
 	// check for fallback creds
 	if opts.username == "" {
-		creds := config.FindCreds(baseurl, config.SetAppName(execname))
+		creds := config.FindCreds(baseurl, config.SetAppName(cordial.ExecutableName()))
 		if creds != nil {
 			opts.username = creds.GetString("username")
 			opts.password = creds.GetPassword("password")

@@ -296,7 +296,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 
 	// then wlk the shared directory, checking and updating contents
 	d = i.Type().Shared(i.Host())
-	r = strings.TrimPrefix(d, i.Host().GetString(cmd.Execname)+"/")
+	r = strings.TrimPrefix(d, i.Host().GetString(cordial.ExecutableName())+"/")
 
 	fs.WalkDir(os.DirFS(d), ".", func(file string, di fs.DirEntry, err error) error {
 		if err != nil {

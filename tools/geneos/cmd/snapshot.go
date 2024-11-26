@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/xpath"
@@ -161,12 +162,12 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *instance.Response
 		//
 		// credential domain is gateway:NAME or gateway:* for wildcard
 		if username == "" {
-			creds := config.FindCreds(i.Type().String()+":"+i.Name(), config.SetAppName(Execname))
+			creds := config.FindCreds(i.Type().String()+":"+i.Name(), config.SetAppName(cordial.ExecutableName()))
 			if creds != nil {
 				username = creds.GetString("username")
 				password = creds.GetPassword("password")
 			} else {
-				if creds = config.FindCreds(i.Type().String()+":*", config.SetAppName(Execname)); creds != nil {
+				if creds = config.FindCreds(i.Type().String()+":*", config.SetAppName(cordial.ExecutableName())); creds != nil {
 					username = creds.GetString("username")
 					password = creds.GetPassword("password")
 				}

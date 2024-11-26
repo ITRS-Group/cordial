@@ -62,6 +62,9 @@ func main() {
 	memguard.CatchInterrupt()
 	defer memguard.Purge()
 
+	// cordial.ExecutableName() returns a full resolved name, including
+	// following symlinks, and we want to know if the are being called
+	// through a symlink, so roll our own here
 	execname := path.Base(os.Args[0])
 
 	// if the executable does not have a `ctl` suffix then execute the

@@ -28,6 +28,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -116,7 +117,7 @@ func hostListInstancePlainHosts(h *geneos.Host, w any) (err error) {
 	if username == "" {
 		username = "-"
 	}
-	fmt.Fprintf(w.(io.Writer), "%s\t%s\t%s\t%s\t%d\t%s\n", h.GetString("name"), username, h.GetString("hostname"), flags, h.GetInt("port", config.Default(22)), h.GetString(cmd.Execname))
+	fmt.Fprintf(w.(io.Writer), "%s\t%s\t%s\t%s\t%d\t%s\n", h.GetString("name"), username, h.GetString("hostname"), flags, h.GetInt("port", config.Default(22)), h.GetString(cordial.ExecutableName()))
 	return
 }
 
@@ -128,7 +129,7 @@ func hostListInstanceCSVHosts(h *geneos.Host, w any) (err error) {
 	username := h.GetString("username")
 
 	c := w.(*csv.Writer)
-	c.Write([]string{h.String(), username, h.GetString("hostname"), flags, fmt.Sprint(h.GetInt("port", config.Default(22))), h.GetString(cmd.Execname)})
+	c.Write([]string{h.String(), username, h.GetString("hostname"), flags, fmt.Sprint(h.GetInt("port", config.Default(22))), h.GetString(cordial.ExecutableName())})
 	return
 }
 
@@ -139,6 +140,6 @@ func hostListInstanceJSONHosts(h *geneos.Host, w any) (err error) {
 	}
 	username := h.GetString("username")
 
-	listCmdEntries = append(listCmdEntries, listCmdType{h.String(), username, h.GetString("hostname"), flags, h.GetInt64("port", config.Default(22)), h.GetString(cmd.Execname)})
+	listCmdEntries = append(listCmdEntries, listCmdType{h.String(), username, h.GetString("hostname"), flags, h.GetInt64("port", config.Default(22)), h.GetString(cordial.ExecutableName())})
 	return
 }

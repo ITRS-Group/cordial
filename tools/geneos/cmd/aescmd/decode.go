@@ -26,6 +26,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -42,7 +43,7 @@ func init() {
 	cmd.UserKeyFile = cmd.DefaultUserKeyfile
 	aesPrevUserKeyFile = config.KeyFile(
 		config.Path("prevkeyfile",
-			config.SetAppName(cmd.Execname),
+			config.SetAppName(cordial.ExecutableName()),
 			config.SetFileExtension("aes"),
 			config.IgnoreWorkingDir(),
 		))

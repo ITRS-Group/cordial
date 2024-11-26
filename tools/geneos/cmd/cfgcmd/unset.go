@@ -20,6 +20,7 @@ package cfgcmd
 import (
 	_ "embed"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/spf13/cobra"
@@ -48,7 +49,7 @@ var unsetCmd = &cobra.Command{
 		}
 
 		_, args := cmd.ParseTypeNames(command)
-		orig, err := config.Load(cmd.Execname,
+		orig, err := config.Load(cordial.ExecutableName(),
 			config.IgnoreWorkingDir(),
 			config.IgnoreSystemDir(),
 		)
@@ -69,7 +70,7 @@ var unsetCmd = &cobra.Command{
 		}
 
 		if changed {
-			return new.Save(cmd.Execname)
+			return new.Save(cordial.ExecutableName())
 		}
 		return nil
 	},

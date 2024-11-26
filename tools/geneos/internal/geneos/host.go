@@ -128,7 +128,7 @@ func NewHost(name string, options ...any) (h *Host) {
 		h.Set("os", os)
 		h.Set("arch", arch)
 	}
-	h.Set(execname, config.GetString(execname, config.Default(config.GetString("itrshome"))))
+	h.Set(cordial.ExecutableName(), config.GetString(cordial.ExecutableName(), config.Default(config.GetString("itrshome"))))
 	return
 }
 
@@ -335,7 +335,7 @@ func (h *Host) PathTo(parts ...any) string {
 		h = LOCAL
 	}
 
-	strParts := []string{h.GetString(execname)}
+	strParts := []string{h.GetString(cordial.ExecutableName())}
 
 	for _, p := range parts {
 		switch s := p.(type) {
@@ -408,11 +408,12 @@ func LoadHostConfig() {
 	if err != nil {
 		log.Error().Err(err).Msg("user lookup failed, skipping user config directory")
 	} else {
-		confFile = config.PromoteFile(host.Localhost, path.Join(userConfDir, execname), path.Join(userConfDir, OldUserHostFile))
+		confFile = config.PromoteFile(host.Localhost, path.Join(userConfDir, cordial.ExecutableName()), path.Join(userConfDir, OldUserHostFile))
 	}
+
 	// note that SetAppName only matters when PromoteFile returns an empty path
 	h, err := config.Load("hosts",
-		config.SetAppName(execname),
+		config.SetAppName(cordial.ExecutableName()),
 		config.SetConfigFile(confFile),
 		config.UseDefaults(false),
 		config.IgnoreWorkingDir(),
@@ -456,5 +457,5 @@ func SaveHostConfig() error {
 		return true
 	})
 
-	return n.Save("hosts", config.SetAppName(execname))
+	return n.Save("hosts", config.SetAppName(cordial.ExecutableName()))
 }

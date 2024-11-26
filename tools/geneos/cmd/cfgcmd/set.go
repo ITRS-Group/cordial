@@ -23,6 +23,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
@@ -53,7 +54,7 @@ geneos config set geneos="/opt/geneos"
 		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
 			return command.Usage()
 		}
-		cf, err := config.Load(cmd.Execname,
+		cf, err := config.Load(cordial.ExecutableName(),
 			config.IgnoreSystemDir(),
 			config.IgnoreWorkingDir(),
 		)
@@ -71,7 +72,7 @@ geneos config set geneos="/opt/geneos"
 			cf.Set("itrshome", nil)
 		}
 
-		log.Debug().Msgf("save config %q", cmd.Execname)
-		return cf.Save(cmd.Execname)
+		log.Debug().Msgf("save config %q", cordial.ExecutableName())
+		return cf.Save(cordial.ExecutableName())
 	},
 }

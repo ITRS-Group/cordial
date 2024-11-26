@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/spf13/cobra"
@@ -54,7 +55,7 @@ var showCmd = &cobra.Command{
 		if showCmdAll {
 			cf = config.GetConfig()
 		} else {
-			cf, err = config.Load(cmd.Execname,
+			cf, err = config.Load(cordial.ExecutableName(),
 				config.IgnoreSystemDir(),
 				config.IgnoreWorkingDir())
 			if err != nil {

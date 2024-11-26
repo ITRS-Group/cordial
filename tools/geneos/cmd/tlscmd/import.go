@@ -29,6 +29,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -123,7 +124,7 @@ $ geneos tls import --signing-bundle file.pem
 		if err = geneos.WriteChainLocal(chain); err != nil {
 			return err
 		}
-		fmt.Printf("%s certificate chain written using %s\n", cmd.Execname, importCmdChain)
+		fmt.Printf("%s certificate chain written using %s\n", cordial.ExecutableName(), importCmdChain)
 
 		return
 	},

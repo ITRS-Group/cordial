@@ -24,12 +24,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/rs/zerolog/log"
 )
-
-var execname string
 
 // initDirs is a map of component type name to a slice of directories to create
 var initDirs = make(map[string][]string)
@@ -48,9 +47,6 @@ var RootComponent = Component{
 	Aliases:      []string{"any"},
 	DownloadBase: DownloadBases{Default: "", Nexus: ""},
 	GlobalSettings: map[string]string{
-		// Root directory for all operations
-		execname: "",
-
 		// Root URL for all downloads of software archives
 		// hardwire delimiters because config may not be initialised for config.Join()
 		"download::url": defaultURL,
@@ -268,7 +264,7 @@ func (ct *Component) MakeDirs(h *Host) (err error) {
 	if ct != nil {
 		name = ct.Name
 	}
-	geneos := h.GetString(execname) // root for host h
+	geneos := h.GetString(cordial.ExecutableName()) // root for host h
 	for _, d := range initDirs[name] {
 		dir := path.Join(geneos, d)
 		if err = h.MkdirAll(dir, 0775); err != nil {

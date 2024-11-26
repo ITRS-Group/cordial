@@ -39,16 +39,6 @@ import (
 
 const pkgname = "cordial"
 
-// default command name for pre-init
-const execname = "geneos"
-
-// Execname is the basename, without extension, of the underlying binary
-// used to start the program. The initialising routines evaluate
-// symlinks etc.
-//
-// initialise to sensible default
-var Execname = execname
-
 var cfgFile string
 
 // Hostname is the cmd package global host selected ny the `--host`/`-H` option
@@ -63,7 +53,7 @@ var debug, quiet bool
 // config.Keyfile type
 var DefaultUserKeyfile = config.KeyFile(
 	config.Path("keyfile",
-		config.SetAppName(Execname),
+		config.SetAppName(cordial.ExecutableName()),
 		config.SetFileExtension("aes"),
 		config.IgnoreWorkingDir(),
 	),
@@ -87,8 +77,8 @@ func init() {
 	config.DefaultKeyDelimiter("::")
 	config.ResetConfig(config.KeyDelimiter("::"))
 
-	GeneosCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/geneos.json, "+
-		config.Path(Execname,
+	GeneosCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/"+cordial.ExecutableName()+".json, "+
+		config.Path(cordial.ExecutableName(),
 			config.IgnoreUserConfDir(),
 			config.IgnoreWorkingDir())+
 		")")
@@ -115,7 +105,7 @@ func init() {
 		if b, _ := c.Flags().GetBool("help"); b {
 			c.Usage()
 			fmt.Println("")
-			fmt.Println("💡 Use the `help` command to get more detailed help, instead of the `-h` flag, e.g. `" + strings.Replace(c.CommandPath(), Execname, Execname+" help", 1) + "`")
+			fmt.Println("💡 Use the `help` command to get more detailed help, instead of the `-h` flag, e.g. `" + strings.Replace(c.CommandPath(), cordial.ExecutableName(), cordial.ExecutableName()+" help", 1) + "`")
 
 		} else {
 			helpfunc(c, []string{})
@@ -123,7 +113,7 @@ func init() {
 	})
 
 	// run initialisers on internal packages, set the executable name
-	geneos.Init(Execname)
+	geneos.Init(cordial.ExecutableName())
 }
 
 //go:embed _docs/geneos.md
@@ -164,7 +154,7 @@ func cmddata(command *cobra.Command) *CmdValType {
 
 // GeneosCmd represents the base command when called without any subcommands
 var GeneosCmd = &cobra.Command{
-	Use:   Execname + " COMMAND [flags] [TYPE] [NAME...] [parameters...]",
+	Use:   cordial.ExecutableName() + " COMMAND [flags] [TYPE] [NAME...] [parameters...]",
 	Short: "Take control of your Geneos environments",
 	Long:  geneosCmdDescription,
 	Example: strings.ReplaceAll(`
@@ -297,9 +287,9 @@ func initConfig() {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-	Execname = cordial.ExecutableName()
+	// Execname = cordial.ExecutableName()
 
-	log.Debug().Msgf("cordial 'geneos' running as execname '%s', version %s", Execname, cordial.VERSION)
+	log.Debug().Msgf("cordial 'geneos' running as executable '%s', version %s", cordial.ExecutableName(), cordial.VERSION)
 
 	// `oldConfDir` is the original path to the user configuration,
 	// typically directly in `~/geneos`. The LoadConfig() function
@@ -308,7 +298,7 @@ func initConfig() {
 	// errors.
 	oldConfDir, _ := config.UserConfigDir()
 
-	cf, err := config.Load(Execname,
+	cf, err := config.Load(cordial.ExecutableName(),
 		config.SetConfigFile(cfgFile),
 		config.UseGlobal(),
 		config.AddDirs(oldConfDir),
@@ -319,7 +309,7 @@ func initConfig() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
-	log.Debug().Msgf("configuration loaded from %s", config.Path(Execname,
+	log.Debug().Msgf("configuration loaded from %s", config.Path(cordial.ExecutableName(),
 		config.SetConfigFile(cfgFile),
 		config.UseGlobal(),
 		config.AddDirs(oldConfDir),
@@ -329,18 +319,18 @@ func initConfig() {
 	))
 
 	// support old set-ups
-	cf.BindEnv(Execname, "GENEOS_HOME", "ITRS_HOME")
+	cf.BindEnv(cordial.ExecutableName(), "GENEOS_HOME", "ITRS_HOME")
 
 	// manual alias+remove as the viper.RegisterAlias doesn't work as expected
 	if cf.IsSet("itrshome") {
-		if !cf.IsSet(Execname) {
-			cf.Set(Execname, cf.GetString("itrshome"))
+		if !cf.IsSet(cordial.ExecutableName()) {
+			cf.Set(cordial.ExecutableName(), cf.GetString("itrshome"))
 		}
 		cf.Set("itrshome", nil)
 	}
 
 	// initialise after config loaded
-	geneos.InitHosts(Execname)
+	geneos.InitHosts(cordial.ExecutableName())
 }
 
 // RunE runs a command in a sub-package to avoid import loops. It is

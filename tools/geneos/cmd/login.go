@@ -24,6 +24,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 )
@@ -66,7 +67,7 @@ var loginCmd = &cobra.Command{
 		if loginCmdList {
 			var err2 error
 			cr, err2 := config.Load("credentials",
-				config.SetAppName(Execname),
+				config.SetAppName(cordial.ExecutableName()),
 				config.UseDefaults(false),
 				config.IgnoreWorkingDir(),
 			)
@@ -124,7 +125,7 @@ var loginCmd = &cobra.Command{
 			Domain:   urlMatch,
 			Username: loginCmdUsername,
 			Password: enc,
-		}, config.SetAppName(Execname)); err != nil {
+		}, config.SetAppName(cordial.ExecutableName())); err != nil {
 			return err
 		}
 

@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -118,10 +119,10 @@ var deployCmd = &cobra.Command{
 		CmdGlobal:      "false",
 		CmdRequireHome: "false",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var name string
 
-		ct, names, params := ParseTypeNamesParams(cmd)
+		ct, names, params := ParseTypeNamesParams(command)
 		if ct == nil {
 			fmt.Println("component type must be given for a deployment")
 			return nil
@@ -163,8 +164,8 @@ var deployCmd = &cobra.Command{
 					if root, err = config.UserHomeDir(); err != nil {
 						log.Warn().Msg("cannot find user home directory")
 					}
-					if path.Base(root) != Execname {
-						root = path.Join(root, Execname)
+					if path.Base(root) != cordial.ExecutableName() {
+						root = path.Join(root, cordial.ExecutableName())
 					}
 					if input, err = config.ReadUserInputLine("Geneos Directory (default %q): ", root); err == nil {
 						if strings.TrimSpace(input) != "" {
@@ -173,17 +174,17 @@ var deployCmd = &cobra.Command{
 						}
 					}
 					err = nil
-					if path.Base(root) == execname {
+					if path.Base(root) == cordial.ExecutableName() {
 						deployCmdGeneosHome = root
 					} else {
-						deployCmdGeneosHome = path.Join(root, execname)
+						deployCmdGeneosHome = path.Join(root, cordial.ExecutableName())
 					}
 				}
 
 				// create base install
 				deployCmdGeneosHome, _ = h.Abs(deployCmdGeneosHome)
-				config.Set(execname, deployCmdGeneosHome)
-				if err = geneos.SaveConfig(execname); err != nil {
+				config.Set(cordial.ExecutableName(), deployCmdGeneosHome)
+				if err = geneos.SaveConfig(cordial.ExecutableName()); err != nil {
 					return err
 				}
 
@@ -193,7 +194,7 @@ var deployCmd = &cobra.Command{
 				h = geneos.LOCAL
 			}
 		} else {
-			basedir := h.GetString(Execname)
+			basedir := h.GetString(cordial.ExecutableName())
 			if deployCmdGeneosHome != "" && deployCmdGeneosHome != basedir {
 				fmt.Printf("Geneos location given with --geneos/-D must be the same as configured for remote host %s\n", h)
 				return nil
@@ -251,14 +252,14 @@ var deployCmd = &cobra.Command{
 			options := []geneos.PackageOptions{
 				geneos.Version(deployCmdVersion),
 				geneos.Basename(deployCmdBase),
-				geneos.UseRoot(h.GetString(Execname)),
+				geneos.UseRoot(h.GetString(cordial.ExecutableName())),
 				geneos.LocalOnly(deployCmdLocal),
 				geneos.NoSave(deployCmdNoSave || deployCmdLocal),
 				geneos.OverrideVersion(deployCmdOverride),
 				geneos.Password(deployCmdPassword),
 				geneos.Username(deployCmdUsername),
 			}
-			if cmd.Flags().Changed("archive") {
+			if command.Flags().Changed("archive") {
 				options = append(options,
 					geneos.LocalArchive(deployCmdArchive),
 				)
@@ -295,7 +296,7 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 		if signingBundle != "" {
-			RunE(cmd.Root(), []string{"tls", "import", "--signing-bundle"}, []string{"pem:" + signingBundle})
+			RunE(command.Root(), []string{"tls", "import", "--signing-bundle"}, []string{"pem:" + signingBundle})
 		}
 
 		// we are installed and ready to go, drop through to code from `add`

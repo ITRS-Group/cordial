@@ -24,6 +24,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/rs/zerolog/log"
@@ -103,8 +104,9 @@ func Initialise(h *Host, options ...PackageOptions) (err error) {
 	}
 
 	if h.IsLocal() {
-		config.Set(execname, opts.geneosdir)
-		if err = SaveConfig(execname); err != nil {
+		log.Debug().Msgf("setting %q to %q", cordial.ExecutableName(), opts.geneosdir)
+		config.Set(cordial.ExecutableName(), opts.geneosdir)
+		if err = SaveConfig(cordial.ExecutableName()); err != nil {
 			return err
 		}
 
@@ -128,9 +130,8 @@ func Initialise(h *Host, options ...PackageOptions) (err error) {
 
 // Init is called from the main command initialisation
 func Init(app string) {
-	execname = app
-	SigningCertBasename = execname
-	ChainCertFile = execname + "-chain.pem"
+	SigningCertBasename = cordial.ExecutableName()
+	ChainCertFile = cordial.ExecutableName() + "-chain.pem"
 	RootComponent.Register(nil)
 }
 
@@ -138,13 +139,13 @@ func Init(app string) {
 // run on an older installation it may return the value from the legacy
 // configuration item `itrshome` if `geneos` is not set.
 func LocalRoot() string {
-	return config.GetString(execname, config.Default(config.GetString("itrshome")))
+	return config.GetString(cordial.ExecutableName(), config.Default(config.GetString("itrshome")))
 }
 
 // SaveConfig saves the global configuration (in config.Global) but
 // excludes any values that still have their defaults, by iterating
 // through registered components and checking.
-func SaveConfig(execname string) error {
+func SaveConfig(name string) error {
 	cf := config.New()
 	globalsettings := make(map[string]string)
 	for _, ct := range AllComponents() {
@@ -170,5 +171,5 @@ func SaveConfig(execname string) error {
 			cf.Set(k, config.GetString(k))
 		}
 	}
-	return cf.Save(execname)
+	return cf.Save(name)
 }

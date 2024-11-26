@@ -22,6 +22,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
@@ -48,12 +49,12 @@ var logoutCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if logoutCmdAll {
-			config.DeleteAllCreds(config.SetAppName(Execname))
+			config.DeleteAllCreds(config.SetAppName(cordial.ExecutableName()))
 			return
 		}
 		if len(args) != 0 {
 			for _, d := range args {
-				config.DeleteCreds(d, config.SetAppName(Execname))
+				config.DeleteCreds(d, config.SetAppName(cordial.ExecutableName()))
 			}
 		}
 	},

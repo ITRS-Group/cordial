@@ -46,7 +46,7 @@ var versionCmd = &cobra.Command{
 	},
 	DisableFlagsInUseLine: true,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s version %s\n", Execname, cmd.Version)
+		fmt.Printf("%s version %s\n", cordial.ExecutableName(), cmd.Version)
 		if debug {
 			info, ok := dbg.ReadBuildInfo()
 			if ok {

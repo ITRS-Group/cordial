@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -200,8 +201,8 @@ func initProcessArgs(args []string) (options []geneos.PackageOptions, err error)
 		// default home + geneos, but check with user if it's an
 		// interactive session
 		root = homedir
-		if path.Base(homedir) != cmd.Execname {
-			root = path.Join(homedir, cmd.Execname)
+		if path.Base(homedir) != cordial.ExecutableName() {
+			root = path.Join(homedir, cordial.ExecutableName())
 		}
 		if input, err := config.ReadUserInputLine("Geneos Directory (default %q): ", root); err == nil {
 			if strings.TrimSpace(input) != "" {
@@ -219,6 +220,7 @@ func initProcessArgs(args []string) (options []geneos.PackageOptions, err error)
 		log.Fatal().Msgf("too many args: %v", args)
 	}
 
+	log.Debug().Msgf("using %q as root", root)
 	options = append(options, geneos.UseRoot(root))
 
 	// download authentication
