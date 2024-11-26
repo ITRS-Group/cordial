@@ -28,6 +28,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -37,6 +38,22 @@ import (
 var addCmdInit, addCmdPrompt bool
 var addCmdPassword *config.Plaintext
 var addCmdKeyfile config.KeyFile
+var addCmdPrivateKeyfiles PrivateKeyFiles
+
+type PrivateKeyFiles []string
+
+func (i *PrivateKeyFiles) String() string {
+	return ""
+}
+
+func (i *PrivateKeyFiles) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
+func (i *PrivateKeyFiles) Type() string {
+	return "PATH"
+}
 
 func init() {
 	hostCmd.AddCommand(addCmd)
@@ -46,7 +63,8 @@ func init() {
 	addCmd.Flags().BoolVarP(&addCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
 	addCmd.Flags().BoolVarP(&addCmdPrompt, "prompt", "p", false, "Prompt for password")
 	addCmd.Flags().VarP(addCmdPassword, "password", "P", "Password")
-	addCmd.Flags().VarP(&addCmdKeyfile, "keyfile", "k", "Keyfile")
+	addCmd.Flags().VarP(&addCmdKeyfile, "keyfile", "k", "Keyfile for encryption of stored password")
+	addCmd.Flags().VarP(&addCmdPrivateKeyfiles, "privatekey", "i", "Private key file")
 
 	addCmd.Flags().SortFlags = false
 }
@@ -111,7 +129,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 		hostcf.SetDefault("port", 22)
 		// XXX default to remote user's home dir, not local
-		hostcf.SetDefault(cmd.Execname, geneos.LocalRoot())
+		hostcf.SetDefault(cordial.ExecutableName(), geneos.LocalRoot())
 
 		var password string
 		var pw = &config.Plaintext{}
@@ -166,11 +184,16 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			hostcf.Set("username", sshurl.User.Username())
 		}
 
+		if len(addCmdPrivateKeyfiles) > 0 {
+			hostcf.Set("privatekeys", []string(addCmdPrivateKeyfiles))
+		}
+
 		h := geneos.NewHost(name,
 			host.Hostname(hostcf.GetString("hostname")),
 			host.Username(hostcf.GetString("username")),
 			host.Port(uint16(hostcf.GetInt("port"))),
 			host.Password(pw.Enclave),
+			host.PrivateKeyFiles(hostcf.GetStringSlice("privatekeys")...),
 		)
 
 		h.MergeConfigMap(hostcf.AllSettings())

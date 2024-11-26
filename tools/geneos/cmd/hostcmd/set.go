@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -34,6 +33,7 @@ import (
 var setCmdPrompt bool
 var setCmdPassword *config.Plaintext
 var setCmdKeyfile config.KeyFile
+var setCmdPrivateKeyfiles PrivateKeyFiles
 
 func init() {
 	hostCmd.AddCommand(setCmd)
@@ -43,6 +43,7 @@ func init() {
 	setCmd.Flags().BoolVarP(&setCmdPrompt, "prompt", "p", false, "Prompt for password")
 	setCmd.Flags().VarP(setCmdPassword, "password", "P", "password")
 	setCmd.Flags().VarP(&setCmdKeyfile, "keyfile", "k", "Keyfile")
+	setCmd.Flags().VarP(&setCmdPrivateKeyfiles, "privatekey", "i", "Private key file")
 
 	setCmd.Flags().SortFlags = false
 }
@@ -61,12 +62,13 @@ var setCmd = &cobra.Command{
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
+		var password string
+		var hosts []*geneos.Host
+
 		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
 			return command.Usage()
 		}
 		_, args, params := cmd.ParseTypeNamesParams(command)
-		var password string
-		var hosts []*geneos.Host
 
 		if len(args) == 0 {
 			hosts = geneos.RemoteHosts(false)
@@ -112,11 +114,12 @@ var setCmd = &cobra.Command{
 			if password != "" {
 				h.Set("password", password)
 			}
+
+			if len(setCmdPrivateKeyfiles) > 0 {
+				h.Set("privatekeys", append(h.GetStringSlice("privatekeys"), setCmdPrivateKeyfiles...))
+			}
 		}
 
-		if err = geneos.SaveHostConfig(); err != nil {
-			log.Fatal().Err(err).Msg("")
-		}
-		return
+		return geneos.SaveHostConfig()
 	},
 }
