@@ -39,7 +39,6 @@ import (
 var cf *config.Config
 var debug, trace, quiet bool
 var conffile string
-var execname = cordial.ExecutableName()
 var nowatchconfig bool
 var hostname, hosttype, output string
 
@@ -51,7 +50,7 @@ func init() {
 	rootCmd.PersistentFlags().MarkHidden("trace")
 
 	rootCmd.PersistentFlags().StringVar(&conffile, "config", "", "path to configuration file")
-	rootCmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", execname+".log", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
+	rootCmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", cordial.ExecutableName()+".log", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
 
 	rootCmd.PersistentFlags().BoolVarP(&nowatchconfig, "nowatch", "N", false, "Do not watch configuration file for changes")
 
@@ -76,7 +75,7 @@ var uuidNS uuid.UUID
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   execname,
+	Use:   cordial.ExecutableName(),
 	Short: "Generate SAN configurations",
 	Long:  ``,
 	CompletionOptions: cobra.CompletionOptions{
@@ -165,14 +164,14 @@ func initConfig(cmd *cobra.Command) {
 			)
 		}
 
-		cf, err = config.Load(execname, opts...)
+		cf, err = config.Load(cordial.ExecutableName(), opts...)
 		if err != nil {
-			log.Fatal().Err(err).Msgf("loading from %s", config.Path(execname, opts...))
+			log.Fatal().Err(err).Msgf("loading from %s", config.Path(cordial.ExecutableName(), opts...))
 		}
 
 		// use MustExists() to check for actual files
 		opts = append(opts, config.MustExist())
-		deferredlog = fmt.Sprintf("configuration loaded from %s", config.Path(execname, opts...))
+		deferredlog = fmt.Sprintf("configuration loaded from %s", config.Path(cordial.ExecutableName(), opts...))
 	}
 
 	// check if logfile is set on the command line, which overrides config
@@ -183,7 +182,7 @@ func initConfig(cmd *cobra.Command) {
 		}
 	}
 
-	cordial.LogInit(execname,
+	cordial.LogInit(cordial.ExecutableName(),
 		cordial.SetLogfile(logFile),
 		cordial.LumberjackOptions(&lumberjack.Logger{
 			Filename:   logFile,

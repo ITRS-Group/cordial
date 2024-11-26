@@ -76,7 +76,7 @@ var serverCmd = &cobra.Command{
 		if cf.GetBool("server.tls.enable") {
 			usetls = "s"
 		}
-		log.Info().Msgf("starting %s version %s. listening for %s connections on %s:%d", execname, cordial.VERSION, "http"+usetls, cf.GetString("server.host"), cf.GetInt("server.port"))
+		log.Info().Msgf("starting %s version %s. listening for %s connections on %s:%d", cordial.ExecutableName(), cordial.VERSION, "http"+usetls, cf.GetString("server.host"), cf.GetInt("server.port"))
 		cs, e := initServer(cf)
 		go cs.startServer(e)
 		<-done

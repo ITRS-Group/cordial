@@ -29,6 +29,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
@@ -46,7 +47,7 @@ func ParseInventoryYAML(cf *config.Config, cacheFile string, in io.Reader) (inv 
 		in = io.TeeReader(in, buf)
 	}
 
-	conf, err := config.Load(execname,
+	conf, err := config.Load(cordial.ExecutableName(),
 		config.UseDefaults(false),
 		config.SetConfigReader(in),
 		config.SetFileExtension("yaml"),
