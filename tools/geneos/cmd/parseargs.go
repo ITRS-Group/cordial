@@ -33,11 +33,26 @@ import (
 //
 // Annotations must be read-only.
 const (
-	CmdWildcardNames = "wildcard"     // "true" or "false" - pass all names through a path.Match style lookup
-	CmdKeepHosts     = "hosts"        // do not expand "@host", for command like copy/move
-	CmdReplacedBy    = "replacedby"   // deprecated command alias
-	CmdRequireHome   = "needshomedir" // "true" or "false"
-	CmdGlobal        = "global"       // "true" if an empty list of instances should mean all instances.
+	// CmdWildcardNames should be "true" or "false". True will pass all
+	// names through a path.Match style lookup
+	CmdWildcardNames = "wildcard"
+
+	// CmdKeepHosts should be "true" to not expand "@host", for command
+	// like copy/move
+	CmdKeepHosts = "hosts"
+
+	// CmdReplacedBy should be set to the new command that replaces
+	// this one. It should be a full path without the executable, e.g.
+	// "package install"
+	CmdReplacedBy = "replacedby"
+
+	// CmdRequireHome shouw be "true" if the command requires the Geneos
+	// home directory to be set, initialised or not
+	CmdRequireHome = "needshomedir"
+
+	// CmdGlobal should be "true" if an empty list of instances should
+	// mean all instances.
+	CmdGlobal = "global"
 )
 
 // validNameRE is the test for what is a potentially valid instance name
