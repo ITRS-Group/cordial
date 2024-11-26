@@ -195,11 +195,11 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		//   * if the OS on the remote is different convert the path separators
 		//   * use the user home dir with optional subdir if the last component is not the same
 		if sshurl.Path != "" {
-			h.Set(cmd.Execname, sshurl.Path)
+			h.Set(cordial.ExecutableName(), sshurl.Path)
 		} else if runtime.GOOS != h.GetString("os") {
 			geneosdir := h.GetString("homedir")
-			if path.Base(geneosdir) != cmd.Execname {
-				geneosdir = path.Join(geneosdir, cmd.Execname)
+			if path.Base(geneosdir) != cordial.ExecutableName() {
+				geneosdir = path.Join(geneosdir, cordial.ExecutableName())
 			}
 			// switch h.GetString("os") {
 			// case "windows":
@@ -207,13 +207,13 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			// case "linux":
 			// 	geneosdir = filepath.ToSlash(geneosdir)
 			// }
-			h.Set(cmd.Execname, geneosdir)
+			h.Set(cordial.ExecutableName(), geneosdir)
 		} else {
 			geneosdir := h.GetString("homedir")
-			if path.Base(geneosdir) != cmd.Execname {
-				geneosdir = path.Join(geneosdir, cmd.Execname)
+			if path.Base(geneosdir) != cordial.ExecutableName() {
+				geneosdir = path.Join(geneosdir, cordial.ExecutableName())
 			}
-			h.Set(cmd.Execname, geneosdir)
+			h.Set(cordial.ExecutableName(), geneosdir)
 		}
 
 		// mark the host as valid at this point
@@ -229,7 +229,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 			if err = geneos.Initialise(h,
 				geneos.Force(true),
-				geneos.UseRoot(h.GetString(cmd.Execname))); err != nil {
+				geneos.UseRoot(h.GetString(cordial.ExecutableName()))); err != nil {
 				return
 			}
 		}
