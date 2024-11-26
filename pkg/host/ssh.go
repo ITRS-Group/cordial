@@ -100,10 +100,6 @@ func Password(password *memguard.Enclave) SSHOptions {
 	}
 }
 
-func (h *SSHRemote) Username() string {
-	return h.username
-}
-
 func Port(port uint16) SSHOptions {
 	return func(s *SSHRemote) {
 		s.port = port
@@ -116,24 +112,46 @@ func Hostname(hostname string) SSHOptions {
 	}
 }
 
-func (s *SSHRemote) Hostname() string {
-	return s.hostname
-}
-
-func Keys(paths ...string) SSHOptions {
+// PrivateKeyFiles add the given paths as private key files to use for
+// SSH connections. The files must (at this time) not be passphrase
+// protected.
+func PrivateKeyFiles(paths ...string) SSHOptions {
 	return func(s *SSHRemote) {
 		s.keys = append(s.keys, paths...)
 	}
 }
 
+func (h *SSHRemote) Username() string {
+	return h.username
+}
+
+func (s *SSHRemote) Hostname() string {
+	return s.hostname
+}
+
 // load any/all the known private keys with no passphrase
-func readSSHkeys(homedir string, files ...string) (signers []ssh.Signer) {
+func readSSHkeys(passphrase *memguard.Enclave, homedir string, files ...string) (signers []ssh.Signer) {
 	for _, p := range files {
 		key, err := os.ReadFile(p)
 		if err != nil {
 			continue
 		}
 		signer, err := ssh.ParsePrivateKey(key)
+		pperr := &ssh.PassphraseMissingError{}
+		if err != nil && errors.As(err, &pperr) {
+			err = nil
+			pw, err := passphrase.Open()
+			if err != nil {
+				continue
+			}
+			signer, err = ssh.ParsePrivateKeyWithPassphrase(key, pw.Bytes())
+			pw.Destroy()
+
+			if err != nil {
+				continue
+			}
+		}
+
 		if err != nil {
 			continue
 		}
@@ -177,11 +195,11 @@ func sshConnect(dest, username string, password *memguard.Enclave, keyfiles ...s
 		authmethods = append(authmethods, ssh.PublicKeysCallback(agentClient.Signers))
 	}
 
-	if signers := readSSHkeys(homedir, keyfiles...); len(signers) > 0 {
+	// either private keys (using password as passphrase) or password
+	// but not both
+	if signers := readSSHkeys(password, homedir, keyfiles...); len(signers) > 0 {
 		authmethods = append(authmethods, ssh.PublicKeys(signers...))
-	}
-
-	if password != nil && password.Size() > 0 {
+	} else if password != nil && password.Size() > 0 {
 		l, _ := password.Open()
 		defer l.Destroy()
 		authmethods = append(authmethods, ssh.Password(l.String()))
