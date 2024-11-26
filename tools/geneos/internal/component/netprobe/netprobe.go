@@ -19,6 +19,7 @@ package netprobe
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -219,6 +220,13 @@ func (n *Netprobes) Command() (args, env []string, home string) {
 	args = append(args, instance.SetSecureArgs(n)...)
 	env = append(env, "LOG_FILENAME="+logFile)
 	home = n.Home()
+
+	// always set HOSTNAME env for CA
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "localhost"
+	}
+	env = append(env, "HOSTNAME="+n.Config().GetString(("hostname"), config.Default(hostname)))
 
 	return
 }

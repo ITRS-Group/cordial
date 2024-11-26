@@ -93,7 +93,7 @@ func commandInstance(i geneos.Instance, params ...any) (resp *instance.Response)
 		"environment:",
 	)
 
-	for _, e := range cmd.Env {
+	for _, e := range cmd.Environ() {
 		lines = append(lines, fmt.Sprint("\t", e))
 	}
 	lines = append(lines, "")
@@ -120,7 +120,7 @@ func commandInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) 
 		Type:     i.Type().Name,
 		Host:     i.Host().String(),
 		Path:     cmd.Path,
-		Env:      cmd.Env,
+		Env:      cmd.Environ(),
 		Home:     cmd.Dir,
 	}
 	if len(cmd.Args) > 1 {
