@@ -28,6 +28,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 
@@ -424,8 +425,15 @@ func LoadHostConfig() {
 
 	hosts = sync.Map{}
 
-	for _, hostval := range h.GetStringMap("hosts") {
+	for name, hostval := range h.GetStringMap("hosts") {
 		v := config.New()
+
+		// set defaults ?
+		v.SetDefault("name", name)
+		v.SetDefault("hostname", name)
+		v.SetDefault("port", 22)
+		v.SetDefault("username", LOCAL.Username())
+
 		switch m := hostval.(type) {
 		case map[string]interface{}:
 			v.MergeConfigMap(m)
@@ -439,6 +447,7 @@ func LoadHostConfig() {
 			host.Hostname(v.GetString("hostname")),
 			host.Port(uint16(v.GetInt("port"))),
 			host.Password(v.GetPassword("password").Enclave),
+			host.PrivateKeyFiles(v.GetStringSlice("privatekeys")...),
 		)
 		hosts.Store(v.GetString("name"), &Host{r, v, v.GetBool("hidden"), true})
 	}
