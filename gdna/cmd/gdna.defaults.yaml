@@ -2436,11 +2436,11 @@ reports:
                count(DISTINCT l2.server) l2covered,
                count(DISTINCT l3.server) l3covered
           FROM      ${db.servers.table} a
-          LEFT JOIN ${db.covered-servers.table} m USING (server)
-          LEFT JOIN ${db.empty-servers.table} e USING (server)
-          LEFT JOIN ${db.l1covered-servers.table} l1 USING (server)
-          LEFT JOIN ${db.l2covered-servers.table} l2 USING (server)
-          LEFT JOIN ${db.l3covered-servers.table} l3 USING (server)
+          LEFT JOIN ${db.covered-servers.table} m USING (gateway, server)
+          LEFT JOIN ${db.empty-servers.table} e USING (gateway, server)
+          LEFT JOIN ${db.l1covered-servers.table} l1 USING (gateway, server)
+          LEFT JOIN ${db.l2covered-servers.table} l2 USING (gateway, server)
+          LEFT JOIN ${db.l3covered-servers.table} l3 USING (gateway, server)
           LEFT JOIN ${db.match-servers.table} grp USING (server)
         GROUP BY grouping
       )
