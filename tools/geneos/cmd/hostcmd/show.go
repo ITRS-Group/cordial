@@ -28,14 +28,18 @@ import (
 )
 
 type showCmdConfig struct {
-	Name   string      `json:"name,omitempty"`
-	Hidden bool        `json:"hidden,omitempty"`
-	Config interface{} `json:"config,omitempty"`
+	Name   string `json:"name"`
+	Hidden bool   `json:"hidden"`
+	Config any    `json:"config"`
 }
+
+var showCmdRaw bool
 
 func init() {
 	hostCmd.AddCommand(showCmd)
 
+	showCmd.Flags().BoolVarP(&showCmdRaw, "raw", "r", false, "show raw configuration, without defaults or expansion")
+	showCmd.Flags().MarkHidden("raw")
 	showCmd.Flags().SortFlags = false
 }
 
@@ -53,6 +57,10 @@ var showCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var hosts []*geneos.Host
+
+		if showCmdRaw {
+
+		}
 
 		if len(args) == 0 {
 			hosts = geneos.RemoteHosts(false)

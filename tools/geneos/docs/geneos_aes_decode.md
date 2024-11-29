@@ -20,8 +20,8 @@ geneos aes decode [flags] [TYPE] [NAME...]
 
 ```text
   -e, --expandable string   The keyfile and ciphertext in expandable format (including '${...}')
-  -k, --keyfile KEYFILE     Path to keyfile (default /home/peter/.config/geneos/keyfile.aes)
-  -v, --previous KEYFILE    Path to previous keyfile (default /home/peter/.config/geneos/prevkeyfile.aes)
+  -k, --keyfile KEYFILE     Path to keyfile (default /home/peter/.config/docs/keyfile.aes)
+  -v, --previous KEYFILE    Path to previous keyfile (default /home/peter/.config/docs/prevkeyfile.aes)
   -p, --password string     Geneos formatted AES256 password
   -s, --source string       Alternative source for password
 ```

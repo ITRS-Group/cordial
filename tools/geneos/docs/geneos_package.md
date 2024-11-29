@@ -21,7 +21,7 @@ Where X, Y, Z are each ordered in ascending numerical order. If a directory star
 ### Options inherited from parent commands
 
 ```text
-  -G, --config string   config file (defaults are $HOME/.config/geneos.json, /etc/geneos/geneos.json)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 

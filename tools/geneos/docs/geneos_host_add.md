@@ -28,7 +28,8 @@ geneos host add [flags] [NAME] [SSHURL]
   -I, --init                 Initialise the remote host directories and component files
   -p, --prompt               Prompt for password
   -P, --password PLAINTEXT   Password
-  -k, --keyfile KEYFILE      Keyfile (default /home/peter/.config/geneos/keyfile.aes)
+  -k, --keyfile KEYFILE      Keyfile for encryption of stored password (default /home/peter/.config/docs/keyfile.aes)
+  -i, --privatekey PATH      Private key file
 ```
 
 ## Examples

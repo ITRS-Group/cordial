@@ -70,6 +70,7 @@ The remote connections over SSH mean there are limitations to the features avail
 | [`geneos host list / ls`](geneos_host_list.md)	 | List hosts, optionally in CSV or JSON format |
 | [`geneos host set`](geneos_host_set.md)	 | Set host configuration value |
 | [`geneos host show`](geneos_host_show.md)	 | Show details of remote host configuration |
+| [`geneos host unset`](geneos_host_unset.md)	 | Unset Host Parameters |
 
 ## SEE ALSO
 
