@@ -2783,9 +2783,8 @@ reports:
     split-values-query: SELECT ${reports.coverage-per-gateway-overview.split-column} FROM ${db.gateways.active}
     split-values-query-all: SELECT ${reports.coverage-per-gateway-overview.split-column} FROM ${db.gateways.table}
     headlines: > #sql
-      WITH t AS (
-        SELECT
-          (SELECT count(DISTINCT server) FROM ${db.servers.table} WHERE ${split-column} = '${value}') as total
+      WITH t(total) AS (
+          SELECT count(DISTINCT server) FROM ${db.servers.table} WHERE ${split-column} = '${value}'
       )
 
       SELECT 'gatewayName', '${value}'
@@ -2944,9 +2943,8 @@ reports:
     split-values-query: SELECT ${reports.coverage-per-gateway-detail.split-column} FROM ${db.gateways.active}
     split-values-query-all: SELECT ${reports.coverage-per-gateway-detail.split-column} FROM ${db.gateways.table}
     headlines: > #sql
-      WITH t AS (
-        SELECT
-          (SELECT count(DISTINCT server) FROM ${db.servers.table} WHERE ${split-column} = '${value}') as total
+      WITH t(total) AS (
+          SELECT count(DISTINCT server) FROM ${db.servers.table} WHERE ${split-column} = '${value}'
       )
 
       SELECT 'gatewayName', '${value}'
@@ -3029,7 +3027,12 @@ reports:
 
       SELECT server || ' # ' || probePort serverID,
               '' server,
-              COALESCE(os, '') osVersion,
+              -- COALESCE(os, '') osVersion,
+              COALESCE(CASE (SELECT count(DISTINCT os) FROM ${db.probes.active} WHERE server = p.server)
+                           WHEN 0 THEN ''
+                           WHEN 1 THEN ''
+                           ELSE os
+                           END, '') osVersion,
               '' probes,
               probeName,
               probePort,
