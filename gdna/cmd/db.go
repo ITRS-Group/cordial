@@ -142,9 +142,9 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 			if err = db.QueryRowContext(ctx, checkQuery).Scan(&required); err != nil {
 				return
 			}
+			log.Debug().Msgf("checked: %q -> %d", checkQuery, required)
 		}
 
-		log.Info().Msgf("checked: %q -> %d", checkQuery, required)
 		if required > 0 {
 			var tx *sql.Tx
 			tx, err = db.BeginTx(ctx, nil)
@@ -406,7 +406,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 			}
 
 			_, err = probesInsertStmt.ExecContext(ctx,
-				sql.Named("gateway", strings.TrimPrefix(values["requestingcomponent"], "gateway:")),
+				sql.Named("gateway", strings.TrimSpace(strings.TrimPrefix(values["requestingcomponent"], "gateway:"))),
 				sql.Named("probeName", host_name),
 				sql.Named("probePort", port),
 				sql.Named("tokenID", token_id),
@@ -422,7 +422,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 		case "plugin":
 			// 21,gateway:LOB_GATEWAY_1102,gateway:LOB_GATEWAY_1102,binary,netprobe,itrsrh002111:7036 [410a355f],1
 			_, err = samplersInsertStmt.ExecContext(ctx,
-				sql.Named("gateway", strings.TrimPrefix(values["requestingcomponent"], "gateway:")),
+				sql.Named("gateway", strings.TrimSpace(strings.TrimPrefix(values["requestingcomponent"], "gateway:"))),
 				sql.Named("plugin", values["item"]),
 				sql.Named("probeName", host_name),
 				sql.Named("probePort", port),
@@ -445,7 +445,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 				entity = values["description"]
 			}
 			_, err = caSamplersInsertStmt.ExecContext(ctx,
-				sql.Named("gateway", strings.TrimPrefix(values["requestingcomponent"], "gateway:")),
+				sql.Named("gateway", strings.TrimSpace(strings.TrimPrefix(values["requestingcomponent"], "gateway:"))),
 				sql.Named("plugin", values["item"]),
 				sql.Named("entity", entity),
 				sql.Named("probeName", colOrNull("host_name", columns, fields)),
@@ -462,7 +462,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 		case "gateway_component":
 			// 1,gateway:LOB_GATEWAY_1102,gateway:LOB_GATEWAY_1102,gateway_component,database-logging,,1
 			_, err = gwComponentsInsertStmt.ExecContext(ctx,
-				sql.Named("gateway", strings.TrimPrefix(values["requestingcomponent"], "gateway:")),
+				sql.Named("gateway", strings.TrimSpace(strings.TrimPrefix(values["requestingcomponent"], "gateway:"))),
 				sql.Named("component", values["item"]),
 				sql.Named("number", values["number"]),
 				sql.Named("time", isoTime),
@@ -475,7 +475,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 			// also add gateways directly to a gateways table
 			if fields[4] == "gateway" {
 				_, err = gatewaysInsertStmt.ExecContext(ctx,
-					sql.Named("gateway", strings.TrimPrefix(values["requestingcomponent"], "gateway:")),
+					sql.Named("gateway", strings.TrimSpace(strings.TrimPrefix(values["requestingcomponent"], "gateway:"))),
 					sql.Named("host", colOrNull("gateway_host", columns, fields)),
 					sql.Named("port", colOrNull("gateway_port", columns, fields)),
 					sql.Named("version", colOrNull("version", columns, fields)),
@@ -490,7 +490,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 		case "gateway-plugin":
 			// 8188,EQ,gateway:LOB_GATEWAY_1165,gateway-plugin,gateway-breachpredictor,,1
 			_, err = gwSamplersInsertStmt.ExecContext(ctx,
-				sql.Named("gateway", strings.TrimPrefix(values["requestingcomponent"], "gateway:")),
+				sql.Named("gateway", strings.TrimSpace(strings.TrimPrefix(values["requestingcomponent"], "gateway:"))),
 				sql.Named("plugin", values["item"]),
 				sql.Named("number", values["number"]),
 				sql.Named("time", isoTime),
