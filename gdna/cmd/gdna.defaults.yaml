@@ -618,7 +618,16 @@ db:
         INSERT INTO ${plugins.level2.table}_new SELECT * FROM ${plugins.level2.table};
         DROP TABLE ${plugins.level2.table};
         ALTER TABLE ${plugins.level2.table}_new RENAME TO ${plugins.level2.table};
-
+    5:
+      check:
+        SELECT count(*) > 0 FROM pragma_table_info('${db.gateways.table}')
+      update: | #sql
+        UPDATE ${db.gateways.table} SET gateway = TRIM(gateway);
+        UPDATE ${db.probes.table} SET gateway = TRIM(gateway);
+        UPDATE ${db.samplers.table} SET gateway = TRIM(gateway);
+        UPDATE ${db.ca-samplers.table} SET gateway = TRIM(gateway);
+        UPDATE ${db.gw-samplers.table} SET gateway = TRIM(gateway);
+        UPDATE ${db.gw-components.table} SET gateway = TRIM(gateway);
   #
   # main-tables
   #
