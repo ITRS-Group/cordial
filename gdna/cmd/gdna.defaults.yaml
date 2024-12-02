@@ -1896,16 +1896,16 @@ reports:
       WITH
         plugins AS (
           SELECT * FROM (
-            SELECT DISTINCT gateway, plugin, server FROM ${db.samplers.active}
+            SELECT DISTINCT gateway, plugin, server, number FROM ${db.samplers.active}
             UNION ALL
-            SELECT DISTINCT gateway, plugin, entity server FROM ${db.ca-samplers.active}
+            SELECT DISTINCT gateway, plugin, entity server, number FROM ${db.ca-samplers.active}
             UNION ALL
-            SELECT DISTINCT gateway, plugin, 1 server FROM ${db.gw-samplers.active}
+            SELECT DISTINCT gateway, plugin, 1 server, number FROM ${db.gw-samplers.active}
            )
         )
       SELECT grouping,
              COALESCE(count(DISTINCT gateway||":"||server), 0) servers,
-             COALESCE(count(server), 0) instances
+             total(number) instances
         FROM plugins
         RIGHT JOIN ${db.match-sampler-plugins.table} USING (plugin)
        GROUP BY grouping
