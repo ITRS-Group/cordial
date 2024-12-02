@@ -2798,11 +2798,11 @@ reports:
 
       SELECT 'gatewayName', '${value}'
       UNION
-      SELECT 'gatewayHost', (SELECT COALESCE(gatewayHost, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+      SELECT 'gatewayHost', COALESCE((SELECT gatewayHost FROM ${db.gateways.active} WHERE ${split-column} = '${value}'), '')
       UNION
-      SELECT 'gatewayPort', (SELECT COALESCE(gatewayPort, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+      SELECT 'gatewayPort', COALESCE((SELECT gatewayPort FROM ${db.gateways.active} WHERE ${split-column} = '${value}'), '')
       UNION
-      SELECT 'gatewayVersion', (SELECT COALESCE(version, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+      SELECT 'gatewayVersion', COALESCE((SELECT version FROM ${db.gateways.active} WHERE ${split-column} = '${value}'), '')
       UNION
       SELECT 'servers', total FROM t
       UNION
@@ -2824,7 +2824,7 @@ reports:
       UNION
       SELECT 'dynamicEntitiesUnknownServer', (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server IS NULL AND ${split-column} = '${value}')
       UNION
-      SELECT 'licenceSource', (SELECT source FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+      SELECT 'licenceSource', COALESCE((SELECT source FROM ${db.gateways.active} WHERE ${split-column} = '${value}'), '')
 
       ;
     query: | #sql
@@ -2958,11 +2958,11 @@ reports:
 
       SELECT 'gatewayName', '${value}'
       UNION
-      SELECT 'gatewayHost', (SELECT COALESCE(gatewayHost, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+      SELECT 'gatewayHost', COALESCE((SELECT gatewayHost FROM ${db.gateways.active} WHERE ${split-column} = '${value}'), '')
       UNION
-      SELECT 'gatewayPort', (SELECT COALESCE(gatewayPort, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+      SELECT 'gatewayPort', COALESCE((SELECT gatewayPort FROM ${db.gateways.active} WHERE ${split-column} = '${value}'), '')
       UNION
-      SELECT 'gatewayVersion', (SELECT COALESCE(version, '') FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+      SELECT 'gatewayVersion', COALESCE((SELECT version FROM ${db.gateways.active} WHERE ${split-column} = '${value}'), '')
       UNION
       SELECT 'servers', total FROM t
       UNION
@@ -2984,7 +2984,7 @@ reports:
       UNION
       SELECT 'dynamicEntitiesUnknownServer', (SELECT total(number) FROM ${db.ca-samplers.active} WHERE server IS NULL AND ${split-column} = '${value}')
       UNION
-      SELECT 'licenceSource', (SELECT source FROM ${db.gateways.active} WHERE ${split-column} = '${value}')
+      SELECT 'licenceSource', COALESCE((SELECT source FROM ${db.gateways.active} WHERE ${split-column} = '${value}'), '')
 
       ;
     query: | #sql
