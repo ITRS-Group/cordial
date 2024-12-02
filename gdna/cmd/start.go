@@ -262,12 +262,24 @@ func do(ctx context.Context, cf *config.Config, db *sql.DB) (err error) {
 		log.Error().Err(err).Msg("cannot BEGIN transaction")
 		return
 	}
-	defer tx.Rollback()
 
 	if err = updateReportingDatabase(ctx, cf, tx, sources); err != nil {
+		tx.Rollback()
 		return
 	}
 
+	// commit the reporting database changes in case we are not using
+	// temp tables and want to catch the data for debug purposes
+	if err = tx.Commit(); err != nil {
+		return
+	}
+
+	tx, err = db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Error().Err(err).Msg("cannot BEGIN transaction")
+		return
+	}
+	defer tx.Rollback()
 	if err = report(ctx, cf, tx, io.Discard, "dataview", reportNames); err != nil {
 		return
 	}
