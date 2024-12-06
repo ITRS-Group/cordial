@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 // Save a configuration file for the module name.
@@ -64,9 +65,22 @@ func (cf *Config) Save(name string, options ...FileOptions) (err error) {
 	}
 
 	cf.mutex.Lock()
+	defer cf.mutex.Unlock()
+
 	cf.Viper.SetFs(r.GetFs())
-	err = cf.Viper.WriteConfigAs(p)
-	cf.mutex.Unlock()
+
+	// write to path with process ID and original extension appended and
+	// then try to atomically rename
+	tmp := fmt.Sprintf("%s.%d%s", p, os.Getpid(), filepath.Ext(p))
+	if err = cf.Viper.WriteConfigAs(tmp); err != nil {
+		return
+	}
+
+	// if write is OK, rename the temp file
+	if err = r.Rename(tmp, p); err != nil { // try to remove tmp file is rename fails
+		err = r.Remove(tmp)
+	}
+
 	return
 }
 
