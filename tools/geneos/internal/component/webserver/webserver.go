@@ -327,31 +327,34 @@ func (w *Webservers) Command() (args, env []string, home string) {
 	base := instance.BaseVersion(w)
 	home = w.Home()
 
-	args = []string{
-		// "-Duser.home=" + c.WebsHome,
-		"-XX:+UseConcMarkSweepGC",
-		"-Xmx" + cf.GetString("maxmem"),
+	// Java 17 in server 7.1.1 and later does not support this arg
+	if instance.CompareVersion(w, "7.1.1") < 0 {
+		args = []string{"-XX:+UseConcMarkSweepGC"}
+	}
+
+	args = append(args,
+		"-Xmx"+cf.GetString("maxmem"),
 		"-server",
-		"-Djava.io.tmpdir=" + home + "/webapps",
+		"-Djava.io.tmpdir="+home+"/webapps",
 		"-Djava.awt.headless=true",
-		"-DsecurityConfig=" + home + "/config/security.xml",
-		"-Dcom.itrsgroup.configuration.file=" + home + "/config/config.xml",
+		"-DsecurityConfig="+home+"/config/security.xml",
+		"-Dcom.itrsgroup.configuration.file="+home+"/config/config.xml",
 		// "-Dcom.itrsgroup.dashboard.dir=<Path to dashboards directory>",
-		"-Dcom.itrsgroup.dashboard.resources.dir=" + base + "/resources",
-		"-Djava.library.path=" + cf.GetString("libpaths"),
-		"-Dlog4j2.configurationFile=file:" + home + "/config/log4j2.properties",
-		"-Dworking.directory=" + home,
-		"-Dvalid.host.header=" + cf.GetString("valid-host-header", config.Default(".*")),
+		"-Dcom.itrsgroup.dashboard.resources.dir="+base+"/resources",
+		"-Djava.library.path="+cf.GetString("libpaths"),
+		"-Dlog4j2.configurationFile=file:"+home+"/config/log4j2.properties",
+		"-Dworking.directory="+home,
+		"-Dvalid.host.header="+cf.GetString("valid-host-header", config.Default(".*")),
 		"-Dcom.itrsgroup.legacy.database.maxconnections=100",
 		// SSO
-		"-Dcom.itrsgroup.sso.config.file=" + home + "/config/sso.properties",
-		"-Djava.security.auth.login.config=" + home + "/config/login.conf",
+		"-Dcom.itrsgroup.sso.config.file="+home+"/config/sso.properties",
+		"-Djava.security.auth.login.config="+home+"/config/login.conf",
 		"-Djava.security.krb5.conf=/etc/krb5.conf",
 		"-Dcom.itrsgroup.bdosync=DataView,BDOSyncType_Level,DV1_SyncLevel_RedAmberCells",
 		// "-Dcom.sun.management.jmxremote.port=$JMX_PORT -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false",
 		"-XX:+HeapDumpOnOutOfMemoryError",
 		"-XX:HeapDumpPath=/tmp",
-	}
+	)
 
 	javaopts := strings.Fields(cf.GetString("java-options"))
 	args = append(args, javaopts...)
