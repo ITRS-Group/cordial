@@ -2048,9 +2048,9 @@ reports:
         plugin,
         count(DISTINCT server) servers,
         total(number) instances,
-        COALESCE((SELECT COALESCE(sum(total), CASE WHEN lastSeen IS NOT NULL THEN 'Unlimited' ELSE NULL END) FROM ${db.tokens.table} WHERE token = current.plugin), 0) tokensAvailable,
-        COALESCE((SELECT total(used) FROM ${db.tokens.table} WHERE token = current.plugin AND total IS NOT NULL), 0) tokensUsed,
-        printf('%d %%', COALESCE((SELECT IIF(sum(total) IS NULL, 0, round(total(used) * 100 / total(total))) FROM ${db.tokens.table} WHERE token = current.plugin AND total IS NOT NULL), 0)) tokensUsedPct,
+        COALESCE((SELECT COALESCE(sum(total), CASE WHEN lastSeen IS NOT NULL THEN 'Unlimited' ELSE NULL END) FROM ${db.tokens.active} WHERE token = current.plugin), 0) tokensAvailable,
+        COALESCE((SELECT total(used) FROM ${db.tokens.active} WHERE token = current.plugin AND total IS NOT NULL), 0) tokensUsed,
+        printf('%d %%', COALESCE((SELECT IIF(sum(total) IS NULL, 0, round(total(used) * 100 / total(total))) FROM ${db.tokens.active} WHERE token = current.plugin AND total IS NOT NULL), 0)) tokensUsedPct,
         (SELECT count(*) FROM previous WHERE plugin = current.plugin) previousServers,
         (SELECT total(number) FROM previous WHERE plugin = current.plugin) previousInstances,
         COALESCE(location, ''),
@@ -2068,7 +2068,7 @@ reports:
         plugin,
         0,
         0,
-        COALESCE((SELECT COALESCE(sum(total), CASE WHEN lastSeen IS NOT NULL THEN 'Unlimited' ELSE NULL END) FROM ${db.tokens.table} WHERE token = previous.plugin), 0) tokensAvailable,
+        COALESCE((SELECT COALESCE(sum(total), CASE WHEN lastSeen IS NOT NULL THEN 'Unlimited' ELSE NULL END) FROM ${db.tokens.active} WHERE token = previous.plugin), 0) tokensAvailable,
         0,
         ' 0%',
         count(DISTINCT server),
@@ -2088,7 +2088,7 @@ reports:
       SELECT plugin,
         0,
         0,
-        COALESCE((SELECT COALESCE(sum(total), CASE WHEN lastSeen IS NOT NULL THEN 'Unlimited' ELSE NULL END) FROM ${db.tokens.table} WHERE token = a.plugin), 0) tokensAvailable,
+        COALESCE((SELECT COALESCE(sum(total), CASE WHEN lastSeen IS NOT NULL THEN 'Unlimited' ELSE NULL END) FROM ${db.tokens.active} WHERE token = a.plugin), 0) tokensAvailable,
         0,
         '0 %',
         0,
@@ -3287,7 +3287,13 @@ reports:
       UNION ALL
 
       SELECT 'totalServerTokens', COALESCE(total(total), 0)
-        FROM ${db.tokens.table}
+        FROM ${db.tokens.active}
+       WHERE token = 'servers'
+
+      UNION ALL
+
+      SELECT 'totalServerTokensUsed', COALESCE(total(used), 0)
+        FROM ${db.tokens.active}
        WHERE token = 'servers'
       ;
     query: | #sql
@@ -3298,9 +3304,9 @@ reports:
              (SELECT count(*) FROM ${db.probes.table}   WHERE source = src.source AND lastSeen = src.lastSeen) AS probes,
              (SELECT total(number) FROM ${db.samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS samplers,
              (SELECT total(number) FROM ${db.ca-samplers.table} WHERE source = src.source AND lastSeen = src.lastSeen) AS dynamicEntities,
-             COALESCE((SELECT COALESCE(total, 'Unlimited') FROM ${db.tokens.table} WHERE token = 'servers' AND source = src.source AND lastSeen = src.lastSeen), 0),
-             COALESCE((SELECT COALESCE(used, 0) FROM ${db.tokens.table} WHERE token = 'servers' AND source = src.source AND lastSeen = src.lastSeen), 0),
-             COALESCE((SELECT COALESCE(free, 'Unlimited') FROM ${db.tokens.table} WHERE token = 'servers' AND source = src.source AND lastSeen = src.lastSeen), 0),
+             COALESCE((SELECT COALESCE(total, 'Unlimited') FROM ${db.tokens.active} WHERE token = 'servers' AND source = src.source AND lastSeen = src.lastSeen), 0),
+             COALESCE((SELECT COALESCE(used, 0) FROM ${db.tokens.active} WHERE token = 'servers' AND source = src.source AND lastSeen = src.lastSeen), 0),
+             COALESCE((SELECT COALESCE(free, 'Unlimited') FROM ${db.tokens.active} WHERE token = 'servers' AND source = src.source AND lastSeen = src.lastSeen), 0),
              COALESCE(licenceName, ''),
              COALESCE(licenceExpiry, ''),
              COALESCE(licenceMode, ''),
