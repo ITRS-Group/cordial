@@ -3074,6 +3074,95 @@ reports:
       ORDER BY 1
       ;
 
+  multiple-os-versions-per-hostid:
+    name: Multiple OS Versions Per HostID
+    dataview:
+      group: Licensing
+      enable: true
+    xlsx:
+      enable: true
+      freeze-to-column: serverID
+      conditional-format:
+        - test:
+            columns: [ gateways, samplers, dynamicEntities ]
+            condition: "="
+            type: number
+            value: 0
+          set:
+            - columns: [ samplers, dynamicEntities ]
+              format: warning
+        - test:
+            columns: samplers
+            condition: ">"
+            type: number
+            value: 0
+          set:
+            - format: ok
+        - test:
+            columns: dynamicEntities
+            condition: ">"
+            type: number
+            value: 0
+          set:
+            - format: ok
+    columns: [ serverID, server, osVersion, probes, probeName, probePort, probeVersion, licenceSources, gateway, samplers, dynamicEntities, plugins ]
+    scramble-columns: [ serverID, server, probeName ]
+    query: | #sql
+      SELECT
+            server serverID,
+            replace(server, ':'||hostID, '') server,
+            '' osVersion,
+             (SELECT count(*) FROM ${db.probes.active} WHERE server = u.server) probes,
+             '' probeName,
+             '' probePort,
+             '' probeVersions,
+             (SELECT count(DISTINCT source) FROM ${db.servers.table} WHERE server = u.server) licenceSources,
+             '' gateway,
+             '' samplers,
+             '' dynamicEntities,
+             '' plugins
+        FROM ${db.servers.table} u
+       GROUP BY server
+      HAVING COUNT(DISTINCT os) > 1
+
+      UNION
+
+      SELECT server || ' # ' || probeName || ' on ' || gateway serverID,
+              '' server,
+              COALESCE(CASE (SELECT count(DISTINCT os) FROM ${db.probes.active} WHERE server = p.server)
+                            WHEN 0 THEN ''
+                            WHEN 1 THEN ''
+                            ELSE os
+                            END, '') osVersion,
+              '' probes,
+              probeName,
+              probePort,
+              COALESCE(version, '') probeVersion,
+              '' licenceSources,
+              p.gateway gateway,
+              (SELECT total(number) FROM ${db.samplers.active} WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort) samplers,
+              (SELECT total(number) FROM ${db.ca-samplers.active} WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort) as dynamicEntities,
+              COALESCE((SELECT group_concat(plugins, ', ') FROM (
+                          SELECT plugin || IIF(total(number) > 1, printf('(%d)', total(number)), '') plugins
+                            FROM ${db.samplers.active}
+                            WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort
+                            GROUP BY plugin
+
+                          UNION
+
+                          SELECT plugin || IIF(count(plugin) > 1, printf('(%d)', total(number)), '')
+                            FROM ${db.ca-samplers.active}
+                            WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort
+                            GROUP BY plugin
+
+                          ORDER BY 1
+                      )), '') plugins
+        FROM ${db.probes.active} p
+       WHERE server = (SELECT server FROM ${db.probes.active} GROUP BY server HAVING COUNT(DISTINCT os) > 1)
+
+      ORDER BY 1
+      ;
+
   plugin-coverage:
     name: Plugin Coverage
     dataview:
