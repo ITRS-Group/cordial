@@ -313,12 +313,20 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 		return
 	}
 	defer gatewaysInsertStmt.Close()
+
 	probesInsertStmt, err := tx.PrepareContext(ctx, cf.GetString("db.probes.insert"))
 	if err != nil {
 		log.Error().Msgf("cannot prepare statement: %s", err)
 		return
 	}
 	defer probesInsertStmt.Close()
+
+	osInsertStmt, err := tx.PrepareContext(ctx, cf.GetString("db.os-versions.insert"))
+	if err != nil {
+		log.Error().Msgf("cannot prepare statement: %s", err)
+		return
+	}
+	defer osInsertStmt.Close()
 
 	samplersInsertStmt, err := tx.PrepareContext(ctx, cf.GetString("db.samplers.insert"))
 	if err != nil {
@@ -405,6 +413,81 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 				return fmt.Errorf("unknown binary type %q at line %d, column %d: %q", values["item"], line, col, source)
 			}
 
+			// create names SQL value here to update AIX to strip
+			// machine ID below, if matched
+			osField := colOrNull("os", columns, fields)
+
+			// TODO: process OS here
+			if osField.Valid {
+				var family, major, minor, patch, build, rest string
+				var found bool
+
+				family, rest, found = strings.Cut(osField.String, " ")
+				switch strings.ToLower(family) {
+				case "linux":
+					if major, rest, found = strings.Cut(rest, "."); found {
+						if minor, rest, found = strings.Cut(rest, "."); found {
+							if patch, rest, found = strings.Cut(rest, "-"); found {
+								build = rest
+							}
+						}
+					}
+				case "windows":
+					// so many version strings and so little time
+					var name string
+					if name, rest, found = strings.Cut(rest, " "); found {
+						if name == "Server" {
+							major, rest, found = strings.Cut(rest, " ")
+							major = "Server " + major
+							if strings.HasPrefix(rest, "R2 ") {
+								minor = "R2"
+							}
+						} else {
+							major, minor, _ = strings.Cut(name, ".")
+						}
+
+						// build is either in parenthesis or the last
+						// part of the string, after the last "."
+						if _, build, found = strings.Cut(rest, "(Build"); found {
+							build = strings.TrimSpace(strings.TrimSuffix(build, ")"))
+						} else {
+							if off := strings.LastIndex(rest, "."); off != -1 {
+								build = rest[off+1:]
+							}
+						}
+					}
+
+				case "aix":
+					if major, rest, found = strings.Cut(rest, "."); found {
+						if minor, rest, found = strings.Cut(rest, " "); found {
+							// ignore the rest, which is a machine ID
+						}
+					}
+					// update os string to remove machine ID
+					osField.String = fmt.Sprintf("AIX %s.%s", major, minor)
+				case "sunos":
+					if major, rest, found = strings.Cut(rest, "."); found {
+						minor = rest
+					}
+				default:
+
+				}
+
+				if major != "" {
+					_, err = osInsertStmt.ExecContext(ctx,
+						sql.Named("os", osField),
+						sql.Named("family", family),
+						sql.Named("major", major),
+						sql.Named("minor", minor),
+						sql.Named("patch", patch),
+						sql.Named("build", build),
+					)
+					if err != nil {
+						log.Error().Err(err).Msgf("inserting os-version %q", osField.String)
+					}
+				}
+			}
+
 			_, err = probesInsertStmt.ExecContext(ctx,
 				sql.Named("gateway", strings.TrimSpace(strings.TrimPrefix(values["requestingcomponent"], "gateway:"))),
 				sql.Named("probeName", host_name),
@@ -412,7 +495,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 				sql.Named("tokenID", token_id),
 				sql.Named("time", isoTime),
 				sql.Named("source", source),
-				sql.Named("os", colOrNull("os", columns, fields)),
+				sql.Named("os", osField),
 				sql.Named("version", colOrNull("version", columns, fields)),
 			)
 			if err != nil {
@@ -658,9 +741,9 @@ func summaryReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 }
 
 // colOrNull returns a sql.NullString which is populated if the column
-// exists and the value in that column is not an empty string. column is
-// the name, columns is a mapping of column names to field offsets and
-// fields are the values.
+// exists and the value in that column is not an empty string, otherwise
+// it is left as null. column is the name, columns is a mapping of
+// column names to field offsets and fields are the values.
 func colOrNull(column string, columns map[string]int, fields []string) (val sql.NullString) {
 	if v, ok := columns[column]; ok && fields[v] != "" {
 		val = sql.NullString{

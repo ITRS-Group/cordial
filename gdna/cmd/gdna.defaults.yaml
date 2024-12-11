@@ -451,6 +451,7 @@ db:
     - sources-licence
     - reporting-updates
     - probes
+    - os-versions
     - samplers
     - ca-samplers
     - gw-samplers
@@ -766,7 +767,27 @@ db:
           FROM ${db.probes.table} p
          WHERE lastSeen <> (SELECT lastSeen FROM ${db.sources.table} WHERE source = p.source AND valid)
            AND ${filters:p:gateway,source,server,hostid}
-        ;
+      ;
+
+  os-versions:
+    table: os_versions
+    columns: [ os, osFamily, osMajor, osMinor, osPatch ]
+    create: > #sql
+      CREATE TABLE IF NOT EXISTS ${db.os-versions.table} (
+        os                TEXT NOT NULL UNIQUE,
+        family            TEXT NOT NULL,
+        major             TEXT NOT NULL,
+        minor             TEXT NOT NULL,
+        patch             TEXT,
+        build             TEXT
+      );
+    insert: > #sql
+      INSERT INTO ${db.os-versions.table}
+        (os, family, major, minor, patch, build)
+        VALUES (@os, @family, @major, @minor, @patch, @build)
+        ON CONFLICT (os)
+          DO UPDATE SET family=@family, major=@major, minor=@minor, patch=@patch, build=@build
+      ;
 
   samplers:
     # The samplers table contains all entries from the license daemon for
@@ -3609,9 +3630,9 @@ reports:
     columns: [ group, category, grouping, token, allocation, user, origin, comment, timestamp ]
     query: | #sql
       SELECT DISTINCT 'group-gateway' 'group', 'gateway' category, '' grouping, '' token, '' allocation, '' user, '' origin, '' comment, '' timestamp
-        FROM ${filters.group.gateway.table}
+        -- FROM ${filters.group.gateway.table}
 
-      UNION
+      UNION ALL
 
       SELECT 'group-gateway # '||grouping,
              'gateway',
