@@ -195,9 +195,10 @@ func TrimSpace(yes bool) ExpandOptions {
 // Default sets a default value to be returned if the resulting
 // expansion of the whole config value is empty (after any optional
 // trimming of leading and trailing spaces). This includes cases where
-// external lookups fail or a configuration item is not found. If
-// TrimSpace is false and the returned value consists wholly of
-// whitespace then this is returned and not the default given here.
+// external lookups fail or a configuration item is not found. If the
+// TrimSpace option is set to false and the expanded value consists
+// wholly of whitespace then that is returned and not the default given
+// here.
 func Default(value any) ExpandOptions {
 	return func(e *expandOptions) {
 		e.defaultValue = value
