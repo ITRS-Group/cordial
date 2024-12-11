@@ -228,6 +228,10 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 		if platform != "" {
 			version += "+" + platform
 		}
+		log.Debug().Msgf("ctFromFile %q, version %q, platform %q, suffix %q", ctFromFile, version, platform, suffix)
+		if ctFromFile == nil {
+			ctFromFile = &RootComponent
+		}
 		// check the component in the filename
 		// special handling for SANs
 		switch ct.Name {
