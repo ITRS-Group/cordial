@@ -164,6 +164,7 @@ servicenow:
   clientsecret: ${enc:~/.keyfile:+encs+6680A7836122519CE44EEE1BA9152900}
   searchtype: simple
   queryresponsefields: number,sys_id,cmdb_ci.name,short_description,description,correlation_id,opened_by,state
+  incident-query: "active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}"
   incident-user:
     field: class_id
     lookup: true
@@ -317,6 +318,27 @@ Note: All values that are intended to be passed to ServiceNow as a field are unq
   * `queryresponsefields` **Router Only**
 
     A comma separated list of fields to return when calling the request-all-incident endpoint.
+
+  * `incident-query` **Router Only**
+
+    `incident-query` is the ServiceNow filter query used to lookup existing incidents. For details of what is permitted in the query see:
+  
+    * <https://www.servicenow.com/docs/bundle/xanadu-platform-user-interface/page/use/using-lists/concept/c_EncodedQueryStrings.html>
+
+    * <https://www.servicenow.com/docs/bundle/xanadu-platform-user-interface/page/use/common-ui-elements/reference/r_OpAvailableFiltersQueries.html>
+
+    In addition to referring to other configuration values in your YAML file as `${config:servicenow.parameter}`, the dynamic parameters available are:
+  
+    * ${cmdb_ci}
+    * ${correlation_id}
+  
+    For example, to exclude Resolved incidents from being found and updated, instead requiring a new incident to be created, use this:
+  
+      `incident-query: "state!=6^active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}"`
+  
+    The default, if not otherwise defined, is:
+
+      `incident-query: "active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}"`
 
   * `incident-user` **Router Only**
 

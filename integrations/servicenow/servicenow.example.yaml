@@ -25,6 +25,30 @@ servicenow:
     3: impact=1,urgency=1
     2: impact=3,urgency=3
     1: state=6,close_code="Closed/Resolved by Caller",close_notes="Resolved"
+
+  # `incident-query` is the ServiceNow filter query used to lookup
+  # existing incidents
+  #
+  # For details of what is permitted, see:
+  #
+  # <https://www.servicenow.com/docs/bundle/xanadu-platform-user-interface/page/use/using-lists/concept/c_EncodedQueryStrings.html>
+  # <https://www.servicenow.com/docs/bundle/xanadu-platform-user-interface/page/use/common-ui-elements/reference/r_OpAvailableFiltersQueries.html>
+  #
+  # In addition to referring to other configuration values in your YAML
+  # file as `${config:servicenow.parameter}`, the dynamic parameters
+  # available are:
+  #
+  #   * ${cmdb_ci}
+  #   * ${correlation_id}
+  #
+  # For example, to exclude Resolved incidents from being found and
+  # updated, instead requiring a new incident to be created, use this:
+  #
+  #   incident-query: "state!=6^active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}"
+  #
+  # The default, if not otherwise defined, is:
+  incident-query: "active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}"
+
   incidentdefaults:
     default_cmdb_ci: 03a9e40d3790200044e0bfc8bcbe5d6c
     assignment_group: group1
