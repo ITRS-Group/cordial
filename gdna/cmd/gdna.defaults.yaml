@@ -3571,16 +3571,37 @@ reports:
     name: Operating System Versions
     dataview:
       group: Geneos Estate
-    columns: [ osVersion, count ]
+    columns: [ osRelease, osFamily, osMajorVersion, osMinorVersion, osPatchVersion, osBuild, versionCount, serverCount ]
     query: | #sql
-      SELECT os, count(*)
-        FROM ${db.servers.table}
-       WHERE os IS NOT NULL
+      SELECT family,
+             family,
+             '',
+             '',
+             '',
+             '',
+             (SELECT count(*) FROM ${db.os-versions.table} WHERE o.family = family),
+             count(*)
+        FROM ${db.os-versions.table} o
+        JOIN ${db.probes.active} USING (os)
+       GROUP BY family
+
+      UNION ALL
+
+      SELECT family || ' # ' || os,
+             family,
+             major,
+             minor,
+             patch,
+             build,
+             '',
+             count(*)
+        FROM ${db.os-versions.table}
+        JOIN ${db.probes.active} USING (os)
        GROUP BY os
 
-      UNION
+      UNION ALL
 
-      SELECT 'Unknown', count(*)
+      SELECT 'Unknown', '', '', '', '', '', '', count(*)
         FROM ${db.servers.table}
        WHERE os IS NULL
       ;

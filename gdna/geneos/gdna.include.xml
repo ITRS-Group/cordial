@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
+<!--Edited using Gateway Setup Editor version GA7.1.0-241109 at 2024-12-11 17:09:46 by cnielsen on ITRSLP188b-->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.1.0-241109/gateway.xsd">
 	<probes>
 		<probe name="gdna">
@@ -124,12 +125,27 @@
 							<columns>
 								<column>
 									<name>
-										<data>osVersion</data>
+										<data>osFamily</data>
 									</name>
 								</column>
 								<column>
 									<name>
-										<data>count</data>
+										<data>osMajorVersion</data>
+									</name>
+								</column>
+								<column>
+									<name>
+										<data>osMinorVersion</data>
+									</name>
+								</column>
+								<column>
+									<name>
+										<data>serverCount</data>
+									</name>
+								</column>
+								<column>
+									<name>
+										<data>osPatchVersion</data>
 									</name>
 								</column>
 							</columns>
@@ -177,9 +193,13 @@
 								<data>Operating Systems</data>
 							</name>
 							<sql>
-								<data>SELECT * FROM 
-OS
-ORDER BY osVersion ASC</data>
+								<data>SELECT
+osFamily ||&apos; &apos;|| osMajorVersion || &apos; &apos; || osMinorVersion AS osVersion,
+sum(serverCount) AS instances,
+count(osPatchVersion) AS versions
+FROM OS where osMajorVersion &lt;&gt; &apos;&apos;
+GROUP BY osFamily, osMajorVersion, osMinorVersion
+ORDER BY instances DESC</data>
 							</sql>
 							<showRowID>true</showRowID>
 						</view>
