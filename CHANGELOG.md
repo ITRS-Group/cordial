@@ -1,5 +1,53 @@
 # Change Log
 
+## Version v1.20.0 - Codename "Leo"
+
+> [!NOTE]
+> **Released 2024-12-13** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+> [!TIP]
+>
+> This release is dedicated to my best boy Leo, who left us in late November 2024. In his 14 years he wasn't just a wonderful companion but he also helped, with his also now departed brothers, to save the lives of many other cats by donating blood through the RVC Animal Care Trust. For those reading this (and are near to Potters Bar in the UK) who believe their cats or dogs could become blood donors, please see <https://www.rvc.ac.uk/small-animal-vet/specialist-referrals/for-pet-owners/pet-blood-donations>
+>
+> <img src="screenshots/1311_BSHclients_181.jpg" alt="Leo, the best cat ever" width="500">
+
+## Version v1.20.0 Changes
+
+* `gdna`
+
+  * Thanks to all the valuable feedback, we have a completely new Monitoring Coverage and Version dashboards. These new dashboards depends on the changes to some reports, so you **must** also upgrade the `gdna` binary before you can use it. The old dashboard will continue to work with the new binary but we may remove some of the data driving it from reports in future releases.
+  * Add a new report `multiple-os-versions-per-hostid` which shows all servers that have more than one OS version for associated probes. This is an indication of invalid (duplicated) host IDs.
+
+* `pkg/host`
+
+  * Update <golang.org/x/crypto> dependency to mitigate potential issue with `ServerConfig.PublicKeyCallback` (CVE-2024-45337)
+
+* `tools/geneos`
+
+  * Added support for SSH private key files to the `geneos host` subsystem
+  * Added a `geneos host unset` command to work with the changes require for private key files and more
+
+* `integrations/servicenow`
+
+  * Expose `incident-query` configuration to allow custom lookups
+  * Some code clean-up and refactoring
+  * Add example of using an encrypted API key between client and router
+
+## Version v1.20.0 Fixes
+
+* `gdna`
+
+  * Fix `server-groups` report performance by joining on gateways as well as servers in the SQL query
+  * Trim spaces from Gateway names and also update any existing entries to remove leading/trailing spaces. This can happen because even though we trim each incoming CSV field the Gateway name is prefixed `gateway:` and can hide a leading space
+
+* `tools/geneos`
+
+  * Support Webserver > 7.1.1 byt removing unsupported Java command line option
+  * More updates to support OS and ARCH in downloads
+  * Always set `HOSTNAME` environment variable in Netprobe so that Collection Agent self-monitoring works without further updates (this was already the case for `ca3` components)
+
+---
+
 ## Version v1.19.2
 
 > [!NOTE]
