@@ -73,7 +73,7 @@ We include three out-of-the-box dashboards to show you how effectively Geneos is
 
 The first dashboard, Monitoring Coverage, gives an overview of all your Geneos Gateways, the servers they are monitoring and the high-level plugin utilization, broken down into 3 coverage levels:
 
-![Monitoring Coverage Example](screenshots/gdna-2.jpg)
+![Monitoring Coverage Example](screenshots/gdna-2.png)
 
 * Level 1 - Core compute infrastructure monitoring; The plugin names can be seen in the left had part of the Plugin Utilization area above. (There are also optional Level 1 plugins, which can be seen in the second dashboard below)
 
@@ -93,7 +93,7 @@ Each hexagon represents a specific plugin, grouped into logical segments. The nu
 
 The third dashboard we include shows version data collected from Geneos 7 release `licd` and Gateways. It shows you version information about the servers that Netprobes are running on as well as Netprobe versions when `licd` is running release 7 or later. Additional Gateway version information becomes available when running Gateway of release 7 or later.
 
-![Version Summary Example](screenshots/version-summary.jpg)
+![Version Summary Example](screenshots/version-summary.png)
 
 ## Gateway Dataviews
 

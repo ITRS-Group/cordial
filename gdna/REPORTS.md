@@ -39,6 +39,7 @@ Below is the list of reports from the `gdna list reports` command (with minor ch
 | instance-licences-per-gateway         | Licensing           | Instance Licences Per Gateway   | indirect | Y        | Y    |
 | licence-allocations                   | Licensing           | Licence Allocations             |          | Y        | N    |
 | licence-sources                       | Licensing           | Licence Sources                 |          | Y        | Y    |
+| multiple-os-versions-per-hostid       | Licensing           | Multiple OS Versions Per HostID |          | Y        | Y    |
 | plugin-licences-per-gateway           | Licensing           | Plugin Licences Per Gateway     | indirect | N        | N    |
 | servers-with-multiple-licence-sources | Licensing           | Servers Using Multiple Licenses |          | Y        | Y    |
 | coverage-by-level-and-plugin          | Monitoring Coverage | Coverage By Level And Plugin    |          | Y        | N    |
