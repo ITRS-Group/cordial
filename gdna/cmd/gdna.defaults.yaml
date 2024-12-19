@@ -2126,8 +2126,7 @@ reports:
         1
         FROM ${plugins.all.table} a
         JOIN levels USING (plugin)
-       WHERE plugin IN (SELECT DISTINCT plugin from ${db.tokens.active})
-         AND plugin NOT IN (SELECT DISTINCT plugin FROM current)
+       WHERE plugin NOT IN (SELECT DISTINCT plugin FROM current)
          AND plugin NOT IN (SELECT DISTINCT plugin FROM previous)
        GROUP BY plugin
       ;
