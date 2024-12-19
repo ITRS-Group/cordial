@@ -187,6 +187,9 @@ func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave
 	return
 }
 
+// TLSImportBundle processes a PEM formatted signingBundle from a file
+// or an embedded string with either an included private key and chain
+// or separately specified in the same way.
 func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) (err error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
@@ -209,6 +212,10 @@ func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) 
 	// basic validation
 	if !(cert.BasicConstraintsValid && cert.IsCA) {
 		return ErrInvalidArgs
+	}
+
+	if key == nil {
+		return errors.New("no matching private key found")
 	}
 
 	if err = config.WriteCert(LOCAL, path.Join(confDir, SigningCertBasename+".pem"), cert); err != nil {
