@@ -287,26 +287,27 @@ func TLSInit(overwrite bool, keytype string) (err error) {
 		cordial.ExecutableName()+" root certificate",
 		overwrite,
 		keytype); err != nil {
-		if errors.Is(err, os.ErrExist) {
-			// fmt.Println("root certificate already exists in", confDir)
-			return nil
+		if !errors.Is(err, os.ErrExist) {
+			return err
 		}
-		return err
+		fmt.Printf("root certificate already exists in %s, skipping\n", path.Join(confDir, RootCABasename)+".pem")
+	} else {
+		fmt.Printf("CA created for %s\n", RootCABasename)
 	}
-	fmt.Printf("CA created for %s\n", RootCABasename)
 
 	if err := config.CreateSigningCert(
-		LOCAL, path.Join(confDir, SigningCertBasename),
+		LOCAL,
+		path.Join(confDir, SigningCertBasename),
 		path.Join(confDir, RootCABasename),
 		cordial.ExecutableName()+" intermediate certificate",
 		overwrite); err != nil {
-		if errors.Is(err, os.ErrExist) {
-			// fmt.Println("signing certificate already exists in", confDir)
-			return nil
+		if !errors.Is(err, os.ErrExist) {
+			return err
 		}
-		return err
+		fmt.Printf("signing certificate already exists in %s, skipping\n", path.Join(confDir, SigningCertBasename)+".pem")
+	} else {
+		fmt.Printf("Signing certificate created for %s\n", SigningCertBasename)
 	}
-	fmt.Printf("Signing certificate created for %s\n", SigningCertBasename)
 
 	// sync if geneos root exists
 	if d, err := os.Stat(LocalRoot()); err == nil && d.IsDir() {
