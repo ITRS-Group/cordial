@@ -953,7 +953,9 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 	switch u.Scheme {
 	case "https", "http":
 		sources = append(sources, u.Scheme+":"+u.Hostname())
-		t := time.Now()
+		// source timestamp defaults to "now" and is only updated from
+		// the detail report, the summary report time is ignored
+		ts := time.Now()
 		tr := http.DefaultTransport
 		if u.Scheme == "https" {
 			skip := cf.GetBool("gdna.licd-skip-verify")
@@ -986,36 +988,37 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 		uSummary := u.JoinPath(SummaryPath)
 		req, err := http.NewRequestWithContext(ctx, "GET", uSummary.String(), nil)
 		if err != nil {
-			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, t, err)
+			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, ts, err)
 			return sources, err
 		}
 		resp, err := client.Do(req)
 		if err != nil {
-			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, t, err)
+			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, ts, err)
 			return sources, err
 		}
 		if resp.StatusCode > 299 {
 			resp.Body.Close()
 			err = fmt.Errorf("server returned %s", resp.Status)
-			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, t, err)
+			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, ts, err)
 			return sources, err
 		}
 		defer resp.Body.Close()
+
 		// set the source time to either the last-modified header or now
-		if lm := resp.Header.Get("last-modified"); lm != "" {
-			lmt, err := http.ParseTime(lm)
-			if err == nil {
-				t = lmt
-			}
-		}
+		// if lm := resp.Header.Get("last-modified"); lm != "" {
+		// 	lmt, err := http.ParseTime(lm)
+		// 	if err == nil {
+		// 		ts = lmt
+		// 	}
+		// }
 
 		c := csv.NewReader(resp.Body)
 		c.ReuseRecord = false
 		c.Comment = '#'
 
-		if err = summaryReportToDB(ctx, cf, tx, c, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, t); err != nil {
+		if err = summaryReportToDB(ctx, cf, tx, c, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, ts); err != nil {
 			log.Error().Err(err).Msg("")
-			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, t, err)
+			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, ts, err)
 			return sources, err
 		}
 
@@ -1023,36 +1026,36 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 		uDetail := u.JoinPath(DetailsPath)
 		req, err = http.NewRequestWithContext(ctx, "GET", uDetail.String(), nil)
 		if err != nil {
-			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, t, err)
+			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, ts, err)
 			return sources, err
 		}
 		resp, err = client.Do(req)
 		if err != nil {
-			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, t, err)
+			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, ts, err)
 			return sources, err
 		}
 		if resp.StatusCode > 299 {
 			resp.Body.Close()
 			err = fmt.Errorf("server returned %s", resp.Status)
-			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, t, err)
+			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, ts, err)
 			return sources, err
 		}
 		defer resp.Body.Close()
 
 		// set the source time to either the last-modified header or now
-		if lm := resp.Header.Get("last-modified"); lm != "" {
-			lmt, err := http.ParseTime(lm)
-			if err == nil {
-				t = lmt
-			}
-		}
+		// if lm := resp.Header.Get("last-modified"); lm != "" {
+		// 	lmt, err := http.ParseTime(lm)
+		// 	if err == nil {
+		// 		ts = lmt
+		// 	}
+		// }
 
 		c = csv.NewReader(resp.Body)
 		c.ReuseRecord = true
 		c.Comment = '#'
 
-		if err = detailReportToDB(ctx, cf, tx, c, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, t); err != nil {
-			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, t, err)
+		if err = detailReportToDB(ctx, cf, tx, c, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, ts); err != nil {
+			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, ts, err)
 			return sources, err
 		}
 
@@ -1071,28 +1074,34 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 
 		// any file with the suffix `_summary` before the extension is
 		// loaded as a license summary
-		for _, source := range files {
-			var s os.FileInfo
-			t := time.Now()
-			source, _ = filepath.Abs(source)
-			source = filepath.ToSlash(source)
+		for _, file := range files {
+			// skip _summary files, check them explicitly later
+			if strings.HasSuffix(strings.TrimSuffix(file, filepath.Ext(file)), "_summary") {
+				continue
+			}
 
-			sourceName := "file:" + strings.TrimSuffix(filepath.Base(source), filepath.Ext(source))
+			var s os.FileInfo
+			ts := time.Now()
+			file, _ = filepath.Abs(file)
+			file = filepath.ToSlash(file)
+
+			sourceName := "file:" + strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
 			sources = append(sources, sourceName)
-			s, err = os.Stat(source)
+			s, err = os.Stat(file)
 			if err != nil {
 				log.Error().Err(err).Msg("")
 				// record the failure
-				updateSources(ctx, cf, tx, sourceName, "file", source, false, t, err)
+				updateSources(ctx, cf, tx, sourceName, "file", file, false, ts, err)
 				return sources, err
 			}
 			if s.IsDir() {
 				// record failure as source file is a directory
-				updateSources(ctx, cf, tx, sourceName, "file", source, false, t, os.ErrInvalid)
+				updateSources(ctx, cf, tx, sourceName, "file", file, false, ts, os.ErrInvalid)
 				return sources, os.ErrInvalid // geneos.ErrIsADirectory
 			}
+
 			if !overrideFiletime {
-				t = s.ModTime()
+				ts = s.ModTime()
 			}
 
 			var tm sql.NullString
@@ -1108,36 +1117,48 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 					// drop through, time is nil
 				}
 
-				if t.Truncate(time.Second).Equal(last) && !(onStart || onStartEMail) && !dbUpdated {
+				if ts.Truncate(time.Second).Equal(last) && !(onStart || onStartEMail) && !dbUpdated {
 					log.Debug().Msgf("no update since %s", tm.String)
 					continue
 				}
 			}
 
-			r, err := os.Open(source)
+			r, err := os.Open(file)
 			if err != nil {
-				log.Error().Err(err).Msg(source)
+				log.Error().Err(err).Msg(file)
 				continue
 			}
-			defer r.Close()
 			c := csv.NewReader(r)
 			c.ReuseRecord = true
 			c.Comment = '#'
 
-			if strings.HasSuffix(strings.TrimSuffix(sourceName, filepath.Ext(sourceName)), "_summary") {
-				sn := strings.TrimSuffix(sourceName, "_summary"+filepath.Ext(sourceName)) + filepath.Ext(sourceName)
-				if err = summaryReportToDB(ctx, cf, tx, c, sn, "file", source, t); err != nil {
-					log.Error().Err(err).Msg("")
-					updateSources(ctx, cf, tx, sn, "file", source, false, t, err)
-					return sources, err
-				}
-			} else {
-				if err = detailReportToDB(ctx, cf, tx, c, sourceName, "file", source, t); err != nil {
-					log.Error().Err(err).Msg(source)
-					// record error
-					updateSources(ctx, cf, tx, sourceName, "file", source, false, t, err)
-				}
+			if err = detailReportToDB(ctx, cf, tx, c, sourceName, "file", file, ts); err != nil {
+				log.Error().Err(err).Msg(file)
+				// record error
+				updateSources(ctx, cf, tx, sourceName, "file", file, false, ts, err)
 			}
+			r.Close()
+
+			// now try to process a _summary file for the same
+			file = strings.TrimSuffix(file, filepath.Ext(file)) + "_summary" + filepath.Ext(file)
+			sourceName = strings.TrimSuffix(sourceName, filepath.Ext(sourceName)) + "_summary" + filepath.Ext(sourceName)
+
+			r, err = os.Open(file)
+			if err != nil {
+				log.Debug().Err(err).Msg(file)
+				continue
+			}
+			c = csv.NewReader(r)
+			c.ReuseRecord = true
+			c.Comment = '#'
+
+			sn := strings.TrimSuffix(sourceName, "_summary"+filepath.Ext(sourceName)) + filepath.Ext(sourceName)
+			if err = summaryReportToDB(ctx, cf, tx, c, sn, "file", file, ts); err != nil {
+				log.Error().Err(err).Msg("")
+				updateSources(ctx, cf, tx, sn, "file", file, false, ts, err)
+				return sources, err
+			}
+
 		}
 		return sources, nil
 	}
