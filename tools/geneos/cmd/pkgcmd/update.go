@@ -95,7 +95,7 @@ geneos package update netprobe --version 5.13.2
 					types[c.Type().String()] = true
 				}
 			}
-			for _, h := range h.OrList() {
+			for h := range h.OrList() {
 				for t := range types {
 					ct := geneos.ParseComponent(t)
 					if err = geneos.Install(h, ct, geneos.Version(updateCmdVersion)); err != nil {

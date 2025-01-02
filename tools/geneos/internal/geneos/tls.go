@@ -343,7 +343,7 @@ func TLSSync() (err error) {
 		return
 	}
 
-	for _, r := range AllHosts() {
+	for r := range ALL.OrList() {
 		tlsPath := r.PathTo("tls")
 		if err = r.MkdirAll(tlsPath, 0775); err != nil {
 			return

@@ -21,6 +21,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"iter"
 	"os"
 	"os/exec"
 	"path"
@@ -288,36 +289,59 @@ func PlatformID(h *Host) (platformID string) {
 	return
 }
 
-// Match returns a slice of all matching Hosts. Intended for use in
-// range loops where the host could be specific or 'all'. If passed
-// an empty string then returns an empty slice.
-func Match(h string) (r []*Host) {
-	switch h {
-	case "":
-		return []*Host{}
-	case ALLHOSTS:
-		return AllHosts()
-	default:
-		return []*Host{GetHost(h)}
+// Match returns an iterator for all matching Hosts. Intended for use in
+// range loops where the host could be specific or 'all'. If passed an
+// empty string then yields nothing
+func Match(h string) iter.Seq[*Host] {
+	return func(yield func(*Host) bool) {
+		switch h {
+		case "":
+			return
+		case ALLHOSTS:
+			yield(GetHost(h))
+			return
+		default:
+			hs := []*Host{LOCAL}
+			hs = append(hs, RemoteHosts(false)...)
+			for _, h := range hs {
+				if !yield(h) {
+					return
+				}
+			}
+		}
 	}
 }
 
-// OrList will return the receiver unless it is nil, or the list of all hosts
-// passed as args. If no args are given and the receiver is nil then all hosts
-// are returned.
-func (h *Host) OrList(hosts ...*Host) []*Host {
-	switch h {
-	case nil:
-		if len(hosts) == 0 {
-			return AllHosts()
+// OrList returns an iterator for Hosts; the receiver unless it is nil,
+// or the list of all hosts passed as args. If no args are given and the
+// receiver is nil then all hosts are returned.
+func (h *Host) OrList(hosts ...*Host) iter.Seq[*Host] {
+	return func(yield func(*Host) bool) {
+		switch h {
+		case nil:
+			if len(hosts) == 0 {
+				hosts = append(hosts, LOCAL)
+				hosts = append(hosts, RemoteHosts(false)...)
+			}
+			for _, h := range hosts {
+				if !yield(h) {
+					return
+				}
+			}
+		case ALL:
+			hs := []*Host{LOCAL}
+			hs = append(hs, RemoteHosts(false)...)
+			for _, h := range hs {
+				if !yield(h) {
+					return
+				}
+			}
+		case UNKNOWN:
+			return
+		default:
+			yield(h)
+			return
 		}
-		return hosts
-	case ALL:
-		return AllHosts()
-	case UNKNOWN:
-		return []*Host{}
-	default:
-		return []*Host{h}
 	}
 }
 
@@ -370,13 +394,6 @@ func (h *Host) FullName(name string) string {
 		return name
 	}
 	return name + "@" + h.String()
-}
-
-// AllHosts returns a slice of all hosts, including LOCAL
-func AllHosts() (hs []*Host) {
-	hs = []*Host{LOCAL}
-	hs = append(hs, RemoteHosts(false)...)
-	return
 }
 
 // RemoteHosts returns a slice of all valid (loaded and reachable)

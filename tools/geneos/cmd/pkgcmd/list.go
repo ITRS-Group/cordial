@@ -64,7 +64,7 @@ var listCmd = &cobra.Command{
 		h := geneos.GetHost(cmd.Hostname)
 		versions := []geneos.ReleaseDetails{}
 
-		for _, h := range h.OrList() {
+		for h := range h.OrList() {
 			for ct := range ct.OrList() {
 				v, err := geneos.GetReleases(h, ct)
 				if err != nil {

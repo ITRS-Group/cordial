@@ -330,7 +330,7 @@ func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.PackageOpti
 	installed := 0
 	ctSet := ct != nil
 
-	for _, h := range h.OrList() {
+	for h := range h.OrList() {
 		for ct := range ct.OrList() {
 			if !ctSet && !installCmdAllTypes {
 				v, err := geneos.GetReleases(h, ct)

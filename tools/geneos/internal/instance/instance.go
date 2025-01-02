@@ -307,7 +307,7 @@ func FilterParameters(parameters ...string) InstanceOptions {
 // To support the move to parent types we do a little more, looking for
 // legacy locations in here
 func InstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
-	for _, h := range h.OrList() {
+	for h := range h.OrList() {
 		for ct := range ct.OrList() {
 			for _, dir := range ct.InstancesBaseDirs(h) {
 				d, err := h.ReadDir(dir)

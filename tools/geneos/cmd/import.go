@@ -93,7 +93,7 @@ func ImportFiles(ct *geneos.Component, args []string, sources []string) (err err
 		if ct == nil {
 			return fmt.Errorf("component type must be specified for common/shared directory import")
 		}
-		for _, r := range geneos.Match(Hostname) {
+		for r := range geneos.Match(Hostname) {
 			if _, err = geneos.ImportCommons(r, ct, ct.String()+"_"+importCmdCommon, sources); err != nil {
 				return
 			}
