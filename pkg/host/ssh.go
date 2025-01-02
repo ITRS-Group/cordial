@@ -35,11 +35,11 @@ import (
 	"time"
 
 	"github.com/awnumar/memguard"
+	"github.com/pkg/sftp"
+	"github.com/rs/zerolog/log"
+	"github.com/skeema/knownhosts"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/sftpfs"
-
-	"github.com/pkg/sftp"
-	"github.com/skeema/knownhosts"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -186,9 +186,14 @@ func sshConnect(dest, username string, password *memguard.Enclave, keyfiles ...s
 
 	// XXX we need this because:
 	// https://github.com/golang/go/issues/29286#issuecomment-1160958614
-	kh, err := knownhosts.New(path.Join(homedir, userSSHdir, "known_hosts"))
+	kh, err := knownhosts.NewDB(path.Join(homedir, userSSHdir, "known_hosts"))
 	if err != nil {
 		return
+	}
+
+	keys := kh.HostKeys(dest)
+	if len(keys) == 0 {
+		log.Fatal().Msgf("no public key found for %s", dest)
 	}
 
 	if agentClient := sshConnectAgent(); agentClient != nil {
@@ -212,7 +217,11 @@ func sshConnect(dest, username string, password *memguard.Enclave, keyfiles ...s
 		HostKeyAlgorithms: kh.HostKeyAlgorithms(dest),
 		Timeout:           5 * time.Second,
 	}
-	return ssh.Dial("tcp", dest, config)
+	client, err = ssh.Dial("tcp", dest, config)
+	if err != nil && knownhosts.IsHostKeyChanged(err) {
+		log.Fatal().Msgf("host key has changed for %s", dest)
+	}
+	return
 }
 
 // Dial connects to a remote host using ssh and returns an *ssh.Client
