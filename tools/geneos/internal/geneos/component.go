@@ -18,6 +18,7 @@ limitations under the License.
 package geneos
 
 import (
+	"iter"
 	"path"
 	"regexp"
 	"slices"
@@ -313,19 +314,38 @@ func (ct *Component) Shared(h *Host, subs ...interface{}) string {
 	return h.PathTo(parts...)
 }
 
-// OrList will return the method receiver, if not nil, or the list of
-// component types passed as args. If no arguments are passed then all
-// non-root components are returned.
-func (ct *Component) OrList(cts ...*Component) []*Component {
-	if ct != nil {
-		return []*Component{ct}
-	}
+// OrList returns and iterator for component types for the first non-nil
+// value of: the method receiver or the list of component types passed as
+// args. If no arguments are passed then all non-root components are
+// returned.
+func (ct *Component) OrList(cts ...*Component) iter.Seq[*Component] {
+	return func(yield func(*Component) bool) {
+		if ct != nil {
+			yield(ct)
+			return
+		}
 
-	if len(cts) == 0 {
-		return RealComponents()
-	}
+		if len(cts) == 0 {
+			for _, c := range registeredComponents {
+				if c == &RootComponent {
+					continue
+				}
+				if !yield(c) {
+					return
+				}
+			}
+			return
+		}
 
-	return cts
+		for _, c := range cts {
+			if c == &RootComponent {
+				continue
+			}
+			if !yield(c) {
+				return
+			}
+		}
+	}
 }
 
 // AllComponents returns a slice of all registered components, include

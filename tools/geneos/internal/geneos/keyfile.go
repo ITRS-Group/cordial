@@ -151,7 +151,7 @@ func WriteSharedKeyValues(h *Host, ct *Component, kv *config.KeyValues) (paths [
 	// at this point we have an AESValue struct and a CRC to use as
 	// the filename base. create 'keyfiles' directory as required
 	for _, h := range h.OrList(AllHosts()...) {
-		for _, ct := range ct.OrList(UsesKeyFiles()...) {
+		for ct := range ct.OrList(UsesKeyFiles()...) {
 			var p string
 			if p, err = writeSharedKey(h, ct, kv); err != nil {
 				return

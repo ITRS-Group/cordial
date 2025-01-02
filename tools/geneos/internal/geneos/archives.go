@@ -847,7 +847,7 @@ func FilenameToComponentVersion(oct *Component, filename string) (ct *Component,
 	var re *regexp.Regexp
 	var parts []string
 
-	for _, nct := range oct.OrList() {
+	for nct := range oct.OrList() {
 		re = archiveRE
 		if nct.DownloadNameRegexp != nil {
 			re = nct.DownloadNameRegexp

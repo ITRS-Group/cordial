@@ -79,7 +79,7 @@ geneos uninstall --version 5.14.1
 		}
 
 		for _, h := range h.OrList() {
-			for _, ct := range ct.OrList() {
+			for ct := range ct.OrList() {
 				// remove cached packages, but only locally
 				if h == geneos.LOCAL && !uninstallCmdKeep {
 					pattern := ct.DownloadInfix

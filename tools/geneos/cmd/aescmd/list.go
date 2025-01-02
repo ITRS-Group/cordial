@@ -150,7 +150,7 @@ func aesListShared(ct *geneos.Component, h *geneos.Host) (results instance.Respo
 	results = make(instance.Responses)
 	var lines []string
 	for _, h := range h.OrList() {
-		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
+		for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 			var dirs []fs.DirEntry
 			dirs, err = h.ReadDir(ct.Shared(h, "keyfiles"))
 			if err != nil {
@@ -208,7 +208,7 @@ func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (responses instance.
 	var rows [][]string
 
 	for _, h := range h.OrList() {
-		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
+		for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 			dirs, err := h.ReadDir(ct.Shared(h, "keyfiles"))
 			if err != nil {
 				continue
@@ -300,7 +300,7 @@ func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results instance.R
 	var values []*instance.Response
 
 	for _, h := range h.OrList() {
-		for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
+		for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 			var dirs []fs.DirEntry
 			dirs, err = h.ReadDir(ct.Shared(h, "keyfiles"))
 			if err != nil {

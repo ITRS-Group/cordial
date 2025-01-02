@@ -92,7 +92,7 @@ var setCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
+			for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 				instance.Do(h, ct, names, aesSetAESInstance, kv).Write(os.Stdout)
 			}
 			return nil

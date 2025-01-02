@@ -216,7 +216,7 @@ func Get(ct *geneos.Component, name string) (instance geneos.Instance, err error
 func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions) (instances []geneos.Instance, err error) {
 	var instanceNames []string
 
-	for _, ct := range ct.OrList() {
+	for ct := range ct.OrList() {
 		for _, name := range InstanceNames(h, ct) {
 			instanceNames = append(instanceNames, ct.String()+":"+name)
 		}
@@ -308,7 +308,7 @@ func FilterParameters(parameters ...string) InstanceOptions {
 // legacy locations in here
 func InstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 	for _, h := range h.OrList() {
-		for _, ct := range ct.OrList() {
+		for ct := range ct.OrList() {
 			for _, dir := range ct.InstancesBaseDirs(h) {
 				d, err := h.ReadDir(dir)
 				if err != nil {

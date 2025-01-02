@@ -107,7 +107,7 @@ geneos aes new -S gateway
 				if err != nil {
 					return err
 				}
-				for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
+				for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 					instance.Do(h, ct, names, aesNewSetInstanceShared, crc).Write(os.Stdout)
 				}
 			}
@@ -115,7 +115,7 @@ geneos aes new -S gateway
 			ct, names := cmd.ParseTypeNames(command)
 			h := geneos.GetHost(cmd.Hostname)
 
-			for _, ct := range ct.OrList(geneos.UsesKeyFiles()...) {
+			for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
 				instance.Do(h, ct, names, aesNewSetInstance, kv).Write(os.Stdout)
 			}
 		} else {

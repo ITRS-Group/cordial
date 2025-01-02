@@ -123,7 +123,7 @@ geneos package update netprobe --version 5.13.2
 
 		instances := []geneos.Instance{}
 		if updateCmdRestart {
-			for _, ct := range ct.OrList() {
+			for ct := range ct.OrList() {
 				allInstances, err := instance.Instances(h, ct)
 				if err != nil {
 					return err

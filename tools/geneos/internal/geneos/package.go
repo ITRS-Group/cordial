@@ -204,7 +204,7 @@ func Update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	//
 
 	for _, h := range h.OrList() {
-		for _, ct := range ct.OrList() {
+		for ct := range ct.OrList() {
 			if err = update(h, ct, options...); err != nil {
 				if !errors.Is(err, os.ErrNotExist) {
 					fmt.Println(err)

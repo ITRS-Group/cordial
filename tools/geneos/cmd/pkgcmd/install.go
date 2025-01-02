@@ -288,7 +288,7 @@ geneos install netprobe -b active_dev -U
 		// record which instances to stop early. once we get to components, we don't know about instances
 		if installCmdUpdate {
 			instances := []geneos.Instance{}
-			for _, ct := range ct.OrList() {
+			for ct := range ct.OrList() {
 				allInstances, err := instance.Instances(h, ct)
 				if err != nil {
 					panic(err)
@@ -331,7 +331,7 @@ func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.PackageOpti
 	ctSet := ct != nil
 
 	for _, h := range h.OrList() {
-		for _, ct := range ct.OrList() {
+		for ct := range ct.OrList() {
 			if !ctSet && !installCmdAllTypes {
 				v, err := geneos.GetReleases(h, ct)
 				if err != nil {
