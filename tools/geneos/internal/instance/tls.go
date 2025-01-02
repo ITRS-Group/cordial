@@ -22,6 +22,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"os"
 	"path"
@@ -47,14 +48,26 @@ import (
 func CreateCert(i geneos.Instance, duration time.Duration) (resp *Response) {
 	resp = NewResponse(i)
 
+	// skip if we can load an existing and valid certificate
+	if _, valid, _, err := ReadCert(i); err == nil && valid {
+		resp.Line = "certificate already exists and is valid (use the `renew` command to overwrite)"
+		return
+	}
+
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		resp.Err = config.ErrNoUserConfigDir
 		return
 	}
 
-	// skip if we can load an existing and valid certificate
-	if _, valid, _, err := ReadCert(i); err == nil && valid {
+	signingCert, _, err := geneos.ReadSigningCert()
+	if err != nil {
+		resp.Err = err
+		return
+	}
+	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertBasename+".key"))
+	if err != nil {
+		resp.Err = err
 		return
 	}
 
@@ -66,6 +79,7 @@ func CreateCert(i geneos.Instance, duration time.Duration) (resp *Response) {
 		return
 	}
 	if duration == 0 {
+		// default to one year
 		duration = 365 * 24 * time.Hour
 	}
 	expires := time.Now().Add(duration)
@@ -81,17 +95,6 @@ func CreateCert(i geneos.Instance, duration time.Duration) (resp *Response) {
 		MaxPathLenZero: true,
 		DNSNames:       []string{hostname},
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
-	}
-
-	signingCert, _, err := geneos.ReadSigningCert()
-	if err != nil {
-		resp.Err = err
-		return
-	}
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertBasename+".key"))
-	if err != nil {
-		resp.Err = err
-		return
 	}
 
 	cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey, nil)
@@ -132,13 +135,15 @@ func CreateCert(i geneos.Instance, duration time.Duration) (resp *Response) {
 		return
 	}
 
+	// resp.Completed = append(resp.Completed, fmt.Sprintf("certificate created, expires %s", expires.UTC().Format(time.RFC3339)))
 	resp.Line = fmt.Sprintf("certificate created for %s (expires %s)", i, expires.UTC().Format(time.RFC3339))
 	return
 }
 
-// WriteCert writes the certificate for the instance i and updates the
-// "certificate" instance parameter. It does not save the instance
-// configuration.
+// WriteCert writes the certificate in the instance i directory using
+// standard file name of TYPE.pem and updates the `certificate`
+// parameter. It does not write the instance configuration, expecting
+// the caller to do so after any other updates.
 func WriteCert(i geneos.Instance, cert *x509.Certificate) (err error) {
 	cf := i.Config()
 
@@ -156,9 +161,10 @@ func WriteCert(i geneos.Instance, cert *x509.Certificate) (err error) {
 	return
 }
 
-// WriteKey writes the key for the instance i and updates the
-// "privatekey" instance parameter. It does not save the instance
-// configuration.
+// WriteKey writes the private key in the instance i directory using
+// standard file name of TYPE.key and updates the `privatekey` instance
+// parameter. It does not write the instance configuration, expecting
+// the caller to do so after any other updates.
 func WriteKey(i geneos.Instance, key *memguard.Enclave) (err error) {
 	cf := i.Config()
 
@@ -210,8 +216,13 @@ func ReadCert(i geneos.Instance) (cert *x509.Certificate, valid bool, chainfile 
 		log.Debug().Err(err).Msg("")
 		return
 	}
+	pembytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: k.Bytes(),
+	})
 	defer k.Destroy()
-	_, err = tls.X509KeyPair(c, k.Bytes())
+
+	_, err = tls.X509KeyPair(c, pembytes)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
 		return

@@ -62,13 +62,24 @@ var renewCmd = &cobra.Command{
 	},
 }
 
-// renew an instance certificate, use private key if it exists
+// renew an instance certificate, reuse private key if it exists
 func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		resp.Err = config.ErrNoUserConfigDir
+		return
+	}
+
+	signingCert, _, err := geneos.ReadSigningCert()
+	resp.Err = err
+	if resp.Err != nil {
+		return
+	}
+	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
+	resp.Err = err
+	if resp.Err != nil {
 		return
 	}
 
@@ -98,17 +109,6 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		MaxPathLenZero: true,
 		DNSNames:       []string{hostname},
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
-	}
-
-	signingCert, _, err := geneos.ReadSigningCert()
-	resp.Err = err
-	if resp.Err != nil {
-		return
-	}
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
-	resp.Err = err
-	if resp.Err != nil {
-		return
 	}
 
 	// read existing key or create a new one
