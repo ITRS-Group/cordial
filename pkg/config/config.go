@@ -98,12 +98,13 @@ func New(options ...FileOptions) *Config {
 
 var ErrNoUserConfigDir = errors.New("cannot resolve user config directory, check $USER and $HOME exist")
 
-// AppConfigDir returns the application configuration directory
+// AppConfigDir returns the application configuration directory for the
+// global configuration
 func AppConfigDir() string {
 	return global.appUserConfDir
 }
 
-// AppConfigDir returns the application configuration directory
+// AppConfigDir returns the application configuration directory for c
 func (c *Config) AppConfigDir() string {
 	return c.appUserConfDir
 }
