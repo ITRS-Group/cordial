@@ -133,11 +133,7 @@ geneos uninstall --version 5.14.1
 				//
 				// get all instances on host h and check type and pkgtype
 				restart := map[string][]geneos.Instance{}
-				instances, err := instance.Instances(h, nil)
-				if err != nil {
-					panic(err)
-				}
-				for _, i := range instances {
+				for _, i := range instance.Instances(h, nil) {
 					if i.Type() != ct && i.Config().GetString("pkgtype") != ct.String() {
 						log.Debug().Msgf("%q is neither %q or pkgtype %q, skipping", i, ct, i.Config().GetString("pkgtype"))
 						continue

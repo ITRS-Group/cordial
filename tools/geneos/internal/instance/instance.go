@@ -115,8 +115,8 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 }
 
 // Do calls function f for each matching instance and gathers the return
-// values into a slice of Response for handling by the caller. The
-// functions are executed in goroutines and must be concurrency safe.
+// values into responses for handling by the caller. The functions are
+// executed in goroutines and must be concurrency safe.
 //
 // The values are passed to each function called and must not be changes
 // by the called function. The called function should validate and cast
@@ -128,12 +128,7 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *Response, values ...any) (responses Responses) {
 	var wg sync.WaitGroup
 
-	instances, err := Instances(h, ct, FilterNames(names...))
-	if err != nil {
-		log.Error().Err(err).Msg("")
-		return
-	}
-
+	instances := Instances(h, ct, FilterNames(names...))
 	responses = make(Responses, len(instances))
 	ch := make(chan *Response, len(instances))
 
@@ -180,6 +175,7 @@ func Disable(i geneos.Instance) (err error) {
 func Enable(i geneos.Instance) (err error) {
 	disableFile := ComponentFilepath(i, geneos.DisableExtension)
 	if _, err = i.Host().Stat(disableFile); err != nil {
+		// not disabled, return with no error
 		return nil
 	}
 	return i.Host().Remove(disableFile)
@@ -213,7 +209,7 @@ func Get(ct *geneos.Component, name string) (instance geneos.Instance, err error
 // type ct, where both can be nil in which case all hosts or component
 // types are used respectively. The options allow filtering based on
 // names or parameter matches.
-func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions) (instances []geneos.Instance, err error) {
+func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions) (instances []geneos.Instance) {
 	var instanceNames []string
 
 	for ct := range ct.OrList() {
@@ -245,7 +241,6 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions)
 		}
 		instances = append(instances, instance)
 	}
-	err = nil
 
 	if len(opts.parameters) > 0 {
 		params := map[string]string{}

@@ -121,10 +121,7 @@ var exportCmd = &cobra.Command{
 
 			if len(names) == 1 {
 				// single instance
-				instances, err := instance.Instances(h, ct, instance.FilterNames(names...))
-				if err != nil {
-					return err
-				}
+				instances := instance.Instances(h, ct, instance.FilterNames(names...))
 				if len(instances) == 0 {
 					return geneos.ErrNotExist
 				}
@@ -134,13 +131,9 @@ var exportCmd = &cobra.Command{
 				h = i.Host()
 			} else {
 				// more than one, error if not (a) all the same type and (b) all on the same host
-				instances, err := instance.Instances(h, ct, instance.FilterNames(names...))
-				if err != nil {
-					return err
-				}
 				var nct *geneos.Component
 				var nh *geneos.Host
-				for _, i := range instances {
+				for _, i := range instance.Instances(h, ct, instance.FilterNames(names...)) {
 					if nct == nil {
 						nct = i.Type()
 						nh = i.Host()

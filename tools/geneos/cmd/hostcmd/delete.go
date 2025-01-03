@@ -80,11 +80,7 @@ var deleteCmd = &cobra.Command{
 		for _, h := range hosts {
 			// stop and/or delete instances on host
 			if deleteCmdStop {
-				instances, err := instance.Instances(h, nil)
-				if err != nil {
-					panic(err)
-				}
-				for _, c := range instances {
+				for _, c := range instance.Instances(h, nil) {
 					if err = instance.Stop(c, deleteCmdForce, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
 						return err
 					}
