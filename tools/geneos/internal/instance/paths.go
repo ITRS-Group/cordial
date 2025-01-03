@@ -21,7 +21,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -115,8 +114,7 @@ func Abs(i geneos.Instance, file string) (result string) {
 	return path.Join(i.Home(), result)
 }
 
-// Filepaths returns the full paths to the files identified by the list
-// of parameters in names.
+// Filepaths returns the full paths to the files identified by names.
 //
 // If the instance configuration is valid an empty slice is returned. If
 // a parameter is unset or empty then an empty path is returned.
@@ -132,22 +130,6 @@ func Filepaths(i geneos.Instance, names ...string) (filenames []string) {
 		filenames = append(filenames, Abs(i, cf.GetString(name)))
 	}
 	return
-}
-
-// ConfigFileType returns the current primary configuration file
-// extension
-func ConfigFileType() (conftype string) {
-	conftype = config.GetString("configtype")
-	if conftype == "" {
-		conftype = "json"
-	}
-	return
-}
-
-// ConfigFileTypes contains a list of supported configuration file
-// extensions
-func ConfigFileTypes() []string {
-	return []string{"json", "yaml"}
 }
 
 // Home return the directory for the instance. It checks for the first existing directory from:

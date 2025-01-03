@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -38,86 +37,25 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-// return the KEY from "[TYPE:]KEY=VALUE"
-func nameOf(s string, sep string) string {
-	r := strings.SplitN(s, sep, 2)
-	return r[0]
-}
-
-// return the VALUE from "[TYPE:]KEY=VALUE"
-func valueOf(s string, sep string) string {
-	r := strings.SplitN(s, sep, 2)
-	if len(r) > 0 {
-		return r[1]
+// ConfigFileType returns the configuration file extension, defaulting
+// to "json" if not set.
+func ConfigFileType() (conftype string) {
+	conftype = config.GetString("configtype")
+	if conftype == "" {
+		conftype = "json"
 	}
-	return ""
-}
-
-// first returns the first non-empty string argument
-func first(d ...interface{}) string {
-	for _, f := range d {
-		if s, ok := f.(string); ok {
-			if s != "" {
-				return s
-			}
-		}
-	}
-	return ""
-}
-
-var fnmap = template.FuncMap{
-	"first":   first,
-	"join":    path.Join,
-	"nameOf":  nameOf,
-	"valueOf": valueOf,
-}
-
-// ExecuteTemplate loads templates from TYPE/templates/[tmpl]* and parse them,
-// using the instance data write it out to a single file. If tmpl is
-// empty, load all files
-func ExecuteTemplate(i geneos.Instance, p string, name string, defaultTemplate []byte) (err error) {
-	var out io.WriteCloser
-	// var t *template.Template
-
-	cf := i.Config()
-
-	t := template.New("").Funcs(fnmap).Option("missingkey=zero")
-	if t, err = t.ParseGlob(i.Host().PathTo(i.Type(), "templates", "*.gotmpl")); err != nil {
-		t = template.New(name).Funcs(fnmap).Option("missingkey=zero")
-		// if there are no templates, use internal as a fallback
-		log.Warn().Msgf("No templates found in %s, using internal defaults", i.Host().PathTo(i.Type(), "templates"))
-		t = template.Must(t.Parse(string(defaultTemplate)))
-	}
-
-	if out, err = i.Host().Create(p, 0660); err != nil {
-		log.Warn().Msgf("Cannot create configuration file for %s %s", i, p)
-		return err
-	}
-	defer out.Close()
-	m := cf.ExpandAllSettings(config.NoDecode(true))
-	// viper insists this is a float64, manually override
-	m["port"] = uint16(cf.GetUint("port"))
-	// set high level defaults
-	m["root"] = i.Host().GetString("geneos")
-	m["name"] = i.Name()
-	m["home"] = i.Home()
-	// remove aliases and expand the rest
-	for _, k := range cf.AllKeys() {
-		if _, ok := i.Type().LegacyParameters[k]; ok {
-			delete(m, k)
-		}
-	}
-	// log.Debug().Msgf("template data: %#v", m)
-
-	if err = t.ExecuteTemplate(out, name, m); err != nil {
-		log.Error().Err(err).Msg("Cannot create configuration from template(s)")
-	}
-
 	return
 }
 
-// LoadConfig will load the JSON config file if available, otherwise try
-// to load the "legacy" .rc file
+// ConfigFileTypes contains a list of supported configuration file
+// extensions
+func ConfigFileTypes() []string {
+	return []string{"json", "yaml"}
+}
+
+// LoadConfig will load the instance config file if available, otherwise
+// try to load the "legacy" .rc file. The instance struct must be
+// initialised before the call.
 //
 // The modtime of the underlying config file is recorded in ConfigLoaded
 // and checked before re-loading
