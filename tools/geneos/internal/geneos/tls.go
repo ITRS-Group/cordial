@@ -196,6 +196,14 @@ func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) 
 	if confDir == "" {
 		return config.ErrNoUserConfigDir
 	}
+
+	// speculatively create user config directory. permissions do not
+	// need to be restrictive
+	err = LOCAL.MkdirAll(confDir, 0775)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
 	signingBundle, err := config.ReadInputPEMString(signingBundleSource, "signing certificate(s)")
 	if err != nil {
 		return err
@@ -210,6 +218,7 @@ func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) 
 	if err != nil {
 		return err
 	}
+
 	// basic validation
 	if !(cert.BasicConstraintsValid && cert.IsCA) {
 		return ErrInvalidArgs
@@ -228,6 +237,7 @@ func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) 
 		return err
 	}
 	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+".key"))
+
 	if chainSource != "" {
 		b, err := os.ReadFile(chainSource)
 		if err != nil {
