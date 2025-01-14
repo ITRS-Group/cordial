@@ -34,6 +34,19 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
+// RootCABasename is the file base name for the root certificate authority
+// created with the TLS commands
+var RootCABasename = "rootCA"
+
+// SigningCertBasename is the file base name for the signing certificate
+// created with the TLS commands
+var SigningCertBasename string
+
+// ChainCertFile the is file name (including extension, as this does not
+// need to be used for keys) for the consolidated chain file used to
+// verify instance certificates
+var ChainCertFile string
+
 // ReadRootCert reads the root certificate from the user's app config
 // directory. It "promotes" old cert and key files from the previous tls
 // directory if files do not already exist in the user app config

@@ -114,7 +114,7 @@ var listCmd = &cobra.Command{
 	},
 }
 
-func listCertsCommand(ct *geneos.Component, names []string, params []string) (err error) {
+func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err error) {
 	switch {
 	case listCmdJSON, listCmdIndent:
 		listJSONEncoder = json.NewEncoder(os.Stdout)

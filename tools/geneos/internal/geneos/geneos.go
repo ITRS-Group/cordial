@@ -50,19 +50,6 @@ var (
 // them disabled
 const DisableExtension = "disabled"
 
-// RootCABasename is the file base name for the root certificate authority
-// created with the TLS commands
-var RootCABasename = "rootCA"
-
-// SigningCertBasename is the file base name for the signing certificate
-// created with the TLS commands
-var SigningCertBasename string
-
-// ChainCertFile the is file name (including extension, as this does not
-// need to be used for keys) for the consolidated chain file used to
-// verify instance certificates
-var ChainCertFile string
-
 // Initialise a Geneos environment by creating a directory structure and
 // then it calls the initialisation functions for each component type
 // registered.
