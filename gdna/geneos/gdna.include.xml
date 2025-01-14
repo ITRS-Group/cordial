@@ -2592,6 +2592,86 @@ ORDER BY probeVersion ASC
 					</transaction>
 				</block>
 			</rule>
+			<rule name="Coverage Severity">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[wild(@name,&quot;* Coverage&quot;)]/rows/row/cell[(@column=&quot;percent&quot;)]</target>
+				</targets>
+				<priority>1</priority>
+				<block>
+					<if>
+						<and>
+							<equal>
+								<target>
+									<rowName/>
+								</target>
+								<string>No Coverage</string>
+							</equal>
+							<gt>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>0</integer>
+							</gt>
+						</and>
+						<transaction>
+							<update>
+								<property>state/@severity</property>
+								<severity>critical</severity>
+							</update>
+						</transaction>
+						<if>
+							<and>
+								<equal>
+									<target>
+										<rowName/>
+									</target>
+									<string>Incomplete Coverage</string>
+								</equal>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>0</integer>
+								</gt>
+							</and>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>warning</severity>
+								</update>
+							</transaction>
+							<if>
+								<and>
+									<equal>
+										<target>
+											<rowName/>
+										</target>
+										<string>Complete Coverage</string>
+									</equal>
+									<gt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<integer>0</integer>
+									</gt>
+								</and>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>undefined</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</if>
+				</block>
+			</rule>
 			<ruleGroup name="Gateways">
 				<rule disabled="true" name="Empty Probes">
 					<targets>
@@ -3382,6 +3462,68 @@ ORDER BY probeVersion ASC
 									</total>
 								</update>
 							</transaction>
+						</block>
+					</rule>
+					<rule name="version">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Version Summary&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Probes&quot;)]/rows/row/cell[(@column=&quot;probeVersion&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>unknown</string>
+								</equal>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>undefined</severity>
+									</update>
+								</transaction>
+								<if>
+									<lt>
+										<stringAfter>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+											<string>GA</string>
+										</stringAfter>
+										<integer>5</integer>
+									</lt>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>critical</severity>
+										</update>
+									</transaction>
+									<if>
+										<lt>
+											<stringAfter>
+												<dataItem>
+													<property>@value</property>
+												</dataItem>
+												<string>GA</string>
+											</stringAfter>
+											<integer>6</integer>
+										</lt>
+										<transaction>
+											<update>
+												<property>state/@severity</property>
+												<severity>warning</severity>
+											</update>
+										</transaction>
+										<transaction>
+											<update>
+												<property>state/@severity</property>
+												<severity>undefined</severity>
+											</update>
+										</transaction>
+									</if>
+								</if>
+							</if>
 						</block>
 					</rule>
 				</ruleGroup>
