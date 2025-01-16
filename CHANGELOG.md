@@ -1,5 +1,32 @@
 # Change Log
 
+## Version v1.20.1
+
+> [!NOTE]
+> **Released 2025-01-16** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v1.20.1 Changes
+
+* Update Go to 1.23.4 and update all dependencies
+
+### Version v1.20.1 Fixes
+
+* `tools/geneos`
+
+  * Fix handling of older package directories that have `GA` or `RA` prefixes and sort packages by the numeric part only using semantic versioning rules.
+  * Don't stop if there is no private key in a TLS bundle, it may be supplied in a separate argument
+  * Do not overwrite existing root and signing certs and keys if they exist when running `geneos tls init`
+  * Report if public key is missing or changes in user's `known_hosts` file
+  * Always try to create the user config directory when writing configurations
+
+* `gdna`
+
+  * Remove dependency on license token when listing unused plugins
+  * Use timestamp of detailed report when updating summary report
+  * Update include file with additional configuration
+
+---
+
 ## Version v1.20.0 - Codename "Leo"
 
 > [!NOTE]
