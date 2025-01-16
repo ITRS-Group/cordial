@@ -107,7 +107,8 @@ func InstalledReleases(h *Host, ct *Component) (versions []string, err error) {
 	for _, ent := range ents {
 		versions = append(versions, ent.Name())
 	}
-	slices.Sort(versions)
+
+	slices.SortFunc(versions, CompareVersion)
 
 	return
 }
@@ -222,38 +223,41 @@ func CompareVersion(version1, version2 string) int {
 		return 1
 	}
 
-	v1p := strings.FieldsFunc(version1, func(r rune) bool {
+	v1parts := strings.FieldsFunc(version1, func(r rune) bool {
 		return !unicode.IsLetter(r)
 	})
-	if len(v1p) == 0 {
-		v1p = []string{"GA"}
-	} else if v1p[0] == "" {
-		v1p[0] = "GA"
+	if len(v1parts) == 0 {
+		v1parts = []string{"GA"}
+	} else if v1parts[0] == "" {
+		v1parts[0] = "GA"
 	} else {
-		version1 = strings.TrimPrefix(version1, v1p[0])
+		version1 = strings.TrimPrefix(version1, v1parts[0])
 	}
 	v1, err := version.NewVersion(version1)
 	if err != nil {
 		// if version1 is unparseable, treat version2 as greater
 		return 1
 	}
-	v2p := strings.FieldsFunc(version2, func(r rune) bool {
+
+	v2parts := strings.FieldsFunc(version2, func(r rune) bool {
 		return !unicode.IsLetter(r)
 	})
-	if len(v2p) == 0 {
-		v2p = []string{"GA"}
-	} else if v2p[0] == "" {
-		v2p[0] = "GA"
+	if len(v2parts) == 0 {
+		v2parts = []string{"GA"}
+	} else if v2parts[0] == "" {
+		v2parts[0] = "GA"
 	} else {
-		version2 = strings.TrimPrefix(version2, v2p[0])
+		version2 = strings.TrimPrefix(version2, v2parts[0])
 	}
 	v2, err := version.NewVersion(version2)
 	if err != nil {
 		// if version2 is unparseable, treat version2 as greater
 		return -1
 	}
+
 	if i := v1.Compare(v2); i != 0 {
 		return i
 	}
-	return strings.Compare(v1p[0], v2p[0])
+
+	return strings.Compare(v1parts[0], v2parts[0])
 }
