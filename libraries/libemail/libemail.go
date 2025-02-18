@@ -60,6 +60,9 @@ var logo []byte
 
 const msTeamsMessageCard = "MessageCard"
 const geneosThemecolor = "#46e1d7"
+const geneosThemecolorRed = "#FF0000"
+const geneosThemecolorAmber = "#FFA500"
+const geneosThemecolorGreen = "#00FF00"
 const DefaultWebhookURLValidationPattern = `^https:\/\/(?:.*\.webhook|outlook)\.office(?:365)?\.com`
 const DefaultMsTeamsTimeout = 2000
 
@@ -527,7 +530,16 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 	postData.Type = msTeamsMessageCard
 	postData.Title = header
 	postData.Text = body
-	postData.ThemeColor = geneosThemecolor
+	switch severity := strings.ToLower(getWithDefault("_SEVERITY", conf, "")); severity {
+	case "ok":
+		postData.ThemeColor = geneosThemecolorGreen
+	case "warning":
+		postData.ThemeColor = geneosThemecolorAmber
+	case "critical":
+		postData.ThemeColor = geneosThemecolorRed
+	default:
+		postData.ThemeColor = geneosThemecolor
+	}
 
 	// Build JSON data
 	jsonValue, err := json.Marshal(postData)
