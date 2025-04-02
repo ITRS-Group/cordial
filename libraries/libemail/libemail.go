@@ -146,7 +146,8 @@ func SendMail(n C.int, args **C.char) C.int {
 	}
 
 	body := replArgs(format, conf)
-	m.SetHeader("Subject", subject)
+	processedSubject := replArgs(subject, conf)
+	m.SetHeader("Subject", processedSubject)
 	m.SetBody("text/plain", body)
 
 	if err = d.DialAndSend(m); err != nil {
