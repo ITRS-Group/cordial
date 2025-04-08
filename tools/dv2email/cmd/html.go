@@ -89,7 +89,9 @@ func buildHTMLAttachments(cf *config.Config, m *mail.Msg, d any, timestamp time.
 				"timestamp": timestamp.Local().Format("20060102150405"),
 			}
 			filename := buildName(cf.GetString("html.filename", config.LookupTable(lookupDateTime)), lookup) + ".html"
-			m.AttachHTMLTemplate(filename, ht, many)
+			if err = m.AttachHTMLTemplate(filename, ht, many); err != nil {
+				return err
+			}
 		}
 	case "dataview":
 		for _, d := range data.Dataviews {
@@ -105,7 +107,9 @@ func buildHTMLAttachments(cf *config.Config, m *mail.Msg, d any, timestamp time.
 				"timestamp": timestamp.Local().Format("20060102150405"),
 			}
 			filename := buildName(cf.GetString("html.filename", config.LookupTable(lookupDateTime)), lookup) + ".html"
-			m.AttachHTMLTemplate(filename, ht, one)
+			if err = m.AttachHTMLTemplate(filename, ht, one); err != nil {
+				return err
+			}
 		}
 	default:
 		lookup := map[string]string{
@@ -116,7 +120,9 @@ func buildHTMLAttachments(cf *config.Config, m *mail.Msg, d any, timestamp time.
 			"timestamp": timestamp.Local().Format("20060102150405"),
 		}
 		filename := buildName(cf.GetString("html.filename", config.LookupTable(lookupDateTime)), lookup) + ".html"
-		m.AttachHTMLTemplate(filename, ht, data)
+		if err = m.AttachHTMLTemplate(filename, ht, data); err != nil {
+			return err
+		}
 	}
 
 	return
