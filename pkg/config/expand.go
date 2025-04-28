@@ -773,8 +773,8 @@ func mapEnv(e string) (s string) {
 	return
 }
 
-// the below is copied from the Go source but modified to NOT support
-// $val, only ${val}
+// the functions below are based on code copied from the Go sources but
+// modified to NOT support $val, only ${val}
 //
 // Copyright 2010 The Go Authors. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
