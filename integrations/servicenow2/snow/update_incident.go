@@ -24,12 +24,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func UpdateIncident(cc *RouterContext, incident_id string, incident IncidentFields) (incident_number string, err error) {
+func UpdateIncident(ctx *Context, incident_id string, incident IncidentFields) (incident_number string, err error) {
 	var postbytes []byte
 	var result results
 
-	cf := cc.Conf
-	table, err := getTableConfig(cf, cc.Param("table"))
+	cf := ctx.Conf
+	table, err := getTableConfig(cf, ctx.Param("table"))
 	if err != nil {
 		return
 	}

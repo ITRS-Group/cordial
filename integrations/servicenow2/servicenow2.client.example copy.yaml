@@ -31,7 +31,7 @@ defaults:
   - set:
       _sys_id_search: name=${_NETPROBE_HOST}
       _sys_id_table: cmdb_ci
-      _id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${_ROWNAME}${_COLUMN}
+      _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${_ROWNAME}${_COLUMN}
       _subject: "Geneos Alert on ${first:_NETPROBE_HOST:Unknown} | ${first:_DATAVIEW:None} | ${_ROWNAME} | ${_COLUMN}${_HEADLINE} is ${_VALUE}"
       _text: |
         Status Message: ${_STATUSMESSAGE}	

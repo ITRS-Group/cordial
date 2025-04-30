@@ -34,14 +34,14 @@ import (
 func AcceptEvent(c echo.Context) (err error) {
 	var incident IncidentFields
 	var ok bool
-	var cmdb_ci_id string
+	var cmdb_ci string
 
 	// close any request body after we are done
 	if c.Request().Body != nil {
 		defer c.Request().Body.Close()
 	}
 
-	rc := c.(*RouterContext)
+	rc := c.(*Context)
 	cf := rc.Conf
 
 	table, err := getTableConfig(cf, rc.Param("table"))
@@ -56,35 +56,29 @@ func AcceptEvent(c echo.Context) (err error) {
 
 	snow := InitializeConnection(cf)
 
-	// if not given an explicit sys_id then search based on config
-	if cmdb_ci_id, ok = incident["sys_id"]; !ok {
-		if search, ok := incident["_sys_id_search"]; !ok {
-			if cmdb_ci_id, ok = incident["_default_cmdb_ci"]; !ok {
-				return echo.NewHTTPError(http.StatusNotFound, "must supply either a _default_cmdb_ci or a _sys_id_search parameter")
+	// if not given an explicit cmdb_ci then search based on config
+	if cmdb_ci, ok = incident["cmdb_ci"]; !ok {
+		if query, ok := incident["_cmdb_search"]; !ok {
+			if cmdb_ci, ok = incident["_cmdb_ci_default"]; !ok {
+				return echo.NewHTTPError(http.StatusNotFound, "must supply either a _cmdb_ci_default or a _cmdb_search parameter")
 			}
 		} else {
-			if cf.GetString("servicenow.search-type") == "simple" {
-				if cmdb_ci_id, err = LookupSysIDSimple(cf, incident["_sys_id_table"], search, incident["_default_cmdb_ci"]); err != nil {
-					return
-				}
-			} else {
-				if cmdb_ci_id, err = LookupSysID(cf, incident["_sys_id_table"], search, incident["_default_cmdb_ci"]); err != nil {
-					return
-				}
+			if cmdb_ci, err = LookupCmdbCI(cf, incident["_cmdb_table"], query, incident["_cmdb_ci_default"]); err != nil {
+				return
 			}
 		}
 	}
 
-	if cmdb_ci_id == "" {
+	if cmdb_ci == "" {
 		// incident["action"] = "Failed"
-		return echo.NewHTTPError(http.StatusNotFound, "cmdb_ci sys_id is empty or search resulted in no matches")
+		return echo.NewHTTPError(http.StatusNotFound, "cmdb_ci is empty or search resulted in no matches")
 	}
 
-	correlation_id := incident["_id"]
+	correlation_id := incident["correlation_id"]
 
 	response := make(map[string]string)
 
-	incident_id, state, err := LookupIncident(rc, cmdb_ci_id, correlation_id)
+	incident_id, state, err := LookupIncident(rc, cmdb_ci, correlation_id)
 	if err != nil {
 		return
 	}
@@ -125,9 +119,9 @@ func AcceptEvent(c echo.Context) (err error) {
 
 	}
 
-	if cf.GetBool(config.Join("servicenow", "incident-user", "lookup")) {
-		user := cf.GetString(config.Join("servicenow", "username"))
-		userfield := cf.GetString(config.Join("servicenow", "incident-user", "field"), config.Default("caller_id"))
+	if cf.GetBool(cf.Join("servicenow", "incident-user", "lookup")) {
+		user := cf.GetString(cf.Join("servicenow", "username"))
+		userfield := cf.GetString(cf.Join("servicenow", "incident-user", "field"), config.Default("caller_id"))
 		if _, ok := incident[userfield]; ok {
 			user = incident[userfield]
 		}
@@ -162,7 +156,7 @@ func AcceptEvent(c echo.Context) (err error) {
 		return echo.NewHTTPError(http.StatusAccepted, "No Incident Created. 'update only' option set.")
 	} else {
 		incident["correlation_id"] = correlation_id
-		incidentID, err := CreateIncident(rc, cmdb_ci_id, incident)
+		incidentID, err := CreateIncident(rc, cmdb_ci, incident)
 		if err != nil {
 			return err
 		}

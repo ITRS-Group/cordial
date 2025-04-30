@@ -23,18 +23,18 @@ import (
 
 type IncidentFields map[string]string
 
-func CreateIncident(cc *RouterContext, sys_id string, incident IncidentFields) (incident_number string, err error) {
+func CreateIncident(ctx *Context, sys_id string, incident IncidentFields) (incident_number string, err error) {
 	var postbytes []byte
 	var result results
 
-	vc := cc.Conf
-	table, err := getTableConfig(vc, cc.Param("table"))
+	cf := ctx.Conf
+	table, err := getTableConfig(cf, ctx.Param("table"))
 	if err != nil {
 		return
 	}
 
 	// Initialize ServiceNow Connection
-	s := InitializeConnection(vc)
+	s := InitializeConnection(cf)
 
 	incident["cmdb_ci"] = sys_id
 

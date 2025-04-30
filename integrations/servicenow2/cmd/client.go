@@ -236,12 +236,15 @@ var incident = make(snow.IncidentFields)
 // fields are stored to a global "incident" map of name/value pairs.
 //
 // all keys with a leading "_" are passed to the router but the router
-// then removes them in addition to other configuration settings. The expected private fields are:
+// then removes them in addition to other configuration settings. The expected fields are:
 //
-// _rawid - correlation ID, which is left unchanged before use, or if not defined,
-// _id - correlation ID, which is SHA1 checksummed before use
+// correlation_id - correlation ID, which is left unchanged before use, or if not defined,
+// _correlation_id - correlation ID, which is SHA1 checksummed before use
 //
-// _search - search query for sys_id
+// cmdb_ci or
+// _cmdb_search - search query for cmdb_ci sys_id - or
+// _cmdb_ci_default
+//
 // _subject - short description
 // _text - long text
 func client(args []string) {
@@ -269,7 +272,7 @@ func client(args []string) {
 	if profile == "" {
 		profile = "default"
 	}
-	if err := cf.UnmarshalKey(config.Join("profiles", profile), &profileValues); err != nil {
+	if err := cf.UnmarshalKey(cf.Join("profiles", profile), &profileValues); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 	log.Debug().Msgf("loaded profile %s:\n%#v", profile, profileValues)
@@ -298,11 +301,11 @@ func client(args []string) {
 	}
 
 	// checksum ID
-	if rawid := incident["_rawid"]; rawid != "" {
-		incident["_id"] = rawid
-	} else if id := incident["_id"]; id != "" {
+	if rawid, ok := incident["correlation_id"]; ok {
+		incident["correlation_id"] = rawid
+	} else if id, ok := incident["_correlation_id"]; ok {
 		id := fmt.Sprintf("%x", sha1.Sum([]byte(id)))
-		incident["_id"] = id
+		incident["correlation_id"] = id
 	}
 
 	b, _ = json.MarshalIndent(incident, "", "    ")

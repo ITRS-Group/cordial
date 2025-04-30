@@ -42,17 +42,17 @@ func InitializeConnection(cf *config.Config) *Connection {
 	}
 	snowMutex.RUnlock()
 
-	trace := cf.GetBool(config.Join("servicenow", "trace"))
+	trace := cf.GetBool(cf.Join("servicenow", "trace"))
 
-	instance := cf.GetString("servicenow.instance")
-	path := cf.GetString("servicenow.path", config.Default("/api/now/v2"))
+	instance := cf.GetString(cf.Join("servicenow", "instance"))
+	path := cf.GetString(cf.Join("servicenow", "path"), config.Default("/api/now/v2"))
 
-	username := cf.GetString("servicenow.username")
-	password := cf.GetPassword("servicenow.password")
+	username := cf.GetString(cf.Join("servicenow", "username"))
+	password := cf.GetPassword(cf.Join("servicenow", "password"))
 
 	// servicenow SaaS
-	clientid := cf.GetString("servicenow.clientid")
-	clientsecret := cf.GetPassword("servicenow.clientsecret")
+	clientid := cf.GetString(cf.Join("servicenow", "clientid"))
+	clientsecret := cf.GetPassword(cf.Join("servicenow", "clientsecret"))
 
 	if clientid != "" && !clientsecret.IsNil() && !strings.Contains(instance, ".") {
 		params := make(url.Values)
@@ -113,10 +113,8 @@ func AssembleRequest(snow TransitiveConnection, table string) (req *http.Request
 		u.Path += path.Join(snow.Path, "table", table)
 	}
 
-	z := snow.Params.Encode()
-	z = strings.ReplaceAll(z, "+", "%20") // XXX ?
-
-	u.RawQuery = z
+	// u.RawQuery = strings.ReplaceAll(snow.Params.Encode(), "+", "%20")
+	u.RawQuery = snow.Params.Encode()
 
 	if req, err = http.NewRequest(snow.Method, u.String(), bytes.NewReader(snow.Payload)); err != nil {
 		return

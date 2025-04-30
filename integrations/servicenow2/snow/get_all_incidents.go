@@ -32,7 +32,7 @@ import (
 func GetAllIncidents(c echo.Context) (err error) {
 	var user, format string
 
-	cc := c.(*RouterContext)
+	cc := c.(*Context)
 	vc := cc.Conf
 
 	defer c.Request().Body.Close()

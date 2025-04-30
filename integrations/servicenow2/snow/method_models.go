@@ -22,8 +22,9 @@ import (
 	"net/url"
 	"regexp"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/labstack/echo/v4"
+
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 type Connection struct {
@@ -43,7 +44,7 @@ type TransitiveConnection struct {
 	SysID   string
 }
 
-type RouterContext struct {
+type Context struct {
 	echo.Context
 	Conf *config.Config
 }

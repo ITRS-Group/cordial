@@ -26,7 +26,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
-	"github.com/itrs-group/cordial/integrations/servicenow2/snow"
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
@@ -96,15 +95,4 @@ func loadConfigFile(cmd *cobra.Command) {
 			config.SetFileExtension("yaml"),
 			config.SetConfigFile(conffile)),
 	)
-}
-
-var snowConnection *snow.Connection
-
-func InitializeConnection() *snow.Connection {
-	if snowConnection != nil {
-		return snowConnection
-	}
-
-	snowConnection = snow.InitializeConnection(cf)
-	return snowConnection
 }

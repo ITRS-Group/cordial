@@ -19,18 +19,17 @@ package cmd
 
 import (
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/itrs-group/cordial/integrations/servicenow2/snow"
-	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/process"
-
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/integrations/servicenow2/snow"
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/process"
 )
 
 var daemon bool
@@ -101,17 +100,17 @@ func router() {
 	// as per https://echo.labstack.com/guide/context/
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			cc := &snow.RouterContext{Context: c, Conf: cf}
+			cc := &snow.Context{Context: c, Conf: cf}
 			return next(cc)
 		}
 	})
 	e.Use(Timestamp())
 	e.Use(middleware.BodyDump(bodyDumpLog))
 	e.Use(middleware.KeyAuth(func(key string, c echo.Context) (bool, error) {
-		return key == cf.GetString("router.authentication.token"), nil
+		return key == cf.GetString(cf.Join("router", "authentication", "token")), nil
 	}))
 
-	v2route := e.Group(cf.GetString("router.path"))
+	v2route := e.Group(cf.GetString(cf.Join("router", "path")))
 
 	// GET Endpoint
 	v2route.GET("/:table", snow.GetAllIncidents)
@@ -119,33 +118,19 @@ func router() {
 	// POST Endpoint
 	v2route.POST("/:table", snow.AcceptEvent)
 
-	listen := cf.GetString("router.listen")
+	listen := cf.GetString(cf.Join("router", "listen"))
 
-	InitializeConnection()
+	snow.InitializeConnection(cf)
 
-	// firing up the server
-	if !cf.GetBool("router.tls.enabled") {
-		e.Logger.Fatal(e.Start(listen))
-	} else {
-		var cert interface{}
-		certstr := config.GetString("router.tls.certificate")
-		certpem, _ := pem.Decode([]byte(certstr))
-		if certpem == nil {
-			cert = certstr
-		} else {
-			cert = []byte(certstr)
-		}
-
-		var key interface{}
-		keystr := config.GetString("router.tls.key")
-		keypem, _ := pem.Decode([]byte(keystr))
-		if keypem == nil {
-			key = keystr
-		} else {
-			key = []byte(keystr)
-		}
-		e.Logger.Fatal(e.StartTLS(listen, cert, key))
+	if cf.GetBool(cf.Join("router", "tls", "enabled")) {
+		e.Logger.Fatal(e.StartTLS(
+			listen,
+			config.GetBytes(cf.Join("router", "tls", "certificate")),
+			config.GetBytes(cf.Join("router", "tls", "key")),
+		))
 	}
+
+	e.Logger.Fatal(e.Start(listen))
 }
 
 func bodyDumpLog(c echo.Context, reqBody, resBody []byte) {
