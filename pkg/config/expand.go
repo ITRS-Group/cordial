@@ -791,7 +791,7 @@ func expand(s string, mapping func(string) string) string {
 				buf = make([]byte, 0, 2*len(s))
 			}
 			buf = append(buf, s[i:j]...)
-			name, w := getShellName(s[j+1:])
+			name, w := getContents(s[j+1:])
 			if name == "" && w > 0 {
 				// Encountered invalid syntax; eat the
 				// characters.
@@ -823,7 +823,7 @@ func expandBytes(s []byte, mapping func([]byte) []byte) []byte {
 				buf = make([]byte, 0, 2*len(s))
 			}
 			buf = append(buf, s[i:j]...)
-			name, w := getShellName(string(s[j+1:]))
+			name, w := getContents(string(s[j+1:]))
 			if name == "" && w > 0 {
 				// Encountered invalid syntax; eat the
 				// characters.
@@ -854,7 +854,7 @@ func expandToEnclave(s []byte, mapping func([]byte) *memguard.Enclave) *memguard
 				buf = make([]byte, 0, 2*len(s))
 			}
 			buf = append(buf, s[i:j]...)
-			name, w := getShellName(string(s[j+1:]))
+			name, w := getContents(string(s[j+1:]))
 			if name == "" && w > 0 {
 				// Encountered invalid syntax; eat the
 				// characters.
@@ -893,7 +893,7 @@ func expandToLockedBuffer(s []byte, mapping func([]byte) *memguard.LockedBuffer)
 				buf = make([]byte, 0, 2*len(s))
 			}
 			buf = append(buf, s[i:j]...)
-			name, w := getShellName(string(s[j+1:]))
+			name, w := getContents(string(s[j+1:]))
 			if name == "" && w > 0 {
 				// Encountered invalid syntax; eat the
 				// characters.
@@ -921,38 +921,48 @@ func expandToLockedBuffer(s []byte, mapping func([]byte) *memguard.LockedBuffer)
 	return memguard.NewBufferFromBytes(buf)
 }
 
-// isShellSpecialVar reports whether the character identifies a special
-// shell variable such as $*.
-func isShellSpecialVar(c uint8) bool {
-	switch c {
-	case '*', '#', '$', '@', '!', '?', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		return true
-	}
-	return false
-}
-
-// getShellName returns the name that begins the string and the number of bytes
-// consumed to extract it. If the name is enclosed in {}, it's part of a ${}
-// expansion and two more bytes are needed than the length of the name.
+// getContents returns the string inside braces, checking for embedded
+// braces and the number of bytes consumed to extract it. The contents
+// must be enclosed in {} and two more bytes are needed than the length
+// of the name.
 //
 // CHANGE: return if string does not start with an opening bracket
-func getShellName(s string) (string, int) {
+//
+// CHANGE: skip any character after a backslash, including closing
+// braces
+//
+// CHANGE: match embedded opening braces and closing ones inside the
+// string.
+func getContents(s string) (string, int) {
+	// must start with an opening brace
 	if s[0] != '{' {
 		// skip
 		return "", 0
 	}
 
-	if len(s) > 2 && isShellSpecialVar(s[1]) && s[2] == '}' {
-		return s[1:2], 3
-	}
+	// * not required
+	// if len(s) > 2 && isShellSpecialVar(s[1]) && s[2] == '}' {
+	// 	return s[1:2], 3
+	// }
 
-	// Scan to closing brace
+	// Scan to closing brace, skipping backslash+next and stacking opening braces
+	var depth int
 	for i := 1; i < len(s); i++ {
-		if s[i] == '}' {
+		switch s[i] {
+		case '\\':
+			i++
+		case '{':
+			depth++
+		case '}':
+			if depth > 0 {
+				depth--
+				continue
+			}
 			if i == 1 {
 				return "", 2 // Bad syntax; eat "${}"
 			}
 			return s[1:i], i + 1
+		default:
 		}
 	}
 	return "", 1 // Bad syntax; eat "${"
