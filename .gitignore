@@ -42,6 +42,9 @@ integrations/pagerduty/pagerduty
 
 integrations/servicenow/servicenow
 integrations/servicenow/servicenow.yaml
+integrations/servicenow2/servicenow2
+integrations/servicenow2/servicenow2.client.yaml
+integrations/servicenow2/servicenow2.router.yaml
 integrations/servicenow/snow_client/snow_client
 integrations/servicenow/snow_client/snow_client.yaml
 integrations/servicenow/snow_router/snow_router

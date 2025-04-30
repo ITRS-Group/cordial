@@ -1,0 +1,369 @@
+/*
+Copyright © 2022 ITRS Group
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package cmd
+
+import (
+	"bytes"
+	"crypto/sha1"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"path"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/itrs-group/cordial/integrations/servicenow2/snow"
+	"github.com/itrs-group/cordial/pkg/config"
+
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+)
+
+var profile, table string
+
+func init() {
+	RootCmd.AddCommand(incidentCmd)
+
+	incidentCmd.Flags().StringVarP(&profile, "profile", "p", "", "profile to use for field creation")
+	incidentCmd.Flags().StringVarP(&table, "table", "t", "", "servicenow table, defaults typically to incident")
+
+	incidentCmd.Flags().SortFlags = false
+}
+
+var incidentCmd = &cobra.Command{
+	Use:   "client [FLAGS] [field=value ...]",
+	Short: "Create or update a ServiceNow incident",
+	Long: strings.ReplaceAll(`
+Create or update a ServiceNow incident from ITRS Geneos.
+
+This command is the client-side of the ITRS Geneos to ServiceNow
+incident integration. The program takes command line flags, arguments
+and environment variables to create a submission to the router
+instance which is responsible for sending the request to the
+ServiceNow API.
+
+
+`, "|", "`"),
+	SilenceUsage: true,
+	Run: func(cmd *cobra.Command, args []string) {
+		// fmt.Printf("defaults: %#v", cf.Get("defaults"))
+		loadConfigFile(cmd)
+		client(args)
+	},
+}
+
+// processClientActions evaluates the SnowClientConfig structure and if the
+// caller should stop processing (skip) then returns `true`. The
+// evaluation is in the following order:
+//
+//   - `if` - one or more strings that are evaluated and the results parsed as a boolean. As soon as any `if` returns a false value, evaluation stops and the function returns false
+//   - `set` - set all the fields, unordered, to the expanded values given
+//   - `unset` - unset the list of field names
+//   - `then` - evaluate a subsection, and terminating evaluation if the subsection uses `skip`
+//   - `skip` - skip returns true to the caller, allow them to stop processing early. This is used to stop evaluation in a parent
+func processClientActions(v SnowClientConfig, incident snow.IncidentFields) bool {
+	for _, i := range v.If {
+		if b, err := strconv.ParseBool(config.ExpandString(i)); err != nil || !b {
+			return false
+		}
+	}
+
+	for field, value := range v.Set {
+		incident[field] = config.ExpandString(value)
+	}
+
+	for _, field := range v.Unset {
+		delete(incident, field)
+	}
+
+	for _, t := range v.Then {
+		if processClientActions(t, incident) {
+			return false
+		}
+	}
+
+	if v.Skip {
+		return true
+	}
+
+	return false
+}
+
+// match environment variable against regex and return "true" or
+// "false" or error. If the environment variable is not set or empty,
+// return "false"
+func matchenv(cf *config.Config, s string, trim bool) (result string, err error) {
+	s = strings.TrimPrefix(s, "match:")
+	// s has the form "match:ENV:PATTERN" and PATTERN may contain ':'
+	p := strings.SplitN(s, ":", 2)
+	if len(p) != 2 {
+		return "false", fmt.Errorf("invalid args")
+	}
+	env, pattern := p[0], p[1]
+
+	if len(env) == 0 || len(pattern) == 0 {
+		return "false", nil
+	}
+	val := os.Getenv(env)
+	if val == "" {
+		return "false", nil
+	}
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return "false", err
+	}
+	match := re.MatchString(val)
+	log.Debug().Msgf("%q match %q: %v", val, pattern, match)
+	return fmt.Sprintf("%v", re.MatchString(val)), nil
+}
+
+// getsnowfield returns the value of the named field, or an empty string
+// if not set
+func getsnowfield(cf *config.Config, s string, trim bool) (result string, err error) {
+	s = strings.TrimPrefix(s, "snow:")
+	result = incident[s]
+	if trim {
+		result = strings.TrimSpace(result)
+	}
+	return
+}
+
+// replaceenv takes a strings with four components, colon separated, of
+// the form: `${replace:ENV:/PATTERN/TEXT/}` (where the `/` can be any
+// character, but is then solely used to separate the pattern and the
+// replacement text and must be given at the end before the closing `}`)
+// and runs regexp.ReplaceAllString(). If the environment variable is
+// empty or not defined, an empty string is returned. If parsing the
+// PATTERN fails then no substitution is done
+func replaceenv(cf *config.Config, s string, trim bool) (r string, err error) {
+	s = strings.TrimPrefix(s, "replace:")
+	env, expr, found := strings.Cut(s, ":")
+	if !found || len(env) == 0 || len(expr) == 0 {
+		err = fmt.Errorf("invalid args")
+		return
+	}
+	log.Debug().Msgf("env, expr = %q, %q", env, expr)
+
+	r = os.Getenv(env)
+	if r == "" {
+		return
+	}
+
+	sep := expr[0:1]
+	p := strings.SplitN(expr[1:], sep, 3)
+	if len(p) != 3 || (len(p) == 3 && p[2] != "") {
+		// there must be two more separators and nothing after the second
+		err = fmt.Errorf("invalid args")
+		return
+	}
+	pattern, text := p[0], p[1]
+
+	log.Debug().Msgf("input, pattern, text = %q, %q, %q", r, pattern, text)
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		log.Error().Err(err).Msg("")
+		return
+	}
+
+	r = re.ReplaceAllString(r, text)
+	if trim {
+		r = strings.TrimSpace(r)
+	}
+	log.Debug().Msgf("result = %q", r)
+	return
+}
+
+// return the value of the first set environment variable. If the
+// environment variable is set but an empty string then that is
+// returned. If no environment variable is set the last field is
+// returned as text.
+func firstenv(cf *config.Config, s string, trim bool) (result string, err error) {
+	s = strings.TrimLeft(s, "firstenv:")
+	envs := strings.Split(s, ":")
+	if len(envs) == 0 {
+		return
+	}
+	last := len(envs) - 1
+	def := envs[last]
+	envs = envs[:last]
+
+	for _, env := range envs {
+		if v, ok := os.LookupEnv(env); ok {
+			if trim {
+				return strings.TrimSpace(v), nil
+			}
+			return v, nil
+		}
+	}
+
+	return def, nil
+}
+
+type SnowClientConfig struct {
+	If    []string           `json:"if,omitempty"`
+	Skip  bool               `json:"skip,omitempty"`
+	Set   map[string]string  `json:"set,omitempty"`
+	Unset []string           `json:"unset,omitempty"`
+	Then  []SnowClientConfig `json:"then,omitempty"`
+}
+
+// global so that "getsnowfield" func can see existing values
+var incident = make(snow.IncidentFields)
+
+// client call
+//
+// process configuration and command line with environment variables
+//
+// fields are stored to a global "incident" map of name/value pairs.
+//
+// all keys with a leading "_" are passed to the router but the router
+// then removes them in addition to other configuration settings. The expected private fields are:
+//
+// _rawid - correlation ID, which is left unchanged before use, or if not defined,
+// _id - correlation ID, which is SHA1 checksummed before use
+//
+// _search - search query for sys_id
+// _subject - short description
+// _text - long text
+func client(args []string) {
+	cf.DefaultExpandOptions(
+		config.Prefix("match", matchenv),
+		config.Prefix("first", firstenv),
+		config.Prefix("replace", replaceenv),
+		config.Prefix("snow", getsnowfield),
+	)
+
+	var defaults []SnowClientConfig
+	if err := cf.UnmarshalKey("defaults", &defaults); err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+	for _, v := range defaults {
+		if processClientActions(v, incident) {
+			break
+		}
+	}
+
+	b, _ := json.MarshalIndent(incident, "", "    ")
+	log.Debug().Msgf("incident fields after processing defaults:\n%s", string(b))
+
+	var profileValues []SnowClientConfig
+	if profile == "" {
+		profile = "default"
+	}
+	if err := cf.UnmarshalKey(config.Join("profiles", profile), &profileValues); err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+	log.Debug().Msgf("loaded profile %s:\n%#v", profile, profileValues)
+	for _, v := range profileValues {
+		if processClientActions(v, incident) {
+			break
+		}
+	}
+
+	b, _ = json.MarshalIndent(incident, "", "    ")
+	log.Debug().Msgf("incident fields after processing profile:\n%s", string(b))
+
+	// command line args can replace defaults and config file settings.
+	// parse key value pairs as fields for the request for now ignore
+	// everything else
+	for _, arg := range args {
+		s := strings.SplitN(arg, "=", 2)
+		if len(s) != 2 {
+			continue
+		}
+		if s[1] == "" {
+			delete(incident, s[0])
+		} else {
+			incident[s[0]] = s[1]
+		}
+	}
+
+	// checksum ID
+	if rawid := incident["_rawid"]; rawid != "" {
+		incident["_id"] = rawid
+	} else if id := incident["_id"]; id != "" {
+		id := fmt.Sprintf("%x", sha1.Sum([]byte(id)))
+		incident["_id"] = id
+	}
+
+	b, _ = json.MarshalIndent(incident, "", "    ")
+	log.Debug().Msgf("incident fields after processing command line args:\n%s", string(b))
+
+	// build incident fields here
+	requestBody, err := json.Marshal(incident)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
+	u, err := url.Parse(cf.GetString("router.url"))
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
+	if table == "" {
+		table = cf.GetString("router.default-table", config.Default("incident"))
+	}
+	u.Path = path.Join(u.Path, table)
+
+	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(requestBody))
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
+	bearer := fmt.Sprintf("Bearer %s", cf.GetString("router.authentication.token"))
+	req.Header.Add("Authorization", bearer)
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
+	if resp.StatusCode > 299 {
+		log.Fatal().Msgf("%s %s", resp.Status, string(body))
+	}
+
+	var result map[string]string
+
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
+	if result["message"] != "" {
+		log.Fatal().Msg(result["message"])
+	}
+
+	if result["action"] == "Failed" {
+		log.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
+	}
+
+	fmt.Printf("%s %s %s\n", result["event_type"], result["number"], result["action"])
+
+}

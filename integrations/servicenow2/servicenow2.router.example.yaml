@@ -1,0 +1,129 @@
+router:
+  # answer requests on a concatenation of `router.listen`, `router.path`
+  # and table name, where the table is looked up against the "tables"
+  # section below
+  listen: localhost:3000
+  path: /snow/api/v2
+  tls:
+    enabled: false
+    certificate: ${file:/path/to/cert.pem}
+    private-key: ${file:/path/to/cert.key}
+
+  # add support later for basic, oauth, cert etc. token only for now
+  authentication:
+    # the `token` can be any string as long as it is the same on both
+    # router and client - the client being either the incident poster or a
+    # GET requests for all incidents. To protect the plain text, if
+    # required, you can use `geneos aes password` to create an encoded
+    # strings that replies on the security of the key file being read-only
+    # to the user. This also allows the configuration file to be shared
+    # without sharing the plaintext of the key.
+    token: ${enc:~/.config/geneos/keyfile.aes:+encs+E33C8DFAFED66ED8EE68019DAEE0106E}
+
+servicenow:
+  instance: dev267773
+  username: admin
+  password: ${enc:~/.config/geneos/keyfile.aes:+encs+4D5B2A11CB2BF9ECDCBC345CF4DD3DC6}
+  # ClientID: ${SERVICENOW_CLIENTID}
+  # ClientSecret: ${SERVICENOW_CLIENTSECRET}
+  search-type: simple
+  trace: true
+
+  tables:
+    - name: incident
+      # `query` is the ServiceNow filter query used to lookup existing
+      # incidents
+      #
+      # For details of what is permitted, see:
+      #
+      # <https://www.servicenow.com/docs/bundle/xanadu-platform-user-interface/page/use/using-lists/concept/c_EncodedQueryStrings.html>
+      # <https://www.servicenow.com/docs/bundle/xanadu-platform-user-interface/page/use/common-ui-elements/reference/r_OpAvailableFiltersQueries.html>
+      #
+      # In addition to referring to other configuration values in your
+      # YAML file as `${config:servicenow.parameter}`, parameters
+      # available are:
+      #
+      #   * ${cmdb_ci}
+      #   * ${correlation_id}
+      #
+      # For example, to exclude Resolved incidents from being found and
+      # updated, instead requiring a new incident to be created, use
+      # this:
+      #
+      #     query: "state!=6^active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}^ORDERBYDESCnumber"
+      #
+      # The default search, if not otherwise defined, is:
+      search: "active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}^ORDERBYDESCnumber"
+      #
+      # you can use any query that is encoded as a `sysparm_query`
+      # according to the Servicenow docs.
+
+      query:
+        # allow a GET to query for incidents
+        enabled: true
+        search: "user=${username}"
+        response-fields: [ number,sys_id,cmdb_ci.name,short_description,description,correlation_id,opened_by,state ]
+      defaults:
+        _default_cmdb_ci: 03a9e40d3790200044e0bfc8bcbe5d6c
+        assignment_group: group1
+        incident_type: event
+        impact: 3
+        urgency: 3
+        category: hardware
+        contact_type: email
+        caller_id: admin
+      user:
+        field: caller_id
+        lookup: true
+      new-state:
+        1:
+        6:
+      current-state:
+        0: # create
+          defaults: # default values if not set previously/elsewhere
+            # assignment_group: something
+            # contact_type: email
+            impact: 3
+            urgency: 3
+            category: hardware
+            state: 1
+            # caller_id: admin
+          rename:
+            _text: description
+            _subject: short_description
+          remove: [ watch_list ] # anything in this list is removed
+                            # value or raises an error, after adding any defaults from below
+          must-include: [ short_description, description ] # anything on the include list MUST have a
+        1: # new
+          defaults:
+            assignment_group: "something else"
+            contact_type: email
+            impact: 3
+            urgency: 3
+            category: hardware
+            state: 2
+            caller_id: admin
+          rename:
+            _text: work_notes
+          remove: [ short_description ]
+        2: # update
+          defaults:
+            assignment_group: "something else"
+            contact_type: email
+            impact: 3
+            urgency: 3
+            category: hardware
+            state: 2
+            caller_id: admin
+          rename:
+            _text: work_notes
+          remove: [ short_description ]
+        6: # resolve
+          defaults:
+            caller_id: admin
+            state: 1
+          remove: [ short_description ]
+          rename:
+            _subject: short_description
+            _text: work_notes
+
