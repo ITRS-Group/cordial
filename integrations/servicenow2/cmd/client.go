@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 ITRS Group
+Copyright © 2025 ITRS Group
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,21 +18,19 @@ limitations under the License.
 package cmd
 
 import (
-	"bytes"
+	"context"
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
 	"os"
-	"path"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/itrs-group/cordial/integrations/servicenow2/snow"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/rest"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -80,7 +78,7 @@ ServiceNow API.
 //   - `unset` - unset the list of field names
 //   - `then` - evaluate a subsection, and terminating evaluation if the subsection uses `skip`
 //   - `skip` - skip returns true to the caller, allow them to stop processing early. This is used to stop evaluation in a parent
-func processClientActions(v SnowClientConfig, incident snow.IncidentFields) bool {
+func processClientActions(v ProfileSection, incident snow.Record) bool {
 	for _, i := range v.If {
 		if b, err := strconv.ParseBool(config.ExpandString(i)); err != nil || !b {
 			return false
@@ -192,10 +190,10 @@ func replaceenv(cf *config.Config, s string, trim bool) (r string, err error) {
 	return
 }
 
-// return the value of the first set environment variable. If the
-// environment variable is set but an empty string then that is
-// returned. If no environment variable is set the last field is
-// returned as text.
+// firstenv returns the value of the first environment variable with a
+// value or the last field as a static string. If the environment
+// variable is set but an empty string then that is returned. If no
+// environment variable is set then last field is returned as text.
 func firstenv(cf *config.Config, s string, trim bool) (result string, err error) {
 	s = strings.TrimLeft(s, "firstenv:")
 	envs := strings.Split(s, ":")
@@ -218,16 +216,16 @@ func firstenv(cf *config.Config, s string, trim bool) (result string, err error)
 	return def, nil
 }
 
-type SnowClientConfig struct {
-	If    []string           `json:"if,omitempty"`
-	Skip  bool               `json:"skip,omitempty"`
-	Set   map[string]string  `json:"set,omitempty"`
-	Unset []string           `json:"unset,omitempty"`
-	Then  []SnowClientConfig `json:"then,omitempty"`
+type ProfileSection struct {
+	If    []string          `json:"if,omitempty"`
+	Skip  bool              `json:"skip,omitempty"`
+	Set   map[string]string `json:"set,omitempty"`
+	Unset []string          `json:"unset,omitempty"`
+	Then  []ProfileSection  `json:"then,omitempty"`
 }
 
 // global so that "getsnowfield" func can see existing values
-var incident = make(snow.IncidentFields)
+var incident = make(snow.Record)
 
 // client call
 //
@@ -250,12 +248,12 @@ var incident = make(snow.IncidentFields)
 func client(args []string) {
 	cf.DefaultExpandOptions(
 		config.Prefix("match", matchenv),
-		config.Prefix("first", firstenv),
 		config.Prefix("replace", replaceenv),
-		config.Prefix("snow", getsnowfield),
+		config.Prefix("select", firstenv),
+		config.Prefix("field", getsnowfield),
 	)
 
-	var defaults []SnowClientConfig
+	var defaults []ProfileSection
 	if err := cf.UnmarshalKey("defaults", &defaults); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
@@ -268,7 +266,7 @@ func client(args []string) {
 	b, _ := json.MarshalIndent(incident, "", "    ")
 	log.Debug().Msgf("incident fields after processing defaults:\n%s", string(b))
 
-	var profileValues []SnowClientConfig
+	var profileValues []ProfileSection
 	if profile == "" {
 		profile = "default"
 	}
@@ -311,50 +309,18 @@ func client(args []string) {
 	b, _ = json.MarshalIndent(incident, "", "    ")
 	log.Debug().Msgf("incident fields after processing command line args:\n%s", string(b))
 
-	// build incident fields here
-	requestBody, err := json.Marshal(incident)
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
-	u, err := url.Parse(cf.GetString("router.url"))
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
-	if table == "" {
-		table = cf.GetString("router.default-table", config.Default("incident"))
-	}
-	u.Path = path.Join(u.Path, table)
-
-	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(requestBody))
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
-	bearer := fmt.Sprintf("Bearer %s", cf.GetString("router.authentication.token"))
-	req.Header.Add("Authorization", bearer)
-
-	client := &http.Client{}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
-	if resp.StatusCode > 299 {
-		log.Fatal().Msgf("%s %s", resp.Status, string(body))
-	}
-
 	var result map[string]string
-
-	err = json.Unmarshal(body, &result)
+	rc := rest.NewClient(
+		rest.BaseURL(cf.GetString("router.url")),
+		rest.SetupRequestFunc(func(req *http.Request, _ *rest.Client, _ string, _ []byte) {
+			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", cf.GetString("router.authentication.token")))
+		}),
+	)
+	_, err := rc.Post(context.Background(),
+		cf.GetString("router.default-table", config.Default("incident")),
+		incident,
+		&result,
+	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}

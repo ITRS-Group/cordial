@@ -26,7 +26,6 @@ servicenow:
   password: ${enc:~/.config/geneos/keyfile.aes:+encs+4D5B2A11CB2BF9ECDCBC345CF4DD3DC6}
   # ClientID: ${SERVICENOW_CLIENTID}
   # ClientSecret: ${SERVICENOW_CLIENTSECRET}
-  search-type: simple
   trace: true
 
   tables:

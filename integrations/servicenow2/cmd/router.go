@@ -113,14 +113,15 @@ func router() {
 	v2route := e.Group(cf.GetString(cf.Join("router", "path")))
 
 	// GET Endpoint
-	v2route.GET("/:table", snow.GetAllIncidents)
+	v2route.GET("/:table", snow.GetAllRecords)
 
 	// POST Endpoint
 	v2route.POST("/:table", snow.AcceptEvent)
 
 	listen := cf.GetString(cf.Join("router", "listen"))
 
-	snow.InitializeConnection(cf)
+	// init connection or fail early
+	snow.ServiceNow(cf.Sub("servicenow"))
 
 	if cf.GetBool(cf.Join("router", "tls", "enabled")) {
 		e.Logger.Fatal(e.StartTLS(
