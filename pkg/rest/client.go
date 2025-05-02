@@ -70,6 +70,47 @@ func (c *Client) Auth(ctx context.Context, clientid string, clientsecret *config
 }
 
 // GET method. On successful return the response body will be closed.
+func (c *Client) GetURL(ctx context.Context, endpoint *url.URL, request any, response any) (resp *http.Response, err error) {
+	u, _ := url.Parse(c.BaseURL)
+	if err != nil {
+		return
+	}
+	dest := u.ResolveReference(endpoint)
+	req, err := http.NewRequestWithContext(ctx, "GET", dest.String(), nil)
+	if err != nil {
+		return
+	}
+	if c.authHeader != "" {
+		req.Header.Add(c.authHeader, c.authValue)
+	}
+	if request != nil {
+		v, err := query.Values(request)
+		if err != nil {
+			return resp, err
+		}
+		req.URL.RawQuery = v.Encode()
+	}
+	if c.SetupRequest != nil {
+		c.SetupRequest(req, c, endpoint.String(), nil)
+	}
+	resp, err = c.HTTPClient.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode > 299 {
+		b, _ := io.ReadAll(resp.Body)
+		err = fmt.Errorf("%s %s", resp.Status, string(b))
+		return
+	}
+	if response == nil {
+		return
+	}
+	err = decodeResponse(resp, response)
+	return
+}
+
+// GET method. On successful return the response body will be closed.
 func (c *Client) Get(ctx context.Context, endpoint string, request any, response any) (resp *http.Response, err error) {
 	dest, err := url.JoinPath(c.BaseURL, endpoint)
 	if err != nil {
@@ -109,7 +150,50 @@ func (c *Client) Get(ctx context.Context, endpoint string, request any, response
 	return
 }
 
-// POST method
+// PostURL issues a POST request to the client using *url.URL endpoint
+// as either a relative path to the base URL in the client, or as an
+// absolute path, encoding request as a JSON body and decoding any
+// returned body into result, if set.
+func (c *Client) PostURL(ctx context.Context, endpoint *url.URL, request any, response any) (resp *http.Response, err error) {
+	u, _ := url.Parse(c.BaseURL)
+	if err != nil {
+		return
+	}
+	dest := u.ResolveReference(endpoint)
+
+	r, body := encodeBody(request)
+	req, err := http.NewRequestWithContext(ctx, "POST", dest.String(), r)
+	if err != nil {
+		return
+	}
+	if c.authHeader != "" {
+		req.Header.Add(c.authHeader, c.authValue)
+	}
+	req.Header.Add("content-type", "application/json")
+
+	if c.SetupRequest != nil {
+		c.SetupRequest(req, c, endpoint.String(), body)
+	}
+	resp, err = c.HTTPClient.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode > 299 {
+		b, _ := io.ReadAll(resp.Body)
+		err = fmt.Errorf("%s %s", resp.Status, string(b))
+		return
+	}
+	if response == nil {
+		return
+	}
+	err = decodeResponse(resp, response)
+	return
+}
+
+// Post issues a POST request to the client using endpoint as either a
+// relative path to the base URL in the client, encoding request as a
+// JSON body and decoding any returned body into result, if set.
 func (c *Client) Post(ctx context.Context, endpoint string, request any, response any) (resp *http.Response, err error) {
 	dest, err := url.JoinPath(c.BaseURL, endpoint)
 	if err != nil {
@@ -127,6 +211,44 @@ func (c *Client) Post(ctx context.Context, endpoint string, request any, respons
 
 	if c.SetupRequest != nil {
 		c.SetupRequest(req, c, endpoint, body)
+	}
+	resp, err = c.HTTPClient.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode > 299 {
+		b, _ := io.ReadAll(resp.Body)
+		err = fmt.Errorf("%s %s", resp.Status, string(b))
+		return
+	}
+	if response == nil {
+		return
+	}
+	// b, _ := io.ReadAll(resp.Body)
+	// log.Debug().Msgf("body: %v", string(b))
+	err = decodeResponse(resp, response)
+	return
+}
+
+// PUT method
+func (c *Client) PutURL(ctx context.Context, endpoint *url.URL, request any, response any) (resp *http.Response, err error) {
+	u, _ := url.Parse(c.BaseURL)
+	if err != nil {
+		return
+	}
+	dest := u.ResolveReference(endpoint)
+	r, body := encodeBody(request)
+	req, err := http.NewRequestWithContext(ctx, "PUT", dest.String(), r)
+	if err != nil {
+		return
+	}
+	if c.authHeader != "" {
+		req.Header.Add(c.authHeader, c.authValue)
+	}
+	req.Header.Add("content-type", "application/json")
+	if c.SetupRequest != nil {
+		c.SetupRequest(req, c, endpoint.String(), body)
 	}
 	resp, err = c.HTTPClient.Do(req)
 	if err != nil {
@@ -291,6 +413,62 @@ func decodeResponse(resp *http.Response, response interface{}) (err error) {
 		}
 	default:
 		err = errors.ErrUnsupported
+	}
+	return
+}
+
+// decodeResponseBytes checks the content-type and decodes based on
+// that. On failure it returns the body in b.
+func decodeResponseBytes(resp *http.Response, response interface{}) (b []byte, err error) {
+	if response == nil {
+		return
+	}
+	// we only care about the main value, not char sets etc.
+	ct := resp.Header.Get("content-type")
+	ct, _, _ = strings.Cut(ct, ";")
+	switch ct {
+	case "application/json":
+		// stream JSON
+		d := json.NewDecoder(resp.Body)
+		rt := reflect.TypeOf(response)
+		switch rt.Kind() {
+		case reflect.Slice:
+			rv := reflect.ValueOf(response)
+			var t json.Token
+			t, err = d.Token()
+			if err != nil {
+				return
+			}
+			if t != "[" {
+				err = errors.New("not an array")
+				return
+			}
+			for d.More() {
+				var s interface{}
+				if err = d.Decode(&s); err != nil {
+					return
+				}
+				rv = reflect.Append(rv, reflect.ValueOf(s))
+			}
+			t, err = d.Token()
+			if err != nil {
+				return
+			}
+			if t != "]" {
+				err = errors.New("array not terminated")
+				return
+			}
+		default:
+			err = d.Decode(&response)
+		}
+	case "text/xml", "application/xml":
+		var mv mxj.Map
+		if mv, err = mxj.NewMapXmlReader(resp.Body); err == nil { // all good ?
+			response = mv
+		}
+	default:
+		// return bytes
+		return io.ReadAll(resp.Body)
 	}
 	return
 }
