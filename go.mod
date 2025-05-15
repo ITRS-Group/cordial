@@ -1,6 +1,6 @@
 module github.com/itrs-group/cordial
 
-go 1.24.0
+go 1.24.3
 
 require (
 	github.com/Microsoft/go-winio v0.6.2
