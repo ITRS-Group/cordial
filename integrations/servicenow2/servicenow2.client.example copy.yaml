@@ -7,9 +7,10 @@ router:
   url: http://localhost:3000/snow/api/v2
   # the default table on the router side
   default-table: incident
+  # if the URL is `https://...` then the tls settings below take effect
   tls:
     # should we check the router cert? default true
-    verify: false
+    verify: true
     # chain to validate router connection, if none and verify is true then use system roots
     chain: /path/to/chain.pem
 
@@ -19,20 +20,52 @@ router:
     # router and client - the client being either the incident poster or a
     # GET requests for all incidents. To protect the plain text, if
     # required, you can use `geneos aes password` to create an encoded
-    # strings that replies on the security of the key file being read-only
+    # strings that relies on the security of the key file being private
     # to the user. This also allows the configuration file to be shared
     # without sharing the plaintext of the key.
     #
     # perhaps allow auto-generated key file for local routers?
     token: ${enc:~/.config/geneos/keyfile.aes:+encs+E33C8DFAFED66ED8EE68019DAEE0106E}
 
-# default snow field settings
+# default ServiceNow fields
+#
+# The `defaults` section and each of the named entries in the `profiles`
+# section share the same format.
+#
+# The layout is a sequence of mappings The format is an array of objects
+# which are evaluated in array order, but the keys in each object are
+# evaluated according to the rules below
+#
+# the mapping keys are below, and processed in the order shown:
+#
+#   - `if` - this can be either a single string or an array; the values
+#     are evaluated and the result of each parsed as a boolean. As soon
+#     as any `if` value returns a false value, evaluation stops and
+#     evaluation continues with the next array element. If there is no
+#     `if` then this is the same as a `true` values being returned.
+#   - `set` - is a list of name/value pairs (a YAML dictionary) and the
+#     client sets all the fields names (in an undefined order) to the
+#     expanded values on the right
+#   - `unset` - is list of names. unset any fields given.
+#   - `then` - evaluate a subsection, and terminating evaluation if the
+#     subsection uses `skip`
+#   - `skip` - skip stops processing of the level above the block it
+#     appears in, and is used to terminate further evaulation of `if`s
+#     etc.
+#
+# all field names beginning with an underscore (`_`) are treated as
+# internal values between client and router and are renamed or removed
+# before being sent to the ServiceNow instance by the router.
+#
+# all field values are subject to expansion accoring to the `cordial`
+# config package `ExpandString` function with some custom functions: 
 defaults:
   - set:
-      _sys_id_search: name=${_NETPROBE_HOST}
-      _sys_id_table: cmdb_ci
+      # cmdb_ci: ${CMDB_CI}
+      _cmdb_search: name=${_NETPROBE_HOST}
+      _cmdb_table: cmdb_ci
       _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${_ROWNAME}${_COLUMN}
-      _subject: "Geneos Alert on ${first:_NETPROBE_HOST:Unknown} | ${first:_DATAVIEW:None} | ${_ROWNAME} | ${_COLUMN}${_HEADLINE} is ${_VALUE}"
+      _subject: "Geneos Alert on ${select:_NETPROBE_HOST:Unknown} | ${select:_DATAVIEW:None} | ${_ROWNAME} | ${_COLUMN}${_HEADLINE} is ${_VALUE}"
       _text: |
         Status Message: ${_STATUSMESSAGE}	
         Severity: ${_SEVERITY}	
@@ -49,13 +82,10 @@ defaults:
       urgency: 3
       impact: 3
       state: 1
-  - if:
-      - ${match:_PLUGIN:FKM}
-    then:
-      - set:
-          # ${replace:_ROWNAME:/#.*$//}
-          # ${sedenv:_triggerDetails:/^[\d-]+\s[\d-]+//}
-          id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${_filename}${replace:_triggerDetails:^[\d-]+\s[\d-]+::}
+  - if: [ "${match:_PLUGIN:FKM}", "${match:_DATAVIEW:pattern}" ]
+    set:
+      # ${replace:_ROWNAME:/#.*$//}
+      _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${_filename}${replace:_triggerDetails:^[\d-]+\s[\d-]+::}
   - if: ${match:_SEVERITY:(CRITICAL|critical|3)}
     set:
       impact: 1
@@ -82,7 +112,8 @@ profiles:
   # above
   default:
     - set:
-        _subject: ${replace:_NETPROBE_HOST:thinkpad:that}
+        _subject: ${replace:_NETPROBE_HOST:/(think)pad/${1}that/}
+        subcategory: Geneos Alert
     - set:
         _text: |
           Status Message: ${_STATUSMESSAGE}
@@ -90,75 +121,70 @@ profiles:
           Geneos time: ${_ALERT_CREATED}
           Category: Alert
           Gateway: ${_GATEWAY}
-          Managed Entity: ${first:_MANAGED_ENTITY:Unknown}
-          Sampler: ${first:_SAMPLER:Unknown}
+          Managed Entity: ${select:_MANAGED_ENTITY:Unknown}
+          Sampler: ${select:_SAMPLER:Unknown}
           Row: ${_ROWNAME}
           Column/Headline: ${_COLUMN}${_HEADLINE}
           Value: ${_VALUE} ${_triggerDetails}
-          Sub-category: ${snow:subcategory}
-          Impact: ${snow:impact}
-          Urgency: ${snow:urgency}
+          Sub-category: ${field:subcategory}
+          Impact: ${field:impact}
+          Urgency: ${field:urgency}
 
   opsview:
     - set:
         _subject: Opsview Alert on ${_NETPROBE_HOST} | ${_DATAVIEW} | ${_ROWNAME} | ${_COLUMN}${_HEADLINE} is ${_VALUE}
     - if: [ '${match:_TAGS:\b(core|access|distribution)\b}' ]
+      set:
+        subcategory: abc 
       then:
         - set:
             key: value
         - if: ${match:_DATAVIEW:^(Connectivity|Uptime)}
-          then:
-            - set:
-                subcategory: "Network Device Down"
-                impact: 2
-                urgency: 2
+          set:
+            subcategory: "Network Device Down"
+            impact: 2
+            urgency: 2
           skip: true
         - if: ${match:_DATAVIEW:^SNMP}
-          then:
-            - set:
-                subcategory: "Network Security"
-                impact: 3
-                urgency: 3
+          set:
+            subcategory: "Network Security"
+            impact: 3
+            urgency: 3
         - if: '${match:_DATAVIEW:^NTP}'
-          then:
-            - set:
-                subcategory: "Network Configuration Error"
-                impact: 3
-                urgency: 3
+          set:
+            subcategory: "Network Configuration Error"
+            impact: 3
+            urgency: 3
+          skip: true
         - if: ${match:_DATAVIEW:^(Discards|Errors)}
-          then:
-            - set:
-              subcategory: "Network Performance"
-              impact: 3
-              urgency: 3
+          set:
+            subcategory: "Network Performance"
+            impact: 3
+            urgency: 3
         - if:
             - ${match:_DATAVIEW:^Discards}
             - ${match:_STATUSMESSAGE:discards.*(total|in.*out)}
-          then:
-            - set:
-                urgency: 2
+          set:
+            urgency: 2
         - if:
             - ${match:_DATAVIEW:^Errors}
             - ${match:_STATUSMESSAGE:errors.*(total|in.*out)|interface.*down}
-          then:
-            - set:
-                urgency: 2
+          set:
+            urgency: 2
         - if:
             - ${match:_DATAVIEW:^Interface}
             - ${match:_STATUSMESSAGE:Interface.*DOWN}
-          then:
-            - set:
-                subcategory: "Network Port Down"
-                impact: 2
-                urgency: 2
+          set:
+            subcategory: "Network Port Down"
+            impact: 2
+            urgency: 2
         - if:
             - ${match:_DATAVIEW:^Interface}
             - ${match:_STATUSMESSAGE:SNMP}
-          then:
-            - set:
-                subcategory: "Network Security"
-                impact: 3
-                urgency: 3
+          set:
+            subcategory: "Network Security"
+            impact: 3
+            urgency: 3
     - set:
         _text: |
             Status Message: ${_STATUSMESSAGE}	
@@ -172,7 +198,7 @@ profiles:
             Column/Headline: ${_COLUMN}${_HEADLINE}	
             Value: ${_VALUE}${_triggerDetails}	
             Hashtags: ${_TAGS}	
-            Sub-category: ${snow:subcategory}	
-            Impact: ${snow:impact}	
-            Urgency: ${snow:urgency}
+            Sub-category: ${field:subcategory}	
+            Impact: ${field:impact}	
+            Urgency: ${field:urgency}
 

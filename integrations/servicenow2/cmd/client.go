@@ -134,17 +134,6 @@ func matchenv(cf *config.Config, s string, trim bool) (result string, err error)
 	return fmt.Sprintf("%v", re.MatchString(val)), nil
 }
 
-// getsnowfield returns the value of the named field, or an empty string
-// if not set
-func getsnowfield(cf *config.Config, s string, trim bool) (result string, err error) {
-	s = strings.TrimPrefix(s, "snow:")
-	result = incident[s]
-	if trim {
-		result = strings.TrimSpace(result)
-	}
-	return
-}
-
 // replaceenv takes a strings with four components, colon separated, of
 // the form: `${replace:ENV:/PATTERN/TEXT/}` (where the `/` can be any
 // character, but is then solely used to separate the pattern and the
@@ -190,12 +179,40 @@ func replaceenv(cf *config.Config, s string, trim bool) (r string, err error) {
 	return
 }
 
-// firstenv returns the value of the first environment variable with a
-// value or the last field as a static string. If the environment
-// variable is set but an empty string then that is returned. If no
-// environment variable is set then last field is returned as text.
+// firstfield accepts an expansion (after the `${}` is removed) in the
+// form `field[:FIELD...]:[DEFAULT]` and returns the value of the first
+// field that is set or the last value as a plain string. To return a
+// blank string if no field is set use `${field:FIELD:}` noting the
+// colon just before the closing brace. In all other cases it returns an
+// empty string.
+func firstfield(cf *config.Config, s string, trim bool) (result string, err error) {
+	s = strings.TrimPrefix(s, "field:")
+	fields := strings.Split(s, ":")
+	if len(fields) == 0 {
+		return
+	}
+	last := len(fields) - 1
+	def := fields[last]
+	fields = fields[:last]
+
+	for _, field := range fields {
+		if r, ok := incident[field]; ok {
+			if trim {
+				return strings.TrimSpace(r), nil
+			}
+			return r, nil
+		}
+	}
+	return def, nil
+}
+
+// firstenv accepts an expansion (after the `${}` is removed) in the
+// form `first[:ENV...]:[DEFAULT]` and returns the value of the first
+// environment variable with a value or the last field as a static
+// string. If the environment variable is set but an empty string then
+// that is returned. In all other cases it returns an empty string.
 func firstenv(cf *config.Config, s string, trim bool) (result string, err error) {
-	s = strings.TrimLeft(s, "firstenv:")
+	s = strings.TrimLeft(s, "select:")
 	envs := strings.Split(s, ":")
 	if len(envs) == 0 {
 		return
@@ -224,7 +241,8 @@ type ProfileSection struct {
 	Then  []ProfileSection  `json:"then,omitempty"`
 }
 
-// global so that "getsnowfield" func can see existing values
+// global for each instance so that "getsnowfield" func can see existing
+// values
 var incident = make(snow.Record)
 
 // client call
@@ -250,7 +268,7 @@ func client(args []string) {
 		config.Prefix("match", matchenv),
 		config.Prefix("replace", replaceenv),
 		config.Prefix("select", firstenv),
-		config.Prefix("field", getsnowfield),
+		config.Prefix("field", firstfield),
 	)
 
 	var defaults []ProfileSection
@@ -310,29 +328,32 @@ func client(args []string) {
 	log.Debug().Msgf("incident fields after processing command line args:\n%s", string(b))
 
 	var result map[string]string
-	rc := rest.NewClient(
-		rest.BaseURL(cf.GetString("router.url")),
-		rest.SetupRequestFunc(func(req *http.Request, _ *rest.Client, _ string, _ []byte) {
-			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", cf.GetString("router.authentication.token")))
-		}),
-	)
-	_, err := rc.Post(context.Background(),
-		cf.GetString("router.default-table", config.Default("incident")),
-		incident,
-		&result,
-	)
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
+	for _, ru := range cf.GetStringSlice(cf.Join("router", "url")) {
+		rc := rest.NewClient(
+			rest.BaseURL(ru),
+			rest.SetupRequestFunc(func(req *http.Request, _ *rest.Client, _ string, _ []byte) {
+				req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", cf.GetString(config.Join("router", "authentication", "token"))))
+			}),
+		)
+		_, err := rc.Post(context.Background(),
+			cf.GetString(config.Join("router", "default-table"), config.Default("incident")),
+			incident,
+			&result,
+		)
+		if err != nil {
+			log.Debug().Err(err).Msg("connection error, trying next router (if any)")
+			continue
+		}
 
-	if result["message"] != "" {
-		log.Fatal().Msg(result["message"])
-	}
+		if result["message"] != "" {
+			log.Fatal().Msg(result["message"])
+		}
 
-	if result["action"] == "Failed" {
-		log.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
-	}
+		if result["action"] == "Failed" {
+			log.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
+		}
 
-	fmt.Printf("%s %s %s\n", result["event_type"], result["number"], result["action"])
+		fmt.Printf("%s %s %s\n", result["event_type"], result["number"], result["action"])
+	}
 
 }
