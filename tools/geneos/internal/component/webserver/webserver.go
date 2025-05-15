@@ -322,7 +322,9 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 	return
 }
 
-func (w *Webservers) Command() (args, env []string, home string) {
+func (w *Webservers) Command(checkExt bool) (args, env []string, home string, err error) {
+	var checks []string
+
 	cf := w.Config()
 	base := instance.BaseVersion(w)
 	home = w.Home()
@@ -335,25 +337,31 @@ func (w *Webservers) Command() (args, env []string, home string) {
 	args = append(args,
 		"-Xmx"+cf.GetString("maxmem"),
 		"-server",
-		"-Djava.io.tmpdir="+home+"/webapps",
+		"-Djava.io.tmpdir="+path.Join(home, "webapps"),
 		"-Djava.awt.headless=true",
-		"-DsecurityConfig="+home+"/config/security.xml",
-		"-Dcom.itrsgroup.configuration.file="+home+"/config/config.xml",
+		"-DsecurityConfig="+path.Join(home, "config/security.xml"),
+		"-Dcom.itrsgroup.configuration.file="+path.Join(home, "config/config.xml"),
 		// "-Dcom.itrsgroup.dashboard.dir=<Path to dashboards directory>",
-		"-Dcom.itrsgroup.dashboard.resources.dir="+base+"/resources",
+		"-Dcom.itrsgroup.dashboard.resources.dir="+path.Join(base, "resources"),
 		"-Djava.library.path="+cf.GetString("libpaths"),
-		"-Dlog4j2.configurationFile=file:"+home+"/config/log4j2.properties",
+		"-Dlog4j2.configurationFile=file:"+path.Join(home, "config/log4j2.properties"),
 		"-Dworking.directory="+home,
 		"-Dvalid.host.header="+cf.GetString("valid-host-header", config.Default(".*")),
 		"-Dcom.itrsgroup.legacy.database.maxconnections=100",
 		// SSO
-		"-Dcom.itrsgroup.sso.config.file="+home+"/config/sso.properties",
-		"-Djava.security.auth.login.config="+home+"/config/login.conf",
+		"-Dcom.itrsgroup.sso.config.file="+path.Join(home, "config/sso.properties"),
+		"-Djava.security.auth.login.config="+path.Join(home, "config/login.conf"),
 		"-Djava.security.krb5.conf=/etc/krb5.conf",
 		"-Dcom.itrsgroup.bdosync=DataView,BDOSyncType_Level,DV1_SyncLevel_RedAmberCells",
 		// "-Dcom.sun.management.jmxremote.port=$JMX_PORT -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false",
 		"-XX:+HeapDumpOnOutOfMemoryError",
 		"-XX:HeapDumpPath=/tmp",
+	)
+	checks = append(checks,
+		path.Join(home, "config/security.xml"),
+		path.Join(home, "config/config.xml"),
+		path.Join(home, "config/log4j2.properties"),
+		path.Join(home, "config/sso.properties"),
 	)
 
 	javaopts := strings.Fields(cf.GetString("java-options"))
@@ -361,6 +369,7 @@ func (w *Webservers) Command() (args, env []string, home string) {
 
 	if truststorePath := cf.GetString("truststore"); truststorePath != "" {
 		args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
+		checks = append(checks, truststorePath)
 	}
 
 	// fetch password as string as it has to be exposed on the command line anyway
@@ -385,6 +394,13 @@ func (w *Webservers) Command() (args, env []string, home string) {
 	if cert != "" && privkey != "" {
 		// the instance specific truststore should have been created by `rebuild`
 		args = append(args, "-ssl", "true")
+	}
+
+	if checkExt {
+		missing := instance.CheckPaths(w, checks)
+		if len(missing) > 0 {
+			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
+		}
 	}
 
 	return

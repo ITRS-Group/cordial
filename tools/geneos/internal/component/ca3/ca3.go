@@ -218,17 +218,24 @@ func (n *CA3s) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }
 
-func (n *CA3s) Command() (args, env []string, home string) {
-	cf := n.Config()
+func (n *CA3s) Command(checkExt bool) (args, env []string, home string, err error) {
+	var checks []string
 
-	// locate jar file
-	classPath := path.Join(instance.BaseVersion(n), "collection_agent", "*")
+	cf := n.Config()
+	home = n.Home()
+
+	classPath := path.Join(instance.BaseVersion(n), "collection_agent")
+	logback := path.Join(n.Home(), "logback.xml")
+
+	checks = append(checks, classPath)
+	checks = append(checks, logback)
+	checks = append(checks, cf.GetString("config"))
 
 	args = []string{
 		"-Xms" + cf.GetString("minheap", config.Default("512M")),
 		"-Xmx" + cf.GetString("maxheap", config.Default("512M")),
-		"-Dlogback.configurationFile=" + path.Join(n.Home(), "logback.xml"),
-		"-cp", classPath,
+		"-Dlogback.configurationFile=" + logback,
+		"-cp", path.Join(classPath, "*"),
 		"-DCOLLECTION_AGENT_DIR=" + n.Home(),
 		"com.itrsgroup.collection.ca.Main",
 		cf.GetString("config"),
@@ -239,6 +246,7 @@ func (n *CA3s) Command() (args, env []string, home string) {
 		hostname = "localhost"
 	}
 
+	checks = append(checks, cf.GetString("plugins", config.Default(path.Join(classPath, "plugins"))))
 	env = []string{
 		fmt.Sprintf("CA_PLUGIN_DIR=%s", cf.GetString("plugins", config.Default(path.Join(classPath, "plugins")))),
 		fmt.Sprintf("HEALTH_CHECK_PORT=%d", cf.GetInt("health-check-port", config.Default(9136))),
@@ -246,8 +254,12 @@ func (n *CA3s) Command() (args, env []string, home string) {
 		fmt.Sprintf("HOSTNAME=%s", cf.GetString(("hostname"), config.Default(hostname))),
 	}
 
-	home = n.Home()
-
+	if checkExt {
+		missing := instance.CheckPaths(n, checks)
+		if len(missing) > 0 {
+			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
+		}
+	}
 	return
 }
 

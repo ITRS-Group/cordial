@@ -134,8 +134,11 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *instance.Resp
 		defer i.Host().Remove(tempfile)
 
 		// run a gateway with -dump-xml and consume the result, discard the heading
-		cmd := instance.BuildCmd(i, false)
-
+		cmd, err := instance.BuildCmd(i, false, instance.CheckExternalFiles(true))
+		if err != nil {
+			resp.Err = err
+			return
+		}
 		// replace args with a more limited set
 		cmd.Args = []string{
 			cmd.Path,
@@ -164,7 +167,7 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *instance.Resp
 
 		var output []byte
 		// err is set for validation errors, they are not errors in running
-		_, err := i.Host().Run(cmd, "errors.txt")
+		_, err = i.Host().Run(cmd, "errors.txt")
 		if err != nil {
 			log.Debug().Err(err).Msg("run")
 		}
@@ -199,7 +202,11 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *instance.Respon
 	}
 	if instance.IsA(i, "gateway") && merge {
 		// run a gateway with -dump-xml and consume the result, discard the heading
-		cmd := instance.BuildCmd(i, false)
+		cmd, err := instance.BuildCmd(i, false, instance.CheckExternalFiles(false))
+		if err != nil {
+			resp.Err = err
+			return
+		}
 		// replace args with a more limited set
 		cmd.Args = []string{
 			cmd.Path,
@@ -214,7 +221,7 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *instance.Respon
 		cmd.Args = append(cmd.Args, instance.SetSecureArgs(i)...)
 		var output []byte
 		// we don't care about errors, just the output
-		output, err := i.Host().Run(cmd, "errors.txt")
+		output, err = i.Host().Run(cmd, "errors.txt")
 		if err != nil {
 			log.Debug().Msgf("error: %s", output)
 		}

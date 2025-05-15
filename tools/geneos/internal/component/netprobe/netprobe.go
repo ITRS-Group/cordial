@@ -20,6 +20,7 @@ package netprobe
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -211,15 +212,30 @@ func (n *Netprobes) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }
 
-func (n *Netprobes) Command() (args, env []string, home string) {
+func (n *Netprobes) Command(checkExt bool) (args, env []string, home string, err error) {
+	var checks []string
+
+	cf := n.Config()
+	home = n.Home()
+
 	logFile := instance.LogFilePath(n)
+	checks = append(checks, filepath.Dir(logFile))
+
 	args = []string{
 		n.Name(),
 		"-port", n.Config().GetString("port"),
 	}
-	args = append(args, instance.SetSecureArgs(n)...)
+	if cf.IsSet("listenip") {
+		args = append(args, "-listenip", cf.GetString("listenip"))
+	}
+	secureArgs := instance.SetSecureArgs(n)
+	args = append(args, secureArgs...)
+	for _, arg := range secureArgs {
+		if !strings.HasPrefix(arg, "-") {
+			checks = append(checks, arg)
+		}
+	}
 	env = append(env, "LOG_FILENAME="+logFile)
-	home = n.Home()
 
 	// always set HOSTNAME env for CA
 	hostname, err := os.Hostname()
@@ -228,6 +244,12 @@ func (n *Netprobes) Command() (args, env []string, home string) {
 	}
 	env = append(env, "HOSTNAME="+n.Config().GetString(("hostname"), config.Default(hostname)))
 
+	if checkExt {
+		missing := instance.CheckPaths(n, checks)
+		if len(missing) > 0 {
+			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
+		}
+	}
 	return
 }
 

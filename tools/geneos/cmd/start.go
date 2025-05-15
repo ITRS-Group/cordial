@@ -74,7 +74,11 @@ func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string,
 	instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		resp = instance.NewResponse(i)
 		if instance.IsAutoStart(i) || autostart {
-			resp.Err = instance.Start(i, instance.StartingExtras(startCmdExtras), instance.StartingEnvs(startCmdEnvs))
+			resp.Err = instance.Start(i,
+				instance.StartingExtras(startCmdExtras),
+				instance.StartingEnvs(startCmdEnvs),
+				instance.CheckExternalFiles(true),
+			)
 		}
 		return
 	}).Write(os.Stdout, instance.WriterIgnoreErr(geneos.ErrRunning))

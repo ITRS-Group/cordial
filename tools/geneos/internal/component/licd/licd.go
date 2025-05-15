@@ -19,6 +19,8 @@ package licd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -197,15 +199,33 @@ func (l *Licds) Add(tmpl string, port uint16) (err error) {
 	return nil
 }
 
-func (l *Licds) Command() (args, env []string, home string) {
+func (l *Licds) Command(checkExt bool) (args, env []string, home string, err error) {
+	var checks []string
+
+	home = l.Home()
+
+	logFile := instance.LogFilePath(l)
+	checks = append(checks, filepath.Dir(logFile))
 	args = []string{
 		l.Name(),
 		"-port", l.Config().GetString("port"),
-		"-log", instance.LogFilePath(l),
+		"-log", logFile,
 	}
 
-	args = append(args, instance.SetSecureArgs(l)...)
-	home = l.Home()
+	secureArgs := instance.SetSecureArgs(l)
+	args = append(args, secureArgs...)
+	for _, arg := range secureArgs {
+		if !strings.HasPrefix(arg, "-") {
+			checks = append(checks, arg)
+		}
+	}
+
+	if checkExt {
+		missing := instance.CheckPaths(l, checks)
+		if len(missing) > 0 {
+			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
+		}
+	}
 	return
 }
 

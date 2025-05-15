@@ -19,6 +19,8 @@ package fileagent
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -205,17 +207,34 @@ func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 	return nil
 }
 
-func (c *FileAgents) Command() (args, env []string, home string) {
+func (c *FileAgents) Command(checkExt bool) (args, env []string, home string, err error) {
+	var checks []string
+
+	home = c.Home()
 	logFile := instance.LogFilePath(c)
+	checks = append(checks, filepath.Dir(logFile))
 	args = []string{
 		c.Name(),
 		"-port", c.Config().GetString("port"),
 	}
 	if instance.CompareVersion(c, "6.6.0") >= 0 {
-		args = append(args, instance.SetSecureArgs(c)...)
+		secureArgs := instance.SetSecureArgs(c)
+		args = append(args, secureArgs...)
+		for _, arg := range secureArgs {
+			if !strings.HasPrefix(arg, "-") {
+				checks = append(checks, arg)
+			}
+		}
 	}
 	env = append(env, "LOG_FILENAME="+logFile)
-	home = c.Home()
+
+	if checkExt {
+		missing := instance.CheckPaths(c, checks)
+		if len(missing) > 0 {
+			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
+		}
+	}
+
 	return
 }
 

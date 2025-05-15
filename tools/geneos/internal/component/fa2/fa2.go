@@ -19,6 +19,8 @@ package fa2
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -202,16 +204,32 @@ func (n *FA2s) Add(tmpl string, port uint16) (err error) {
 	return nil
 }
 
-func (n *FA2s) Command() (args, env []string, home string) {
+func (n *FA2s) Command(checkExt bool) (args, env []string, home string, err error) {
+	var checks []string
+
+	home = n.Home()
 	logFile := instance.LogFilePath(n)
+	checks = append(checks, filepath.Dir(logFile))
 	args = []string{
 		n.Name(),
 		"-port", n.Config().GetString("port"),
 	}
-	args = append(args, instance.SetSecureArgs(n)...)
-	env = append(env, "LOG_FILENAME="+logFile)
-	home = n.Home()
+	secureArgs := instance.SetSecureArgs(n)
+	args = append(args, secureArgs...)
+	for _, arg := range secureArgs {
+		if !strings.HasPrefix(arg, "-") {
+			checks = append(checks, arg)
+		}
+	}
 
+	env = append(env, "LOG_FILENAME="+logFile)
+
+	if checkExt {
+		missing := instance.CheckPaths(n, checks)
+		if len(missing) > 0 {
+			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
+		}
+	}
 	return
 }
 

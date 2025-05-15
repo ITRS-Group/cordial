@@ -20,6 +20,8 @@ package floating
 import (
 	_ "embed"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -84,6 +86,7 @@ var Floating = geneos.Component{
 		`floatingname={{.name}}`,
 		`setup={{join "${config:home}" "netprobe.setup.xml"}}`,
 		`autostart=true`,
+		`listenip="none"`,
 	},
 
 	Directories: []string{
@@ -281,19 +284,39 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 		template)
 }
 
-func (s *Floatings) Command() (args, env []string, home string) {
+func (s *Floatings) Command(checkExt bool) (args, env []string, home string, err error) {
+	var checks []string
+
 	cf := s.Config()
+	home = s.Home()
+
 	logFile := instance.LogFilePath(s)
+	checks = append(checks, filepath.Dir(logFile))
+
 	args = []string{
 		s.Name(),
-		"-listenip", "none",
+		"-listenip", cf.GetString("listenip", config.Default("none")),
 		"-port", cf.GetString("port"),
 		"-setup", cf.GetString("setup"),
 		// "-setup-interval", "300",
 	}
-	args = append(args, instance.SetSecureArgs(s)...)
-	env = append(env, "LOG_FILENAME="+logFile)
-	home = s.Home()
+	checks = append(checks, cf.GetString("setup"))
 
+	secureArgs := instance.SetSecureArgs(s)
+	args = append(args, secureArgs...)
+	for _, arg := range secureArgs {
+		if !strings.HasPrefix(arg, "-") {
+			checks = append(checks, arg)
+		}
+	}
+
+	env = append(env, "LOG_FILENAME="+logFile)
+
+	if checkExt {
+		missing := instance.CheckPaths(s, checks)
+		if len(missing) > 0 {
+			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
+		}
+	}
 	return
 }

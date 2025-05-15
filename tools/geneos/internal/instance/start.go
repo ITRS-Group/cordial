@@ -57,7 +57,10 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 			options = append(options, option)
 		}
 	}
-	cmd := BuildCmd(i, false, options...)
+	cmd, err := BuildCmd(i, false, options...)
+	if err != nil {
+		return
+	}
 	if cmd == nil {
 		return fmt.Errorf("BuildCmd() returned nil")
 	}
@@ -88,18 +91,22 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 // so can be used for display
 //
 // Any extras arguments are appended without further checks
-func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *exec.Cmd) {
+func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *exec.Cmd, err error) {
 	var env []string
 	var home string
 
+	so := evalStartOptions(options...)
+
 	binary := PathOf(i, "program")
 
-	args, env, home := i.Command()
+	args, env, home, err := i.Command(so.checkexternal)
+	if err != nil {
+		return
+	}
 
 	opts := strings.Fields(i.Config().GetString("options"))
 	args = append(args, opts...)
 
-	so := evalStartOptions(options...)
 	args = append(args, so.extras...)
 
 	envs := i.Config().GetStringSlice("env", config.NoDecode(noDecode))
@@ -129,8 +136,9 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *e
 }
 
 type startOptions struct {
-	envs   []string
-	extras []string
+	envs          []string
+	extras        []string
+	checkexternal bool
 }
 
 type StartOptions func(*startOptions)
@@ -158,5 +166,11 @@ func StartingExtras(extras string) StartOptions {
 func StartingEnvs(envs NameValues) StartOptions {
 	return func(so *startOptions) {
 		so.envs = envs
+	}
+}
+
+func CheckExternalFiles(check bool) StartOptions {
+	return func(so *startOptions) {
+		so.checkexternal = check
 	}
 }
