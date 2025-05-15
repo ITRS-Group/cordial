@@ -27,7 +27,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial/integrations/servicenow2/snow"
+	"github.com/itrs-group/cordial/integrations/servicenow2/internal/snow"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/process"
 )
