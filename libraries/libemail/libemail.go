@@ -146,7 +146,7 @@ func SendMail(n C.int, args **C.char) C.int {
 	}
 
 	body := replArgs(format, conf)
-	m.SetHeader("Subject", subject)
+	m.SetHeader("Subject", replArgs(subject, conf))
 	m.SetBody("text/plain", body)
 
 	if err = d.DialAndSend(m); err != nil {
@@ -220,7 +220,7 @@ func GoSendMail(n C.int, args **C.char) C.int {
 		}
 	}
 
-	m.SetHeader("Subject", subject)
+	m.SetHeader("Subject", replArgs(subject, conf))
 
 	tmpl := template.New("text")
 	if _, ok := conf["_TEMPLATE_TEXT_FILE"]; ok {
