@@ -70,8 +70,8 @@ map and submit incidents.
 `, "|", "`"),
 	SilenceUsage: true,
 	Run: func(cmd *cobra.Command, args []string) {
-		loadConfigFile(cmd)
-		router()
+		cf := loadConfigFile("router")
+		router(cf)
 	},
 }
 
@@ -85,7 +85,7 @@ func Timestamp() echo.MiddlewareFunc {
 	}
 }
 
-func router() {
+func router(cf *config.Config) {
 	if daemon {
 		process.Daemon(nil, process.RemoveArgs, "-D", "--daemon")
 	}
@@ -137,6 +137,8 @@ func router() {
 func bodyDumpLog(c echo.Context, reqBody, resBody []byte) {
 	var reqMethod string
 	var resStatus int
+
+	cf := c.(*snow.Context).Conf
 
 	// request and response object
 	req := c.Request()

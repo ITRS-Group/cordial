@@ -77,12 +77,15 @@ For the first implementation you should start with the example configuration fil
 
 ## How It Works
 
-When a Geneos Gateway invokes either an Action from a Rule or an Effect from an Alerting hierarchy it sets a number of predefined environment variables for the external process to use as a context. The specific list varies slightly between the two and are documented in these sections of the reference manuals:
+When the Gateway runs an Action from a Rule or an Effect from an Alerting hierarchy, it sets environment variables for the external process to use as a context. The names and values varies slightly between the two and are documented in these sections of the reference manuals:
 
-Actions: <https://docs.itrsgroup.com/docs/geneos/current/processing/monitoring-and-alerts/geneos_rulesactionsalerts_tr/index.html#action-configuration>
-Effects: <https://docs.itrsgroup.com/docs/geneos/current/processing/monitoring-and-alerts/geneos_rulesactionsalerts_tr/index.html#effects>
+* Actions: <https://docs.itrsgroup.com/docs/geneos/current/processing/monitoring-and-alerts/geneos_rulesactionsalerts_tr/index.html#action-configuration>
 
-In addition to a fixed set of environment variables, as detailed in the manuals above, the Action/Effect will also sets, depending on the Geneos Data Item that caused the invocation, variables for the value in each cell on the same row (where the Action/Effect is for a table cell) and also for each Managed Entity Attribute.
+* Effects: <https://docs.itrsgroup.com/docs/geneos/current/processing/monitoring-and-alerts/geneos_rulesactionsalerts_tr/index.html#effects>
+
+In addition to a data item related environment variables the Action or Effect sets, and depending on the Geneos Data Item that caused the invocation, variables for the value in each cell on the same row (where the Action/Effect is for a table cell) and also for each Managed Entity Attribute are set.
+
+The servicenow2 client can use these environment variables both to set incident field values and also to test for conditions and set or remove fields driven by these tests.
 
 
 

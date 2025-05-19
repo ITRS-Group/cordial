@@ -81,9 +81,10 @@ func LookupCmdbCI(ctx *Context, table, query, cmdb_ci_default string) (cmdb_ci s
 		return
 	}
 
-	if cmdb_ci = r["sys_id"]; cmdb_ci == "" {
+	var ok bool
+	if cmdb_ci, ok = r["sys_id"]; !ok {
 		if cmdb_ci_default == "" {
-			err = echo.NewHTTPError(http.StatusNotFound, nil)
+			err = echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("sys_id not found for query %q", query))
 			return
 		}
 		cmdb_ci = cmdb_ci_default
@@ -128,10 +129,8 @@ func (x *resultsSlice) UnmarshalJSON(b []byte) error {
 
 func GetRecords(ctx *Context, endpoint *url.URL) (result resultsSlice, err error) {
 	var r snowResult
-
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
-	log.Debug().Msgf("geturl %q", endpoint)
-	_, err = rc.GetURL(ctx.Request().Context(), endpoint, nil, &r)
+	_, err = rc.GetURL(ctx.Request().Context(), endpoint, &r)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)
 		return
@@ -142,9 +141,8 @@ func GetRecords(ctx *Context, endpoint *url.URL) (result resultsSlice, err error
 
 func GetRecord(ctx *Context, endpoint *url.URL) (result results, err error) {
 	var r snowResult
-
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
-	_, err = rc.GetURL(ctx.Request().Context(), endpoint, nil, &r)
+	_, err = rc.GetURL(ctx.Request().Context(), endpoint, &r)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)
 		return
@@ -200,6 +198,9 @@ func makeURLPath(table string, options ...Options) *url.URL {
 	}
 	if opts.query != "" {
 		v.Add("sysparm_query", opts.query)
+	}
+	if opts.display != "" {
+		v.Add("sysparm_display_value", opts.display)
 	}
 	v.Add("sysparm_exclude_reference_link", "true")
 

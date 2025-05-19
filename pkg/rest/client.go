@@ -70,7 +70,7 @@ func (c *Client) Auth(ctx context.Context, clientid string, clientsecret *config
 }
 
 // GET method. On successful return the response body will be closed.
-func (c *Client) GetURL(ctx context.Context, endpoint *url.URL, request any, response any) (resp *http.Response, err error) {
+func (c *Client) GetURL(ctx context.Context, endpoint *url.URL, response any) (resp *http.Response, err error) {
 	u, _ := url.Parse(c.BaseURL)
 	if err != nil {
 		return
@@ -83,13 +83,7 @@ func (c *Client) GetURL(ctx context.Context, endpoint *url.URL, request any, res
 	if c.authHeader != "" {
 		req.Header.Add(c.authHeader, c.authValue)
 	}
-	if request != nil {
-		v, err := query.Values(request)
-		if err != nil {
-			return resp, err
-		}
-		req.URL.RawQuery = v.Encode()
-	}
+
 	if c.SetupRequest != nil {
 		c.SetupRequest(req, c, endpoint.String(), nil)
 	}
@@ -123,13 +117,20 @@ func (c *Client) Get(ctx context.Context, endpoint string, request any, response
 	if c.authHeader != "" {
 		req.Header.Add(c.authHeader, c.authValue)
 	}
-	if request != nil {
-		v, err := query.Values(request)
-		if err != nil {
-			return resp, err
+
+	switch r := request.(type) {
+	case string:
+		req.URL.RawQuery = r
+	default:
+		if r != nil {
+			v, err := query.Values(r)
+			if err != nil {
+				return resp, err
+			}
+			req.URL.RawQuery = v.Encode()
 		}
-		req.URL.RawQuery = v.Encode()
 	}
+
 	if c.SetupRequest != nil {
 		c.SetupRequest(req, c, endpoint, nil)
 	}
@@ -357,10 +358,7 @@ func encodeBody(request any) (r io.Reader, body []byte) {
 // decodeResponse checks the content-type and decodes based on that.
 // This could be better done in a http handler, but this is simple to
 // understand
-func decodeResponse(resp *http.Response, response interface{}) (err error) {
-	if response == nil {
-		return
-	}
+func decodeResponse(resp *http.Response, response any) (err error) {
 	// we only care about the main value, not char sets etc.
 	ct := resp.Header.Get("content-type")
 	ct, _, _ = strings.Cut(ct, ";")

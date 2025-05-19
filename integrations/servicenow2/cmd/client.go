@@ -64,8 +64,9 @@ ServiceNow API.
 	SilenceUsage: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		// fmt.Printf("defaults: %#v", cf.Get("defaults"))
-		loadConfigFile(cmd)
-		client(args)
+		cf := loadConfigFile("client")
+
+		client(cf, args)
 	},
 }
 
@@ -263,7 +264,7 @@ var incident = make(snow.Record)
 //
 // _subject - short description
 // _text - long text
-func client(args []string) {
+func client(cf *config.Config, args []string) {
 	cf.DefaultExpandOptions(
 		config.Prefix("match", matchenv),
 		config.Prefix("replace", replaceenv),
@@ -335,11 +336,11 @@ func client(args []string) {
 				req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", cf.GetString(config.Join("router", "authentication", "token"))))
 			}),
 		)
-		_, err := rc.Post(context.Background(),
-			cf.GetString(config.Join("router", "default-table"), config.Default("incident")),
-			incident,
-			&result,
-		)
+
+		if table == "" {
+			table = cf.GetString(cf.Join("router", "default-table"), config.Default("incident"))
+		}
+		_, err := rc.Post(context.Background(), table, incident, &result)
 		if err != nil {
 			log.Debug().Err(err).Msg("connection error, trying next router (if any)")
 			continue
@@ -354,6 +355,6 @@ func client(args []string) {
 		}
 
 		fmt.Printf("%s %s %s\n", result["event_type"], result["number"], result["action"])
+		break
 	}
-
 }

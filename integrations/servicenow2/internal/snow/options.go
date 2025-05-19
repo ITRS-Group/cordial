@@ -22,11 +22,12 @@ import (
 )
 
 type reqOptions struct {
-	limit  string
-	fields string
-	offset string
-	query  string
-	sysID  string
+	limit   string
+	fields  string
+	offset  string
+	query   string
+	display string
+	sysID   string
 }
 
 type Options func(*reqOptions)
@@ -60,6 +61,13 @@ func Offset(offset string) Options {
 func Query(query string) Options {
 	return func(ro *reqOptions) {
 		ro.query = query
+	}
+}
+
+// Display sets the `sysparm_display_value` parameter
+func Display(display string) Options {
+	return func(ro *reqOptions) {
+		ro.display = display
 	}
 }
 

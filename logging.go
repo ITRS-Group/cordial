@@ -22,6 +22,7 @@ package cordial
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path"
 	"runtime"
@@ -113,12 +114,15 @@ func LogInit(prefix string, options ...LogOptions) {
 			return fmt.Sprintf("%s: %s", prefix, i)
 		},
 	}).With().Caller().Logger()
+
+	zerolog.SetGlobalLevel(opts.level)
 }
 
 type logOpts struct {
 	logfile       string
 	lj            *lumberjack.Logger
 	rotateOnStart bool
+	level         zerolog.Level
 }
 
 type LogOptions func(*logOpts)
@@ -154,5 +158,21 @@ func LumberjackOptions(lj *lumberjack.Logger) LogOptions {
 func RotateOnStart(rotate bool) LogOptions {
 	return func(lo *logOpts) {
 		lo.rotateOnStart = rotate
+	}
+}
+
+// LogLevel takes a slog debug level to use as a default
+func LogLevel(level slog.Level) LogOptions {
+	return func(lo *logOpts) {
+		switch level {
+		case slog.LevelDebug:
+			lo.level = zerolog.DebugLevel
+		case slog.LevelInfo:
+			lo.level = zerolog.InfoLevel
+		case slog.LevelWarn:
+			lo.level = zerolog.WarnLevel
+		case slog.LevelError:
+			lo.level = zerolog.ErrorLevel
+		}
 	}
 }

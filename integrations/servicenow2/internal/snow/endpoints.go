@@ -18,7 +18,6 @@ limitations under the License.
 package snow
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -59,6 +58,9 @@ func AcceptEvent(c echo.Context) (err error) {
 				return echo.NewHTTPError(http.StatusNotFound, "must supply either a _cmdb_ci_default or a _cmdb_search parameter")
 			}
 		} else {
+			if _, ok = incident["_cmdb_ci_default"]; !ok {
+				incident["_cmdb_ci_default"] = table.Defaults["_cmdb_ci_default"]
+			}
 			// if incident["cmdb_ci"], err = LookupCmdbCI(cf, incident["_cmdb_table"], query, incident["_cmdb_ci_default"]); err != nil {
 			if incident["cmdb_ci"], err = LookupCmdbCI(req, incident["_cmdb_table"], query, incident["_cmdb_ci_default"]); err != nil {
 				return
@@ -174,12 +176,21 @@ func AcceptEvent(c echo.Context) (err error) {
 // user. `format` is the output format, either json (the default) or
 // `csv`.
 func GetAllRecords(c echo.Context) (err error) {
-	var user, format string
+	var user string
+	var fields string
 
 	cc := c.(*Context)
 	cf := cc.Conf
 
 	defer c.Request().Body.Close()
+
+	tc, err := getTableConfig(cf, cc.Param("table"))
+	if err != nil {
+		return
+	}
+	if !tc.Query.Enabled {
+		return echo.ErrNotFound
+	}
 
 	qb := echo.QueryParamsBinder(c)
 
@@ -188,9 +199,9 @@ func GetAllRecords(c echo.Context) (err error) {
 		user = cf.GetString("servicenow.username")
 	}
 
-	err = qb.String("format", &format).BindError()
-	if err != nil || format == "" {
-		format = "json"
+	err = qb.String("fields", &fields).BindError()
+	if err != nil || fields == "" {
+		fields = strings.Join(tc.Query.ResponseFields, ",")
 	}
 
 	// real basic validation of user
@@ -205,36 +216,7 @@ func GetAllRecords(c echo.Context) (err error) {
 
 	q := fmt.Sprintf(`active=true^opened_by=%s`, u["sys_id"])
 
-	tc, err := getTableConfig(cf, cc.Param("table"))
-	if err != nil {
-		return
-	}
-	if !tc.Query.Enabled {
-		return echo.ErrNotFound
-	}
+	l, _ := GetRecords(cc, makeURLPath(tc.Name, Fields(fields), Query(q), Display("true")))
 
-	l, _ := GetRecords(cc, makeURLPath(tc.Name, Fields(strings.Join(tc.Query.ResponseFields, ",")), Query(q)))
-
-	switch format {
-	case "json":
-		return c.JSON(200, l)
-	case "csv":
-		columns := tc.Query.ResponseFields
-		csv := csv.NewWriter(c.Response())
-		csv.Write(columns)
-		c.Response().Header().Set(echo.HeaderContentType, "text/csv")
-		c.Response().WriteHeader(http.StatusOK)
-		for _, line := range l {
-			var fields []string
-			for _, col := range columns {
-				fields = append(fields, line[col])
-			}
-			csv.Write(fields)
-		}
-		csv.Flush()
-		c.Response().Flush()
-		return nil
-	default:
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unknown output format %q. Use `csv` or `json`", format))
-	}
+	return c.JSON(200, l)
 }

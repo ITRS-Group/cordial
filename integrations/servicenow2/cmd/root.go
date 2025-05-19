@@ -18,6 +18,7 @@ limitations under the License.
 package cmd
 
 import (
+	"log/slog"
 	"os"
 	"path"
 	"strings"
@@ -29,7 +30,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-var cf *config.Config
+// var cf *config.Config
 
 var conffile, execname string
 var debug bool
@@ -47,7 +48,15 @@ func init() {
 	RootCmd.Flags().SortFlags = false
 
 	execname = path.Base(os.Args[0])
-	cordial.LogInit(execname)
+	cobra.OnInitialize(func() {
+		var l slog.Level
+		if debug {
+			l = slog.LevelDebug
+		}
+		cordial.LogInit(execname, cordial.LogLevel(l))
+		log.Debug().Msgf("cordial 'servicenow2' running as executable '%s', version %s", cordial.ExecutableName(), cordial.VERSION)
+
+	})
 }
 
 var RootCmd = &cobra.Command{
@@ -73,10 +82,10 @@ func Execute() {
 }
 
 // loadConfigFile reads in config file and ENV variables if set.
-func loadConfigFile(cmd *cobra.Command) {
+func loadConfigFile(cmdName string) (cf *config.Config) {
 	var err error
 
-	configBasename := strings.Join([]string{execname, cmd.Name()}, ".")
+	configBasename := strings.Join([]string{execname, cmdName}, ".")
 
 	cf, err = config.Load(configBasename,
 		config.SetAppName("geneos"),
@@ -95,4 +104,6 @@ func loadConfigFile(cmd *cobra.Command) {
 			config.SetFileExtension("yaml"),
 			config.SetConfigFile(conffile)),
 	)
+
+	return
 }
