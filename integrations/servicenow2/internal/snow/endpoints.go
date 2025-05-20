@@ -25,7 +25,6 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -106,12 +105,13 @@ func AcceptEvent(c echo.Context) (err error) {
 		for k, v := range s.Rename {
 			if _, ok := incident[k]; ok {
 				incident[v] = incident[k]
+				if strings.HasPrefix(k, "_") && !strings.HasPrefix(v, "_") {
+					// do not delete src is it starts with an underscore and the dst does not
+					continue
+				}
 				delete(incident, k)
 			}
 		}
-
-		// now remove all fields prefixed with an underscore
-		maps.DeleteFunc(incident, func(e, _ string) bool { return strings.HasPrefix(e, "_") })
 
 		// all include must exist, else error
 		for _, i := range s.MustInclude {
@@ -119,45 +119,29 @@ func AcceptEvent(c echo.Context) (err error) {
 				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("missing field %q", i))
 			}
 		}
-
 	}
 
-	if cf.GetBool(cf.Join("servicenow", "incident-user", "lookup")) {
-		user := cf.GetString(cf.Join("servicenow", "username"))
-		userfield := cf.GetString(cf.Join("servicenow", "incident-user", "field"), config.Default("caller_id"))
-		if _, ok := incident[userfield]; ok {
-			user = incident[userfield]
-		}
+	// now remove all fields prefixed with an underscore, but leaves
+	// them in incidentFields for later
+	incidentFields := maps.Clone(incident)
+	maps.DeleteFunc(incident, func(e, _ string) bool { return strings.HasPrefix(e, "_") })
 
-		// basic validation of user
-		if !userRE.MatchString(user) {
-			return echo.NewHTTPError(http.StatusBadRequest, "username supplied is invalid")
-		}
-
-		// only lookup user after all defaults applied
-		u, err := GetRecord(req, makeURLPath("sys_user", Fields("sys_id"), Query("user_name="+user), Limit(1)))
-		if err != nil || len(u) == 0 {
-			log.Error().Err(err).Msgf("user not found")
-			return echo.NewHTTPError(http.StatusNotFound, "User not found")
-		}
-		incident[userfield] = u["sys_id"]
-	}
-
-	// response := make(map[string]string)
-	response := map[string]string{
-		"host":       incident["host"],
-		"event_type": "Incident",
-	}
+	response := map[string]string{}
 
 	if incident_id != "" {
 		number, err := incident.UpdateRecord(req, incident_id)
 		if err != nil {
 			return err
 		}
-		response["action"] = "Updated"
-		response["number"] = number
+		response["_action"] = "Updated"
+		response["_number"] = number
+		// response["_log_extra"] = table.Logging.Updated
+		response["result"] = cf.ExpandString(table.Response.Updated, config.LookupTable(incidentFields, response), config.TrimSpace(false))
+
+		// maps.Copy(response, incidentFields)
+
 	} else if incident["update_only"] == "true" {
-		response["action"] = "Ignored"
+		response["_action"] = "Ignored"
 		return echo.NewHTTPError(http.StatusAccepted, "No Incident Created. 'update only' option set.")
 	} else {
 		// incident["correlation_id"] = correlation_id
@@ -165,8 +149,11 @@ func AcceptEvent(c echo.Context) (err error) {
 		if err != nil {
 			return err
 		}
-		response["action"] = "Created"
-		response["number"] = number
+		response["_action"] = "Created"
+		response["_number"] = number
+		// response["_log_extra"] = table.Logging.Created
+		response["result"] = cf.ExpandString(table.Response.Created, config.LookupTable(incidentFields, response), config.TrimSpace(false))
+		// maps.Copy(response, incidentFields)
 	}
 
 	return c.JSON(201, response)

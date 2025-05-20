@@ -220,7 +220,7 @@ func makeURLPath(table string, options ...Options) *url.URL {
 type TableQuery struct {
 	Enabled        bool     `mapstructure:"enabled"`
 	Search         string   `mapstructure:"search"`
-	ResponseFields []string `mapstructure:"response-fields"`
+	ResponseFields []string `mapstructure:"fields"`
 }
 
 type TableStates struct {
@@ -230,13 +230,19 @@ type TableStates struct {
 	Remove      []string          `mapstructure:"remove,omitempty"`
 }
 
+type TableResponses struct {
+	Created string `mapstructure:"created,omitempty"`
+	Updated string `mapstructure:"updated,omitempty"`
+	Failed  string `mapstructure:"failed,omitempty"`
+}
+
 type TableData struct {
 	Name          string              `mapstructure:"name,omitempty"`
 	Search        string              `mapstructure:"search,omitempty"`
 	Query         TableQuery          `mapstructure:"query,omitempty"`
 	Defaults      map[string]string   `mapstructure:"defaults,omitempty"`
-	User          map[string]string   `mapstructure:"user,omitempty"`
 	CurrentStates map[int]TableStates `mapstructure:"current-state,omitempty"`
+	Response      TableResponses      `mapstructure:"response,omitempty"`
 }
 
 func getTableConfig(cf *config.Config, tableName string) (tableData TableData, err error) {

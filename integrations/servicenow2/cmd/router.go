@@ -152,13 +152,8 @@ func bodyDumpLog(c echo.Context, reqBody, resBody []byte) {
 	var message string
 
 	if err := json.Unmarshal(resBody, &result); err == nil {
-		if result["message"] != "" {
-			message = result["message"]
-		} else if result["action"] == "Failed" {
-			message = fmt.Sprintf("Failed to create event for %s", result["host"])
-		} else {
-			message = fmt.Sprintf("%s %s %s", result["event_type"], result["number"], result["action"])
-		}
+		message = result["result"]
+		// message = cf.ExpandString(result["_log_extra"], config.LookupTable(result), config.TrimSpace(false))
 	}
 
 	bytes_in := req.Header.Get(echo.HeaderContentLength)
@@ -167,9 +162,9 @@ func bodyDumpLog(c echo.Context, reqBody, resBody []byte) {
 	}
 	starttime := c.Get("starttime").(time.Time)
 	latency := time.Since(starttime)
-	latency = latency.Round(time.Millisecond)
+	// latency = latency.Round(time.Millisecond)
 
-	fmt.Printf("%v %s %s %3d %s/%d %v %s %s %s %q\n",
+	fmt.Printf("%v %s %s %3d %s/%d %.3fs %s %s %s %q\n",
 		time.Now().Format(time.RFC3339),     // TIMESTAMP for route access
 		cf.GetString("servicenow.instance"), // name of server (APP) with the environment
 		req.Proto,                           // protocol
@@ -177,7 +172,7 @@ func bodyDumpLog(c echo.Context, reqBody, resBody []byte) {
 		// stats here
 		bytes_in,
 		res.Size,
-		latency,
+		float64(latency.Milliseconds())/1000.0,
 		c.RealIP(), // client IP
 		reqMethod,  // request method
 		req.URL,    // request URI (path)

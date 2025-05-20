@@ -63,7 +63,7 @@ servicenow:
         # fields are returned in the order below. to ensure that Geneos
         # row-names are unique make sure that the first column is a
         # primary key, as below
-        response-fields: [ number, sys_id, cmdb_ci.name, short_description, description, correlation_id, opened_by, state ]
+        fields: [ number, sys_id, cmdb_ci.name, short_description, description, correlation_id, opened_by, state ]
 
       # the rest of the configuration is concerned with creating and updating incidents
 
