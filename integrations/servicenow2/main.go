@@ -17,7 +17,11 @@ limitations under the License.
 
 package main
 
-import "github.com/itrs-group/cordial/integrations/servicenow2/cmd"
+import (
+	"github.com/itrs-group/cordial/integrations/servicenow2/cmd"
+	_ "github.com/itrs-group/cordial/integrations/servicenow2/cmd/client"
+	_ "github.com/itrs-group/cordial/integrations/servicenow2/cmd/router"
+)
 
 func main() {
 	cmd.Execute()

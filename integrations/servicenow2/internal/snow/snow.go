@@ -22,16 +22,15 @@ import (
 	"crypto/tls"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"sync"
 
+	"github.com/labstack/echo/v4"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/rest"
-	"github.com/labstack/echo/v4"
 )
 
 var snowMutex sync.RWMutex
@@ -41,9 +40,6 @@ type Context struct {
 	echo.Context
 	Conf *config.Config
 }
-
-// not a complete test, but just filter characters *allowed*
-var userRE = regexp.MustCompile(`^[\w\.@ ]+$`)
 
 func ServiceNow(cf *config.Config) (client *rest.Client) {
 	snowMutex.RLock()

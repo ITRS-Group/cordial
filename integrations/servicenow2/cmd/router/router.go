@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
+package router
 
 import (
 	"encoding/json"
@@ -27,15 +27,17 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial/integrations/servicenow2/internal/snow"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/process"
+
+	"github.com/itrs-group/cordial/integrations/servicenow2/cmd"
+	"github.com/itrs-group/cordial/integrations/servicenow2/internal/snow"
 )
 
 var daemon bool
 
 func init() {
-	RootCmd.AddCommand(routerCmd)
+	cmd.RootCmd.AddCommand(routerCmd)
 
 	routerCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Daemonise the router process")
 	routerCmd.Flags().SortFlags = false
@@ -69,8 +71,8 @@ map and submit incidents.
 
 `, "|", "`"),
 	SilenceUsage: true,
-	Run: func(cmd *cobra.Command, args []string) {
-		cf := loadConfigFile("router")
+	Run: func(command *cobra.Command, args []string) {
+		cf := cmd.LoadConfigFile("router")
 		router(cf)
 	},
 }
@@ -113,10 +115,10 @@ func router(cf *config.Config) {
 	v2route := e.Group(cf.GetString(cf.Join("router", "path")))
 
 	// GET Endpoint
-	v2route.GET("/:table", snow.GetAllRecords)
+	v2route.GET("/:table", getRecords)
 
 	// POST Endpoint
-	v2route.POST("/:table", snow.AcceptEvent)
+	v2route.POST("/:table", acceptRecord)
 
 	listen := cf.GetString(cf.Join("router", "listen"))
 

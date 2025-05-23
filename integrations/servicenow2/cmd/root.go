@@ -32,11 +32,11 @@ import (
 
 // var cf *config.Config
 
-var conffile, execname string
+var configFile, execname string
 var debug bool
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&conffile, "conf", "c", "", "override config file")
+	RootCmd.PersistentFlags().StringVarP(&configFile, "conf", "c", "", "override config file")
 
 	RootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
 	RootCmd.PersistentFlags().MarkHidden("debug")
@@ -81,8 +81,8 @@ func Execute() {
 	}
 }
 
-// loadConfigFile reads in config file and ENV variables if set.
-func loadConfigFile(cmdName string) (cf *config.Config) {
+// LoadConfigFile reads in config file and ENV variables if set.
+func LoadConfigFile(cmdName string) (cf *config.Config) {
 	var err error
 
 	configBasename := strings.Join([]string{execname, cmdName}, ".")
@@ -91,7 +91,7 @@ func loadConfigFile(cmdName string) (cf *config.Config) {
 		config.SetAppName("geneos"),
 		config.UseGlobal(),
 		config.SetFileExtension("yaml"),
-		config.SetConfigFile(conffile),
+		config.SetConfigFile(configFile),
 		config.MustExist(),
 	)
 	if err != nil {
@@ -102,7 +102,7 @@ func loadConfigFile(cmdName string) (cf *config.Config) {
 			config.SetAppName("geneos"),
 			config.UseGlobal(),
 			config.SetFileExtension("yaml"),
-			config.SetConfigFile(conffile)),
+			config.SetConfigFile(configFile)),
 	)
 
 	return

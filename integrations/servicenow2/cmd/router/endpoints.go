@@ -15,22 +15,102 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package snow
+package router
 
 import (
 	"encoding/json"
 	"fmt"
 	"maps"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/labstack/echo/v4"
 
 	"github.com/itrs-group/cordial/pkg/config"
+
+	"github.com/itrs-group/cordial/integrations/servicenow2/internal/snow"
 )
 
-func AcceptEvent(c echo.Context) (err error) {
-	var incident Record
+const (
+	// ServiceNow fields
+	SNOW_CMDB_CI        = "cmdb_ci"
+	SNOW_CORRELATION_ID = "correlation_id"
+	SNOW_SYS_ID         = "sys_id"
+	SNOW_USER_NAME      = "user_name"
+
+	// ServiceNow tables
+	SNOW_SYS_USER_TABLE = "sys_user"
+	SNOW_INCIDENT_TABLE = "incident"
+	SNOW_CMDB_TABLE     = "cmdb_ci"
+
+	// internal fields
+	RAW_CORRELATION_ID = "_correlation_id"
+	CMDB_SEARCH        = "_cmdb_search"
+	CMDB_CI_DEFAULT    = "_cmdb_ci_default"
+	UPDATE_ONLY        = "_update_only"
+	CMDB_TABLE         = "_cmdb_table"
+)
+
+type ResultsResponse struct {
+	Fields  []string     `json:"fields,omitempty"`
+	Results snow.Results `json:"results,omitempty"`
+}
+
+// not a complete test, but just filter characters *allowed*
+var userRE = regexp.MustCompile(`^[\w\.@ ]+$`)
+
+// This is to get a list of all records opened by the service
+// user. `format` is the output format, either json (the default) or
+// `csv`.
+func getRecords(c echo.Context) (err error) {
+	var user string
+	var fields string
+
+	cc := c.(*snow.Context)
+	cf := cc.Conf
+
+	defer c.Request().Body.Close()
+
+	tc, err := snow.TableConfig(cf, cc.Param("table"))
+	if err != nil {
+		return
+	}
+	if !tc.Query.Enabled {
+		return echo.ErrNotFound
+	}
+
+	qb := echo.QueryParamsBinder(c)
+
+	err = qb.String("user", &user).BindError()
+	if err != nil || user == "" {
+		user = cf.GetString("servicenow.username")
+	}
+
+	err = qb.String("fields", &fields).BindError()
+	if err != nil || fields == "" {
+		fields = strings.Join(tc.Query.ResponseFields, ",")
+	}
+
+	// real basic validation of user
+	if !userRE.MatchString(user) {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("username %q supplied is invalid", user))
+	}
+
+	u, err := snow.GetRecord(cc, snow.AssembleURL(SNOW_SYS_USER_TABLE, snow.Fields(SNOW_SYS_ID), snow.Query(SNOW_USER_NAME+"="+user), snow.Limit(1)))
+	if err != nil || len(u) == 0 {
+		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("user %q not found in sys_user (and needed for lookup)", user))
+	}
+
+	q := fmt.Sprintf(`active=true^opened_by=%s`, u[SNOW_SYS_ID])
+
+	l, _ := snow.GetRecords(cc, snow.AssembleURL(tc.Name, snow.Fields(fields), snow.Query(q), snow.Display("true")))
+
+	return c.JSON(200, ResultsResponse{Fields: strings.Split(fields, ","), Results: l})
+}
+
+func acceptRecord(c echo.Context) (err error) {
+	var incident snow.Record
 	var ok bool
 
 	// close any request body after we are done
@@ -38,10 +118,10 @@ func AcceptEvent(c echo.Context) (err error) {
 		defer c.Request().Body.Close()
 	}
 
-	req := c.(*Context)
+	req := c.(*snow.Context)
 	cf := req.Conf
 
-	table, err := getTableConfig(cf, req.Param("table"))
+	table, err := snow.TableConfig(cf, req.Param("table"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("invalid table %q", req.Param("table")))
 	}
@@ -51,35 +131,32 @@ func AcceptEvent(c echo.Context) (err error) {
 	}
 
 	// if not given an explicit cmdb_ci then search based on config
-	if _, ok = incident["cmdb_ci"]; !ok {
-		if query, ok := incident["_cmdb_search"]; !ok {
-			if incident["cmdb_ci"], ok = incident["_cmdb_ci_default"]; !ok {
+	if _, ok = incident[SNOW_CMDB_CI]; !ok {
+		if query, ok := incident[CMDB_SEARCH]; !ok {
+			if incident[SNOW_CMDB_CI], ok = incident[CMDB_CI_DEFAULT]; !ok {
 				return echo.NewHTTPError(http.StatusNotFound, "must supply either a _cmdb_ci_default or a _cmdb_search parameter")
 			}
 		} else {
-			if _, ok = incident["_cmdb_ci_default"]; !ok {
-				incident["_cmdb_ci_default"] = table.Defaults["_cmdb_ci_default"]
+			if _, ok = incident[CMDB_CI_DEFAULT]; !ok {
+				incident[CMDB_CI_DEFAULT] = table.Defaults[CMDB_CI_DEFAULT]
 			}
-			// if incident["cmdb_ci"], err = LookupCmdbCI(cf, incident["_cmdb_table"], query, incident["_cmdb_ci_default"]); err != nil {
-			if incident["cmdb_ci"], err = LookupCmdbCI(req, incident["_cmdb_table"], query, incident["_cmdb_ci_default"]); err != nil {
+			if incident[SNOW_CMDB_CI], err = snow.LookupCmdbCI(req, incident[CMDB_TABLE], query, incident[CMDB_CI_DEFAULT]); err != nil {
 				return
 			}
 		}
 	}
 
-	if incident["cmdb_ci"] == "" {
+	if incident[SNOW_CMDB_CI] == "" {
 		return echo.NewHTTPError(http.StatusNotFound, "cmdb_ci is empty or search resulted in no matches")
 	}
 
-	// correlation_id := incident["correlation_id"]
-
 	lookup_map := map[string]string{
-		"cmdb_ci":        incident["cmdb_ci"],
-		"correlation_id": incident["correlation_id"],
+		SNOW_CMDB_CI:        incident[SNOW_CMDB_CI],
+		SNOW_CORRELATION_ID: incident[SNOW_CORRELATION_ID],
 	}
-	incident_id, state, err := LookupRecord(req,
+	incident_id, state, err := snow.LookupRecord(req,
 		config.LookupTable(lookup_map),
-		config.Default(fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s^ORDERBYDESCnumber", incident["cmdb_ci"], incident["correlation_id"])),
+		config.Default(fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s^ORDERBYDESCnumber", incident[SNOW_CMDB_CI], incident[SNOW_CORRELATION_ID])),
 	)
 	if err != nil {
 		return
@@ -137,14 +214,10 @@ func AcceptEvent(c echo.Context) (err error) {
 		response["_number"] = number
 		// response["_log_extra"] = table.Logging.Updated
 		response["result"] = cf.ExpandString(table.Response.Updated, config.LookupTable(incidentFields, response), config.TrimSpace(false))
-
-		// maps.Copy(response, incidentFields)
-
-	} else if incident["update_only"] == "true" {
+	} else if incident[UPDATE_ONLY] == "true" {
 		response["_action"] = "Ignored"
 		return echo.NewHTTPError(http.StatusAccepted, "No Incident Created. 'update only' option set.")
 	} else {
-		// incident["correlation_id"] = correlation_id
 		number, err := incident.CreateRecord(req)
 		if err != nil {
 			return err
@@ -153,57 +226,7 @@ func AcceptEvent(c echo.Context) (err error) {
 		response["_number"] = number
 		// response["_log_extra"] = table.Logging.Created
 		response["result"] = cf.ExpandString(table.Response.Created, config.LookupTable(incidentFields, response), config.TrimSpace(false))
-		// maps.Copy(response, incidentFields)
 	}
 
 	return c.JSON(201, response)
-}
-
-// This is to get a list of all records opened by the service
-// user. `format` is the output format, either json (the default) or
-// `csv`.
-func GetAllRecords(c echo.Context) (err error) {
-	var user string
-	var fields string
-
-	cc := c.(*Context)
-	cf := cc.Conf
-
-	defer c.Request().Body.Close()
-
-	tc, err := getTableConfig(cf, cc.Param("table"))
-	if err != nil {
-		return
-	}
-	if !tc.Query.Enabled {
-		return echo.ErrNotFound
-	}
-
-	qb := echo.QueryParamsBinder(c)
-
-	err = qb.String("user", &user).BindError()
-	if err != nil || user == "" {
-		user = cf.GetString("servicenow.username")
-	}
-
-	err = qb.String("fields", &fields).BindError()
-	if err != nil || fields == "" {
-		fields = strings.Join(tc.Query.ResponseFields, ",")
-	}
-
-	// real basic validation of user
-	if !userRE.MatchString(user) {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("username %q supplied is invalid", user))
-	}
-
-	u, err := GetRecord(cc, makeURLPath("sys_user", Fields("sys_id"), Query("user_name="+user), Limit(1)))
-	if err != nil || len(u) == 0 {
-		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("user %q not found in sys_user (and needed for lookup)", user))
-	}
-
-	q := fmt.Sprintf(`active=true^opened_by=%s`, u["sys_id"])
-
-	l, _ := GetRecords(cc, makeURLPath(tc.Name, Fields(fields), Query(q), Display("true")))
-
-	return c.JSON(200, l)
 }

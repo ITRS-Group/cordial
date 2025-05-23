@@ -31,7 +31,7 @@ import (
 )
 
 type results map[string]string
-type resultsSlice []results
+type Results []results
 
 // Record is a map of key/value pairs
 type Record map[string]string
@@ -45,7 +45,7 @@ type snowError struct {
 }
 
 type snowResult struct {
-	Result resultsSlice `json:"result,omitempty"`
+	Result Results `json:"result,omitempty"`
 	Error  struct {
 		Message string `json:"message"`
 		Detail  string `json:"detail"`
@@ -56,12 +56,12 @@ type snowResult struct {
 func LookupRecord(ctx *Context, options ...config.ExpandOptions) (sys_id string, state int, err error) {
 	cf := ctx.Conf
 
-	table, err := getTableConfig(cf, ctx.Param("table"))
+	table, err := TableConfig(cf, ctx.Param("table"))
 	if err != nil {
 		return
 	}
 
-	results, err := GetRecord(ctx, makeURLPath(ctx.Param("table"), Fields("sys_id,state"), Query(cf.ExpandString(table.Search, options...))))
+	results, err := GetRecord(ctx, AssembleURL(ctx.Param("table"), Fields("sys_id,state"), Query(cf.ExpandString(table.Search, options...))))
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("lookup record: %s", err))
 		return
@@ -75,7 +75,7 @@ func LookupRecord(ctx *Context, options ...config.ExpandOptions) (sys_id string,
 }
 
 func LookupCmdbCI(ctx *Context, table, query, cmdb_ci_default string) (cmdb_ci string, err error) {
-	r, err := GetRecord(ctx, makeURLPath(table, Fields("sys_id"), Query(query)))
+	r, err := GetRecord(ctx, AssembleURL(table, Fields("sys_id"), Query(query)))
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusNotFound, err)
 		return
@@ -95,18 +95,18 @@ func LookupCmdbCI(ctx *Context, table, query, cmdb_ci_default string) (cmdb_ci s
 
 // CreateRecord uses the POST method to send create a new ServiceNow record in the table named as a parameter
 func (record Record) CreateRecord(ctx *Context) (number string, err error) {
-	result, err := PostRecord(ctx, makeURLPath(ctx.Param("table"), Fields("number")), record)
+	result, err := PostRecord(ctx, AssembleURL(ctx.Param("table"), Fields("number")), record)
 	number = result["number"]
 	return
 }
 
 func (record Record) UpdateRecord(ctx *Context, sys_id string) (number string, err error) {
-	result, err := PutRecord(ctx, makeURLPath(ctx.Param("table"), Fields("number"), SysID(sys_id)), record)
+	result, err := PutRecord(ctx, AssembleURL(ctx.Param("table"), Fields("number"), SysID(sys_id)), record)
 	number = result["number"]
 	return
 }
 
-func (x *resultsSlice) UnmarshalJSON(b []byte) error {
+func (x *Results) UnmarshalJSON(b []byte) error {
 	for _, c := range b {
 		switch c {
 		case ' ', '\n', '\r', '\t':
@@ -127,7 +127,7 @@ func (x *resultsSlice) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func GetRecords(ctx *Context, endpoint *url.URL) (result resultsSlice, err error) {
+func GetRecords(ctx *Context, endpoint *url.URL) (result Results, err error) {
 	var r snowResult
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
 	_, err = rc.GetURL(ctx.Request().Context(), endpoint, &r)
@@ -183,7 +183,7 @@ func PutRecord(ctx *Context, endpoint *url.URL, record Record) (result results, 
 	return
 }
 
-func makeURLPath(table string, options ...Options) *url.URL {
+func AssembleURL(table string, options ...Options) *url.URL {
 	opts := evalReqOptions(options...)
 
 	v := url.Values{}
@@ -245,7 +245,7 @@ type TableData struct {
 	Response      TableResponses      `mapstructure:"response,omitempty"`
 }
 
-func getTableConfig(cf *config.Config, tableName string) (tableData TableData, err error) {
+func TableConfig(cf *config.Config, tableName string) (tableData TableData, err error) {
 	var tables []TableData
 
 	if err = cf.UnmarshalKey("servicenow.tables", &tables); err != nil {

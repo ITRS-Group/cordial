@@ -96,12 +96,12 @@ The servicenow2 client can use these environment variables both to set incident 
 
 ```mermaid
 ---
-title: ITRS Geneos to ServiceNow Incident
+title: ITRS Geneos to ServiceNow
 ---
 sequenceDiagram
     participant G as Geneos Gateway
-    participant C as snow incident command
-    participant R as snow router process
+    participant C as snow client command
+    participant R as snow router daemon
     participant S as ServiceNow API
 
     G ->> C: Action/Effect Data<br/>(Environment Variables)
