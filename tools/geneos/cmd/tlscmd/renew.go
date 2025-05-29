@@ -22,6 +22,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -69,6 +70,12 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		resp.Err = config.ErrNoUserConfigDir
+		return
+	}
+
+	// check instance for existing cert, and do nothing if none
+	cert, _, _, err := instance.ReadCert(i)
+	if cert == nil && errors.Is(err, os.ErrNotExist) {
 		return
 	}
 

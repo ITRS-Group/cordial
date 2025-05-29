@@ -60,8 +60,12 @@ var logo []byte
 
 const msTeamsMessageCard = "MessageCard"
 const geneosThemecolor = "#46e1d7"
-const DefaultWebhookURLValidationPattern = `^https:\/\/(?:.*\.webhook|outlook)\.office(?:365)?\.com`
 const DefaultMsTeamsTimeout = 2000
+
+var webhookValidators []string = []string{
+	`^https:\/\/(.+\.webhook|outlook)\.office(365)?\.com`,
+	`^https:\/\/.+\.azure\.com`,
+}
 
 type msTeamsBasicTextNotifPostData struct {
 	Type       string `json:"@type"`
@@ -146,7 +150,7 @@ func SendMail(n C.int, args **C.char) C.int {
 	}
 
 	body := replArgs(format, conf)
-	m.SetHeader("Subject", subject)
+	m.SetHeader("Subject", replArgs(subject, conf))
 	m.SetBody("text/plain", body)
 
 	if err = d.DialAndSend(m); err != nil {
@@ -220,7 +224,7 @@ func GoSendMail(n C.int, args **C.char) C.int {
 		}
 	}
 
-	m.SetHeader("Subject", subject)
+	m.SetHeader("Subject", replArgs(subject, conf))
 
 	tmpl := template.New("text")
 	if _, ok := conf["_TEMPLATE_TEXT_FILE"]; ok {
@@ -361,18 +365,19 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 	validityWebhooksCount := 0
 	// Browse through webhooks & check validity usng a regex match.
 	// Invalid webhooks are ignored.
-	regex, err := regexp.Compile(DefaultWebhookURLValidationPattern)
-	if err != nil {
-		log.Println("ERR: Cannot compile regex to validate msTeams webhooks. Abort GoSendToMsTeamsChannel().")
-		return 1
+	var regexes []*regexp.Regexp
+	for _, r := range webhookValidators {
+		regexes = append(regexes, regexp.MustCompile(r))
 	}
-	for i, s := range msTeamsWebhooks {
-		if match := regex.MatchString(s); !match {
-			log.Printf("WARN: msTeams weekhook #%d (%s) is not valid. Ignoring it.\n", i+1, s)
-			msTeamsWebhooksValidity[strings.TrimSpace(s)] = false
-		} else {
-			msTeamsWebhooksValidity[strings.TrimSpace(s)] = true
-			validityWebhooksCount++
+	for _, s := range msTeamsWebhooks {
+		for _, r := range regexes {
+			if r.MatchString(s) {
+				msTeamsWebhooksValidity[strings.TrimSpace(s)] = true
+				validityWebhooksCount++
+				break
+			} else {
+				msTeamsWebhooksValidity[strings.TrimSpace(s)] = false
+			}
 		}
 	}
 	// Error if no valid webhooks defined
@@ -409,7 +414,7 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 
 	// Run to subject through text template to allow variable subject
 	subjtmpl := template.New("subject")
-	subjtmpl, err = subjtmpl.Parse(subject)
+	subjtmpl, err := subjtmpl.Parse(subject)
 	if err == nil {
 		var subjbuf bytes.Buffer
 		err = subjtmpl.Execute(&subjbuf, conf)

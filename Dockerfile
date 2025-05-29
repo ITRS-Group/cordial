@@ -1,6 +1,6 @@
 # Dockerfile to build cordial components and tar.gz files
 
-ARG GOVERSION=1.24.0
+ARG GOVERSION=1.24.3
 
 # The bullseye image seems to offer the most compatibility, including
 # libemail.so dependencies
@@ -44,16 +44,36 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     # pagerduty
     cd /app/cordial/integrations/pagerduty; \
     go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    # gdna (inc Windows version)
+    cd /app/cordial/gdna; \
+    go build -tags sqlite_omit_load_extension,netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    GOOS=windows go build --ldflags '-s -w';
+
+# build non-static binaries (shared libs) with UBI8 for GLIBC backward compatibility
+FROM redhat/ubi8 AS build-ubi8
+RUN set -eux; \
+    yum -y install gcc make golang
+ARG GOVERSION
+ENV GOTOOLCHAIN=go${GOVERSION}
+# base files
+COPY go.mod go.sum cordial.go logging.go VERSION README.md CHANGELOG.md /app/cordial/
+COPY pkg /app/cordial/pkg
+# geneos, dv2email, gateway-reporter, san-config
+COPY tools /app/cordial/tools
+# servicenow, pagerduty
+COPY integrations /app/cordial/integrations/
+# libemail, libalerts
+COPY libraries /app/cordial/libraries/
+# gdna
+COPY gdna /app/cordial/gdna
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    set -eux; \
     # libemail
     cd /app/cordial/libraries/libemail; \
     make; \
     # libalerts
     cd /app/cordial/libraries/libalert; \
-    make; \
-    # gdna (inc Windows version)
-    cd /app/cordial/gdna; \
-    go build -tags sqlite_omit_load_extension,netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
-    GOOS=windows go build --ldflags '-s -w';
+    make
 
 #
 # Build PDF documentation using mdpdf. Like all Puppeteer based PDF
@@ -181,8 +201,8 @@ COPY --from=build /app/cordial/integrations/pagerduty/pagerduty /cordial/bin/
 COPY --from=build /app/cordial/integrations/pagerduty/cmd/pagerduty.defaults.yaml /cordial/etc/geneos/
 
 # libemail / libalerts
-COPY --from=build /app/cordial/libraries/libemail/libemail.so /cordial/lib/
-COPY --from=build /app/cordial/libraries/libalert/libalert.so /cordial/lib/
+COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /cordial/lib/
+COPY --from=build-ubi8 /app/cordial/libraries/libalert/libalert.so /cordial/lib/
 
 # gdna
 COPY --from=build /app/cordial/gdna/gdna /cordial/bin/

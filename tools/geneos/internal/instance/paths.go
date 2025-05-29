@@ -191,3 +191,20 @@ func Shared(i geneos.Instance, subs ...interface{}) string {
 	}
 	return i.Type().Shared(i.Host(), subs...)
 }
+
+// CheckPaths checks paths for an existing file or directory, returning
+// a list of missing paths. The check performed is a simple stat() for
+// now.
+func CheckPaths(i geneos.Instance, paths []string) (missing []string) {
+	for _, p := range paths {
+		if p == "" {
+			continue
+		}
+		_, err := i.Host().Stat(p)
+		if err != nil {
+			missing = append(missing, p)
+			continue
+		}
+	}
+	return
+}

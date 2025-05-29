@@ -71,8 +71,11 @@ You can do one of the following:
 `, "|", "`"))
 
 func init() {
-	cordial.LogInit(pkgname)
-	cobra.OnInitialize(initConfig)
+	// cordial.LogInit(pkgname)
+	cobra.OnInitialize(func() {
+		cordial.LogInit(pkgname)
+		initConfig()
+	})
 
 	config.DefaultKeyDelimiter("::")
 	config.ResetConfig(config.KeyDelimiter("::"))

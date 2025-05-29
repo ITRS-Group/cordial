@@ -208,7 +208,10 @@ func (n *AC2s) Rebuild(initial bool) error {
 }
 
 // Command returns the command, args and environment for the instance
-func (n *AC2s) Command() (args, env []string, home string) {
+func (n *AC2s) Command(checkExt bool) (args, env []string, home string, err error) {
+	var checks []string
+
+	// AC2 expects to start in the package directory
 	home = instance.BaseVersion(n)
 
 	args = []string{}
@@ -227,6 +230,13 @@ func (n *AC2s) Command() (args, env []string, home string) {
 	for _, e := range list {
 		if v, ok := os.LookupEnv(e); ok {
 			env = append(env, e+"="+v)
+		}
+	}
+
+	if checkExt {
+		missing := instance.CheckPaths(n, checks)
+		if len(missing) > 0 {
+			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 		}
 	}
 

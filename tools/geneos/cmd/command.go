@@ -74,7 +74,12 @@ func commandInstance(i geneos.Instance, params ...any) (resp *instance.Response)
 
 	lines := []string{fmt.Sprintf("=== %s ===", i)}
 
-	cmd := instance.BuildCmd(i, true, instance.StartingExtras(commandCmdExtras), instance.StartingEnvs(commandCmdEnvs))
+	cmd, err := instance.BuildCmd(i, true, instance.StartingExtras(commandCmdExtras), instance.StartingEnvs(commandCmdEnvs))
+	if err != nil {
+		resp.Err = err
+		return
+	}
+
 	cmdLine := ""
 	for _, a := range cmd.Args {
 		if strings.Contains(a, " ") {
@@ -114,7 +119,11 @@ type command struct {
 func commandInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	cmd := instance.BuildCmd(i, true, instance.StartingExtras(commandCmdExtras), instance.StartingEnvs(commandCmdEnvs))
+	cmd, err := instance.BuildCmd(i, true, instance.StartingExtras(commandCmdExtras), instance.StartingEnvs(commandCmdEnvs))
+	if err != nil {
+		resp.Err = err
+		return
+	}
 	command := &command{
 		Instance: i.Name(),
 		Type:     i.Type().Name,

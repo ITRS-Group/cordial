@@ -20,7 +20,9 @@ package gateway
 import (
 	_ "embed"
 	"fmt"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -339,8 +341,11 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 		template)
 }
 
-func (g *Gateways) Command() (args, env []string, home string) {
+func (g *Gateways) Command(checkExt bool) (args, env []string, home string, err error) {
+	var checks []string
+
 	cf := g.Config()
+	home = g.Home()
 
 	// first, get the correct name, using the "gatewayname" parameter if
 	// it is different to the instance name. It may not be set, hence
@@ -359,15 +364,20 @@ func (g *Gateways) Command() (args, env []string, home string) {
 	}
 
 	// always required
+	resourceDir := path.Join(instance.BaseVersion(g), "resources")
+	logDir := filepath.Dir(instance.LogFilePath(g))
+	checks = append(checks, resourceDir, logDir)
+
 	args = append(args,
 		"-resources-dir",
-		path.Join(instance.BaseVersion(g), "resources"),
+		resourceDir,
 		"-log",
 		instance.LogFilePath(g),
 	)
 
 	if cf.IsSet("gateway-hub") && cf.IsSet("obcerv") {
-		log.Debug().Msg("only one of 'obcerv' or 'gateway-hub' can be set")
+		// log.Debug().Msg("only one of 'obcerv' or 'gateway-hub' can be set")
+		err = fmt.Errorf("%w: only one of 'obcerv' or 'gateway-hub' can be set", geneos.ErrInvalidArgs)
 		return
 	}
 
@@ -375,10 +385,14 @@ func (g *Gateways) Command() (args, env []string, home string) {
 		if cf.IsSet(k) {
 			args = append(args, "-"+k, cf.GetString(k))
 		}
+		if k == "kerberos-keytab" {
+			checks = append(checks, cf.GetString(k))
+		}
 	}
 
 	if setup := cf.GetString("setup"); !(setup == "" || setup == "none") {
 		args = append(args, "-setup", setup)
+		checks = append(checks, setup)
 	}
 
 	if cf.GetString("licdhost") != "" {
@@ -389,7 +403,13 @@ func (g *Gateways) Command() (args, env []string, home string) {
 		args = append(args, "-licd-port", fmt.Sprint(cf.GetString("licdport")))
 	}
 
-	args = append(args, instance.SetSecureArgs(g)...)
+	secureArgs := instance.SetSecureArgs(g)
+	args = append(args, secureArgs...)
+	for _, arg := range secureArgs {
+		if !strings.HasPrefix(arg, "-") {
+			checks = append(checks, arg)
+		}
+	}
 
 	// 3 options: set, set to false, not set
 	if cf.GetBool("licdsecure") || (!cf.IsSet("licdsecure") && instance.FileOf(g, "certificate") != "") {
@@ -400,16 +420,22 @@ func (g *Gateways) Command() (args, env []string, home string) {
 		keyfile := instance.PathOf(g, "keyfile")
 		if keyfile != "" {
 			args = append(args, "-key-file", keyfile)
+			checks = append(checks, keyfile)
 		}
 
 		prevkeyfile := instance.PathOf(g, "prevkeyfile")
 		if prevkeyfile != "" {
 			args = append(args, "-previous-key-file", prevkeyfile)
+			checks = append(checks, prevkeyfile)
 		}
-
 	}
 
-	home = g.Home()
+	if checkExt {
+		missing := instance.CheckPaths(g, checks)
+		if len(missing) > 0 {
+			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
+		}
+	}
 
 	return
 }

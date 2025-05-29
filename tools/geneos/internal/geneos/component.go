@@ -212,7 +212,7 @@ type Instance interface {
 
 	// actions
 	Add(template string, port uint16) error
-	Command() ([]string, []string, string)
+	Command(bool) ([]string, []string, string, error)
 	Reload() (err error)
 	Rebuild(bool) error
 }
