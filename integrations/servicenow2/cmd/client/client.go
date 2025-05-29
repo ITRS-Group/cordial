@@ -49,12 +49,14 @@ type ActionGroup struct {
 
 // flags
 var clientCmdProfile, clientCmdTable string
+var clientCmdQuiet bool
 
 func init() {
 	cmd.RootCmd.AddCommand(clientCmd)
 
 	clientCmd.Flags().StringVarP(&clientCmdProfile, "profile", "p", "", "profile to use for field creation")
 	clientCmd.Flags().StringVarP(&clientCmdTable, "table", "t", "", "servicenow table, defaults typically to incident")
+	clientCmd.Flags().BoolVarP(&clientCmdQuiet, "quiet", "q", false, "quiet mode. supress all non-error messages")
 
 	clientCmd.Flags().SortFlags = false
 }
@@ -303,7 +305,9 @@ var clientCmd = &cobra.Command{
 				log.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
 			}
 
-			fmt.Printf("%s %s %s\n", result["event_type"], result["number"], result["action"])
+			if !clientCmdQuiet {
+				fmt.Println(result["result"])
+			}
 			break
 		}
 	},
