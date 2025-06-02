@@ -41,7 +41,7 @@ import (
 
 type ActionGroup struct {
 	If    []string          `json:"if,omitempty"`
-	Skip  bool              `json:"skip,omitempty"`
+	Skip  []string          `json:"skip,omitempty"`
 	Set   map[string]string `json:"set,omitempty"`
 	Unset []string          `json:"unset,omitempty"`
 	Then  []ActionGroup     `json:"then,omitempty"`
@@ -349,8 +349,10 @@ func processActionGroup(cf *config.Config, ag ActionGroup, incident snow.Record)
 		}
 	}
 
-	if ag.Skip {
-		return true
+	for _, i := range ag.Skip {
+		if b, err := strconv.ParseBool(cf.ExpandString(i)); err != nil && b {
+			return true
+		}
 	}
 
 	return false
