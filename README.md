@@ -18,10 +18,11 @@
 
 ## Integrations
 
-| Name                                            | Description                      |
-| ----------------------------------------------- | -------------------------------- |
-| [servicenow](integrations/servicenow/README.md) | Send Geneos Alerts to ServiceNow |
-| [pagerduty](integrations/pagerduty/README.md)   | Send Geneos to PagerDuty         |
+| Name                                              | Description                                  |
+| ------------------------------------------------- | -------------------------------------------- |
+| [servicenow](integrations/servicenow/README.md)   | Send Geneos Alerts to ServiceNow             |
+| [servicenow2](integrations/servicenow2/README.md) | Send Geneos Alerts to ServiceNow - Version 2 |
+| [pagerduty](integrations/pagerduty/README.md)     | Send Geneos to PagerDuty                     |
 
 ## Packages
 
