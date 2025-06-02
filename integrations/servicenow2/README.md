@@ -91,9 +91,6 @@ The servicenow2 client can use these environment variables both to set incident 
 
 ### Data Flow
 
->[!NOTE]
-> To be reviewed for new integration
-
 ```mermaid
 ---
 title: ITRS Geneos to ServiceNow
@@ -129,13 +126,14 @@ The client configuration file controls the transformation of Geneos Action/Effec
 
 The configuration file is evaluated for each execution, so changes to the file will take effect on the next run.
 
-### Environment Variables To ServiceNow Fields
+### Geneos Environment Variables To ServiceNow Fields
 
 All data values are passed from the Geneos Gateway to the integration as environment variables. These are then transformed into the name/value fields passed to the router process, which in turn will process them and pass them to ServiceNow to either create or update an incident.
 
 The client configuration includes features to test, set and unset ServiceNow fields based on environment variables.
 
->[!NOTE] The configuration is in the YAML format, so it is important to use the correct indentation and layout. Please pay attention to change you make to ensure these are correct.
+>[!NOTE]
+>The configuration is in the YAML format, so it is important to use the correct indentation and layout. Please pay attention to change you make to ensure these are correct.
 
 This processing is done in two _sections_, `defaults` and a selected _profile_, which are in turn made up of _groups_. First the [**`defaults`**](#defaults) section is evaluated and then the selected profile section. Each section is processed as an ordered list of groups of tests and actions.
 
@@ -148,6 +146,10 @@ Each _group_ supports the following actions (more details below):
 * `skip` - Exits the processing of the **_parent_** group
 
 The order that action are defined in a group is not important as they are always processed in the order above.
+
+### ServiceNow Field Naming
+
+All the fields built on the client-side are passed to the router process, which will perform further processing. Those stages are described further below, but it is worth noting the following behaviour; All fields that start with an underscore (`_`) are considered internal and are typically used to pass values to the router that will never be sent directly to ServiceNow. For example, the `_subject` field can be used as the `short_description` when creating a new incident or included in the `work_notes` when updating an existing incident (or dropped entirely). Other internal fields may be simply to pass query information, such as `_cmdb_ci_default`.
 
 ### Value Expansion
 
