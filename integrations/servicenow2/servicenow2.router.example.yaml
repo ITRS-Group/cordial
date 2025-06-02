@@ -16,7 +16,7 @@ router:
   tls:
     enabled: false
     skip-verify: false
-    # PEM formatted certficate, either a multiline string or an
+    # PEM formatted certificate, either a multiline string or an
     # expandable format reference to an external file
     certificate: ${file:/path/to/cert.pem}
     #
@@ -41,10 +41,12 @@ router:
     token: ${enc:~/.config/geneos/keyfile.aes:+encs+E33C8DFAFED66ED8EE68019DAEE0106E}
 
 servicenow:
-  url: https://dev267773.service-now.com
+  url: https://dev265687.service-now.com/
   username: admin
-  password: ${enc:~/.config/geneos/keyfile.aes:+encs+4D5B2A11CB2BF9ECDCBC345CF4DD3DC6}
+  password: ${enc:~/.config/geneos/keyfile.aes:+encs+06003E5C9E9E9B3C3BFA3F1B8B468B53}
   # ClientID: ${SERVICENOW_CLIENTID}
+  # clientid: 8f6d312205252210c9220db8ef9d9b71
+  # clientsecret: ";Q|UeZJ|D4"
   # ClientSecret: ${SERVICENOW_CLIENTSECRET}
   trace: true
 
@@ -59,7 +61,8 @@ servicenow:
       # the query endpoint is configured below:
       query:
         enabled: true
-        search: "user=${username}"
+        
+        search: "user=${servicenow.username}"
         # fields are returned in the order below. to ensure that Geneos
         # row-names are unique make sure that the first column is a
         # primary key, as below
@@ -90,7 +93,12 @@ servicenow:
       #
       # The default search, if not otherwise defined, is:
       search: "active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}^ORDERBYDESCnumber"
-      
+
+      response:
+        created: "Incident ${_number} ${_action} - State ${state} Impact ${impact} Urgency ${urgency} - '${_subject}'"
+        updated: "Incident ${_number} ${_action} - State ${state} Impact ${impact} Urgency ${urgency} - '${_subject}'"
+        failed: "${_action} to create or update incident"
+
       defaults:
         _cmdb_ci_default: 03a9e40d3790200044e0bfc8bcbe5d6c
         assignment_group: group1
@@ -100,25 +108,27 @@ servicenow:
         category: hardware
         contact_type: email
         caller_id: admin
-      incident-user:
-        field: caller_id
-        lookup: true
       current-state:
         0: # create
-          defaults: # default values if not set previously/elsewhere
+          # default values if not set previously/elsewhere
+          defaults:
             # assignment_group: something
             # contact_type: email
             impact: 3
             urgency: 3
             category: hardware
             state: 1
-            # caller_id: admin
+            caller_id: "david.miller@example.com"
           rename:
             _text: description
             _subject: short_description
-          remove: [ watch_list ] # anything in this list is removed
-                            # value or raises an error, after adding any defaults from below
-          must-include: [ short_description, description ] # anything on the include list MUST have a
+          # anything in this list is removed value or raises an error,
+          # after adding any defaults from below. all fields prefixed
+          # with an underscore are always removed.
+          remove: [ watch_list ]
+          # anything in this list MUST be set but it can be to an empty
+          # value
+          must-include: [ short_description, description ]
         1: # new
           defaults:
             assignment_group: "something else"
@@ -131,6 +141,7 @@ servicenow:
           rename:
             _text: work_notes
           remove: [ short_description ]
+          must-include: [ work_notes ]
         2: # update
           defaults:
             assignment_group: "something else"
