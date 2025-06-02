@@ -1,0 +1,208 @@
+#
+# The client transforms environment variables to Servicenow fields, plus
+# internal fields prefixed with underscores
+#
+
+router:
+  url: http://localhost:3000/snow/api/v2
+  # the default table on the router side
+  default-table: incident
+  default-user: admin
+  # if the URL is `https://...` then the tls settings below take effect
+  tls:
+    # should we check the router cert? default true
+    verify: true
+    # chain to validate router connection, if none and verify is true then use system roots
+    chain: /path/to/chain.pem
+
+  # different auth types, basic, cert, token etc.
+  authentication:
+    # the `token` can be any string as long as it is the same on both
+    # router and client - the client being either the incident poster or a
+    # GET requests for all incidents. To protect the plain text, if
+    # required, you can use `geneos aes password` to create an encoded
+    # strings that relies on the security of the key file being private
+    # to the user. This also allows the configuration file to be shared
+    # without sharing the plaintext of the key.
+    #
+    # perhaps allow auto-generated key file for local routers?
+    token: ${enc:~/.config/geneos/keyfile.aes:+encs+E33C8DFAFED66ED8EE68019DAEE0106E}
+
+query:
+  fields: [ number, sys_id, cmdb_ci.name, short_description, description, correlation_id, caller_id, opened_by, state ]
+
+# default ServiceNow fields
+#
+# The `defaults` section and each of the named entries in the `profiles`
+# section share the same format.
+#
+# The layout is a sequence of mappings The format is an array of objects
+# which are evaluated in array order, but the keys in each object are
+# evaluated according to the rules below
+#
+# the mapping keys are below, and processed in the order shown:
+#
+#   - `if` - this can be either a single string or an array; the values
+#     are evaluated and the result of each parsed as a boolean. As soon
+#     as any `if` value returns a false value, evaluation stops and
+#     evaluation continues with the next array element. If there is no
+#     `if` then this is the same as a `true` values being returned.
+#   - `set` - is a list of name/value pairs (a YAML dictionary) and the
+#     client sets all the fields names (in an undefined order) to the
+#     expanded values on the right
+#   - `unset` - is list of names. unset any fields given.
+#   - `then` - evaluate a subsection, and terminating evaluation if the
+#     subsection uses `skip`
+#   - `skip` - skip stops processing of the level above the block it
+#     appears in, and is used to terminate further evaluation of `if`s
+#     etc.
+#
+# all field names beginning with an underscore (`_`) are treated as
+# internal values between client and router and are renamed or removed
+# before being sent to the ServiceNow instance by the router.
+#
+# all field values are subject to expansion according to the `cordial`
+# config package `ExpandString` function with some custom functions: 
+defaults:
+  - set:
+      # cmdb_ci: ${CMDB_CI}
+      _cmdb_search: name=${_NETPROBE_HOST}
+      _cmdb_table: cmdb_ci
+      _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${_ROWNAME}${_COLUMN}
+      _subject: "Geneos Alert on ${select:_NETPROBE_HOST:Unknown} | ${select:_DATAVIEW:None} | ${_ROWNAME} | ${_COLUMN}${_HEADLINE} is ${_VALUE}"
+      _text: |
+        Status Message: ${_STATUSMESSAGE}	
+        Severity: ${_SEVERITY}	
+        Geneos time: ${_ALERT_CREATED}	
+        Category: Alert	
+        Gateway: ${_GATEWAY}	
+        Managed Entity: ${_MANAGED_ENTITY}	
+        Sampler: ${_SAMPLER}	
+        Row: ${_ROWNAME}	
+        Column/Headline: ${_COLUMN}${_HEADLINE}	
+        Value: ${_VALUE} ${_triggerDetails}
+      category: Alert
+      assignment_group: ${ASSIGNMENT_GROUP}
+      urgency: 3
+      impact: 3
+      state: 1
+  - if: [ "${match:_PLUGIN:FKM}", "${match:_DATAVIEW:pattern}" ]
+    set:
+      # ${replace:_ROWNAME:/#.*$//}
+      _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${_filename}${replace:_triggerDetails:^[\d-]+\s[\d-]+::}
+  - if: ${match:_SEVERITY:(CRITICAL|critical|3)}
+    set:
+      impact: 1
+      urgency: 1
+    # ignore the rest
+    # skip: true
+  - if: ${match:_SEVERITY:(WARNING|warning|2)}
+    set:
+      impact: 3
+      urgency: 3
+  - if: ${match:_SEVERITY:(OK|ok|1)}
+    set:
+      state: 6
+      close_code: Closed/Resolved by Caller
+      close_notes: Resolved
+    unset: [ urgency, impact ]
+
+# profiles, selected from command line; e.g. `opsview`, `INFRA`, `Apps`
+#
+# format as for `defaults` above
+profiles:
+  # The `default` profile is only applied if no other profile is given.
+  # To set default values for all profiles, use the `defaults` section
+  # above
+  default:
+    - set:
+        # _subject: ${replace:_NETPROBE_HOST:/(think)pad/${1}that/}
+        subcategory: Geneos Alert
+    - set:
+        _text: |
+          Status Message: ${_STATUSMESSAGE}
+          Severity: ${_SEVERITY}
+          Geneos time: ${_ALERT_CREATED}
+          Category: Alert
+          Gateway: ${_GATEWAY}
+          Managed Entity: ${select:_MANAGED_ENTITY:Unknown}
+          Sampler: ${select:_SAMPLER:Unknown}
+          Row: ${_ROWNAME}
+          Column/Headline: ${_COLUMN}${_HEADLINE}
+          Value: ${_VALUE} ${_triggerDetails}
+          Sub-category: ${field:subcategory:None}
+          Impact: ${field:impact:3}
+          Urgency: ${field:urgency:3}
+
+  opsview:
+    - set:
+        _subject: Opsview Alert on ${_NETPROBE_HOST} | ${_DATAVIEW} | ${_ROWNAME} | ${_COLUMN}${_HEADLINE} is ${_VALUE}
+    - if: [ '${match:_TAGS:\b(core|access|distribution)\b}' ]
+      set:
+        subcategory: abc 
+      then:
+        - set:
+            key: value
+        - if: ${match:_DATAVIEW:^(Connectivity|Uptime)}
+          set:
+            subcategory: "Network Device Down"
+            impact: 2
+            urgency: 2
+          skip: true
+        - if: ${match:_DATAVIEW:^SNMP}
+          set:
+            subcategory: "Network Security"
+            impact: 3
+            urgency: 3
+        - if: '${match:_DATAVIEW:^NTP}'
+          set:
+            subcategory: "Network Configuration Error"
+            impact: 3
+            urgency: 3
+          skip: true
+        - if: ${match:_DATAVIEW:^(Discards|Errors)}
+          set:
+            subcategory: "Network Performance"
+            impact: 3
+            urgency: 3
+        - if:
+            - ${match:_DATAVIEW:^Discards}
+            - ${match:_STATUSMESSAGE:discards.*(total|in.*out)}
+          set:
+            urgency: 2
+        - if:
+            - ${match:_DATAVIEW:^Errors}
+            - ${match:_STATUSMESSAGE:errors.*(total|in.*out)|interface.*down}
+          set:
+            urgency: 2
+        - if:
+            - ${match:_DATAVIEW:^Interface}
+            - ${match:_STATUSMESSAGE:Interface.*DOWN}
+          set:
+            subcategory: "Network Port Down"
+            impact: 2
+            urgency: 2
+        - if:
+            - ${match:_DATAVIEW:^Interface}
+            - ${match:_STATUSMESSAGE:SNMP}
+          set:
+            subcategory: "Network Security"
+            impact: 3
+            urgency: 3
+    - set:
+        _text: |
+            Status Message: ${_STATUSMESSAGE}	
+            Severity: ${_SEVERITY}	
+            Geneos time: ${_ALERT_CREATED}	
+            Category: Alert	
+            Gateway: ${_GATEWAY}	
+            Managed Entity: ${_MANAGED_ENTITY}	
+            Sampler: ${_SAMPLER}	
+            Row: ${_ROWNAME}	
+            Column/Headline: ${_COLUMN}${_HEADLINE}	
+            Value: ${_VALUE}${_triggerDetails}	
+            Hashtags: ${_TAGS}	
+            Sub-category: ${field:subcategory:None}	
+            Impact: ${field:impact:3}	
+            Urgency: ${field:urgency:3}
+

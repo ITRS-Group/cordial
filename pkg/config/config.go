@@ -665,6 +665,9 @@ func (c *Config) GetStringMap(key string) (value map[string]any) {
 	c.mutex.RLock()
 	value = c.Viper.GetStringMap(key)
 	c.mutex.RUnlock()
+	if value == nil {
+		value = make(map[string]any)
+	}
 	return
 }
 

@@ -15,13 +15,13 @@ COPY go.mod go.sum cordial.go logging.go VERSION README.md CHANGELOG.md /app/cor
 COPY pkg /app/cordial/pkg
 # geneos, dv2email, gateway-reporter, san-config
 COPY tools /app/cordial/tools
-# servicenow, pagerduty
+# servicenow*, pagerduty
 COPY integrations /app/cordial/integrations/
 # libemail, libalerts
 COPY libraries /app/cordial/libraries/
 # gdna
 COPY gdna /app/cordial/gdna
-RUN --mount=type=cache,target=/root/.cache/go-build \
+RUN --mount=type=cache,target=/go/pkg/mod \
     set -eux; \
     # build geneos (in Windows version)
     cd /app/cordial/tools/geneos; \
@@ -40,6 +40,9 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     GOOS=windows go build --ldflags '-s -w'; \
     # servicenow
     cd /app/cordial/integrations/servicenow; \
+    go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    # servicenow2
+    cd /app/cordial/integrations/servicenow2; \
     go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
     # pagerduty
     cd /app/cordial/integrations/pagerduty; \
@@ -60,13 +63,13 @@ COPY go.mod go.sum cordial.go logging.go VERSION README.md CHANGELOG.md /app/cor
 COPY pkg /app/cordial/pkg
 # geneos, dv2email, gateway-reporter, san-config
 COPY tools /app/cordial/tools
-# servicenow, pagerduty
+# servicenow*, pagerduty
 COPY integrations /app/cordial/integrations/
 # libemail, libalerts
 COPY libraries /app/cordial/libraries/
 # gdna
 COPY gdna /app/cordial/gdna
-RUN --mount=type=cache,target=/root/.cache/go-build \
+RUN --mount=type=cache,target=/go/pkg/mod \
     set -eux; \
     # libemail
     cd /app/cordial/libraries/libemail; \
@@ -128,7 +131,7 @@ COPY VERSION README.md CHANGELOG.md /app/cordial/
 COPY pkg /app/cordial/pkg
 # geneos, dv2email, gateway-reporter, san-config
 COPY tools /app/cordial/tools
-# servicenow, pagerduty
+# servicenow*, pagerduty
 COPY integrations /app/cordial/integrations/
 # libemail, libalerts
 COPY libraries /app/cordial/libraries/
@@ -144,12 +147,13 @@ COPY tools/san-config/README.md san-config.md
 COPY gdna/*.md gdna/
 COPY gdna/screenshots/ screenshots/
 COPY integrations/servicenow/README.md servicenow.md
+COPY integrations/servicenow2/README.md servicenow2.md
 COPY integrations/pagerduty/README.md pagerduty.md
 COPY libraries/libemail/README.md libemail.md
 COPY libraries/libalert/README.md libalert.md
 
 ARG MERMAID=".mermaid"
-ARG READMEDIRS="tools/geneos tools/gateway-reporter tools/dv2email tools/san-config integrations/servicenow integrations/pagerduty libraries/libemail libraries/libalert"
+ARG READMEDIRS="tools/geneos tools/gateway-reporter tools/dv2email tools/san-config integrations/servicenow integrations/servicenow2 integrations/pagerduty libraries/libemail libraries/libalert"
 RUN set -eux; \
     echo '{ "args": ["--no-sandbox"] }' > /puppeteer.json; \
     for i in ${READMEDIRS}; \
@@ -195,6 +199,11 @@ COPY --from=cordial-docs /app/cordial/doc-output /cordial/docs/
 # servicenow
 COPY --from=build /app/cordial/integrations/servicenow/servicenow /cordial/bin/
 COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /cordial/etc/geneos/
+
+# servicenow2
+COPY --from=build /app/cordial/integrations/servicenow2/servicenow2 /cordial/bin/
+COPY --from=build /app/cordial/integrations/servicenow2/servicenow2.client.example.yaml /cordial/etc/geneos/
+COPY --from=build /app/cordial/integrations/servicenow2/servicenow2.router.example.yaml /cordial/etc/geneos/
 
 # pagerduty
 COPY --from=build /app/cordial/integrations/pagerduty/pagerduty /cordial/bin/
