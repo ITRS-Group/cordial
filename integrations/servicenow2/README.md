@@ -133,11 +133,11 @@ All data values are passed from the Geneos Gateway to the integration as environ
 The client configuration includes features to test, set and unset ServiceNow fields based on environment variables.
 
 >[!NOTE]
->The configuration is in the YAML format, so it is important to use the correct indentation and layout. Please pay attention to change you make to ensure these are correct.
+>The configuration is in the YAML format, so it is important to use the correct indentation. Please pay attention to change you make to ensure these are correct.
 
-This processing is done in two _sections_, `defaults` and a selected _profile_, which are in turn made up of _groups_. First the [**`defaults`**](#defaults) section is evaluated and then the selected profile section. Each section is processed as an ordered list of groups of tests and actions.
+This processing is done in two _sections_, `defaults` and a selected _profile_, which are in turn made up of _action groups_. First the [**`defaults`**](#defaults) section is evaluated and then the selected profile section. Each section is processed as an ordered list of groups of tests and actions.
 
-Each _group_ supports the following actions (more details below):
+Each _action group_ supports the following actions (more details [below](#actions-groups)):
 
 * `if` - Continue processing this group if the value(s) evaluate to `true`. The default is to act as if `if: true` is used.
 * `then` - Starts a new, lower level, group which is then processed in order and recursively
@@ -165,7 +165,7 @@ These are standard _cordial_ expansion functions:
 
   Return the value of the environment variable `ENV`. The second, shorter, format takes precedence of the config option below as `ENV` will very rarely contain a dot. In those very rare cases where environment variable names contain a dot character use the first format. If the environment variable does not exist then an empty string is substituted and no error is logged.
 
-* `${config:ITEM.ITEM...]}` or `${ITEM.ITEM...}`
+* `${config:ITEM.ITEM...}` or `${ITEM.ITEM...}`
 
   Return the value of the configuration item `ITEM.ITEM` etc. The second form only works when there is at least one dot separator in the configuration item path. This can be used to pull in the value of another configuration key (which can be done in native YAML, but this allows for clearer configurations). The item referred to is not expanded.
 
@@ -191,7 +191,7 @@ These additional custom functions are available in this integration:
 
 * `${field:FIELD1:FIELD2:...:DEFAULT}` - returns to current value of the first ServiceNow field set. As per `select` above, DEFAULT is a string that is returned if non of the fields are set.
 
-### Group Actions
+### Actions Groups
 
 Below are more details, and examples, for each action that can be included in a group. Groups may only contain at most on of each action.
 
@@ -285,34 +285,28 @@ The `set` action, as the name suggests, sets the fields to the expanded values o
     skip: true
 ```
 
-## Router Configuration Reference
+### Configuration Sections
 
-### `router`
+#### `router`
 
 The first part of the configuration file is `router` and contains the settings on how to communicate with the router process.
 
-### `query`
+#### `query`
 
-### `defaults`
+#### `defaults`
 
 This section sets default values for fields.
 
 * `_cmdb_id_default`
 
-### `profiles`
+#### `profiles`
 
 The Geneos Gateway executing the integration client can select a _profile_ in the configuration file. If no profile is selected then the `default` profile is used. Note that this is different to the top-level `defaults` section described above. Using profiles allows you to reduce the required nesting of test and so on by categorising settings, such a `opsview` or `infrastructure` and then using this name from different Actions or Alert/Effects in the Gateway.
 
+## Router Configuration Reference
 
+### `router`
 
-## Router Configuration
-
-## `router`
-
-## `servicenow`
+### `servicenow`
 
 ### `tables`
-
-#### 
-
-* 
