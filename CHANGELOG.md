@@ -1,5 +1,54 @@
 # Change Log
 
+## Version v1.21.0-beta
+
+> [!NOTE]
+> **Released 2025-06-03** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v1.20.1 Highlights
+
+* A new ServiceNow incident integrations
+
+### Version v1.21.0 Changes
+
+* Update Go to 1.24.3 and update all dependencies
+* Build all shared libraries in a UBI8 (RHEL8) container to maximise compatibility with older GLIBC versions
+* Update `mapstructure` imports to support new Viper version and their fork of mapstructure
+
+* `libraries/libemail.so`
+
+  * Support variable substitution in `_SUBJECT` and other subject settings
+  * For Teams support, make the validation of URLs a list of regexes and add an `azure.com` pattern
+
+* `pkg/config`
+
+  * Add support for backslash escapes and escaped closing braces to `Expand*` functions. This was added for the new ServiceNow v2 integration.
+
+* `tools/geneos`
+
+  * Do pre-start checks for all files (that must exist) before attempting to start an instance. Report any missing files to the user but continue starting other instances. Files that are created by components, such as logs, are not checked for and neither is the permissions to create those files.
+
+  * Add a new `listenip` configuration parameter to probe types, which defaults to the string value `"none"`. If you have probe instances with a custom `-listenip a.b.c.d` in your `options` parameter then you must remove this before this new parameter will take effect.
+
+### Version v1.21.0 Fixes
+
+* `gdna`
+
+  * Update dashboards, both in appearance but also functionality. The previous versions were missing some modifiers.
+
+* `tools/dv2email`
+
+  * Check for errors, and present them, from the `AttachHTMLTemplate` function
+
+* `tools/geneos`
+
+  * `geneos tls renew` should not create new certificates for instances that did not previously have them
+
+### Version 1.21.0 To Do Before Release
+
+* Documentation still needs to be updated to be in sync with changes to most components
+* ServiceNow v2 needs better error reporting
+
 ## Version v1.20.1
 
 > [!NOTE]
