@@ -134,7 +134,7 @@ func Init(r *geneos.Host, ct *geneos.Component) {
 
 var sans sync.Map
 
-// factory is the factory method fpr SANs.
+// factory is the factory method for SANs.
 //
 // If the name has a TYPE prefix then that type is used as the "pkgtype"
 // parameter to select other Netprobe types, such as fa2
