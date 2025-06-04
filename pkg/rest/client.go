@@ -20,14 +20,20 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-// Package rest provides simple client interfaces for REST calls with
+// Package rest provides a very simple client for REST calls with
 // automatic marshalling and unmarshalling of request and response.
+//
+// GET requests encode parameters into the URL while POST and PUT
+// requests...
+//
+// Responses must be in JSON and can be either an array or objects or a
+// single object.
 
 type Client struct {
-	BaseURL    string
+	BaseURL    *url.URL
 	HTTPClient *http.Client
 	// if not nil, call SetUpRequest() just before the Do() call
-	SetupRequest func(req *http.Request, c *Client, endpoint string, body []byte)
+	SetupRequest func(req *http.Request, c *Client, body []byte)
 	authHeader   string
 	authValue    string
 }
@@ -43,74 +49,47 @@ func NewClient(options ...Options) *Client {
 	}
 }
 
-// SetAuth sets an explicit auth head and value for clients that do not
-// use OAUTH etc.
+// SetAuth sets an explicit authentication header to value for clients
+// that do not use OAUTH etc.
 func (c *Client) SetAuth(header, value string) {
 	c.authHeader = header
 	c.authValue = value
 }
 
-// Auth with client ID and Secret. If clientid is empty just return,
-// allowing callers to call with config values even when not set.
-func (c *Client) Auth(ctx context.Context, clientid string, clientsecret *config.Plaintext) {
-	if clientid == "" {
+// Auth sets up a 2-legged OAUTH2 with client ID and Secret. If clientID
+// is empty just return, allowing callers to call when the value are not
+// set (or empty) not set.
+func (c *Client) Auth(ctx context.Context, clientID string, clientSecret *config.Plaintext) {
+	if clientID == "" {
 		return
 	}
 	params := make(url.Values)
 	params.Set("grant_type", "client_credentials")
-	tokenauth, _ := url.JoinPath(c.BaseURL + "/oauth2/token")
+	tokenauth := c.BaseURL.JoinPath("/oauth2/token")
 	conf := &clientcredentials.Config{
-		ClientID:       clientid,
-		ClientSecret:   clientsecret.String(),
+		ClientID:       clientID,
+		ClientSecret:   clientSecret.String(),
 		EndpointParams: params,
-		TokenURL:       tokenauth,
+		TokenURL:       tokenauth.String(),
 	}
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, c.HTTPClient)
 	c.HTTPClient = conf.Client(ctx)
 }
 
 // GET method. On successful return the response body will be closed.
-func (c *Client) GetURL(ctx context.Context, endpoint *url.URL, response any) (resp *http.Response, err error) {
-	u, _ := url.Parse(c.BaseURL)
-	if err != nil {
-		return
+// endpoint is either a string or a *url.URL relative to the client c
+// base URL.
+func (c *Client) Get(ctx context.Context, endpoint any, request any, response any) (resp *http.Response, err error) {
+	var dest *url.URL
+	switch e := endpoint.(type) {
+	case string:
+		dest = c.BaseURL.JoinPath(e)
+	case *url.URL:
+		dest = c.BaseURL.ResolveReference(e)
+	default:
+		err = errors.ErrUnsupported
 	}
-	dest := u.ResolveReference(endpoint)
 	req, err := http.NewRequestWithContext(ctx, "GET", dest.String(), nil)
-	if err != nil {
-		return
-	}
-	if c.authHeader != "" {
-		req.Header.Add(c.authHeader, c.authValue)
-	}
-
-	if c.SetupRequest != nil {
-		c.SetupRequest(req, c, endpoint.String(), nil)
-	}
-	resp, err = c.HTTPClient.Do(req)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode > 299 {
-		b, _ := io.ReadAll(resp.Body)
-		err = fmt.Errorf("%s %s", resp.Status, string(b))
-		return
-	}
-	if response == nil {
-		return
-	}
-	err = decodeResponse(resp, response)
-	return
-}
-
-// GET method. On successful return the response body will be closed.
-func (c *Client) Get(ctx context.Context, endpoint string, request any, response any) (resp *http.Response, err error) {
-	dest, err := url.JoinPath(c.BaseURL, endpoint)
-	if err != nil {
-		return
-	}
-	req, err := http.NewRequestWithContext(ctx, "GET", dest, nil)
 	if err != nil {
 		return
 	}
@@ -132,48 +111,7 @@ func (c *Client) Get(ctx context.Context, endpoint string, request any, response
 	}
 
 	if c.SetupRequest != nil {
-		c.SetupRequest(req, c, endpoint, nil)
-	}
-	resp, err = c.HTTPClient.Do(req)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode > 299 {
-		b, _ := io.ReadAll(resp.Body)
-		err = fmt.Errorf("%s %s", resp.Status, string(b))
-		return
-	}
-	if response == nil {
-		return
-	}
-	err = decodeResponse(resp, response)
-	return
-}
-
-// PostURL issues a POST request to the client using *url.URL endpoint
-// as either a relative path to the base URL in the client, or as an
-// absolute path, encoding request as a JSON body and decoding any
-// returned body into result, if set.
-func (c *Client) PostURL(ctx context.Context, endpoint *url.URL, request any, response any) (resp *http.Response, err error) {
-	u, _ := url.Parse(c.BaseURL)
-	if err != nil {
-		return
-	}
-	dest := u.ResolveReference(endpoint)
-
-	r, body := encodeBody(request)
-	req, err := http.NewRequestWithContext(ctx, "POST", dest.String(), r)
-	if err != nil {
-		return
-	}
-	if c.authHeader != "" {
-		req.Header.Add(c.authHeader, c.authValue)
-	}
-	req.Header.Add("content-type", "application/json")
-
-	if c.SetupRequest != nil {
-		c.SetupRequest(req, c, endpoint.String(), body)
+		c.SetupRequest(req, c, nil)
 	}
 	resp, err = c.HTTPClient.Do(req)
 	if err != nil {
@@ -195,13 +133,20 @@ func (c *Client) PostURL(ctx context.Context, endpoint *url.URL, request any, re
 // Post issues a POST request to the client using endpoint as either a
 // relative path to the base URL in the client, encoding request as a
 // JSON body and decoding any returned body into result, if set.
-func (c *Client) Post(ctx context.Context, endpoint string, request any, response any) (resp *http.Response, err error) {
-	dest, err := url.JoinPath(c.BaseURL, endpoint)
-	if err != nil {
-		return
+// endpoint is either a string or a *url.URL relative to the client c
+// base URL.
+func (c *Client) Post(ctx context.Context, endpoint any, request any, response any) (resp *http.Response, err error) {
+	var dest *url.URL
+	switch e := endpoint.(type) {
+	case string:
+		dest = c.BaseURL.JoinPath(e)
+	case *url.URL:
+		dest = c.BaseURL.ResolveReference(e)
+	default:
+		err = errors.ErrUnsupported
 	}
 	r, body := encodeBody(request)
-	req, err := http.NewRequestWithContext(ctx, "POST", dest, r)
+	req, err := http.NewRequestWithContext(ctx, "POST", dest.String(), r)
 	if err != nil {
 		return
 	}
@@ -211,7 +156,7 @@ func (c *Client) Post(ctx context.Context, endpoint string, request any, respons
 	req.Header.Add("content-type", "application/json")
 
 	if c.SetupRequest != nil {
-		c.SetupRequest(req, c, endpoint, body)
+		c.SetupRequest(req, c, body)
 	}
 	resp, err = c.HTTPClient.Do(req)
 	if err != nil {
@@ -226,19 +171,23 @@ func (c *Client) Post(ctx context.Context, endpoint string, request any, respons
 	if response == nil {
 		return
 	}
-	// b, _ := io.ReadAll(resp.Body)
-	// log.Debug().Msgf("body: %v", string(b))
 	err = decodeResponse(resp, response)
 	return
 }
 
 // PUT method
-func (c *Client) PutURL(ctx context.Context, endpoint *url.URL, request any, response any) (resp *http.Response, err error) {
-	u, _ := url.Parse(c.BaseURL)
-	if err != nil {
-		return
+// endpoint is either a string or a *url.URL relative to the client c
+// base URL.
+func (c *Client) Put(ctx context.Context, endpoint any, request any, response any) (resp *http.Response, err error) {
+	var dest *url.URL
+	switch e := endpoint.(type) {
+	case string:
+		dest = c.BaseURL.JoinPath(e)
+	case *url.URL:
+		dest = c.BaseURL.ResolveReference(e)
+	default:
+		err = errors.ErrUnsupported
 	}
-	dest := u.ResolveReference(endpoint)
 	r, body := encodeBody(request)
 	req, err := http.NewRequestWithContext(ctx, "PUT", dest.String(), r)
 	if err != nil {
@@ -249,42 +198,7 @@ func (c *Client) PutURL(ctx context.Context, endpoint *url.URL, request any, res
 	}
 	req.Header.Add("content-type", "application/json")
 	if c.SetupRequest != nil {
-		c.SetupRequest(req, c, endpoint.String(), body)
-	}
-	resp, err = c.HTTPClient.Do(req)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode > 299 {
-		b, _ := io.ReadAll(resp.Body)
-		err = fmt.Errorf("%s %s", resp.Status, string(b))
-		return
-	}
-	if response == nil {
-		return
-	}
-	err = decodeResponse(resp, response)
-	return
-}
-
-// PUT method
-func (c *Client) Put(ctx context.Context, endpoint string, request any, response any) (resp *http.Response, err error) {
-	dest, err := url.JoinPath(c.BaseURL, endpoint)
-	if err != nil {
-		return
-	}
-	r, body := encodeBody(request)
-	req, err := http.NewRequestWithContext(ctx, "PUT", dest, r)
-	if err != nil {
-		return
-	}
-	if c.authHeader != "" {
-		req.Header.Add(c.authHeader, c.authValue)
-	}
-	req.Header.Add("content-type", "application/json")
-	if c.SetupRequest != nil {
-		c.SetupRequest(req, c, endpoint, body)
+		c.SetupRequest(req, c, body)
 	}
 	resp, err = c.HTTPClient.Do(req)
 	if err != nil {
@@ -305,11 +219,8 @@ func (c *Client) Put(ctx context.Context, endpoint string, request any, response
 
 // Delete Method
 func (c *Client) Delete(ctx context.Context, endpoint string, request any) (resp *http.Response, err error) {
-	dest, err := url.JoinPath(c.BaseURL, endpoint)
-	if err != nil {
-		return
-	}
-	req, err := http.NewRequestWithContext(ctx, "DELETE", dest, nil)
+	dest := c.BaseURL.JoinPath(endpoint)
+	req, err := http.NewRequestWithContext(ctx, "DELETE", dest.String(), nil)
 	if err != nil {
 		return
 	}
@@ -324,7 +235,7 @@ func (c *Client) Delete(ctx context.Context, endpoint string, request any) (resp
 		req.URL.RawQuery = v.Encode()
 	}
 	if c.SetupRequest != nil {
-		c.SetupRequest(req, c, endpoint, nil)
+		c.SetupRequest(req, c, nil)
 	}
 	resp, err = c.HTTPClient.Do(req)
 	if err != nil {

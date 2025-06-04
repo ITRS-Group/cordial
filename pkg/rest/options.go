@@ -2,31 +2,40 @@ package rest
 
 import (
 	"net/http"
+	"net/url"
 )
 
 // Options are used to control behaviour of ICP functions
 type Options func(*restOptions)
 
 type restOptions struct {
-	baseURL      string
+	baseURL      *url.URL
 	client       *http.Client
-	setupRequest func(req *http.Request, c *Client, endpoint string, body []byte)
+	setupRequest func(req *http.Request, c *Client, body []byte)
 }
 
 func evalOptions(options ...Options) (opts *restOptions) {
 	opts = &restOptions{
-		baseURL: "https://localhost:443",
-		client:  &http.Client{},
+		client: &http.Client{},
 	}
+	opts.baseURL, _ = url.Parse("https://localhost")
 	for _, opt := range options {
 		opt(opts)
 	}
 	return
 }
 
-// BaseURL sets the root of the REST API URL. The default is
-// "https://localhost:443"
-func BaseURL(baseurl string) Options {
+// BaseURLString sets the root of the REST API URL. The default is
+// "https://localhost"
+func BaseURLString(baseurl string) Options {
+	return func(io *restOptions) {
+		io.baseURL, _ = url.Parse(baseurl)
+	}
+}
+
+// BaseURLString sets the root of the REST API URL. The default is
+// "https://localhost"
+func BaseURL(baseurl *url.URL) Options {
 	return func(io *restOptions) {
 		io.baseURL = baseurl
 	}
@@ -40,7 +49,15 @@ func HTTPClient(client *http.Client) Options {
 	}
 }
 
-func SetupRequestFunc(f func(req *http.Request, c *Client, endpoint string, body []byte)) Options {
+// SetupRequestFunc sets a function to call while setting up the
+// request. For example, to add Basic Authentication:
+//
+//	client = rest.NewClient(
+//	        rest.SetupRequestFunc(func(req *http.Request, c *rest.Client, body []byte) {
+//	            req.SetBasicAuth(username, password.String())
+//	        }),
+//	    )
+func SetupRequestFunc(f func(req *http.Request, c *Client, body []byte)) Options {
 	return func(ro *restOptions) {
 		ro.setupRequest = f
 	}

@@ -282,8 +282,8 @@ var clientCmd = &cobra.Command{
 		// iterate through router urls
 		for _, r := range cf.GetStringSlice(cf.Join("router", "url")) {
 			rc := rest.NewClient(
-				rest.BaseURL(r),
-				rest.SetupRequestFunc(func(req *http.Request, _ *rest.Client, _ string, _ []byte) {
+				rest.BaseURLString(r),
+				rest.SetupRequestFunc(func(req *http.Request, _ *rest.Client, _ []byte) {
 					req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", cf.GetString(config.Join("router", "authentication", "token"))))
 				}),
 			)

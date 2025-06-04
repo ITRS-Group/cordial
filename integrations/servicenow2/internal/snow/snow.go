@@ -22,7 +22,6 @@ import (
 	"crypto/tls"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 
 	"github.com/labstack/echo/v4"
@@ -52,8 +51,8 @@ func ServiceNow(cf *config.Config) (client *rest.Client) {
 	username := cf.GetString("username")
 	password := cf.GetPassword("password")
 
-	clientid := cf.GetString("clientid")
-	clientsecret := cf.GetPassword("clientsecret")
+	clientID := cf.GetString("clientid")
+	clientSecret := cf.GetPassword("clientsecret")
 
 	sn, err := url.Parse(cf.GetString("url"))
 	if err != nil {
@@ -62,7 +61,7 @@ func ServiceNow(cf *config.Config) (client *rest.Client) {
 
 	hc := &http.Client{}
 
-	if strings.HasPrefix(cf.GetString("url"), "https:") {
+	if sn.Scheme == "https" {
 		hc.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: cf.GetBool(cf.Join("tls", "skip-verify")),
@@ -70,29 +69,23 @@ func ServiceNow(cf *config.Config) (client *rest.Client) {
 		}
 	}
 
-	p, err := url.JoinPath(cf.GetString("url"), cf.GetString("path", config.Default("/api/now/v2/table")))
-	if err != nil {
-		panic(err)
-	}
+	p := sn.JoinPath(cf.GetString("path", config.Default("/api/now/v2/table")))
 
-	if clientid != "" && !clientsecret.IsNil() {
+	if clientID != "" && !clientSecret.IsNil() {
 		params := make(url.Values)
 		params.Set("grant_type", "password")
 		params.Set("username", username)
 		params.Set("password", password.String())
-		// params.Set("client_id", "api-gateway-client")
-
-		tokenEndpoint := sn.JoinPath("/oauth_token.do")
 
 		conf := &clientcredentials.Config{
-			ClientID:       clientid,
-			ClientSecret:   clientsecret.String(),
+			ClientID:       clientID,
+			ClientSecret:   clientSecret.String(),
 			EndpointParams: params,
-			TokenURL:       tokenEndpoint.String(),
+			TokenURL:       sn.JoinPath("/oauth_token.do").String(),
 		}
 
-		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, hc)
-		hc = conf.Client(ctx)
+		hc = conf.Client(context.WithValue(context.Background(), oauth2.HTTPClient, hc))
+
 		client = rest.NewClient(
 			rest.BaseURL(p),
 			rest.HTTPClient(hc),
@@ -101,7 +94,7 @@ func ServiceNow(cf *config.Config) (client *rest.Client) {
 		client = rest.NewClient(
 			rest.BaseURL(p),
 			rest.HTTPClient(hc),
-			rest.SetupRequestFunc(func(req *http.Request, c *rest.Client, endpoint string, body []byte) {
+			rest.SetupRequestFunc(func(req *http.Request, c *rest.Client, body []byte) {
 				req.SetBasicAuth(username, password.String())
 			}),
 		)

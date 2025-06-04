@@ -44,7 +44,7 @@ type RESTClient struct {
 var _ APIClient = (*RESTClient)(nil)
 
 func NewRESTClient(endpoint string, options ...rest.Options) (c APIClient, err error) {
-	options = append(options, rest.BaseURL(endpoint))
+	options = append(options, rest.BaseURLString(endpoint))
 	return &RESTClient{Client: rest.NewClient(options...)}, nil
 }
 

@@ -130,7 +130,7 @@ func (x *Results) UnmarshalJSON(b []byte) error {
 func GetRecords(ctx *Context, endpoint *url.URL) (result Results, err error) {
 	var r snowResult
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
-	_, err = rc.GetURL(ctx.Request().Context(), endpoint, &r)
+	_, err = rc.Get(ctx.Request().Context(), endpoint, nil, &r)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)
 		return
@@ -142,7 +142,7 @@ func GetRecords(ctx *Context, endpoint *url.URL) (result Results, err error) {
 func GetRecord(ctx *Context, endpoint *url.URL) (result results, err error) {
 	var r snowResult
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
-	_, err = rc.GetURL(ctx.Request().Context(), endpoint, &r)
+	_, err = rc.Get(ctx.Request().Context(), endpoint, nil, &r)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)
 		return
@@ -157,7 +157,7 @@ func PostRecord(ctx *Context, endpoint *url.URL, record Record) (result results,
 	var r snowResult
 
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
-	_, err = rc.PostURL(ctx.Request().Context(), endpoint, record, &r)
+	_, err = rc.Post(ctx.Request().Context(), endpoint, record, &r)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)
 		return
@@ -172,7 +172,7 @@ func PutRecord(ctx *Context, endpoint *url.URL, record Record) (result results, 
 	var r snowResult
 
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
-	_, err = rc.PutURL(ctx.Request().Context(), endpoint, record, &r)
+	_, err = rc.Put(ctx.Request().Context(), endpoint, record, &r)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)
 		return
