@@ -38,7 +38,6 @@ import (
 )
 
 var queryCmdTable, queryCmdUser, queryCmdFormat string
-var queryCmdColumns []string
 
 func init() {
 	cmd.RootCmd.AddCommand(queryCmd)
@@ -46,7 +45,6 @@ func init() {
 	queryCmd.Flags().StringVarP(&queryCmdTable, "table", "t", "", "servicenow table, defaults to incident")
 	queryCmd.Flags().StringVarP(&queryCmdUser, "user", "u", "", "incident user to query")
 	queryCmd.Flags().StringVarP(&queryCmdFormat, "format", "f", "json", "output format: csv or `json`")
-	queryCmd.Flags().StringSliceVarP(&queryCmdColumns, "columns", "C", nil, "order of columns for CSV format")
 	queryCmd.Flags().SortFlags = false
 }
 
