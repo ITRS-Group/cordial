@@ -1,14 +1,14 @@
 #
-# Servicenow Geneos Integration v2 - router configuration
+# Servicenow Geneos Integration v2 - proxy configuration
 #
-# The router acts as a single point of contact to the Servicenow
-# instance. The router supports two endpoints, one to GET existing
+# The proxy acts as a single point of contact to the Servicenow
+# instance. The proxy supports two endpoints, one to GET existing
 # incidents for display as a Dataview and the other for the submission
 # of incidents, either new or updates.
 #
 
-router:
-  # answer requests on a concatenation of `router.listen`, `router.path`
+proxy:
+  # answer requests on a concatenation of `proxy.listen`, `proxy.path`
   # and table name, where the table is looked up against the "tables"
   # section below
   listen: localhost:3000
@@ -32,7 +32,7 @@ router:
   # add support later for basic, oauth, cert etc. token only for now
   authentication:
     # the `token` can be any string as long as it is the same on both
-    # router and client - the client being either the incident poster or a
+    # proxy and client - the client being either the incident poster or a
     # GET requests for all incidents. To protect the plain text, if
     # required, you can use `geneos aes password` to create an encoded
     # strings that replies on the security of the key file being read-only
@@ -79,7 +79,7 @@ servicenow:
       # <https://www.servicenow.com/docs/bundle/xanadu-platform-user-interface/page/use/common-ui-elements/reference/r_OpAvailableFiltersQueries.html>
       #
       # In addition to referring to other configuration values in the
-      # router configuration file as `${config:servicenow.parameter}`,
+      # proxy configuration file as `${config:servicenow.parameter}`,
       # other dynamically set parameters available are:
       #
       #   * ${cmdb_ci}

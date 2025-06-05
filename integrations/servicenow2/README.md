@@ -4,49 +4,49 @@
 
 The Geneos ServiceNow integration (Version 2) connects your Gateways to ServiceNow to raise and manage incidents. The integration understands the environment set-up by Gateway Actions and Alert/Effects, transforming them into ServiceNow field values.
 
-The integration is divided into two commands; A _client_, executed by Gateways, and a background _router_. The router acts both as a proxy and an additional layer of configuration driven data transformation. There is also a _query_ command to fetch incidents assigned to a specific user.
+The integration is divided into two commands; A _client_, executed by Gateways, and a background _router_. The proxy acts both as a proxy and an additional layer of configuration driven data transformation. There is also a _query_ command to fetch incidents assigned to a specific user.
 
 The _client_ command uses environment variables and command line flags, while the _router_ then accepts the resulting key/value pairs from clients and creates and sends a ServiceNow table data set. The _client_ command has no direct link to the ServiceNow instance.
 
 >[!NOTE]
-> Previous versions of this integration also required a wrapper script to perform the initial mapping of Gateway Action/Effect environment variables, but these functions have now all been incorporated into the client command. This version also uses two distinct configuration files for client and router.
+>Previous versions of this integration also required a wrapper script to perform the initial mapping of Gateway Action/Effect environment variables, but these functions have now all been incorporated into the client command. This version also uses two distinct configuration files for client and proxy.
 
 ## Getting Started
 
-The ServiceNow integration is delivered as a single binary. A command argument is used to select _client_, _router_ or _query_ modes. You will need to install the binary (**`servicenow2`**) in a suitable directory so that it can be executed by Geneos Gateways as a client and, if the same host is used to connect to your ServiceNow instance, run as a router.
+The ServiceNow integration is delivered as a single binary. A command argument is used to select _client_, _router_ or _query_ modes. You will need to install the binary (**`servicenow2`**) in a suitable directory so that it can be executed by Geneos Gateways as a client and, if the same host is used to connect to your ServiceNow instance, run as a proxy.
 
 If your ServiceNow instance can only be contacted from a specific network endpoint then you must also install the binary there and ensure you select a listening port that the Gensos Gateway's ServiceNow _client_ process can connect to.
 
-The example configuration files provided with the integration should serve as a good starting point to get you up and running. You will need to, at minimum, edit the **`router`** configuration file with the details of your ServiceNow instance; the network address and authentication details. If your router process runs on a different endpoint to your client(s) then you will also need to modify the listening address, which defaults to localhost only (and also consider implementing TLS which requires a certificate and private key matching the host and domain name of the router endpoint).
+The example configuration files provided with the integration should serve as a good starting point to get you up and running. You will need to, at minimum, edit the **`proxy`** configuration file with the details of your ServiceNow instance; the network address and authentication details. If your proxy process runs on a different endpoint to your client(s) then you will also need to modify the listening address, which defaults to localhost only (and also consider implementing TLS which requires a certificate and private key matching the host and domain name of the proxy endpoint).
 
-### Run The Router
+### Run The Proxy
 
 Copy the **`servicenow2`** binary to a suitable directory. If you are not sure where then use either `/usr/local/bin/` (if you have superuser privileges), or `${HOME}/bin/` if you are doing this as a normal user. If `${HOME}/bin` does not exist then create it with `mkdir ${HOME}/bin`. (Note: `${HOME}` is your user home directory and is automatically set by your Linux shell when you login). Check that the binary is executable using `ls -l` or just set it to executable by running `chmod +x [PATH]` where `[PATH]` is the full path to the binary, e.g. `${HOME}/bin/servicenow2`
 
-Create a router configuration file using the example one provided with the binary. This configuration file should go in one of three locations that are checked on start-up (in the order given, first one found is used):
+Create a proxy configuration file using the example one provided with the binary. This configuration file should go in one of three locations that are checked on start-up (in the order given, first one found is used):
 
-* `./servicenow2.router.yaml`
-* `${HOME}/.config/geneos/servicenow2.router.yaml`
-* `/etc/geneos/servicenow2.router.yaml`
+* `./servicenow2.proxy.yaml`
+* `${HOME}/.config/geneos/servicenow2.proxy.yaml`
+* `/etc/geneos/servicenow2.proxy.yaml`
 
 In most cases you will select the first option (the current working directory) for a Gateway if there is a different configuration for each Gateway, or the second for the user running the Geneos Gateways on the server. You may need to create the user config directory with `mkdir -p ${HOME}/.config/geneos` first. So, for example:
 
 ```bash
 mkdir -p ${HOME}/.config/geneos
-cp servicenow2.router.example.yaml ${HOME}/.config/geneos/servicenow2.router.yaml
+cp servicenow2.proxy.example.yaml ${HOME}/.config/geneos/servicenow2.proxy.yaml
 ```
 
-Edit the new router configuration file, following the suggestions in the comments. At minimum you will need to set the ServiceNow instance name and authentication details for the ServiceNow user that will be used to create and update incidents.
+Edit the new proxy configuration file, following the suggestions in the comments. At minimum you will need to set the ServiceNow instance name and authentication details for the ServiceNow user that will be used to create and update incidents.
 
-First, start by running the router in the foreground, so you can watch for any errors:
+First, start by running the proxy in the foreground, so you can watch for any errors:
 
 ```bash
-servicenow2 router
+servicenow2 proxy
 ```
 
 If the directory you installed the binary is not in your executable path (such as if you had just created the `${HOME}/bin` directory and not logged out and in again) then use the full path to the binary.
 
-In another terminal session test the router by issuing a `curl` command to query existing incidents. To do this you will need the plaintext value of the router's authentication token (in the `router.authentication.token` configuration field). Then run:
+In another terminal session test the proxy by issuing a `curl` command to query existing incidents. To do this you will need the plaintext value of the proxy's authentication token (in the `proxy.authentication.token` configuration field). Then run:
 
 ```bash
 curl -H 'Authorization: Bearer EXAMPLE' http://localhost:3000/snow/api/v2/incident
@@ -55,7 +55,7 @@ curl -H 'Authorization: Bearer EXAMPLE' http://localhost:3000/snow/api/v2/incide
 >[!NOTE]
 > If you have changed the listening address or port or the API endpoint path then you must, of course, adjust the URL above to match.
 
-Where `EXAMPLE` should be replaced by your token, in plaintext. You should see output in JSON format with all the configured user's incidents. If you see an empty list (`[]`) then that may be OK. On the router side you should see a corresponding log entry, like this:
+Where `EXAMPLE` should be replaced by your token, in plaintext. You should see output in JSON format with all the configured user's incidents. If you see an empty list (`[]`) then that may be OK. On the proxy side you should see a corresponding log entry, like this:
 
 ```log
 2025-05-07T15:52:47+01:00  HTTP/1.1 200 0/5524 1.794s 127.0.0.1 GET /snow/api/v2/incident ""
@@ -65,9 +65,9 @@ Any other results means you need to review the configuration, the ServiceNow use
 
 ### Configure The Client
 
-Now that the router is running you can build the client configuration file and the Gateway Actions/Effects you want to use it.
+Now that the proxy is running you can build the client configuration file and the Gateway Actions/Effects you want to use it.
 
-Just like for the router functionality, the client looks for a configuration file in this order:
+Just like for the proxy functionality, the client looks for a configuration file in this order:
 
 * `./servicenow2.client.yaml`
 * `${HOME}/.config/geneos/servicenow2.client.yaml`
@@ -98,7 +98,7 @@ title: ITRS Geneos to ServiceNow
 sequenceDiagram
     participant G as Geneos Gateway
     participant C as 'servicenow2 client' command
-    participant R as 'servicenow2 router' daemon
+    participant R as 'servicenow2 proxy' daemon
     participant S as ServiceNow API
 
     G ->> C: Action/Effect Data<br/>(Environment Variables)
@@ -120,6 +120,12 @@ sequenceDiagram
     C ->> G: Return Status
 ```
 
+### Query Command
+
+There is also a `query` command that will fetch the incidents for the given user. If no user is specified on the command line then the user the proxy uses to connect to the ServiceNow instance will be used. The table to query, which defaults to `incident`, can also be set on the command line. Finally, the output format can be in JSON or a CSV table, suitable for Geneos Toolkit samplers.
+
+The `query` command uses the `servicenow2.client.yaml` configuration file for proxy connection information. The fields that are returned, and the query sent to ServiceNow, are both defined in the proxy configuration and cannot be controlled by the `query` command.
+
 ## Client Configuration Reference
 
 The client configuration file controls the transformation of Geneos Action/Effect environment variables to ServiceNow files in the form of name/value pairs. The file is in YAML format but supports Cordial's "expandable" format for almost all values (right of the `:`). See below for more information.
@@ -128,7 +134,7 @@ The configuration file is evaluated for each execution, so changes to the file w
 
 ### Geneos Environment Variables To ServiceNow Fields
 
-All data values are passed from the Geneos Gateway to the integration as environment variables. These are then transformed into the name/value fields passed to the router process, which in turn will process them and pass them to ServiceNow to either create or update an incident.
+All data values are passed from the Geneos Gateway to the integration as environment variables. These are then transformed into the name/value fields passed to the proxy process, which in turn will process them and pass them to ServiceNow to either create or update an incident.
 
 The client configuration includes features to test, set and unset ServiceNow fields based on environment variables.
 
@@ -149,7 +155,7 @@ The order that action are defined in a group is not important as they are always
 
 ### ServiceNow Field Naming
 
-All the fields built on the client-side are passed to the router process, which will perform further processing. Those stages are described further below, but it is worth noting the following behaviour; All fields that start with an underscore (`_`) are considered internal and are typically used to pass values to the router that will never be sent directly to ServiceNow. For example, the `_subject` field can be used as the `short_description` when creating a new incident or included in the `work_notes` when updating an existing incident (or dropped entirely). Other internal fields may be simply to pass query information, such as `_cmdb_ci_default`.
+All the fields built on the client-side are passed to the proxy process, which will perform further processing. Those stages are described further below, but it is worth noting the following behaviour; All fields that start with an underscore (`_`) are considered internal and are typically used to pass values to the proxy that will never be sent directly to ServiceNow. For example, the `_subject` field can be used as the `short_description` when creating a new incident or included in the `work_notes` when updating an existing incident (or dropped entirely). Other internal fields may be simply to pass query information, such as `_cmdb_ci_default`.
 
 ### Value Expansion
 
@@ -287,9 +293,9 @@ The `set` action, as the name suggests, sets the fields to the expanded values o
 
 ### Configuration Sections
 
-#### `router`
+#### `proxy`
 
-The first part of the configuration file is `router` and contains the settings on how to communicate with the router process.
+The first part of the configuration file is `proxy` and contains the settings on how to communicate with the proxy process.
 
 #### `query`
 
@@ -303,9 +309,9 @@ This section sets default values for fields.
 
 The Geneos Gateway executing the integration client can select a _profile_ in the configuration file. If no profile is selected then the `default` profile is used. Note that this is different to the top-level `defaults` section described above. Using profiles allows you to reduce the required nesting of test and so on by categorising settings, such a `opsview` or `infrastructure` and then using this name from different Actions or Alert/Effects in the Gateway.
 
-## Router Configuration Reference
+## Proxy Configuration Reference
 
-### `router`
+### `proxy`
 
 ### `servicenow`
 

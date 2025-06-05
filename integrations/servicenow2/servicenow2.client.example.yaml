@@ -3,22 +3,22 @@
 # internal fields prefixed with underscores
 #
 
-router:
+proxy:
   url: http://localhost:3000/snow/api/v2
-  # the default table on the router side
+  # the default table on the proxy side
   default-table: incident
   default-user: admin
   # if the URL is `https://...` then the tls settings below take effect
   tls:
-    # should we check the router cert? default true
+    # should we check the proxy cert? default true
     verify: true
-    # chain to validate router connection, if none and verify is true then use system roots
+    # chain to validate proxy connection, if none and verify is true then use system roots
     chain: /path/to/chain.pem
 
   # different auth types, basic, cert, token etc.
   authentication:
     # the `token` can be any string as long as it is the same on both
-    # router and client - the client being either the incident poster or a
+    # proxy and client - the client being either the incident poster or a
     # GET requests for all incidents. To protect the plain text, if
     # required, you can use `geneos aes password` to create an encoded
     # strings that relies on the security of the key file being private
@@ -58,8 +58,8 @@ query:
 #     etc.
 #
 # all field names beginning with an underscore (`_`) are treated as
-# internal values between client and router and are renamed or removed
-# before being sent to the ServiceNow instance by the router.
+# internal values between client and proxy and are renamed or removed
+# before being sent to the ServiceNow instance by the proxy.
 #
 # all field values are subject to expansion according to the `cordial`
 # config package `ExpandString` function with some custom functions: 

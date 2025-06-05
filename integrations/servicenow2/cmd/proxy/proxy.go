@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package router
+package proxy
 
 import (
 	"encoding/json"
@@ -39,41 +39,41 @@ var daemon bool
 func init() {
 	cmd.RootCmd.AddCommand(routerCmd)
 
-	routerCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Daemonise the router process")
+	routerCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Daemonise the proxy process")
 	routerCmd.Flags().SortFlags = false
 
 }
 
-// routerCmd represents the router command
+// routerCmd represents the proxy command
 var routerCmd = &cobra.Command{
-	Use:   "router",
-	Short: "Run a ServiceNow integration router",
+	Use:   "proxy",
+	Short: "Run a ServiceNow integration proxy",
 	Long: strings.ReplaceAll(`
-Run an ITRS Geneos to ServiceNow router.
+Run an ITRS Geneos to ServiceNow proxy.
 
-The router acts as a proxy between Geneos Gateways, each running an
+The proxy acts as a proxy between Geneos Gateways, each running an
 incident submission client, and the ServiceNow instance API. The
-router can run on a different network endpoint, such as a DMZ, and
+proxy can run on a different network endpoint, such as a DMZ, and
 can also help limit the number of IP endpoints connecting to a
 ServiceNow instance that may have a limit on source connections. The
-router can also act on data fetched from ServiceNow as part of the
+proxy can also act on data fetched from ServiceNow as part of the
 incident submission or update flow.
 
-In normal operation the router starts and runs in the foreground,
+In normal operation the proxy starts and runs in the foreground,
 logging actions and results to stdout/stderr. If started with the
 |--daemon| flag it will background itself and no logging will be
 available. (Logging to an external file will be added in a future
 release)
 
-The router reads it's configuration from a YAML file, which can be
+The proxy reads it's configuration from a YAML file, which can be
 shared with the submission client function, and uses this to look-up,
 map and submit incidents.
 
 `, "|", "`"),
 	SilenceUsage: true,
 	Run: func(command *cobra.Command, args []string) {
-		cf := cmd.LoadConfigFile("router")
-		router(cf)
+		cf := cmd.LoadConfigFile("proxy")
+		proxy(cf)
 	},
 }
 
@@ -87,7 +87,7 @@ func Timestamp() echo.MiddlewareFunc {
 	}
 }
 
-func router(cf *config.Config) {
+func proxy(cf *config.Config) {
 	if daemon {
 		process.Daemon(nil, process.RemoveArgs, "-D", "--daemon")
 	}
@@ -109,10 +109,10 @@ func router(cf *config.Config) {
 	e.Use(Timestamp())
 	e.Use(middleware.BodyDump(bodyDumpLog))
 	e.Use(middleware.KeyAuth(func(key string, c echo.Context) (bool, error) {
-		return key == cf.GetString(cf.Join("router", "authentication", "token")), nil
+		return key == cf.GetString(cf.Join("proxy", "authentication", "token")), nil
 	}))
 
-	v2route := e.Group(cf.GetString(cf.Join("router", "path")))
+	v2route := e.Group(cf.GetString(cf.Join("proxy", "path")))
 
 	// GET Endpoint
 	v2route.GET("/:table", getRecords)
@@ -120,16 +120,16 @@ func router(cf *config.Config) {
 	// POST Endpoint
 	v2route.POST("/:table", acceptRecord)
 
-	listen := cf.GetString(cf.Join("router", "listen"))
+	listen := cf.GetString(cf.Join("proxy", "listen"))
 
 	// init connection or fail early
 	snow.ServiceNow(cf.Sub("servicenow"))
 
-	if cf.GetBool(cf.Join("router", "tls", "enabled")) {
+	if cf.GetBool(cf.Join("proxy", "tls", "enabled")) {
 		e.Logger.Fatal(e.StartTLS(
 			listen,
-			config.GetBytes(cf.Join("router", "tls", "certificate")),
-			config.GetBytes(cf.Join("router", "tls", "key")),
+			config.GetBytes(cf.Join("proxy", "tls", "certificate")),
+			config.GetBytes(cf.Join("proxy", "tls", "key")),
 		))
 	}
 

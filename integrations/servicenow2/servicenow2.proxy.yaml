@@ -1,0 +1,163 @@
+#
+# Servicenow Geneos Integration v2 - proxy configuration
+#
+# The proxy acts as a single point of contact to the Servicenow
+# instance. The proxy supports two endpoints, one to GET existing
+# incidents for display as a Dataview and the other for the submission
+# of incidents, either new or updates.
+#
+
+proxy:
+  # answer requests on a concatenation of `proxy.listen`, `proxy.path`
+  # and table name, where the table is looked up against the "tables"
+  # section below
+  listen: localhost:3000
+  path: /snow/api/v2
+  tls:
+    enabled: false
+    skip-verify: false
+    # PEM formatted certficate, either a multiline string or an
+    # expandable format reference to an external file
+    certificate: ${file:/path/to/cert.pem}
+    # or
+    # certificate: |
+    #   -----BEGIN CERTIFICATE-----
+    #   ...
+
+    # PEM formatted unencrypted private key, either a multiline string
+    # or an expandable format reference to an external file
+    private-key: ${file:/path/to/cert.key}
+
+  # add support later for basic, oauth, cert etc. token only for now
+  authentication:
+    # the `token` can be any string as long as it is the same on both
+    # proxy and client - the client being either the incident poster or a
+    # GET requests for all incidents. To protect the plain text, if
+    # required, you can use `geneos aes password` to create an encoded
+    # strings that replies on the security of the key file being read-only
+    # to the user. This also allows the configuration file to be shared
+    # without sharing the plaintext of the key.
+    token: ${enc:~/.config/geneos/keyfile.aes:+encs+E33C8DFAFED66ED8EE68019DAEE0106E}
+
+servicenow:
+  url: https://dev265687.service-now.com/
+  path: /api/now/v2/table
+  username: admin
+  password: ${enc:~/.config/geneos/keyfile.aes:+encs+06003E5C9E9E9B3C3BFA3F1B8B468B53}
+  # clientid: ${SERVICENOW_CLIENTID}
+  # clientsecret: ${SERVICENOW_CLIENTSECRET}
+  trace: false
+
+  tables:
+    # multiple tables are supported through the client side `--table`
+    # option which results in a different endpoint used for each table.
+    # The named tables below are selected by the last part of the
+    # endpoint URL, e.g. `/snow/api/v2/incident`
+    #
+    # if a table configuration does not exist an error is returned
+    - name: incident
+      # the query endpoint is configured below:
+      query:
+        enabled: true
+        
+        search: "user=${servicenow.username}"
+        # fields are returned in the order below. to ensure that Geneos
+        # row-names are unique make sure that the first column is a
+        # primary key, as below
+        fields: [ number, sys_id, cmdb_ci.name, short_description, description, correlation_id, opened_by, state ]
+
+      # the rest of the configuration is concerned with creating and updating incidents
+
+      # `search` is the ServiceNow filter query used to lookup existing
+      # incidents
+      #
+      # For details of what is permitted, see:
+      #
+      # <https://www.servicenow.com/docs/bundle/xanadu-platform-user-interface/page/use/using-lists/concept/c_EncodedQueryStrings.html>
+      # <https://www.servicenow.com/docs/bundle/xanadu-platform-user-interface/page/use/common-ui-elements/reference/r_OpAvailableFiltersQueries.html>
+      #
+      # In addition to referring to other configuration values in the
+      # proxy configuration file as `${config:servicenow.parameter}`,
+      # other dynamically set parameters available are:
+      #
+      #   * ${cmdb_ci}
+      #   * ${correlation_id}
+      #
+      # For example, to exclude "Resolved" incidents from being found
+      # and updated, instead requiring a new incident to be created, use
+      # this:
+      #
+      #     search: "state!=6^active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}^ORDERBYDESCnumber"
+      #
+      # The default search, if not otherwise defined, is:
+      search: "active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}^ORDERBYDESCnumber"
+
+      response:
+        created: "Incident ${_number} ${_action} - State ${state} Impact ${impact} Urgency ${urgency} - '${_subject}'"
+        updated: "Incident ${_number} ${_action} - State ${state} Impact ${impact} Urgency ${urgency} - '${_subject}'"
+        failed: "${_action} to create or update incident"
+
+      defaults:
+        _cmdb_ci_default: 03a9e40d3790200044e0bfc8bcbe5d6c
+        assignment_group: group1
+        incident_type: event
+        impact: 3
+        urgency: 3
+        category: hardware
+        contact_type: email
+        caller_id: admin
+      current-state:
+        0: # create
+          # default values if not set previously/elsewhere
+          defaults:
+            # assignment_group: something
+            # contact_type: email
+            impact: 3
+            urgency: 3
+            category: hardware
+            state: 1
+            caller_id: "david.miller@example.com"
+          rename:
+            _text: description
+            _subject: short_description
+          # anything in this list is removed value or raises an error,
+          # after adding any defaults from below. all fields prefixed
+          # with an underscore are always removed.
+          remove: [ watch_list ]
+          # anything in this list MUST be set but it can be to an empty
+          # value
+          must-include: [ short_description, description ]
+        1: # new
+          defaults:
+            assignment_group: "something else"
+            contact_type: email
+            impact: 3
+            urgency: 3
+            category: hardware
+            state: 2
+            caller_id: admin
+          rename:
+            _text: work_notes
+          remove: [ short_description ]
+          must-incude: [ work_notes ]
+        2: # update
+          defaults:
+            assignment_group: "something else"
+            contact_type: email
+            impact: 3
+            urgency: 3
+            category: hardware
+            state: 2
+            caller_id: admin
+          rename:
+            _text: work_notes
+          remove: [ short_description ]
+        6: # resolve
+          defaults:
+            caller_id: admin
+            state: 1
+          remove: [ short_description ]
+          rename:
+            _subject: short_description
+            _text: work_notes
+

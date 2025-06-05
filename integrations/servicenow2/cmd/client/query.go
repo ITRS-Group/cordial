@@ -34,7 +34,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/rest"
 
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd"
-	"github.com/itrs-group/cordial/integrations/servicenow2/cmd/router"
+	"github.com/itrs-group/cordial/integrations/servicenow2/cmd/proxy"
 )
 
 var queryCmdTable, queryCmdUser, queryCmdFormat string
@@ -61,21 +61,21 @@ var queryCmd = &cobra.Command{
 
 		// var result []map[string]string
 		var err error
-		var result router.ResultsResponse
+		var result proxy.ResultsResponse
 
-		for _, ru := range cf.GetStringSlice(cf.Join("router", "url")) {
+		for _, ru := range cf.GetStringSlice(cf.Join("proxy", "url")) {
 			rc := rest.NewClient(
 				rest.BaseURLString(ru),
 				rest.SetupRequestFunc(func(req *http.Request, _ *rest.Client, _ []byte) {
-					req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", cf.GetString(config.Join("router", "authentication", "token"))))
+					req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", cf.GetString(config.Join("proxy", "authentication", "token"))))
 				}),
 			)
 
 			if queryCmdTable == "" {
-				queryCmdTable = cf.GetString(config.Join("router", "default-table"), config.Default(router.SNOW_INCIDENT_TABLE))
+				queryCmdTable = cf.GetString(config.Join("proxy", "default-table"), config.Default(proxy.SNOW_INCIDENT_TABLE))
 			}
 			if queryCmdUser == "" {
-				queryCmdUser = cf.GetString(config.Join("router", "default-user"))
+				queryCmdUser = cf.GetString(config.Join("proxy", "default-user"))
 			}
 
 			_, err = rc.Get(context.Background(), queryCmdTable, "user="+queryCmdUser, &result)
@@ -84,7 +84,7 @@ var queryCmd = &cobra.Command{
 				break
 			}
 
-			log.Debug().Err(err).Msg("connection error, trying next router (if any)")
+			log.Debug().Err(err).Msg("connection error, trying next proxy (if any)")
 		}
 
 		if err != nil {

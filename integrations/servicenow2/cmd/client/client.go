@@ -35,7 +35,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/rest"
 
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd"
-	"github.com/itrs-group/cordial/integrations/servicenow2/cmd/router"
+	"github.com/itrs-group/cordial/integrations/servicenow2/cmd/proxy"
 	"github.com/itrs-group/cordial/integrations/servicenow2/internal/snow"
 )
 
@@ -69,13 +69,13 @@ var clientCmd = &cobra.Command{
 	
 	This command is the client-side of the ITRS Geneos to ServiceNow
 	incident integration. The program takes command line flags, arguments
-	and environment variables to create a submission to the router
-	instance which is responsible for sending the request to the
+	and environment variables to create a submission to the proxy
+	which is responsible for sending the request to the
 	ServiceNow API.
 	`, "|", "`"),
 	SilenceUsage: true,
 	Run: func(command *cobra.Command, args []string) {
-		// all keys with a leading "_" are passed to the router but the router
+		// all keys with a leading "_" are passed to the proxy but the proxy
 		// then removes them in addition to other configuration settings. The expected fields are:
 		//
 		// correlation_id - correlation ID, which is left unchanged before use, or if not defined,
@@ -268,32 +268,32 @@ var clientCmd = &cobra.Command{
 		}
 
 		// check correlation ID, prefer a "raw" ID
-		if _, ok := incident[router.SNOW_CORRELATION_ID]; !ok {
-			if id, ok := incident[router.RAW_CORRELATION_ID]; ok {
-				incident[router.SNOW_CORRELATION_ID] = fmt.Sprintf("%x", sha1.Sum([]byte(id)))
+		if _, ok := incident[proxy.SNOW_CORRELATION_ID]; !ok {
+			if id, ok := incident[proxy.RAW_CORRELATION_ID]; ok {
+				incident[proxy.SNOW_CORRELATION_ID] = fmt.Sprintf("%x", sha1.Sum([]byte(id)))
 			}
 		}
 		// drop internal string either way
-		delete(incident, router.RAW_CORRELATION_ID)
+		delete(incident, proxy.RAW_CORRELATION_ID)
 
 		// b, _ = json.MarshalIndent(incident, "", "    ")
 		// log.Debug().Msgf("incident fields after processing command line args:\n%s", string(b))
 
-		// iterate through router urls
-		for _, r := range cf.GetStringSlice(cf.Join("router", "url")) {
+		// iterate through proxy urls
+		for _, r := range cf.GetStringSlice(cf.Join("proxy", "url")) {
 			rc := rest.NewClient(
 				rest.BaseURLString(r),
 				rest.SetupRequestFunc(func(req *http.Request, _ *rest.Client, _ []byte) {
-					req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", cf.GetString(config.Join("router", "authentication", "token"))))
+					req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", cf.GetString(config.Join("proxy", "authentication", "token"))))
 				}),
 			)
 
 			if clientCmdTable == "" {
-				clientCmdTable = cf.GetString(cf.Join("router", "default-table"), config.Default(router.SNOW_INCIDENT_TABLE))
+				clientCmdTable = cf.GetString(cf.Join("proxy", "default-table"), config.Default(proxy.SNOW_INCIDENT_TABLE))
 			}
 			_, err := rc.Post(context.Background(), clientCmdTable, incident, &result)
 			if err != nil {
-				log.Debug().Err(err).Msg("connection error, trying next router (if any)")
+				log.Debug().Err(err).Msg("connection error, trying next proxy (if any)")
 				continue
 			}
 
