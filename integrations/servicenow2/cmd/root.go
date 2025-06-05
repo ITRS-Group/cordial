@@ -32,13 +32,13 @@ import (
 
 // var cf *config.Config
 
-var configFile, execname string
-var debug bool
+var configFile, Execname, logFile string
+var Debug bool
 
 func init() {
 	RootCmd.PersistentFlags().StringVarP(&configFile, "conf", "c", "", "override config file")
 
-	RootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	RootCmd.PersistentFlags().BoolVarP(&Debug, "debug", "d", false, "enable extra debug output")
 	RootCmd.PersistentFlags().MarkHidden("debug")
 
 	// how to remove the help flag help text from the help output! Sigh...
@@ -47,15 +47,14 @@ func init() {
 
 	RootCmd.Flags().SortFlags = false
 
-	execname = path.Base(os.Args[0])
+	Execname = path.Base(os.Args[0])
 	cobra.OnInitialize(func() {
 		var l slog.Level
-		if debug {
+		if Debug {
 			l = slog.LevelDebug
 		}
-		cordial.LogInit(execname, cordial.LogLevel(l))
+		cordial.LogInit(Execname, cordial.LogLevel(l))
 		log.Debug().Msgf("cordial 'servicenow2' running as executable '%s', version %s", cordial.ExecutableName(), cordial.VERSION)
-
 	})
 }
 
@@ -85,7 +84,7 @@ func Execute() {
 func LoadConfigFile(cmdName string) (cf *config.Config) {
 	var err error
 
-	configBasename := strings.Join([]string{execname, cmdName}, ".")
+	configBasename := strings.Join([]string{Execname, cmdName}, ".")
 
 	cf, err = config.Load(configBasename,
 		config.SetAppName("geneos"),
