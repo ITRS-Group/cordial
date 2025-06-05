@@ -44,7 +44,7 @@ func init() {
 
 	queryCmd.Flags().StringVarP(&queryCmdTable, "table", "t", "", "servicenow table, defaults to incident")
 	queryCmd.Flags().StringVarP(&queryCmdUser, "user", "u", "", "incident user to query")
-	queryCmd.Flags().StringVarP(&queryCmdFormat, "format", "f", "json", "output format: csv or `json`")
+	queryCmd.Flags().StringVarP(&queryCmdFormat, "format", "f", "csv", "output format: `csv` or json")
 	queryCmd.Flags().SortFlags = false
 }
 
