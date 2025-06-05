@@ -50,33 +50,36 @@ func (discardCloser) Close() error { return nil }
 // (not STDERR) or equal to the [os.DevNull] value, in which case is
 // [io.Discard].
 func LogInit(prefix string, options ...LogOptions) {
-	opts := evalLoggerOptions(options...)
-	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
-		if zerolog.GlobalLevel() > zerolog.DebugLevel {
-			return ""
-		}
-		fnName := "UNKNOWN"
-		fn := runtime.FuncForPC(pc)
-		if fn != nil {
-			fnName = fn.Name()
-		}
-		fnName = path.Base(fnName)
-		// fnName = strings.TrimPrefix(fnName, "main.")
-
-		s := strings.SplitAfterN(file, prefix+"/", 2)
-		if len(s) == 2 {
-			file = s[1]
-		}
-		return fmt.Sprintf("%s:%d %s()", file, line, fnName)
-	}
-
-	var nocolor bool
+	var noColour bool
 	var out io.WriteCloser
 	out = os.Stderr
 
+	if zerolog.CallerMarshalFunc == nil {
+		zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
+			if zerolog.GlobalLevel() > zerolog.DebugLevel {
+				return ""
+			}
+			fnName := "UNKNOWN"
+			fn := runtime.FuncForPC(pc)
+			if fn != nil {
+				fnName = fn.Name()
+			}
+			fnName = path.Base(fnName)
+			// fnName = strings.TrimPrefix(fnName, "main.")
+
+			s := strings.SplitAfterN(file, prefix+"/", 2)
+			if len(s) == 2 {
+				file = s[1]
+			}
+			return fmt.Sprintf("%s:%d %s()", file, line, fnName)
+		}
+	}
+
+	opts := evalLoggerOptions(options...)
+
 	switch opts.logfile {
 	case "":
-		if opts.lj != nil {
+		if opts.lj != (&lumberjack.Logger{}) {
 			if opts.rotateOnStart {
 				opts.lj.Rotate()
 			}
@@ -91,19 +94,16 @@ func LogInit(prefix string, options ...LogOptions) {
 	default:
 		// if given a filename, use the default lumberjack but override
 		// the filename
-		if opts.lj == nil {
-			opts.lj = &lumberjack.Logger{}
-		}
 		opts.lj.Filename = opts.logfile
 
-		out = &lumberjack.Logger{Filename: opts.logfile}
-		nocolor = true
+		out = opts.lj
+		noColour = true
 	}
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{
 		Out:        out,
 		TimeFormat: time.RFC3339,
-		NoColor:    nocolor,
+		NoColor:    noColour,
 		FormatLevel: func(i interface{}) string {
 			return strings.ToUpper(fmt.Sprintf("%s:", i))
 		},
@@ -129,11 +129,13 @@ type LogOptions func(*logOpts)
 
 func evalLoggerOptions(options ...LogOptions) *logOpts {
 	opts := &logOpts{
+		lj:            &lumberjack.Logger{},
 		rotateOnStart: true,
 	}
 	for _, opt := range options {
 		opt(opts)
 	}
+
 	return opts
 }
 
