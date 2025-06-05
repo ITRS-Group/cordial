@@ -20,13 +20,18 @@ package proxy
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"gopkg.in/natefinch/lumberjack.v2"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/process"
 
@@ -35,11 +40,14 @@ import (
 )
 
 var daemon bool
+var logFile string
 
 func init() {
 	cmd.RootCmd.AddCommand(routerCmd)
 
 	routerCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Daemonise the proxy process")
+	routerCmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", cmd.Execname+".log", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
+
 	routerCmd.Flags().SortFlags = false
 
 }
@@ -72,7 +80,29 @@ map and submit incidents.
 `, "|", "`"),
 	SilenceUsage: true,
 	Run: func(command *cobra.Command, args []string) {
+		if daemon {
+			process.Daemon(nil, process.RemoveArgs, "-D", "--daemon")
+		}
+
+		var l slog.Level
+		if cmd.Debug {
+			l = slog.LevelDebug
+		}
 		cf := cmd.LoadConfigFile("proxy")
+		// update logging for long running proxy
+		cordial.LogInit(cmd.Execname,
+			cordial.LogLevel(l),
+			cordial.SetLogfile(logFile),
+			cordial.LumberjackOptions(&lumberjack.Logger{
+				Filename:   logFile,
+				MaxSize:    cf.GetInt("server.log.max-size"),
+				MaxBackups: cf.GetInt("server.log.max-backups"),
+				MaxAge:     cf.GetInt("server.log.stale-after"),
+				Compress:   cf.GetBool("server.log.compress"),
+			}),
+			cordial.RotateOnStart(cf.GetBool("server.log.rotate-on-start")),
+		)
+		fmt.Println("logging to", logFile)
 		proxy(cf)
 	},
 }
@@ -88,13 +118,7 @@ func Timestamp() echo.MiddlewareFunc {
 }
 
 func proxy(cf *config.Config) {
-	if daemon {
-		process.Daemon(nil, process.RemoveArgs, "-D", "--daemon")
-	}
-
-	// Initialization of go-echo server
 	e := echo.New()
-
 	e.HideBanner = true
 	e.HidePort = true
 
@@ -109,10 +133,10 @@ func proxy(cf *config.Config) {
 	e.Use(Timestamp())
 	e.Use(middleware.BodyDump(bodyDumpLog))
 	e.Use(middleware.KeyAuth(func(key string, c echo.Context) (bool, error) {
-		return key == cf.GetString(cf.Join("proxy", "authentication", "token")), nil
+		return key == cf.GetString(cf.Join("server", "authentication", "token")), nil
 	}))
 
-	v2route := e.Group(cf.GetString(cf.Join("proxy", "path")))
+	v2route := e.Group(cf.GetString(cf.Join("server", "path")))
 
 	// GET Endpoint
 	v2route.GET("/:table", getRecords)
@@ -120,16 +144,16 @@ func proxy(cf *config.Config) {
 	// POST Endpoint
 	v2route.POST("/:table", acceptRecord)
 
-	listen := cf.GetString(cf.Join("proxy", "listen"))
+	listen := cf.GetString(cf.Join("server", "listen"))
 
 	// init connection or fail early
 	snow.ServiceNow(cf.Sub("servicenow"))
 
-	if cf.GetBool(cf.Join("proxy", "tls", "enabled")) {
+	if cf.GetBool(cf.Join("server", "tls", "enabled")) {
 		e.Logger.Fatal(e.StartTLS(
 			listen,
-			config.GetBytes(cf.Join("proxy", "tls", "certificate")),
-			config.GetBytes(cf.Join("proxy", "tls", "key")),
+			config.GetBytes(cf.Join("server", "tls", "certificate")),
+			config.GetBytes(cf.Join("server", "tls", "key")),
 		))
 	}
 
@@ -155,7 +179,6 @@ func bodyDumpLog(c echo.Context, reqBody, resBody []byte) {
 
 	if err := json.Unmarshal(resBody, &result); err == nil {
 		message = result["result"]
-		// message = cf.ExpandString(result["_log_extra"], config.LookupTable(result), config.TrimSpace(false))
 	}
 
 	bytes_in := req.Header.Get(echo.HeaderContentLength)
@@ -164,13 +187,11 @@ func bodyDumpLog(c echo.Context, reqBody, resBody []byte) {
 	}
 	starttime := c.Get("starttime").(time.Time)
 	latency := time.Since(starttime)
-	// latency = latency.Round(time.Millisecond)
 
-	fmt.Printf("%v %s %s %3d %s/%d %.3fs %s %s %s %q\n",
-		time.Now().Format(time.RFC3339),     // TIMESTAMP for route access
-		cf.GetString("servicenow.instance"), // name of server (APP) with the environment
-		req.Proto,                           // protocol
-		resStatus,                           // response status
+	log.Info().Msgf("%s %s %3d %s/%d %.3fs %s %s %s %q",
+		cf.GetString("servicenow.url"), // name of server (APP) with the environment
+		req.Proto,                      // protocol
+		resStatus,                      // response status
 		// stats here
 		bytes_in,
 		res.Size,
