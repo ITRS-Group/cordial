@@ -19,7 +19,6 @@ package proxy
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"os"
 	"strings"
@@ -46,7 +45,7 @@ func init() {
 	cmd.RootCmd.AddCommand(routerCmd)
 
 	routerCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Daemonise the proxy process")
-	routerCmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", cmd.Execname+".log", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
+	routerCmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", "-", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
 
 	routerCmd.Flags().SortFlags = false
 
@@ -70,8 +69,7 @@ incident submission or update flow.
 In normal operation the proxy starts and runs in the foreground,
 logging actions and results to stdout/stderr. If started with the
 |--daemon| flag it will background itself and no logging will be
-available. (Logging to an external file will be added in a future
-release)
+available.
 
 The proxy reads it's configuration from a YAML file, which can be
 shared with the submission client function, and uses this to look-up,
@@ -102,7 +100,6 @@ map and submit incidents.
 			}),
 			cordial.RotateOnStart(cf.GetBool("server.log.rotate-on-start")),
 		)
-		fmt.Println("logging to", logFile)
 		proxy(cf)
 	},
 }
