@@ -1,6 +1,6 @@
 # Dockerfile to build cordial components and tar.gz files
 
-ARG GOVERSION=1.24.3
+ARG GOVERSION=1.24.4
 
 # The bullseye image seems to offer the most compatibility, including
 # libemail.so dependencies
@@ -203,7 +203,7 @@ COPY --from=build /app/cordial/integrations/servicenow/servicenow.example.yaml /
 # servicenow2
 COPY --from=build /app/cordial/integrations/servicenow2/servicenow2 /cordial/bin/
 COPY --from=build /app/cordial/integrations/servicenow2/servicenow2.client.example.yaml /cordial/etc/geneos/
-COPY --from=build /app/cordial/integrations/servicenow2/servicenow2.router.example.yaml /cordial/etc/geneos/
+COPY --from=build /app/cordial/integrations/servicenow2/servicenow2.proxy.example.yaml /cordial/etc/geneos/
 
 # pagerduty
 COPY --from=build /app/cordial/integrations/pagerduty/pagerduty /cordial/bin/

@@ -1,6 +1,6 @@
 module github.com/itrs-group/cordial
 
-go 1.24.3
+go 1.24.4
 
 require (
 	github.com/Microsoft/go-winio v0.6.2
@@ -30,7 +30,7 @@ require (
 	github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/lestrrat-go/strftime v1.1.0
-	github.com/mackerelio/go-osstat v0.2.5
+	github.com/mackerelio/go-osstat v0.2.6
 	github.com/maja42/goval v1.6.0
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/pavlo-v-chernykh/keystore-go/v4 v4.5.0
@@ -48,8 +48,8 @@ require (
 	github.com/thediveo/go-asciitree v1.0.2
 	github.com/wneessen/go-mail v0.6.2
 	github.com/xuri/excelize/v2 v2.9.1
-	golang.org/x/crypto v0.38.0
-	golang.org/x/net v0.40.0
+	golang.org/x/crypto v0.39.0
+	golang.org/x/net v0.41.0
 	golang.org/x/oauth2 v0.30.0
 	golang.org/x/sys v0.33.0
 	golang.org/x/term v0.32.0
@@ -68,7 +68,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834 // indirect
 	github.com/charmbracelet/x/ansi v0.9.2 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
-	github.com/charmbracelet/x/exp/slice v0.0.0-20250602103501-ef16141e7b03 // indirect
+	github.com/charmbracelet/x/exp/slice v0.0.0-20250603201427-c31516f43444 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -117,7 +117,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sagikazarmark/locafero v0.9.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
-	github.com/spf13/cast v1.9.1 // indirect
+	github.com/spf13/cast v1.9.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tiendc/go-deepcopy v1.6.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
@@ -134,9 +134,9 @@ require (
 	go.opentelemetry.io/otel/metric v1.36.0 // indirect
 	go.opentelemetry.io/otel/trace v1.36.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/exp v0.0.0-20250531010427-b6e5de432a8b // indirect
-	golang.org/x/text v0.25.0 // indirect
-	golang.org/x/time v0.11.0 // indirect
+	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476 // indirect
+	golang.org/x/text v0.26.0 // indirect
+	golang.org/x/time v0.12.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/mail.v2 v2.3.1 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
