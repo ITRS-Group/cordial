@@ -79,7 +79,7 @@ func LogInit(prefix string, options ...LogOptions) {
 
 	switch opts.logfile {
 	case "":
-		if opts.lj != (&lumberjack.Logger{}) {
+		if opts.lj != nil {
 			if opts.rotateOnStart {
 				opts.lj.Rotate()
 			}
@@ -94,6 +94,9 @@ func LogInit(prefix string, options ...LogOptions) {
 	default:
 		// if given a filename, use the default lumberjack but override
 		// the filename
+		if opts.lj == nil {
+			opts.lj = &lumberjack.Logger{}
+		}
 		opts.lj.Filename = opts.logfile
 
 		out = opts.lj
@@ -129,7 +132,6 @@ type LogOptions func(*logOpts)
 
 func evalLoggerOptions(options ...LogOptions) *logOpts {
 	opts := &logOpts{
-		lj:            &lumberjack.Logger{},
 		rotateOnStart: true,
 	}
 	for _, opt := range options {
