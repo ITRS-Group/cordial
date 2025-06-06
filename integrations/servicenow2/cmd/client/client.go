@@ -237,13 +237,17 @@ var clientCmd = &cobra.Command{
 		log.Debug().Msgf("incident fields after processing defaults:\n%s", string(b))
 
 		if clientCmdProfile == "" {
-			clientCmdProfile = "default"
+			var ok bool
+			if clientCmdProfile, ok = incident[proxy.PROFILE]; !ok {
+				clientCmdProfile = "default"
+			}
 		}
 
 		if err := cf.UnmarshalKey(cf.Join("profiles", clientCmdProfile), &profileGroups); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 		for _, g := range profileGroups {
+			log.Debug().Msgf("processing profile %s: %#v", clientCmdProfile, g)
 			if processActionGroup(cf, g, incident) {
 				break
 			}
@@ -289,7 +293,10 @@ var clientCmd = &cobra.Command{
 			)
 
 			if clientCmdTable == "" {
-				clientCmdTable = cf.GetString(cf.Join("proxy", "default-table"), config.Default(proxy.SNOW_INCIDENT_TABLE))
+				var ok bool
+				if clientCmdTable, ok = incident[proxy.INCIDENT_TABLE]; !ok {
+					clientCmdTable = cf.GetString(cf.Join("proxy", "default-table"), config.Default(proxy.SNOW_INCIDENT_TABLE))
+				}
 			}
 			_, err := rc.Post(context.Background(), clientCmdTable, incident, &result)
 			if err != nil {

@@ -50,6 +50,8 @@ const (
 	CMDB_CI_DEFAULT    = "_cmdb_ci_default"
 	UPDATE_ONLY        = "_update_only"
 	CMDB_TABLE         = "_cmdb_table"
+	PROFILE            = "_profile"
+	INCIDENT_TABLE     = "_table"
 )
 
 type ResultsResponse struct {
