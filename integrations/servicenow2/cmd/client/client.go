@@ -20,6 +20,8 @@ package client
 import (
 	"context"
 	"crypto/sha1"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -74,7 +76,7 @@ var clientCmd = &cobra.Command{
 	ServiceNow API.
 	`, "|", "`"),
 	SilenceUsage: true,
-	Run: func(command *cobra.Command, args []string) {
+	RunE: func(command *cobra.Command, args []string) (err error) {
 		// all keys with a leading "_" are passed to the proxy but the proxy
 		// then removes them in addition to other configuration settings. The expected fields are:
 		//
@@ -224,7 +226,7 @@ var clientCmd = &cobra.Command{
 			}),
 		)
 
-		if err := cf.UnmarshalKey("defaults", &defaults); err != nil {
+		if err = cf.UnmarshalKey("defaults", &defaults); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 		for _, g := range defaults {
@@ -243,7 +245,7 @@ var clientCmd = &cobra.Command{
 			}
 		}
 
-		if err := cf.UnmarshalKey(cf.Join("profiles", clientCmdProfile), &profileGroups); err != nil {
+		if err = cf.UnmarshalKey(cf.Join("profiles", clientCmdProfile), &profileGroups); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 		for _, g := range profileGroups {
@@ -280,15 +282,41 @@ var clientCmd = &cobra.Command{
 		// drop internal string either way
 		delete(incident, proxy.RAW_CORRELATION_ID)
 
-		// b, _ = json.MarshalIndent(incident, "", "    ")
-		// log.Debug().Msgf("incident fields after processing command line args:\n%s", string(b))
-
 		// iterate through proxy urls
 		for _, r := range cf.GetStringSlice(cf.Join("proxy", "url")) {
+			hc := &http.Client{}
+
+			if strings.HasPrefix(r, "https:") {
+				skip := cf.GetBool(cf.Join("proxy", "tls", "skip-verify"))
+				roots, err := x509.SystemCertPool()
+				if err != nil {
+					log.Warn().Err(err).Msg("cannot read system certificates, continuing anyway")
+				}
+
+				if !skip {
+					if chain := cf.GetBytes(cf.Join("proxy", "tls", "chain")); len(chain) != 0 {
+						if ok := roots.AppendCertsFromPEM(chain); !ok {
+							log.Warn().Msg("error reading cert chain")
+						}
+					}
+				}
+
+				hc.Transport = &http.Transport{
+					TLSClientConfig: &tls.Config{
+						RootCAs:            roots,
+						InsecureSkipVerify: skip,
+					},
+				}
+			}
+
 			rc := rest.NewClient(
 				rest.BaseURLString(r),
+				rest.HTTPClient(hc),
 				rest.SetupRequestFunc(func(req *http.Request, _ *rest.Client, _ []byte) {
-					req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", cf.GetString(config.Join("proxy", "authentication", "token"))))
+					req.Header.Add(
+						"Authorization",
+						fmt.Sprintf("Bearer %s", cf.GetString(config.Join("proxy", "authentication", "token"))),
+					)
 				}),
 			)
 
@@ -298,14 +326,10 @@ var clientCmd = &cobra.Command{
 					clientCmdTable = cf.GetString(cf.Join("proxy", "default-table"), config.Default(proxy.SNOW_INCIDENT_TABLE))
 				}
 			}
-			_, err := rc.Post(context.Background(), clientCmdTable, incident, &result)
+			_, err = rc.Post(context.Background(), clientCmdTable, incident, &result)
 			if err != nil {
 				log.Debug().Err(err).Msg("connection error, trying next proxy (if any)")
 				continue
-			}
-
-			if result["message"] != "" {
-				log.Fatal().Msg(result["message"])
 			}
 
 			if result["action"] == "Failed" {
@@ -317,6 +341,8 @@ var clientCmd = &cobra.Command{
 			}
 			break
 		}
+
+		return
 	},
 }
 

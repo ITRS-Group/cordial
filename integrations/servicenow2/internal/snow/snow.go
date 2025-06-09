@@ -40,7 +40,7 @@ type Context struct {
 	Conf *config.Config
 }
 
-func ServiceNow(cf *config.Config) (client *rest.Client) {
+func ServiceNow(cf *config.Config) (rc *rest.Client) {
 	snowMutex.RLock()
 	if snowConnection != nil {
 		snowMutex.RUnlock()
@@ -86,12 +86,12 @@ func ServiceNow(cf *config.Config) (client *rest.Client) {
 
 		hc = conf.Client(context.WithValue(context.Background(), oauth2.HTTPClient, hc))
 
-		client = rest.NewClient(
+		rc = rest.NewClient(
 			rest.BaseURL(p),
 			rest.HTTPClient(hc),
 		)
 	} else {
-		client = rest.NewClient(
+		rc = rest.NewClient(
 			rest.BaseURL(p),
 			rest.HTTPClient(hc),
 			rest.SetupRequestFunc(func(req *http.Request, c *rest.Client, body []byte) {
