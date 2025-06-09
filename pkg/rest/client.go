@@ -126,6 +126,7 @@ func (c *Client) Get(ctx context.Context, endpoint any, request any, response an
 	if response == nil {
 		return
 	}
+
 	err = decodeResponse(resp, response)
 	return
 }
@@ -275,12 +276,18 @@ func decodeResponse(resp *http.Response, response any) (err error) {
 	ct, _, _ = strings.Cut(ct, ";")
 	switch ct {
 	case "text/plain", "text/html":
-		// decode as plain string and return as the err
-		var b []byte
-		if b, err = io.ReadAll(resp.Body); err == nil { // all good?
-			err = errors.New(string(b))
+		switch rt := response.(type) {
+		case []byte:
+			b, _ := io.ReadAll(resp.Body)
+			rt = b
+		case string:
+			b, _ := io.ReadAll(resp.Body)
+			rt = string(b)
+		default:
+			err = http.ErrNotSupported
+			_ = rt // satisfy linter
 		}
-		return
+
 	case "application/json":
 		// stream JSON
 		d := json.NewDecoder(resp.Body)
