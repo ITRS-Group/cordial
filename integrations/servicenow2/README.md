@@ -193,7 +193,22 @@ These additional custom functions are available in this integration:
 
 * `${replace:ENV:/PATTERN/TEXT/}` - apply the regular expression `PATTERN` to the value in the `ENV` environment variable and replace all matches with `TEXT`. `PATTERN` and `TEXT` support the features provided by the Go `regexp` package. To include forward slashes (`/`) or closing brackets (`}`) you must escape them with a backslash.
 
-* `${select:ENV1:ENV2:...:DEFAULT}` - return the value of the first environment variable that is set (including an empty string). The last field is a string returned as a default value if none of the environment variables are set. Remember to include the last colon directly followed by the closing `}` if the default value should be an empty string
+* `${select:ENV1:ENV2:...:DEFAULT}` - return the value of the first environment variable that is set (including an empty string). The last field is a string returned as a default value if none of the environment variables are set. Remember to include the last colon directly followed by the closing `}` if the default value should be an empty string.
+
+  Each ENV* field may also include multiple environment variable names separated by one of: `-`, ` `, `/`, `+` or `++`. A single plus (`+`) is a zero-width separator while a double plus (`++`) results in a single plus sign in the output. The other valid separators are included as-is. If any of the individual environment variables are set then this counts as if the whole field were set. This feature is useful for alternating between aggregate labels each as rowname and column versus headlines.
+
+  For example:
+
+  When `_ROWNAME` is `row`, `_COLUMN` is `data1` and `_HEADLINE` is `headline1` then:
+
+  * `${select:_ROWNAME+_COLUMN:_HEADLINE:None}` becomes `rowdata1`
+  * `${select:_ROWNAME/_COLUMN:_HEADLINE:None}` becomes `row/data1`
+
+  And when `_ROWNAME` and `_COLUMN` are unset then:
+
+  * `${select:_ROWNAME/_COLUMN:_HEADLINE:None}` becomes `headline1`
+
+  Other separators are not valid and result in the field being ignored. Separators may appear before or after the environment variable names as well, but are not taken into account when checking if the values are set.
 
 * `${field:FIELD1:FIELD2:...:DEFAULT}` - returns to current value of the first ServiceNow field set. As per `select` above, DEFAULT is a string that is returned if non of the fields are set.
 

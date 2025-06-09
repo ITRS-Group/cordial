@@ -169,14 +169,23 @@ var clientCmd = &cobra.Command{
 				return
 			}),
 
-			// "select" accepts an expansion (after the `${}` is
-			// removed) in the form `select[:ENV...]:[DEFAULT]` and
+			// "select" accepts an expansion (after the enclosing `${}`
+			// is removed) in the form `select[:ENV...]:[DEFAULT]` and
 			// returns the value of the first environment variable set
 			// or the last field as a static string. If the environment
 			// variable is set but an empty string then the empty string
 			// is returned. In all other cases it returns an empty
 			// string.
+			//
+			// Extend: Each ENV can be made up of multiple environment
+			// variable names concatenated with either a plus (`+`) (as
+			// a zero-length separator), two plus symbols for a single
+			// symbol in the output (`+`) or one of a space (` `), dash
+			// (`-`) or forward slash (`/`).
 			config.Prefix("select", func(cf *config.Config, s string, trim bool) (result string, err error) {
+				// const validSeparators = "+ /-"
+				var r strings.Builder
+
 				s = strings.TrimLeft(s, "select:")
 				envs := strings.Split(s, ":")
 				if len(envs) == 0 {
@@ -187,11 +196,45 @@ var clientCmd = &cobra.Command{
 				envs = envs[:last]
 
 				for _, env := range envs {
-					if v, ok := os.LookupEnv(env); ok {
-						if trim {
-							return strings.TrimSpace(v), nil
+					var e strings.Builder
+					var envIsSet bool
+
+					for i := 0; i < len(env); i++ {
+						switch env[i] {
+						case '+', ' ', '-', '/':
+							if e.Len() > 0 {
+								if v, ok := os.LookupEnv(e.String()); ok {
+									r.WriteString(v)
+									envIsSet = true
+								}
+								e.Reset()
+							}
+							if env[i] == '+' {
+								if len(env) > i+1 && env[i+1] == '+' {
+									r.WriteByte('+')
+									i++
+								}
+							} else {
+								r.WriteByte(env[i])
+							}
+						default:
+							e.WriteByte(env[i])
 						}
-						return v, nil
+					}
+
+					if e.Len() > 0 {
+						if v, ok := os.LookupEnv(e.String()); ok {
+							r.WriteString(v)
+							envIsSet = true
+						}
+						e.Reset()
+					}
+
+					if envIsSet {
+						if trim {
+							return strings.TrimSpace(r.String()), nil
+						}
+						return r.String(), nil
 					}
 				}
 
