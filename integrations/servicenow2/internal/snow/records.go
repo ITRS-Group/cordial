@@ -45,12 +45,40 @@ type snowError struct {
 }
 
 type snowResult struct {
-	Result Results `json:"result,omitempty"`
-	Error  struct {
+	Results Results `json:"result,omitempty"`
+	Error   struct {
 		Message string `json:"message"`
 		Detail  string `json:"detail"`
 	} `json:"error,omitempty"`
 	Status string `json:"status,omitempty"`
+}
+
+type TableQuery struct {
+	Enabled        bool     `mapstructure:"enabled"`
+	Search         string   `mapstructure:"search"`
+	ResponseFields []string `mapstructure:"fields"`
+}
+
+type TableStates struct {
+	Defaults    map[string]string `mapstructure:"defaults,omitempty"`
+	Rename      map[string]string `mapstructure:"rename,omitempty"`
+	MustInclude []string          `mapstructure:"must-include,omitempty"`
+	Remove      []string          `mapstructure:"remove,omitempty"`
+}
+
+type TableResponses struct {
+	Created string `mapstructure:"created,omitempty"`
+	Updated string `mapstructure:"updated,omitempty"`
+	Failed  string `mapstructure:"failed,omitempty"`
+}
+
+type TableData struct {
+	Name          string              `mapstructure:"name,omitempty"`
+	Search        string              `mapstructure:"search,omitempty"`
+	Query         TableQuery          `mapstructure:"query,omitempty"`
+	Defaults      map[string]string   `mapstructure:"defaults,omitempty"`
+	CurrentStates map[int]TableStates `mapstructure:"current-state,omitempty"`
+	Response      TableResponses      `mapstructure:"response,omitempty"`
 }
 
 func LookupRecord(ctx *Context, options ...config.ExpandOptions) (sys_id string, state int, err error) {
@@ -61,9 +89,8 @@ func LookupRecord(ctx *Context, options ...config.ExpandOptions) (sys_id string,
 		return
 	}
 
-	results, err := GetRecord(ctx, AssembleURL(ctx.Param("table"), Fields("sys_id,state"), Query(cf.ExpandString(table.Search, options...))))
+	results, err := GetRecord(ctx, ctx.Param("table"), Fields("sys_id,state"), Query(cf.ExpandString(table.Search, options...)))
 	if err != nil {
-		err = echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("lookup record: %s", err))
 		return
 	}
 	if len(results) == 0 {
@@ -75,14 +102,13 @@ func LookupRecord(ctx *Context, options ...config.ExpandOptions) (sys_id string,
 }
 
 func LookupCmdbCI(ctx *Context, table, query, cmdb_ci_default string) (cmdb_ci string, err error) {
-	r, err := GetRecord(ctx, AssembleURL(table, Fields("sys_id"), Query(query)))
+	result, err := GetRecord(ctx, table, Fields("sys_id"), Query(query))
 	if err != nil {
-		err = echo.NewHTTPError(http.StatusNotFound, err)
 		return
 	}
 
 	var ok bool
-	if cmdb_ci, ok = r["sys_id"]; !ok {
+	if cmdb_ci, ok = result["sys_id"]; !ok {
 		if cmdb_ci_default == "" {
 			err = echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("sys_id not found for query %q", query))
 			return
@@ -95,17 +121,18 @@ func LookupCmdbCI(ctx *Context, table, query, cmdb_ci_default string) (cmdb_ci s
 
 // CreateRecord uses the POST method to send create a new ServiceNow record in the table named as a parameter
 func (record Record) CreateRecord(ctx *Context) (number string, err error) {
-	result, err := PostRecord(ctx, AssembleURL(ctx.Param("table"), Fields("number")), record)
+	result, err := PostRecord(ctx, ctx.Param("table"), record, Fields("number"))
 	number = result["number"]
 	return
 }
 
 func (record Record) UpdateRecord(ctx *Context, sys_id string) (number string, err error) {
-	result, err := PutRecord(ctx, AssembleURL(ctx.Param("table"), Fields("number"), SysID(sys_id)), record)
+	result, err := PutRecord(ctx, ctx.Param("table"), record, Fields("number"), SysID(sys_id))
 	number = result["number"]
 	return
 }
 
+// UnmarshalJSON satisfies the json Unmarshal interface for *Results
 func (x *Results) UnmarshalJSON(b []byte) error {
 	for _, c := range b {
 		switch c {
@@ -127,58 +154,60 @@ func (x *Results) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func GetRecords(ctx *Context, endpoint *url.URL) (result Results, err error) {
-	var r snowResult
+func GetRecords(ctx *Context, table string, options ...Options) (results Results, err error) {
+	var result snowResult
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
-	_, err = rc.Get(ctx.Request().Context(), endpoint, nil, &r)
+	_, err = rc.Get(ctx.Request().Context(), AssembleURL(table, options...), nil, &result)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)
 		return
 	}
-	result = r.Result
+	results = result.Results
 	return
 }
 
-func GetRecord(ctx *Context, endpoint *url.URL) (result results, err error) {
-	var r snowResult
+func GetRecord(ctx *Context, table string, options ...Options) (results results, err error) {
+	var result snowResult
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
-	_, err = rc.Get(ctx.Request().Context(), endpoint, nil, &r)
+	// ensure limit is set to 1
+	options = append(options, Limit(1))
+	_, err = rc.Get(ctx.Request().Context(), AssembleURL(table, options...), nil, &result)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)
 		return
 	}
-	if len(r.Result) > 0 {
-		result = r.Result[0]
-	}
-	return
-}
-
-func PostRecord(ctx *Context, endpoint *url.URL, record Record) (result results, err error) {
-	var r snowResult
-
-	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
-	_, err = rc.Post(ctx.Request().Context(), endpoint, record, &r)
-	if err != nil {
-		err = echo.NewHTTPError(http.StatusInternalServerError, err)
-		return
-	}
-	if len(r.Result) > 0 {
-		result = r.Result[0]
+	if len(result.Results) > 0 {
+		results = result.Results[0]
 	}
 	return
 }
 
-func PutRecord(ctx *Context, endpoint *url.URL, record Record) (result results, err error) {
+func PostRecord(ctx *Context, table string, record Record, options ...Options) (result results, err error) {
 	var r snowResult
 
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
-	_, err = rc.Put(ctx.Request().Context(), endpoint, record, &r)
+	_, err = rc.Post(ctx.Request().Context(), AssembleURL(table, options...), record, &r)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)
 		return
 	}
-	if len(r.Result) > 0 {
-		result = r.Result[0]
+	if len(r.Results) > 0 {
+		result = r.Results[0]
+	}
+	return
+}
+
+func PutRecord(ctx *Context, table string, record Record, options ...Options) (result results, err error) {
+	var r snowResult
+
+	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
+	_, err = rc.Put(ctx.Request().Context(), AssembleURL(table, options...), record, &r)
+	if err != nil {
+		err = echo.NewHTTPError(http.StatusInternalServerError, err)
+		return
+	}
+	if len(r.Results) > 0 {
+		result = r.Results[0]
 	}
 	return
 }
@@ -215,34 +244,6 @@ func AssembleURL(table string, options ...Options) *url.URL {
 	u.RawQuery = v.Encode()
 
 	return u
-}
-
-type TableQuery struct {
-	Enabled        bool     `mapstructure:"enabled"`
-	Search         string   `mapstructure:"search"`
-	ResponseFields []string `mapstructure:"fields"`
-}
-
-type TableStates struct {
-	Defaults    map[string]string `mapstructure:"defaults,omitempty"`
-	Rename      map[string]string `mapstructure:"rename,omitempty"`
-	MustInclude []string          `mapstructure:"must-include,omitempty"`
-	Remove      []string          `mapstructure:"remove,omitempty"`
-}
-
-type TableResponses struct {
-	Created string `mapstructure:"created,omitempty"`
-	Updated string `mapstructure:"updated,omitempty"`
-	Failed  string `mapstructure:"failed,omitempty"`
-}
-
-type TableData struct {
-	Name          string              `mapstructure:"name,omitempty"`
-	Search        string              `mapstructure:"search,omitempty"`
-	Query         TableQuery          `mapstructure:"query,omitempty"`
-	Defaults      map[string]string   `mapstructure:"defaults,omitempty"`
-	CurrentStates map[int]TableStates `mapstructure:"current-state,omitempty"`
-	Response      TableResponses      `mapstructure:"response,omitempty"`
 }
 
 func TableConfig(cf *config.Config, tableName string) (tableData TableData, err error) {

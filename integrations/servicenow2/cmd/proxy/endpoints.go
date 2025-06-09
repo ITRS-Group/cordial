@@ -45,13 +45,13 @@ const (
 	SNOW_CMDB_TABLE     = "cmdb_ci"
 
 	// internal fields
-	RAW_CORRELATION_ID = "_correlation_id"
-	CMDB_SEARCH        = "_cmdb_search"
 	CMDB_CI_DEFAULT    = "_cmdb_ci_default"
-	UPDATE_ONLY        = "_update_only"
+	CMDB_SEARCH        = "_cmdb_search"
 	CMDB_TABLE         = "_cmdb_table"
-	PROFILE            = "_profile"
 	INCIDENT_TABLE     = "_table"
+	PROFILE            = "_profile"
+	RAW_CORRELATION_ID = "_correlation_id"
+	UPDATE_ONLY        = "_update_only"
 )
 
 type ResultsResponse struct {
@@ -99,16 +99,22 @@ func getRecords(c echo.Context) (err error) {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("username %q supplied is invalid", user))
 	}
 
-	u, err := snow.GetRecord(cc, snow.AssembleURL(SNOW_SYS_USER_TABLE, snow.Fields(SNOW_SYS_ID), snow.Query(SNOW_USER_NAME+"="+user), snow.Limit(1)))
+	u, err := snow.GetRecord(cc, SNOW_SYS_USER_TABLE, snow.Limit(1), snow.Fields(SNOW_SYS_ID), snow.Query(SNOW_USER_NAME+"="+user))
 	if err != nil || len(u) == 0 {
-		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("user %q not found in sys_user (and needed for lookup)", user))
+		return
 	}
 
 	q := fmt.Sprintf(`active=true^opened_by=%s`, u[SNOW_SYS_ID])
 
-	l, _ := snow.GetRecords(cc, snow.AssembleURL(tc.Name, snow.Fields(fields), snow.Query(q), snow.Display("true")))
+	results, err := snow.GetRecords(cc, tc.Name, snow.Fields(fields), snow.Query(q), snow.Display("true"))
+	if err != nil {
+		return err
+	}
 
-	return c.JSON(200, ResultsResponse{Fields: strings.Split(fields, ","), Results: l})
+	return c.JSON(200, ResultsResponse{
+		Fields:  strings.Split(fields, ","),
+		Results: results,
+	})
 }
 
 func acceptRecord(c echo.Context) (err error) {
@@ -160,6 +166,7 @@ func acceptRecord(c echo.Context) (err error) {
 		config.LookupTable(lookup_map),
 		config.Default(fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s^ORDERBYDESCnumber", incident[SNOW_CMDB_CI], incident[SNOW_CORRELATION_ID])),
 	)
+
 	if err != nil {
 		return
 	}
@@ -214,21 +221,22 @@ func acceptRecord(c echo.Context) (err error) {
 		}
 		response["_action"] = "Updated"
 		response["_number"] = number
-		// response["_log_extra"] = table.Logging.Updated
 		response["result"] = cf.ExpandString(table.Response.Updated, config.LookupTable(incidentFields, response), config.TrimSpace(false))
-	} else if incident[UPDATE_ONLY] == "true" {
-		response["_action"] = "Ignored"
-		return echo.NewHTTPError(http.StatusAccepted, "No Incident Created. 'update only' option set.")
-	} else {
-		number, err := incident.CreateRecord(req)
-		if err != nil {
-			return err
-		}
-		response["_action"] = "Created"
-		response["_number"] = number
-		// response["_log_extra"] = table.Logging.Created
-		response["result"] = cf.ExpandString(table.Response.Created, config.LookupTable(incidentFields, response), config.TrimSpace(false))
+		return c.JSON(http.StatusOK, response)
 	}
 
-	return c.JSON(201, response)
+	if incident[UPDATE_ONLY] == "true" {
+		response["result"] = "No Incident Created. 'update only' option set."
+		response["_action"] = "Ignored"
+		return c.JSON(http.StatusOK, response)
+	}
+
+	number, err := incident.CreateRecord(req)
+	if err != nil {
+		return err
+	}
+	response["_action"] = "Created"
+	response["_number"] = number
+	response["result"] = cf.ExpandString(table.Response.Created, config.LookupTable(incidentFields, response), config.TrimSpace(false))
+	return c.JSON(http.StatusCreated, response)
 }
