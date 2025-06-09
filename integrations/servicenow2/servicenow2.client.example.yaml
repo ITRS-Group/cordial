@@ -1,35 +1,55 @@
 #
 # The client transforms environment variables to Servicenow fields, plus
-# internal fields prefixed with underscores
+# internal fields (which are all prefixed with underscores - e.g.
+# `_internal`)
+#
+# This configuration file is also used by the `query` command to reach
+# the proxy process.
 #
 
+# The `proxy` section contains the details on where to reach the proxy
+# process, including optional TLS configuration and mandatory authentication
 proxy:
+  # `url` is the proxy endpoint not including table name and is used
+  # for GET, POST and PUT requests
   url: http://localhost:3000/snow/api/v2
-  # the default table on the proxy side
-  default-table: incident
-  default-user: admin
-  # if the URL is `https://...` then the tls settings below take effect
-  tls:
-    # should we check the proxy cert? default true
-    verify: true
-    # chain to validate proxy connection, if none and verify is true then use system roots
-    chain: /path/to/chain.pem
 
-  # different auth types, basic, cert, token etc.
+  # `default-table` selects the ServiceNow incident table name for
+  # scenarios where there may be multiple incident tables configured.
+  # There must be a corresponding configuration on the proxy side and
+  # this cannot be used to select arbitrary ServiceNow tables. This
+  # setting can be overridden on the command line using the `--table/-t`
+  # flag.
+  default-table: incident
+
+  # `default-user` selects the user used for the `query` command and is
+  # ignored for the `client` command. This setting can be overridden on
+  # the command line using the `--query/-q` flag.
+  default-user: admin
+
+  # `authentication` contains the chosen authentication between the
+  # client/query commands and the proxy. At the moment only `token` is
+  # supported.
   authentication:
     # the `token` can be any string as long as it is the same on both
-    # proxy and client - the client being either the incident poster or a
-    # GET requests for all incidents. To protect the plain text, if
+    # proxy and client/query side. To protect the plain text, if
     # required, you can use `geneos aes password` to create an encoded
     # strings that relies on the security of the key file being private
     # to the user. This also allows the configuration file to be shared
     # without sharing the plaintext of the key.
-    #
-    # perhaps allow auto-generated key file for local routers?
     token: ${enc:~/.config/geneos/keyfile.aes:+encs+E33C8DFAFED66ED8EE68019DAEE0106E}
 
-query:
-  fields: [ number, sys_id, cmdb_ci.name, short_description, description, correlation_id, caller_id, opened_by, state ]
+  # the settings in the `tls` section only take effects if the URL
+  # starts `https://...`
+  tls:
+    # should we ignore the server cert chain and hostname verification.
+    # Note that even with a customer chain (below) the hostname still
+    # needs to match the one in the URL, and this is uncommon for
+    # self-managed certificates.
+    skip-verify: false
+    # chain to validate proxy connection, if not defined (and
+    # skip-verify is false) then use system roots
+    chain: ${file:/path/to/chain.pem}
 
 # default ServiceNow fields
 #
@@ -65,10 +85,23 @@ query:
 # config package `ExpandString` function with some custom functions: 
 defaults:
   - set:
+      # standard mappings for all Geneos Actions and Effects
+      _gateway: ${_GATEWAY}
+      _probe: ${_PROBE}
+      _entity: ${_MANAGED_ENTITY}
+      _sampler: ${_SAMPLER}
+      _dataview: ${_DATAVIEW}
+      _severity: ${_SEVERITY}
+      _value: ${_VALUE}
+      _row: ${ROWNAME}
+      _column: ${_COLUMN}
+      _headline: ${_HEADLINE}
+
+      # values required by the proxy
       # cmdb_ci: ${CMDB_CI}
       _cmdb_search: name=${_NETPROBE_HOST}
       _cmdb_table: cmdb_ci
-      _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${_ROWNAME}${_COLUMN}
+      _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${select:_ROWNAME+${_COLUMN}:_HEADLINE:}
       _subject: "Geneos Alert on ${select:_NETPROBE_HOST:Unknown} | ${select:_DATAVIEW:None} | ${_ROWNAME} | ${_COLUMN}${_HEADLINE} is ${_VALUE}"
       _text: |
         Status Message: ${_STATUSMESSAGE}	
@@ -81,12 +114,17 @@ defaults:
         Row: ${_ROWNAME}	
         Column/Headline: ${_COLUMN}${_HEADLINE}	
         Value: ${_VALUE} ${_triggerDetails}
+
+      # other defaults
       category: Alert
       assignment_group: ${ASSIGNMENT_GROUP}
       urgency: 3
       impact: 3
       state: 1
-  - if: [ "${match:_PLUGIN:FKM}", "${match:_DATAVIEW:pattern}" ]
+  # - if: ${match:_SEVERITY:critical}
+    # set:
+      # _profile: infra
+  - if: [ "${match:_PLUGIN:FKM}", "${match:_DATAVIEW:name}" ]
     set:
       # ${replace:_ROWNAME:/#.*$//}
       _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${_filename}${replace:_triggerDetails:^[\d-]+\s[\d-]+::}
@@ -106,6 +144,7 @@ defaults:
       close_code: Closed/Resolved by Caller
       close_notes: Resolved
     unset: [ urgency, impact ]
+      
 
 # profiles, selected from command line; e.g. `opsview`, `INFRA`, `Apps`
 #
@@ -132,14 +171,17 @@ profiles:
           Value: ${_VALUE} ${_triggerDetails}
           Sub-category: ${field:subcategory:None}
           Impact: ${field:impact:3}
-          Urgency: ${field:urgency:3}
+
+  infra:
+    - set:
+        _valuetest: true
 
   opsview:
     - set:
         _subject: Opsview Alert on ${_NETPROBE_HOST} | ${_DATAVIEW} | ${_ROWNAME} | ${_COLUMN}${_HEADLINE} is ${_VALUE}
     - if: [ '${match:_TAGS:\b(core|access|distribution)\b}' ]
       set:
-        subcategory: abc 
+        subcategory: OpsView Alert 
       then:
         - set:
             key: value
