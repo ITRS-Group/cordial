@@ -153,9 +153,56 @@ Each _action group_ supports the following actions (more details [below](#action
 
 The order that action are defined in a group is not important as they are always processed in the order above.
 
-### ServiceNow Field Naming
+### ServiceNow Fields
 
-All the fields built on the client-side are passed to the proxy process, which will perform further processing. Those stages are described further below, but it is worth noting the following behaviour; All fields that start with an underscore (`_`) are considered internal and are typically used to pass values to the proxy that will never be sent directly to ServiceNow. For example, the `_subject` field can be used as the `short_description` when creating a new incident or included in the `work_notes` when updating an existing incident (or dropped entirely). Other internal fields may be simply to pass query information, such as `_cmdb_ci_default`.
+All the fields built on the client-side are passed to the proxy process, which will perform further processing. Those stages are described further below, but it is worth noting the following behaviour; All fields that start with an underscore (`_`) are internal to the integration and are discarded by the proxy after processing and are used to pass values that control that processing. For example, the `_subject` field can be used as the `short_description` when creating a new incident or included in the `work_notes` when updating an existing incident (or dropped entirely). Other internal fields may be simply to pass query information, such as `_cmdb_ci_default`.
+
+Internal fields with special meanings are:
+
+* `_subject` - Default `Geneos Alert on ${select:_NETPROBE_HOST:Unknown} | ${select:_DATAVIEW:None} | ${_ROWNAME} | ${_COLUMN}${_HEADLINE} is ${_VALUE}`
+
+  This field is used to populate the `short_description` field when creating new incidents and discarded otherwise.
+
+* `_text` - Default is a multiline summary of the alert
+
+  This field is used to populate the `description` field for new incidents and the `work_notes` field for incident updates.
+
+* `_cmdb_ci_default` - No default
+
+  The `sys_id` value for the default configuration item if the search returns nothing. For example, defining a Managed Entity Attribute with a known `sys_id` and then using that like:
+
+  ```yaml
+  defaults:
+    - set:
+      _cmdb_ci_default: ${SNOW_SYS_ID}
+  ```
+
+* `_cmdb_search` - Default `name=${_NETPROBE_HOST}`
+
+  The Service Now formatted search string to lookup the CMDB_CI. The supported format is documented across these pages:
+
+  * <https://www.servicenow.com/docs/bundle/xanadu-platform-user-interface/page/use/using-lists/concept/c_EncodedQueryStrings.html>
+  * <https://www.servicenow.com/docs/bundle/xanadu-platform-user-interface/page/use/common-ui-elements/reference/r_OpAvailableFiltersQueries.html>
+
+* `_cmdb_table` - Default `cmdb_ci`
+
+  The name of the table to search for the configuration item using `_cmdb_search` above.
+
+* `_table` - Default `incident`
+
+  The name of the incident table to use. This can be overridden by the command line `--table/-t` flags.
+
+* `_profile` - Default `default`
+
+  The name of the Action Group profile to use. This can be overridden by the command line `--profile/-p` flags.
+
+* `_correlation_id` - Default `${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${select:_ROWNAME+$_COLUMN:_HEADLINE:}`
+
+  This is the textual correlation string used to generate the real `correlation_id` field that is used to search for an existing incident. The `correlation_id` field is formed from the SHA1 checksum/hash of the given string. If a `correlation_id` field is defined then this internal field is not used.
+
+* `_update_only` - Default `false`
+
+  If set to true, then incidents are only updated if they already exist. This can be useful where your monitoring should only update an existing incident, for example if a WARNING severity event is triggered that should only update an existing CRITICAL, but not raise it's own incident.
 
 ### Value Expansion
 
