@@ -103,7 +103,7 @@ var queryCmd = &cobra.Command{
 			)
 
 			if queryCmdTable == "" {
-				queryCmdTable = cf.GetString(config.Join("proxy", "default-table"), config.Default(proxy.SNOW_INCIDENT_TABLE))
+				queryCmdTable = proxy.SNOW_INCIDENT_TABLE
 			}
 			if queryCmdUser == "" {
 				queryCmdUser = cf.GetString(config.Join("proxy", "default-user"))

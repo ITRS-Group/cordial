@@ -14,14 +14,6 @@ proxy:
   # for GET, POST and PUT requests
   url: http://localhost:3000/snow/api/v2
 
-  # `default-table` selects the ServiceNow incident table name for
-  # scenarios where there may be multiple incident tables configured.
-  # There must be a corresponding configuration on the proxy side and
-  # this cannot be used to select arbitrary ServiceNow tables. This
-  # setting can be overridden on the command line using the `--table/-t`
-  # flag.
-  default-table: incident
-
   # `default-user` selects the user used for the `query` command and is
   # ignored for the `client` command. This setting can be overridden on
   # the command line using the `--query/-q` flag.
@@ -96,6 +88,14 @@ defaults:
       _row: ${ROWNAME}
       _column: ${_COLUMN}
       _headline: ${_HEADLINE}
+
+      # `_table` selects the ServiceNow incident table name for
+      # scenarios where there may be multiple incident tables configured.
+      # There must be a corresponding configuration on the proxy side and
+      # this cannot be used to select arbitrary ServiceNow tables. This
+      # setting can be overridden on the command line using the `--table/-t`
+      # flag.
+      _table: incident
 
       # values required by the proxy
       # cmdb_ci: ${CMDB_CI}

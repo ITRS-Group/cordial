@@ -366,7 +366,7 @@ var clientCmd = &cobra.Command{
 			if clientCmdTable == "" {
 				var ok bool
 				if clientCmdTable, ok = incident[proxy.INCIDENT_TABLE]; !ok {
-					clientCmdTable = cf.GetString(cf.Join("proxy", "default-table"), config.Default(proxy.SNOW_INCIDENT_TABLE))
+					clientCmdTable = proxy.SNOW_INCIDENT_TABLE
 				}
 			}
 			_, err = rc.Post(context.Background(), clientCmdTable, incident, &result)
