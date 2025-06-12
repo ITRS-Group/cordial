@@ -48,7 +48,6 @@ func init() {
 	routerCmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", "-", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
 
 	routerCmd.Flags().SortFlags = false
-
 }
 
 // routerCmd represents the proxy command
