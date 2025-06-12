@@ -23,6 +23,7 @@ import (
 	"maps"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -94,6 +95,11 @@ func getRecords(c echo.Context) (err error) {
 		fields = strings.Join(tc.Query.ResponseFields, ",")
 	}
 
+	// validate fields
+	if !validateFields(strings.Split(fields, ",")) {
+		return echo.NewHTTPError(http.StatusBadRequest, "one or more field names are invalid or not unique")
+	}
+
 	// real basic validation of user
 	if !userRE.MatchString(user) {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("username %q supplied is invalid", user))
@@ -117,6 +123,45 @@ func getRecords(c echo.Context) (err error) {
 	})
 }
 
+var snowField1 = regexp.MustCompile(`^[\w-]+$`)
+
+// validateFields checks all the keys in the snow.Record incident.
+// ServiceNow fields can consist of letters, numbers, underscored and
+// hyphens and cannot begin or end with a hyphen. They cannot be an
+// empty string either.
+//
+// it also lowercases all fields names and if there is a clash it
+// returns false.
+//
+// if there are no invalid fields, the function returns true.
+func validateFields(keys []string) bool {
+	// check keys are valid (we cannot use a single regexp to check for
+	// non leading hyphen on a single char string)
+	for _, k := range keys {
+		if k == "" || strings.HasPrefix(k, "-") || strings.HasSuffix(k, "-") {
+			return false
+		}
+		if !snowField1.MatchString(k) {
+			return false
+		}
+	}
+
+	// check keys are unique when lowercased
+	//
+	// NOTE: this could be skipped as viper lowercases all parameters
+	// names from yaml, but we change future YAML parsers
+	slices.SortFunc(keys, func(a, b string) int {
+		return strings.Compare(strings.ToLower(a), strings.ToLower(b))
+	})
+
+	l1 := len(keys)
+	l2 := len(slices.Compact(keys))
+	if l1 != l2 {
+		return false
+	}
+	return true
+}
+
 func acceptRecord(c echo.Context) (err error) {
 	var incident snow.Record
 	var ok bool
@@ -136,6 +181,11 @@ func acceptRecord(c echo.Context) (err error) {
 
 	if err = json.NewDecoder(c.Request().Body).Decode(&incident); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
+	}
+
+	// validate incident field names
+	if !validateFields(slices.Collect(maps.Keys(incident))) {
+		return echo.NewHTTPError(http.StatusBadRequest, "one or more field names are invalid or not unique")
 	}
 
 	// if not given an explicit cmdb_ci then search based on config
