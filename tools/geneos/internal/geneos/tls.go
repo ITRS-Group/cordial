@@ -18,6 +18,7 @@ limitations under the License.
 package geneos
 
 import (
+	"bytes"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -131,7 +132,7 @@ func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err e
 // DecomposePEM parses PEM formatted data and extracts the leaf
 // certificate, any CA certs as a chain and a private key as a DER
 // encoded *memguard.Enclave. The key is matched to the leaf
-// certificate.
+// certificate, and only returned if they match.
 func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave, chain []*x509.Certificate, err error) {
 	var certs []*x509.Certificate
 	var leaf *x509.Certificate
@@ -186,8 +187,8 @@ func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave
 	cert = leaf
 	chain = certs
 
-	// if we have no leaf certificate then user the first cert from the
-	// chain BUT leave do not remove from the chain. order is not checked
+	// if we have no leaf certificate then use the first cert from the
+	// chain BUT do not remove from the chain. order is not checked
 	if cert == nil {
 		cert = chain[0]
 	}
@@ -239,6 +240,25 @@ func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) 
 
 	if key == nil {
 		return errors.New("no matching private key found")
+	}
+
+	// write root cert, but only if it's the only other cert in the
+	// chain (the chain will contain both the signing cert and root, as
+	// there is no leaf cert) and it's self-signed. overwrite any
+	// existing root.
+	if len(chain) == 2 {
+		root := chain[1]
+		rootCA := path.Join(confDir, RootCABasename+".pem")
+
+		if bytes.Equal(root.RawIssuer, root.RawSubject) && root.IsCA {
+			// if st, err := os.Stat(rootCA); !errors.Is(err, os.ErrNotExist) {
+			// 	return errors.New("rootCA.pem is already present in user config directory, will not overwrite")
+			// }
+			if err = config.WriteCert(LOCAL, rootCA, root); err != nil {
+				return err
+			}
+			fmt.Printf("%s root certificate written to %s\n", cordial.ExecutableName(), rootCA)
+		}
 	}
 
 	if err = config.WriteCert(LOCAL, path.Join(confDir, SigningCertBasename+".pem"), cert); err != nil {
