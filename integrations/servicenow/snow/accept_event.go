@@ -155,15 +155,20 @@ func AcceptEvent(c echo.Context) (err error) {
 // an empty value means delete any value passed - e.g. short_description in an update
 func configDefaults(incident IncidentFields, defaults map[string]string) {
 	for k, v := range defaults {
+		if v == "" {
+			delete(incident, k)
+			continue
+		}
 		if _, ok := incident[k]; !ok {
+			if v == "" {
+				continue
+			}
 			// trim spaces and surrounding quotes before unquoting embedded escapes
 			str, err := strconv.Unquote(`"` + strings.Trim(v, `"`) + `"`)
 			if err == nil {
 				v = str
 			}
 			incident[k] = v
-		} else if v == "" {
-			delete(incident, k)
 		}
 	}
 }
