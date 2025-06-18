@@ -63,9 +63,9 @@ proxy:
 #     client sets all the fields names (in an undefined order) to the
 #     expanded values on the right
 #   - `unset` - is list of names. unset any fields given.
-#   - `then` - evaluate a subsection, and terminating evaluation if the
-#     subsection uses `skip`
-#   - `skip` - skip stops processing of the level above the block it
+#   - `subgroup` - evaluate a subsection, and terminating evaluation if the
+#     subsection uses `break`
+#   - `break` - break stops processing of the level above the block it
 #     appears in, and is used to terminate further evaluation of `if`s
 #     etc.
 #
@@ -133,7 +133,7 @@ defaults:
       impact: 1
       urgency: 1
     # ignore the rest
-    # skip: true
+    # break: true
   - if: ${match:_SEVERITY:(WARNING|warning|2)}
     set:
       impact: 3
@@ -182,7 +182,7 @@ profiles:
     - if: [ '${match:_TAGS:\b(core|access|distribution)\b}' ]
       set:
         subcategory: OpsView Alert 
-      then:
+      subgroup:
         - set:
             key: value
         - if: ${match:_DATAVIEW:^(Connectivity|Uptime)}
@@ -190,7 +190,7 @@ profiles:
             subcategory: "Network Device Down"
             impact: 2
             urgency: 2
-          skip: true
+          break: true
         - if: ${match:_DATAVIEW:^SNMP}
           set:
             subcategory: "Network Security"
@@ -201,7 +201,7 @@ profiles:
             subcategory: "Network Configuration Error"
             impact: 3
             urgency: 3
-          skip: true
+          break: true
         - if: ${match:_DATAVIEW:^(Discards|Errors)}
           set:
             subcategory: "Network Performance"

@@ -146,10 +146,10 @@ This processing is done in two _sections_, `defaults` and a selected _profile_, 
 Each _action group_ supports the following actions (more details [below](#actions-groups)):
 
 * `if` - Continue processing this group if the value(s) evaluate to `true`. The default is to act as if `if: true` is used.
-* `then` - Starts a new, lower level, group which is then processed in order and recursively
 * `set` - A list of key/value pairs. Evaluates the right side and sets the named field, overwriting any previous value
 * `unset` - Removes the field from the currently defined set
-* `skip` - Exits the processing of the **_parent_** group
+* `subgroup` - Starts a new, lower level, group which is then processed in order and recursively
+* `break` - Exits the processing of the **_parent_** group
 
 The order that action are defined in a group is not important as they are always processed in the order above.
 
@@ -212,7 +212,7 @@ Almost all the right-hand side values in the YAML configuration file support a c
     _subject: Geneos Alert on ${select:_NETPROBE_HOST:Unknown} | ${select:_DATAVIEW:None} | ${_ROWNAME} ${_COLUMN}
 ```
 
-These are standard _cordial_ expansion functions:
+The standard _cordial_ expansion functions:
 
 * `${env:ENV}` or `${ENV}`
 
@@ -234,7 +234,7 @@ These are standard _cordial_ expansion functions:
 
   Decrypt the `ENCRYPTED` string using the AES file path given. Use this to embed credentials which cannot be decrypted without the AES file. To create a field of this format you can run `geneos aes password`.
 
-These additional custom functions are available in this integration:
+Additional custom functions:
 
 * `${match:ENV:PATTERN}` - evaluate PATTERN as a regular expression against the contents of `ENV` environment variable and return `true` or `false`. If ENV is an empty string (or not set) then `matchenv` returns `false`
 
@@ -246,7 +246,7 @@ These additional custom functions are available in this integration:
 
   For example:
 
-  When `_ROWNAME` is `row`, `_COLUMN` is `data1` and `_HEADLINE` is `headline1` then:
+  When `_ROWNAME` is `row`, `_COLUMN` is `data1` and `_HEADLINE` is `headline1` group:
 
   * `${select:_ROWNAME+_COLUMN:_HEADLINE:None}` becomes `rowdata1`
   * `${select:_ROWNAME/_COLUMN:_HEADLINE:None}` becomes `row/data1`
@@ -261,7 +261,7 @@ These additional custom functions are available in this integration:
 
 ### Actions Groups
 
-Below are more details, and examples, for each action that can be included in a group. Groups may only contain at most on of each action.
+Action Groups can contain one of each of the named entries below. The entries are evaluated in a specific order, as shown in the introduction above (and in the order of the sections below).
 
 #### `if`
 
@@ -286,35 +286,6 @@ defaults:
     set: ... 
 ```
 
-#### `then`
-
-A `then` action introduces a sub-group that can contain multiple groups as an array of YAML objects.
-
-For example, these two `if` sections result in identical results:
-
-```yaml
-defaults:
-  - if: TEST
-    set: ...
-
-  - if: TEST
-    then:
-      - set: ...
-```
-
-Using `then` is useful when further tests are required and these are also processed in top down order. For example, grouping together tests that all depends on a _parent_ value, such as testing a Managed Entity Attribute value. e.g.
-
-```yaml
-defaults:
-  - if: ${match:ENVIRONMENT:\bPROD\b}$
-    then:
-      - if: ${match:CATEGORY:\bDatabase\b}
-        set:
-          ...
-```
-
-See `skip` below as a way of exiting a list of groups based on a test.
-
 #### `set`
 
 ```yaml
@@ -334,23 +305,52 @@ The `set` action, as the name suggests, sets the fields to the expanded values o
   unset: _text
 ```
 
-#### `skip`
+#### `subgroup`
 
-`skip` evaluates the value(s) on the right, the same way as the `if` action, and terminates further processing of groups in the same parent group or section. Skip is, however, evaluated last and so allows other actions to be processed in the same group and then (as the name suggests) skip further processing below at the same level.
+A `subgroup` introduces group(s) that contain further action group(s) as an array of YAML objects.
+
+For example, these two `if` sections result in identical results:
+
+```yaml
+defaults:
+  - if: TEST
+    set: ...
+
+  - if: TEST
+    subgroup:
+      - set: ...
+```
+
+Using `subgroup` is useful when further tests are required and these are also processed in top down order. For example, grouping together tests that all depends on a _parent_ value, such as testing a Managed Entity Attribute value. e.g.
+
+```yaml
+defaults:
+  - if: ${match:ENVIRONMENT:\bPROD\b}$
+    subgroup:
+      - if: ${match:CATEGORY:\bDatabase\b}
+        set:
+          ...
+```
+
+See `break` below as a way of exiting a list of groups based on a test.
+
+#### `break`
+
+`break` evaluates the value(s) on the right, the same way as the `if` action, and terminates further processing of groups in the same parent group or section. Break is, however, evaluated last and so allows other actions to be processed in the same group and then (as the name suggests) break further processing below at the same level.
 
 ```yaml
   # long format
   - if: ${match:_SAMPLER:mySampler}
-    skip: true
+    break: true
 
   # combined
-  - skip: ${match:_SAMPLER:mySampler}
+  - break: ${match:_SAMPLER:mySampler}
 
   # more actions
   - if: ${match:_SAMPLER:mySampler}
     set:
       _subject: Alert in ${_SAMPLER}
-    skip: true
+    break: true
 ```
 
 ### Configuration Sections
@@ -378,3 +378,54 @@ The Geneos Gateway executing the integration client can select a _profile_ in th
 ### `servicenow`
 
 ### `tables`
+
+Incidents can be applied to different tables, depending on the configuration. By default only the `incident` table is configured. The `tables` section can include a list of tables, each containing the keys below.
+
+* `name` - No default
+
+  The name of the table in ServiceNow, e.g. `incident`
+
+* `query`
+
+  The `query` section controls how the proxy handles queries to the API endpoint.
+
+* `search`
+
+  `search` is the ServiceNow filter query used to lookup existing incidents
+
+* `response`
+
+  This section defines the three messages returned to the caller on incident creation, update or failure. It can be used to format custom messages which include values of interest to your specific installation. Expansion values include fields by name after all other processing is complete but before internal fields are removed.
+
+* `defaults`
+
+  The `defaults` section contains key/value pairs of field values that are used as defaults if they are not set by the client or by processing (see below) in the proxy.
+
+* `current-state`
+
+  The `current-states` section is evaluated based on the existing numeric value of the state of the incident in ServiceNow, and using `0` if no existing incident is found.
+
+  Each state-valued block can include the following (evaluated in the the order shown):
+
+  * `defaults`
+
+    `defaults` sets default values for the given current state. These override the general defaults above but only take effect if the fields are not defined by the client.
+
+  * `remove`
+
+    A list of fields to remove.
+
+    Note that all internal fields, those prefixed with an underscore (`_`) are removed after the evaluation done in `current-states`.
+
+  * `rename`
+
+    A list of old and new names for fields to rename. This is the configuration section where internal fields, like `_text` can be set to their final names, like `work_notes`
+
+  * `must-include`
+
+    A list of fields that must be present in the set at the point of evaluation, or an error is returned to the caller.
+
+  * `filter`
+
+    If defined, an inclusive list of regular expression filters that are applied to the ServiceNow fields, and fields not matching at least one of the filters is removed from the set sent to ServiceNow. If there is no filter list defined then no filtering is performed.
+    

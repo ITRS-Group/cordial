@@ -42,11 +42,11 @@ import (
 )
 
 type ActionGroup struct {
-	If    []string          `json:"if,omitempty"`
-	Skip  []string          `json:"skip,omitempty"`
-	Set   map[string]string `json:"set,omitempty"`
-	Unset []string          `json:"unset,omitempty"`
-	Then  []ActionGroup     `json:"then,omitempty"`
+	If       []string          `json:"if,omitempty"`
+	Set      map[string]string `json:"set,omitempty"`
+	Unset    []string          `json:"unset,omitempty"`
+	Subgroup []ActionGroup     `json:"subgroup,omitempty"`
+	Break    []string          `json:"break,omitempty"`
 }
 
 // flags
@@ -390,7 +390,7 @@ var clientCmd = &cobra.Command{
 }
 
 // processActionGroup evaluates the SnowClientConfig structure and if
-// the caller should stop processing (skip) then returns `true`. The
+// the caller should stop processing (break) then returns `true`. The
 // evaluation is in the following order:
 //
 //   - `if`: one or more strings that are evaluated and the results
@@ -400,9 +400,9 @@ var clientCmd = &cobra.Command{
 //   - `set`: an object that sets the fields, unordered, to the value
 //     passed through expansion with [config.ExpandString]
 //   - `unset`: unset the list of field names
-//   - `then`: evaluate a sub-group, terminating evaluation if the
-//     group includes `skip` (after evaluating any `if` actions as true)
-//   - `skip`: skip returns true to the caller, allow them to stop
+//   - `subgroup`: evaluate a sub-group, terminating evaluation if the
+//     group includes `break` (after evaluating any `if` actions as true)
+//   - `break`: break returns true to the caller, allow them to stop
 //     processing early. This is used to stop evaluation in a parent
 func processActionGroup(cf *config.Config, ag ActionGroup, incident snow.Record) bool {
 	for _, i := range ag.If {
@@ -419,13 +419,13 @@ func processActionGroup(cf *config.Config, ag ActionGroup, incident snow.Record)
 		delete(incident, field)
 	}
 
-	for _, t := range ag.Then {
+	for _, t := range ag.Subgroup {
 		if processActionGroup(cf, t, incident) {
 			return false
 		}
 	}
 
-	for _, i := range ag.Skip {
+	for _, i := range ag.Break {
 		if b, err := strconv.ParseBool(cf.ExpandString(i)); err != nil && b {
 			return true
 		}

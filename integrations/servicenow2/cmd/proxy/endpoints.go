@@ -255,6 +255,19 @@ func acceptRecord(c echo.Context) (err error) {
 				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("missing field %q", i))
 			}
 		}
+
+		// Filter, if defined, is a slice of regexps to filter incident
+		// fields. Only fields matching the filters will be retained.
+		if len(s.Filter) > 0 {
+			for key := range incident {
+				if !slices.ContainsFunc(s.Filter, func(f string) bool {
+					match, _ := regexp.MatchString(f, key) // ignore error as this would be a failed match anyway
+					return match
+				}) {
+					delete(incident, key)
+				}
+			}
+		}
 	}
 
 	// now remove all fields prefixed with an underscore, but leaves
@@ -271,7 +284,11 @@ func acceptRecord(c echo.Context) (err error) {
 		}
 		response["_action"] = "Updated"
 		response["_number"] = number
-		response["result"] = cf.ExpandString(table.Response.Updated, config.LookupTable(incidentFields, response), config.TrimSpace(false))
+		response["result"] = cf.ExpandString(
+			table.Response.Updated,
+			config.LookupTable(incidentFields, response),
+			config.TrimSpace(false),
+		)
 		return c.JSON(http.StatusOK, response)
 	}
 
@@ -287,6 +304,10 @@ func acceptRecord(c echo.Context) (err error) {
 	}
 	response["_action"] = "Created"
 	response["_number"] = number
-	response["result"] = cf.ExpandString(table.Response.Created, config.LookupTable(incidentFields, response), config.TrimSpace(false))
+	response["result"] = cf.ExpandString(
+		table.Response.Created,
+		config.LookupTable(incidentFields, response),
+		config.TrimSpace(false),
+	)
 	return c.JSON(http.StatusCreated, response)
 }

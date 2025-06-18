@@ -61,9 +61,10 @@ type TableQuery struct {
 
 type TableStates struct {
 	Defaults    map[string]string `mapstructure:"defaults,omitempty"`
+	Remove      []string          `mapstructure:"remove,omitempty"`
 	Rename      map[string]string `mapstructure:"rename,omitempty"`
 	MustInclude []string          `mapstructure:"must-include,omitempty"`
-	Remove      []string          `mapstructure:"remove,omitempty"`
+	Filter      []string          `mapstructure:"filter,omitempty"`
 }
 
 type TableResponses struct {
