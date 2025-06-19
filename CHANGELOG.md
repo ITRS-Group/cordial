@@ -43,6 +43,7 @@
 * `tools/geneos`
 
   * `geneos tls renew` should not create new certificates for instances that did not previously have them
+  * Fix importing of root CA cert when importing a signing bundle
 
 ### Version 1.21.0 To Do Before Release
 
