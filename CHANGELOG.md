@@ -3,11 +3,11 @@
 ## Version v1.21.0-beta
 
 > [!NOTE]
-> **Released 2025-06-03** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2025-06-19** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
-### Version v1.20.1 Highlights
+### Version v1.21.0 Highlights
 
-* A new ServiceNow incident integrations
+* A new ServiceNow incident integration
 
 ### Version v1.21.0 Changes
 
@@ -44,11 +44,6 @@
 
   * `geneos tls renew` should not create new certificates for instances that did not previously have them
   * Fix importing of root CA cert when importing a signing bundle
-
-### Version 1.21.0 To Do Before Release
-
-* Documentation still needs to be updated to be in sync with changes to most components
-* ServiceNow v2 needs better error reporting
 
 ## Version v1.20.1
 
