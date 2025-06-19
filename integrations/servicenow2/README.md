@@ -15,11 +15,11 @@ The _client_ command uses environment variables and command line flags, while th
 
 The ServiceNow integration is delivered as a single binary. A command argument is used to select _client_, _router_ or _query_ modes. You will need to install the binary (**`servicenow2`**) in a suitable directory so that it can be executed by Geneos Gateways as a client and, if the same host is used to connect to your ServiceNow instance, run as a proxy.
 
-If your ServiceNow instance can only be contacted from a specific network endpoint then you must also install the binary there and ensure you select a listening port that the Gensos Gateway's ServiceNow _client_ process can connect to.
+If your ServiceNow instance can only be contacted from a specific network endpoint then you must also install the binary there and ensure you select a listening port that the Geneos Gateway's ServiceNow _client_ process can connect to.
 
 The example configuration files provided with the integration should serve as a good starting point to get you up and running. You will need to, at minimum, edit the **`proxy`** configuration file with the details of your ServiceNow instance; the network address and authentication details. If your proxy process runs on a different endpoint to your client(s) then you will also need to modify the listening address, which defaults to localhost only (and also consider implementing TLS which requires a certificate and private key matching the host and domain name of the proxy endpoint).
 
-### Run The Proxy
+### Getting Started - Run The Proxy
 
 Copy the **`servicenow2`** binary to a suitable directory. If you are not sure where then use either `/usr/local/bin/` (if you have superuser privileges), or `${HOME}/bin/` if you are doing this as a normal user. If `${HOME}/bin` does not exist then create it with `mkdir ${HOME}/bin`. (Note: `${HOME}` is your user home directory and is automatically set by your Linux shell when you login). Check that the binary is executable using `ls -l` or just set it to executable by running `chmod +x [PATH]` where `[PATH]` is the full path to the binary, e.g. `${HOME}/bin/servicenow2`
 
@@ -63,7 +63,7 @@ Where `EXAMPLE` should be replaced by your token, in plaintext. You should see o
 
 Any other results means you need to review the configuration, the ServiceNow user details and the connectivity to your ServiceNow instance.
 
-### Configure The Client
+### Getting Started - Configure The Client
 
 Now that the proxy is running you can build the client configuration file and the Gateway Actions/Effects you want to use it.
 
@@ -126,7 +126,7 @@ There is also a `query` command that will fetch the incidents for the given user
 
 The `query` command uses the `servicenow2.client.yaml` configuration file for proxy connection information. The fields that are returned, and the query sent to ServiceNow, are both defined in the proxy configuration and cannot be controlled by the `query` command.
 
-## Client Configuration Reference
+## Client Configuration
 
 The client configuration file controls the transformation of Geneos Action/Effect environment variables to ServiceNow files in the form of name/value pairs. The file is in YAML format but supports Cordial's "expandable" format for almost all values (right of the `:`). See below for more information.
 
@@ -149,7 +149,7 @@ Each _action group_ supports the following actions (more details [below](#action
 * `set` - A list of key/value pairs. Evaluates the right side and sets the named field, overwriting any previous value
 * `unset` - Removes the field from the currently defined set
 * `subgroup` - Starts a new, lower level, group which is then processed in order and recursively
-* `break` - Exits the processing of the **_parent_** group
+* `break` - Stop further processing of the **_containing_** group
 
 The order that action are defined in a group is not important as they are always processed in the order above.
 
@@ -259,7 +259,7 @@ Additional custom functions:
 
 * `${field:FIELD1:FIELD2:...:DEFAULT}` - returns to current value of the first ServiceNow field set. As per `select` above, DEFAULT is a string that is returned if non of the fields are set.
 
-### Actions Groups
+### Client Actions Groups
 
 Action Groups can contain one of each of the named entries below. The entries are evaluated in a specific order, as shown in the introduction above (and in the order of the sections below).
 
@@ -353,79 +353,147 @@ See `break` below as a way of exiting a list of groups based on a test.
     break: true
 ```
 
-### Configuration Sections
+### Client Configuration Sections
 
-#### `proxy`
+* `proxy`
 
-The first part of the configuration file is `proxy` and contains the settings on how to communicate with the proxy process.
+  The first part of the configuration file is `proxy` and contains the settings on how to communicate with the proxy process.
 
-#### `query`
+  * `url`
 
-#### `defaults`
+    The URL of the proxy. This is normally of the form `https://HOSTNAME:PORT/snow/api/v2` where `HOSTNAME` is likely to be `localhost` and the default port is 3000. These values are set in the proxy configuration, and if you are not responsible for configuring the proxy part of this integration then please obtain the correct value from the administrator.
 
-This section sets default values for fields.
+  * `default-user` - Default `admin`
 
-* `_cmdb_id_default`
+    This is the default ServiceNow user name to use for the `query` command and is ignored for the `client` command.
 
-#### `profiles`
+    The default value of `admin` is only useful for testing and should be set carefully.
 
-The Geneos Gateway executing the integration client can select a _profile_ in the configuration file. If no profile is selected then the `default` profile is used. Note that this is different to the top-level `defaults` section described above. Using profiles allows you to reduce the required nesting of test and so on by categorising settings, such a `opsview` or `infrastructure` and then using this name from different Actions or Alert/Effects in the Gateway.
+  * `authentication`
 
-## Proxy Configuration Reference
+    The `authentication` section needs to match the settings in the proxy. At this time only `token` is supported.
 
-### `proxy`
+    * `token`
 
-### `servicenow`
+      A string which must match the setting on the proxy. This value can be opaqued by using a _cordial_ AES encoded expansion value, such as that generated by `geneos aes password`.
 
-### `tables`
+  * `tls`
 
-Incidents can be applied to different tables, depending on the configuration. By default only the `incident` table is configured. The `tables` section can include a list of tables, each containing the keys below.
+    If the `url` above uses a `https` scheme then the settings in this section take effect. They are ignored otherwise.
 
-* `name` - No default
+    * `skip-verify` - Default `false`
 
-  The name of the table in ServiceNow, e.g. `incident`
+      By default the proxy certificate must both match the hostname portion or the URL and the certificate chain is also checked. If `true` then no certificate validation is done.
 
-* `query`
+    * `chain`
 
-  The `query` section controls how the proxy handles queries to the API endpoint.
+      If set, `chain` is used to verify the proxy certificate. The chain should be one or more PEM encoded certificates and can either be given inline (for example as a multiline YAML value) or loaded from a file using `${file:/path/to/file.pem}` style expansion values.
 
-* `search`
-
-  `search` is the ServiceNow filter query used to lookup existing incidents
-
-* `response`
-
-  This section defines the three messages returned to the caller on incident creation, update or failure. It can be used to format custom messages which include values of interest to your specific installation. Expansion values include fields by name after all other processing is complete but before internal fields are removed.
+      When no chain is given, then only the operating system PKI CA certificates are used for verification. Note that these are always used, even if a custom `chain` is set.
 
 * `defaults`
 
-  The `defaults` section contains key/value pairs of field values that are used as defaults if they are not set by the client or by processing (see below) in the proxy.
+  This section sets default values for fields. It is made up of a list of [Action Groups](#client-actions-groups) that are processed in the order given.
 
-* `current-state`
+* `profiles`
 
-  The `current-states` section is evaluated based on the existing numeric value of the state of the incident in ServiceNow, and using `0` if no existing incident is found.
+  When the Geneos Gateway runs the integration client it can select a _profile_. If no profile is selected then a profile labelled `default` is used. Note that this is different to the top-level `defaults` above. Using profiles allows you to reduce the required nesting of tests  by categorising into related action groups, such a `opsview` or `infrastructure` and then using this name from different Geneos Actions or Alert/Effects in the Gateway.
 
-  Each state-valued block can include the following (evaluated in the the order shown):
+  Each profile is made up of a list of [Action Groups](#client-actions-groups) and is processed in order.
+
+## Proxy Configuration Reference
+
+### Proxy Configuration Sections
+
+* `server`
+
+  * `listen`
+
+  * `path`
+
+  * `tls`
+
+    * `enabled`
+
+    * `certificate`
+
+    * `private-key`
+
+  * `authentication`
+
+    * `token`
+
+* `servicenow`
+
+  * `url`
+
+  * `path`
+
+  * `username`
+
+  * `password`
+
+  * `client-id`
+
+  * `client-secret`
+
+* `tables`
+
+  Incidents can be applied to different tables, depending on the configuration. By default only the `incident` table is configured. The `tables` section can include a list of tables, each containing the keys below.
+
+  * `name` - No default
+
+    The name of the table in ServiceNow, e.g. `incident`
+
+  * `search`
+
+    `search` is the ServiceNow filter query used to lookup existing incidents
+
+  * `response`
+
+    This section defines the three messages returned to the caller on incident creation, update or failure. It can be used to format custom messages which include values of interest to your specific installation. Expansion values include fields by name after all other processing is complete but before internal fields are removed.
 
   * `defaults`
 
-    `defaults` sets default values for the given current state. These override the general defaults above but only take effect if the fields are not defined by the client.
+    The `defaults` section contains key/value pairs of field values that are used as defaults if they are not set by the client or by processing (see below) in the proxy.
 
-  * `remove`
+  * `current-state`
 
-    A list of fields to remove.
+    The `current-states` section is evaluated based on the existing numeric value of the state of the incident in ServiceNow, and using `0` if no existing incident is found.
 
-    Note that all internal fields, those prefixed with an underscore (`_`) are removed after the evaluation done in `current-states`.
+    Each state-valued block can include the following (evaluated in the the order shown):
 
-  * `rename`
+    * `defaults`
 
-    A list of old and new names for fields to rename. This is the configuration section where internal fields, like `_text` can be set to their final names, like `work_notes`
+      `defaults` sets default values for the given current state. These override the general defaults above but only take effect if the fields are not defined by the client.
 
-  * `must-include`
+    * `remove`
 
-    A list of fields that must be present in the set at the point of evaluation, or an error is returned to the caller.
+      A list of fields to remove.
 
-  * `filter`
+      Note that all internal fields, those prefixed with an underscore (`_`) are removed after the evaluation done in `current-states`.
 
-    If defined, an inclusive list of regular expression filters that are applied to the ServiceNow fields, and fields not matching at least one of the filters is removed from the set sent to ServiceNow. If there is no filter list defined then no filtering is performed.
-    
+    * `rename`
+
+      A list of old and new names for fields to rename. This is the configuration section where internal fields, like `_text` can be set to their final names, like `work_notes`
+
+    * `must-include`
+
+      A list of fields that must be present in the set at the point of evaluation, or an error is returned to the caller.
+
+    * `filter`
+
+      If defined, a list of regular expression filters that are applied to the ServiceNow fields, and fields not matching at least one of the filters is removed from the set to ServiceNow. If there is no filter list defined then no filtering is performed.
+
+  * `query`
+
+    The `query` section controls how the proxy handles queries to the API endpoint.
+
+    * `enabled` - Default `false`
+
+      This should be set to `true` to enable the query endpoint.
+
+    * `fields` - No default
+
+      A list of fields names to fetch for the query.
+

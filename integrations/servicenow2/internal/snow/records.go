@@ -55,7 +55,6 @@ type snowResult struct {
 
 type TableQuery struct {
 	Enabled        bool     `mapstructure:"enabled"`
-	Search         string   `mapstructure:"search"`
 	ResponseFields []string `mapstructure:"fields"`
 }
 

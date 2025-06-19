@@ -43,9 +43,8 @@ servicenow:
   path: /api/now/v2/table
   username: admin
   password: ${enc:~/.config/geneos/keyfile.aes:+encs+06003E5C9E9E9B3C3BFA3F1B8B468B53}
-  # clientid: ${SERVICENOW_CLIENTID}
-  # clientsecret: ${SERVICENOW_CLIENTSECRET}
-  trace: false
+  # client-id: ${SERVICENOW_CLIENTID}
+  # client-secret: ${SERVICENOW_CLIENTSECRET}
 
   tables:
     # multiple tables are supported through the client side `--table`
@@ -55,17 +54,6 @@ servicenow:
     #
     # if a table configuration does not exist an error is returned
     - name: incident
-      # the query endpoint is configured below:
-      query:
-        enabled: true
-        search: "user=${servicenow.username}"
-        # fields are returned in the order below. to ensure that Geneos
-        # row-names are unique make sure that the first column is a
-        # primary key, as below
-        fields: [ number, sys_id, cmdb_ci.name, short_description, description, correlation_id, opened_by, state ]
-
-      # the rest of the configuration is concerned with creating and updating incidents
-
       # `search` is the ServiceNow filter query used to lookup existing
       # incidents
       #
@@ -103,59 +91,80 @@ servicenow:
         urgency: 3
         category: hardware
         contact_type: email
-        caller_id: admin
+        caller_id: "david.miller@example.com"
+
       current-state:
-        0: # create
+        # each key is the numeric value of the current state of the
+        # incident before any changes are made. state 0 is a special
+        # value meaning that the incident could not be found and will be
+        # created, instead of updated.
+        #
+        # each section supports the following keys, which are processed
+        # in the order below:
+        #
+        # * `defaults` - set ServiceNow field default values if those
+        #   fields have not been set elsewhere
+        #
+        # * `remove` - remove the fields listed from those currently
+        #   set. Note that all fields with an underscore prefix will be
+        #   removed anyway, after all other processing, before the final
+        #   set is sent to ServiceNow
+        #
+        # * `rename` - rename each fields used as a key to the value
+        #   given
+        #
+        # * `must-include` - if defined and non-zero in length, a list
+        #   of fields names that must be set to a value, otherwise the
+        #   incident creation or update will not be performed and an
+        #   error returned.
+        #
+        # * `filter` - if defined and non-zero in length, a list of all
+        #   the fields that will be sent to ServiceNow. This list must
+        #   represent the complete list of fields you want to send via
+        #   the API.
+
+        # current state 0 - doesn't exist, incident will be created
+        0:
           # default values if not set previously/elsewhere
           defaults:
-            # assignment_group: something
-            # contact_type: email
-            impact: 3
-            urgency: 3
-            category: hardware
             state: 1
-            caller_id: "david.miller@example.com"
+          remove: [ watch_list ]
           rename:
             _text: description
             _subject: short_description
-          # anything in this list is removed value or raises an error,
-          # after adding any defaults from below. all fields prefixed
-          # with an underscore are always removed.
-          remove: [ watch_list ]
-          # anything in this list MUST be set but it can be to an empty
-          # value
           must-include: [ short_description, description ]
-        1: # new
+
+        # current state 1 - is a new incident
+        1:
           defaults:
-            assignment_group: "something else"
-            contact_type: email
-            impact: 3
-            urgency: 3
-            category: hardware
             state: 2
-            caller_id: admin
           rename:
             _text: work_notes
           remove: [ short_description ]
           must-include: [ work_notes ]
-        2: # update
+
+        # current state 2 - updated
+        2:
           defaults:
-            assignment_group: "something else"
-            contact_type: email
-            impact: 3
-            urgency: 3
-            category: hardware
             state: 2
-            caller_id: admin
           rename:
             _text: work_notes
           remove: [ short_description ]
+
+        # current state 6 - resolved
         6: # resolve
           defaults:
-            caller_id: admin
             state: 1
           remove: [ short_description ]
           rename:
             _subject: short_description
             _text: work_notes
+
+      # the query endpoint is configured below
+      query:
+        enabled: true
+        # fields are returned in the order below. to ensure that Geneos
+        # row-names are unique make sure that the first column is a
+        # primary key, as below
+        fields: [ number, sys_id, cmdb_ci.name, short_description, description, correlation_id, opened_by, state ]
 

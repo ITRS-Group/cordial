@@ -97,7 +97,7 @@ func getRecords(c echo.Context) (err error) {
 
 	// validate fields
 	if !validateFields(strings.Split(fields, ",")) {
-		return echo.NewHTTPError(http.StatusBadRequest, "one or more field names are invalid or not unique")
+		return echo.NewHTTPError(http.StatusBadRequest, "field names are invalid or not unique")
 	}
 
 	// real basic validation of user
@@ -133,8 +133,14 @@ var snowField1 = regexp.MustCompile(`^[\w-]+$`)
 // it also lowercases all fields names and if there is a clash it
 // returns false.
 //
+// if there are no keys the function returns false.
+//
 // if there are no invalid fields, the function returns true.
 func validateFields(keys []string) bool {
+	if len(keys) == 0 {
+		return false
+	}
+
 	// check keys are valid (we cannot use a single regexp to check for
 	// non leading hyphen on a single char string)
 	for _, k := range keys {
@@ -185,7 +191,7 @@ func acceptRecord(c echo.Context) (err error) {
 
 	// validate incident field names
 	if !validateFields(slices.Collect(maps.Keys(incident))) {
-		return echo.NewHTTPError(http.StatusBadRequest, "one or more field names are invalid or not unique")
+		return echo.NewHTTPError(http.StatusBadRequest, "field names are invalid or not unique")
 	}
 
 	// if not given an explicit cmdb_ci then search based on config

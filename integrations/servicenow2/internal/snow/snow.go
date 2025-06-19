@@ -51,8 +51,8 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 	username := cf.GetString("username")
 	password := cf.GetPassword("password")
 
-	clientID := cf.GetString("clientid")
-	clientSecret := cf.GetPassword("clientsecret")
+	clientID := cf.GetString("client-id")
+	clientSecret := cf.GetPassword("client-secret")
 
 	sn, err := url.Parse(cf.GetString("url"))
 	if err != nil {

@@ -96,13 +96,13 @@ defaults:
       # setting can be overridden on the command line using the `--table/-t`
       # flag.
       _table: incident
-
+      
       # values required by the proxy
       # cmdb_ci: ${CMDB_CI}
       _cmdb_search: name=${_NETPROBE_HOST}
       _cmdb_table: cmdb_ci
-      _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${select:_ROWNAME+${_COLUMN}:_HEADLINE:}
-      _subject: "Geneos Alert on ${select:_NETPROBE_HOST:Unknown} | ${select:_DATAVIEW:None} | ${_ROWNAME} | ${_COLUMN}${_HEADLINE} is ${_VALUE}"
+      _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${select:_ROWNAME+$_COLUMN:_HEADLINE:}
+      _subject: Geneos Alert on ${select:_MANAGED_ENTITY:_NETPROBE_HOST:Unknown} | ${select:_DATAVIEW:None} | ${_ROWNAME} | ${_COLUMN}${_HEADLINE} is ${_VALUE}
       _text: |
         Status Message: ${_STATUSMESSAGE}	
         Severity: ${_SEVERITY}	
@@ -121,19 +121,10 @@ defaults:
       urgency: 3
       impact: 3
       state: 1
-  # - if: ${match:_SEVERITY:critical}
-    # set:
-      # _profile: infra
-  - if: [ "${match:_PLUGIN:FKM}", "${match:_DATAVIEW:name}" ]
-    set:
-      # ${replace:_ROWNAME:/#.*$//}
-      _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${_filename}${replace:_triggerDetails:^[\d-]+\s[\d-]+::}
   - if: ${match:_SEVERITY:(CRITICAL|critical|3)}
     set:
       impact: 1
       urgency: 1
-    # ignore the rest
-    # break: true
   - if: ${match:_SEVERITY:(WARNING|warning|2)}
     set:
       impact: 3
@@ -144,6 +135,13 @@ defaults:
       close_code: Closed/Resolved by Caller
       close_notes: Resolved
     unset: [ urgency, impact ]
+  # - if: ${match:_SEVERITY:critical}
+    # set:
+      # _profile: infra
+  - if: [ "${match:_PLUGIN:FKM}", "${match:_DATAVIEW:name}" ]
+    set:
+      # ${replace:_ROWNAME:/#.*$//}
+      _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${_filename}${replace:_triggerDetails:^[\d-]+\s[\d-]+::}
       
 
 # profiles, selected from command line; e.g. `opsview`, `INFRA`, `Apps`
