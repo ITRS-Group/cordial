@@ -34,7 +34,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var listCmdJSON, listCmdIndent, listCmdCSV bool
+var listCmdJSON, listCmdIndent, listCmdCSV, listCmdToolkit bool
 
 func init() {
 	packageCmd.AddCommand(listCmd)
@@ -42,6 +42,7 @@ func init() {
 	listCmd.Flags().BoolVarP(&listCmdJSON, "json", "j", false, "Output JSON")
 	listCmd.Flags().BoolVarP(&listCmdIndent, "pretty", "i", false, "Output indented JSON")
 	listCmd.Flags().BoolVarP(&listCmdCSV, "csv", "c", false, "Output CSV")
+	listCmd.Flags().BoolVarP(&listCmdToolkit, "toolkit", "t", false, "Output Toolkit formatted CSV")
 
 	listCmd.Flags().SortFlags = false
 }
@@ -88,24 +89,75 @@ var listCmd = &cobra.Command{
 				return err
 			}
 			fmt.Println(string(b))
-		case listCmdCSV:
-			packageListCSVWriter := csv.NewWriter(os.Stdout)
-			packageListCSVWriter.Write([]string{"Component", "Host", "Version", "Latest", "Links", "LastModified", "Path"})
+		case listCmdToolkit:
+			w := csv.NewWriter(os.Stdout)
+			w.Write([]string{
+				"ID",
+				"Component",
+				"Host",
+				"Version",
+				"Latest",
+				"Links",
+				"LastModified",
+				"Path"})
 			for _, d := range versions {
-				packageListCSVWriter.Write([]string{d.Component, d.Host, d.Version, fmt.Sprintf("%v", d.Latest), strings.Join(d.Links, ", "), d.ModTime.Format(time.RFC3339), d.Path})
+				id := d.Component + "-" + d.Version
+				if d.Host != geneos.LOCALHOST {
+					id += "@" + d.Host
+				}
+				w.Write([]string{
+					id,
+					d.Component,
+					d.Host,
+					d.Version,
+					fmt.Sprintf("%v", d.Latest),
+					strings.Join(d.Links, " "),
+					d.ModTime.Format(time.RFC3339),
+					d.Path,
+				})
 			}
-			packageListCSVWriter.Flush()
+			w.Flush()
+		case listCmdCSV:
+			w := csv.NewWriter(os.Stdout)
+			w.Write([]string{
+				"Component",
+				"Host",
+				"Version",
+				"Latest",
+				"Links",
+				"LastModified",
+				"Path",
+			})
+			for _, d := range versions {
+				w.Write([]string{
+					d.Component,
+					d.Host,
+					d.Version,
+					fmt.Sprintf("%v", d.Latest),
+					strings.Join(d.Links, ", "),
+					d.ModTime.Format(time.RFC3339),
+					d.Path,
+				})
+			}
+			w.Flush()
 		default:
-			packageListTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-			fmt.Fprintf(packageListTabWriter, "Component\tHost\tVersion\tLinks\tLastModified\tPath\n")
+			w := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+			fmt.Fprintf(w, "Component\tHost\tVersion\tLinks\tLastModified\tPath\n")
 			for _, d := range versions {
 				name := d.Version
 				if d.Latest {
 					name = fmt.Sprintf("%s (latest)", d.Version)
 				}
-				fmt.Fprintf(packageListTabWriter, "%s\t%s\t%s\t%s\t%s\t%s\n", d.Component, d.Host, name, strings.Join(d.Links, ", "), d.ModTime.Format(time.RFC3339), d.Path)
+				fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+					d.Component,
+					d.Host,
+					name,
+					strings.Join(d.Links, ", "),
+					d.ModTime.Format(time.RFC3339),
+					d.Path)
+
 			}
-			packageListTabWriter.Flush()
+			w.Flush()
 		}
 
 		if err == os.ErrNotExist {

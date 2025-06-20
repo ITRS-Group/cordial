@@ -36,7 +36,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var listCmdCSV, listCmdJSON, listCmdIndent bool
+var listCmdCSV, listCmdJSON, listCmdIndent, listCmdToolkit bool
 var listCmdShared bool
 
 type listCmdType struct {
@@ -57,6 +57,7 @@ func init() {
 	listCmd.Flags().BoolVarP(&listCmdJSON, "json", "j", false, "Output JSON")
 	listCmd.Flags().BoolVarP(&listCmdIndent, "pretty", "i", false, "Output indented JSON")
 	listCmd.Flags().BoolVarP(&listCmdCSV, "csv", "c", false, "Output CSV")
+	listCmd.Flags().BoolVarP(&listCmdToolkit, "toolkit", "t", false, "Output Toolkit formatted CSV")
 	listCmd.Flags().SortFlags = false
 }
 
@@ -91,24 +92,40 @@ geneos aes ls -S gateway -H localhost -c
 			} else {
 				instance.Do(h, ct, names, aesListInstanceJSON).Write(os.Stdout, instance.WriterIndent(listCmdIndent))
 			}
-		case listCmdCSV:
-			aesListCSVWriter := csv.NewWriter(os.Stdout)
-			aesListCSVWriter.Write([]string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
+		case listCmdToolkit:
+			w := csv.NewWriter(os.Stdout)
+			w.Write([]string{"ID", "Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
 
 			if listCmdShared {
-				aesListSharedCSV(ct, h).Write(aesListCSVWriter)
+				aesListSharedCSV(ct, h).Write(w)
 			} else {
-				instance.Do(h, ct, names, aesListInstanceCSV).Write(aesListCSVWriter)
+				instance.Do(h, ct, names, aesListInstanceCSV).Write(w)
+			}
+		case listCmdCSV:
+			w := csv.NewWriter(os.Stdout)
+			w.Write([]string{
+				"Type",
+				"Name",
+				"Host",
+				"Keyfile",
+				"CRC32",
+				"Modtime",
+			})
+
+			if listCmdShared {
+				aesListSharedCSV(ct, h).Write(w)
+			} else {
+				instance.Do(h, ct, names, aesListInstanceCSV).Write(w)
 			}
 		default:
-			aesListTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-			fmt.Fprintf(aesListTabWriter, "Type\tName\tHost\tKeyfile\tCRC32\tModtime\n")
+			w := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+			fmt.Fprintf(w, "Type\tName\tHost\tKeyfile\tCRC32\tModtime\n")
 
 			if listCmdShared {
 				responses, _ := aesListShared(ct, h)
-				responses.Write(aesListTabWriter)
+				responses.Write(w)
 			} else {
-				instance.Do(h, ct, names, aesListInstance).Write(aesListTabWriter)
+				instance.Do(h, ct, names, aesListInstance).Write(w)
 			}
 		}
 	},
@@ -168,21 +185,42 @@ func aesListShared(ct *geneos.Component, h *geneos.Host) (results instance.Respo
 	return
 }
 
-func aesListPathCSV(ct *geneos.Component, h *geneos.Host, name string, path config.KeyFile) (row []string) {
-	if path == "" {
+func aesListPathCSV(ct *geneos.Component, h *geneos.Host, name string, kf config.KeyFile) (row []string) {
+	if kf == "" {
 		return
 	}
-	s, err := h.Stat(path.String())
-	if err != nil {
-		return []string{ct.String(), name, h.String(), path.String(), "-", "-"}
+
+	ts := ct.String()
+	hs := h.String()
+	id := ts + ":" + name
+	crcstr := "-"
+
+	crc, _, crcerr := kf.ReadOrCreate(host.Localhost, false)
+	if crcerr == nil {
+		crcstr = fmt.Sprintf("%08X", crc)
 	}
 
-	crc, _, err := path.ReadOrCreate(host.Localhost, false)
-	if err != nil {
-		return []string{ct.String(), name, h.String(), path.String(), "-", s.ModTime().Format(time.RFC3339)}
+	if listCmdShared {
+		id = ts + ":" + crcstr
 	}
-	crcstr := fmt.Sprintf("%08X", crc)
-	return []string{ct.String(), name, h.String(), path.String(), crcstr, s.ModTime().Format(time.RFC3339)}
+
+	if hs != geneos.LOCALHOST {
+		id += "@" + hs
+	}
+
+	if listCmdToolkit {
+		row = []string{id}
+	}
+	row = append(row, ts, name, hs, kf.String())
+
+	s, err := h.Stat(kf.String())
+	if err != nil {
+		row = append(row, "-", "-")
+		return
+	}
+
+	row = append(row, crcstr, s.ModTime().Format(time.RFC3339))
+	return
 }
 
 func aesListInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {

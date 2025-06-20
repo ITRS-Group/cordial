@@ -63,6 +63,16 @@ func DisplayName(i geneos.Instance) string {
 	return fmt.Sprintf("%s \"%s@%s\"", i.Type(), i.Name(), i.Host())
 }
 
+// IDString returns a string suitable as a unique rowname for Toolkit
+// output and other places. For local instance it return `TYPE:NAME` and
+// for remote instances it returns `TYPE:NAME@HOST`
+func IDString(i geneos.Instance) string {
+	if i.Host().IsLocal() {
+		return i.Type().String() + ":" + i.Name()
+	}
+	return i.Type().String() + ":" + i.Name() + "@" + i.Host().String()
+}
+
 // ReservedName returns true if name is a reserved word. Reserved names
 // are checked against all the values registered by components at
 // start-up.

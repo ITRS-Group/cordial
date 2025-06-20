@@ -37,10 +37,10 @@ import (
 )
 
 type psType struct {
-	Type      string `json:"type,omitempty"`
-	Name      string `json:"name,omitempty"`
-	Host      string `json:"host,omitempty"`
-	PID       string `json:"pid,omitempty"`
+	Type      string `json:"type"`
+	Name      string `json:"name"`
+	Host      string `json:"host"`
+	PID       string `json:"pid"`
 	Ports     []int  `json:"ports,omitempty"`
 	User      string `json:"user,omitempty"`
 	Group     string `json:"group,omitempty"`
@@ -48,9 +48,12 @@ type psType struct {
 	Version   string `json:"version,omitempty"`
 	Home      string `json:"home,omitempty"`
 	// Live      bool   `json:"live,omitempty"`
+
+	// Extra fields, when `--long` is used
+	Extra *instance.ProcessStats `json:"extra,omitempty"`
 }
 
-var psCmdLong, psCmdShowFiles, psCmdJSON, psCmdIndent, psCmdCSV, psCmdNoLookups bool
+var psCmdLong, psCmdShowFiles, psCmdJSON, psCmdIndent, psCmdCSV, psCmdNoLookups, psCmdToolkit bool
 
 func init() {
 	GeneosCmd.AddCommand(psCmd)
@@ -64,6 +67,7 @@ func init() {
 	psCmd.Flags().BoolVarP(&psCmdJSON, "json", "j", false, "Output JSON")
 	psCmd.Flags().BoolVarP(&psCmdIndent, "pretty", "i", false, "Output indented JSON")
 	psCmd.Flags().BoolVarP(&psCmdCSV, "csv", "c", false, "Output CSV")
+	psCmd.Flags().BoolVarP(&psCmdToolkit, "toolkit", "t", false, "Output Toolkit formatted CSV")
 
 	psCmd.Flags().SortFlags = false
 }
@@ -96,13 +100,70 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 	switch {
 	case psCmdJSON, psCmdIndent:
 		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceJSON).Write(os.Stdout, instance.WriterIndent(psCmdIndent))
+	case psCmdToolkit:
+		psCSVWriter := csv.NewWriter(os.Stdout)
+		columns := []string{
+			"ID",
+			"type",
+			"name",
+			"host",
+			"pid",
+			"ports",
+			"user",
+			"group",
+			"startTime",
+			"version",
+			"home",
+		}
+		if psCmdLong {
+			columns = append(columns,
+				"state",
+				"threads",
+				"residentSetSize",
+				"residentSetSizeMax",
+				"userTimeSinceStart",
+				"kernelTimeSinceStart",
+				"childUserTimeSinceStart",
+				"childKernelTimeSinceStart",
+			)
+		}
+		psCSVWriter.Write(columns)
+		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV).Write(psCSVWriter)
 	case psCmdCSV:
 		psCSVWriter := csv.NewWriter(os.Stdout)
-		psCSVWriter.Write([]string{"Type", "Name", "Host", "PID", "Ports", "User", "Group", "Starttime", "Version", "Home"})
+		columns := []string{
+			"Type",
+			"Name",
+			"Host",
+			"PID",
+			"Ports",
+			"User",
+			"Group",
+			"Starttime",
+			"Version",
+			"Home",
+		}
+		if psCmdLong {
+			columns = append(columns,
+				"State",
+				"Threads",
+				"RSS",
+				"RSSMax",
+				"UserTime",
+				"KernelTime",
+				"ChildUserTime",
+				"ChildKernelTime",
+			)
+		}
+		psCSVWriter.Write(columns)
 		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV).Write(psCSVWriter)
 	default:
 		psTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-		fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\n")
+		if psCmdLong {
+			fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\tState\tThreads\tRSS\tRSSMax\tUserTime\tKernelTime\tChildUserTime\tChildKernelTime\n")
+		} else {
+			fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\n")
+		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, psInstancePlain).Write(psTabWriter)
 	}
 }
@@ -149,7 +210,46 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		uptodate = "<>"
 	}
 
-	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s%s%s\t%s", i.Type(), i.Name(), i.Host(), pid, portlist, username, groupname, mtime.Local().Format(time.RFC3339), base, uptodate, actual, i.Home())
+	p := &instance.ProcessStats{}
+	if err := instance.ProcessStatus(i, p); err == nil && psCmdLong {
+		resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s%s%s\t%s\t%s\t%d\t%.2f MiB\t%.2f MiB\t%.2f s\t%.2f s\t%.2f s\t%.2f s",
+			i.Type(),
+			i.Name(),
+			i.Host(),
+			pid,
+			portlist,
+			username,
+			groupname,
+			mtime.Local().Format(time.RFC3339),
+			base,
+			uptodate,
+			actual,
+			i.Home(),
+			p.State,
+			p.Threads,
+			float64(p.VmRSS)/(1024*1024),
+			float64(p.VmHWM)/(1024*1024),
+			p.Utime.Seconds(),
+			p.Stime.Seconds(),
+			p.CUtime.Seconds(),
+			p.CStime.Seconds(),
+		)
+	} else {
+		resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s%s%s\t%s",
+			i.Type(),
+			i.Name(),
+			i.Host(),
+			pid,
+			portlist,
+			username,
+			groupname,
+			mtime.Local().Format(time.RFC3339),
+			base,
+			uptodate,
+			actual,
+			i.Home(),
+		)
+	}
 
 	if psCmdShowFiles {
 		resp.Lines = listOpenFiles(i)
@@ -196,8 +296,42 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	if underlying != actual {
 		uptodate = "<>"
 	}
-	resp.Rows = append(resp.Rows, []string{i.Type().String(), i.Name(), i.Host().String(), fmt.Sprint(pid), portlist, username, groupname, mtime.Local().Format(time.RFC3339), fmt.Sprintf("%s%s%s", base, uptodate, actual), i.Home()})
+	var row []string
 
+	if psCmdToolkit {
+		row = append(row, instance.IDString(i))
+	}
+
+	row = append(row,
+		i.Type().String(),
+		i.Name(),
+		i.Host().String(),
+		fmt.Sprint(pid),
+		portlist,
+		username,
+		groupname,
+		mtime.Local().Format(time.RFC3339),
+		fmt.Sprintf("%s%s%s", base, uptodate, actual),
+		i.Home(),
+	)
+
+	if psCmdLong {
+		p := &instance.ProcessStats{}
+		if err := instance.ProcessStatus(i, p); err == nil {
+			row = append(row,
+				p.State,
+				fmt.Sprint(p.Threads),
+				fmt.Sprintf("%.2f MiB", float64(p.VmRSS)/(1024*1024)),
+				fmt.Sprintf("%.2f MiB", float64(p.VmHWM)/(1024*1024)),
+				fmt.Sprintf("%.2f s", p.Utime.Seconds()),
+				fmt.Sprintf("%.2f s", p.Stime.Seconds()),
+				fmt.Sprintf("%.2f s", p.CUtime.Seconds()),
+				fmt.Sprintf("%.2f s", p.CStime.Seconds()),
+			)
+		}
+	}
+
+	resp.Rows = append(resp.Rows, row)
 	return
 }
 
@@ -240,7 +374,7 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		uptodate = "<>"
 	}
 
-	resp.Value = psType{
+	psData := psType{
 		Type:      i.Type().String(),
 		Name:      i.Name(),
 		Host:      i.Host().String(),
@@ -253,6 +387,12 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		Home:      i.Home(),
 	}
 
+	if psCmdLong {
+		psData.Extra = &instance.ProcessStats{}
+		instance.ProcessStatus(i, psData.Extra)
+	}
+
+	resp.Value = psData
 	return
 }
 
