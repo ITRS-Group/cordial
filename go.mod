@@ -46,6 +46,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/square/certigo v1.16.0
 	github.com/thediveo/go-asciitree v1.0.2
+	github.com/tklauser/go-sysconf v0.3.15
 	github.com/wneessen/go-mail v0.6.2
 	github.com/xuri/excelize/v2 v2.9.1
 	golang.org/x/crypto v0.39.0
@@ -120,6 +121,7 @@ require (
 	github.com/spf13/cast v1.9.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tiendc/go-deepcopy v1.6.0 // indirect
+	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect

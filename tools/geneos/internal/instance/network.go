@@ -43,7 +43,7 @@ var tcpfiles = []string{
 // to bool "true" for each lookup.
 func GetAllPorts(h *geneos.Host) (ports map[uint16]bool) {
 	if h == geneos.ALL {
-		log.Fatal().Msg("getports() call with all hosts")
+		log.Fatal().Msg("getports() called with all hosts")
 	}
 	ports = make(map[uint16]bool)
 	for _, c := range Instances(h, nil) {
@@ -147,6 +147,10 @@ func NextFreePort(h *geneos.Host, ct *geneos.Component) uint16 {
 // TCP ports from the source (typically /proc/net/tcp or /proc/net/tcp6)
 // on host h. Will only work on Linux hosts.
 func allTCPListenPorts(h *geneos.Host, ports map[int]int) (err error) {
+	if strings.Contains(h.ServerVersion(), "windows") {
+		return errors.ErrUnsupported
+	}
+
 	for _, source := range tcpfiles {
 		tcp, err := h.Open(source)
 		if err != nil {

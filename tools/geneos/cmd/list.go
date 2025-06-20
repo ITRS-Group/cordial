@@ -43,7 +43,7 @@ type listCmdType struct {
 	Home      string `json:"home,omitempty"`
 }
 
-var listCmdJSON, listCmdCSV, listCmdIndent bool
+var listCmdJSON, listCmdCSV, listCmdIndent, listCmdToolkit bool
 
 func init() {
 	GeneosCmd.AddCommand(listCmd)
@@ -51,6 +51,7 @@ func init() {
 	listCmd.PersistentFlags().BoolVarP(&listCmdJSON, "json", "j", false, "Output JSON")
 	listCmd.PersistentFlags().BoolVarP(&listCmdIndent, "pretty", "i", false, "Output indented JSON")
 	listCmd.PersistentFlags().BoolVarP(&listCmdCSV, "csv", "c", false, "Output CSV")
+	listCmd.PersistentFlags().BoolVarP(&listCmdToolkit, "toolkit", "t", false, "Output Toolkit formatted CSV")
 
 	listCmd.Flags().SortFlags = false
 }
@@ -75,9 +76,36 @@ var listCmd = &cobra.Command{
 		switch {
 		case listCmdJSON, listCmdIndent:
 			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceJSON).Write(os.Stdout, instance.WriterIndent(listCmdIndent))
+		case listCmdToolkit:
+			listCSVWriter := csv.NewWriter(os.Stdout)
+			listCSVWriter.Write([]string{
+				"ID",
+				"Type",
+				"Name",
+				"Host",
+				"Disabled",
+				"Protected",
+				"AutoStart",
+				"TLS",
+				"Port",
+				"Version",
+				"Home",
+			})
+			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV).Write(listCSVWriter)
 		case listCmdCSV:
 			listCSVWriter := csv.NewWriter(os.Stdout)
-			listCSVWriter.Write([]string{"Type", "Name", "Host", "Disabled", "Protected", "AutoStart", "TLS", "Port", "Version", "Home"})
+			listCSVWriter.Write([]string{
+				"Type",
+				"Name",
+				"Host",
+				"Disabled",
+				"Protected",
+				"AutoStart",
+				"TLS",
+				"Port",
+				"Version",
+				"Home",
+			})
 			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV).Write(listCSVWriter)
 		default:
 			listTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
@@ -140,7 +168,23 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		tls = "Y"
 	}
 	base, underlying, _ := instance.Version(i)
-	resp.Rows = append(resp.Rows, []string{i.Type().String(), i.Name(), i.Host().String(), disabled, protected, autostart, tls, fmt.Sprint(i.Config().GetInt("port")), fmt.Sprintf("%s:%s", base, underlying), i.Home()})
+	var row []string
+
+	if listCmdToolkit {
+		row = append(row, instance.IDString(i))
+	}
+	row = append(row,
+		i.Type().String(),
+		i.Name(),
+		i.Host().String(),
+		disabled,
+		protected,
+		autostart,
+		tls,
+		fmt.Sprint(i.Config().GetInt("port")),
+		fmt.Sprintf("%s:%s", base, underlying), i.Home(),
+	)
+	resp.Rows = append(resp.Rows, row)
 	return
 }
 

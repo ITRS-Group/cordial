@@ -24,14 +24,14 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/rs/zerolog/log"
 )
 
 // listOpenFiles is a placeholder for functionality to come later
 func listOpenFiles(i geneos.Instance) (lines []string) {
-
 	// list open files (test code)
 
 	instdir := i.Home()
