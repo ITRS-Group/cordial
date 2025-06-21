@@ -93,13 +93,13 @@ var listCmd = &cobra.Command{
 			w := csv.NewWriter(os.Stdout)
 			w.Write([]string{
 				"ID",
-				"Component",
-				"Host",
-				"Version",
-				"Latest",
-				"Links",
-				"LastModified",
-				"Path"})
+				"component",
+				"host",
+				"version",
+				"latest",
+				"links",
+				"lastModified",
+				"path"})
 			for _, d := range versions {
 				id := d.Component + "-" + d.Version
 				if d.Host != geneos.LOCALHOST {

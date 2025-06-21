@@ -158,13 +158,13 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 		listCSVWriter := csv.NewWriter(os.Stdout)
 		listCSVWriter.Write([]string{
 			"ID",
-			"Type",
-			"Name",
-			"Host",
-			"Remaining",
-			"Expires",
-			"CommonName",
-			"Valid",
+			"type",
+			"name",
+			"host",
+			"remaining",
+			"expires",
+			"commonName",
+			"valid",
 		})
 		if listCmdAll {
 			if rootCert != nil {
@@ -341,20 +341,20 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 		listCSVWriter := csv.NewWriter(os.Stdout)
 		listCSVWriter.Write([]string{
 			"ID",
-			"Type",
-			"Name",
-			"Host",
-			"Remaining",
-			"Expires",
-			"CommonName",
-			"Valid",
-			"CertificateFile",
-			"PrivateKeyFile",
-			"ChainFile",
-			"Issuer",
-			"SubjAltNames",
+			"type",
+			"name",
+			"host",
+			"remaining",
+			"expires",
+			"commonName",
+			"valid",
+			"certificateFile",
+			"privateKeyFile",
+			"chainFile",
+			"issuer",
+			"subjAltNames",
 			"IPs",
-			"Signature",
+			"signature",
 		})
 		if listCmdAll {
 			if rootCert != nil {

@@ -94,7 +94,15 @@ geneos aes ls -S gateway -H localhost -c
 			}
 		case listCmdToolkit:
 			w := csv.NewWriter(os.Stdout)
-			w.Write([]string{"ID", "Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"})
+			w.Write([]string{
+				"ID",
+				"type",
+				"name",
+				"host",
+				"keyfile",
+				"crc32",
+				"modtime",
+			})
 
 			if listCmdShared {
 				aesListSharedCSV(ct, h).Write(w)

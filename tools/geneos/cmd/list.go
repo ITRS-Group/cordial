@@ -80,16 +80,16 @@ var listCmd = &cobra.Command{
 			listCSVWriter := csv.NewWriter(os.Stdout)
 			listCSVWriter.Write([]string{
 				"ID",
-				"Type",
-				"Name",
-				"Host",
-				"Disabled",
-				"Protected",
-				"AutoStart",
-				"TLS",
-				"Port",
-				"Version",
-				"Home",
+				"type",
+				"name",
+				"host",
+				"disabled",
+				"protected",
+				"autoStart",
+				"tls",
+				"port",
+				"version",
+				"home",
 			})
 			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV).Write(listCSVWriter)
 		case listCmdCSV:

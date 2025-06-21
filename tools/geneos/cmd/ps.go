@@ -121,10 +121,10 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 				"threads",
 				"residentSetSize",
 				"residentSetSizeMax",
-				"userTimeSinceStart",
-				"kernelTimeSinceStart",
-				"childUserTimeSinceStart",
-				"childKernelTimeSinceStart",
+				"totalUserTime",
+				"totalKernelTime",
+				"totalChildUserTime",
+				"totalChildKernelTime",
 			)
 		}
 		psCSVWriter.Write(columns)
@@ -149,10 +149,10 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 				"Threads",
 				"RSS",
 				"RSSMax",
-				"UserTime",
-				"KernelTime",
-				"ChildUserTime",
-				"ChildKernelTime",
+				"TotalUserTime",
+				"TotalKernelTime",
+				"TotalChildUserTime",
+				"TotalChildKernelTime",
 			)
 		}
 		psCSVWriter.Write(columns)
@@ -160,7 +160,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 	default:
 		psTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		if psCmdLong {
-			fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\tState\tThreads\tRSS\tRSSMax\tUserTime\tKernelTime\tChildUserTime\tChildKernelTime\n")
+			fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\tState\tThreads\tRSS\tRSSMax\tTotalUserTime\tTotalKernelTime\tTotalChildUserTime\tTotalChildKernelTime\n")
 		} else {
 			fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\n")
 		}
