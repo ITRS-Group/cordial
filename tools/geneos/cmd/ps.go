@@ -287,7 +287,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	if i.Host().IsLocal() || psCmdLong {
 		ports = instance.ListeningPortsStrings(i)
 	}
-	portlist := strings.Join(ports, ":")
+	portlist := strings.Join(ports, " ")
 	base, underlying, actual, _ := instance.LiveVersion(i, pid)
 	if pkgtype := i.Config().GetString("pkgtype"); pkgtype != "" {
 		base = path.Join(pkgtype, base)
