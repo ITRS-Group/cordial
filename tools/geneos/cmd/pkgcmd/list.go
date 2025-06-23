@@ -32,6 +32,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
 var listCmdJSON, listCmdIndent, listCmdCSV, listCmdToolkit bool
@@ -63,7 +64,7 @@ var listCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		ct, _ := cmd.ParseTypeNames(command)
 		h := geneos.GetHost(cmd.Hostname)
-		versions := []geneos.ReleaseDetails{}
+		versions := []*geneos.ReleaseDetails{}
 
 		for h := range h.OrList() {
 			for ct := range ct.OrList() {
@@ -77,9 +78,24 @@ var listCmd = &cobra.Command{
 			}
 		}
 
+		// sort versions, by host ct
+		slices.SortFunc(versions, func(a, b *geneos.ReleaseDetails) int {
+			s := strings.Compare(a.Host, b.Host)
+			if s != 0 {
+				return s
+			}
+			return strings.Compare(a.Component, b.Component)
+		})
+
 		switch {
 		case listCmdJSON, listCmdIndent:
 			var b []byte
+			for _, v := range versions {
+				for _, l := range v.Links {
+					v.Instances += len(instance.Instances(geneos.GetHost(v.Host), geneos.ParseComponent(v.Component), instance.FilterParameters("version="+l)))
+				}
+				v.Instances += len(instance.Instances(geneos.GetHost(v.Host), geneos.ParseComponent(v.Component), instance.FilterParameters("version="+v.Version)))
+			}
 			if listCmdIndent {
 				b, err = json.MarshalIndent(versions, "", "    ")
 			} else {
@@ -96,7 +112,8 @@ var listCmd = &cobra.Command{
 				"component",
 				"host",
 				"version",
-				"latest",
+				"latestInstalled",
+				"instances",
 				"links",
 				"lastModified",
 				"path"})
@@ -105,12 +122,18 @@ var listCmd = &cobra.Command{
 				if d.Host != geneos.LOCALHOST {
 					id += "@" + d.Host
 				}
+				var instances int
+				for _, v := range d.Links {
+					instances += len(instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.FilterParameters("version="+v)))
+				}
+				instances += len(instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.FilterParameters("version="+d.Version)))
 				w.Write([]string{
 					id,
 					d.Component,
 					d.Host,
 					d.Version,
 					fmt.Sprintf("%v", d.Latest),
+					fmt.Sprintf("%d", instances),
 					strings.Join(d.Links, " "),
 					d.ModTime.Format(time.RFC3339),
 					d.Path,
@@ -123,17 +146,24 @@ var listCmd = &cobra.Command{
 				"Component",
 				"Host",
 				"Version",
-				"Latest",
+				"LatestInstalled",
+				"Instances",
 				"Links",
 				"LastModified",
 				"Path",
 			})
 			for _, d := range versions {
+				var instances int
+				for _, v := range d.Links {
+					instances += len(instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.FilterParameters("version="+v)))
+				}
+				instances += len(instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.FilterParameters("version="+d.Version)))
 				w.Write([]string{
 					d.Component,
 					d.Host,
 					d.Version,
 					fmt.Sprintf("%v", d.Latest),
+					fmt.Sprintf("%d", instances),
 					strings.Join(d.Links, ", "),
 					d.ModTime.Format(time.RFC3339),
 					d.Path,
@@ -142,17 +172,23 @@ var listCmd = &cobra.Command{
 			w.Flush()
 		default:
 			w := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-			fmt.Fprintf(w, "Component\tHost\tVersion\tLinks\tLastModified\tPath\n")
+			fmt.Fprintf(w, "Component\tHost\tVersion\tLinks\tInstances\tLastModified\tPath\n")
 			for _, d := range versions {
+				var instances int
+				for _, v := range d.Links {
+					instances += len(instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.FilterParameters("version="+v)))
+				}
+				instances += len(instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.FilterParameters("version="+d.Version)))
 				name := d.Version
 				if d.Latest {
 					name = fmt.Sprintf("%s (latest)", d.Version)
 				}
-				fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+				fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\t%s\t%s\n",
 					d.Component,
 					d.Host,
 					name,
 					strings.Join(d.Links, ", "),
+					instances,
 					d.ModTime.Format(time.RFC3339),
 					d.Path)
 

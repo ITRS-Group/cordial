@@ -47,6 +47,7 @@ type ReleaseDetails struct {
 	Version   string    `json:"Version"`
 	Latest    bool      `json:"Latest,string"`
 	Links     []string  `json:"Links,omitempty"`
+	Instances int       `json:"Instances"`
 	ModTime   time.Time `json:"LastModified"`
 	Path      string    `json:"Path"`
 }
@@ -57,7 +58,7 @@ type ReleaseDetails struct {
 // symlinks are ignored.
 //
 // No validation is done on the contents, only that a directory exists.
-func GetReleases(h *Host, ct *Component) (releases []ReleaseDetails, err error) {
+func GetReleases(h *Host, ct *Component) (releases []*ReleaseDetails, err error) {
 	var ok bool
 	if ok, err = h.IsAvailable(); !ok {
 		return
@@ -100,7 +101,8 @@ func GetReleases(h *Host, ct *Component) (releases []ReleaseDetails, err error) 
 				log.Debug().Err(err).Msg("skipping")
 				continue
 			}
-			releases = append(releases, ReleaseDetails{
+			// usedBy := len(instance.Instances(h, ct, instance.FilterParameters("protected=true", "version="+ent.Name())))
+			releases = append(releases, &ReleaseDetails{
 				Component: ct.String(),
 				Host:      h.String(),
 				Version:   ent.Name(),
@@ -113,7 +115,7 @@ func GetReleases(h *Host, ct *Component) (releases []ReleaseDetails, err error) 
 	}
 
 	// TODO: fix for non valid directories, prevent panics
-	slices.SortFunc(releases, func(a, b ReleaseDetails) int {
+	slices.SortFunc(releases, func(a, b *ReleaseDetails) int {
 		va, err := version.NewVersion(strings.TrimLeftFunc(a.Version, func(r rune) bool { return !unicode.IsNumber(r) }))
 		if err != nil {
 			log.Debug().Err(err).Msg("")

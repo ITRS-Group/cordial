@@ -112,7 +112,7 @@ geneos uninstall --version 5.14.1
 				}
 
 				// create a slice of releases to remove
-				removeReleases := slices.DeleteFunc(releases, func(r geneos.ReleaseDetails) bool {
+				removeReleases := slices.DeleteFunc(releases, func(r *geneos.ReleaseDetails) bool {
 					if uninstallCmdAll {
 						return false
 					}
@@ -154,7 +154,7 @@ geneos uninstall --version 5.14.1
 					// remove any package referenced by an instance -
 					// except those disabled as above
 					if !uninstallCmdUpdate && !uninstallCmdAll {
-						removeReleases = slices.DeleteFunc(removeReleases, func(r geneos.ReleaseDetails) bool { return version == r.Version })
+						removeReleases = slices.DeleteFunc(removeReleases, func(r *geneos.ReleaseDetails) bool { return version == r.Version })
 						continue
 					}
 
@@ -163,7 +163,7 @@ geneos uninstall --version 5.14.1
 					if instance.IsProtected(i) {
 						if !uninstallCmdForce {
 							fmt.Printf("%s is marked protected and uses version %s, skipping\n", i, version)
-							removeReleases = slices.DeleteFunc(removeReleases, func(r geneos.ReleaseDetails) bool { return version == r.Version })
+							removeReleases = slices.DeleteFunc(removeReleases, func(r *geneos.ReleaseDetails) bool { return version == r.Version })
 							continue
 						}
 					}
@@ -240,7 +240,7 @@ geneos uninstall --version 5.14.1
 // updateLinks removes the base symlink for oldVersion and recreates a
 // new one pointing to target. It also updates all other links in the
 // map to the same old target to the new one.
-func updateLinks(h *geneos.Host, ct *geneos.Component, releaseDir string, release geneos.ReleaseDetails, oldVersion, newVersion string) (err error) {
+func updateLinks(h *geneos.Host, ct *geneos.Component, releaseDir string, release *geneos.ReleaseDetails, oldVersion, newVersion string) (err error) {
 	for _, l := range release.Links {
 		link := path.Join(releaseDir, l)
 		if err = h.Remove(link); err != nil && !errors.Is(err, fs.ErrNotExist) {

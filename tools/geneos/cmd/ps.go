@@ -168,8 +168,9 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 	}
 }
 
-func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func psInstanceCommon(i geneos.Instance) (pid int, username, groupname string, mtime time.Time, base, actual, uptodate string, ports []int, err error) {
+	var u *user.User
+	var g *user.Group
 
 	if instance.IsDisabled(i) {
 		return
@@ -179,11 +180,8 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		return
 	}
 
-	var u *user.User
-	var g *user.Group
-
-	username := fmt.Sprint(uid)
-	groupname := fmt.Sprint(gid)
+	username = fmt.Sprint(uid)
+	groupname = fmt.Sprint(gid)
 
 	if !psCmdNoLookups {
 		if u, err = user.LookupId(username); err == nil {
@@ -193,21 +191,38 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			groupname = g.Name
 		}
 	}
+
 	base, underlying, actual, _ := instance.LiveVersion(i, pid)
 	if pkgtype := i.Config().GetString("pkgtype"); pkgtype != "" {
 		base = path.Join(pkgtype, base)
 	}
-
-	var portlist string
-	if i.Host().IsLocal() || psCmdLong {
-		portlist = strings.Join(instance.ListeningPortsStrings(i), " ")
-	}
-	if !i.Host().IsLocal() && portlist == "" {
-		portlist = "..."
-	}
-	uptodate := "="
+	uptodate = "="
 	if underlying != actual {
 		uptodate = "<>"
+	}
+
+	if i.Host().IsLocal() || psCmdLong {
+		ports = instance.ListeningPorts(i)
+	}
+
+	return
+}
+
+func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
+	pid, username, groupname, mtime, base, actual, uptodate, ports, err := psInstanceCommon(i)
+	if err != nil {
+		return
+	}
+
+	var portlist string
+	portsString := []string{}
+	for _, p := range ports {
+		portsString = append(portsString, fmt.Sprint(p))
+	}
+	portlist = strings.Join(portsString, " ")
+	if !i.Host().IsLocal() && portlist == "" {
+		portlist = "..."
 	}
 
 	p := &instance.ProcessStats{}
@@ -259,43 +274,21 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 
 func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
-
-	if instance.IsDisabled(i) {
-		return
-	}
-	pid, uid, gid, mtime, err := instance.GetPIDInfo(i)
+	pid, username, groupname, mtime, base, actual, uptodate, ports, err := psInstanceCommon(i)
 	if err != nil {
-		err = nil // skip
 		return
 	}
 
-	var u *user.User
-	var g *user.Group
+	var portlist string
+	portsString := []string{}
+	for _, p := range ports {
+		portsString = append(portsString, fmt.Sprint(p))
+	}
+	portlist = strings.Join(portsString, " ")
+	if !i.Host().IsLocal() && portlist == "" {
+		portlist = "..."
+	}
 
-	username := fmt.Sprint(uid)
-	groupname := fmt.Sprint(gid)
-
-	if !psCmdNoLookups {
-		if u, err = user.LookupId(username); err == nil {
-			username = u.Username
-		}
-		if g, err = user.LookupGroupId(groupname); err == nil {
-			groupname = g.Name
-		}
-	}
-	ports := []string{}
-	if i.Host().IsLocal() || psCmdLong {
-		ports = instance.ListeningPortsStrings(i)
-	}
-	portlist := strings.Join(ports, " ")
-	base, underlying, actual, _ := instance.LiveVersion(i, pid)
-	if pkgtype := i.Config().GetString("pkgtype"); pkgtype != "" {
-		base = path.Join(pkgtype, base)
-	}
-	uptodate := "="
-	if underlying != actual {
-		uptodate = "<>"
-	}
 	var row []string
 
 	if psCmdToolkit {
@@ -337,41 +330,9 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 
 func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
-
-	if instance.IsDisabled(i) {
-		return
-	}
-	pid, uid, gid, mtime, err := instance.GetPIDInfo(i)
+	pid, username, groupname, mtime, base, actual, uptodate, ports, err := psInstanceCommon(i)
 	if err != nil {
-		// skip errors for now
 		return
-	}
-
-	var u *user.User
-	var g *user.Group
-
-	username := fmt.Sprint(uid)
-	groupname := fmt.Sprint(gid)
-
-	if !psCmdNoLookups {
-		if u, err = user.LookupId(username); err == nil {
-			username = u.Username
-		}
-		if g, err = user.LookupGroupId(groupname); err == nil {
-			groupname = g.Name
-		}
-	}
-	ports := []int{}
-	if i.Host().IsLocal() || psCmdLong {
-		ports = instance.ListeningPorts(i)
-	}
-	base, underlying, actual, _ := instance.LiveVersion(i, pid)
-	if pkgtype := i.Config().GetString("pkgtype"); pkgtype != "" {
-		base = path.Join(pkgtype, base)
-	}
-	uptodate := "="
-	if underlying != actual {
-		uptodate = "<>"
 	}
 
 	psData := psType{
