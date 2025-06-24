@@ -189,6 +189,9 @@ COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/bin/
 COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /cordial/bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
 
+# tools/geneos include files
+COPY --from=build /app/cordial/tools/geneos/includes /cordial/etc/geneos/includes/
+
 # san-config and default YAML
 COPY --from=build /app/cordial/tools/san-config/san-config /cordial/bin/
 COPY --from=build /app/cordial/tools/san-config/cmd/san-config.defaults.yaml /cordial/etc/geneos/
