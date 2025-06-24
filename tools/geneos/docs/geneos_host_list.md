@@ -9,10 +9,11 @@ geneos host list [flags] [NAME...]
 ### Options
 
 ```text
-  -a, --all      Show all hosts
-  -j, --json     Output JSON
-  -i, --pretty   Output indented JSON
-  -c, --csv      Output CSV
+  -a, --all       Show all hosts
+  -j, --json      Output JSON
+  -i, --pretty    Output indented JSON
+  -c, --csv       Output CSV
+  -t, --toolkit   Output Toolkit formatted CSV
 ```
 
 ## SEE ALSO

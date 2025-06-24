@@ -19,10 +19,13 @@ package instance
 
 import (
 	"bufio"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
 	"path"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -36,6 +39,43 @@ import (
 var tcpfiles = []string{
 	"/proc/net/tcp",
 	"/proc/net/tcp6",
+}
+
+var udpfiles = []string{
+	"/proc/net/udp",
+	"/proc/net/udp6",
+}
+
+// from linux net/tcp_states.h
+const (
+	_ = iota
+	TCP_ESTABLISHED
+	TCP_SYN_SENT
+	TCP_SYN_RECV
+	TCP_FIN_WAIT1
+	TCP_FIN_WAIT2
+	TCP_TIME_WAIT
+	TCP_CLOSE
+	TCP_CLOSE_WAIT
+	TCP_LAST_ACK
+	TCP_LISTEN
+	TCP_CLOSING
+	TCP_NEW_SYN_RECV
+)
+
+var stateNames = map[int]string{
+	TCP_ESTABLISHED:  "ESTABLISHED",
+	TCP_SYN_SENT:     "SYN-SENT",
+	TCP_SYN_RECV:     "SYN-RECEIVED",
+	TCP_FIN_WAIT1:    "FIN-WAIT-1",
+	TCP_FIN_WAIT2:    "FIN-WAIT-2",
+	TCP_TIME_WAIT:    "TIME-WAIT",
+	TCP_CLOSE:        "CLOSED",
+	TCP_CLOSE_WAIT:   "CLOSE-WAIT",
+	TCP_LAST_ACK:     "LAST-ACK",
+	TCP_LISTEN:       "LISTEN",
+	TCP_CLOSING:      "CLOSING",
+	TCP_NEW_SYN_RECV: "SYN-RECEIVED",
 }
 
 // GetAllPorts gets all used ports in config files on a specific remote
@@ -164,7 +204,7 @@ func allTCPListenPorts(h *geneos.Host, ports map[int]int) (err error) {
 			for scanner.Scan() {
 				line := scanner.Text()
 				fields := strings.Fields(line)
-				if len(fields) < 10 || fields[3] != "0A" {
+				if len(fields) < 10 || fields[3] != "0A" { // TCP_LISTEN
 					break
 				}
 				s := strings.SplitN(fields[1], ":", 2)
@@ -254,4 +294,100 @@ func sockets(i geneos.Instance) (links map[int]int) {
 		}
 	}
 	return
+}
+
+var sockRE = regexp.MustCompile(`socket:\[(\d+)\]`)
+
+// SocketToConn takes the name of a socket from destination of a
+// `/proc/.../fd` link and locates the corresponding connection in one
+// of `/proc/net/tcp[6]` or `/proc/net/ucp[6]`. socket should be of the
+// form `socket:[17126174]`
+func SocketToConn(h *geneos.Host, socket string) (sc *SocketConnection, err error) {
+	lx := sockRE.FindStringSubmatch(socket)
+	if len(lx) < 2 {
+		return
+	}
+	sockInode := lx[1]
+
+	sc = &SocketConnection{}
+
+	for _, source := range tcpfiles {
+		tcp, err := h.Open(source)
+		if err != nil {
+			continue
+		}
+
+		var found bool
+		var fields []string
+
+		scanner := bufio.NewScanner(tcp)
+		if scanner.Scan() {
+			// skip headers
+			_ = scanner.Text()
+			for scanner.Scan() {
+				line := scanner.Text()
+				fields = strings.Fields(line)
+				if len(fields) > 8 && fields[9] == sockInode {
+					// found
+					found = true
+					break
+				}
+			}
+		}
+
+		if !found {
+			continue
+		}
+
+		sc.Protocol = path.Base(source)
+
+		l, r, st, q := fields[1], fields[2], fields[3], fields[4]
+
+		laddr, lport, _ := strings.Cut(l, ":")
+		raddr, rport, _ := strings.Cut(r, ":")
+
+		lx, err2 := hex.DecodeString(laddr)
+		for i, j := 0, len(lx)-1; i < j; i, j = i+1, j-1 {
+			lx[i], lx[j] = lx[j], lx[i]
+		}
+
+		if err2 != nil {
+			log.Error().Err(err2).Msg("")
+			return sc, err2
+		}
+		sc.LocalAddr = net.IP(lx)
+		fmt.Sscanf(lport, "%X", &sc.LocalPort)
+
+		rx, err2 := hex.DecodeString(raddr)
+		for i, j := 0, len(rx)-1; i < j; i, j = i+1, j-1 {
+			rx[i], rx[j] = rx[j], rx[i]
+		}
+
+		if err2 != nil {
+			log.Error().Err(err2).Msg("")
+			return sc, err2
+		}
+		sc.RemoteAddr = net.IP(rx)
+		fmt.Sscanf(rport, "%X", &sc.RemotePort)
+
+		fmt.Sscanf(q, "%X:%X", &sc.TxQueue, &sc.RxQueue)
+		var state int
+		fmt.Sscanf(st, "%X", &state)
+		sc.Status = stateNames[state]
+
+		return sc, nil
+	}
+
+	return
+}
+
+type SocketConnection struct {
+	Protocol   string
+	LocalAddr  net.IP
+	LocalPort  uint16
+	RemoteAddr net.IP
+	RemotePort uint16
+	TxQueue    int64
+	RxQueue    int64
+	Status     string
 }

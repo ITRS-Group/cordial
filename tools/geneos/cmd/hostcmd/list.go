@@ -43,7 +43,7 @@ type listCmdType struct {
 	Directory string
 }
 
-var listCmdShowHidden, listCmdJSON, listCmdIndent, listCmdCSV bool
+var listCmdShowHidden, listCmdJSON, listCmdIndent, listCmdCSV, listCmdToolkit bool
 
 var listCmdEntries []listCmdType
 
@@ -54,6 +54,7 @@ func init() {
 	listCmd.Flags().BoolVarP(&listCmdJSON, "json", "j", false, "Output JSON")
 	listCmd.Flags().BoolVarP(&listCmdIndent, "pretty", "i", false, "Output indented JSON")
 	listCmd.Flags().BoolVarP(&listCmdCSV, "csv", "c", false, "Output CSV")
+	listCmd.Flags().BoolVarP(&listCmdToolkit, "toolkit", "t", false, "Output Toolkit formatted CSV")
 
 	listCmd.Flags().SortFlags = false
 }
@@ -83,6 +84,11 @@ var listCmd = &cobra.Command{
 				b, _ = json.Marshal(listCmdEntries)
 			}
 			fmt.Println(string(b))
+		case listCmdToolkit:
+			hostListCSVWriter := csv.NewWriter(os.Stdout)
+			hostListCSVWriter.Write([]string{"name", "username", "hostname", "flags", "port", "directory"})
+			err = loopHosts(hostListInstanceCSVHosts, hostListCSVWriter, listCmdShowHidden)
+			hostListCSVWriter.Flush()
 		case listCmdCSV:
 			hostListCSVWriter := csv.NewWriter(os.Stdout)
 			hostListCSVWriter.Write([]string{"Name", "Username", "Hostname", "Flags", "Port", "Directory"})

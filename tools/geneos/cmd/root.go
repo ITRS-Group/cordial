@@ -280,6 +280,8 @@ func cmdNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 	return pflag.NormalizedName(name)
 }
 
+var configPath string
+
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if quiet {
@@ -312,14 +314,17 @@ func initConfig() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
-	log.Debug().Msgf("configuration loaded from %s", config.Path(cordial.ExecutableName(),
+
+	configPath = config.Path(cordial.ExecutableName(),
 		config.SetConfigFile(cfgFile),
 		config.UseGlobal(),
 		config.AddDirs(oldConfDir),
 		config.MergeSettings(),
 		config.IgnoreWorkingDir(),
 		config.WithEnvs("ITRS", "_"),
-	))
+	)
+
+	log.Debug().Msgf("configuration loaded from %s", configPath)
 
 	// support old set-ups
 	cf.BindEnv(cordial.ExecutableName(), "GENEOS_HOME", "ITRS_HOME")

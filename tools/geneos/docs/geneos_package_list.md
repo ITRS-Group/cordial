@@ -13,9 +13,10 @@ geneos package list [flags] [TYPE]
 ### Options
 
 ```text
-  -j, --json     Output JSON
-  -i, --pretty   Output indented JSON
-  -c, --csv      Output CSV
+  -j, --json      Output JSON
+  -i, --pretty    Output indented JSON
+  -c, --csv       Output CSV
+  -t, --toolkit   Output Toolkit formatted CSV
 ```
 
 ## SEE ALSO

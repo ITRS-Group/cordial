@@ -348,9 +348,9 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			"expires",
 			"commonName",
 			"valid",
-			"certificateFile",
-			"privateKeyFile",
-			"chainFile",
+			"certificate",
+			"privateKey",
+			"chain",
 			"issuer",
 			"subjAltNames",
 			"IPs",
@@ -610,11 +610,13 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *instance.Res
 		fmt.Sprint(valid),
 	}
 	if listCmdLong {
-		cols = append(cols, i.Config().GetString("certificate"))
-		cols = append(cols, i.Config().GetString("privatekey"))
-		cols = append(cols, chainfile)
-		cols = append(cols, cert.Issuer.CommonName)
-		cols = append(cols, strings.Join(cert.DNSNames, " "))
+		cols = append(cols,
+			i.Config().GetString("certificate"),
+			i.Config().GetString("privatekey"),
+			chainfile,
+			cert.Issuer.CommonName,
+			strings.Join(cert.DNSNames, " "),
+		)
 		if len(cert.IPAddresses) > 0 {
 			ips := []string{}
 			for _, ip := range cert.IPAddresses {

@@ -25,6 +25,7 @@ import (
 	"io/fs"
 	"path"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -34,18 +35,10 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-type OpenFiles struct {
-	Path   string
-	Stat   fs.FileInfo
-	FD     string
-	FDMode fs.FileMode
-}
-
-// Files returns a map of file descriptor (int) to file details
-// (InstanceProcFiles) for all open, real, files for the process running
-// as the instance. All paths that are not absolute paths are ignored.
-// An empty map is returned if the process cannot be found.
-func Files(i geneos.Instance) (files map[int]OpenFiles) {
+// Files returns a map of file descriptor to file details for all files
+// for the instance. An empty map is returned if the process cannot be
+// found.
+func Files(i geneos.Instance) (files []ProcessFDs) {
 	pid, err := GetPID(i)
 	if err != nil {
 		return
@@ -53,61 +46,71 @@ func Files(i geneos.Instance) (files map[int]OpenFiles) {
 
 	h := i.Host()
 
-	file := fmt.Sprintf("/proc/%d/fd", pid)
-	fds, err := h.ReadDir(file)
+	fdDir := fmt.Sprintf("/proc/%d/fd", pid)
+	fds, err := h.ReadDir(fdDir)
 	if err != nil {
 		return
 	}
-
-	files = make(map[int]OpenFiles, len(fds))
+	slices.SortFunc(fds, func(a, b fs.DirEntry) int {
+		an, _ := strconv.Atoi(a.Name())
+		bn, _ := strconv.Atoi(b.Name())
+		if an < bn {
+			return -1
+		}
+		if an == bn {
+			return 0
+		}
+		return 1
+	})
 
 	for _, ent := range fds {
 		fd := ent.Name()
-		dest, err := h.Readlink(path.Join(file, fd))
-		if err != nil {
-			continue
-		}
-		if !path.IsAbs(dest) {
-			continue
-		}
 		n, _ := strconv.Atoi(fd)
 
-		fdPath := path.Join(file, fd)
-		fdMode, err := h.Lstat(fdPath)
+		fdPath := path.Join(fdDir, fd)
+
+		linkVal, err := h.Readlink(fdPath)
 		if err != nil {
 			continue
 		}
 
-		s, err := h.Stat(dest)
+		linkStat, err := h.Lstat(fdPath)
 		if err != nil {
 			continue
 		}
 
-		files[n] = OpenFiles{
-			Path:   dest,
-			Stat:   s,
-			FD:     fdPath,
-			FDMode: fdMode.Mode(),
+		if !path.IsAbs(linkVal) {
+			// check for socket
+			sc, err := SocketToConn(h, linkVal)
+			if err != nil {
+				continue
+			}
+
+			files = append(files, ProcessFDs{
+				PID:  pid,
+				FD:   n,
+				Path: linkVal,
+				Stat: linkStat,
+				Conn: sc,
+			})
+
+			continue
 		}
+
+		destStat, err := h.Stat(fdPath)
+		if err != nil {
+			continue
+		}
+
+		files = append(files, ProcessFDs{
+			PID:   pid,
+			FD:    n,
+			Path:  linkVal,
+			Lstat: linkStat,
+			Stat:  destStat,
+		})
 	}
 	return
-}
-
-// ProcessStats is an example of a structure to pass to
-// instance.ProcessStatus, using `stats` and `status` tags
-type ProcessStats struct {
-	Pid      int64         `stat:"0"`
-	Utime    time.Duration `stat:"13"`
-	Stime    time.Duration `stat:"14"`
-	CUtime   time.Duration `stat:"15"`
-	CStime   time.Duration `stat:"16"`
-	State    string        `status:"State"`
-	Threads  int64         `status:"Threads"`
-	VmRSS    int64         `status:"VmRSS"`
-	VmHWM    int64         `status:"VmHWM"`
-	RssAnon  int64         `status:"RssAnon"`
-	RssFile  int64         `status:"RssFile"`
-	RssShmem int64         `status:"RssShmem"`
 }
 
 // ProcessStatus reads the instance process `stats` and `status` files
@@ -167,44 +170,101 @@ func ProcessStatus(i geneos.Instance, pstats any) (err error) {
 	for i := 0; i < st.NumField(); i++ {
 		ft := st.Field(i)
 		fv := sv.Field(i)
-		// for "stat" tag, lookup the field by index, if it exists
-		if statField, ok := ft.Tag.Lookup("stat"); ok {
-			if idx, err := strconv.Atoi(statField); err == nil {
-				if len(statFields) > idx && fv.CanSet() {
+
+		// special cases
+		switch ft.Name {
+		case "OpenFiles":
+			if fv.CanSet() {
+				var openfiles int64
+				fdDir := fmt.Sprintf("/proc/%d/fd", pid)
+				dirents, err := h.ReadDir(fdDir)
+				if err != nil {
+					continue
+				}
+				for _, d := range dirents {
+					// skip non symlinks
+					s, err := d.Info()
+					if err != nil || s.Mode()&fs.ModeSymlink == 0 {
+						continue
+					}
+
+					linkVal, err := h.Readlink(path.Join(fdDir, d.Name()))
+					if err != nil {
+						continue
+					}
+					if path.IsAbs(linkVal) {
+						openfiles++
+					}
+				}
+				fv.SetInt(openfiles)
+			}
+
+		case "OpenSockets":
+			if fv.CanSet() {
+				var opensockets int64
+				fdDir := fmt.Sprintf("/proc/%d/fd", pid)
+				dirents, err := h.ReadDir(fdDir)
+				if err != nil {
+					continue
+				}
+				for _, d := range dirents {
+					// skip non symlinks
+					s, err := d.Info()
+					if err != nil || s.Mode()&fs.ModeSymlink == 0 {
+						continue
+					}
+					linkVal, err := h.Readlink(path.Join(fdDir, d.Name()))
+					if err != nil {
+						continue
+					}
+					if strings.HasPrefix(linkVal, "socket:[") {
+						opensockets++
+					}
+				}
+				fv.SetInt(opensockets)
+			}
+
+		default:
+			// for "stat" tag, lookup the field by index, if it exists
+			if statField, ok := ft.Tag.Lookup("stat"); ok {
+				if idx, err := strconv.Atoi(statField); err == nil {
+					if len(statFields) > idx && fv.CanSet() {
+						switch fv.Kind() {
+						case reflect.String:
+							fv.SetString(statFields[idx])
+						case reflect.Int64:
+							if iv, err := strconv.ParseInt(statFields[idx], 10, 64); err == nil {
+								if fv.Type().String() == "time.Duration" {
+									fv.SetInt(iv * int64(time.Second) / scClkTck)
+								} else {
+									fv.SetInt(iv)
+								}
+							}
+
+						}
+					}
+				}
+			}
+
+			// for "status" tag, lookup the value by matching name, if it exists
+			if statusField, ok := ft.Tag.Lookup("status"); ok {
+				if v, ok := statusFields[statusField]; ok && fv.CanSet() {
 					switch fv.Kind() {
 					case reflect.String:
-						fv.SetString(statFields[idx])
-					case reflect.Int64:
-						if iv, err := strconv.ParseInt(statFields[idx], 10, 64); err == nil {
-							if fv.Type().String() == "time.Duration" {
-								fv.SetInt(iv * int64(time.Second) / scClkTck)
+						fv.SetString(v)
+					case reflect.Int64: // assume kB values
+						v, found := strings.CutSuffix(v, " kB")
+						if iv, err := strconv.ParseInt(v, 10, 64); err == nil {
+							if found {
+								fv.SetInt(iv * 1024)
 							} else {
 								fv.SetInt(iv)
 							}
 						}
-
 					}
 				}
 			}
-		}
 
-		// for "status" tag, lookup the value by matching name, if it exists
-		if statusField, ok := ft.Tag.Lookup("status"); ok {
-			if v, ok := statusFields[statusField]; ok && fv.CanSet() {
-				switch fv.Kind() {
-				case reflect.String:
-					fv.SetString(v)
-				case reflect.Int64: // assume kB values
-					v, found := strings.CutSuffix(v, " kB")
-					if iv, err := strconv.ParseInt(v, 10, 64); err == nil {
-						if found {
-							fv.SetInt(iv * 1024)
-						} else {
-							fv.SetInt(iv)
-						}
-					}
-				}
-			}
 		}
 	}
 

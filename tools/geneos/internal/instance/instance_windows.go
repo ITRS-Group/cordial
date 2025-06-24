@@ -21,9 +21,10 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-type ProcessStats struct {
+func ProcessStatus(i geneos.Instance, pstats any) (err error) {
+	return
 }
 
-func ProcessStatus(i geneos.Instance) (p *ProcessStats, err error) {
+func Files(i geneos.Instance) (files []ProcessFDs) {
 	return
 }

@@ -21,10 +21,12 @@ import (
 	"crypto/tls"
 	_ "embed"
 	"encoding/csv"
+	"errors"
 	"fmt"
+	"io/fs"
+	"net"
 	"net/http"
 	"os"
-	"os/user"
 	"path"
 	"strings"
 	"text/tabwriter"
@@ -36,33 +38,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type psType struct {
-	Type      string `json:"type"`
-	Name      string `json:"name"`
-	Host      string `json:"host"`
-	PID       string `json:"pid"`
-	Ports     []int  `json:"ports,omitempty"`
-	User      string `json:"user,omitempty"`
-	Group     string `json:"group,omitempty"`
-	Starttime string `json:"starttime,omitempty"`
-	Version   string `json:"version,omitempty"`
-	Home      string `json:"home,omitempty"`
-	// Live      bool   `json:"live,omitempty"`
-
-	// Extra fields, when `--long` is used
-	Extra *instance.ProcessStats `json:"extra,omitempty"`
-}
-
-var psCmdLong, psCmdShowFiles, psCmdJSON, psCmdIndent, psCmdCSV, psCmdNoLookups, psCmdToolkit bool
+var psCmdLong, psCmdShowFiles, psCmdShowNet, psCmdJSON, psCmdIndent, psCmdCSV, psCmdToolkit bool
 
 func init() {
 	GeneosCmd.AddCommand(psCmd)
 
 	psCmd.Flags().BoolVarP(&psCmdShowFiles, "files", "f", false, "Show open files")
+	psCmd.Flags().BoolVarP(&psCmdShowNet, "network", "n", false, "Show TCP sockets")
 	psCmd.Flags().MarkHidden("files")
 
 	psCmd.Flags().BoolVarP(&psCmdLong, "long", "l", false, "Show more output (remote ports etc.)")
-	psCmd.Flags().BoolVarP(&psCmdNoLookups, "nolookup", "n", false, "No lookups for user/groups")
 
 	psCmd.Flags().BoolVarP(&psCmdJSON, "json", "j", false, "Output JSON")
 	psCmd.Flags().BoolVarP(&psCmdIndent, "pretty", "i", false, "Output indented JSON")
@@ -94,41 +79,97 @@ var psCmd = &cobra.Command{
 }
 
 // CommandPS writes running instance information to STDOUT
-//
-// XXX relies on global flags
 func CommandPS(ct *geneos.Component, names []string, params []string) {
 	switch {
 	case psCmdJSON, psCmdIndent:
 		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceJSON).Write(os.Stdout, instance.WriterIndent(psCmdIndent))
 	case psCmdToolkit:
 		psCSVWriter := csv.NewWriter(os.Stdout)
-		columns := []string{
-			"ID",
-			"type",
-			"name",
-			"host",
-			"pid",
-			"ports",
-			"user",
-			"group",
-			"startTime",
-			"version",
-			"home",
-		}
-		if psCmdLong {
-			columns = append(columns,
-				"state",
-				"threads",
-				"residentSetSize",
-				"residentSetSizeMax",
-				"totalUserTime",
-				"totalKernelTime",
-				"totalChildUserTime",
-				"totalChildKernelTime",
-			)
+
+		var columns []string
+
+		switch {
+		case psCmdShowNet:
+			columns = []string{
+				"ID",
+				"type",
+				"name",
+				"host",
+				"fd",
+				"localaddr",
+				"localport",
+				"remoteaddr",
+				"remoteport",
+				"status",
+				"txqueue",
+				"rxqueue",
+			}
+		case psCmdShowFiles:
+			columns = []string{
+				"ID",
+				"type",
+				"name",
+				"host",
+				"fd",
+				"permissions",
+				"user",
+				"group",
+				"size",
+				"lastModified",
+				"path",
+			}
+		default:
+			columns = []string{
+				"ID",
+				"type",
+				"name",
+				"host",
+				"pid",
+				"ports",
+				"user",
+				"group",
+				"startTime",
+				"version",
+				"home",
+			}
+			if psCmdLong {
+				columns = append(columns,
+					"state",
+					"threads",
+					"openfiles",
+					"opensockets",
+					"residentSetSize",
+					"residentSetSizeAnon",
+					"residentSetSizeMax",
+					"totalUserTime",
+					"totalKernelTime",
+					"totalChildUserTime",
+					"totalChildKernelTime",
+				)
+			}
 		}
 		psCSVWriter.Write(columns)
-		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV).Write(psCSVWriter)
+		resp := instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV)
+		resp.Write(psCSVWriter, instance.WriterIgnoreErr(geneos.ErrDisabled))
+		switch {
+		case psCmdShowNet:
+		case psCmdShowFiles:
+		default:
+			var notRunning int
+			var disabled int
+			for _, r := range resp {
+				if errors.Is(r.Err, os.ErrProcessDone) {
+					notRunning++
+				}
+				if errors.Is(r.Err, geneos.ErrDisabled) {
+					disabled++
+				}
+			}
+			fmt.Printf("<!>instances,%d\n", len(resp))
+			fmt.Printf("<!>running,%d\n", len(resp)-notRunning-disabled)
+			fmt.Printf("<!>notRunning,%d\n", notRunning)
+			fmt.Printf("<!>disabled,%d\n", disabled)
+		}
 	case psCmdCSV:
 		psCSVWriter := csv.NewWriter(os.Stdout)
 		columns := []string{
@@ -147,7 +188,10 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 			columns = append(columns,
 				"State",
 				"Threads",
+				"Open Files",
+				"Open Sockets",
 				"RSS",
+				"RSSAnon",
 				"RSSMax",
 				"TotalUserTime",
 				"TotalKernelTime",
@@ -159,8 +203,16 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV).Write(psCSVWriter)
 	default:
 		psTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-		if psCmdLong {
-			fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\tState\tThreads\tRSS\tRSSMax\tTotalUserTime\tTotalKernelTime\tTotalChildUserTime\tTotalChildKernelTime\n")
+		if psCmdShowNet {
+			fmt.Fprintf(psTabWriter,
+				"Type\tName\tHost\tFD\tLocal Addr\tLocal Port\tRemote Addr\tRemote Port\tStatus\tTXQueue\tRxQueue\n",
+			)
+		} else if psCmdShowFiles {
+			fmt.Fprintf(psTabWriter,
+				"Type\tName\tHost\tFD\tPerms\tUser:Group\tSize\tLast Modified\tPath\n",
+			)
+		} else if psCmdLong {
+			fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\tState\tThreads\tOpen Files\tOpen Sockets\tRSS\tRSSAnon\tRSSMax\tTotalUserTime\tTotalKernelTime\tTotalChildUserTime\tTotalChildKernelTime\n")
 		} else {
 			fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\n")
 		}
@@ -169,28 +221,17 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 }
 
 func psInstanceCommon(i geneos.Instance) (pid int, username, groupname string, mtime time.Time, base, actual, uptodate string, ports []int, err error) {
-	var u *user.User
-	var g *user.Group
-
 	if instance.IsDisabled(i) {
+		err = geneos.ErrDisabled
 		return
 	}
-	pid, uid, gid, mtime, err := instance.GetPIDInfo(i)
+	pid, owner, mtime, err := instance.GetPIDInfo(i)
 	if err != nil {
 		return
 	}
 
-	username = fmt.Sprint(uid)
-	groupname = fmt.Sprint(gid)
-
-	if !psCmdNoLookups {
-		if u, err = user.LookupId(username); err == nil {
-			username = u.Username
-		}
-		if g, err = user.LookupGroupId(groupname); err == nil {
-			groupname = g.Name
-		}
-	}
+	username = geneos.GetUsername(owner)
+	groupname = geneos.GetGroupname(owner)
 
 	base, underlying, actual, _ := instance.LiveVersion(i, pid)
 	if pkgtype := i.Config().GetString("pkgtype"); pkgtype != "" {
@@ -210,8 +251,98 @@ func psInstanceCommon(i geneos.Instance) (pid int, username, groupname string, m
 
 func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
+
 	pid, username, groupname, mtime, base, actual, uptodate, ports, err := psInstanceCommon(i)
 	if err != nil {
+		return
+	}
+
+	if psCmdShowNet {
+		for _, fd := range instance.Files(i) {
+			if fd.Conn != nil {
+				// socket
+				c := fd.Conn
+				remAddr := "-"
+				if !c.RemoteAddr.Equal(net.IPv4(0, 0, 0, 0)) {
+					remAddr = fmt.Sprint(c.RemoteAddr)
+				}
+				remPort := "-"
+				if c.RemotePort != 0 {
+					remPort = fmt.Sprint(c.RemotePort)
+				}
+				resp.Lines = append(resp.Lines,
+					fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%d\t%s\t%s\t%s\t%d\t%d",
+						i.Type(),
+						i.Name(),
+						i.Host(),
+						fd.FD,
+						c.LocalAddr,
+						c.LocalPort,
+						remAddr,
+						remPort,
+						c.Status,
+						c.TxQueue,
+						c.RxQueue,
+					))
+			}
+		}
+		return
+	}
+
+	// file
+	if psCmdShowFiles {
+		homedir := i.Home()
+		hs, err := i.Host().Stat(homedir)
+		if err != nil {
+			resp.Err = err
+			return
+		}
+		o := i.Host().GetFileOwner(hs)
+		resp.Lines = append(resp.Lines,
+			fmt.Sprintf("%s\t%s\t%s\tcwd\t%s\t%s:%s\t%d\t%s\t%s",
+				i.Type(),
+				i.Name(),
+				i.Host(),
+				hs.Mode().Perm().String(),
+				geneos.GetUsername(o),
+				geneos.GetGroupname(o),
+				hs.Size(),
+				hs.ModTime().Local().Format(time.RFC3339),
+				homedir,
+			))
+		homedir += "/"
+		for _, fd := range instance.Files(i) {
+			if path.IsAbs(fd.Path) {
+				o := i.Host().GetFileOwner(fd.Stat)
+				path := fd.Path
+				if strings.HasPrefix(path, homedir) {
+					path = strings.Replace(path, homedir, "", 1)
+				}
+				fdPerm := ""
+				m := fd.Lstat.Mode().Perm()
+				if m&0400 == 0400 {
+					fdPerm += "r"
+				}
+				if m&0200 == 0200 {
+					fdPerm += "w"
+				}
+				resp.Lines = append(resp.Lines,
+					fmt.Sprintf("%s\t%s\t%s\t%d:%s\t%s\t%s:%s\t%d\t%s\t%s",
+						i.Type(),
+						i.Name(),
+						i.Host(),
+						fd.FD,
+						fdPerm,
+						fd.Stat.Mode().Perm().String(),
+						geneos.GetUsername(o),
+						geneos.GetGroupname(o),
+						fd.Stat.Size(),
+						fd.Stat.ModTime().Local().Format(time.RFC3339),
+						path,
+					))
+			}
+		}
+
 		return
 	}
 
@@ -227,7 +358,7 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 
 	p := &instance.ProcessStats{}
 	if err := instance.ProcessStatus(i, p); err == nil && psCmdLong {
-		resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s%s%s\t%s\t%s\t%d\t%.2f MiB\t%.2f MiB\t%.2f s\t%.2f s\t%.2f s\t%.2f s",
+		resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s%s%s\t%s\t%s\t%d\t%d\t%d\t%.2f MiB\t%.2f MiB\t%.2f MiB\t%.2f s\t%.2f s\t%.2f s\t%.2f s",
 			i.Type(),
 			i.Name(),
 			i.Host(),
@@ -242,7 +373,10 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			i.Home(),
 			p.State,
 			p.Threads,
+			p.OpenFiles,
+			p.OpenSockets,
 			float64(p.VmRSS)/(1024*1024),
+			float64(p.RssAnon)/(1024*1024),
 			float64(p.VmHWM)/(1024*1024),
 			p.Utime.Seconds(),
 			p.Stime.Seconds(),
@@ -266,9 +400,6 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		)
 	}
 
-	if psCmdShowFiles {
-		resp.Lines = listOpenFiles(i)
-	}
 	return
 }
 
@@ -276,6 +407,115 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 	pid, username, groupname, mtime, base, actual, uptodate, ports, err := psInstanceCommon(i)
 	if err != nil {
+		resp.Err = err
+		return
+	}
+
+	if psCmdShowNet {
+		for _, fd := range instance.Files(i) {
+			if fd.Conn != nil {
+				// socket
+				c := fd.Conn
+				remAddr := "-"
+				if !c.RemoteAddr.Equal(net.IPv4(0, 0, 0, 0)) {
+					remAddr = fmt.Sprint(c.RemoteAddr)
+				}
+				remPort := "-"
+				if c.RemotePort != 0 {
+					remPort = fmt.Sprint(c.RemotePort)
+				}
+
+				var row []string
+				if psCmdToolkit {
+					row = append(row, instance.IDString(i)+"-"+fmt.Sprint(fd.FD))
+				}
+
+				row = append(row,
+					i.Type().String(),
+					i.Name(),
+					i.Host().String(),
+					fmt.Sprint(fd.FD),
+					c.LocalAddr.String(),
+					fmt.Sprint(c.LocalPort),
+					remAddr,
+					remPort,
+					c.Status,
+					fmt.Sprint(c.TxQueue),
+					fmt.Sprint(c.RxQueue),
+				)
+				resp.Rows = append(resp.Rows, row)
+			}
+		}
+		return
+	}
+
+	// file
+	if psCmdShowFiles {
+		homedir := i.Home()
+		hs, err := i.Host().Stat(homedir)
+		if err != nil {
+			resp.Err = err
+			return
+		}
+		o := i.Host().GetFileOwner(hs)
+
+		var row []string
+		if psCmdToolkit {
+			row = append(row, instance.IDString(i))
+		}
+
+		row = append(row,
+			i.Type().String(),
+			i.Name(),
+			i.Host().String(),
+			"cwd",
+			hs.Mode().Perm().String(),
+			geneos.GetUsername(o),
+			geneos.GetGroupname(o),
+			fmt.Sprint(hs.Size()),
+			hs.ModTime().Local().Format(time.RFC3339),
+			homedir,
+		)
+		resp.Rows = append(resp.Rows, row)
+
+		homedir += "/"
+		for _, fd := range instance.Files(i) {
+			if path.IsAbs(fd.Path) {
+				o := i.Host().GetFileOwner(fd.Stat)
+				path := fd.Path
+				if strings.HasPrefix(path, homedir) {
+					path = strings.Replace(path, homedir, "", 1)
+				}
+				fdPerm := ""
+				m := fd.Lstat.Mode().Perm()
+				if m&0400 == 0400 {
+					fdPerm += "r"
+				}
+				if m&0200 == 0200 {
+					fdPerm += "w"
+				}
+				var row []string
+				if psCmdToolkit {
+					row = append(row, instance.IDString(i)+" # "+fmt.Sprint(fd.FD))
+				}
+
+				row = append(row,
+					i.Type().String(),
+					i.Name(),
+					i.Host().String(),
+					fmt.Sprintf("%d:%s", fd.FD, fdPerm),
+					fd.Stat.Mode().Perm().String(),
+					geneos.GetUsername(o),
+					geneos.GetGroupname(o),
+					fmt.Sprint(fd.Stat.Size()),
+					fd.Stat.ModTime().Local().Format(time.RFC3339),
+					path,
+				)
+				resp.Rows = append(resp.Rows, row)
+
+			}
+		}
+
 		return
 	}
 
@@ -314,7 +554,10 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			row = append(row,
 				p.State,
 				fmt.Sprint(p.Threads),
+				fmt.Sprint(p.OpenFiles),
+				fmt.Sprint(p.OpenSockets),
 				fmt.Sprintf("%.2f MiB", float64(p.VmRSS)/(1024*1024)),
+				fmt.Sprintf("%.2f MiB", float64(p.RssAnon)/(1024*1024)),
 				fmt.Sprintf("%.2f MiB", float64(p.VmHWM)/(1024*1024)),
 				fmt.Sprintf("%.2f s", p.Utime.Seconds()),
 				fmt.Sprintf("%.2f s", p.Stime.Seconds()),
@@ -328,6 +571,50 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	return
 }
 
+type psInstance struct {
+	Type      string `json:"type"`
+	Name      string `json:"name"`
+	Host      string `json:"host"`
+	PID       string `json:"pid"`
+	Ports     []int  `json:"ports,omitempty"`
+	User      string `json:"user,omitempty"`
+	Group     string `json:"group,omitempty"`
+	Starttime string `json:"starttime,omitempty"`
+	Version   string `json:"version,omitempty"`
+	Home      string `json:"home,omitempty"`
+
+	// Extra fields, when `--long` is used
+	Extra *instance.ProcessStats `json:"extra,omitempty"`
+}
+
+type psInstanceFiles struct {
+	Type     string      `json:"type"`
+	Name     string      `json:"name"`
+	Host     string      `json:"host"`
+	FD       int         `json:"fd"`
+	FDPerms  string      `json:"fd_perms"`
+	Perms    fs.FileMode `json:"perms"`
+	Username string      `json:"username"`
+	Group    string      `json:"group"`
+	Size     int64       `json:"size"`
+	ModTime  time.Time   `json:"mod_time"`
+	Path     string      `json:"path"`
+}
+
+type psInstanceNetwork struct {
+	Type       string `json:"type"`
+	Name       string `json:"name"`
+	Host       string `json:"host"`
+	FD         int    `json:"fd"`
+	LocalAddr  net.IP `json:"local_addr"`
+	LocalPort  uint16 `json:"local_port"`
+	RemoteAddr net.IP `json:"remote_addr"`
+	RemotePort uint16 `json:"remote_port"`
+	Status     string `json:"status"`
+	TXQueue    int64  `json:"tx_queue"`
+	RXQueue    int64  `json:"rx_queue"`
+}
+
 func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 	pid, username, groupname, mtime, base, actual, uptodate, ports, err := psInstanceCommon(i)
@@ -335,7 +622,92 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		return
 	}
 
-	psData := psType{
+	if psCmdShowNet {
+		conns := []psInstanceNetwork{}
+		for _, fd := range instance.Files(i) {
+			if fd.Conn != nil {
+				// socket
+				c := fd.Conn
+				conns = append(conns, psInstanceNetwork{
+					Type:       i.Type().String(),
+					Name:       i.Name(),
+					Host:       i.Host().String(),
+					FD:         fd.FD,
+					LocalAddr:  c.LocalAddr,
+					LocalPort:  c.LocalPort,
+					RemoteAddr: c.RemoteAddr,
+					RemotePort: c.RemotePort,
+					Status:     c.Status,
+					TXQueue:    c.TxQueue,
+					RXQueue:    c.RxQueue,
+				})
+			}
+		}
+		resp.Value = conns
+		return
+	}
+
+	if psCmdShowFiles {
+		homedir := i.Home()
+		hs, err := i.Host().Stat(homedir)
+		if err != nil {
+			resp.Err = err
+			return
+		}
+		o := i.Host().GetFileOwner(hs)
+
+		files := []psInstanceFiles{}
+
+		files = append(files, psInstanceFiles{
+			Type:     i.Type().String(),
+			Name:     i.Name(),
+			Host:     i.Host().String(),
+			FD:       -1,
+			Perms:    hs.Mode().Perm(),
+			Username: geneos.GetUsername(o),
+			Group:    geneos.GetGroupname(o),
+			Size:     hs.Size(),
+			ModTime:  hs.ModTime(),
+			Path:     homedir,
+		})
+
+		homedir += "/"
+		for _, fd := range instance.Files(i) {
+			if path.IsAbs(fd.Path) {
+				o := i.Host().GetFileOwner(fd.Stat)
+				path := fd.Path
+				if strings.HasPrefix(path, homedir) {
+					path = strings.Replace(path, homedir, "", 1)
+				}
+				fdPerm := ""
+				m := fd.Lstat.Mode().Perm()
+				if m&0400 == 0400 {
+					fdPerm += "r"
+				}
+				if m&0200 == 0200 {
+					fdPerm += "w"
+				}
+				files = append(files, psInstanceFiles{
+					Type:     i.Type().String(),
+					Name:     i.Name(),
+					Host:     i.Host().String(),
+					FD:       fd.FD,
+					FDPerms:  fdPerm,
+					Perms:    fd.Stat.Mode().Perm(),
+					Username: geneos.GetUsername(o),
+					Group:    geneos.GetGroupname(o),
+					Size:     fd.Stat.Size(),
+					ModTime:  fd.Stat.ModTime(),
+					Path:     path,
+				})
+			}
+		}
+
+		resp.Value = files
+		return
+	}
+
+	psData := psInstance{
 		Type:      i.Type().String(),
 		Name:      i.Name(),
 		Host:      i.Host().String(),

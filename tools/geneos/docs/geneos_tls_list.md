@@ -22,11 +22,12 @@ geneos tls list [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -a, --all      Show all certs, including global and signing certs
-  -l, --long     Long output
-  -j, --json     Output JSON
-  -i, --pretty   Output indented JSON
-  -c, --csv      Output CSV
+  -a, --all       Show all certs, including global and signing certs
+  -l, --long      Long output
+  -j, --json      Output JSON
+  -i, --pretty    Output indented JSON
+  -c, --csv       Output CSV
+  -t, --toolkit   Output Toolkit formatted CSV
 ```
 
 ## SEE ALSO

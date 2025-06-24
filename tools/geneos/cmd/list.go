@@ -91,7 +91,18 @@ var listCmd = &cobra.Command{
 				"version",
 				"home",
 			})
-			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV).Write(listCSVWriter)
+			resp := instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV)
+			resp.Write(listCSVWriter)
+			fmt.Printf("<!>instances,%d\n", len(resp))
+			for _, ct := range geneos.RealComponents() {
+				var count int
+				for _, r := range resp {
+					if r.Instance.Type() == ct {
+						count++
+					}
+				}
+				fmt.Printf("<!>%ss,%d\n", ct, count)
+			}
 		case listCmdCSV:
 			listCSVWriter := csv.NewWriter(os.Stdout)
 			listCSVWriter.Write([]string{

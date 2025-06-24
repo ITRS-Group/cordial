@@ -40,3 +40,11 @@ func (h *Host) GetFileOwner(info fs.FileInfo) (s FileOwner) {
 	}
 	return
 }
+
+func GetUsername(s FileOwner) (username string) {
+	return
+}
+
+func GetGroupname(s FileOwner) (groupname string) {
+	return
+}

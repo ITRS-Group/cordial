@@ -20,7 +20,10 @@ limitations under the License.
 package geneos
 
 import (
+	"fmt"
 	"io/fs"
+	"os/user"
+	"sync"
 	"syscall"
 
 	"github.com/pkg/sftp"
@@ -41,5 +44,43 @@ func (h *Host) GetFileOwner(info fs.FileInfo) (s FileOwner) {
 		s.Uid = int(info.Sys().(*sftp.FileStat).UID)
 		s.Gid = int(info.Sys().(*sftp.FileStat).GID)
 	}
+	return
+}
+
+var usernames sync.Map
+
+func GetUsername(s FileOwner) (username string) {
+	if u, ok := usernames.Load(s.Uid); ok {
+		username = u.(string)
+		return
+	}
+
+	username = fmt.Sprint(s.Uid)
+	u, err := user.LookupId(username)
+	if err == nil && u.Name != "" {
+		username = u.Username
+	}
+
+	usernames.Store(s.Uid, username)
+
+	return
+}
+
+var groupnames sync.Map
+
+func GetGroupname(s FileOwner) (groupname string) {
+	if g, ok := usernames.Load(s.Gid); ok {
+		groupname = g.(string)
+		return
+	}
+
+	groupname = fmt.Sprint(s.Gid)
+	g, err := user.LookupGroupId(groupname)
+	if err == nil && g.Name != "" {
+		groupname = g.Name
+	}
+
+	groupnames.Store(s.Gid, groupname)
+
 	return
 }

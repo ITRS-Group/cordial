@@ -13,10 +13,11 @@ geneos aes list [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -S, --shared   List shared key files
-  -j, --json     Output JSON
-  -i, --pretty   Output indented JSON
-  -c, --csv      Output CSV
+  -S, --shared    List shared key files
+  -j, --json      Output JSON
+  -i, --pretty    Output indented JSON
+  -c, --csv       Output CSV
+  -t, --toolkit   Output Toolkit formatted CSV
 ```
 
 ## Examples

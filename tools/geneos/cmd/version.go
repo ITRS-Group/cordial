@@ -20,14 +20,21 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
+	"os"
 	dbg "runtime/debug"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/spf13/cobra"
 )
 
+var versionCmdToolkit bool
+
 func init() {
 	GeneosCmd.AddCommand(versionCmd)
+
+	versionCmd.Flags().BoolVarP(&versionCmdToolkit, "toolkit", "t", false, "toolkit formatted CSV output")
+
 }
 
 //go:embed _docs/version.md
@@ -46,6 +53,18 @@ var versionCmd = &cobra.Command{
 	},
 	DisableFlagsInUseLine: true,
 	Run: func(cmd *cobra.Command, args []string) {
+		if versionCmdToolkit {
+			fmt.Printf("Name,Value\n")
+			fmt.Printf("Version,%s\n", cmd.Version)
+			fmt.Printf("Source,https://github.com/ITRS-Group/cordial\n")
+			if execpath, err := os.Executable(); err == nil {
+				fmt.Printf("Executable,%s\n", execpath)
+			}
+			fmt.Printf("Config Path,%s\n", configPath)
+			fmt.Printf("Geneos Root,%s\n", geneos.LocalRoot())
+
+			return
+		}
 		fmt.Printf("%s version %s\n", cordial.ExecutableName(), cmd.Version)
 		if debug {
 			info, ok := dbg.ReadBuildInfo()

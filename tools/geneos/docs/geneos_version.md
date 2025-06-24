@@ -8,6 +8,12 @@ With the `--debug`/`-d` option it will also output build information which may b
 geneos version
 ```
 
+### Options
+
+```text
+  -t, --toolkit   toolkit formatted CSV output
+```
+
 ## SEE ALSO
 
 * [geneos](geneos.md)	 - Take control of your Geneos environments

@@ -22,9 +22,10 @@ geneos list [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -c, --csv      Output CSV
-  -j, --json     Output JSON
-  -i, --pretty   Output indented JSON
+  -c, --csv       Output CSV
+  -j, --json      Output JSON
+  -i, --pretty    Output indented JSON
+  -t, --toolkit   Output Toolkit formatted CSV
 ```
 
 ## SEE ALSO
