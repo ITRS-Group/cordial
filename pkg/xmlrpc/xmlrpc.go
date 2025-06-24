@@ -90,7 +90,7 @@ type methodResponse struct {
 func (c Client) post(method string, args ...interface{}) (result methodResponse, err error) {
 	data := &methodCall{Name: method}
 
-	params := []interface{}{}
+	params := []any{}
 
 	for _, arg := range args {
 		switch a := arg.(type) {
@@ -143,8 +143,9 @@ func (c Client) post(method string, args ...interface{}) (result methodResponse,
 	if err != nil {
 		return
 	}
-
 	defer resp.Body.Close()
+	defer c.CloseIdleConnections()
+
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return
