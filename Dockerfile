@@ -240,7 +240,7 @@ COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build /app/cordial/tools/san-config/san-config /bin/
-COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
+COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
 RUN --mount=type=cache,target=/var/cache/apt \
     set -eux; \
@@ -261,7 +261,7 @@ COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build /app/cordial/tools/san-config/san-config /bin/
-COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
+COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
 RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
@@ -273,7 +273,7 @@ FROM redhat/ubi9 AS cordial-run-ubi9
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
-COPY --from=build /app/cordial/libraries/libemail/libemail.so /lib/
+COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
 RUN set -eux; \
     dnf install -y libnsl2 \
