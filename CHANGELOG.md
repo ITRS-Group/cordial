@@ -7,13 +7,37 @@
 
 ### Version v1.21.0 Highlights
 
-* A new ServiceNow incident integration
+* A new [ServiceNow incident integration](integrations/servicenow2/README.md)
+
+* A [cordial-geneos.xml](tools/geneos/includes/cordial-geneos.xml) include files that leverages the new `--toolkit/-t` flags for the various list subcommands, to monitor the cordial `geneos` managed environment.
 
 ### Version v1.21.0 Changes
 
 * Update Go to 1.24.3 and update all dependencies
+
 * Build all shared libraries in a UBI8 (RHEL8) container to maximise compatibility with older GLIBC versions
+
 * Update `mapstructure` imports to support new Viper version and their fork of mapstructure
+
+* `tools/geneos`
+
+  * Add `--toolkit/-t` flag to all list command (as well as `ps`) to output information about the managed environment and more.
+
+  * Enhance the `ps` command to support listing of open files (`--files/-f`) and TCP connections (`--network/-n`) for matching instances.
+
+  * Additional changes to `ps` command:
+  
+    * Removal of the `--nolookup/-n` flag as we now cache user/group name lookups and also re-use the `-n` flags as the short form for the new `--network` output format.
+
+    * Change separator character for port lists in CSV / Toolkit output from colon to space
+
+    * Change separator for listening ports in table mode to a comma and remove surrounding brackets
+
+  * `geneos package ls` output is now sorted by host and component name.
+
+  * Do pre-start checks for all files (that must exist) before attempting to start an instance. Report any missing files to the user but continue starting other instances. Files that are created by components, such as logs, are not checked for and neither is the permissions to create those files.
+
+  * Add a new `listenip` configuration parameter to probe types, which defaults to the string value `"none"`. If you have probe instances with a custom `-listenip a.b.c.d` in your `options` parameter then you must remove this before this new parameter will take effect.
 
 * `libraries/libemail.so`
 
@@ -24,11 +48,9 @@
 
   * Add support for backslash escapes and escaped closing braces to `Expand*` functions. This was added for the new ServiceNow v2 integration.
 
-* `tools/geneos`
+* `pkg/xmlrpc` (and `gdna`)
 
-  * Do pre-start checks for all files (that must exist) before attempting to start an instance. Report any missing files to the user but continue starting other instances. Files that are created by components, such as logs, are not checked for and neither is the permissions to create those files.
-
-  * Add a new `listenip` configuration parameter to probe types, which defaults to the string value `"none"`. If you have probe instances with a custom `-listenip a.b.c.d` in your `options` parameter then you must remove this before this new parameter will take effect.
+  * Fix a possible file descriptor leak for long running processes by closing idle HTTP client connections after use.
 
 ### Version v1.21.0 Fixes
 
@@ -43,7 +65,10 @@
 * `tools/geneos`
 
   * `geneos tls renew` should not create new certificates for instances that did not previously have them
+
   * Fix importing of root CA cert when importing a signing bundle
+
+---
 
 ## Version v1.20.1
 
