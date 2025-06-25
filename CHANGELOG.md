@@ -1,9 +1,9 @@
 # Change Log
 
-## Version v1.21.0-beta
+## Version v1.21.0
 
 > [!NOTE]
-> **Released 2025-06-19** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2025-06-25** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ### Version v1.21.0 Highlights
 
