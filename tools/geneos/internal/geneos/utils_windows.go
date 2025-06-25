@@ -23,28 +23,22 @@ import (
 	"github.com/pkg/sftp"
 )
 
-// FileOwner is only available on Linux localhost
-type FileOwner struct {
-	Uid int
-	Gid int
-}
-
-func (h *Host) GetFileOwner(info fs.FileInfo) (s FileOwner) {
-	s.Uid = -1
-	s.Gid = -1
+func (h *Host) GetFileOwner(info fs.FileInfo) (uid, gid int) {
+	uid = -1
+	gid = -1
 	if h.GetString("name") != LOCALHOST {
 		if sys := info.Sys(); sys != nil {
-			s.Uid = int(info.Sys().(*sftp.FileStat).UID)
-			s.Gid = int(info.Sys().(*sftp.FileStat).GID)
+			uid = int(info.Sys().(*sftp.FileStat).UID)
+			gid = int(info.Sys().(*sftp.FileStat).GID)
 		}
 	}
 	return
 }
 
-func GetUsername(s FileOwner) (username string) {
+func GetUsername(uid int) (username string) {
 	return
 }
 
-func GetGroupname(s FileOwner) (groupname string) {
+func GetGroupname(gid int) (groupname string) {
 	return
 }

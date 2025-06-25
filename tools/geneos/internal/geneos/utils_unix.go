@@ -29,58 +29,62 @@ import (
 	"github.com/pkg/sftp"
 )
 
-// FileOwner is only available on Linux localhost
-type FileOwner struct {
-	Uid int
-	Gid int
-}
-
-func (h *Host) GetFileOwner(info fs.FileInfo) (s FileOwner) {
-	switch h.GetString("name") {
-	case LOCALHOST:
-		s.Uid = int(info.Sys().(*syscall.Stat_t).Uid)
-		s.Gid = int(info.Sys().(*syscall.Stat_t).Gid)
-	default:
-		s.Uid = int(info.Sys().(*sftp.FileStat).UID)
-		s.Gid = int(info.Sys().(*sftp.FileStat).GID)
-	}
-	return
-}
+// cache lookups, including fails
+const notfound = "[NOT FOUND]"
 
 var usernames sync.Map
+var groupnames sync.Map
 
-func GetUsername(s FileOwner) (username string) {
-	if u, ok := usernames.Load(s.Uid); ok {
+func (h *Host) GetFileOwner(info fs.FileInfo) (uid, gid int) {
+	switch h.GetString("name") {
+	case LOCALHOST:
+		uid = int(info.Sys().(*syscall.Stat_t).Uid)
+		gid = int(info.Sys().(*syscall.Stat_t).Gid)
+	default:
+		uid = int(info.Sys().(*sftp.FileStat).UID)
+		gid = int(info.Sys().(*sftp.FileStat).GID)
+	}
+	return
+}
+
+func GetUsername(uid int) (username string) {
+	if u, ok := usernames.Load(uid); ok {
 		username = u.(string)
+		if username == notfound {
+			username = fmt.Sprint(uid)
+		}
 		return
 	}
 
-	username = fmt.Sprint(s.Uid)
+	username = fmt.Sprint(uid)
 	u, err := user.LookupId(username)
-	if err == nil && u.Name != "" {
-		username = u.Username
+	if err != nil || u.Username == "" {
+		usernames.Store(uid, notfound)
+		return
 	}
-
-	usernames.Store(s.Uid, username)
+	username = u.Username
+	usernames.Store(uid, username)
 
 	return
 }
 
-var groupnames sync.Map
-
-func GetGroupname(s FileOwner) (groupname string) {
-	if g, ok := usernames.Load(s.Gid); ok {
+func GetGroupname(gid int) (groupname string) {
+	if g, ok := groupnames.Load(gid); ok {
 		groupname = g.(string)
+		if groupname == notfound {
+			groupname = fmt.Sprint(gid)
+		}
 		return
 	}
 
-	groupname = fmt.Sprint(s.Gid)
+	groupname = fmt.Sprint(gid)
 	g, err := user.LookupGroupId(groupname)
-	if err == nil && g.Name != "" {
-		groupname = g.Name
+	if err != nil || g.Name == "" {
+		groupnames.Store(gid, notfound)
+		return
 	}
-
-	groupnames.Store(s.Gid, groupname)
+	groupname = g.Name
+	groupnames.Store(gid, groupname)
 
 	return
 }

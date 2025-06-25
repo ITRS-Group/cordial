@@ -180,15 +180,15 @@ var exportCmd = &cobra.Command{
 			if !fi.Mode().IsRegular() {
 				return fmt.Errorf("%s is not a regular file", p)
 			}
-			own := h.GetFileOwner(fi)
+			uid, gid := h.GetFileOwner(fi)
 			th := &tar.Header{
 				Format:  tar.FormatUnknown,
 				Name:    f,
 				Size:    fi.Size(),
 				Mode:    int64(fi.Mode()),
 				ModTime: fi.ModTime(),
-				Uid:     own.Uid,
-				Gid:     own.Gid,
+				Uid:     uid,
+				Gid:     gid,
 			}
 			tw.WriteHeader(th)
 			b, err := h.ReadFile(p)

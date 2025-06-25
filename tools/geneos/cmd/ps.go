@@ -225,13 +225,13 @@ func psInstanceCommon(i geneos.Instance) (pid int, username, groupname string, m
 		err = geneos.ErrDisabled
 		return
 	}
-	pid, owner, mtime, err := instance.GetPIDInfo(i)
+	pid, uid, gid, mtime, err := instance.GetPIDInfo(i)
 	if err != nil {
 		return
 	}
 
-	username = geneos.GetUsername(owner)
-	groupname = geneos.GetGroupname(owner)
+	username = geneos.GetUsername(uid)
+	groupname = geneos.GetGroupname(gid)
 
 	base, underlying, actual, _ := instance.LiveVersion(i, pid)
 	if pkgtype := i.Config().GetString("pkgtype"); pkgtype != "" {
@@ -297,15 +297,15 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			resp.Err = err
 			return
 		}
-		o := i.Host().GetFileOwner(hs)
+		uid, gid := i.Host().GetFileOwner(hs)
 		resp.Lines = append(resp.Lines,
 			fmt.Sprintf("%s\t%s\t%s\tcwd\t%s\t%s:%s\t%d\t%s\t%s",
 				i.Type(),
 				i.Name(),
 				i.Host(),
 				hs.Mode().Perm().String(),
-				geneos.GetUsername(o),
-				geneos.GetGroupname(o),
+				geneos.GetUsername(uid),
+				geneos.GetGroupname(gid),
 				hs.Size(),
 				hs.ModTime().Local().Format(time.RFC3339),
 				homedir,
@@ -313,7 +313,7 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		homedir += "/"
 		for _, fd := range instance.Files(i) {
 			if path.IsAbs(fd.Path) {
-				o := i.Host().GetFileOwner(fd.Stat)
+				uid, gid := i.Host().GetFileOwner(fd.Stat)
 				path := fd.Path
 				if strings.HasPrefix(path, homedir) {
 					path = strings.Replace(path, homedir, "", 1)
@@ -334,8 +334,8 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 						fd.FD,
 						fdPerm,
 						fd.Stat.Mode().Perm().String(),
-						geneos.GetUsername(o),
-						geneos.GetGroupname(o),
+						geneos.GetUsername(uid),
+						geneos.GetGroupname(gid),
 						fd.Stat.Size(),
 						fd.Stat.ModTime().Local().Format(time.RFC3339),
 						path,
@@ -351,14 +351,14 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	for _, p := range ports {
 		portsString = append(portsString, fmt.Sprint(p))
 	}
-	portlist = strings.Join(portsString, " ")
+	portlist = strings.Join(portsString, ",")
 	if !i.Host().IsLocal() && portlist == "" {
 		portlist = "..."
 	}
 
 	p := &instance.ProcessStats{}
 	if err := instance.ProcessStatus(i, p); err == nil && psCmdLong {
-		resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s%s%s\t%s\t%s\t%d\t%d\t%d\t%.2f MiB\t%.2f MiB\t%.2f MiB\t%.2f s\t%.2f s\t%.2f s\t%.2f s",
+		resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s\t%s\t%d\t%d\t%d\t%.2f MiB\t%.2f MiB\t%.2f MiB\t%.2f s\t%.2f s\t%.2f s\t%.2f s",
 			i.Type(),
 			i.Name(),
 			i.Host(),
@@ -384,7 +384,7 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			p.CStime.Seconds(),
 		)
 	} else {
-		resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t%s\t%s\t%s%s%s\t%s",
+		resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s",
 			i.Type(),
 			i.Name(),
 			i.Host(),
@@ -457,7 +457,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			resp.Err = err
 			return
 		}
-		o := i.Host().GetFileOwner(hs)
+		uid, gid := i.Host().GetFileOwner(hs)
 
 		var row []string
 		if psCmdToolkit {
@@ -470,8 +470,8 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			i.Host().String(),
 			"cwd",
 			hs.Mode().Perm().String(),
-			geneos.GetUsername(o),
-			geneos.GetGroupname(o),
+			geneos.GetUsername(uid),
+			geneos.GetGroupname(gid),
 			fmt.Sprint(hs.Size()),
 			hs.ModTime().Local().Format(time.RFC3339),
 			homedir,
@@ -481,7 +481,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		homedir += "/"
 		for _, fd := range instance.Files(i) {
 			if path.IsAbs(fd.Path) {
-				o := i.Host().GetFileOwner(fd.Stat)
+				uid, gid := i.Host().GetFileOwner(fd.Stat)
 				path := fd.Path
 				if strings.HasPrefix(path, homedir) {
 					path = strings.Replace(path, homedir, "", 1)
@@ -505,8 +505,8 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 					i.Host().String(),
 					fmt.Sprintf("%d:%s", fd.FD, fdPerm),
 					fd.Stat.Mode().Perm().String(),
-					geneos.GetUsername(o),
-					geneos.GetGroupname(o),
+					geneos.GetUsername(uid),
+					geneos.GetGroupname(gid),
 					fmt.Sprint(fd.Stat.Size()),
 					fd.Stat.ModTime().Local().Format(time.RFC3339),
 					path,
@@ -654,7 +654,7 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			resp.Err = err
 			return
 		}
-		o := i.Host().GetFileOwner(hs)
+		uid, gid := i.Host().GetFileOwner(hs)
 
 		files := []psInstanceFiles{}
 
@@ -664,8 +664,8 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			Host:     i.Host().String(),
 			FD:       -1,
 			Perms:    hs.Mode().Perm(),
-			Username: geneos.GetUsername(o),
-			Group:    geneos.GetGroupname(o),
+			Username: geneos.GetUsername(uid),
+			Group:    geneos.GetGroupname(gid),
 			Size:     hs.Size(),
 			ModTime:  hs.ModTime(),
 			Path:     homedir,
@@ -674,7 +674,7 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		homedir += "/"
 		for _, fd := range instance.Files(i) {
 			if path.IsAbs(fd.Path) {
-				o := i.Host().GetFileOwner(fd.Stat)
+				uid, gid := i.Host().GetFileOwner(fd.Stat)
 				path := fd.Path
 				if strings.HasPrefix(path, homedir) {
 					path = strings.Replace(path, homedir, "", 1)
@@ -694,8 +694,8 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 					FD:       fd.FD,
 					FDPerms:  fdPerm,
 					Perms:    fd.Stat.Mode().Perm(),
-					Username: geneos.GetUsername(o),
-					Group:    geneos.GetGroupname(o),
+					Username: geneos.GetUsername(uid),
+					Group:    geneos.GetGroupname(gid),
 					Size:     fd.Stat.Size(),
 					ModTime:  fd.Stat.ModTime(),
 					Path:     path,

@@ -161,7 +161,7 @@ func GetPID(i geneos.Instance) (pid int, err error) {
 
 // GetPIDInfo returns the PID of the process for the instance i along
 // with the owner uid and gid and the start time.
-func GetPIDInfo(i geneos.Instance) (pid int, owner geneos.FileOwner, mtime time.Time, err error) {
+func GetPIDInfo(i geneos.Instance) (pid int, uid, gid int, mtime time.Time, err error) {
 	if pid, err = GetPID(i); err != nil {
 		return
 	}
@@ -169,7 +169,9 @@ func GetPIDInfo(i geneos.Instance) (pid int, owner geneos.FileOwner, mtime time.
 	var st os.FileInfo
 	st, err = i.Host().Stat(fmt.Sprintf("/proc/%d", pid))
 	if err == nil {
-		owner = i.Host().GetFileOwner(st)
+		uid, gid = i.Host().GetFileOwner(st)
 	}
-	return pid, owner, st.ModTime(), err
+	mtime = st.ModTime()
+
+	return
 }
