@@ -78,6 +78,10 @@ proxy:
 defaults:
   - set:
       # standard mappings for all Geneos Actions and Effects
+      #
+      # as these are all prefixed with an underscore, they are visible
+      # to the proxy but are removed before the incident is created or
+      # updated
       _gateway: ${_GATEWAY}
       _probe: ${_PROBE}
       _entity: ${_MANAGED_ENTITY}
@@ -104,15 +108,15 @@ defaults:
       _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${select:_ROWNAME+$_COLUMN:_HEADLINE:}
       _subject: Geneos Alert on ${select:_MANAGED_ENTITY:_NETPROBE_HOST:Unknown} | ${select:_DATAVIEW:None} | ${_ROWNAME} | ${_COLUMN}${_HEADLINE} is ${_VALUE}
       _text: |
-        Status Message: ${_STATUSMESSAGE}	
-        Severity: ${_SEVERITY}	
-        Geneos time: ${_ALERT_CREATED}	
-        Category: Alert	
-        Gateway: ${_GATEWAY}	
-        Managed Entity: ${_MANAGED_ENTITY}	
-        Sampler: ${_SAMPLER}	
-        Row: ${_ROWNAME}	
-        Column/Headline: ${_COLUMN}${_HEADLINE}	
+        Status Message: ${_STATUSMESSAGE}
+        Severity: ${_SEVERITY}
+        Geneos time: ${_ALERT_CREATED}
+        Category: Alert
+        Gateway: ${_GATEWAY}
+        Managed Entity: ${_MANAGED_ENTITY}
+        Sampler: ${_SAMPLER}
+        Row: ${_ROWNAME}
+        Column/Headline: ${_COLUMN}${_HEADLINE}
         Value: ${_VALUE} ${_triggerDetails}
 
       # other defaults
@@ -231,18 +235,19 @@ profiles:
             urgency: 3
     - set:
         _text: |
-            Status Message: ${_STATUSMESSAGE}	
-            Severity: ${_SEVERITY}	
-            Geneos time: ${_ALERT_CREATED}	
-            Category: Alert	
-            Gateway: ${_GATEWAY}	
-            Managed Entity: ${_MANAGED_ENTITY}	
-            Sampler: ${_SAMPLER}	
-            Row: ${_ROWNAME}	
-            Column/Headline: ${_COLUMN}${_HEADLINE}	
-            Value: ${_VALUE}${_triggerDetails}	
-            Hashtags: ${_TAGS}	
-            Sub-category: ${field:subcategory:None}	
-            Impact: ${field:impact:3}	
+            Status Message: ${_STATUSMESSAGE}
+            Severity: ${_SEVERITY}
+            Geneos time: ${_ALERT_CREATED}
+            Category: Alert
+            Gateway: ${_GATEWAY}
+            Managed Entity: ${_MANAGED_ENTITY}
+            Sampler: ${_SAMPLER}
+            Row: ${_ROWNAME}
+            Column/Headline: ${_COLUMN}${_HEADLINE}
+            Value: ${_VALUE}${_triggerDetails}
+            Hashtags: ${_TAGS}
+            Sub-category: ${field:subcategory:None}
+            Impact: ${field:impact:3}
             Urgency: ${field:urgency:3}
+
 
