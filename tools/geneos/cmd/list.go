@@ -34,6 +34,7 @@ type listCmdType struct {
 	Type      string `json:"type,omitempty"`
 	Name      string `json:"name,omitempty"`
 	Host      string `json:"host,omitempty"`
+	Running   bool   `json:"running"`
 	Disabled  bool   `json:"disabled"`
 	Protected bool   `json:"protected"`
 	AutoStart bool   `json:"autostart"`
@@ -83,6 +84,7 @@ var listCmd = &cobra.Command{
 				"type",
 				"name",
 				"host",
+				"running",
 				"disabled",
 				"protected",
 				"autoStart",
@@ -109,6 +111,7 @@ var listCmd = &cobra.Command{
 				"Type",
 				"Name",
 				"Host",
+				"Running",
 				"Disabled",
 				"Protected",
 				"AutoStart",
@@ -134,14 +137,18 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
 	var flags string
+
+	if instance.IsAutoStart(i) {
+		flags += "A"
+	}
 	if instance.IsDisabled(i) {
 		flags += "D"
 	}
 	if instance.IsProtected(i) {
 		flags += "P"
 	}
-	if instance.IsAutoStart(i) {
-		flags += "A"
+	if instance.IsRunning(i) {
+		flags += "R"
 	}
 	if len(instance.SetSecureArgs(i)) > 0 {
 		flags += "T"
@@ -161,11 +168,15 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 func listInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
+	running := "R"
 	disabled := "N"
 	protected := "N"
 	autostart := "N"
 	tls := "N"
 
+	if instance.IsRunning(i) {
+		running = "Y"
+	}
 	if instance.IsDisabled(i) {
 		disabled = "Y"
 	}
@@ -188,6 +199,7 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		i.Type().String(),
 		i.Name(),
 		i.Host().String(),
+		running,
 		disabled,
 		protected,
 		autostart,
@@ -207,6 +219,7 @@ func listInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		Type:      i.Type().String(),
 		Name:      i.Name(),
 		Host:      i.Host().String(),
+		Running:   instance.IsRunning(i),
 		Disabled:  instance.IsDisabled(i),
 		Protected: instance.IsProtected(i),
 		AutoStart: instance.IsAutoStart(i),
