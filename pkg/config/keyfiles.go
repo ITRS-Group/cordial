@@ -52,10 +52,10 @@ func (k *KeyFile) Type() string {
 // extension, unless backup is an empty string, in which case any
 // existing file is overwritten and no backup made.
 func (k *KeyFile) CreateWithBackup(h host.Host, backup string) (crc uint32, err error) {
-	if _, _, err = k.ReadOrCreate(h, false); err != nil {
+	if _, err = k.ReadCRC(h); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			// if is doesn't exist just try to create it, no backup
-			crc, _, err = k.ReadOrCreate(h, true)
+			crc, _, err = k.ReadOrCreate(h)
 		}
 		return
 	}
@@ -70,7 +70,7 @@ func (k *KeyFile) CreateWithBackup(h host.Host, backup string) (crc uint32, err 
 			return 0, err
 		}
 	}
-	crc, _, err = k.ReadOrCreate(h, true)
+	crc, _, err = k.ReadOrCreate(h)
 	return
 }
 
@@ -128,17 +128,14 @@ func (k *KeyFile) Write(h host.Host, kv *KeyValues) (err error) {
 // error the checksum is undefined and err will indicate why. If create
 // is true then directories and a file may have been created even on
 // error.
-func (k *KeyFile) ReadOrCreate(h host.Host, create bool) (crc32 uint32, created bool, err error) {
-	if kv, err := k.Read(h); err == nil { // ok?
+func (k *KeyFile) ReadOrCreate(h host.Host) (crc32 uint32, created bool, err error) {
+	if kv, err2 := k.Read(h); err2 == nil { // ok?
 		crc32, err = kv.Checksum()
-		return crc32, false, err
+		return
 	}
 
 	// only try to create if the file error is a not exists
 	if _, err = h.Stat(k.String()); err != nil && errors.Is(err, fs.ErrNotExist) {
-		if !create {
-			return
-		}
 		if err = h.MkdirAll(k.Dir(), 0775); err != nil {
 			err = fmt.Errorf("failed to create keyfile directory %q: %w", k.Dir(), err)
 			return
@@ -148,13 +145,21 @@ func (k *KeyFile) ReadOrCreate(h host.Host, create bool) (crc32 uint32, created 
 			err = fmt.Errorf("failed to write keyfile to %q: %w", k, err)
 			return
 		}
-		created = true
 
+		created = true
 		crc32, err = kv.Checksum()
-		if err != nil {
-			return
-		}
 	}
+	return
+}
+
+// ReadCRC will return the CRC32 checksum of an existing keyfile, or an
+// error if the file cannot be read.
+func (k *KeyFile) ReadCRC(h host.Host) (crc32 uint32, err error) {
+	kv, err := k.Read(h)
+	if err == nil {
+		crc32, err = kv.Checksum()
+	}
+
 	return
 }
 

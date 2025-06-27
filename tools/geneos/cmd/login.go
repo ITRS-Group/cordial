@@ -87,16 +87,14 @@ var loginCmd = &cobra.Command{
 			}
 		}
 
-		var createKeyfile bool
 		if loginKeyfile == "" {
 			// use default, create if none
 			loginKeyfile = DefaultUserKeyfile
-			createKeyfile = true
 		}
 
 		log.Debug().Msgf("checking keyfile %q, default file %q", loginKeyfile, DefaultUserKeyfile)
 
-		if crc, created, err := loginKeyfile.ReadOrCreate(host.Localhost, createKeyfile); err != nil {
+		if crc, created, err := loginKeyfile.ReadOrCreate(host.Localhost); err != nil {
 			return err
 		} else if created {
 			fmt.Printf("%s created, checksum %08X\n", loginKeyfile, crc)

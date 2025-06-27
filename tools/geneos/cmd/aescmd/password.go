@@ -55,7 +55,7 @@ var passwordCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var plaintext *config.Plaintext
 
-		crc, created, err := cmd.DefaultUserKeyfile.ReadOrCreate(host.Localhost, true)
+		crc, created, err := cmd.DefaultUserKeyfile.ReadOrCreate(host.Localhost)
 		if err != nil {
 			return
 		}

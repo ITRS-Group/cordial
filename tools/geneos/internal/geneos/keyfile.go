@@ -78,7 +78,7 @@ func ReadKeyValues(source string, prompt ...string) (kv *config.KeyValues, err e
 	default:
 		// local file, read and write to new locations
 		keyfile := config.KeyFile(config.ExpandHome(source))
-		_, _, err = keyfile.ReadOrCreate(host.Localhost, false)
+		_, err = keyfile.ReadCRC(host.Localhost)
 		if err != nil {
 			return
 		}
@@ -127,7 +127,7 @@ func ImportSharedKey(h *Host, ct *Component, source string, prompt ...string) (p
 	default:
 		// local file, read and write to new locations
 		keyfile := config.KeyFile(config.ExpandHome(source))
-		_, _, err = keyfile.ReadOrCreate(host.Localhost, false)
+		_, err = keyfile.ReadCRC(host.Localhost)
 		if err != nil {
 			return
 		}

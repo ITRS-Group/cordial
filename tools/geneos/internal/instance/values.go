@@ -67,18 +67,18 @@ type SetConfigValues struct {
 // SetInstanceValues applies the settings in values to instance i by
 // iterating through the fields and calling the appropriate helper
 // function. SecureEnvs overwrite any set by Envs earlier.
-func SetInstanceValues(i geneos.Instance, set SetConfigValues, keyfile config.KeyFile) (err error) {
+func SetInstanceValues(i geneos.Instance, set SetConfigValues, k config.KeyFile) (err error) {
 	var secrets []string
 
 	cf := i.Config()
 
 	// only bother with keyfile if we need it later?
 	if len(set.SecureEnvs) > 0 || len(set.SecureParams) > 0 {
-		if keyfile == "" {
-			keyfile = config.KeyFile(cf.GetString("keyfile"))
+		if k == "" {
+			k = config.KeyFile(cf.GetString("keyfile"))
 		}
 
-		if keyfile == "" {
+		if k == "" {
 			return fmt.Errorf("%s: no keyfile", i)
 		}
 	}
@@ -92,7 +92,7 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, keyfile config.Ke
 		return
 	}
 
-	secrets, err = setEncoded(i, set.SecureParams, keyfile)
+	secrets, err = setEncoded(i, set.SecureParams, k)
 	if err != nil {
 		return
 	}
@@ -106,7 +106,7 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, keyfile config.Ke
 		return strings.SplitN(a, "=", 2)[0]
 	})
 
-	secrets, err = setEncoded(i, set.SecureEnvs, keyfile)
+	secrets, err = setEncoded(i, set.SecureEnvs, k)
 	if err != nil {
 		return
 	}
@@ -136,12 +136,12 @@ func setMap[V any](i geneos.Instance, items map[string]V, setting string) {
 }
 
 // setEncoded takes a slice of SecureValue.
-func setEncoded(i geneos.Instance, values SecureValues, keyfile config.KeyFile) (params []string, err error) {
+func setEncoded(i geneos.Instance, values SecureValues, k config.KeyFile) (params []string, err error) {
 	if len(values) == 0 {
 		return
 	}
 
-	if _, _, err = keyfile.ReadOrCreate(i.Host(), false); err != nil {
+	if _, err = k.ReadCRC(i.Host()); err != nil {
 		return
 	}
 
@@ -152,7 +152,7 @@ func setEncoded(i geneos.Instance, values SecureValues, keyfile config.KeyFile) 
 		if s.Plaintext.IsNil() {
 			log.Fatal().Msg("plaintext is not set")
 		}
-		s.Ciphertext, err = keyfile.Encode(i.Host(), s.Plaintext, true)
+		s.Ciphertext, err = k.Encode(i.Host(), s.Plaintext, true)
 		if err != nil {
 			return
 		}
