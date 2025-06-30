@@ -72,10 +72,11 @@ var (
 	UNKNOWN *Host
 )
 
-// InitHosts initialises the host settings and is only called from the
-// root command to set the initial values of host.LOCAL and host.ALL and
-// reads the host configuration file. LOCAL and ALL cannot be
-// initialised outside a function as there would be a definition loop.
+// InitHosts initialises the host settings and is should only be called
+// from the root command to set the initial values of host.LOCAL and
+// host.ALL and reads the host configuration file. LOCAL and ALL cannot
+// be initialised outside a function as there would be a definition
+// loop.
 func InitHosts(app string) {
 	LOCAL = NewHost(LOCALHOST)
 	ALL = NewHost(ALLHOSTS)
