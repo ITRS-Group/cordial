@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -89,13 +90,15 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		_, args, params := cmd.ParseTypeNamesParams(command)
-		args = append(args, params...)
-
-		hostcf := config.New()
-
 		var sshurl *url.URL
 		var name string
+		var password string
+		var pw = &config.Plaintext{}
+
+		cf := config.New()
+
+		_, args, params := cmd.ParseTypeNamesParams(command)
+		args = append(args, params...)
 
 		switch len(args) {
 		case 1:
@@ -117,22 +120,18 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			log.Fatal().Msgf("wrong number of args: %d", len(args))
 		}
 
-		// validate name - almost anything but no double colons
+		// validate name - almost anything but no double colons, which
+		// may be an issue with future IPv6 addresses
 		if strings.Contains(name, "::") {
 			log.Error().Msg("a remote hostname may not contain `::`")
 			return geneos.ErrInvalidArgs
 		}
 
-		log.Debug().Msgf("hostname: %s", sshurl.Hostname())
-
-		hostcf.SetDefault("hostname", sshurl.Hostname())
-
-		hostcf.SetDefault("port", 22)
-		// XXX default to remote user's home dir, not local
-		hostcf.SetDefault(cordial.ExecutableName(), geneos.LocalRoot())
-
-		var password string
-		var pw = &config.Plaintext{}
+		cf.SetDefault("hostname", sshurl.Hostname())
+		cf.SetDefault("port", 22)
+		// default to remote user's home dir, not local, but that can't
+		// be done until after a successful connection
+		cf.SetDefault(cordial.ExecutableName(), geneos.LocalRoot())
 
 		if addCmdPrompt {
 			pw, err = config.ReadPasswordInput(true, 3)
@@ -159,7 +158,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 			if len(password) > 0 {
 				// this is the encoded password for the config file, not an enclave
-				hostcf.Set("password", password)
+				cf.Set("password", password)
 			}
 		}
 
@@ -173,30 +172,30 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 		// now disassemble URL
 		if sshurl.Hostname() == "" {
-			hostcf.Set("hostname", hostcf.GetString("name"))
+			cf.Set("hostname", cf.GetString("name"))
 		}
 
 		if sshurl.Port() != "" {
-			hostcf.Set("port", sshurl.Port())
+			cf.Set("port", sshurl.Port())
 		}
 
 		if sshurl.User.Username() != "" {
-			hostcf.Set("username", sshurl.User.Username())
+			cf.Set("username", sshurl.User.Username())
 		}
 
 		if len(addCmdPrivateKeyfiles) > 0 {
-			hostcf.Set("privatekeys", []string(addCmdPrivateKeyfiles))
+			cf.Set("privatekeys", []string(addCmdPrivateKeyfiles))
 		}
 
 		h := geneos.NewHost(name,
-			host.Hostname(hostcf.GetString("hostname")),
-			host.Username(hostcf.GetString("username")),
-			host.Port(uint16(hostcf.GetInt("port"))),
+			host.Hostname(cf.GetString("hostname")),
+			host.Username(cf.GetString("username")),
+			host.Port(uint16(cf.GetInt("port"))),
 			host.Password(pw.Enclave),
-			host.PrivateKeyFiles(hostcf.GetStringSlice("privatekeys")...),
+			host.PrivateKeyFiles(cf.GetStringSlice("privatekeys")...),
 		)
 
-		h.MergeConfigMap(hostcf.AllSettings())
+		h.MergeConfigMap(cf.AllSettings())
 
 		if h.Exists() {
 			return fmt.Errorf("host %q already exists", name)
@@ -204,7 +203,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 		var ok bool
 		if ok, err = h.IsAvailable(); !ok {
-			log.Debug().Err(err).Msgf("cannot connect to remote host %s port %d as %s, not adding", hostcf.GetString("hostname"), hostcf.GetInt("port"), hostcf.GetString("username"))
+			log.Debug().Err(err).Msgf("cannot connect to remote host %s port %d as %s, not adding", cf.GetString("hostname"), cf.GetInt("port"), cf.GetString("username"))
 			return
 		}
 
@@ -219,22 +218,13 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		//   * use the user home dir with optional subdir if the last component is not the same
 		if sshurl.Path != "" {
 			h.Set(cordial.ExecutableName(), sshurl.Path)
-		} else if runtime.GOOS != h.GetString("os") {
-			geneosdir := h.GetString("homedir")
-			if path.Base(geneosdir) != cordial.ExecutableName() {
-				geneosdir = path.Join(geneosdir, cordial.ExecutableName())
-			}
-			// switch h.GetString("os") {
-			// case "windows":
-			// 	geneosdir = filepath.FromSlash(geneosdir)
-			// case "linux":
-			// 	geneosdir = filepath.ToSlash(geneosdir)
-			// }
-			h.Set(cordial.ExecutableName(), geneosdir)
 		} else {
 			geneosdir := h.GetString("homedir")
 			if path.Base(geneosdir) != cordial.ExecutableName() {
 				geneosdir = path.Join(geneosdir, cordial.ExecutableName())
+			}
+			if runtime.GOOS == "windows" {
+				geneosdir = filepath.ToSlash(geneosdir)
 			}
 			h.Set(cordial.ExecutableName(), geneosdir)
 		}
