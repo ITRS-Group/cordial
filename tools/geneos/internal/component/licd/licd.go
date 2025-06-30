@@ -101,31 +101,34 @@ func init() {
 	Licd.Register(factory)
 }
 
-var licds sync.Map
+var instances sync.Map
 
-func factory(name string) geneos.Instance {
+func factory(name string) (licd geneos.Instance) {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
-	l, ok := licds.Load(h.FullName(local))
-	if ok {
-		lc, ok := l.(*Licds)
-		if ok {
+
+	if l, ok := instances.Load(h.FullName(local)); ok {
+		if lc, ok := l.(*Licds); ok {
 			return lc
 		}
 	}
-	licd := &Licds{}
-	licd.Conf = config.New()
-	licd.InstanceHost = h
-	licd.Component = &Licd
+
+	licd = &Licds{
+		Component:    &Licd,
+		Conf:         config.New(),
+		InstanceHost: h,
+	}
+
 	if err := instance.SetDefaults(licd, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", licd)
 	}
 	// set the home dir based on where it might be, default to one above
 	licd.Config().Set("home", instance.Home(licd))
-	licds.Store(h.FullName(local), licd)
-	return licd
+	instances.Store(h.FullName(local), licd)
+
+	return
 }
 
 // interface method set
@@ -159,7 +162,7 @@ func (l *Licds) Load() (err error) {
 }
 
 func (l *Licds) Unload() (err error) {
-	licds.Delete(l.Name() + "@" + l.Host().String())
+	instances.Delete(l.Name() + "@" + l.Host().String())
 	l.ConfigLoaded = time.Time{}
 	return
 }

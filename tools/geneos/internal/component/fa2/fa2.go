@@ -106,31 +106,33 @@ func init() {
 	FA2.Register(factory)
 }
 
-var fa2s sync.Map
+var instances sync.Map
 
-func factory(name string) geneos.Instance {
+func factory(name string) (fa2 geneos.Instance) {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
-	f, ok := fa2s.Load(h.FullName(local))
-	if ok {
-		fa, ok := f.(*FA2s)
-		if ok {
+
+	if f, ok := instances.Load(h.FullName(local)); ok {
+		if fa, ok := f.(*FA2s); ok {
 			return fa
 		}
 	}
-	fa2 := &FA2s{}
-	fa2.Conf = config.New()
-	fa2.InstanceHost = h
-	fa2.Component = &FA2
+	fa2 = &FA2s{
+		Component:    &FA2,
+		Conf:         config.New(),
+		InstanceHost: h,
+	}
+
 	if err := instance.SetDefaults(fa2, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", fa2)
 	}
 	// set the home dir based on where it might be, default to one above
 	fa2.Config().Set("home", instance.Home(fa2))
-	fa2s.Store(h.FullName(local), fa2)
-	return fa2
+	instances.Store(h.FullName(local), fa2)
+
+	return
 }
 
 // interface method set
@@ -164,7 +166,7 @@ func (n *FA2s) Load() (err error) {
 }
 
 func (n *FA2s) Unload() (err error) {
-	fa2s.Delete(n.Name() + "@" + n.Host().String())
+	instances.Delete(n.Name() + "@" + n.Host().String())
 	n.ConfigLoaded = time.Time{}
 	return
 }

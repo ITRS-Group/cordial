@@ -114,31 +114,34 @@ func init() {
 	SSOAgent.Register(factory)
 }
 
-var ssoagents sync.Map
+var instances sync.Map
 
-func factory(name string) geneos.Instance {
+func factory(name string) (ssoagent geneos.Instance) {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
-	w, ok := ssoagents.Load(h.FullName(local))
-	if ok {
-		ws, ok := w.(*SSOAgents)
-		if ok {
-			return ws
+
+	if s, ok := instances.Load(h.FullName(local)); ok {
+		if ss, ok := s.(*SSOAgents); ok {
+			return ss
 		}
 	}
-	ssoagent := &SSOAgents{}
-	ssoagent.Conf = config.New()
-	ssoagent.InstanceHost = h
-	ssoagent.Component = &SSOAgent
+
+	ssoagent = &SSOAgents{
+		Component:    &SSOAgent,
+		Conf:         config.New(),
+		InstanceHost: h,
+	}
+
 	if err := instance.SetDefaults(ssoagent, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", ssoagent)
 	}
 	// set the home dir based on where it might be, default to one above
 	ssoagent.Config().Set("home", instance.Home(ssoagent))
-	ssoagents.Store(h.FullName(local), ssoagent)
-	return ssoagent
+	instances.Store(h.FullName(local), ssoagent)
+
+	return
 }
 
 // list of file patterns to copy?
@@ -184,7 +187,7 @@ func (w *SSOAgents) Load() (err error) {
 }
 
 func (w *SSOAgents) Unload() (err error) {
-	ssoagents.Delete(w.Name() + "@" + w.Host().String())
+	instances.Delete(w.Name() + "@" + w.Host().String())
 	w.ConfigLoaded = time.Time{}
 	return
 }

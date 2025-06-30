@@ -107,31 +107,34 @@ func init() {
 	CA3.Register(factory)
 }
 
-var ca3s sync.Map
+var instances sync.Map
 
-func factory(name string) geneos.Instance {
+func factory(name string) (ca3 geneos.Instance) {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
-	n, ok := ca3s.Load(h.FullName(local))
-	if ok {
-		np, ok := n.(*CA3s)
-		if ok {
-			return np
+
+	if c, ok := instances.Load(h.FullName(local)); ok {
+		if ca, ok := c.(*CA3s); ok {
+			return ca
 		}
 	}
-	ca3 := &CA3s{}
-	ca3.Conf = config.New()
-	ca3.InstanceHost = h
-	ca3.Component = &CA3
+
+	ca3 = &CA3s{
+		Component:    &CA3,
+		Conf:         config.New(),
+		InstanceHost: h,
+	}
+
 	if err := instance.SetDefaults(ca3, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", ca3)
 	}
 	// set the home dir based on where it might be, default to one above
 	ca3.Config().Set("home", instance.Home(ca3))
-	ca3s.Store(h.FullName(local), ca3)
-	return ca3
+	instances.Store(h.FullName(local), ca3)
+
+	return
 }
 
 // interface method set
@@ -165,7 +168,7 @@ func (n *CA3s) Load() (err error) {
 }
 
 func (n *CA3s) Unload() (err error) {
-	ca3s.Delete(n.Name() + "@" + n.Host().String())
+	instances.Delete(n.Name() + "@" + n.Host().String())
 	n.ConfigLoaded = time.Time{}
 	return
 }

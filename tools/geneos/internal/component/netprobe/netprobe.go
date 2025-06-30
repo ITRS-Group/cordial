@@ -108,35 +108,40 @@ func init() {
 	Netprobe.Register(factory)
 }
 
-var netprobes sync.Map
+var instances sync.Map
 
-func factory(name string) geneos.Instance {
+func factory(name string) (netprobe geneos.Instance) {
 	ct, local, h := instance.SplitName(name, geneos.LOCAL)
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
-	n, ok := netprobes.Load(h.FullName(local))
-	if ok {
-		np, ok := n.(*Netprobes)
-		if ok {
+
+	if n, ok := instances.Load(h.FullName(local)); ok {
+		if np, ok := n.(*Netprobes); ok {
 			return np
 		}
 	}
-	netprobe := &Netprobes{}
-	netprobe.Conf = config.New()
-	netprobe.InstanceHost = h
-	netprobe.Component = &Netprobe
+
+	netprobe = &Netprobes{
+		Component:    &Netprobe,
+		Conf:         config.New(),
+		InstanceHost: h,
+	}
+
 	netprobe.Config().SetDefault("pkgtype", "netprobe")
 	if ct != nil {
 		netprobe.Config().SetDefault("pkgtype", ct.Name)
 	}
+
 	if err := instance.SetDefaults(netprobe, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", netprobe)
 	}
+
 	// set the home dir based on where it might be, default to one above
 	netprobe.Config().Set("home", instance.Home(netprobe))
-	netprobes.Store(h.FullName(local), netprobe)
-	return netprobe
+	instances.Store(h.FullName(local), netprobe)
+
+	return
 }
 
 // interface method set
@@ -170,7 +175,7 @@ func (n *Netprobes) Load() (err error) {
 }
 
 func (n *Netprobes) Unload() (err error) {
-	netprobes.Delete(n.Name() + "@" + n.Host().String())
+	instances.Delete(n.Name() + "@" + n.Host().String())
 	n.ConfigLoaded = time.Time{}
 	return
 }

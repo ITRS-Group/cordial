@@ -96,31 +96,35 @@ func init() {
 	AC2.Register(factory)
 }
 
-var ac2s sync.Map
+var instances sync.Map
 
-func factory(name string) geneos.Instance {
+func factory(name string) (ac2 geneos.Instance) {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
-	n, ok := ac2s.Load(h.FullName(local))
-	if ok {
-		np, ok := n.(*AC2s)
-		if ok {
-			return np
+
+	if a, ok := instances.Load(h.FullName(local)); ok {
+		if ac, ok := a.(*AC2s); ok {
+			return ac
 		}
 	}
-	ac2 := &AC2s{}
-	ac2.Conf = config.New()
-	ac2.InstanceHost = h
-	ac2.Component = &AC2
+
+	ac2 = &AC2s{
+		Component:    &AC2,
+		Conf:         config.New(),
+		InstanceHost: h,
+	}
+
 	if err := instance.SetDefaults(ac2, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", ac2)
 	}
+
 	// set the home dir based on where it might be, default to one above
 	ac2.Config().Set("home", instance.Home(ac2))
-	ac2s.Store(h.FullName(local), ac2)
-	return ac2
+	instances.Store(h.FullName(local), ac2)
+
+	return
 }
 
 // interface method set
@@ -154,7 +158,7 @@ func (n *AC2s) Load() (err error) {
 }
 
 func (n *AC2s) Unload() (err error) {
-	ac2s.Delete(n.Name() + "@" + n.Host().String())
+	instances.Delete(n.Name() + "@" + n.Host().String())
 	n.ConfigLoaded = time.Time{}
 	return
 }

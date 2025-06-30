@@ -148,30 +148,36 @@ func initialise(r *geneos.Host, ct *geneos.Component) {
 	}
 }
 
-var gateways sync.Map
+var instances sync.Map
 
 // factory is the factory method for Gateways
-func factory(name string) geneos.Instance {
+func factory(name string) (gateway geneos.Instance) {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
-	if i, ok := gateways.Load(h.FullName(local)); ok {
-		if g, ok := i.(*Gateways); ok {
-			return g
+
+	if g, ok := instances.Load(h.FullName(local)); ok {
+		if gw, ok := g.(*Gateways); ok {
+			return gw
 		}
 	}
-	gateway := &Gateways{}
-	gateway.Conf = config.New()
-	gateway.Component = &Gateway
-	gateway.InstanceHost = h
+
+	gateway = &Gateways{
+		Component:    &Gateway,
+		Conf:         config.New(),
+		InstanceHost: h,
+	}
+
 	if err := instance.SetDefaults(gateway, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", gateway)
 	}
+
 	// set the home dir based on where it might be, default to one above
 	gateway.Config().Set("home", instance.Home(gateway))
-	gateways.Store(h.FullName(local), gateway)
-	return gateway
+	instances.Store(h.FullName(local), gateway)
+
+	return
 }
 
 // interface method set
@@ -205,7 +211,7 @@ func (g *Gateways) Load() (err error) {
 }
 
 func (g *Gateways) Unload() (err error) {
-	gateways.Delete(g.Name() + "@" + g.Host().String())
+	instances.Delete(g.Name() + "@" + g.Host().String())
 	g.ConfigLoaded = time.Time{}
 	return
 }

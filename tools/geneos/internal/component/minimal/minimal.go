@@ -107,31 +107,34 @@ func init() {
 	Minimal.Register(factory)
 }
 
-var minimals sync.Map
+var instances sync.Map
 
-func factory(name string) geneos.Instance {
+func factory(name string) (minimal geneos.Instance) {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
-	f, ok := minimals.Load(h.FullName(local))
-	if ok {
-		fa, ok := f.(*Minimals)
-		if ok {
-			return fa
+
+	if m, ok := instances.Load(h.FullName(local)); ok {
+		if mn, ok := m.(*Minimals); ok {
+			return mn
 		}
 	}
-	minimal := &Minimals{}
-	minimal.Conf = config.New()
-	minimal.InstanceHost = h
-	minimal.Component = &Minimal
+
+	minimal = &Minimals{
+		Conf:         config.New(),
+		InstanceHost: h,
+		Component:    &Minimal,
+	}
+
 	if err := instance.SetDefaults(minimal, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", minimal)
 	}
 	// set the home dir based on where it might be, default to one above
 	minimal.Config().Set("home", instance.Home(minimal))
-	minimals.Store(h.FullName(local), minimal)
-	return minimal
+	instances.Store(h.FullName(local), minimal)
+
+	return
 }
 
 // interface method set
@@ -165,7 +168,7 @@ func (n *Minimals) Load() (err error) {
 }
 
 func (n *Minimals) Unload() (err error) {
-	minimals.Delete(n.Name() + "@" + n.Host().String())
+	instances.Delete(n.Name() + "@" + n.Host().String())
 	n.ConfigLoaded = time.Time{}
 	return
 }

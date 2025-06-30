@@ -115,31 +115,33 @@ func init() {
 	Webserver.Register(factory)
 }
 
-var webservers sync.Map
+var instances sync.Map
 
-func factory(name string) geneos.Instance {
+func factory(name string) (webserver geneos.Instance) {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
-	w, ok := webservers.Load(h.FullName(local))
-	if ok {
-		ws, ok := w.(*Webservers)
-		if ok {
+	if w, ok := instances.Load(h.FullName(local)); ok {
+		if ws, ok := w.(*Webservers); ok {
 			return ws
 		}
 	}
-	webserver := &Webservers{}
-	webserver.Conf = config.New()
-	webserver.InstanceHost = h
-	webserver.Component = &Webserver
+
+	webserver = &Webservers{
+		Conf:         config.New(),
+		InstanceHost: h,
+		Component:    &Webserver,
+	}
+
 	if err := instance.SetDefaults(webserver, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", webserver)
 	}
 	// set the home dir based on where it might be, default to one above
 	webserver.Config().Set("home", instance.Home(webserver))
-	webservers.Store(h.FullName(local), webserver)
-	return webserver
+	instances.Store(h.FullName(local), webserver)
+
+	return
 }
 
 // list of file patterns to copy?
@@ -187,7 +189,7 @@ func (w *Webservers) Load() (err error) {
 }
 
 func (w *Webservers) Unload() (err error) {
-	webservers.Delete(w.Name() + "@" + w.Host().String())
+	instances.Delete(w.Name() + "@" + w.Host().String())
 	w.ConfigLoaded = time.Time{}
 	return
 }

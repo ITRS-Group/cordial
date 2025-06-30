@@ -109,31 +109,33 @@ func init() {
 	FileAgent.Register(factory)
 }
 
-var fileagents sync.Map
+var instances sync.Map
 
-func factory(name string) geneos.Instance {
+func factory(name string) (fileagent geneos.Instance) {
 	_, local, h := instance.SplitName(name, geneos.LOCAL)
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
-	f, ok := fileagents.Load(h.FullName(local))
-	if ok {
-		fa, ok := f.(*FileAgents)
-		if ok {
+	if f, ok := instances.Load(h.FullName(local)); ok {
+		if fa, ok := f.(*FileAgents); ok {
 			return fa
 		}
 	}
-	fileagent := &FileAgents{}
-	fileagent.Conf = config.New()
-	fileagent.InstanceHost = h
-	fileagent.Component = &FileAgent
+
+	fileagent = &FileAgents{
+		Component:    &FileAgent,
+		Conf:         config.New(),
+		InstanceHost: h,
+	}
+
 	if err := instance.SetDefaults(fileagent, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", fileagent)
 	}
 	// set the home dir based on where it might be, default to one above
 	fileagent.Config().Set("home", instance.Home(fileagent))
-	fileagents.Store(h.FullName(local), fileagent)
-	return fileagent
+	instances.Store(h.FullName(local), fileagent)
+
+	return
 }
 
 // interface method set
@@ -167,7 +169,7 @@ func (n *FileAgents) Load() (err error) {
 }
 
 func (n *FileAgents) Unload() (err error) {
-	fileagents.Delete(n.Name() + "@" + n.Host().String())
+	instances.Delete(n.Name() + "@" + n.Host().String())
 	n.ConfigLoaded = time.Time{}
 	return
 }

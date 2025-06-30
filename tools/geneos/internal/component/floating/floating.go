@@ -118,24 +118,26 @@ func Init(r *geneos.Host, ct *geneos.Component) {
 	}
 }
 
-var floatings sync.Map
+var instances sync.Map
 
-func factory(name string) geneos.Instance {
+func factory(name string) (floating geneos.Instance) {
 	ct, local, h := instance.SplitName(name, geneos.LOCAL)
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
-	s, ok := floatings.Load(h.FullName(local))
-	if ok {
-		sn, ok := s.(*Floatings)
-		if ok {
-			return sn
+
+	if f, ok := instances.Load(h.FullName(local)); ok {
+		if ft, ok := f.(*Floatings); ok {
+			return ft
 		}
 	}
-	floating := &Floatings{}
-	floating.Conf = config.New()
-	floating.InstanceHost = h
-	floating.Component = &Floating
+
+	floating = &Floatings{
+		Component:    &Floating,
+		Conf:         config.New(),
+		InstanceHost: h,
+	}
+
 	floating.Config().SetDefault("pkgtype", "netprobe")
 	if ct != nil {
 		floating.Config().SetDefault("pkgtype", ct.Name)
@@ -145,8 +147,9 @@ func factory(name string) geneos.Instance {
 	}
 	// set the home dir based on where it might be, default to one above
 	floating.Config().Set("home", instance.Home(floating))
-	floatings.Store(h.FullName(local), floating)
-	return floating
+	instances.Store(h.FullName(local), floating)
+
+	return
 }
 
 // interface method set
@@ -180,7 +183,7 @@ func (s *Floatings) Load() (err error) {
 }
 
 func (s *Floatings) Unload() (err error) {
-	floatings.Delete(s.Name() + "@" + s.Host().String())
+	instances.Delete(s.Name() + "@" + s.Host().String())
 	s.ConfigLoaded = time.Time{}
 	return
 }

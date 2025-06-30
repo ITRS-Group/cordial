@@ -132,28 +132,30 @@ func Init(r *geneos.Host, ct *geneos.Component) {
 	}
 }
 
-var sans sync.Map
+var instances sync.Map
 
 // factory is the factory method for SANs.
 //
 // If the name has a TYPE prefix then that type is used as the "pkgtype"
 // parameter to select other Netprobe types, such as fa2
-func factory(name string) geneos.Instance {
+func factory(name string) (san geneos.Instance) {
 	ct, local, h := instance.SplitName(name, geneos.LOCAL)
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
-	s, ok := sans.Load(h.FullName(local))
+	s, ok := instances.Load(h.FullName(local))
 	if ok {
 		sn, ok := s.(*Sans)
 		if ok {
 			return sn
 		}
 	}
-	san := &Sans{}
-	san.Conf = config.New()
-	san.InstanceHost = h
-	san.Component = &San
+	san = &Sans{
+		Component:    &San,
+		Conf:         config.New(),
+		InstanceHost: h,
+	}
+
 	san.Config().SetDefault("pkgtype", "netprobe")
 	if ct != nil {
 		san.Config().SetDefault("pkgtype", ct.Name)
@@ -163,8 +165,9 @@ func factory(name string) geneos.Instance {
 	}
 	// set the home dir based on where it might be, default to one above
 	san.Config().Set("home", instance.Home(san))
-	sans.Store(h.FullName(local), san)
-	return san
+	instances.Store(h.FullName(local), san)
+
+	return
 }
 
 // interface method set
@@ -198,7 +201,7 @@ func (s *Sans) Load() (err error) {
 }
 
 func (s *Sans) Unload() (err error) {
-	sans.Delete(s.Name() + "@" + s.Host().String())
+	instances.Delete(s.Name() + "@" + s.Host().String())
 	s.ConfigLoaded = time.Time{}
 	return
 }
