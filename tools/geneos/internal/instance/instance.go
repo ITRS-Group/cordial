@@ -92,6 +92,12 @@ func DisplayName(i geneos.Instance) string {
 	return fmt.Sprintf("%s \"%s@%s\"", i.Type(), i.Name(), i.Host())
 }
 
+// ShortName returns the instance name with the "@HOST" suffix as a
+// string
+func ShortName(i geneos.Instance) string {
+	return i.Name() + "@" + i.Host().String()
+}
+
 // IDString returns a string suitable as a unique rowname for Toolkit
 // output and other places. For local instance it return `TYPE:NAME` and
 // for remote instances it returns `TYPE:NAME@HOST`
@@ -220,10 +226,10 @@ func Enable(i geneos.Instance) (err error) {
 	return i.Host().Remove(disableFile)
 }
 
-// Get return instance name of component type ct, and loads the config.
-// It is an error if the config cannot be loaded. The instance is loaded
-// from the host given in the name after any '@' or, if none, localhost
-// is used.
+// Get return instance of component type ct, and loads the config. It is
+// an error if the config cannot be loaded. The instance is loaded from
+// the host given in the name after any '@' or, if none, localhost is
+// used.
 func Get(ct *geneos.Component, name string) (instance geneos.Instance, err error) {
 	if ct == nil || name == "" {
 		return nil, geneos.ErrInvalidArgs
@@ -232,7 +238,33 @@ func Get(ct *geneos.Component, name string) (instance geneos.Instance, err error
 	instance = ct.New(name)
 	if instance == nil {
 		// if no instance is created, check why
-		_, _, h := SplitName(name, geneos.LOCAL)
+		h, _, _ := Decompose(name)
+		if h == geneos.LOCAL && geneos.LocalRoot() == "" {
+			err = geneos.ErrRootNotSet
+			return
+		}
+		err = geneos.ErrInvalidArgs
+		return
+	}
+	err = instance.Load()
+	return
+}
+
+// GetWithHost return instance of component type ct from host h and
+// loads the config. It is an error if the config cannot be loaded. If
+// name has an embedded "@HOST" it must match h, else that is an error.
+func GetWithHost(h *geneos.Host, ct *geneos.Component, name string) (instance geneos.Instance, err error) {
+	if ct == nil || h == nil || h == geneos.ALL || name == "" {
+		return nil, geneos.ErrInvalidArgs
+	}
+
+	if strings.Contains(name, "@") && !strings.HasSuffix(name, "@"+h.String()) {
+		err = geneos.ErrInvalidArgs
+		return
+	}
+
+	instance = ct.New(h.FullName(name))
+	if instance == nil {
 		if h == geneos.LOCAL && geneos.LocalRoot() == "" {
 			err = geneos.ErrRootNotSet
 			return
@@ -261,9 +293,9 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions)
 
 	if len(opts.names) > 0 {
 		instanceNames = slices.DeleteFunc(instanceNames, func(n string) bool {
-			_, in, ih := SplitName(n, h)
+			ih, _, in := Decompose(n, h)
 			for _, v := range opts.names {
-				_, name, h := SplitName(v, h)
+				h, _, name := Decompose(v, h)
 				if name == in && (h == geneos.ALL || h == ih) {
 					return false
 				}
@@ -273,8 +305,8 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions)
 	}
 
 	for _, name := range instanceNames {
-		ct, name, h := SplitName(name, h)
-		instance, err := Get(ct, name+"@"+h.String())
+		h, ct, name := Decompose(name, h)
+		instance, err := GetWithHost(h, ct, name)
 		if err != nil {
 			continue
 		}
@@ -388,10 +420,10 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, patterns ...str
 			continue
 		}
 
-		_, p, h := SplitName(pattern, h) // override 'h' inside loop
+		h, _, p := Decompose(pattern, h) // override 'h' inside loop
 
 		for _, name := range InstanceNames(h, ct) {
-			_, n, _ := SplitName(name, h)
+			_, _, n := Decompose(name, h)
 			if match, _ := path.Match(p, n); match {
 				if h == geneos.ALL {
 					names = append(names, n)
@@ -421,28 +453,32 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, patterns ...str
 	return
 }
 
-// SplitName returns the parts of an instance name given an instance
-// name in the format [TYPE:]NAME[@HOST] and a default host, return a
-// *geneos.Component for the TYPE if given, a string for the NAME and a
-// *geneos.Host - the latter being either from the name or the default
-// provided
-func SplitName(in string, defaultHost *geneos.Host) (ct *geneos.Component, name string, h *geneos.Host) {
-	if defaultHost == nil {
-		h = geneos.ALL
+// Decompose returns the parts of an instance name in the format
+// [TYPE:]NAME[@HOST]. ct defaults to nil and host to localhost unless
+// an optional default host is passed as a var arg. If defaultHost[0] is
+// geneos.ALL then geneos.LOCAL is returned
+func Decompose(name string, defaultHost ...*geneos.Host) (host *geneos.Host, ct *geneos.Component, instance string) {
+	var t, h string
+	var found bool
+
+	if len(defaultHost) == 0 || defaultHost[0] == geneos.ALL {
+		host = geneos.LOCAL
 	} else {
-		h = defaultHost
+		host = defaultHost[0]
 	}
 
-	parts := strings.SplitN(in, "@", 2)
-	name = parts[0]
-	if len(parts) > 1 {
-		h = geneos.GetHost(parts[1])
+	t, name, found = strings.Cut(name, ":")
+	if found {
+		ct = geneos.ParseComponent(t)
+	} else {
+		name = t
 	}
-	parts = strings.SplitN(name, ":", 2)
-	if len(parts) > 1 {
-		ct = geneos.ParseComponent(parts[0])
-		name = parts[1]
+
+	instance, h, found = strings.Cut(name, "@")
+	if found {
+		host = geneos.GetHost(h)
 	}
+
 	return
 }
 

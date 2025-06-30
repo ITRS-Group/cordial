@@ -110,7 +110,8 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (minimal geneos.Instance) {
-	_, local, h := instance.SplitName(name, geneos.LOCAL)
+	h, _, local := instance.Decompose(name)
+
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}
@@ -132,7 +133,7 @@ func factory(name string) (minimal geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	minimal.Config().Set("home", instance.Home(minimal))
-	instances.Store(h.FullName(local), minimal)
+	instances.Store(instance.ShortName(minimal), minimal)
 
 	return
 }

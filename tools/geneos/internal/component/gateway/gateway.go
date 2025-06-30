@@ -152,7 +152,8 @@ var instances sync.Map
 
 // factory is the factory method for Gateways
 func factory(name string) (gateway geneos.Instance) {
-	_, local, h := instance.SplitName(name, geneos.LOCAL)
+	h, _, local := instance.Decompose(name)
+
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}

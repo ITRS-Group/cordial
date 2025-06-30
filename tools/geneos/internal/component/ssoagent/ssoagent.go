@@ -117,7 +117,8 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (ssoagent geneos.Instance) {
-	_, local, h := instance.SplitName(name, geneos.LOCAL)
+	h, _, local := instance.Decompose(name)
+
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
 	}

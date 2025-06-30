@@ -132,12 +132,9 @@ var deployCmd = &cobra.Command{
 			name = names[0]
 		}
 
-		// check we have a Geneos directory, update host based on instance
-		// name wanted
-		h := geneos.GetHost(Hostname)
-		// update ct and host - ct may come from TYPE:NAME@HOST format
-		pkgct, local, h := instance.SplitName(name, h)
+		h, pkgct, local := instance.Decompose(name, geneos.GetHost(Hostname))
 
+		// if no name is given, use the hostname
 		if local == "" {
 			local = h.Hostname()
 		}
@@ -300,7 +297,7 @@ var deployCmd = &cobra.Command{
 		}
 
 		// we are installed and ready to go, drop through to code from `add`
-		i, err := instance.Get(ct, name)
+		i, err := instance.GetWithHost(h, ct, name)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return
 		}
@@ -386,7 +383,6 @@ var deployCmd = &cobra.Command{
 		// reload config as instance data is not updated by Add() as an interface value
 		i.Unload()
 		i.Load()
-		log.Debug().Msgf("home is now %s", i.Home())
 		i.Rebuild(true)
 
 		_ = instance.ImportFiles(i, deployCmdImportFiles...)

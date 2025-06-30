@@ -103,12 +103,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	// check validity and reserved words here
 	name := names[0]
 
-	h := geneos.GetHost(Hostname)
-	if h == geneos.ALL {
-		h = geneos.LOCAL
-	}
-
-	pkgct, local, h := instance.SplitName(name, h)
+	h, pkgct, local := instance.Decompose(name, geneos.GetHost(Hostname))
 
 	if local == "" {
 		local = h.Hostname()
@@ -132,7 +127,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 		return
 	}
 
-	i, err := instance.Get(ct, h.FullName(name))
+	i, err := instance.GetWithHost(h, ct, name)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		// we get a not exists error for a new instance, but c is still populated
 		return

@@ -106,7 +106,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		destination = src.Name() + destination
 	}
 
-	_, _, dHost := SplitName(destination, geneos.LOCAL)
+	dHost, _, _ := Decompose(destination, geneos.LOCAL)
 	if !dHost.Exists() {
 		return fmt.Errorf("%w: destination host for %q not found", host.ErrNotExist, destination)
 	}
@@ -138,7 +138,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		}
 	}
 
-	_, dName, dHost := SplitName(destination, geneos.LOCAL)
+	_, _, dName := Decompose(destination, geneos.LOCAL)
 
 	// do a dance here to deep copy-ish the dst
 	newdst := src.Type().New(destination)
@@ -204,8 +204,8 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 
 	// update any component name only if the same as the instance name
 	log.Debug().Msgf("src name: %s, setting dst to %s", src.Config().GetString("name"), destination)
-	_, newname, _ := SplitName(destination, geneos.LOCAL)
-	ncf.Set("name", newname)
+	// _, _, newname := Decompose(destination, geneos.LOCAL)
+	ncf.Set("name", dName)
 
 	// fix-up any other config changes here
 	//
