@@ -193,14 +193,17 @@ func aesListShared(ct *geneos.Component, h *geneos.Host) (results instance.Respo
 	return
 }
 
-func aesListPathCSV(ct *geneos.Component, h *geneos.Host, name string, kf config.KeyFile) (row []string) {
+func aesListPathCSV(ct *geneos.Component, h *geneos.Host, name, suffix string, kf config.KeyFile) (row []string) {
 	if kf == "" {
 		return
 	}
 
 	ts := ct.String()
 	hs := h.String()
-	id := ts + ":" + name
+	id := ts + ":" + name + suffix
+	if !listCmdToolkit {
+		name += suffix
+	}
 	crcstr := "-"
 
 	crc, crcerr := kf.ReadCRC(host.Localhost)
@@ -236,13 +239,19 @@ func aesListInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 
 	path := config.KeyFile(instance.PathOf(i, "keyfile"))
 	if path != "" {
-		row := aesListPathCSV(i.Type(), i.Host(), i.Name(), path)
+		row := aesListPathCSV(i.Type(), i.Host(), i.Name(), "", path)
 		resp.Rows = append(resp.Rows, row)
 	}
 
 	prev := config.KeyFile(instance.PathOf(i, "prevkeyfile"))
 	if prev != "" {
-		row := aesListPathCSV(i.Type(), i.Host(), i.Name()+" (prev)", prev)
+		var row []string
+		if listCmdToolkit {
+			row = aesListPathCSV(i.Type(), i.Host(), i.Name(), " # prev", prev)
+		} else {
+			row = aesListPathCSV(i.Type(), i.Host(), i.Name(), " (prev)", prev)
+
+		}
 		resp.Rows = append(resp.Rows, row)
 	}
 
@@ -263,7 +272,7 @@ func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (responses instance.
 				if dir.IsDir() || !strings.HasSuffix(dir.Name(), ".aes") {
 					continue
 				}
-				rows = append(rows, aesListPathCSV(ct, h, "shared", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name()))))
+				rows = append(rows, aesListPathCSV(ct, h, "shared", "", config.KeyFile(ct.Shared(h, "keyfiles", dir.Name()))))
 			}
 		}
 	}
