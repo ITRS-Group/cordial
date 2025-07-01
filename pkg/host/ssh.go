@@ -325,10 +325,18 @@ func (h *SSHRemote) IsLocal() bool {
 
 // IsAvailable returns true is the remote host can be contacted
 func (h *SSHRemote) IsAvailable() (ok bool, err error) {
-	if h == nil || (h.failed != nil && !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) < 5*time.Second) {
-		// not available for 5 seconds since last error
-		return false, ErrNotAvailable
+	if h == nil {
+		return false, ErrInvalidArgs
 	}
+
+	if h.failed != nil {
+		// only retry every 5 seconds, otherwise return previous error with a time
+		if !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) < 5*time.Second {
+			// not available for 5 seconds since last error
+			return false, fmt.Errorf("%w (%v ago)", h.failed, time.Since(h.lastAttempt))
+		}
+	}
+
 	_, err = h.Dial()
 	return err == nil, err
 }
