@@ -58,10 +58,9 @@ type Host struct {
 var hosts sync.Map
 
 // Default host labels that always exist
-const (
-	LOCALHOST   = "localhost"
-	ALLHOSTS    = "all"
-	UNKNOWNHOST = "UNKNOWN"
+var (
+	LOCALHOST = "localhost"
+	ALLHOSTS  = "all"
 )
 
 // LOCAL and ALL are the global Host values that represent LOCALHOST and
@@ -78,9 +77,13 @@ var (
 // be initialised outside a function as there would be a definition
 // loop.
 func InitHosts(app string) {
+	var err error
+	if LOCALHOST, err = os.Hostname(); err != nil {
+		LOCALHOST = "localhost"
+	}
+
 	LOCAL = NewHost(LOCALHOST)
 	ALL = NewHost(ALLHOSTS)
-	UNKNOWN = NewHost(UNKNOWNHOST)
 	LoadHostConfig()
 }
 
@@ -89,6 +92,13 @@ func InitHosts(app string) {
 // "unknown" then it returns pseudo-hosts used for testing and ranges.
 // An empty name results in a nil pointer.
 func NewHost(name string, options ...any) (h *Host) {
+	h = &Host{
+		Host:   host.NewLocal(),
+		Config: config.New(),
+		hidden: false,
+		loaded: true,
+	}
+
 	switch name {
 	case "":
 		return nil
@@ -96,23 +106,14 @@ func NewHost(name string, options ...any) (h *Host) {
 		if LOCAL != nil {
 			return LOCAL
 		}
-		h = &Host{host.NewLocal(), config.New(), false, true}
 		h.Set("name", LOCALHOST)
-		hostname, _ := os.Hostname()
-		h.Set("hostname", hostname)
+		h.Set("hostname", LOCALHOST)
 		h.SetOSReleaseEnv()
 	case ALLHOSTS:
 		if ALL != nil {
 			return ALL
 		}
-		h = &Host{host.NewLocal(), config.New(), false, true}
 		h.Set("name", ALLHOSTS)
-	case UNKNOWNHOST:
-		if UNKNOWN != nil {
-			return UNKNOWN
-		}
-		h = &Host{host.NewLocal(), config.New(), false, true}
-		h.Set("name", UNKNOWNHOST)
 	default:
 		r, ok := hosts.Load(name)
 		if ok {
@@ -122,7 +123,12 @@ func NewHost(name string, options ...any) (h *Host) {
 			}
 		}
 		// or bootstrap, but NOT save a new one, with only the name set
-		h = &Host{host.NewSSHRemote(name, options...), config.New(), false, false}
+		h = &Host{
+			Host:   host.NewSSHRemote(name, options...),
+			Config: config.New(),
+			hidden: false,
+			loaded: false,
+		}
 		h.Set("name", name)
 		hosts.Store(name, h)
 	}
@@ -153,7 +159,7 @@ func GetHost(name string) (h *Host) {
 	switch name {
 	case "":
 		return nil
-	case LOCALHOST:
+	case "localhost", LOCALHOST:
 		return LOCAL
 	case ALLHOSTS:
 		return ALL
