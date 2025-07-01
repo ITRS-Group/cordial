@@ -85,20 +85,20 @@ var listCmd = &cobra.Command{
 			}
 			fmt.Println(string(b))
 		case listCmdToolkit:
-			hostListCSVWriter := csv.NewWriter(os.Stdout)
-			hostListCSVWriter.Write([]string{"name", "username", "hostname", "flags", "port", "directory"})
-			err = loopHosts(hostListInstanceCSVHosts, hostListCSVWriter, listCmdShowHidden)
-			hostListCSVWriter.Flush()
+			w := csv.NewWriter(os.Stdout)
+			w.Write([]string{"name", "username", "hostname", "flags", "port", "directory"})
+			err = loopHosts(hostListInstanceCSVHosts, w, listCmdShowHidden)
+			w.Flush()
 		case listCmdCSV:
-			hostListCSVWriter := csv.NewWriter(os.Stdout)
-			hostListCSVWriter.Write([]string{"Name", "Username", "Hostname", "Flags", "Port", "Directory"})
-			err = loopHosts(hostListInstanceCSVHosts, hostListCSVWriter, listCmdShowHidden)
-			hostListCSVWriter.Flush()
+			w := csv.NewWriter(os.Stdout)
+			w.Write([]string{"Name", "Username", "Hostname", "Flags", "Port", "Directory"})
+			err = loopHosts(hostListInstanceCSVHosts, w, listCmdShowHidden)
+			w.Flush()
 		default:
-			hostListTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-			fmt.Fprintf(hostListTabWriter, "Name\tUsername\tHostname\tFlags\tPort\tDirectory\n")
-			err = loopHosts(hostListInstancePlainHosts, hostListTabWriter, listCmdShowHidden)
-			hostListTabWriter.Flush()
+			w := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+			fmt.Fprintf(w, "Name\tUsername\tHostname\tFlags\tPort\tDirectory\n")
+			err = loopHosts(hostListInstancePlainHosts, w, listCmdShowHidden)
+			w.Flush()
 		}
 		if err == os.ErrNotExist {
 			err = nil
