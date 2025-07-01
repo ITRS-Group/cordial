@@ -168,7 +168,7 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 func listInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	running := "R"
+	running := "N"
 	disabled := "N"
 	protected := "N"
 	autostart := "N"
