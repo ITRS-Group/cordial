@@ -455,13 +455,12 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, patterns ...str
 
 // Decompose returns the parts of an instance name in the format
 // [TYPE:]NAME[@HOST]. ct defaults to nil and host to localhost unless
-// an optional default host is passed as a var arg. If defaultHost[0] is
-// geneos.ALL then geneos.LOCAL is returned
+// an optional default host is passed as a var arg.
 func Decompose(name string, defaultHost ...*geneos.Host) (host *geneos.Host, ct *geneos.Component, instance string) {
 	var t, h string
 	var found bool
 
-	if len(defaultHost) == 0 || defaultHost[0] == geneos.ALL {
+	if len(defaultHost) == 0 {
 		host = geneos.LOCAL
 	} else {
 		host = defaultHost[0]
