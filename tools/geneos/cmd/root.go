@@ -27,14 +27,14 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/itrs-group/cordial"
-	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 const pkgname = "cordial"
