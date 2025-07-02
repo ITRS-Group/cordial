@@ -35,7 +35,7 @@ import (
 
 var snapshotCmdValues, snapshotCmdSeverities, snapshotCmdSnoozes, snapshotCmdUserAssignments, snapshotCmdXpathsonly bool
 var snapshotCmdMaxitems int
-var snapshotCmdUsername, snapshotCmdPwFile string
+var snapshotCmdUsername string
 var snapshotCmdPassword *config.Plaintext
 
 func init() {
@@ -48,8 +48,6 @@ func init() {
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdUserAssignments, "userassignment", "U", false, "Request cell user assignment info")
 
 	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username")
-	snapshotCmd.Flags().StringVarP(&snapshotCmdPwFile, "pwfile", "P", "", "File containing cleartext password (deprecated)")
-	snapshotCmd.Flags().MarkHidden("pwfile")
 
 	snapshotCmd.Flags().IntVarP(&snapshotCmdMaxitems, "limit", "l", 0, "limit matching items to display. default is unlimited. results unsorted.")
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdXpathsonly, "xpaths", "x", false, "just show matching xpaths")
@@ -95,15 +93,7 @@ var snapshotCmd = &cobra.Command{
 			snapshotCmdUsername = config.GetString(config.Join("snapshot", "username"))
 		}
 
-		if snapshotCmdPwFile != "" {
-			var sp []byte
-			if sp, err = os.ReadFile(snapshotCmdPwFile); err != nil {
-				return
-			}
-			snapshotCmdPassword = config.NewPlaintext(sp)
-		} else {
-			snapshotCmdPassword = config.GetPassword(config.Join("snapshot", "password"))
-		}
+		snapshotCmdPassword = config.GetPassword(config.Join("snapshot", "password"))
 
 		if snapshotCmdUsername != "" && (snapshotCmdPassword.IsNil() || snapshotCmdPassword.Size() == 0) {
 			snapshotCmdPassword, err = config.ReadPasswordInput(false, 0)

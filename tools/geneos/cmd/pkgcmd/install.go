@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -37,7 +36,7 @@ import (
 )
 
 var installCmdLocal, installCmdNoSave, installCmdUpdate, installCmdForce, installCmdNexus, installCmdSnapshot bool
-var installCmdBase, installCmdOverride, installCmdVersion, installCmdUsername, installCmdPwFile string
+var installCmdBase, installCmdOverride, installCmdVersion, installCmdUsername string
 var installCmdDownloadOnly, installCmdAllTypes bool
 var installCmdPassword *config.Plaintext
 
@@ -47,8 +46,6 @@ func init() {
 	installCmdPassword = &config.Plaintext{}
 
 	installCmd.Flags().StringVarP(&installCmdUsername, "username", "u", "", "Username for downloads, defaults to configuration value in download.username")
-	installCmd.Flags().StringVarP(&installCmdPwFile, "pwfile", "P", "", "Password file to read for downloads, defaults to configuration value in download::password or otherwise prompts")
-	installCmd.Flags().MarkHidden("pwfile")
 
 	installCmd.Flags().BoolVarP(&installCmdLocal, "local", "L", false, "Install from local files only.\n* Implied if files or directories are given on command line.")
 	installCmd.Flags().BoolVarP(&installCmdNoSave, "nosave", "n", false, "Do not save a local copy of any downloads.\n* Implied if files or directories are given on command line.")
@@ -218,15 +215,7 @@ geneos install netprobe -b active_dev -U
 				installCmdUsername = config.GetString(config.Join("download", "username"))
 			}
 
-			if installCmdPwFile != "" {
-				var pp []byte
-				if pp, err = os.ReadFile(installCmdPwFile); err != nil {
-					return
-				}
-				installCmdPassword = config.NewPlaintext(pp)
-			} else {
-				installCmdPassword = config.GetPassword(config.Join("download", "password"))
-			}
+			installCmdPassword = config.GetPassword(config.Join("download", "password"))
 
 			if installCmdUsername != "" && (installCmdPassword.IsNil() || installCmdPassword.Size() == 0) {
 				installCmdPassword, err = config.ReadPasswordInput(false, 0)

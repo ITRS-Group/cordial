@@ -41,7 +41,7 @@ const archiveOptionsText = "Directory of releases for installation"
 
 var initCmdLogs, initCmdTLS, initCmdForce, initCmdNexus, initCmdSnapshot bool
 var initCmdName, initCmdSigningBundle, initCmdImportKey, initCmdGatewayTemplate, initCmdVersion string
-var initCmdDLUsername, initCmdPwFile string
+var initCmdDLUsername string
 var initCmdDLPassword *config.Plaintext
 
 // initCmdExtras is shared between all `init` commands as they share common
@@ -74,10 +74,6 @@ func init() {
 
 	initCmd.PersistentFlags().StringVarP(&initCmdVersion, "version", "V", "latest", "Download matching `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
 	initCmd.PersistentFlags().StringVarP(&initCmdDLUsername, "username", "u", "", "Username for downloads")
-
-	// we now prompt for passwords if not in config, so hide this old flag
-	initCmd.PersistentFlags().StringVarP(&initCmdPwFile, "pwfile", "P", "", "")
-	initCmd.PersistentFlags().MarkHidden("pwfile")
 
 	initCmd.PersistentFlags().StringVarP(&initCmdGatewayTemplate, "gateway-template", "w", "", "A gateway template file")
 
@@ -229,15 +225,7 @@ func initProcessArgs(args []string) (options []geneos.PackageOptions, err error)
 	}
 
 	if initCmdDLUsername != "" {
-		if initCmdPwFile != "" {
-			var ip []byte
-			if ip, err = os.ReadFile(initCmdPwFile); err != nil {
-				return
-			}
-			initCmdDLPassword = config.NewPlaintext(ip)
-		} else {
-			initCmdDLPassword = config.GetPassword(config.Join("download", "password"))
-		}
+		initCmdDLPassword = config.GetPassword(config.Join("download", "password"))
 
 		if initCmdDLUsername != "" && (initCmdDLPassword.IsNil() || initCmdDLPassword.Size() == 0) {
 			initCmdDLPassword, err = config.ReadPasswordInput(false, 0)
