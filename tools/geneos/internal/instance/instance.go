@@ -53,7 +53,9 @@ type ProcessFDs struct {
 }
 
 // ProcessStats is an example of a structure to pass to
-// instance.ProcessStatus, using `stats` and `status` tags
+// instance.ProcessStatus, using a field number for `stat` and a line
+// prefix for `status` tags. OpenFiles and OpenSockets are counts of
+// their respective names.
 type ProcessStats struct {
 	Pid         int64         `stat:"0"`
 	Utime       time.Duration `stat:"13"`
