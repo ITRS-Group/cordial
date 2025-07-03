@@ -194,7 +194,6 @@ var exportCmd = &cobra.Command{
 
 		slices.Sort(contents)
 		contents = slices.Compact(contents)
-		log.Debug().Msgf("contents: %v", contents)
 
 		var out *os.File
 		if archive == "-" {
@@ -275,7 +274,6 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 	ct := i.Type()
 
 	if len(params) == 0 {
-		log.Debug().Msg("len(params) = 0")
 		resp.Err = geneos.ErrInvalidArgs
 		return
 	}
@@ -296,7 +294,6 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 			ignore = append(ignore, filepath.SplitList(geneos.RootComponent.PurgeList)...)
 		}
 
-		log.Debug().Msgf("ignorelist: %v", ignore)
 		if !exportCmdIncludeAES {
 			ignore = append(ignore, "*.aes")
 		}

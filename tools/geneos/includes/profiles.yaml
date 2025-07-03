@@ -1,0 +1,73 @@
+# gateway profiles
+default: none
+
+
+
+profiles:
+  none:
+    # create nothing
+
+  all:
+    include: level0, level1
+    gateway:
+      - name: ${hostname}
+      - name: ${hostname}-geneos
+    netprobe:
+      name: ${hostname}
+    licd:
+      name: perm
+    webserver:
+      name: ${hostname}
+
+  demo:
+    include: level0
+    gateway:
+      name: Demo Gateway
+      options: "-demo"
+    netprobe:
+      name: ${hostname}-demo
+    webserver:
+      name: ${hostname}-demo
+
+  level0:
+    gateway:
+      includes:
+        - location: ${geneos}/gateway/includes/xxx.xml
+          priority: 10
+          required: true
+          reloadInterval: 0
+
+        - location: https://poath/th/include.xml
+          priority: 20
+          required: false
+          reloadInterval: 300
+
+  # level 1 monitoring - infrastructure
+  level1:
+    gateway:
+      includes:
+        - location: ${geneos}/gateway/includes/itrs/level1.infrastructure.xml
+          priority: 1015
+          required: true
+          reloadInterval: 300
+
+        - location: ${home}/gateway.level1.infrastructure.xml
+          source: ${geneos}/gateway/includes/templates/level1.infrastructure.xml.gotmpl
+          rebuild: always # never, once
+          priority: 1010
+          required: true
+          reloadInterval: 300
+    netprobe:
+      name: ${hostname}-level1
+      type: minimal
+    webserver:
+      dashboards:
+        - file: xxx.adb
+
+  # level 1 monitoring, online sources - infrastructure
+  level1-online:
+    - location: https://example.com/geneos-includes/itrs/level1.infrastructure.xml
+
+    - location: ${home}/gateway.level1.infrastructure.xml
+      source: https://example.com/geneos-includes/templates/level1.infrastructure.xml.gotmpl
+
