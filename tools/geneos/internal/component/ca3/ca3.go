@@ -46,11 +46,10 @@ var CA3 = geneos.Component{
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "9137-",
-		config.Join(Name, "clean"): strings.Join([]string{
-			"*.old",
-		}, ":"),
+		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
 		config.Join(Name, "purge"): strings.Join([]string{
-			"*.log",
+			"Workflow/",
+			"ca.pid.*",
 		}, ":"),
 	},
 	PortRange: config.Join(Name, "ports"),

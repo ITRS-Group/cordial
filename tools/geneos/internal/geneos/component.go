@@ -61,6 +61,16 @@ var RootComponent = Component{
 	Directories: []string{
 		"packages/downloads",
 	},
+	CleanList: strings.Join([]string{
+		"*.old",
+		"*.orig",
+		"*.bak",
+		"core*",
+	}, ":"),
+	PurgeList: strings.Join([]string{
+		"*.log",
+		"*.txt",
+	}, ":"),
 }
 
 // definitions and access methods for the generic component types

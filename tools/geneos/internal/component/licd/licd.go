@@ -42,13 +42,8 @@ var Licd = geneos.Component{
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "7041,7100-",
-		config.Join(Name, "clean"): strings.Join([]string{
-			"*.old",
-		}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{
-			"*.log",
-			"*.txt",
-		}, ":"),
+		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(Name, "purge"): strings.Join([]string{}, ":"),
 	},
 	PortRange: config.Join(Name, "ports"),
 	CleanList: config.Join(Name, "clean"),

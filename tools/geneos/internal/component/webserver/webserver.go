@@ -47,12 +47,8 @@ var Webserver = geneos.Component{
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "8080,8100-",
-		config.Join(Name, "clean"): strings.Join([]string{
-			"*.old",
-		}, ":"),
+		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
 		config.Join(Name, "purge"): strings.Join([]string{
-			"*.log",
-			"*.txt",
 			"logs/*.log",
 			"logs/*.gz",
 			"webapps/*",

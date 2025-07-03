@@ -39,12 +39,21 @@ import (
 func Clean(i geneos.Instance, full bool) (err error) {
 	var stopped bool
 
-	cleanlist := config.GetString(i.Type().CleanList, config.Default(i.Type().ConfigAliases[i.Type().CleanList]))
-	purgelist := config.GetString(i.Type().PurgeList, config.Default(i.Type().ConfigAliases[i.Type().PurgeList]))
+	ct := i.Type()
+
+	cleanlist := filepath.SplitList(config.GetString(ct.CleanList, config.Default(ct.ConfigAliases[ct.CleanList])))
+	if geneos.RootComponent.CleanList != "" {
+		cleanlist = append(cleanlist, filepath.SplitList(geneos.RootComponent.CleanList)...)
+	}
+
+	purgelist := filepath.SplitList(config.GetString(ct.PurgeList, config.Default(ct.ConfigAliases[ct.PurgeList])))
+	if geneos.RootComponent.PurgeList != "" {
+		purgelist = append(purgelist, filepath.SplitList(geneos.RootComponent.PurgeList)...)
+	}
 
 	if !full {
-		if cleanlist != "" {
-			if err = RemovePaths(i, cleanlist); err == nil {
+		if len(cleanlist) > 0 {
+			if err = RemovePaths(i, cleanlist...); err == nil {
 				log.Debug().Msgf("%s cleaned", i)
 			}
 		}
@@ -60,13 +69,13 @@ func Clean(i geneos.Instance, full bool) (err error) {
 		stopped = true
 	}
 
-	if cleanlist != "" {
-		if err = RemovePaths(i, cleanlist); err != nil {
+	if len(cleanlist) > 0 {
+		if err = RemovePaths(i, cleanlist...); err != nil {
 			return
 		}
 	}
-	if purgelist != "" {
-		if err = RemovePaths(i, purgelist); err != nil {
+	if len(purgelist) > 0 {
+		if err = RemovePaths(i, purgelist...); err != nil {
 			return
 		}
 	}
@@ -78,8 +87,8 @@ func Clean(i geneos.Instance, full bool) (err error) {
 }
 
 // RemovePaths removes all files and directories in paths, each file or directory is separated by ListSeperator
-func RemovePaths(i geneos.Instance, paths string) (err error) {
-	list := filepath.SplitList(paths)
+func RemovePaths(i geneos.Instance, list ...string) (err error) {
+	// list := filepath.SplitList(paths)
 	for _, p := range list {
 		// clean path, error on absolute or parent paths, like 'import'
 		// walk globbed directories, remove everything

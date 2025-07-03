@@ -63,12 +63,8 @@ var SSOAgent = geneos.Component{
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "1180-",
-		config.Join(Name, "clean"): strings.Join([]string{
-			"*.old",
-		}, ":"),
+		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
 		config.Join(Name, "purge"): strings.Join([]string{
-			"*.log",
-			"*.txt",
 			"logs/*.log",
 			"logs/*.gz",
 		}, ":"),

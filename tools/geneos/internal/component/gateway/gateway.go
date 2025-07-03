@@ -51,14 +51,14 @@ var Gateway = geneos.Component{
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "7039,7100-",
 		config.Join(Name, "clean"): strings.Join([]string{
-			"*.old",
 			"*.history",
+			"*.download",
 		}, ":"),
 		config.Join(Name, "purge"): strings.Join([]string{
-			"*.log",
-			"*.txt",
 			"*.snooze",
 			"*.user_assignment",
+			"stats.xml",
+			"persistence.*",
 			"licences.cache",
 			"cache/",
 			"database/",
