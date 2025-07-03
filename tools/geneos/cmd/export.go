@@ -267,7 +267,7 @@ var exportCmd = &cobra.Command{
 }
 
 func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
-	var ignoredirs, ignorefiles []string
+	var ignoreDirs, ignoreFiles []string
 
 	resp = instance.NewResponse(i)
 
@@ -287,25 +287,25 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 	}
 
 	if !exportCmdIncludeAll {
-		ignorelist := strings.Split(config.GetString(ct.CleanList, config.Default(ct.ConfigAliases[ct.CleanList])), ":")
-		ignorelist = append(ignorelist, strings.Split(config.GetString(ct.PurgeList, config.Default(ct.ConfigAliases[ct.PurgeList])), ":")...)
+		ignore := strings.Split(config.GetString(ct.CleanList, config.Default(ct.ConfigAliases[ct.CleanList])), ":")
+		ignore = append(ignore, strings.Split(config.GetString(ct.PurgeList, config.Default(ct.ConfigAliases[ct.PurgeList])), ":")...)
 		if geneos.RootComponent.CleanList != "" {
-			ignorelist = append(ignorelist, filepath.SplitList(geneos.RootComponent.CleanList)...)
+			ignore = append(ignore, filepath.SplitList(geneos.RootComponent.CleanList)...)
 		}
 		if geneos.RootComponent.PurgeList != "" {
-			ignorelist = append(ignorelist, filepath.SplitList(geneos.RootComponent.PurgeList)...)
+			ignore = append(ignore, filepath.SplitList(geneos.RootComponent.PurgeList)...)
 		}
 
-		log.Debug().Msgf("ignorelist: %v", ignorelist)
+		log.Debug().Msgf("ignorelist: %v", ignore)
 		if !exportCmdIncludeAES {
-			ignorelist = append(ignorelist, "*.aes")
+			ignore = append(ignore, "*.aes")
 		}
 
-		for _, i := range ignorelist {
+		for _, i := range ignore {
 			if strings.HasSuffix(i, "/") {
-				ignoredirs = append(ignoredirs, strings.TrimSuffix(i, "/"))
+				ignoreDirs = append(ignoreDirs, strings.TrimSuffix(i, "/"))
 			} else {
-				ignorefiles = append(ignorefiles, i)
+				ignoreFiles = append(ignoreFiles, i)
 			}
 		}
 	}
@@ -324,7 +324,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 
 	for _, ig := range ignoreSecure {
 		if cf.IsSet(ig) {
-			ignorefiles = append(ignorefiles, strings.TrimPrefix(cf.GetString(ig), i.Home()+"/"))
+			ignoreFiles = append(ignoreFiles, strings.TrimPrefix(cf.GetString(ig), i.Home()+"/"))
 		}
 	}
 
@@ -338,7 +338,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 		}
 		switch {
 		case fi.IsDir():
-			for _, ig := range ignoredirs {
+			for _, ig := range ignoreDirs {
 				if match, err := filepath.Match(ig, file); err == nil && match {
 					return fs.SkipDir
 				}
@@ -348,7 +348,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 			log.Debug().Msgf("ignoring symlink %s", file)
 		default:
 			if !exportCmdIncludeAll {
-				for _, ig := range ignorefiles {
+				for _, ig := range ignoreFiles {
 					if match, err := filepath.Match(ig, file); err == nil && match {
 						return nil
 					}
@@ -383,7 +383,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 		switch {
 		case fi.IsDir():
 			if !exportCmdIncludeAll {
-				for _, ig := range ignoredirs {
+				for _, ig := range ignoreDirs {
 					if match, err := filepath.Match(ig, file); err == nil && match {
 						return fs.SkipDir
 					}
@@ -394,7 +394,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 			log.Debug().Msgf("ignoring symlink %s", file)
 		default:
 			if !exportCmdIncludeAll {
-				for _, ig := range ignorefiles {
+				for _, ig := range ignoreFiles {
 					if match, err := filepath.Match(ig, file); err == nil && match {
 						return nil
 					}
