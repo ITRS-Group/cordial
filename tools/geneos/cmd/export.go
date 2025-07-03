@@ -289,7 +289,14 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 	if !exportCmdIncludeAll {
 		ignorelist := strings.Split(config.GetString(ct.CleanList, config.Default(ct.ConfigAliases[ct.CleanList])), ":")
 		ignorelist = append(ignorelist, strings.Split(config.GetString(ct.PurgeList, config.Default(ct.ConfigAliases[ct.PurgeList])), ":")...)
+		if geneos.RootComponent.CleanList != "" {
+			ignorelist = append(ignorelist, filepath.SplitList(geneos.RootComponent.CleanList)...)
+		}
+		if geneos.RootComponent.PurgeList != "" {
+			ignorelist = append(ignorelist, filepath.SplitList(geneos.RootComponent.PurgeList)...)
+		}
 
+		log.Debug().Msgf("ignorelist: %v", ignorelist)
 		if !exportCmdIncludeAES {
 			ignorelist = append(ignorelist, "*.aes")
 		}
