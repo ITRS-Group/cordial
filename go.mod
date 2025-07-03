@@ -6,6 +6,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2
 	github.com/PagerDuty/go-pagerduty v1.8.0
 	github.com/StackExchange/wmi v1.2.1
+	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/awnumar/memguard v0.22.5
 	github.com/aymerick/douceur v0.2.0
 	github.com/charmbracelet/glamour v0.10.0
