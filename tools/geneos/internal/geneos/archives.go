@@ -295,16 +295,16 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 		}
 		log.Debug().Msgf("gziplen %d", gziplen)
 
-		var t *gzip.Reader
-		t, err = gzip.NewReader(archive)
+		var tin *gzip.Reader
+		tin, err = gzip.NewReader(archive)
 		if err != nil {
 			// cannot gunzip file
 			return
 		}
-		defer t.Close()
-		t.Multistream(false)
+		defer tin.Close()
+		tin.Multistream(false)
 
-		if err = untar(h, basedir, t, int64(gziplen), stripFirstDir); err != nil {
+		if err = untar(h, basedir, tin, int64(gziplen), stripFirstDir); err != nil {
 			return
 		}
 
