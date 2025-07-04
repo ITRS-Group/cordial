@@ -586,9 +586,9 @@ func (c *Config) SetKeyValues(items ...string) (err error) {
 			}
 
 			if strings.HasPrefix(fields[3], "-") {
-				c.Set(fields[1], c.GetString(fields[1])+" "+fields[3])
+				c.Set(fields[1], c.GetString(fields[1], NoExpand())+" "+fields[3])
 			} else {
-				c.Set(fields[1], c.GetString(fields[1])+fields[3])
+				c.Set(fields[1], c.GetString(fields[1], NoExpand())+fields[3])
 			}
 		default:
 			continue
