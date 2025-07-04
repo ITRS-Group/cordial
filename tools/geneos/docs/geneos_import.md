@@ -21,7 +21,12 @@ geneos import [flags] [TYPE] [NAME...] [DEST=]SOURCE...
 ### Options
 
 ```text
-  -c, --common SUFFIX   Import files to a component directory named TYPE_SUFFIX
+  -i, --instance FILE     import one or more instances from FILE
+                          FILE can be `-` for STDIN
+  -s, --shared            include shared files when using --instances
+  -z, --decompress type   use decompression type, one of `gzip`, `bzip2` or `none`
+                          if not given then the file name is used to guess the type
+  -c, --common SUFFIX     import files to a component directory named TYPE_SUFFIX
 ```
 
 ## Examples
