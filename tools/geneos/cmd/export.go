@@ -31,6 +31,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/units"
 	"github.com/dsnet/compress/bzip2"
@@ -47,7 +48,9 @@ var exportCmdOutput string
 
 var exportCmdIncludeAll, exportCmdIncludeShared bool
 var exportCmdIncludeAES, exportCmdIncludeCerts bool
+var exportCmdIncludeDatetime bool
 var exportCmdLimitSize, exportCmdCompression string
+
 var maxsize int64
 
 func init() {
@@ -55,7 +58,10 @@ func init() {
 
 	exportCmd.Flags().StringVarP(&exportCmdOutput, "output", "o", "", "Output file `path`. If path is a directory or has a '/' suffix then the constructed\nfile name is used in that directory. If not final file name is given then the\nfile name is of the form 'geneos[-TYPE][-NAME].tar.gz'")
 
-	exportCmd.Flags().StringVarP(&exportCmdCompression, "compress", "c", "gzip", "Compressions type. One of gzip, bzip2 or none.")
+	// archive name options, if not a fixed name
+	exportCmd.Flags().BoolVarP(&exportCmdIncludeDatetime, "datetime", "D", false, "include a datetime string the in the auto-generated archive name")
+
+	exportCmd.Flags().StringVarP(&exportCmdCompression, "compress", "z", "gzip", "Compression `type`. One of `gzip`, `bzip2` or `none`.")
 
 	exportCmd.Flags().StringVarP(&exportCmdLimitSize, "size", "s", "1MiB", "Ignore files larger than this size (in bytes) unless --all is used\nAccepts suffixes i=with both B and iB units")
 	exportCmd.Flags().BoolVarP(&exportCmdIncludeAll, "all", "A", false, "Include all files except AES key files, certificates and associated files, in the archive.\nThis may fail for running instances")
@@ -72,8 +78,8 @@ func init() {
 var exportCmdDescription string
 
 var compression = map[string]string{
-	"gzip":  "gz",
-	"bzip2": "bz2",
+	"gzip":  ".gz",
+	"bzip2": ".bz2",
 	"none":  "",
 }
 
@@ -89,14 +95,16 @@ var exportCmd = &cobra.Command{
 		CmdRequireHome:   "true",
 		CmdWildcardNames: "true",
 	},
-	RunE: func(command *cobra.Command, _ []string) (err error) {
+	RunE: func(command *cobra.Command, args []string) (err error) {
 		var archive string
 
 		ct, names := ParseTypeNames(command)
 
-		// h can be geneos.ALL in which case it is updated below before
-		// being used
+		// if no host is given, make it local only
 		h := geneos.GetHost(Hostname)
+		if h == geneos.ALL {
+			h = geneos.LOCAL
+		}
 
 		suffix, ok := compression[exportCmdCompression]
 		if !ok {
@@ -142,44 +150,39 @@ var exportCmd = &cobra.Command{
 			// build archive name, starting with executable
 			archive += cordial.ExecutableName()
 
+			// include host name if not local
+			if h != geneos.LOCAL {
+				archive += "-" + h.String()
+			}
+
+			// include component name if given on command line
 			if ct != nil {
-				// add component types
 				archive += "-" + ct.String()
 			}
 
-			if len(names) == 1 {
-				// single instance
-				instances := instance.Instances(h, ct, instance.FilterNames(names...))
-				if len(instances) == 0 {
-					return geneos.ErrNotExist
-				}
+			instances := instance.Instances(h, ct, instance.FilterNames(names...))
+			switch len(instances) {
+			case 0:
+				return fmt.Errorf("no matching instances found")
+			case 1:
 				i = instances[0]
-				archive += "-" + i.Type().String()
-				archive += "-" + strings.ReplaceAll(i.Name(), " ", "_")
-				h = i.Host()
-			} else {
-				// more than one, error if not (a) all the same type and (b) all on the same host
-				var nct *geneos.Component
-				var nh *geneos.Host
-				for _, i := range instance.Instances(h, ct, instance.FilterNames(names...)) {
-					if nct == nil {
-						nct = i.Type()
-						nh = i.Host()
-						continue
-					}
-					if nct != i.Type() || nh != i.Host() {
-						return errors.New("all matches must be of the same TYPE and on the same host")
-					}
-				}
 				if ct == nil {
-					archive += "-" + nct.String()
+					archive += "-" + i.Type().String()
 				}
-				h = nh
+				archive += "-" + strings.ReplaceAll(i.Name(), " ", "_")
+			default:
+				if len(names) == 1 {
+					archive += "-" + strings.ReplaceAll(names[0], " ", "_")
+				}
+			}
+
+			if exportCmdIncludeDatetime {
+				archive += "-" + time.Now().Local().Format("20060102150405")
 			}
 
 			archive += ".tar"
 			if suffix != "" {
-				archive += "." + suffix
+				archive += suffix
 			}
 		}
 
@@ -198,9 +201,6 @@ var exportCmd = &cobra.Command{
 		var out *os.File
 		if archive == "-" {
 			out = os.Stdout
-			if h == geneos.ALL {
-				h = geneos.LOCAL
-			}
 		} else {
 			out, err = os.Create(archive)
 			if err != nil {
