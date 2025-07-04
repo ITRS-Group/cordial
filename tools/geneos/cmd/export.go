@@ -238,8 +238,8 @@ var exportCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			if !fi.Mode().IsRegular() {
-				return fmt.Errorf("%s is not a regular file", p)
+			if !fi.Mode().IsRegular() && !fi.IsDir() {
+				return fmt.Errorf("%s is not a regular file or directory", p)
 			}
 			uid, gid := h.GetFileOwner(fi)
 			th := &tar.Header{
@@ -252,12 +252,14 @@ var exportCmd = &cobra.Command{
 				Gid:     gid,
 			}
 			tw.WriteHeader(th)
-			b, err := h.ReadFile(p)
-			if err != nil {
-				return err
-			}
-			if _, err = tw.Write(b); err != nil {
-				return err
+			if !fi.IsDir() {
+				b, err := h.ReadFile(p)
+				if err != nil {
+					return err
+				}
+				if _, err = tw.Write(b); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -279,7 +281,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 	}
 	contents, ok := params[0].(*[]string)
 	if !ok {
-		log.Debug().Msgf("invalid contents parameter (%T and not *[]string)", contents)
+		log.Debug().Msgf("invalid contents parameter (%T and not `*[]string`)", contents)
 		resp.Err = geneos.ErrInvalidArgs
 		return
 	}
@@ -335,11 +337,14 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 		}
 		switch {
 		case fi.IsDir():
-			for _, ig := range ignoreDirs {
-				if match, err := filepath.Match(ig, file); err == nil && match {
-					return fs.SkipDir
+			if !exportCmdIncludeAll {
+				for _, ig := range ignoreDirs {
+					if match, err := filepath.Match(ig, file); err == nil && match {
+						return fs.SkipDir
+					}
 				}
 			}
+			*contents = append(*contents, filepath.Join(r, file)+"/")
 			return nil
 		case fi.Mode()&fs.ModeSymlink != 0:
 			log.Debug().Msgf("ignoring symlink %s", file)
@@ -386,6 +391,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 					}
 				}
 			}
+			*contents = append(*contents, filepath.Join(r, file)+"/")
 			return nil
 		case fi.Mode()&fs.ModeSymlink != 0:
 			log.Debug().Msgf("ignoring symlink %s", file)
