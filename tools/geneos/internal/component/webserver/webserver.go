@@ -51,7 +51,7 @@ var Webserver = geneos.Component{
 		config.Join(Name, "purge"): strings.Join([]string{
 			"logs/*.log",
 			"logs/*.gz",
-			"webapps/*",
+			"webapps/",
 		}, ":"),
 	},
 	PortRange: config.Join(Name, "ports"),
@@ -333,10 +333,16 @@ func (w *Webservers) Command(checkExt bool) (args, env []string, home string, er
 		args = []string{"-XX:+UseConcMarkSweepGC"}
 	}
 
+	// tmpdir must exist
+	tmpdir := path.Join(home, "webapps")
+	if err = w.Host().MkdirAll(tmpdir, 0775); err != nil {
+		return
+	}
+
 	args = append(args,
 		"-Xmx"+cf.GetString("maxmem"),
 		"-server",
-		"-Djava.io.tmpdir="+path.Join(home, "webapps"),
+		"-Djava.io.tmpdir="+tmpdir,
 		"-Djava.awt.headless=true",
 		"-DsecurityConfig="+path.Join(home, "config/security.xml"),
 		"-Dcom.itrsgroup.configuration.file="+path.Join(home, "config/config.xml"),
