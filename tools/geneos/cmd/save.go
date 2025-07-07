@@ -44,38 +44,38 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var exportCmdOutput string
+var saveCmdOutput string
 
-var exportCmdIncludeAll, exportCmdIncludeShared bool
-var exportCmdIncludeAES, exportCmdIncludeCerts bool
-var exportCmdIncludeDatetime bool
-var exportCmdLimitSize, exportCmdCompression string
+var saveCmdIncludeAll, saveCmdIncludeShared bool
+var saveCmdIncludeAES, saveCmdIncludeCerts bool
+var saveCmdIncludeDatetime bool
+var saveCmdLimitSize, saveCmdCompression string
 
 var maxsize int64
 
 func init() {
-	GeneosCmd.AddCommand(exportCmd)
+	GeneosCmd.AddCommand(saveCmd)
 
-	exportCmd.Flags().StringVarP(&exportCmdOutput, "output", "o", "", "Output file `path`. If path is a directory or has a '/' suffix then the constructed\nfile name is used in that directory. If not final file name is given then the\nfile name is of the form 'geneos[-TYPE][-NAME].tar.gz'")
+	saveCmd.Flags().StringVarP(&saveCmdOutput, "output", "o", "", "Output file `path`. If path is a directory or has a '/' suffix then the constructed\nfile name is used in that directory. If not final file name is given then the\nfile name is of the form 'geneos[-TYPE][-NAME].tar.gz'")
 
 	// archive name options, if not a fixed name
-	exportCmd.Flags().BoolVarP(&exportCmdIncludeDatetime, "datetime", "D", false, "include a datetime string the in the auto-generated archive name")
+	saveCmd.Flags().BoolVarP(&saveCmdIncludeDatetime, "datetime", "D", false, "include a datetime string the in the auto-generated archive name")
 
-	exportCmd.Flags().StringVarP(&exportCmdCompression, "compress", "z", "gzip", "Compression `type`. One of `gzip`, `bzip2` or `none`.")
+	saveCmd.Flags().StringVarP(&saveCmdCompression, "compress", "z", "gzip", "Compression `type`. One of `gzip`, `bzip2` or `none`.")
 
-	exportCmd.Flags().StringVarP(&exportCmdLimitSize, "size", "s", "1MiB", "Ignore files larger than this size (in bytes) unless --all is used\nAccepts suffixes i=with both B and iB units")
-	exportCmd.Flags().BoolVarP(&exportCmdIncludeAll, "all", "A", false, "Include all files except AES key files, certificates and associated files, in the archive.\nThis may fail for running instances")
+	saveCmd.Flags().StringVarP(&saveCmdLimitSize, "size", "s", "1MiB", "Ignore files larger than this size (in bytes) unless --all is used\nAccepts suffixes i=with both B and iB units")
+	saveCmd.Flags().BoolVarP(&saveCmdIncludeAll, "all", "A", false, "Include all files except AES key files, certificates and associated files, in the archive.\nThis may fail for running instances")
 
-	exportCmd.Flags().BoolVar(&exportCmdIncludeShared, "shared", false, "Include shared directory contents in the archive\n(also use --all to include files that are filtered by clean/purge lists)")
+	saveCmd.Flags().BoolVar(&saveCmdIncludeShared, "shared", false, "Include shared directory contents in the archive\n(also use --all to include files that are filtered by clean/purge lists)")
 
-	exportCmd.Flags().BoolVar(&exportCmdIncludeAES, "aes", false, "Include AES key files in the archive\n(never includes user's own keyfile)")
-	exportCmd.Flags().BoolVar(&exportCmdIncludeCerts, "tls", false, "Include certificates, private keys and certificate chains in archive")
+	saveCmd.Flags().BoolVar(&saveCmdIncludeAES, "aes", false, "Include AES key files in the archive\n(never includes user's own keyfile)")
+	saveCmd.Flags().BoolVar(&saveCmdIncludeCerts, "tls", false, "Include certificates, private keys and certificate chains in archive")
 
-	exportCmd.Flags().SortFlags = false
+	saveCmd.Flags().SortFlags = false
 }
 
-//go:embed _docs/export.md
-var exportCmdDescription string
+//go:embed _docs/save.md
+var saveCmdDescription string
 
 var compression = map[string]string{
 	"gzip":  ".gz",
@@ -83,10 +83,10 @@ var compression = map[string]string{
 	"none":  "",
 }
 
-var exportCmd = &cobra.Command{
-	Use:   "export [flags] [TYPE] [NAME...]",
-	Short: "Export Instances",
-	Long:  exportCmdDescription,
+var saveCmd = &cobra.Command{
+	Use:   "save [flags] [TYPE] [NAME...]",
+	Short: "Save Instances",
+	Long:  saveCmdDescription,
 	Example: strings.ReplaceAll(`
 `, "|", "`"),
 	SilenceUsage: true,
@@ -106,36 +106,36 @@ var exportCmd = &cobra.Command{
 			h = geneos.LOCAL
 		}
 
-		suffix, ok := compression[exportCmdCompression]
+		suffix, ok := compression[saveCmdCompression]
 		if !ok {
 			return fmt.Errorf("invalid compression type, select one of: %s", strings.Join(slices.Collect(maps.Keys(compression)), ", "))
 		}
 
-		if !exportCmdIncludeAll {
-			maxsize, err = units.ParseStrictBytes(exportCmdLimitSize)
+		if !saveCmdIncludeAll {
+			maxsize, err = units.ParseStrictBytes(saveCmdLimitSize)
 			if err != nil {
 				return fmt.Errorf("invalid size: %w", err)
 			}
 		}
 
-		if exportCmdOutput != "" {
-			if strings.HasSuffix(exportCmdOutput, "/") {
+		if saveCmdOutput != "" {
+			if strings.HasSuffix(saveCmdOutput, "/") {
 				// user has asked for a directory, so try to create it as well
-				archive = exportCmdOutput
+				archive = saveCmdOutput
 				os.MkdirAll(archive, 0664)
 			} else {
 				// check for existing file, else try to create the directories above it
-				st, err := os.Stat(exportCmdOutput)
+				st, err := os.Stat(saveCmdOutput)
 				if err == nil {
 					// file (or directory) exists, use it
-					archive = exportCmdOutput
+					archive = saveCmdOutput
 					// destination may be an existing directory, in which case append a '/'
 					if st.IsDir() {
 						archive += "/"
 					}
 				} else {
 					if errors.Is(err, os.ErrNotExist) {
-						archive = exportCmdOutput
+						archive = saveCmdOutput
 						os.MkdirAll(filepath.Dir(archive), 0775)
 					} else {
 						return err
@@ -176,7 +176,7 @@ var exportCmd = &cobra.Command{
 				}
 			}
 
-			if exportCmdIncludeDatetime {
+			if saveCmdIncludeDatetime {
 				archive += "-" + time.Now().Local().Format("20060102150405")
 			}
 
@@ -188,7 +188,7 @@ var exportCmd = &cobra.Command{
 
 		// contents is a list of files so that instances do not duplicate shared contents
 		var contents []string
-		resp := instance.Do(h, ct, names, exportInstance, &contents)
+		resp := instance.Do(h, ct, names, saveInstance, &contents)
 		if archive != "-" {
 			resp.Write(os.Stdout)
 		} else {
@@ -211,7 +211,7 @@ var exportCmd = &cobra.Command{
 
 		var cout io.WriteCloser
 
-		switch exportCmdCompression {
+		switch saveCmdCompression {
 		case "gzip":
 			cout, err = gzip.NewWriterLevel(out, gzip.BestCompression)
 			if err != nil {
@@ -267,7 +267,7 @@ var exportCmd = &cobra.Command{
 	},
 }
 
-func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
+func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 	var ignoreDirs, ignoreFiles []string
 
 	resp = instance.NewResponse(i)
@@ -286,7 +286,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 		return
 	}
 
-	if !exportCmdIncludeAll {
+	if !saveCmdIncludeAll {
 		ignore := strings.Split(config.GetString(ct.CleanList, config.Default(ct.ConfigAliases[ct.CleanList])), ":")
 		ignore = append(ignore, strings.Split(config.GetString(ct.PurgeList, config.Default(ct.ConfigAliases[ct.PurgeList])), ":")...)
 		if geneos.RootComponent.CleanList != "" {
@@ -296,7 +296,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 			ignore = append(ignore, filepath.SplitList(geneos.RootComponent.PurgeList)...)
 		}
 
-		if !exportCmdIncludeAES {
+		if !saveCmdIncludeAES {
 			ignore = append(ignore, "*.aes")
 		}
 
@@ -314,10 +314,10 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 	r := strings.TrimPrefix(d, i.Host().PathTo()+"/")
 
 	var ignoreSecure []string
-	if !exportCmdIncludeAES {
+	if !saveCmdIncludeAES {
 		ignoreSecure = append(ignoreSecure, "keyfile", "prevkeyfile")
 	}
-	if !exportCmdIncludeCerts {
+	if !saveCmdIncludeCerts {
 		ignoreSecure = append(ignoreSecure, "certificate", "privatekey", "certchain")
 	}
 
@@ -337,7 +337,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 		}
 		switch {
 		case fi.IsDir():
-			if !exportCmdIncludeAll {
+			if !saveCmdIncludeAll {
 				for _, ig := range ignoreDirs {
 					if match, err := filepath.Match(ig, file); err == nil && match {
 						return fs.SkipDir
@@ -349,7 +349,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 		case fi.Mode()&fs.ModeSymlink != 0:
 			log.Debug().Msgf("ignoring symlink %s", file)
 		default:
-			if !exportCmdIncludeAll {
+			if !saveCmdIncludeAll {
 				for _, ig := range ignoreFiles {
 					if match, err := filepath.Match(ig, file); err == nil && match {
 						return nil
@@ -366,7 +366,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 		return nil
 	})
 
-	if !exportCmdIncludeShared {
+	if !saveCmdIncludeShared {
 		return
 	}
 
@@ -384,7 +384,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 		}
 		switch {
 		case fi.IsDir():
-			if !exportCmdIncludeAll {
+			if !saveCmdIncludeAll {
 				for _, ig := range ignoreDirs {
 					if match, err := filepath.Match(ig, file); err == nil && match {
 						return fs.SkipDir
@@ -396,7 +396,7 @@ func exportInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 		case fi.Mode()&fs.ModeSymlink != 0:
 			log.Debug().Msgf("ignoring symlink %s", file)
 		default:
-			if !exportCmdIncludeAll {
+			if !saveCmdIncludeAll {
 				for _, ig := range ignoreFiles {
 					if match, err := filepath.Match(ig, file); err == nil && match {
 						return nil
