@@ -311,11 +311,11 @@ func (ct *Component) InstancesBaseDirs(h *Host) (dirs []string) {
 
 // Shared return a path to a location in the shared directory for the
 // component on host h joined to subdirectories and file given as subs.
-func (ct *Component) Shared(h *Host, subs ...interface{}) string {
+func (ct *Component) Shared(h *Host, subs ...any) string {
 	if ct == nil {
 		return ""
 	}
-	parts := []interface{}{}
+	parts := []any{}
 	if ct.ParentType == nil {
 		parts = append(parts, ct, ct.Name+sharedSuffix, subs)
 	} else {
