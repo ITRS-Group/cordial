@@ -79,7 +79,6 @@ func LoadConfig(i geneos.Instance) (err error) {
 		st, err := h.Stat(conf)
 
 		if err == nil && st.ModTime().Equal(i.Loaded()) {
-			log.Debug().Msg("conf file with same modtime already loaded")
 			return nil
 		}
 	}
