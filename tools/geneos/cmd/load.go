@@ -80,16 +80,15 @@ geneos load gateway ABC x.tgz
 		CmdWildcardNames: "false",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-
 		ct, names, params := ParseTypeNamesParams(cmd)
 
+		// specific host or local, never all
 		h := geneos.NewHost(Hostname)
 		if h == geneos.ALL {
 			h = geneos.LOCAL
 		}
 
-		log.Debug().Msgf("ct %s, names %v, params %v", ct, names, params)
-
+		// extract any args that look like archives
 		files := []string{}
 		names = slices.DeleteFunc(names, func(name string) bool {
 			for n := range fileTypes {
@@ -100,8 +99,6 @@ geneos load gateway ABC x.tgz
 			}
 			return false
 		})
-
-		log.Debug().Msgf("files %v, names %v", files, names)
 		names = append(names, params...)
 
 		// if no file names are found in args then assume STDIN. later
@@ -113,7 +110,6 @@ geneos load gateway ABC x.tgz
 		} else {
 			for _, f := range files {
 				// process file
-				log.Debug().Msgf("loading ct %s, host %s from file %s", ct, h, f)
 				if err = loadFromFile(h, ct, f, names); err != nil {
 					return
 				}
