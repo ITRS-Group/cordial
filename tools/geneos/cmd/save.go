@@ -309,6 +309,8 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 		}
 	}
 
+	log.Debug().Msgf("instance %s, ignore %v", i, ignoreFiles)
+
 	var ignoreSecure []string
 	if !saveCmdIncludeAES {
 		ignoreSecure = append(ignoreSecure, "keyfile", "prevkeyfile")
@@ -323,31 +325,59 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 	}
 
 	// walk the instance home directory first
-	walkDir(i.Home(),
+	if err := walkDir(
+		i.Host(),
+		i.Home(),
 		strings.TrimPrefix(i.Home(), i.Host().PathTo()+"/"),
 		contents,
 		ignoreDirs,
 		ignoreFiles,
-	)
+	); err != nil {
+		log.Debug().Err(err).Msg("")
+	}
+
+	log.Debug().Msgf("%s: contents %v", i, contents)
 
 	if !saveCmdIncludeShared {
 		return
 	}
 
 	// then walk the shared directory, checking and updating contents
-	walkDir(ct.Shared(i.Host()),
-		strings.TrimPrefix(ct.Shared(i.Host()), i.Host().GetString(cordial.ExecutableName())+"/"),
+	if err := walkDir(
+		i.Host(),
+		ct.Shared(i.Host()),
+		strings.TrimPrefix(ct.Shared(i.Host()), i.Host().PathTo()+"/"),
 		contents,
 		ignoreDirs,
 		ignoreFiles,
-	)
+	); err != nil {
+		log.Debug().Err(err).Msg("")
+	}
+
+	// add the gateway includes directory if `--shared` is selected
+	if ct.IsA("gateway") {
+		if err := walkDir(
+			i.Host(),
+			i.Host().PathTo(ct, "includes"),
+			strings.TrimPrefix(i.Host().PathTo(ct, "includes"), i.Host().PathTo()+"/"),
+			contents,
+			ignoreDirs,
+			ignoreFiles,
+		); err != nil {
+			log.Debug().Err(err).Msg("")
+		}
+	}
+
+	log.Debug().Msgf("%s: contents %v", i, contents)
 
 	return
 }
 
-func walkDir(d, r string, contents *[]string, ignoreDirs, ignoreFiles []string) error {
-	return fs.WalkDir(os.DirFS(d), ".", func(file string, di fs.DirEntry, err error) error {
+func walkDir(h *geneos.Host, d, r string, contents *[]string, ignoreDirs, ignoreFiles []string) error {
+	return h.WalkDir(d, func(file string, di fs.DirEntry, err error) error {
+		log.Debug().Msgf("called with file=%s, di=%#v", file, di)
 		if err != nil {
+			log.Debug().Err(err).Msg(d)
 			return err
 		}
 		fi, err := di.Info()
