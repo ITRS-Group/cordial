@@ -309,8 +309,6 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 		}
 	}
 
-	log.Debug().Msgf("instance %s, ignore %v", i, ignoreFiles)
-
 	var ignoreSecure []string
 	if !saveCmdIncludeAES {
 		ignoreSecure = append(ignoreSecure, "keyfile", "prevkeyfile")
@@ -335,8 +333,6 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 	); err != nil {
 		log.Debug().Err(err).Msg("")
 	}
-
-	log.Debug().Msgf("%s: contents %v", i, contents)
 
 	if !saveCmdIncludeShared {
 		return
@@ -368,14 +364,11 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 		}
 	}
 
-	log.Debug().Msgf("%s: contents %v", i, contents)
-
 	return
 }
 
 func walkDir(h *geneos.Host, d, r string, contents *[]string, ignoreDirs, ignoreFiles []string) error {
 	return h.WalkDir(d, func(file string, di fs.DirEntry, err error) error {
-		log.Debug().Msgf("called with file=%s, di=%#v", file, di)
 		if err != nil {
 			log.Debug().Err(err).Msg(d)
 			return err
