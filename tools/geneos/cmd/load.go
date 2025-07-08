@@ -35,6 +35,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
 var loadCmdCommon, loadCmdFile, loadCmdCompression string
@@ -199,22 +200,21 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string
 
 	// mapping instance names to potentially new ones.
 	//
-	// key is the source instance name which can include wildcards, the
-	// value is the target name, where any wildcarded part is added to
-	// the target as a suffix (somehow)
+	// wildcards are only allowed when no renaming is taking place
 	mapping := map[string]string{}
 
 	for _, name := range names {
 		dest, src, found := strings.Cut(name, "=")
 		if found {
+			if !instance.ValidName(src) || !instance.ValidName(dest) {
+				log.Debug().Msgf("invalid instance name format when using DEST=SRC format: %s", name)
+				return geneos.ErrInvalidArgs
+			}
 			mapping[src] = dest
 		} else {
 			mapping[name] = name
 		}
 	}
-
-	//
-	//
 
 	tr := tar.NewReader(tin)
 	for {
@@ -267,35 +267,36 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string
 			continue
 		}
 
-		// "rest" is (should be) now "instance/content"
-		instance, fp, found := strings.Cut(rest, "/")
+		// "rest" is (should be) now "i/content"
+		i, fp, found := strings.Cut(rest, "/")
 
 		// we now have type (nct), instance name and filepath fp
 
 		// does the instance name match any of the names list, including wildcards?
-		if len(names) > 0 {
-			log.Debug().Msgf("len(names) = %d", len(names))
-
-		}
-
-		// otherwise load all instances in the archive
-		if process, ok := processed[pkgct.String()+":"+instance]; ok {
-			if process {
-				if err = writeFile(h, pkgct, instance, fp, tr, hdr); err != nil {
-					return
+		if len(mapping) > 0 {
+			for k, v := range mapping {
+				if k == v {
+					if matched, _ := filepath.Match(k, i); matched {
+						// save
+						if err = processFile(h, pkgct, i, fp, tr, hdr, processed); err != nil {
+							return
+						}
+					}
+				} else {
+					if k == i {
+						// rename and save
+						if err = processFile(h, pkgct, v, fp, tr, hdr, processed); err != nil {
+							return
+						}
+					}
 				}
 			}
 			continue
 		}
 
-		// write file and update processed
-		if _, err = h.Stat(h.PathTo(pkgct, pkgct.String()+"s", instance)); err != nil {
-			if err = writeFile(h, pkgct, instance, fp, tr, hdr); err != nil {
-				return
-			}
-			processed[pkgct.String()+":"+instance] = true
-		} else {
-			processed[pkgct.String()+":"+instance] = false
+		// otherwise load all instances in the archive
+		if err = processFile(h, pkgct, i, fp, tr, hdr, processed); err != nil {
+			return
 		}
 	}
 
@@ -307,6 +308,27 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string
 		}
 	}
 
+	return
+}
+
+func processFile(h *geneos.Host, ct *geneos.Component, i, fp string, tr *tar.Reader, hdr *tar.Header, processed map[string]bool) (err error) {
+	// otherwise load all instances in the archive
+	if process, ok := processed[ct.String()+":"+i]; ok {
+		if process {
+			err = writeFile(h, ct, i, fp, tr, hdr)
+		}
+		return
+	}
+
+	// write file and update processed
+	if _, err = h.Stat(h.PathTo(ct, ct.String()+"s", i)); err != nil {
+		if err = writeFile(h, ct, i, fp, tr, hdr); err != nil {
+			return
+		}
+		processed[ct.String()+":"+i] = true
+	} else {
+		processed[ct.String()+":"+i] = false
+	}
 	return
 }
 
@@ -352,13 +374,16 @@ func writeFile(h *geneos.Host, pkgct *geneos.Component, instance string, fp stri
 	return
 }
 
-func rebuildConfig(h *geneos.Host, ct *geneos.Component, instance, instanceDir string, r io.Reader) (err error) {
+func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, r io.Reader) (err error) {
 	// load config, update parameters for new root dir on dest host, write
 	cf, err := config.Load(ct.String(), config.SetConfigReader(r))
 	if err != nil {
 		log.Debug().Err(err).Msg("instance config cannot be loaded")
 		return err
 	}
+
+	// update name in case this is a rename
+	cf.Set("name", i)
 
 	oldHome := cf.GetString("home")
 	newHome := instanceDir
@@ -419,11 +444,11 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, instance, instanceDir s
 	if err = cf.Save(ct.String(),
 		config.Host(h),
 		config.AddDirs(instanceDir),
-		config.SetAppName(instance),
+		config.SetAppName(i),
 	); err != nil {
 		return err
 	}
-	log.Debug().Msgf("saved config for %s", instance)
+	log.Debug().Msgf("saved config for %s", i)
 
 	return
 }
