@@ -47,7 +47,7 @@ import (
 var saveCmdOutput string
 
 var saveCmdIncludeAll, saveCmdIncludeShared bool
-var saveCmdIncludeAES, saveCmdIncludeCerts bool
+var saveCmdIncludeAES, saveCmdIncludeTLS bool
 var saveCmdIncludeDatetime bool
 var saveCmdLimitSize, saveCmdCompression string
 
@@ -69,7 +69,7 @@ func init() {
 	saveCmd.Flags().BoolVar(&saveCmdIncludeShared, "shared", false, "Include shared directory contents in the archive\n(also use --all to include files that are filtered by clean/purge lists)")
 
 	saveCmd.Flags().BoolVar(&saveCmdIncludeAES, "aes", false, "Include AES key files in the archive\n(never includes user's own keyfile)")
-	saveCmd.Flags().BoolVar(&saveCmdIncludeCerts, "tls", false, "Include certificates, private keys and certificate chains in archive")
+	saveCmd.Flags().BoolVar(&saveCmdIncludeTLS, "tls", false, "Include certificates, private keys and certificate chains in archive")
 
 	saveCmd.Flags().SortFlags = false
 }
@@ -309,72 +309,44 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 		}
 	}
 
-	// walk the instance home directory first
-	d := i.Home()
-	r := strings.TrimPrefix(d, i.Host().PathTo()+"/")
-
 	var ignoreSecure []string
 	if !saveCmdIncludeAES {
 		ignoreSecure = append(ignoreSecure, "keyfile", "prevkeyfile")
 	}
-	if !saveCmdIncludeCerts {
+	if !saveCmdIncludeTLS {
 		ignoreSecure = append(ignoreSecure, "certificate", "privatekey", "certchain")
 	}
-
 	for _, ig := range ignoreSecure {
 		if cf.IsSet(ig) {
 			ignoreFiles = append(ignoreFiles, strings.TrimPrefix(cf.GetString(ig), i.Home()+"/"))
 		}
 	}
 
-	fs.WalkDir(os.DirFS(d), ".", func(file string, di fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		fi, err := di.Info()
-		if err != nil {
-			return err
-		}
-		switch {
-		case fi.IsDir():
-			if !saveCmdIncludeAll {
-				for _, ig := range ignoreDirs {
-					if match, err := filepath.Match(ig, file); err == nil && match {
-						return fs.SkipDir
-					}
-				}
-			}
-			*contents = append(*contents, filepath.Join(r, file)+"/")
-			return nil
-		case fi.Mode()&fs.ModeSymlink != 0:
-			log.Debug().Msgf("ignoring symlink %s", file)
-		default:
-			if !saveCmdIncludeAll {
-				for _, ig := range ignoreFiles {
-					if match, err := filepath.Match(ig, file); err == nil && match {
-						return nil
-					}
-				}
-				if fi.Size() > maxsize {
-					log.Debug().Msgf("skipping large file %s", filepath.Join(r, file))
-					return nil
-				}
-			}
-			*contents = append(*contents, filepath.Join(r, file))
-			return nil
-		}
-		return nil
-	})
+	// walk the instance home directory first
+	walkDir(i.Home(),
+		strings.TrimPrefix(i.Home(), i.Host().PathTo()+"/"),
+		contents,
+		ignoreDirs,
+		ignoreFiles,
+	)
 
 	if !saveCmdIncludeShared {
 		return
 	}
 
 	// then walk the shared directory, checking and updating contents
-	d = ct.Shared(i.Host())
-	r = strings.TrimPrefix(d, i.Host().GetString(cordial.ExecutableName())+"/")
+	walkDir(ct.Shared(i.Host()),
+		strings.TrimPrefix(ct.Shared(i.Host()), i.Host().GetString(cordial.ExecutableName())+"/"),
+		contents,
+		ignoreDirs,
+		ignoreFiles,
+	)
 
-	fs.WalkDir(os.DirFS(d), ".", func(file string, di fs.DirEntry, err error) error {
+	return
+}
+
+func walkDir(d, r string, contents *[]string, ignoreDirs, ignoreFiles []string) error {
+	return fs.WalkDir(os.DirFS(d), ".", func(file string, di fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -386,7 +358,7 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 		case fi.IsDir():
 			if !saveCmdIncludeAll {
 				for _, ig := range ignoreDirs {
-					if match, err := filepath.Match(ig, file); err == nil && match {
+					if match, _ := filepath.Match(ig, file); match {
 						return fs.SkipDir
 					}
 				}
@@ -398,7 +370,7 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 		default:
 			if !saveCmdIncludeAll {
 				for _, ig := range ignoreFiles {
-					if match, err := filepath.Match(ig, file); err == nil && match {
+					if match, _ := filepath.Match(ig, file); match {
 						return nil
 					}
 				}
@@ -412,6 +384,4 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 		}
 		return nil
 	})
-
-	return
 }
