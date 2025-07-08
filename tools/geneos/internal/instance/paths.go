@@ -185,7 +185,7 @@ func Home(i geneos.Instance) (home string) {
 // component type shared directory joined to any parts subs - the last
 // element can be a filename. If the instance is not loaded then "." is
 // returned for the current directory.
-func Shared(i geneos.Instance, subs ...interface{}) string {
+func Shared(i geneos.Instance, subs ...any) string {
 	if i == nil {
 		return "."
 	}
