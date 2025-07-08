@@ -297,7 +297,7 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 		}
 
 		if !saveCmdIncludeAES {
-			ignore = append(ignore, "*.aes")
+			ignore = append(ignore, "*.aes", "keyfiles/")
 		}
 
 		for _, i := range ignore {
