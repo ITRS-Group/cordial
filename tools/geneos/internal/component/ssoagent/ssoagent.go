@@ -65,8 +65,7 @@ var SSOAgent = geneos.Component{
 		config.Join(Name, "ports"): "1180-",
 		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
 		config.Join(Name, "purge"): strings.Join([]string{
-			"logs/*.log",
-			"logs/*.gz",
+			"logs/",
 		}, ":"),
 	},
 	PortRange: config.Join(Name, "ports"),

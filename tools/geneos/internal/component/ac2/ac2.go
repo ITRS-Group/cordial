@@ -49,7 +49,7 @@ var AC2 = geneos.Component{
 			"*.old",
 		}, ":"),
 		config.Join(Name, "purge"): strings.Join([]string{
-			"*.log",
+			"logs/",
 		}, ":"),
 	},
 	PortRange: config.Join(Name, "ports"),

@@ -49,8 +49,7 @@ var Webserver = geneos.Component{
 		config.Join(Name, "ports"): "8080,8100-",
 		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
 		config.Join(Name, "purge"): strings.Join([]string{
-			"logs/*.log",
-			"logs/*.gz",
+			"logs/",
 			"webapps/",
 		}, ":"),
 	},
