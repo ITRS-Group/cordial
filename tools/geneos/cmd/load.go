@@ -245,7 +245,14 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string
 			//
 		}
 
-		if ctname+"s" != cthome {
+		if !strings.HasSuffix(cthome, "s") {
+			log.Debug().Msgf("second level directory not a component type+`s`: %s, skipping", cthome)
+			continue
+		}
+		cthome = strings.TrimSuffix(cthome, "s")
+		pkgct := geneos.ParseComponent(cthome)
+
+		if nct != pkgct && nct != pkgct.ParentType {
 			log.Debug().Msgf("top-level entry and home entry not matched: %s, skipping", filename)
 			continue
 		}
@@ -261,9 +268,9 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string
 		}
 
 		// otherwise load all instances in the archive
-		if process, ok := processed[nct.String()+":"+instance]; ok {
+		if process, ok := processed[pkgct.String()+":"+instance]; ok {
 			if process {
-				if err = writeFile(h, nct, instance, fp, tr, hdr); err != nil {
+				if err = writeFile(h, pkgct, instance, fp, tr, hdr); err != nil {
 					return
 				}
 			}
@@ -271,13 +278,13 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string
 		}
 
 		// write file and update processed
-		if _, err = h.Stat(path.Join(nct.InstancesDir(h), instance)); err != nil {
-			if err = writeFile(h, nct, instance, fp, tr, hdr); err != nil {
+		if _, err = h.Stat(h.PathTo(pkgct, pkgct.String()+"s", instance)); err != nil {
+			if err = writeFile(h, pkgct, instance, fp, tr, hdr); err != nil {
 				return
 			}
-			processed[nct.String()+":"+instance] = true
+			processed[pkgct.String()+":"+instance] = true
 		} else {
-			processed[nct.String()+":"+instance] = false
+			processed[pkgct.String()+":"+instance] = false
 		}
 	}
 
@@ -298,12 +305,12 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string
 // Owner and group are ignored. Directory entries are used to create
 // directories with matching permissions, again ignoring owner and
 // group.
-func writeFile(h *geneos.Host, ct *geneos.Component, instance string, fp string, tr *tar.Reader, hdr *tar.Header) (err error) {
-	if ct == nil {
+func writeFile(h *geneos.Host, pkgct *geneos.Component, instance string, fp string, tr *tar.Reader, hdr *tar.Header) (err error) {
+	if pkgct == nil {
 		return geneos.ErrInvalidArgs
 	}
 
-	instanceDir := path.Join(ct.InstancesDir(h), instance)
+	instanceDir := h.PathTo(pkgct, pkgct.String()+"s", instance)
 	destPath := path.Join(instanceDir, fp)
 
 	switch hdr.Typeflag {
@@ -316,8 +323,8 @@ func writeFile(h *geneos.Host, ct *geneos.Component, instance string, fp string,
 			return
 		}
 
-		if fp == ct.String()+".json" {
-			return rebuildConfig(h, ct, instance, instanceDir, tr)
+		if fp == pkgct.String()+".json" {
+			return rebuildConfig(h, pkgct, instance, instanceDir, tr)
 		}
 
 		var w io.WriteCloser
