@@ -199,9 +199,19 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string
 
 	// mapping instance names to potentially new ones.
 	//
-	// key is an entry from names, unchanged and may include '=', the
-	// value is the instance name in the archive
-	// mapping := map[string]geneos.Instance{}
+	// key is the source instance name which can include wildcards, the
+	// value is the target name, where any wildcarded part is added to
+	// the target as a suffix (somehow)
+	mapping := map[string]string{}
+
+	for _, name := range names {
+		dest, src, found := strings.Cut(name, "=")
+		if found {
+			mapping[src] = dest
+		} else {
+			mapping[name] = name
+		}
+	}
 
 	//
 	//
@@ -265,6 +275,7 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string
 		// does the instance name match any of the names list, including wildcards?
 		if len(names) > 0 {
 			log.Debug().Msgf("len(names) = %d", len(names))
+
 		}
 
 		// otherwise load all instances in the archive

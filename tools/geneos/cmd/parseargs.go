@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -54,17 +53,6 @@ const (
 	// mean all instances.
 	CmdGlobal = "global"
 )
-
-// validNameRE is the test for what is a potentially valid instance name
-// versus a parameter. spaces are valid - dumb, but valid - for now. If
-// the name starts with number then the next character cannot be a
-// number or '.' to help distinguish from versions.
-//
-// in addition to static names we also allow glob-style characters
-// through
-//
-// look for "[flavour:]name[@host]" - only name can contain glob chars
-var validNameRE = regexp.MustCompile(`^(\w+:)?([\w\.\-\ _\*\?\[\]\^\]]+)?(@[\w\-_\.]*)?$`)
 
 // REFRESH:
 //
@@ -159,7 +147,8 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 			names = append(names, a)
 			continue
 		}
-		if !validNameRE.MatchString(a) {
+		// if !validNameRE.MatchString(a) {
+		if !instance.ValidName(a) {
 			log.Debug().Msgf("not a valid instance name, moving %q to parameters", a)
 			params = args[i:]
 			break
