@@ -251,7 +251,7 @@ func (ct *Component) String() (name string) {
 }
 
 // IsA returns true is any of the names match the any of the names
-// defined in ComponentMatches. The check is case-insensitive.
+// defined in Aliases. The check is case-insensitive.
 func (ct *Component) IsA(names ...string) bool {
 	for _, a := range append([]string{ct.Name}, ct.Aliases...) {
 		for _, b := range names {
