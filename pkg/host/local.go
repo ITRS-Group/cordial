@@ -255,3 +255,7 @@ func (h *Local) Run(cmd *exec.Cmd, errfile string) (output []byte, err error) {
 func (h *Local) Uname() (os, arch string, err error) {
 	return runtime.GOOS, runtime.GOARCH, nil
 }
+
+func (h *Local) WalkDir(dir string, fn fs.WalkDirFunc) error {
+	return fs.WalkDir(os.DirFS(dir), ".", fn)
+}

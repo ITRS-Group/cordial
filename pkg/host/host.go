@@ -75,6 +75,7 @@ type Host interface {
 	// these two do not conform to the afero / os interface
 	Open(name string) (f io.ReadSeekCloser, err error)
 	Create(p string, perms fs.FileMode) (out io.WriteCloser, err error)
+	WalkDir(dir string, fn fs.WalkDirFunc) error
 
 	// process control
 	Signal(pid int, signal syscall.Signal) (err error)
@@ -129,6 +130,8 @@ func CopyFile(srcHost Host, srcPath string, dstHost Host, dstPath string) (err e
 }
 
 // CopyAll copies a directory between any combination of local or remote locations
+//
+// TODO: Redo to use WalkDir
 func CopyAll(srcHost Host, srcDir string, dstHost Host, dstDir string) (err error) {
 	if srcHost.IsLocal() {
 		filesystem := os.DirFS(srcDir)

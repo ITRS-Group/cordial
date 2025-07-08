@@ -27,6 +27,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -766,4 +767,26 @@ func (h *SSHRemote) Uname() (os, arch string, err error) {
 	}
 
 	return
+}
+
+func (h *SSHRemote) WalkDir(dir string, fn fs.WalkDirFunc) error {
+	s, err := h.DialSFTP()
+	if err != nil {
+		return err
+	}
+
+	w := s.Walk(dir)
+	for w.Step() {
+		if w.Err() != nil {
+			return w.Err()
+		}
+		p, _ := filepath.Rel(dir, w.Path())
+		if err = fn(p, fs.FileInfoToDirEntry(w.Stat()), err); err != nil {
+			if err == fs.SkipDir {
+				break
+			}
+			return err
+		}
+	}
+	return nil
 }
