@@ -721,7 +721,7 @@ func (h *SSHRemote) Run(cmd *exec.Cmd, errfile string) (output []byte, err error
 	// }
 
 	if errfile != "" {
-		if !path.IsAbs(errfile) {
+		if !h.IsAbs(errfile) {
 			errfile = path.Join(cmd.Dir, errfile)
 		}
 		e, err := h.Create(errfile, 0664)

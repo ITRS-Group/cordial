@@ -82,6 +82,11 @@ func (h *Local) Getwd() (dir string, err error) {
 	return os.Getwd()
 }
 
+// IsAbs on a Windows host will always use filepath.IsAbs()
+func (h *Local) IsAbs(name string) bool {
+	return filepath.IsAbs(name)
+}
+
 func (h *Local) Readlink(file string) (link string, err error) {
 	return os.Readlink(file)
 }
@@ -196,7 +201,7 @@ func (h *Local) Signal(pid int, signal syscall.Signal) (err error) {
 func (h *Local) Start(cmd *exec.Cmd, errfile string) (err error) {
 	if errfile == "" {
 		errfile = os.DevNull
-	} else if !path.IsAbs(errfile) {
+	} else if !h.IsAbs(errfile) {
 		errfile = path.Join(cmd.Dir, errfile)
 	}
 
@@ -229,7 +234,7 @@ func (h *Local) Start(cmd *exec.Cmd, errfile string) (err error) {
 func (h *Local) Run(cmd *exec.Cmd, errfile string) (output []byte, err error) {
 	if errfile == "" {
 		errfile = os.DevNull
-	} else if !path.IsAbs(errfile) {
+	} else if !h.IsAbs(errfile) {
 		errfile = path.Join(cmd.Dir, errfile)
 	}
 

@@ -46,6 +46,7 @@ type Host interface {
 	HostPath(p string) string // return the path as a string, prefixed with "host:" if not local
 	Hostname() string
 	ServerVersion() string
+	IsAbs(name string) bool
 	IsAvailable() (bool, error)
 	IsLocal() bool
 	LastError() error

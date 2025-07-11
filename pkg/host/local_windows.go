@@ -29,6 +29,12 @@ import (
 )
 
 func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) (err error) {
+	if detach {
+		if cmd.SysProcAttr == nil {
+			cmd.SysProcAttr = &windows.SysProcAttr{}
+		}
+		cmd.SysProcAttr.CreationFlags = windows.CREATE_NEW_PROCESS_GROUP
+	}
 	return
 }
 

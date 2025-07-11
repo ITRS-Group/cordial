@@ -18,6 +18,8 @@ limitations under the License.
 package host
 
 import (
+	"path/filepath"
+
 	"github.com/Microsoft/go-winio"
 	"golang.org/x/crypto/ssh/agent"
 )
@@ -30,4 +32,10 @@ func sshConnectAgent() (agentClient agent.ExtendedAgent) {
 		}
 	}
 	return
+}
+
+// IsAbs on a Windows host will always use filepath.IsAbs regardless of
+// the target host OS
+func (h *SSHRemote) IsAbs(name string) bool {
+	return filepath.IsAbs(name)
 }
