@@ -82,3 +82,7 @@ func (h *Local) Lchtimes(path string, atime time.Time, mtime time.Time) (err err
 	}
 	return unix.Lutimes(path, tv)
 }
+
+func (h *Local) Symlink(oldname, newname string) (err error) {
+	return os.Symlink(oldname, newname)
+}

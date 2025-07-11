@@ -18,9 +18,14 @@ limitations under the License.
 package host
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
+
+	"github.com/Microsoft/go-winio"
+	"golang.org/x/sys/windows"
 )
 
 func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) (err error) {
@@ -29,4 +34,77 @@ func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) (err error) {
 
 func (h *Local) Lchtimes(path string, atime time.Time, mtime time.Time) (err error) {
 	return
+}
+
+// Symlink on Windows will use a junction if the target is a directory,
+// to avoid extra privileges. It falls back to os.Symlink if the target
+// is not a directory.
+//
+// core code from https://github.com/nyaosorg/go-windows-junction (MIT
+// License)
+func (h *Local) Symlink(oldname, newname string) (err error) {
+	_target := oldname
+	if !filepath.IsAbs(oldname) {
+		// target should be relative to newname's parent
+		_target = filepath.Join(filepath.Dir(newname), oldname)
+	}
+	st, err := os.Stat(_target)
+	if err != nil {
+		return err
+	}
+	if !st.IsDir() {
+		return os.Symlink(oldname, newname)
+	}
+	_mountPt, err := windows.UTF16PtrFromString(newname)
+	if err != nil {
+		return fmt.Errorf("%s: %s", newname, err)
+	}
+
+	err = os.Mkdir(newname, 0777)
+	if err != nil {
+		return fmt.Errorf("%s: %s", newname, err)
+	}
+	ok := false
+	defer func() {
+		if !ok {
+			os.Remove(newname)
+		}
+	}()
+
+	handle, err := windows.CreateFile(_mountPt,
+		windows.GENERIC_WRITE,
+		0,
+		nil,
+		windows.OPEN_EXISTING,
+		windows.FILE_FLAG_BACKUP_SEMANTICS,
+		0)
+	if err != nil {
+		return fmt.Errorf("%s: %s", newname, err)
+	}
+	defer windows.CloseHandle(handle)
+
+	rp := winio.ReparsePoint{
+		Target:       _target,
+		IsMountPoint: true,
+	}
+
+	data := winio.EncodeReparsePoint(&rp)
+
+	var size uint32
+
+	err = windows.DeviceIoControl(
+		handle,
+		windows.FSCTL_SET_REPARSE_POINT,
+		&data[0],
+		uint32(len(data)),
+		nil,
+		0,
+		&size,
+		nil)
+
+	if err != nil {
+		return fmt.Errorf("windows.DeviceIoControl: %s", err)
+	}
+	ok = true
+	return nil
 }

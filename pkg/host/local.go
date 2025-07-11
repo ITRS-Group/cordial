@@ -82,10 +82,6 @@ func (h *Local) Getwd() (dir string, err error) {
 	return os.Getwd()
 }
 
-func (h *Local) Symlink(oldname, newname string) (err error) {
-	return os.Symlink(oldname, newname)
-}
-
 func (h *Local) Readlink(file string) (link string, err error) {
 	return os.Readlink(file)
 }
