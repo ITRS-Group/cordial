@@ -21,7 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/awnumar/memguard"
@@ -62,10 +62,10 @@ func (k *KeyFile) CreateWithBackup(h host.Host, backup string) (crc uint32, err 
 
 	if backup != "" {
 		kp := string(*k)
-		ext := path.Ext(kp)
-		basename := strings.TrimSuffix(path.Base(kp), ext)
-		dir := path.Dir(kp)
-		bkp := path.Join(dir, basename+backup+ext)
+		ext := filepath.Ext(kp)
+		basename := strings.TrimSuffix(filepath.Base(kp), ext)
+		dir := filepath.Dir(kp)
+		bkp := filepath.Join(dir, basename+backup+ext)
 		if err = h.Rename(kp, bkp); err != nil {
 			return 0, err
 		}
@@ -84,12 +84,12 @@ func (k *KeyFile) Concat(extras ...string) string {
 
 // Base returns the last component of the file path to keyfile
 func (k *KeyFile) Base() string {
-	return path.Base(k.String())
+	return filepath.Base(k.String())
 }
 
 // Dir returns the path to the directory containing keyfile
 func (k *KeyFile) Dir() string {
-	return path.Dir(k.String())
+	return filepath.Dir(k.String())
 }
 
 // Read returns an KeyValues struct populated with the contents of the
