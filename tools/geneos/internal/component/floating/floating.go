@@ -73,7 +73,7 @@ var Floating = geneos.Component{
 		"floatingtype": "pkgtype",
 	},
 	Defaults: []string{
-		`binary={{if eq .pkgtype "fa2"}}fix-analyser2-{{end}}netprobe.linux_64`,
+		`binary={{if eq .pkgtype "fa2"}}fix-analyser2-{{end}}netprobe.{{ .os }}_64{{if eq .os "windows"}}.exe{{end}}`,
 		`home={{join .root "netprobe" "floatings" .name}}`,
 		`install={{join .root "packages" .pkgtype}}`,
 		`version=active_prod`,

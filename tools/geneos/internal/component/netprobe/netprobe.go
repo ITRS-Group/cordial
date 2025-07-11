@@ -77,7 +77,7 @@ var Netprobe = geneos.Component{
 		"netpopts":  "options",
 	},
 	Defaults: []string{
-		`binary={{if eq .pkgtype "fa2"}}fix-analyser2-{{end}}netprobe.linux_64`,
+		`binary={{if eq .pkgtype "fa2"}}fix-analyser2-{{end}}netprobe.{{ .os }}_64{{if eq .os "windows"}}.exe{{end}}`,
 		`home={{join .root "netprobe" "netprobes" .name}}`,
 		`install={{join .root "packages" .pkgtype}}`,
 		`version=active_prod`,
@@ -219,6 +219,7 @@ func (n *Netprobes) Command(checkExt bool) (args, env []string, home string, err
 
 	cf := n.Config()
 	home = n.Home()
+	h := n.Host()
 
 	logFile := instance.LogFilePath(n)
 	checks = append(checks, filepath.Dir(logFile))
@@ -227,6 +228,11 @@ func (n *Netprobes) Command(checkExt bool) (args, env []string, home string, err
 		n.Name(),
 		"-port", n.Config().GetString("port"),
 	}
+
+	if strings.Contains(h.ServerVersion(), "windows") {
+		args = append(args, "-cmd")
+	}
+
 	if cf.IsSet("listenip") {
 		args = append(args, "-listenip", cf.GetString("listenip"))
 	}
@@ -240,8 +246,8 @@ func (n *Netprobes) Command(checkExt bool) (args, env []string, home string, err
 	env = append(env, "LOG_FILENAME="+logFile)
 
 	// always set HOSTNAME env for CA
-	hostname, err := os.Hostname()
-	if err != nil {
+	hostname := h.Hostname()
+	if hostname == "" {
 		hostname = "localhost"
 	}
 	env = append(env, "HOSTNAME="+n.Config().GetString(("hostname"), config.Default(hostname)))

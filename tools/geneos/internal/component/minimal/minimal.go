@@ -77,7 +77,7 @@ var Minimal = geneos.Component{
 		"miniopts":  "options",
 	},
 	Defaults: []string{
-		`binary=netprobe.linux_64`,
+		`binary=netprobe.{{ .os }}_64{{if eq .os "windows"}}.exe{{end}}`,
 		`home={{join .root "netprobe" "netprobes" .name}}`,
 		`install={{join .root "packages" "minimal"}}`,
 		`version=active_prod`,
@@ -210,6 +210,8 @@ func (n *Minimals) Command(checkExt bool) (args, env []string, home string, err 
 
 	cf := n.Config()
 	home = n.Home()
+	h := n.Host()
+
 	logFile := instance.LogFilePath(n)
 	checks = append(checks, filepath.Dir(logFile))
 
@@ -217,6 +219,11 @@ func (n *Minimals) Command(checkExt bool) (args, env []string, home string, err 
 		n.Name(),
 		"-port", n.Config().GetString("port"),
 	}
+
+	if strings.Contains(h.ServerVersion(), "windows") {
+		args = append(args, "-cmd")
+	}
+
 	if cf.IsSet("listenip") {
 		args = append(args, "-listenip", cf.GetString("listenip"))
 	}

@@ -19,6 +19,7 @@ package instance
 
 import (
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -93,11 +94,11 @@ func PathOf(i geneos.Instance, name string) string {
 		return ""
 	}
 
-	if path.IsAbs(filename) {
+	if i.Host().IsAbs(filename) {
 		return filename
 	}
 
-	return path.Join(i.Home(), filename)
+	return filepath.Join(i.Home(), filename)
 }
 
 // Abs returns an absolute path to file prepended with the instance

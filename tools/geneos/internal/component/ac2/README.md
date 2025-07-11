@@ -1,1 +1,1 @@
-An `ac2` instance is a Linux Active Console.
+An `ac2` instance is an Active Console.

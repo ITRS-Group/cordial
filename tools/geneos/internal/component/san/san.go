@@ -87,7 +87,7 @@ var San = geneos.Component{
 		"santype":   "pkgtype",
 	},
 	Defaults: []string{
-		`binary={{if eq .pkgtype "fa2"}}fix-analyser2-{{end}}netprobe.linux_64`,
+		`binary={{if eq .pkgtype "fa2"}}fix-analyser2-{{end}}netprobe.{{ .os }}_64{{if eq .os "windows"}}.exe{{end}}`,
 		`home={{join .root "netprobe" "sans" .name}}`,
 		`install={{join .root "packages" .pkgtype}}`,
 		`version=active_prod`,
@@ -309,6 +309,7 @@ func (s *Sans) Command(checkExt bool) (args, env []string, home string, err erro
 
 	cf := s.Config()
 	home = s.Home()
+	h := s.Host()
 
 	logFile := instance.LogFilePath(s)
 	checks = append(checks, filepath.Dir(logFile))
@@ -320,6 +321,10 @@ func (s *Sans) Command(checkExt bool) (args, env []string, home string, err erro
 		"-setup", cf.GetString("setup"),
 	}
 
+	if strings.Contains(h.ServerVersion(), "windows") {
+		args = append(args, "-cmd")
+	}
+
 	secureArgs := instance.SetSecureArgs(s)
 	args = append(args, secureArgs...)
 	for _, arg := range secureArgs {
@@ -328,6 +333,13 @@ func (s *Sans) Command(checkExt bool) (args, env []string, home string, err erro
 		}
 	}
 	env = append(env, "LOG_FILENAME="+logFile)
+
+	// always set HOSTNAME env for CA (ignore SANs that could be non-standard probes)
+	hostname := h.Hostname()
+	if hostname == "" {
+		hostname = "localhost"
+	}
+	env = append(env, "HOSTNAME="+s.Config().GetString(("hostname"), config.Default(hostname)))
 
 	if checkExt {
 		missing := instance.CheckPaths(s, checks)

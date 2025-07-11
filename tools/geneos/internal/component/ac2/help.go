@@ -36,7 +36,7 @@ func init() {
 var helpDocCmd = &cobra.Command{
 	Use:                   "ac2",
 	GroupID:               cmd.CommandGroupComponents,
-	Short:                 "Active Console 2 for Linux",
+	Short:                 "Active Console 2",
 	Long:                  ac2Description,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,

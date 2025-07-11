@@ -420,6 +420,7 @@ func SetDefaults(i geneos.Instance, name string) (err error) {
 	// data to a template must be renewed each time
 	settings := cf.ExpandAllSettings(config.NoDecode(true))
 	settings["root"] = root
+	settings["os"] = i.Host().GetString("os")
 
 	// set bootstrap values used by templates
 	for _, s := range i.Type().Defaults {

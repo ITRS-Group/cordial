@@ -78,7 +78,7 @@ var FileAgent = geneos.Component{
 		"fagentopts": "options",
 	},
 	Defaults: []string{
-		`binary=agent.linux_64`,
+		`binary=agent.{{ .os }}_64{{if eq .os "windows"}}.exe{{end}}`,
 		`home={{join .root "fileagent" "fileagents" .name}}`,
 		`install={{join .root "packages" "fileagent"}}`,
 		`version=active_prod`,

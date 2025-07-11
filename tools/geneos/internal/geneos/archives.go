@@ -369,7 +369,7 @@ func unzip(h *Host, basedir string, archive io.Reader, filesize int64, stripPref
 	var dirtimes []dirtime
 
 	for _, f := range z.File {
-		var name string
+		name := f.Name
 		if stripPrefix != nil {
 			if name = stripPrefix(f.Name); name == "" {
 				continue
@@ -379,6 +379,10 @@ func unzip(h *Host, basedir string, archive io.Reader, filesize int64, stripPref
 		if err != nil {
 			panic(err)
 		}
+		if name == "." {
+			continue
+		}
+
 		fullpath := path.Join(basedir, name)
 
 		// dir
@@ -838,7 +842,7 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 // split an package archive name into type and version
 //
 // geneos-gateway-7.1.0-20240828.194610-12-linux-x64.tar.gz
-var archiveRE = regexp.MustCompile(`^geneos-(?<component>[\w-]+)-(?<version>[\d\-\.]+)(-(?<platform>\w+))?[\.-]linux.*?\.(?<suffix>[\w\.]+)$`)
+var archiveRE = regexp.MustCompile(`^geneos-(?<component>[\w-]+)-(?<version>[\d\-\.]+)(-(?<platform>\w+))?[\.-](?<os>linux|windows).*?\.(?<suffix>[\w\.]+)$`)
 
 // FilenameToComponentVersion transforms an archive filename and returns
 // the component and version or an error if the file format is not
@@ -864,9 +868,10 @@ func FilenameToComponentVersion(oct *Component, filename string) (ct *Component,
 	}
 	versionIndex := re.SubexpIndex("version")
 	componentIndex := re.SubexpIndex("component")
+	osIndex := re.SubexpIndex("os")
 	suffixIndex := re.SubexpIndex("suffix")
 
-	if versionIndex == -1 || componentIndex == -1 || suffixIndex == -1 || len(parts) < versionIndex+1 {
+	if versionIndex == -1 || componentIndex == -1 || suffixIndex == -1 || osIndex == -1 || len(parts) < versionIndex+1 {
 		err = fmt.Errorf("%q: filename not in expected format: %w", filename, ErrInvalidArgs)
 		return
 	}

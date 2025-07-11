@@ -63,7 +63,7 @@ var AC2 = geneos.Component{
 
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
-		`binary=ActiveConsole`,
+		`binary=ActiveConsole{{if eq .os "windows"}}.exe{{end}}`,
 		`home={{join .root "ac2" "ac2s" .name}}`,
 		`install={{join .root "packages" "ac2"}}`,
 		`version=active_prod`,
