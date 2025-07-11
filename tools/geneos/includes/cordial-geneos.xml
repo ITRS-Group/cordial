@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.4.2-250625 at 2025-07-10 11:44:02 by pgalbavy on ITRSLP257-->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.3.1-250422/gateway.xsd">
 	<managedEntities>
 		<managedEntityGroup name="Geneos">
@@ -7,17 +6,22 @@
 			<managedEntityGroup name="Cordial">
 				<attribute name="CATEGORY">Cordial</attribute>
 				<addTypes>
-					<type ref="Cordial Status"/>
+					<type ref="Cordial Status">
+						<environment ref="Cordial"/>
+					</type>
 				</addTypes>
-				<managedEntity name="cordial-geneos" disabled="true">
+				<managedEntity disabled="true" name="example">
 					<!--To enable, create a matching Managed Entity hierarchy in your main setup file and add a new Managed Entity connected to a Netprobe on the server you with to monitor.
 
 You may need to define your own Environment to override the paths to the binary etc.-->
 					<probe ref="localhost"/>
 				</managedEntity>
-				<managedEntityGroup name="Cordial with Diagnostics">
+				<managedEntityGroup name="With Diagnostic Views">
+					<!--Place the Managed Entity in this group to add extra Dataviews including open files and network connections.-->
 					<addTypes>
-						<type ref="Cordial Diagnostics"/>
+						<type ref="Cordial Diagnostics">
+							<environment ref="Cordial"/>
+						</type>
 					</addTypes>
 				</managedEntityGroup>
 			</managedEntityGroup>
@@ -25,657 +29,672 @@ You may need to define your own Environment to override the paths to the binary 
 	</managedEntities>
 	<types>
 		<typeGroup name="Geneos">
-			<type name="Cordial Status">
-				<environment ref="Cordial Configuration"/>
-				<sampler ref="Cordial Summary"/>
-				<sampler ref="Instances"/>
-				<sampler ref="Installed Releases"/>
-				<sampler ref="Active"/>
-				<sampler ref="Certificates"/>
-				<sampler ref="AES Files"/>
-			</type>
-			<type name="Cordial Diagnostics">
-				<environment ref="Cordial Configuration"/>
-				<sampler ref="Open Files"/>
-				<sampler ref="Open TCP Ports"/>
-			</type>
+			<typeGroup name="Cordial">
+				<type name="Cordial Status">
+					<environment ref="Cordial Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>Cordial Status</string>
+					</var>
+					<sampler ref="Cordial Summary"/>
+					<sampler ref="Instances"/>
+					<sampler ref="Installed Releases"/>
+					<sampler ref="Active"/>
+					<sampler ref="Certificates"/>
+					<sampler ref="AES Files"/>
+				</type>
+				<type name="Cordial Diagnostics">
+					<environment ref="Cordial Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>Cordial Diagnostics</string>
+					</var>
+					<sampler ref="Open Files"/>
+					<sampler ref="Open TCP Ports"/>
+				</type>
+			</typeGroup>
 		</typeGroup>
 	</types>
 	<samplers>
-		<samplerGroup name="Cordial Status">
-			<sampler name="Active">
-				<var-group>
-					<var ref="CORDIAL_STATUS_GROUP"/>
-				</var-group>
-				<plugin>
-					<toolkit>
-						<samplerScript>
-							<var ref="GENEOS_EXEC"/>
-							<data> </data>
-							<var ref="GENEOS_CONFIG"/>
-							<data> ps -tl </data>
-							<var ref="GENEOS_HOSTS"/>
-						</samplerScript>
-						<showExecutionDuration>false</showExecutionDuration>
-					</toolkit>
-				</plugin>
-			</sampler>
-			<sampler name="AES Files">
-				<var-group>
-					<var ref="CORDIAL_STATUS_GROUP"/>
-				</var-group>
-				<sampleInterval>
-					<data>300</data>
-				</sampleInterval>
-				<plugin>
-					<toolkit>
-						<samplerScript>
-							<var ref="GENEOS_EXEC"/>
-							<data> </data>
-							<var ref="GENEOS_CONFIG"/>
-							<data> aes ls -t </data>
-							<var ref="GENEOS_HOSTS"/>
-						</samplerScript>
-						<showExecutionDuration>false</showExecutionDuration>
-					</toolkit>
-				</plugin>
-			</sampler>
-			<sampler name="Certificates">
-				<var-group>
-					<var ref="CORDIAL_STATUS_GROUP"/>
-				</var-group>
-				<sampleInterval>
-					<data>0</data>
-				</sampleInterval>
-				<sampleTimes>
-					<time>
-						<data>01:00</data>
-					</time>
-				</sampleTimes>
-				<plugin>
-					<toolkit>
-						<samplerScript>
-							<var ref="GENEOS_EXEC"/>
-							<data> </data>
-							<var ref="GENEOS_CONFIG"/>
-							<data> tls ls -tal </data>
-							<var ref="GENEOS_HOSTS"/>
-						</samplerScript>
-						<showExecutionDuration>false</showExecutionDuration>
-					</toolkit>
-				</plugin>
-			</sampler>
-			<sampler name="Cordial Summary">
-				<var-group>
-					<var ref="CORDIAL_STATUS_GROUP"/>
-				</var-group>
-				<sampleInterval>
-					<data>300</data>
-				</sampleInterval>
-				<plugin>
-					<toolkit>
-						<samplerScript>
-							<var ref="GENEOS_EXEC"/>
-							<data> </data>
-							<var ref="GENEOS_CONFIG"/>
-							<data> version -t </data>
-							<var ref="GENEOS_HOSTS"/>
-						</samplerScript>
-					</toolkit>
-				</plugin>
-			</sampler>
-			<sampler name="Installed Releases">
-				<var-group>
-					<var ref="CORDIAL_STATUS_GROUP"/>
-				</var-group>
-				<sampleInterval>
-					<data>300</data>
-				</sampleInterval>
-				<plugin>
-					<toolkit>
-						<samplerScript>
-							<var ref="GENEOS_EXEC"/>
-							<data> </data>
-							<var ref="GENEOS_CONFIG"/>
-							<data> package ls -t </data>
-							<var ref="GENEOS_HOSTS"/>
-						</samplerScript>
-						<showExecutionDuration>false</showExecutionDuration>
-					</toolkit>
-				</plugin>
-			</sampler>
-			<sampler name="Instances">
-				<var-group>
-					<var ref="CORDIAL_STATUS_GROUP"/>
-				</var-group>
-				<sampleInterval>
-					<data>300</data>
-				</sampleInterval>
-				<plugin>
-					<toolkit>
-						<samplerScript>
-							<var ref="GENEOS_EXEC"/>
-							<data> </data>
-							<var ref="GENEOS_CONFIG"/>
-							<data> ls -t </data>
-							<var ref="GENEOS_HOSTS"/>
-						</samplerScript>
-						<showExecutionDuration>false</showExecutionDuration>
-					</toolkit>
-				</plugin>
-			</sampler>
-		</samplerGroup>
-		<samplerGroup name="Cordial Diagnostics">
-			<sampler name="Open Files">
-				<var-group>
-					<var ref="CORDIAL_DIAGNOSTIC_GROUP"/>
-				</var-group>
-				<plugin>
-					<toolkit>
-						<samplerScript>
-							<var ref="GENEOS_EXEC"/>
-							<data> </data>
-							<var ref="GENEOS_CONFIG"/>
-							<data> ps -tf </data>
-							<var ref="GENEOS_HOSTS"/>
-						</samplerScript>
-						<showExecutionDuration>false</showExecutionDuration>
-					</toolkit>
-				</plugin>
-			</sampler>
-			<sampler name="Open TCP Ports">
-				<var-group>
-					<var ref="CORDIAL_DIAGNOSTIC_GROUP"/>
-				</var-group>
-				<plugin>
-					<toolkit>
-						<samplerScript>
-							<var ref="GENEOS_EXEC"/>
-							<data> </data>
-							<var ref="GENEOS_CONFIG"/>
-							<data> ps -nt </data>
-							<var ref="GENEOS_HOSTS"/>
-						</samplerScript>
-						<showExecutionDuration>false</showExecutionDuration>
-					</toolkit>
-				</plugin>
-			</sampler>
+		<samplerGroup name="Geneos">
+			<samplerGroup name="Cordial">
+				<samplerGroup name="Cordial Status">
+					<sampler name="Active">
+						<var-group>
+							<var ref="SAMPLER_GROUP"/>
+						</var-group>
+						<plugin>
+							<toolkit>
+								<samplerScript>
+									<var ref="GENEOS_EXEC"/>
+									<data> </data>
+									<var ref="GENEOS_CONFIG"/>
+									<data> ps -tl </data>
+									<var ref="GENEOS_HOSTS"/>
+								</samplerScript>
+								<showExecutionDuration>false</showExecutionDuration>
+							</toolkit>
+						</plugin>
+					</sampler>
+					<sampler name="AES Files">
+						<var-group>
+							<var ref="SAMPLER_GROUP"/>
+						</var-group>
+						<sampleInterval>
+							<data>300</data>
+						</sampleInterval>
+						<plugin>
+							<toolkit>
+								<samplerScript>
+									<var ref="GENEOS_EXEC"/>
+									<data> </data>
+									<var ref="GENEOS_CONFIG"/>
+									<data> aes ls -t </data>
+									<var ref="GENEOS_HOSTS"/>
+								</samplerScript>
+								<showExecutionDuration>false</showExecutionDuration>
+							</toolkit>
+						</plugin>
+					</sampler>
+					<sampler name="Certificates">
+						<var-group>
+							<var ref="SAMPLER_GROUP"/>
+						</var-group>
+						<sampleInterval>
+							<data>0</data>
+						</sampleInterval>
+						<sampleTimes>
+							<time>
+								<data>01:00</data>
+							</time>
+						</sampleTimes>
+						<plugin>
+							<toolkit>
+								<samplerScript>
+									<var ref="GENEOS_EXEC"/>
+									<data> </data>
+									<var ref="GENEOS_CONFIG"/>
+									<data> tls ls -tal </data>
+									<var ref="GENEOS_HOSTS"/>
+								</samplerScript>
+								<showExecutionDuration>false</showExecutionDuration>
+							</toolkit>
+						</plugin>
+					</sampler>
+					<sampler name="Cordial Summary">
+						<var-group>
+							<var ref="SAMPLER_GROUP"/>
+						</var-group>
+						<sampleInterval>
+							<data>300</data>
+						</sampleInterval>
+						<plugin>
+							<toolkit>
+								<samplerScript>
+									<var ref="GENEOS_EXEC"/>
+									<data> </data>
+									<var ref="GENEOS_CONFIG"/>
+									<data> version -t </data>
+									<var ref="GENEOS_HOSTS"/>
+								</samplerScript>
+							</toolkit>
+						</plugin>
+					</sampler>
+					<sampler name="Installed Releases">
+						<var-group>
+							<var ref="SAMPLER_GROUP"/>
+						</var-group>
+						<sampleInterval>
+							<data>300</data>
+						</sampleInterval>
+						<plugin>
+							<toolkit>
+								<samplerScript>
+									<var ref="GENEOS_EXEC"/>
+									<data> </data>
+									<var ref="GENEOS_CONFIG"/>
+									<data> package ls -t </data>
+									<var ref="GENEOS_HOSTS"/>
+								</samplerScript>
+								<showExecutionDuration>false</showExecutionDuration>
+							</toolkit>
+						</plugin>
+					</sampler>
+					<sampler name="Instances">
+						<var-group>
+							<var ref="SAMPLER_GROUP"/>
+						</var-group>
+						<sampleInterval>
+							<data>300</data>
+						</sampleInterval>
+						<plugin>
+							<toolkit>
+								<samplerScript>
+									<var ref="GENEOS_EXEC"/>
+									<data> </data>
+									<var ref="GENEOS_CONFIG"/>
+									<data> ls -t </data>
+									<var ref="GENEOS_HOSTS"/>
+								</samplerScript>
+								<showExecutionDuration>false</showExecutionDuration>
+							</toolkit>
+						</plugin>
+					</sampler>
+				</samplerGroup>
+				<samplerGroup name="Cordial Diagnostics">
+					<sampler name="Open Files">
+						<var-group>
+							<var ref="SAMPLER_GROUP"/>
+						</var-group>
+						<plugin>
+							<toolkit>
+								<samplerScript>
+									<var ref="GENEOS_EXEC"/>
+									<data> </data>
+									<var ref="GENEOS_CONFIG"/>
+									<data> ps -tf </data>
+									<var ref="GENEOS_HOSTS"/>
+								</samplerScript>
+								<showExecutionDuration>false</showExecutionDuration>
+							</toolkit>
+						</plugin>
+					</sampler>
+					<sampler name="Open TCP Ports">
+						<var-group>
+							<var ref="SAMPLER_GROUP"/>
+						</var-group>
+						<plugin>
+							<toolkit>
+								<samplerScript>
+									<var ref="GENEOS_EXEC"/>
+									<data> </data>
+									<var ref="GENEOS_CONFIG"/>
+									<data> ps -nt </data>
+									<var ref="GENEOS_HOSTS"/>
+								</samplerScript>
+								<showExecutionDuration>false</showExecutionDuration>
+							</toolkit>
+						</plugin>
+					</sampler>
+				</samplerGroup>
+			</samplerGroup>
 		</samplerGroup>
 	</samplers>
 	<rules>
-		<ruleGroup name="Cordial Status">
-			<ruleGroup name="Active">
-				<rule name="Version Mismatch">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Active&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;version&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<like>
-								<dataItem>
-									<property>@value</property>
-								</dataItem>
-								<string>&lt;&gt;</string>
-							</like>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>critical</severity>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>ok</severity>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
-				<rule name="Leaking Files and Sockets">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;thinkpad-geneos&quot;)][(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Active&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;openfiles&quot;)]</target>
-						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;thinkpad-geneos&quot;)][(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Active&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;opensockets&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<gt>
-								<rate>
-									<dataItem>
-										<property>@value</property>
-									</dataItem>
-								</rate>
-								<integer>0</integer>
-							</gt>
-							<transaction>
-								<delay unit="samples">2</delay>
-								<update>
-									<property>state/@severity</property>
-									<severity>warning</severity>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>undefined</severity>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
-			</ruleGroup>
-			<ruleGroup name="AES Files">
-				<rule name="Missing or Invalid AES File">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;AES Files&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;AES Files&quot;)]/rows/row/cell[(@column=&quot;crc32&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<equal>
-								<dataItem>
-									<property>@value</property>
-								</dataItem>
-								<string>-</string>
-							</equal>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>warning</severity>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>ok</severity>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
-			</ruleGroup>
-			<ruleGroup name="Certificates">
-				<rule name="Invalid Certs Headline">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;invalid&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<gt>
-								<dataItem>
-									<property>@value</property>
-								</dataItem>
-								<integer>0</integer>
-							</gt>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>warning</severity>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>ok</severity>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
-				<rule name="Expiring Certs 30 Days">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;expiringLT30Days&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<gt>
-								<dataItem>
-									<property>@value</property>
-								</dataItem>
-								<integer>0</integer>
-							</gt>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>warning</severity>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>ok</severity>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
-				<rule name="Expiring Certs 7 Days">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;expiringLT7Days&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<gt>
-								<dataItem>
-									<property>@value</property>
-								</dataItem>
-								<integer>0</integer>
-							</gt>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>critical</severity>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>ok</severity>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
-				<rule name="Invalid Certs">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/rows/row/cell[(@column=&quot;valid&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<notEqual>
-								<dataItem>
-									<property>@value</property>
-								</dataItem>
-								<string>true</string>
-							</notEqual>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>warning</severity>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>ok</severity>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
-				<rule name="Remaining Days">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/rows/row/cell[(@column=&quot;remaining&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<lt>
-								<dataItem>
-									<property>@value</property>
-								</dataItem>
-								<multiply>
-									<multiply>
-										<integer>7</integer>
-										<integer>24</integer>
-									</multiply>
-									<integer>3600</integer>
-								</multiply>
-							</lt>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>critical</severity>
-								</update>
-							</transaction>
-							<if>
-								<lt>
-									<dataItem>
-										<property>@value</property>
-									</dataItem>
-									<multiply>
+		<ruleGroup name="Geneos">
+			<ruleGroup name="Cordial">
+				<ruleGroup name="Cordial Status">
+					<ruleGroup name="Active">
+						<rule name="Version Mismatch">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Active&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;version&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<block>
+								<if>
+									<like>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<string>&lt;&gt;</string>
+									</like>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>critical</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</block>
+						</rule>
+						<rule name="Leaking Files and Sockets">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;thinkpad-geneos&quot;)][(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Active&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;openfiles&quot;)]</target>
+								<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;thinkpad-geneos&quot;)][(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Active&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;opensockets&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<block>
+								<if>
+									<gt>
+										<rate>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+										</rate>
+										<integer>0</integer>
+									</gt>
+									<transaction>
+										<delay unit="samples">2</delay>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>undefined</severity>
+										</update>
+									</transaction>
+								</if>
+							</block>
+						</rule>
+					</ruleGroup>
+					<ruleGroup name="AES Files">
+						<rule name="Missing or Invalid AES File">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;AES Files&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;AES Files&quot;)]/rows/row/cell[(@column=&quot;crc32&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<block>
+								<if>
+									<equal>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<string>-</string>
+									</equal>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</block>
+						</rule>
+					</ruleGroup>
+					<ruleGroup name="Certificates">
+						<rule name="Invalid Certs Headline">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;invalid&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<block>
+								<if>
+									<gt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<integer>0</integer>
+									</gt>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</block>
+						</rule>
+						<rule name="Expiring Certs 30 Days">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;expiringLT30Days&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<block>
+								<if>
+									<gt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<integer>0</integer>
+									</gt>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</block>
+						</rule>
+						<rule name="Expiring Certs 7 Days">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;expiringLT7Days&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<block>
+								<if>
+									<gt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<integer>0</integer>
+									</gt>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>critical</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</block>
+						</rule>
+						<rule name="Invalid Certs">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/rows/row/cell[(@column=&quot;valid&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<block>
+								<if>
+									<notEqual>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<string>true</string>
+									</notEqual>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</block>
+						</rule>
+						<rule name="Remaining Days">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/rows/row/cell[(@column=&quot;remaining&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<block>
+								<if>
+									<lt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
 										<multiply>
-											<integer>30</integer>
-											<integer>24</integer>
+											<multiply>
+												<integer>7</integer>
+												<integer>24</integer>
+											</multiply>
+											<integer>3600</integer>
 										</multiply>
-										<integer>3600</integer>
-									</multiply>
-								</lt>
-								<transaction>
-									<update>
-										<property>state/@severity</property>
-										<severity>warning</severity>
-									</update>
-								</transaction>
-								<transaction>
-									<update>
-										<property>state/@severity</property>
-										<severity>ok</severity>
-									</update>
-								</transaction>
-							</if>
-						</if>
-					</block>
-				</rule>
-			</ruleGroup>
-			<ruleGroup name="Installed Releases">
-				<rule name="Old Versions In Use">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Installed Releases&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Installed Releases&quot;)]/rows/row/cell[(@column=&quot;instances&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<pathAliases>
-						<pathAlias name="latest">../cell[(@column=&quot;latestInstalled&quot;)]</pathAlias>
-					</pathAliases>
-					<block>
-						<set>
-							<var ref="latest"/>
-							<dataItem>
-								<pathAlias ref="latest"/>
-								<property>@value</property>
-							</dataItem>
-						</set>
-						<if>
-							<and>
-								<gt>
-									<dataItem>
-										<property>@value</property>
-									</dataItem>
-									<integer>0</integer>
-								</gt>
-								<notEqual>
+									</lt>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>critical</severity>
+										</update>
+									</transaction>
+									<if>
+										<lt>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+											<multiply>
+												<multiply>
+													<integer>30</integer>
+													<integer>24</integer>
+												</multiply>
+												<integer>3600</integer>
+											</multiply>
+										</lt>
+										<transaction>
+											<update>
+												<property>state/@severity</property>
+												<severity>warning</severity>
+											</update>
+										</transaction>
+										<transaction>
+											<update>
+												<property>state/@severity</property>
+												<severity>ok</severity>
+											</update>
+										</transaction>
+									</if>
+								</if>
+							</block>
+						</rule>
+					</ruleGroup>
+					<ruleGroup name="Installed Releases">
+						<rule name="Old Versions In Use">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Installed Releases&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Installed Releases&quot;)]/rows/row/cell[(@column=&quot;instances&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<pathAliases>
+								<pathAlias name="latest">../cell[(@column=&quot;latestInstalled&quot;)]</pathAlias>
+							</pathAliases>
+							<block>
+								<set>
 									<var ref="latest"/>
-									<string>true</string>
-								</notEqual>
-							</and>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>warning</severity>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>ok</severity>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
-			</ruleGroup>
-			<ruleGroup name="Instances">
-				<rule name="TLS Enabled">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Instances&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Instances&quot;)]/rows/row/cell[(@column=&quot;tls&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<notEqual>
-								<dataItem>
-									<property>@value</property>
-								</dataItem>
-								<string>Y</string>
-							</notEqual>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>warning</severity>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>ok</severity>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
-				<rule name="Disabled">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Instances&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Instances&quot;)]/rows/row/cell[(@column=&quot;disabled&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<equal>
-								<dataItem>
-									<property>@value</property>
-								</dataItem>
-								<string>Y</string>
-							</equal>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>warning</severity>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>ok</severity>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
-			</ruleGroup>
-		</ruleGroup>
-		<ruleGroup name="Cordial Diagnostics">
-			<ruleGroup name="Open TCP Ports">
-				<rule name="Status">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Estate&quot;)]/sampler[(@name=&quot;Open TCP Ports&quot;)][(@type=&quot;Cordial Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;status&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<equal>
-								<dataItem>
-									<property>@value</property>
-								</dataItem>
-								<string/>
-							</equal>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>undefined</severity>
-								</update>
-							</transaction>
-							<if>
-								<and>
-									<notEqual>
-										<dataItem>
-											<property>@value</property>
-										</dataItem>
-										<string>LISTEN</string>
-									</notEqual>
-									<notEqual>
-										<dataItem>
-											<property>@value</property>
-										</dataItem>
-										<string>ESTABLISHED</string>
-									</notEqual>
-								</and>
-								<transaction>
-									<delay unit="samples">2</delay>
-									<update>
-										<property>state/@severity</property>
-										<severity>warning</severity>
-									</update>
-								</transaction>
-								<transaction>
-									<update>
-										<property>state/@severity</property>
-										<severity>ok</severity>
-									</update>
-								</transaction>
-							</if>
-						</if>
-					</block>
-				</rule>
-				<rule name="Queues Growing">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Estate&quot;)]/sampler[(@name=&quot;Open TCP Ports&quot;)][(@type=&quot;Cordial Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;txqueue&quot;)]</target>
-						<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Estate&quot;)]/sampler[(@name=&quot;Open TCP Ports&quot;)][(@type=&quot;Cordial Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;rxqueue&quot;)]</target>
-					</targets>
-					<priority>1</priority>
-					<block>
-						<if>
-							<gt>
-								<rate>
 									<dataItem>
+										<pathAlias ref="latest"/>
 										<property>@value</property>
 									</dataItem>
-								</rate>
-								<integer>0</integer>
-							</gt>
-							<transaction>
-								<delay unit="samples">2</delay>
-								<update>
-									<property>state/@severity</property>
-									<severity>warning</severity>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>state/@severity</property>
-									<severity>undefined</severity>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
+								</set>
+								<if>
+									<and>
+										<gt>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+											<integer>0</integer>
+										</gt>
+										<notEqual>
+											<var ref="latest"/>
+											<string>true</string>
+										</notEqual>
+									</and>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</block>
+						</rule>
+					</ruleGroup>
+					<ruleGroup name="Instances">
+						<rule name="TLS Enabled">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Instances&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Instances&quot;)]/rows/row/cell[(@column=&quot;tls&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<block>
+								<if>
+									<notEqual>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<string>Y</string>
+									</notEqual>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</block>
+						</rule>
+						<rule name="Disabled">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Instances&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Instances&quot;)]/rows/row/cell[(@column=&quot;disabled&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<block>
+								<if>
+									<equal>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<string>Y</string>
+									</equal>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</block>
+						</rule>
+					</ruleGroup>
+				</ruleGroup>
+				<ruleGroup name="Cordial Diagnostics">
+					<ruleGroup name="Open TCP Ports">
+						<rule name="Status">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Estate&quot;)]/sampler[(@name=&quot;Open TCP Ports&quot;)][(@type=&quot;Cordial Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;status&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<block>
+								<if>
+									<equal>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<string/>
+									</equal>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>undefined</severity>
+										</update>
+									</transaction>
+									<if>
+										<and>
+											<notEqual>
+												<dataItem>
+													<property>@value</property>
+												</dataItem>
+												<string>LISTEN</string>
+											</notEqual>
+											<notEqual>
+												<dataItem>
+													<property>@value</property>
+												</dataItem>
+												<string>ESTABLISHED</string>
+											</notEqual>
+										</and>
+										<transaction>
+											<delay unit="samples">2</delay>
+											<update>
+												<property>state/@severity</property>
+												<severity>warning</severity>
+											</update>
+										</transaction>
+										<transaction>
+											<update>
+												<property>state/@severity</property>
+												<severity>ok</severity>
+											</update>
+										</transaction>
+									</if>
+								</if>
+							</block>
+						</rule>
+						<rule name="Queues Growing">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Estate&quot;)]/sampler[(@name=&quot;Open TCP Ports&quot;)][(@type=&quot;Cordial Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;txqueue&quot;)]</target>
+								<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Estate&quot;)]/sampler[(@name=&quot;Open TCP Ports&quot;)][(@type=&quot;Cordial Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;rxqueue&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<block>
+								<if>
+									<gt>
+										<rate>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+										</rate>
+										<integer>0</integer>
+									</gt>
+									<transaction>
+										<delay unit="samples">2</delay>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>undefined</severity>
+										</update>
+									</transaction>
+								</if>
+							</block>
+						</rule>
+					</ruleGroup>
+				</ruleGroup>
 			</ruleGroup>
 		</ruleGroup>
 	</rules>
 	<environments>
 		<environmentGroup name="Geneos">
-			<environment name="Cordial Configuration">
-				<var name="GENEOS_HOSTS">
-					<string>-H localhost</string>
-				</var>
-				<var name="GENEOS_EXEC">
-					<string>/usr/local/bin/geneos</string>
-				</var>
-				<var name="GENEOS_CONFIG">
-					<string/>
-				</var>
-				<var name="CORDIAL_STATUS_GROUP">
-					<string>Cordial Status</string>
-				</var>
-				<var name="CORDIAL_DIAGNOSTIC_GROUP">
-					<string>Cordial Diagnostics</string>
-				</var>
-			</environment>
+			<environmentGroup name="Cordial">
+				<environment name="Cordial"><!--This environment is an empty placeholder for any user settings required.
+
+Create a copy of this environment, in the same hierarchy, in your main setup file and add variables as required.--></environment>
+				<environment name="Cordial Defaults">
+					<var name="GENEOS_HOSTS">
+						<string>-H localhost</string>
+					</var>
+					<var name="GENEOS_EXEC">
+						<string>geneos</string>
+					</var>
+					<var name="GENEOS_CONFIG">
+						<string/>
+					</var>
+				</environment>
+			</environmentGroup>
 		</environmentGroup>
 	</environments>
 </gateway>
