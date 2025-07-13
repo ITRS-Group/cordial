@@ -2,8 +2,8 @@
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.3.1-250422/gateway.xsd">
 	<managedEntities>
 		<managedEntityGroup name="Geneos Cordial">
-			<attribute name="COMPONENT">Geneos</attribute>
-			<attribute name="CATEGORY">Cordial</attribute>
+			<attribute name="APPLICATION">Geneos</attribute>
+			<attribute name="COMPONENT">Cordial</attribute>
 			<addTypes>
 				<type ref="Cordial Status">
 					<environment ref="Cordial"/>
@@ -215,10 +215,19 @@ You may need to define your own Environment to override the paths to the binary 
 	<rules>
 		<ruleGroup name="Geneos Cordial">
 			<ruleGroup name="Cordial Status">
+				<default name="Cordial Status">
+					<rule>
+						<contexts>
+							<context>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Cordial&quot;)][(attr(&quot;APPLICATION&quot;)=&quot;Geneos&quot;)]/sampler[(@type=&quot;Cordial Status&quot;)]/dataview/rows/row/cell</context>
+							<context>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Cordial&quot;)][(attr(&quot;APPLICATION&quot;)=&quot;Geneos&quot;)]/sampler[(@type=&quot;Cordial Diagnostics&quot;)]/dataview/headlines/cell</context>
+						</contexts>
+						<priorityGroup>100</priorityGroup>
+					</rule>
+				</default>
 				<ruleGroup name="Active">
 					<rule name="Version Mismatch">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Active&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;version&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;version&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
@@ -246,8 +255,8 @@ You may need to define your own Environment to override the paths to the binary 
 					</rule>
 					<rule name="Leaking Files and Sockets">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;thinkpad-geneos&quot;)][(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Active&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;openfiles&quot;)]</target>
-							<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;thinkpad-geneos&quot;)][(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Active&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;opensockets&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;openfiles&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;opensockets&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
@@ -280,7 +289,7 @@ You may need to define your own Environment to override the paths to the binary 
 				<ruleGroup name="AES Files">
 					<rule name="Missing or Invalid AES File">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;AES Files&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;AES Files&quot;)]/rows/row/cell[(@column=&quot;crc32&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;AES Files&quot;)]/rows/row/cell[(@column=&quot;crc32&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
@@ -310,7 +319,7 @@ You may need to define your own Environment to override the paths to the binary 
 				<ruleGroup name="Certificates">
 					<rule name="Invalid Certs Headline">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;invalid&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;invalid&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
@@ -338,7 +347,7 @@ You may need to define your own Environment to override the paths to the binary 
 					</rule>
 					<rule name="Expiring Certs 30 Days">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;expiringLT30Days&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;expiringLT30Days&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
@@ -366,7 +375,7 @@ You may need to define your own Environment to override the paths to the binary 
 					</rule>
 					<rule name="Expiring Certs 7 Days">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;expiringLT7Days&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;expiringLT7Days&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
@@ -394,7 +403,7 @@ You may need to define your own Environment to override the paths to the binary 
 					</rule>
 					<rule name="Invalid Certs">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/rows/row/cell[(@column=&quot;valid&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Certificates&quot;)]/rows/row/cell[(@column=&quot;valid&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
@@ -422,7 +431,7 @@ You may need to define your own Environment to override the paths to the binary 
 					</rule>
 					<rule name="Remaining Days">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Certificates&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/rows/row/cell[(@column=&quot;remaining&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Certificates&quot;)]/rows/row/cell[(@column=&quot;remaining&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
@@ -478,7 +487,7 @@ You may need to define your own Environment to override the paths to the binary 
 				<ruleGroup name="Installed Releases">
 					<rule name="Old Versions In Use">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Installed Releases&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Installed Releases&quot;)]/rows/row/cell[(@column=&quot;instances&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Installed Releases&quot;)]/rows/row/cell[(@column=&quot;instances&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<pathAliases>
@@ -524,7 +533,7 @@ You may need to define your own Environment to override the paths to the binary 
 				<ruleGroup name="Instances">
 					<rule name="TLS Enabled">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Instances&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Instances&quot;)]/rows/row/cell[(@column=&quot;tls&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Instances&quot;)]/rows/row/cell[(@column=&quot;tls&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
@@ -552,7 +561,7 @@ You may need to define your own Environment to override the paths to the binary 
 					</rule>
 					<rule name="Disabled">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Cordial&quot;)]/sampler[(@name=&quot;Instances&quot;)][(@type=&quot;Cordial Status&quot;)]/dataview[(@name=&quot;Instances&quot;)]/rows/row/cell[(@column=&quot;disabled&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Instances&quot;)]/rows/row/cell[(@column=&quot;disabled&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
@@ -581,10 +590,19 @@ You may need to define your own Environment to override the paths to the binary 
 				</ruleGroup>
 			</ruleGroup>
 			<ruleGroup name="Cordial Diagnostics">
+				<default name="Cordial Diagnostics">
+					<rule>
+						<contexts>
+							<context>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Cordial&quot;)][(attr(&quot;APPLICATION&quot;)=&quot;Geneos&quot;)]/sampler[(@type=&quot;Cordial Diagnostics&quot;)]/dataview/rows/row/cell</context>
+							<context>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Cordial&quot;)][(attr(&quot;APPLICATION&quot;)=&quot;Geneos&quot;)]/sampler[(@type=&quot;Cordial Diagnostics&quot;)]/dataview/headlines/cell</context>
+						</contexts>
+						<priorityGroup>100</priorityGroup>
+					</rule>
+				</default>
 				<ruleGroup name="Open TCP Ports">
 					<rule name="Status">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Estate&quot;)]/sampler[(@name=&quot;Open TCP Ports&quot;)][(@type=&quot;Cordial Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;status&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;status&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
@@ -635,8 +653,8 @@ You may need to define your own Environment to override the paths to the binary 
 					</rule>
 					<rule name="Queues Growing">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Estate&quot;)]/sampler[(@name=&quot;Open TCP Ports&quot;)][(@type=&quot;Cordial Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;txqueue&quot;)]</target>
-							<target>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Geneos&quot;)][(attr(&quot;CATEGORY&quot;)=&quot;Estate&quot;)]/sampler[(@name=&quot;Open TCP Ports&quot;)][(@type=&quot;Cordial Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;rxqueue&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;txqueue&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;rxqueue&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
