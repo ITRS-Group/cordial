@@ -3,6 +3,7 @@
 	<managedEntities>
 		<managedEntityGroup name="Geneos Cordial">
 			<attribute name="APPLICATION">Geneos</attribute>
+			<attribute name="CATEGORY">Information</attribute>
 			<attribute name="COMPONENT">Cordial</attribute>
 			<addTypes>
 				<type ref="Cordial Status">
@@ -212,6 +213,31 @@ You may need to define your own Environment to override the paths to the binary 
 			</samplerGroup>
 		</samplerGroup>
 	</samplers>
+	<commands>
+		<commandGroup name="Geneos Cordial">
+			<menu>
+				<label>Geneos Cordial</label>
+			</menu>
+			<command name="geneos ls" disabled="true">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Active&quot;)]/dataview/rows/row/cell</target>
+				</targets>
+				<userCommand>
+					<type>script</type>
+					<runLocation>netprobe</runLocation>
+					<args>
+						<arg>
+							<static>/bin/echo</static>
+						</arg>
+						<arg>
+							<static>ls</static>
+						</arg>
+					</args>
+					<enablePassword>true</enablePassword>
+				</userCommand>
+			</command>
+		</commandGroup>
+	</commands>
 	<rules>
 		<ruleGroup name="Geneos Cordial">
 			<ruleGroup name="Cordial Status">
@@ -236,7 +262,7 @@ You may need to define your own Environment to override the paths to the binary 
 									<dataItem>
 										<property>@value</property>
 									</dataItem>
-									<string>&lt;&gt;</string>
+									<string>*&lt;&gt;*</string>
 								</like>
 								<transaction>
 									<update>
@@ -693,6 +719,7 @@ You may need to define your own Environment to override the paths to the binary 
 
 Create a copy of this environment, in the same hierarchy, in your main setup file and add variables as required.--></environment>
 			<environment name="Cordial Defaults">
+				<!--Note: GENEOS_CONFIG has a default intentionally of a space character. Without this space the command line containing an empty variable creates errors in the Netprobe log.-->
 				<var name="GENEOS_HOSTS">
 					<string>-H localhost</string>
 				</var>
@@ -700,7 +727,7 @@ Create a copy of this environment, in the same hierarchy, in your main setup fil
 					<string>geneos</string>
 				</var>
 				<var name="GENEOS_CONFIG">
-					<string/>
+					<string> </string>
 				</var>
 			</environment>
 		</environmentGroup>
