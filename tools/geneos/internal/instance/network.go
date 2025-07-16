@@ -129,8 +129,7 @@ func NextFreePort(h *geneos.Host, ct *geneos.Component) uint16 {
 	log.Debug().Msgf("looking for %s, default %s", ct.PortRange, ct.ConfigAliases[ct.PortRange])
 	from := config.GetString(ct.PortRange, config.Default(ct.ConfigAliases[ct.PortRange]))
 	used := GetAllPorts(h)
-	ps := strings.Split(from, ",")
-	for _, p := range ps {
+	for p := range strings.SplitSeq(from, ",") {
 		// split on dash or ".."
 		m := strings.SplitN(p, "-", 2)
 		if len(m) == 1 {
