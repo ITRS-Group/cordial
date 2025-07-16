@@ -395,27 +395,35 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 	version := cf.GetString("version", config.NoExpand())
 
 	for k, v := range cf.AllSettings() {
-		if k == "libpaths" {
+		switch k {
+		case "libpaths":
 			// treat libpaths special, below
 			continue
-		}
-		if vs, ok := v.(string); ok {
-			// replace home (unanchored)
-			if oldHome != newHome {
-				vs = strings.Replace(vs, oldHome, newHome, 1)
+		case "port":
+			ports := instance.GetAllPorts(h)
+			if ports[cf.GetUint16(k)] {
+				// port already in use, get the next one
+				cf.Set(k, instance.NextFreePort(h, ct))
 			}
+		default:
+			if vs, ok := v.(string); ok {
+				// replace home (unanchored)
+				if oldHome != newHome {
+					vs = strings.Replace(vs, oldHome, newHome, 1)
+				}
 
-			// replace install (unanchored)
-			if oldInstall != newInstall {
-				vs = strings.Replace(vs, oldInstall, newInstall, 1)
+				// replace install (unanchored)
+				if oldInstall != newInstall {
+					vs = strings.Replace(vs, oldInstall, newInstall, 1)
+				}
+
+				// replace shared (unanchored)
+				if oldShared != newShared {
+					vs = strings.Replace(vs, oldShared, newShared, 1)
+				}
+
+				cf.Set(k, vs)
 			}
-
-			// replace shared (unanchored)
-			if oldShared != newShared {
-				vs = strings.Replace(vs, oldShared, newShared, 1)
-			}
-
-			cf.Set(k, vs)
 		}
 	}
 
