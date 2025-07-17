@@ -65,7 +65,7 @@ var loadCmdDescription string
 
 var loadCmd = &cobra.Command{
 	Use:     "load [flags] [TYPE] [[DEST=]NAME...]",
-	GroupID: CommandGroupConfig,
+	Aliases: []string{"restore"},
 	Short:   "Load Instances from archive",
 	Long:    loadCmdDescription,
 	Example: strings.ReplaceAll(`

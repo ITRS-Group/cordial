@@ -84,9 +84,10 @@ var compression = map[string]string{
 }
 
 var saveCmd = &cobra.Command{
-	Use:   "save [flags] [TYPE] [NAME...]",
-	Short: "Save Instances",
-	Long:  saveCmdDescription,
+	Use:     "save [flags] [TYPE] [NAME...]",
+	Aliases: []string{"backup"},
+	Short:   "Save Instances",
+	Long:    saveCmdDescription,
 	Example: strings.ReplaceAll(`
 `, "|", "`"),
 	SilenceUsage: true,
