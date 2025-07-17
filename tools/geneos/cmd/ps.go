@@ -421,6 +421,28 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	}
 
 	if psCmdShowNet {
+		var row []string
+		if psCmdToolkit {
+			row = append(row, instance.IDString(i))
+		}
+
+		row = append(row,
+			i.Type().String(),
+			i.Name(),
+			i.Host().String(),
+			fmt.Sprint(pid),
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+		)
+		resp.Rows = append(resp.Rows, row)
+
 		for _, fd := range instance.Files(i) {
 			if fd.Conn != nil {
 				// socket
@@ -439,7 +461,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 
 				var row []string
 				if psCmdToolkit {
-					row = append(row, instance.IDString(i)+"-"+fmt.Sprint(fd.FD))
+					row = append(row, instance.IDString(i)+" # "+fmt.Sprint(fd.FD))
 				}
 
 				row = append(row,
