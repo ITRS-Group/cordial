@@ -95,7 +95,9 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 				"type",
 				"name",
 				"host",
+				"pid",
 				"fd",
+				"protocol",
 				"localaddr",
 				"localport",
 				"remoteaddr",
@@ -110,6 +112,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 				"type",
 				"name",
 				"host",
+				"pid",
 				"fd",
 				"permissions",
 				"user",
@@ -205,11 +208,11 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 		psTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		if psCmdShowNet {
 			fmt.Fprintf(psTabWriter,
-				"Type\tName\tHost\tFD\tLocal Addr\tLocal Port\tRemote Addr\tRemote Port\tStatus\tTXQueue\tRxQueue\n",
+				"Type\tName\tHost\tPID\tFD\tProtocol\tLocal Addr\tLocal Port\tRemote Addr\tRemote Port\tStatus\tTXQueue\tRxQueue\n",
 			)
 		} else if psCmdShowFiles {
 			fmt.Fprintf(psTabWriter,
-				"Type\tName\tHost\tFD\tPerms\tUser:Group\tSize\tLast Modified\tPath\n",
+				"Type\tName\tHost\tPID\tFD\tPerms\tUser:Group\tSize\tLast Modified\tPath\n",
 			)
 		} else if psCmdLong {
 			fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\tState\tThreads\tOpen Files\tOpen Sockets\tRSS\tRSSAnon\tRSSMax\tTotalUserTime\tTotalKernelTime\tTotalChildUserTime\tTotalChildKernelTime\n")
@@ -262,6 +265,9 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			if fd.Conn != nil {
 				// socket
 				c := fd.Conn
+				if !(strings.HasPrefix(c.Protocol, "tcp") || strings.HasPrefix(c.Protocol, "udp")) {
+					continue
+				}
 				remAddr := "-"
 				if !c.RemoteAddr.Equal(net.IPv4(0, 0, 0, 0)) {
 					remAddr = fmt.Sprint(c.RemoteAddr)
@@ -271,11 +277,13 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 					remPort = fmt.Sprint(c.RemotePort)
 				}
 				resp.Lines = append(resp.Lines,
-					fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%d\t%s\t%s\t%s\t%d\t%d",
+					fmt.Sprintf("%s\t%s\t%s\t%d\t%d\t%s\t%s\t%d\t%s\t%s\t%s\t%d\t%d",
 						i.Type(),
 						i.Name(),
 						i.Host(),
+						pid,
 						fd.FD,
+						c.Protocol,
 						c.LocalAddr,
 						c.LocalPort,
 						remAddr,
@@ -299,10 +307,11 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		}
 		uid, gid := i.Host().GetFileOwner(hs)
 		resp.Lines = append(resp.Lines,
-			fmt.Sprintf("%s\t%s\t%s\tcwd\t%s\t%s:%s\t%d\t%s\t%s",
+			fmt.Sprintf("%s\t%s\t%s\tcwd\t%d\t%s\t%s:%s\t%d\t%s\t%s",
 				i.Type(),
 				i.Name(),
 				i.Host(),
+				pid,
 				hs.Mode().Perm().String(),
 				geneos.GetUsername(uid),
 				geneos.GetGroupname(gid),
@@ -416,6 +425,9 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			if fd.Conn != nil {
 				// socket
 				c := fd.Conn
+				if !(strings.HasPrefix(c.Protocol, "tcp") || strings.HasPrefix(c.Protocol, "udp")) {
+					continue
+				}
 				remAddr := "-"
 				if !c.RemoteAddr.Equal(net.IPv4(0, 0, 0, 0)) {
 					remAddr = fmt.Sprint(c.RemoteAddr)
@@ -434,7 +446,9 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 					i.Type().String(),
 					i.Name(),
 					i.Host().String(),
+					fmt.Sprint(pid),
 					fmt.Sprint(fd.FD),
+					c.Protocol,
 					c.LocalAddr.String(),
 					fmt.Sprint(c.LocalPort),
 					remAddr,
@@ -468,6 +482,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			i.Type().String(),
 			i.Name(),
 			i.Host().String(),
+			fmt.Sprint(pid),
 			"cwd",
 			hs.Mode().Perm().String(),
 			geneos.GetUsername(uid),
@@ -503,6 +518,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 					i.Type().String(),
 					i.Name(),
 					i.Host().String(),
+					fmt.Sprint(pid),
 					fmt.Sprintf("%d:%s", fd.FD, fdPerm),
 					fd.Stat.Mode().Perm().String(),
 					geneos.GetUsername(uid),
@@ -591,6 +607,7 @@ type psInstanceFiles struct {
 	Type     string      `json:"type"`
 	Name     string      `json:"name"`
 	Host     string      `json:"host"`
+	PID      int         `json:"pid"`
 	FD       int         `json:"fd"`
 	FDPerms  string      `json:"fd_perms"`
 	Perms    fs.FileMode `json:"perms"`
@@ -605,7 +622,9 @@ type psInstanceNetwork struct {
 	Type       string `json:"type"`
 	Name       string `json:"name"`
 	Host       string `json:"host"`
+	PID        int    `json:"pid"`
 	FD         int    `json:"fd"`
+	Protocol   string `json:"protocol"`
 	LocalAddr  net.IP `json:"local_addr"`
 	LocalPort  uint16 `json:"local_port"`
 	RemoteAddr net.IP `json:"remote_addr"`
@@ -628,11 +647,16 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			if fd.Conn != nil {
 				// socket
 				c := fd.Conn
+				if !(strings.HasPrefix(c.Protocol, "tcp") || strings.HasPrefix(c.Protocol, "udp")) {
+					continue
+				}
 				conns = append(conns, psInstanceNetwork{
 					Type:       i.Type().String(),
 					Name:       i.Name(),
 					Host:       i.Host().String(),
+					PID:        pid,
 					FD:         fd.FD,
+					Protocol:   c.Protocol,
 					LocalAddr:  c.LocalAddr,
 					LocalPort:  c.LocalPort,
 					RemoteAddr: c.RemoteAddr,
@@ -662,6 +686,7 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			Type:     i.Type().String(),
 			Name:     i.Name(),
 			Host:     i.Host().String(),
+			PID:      pid,
 			FD:       -1,
 			Perms:    hs.Mode().Perm(),
 			Username: geneos.GetUsername(uid),
@@ -691,6 +716,7 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 					Type:     i.Type().String(),
 					Name:     i.Name(),
 					Host:     i.Host().String(),
+					PID:      pid,
 					FD:       fd.FD,
 					FDPerms:  fdPerm,
 					Perms:    fd.Stat.Mode().Perm(),
