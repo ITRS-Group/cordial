@@ -63,7 +63,7 @@ func init() {
 
 	saveCmd.Flags().StringVarP(&saveCmdCompression, "compress", "z", "gzip", "Compression `type`. One of `gzip`, `bzip2` or `none`.")
 
-	saveCmd.Flags().StringVarP(&saveCmdLimitSize, "size", "s", "1MiB", "Ignore files larger than this size (in bytes) unless --all is used\nAccepts suffixes i=with both B and iB units")
+	saveCmd.Flags().StringVarP(&saveCmdLimitSize, "size", "s", "1MiB", "Ignore files larger than this size (in bytes) unless --all is used\nAccepts suffixes with common scale units such as K, M, G\nwith both B and iB units, e.g. `1MiB`. `0` (zero) means no\nlimit to file sizes.")
 	saveCmd.Flags().BoolVarP(&saveCmdIncludeAll, "all", "A", false, "Include all files except AES key files, certificates and associated files, in the archive.\nThis may fail for running instances")
 
 	saveCmd.Flags().BoolVar(&saveCmdIncludeShared, "shared", false, "Include shared directory contents in the archive\n(also use --all to include files that are filtered by clean/purge lists)")
@@ -332,6 +332,7 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 		ignoreDirs,
 		ignoreFiles,
 	); err != nil {
+		// missing dirs and inaccessible files are probably not errors
 		log.Debug().Err(err).Msg("")
 	}
 
@@ -339,28 +340,17 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 		return
 	}
 
-	// then walk the shared directory, checking and updating contents
-	if err := walkDir(
-		i.Host(),
-		ct.Shared(i.Host()),
-		strings.TrimPrefix(ct.Shared(i.Host()), i.Host().PathTo()+"/"),
-		contents,
-		ignoreDirs,
-		ignoreFiles,
-	); err != nil {
-		log.Debug().Err(err).Msg("")
-	}
-
-	// add the gateway includes directory if `--shared` is selected
-	if ct.IsA("gateway") {
+	// then walk the shared directories, if any, for ct checking and updating contents
+	for _, s := range ct.SharedDirectories {
 		if err := walkDir(
 			i.Host(),
-			i.Host().PathTo(ct, "includes"),
-			strings.TrimPrefix(i.Host().PathTo(ct, "includes"), i.Host().PathTo()+"/"),
+			i.Host().PathTo(s),
+			s,
 			contents,
 			ignoreDirs,
 			ignoreFiles,
 		); err != nil {
+			// missing dirs and inaccessible files are probably not errors
 			log.Debug().Err(err).Msg("")
 		}
 	}
@@ -368,10 +358,10 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 	return
 }
 
-func walkDir(h *geneos.Host, d, r string, contents *[]string, ignoreDirs, ignoreFiles []string) error {
-	return h.WalkDir(d, func(file string, di fs.DirEntry, err error) error {
+func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDirs, ignoreFiles []string) error {
+	return h.WalkDir(dir, func(file string, di fs.DirEntry, err error) error {
 		if err != nil {
-			log.Debug().Err(err).Msg(d)
+			log.Debug().Err(err).Msg(dir)
 			return err
 		}
 		fi, err := di.Info()
@@ -387,7 +377,7 @@ func walkDir(h *geneos.Host, d, r string, contents *[]string, ignoreDirs, ignore
 					}
 				}
 			}
-			*contents = append(*contents, filepath.Join(r, file)+"/")
+			*contents = append(*contents, filepath.Join(relative, file)+"/")
 			return nil
 		case fi.Mode()&fs.ModeSymlink != 0:
 			log.Debug().Msgf("ignoring symlink %s", file)
@@ -398,12 +388,12 @@ func walkDir(h *geneos.Host, d, r string, contents *[]string, ignoreDirs, ignore
 						return nil
 					}
 				}
-				if fi.Size() > maxsize {
-					log.Debug().Msgf("skipping large file %s", filepath.Join(r, file))
+				if maxsize != 0 && fi.Size() > maxsize {
+					log.Debug().Msgf("skipping large file %s", filepath.Join(relative, file))
 					return nil
 				}
 			}
-			*contents = append(*contents, filepath.Join(r, file))
+			*contents = append(*contents, filepath.Join(relative, file))
 			return nil
 		}
 		return nil

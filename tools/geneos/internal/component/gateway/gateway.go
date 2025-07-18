@@ -112,10 +112,18 @@ var Gateway = geneos.Component{
 
 	Directories: []string{
 		"packages/gateway",
+		"gateway/config",
 		"gateway/gateways",
+		"gateway/includes",
+		"gateway/shared",
+		"gateway/templates",
+	},
+	SharedDirectories: []string{
+		"gateway/config",
 		"gateway/gateway_shared",
 		"gateway/gateway_config",
-		"gateway/templates",
+		"gateway/includes",
+		"gateway/shared",
 	},
 }
 

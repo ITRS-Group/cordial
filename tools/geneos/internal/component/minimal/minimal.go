@@ -90,7 +90,12 @@ var Minimal = geneos.Component{
 
 	Directories: []string{
 		"packages/minimal",
+		"netprobe/shared",
 		"netprobe/netprobes",
+	},
+	SharedDirectories: []string{
+		"netprobe/netprobes_shared",
+		"netprobe/shared",
 	},
 }
 

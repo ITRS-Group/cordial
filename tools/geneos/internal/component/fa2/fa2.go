@@ -90,6 +90,11 @@ var FA2 = geneos.Component{
 	Directories: []string{
 		"packages/fa2",
 		"netprobe/fa2s",
+		"netprobe/shared",
+	},
+	SharedDirectories: []string{
+		"netprobe/netprobes_shared",
+		"netprobe/shared",
 	},
 }
 

@@ -90,8 +90,12 @@ var Netprobe = geneos.Component{
 
 	Directories: []string{
 		"packages/netprobe",
+		"netprobe/shared",
 		"netprobe/netprobes",
+	},
+	SharedDirectories: []string{
 		"netprobe/netprobes_shared",
+		"netprobe/shared",
 	},
 }
 

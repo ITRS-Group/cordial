@@ -146,7 +146,6 @@ type Component struct {
 	// path of each file in the release archive. This is a pointer so
 	// that an empty string can be used (i.e. for webservers)
 	// StripArchivePrefix *string
-
 	ArchiveLeaveFirstDir bool
 
 	// Defaults are name=value templates that are "run" for each new
@@ -160,6 +159,9 @@ type Component struct {
 
 	// Directories to be created (under Geneos home) on initialisation
 	Directories []string
+
+	// Shared directories for each component
+	SharedDirectories []string
 
 	// Templates are any templates for the component. Each Template has
 	// a filename and default content

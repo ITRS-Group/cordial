@@ -38,15 +38,13 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var loadCmdCommon, loadCmdFile, loadCmdCompression string
+var loadCmdCommon, loadCmdCompression string
 var loadCmdInstanceShared bool
 
 func init() {
 	GeneosCmd.AddCommand(loadCmd)
 
-	loadCmd.Flags().StringVarP(&loadCmdFile, "input", "i", "", "import one or more instances from `FILE`\nFILE can be `-` for STDIN")
-
-	loadCmd.Flags().BoolVarP(&loadCmdInstanceShared, "shared", "s", false, "include shared files when using --instances")
+	loadCmd.Flags().BoolVarP(&loadCmdInstanceShared, "shared", "s", false, "include shared files")
 
 	loadCmd.Flags().StringVarP(&loadCmdCompression, "decompress", "z", "", "use decompression `type`, one of `gzip`, `bzip2` or `none`\nif not given then the file name is used to guess the type")
 
@@ -66,7 +64,7 @@ var loadCmdDescription string
 var loadCmd = &cobra.Command{
 	Use:     "load [flags] [TYPE] [[DEST=]NAME...]",
 	Aliases: []string{"restore"},
-	Short:   "Load Instances from archive",
+	Short:   "Load instances from archive",
 	Long:    loadCmdDescription,
 	Example: strings.ReplaceAll(`
 
@@ -120,21 +118,24 @@ geneos load gateway ABC x.tgz
 	},
 }
 
-// loadFromFile reads the archive f and looks for types ct and names,
+// loadFromFile reads the archive and looks for types ct and names,
 // which can be in the form "dest=src" to allow renaming instances. If
 // ct is nil then all matching types are loaded and if names it empty
 // then all instances are loaded. Existing instances with matching names
 // are not overwritten.
-func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string) (err error) {
+//
+// TODO: shared file control (use flag selector and limit to ct, if not
+// nil)
+func loadFromFile(h *geneos.Host, ct *geneos.Component, archive string, names []string) (err error) {
 	var tin io.ReadCloser
 	var fileType string
 
-	if f == "-" {
+	if archive == "-" {
 		fileType = loadCmdCompression
-		f = ""
+		archive = ""
 	} else {
 		for s, t := range fileTypes {
-			if strings.HasSuffix(f, s) {
+			if strings.HasSuffix(archive, s) {
 				fileType = t
 				break
 			}
@@ -147,8 +148,8 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string
 
 	// default source is STDIN
 	in := os.Stdin
-	if f != "" {
-		if in, err = os.Open(f); err != nil {
+	if archive != "" {
+		if in, err = os.Open(archive); err != nil {
 			return
 		}
 		defer in.Close()
@@ -157,12 +158,12 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string
 	switch fileType {
 	case "", "none":
 		switch {
-		case strings.HasSuffix(f, ".gz") || strings.HasSuffix(f, ".tgz"):
+		case strings.HasSuffix(archive, ".gz") || strings.HasSuffix(archive, ".tgz"):
 			if tin, err = gzip.NewReader(in); err != nil {
 				return
 			}
 			defer tin.Close()
-		case strings.HasSuffix(f, ".bz2"):
+		case strings.HasSuffix(archive, ".bz2"):
 			if tin, err = bzip2.NewReader(in, nil); err != nil {
 				return
 			}
@@ -194,7 +195,8 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string
 	// per archive file, not destination
 	processed := map[string]bool{}
 
-	// mapping instance names to potentially new ones.
+	// mapping instance names from archive names to potentially new
+	// ones.
 	//
 	// wildcards are only allowed when no renaming is taking place
 	mapping := map[string]string{}
@@ -223,48 +225,57 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string
 		if err != nil {
 			return
 		}
+
 		filename := hdr.Name
 		if filename, err = geneos.CleanRelativePath(filename); err != nil {
 			return
 		}
 
-		ctname, rest, found := strings.Cut(filename, "/")
-		if !found {
-			log.Debug().Msgf("invalid top-level entry found: %s, skipping", filename)
-			continue
-		}
+		ctname, rest, _ := strings.Cut(filename, "/")
 
 		// check ctname is valid and if ct is not nil, filter for a match
 		nct := geneos.ParseComponent(ctname)
 		if nct == nil {
-			log.Debug().Msgf("unknown type: %s, skipping", filename)
+			log.Debug().Msgf("unknown component type: %s, skipping", filename)
 			continue
 		}
 
 		if ct != nil && ct != nct {
-			log.Debug().Msgf("type does not match wanted: %s != %s, skipping", ct, filename)
+			log.Debug().Msgf("compoentn type does not match: %s != %s, skipping", ct, nct)
 			continue
 		}
 
-		cthome, rest, found := strings.Cut(rest, "/")
-		if !found {
-			//
+		var ctdir string
+		if rest != "" {
+			ctdir, rest, _ = strings.Cut(rest, "/")
 		}
 
-		if !strings.HasSuffix(cthome, "s") {
-			log.Debug().Msgf("second level directory not a component type+`s`: %s, skipping", cthome)
+		// check for shared directories for given nct and restore if asked to
+		if loadCmdInstanceShared {
+			if slices.Contains(nct.SharedDirectories, path.Join(nct.String(), ctdir)) {
+				if ct == nil || ct == nct {
+					if err = writeSharedFile(h, nct, path.Join(nct.String(), ctdir, rest), tr, hdr); err != nil {
+						return
+					}
+					continue
+				}
+			}
+		}
+
+		if !strings.HasSuffix(ctdir, "s") {
+			log.Debug().Msgf("second level directory not a component type+`s`: %s, skipping", ctdir)
 			continue
 		}
-		cthome = strings.TrimSuffix(cthome, "s")
-		pkgct := geneos.ParseComponent(cthome)
+		ctdir = strings.TrimSuffix(ctdir, "s")
+		pkgct := geneos.ParseComponent(ctdir)
 
 		if nct != pkgct && nct != pkgct.ParentType {
 			log.Debug().Msgf("top-level entry and home entry not matched: %s, skipping", filename)
 			continue
 		}
 
-		// "rest" is (should be) now "i/content"
-		i, fp, found := strings.Cut(rest, "/")
+		// "rest" is (should be) now "instance/content"
+		i, fp, _ := strings.Cut(rest, "/")
 
 		// we now have type (nct), instance name and filepath fp
 
@@ -298,9 +309,9 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, f string, names []string
 
 	for k, v := range processed {
 		if v {
-			fmt.Printf("loaded %s from %s\n", k, f)
+			fmt.Printf("loaded %s from %s\n", k, archive)
 		} else {
-			fmt.Printf("skipped loading %s from %s\n", k, f)
+			fmt.Printf("skipped loading %s from %s\n", k, archive)
 		}
 	}
 
@@ -334,12 +345,12 @@ func processFile(h *geneos.Host, ct *geneos.Component, i, fp string, tr *tar.Rea
 // Owner and group are ignored. Directory entries are used to create
 // directories with matching permissions, again ignoring owner and
 // group.
-func writeFile(h *geneos.Host, pkgct *geneos.Component, instance string, fp string, tr *tar.Reader, hdr *tar.Header) (err error) {
-	if pkgct == nil {
+func writeFile(h *geneos.Host, ct *geneos.Component, instance string, fp string, tr *tar.Reader, hdr *tar.Header) (err error) {
+	if ct == nil {
 		return geneos.ErrInvalidArgs
 	}
 
-	instanceDir := h.PathTo(pkgct, pkgct.String()+"s", instance)
+	instanceDir := h.PathTo(ct, ct.String()+"s", instance)
 	destPath := path.Join(instanceDir, fp)
 
 	switch hdr.Typeflag {
@@ -347,17 +358,55 @@ func writeFile(h *geneos.Host, pkgct *geneos.Component, instance string, fp stri
 		// create and set permissions
 		return h.MkdirAll(destPath, hdr.FileInfo().Mode().Perm())
 	case tar.TypeReg:
+		var w io.WriteCloser
+
 		// create intermediate dirs, write, set perms
 		if err = h.MkdirAll(path.Dir(destPath), 0775); err != nil {
 			return
 		}
 
-		if fp == pkgct.String()+".json" {
-			return rebuildConfig(h, pkgct, instance, instanceDir, tr)
+		if fp == ct.String()+".json" {
+			return rebuildConfig(h, ct, instance, instanceDir, tr)
 		}
 
-		var w io.WriteCloser
 		if w, err = h.Create(destPath, hdr.FileInfo().Mode()); err != nil {
+			log.Debug().Err(err).Msg("")
+			return
+		}
+		defer w.Close()
+
+		_, err = io.Copy(w, tr)
+		return
+	default:
+		// ignore
+	}
+	return
+}
+
+// writeSharedFile reads the file from the tar reader and, if a regular
+// file, writes it to the path fp relative to the host's root geneos,
+// creating intermediate directories as required, and setting
+// permissions as per tar header. Owner and group are ignored. Directory
+// entries are used to create directories with matching permissions,
+// again ignoring owner and group.
+func writeSharedFile(h *geneos.Host, ct *geneos.Component, fp string, tr *tar.Reader, hdr *tar.Header) (err error) {
+	if ct == nil {
+		return geneos.ErrInvalidArgs
+	}
+
+	switch hdr.Typeflag {
+	case tar.TypeDir:
+		// create and set permissions
+		return h.MkdirAll(h.PathTo(fp), hdr.FileInfo().Mode().Perm())
+	case tar.TypeReg:
+		var w io.WriteCloser
+
+		// create intermediate dirs, write, set perms
+		if err = h.MkdirAll(path.Dir(h.PathTo(fp)), 0775); err != nil {
+			return
+		}
+
+		if w, err = h.Create(h.PathTo(fp), hdr.FileInfo().Mode()); err != nil {
 			return
 		}
 		defer w.Close()
@@ -374,7 +423,6 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 	// load config, update parameters for new root dir on dest host, write
 	cf, err := config.Load(ct.String(), config.SetConfigReader(r))
 	if err != nil {
-		log.Debug().Err(err).Msg("instance config cannot be loaded")
 		return err
 	}
 
@@ -389,8 +437,6 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 
 	oldShared := path.Join(path.Dir(path.Dir(oldHome)), ct.String()+"_shared")
 	newShared := ct.Shared(h)
-
-	log.Debug().Msgf("oldShared %s newShared %s", oldShared, newShared)
 
 	version := cf.GetString("version", config.NoExpand())
 
@@ -452,7 +498,6 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 	); err != nil {
 		return err
 	}
-	log.Debug().Msgf("saved config for %s", i)
 
 	return
 }

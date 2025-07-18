@@ -79,8 +79,12 @@ var CA3 = geneos.Component{
 
 	Directories: []string{
 		"packages/ca3",
-		"netprobe/netprobes_shared",
 		"netprobe/ca3s",
+		"netprobe/shared",
+	},
+	SharedDirectories: []string{
+		"netprobe/shared",
+		"netprobe/netprobes_shared",
 	},
 	GetPID: pidCheckFn,
 }

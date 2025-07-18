@@ -103,9 +103,13 @@ var San = geneos.Component{
 
 	Directories: []string{
 		"packages/netprobe",
-		"netprobe/netprobes_shared",
+		"netprobe/shared",
 		"netprobe/sans",
 		"netprobe/templates",
+	},
+	SharedDirectories: []string{
+		"netprobe/netprobes_shared",
+		"netprobe/shared",
 	},
 }
 

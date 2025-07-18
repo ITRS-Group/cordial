@@ -89,9 +89,13 @@ var Floating = geneos.Component{
 
 	Directories: []string{
 		"packages/netprobe",
-		"netprobe/netprobes_shared",
 		"netprobe/floatings",
+		"netprobe/shared",
 		"netprobe/templates",
+	},
+	SharedDirectories: []string{
+		"netprobe/netprobes_shared",
+		"netprobe/shared",
 	},
 }
 
