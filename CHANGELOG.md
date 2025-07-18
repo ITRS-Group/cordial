@@ -1,5 +1,42 @@
 # Change Log
 
+## Version v1.22.0
+
+> [!NOTE]
+> **Released 2025-07-18** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v1.22.0 Highlights
+
+* `tools/geneos` - New `save` and `load` commands to help you move and duplicate instances between servers. Originally developed to help set-up standby servers for Geneos Gateways, these commands can be used to make clean backups of one or more instances, selectively including sensitive files like AES key files and certificates with private keys. These can then be restored, optionally remapping names and directories.
+
+### Version v1.22.0 Changes
+
+* Update Go to 1.24.5
+
+* `tools/geneos`
+
+  * Changes to the earlier `cordial-geneos.xml` include file
+  
+    * Renaming to `itrs.level0.geneos.cordial.xml` to better align with future projects
+
+    * Adding more information in the diagnostics views as well as using more conventional row names for the socket view
+
+  * Changes to the output for the hostname from `localhost` to the real hostname, but all commands alias `localhost` and the hostname of the local server together
+
+  * Removed previously deprecated command flags
+
+### Version v.1.22.0 Fixes
+
+* `tools/geneos`
+
+  * Various fixes to spelling errors, both internal and external
+
+  * Fixes for the Windows executable to start support local instances. This still needs more work, but it is possible to initialise a directory layout, install packages and start a local Netprobe and Active Console. Work to address the many remaining issues continues.
+
+  * As part of the new `save` command implementation the lists of cleaned and purged patterns has been reviews for all component types
+
+---
+
 ## Version v1.21.0
 
 > [!NOTE]
