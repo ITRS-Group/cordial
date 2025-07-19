@@ -114,7 +114,6 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	// as a component type, then drop through
 	if len(args) > 0 {
 		if ct = geneos.ParseComponent(args[0]); ct != nil {
-			log.Debug().Msgf("first arg is ct %q", ct)
 			cd.Lock()
 			cd.component = ct
 			cd.Unlock()

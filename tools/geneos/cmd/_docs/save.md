@@ -16,10 +16,10 @@ Instances matching across multiple hosts are not supported, and this returns an 
 
 To include the component shared directory/directories, use the `--shared` option.
 
-To include AES files, use the `--aes` option.
+To include AES files, use the `--aes` option. Without this option the files that are skipped are those referenced by the instance `keyfile` and `prevkeyfile` parameters. When using `--shared` files with an `.aes` extension or any `keyfile` directory and it's contents are skipped.
 
-To include certificate and private key files, use the `--tls` option.
+To include certificate and private key files, use the `--tls` option. Without this option the files skipped are those referenced by the instance parameters `certificate`, `privatekey` and `certchain`. When using `--shared` all files with the extensions `.pem`, `.key` and `.crt` are skipped.
 
-File over 1MiB are not included in the archive unless the `--all/-a` option is used, but this limit can be controlled using the `--size/-s` option which accepts all the common units, e.g. `50KB` or `2MiB`. Passing a size of `0` (zero) removes the limit.
+File over 2MiB are not included in the archive unless the `--all/-a` option is used, but this limit can be controlled using the `--size/-s` option which accepts all the common units, e.g. `50KB` or `10MiB`. Using a size of `0` (zero) removes the limit.
 
 The contents of the archive are relative to the root of the Geneos installation, and the `geneos load` command will refactor any changes to paths in the instance configuration JSON files.

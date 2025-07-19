@@ -56,20 +56,36 @@ var maxsize int64
 func init() {
 	GeneosCmd.AddCommand(saveCmd)
 
-	saveCmd.Flags().StringVarP(&saveCmdOutput, "output", "o", "", "Output file `path`. If path is a directory or has a '/' suffix then the constructed\nfile name is used in that directory. If not final file name is given then the\nfile name is of the form 'geneos[-TYPE][-NAME].tar.gz'")
+	saveCmd.Flags().StringVarP(&saveCmdOutput, "output", "o", "",
+		"Write to `DEST`. Without a destination filename the command creates\na file name based on the contents of the archive. If DEST is a directory\nor has a '/' suffix then the file is written to that directory using the\nsame naming format as if no file was given. Directories are created\nas required.",
+	)
 
-	// archive name options, if not a fixed name
-	saveCmd.Flags().BoolVarP(&saveCmdIncludeDatetime, "datetime", "D", false, "include a datetime string the in the auto-generated archive name")
+	saveCmd.Flags().BoolVarP(&saveCmdIncludeDatetime, "datetime", "D", false,
+		"Add a datetime string (YYYYMMDDhhmmss) the auto-generated file names",
+	)
 
-	saveCmd.Flags().StringVarP(&saveCmdCompression, "compress", "z", "gzip", "Compression `type`. One of `gzip`, `bzip2` or `none`.")
+	saveCmd.Flags().StringVarP(&saveCmdCompression, "compress", "z", "gzip",
+		"Compression `type`. One of `gzip`, `bzip2` or `none`.",
+	)
 
-	saveCmd.Flags().StringVarP(&saveCmdLimitSize, "size", "s", "1MiB", "Ignore files larger than this size (in bytes) unless --all is used\nAccepts suffixes with common scale units such as K, M, G\nwith both B and iB units, e.g. `1MiB`. `0` (zero) means no\nlimit to file sizes.")
-	saveCmd.Flags().BoolVarP(&saveCmdIncludeAll, "all", "A", false, "Include all files except AES key files, certificates and associated files, in the archive.\nThis may fail for running instances")
+	saveCmd.Flags().StringVarP(&saveCmdLimitSize, "size", "s", "2MiB",
+		"Skip files larger than this size unless --all is used. Accepts suffixes\nwith common scale units such as K, M, G with both B and iB units,\ne.g. `2MiB`. `0` (zero) means no limit to file sizes.",
+	)
 
-	saveCmd.Flags().BoolVar(&saveCmdIncludeShared, "shared", false, "Include shared directory contents in the archive\n(also use --all to include files that are filtered by clean/purge lists)")
+	saveCmd.Flags().BoolVarP(&saveCmdIncludeAll, "all", "A", false,
+		"Include all files except AES key files, certificates and private keys.",
+	)
 
-	saveCmd.Flags().BoolVar(&saveCmdIncludeAES, "aes", false, "Include AES key files in the archive\n(never includes user's own keyfile)")
-	saveCmd.Flags().BoolVar(&saveCmdIncludeTLS, "tls", false, "Include certificates, private keys and certificate chains in archive")
+	saveCmd.Flags().BoolVar(&saveCmdIncludeShared, "shared", false,
+		"Include per-component shared directories from outside instance directories.\n",
+	)
+
+	saveCmd.Flags().BoolVar(&saveCmdIncludeAES, "aes", false,
+		"Include AES key files.",
+	)
+	saveCmd.Flags().BoolVar(&saveCmdIncludeTLS, "tls", false,
+		"Include certificates, private keys and certificate chains.",
+	)
 
 	saveCmd.Flags().SortFlags = false
 }
@@ -84,22 +100,28 @@ var compression = map[string]string{
 }
 
 var saveCmd = &cobra.Command{
-	Use:     "save [flags] [TYPE] [NAME...]",
+	Use:     "save [flags] [all] | [TYPE] [NAME...]",
 	Aliases: []string{"backup"},
 	Short:   "Save Instances",
 	Long:    saveCmdDescription,
 	Example: strings.ReplaceAll(`
+geneos save gateway gw1
+geneos save all
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
+		CmdGlobal:        "false",
 		CmdRequireHome:   "true",
 		CmdWildcardNames: "true",
 	},
-	RunE: func(command *cobra.Command, args []string) (err error) {
+	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var archive string
 
 		ct, names := ParseTypeNames(command)
+
+		if ct == nil && len(names) == 0 {
+			return command.Usage()
+		}
 
 		// if no host is given, make it local only
 		h := geneos.GetHost(Hostname)
@@ -210,26 +232,26 @@ var saveCmd = &cobra.Command{
 			defer out.Close()
 		}
 
-		var cout io.WriteCloser
+		var w io.WriteCloser
 
 		switch saveCmdCompression {
 		case "gzip":
-			cout, err = gzip.NewWriterLevel(out, gzip.BestCompression)
+			w, err = gzip.NewWriterLevel(out, gzip.BestCompression)
 			if err != nil {
 				return
 			}
-			defer cout.Close()
+			defer w.Close()
 		case "bzip2":
-			cout, err = bzip2.NewWriter(out, &bzip2.WriterConfig{Level: 9})
+			w, err = bzip2.NewWriter(out, &bzip2.WriterConfig{Level: 9})
 			if err != nil {
 				return
 			}
-			defer cout.Close()
+			defer w.Close()
 		case "none":
-			cout = out
+			w = out
 		}
 
-		tw := tar.NewWriter(cout)
+		tw := tar.NewWriter(w)
 		defer tw.Close()
 
 		root := h.PathTo()
@@ -299,6 +321,9 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 
 		if !saveCmdIncludeAES {
 			ignore = append(ignore, "*.aes", "keyfiles/")
+		}
+		if !saveCmdIncludeTLS {
+			ignore = append(ignore, "*.pem", "*.key", "*.crt")
 		}
 
 		for _, i := range ignore {
