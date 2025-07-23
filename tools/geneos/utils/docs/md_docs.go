@@ -69,7 +69,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 		buf.WriteString(cmd.Short + "\n\n")
 	}
 	if cmd.Runnable() {
-		buf.WriteString(fmt.Sprintf("```text\n%s\n```\n", cmd.UseLine()))
+		fmt.Fprintf(buf, "```text\n%s\n```\n", cmd.UseLine())
 	}
 	if hasSeeAlso(cmd) {
 		children := cmd.Commands()
@@ -109,7 +109,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 						cname += " / " + alias
 					}
 					link := strings.ReplaceAll(name+" "+child.Name()+".md", " ", "_")
-					buf.WriteString(fmt.Sprintf("| [`%s`](%s)\t | %s |\n", cname, linkHandler(link), child.Short))
+					fmt.Fprintf(buf, "| [`%s`](%s)\t | %s |\n", cname, linkHandler(link), child.Short)
 				}
 				if i != len(groups)-1 {
 					buf.WriteString("\n---\n\n")
@@ -142,7 +142,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 					cname += " / " + alias
 				}
 				link := strings.ReplaceAll(name+" "+child.Name()+".md", " ", "_")
-				buf.WriteString(fmt.Sprintf("| [`%s`](%s)\t | %s |\n", cname, linkHandler(link), child.Short))
+				fmt.Fprintf(buf, "| [`%s`](%s)\t | %s |\n", cname, linkHandler(link), child.Short)
 			}
 		}
 		buf.WriteString("\n")
@@ -154,7 +154,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 
 	if len(cmd.Example) > 0 {
 		buf.WriteString("## Examples\n\n")
-		buf.WriteString(fmt.Sprintf("```bash%s\n```\n\n", cmd.Example))
+		fmt.Fprintf(buf, "```bash%s\n```\n\n", cmd.Example)
 	}
 
 	if hasSeeAlso(cmd) {
@@ -164,7 +164,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 			pname := parent.CommandPath()
 			link := pname + ".md"
 			link = strings.ReplaceAll(link, " ", "_")
-			buf.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", pname, linkHandler(link), parent.Short))
+			fmt.Fprintf(buf, "* [%s](%s)\t - %s\n", pname, linkHandler(link), parent.Short)
 			cmd.VisitParents(func(c *cobra.Command) {
 				if c.DisableAutoGenTag {
 					cmd.DisableAutoGenTag = c.DisableAutoGenTag
@@ -261,17 +261,3 @@ func (s subsystemsThenNames) Less(i, j int) bool {
 	}
 	return s[i].Name() < s[j].Name()
 }
-
-// type groupsThenNames []*cobra.Command
-
-// func (s groupsThenNames) Len() int      { return len(s) }
-// func (s groupsThenNames) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-// func (s groupsThenNames) Less(i, j int) bool {
-// 	if s[i].HasAvailableSubCommands() && !s[j].HasAvailableSubCommands() {
-// 		return true
-// 	}
-// 	if !s[i].HasAvailableSubCommands() && s[j].HasAvailableSubCommands() {
-// 		return false
-// 	}
-// 	return s[i].Name() < s[j].Name()
-// }
