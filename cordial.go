@@ -109,6 +109,7 @@ func renderMD(in string) (out string) {
 		}
 	}
 
+	// Bug https://github.com/charmbracelet/glamour/issues/407 with word-wrapping, awaiting fix
 	tr, err := glamour.NewTermRenderer(
 		style,
 		glamour.WithStylesFromJSONBytes([]byte(`{ "document": { "margin": 2 } }`)),
