@@ -92,9 +92,6 @@ func LoadConfig(i geneos.Instance) (err error) {
 		config.UseDefaults(false),
 		config.MustExist(),
 	)
-	if err != nil {
-		log.Debug().Err(err).Msg(h.String())
-	}
 
 	// override the home from the config file and use the directory the
 	// config was found in
@@ -108,9 +105,7 @@ func LoadConfig(i geneos.Instance) (err error) {
 
 	if err != nil {
 		if err = ReadRCConfig(h, cf, ComponentFilepath(i, "rc"), prefix, aliases); err != nil {
-			if !errors.Is(err, host.ErrNotAvailable) {
-				return
-			}
+			return
 		} else {
 			used = ComponentFilepath(i, "rc")
 			i.Config().Type = "rc"

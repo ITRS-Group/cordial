@@ -1,4 +1,6 @@
 /*
+/*
+/*
 Copyright © 2022 ITRS Group
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +32,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/dsnet/compress/bzip2"
 	"github.com/rs/zerolog/log"
@@ -79,7 +82,7 @@ geneos load gateway ABC x.tgz
 	Annotations: map[string]string{
 		CmdGlobal:        "false",
 		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
+		CmdWildcardNames: "false",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		ct, names, params := ParseTypeNamesParams(command)
@@ -108,6 +111,7 @@ geneos load gateway ABC x.tgz
 		// remove host suffixes from args
 		var newnames []string
 		for _, n := range names {
+			log.Debug().Msgf("name: %s", n)
 			h2, _, n2 := instance.Decompose(n, h)
 			if h2 != h {
 				// skip any args that don't match destination host, just in case
@@ -225,16 +229,21 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, archive string, names []
 	// wildcards are only allowed when no renaming is taking place
 	mapping := map[string]string{}
 
-	for _, name := range names {
-		dest, src, found := strings.Cut(name, "=")
-		if found {
-			if !instance.ValidName(src) || !instance.ValidName(dest) {
-				log.Debug().Msgf("invalid instance name format when using DEST=SRC format: %s", name)
-				return geneos.ErrInvalidArgs
+	loadAll := false
+	if len(names) == 1 && names[0] == "all" {
+		loadAll = true
+	} else {
+		for _, name := range names {
+			dest, src, found := strings.Cut(name, "=")
+			if found {
+				if !instance.ValidName(src) || !instance.ValidName(dest) {
+					log.Debug().Msgf("invalid instance name format when using DEST=SRC format: %s", name)
+					return geneos.ErrInvalidArgs
+				}
+				mapping[src] = dest
+			} else {
+				mapping[name] = name
 			}
-			mapping[src] = dest
-		} else {
-			mapping[name] = name
 		}
 	}
 
@@ -295,7 +304,6 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, archive string, names []
 		}
 
 		if !strings.HasSuffix(ctDir, "s") {
-			log.Debug().Msgf("second level directory not a component type+`s`: %s, skipping", ctDir)
 			continue
 		}
 		ctDir = strings.TrimSuffix(ctDir, "s")
@@ -333,25 +341,39 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, archive string, names []
 			continue
 		}
 
-		// otherwise load all instances in the archive
-		// if err = processFile(h, packageCt, i, fp, tr, hdr, processed); err != nil {
-		// 	return
-		// }
+		// otherwise, if "all", load all instances in the archive
+		if loadAll {
+			if err = processFile(h, packageCt, i, fp, tr, hdr, processed); err != nil {
+				return
+			}
+		}
 	}
 
-	fmt.Printf("%s processed:\n", archive)
+	fmt.Printf("\n%s:\n\n", archive)
+	t := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+	fmt.Fprintf(t, "Type\tName\tResult\n")
 	for _, k := range slices.Sorted(maps.Keys(processed)) {
+		ctName, name, _ := strings.Cut(k, ":")
+
+		if name == "!SHARED" {
+			name = "(shared dirs)"
+		}
 		if loadCmdList {
-			fmt.Printf("\t%d files/dirs for %s\n", processed[k], k)
+			fmt.Fprintf(t, "%s\t%s\t%d files/dirs\n", ctName, name, processed[k])
 			continue
 		}
 		if processed[k] > 0 {
-			fmt.Printf("\tloaded %d files/dirs for %s\n", processed[k], k)
+			if name != mapping[name] {
+				fmt.Fprintf(t, "%s\t%s (%s)\t%d files/dirs\n", ctName, mapping[name], name, processed[k])
+			} else {
+				fmt.Fprintf(t, "%s\t%s\t%d files/dirs\n", ctName, name, processed[k])
+			}
+
 		} else {
-			fmt.Printf("\tskipped loading %s\n", k)
+			fmt.Fprintf(t, "%s\t%s\tskipped loading\n", ctName, name)
 		}
 	}
-
+	t.Flush()
 	return
 }
 
