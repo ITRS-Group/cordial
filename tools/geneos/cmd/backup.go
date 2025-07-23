@@ -44,54 +44,54 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var saveCmdOutput string
+var backupCmdOutput string
 
-var saveCmdIncludeAll, saveCmdIncludeShared bool
-var saveCmdIncludeAES, saveCmdIncludeTLS bool
-var saveCmdIncludeDatetime bool
-var saveCmdLimitSize, saveCmdCompression string
+var backupCmdIncludeAll, backupCmdIncludeShared bool
+var backupCmdIncludeAES, backupCmdIncludeTLS bool
+var backupCmdIncludeDatetime bool
+var backupCmdLimitSize, backupCmdCompression string
 
 var maxsize int64
 
 func init() {
-	GeneosCmd.AddCommand(saveCmd)
+	GeneosCmd.AddCommand(backupCmd)
 
-	saveCmd.Flags().StringVarP(&saveCmdOutput, "output", "o", "",
+	backupCmd.Flags().StringVarP(&backupCmdOutput, "output", "o", "",
 		"Write to `DEST`. Without a destination filename the command creates\na file name based on the contents of the archive. If DEST is a directory\nor has a '/' suffix then the file is written to that directory using the\nsame naming format as if no file was given. Directories are created\nas required.",
 	)
 
-	saveCmd.Flags().BoolVarP(&saveCmdIncludeDatetime, "datetime", "D", false,
+	backupCmd.Flags().BoolVarP(&backupCmdIncludeDatetime, "datetime", "D", false,
 		"Add a datetime string (YYYYMMDDhhmmss) the auto-generated file names",
 	)
 
-	saveCmd.Flags().StringVarP(&saveCmdCompression, "compress", "z", "gzip",
+	backupCmd.Flags().StringVarP(&backupCmdCompression, "compress", "z", "gzip",
 		"Compression `type`. One of `gzip`, `bzip2` or `none`.",
 	)
 
-	saveCmd.Flags().StringVarP(&saveCmdLimitSize, "size", "s", "2MiB",
+	backupCmd.Flags().StringVarP(&backupCmdLimitSize, "size", "s", "2MiB",
 		"Skip files larger than this size unless --all is used. Accepts suffixes\nwith common scale units such as K, M, G with both B and iB units,\ne.g. `2MiB`. `0` (zero) means no limit to file sizes.",
 	)
 
-	saveCmd.Flags().BoolVarP(&saveCmdIncludeAll, "all", "A", false,
+	backupCmd.Flags().BoolVarP(&backupCmdIncludeAll, "all", "A", false,
 		"Include all files except AES key files, certificates and private keys.",
 	)
 
-	saveCmd.Flags().BoolVar(&saveCmdIncludeShared, "shared", false,
+	backupCmd.Flags().BoolVar(&backupCmdIncludeShared, "shared", false,
 		"Include per-component shared directories from outside instance directories.\n",
 	)
 
-	saveCmd.Flags().BoolVar(&saveCmdIncludeAES, "aes", false,
+	backupCmd.Flags().BoolVar(&backupCmdIncludeAES, "aes", false,
 		"Include AES key files.",
 	)
-	saveCmd.Flags().BoolVar(&saveCmdIncludeTLS, "tls", false,
+	backupCmd.Flags().BoolVar(&backupCmdIncludeTLS, "tls", false,
 		"Include certificates, private keys and certificate chains.",
 	)
 
-	saveCmd.Flags().SortFlags = false
+	backupCmd.Flags().SortFlags = false
 }
 
-//go:embed _docs/save.md
-var saveCmdDescription string
+//go:embed _docs/backup.md
+var backupCmdDescription string
 
 var compression = map[string]string{
 	"gzip":  ".gz",
@@ -99,14 +99,15 @@ var compression = map[string]string{
 	"none":  "",
 }
 
-var saveCmd = &cobra.Command{
-	Use:     "save [flags] [all] | [TYPE] [NAME...]",
-	Aliases: []string{"backup"},
-	Short:   "Save Instances",
-	Long:    saveCmdDescription,
+var backupCmd = &cobra.Command{
+	Use:     "backup [flags] [all] | [TYPE] [NAME...]",
+	Aliases: []string{"save"},
+	GroupID: CommandGroupConfig,
+	Short:   "Backup Instances",
+	Long:    backupCmdDescription,
 	Example: strings.ReplaceAll(`
-geneos save gateway gw1
-geneos save all
+geneos backup gateway gw1
+geneos backup all
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -129,36 +130,36 @@ geneos save all
 			h = geneos.LOCAL
 		}
 
-		suffix, ok := compression[saveCmdCompression]
+		suffix, ok := compression[backupCmdCompression]
 		if !ok {
 			return fmt.Errorf("invalid compression type, select one of: %s", strings.Join(slices.Collect(maps.Keys(compression)), ", "))
 		}
 
-		if !saveCmdIncludeAll {
-			maxsize, err = units.ParseStrictBytes(saveCmdLimitSize)
+		if !backupCmdIncludeAll {
+			maxsize, err = units.ParseStrictBytes(backupCmdLimitSize)
 			if err != nil {
 				return fmt.Errorf("invalid size: %w", err)
 			}
 		}
 
-		if saveCmdOutput != "" {
-			if strings.HasSuffix(saveCmdOutput, "/") {
+		if backupCmdOutput != "" {
+			if strings.HasSuffix(backupCmdOutput, "/") {
 				// user has asked for a directory, so try to create it as well
-				archive = saveCmdOutput
+				archive = backupCmdOutput
 				os.MkdirAll(archive, 0664)
 			} else {
 				// check for existing file, else try to create the directories above it
-				st, err := os.Stat(saveCmdOutput)
+				st, err := os.Stat(backupCmdOutput)
 				if err == nil {
 					// file (or directory) exists, use it
-					archive = saveCmdOutput
+					archive = backupCmdOutput
 					// destination may be an existing directory, in which case append a '/'
 					if st.IsDir() {
 						archive += "/"
 					}
 				} else {
 					if errors.Is(err, os.ErrNotExist) {
-						archive = saveCmdOutput
+						archive = backupCmdOutput
 						os.MkdirAll(filepath.Dir(archive), 0775)
 					} else {
 						return err
@@ -199,7 +200,7 @@ geneos save all
 				}
 			}
 
-			if saveCmdIncludeDatetime {
+			if backupCmdIncludeDatetime {
 				archive += "-" + time.Now().Local().Format("20060102150405")
 			}
 
@@ -211,7 +212,7 @@ geneos save all
 
 		// contents is a list of files so that instances do not duplicate shared contents
 		var contents []string
-		resp := instance.Do(h, ct, names, saveInstance, &contents)
+		resp := instance.Do(h, ct, names, backupInstance, &contents)
 		if archive != "-" {
 			resp.Write(os.Stdout)
 		} else {
@@ -234,7 +235,7 @@ geneos save all
 
 		var w io.WriteCloser
 
-		switch saveCmdCompression {
+		switch backupCmdCompression {
 		case "gzip":
 			w, err = gzip.NewWriterLevel(out, gzip.BestCompression)
 			if err != nil {
@@ -290,7 +291,7 @@ geneos save all
 	},
 }
 
-func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
+func backupInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 	var ignoreDirs, ignoreFiles []string
 
 	resp = instance.NewResponse(i)
@@ -309,7 +310,7 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 		return
 	}
 
-	if !saveCmdIncludeAll {
+	if !backupCmdIncludeAll {
 		ignore := strings.Split(config.GetString(ct.CleanList, config.Default(ct.ConfigAliases[ct.CleanList])), ":")
 		ignore = append(ignore, strings.Split(config.GetString(ct.PurgeList, config.Default(ct.ConfigAliases[ct.PurgeList])), ":")...)
 		if geneos.RootComponent.CleanList != "" {
@@ -319,10 +320,10 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 			ignore = append(ignore, filepath.SplitList(geneos.RootComponent.PurgeList)...)
 		}
 
-		if !saveCmdIncludeAES {
+		if !backupCmdIncludeAES {
 			ignore = append(ignore, "*.aes", "keyfiles/")
 		}
-		if !saveCmdIncludeTLS {
+		if !backupCmdIncludeTLS {
 			ignore = append(ignore, "*.pem", "*.key", "*.crt")
 		}
 
@@ -336,10 +337,10 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 	}
 
 	var ignoreSecure []string
-	if !saveCmdIncludeAES {
+	if !backupCmdIncludeAES {
 		ignoreSecure = append(ignoreSecure, "keyfile", "prevkeyfile")
 	}
-	if !saveCmdIncludeTLS {
+	if !backupCmdIncludeTLS {
 		ignoreSecure = append(ignoreSecure, "certificate", "privatekey", "certchain")
 	}
 	for _, ig := range ignoreSecure {
@@ -361,7 +362,7 @@ func saveInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
 		log.Debug().Err(err).Msg("")
 	}
 
-	if !saveCmdIncludeShared {
+	if !backupCmdIncludeShared {
 		return
 	}
 
@@ -395,7 +396,7 @@ func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDir
 		}
 		switch {
 		case fi.IsDir():
-			if !saveCmdIncludeAll {
+			if !backupCmdIncludeAll {
 				for _, ig := range ignoreDirs {
 					if match, _ := filepath.Match(ig, file); match {
 						return fs.SkipDir
@@ -407,7 +408,7 @@ func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDir
 		case fi.Mode()&fs.ModeSymlink != 0:
 			log.Debug().Msgf("ignoring symlink %s", file)
 		default:
-			if !saveCmdIncludeAll {
+			if !backupCmdIncludeAll {
 				for _, ig := range ignoreFiles {
 					if match, _ := filepath.Match(ig, file); match {
 						return nil

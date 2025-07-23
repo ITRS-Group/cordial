@@ -1,6 +1,6 @@
-# `geneos save` / `geneos backup`
+# `geneos backup` / `geneos save`
 
-Save instance data in an archive file, either for backup or to be restored on another system using the `geneos load` command.
+Backup instance data in an archive file, either for backup or to be restored on another system using the `geneos restore` command.
 
 Each matching instance has it's primary configuration files included in the archive. By default no AES files, certificates or private keys are included in the archive (taken from the instance configuration and not by filename pattern). If saving any of these files is enabled using the flags below then only files in the instance directory are included; Files outside the instance directory are never saved. Files that match the clean or purge lists for that type are ignored unless the `--all/-a` flag is given in which case those files are not skipped (but sensitive files like AES key files and private keys are still only included using the specific options below).
 

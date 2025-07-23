@@ -43,19 +43,19 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var loadCmdCommon, loadCmdCompression string
-var loadCmdInstanceShared, loadCmdList bool
+var restoreCmdCommon, restoreCmdCompression string
+var restoreCmdInstanceShared, restoreCmdList bool
 
 func init() {
-	GeneosCmd.AddCommand(loadCmd)
+	GeneosCmd.AddCommand(restoreCmd)
 
-	loadCmd.Flags().BoolVarP(&loadCmdInstanceShared, "shared", "s", false, "include shared files")
+	restoreCmd.Flags().BoolVarP(&restoreCmdInstanceShared, "shared", "s", false, "include shared files")
 
-	loadCmd.Flags().StringVarP(&loadCmdCompression, "decompress", "z", "", "use decompression `type`, one of `gzip`, `bzip2` or `none`\nif not given then the file name is used to guess the type")
+	restoreCmd.Flags().StringVarP(&restoreCmdCompression, "decompress", "z", "", "use decompression `type`, one of `gzip`, `bzip2` or `none`\nif not given then the file name is used to guess the type")
 
-	loadCmd.Flags().BoolVarP(&loadCmdList, "list", "l", false, "list the contents of the archive(s)")
+	restoreCmd.Flags().BoolVarP(&restoreCmdList, "list", "l", false, "list the contents of the archive(s)")
 
-	loadCmd.Flags().SortFlags = false
+	restoreCmd.Flags().SortFlags = false
 }
 
 var fileTypes = map[string]string{
@@ -65,18 +65,18 @@ var fileTypes = map[string]string{
 	".tar":     "none",
 }
 
-//go:embed _docs/load.md
-var loadCmdDescription string
+//go:embed _docs/restore.md
+var restoreCmdDescription string
 
-var loadCmd = &cobra.Command{
-	Use:     "load [flags] [TYPE] [[DEST=]NAME...]",
-	Aliases: []string{"restore"},
-	Short:   "Load instances from archive",
-	Long:    loadCmdDescription,
+var restoreCmd = &cobra.Command{
+	Use:     "restore [flags] [TYPE] [[DEST=]NAME...]",
+	Aliases: []string{"load"},
+	GroupID: CommandGroupConfig,
+	Short:   "Restore instances from archive",
+	Long:    restoreCmdDescription,
 	Example: strings.ReplaceAll(`
-
-geneos load gateway ABC x.tgz
-
+geneos restore backup.tgz
+geneos restore gateway ABC x.tgz
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -126,16 +126,16 @@ geneos load gateway ABC x.tgz
 		// if no file names are found in args then assume STDIN. later
 		// we could look for named file patterns, if it proves useful
 		if len(files) == 0 {
-			if loadCmdCompression == "" {
+			if restoreCmdCompression == "" {
 				return fmt.Errorf("when reading from STDIN the compression type must be selected using --decompress/-z")
 			}
-			if err = loadFromFile(h, ct, "-", names); err != nil {
+			if err = restoreFromFile(h, ct, "-", names); err != nil {
 				return
 			}
 		} else {
 			for _, f := range files {
 				// process file
-				if err = loadFromFile(h, ct, f, names); err != nil {
+				if err = restoreFromFile(h, ct, f, names); err != nil {
 					return
 				}
 			}
@@ -145,20 +145,20 @@ geneos load gateway ABC x.tgz
 	},
 }
 
-// loadFromFile reads the archive and looks for types ct and names,
+// restoreFromFile reads the archive and looks for types ct and names,
 // which can be in the form "dest=src" to allow renaming instances. If
-// ct is nil then all matching types are loaded and if names it empty
-// then all instances are loaded. Existing instances with matching names
-// are not overwritten.
+// ct is nil then all matching types are restored and if names it empty
+// then all instances are restored. Existing instances with matching
+// names are not overwritten.
 //
 // TODO: shared file control (use flag selector and limit to ct, if not
 // nil)
-func loadFromFile(h *geneos.Host, ct *geneos.Component, archive string, names []string) (err error) {
+func restoreFromFile(h *geneos.Host, ct *geneos.Component, archive string, names []string) (err error) {
 	var tin io.ReadCloser
 	var fileType string
 
 	if archive == "-" {
-		fileType = loadCmdCompression
+		fileType = restoreCmdCompression
 		archive = ""
 	} else {
 		for s, t := range fileTypes {
@@ -209,7 +209,7 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, archive string, names []
 		}
 		defer tin.Close()
 	default:
-		err = fmt.Errorf("unknown decompression type %s", loadCmdCompression)
+		err = fmt.Errorf("unknown decompression type %s", restoreCmdCompression)
 		return
 	}
 
@@ -229,9 +229,9 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, archive string, names []
 	// wildcards are only allowed when no renaming is taking place
 	mapping := map[string]string{}
 
-	loadAll := false
+	restoreAll := false
 	if len(names) == 1 && names[0] == "all" {
-		loadAll = true
+		restoreAll = true
 	} else {
 		for _, name := range names {
 			dest, src, found := strings.Cut(name, "=")
@@ -284,14 +284,14 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, archive string, names []
 		}
 
 		// check for shared directories for given nct and restore if asked to
-		if loadCmdInstanceShared {
+		if restoreCmdInstanceShared {
 			if slices.Contains(nct.SharedDirectories, path.Join(nct.String(), ctDir)) {
 				if ct == nil || ct == nct {
 					if _, ok := processed[nct.String()+":!SHARED"]; !ok {
 						processed[nct.String()+":!SHARED"] = -1
 					}
 					if err = writeSharedFile(h, nct, path.Join(nct.String(), ctDir, rest), tr, hdr); err != nil {
-						if errors.Is(err, os.ErrExist) && loadCmdList {
+						if errors.Is(err, os.ErrExist) && restoreCmdList {
 							// up the count regardless of existence
 							processed[nct.String()+":!SHARED"]++
 						}
@@ -341,8 +341,8 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, archive string, names []
 			continue
 		}
 
-		// otherwise, if "all", load all instances in the archive
-		if loadAll {
+		// otherwise, if "all", restore all instances in the archive
+		if restoreAll {
 			if err = processFile(h, packageCt, i, fp, tr, hdr, processed); err != nil {
 				return
 			}
@@ -358,7 +358,7 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, archive string, names []
 		if name == "!SHARED" {
 			name = "(shared dirs)"
 		}
-		if loadCmdList {
+		if restoreCmdList {
 			fmt.Fprintf(t, "%s\t%s\t%d files/dirs\n", ctName, name, processed[k])
 			continue
 		}
@@ -370,7 +370,7 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, archive string, names []
 			}
 
 		} else {
-			fmt.Fprintf(t, "%s\t%s\tskipped loading\n", ctName, name)
+			fmt.Fprintf(t, "%s\t%s\tskipped restoreing\n", ctName, name)
 		}
 	}
 	t.Flush()
@@ -378,10 +378,10 @@ func loadFromFile(h *geneos.Host, ct *geneos.Component, archive string, names []
 }
 
 func processFile(h *geneos.Host, ct *geneos.Component, i, fp string, tr *tar.Reader, hdr *tar.Header, processed map[string]int) (err error) {
-	// otherwise load all instances in the archive
+	// otherwise restore all instances in the archive
 	if process, ok := processed[ct.String()+":"+i]; ok {
 		if process > 0 {
-			if !loadCmdList {
+			if !restoreCmdList {
 				if err = writeFile(h, ct, i, fp, tr, hdr); err != nil {
 					// if written ok, add one more file
 					return
@@ -393,7 +393,7 @@ func processFile(h *geneos.Host, ct *geneos.Component, i, fp string, tr *tar.Rea
 	}
 
 	// init processed entry, set to 1 if just listing to allow file count
-	if loadCmdList {
+	if restoreCmdList {
 		processed[ct.String()+":"+i] = 1
 		return
 	}
@@ -501,7 +501,7 @@ func writeSharedFile(h *geneos.Host, ct *geneos.Component, fp string, tr *tar.Re
 }
 
 func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, r io.Reader) (err error) {
-	// load config, update parameters for new root dir on dest host, write
+	// restore config, update parameters for new root dir on dest host, write
 	cf, err := config.Load(ct.String(), config.SetConfigReader(r))
 	if err != nil {
 		return err

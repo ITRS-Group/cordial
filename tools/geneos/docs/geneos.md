@@ -71,12 +71,13 @@ The subsystems below group related functions together and have their own sub-com
 | Command / Aliases | Description |
 |-------|-------|
 | [`geneos add`](geneos_add.md)	 | Add a new instance |
+| [`geneos backup / save`](geneos_backup.md)	 | Backup Instances |
 | [`geneos delete / rm`](geneos_delete.md)	 | Delete Instances |
 | [`geneos deploy`](geneos_deploy.md)	 | Deploy a new Geneos instance |
 | [`geneos import`](geneos_import.md)	 | Import Files To Instances Or Components |
-| [`geneos load`](geneos_load.md)	 | Load Instances from archive |
 | [`geneos migrate`](geneos_migrate.md)	 | Migrate Instance Configurations |
 | [`geneos rebuild`](geneos_rebuild.md)	 | Rebuild Instance Configurations From Templates |
+| [`geneos restore / load`](geneos_restore.md)	 | Restore instances from archive |
 | [`geneos revert`](geneos_revert.md)	 | Revert Migrated Instance Configuration |
 | [`geneos set`](geneos_set.md)	 | Set Instance Parameters |
 | [`geneos unset`](geneos_unset.md)	 | Unset Instance Parameters |
