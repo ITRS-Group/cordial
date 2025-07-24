@@ -90,9 +90,9 @@ func RollAESKeyFile(i geneos.Instance, nkv *config.KeyValues, backup string) (ke
 		return WriteAESKeyFile(i, nkv)
 	}
 
-	// read any existing keyfile, backup if suffix given and not in
-	// component shared directory with CRC prefix
-	if backup != "" {
+	// check for any existing keyfile, backup if it exists and suffix
+	// given and not in component shared directory with CRC prefix
+	if _, err := i.Host().Stat(kp); err == nil && backup != "" {
 		ext := path.Ext(kp)
 		basename := strings.TrimSuffix(path.Base(kp), ext)
 		dir := path.Dir(kp)
@@ -104,6 +104,5 @@ func RollAESKeyFile(i geneos.Instance, nkv *config.KeyValues, backup string) (ke
 		// fallthrough
 	}
 
-	keyfile, crc, err = WriteAESKeyFile(i, nkv)
-	return
+	return WriteAESKeyFile(i, nkv)
 }
