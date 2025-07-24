@@ -45,7 +45,6 @@ func init() {
 
 	psCmd.Flags().BoolVarP(&psCmdShowFiles, "files", "f", false, "Show open files")
 	psCmd.Flags().BoolVarP(&psCmdShowNet, "network", "n", false, "Show TCP sockets")
-	psCmd.Flags().MarkHidden("files")
 
 	psCmd.Flags().BoolVarP(&psCmdLong, "long", "l", false, "Show more output (remote ports etc.)")
 
