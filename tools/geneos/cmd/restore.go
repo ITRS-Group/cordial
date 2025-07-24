@@ -44,14 +44,14 @@ import (
 )
 
 var restoreCmdCommon, restoreCmdCompression string
-var restoreCmdInstanceShared, restoreCmdList bool
+var restoreCmdShared, restoreCmdList bool
 
 func init() {
 	GeneosCmd.AddCommand(restoreCmd)
 
-	restoreCmd.Flags().BoolVarP(&restoreCmdInstanceShared, "shared", "s", false, "include shared files")
+	restoreCmd.Flags().BoolVarP(&restoreCmdShared, "shared", "s", false, "include shared files")
 
-	restoreCmd.Flags().StringVarP(&restoreCmdCompression, "decompress", "z", "", "use decompression `type`, one of `gzip`, `bzip2` or `none`\nif not given then the file name is used to guess the type")
+	restoreCmd.Flags().StringVarP(&restoreCmdCompression, "decompress", "z", "", "use decompression `TYPE`, one of `gzip`, `bzip2` or `none`\nif not given then the file name is used to guess the type\nMUST be supplied if the source is stdin (`-`)")
 
 	restoreCmd.Flags().BoolVarP(&restoreCmdList, "list", "l", false, "list the contents of the archive(s)")
 
@@ -87,9 +87,10 @@ geneos restore gateway ABC x.tgz
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		ct, names, params := ParseTypeNamesParams(command)
 
-		if len(args) == 0 {
+		if !restoreCmdList && len(args) == 0 {
 			return command.Usage()
 		}
+
 		// specific host or local, never all
 		h := geneos.NewHost(Hostname)
 		if h == geneos.ALL {
@@ -111,7 +112,6 @@ geneos restore gateway ABC x.tgz
 		// remove host suffixes from args
 		var newnames []string
 		for _, n := range names {
-			log.Debug().Msgf("name: %s", n)
 			h2, _, n2 := instance.Decompose(n, h)
 			if h2 != h {
 				// skip any args that don't match destination host, just in case
@@ -122,6 +122,16 @@ geneos restore gateway ABC x.tgz
 
 		// build final name list from newnames and any params for renamed hosts
 		names = append(newnames, params...)
+
+		if len(names) == 0 {
+			switch {
+			case restoreCmdList || restoreCmdShared:
+				names = []string{"all"}
+			default:
+				return fmt.Errorf("`restore` requires specific instances to restore or `--shared` and/or the wildcard name `all`")
+			}
+
+		}
 
 		// if no file names are found in args then assume STDIN. later
 		// we could look for named file patterns, if it proves useful
@@ -135,6 +145,7 @@ geneos restore gateway ABC x.tgz
 		} else {
 			for _, f := range files {
 				// process file
+				log.Debug().Msgf("checking file %s for ct %s and names %v", f, ct, names)
 				if err = restoreFromFile(h, ct, f, names); err != nil {
 					return
 				}
@@ -217,11 +228,11 @@ func restoreFromFile(h *geneos.Host, ct *geneos.Component, archive string, names
 	// of skipping, to prevent overwrites, to anticipate instances that
 	// are spread out
 
-	// processed - key is type:name and the value is the number of files
+	// sizes - key is type:name and the value is the number of files
 	// written out. Initial value, when type:name is found in archive,
 	// is -1 to indicate destination either not tested or already
 	// exists.
-	processed := map[string]int{}
+	sizes := map[string]int64{}
 
 	// mapping instance names from archive names to potentially new
 	// ones.
@@ -240,7 +251,7 @@ func restoreFromFile(h *geneos.Host, ct *geneos.Component, archive string, names
 					log.Debug().Msgf("invalid instance name format when using DEST=SRC format: %s", name)
 					return geneos.ErrInvalidArgs
 				}
-				mapping[src] = dest
+				mapping[dest] = src
 			} else {
 				mapping[name] = name
 			}
@@ -284,20 +295,20 @@ func restoreFromFile(h *geneos.Host, ct *geneos.Component, archive string, names
 		}
 
 		// check for shared directories for given nct and restore if asked to
-		if restoreCmdInstanceShared {
+		if restoreCmdShared {
 			if slices.Contains(nct.SharedDirectories, path.Join(nct.String(), ctDir)) {
 				if ct == nil || ct == nct {
-					if _, ok := processed[nct.String()+":!SHARED"]; !ok {
-						processed[nct.String()+":!SHARED"] = -1
+					if _, ok := sizes[nct.String()+":!SHARED"]; !ok {
+						sizes[nct.String()+":!SHARED"] = -1
 					}
 					if err = writeSharedFile(h, nct, path.Join(nct.String(), ctDir, rest), tr, hdr); err != nil {
 						if errors.Is(err, os.ErrExist) && restoreCmdList {
-							// up the count regardless of existence
-							processed[nct.String()+":!SHARED"]++
+							// up the count regardless of existence when listing
+							sizes[nct.String()+":!SHARED"] += hdr.Size
 						}
 						continue
 					}
-					processed[nct.String()+":!SHARED"]++
+					sizes[nct.String()+":!SHARED"] += hdr.Size
 					continue
 				}
 			}
@@ -325,14 +336,14 @@ func restoreFromFile(h *geneos.Host, ct *geneos.Component, archive string, names
 				if k == v {
 					if matched, _ := filepath.Match(k, i); matched {
 						// save
-						if err = processFile(h, packageCt, i, fp, tr, hdr, processed); err != nil {
+						if err = processFile(h, packageCt, i, fp, tr, hdr, sizes); err != nil {
 							return
 						}
 					}
 				} else {
-					if k == i {
+					if v == i {
 						// rename and save
-						if err = processFile(h, packageCt, v, fp, tr, hdr, processed); err != nil {
+						if err = processFile(h, packageCt, k, fp, tr, hdr, sizes); err != nil {
 							return
 						}
 					}
@@ -343,7 +354,7 @@ func restoreFromFile(h *geneos.Host, ct *geneos.Component, archive string, names
 
 		// otherwise, if "all", restore all instances in the archive
 		if restoreAll {
-			if err = processFile(h, packageCt, i, fp, tr, hdr, processed); err != nil {
+			if err = processFile(h, packageCt, i, fp, tr, hdr, sizes); err != nil {
 				return
 			}
 		}
@@ -351,35 +362,36 @@ func restoreFromFile(h *geneos.Host, ct *geneos.Component, archive string, names
 
 	fmt.Printf("\n%s:\n\n", archive)
 	t := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-	fmt.Fprintf(t, "Type\tName\tResult\n")
-	for _, k := range slices.Sorted(maps.Keys(processed)) {
+	fmt.Fprintf(t, "Type\tName\tSize\n")
+	for _, k := range slices.Sorted(maps.Keys(sizes)) {
 		ctName, name, _ := strings.Cut(k, ":")
 
 		if name == "!SHARED" {
 			name = "(shared dirs)"
 		}
 		if restoreCmdList {
-			fmt.Fprintf(t, "%s\t%s\t%d files/dirs\n", ctName, name, processed[k])
+			fmt.Fprintf(t, "%s\t%s\t%.3f MiB\n", ctName, name, float64(sizes[k])/(1024*1024))
 			continue
 		}
-		if processed[k] > 0 {
-			if name != mapping[name] {
-				fmt.Fprintf(t, "%s\t%s (%s)\t%d files/dirs\n", ctName, mapping[name], name, processed[k])
+
+		if sizes[k] > -1 {
+			if name != mapping[name] && !restoreAll {
+				fmt.Fprintf(t, "%s\t%s (from %s)\t%.3f MiB\n", ctName, name, mapping[name], float64(sizes[k])/(1024*1024))
 			} else {
-				fmt.Fprintf(t, "%s\t%s\t%d files/dirs\n", ctName, name, processed[k])
+				fmt.Fprintf(t, "%s\t%s\t%.3f MiB\n", ctName, name, float64(sizes[k])/(1024*1024))
 			}
 
 		} else {
-			fmt.Fprintf(t, "%s\t%s\tskipped restoreing\n", ctName, name)
+			fmt.Fprintf(t, "%s\t%s\tskipped restoring\n", ctName, name)
 		}
 	}
 	t.Flush()
 	return
 }
 
-func processFile(h *geneos.Host, ct *geneos.Component, i, fp string, tr *tar.Reader, hdr *tar.Header, processed map[string]int) (err error) {
+func processFile(h *geneos.Host, ct *geneos.Component, i, fp string, tr *tar.Reader, hdr *tar.Header, sizes map[string]int64) (err error) {
 	// otherwise restore all instances in the archive
-	if process, ok := processed[ct.String()+":"+i]; ok {
+	if process, ok := sizes[ct.String()+":"+i]; ok {
 		if process > 0 {
 			if !restoreCmdList {
 				if err = writeFile(h, ct, i, fp, tr, hdr); err != nil {
@@ -387,28 +399,28 @@ func processFile(h *geneos.Host, ct *geneos.Component, i, fp string, tr *tar.Rea
 					return
 				}
 			}
-			processed[ct.String()+":"+i]++
+			sizes[ct.String()+":"+i] += hdr.Size
 		}
 		return
 	}
 
-	// init processed entry, set to 1 if just listing to allow file count
+	// init sizes entry
 	if restoreCmdList {
-		processed[ct.String()+":"+i] = 1
+		sizes[ct.String()+":"+i] = hdr.Size
 		return
 	}
 
 	// otherwise init to -1
-	processed[ct.String()+":"+i] = -1
+	sizes[ct.String()+":"+i] = -1
 
-	// write file and update processed
+	// write file and update sizes
 	if _, err = h.Stat(h.PathTo(ct, ct.String()+"s", i)); err != nil {
 		// instance does not yet exist
 		if err = writeFile(h, ct, i, fp, tr, hdr); err != nil {
 			return
 		}
 		// first file written
-		processed[ct.String()+":"+i] = 1
+		sizes[ct.String()+":"+i] = hdr.Size
 	}
 	return
 }
