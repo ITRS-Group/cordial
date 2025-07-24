@@ -87,6 +87,8 @@ geneos restore gateway ABC x.tgz
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		ct, names, params := ParseTypeNamesParams(command)
 
+		names = append(names, params...)
+
 		if !restoreCmdList && len(args) == 0 {
 			return command.Usage()
 		}
@@ -109,7 +111,10 @@ geneos restore gateway ABC x.tgz
 			return false
 		})
 
+		log.Debug().Msgf("files: %v", files)
+
 		// remove host suffixes from args
+		// TODO rewrite as a slices in-place delete/replace
 		var newnames []string
 		for _, n := range names {
 			h2, _, n2 := instance.Decompose(n, h)
@@ -119,9 +124,7 @@ geneos restore gateway ABC x.tgz
 			}
 			newnames = append(newnames, n2)
 		}
-
-		// build final name list from newnames and any params for renamed hosts
-		names = append(newnames, params...)
+		names = newnames
 
 		if len(names) == 0 {
 			switch {
@@ -260,7 +263,9 @@ func restoreFromFile(h *geneos.Host, ct *geneos.Component, archive string, names
 
 	tr := tar.NewReader(tin)
 	for {
+		var ctSubdir string
 		var hdr *tar.Header
+
 		hdr, err = tr.Next()
 		if err == io.EOF {
 			err = nil
@@ -270,11 +275,13 @@ func restoreFromFile(h *geneos.Host, ct *geneos.Component, archive string, names
 			return
 		}
 
-		filename := hdr.Name
-		if filename, err = geneos.CleanRelativePath(filename); err != nil {
-			return
+		filename, err2 := geneos.CleanRelativePath(hdr.Name)
+		if err2 != nil {
+			return err2
 		}
 
+		// decompose cleaned path, check for component type at top
+		// level, ignore all other dirs
 		ctName, rest, _ := strings.Cut(filename, "/")
 
 		// check ctName is valid and if ct is not nil, filter for a match
@@ -284,24 +291,24 @@ func restoreFromFile(h *geneos.Host, ct *geneos.Component, archive string, names
 			continue
 		}
 
+		// if a component type is wanted, reject others
 		if ct != nil && ct != nct {
 			log.Debug().Msgf("component type does not match: %s != %s, skipping", ct, nct)
 			continue
 		}
 
-		var ctDir string
 		if rest != "" {
-			ctDir, rest, _ = strings.Cut(rest, "/")
+			ctSubdir, rest, _ = strings.Cut(rest, "/")
 		}
 
 		// check for shared directories for given nct and restore if asked to
 		if restoreCmdShared {
-			if slices.Contains(nct.SharedDirectories, path.Join(nct.String(), ctDir)) {
+			if slices.Contains(nct.SharedDirectories, path.Join(nct.String(), ctSubdir)) {
 				if ct == nil || ct == nct {
 					if _, ok := sizes[nct.String()+":!SHARED"]; !ok {
 						sizes[nct.String()+":!SHARED"] = -1
 					}
-					if err = writeSharedFile(h, nct, path.Join(nct.String(), ctDir, rest), tr, hdr); err != nil {
+					if err = writeSharedFile(h, nct, path.Join(nct.String(), ctSubdir, rest), tr, hdr); err != nil {
 						if errors.Is(err, os.ErrExist) && restoreCmdList {
 							// up the count regardless of existence when listing
 							sizes[nct.String()+":!SHARED"] += hdr.Size
@@ -314,13 +321,13 @@ func restoreFromFile(h *geneos.Host, ct *geneos.Component, archive string, names
 			}
 		}
 
-		if !strings.HasSuffix(ctDir, "s") {
+		if !strings.HasSuffix(ctSubdir, "s") {
 			continue
 		}
-		ctDir = strings.TrimSuffix(ctDir, "s")
-		packageCt := geneos.ParseComponent(ctDir)
+		ctSubdir = strings.TrimSuffix(ctSubdir, "s")
+		packageCt := geneos.ParseComponent(ctSubdir)
 
-		if nct != packageCt && nct != packageCt.ParentType {
+		if packageCt == nil || (nct != packageCt && nct != packageCt.ParentType) {
 			log.Debug().Msgf("top-level entry and home entry not matched: %s, skipping", filename)
 			continue
 		}
