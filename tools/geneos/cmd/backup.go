@@ -212,11 +212,15 @@ geneos backup all
 
 		// contents is a list of files so that instances do not duplicate shared contents
 		var contents []string
-		resp := instance.Do(h, ct, names, backupInstance, &contents)
+		resp := instance.Do(h, ct, names, getInstanceFilePaths, &contents)
+
+		out2 := os.Stderr
 		if archive != "-" {
-			resp.Write(os.Stdout)
-		} else {
-			resp.Write(os.Stderr)
+			out2 = os.Stdout
+		}
+		resp.Write(out2)
+		if backupCmdIncludeShared {
+			fmt.Println("matching shared directories also included")
 		}
 
 		slices.Sort(contents)
@@ -287,11 +291,15 @@ geneos backup all
 			}
 		}
 
+		fmt.Fprintln(out2, "archive written to", archive)
 		return nil
 	},
 }
 
-func backupInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
+// getInstanceFilePaths returns a list of paths to backup for the
+// instance and returns the results in the string slice pointer in
+// params[0].
+func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *instance.Response) {
 	var ignoreDirs, ignoreFiles []string
 
 	resp = instance.NewResponse(i)
@@ -361,6 +369,8 @@ func backupInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 		// missing dirs and inaccessible files are probably not errors
 		log.Debug().Err(err).Msg("")
 	}
+
+	resp.Completed = []string{"included in backup"}
 
 	if !backupCmdIncludeShared {
 		return
