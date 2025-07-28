@@ -7,7 +7,7 @@
 
 ### Version v1.22.0 Highlights
 
-* `tools/geneos` - New `save` and `load` commands to help you move and duplicate instances between servers. Originally developed to help set-up standby servers for Geneos Gateways, these commands can be used to make clean backups of one or more instances, selectively including sensitive files like AES key files and certificates with private keys. These can then be restored, optionally remapping names and directories.
+* `tools/geneos` - New `backup` and `restore` commands to help you move and duplicate instances between servers. Originally developed to help set-up standby servers for Geneos Gateways, these commands can be used to make clean backups of one or more instances, selectively including sensitive files like AES key files and certificates with private keys. These can then be restored, optionally remapping instance names.
 
 ### Version v1.22.0 Changes
 
@@ -17,7 +17,7 @@
 
   * Changes to the earlier `cordial-geneos.xml` include file
   
-    * Renaming to `itrs.level0.geneos.cordial.xml` to better align with future projects
+    * Renaming to `itrs.level0.geneos-cordial.xml` to better align with upcoming projects
 
     * Adding more information in the diagnostics views as well as using more conventional row names for the socket view
 
@@ -34,6 +34,8 @@
   * Fixes for the Windows executable to start support local instances. This still needs more work, but it is possible to initialise a directory layout, install packages and start a local Netprobe and Active Console. Work to address the many remaining issues continues.
 
   * As part of the new `save` command implementation the lists of cleaned and purged patterns has been reviews for all component types
+
+  * `geneos aes set --update` will not fail trying to backup a key file that does not exist
 
 ---
 
