@@ -3,7 +3,7 @@
 ## Version v1.22.0
 
 > [!NOTE]
-> **Released 2025-07-18** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2025-07-29** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ### Version v1.22.0 Highlights
 
