@@ -26,8 +26,9 @@ geneos restore [flags] [TYPE] [[DEST=]NAME...]
 
 ```text
   -s, --shared            include shared files
-  -z, --decompress type   use decompression type, one of `gzip`, `bzip2` or `none`
+  -z, --decompress TYPE   use decompression TYPE, one of `gzip`, `bzip2` or `none`
                           if not given then the file name is used to guess the type
+                          MUST be supplied if the source is stdin (`-`)
   -l, --list              list the contents of the archive(s)
 ```
 

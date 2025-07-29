@@ -15,6 +15,7 @@ geneos ps [flags] [TYPE] [NAMES...]
 ### Options
 
 ```text
+  -f, --files     Show open files
   -n, --network   Show TCP sockets
   -l, --long      Show more output (remote ports etc.)
   -j, --json      Output JSON
