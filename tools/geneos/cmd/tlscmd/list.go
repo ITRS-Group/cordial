@@ -488,7 +488,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 		fmt.Fprintln(listTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tValid\tCertificateFile\tPrivateKeyFile\tChainFile\tIssuer\tSubjAltNames\tIPs\tFingerprint")
 		if listCmdAll {
 			if rootCert != nil {
-				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t%q\t\t\t%X\n",
+				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t%q\t%q\t\t\t%X\n",
 					geneos.RootCABasename,
 					geneos.LOCALHOST,
 					time.Until(rootCert.NotAfter).Seconds(),
@@ -496,13 +496,12 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					rootCert.Subject.CommonName,
 					verifyCert(rootCert),
 					rootCertFile,
-					"",
 					rootCertFile,
 					rootCert.Issuer.CommonName,
 					sha1.Sum(rootCert.Raw))
 			}
 			if geneosCert != nil {
-				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t%q\t\t\t%X\n",
+				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t%q\t%q\t\t\t%X\n",
 					geneos.SigningCertBasename,
 					geneos.LOCALHOST,
 					time.Until(geneosCert.NotAfter).Seconds(),
@@ -510,7 +509,6 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					geneosCert.Subject.CommonName,
 					verifyCert(geneosCert),
 					geneosCertFile,
-					"",
 					rootCertFile,
 					geneosCert.Issuer.CommonName,
 					sha1.Sum(geneosCert.Raw))
@@ -536,11 +534,17 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) 
 	}
 
 	expires := cert.NotAfter
-	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%.f\t%q\t%q\t%v\t", i.Type(), i.Name(), i.Host(), time.Until(expires).Seconds(), expires.Format(time.RFC3339), cert.Subject.CommonName, valid)
+	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%.f\t%q\t%q\t%v\t",
+		i.Type(),
+		i.Name(),
+		i.Host(),
+		time.Until(expires).Seconds(),
+		expires.Format(time.RFC3339),
+		cert.Subject.CommonName,
+		valid)
 
 	if listCmdLong {
-		resp.Line += fmt.Sprintf("%q\t", chainfile)
-		resp.Line += fmt.Sprintf("%q\t", cert.Issuer.CommonName)
+		resp.Line += fmt.Sprintf("%q\t%q\t%q\t%q\t", i.Config().GetString("certificate"), i.Config().GetString("privatekey"), chainfile, cert.Issuer.CommonName)
 		if len(cert.DNSNames) > 0 {
 			resp.Line += fmt.Sprint(cert.DNSNames)
 		}

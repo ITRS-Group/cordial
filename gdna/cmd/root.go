@@ -23,7 +23,6 @@ import (
 	"os"
 	dbg "runtime/debug"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -175,10 +174,10 @@ func initConfig(cmd *cobra.Command) {
 	log.Debug().Msg(deferredlog)
 }
 
-func configReloaded(_ fsnotify.Event) {
-	// XXX protect this
-	cf = nil
-	initConfig(nil)
-	log.Info().Msg("config reloaded")
-	updateJobs()
-}
+// func configReloaded(_ fsnotify.Event) {
+// 	// XXX protect this
+// 	cf = nil
+// 	initConfig(nil)
+// 	log.Info().Msg("config reloaded")
+// 	updateJobs()
+// }

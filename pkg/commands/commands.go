@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -178,7 +179,7 @@ func (c *Connection) Redial() (err error) {
 		}
 		errs = append(errs, fmt.Sprintf("gateway %q: %s", u, err))
 	}
-	return fmt.Errorf(strings.Join(errs, "\n"))
+	return errors.New(strings.Join(errs, "\n"))
 }
 
 // Do executes command on the REST endpoint, return the http response
@@ -226,7 +227,7 @@ func (c *Connection) Do(endpoint string, command *Command) (response CommandResp
 		}
 		response.Status = "error"
 		response.Stderr = geneosError.Error
-		err = fmt.Errorf(resp.Status)
+		err = errors.New(resp.Status)
 		return
 	}
 

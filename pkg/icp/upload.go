@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 
 	"github.com/google/go-querystring/query"
 )
@@ -30,16 +29,13 @@ func (i *ICP) Upload(ctx context.Context, request UploadRequest, filename string
 	// this does not use normal Post method, it uses query parameters
 	// and sends a file as the body
 
-	if icp.token != "" {
+	if icp.token == "" {
 		err = errors.New("auth token required")
 		return
 	}
 
-	dest, err := url.JoinPath(icp.BaseURL, UploadEndpoint)
-	if err != nil {
-		return
-	}
-	req, err := http.NewRequestWithContext(ctx, "POST", dest, body)
+	dest := icp.BaseURL.JoinPath(UploadEndpoint)
+	req, err := http.NewRequestWithContext(ctx, "POST", dest.String(), body)
 	if err != nil {
 		return
 	}
