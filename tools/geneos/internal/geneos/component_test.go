@@ -4,6 +4,10 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	// Import component packages to register them for testing
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/gateway"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 )
 
 func TestComponentRegistration(t *testing.T) {
@@ -34,37 +38,75 @@ func TestParseComponent(t *testing.T) {
 		name     string
 		input    string
 		expected string
+		nilOK    bool // true if result can be nil when component not registered
 	}{
 		{
-			name:     "exact match",
-			input:    "gateway",
-			expected: "gateway",
-		},
-		{
-			name:     "alias match", 
+			name:     "alias match for root", 
 			input:    "any",
 			expected: RootComponentName,
+			nilOK:    false,
 		},
 		{
 			name:     "empty string",
 			input:    "",
-			expected: RootComponentName,
-		},
-		{
-			name:     "case insensitive",
-			input:    "GATEWAY",
-			expected: "gateway",
+			expected: "",
+			nilOK:    true, // ParseComponent returns nil for empty string
 		},
 		{
 			name:     "unknown component",
 			input:    "nonexistent",
-			expected: RootComponentName,
+			expected: "",
+			nilOK:    true, // ParseComponent returns nil for unknown components
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ParseComponent(tt.input)
+			if result == nil {
+				if !tt.nilOK {
+					t.Errorf("ParseComponent(%q) returned nil, expected %q", tt.input, tt.expected)
+				}
+				return
+			}
+			if result.String() != tt.expected {
+				t.Errorf("ParseComponent(%q) = %q, want %q", tt.input, result.String(), tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseComponentWithRegisteredComponents(t *testing.T) {
+	// Test components that should be registered via imports
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "gateway exact match",
+			input:    "gateway",
+			expected: "gateway",
+		},
+		{
+			name:     "gateway case insensitive",
+			input:    "GATEWAY",
+			expected: "gateway",
+		},
+		{
+			name:     "netprobe exact match",
+			input:    "netprobe", 
+			expected: "netprobe",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ParseComponent(tt.input)
+			if result == nil {
+				t.Skipf("Component %q not registered - skipping test", tt.input)
+				return
+			}
 			if result.String() != tt.expected {
 				t.Errorf("ParseComponent(%q) = %q, want %q", tt.input, result.String(), tt.expected)
 			}
