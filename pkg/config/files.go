@@ -96,7 +96,8 @@ func PromoteFile(r host.Host, paths ...string) (final string) {
 // AbbreviateHome replaces the user's home directory prefix on path p
 // with `~/` and cleans the result. If the home directory is not
 // present, or there is an error resolving it, then a cleaned copy of
-// the original string is returned.
+// the original string is returned. If the result is am empty string,
+// return "."
 func AbbreviateHome(p string) string {
 	home, err := UserHomeDir()
 	if err != nil {

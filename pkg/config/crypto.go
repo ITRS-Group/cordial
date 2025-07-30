@@ -90,7 +90,8 @@ func (secret *Plaintext) Type() string {
 	return "PLAINTEXT"
 }
 
-// NewPlaintext returns a memguard Enclave initialised with buf
+// NewPlaintext returns a memguard Enclave initialised with buf. The
+// contents of buf are destroyed.
 func NewPlaintext(buf []byte) *Plaintext {
 	return &Plaintext{memguard.NewEnclave(buf)}
 }

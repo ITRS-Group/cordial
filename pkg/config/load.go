@@ -84,6 +84,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		}
 	} else {
 		cf = New(options...)
+		cf.Type = opts.extension
 	}
 
 	// return first error after initialising the config structure.
