@@ -186,9 +186,9 @@ func TrimPrefix() ExpandOptions {
 // TrimSpace enables the removal of leading and trailing spaces on all
 // values in an expansion. The default is `true`. If a default
 // value is given using the Default() then this is never trimmed.
-func TrimSpace(yes bool) ExpandOptions {
+func TrimSpace(trim bool) ExpandOptions {
 	return func(e *expandOptions) {
-		e.trimSpace = yes
+		e.trimSpace = trim
 	}
 }
 

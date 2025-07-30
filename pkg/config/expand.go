@@ -321,12 +321,12 @@ func (c *Config) ExpandToEnclave(input string, options ...ExpandOptions) (value 
 
 		// fallback to any default value or, failing that, an initial value
 		if opts.defaultValue != nil {
-			return memguard.NewEnclave([]byte(fmt.Sprint(opts.defaultValue)))
+			return memguard.NewEnclave(fmt.Append(nil, opts.defaultValue))
 		} else if opts.initialValue != nil {
 			if b, ok := opts.initialValue.([]byte); ok {
 				return memguard.NewEnclave(b)
 			} else {
-				return memguard.NewEnclave([]byte(fmt.Sprint(opts.initialValue)))
+				return memguard.NewEnclave(fmt.Append(nil, opts.initialValue))
 			}
 		}
 		return &memguard.Enclave{}
@@ -339,7 +339,7 @@ func (c *Config) ExpandToEnclave(input string, options ...ExpandOptions) (value 
 	value = expandToEnclave([]byte(input), func(s []byte) (r *memguard.Enclave) {
 		if bytes.HasPrefix(s, []byte("enc:")) {
 			if opts.nodecode {
-				return memguard.NewEnclave(fmt.Append([]byte{}, `${`, s, `}`))
+				return memguard.NewEnclave(fmt.Append(nil, `${`, s, `}`))
 			}
 			return c.expandEncodedBytesEnclave(s[4:], options...)
 		}
@@ -348,7 +348,7 @@ func (c *Config) ExpandToEnclave(input string, options ...ExpandOptions) (value 
 	})
 
 	if value == nil || value.Size() == 0 {
-		// return a *copy* of the defaultvalue, don't let memguard wipe it!
+		// return a *copy* of the defaultValue, don't let memguard wipe it!
 		return memguard.NewEnclave([]byte(fmt.Sprint(opts.defaultValue)))
 	}
 
@@ -792,13 +792,19 @@ func expand(s string, mapping func(string) string) string {
 			}
 			buf = append(buf, s[i:j]...)
 			name, w := getContents(s[j+1:])
-			if name == "" && w > 0 {
-				// Encountered invalid syntax; eat the
-				// characters.
-			} else if name == "" {
-				// Valid syntax, but $ was not followed by a
-				// name. Leave the dollar character untouched.
-				buf = append(buf, s[j])
+			if name == "" {
+				if w == 1 {
+					// if invalid after opening `${` then return them
+					// unchanged
+					buf = append(buf, s[j:j+2]...)
+				} else if w > 0 {
+					// Encountered invalid syntax; eat the
+					// characters.
+				} else {
+					// Valid syntax, but $ was not followed by a
+					// name. Leave the dollar character untouched.
+					buf = append(buf, s[j])
+				}
 			} else {
 				buf = append(buf, mapping(name)...)
 			}
@@ -824,13 +830,19 @@ func expandBytes(s []byte, mapping func([]byte) []byte) []byte {
 			}
 			buf = append(buf, s[i:j]...)
 			name, w := getContents(string(s[j+1:]))
-			if name == "" && w > 0 {
-				// Encountered invalid syntax; eat the
-				// characters.
-			} else if name == "" {
-				// Valid syntax, but $ was not followed by a
-				// name. Leave the dollar character untouched.
-				buf = append(buf, s[j])
+			if name == "" {
+				if w == 1 {
+					// if invalid after opening `${` then return them
+					// unchanged
+					buf = append(buf, s[j:j+2]...)
+				} else if w > 0 {
+					// Encountered invalid syntax; eat the
+					// characters.
+				} else {
+					// Valid syntax, but $ was not followed by a
+					// name. Leave the dollar character untouched.
+					buf = append(buf, s[j])
+				}
 			} else {
 				buf = append(buf, mapping([]byte(name))...)
 			}
@@ -855,13 +867,19 @@ func expandToEnclave(s []byte, mapping func([]byte) *memguard.Enclave) *memguard
 			}
 			buf = append(buf, s[i:j]...)
 			name, w := getContents(string(s[j+1:]))
-			if name == "" && w > 0 {
-				// Encountered invalid syntax; eat the
-				// characters.
-			} else if name == "" {
-				// Valid syntax, but $ was not followed by a
-				// name. Leave the dollar character untouched.
-				buf = append(buf, s[j])
+			if name == "" {
+				if w == 1 {
+					// if invalid after opening `${` then return them
+					// unchanged
+					buf = append(buf, s[j:j+2]...)
+				} else if w > 0 {
+					// Encountered invalid syntax; eat the
+					// characters.
+				} else {
+					// Valid syntax, but $ was not followed by a
+					// name. Leave the dollar character untouched.
+					buf = append(buf, s[j])
+				}
 			} else {
 				e := mapping([]byte(name))
 				if e != nil {
@@ -894,13 +912,19 @@ func expandToLockedBuffer(s []byte, mapping func([]byte) *memguard.LockedBuffer)
 			}
 			buf = append(buf, s[i:j]...)
 			name, w := getContents(string(s[j+1:]))
-			if name == "" && w > 0 {
-				// Encountered invalid syntax; eat the
-				// characters.
-			} else if name == "" {
-				// Valid syntax, but $ was not followed by a
-				// name. Leave the dollar character untouched.
-				buf = append(buf, s[j])
+			if name == "" {
+				if w == 1 {
+					// if invalid after opening `${` then return them
+					// unchanged
+					buf = append(buf, s[j:j+2]...)
+				} else if w > 0 {
+					// Encountered invalid syntax; eat the
+					// characters.
+				} else {
+					// Valid syntax, but $ was not followed by a
+					// name. Leave the dollar character untouched.
+					buf = append(buf, s[j])
+				}
 			} else {
 				e := mapping([]byte(name))
 				if e != nil {
@@ -939,11 +963,6 @@ func getContents(s string) (string, int) {
 		// skip
 		return "", 0
 	}
-
-	// * not required
-	// if len(s) > 2 && isShellSpecialVar(s[1]) && s[2] == '}' {
-	// 	return s[1:2], 3
-	// }
 
 	// Scan to closing brace, skipping backslash+next and stacking opening braces
 	var depth int
