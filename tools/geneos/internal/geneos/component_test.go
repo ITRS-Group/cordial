@@ -80,7 +80,7 @@ func TestComponentString(t *testing.T) {
 	}
 }
 
-func TestComponentRealName(t *testing.T) {
+func TestComponentName(t *testing.T) {
 	tests := []struct {
 		name      string
 		component *Component
@@ -89,7 +89,7 @@ func TestComponentRealName(t *testing.T) {
 		{
 			name:      "root component",
 			component: &RootComponent,
-			expected:  "",
+			expected:  RootComponentName,
 		},
 		{
 			name: "regular component",
@@ -98,13 +98,18 @@ func TestComponentRealName(t *testing.T) {
 			},
 			expected: "gateway",
 		},
+		{
+			name: "nil component",
+			component: nil,
+			expected: "",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.component.RealName()
+			result := tt.component.String()
 			if result != tt.expected {
-				t.Errorf("Component.RealName() = %q, want %q", result, tt.expected)
+				t.Errorf("Component.String() = %q, want %q", result, tt.expected)
 			}
 		})
 	}

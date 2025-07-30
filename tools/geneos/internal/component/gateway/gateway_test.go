@@ -69,16 +69,23 @@ func TestGatewayComponentFields(t *testing.T) {
 func TestGatewayComponentMethods(t *testing.T) {
 	component := geneos.ParseComponent("gateway")
 	
-	// Test RealName method
-	realName := component.RealName()
-	if realName != "gateway" {
-		t.Errorf("Gateway RealName() = %q, want %q", realName, "gateway")
-	}
-	
 	// Test String method
 	stringName := component.String()
 	if stringName != "gateway" {
 		t.Errorf("Gateway String() = %q, want %q", stringName, "gateway")
+	}
+	
+	// Test IsA method
+	if !component.IsA("gateway") {
+		t.Error("Gateway component should match its own name")
+	}
+	
+	if !component.IsA("GATEWAY") {
+		t.Error("Gateway IsA should be case-insensitive")
+	}
+	
+	if component.IsA("netprobe") {
+		t.Error("Gateway should not match different component name")
 	}
 }
 
