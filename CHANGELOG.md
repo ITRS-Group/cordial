@@ -1,5 +1,22 @@
 # Change Log
 
+## Version v1.22.1-dev
+
+> [!NOTE]
+> **Released 2025-07-30** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v1.22.0 Changes
+
+* Added tests to `pkg/config`, `pkg/host` and `tools/geneos` based on cases created by Cursor, but hand reviewed and edited to suit
+
+### Version v.1.22.0 Fixes
+
+* `integrations/servicenow2` - add missing code to load table defaults on the proxy side. Fixes missing default values for items that are not the default cmdb ID.
+
+* `pkg/config` - fix string expansion edge-cases identified by newly added tests
+
+---
+
 ## Version v1.22.0
 
 > [!NOTE]
