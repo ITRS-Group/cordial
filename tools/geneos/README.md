@@ -1,51 +1,73 @@
 # `geneos`
 
-The `geneos` program will help you manage your Geneos environment.
+The `geneos` command-line tool is your modern, unified solution for managing ITRS Geneos environments. It replaces older tools like `gatewayctl` and `netprobectl` with a single, intuitive interface.
 
-The reference documentation, included in the program as help text, for all commands and their options is [here](docs/geneos.md)
+## Quick Links
+
+📚 **New to geneos?** → Start with the [Getting Started Guide](GETTING_STARTED.md) (10 minutes)  
+📖 **Ready to dive deeper?** → Read the [User Guide](USER_GUIDE.md) (comprehensive workflows)  
+📋 **Need command reference?** → Check the [Quick Reference](QUICKREFGUIDE.md) (cheat sheet)  
+🚀 **Want examples?** → Browse [Usage Examples](USAGE.md) (real-world scenarios)  
+🗂️ **Not sure which guide?** → Check the [Documentation Index](DOCUMENTATION.md) (find the right guide)
 
 > [!IMPORTANT]
 >
 > `geneos` is currently unable to manage ARM 64 releases as seen with Geneos 7.1. There is also a chance that installation or upgrade of existing `gateway` and `licd` packages on **RHEL9** (only) could result in an `aarch64` package being installed. We are working on ensuring this is not possible and will release a patch ASAP.
 
-## Aims
+## Why Use geneos?
 
-* To make your life easier; at least the Geneos part
-* Keep it simple through the [Principle of least astonishment](https://en.wikipedia.org/wiki/Principle_of_least_astonishment)
-* Help you use automation tools with Geneos
+### 🎯 **Simplified Management**
+- **One tool** for all Geneos components (Gateways, Netprobes, License Daemons, etc.)
+- **Consistent syntax** across all operations
+- **Intuitive commands** that follow the [Principle of least astonishment](https://en.wikipedia.org/wiki/Principle_of_least_astonishment)
 
-## Features
+### 🚀 **Powerful Features**
+- **Remote Operations**: Manage instances across multiple servers from one location
+- **Legacy Compatible**: Works with existing installations and emulates older commands
+- **Automation-Ready**: Designed for scripting and integration with automation tools
+- **Template-Driven**: Deploy consistent configurations across environments
 
-* Initialise a new installation with a single command
-* Download, install and update Geneos software
-* Adopt an existing installation created using older tools
-* Operate Geneos across a group of servers with a single command
-* Manage certificates for Secure Connections (TLS) between Geneos components
-* Create Geneos compatible AES256 encoded passwords and manage other credentials
-* Change instance settings from the command line
-* Simple installation of Self-Announcing and Floating Netprobes
+### ✨ **Key Capabilities**
+- Initialize new installations with a single command
+- Download, install and update Geneos software
+- Adopt existing installations created with older tools
+- Manage certificates for secure TLS connections
+- Create AES256 encoded passwords and manage credentials
+- Deploy Self-Announcing and Floating Netprobes
 
-## Getting Started
+## Quick Start
 
-First download the [latest binary](https://github.com/ITRS-Group/cordial/releases) to your user's `bin` directory and make it executable
-
+### Installation
 ```bash
+# Download the latest version
 mkdir -p ${HOME}/bin && cd ${HOME}/bin
 curl -OL https://github.com/ITRS-Group/cordial/releases/latest/download/geneos
 chmod +x ./geneos
+
+# Add to PATH
+export PATH="$HOME/bin:$PATH"
+
+# Verify installation
+geneos version
 ```
 
-You can also build from source. For more details see the [Installation](INSTALL.md#installation) documentation.
-
-If you are on a system (or in a container) without an existing Geneos installation and with Internet access, you can try this:
-
+### First Steps
 ```bash
-geneos init demo -u email@example.com
+# If you have existing Geneos installation
+geneos config set geneos=/opt/itrs    # Point to your installation
+geneos list                          # See what's configured
+geneos ps                           # See what's running
+
+# If starting fresh (requires ITRS account)
+geneos init demo -u your-email@example.com
 ```
 
-You will be prompted for your download password and then, after a short while, you will have a running Geneos Demo environment.
+> 💡 Replace `your-email@example.com` with your registered email for downloading ITRS software. If you need to register [go here](https://www.itrsgroup.com/?register=1)
 
-> 💡 Replace `email@example.com` with your registered email for downloading ITRS software. If you need to register [go here](https://www.itrsgroup.com/?register=1)
+### Next Steps
+- **Beginners**: Follow the [Getting Started Guide](GETTING_STARTED.md) for a 10-minute walkthrough
+- **Experienced users**: Jump into the [User Guide](USER_GUIDE.md) for comprehensive workflows
+- **Quick reference**: Bookmark the [Quick Reference Guide](QUICKREFGUIDE.md) for daily use
 
 ### Adopting An Existing Installation
 
