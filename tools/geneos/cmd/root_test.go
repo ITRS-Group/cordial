@@ -259,7 +259,7 @@ func TestGlobalVariables(t *testing.T) {
 	}
 
 	// Test that UserKeyFile is initialized
-	if UserKeyFile == nil {
+	if UserKeyFile == "" {
 		t.Error("UserKeyFile should be initialized")
 	}
 }

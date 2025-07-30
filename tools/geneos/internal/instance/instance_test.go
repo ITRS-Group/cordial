@@ -1,8 +1,6 @@
 package instance
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -11,10 +9,13 @@ import (
 )
 
 func TestInstanceCreation(t *testing.T) {
+	// Create a test host (LOCAL may not be initialized in tests)
+	testHost := geneos.NewHost("localhost")
+	
 	// Test creating a new instance
 	instance := &Instance{
 		Conf:         config.New(),
-		InstanceHost: geneos.LOCAL,
+		InstanceHost: testHost,
 		Component:    &geneos.RootComponent,
 		ConfigLoaded: time.Now(),
 	}
@@ -46,7 +47,7 @@ func TestInstanceValidation(t *testing.T) {
 			name: "valid instance",
 			instance: &Instance{
 				Conf:         config.New(),
-				InstanceHost: geneos.LOCAL,
+				InstanceHost: geneos.NewHost("localhost"),
 				Component:    &geneos.RootComponent,
 				ConfigLoaded: time.Now(),
 			},
@@ -56,7 +57,7 @@ func TestInstanceValidation(t *testing.T) {
 			name: "instance with nil config",
 			instance: &Instance{
 				Conf:         nil,
-				InstanceHost: geneos.LOCAL,
+				InstanceHost: geneos.NewHost("localhost"),
 				Component:    &geneos.RootComponent,
 				ConfigLoaded: time.Now(),
 			},
@@ -76,7 +77,7 @@ func TestInstanceValidation(t *testing.T) {
 			name: "instance with nil component",
 			instance: &Instance{
 				Conf:         config.New(),
-				InstanceHost: geneos.LOCAL,
+				InstanceHost: geneos.NewHost("localhost"),
 				Component:    nil,
 				ConfigLoaded: time.Now(),
 			},
@@ -172,7 +173,7 @@ func TestInstanceWithRealComponent(t *testing.T) {
 
 	instance := &Instance{
 		Conf:         config.New(),
-		InstanceHost: geneos.LOCAL,
+		InstanceHost: geneos.NewHost("localhost"),
 		Component:    component,
 		ConfigLoaded: time.Now(),
 	}
@@ -205,13 +206,11 @@ func TestInstanceConfigModification(t *testing.T) {
 }
 
 func TestInstanceHostOperations(t *testing.T) {
-	// Test basic host operations
-	if geneos.LOCAL == nil {
-		t.Skip("LOCAL host not available")
-	}
-
+	// Test basic host operations with a test host
+	testHost := geneos.NewHost("localhost")
+	
 	instance := &Instance{
-		InstanceHost: geneos.LOCAL,
+		InstanceHost: testHost,
 	}
 
 	// Test that host is accessible
@@ -280,7 +279,7 @@ func TestInstancePointerOperations(t *testing.T) {
 	// Test operations with instance pointers
 	instance := &Instance{
 		Conf:         config.New(),
-		InstanceHost: geneos.LOCAL,
+		InstanceHost: geneos.NewHost("localhost"),
 		Component:    &geneos.RootComponent,
 		ConfigLoaded: time.Now(),
 	}

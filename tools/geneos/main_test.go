@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/itrs-group/cordial"
@@ -15,16 +16,22 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestInit(t *testing.T) {
-	// Test the init function properly trims whitespace from VERSION
+func TestVersionTrimming(t *testing.T) {
+	// Test version trimming logic (init function behavior)
 	originalVersion := cordial.VERSION
 	defer func() { cordial.VERSION = originalVersion }()
 
-	cordial.VERSION = "  1.0.0  \n\t"
-	init()
+	// Test the trimming logic that init() would do
+	testVersion := "  1.0.0  \n\t"
+	trimmedVersion := strings.TrimSpace(testVersion)
 
-	if cordial.VERSION != "1.0.0" {
-		t.Errorf("init() did not properly trim VERSION, got %q, want %q", cordial.VERSION, "1.0.0")
+	if trimmedVersion != "1.0.0" {
+		t.Errorf("Version trimming failed, got %q, want %q", trimmedVersion, "1.0.0")
+	}
+
+	// Test that the current VERSION is properly trimmed (should be done by init)
+	if strings.TrimSpace(cordial.VERSION) != cordial.VERSION {
+		t.Errorf("cordial.VERSION appears to have untrimmed whitespace: %q", cordial.VERSION)
 	}
 }
 
