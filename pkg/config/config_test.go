@@ -67,7 +67,7 @@ func TestNew(t *testing.T) {
 func TestGetConfig(t *testing.T) {
 	// Reset global config for testing
 	ResetConfig()
-	
+
 	got := GetConfig()
 	if got == nil {
 		t.Fatal("GetConfig() returned nil")
@@ -90,13 +90,13 @@ func TestResetConfig(t *testing.T) {
 
 	// Reset config
 	ResetConfig()
-	
+
 	// Should be a different instance but preserve settings
 	newConfig := GetConfig()
 	if original == newConfig {
 		t.Error("ResetConfig() should create a new instance")
 	}
-	
+
 	if newConfig.GetString("test.key") != "test.value" {
 		t.Error("ResetConfig() should preserve existing settings")
 	}
@@ -105,11 +105,11 @@ func TestResetConfig(t *testing.T) {
 func TestAppConfigDir(t *testing.T) {
 	config := New(SetAppName("testapp"))
 	dir := config.AppConfigDir()
-	
+
 	if dir == "" {
 		t.Error("AppConfigDir() returned empty string")
 	}
-	
+
 	if !strings.Contains(dir, "testapp") {
 		t.Errorf("AppConfigDir() = %q, should contain 'testapp'", dir)
 	}
@@ -177,7 +177,7 @@ func TestDelimiter(t *testing.T) {
 			} else {
 				config = New(KeyDelimiter(tt.delimiter))
 			}
-			
+
 			got := config.Delimiter()
 			if got != tt.delimiter {
 				t.Errorf("Delimiter() = %q, want %q", got, tt.delimiter)
@@ -191,26 +191,26 @@ func TestSub(t *testing.T) {
 	config.Set("database.host", "localhost")
 	config.Set("database.port", 5432)
 	config.Set("database.ssl.enabled", true)
-	
+
 	sub := config.Sub("database")
 	if sub == nil {
 		t.Fatal("Sub() returned nil")
 	}
-	
+
 	if sub.GetString("host") != "localhost" {
 		t.Errorf("Sub config host = %q, want 'localhost'", sub.GetString("host"))
 	}
-	
+
 	if sub.GetInt("port") != 5432 {
 		t.Errorf("Sub config port = %d, want 5432", sub.GetInt("port"))
 	}
-	
+
 	// Test sub of sub
 	sslSub := sub.Sub("ssl")
 	if !sslSub.GetBool("enabled") {
 		t.Error("Sub of sub should return correct value")
 	}
-	
+
 	// Test non-existent key returns empty config, not nil
 	emptySub := config.Sub("nonexistent")
 	if emptySub == nil {
@@ -220,25 +220,25 @@ func TestSub(t *testing.T) {
 
 func TestConfigSetGet(t *testing.T) {
 	config := New()
-	
+
 	// Test string
 	config.Set("string.key", "test value")
 	if got := config.GetString("string.key"); got != "test value" {
 		t.Errorf("GetString() = %q, want 'test value'", got)
 	}
-	
+
 	// Test int
 	config.Set("int.key", 42)
 	if got := config.GetInt("int.key"); got != 42 {
 		t.Errorf("GetInt() = %d, want 42", got)
 	}
-	
+
 	// Test bool
 	config.Set("bool.key", true)
 	if got := config.GetBool("bool.key"); got != true {
 		t.Errorf("GetBool() = %t, want true", got)
 	}
-	
+
 	// Test slice
 	testSlice := []string{"a", "b", "c"}
 	config.Set("slice.key", testSlice)
@@ -251,22 +251,22 @@ func TestConfigMerge(t *testing.T) {
 	config1 := New()
 	config1.Set("key1", "value1")
 	config1.Set("shared", "from_config1")
-	
+
 	config2 := New()
 	config2.Set("key2", "value2")
 	config2.Set("shared", "from_config2")
-	
+
 	// Test merge
 	config1.MergeConfigMap(config2.AllSettings())
-	
+
 	if config1.GetString("key1") != "value1" {
 		t.Error("Merge should preserve original values")
 	}
-	
+
 	if config1.GetString("key2") != "value2" {
 		t.Error("Merge should add new values")
 	}
-	
+
 	if config1.GetString("shared") != "from_config2" {
 		t.Error("Merge should override with new values")
 	}
@@ -278,11 +278,11 @@ func TestUserConfigDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UserConfigDir() failed: %v", err)
 	}
-	
+
 	if dir == "" {
 		t.Error("UserConfigDir() returned empty string")
 	}
-	
+
 	// Test that the directory is absolute
 	if !filepath.IsAbs(dir) {
 		t.Errorf("UserConfigDir() = %q, should be absolute path", dir)
@@ -293,9 +293,9 @@ func TestConfigWithEnv(t *testing.T) {
 	// Set test environment variable
 	os.Setenv("TEST_CONFIG_VAR", "env_value")
 	defer os.Unsetenv("TEST_CONFIG_VAR")
-	
+
 	config := New(WithEnvs("TEST", "_"))
-	
+
 	// Should be able to get env var through config
 	if got := config.GetString("CONFIG.VAR"); got != "env_value" {
 		t.Errorf("GetString() from env = %q, want 'env_value'", got)
@@ -305,20 +305,20 @@ func TestConfigWithEnv(t *testing.T) {
 func TestGlobalFunctions(t *testing.T) {
 	// Test that global functions work
 	ResetConfig()
-	
+
 	// Test Join
 	joined := Join("a", "b", "c")
 	expected := "a.b.c"
 	if joined != expected {
 		t.Errorf("Join() = %q, want %q", joined, expected)
 	}
-	
+
 	// Test Delimiter
 	delimiter := Delimiter()
 	if delimiter != "." {
 		t.Errorf("Delimiter() = %q, want '.'", delimiter)
 	}
-	
+
 	// Test AppConfigDir
 	dir := AppConfigDir()
 	// Should not be empty unless there's an error

@@ -49,14 +49,14 @@ func TestCredentials(t *testing.T) {
 }
 
 func TestFindCreds(t *testing.T) {
-	config := New()
+	config := New(KeyDelimiter("::"))
 
 	// Set up test credentials
-	config.Set("credentials.example.com.username", "user1")
-	config.Set("credentials.example.com.password", "pass1")
-	config.Set("credentials.sub.example.com.username", "user2")
-	config.Set("credentials.sub.example.com.password", "pass2")
-	config.Set("credentials.other.com.username", "user3")
+	config.Set("credentials::example.com::username", "user1")
+	config.Set("credentials::example.com::password", "pass1")
+	config.Set("credentials::sub.example.com::username", "user2")
+	config.Set("credentials::sub.example.com::password", "pass2")
+	config.Set("credentials::other.com::username", "user3")
 
 	tests := []struct {
 		name     string
@@ -287,14 +287,14 @@ func TestCredentialsEmptyDomain(t *testing.T) {
 }
 
 func TestCredentialsComplexDomains(t *testing.T) {
-	config := New()
+	config := New(KeyDelimiter("::"))
 
 	// Set up credentials for various domain patterns
-	config.Set("credentials.api.service.company.com.username", "api_user")
-	config.Set("credentials.service.company.com.username", "service_user")
-	config.Set("credentials.company.com.username", "company_user")
-	config.Set("credentials.localhost:8080.username", "local_user")
-	config.Set("credentials.192.168.1.100.username", "ip_user")
+	config.Set("credentials::api.service.company.com::username", "api_user")
+	config.Set("credentials::service.company.com::username", "service_user")
+	config.Set("credentials::company.com::username", "company_user")
+	config.Set("credentials::localhost:8080::username", "local_user")
+	config.Set("credentials::192.168.1.100::username", "ip_user")
 
 	tests := []struct {
 		name     string
@@ -348,11 +348,11 @@ func TestCredentialsComplexDomains(t *testing.T) {
 }
 
 func TestCredentialsPartialMatches(t *testing.T) {
-	config := New()
+	config := New(KeyDelimiter("::"))
 
 	// Set up some test credentials
-	config.Set("credentials.example.com.username", "example_user")
-	config.Set("credentials.test.example.com.username", "test_user")
+	config.Set("credentials::example.com::username", "example_user")
+	config.Set("credentials::test.example.com::username", "test_user")
 
 	// Test partial domain matching
 	creds := config.FindCreds("sub.test.example.com")

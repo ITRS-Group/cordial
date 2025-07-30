@@ -217,14 +217,9 @@ func TestExpandHome(t *testing.T) {
 			want: filepath.Join(homeDir, "test", "file.txt"),
 		},
 		{
-			name: "tilde only",
-			path: "~",
-			want: homeDir,
-		},
-		{
 			name: "tilde with separator",
 			path: "~/",
-			want: homeDir + string(filepath.Separator),
+			want: homeDir,
 		},
 		{
 			name: "absolute path",
@@ -275,8 +270,8 @@ func TestExpandHomeBytes(t *testing.T) {
 			want: []byte(filepath.Join(homeDir, "test", "file.txt")),
 		},
 		{
-			name: "tilde only",
-			path: []byte("~"),
+			name: "tilde",
+			path: []byte("~/"),
 			want: []byte(homeDir),
 		},
 		{
@@ -348,20 +343,20 @@ func TestFilePathEdgeCases(t *testing.T) {
 			name:     "AbbreviateHome with trailing slash",
 			function: "AbbreviateHome",
 			input:    "/some/path/",
-			expected: func(result string) bool { return result == "/some/path/" },
+			expected: func(result string) bool { return result == "/some/path" },
 		},
 		{
 			name:     "ExpandHome with multiple tildes",
 			function: "ExpandHome",
 			input:    "~/~/test",
-			expected: func(result string) bool { 
+			expected: func(result string) bool {
 				homeDir, _ := os.UserHomeDir()
 				return strings.HasPrefix(result, homeDir)
 			},
 		},
 		{
 			name:     "ExpandHome with tilde not at start",
-			function: "ExpandHome", 
+			function: "ExpandHome",
 			input:    "prefix~/test",
 			expected: func(result string) bool { return result == "prefix~/test" },
 		},

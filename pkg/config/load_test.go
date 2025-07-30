@@ -99,7 +99,7 @@ app:
 		{
 			name:       "non-existent config",
 			configName: "nonexistent",
-			options:    []FileOptions{AddDirs(tempDir)},
+			options:    []FileOptions{AddDirs(tempDir), MustExist()},
 			wantErr:    true,
 		},
 	}
@@ -107,18 +107,18 @@ app:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config, err := Load(tt.configName, tt.options...)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Error("Load() expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Fatalf("Load() unexpected error: %v", err)
 			}
-			
+
 			if config == nil {
 				t.Fatal("Load() returned nil config")
 			}
@@ -129,13 +129,13 @@ app:
 					t.Errorf("database.host = %q, want %q", got, tt.wantHost)
 				}
 			}
-			
+
 			if tt.wantPort != 0 {
 				if got := config.GetInt("database.port"); got != tt.wantPort {
 					t.Errorf("database.port = %d, want %d", got, tt.wantPort)
 				}
 			}
-			
+
 			if tt.wantAppName != "" {
 				if got := config.GetString("app.name"); got != tt.wantAppName {
 					t.Errorf("app.name = %q, want %q", got, tt.wantAppName)
@@ -167,7 +167,7 @@ func TestLoadWithDefaults(t *testing.T) {
 			"debug": true
 		}
 	}`
-	
+
 	configFile := filepath.Join(tempDir, "test.json")
 	err := os.WriteFile(configFile, []byte(configContent), 0644)
 	if err != nil {
@@ -178,7 +178,7 @@ func TestLoadWithDefaults(t *testing.T) {
 		WithDefaults([]byte(defaults), "json"),
 		SetConfigFile(configFile),
 	)
-	
+
 	if err != nil {
 		t.Fatalf("Load() with defaults failed: %v", err)
 	}
@@ -187,19 +187,19 @@ func TestLoadWithDefaults(t *testing.T) {
 	if got := config.GetString("database.host"); got != "confighost" {
 		t.Errorf("database.host = %q, want 'confighost' (from config file)", got)
 	}
-	
+
 	if got := config.GetInt("database.port"); got != 5432 {
 		t.Errorf("database.port = %d, want 5432 (from defaults)", got)
 	}
-	
+
 	if got := config.GetInt("database.timeout"); got != 30 {
 		t.Errorf("database.timeout = %d, want 30 (from defaults)", got)
 	}
-	
+
 	if got := config.GetString("app.name"); got != "defaultapp" {
 		t.Errorf("app.name = %q, want 'defaultapp' (from defaults)", got)
 	}
-	
+
 	if got := config.GetBool("app.debug"); got != true {
 		t.Errorf("app.debug = %t, want true (from config file)", got)
 	}
@@ -254,10 +254,10 @@ func TestLoadMergeSettings(t *testing.T) {
 
 func TestLoadSetGlobal(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	configContent := `{"test": {"global": true}}`
 	configFile := filepath.Join(tempDir, "global.json")
-	
+
 	err := os.WriteFile(configFile, []byte(configContent), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create test config: %v", err)
@@ -265,12 +265,12 @@ func TestLoadSetGlobal(t *testing.T) {
 
 	// Load with SetGlobal option
 	originalGlobal := GetConfig()
-	
+
 	config, err := Load("global",
 		SetConfigFile(configFile),
 		UseGlobal(),
 	)
-	
+
 	if err != nil {
 		t.Fatalf("Load() with UseGlobal failed: %v", err)
 	}
@@ -292,7 +292,7 @@ func TestLoadSetGlobal(t *testing.T) {
 
 func TestPath(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	configFile := filepath.Join(tempDir, "pathtest.yaml")
 	err := os.WriteFile(configFile, []byte("test: value"), 0644)
 	if err != nil {
@@ -319,11 +319,11 @@ func TestPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			path := Path("pathtest", tt.options...)
-			
+
 			if path == "" {
 				t.Error("Path() returned empty string")
 			}
-			
+
 			if !strings.Contains(path, tt.contains) {
 				t.Errorf("Path() = %q, should contain %q", path, tt.contains)
 			}
@@ -371,10 +371,10 @@ func TestLoadMustExist(t *testing.T) {
 
 func TestLoadIgnoreOptions(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	configContent := `{"ignore": {"test": true}}`
 	configFile := filepath.Join(tempDir, "ignore.json")
-	
+
 	err := os.WriteFile(configFile, []byte(configContent), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create test config: %v", err)

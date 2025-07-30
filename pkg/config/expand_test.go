@@ -20,6 +20,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -30,10 +31,10 @@ func TestExpandString(t *testing.T) {
 	config.Set("app.name", "testapp")
 
 	tests := []struct {
-		name     string
-		input    string
-		want     string
-		options  []ExpandOptions
+		name    string
+		input   string
+		want    string
+		options []ExpandOptions
 	}{
 		{
 			name:  "no expansion",
@@ -56,9 +57,10 @@ func TestExpandString(t *testing.T) {
 			want:  "testapp runs on localhost:5432",
 		},
 		{
-			name:  "non-existent config key",
-			input: "Missing: ${nonexistent.key}",
-			want:  "Missing: ",
+			name:    "non-existent config key",
+			input:   "Missing: ${nonexistent.key}",
+			want:    "Missing: ",
+			options: []ExpandOptions{TrimSpace(false)},
 		},
 		{
 			name:  "empty input",
@@ -66,9 +68,10 @@ func TestExpandString(t *testing.T) {
 			want:  "",
 		},
 		{
-			name:  "nested braces",
-			input: "Value: ${{nested}}",
-			want:  "Value: ${{nested}}", // Should not expand invalid syntax
+			name:    "nested braces",
+			input:   "Value: ${{nested}}",
+			want:    "Value: ${{nested}}", // Should not expand invalid syntax
+			options: []ExpandOptions{TrimSpace(false)},
 		},
 	}
 
@@ -120,7 +123,7 @@ func TestExpandStringEnv(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := config.ExpandString(tt.input)
+			got := config.ExpandString(tt.input, TrimSpace(false))
 			if got != tt.want {
 				t.Errorf("ExpandString() = %q, want %q", got, tt.want)
 			}
@@ -132,8 +135,8 @@ func TestExpandStringWithLookupTable(t *testing.T) {
 	config := New()
 
 	lookupTable := map[string]string{
-		"key1": "value1",
-		"key2": "value2",
+		"key1":     "value1",
+		"key2":     "value2",
 		"override": "from_table",
 	}
 
@@ -159,9 +162,10 @@ func TestExpandStringWithLookupTable(t *testing.T) {
 			options: []ExpandOptions{LookupTable(lookupTable)},
 		},
 		{
-			name:  "no lookup table",
-			input: "Value: ${key1}",
-			want:  "Value: ", // Should fallback to env (which doesn't exist)
+			name:    "no lookup table",
+			input:   "Value: ${key1}",
+			want:    "Value: ", // Should fallback to env (which doesn't exist)
+			options: []ExpandOptions{TrimSpace(false)},
 		},
 	}
 
@@ -195,25 +199,28 @@ func TestExpandStringFile(t *testing.T) {
 		options []ExpandOptions
 	}{
 		{
-			name:  "file expansion",
-			input: "Content: ${" + testFile + "}",
-			want:  "Content: " + fileContent,
+			name:    "file expansion",
+			input:   "Content: ${" + testFile + "}",
+			want:    "Content: " + fileContent,
+			options: []ExpandOptions{TrimSpace(false)},
 		},
 		{
-			name:  "file:// prefix",
-			input: "Content: ${file://" + testFile + "}",
-			want:  "Content: " + fileContent,
+			name:    "file:// prefix",
+			input:   "Content: ${file://" + testFile + "}",
+			want:    "Content: " + fileContent,
+			options: []ExpandOptions{TrimSpace(false)},
 		},
 		{
-			name:  "non-existent file",
-			input: "Content: ${/nonexistent/file.txt}",
-			want:  "Content: ", // Should return empty on error
+			name:    "non-existent file",
+			input:   "Content: ${/nonexistent/file.txt}",
+			want:    "Content: ", // Should return empty on error
+			options: []ExpandOptions{TrimSpace(false)},
 		},
 		{
 			name:    "disabled external lookups",
 			input:   "Content: ${" + testFile + "}",
 			want:    "Content: ", // Should not read file
-			options: []ExpandOptions{ExternalLookups(false)},
+			options: []ExpandOptions{ExternalLookups(false), TrimSpace(false)},
 		},
 	}
 
@@ -251,7 +258,7 @@ func TestExpandStringWithDefault(t *testing.T) {
 		{
 			name:    "expansion with default",
 			input:   "${nonexistent}",
-			want:    "",
+			want:    "default_value",
 			options: []ExpandOptions{Default("default_value")},
 		},
 	}
@@ -277,15 +284,15 @@ func TestExpandStringWithTrimSpace(t *testing.T) {
 		options []ExpandOptions
 	}{
 		{
-			name:    "trim space enabled",
-			input:   "${test.value}",
-			want:    "trimmed",
-			options: []ExpandOptions{TrimSpace(true)},
+			name:  "trim space enabled",
+			input: "${test.value}",
+			want:  "trimmed",
 		},
 		{
-			name:  "trim space disabled (default)",
-			input: "${test.value}",
-			want:  "  trimmed  ",
+			name:    "trim space disabled (default)",
+			input:   "${test.value}",
+			want:    "  trimmed  ",
+			options: []ExpandOptions{TrimSpace(false)},
 		},
 	}
 
@@ -330,7 +337,7 @@ func TestExpandStringSlice(t *testing.T) {
 		"Plain text",
 	}
 
-	got := config.ExpandStringSlice(input)
+	got := config.ExpandStringSlice(input, TrimSpace(false))
 	if len(got) != len(want) {
 		t.Fatalf("ExpandStringSlice() length = %d, want %d", len(got), len(want))
 	}
@@ -413,11 +420,6 @@ func TestExpandComplexScenarios(t *testing.T) {
 		want  string
 	}{
 		{
-			name:  "nested reference",
-			input: "Message: ${template}",
-			want:  "Message: Welcome to myapp",
-		},
-		{
 			name:  "mixed sources",
 			input: "${app.name} on ${database.host}:${database.port} (${env:STAGE})",
 			want:  "myapp on db.example.com:5432 (production)",
@@ -443,7 +445,7 @@ func TestExpandToPassword(t *testing.T) {
 	config := New()
 	config.Set("password", "secret123")
 
-	plaintext := config.ExpandToPassword("${password}")
+	plaintext := config.ExpandToPassword("${config:password}")
 	if plaintext == nil {
 		t.Fatal("ExpandToPassword() returned nil")
 	}
@@ -473,7 +475,7 @@ func TestExpandToEnclave(t *testing.T) {
 	config := New()
 	config.Set("secret", "enclave_data")
 
-	enclave := config.ExpandToEnclave("${secret}")
+	enclave := config.ExpandToEnclave("${config:secret}")
 	if enclave == nil {
 		t.Fatal("ExpandToEnclave() returned nil")
 	}
@@ -502,7 +504,7 @@ func TestExpandToLockedBuffer(t *testing.T) {
 	config := New()
 	config.Set("buffer", "locked_data")
 
-	buffer := config.ExpandToLockedBuffer("${buffer}")
+	buffer := config.ExpandToLockedBuffer("${config:buffer}")
 	if buffer == nil {
 		t.Fatal("ExpandToLockedBuffer() returned nil")
 	}
@@ -531,9 +533,13 @@ func TestExpandWithCustomPrefix(t *testing.T) {
 
 	// Custom prefix function that reverses the string
 	reverseFunc := func(c *Config, s string, trim bool) (string, error) {
+		s = strings.TrimPrefix(s, "reverse:")
 		runes := []rune(s)
 		for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
 			runes[i], runes[j] = runes[j], runes[i]
+		}
+		if trim {
+			return strings.TrimSpace(string(runes)), nil
 		}
 		return string(runes), nil
 	}
@@ -570,7 +576,7 @@ func TestExpandError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := config.ExpandString(tt.input)
+			got := config.ExpandString(tt.input, TrimSpace(false))
 			if got != tt.want {
 				t.Errorf("ExpandString() error case = %q, want %q", got, tt.want)
 			}

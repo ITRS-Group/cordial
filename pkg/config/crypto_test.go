@@ -42,7 +42,7 @@ func TestNewRandomKeyValues(t *testing.T) {
 
 func TestNewPlaintext(t *testing.T) {
 	testData := []byte("test password")
-	plaintext := NewPlaintext(testData)
+	plaintext := NewPlaintext(bytes.Clone(testData))
 
 	if plaintext == nil {
 		t.Fatal("NewPlaintext() returned nil")
@@ -54,7 +54,7 @@ func TestNewPlaintext(t *testing.T) {
 
 	// Verify content using public methods
 	if plaintext.String() != string(testData) {
-		t.Error("Plaintext content doesn't match input")
+		t.Error("Plaintext content doesn't match input:")
 	}
 
 	if !bytes.Equal(plaintext.Bytes(), testData) {
@@ -78,7 +78,7 @@ func TestKeyValuesEncodeDecodeString(t *testing.T) {
 	}
 
 	// Test decoding
-	decoded, err := kv.DecodeString("+encs+"+encoded)
+	decoded, err := kv.DecodeString("+encs+" + encoded)
 	if err != nil {
 		t.Fatalf("DecodeString() failed: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestKeyValuesEncodeDecodeBytes(t *testing.T) {
 	kv := NewRandomKeyValues()
 
 	testData := []byte("Binary data test \x00\x01\x02")
-	plaintext := NewPlaintext(testData)
+	plaintext := NewPlaintext(bytes.Clone(testData))
 
 	// Test encoding
 	encoded, err := kv.Encode(plaintext)
@@ -130,7 +130,7 @@ func TestKeyValuesEncodePassword(t *testing.T) {
 	}
 
 	// Test decoding back
-	decoded, err := kv.DecodeString("+encs+"+string(encoded))
+	decoded, err := kv.DecodeString("+encs+" + string(encoded))
 	if err != nil {
 		t.Fatalf("DecodeString() failed: %v", err)
 	}
@@ -165,7 +165,7 @@ func TestReadKeyValues(t *testing.T) {
 		t.Fatalf("Original key encoding failed: %v", err)
 	}
 
-	decoded2, err := readKV.DecodeString("+encs+"+encoded1)
+	decoded2, err := readKV.DecodeString("+encs+" + encoded1)
 	if err != nil {
 		t.Fatalf("Read key decoding failed: %v", err)
 	}
@@ -202,7 +202,7 @@ func TestKeyValuesWriteRead(t *testing.T) {
 		t.Fatalf("Encoding failed: %v", err)
 	}
 
-	decoded, err := readKV.DecodeString("+encs+"+encoded)
+	decoded, err := readKV.DecodeString("+encs+" + encoded)
 	if err != nil {
 		t.Fatalf("Decoding with read key failed: %v", err)
 	}
@@ -283,7 +283,7 @@ func TestPlaintextString(t *testing.T) {
 
 func TestPlaintextBytes(t *testing.T) {
 	testData := []byte("test data")
-	plaintext := NewPlaintext(testData)
+	plaintext := NewPlaintext(bytes.Clone(testData))
 
 	result := plaintext.Bytes()
 	if !bytes.Equal(result, testData) {
@@ -327,7 +327,7 @@ func TestKeyValuesWithDifferentData(t *testing.T) {
 				t.Fatalf("EncodeString() failed: %v", err)
 			}
 
-			decoded, err := kv.DecodeString("+encs+"+encoded)
+			decoded, err := kv.DecodeString("+encs+" + encoded)
 			if err != nil {
 				t.Fatalf("DecodeString() failed: %v", err)
 			}
@@ -362,12 +362,12 @@ func TestMultipleKeyValues(t *testing.T) {
 	}
 
 	// Each key should only be able to decode its own data
-	_, err = kv1.DecodeString("+encs+"+encoded2)
+	_, err = kv1.DecodeString("+encs+" + encoded2)
 	if err == nil {
 		t.Error("Key1 should not be able to decode data encrypted with Key2")
 	}
 
-	_, err = kv2.DecodeString("+encs+"+encoded1)
+	_, err = kv2.DecodeString("+encs+" + encoded1)
 	if err == nil {
 		t.Error("Key2 should not be able to decode data encrypted with Key1")
 	}
