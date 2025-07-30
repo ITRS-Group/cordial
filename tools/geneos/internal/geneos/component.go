@@ -245,6 +245,8 @@ func (ct *Component) Register(factory func(string) Instance) {
 	}
 }
 
+// String returns the stringified name of ct. If ct is nil then return
+// an empty string.
 func (ct *Component) String() (name string) {
 	if ct == nil {
 		return ""

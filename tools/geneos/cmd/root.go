@@ -45,7 +45,7 @@ var cfgFile string
 var Hostname string
 
 // UserKeyFile is the path to the user's key file. It starts as DefaultUserKeyFile but can be changed.
-var UserKeyFile config.KeyFile
+var UserKeyFile = DefaultUserKeyfile
 
 var debug, quiet bool
 
