@@ -40,7 +40,6 @@ var decodeCmdPassword, decodeCmdSource, decodeCmdExpandString string
 func init() {
 	aesCmd.AddCommand(decodeCmd)
 
-	cmd.UserKeyFile = cmd.DefaultUserKeyfile
 	aesPrevUserKeyFile = config.KeyFile(
 		config.Path("prevkeyfile",
 			config.SetAppName(cordial.ExecutableName()),
