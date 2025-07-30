@@ -185,6 +185,9 @@ func acceptRecord(c echo.Context) (err error) {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("invalid table %q", req.Param("table")))
 	}
 
+	// set up defaults
+	incident = maps.Clone(table.Defaults)
+
 	if err = json.NewDecoder(c.Request().Body).Decode(&incident); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
