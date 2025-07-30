@@ -4,11 +4,12 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-
-	// Import component packages to register them for testing
-	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/gateway"
-	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 )
+
+func init() {
+	// Ensure RootComponent is registered for tests
+	RootComponent.Register(nil)
+}
 
 func TestComponentRegistration(t *testing.T) {
 	// Test that RootComponent is properly initialized
