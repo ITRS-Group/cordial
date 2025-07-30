@@ -46,7 +46,7 @@ geneos start netprobe MyProbe -l               # Start and follow logs
 ### Daily Health Check
 ```bash
 geneos ps                             # What's running?
-geneos logs --tail 20                # Recent activity
+geneos logs --lines 20               # Recent activity
 geneos package list                  # Software status
 ```
 
@@ -128,7 +128,7 @@ geneos start gateway MyGW -l        # Start and immediately follow logs
 ```bash
 geneos ps                            # What's running?
 geneos stop --force                 # Emergency stop all
-geneos logs --tail 100              # Last 100 log lines
+geneos logs --lines 100             # Last 100 log lines
 geneos command gateway MyGW         # Show startup command
 geneos show gateway MyGW --raw      # Raw configuration
 ```

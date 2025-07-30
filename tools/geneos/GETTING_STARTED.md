@@ -90,7 +90,7 @@ geneos gateway help      # Help for gateway component
 ### Daily Health Check
 ```bash
 geneos ps                           # Are my services running?
-geneos logs --tail 20              # Any recent errors?
+geneos logs --lines 20             # Any recent errors?
 ```
 
 ### Adding a New Gateway

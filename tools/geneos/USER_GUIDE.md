@@ -133,7 +133,7 @@ geneos ps
 geneos list | grep -v "running\|stopped"
 
 # View recent logs for any problems
-geneos logs --tail 50
+geneos logs --lines 50
 ```
 
 ### Managing a Gateway
@@ -203,7 +203,7 @@ geneos logs licd -f             # Follow logs for all licence daemons
 
 ```bash
 # Add a remote host
-geneos host add myserver user@hostname --key ~/.ssh/id_rsa
+geneos host add myserver ssh://user@hostname --privatekey ~/.ssh/id_rsa
 
 # Deploy an instance to remote host
 geneos deploy gateway RemoteGW --host myserver
@@ -284,7 +284,7 @@ geneos deploy san NewSAN --template production
 export GENEOS_NON_INTERACTIVE=true
 
 # JSON output for parsing
-geneos ps --format json
+geneos ps --json
 
 # Exit codes for automation
 if geneos ps gateway MyGW > /dev/null 2>&1; then
@@ -343,7 +343,7 @@ export ITRS_HOME=/opt/itrs
 **Solution**: Check logs and configuration
 ```bash
 # View recent logs
-geneos logs instance_name --tail 100
+geneos logs instance_name --lines 100
 
 # Check configuration
 geneos show instance_name
