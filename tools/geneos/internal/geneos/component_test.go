@@ -2,9 +2,8 @@ package geneos
 
 import (
 	"reflect"
+	"strings"
 	"testing"
-
-	"github.com/itrs-group/cordial/pkg/config"
 )
 
 func TestComponentRegistration(t *testing.T) {
