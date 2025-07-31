@@ -84,6 +84,7 @@ func InitHosts(app string) {
 
 	LOCAL = NewHost(LOCALHOST)
 	ALL = NewHost(ALLHOSTS)
+
 	LoadHostConfig()
 }
 
@@ -210,36 +211,40 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 
 	if strings.Contains(strings.ToLower(serverVersion), "windows") {
 		osinfo["id"] = "windows"
-		cmd := exec.Command("systeminfo")
-		output, _ := h.Run(cmd, "")
-		// if err == nil {
-		// 	log.Debug().Msg(string(output))
-		// }
-		l := bufio.NewScanner(bytes.NewBuffer(output))
-		for l.Scan() {
-			line := l.Text()
-			if strings.HasPrefix(line, " ") {
-				continue
+
+		if h.IsLocal() {
+			h.SetWindowsReleaseEnv(osinfo)
+		} else {
+			cmd := exec.Command("systeminfo")
+			output, _ := h.Run(cmd, "")
+			// if err == nil {
+			// 	log.Debug().Msg(string(output))
+			// }
+			l := bufio.NewScanner(bytes.NewBuffer(output))
+			for l.Scan() {
+				line := l.Text()
+				if strings.HasPrefix(line, " ") {
+					continue
+				}
+				s := strings.SplitN(line, ":", 2)
+				if len(s) < 2 {
+					continue
+				}
+				name := strings.TrimSpace(s[0])
+				val := strings.TrimSpace(s[1])
+				switch name {
+				case "OS Name":
+					osinfo["name"] = val
+					osinfo["pretty_name"] = val
+				case "OS Version":
+					osinfo["version"] = val
+					vers := strings.Fields(val)
+					osinfo["version_id"] = vers[0]
+					osinfo["build_id"] = vers[len(vers)-1]
+				}
 			}
-			s := strings.SplitN(line, ":", 2)
-			if len(s) < 2 {
-				continue
-			}
-			name := strings.TrimSpace(s[0])
-			val := strings.TrimSpace(s[1])
-			switch name {
-			case "OS Name":
-				osinfo["name"] = val
-				osinfo["pretty_name"] = val
-			case "OS Version":
-				osinfo["version"] = val
-				vers := strings.Fields(val)
-				osinfo["version_id"] = vers[0]
-				osinfo["build_id"] = vers[len(vers)-1]
-			}
-		}
-		if !h.IsLocal() {
-			cmd := exec.Command("cmd", "/c", "echo", "%USERPROFILE%")
+
+			cmd = exec.Command("cmd", "/c", "echo", "%USERPROFILE%")
 			output, err := h.Run(cmd, "")
 			if err != nil {
 				log.Error().Err(err).Msg("")
