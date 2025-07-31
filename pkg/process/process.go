@@ -125,6 +125,9 @@ OUTER:
 // TODO: cache /proc entries for a period, this is very likely to be
 // used over and over in the same proc
 func GetPID(h host.Host, binaryPrefix string, customCheckFunc func(arg any, cmdline ...[]byte) bool, checkarg any, args ...string) (pid int, err error) {
+	if condition := h == nil || binaryPrefix == ""; condition {
+		return 0, fmt.Errorf("host cannot be nil and binaryPrefix must not be empty")
+	}
 	if strings.Contains(h.ServerVersion(), "windows") {
 		return 0, os.ErrProcessDone
 	}
@@ -221,6 +224,10 @@ func retErrIfFalse(ret bool, err error) error {
 // TODO: look at remote processes
 func Start(h host.Host, program Program, options ...Options) (pid int, err error) {
 	opts := evalOptions(options...)
+
+	if h == nil {
+		return 0, fmt.Errorf("host cannot be nil")
+	}
 
 	if program.Username != "" && program.Username != h.Username() {
 		// if username is set and is not current user for host h

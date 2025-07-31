@@ -19,8 +19,6 @@ package commands
 
 import "github.com/itrs-group/cordial/pkg/xpath"
 
-// test commands to work out kinks in args and returns
-
 // SnoozeManual runs the internal command of the same name
 func (c *Connection) SnoozeManual(target *xpath.XPath, info string) (err error) {
 	if target.IsGateway() || target.IsProbe() || target.IsEntity() {

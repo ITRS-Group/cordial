@@ -204,33 +204,38 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg string) (em *config.
 	// domain
 
 	epassword := &config.Plaintext{}
+	var eusername, smtpserver string
 
-	eusername := cf.GetString("email.username")
-	smtpserver := cf.GetString("email.smtp")
+	if cf != nil {
+		eusername = cf.GetString("email.username")
+		smtpserver = cf.GetString("email.smtp")
 
-	if eusername != "" {
-		epassword = cf.GetPassword("email.password")
-	}
+		if eusername != "" {
+			epassword = cf.GetPassword("email.password")
+		}
 
-	if eusername == "" {
-		creds := config.FindCreds(smtpserver, config.SetAppName("geneos"))
-		if creds != nil {
-			eusername = creds.GetString("username")
-			epassword = creds.GetPassword("password")
+		if eusername == "" {
+			creds := config.FindCreds(smtpserver, config.SetAppName("geneos"))
+			if creds != nil {
+				eusername = creds.GetString("username")
+				epassword = creds.GetPassword("password")
+			}
 		}
 	}
 
 	em.SetDefault("_smtp_username", eusername)
 	em.SetDefault("_smtp_password", epassword.String())
 	em.SetDefault("_smtp_server", smtpserver)
-	em.SetDefault("_smtp_tls", cf.GetString("email.use-tls"))
-	em.SetDefault("_smtp_tls_insecure", cf.GetBool("email.tls-skip-verify"))
-	em.SetDefault("_smtp_port", cf.GetInt("email.port"))
-	em.SetDefault("_from", cf.GetString("email.from"))
-	em.SetDefault("_to", cf.GetString("email.to"))
-	em.SetDefault("_cc", cf.GetString("email.cc"))
-	em.SetDefault("_bcc", cf.GetString("email.bcc"))
-	em.SetDefault("_subject", cf.GetString("email.subject"))
+	if cf != nil {
+		em.SetDefault("_smtp_tls", cf.GetString("email.use-tls"))
+		em.SetDefault("_smtp_tls_insecure", cf.GetBool("email.tls-skip-verify"))
+		em.SetDefault("_smtp_port", cf.GetInt("email.port"))
+		em.SetDefault("_from", cf.GetString("email.from"))
+		em.SetDefault("_to", cf.GetString("email.to"))
+		em.SetDefault("_cc", cf.GetString("email.cc"))
+		em.SetDefault("_bcc", cf.GetString("email.bcc"))
+		em.SetDefault("_subject", cf.GetString("email.subject"))
+	}
 
 	for _, e := range os.Environ() {
 		n := strings.SplitN(e, "=", 2)
