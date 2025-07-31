@@ -5,8 +5,6 @@ import (
 	"os"
 	"testing"
 	"time"
-
-	"github.com/itrs-group/cordial/pkg/host"
 )
 
 func TestRemoveArgs(t *testing.T) {
@@ -15,11 +13,11 @@ func TestRemoveArgs(t *testing.T) {
 	remove := []string{"arg2"}
 	result := RemoveArgs(args, remove...)
 	expected := []string{"arg1", "arg3", "arg4"}
-	
+
 	if len(result) != len(expected) {
 		t.Errorf("Expected %d args, got %d", len(expected), len(result))
 	}
-	
+
 	for i, arg := range expected {
 		if result[i] != arg {
 			t.Errorf("Expected '%s' at index %d, got '%s'", arg, i, result[i])
@@ -31,11 +29,11 @@ func TestRemoveArgs(t *testing.T) {
 	remove = []string{"arg2", "arg4"}
 	result = RemoveArgs(args, remove...)
 	expected = []string{"arg1", "arg3", "arg5"}
-	
+
 	if len(result) != len(expected) {
 		t.Errorf("Expected %d args, got %d", len(expected), len(result))
 	}
-	
+
 	for i, arg := range expected {
 		if result[i] != arg {
 			t.Errorf("Expected '%s' at index %d, got '%s'", arg, i, result[i])
@@ -47,7 +45,7 @@ func TestRemoveArgs(t *testing.T) {
 	remove = []string{"nonexistent"}
 	result = RemoveArgs(args, remove...)
 	expected = []string{"arg1", "arg2", "arg3"}
-	
+
 	if len(result) != len(expected) {
 		t.Errorf("Expected %d args, got %d", len(expected), len(result))
 	}
@@ -115,11 +113,11 @@ func TestSliceFromAny(t *testing.T) {
 	if err != nil {
 		t.Errorf("sliceFromAny failed: %v", err)
 	}
-	
+
 	if len(result) != len(input) {
 		t.Errorf("Expected %d items, got %d", len(input), len(result))
 	}
-	
+
 	for i, item := range input {
 		if result[i] != item {
 			t.Errorf("Expected '%s' at index %d, got '%s'", item, i, result[i])
@@ -132,7 +130,7 @@ func TestSliceFromAny(t *testing.T) {
 	if err != nil {
 		t.Errorf("sliceFromAny failed: %v", err)
 	}
-	
+
 	if len(result) != len(inputInterface) {
 		t.Errorf("Expected %d items, got %d", len(inputInterface), len(result))
 	}
@@ -229,7 +227,7 @@ func TestBatch(t *testing.T) {
 
 func TestGetPID(t *testing.T) {
 	// Test with empty binary prefix
-	pid, err := GetPID(nil, "", nil, nil)
+	_, err := GetPID(nil, "", nil, nil)
 	if err == nil {
 		t.Error("Expected error with empty binary prefix")
 	}
@@ -238,7 +236,7 @@ func TestGetPID(t *testing.T) {
 	customCheck := func(arg any, cmdline ...[]byte) bool {
 		return true
 	}
-	pid, err = GetPID(nil, "test", customCheck, nil)
+	_, err = GetPID(nil, "test", customCheck, nil)
 	if err == nil {
 		t.Error("Expected error with nil host")
 	}
