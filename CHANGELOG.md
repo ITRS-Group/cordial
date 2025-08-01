@@ -3,17 +3,25 @@
 ## Version v1.22.1-dev
 
 > [!NOTE]
-> **Released 2025-07-30** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2025-08-01** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
-### Version v1.22.0 Changes
+### Version v1.22.1 Changes
 
-* Added tests to `pkg/config`, `pkg/host` and `tools/geneos` based on cases created by Cursor, but hand reviewed and edited to suit
+* Added tests to various packages and other parts based on cases created by Cursor, but hand-reviewed and edited to suit
 
-### Version v.1.22.0 Fixes
+* `tools/geneos`
 
-* `integrations/servicenow2` - add missing code to load table defaults on the proxy side. Fixes missing default values for items that are not the default cmdb ID.
+  * updated documentation using Cursor
+
+  * work on making Windows native support work, starting with Active Console. You can install and run AC2 instances using `geneos.exe` once you have configured the environment; this lets you manage versions easier that juggling ZIP files and directories
+
+### Version v.1.22.1 Fixes
+
+* `integrations/servicenow2` - add missing code to load table defaults on the proxy side. This fixes missing default values for fields not set on client side.
 
 * `pkg/config` - fix string expansion edge-cases identified by newly added tests
+
+* `tools/geneos` - fix minor bugs found during other work
 
 ---
 
