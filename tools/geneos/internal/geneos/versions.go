@@ -36,36 +36,39 @@ import (
 // component ct on host h. If base is not a symlink then it is returned
 // unchanged. Returns version set to "unknown" on error.
 func CurrentVersion(h *Host, ct *Component, base string) (version string, err error) {
-	var st fs.FileInfo
 	var i int
 
 	dir := h.PathTo("packages", ct.String())
 	version = base
 
+	// follow the symlink up to 10 times, if it is a symlink and return
+	// as soon as it is not a link.
 	for i = 0; i < 10; i++ {
+		var lversion string
 		basepath := path.Join(dir, version)
-		st, err = h.Lstat(basepath)
+		_, err = h.Lstat(basepath)
 		if err != nil {
-			log.Debug().Err(err).Msg("Lstat")
 			version = "unknown"
 			return
 		}
-		if st.Mode()&fs.ModeSymlink == 0 {
-			if !st.IsDir() {
-				err = syscall.ENOTDIR
-				log.Debug().Err(err).Msg("symlink?")
-				version = "unknown"
-				return
+
+		// return if it is not a symlink
+		lversion, err = h.Readlink(basepath)
+		if err != nil {
+			return
+		}
+		version = lversion
+
+		if filepath.IsAbs(version) {
+			// if the version is absolute then we need to make it relative to the
+			// directory we are in so that it can be used as a relative path
+			// in the config file.
+			version, err = filepath.Rel(dir, version)
+			if err != nil {
+				log.Debug().Err(err).Msg("relative path")
 			}
-			// version = st.Name()
-			return
 		}
-		version, err = h.Readlink(basepath)
-		if err != nil {
-			log.Debug().Err(err).Msg("readlink")
-			version = "unknown"
-			return
-		}
+
 		if version == base {
 			err = syscall.ELOOP
 			log.Debug().Err(err).Msg("loop")
