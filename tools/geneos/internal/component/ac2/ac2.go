@@ -231,6 +231,7 @@ func (n *AC2s) Command(checkExt bool) (args, env []string, home string, err erro
 	list := []string{
 		"DISPLAY",
 		"XAUTHORITY",
+		"TEMP",
 	}
 
 	for _, e := range list {
