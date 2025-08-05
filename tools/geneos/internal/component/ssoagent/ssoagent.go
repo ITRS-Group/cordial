@@ -407,22 +407,22 @@ func (w *SSOAgents) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func pidCheckFn(arg any, cmdline ...[]byte) bool {
+func pidCheckFn(arg any, cmdline []string) bool {
 	var wdOK, appOK bool
 	s, ok := arg.(*SSOAgents)
 	if !ok {
 		return false
 	}
 
-	if path.Base(string(cmdline[0])) != "java" {
+	if path.Base(cmdline[0]) != "java" {
 		return false
 	}
 
 	for _, arg := range cmdline[1:] {
-		if string(arg) == "-Dapp.home="+s.Home() {
+		if arg == "-Dapp.home="+s.Home() {
 			wdOK = true
 		}
-		if string(arg) == "com.itrsgroup.ssoagent.AgentServer" {
+		if arg == "com.itrsgroup.ssoagent.AgentServer" {
 			appOK = true
 		}
 		if wdOK && appOK {

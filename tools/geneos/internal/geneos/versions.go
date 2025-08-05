@@ -55,6 +55,9 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 		// return if it is not a symlink
 		lversion, err = h.Readlink(basepath)
 		if err != nil {
+			// if we can't readlink then it is not a symlink, return the
+			// last known version a symlink did point to
+			err = nil
 			return
 		}
 		version = lversion
@@ -81,8 +84,6 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 		log.Debug().Err(err).Msg("levels")
 		version = "unknown"
 	}
-
-	log.Debug().Msgf("return %s", version)
 
 	return
 }

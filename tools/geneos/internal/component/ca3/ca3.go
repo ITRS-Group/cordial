@@ -275,7 +275,7 @@ func (n *CA3s) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func pidCheckFn(arg any, cmdline ...[]byte) bool {
+func pidCheckFn(arg any, cmdline []string) bool {
 	var jarOK, configOK bool
 
 	c, ok := arg.(*CA3s)
@@ -283,15 +283,15 @@ func pidCheckFn(arg any, cmdline ...[]byte) bool {
 		return false
 	}
 
-	if path.Base(string(cmdline[0])) != "java" {
+	if path.Base(cmdline[0]) != "java" {
 		return false
 	}
 
 	for _, arg := range cmdline[1:] {
-		if strings.Contains(string(arg), "collection-agent") {
+		if strings.Contains(arg, "collection-agent") {
 			jarOK = true
 		}
-		if strings.Contains(string(arg), c.Config().GetString("config")) {
+		if strings.Contains(arg, c.Config().GetString("config")) {
 			configOK = true
 		}
 		if jarOK && configOK {

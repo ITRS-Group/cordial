@@ -414,22 +414,22 @@ func (w *Webservers) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func pidCheckFn(arg any, cmdline ...[]byte) bool {
+func pidCheckFn(arg any, cmdline []string) bool {
 	var wdOK, jarOK bool
 	w, ok := arg.(*Webservers)
 	if !ok {
 		return false
 	}
 
-	if path.Base(string(cmdline[0])) != "java" {
+	if path.Base(cmdline[0]) != "java" {
 		return false
 	}
 
 	for _, arg := range cmdline[1:] {
-		if string(arg) == "-Dworking.directory="+w.Home() {
+		if arg == "-Dworking.directory="+w.Home() {
 			wdOK = true
 		}
-		if strings.HasSuffix(string(arg), "geneos-web-server.jar") {
+		if strings.HasSuffix(arg, "geneos-web-server.jar") {
 			jarOK = true
 		}
 		if wdOK && jarOK {

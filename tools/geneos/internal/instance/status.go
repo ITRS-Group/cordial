@@ -154,7 +154,7 @@ func LiveVersion(i geneos.Instance, pid int) (base string, version string, actua
 //
 // The process is identified by checking the conventions used to start
 // Geneos processes. If a component type defines it's own GetPID()
-// customer check then that is used instead.
+// custom check then that is used instead.
 func GetPID(i geneos.Instance) (pid int, err error) {
 	return process.GetPID(i.Host(), i.Config().GetString("binary"), i.Type().GetPID, i, i.Name())
 }
@@ -163,15 +163,27 @@ func GetPID(i geneos.Instance) (pid int, err error) {
 // with the owner uid and gid and the start time.
 func GetPIDInfo(i geneos.Instance) (pid int, uid, gid int, mtime time.Time, err error) {
 	if pid, err = GetPID(i); err != nil {
+		log.Debug().Err(err).Msgf("failed to get PID for instance %s", i.Name())
 		return
 	}
 
-	var st os.FileInfo
-	st, err = i.Host().Stat(fmt.Sprintf("/proc/%d", pid))
-	if err == nil {
-		uid, gid = i.Host().GetFileOwner(st)
+	if i.Host().ServerVersion() == "windows" {
+	} else {
+		var st os.FileInfo
+		st, err = i.Host().Stat(fmt.Sprintf("/proc/%d", pid))
+		if err == nil {
+			uid, gid = i.Host().GetFileOwner(st)
+		}
+		if st != nil {
+			// mtime is the last modification time of the /proc/<pid> directory
+			// which is the start time of the process.
+			mtime = st.ModTime()
+		} else {
+			// if we cannot stat the /proc/<pid> directory, then we cannot get
+			// the mtime, so set it to zero.
+			mtime = time.Time{}
+		}
 	}
-	mtime = st.ModTime()
 
 	return
 }

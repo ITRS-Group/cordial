@@ -254,13 +254,14 @@ func (n *AC2s) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func pidCheckFn(arg any, cmdline ...[]byte) bool {
+func pidCheckFn(arg any, cmdline []string) bool {
 	c, ok := arg.(*AC2s)
 	if !ok {
 		return false
 	}
 	if string(cmdline[0]) != c.Config().GetString("program") {
 
+	if cmdline[0] != c.Config().GetString("program") {
 		return false
 	}
 	for _, arg := range cmdline[1:] {

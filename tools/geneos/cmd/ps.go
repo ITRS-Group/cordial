@@ -35,6 +35,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -229,6 +230,9 @@ func psInstanceCommon(i geneos.Instance) (pid int, username, groupname string, m
 	}
 	pid, uid, gid, mtime, err := instance.GetPIDInfo(i)
 	if err != nil {
+		if !errors.Is(err, os.ErrProcessDone) {
+			log.Debug().Err(err).Msgf("failed to get PID info for instance %s", i.Name())
+		}
 		return
 	}
 
