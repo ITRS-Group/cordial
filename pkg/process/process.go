@@ -198,6 +198,12 @@ func getProcCache(h host.Host) (c procCache, ok bool) {
 // process entries, which can be expensive. The cache is updated every 5
 // seconds, or when the cache is empty.
 func GetPID(h host.Host, binary string, customCheckFunc func(checkarg any, cmdline []string) bool, checkarg any, args ...string) (int, error) {
+	if h == nil {
+		return 0, fmt.Errorf("host cannot be nil")
+	}
+	if binary == "" {
+		return 0, fmt.Errorf("binaryPrefix must not be empty")
+	}
 	c, ok := getProcCache(h)
 	if !ok {
 		return 0, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
