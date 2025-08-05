@@ -24,8 +24,14 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
+	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 func prepareCmd(cmd *exec.Cmd) {
@@ -96,4 +102,49 @@ func setCredentialsFromUsername(cmd *exec.Cmd, username string) (err error) {
 		cmd.SysProcAttr.Credential = creds
 	}
 	return
+}
+
+func getLocalProcCache() (c procCache, ok bool) {
+	procCacheMutex.Lock()
+	defer procCacheMutex.Unlock()
+
+	if c, ok = procCacheMap[nil]; ok {
+		if time.Since(c.LastUpdate) < procCacheTTL {
+			return
+		}
+	}
+
+	// cache is empty or expired, update it
+	dirs, err := filepath.Glob("/proc/[0-9]*")
+	if err != nil {
+		return
+	}
+	c.Entries = make(map[int]procCacheEntry, len(dirs))
+
+	for _, dir := range dirs {
+		pid, err := strconv.Atoi(path.Base(dir))
+		if err != nil {
+			log.Debug().Err(err).Msgf("failed to parse pid from %s", dir)
+			continue
+		}
+		exe, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
+		if err != nil {
+			continue
+		}
+		b, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+		if err != nil {
+			continue
+		}
+		cmdline := strings.Split(strings.TrimSuffix(string(b), "\000"), "\000")
+
+		c.Entries[pid] = procCacheEntry{
+			PID:     pid,
+			Exe:     exe,
+			Cmdline: cmdline,
+		}
+	}
+	c.LastUpdate = time.Now()
+	procCacheMap[nil] = c
+
+	return c, true
 }

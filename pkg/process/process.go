@@ -18,7 +18,6 @@ limitations under the License.
 package process
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/fs"
@@ -26,13 +25,15 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
+	"path/filepath"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-reap"
+	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
@@ -108,88 +109,165 @@ OUTER:
 	return
 }
 
+type procCache struct {
+	// LastUpdate is the time when the cache was last updated
+	LastUpdate time.Time
+
+	// Entries is the map of process entries, indexed by PID
+	Entries map[int]procCacheEntry
+}
+
+type procCacheEntry struct {
+	PID     int
+	Exe     string
+	Cmdline []string
+}
+
+var procCacheTTL = 5 * time.Second
+
+// procCache is a map of host to procCache, which is used to cache
+// process entries for each host. It is used to avoid repeated calls to
+// the host to get the process entries, which can be expensive.
+//
+// The cache is updated every 5 seconds, or when the cache is empty.
+//
+// The cache map is protected by a mutex to ensure that only one
+// goroutine can update the cache at a time.
+var procCacheMutex sync.Mutex
+var procCacheMap = make(map[host.Host]procCache)
+
+func getProcCache(h host.Host) (c procCache, ok bool) {
+	if h.IsLocal() {
+		return getLocalProcCache()
+	}
+
+	// remote support for Linux only for now
+	if !strings.Contains(h.ServerVersion(), "linux") {
+		return
+	}
+
+	procCacheMutex.Lock()
+	defer procCacheMutex.Unlock()
+
+	if c, ok = procCacheMap[nil]; ok {
+		if time.Since(c.LastUpdate) < procCacheTTL {
+			return
+		}
+	}
+
+	// cache is empty or expired, update it
+	dirs, err := h.Glob("/proc/[0-9]*")
+	if err != nil {
+		return c, false
+	}
+	c.Entries = make(map[int]procCacheEntry, len(dirs))
+
+	for _, dir := range dirs {
+		pid, _ := strconv.Atoi(path.Base(dir))
+		exe, _ := h.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
+		b, err := h.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+		if err != nil {
+			log.Debug().Err(err).Msgf("failed to read cmdline for pid %d", pid)
+			continue
+		}
+		cmdline := strings.Split(strings.TrimSuffix(string(b), "\000"), "\000")
+		c.Entries[pid] = procCacheEntry{
+			PID:     pid,
+			Exe:     exe,
+			Cmdline: cmdline,
+		}
+	}
+	c.LastUpdate = time.Now()
+	procCacheMap[h] = c
+
+	return c, true
+}
+
 // GetPID returns the PID of the process started with binary name and
 // all args (in any order) on host h. If not found then an err of
 // os.ErrProcessDone is returned.
 //
-// checkfn() is a custom function to validate the args against the each
-// process found and checkargs is passed to the function as a parameter.
-// If the function returns true then the process is a match.
+// customCheckFunc() is a custom function to validate the args against
+// the each process found and checkargs is passed to the function as a
+// parameter. If the function returns true then the process is a match.
 //
 // walk the /proc directory (local or remote) and find the matching pid.
 // This is subject to races, but not much we can do
 //
-// TODO: add support for windows hosts - the lookups are based on the
-// host h and not the local system
-//
-// TODO: cache /proc entries for a period, this is very likely to be
-// used over and over in the same proc
-func GetPID(h host.Host, binaryPrefix string, customCheckFunc func(arg any, cmdline ...[]byte) bool, checkarg any, args ...string) (pid int, err error) {
-	if condition := h == nil || binaryPrefix == ""; condition {
+// We use a process cache to avoid repeated calls to the host to get the
+// process entries, which can be expensive. The cache is updated every 5
+// seconds, or when the cache is empty.
+func GetPID(h host.Host, binary string, customCheckFunc func(checkarg any, cmdline []string) bool, checkarg any, args ...string) (int, error) {
+	c, ok := getProcCache(h)
+	if !ok {
+		return 0, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
+	}
+
+	if condition := h == nil || binary == ""; condition {
 		return 0, fmt.Errorf("host cannot be nil and binaryPrefix must not be empty")
 	}
-	if strings.Contains(h.ServerVersion(), "windows") {
-		return 0, os.ErrProcessDone
-	}
 
-	// safe to ignore error as it can only be bad pattern,
-	// which means no matches to range over
-	dirs, err := h.Glob("/proc/[0-9]*")
-	if err != nil {
-		err = os.ErrProcessDone
-		return
-	}
+	for _, pc := range c.Entries {
+		// remove Linux specific suffixes
+		exe := strings.TrimSuffix(pc.Exe, " (deleted)")
 
-	pids := []int{}
-	for _, dir := range dirs {
-		p, _ := strconv.Atoi(path.Base(dir))
-		pids = append(pids, p)
-	}
-
-	sort.Ints(pids)
-
-	var data []byte
-PIDS:
-	// `pid` is the return value, not a local var
-	for _, pid = range pids {
-		var exe string
-		exe, err = h.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
-		if err != nil {
+		if filepath.Base(exe) != binary {
 			continue
 		}
-		// remove deleted suffix if underlying binary is gone
-		exe = strings.TrimSuffix(exe, " (deleted)")
-		if path.Base(exe) != binaryPrefix {
-			continue
-		}
-		if data, err = h.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid)); err != nil {
-			// process may disappear by this point, perms denied etc., ignore error
-			continue
-		}
-		cmdline := bytes.Split(data, []byte("\000"))
-		if len(args) > len(cmdline)-1 {
+
+		if len(args) > len(pc.Cmdline)-1 {
 			// not enough arguments to test, so it can't match all args
 			continue
 		}
-		execfile := path.Base(string(cmdline[0]))
+
 		if customCheckFunc != nil {
-			if customCheckFunc(checkarg, cmdline...) {
-				return
+			if customCheckFunc(checkarg, pc.Cmdline) {
+				return pc.PID, nil
 			}
-		} else {
-			if strings.HasPrefix(execfile, binaryPrefix) {
-				for _, arg := range args {
-					if !slices.ContainsFunc(cmdline[1:], func(a []byte) bool {
-						return bytes.Equal(a, []byte(arg))
-					}) {
-						continue PIDS
-					}
-				}
-				return
-			}
+			continue
+		}
+
+		if len(args) == 0 {
+			// no args to check, so return the first match
+			return pc.PID, nil
+		}
+
+		// check that all args passed to the function are somewhere on
+		// the command line. we do not check the order of the args, just
+		// that they are all present in the command line
+		if slices.ContainsFunc(pc.Cmdline[1:], func(a string) bool {
+			return slices.Contains(args, a)
+		}) {
+			return pc.PID, nil
 		}
 	}
+
 	return 0, os.ErrProcessDone
+}
+
+type ProcessInfo struct {
+	PID          int
+	Exe          string
+	Cmdline      []string
+	CreationTime time.Time
+	UID          int
+	GID          int
+	TCPPorts     []int
+	UDPPorts     []int
+}
+
+// GetProcessInfo returns information about the process pid on host h.
+func GetProcessInfo(h host.Host, pid int) (err error) {
+	c, ok := getProcCache(h)
+	if !ok {
+		return fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
+	}
+
+	if pc, ok := c.Entries[pid]; ok {
+		log.Debug().Msgf("matched pid %d exe %s cmdline %v", pc.PID, pc.Exe, pc.Cmdline)
+		return nil
+	}
+	return
 }
 
 // Program is a highly simplified representation of a program to manage
