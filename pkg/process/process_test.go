@@ -233,7 +233,7 @@ func TestGetPID(t *testing.T) {
 	}
 
 	// Test with custom check function
-	customCheck := func(arg any, cmdline ...[]byte) bool {
+	customCheck := func(arg any, cmdline []string) bool {
 		return true
 	}
 	_, err = GetPID(nil, "test", customCheck, nil)
