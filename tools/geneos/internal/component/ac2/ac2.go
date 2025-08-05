@@ -259,7 +259,6 @@ func pidCheckFn(arg any, cmdline []string) bool {
 	if !ok {
 		return false
 	}
-	if string(cmdline[0]) != c.Config().GetString("program") {
 
 	if cmdline[0] != c.Config().GetString("program") {
 		return false
