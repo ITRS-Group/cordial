@@ -38,7 +38,7 @@ import (
 const Name = "floating"
 
 var Floating = geneos.Component{
-	Initialise:   Init,
+	Initialise:   initialise,
 	Name:         "floating",
 	Aliases:      []string{"float"},
 	LegacyPrefix: "flt",
@@ -113,7 +113,7 @@ func init() {
 	Floating.Register(factory)
 }
 
-func Init(r *geneos.Host, ct *geneos.Component) {
+func initialise(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
 	if err := r.WriteFile(r.PathTo(ct.ParentType, "templates", templateName), template, 0664); err != nil {
 		log.Fatal().Err(err).Msg("")

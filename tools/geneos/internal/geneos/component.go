@@ -182,7 +182,12 @@ type Component struct {
 
 	// Functions
 
-	// Initialise a component. Callback after the component is registered
+	// Initialise a component. This is called after the directories
+	// have been created and the component is registered. It is called
+	// with the Host and the Component itself, so that it can create
+	// any files or directories that are not part of the initial
+	// directories.
+	// If this is nil then no initialisation is done.
 	Initialise func(*Host, *Component)
 
 	// New is the factory method for the component. It has to be added
