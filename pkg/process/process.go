@@ -142,14 +142,14 @@ func getProcCache(h host.Host) (c procCache, ok bool) {
 	}
 
 	// remote support for Linux only for now
-	if !strings.Contains(h.ServerVersion(), "linux") {
+	if h.ServerVersion() == "windows" {
 		return
 	}
 
 	procCacheMutex.Lock()
 	defer procCacheMutex.Unlock()
 
-	if c, ok = procCacheMap[nil]; ok {
+	if c, ok = procCacheMap[h]; ok {
 		if time.Since(c.LastUpdate) < procCacheTTL {
 			return
 		}
