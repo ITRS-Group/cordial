@@ -45,7 +45,7 @@ func Load() (pf *config.Config, err error) {
 		config.SetAppName(cordial.ExecutableName()),
 		config.SetFileExtension("yaml"),
 		config.WithDefaults(profilesDefault, "yaml"),
-		config.MustExist(), // Ensure the file exists, for checking if creation is required
+		config.MustExist(), // Ensure the file exists, checking if creation is required
 	) == "internal defaults" {
 		if err = pf.Save("profiles",
 			config.SetAppName(cordial.ExecutableName()),

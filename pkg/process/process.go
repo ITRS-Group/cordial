@@ -251,6 +251,8 @@ func GetPID(h host.Host, binary string, customCheckFunc func(checkarg any, cmdli
 	return 0, os.ErrProcessDone
 }
 
+// ProcessInfo is a struct that holds information about a process.
+// It is used to return information about a process on a host.
 type ProcessInfo struct {
 	PID          int
 	Exe          string
