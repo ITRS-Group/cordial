@@ -311,6 +311,7 @@ func initConfig() {
 		config.MergeSettings(),
 		config.IgnoreWorkingDir(),
 		config.WithEnvs("ITRS", "_"),
+		config.UseDefaults(false),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
@@ -323,6 +324,7 @@ func initConfig() {
 		config.MergeSettings(),
 		config.IgnoreWorkingDir(),
 		config.WithEnvs("ITRS", "_"),
+		config.UseDefaults(false),
 	)
 
 	log.Debug().Msgf("configuration loaded from %s", configPath)
