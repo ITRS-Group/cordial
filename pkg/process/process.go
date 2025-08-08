@@ -114,16 +114,23 @@ type procCache struct {
 	LastUpdate time.Time
 
 	// Entries is the map of process entries, indexed by PID
-	Entries map[int]procCacheEntry
-}
-
-type procCacheEntry struct {
-	PID     int
-	Exe     string
-	Cmdline []string
+	Entries map[int]ProcessInfo
 }
 
 var procCacheTTL = 5 * time.Second
+
+// ProcessInfo is a struct that holds information about a process.
+// It is used to return information about a process on a host.
+type ProcessInfo struct {
+	PID          int
+	Exe          string
+	Cmdline      []string
+	CreationTime time.Time
+	UID          int
+	GID          int
+	TCPPorts     []int
+	UDPPorts     []int
+}
 
 // procCache is a map of host to procCache, which is used to cache
 // process entries for each host. It is used to avoid repeated calls to
@@ -160,7 +167,7 @@ func getProcCache(h host.Host) (c procCache, ok bool) {
 	if err != nil {
 		return c, false
 	}
-	c.Entries = make(map[int]procCacheEntry, len(dirs))
+	c.Entries = make(map[int]ProcessInfo, len(dirs))
 
 	for _, dir := range dirs {
 		pid, _ := strconv.Atoi(path.Base(dir))
@@ -171,7 +178,7 @@ func getProcCache(h host.Host) (c procCache, ok bool) {
 			continue
 		}
 		cmdline := strings.Split(strings.TrimSuffix(string(b), "\000"), "\000")
-		c.Entries[pid] = procCacheEntry{
+		c.Entries[pid] = ProcessInfo{
 			PID:     pid,
 			Exe:     exe,
 			Cmdline: cmdline,
@@ -249,19 +256,6 @@ func GetPID(h host.Host, binary string, customCheckFunc func(checkarg any, cmdli
 	}
 
 	return 0, os.ErrProcessDone
-}
-
-// ProcessInfo is a struct that holds information about a process.
-// It is used to return information about a process on a host.
-type ProcessInfo struct {
-	PID          int
-	Exe          string
-	Cmdline      []string
-	CreationTime time.Time
-	UID          int
-	GID          int
-	TCPPorts     []int
-	UDPPorts     []int
 }
 
 // GetProcessInfo returns information about the process pid on host h.

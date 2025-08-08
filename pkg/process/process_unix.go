@@ -119,7 +119,7 @@ func getLocalProcCache() (c procCache, ok bool) {
 	if err != nil {
 		return
 	}
-	c.Entries = make(map[int]procCacheEntry, len(dirs))
+	c.Entries = make(map[int]ProcessInfo, len(dirs))
 
 	for _, dir := range dirs {
 		pid, err := strconv.Atoi(path.Base(dir))
@@ -137,7 +137,7 @@ func getLocalProcCache() (c procCache, ok bool) {
 		}
 		cmdline := strings.Split(strings.TrimSuffix(string(b), "\000"), "\000")
 
-		c.Entries[pid] = procCacheEntry{
+		c.Entries[pid] = ProcessInfo{
 			PID:     pid,
 			Exe:     exe,
 			Cmdline: cmdline,

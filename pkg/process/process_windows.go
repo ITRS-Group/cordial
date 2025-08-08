@@ -58,7 +58,7 @@ func getLocalProcCache() (c procCache, ok bool) {
 		}
 	}
 
-	c.Entries = map[int]procCacheEntry{}
+	c.Entries = map[int]ProcessInfo{}
 
 	h, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
 	if err != nil {
@@ -95,7 +95,7 @@ func getLocalProcCache() (c procCache, ok bool) {
 			continue
 		}
 
-		c.Entries[int(pid)] = procCacheEntry{
+		c.Entries[int(pid)] = ProcessInfo{
 			PID:     int(pid),
 			Exe:     exe,
 			Cmdline: cmdLine,
