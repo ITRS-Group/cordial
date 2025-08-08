@@ -6,7 +6,7 @@ export DOCKER_BUILDKIT = 1
 
 all: release gdna
 
-test-images:
+test-images: release
 	docker build --tag cordial/ubi8 --tag cordial/ubi8:$(VERSION) --target cordial-run-ubi8 .
 	docker build --tag cordial/ubi9 --tag cordial/ubi9:$(VERSION) --target cordial-run-ubi9 .
 
