@@ -125,9 +125,6 @@ var queryCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
-		if len(result.Results) == 0 {
-			log.Fatal().Msg("no data returned")
-		}
 
 		if !strings.EqualFold(queryCmdFormat, "csv") {
 			b, err := json.MarshalIndent(result.Results, "", "    ")
@@ -156,5 +153,10 @@ var queryCmd = &cobra.Command{
 			csv.Write(fields)
 		}
 		csv.Flush()
+
+		// write headlines for toolkit consumers
+		fmt.Printf("<!>table,%s\n", queryCmdTable)
+		fmt.Printf("<!>results,%d\n", len(result.Results))
+		fmt.Printf("<!>query,%s\n", queryCmdQuery)
 	},
 }

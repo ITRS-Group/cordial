@@ -60,8 +60,10 @@ type ResultsResponse struct {
 	Results snow.Results `json:"results,omitempty"`
 }
 
-// not a complete test, but just filter characters *allowed*
-var queryRE = regexp.MustCompile(`^[\w\.@=^ ]+$`)
+// not a complete test, but just filter characters *allowed* according to the ServiceNow
+// documentation. This is not a complete test, but it should catch most
+// of the invalid queries.
+var queryRE = regexp.MustCompile(`^[\w\.,@=^!%*<> ]+$`)
 
 // This is to get a list of all records that match the query, which is
 // usually for a user or caller_id. `format` is the output format,
