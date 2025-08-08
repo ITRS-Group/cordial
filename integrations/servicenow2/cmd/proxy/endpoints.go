@@ -61,13 +61,14 @@ type ResultsResponse struct {
 }
 
 // not a complete test, but just filter characters *allowed*
-var userRE = regexp.MustCompile(`^[\w\.@ ]+$`)
+var queryRE = regexp.MustCompile(`^[\w\.@=^ ]+$`)
 
-// This is to get a list of all records opened by the service
-// user. `format` is the output format, either json (the default) or
-// `csv`.
+// This is to get a list of all records that match the query, which is
+// usually for a user or caller_id. `format` is the output format,
+// either json (the default) or `csv`. `fields` is a comma separated
+// list of fields to return.
 func getRecords(c echo.Context) (err error) {
-	var user string
+	var query string
 	var fields string
 
 	cc := c.(*snow.Context)
@@ -85,9 +86,9 @@ func getRecords(c echo.Context) (err error) {
 
 	qb := echo.QueryParamsBinder(c)
 
-	err = qb.String("user", &user).BindError()
-	if err != nil || user == "" {
-		user = cf.GetString("servicenow.username")
+	err = qb.String("query", &query).BindError()
+	if err != nil || query == "" {
+		query = "name=" + cf.GetString("servicenow.username")
 	}
 
 	err = qb.String("fields", &fields).BindError()
@@ -97,22 +98,15 @@ func getRecords(c echo.Context) (err error) {
 
 	// validate fields
 	if !validateFields(strings.Split(fields, ",")) {
-		return echo.NewHTTPError(http.StatusBadRequest, "field names are invalid or not unique")
+		return echo.NewHTTPError(http.StatusBadRequest, "requested field names are invalid or not unique: %q", fields)
 	}
 
-	// real basic validation of user
-	if !userRE.MatchString(user) {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("username %q supplied is invalid", user))
+	// real basic validation of query
+	if !queryRE.MatchString(query) {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("query %q supplied is invalid", query))
 	}
 
-	u, err := snow.GetRecord(cc, SNOW_SYS_USER_TABLE, snow.Limit(1), snow.Fields(SNOW_SYS_ID), snow.Query(SNOW_USER_NAME+"="+user))
-	if err != nil || len(u) == 0 {
-		return
-	}
-
-	q := fmt.Sprintf(`active=true^opened_by=%s`, u[SNOW_SYS_ID])
-
-	results, err := snow.GetRecords(cc, tc.Name, snow.Fields(fields), snow.Query(q), snow.Display("true"))
+	results, err := snow.GetRecords(cc, tc.Name, snow.Fields(fields), snow.Query(query), snow.Display("true"))
 	if err != nil {
 		return err
 	}
@@ -123,7 +117,7 @@ func getRecords(c echo.Context) (err error) {
 	})
 }
 
-var snowField1 = regexp.MustCompile(`^[\w-]+$`)
+var snowField1 = regexp.MustCompile(`^[\w\.-]+$`)
 
 // validateFields checks all the keys in the snow.Record incident.
 // ServiceNow fields can consist of letters, numbers, underscored and

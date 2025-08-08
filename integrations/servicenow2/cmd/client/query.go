@@ -39,13 +39,13 @@ import (
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd/proxy"
 )
 
-var queryCmdTable, queryCmdUser, queryCmdFormat string
+var queryCmdTable, queryCmdQuery, queryCmdFormat string
 
 func init() {
 	cmd.RootCmd.AddCommand(queryCmd)
 
 	queryCmd.Flags().StringVarP(&queryCmdTable, "table", "t", "", "servicenow table, defaults to incident")
-	queryCmd.Flags().StringVarP(&queryCmdUser, "user", "u", "", "incident user to query")
+	queryCmd.Flags().StringVarP(&queryCmdQuery, "query", "q", "", "query")
 	queryCmd.Flags().StringVarP(&queryCmdFormat, "format", "f", "csv", "output format: `csv` or json")
 	queryCmd.Flags().SortFlags = false
 }
@@ -58,10 +58,8 @@ var queryCmd = &cobra.Command{
 `, "|", "`"),
 	SilenceUsage: true,
 	Run: func(command *cobra.Command, args []string) {
-		// fmt.Printf("defaults: %#v", cf.Get("defaults"))
 		cf := cmd.LoadConfigFile("client")
 
-		// var result []map[string]string
 		var err error
 		var result proxy.ResultsResponse
 
@@ -105,13 +103,19 @@ var queryCmd = &cobra.Command{
 			if queryCmdTable == "" {
 				queryCmdTable = proxy.SNOW_INCIDENT_TABLE
 			}
-			if queryCmdUser == "" {
-				queryCmdUser = cf.GetString(config.Join("proxy", "default-user"))
+
+			if queryCmdQuery == "" {
+				queryCmdQuery = cf.GetString(config.Join("proxy", "default-query"))
 			}
 
-			_, err = rc.Get(context.Background(), queryCmdTable, "user="+queryCmdUser, &result)
+			query := struct {
+				Query string `url:"query,omitempty"`
+			}{
+				Query: queryCmdQuery,
+			}
 
-			if err == nil {
+			if _, err = rc.Get(context.Background(), queryCmdTable, query, &result); err == nil {
+				// all OK ?
 				break
 			}
 

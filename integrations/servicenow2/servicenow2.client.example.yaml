@@ -14,10 +14,11 @@ proxy:
   # for GET, POST and PUT requests
   url: http://localhost:3000/snow/api/v2
 
-  # `default-user` selects the user used for the `query` command and is
-  # ignored for the `client` command. This setting can be overridden on
-  # the command line using the `--query/-q` flag.
-  default-user: admin
+  # `default-query` is for the `query` command and is ignored
+  # for the `client` command. This setting can be overridden on the
+  # command line using the `--query/-q` flag.
+  default-query: name=admin
+  
 
   # `authentication` contains the chosen authentication between the
   # client/query commands and the proxy. At the moment only `token` is

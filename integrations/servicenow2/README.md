@@ -363,11 +363,11 @@ See `break` below as a way of exiting a list of groups based on a test.
 
     The URL of the proxy. This is normally of the form `https://HOSTNAME:PORT/snow/api/v2` where `HOSTNAME` is likely to be `localhost` and the default port is 3000. These values are set in the proxy configuration, and if you are not responsible for configuring the proxy part of this integration then please obtain the correct value from the administrator.
 
-  * `default-user` - Default `admin`
+  * `default-query` - Default `user=admin`
 
     This is the default ServiceNow user name to use for the `query` command and is ignored for the `client` command.
 
-    The default value of `admin` is only useful for testing and should be set carefully.
+    The default value of `name=admin` is only useful for testing and should be set carefully.
 
   * `authentication`
 
