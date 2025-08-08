@@ -36,14 +36,14 @@ type Results []results
 // Record is a map of key/value pairs
 type Record map[string]string
 
-type snowError struct {
-	Error struct {
-		Message string `json:"message"`
-		Detail  string `json:"detail"`
-	} `json:"error"`
-	Status string `json:"status"`
-}
-
+// snowResult is the response from ServiceNow. It contains the results
+// of the request, which is a slice of results. It also contains an
+// error message if the request failed. The status field is used to
+// indicate the status of the request. If the request was successful,
+// the status will be "success". If the request failed, the status will
+// be "error". The error field contains the error message and detail if
+// the request failed. The results field contains the results of the
+// request.
 type snowResult struct {
 	Results Results `json:"result,omitempty"`
 	Error   struct {

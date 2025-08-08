@@ -79,9 +79,10 @@ servicenow:
       search: "active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}^ORDERBYDESCnumber"
 
       response:
-        created: "Incident ${_number} ${_action} - State ${state} Impact ${impact} Urgency ${urgency} - '${_subject}' from ${_gateway}"
-        updated: "Incident ${_number} ${_action} - State ${state} Impact ${impact} Urgency ${urgency} - '${_subject}' from ${_gateway}"
-        failed: "${_action} to create or update incident from ${_gateway}"
+        created: "${_timestamp} Incident ${_number} Created - State ${state} Impact ${impact} Urgency ${urgency} - '${_subject}' from ${_gateway}"
+        updated: "${_timestamp} Incident ${_number} Updated - State ${state} Impact ${impact} Urgency ${urgency} - '${_subject}' from ${_gateway}"
+        failed: "${_timestamp} Failed to create or update incident from ${_gateway} - ${_error}"
+        query: "${_timestamp} Query `${_query}` for table ${_table} returned ${_count} results"
 
       defaults:
         _cmdb_ci_default: 03a9e40d3790200044e0bfc8bcbe5d6c

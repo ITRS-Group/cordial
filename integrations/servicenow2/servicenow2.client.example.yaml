@@ -18,7 +18,6 @@ proxy:
   # for the `client` command. This setting can be overridden on the
   # command line using the `--query/-q` flag.
   default-query: "active=true^opened_byLIKEgeneos"
-  
 
   # `authentication` contains the chosen authentication between the
   # client/query commands and the proxy. At the moment only `token` is

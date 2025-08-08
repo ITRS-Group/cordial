@@ -25,6 +25,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 
@@ -65,7 +66,7 @@ type ResultsResponse struct {
 // of the invalid queries.
 var queryRE = regexp.MustCompile(`^[\w\.,@=^!%*<> ]+$`)
 
-// This is to get a list of all records that match the query, which is
+// This is to get a list of all records that match `query`, which is
 // usually for a user or caller_id. `format` is the output format,
 // either json (the default) or `csv`. `fields` is a comma separated
 // list of fields to return.
@@ -113,7 +114,7 @@ func getRecords(c echo.Context) (err error) {
 		return err
 	}
 
-	return c.JSON(200, ResultsResponse{
+	return c.JSON(http.StatusOK, ResultsResponse{
 		Fields:  strings.Split(fields, ","),
 		Results: results,
 	})
@@ -164,53 +165,131 @@ func validateFields(keys []string) bool {
 	return true
 }
 
+const (
+	Failed  = "Failed"
+	Created = "Created"
+	Updated = "Updated"
+)
+
+type Response struct {
+	Timestamp string `json:"_timestamp"`
+	Action    string `json:"_action"`
+	Error     string `json:"_error,omitempty"`
+	Number    string `json:"_number,omitempty"`
+	Result    string `json:"result"`
+}
+
+// acceptRecord is the main entry point for accepting a record from
+// the ServiceNow proxy. It expects a JSON body with the record to
+// create or update. It will look up the record based on the cmdb_ci
+// and correlation_id fields, and if it exists, it will update it.
 func acceptRecord(c echo.Context) (err error) {
 	var incident snow.Record
 	var ok bool
+
+	req := c.(*snow.Context)
+	cf := req.Conf
+
+	// set up the response, anticipate failure until we know otherwise
+	response := &Response{
+		Timestamp: time.Now().Local().Format(time.RFC3339),
+		Action:    "Failed",
+	}
 
 	// close any request body after we are done
 	if c.Request().Body != nil {
 		defer c.Request().Body.Close()
 	}
 
-	req := c.(*snow.Context)
-	cf := req.Conf
-
 	table, err := snow.TableConfig(cf, req.Param("table"))
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("invalid table %q", req.Param("table")))
+		response.Result = cf.ExpandString(
+			fmt.Sprintf("${_timestamp} Error retrieving table configuration for %q", req.Param("table")),
+			config.LookupTable(incident, map[string]string{
+				"_error":     response.Error,
+				"_timestamp": response.Timestamp,
+			}),
+			config.TrimSpace(false),
+		)
+		return c.JSON(http.StatusBadRequest, response)
 	}
 
 	// set up defaults
 	incident = maps.Clone(table.Defaults)
 
 	if err = json.NewDecoder(c.Request().Body).Decode(&incident); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
+		response.Error = fmt.Sprintf("error decoding request body: %v", err)
+		response.Result = cf.ExpandString(
+			table.Response.Failed,
+			config.LookupTable(incident, map[string]string{
+				"_error":     response.Error,
+				"_timestamp": response.Timestamp,
+			}),
+			config.TrimSpace(false),
+		)
+		return c.JSON(http.StatusBadRequest, response)
 	}
 
 	// validate incident field names
 	if !validateFields(slices.Collect(maps.Keys(incident))) {
-		return echo.NewHTTPError(http.StatusBadRequest, "field names are invalid or not unique")
+		response.Error = "field names are invalid or not unique"
+		response.Result = cf.ExpandString(
+			table.Response.Failed,
+			config.LookupTable(incident, map[string]string{
+				"_error":     response.Error,
+				"_timestamp": response.Timestamp,
+			}),
+			config.TrimSpace(false),
+		)
+		return c.JSON(http.StatusBadRequest, response)
 	}
 
 	// if not given an explicit cmdb_ci then search based on config
 	if _, ok = incident[SNOW_CMDB_CI]; !ok {
 		if query, ok := incident[CMDB_SEARCH]; !ok {
 			if incident[SNOW_CMDB_CI], ok = incident[CMDB_CI_DEFAULT]; !ok {
-				return echo.NewHTTPError(http.StatusNotFound, "must supply either a _cmdb_ci_default or a _cmdb_search parameter")
+				response.Error = "must supply either a _cmdb_ci_default or a _cmdb_search parameter"
+				response.Result = cf.ExpandString(
+					table.Response.Failed,
+					config.LookupTable(incident, map[string]string{
+						"_error":     response.Error,
+						"_timestamp": response.Timestamp,
+					}),
+					config.TrimSpace(false),
+				)
+				return c.JSON(http.StatusNotFound, response)
 			}
 		} else {
 			if _, ok = incident[CMDB_CI_DEFAULT]; !ok {
 				incident[CMDB_CI_DEFAULT] = table.Defaults[CMDB_CI_DEFAULT]
 			}
 			if incident[SNOW_CMDB_CI], err = snow.LookupCmdbCI(req, incident[CMDB_TABLE], query, incident[CMDB_CI_DEFAULT]); err != nil {
-				return
+				response.Error = "failed to look up cmdb_ci: " + err.Error()
+				response.Result = cf.ExpandString(
+					table.Response.Failed,
+					config.LookupTable(incident, map[string]string{
+						"_error":     response.Error,
+						"_timestamp": response.Timestamp,
+					}),
+					config.TrimSpace(false),
+				)
+				return c.JSON(http.StatusBadRequest, response)
 			}
 		}
 	}
 
 	if incident[SNOW_CMDB_CI] == "" {
-		return echo.NewHTTPError(http.StatusNotFound, "cmdb_ci is empty or search resulted in no matches")
+		response.Error = "cmdb_ci is empty or search resulted in no matches"
+		response.Result = cf.ExpandString(
+			table.Response.Failed,
+			config.LookupTable(incident, map[string]string{
+				"_error":     response.Error,
+				"_timestamp": response.Timestamp,
+			}),
+			config.TrimSpace(false),
+		)
+		// if cmdb_ci is empty, we cannot continue
+		return c.JSON(http.StatusNotFound, response)
 	}
 
 	lookup_map := map[string]string{
@@ -223,7 +302,16 @@ func acceptRecord(c echo.Context) (err error) {
 	)
 
 	if err != nil {
-		return
+		response.Error = "failed to look up incident: " + err.Error()
+		response.Result = cf.ExpandString(
+			table.Response.Failed,
+			config.LookupTable(incident, map[string]string{
+				"_error":     response.Error,
+				"_timestamp": response.Timestamp,
+			}),
+			config.TrimSpace(false),
+		)
+		return c.JSON(http.StatusNotFound, response)
 	}
 
 	// first apply defaults, then remove excluded fields, apply renaming, check must-includes
@@ -257,7 +345,17 @@ func acceptRecord(c echo.Context) (err error) {
 		// all include must exist, else error
 		for _, i := range s.MustInclude {
 			if _, ok := incident[i]; !ok {
-				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("missing field %q", i))
+				response.Error = fmt.Sprintf("missing required field %q", i)
+				response.Result = cf.ExpandString(
+					table.Response.Failed,
+					config.LookupTable(incident, map[string]string{
+						"_error":     response.Error,
+						"_timestamp": response.Timestamp,
+					}),
+					config.TrimSpace(false),
+				)
+				// if a must-include field is missing, we cannot continue
+				return c.JSON(http.StatusBadRequest, response)
 			}
 		}
 
@@ -280,38 +378,61 @@ func acceptRecord(c echo.Context) (err error) {
 	incidentFields := maps.Clone(incident)
 	maps.DeleteFunc(incident, func(e, _ string) bool { return strings.HasPrefix(e, "_") })
 
-	response := map[string]string{}
-
 	if incident_id != "" {
 		number, err := incident.UpdateRecord(req, incident_id)
 		if err != nil {
-			return err
+			response.Error = fmt.Sprintf("error updating incident: %v", err)
+			response.Result = cf.ExpandString(
+				table.Response.Failed,
+				config.LookupTable(incident, map[string]string{
+					"_error":     response.Error,
+					"_timestamp": response.Timestamp,
+				}),
+				config.TrimSpace(false),
+			)
+			return c.JSON(http.StatusInternalServerError, response)
 		}
-		response["_action"] = "Updated"
-		response["_number"] = number
-		response["result"] = cf.ExpandString(
+		response.Action = "Updated"
+		response.Number = number
+		response.Result = cf.ExpandString(
 			table.Response.Updated,
-			config.LookupTable(incidentFields, response),
+			config.LookupTable(incidentFields, map[string]string{
+				"_number":    number,
+				"_timestamp": response.Timestamp,
+			}),
 			config.TrimSpace(false),
 		)
 		return c.JSON(http.StatusOK, response)
 	}
 
 	if incident[UPDATE_ONLY] == "true" {
-		response["result"] = "No Incident Created. 'update only' option set."
-		response["_action"] = "Ignored"
+		response.Action = "Ignored"
+		response.Result = "No Incident Created. 'update only' option set."
 		return c.JSON(http.StatusOK, response)
 	}
 
 	number, err := incident.CreateRecord(req)
 	if err != nil {
-		return err
+		response.Error = fmt.Sprintf("error creating incident: %v", err)
+		response.Result = cf.ExpandString(
+			table.Response.Failed,
+			config.LookupTable(incident, map[string]string{
+				"_error":     response.Error,
+				"_timestamp": response.Timestamp,
+			}),
+			config.LookupTable(incidentFields),
+			config.TrimSpace(false),
+		)
+		return c.JSON(http.StatusInternalServerError, response)
 	}
-	response["_action"] = "Created"
-	response["_number"] = number
-	response["result"] = cf.ExpandString(
+	response.Action = "Created"
+	response.Number = number
+	response.Result = cf.ExpandString(
 		table.Response.Created,
-		config.LookupTable(incidentFields, response),
+		config.LookupTable(incidentFields, map[string]string{
+			"_number":    number,
+			"_timestamp": response.Timestamp,
+		}),
 		config.TrimSpace(false),
 	)
 	return c.JSON(http.StatusCreated, response)
