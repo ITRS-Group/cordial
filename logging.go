@@ -54,25 +54,23 @@ func LogInit(prefix string, options ...LogOptions) {
 	var out io.WriteCloser
 	out = os.Stderr
 
-	if zerolog.CallerMarshalFunc == nil {
-		zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
-			if zerolog.GlobalLevel() > zerolog.DebugLevel {
-				return ""
-			}
-			fnName := "UNKNOWN"
-			fn := runtime.FuncForPC(pc)
-			if fn != nil {
-				fnName = fn.Name()
-			}
-			fnName = path.Base(fnName)
-			// fnName = strings.TrimPrefix(fnName, "main.")
-
-			s := strings.SplitAfterN(file, prefix+"/", 2)
-			if len(s) == 2 {
-				file = s[1]
-			}
-			return fmt.Sprintf("%s:%d %s()", file, line, fnName)
+	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
+		if zerolog.GlobalLevel() > zerolog.DebugLevel {
+			return ""
 		}
+		fnName := "UNKNOWN"
+		fn := runtime.FuncForPC(pc)
+		if fn != nil {
+			fnName = fn.Name()
+		}
+		fnName = path.Base(fnName)
+		// fnName = strings.TrimPrefix(fnName, "main.")
+
+		s := strings.SplitAfterN(file, prefix+"/", 2)
+		if len(s) == 2 {
+			file = s[1]
+		}
+		return fmt.Sprintf("%s:%d %s()", file, line, fnName)
 	}
 
 	opts := evalLoggerOptions(options...)
@@ -107,10 +105,10 @@ func LogInit(prefix string, options ...LogOptions) {
 		Out:        out,
 		TimeFormat: time.RFC3339,
 		NoColor:    noColour,
-		FormatLevel: func(i interface{}) string {
+		FormatLevel: func(i any) string {
 			return strings.ToUpper(fmt.Sprintf("%s:", i))
 		},
-		FormatMessage: func(i interface{}) string {
+		FormatMessage: func(i any) string {
 			if i == nil {
 				return fmt.Sprintf("%s:", prefix)
 			}
