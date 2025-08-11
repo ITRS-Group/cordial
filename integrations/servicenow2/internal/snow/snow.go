@@ -110,5 +110,9 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 		)
 	}
 
+	// cache the connection
+	snowMutex.Lock()
+	snowConnection = rc
+	snowMutex.Unlock()
 	return
 }

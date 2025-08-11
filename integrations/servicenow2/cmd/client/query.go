@@ -19,12 +19,9 @@ package client
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -33,7 +30,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/rest"
 
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd"
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd/proxy"
@@ -64,41 +60,7 @@ var queryCmd = &cobra.Command{
 		var result proxy.ResultsResponse
 
 		for _, r := range cf.GetStringSlice(cf.Join("proxy", "url")) {
-			hc := &http.Client{}
-
-			if strings.HasPrefix(r, "https:") {
-				skip := cf.GetBool(cf.Join("proxy", "tls", "skip-verify"))
-				roots, err := x509.SystemCertPool()
-				if err != nil {
-					log.Warn().Err(err).Msg("cannot read system certificates, continuing anyway")
-				}
-
-				if !skip {
-					if chain := cf.GetBytes(cf.Join("proxy", "tls", "chain")); len(chain) != 0 {
-						if ok := roots.AppendCertsFromPEM(chain); !ok {
-							log.Warn().Msg("error reading cert chain")
-						}
-					}
-				}
-
-				hc.Transport = &http.Transport{
-					TLSClientConfig: &tls.Config{
-						RootCAs:            roots,
-						InsecureSkipVerify: skip,
-					},
-				}
-			}
-
-			rc := rest.NewClient(
-				rest.BaseURLString(r),
-				rest.HTTPClient(hc),
-				rest.SetupRequestFunc(func(req *http.Request, _ *rest.Client, _ []byte) {
-					req.Header.Add(
-						"Authorization",
-						fmt.Sprintf("Bearer %s", cf.GetString(config.Join("proxy", "authentication", "token"))),
-					)
-				}),
-			)
+			rc := newRestClient(cf, r)
 
 			if queryCmdTable == "" {
 				queryCmdTable = proxy.SNOW_INCIDENT_TABLE

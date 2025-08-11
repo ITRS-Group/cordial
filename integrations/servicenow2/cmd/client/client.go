@@ -29,6 +29,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -327,41 +328,7 @@ var clientCmd = &cobra.Command{
 
 		// iterate through proxy urls
 		for _, r := range cf.GetStringSlice(cf.Join("proxy", "url")) {
-			hc := &http.Client{}
-
-			if strings.HasPrefix(r, "https:") {
-				skip := cf.GetBool(cf.Join("proxy", "tls", "skip-verify"))
-				roots, err := x509.SystemCertPool()
-				if err != nil {
-					log.Warn().Err(err).Msg("cannot read system certificates, continuing anyway")
-				}
-
-				if !skip {
-					if chain := cf.GetBytes(cf.Join("proxy", "tls", "chain")); len(chain) != 0 {
-						if ok := roots.AppendCertsFromPEM(chain); !ok {
-							log.Warn().Msg("error reading cert chain")
-						}
-					}
-				}
-
-				hc.Transport = &http.Transport{
-					TLSClientConfig: &tls.Config{
-						RootCAs:            roots,
-						InsecureSkipVerify: skip,
-					},
-				}
-			}
-
-			rc := rest.NewClient(
-				rest.BaseURLString(r),
-				rest.HTTPClient(hc),
-				rest.SetupRequestFunc(func(req *http.Request, _ *rest.Client, _ []byte) {
-					req.Header.Add(
-						"Authorization",
-						fmt.Sprintf("Bearer %s", cf.GetString(config.Join("proxy", "authentication", "token"))),
-					)
-				}),
-			)
+			rc := newRestClient(cf, r)
 
 			if clientCmdTable == "" {
 				var ok bool
@@ -432,4 +399,55 @@ func processActionGroup(cf *config.Config, ag ActionGroup, incident snow.Record)
 	}
 
 	return false
+}
+
+// newRestClient creates a new rest.Client for the given URL and
+// configuration. The client is NOT cached as each execution is a single
+// request to the first remote proxy that responds.
+func newRestClient(cf *config.Config, r string) *rest.Client {
+	var tcc *tls.Config
+
+	if strings.HasPrefix(r, "https:") {
+		skip := cf.GetBool(cf.Join("proxy", "tls", "skip-verify"))
+		roots, err := x509.SystemCertPool()
+		if err != nil {
+			log.Warn().Err(err).Msg("cannot read system certificates, continuing anyway")
+		}
+
+		if !skip {
+			if chain := cf.GetBytes(cf.Join("proxy", "tls", "chain")); len(chain) != 0 {
+				if ok := roots.AppendCertsFromPEM(chain); !ok {
+					log.Warn().Msg("error reading cert chain")
+				}
+			}
+		}
+
+		tcc = &tls.Config{
+			RootCAs:            roots,
+			InsecureSkipVerify: skip,
+		}
+	}
+
+	// use most of the default transport settings
+	hc := &http.Client{
+		Transport: &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			TLSClientConfig:       tcc,
+		},
+	}
+
+	return rest.NewClient(
+		rest.BaseURLString(r),
+		rest.HTTPClient(hc),
+		rest.SetupRequestFunc(func(req *http.Request, _ *rest.Client, _ []byte) {
+			req.Header.Add(
+				"Authorization",
+				fmt.Sprintf("Bearer %s", cf.GetString(config.Join("proxy", "authentication", "token"))),
+			)
+		}),
+	)
 }
