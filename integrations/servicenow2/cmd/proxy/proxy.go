@@ -81,10 +81,12 @@ map and submit incidents.
 			process.Daemon(nil, process.RemoveArgs, "-D", "--daemon")
 		}
 
-		var l slog.Level
+		var l slog.Level = slog.LevelInfo
+
 		if cmd.Debug {
 			l = slog.LevelDebug
 		}
+
 		cf := cmd.LoadConfigFile("proxy")
 		// update logging for long running proxy
 		cordial.LogInit(cmd.Execname,
