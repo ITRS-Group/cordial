@@ -85,9 +85,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 #
 FROM node:lts AS cordial-docs
 ARG NODE_ENV=production
-ENV NODE_ENV $NODE_ENV
-ENV PUPPETEER_SKIP_DOWNLOAD true
-ENV PUPPETEER_EXECUTABLE_PATH /usr/bin/google-chrome-stable
+ENV NODE_ENV=$NODE_ENV
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     set -eux; \
