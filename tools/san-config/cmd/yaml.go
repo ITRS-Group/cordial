@@ -86,6 +86,7 @@ func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 	}
 	httpsClient := &http.Client{
 		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: cf.GetBool("inventory.insecure"),
 			},

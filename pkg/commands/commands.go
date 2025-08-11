@@ -185,6 +185,7 @@ func (c *Connection) Redial() (err error) {
 // Do executes command on the REST endpoint, return the http response
 func (c *Connection) Do(endpoint string, command *Command) (response CommandResponse, err error) {
 	tr := &http.Transport{
+		Proxy:           http.ProxyFromEnvironment,
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: c.InsecureSkipVerify},
 	}
 	client := &http.Client{Transport: tr, Timeout: c.Timeout}

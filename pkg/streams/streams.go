@@ -93,6 +93,7 @@ func NewRESTStream(url *url.URL, entity, sampler, streamname string) (stream RES
 	stream.baseurl = url.JoinPath("managedEntity", entity, "sampler", sampler, "stream", streamname)
 	stream.client = &http.Client{
 		Transport: &http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 	}

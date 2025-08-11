@@ -36,6 +36,7 @@ func NewClient(url *url.URL, options ...Options) (c *Client) {
 	c = &Client{url: url}
 	if opt.insecureSkipVerify {
 		c.Client.Transport = &http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 	}
@@ -58,6 +59,7 @@ func (c Client) Connected() bool {
 
 func (c *Client) InsecureSkipVerify() {
 	tr := &http.Transport{
+		Proxy:           http.ProxyFromEnvironment,
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	c.Client = http.Client{Transport: tr}

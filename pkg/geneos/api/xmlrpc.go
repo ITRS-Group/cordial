@@ -64,6 +64,7 @@ func NewXMLRPCClient(endpoint string, options ...Options) (c APIClient, err erro
 	opts := evalOptions(options...)
 	roundtripper := &roundTripper{
 		transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: opts.insecureSkipVerify,
 			},

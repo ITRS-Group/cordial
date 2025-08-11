@@ -956,7 +956,9 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 		// source timestamp defaults to "now" and is only updated from
 		// the detail report, the summary report time is ignored
 		ts := time.Now()
-		tr := http.DefaultTransport
+
+		tc := &tls.Config{}
+
 		if u.Scheme == "https" {
 			skip := cf.GetBool("gdna.licd-skip-verify")
 			roots, err := x509.SystemCertPool()
@@ -974,15 +976,19 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 				}
 			}
 
-			tr = &http.Transport{
-				TLSClientConfig: &tls.Config{
-					RootCAs:            roots,
-					InsecureSkipVerify: skip,
-				},
+			tc = &tls.Config{
+				RootCAs:            roots,
+				InsecureSkipVerify: skip,
 			}
 		}
 
-		client := &http.Client{Transport: tr, Timeout: cf.GetDuration("gdna.licd-timeout")}
+		client := &http.Client{
+			Transport: &http.Transport{
+				Proxy:           http.ProxyFromEnvironment,
+				TLSClientConfig: tc,
+			},
+			Timeout: cf.GetDuration("gdna.licd-timeout"),
+		}
 
 		// read summary data
 		uSummary := u.JoinPath(SummaryPath)

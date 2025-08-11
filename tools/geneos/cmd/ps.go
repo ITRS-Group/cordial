@@ -780,6 +780,7 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	return
 }
 
+// live is unused for now
 func live(i geneos.Instance) bool {
 	cf := i.Config()
 	h := i.Host()
@@ -795,6 +796,7 @@ func live(i geneos.Instance) bool {
 		roots := config.ReadCertChain(h, chain)
 
 		client.Transport = &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{
 				RootCAs: roots,
 			},

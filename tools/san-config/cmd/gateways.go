@@ -69,6 +69,7 @@ func CheckGateways(cf *config.Config) (liveGateways []string) {
 	}
 	httpsClient := http.Client{
 		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true, // we just want to know if it responds, let the client check certs
 			},
