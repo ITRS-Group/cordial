@@ -431,12 +431,9 @@ func newRestClient(cf *config.Config, r string) *rest.Client {
 	// use most of the default transport settings
 	hc := &http.Client{
 		Transport: &http.Transport{
-			Proxy:                 http.ProxyFromEnvironment,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig:       tcc,
+			Proxy:               http.ProxyFromEnvironment,
+			TLSHandshakeTimeout: 10 * time.Second,
+			TLSClientConfig:     tcc,
 		},
 	}
 
