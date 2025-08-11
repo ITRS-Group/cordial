@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"golang.org/x/oauth2"
@@ -59,14 +60,23 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 		return
 	}
 
-	hc := &http.Client{}
-
+	var tcc *tls.Config
 	if sn.Scheme == "https" {
-		hc.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: cf.GetBool(cf.Join("tls", "skip-verify")),
-			},
+		tcc = &tls.Config{
+			InsecureSkipVerify: cf.GetBool(cf.Join("tls", "skip-verify")),
 		}
+	}
+
+	// use most of the default transport settings
+	hc := &http.Client{
+		Transport: &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			TLSClientConfig:       tcc,
+		},
 	}
 
 	p := sn.JoinPath(cf.GetString("path", config.Default("/api/now/v2/table")))
