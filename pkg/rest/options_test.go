@@ -231,6 +231,7 @@ func TestHTTPClient(t *testing.T) {
 
 	t.Run("HTTP client with custom transport", func(t *testing.T) {
 		customTransport := &http.Transport{
+			Proxy:        http.ProxyFromEnvironment,
 			MaxIdleConns: 100,
 		}
 		

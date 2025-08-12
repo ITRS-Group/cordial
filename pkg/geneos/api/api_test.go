@@ -55,7 +55,7 @@ func TestInsecureSkipVerify(t *testing.T) {
 
 func TestRoundTripper(t *testing.T) {
 	// Test roundTripper struct
-	transport := &http.Transport{}
+	transport := &http.Transport{Proxy: http.ProxyFromEnvironment}
 	rt := &roundTripper{
 		transport: transport,
 	}
