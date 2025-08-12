@@ -142,7 +142,7 @@ defaults:
   # - if: ${match:_SEVERITY:critical}
     # set:
       # _profile: infra
-  - if: [ "${match:_PLUGIN:FKM}", "${match:_DATAVIEW:name}" ]
+  - if: [ "${match:_PLUGINNAME:FKM}", "${match:_DATAVIEW:name}" ]
     set:
       # ${replace:_ROWNAME:/#.*$//}
       _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${_filename}${replace:_triggerDetails:^[\d-]+\s[\d-]+::}

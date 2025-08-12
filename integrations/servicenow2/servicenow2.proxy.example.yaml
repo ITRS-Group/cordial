@@ -45,6 +45,12 @@ servicenow:
   password: ${enc:~/.config/geneos/keyfile.aes:+encs+06003E5C9E9E9B3C3BFA3F1B8B468B53}
   # client-id: ${SERVICENOW_CLIENTID}
   # client-secret: ${SERVICENOW_CLIENTSECRET}
+  
+  # the `trace` option is used to enable additional logging of the
+  # requests and responses to/from ServiceNow. This is useful for
+  # debugging issues with the API, but should be disabled in production
+  # environments to avoid logging sensitive information.
+  trace: false
 
   tables:
     # multiple tables are supported through the client side `--table`
