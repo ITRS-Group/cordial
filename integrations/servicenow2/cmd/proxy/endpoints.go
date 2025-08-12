@@ -73,6 +73,7 @@ var queryRE = regexp.MustCompile(`^[\w\.,@=^!%*<> ]+$`)
 func getRecords(c echo.Context) (err error) {
 	var query string
 	var fields string
+	var raw bool
 
 	cc := c.(*snow.Context)
 	cf := cc.Conf
@@ -99,6 +100,8 @@ func getRecords(c echo.Context) (err error) {
 		fields = strings.Join(tc.Query.ResponseFields, ",")
 	}
 
+	qb.Bool("raw", &raw) // defaults to false regardless
+
 	// validate fields
 	if !validateFields(strings.Split(fields, ",")) {
 		return echo.NewHTTPError(http.StatusBadRequest, "requested field names are invalid or not unique: %q", fields)
@@ -109,7 +112,7 @@ func getRecords(c echo.Context) (err error) {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("query %q supplied is invalid", query))
 	}
 
-	results, err := snow.GetRecords(cc, tc.Name, snow.Fields(fields), snow.Query(query), snow.Display("true"))
+	results, err := snow.GetRecords(cc, tc.Name, snow.Fields(fields), snow.Query(query), snow.Display(fmt.Sprint(!raw)))
 	if err != nil {
 		return err
 	}

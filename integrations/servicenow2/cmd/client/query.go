@@ -36,6 +36,7 @@ import (
 )
 
 var queryCmdTable, queryCmdQuery, queryCmdFormat string
+var queryCmdRaw bool
 
 func init() {
 	cmd.RootCmd.AddCommand(queryCmd)
@@ -43,6 +44,7 @@ func init() {
 	queryCmd.Flags().StringVarP(&queryCmdTable, "table", "t", "", "servicenow table, defaults to incident")
 	queryCmd.Flags().StringVarP(&queryCmdQuery, "query", "q", "", "query")
 	queryCmd.Flags().StringVarP(&queryCmdFormat, "format", "f", "csv", "output format: `csv` or json")
+	queryCmd.Flags().BoolVarP(&queryCmdRaw, "raw", "r", false, "turn ServiceNow sys_display off, i.e. return raw values instead of display values")
 	queryCmd.Flags().SortFlags = false
 }
 
@@ -72,8 +74,10 @@ var queryCmd = &cobra.Command{
 
 			query := struct {
 				Query string `url:"query,omitempty"`
+				Raw   bool   `url:"raw,omitempty"`
 			}{
 				Query: queryCmdQuery,
+				Raw:   queryCmdRaw,
 			}
 
 			if _, err = rc.Get(context.Background(), queryCmdTable, query, &result); err == nil {
