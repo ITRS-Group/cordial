@@ -185,7 +185,17 @@ func GetRecord(ctx *Context, table string, options ...Options) (results results,
 func PostRecord(ctx *Context, table string, record Record, options ...Options) (result results, err error) {
 	var r snowResult
 
+	cf := ctx.Conf.Sub("servicenow")
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
+
+	if cf.GetBool("trace") {
+		js, err := json.MarshalIndent(record, "", "    ")
+		if err != nil {
+			log.Debug().Err(err).Msg("failed to marshal trace record for POST request")
+		} else {
+			log.Debug().Msgf("POST %s with record:\n%s", table, js)
+		}
+	}
 	_, err = rc.Post(ctx.Request().Context(), AssembleURL(table, options...), record, &r)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)
@@ -200,7 +210,18 @@ func PostRecord(ctx *Context, table string, record Record, options ...Options) (
 func PutRecord(ctx *Context, table string, record Record, options ...Options) (result results, err error) {
 	var r snowResult
 
-	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
+	cf := ctx.Conf.Sub("servicenow")
+	rc := ServiceNow(cf)
+
+	if cf.GetBool("trace") {
+		js, err := json.MarshalIndent(record, "", "    ")
+		if err != nil {
+			log.Debug().Err(err).Msg("failed to marshal trace record for PUT request")
+		} else {
+			log.Debug().Msgf("PUT %s with record:\n%s", table, js)
+		}
+	}
+
 	_, err = rc.Put(ctx.Request().Context(), AssembleURL(table, options...), record, &r)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)

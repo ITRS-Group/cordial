@@ -1153,3 +1153,134 @@ func BenchmarkClientPost(b *testing.B) {
 		}
 	}
 }
+
+// Test proxy usage with mocked HTTP servers
+func TestProxyUsage(t *testing.T) {
+    t.Run("GET via proxy", func(t *testing.T) {
+        // Target server should not be hit when a proxy is used that responds directly
+        targetHits := 0
+        target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            targetHits++
+            w.WriteHeader(http.StatusTeapot)
+        }))
+        defer target.Close()
+
+        // Proxy server captures absolute URL and returns a canned response
+        proxyHits := 0
+        var seenHost string
+        var seenPath string
+        proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            proxyHits++
+            seenHost = r.URL.Host
+            seenPath = r.URL.Path
+            w.Header().Set("Content-Type", "application/json")
+            json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+        }))
+        defer proxy.Close()
+
+        proxyURL, _ := url.Parse(proxy.URL)
+        httpClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+
+        client := NewClient(
+            BaseURLString(target.URL),
+            HTTPClient(httpClient),
+        )
+
+        var result map[string]string
+        resp, err := client.Get(context.Background(), "json", nil, &result)
+        if err != nil {
+            t.Fatalf("GET via proxy failed: %v", err)
+        }
+        if resp.StatusCode != http.StatusOK {
+            t.Fatalf("Expected 200 from proxy, got %d", resp.StatusCode)
+        }
+        if result["status"] != "ok" {
+            t.Fatalf("Unexpected response body: %+v", result)
+        }
+
+        // Verify proxy saw absolute URL to target
+        tu, _ := url.Parse(target.URL)
+        if seenHost != tu.Host {
+            t.Errorf("Proxy saw host %q, want %q", seenHost, tu.Host)
+        }
+        if seenPath != "/json" {
+            t.Errorf("Proxy saw path %q, want %q", seenPath, "/json")
+        }
+        if proxyHits == 0 {
+            t.Error("Proxy was not hit")
+        }
+        if targetHits != 0 {
+            t.Errorf("Target server was hit %d times; expected 0 (proxy handled request)", targetHits)
+        }
+    })
+
+    t.Run("POST via proxy", func(t *testing.T) {
+        // Target server should not be hit when a proxy is used that responds directly
+        targetHits := 0
+        target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            targetHits++
+            w.WriteHeader(http.StatusTeapot)
+        }))
+        defer target.Close()
+
+        // Proxy server validates method and body, then responds
+        proxyHits := 0
+        var seenMethod string
+        var seenURLHost string
+        var seenURLPath string
+        var seenBody map[string]string
+        proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            proxyHits++
+            seenMethod = r.Method
+            seenURLHost = r.URL.Host
+            seenURLPath = r.URL.Path
+            if err := json.NewDecoder(r.Body).Decode(&seenBody); err != nil {
+                t.Fatalf("Proxy failed to decode body: %v", err)
+            }
+            w.Header().Set("Content-Type", "application/json")
+            json.NewEncoder(w).Encode(map[string]string{"status": "posted"})
+        }))
+        defer proxy.Close()
+
+        proxyURL, _ := url.Parse(proxy.URL)
+        httpClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+
+        client := NewClient(
+            BaseURLString(target.URL),
+            HTTPClient(httpClient),
+        )
+
+        payload := map[string]string{"hello": "world"}
+        var result map[string]string
+        resp, err := client.Post(context.Background(), "json", payload, &result)
+        if err != nil {
+            t.Fatalf("POST via proxy failed: %v", err)
+        }
+        if resp.StatusCode != http.StatusOK {
+            t.Fatalf("Expected 200 from proxy, got %d", resp.StatusCode)
+        }
+        if result["status"] != "posted" {
+            t.Fatalf("Unexpected response body: %+v", result)
+        }
+
+        tu, _ := url.Parse(target.URL)
+        if seenMethod != http.MethodPost {
+            t.Errorf("Proxy saw method %q, want %q", seenMethod, http.MethodPost)
+        }
+        if seenURLHost != tu.Host {
+            t.Errorf("Proxy saw host %q, want %q", seenURLHost, tu.Host)
+        }
+        if seenURLPath != "/json" {
+            t.Errorf("Proxy saw path %q, want %q", seenURLPath, "/json")
+        }
+        if seenBody["hello"] != "world" {
+            t.Errorf("Proxy saw body %+v, want {hello: world}", seenBody)
+        }
+        if proxyHits == 0 {
+            t.Error("Proxy was not hit")
+        }
+        if targetHits != 0 {
+            t.Errorf("Target server was hit %d times; expected 0 (proxy handled request)", targetHits)
+        }
+    })
+}

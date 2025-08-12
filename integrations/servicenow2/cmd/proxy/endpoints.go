@@ -305,7 +305,7 @@ func acceptRecord(c echo.Context) (err error) {
 	)
 
 	if err != nil {
-		response.Error = "failed to look up incident: " + err.Error()
+		response.Error = "error looking up incident: " + err.Error()
 		response.Result = cf.ExpandString(
 			table.Response.Failed,
 			config.LookupTable(incident, map[string]string{
@@ -319,6 +319,16 @@ func acceptRecord(c echo.Context) (err error) {
 
 	// first apply defaults, then remove excluded fields, apply renaming, check must-includes
 	s, ok := table.CurrentStates[state]
+
+	// try to fall back to the default state if we do not have a known
+	// current state for the incident. This is useful for example when
+	// the incident is in a state that we do not know about, such as a
+	// custom state. It is NOT the same as a current state of 0, which
+	// means incident is new.
+	if !ok {
+		s, ok = table.CurrentStates[-1] // -1 is the unknown state
+	}
+
 	if ok {
 		// add default fields if they are not already set (or empty)
 		for k, v := range s.Defaults {
