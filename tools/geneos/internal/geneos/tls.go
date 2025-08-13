@@ -59,6 +59,7 @@ func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err erro
 		err = config.ErrNoUserConfigDir
 		return
 	}
+	// move the root certificate to the user app config directory
 	file = config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls"), RootCABasename+".pem")
 	if file == "" {
 		err = fmt.Errorf("%w: root certificate file %s not found in %s", os.ErrNotExist, RootCABasename+".pem", confDir)
@@ -99,6 +100,7 @@ func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err e
 		err = config.ErrNoUserConfigDir
 		return
 	}
+	// move the signing certificate to the user app config directory
 	file = config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".pem"))
 	if file == "" {
 		err = fmt.Errorf("%w: signing certificate file %s not found in %s", os.ErrNotExist, SigningCertBasename+".pem", confDir)
