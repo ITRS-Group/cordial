@@ -322,7 +322,7 @@ func SetSecureArgs(i geneos.Instance) (args []string) {
 
 	if chain == "" {
 		// promote old files that may exist
-		chain = config.PromoteFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
+		chain = config.MigrateFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
 	}
 	s, err := i.Host().Stat(chain)
 	if err == nil && !s.IsDir() && !(i.Config().IsSet("use-chain") && !i.Config().GetBool("use-chain")) {

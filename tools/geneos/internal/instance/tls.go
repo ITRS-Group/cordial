@@ -232,7 +232,7 @@ func ReadCert(i geneos.Instance) (cert *x509.Certificate, valid bool, chainfile 
 	// etc.
 	chainfile = PathOf(i, "certchain")
 	if chainfile == "" {
-		chainfile = config.PromoteFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
+		chainfile = config.MigrateFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
 	}
 
 	if cp := config.ReadCertChain(i.Host(), chainfile); cp != nil {

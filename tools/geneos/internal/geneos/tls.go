@@ -60,9 +60,11 @@ func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err erro
 		return
 	}
 	// move the root certificate to the user app config directory
-	file = config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls"), RootCABasename+".pem")
+	log.Debug().Msgf("migrating root certificate from %s to %s", LOCAL.PathTo("tls", RootCABasename+".pem"), confDir)
+	file = config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", RootCABasename+".pem"))
 	if file == "" {
 		err = fmt.Errorf("%w: root certificate file %s not found in %s", os.ErrNotExist, RootCABasename+".pem", confDir)
+		log.Debug().Err(err).Msgf("failed to migrate root certificate from %s", LOCAL.PathTo("tls", RootCABasename+".pem"))
 		return
 	}
 	log.Debug().Msgf("reading root certificate %s", file)
@@ -70,7 +72,7 @@ func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err erro
 	// speculatively promote the key file, but do not fail if it does
 	// not exist. this is because the root certificate is self-signed and
 	// does not need a key to verify itself.
-	config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls"), RootCABasename+".key")
+	config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", RootCABasename+".key"))
 	cert, err = config.ParseCertificate(LOCAL, file)
 	if err != nil {
 		return
@@ -101,7 +103,7 @@ func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err e
 		return
 	}
 	// move the signing certificate to the user app config directory
-	file = config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".pem"))
+	file = config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".pem"))
 	if file == "" {
 		err = fmt.Errorf("%w: signing certificate file %s not found in %s", os.ErrNotExist, SigningCertBasename+".pem", confDir)
 		return
@@ -110,7 +112,7 @@ func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err e
 
 	// speculatively promote the key file, but do not fail if it does
 	// not exist.
-	config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".key"))
+	config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".key"))
 	cert, err = config.ParseCertificate(LOCAL, file)
 	if err != nil {
 		return

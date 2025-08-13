@@ -434,15 +434,20 @@ func (h *Host) Hidden() bool {
 func LoadHostConfig() {
 	var err error
 	var confFile string
-	userConfDir, err := config.UserConfigDir()
-	if err != nil {
-		log.Error().Err(err).Msg("user lookup failed, skipping user config directory")
-	} else {
-		confFile = config.PromoteFile(host.Localhost, path.Join(userConfDir, cordial.ExecutableName()), path.Join(userConfDir, OldUserHostFile))
-	}
+	userConfDir := config.AppConfigDir()
+
+	hostsfile := config.Path(
+		"hosts",
+		config.SetAppName(cordial.ExecutableName()),
+		config.UseDefaults(false),
+		config.IgnoreWorkingDir(),
+	)
+
+	confFile = config.MigrateFile(host.Localhost, hostsfile, path.Join(userConfDir, OldUserHostFile))
 
 	// note that SetAppName only matters when PromoteFile returns an empty path
-	h, err := config.Load("hosts",
+	h, err := config.Load(
+		"hosts",
 		config.SetAppName(cordial.ExecutableName()),
 		config.SetConfigFile(confFile),
 		config.UseDefaults(false),
