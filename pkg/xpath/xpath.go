@@ -103,9 +103,12 @@ type Column struct {
 
 // New returns an XPath to the level of the element passed, which can be
 // populated with fields.
-func New(element interface{}) *XPath {
+func New(element any) *XPath {
 	x := &XPath{}
-	return x.ResolveTo(element)
+	if r := x.ResolveTo(element); r != nil {
+		return r
+	}
+	return x
 }
 
 // NewDataviewPath returns an xpath populated to the dataview, with name
@@ -142,7 +145,7 @@ func NewHeadlinePath(name string) (x *XPath) {
 //
 //	x := x.ResolveTo(&Dataview{})
 //	y := xpath.ResolveTo(&Headline{Name: "headlineName"})
-func (x *XPath) ResolveTo(element interface{}) *XPath {
+func (x *XPath) ResolveTo(element any) *XPath {
 	if element == nil {
 		return nil
 	}
