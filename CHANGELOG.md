@@ -9,6 +9,10 @@
 
 * Where we use a custom `http.Transport`, and it's appropriate, add a `Proxy: http.ProxyFromEnvironment` field setting to restore proxy support. In some components, such as the `servicenow2` integration this broke connectivity where the previous version used the `http.DefaultTransport` round-tripper.
 
+* `tools/geneos`
+
+  * Fix CurrentVersion() to return a valid value. This fixes version selection for component command lines as well as `geneos ps` output.
+
 * Fix `cordial.LogInit` to ignore the current `zerolog.CallerMarshalFunc` value rather than just testing for nil. This means our custom function actually works.
 
 * `integrations/servicenow2`
