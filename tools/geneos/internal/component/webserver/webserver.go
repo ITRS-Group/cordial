@@ -387,7 +387,7 @@ func (w *Webservers) Command(checkExt bool) (args, env []string, home string, er
 		"-jar", base+"/geneos-web-server.jar",
 		"-dir", base+"/webapps",
 		"-port", cf.GetString("port"),
-		"-maxThreads 254",
+		"-maxThreads", "254",
 	)
 
 	tlsFiles := instance.Filepaths(w, "certificate", "privatekey")
