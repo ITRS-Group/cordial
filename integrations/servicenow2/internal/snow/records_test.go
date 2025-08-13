@@ -95,7 +95,7 @@ func TestResults_UnmarshalJSON(t *testing.T) {
 func TestTableConfig(t *testing.T) {
 	// Create a test configuration
 	cf := config.New()
-	
+
 	// Set up test table configuration
 	tables := []TableData{
 		{
@@ -176,8 +176,8 @@ func TestRecord_CreateRecord(t *testing.T) {
 	// For now, we'll test the basic structure
 	record := Record{
 		"short_description": "Test incident",
-		"urgency":          "3",
-		"impact":           "3",
+		"urgency":           "3",
+		"impact":            "3",
 	}
 
 	// Verify record structure
@@ -193,8 +193,8 @@ func TestRecord_UpdateRecord(t *testing.T) {
 	// This test would require mocking the HTTP client and ServiceNow function
 	// For now, we'll test the basic structure
 	record := Record{
-		"state":            "2",
-		"work_notes":       "Updated by test",
+		"state":      "2",
+		"work_notes": "Updated by test",
 	}
 
 	// Verify record structure
@@ -216,7 +216,7 @@ func TestSnowError(t *testing.T) {
 		"status": "failure"
 	}`
 
-	var snowErr snowError
+	var snowErr snowResult
 	err := json.Unmarshal([]byte(errorJSON), &snowErr)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal error JSON: %v", err)
@@ -319,7 +319,7 @@ func TestTableStates(t *testing.T) {
 func TestTableResponses(t *testing.T) {
 	responses := TableResponses{
 		Created: "Incident ${number} created successfully",
-		Updated: "Incident ${number} updated successfully", 
+		Updated: "Incident ${number} updated successfully",
 		Failed:  "Failed to process incident: ${error}",
 	}
 

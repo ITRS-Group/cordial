@@ -206,7 +206,7 @@ func TestXPathString(t *testing.T) {
 
 func TestParse(t *testing.T) {
 	// Test valid gateway path
-	xpath, err := Parse("/geneos/gateway/testGateway")
+	xpath, err := Parse("/geneos/gateway[(@name=\"testGateway\")]")
 	if err != nil {
 		t.Errorf("Parse failed: %v", err)
 	}
@@ -218,7 +218,7 @@ func TestParse(t *testing.T) {
 	}
 
 	// Test valid full path
-	xpath, err = Parse("/geneos/gateway/testGateway/probe/testProbe/managedEntity/testEntity/sampler/testSampler/dataview/testDataview/rows/row/testRow/cell/testColumn")
+	xpath, err = Parse("/geneos/gateway[(@name=\"testGateway\")]/directory/probe[(@name=\"testProbe\")]/managedEntity[(@name=\"testEntity\")]/sampler[(@name=\"testSampler\")]/dataview[(@name=\"testDataview\")]/rows/row[(@name=\"testRow\")]/cell[(@column=\"testColumn\")]")
 	if err != nil {
 		t.Errorf("Parse failed: %v", err)
 	}
