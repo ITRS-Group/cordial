@@ -23,69 +23,69 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
-// PromoteFile iterates over paths and finds the first regular file that
-// exists. If this is not the first element in the paths slice then the
-// found file is renamed to the path of the first element. The resulting
-// final path is returned.
+// MigrateFile iterates over newPath and oldPaths and finds the first
+// regular file that exists. If this is not newPath then the found file
+// is renamed to the newPath. The resulting oldPath is returned.
 //
-// If the first element of paths is an empty string then no rename takes
-// place and the first existing file is returned. If the first element
+// If the newPath is an empty string then no rename takes place and the
+// path of the first existing regular file is returned. If the newPath
 // is a directory then the file is moved into that directory through a
 // rename operation and a file with the first matching basename of any
 // other arguments is returned (this avoids the second call returning
-// nothing).
-func PromoteFile(r host.Host, paths ...string) (final string) {
-	if len(paths) == 0 {
+// nothing). Any empty strings in oldPaths is ignored.
+func MigrateFile(h host.Host, newPath string, oldPaths ...string) (dest string) {
+	if newPath == "" {
+		// iterate over newPaths and find the first existing file
+		for _, oldPath := range oldPaths {
+			if p, err := h.Stat(oldPath); err == nil && p.Mode().IsRegular() {
+				return oldPath
+			}
+		}
+		// else return an empty destination
 		return
 	}
 
-	var dir string
-	if paths[0] != "" {
-		if p0, err := r.Stat(paths[0]); err == nil && p0.IsDir() {
-			dir = paths[0]
-		}
+	// check is newPath already exists
+	if st, err := h.Stat(newPath); err == nil && st.Mode().IsRegular() {
+		// newPath is a existing regular file, just return it
+		log.Debug().Msgf("newPath %s already exists, returning", newPath)
+		return newPath
 	}
 
-	for i, p := range paths {
-		var err error
-		if p == "" {
+	for i, oldPath := range oldPaths {
+		if oldPath == "" {
+			// skip empty paths
+			log.Debug().Msgf("skipping empty oldPath at %d", i)
 			continue
 		}
-		if p, err := r.Stat(p); err != nil || !p.Mode().IsRegular() {
-			continue
-		}
 
-		final = p
-		if i == 0 || paths[0] == "" {
-			return
-		}
-		if dir == "" {
-			if err = r.Rename(p, paths[0]); err != nil {
+		if st, err := h.Stat(newPath); err == nil {
+			switch {
+			case st.IsDir():
+				// if newPath is a directory, move the file oldPath into it
+				dest = path.Join(newPath, path.Base(oldPath))
+
+				// if destination already exists and is a regular file, return
+				if st, err := h.Stat(dest); err == nil && st.Mode().IsRegular() {
+					return
+				}
+
+				// else rename the oldPath to the new destination
+				if err := h.Rename(oldPath, dest); err != nil {
+					log.Debug().Err(err).Msgf("failed to rename %s to %s", oldPath, path.Join(newPath, path.Base(oldPath)))
+					return ""
+				}
+
 				return
-			}
-			final = paths[0]
-		} else {
-			final = path.Join(dir, path.Base(p))
-			// don't overwrite existing, return that
-			if p, err := r.Stat(final); err == nil && p.Mode().IsRegular() {
-				return final
-			}
-			if err = r.Rename(p, final); err != nil {
-				return
-			}
-		}
-
-		return
-	}
-
-	if final == "" && dir != "" {
-		for _, p := range paths[1:] {
-			check := path.Join(dir, path.Base(p))
-			if p, err := r.Stat(check); err == nil && p.Mode().IsRegular() {
-				return check
+			case st.Mode().IsRegular():
+				if err := h.Rename(oldPath, newPath); err == nil {
+					return newPath
+				}
 			}
 		}
 	}

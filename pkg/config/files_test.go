@@ -101,7 +101,7 @@ func TestPromoteFile(t *testing.T) {
 
 			tt.setup()
 
-			got := PromoteFile(localhost, tt.paths...)
+			got := MigrateFile(localhost, tt.want, tt.paths...)
 
 			if got != tt.want {
 				t.Errorf("PromoteFile() = %q, want %q", got, tt.want)
@@ -137,7 +137,7 @@ func TestPromoteFileWithDirectory(t *testing.T) {
 	}
 
 	// Test promoting to directory
-	result := PromoteFile(localhost, subDir, srcFile)
+	result := MigrateFile(localhost, subDir, srcFile)
 
 	// Should move file into the directory
 	if !strings.Contains(result, subDir) {
@@ -326,7 +326,7 @@ func TestPromoteFileErrors(t *testing.T) {
 	localhost := host.Localhost
 
 	// Test with non-existent directory (should handle gracefully)
-	result := PromoteFile(localhost, "/nonexistent/path/file1", "/nonexistent/path/file2")
+	result := MigrateFile(localhost, "/nonexistent/path/file1", "/nonexistent/path/file2")
 	if result != "" {
 		t.Errorf("PromoteFile() with non-existent files should return empty string, got %q", result)
 	}
@@ -393,7 +393,7 @@ func TestPromoteFileWithPermissions(t *testing.T) {
 	targetFile := filepath.Join(tempDir, "target.txt")
 
 	// Promote the file
-	result := PromoteFile(localhost, targetFile, testFile)
+	result := MigrateFile(localhost, targetFile, testFile)
 
 	if result != targetFile {
 		t.Errorf("PromoteFile() = %q, want %q", result, targetFile)
