@@ -1,6 +1,33 @@
 # Change Log
 
-## Version v1.22.1-dev
+## Version v1.22.2
+
+> [!NOTE]
+> **Released 2025-08-13** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v.1.22.2 Fixes
+
+* Where we use a custom `http.Transport`, and it's appropriate, add a `Proxy: http.ProxyFromEnvironment` field setting to restore proxy support. In some components, such as the `servicenow2` integration this broke connectivity where the previous version used the `http.DefaultTransport` round-tripper.
+
+* Fix `cordial.LogInit` to ignore the current `zerolog.CallerMarshalFunc` value rather than just testing for nil. This means our custom function actually works.
+
+* `integrations/servicenow2`
+
+  * Fix various bugs and irritations based on feedback from beta testing.
+  
+  * The `query` command has new flags and can accept a full Service Now style query for incidents rather than just a username.
+
+### Version v1.22.2 Changes
+
+* Update to use Go 1.24.6
+
+* `tools/geneos`
+
+  * Add a process cache with a TTL of 5 seconds so that we don't have to iterate through `/proc` (on Linux) for each instance. The 5 second TTL is long enough for each execution. TODO: also cache per-process file and network entries.
+
+---
+
+## Version v1.22.1
 
 > [!NOTE]
 > **Released 2025-08-01** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
