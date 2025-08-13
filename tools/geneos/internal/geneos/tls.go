@@ -61,7 +61,7 @@ func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err erro
 	}
 	file = config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls"), RootCABasename+".pem")
 	if file == "" {
-		err = ErrNotExist
+		err = os.ErrNotExist
 		return
 	}
 	log.Debug().Msgf("reading %s", file)
