@@ -61,14 +61,14 @@ func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err erro
 	}
 	file = config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls"), RootCABasename+".pem")
 	if file == "" {
-		err = os.ErrNotExist
-		return
-	}
-	log.Debug().Msgf("reading %s", file)
-	if file == "" {
 		err = fmt.Errorf("%w: root certificate file %s not found in %s", os.ErrNotExist, RootCABasename+".pem", confDir)
 		return
 	}
+	log.Debug().Msgf("reading root certificate %s", file)
+
+	// speculatively promote the key file, but do not fail if it does
+	// not exist. this is because the root certificate is self-signed and
+	// does not need a key to verify itself.
 	config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls"), RootCABasename+".key")
 	cert, err = config.ParseCertificate(LOCAL, file)
 	if err != nil {
@@ -100,11 +100,14 @@ func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err e
 		return
 	}
 	file = config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".pem"))
-	log.Debug().Msgf("reading %s", file)
 	if file == "" {
 		err = fmt.Errorf("%w: signing certificate file %s not found in %s", os.ErrNotExist, SigningCertBasename+".pem", confDir)
 		return
 	}
+	log.Debug().Msgf("reading signing certificate %s", file)
+
+	// speculatively promote the key file, but do not fail if it does
+	// not exist.
 	config.PromoteFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".key"))
 	cert, err = config.ParseCertificate(LOCAL, file)
 	if err != nil {

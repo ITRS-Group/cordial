@@ -104,10 +104,12 @@ var listCmd = &cobra.Command{
 		ct, names, params := cmd.ParseTypeNamesParams(command)
 		rootCert, rootCertFile, err = geneos.ReadRootCert(true)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			log.Debug().Err(err).Msg("failed to read root cert")
 			return
 		}
 		geneosCert, geneosCertFile, err = geneos.ReadSigningCert()
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			log.Debug().Err(err).Msg("failed to read signing cert")
 			return
 		}
 
