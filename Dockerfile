@@ -1,15 +1,14 @@
 # Dockerfile to build cordial components and tar.gz files
 
-ARG GOVERSION=1.24.6
+ARG GOVERSION=1.25.0
 
-# The bullseye image seems to offer the most compatibility, including
-# libemail.so dependencies
-#
 # Note: To build an executable for a modern Mac use something like:
 #
 # GOOS=darwin GOARCH=arm64 go build -o geneos.${GOOS}-${GOARCH} -tags netgo,osusergo --ldflags '-s -w'
+#
+# However without executable signing this will not run on a Mac unless built locally.
 # 
-FROM golang:${GOVERSION}-bullseye AS build
+FROM golang:${GOVERSION} AS build
 # base files
 COPY go.mod go.sum cordial.go logging.go VERSION README.md CHANGELOG.md /app/cordial/
 COPY pkg /app/cordial/pkg
