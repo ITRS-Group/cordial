@@ -1,5 +1,22 @@
 # Change Log
 
+## Version v1.22.3
+
+> [!NOTE]
+> **Released 2025-08-14** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v.1.22.3 Fixes
+
+* `tools/geneos`
+
+  * `restart` was broken by the earlier implementation of a process cache. Add a `GetLivePID()` function to reset/bypass the cache
+
+### Version v.1.22.3 Changes
+
+* Update Go to 1.25.0 and update dependencies.
+
+---
+
 ## Version v1.22.2
 
 > [!NOTE]

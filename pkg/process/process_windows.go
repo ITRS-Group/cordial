@@ -48,7 +48,7 @@ func setCredentialsFromUsername(cmd *exec.Cmd, username string) (err error) {
 	return
 }
 
-func getLocalProcCache() (c procCache, ok bool, resetcache bool) {
+func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 	procCacheMutex.Lock()
 	defer procCacheMutex.Unlock()
 
