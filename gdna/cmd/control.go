@@ -59,7 +59,7 @@ var stopCmd = &cobra.Command{
 }
 
 func stop() (err error) {
-	pid, err := process.GetPID(host.Localhost, "gdna", nil, nil, "start")
+	pid, err := process.GetPID(host.Localhost, "gdna", true, nil, nil, "start")
 	if err != nil {
 		if err == os.ErrProcessDone {
 			log.Info().Msg("process not found")

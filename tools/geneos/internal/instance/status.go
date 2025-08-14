@@ -47,7 +47,7 @@ func IsProtected(i geneos.Instance) bool {
 
 // IsRunning returns true if the instance is running
 func IsRunning(i geneos.Instance) bool {
-	_, err := GetPID(i)
+	_, err := GetLivePID(i)
 	return err != os.ErrProcessDone
 }
 
@@ -156,7 +156,18 @@ func LiveVersion(i geneos.Instance, pid int) (base string, version string, actua
 // Geneos processes. If a component type defines it's own GetPID()
 // custom check then that is used instead.
 func GetPID(i geneos.Instance) (pid int, err error) {
-	return process.GetPID(i.Host(), i.Config().GetString("binary"), i.Type().GetPID, i, i.Name())
+	return process.GetPID(i.Host(), i.Config().GetString("binary"), false, i.Type().GetPID, i, i.Name())
+}
+
+// GetLivePID returns the PID of the process running for the instance.
+// It resets the process cache to ensure the check is live. If not found
+// then an err of os.ErrProcessDone is returned.
+//
+// The process is identified by checking the conventions used to start
+// Geneos processes. If a component type defines it's own GetPID()
+// custom check then that is used instead.
+func GetLivePID(i geneos.Instance) (pid int, err error) {
+	return process.GetPID(i.Host(), i.Config().GetString("binary"), true, i.Type().GetPID, i, i.Name())
 }
 
 // GetPIDInfo returns the PID of the process for the instance i along

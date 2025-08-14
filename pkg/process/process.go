@@ -143,9 +143,9 @@ type ProcessInfo struct {
 var procCacheMutex sync.Mutex
 var procCacheMap = make(map[host.Host]procCache)
 
-func getProcCache(h host.Host) (c procCache, ok bool) {
+func getProcCache(h host.Host, resetcache bool) (c procCache, ok bool) {
 	if h.IsLocal() {
-		return getLocalProcCache()
+		return getLocalProcCache(resetcache)
 	}
 
 	// remote support for Linux only for now
@@ -156,9 +156,11 @@ func getProcCache(h host.Host) (c procCache, ok bool) {
 	procCacheMutex.Lock()
 	defer procCacheMutex.Unlock()
 
-	if c, ok = procCacheMap[h]; ok {
-		if time.Since(c.LastUpdate) < procCacheTTL {
-			return
+	if !resetcache {
+		if c, ok = procCacheMap[h]; ok {
+			if time.Since(c.LastUpdate) < procCacheTTL {
+				return
+			}
 		}
 	}
 
@@ -204,14 +206,14 @@ func getProcCache(h host.Host) (c procCache, ok bool) {
 // We use a process cache to avoid repeated calls to the host to get the
 // process entries, which can be expensive. The cache is updated every 5
 // seconds, or when the cache is empty.
-func GetPID(h host.Host, binary string, customCheckFunc func(checkarg any, cmdline []string) bool, checkarg any, args ...string) (int, error) {
+func GetPID(h host.Host, binary string, resetcache bool, customCheckFunc func(checkarg any, cmdline []string) bool, checkarg any, args ...string) (int, error) {
 	if h == nil {
 		return 0, fmt.Errorf("host cannot be nil")
 	}
 	if binary == "" {
 		return 0, fmt.Errorf("binaryPrefix must not be empty")
 	}
-	c, ok := getProcCache(h)
+	c, ok := getProcCache(h, resetcache)
 	if !ok {
 		return 0, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
 	}
@@ -259,18 +261,18 @@ func GetPID(h host.Host, binary string, customCheckFunc func(checkarg any, cmdli
 }
 
 // GetProcessInfo returns information about the process pid on host h.
-func GetProcessInfo(h host.Host, pid int) (err error) {
-	c, ok := getProcCache(h)
-	if !ok {
-		return fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
-	}
+// func GetProcessInfo(h host.Host, pid int, resetcache bool) (err error) {
+// 	c, ok := getProcCache(h, resetcache)
+// 	if !ok {
+// 		return fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
+// 	}
 
-	if pc, ok := c.Entries[pid]; ok {
-		log.Debug().Msgf("matched pid %d exe %s cmdline %v", pc.PID, pc.Exe, pc.Cmdline)
-		return nil
-	}
-	return
-}
+// 	if pc, ok := c.Entries[pid]; ok {
+// 		log.Debug().Msgf("matched pid %d exe %s cmdline %v", pc.PID, pc.Exe, pc.Cmdline)
+// 		return nil
+// 	}
+// 	return
+// }
 
 // Program is a highly simplified representation of a program to manage
 // with Start or Batch.
@@ -412,7 +414,7 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 	}
 
 	// only valid if long running
-	pid, err = GetPID(h, p, nil, nil)
+	pid, err = GetPID(h, p, true, nil, nil)
 	err = retErrIfFalse(program.IgnoreErr, err)
 	return
 }

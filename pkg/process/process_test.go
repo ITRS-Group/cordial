@@ -227,7 +227,7 @@ func TestBatch(t *testing.T) {
 
 func TestGetPID(t *testing.T) {
 	// Test with empty binary prefix
-	_, err := GetPID(nil, "", nil, nil)
+	_, err := GetPID(nil, "", false, nil, nil)
 	if err == nil {
 		t.Error("Expected error with empty binary prefix")
 	}
@@ -236,7 +236,7 @@ func TestGetPID(t *testing.T) {
 	customCheck := func(arg any, cmdline []string) bool {
 		return true
 	}
-	_, err = GetPID(nil, "test", customCheck, nil)
+	_, err = GetPID(nil, "test", false, customCheck, nil)
 	if err == nil {
 		t.Error("Expected error with nil host")
 	}

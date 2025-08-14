@@ -149,7 +149,7 @@ func LogFilePath(i geneos.Instance) (logfile string) {
 
 // Signal sends the signal to the instance
 func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
-	pid, err := GetPID(i)
+	pid, err := GetLivePID(i)
 	if err != nil {
 		return os.ErrProcessDone
 	}
@@ -158,7 +158,7 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 		return
 	}
 
-	_, err = GetPID(i)
+	_, err = GetLivePID(i)
 	return
 }
 

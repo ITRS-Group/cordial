@@ -74,7 +74,7 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 	}
 	// wait a bit for the process to start before checking
 	time.Sleep(250 * time.Millisecond)
-	pid, err := GetPID(i)
+	pid, err := GetLivePID(i)
 	if err != nil {
 		return err
 	}
