@@ -343,6 +343,7 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 						i.Type(),
 						i.Name(),
 						i.Host(),
+						pid,
 						fd.FD,
 						fdPerm,
 						fd.Stat.Mode().Perm().String(),
