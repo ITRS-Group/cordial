@@ -66,7 +66,7 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 // openSourceFile(), no options are supported
 func ReadAll(source string) (b []byte, err error) {
 	var from io.ReadCloser
-	from, _, _, err = openSourceFile(source)
+	from, _, _, err = openSource(source)
 	if err != nil {
 		return
 	}
@@ -74,7 +74,7 @@ func ReadAll(source string) (b []byte, err error) {
 	return io.ReadAll(from)
 }
 
-// openSourceFile returns an io.ReadCloser and the base filename for the
+// openSource returns an io.ReadCloser and the base filename for the
 // given source. The source can be a `https` or `http“ URL or a path to
 // a file or '-' for STDIN.
 //
@@ -91,21 +91,15 @@ func ReadAll(source string) (b []byte, err error) {
 // If source is a path to a directory then `geneos.ErrIsADirectory` is
 // returned. If any other stage fails then err is returned from the
 // underlying package.
-func openSourceFile(source string, options ...PackageOptions) (from io.ReadCloser, filename string, filesize int64, err error) {
+func openSource(source string, options ...PackageOptions) (from io.ReadCloser, filename string, filesize int64, err error) {
 	opts := evalOptions(options...)
 
 	filesize = -1 // unknown
 
-	u, err := url.Parse(source)
-	if err != nil {
-		log.Debug().Err(err).Msg("")
-		return
-	}
-
 	switch {
-	case u.Scheme == "https" || u.Scheme == "http":
+	case IsURL(source):
 		var resp *http.Response
-		resp, err = http.Get(u.String())
+		resp, err = http.Get(source)
 		if err != nil {
 			return
 		}
@@ -114,7 +108,7 @@ func openSourceFile(source string, options ...PackageOptions) (from io.ReadClose
 			if opts.username != "" {
 				var req *http.Request
 				client := &http.Client{}
-				if req, err = http.NewRequest("GET", u.String(), nil); err != nil {
+				if req, err = http.NewRequest("GET", source, nil); err != nil {
 					return
 				}
 				pw, _ := opts.password.Open()

@@ -131,7 +131,7 @@ func ImportSource(h *Host, dest string, source string) (filename string, err err
 		}
 	}
 
-	from, filename, _, err = openSourceFile(source)
+	from, filename, _, err = openSource(source)
 	if err != nil {
 		if errors.Is(err, ErrIsADirectory) {
 			err = nil

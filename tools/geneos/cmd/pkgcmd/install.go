@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net/url"
 	"path"
 	"path/filepath"
 	"strings"
@@ -153,52 +154,71 @@ geneos install netprobe -b active_dev -U
 			// work through command line params and try to install each
 			// argument using the naming format of standard downloads
 			for _, source := range params {
-				// check if source is a file, and then extract type and version unless override set
-				st, err := h.Stat(source)
-				if err != nil {
-					log.Debug().Err(err).Msg("skipping")
-					continue
-				}
 				nct := ct
 				version := installCmdVersion
 
-				var p string
+				if installCmdOverride != "" {
+					nct, version, err = geneos.OverrideToComponentVersion(installCmdOverride)
+					if err != nil {
+						fmt.Printf("cannot user override: %s\n", err)
+						return nil
+					}
+				}
 
-				// for non-directories, try to match the filename to ct
-				// and version unless override is set
-				if !st.IsDir() {
-					p, err = filepath.EvalSymlinks(source)
+				switch {
+				case geneos.IsURL(source):
+					u, err := url.Parse(source)
 					if err != nil {
 						log.Debug().Err(err).Msg("skipping")
 						continue
 					}
-					if installCmdOverride != "" {
-						nct, version, err = geneos.OverrideToComponentVersion(installCmdOverride)
-						if err != nil {
-							fmt.Printf("cannot user override: %s\n", err)
-							return nil
-						}
-					} else {
+					// just take the last part of the path
+					p := path.Base(u.Path)
+					if installCmdOverride == "" {
 						var platform string
 						nct, version, platform, _, err = geneos.FilenameToComponentVersion(ct, path.Base(p))
+						if err != nil {
+							log.Debug().Err(err).Msg("skipping")
+							continue
+						}
 						if platform != "" {
 							version += "+" + platform
 						}
 					}
+				case geneos.IsDir(source):
+					// use as is
+					break
+				case geneos.IsFile(source):
+					p, err := filepath.EvalSymlinks(source)
 					if err != nil {
 						log.Debug().Err(err).Msg("skipping")
 						continue
 					}
+					if installCmdOverride == "" {
+						var platform string
+						nct, version, platform, _, err = geneos.FilenameToComponentVersion(ct, path.Base(p))
+						if err != nil {
+							log.Debug().Err(err).Msg("skipping")
+							continue
+						}
+						if platform != "" {
+							version += "+" + platform
+						}
+					}
+
 					if ct != nil && ct != nct {
 						log.Debug().Msgf("ct %s and file ct %s do not match, skipping", ct, nct)
 						continue
 					}
+				default:
+					// if none of the above, skip
+					log.Debug().Msg("skipping")
 				}
 
 				options = append(options, geneos.Version(version))
 
 				log.Debug().Msgf("installing from %s as %q version of %s to %s host(s)", source, version, ct, cmd.Hostname)
-				if err = Install(h, nct, append(options, geneos.LocalArchive(source))...); err != nil {
+				if err = Install(h, nct, append(options, geneos.Source(source))...); err != nil {
 					return err
 				}
 				installed = true
@@ -251,7 +271,7 @@ geneos install netprobe -b active_dev -U
 			}
 			log.Debug().Msgf("downloading %q version of %s to %s", installCmdVersion, ct, archive)
 			options = append(options,
-				geneos.LocalArchive(archive),
+				geneos.Source(archive),
 			)
 			if installCmdSnapshot {
 				installCmdNexus = true
@@ -307,6 +327,8 @@ geneos install netprobe -b active_dev -U
 	},
 }
 
+// Install installs the given component type on the given host, using the
+// given options. If ct is nil, then all component types are installed.
 func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.PackageOptions) (err error) {
 	installed := 0
 	ctSet := ct != nil

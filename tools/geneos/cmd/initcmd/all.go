@@ -87,7 +87,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 
 		if command.Flags().Changed("archive") {
 			options = append(options,
-				geneos.LocalArchive(allCmdArchive),
+				geneos.Source(allCmdArchive),
 			)
 		}
 		return initAll(geneos.LOCAL, options...)

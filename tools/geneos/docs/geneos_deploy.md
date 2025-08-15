@@ -91,7 +91,7 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
   -V, --version VERSION               Use this VERSION
                                       Doesn't work for EL8 archives. (default "latest")
   -L, --local                         Install from local archives only
-  -A, --archive string                File or directory to search for local release archives
+  -A, --archive string                URL or file path to use or a directory to search for local release archives
   -O, --override [TYPE:]VERSION       Override the [TYPE:]VERSION for archive
                                       files with non-standard names
       --nexus                         Download from nexus.itrsgroup.com

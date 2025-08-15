@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -156,16 +155,12 @@ func Install(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	archive, filename, filesize, err := openArchive(ct, options...)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			var dir bool
-			u, _ := url.Parse(opts.localArchive)
-			if u.Scheme == "https" || u.Scheme == "http" {
+			if IsURL(opts.source) {
 				return
 			}
-			if s, err := h.Stat(opts.localArchive); err == nil && s.IsDir() {
-				dir = true
-			}
-			if opts.localOnly || (!opts.downloadonly && dir) {
-				log.Debug().Msgf("%s not found at/in %s but local install only selected, skipping", ct, opts.localArchive)
+			log.Debug().Msgf("%s not found at/in %s (isdir? %v)", ct, opts.source, IsDir(opts.source))
+			if opts.localOnly || (!opts.downloadonly && IsDir(opts.source)) {
+				log.Debug().Msgf("%s not found at/in %s but local install only selected, skipping", ct, opts.source)
 				return nil
 			}
 		}

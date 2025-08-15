@@ -26,7 +26,7 @@ import (
 // packageOptions defines the internal options for various operations in
 // the geneos package
 type packageOptions struct {
-	localArchive string
+	source       string
 	basename     string
 	doupdate     bool
 	downloadbase string
@@ -56,7 +56,7 @@ func evalOptions(options ...PackageOptions) (d *packageOptions) {
 	d = &packageOptions{
 		downloadbase: "releases",
 		downloadtype: "resources",
-		localArchive: path.Join(LocalRoot(), "packages", "downloads"),
+		source:       path.Join(LocalRoot(), "packages", "downloads"),
 		host:         LOCAL,
 	}
 	for _, opt := range options {
@@ -86,32 +86,44 @@ func Destination(host *Host) PackageOptions {
 // NoSave stops downloads from being saved in the archive directory.
 // NoSave and DownloadOnly are mutually exclusive.
 func NoSave(nosave bool) PackageOptions {
-	return func(d *packageOptions) { d.nosave = nosave }
+	return func(d *packageOptions) {
+		d.nosave = nosave
+	}
 }
 
 // LocalOnly uses only existing archives and prevents attempts to
 // download releases
 func LocalOnly(local bool) PackageOptions {
-	return func(d *packageOptions) { d.localOnly = local }
+	return func(d *packageOptions) {
+		d.localOnly = local
+	}
 }
 
-// LocalArchive is the local archive location or the specific release
-// file. It can be a directory, in which case that directory is used for
-// the appropriate archive file(s)
-func LocalArchive(path string) PackageOptions {
-	return func(d *packageOptions) { d.localArchive = path }
+// Source is the archive location or the specific release file. It can
+// be a directory, in which case that directory is used for the
+// appropriate archive file(s), a specific file or a URL to a
+// release. If the file is a URL, it is downloaded to the local archive
+// directory, which defaults to `packages/downloads`.
+func Source(path string) PackageOptions {
+	return func(d *packageOptions) {
+		d.source = path
+	}
 }
 
 // Force ignores existing directories or files and also overrides
 // protection for running instances in upgrades
 func Force(force bool) PackageOptions {
-	return func(d *packageOptions) { d.force = force }
+	return func(d *packageOptions) {
+		d.force = force
+	}
 }
 
 // OverrideVersion forces a specific version to be used and fails if not
 // available
 func OverrideVersion(version string) PackageOptions {
-	return func(d *packageOptions) { d.override = version }
+	return func(d *packageOptions) {
+		d.override = version
+	}
 }
 
 // Restart sets the instances to be restarted around the update
@@ -146,35 +158,47 @@ func StopFunc(fn func(Instance, bool, bool) error) PackageOptions {
 // cases. The version number is in the form `[GA]X.Y.Z` (or `RA` for
 // snapshots)
 func Version(version string) PackageOptions {
-	return func(d *packageOptions) { d.version = version }
+	return func(d *packageOptions) {
+		d.version = version
+	}
 }
 
 // Basename sets the package binary basename, defaults to active_prod,
 // for symlinks for update.
 func Basename(basename string) PackageOptions {
-	return func(d *packageOptions) { d.basename = basename }
+	return func(d *packageOptions) {
+		d.basename = basename
+	}
 }
 
 // SetPlatformID sets the (Linux) platform ID from the OS release info.
 // Currently used to distinguish RHEL8/9 releases from others.
 func SetPlatformID(platform string) PackageOptions {
-	return func(d *packageOptions) { d.platformId = platform }
+	return func(d *packageOptions) {
+		d.platformId = platform
+	}
 }
 
 // UseRoot sets the Geneos installation home directory (aka `geneos` in
 // the settings)
 func UseRoot(root string) PackageOptions {
-	return func(d *packageOptions) { d.geneosdir = root }
+	return func(d *packageOptions) {
+		d.geneosdir = root
+	}
 }
 
 // Username is the remote access username for downloads
 func Username(username string) PackageOptions {
-	return func(d *packageOptions) { d.username = username }
+	return func(d *packageOptions) {
+		d.username = username
+	}
 }
 
 // Password is the remote access password for downloads
 func Password(password *config.Plaintext) PackageOptions {
-	return func(d *packageOptions) { d.password = password }
+	return func(d *packageOptions) {
+		d.password = password
+	}
 }
 
 // UseNexus sets the flag to use nexus.itrsgroup.com for internal
@@ -182,11 +206,15 @@ func Password(password *config.Plaintext) PackageOptions {
 // also influences the way the remote path is searched and build, not
 // just the base URL.
 func UseNexus() PackageOptions {
-	return func(d *packageOptions) { d.downloadtype = "nexus" }
+	return func(d *packageOptions) {
+		d.downloadtype = "nexus"
+	}
 }
 
 // UseNexusSnapshots set the flag to use Nexus Snapshots rather than
 // Releases.
 func UseNexusSnapshots() PackageOptions {
-	return func(d *packageOptions) { d.downloadbase = "snapshots" }
+	return func(d *packageOptions) {
+		d.downloadbase = "snapshots"
+	}
 }

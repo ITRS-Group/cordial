@@ -70,19 +70,19 @@ func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, 
 	opts := evalOptions(options...)
 
 	if !opts.downloadonly {
-		log.Debug().Msgf("localArchive %q", opts.localArchive)
-		body, filename, filesize, err = openSourceFile(opts.localArchive, options...)
+		log.Debug().Msgf("source %q", opts.source)
+		body, filename, filesize, err = openSource(opts.source, options...)
 		if err == nil {
 			log.Debug().Msgf("source opened, returning")
 			return
 		} else if !errors.Is(err, ErrIsADirectory) {
 			// if success or the error indicates it's a directory,
 			// just return
-			log.Debug().Err(err).Msgf("source %q not opened as %q, returning error", opts.localArchive, filename)
+			log.Debug().Err(err).Msgf("source %q not opened as %q, returning error", opts.source, filename)
 			return
 		}
-		if opts.localArchive != path.Join(LocalRoot(), "packages", "downloads") {
-			log.Debug().Msg("source is a directory, setting local directory search flag")
+		if IsDir(opts.source) && opts.source != path.Join(LocalRoot(), "packages", "downloads") {
+			log.Debug().Msg("source is a directory, and not the download cache, so setting local directory search flag")
 			opts.localOnly = true
 		}
 	}
@@ -100,10 +100,22 @@ func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, 
 			return
 		}
 		log.Debug().Msgf("archives: %v", archives)
+		// filter list of archives by version
 		archives = slices.DeleteFunc(archives, func(n string) bool {
-			return !strings.Contains(n, opts.version)
+			var ctMatch bool
+			if ct.DownloadInfix != "" {
+				ctMatch = strings.Contains(n, ct.DownloadInfix)
+			} else {
+				ctMatch = strings.Contains(n, ct.String())
+			}
+
+			if opts.version != "" {
+				return !ctMatch || !strings.Contains(n, opts.version)
+			}
+
+			return !ctMatch
 		})
-		log.Debug().Msgf("archives (filters by version): %v", archives)
+		log.Debug().Msgf("archives (filtered by version %q): %v", opts.version, archives)
 		if len(archives) > 0 {
 			filename = archives[len(archives)-1]
 		}
@@ -113,15 +125,15 @@ func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, 
 			return
 		}
 		var f io.ReadSeekCloser
-		filepath := path.Join(opts.localArchive, filename)
-		if f, err = LOCAL.Open(filepath); err != nil {
+		fp := path.Join(opts.source, filename)
+		if f, err = LOCAL.Open(fp); err != nil {
 			err = fmt.Errorf("local installation selected but no suitable file found for %s (%w)", ct, err)
 			return
 		}
 		body = f
 
 		var s fs.FileInfo
-		s, err = LOCAL.Stat(filepath)
+		s, err = LOCAL.Stat(fp)
 		if err != nil {
 			// Can this fail?
 		}
@@ -133,8 +145,8 @@ func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, 
 		return
 	}
 
-	LOCAL.MkdirAll(opts.localArchive, 0775)
-	archivePath := path.Join(opts.localArchive, filename)
+	LOCAL.MkdirAll(opts.source, 0775)
+	archivePath := path.Join(opts.source, filename)
 	s, err := LOCAL.Stat(archivePath)
 	if err == nil && s.Size() == resp.ContentLength {
 		if f, err := LOCAL.Open(archivePath); err == nil {
@@ -187,6 +199,12 @@ func getbar(console *os.File, name string, size int64) (bar *progressbar.Progres
 	if isterm {
 		out = console
 	}
+
+	if size < 1 {
+		bar = progressbar.DefaultSilent(size)
+		return
+	}
+
 	bar = progressbar.NewOptions64(
 		size,
 		progressbar.OptionSetDescription(name),
@@ -202,6 +220,7 @@ func getbar(console *os.File, name string, size int64) (bar *progressbar.Progres
 		progressbar.OptionFullWidth(),
 		progressbar.OptionSetRenderBlankState(true),
 		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionUseIECUnits(true),
 	)
 	return
 }
