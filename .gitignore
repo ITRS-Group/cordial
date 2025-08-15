@@ -27,7 +27,7 @@ cordial.code-workspace
 
 # Dependency directories (remove the comment below to include it)
 vendor/
-releases/
+release*/
 
 examples/api/api
 examples/commands

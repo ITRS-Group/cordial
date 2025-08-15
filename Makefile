@@ -11,13 +11,13 @@ test-images: release
 	docker build --tag cordial/ubi9 --tag cordial/ubi9:$(VERSION) --target cordial-run-ubi9 .
 
 release: base docs
-	mkdir -p releases/
+	mkdir -p release-$(VERSION)/
 	-docker rm cordial-build-$(VERSION)
 	docker create --name cordial-build-$(VERSION) cordial-build:$(VERSION)
-	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).tar.gz releases/
-	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/. releases/
-	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/docs/. releases/docs/
-	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/lib/libemail.so releases/
+	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).tar.gz release-$(VERSION)/
+	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/. release-$(VERSION)/
+	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/docs/. release-$(VERSION)/docs/
+	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/lib/libemail.so release-$(VERSION)/
 
 .PHONY: build gdna
 
