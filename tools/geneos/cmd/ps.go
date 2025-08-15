@@ -339,7 +339,7 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 					fdPerm += "w"
 				}
 				resp.Lines = append(resp.Lines,
-					fmt.Sprintf("%s\t%s\t%s\t%d:%s\t%s\t%s:%s\t%d\t%s\t%s",
+					fmt.Sprintf("%s\t%s\t%s\t%d\t%d:%s\t%s\t%s:%s\t%d\t%s\t%s",
 						i.Type(),
 						i.Name(),
 						i.Host(),
