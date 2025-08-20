@@ -78,7 +78,15 @@ map and submit incidents.
 	SilenceUsage: true,
 	Run: func(command *cobra.Command, args []string) {
 		if daemon {
-			process.Daemon(nil, process.RemoveArgs, "-D", "--daemon")
+			var logArgs []string
+
+			if logFile == "-" {
+				logArgs = append(logArgs, "--logfile", "servicenow2.proxy.log")
+			}
+
+			if err := process.Daemon2(os.Stdout, logArgs, nil, "-D", "--daemon"); err != nil {
+				log.Fatal().Err(err).Msg("failed to daemonise process")
+			}
 		}
 
 		var l slog.Level = slog.LevelInfo

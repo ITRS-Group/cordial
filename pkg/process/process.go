@@ -91,21 +91,75 @@ func Daemon(writepid io.WriteCloser, processArgs func([]string, ...string) []str
 	return // not reached
 }
 
+// Daemon2 backgrounds the current process by re-executing the existing
+// binary (as found by [os.Executable], so may there is a small window
+// while the referenced binary can change). The function passed as
+// processArgs is called with any further arguments passed to it as
+// parameters and can be used to remove flags that triggered the
+// daemonisation in the first place. A helper function - [RemoveArgs] -
+// is available to do this.
+//
+// The child process is executed with any `addArgs` appended to the
+// command line.
+//
+// If successful the function never returns and the child process PID is
+// written to writepid, if not nil. Remember to only open the file
+// inside the test for daemon mode in the caller, otherwise on
+// re-execution the file will be re-opened and overwrite the one from
+// the parent. writepid is closed in the parent.
+//
+// On failure the function does return with an error.
+//
+//	process.Daemon(os.Stdout, process.RemoveArgs, "-D", "--daemon")
+func Daemon2(writepid io.WriteCloser, addArgs []string, processArgs func([]string, ...string) []string, args ...string) (err error) {
+	bin, err := os.Executable()
+	if err != nil {
+		return
+	}
+	var newargs []string
+	if processArgs == nil {
+		newargs = RemoveArgs(os.Args[1:], args...)
+	} else {
+		newargs = processArgs(os.Args[1:], args...)
+	}
+	newargs = append(newargs, addArgs...)
+	cmd := exec.Command(bin, newargs...)
+	cmd.Stdin = nil
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+
+	// OS specific (compile time/build constraint) changes to cmd
+	prepareCmd(cmd)
+
+	if err = cmd.Start(); err != nil {
+		return
+	}
+
+	// write the resulting PID to writepid if non-nil. close writepid
+	if writepid != nil {
+		fmt.Fprintln(writepid, cmd.Process.Pid)
+		writepid.Close()
+	}
+	if cmd.Process != nil {
+		cmd.Process.Release()
+	}
+	os.Exit(0)
+	return // not reached
+}
+
 // RemoveArgs is a helper function for Daemon(). Daemon calls the
-// function with os.Args[1;] and removes any arguments matching members
+// function with os.Args[1:] and removes any arguments matching members
 // of the slice `remove` and returns the result. Only bare arguments are
 // removed and no pattern matching or adjacent values are removed. If
-// this is required then pass your own function with the same signature.
+// more complex tests are required then pass Daemon() your own function.
 func RemoveArgs(in []string, remove ...string) (out []string) {
-OUTER:
-	for _, a := range in {
-		for _, r := range remove {
-			if a == r {
-				continue OUTER
-			}
+	out = slices.DeleteFunc(in, func(a string) bool {
+		if slices.Contains(remove, a) {
+			return true
 		}
-		out = append(out, a)
-	}
+		return false
+	})
+
 	return
 }
 
