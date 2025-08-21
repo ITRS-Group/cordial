@@ -72,19 +72,25 @@ var listCmd = &cobra.Command{
 				if err != nil {
 					return err
 				}
-				// append in reverse order
-				slices.Reverse(v)
 				versions = append(versions, v...)
 			}
 		}
 
-		// sort versions, by host ct
+		// sort versions, by host ct and reverse version
 		slices.SortFunc(versions, func(a, b *geneos.ReleaseDetails) int {
-			s := strings.Compare(a.Host, b.Host)
-			if s != 0 {
+			if s := strings.Compare(a.Host, b.Host); s != 0 {
+				if geneos.GetHost(a.Host).IsLocal() {
+					return -1
+				}
+				if geneos.GetHost(b.Host).IsLocal() {
+					return 1
+				}
 				return s
 			}
-			return strings.Compare(a.Component, b.Component)
+			if c := strings.Compare(a.Component, b.Component); c != 0 {
+				return c
+			}
+			return geneos.CompareVersions(b.Version, a.Version)
 		})
 
 		switch {
