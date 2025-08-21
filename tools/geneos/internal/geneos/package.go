@@ -27,9 +27,7 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode"
 
-	"github.com/hashicorp/go-version"
 	"github.com/rs/zerolog/log"
 )
 
@@ -78,8 +76,7 @@ func GetReleases(h *Host, ct *Component) (releases []*ReleaseDetails, err error)
 		}
 	}
 
-	latest := ""
-	versions, err := InstalledReleases(h, ct)
+	_, latest, err := InstalledReleases(h, ct)
 	if err != nil {
 		// not found is ok, just return an empty slice
 		if errors.Is(err, fs.ErrNotExist) {
@@ -87,11 +84,7 @@ func GetReleases(h *Host, ct *Component) (releases []*ReleaseDetails, err error)
 		}
 		return
 	}
-	if len(versions) > 0 {
-		latest = versions[len(versions)-1]
-	}
 
-	// latest, _ := LatestInstalledVersion(h, ct, "")
 	for _, ent := range ents {
 		if ent.IsDir() {
 			info, err := ent.Info()
@@ -184,14 +177,9 @@ func Install(h *Host, ct *Component, options ...PackageOptions) (err error) {
 
 // Update will check and update the base link given in the options. If
 // the base link exists then the force option must be used to update it,
-// otherwise it is created as expected. When called from unarchive()
-// this allows new installs to work without explicitly calling update.
+// otherwise it is created. When called from unarchive() this allows new
+// installs to work without explicitly calling update.
 func Update(h *Host, ct *Component, options ...PackageOptions) (err error) {
-	// before updating a specific type on a specific host, loop
-	// through related types, hosts and components. continue to
-	// other items if a single update fails?
-	//
-
 	for h := range h.OrList() {
 		for ct := range ct.OrList() {
 			if err = update(h, ct, options...); err != nil {
@@ -205,8 +193,11 @@ func Update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	return nil
 }
 
-// update is the core function and must be called with non-wild ct and
-// host
+// update will check and update the base link given in the options. If
+// the base link exists then the force option must be used to update it,
+// otherwise it is created. When called from unarchive() this allows new
+// installs to work without explicitly calling update. Host ha dn type
+// ct must not be wildcards
 func update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	if ct == nil || h == ALL {
 		return ErrInvalidArgs
@@ -242,7 +233,7 @@ func update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	}
 
 	version := ""
-	versions, err := InstalledReleases(h, ct)
+	versions, _, err := InstalledReleases(h, ct)
 	if err != nil {
 		// not found is ok, just return an empty slice
 		if errors.Is(err, fs.ErrNotExist) {
@@ -250,6 +241,7 @@ func update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 		}
 		return
 	}
+
 	versions = slices.DeleteFunc(versions, func(version string) bool { return !strings.HasPrefix(version, opts.version) })
 	if len(versions) > 0 {
 		version = versions[len(versions)-1]

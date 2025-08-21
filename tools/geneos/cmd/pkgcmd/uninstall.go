@@ -199,23 +199,15 @@ geneos uninstall --version 5.14.1
 								h.Remove(path.Join(basedir, l))
 							}
 						} else {
-							// update to latest version, remove all others
-							latest := ""
-							versions, err := geneos.InstalledReleases(h, ct)
+							// update to latest version that's left,
+							// remove all others
+							_, latest, err := geneos.InstalledReleases(h, ct)
 							if err != nil {
 								if !errors.Is(err, fs.ErrNotExist) {
 									log.Error().Err(err).Msg("")
 								}
 								continue
 							}
-							if len(versions) > 0 {
-								latest = versions[len(versions)-1]
-							}
-							// latest, err := geneos.LatestInstalledVersion(h, ct, "")
-							// if err != nil {
-							// 	log.Error().Err(err).Msg("")
-							// 	continue
-							// }
 							updateLinks(h, ct, basedir, release, release.Version, latest)
 						}
 					}
