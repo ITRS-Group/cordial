@@ -217,7 +217,7 @@ geneos install netprobe -b active_dev -U
 
 				options = append(options, geneos.Version(version))
 
-				log.Debug().Msgf("installing from %s as %q version of %s to %s host(s)", source, version, ct, cmd.Hostname)
+				log.Debug().Msgf("installing from %s as %q version of %s to %s host(s)", source, version, nct, cmd.Hostname)
 				if err = Install(h, nct, append(options, geneos.Source(source))...); err != nil {
 					return err
 				}
