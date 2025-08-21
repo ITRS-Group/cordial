@@ -96,7 +96,7 @@ func CompareVersion(i geneos.Instance, version string) int {
 		return -1
 	}
 
-	return geneos.CompareVersion(iv, version)
+	return geneos.CompareVersions(iv, version)
 }
 
 // LiveVersion returns the base package name, the underlying package

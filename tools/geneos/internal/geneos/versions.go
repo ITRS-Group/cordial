@@ -227,7 +227,7 @@ func LocalArchives(ct *Component, options ...PackageOptions) (archives []string,
 	return
 }
 
-// CompareVersion takes two Geneos package versions and returns an int
+// CompareVersions takes two Geneos package versions and returns an int
 // that is 0 if they are identical, negative if version1 < version2 and
 // positive is version1 > version2. If the version is prefixed with non
 // numeric values then "GA" is always greater thn "RA" (general versus
@@ -236,7 +236,7 @@ func LocalArchives(ct *Component, options ...PackageOptions) (archives []string,
 //
 // If either version is empty or unparseable then the return value is
 // set to favour the other version - or 0 if both are empty strings.
-func CompareVersion(version1, version2 string) int {
+func CompareVersions(version1, version2 string) int {
 	// cope with empty versions
 	if version1 == "" && version2 == "" {
 		return 0
@@ -248,15 +248,15 @@ func CompareVersion(version1, version2 string) int {
 		return 1
 	}
 
-	v1parts := strings.FieldsFunc(version1, func(r rune) bool {
+	var version1prefix string
+	v1prefixIdx := strings.IndexFunc(version1, func(r rune) bool {
 		return !unicode.IsLetter(r)
 	})
-	if len(v1parts) == 0 {
-		v1parts = []string{"GA"}
-	} else if v1parts[0] == "" {
-		v1parts[0] = "GA"
+	if v1prefixIdx > 0 {
+		version1prefix = version1[:v1prefixIdx]
+		version1 = version1[v1prefixIdx:]
 	} else {
-		version1 = strings.TrimPrefix(version1, v1parts[0])
+		version1prefix = "GA" // default to GA if no prefix
 	}
 	v1, err := version.NewVersion(version1)
 	if err != nil {
@@ -264,25 +264,26 @@ func CompareVersion(version1, version2 string) int {
 		return 1
 	}
 
-	v2parts := strings.FieldsFunc(version2, func(r rune) bool {
+	var version2prefix string
+	v2prefixIdx := strings.IndexFunc(version2, func(r rune) bool {
 		return !unicode.IsLetter(r)
 	})
-	if len(v2parts) == 0 {
-		v2parts = []string{"GA"}
-	} else if v2parts[0] == "" {
-		v2parts[0] = "GA"
+	if v2prefixIdx > 0 {
+		version2prefix = version2[:v2prefixIdx]
+		version2 = version2[v2prefixIdx:]
 	} else {
-		version2 = strings.TrimPrefix(version2, v2parts[0])
+		version2prefix = "GA" // default to GA if no prefix
 	}
 	v2, err := version.NewVersion(version2)
 	if err != nil {
-		// if version2 is unparseable, treat version2 as greater
+		// if version2 is unparseable, treat version1 as greater
 		return -1
 	}
 
-	if i := v1.Compare(v2); i != 0 {
+	if i := v1.Compare(v2); i == 0 {
+		// if the versions are equal then compare the prefixes
+		return strings.Compare(version1prefix, version2prefix)
+	} else {
 		return i
 	}
-
-	return strings.Compare(v1parts[0], v2parts[0])
 }

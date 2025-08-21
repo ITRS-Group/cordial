@@ -113,17 +113,8 @@ func GetReleases(h *Host, ct *Component) (releases []*ReleaseDetails, err error)
 		}
 	}
 
-	// TODO: fix for non valid directories, prevent panics
 	slices.SortFunc(releases, func(a, b *ReleaseDetails) int {
-		va, err := version.NewVersion(strings.TrimLeftFunc(a.Version, func(r rune) bool { return !unicode.IsNumber(r) }))
-		if err != nil {
-			log.Debug().Err(err).Msg("")
-		}
-		vb, err := version.NewVersion(strings.TrimLeftFunc(b.Version, func(r rune) bool { return !unicode.IsNumber(r) }))
-		if err != nil {
-			log.Debug().Err(err).Msg("")
-		}
-		return va.Compare(vb)
+		return CompareVersions(a.Version, b.Version)
 	})
 
 	return releases, nil
