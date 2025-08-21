@@ -89,9 +89,8 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 }
 
 // InstalledReleases returns a sorted slice of all the installed version
-// of component ct on host h as strings. No filtering is done for
-// platform ID etc. as these are already installed on theo host given.
-func InstalledReleases(h *Host, ct *Component) (versions []string, err error) {
+// of component ct on host h as strings.
+func InstalledReleases(h *Host, ct *Component) (versions []string, latest string, err error) {
 	if h == nil || h == ALL || ct == nil {
 		err = ErrInvalidArgs
 		return
@@ -112,7 +111,22 @@ func InstalledReleases(h *Host, ct *Component) (versions []string, err error) {
 		versions = append(versions, ent.Name())
 	}
 
-	slices.SortFunc(versions, CompareVersion)
+	slices.SortFunc(versions, CompareVersions)
+
+	// find the latest version but only include plain and platform
+	// specific releases (i.e. on platformSuffixList and on the host h)
+	if len(versions) > 0 {
+		for i := len(versions) - 1; i >= 0; i-- {
+			v, e, found := strings.Cut(versions[i], "+")
+			if found && PlatformID(h) == e {
+				latest = versions[i]
+				break
+			} else if !found {
+				latest = v
+				break
+			}
+		}
+	}
 
 	return
 }
