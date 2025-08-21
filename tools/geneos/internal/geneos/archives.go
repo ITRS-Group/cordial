@@ -910,7 +910,7 @@ func FilenameToComponentVersion(oct *Component, filename string) (ct *Component,
 	return
 }
 
-var anchoredVersRE = regexp.MustCompile(`^(\d+(\.\d+){0,2})$`)
+var anchoredVersRE = regexp.MustCompile(`^\w+(\.\d+){0,2}\+?`)
 
 func matchVersion(v string) bool {
 	return anchoredVersRE.MatchString(v)
