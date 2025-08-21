@@ -18,7 +18,7 @@ var versions = []versionChecks{
 
 func TestCompareVersion(t *testing.T) {
 	for n, v := range versions {
-		if b := CompareVersion(v.version1, v.version2); b != v.result {
+		if b := CompareVersions(v.version1, v.version2); b != v.result {
 			t.Errorf(`test %d: CompareVersion(%s, %s) returned %d, expected %d`, n, v.version1, v.version2, b, v.result)
 		}
 	}
