@@ -162,11 +162,9 @@ func validateFields(keys []string) bool {
 	})
 
 	l1 := len(keys)
-	l2 := len(slices.Compact(keys))
-	if l1 != l2 {
-		return false
-	}
-	return true
+	l2 := len(slices.Compact(keys)) // slices.Compact modifies the slice
+
+	return l1 == l2
 }
 
 const (

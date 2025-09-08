@@ -97,7 +97,7 @@ func TestProxyCommandAddedToRoot(t *testing.T) {
 			break
 		}
 	}
-	
+
 	if !found {
 		t.Error("Expected proxy command to be added to root command")
 	}
@@ -145,7 +145,7 @@ func TestDaemonFlagDefaultValue(t *testing.T) {
 
 func TestCommandStructure(t *testing.T) {
 	// Test command properties
-	if routerCmd.Aliases != nil && len(routerCmd.Aliases) > 0 {
+	if len(routerCmd.Aliases) > 0 {
 		t.Errorf("Expected proxy command to have no aliases, got %v", routerCmd.Aliases)
 	}
 
@@ -211,7 +211,7 @@ func TestCommandParent(t *testing.T) {
 func TestSubcommands(t *testing.T) {
 	// Test if the proxy command has any subcommands
 	subcommands := routerCmd.Commands()
-	
+
 	// For now, the proxy command shouldn't have subcommands based on the current structure
 	// This test documents the current state and will need updating if subcommands are added
 	if len(subcommands) > 0 {
