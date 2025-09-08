@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -418,9 +419,9 @@ func acceptRecord(c echo.Context) (err error) {
 		return c.JSON(http.StatusOK, response)
 	}
 
-	if incident[UPDATE_ONLY] == "true" {
+	if updateOnly, err := strconv.ParseBool(incidentFields[UPDATE_ONLY]); err == nil && updateOnly {
 		response.Action = "Ignored"
-		response.Result = "No Incident Created. 'update only' option set."
+		response.Result = "No Incident Created. '" + UPDATE_ONLY + "' set."
 		return c.JSON(http.StatusOK, response)
 	}
 
@@ -429,7 +430,7 @@ func acceptRecord(c echo.Context) (err error) {
 		response.Error = fmt.Sprintf("error creating incident: %v", err)
 		response.Result = cf.ExpandString(
 			table.Response.Failed,
-			config.LookupTable(incident, map[string]string{
+			config.LookupTable(incidentFields, map[string]string{
 				"_error":     response.Error,
 				"_timestamp": response.Timestamp,
 			}),
