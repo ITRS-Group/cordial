@@ -19,7 +19,9 @@ package instance
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
@@ -109,13 +111,12 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *e
 
 	args = append(args, so.extras...)
 
-	envs := i.Config().GetStringSlice("env", config.NoDecode(noDecode))
 	libs := []string{}
 	if i.Config().GetString("libpaths") != "" {
 		libs = append(libs, i.Config().GetString("libpaths"))
 	}
 
-	for _, e := range envs {
+	for _, e := range i.Config().GetStringSlice("env", config.NoDecode(noDecode)) {
 		switch {
 		case strings.HasPrefix(e, "LD_LIBRARY_PATH="):
 			libs = append(libs, strings.TrimPrefix(e, "LD_LIBRARY_PATH="))
@@ -123,10 +124,19 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *e
 			env = append(env, e)
 		}
 	}
+
 	if len(libs) > 0 {
 		env = append(env, "LD_LIBRARY_PATH="+strings.Join(libs, ":"))
 	}
+
 	env = append(env, so.envs...)
+
+	// pass through the user's home directory unless there is one specifically defined
+	if !slices.ContainsFunc(env, func(e string) bool {
+		return strings.HasPrefix(e, "HOME=")
+	}) {
+		env = append(env, "HOME="+os.Getenv("HOME"))
+	}
 
 	cmd = exec.Command(binary, args...)
 	cmd.Env = env
