@@ -1,5 +1,26 @@
 # Change Log
 
+## Version v1.22.4
+
+> [!NOTE]
+> **Released 2025-09-10** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v.1.22.4 Fixes
+
+* `tools/geneos`
+
+  * Fix `ps -f` output format
+  * Restore ability to install packages from a URL
+  * Fix progressbar to not show on unknown file sizes and pin units to use IEC (powers of 1,024)
+  * Always set a `HOME` environment variable in the start-up environments, which allws instances to run external processes which depend on knowing the home directory
+
+* `integrations/servicenow2`
+
+  * Fix logging to a file when run as a daemon process
+  * Fix `_update_only` functionality
+
+---
+
 ## Version v1.22.3
 
 > [!NOTE]
