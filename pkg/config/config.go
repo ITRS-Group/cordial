@@ -78,7 +78,7 @@ func New(options ...FileOptions) *Config {
 	var appUserConfDir string
 	opts := evalFileOptions(options...)
 	if userConfDir, err := UserConfigDir(); err == nil {
-		// only set of no error, else ignore
+		// only set if no error, else ignore
 		appUserConfDir = path.Join(userConfDir, opts.appname)
 	}
 	cf := &Config{
