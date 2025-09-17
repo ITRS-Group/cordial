@@ -56,12 +56,17 @@ var demoCmd = &cobra.Command{
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args := cmd.ParseTypeNames(command)
+		ct, args, params := cmd.ParseTypeNamesParams(command)
+
 		// none of the arguments can be a reserved type
 		if ct != nil {
 			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
 			return geneos.ErrInvalidArgs
 		}
+
+		// merge params into args as there may be a directory path in there
+		args = append(args, params...)
+
 		options, err := initProcessArgs(args)
 		if err != nil {
 			return
