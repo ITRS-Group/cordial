@@ -66,12 +66,16 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, args, params := cmd.ParseTypeNamesParams(command)
-		log.Debug().Msgf("%s %v %v", ct, args, params)
+
 		// none of the arguments can be a reserved type
 		if ct != nil {
 			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
 			return geneos.ErrInvalidArgs
 		}
+
+		// merge params into args as there may be a directory path in there
+		args = append(args, params...)
+
 		options, err := initProcessArgs(args)
 		if err != nil {
 			return

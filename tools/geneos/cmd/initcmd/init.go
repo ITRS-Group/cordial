@@ -120,12 +120,15 @@ geneos init
 	//
 	// XXX Call any registered initializer funcs from components
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args := cmd.ParseTypeNames(command)
+		ct, args, params := cmd.ParseTypeNamesParams(command)
 		// none of the arguments can be a reserved type
 		if ct != nil {
 			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
 			return geneos.ErrInvalidArgs
 		}
+
+		// merge params into args as there may be a directory path in there
+		args = append(args, params...)
 
 		options, err := initProcessArgs(args)
 		if err != nil {
@@ -179,7 +182,7 @@ func initProcessArgs(args []string) (options []geneos.PackageOptions, err error)
 	}
 
 	// always have a home directory. the logic below is required in case
-	// the user look-up and the environment variable loo-up both fail
+	// the user look-up and the environment variable look-up both fail
 	// (which can happen when the users are in an external directory and
 	// the program is built fully static)
 	homedir := "/"
