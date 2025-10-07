@@ -149,8 +149,8 @@ func (h *Host) String() string {
 	return h.GetString("name")
 }
 
-// GetHost returns a pointer to Host value. If passed an empty name,
-// returns nil. If passed the special values LOCALHOST or ALLHOSTS then
+// GetHost returns a pointer to a Host. If passed an empty name, returns
+// nil. If passed one of the special values LOCALHOST or ALLHOSTS then
 // it will return the respective special values LOCAL or ALL. Otherwise
 // it tries to lookup an existing host with the given name.
 //
@@ -310,9 +310,6 @@ func Match(h string) iter.Seq[*Host] {
 		case "":
 			return
 		case ALLHOSTS:
-			yield(GetHost(h))
-			return
-		default:
 			hs := []*Host{LOCAL}
 			hs = append(hs, RemoteHosts(false)...)
 			for _, h := range hs {
@@ -320,6 +317,9 @@ func Match(h string) iter.Seq[*Host] {
 					return
 				}
 			}
+		default:
+			yield(GetHost(h))
+			return
 		}
 	}
 }
