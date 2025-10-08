@@ -26,9 +26,9 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
-// CleanRelativePath given a path returns a cleaned version. If the
-// cleaning results in an absolute path or one that tries to ascend the
-// tree then return an error
+// CleanRelativePath returns a cleaned version of relative path p. If
+// the cleaning results in an absolute path or one that tries to ascend
+// the tree then return an error
 func CleanRelativePath(p string) (clean string, err error) {
 	clean = path.Clean(p)
 	if path.IsAbs(clean) || strings.HasPrefix(clean, "../") {
