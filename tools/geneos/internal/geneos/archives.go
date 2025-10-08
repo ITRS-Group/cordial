@@ -887,10 +887,10 @@ func FilenameToComponentVersion(oct *Component, filename string) (ct *Component,
 	}
 	versionIndex := re.SubexpIndex("version")
 	componentIndex := re.SubexpIndex("component")
-	osIndex := re.SubexpIndex("os")
+	// osIndex := re.SubexpIndex("os") // unused
 	suffixIndex := re.SubexpIndex("suffix")
 
-	if versionIndex == -1 || componentIndex == -1 || suffixIndex == -1 || osIndex == -1 || len(parts) < versionIndex+1 {
+	if versionIndex == -1 || componentIndex == -1 || suffixIndex == -1 || len(parts) < versionIndex+1 {
 		err = fmt.Errorf("%q: filename not in expected format: %w", filename, ErrInvalidArgs)
 		return
 	}
