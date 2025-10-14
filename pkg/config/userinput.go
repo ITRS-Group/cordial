@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 
@@ -60,6 +61,9 @@ func ReadUserInputLine(format string, args ...any) (input string, err error) {
 //     the prompt argument.
 //   - If `from` has the prefix `pem:` then the data is taken from the
 //     remainder of the argument.
+//   - If `from` has the prefix `http://` or `https://` then the data
+//     is fetched from the URL pointed to by `from` using an HTTP GET
+//     request.
 //   - Otherwise the file at the path pointed to by `from` is read and
 //     returned
 //
@@ -74,6 +78,23 @@ func ReadInputPEMString(from, prompt string) (data string, err error) {
 	case strings.HasPrefix(from, "pem:"):
 		data = strings.TrimPrefix(from, "pem:")
 		return
+	case strings.HasPrefix(from, "http://"), strings.HasPrefix(from, "https://"):
+		resp, err2 := http.Get(from)
+		if err != nil {
+			err = err2
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode > 299 {
+			err = fmt.Errorf("error fetching %s: %s", from, resp.Status)
+			return
+		}
+		b, err2 := io.ReadAll(resp.Body)
+		if err2 != nil {
+			err = err2
+			return
+		}
+		data = string(b)
 	case from == "-":
 		fmt.Printf("Paste PEM formatted %s, end with newline + CTRL-D:\n", prompt)
 		b, err := io.ReadAll(os.Stdin)
