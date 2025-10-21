@@ -22,7 +22,7 @@ The stages that deploy goes through will help you choose the options you need:
 
 5. If the `--start`/`-S` or `--log`/`-l` options are given then the new instance is started.
 
-You can select the distribution of SAN or Floating Netprobe using the special syntax for the `NAME` in the form `TYPE:NAME`. The only supported `TYPE` at the moment, in addition to the default `netprobe`, is `fa2` allowing you to deploy Fix Analyser 2 based SAN and Floating probes.
+You can select the distribution of SAN or Floating Netprobe using the special syntax for the `NAME` in the form `TYPE:[NAME]`. The `TYPE` can be one of `fa2` or `minimal` to change the package used. `NAME` REMAINS optional, and if not given defaults to the local hostname, but remember to include the colon (`:`) to indicate you are using this syntax.
 
 When an instance is started it has an environment made up of the variables in it's configuration file and some necessary defaults, such as `JAVA_HOME`. Additional variables can be set with the `--env`/`-e` option, which can be repeated as many times as required.
 
