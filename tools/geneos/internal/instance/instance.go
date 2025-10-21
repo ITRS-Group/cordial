@@ -485,8 +485,8 @@ func Decompose(name string, defaultHost ...*geneos.Host) (host *geneos.Host, ct 
 }
 
 func ImportFiles(s geneos.Instance, files ...string) (err error) {
-	for _, source := range files {
-		if _, err = geneos.ImportSource(s.Host(), s.Home(), source); err != nil {
+	for _, item := range files {
+		if _, err = geneos.ImportSource(s.Host(), s.Home(), item); err != nil {
 			return
 		}
 	}

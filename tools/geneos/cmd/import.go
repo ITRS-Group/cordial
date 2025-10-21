@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -87,21 +86,25 @@ geneos import gateway -c shared common_include.xml
 // without asking - use case is license files, setup files etc. backup /
 // history track older files (date/time?) no restart or reload of
 // components?
-func ImportFiles(ct *geneos.Component, args []string, sources []string) (err error) {
+func ImportFiles(ct *geneos.Component, args []string, params []string) (err error) {
 	if importCmdCommon != "" {
 		// ignore args, use ct & params
 		if ct == nil {
 			return fmt.Errorf("component type must be specified for common/shared directory import")
 		}
-		for r := range geneos.Match(Hostname) {
-			if _, err = geneos.ImportCommons(r, ct, ct.String()+"_"+importCmdCommon, sources); err != nil {
+		if importCmdCommon == ct.String()+"s" {
+			return fmt.Errorf("destination cannot be inside the component instance directory")
+		}
+
+		for h := range geneos.Match(Hostname) {
+			if _, err = geneos.ImportCommons(h, ct, importCmdCommon, params); err != nil {
 				return
 			}
 		}
 		return nil
 	}
 
-	instance.Do(geneos.GetHost(Hostname), ct, args, importInstance, sources)
+	instance.Do(geneos.GetHost(Hostname), ct, args, importInstance, params)
 	return
 }
 
@@ -125,7 +128,8 @@ func importInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 	}
 	sources, ok := params[0].([]string)
 	if !ok {
-		panic("wront type")
+		resp.Err = geneos.ErrNotSupported
+		return
 	}
 
 	if i.Type() == &geneos.RootComponent {
@@ -134,10 +138,10 @@ func importInstance(i geneos.Instance, params ...any) (resp *instance.Response) 
 	}
 
 	if len(sources) == 0 {
-		log.Fatal().Msg("no file/url provided")
+		resp.Err = geneos.ErrNotExist
+		return
 	}
 
-	_ = instance.ImportFiles(i, sources...)
-	resp.Err = nil
+	resp.Err = instance.ImportFiles(i, sources...)
 	return
 }
