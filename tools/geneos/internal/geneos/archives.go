@@ -849,7 +849,11 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 	if ct.DownloadParamsNexus == nil {
 		v.Set("maven.groupId", "com.itrsgroup.geneos")
 		v.Set("maven.extension", "tar.gz")
-		v.Set("maven.classifier", os+"-"+arch)
+		if platform != "" {
+			v.Set("maven.classifier", platform+"-"+os+"-"+arch)
+		} else {
+			v.Set("maven.classifier", os+"-"+arch)
+		}
 	} else {
 		for _, param := range *ct.DownloadParamsNexus {
 			s := strings.SplitN(param, "=", 2)
@@ -858,10 +862,6 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 			}
 			v.Set(s[0], s[1])
 		}
-	}
-
-	if platform != "" && ct.DownloadParamsNexus == nil {
-		v.Set("maven.classifier", platform+"-"+os+"-"+arch)
 	}
 
 	if opts.version != "latest" {
