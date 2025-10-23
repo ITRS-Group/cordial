@@ -18,7 +18,8 @@ limitations under the License.
 package config
 
 import (
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 )
 
@@ -37,8 +38,9 @@ type Credentials struct {
 }
 
 // FindCreds finds a set of credentials in the given config under the
-// key "credentials" and returns the longest match, if any. creds
-// is nil if no matching credentials found.
+// key "credentials" and returns the longest case-insensitive match, if
+// any. The domains in the credentials file can use shell patterns, as
+// per `file.Match()`. creds is nil if no matching credentials found.
 func (cf *Config) FindCreds(p string) (creds *Config) {
 	if cf == nil {
 		return nil
@@ -48,14 +50,11 @@ func (cf *Config) FindCreds(p string) (creds *Config) {
 	if cr == nil {
 		return
 	}
-	domains := []string{}
-	for k := range cr {
-		domains = append(domains, k)
-	}
-	// sort the paths longest to shortest
-	sort.Slice(domains, func(i, j int) bool {
-		return len(domains[i]) > len(domains[j])
+
+	domains := slices.SortedFunc(maps.Keys(cr), func(i, j string) int {
+		return len(j) - len(i)
 	})
+
 	creds = New()
 	for _, domain := range domains {
 		if strings.Contains(strings.ToLower(p), strings.ToLower(domain)) {
