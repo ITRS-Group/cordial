@@ -1,5 +1,29 @@
 # Change Log
 
+## Version v1.23.0
+
+> [!NOTE]
+> **Released 2025-10-24** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v.1.23.0 Fixes
+
+* `tools/geneos`
+
+  * Fix directory path passed to `geneos init` commands. Previously the path argument was ignored.
+  * Fix support for `sso-agent` by removing requirement that the download archive have an OS component
+
+### Version v.1.23.0 Changes
+
+* Update Go to 1.25.3 and update dependencies.
+
+* `tools/geneos`
+
+  * Add URL support for arguments that accept PEM file input, like signing and instance bundles. The remote host must have a valid certificate if using `https`, and this cannot be disabled.
+  * Add support for `--header` args to `geneos package install`, `geneos init` and `geneos deploy` to allow custom headers for any remote downloads.
+  * The base URL for nexus downloads can be configured using `geneos config set download::nexus::url=https://...` but the query parameters are hardcoded for the moment. This will be addressed in a future release.
+
+---
+
 ## Version v1.22.4
 
 > [!NOTE]
