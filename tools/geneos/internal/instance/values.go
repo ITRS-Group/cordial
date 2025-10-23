@@ -45,6 +45,10 @@ type SetConfigValues struct {
 	// Environment variables for all instances as name=value pairs
 	Envs NameValues
 
+	// Headers are name=value pairs for passing to URL requests from
+	// various commands
+	Headers NameValues
+
 	// Variables for SAN templates, keyed by variable name
 	Variables Vars
 
@@ -319,6 +323,7 @@ type NameValues []string
 
 const AttributesOptionsText = "An attribute in the format NAME=VALUE\n(Repeat as required, san only)"
 const EnvsOptionsText = "An environment variable for instance start-up\n(Repeat as required)"
+const HeadersOptionsText = "An HTTP header in the format NAME=VALUE\n(Repeat as required)"
 
 func (i *NameValues) String() string {
 	return ""

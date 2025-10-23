@@ -26,6 +26,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/rs/zerolog/log"
@@ -98,23 +99,37 @@ func openSource(source string, options ...PackageOptions) (from io.ReadCloser, f
 
 	switch {
 	case IsURL(source):
+		var req *http.Request
 		var resp *http.Response
-		resp, err = http.Get(source)
+
+		client := &http.Client{}
+
+		req, err = http.NewRequest("GET", source, nil)
+		if err != nil {
+			return nil, "", -1, err
+		}
+
+		// add any headers
+		for _, h := range opts.headers {
+			name, value, found := strings.Cut(h, "=")
+			if found {
+				req.Header.Add(name, value)
+			}
+		}
+		req1 := req.Clone(req.Context())
+		resp, err = client.Do(req1)
 		if err != nil {
 			return
 		}
+
 		// only use auth if required
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
 			if opts.username != "" {
-				var req *http.Request
-				client := &http.Client{}
-				if req, err = http.NewRequest("GET", source, nil); err != nil {
-					return
-				}
+				req2 := req.Clone(req.Context())
 				pw, _ := opts.password.Open()
-				req.SetBasicAuth(opts.username, pw.String())
+				req2.SetBasicAuth(opts.username, pw.String())
 				pw.Destroy()
-				if resp, err = client.Do(req); err != nil {
+				if resp, err = client.Do(req2); err != nil {
 					return
 				}
 			}

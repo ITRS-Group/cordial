@@ -41,22 +41,24 @@ geneos package install [flags] [TYPE] [FILE|URL...]
 ### Options
 
 ```text
-  -u, --username string   Username for downloads, defaults to configuration value in download.username
-  -L, --local             Install from local files only.
-                          * Implied if files or directories are given on command line.
-  -n, --nosave            Do not save a local copy of any downloads.
-                          * Implied if files or directories are given on command line.
-  -D, --download          Download only, to the current directory.
-                          Cannot be combined with --nosave
-  -U, --update            Update the base directory symlink, will restart unprotected instances
-  -F, --force             Force restart of protected instances, implies --update
-  -b, --base string       Override the base active_prod link name (default "active_prod")
-  -V, --version string    Download this version, defaults to latest. Doesn't work for EL8 archives.
-                          Ignored if local file(s) - not directories - are given to install on command-line (default "latest")
-  -O, --override string   Override the TYPE:VERSION for archive files with non-standard names
-  -N, --nexus             Download from nexus.itrsgroup.com. Requires auth.
-  -S, --snapshots         Download from nexus snapshots (pre-releases), not releases. Requires -N
-  -A, --all               Install all types available, not just those types already installed
+  -u, --username string     Username for downloads, defaults to configuration value in download.username
+  -L, --local               Install from local files only.
+                            * Implied if files or directories are given on command line.
+  -n, --nosave              Do not save a local copy of any downloads.
+                            * Implied if files or directories are given on command line.
+  -D, --download            Download only, to the current directory.
+                            Cannot be combined with --nosave
+  -U, --update              Update the base directory symlink, will restart unprotected instances
+  -F, --force               Force restart of protected instances, implies --update
+  -b, --base string         Override the base active_prod link name (default "active_prod")
+  -V, --version string      Download this version, defaults to latest. Doesn't work for EL8 archives.
+                            Ignored if local file(s) - not directories - are given to install on command-line (default "latest")
+  -O, --override string     Override the TYPE:VERSION for archive files with non-standard names
+  -N, --nexus               Download from nexus.itrsgroup.com. Requires auth.
+  -S, --snapshots           Download from nexus snapshots (pre-releases), not releases. Requires -N
+  -A, --all                 Install all types available, not just those types already installed
+      --header NAME=VALUE   An HTTP header in the format NAME=VALUE
+                            (Repeat as required)
 ```
 
 ## Examples

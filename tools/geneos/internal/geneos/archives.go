@@ -141,6 +141,7 @@ func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, 
 		return
 	}
 
+	// else try one of the built-in download methods
 	if filename, resp, err = openRemoteArchive(ct, options...); err != nil {
 		return
 	}
@@ -683,6 +684,8 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		return unicode.IsSpace(r) || r == ','
 	})
 
+	client := &http.Client{}
+
 	for _, bp := range basepaths {
 		// first try plain unauthenticated GET
 		basepath, _ := url.Parse(bp)
@@ -691,7 +694,24 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 
 		log.Debug().Msgf("source url: %s", source)
 
-		if resp, err = http.Get(source); err != nil {
+		var req *http.Request
+		req, err = http.NewRequest("GET", source, nil)
+		if err != nil {
+			log.Error().Err(err).Msg("source, trying next if configured")
+			continue
+		}
+
+		// add any headers
+		for _, h := range opts.headers {
+			name, value, found := strings.Cut(h, "=")
+			if found {
+				req.Header.Add(name, value)
+			}
+		}
+
+		req1 := req.Clone(req.Context())
+
+		if resp, err = client.Do(req1); err != nil {
 			log.Error().Err(err).Msg("source, trying next if configured")
 			continue
 		}
@@ -711,7 +731,8 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 			source = downloadURL.ResolveReference(basepath).String()
 
 			log.Debug().Msgf("platform download failed, retry source url: %q", source)
-			if resp, err = http.Get(source); err != nil {
+			req2 := req.Clone(req.Context())
+			if resp, err = client.Do(req2); err != nil {
 				log.Error().Err(err).Msg("source, trying next if configured")
 				continue
 			}
@@ -745,7 +766,20 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 				// make a copy as bytes.NewBuffer() takes ownership
 				ba := bytes.Clone(authBody)
 				authReader := bytes.NewBuffer(ba)
-				if resp, err = http.Post(source, "application/json", authReader); err != nil {
+				req, err = http.NewRequest("POST", source, authReader)
+				if err != nil {
+					log.Error().Err(err).Msg("source, trying next if configured")
+					continue
+				}
+				req.Header.Set("Content-Type", "application/json")
+				// add any headers
+				for _, h := range opts.headers {
+					name, value, found := strings.Cut(h, "=")
+					if found {
+						req.Header.Add(name, value)
+					}
+				}
+				if resp, err = client.Do(req); err != nil {
 					log.Error().Err(err).Msg("source, trying next if configured")
 					continue
 				}
@@ -764,7 +798,20 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 
 			log.Debug().Msgf("platform download failed, retry source url: %q", source)
 			authReader := bytes.NewBuffer(authBody)
-			if resp, err = http.Post(source, "application/json", authReader); err != nil {
+			req, err = http.NewRequest("POST", source, authReader)
+			if err != nil {
+				log.Error().Err(err).Msg("source, trying next if configured")
+				continue
+			}
+			req.Header.Set("Content-Type", "application/json")
+			// add any headers
+			for _, h := range opts.headers {
+				name, value, found := strings.Cut(h, "=")
+				if found {
+					req.Header.Add(name, value)
+				}
+			}
+			if resp, err = client.Do(req); err != nil {
 				log.Error().Err(err).Msg("source, trying next if configured")
 				continue
 			}
@@ -841,6 +888,13 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 		log.Debug().Msgf("nexus url: %s", source)
 		if req, err = http.NewRequest("GET", source, nil); err != nil {
 			return
+		}
+		// add any headers
+		for _, h := range opts.headers {
+			name, value, found := strings.Cut(h, "=")
+			if found {
+				req.Header.Add(name, value)
+			}
 		}
 		if opts.username != "" {
 			log.Debug().Msgf("setting creds for %s", opts.username)

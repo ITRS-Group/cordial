@@ -93,6 +93,8 @@ func init() {
 	deployCmd.Flags().VarP(&deployCmdExtras.Types, "type", "t", instance.TypesOptionsText)
 	deployCmd.Flags().VarP(&deployCmdExtras.Variables, "variable", "v", instance.VarsOptionsText)
 
+	deployCmd.Flags().Var(&deployCmdExtras.Headers, "header", instance.HeadersOptionsText)
+
 	deployCmd.Flags().SortFlags = false
 
 	deployCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
@@ -255,6 +257,7 @@ var deployCmd = &cobra.Command{
 				geneos.OverrideVersion(deployCmdOverride),
 				geneos.Password(deployCmdPassword),
 				geneos.Username(deployCmdUsername),
+				geneos.Headers(deployCmdExtras.Headers...),
 			}
 			if command.Flags().Changed("archive") {
 				options = append(options,

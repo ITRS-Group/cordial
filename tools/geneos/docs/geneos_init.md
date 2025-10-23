@@ -149,6 +149,8 @@ geneos init [flags] [DIRECTORY]
   -w, --gateway-template string   A gateway template file
   -e, --env NAME=VALUE            An environment variable for instance start-up
                                   (Repeat as required)
+      --header NAME=VALUE         An HTTP header in the format NAME=VALUE
+                                  (Repeat as required)
 ```
 
 ## Examples

@@ -115,6 +115,8 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       (Repeat as required, san only)
   -v, --variable [TYPE:]NAME=VALUE    A variable in the format [TYPE:]NAME=VALUE
                                       (Repeat as required, san only)
+      --header NAME=VALUE             An HTTP header in the format NAME=VALUE
+                                      (Repeat as required)
 ```
 
 ## Examples

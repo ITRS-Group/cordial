@@ -140,7 +140,8 @@ func ImportSource(h *Host, dir, item string) (filename string, err error) {
 
 	log.Debug().Msgf("importing source %q to dir %q with dest %q", item, dir, dst)
 
-	from, filename, _, err := openSource(item)
+	// set the Source(item) option so that any optional credentials are loaded
+	from, filename, _, err := openSource(item, Source(item))
 	if err != nil {
 		// special case the source is a directory
 		if errors.Is(err, ErrIsADirectory) {

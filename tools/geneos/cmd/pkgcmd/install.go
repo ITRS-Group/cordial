@@ -40,6 +40,7 @@ var installCmdLocal, installCmdNoSave, installCmdUpdate, installCmdForce, instal
 var installCmdBase, installCmdOverride, installCmdVersion, installCmdUsername string
 var installCmdDownloadOnly, installCmdAllTypes bool
 var installCmdPassword *config.Plaintext
+var installCmdHeaders instance.NameValues
 
 func init() {
 	packageCmd.AddCommand(installCmd)
@@ -69,6 +70,8 @@ func init() {
 	installCmd.Flags().BoolVarP(&installCmdSnapshot, "snapshots", "S", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
 
 	installCmd.Flags().BoolVarP(&installCmdAllTypes, "all", "A", false, "Install all types available, not just those types already installed")
+
+	installCmd.Flags().Var(&installCmdHeaders, "header", instance.HeadersOptionsText)
 
 	installCmd.Flags().SortFlags = false
 }
@@ -262,6 +265,7 @@ geneos install netprobe -b active_dev -U
 			geneos.Password(installCmdPassword),
 			geneos.Username(installCmdUsername),
 			geneos.DownloadOnly(installCmdDownloadOnly),
+			geneos.Headers(installCmdHeaders...),
 		}
 
 		if installCmdDownloadOnly {

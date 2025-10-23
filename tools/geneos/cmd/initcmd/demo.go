@@ -67,7 +67,7 @@ var demoCmd = &cobra.Command{
 		// merge params into args as there may be a directory path in there
 		args = append(args, params...)
 
-		options, err := initProcessArgs(args)
+		options, err := initProcessArgs(args, initCmdExtras)
 		if err != nil {
 			return
 		}

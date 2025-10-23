@@ -76,7 +76,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 		// merge params into args as there may be a directory path in there
 		args = append(args, params...)
 
-		options, err := initProcessArgs(args)
+		options, err := initProcessArgs(args, initCmdExtras)
 		if err != nil {
 			return
 		}

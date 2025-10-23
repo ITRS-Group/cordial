@@ -78,6 +78,7 @@ func init() {
 	initCmd.PersistentFlags().StringVarP(&initCmdGatewayTemplate, "gateway-template", "w", "", "A gateway template file")
 
 	initCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", instance.EnvsOptionsText)
+	initCmd.PersistentFlags().Var(&initCmdExtras.Headers, "header", instance.HeadersOptionsText)
 
 	initCmd.PersistentFlags().SortFlags = false
 	initCmd.Flags().SortFlags = false
@@ -130,7 +131,7 @@ geneos init
 		// merge params into args as there may be a directory path in there
 		args = append(args, params...)
 
-		options, err := initProcessArgs(args)
+		options, err := initProcessArgs(args, initCmdExtras)
 		if err != nil {
 			return err
 		}
@@ -165,13 +166,18 @@ var initTLSCmd = &cobra.Command{
 
 // initProcessArgs works through the parsed arguments and returns a
 // geneos.GeneosOptions slice to be passed to worker functions
-func initProcessArgs(args []string) (options []geneos.PackageOptions, err error) {
+func initProcessArgs(args []string, extras ...instance.SetConfigValues) (options []geneos.PackageOptions, err error) {
 	var root string
 
 	options = []geneos.PackageOptions{
 		geneos.Version(initCmdVersion),
 		geneos.Basename("active_prod"),
 		geneos.Force(initCmdForce),
+	}
+
+	// if passed in extras, add any headers
+	if len(extras) > 0 {
+		options = append(options, geneos.Headers(extras[0].Headers...))
 	}
 
 	if initCmdNexus {

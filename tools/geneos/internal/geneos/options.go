@@ -34,6 +34,7 @@ type packageOptions struct {
 	downloadtype string
 	force        bool
 	geneosdir    string
+	headers      []string
 	host         *Host
 	localOnly    bool
 	nosave       bool
@@ -61,6 +62,15 @@ func evalOptions(options ...PackageOptions) (d *packageOptions) {
 	}
 	for _, opt := range options {
 		opt(d)
+	}
+
+	// try to fill in username/password from credentials if not set
+	if d.source != "" && d.username == "" {
+		cr := config.FindCreds(d.source)
+		if cr != nil {
+			d.username = cr.GetString("username")
+			d.password = cr.GetPassword("password")
+		}
 	}
 	return
 }
@@ -216,5 +226,15 @@ func UseNexus() PackageOptions {
 func UseNexusSnapshots() PackageOptions {
 	return func(d *packageOptions) {
 		d.downloadbase = "snapshots"
+	}
+}
+
+// Headers adds each arg as an HTTP header in the form NAME=VALUE for
+// passing to URL requests. The NAME=VALUE is decomposed just before the
+// request so that the order the headers are added as options is
+// preserved. A header in the wrong format is ignored.
+func Headers(header ...string) PackageOptions {
+	return func(d *packageOptions) {
+		d.headers = append(d.headers, header...)
 	}
 }
