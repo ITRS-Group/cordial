@@ -89,8 +89,8 @@ var SSOAgent = geneos.Component{
 		`port=1180`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib"}}`,
 		`autostart=true`,
-		// customised cacerts - can be to a shared one if required
-		`truststore={{join "${config:home}" "cacerts"}}`,
+		// customised cacerts - can be to a shared one if required - not set by default
+		// `truststore={{join "${config:home}" "conf" "cacerts"}}`,
 	},
 
 	Directories: []string{
