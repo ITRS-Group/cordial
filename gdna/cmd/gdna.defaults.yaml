@@ -1698,6 +1698,9 @@ reports:
   # This is the Summary sheet at the start of any XLSX file and as a
   # table in the body of emails. Put any required headlines here as they
   # are not added to individual sheets in an XLSX workbook.
+  #
+  # Note: if the command line option to scramble names is set then
+  # `${hostname}` and `${username}` are set as a sequence of asterisks.
   gdna-summary:
     name: GDNA Summary
     dataview:

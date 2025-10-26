@@ -30,7 +30,7 @@ import (
 // create a report per gateway (or other column) and populate with given queries
 func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report) (err error) {
 	split := []string{}
-	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title))
+	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
 
 	if report.SplitValues == "" {
 		log.Error().Msg("no split-values-query defined")

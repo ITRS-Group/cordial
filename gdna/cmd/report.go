@@ -361,7 +361,7 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 	return nil
 }
 
-func reportLookupTable(report, group string) (lookupTable map[string]string) {
+func reportLookupTable(report, group string, scramble bool) (lookupTable map[string]string) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "UNKNOWN"
@@ -371,18 +371,20 @@ func reportLookupTable(report, group string) (lookupTable map[string]string) {
 	if err == nil {
 		username = user.Username
 	}
-	now := time.Now()
 
-	dateonly := now.Local().Format(time.DateOnly)
-	timeonly := now.Local().Format(time.TimeOnly)
-	datetime := now.Local().Format(time.RFC3339)
+	if scramble {
+		hostname = "********"
+		username = "********"
+	}
+
+	now := time.Now().Local()
 
 	lookupTable = map[string]string{
 		"hostname":     hostname,
 		"username":     username,
-		"date":         dateonly,
-		"time":         timeonly,
-		"datetime":     datetime,
+		"date":         now.Format(time.DateOnly),
+		"time":         now.Format(time.TimeOnly),
+		"datetime":     now.Format(time.RFC3339),
 		"report-name":  report,
 		"report-group": group,
 	}
@@ -397,7 +399,7 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 		return
 	}
 	r.AddHeadline("reportName", report.Name)
-	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title))
+	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
 
 	query := cf.ExpandString(report.Query, lookup, config.ExpandNonStringToCSV())
 	log.Trace().Msgf("query:\n%s", query)
@@ -431,7 +433,7 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 		return
 	}
 	r2.AddHeadline("reportName", report.Name)
-	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title))
+	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
 
 	prequery := cf.ExpandString(report.Query, lookup, config.ExpandNonStringToCSV())
 	r := tx.QueryRowContext(ctx, prequery)
@@ -477,7 +479,7 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 		return
 	}
 	r.AddHeadline("reportName", report.Name)
-	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title))
+	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
 
 	groups := cf.GetStringMapString(report.Grouping)
 
