@@ -43,7 +43,7 @@ import (
 var reportCmdDescription string
 
 var outputFormat, reportNames, output string
-var resetViews, scrambleNames bool
+var resetViews, scrambleNames, reportFetch bool
 
 // Reporter is the GDNA specific reporter struct
 type Report struct {
@@ -72,6 +72,8 @@ func init() {
 
 	reportCmd.Flags().StringVarP(&output, "output", "o", "-", "output destination `file`, default is console (stdout)")
 	reportCmd.Flags().StringVarP(&outputFormat, "format", "F", "dataview", "output `format` - one of: dataview, table, html, markdown,\ntoolkit (or csv), xslx")
+
+	reportCmd.Flags().BoolVarP(&reportFetch, "fetch", "M", false, "Fetch license usage, build data in memory and report")
 
 	reportCmd.Flags().StringVarP(&reportNames, "reports", "r", "", reportNamesDescription)
 	reportCmd.Flags().BoolVarP(&scrambleNames, "scramble", "S", false, "Scramble configured column of data in reports with sensitive data")
@@ -109,15 +111,30 @@ var reportCmd = &cobra.Command{
 		cf.Viper.BindPFlag("geneos.sampler", cmd.Flags().Lookup("sampler"))
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		var db *sql.DB
+
 		// Handle SIGINT (CTRL+C) gracefully.
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer stop()
 
-		db, err := openDB(ctx, cf, "db.dsn", false)
+		if reportFetch {
+			// use an in-memory database
+			cf.Set("db.dsn", ":memory:")
+		}
+
+		db, err = openDB(ctx, cf, "db.dsn", false)
 		if err != nil {
 			return
 		}
 		defer db.Close()
+
+		var sources []string
+		if reportFetch {
+			sources, err = fetch(ctx, cf, db)
+			if err != nil {
+				return
+			}
+		}
 
 		tx, err := db.BeginTx(ctx, nil)
 		if err != nil {
@@ -126,7 +143,7 @@ var reportCmd = &cobra.Command{
 		}
 		defer tx.Rollback()
 
-		if err = updateReportingDatabase(ctx, cf, tx, nil); err != nil {
+		if err = updateReportingDatabase(ctx, cf, tx, sources); err != nil {
 			return
 		}
 
@@ -145,8 +162,10 @@ var reportCmd = &cobra.Command{
 		}
 		tx.Commit()
 
-		log.Debug().Msg("closing database")
-		_, err = db.ExecContext(ctx, "VACUUM")
+		if !reportFetch {
+			log.Debug().Msg("closing database")
+			_, err = db.ExecContext(ctx, "VACUUM")
+		}
 		return
 	},
 }

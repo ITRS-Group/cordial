@@ -397,7 +397,7 @@ func processFilters(ctx context.Context, cf *config.Config, tx *sql.Tx, filterTy
 	ig, err := config.Load(filterBase,
 		config.SetAppName("geneos"),
 		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
-		config.MustExist(),
+		// config.MustExist(),
 	)
 
 	if err != nil {

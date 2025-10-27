@@ -847,7 +847,7 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx,
 		oldestTimeUnix = oldestTime.Unix()
 	}
 
-	if validSources == nil {
+	if len(validSources) == 0 {
 		rows, err := tx.QueryContext(ctx, "SELECT source FROM sources WHERE valid = 1")
 		if err != nil {
 			return err
