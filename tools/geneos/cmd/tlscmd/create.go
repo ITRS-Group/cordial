@@ -47,11 +47,11 @@ func init() {
 	tlsCmd.AddCommand(createCmd)
 
 	createCmd.Flags().BoolVarP(&createCmdBundle, "bundle", "b", false, "Create a certificate bundle, including certificate, key and verification chain")
-	createCmd.Flags().StringVar(&createCmdDest, "dest", ".", "Destination to write results to, use a dash '-' for console for bundles only")
+	createCmd.Flags().StringVarP(&createCmdDest, "out", "o", ".", "Output `directory` to write to.\nFor bundles use a dash '-' for stdout.")
 
 	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", "", "Common Name for certificate. Defaults to hostname")
 	createCmd.Flags().VarP(&createCmdSANs, "san", "s", "Subject-Alternative-Name (repeat for each one required). Defaults to hostname if none given")
-	createCmd.Flags().BoolVarP(&createCmdOverwrite, "force", "F", false, "Run `tls init` and force overwrite any existing file in 'dest'")
+	createCmd.Flags().BoolVarP(&createCmdOverwrite, "force", "F", false, "Run \"tls init\" and force overwrite any existing file in 'dest'")
 	createCmd.Flags().IntVarP(&createCmdDays, "days", "D", 365, "Certificate duration in days")
 
 }

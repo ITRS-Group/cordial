@@ -1,12 +1,13 @@
-Create a standalone certificate and private key, with optional bundle including parent certificates.
+Create a standalone certificate and private key, or a bundle including parent certificate(s).
 
-💡 The `tls create` command differs from `tls new` and `tls renew` by creating a certificate in the current working directory based on the Common Name given. You can use this command when you need to create certificates for manual configuration or transfer to another location. You will probably want to use `tls new` and `tls renew` for most Geneos certificate management.
+>[!NOTE]
+>The `tls create` command differs from `tls new` and `tls renew` by creating a certificate in the current working directory based on the Common Name given. You can use this command when you need to create certificates for manual configuration or to transfer to another location. You will probably want to use `tls new` and `tls renew` for local Geneos instance certificate management.
 
 Without other options `tls create` will create certificate and private key files (using extensions `.pem` and `.key` respectively) in the current directory, using an existing Geneos signing certificate, for use with Geneos components. The file names will be based on the certificate Common Name (`CN`), which will default to the local hostname.
 
-You can set the destination directory using the `--dest` option.
+You can set the output directory using the `--out`/`-o` option.
 
-To create a certificate bundle (sometimes referred to as a `fullchain.pem` file) use the `--bundle`/`-b` flag. This created a single `.pem` file using the same options as above unless the `--dest` directory is given as a dash (`-`) in which case the PEM formatted bundle is output to the console.
+To create a certificate bundle (sometimes referred to as a `fullchain.pem` file) use the `--bundle`/`-b` flag. This created a single `.pem` file using the same options as above unless the `--out`/`-o` directory is given as a dash (`-`) in which case the PEM formatted bundle is output to the console.
 
 You can set you own Common Name using the `--cname`/`-c` option. If you want to include spaces please remember to quote the name. The resulting files have spaces in the Common Name replaced with dashes.
 
@@ -14,7 +15,7 @@ The default expiry period is 365 days from one minute in the past - this is to a
 
 If the Geneos installation has not been initialised or the TLS sub-system not been initialised then an error will be returned.
 
-With the `--force`/`-F` flags a new root and intermediate certificate are created along with private keys in your user configuration directory unless they already exist. The act of initialising the TLS subsystem will result in any new Geneos component instances you create having certificates automatically created and various options set to trigger the use of TLS by default - which may not be what you expect, so please beware.
+With the `--force`/`-F` flags a new root and intermediate certificate are created along with private keys in your user configuration directory unless they already exist. The act of initialising the TLS subsystem will result in any new Geneos component instances you create having certificates automatically created and various options set to trigger the use of TLS by default - which may not be what you expect, so beware.
 
 To add Subject Alternative Names (`SANs`) use the `--san`/`-s` option and repeat as often as required.
 
