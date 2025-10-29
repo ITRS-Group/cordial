@@ -120,7 +120,9 @@ func NewReporter(t string, w io.Writer, options ...any) (r Reporter, err error) 
 	opts := evalReporterOptions(ro...)
 
 	switch t {
-	case "csv", "toolkit":
+	case "csv":
+		r = newCSVReporter(w, opts)
+	case "toolkit":
 		r = newToolkitReporter(w, opts)
 	case "api", "dataview":
 		var apioptions []APIReporterOptions

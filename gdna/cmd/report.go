@@ -71,7 +71,7 @@ func init() {
 	GDNACmd.AddCommand(reportCmd)
 
 	reportCmd.Flags().StringVarP(&output, "output", "o", "-", "output destination `file`, default is console (stdout)")
-	reportCmd.Flags().StringVarP(&outputFormat, "format", "F", "dataview", "output `format` - one of: dataview, table, html, markdown,\ntoolkit (or csv), xslx")
+	reportCmd.Flags().StringVarP(&outputFormat, "format", "F", "dataview", "output `format` - one of: dataview, table, html, markdown,\ntoolkit, csv, xslx")
 
 	reportCmd.Flags().BoolVarP(&reportFetch, "fetch", "M", false, "Fetch license usage, build data in memory and report")
 
@@ -175,12 +175,19 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 	maxreports := -1
 
 	switch format {
-	case "toolkit", "csv":
+	case "csv":
+		if reports == "" {
+			err = errors.New("csv format requires a report name")
+			return
+		}
+		maxreports = 1
+		r, _ = reporter.NewReporter("csv", w)
+	case "toolkit":
 		// we have a custom Toolkit reporter instead of using the
 		// go-pretty CSV output so that we can render headlines in the
 		// Geneos toolkit format
 		if reports == "" {
-			err = errors.New("toolkit/csv format requires a report name")
+			err = errors.New("toolkit format requires a report name")
 			return
 		}
 		maxreports = 1

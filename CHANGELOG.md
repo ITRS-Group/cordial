@@ -1,5 +1,34 @@
 # Change Log
 
+## Version v1.23.1
+
+> [!NOTE]
+> **Released 2025-10-28** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v.1.23.1 Fixes
+
+* `tools/geneos`
+
+  * Remove default `sso-agent` component parameter `truststore`, which can be used to override the Java `cacerts` location, and document the parameter.
+
+* `gdna`
+
+  * If the command line `--sceamble`/`-S` is given to various commands then also opaque the username and hostname in the `gdna-summary` report.
+
+### Version v.1.23.1 Changes
+
+* `gdna`
+
+  * Add a `--fetch`/`-M` option to `gdna report` to run a single-shot fetch and report cycle, using an in-memory database. This is useful for ad-hoc reporting without needing to maintain a persistent database.
+
+  * Split the `toolkit` and `csv` report formats into separate reporters, so that `csv` uses standard CSV formatting without Geneos Toolkit specific additions like headlines.
+
+* `pkg/reporter`
+
+  * Added a CSV reporter that uses standard CSV formatting without Geneos Toolkit specific additions like headlines.
+
+---
+
 ## Version v1.23.0
 
 > [!NOTE]
