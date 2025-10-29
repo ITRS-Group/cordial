@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"slices"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -71,6 +72,8 @@ var fetchCmd = &cobra.Command{
 	},
 }
 
+var fetchCmdSources Sources
+
 func init() {
 	GDNACmd.AddCommand(fetchCmd)
 
@@ -78,7 +81,27 @@ func init() {
 	fetchCmd.Flags().BoolVarP(&overrideFiletime, "time", "T", false, "Override file times with the current time (for testing only)")
 	// fetchCmd.Flags().StringVarP(&logFile, "logfile", "l", execname+"-fetch.log", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
 
+	fetchCmd.Flags().VarP(&fetchCmdSources, "source", "L", SourcesOptionsText)
+
 	fetchCmd.Flags().SortFlags = false
+}
+
+// Sources is a slice of licence data sources
+type Sources []string
+
+const SourcesOptionsText = "Override configured licence source.\n(Repeat as required)"
+
+func (i *Sources) String() string {
+	return strings.Join(*i, ", ")
+}
+
+func (i *Sources) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
+func (i *Sources) Type() string {
+	return "URL | PATH"
 }
 
 func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string, err error) {
@@ -93,8 +116,11 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string
 		return
 	}
 
-	log.Debug().Msgf("licd-sources: %v", cf.GetStringSlice("gdna.licd-sources"))
-	for _, source := range cf.GetStringSlice("gdna.licd-sources") {
+	if len(fetchCmdSources) == 0 {
+		fetchCmdSources = cf.GetStringSlice("gdna.licd-sources")
+	}
+	log.Debug().Msgf("sources: %v", fetchCmdSources)
+	for _, source := range fetchCmdSources {
 		var s []string
 		log.Debug().Msgf("reading from %s", source)
 		if s, err = readLicdReports(ctx, cf, tx, source); err != nil {

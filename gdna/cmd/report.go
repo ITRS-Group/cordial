@@ -74,6 +74,7 @@ func init() {
 	reportCmd.Flags().StringVarP(&outputFormat, "format", "F", "dataview", "output `format` - one of: dataview, table, html, markdown,\ntoolkit, csv, xslx")
 
 	reportCmd.Flags().BoolVarP(&reportFetch, "fetch", "M", false, "Fetch license usage, build data in-memory and report")
+	reportCmd.Flags().VarP(&fetchCmdSources, "source", "L", SourcesOptionsText)
 
 	reportCmd.Flags().StringVarP(&reportNames, "reports", "r", "", reportNamesDescription)
 	reportCmd.Flags().BoolVarP(&scrambleNames, "scramble", "S", false, "Scramble configured column of data in reports with sensitive data")
