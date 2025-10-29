@@ -21,6 +21,7 @@ import (
 	"context"
 	"database/sql"
 	"slices"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/reporter"
@@ -137,6 +138,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 	}
 
 	for _, v := range split {
+		v = strings.ReplaceAll(v, "'", "''")
 		split := map[string]string{
 			"split-column": report.SplitColumn,
 			"value":        v,
