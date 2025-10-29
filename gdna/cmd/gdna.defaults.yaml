@@ -48,7 +48,7 @@ xlsx:
     percent: 9
     datetime: "yyyy-mm-ddThh:MM:ss"
     min-width: 10.0
-    max-width: 30.0
+    max-width: 50.0
   conditional-formats:
     ok: 43d815
     warning: fcd600
@@ -1705,58 +1705,58 @@ reports:
     name: GDNA Summary
     dataview:
       group: GDNA Information
-    columns: [ Item, Description ]
+    columns: [ Item, Description, Comment ]
     type: summary
     query: | #sql
-      SELECT 'ITRS GDNA', 'Version ${gdna.version}'
+      SELECT 'ITRS GDNA', '${gdna.version}', 'Version used to create this report'
 
       UNION ALL
 
-      SELECT 'Site', '${gdna.site-name}'
+      SELECT 'Site', '${gdna.site-name}', ''
 
       UNION ALL
 
-      SELECT 'Report Time', '${datetime}'
+      SELECT 'Report Time', '${datetime}', ''
 
       UNION ALL
 
-      SELECT 'Created On', '${hostname}'
-
-      UNION ALL
-      
-      SELECT 'Created By', '${username}'
+      SELECT 'Created On', '${hostname}', ''
 
       UNION ALL
 
-      SELECT 'Valid/OK Licence Sources', (SELECT count(*) FROM ${db.sources.table} WHERE valid AND status = 'OK')
+      SELECT 'Created By', '${username}', ''
 
       UNION ALL
 
-      SELECT 'Gateways', (SELECT count(*) FROM ${db.gateways.active}) || " (" || (SELECT count(*) FROM ${db.gateways.table}) || ")"
+      SELECT 'Licence Sources', (SELECT count(*) FROM ${db.sources.table} WHERE valid AND status = 'OK'), 'Only Valid/OK sources included'
 
       UNION ALL
 
-      SELECT 'Gateways - Unused', (SELECT count(DISTINCT gateway) FROM ${db.unused-gateways.table})
+      SELECT 'Gateways', (SELECT count(*) FROM ${db.gateways.active}) || " (" || (SELECT count(*) FROM ${db.gateways.table}) || ")", 'Active (vs Total)'
 
       UNION ALL
 
-      SELECT 'Servers', (SELECT count(DISTINCT server) FROM ${db.servers.table})
+      SELECT 'Gateways - Unused', (SELECT count(DISTINCT gateway) FROM ${db.unused-gateways.table}), ''
 
       UNION ALL
 
-      SELECT 'Probes', (SELECT count(*) FROM ${db.probes.active}) || " ("|| (SELECT count(*) FROM ${db.probes.table}) || ")"
+      SELECT 'Servers', (SELECT count(DISTINCT server) FROM ${db.servers.table}), 'Distinct Host ID or MAC Addresses'
 
       UNION ALL
 
-      SELECT 'Samplers', (SELECT total(number) FROM ${db.samplers.active})
+      SELECT 'Probes (of Total)', (SELECT count(*) FROM ${db.probes.active}) || " ("|| (SELECT count(*) FROM ${db.probes.table}) || ")", 'Active (vs Total)'
 
       UNION ALL
 
-      SELECT 'Dynamic Entities', (SELECT total(number) FROM ${db.ca-samplers.active})
+      SELECT 'Samplers', (SELECT total(number) FROM ${db.samplers.active}), ''
 
       UNION ALL
 
-      SELECT 'Gateway Samplers', (SELECT total(number) FROM ${db.gw-samplers.active})
+      SELECT 'Dynamic Entities', (SELECT total(number) FROM ${db.ca-samplers.active}), ''
+
+      UNION ALL
+
+      SELECT 'Gateway Samplers', (SELECT total(number) FROM ${db.gw-samplers.active}), ''
       ;
 
   coverage-by-level-and-plugin:
