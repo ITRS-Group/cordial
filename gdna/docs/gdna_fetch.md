@@ -4,6 +4,7 @@ The `gdna fetch` command collects a new set of license token data from the confi
 
 The fetch command will normally work through the configured license usage sources and load the transformed data into the SQLite database. If the program configuration has been set, usually during report development, to make temporary tables actually not temporary then these are not updated during fetching of data. This behaviour can be changed using the `--post-process`/`-p` flag, which executes the routines required to create and update these intermediate tables. Another flags, `--time`/`-T`, is also for diagnostics and development of reports and this sets the timestamp of data imported from files to the current time rather than the modification time of the file. Note that this flag only affects plain files sources from the `licd` TCP endpoint and not reporting summary files, which have a timestamp in the filename.
 
+To override the configured license data sources, the `--source`/`-L` flag can be used one or more times to specify the source(s) to use. This is useful for testing new or modified sources without changing the configuration file.
 
 ```text
 gdna fetch
@@ -12,8 +13,10 @@ gdna fetch
 ### Options
 
 ```text
-  -p, --post-process   post process data for reporting database
-  -T, --time           Override file times with the current time (for testing only)
+  -p, --post-process        post process data for reporting database
+  -T, --time                Override file times with the current time (for testing only)
+  -L, --source URL | PATH   Override configured licence source.
+                            (Repeat as required)
 ```
 
 ## SEE ALSO
