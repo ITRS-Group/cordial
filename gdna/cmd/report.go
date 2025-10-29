@@ -73,7 +73,7 @@ func init() {
 	reportCmd.Flags().StringVarP(&output, "output", "o", "-", "output destination `file`, default is console (stdout)")
 	reportCmd.Flags().StringVarP(&outputFormat, "format", "F", "dataview", "output `format` - one of: dataview, table, html, markdown,\ntoolkit, csv, xslx")
 
-	reportCmd.Flags().BoolVarP(&reportFetch, "fetch", "M", false, "Fetch license usage, build data in memory and report")
+	reportCmd.Flags().BoolVarP(&reportFetch, "fetch", "M", false, "Fetch license usage, build data in-memory and report")
 
 	reportCmd.Flags().StringVarP(&reportNames, "reports", "r", "", reportNamesDescription)
 	reportCmd.Flags().BoolVarP(&scrambleNames, "scramble", "S", false, "Scramble configured column of data in reports with sensitive data")
@@ -243,8 +243,8 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 // matchReport checks if report name matches any component of pattern.
 // pattern is a comma separated list of glob-style strings. The function
 // returns true as soon as a match is found or returns false on no
-// match. The match is done after removing any `:value` suffix to allow
-// for limited split report names.
+// match. The match is done removing any `:value` suffix to allow for
+// limited split report names.
 func matchReport(name, pattern string) (match bool, subreport string) {
 	for _, p := range strings.FieldsFunc(pattern, func(r rune) bool { return r == ',' }) {
 		// trim anything after a ':'
