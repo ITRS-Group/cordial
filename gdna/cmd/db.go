@@ -111,6 +111,8 @@ func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly boo
 	return
 }
 
+// updateSchema applies any required schema updates to bring the database
+// schema up to the latest version
 func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error) {
 	// update schema as required
 	userVersionQuery := "PRAGMA user_version"
@@ -178,10 +180,10 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 	return
 }
 
-// queryToTable returns the result of running query, inside the
-// transaction tx, as a table of data as a two dimensional slice of
-// strings. The first row is always the column names and should be
-// discarded if using your own.
+// queryToTable returns the result of running the given query inside the
+// transaction tx as a table of data as a two dimensional slice of
+// strings. The first row returned is always the column names and should
+// be discarded if using your own.
 func queryToTable(ctx context.Context, tx *sql.Tx, columns []string, query string) (table [][]string, err error) {
 	rows, err := tx.QueryContext(ctx, query)
 	if err != nil {
@@ -222,7 +224,7 @@ func queryToTable(ctx context.Context, tx *sql.Tx, columns []string, query strin
 	return
 }
 
-// queryHeadlines run query, inside the transaction tx, and returns a
+// queryHeadlines runs query inside the transaction tx and returns a
 // ordered slice of headlines names and a map of those names to values.
 func queryHeadlines(ctx context.Context, tx *sql.Tx, query string) (names []string, headlines map[string]string, err error) {
 	headlines = make(map[string]string)
@@ -270,6 +272,7 @@ func queryHeadlines(ctx context.Context, tx *sql.Tx, query string) (names []stri
 // contents transforms and inserts them into the database using the
 // active transaction tx. The format of the fields in the csv file are
 // from the detail report documented here:
+//
 // <https://docs.itrsgroup.com/docs/geneos/current/administration/licence-daemon/index.html#csv-files>
 //
 // The source, sourceType, sourcePath and sourceTimestamp parameters are
@@ -602,6 +605,12 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 	return updateSources(ctx, cf, tx, source, sourceType, sourcePath, valid, sourceTimestamp, "OK")
 }
 
+// summaryReportToDB reads lines from a csv.Reader c and based on the
+// contents transforms and inserts them into the database using the
+// active transaction tx. The format of the fields in the csv file are
+// from the summary report documented here:
+//
+// <https://docs.itrsgroup.com/docs/geneos/current/administration/licence-daemon/index.html#csv-files>
 func summaryReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv.Reader, source, sourceType, sourcePath string, sourceTimestamp time.Time) (err error) {
 	var expiry time.Time
 	var mode, licencename, hostname, hostid string
@@ -1172,16 +1181,12 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 	return sources, nil
 }
 
-func readSummaryReport() {
-
-}
-
+// updateSources updates the sources table with the given information
 func updateSources(ctx context.Context, cf *config.Config, tx *sql.Tx, source, sourceType, path string, valid bool, t time.Time, status any) error {
 	isoTime := t.UTC().Format(time.RFC3339)
 	// is source is an error then unwrap it as prefix with a plain
 	// "ERROR:"
-	s, ok := status.(error)
-	if ok {
+	if s, ok := status.(error); ok {
 		status = fmt.Errorf("ERROR: %w", errors.Unwrap(s))
 	}
 	return execSQL(ctx, cf, tx, "db.sources", "insert", nil,
