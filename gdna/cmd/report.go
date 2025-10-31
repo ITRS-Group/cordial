@@ -73,7 +73,7 @@ func init() {
 	reportCmd.Flags().StringVarP(&output, "output", "o", "-", "output destination `file`, default is console (stdout)")
 	reportCmd.Flags().StringVarP(&outputFormat, "format", "F", "dataview", "output `format` - one of: dataview, table, html, markdown,\ntoolkit, csv, xslx")
 
-	reportCmd.Flags().BoolVarP(&reportFetch, "fetch", "M", false, "Fetch license usage, build data in-memory and report")
+	reportCmd.Flags().BoolVarP(&reportFetch, "adhoc", "A", false, "Ad-hoc reporting: Fetch license reports, build data in-memory and report\n(default format CSV, dataview output not supported)")
 	reportCmd.Flags().VarP(&fetchCmdSources, "source", "L", SourcesOptionsText)
 
 	reportCmd.Flags().StringVarP(&reportNames, "reports", "r", "", reportNamesDescription)
@@ -99,6 +99,9 @@ var reportCmd = &cobra.Command{
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
+	Annotations: map[string]string{
+		"defaultlog": os.DevNull,
+	},
 	SilenceUsage:          true,
 	DisableAutoGenTag:     true,
 	DisableSuggestions:    true,
@@ -121,6 +124,10 @@ var reportCmd = &cobra.Command{
 		if reportFetch {
 			// use an in-memory database
 			cf.Set("db.dsn", ":memory:")
+			if outputFormat == "dataview" {
+				// should not use dataview output with ad-hoc reports
+				outputFormat = "csv"
+			}
 		}
 
 		db, err = openDB(ctx, cf, "db.dsn", false)
