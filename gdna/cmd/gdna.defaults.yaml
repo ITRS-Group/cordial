@@ -2749,15 +2749,15 @@ reports:
                          FROM ${db.l2missing-plugins-per-server.table} WHERE server = u.server), '') l2missing,
              (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table}), '', 'missing')) as l3missing,
              group_concat(gateway, ', '),
-             COALESCE((SELECT group_concat(plugins, ', ') FROM (
-                          SELECT plugin || IIF(total(number) > 1, printf('(%d)', total(number)), '') plugins
+             COALESCE((SELECT group_concat(plugins, ' ') FROM (
+                          SELECT printf('%s:%d', plugin, total(number)) plugins
                             FROM ${db.samplers.active}
                            WHERE server = u.server
                            GROUP BY plugin
 
                           UNION
 
-                          SELECT plugin || IIF(count(plugin) > 1, printf('(%d)', total(number)), '')
+                          SELECT printf('%s:%d', plugin, total(number)) plugins
                             FROM ${db.ca-samplers.active}
                            WHERE server = u.server
                            GROUP BY plugin
@@ -2899,15 +2899,15 @@ reports:
                          FROM ${db.l2missing-plugins-per-server.table} WHERE server = u.server), '') l2missing,
              (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table}), '', 'missing')) as l3missing,
              COALESCE((SELECT group_concat(gateway, ', ') FROM ${db.servers.table} WHERE server = u.server AND gateway <> u.gateway), '') otherGateways,
-             COALESCE((SELECT group_concat(plugins, ', ') FROM (
-                          SELECT plugin || IIF(total(number) > 1, printf('(%d)', total(number)), '') plugins
+             COALESCE((SELECT group_concat(plugins, ' ') FROM (
+                          SELECT printf('%s:%d', plugin, total(number)) plugins
                             FROM ${db.samplers.active}
                            WHERE server = u.server
                            GROUP BY plugin
 
                           UNION
 
-                          SELECT plugin || IIF(count(plugin) > 1, printf('(%d)', total(number)), '')
+                          SELECT printf('%s:%d', plugin, total(number)) plugins
                             FROM ${db.ca-samplers.active}
                            WHERE server = u.server
                            GROUP BY plugin
@@ -3062,15 +3062,15 @@ reports:
              COALESCE((SELECT group_concat(CASE missing WHEN '0' THEN NULL WHEN '1' THEN plugin ELSE plugin || '(' || missing || ')' END, ', ')
                          FROM ${db.l2missing-plugins-per-server.table} WHERE server = u.server), '') l2missing,
              (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table} WHERE ${split-column} = '${value}'), '', 'missing')) as l3missing,
-             COALESCE((SELECT group_concat(plugins, ', ') FROM (
-                          SELECT plugin || IIF(total(number) > 1, printf('(%d)', total(number)), '') plugins
+             COALESCE((SELECT group_concat(plugins, ' ') FROM (
+                          SELECT printf('%s:%d', plugin, total(number)) plugins
                             FROM ${db.samplers.active}
                            WHERE server = u.server
                            GROUP BY plugin
 
                           UNION
 
-                          SELECT plugin || IIF(count(plugin) > 1, printf('(%d)', total(number)), '')
+                          SELECT printf('%s:%d', plugin, total(number)) plugins
                             FROM ${db.ca-samplers.active}
                            WHERE server = u.server
                            GROUP BY plugin
@@ -3102,15 +3102,15 @@ reports:
               '' l1missing,
               '' l2missing,
               '' l3missing,
-              COALESCE((SELECT group_concat(plugins, ', ') FROM (
-                          SELECT plugin || IIF(total(number) > 1, printf('(%d)', total(number)), '') plugins
+              COALESCE((SELECT group_concat(plugins, ' ') FROM (
+                          SELECT printf('%s:%d', plugin, total(number)) plugins
                             FROM ${db.samplers.active}
                            WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort
                            GROUP BY plugin
 
                           UNION
 
-                          SELECT plugin || IIF(count(plugin) > 1, printf('(%d)', total(number)), '')
+                          SELECT printf('%s:%d', plugin, total(number)) plugins
                             FROM ${db.ca-samplers.active}
                            WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort
                            GROUP BY plugin
@@ -3191,15 +3191,15 @@ reports:
               p.gateway gateway,
               (SELECT total(number) FROM ${db.samplers.active} WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort) samplers,
               (SELECT total(number) FROM ${db.ca-samplers.active} WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort) as dynamicEntities,
-              COALESCE((SELECT group_concat(plugins, ', ') FROM (
-                          SELECT plugin || IIF(total(number) > 1, printf('(%d)', total(number)), '') plugins
+              COALESCE((SELECT group_concat(plugins, ' ') FROM (
+                          SELECT printf('%s:%d', plugin, total(number)) plugins
                             FROM ${db.samplers.active}
                             WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort
                             GROUP BY plugin
 
                           UNION
 
-                          SELECT plugin || IIF(count(plugin) > 1, printf('(%d)', total(number)), '')
+                          SELECT printf('%s:%d', plugin, total(number)) plugins
                             FROM ${db.ca-samplers.active}
                             WHERE gateway = p.gateway AND probeName = p.probeName AND probePort = p.probePort
                             GROUP BY plugin
@@ -3548,15 +3548,15 @@ reports:
              (SELECT IIF(server IN (SELECT server FROM ${db.l3covered-servers.table}), '', 'missing')) as l3missing,
              (SELECT count(DISTINCT source) FROM ${db.servers.table} WHERE server = s.server) licenceSources,
              group_concat(gateway, ','),
-             COALESCE((SELECT group_concat(plugins, ', ') FROM (
-                          SELECT plugin || IIF(total(number) > 1, printf('(%d)', total(number)), '') plugins
+             COALESCE((SELECT group_concat(plugins, ' ') FROM (
+                          SELECT printf('%s:%d', plugin, total(number)) plugins
                             FROM ${db.samplers.active}
                            WHERE server = s.server
                            GROUP BY plugin
 
                           UNION
 
-                          SELECT plugin || IIF(count(plugin) > 1, printf('(%d)', total(number)), '')
+                          SELECT printf('%s:%d', plugin, total(number)) plugins
                             FROM ${db.ca-samplers.active}
                            WHERE server = s.server
                            GROUP BY plugin
