@@ -90,7 +90,7 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 // directories, user and group etc.
 //
 // If noDecode is set then any secure environment variables are not decoded,
-// so can be used for display
+// so can be used for display to a user without revealing secrets.
 //
 // Any extras arguments are appended without further checks
 func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *exec.Cmd, err error) {
@@ -136,6 +136,24 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *e
 		return strings.HasPrefix(e, "HOME=")
 	}) {
 		env = append(env, "HOME="+os.Getenv("HOME"))
+	}
+
+	// similarly, check for a PATH setting, else use a very plain one.
+	// this can be overridden by the user using the `-e PATH=...` option
+	// to start and restart commands
+	if !slices.ContainsFunc(env, func(e string) bool {
+		return strings.HasPrefix(e, "PATH=")
+	}) {
+		if strings.Contains(i.Host().ServerVersion(), "windows") {
+			p := "C:\\Windows\\System32;C:\\Windows;C:\\Windows\\System32\\Wbem"
+			up, ok := os.LookupEnv("USERPROFILE")
+			if ok {
+				p = fmt.Sprintf("%s%s;%s", p, up+"\\bin", up+"\\AppData\\Local\\Microsoft\\WindowsApps")
+			}
+			env = append(env, p)
+		} else {
+			env = append(env, "PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
+		}
 	}
 
 	cmd = exec.Command(binary, args...)
