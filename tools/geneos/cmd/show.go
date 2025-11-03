@@ -134,7 +134,7 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *instance.Resp
 		defer i.Host().Remove(tempfile)
 
 		// run a gateway with -dump-xml and consume the result, discard the heading
-		cmd, err := instance.BuildCmd(i, false, instance.CheckExternalFiles(true))
+		cmd, err := instance.BuildCmd(i, false)
 		if err != nil {
 			resp.Err = err
 			return
@@ -202,7 +202,7 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *instance.Respon
 	}
 	if instance.IsA(i, "gateway") && merge {
 		// run a gateway with -dump-xml and consume the result, discard the heading
-		cmd, err := instance.BuildCmd(i, false, instance.CheckExternalFiles(false))
+		cmd, err := instance.BuildCmd(i, false, instance.SkipFileCheck())
 		if err != nil {
 			resp.Err = err
 			return

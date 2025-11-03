@@ -210,7 +210,7 @@ func (n *Minimals) Add(tmpl string, port uint16) (err error) {
 	return nil
 }
 
-func (n *Minimals) Command(checkExt bool) (args, env []string, home string, err error) {
+func (n *Minimals) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	cf := n.Config()
@@ -242,11 +242,13 @@ func (n *Minimals) Command(checkExt bool) (args, env []string, home string, err 
 	}
 	env = append(env, "LOG_FILENAME="+logFile)
 
-	if checkExt {
-		missing := instance.CheckPaths(n, checks)
-		if len(missing) > 0 {
-			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
-		}
+	if skipFileCheck {
+		return
+	}
+
+	missing := instance.CheckPaths(n, checks)
+	if len(missing) > 0 {
+		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 	}
 
 	return

@@ -320,21 +320,21 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 	return
 }
 
-func (w *Webservers) Command(checkExt bool) (args, env []string, home string, err error) {
+func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
-	cf := w.Config()
-	base := instance.BaseVersion(w)
-	home = w.Home()
+	cf := i.Config()
+	base := instance.BaseVersion(i)
+	home = i.Home()
 
 	// Java 17 in server 7.1.1 and later does not support this arg
-	if instance.CompareVersion(w, "7.1.1") < 0 {
+	if instance.CompareVersion(i, "7.1.1") < 0 {
 		args = []string{"-XX:+UseConcMarkSweepGC"}
 	}
 
 	// tmpdir must exist
 	tmpdir := path.Join(home, "webapps")
-	if err = w.Host().MkdirAll(tmpdir, 0775); err != nil {
+	if err = i.Host().MkdirAll(tmpdir, 0775); err != nil {
 		return
 	}
 
@@ -390,7 +390,7 @@ func (w *Webservers) Command(checkExt bool) (args, env []string, home string, er
 		"-maxThreads", "254",
 	)
 
-	tlsFiles := instance.Filepaths(w, "certificate", "privatekey")
+	tlsFiles := instance.Filepaths(i, "certificate", "privatekey")
 	if len(tlsFiles) == 0 || tlsFiles[0] == "" {
 		return
 	}
@@ -400,11 +400,13 @@ func (w *Webservers) Command(checkExt bool) (args, env []string, home string, er
 		args = append(args, "-ssl", "true")
 	}
 
-	if checkExt {
-		missing := instance.CheckPaths(w, checks)
-		if len(missing) > 0 {
-			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
-		}
+	if skipFileCheck {
+		return
+	}
+
+	missing := instance.CheckPaths(i, checks)
+	if len(missing) > 0 {
+		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 	}
 
 	return

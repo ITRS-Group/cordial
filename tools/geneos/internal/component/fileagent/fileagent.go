@@ -206,18 +206,18 @@ func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 	return nil
 }
 
-func (c *FileAgents) Command(checkExt bool) (args, env []string, home string, err error) {
+func (i *FileAgents) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
-	home = c.Home()
-	logFile := instance.LogFilePath(c)
+	home = i.Home()
+	logFile := instance.LogFilePath(i)
 	checks = append(checks, filepath.Dir(logFile))
 	args = []string{
-		c.Name(),
-		"-port", c.Config().GetString("port"),
+		i.Name(),
+		"-port", i.Config().GetString("port"),
 	}
-	if instance.CompareVersion(c, "6.6.0") >= 0 {
-		secureArgs := instance.SetSecureArgs(c)
+	if instance.CompareVersion(i, "6.6.0") >= 0 {
+		secureArgs := instance.SetSecureArgs(i)
 		args = append(args, secureArgs...)
 		for _, arg := range secureArgs {
 			if !strings.HasPrefix(arg, "-") {
@@ -227,11 +227,13 @@ func (c *FileAgents) Command(checkExt bool) (args, env []string, home string, er
 	}
 	env = append(env, "LOG_FILENAME="+logFile)
 
-	if checkExt {
-		missing := instance.CheckPaths(c, checks)
-		if len(missing) > 0 {
-			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
-		}
+	if skipFileCheck {
+		return
+	}
+
+	missing := instance.CheckPaths(i, checks)
+	if len(missing) > 0 {
+		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 	}
 
 	return

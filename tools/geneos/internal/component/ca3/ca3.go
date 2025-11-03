@@ -226,7 +226,7 @@ func (n *CA3s) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }
 
-func (n *CA3s) Command(checkExt bool) (args, env []string, home string, err error) {
+func (n *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	cf := n.Config()
@@ -262,12 +262,15 @@ func (n *CA3s) Command(checkExt bool) (args, env []string, home string, err erro
 		fmt.Sprintf("HOSTNAME=%s", cf.GetString(("hostname"), config.Default(hostname))),
 	}
 
-	if checkExt {
-		missing := instance.CheckPaths(n, checks)
-		if len(missing) > 0 {
-			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
-		}
+	if skipFileCheck {
+		return
 	}
+
+	missing := instance.CheckPaths(n, checks)
+	if len(missing) > 0 {
+		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
+	}
+
 	return
 }
 

@@ -101,7 +101,7 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *e
 
 	binary := PathOf(i, "program")
 
-	args, env, home, err := i.Command(so.checkexternal)
+	args, env, home, err := i.Command(so.skipfilecheck)
 	if err != nil {
 		return
 	}
@@ -148,7 +148,7 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *e
 type startOptions struct {
 	envs          []string
 	extras        []string
-	checkexternal bool
+	skipfilecheck bool
 }
 
 type StartOptions func(*startOptions)
@@ -179,8 +179,8 @@ func StartingEnvs(envs NameValues) StartOptions {
 	}
 }
 
-func CheckExternalFiles(check bool) StartOptions {
+func SkipFileCheck() StartOptions {
 	return func(so *startOptions) {
-		so.checkexternal = check
+		so.skipfilecheck = true
 	}
 }

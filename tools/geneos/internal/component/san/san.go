@@ -308,18 +308,18 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 		template)
 }
 
-func (s *Sans) Command(checkExt bool) (args, env []string, home string, err error) {
+func (i *Sans) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
-	cf := s.Config()
-	home = s.Home()
-	h := s.Host()
+	cf := i.Config()
+	home = i.Home()
+	h := i.Host()
 
-	logFile := instance.LogFilePath(s)
+	logFile := instance.LogFilePath(i)
 	checks = append(checks, filepath.Dir(logFile))
 
 	args = []string{
-		s.Name(),
+		i.Name(),
 		"-listenip", cf.GetString("listenip", config.Default("none")),
 		"-port", cf.GetString("port"),
 		"-setup", cf.GetString("setup"),
@@ -329,7 +329,7 @@ func (s *Sans) Command(checkExt bool) (args, env []string, home string, err erro
 		args = append(args, "-cmd")
 	}
 
-	secureArgs := instance.SetSecureArgs(s)
+	secureArgs := instance.SetSecureArgs(i)
 	args = append(args, secureArgs...)
 	for _, arg := range secureArgs {
 		if !strings.HasPrefix(arg, "-") {
@@ -343,13 +343,15 @@ func (s *Sans) Command(checkExt bool) (args, env []string, home string, err erro
 	if hostname == "" {
 		hostname = "localhost"
 	}
-	env = append(env, "HOSTNAME="+s.Config().GetString(("hostname"), config.Default(hostname)))
+	env = append(env, "HOSTNAME="+i.Config().GetString(("hostname"), config.Default(hostname)))
 
-	if checkExt {
-		missing := instance.CheckPaths(s, checks)
-		if len(missing) > 0 {
-			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
-		}
+	if skipFileCheck {
+		return
+	}
+
+	missing := instance.CheckPaths(i, checks)
+	if len(missing) > 0 {
+		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 	}
 
 	return

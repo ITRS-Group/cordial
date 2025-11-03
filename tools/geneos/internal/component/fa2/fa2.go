@@ -209,7 +209,7 @@ func (n *FA2s) Add(tmpl string, port uint16) (err error) {
 	return nil
 }
 
-func (n *FA2s) Command(checkExt bool) (args, env []string, home string, err error) {
+func (n *FA2s) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	home = n.Home()
@@ -229,11 +229,13 @@ func (n *FA2s) Command(checkExt bool) (args, env []string, home string, err erro
 
 	env = append(env, "LOG_FILENAME="+logFile)
 
-	if checkExt {
-		missing := instance.CheckPaths(n, checks)
-		if len(missing) > 0 {
-			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
-		}
+	if skipFileCheck {
+		return
+	}
+
+	missing := instance.CheckPaths(n, checks)
+	if len(missing) > 0 {
+		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 	}
 	return
 }

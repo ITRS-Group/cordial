@@ -356,38 +356,38 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 		template)
 }
 
-func (g *Gateways) Command(checkExt bool) (args, env []string, home string, err error) {
+func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
-	cf := g.Config()
-	home = g.Home()
+	cf := i.Config()
+	home = i.Home()
 
 	// first, get the correct name, using the "gatewayname" parameter if
 	// it is different to the instance name. It may not be set, hence
 	// the test.
-	name := g.Name()
-	if cf.GetString("gatewayname") != g.Name() {
+	name := i.Name()
+	if cf.GetString("gatewayname") != i.Name() {
 		name = cf.GetString("gatewayname")
 	}
 
 	// if we have a valid version test for additional features
-	if instance.CompareVersion(g, "5.10.0") >= 0 {
-		args = append(args, g.Name(), "-gateway-name", name)
+	if instance.CompareVersion(i, "5.10.0") >= 0 {
+		args = append(args, i.Name(), "-gateway-name", name)
 	} else {
 		// fallback to older settings
 		args = append(args, name)
 	}
 
 	// always required
-	resourceDir := path.Join(instance.BaseVersion(g), "resources")
-	logDir := filepath.Dir(instance.LogFilePath(g))
+	resourceDir := path.Join(instance.BaseVersion(i), "resources")
+	logDir := filepath.Dir(instance.LogFilePath(i))
 	checks = append(checks, resourceDir, logDir)
 
 	args = append(args,
 		"-resources-dir",
 		resourceDir,
 		"-log",
-		instance.LogFilePath(g),
+		instance.LogFilePath(i),
 	)
 
 	if cf.IsSet("gateway-hub") && cf.IsSet("obcerv") {
@@ -418,7 +418,7 @@ func (g *Gateways) Command(checkExt bool) (args, env []string, home string, err 
 		args = append(args, "-licd-port", fmt.Sprint(cf.GetString("licdport")))
 	}
 
-	secureArgs := instance.SetSecureArgs(g)
+	secureArgs := instance.SetSecureArgs(i)
 	args = append(args, secureArgs...)
 	for _, arg := range secureArgs {
 		if !strings.HasPrefix(arg, "-") {
@@ -427,29 +427,31 @@ func (g *Gateways) Command(checkExt bool) (args, env []string, home string, err 
 	}
 
 	// 3 options: set, set to false, not set
-	if cf.GetBool("licdsecure") || (!cf.IsSet("licdsecure") && instance.FileOf(g, "certificate") != "") {
+	if cf.GetBool("licdsecure") || (!cf.IsSet("licdsecure") && instance.FileOf(i, "certificate") != "") {
 		args = append(args, "-licd-secure")
 	}
 
 	if cf.GetBool("usekeyfile") {
-		keyfile := instance.PathOf(g, "keyfile")
+		keyfile := instance.PathOf(i, "keyfile")
 		if keyfile != "" {
 			args = append(args, "-key-file", keyfile)
 			checks = append(checks, keyfile)
 		}
 
-		prevkeyfile := instance.PathOf(g, "prevkeyfile")
+		prevkeyfile := instance.PathOf(i, "prevkeyfile")
 		if prevkeyfile != "" {
 			args = append(args, "-previous-key-file", prevkeyfile)
 			checks = append(checks, prevkeyfile)
 		}
 	}
 
-	if checkExt {
-		missing := instance.CheckPaths(g, checks)
-		if len(missing) > 0 {
-			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
-		}
+	if skipFileCheck {
+		return
+	}
+
+	missing := instance.CheckPaths(i, checks)
+	if len(missing) > 0 {
+		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 	}
 
 	return

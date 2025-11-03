@@ -357,12 +357,12 @@ func genkeypair() (cert *x509.Certificate, key *memguard.Enclave, err error) {
 	return config.CreateCertificateAndKey(template, template, privateKeyPEM, nil)
 }
 
-func (s *SSOAgents) Command(checkExt bool) (args, env []string, home string, err error) {
+func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
-	cf := s.Config()
-	home = s.Home()
+	cf := i.Config()
+	home = i.Home()
 
-	base := instance.BaseVersion(s)
+	base := instance.BaseVersion(i)
 	checks = append(checks, path.Join(base, "lib"))
 
 	args = []string{
@@ -378,7 +378,7 @@ func (s *SSOAgents) Command(checkExt bool) (args, env []string, home string, err
 
 	if truststorePath := cf.GetString("truststore"); truststorePath != "" {
 		checks = append(checks, truststorePath)
-		if _, err := s.Host().Stat(truststorePath); err == nil {
+		if _, err := i.Host().Stat(truststorePath); err == nil {
 			args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
 			// fetch password as string as it has to be exposed on the command line anyway
 			if truststorePassword := cf.GetString("truststore-password"); truststorePassword != "" {
@@ -393,11 +393,13 @@ func (s *SSOAgents) Command(checkExt bool) (args, env []string, home string, err
 		"com.itrsgroup.ssoagent.AgentServer",
 	)
 
-	if checkExt {
-		missing := instance.CheckPaths(s, checks)
-		if len(missing) > 0 {
-			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
-		}
+	if skipFileCheck {
+		return
+	}
+
+	missing := instance.CheckPaths(i, checks)
+	if len(missing) > 0 {
+		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 	}
 
 	return

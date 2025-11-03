@@ -200,20 +200,20 @@ func (l *Licds) Add(tmpl string, port uint16) (err error) {
 	return nil
 }
 
-func (l *Licds) Command(checkExt bool) (args, env []string, home string, err error) {
+func (i *Licds) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
-	home = l.Home()
+	home = i.Home()
 
-	logFile := instance.LogFilePath(l)
+	logFile := instance.LogFilePath(i)
 	checks = append(checks, filepath.Dir(logFile))
 	args = []string{
-		l.Name(),
-		"-port", l.Config().GetString("port"),
+		i.Name(),
+		"-port", i.Config().GetString("port"),
 		"-log", logFile,
 	}
 
-	secureArgs := instance.SetSecureArgs(l)
+	secureArgs := instance.SetSecureArgs(i)
 	args = append(args, secureArgs...)
 	for _, arg := range secureArgs {
 		if !strings.HasPrefix(arg, "-") {
@@ -221,12 +221,15 @@ func (l *Licds) Command(checkExt bool) (args, env []string, home string, err err
 		}
 	}
 
-	if checkExt {
-		missing := instance.CheckPaths(l, checks)
-		if len(missing) > 0 {
-			err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
-		}
+	if skipFileCheck {
+		return
 	}
+
+	missing := instance.CheckPaths(i, checks)
+	if len(missing) > 0 {
+		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
+	}
+
 	return
 }
 

@@ -77,7 +77,6 @@ func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string,
 			resp.Err = instance.Start(i,
 				instance.StartingExtras(startCmdExtras),
 				instance.StartingEnvs(startCmdEnvs),
-				instance.CheckExternalFiles(true),
 			)
 		}
 		return
