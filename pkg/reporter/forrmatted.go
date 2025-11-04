@@ -53,10 +53,11 @@ var _ Reporter = (*FormattedReporter)(nil)
 // newFormattedReporter returns a new FormattedReporter reporter
 func newFormattedReporter(w io.Writer, ropts *reporterOptions, options ...FormattedReporterOptions) (tr *FormattedReporter) {
 	tr = &FormattedReporter{
-		w:       w,
-		t:       table.NewWriter(),
-		columns: []string{},
-		options: options,
+		ReporterCommon: ReporterCommon{scrambleNames: ropts.scrambleNames},
+		w:              w,
+		t:              table.NewWriter(),
+		columns:        []string{},
+		options:        options,
 	}
 	tr.t.SetOutputMirror(tr.w)
 
@@ -75,6 +76,7 @@ func (t *FormattedReporter) Prepare(report Report) error {
 
 	// reset
 	*t = FormattedReporter{
+		ReporterCommon:  ReporterCommon{scrambleNames: t.scrambleNames},
 		w:               t.w,
 		name:            title,
 		t:               table.NewWriter(),
@@ -184,7 +186,6 @@ func (tr *FormattedReporter) updateReporter(options ...FormattedReporterOptions)
 		tr.w = opts.writer
 		tr.t.SetOutputMirror(opts.writer)
 	}
-	tr.scrambleNames = opts.scramble
 	tr.renderas = opts.renderas
 
 	switch tr.renderas {

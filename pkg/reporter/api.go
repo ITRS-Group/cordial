@@ -37,7 +37,6 @@ type APIReporter struct {
 	conn            *plugins.Connection
 	dv              *xmlrpc.Dataview
 	resetDV         bool
-	scramble        bool
 	scrambleColumns []string
 	dvCreateDelay   time.Duration
 	maxrows         int
@@ -144,8 +143,7 @@ func (a *APIReporter) UpdateTable(columns []string, data [][]string) {
 		data = data[:a.maxrows+1]
 	}
 
-	if a.scramble {
-		log.Debug().Msgf("scramble columns %v", a.scrambleColumns)
+	if a.scrambleNames {
 		scrambleColumns(columns, a.scrambleColumns, data)
 	}
 

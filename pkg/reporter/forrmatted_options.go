@@ -28,7 +28,6 @@ type formattedReporterOptions struct {
 	headlinecssclass string
 	htmlpreamble     string
 	htmlpostscript   string
-	scramble         bool
 }
 
 func evalFormattedOptions(options ...FormattedReporterOptions) (fro *formattedReporterOptions) {

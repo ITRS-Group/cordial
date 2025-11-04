@@ -47,8 +47,6 @@ func (t *CSVReporter) Prepare(report Report) error {
 	return nil
 }
 
-// AddHeadline writes a Geneos CSV formatted headline to the
-// reporter.
 func (t *CSVReporter) AddHeadline(name, value string) {
 	// No headlines in CSV format
 }
@@ -73,7 +71,6 @@ func (t *CSVReporter) Render() {
 
 // Close will call Close on the writer if it has a Close method
 func (t *CSVReporter) Close() {
-
 	if c, ok := t.w.(io.Closer); ok {
 		c.Close()
 	}

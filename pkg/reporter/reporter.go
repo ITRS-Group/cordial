@@ -49,7 +49,6 @@ type Reporter interface {
 
 type ReporterCommon struct {
 	scrambleNames bool
-	scrambleFunc  func(in string) string
 }
 
 type Report struct {
@@ -109,12 +108,13 @@ func ScrambleColumns(columns []string) ReporterOptions {
 	}
 }
 
-// NewReporter returns a reporter for type t, which must be one of
-// "toolkit", "csv", "api", "dataview", "xlsx", "table" or "html". If a
-// destination writer is appropriate for the reporter type, then w
-// should be the io.Writer to use. options are a list of options of
-// either ReporterOptions or the options for the selected reporter type.
-func NewReporter(t string, w io.Writer, options ...any) (r Reporter, err error) {
+// NewReporter returns a reporter for type format, which must be one of
+// "toolkit", "csv", "tsv", "api", "dataview", "xlsx", "table" or
+// "html". If a destination writer is required for the reporter type,
+// then w should be the io.Writer to use. options are a list of options
+// of either ReporterOptions or the options for the selected reporter
+// type.
+func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err error) {
 	// pull out general reporter options, which are passed to each
 	// reporter factory method
 	var ro []ReporterOptions
@@ -127,7 +127,7 @@ func NewReporter(t string, w io.Writer, options ...any) (r Reporter, err error) 
 	})
 	opts := evalReporterOptions(ro...)
 
-	switch t {
+	switch format {
 	case "csv":
 		r = newCSVReporter(w, opts)
 	case "toolkit":
@@ -154,7 +154,7 @@ func NewReporter(t string, w io.Writer, options ...any) (r Reporter, err error) 
 		r = newXLSXReporter(w, opts, xlsxoptions...)
 	case "table", "html", "markdown", "md", "tsv":
 		var fmtoptions = []FormattedReporterOptions{
-			RenderAs(t),
+			RenderAs(format),
 		}
 		for _, o := range options {
 			if f, ok := o.(FormattedReporterOptions); ok {
@@ -165,7 +165,7 @@ func NewReporter(t string, w io.Writer, options ...any) (r Reporter, err error) 
 		}
 		r = newFormattedReporter(w, opts, fmtoptions...)
 	default:
-		err = fmt.Errorf("unknown report type %q", t)
+		err = fmt.Errorf("unknown report type %q", format)
 		return
 	}
 
