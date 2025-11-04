@@ -2931,7 +2931,7 @@ reports:
       freeze-to-column: serverID
       conditional-format:
         - test:
-            columns: [ otherGateways, samplers, dynamicEntities ]
+            columns: [ samplers, dynamicEntities ]
             condition: "="
             type: number
             value: 0
@@ -3133,7 +3133,7 @@ reports:
       freeze-to-column: serverID
       conditional-format:
         - test:
-            columns: [ gateways, samplers, dynamicEntities ]
+            columns: [ samplers, dynamicEntities ]
             condition: "="
             type: number
             value: 0
