@@ -19,6 +19,10 @@
 
   * Update default maximum column width for XLSX reports to 50 characters to avoid excessive column widths for long lists of plugins etc.
 
+* `pkg/reporter`
+
+  * Skip conditional formatting for sheets where there are no data rows.
+
 ### Version v.1.23.1 Changes
 
 * `gdna`
