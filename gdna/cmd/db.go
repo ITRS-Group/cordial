@@ -36,15 +36,11 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
-
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 )
-
-const dbtype = "sqlite3"
 
 // openDB opens the given DSN and returns both a *sql.DB object and a
 // ready to go single *sql.Conn object. Remember to close the conn
