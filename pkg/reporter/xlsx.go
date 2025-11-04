@@ -654,6 +654,10 @@ func (x *XLSXReporter) applyConditionalFormat() {
 			}
 
 			rows := len(sheet.rowOrder)
+			if rows == 0 {
+				// no rows to format
+				continue
+			}
 
 			tc := []string{}
 
