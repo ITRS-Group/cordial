@@ -3,7 +3,7 @@
 ## Version v1.23.1
 
 > [!NOTE]
-> **Released 2025-10-28** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2025-11-03** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ### Version v.1.23.1 Fixes
 
@@ -13,15 +13,29 @@
 
 * `gdna`
 
-  * If the command line `--sceamble`/`-S` is given to various commands then also opaque the username and hostname in the `gdna-summary` report.
+  * `gdna.exe` has been broken for some time on Windows due to the use of the `github.com/mattn/go-sqlite3` package, which requires CGO. Replace this with the pure Go `modernc.org/sqlite` package to restore functionality.
+  
+  * If the command line `--scramble`/`-S` is given to various commands then also opaque the username and hostname in the `gdna-summary` report.
+
+  * Update default maximum column width for XLSX reports to 50 characters to avoid excessive column widths for long lists of plugins etc.
 
 ### Version v.1.23.1 Changes
 
 * `gdna`
 
-  * Add a `--fetch`/`-M` option to `gdna report` to run a single-shot fetch and report cycle, using an in-memory database. This is useful for ad-hoc reporting without needing to maintain a persistent database.
+  * Add a `--adhoc`/`-A` option to `gdna report` to run a single-shot fetch and report cycle, using an in-memory database. This is useful for ad-hoc reporting without needing to maintain a persistent database.
+
+  * To support ad-hoc reports, above, without needing a configuration file there is also a repeatable `--source`/`-L` option to specify one or more license data sources to use instead of those in the configuration file.
+
+    To connect to a `https://` source (specified on the command line without a configuration file) that has a self-signed or otherwise untrusted certificate you can set the `GDNA_GDNA_LICD_SKIP_VERIFY=true` environment variable to skip TLS verification.
 
   * Split the `toolkit` and `csv` report formats into separate reporters, so that `csv` uses standard CSV formatting without Geneos Toolkit specific additions like headlines.
+
+  * Change `plugins` columns in various reports from `name(N)` format to `name:N` format, with plugins separated by spaces. This makes it easier to parse the output in scripts and other automations.
+
+* `tools/geneos`
+
+  * Set a PATH environment variable when starting instances so that standard system commands can be found without needing to set full paths in `options` parameters. The PATH includes both Linux standard locations as well as Windows ones to support running Windows instances using `geneos.exe` on Windows.
 
 * `pkg/reporter`
 
