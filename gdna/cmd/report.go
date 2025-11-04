@@ -34,6 +34,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/reporter"
@@ -86,6 +87,15 @@ func init() {
 	reportCmd.Flags().StringVarP(&entity, "entity", "e", "GDNA", "Send reports to Managed `Entity`")
 	reportCmd.Flags().StringVarP(&sampler, "sampler", "s", "GDNA", "Send reports to `Sampler`")
 	reportCmd.Flags().BoolVarP(&resetViews, "reset", "R", false, "Reset/Delete configured Dataviews")
+
+	// allow user to specify --ad-hoc as --adhoc
+	reportCmd.PersistentFlags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+		switch name {
+		case "ad-hoc":
+			name = "adhoc"
+		}
+		return pflag.NormalizedName(name)
+	})
 
 	reportCmd.Flags().SortFlags = false
 }
