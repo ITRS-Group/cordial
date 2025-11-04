@@ -1,5 +1,12 @@
 # Dockerfile to build cordial components and tar.gz files
 
+# To build a release with docker images for testing, you must create a
+# credentials.json file in your user config directory, like this:
+#
+# $ geneos login -u user@example.com
+#
+# This is to allow downloading Geneos release archives during the build.
+
 ARG GOVERSION=1.25.3
 
 # Note: To build an executable for a modern Mac use something like:
@@ -7,7 +14,7 @@ ARG GOVERSION=1.25.3
 # GOOS=darwin GOARCH=arm64 go build -o geneos.${GOOS}-${GOARCH} -tags netgo,osusergo --ldflags '-s -w'
 #
 # However without executable signing this will not run on a Mac unless built locally.
-# 
+
 FROM golang:${GOVERSION} AS build
 # base files
 COPY go.mod go.sum cordial.go logging.go VERSION README.md CHANGELOG.md /app/cordial/
