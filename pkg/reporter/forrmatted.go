@@ -42,7 +42,6 @@ type FormattedReporter struct {
 	htmlpreamble    string
 	htmlpostscript  string
 	options         []FormattedReporterOptions
-	scrambleNames   bool
 	scrambleColumns []string
 }
 
@@ -192,12 +191,6 @@ func HTMLPreamble(preamble string) FormattedReporterOptions {
 func HTMLPostscript(postscript string) FormattedReporterOptions {
 	return func(fro *formattedReporterOptions) {
 		fro.htmlpostscript = postscript
-	}
-}
-
-func Scramble(scramble bool) FormattedReporterOptions {
-	return func(fro *formattedReporterOptions) {
-		fro.scramble = scramble
 	}
 }
 

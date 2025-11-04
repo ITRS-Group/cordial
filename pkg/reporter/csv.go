@@ -24,9 +24,10 @@ import (
 
 type CSVReporter struct {
 	ReporterCommon
-	w               io.Writer
-	c               *csv.Writer
-	table           [][]string
+	w     io.Writer
+	c     *csv.Writer
+	table [][]string
+	// scrambleNames   bool
 	scrambleColumns []string
 }
 
@@ -36,8 +37,9 @@ var _ Reporter = (*CSVReporter)(nil)
 func newCSVReporter(w io.Writer, opts *reporterOptions) *CSVReporter {
 	_ = opts
 	return &CSVReporter{
-		w: w,
-		c: csv.NewWriter(w),
+		ReporterCommon: ReporterCommon{scrambleNames: opts.scrambleNames},
+		w:              w,
+		c:              csv.NewWriter(w),
 	}
 }
 
@@ -58,7 +60,9 @@ func (t *CSVReporter) AddHeadline(name, value string) {
 }
 
 func (t *CSVReporter) UpdateTable(columns []string, data [][]string) {
-
+	if t.scrambleNames {
+		scrambleColumns(columns, t.scrambleColumns, data)
+	}
 	t.table = append([][]string{columns}, data...)
 }
 

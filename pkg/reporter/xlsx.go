@@ -53,8 +53,7 @@ type XLSXReporter struct {
 	plainStyle   int
 
 	// top level scramble toggle
-	scambleNames bool
-	password     *config.Plaintext
+	password *config.Plaintext
 
 	// conditional format global styles
 	cond        map[string]*int
@@ -96,12 +95,12 @@ func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporte
 	opts := evalXLSXReportOptions(options...)
 
 	x = &XLSXReporter{
-		x:            excelize.NewFile(),
-		w:            w,
-		scambleNames: opts.scramble,
-		password:     opts.password,
-		sheets:       map[string]*sheet{},
-		headlines:    opts.headlines,
+		ReporterCommon: ReporterCommon{scrambleNames: ropts.scrambleNames},
+		x:              excelize.NewFile(),
+		w:              w,
+		password:       opts.password,
+		sheets:         map[string]*sheet{},
+		headlines:      opts.headlines,
 	}
 
 	x.topHeading, _ = x.x.NewStyle(&excelize.Style{
@@ -359,7 +358,7 @@ func (x *XLSXReporter) UpdateTable(columns []string, data [][]string) {
 		return
 	}
 
-	if x.scambleNames {
+	if x.scrambleNames {
 		scrambleColumns(columns, sheet.scrambleColumns, data)
 	}
 

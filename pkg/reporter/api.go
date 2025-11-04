@@ -33,6 +33,7 @@ import (
 // An APIReporter connects to a Geneos Netprobe using the XML-RPC API
 // and publishes Dataview with optional Headlines
 type APIReporter struct {
+	ReporterCommon
 	conn            *plugins.Connection
 	dv              *xmlrpc.Dataview
 	resetDV         bool
@@ -66,10 +67,10 @@ func newAPIReporter(ropts *reporterOptions, options ...APIReporterOptions) (a *A
 	opts := evalAPIOptions(options...)
 
 	a = &APIReporter{
-		resetDV:       opts.reset,
-		scramble:      opts.scramble,
-		dvCreateDelay: opts.dvCreateDelay,
-		maxrows:       opts.maxrows,
+		ReporterCommon: ReporterCommon{scrambleNames: ropts.scrambleNames},
+		resetDV:        opts.reset,
+		dvCreateDelay:  opts.dvCreateDelay,
+		maxrows:        opts.maxrows,
 	}
 
 	scheme := "http"
@@ -113,7 +114,6 @@ type apiReportOptions struct {
 	sampler       string
 	dvCreateDelay time.Duration
 	reset         bool
-	scramble      bool
 	maxrows       int
 }
 
@@ -177,12 +177,6 @@ func DataviewCreateDelay(delay time.Duration) APIReporterOptions {
 func ResetDataviews(reset bool) APIReporterOptions {
 	return func(aro *apiReportOptions) {
 		aro.reset = reset
-	}
-}
-
-func ScrambleDataviews(scramble bool) APIReporterOptions {
-	return func(aro *apiReportOptions) {
-		aro.scramble = scramble
 	}
 }
 

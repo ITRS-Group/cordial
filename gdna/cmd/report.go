@@ -199,7 +199,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 			return
 		}
 		maxreports = 1
-		r, _ = reporter.NewReporter("csv", w)
+		r, _ = reporter.NewReporter("csv", w, reporter.Scramble(scrambleNames))
 	case "toolkit":
 		// we have a custom Toolkit reporter instead of using the
 		// go-pretty CSV output so that we can render headlines in the
@@ -219,7 +219,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 	case "xlsx":
 		r, _ = reporter.NewReporter("xlsx", w,
 			reporter.SummarySheetName(cf.GetString("reports.gdna-summary.name")),
-			reporter.XLSXScramble(scrambleNames || cf.GetBool("xlsx.scramble")),
+			reporter.Scramble(scrambleNames || cf.GetBool("xlsx.scramble")),
 			reporter.XLSXPassword(cf.GetPassword("xlsx.password")),
 			reporter.DateFormat(cf.GetString("xlsx.formats.datetime", config.Default("yyyy-mm-ddThh:MM:ss"))),
 			reporter.IntFormat(cf.GetInt("xlsx.formats.int", config.Default(1))),
@@ -239,7 +239,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 	default:
 		if r, err = reporter.NewReporter("api", nil,
 			reporter.ResetDataviews(resetViews),
-			reporter.ScrambleDataviews(scrambleNames || cf.GetBool("geneos.scramble")),
+			reporter.Scramble(scrambleNames || cf.GetBool("geneos.scramble")),
 			reporter.APIHostname(cf.GetString(config.Join("geneos", "netprobe", "hostname"))),
 			reporter.APIPort(cf.GetInt(config.Join("geneos", "netprobe", "port"))),
 			reporter.APISecure(cf.GetBool(config.Join("geneos", "netprobe", "secure"))),

@@ -48,7 +48,8 @@ type Reporter interface {
 }
 
 type ReporterCommon struct {
-	scrambleFunc func(in string) string
+	scrambleNames bool
+	scrambleFunc  func(in string) string
 }
 
 type Report struct {
@@ -75,6 +76,7 @@ type Report struct {
 type ReporterOptions func(*reporterOptions)
 
 type reporterOptions struct {
+	scrambleNames   bool
 	scrambleFunc    func(string) string
 	scrambleColumns []string
 }
@@ -87,6 +89,12 @@ func evalReporterOptions(options ...ReporterOptions) (ro *reporterOptions) {
 		opt(ro)
 	}
 	return
+}
+
+func Scramble(scramble bool) ReporterOptions {
+	return func(ro *reporterOptions) {
+		ro.scrambleNames = scramble
+	}
 }
 
 func ScrambleFunc(fn func(in string) string) ReporterOptions {
