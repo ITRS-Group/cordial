@@ -38,20 +38,16 @@ var _ Reporter = (*ToolkitReporter)(nil)
 func newToolkitReporter(w io.Writer, opts *reporterOptions) *ToolkitReporter {
 	_ = opts
 	return &ToolkitReporter{
-		w:         w,
-		c:         csv.NewWriter(w),
-		headlines: make(map[string]string),
+		ReporterCommon: ReporterCommon{scrambleNames: opts.scrambleNames},
+		w:              w,
+		c:              csv.NewWriter(w),
+		headlines:      make(map[string]string),
 	}
 }
 
 func (t *ToolkitReporter) Prepare(report Report) error {
 	t.scrambleColumns = report.ScrambleColumns
 	return nil
-}
-
-func (t *ToolkitReporter) Remove(report Report) (err error) {
-	// do nothing
-	return
 }
 
 // AddHeadline writes a Geneos Toolkit formatted headline to the
@@ -61,8 +57,15 @@ func (t *ToolkitReporter) AddHeadline(name, value string) {
 }
 
 func (t *ToolkitReporter) UpdateTable(columns []string, data [][]string) {
-
+	if t.scrambleNames {
+		scrambleColumns(columns, t.scrambleColumns, data)
+	}
 	t.table = append([][]string{columns}, data...)
+}
+
+func (t *ToolkitReporter) Remove(report Report) (err error) {
+	// do nothing
+	return
 }
 
 func (t *ToolkitReporter) Render() {

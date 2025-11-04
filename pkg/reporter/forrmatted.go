@@ -25,6 +25,8 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 )
 
+// FormattedReporter implements a Reporter that outputs in various formatted
+// text formats, including plain text tables, Markdown and HTML.
 type FormattedReporter struct {
 	ReporterCommon
 	name            string
@@ -45,10 +47,10 @@ type FormattedReporter struct {
 	scrambleColumns []string
 }
 
-// ensure that *Table is a Reporter
+// ensure that *FormattedReporter is a Reporter
 var _ Reporter = (*FormattedReporter)(nil)
 
-// newFormattedReporter returns a new Table reporter
+// newFormattedReporter returns a new FormattedReporter reporter
 func newFormattedReporter(w io.Writer, ropts *reporterOptions, options ...FormattedReporterOptions) (tr *FormattedReporter) {
 	tr = &FormattedReporter{
 		w:       w,
@@ -86,112 +88,13 @@ func (t *FormattedReporter) Prepare(report Report) error {
 	return nil
 }
 
-func (tr *FormattedReporter) updateReporter(options ...FormattedReporterOptions) {
-	tr.options = options
-	opts := evalFormattedOptions(options...)
-	if opts.writer != nil {
-		tr.w = opts.writer
-		tr.t.SetOutputMirror(opts.writer)
+func (t *FormattedReporter) AddHeadline(name, value string) {
+	if len(t.headlineOrder) == 0 {
+		// init map
+		t.headlines = map[string]string{}
 	}
-	tr.scrambleNames = opts.scramble
-	tr.renderas = opts.renderas
-
-	switch tr.renderas {
-	case "html":
-		tr.tablestyle.HTML = table.HTMLOptions{
-			CSSClass:    opts.dvcssclass,
-			EmptyColumn: "&nbsp;",
-			EscapeText:  true,
-			Newline:     "<br/>",
-		}
-		tr.headlinestyle.HTML = table.HTMLOptions{
-			CSSClass:    opts.headlinecssclass,
-			EmptyColumn: "&nbsp;",
-			EscapeText:  true,
-			Newline:     "<br/>",
-		}
-		tr.render = tr.t.RenderHTML
-		tr.htmlpreamble = opts.htmlpreamble
-		tr.htmlpostscript = opts.htmlpostscript
-	case "toolkit", "csv":
-		tr.render = tr.t.RenderCSV
-	case "markdown", "md":
-		tr.render = tr.t.RenderMarkdown
-	case "tsv":
-		tr.headlinestyle = table.StyleLight
-		tr.tablestyle = table.StyleLight
-		tr.render = tr.t.RenderTSV
-	case "table":
-		fallthrough
-	default:
-		s := table.StyleLight
-		s.Format.Header = text.FormatDefault
-		tr.headlinestyle = s
-		tr.tablestyle = s
-
-		tr.render = tr.t.Render
-	}
-
-}
-
-type formattedReporterOptions struct {
-	writer           io.Writer
-	renderas         string
-	dvcssclass       string
-	headlinecssclass string
-	htmlpreamble     string
-	htmlpostscript   string
-	scramble         bool
-}
-
-func evalFormattedOptions(options ...FormattedReporterOptions) (fro *formattedReporterOptions) {
-	fro = &formattedReporterOptions{
-		renderas:         "table",
-		dvcssclass:       "table",
-		headlinecssclass: "headlines",
-	}
-	for _, opt := range options {
-		opt(fro)
-	}
-	return
-}
-
-type FormattedReporterOptions func(*formattedReporterOptions)
-
-func Writer(w io.Writer) FormattedReporterOptions {
-	return func(fro *formattedReporterOptions) {
-		fro.writer = w
-	}
-}
-
-func RenderAs(renderas string) FormattedReporterOptions {
-	return func(fro *formattedReporterOptions) {
-		fro.renderas = renderas
-	}
-}
-
-func DataviewCSSClass(cssclass string) FormattedReporterOptions {
-	return func(fro *formattedReporterOptions) {
-		fro.dvcssclass = cssclass
-	}
-}
-
-func HeadlineCSSClass(cssclass string) FormattedReporterOptions {
-	return func(fro *formattedReporterOptions) {
-		fro.headlinecssclass = cssclass
-	}
-}
-
-func HTMLPreamble(preamble string) FormattedReporterOptions {
-	return func(fro *formattedReporterOptions) {
-		fro.htmlpreamble = preamble
-	}
-}
-
-func HTMLPostscript(postscript string) FormattedReporterOptions {
-	return func(fro *formattedReporterOptions) {
-		fro.htmlpostscript = postscript
-	}
+	t.headlineOrder = append(t.headlineOrder, name)
+	t.headlines[name] = value
 }
 
 func (t *FormattedReporter) UpdateTable(columns []string, data [][]string) {
@@ -216,15 +119,6 @@ func (t *FormattedReporter) UpdateTable(columns []string, data [][]string) {
 func (t *FormattedReporter) Remove(report Report) (err error) {
 	// do nothing
 	return
-}
-
-func (t *FormattedReporter) AddHeadline(name, value string) {
-	if len(t.headlineOrder) == 0 {
-		// init map
-		t.headlines = map[string]string{}
-	}
-	t.headlineOrder = append(t.headlineOrder, name)
-	t.headlines[name] = value
 }
 
 // Render sends the collected report data to the underlying table.Writer
@@ -280,5 +174,52 @@ func (t *FormattedReporter) Close() {
 	}
 	if c, ok := t.w.(io.Closer); ok {
 		c.Close()
+	}
+}
+
+func (tr *FormattedReporter) updateReporter(options ...FormattedReporterOptions) {
+	tr.options = options
+	opts := evalFormattedOptions(options...)
+	if opts.writer != nil {
+		tr.w = opts.writer
+		tr.t.SetOutputMirror(opts.writer)
+	}
+	tr.scrambleNames = opts.scramble
+	tr.renderas = opts.renderas
+
+	switch tr.renderas {
+	case "html":
+		tr.tablestyle.HTML = table.HTMLOptions{
+			CSSClass:    opts.dvcssclass,
+			EmptyColumn: "&nbsp;",
+			EscapeText:  true,
+			Newline:     "<br/>",
+		}
+		tr.headlinestyle.HTML = table.HTMLOptions{
+			CSSClass:    opts.headlinecssclass,
+			EmptyColumn: "&nbsp;",
+			EscapeText:  true,
+			Newline:     "<br/>",
+		}
+		tr.render = tr.t.RenderHTML
+		tr.htmlpreamble = opts.htmlpreamble
+		tr.htmlpostscript = opts.htmlpostscript
+	case "toolkit", "csv":
+		tr.render = tr.t.RenderCSV
+	case "markdown", "md":
+		tr.render = tr.t.RenderMarkdown
+	case "tsv":
+		tr.headlinestyle = table.StyleLight
+		tr.tablestyle = table.StyleLight
+		tr.render = tr.t.RenderTSV
+	case "table":
+		fallthrough
+	default:
+		s := table.StyleLight
+		s.Format.Header = text.FormatDefault
+		tr.headlinestyle = s
+		tr.tablestyle = s
+
+		tr.render = tr.t.Render
 	}
 }

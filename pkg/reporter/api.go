@@ -104,88 +104,6 @@ func newAPIReporter(ropts *reporterOptions, options ...APIReporterOptions) (a *A
 	return
 }
 
-type apiReportOptions struct {
-	ReporterCommon
-	hostname      string
-	port          int
-	secure        bool
-	skipVerify    bool
-	entity        string
-	sampler       string
-	dvCreateDelay time.Duration
-	reset         bool
-	maxrows       int
-}
-
-func evalAPIOptions(options ...APIReporterOptions) (fro *apiReportOptions) {
-	fro = &apiReportOptions{
-		hostname:   "localhost",
-		port:       7036,
-		secure:     false,
-		skipVerify: false,
-	}
-	for _, opt := range options {
-		opt(fro)
-	}
-	return
-}
-
-type APIReporterOptions func(*apiReportOptions)
-
-func APIHostname(hostname string) APIReporterOptions {
-	return func(aro *apiReportOptions) {
-		aro.hostname = hostname
-	}
-}
-
-func APIPort(port int) APIReporterOptions {
-	return func(aro *apiReportOptions) {
-		aro.port = port
-	}
-}
-
-func APISecure(secure bool) APIReporterOptions {
-	return func(aro *apiReportOptions) {
-		aro.secure = secure
-	}
-}
-
-func APISkipVerify(skip bool) APIReporterOptions {
-	return func(aro *apiReportOptions) {
-		aro.skipVerify = skip
-	}
-}
-
-func APIEntity(entity string) APIReporterOptions {
-	return func(aro *apiReportOptions) {
-		aro.entity = entity
-	}
-}
-
-func APISampler(sampler string) APIReporterOptions {
-	return func(aro *apiReportOptions) {
-		aro.sampler = sampler
-	}
-}
-
-func DataviewCreateDelay(delay time.Duration) APIReporterOptions {
-	return func(aro *apiReportOptions) {
-		aro.dvCreateDelay = delay
-	}
-}
-
-func ResetDataviews(reset bool) APIReporterOptions {
-	return func(aro *apiReportOptions) {
-		aro.reset = reset
-	}
-}
-
-func APIMaxRows(n int) APIReporterOptions {
-	return func(aro *apiReportOptions) {
-		aro.maxrows = n
-	}
-}
-
 // Prepare sets the Dataview group and title from the report structure
 // passed. err is returned if the connection fails or the name is
 // invalid. Note that in the Geneos api sampler the group and title must
@@ -217,17 +135,6 @@ func (a *APIReporter) Prepare(report Report) (err error) {
 	return
 }
 
-func (a *APIReporter) Remove(report Report) error {
-	if a == nil || a.conn == nil {
-		return nil
-	}
-	dv := a.conn.Dataview(report.Dataview.Group, report.Title)
-	if dv != nil {
-		return dv.Remove()
-	}
-	return nil
-}
-
 // UpdateTable takes a table of data in the form of a slice of slices of
 // strings and writes them to the configured APIReporter. The first
 // slice must be the column names. UpdateTable replaces all existing data
@@ -257,11 +164,14 @@ func (a *APIReporter) UpdateTable(columns []string, data [][]string) {
 		a.dv.Remove()
 		time.Sleep(a.dvCreateDelay)
 		_, err = a.conn.NewDataview(s[0], s[1])
+		if err != nil {
+			log.Error().Err(err).Msg("")
+			return
+		}
 	}
 	if err := a.dv.UpdateTable(columns, data...); err != nil {
 		log.Error().Err(err).Msg("")
 	}
-	return
 }
 
 func (a *APIReporter) AddHeadline(name, value string) {
@@ -270,10 +180,21 @@ func (a *APIReporter) AddHeadline(name, value string) {
 	}
 }
 
+func (a *APIReporter) Remove(report Report) error {
+	if a == nil || a.conn == nil {
+		return nil
+	}
+	dv := a.conn.Dataview(report.Dataview.Group, report.Title)
+	if dv != nil {
+		return dv.Remove()
+	}
+	return nil
+}
+
 func (a *APIReporter) Render() {
-	// nil
+	// do nothing
 }
 
 func (a *APIReporter) Close() {
-	//
+	// do nothing
 }

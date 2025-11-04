@@ -35,7 +35,6 @@ type CSVReporter struct {
 var _ Reporter = (*CSVReporter)(nil)
 
 func newCSVReporter(w io.Writer, opts *reporterOptions) *CSVReporter {
-	_ = opts
 	return &CSVReporter{
 		ReporterCommon: ReporterCommon{scrambleNames: opts.scrambleNames},
 		w:              w,
@@ -46,11 +45,6 @@ func newCSVReporter(w io.Writer, opts *reporterOptions) *CSVReporter {
 func (t *CSVReporter) Prepare(report Report) error {
 	t.scrambleColumns = report.ScrambleColumns
 	return nil
-}
-
-func (t *CSVReporter) Remove(report Report) (err error) {
-	// do nothing
-	return
 }
 
 // AddHeadline writes a Geneos CSV formatted headline to the
@@ -64,6 +58,11 @@ func (t *CSVReporter) UpdateTable(columns []string, data [][]string) {
 		scrambleColumns(columns, t.scrambleColumns, data)
 	}
 	t.table = append([][]string{columns}, data...)
+}
+
+func (t *CSVReporter) Remove(report Report) (err error) {
+	// do nothing
+	return
 }
 
 func (t *CSVReporter) Render() {
