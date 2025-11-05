@@ -128,8 +128,6 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 	opts := evalReporterOptions(ro...)
 
 	switch format {
-	case "csv":
-		r = newCSVReporter(w, opts)
 	case "toolkit":
 		r = newToolkitReporter(w, opts)
 	case "api", "dataview":
@@ -152,7 +150,7 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 			}
 		}
 		r = newXLSXReporter(w, opts, xlsxoptions...)
-	case "table", "html", "markdown", "md", "tsv":
+	case "table", "html", "markdown", "md", "tsv", "csv":
 		var fmtoptions = []FormattedReporterOptions{
 			RenderAs(format),
 		}

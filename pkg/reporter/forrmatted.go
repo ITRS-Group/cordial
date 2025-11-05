@@ -29,11 +29,16 @@ import (
 // text formats, including plain text tables, Markdown and HTML.
 type FormattedReporter struct {
 	ReporterCommon
-	name            string
-	w               io.Writer
-	t               table.Writer
-	renderas        string
-	render          func() string
+	name     string
+	w        io.Writer
+	t        table.Writer
+	renderas string
+	render   func() string
+
+	// set if any data has been rendered, to allow a spacer line to be
+	// added for those formats that make sense
+	rendered bool
+
 	headlineOrder   []string
 	headlines       map[string]string
 	headlinestyle   table.Style
@@ -83,6 +88,7 @@ func (t *FormattedReporter) Prepare(report Report) error {
 		columns:         []string{},
 		options:         t.options,
 		scrambleColumns: report.ScrambleColumns,
+		rendered:        t.rendered,
 	}
 	t.t.SetOutputMirror(t.w)
 
@@ -126,27 +132,40 @@ func (t *FormattedReporter) Remove(report Report) (err error) {
 // Render sends the collected report data to the underlying table.Writer
 // as on table of headlines and another or table data
 func (t *FormattedReporter) Render() {
-	if len(t.headlines) > 0 {
-		// render headers
-		headlines := []table.Row{}
-		for _, h := range t.headlineOrder {
-			headlines = append(headlines, table.Row{h, t.headlines[h]})
+	if t.renderas != "csv" {
+		if len(t.headlines) > 0 {
+			if t.rendered {
+				fmt.Fprintln(t.w)
+			}
+
+			// render headers
+			headlines := []table.Row{}
+			for _, h := range t.headlineOrder {
+				headlines = append(headlines, table.Row{h, t.headlines[h]})
+			}
+			t.t.SetColumnConfigs([]table.ColumnConfig{
+				{Number: 2, WidthMax: 0},
+			})
+			t.t.Style().Format.Header = text.FormatDefault
+			t.t.SetTitle(t.name + " Headlines")
+			t.t.AppendRows(headlines)
+			t.t.SetStyle(t.headlinestyle)
+			if t.t.Length() > 0 {
+				t.render()
+				t.rendered = true
+			}
 		}
-		t.t.SetColumnConfigs([]table.ColumnConfig{
-			{Number: 2, WidthMax: 0},
-		})
-		t.t.Style().Format.Header = text.FormatDefault
-		t.t.SetTitle(t.name + " Headlines")
-		t.t.AppendRows(headlines)
-		t.t.SetStyle(t.headlinestyle)
-		t.render()
+
+		// render table
+		t.t.ResetHeaders()
+		t.t.ResetRows()
+		t.t.SetTitle(t.name)
+	}
+
+	if t.rendered {
 		fmt.Fprintln(t.w)
 	}
 
-	// render dataview
-	t.t.ResetHeaders()
-	t.t.ResetRows()
-	t.t.SetTitle(t.name)
 	t.t.SetAllowedRowLength(0)
 	t.t.SetColumnConfigs([]table.ColumnConfig{
 		{Number: len(t.columns), WidthMax: 0},
@@ -166,8 +185,10 @@ func (t *FormattedReporter) Render() {
 		t.t.AppendRow(row)
 	}
 	t.t.SetStyle(t.tablestyle)
-	t.render()
-	fmt.Fprintln(t.w)
+	if t.t.Length() > 0 {
+		t.render()
+		t.rendered = true
+	}
 }
 
 func (t *FormattedReporter) Close() {
@@ -205,7 +226,7 @@ func (tr *FormattedReporter) updateReporter(options ...FormattedReporterOptions)
 		tr.render = tr.t.RenderHTML
 		tr.htmlpreamble = opts.htmlpreamble
 		tr.htmlpostscript = opts.htmlpostscript
-	case "toolkit", "csv":
+	case "csv":
 		tr.render = tr.t.RenderCSV
 	case "markdown", "md":
 		tr.render = tr.t.RenderMarkdown
