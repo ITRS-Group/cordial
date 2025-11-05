@@ -18,8 +18,10 @@ limitations under the License.
 package reporter
 
 import (
+	"archive/zip"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
@@ -29,11 +31,13 @@ import (
 // text formats, including plain text tables, Markdown and HTML.
 type FormattedReporter struct {
 	ReporterCommon
-	name     string
-	w        io.Writer
-	t        table.Writer
-	renderas string
-	render   func() string
+	title       string
+	name        string
+	writer      io.Writer
+	tableWriter table.Writer
+	zipWriter   *zip.Writer
+	format      string
+	render      func() string
 
 	// set if any data has been rendered, to allow a spacer line to be
 	// added for those formats that make sense
@@ -56,192 +60,239 @@ type FormattedReporter struct {
 var _ Reporter = (*FormattedReporter)(nil)
 
 // newFormattedReporter returns a new FormattedReporter reporter
-func newFormattedReporter(w io.Writer, ropts *reporterOptions, options ...FormattedReporterOptions) (tr *FormattedReporter) {
-	tr = &FormattedReporter{
+func newFormattedReporter(ropts *reporterOptions, options ...FormattedReporterOptions) (t *FormattedReporter) {
+	opts := evalFormattedOptions(options...)
+	t = &FormattedReporter{
 		ReporterCommon: ReporterCommon{scrambleNames: ropts.scrambleNames},
-		w:              w,
-		t:              table.NewWriter(),
+		writer:         opts.writer,
+		zipWriter:      opts.zipWriter,
+		tableWriter:    table.NewWriter(),
 		columns:        []string{},
 		options:        options,
 	}
-	tr.t.SetOutputMirror(tr.w)
+	// t.tableWriter.SetOutputMirror(t.writer)
 
-	tr.updateReporter(options...)
-	if tr.renderas == "html" {
-		tr.w.Write([]byte(tr.htmlpreamble))
+	t.updateReporter(options...)
+	if t.format == "html" {
+		t.writer.Write([]byte(t.htmlpreamble))
 	}
 	return
 }
 
-func (t *FormattedReporter) Prepare(report Report) error {
-	title := report.Title
-
-	// write the last output
-	t.Render()
+func (fr *FormattedReporter) Prepare(report Report) (err error) {
+	// flush any existing data
+	fr.Render()
 
 	// reset
-	*t = FormattedReporter{
-		ReporterCommon:  ReporterCommon{scrambleNames: t.scrambleNames},
-		w:               t.w,
-		name:            title,
-		t:               table.NewWriter(),
+	*fr = FormattedReporter{
+		ReporterCommon:  ReporterCommon{scrambleNames: fr.scrambleNames},
+		title:           report.Title,
+		name:            report.Name,
+		writer:          fr.writer,
+		tableWriter:     table.NewWriter(),
+		zipWriter:       fr.zipWriter,
 		columns:         []string{},
-		options:         t.options,
+		options:         fr.options,
 		scrambleColumns: report.ScrambleColumns,
-		rendered:        t.rendered,
+		rendered:        fr.rendered,
+		format:          fr.format,
 	}
-	t.t.SetOutputMirror(t.w)
 
-	t.updateReporter(t.options...)
+	fr.updateReporter(fr.options...)
 	return nil
 }
 
-func (t *FormattedReporter) AddHeadline(name, value string) {
-	if len(t.headlineOrder) == 0 {
+func (fr *FormattedReporter) AddHeadline(name, value string) {
+	if len(fr.headlineOrder) == 0 {
 		// init map
-		t.headlines = map[string]string{}
+		fr.headlines = map[string]string{}
 	}
-	t.headlineOrder = append(t.headlineOrder, name)
-	t.headlines[name] = value
+	fr.headlineOrder = append(fr.headlineOrder, name)
+	fr.headlines[name] = value
 }
 
-func (t *FormattedReporter) UpdateTable(columns []string, data [][]string) {
-	if len(t.columns) == 0 {
+func (fr *FormattedReporter) UpdateTable(columns []string, data [][]string) {
+	if len(fr.columns) == 0 {
 		// init
-		t.columns = columns
-		t.table = map[string][]string{}
+		fr.columns = columns
+		fr.table = map[string][]string{}
 	}
 
 	if len(data) == 0 {
 		return
 	}
-	if t.scrambleNames {
-		scrambleColumns(columns, t.scrambleColumns, data)
+	if fr.scrambleNames {
+		scrambleColumns(columns, fr.scrambleColumns, data)
 	}
 	for _, row := range data {
-		t.tableOrder = append(t.tableOrder, row[0])
-		t.table[row[0]] = row
+		fr.tableOrder = append(fr.tableOrder, row[0])
+		fr.table[row[0]] = row
 	}
 }
 
-func (t *FormattedReporter) Remove(report Report) (err error) {
+func (fr *FormattedReporter) Remove(report Report) (err error) {
 	// do nothing
 	return
 }
 
 // Render sends the collected report data to the underlying table.Writer
 // as on table of headlines and another or table data
-func (t *FormattedReporter) Render() {
-	if t.renderas != "csv" {
-		if len(t.headlines) > 0 {
-			if t.rendered {
-				fmt.Fprintln(t.w)
-			}
+func (fr *FormattedReporter) Render() {
+	var err error
 
+	if fr.zipWriter != nil || fr.format != "csv" {
+		if len(fr.headlines) > 0 {
 			// render headers
 			headlines := []table.Row{}
-			for _, h := range t.headlineOrder {
-				headlines = append(headlines, table.Row{h, t.headlines[h]})
+			for _, h := range fr.headlineOrder {
+				headlines = append(headlines, table.Row{h, fr.headlines[h]})
 			}
-			t.t.SetColumnConfigs([]table.ColumnConfig{
+			fr.tableWriter.SetColumnConfigs([]table.ColumnConfig{
 				{Number: 2, WidthMax: 0},
 			})
-			t.t.Style().Format.Header = text.FormatDefault
-			t.t.SetTitle(t.name + " Headlines")
-			t.t.AppendRows(headlines)
-			t.t.SetStyle(t.headlinestyle)
-			if t.t.Length() > 0 {
-				t.render()
-				t.rendered = true
+			fr.tableWriter.Style().Format.Header = text.FormatDefault
+			fr.tableWriter.SetTitle(fr.title + " Headlines")
+			fr.tableWriter.AppendRows(headlines)
+			fr.tableWriter.SetStyle(fr.headlinestyle)
+			if fr.tableWriter.Length() > 0 {
+				w := fr.writer
+				if fr.zipWriter != nil {
+					// need to create a new writer for headlines
+					w, err = fr.zipWriter.CreateHeader(&zip.FileHeader{
+						Name:     fr.name + ".headlines." + fr.format,
+						Method:   zip.Deflate,
+						Modified: time.Now(),
+					})
+					if err != nil {
+						panic(err)
+					}
+				} else if fr.rendered {
+					fmt.Fprintln(fr.writer)
+				}
+
+				fr.tableWriter.SetOutputMirror(w)
+				fr.render()
+				if fr.zipWriter != nil {
+					fr.zipWriter.Flush()
+				}
+				fr.rendered = true
 			}
 		}
 
 		// render table
-		t.t.ResetHeaders()
-		t.t.ResetRows()
-		t.t.SetTitle(t.name)
+		fr.tableWriter.ResetHeaders()
+		fr.tableWriter.ResetRows()
+		fr.tableWriter.SetTitle(fr.title)
 	}
 
-	if t.rendered {
-		fmt.Fprintln(t.w)
-	}
-
-	t.t.SetAllowedRowLength(0)
-	t.t.SetColumnConfigs([]table.ColumnConfig{
-		{Number: len(t.columns), WidthMax: 0},
+	fr.tableWriter.SetAllowedRowLength(0)
+	fr.tableWriter.SetColumnConfigs([]table.ColumnConfig{
+		{Number: len(fr.columns), WidthMax: 0},
 	})
-	t.t.Style().Format.Header = text.FormatDefault
+	fr.tableWriter.Style().Format.Header = text.FormatDefault
 
 	headings := table.Row{}
-	for _, h := range t.columns {
+	for _, h := range fr.columns {
 		headings = append(headings, h)
 	}
-	t.t.AppendHeader(headings)
-	for _, rn := range t.tableOrder {
+	fr.tableWriter.AppendHeader(headings)
+	for _, rn := range fr.tableOrder {
 		row := table.Row{}
-		for cn := range t.columns {
-			row = append(row, t.table[rn][cn])
+		for cn := range fr.columns {
+			row = append(row, fr.table[rn][cn])
 		}
-		t.t.AppendRow(row)
+		fr.tableWriter.AppendRow(row)
 	}
-	t.t.SetStyle(t.tablestyle)
-	if t.t.Length() > 0 {
-		t.render()
-		t.rendered = true
+	fr.tableWriter.SetStyle(fr.tablestyle)
+	if fr.tableWriter.Length() > 0 {
+		w := fr.writer
+		if fr.zipWriter != nil {
+			// need to create a new writer for table
+			w, err = fr.zipWriter.CreateHeader(&zip.FileHeader{
+				Name:     fr.name + "." + fr.format,
+				Method:   zip.Deflate,
+				Modified: time.Now(),
+			})
+			if err != nil {
+				panic(err)
+			}
+		} else if fr.rendered {
+			fmt.Fprintln(fr.writer)
+		}
+		fr.tableWriter.SetOutputMirror(w)
+		fr.render()
+		if fr.zipWriter != nil {
+			fr.zipWriter.Flush()
+		}
+		fr.rendered = true
 	}
 }
 
-func (t *FormattedReporter) Close() {
-	if t.renderas == "html" {
-		t.w.Write([]byte(t.htmlpostscript))
+func (fr *FormattedReporter) Close() {
+	if fr.format == "html" {
+		fr.writer.Write([]byte(fr.htmlpostscript))
 	}
-	if c, ok := t.w.(io.Closer); ok {
-		c.Close()
+
+	if fr.zipWriter != nil {
+		// close the ZIP, create the directory entries
+		err := fr.zipWriter.Close()
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if c, ok := fr.writer.(io.Closer); ok {
+		err := c.Close()
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
-func (tr *FormattedReporter) updateReporter(options ...FormattedReporterOptions) {
-	tr.options = options
+func (fr *FormattedReporter) updateReporter(options ...FormattedReporterOptions) {
+	// update saved options
+	fr.options = options
+
 	opts := evalFormattedOptions(options...)
-	if opts.writer != nil {
-		tr.w = opts.writer
-		tr.t.SetOutputMirror(opts.writer)
-	}
-	tr.renderas = opts.renderas
+	// if opts.writer != nil {
+	// 	fr.writer = opts.writer
+	// 	fr.tableWriter.SetOutputMirror(opts.writer)
+	// }
+	fr.format = opts.renderas
 
-	switch tr.renderas {
+	switch fr.format {
 	case "html":
-		tr.tablestyle.HTML = table.HTMLOptions{
+		fr.tablestyle.HTML = table.HTMLOptions{
 			CSSClass:    opts.dvcssclass,
 			EmptyColumn: "&nbsp;",
 			EscapeText:  true,
 			Newline:     "<br/>",
 		}
-		tr.headlinestyle.HTML = table.HTMLOptions{
+		fr.headlinestyle.HTML = table.HTMLOptions{
 			CSSClass:    opts.headlinecssclass,
 			EmptyColumn: "&nbsp;",
 			EscapeText:  true,
 			Newline:     "<br/>",
 		}
-		tr.render = tr.t.RenderHTML
-		tr.htmlpreamble = opts.htmlpreamble
-		tr.htmlpostscript = opts.htmlpostscript
+		fr.render = fr.tableWriter.RenderHTML
+		fr.htmlpreamble = opts.htmlpreamble
+		fr.htmlpostscript = opts.htmlpostscript
 	case "csv":
-		tr.render = tr.t.RenderCSV
+		fr.render = fr.tableWriter.RenderCSV
 	case "markdown", "md":
-		tr.render = tr.t.RenderMarkdown
+		fr.render = fr.tableWriter.RenderMarkdown
 	case "tsv":
-		tr.headlinestyle = table.StyleLight
-		tr.tablestyle = table.StyleLight
-		tr.render = tr.t.RenderTSV
+		fr.headlinestyle = table.StyleLight
+		fr.tablestyle = table.StyleLight
+		fr.render = fr.tableWriter.RenderTSV
 	case "table":
 		fallthrough
 	default:
 		s := table.StyleLight
 		s.Format.Header = text.FormatDefault
-		tr.headlinestyle = s
-		tr.tablestyle = s
+		fr.headlinestyle = s
+		fr.tablestyle = s
 
-		tr.render = tr.t.Render
+		fr.render = fr.tableWriter.Render
 	}
 }

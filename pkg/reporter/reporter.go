@@ -152,6 +152,7 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 		r = newXLSXReporter(w, opts, xlsxoptions...)
 	case "table", "html", "markdown", "md", "tsv", "csv":
 		var fmtoptions = []FormattedReporterOptions{
+			Writer(w),
 			RenderAs(format),
 		}
 		for _, o := range options {
@@ -161,7 +162,7 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 				panic("wrong option type")
 			}
 		}
-		r = newFormattedReporter(w, opts, fmtoptions...)
+		r = newFormattedReporter(opts, fmtoptions...)
 	default:
 		err = fmt.Errorf("unknown report type %q", format)
 		return

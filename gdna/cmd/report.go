@@ -18,6 +18,7 @@ limitations under the License.
 package cmd
 
 import (
+	"archive/zip"
 	"context"
 	"database/sql"
 	_ "embed"
@@ -44,6 +45,7 @@ import (
 var reportCmdDescription string
 
 var outputFormat, reportNames, output string
+var outputZip bool
 var resetViews, scrambleNames, reportFetch bool
 
 // Reporter is the GDNA specific reporter struct
@@ -73,6 +75,7 @@ func init() {
 
 	reportCmd.Flags().StringVarP(&output, "output", "o", "-", "output destination `file`, default is console (stdout)")
 	reportCmd.Flags().StringVarP(&outputFormat, "format", "F", "dataview", "output `format` - one of: dataview, table, html, markdown,\ntoolkit, csv, xslx")
+	reportCmd.Flags().BoolVarP(&outputZip, "zip", "Z", false, "Compress report output into a ZIP archive (only for table, html, markdown and csv formats)")
 
 	reportCmd.Flags().BoolVarP(&reportFetch, "adhoc", "A", false, "Ad-hoc reporting: Fetch license reports, build data in-memory and report\n(default format CSV, dataview output not supported)")
 	reportCmd.Flags().VarP(&fetchCmdSources, "source", "L", SourcesOptionsText)
@@ -189,8 +192,15 @@ var reportCmd = &cobra.Command{
 }
 
 func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, format string, reports string) (err error) {
+	var z *zip.Writer
 	var r reporter.Reporter
 	maxreports := -1
+
+	if outputZip {
+		z = zip.NewWriter(w)
+		log.Debug().Msgf("creating zipped report output: %p", z)
+		// file is closed by reporter.Close()
+	}
 
 	switch format {
 	case "csv":
@@ -198,8 +208,17 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 			err = errors.New("csv format requires a report name")
 			return
 		}
-		maxreports = 1
-		r, _ = reporter.NewReporter("csv", w, reporter.Scramble(scrambleNames))
+		if !outputZip {
+			maxreports = 1
+		}
+		r, err = reporter.NewReporter("csv", w,
+			reporter.Scramble(scrambleNames),
+			reporter.ZipWriter(z),
+		)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to create CSV reporter")
+			return
+		}
 	case "toolkit":
 		// we have a custom Toolkit reporter instead of using the
 		// go-pretty CSV output so that we can render headlines in the
@@ -210,11 +229,12 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 		}
 		maxreports = 1
 		r, _ = reporter.NewReporter("toolkit", w)
-	case "table", "html":
+	case "table", "html", "tsv", "markdown", "md":
 		r, _ = reporter.NewReporter(format, w,
 			reporter.Scramble(scrambleNames),
 			reporter.DataviewCSSClass("gdna-dataview"),
 			reporter.HeadlineCSSClass("gdna-headlines"),
+			reporter.ZipWriter(z),
 		)
 	case "xlsx":
 		r, _ = reporter.NewReporter("xlsx", w,
@@ -439,6 +459,7 @@ func reportLookupTable(report, group string, scramble bool) (lookupTable map[str
 func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report) {
 	var err error
 
+	log.Debug().Msgf("calling prepare for report %s", report.Name)
 	if err = r.Prepare(report.Report); err != nil {
 		return
 	}

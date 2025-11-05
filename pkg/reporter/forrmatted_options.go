@@ -18,11 +18,13 @@ limitations under the License.
 package reporter
 
 import (
+	"archive/zip"
 	"io"
 )
 
 type formattedReporterOptions struct {
 	writer           io.Writer
+	zipWriter        *zip.Writer
 	renderas         string
 	dvcssclass       string
 	headlinecssclass string
@@ -47,6 +49,12 @@ type FormattedReporterOptions func(*formattedReporterOptions)
 func Writer(w io.Writer) FormattedReporterOptions {
 	return func(fro *formattedReporterOptions) {
 		fro.writer = w
+	}
+}
+
+func ZipWriter(z *zip.Writer) FormattedReporterOptions {
+	return func(fro *formattedReporterOptions) {
+		fro.zipWriter = z
 	}
 }
 
