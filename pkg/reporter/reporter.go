@@ -45,10 +45,9 @@ type Reporter interface {
 
 	// Close releases any resources for the whole reporter
 	Close()
-}
 
-type ReporterCommon struct {
-	scrambleNames bool
+	// Extension returns the file extension appropriate for this reporter type
+	Extension() string
 }
 
 type Report struct {
@@ -56,6 +55,27 @@ type Report struct {
 	Title           string   `mapstructure:"name"`
 	Columns         []string `mapstructure:"columns,omitempty"`
 	ScrambleColumns []string `mapstructure:"scramble-columns,omitempty"`
+
+	// FilePath is the pattern used to generate a file path for reports
+	// when being written to a directory or a zip archive. It may
+	// contain placeholders that will be replaced with report-specific
+	// values.
+	//
+	// When not set the file path is generated from the report name,
+	// lowercased and with spaces replaced by '-' (dash) and an extension
+	// appropriate to the report format.
+	//
+	// Example: "reports/${value}_report.${extension}"
+	// The ${value} placeholder is replaced with the split value
+	// (e.g. gateway name) and ${extension} with the appropriate file
+	// extension for the report format (e.g. "csv" or "xlsx").
+	//
+	// ${value} is only replaced when the report is being split by a
+	// column value, e.g. gateway name. If the report is not split,
+	// then ${value} is unset.
+	//
+	// The ${extension} placeholder is always replaced.
+	FilePath string `mapstructure:"file-path,omitempty"`
 
 	// Report format specific settings
 
@@ -72,40 +92,10 @@ type Report struct {
 	} `mapstructure:"xlsx,omitempty"`
 }
 
-type ReporterOptions func(*reporterOptions)
-
-type reporterOptions struct {
-	scrambleNames   bool
-	scrambleFunc    func(string) string
-	scrambleColumns []string
-}
-
-func evalReporterOptions(options ...ReporterOptions) (ro *reporterOptions) {
-	ro = &reporterOptions{
-		scrambleFunc: scrambleWords,
-	}
-	for _, opt := range options {
-		opt(ro)
-	}
-	return
-}
-
-func Scramble(scramble bool) ReporterOptions {
-	return func(ro *reporterOptions) {
-		ro.scrambleNames = scramble
-	}
-}
-
-func ScrambleFunc(fn func(in string) string) ReporterOptions {
-	return func(ro *reporterOptions) {
-		ro.scrambleFunc = fn
-	}
-}
-
-func ScrambleColumns(columns []string) ReporterOptions {
-	return func(ro *reporterOptions) {
-		ro.scrambleColumns = columns
-	}
+type reporterCommon struct {
+	Report
+	format        string
+	scrambleNames bool
 }
 
 // NewReporter returns a reporter for type format, which must be one of

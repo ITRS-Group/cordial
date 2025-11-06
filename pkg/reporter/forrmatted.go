@@ -21,6 +21,8 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -30,22 +32,23 @@ import (
 // FormattedReporter implements a Reporter that outputs in various formatted
 // text formats, including plain text tables, Markdown and HTML.
 type FormattedReporter struct {
-	ReporterCommon
-	title       string
-	name        string
-	writer      io.Writer
-	tableWriter table.Writer
-	zipWriter   *zip.Writer
-	format      string
-	render      func() string
+	reporterCommon
+	w      io.Writer
+	t      table.Writer
+	z      *zip.Writer
+	format string
+
+	// render is the function used to render the table in the selected format
+	renderFunc func() string
 
 	// set if any data has been rendered, to allow a spacer line to be
-	// added for those formats that make sense
+	// added for those formats that need it
 	rendered bool
 
-	headlineOrder   []string
-	headlines       map[string]string
-	headlinestyle   table.Style
+	headlineOrder []string
+	headlines     map[string]string
+	headlinestyle table.Style
+
 	columns         []string
 	tableOrder      []string
 	table           map[string][]string
@@ -63,18 +66,20 @@ var _ Reporter = (*FormattedReporter)(nil)
 func newFormattedReporter(ropts *reporterOptions, options ...FormattedReporterOptions) (t *FormattedReporter) {
 	opts := evalFormattedOptions(options...)
 	t = &FormattedReporter{
-		ReporterCommon: ReporterCommon{scrambleNames: ropts.scrambleNames},
-		writer:         opts.writer,
-		zipWriter:      opts.zipWriter,
-		tableWriter:    table.NewWriter(),
-		columns:        []string{},
-		options:        options,
+		reporterCommon: reporterCommon{
+			scrambleNames: ropts.scrambleNames,
+		},
+		w:       opts.writer,
+		z:       opts.zipWriter,
+		t:       table.NewWriter(),
+		columns: []string{},
+		options: options,
 	}
 	// t.tableWriter.SetOutputMirror(t.writer)
 
 	t.updateReporter(options...)
 	if t.format == "html" {
-		t.writer.Write([]byte(t.htmlpreamble))
+		t.w.Write([]byte(t.htmlpreamble))
 	}
 	return
 }
@@ -85,17 +90,19 @@ func (fr *FormattedReporter) Prepare(report Report) (err error) {
 
 	// reset
 	*fr = FormattedReporter{
-		ReporterCommon:  ReporterCommon{scrambleNames: fr.scrambleNames},
-		title:           report.Title,
-		name:            report.Name,
-		writer:          fr.writer,
-		tableWriter:     table.NewWriter(),
-		zipWriter:       fr.zipWriter,
+		reporterCommon: reporterCommon{
+			Report:        report,
+			format:        fr.format,
+			scrambleNames: fr.scrambleNames,
+		},
+		// title:           report.Title,
+		w:               fr.w,
+		t:               table.NewWriter(),
+		z:               fr.z,
 		columns:         []string{},
 		options:         fr.options,
 		scrambleColumns: report.ScrambleColumns,
 		rendered:        fr.rendered,
-		format:          fr.format,
 	}
 
 	fr.updateReporter(fr.options...)
@@ -140,26 +147,30 @@ func (fr *FormattedReporter) Remove(report Report) (err error) {
 func (fr *FormattedReporter) Render() {
 	var err error
 
-	if fr.zipWriter != nil || fr.format != "csv" {
+	if fr.z != nil || fr.format != "csv" {
 		if len(fr.headlines) > 0 {
 			// render headers
 			headlines := []table.Row{}
 			for _, h := range fr.headlineOrder {
 				headlines = append(headlines, table.Row{h, fr.headlines[h]})
 			}
-			fr.tableWriter.SetColumnConfigs([]table.ColumnConfig{
+			fr.t.SetColumnConfigs([]table.ColumnConfig{
 				{Number: 2, WidthMax: 0},
 			})
-			fr.tableWriter.Style().Format.Header = text.FormatDefault
-			fr.tableWriter.SetTitle(fr.title + " Headlines")
-			fr.tableWriter.AppendRows(headlines)
-			fr.tableWriter.SetStyle(fr.headlinestyle)
-			if fr.tableWriter.Length() > 0 {
-				w := fr.writer
-				if fr.zipWriter != nil {
+			fr.t.Style().Format.Header = text.FormatDefault
+			fr.t.SetTitle(fr.Title + " Headlines")
+			fr.t.AppendRows(headlines)
+			fr.t.SetStyle(fr.headlinestyle)
+			if fr.t.Length() > 0 {
+				w := fr.w
+				if fr.z != nil {
 					// need to create a new writer for headlines
-					w, err = fr.zipWriter.CreateHeader(&zip.FileHeader{
-						Name:     fr.name + ".headlines." + fr.format,
+					p := fr.FilePath
+					pe := path.Ext(p)
+					pf := strings.TrimSuffix(p, pe)
+					fp := pf + ".headlines" + pe
+					w, err = fr.z.CreateHeader(&zip.FileHeader{
+						Name:     fp,
 						Method:   zip.Deflate,
 						Modified: time.Now(),
 					})
@@ -167,49 +178,49 @@ func (fr *FormattedReporter) Render() {
 						panic(err)
 					}
 				} else if fr.rendered {
-					fmt.Fprintln(fr.writer)
+					fmt.Fprintln(fr.w)
 				}
 
-				fr.tableWriter.SetOutputMirror(w)
-				fr.render()
-				if fr.zipWriter != nil {
-					fr.zipWriter.Flush()
+				fr.t.SetOutputMirror(w)
+				fr.renderFunc()
+				if fr.z != nil {
+					fr.z.Flush()
 				}
 				fr.rendered = true
 			}
 		}
 
 		// render table
-		fr.tableWriter.ResetHeaders()
-		fr.tableWriter.ResetRows()
-		fr.tableWriter.SetTitle(fr.title)
+		fr.t.ResetHeaders()
+		fr.t.ResetRows()
+		fr.t.SetTitle(fr.Title)
 	}
 
-	fr.tableWriter.SetAllowedRowLength(0)
-	fr.tableWriter.SetColumnConfigs([]table.ColumnConfig{
+	fr.t.SetAllowedRowLength(0)
+	fr.t.SetColumnConfigs([]table.ColumnConfig{
 		{Number: len(fr.columns), WidthMax: 0},
 	})
-	fr.tableWriter.Style().Format.Header = text.FormatDefault
+	fr.t.Style().Format.Header = text.FormatDefault
 
 	headings := table.Row{}
 	for _, h := range fr.columns {
 		headings = append(headings, h)
 	}
-	fr.tableWriter.AppendHeader(headings)
+	fr.t.AppendHeader(headings)
 	for _, rn := range fr.tableOrder {
 		row := table.Row{}
 		for cn := range fr.columns {
 			row = append(row, fr.table[rn][cn])
 		}
-		fr.tableWriter.AppendRow(row)
+		fr.t.AppendRow(row)
 	}
-	fr.tableWriter.SetStyle(fr.tablestyle)
-	if fr.tableWriter.Length() > 0 {
-		w := fr.writer
-		if fr.zipWriter != nil {
+	fr.t.SetStyle(fr.tablestyle)
+	if fr.t.Length() > 0 || fr.z != nil {
+		w := fr.w
+		if fr.z != nil {
 			// need to create a new writer for table
-			w, err = fr.zipWriter.CreateHeader(&zip.FileHeader{
-				Name:     fr.name + "." + fr.format,
+			w, err = fr.z.CreateHeader(&zip.FileHeader{
+				Name:     fr.FilePath,
 				Method:   zip.Deflate,
 				Modified: time.Now(),
 			})
@@ -217,12 +228,12 @@ func (fr *FormattedReporter) Render() {
 				panic(err)
 			}
 		} else if fr.rendered {
-			fmt.Fprintln(fr.writer)
+			fmt.Fprintln(fr.w)
 		}
-		fr.tableWriter.SetOutputMirror(w)
-		fr.render()
-		if fr.zipWriter != nil {
-			fr.zipWriter.Flush()
+		fr.t.SetOutputMirror(w)
+		fr.renderFunc()
+		if fr.z != nil {
+			fr.z.Flush()
 		}
 		fr.rendered = true
 	}
@@ -230,23 +241,27 @@ func (fr *FormattedReporter) Render() {
 
 func (fr *FormattedReporter) Close() {
 	if fr.format == "html" {
-		fr.writer.Write([]byte(fr.htmlpostscript))
+		fr.w.Write([]byte(fr.htmlpostscript))
 	}
 
-	if fr.zipWriter != nil {
+	if fr.z != nil {
 		// close the ZIP, create the directory entries
-		err := fr.zipWriter.Close()
+		err := fr.z.Close()
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	if c, ok := fr.writer.(io.Closer); ok {
+	if c, ok := fr.w.(io.Closer); ok {
 		err := c.Close()
 		if err != nil {
 			panic(err)
 		}
 	}
+}
+
+func (fr *FormattedReporter) Extension() string {
+	return fr.format
 }
 
 func (fr *FormattedReporter) updateReporter(options ...FormattedReporterOptions) {
@@ -274,17 +289,17 @@ func (fr *FormattedReporter) updateReporter(options ...FormattedReporterOptions)
 			EscapeText:  true,
 			Newline:     "<br/>",
 		}
-		fr.render = fr.tableWriter.RenderHTML
+		fr.renderFunc = fr.t.RenderHTML
 		fr.htmlpreamble = opts.htmlpreamble
 		fr.htmlpostscript = opts.htmlpostscript
 	case "csv":
-		fr.render = fr.tableWriter.RenderCSV
+		fr.renderFunc = fr.t.RenderCSV
 	case "markdown", "md":
-		fr.render = fr.tableWriter.RenderMarkdown
+		fr.renderFunc = fr.t.RenderMarkdown
 	case "tsv":
 		fr.headlinestyle = table.StyleLight
 		fr.tablestyle = table.StyleLight
-		fr.render = fr.tableWriter.RenderTSV
+		fr.renderFunc = fr.t.RenderTSV
 	case "table":
 		fallthrough
 	default:
@@ -293,6 +308,6 @@ func (fr *FormattedReporter) updateReporter(options ...FormattedReporterOptions)
 		fr.headlinestyle = s
 		fr.tablestyle = s
 
-		fr.render = fr.tableWriter.Render
+		fr.renderFunc = fr.t.Render
 	}
 }

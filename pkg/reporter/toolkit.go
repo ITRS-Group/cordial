@@ -24,7 +24,7 @@ import (
 )
 
 type ToolkitReporter struct {
-	ReporterCommon
+	reporterCommon
 	w               io.Writer
 	c               *csv.Writer
 	table           [][]string
@@ -38,10 +38,13 @@ var _ Reporter = (*ToolkitReporter)(nil)
 func newToolkitReporter(w io.Writer, opts *reporterOptions) *ToolkitReporter {
 	_ = opts
 	return &ToolkitReporter{
-		ReporterCommon: ReporterCommon{scrambleNames: opts.scrambleNames},
-		w:              w,
-		c:              csv.NewWriter(w),
-		headlines:      make(map[string]string),
+		reporterCommon: reporterCommon{
+			format:        "toolkit",
+			scrambleNames: opts.scrambleNames,
+		},
+		w:         w,
+		c:         csv.NewWriter(w),
+		headlines: make(map[string]string),
 	}
 }
 
@@ -85,4 +88,8 @@ func (t *ToolkitReporter) Close() {
 	if c, ok := t.w.(io.Closer); ok {
 		c.Close()
 	}
+}
+
+func (t *ToolkitReporter) Extension() string {
+	return "txt"
 }

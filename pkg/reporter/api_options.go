@@ -22,7 +22,6 @@ import (
 )
 
 type apiReportOptions struct {
-	ReporterCommon
 	hostname      string
 	port          int
 	secure        bool

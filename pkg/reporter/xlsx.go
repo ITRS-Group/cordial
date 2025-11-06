@@ -33,9 +33,9 @@ import (
 )
 
 type XLSXReporter struct {
-	ReporterCommon
-	x *excelize.File
+	reporterCommon
 	w io.Writer
+	x *excelize.File
 
 	summarySheet string
 
@@ -95,12 +95,15 @@ func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporte
 	opts := evalXLSXReportOptions(options...)
 
 	x = &XLSXReporter{
-		ReporterCommon: ReporterCommon{scrambleNames: ropts.scrambleNames},
-		x:              excelize.NewFile(),
-		w:              w,
-		password:       opts.password,
-		sheets:         map[string]*sheet{},
-		headlines:      opts.headlines,
+		reporterCommon: reporterCommon{
+			format:        "xlsx",
+			scrambleNames: ropts.scrambleNames,
+		},
+		x:         excelize.NewFile(),
+		w:         w,
+		password:  opts.password,
+		sheets:    map[string]*sheet{},
+		headlines: opts.headlines,
 	}
 
 	x.topHeading, _ = x.x.NewStyle(&excelize.Style{
@@ -452,6 +455,10 @@ func (x *XLSXReporter) Render() {
 
 func (x *XLSXReporter) Close() {
 	x.x.Close()
+}
+
+func (x *XLSXReporter) Extension() string {
+	return "xlsx"
 }
 
 var percentRE = regexp.MustCompile(`^\d+\s*%$`)

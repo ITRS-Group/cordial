@@ -33,7 +33,7 @@ import (
 // An APIReporter connects to a Geneos Netprobe using the XML-RPC API
 // and publishes Dataview with optional Headlines
 type APIReporter struct {
-	ReporterCommon
+	reporterCommon
 	conn            *plugins.Connection
 	dv              *xmlrpc.Dataview
 	resetDV         bool
@@ -66,10 +66,13 @@ func newAPIReporter(ropts *reporterOptions, options ...APIReporterOptions) (a *A
 	opts := evalAPIOptions(options...)
 
 	a = &APIReporter{
-		ReporterCommon: ReporterCommon{scrambleNames: ropts.scrambleNames},
-		resetDV:        opts.reset,
-		dvCreateDelay:  opts.dvCreateDelay,
-		maxrows:        opts.maxrows,
+		reporterCommon: reporterCommon{
+			format:        "api",
+			scrambleNames: ropts.scrambleNames,
+		},
+		resetDV:       opts.reset,
+		dvCreateDelay: opts.dvCreateDelay,
+		maxrows:       opts.maxrows,
 	}
 
 	scheme := "http"
@@ -174,7 +177,9 @@ func (a *APIReporter) UpdateTable(columns []string, data [][]string) {
 
 func (a *APIReporter) AddHeadline(name, value string) {
 	if a.dv != nil {
+		start := time.Now()
 		a.dv.Headline(name, value)
+		log.Debug().Dur("duration", time.Since(start)).Msgf("added headline %s", name)
 	}
 }
 
@@ -195,4 +200,8 @@ func (a *APIReporter) Render() {
 
 func (a *APIReporter) Close() {
 	// do nothing
+}
+
+func (a *APIReporter) Extension() string {
+	return "xmlrpc"
 }
