@@ -23,6 +23,10 @@
 
   * Skip conditional formatting for sheets where there are no data rows.
 
+* `pkg/xmlrpc`
+
+  * Don't close idle HTTP connections after each XML-RPC call to avoid very slow request times when making multiple calls in succession.
+
 ### Version v.1.23.1 Changes
 
 * `gdna`
