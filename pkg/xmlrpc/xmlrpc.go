@@ -144,7 +144,10 @@ func (c Client) post(method string, args ...interface{}) (result methodResponse,
 		return
 	}
 	defer resp.Body.Close()
-	defer c.CloseIdleConnections()
+
+	// using CloseIdleConnections here causes issues with
+	// response time when making multiple calls in succession
+	// defer c.CloseIdleConnections()
 
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
