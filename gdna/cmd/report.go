@@ -204,11 +204,13 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 
 	switch format {
 	case "csv":
-		if reports == "" {
-			err = errors.New("csv format requires a report name")
-			return
-		}
 		if !outputZip {
+			// csv format only allows one report and that must be
+			// selected on the command line
+			if reports == "" {
+				err = errors.New("csv format requires a report name")
+				return
+			}
 			maxreports = 1
 		}
 		r, err = reporter.NewReporter("csv", w,
@@ -459,11 +461,22 @@ func reportLookupTable(report, group string, scramble bool) (lookupTable map[str
 func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report) {
 	var err error
 
-	log.Debug().Msgf("calling prepare for report %s", report.Name)
+	if report.FilePath != "" {
+		report.FilePath = cf.ExpandString(report.FilePath, config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames)))
+	} else {
+		// generate filepath from report name
+		report.FilePath = strings.ReplaceAll(report.Name, " ", "_") + "." + r.Extension()
+	}
+
 	if err = r.Prepare(report.Report); err != nil {
 		return
 	}
-	r.AddHeadline("reportName", report.Name)
+	if !outputZip {
+		r.AddHeadline("reportName", report.Name)
+		if scrambleNames {
+			r.AddHeadline("scrambledColumns", strings.Join(report.ScrambleColumns, ","))
+		}
+	}
 	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
 
 	query := cf.ExpandString(report.Query, lookup, config.ExpandNonStringToCSV())
@@ -494,10 +507,22 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.Reporter, report Report) {
 	var err error
 
+	if report.FilePath != "" {
+		report.FilePath = cf.ExpandString(report.FilePath, config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames)))
+	} else {
+		// generate filepath from report name
+		report.FilePath = strings.ReplaceAll(report.Name, " ", "_") + "." + r2.Extension()
+	}
+
 	if err = r2.Prepare(report.Report); err != nil {
 		return
 	}
-	r2.AddHeadline("reportName", report.Name)
+	if !outputZip {
+		r2.AddHeadline("reportName", report.Name)
+		if scrambleNames {
+			r2.AddHeadline("scrambledColumns", strings.Join(report.ScrambleColumns, ","))
+		}
+	}
 	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
 
 	prequery := cf.ExpandString(report.Query, lookup, config.ExpandNonStringToCSV())
@@ -540,10 +565,22 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 	var err error
 	table := [][]string{report.Columns}
 
+	if report.FilePath != "" {
+		report.FilePath = cf.ExpandString(report.FilePath, config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames)))
+	} else {
+		// generate filepath from report name
+		report.FilePath = strings.ReplaceAll(report.Name, " ", "_") + "." + r.Extension()
+	}
+
 	if err = r.Prepare(report.Report); err != nil {
 		return
 	}
-	r.AddHeadline("reportName", report.Name)
+	if !outputZip {
+		r.AddHeadline("reportName", report.Name)
+		if scrambleNames {
+			r.AddHeadline("scrambledColumns", strings.Join(report.ScrambleColumns, ","))
+		}
+	}
 	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
 
 	groups := cf.GetStringMapString(report.Grouping)

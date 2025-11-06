@@ -23,9 +23,10 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/reporter"
-	"github.com/rs/zerolog/log"
 )
 
 // create a report per gateway (or other column) and populate with given queries
@@ -138,20 +139,36 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 	}
 
 	for _, v := range split {
+		rep := report // copy, as we update some fields per split
+
 		v = strings.ReplaceAll(v, "'", "''")
 		split := map[string]string{
-			"split-column": report.SplitColumn,
+			"split-column": rep.SplitColumn,
+			"name":         rep.Name,
 			"value":        v,
+			"extension":    r.Extension(),
 		}
-		origname := report.Title
-		report.Title = cf.ExpandString(report.Title, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
-		if err = r.Prepare(report.Report); err != nil {
+		origname := rep.Title
+		rep.Title = cf.ExpandString(rep.Title, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
+		if rep.FilePath != "" {
+			rep.FilePath = cf.ExpandString(rep.FilePath, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
+		} else {
+			// generate filepath from rep name
+			rep.FilePath = strings.ReplaceAll(rep.Title, " ", "_") + "." + r.Extension()
+		}
+
+		if err = r.Prepare(rep.Report); err != nil {
 			log.Debug().Err(err).Msg("")
 		}
-		r.AddHeadline("reportName", report.Name)
-		report.Title = origname
+		if !outputZip {
+			r.AddHeadline("reportName", rep.Name)
+			if scrambleNames {
+				r.AddHeadline("scrambledColumns", strings.Join(report.ScrambleColumns, ","))
+			}
+		}
+		rep.Title = origname
 
-		if query := cf.ExpandString(report.Headlines, config.LookupTable(split), lookup, config.ExpandNonStringToCSV()); query != "" {
+		if query := cf.ExpandString(rep.Headlines, config.LookupTable(split), lookup, config.ExpandNonStringToCSV()); query != "" {
 			names, headlines, err := queryHeadlines(ctx, tx, query)
 			if err != nil {
 				log.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
@@ -162,9 +179,9 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 			}
 		}
 
-		query := cf.ExpandString(report.Query, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
-		log.Trace().Msgf("query:\n%s ->\n%s", report.Query, query)
-		t, err := queryToTable(ctx, tx, report.Columns, query)
+		query := cf.ExpandString(rep.Query, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
+		log.Trace().Msgf("query:\n%s ->\n%s", rep.Query, query)
+		t, err := queryToTable(ctx, tx, rep.Columns, query)
 		if err != nil {
 			return err
 		}

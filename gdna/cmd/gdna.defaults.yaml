@@ -1796,7 +1796,7 @@ reports:
              totals.l1count,
              totals.l1covered,
              printf('%d %%', round((totals.l1covered * 100.0 ) / totals.servers)),
-             4 * round((totals.l1covered * 100.0 ) / totals.servers),
+             COALESCE(4 * round((totals.l1covered * 100.0 ) / totals.servers), 0),
              totals.l1count - totals.l1covered,
              printf('%d %%', 100 - round((totals.l1covered * 100.0 ) / totals.servers))
         FROM totals
@@ -1807,7 +1807,7 @@ reports:
              l1.total,
              l1.covered,
              printf('%d %%', round((l1.covered * 100.0 ) / totals.servers)),
-             4 * round((l1.covered * 100.0 ) / totals.servers),
+             COALESCE(4 * round((l1.covered * 100.0 ) / totals.servers), 0),
              totals.l1count - l1.covered,
              printf('%d %%', 100 - round((l1.covered * 100.0 ) / totals.servers))
 
@@ -1819,7 +1819,7 @@ reports:
              totals.l2count,
              totals.l2covered,
              printf('%d %%', round((totals.l2covered * 100.0) / totals.servers)),
-             4 * round((totals.l2covered * 100.0) / totals.servers),
+             COALESCE(4 * round((totals.l2covered * 100.0) / totals.servers), 0),
              totals.l2count - totals.l2covered,
              printf('%d %%', 100 - round((totals.l2covered * 100.0 ) / totals.servers))
         FROM totals
@@ -1830,7 +1830,7 @@ reports:
              l2.total,
              l2.covered,
              printf('%d %%', round((l2.covered * 100.0) / totals.servers)),
-             4 * round((l2.covered * 100.0) / totals.servers),
+             COALESCE(4 * round((l2.covered * 100.0) / totals.servers), 0),
              totals.l2count - l2.covered,
              printf('%d %%', 100 - round((l2.covered * 100.0 ) / totals.servers))
 
@@ -1842,7 +1842,7 @@ reports:
              totals.l3count,
              totals.l3covered,
              printf('%d %%', round((totals.l3covered * 100.0) / totals.servers)),
-             4 * round((totals.l3covered * 100.0) / totals.servers),
+             COALESCE(4 * round((totals.l3covered * 100.0) / totals.servers), 0),
              totals.servers - totals.l3covered,
              printf('%d %%', 100 - round((totals.l3covered * 100.0) / totals.servers))
         FROM totals;
@@ -2303,7 +2303,7 @@ reports:
              IIF(covered * 100.0 / total > 90, 1, 0),
              IIF(covered * 100.0 / total > 95, 1, 0),
              IIF(covered * 100.0 / total = 100, 1, 0),
-             4 * round(covered * 100.0 / total),
+             COALESCE(4 * round(covered * 100.0 / total), 0),
              'gateways where all servers have complete coverage'
           FROM w
 
@@ -2335,7 +2335,7 @@ reports:
              IIF((total - covered - empty) * 100.0 / total > 90, 1, 0),
              IIF((total - covered - empty) * 100.0 / total > 95, 1, 0),
              IIF((total - covered - empty) * 100.0 / total = 100, 1, 0),
-             4 * round((total - covered - empty) * 100.0 / total),
+             COALESCE(4 * round((total - covered - empty) * 100.0 / total), 0),
              'gateways where servers do not have all levels of coverage'
           FROM w
         
@@ -2367,7 +2367,7 @@ reports:
              IIF(l1coveredPercent > 90, 1, 0),
              IIF(l1coveredPercent > 95, 1, 0),
              IIF(l1coveredPercent = 100, 1, 0),
-             4 * round(l1coveredPercent),
+             COALESCE(4 * round(l1coveredPercent), 0),
              'gateways where servers have level 1 coverage, excluding fully covered'
         FROM w
 
@@ -2399,7 +2399,7 @@ reports:
              IIF(l2coveredPercent > 90, 1, 0),
              IIF(l2coveredPercent > 95, 1, 0),
              IIF(l2coveredPercent = 100, 1, 0),
-             4 * round(l2coveredPercent),
+             COALESCE(4 * round(l2coveredPercent), 0),
              'gateways where servers have level 2 coverage, excluding fully covered'
           FROM w
 
@@ -2431,7 +2431,7 @@ reports:
              IIF(l3coveredPercent > 90, 1, 0),
              IIF(l3coveredPercent > 95, 1, 0),
              IIF(l3coveredPercent = 100, 1, 0),
-             4 * round(l3coveredPercent),
+             COALESCE(4 * round(l3coveredPercent), 0),
              'gateways where servers have level 2 coverage, excluding fully covered'
           FROM w
 
@@ -2463,7 +2463,7 @@ reports:
              IIF(empty * 100.0 / total > 90, 1, 0),
              IIF(empty * 100.0 / total > 95, 1, 0),
              IIF(empty * 100.0 / total = 100, 1, 0),
-             4 * round(empty * 100.0 / total),
+             COALESCE(4 * round(empty * 100.0 / total), 0),
              'gateways where no servers have any level of coverage'
           FROM w
         ;
@@ -2770,6 +2770,7 @@ reports:
 
   coverage-per-gateway-overview:
     name: ${value} Overview
+    file-path: ${name}/${value}.${extension}
     dataview:
       group: Gateways
       enable: false
@@ -2923,6 +2924,7 @@ reports:
 
   coverage-per-gateway-detail:
     name: ${value} Detail
+    file-path: ${name}/${value}.${extension}
     dataview:
       group: Gateways
       enable: false

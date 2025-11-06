@@ -46,6 +46,7 @@ gdna report
   -o, --output file         output destination file, default is console (stdout) (default "-")
   -F, --format format       output format - one of: dataview, table, html, markdown,
                             toolkit, csv, xslx (default "dataview")
+  -Z, --zip                 Compress report output into a ZIP archive (only for table, html, markdown and csv formats)
   -A, --adhoc               Ad-hoc reporting: Fetch license reports, build data in-memory and report
                             (default format CSV, dataview output not supported)
   -L, --source URL | PATH   Override configured licence source.
