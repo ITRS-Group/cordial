@@ -1,11 +1,11 @@
 # Change Log
 
-## Version v1.23.1
+## Version v1.24.0
 
 > [!NOTE]
-> **Released 2025-11-03** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2025-11-07** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
-### Version v.1.23.1 Fixes
+### Version v.1.24.0 Fixes
 
 * `tools/geneos`
 
@@ -27,7 +27,7 @@
 
   * Don't close idle HTTP connections after each XML-RPC call to avoid very slow request times when making multiple calls in succession.
 
-### Version v.1.23.1 Changes
+### Version v.1.24.0 Changes
 
 * `gdna`
 
@@ -36,6 +36,8 @@
   * To support ad-hoc reports, above, without needing a configuration file there is also a repeatable `--source`/`-L` option to specify one or more license data sources to use instead of those in the configuration file.
 
     To connect to a `https://` source (specified on the command line without a configuration file) that has a self-signed or otherwise untrusted certificate you can set the `GDNA_GDNA_LICD_SKIP_VERIFY=true` environment variable to skip TLS verification.
+
+  * Also, support ZIP archives of formatted reports, defaulting to CSV format, using `--zip`/`-Z` option to `gdna report` command.
 
   * Split the `toolkit` and `csv` report formats into separate reporters, so that `csv` uses standard CSV formatting without Geneos Toolkit specific additions like headlines.
 
