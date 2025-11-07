@@ -36,6 +36,8 @@ GDNA_GDNA_LICD_SKIP_VERIFY=true gdna report --adhoc --source https://licd:7041 -
 
 When using this option you can also use the `--source`/`-L` flag one or more times to override the configured license data sources and specify which source(s) to use. This is useful for testing new or modified sources without changing the configuration file.
 
+To create a ZIP archive of reports, you can use the `--zip`/`-Z` option along with `--reports`/`-r` options to select which reports to include in the archive. The output file specified with `--output`/`-o` will be created as a ZIP file containing the selected reports in the specified format (defaulting to CSV). When combined with `--adhoc`/`-A` and `--source`/`-L` options, this allows you to create portable report archives from ad-hoc data sources without needing a configuration file.
+
 ```text
 gdna report
 ```
