@@ -96,6 +96,8 @@ func init() {
 		switch name {
 		case "ad-hoc":
 			name = "adhoc"
+		case "report":
+			name = "reports"
 		}
 		return pflag.NormalizedName(name)
 	})
