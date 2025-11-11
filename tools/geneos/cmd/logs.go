@@ -70,7 +70,7 @@ func init() {
 
 	logsCmd.Flags().SortFlags = false
 
-	logsCmd.PersistentFlags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	logsCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
 		switch name {
 		case "nostandard":
 			name = "no-stdout"

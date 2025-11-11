@@ -54,7 +54,7 @@ func init() {
 	importCmd.MarkFlagsMutuallyExclusive("instance-bundle", "signing-bundle")
 	importCmd.MarkFlagsOneRequired("instance-bundle", "signing-bundle")
 
-	importCmd.PersistentFlags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	importCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
 		switch name {
 		case "privkey":
 			name = "key"
