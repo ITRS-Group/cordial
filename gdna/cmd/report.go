@@ -92,7 +92,7 @@ func init() {
 	reportCmd.Flags().BoolVarP(&resetViews, "reset", "R", false, "Reset/Delete configured Dataviews")
 
 	// allow user to specify --ad-hoc as --adhoc
-	reportCmd.PersistentFlags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	reportCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
 		switch name {
 		case "ad-hoc":
 			name = "adhoc"
