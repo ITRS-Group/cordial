@@ -40,7 +40,7 @@ var debug, quiet bool
 var inlineCSS bool
 
 var entityArg, samplerArg, typeArg, dataviewArg string
-var toArg, ccArg, bccArg string
+var toArg, ccArg, bccArg, subjectArg string
 
 func init() {
 	// cobra.OnInitialize(initConfig)
@@ -63,6 +63,7 @@ func init() {
 	DV2EMAILCmd.Flags().StringVarP(&toArg, "to", "t", "", "To as comma-separated emails")
 	DV2EMAILCmd.Flags().StringVarP(&ccArg, "cc", "c", "", "Cc as comma-separated emails")
 	DV2EMAILCmd.Flags().StringVarP(&bccArg, "bcc", "b", "", "Bcc as comma-separated emails")
+	DV2EMAILCmd.Flags().StringVarP(&subjectArg, "subject", "s", "", "Subject of the email")
 
 	DV2EMAILCmd.Flags().SortFlags = false
 }
@@ -93,6 +94,7 @@ func initConfig() {
 		config.MergeSettings(),
 		config.SetFileExtension("yaml"),
 		config.WithDefaults(defaults, "yaml"),
+		config.WithEnvs("DV2EMAIL", "_"),
 	}
 
 	cf, err = config.Load(execname, opts...)
@@ -142,7 +144,7 @@ var DV2EMAILCmd = &cobra.Command{
 		}
 
 		// we need to pass filters etc. to fetchDataviews
-		em := email.NewEmailConfig(cf, toArg, ccArg, bccArg)
+		em := email.NewEmailConfig(cf, toArg, ccArg, bccArg, subjectArg)
 
 		data, err := fetchDataviews(cmd, gw,
 			em.GetString("_firstcolumn"),

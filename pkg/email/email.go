@@ -195,7 +195,7 @@ func splitCommaTrimSpace(s string) []string {
 }
 
 // NewEmailConfig sets up a config.Config containing Geneos specific email settings, ready to use with
-func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg string) (em *config.Config) {
+func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) (em *config.Config) {
 	em = config.New()
 	// set default from yaml file, can be overridden from Geneos as
 	// environment variables
@@ -251,6 +251,9 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg string) (em *config.
 	}
 	if bccArg != "" {
 		em.Set("_bcc", bccArg)
+	}
+	if subjectArg != "" {
+		em.Set("_subject", subjectArg)
 	}
 
 	return
