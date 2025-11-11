@@ -150,6 +150,7 @@ func (fr *FormattedReporter) Render() {
 	if fr.z != nil || fr.format != "csv" {
 		if len(fr.headlines) > 0 {
 			// render headers
+			fr.t.AppendHeader(table.Row{"headline", "value"})
 			headlines := []table.Row{}
 			for _, h := range fr.headlineOrder {
 				headlines = append(headlines, table.Row{h, fr.headlines[h]})
@@ -158,7 +159,9 @@ func (fr *FormattedReporter) Render() {
 				{Number: 2, WidthMax: 0},
 			})
 			fr.t.Style().Format.Header = text.FormatDefault
-			fr.t.SetTitle(fr.Title + " Headlines")
+			if fr.format != "csv" {
+				fr.t.SetTitle(fr.Title + " Headlines")
+			}
 			fr.t.AppendRows(headlines)
 			fr.t.SetStyle(fr.headlinestyle)
 			if fr.t.Length() > 0 {
@@ -193,7 +196,9 @@ func (fr *FormattedReporter) Render() {
 		// render table
 		fr.t.ResetHeaders()
 		fr.t.ResetRows()
-		fr.t.SetTitle(fr.Title)
+		if fr.format != "csv" {
+			fr.t.SetTitle(fr.Title)
+		}
 	}
 
 	fr.t.SetAllowedRowLength(0)
