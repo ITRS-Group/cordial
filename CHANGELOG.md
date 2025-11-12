@@ -1,5 +1,30 @@
 # Change Log
 
+## Version v1.24.1
+
+> [!NOTE]
+> **Released 2025-11-12** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v.1.24.1 Fixes
+
+* `pkg/reporter`
+
+  * Remove report titles as the first line in CSV output, as these interfere with importing into spreadsheets and other tools. Report titles are still included in other formats, when applicable.
+
+  * Add column headings to "headline" outputs
+
+* `gdna` and `tools/geneos`
+
+  * Fix flag aliases for some commands.
+
+### Version v.1.24.1 Changes
+
+* `tools/dv2email`
+
+  * Add a `--subject`/`-s` flag to set the email subject from the command line, overriding any subject set in the XML configuration. This closes issue #243.
+
+---
+
 ## Version v1.24.0
 
 > [!NOTE]
