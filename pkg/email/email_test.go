@@ -57,7 +57,7 @@ func TestDial(t *testing.T) {
 
 func TestUpdateEnvelope(t *testing.T) {
 	conf := config.New()
-	
+
 	// Test with basic configuration
 	msg, err := UpdateEnvelope(conf, false)
 	if err != nil {
@@ -135,7 +135,7 @@ func TestNewEmailConfig(t *testing.T) {
 	baseConf.Set("email.port", 587)
 
 	// Test with to, cc, and bcc addresses
-	emailConf := NewEmailConfig(baseConf, "to@example.com", "cc@example.com", "bcc@example.com")
+	emailConf := NewEmailConfig(baseConf, "to@example.com", "cc@example.com", "bcc@example.com", "")
 	if emailConf == nil {
 		t.Fatal("NewEmailConfig should not return nil")
 	}
@@ -163,13 +163,13 @@ func TestNewEmailConfig(t *testing.T) {
 	}
 
 	// Test with empty addresses
-	emailConf = NewEmailConfig(baseConf, "", "", "")
+	emailConf = NewEmailConfig(baseConf, "", "", "", "")
 	if emailConf == nil {
 		t.Fatal("NewEmailConfig should not return nil with empty addresses")
 	}
 
 	// Test with nil base config - this should not panic
-	emailConf = NewEmailConfig(nil, "to@example.com", "cc@example.com", "bcc@example.com")
+	emailConf = NewEmailConfig(nil, "to@example.com", "cc@example.com", "bcc@example.com", "")
 	if emailConf == nil {
 		t.Fatal("NewEmailConfig should not return nil with nil base config")
 	}

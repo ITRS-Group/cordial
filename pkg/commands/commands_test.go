@@ -196,7 +196,7 @@ func TestCommandResponse(t *testing.T) {
 func TestConnection(t *testing.T) {
 	// Test Connection struct
 	baseURL, _ := url.Parse("http://localhost:8080")
-	password := config.NewPlaintext("testpass")
+	password := config.NewPlaintext([]byte("testpass"))
 
 	conn := &Connection{
 		BaseURL:            baseURL,
@@ -296,9 +296,8 @@ func TestRunCommand(t *testing.T) {
 	}
 
 	target := xpath.NewDataviewPath("testDataview")
-	args := []Args{{"arg1", "value1"}}
-
-	response, err := conn.RunCommand("testCommand", target, args...)
+	args := []Args{Arg(1, "value1")}
+	_, err := conn.RunCommand("testCommand", target, args...)
 	if err == nil {
 		t.Error("Expected error with invalid connection")
 	}
@@ -319,7 +318,7 @@ func TestRunCommandAll(t *testing.T) {
 	}
 
 	target := xpath.NewDataviewPath("testDataview")
-	args := []Args{{"arg1", "value1"}}
+	args := []Args{Arg(1, "value1")}
 
 	responses, err := conn.RunCommandAll("testCommand", target, args...)
 	if err == nil {
@@ -385,38 +384,39 @@ func TestCommandTargets(t *testing.T) {
 
 func TestArgs(t *testing.T) {
 	// Test Args type
-	args := Args{"arg1", "value1"}
-
-	if len(args) != 2 {
-		t.Errorf("Expected 2 elements in args, got %d", len(args))
+	args := Arg(1, "value1")
+	ca := CommandArgs{}
+	args(&ca)
+	if len(ca) != 1 {
+		t.Errorf("Expected 1 element in CommandArgs, got %d", len(ca))
 	}
-
-	if args[0] != "arg1" {
-		t.Errorf("Expected first element 'arg1', got '%s'", args[0])
-	}
-
-	if args[1] != "value1" {
-		t.Errorf("Expected second element 'value1', got '%s'", args[1])
+	if ca["1"] != "value1" {
+		t.Errorf("Expected value 'value1' for key '1', got '%s'", ca["1"])
 	}
 }
 
 func TestDataview(t *testing.T) {
 	// Test Dataview struct
 	dataview := &Dataview{
-		Headlines: []string{"headline1", "headline2"},
-		Rows:      [][]string{{"row1col1", "row1col2"}, {"row2col1", "row2col2"}},
+		Headlines: map[string]DataItem{"headline1": DataItem{}, "headline2": DataItem{}},
+		Table: map[string]map[string]DataItem{
+			"row1": {"col1": DataItem{}, "col2": DataItem{}},
+			"row2": {"col1": DataItem{}, "col2": DataItem{}},
+		},
+		RowOrder:    []string{"row1", "row2"},
+		ColumnOrder: []string{"col1", "col2"},
 	}
 
 	if len(dataview.Headlines) != 2 {
 		t.Errorf("Expected 2 headlines, got %d", len(dataview.Headlines))
 	}
 
-	if len(dataview.Rows) != 2 {
-		t.Errorf("Expected 2 rows, got %d", len(dataview.Rows))
+	if len(dataview.RowOrder) != 2 {
+		t.Errorf("Expected 2 rows, got %d", len(dataview.RowOrder))
 	}
 
-	if len(dataview.Rows[0]) != 2 {
-		t.Errorf("Expected 2 columns in first row, got %d", len(dataview.Rows[0]))
+	if len(dataview.ColumnOrder) != 2 {
+		t.Errorf("Expected 2 columns, got %d", len(dataview.ColumnOrder))
 	}
 }
 
