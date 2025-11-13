@@ -23,6 +23,7 @@ import (
 	_ "embed"
 	"os"
 	"os/signal"
+	"path"
 	"slices"
 	"strings"
 
@@ -120,10 +121,22 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string
 		fetchCmdSources = cf.GetStringSlice("gdna.licd-sources")
 	}
 	log.Debug().Msgf("sources: %v", fetchCmdSources)
+
 	for _, source := range fetchCmdSources {
 		var s []string
 		log.Debug().Msgf("reading from %s", source)
-		if s, err = readLicdReports(ctx, cf, tx, source); err != nil {
+		if strings.HasPrefix(source, "summary:") {
+			source = strings.TrimPrefix(source, "summary:")
+			log.Debug().Msgf("reading licd report file(s): %s", source)
+			if s, err = readLicdReportFile(ctx, cf, tx, source); err != nil {
+				return
+			}
+		} else if path.Ext(source) == ".dat" || strings.HasPrefix(path.Base(source), "summary") {
+			log.Debug().Msgf("reading licd report file(s): %s", source)
+			if s, err = readLicdReportFile(ctx, cf, tx, source); err != nil {
+				return
+			}
+		} else if s, err = readLicdReports(ctx, cf, tx, source); err != nil {
 			log.Error().Err(err).Msgf("readLicenseReports for %s failed", source)
 		}
 		sources = append(sources, s...)
