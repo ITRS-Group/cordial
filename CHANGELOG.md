@@ -23,6 +23,10 @@
 
   * Add a `--subject`/`-s` flag to set the email subject from the command line, overriding any subject set in the XML configuration. This closes issue #243.
 
+* `gdna`
+
+  * Add support for `licd` binary summary files to the `fetch` and `report --adhoc` sources flags.
+
 ---
 
 ## Version v1.24.0

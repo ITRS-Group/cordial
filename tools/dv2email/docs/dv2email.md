@@ -23,6 +23,7 @@ Settings for the Gateway REST connection and defaults for the EMail gateway can 
   -t, --to string         To as comma-separated emails
   -c, --cc string         Cc as comma-separated emails
   -b, --bcc string        Bcc as comma-separated emails
+  -s, --subject string    Subject of the email
   -f, --config string     config file (default is $HOME/.config/geneos/dv2email.yaml)
   -D, --dataview string   dataview name, ignored if _VARIBLEPATH set in environment
   -E, --entity string     entity name, ignored if _VARIBLEPATH set in environment
