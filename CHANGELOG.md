@@ -21,7 +21,7 @@
 
 * `tools/dv2email`
 
-  * Add a `--subject`/`-s` flag to set the email subject from the command line, overriding any subject set in the XML configuration. This closes issue #243.
+  * Add a `--subject`/`-s` flag to set the email subject from the command line, overriding any subject set in the XML configuration. This closes issue #223.
 
 * `gdna`
 
