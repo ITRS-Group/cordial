@@ -77,8 +77,8 @@ var importCmd = &cobra.Command{
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Example: `
-$ geneos tls import -c netprobe localhost file.pem
-$ geneos tls import --signing-bundle file.pem
+$ geneos tls import netprobe localhost -c /path/to/file.pem
+$ geneos tls import --signing-bundle /path/to/file.pem
 `,
 	Annotations: map[string]string{
 		cmd.CmdGlobal:      "false",
@@ -94,15 +94,18 @@ $ geneos tls import --signing-bundle file.pem
 		if importCmdCert != "" {
 			certs, err := config.ReadInputPEMString(importCmdCert, "instance certificate(s)")
 			if err != nil {
-				return err
+				log.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
+				// return err
 			}
 			key, err := config.ReadInputPEMString(importCmdPrivateKey, "instance key")
 			if err != nil {
-				return err
+				log.Fatal().Err(err).Msg("Failed to read instance key")
+				// return err
 			}
 			c, k, chain, err := geneos.DecomposePEM(certs, key)
 			if err != nil {
-				return err
+				log.Fatal().Err(err).Msg("Failed to decompose PEM")
+				// return err
 			}
 
 			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, c, k, chain).Write(os.Stdout)

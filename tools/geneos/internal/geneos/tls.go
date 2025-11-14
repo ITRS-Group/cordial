@@ -164,10 +164,6 @@ func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave
 				if err != nil {
 					return
 				}
-				if !c.BasicConstraintsValid {
-					err = ErrInvalidArgs
-					return
-				}
 				if c.IsCA {
 					certs = append(certs, c)
 				} else if leaf == nil {
@@ -241,7 +237,8 @@ func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) 
 	}
 
 	// basic validation
-	if !(cert.BasicConstraintsValid && cert.IsCA) {
+	if !cert.BasicConstraintsValid || !cert.IsCA {
+		err = errors.New("signing certificate not valid as a signing certificate")
 		return ErrInvalidArgs
 	}
 
