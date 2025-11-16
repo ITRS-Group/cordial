@@ -1,5 +1,18 @@
 # Change Log
 
+## Version v1.24.2
+
+> [!NOTE]
+> **Released 2025-11-17** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v.1.24.2 Fixes
+
+* `tools/geneos`
+
+  * Fix `geneos tls import -c ...` of non-signing certificate bundles. The previous implementation incorrectly checked for the `BasicConstraintsValid` flag in all certificates, but this is only set on CA certificates.
+
+---
+
 ## Version v1.24.1
 
 > [!NOTE]
