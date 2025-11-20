@@ -344,11 +344,10 @@ func initConfig() {
 	geneos.InitHosts(cordial.ExecutableName())
 
 	// for now, always load profiles, even if not used
-	pf, err := profiles.Load()
+	_, err = profiles.Load()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to load profiles")
 	}
-	log.Debug().Msgf("profiles loaded: %v", pf.AllSettings())
 }
 
 // RunE runs a command in a sub-package to avoid import loops. It is
