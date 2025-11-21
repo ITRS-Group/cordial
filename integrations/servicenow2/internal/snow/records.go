@@ -179,6 +179,7 @@ func GetRecord(ctx *Context, table string, options ...Options) (results results,
 	if len(result.Results) > 0 {
 		results = result.Results[0]
 	}
+	log.Debug().Msgf("GetRecord results: %+v", results)
 	return
 }
 
@@ -193,7 +194,7 @@ func PostRecord(ctx *Context, table string, record Record, options ...Options) (
 		if err != nil {
 			log.Debug().Err(err).Msg("failed to marshal trace record for POST request")
 		} else {
-			log.Debug().Msgf("POST %s with record:\n%s", table, js)
+			log.Debug().Msgf("POST (Create) %s with record:\n%s", table, js)
 		}
 	}
 	_, err = rc.Post(ctx.Request().Context(), AssembleURL(table, options...), record, &r)
@@ -218,7 +219,7 @@ func PutRecord(ctx *Context, table string, record Record, options ...Options) (r
 		if err != nil {
 			log.Debug().Err(err).Msg("failed to marshal trace record for PUT request")
 		} else {
-			log.Debug().Msgf("PUT %s with record:\n%s", table, js)
+			log.Debug().Msgf("PUT (Update) %s with record:\n%s", table, js)
 		}
 	}
 

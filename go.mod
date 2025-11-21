@@ -39,6 +39,7 @@ require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/pkg/sftp v1.13.10
 	github.com/rs/zerolog v1.34.0
+	github.com/samber/slog-zerolog/v2 v2.9.0
 	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/skeema/knownhosts v1.3.2
 	github.com/spf13/afero v1.15.0
@@ -126,6 +127,8 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sagikazarmark/locafero v0.12.0 // indirect
+	github.com/samber/lo v1.51.0 // indirect
+	github.com/samber/slog-common v0.19.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tiendc/go-deepcopy v1.7.1 // indirect

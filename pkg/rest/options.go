@@ -1,17 +1,19 @@
 package rest
 
 import (
+	"log/slog"
 	"net/http"
 	"net/url"
 )
 
-// Options are used to control behaviour of ICP functions
+// Options are used to control behaviour of REST functions
 type Options func(*restOptions)
 
 type restOptions struct {
 	baseURL      *url.URL
 	client       *http.Client
 	setupRequest func(req *http.Request, c *Client, body []byte)
+	logger       *slog.Logger
 }
 
 func evalOptions(options ...Options) (opts *restOptions) {
@@ -60,5 +62,11 @@ func HTTPClient(client *http.Client) Options {
 func SetupRequestFunc(f func(req *http.Request, c *Client, body []byte)) Options {
 	return func(ro *restOptions) {
 		ro.setupRequest = f
+	}
+}
+
+func Logger(logger *slog.Logger) Options {
+	return func(ro *restOptions) {
+		ro.logger = logger
 	}
 }
