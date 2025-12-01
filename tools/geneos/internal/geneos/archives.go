@@ -641,7 +641,7 @@ var osMap = map[string]string{
 }
 
 func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source string, resp *http.Response, err error) {
-	// cannot fetch partial versions for el8 - restriction on download search interface
+	// cannot fetch partial versions for OSes with platformID set - restriction on download search interface
 	platform := getPlatformId(opts.platformId)
 
 	baseurl := config.GetString(config.Join("download", "url"))

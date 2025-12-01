@@ -9,6 +9,7 @@ all: release gdna
 test-images: release
 	docker build --tag cordial/ubi8 --tag cordial/ubi8:$(VERSION) --target cordial-run-ubi8 .
 	docker build --tag cordial/ubi9 --tag cordial/ubi9:$(VERSION) --target cordial-run-ubi9 .
+	docker build --tag cordial/ubi10 --tag cordial/ubi10:$(VERSION) --target cordial-run-ubi10 .
 
 release: base docs
 	mkdir -p release-$(VERSION)/
