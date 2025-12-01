@@ -113,7 +113,9 @@ func (c *Client) Get(ctx context.Context, endpoint any, request any, response an
 		}
 	}
 
-	c.logger.Debug("get request", "url", req.URL.String(), "query", req.URL.RawQuery)
+	if c.logger != nil {
+		c.logger.Debug("get request", "url", req.URL.String(), "query", req.URL.RawQuery)
+	}
 
 	if c.SetupRequest != nil {
 		c.SetupRequest(req, c, nil)
@@ -161,7 +163,9 @@ func (c *Client) Post(ctx context.Context, endpoint any, request any, response a
 	}
 	req.Header.Add("content-type", "application/json")
 
-	c.logger.Debug("post request", "url", req.URL.String(), "body", body)
+	if c.logger != nil {
+		c.logger.Debug("post request", "url", req.URL.String(), "body", body)
+	}
 
 	if c.SetupRequest != nil {
 		c.SetupRequest(req, c, body)
@@ -206,7 +210,9 @@ func (c *Client) Put(ctx context.Context, endpoint any, request any, response an
 	}
 	req.Header.Add("content-type", "application/json")
 
-	c.logger.Debug("put request", "url", req.URL.String(), "body", body)
+	if c.logger != nil {
+		c.logger.Debug("put request", "url", req.URL.String(), "body", body)
+	}
 
 	if c.SetupRequest != nil {
 		c.SetupRequest(req, c, body)
