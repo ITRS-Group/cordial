@@ -174,9 +174,10 @@ var clientCmd = &cobra.Command{
 			// is removed) in the form `select[:ENV...]:[DEFAULT]` and
 			// returns the value of the first environment variable set
 			// or the last field as a static string. If the environment
-			// variable is set but an empty string then the empty string
-			// is returned. In all other cases it returns an empty
-			// string.
+			// variable is set but an empty string then it is treated as
+			// if it were not set. To return a blank string if no
+			// environment variable is set use `${select:ENV:}` noting the
+			// colon just before the closing brace.
 			//
 			// Extend: Each ENV can be made up of multiple environment
 			// variable names concatenated with either a plus (`+`) (as
@@ -196,26 +197,31 @@ var clientCmd = &cobra.Command{
 				def := envs[last]
 				envs = envs[:last]
 
+				var e strings.Builder
 				for _, env := range envs {
-					var e strings.Builder
-					var envIsSet bool
+					var envWasSet bool
+					e.Reset()
 
 					for i := 0; i < len(env); i++ {
 						switch env[i] {
 						case '+', ' ', '-', '/':
 							if e.Len() > 0 {
 								if v, ok := os.LookupEnv(e.String()); ok {
-									r.WriteString(v)
-									envIsSet = true
+									if len(v) > 0 {
+										r.WriteString(v)
+										envWasSet = true
+									}
 								}
 								e.Reset()
 							}
+							// only add a '+' if it's doubles up
 							if env[i] == '+' {
 								if len(env) > i+1 && env[i+1] == '+' {
 									r.WriteByte('+')
 									i++
 								}
 							} else {
+								// add the separator
 								r.WriteByte(env[i])
 							}
 						default:
@@ -225,18 +231,21 @@ var clientCmd = &cobra.Command{
 
 					if e.Len() > 0 {
 						if v, ok := os.LookupEnv(e.String()); ok {
-							r.WriteString(v)
-							envIsSet = true
+							if len(v) > 0 {
+								r.WriteString(v)
+								envWasSet = true
+							}
 						}
-						e.Reset()
 					}
 
-					if envIsSet {
+					if envWasSet {
 						if trim {
 							return strings.TrimSpace(r.String()), nil
 						}
 						return r.String(), nil
 					}
+
+					r.Reset()
 				}
 
 				return def, nil
