@@ -71,6 +71,11 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 		}
 	}
 
+	timeout := cf.GetDuration(cf.Join("proxy", "timeout"))
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
+
 	// use most of the default transport settings
 	hc := &http.Client{
 		Transport: &http.Transport{
@@ -81,6 +86,7 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 			ExpectContinueTimeout: 1 * time.Second,
 			TLSClientConfig:       tcc,
 		},
+		Timeout: timeout,
 	}
 
 	p := sn.JoinPath(cf.GetString("path", config.Default("/api/now/v2/table")))

@@ -1,5 +1,18 @@
 # Change Log
 
+## Version v1.24.3
+
+> [!NOTE]
+> **Released 2025-12-09** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v.1.24.3 Fixes
+
+* Add timeouts to HTTP clients in various components to avoid hanging indefinitely on network operations.
+
+  This fixes the `servicenow` and `servicenow2` integrations hanging indefinitely when the remote server does not respond.
+
+---
+
 ## Version v1.24.2
 
 > [!NOTE]
