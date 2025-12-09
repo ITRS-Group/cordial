@@ -339,7 +339,7 @@ func TLSInit(overwrite bool, keytype string) (err error) {
 		}
 		fmt.Printf("root certificate already exists in %s, skipping\n", path.Join(confDir, RootCABasename)+".pem")
 	} else {
-		fmt.Printf("CA created for %s\n", RootCABasename)
+		fmt.Printf("CA certificate created for %s\n", RootCABasename)
 	}
 
 	if err := config.CreateSigningCert(

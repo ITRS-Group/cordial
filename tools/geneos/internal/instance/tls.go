@@ -19,6 +19,8 @@ package instance
 
 import (
 	"crypto/rand"
+	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -136,7 +138,12 @@ func CreateCert(i geneos.Instance, duration time.Duration) (resp *Response) {
 	}
 
 	// resp.Completed = append(resp.Completed, fmt.Sprintf("certificate created, expires %s", expires.UTC().Format(time.RFC3339)))
-	resp.Line = fmt.Sprintf("certificate created for %s (expires %s)", i, expires.UTC().Format(time.RFC3339))
+	resp.Lines = []string{
+		fmt.Sprintf("certificate created for %s", i),
+		fmt.Sprintf("            Expiry: %s", expires.UTC().Format(time.RFC3339)),
+		fmt.Sprintf("  SHA1 Fingerprint: %X", sha1.Sum(cert.Raw)),
+		fmt.Sprintf("SHA256 Fingerprint: %X", sha256.Sum256(cert.Raw)),
+	}
 	return
 }
 

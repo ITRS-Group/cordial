@@ -19,6 +19,8 @@ package tlscmd
 
 import (
 	"crypto/rand"
+	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	_ "embed"
@@ -172,7 +174,10 @@ func CreateCert(destination string, overwrite bool, duration time.Duration, cn s
 		return
 	}
 
-	fmt.Printf("certificate created for %s (expires %s)\n", basepath, expires.UTC())
+	fmt.Printf("certificate created for %s\n", basepath)
+	fmt.Printf("            Expiry: %s\n", expires.UTC().Format(time.RFC3339))
+	fmt.Printf("  SHA1 Fingerprint: %X\n", sha1.Sum(cert.Raw))
+	fmt.Printf("SHA256 Fingerprint: %X\n", sha256.Sum256(cert.Raw))
 
 	return
 }

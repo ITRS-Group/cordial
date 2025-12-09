@@ -43,11 +43,11 @@ var importCmdPassword *config.Plaintext
 func init() {
 	tlsCmd.AddCommand(importCmd)
 
-	importCmd.Flags().StringVarP(&importCmdCert, "instance-bundle", "c", "", "Instance certificate bundle to import, PEM or PFX/PKCS#12 format")
-	importCmd.Flags().StringVarP(&importCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle to import, PEM format")
-
 	importCmdPassword = &config.Plaintext{}
+	importCmd.Flags().StringVarP(&importCmdCert, "instance-bundle", "c", "", "Instance certificate bundle to import, PEM or PFX/PKCS#12 format")
 	importCmd.Flags().VarP(importCmdPassword, "password", "p", "Password for private key decryption, if needed, for pfx files")
+
+	importCmd.Flags().StringVarP(&importCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle to import, PEM format")
 
 	importCmd.Flags().StringVarP(&importCmdPrivateKey, "key", "k", "", "Private key `file` for certificate, PEM format")
 	importCmd.Flags().MarkDeprecated("key", "include the private key in either the instance or signing bundles")
