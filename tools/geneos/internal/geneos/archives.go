@@ -684,7 +684,9 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		return unicode.IsSpace(r) || r == ','
 	})
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 
 	for _, bp := range basepaths {
 		// first try plain unauthenticated GET
@@ -877,7 +879,9 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 		}
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 	var req *http.Request
 
 	artifacts := strings.FieldsFunc(ct.DownloadBase.Nexus, func(r rune) bool {

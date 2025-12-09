@@ -27,6 +27,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"golang.org/x/oauth2/clientcredentials"
@@ -94,7 +95,7 @@ func InitializeConnection(vc *config.Config) *Connection {
 
 	snowMutex.Lock()
 	snowConnection = &Connection{
-		Client:   http.DefaultClient,
+		Client:   &http.Client{Timeout: 30 * time.Second},
 		Instance: instance,
 		Path:     path,
 		Username: username,

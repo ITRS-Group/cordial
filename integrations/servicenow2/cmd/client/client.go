@@ -428,6 +428,11 @@ func newRestClient(cf *config.Config, r string) *rest.Client {
 		}
 	}
 
+	timeout := cf.GetDuration(cf.Join("proxy", "timeout"))
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
+
 	// use most of the default transport settings
 	hc := &http.Client{
 		Transport: &http.Transport{
@@ -435,6 +440,7 @@ func newRestClient(cf *config.Config, r string) *rest.Client {
 			TLSHandshakeTimeout: 10 * time.Second,
 			TLSClientConfig:     tcc,
 		},
+		Timeout: timeout,
 	}
 
 	return rest.NewClient(

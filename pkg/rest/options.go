@@ -3,6 +3,7 @@ package rest
 import (
 	"net/http"
 	"net/url"
+	"time"
 )
 
 // Options are used to control behaviour of ICP functions
@@ -16,7 +17,9 @@ type restOptions struct {
 
 func evalOptions(options ...Options) (opts *restOptions) {
 	opts = &restOptions{
-		client: &http.Client{},
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+		},
 	}
 	opts.baseURL, _ = url.Parse("https://localhost")
 	for _, opt := range options {
