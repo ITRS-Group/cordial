@@ -20,12 +20,15 @@ package snow
 import (
 	"context"
 	"crypto/tls"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/rs/zerolog/log"
+	slogzerolog "github.com/samber/slog-zerolog/v2"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 
@@ -38,7 +41,8 @@ var snowConnection *rest.Client
 
 type Context struct {
 	echo.Context
-	Conf *config.Config
+	Conf  *config.Config
+	debug bool
 }
 
 func ServiceNow(cf *config.Config) (rc *rest.Client) {
@@ -87,6 +91,8 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 
 	p := sn.JoinPath(cf.GetString("path", config.Default("/api/now/v2/table")))
 
+	logger := slog.New(slogzerolog.Option{Level: slog.LevelDebug, Logger: &log.Logger}.NewZerologHandler())
+
 	if clientID != "" && !clientSecret.IsNil() {
 		params := make(url.Values)
 		params.Set("grant_type", "password")
@@ -105,6 +111,7 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 		rc = rest.NewClient(
 			rest.BaseURL(p),
 			rest.HTTPClient(hc),
+			rest.Logger(logger),
 		)
 	} else {
 		rc = rest.NewClient(
@@ -113,6 +120,7 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 			rest.SetupRequestFunc(func(req *http.Request, c *rest.Client, body []byte) {
 				req.SetBasicAuth(username, password.String())
 			}),
+			rest.Logger(logger),
 		)
 	}
 

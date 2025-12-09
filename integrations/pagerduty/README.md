@@ -15,7 +15,7 @@ pagerduty:
   authtoken: [SEE BELOW]
 ```
 
-Save this as `.config/geneos/pagerduty.yaml` relative to the home directory of the user running the Geneos Gateway.
+Save this as `${HOME}/.config/geneos/pagerduty.yaml` and then all Geneos Gateways that invoke the binary will use the same configuration.
 
 In your Geneos Gateway create an Effect like this, changing the path to the binary as required:
 
@@ -102,10 +102,7 @@ The default configuration sets the following:
   This is the API Key that grant Geneos access to Pagerduty. You will need to create one under the API Access Keys page of your Pagerduty instance - e.g. `https://XXX.pagerduty.com/api_keys`. To protect the key from casual viewing use the `${enc:}` format supported by `cordial` via the `geneos aes` commands. For example:
 
   ```bash
-  # unless already done, create an aes keyfile (this is save in ${HOME}/.config/geneos/keyfile.aes by default)
-  $ geneos aes new -D
-  # now encode the key in "expandable" format, copy the entire output line into the config
-  $ geneos aes encode -e -p 'apikeyhere'
+  $ geneos aes password -p 'apikeyhere'
   ${enc:~/.config/geneos/keyfile.aes:+encs+6841BD18C7FB9082742B8208B744FD27}
   ```
 

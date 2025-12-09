@@ -238,11 +238,15 @@ Additional custom functions:
 
 * `${match:ENV:PATTERN}` - evaluate PATTERN as a regular expression against the contents of `ENV` environment variable and return `true` or `false`. If ENV is an empty string (or not set) then `matchenv` returns `false`
 
-* `${replace:ENV:/PATTERN/TEXT/}` - apply the regular expression `PATTERN` to the value in the `ENV` environment variable and replace all matches with `TEXT`. `PATTERN` and `TEXT` support the features provided by the Go `regexp` package. To include forward slashes (`/`) or closing brackets (`}`) you must escape them with a backslash.
+* `${replace:ENV:/PATTERN/TEXT/}` - apply the regular expression `PATTERN` to the value in the `ENV` environment variable and replace **all** matches with `TEXT`. `PATTERN` and `TEXT` support the features provided by the Go `regexp` package. The forward slash (`/`) can be replaced with any character but must appear three times, beginning, middle and end. Special characters can be escaped with a backslash, including `}`, but you cannot escape the chosen delimiter, so instead replace it with something not in the pattern or replacement. Note that capture group references are not supported in the `TEXT` replacement.
 
-* `${select:ENV1:ENV2:...:DEFAULT}` - return the value of the first environment variable that is set (including an empty string). The last field is a string returned as a default value if none of the environment variables are set. Remember to include the last colon directly followed by the closing `}` if the default value should be an empty string.
+  For example, to replace all spaces with underscores:
 
-  Each ENV* field may also include multiple environment variable names separated by one of: `-`, ` `, `/`, `+` or `++`. A single plus (`+`) is a zero-width separator while a double plus (`++`) results in a single plus sign in the output. The other valid separators are included as-is. If any of the individual environment variables are set then this counts as if the whole field were set. This feature is useful for alternating between aggregate labels each as rowname and column versus headlines.
+  * `${replace:_DATAVIEW:/ /_/}`
+
+* `${select:ENV1:ENV2:...:DEFAULT}` - return the value of the first environment variable that is set (an empty string is seen as unset). The last field is a string returned as a default value if none of the environment variables are set. Remember to include the last colon directly followed by the closing `}` if the default value should be an empty string.
+
+  Each ENVx field may also include multiple environment variable names separated by one of: `-`, ` `, `/`, `+` or `++`. A single plus (`+`) is a zero-width separator while a double plus (`++`) results in a single plus sign in the output. The other valid separators are included as-is. If any of the individual environment variables are set then this counts as if the whole field were set. This feature is useful for alternating between aggregate labels each as rowname and column versus headlines.
 
   For example:
 

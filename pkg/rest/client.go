@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -36,6 +37,7 @@ type Client struct {
 	SetupRequest func(req *http.Request, c *Client, body []byte)
 	authHeader   string
 	authValue    string
+	logger       *slog.Logger
 }
 
 // NewClient returns a *Client struct, ready to use. Unless options are
@@ -46,6 +48,7 @@ func NewClient(options ...Options) *Client {
 		BaseURL:      opts.baseURL,
 		HTTPClient:   opts.client,
 		SetupRequest: opts.setupRequest,
+		logger:       opts.logger,
 	}
 }
 
@@ -110,6 +113,10 @@ func (c *Client) Get(ctx context.Context, endpoint any, request any, response an
 		}
 	}
 
+	if c.logger != nil {
+		c.logger.Debug("get request", "url", req.URL.String(), "query", req.URL.RawQuery)
+	}
+
 	if c.SetupRequest != nil {
 		c.SetupRequest(req, c, nil)
 	}
@@ -156,6 +163,10 @@ func (c *Client) Post(ctx context.Context, endpoint any, request any, response a
 	}
 	req.Header.Add("content-type", "application/json")
 
+	if c.logger != nil {
+		c.logger.Debug("post request", "url", req.URL.String(), "body", body)
+	}
+
 	if c.SetupRequest != nil {
 		c.SetupRequest(req, c, body)
 	}
@@ -198,6 +209,11 @@ func (c *Client) Put(ctx context.Context, endpoint any, request any, response an
 		req.Header.Add(c.authHeader, c.authValue)
 	}
 	req.Header.Add("content-type", "application/json")
+
+	if c.logger != nil {
+		c.logger.Debug("put request", "url", req.URL.String(), "body", body)
+	}
+
 	if c.SetupRequest != nil {
 		c.SetupRequest(req, c, body)
 	}

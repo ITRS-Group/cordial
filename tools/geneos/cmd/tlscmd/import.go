@@ -28,6 +28,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"software.sslmate.com/src/go-pkcs12"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -37,12 +38,16 @@ import (
 )
 
 var importCmdCert, importCmdSigningBundle, importCmdChain, importCmdPrivateKey string
+var importCmdPassword *config.Plaintext
 
 func init() {
 	tlsCmd.AddCommand(importCmd)
 
-	importCmd.Flags().StringVarP(&importCmdCert, "instance-bundle", "c", "", "Instance certificate bundle to import, PEM format")
+	importCmd.Flags().StringVarP(&importCmdCert, "instance-bundle", "c", "", "Instance certificate bundle to import, PEM or PFX/PKCS#12 format")
 	importCmd.Flags().StringVarP(&importCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle to import, PEM format")
+
+	importCmdPassword = &config.Plaintext{}
+	importCmd.Flags().VarP(importCmdPassword, "password", "p", "Password for private key decryption, if needed, for pfx files")
 
 	importCmd.Flags().StringVarP(&importCmdPrivateKey, "key", "k", "", "Private key `file` for certificate, PEM format")
 	importCmd.Flags().MarkDeprecated("key", "include the private key in either the instance or signing bundles")
@@ -86,12 +91,43 @@ $ geneos tls import --signing-bundle /path/to/file.pem
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, names := cmd.ParseTypeNames(command)
+		if len(names) == 0 {
+			return fmt.Errorf("%w: no instance names specified", geneos.ErrInvalidArgs)
+		}
 
 		if importCmdSigningBundle != "" {
 			return geneos.TLSImportBundle(importCmdSigningBundle, importCmdPrivateKey, importCmdChain)
 		}
 
 		if importCmdCert != "" {
+			if path.Ext(importCmdCert) == ".pfx" || path.Ext(importCmdCert) == ".p12" {
+				if importCmdPassword.String() == "" {
+					importCmdPassword, err = config.ReadPasswordInput(false, 0, "Password")
+					if err != nil {
+						log.Fatal().Err(err).Msg("Failed to read password")
+						// return err
+					}
+				}
+				pfxData, err := os.ReadFile(importCmdCert)
+				if err != nil {
+					log.Fatal().Err(err).Msg("Failed to read PFX file")
+					// return err
+				}
+				key, c, chain, err := pkcs12.DecodeChain(pfxData, importCmdPassword.String())
+				if err != nil {
+					log.Fatal().Err(err).Msg("Failed to decode PFX file")
+					// return err
+				}
+				pk, err := x509.MarshalPKCS8PrivateKey(key)
+				if err != nil {
+					log.Fatal().Err(err).Msg("Failed to marshal private key")
+					// return err
+				}
+				k := memguard.NewEnclave(pk)
+				instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, c, k, chain).Write(os.Stdout)
+				return nil
+			}
+
 			certs, err := config.ReadInputPEMString(importCmdCert, "instance certificate(s)")
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
@@ -109,6 +145,7 @@ $ geneos tls import --signing-bundle /path/to/file.pem
 			}
 
 			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, c, k, chain).Write(os.Stdout)
+			return nil
 		}
 
 		if importCmdChain == "" {
