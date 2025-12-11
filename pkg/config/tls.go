@@ -31,6 +31,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -154,20 +155,58 @@ func WriteCert(h host.Host, p string, cert *x509.Certificate) (err error) {
 	return h.WriteFile(p, pembytes, 0644)
 }
 
-// WriteCertChain concatenate certs and writes to path on host h
-func WriteCertChain(h host.Host, p string, certs ...*x509.Certificate) (err error) {
-	var pembytes []byte
-	for _, cert := range certs {
-		if cert == nil {
+// UpdateCertChainFile updates the certificate chain file at the
+// specified path on the given host. It ensures that all provided
+// certificates are present in the file, appending any that are missing.
+// If the file does not exist or is empty, it will be created with the
+// provided certificates. Returns true if the file was updated
+// (certificates added or file created), false if no changes were made.
+// Returns an error if writing the certificate chain fails.
+//
+// The caller is responsible for locking access to the chain file if
+// concurrent access is possible.
+func UpdateCertChainFile(h host.Host, path string, certs ...*x509.Certificate) (updated bool, err error) {
+	allCerts := ReadCertificates(h, path)
+
+	if allCerts == nil {
+		return true, WriteCertChainFile(h, path, certs...)
+	}
+
+	added := false
+	for _, newCert := range certs {
+		if slices.ContainsFunc(allCerts, func(cert *x509.Certificate) bool {
+			return newCert.Equal(cert)
+		}) {
+			// already present
 			continue
 		}
+		allCerts = append(allCerts, newCert)
+		added = true
+	}
+	if !added {
+		return false, nil
+	}
+
+	return true, WriteCertChainFile(h, path, allCerts...)
+}
+
+// WriteCertChainFile concatenate certs and writes to path on host h.
+// Certificates that are not valid or expired are skipped.
+func WriteCertChainFile(h host.Host, path string, certs ...*x509.Certificate) (err error) {
+	var pembytes []byte
+	for _, cert := range certs {
+		// validate cert as CA and not expired
+		if cert == nil || !cert.IsCA || !cert.BasicConstraintsValid || cert.NotAfter.Before(time.Now()) {
+			continue
+		}
+
 		p := pem.EncodeToMemory(&pem.Block{
 			Type:  "CERTIFICATE",
 			Bytes: cert.Raw,
 		})
 		pembytes = append(pembytes, p...)
 	}
-	return h.WriteFile(p, pembytes, 0644)
+	return h.WriteFile(path, pembytes, 0644)
 }
 
 // ReadCertificateFile reads the first PEM encoded certificate from
@@ -204,7 +243,8 @@ func ReadCertChain(h host.Host, path string) (pool *x509.CertPool) {
 }
 
 // ReadCerts reads and decodes all certificates from the PEM file on
-// host h at path.
+// host h at path. If the files cannot be read or no certificates found
+// then an empty slice is returned.
 func ReadCertificates(h host.Host, path string) (certs []*x509.Certificate) {
 	pembytes, err := h.ReadFile(path)
 	if err != nil {
@@ -263,10 +303,9 @@ func WritePrivateKey(h host.Host, pt string, key *memguard.Enclave) (err error) 
 }
 
 // CreateCertificateAndKey is a wrapper to create a new certificate
-// given the signing cert and key and an optional private key to (re)use
-// for the certificate creation. Returns a certificate and private key.
+// given the signing cert and key. Returns a certificate and private key.
 // Keys are usually PKCS#8 encoded and so need parsing after unsealing.
-func CreateCertificateAndKey(template, parent *x509.Certificate, signingKeyDER, existingKeyDER *memguard.Enclave) (cert *x509.Certificate, certKeyDER *memguard.Enclave, err error) {
+func CreateCertificateAndKey(template, parent *x509.Certificate, signingKeyDER *memguard.Enclave) (cert *x509.Certificate, key *memguard.Enclave, err error) {
 	var certBytes []byte
 	// var certKey *rsa.PrivateKey
 
@@ -275,20 +314,19 @@ func CreateCertificateAndKey(template, parent *x509.Certificate, signingKeyDER, 
 		return
 	}
 
-	certKeyDER = existingKeyDER
-	if certKeyDER == nil {
-		keytype := PrivateKeyType(signingKeyDER)
-		if keytype == "" {
-			keytype = DefaultKeyType
-		}
-		certKeyDER, err = NewPrivateKey(keytype)
-		if err != nil {
-			panic(err)
-		}
+	// create a new key of the same type as the signing cert key or use a default type
+	keytype := PrivateKeyType(signingKeyDER)
+	if keytype == "" {
+		keytype = DefaultKeyType
+	}
+
+	key, err = NewPrivateKey(keytype)
+	if err != nil {
+		panic(err)
 	}
 
 	// default the signingKey to the certKey (for self-signed root)
-	signingKey, certPubKey, err := ParseKey(certKeyDER)
+	signingKey, certPubKey, err := ParseKey(key)
 	if err != nil {
 		return
 	}
@@ -296,18 +334,18 @@ func CreateCertificateAndKey(template, parent *x509.Certificate, signingKeyDER, 
 	if signingKeyDER != nil {
 		signingKey, _, err = ParseKey(signingKeyDER)
 		if err != nil {
-			certKeyDER = nil
+			key = nil
 			return
 		}
 	}
 
 	if certBytes, err = x509.CreateCertificate(rand.Reader, template, parent, certPubKey, signingKey); err != nil {
-		certKeyDER = nil
+		key = nil
 		return
 	}
 
 	if cert, err = x509.ParseCertificate(certBytes); err != nil {
-		certKeyDER = nil
+		key = nil
 		return
 	}
 
@@ -416,7 +454,7 @@ func CreateRootCert(h host.Host, basefilepath string, cn string, overwrite bool,
 		return
 	}
 
-	cert, key, err := CreateCertificateAndKey(template, template, privateKeyPEM, nil)
+	cert, key, err := CreateCertificateAndKey(template, template, privateKeyPEM)
 	if err != nil {
 		return
 	}
@@ -471,7 +509,7 @@ func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string
 		return
 	}
 
-	cert, key, err := CreateCertificateAndKey(&template, rootCert, rootKey, nil)
+	cert, key, err := CreateCertificateAndKey(&template, rootCert, rootKey)
 	if err != nil {
 		return
 	}
