@@ -183,6 +183,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response
 		return
 	}
 
+	// validate and convert params
 	cert, ok := params[0].(*x509.Certificate)
 	if !ok {
 		resp.Err = fmt.Errorf("%w: params[0] not a certificate", geneos.ErrInvalidArgs)
@@ -211,7 +212,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response
 
 	if len(chain) > 0 {
 		chainfile := path.Join(i.Home(), "chain.pem")
-		if err := config.WriteCertChain(i.Host(), chainfile, chain...); err == nil {
+		if err := config.WriteCertChainFile(i.Host(), chainfile, chain...); err == nil {
 			resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate chain written", i))
 			if cf.GetString("certchain") == chainfile {
 				return

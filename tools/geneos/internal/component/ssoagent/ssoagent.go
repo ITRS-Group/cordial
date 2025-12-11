@@ -354,7 +354,7 @@ func genkeypair() (cert *x509.Certificate, key *memguard.Enclave, err error) {
 		return
 	}
 
-	return config.CreateCertificateAndKey(template, template, privateKeyPEM, nil)
+	return config.CreateCertificateAndKey(template, template, privateKeyPEM)
 }
 
 func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string, err error) {

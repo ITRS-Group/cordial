@@ -161,7 +161,7 @@ func CreateCert(destination string, overwrite bool, duration time.Duration, cn s
 		return
 	}
 
-	cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey, nil)
+	cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey)
 	if err != nil {
 		return
 	}
@@ -226,7 +226,7 @@ func CreateCertBundle(destination string, overwrite bool, duration time.Duration
 		return
 	}
 
-	cert, key, err := config.CreateCertificateAndKey(&template, signer, signingKey, nil)
+	cert, key, err := config.CreateCertificateAndKey(&template, signer, signingKey)
 	if err != nil {
 		return
 	}

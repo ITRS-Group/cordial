@@ -99,7 +99,7 @@ func CreateCert(i geneos.Instance, duration time.Duration) (resp *Response) {
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey, nil)
+	cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey)
 	if err != nil {
 		resp.Err = err
 		return
@@ -126,7 +126,7 @@ func CreateCert(i geneos.Instance, duration time.Duration) (resp *Response) {
 			i.Config().SetString("certchain", chainfile, config.Replace("home"))
 		}
 
-		if err = config.WriteCertChain(i.Host(), chainfile, signingCert, rootCert); err != nil {
+		if err = config.WriteCertChainFile(i.Host(), chainfile, signingCert, rootCert); err != nil {
 			resp.Err = err
 			return
 		}

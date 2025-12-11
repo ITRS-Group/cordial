@@ -305,7 +305,7 @@ func WriteChainLocal(chain []*x509.Certificate) (err error) {
 	if err = LOCAL.MkdirAll(tlsPath, 0775); err != nil {
 		return err
 	}
-	if err = config.WriteCertChain(LOCAL, path.Join(tlsPath, ChainCertFile), chain...); err != nil {
+	if err = config.WriteCertChainFile(LOCAL, path.Join(tlsPath, ChainCertFile), chain...); err != nil {
 		return err
 	}
 	return
@@ -396,7 +396,7 @@ func TLSSync() (err error) {
 			return
 		}
 		chainpath := path.Join(tlsPath, ChainCertFile)
-		if err = config.WriteCertChain(r, chainpath, geneosCert, rootCert); err != nil {
+		if err = config.WriteCertChainFile(r, chainpath, geneosCert, rootCert); err != nil {
 			return
 		}
 
