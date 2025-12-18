@@ -445,7 +445,7 @@ func CreateRootCert(h host.Host, basefilepath string, cn string, overwrite bool,
 		NotAfter:              time.Now().AddDate(10, 0, 0).Truncate(24 * time.Hour),
 		IsCA:                  true,
 		BasicConstraintsValid: true,
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 		MaxPathLen:            -1,
 	}
 
@@ -495,7 +495,7 @@ func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string
 		NotAfter:              time.Now().AddDate(10, 0, 0).Truncate(24 * time.Hour),
 		IsCA:                  true,
 		BasicConstraintsValid: true,
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 		MaxPathLen:            0,
 		MaxPathLenZero:        true,
 	}

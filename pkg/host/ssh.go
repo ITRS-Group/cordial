@@ -378,6 +378,14 @@ func (h *SSHRemote) Readlink(file string) (string, error) {
 	}
 }
 
+func (h *SSHRemote) Mkdir(p string, perm os.FileMode) error {
+	if s, err := h.DialSFTP(); err != nil {
+		return err
+	} else {
+		return s.Mkdir(p)
+	}
+}
+
 func (h *SSHRemote) MkdirAll(p string, perm os.FileMode) error {
 	if s, err := h.DialSFTP(); err != nil {
 		return err
@@ -474,6 +482,14 @@ func (h *SSHRemote) Rename(oldpath, newpath string) error {
 	} else {
 		// use PosixRename to overwrite oldpath
 		return s.PosixRename(oldpath, newpath)
+	}
+}
+
+func (h *SSHRemote) Link(oldname, newname string) error {
+	if s, err := h.DialSFTP(); err != nil {
+		return err
+	} else {
+		return s.Link(oldname, newname)
 	}
 }
 

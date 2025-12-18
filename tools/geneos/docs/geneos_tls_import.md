@@ -45,8 +45,8 @@ geneos tls import [flags] [TYPE] [NAME...]
 
 ```text
   -c, --instance-bundle string   Instance certificate bundle to import, PEM or PFX/PKCS#12 format
-  -C, --signing-bundle string    Signing certificate bundle to import, PEM format
   -p, --password PLAINTEXT       Password for private key decryption, if needed, for pfx files
+  -C, --signing-bundle string    Signing certificate bundle to import, PEM format
 ```
 
 ## Examples

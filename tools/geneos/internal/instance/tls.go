@@ -26,8 +26,8 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/awnumar/memguard"
@@ -151,20 +151,26 @@ func CreateCert(i geneos.Instance, duration time.Duration) (resp *Response) {
 // standard file name of TYPE.pem and updates the `certificate`
 // parameter. It does not write the instance configuration, expecting
 // the caller to do so after any other updates.
-func WriteCert(i geneos.Instance, cert *x509.Certificate) (err error) {
+//
+// If any extensions are passed (as ext), they are appended to the
+// filename with dot separators, e.g. for temporary files and the
+// instance config is not updated.
+func WriteCert(i geneos.Instance, cert *x509.Certificate, ext ...string) (err error) {
 	cf := i.Config()
 
 	if i.Type() == nil {
 		return geneos.ErrInvalidArgs
 	}
-	certfile := ComponentFilepath(i, "pem")
-	if err = config.WriteCert(i.Host(), certfile, cert); err != nil {
+	certFile := ComponentFilepath(i, append([]string{"pem"}, ext...)...)
+	if err = config.WriteCert(i.Host(), certFile, cert); err != nil {
 		return
 	}
-	if cf.GetString("certificate") == certfile {
+	if len(ext) > 0 || cf.GetString("certificate") == certFile {
+		// do not update config if ext is given (used for temp files) or
+		// if it's already set
 		return
 	}
-	cf.SetString("certificate", certfile, config.Replace("home"))
+	cf.SetString("certificate", certFile, config.Replace("home"))
 	return
 }
 
@@ -172,18 +178,24 @@ func WriteCert(i geneos.Instance, cert *x509.Certificate) (err error) {
 // standard file name of TYPE.key and updates the `privatekey` instance
 // parameter. It does not write the instance configuration, expecting
 // the caller to do so after any other updates.
-func WriteKey(i geneos.Instance, key *memguard.Enclave) (err error) {
+//
+// If any extensions are passed (as ext), they are appended to the
+// filename with dot separators, e.g. for temporary files and the
+// instance config is not updated.
+func WriteKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (err error) {
 	cf := i.Config()
 
 	if i.Type() == nil {
 		return geneos.ErrInvalidArgs
 	}
 
-	keyfile := ComponentFilepath(i, "key")
+	keyfile := ComponentFilepath(i, append([]string{"key"}, ext...)...)
 	if err = config.WritePrivateKey(i.Host(), keyfile, key); err != nil {
 		return
 	}
-	if cf.GetString("privatekey") == keyfile {
+	if len(ext) > 0 || cf.GetString("privatekey") == keyfile {
+		// do not update config if ext is given (used for temp files) or
+		// if it's already set
 		return
 	}
 	cf.SetString("privatekey", keyfile, config.Replace("home"))
@@ -193,27 +205,32 @@ func WriteKey(i geneos.Instance, key *memguard.Enclave) (err error) {
 // ReadCert reads the instance certificate for c. It verifies the
 // certificate against any chain file and, if that fails, against system
 // certificates.
-func ReadCert(i geneos.Instance) (cert *x509.Certificate, valid bool, chainfile string, err error) {
-	if i.Type() == nil {
+//
+// If any extensions are passed (as ext), they are appended to the
+// filename with dot separators, e.g. for temporary files. The private
+// key used for validation with have the same extension(s) appended
+//
+// The chainfile returned is always the one from the instance config.
+func ReadCert(i geneos.Instance, ext ...string) (cert *x509.Certificate, valid bool, chainfile string, err error) {
+	if i.Type() == nil || PathOf(i, "certificate") == "" {
 		return nil, false, "", geneos.ErrInvalidArgs
 	}
 
-	if FileOf(i, "certificate") == "" {
-		return nil, false, "", os.ErrNotExist
-	}
-	cert, err = config.ParseCertificate(i.Host(), PathOf(i, "certificate"))
+	certPath := strings.Join(append([]string{PathOf(i, "certificate")}, ext...), ".")
+
+	cert, err = config.ParseCertificate(i.Host(), certPath)
 	if err != nil {
 		return
 	}
 
 	// first check if we have a valid private key
-	c, err := config.ReadCertificateFile(i.Host(), PathOf(i, "certificate"))
+	c, err := config.ReadCertificateFile(i.Host(), certPath)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
 		return
 	}
 
-	pk, err := config.ReadPrivateKey(i.Host(), PathOf(i, "privatekey"))
+	pk, err := ReadPrivateKey(i, ext...)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
 		return
@@ -235,7 +252,7 @@ func ReadCert(i geneos.Instance) (cert *x509.Certificate, valid bool, chainfile 
 		return
 	}
 
-	// validate against certificate chain file on the same host, expiry
+	// validate against certificate chain file and expiry
 	// etc.
 	chainfile = PathOf(i, "certchain")
 	if chainfile == "" {
@@ -267,11 +284,12 @@ func ReadCert(i geneos.Instance) (cert *x509.Certificate, valid bool, chainfile 
 	return
 }
 
-// ReadKey reads the instance RSA private key
-func ReadKey(i geneos.Instance) (key *memguard.Enclave, err error) {
-	if i.Type() == nil || i.Config().GetString("privatekey") == "" {
+// ReadPrivateKey reads the instance RSA private key
+func ReadPrivateKey(i geneos.Instance, ext ...string) (key *memguard.Enclave, err error) {
+	if i.Type() == nil || PathOf(i, "privatekey") == "" {
 		return nil, geneos.ErrInvalidArgs
 	}
 
-	return config.ReadPrivateKey(i.Host(), Abs(i, i.Config().GetString("privatekey")))
+	keyPath := strings.Join(append([]string{PathOf(i, "privatekey")}, ext...), ".")
+	return config.ReadPrivateKey(i.Host(), Abs(i, keyPath))
 }

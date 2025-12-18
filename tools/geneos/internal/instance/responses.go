@@ -32,6 +32,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/rs/zerolog/log"
 )
@@ -111,6 +112,44 @@ func MergeResponse(r1, r2 *Response) (resp *Response) {
 	return
 }
 
+// Report outputs the responses as a report in the specified format to
+// writer w. headings are the column headings to use. prequel is any
+// rows to add before the response rows.
+//
+// options are any reporter.ReporterOptions to control the output.
+//
+// If any response has a non-nil Err field then it is skipped.
+func (responses Responses) Report(w io.Writer, format string, headings []string, prequel [][]string, options ...any) (err error) {
+	r, err := reporter.NewReporter(format, w, options...)
+	if err != nil {
+		return err
+	}
+
+	if err = r.Prepare(reporter.Report{
+		Columns:         headings,
+		ScrambleColumns: []string{},
+	}); err != nil {
+		return err
+	}
+
+	var rows [][]string
+	if len(prequel) > 0 {
+		rows = prequel
+	}
+
+	for _, k := range slices.Sorted(maps.Keys(responses)) {
+		resp := responses[k]
+		if resp.Err != nil {
+			continue
+		}
+		rows = append(rows, resp.Rows...)
+	}
+
+	r.UpdateTable(headings, rows)
+	r.Render()
+	return nil
+}
+
 // Write iterates over responses and outputs a formatted response to
 // writer.
 //
@@ -140,6 +179,8 @@ func MergeResponse(r1, r2 *Response) (resp *Response) {
 //
 // Write calls Flush() after writing to CSV or Tab writers.
 func (responses Responses) Write(writer any, options ...WriterOptions) {
+	var rows [][]string
+
 	if len(responses) == 0 {
 		return
 	}
@@ -162,6 +203,8 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 		}
 
 		switch w := writer.(type) {
+		case *reporter.TabWriterReporter:
+			rows = append(rows, r.Rows...)
 		case *tabwriter.Writer:
 			if r.Line != "" {
 				fmt.Fprintf(w, "%s\n", r.Line)
@@ -257,6 +300,12 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 			fmt.Fprint(writer.(io.Writer), "\n")
 		}
 		fmt.Fprintln(writer.(io.Writer), "]")
+	}
+
+	if w, ok := writer.(*reporter.TabWriterReporter); ok {
+		w.UpdateTable(w.Columns, rows)
+		w.Render()
+		w.Close()
 	}
 
 	if w, ok := writer.(*tabwriter.Writer); ok {

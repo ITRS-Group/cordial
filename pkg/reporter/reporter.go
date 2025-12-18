@@ -104,6 +104,8 @@ type reporterCommon struct {
 // then w should be the io.Writer to use. options are a list of options
 // of either ReporterOptions or the options for the selected reporter
 // type.
+//
+// TODO: add "column" output format, based on tabwriter.
 func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err error) {
 	// pull out general reporter options, which are passed to each
 	// reporter factory method
@@ -118,6 +120,16 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 	opts := evalReporterOptions(ro...)
 
 	switch format {
+	case "column", "tabwriter":
+		var twoptions = []TabWriterReporterOptions{}
+		for _, o := range options {
+			if t, ok := o.(TabWriterReporterOptions); ok {
+				twoptions = append(twoptions, t)
+			} else {
+				panic("wrong option type")
+			}
+		}
+		r = newTabWriterReporter(w, opts)
 	case "toolkit":
 		r = newToolkitReporter(w, opts)
 	case "api", "dataview":

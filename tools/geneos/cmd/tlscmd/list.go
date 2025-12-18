@@ -28,11 +28,12 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -75,6 +76,7 @@ func init() {
 
 	listCmd.Flags().BoolVarP(&listCmdAll, "all", "a", false, "Show all certs, including global and signing certs")
 	listCmd.Flags().BoolVarP(&listCmdLong, "long", "l", false, "Long output")
+
 	listCmd.Flags().BoolVarP(&listCmdJSON, "json", "j", false, "Output JSON")
 	listCmd.Flags().BoolVarP(&listCmdIndent, "pretty", "i", false, "Output indented JSON")
 	listCmd.Flags().BoolVarP(&listCmdCSV, "csv", "c", false, "Output CSV")
@@ -224,67 +226,89 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 		fmt.Printf("<!>invalid,%d\n", invalid)
 
 	case listCmdCSV:
-		listCSVWriter := csv.NewWriter(os.Stdout)
-		listCSVWriter.Write([]string{
-			"Type",
-			"Name",
-			"Host",
-			"Remaining",
-			"Expires",
-			"CommonName",
-			"Valid",
-		})
+		var prequel [][]string
 		if listCmdAll {
 			if rootCert != nil {
-				listCSVWriter.Write([]string{
+				prequel = append(prequel, []string{
 					"global",
 					geneos.RootCABasename,
 					geneos.LOCALHOST,
-					fmt.Sprintf("%.f", time.Until(rootCert.NotAfter).Seconds()),
+					strconv.FormatFloat(time.Until(rootCert.NotAfter).Seconds(), 'f', 0, 64),
 					rootCert.NotAfter.Format(time.RFC3339),
 					rootCert.Subject.CommonName,
-					fmt.Sprint(verifyCert(rootCert)),
+					strconv.FormatBool(verifyCert(rootCert)),
 				})
 			}
 			if geneosCert != nil {
-				listCSVWriter.Write([]string{
+				prequel = append(prequel, []string{
 					"global",
 					geneos.SigningCertBasename,
 					geneos.LOCALHOST,
-					fmt.Sprintf("%.f", time.Until(geneosCert.NotAfter).Seconds()),
+					strconv.FormatFloat(time.Until(geneosCert.NotAfter).Seconds(), 'f', 0, 64),
 					geneosCert.NotAfter.Format(time.RFC3339),
 					geneosCert.Subject.CommonName,
-					fmt.Sprint(verifyCert(geneosCert)),
+					strconv.FormatBool(verifyCert(geneosCert)),
 				})
 			}
 		}
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Write(listCSVWriter)
+
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Report(
+			os.Stdout,
+			"csv",
+			[]string{
+				"Type",
+				"Name",
+				"Host",
+				"Remaining",
+				"Expires",
+				"CommonName",
+				"Valid",
+			},
+			prequel,
+			reporter.OrderByColumns(0, 1, 2),
+		)
 
 	default:
-		listTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-		fmt.Fprintln(listTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tValid")
+		var prequel [][]string
 		if listCmdAll {
 			if rootCert != nil {
-				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\n",
+				prequel = append(prequel, []string{
+					"global",
 					geneos.RootCABasename,
 					geneos.LOCALHOST,
-					time.Until(rootCert.NotAfter).Seconds(),
+					strconv.FormatFloat(time.Until(rootCert.NotAfter).Seconds(), 'f', 0, 64),
 					rootCert.NotAfter.Format(time.RFC3339),
-					rootCert.Subject.CommonName,
-					verifyCert(rootCert))
+					strconv.Quote(rootCert.Subject.CommonName),
+					strconv.FormatBool(verifyCert(rootCert)),
+				})
 			}
 			if geneosCert != nil {
-				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\n",
+				prequel = append(prequel, []string{
+					"global",
 					geneos.SigningCertBasename,
 					geneos.LOCALHOST,
-					time.Until(geneosCert.NotAfter).Seconds(),
+					strconv.FormatFloat(time.Until(geneosCert.NotAfter).Seconds(), 'f', 0, 64),
 					geneosCert.NotAfter.Format(time.RFC3339),
-					geneosCert.Subject.CommonName,
-					verifyCert(geneosCert))
+					strconv.Quote(geneosCert.Subject.CommonName),
+					strconv.FormatBool(verifyCert(geneosCert)),
+				})
 			}
 		}
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Write(listTabWriter)
-		listTabWriter.Flush()
+
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Report(
+			os.Stdout,
+			"column",
+			[]string{
+				"Type",
+				"Name",
+				"Host",
+				"Remaining",
+				"Expires",
+				"CommonName",
+				"Valid",
+			},
+			prequel,
+		)
 	}
 	return
 }
@@ -486,38 +510,66 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Write(listCSVWriter)
 
 	default:
-		listTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-		fmt.Fprintln(listTabWriter, "Type\tName\tHost\tRemaining\tExpires\tCommonName\tValid\tCertificateFile\tPrivateKeyFile\tChainFile\tIssuer\tSubjAltNames\tIPs\tFingerprint")
+		var prequel [][]string
 		if listCmdAll {
 			if rootCert != nil {
-				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t%q\t%q\t\t\t%X\n",
+				prequel = append(prequel, []string{
+					"global",
 					geneos.RootCABasename,
 					geneos.LOCALHOST,
-					time.Until(rootCert.NotAfter).Seconds(),
+					strconv.FormatFloat(time.Until(rootCert.NotAfter).Seconds(), 'f', 0, 64),
 					rootCert.NotAfter.Format(time.RFC3339),
-					rootCert.Subject.CommonName,
-					verifyCert(rootCert),
-					rootCertFile,
-					rootCertFile,
-					rootCert.Issuer.CommonName,
-					sha1.Sum(rootCert.Raw))
+					strconv.Quote(rootCert.Subject.CommonName),
+					strconv.FormatBool(verifyCert(rootCert)),
+					strconv.Quote(rootCertFile),
+					strconv.Quote(rootCertFile),
+					"",
+					strconv.Quote(rootCert.Issuer.CommonName),
+					"",
+					"",
+					fmt.Sprintf("%X", sha1.Sum(rootCert.Raw)),
+				})
 			}
 			if geneosCert != nil {
-				fmt.Fprintf(listTabWriter, "global\t%s\t%s\t%.f\t%q\t%q\t%v\t%q\t%q\t%q\t\t\t%X\n",
+				prequel = append(prequel, []string{
+					"global",
 					geneos.SigningCertBasename,
 					geneos.LOCALHOST,
-					time.Until(geneosCert.NotAfter).Seconds(),
+					strconv.FormatFloat(time.Until(geneosCert.NotAfter).Seconds(), 'f', 0, 64),
 					geneosCert.NotAfter.Format(time.RFC3339),
-					geneosCert.Subject.CommonName,
-					verifyCert(geneosCert),
-					geneosCertFile,
-					rootCertFile,
-					geneosCert.Issuer.CommonName,
-					sha1.Sum(geneosCert.Raw))
+					strconv.Quote(geneosCert.Subject.CommonName),
+					strconv.FormatBool(verifyCert(geneosCert)),
+					strconv.Quote(geneosCertFile),
+					strconv.Quote(rootCertFile),
+					"",
+					strconv.Quote(geneosCert.Issuer.CommonName),
+					"",
+					"",
+					fmt.Sprintf("%X", sha1.Sum(geneosCert.Raw)),
+				})
 			}
 		}
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Write(listTabWriter)
-		listTabWriter.Flush()
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Report(
+			os.Stdout,
+			"column",
+			[]string{
+				"Type",
+				"Name",
+				"Host",
+				"Remaining",
+				"Expires",
+				"CommonName",
+				"Valid",
+				"CertificateFile",
+				"PrivateKeyFile",
+				"ChainFile",
+				"Issuer",
+				"SubjAltNames",
+				"IPs",
+				"Fingerprint",
+			},
+			prequel,
+		)
 	}
 	return
 }
@@ -536,26 +588,19 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) 
 	}
 
 	expires := cert.NotAfter
-	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%.f\t%q\t%q\t%v\t",
-		i.Type(),
-		i.Name(),
-		i.Host(),
-		time.Until(expires).Seconds(),
-		expires.Format(time.RFC3339),
-		cert.Subject.CommonName,
-		valid)
-
+	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
+	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.Format(time.RFC3339), strconv.Quote(cert.Subject.CommonName), fmt.Sprint(valid)}
 	if listCmdLong {
-		resp.Line += fmt.Sprintf("%q\t%q\t%q\t%q\t", i.Config().GetString("certificate"), i.Config().GetString("privatekey"), chainfile, cert.Issuer.CommonName)
-		if len(cert.DNSNames) > 0 {
-			resp.Line += fmt.Sprint(cert.DNSNames)
-		}
-		resp.Line += "\t"
-		if len(cert.IPAddresses) > 0 {
-			resp.Line += fmt.Sprint(cert.IPAddresses)
-		}
-		resp.Line += fmt.Sprintf("\t%X", sha1.Sum(cert.Raw))
+		cols = append(cols, strconv.Quote(i.Config().GetString("certificate")))
+		cols = append(cols, strconv.Quote(i.Config().GetString("privatekey")))
+		cols = append(cols, strconv.Quote(chainfile))
+		cols = append(cols, strconv.Quote(cert.Issuer.CommonName))
+		cols = append(cols, fmt.Sprintf("%v", cert.DNSNames))
+		cols = append(cols, fmt.Sprintf("%v", cert.IPAddresses))
+		cols = append(cols, fmt.Sprintf("%X", sha1.Sum(cert.Raw)))
 	}
+
+	resp.Rows = append(resp.Rows, cols)
 	return
 }
 

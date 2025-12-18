@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -37,11 +38,25 @@ import (
 )
 
 var renewCmdDays int
+var renewCmdNewKey, renewCmdPrepare, renewCmdRoll, renewCmdUnroll bool
+
+const (
+	newFileSuffix = "new"
+	oldFileSuffix = "old"
+)
 
 func init() {
 	tlsCmd.AddCommand(renewCmd)
 
 	renewCmd.Flags().IntVarP(&renewCmdDays, "days", "D", 365, "Certificate duration in days")
+
+	renewCmd.Flags().BoolVarP(&renewCmdNewKey, "new-key", "n", false, "Always generate a new private key for the renewed certificate")
+
+	renewCmd.Flags().BoolVarP(&renewCmdPrepare, "prepare", "P", false, "Prepare renewal without overwriting existing certificates")
+	renewCmd.Flags().BoolVarP(&renewCmdRoll, "roll", "R", false, "Roll previously prepared certificates and backup existing ones")
+	renewCmd.Flags().BoolVarP(&renewCmdUnroll, "unroll", "U", false, "Unroll previously rolled certificates to restore backups")
+
+	renewCmd.MarkFlagsMutuallyExclusive("prepare", "roll", "unroll")
 }
 
 //go:embed _docs/renew.md
@@ -63,8 +78,13 @@ var renewCmd = &cobra.Command{
 	},
 }
 
+var chainUpdateMutex sync.Mutex
+
 // renew an instance certificate, reuse private key if it exists
 func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
+	var err error
+	h := i.Host()
+
 	resp = instance.NewResponse(i)
 
 	confDir := config.AppConfigDir()
@@ -73,89 +93,127 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		return
 	}
 
-	// check instance for existing cert, and do nothing if none
-	cert, _, _, err := instance.ReadCert(i)
-	if cert == nil && errors.Is(err, os.ErrNotExist) {
-		return
-	}
+	switch {
+	case renewCmdRoll:
+		if err = instance.RollFiles(i, newFileSuffix, oldFileSuffix, "certificate", "privatekey"); err != nil {
+			resp.Err = err
+			return
+		}
 
-	signingCert, _, err := geneos.ReadSigningCert()
-	resp.Err = err
-	if resp.Err != nil {
+		resp.Completed = append(resp.Completed, "new certificate and key deployed, previous versions backed up")
 		return
-	}
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
-	resp.Err = err
-	if resp.Err != nil {
+
+	case renewCmdUnroll:
+		if err = instance.RollFiles(i, oldFileSuffix, newFileSuffix, "certificate", "privatekey"); err != nil {
+			resp.Err = err
+			return
+		}
+
+		resp.Completed = append(resp.Completed, "certificate unrolled, previous versions restored")
 		return
-	}
 
-	hostname, _ := os.Hostname()
-	if !i.Host().IsLocal() {
-		hostname = i.Host().GetString("hostname")
-	}
+	default:
+		// check instance for existing cert, and do nothing if none
+		cert, _, _, err := instance.ReadCert(i)
+		if cert == nil && errors.Is(err, os.ErrNotExist) {
+			return
+		}
 
-	serial, err := rand.Prime(rand.Reader, 64)
-	if err != nil {
-		return
-	}
-	duration := 365 * 24 * time.Hour
-	if renewCmdDays != 0 {
-		duration = 24 * time.Hour * time.Duration(renewCmdDays)
-	}
-	expires := time.Now().Add(duration)
-	template := x509.Certificate{
-		SerialNumber: serial,
-		Subject: pkix.Name{
-			CommonName: fmt.Sprintf("geneos %s %s", i.Type(), i.Name()),
-		},
-		NotBefore:      time.Now().Add(-60 * time.Second),
-		NotAfter:       expires,
-		KeyUsage:       x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		MaxPathLenZero: true,
-		DNSNames:       []string{hostname},
-		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
-	}
+		signingCert, _, err := geneos.ReadSigningCert()
+		resp.Err = err
+		if resp.Err != nil {
+			return
+		}
 
-	// read existing key or create a new one
-	existingKey, _ := instance.ReadKey(i)
-	cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey, existingKey)
-	resp.Err = err
-	if resp.Err != nil {
-		return
-	}
+		signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
+		resp.Err = err
+		if resp.Err != nil {
+			return
+		}
 
-	if resp.Err = instance.WriteCert(i, cert); resp.Err != nil {
-		return
-	}
+		hostname, _ := os.Hostname()
+		if !h.IsLocal() {
+			hostname = h.GetString("hostname")
+		}
 
-	if existingKey == nil {
+		serial, err := rand.Prime(rand.Reader, 64)
+		if err != nil {
+			return
+		}
+		duration := 365 * 24 * time.Hour
+		if renewCmdDays != 0 {
+			duration = 24 * time.Hour * time.Duration(renewCmdDays)
+		}
+		expires := time.Now().Add(duration)
+		template := x509.Certificate{
+			SerialNumber: serial,
+			Subject: pkix.Name{
+				CommonName: fmt.Sprintf("geneos %s %s", i.Type(), i.Name()),
+			},
+			NotBefore:      time.Now().Add(-60 * time.Second),
+			NotAfter:       expires,
+			KeyUsage:       x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+			ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+			MaxPathLenZero: true,
+			DNSNames:       []string{hostname},
+			// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
+		}
+
+		cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey)
+		resp.Err = err
+		if resp.Err != nil {
+			return
+		}
+
+		if renewCmdPrepare {
+			// write new files but do not update instance config
+			if err = instance.WriteCert(i, cert, newFileSuffix); err != nil {
+				return
+			}
+
+			if err = instance.WriteKey(i, key, newFileSuffix); err != nil {
+				return
+			}
+
+			resp.Completed = append(resp.Completed, fmt.Sprintf("certificate prepared (expires %s)", expires.UTC().Format(time.RFC3339)))
+			return
+		}
+
+		if resp.Err = instance.WriteCert(i, cert); resp.Err != nil {
+			return
+		}
+
 		if resp.Err = instance.WriteKey(i, key); resp.Err != nil {
 			return
 		}
-	}
 
-	// root cert optional to create instance specific chain file
-	rootCert, _, _ := geneos.ReadRootCert()
-	if rootCert == nil {
-		i.Config().SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
-	} else {
-		chainfile := instance.PathOf(i, "certchain")
-		if chainfile == "" {
-			chainfile = path.Join(i.Home(), "chain.pem")
-			i.Config().SetString("certchain", chainfile, config.Replace("home"))
+		// root cert optional to create instance specific chain file
+		rootCert, _, _ := geneos.ReadRootCert()
+		if rootCert == nil {
+			i.Config().SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
+		} else {
+			chainfile := instance.PathOf(i, "certchain")
+			if chainfile == "" {
+				chainfile = path.Join(i.Home(), "chain.pem")
+				i.Config().SetString("certchain", chainfile, config.Replace("home"))
+			}
+
+			chainUpdateMutex.Lock()
+			if updated, err := config.UpdateCertChainFile(i.Host(), chainfile, signingCert, rootCert); err != nil {
+				resp.Err = err
+				chainUpdateMutex.Unlock()
+				return
+			} else if updated {
+				resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate chain %q updated", i, chainfile))
+			}
+			chainUpdateMutex.Unlock()
 		}
 
-		if resp.Err = config.WriteCertChain(i.Host(), chainfile, signingCert, rootCert); resp.Err != nil {
+		if resp.Err = instance.SaveConfig(i); resp.Err != nil {
 			return
 		}
-	}
 
-	if resp.Err = instance.SaveConfig(i); resp.Err != nil {
-		return
+		resp.Completed = append(resp.Completed, fmt.Sprintf("certificate renewed (expires %s)", expires.UTC().Format(time.RFC3339)))
 	}
-
-	resp.Completed = append(resp.Completed, fmt.Sprintf("certificate renewed (expires %s)", expires.UTC().Format(time.RFC3339)))
 	return
 }

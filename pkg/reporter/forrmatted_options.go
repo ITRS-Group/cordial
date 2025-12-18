@@ -30,6 +30,7 @@ type formattedReporterOptions struct {
 	headlinecssclass string
 	htmlpreamble     string
 	htmlpostscript   string
+	orderbycolumns   []int
 }
 
 func evalFormattedOptions(options ...FormattedReporterOptions) (fro *formattedReporterOptions) {
@@ -37,6 +38,7 @@ func evalFormattedOptions(options ...FormattedReporterOptions) (fro *formattedRe
 		renderas:         "table",
 		dvcssclass:       "table",
 		headlinecssclass: "headlines",
+		orderbycolumns:   []int{0},
 	}
 	for _, opt := range options {
 		opt(fro)
@@ -85,5 +87,11 @@ func HTMLPreamble(preamble string) FormattedReporterOptions {
 func HTMLPostscript(postscript string) FormattedReporterOptions {
 	return func(fro *formattedReporterOptions) {
 		fro.htmlpostscript = postscript
+	}
+}
+
+func OrderByColumns(cols ...int) FormattedReporterOptions {
+	return func(fro *formattedReporterOptions) {
+		fro.orderbycolumns = cols
 	}
 }

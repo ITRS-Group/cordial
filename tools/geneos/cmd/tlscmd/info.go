@@ -24,38 +24,81 @@ import (
 	_ "embed"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"net"
 	"net/url"
 	"os"
 	"path"
-	"strings"
+	"strconv"
+	"time"
 
 	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"software.sslmate.com/src/go-pkcs12"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 // var infoCmdJSON, infoCmdIndent, infoCmdCSV, infoCmdToolkit bool
 var infoCmdFormat string
+var infoCmdLong bool
+var infoCmdPassword *config.Plaintext
 
 func init() {
 	tlsCmd.AddCommand(infoCmd)
 
+	infoCmdPassword = &config.Plaintext{}
+
+	infoCmd.Flags().BoolVarP(&infoCmdLong, "long", "l", false, "Output long format (more columns)")
+
 	infoCmd.Flags().StringVarP(&infoCmdFormat, "format", "f", "table", "Output format (table, json, csv, toolkit)")
-
-	// infoCmd.Flags().BoolVarP(&infoCmdJSON, "json", "j", false, "Output JSON")
-	// infoCmd.Flags().BoolVarP(&infoCmdIndent, "pretty", "i", false, "Output indented JSON")
-	// infoCmd.Flags().BoolVarP(&infoCmdCSV, "csv", "c", false, "Output CSV")
-	// infoCmd.Flags().BoolVarP(&infoCmdToolkit, "toolkit", "t", false, "Output Toolkit formatted CSV")
-
+	infoCmd.Flags().VarP(infoCmdPassword, "password", "p", "Password for PFX file(s), if needed. Defaults to prompting for each file. Use -p \"\" to specify empty password.")
 }
 
 //go:embed _docs/info.md
 var infoCmdDescription string
+
+type certContents struct {
+	Alias        []string
+	Certificates []*x509.Certificate
+	PrivateKeys  []*memguard.Enclave
+}
+
+type certInfo struct {
+	Path     string
+	Contents certContents
+}
+
+var columns = []string{
+	"Common Name",
+	"Issuer Common Name",
+	"Not After",
+	"Is CA",
+	"Ext Key Usage",
+	"SAN DNS Names",
+	"SAN IP Addresses",
+}
+
+var columnsLong = []string{
+	"Common Name",
+	"Issuer Common Name",
+	"Serial",
+	"Not Before",
+	"Not After",
+	"Is CA",
+	"Key Usage",
+	"Ext Key Usage",
+	"SAN DNS Names",
+	"SAN Email Addresses",
+	"SAN IP Addresses",
+	"SAN URIs",
+	"SHA1 Fingerprint",
+	"SHA256 Fingerprint",
+	// "Private Key Present",
+}
 
 var infoCmd = &cobra.Command{
 	Use:          "info",
@@ -67,139 +110,172 @@ var infoCmd = &cobra.Command{
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, paths []string) (err error) {
+		// gather cert info
+		certInfos := make([]certInfo, len(paths))
 
+		certInfos, err = readFiles(paths)
+		if err != nil {
+			return
+		}
+
+		// prepare reporter
 		rp, err := reporter.NewReporter(infoCmdFormat, os.Stdout)
 		if err != nil {
 			return
 		}
 
-		// paths is a list of files to examine, pre-resolved by the
-		// shell so we don't do any wildcard processing
-		//
-		// extensions are only checked for .pfx/.p12 files, others are
-		// assumed to be PEM and may contain certificates, private keys
-		// or both
-		//
-		// each PEM file can contain multiple entries and they are
-		// listed in order
-
-		for _, p := range paths {
-			rep := reporter.Report{
-				Name: fmt.Sprintf("tls-info-for file %q", p),
-			}
-
-			if path.Ext(p) == ".pfx" || path.Ext(p) == ".p12" {
-				continue
-			}
-
-			r, err2 := os.Open(p)
-			if err2 != nil {
-				log.Error().Err(err2).Str("file", p).Msg("unable to open file")
-				continue
-			}
-
-			contents, err2 := io.ReadAll(r)
-			if err2 != nil {
-				log.Error().Err(err2).Str("file", p).Msg("unable to read file")
-				continue
-			}
-
-			_ = r.Close()
-
-			var certs []*x509.Certificate
-			var keys []*memguard.Enclave
-
-			for {
-				block, rest := pem.Decode(contents)
-				if block == nil {
-					break
-				}
-				switch block.Type {
-				case "CERTIFICATE":
-					var c *x509.Certificate
-					c, err = x509.ParseCertificate(block.Bytes)
-					if err != nil {
-						return
-					}
-					log.Debug().Str("file", p).Str("cn", c.Subject.CommonName).Msg("found certificate")
-					certs = append(certs, c)
-				case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
-					// save all private keys for later matching
-					keys = append(keys, memguard.NewEnclave(block.Bytes))
-				default:
-					err = fmt.Errorf("unsupported PEM type found: %s", block.Type)
-					continue
-				}
-				contents = rest
-			}
-
+		// output info
+		for i := range certInfos {
 			// report
+			rp.Prepare(reporter.Report{
+				Title: "Path: " + certInfos[i].Path,
+			})
 
-			fmt.Printf("contents of file %s:\n\n", p)
+			lines := [][]string{}
 
-			for _, c := range certs {
-				rep.Title = c.Subject.CommonName
-				rp.Prepare(rep)
+			if !infoCmdLong {
+				for _, c := range certInfos[i].Contents.Certificates {
+					lines = append(lines, []string{
+						strconv.Quote(c.Subject.CommonName),
+						strconv.Quote(c.Issuer.CommonName),
+						c.NotAfter.UTC().Format(time.RFC3339),
+						fmt.Sprintf("%v", c.IsCA),
+						fmt.Sprintf("%v", extKeyUsageToString(c.ExtKeyUsage)),
+						fmt.Sprintf("%v", c.DNSNames),
+						fmt.Sprintf("%v", infoMap(c.IPAddresses, func(ip net.IP) string { return ip.String() })),
+					})
+				}
 
-				// var matchingKey *memguard.Enclave
-				// for _, k := range derkeys {
-				// 	_, err = tls.X509KeyPair(
-				// 		pem.EncodeToMemory(&pem.Block{
-				// 			Type:  "CERTIFICATE",
-				// 			Bytes: c.Raw,
-				// 		}),
-				// 		pem.EncodeToMemory(&pem.Block{
-				// 			Type:  "PRIVATE KEY",
-				// 			Bytes: k.Bytes(),
-				// 		}),
-				// 	)
-				// 	if err == nil {
-				// 		matchingKey = k
-				// 		break
-				// 	}
-				// }
+				rp.UpdateTable(columns, lines)
+			} else {
+				for _, c := range certInfos[i].Contents.Certificates {
+					lines = append(lines, []string{
+						strconv.Quote(c.Subject.CommonName),
+						strconv.Quote(c.Issuer.CommonName),
+						fmt.Sprintf("%X", c.SerialNumber),
+						c.NotBefore.UTC().Format(time.RFC3339),
+						c.NotAfter.UTC().Format(time.RFC3339),
+						fmt.Sprintf("%v", c.IsCA),
+						fmt.Sprintf("%v", keyUsageToString(c.KeyUsage)),
+						fmt.Sprintf("%v", extKeyUsageToString(c.ExtKeyUsage)),
+						fmt.Sprintf("%v", c.DNSNames),
+						fmt.Sprintf("%v", c.EmailAddresses),
+						fmt.Sprintf("%v", infoMap(c.IPAddresses, func(ip net.IP) string { return ip.String() })),
+						fmt.Sprintf("%v", infoMap(c.URIs, func(uri *url.URL) string { return uri.String() })),
+						fmt.Sprintf("%X", sha1.Sum(c.Raw)),
+						fmt.Sprintf("%X", sha256.Sum256(c.Raw)),
+						// fmt.Sprintf("%v", matchingKey != nil),
+					})
+				}
 
-				lines := [][]string{
-					{"Common Name", c.Subject.CommonName},
-					{"Issuer", c.Issuer.CommonName},
-					{"Serial", fmt.Sprintf("%X", c.SerialNumber)},
-					{"Not Before", c.NotBefore.UTC().Format("2006-01-02 15:04:05 MST")},
-					{"Not After", c.NotAfter.UTC().Format("2006-01-02 15:04:05 MST")},
-					{"Is CA", fmt.Sprintf("%v", c.IsCA)},
-					{"Basic Constraints", fmt.Sprintf("%v", c.BasicConstraintsValid)},
-				}
-				if c.KeyUsage > 0 {
-					lines = append(lines, []string{"Key Usage", fmt.Sprintf("%s", strings.Join(keyUsageToString(c.KeyUsage), ", "))})
-				}
-				if len(c.ExtKeyUsage) > 0 {
-					lines = append(lines, []string{"Ext Key Usage", fmt.Sprintf("%s", strings.Join(extKeyUsageToString(c.ExtKeyUsage), ", "))})
-				}
-				if len(c.DNSNames) > 0 {
-					lines = append(lines, []string{"SAN DNS Names", fmt.Sprintf("%s", strings.Join(c.DNSNames, ", "))})
-				}
-				if len(c.EmailAddresses) > 0 {
-					lines = append(lines, []string{"SAN Email Addresses", fmt.Sprintf("%s", strings.Join(c.EmailAddresses, ", "))})
-				}
-				if len(c.IPAddresses) > 0 {
-					lines = append(lines, []string{"SAN IP Addresses", fmt.Sprintf("%s", strings.Join(infoMap(c.IPAddresses, func(ip net.IP) string { return ip.String() }), ", "))})
-				}
-				if len(c.URIs) > 0 {
-					lines = append(lines, []string{"SAN URIs", fmt.Sprintf("%s", strings.Join(infoMap(c.URIs, func(uri *url.URL) string { return uri.String() }), ", "))})
-				}
-				lines = append(lines, [][]string{
-					{"SHA1 Fingerprint", fmt.Sprintf("%X", sha1.Sum(c.Raw))},
-					{"SHA256 Fingerprint", fmt.Sprintf("%X", sha256.Sum256(c.Raw))},
-					// {"Private Key Present", fmt.Sprintf("%v", matchingKey != nil)},
-				}...)
-
-				rp.UpdateTable([]string{"Item", "Value"}, lines)
+				rp.UpdateTable(columnsLong, lines)
 			}
-
-			rp.Render()
 		}
+		rp.Render()
 
 		return
 	},
+}
+
+func readFiles(paths []string) (certInfos []certInfo, err error) {
+	certInfos = make([]certInfo, len(paths))
+
+	// paths is a list of files to examine, pre-resolved by the
+	// shell so we don't do any wildcard processing
+	//
+	// extensions are only checked for .pfx/.p12 files, others are
+	// assumed to be PEM and may contain certificates, private keys
+	// or both
+	//
+	// each PEM file can contain multiple entries and they are
+	// listed in order
+	for i, p := range paths {
+		certInfos[i].Path = p
+		certInfos[i].Contents = certContents{}
+
+		contents, err2 := os.ReadFile(p)
+		if err2 != nil {
+			log.Error().Err(err2).Str("file", p).Msg("unable to read file")
+			continue
+		}
+
+		if path.Base(p) == "cacerts" {
+			k, err := geneos.ReadKeystore(geneos.LOCAL, p, config.NewPlaintext([]byte("changeit")))
+			if err != nil {
+				log.Error().Err(err).Str("file", p).Msg("unable to read Java keystore")
+				continue
+			}
+			for _, alias := range k.Aliases() {
+				entry, err := k.GetTrustedCertificateEntry(alias)
+				if err != nil {
+					log.Error().Err(err).Str("alias", alias).Msgf("unable to get certificate entry %q from Java keystore", alias)
+					continue
+				}
+				cert, err := x509.ParseCertificate(entry.Certificate.Content)
+				if err != nil {
+					log.Error().Err(err).Str("alias", alias).Msg("unable to parse certificate from Java keystore")
+					continue
+				}
+				log.Debug().Str("file", p).Str("alias", alias).Str("cn", cert.Subject.CommonName).Msg("found certificate in Java keystore")
+				certInfos[i].Contents.Alias = append(certInfos[i].Contents.Alias, alias)
+				certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, cert)
+			}
+			continue
+		}
+
+		if path.Ext(p) == ".pfx" || path.Ext(p) == ".p12" {
+			log.Debug().Msgf("password: %s", infoCmdPassword.String())
+			if infoCmdPassword.String() == "" {
+				infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password (for file "+p+")")
+				if err != nil {
+					log.Fatal().Err(err).Msg("Failed to read password")
+					// return err
+				}
+			}
+
+			key, c, chain, err := pkcs12.DecodeChain(contents, infoCmdPassword.String())
+			if err != nil {
+				log.Fatal().Err(err).Msg("Failed to decode PFX file")
+				// return err
+			}
+			certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, c)
+			certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, chain...)
+
+			pk, err := x509.MarshalPKCS8PrivateKey(key)
+			if err != nil {
+				log.Fatal().Err(err).Msg("Failed to marshal private key")
+				// return err
+			}
+			certInfos[i].Contents.PrivateKeys = append(certInfos[i].Contents.PrivateKeys, memguard.NewEnclave(pk))
+			continue
+		}
+
+		for {
+			block, rest := pem.Decode(contents)
+			if block == nil {
+				break
+			}
+			switch block.Type {
+			case "CERTIFICATE":
+				var c *x509.Certificate
+				c, err = x509.ParseCertificate(block.Bytes)
+				if err != nil {
+					return
+				}
+				log.Debug().Str("file", p).Str("cn", c.Subject.CommonName).Msg("found certificate")
+				certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, c)
+			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
+				// save all private keys for later matching
+				certInfos[i].Contents.PrivateKeys = append(certInfos[i].Contents.PrivateKeys, memguard.NewEnclave(block.Bytes))
+			default:
+				err = fmt.Errorf("unsupported PEM type found: %s", block.Type)
+				continue
+			}
+			contents = rest
+		}
+	}
+
+	return
 }
 
 func infoMap[T, V any](ts []T, fn func(T) V) []V {
@@ -213,11 +289,11 @@ func infoMap[T, V any](ts []T, fn func(T) V) []V {
 func keyUsageToString(ku x509.KeyUsage) []string {
 	usages := []string{}
 	usageMap := map[x509.KeyUsage]string{
-		x509.KeyUsageDigitalSignature:  "Digital Signature",
-		x509.KeyUsageContentCommitment: "Content Commitment",
-		x509.KeyUsageKeyEncipherment:   "Key Encipherment",
-		x509.KeyUsageDataEncipherment:  "Data Encipherment",
-		x509.KeyUsageKeyAgreement:      "Key Agreement",
+		x509.KeyUsageDigitalSignature:  `"Digital Signature"`,
+		x509.KeyUsageContentCommitment: `"Content Commitment"`,
+		x509.KeyUsageKeyEncipherment:   `"Key Encipherment"`,
+		x509.KeyUsageDataEncipherment:  `"Data Encipherment"`,
+		x509.KeyUsageKeyAgreement:      `"Key Agreement"`,
 	}
 	for k, v := range usageMap {
 		if ku&k != 0 {
@@ -230,11 +306,11 @@ func keyUsageToString(ku x509.KeyUsage) []string {
 func extKeyUsageToString(eku []x509.ExtKeyUsage) []string {
 	usages := []string{}
 	usageMap := map[x509.ExtKeyUsage]string{
-		x509.ExtKeyUsageAny:             "Any",
-		x509.ExtKeyUsageServerAuth:      "Server Auth",
-		x509.ExtKeyUsageClientAuth:      "Client Auth",
-		x509.ExtKeyUsageCodeSigning:     "Code Signing",
-		x509.ExtKeyUsageEmailProtection: "Email Protection",
+		x509.ExtKeyUsageAny:             `"Any"`,
+		x509.ExtKeyUsageServerAuth:      `"Server Auth"`,
+		x509.ExtKeyUsageClientAuth:      `"Client Auth"`,
+		x509.ExtKeyUsageCodeSigning:     `"Code Signing"`,
+		x509.ExtKeyUsageEmailProtection: `"Email Protection"`,
 	}
 	for k, v := range usageMap {
 		if containsExtKeyUsage(eku, k) {
