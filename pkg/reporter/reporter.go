@@ -121,14 +121,6 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 
 	switch format {
 	case "column", "tabwriter":
-		var twoptions = []TabWriterReporterOptions{}
-		for _, o := range options {
-			if t, ok := o.(TabWriterReporterOptions); ok {
-				twoptions = append(twoptions, t)
-			} else {
-				panic("wrong option type")
-			}
-		}
 		r = newTabWriterReporter(w, opts)
 	case "toolkit":
 		r = newToolkitReporter(w, opts)

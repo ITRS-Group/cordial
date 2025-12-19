@@ -21,8 +21,10 @@ package reporter
 // the tabwriter package.
 import (
 	"io"
+	"strconv"
 	"strings"
 	"text/tabwriter"
+	"unicode"
 )
 
 // TabWriterReporter implements a Reporter using tabwriter to format
@@ -34,15 +36,10 @@ type TabWriterReporter struct {
 	quoteFieldsWithSpace bool
 }
 
-func newTabWriterReporter(opts *reporterOptions, options ...TabWriterReporterOptions) *TabWriterReporter {
+func newTabWriterReporter(w io.Writer, opts *reporterOptions) *TabWriterReporter {
 	_ = opts
-	var opt TabWriterReporterOptions
-	if len(options) > 0 {
-		opt = evalTabWriterOptions(options...)
-	}
 	return &TabWriterReporter{
-		writer:               tabwriter.NewWriter(opt.w, 3, 8, 2, ' ', 0),
-		quoteFieldsWithSpace: opt.QuoteFieldsWithSpace,
+		writer: tabwriter.NewWriter(w, 3, 8, 2, ' ', 0),
 	}
 }
 
@@ -58,11 +55,23 @@ func (t *TabWriterReporter) AddHeadline(name, value string) {
 }
 
 // UpdateTable sets the headings and rows for the table.
+//
+// It quotes fields as necessary.
 func (t *TabWriterReporter) UpdateTable(headings []string, rows [][]string) {
 	if len(headings) > 0 {
-		t.Columns = headings
+		t.Columns = []string{}
+		for _, h := range headings {
+			t.Columns = append(t.Columns, tabWriterCheckAndQuote(h))
+		}
 	}
-	t.rows = rows
+	t.rows = [][]string{}
+	for _, row := range rows {
+		var quotedRow []string
+		for _, field := range row {
+			quotedRow = append(quotedRow, tabWriterCheckAndQuote(field))
+		}
+		t.rows = append(t.rows, quotedRow)
+	}
 }
 
 // Remove is a no-op for TabWriterReporter.
@@ -93,36 +102,17 @@ func (t *TabWriterReporter) Extension() string {
 	return "txt"
 }
 
-type tabWriterReporterOptions struct {
-	QuoteFieldsWithSpace bool
-	w                    io.Writer
+// tabWriterCheckRune checks if a rune triggers quoting
+func tabWriterCheckRune(r rune) bool {
+	if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' || r == '/' || r == ':' || r == '@' {
+		return false
+	}
+	return true
 }
 
-type TabWriterReporterOptions func(*tabWriterReporterOptions)
-
-func evalTabWriterOptions(options ...TabWriterReporterOptions) (twro *tabWriterReporterOptions) {
-	twro = &tabWriterReporterOptions{
-		QuoteFieldsWithSpace: false,
-		w:                    io.Discard,
+func tabWriterCheckAndQuote(s string) string {
+	if strings.ContainsFunc(s, tabWriterCheckRune) {
+		return strconv.Quote(s)
 	}
-	for _, opt := range options {
-		opt(twro)
-	}
-	return
-}
-
-// TabWriter is a TabWriterReporter option to set the output writer.
-
-func TabWriter(w io.Writer) TabWriterReporterOptions {
-	return func(twro *tabWriterReporterOptions) {
-		twro.w = w
-	}
-}
-
-// WithQuoteFieldsWithSpace is a TabWriterReporter option to quote fields
-// containing spaces.
-func WithQuoteFieldsWithSpace() TabWriterReporterOptions {
-	return func(twro *tabWriterReporterOptions) {
-		twro.QuoteFieldsWithSpace = true
-	}
+	return s
 }

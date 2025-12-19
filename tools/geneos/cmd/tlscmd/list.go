@@ -20,6 +20,7 @@ package tlscmd
 import (
 	"bytes"
 	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/x509"
 	_ "embed"
 	"encoding/csv"
@@ -52,20 +53,21 @@ type listCertType struct {
 }
 
 type listCertLongType struct {
-	Type        string        `json:"type,omitempty"`
-	Name        string        `json:"name,omitempty"`
-	Host        string        `json:"host,omitempty"`
-	Remaining   time.Duration `json:"remaining,omitempty"`
-	Expires     time.Time     `json:"expires,omitempty"`
-	CommonName  string        `json:"common_name,omitempty"`
-	Valid       bool          `json:"valid,omitempty"`
-	Certificate string        `json:"certificate,omitempty"`
-	PrivateKey  string        `json:"privatekey,omitempty"`
-	Chainfile   string        `json:"chainfile,omitempty"`
-	Issuer      string        `json:"issuer,omitempty"`
-	SubAltNames []string      `json:"sans,omitempty"`
-	IPs         []net.IP      `json:"ip_addresses,omitempty"`
-	Signature   string        `json:"signature,omitempty"`
+	Type              string        `json:"type,omitempty"`
+	Name              string        `json:"name,omitempty"`
+	Host              string        `json:"host,omitempty"`
+	Remaining         time.Duration `json:"remaining,omitempty"`
+	Expires           time.Time     `json:"expires,omitempty"`
+	CommonName        string        `json:"common_name,omitempty"`
+	Valid             bool          `json:"valid,omitempty"`
+	Certificate       string        `json:"certificate,omitempty"`
+	PrivateKey        string        `json:"privatekey,omitempty"`
+	Chainfile         string        `json:"chainfile,omitempty"`
+	Issuer            string        `json:"issuer,omitempty"`
+	SubAltNames       []string      `json:"sans,omitempty"`
+	IPs               []net.IP      `json:"ip_addresses,omitempty"`
+	Fingerprint       string        `json:"fingerprint,omitempty"`
+	FingerprintSHA256 string        `json:"fingerprint_sha256,omitempty"`
 }
 
 var listCmdAll, listCmdCSV, listCmdJSON, listCmdIndent, listCmdLong, listCmdToolkit bool
@@ -278,7 +280,7 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 					geneos.LOCALHOST,
 					strconv.FormatFloat(time.Until(rootCert.NotAfter).Seconds(), 'f', 0, 64),
 					rootCert.NotAfter.Format(time.RFC3339),
-					strconv.Quote(rootCert.Subject.CommonName),
+					rootCert.Subject.CommonName,
 					strconv.FormatBool(verifyCert(rootCert)),
 				})
 			}
@@ -289,7 +291,7 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 					geneos.LOCALHOST,
 					strconv.FormatFloat(time.Until(geneosCert.NotAfter).Seconds(), 'f', 0, 64),
 					geneosCert.NotAfter.Format(time.RFC3339),
-					strconv.Quote(geneosCert.Subject.CommonName),
+					geneosCert.Subject.CommonName,
 					strconv.FormatBool(verifyCert(geneosCert)),
 				})
 			}
@@ -339,6 +341,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 						nil,
 						nil,
 						fmt.Sprintf("%X", sha1.Sum(rootCert.Raw)),
+						fmt.Sprintf("%X", sha256.Sum256(rootCert.Raw)),
 					}}
 			}
 			if geneosCert != nil {
@@ -358,6 +361,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 						nil,
 						nil,
 						fmt.Sprintf("%X", sha1.Sum(rootCert.Raw)),
+						fmt.Sprintf("%X", sha256.Sum256(rootCert.Raw)),
 					}}
 			}
 		}
@@ -380,7 +384,8 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			"issuer",
 			"subjAltNames",
 			"IPs",
-			"signature",
+			"fingerprint",
+			"fingerprintSHA256",
 		})
 		if listCmdAll {
 			if rootCert != nil {
@@ -400,6 +405,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					"",
 					"",
 					fmt.Sprintf("%X", sha1.Sum(rootCert.Raw)),
+					fmt.Sprintf("%X", sha256.Sum256(rootCert.Raw)),
 				})
 			}
 			if geneosCert != nil {
@@ -419,6 +425,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					"",
 					"",
 					fmt.Sprintf("%X", sha1.Sum(geneosCert.Raw)),
+					fmt.Sprintf("%X", sha256.Sum256(geneosCert.Raw)),
 				})
 			}
 		}
@@ -467,7 +474,8 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			"Issuer",
 			"SubjAltNames",
 			"IPs",
-			"Signature",
+			"Fingerprint",
+			"FingerprintSHA256",
 		})
 		if listCmdAll {
 			if rootCert != nil {
@@ -486,6 +494,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					"[]",
 					"[]",
 					fmt.Sprintf("%X", sha1.Sum(rootCert.Raw)),
+					fmt.Sprintf("%X", sha256.Sum256(rootCert.Raw)),
 				})
 			}
 			if geneosCert != nil {
@@ -504,6 +513,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					"[]",
 					"[]",
 					fmt.Sprintf("%X", sha1.Sum(geneosCert.Raw)),
+					fmt.Sprintf("%X", sha256.Sum256(geneosCert.Raw)),
 				})
 			}
 		}
@@ -519,15 +529,16 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					geneos.LOCALHOST,
 					strconv.FormatFloat(time.Until(rootCert.NotAfter).Seconds(), 'f', 0, 64),
 					rootCert.NotAfter.Format(time.RFC3339),
-					strconv.Quote(rootCert.Subject.CommonName),
+					rootCert.Subject.CommonName,
 					strconv.FormatBool(verifyCert(rootCert)),
-					strconv.Quote(rootCertFile),
-					strconv.Quote(rootCertFile),
+					rootCertFile,
+					rootCertFile,
 					"",
-					strconv.Quote(rootCert.Issuer.CommonName),
+					rootCert.Issuer.CommonName,
 					"",
 					"",
 					fmt.Sprintf("%X", sha1.Sum(rootCert.Raw)),
+					fmt.Sprintf("%X", sha256.Sum256(rootCert.Raw)),
 				})
 			}
 			if geneosCert != nil {
@@ -537,15 +548,16 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					geneos.LOCALHOST,
 					strconv.FormatFloat(time.Until(geneosCert.NotAfter).Seconds(), 'f', 0, 64),
 					geneosCert.NotAfter.Format(time.RFC3339),
-					strconv.Quote(geneosCert.Subject.CommonName),
+					geneosCert.Subject.CommonName,
 					strconv.FormatBool(verifyCert(geneosCert)),
-					strconv.Quote(geneosCertFile),
-					strconv.Quote(rootCertFile),
+					geneosCertFile,
+					rootCertFile,
 					"",
-					strconv.Quote(geneosCert.Issuer.CommonName),
+					geneosCert.Issuer.CommonName,
 					"",
 					"",
 					fmt.Sprintf("%X", sha1.Sum(geneosCert.Raw)),
+					fmt.Sprintf("%X", sha256.Sum256(geneosCert.Raw)),
 				})
 			}
 		}
@@ -567,6 +579,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 				"SubjAltNames",
 				"IPs",
 				"Fingerprint",
+				"FingerprintSHA256",
 			},
 			prequel,
 		)
@@ -589,15 +602,16 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) 
 
 	expires := cert.NotAfter
 	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
-	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.Format(time.RFC3339), strconv.Quote(cert.Subject.CommonName), fmt.Sprint(valid)}
+	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.Format(time.RFC3339), cert.Subject.CommonName, fmt.Sprint(valid)}
 	if listCmdLong {
-		cols = append(cols, strconv.Quote(i.Config().GetString("certificate")))
-		cols = append(cols, strconv.Quote(i.Config().GetString("privatekey")))
-		cols = append(cols, strconv.Quote(chainfile))
-		cols = append(cols, strconv.Quote(cert.Issuer.CommonName))
+		cols = append(cols, i.Config().GetString("certificate"))
+		cols = append(cols, i.Config().GetString("privatekey"))
+		cols = append(cols, chainfile)
+		cols = append(cols, cert.Issuer.CommonName)
 		cols = append(cols, fmt.Sprintf("%v", cert.DNSNames))
 		cols = append(cols, fmt.Sprintf("%v", cert.IPAddresses))
 		cols = append(cols, fmt.Sprintf("%X", sha1.Sum(cert.Raw)))
+		cols = append(cols, fmt.Sprintf("%X", sha256.Sum256(cert.Raw)))
 	}
 
 	resp.Rows = append(resp.Rows, cols)
@@ -628,6 +642,7 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *instance.Respons
 		cols = append(cols, fmt.Sprintf("%v", cert.DNSNames))
 		cols = append(cols, fmt.Sprintf("%v", cert.IPAddresses))
 		cols = append(cols, fmt.Sprintf("%X", sha1.Sum(cert.Raw)))
+		cols = append(cols, fmt.Sprintf("%X", sha256.Sum256(cert.Raw)))
 	}
 
 	resp.Rows = append(resp.Rows, cols)
@@ -678,6 +693,7 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *instance.Res
 			cols = append(cols, "")
 		}
 		cols = append(cols, fmt.Sprintf("%X", sha1.Sum(cert.Raw)))
+		cols = append(cols, fmt.Sprintf("%X", sha256.Sum256(cert.Raw)))
 	}
 
 	resp.Rows = append(resp.Rows, cols)
@@ -713,6 +729,7 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *instance.Respon
 			cert.DNSNames,
 			cert.IPAddresses,
 			fmt.Sprintf("%X", sha1.Sum(cert.Raw)),
+			fmt.Sprintf("%X", sha256.Sum256(cert.Raw)),
 		}
 		return
 	}
