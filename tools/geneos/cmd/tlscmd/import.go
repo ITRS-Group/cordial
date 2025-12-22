@@ -212,7 +212,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response
 
 	if len(chain) > 0 {
 		chainfile := path.Join(i.Home(), "chain.pem")
-		if err := config.WriteCertChainFile(i.Host(), chainfile, chain...); err == nil {
+		if err := config.WriteCertificates(i.Host(), chainfile, chain...); err == nil {
 			resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate chain written", i))
 			if cf.GetString("certchain") == chainfile {
 				return

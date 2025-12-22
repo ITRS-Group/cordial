@@ -264,7 +264,7 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCert(g, 0)
+	resp := instance.CreateCertificate(g, 0)
 	if resp.Err == nil {
 		fmt.Println(resp.Line)
 	}

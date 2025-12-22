@@ -24,7 +24,6 @@ import (
 	"strconv"
 	"strings"
 	"text/tabwriter"
-	"unicode"
 )
 
 // TabWriterReporter implements a Reporter using tabwriter to format
@@ -45,6 +44,8 @@ func newTabWriterReporter(w io.Writer, opts *reporterOptions) *TabWriterReporter
 
 // Prepare initialises the TabWriterReporter.
 func (t *TabWriterReporter) Prepare(report Report) error {
+	t.Render()
+
 	t.Report = report
 	return nil
 }
@@ -81,7 +82,9 @@ func (t *TabWriterReporter) Remove(report Report) error {
 
 // Render writes the table to the tabwriter.
 func (t *TabWriterReporter) Render() {
-	t.writer.Write([]byte(strings.Join(t.Columns, "\t") + "\n"))
+	if len(t.Columns) > 0 {
+		t.writer.Write([]byte(strings.Join(t.Columns, "\t") + "\n"))
+	}
 
 	for _, row := range t.rows {
 		t.writer.Write([]byte(strings.Join(row, "\t") + "\n"))
@@ -102,9 +105,11 @@ func (t *TabWriterReporter) Extension() string {
 	return "txt"
 }
 
+const allowedTabWriterRunes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.:/@()[]{}"
+
 // tabWriterCheckRune checks if a rune triggers quoting
 func tabWriterCheckRune(r rune) bool {
-	if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' || r == '/' || r == ':' || r == '@' {
+	if strings.ContainsRune(allowedTabWriterRunes, r) {
 		return false
 	}
 	return true

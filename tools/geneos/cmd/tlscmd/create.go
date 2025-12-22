@@ -24,7 +24,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	_ "embed"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
@@ -41,14 +40,13 @@ import (
 )
 
 var createCmdCN, createCmdDest string
-var createCmdOverwrite, createCmdBundle bool
+var createCmdOverwrite bool
 var createCmdSANs createCmdSAN
 var createCmdDays int
 
 func init() {
 	tlsCmd.AddCommand(createCmd)
 
-	createCmd.Flags().BoolVarP(&createCmdBundle, "bundle", "b", false, "Create a certificate bundle, including certificate, key and verification chain")
 	createCmd.Flags().StringVarP(&createCmdDest, "out", "o", ".", "Output `directory` to write to.\nFor bundles use a dash '-' for stdout.")
 
 	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", "", "Common Name for certificate. Defaults to hostname")
@@ -81,21 +79,10 @@ var createCmd = &cobra.Command{
 			}
 		}
 		if createCmdCN == "" {
-			createCmdCN, _ = os.Hostname()
-		}
-		if createCmdBundle {
-			err = CreateCertBundle(createCmdDest, createCmdOverwrite, 24*time.Hour*time.Duration(createCmdDays), createCmdCN, createCmdSANs...)
+			createCmdCN, err = os.Hostname()
 			if err != nil {
-				if errors.Is(err, os.ErrExist) && !createCmdOverwrite {
-					fmt.Printf("Certificate file already exists for CN=%q, use --force to overwrite\n", createCmdCN)
-					return nil
-				}
-				return
+				return err
 			}
-			if createCmdDest != "-" {
-				fmt.Printf("Certificate bundle created for CN=%q\n", createCmdCN)
-			}
-			return
 		}
 
 		if createCmdDest == "-" {
@@ -166,7 +153,7 @@ func CreateCert(destination string, overwrite bool, duration time.Duration, cn s
 		return
 	}
 
-	if err = config.WriteCert(geneos.LOCAL, basepath+".pem", cert); err != nil {
+	if err = config.WriteCertificates(geneos.LOCAL, basepath+".pem", cert, signingCert); err != nil {
 		return
 	}
 
@@ -178,79 +165,6 @@ func CreateCert(destination string, overwrite bool, duration time.Duration, cn s
 	fmt.Printf("            Expiry: %s\n", expires.UTC().Format(time.RFC3339))
 	fmt.Printf("  SHA1 Fingerprint: %X\n", sha1.Sum(cert.Raw))
 	fmt.Printf("SHA256 Fingerprint: %X\n", sha256.Sum256(cert.Raw))
-
-	return
-}
-
-func CreateCertBundle(destination string, overwrite bool, duration time.Duration, cn string, san ...string) (err error) {
-	basepath := path.Join(destination, strings.ReplaceAll(cn, " ", "-"))
-	if destination != "-" {
-		if _, err = os.Stat(basepath + ".pem"); err == nil && !overwrite {
-			return os.ErrExist
-		}
-	}
-	serial, err := rand.Prime(rand.Reader, 64)
-	if err != nil {
-		return
-	}
-	if duration == 0 {
-		duration = 365 * 24 * time.Hour
-	}
-	expires := time.Now().Add(duration)
-	template := x509.Certificate{
-		SerialNumber: serial,
-		Subject: pkix.Name{
-			CommonName: cn,
-		},
-		NotBefore:      time.Now().Add(-60 * time.Second),
-		NotAfter:       expires,
-		KeyUsage:       x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		MaxPathLenZero: true,
-		DNSNames:       san,
-		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
-	}
-
-	root, rootFile, err := geneos.ReadRootCert(true)
-	if err != nil {
-		err = fmt.Errorf("local root certificate (%s) not valid: %w", rootFile, err)
-		return
-	}
-	signer, signerFile, err := geneos.ReadSigningCert(true)
-	if err != nil {
-		err = fmt.Errorf("local signing root certificate (%s) not valid: %w", signerFile, err)
-		return
-	}
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertBasename+".key"))
-	if err != nil {
-		return
-	}
-
-	cert, key, err := config.CreateCertificateAndKey(&template, signer, signingKey)
-	if err != nil {
-		return
-	}
-
-	var pembytes []byte
-	for _, c := range []*x509.Certificate{cert, signer, root} {
-		pembytes = append(pembytes, pem.EncodeToMemory(&pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: c.Raw,
-		})...)
-	}
-
-	l, _ := key.Open()
-	pembytes = append(pembytes, pem.EncodeToMemory(&pem.Block{
-		Type:  "PRIVATE KEY",
-		Bytes: l.Bytes(),
-	})...)
-	l.Destroy()
-
-	if destination != "-" {
-		return os.WriteFile(basepath+".pem", pembytes, 0600)
-	}
-
-	fmt.Println(string(pembytes))
 
 	return
 }

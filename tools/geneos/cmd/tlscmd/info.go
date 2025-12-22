@@ -28,7 +28,7 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"strconv"
+	"path/filepath"
 	"time"
 
 	"github.com/awnumar/memguard"
@@ -54,7 +54,7 @@ func init() {
 
 	infoCmd.Flags().BoolVarP(&infoCmdLong, "long", "l", false, "Output long format (more columns)")
 
-	infoCmd.Flags().StringVarP(&infoCmdFormat, "format", "f", "table", "Output format (table, json, csv, toolkit)")
+	infoCmd.Flags().StringVarP(&infoCmdFormat, "format", "f", "column", "Output format (column, table, csv, toolkit)")
 	infoCmd.Flags().VarP(infoCmdPassword, "password", "p", "Password for PFX file(s), if needed. Defaults to prompting for each file. Use -p \"\" to specify empty password.")
 }
 
@@ -73,30 +73,34 @@ type certInfo struct {
 }
 
 var columns = []string{
-	"Common Name",
-	"Issuer Common Name",
-	"Not After",
-	"Is CA",
-	"Ext Key Usage",
-	"SAN DNS Names",
-	"SAN IP Addresses",
+	"FileAndIndex",
+	"CommonName",
+	"IssuerCommonName",
+	"NotAfter",
+	"IsCA",
+	"ExtKeyUsage",
+	"SANDNSNames",
+	"SANIPAddresses",
 }
 
 var columnsLong = []string{
-	"Common Name",
-	"Issuer Common Name",
+	"PathAndIndex",
+	"CommonName",
+	"IssuerCommonName",
 	"Serial",
-	"Not Before",
-	"Not After",
-	"Is CA",
-	"Key Usage",
-	"Ext Key Usage",
-	"SAN DNS Names",
-	"SAN Email Addresses",
-	"SAN IP Addresses",
-	"SAN URIs",
-	"SHA1 Fingerprint",
-	"SHA256 Fingerprint",
+	"SKID",
+	"AKID",
+	"NotBefore",
+	"NotAfter",
+	"IsCA",
+	"KeyUsage",
+	"ExtKeyUsage",
+	"SANDNSNames",
+	"SANEmailAddresses",
+	"SANIPAddresses",
+	"SANURIs",
+	"SHA1Fingerprint",
+	"SHA256Fingerprint",
 	// "Private Key Present",
 }
 
@@ -125,34 +129,34 @@ var infoCmd = &cobra.Command{
 		}
 
 		// output info
+		// report
+		rp.Prepare(reporter.Report{
+			Title: "Certificate Information",
+		})
+
+		lines := [][]string{}
+
 		for i := range certInfos {
-			// report
-			rp.Prepare(reporter.Report{
-				Title: "Path: " + certInfos[i].Path,
-			})
-
-			lines := [][]string{}
-
-			if !infoCmdLong {
-				for _, c := range certInfos[i].Contents.Certificates {
+			for n, c := range certInfos[i].Contents.Certificates {
+				if !infoCmdLong {
 					lines = append(lines, []string{
-						strconv.Quote(c.Subject.CommonName),
-						strconv.Quote(c.Issuer.CommonName),
+						fmt.Sprintf("%s:%d", path.Base(certInfos[i].Path), n),
+						c.Subject.CommonName,
+						c.Issuer.CommonName,
 						c.NotAfter.UTC().Format(time.RFC3339),
 						fmt.Sprintf("%v", c.IsCA),
 						fmt.Sprintf("%v", extKeyUsageToString(c.ExtKeyUsage)),
 						fmt.Sprintf("%v", c.DNSNames),
 						fmt.Sprintf("%v", infoMap(c.IPAddresses, func(ip net.IP) string { return ip.String() })),
 					})
-				}
-
-				rp.UpdateTable(columns, lines)
-			} else {
-				for _, c := range certInfos[i].Contents.Certificates {
+				} else {
 					lines = append(lines, []string{
-						strconv.Quote(c.Subject.CommonName),
-						strconv.Quote(c.Issuer.CommonName),
+						fmt.Sprintf("%s:%d", certInfos[i].Path, n),
+						c.Subject.CommonName,
+						c.Issuer.CommonName,
 						fmt.Sprintf("%X", c.SerialNumber),
+						fmt.Sprintf("%X", c.SubjectKeyId),
+						fmt.Sprintf("%X", c.AuthorityKeyId),
 						c.NotBefore.UTC().Format(time.RFC3339),
 						c.NotAfter.UTC().Format(time.RFC3339),
 						fmt.Sprintf("%v", c.IsCA),
@@ -167,9 +171,13 @@ var infoCmd = &cobra.Command{
 						// fmt.Sprintf("%v", matchingKey != nil),
 					})
 				}
-
-				rp.UpdateTable(columnsLong, lines)
 			}
+		}
+
+		if infoCmdLong {
+			rp.UpdateTable(columnsLong, lines)
+		} else {
+			rp.UpdateTable(columns, lines)
 		}
 		rp.Render()
 
@@ -190,7 +198,11 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 	// each PEM file can contain multiple entries and they are
 	// listed in order
 	for i, p := range paths {
-		certInfos[i].Path = p
+		certInfos[i].Path, err = filepath.Abs(p)
+		if err != nil {
+			log.Error().Err(err).Str("file", p).Msg("unable to get absolute path")
+			continue
+		}
 		certInfos[i].Contents = certContents{}
 
 		contents, err2 := os.ReadFile(p)
@@ -289,11 +301,11 @@ func infoMap[T, V any](ts []T, fn func(T) V) []V {
 func keyUsageToString(ku x509.KeyUsage) []string {
 	usages := []string{}
 	usageMap := map[x509.KeyUsage]string{
-		x509.KeyUsageDigitalSignature:  `"Digital Signature"`,
-		x509.KeyUsageContentCommitment: `"Content Commitment"`,
-		x509.KeyUsageKeyEncipherment:   `"Key Encipherment"`,
-		x509.KeyUsageDataEncipherment:  `"Data Encipherment"`,
-		x509.KeyUsageKeyAgreement:      `"Key Agreement"`,
+		x509.KeyUsageDigitalSignature:  "DigitalSignature",
+		x509.KeyUsageContentCommitment: "ContentCommitment",
+		x509.KeyUsageKeyEncipherment:   "KeyEncipherment",
+		x509.KeyUsageDataEncipherment:  "DataEncipherment",
+		x509.KeyUsageKeyAgreement:      "KeyAgreement",
 	}
 	for k, v := range usageMap {
 		if ku&k != 0 {
@@ -306,11 +318,11 @@ func keyUsageToString(ku x509.KeyUsage) []string {
 func extKeyUsageToString(eku []x509.ExtKeyUsage) []string {
 	usages := []string{}
 	usageMap := map[x509.ExtKeyUsage]string{
-		x509.ExtKeyUsageAny:             `"Any"`,
-		x509.ExtKeyUsageServerAuth:      `"Server Auth"`,
-		x509.ExtKeyUsageClientAuth:      `"Client Auth"`,
-		x509.ExtKeyUsageCodeSigning:     `"Code Signing"`,
-		x509.ExtKeyUsageEmailProtection: `"Email Protection"`,
+		x509.ExtKeyUsageAny:             "Any",
+		x509.ExtKeyUsageServerAuth:      "ServerAuth",
+		x509.ExtKeyUsageClientAuth:      "ClientAuth",
+		x509.ExtKeyUsageCodeSigning:     "CodeSigning",
+		x509.ExtKeyUsageEmailProtection: "EmailProtection",
 	}
 	for k, v := range usageMap {
 		if containsExtKeyUsage(eku, k) {

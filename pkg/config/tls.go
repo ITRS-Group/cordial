@@ -145,16 +145,6 @@ func MatchKey(cert *x509.Certificate, derkeys []*memguard.Enclave) int {
 	return -1
 }
 
-// WriteCert writes cert as PEM to file p on host h
-func WriteCert(h host.Host, p string, cert *x509.Certificate) (err error) {
-	pembytes := pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: cert.Raw,
-	})
-
-	return h.WriteFile(p, pembytes, 0644)
-}
-
 // UpdateCertChainFile updates the certificate chain file at the
 // specified path on the given host. It ensures that all provided
 // certificates are present in the file, appending any that are missing.
@@ -169,7 +159,7 @@ func UpdateCertChainFile(h host.Host, path string, certs ...*x509.Certificate) (
 	allCerts := ReadCertificates(h, path)
 
 	if allCerts == nil {
-		return true, WriteCertChainFile(h, path, certs...)
+		return true, WriteCertificates(h, path, certs...)
 	}
 
 	added := false
@@ -187,16 +177,17 @@ func UpdateCertChainFile(h host.Host, path string, certs ...*x509.Certificate) (
 		return false, nil
 	}
 
-	return true, WriteCertChainFile(h, path, allCerts...)
+	return true, WriteCertificates(h, path, allCerts...)
 }
 
-// WriteCertChainFile concatenate certs and writes to path on host h.
-// Certificates that are not valid or expired are skipped.
-func WriteCertChainFile(h host.Host, path string, certs ...*x509.Certificate) (err error) {
+// WriteCertificates concatenate certs in PEM format and writes to path
+// on host h. Certificates that are expired are skipped, only errors
+// from writing the resulting file are returned
+func WriteCertificates(h host.Host, path string, certs ...*x509.Certificate) (err error) {
 	var pembytes []byte
 	for _, cert := range certs {
-		// validate cert as CA and not expired
-		if cert == nil || !cert.IsCA || !cert.BasicConstraintsValid || cert.NotAfter.Before(time.Now()) {
+		// validate cert as not expired
+		if cert == nil || cert.NotAfter.Before(time.Now()) {
 			continue
 		}
 
@@ -209,9 +200,9 @@ func WriteCertChainFile(h host.Host, path string, certs ...*x509.Certificate) (e
 	return h.WriteFile(path, pembytes, 0644)
 }
 
-// ReadCertificateFile reads the first PEM encoded certificate from
+// ReadCertificate reads the first PEM encoded certificate from
 // file at path p on host h and returns the block
-func ReadCertificateFile(h host.Host, path string) (data []byte, err error) {
+func ReadCertificate(h host.Host, path string) (data []byte, err error) {
 	b, err := h.ReadFile(path)
 	if err != nil {
 		return
@@ -230,9 +221,9 @@ func ReadCertificateFile(h host.Host, path string) (data []byte, err error) {
 	}
 }
 
-// ReadCertChain returns a certificate pool loaded from the file on host
+// ReadCertPool returns a certificate pool loaded from the file on host
 // h at path. If there is any error a nil pointer is returned.
-func ReadCertChain(h host.Host, path string) (pool *x509.CertPool) {
+func ReadCertPool(h host.Host, path string) (pool *x509.CertPool) {
 	pool = x509.NewCertPool()
 	if chain, err := h.ReadFile(path); err == nil {
 		if ok := pool.AppendCertsFromPEM(chain); !ok {
@@ -315,7 +306,7 @@ func CreateCertificateAndKey(template, parent *x509.Certificate, signingKeyDER *
 	}
 
 	// create a new key of the same type as the signing cert key or use a default type
-	keytype := PrivateKeyType(signingKeyDER)
+	keytype := privateKeyType(signingKeyDER)
 	if keytype == "" {
 		keytype = DefaultKeyType
 	}
@@ -352,9 +343,9 @@ func CreateCertificateAndKey(template, parent *x509.Certificate, signingKeyDER *
 	return
 }
 
-// PrivateKeyType returns the type of the DER encoded private key,
+// privateKeyType returns the type of the DER encoded private key,
 // suitable for use to NewPrivateKey
-func PrivateKeyType(der *memguard.Enclave) (keytype string) {
+func privateKeyType(der *memguard.Enclave) (keytype string) {
 	if der == nil {
 		return
 	}
@@ -459,7 +450,7 @@ func CreateRootCert(h host.Host, basefilepath string, cn string, overwrite bool,
 		return
 	}
 
-	if err = WriteCert(h, basefilepath+".pem", cert); err != nil {
+	if err = WriteCertificates(h, basefilepath+".pem", cert); err != nil {
 		return
 	}
 	if err = WritePrivateKey(h, basefilepath+".key", key); err != nil {
@@ -514,7 +505,7 @@ func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string
 		return
 	}
 
-	if err = WriteCert(h, basefilepath+".pem", cert); err != nil {
+	if err = WriteCertificates(h, basefilepath+".pem", cert); err != nil {
 		return
 	}
 	if err = WritePrivateKey(h, basefilepath+".key", key); err != nil {

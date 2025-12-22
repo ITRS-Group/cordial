@@ -213,7 +213,7 @@ func (s *SSOAgents) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCert(s, 0)
+	resp := instance.CreateCertificate(s, 0)
 	if resp.Err == nil {
 		fmt.Println(resp.Line)
 	}
@@ -314,13 +314,13 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 			if err != nil {
 				return err
 			}
-			chain := []*x509.Certificate{cert}
+			certs := []*x509.Certificate{cert}
 			if cf.IsSet("certchain") {
-				chain = append(chain, config.ReadCertificates(s.Host(), cf.GetString("certchain"))...)
+				certs = append(certs, config.ReadCertificates(s.Host(), cf.GetString("certchain"))...)
 			}
 			alias := geneos.ALL.Hostname()
 			ks.DeleteEntry(alias)
-			ks.AddKeystoreKey(alias, key, ksPassword, chain)
+			ks.AddKeystoreKey(alias, key, ksPassword, certs)
 			changed = true
 		}
 

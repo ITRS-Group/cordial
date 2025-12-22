@@ -57,5 +57,5 @@ var newCmd = &cobra.Command{
 }
 
 func newInstanceCert(i geneos.Instance, _ ...any) *instance.Response {
-	return instance.CreateCert(i, 24*time.Hour*time.Duration(newCmdDays))
+	return instance.CreateCertificate(i, 24*time.Hour*time.Duration(newCmdDays))
 }

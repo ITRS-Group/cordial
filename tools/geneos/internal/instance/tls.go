@@ -38,7 +38,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-// CreateCert creates a new certificate for an instance.
+// CreateCertificate creates a new certificate for an instance.
 //
 // If the root and signing certs are readable then create an instance
 // specific chain file, otherwise set the instance to point to the
@@ -47,7 +47,7 @@ import (
 // this also creates a new private key
 //
 // skip if certificate exists and is valid
-func CreateCert(i geneos.Instance, duration time.Duration) (resp *Response) {
+func CreateCertificate(i geneos.Instance, duration time.Duration) (resp *Response) {
 	resp = NewResponse(i)
 
 	// skip if we can load an existing and valid certificate
@@ -105,12 +105,12 @@ func CreateCert(i geneos.Instance, duration time.Duration) (resp *Response) {
 		return
 	}
 
-	if err = WriteCert(i, cert); err != nil {
+	if err = config.WriteCertificates(i.Host(), ComponentFilepath(i, "pem"), cert, signingCert); err != nil {
 		resp.Err = err
 		return
 	}
 
-	if err = WriteKey(i, key); err != nil {
+	if err = config.WritePrivateKey(i.Host(), ComponentFilepath(i, "key"), key); err != nil {
 		resp.Err = err
 		return
 	}
@@ -126,7 +126,7 @@ func CreateCert(i geneos.Instance, duration time.Duration) (resp *Response) {
 			i.Config().SetString("certchain", chainfile, config.Replace("home"))
 		}
 
-		if err = config.WriteCertChainFile(i.Host(), chainfile, signingCert, rootCert); err != nil {
+		if err = config.WriteCertificates(i.Host(), chainfile, signingCert, rootCert); err != nil {
 			resp.Err = err
 			return
 		}
@@ -162,7 +162,7 @@ func WriteCert(i geneos.Instance, cert *x509.Certificate, ext ...string) (err er
 		return geneos.ErrInvalidArgs
 	}
 	certFile := ComponentFilepath(i, append([]string{"pem"}, ext...)...)
-	if err = config.WriteCert(i.Host(), certFile, cert); err != nil {
+	if err = config.WriteCertificates(i.Host(), certFile, cert); err != nil {
 		return
 	}
 	if len(ext) > 0 || cf.GetString("certificate") == certFile {
@@ -224,7 +224,7 @@ func ReadCert(i geneos.Instance, ext ...string) (cert *x509.Certificate, valid b
 	}
 
 	// first check if we have a valid private key
-	c, err := config.ReadCertificateFile(i.Host(), certPath)
+	c, err := config.ReadCertificate(i.Host(), certPath)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
 		return
@@ -259,7 +259,7 @@ func ReadCert(i geneos.Instance, ext ...string) (cert *x509.Certificate, valid b
 		chainfile = config.MigrateFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
 	}
 
-	if cp := config.ReadCertChain(i.Host(), chainfile); cp != nil {
+	if cp := config.ReadCertPool(i.Host(), chainfile); cp != nil {
 		opts := x509.VerifyOptions{
 			Roots:         cp,
 			Intermediates: cp,

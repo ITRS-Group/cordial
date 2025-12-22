@@ -215,7 +215,7 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCert(w, 0)
+	resp := instance.CreateCertificate(w, 0)
 	if resp.Err == nil {
 		fmt.Println(resp.Line)
 	}
@@ -293,9 +293,9 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 		if err != nil {
 			return err
 		}
-		chain := []*x509.Certificate{cert}
+		certs := []*x509.Certificate{cert}
 		if cf.IsSet("certchain") {
-			chain = append(chain, config.ReadCertificates(w.Host(), cf.GetString("certchain"))...)
+			certs = append(certs, config.ReadCertificates(w.Host(), cf.GetString("certchain"))...)
 		}
 		keyStore, ok := sp["keyStore"]
 		if !ok {
@@ -314,7 +314,7 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 		}
 		alias := geneos.ALL.Hostname()
 		k.DeleteEntry(alias)
-		k.AddKeystoreKey(alias, key, keyStorePassword, chain)
+		k.AddKeystoreKey(alias, key, keyStorePassword, certs)
 		return k.WriteKeystore(w.Host(), path.Join(w.Home(), keyStore), keyStorePassword)
 	}
 	return

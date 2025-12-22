@@ -765,8 +765,8 @@ func verifyCert(cert *x509.Certificate) bool {
 	}
 
 	// load chain, split into root and other
-	chaincerts := config.ReadCertificates(geneos.LOCAL, geneos.LOCAL.PathTo("tls", geneos.ChainCertFile))
-	for _, cert := range chaincerts {
+	certs := config.ReadCertificates(geneos.LOCAL, geneos.LOCAL.PathTo("tls", geneos.ChainCertFile))
+	for _, cert := range certs {
 		if bytes.Equal(cert.RawIssuer, cert.RawSubject) && cert.IsCA {
 			// check root validity against itself
 			selfRootPool := x509.NewCertPool()

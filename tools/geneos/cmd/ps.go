@@ -794,7 +794,7 @@ func live(i geneos.Instance) bool {
 
 	if cert != "" {
 		scheme = "https"
-		roots := config.ReadCertChain(h, chain)
+		roots := config.ReadCertPool(h, chain)
 
 		client.Transport = &http.Transport{
 			Proxy: http.ProxyFromEnvironment,

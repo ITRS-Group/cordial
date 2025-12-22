@@ -234,7 +234,7 @@ func (s *Floatings) Add(template string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCert(s, 0)
+	resp := instance.CreateCertificate(s, 0)
 	if resp.Err == nil {
 		fmt.Println(resp.Line)
 	}

@@ -258,14 +258,14 @@ func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) 
 			// if st, err := os.Stat(rootCA); !errors.Is(err, os.ErrNotExist) {
 			// 	return errors.New("rootCA.pem is already present in user config directory, will not overwrite")
 			// }
-			if err = config.WriteCert(LOCAL, rootCA, root); err != nil {
+			if err = config.WriteCertificates(LOCAL, rootCA, root); err != nil {
 				return err
 			}
 			fmt.Printf("%s root certificate written to %s\n", cordial.ExecutableName(), rootCA)
 		}
 	}
 
-	if err = config.WriteCert(LOCAL, path.Join(confDir, SigningCertBasename+".pem"), cert); err != nil {
+	if err = config.WriteCertificates(LOCAL, path.Join(confDir, SigningCertBasename+".pem"), cert); err != nil {
 		return err
 	}
 	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+".pem"))
@@ -305,7 +305,7 @@ func WriteChainLocal(chain []*x509.Certificate) (err error) {
 	if err = LOCAL.MkdirAll(tlsPath, 0775); err != nil {
 		return err
 	}
-	if err = config.WriteCertChainFile(LOCAL, path.Join(tlsPath, ChainCertFile), chain...); err != nil {
+	if err = config.WriteCertificates(LOCAL, path.Join(tlsPath, ChainCertFile), chain...); err != nil {
 		return err
 	}
 	return
@@ -396,7 +396,7 @@ func TLSSync() (err error) {
 			return
 		}
 		chainpath := path.Join(tlsPath, ChainCertFile)
-		if err = config.WriteCertChainFile(r, chainpath, geneosCert, rootCert); err != nil {
+		if err = config.WriteCertificates(r, chainpath, geneosCert, rootCert); err != nil {
 			return
 		}
 

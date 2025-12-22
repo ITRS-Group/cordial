@@ -19,6 +19,8 @@ package tlscmd
 
 import (
 	"crypto/rand"
+	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	_ "embed"
@@ -167,7 +169,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 
 		if renewCmdPrepare {
 			// write new files but do not update instance config
-			if err = instance.WriteCert(i, cert, newFileSuffix); err != nil {
+			if err = config.WriteCertificates(i.Host(), instance.ComponentFilepath(i, "pem", newFileSuffix), cert, signingCert); err != nil {
 				return
 			}
 
@@ -179,7 +181,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			return
 		}
 
-		if resp.Err = instance.WriteCert(i, cert); resp.Err != nil {
+		if resp.Err = config.WriteCertificates(i.Host(), instance.ComponentFilepath(i, "pem"), cert, signingCert); resp.Err != nil {
 			return
 		}
 
@@ -213,7 +215,12 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			return
 		}
 
-		resp.Completed = append(resp.Completed, fmt.Sprintf("certificate renewed (expires %s)", expires.UTC().Format(time.RFC3339)))
+		resp.Lines = []string{
+			fmt.Sprintf("certificate created for %s", i),
+			fmt.Sprintf("            Expiry: %s", expires.UTC().Format(time.RFC3339)),
+			fmt.Sprintf("  SHA1 Fingerprint: %X", sha1.Sum(cert.Raw)),
+			fmt.Sprintf("SHA256 Fingerprint: %X", sha256.Sum256(cert.Raw)),
+		}
 	}
 	return
 }

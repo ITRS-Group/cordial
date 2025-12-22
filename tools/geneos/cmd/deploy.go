@@ -339,7 +339,7 @@ var deployCmd = &cobra.Command{
 
 			if len(chain) > 0 {
 				chainfile := path.Join(i.Home(), "chain.pem")
-				if err = config.WriteCertChainFile(i.Host(), chainfile, chain...); err == nil {
+				if err = config.WriteCertificates(i.Host(), chainfile, chain...); err == nil {
 					fmt.Printf("%s certificate chain written", i)
 					if i.Config().GetString("certchain") == chainfile {
 						return err
