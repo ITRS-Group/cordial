@@ -31,6 +31,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -317,12 +318,12 @@ var deployCmd = &cobra.Command{
 		}
 
 		if deployCmdInstanceBundle != "" {
-			certs, err := config.ReadInputPEMString(deployCmdInstanceBundle, "instance certificate(s)")
+			certSlice, err := config.ReadInputPEMString(deployCmdInstanceBundle, "instance certificate(s)")
 			if err != nil {
 				return err
 			}
 
-			cert, key, chain, err := geneos.DecomposePEM(certs)
+			cert, key, chain, err := geneos.DecomposePEM(certSlice)
 			if err != nil {
 				return err
 			}
@@ -339,7 +340,7 @@ var deployCmd = &cobra.Command{
 
 			if len(chain) > 0 {
 				chainfile := path.Join(i.Home(), "chain.pem")
-				if err = config.WriteCertificates(i.Host(), chainfile, chain...); err == nil {
+				if err = certs.WriteCertificates(i.Host(), chainfile, chain...); err == nil {
 					fmt.Printf("%s certificate chain written", i)
 					if i.Config().GetString("certchain") == chainfile {
 						return err

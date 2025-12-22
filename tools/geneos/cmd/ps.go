@@ -32,6 +32,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -794,7 +795,7 @@ func live(i geneos.Instance) bool {
 
 	if cert != "" {
 		scheme = "https"
-		roots := config.ReadCertPool(h, chain)
+		roots := certs.ReadCertPool(h, chain)
 
 		client.Transport = &http.Transport{
 			Proxy: http.ProxyFromEnvironment,

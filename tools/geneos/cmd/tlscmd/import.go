@@ -31,6 +31,7 @@ import (
 	"software.sslmate.com/src/go-pkcs12"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -212,7 +213,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response
 
 	if len(chain) > 0 {
 		chainfile := path.Join(i.Home(), "chain.pem")
-		if err := config.WriteCertificates(i.Host(), chainfile, chain...); err == nil {
+		if err := certs.WriteCertificates(i.Host(), chainfile, chain...); err == nil {
 			resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate chain written", i))
 			if cf.GetString("certchain") == chainfile {
 				return

@@ -33,6 +33,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -85,7 +86,6 @@ var chainUpdateMutex sync.Mutex
 // renew an instance certificate, reuse private key if it exists
 func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	var err error
-	h := i.Host()
 
 	resp = instance.NewResponse(i)
 
@@ -127,16 +127,13 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			return
 		}
 
-		signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
+		signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
 		resp.Err = err
 		if resp.Err != nil {
 			return
 		}
 
-		hostname, _ := os.Hostname()
-		if !h.IsLocal() {
-			hostname = h.GetString("hostname")
-		}
+		hostname := i.Host().GetString("hostname")
 
 		serial, err := rand.Prime(rand.Reader, 64)
 		if err != nil {
@@ -161,7 +158,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 		}
 
-		cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey)
+		cert, key, err := certs.CreateCertificateAndKey(&template, signingCert, signingKey)
 		resp.Err = err
 		if resp.Err != nil {
 			return
@@ -169,7 +166,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 
 		if renewCmdPrepare {
 			// write new files but do not update instance config
-			if err = config.WriteCertificates(i.Host(), instance.ComponentFilepath(i, "pem", newFileSuffix), cert, signingCert); err != nil {
+			if err = certs.WriteCertificates(i.Host(), instance.ComponentFilepath(i, "pem", newFileSuffix), cert, signingCert); err != nil {
 				return
 			}
 
@@ -181,7 +178,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			return
 		}
 
-		if resp.Err = config.WriteCertificates(i.Host(), instance.ComponentFilepath(i, "pem"), cert, signingCert); resp.Err != nil {
+		if resp.Err = certs.WriteCertificates(i.Host(), instance.ComponentFilepath(i, "pem"), cert, signingCert); resp.Err != nil {
 			return
 		}
 
@@ -201,7 +198,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			}
 
 			chainUpdateMutex.Lock()
-			if updated, err := config.UpdateCertChainFile(i.Host(), chainfile, signingCert, rootCert); err != nil {
+			if updated, err := certs.UpdateCertChainFile(i.Host(), chainfile, signingCert, rootCert); err != nil {
 				resp.Err = err
 				chainUpdateMutex.Unlock()
 				return

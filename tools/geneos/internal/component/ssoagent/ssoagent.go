@@ -36,6 +36,7 @@ import (
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -245,7 +246,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		trustStore := instance.Abs(s, ssoconf.GetString(config.Join("server", "trust_store", "location")))
 		trustStorePassword := ssoconf.GetPassword(config.Join("server", "trust_store", "password"), config.Default("changeit"))
 		log.Debug().Msgf("%s: rebuilding truststore: %q", s.String(), trustStore)
-		certs := config.ReadCertificates(s.Host(), cf.GetString("certchain"))
+		certSlice := certs.ReadCertificates(s.Host(), cf.GetString("certchain"))
 		k, err := geneos.ReadKeystore(s.Host(),
 			trustStore,
 			trustStorePassword,
@@ -258,7 +259,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		}
 
 		// if trust exists, check for existing cert
-		for _, cert := range certs {
+		for _, cert := range certSlice {
 			alias := cert.Subject.CommonName
 			k.DeleteEntry(alias)
 			if err = k.AddKeystoreCert(alias, cert); err != nil {
@@ -306,21 +307,21 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		// this too. This is for client connections to the sso-agent and
 		// will typically be a "real" certificate.
 		if cf.IsSet("certficate") && cf.IsSet("privatekey") {
-			cert, err := config.ParseCertificate(s.Host(), cf.GetString("certificate"))
+			cert, err := certs.ParseCertificate(s.Host(), cf.GetString("certificate"))
 			if err != nil {
 				return err
 			}
-			key, err := config.ReadPrivateKey(s.Host(), cf.GetString("privatekey"))
+			key, err := certs.ReadPrivateKey(s.Host(), cf.GetString("privatekey"))
 			if err != nil {
 				return err
 			}
-			certs := []*x509.Certificate{cert}
+			certSlice := []*x509.Certificate{cert}
 			if cf.IsSet("certchain") {
-				certs = append(certs, config.ReadCertificates(s.Host(), cf.GetString("certchain"))...)
+				certSlice = append(certSlice, certs.ReadCertificates(s.Host(), cf.GetString("certchain"))...)
 			}
 			alias := geneos.ALL.Hostname()
 			ks.DeleteEntry(alias)
-			ks.AddKeystoreKey(alias, key, ksPassword, certs)
+			ks.AddKeystoreKey(alias, key, ksPassword, certSlice)
 			changed = true
 		}
 
@@ -349,12 +350,12 @@ func genkeypair() (cert *x509.Certificate, key *memguard.Enclave, err error) {
 		MaxPathLen:            -1,
 	}
 
-	privateKeyPEM, err := config.NewPrivateKey("rsa")
+	privateKeyPEM, err := certs.NewPrivateKey("rsa")
 	if err != nil {
 		return
 	}
 
-	return config.CreateCertificateAndKey(template, template, privateKeyPEM)
+	return certs.CreateCertificateAndKey(template, template, privateKeyPEM)
 }
 
 func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string, err error) {

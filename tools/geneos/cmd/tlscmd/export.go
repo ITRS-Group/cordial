@@ -26,6 +26,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -47,7 +48,7 @@ func init() {
 var exportCmdDescription string
 
 var exportCmd = &cobra.Command{
-	Use:                   "export [flags] [TYPE] [NAME...]",
+	Use:                   "export [flags]",
 	Short:                 "Export certificates",
 	Long:                  exportCmdDescription,
 	SilenceUsage:          true,
@@ -76,7 +77,7 @@ $ geneos tls export --output file.pem
 			err = fmt.Errorf("local signing root certificate (%s) not valid: %w", signerFile, err)
 			return
 		}
-		signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
+		signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
 		if err != nil {
 			return
 		}

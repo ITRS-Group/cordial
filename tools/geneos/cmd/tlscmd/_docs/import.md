@@ -4,7 +4,6 @@ You can import certificates that have been generated externally along with their
 
 You can import either an instance certificate, a signing certificate or a certificate chain.
 
-
 ## Signing Certificates
 
 Without a valid signing certificate, validation chain and private key the commands `tls new` and `tls renew` will not work. Local signing certs and keys are created automatically when you initialize a Geneos host using `geneos init` or can be created on `geneos tls init` afterwards.

@@ -33,6 +33,7 @@ import (
 	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -67,7 +68,7 @@ func CreateCertificate(i geneos.Instance, duration time.Duration) (resp *Respons
 		resp.Err = err
 		return
 	}
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertBasename+".key"))
+	signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertBasename+".key"))
 	if err != nil {
 		resp.Err = err
 		return
@@ -99,18 +100,18 @@ func CreateCertificate(i geneos.Instance, duration time.Duration) (resp *Respons
 		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey)
+	cert, key, err := certs.CreateCertificateAndKey(&template, signingCert, signingKey)
 	if err != nil {
 		resp.Err = err
 		return
 	}
 
-	if err = config.WriteCertificates(i.Host(), ComponentFilepath(i, "pem"), cert, signingCert); err != nil {
+	if err = certs.WriteCertificates(i.Host(), ComponentFilepath(i, "pem"), cert, signingCert); err != nil {
 		resp.Err = err
 		return
 	}
 
-	if err = config.WritePrivateKey(i.Host(), ComponentFilepath(i, "key"), key); err != nil {
+	if err = certs.WritePrivateKey(i.Host(), ComponentFilepath(i, "key"), key); err != nil {
 		resp.Err = err
 		return
 	}
@@ -126,7 +127,7 @@ func CreateCertificate(i geneos.Instance, duration time.Duration) (resp *Respons
 			i.Config().SetString("certchain", chainfile, config.Replace("home"))
 		}
 
-		if err = config.WriteCertificates(i.Host(), chainfile, signingCert, rootCert); err != nil {
+		if err = certs.WriteCertificates(i.Host(), chainfile, signingCert, rootCert); err != nil {
 			resp.Err = err
 			return
 		}
@@ -162,7 +163,7 @@ func WriteCert(i geneos.Instance, cert *x509.Certificate, ext ...string) (err er
 		return geneos.ErrInvalidArgs
 	}
 	certFile := ComponentFilepath(i, append([]string{"pem"}, ext...)...)
-	if err = config.WriteCertificates(i.Host(), certFile, cert); err != nil {
+	if err = certs.WriteCertificates(i.Host(), certFile, cert); err != nil {
 		return
 	}
 	if len(ext) > 0 || cf.GetString("certificate") == certFile {
@@ -190,7 +191,7 @@ func WriteKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (err erro
 	}
 
 	keyfile := ComponentFilepath(i, append([]string{"key"}, ext...)...)
-	if err = config.WritePrivateKey(i.Host(), keyfile, key); err != nil {
+	if err = certs.WritePrivateKey(i.Host(), keyfile, key); err != nil {
 		return
 	}
 	if len(ext) > 0 || cf.GetString("privatekey") == keyfile {
@@ -202,7 +203,7 @@ func WriteKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (err erro
 	return
 }
 
-// ReadCert reads the instance certificate for c. It verifies the
+// ReadCert reads the instance certificate for i. It verifies the
 // certificate against any chain file and, if that fails, against system
 // certificates.
 //
@@ -218,13 +219,13 @@ func ReadCert(i geneos.Instance, ext ...string) (cert *x509.Certificate, valid b
 
 	certPath := strings.Join(append([]string{PathOf(i, "certificate")}, ext...), ".")
 
-	cert, err = config.ParseCertificate(i.Host(), certPath)
+	cert, err = certs.ParseCertificate(i.Host(), certPath)
 	if err != nil {
 		return
 	}
 
 	// first check if we have a valid private key
-	c, err := config.ReadCertificate(i.Host(), certPath)
+	derCert, err := certs.ReadCertificate(i.Host(), certPath)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
 		return
@@ -240,13 +241,13 @@ func ReadCert(i geneos.Instance, ext ...string) (cert *x509.Certificate, valid b
 		log.Debug().Err(err).Msg("")
 		return
 	}
-	pembytes := pem.EncodeToMemory(&pem.Block{
+	derPrivateKey := pem.EncodeToMemory(&pem.Block{
 		Type:  "PRIVATE KEY",
 		Bytes: k.Bytes(),
 	})
 	defer k.Destroy()
 
-	_, err = tls.X509KeyPair(c, pembytes)
+	_, err = tls.X509KeyPair(derCert, derPrivateKey)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
 		return
@@ -259,7 +260,7 @@ func ReadCert(i geneos.Instance, ext ...string) (cert *x509.Certificate, valid b
 		chainfile = config.MigrateFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
 	}
 
-	if cp := config.ReadCertPool(i.Host(), chainfile); cp != nil {
+	if cp := certs.ReadCertPool(i.Host(), chainfile); cp != nil {
 		opts := x509.VerifyOptions{
 			Roots:         cp,
 			Intermediates: cp,
@@ -291,5 +292,5 @@ func ReadPrivateKey(i geneos.Instance, ext ...string) (key *memguard.Enclave, er
 	}
 
 	keyPath := strings.Join(append([]string{PathOf(i, "privatekey")}, ext...), ".")
-	return config.ReadPrivateKey(i.Host(), Abs(i, keyPath))
+	return certs.ReadPrivateKey(i.Host(), Abs(i, keyPath))
 }

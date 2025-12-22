@@ -34,6 +34,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -142,22 +143,22 @@ func CreateCert(destination string, overwrite bool, duration time.Duration, cn s
 		return
 	}
 
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
+	signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
 
-	cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey)
+	cert, key, err := certs.CreateCertificateAndKey(&template, signingCert, signingKey)
 	if err != nil {
 		return
 	}
 
-	if err = config.WriteCertificates(geneos.LOCAL, basepath+".pem", cert, signingCert); err != nil {
+	if err = certs.WriteCertificates(geneos.LOCAL, basepath+".pem", cert, signingCert); err != nil {
 		return
 	}
 
-	if err = config.WritePrivateKey(geneos.LOCAL, basepath+".key", key); err != nil {
+	if err = certs.WritePrivateKey(geneos.LOCAL, basepath+".key", key); err != nil {
 		return
 	}
 

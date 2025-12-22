@@ -33,7 +33,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -765,8 +765,8 @@ func verifyCert(cert *x509.Certificate) bool {
 	}
 
 	// load chain, split into root and other
-	certs := config.ReadCertificates(geneos.LOCAL, geneos.LOCAL.PathTo("tls", geneos.ChainCertFile))
-	for _, cert := range certs {
+	certSlice := certs.ReadCertificates(geneos.LOCAL, geneos.LOCAL.PathTo("tls", geneos.ChainCertFile))
+	for _, cert := range certSlice {
 		if bytes.Equal(cert.RawIssuer, cert.RawSubject) && cert.IsCA {
 			// check root validity against itself
 			selfRootPool := x509.NewCertPool()

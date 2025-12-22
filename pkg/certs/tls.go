@@ -1,5 +1,5 @@
 /*
-Copyright © 2023 ITRS Group
+Copyright © 2025 ITRS Group
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+// The certs package provides functions for handling TLS certificates and keys.
+package certs
 
 import (
 	"crypto"
@@ -48,20 +49,20 @@ const DefaultKeyType = "ecdh"
 // not verified or validated beyond that of the underlying Go x509
 // package parsing functions.
 func ParseCertificate(h host.Host, certfile string) (cert *x509.Certificate, err error) {
-	pembytes, err := h.ReadFile(certfile)
+	derbytes, err := h.ReadFile(certfile)
 	if err != nil {
 		return
 	}
 
 	for {
-		p, rest := pem.Decode(pembytes)
+		p, rest := pem.Decode(derbytes)
 		if p == nil {
 			return nil, fmt.Errorf("cannot locate certificate in %s", certfile)
 		}
 		if p.Type == "CERTIFICATE" {
 			return x509.ParseCertificate(p.Bytes)
 		}
-		pembytes = rest
+		derbytes = rest
 	}
 }
 
@@ -71,12 +72,12 @@ func ParseCertificate(h host.Host, certfile string) (cert *x509.Certificate, err
 // or validated beyond that of the underlying Go x509 package parsing
 // functions.
 func ParseCertificates(h host.Host, p string) (certs []*x509.Certificate, err error) {
-	pembytes, err := h.ReadFile(p)
+	derbytes, err := h.ReadFile(p)
 	if err != nil {
 		return
 	}
 
-	return x509.ParseCertificates(pembytes)
+	return x509.ParseCertificates(derbytes)
 }
 
 // ParseKey tries to parse the DER encoded private key enclave, first as
@@ -103,9 +104,9 @@ func ParseKey(der *memguard.Enclave) (privateKey any, publickey crypto.PublicKey
 
 // PublicKey parses the DER encoded private key enclave and returns the
 // public key if successful. It will first try as PKCS#8 and then PKCS#1
-// if that fails. Using this over the more general ParseKey() ensures
-// the decoded private key is not returned to the caller when not
-// required.
+// if that fails and finally as SEC1 (EC). Using this over the more
+// general ParseKey() ensures the decoded private key is not returned to
+// the caller when not required.
 func PublicKey(der *memguard.Enclave) (publickey crypto.PublicKey, err error) {
 	var pkey any
 
@@ -128,11 +129,11 @@ func PublicKey(der *memguard.Enclave) (publickey crypto.PublicKey, err error) {
 	return
 }
 
-// MatchKey tests the slice derkeys of private keys against the x509
+// MatchKey tests the slice DER encoded private keys against the x509
 // cert and returns the index of the first match, or -1 if none of the
 // keys match.
-func MatchKey(cert *x509.Certificate, derkeys []*memguard.Enclave) int {
-	for i, der := range derkeys {
+func MatchKey(cert *x509.Certificate, keys []*memguard.Enclave) int {
+	for i, der := range keys {
 		if pubkey, err := PublicKey(der); err == nil { // if ok then compare
 			// ensure we have an Equal() method on the opaque key
 			if k, ok := pubkey.(interface{ Equal(crypto.PublicKey) bool }); ok {
@@ -200,9 +201,9 @@ func WriteCertificates(h host.Host, path string, certs ...*x509.Certificate) (er
 	return h.WriteFile(path, pembytes, 0644)
 }
 
-// ReadCertificate reads the first PEM encoded certificate from
-// file at path p on host h and returns the block
-func ReadCertificate(h host.Host, path string) (data []byte, err error) {
+// ReadCertificate reads the first PEM encoded certificate from file at
+// path p on host h and returns the block of DER encoded data.
+func ReadCertificate(h host.Host, path string) (der []byte, err error) {
 	b, err := h.ReadFile(path)
 	if err != nil {
 		return

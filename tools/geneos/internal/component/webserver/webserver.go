@@ -29,6 +29,7 @@ import (
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -255,7 +256,7 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 	cf := w.Config()
 	if cf.IsSet("truststore") && cf.IsSet("certchain") {
 		log.Debug().Msgf("%s: rebuilding truststore: %q", w.String(), cf.GetString("truststore"))
-		certs := config.ReadCertificates(w.Host(), cf.GetString("certchain"))
+		certSlice := certs.ReadCertificates(w.Host(), cf.GetString("certchain"))
 		k, err := geneos.ReadKeystore(w.Host(),
 			cf.GetString("truststore"),
 			cf.GetPassword("truststore-password", config.Default("changeit")),
@@ -263,7 +264,7 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 		if err != nil {
 			return err
 		}
-		for _, cert := range certs {
+		for _, cert := range certSlice {
 			alias := cert.Subject.CommonName
 			log.Debug().Msgf("%s: replacing entry for %q", w.String(), alias)
 			k.DeleteEntry(alias)
@@ -285,17 +286,17 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 	// privatekey are defined. This is for client connections to the web
 	// dashboard and will typically be a "real" certificate.
 	if cf.IsSet("certificate") && cf.IsSet("privatekey") {
-		cert, err := config.ParseCertificate(w.Host(), cf.GetString("certificate"))
+		cert, err := certs.ParseCertificate(w.Host(), cf.GetString("certificate"))
 		if err != nil {
 			return err
 		}
-		key, err := config.ReadPrivateKey(w.Host(), cf.GetString("privatekey"))
+		key, err := certs.ReadPrivateKey(w.Host(), cf.GetString("privatekey"))
 		if err != nil {
 			return err
 		}
-		certs := []*x509.Certificate{cert}
+		certSlice := []*x509.Certificate{cert}
 		if cf.IsSet("certchain") {
-			certs = append(certs, config.ReadCertificates(w.Host(), cf.GetString("certchain"))...)
+			certSlice = append(certSlice, certs.ReadCertificates(w.Host(), cf.GetString("certchain"))...)
 		}
 		keyStore, ok := sp["keyStore"]
 		if !ok {
@@ -314,7 +315,7 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 		}
 		alias := geneos.ALL.Hostname()
 		k.DeleteEntry(alias)
-		k.AddKeystoreKey(alias, key, keyStorePassword, certs)
+		k.AddKeystoreKey(alias, key, keyStorePassword, certSlice)
 		return k.WriteKeystore(w.Host(), path.Join(w.Home(), keyStore), keyStorePassword)
 	}
 	return

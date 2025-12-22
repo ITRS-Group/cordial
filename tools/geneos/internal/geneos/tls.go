@@ -31,6 +31,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 )
@@ -73,7 +74,7 @@ func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err erro
 	// not exist. this is because the root certificate is self-signed and
 	// does not need a key to verify itself.
 	config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", RootCABasename+".key"))
-	cert, err = config.ParseCertificate(LOCAL, file)
+	cert, err = certs.ParseCertificate(LOCAL, file)
 	if err != nil {
 		return
 	}
@@ -113,7 +114,7 @@ func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err e
 	// speculatively promote the key file, but do not fail if it does
 	// not exist.
 	config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".key"))
-	cert, err = config.ParseCertificate(LOCAL, file)
+	cert, err = certs.ParseCertificate(LOCAL, file)
 	if err != nil {
 		return
 	}
@@ -141,7 +142,7 @@ func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err e
 // encoded *memguard.Enclave. The key is matched to the leaf
 // certificate, and only returned if they match.
 func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave, chain []*x509.Certificate, err error) {
-	var certs []*x509.Certificate
+	var certSlice []*x509.Certificate
 	var leaf *x509.Certificate
 	var derkeys []*memguard.Enclave
 
@@ -165,7 +166,7 @@ func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave
 					return
 				}
 				if c.IsCA {
-					certs = append(certs, c)
+					certSlice = append(certSlice, c)
 				} else if leaf == nil {
 					// save first leaf
 					leaf = c
@@ -181,14 +182,14 @@ func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave
 		}
 	}
 
-	if leaf == nil && len(certs) == 0 {
+	if leaf == nil && len(certSlice) == 0 {
 		err = fmt.Errorf("no certificates found")
 		return
 	}
 
 	// if we got this far then we can start setting returns
 	cert = leaf
-	chain = certs
+	chain = certSlice
 
 	// if we have no leaf certificate then use the first cert from the
 	// chain BUT do not remove from the chain. order is not checked
@@ -197,7 +198,7 @@ func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave
 	}
 
 	// are we good? check key and return a chain of valid CA certs
-	if i := config.MatchKey(cert, derkeys); i != -1 {
+	if i := certs.MatchKey(cert, derkeys); i != -1 {
 		der = derkeys[i]
 	}
 
@@ -258,19 +259,19 @@ func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) 
 			// if st, err := os.Stat(rootCA); !errors.Is(err, os.ErrNotExist) {
 			// 	return errors.New("rootCA.pem is already present in user config directory, will not overwrite")
 			// }
-			if err = config.WriteCertificates(LOCAL, rootCA, root); err != nil {
+			if err = certs.WriteCertificates(LOCAL, rootCA, root); err != nil {
 				return err
 			}
 			fmt.Printf("%s root certificate written to %s\n", cordial.ExecutableName(), rootCA)
 		}
 	}
 
-	if err = config.WriteCertificates(LOCAL, path.Join(confDir, SigningCertBasename+".pem"), cert); err != nil {
+	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, SigningCertBasename+".pem"), cert); err != nil {
 		return err
 	}
 	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+".pem"))
 
-	if err = config.WritePrivateKey(LOCAL, path.Join(confDir, SigningCertBasename+".key"), key); err != nil {
+	if err = certs.WritePrivateKey(LOCAL, path.Join(confDir, SigningCertBasename+".key"), key); err != nil {
 		return err
 	}
 	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+".key"))
@@ -305,7 +306,7 @@ func WriteChainLocal(chain []*x509.Certificate) (err error) {
 	if err = LOCAL.MkdirAll(tlsPath, 0775); err != nil {
 		return err
 	}
-	if err = config.WriteCertificates(LOCAL, path.Join(tlsPath, ChainCertFile), chain...); err != nil {
+	if err = certs.WriteCertificates(LOCAL, path.Join(tlsPath, ChainCertFile), chain...); err != nil {
 		return err
 	}
 	return
@@ -328,7 +329,7 @@ func TLSInit(overwrite bool, keytype string) (err error) {
 		log.Fatal().Err(err).Msg("")
 	}
 
-	if err := config.CreateRootCert(
+	if err := certs.CreateRootCert(
 		LOCAL,
 		path.Join(confDir, RootCABasename),
 		cordial.ExecutableName()+" root certificate",
@@ -342,7 +343,7 @@ func TLSInit(overwrite bool, keytype string) (err error) {
 		fmt.Printf("CA certificate created for %s\n", RootCABasename)
 	}
 
-	if err := config.CreateSigningCert(
+	if err := certs.CreateSigningCert(
 		LOCAL,
 		path.Join(confDir, SigningCertBasename),
 		path.Join(confDir, RootCABasename),
@@ -396,7 +397,7 @@ func TLSSync() (err error) {
 			return
 		}
 		chainpath := path.Join(tlsPath, ChainCertFile)
-		if err = config.WriteCertificates(r, chainpath, geneosCert, rootCert); err != nil {
+		if err = certs.WriteCertificates(r, chainpath, geneosCert, rootCert); err != nil {
 			return
 		}
 
