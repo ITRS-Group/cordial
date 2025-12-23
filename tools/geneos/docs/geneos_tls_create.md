@@ -30,7 +30,6 @@ geneos tls create [flags]
 ### Options
 
 ```text
-  -b, --bundle          Create a certificate bundle, including certificate, key and verification chain
   -c, --cname string    Common Name for certificate. Defaults to hostname
   -D, --days int        Certificate duration in days (default 365)
   -F, --force           Run "tls init" and force overwrite any existing file in 'dest'

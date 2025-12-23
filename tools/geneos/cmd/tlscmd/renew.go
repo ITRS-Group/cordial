@@ -191,7 +191,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		if rootCert == nil {
 			i.Config().SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
 		} else {
-			chainfile := instance.PathOf(i, "certchain")
+			chainfile := instance.PathTo(i, "certchain")
 			if chainfile == "" {
 				chainfile = path.Join(i.Home(), "chain.pem")
 				i.Config().SetString("certchain", chainfile, config.Replace("home"))

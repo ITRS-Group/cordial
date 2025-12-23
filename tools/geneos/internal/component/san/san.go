@@ -329,13 +329,21 @@ func (i *Sans) Command(skipFileCheck bool) (args, env []string, home string, err
 		args = append(args, "-cmd")
 	}
 
-	secureArgs := instance.SetSecureArgs(i)
-	args = append(args, secureArgs...)
-	for _, arg := range secureArgs {
-		if !strings.HasPrefix(arg, "-") {
-			checks = append(checks, arg)
-		}
+	// secureArgs := instance.SetSecureArgs(i)
+	secureArgs, secureEnvs, fileChecks, err := instance.SecureArgs(i)
+	if err != nil {
+		return
 	}
+	args = append(args, secureArgs...)
+	checks = append(checks, fileChecks...)
+	env = append(env, secureEnvs...)
+
+	// for _, arg := range secureArgs {
+	// 	if !strings.HasPrefix(arg, "-") {
+	// 		checks = append(checks, arg)
+	// 	}
+	// }
+
 	env = append(env, "LOG_FILENAME="+logFile)
 
 	// always set HOSTNAME env for CA (ignore SANs that could be non-standard probes)

@@ -309,13 +309,19 @@ func (i *Floatings) Command(skipFileCheck bool) (args, env []string, home string
 	}
 	checks = append(checks, cf.GetString("setup"))
 
-	secureArgs := instance.SetSecureArgs(i)
-	args = append(args, secureArgs...)
-	for _, arg := range secureArgs {
-		if !strings.HasPrefix(arg, "-") {
-			checks = append(checks, arg)
-		}
+	// secureArgs := instance.SetSecureArgs(i)
+	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(i)
+	if err != nil {
+		return
 	}
+	args = append(args, secureArgs...)
+	env = append(env, secureEnv...)
+	checks = append(checks, fileChecks...)
+	// for _, arg := range secureArgs {
+	// 	if !strings.HasPrefix(arg, "-") {
+	// 		checks = append(checks, arg)
+	// 	}
+	// }
 
 	env = append(env, "LOG_FILENAME="+logFile)
 

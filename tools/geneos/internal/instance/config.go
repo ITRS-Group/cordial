@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path"
 	"slices"
 	"strings"
@@ -122,7 +121,7 @@ func LoadConfig(i geneos.Instance) (err error) {
 
 	if err != nil {
 		// generic error as no .json or .rc found
-		return fmt.Errorf("no configuration files for %s in %s: %w", i, i.Home(), os.ErrNotExist)
+		return fmt.Errorf("no configuration files for %s in %s: %w", i, i.Home(), geneos.ErrNotExist)
 	}
 
 	st, err := h.Stat(used)
@@ -300,11 +299,103 @@ func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
 	return
 }
 
-// SetSecureArgs returns a slice of arguments to enable secure
+// from go crypto/x509/root_unix.go
+//
+// Possible certificate files; stop after finding one.
+var certFiles = []string{
+	"/etc/ssl/certs/ca-certificates.crt",                // Debian/Ubuntu/Gentoo etc.
+	"/etc/pki/tls/certs/ca-bundle.crt",                  // Fedora/RHEL 6
+	"/etc/ssl/ca-bundle.pem",                            // OpenSUSE
+	"/etc/pki/tls/cacert.pem",                           // OpenELEC
+	"/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem", // CentOS/RHEL 7
+	"/etc/ssl/cert.pem",                                 // Alpine Linux
+}
+
+// SecureArgs2 returns command line arguments, environment variables,
+// and any files that need to be checked for secure connections based on
+// the TLS configuration of the instance.
+//
+// If the instance has not been migrated to the new TLS parameters then
+// it calls SetSecureArgs() instead, but with the addition of file
+// checks for any args that are not prefixed with a dash (`-`).
+func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []string, err error) {
+	// has this instance been migrated to the new TLS parameters?
+	if !i.Config().IsSet("tls") {
+		args = setSecureArgs(i)
+		for _, arg := range args {
+			if !strings.HasPrefix(arg, "-") {
+				fileChecks = append(fileChecks, arg)
+			}
+		}
+		return
+	}
+
+	// look for:
+	//   tls::certificate 		--> -ssl-certificate
+	//   tls::privatekey  		--> -ssl-certificate-key
+	//   tls::certchain   		--> -ssl-certificate-chain (--initial)
+	//   tls::verify			--> if set but no chain, use Geneos global roots
+	//   tls::minimumversion 	--> -minTLSversion (default 1.2) or MIN_TLS_VERSION env var for Netprobe
+	//   tls::roots				--> -ssl-certificate-chain (--final)
+
+	if cert := PathTo(i, config.Join("tls", "certificate")); cert != "" {
+		if IsA(i, "minimal", "netprobe", "fa2", "fileagent", "licd") {
+			args = append(args, "-secure")
+		}
+		args = append(args, "-ssl-certificate", cert)
+		fileChecks = append(fileChecks, cert)
+	}
+
+	if privkey := PathTo(i, config.Join("tls", "privatekey")); privkey != "" {
+		args = append(args, "-ssl-certificate-key", privkey)
+		fileChecks = append(fileChecks, privkey)
+	}
+
+	chain := PathTo(i, config.Join("tls", "certchain"))
+	if chain != "" {
+		args = append(args, "-ssl-certificate-chain", chain)
+		fileChecks = append(fileChecks, chain)
+	}
+
+	tlsVerify := i.Config().GetBool(config.Join("tls", "verify"))
+	if chain == "" && tlsVerify {
+		// use global roots, if one exists, starting with Geneos trusted-roots.pem
+		rootCerts := append([]string{geneos.TrustedCertsFile}, certFiles...)
+		for _, rc := range rootCerts {
+			if _, err := i.Host().Stat(rc); err == nil {
+				log.Debug().Msgf("using root certs %q for %s", rc, i)
+				args = append(args, "-ssl-certificate-chain", rc)
+				fileChecks = append(fileChecks, rc)
+				break
+			}
+		}
+	}
+
+	// minimum TLS version - from instance, global or 1.2 as a default
+	minTLS := i.Config().GetString(
+		i.Config().Join("tls", "minimumversion"),
+		config.Default(
+			config.GetString(
+				config.Join("tls", "minimumversion"),
+				config.Default("1.2"),
+			),
+		),
+	)
+	if IsA(i, "minimal", "netprobe", "fa2", "san", "floating") {
+		env = append(env, fmt.Sprintf("MIN_TLS_VERSION=%s", minTLS))
+	} else {
+		args = append(args, "-minTLSversion", minTLS)
+	}
+
+	return
+}
+
+// setSecureArgs returns a slice of arguments to enable secure
 // connections if the correct configuration values are set. The private
 // key may be in the certificate file and the chain is optional.
-func SetSecureArgs(i geneos.Instance) (args []string) {
-	files := Filepaths(i, "certificate", "privatekey", "certchain")
+func setSecureArgs(i geneos.Instance) (args []string) {
+
+	files := PathsTo(i, "certificate", "privatekey", "certchain")
 	if len(files) == 0 || files[0] == "" {
 		return
 	}

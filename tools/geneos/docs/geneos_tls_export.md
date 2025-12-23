@@ -9,7 +9,7 @@ To not include the root CA certificate, which may be valid in some limited cases
 The resulting PEM data can be imported into another Geneos instance through one of the `geneos deploy --import-cert`, `geneos init --import-cert` or `geneos tls import --signer` commands.
 
 ```text
-geneos tls export [flags] [TYPE] [NAME...]
+geneos tls export [flags]
 ```
 
 ### Options

@@ -418,13 +418,20 @@ func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string,
 		args = append(args, "-licd-port", fmt.Sprint(cf.GetString("licdport")))
 	}
 
-	secureArgs := instance.SetSecureArgs(i)
-	args = append(args, secureArgs...)
-	for _, arg := range secureArgs {
-		if !strings.HasPrefix(arg, "-") {
-			checks = append(checks, arg)
-		}
+	// secureArgs := instance.SetSecureArgs(i)
+	secureArgs, secureEnvs, fileChecks, err := instance.SecureArgs(i)
+	if err != nil {
+		return
 	}
+	args = append(args, secureArgs...)
+	env = append(env, secureEnvs...)
+	checks = append(checks, fileChecks...)
+
+	// for _, arg := range secureArgs {
+	// 	if !strings.HasPrefix(arg, "-") {
+	// 		checks = append(checks, arg)
+	// 	}
+	// }
 
 	// 3 options: set, set to false, not set
 	if cf.GetBool("licdsecure") || (!cf.IsSet("licdsecure") && instance.FileOf(i, "certificate") != "") {
@@ -432,13 +439,13 @@ func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string,
 	}
 
 	if cf.GetBool("usekeyfile") {
-		keyfile := instance.PathOf(i, "keyfile")
+		keyfile := instance.PathTo(i, "keyfile")
 		if keyfile != "" {
 			args = append(args, "-key-file", keyfile)
 			checks = append(checks, keyfile)
 		}
 
-		prevkeyfile := instance.PathOf(i, "prevkeyfile")
+		prevkeyfile := instance.PathTo(i, "prevkeyfile")
 		if prevkeyfile != "" {
 			args = append(args, "-previous-key-file", prevkeyfile)
 			checks = append(checks, prevkeyfile)

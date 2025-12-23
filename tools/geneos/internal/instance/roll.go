@@ -73,7 +73,7 @@ func rollOneFileParam(i geneos.Instance, param, newSuffix, oldSuffix string) (er
 
 	noOriginal := false
 
-	path := PathOf(i, param)
+	path := PathTo(i, param)
 	lockPath := path + "." + lockDirSuffix
 	newPath := path + "." + newSuffix
 	oldPath := path + "." + oldSuffix

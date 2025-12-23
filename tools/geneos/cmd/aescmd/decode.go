@@ -144,7 +144,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 			if !i.Type().UsesKeyfiles {
 				return
 			}
-			path := instance.PathOf(i, "keyfile")
+			path := instance.PathTo(i, "keyfile")
 			if path == "" {
 				return
 			}

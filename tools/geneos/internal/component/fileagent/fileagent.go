@@ -217,13 +217,19 @@ func (i *FileAgents) Command(skipFileCheck bool) (args, env []string, home strin
 		"-port", i.Config().GetString("port"),
 	}
 	if instance.CompareVersion(i, "6.6.0") >= 0 {
-		secureArgs := instance.SetSecureArgs(i)
-		args = append(args, secureArgs...)
-		for _, arg := range secureArgs {
-			if !strings.HasPrefix(arg, "-") {
-				checks = append(checks, arg)
-			}
+		// secureArgs := instance.SetSecureArgs(i)
+		secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(i)
+		if err != nil {
+			return nil, nil, "", err
 		}
+		args = append(args, secureArgs...)
+		env = append(env, secureEnv...)
+		checks = append(checks, fileChecks...)
+		// for _, arg := range secureArgs {
+		// 	if !strings.HasPrefix(arg, "-") {
+		// 		checks = append(checks, arg)
+		// 	}
+		// }
 	}
 	env = append(env, "LOG_FILENAME="+logFile)
 

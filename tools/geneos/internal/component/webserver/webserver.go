@@ -391,7 +391,7 @@ func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home strin
 		"-maxThreads", "254",
 	)
 
-	tlsFiles := instance.Filepaths(i, "certificate", "privatekey")
+	tlsFiles := instance.PathsTo(i, "certificate", "privatekey")
 	if len(tlsFiles) == 0 || tlsFiles[0] == "" {
 		return
 	}

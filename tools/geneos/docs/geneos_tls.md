@@ -28,9 +28,11 @@ Those components that act as clients and connect to servers, Geneos or otherwise
 | [`geneos tls info`](geneos_tls_info.md)	 | Info about certificates and keys |
 | [`geneos tls init`](geneos_tls_init.md)	 | Initialise the TLS environment |
 | [`geneos tls list / ls`](geneos_tls_list.md)	 | List certificates |
+| [`geneos tls migrate`](geneos_tls_migrate.md)	 | Migrate certificates and related files to the updated layout |
 | [`geneos tls new`](geneos_tls_new.md)	 | Create instance certificates and keys |
 | [`geneos tls renew`](geneos_tls_renew.md)	 | Renew instance certificates |
 | [`geneos tls sync`](geneos_tls_sync.md)	 | Sync remote hosts certificate chain files |
+| [`geneos tls trust`](geneos_tls_trust.md)	 | Import trusted certificates |
 
 ## SEE ALSO
 

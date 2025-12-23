@@ -219,13 +219,20 @@ func (n *FA2s) Command(skipFileCheck bool) (args, env []string, home string, err
 		n.Name(),
 		"-port", n.Config().GetString("port"),
 	}
-	secureArgs := instance.SetSecureArgs(n)
-	args = append(args, secureArgs...)
-	for _, arg := range secureArgs {
-		if !strings.HasPrefix(arg, "-") {
-			checks = append(checks, arg)
-		}
+	// secureArgs := instance.SetSecureArgs(n)
+	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(n)
+	if err != nil {
+		return
 	}
+	args = append(args, secureArgs...)
+	env = append(env, secureEnv...)
+	checks = append(checks, fileChecks...)
+
+	// for _, arg := range secureArgs {
+	// 	if !strings.HasPrefix(arg, "-") {
+	// 		checks = append(checks, arg)
+	// 	}
+	// }
 
 	env = append(env, "LOG_FILENAME="+logFile)
 

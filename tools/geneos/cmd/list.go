@@ -150,7 +150,8 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	if instance.IsRunning(i) {
 		flags += "R"
 	}
-	if len(instance.SetSecureArgs(i)) > 0 {
+	secureArgs, _, _, _ := instance.SecureArgs(i)
+	if len(secureArgs) > 0 {
 		flags += "T"
 	}
 	if flags == "" {
@@ -186,7 +187,8 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	if instance.IsAutoStart(i) {
 		autostart = "Y"
 	}
-	if len(instance.SetSecureArgs(i)) > 0 {
+	secureArgs, _, _, _ := instance.SecureArgs(i)
+	if len(secureArgs) > 0 {
 		tls = "Y"
 	}
 	base, underlying, _ := instance.Version(i)
@@ -215,6 +217,7 @@ func listInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
 	base, underlying, _ := instance.Version(i)
+	secureArgs, _, _, _ := instance.SecureArgs(i)
 	resp.Value = listCmdType{
 		Type:      i.Type().String(),
 		Name:      i.Name(),
@@ -223,7 +226,7 @@ func listInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		Disabled:  instance.IsDisabled(i),
 		Protected: instance.IsProtected(i),
 		AutoStart: instance.IsAutoStart(i),
-		TLS:       len(instance.SetSecureArgs(i)) > 0,
+		TLS:       len(secureArgs) > 0,
 		Port:      i.Config().GetInt64("port"),
 		Version:   fmt.Sprintf("%s:%s", base, underlying),
 		Home:      i.Home(),

@@ -154,7 +154,15 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *instance.Resp
 			"-silent",
 			"-hub-validation-rules",
 		}
-		cmd.Args = append(cmd.Args, instance.SetSecureArgs(i)...)
+		// cmd.Args = append(cmd.Args, instance.SetSecureArgs(i)...)
+		secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(i)
+		if err != nil {
+			resp.Err = err
+			return
+		}
+		cmd.Args = append(cmd.Args, secureArgs...)
+		cmd.Env = append(cmd.Env, secureEnv...)
+		_ = fileChecks
 		if len(params) > 0 && params[0] != "" {
 			hooksdir, _ := i.Host().Abs(params[0].(string))
 			log.Debug().Msgf("hooksdir: %s", hooksdir)
@@ -218,7 +226,16 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *instance.Respon
 			i.Config().GetString("setup"),
 			"-dump-xml",
 		}
-		cmd.Args = append(cmd.Args, instance.SetSecureArgs(i)...)
+		// cmd.Args = append(cmd.Args, instance.SetSecureArgs(i)...)
+		secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(i)
+		if err != nil {
+			resp.Err = err
+			return
+		}
+		cmd.Args = append(cmd.Args, secureArgs...)
+		cmd.Env = append(cmd.Env, secureEnv...)
+		_ = fileChecks
+
 		var output []byte
 		// we don't care about errors, just the output
 		output, err = i.Host().Run(cmd, "errors.txt")

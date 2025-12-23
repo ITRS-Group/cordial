@@ -183,7 +183,7 @@ func logTailInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	}
 
 	if logCmdCALog && i.Type().IsA("netprobe") {
-		lines, err := logTailInstanceFile(i, instance.PathOf(i, "calogfile"))
+		lines, err := logTailInstanceFile(i, instance.PathTo(i, "calogfile"))
 		if err != nil {
 			resp.Err = err
 			return
@@ -360,7 +360,7 @@ func logCatInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		resp.Lines = append(resp.Lines, lines...)
 	}
 	if logCmdCALog && i.Type().IsA("netprobe") {
-		lines, err := logCatInstanceFile(i, instance.PathOf(i, "calogfile"))
+		lines, err := logCatInstanceFile(i, instance.PathTo(i, "calogfile"))
 		if err != nil {
 			resp.Err = err
 			return
@@ -404,7 +404,7 @@ func logFollowInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		}
 	}
 	if logCmdCALog && i.Type().IsA("netprobe") {
-		if err := logFollowInstanceFile(i, instance.PathOf(i, "calogfile")); err != nil {
+		if err := logFollowInstanceFile(i, instance.PathTo(i, "calogfile")); err != nil {
 			resp.Err = err
 			return
 		}

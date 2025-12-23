@@ -49,6 +49,11 @@ var SigningCertBasename string
 // verify instance certificates
 var ChainCertFile string
 
+// TrustedCertsFile is the path to the root certificates file used by
+// instance when a more specific one is not given and `tls::verify` is
+// true. This is normally located in the user's app config directory.
+var TrustedCertsFile string
+
 // ReadRootCert reads the root certificate from the user's app config
 // directory. It "promotes" old cert and key files from the previous tls
 // directory if files do not already exist in the user app config

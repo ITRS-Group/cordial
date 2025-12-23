@@ -164,7 +164,7 @@ var encodeCmd = &cobra.Command{
 				} else {
 					keyfile = config.KeyFile(keyfilepath)
 					if keyfile == "" {
-						keyfile = config.KeyFile(instance.PathOf(i, "keyfile"))
+						keyfile = config.KeyFile(instance.PathTo(i, "keyfile"))
 						if keyfile == "" {
 							return
 						}
@@ -245,7 +245,7 @@ var encodeCmd = &cobra.Command{
 			if !i.Type().UsesKeyfiles {
 				return
 			}
-			keyfile := config.KeyFile(instance.PathOf(i, "keyfile"))
+			keyfile := config.KeyFile(instance.PathTo(i, "keyfile"))
 			if keyfile == "" {
 				return
 			}

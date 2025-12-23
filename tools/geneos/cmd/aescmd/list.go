@@ -159,12 +159,12 @@ func aesListPath(ct *geneos.Component, h *geneos.Host, name string, path config.
 func aesListInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	path := config.KeyFile(instance.PathOf(i, "keyfile"))
+	path := config.KeyFile(instance.PathTo(i, "keyfile"))
 	if path != "" {
 		resp.Lines = append(resp.Lines, aesListPath(i.Type(), i.Host(), i.Name(), path))
 	}
 
-	prev := config.KeyFile(instance.PathOf(i, "prevkeyfile"))
+	prev := config.KeyFile(instance.PathTo(i, "prevkeyfile"))
 	if path != "" {
 		resp.Lines = append(resp.Lines, aesListPath(i.Type(), i.Host(), i.Name()+" (prev)", prev))
 	}
@@ -237,13 +237,13 @@ func aesListPathCSV(ct *geneos.Component, h *geneos.Host, name, suffix string, k
 func aesListInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	path := config.KeyFile(instance.PathOf(i, "keyfile"))
+	path := config.KeyFile(instance.PathTo(i, "keyfile"))
 	if path != "" {
 		row := aesListPathCSV(i.Type(), i.Host(), i.Name(), "", path)
 		resp.Rows = append(resp.Rows, row)
 	}
 
-	prev := config.KeyFile(instance.PathOf(i, "prevkeyfile"))
+	prev := config.KeyFile(instance.PathTo(i, "prevkeyfile"))
 	if prev != "" {
 		var row []string
 		if listCmdToolkit {
@@ -377,5 +377,5 @@ func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results instance.R
 }
 
 func aesListInstanceJSON(i geneos.Instance, _ ...any) (result *instance.Response) {
-	return aesListPathJSON(i.Type(), i.Host(), i.Name(), config.KeyFile(instance.PathOf(i, "keyfile")), config.KeyFile(instance.PathOf(i, "prevkeyfile")))
+	return aesListPathJSON(i.Type(), i.Host(), i.Name(), config.KeyFile(instance.PathTo(i, "keyfile")), config.KeyFile(instance.PathTo(i, "prevkeyfile")))
 }

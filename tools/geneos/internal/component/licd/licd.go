@@ -213,13 +213,17 @@ func (i *Licds) Command(skipFileCheck bool) (args, env []string, home string, er
 		"-log", logFile,
 	}
 
-	secureArgs := instance.SetSecureArgs(i)
+	// secureArgs := instance.SetSecureArgs(i)
+	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(i)
 	args = append(args, secureArgs...)
-	for _, arg := range secureArgs {
-		if !strings.HasPrefix(arg, "-") {
-			checks = append(checks, arg)
-		}
-	}
+	env = append(env, secureEnv...)
+	checks = append(checks, fileChecks...)
+
+	// for _, arg := range secureArgs {
+	// 	if !strings.HasPrefix(arg, "-") {
+	// 		checks = append(checks, arg)
+	// 	}
+	// }
 
 	if skipFileCheck {
 		return

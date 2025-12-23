@@ -121,7 +121,7 @@ func CreateCertificate(i geneos.Instance, duration time.Duration) (resp *Respons
 	if rootCert == nil {
 		i.Config().SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
 	} else {
-		chainfile := PathOf(i, "certchain")
+		chainfile := PathTo(i, "certchain")
 		if chainfile == "" {
 			chainfile = path.Join(i.Home(), "chain.pem")
 			i.Config().SetString("certchain", chainfile, config.Replace("home"))
@@ -213,11 +213,11 @@ func WriteKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (err erro
 //
 // The chainfile returned is always the one from the instance config.
 func ReadCert(i geneos.Instance, ext ...string) (cert *x509.Certificate, valid bool, chainfile string, err error) {
-	if i.Type() == nil || PathOf(i, "certificate") == "" {
+	if i.Type() == nil || PathTo(i, "certificate") == "" {
 		return nil, false, "", geneos.ErrInvalidArgs
 	}
 
-	certPath := strings.Join(append([]string{PathOf(i, "certificate")}, ext...), ".")
+	certPath := strings.Join(append([]string{PathTo(i, "certificate")}, ext...), ".")
 
 	cert, err = certs.ParseCertificate(i.Host(), certPath)
 	if err != nil {
@@ -255,7 +255,7 @@ func ReadCert(i geneos.Instance, ext ...string) (cert *x509.Certificate, valid b
 
 	// validate against certificate chain file and expiry
 	// etc.
-	chainfile = PathOf(i, "certchain")
+	chainfile = PathTo(i, "certchain")
 	if chainfile == "" {
 		chainfile = config.MigrateFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
 	}
@@ -287,10 +287,10 @@ func ReadCert(i geneos.Instance, ext ...string) (cert *x509.Certificate, valid b
 
 // ReadPrivateKey reads the instance RSA private key
 func ReadPrivateKey(i geneos.Instance, ext ...string) (key *memguard.Enclave, err error) {
-	if i.Type() == nil || PathOf(i, "privatekey") == "" {
+	if i.Type() == nil || PathTo(i, "privatekey") == "" {
 		return nil, geneos.ErrInvalidArgs
 	}
 
-	keyPath := strings.Join(append([]string{PathOf(i, "privatekey")}, ext...), ".")
+	keyPath := strings.Join(append([]string{PathTo(i, "privatekey")}, ext...), ".")
 	return certs.ReadPrivateKey(i.Host(), Abs(i, keyPath))
 }

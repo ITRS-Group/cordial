@@ -19,7 +19,6 @@ package instance
 
 import (
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -76,31 +75,6 @@ func FileOf(i geneos.Instance, name string) (filename string) {
 	return
 }
 
-// PathOf returns the full path to the file identified by the
-// configuration parameter name. If the parameters value is already an
-// absolute path then it is returned as-is, otherwise it is joined with
-// the home directory of the instance and returned. The path is only
-// useful on the host that instance i is on.
-//
-// If the parameter is unset or empty then an empty path is returned.
-func PathOf(i geneos.Instance, name string) string {
-	cf := i.Config()
-
-	if cf == nil {
-		return ""
-	}
-	filename := cf.GetString(name)
-	if filename == "" {
-		return ""
-	}
-
-	if i.Host().IsAbs(filename) {
-		return filename
-	}
-
-	return filepath.Join(i.Home(), filename)
-}
-
 // Abs returns an absolute path to file prepended with the instance
 // working directory if file is not already an absolute path. If file is
 // empty then an empty result is returned.
@@ -115,11 +89,38 @@ func Abs(i geneos.Instance, file string) (result string) {
 	return path.Join(i.Home(), result)
 }
 
-// Filepaths returns the full paths to the files identified by names.
+// PathTo returns the full path to the file identified by the
+// configuration parameter name. If the parameters value is already an
+// absolute path then it is returned as-is, otherwise it is joined with
+// the home directory of the instance and returned. The path is only
+// useful on the host that instance i is on.
+//
+// If the parameter is unset or empty then an empty path is returned.
+func PathTo(i geneos.Instance, name string) string {
+	cf := i.Config()
+
+	if cf == nil {
+		return ""
+	}
+	filename := cf.GetString(name)
+	if filename == "" {
+		return ""
+	}
+
+	return Abs(i, filename)
+
+	// if i.Host().IsAbs(filename) {
+	// 	return filename
+	// }
+
+	// return filepath.Join(i.Home(), filename)
+}
+
+// PathsTo returns the full paths to the files identified by names.
 //
 // If the instance configuration is valid an empty slice is returned. If
 // a parameter is unset or empty then an empty path is returned.
-func Filepaths(i geneos.Instance, names ...string) (filenames []string) {
+func PathsTo(i geneos.Instance, names ...string) (filenames []string) {
 	cf := i.Config()
 
 	if cf == nil {
