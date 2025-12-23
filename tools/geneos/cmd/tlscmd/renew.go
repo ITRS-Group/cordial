@@ -18,11 +18,8 @@ limitations under the License.
 package tlscmd
 
 import (
-	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -41,7 +38,7 @@ import (
 )
 
 var renewCmdDays int
-var renewCmdNewKey, renewCmdPrepare, renewCmdRoll, renewCmdUnroll bool
+var renewCmdPrepare, renewCmdRoll, renewCmdUnroll bool
 
 const (
 	newFileSuffix = "new"
@@ -53,7 +50,7 @@ func init() {
 
 	renewCmd.Flags().IntVarP(&renewCmdDays, "days", "D", 365, "Certificate duration in days")
 
-	renewCmd.Flags().BoolVarP(&renewCmdNewKey, "new-key", "n", false, "Always generate a new private key for the renewed certificate")
+	// renewCmd.Flags().BoolVarP(&renewCmdNewKey, "new-key", "n", false, "Always generate a new private key for the renewed certificate")
 
 	renewCmd.Flags().BoolVarP(&renewCmdPrepare, "prepare", "P", false, "Prepare renewal without overwriting existing certificates")
 	renewCmd.Flags().BoolVarP(&renewCmdRoll, "roll", "R", false, "Roll previously prepared certificates and backup existing ones")
@@ -133,32 +130,10 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			return
 		}
 
-		hostname := i.Host().GetString("hostname")
+		template := certs.Template("geneos "+i.Type().String()+" "+i.Name(), []string{i.Host().GetString("hostname")}, 0)
+		expires := template.NotAfter
 
-		serial, err := rand.Prime(rand.Reader, 64)
-		if err != nil {
-			return
-		}
-		duration := 365 * 24 * time.Hour
-		if renewCmdDays != 0 {
-			duration = 24 * time.Hour * time.Duration(renewCmdDays)
-		}
-		expires := time.Now().Add(duration)
-		template := x509.Certificate{
-			SerialNumber: serial,
-			Subject: pkix.Name{
-				CommonName: fmt.Sprintf("geneos %s %s", i.Type(), i.Name()),
-			},
-			NotBefore:      time.Now().Add(-60 * time.Second),
-			NotAfter:       expires,
-			KeyUsage:       x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-			ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-			MaxPathLenZero: true,
-			DNSNames:       []string{hostname},
-			// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
-		}
-
-		cert, key, err := certs.CreateCertificateAndKey(&template, signingCert, signingKey)
+		cert, key, err := certs.CreateCertificateAndKey(template, signingCert, signingKey)
 		resp.Err = err
 		if resp.Err != nil {
 			return
@@ -198,7 +173,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			}
 
 			chainUpdateMutex.Lock()
-			if updated, err := certs.UpdateCertChainFile(i.Host(), chainfile, signingCert, rootCert); err != nil {
+			if updated, err := certs.UpdateCACertsFile(i.Host(), chainfile, signingCert, rootCert); err != nil {
 				resp.Err = err
 				chainUpdateMutex.Unlock()
 				return

@@ -18,11 +18,8 @@ limitations under the License.
 package tlscmd
 
 import (
-	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -115,27 +112,8 @@ func CreateCert(destination string, overwrite bool, duration time.Duration, cn s
 	if _, err = os.Stat(basepath + ".pem"); err == nil && !overwrite {
 		return os.ErrExist
 	}
-	serial, err := rand.Prime(rand.Reader, 64)
-	if err != nil {
-		return
-	}
-	if duration == 0 {
-		duration = 365 * 24 * time.Hour
-	}
-	expires := time.Now().Add(duration)
-	template := x509.Certificate{
-		SerialNumber: serial,
-		Subject: pkix.Name{
-			CommonName: cn,
-		},
-		NotBefore:      time.Now().Add(-60 * time.Second),
-		NotAfter:       expires,
-		KeyUsage:       x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		MaxPathLenZero: true,
-		DNSNames:       san,
-		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
-	}
+	template := certs.Template(cn, san, duration)
+	expires := template.NotAfter
 
 	signingCert, _, err := geneos.ReadSigningCert()
 	if err != nil {
@@ -149,7 +127,7 @@ func CreateCert(destination string, overwrite bool, duration time.Duration, cn s
 		return
 	}
 
-	cert, key, err := certs.CreateCertificateAndKey(&template, signingCert, signingKey)
+	cert, key, err := certs.CreateCertificateAndKey(template, signingCert, signingKey)
 	if err != nil {
 		return
 	}

@@ -18,12 +18,10 @@ limitations under the License.
 package instance
 
 import (
-	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"path"
@@ -74,33 +72,10 @@ func CreateCertificate(i geneos.Instance, duration time.Duration) (resp *Respons
 		return
 	}
 
-	hostname := i.Host().GetString("hostname")
+	template := certs.Template("geneos "+i.Type().String()+" "+i.Name(), []string{i.Host().GetString("hostname")}, duration)
+	expires := template.NotAfter
 
-	serial, err := rand.Prime(rand.Reader, 64)
-	if err != nil {
-		resp.Err = err
-		return
-	}
-	if duration == 0 {
-		// default to one year
-		duration = 365 * 24 * time.Hour
-	}
-	expires := time.Now().Add(duration)
-	template := x509.Certificate{
-		SerialNumber: serial,
-		Subject: pkix.Name{
-			CommonName: fmt.Sprintf("geneos %s %s", i.Type(), i.Name()),
-		},
-		NotBefore:      time.Now().Add(-60 * time.Second),
-		NotAfter:       expires,
-		KeyUsage:       x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		MaxPathLenZero: true,
-		DNSNames:       []string{hostname},
-		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
-	}
-
-	cert, key, err := certs.CreateCertificateAndKey(&template, signingCert, signingKey)
+	cert, key, err := certs.CreateCertificateAndKey(template, signingCert, signingKey)
 	if err != nil {
 		resp.Err = err
 		return

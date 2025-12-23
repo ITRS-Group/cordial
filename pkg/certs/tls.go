@@ -133,8 +133,8 @@ func PublicKey(der *memguard.Enclave) (publickey crypto.PublicKey, err error) {
 // cert and returns the index of the first match, or -1 if none of the
 // keys match.
 func MatchKey(cert *x509.Certificate, keys []*memguard.Enclave) int {
-	for i, der := range keys {
-		if pubkey, err := PublicKey(der); err == nil { // if ok then compare
+	for i, key := range keys {
+		if pubkey, err := PublicKey(key); err == nil { // if ok then compare
 			// ensure we have an Equal() method on the opaque key
 			if k, ok := pubkey.(interface{ Equal(crypto.PublicKey) bool }); ok {
 				if k.Equal(cert.PublicKey) {
@@ -146,7 +146,7 @@ func MatchKey(cert *x509.Certificate, keys []*memguard.Enclave) int {
 	return -1
 }
 
-// UpdateCertChainFile updates the certificate chain file at the
+// UpdateCACertsFile updates the certificate chain file at the
 // specified path on the given host. It ensures that all provided
 // certificates are present in the file, appending any that are missing.
 // If the file does not exist or is empty, it will be created with the
@@ -156,22 +156,79 @@ func MatchKey(cert *x509.Certificate, keys []*memguard.Enclave) int {
 //
 // The caller is responsible for locking access to the chain file if
 // concurrent access is possible.
-func UpdateCertChainFile(h host.Host, path string, certs ...*x509.Certificate) (updated bool, err error) {
-	allCerts := ReadCertificates(h, path)
+func UpdateCACertsFile(h host.Host, path string, certs ...*x509.Certificate) (updated bool, err error) {
+	// remove nil, non-CA or expired certificates from certs
+	certs = slices.DeleteFunc(certs, func(c *x509.Certificate) bool {
+		return c == nil || !c.IsCA || c.NotAfter.Before(time.Now())
+	})
 
+	allCerts := ReadCertificates(h, path)
 	if allCerts == nil {
 		return true, WriteCertificates(h, path, certs...)
 	}
 
+	// remove non-CA or expired certs
+	allCerts = slices.DeleteFunc(allCerts, func(c *x509.Certificate) bool {
+		return !c.IsCA || c.NotAfter.Before(time.Now())
+	})
+
 	added := false
-	for _, newCert := range certs {
-		if slices.ContainsFunc(allCerts, func(cert *x509.Certificate) bool {
-			return newCert.Equal(cert)
+	for _, cert := range certs {
+		// skip duplicates
+		if slices.ContainsFunc(allCerts, func(c *x509.Certificate) bool {
+			return cert.Equal(c)
 		}) {
-			// already present
 			continue
 		}
-		allCerts = append(allCerts, newCert)
+		allCerts = append(allCerts, cert)
+		added = true
+	}
+	if !added {
+		return false, nil
+	}
+
+	return true, WriteCertificates(h, path, allCerts...)
+}
+
+// UpdateRootCertsFile updates the root certificate file at the
+// specified path on the given host. It ensures that all provided
+// certificates are present in the file, appending any that are missing.
+// If the file does not exist or is empty, it will be created with the
+// provided certificates. Returns true if the file was updated
+// (certificates added or file created), false if no changes were made.
+// Returns an error if writing the root certificate file fails.
+//
+// Any non-root CA or expired certificates in the provided certs slice
+// are ignored. Additionally, any non-root CA or expired certificates already
+// present in the existing root certificate file are removed.
+//
+// The caller is responsible for locking access to the root cert file if
+// concurrent access is possible.
+func UpdateRootCertsFile(h host.Host, path string, certs ...*x509.Certificate) (updated bool, err error) {
+	// remove nil, non-root CA or expired certificates from certs
+	certs = slices.DeleteFunc(certs, func(c *x509.Certificate) bool {
+		return c == nil || !IsRootCA(c) || c.NotAfter.Before(time.Now())
+	})
+
+	allCerts := ReadCertificates(h, path)
+	if allCerts == nil {
+		return true, WriteCertificates(h, path, certs...)
+	}
+
+	// remove non-root CA or expired certs
+	allCerts = slices.DeleteFunc(allCerts, func(c *x509.Certificate) bool {
+		return !IsRootCA(c) || c.NotAfter.Before(time.Now())
+	})
+
+	added := false
+	for _, cert := range certs {
+		// skip duplicates
+		if slices.ContainsFunc(allCerts, func(c *x509.Certificate) bool {
+			return cert.Equal(c)
+		}) {
+			continue
+		}
+		allCerts = append(allCerts, cert)
 		added = true
 	}
 	if !added {
@@ -514,4 +571,16 @@ func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string
 	}
 
 	return
+}
+
+// IsRootCA returns true if the provided certificate is a valid root
+// CA certificate.
+func IsRootCA(cert *x509.Certificate) bool {
+	if cert == nil {
+		return false
+	}
+	return cert.IsCA &&
+		cert.BasicConstraintsValid &&
+		cert.Subject.CommonName == cert.Issuer.CommonName &&
+		(cert.AuthorityKeyId == nil || slices.Equal(cert.AuthorityKeyId, cert.SubjectKeyId))
 }

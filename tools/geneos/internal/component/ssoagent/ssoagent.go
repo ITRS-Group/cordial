@@ -332,6 +332,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 	return
 }
 
+// generate a keypair for ssoagent keystore if not present
 func genkeypair() (cert *x509.Certificate, key *memguard.Enclave, err error) {
 	serial, err := rand.Prime(rand.Reader, 64)
 	if err != nil {
