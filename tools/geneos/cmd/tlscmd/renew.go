@@ -113,12 +113,12 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 
 	default:
 		// check instance for existing cert, and do nothing if none
-		cert, _, _, err := instance.ReadCert(i)
+		cert, _, _, err := instance.ReadCertificate(i)
 		if cert == nil && errors.Is(err, os.ErrNotExist) {
 			return
 		}
 
-		signingCert, _, err := geneos.ReadSigningCert()
+		signingCert, _, err := geneos.ReadSigningCertificate()
 		resp.Err = err
 		if resp.Err != nil {
 			return
@@ -162,7 +162,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		}
 
 		// root cert optional to create instance specific chain file
-		rootCert, _, _ := geneos.ReadRootCert()
+		rootCert, _, _ := geneos.ReadRootCertificate()
 		if rootCert == nil {
 			i.Config().SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
 		} else {

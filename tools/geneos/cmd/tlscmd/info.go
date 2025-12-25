@@ -36,6 +36,7 @@ import (
 	"github.com/spf13/cobra"
 	"software.sslmate.com/src/go-pkcs12"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -212,7 +213,7 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 		}
 
 		if path.Base(p) == "cacerts" {
-			k, err := geneos.ReadKeystore(geneos.LOCAL, p, config.NewPlaintext([]byte("changeit")))
+			k, err := certs.ReadKeystore(geneos.LOCAL, p, config.NewPlaintext([]byte("changeit")))
 			if err != nil {
 				log.Error().Err(err).Str("file", p).Msg("unable to read Java keystore")
 				continue

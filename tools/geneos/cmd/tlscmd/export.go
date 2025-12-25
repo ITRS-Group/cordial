@@ -67,12 +67,12 @@ $ geneos tls export --output file.pem
 			return config.ErrNoUserConfigDir
 		}
 		// gather the rootCA cert, the geneos cert and key
-		root, rootFile, err := geneos.ReadRootCert(true)
+		root, rootFile, err := geneos.ReadRootCertificate(true)
 		if err != nil {
 			err = fmt.Errorf("local root certificate (%s) not valid: %w", rootFile, err)
 			return
 		}
-		signer, signerFile, err := geneos.ReadSigningCert(true)
+		signer, signerFile, err := geneos.ReadSigningCertificate(true)
 		if err != nil {
 			err = fmt.Errorf("local signing root certificate (%s) not valid: %w", signerFile, err)
 			return

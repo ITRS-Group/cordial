@@ -50,7 +50,7 @@ func CreateCertificate(i geneos.Instance, duration time.Duration) (resp *Respons
 	resp = NewResponse(i)
 
 	// skip if we can load an existing and valid certificate
-	if _, valid, _, err := ReadCert(i); err == nil && valid {
+	if _, valid, _, err := ReadCertificate(i); err == nil && valid {
 		resp.Line = "certificate already exists and is valid (use the `renew` command to overwrite)"
 		return
 	}
@@ -61,7 +61,7 @@ func CreateCertificate(i geneos.Instance, duration time.Duration) (resp *Respons
 		return
 	}
 
-	signingCert, _, err := geneos.ReadSigningCert()
+	signingCert, _, err := geneos.ReadSigningCertificate()
 	if err != nil {
 		resp.Err = err
 		return
@@ -92,7 +92,7 @@ func CreateCertificate(i geneos.Instance, duration time.Duration) (resp *Respons
 	}
 
 	// optional root for instance specific chain
-	rootCert, _, _ := geneos.ReadRootCert()
+	rootCert, _, _ := geneos.ReadRootCertificate()
 	if rootCert == nil {
 		i.Config().SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
 	} else {
@@ -123,15 +123,15 @@ func CreateCertificate(i geneos.Instance, duration time.Duration) (resp *Respons
 	return
 }
 
-// WriteCert writes the certificate in the instance i directory using
-// standard file name of TYPE.pem and updates the `certificate`
+// WriteCertificate writes the certificate in the instance i directory
+// using standard file name of TYPE.pem and updates the `certificate`
 // parameter. It does not write the instance configuration, expecting
 // the caller to do so after any other updates.
 //
 // If any extensions are passed (as ext), they are appended to the
 // filename with dot separators, e.g. for temporary files and the
 // instance config is not updated.
-func WriteCert(i geneos.Instance, cert *x509.Certificate, ext ...string) (err error) {
+func WriteCertificate(i geneos.Instance, cert *x509.Certificate, ext ...string) (err error) {
 	cf := i.Config()
 
 	if i.Type() == nil {
@@ -178,7 +178,7 @@ func WriteKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (err erro
 	return
 }
 
-// ReadCert reads the instance certificate for i. It verifies the
+// ReadCertificate reads the instance certificate for i. It verifies the
 // certificate against any chain file and, if that fails, against system
 // certificates.
 //
@@ -187,22 +187,15 @@ func WriteKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (err erro
 // key used for validation with have the same extension(s) appended
 //
 // The chainfile returned is always the one from the instance config.
-func ReadCert(i geneos.Instance, ext ...string) (cert *x509.Certificate, valid bool, chainfile string, err error) {
+func ReadCertificate(i geneos.Instance, ext ...string) (cert *x509.Certificate, valid bool, chainfile string, err error) {
 	if i.Type() == nil || PathTo(i, "certificate") == "" {
 		return nil, false, "", geneos.ErrInvalidArgs
 	}
 
 	certPath := strings.Join(append([]string{PathTo(i, "certificate")}, ext...), ".")
 
-	cert, err = certs.ParseCertificate(i.Host(), certPath)
+	cert, err = certs.ReadCertificate(i.Host(), certPath)
 	if err != nil {
-		return
-	}
-
-	// first check if we have a valid private key
-	derCert, err := certs.ReadCertificate(i.Host(), certPath)
-	if err != nil {
-		log.Debug().Err(err).Msg("")
 		return
 	}
 
@@ -216,13 +209,13 @@ func ReadCert(i geneos.Instance, ext ...string) (cert *x509.Certificate, valid b
 		log.Debug().Err(err).Msg("")
 		return
 	}
-	derPrivateKey := pem.EncodeToMemory(&pem.Block{
+	privatekey := pem.EncodeToMemory(&pem.Block{
 		Type:  "PRIVATE KEY",
 		Bytes: k.Bytes(),
 	})
 	defer k.Destroy()
 
-	_, err = tls.X509KeyPair(derCert, derPrivateKey)
+	_, err = tls.X509KeyPair(cert.Raw, privatekey)
 	if err != nil {
 		log.Debug().Err(err).Msg("")
 		return

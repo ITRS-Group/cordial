@@ -106,12 +106,12 @@ var listCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, names, params := cmd.ParseTypeNamesParams(command)
-		rootCert, rootCertFile, err = geneos.ReadRootCert(true)
+		rootCert, rootCertFile, err = geneos.ReadRootCertificate(true)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			log.Debug().Err(err).Msg("failed to read root cert")
 			return
 		}
-		geneosCert, geneosCertFile, err = geneos.ReadSigningCert()
+		geneosCert, geneosCertFile, err = geneos.ReadSigningCertificate()
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			log.Debug().Err(err).Msg("failed to read signing cert")
 			return
@@ -590,7 +590,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	cert, valid, chainfile, err := instance.ReadCert(i)
+	cert, valid, chainfile, err := instance.ReadCertificate(i)
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -621,7 +621,7 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) 
 func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	cert, valid, chainfile, err := instance.ReadCert(i)
+	cert, valid, chainfile, err := instance.ReadCertificate(i)
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -652,7 +652,7 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *instance.Respons
 func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	cert, valid, chainfile, err := instance.ReadCert(i)
+	cert, valid, chainfile, err := instance.ReadCertificate(i)
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -703,7 +703,7 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *instance.Res
 func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	cert, valid, chainfile, err := instance.ReadCert(i)
+	cert, valid, chainfile, err := instance.ReadCertificate(i)
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return

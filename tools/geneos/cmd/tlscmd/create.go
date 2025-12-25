@@ -115,7 +115,7 @@ func CreateCert(destination string, overwrite bool, duration time.Duration, cn s
 	template := certs.Template(cn, san, duration)
 	expires := template.NotAfter
 
-	signingCert, _, err := geneos.ReadSigningCert()
+	signingCert, _, err := geneos.ReadSigningCertificate()
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return

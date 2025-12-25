@@ -144,6 +144,9 @@ $ geneos tls import --signing-bundle /path/to/file.pem
 				log.Fatal().Err(err).Msg("Failed to decompose PEM")
 				// return err
 			}
+			if c == nil || k == nil {
+				return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
+			}
 
 			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, c, k, chain).Write(os.Stdout)
 			return nil
@@ -201,7 +204,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response
 		return
 	}
 
-	if resp.Err = instance.WriteCert(i, cert); resp.Err != nil {
+	if resp.Err = instance.WriteCertificate(i, cert); resp.Err != nil {
 		return
 	}
 	resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate written", i))

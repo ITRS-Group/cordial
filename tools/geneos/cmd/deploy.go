@@ -327,8 +327,11 @@ var deployCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
+			if cert == nil || key == nil {
+				return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
+			}
 
-			if err = instance.WriteCert(i, cert); err != nil {
+			if err = instance.WriteCertificate(i, cert); err != nil {
 				return err
 			}
 			fmt.Printf("%s certificate written", i)

@@ -44,11 +44,11 @@ import (
 // DefaultKeyType is the default key type
 const DefaultKeyType = "ecdh"
 
-// ParseCertificate reads a PEM encoded cert from path on host h, return
+// ReadCertificate reads a PEM encoded cert from path on host h, return
 // the first found as a parsed certificate. The returned certificate is
 // not verified or validated beyond that of the underlying Go x509
 // package parsing functions.
-func ParseCertificate(h host.Host, certfile string) (cert *x509.Certificate, err error) {
+func ReadCertificate(h host.Host, certfile string) (cert *x509.Certificate, err error) {
 	derbytes, err := h.ReadFile(certfile)
 	if err != nil {
 		return
@@ -66,18 +66,29 @@ func ParseCertificate(h host.Host, certfile string) (cert *x509.Certificate, err
 	}
 }
 
-// ParseCertificates reads a PEM encoded file from host h and returns
-// all the certificates found (using the same rules as
-// x509.ParseCertificates). The returned certificates are not verified
-// or validated beyond that of the underlying Go x509 package parsing
-// functions.
-func ParseCertificates(h host.Host, p string) (certs []*x509.Certificate, err error) {
-	derbytes, err := h.ReadFile(p)
+// ReadCertificates reads and decodes all certificates from the PEM file on
+// host h at path. If the files cannot be read or no certificates found
+// then an empty slice is returned.
+func ReadCertificates(h host.Host, path string) (certs []*x509.Certificate) {
+	pembytes, err := h.ReadFile(path)
 	if err != nil {
 		return
 	}
 
-	return x509.ParseCertificates(derbytes)
+	for {
+		p, rest := pem.Decode(pembytes)
+		if p == nil {
+			break
+		}
+		if p.Type == "CERTIFICATE" {
+			if c, err := x509.ParseCertificate(p.Bytes); err == nil { // no error
+				certs = append(certs, c)
+			}
+		}
+		pembytes = rest
+	}
+
+	return
 }
 
 // ParseKey tries to parse the DER encoded private key enclave, first as
@@ -258,27 +269,6 @@ func WriteCertificates(h host.Host, path string, certs ...*x509.Certificate) (er
 	return h.WriteFile(path, pembytes, 0644)
 }
 
-// ReadCertificate reads the first PEM encoded certificate from file at
-// path p on host h and returns the block of DER encoded data.
-func ReadCertificate(h host.Host, path string) (der []byte, err error) {
-	b, err := h.ReadFile(path)
-	if err != nil {
-		return
-	}
-
-	for {
-		p, rest := pem.Decode(b)
-		if p == nil {
-			return nil, fmt.Errorf("cannot locate certificate in %s", p)
-		}
-		if p.Type == "CERTIFICATE" {
-			// reencode for use
-			return pem.EncodeToMemory(p), nil
-		}
-		b = rest
-	}
-}
-
 // ReadCertPool returns a certificate pool loaded from the file on host
 // h at path. If there is any error a nil pointer is returned.
 func ReadCertPool(h host.Host, path string) (pool *x509.CertPool) {
@@ -288,31 +278,6 @@ func ReadCertPool(h host.Host, path string) (pool *x509.CertPool) {
 			return nil
 		}
 	}
-	return
-}
-
-// ReadCerts reads and decodes all certificates from the PEM file on
-// host h at path. If the files cannot be read or no certificates found
-// then an empty slice is returned.
-func ReadCertificates(h host.Host, path string) (certs []*x509.Certificate) {
-	pembytes, err := h.ReadFile(path)
-	if err != nil {
-		return
-	}
-
-	for {
-		p, rest := pem.Decode(pembytes)
-		if p == nil {
-			break
-		}
-		if p.Type == "CERTIFICATE" {
-			if c, err := x509.ParseCertificate(p.Bytes); err == nil { // no error
-				certs = append(certs, c)
-			}
-		}
-		pembytes = rest
-	}
-
 	return
 }
 
@@ -477,7 +442,7 @@ func CreateRootCert(h host.Host, basefilepath string, cn string, overwrite bool,
 	var cert *x509.Certificate
 
 	if !overwrite {
-		if _, err = ParseCertificate(h, basefilepath+".pem"); err == nil {
+		if _, err = ReadCertificate(h, basefilepath+".pem"); err == nil {
 			return os.ErrExist
 		}
 	}
@@ -526,7 +491,7 @@ func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string
 	var cert *x509.Certificate
 
 	if !overwrite {
-		if _, err = ParseCertificate(h, basefilepath+".pem"); err == nil {
+		if _, err = ReadCertificate(h, basefilepath+".pem"); err == nil {
 			return os.ErrExist
 		}
 	}
@@ -549,7 +514,7 @@ func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string
 		MaxPathLenZero:        true,
 	}
 
-	rootCert, err := ParseCertificate(h, rootbasefilepath+".pem")
+	rootCert, err := ReadCertificate(h, rootbasefilepath+".pem")
 	if err != nil {
 		return
 	}

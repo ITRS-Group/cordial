@@ -54,12 +54,12 @@ var ChainCertFile string
 // true. This is normally located in the user's app config directory.
 var TrustedCertsFile string
 
-// ReadRootCert reads the root certificate from the user's app config
-// directory. It "promotes" old cert and key files from the previous tls
-// directory if files do not already exist in the user app config
-// directory. If verify is true then the certificate is verified against
-// itself as a root and if it fails an error is returned.
-func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err error) {
+// ReadRootCertificate reads the root certificate from the user's app
+// config directory. It "promotes" old cert and key files from the
+// previous tls directory if files do not already exist in the user app
+// config directory. If verify is true then the certificate is verified
+// against itself as a root and if it fails an error is returned.
+func ReadRootCertificate(verify ...bool) (root *x509.Certificate, file string, err error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		err = config.ErrNoUserConfigDir
@@ -79,30 +79,30 @@ func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err erro
 	// not exist. this is because the root certificate is self-signed and
 	// does not need a key to verify itself.
 	config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", RootCABasename+".key"))
-	cert, err = certs.ParseCertificate(LOCAL, file)
+	root, err = certs.ReadCertificate(LOCAL, file)
 	if err != nil {
 		return
 	}
 	if len(verify) > 0 && verify[0] {
-		if !cert.BasicConstraintsValid || !cert.IsCA {
+		if !root.BasicConstraintsValid || !root.IsCA {
 			err = errors.New("root certificate not valid as a signing certificate")
 			return
 		}
 		roots := x509.NewCertPool()
-		roots.AddCert(cert)
-		_, err = cert.Verify(x509.VerifyOptions{
+		roots.AddCert(root)
+		_, err = root.Verify(x509.VerifyOptions{
 			Roots: roots,
 		})
 	}
 	return
 }
 
-// ReadSigningCert reads the signing certificate from the user's app
+// ReadSigningCertificate reads the signing certificate from the user's app
 // config directory. It "promotes" old cert and key files from the
 // previous tls directory if files do not already exist in the user app
 // config directory. If verify is true then the signing certificate is
 // checked and verified against the default root certificate.
-func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err error) {
+func ReadSigningCertificate(verify ...bool) (signer *x509.Certificate, file string, err error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		err = config.ErrNoUserConfigDir
@@ -119,37 +119,43 @@ func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err e
 	// speculatively promote the key file, but do not fail if it does
 	// not exist.
 	config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".key"))
-	cert, err = certs.ParseCertificate(LOCAL, file)
+	signer, err = certs.ReadCertificate(LOCAL, file)
 	if err != nil {
 		return
 	}
 	if len(verify) > 0 && verify[0] {
-		if !cert.BasicConstraintsValid || !cert.IsCA {
+		if !signer.BasicConstraintsValid || !signer.IsCA {
 			err = errors.New("certificate not valid as a signing certificate")
 			return
 		}
 		var root *x509.Certificate
-		root, _, err = ReadRootCert(verify...)
+		root, _, err = ReadRootCertificate(verify...)
 		if err != nil {
 			return
 		}
 		roots := x509.NewCertPool()
 		roots.AddCert(root)
-		_, err = cert.Verify(x509.VerifyOptions{
+		_, err = signer.Verify(x509.VerifyOptions{
 			Roots: roots,
 		})
 	}
 	return
 }
 
-// DecomposePEM parses PEM formatted data and extracts the leaf
+// DecomposePEM parses PEM formatted data and extracts a leaf
 // certificate, any CA certs as a chain and a private key as a DER
-// encoded *memguard.Enclave. The key is matched to the leaf
-// certificate, and only returned if they match.
-func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave, chain []*x509.Certificate, err error) {
+// encoded *memguard.Enclave.
+//
+// If no leaf certificate is found, but CA certificates are found, only
+// return the chain.
+//
+// The key is matched either to the leaf certificate or, if no leaf,
+// then the first member of the chain that matches and private key in
+// the bundle.
+func DecomposePEM(data ...string) (cert *x509.Certificate, key *memguard.Enclave, chain []*x509.Certificate, err error) {
 	var certSlice []*x509.Certificate
 	var leaf *x509.Certificate
-	var derkeys []*memguard.Enclave
+	var keys []*memguard.Enclave
 
 	if len(data) == 0 {
 		err = fmt.Errorf("no PEM data process")
@@ -178,7 +184,7 @@ func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave
 				}
 			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
 				// save all private keys for later matching
-				derkeys = append(derkeys, memguard.NewEnclave(block.Bytes))
+				keys = append(keys, memguard.NewEnclave(block.Bytes))
 			default:
 				err = fmt.Errorf("unsupported PEM type found: %s", block.Type)
 				return
@@ -196,15 +202,18 @@ func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave
 	cert = leaf
 	chain = certSlice
 
-	// if we have no leaf certificate then use the first cert from the
-	// chain BUT do not remove from the chain. order is not checked
-	if cert == nil {
-		cert = chain[0]
-	}
-
-	// are we good? check key and return a chain of valid CA certs
-	if i := certs.MatchKey(cert, derkeys); i != -1 {
-		der = derkeys[i]
+	// match key if we have a leaf cert
+	if cert != nil {
+		if i := certs.MatchKey(cert, keys); i != -1 {
+			key = keys[i]
+		}
+	} else {
+		for _, c := range chain {
+			if i := certs.MatchKey(c, keys); i != -1 {
+				key = keys[i]
+				break
+			}
+		}
 	}
 
 	err = nil
@@ -237,19 +246,16 @@ func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) 
 		return err
 	}
 
-	cert, key, chain, err := DecomposePEM(signingBundle, privateKey)
+	_, key, chain, err := DecomposePEM(signingBundle, privateKey)
 	if err != nil {
 		return err
 	}
+	cert := chain[0]
 
 	// basic validation
-	if !cert.BasicConstraintsValid || !cert.IsCA {
-		err = errors.New("signing certificate not valid as a signing certificate")
-		return ErrInvalidArgs
-	}
+	if !cert.BasicConstraintsValid || !cert.IsCA || key == nil {
+		return errors.New("no signing certificate with private key found in bundle")
 
-	if key == nil {
-		return errors.New("no matching private key found")
 	}
 
 	// write root cert, but only if it's the only other cert in the
@@ -376,11 +382,11 @@ func TLSInit(overwrite bool, keytype string) (err error) {
 // from it, otherwise copy the chain file (using the configured name) to
 // all remotes.
 func TLSSync() (err error) {
-	rootCert, _, err := ReadRootCert(true)
+	rootCert, _, err := ReadRootCertificate(true)
 	if err != nil {
 		rootCert = nil
 	}
-	geneosCert, _, err := ReadSigningCert()
+	geneosCert, _, err := ReadSigningCertificate()
 	if err != nil {
 		return os.ErrNotExist
 	}

@@ -247,13 +247,13 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		trustStorePassword := ssoconf.GetPassword(config.Join("server", "trust_store", "password"), config.Default("changeit"))
 		log.Debug().Msgf("%s: rebuilding truststore: %q", s.String(), trustStore)
 		certSlice := certs.ReadCertificates(s.Host(), cf.GetString("certchain"))
-		k, err := geneos.ReadKeystore(s.Host(),
+		k, err := certs.ReadKeystore(s.Host(),
 			trustStore,
 			trustStorePassword,
 		)
 		if err != nil {
 			log.Debug().Err(err).Msg("")
-			k = geneos.KeyStore{
+			k = &certs.KeyStore{
 				KeyStore: keystore.New(),
 			}
 		}
@@ -262,7 +262,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		for _, cert := range certSlice {
 			alias := cert.Subject.CommonName
 			k.DeleteEntry(alias)
-			if err = k.AddKeystoreCert(alias, cert); err != nil {
+			if err = k.AddKeystoreCertificate(alias, cert); err != nil {
 				return err
 			}
 		}
@@ -282,10 +282,10 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		keyStore := instance.Abs(s, ssoconf.GetString(config.Join("server", "key_store", "location")))
 		log.Debug().Msgf("%s: rebuilding keystore: %q", s.String(), keyStore)
 		ksPassword := ssoconf.GetPassword(config.Join("server", "key_store", "password"), config.Default("changeit"))
-		ks, err := geneos.ReadKeystore(s.Host(), keyStore, ksPassword)
+		ks, err := certs.ReadKeystore(s.Host(), keyStore, ksPassword)
 		if err != nil {
 			// new, empty keystore
-			ks = geneos.KeyStore{
+			ks = &certs.KeyStore{
 				KeyStore: keystore.New(),
 			}
 			changed = true
@@ -296,8 +296,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 			if err != nil {
 				log.Fatal().Err(err).Msg("")
 			}
-			chain := []*x509.Certificate{cert}
-			if err = ks.AddKeystoreKey("ssokey", key, ksPassword, chain); err != nil {
+			if err = ks.AddKeystoreKey("ssokey", key, ksPassword, cert); err != nil {
 				log.Fatal().Err(err).Msg("")
 			}
 			changed = true
@@ -307,7 +306,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		// this too. This is for client connections to the sso-agent and
 		// will typically be a "real" certificate.
 		if cf.IsSet("certficate") && cf.IsSet("privatekey") {
-			cert, err := certs.ParseCertificate(s.Host(), cf.GetString("certificate"))
+			cert, err := certs.ReadCertificate(s.Host(), cf.GetString("certificate"))
 			if err != nil {
 				return err
 			}
@@ -315,13 +314,10 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 			if err != nil {
 				return err
 			}
-			certSlice := []*x509.Certificate{cert}
-			if cf.IsSet("certchain") {
-				certSlice = append(certSlice, certs.ReadCertificates(s.Host(), cf.GetString("certchain"))...)
-			}
 			alias := geneos.ALL.Hostname()
 			ks.DeleteEntry(alias)
-			ks.AddKeystoreKey(alias, key, ksPassword, certSlice)
+			ks.AddKeystoreKey(alias, key, ksPassword, append([]*x509.Certificate{cert},
+				certs.ReadCertificates(s.Host(), cf.GetString("certchain"))...)...)
 			changed = true
 		}
 
