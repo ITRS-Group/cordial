@@ -214,7 +214,7 @@ func (s *SSOAgents) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCertificate(s, 0)
+	resp := instance.NewCertificate(s, 0)
 	if resp.Err == nil {
 		fmt.Println(resp.Line)
 	}
@@ -347,12 +347,12 @@ func genkeypair() (cert *x509.Certificate, key *memguard.Enclave, err error) {
 		MaxPathLen:            -1,
 	}
 
-	privateKeyPEM, err := certs.NewPrivateKey("rsa")
+	privateKey, _, err := certs.NewPrivateKey("rsa")
 	if err != nil {
 		return
 	}
 
-	return certs.CreateCertificateAndKey(template, template, privateKeyPEM)
+	return certs.CreateCertificateAndKey(template, template, privateKey)
 }
 
 func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string, err error) {

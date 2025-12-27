@@ -250,7 +250,7 @@ func (s *Sans) Add(template string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCertificate(s, 0)
+	resp := instance.NewCertificate(s, 0)
 	if resp.Err == nil {
 		fmt.Println(resp.Line)
 	}

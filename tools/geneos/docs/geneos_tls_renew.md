@@ -12,7 +12,6 @@ geneos tls renew [TYPE] [NAME...] [flags]
 
 ```text
   -D, --days int   Certificate duration in days (default 365)
-  -n, --new-key    Always generate a new private key for the renewed certificate
   -P, --prepare    Prepare renewal without overwriting existing certificates
   -R, --roll       Roll previously prepared certificates and backup existing ones
   -U, --unroll     Unroll previously rolled certificates to restore backups

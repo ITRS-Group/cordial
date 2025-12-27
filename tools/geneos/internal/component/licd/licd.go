@@ -191,7 +191,7 @@ func (l *Licds) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCertificate(l, 0)
+	resp := instance.NewCertificate(l, 0)
 	if resp.Err == nil {
 		fmt.Println(resp.Line)
 	}

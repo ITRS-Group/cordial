@@ -40,7 +40,7 @@ import (
 var deployCmdTemplate, deployCmdBase, deployCmdKeyfileCRC string
 var deployCmdGeneosHome, deployCmdUsername, deployCmdExtraOpts string
 var deployCmdStart, deployCmdLogs, deployCmdLocal, deployCmdNexus, deployCmdSnapshot, deployCmdNoSave bool
-var deployCmdTLS bool
+var deployCmdNoTLS bool
 var deployCmdSigningBundle, deployCmdInstanceBundle string
 var deployCmdPort uint16
 var deployCmdArchive, deployCmdVersion, deployCmdOverride string
@@ -64,7 +64,10 @@ func init() {
 
 	deployCmd.Flags().BoolVarP(&deployCmdNoSave, "nosave", "n", false, "Do not save a local copy of any downloads")
 
-	deployCmd.Flags().BoolVarP(&deployCmdTLS, "tls", "T", false, "Initialise TLS subsystem if required.\nUse options below to import existing certificate bundles")
+	// deployCmd.Flags().BoolVarP(&deployCmdTLS, "tls", "T", false, "Initialise TLS subsystem if required.\nUse options below to import existing certificate bundles")
+	deployCmd.Flags().BoolVarP(&deployCmdNoTLS, "insecure", "", false, "Do not initialise TLS subsystem")
+	deployCmd.Flags().MarkDeprecated("tls", "TLS is now enabled by default, use --insecure to disable")
+
 	deployCmd.Flags().StringVarP(&deployCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
 	deployCmd.Flags().StringVarP(&deployCmdInstanceBundle, "instance-bundle", "c", "", "Instance certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
 
@@ -286,8 +289,8 @@ var deployCmd = &cobra.Command{
 		}
 
 		// TLS check and init
-		if deployCmdTLS {
-			if err = geneos.TLSInit(true, "ecdh"); err != nil {
+		if !deployCmdNoTLS {
+			if err = geneos.TLSInit(true, certs.DefaultKeyType); err != nil {
 				return
 			}
 		}

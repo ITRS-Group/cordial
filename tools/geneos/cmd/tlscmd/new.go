@@ -20,7 +20,6 @@ package tlscmd
 import (
 	_ "embed"
 	"os"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -57,5 +56,5 @@ var newCmd = &cobra.Command{
 }
 
 func newInstanceCert(i geneos.Instance, _ ...any) *instance.Response {
-	return instance.CreateCertificate(i, 24*time.Hour*time.Duration(newCmdDays))
+	return instance.NewCertificate(i, newCmdDays)
 }

@@ -41,12 +41,12 @@ type Credentials struct {
 // key "credentials" and returns the longest case-insensitive match, if
 // any. The domains in the credentials file can use shell patterns, as
 // per `file.Match()`. creds is nil if no matching credentials found.
-func (cf *Config) FindCreds(p string) (creds *Config) {
-	if cf == nil {
+func (c *Config) FindCreds(p string) (creds *Config) {
+	if c == nil {
 		return nil
 	}
 
-	cr := cf.GetStringMap("credentials")
+	cr := c.GetStringMap("credentials")
 	if cr == nil {
 		return
 	}
@@ -58,7 +58,7 @@ func (cf *Config) FindCreds(p string) (creds *Config) {
 	creds = New()
 	for _, domain := range domains {
 		if strings.Contains(strings.ToLower(p), strings.ToLower(domain)) {
-			creds.MergeConfigMap(cf.GetStringMap(cf.Join("credentials", domain)))
+			creds.MergeConfigMap(c.GetStringMap(c.Join("credentials", domain)))
 			return
 		}
 	}

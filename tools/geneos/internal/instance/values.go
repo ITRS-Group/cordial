@@ -321,9 +321,9 @@ func (i *Gateways) Type() string {
 // attribute - name=value
 type NameValues []string
 
-const AttributesOptionsText = "An attribute in the format NAME=VALUE\n(Repeat as required, san only)"
-const EnvsOptionsText = "An environment variable for instance start-up\n(Repeat as required)"
-const HeadersOptionsText = "An HTTP header in the format NAME=VALUE\n(Repeat as required)"
+const AttributesOptionsText = "Attribute in the format NAME=VALUE\n(Repeat as required, san only)"
+const EnvsOptionsText = "Environment variable for instance start-up\n(Repeat as required)"
+const HeadersOptionsText = "HTTP header in the format NAME=VALUE\n(Repeat as required)"
 
 func (i *NameValues) String() string {
 	return ""

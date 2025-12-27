@@ -20,9 +20,7 @@ package instance
 import (
 	"crypto/sha1"
 	"crypto/sha256"
-	"crypto/tls"
 	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"path"
 	"strings"
@@ -37,7 +35,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-// CreateCertificate creates a new certificate for an instance.
+// NewCertificate creates a new certificate for an instance.
 //
 // If the root and signing certs are readable then create an instance
 // specific chain file, otherwise set the instance to point to the
@@ -46,7 +44,9 @@ import (
 // this also creates a new private key
 //
 // skip if certificate exists and is valid
-func CreateCertificate(i geneos.Instance, duration time.Duration) (resp *Response) {
+func NewCertificate(i geneos.Instance, days int) (resp *Response) {
+	cf := i.Config()
+
 	resp = NewResponse(i)
 
 	// skip if we can load an existing and valid certificate
@@ -72,7 +72,10 @@ func CreateCertificate(i geneos.Instance, duration time.Duration) (resp *Respons
 		return
 	}
 
-	template := certs.Template("geneos "+i.Type().String()+" "+i.Name(), []string{i.Host().GetString("hostname")}, duration)
+	template := certs.Template("geneos "+i.Type().String()+" "+i.Name(),
+		certs.DNSNames(i.Host().GetString("hostname")),
+		certs.Days(days),
+	)
 	expires := template.NotAfter
 
 	cert, key, err := certs.CreateCertificateAndKey(template, signingCert, signingKey)
@@ -81,32 +84,38 @@ func CreateCertificate(i geneos.Instance, duration time.Duration) (resp *Respons
 		return
 	}
 
-	if err = certs.WriteCertificates(i.Host(), ComponentFilepath(i, "pem"), cert, signingCert); err != nil {
+	certPath := ComponentFilepath(i, "pem")
+	log.Debug().Msgf("writing certificate to %q", certPath)
+	if err = certs.WriteCertificates(i.Host(), certPath, cert, signingCert); err != nil {
 		resp.Err = err
 		return
 	}
+	cf.SetString(cf.Join("tls", "certificate"), certPath, config.Replace("home"))
 
-	if err = certs.WritePrivateKey(i.Host(), ComponentFilepath(i, "key"), key); err != nil {
+	keyPath := ComponentFilepath(i, "key")
+	log.Debug().Msgf("writing private key to %q", keyPath)
+	if err = certs.WritePrivateKey(i.Host(), keyPath, key); err != nil {
 		resp.Err = err
 		return
 	}
+	cf.SetString(cf.Join("tls", "privatekey"), keyPath, config.Replace("home"))
 
-	// optional root for instance specific chain
-	rootCert, _, _ := geneos.ReadRootCertificate()
-	if rootCert == nil {
-		i.Config().SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
-	} else {
-		chainfile := PathTo(i, "certchain")
-		if chainfile == "" {
-			chainfile = path.Join(i.Home(), "chain.pem")
-			i.Config().SetString("certchain", chainfile, config.Replace("home"))
-		}
+	// // optional root for instance specific chain
+	// rootCert, _, _ := geneos.ReadRootCertificate()
+	// if rootCert == nil {
+	// 	cf.SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
+	// } else {
+	// 	chainfile := PathTo(i, "certchain")
+	// 	if chainfile == "" {
+	// 		chainfile = path.Join(i.Home(), "chain.pem")
+	// 		cf.SetString("certchain", chainfile, config.Replace("home"))
+	// 	}
 
-		if err = certs.WriteCertificates(i.Host(), chainfile, signingCert, rootCert); err != nil {
-			resp.Err = err
-			return
-		}
-	}
+	// 	if err = certs.WriteCertificates(i.Host(), chainfile, signingCert, rootCert); err != nil {
+	// 		resp.Err = err
+	// 		return
+	// 	}
+	// }
 
 	if err = SaveConfig(i); err != nil {
 		resp.Err = err
@@ -204,19 +213,9 @@ func ReadCertificate(i geneos.Instance, ext ...string) (cert *x509.Certificate, 
 		log.Debug().Err(err).Msg("")
 		return
 	}
-	k, err := pk.Open()
-	if err != nil {
-		log.Debug().Err(err).Msg("")
-		return
-	}
-	privatekey := pem.EncodeToMemory(&pem.Block{
-		Type:  "PRIVATE KEY",
-		Bytes: k.Bytes(),
-	})
-	defer k.Destroy()
 
-	_, err = tls.X509KeyPair(cert.Raw, privatekey)
-	if err != nil {
+	if !certs.CheckKeyMatch(pk, cert) {
+		err = fmt.Errorf("certificate and private key do not match")
 		log.Debug().Err(err).Msg("")
 		return
 	}

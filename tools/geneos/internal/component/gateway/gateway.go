@@ -264,7 +264,7 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCertificate(g, 0)
+	resp := instance.NewCertificate(g, 0)
 	if resp.Err == nil {
 		fmt.Println(resp.Line)
 	}
@@ -426,12 +426,6 @@ func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string,
 	args = append(args, secureArgs...)
 	env = append(env, secureEnvs...)
 	checks = append(checks, fileChecks...)
-
-	// for _, arg := range secureArgs {
-	// 	if !strings.HasPrefix(arg, "-") {
-	// 		checks = append(checks, arg)
-	// 	}
-	// }
 
 	// 3 options: set, set to false, not set
 	if cf.GetBool("licdsecure") || (!cf.IsSet("licdsecure") && instance.FileOf(i, "certificate") != "") {

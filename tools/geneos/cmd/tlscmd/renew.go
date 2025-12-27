@@ -130,7 +130,10 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			return
 		}
 
-		template := certs.Template("geneos "+i.Type().String()+" "+i.Name(), []string{i.Host().GetString("hostname")}, 0)
+		template := certs.Template("geneos "+i.Type().String()+" "+i.Name(),
+			certs.DNSNames(i.Host().GetString("hostname")),
+			certs.Days(renewCmdDays),
+		)
 		expires := template.NotAfter
 
 		cert, key, err := certs.CreateCertificateAndKey(template, signingCert, signingKey)

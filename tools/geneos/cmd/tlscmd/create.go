@@ -87,7 +87,7 @@ var createCmd = &cobra.Command{
 			fmt.Println("Console output only valid for bundles")
 			return nil
 		}
-		err = CreateCert(createCmdDest, createCmdOverwrite, 24*time.Hour*time.Duration(createCmdDays), createCmdCN, createCmdSANs...)
+		err = CreateCert(createCmdDest, createCmdOverwrite, createCmdDays, createCmdCN, createCmdSANs...)
 		if err != nil {
 			if errors.Is(err, os.ErrExist) && !createCmdOverwrite {
 				fmt.Printf("Certificate already exists for CN=%q, use --force to overwrite\n", createCmdCN)
@@ -103,7 +103,7 @@ var createCmd = &cobra.Command{
 // CreateCert creates a new certificate and private key
 //
 // skip if certificate exists and is valid
-func CreateCert(destination string, overwrite bool, duration time.Duration, cn string, san ...string) (err error) {
+func CreateCert(destination string, overwrite bool, days int, cn string, san ...string) (err error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		return config.ErrNoUserConfigDir
@@ -112,7 +112,7 @@ func CreateCert(destination string, overwrite bool, duration time.Duration, cn s
 	if _, err = os.Stat(basepath + ".pem"); err == nil && !overwrite {
 		return os.ErrExist
 	}
-	template := certs.Template(cn, san, duration)
+	template := certs.Template(cn, certs.Days(days), certs.DNSNames(san...))
 	expires := template.NotAfter
 
 	signingCert, _, err := geneos.ReadSigningCertificate()

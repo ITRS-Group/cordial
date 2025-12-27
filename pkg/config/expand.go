@@ -405,9 +405,9 @@ func (c *Config) ExpandToLockedBuffer(input string, options ...ExpandOptions) (v
 // applying ExpandString to all string values and all string slice
 // values. Non-string types are left unchanged. Further types, e.g. maps
 // of strings, may be added in future releases.
-func (c *Config) ExpandAllSettings(options ...ExpandOptions) (all map[string]interface{}) {
+func (c *Config) ExpandAllSettings(options ...ExpandOptions) (all map[string]any) {
 	as := c.AllSettings()
-	all = make(map[string]interface{}, len(as))
+	all = make(map[string]any, len(as))
 
 	for k, v := range as {
 		switch ev := v.(type) {
@@ -419,6 +419,16 @@ func (c *Config) ExpandAllSettings(options ...ExpandOptions) (all map[string]int
 				ns = append(ns, c.ExpandString(s, options...))
 			}
 			all[k] = ns
+		case map[string]any:
+			nm := make(map[string]any, len(ev))
+			for kk, vv := range ev {
+				if vvs, ok := vv.(string); ok {
+					nm[kk] = c.ExpandString(vvs, options...)
+				} else {
+					nm[kk] = vv
+				}
+			}
+			all[k] = nm
 		default:
 			all[k] = ev
 		}

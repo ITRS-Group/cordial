@@ -194,7 +194,7 @@ func (n *AC2s) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCertificate(n, 0)
+	resp := instance.NewCertificate(n, 0)
 	if resp.Err == nil {
 		fmt.Println(resp.Line)
 	}
