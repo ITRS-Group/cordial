@@ -339,7 +339,7 @@ var deployCmd = &cobra.Command{
 			}
 			fmt.Printf("%s certificate written", i)
 
-			if err = instance.WriteKey(i, key); err != nil {
+			if err = instance.WritePrivateKey(i, key); err != nil {
 				return err
 			}
 			fmt.Printf("%s private key written", i)

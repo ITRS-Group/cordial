@@ -45,6 +45,8 @@ var initCmdName, initCmdSigningBundle, initCmdImportKey, initCmdGatewayTemplate,
 var initCmdDLUsername string
 var initCmdDLPassword *config.Plaintext
 
+var initCmdTLS bool
+
 // initCmdExtras is shared between all `init` commands as they share common
 // flags (for now)
 var initCmdExtras = instance.SetConfigValues{}
@@ -63,7 +65,7 @@ func init() {
 	initCmd.PersistentFlags().BoolVarP(&initCmdForce, "force", "F", false, "Be forceful, ignore existing directories.")
 	initCmd.PersistentFlags().StringVarP(&initCmdName, "name", "n", "", "Use name for instances and configurations instead of the hostname")
 
-	// initCmd.PersistentFlags().BoolVarP(&initCmdTLS, "tls", "T", false, "Create internal certificates for TLS support")
+	initCmd.PersistentFlags().BoolVarP(&initCmdTLS, "tls", "T", false, "Create internal certificates for TLS support")
 	initCmd.Flags().MarkDeprecated("tls", "TLS is enabled by default, use --insecure to disable")
 
 	initCmd.PersistentFlags().StringVarP(&initCmdSigningBundle, "signing-bundle", "C", "", "signing bundle including private key, PEM format")

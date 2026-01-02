@@ -12,8 +12,8 @@ geneos tls init
 ### Options
 
 ```text
-  -K, --keytype string   Key type for root, one of ecdh, ecdsa, ec15529 or rsa (default "ecdh")
-  -F, --force            Overwrite any existing certificates
+  -K, --keytype KeyType   Key type for root. One of ecdh, ecdsa, ed25519 or rsa
+  -F, --force             Overwrite any existing certificates
 ```
 
 ## SEE ALSO

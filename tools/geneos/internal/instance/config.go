@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"path"
 	"slices"
 	"strings"
@@ -249,27 +250,34 @@ func WriteKVConfig(r host.Host, p string, kvs map[string]string) (err error) {
 // SaveConfig writes the first values map or, if none, the instance
 // configuration to the standard file for that instance. All legacy
 // parameter (aliases) are removed from the set of values saved.
+//
+// Any configuration values of an empty string are removed from the
+// saved configuration.
 func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
-	var settings map[string]any
+	var keys []string
 
 	// speculatively migrate the config, in case there is a legacy .rc
 	// file in place. Migrate() returns an error only for real errors
 	// and returns nil if there is no .rc file to migrate.
+	//
+	// TODO: we need to apply any values passed in here too
 	if resp := Migrate(i); resp.Err != nil {
 		return
 	}
 
 	if len(values) > 0 {
-		settings = values[0]
+		keys = slices.Collect(maps.Keys(values[0]))
 	} else {
-		settings = i.Config().AllSettings()
+		keys = i.Config().AllKeys()
 	}
 
 	nv := config.New()
 	lp := i.Type().LegacyParameters
-	for k, v := range settings {
-		// skip aliases
-		if _, ok := lp[k]; ok {
+
+	for _, k := range keys {
+		v := i.Config().Get(k)
+		// skip aliases and empty settings
+		if _, ok := lp[k]; ok || v == "" {
 			continue
 		}
 		nv.Set(k, v)
@@ -311,7 +319,7 @@ var certFiles = []string{
 	"/etc/ssl/cert.pem",                                 // Alpine Linux
 }
 
-// SecureArgs2 returns command line arguments, environment variables,
+// SecureArgs returns command line arguments, environment variables,
 // and any files that need to be checked for secure connections based on
 // the TLS configuration of the instance.
 //
@@ -319,8 +327,10 @@ var certFiles = []string{
 // it calls SetSecureArgs() instead, but with the addition of file
 // checks for any args that are not prefixed with a dash (`-`).
 func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []string, err error) {
+	cf := i.Config()
+
 	// has this instance been migrated to the new TLS parameters?
-	if !i.Config().IsSet("tls") {
+	if !cf.IsSet("tls") {
 		args = setSecureArgs(i)
 		for _, arg := range args {
 			if !strings.HasPrefix(arg, "-") {
@@ -336,7 +346,7 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 	//   tls::certchain   		--> -ssl-certificate-chain (--initial)
 	//   tls::verify			--> if set but no chain, use Geneos global roots
 	//   tls::minimumversion 	--> -minTLSversion (default 1.2) or MIN_TLS_VERSION env var for Netprobe
-	//   tls::roots				--> -ssl-certificate-chain (--final)
+	//   tls::trusted-roots		--> -ssl-certificate-chain (--final)
 
 	if cert := PathTo(i, config.Join("tls", "certificate")); cert != "" {
 		if IsA(i, "minimal", "netprobe", "fa2", "fileagent", "licd") {
@@ -351,29 +361,33 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 		fileChecks = append(fileChecks, privkey)
 	}
 
-	chain := PathTo(i, config.Join("tls", "certchain"))
-	if chain != "" {
-		args = append(args, "-ssl-certificate-chain", chain)
-		fileChecks = append(fileChecks, chain)
+	tlsVerify := true
+	if cf.IsSet(cf.Join("tls", "verify")) {
+		tlsVerify = cf.GetBool(cf.Join("tls", "verify"))
 	}
 
-	tlsVerify := i.Config().GetBool(config.Join("tls", "verify"))
-	if chain == "" && tlsVerify {
-		// use global roots, if one exists, starting with Geneos trusted-roots.pem
-		rootCerts := append([]string{geneos.TrustedCertsFile}, certFiles...)
-		for _, rc := range rootCerts {
-			if _, err := i.Host().Stat(rc); err == nil {
-				log.Debug().Msgf("using root certs %q for %s", rc, i)
-				args = append(args, "-ssl-certificate-chain", rc)
-				fileChecks = append(fileChecks, rc)
-				break
+	if tlsVerify {
+		chain := PathTo(i, config.Join("tls", "trusted-roots"))
+
+		if chain != "" {
+			args = append(args, "-ssl-certificate-chain", chain)
+			fileChecks = append(fileChecks, chain)
+		} else {
+			// use global roots, if one exists, starting with Geneos trusted-roots.pem
+			for _, rc := range certFiles {
+				if _, err := i.Host().Stat(rc); err == nil {
+					log.Debug().Msgf("using root certs %q for %s", rc, i)
+					args = append(args, "-ssl-certificate-chain", rc)
+					fileChecks = append(fileChecks, rc)
+					break
+				}
 			}
 		}
-	}
 
+	}
 	// minimum TLS version - from instance, global or 1.2 as a default
-	minTLS := i.Config().GetString(
-		i.Config().Join("tls", "minimumversion"),
+	minTLS := cf.GetString(
+		cf.Join("tls", "minimumversion"),
 		config.Default(
 			config.GetString(
 				config.Join("tls", "minimumversion"),
@@ -394,6 +408,7 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 // connections if the correct configuration values are set. The private
 // key may be in the certificate file and the chain is optional.
 func setSecureArgs(i geneos.Instance) (args []string) {
+	cf := i.Config()
 
 	files := PathsTo(i, "certificate", "privatekey", "certchain")
 	if len(files) == 0 || files[0] == "" {
@@ -416,7 +431,7 @@ func setSecureArgs(i geneos.Instance) (args []string) {
 		chain = config.MigrateFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
 	}
 	s, err := i.Host().Stat(chain)
-	if err == nil && !s.IsDir() && !(i.Config().IsSet("use-chain") && !i.Config().GetBool("use-chain")) {
+	if err == nil && !s.IsDir() && !(cf.IsSet("use-chain") && !cf.GetBool("use-chain")) {
 		args = append(args, "-ssl-certificate-chain", chain)
 	}
 	return

@@ -169,12 +169,12 @@ func Sub(key string) *Config {
 }
 
 // Set sets the key to value
-func Set(key string, value interface{}) {
+func Set(key string, value any) {
 	global.Set(key, value)
 }
 
 // Set sets the key to value
-func (c *Config) Set(key string, value interface{}) {
+func (c *Config) Set(key string, value any) {
 	c.mutex.Lock()
 	c.Viper.Set(key, value)
 	c.mutex.Unlock()

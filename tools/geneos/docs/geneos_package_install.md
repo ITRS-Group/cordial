@@ -57,7 +57,7 @@ geneos package install [flags] [TYPE] [FILE|URL...]
   -N, --nexus               Download from nexus.itrsgroup.com. Requires auth.
   -S, --snapshots           Download from nexus snapshots (pre-releases), not releases. Requires -N
   -A, --all                 Install all types available, not just those types already installed
-      --header NAME=VALUE   An HTTP header in the format NAME=VALUE
+      --header NAME=VALUE   HTTP header in the format NAME=VALUE
                             (Repeat as required)
 ```
 

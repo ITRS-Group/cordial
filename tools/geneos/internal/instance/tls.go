@@ -50,9 +50,12 @@ func NewCertificate(i geneos.Instance, days int) (resp *Response) {
 	resp = NewResponse(i)
 
 	// skip if we can load an existing and valid certificate
-	if _, valid, _, err := ReadCertificate(i); err == nil && valid {
-		resp.Line = "certificate already exists and is valid (use the `renew` command to overwrite)"
-		return
+	cert, err := ReadCertificate(i)
+	if err == nil {
+		if certs.ValidLeafCert(cert) {
+			resp.Line = "certificate already exists and is valid (use the `renew` command to overwrite)"
+			return
+		}
 	}
 
 	confDir := config.AppConfigDir()
@@ -90,6 +93,8 @@ func NewCertificate(i geneos.Instance, days int) (resp *Response) {
 		resp.Err = err
 		return
 	}
+	// remove old certificate entry
+	cf.Set("certificate", "")
 	cf.SetString(cf.Join("tls", "certificate"), certPath, config.Replace("home"))
 
 	keyPath := ComponentFilepath(i, "key")
@@ -98,24 +103,10 @@ func NewCertificate(i geneos.Instance, days int) (resp *Response) {
 		resp.Err = err
 		return
 	}
+	// remove old private key entry
+	cf.Set("privatekey", "")
+
 	cf.SetString(cf.Join("tls", "privatekey"), keyPath, config.Replace("home"))
-
-	// // optional root for instance specific chain
-	// rootCert, _, _ := geneos.ReadRootCertificate()
-	// if rootCert == nil {
-	// 	cf.SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
-	// } else {
-	// 	chainfile := PathTo(i, "certchain")
-	// 	if chainfile == "" {
-	// 		chainfile = path.Join(i.Home(), "chain.pem")
-	// 		cf.SetString("certchain", chainfile, config.Replace("home"))
-	// 	}
-
-	// 	if err = certs.WriteCertificates(i.Host(), chainfile, signingCert, rootCert); err != nil {
-	// 		resp.Err = err
-	// 		return
-	// 	}
-	// }
 
 	if err = SaveConfig(i); err != nil {
 		resp.Err = err
@@ -150,16 +141,53 @@ func WriteCertificate(i geneos.Instance, cert *x509.Certificate, ext ...string) 
 	if err = certs.WriteCertificates(i.Host(), certFile, cert); err != nil {
 		return
 	}
-	if len(ext) > 0 || cf.GetString("certificate") == certFile {
+
+	if len(ext) > 0 || cf.GetString(cf.Join("tls", "certificate")) == certFile {
 		// do not update config if ext is given (used for temp files) or
 		// if it's already set
 		return
 	}
-	cf.SetString("certificate", certFile, config.Replace("home"))
+	cf.Set("certificate", "")
+	cf.SetString(cf.Join("tls", "certificate"), certFile, config.Replace("home"))
+	if err = SaveConfig(i); err != nil {
+		return
+	}
 	return
 }
 
-// WriteKey writes the private key in the instance i directory using
+// WriteCertificates writes the certificates to a single file in the
+// instance i directory using standard file name of TYPE.pem and updates
+// the `certificate` parameter. It does not write the instance
+// configuration, expecting the caller to do so after any other updates.
+//
+// If any extensions are passed (as ext), they are appended to the
+// filename with dot separators, e.g. for temporary files and the
+// instance config is not updated.
+func WriteCertificates(i geneos.Instance, certSlice []*x509.Certificate, ext ...string) (err error) {
+	cf := i.Config()
+
+	if i.Type() == nil {
+		return geneos.ErrInvalidArgs
+	}
+	certFile := ComponentFilepath(i, append([]string{"pem"}, ext...)...)
+	if err = certs.WriteCertificates(i.Host(), certFile, certSlice...); err != nil {
+		return
+	}
+
+	if len(ext) > 0 || cf.GetString(cf.Join("tls", "certificate")) == certFile {
+		// do not update config if ext is given (used for temp files) or
+		// if it's already set
+		return
+	}
+	cf.Set("certificate", "")
+	cf.SetString(cf.Join("tls", "certificate"), certFile, config.Replace("home"))
+	if err = SaveConfig(i); err != nil {
+		return
+	}
+	return
+}
+
+// WritePrivateKey writes the private key in the instance i directory using
 // standard file name of TYPE.key and updates the `privatekey` instance
 // parameter. It does not write the instance configuration, expecting
 // the caller to do so after any other updates.
@@ -167,7 +195,7 @@ func WriteCertificate(i geneos.Instance, cert *x509.Certificate, ext ...string) 
 // If any extensions are passed (as ext), they are appended to the
 // filename with dot separators, e.g. for temporary files and the
 // instance config is not updated.
-func WriteKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (err error) {
+func WritePrivateKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (err error) {
 	cf := i.Config()
 
 	if i.Type() == nil {
@@ -178,78 +206,49 @@ func WriteKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (err erro
 	if err = certs.WritePrivateKey(i.Host(), keyfile, key); err != nil {
 		return
 	}
-	if len(ext) > 0 || cf.GetString("privatekey") == keyfile {
+	if len(ext) > 0 || cf.GetString(cf.Join("tls", "privatekey")) == keyfile {
 		// do not update config if ext is given (used for temp files) or
 		// if it's already set
 		return
 	}
-	cf.SetString("privatekey", keyfile, config.Replace("home"))
+	cf.Set("privatekey", "")
+	cf.SetString(cf.Join("tls", "privatekey"), keyfile, config.Replace("home"))
+	if err = SaveConfig(i); err != nil {
+		return
+	}
 	return
 }
 
-// ReadCertificate reads the instance certificate for i. It verifies the
-// certificate against any chain file and, if that fails, against system
-// certificates.
-//
-// If any extensions are passed (as ext), they are appended to the
-// filename with dot separators, e.g. for temporary files. The private
-// key used for validation with have the same extension(s) appended
-//
-// The chainfile returned is always the one from the instance config.
-func ReadCertificate(i geneos.Instance, ext ...string) (cert *x509.Certificate, valid bool, chainfile string, err error) {
-	if i.Type() == nil || PathTo(i, "certificate") == "" {
-		return nil, false, "", geneos.ErrInvalidArgs
+func ReadCertificate(i geneos.Instance, ext ...string) (cert *x509.Certificate, err error) {
+	var certPath string
+
+	cf := i.Config()
+	if cf.IsSet(cf.Join("tls", "certificate")) {
+		certPath = cf.GetString(cf.Join("tls", "certificate"))
+	} else if cf.IsSet("certificate") {
+		certPath = cf.GetString("certificate")
+	} else {
+		return nil, geneos.ErrNotExist
 	}
 
-	certPath := strings.Join(append([]string{PathTo(i, "certificate")}, ext...), ".")
+	return certs.ReadCertificate(i.Host(), strings.Join(append([]string{certPath}, ext...), "."))
+}
 
-	cert, err = certs.ReadCertificate(i.Host(), certPath)
-	if err != nil {
-		return
+// ReadCertificates reads the instance certificate chain
+// and returns a slice of certificates.
+func ReadCertificates(i geneos.Instance, ext ...string) (certChain []*x509.Certificate, err error) {
+	var certPath string
+
+	cf := i.Config()
+	if cf.IsSet(cf.Join("tls", "certificate")) {
+		certPath = cf.GetString(cf.Join("tls", "certificate"))
+	} else if cf.IsSet("certificate") {
+		certPath = cf.GetString("certificate")
+	} else {
+		return nil, geneos.ErrNotExist
 	}
 
-	pk, err := ReadPrivateKey(i, ext...)
-	if err != nil {
-		log.Debug().Err(err).Msg("")
-		return
-	}
-
-	if !certs.CheckKeyMatch(pk, cert) {
-		err = fmt.Errorf("certificate and private key do not match")
-		log.Debug().Err(err).Msg("")
-		return
-	}
-
-	// validate against certificate chain file and expiry
-	// etc.
-	chainfile = PathTo(i, "certchain")
-	if chainfile == "" {
-		chainfile = config.MigrateFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
-	}
-
-	if cp := certs.ReadCertPool(i.Host(), chainfile); cp != nil {
-		opts := x509.VerifyOptions{
-			Roots:         cp,
-			Intermediates: cp,
-		}
-
-		if _, err = cert.Verify(opts); err == nil { // return if no error
-			valid = true
-			log.Debug().Msgf("cert %q verified", cert.Subject.CommonName)
-			return
-		}
-		log.Debug().Err(err).Msg("")
-	}
-
-	// if failed against internal certs, try system ones
-	if _, err = cert.Verify(x509.VerifyOptions{}); err == nil { // return if no error
-		valid = true
-		log.Debug().Msgf("cert %q verified", cert.Subject.CommonName)
-		return
-	}
-
-	log.Debug().Msgf("cert %q NOT verified: %s", cert.Subject.CommonName, err)
-	return
+	return certs.ReadCertificates(i.Host(), strings.Join(append([]string{certPath}, ext...), "."))
 }
 
 // ReadPrivateKey reads the instance RSA private key

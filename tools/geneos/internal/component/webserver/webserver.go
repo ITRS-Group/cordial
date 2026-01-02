@@ -256,7 +256,7 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 	cf := w.Config()
 	if cf.IsSet("truststore") && cf.IsSet("certchain") {
 		log.Debug().Msgf("%s: rebuilding truststore: %q", w.String(), cf.GetString("truststore"))
-		certSlice := certs.ReadCertificates(w.Host(), cf.GetString("certchain"))
+		certSlice, _ := certs.ReadCertificates(w.Host(), cf.GetString("certchain"))
 		k, err := certs.ReadKeystore(w.Host(),
 			cf.GetString("truststore"),
 			cf.GetPassword("truststore-password", config.Default("changeit")),
@@ -309,10 +309,10 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 				KeyStore: keystore.New(),
 			}
 		}
+		certSlice, _ := certs.ReadCertificates(w.Host(), cf.GetString("certchain"))
 		alias := geneos.ALL.Hostname()
 		k.DeleteEntry(alias)
-		k.AddKeystoreKey(alias, key, keyStorePassword, append([]*x509.Certificate{cert},
-			certs.ReadCertificates(w.Host(), cf.GetString("certchain"))...)...)
+		k.AddKeystoreKey(alias, key, keyStorePassword, append([]*x509.Certificate{cert}, certSlice...)...)
 		return k.WriteKeystore(w.Host(), path.Join(w.Home(), keyStore), keyStorePassword)
 	}
 	return

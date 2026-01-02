@@ -307,6 +307,10 @@ func keyUsageToString(ku x509.KeyUsage) []string {
 		x509.KeyUsageKeyEncipherment:   "KeyEncipherment",
 		x509.KeyUsageDataEncipherment:  "DataEncipherment",
 		x509.KeyUsageKeyAgreement:      "KeyAgreement",
+		x509.KeyUsageCertSign:          "CertSign",
+		x509.KeyUsageCRLSign:           "CRLSign",
+		x509.KeyUsageEncipherOnly:      "EncipherOnly",
+		x509.KeyUsageDecipherOnly:      "DecipherOnly",
 	}
 	for k, v := range usageMap {
 		if ku&k != 0 {
@@ -319,11 +323,20 @@ func keyUsageToString(ku x509.KeyUsage) []string {
 func extKeyUsageToString(eku []x509.ExtKeyUsage) []string {
 	usages := []string{}
 	usageMap := map[x509.ExtKeyUsage]string{
-		x509.ExtKeyUsageAny:             "Any",
-		x509.ExtKeyUsageServerAuth:      "ServerAuth",
-		x509.ExtKeyUsageClientAuth:      "ClientAuth",
-		x509.ExtKeyUsageCodeSigning:     "CodeSigning",
-		x509.ExtKeyUsageEmailProtection: "EmailProtection",
+		x509.ExtKeyUsageAny:                            "Any",
+		x509.ExtKeyUsageServerAuth:                     "ServerAuth",
+		x509.ExtKeyUsageClientAuth:                     "ClientAuth",
+		x509.ExtKeyUsageCodeSigning:                    "CodeSigning",
+		x509.ExtKeyUsageEmailProtection:                "EmailProtection",
+		x509.ExtKeyUsageIPSECEndSystem:                 "IPSECEndSystem",
+		x509.ExtKeyUsageIPSECTunnel:                    "IPSECTunnel",
+		x509.ExtKeyUsageIPSECUser:                      "IPSECUser",
+		x509.ExtKeyUsageTimeStamping:                   "TimeStamping",
+		x509.ExtKeyUsageOCSPSigning:                    "OCSPSigning",
+		x509.ExtKeyUsageMicrosoftServerGatedCrypto:     "MicrosoftServerGatedCrypto",
+		x509.ExtKeyUsageNetscapeServerGatedCrypto:      "NetscapeServerGatedCrypto",
+		x509.ExtKeyUsageMicrosoftCommercialCodeSigning: "MicrosoftCommercialCodeSigning",
+		x509.ExtKeyUsageMicrosoftKernelCodeSigning:     "MicrosoftKernelCodeSigning",
 	}
 	for k, v := range usageMap {
 		if containsExtKeyUsage(eku, k) {

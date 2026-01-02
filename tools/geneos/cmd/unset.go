@@ -75,29 +75,16 @@ geneos unset san -g Gateway1
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			resp = instance.NewResponse(i)
 
-			changed := instance.UnsetInstanceValues(i, unsetCmdValues)
+			cf := i.Config()
 
-			settings := i.Config().AllSettings()
-			delimiter := i.Config().Delimiter()
+			changed := instance.UnsetInstanceValues(i, unsetCmdValues)
 
 			if len(unsetCmdValues.Keys) > 0 {
 				for _, k := range unsetCmdValues.Keys {
-					// check and delete one level of maps
-					if strings.Contains(k, delimiter) {
-						p := strings.SplitN(k, delimiter, 2)
-						switch x := settings[p[0]].(type) {
-						case map[string]interface{}:
-							instance.DeleteSettingFromMap(i, x, p[1])
-							settings[p[0]] = x
-							changed = true
-						default:
-							// nothing yet
-						}
-						continue
+					if cf.IsSet(k) {
+						cf.Set(k, "")
+						changed = true
 					}
-
-					instance.DeleteSettingFromMap(i, settings, k)
-					changed = true
 				}
 			}
 
@@ -107,7 +94,7 @@ geneos unset san -g Gateway1
 				return
 			}
 
-			resp.Err = instance.SaveConfig(i, settings)
+			resp.Err = instance.SaveConfig(i)
 			return
 		}).Write(os.Stdout)
 	},

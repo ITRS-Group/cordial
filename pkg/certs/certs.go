@@ -25,12 +25,20 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"os"
+	"path"
 	"slices"
 	"time"
 
 	"github.com/awnumar/memguard"
+	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/host"
+)
+
+const (
+	PEMExtension = "pem"
+	KEYExtension = "key"
 )
 
 // ReadCertificate reads a PEM encoded cert from path on host h, return
@@ -56,9 +64,14 @@ func ReadCertificate(h host.Host, path string) (cert *x509.Certificate, err erro
 }
 
 // ReadCertificates reads and decodes all certificates from the PEM file on
-// host h at path. If the files cannot be read or no certificates found
-// then an empty slice is returned.
-func ReadCertificates(h host.Host, path string) (certs []*x509.Certificate) {
+// host h at path. If the files cannot be read an error is returned. If no
+// certificates are found in the file then no error is returned.
+func ReadCertificates(h host.Host, path string) (certs []*x509.Certificate, err error) {
+	if path == "" {
+		err = os.ErrInvalid
+		return
+	}
+
 	data, err := h.ReadFile(path)
 	if err != nil {
 		return
@@ -100,7 +113,10 @@ func UpdateCACertsFile(h host.Host, path string, certs ...*x509.Certificate) (ok
 		return c == nil || !ValidSigningCA(c)
 	})
 
-	existingCerts := ReadCertificates(h, path)
+	existingCerts, err := ReadCertificates(h, path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return false, err
+	}
 	if len(existingCerts) == 0 {
 		// if no existing certs just write the new ones
 		return true, WriteCertificates(h, path, certs...)
@@ -149,7 +165,11 @@ func UpdateRootCertsFile(h host.Host, path string, certs ...*x509.Certificate) (
 		return c == nil || !ValidRootCA(c)
 	})
 
-	allCerts := ReadCertificates(h, path)
+	allCerts, err := ReadCertificates(h, path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Error().Err(err).Msg("reading existing root certificates failed")
+		return false, err
+	}
 	if allCerts == nil {
 		return true, WriteCertificates(h, path, certs...)
 	}
@@ -181,7 +201,7 @@ func UpdateRootCertsFile(h host.Host, path string, certs ...*x509.Certificate) (
 // on host h. Certificates that are expired are skipped, only errors
 // from writing the resulting file are returned. Certificates are written
 // in the order provided.
-func WriteCertificates(h host.Host, path string, certs ...*x509.Certificate) (err error) {
+func WriteCertificates(h host.Host, certpath string, certs ...*x509.Certificate) (err error) {
 	var data []byte
 	for _, cert := range certs {
 		// validate cert as not expired, but it may still be before its
@@ -196,16 +216,37 @@ func WriteCertificates(h host.Host, path string, certs ...*x509.Certificate) (er
 		})
 		data = append(data, p...)
 	}
-	return h.WriteFile(path, data, 0644)
+	h.MkdirAll(path.Dir(certpath), 0755)
+	return h.WriteFile(certpath, data, 0644)
 }
 
 // ReadCertPool returns a certificate pool loaded from the file on host
 // h at path. If there is any error a nil pointer is returned.
 func ReadCertPool(h host.Host, path string) (pool *x509.CertPool) {
 	pool = x509.NewCertPool()
-	if chain, err := h.ReadFile(path); err == nil {
-		if ok := pool.AppendCertsFromPEM(chain); !ok {
+	if data, err := h.ReadFile(path); err == nil {
+		if ok := pool.AppendCertsFromPEM(data); !ok {
 			return nil
+		}
+	}
+	return
+}
+
+// ReadTrustedCertificates reads multiple trusted root certificates from
+// the specified files and returns a combined *x509.CertPool. Any
+// certificates that are not valid root CAs are ignored.
+func ReadTrustedCertificates(certFiles ...string) (pool *x509.CertPool, n int) {
+	pool = x509.NewCertPool()
+	for _, cf := range certFiles {
+		certSlice, err := ReadCertificates(host.Localhost, cf)
+		if err != nil {
+			continue
+		}
+		for _, c := range certSlice {
+			if ValidRootCA(c) {
+				pool.AddCert(c)
+				n++
+			}
 		}
 	}
 	return
@@ -254,10 +295,10 @@ func CreateCertificateAndKey(template, parent *x509.Certificate, signerKey *memg
 }
 
 // CreateRootCert creates a new root certificate and private key and
-// saves it with dir and file basefilepath with .pem and .key extensions. If
-// overwrite is true then any existing certificate and key is
-// overwritten.
-func CreateRootCert(h host.Host, basefilepath string, cn string, keytype KeyType) (err error) {
+// writes it locally with dir and file basefilepath with .pem and .key
+// extensions. If overwrite is true then any existing certificate and
+// key is overwritten.
+func CreateRootCert(basefilepath string, cn string, keytype KeyType) (err error) {
 	var root *x509.Certificate
 
 	template := Template(cn,
@@ -279,10 +320,10 @@ func CreateRootCert(h host.Host, basefilepath string, cn string, keytype KeyType
 		return
 	}
 
-	if err = WriteCertificates(h, basefilepath+".pem", root); err != nil {
+	if err = WriteCertificates(host.Localhost, basefilepath+".pem", root); err != nil {
 		return
 	}
-	if err = WritePrivateKey(h, basefilepath+".key", key); err != nil {
+	if err = WritePrivateKey(host.Localhost, basefilepath+".key", key); err != nil {
 		return
 	}
 
@@ -290,10 +331,10 @@ func CreateRootCert(h host.Host, basefilepath string, cn string, keytype KeyType
 }
 
 // CreateSigningCert creates a new signing certificate and private key
-// with the path and file bane name basefilepath. You must provide a
+// with the path and file base name basefilepath. You must provide a
 // valid root certificate and key in rootbasefilepath. If overwrite is
 // true than any existing cert and key are overwritten.
-func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string, cn string) (err error) {
+func CreateSigningCert(basefilepath string, rootbasefilepath string, cn string) (err error) {
 	var signer *x509.Certificate
 
 	template := Template(cn,
@@ -305,11 +346,12 @@ func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string
 		MaxPathLen(0),
 	)
 
-	rootCert, err := ReadCertificate(h, rootbasefilepath+".pem")
+	rootCert, err := ReadCertificate(host.Localhost, rootbasefilepath+".pem")
 	if err != nil {
 		return
 	}
-	rootKey, err := ReadPrivateKey(h, rootbasefilepath+".key")
+
+	rootKey, err := ReadPrivateKey(host.Localhost, rootbasefilepath+".key")
 	if err != nil {
 		return
 	}
@@ -319,10 +361,10 @@ func CreateSigningCert(h host.Host, basefilepath string, rootbasefilepath string
 		return
 	}
 
-	if err = WriteCertificates(h, basefilepath+".pem", signer); err != nil {
+	if err = WriteCertificates(host.Localhost, basefilepath+".pem", signer); err != nil {
 		return
 	}
-	if err = WritePrivateKey(h, basefilepath+".key", key); err != nil {
+	if err = WritePrivateKey(host.Localhost, basefilepath+".key", key); err != nil {
 		return
 	}
 
@@ -356,8 +398,95 @@ func ValidSigningCA(cert *x509.Certificate) bool {
 	}
 	return cert.IsCA &&
 		cert.BasicConstraintsValid &&
-		cert.MaxPathLen == 0 &&
-		cert.MaxPathLenZero &&
+		(cert.MaxPathLen != 0 || (cert.MaxPathLen == 0 && cert.MaxPathLenZero)) &&
 		cert.NotBefore.Before(time.Now()) &&
 		cert.NotAfter.After(time.Now())
+}
+
+// ValidLeafCert returns true if the provided certificate is a valid
+// leaf certificate. A valid leaf certificate is not a CA, has the
+// DigitalSignature key usage, has at least one extended key usage,
+// and is between its NotBefore and NotAfter dates.
+func ValidLeafCert(cert *x509.Certificate) bool {
+	if cert == nil {
+		return false
+	}
+	return !cert.IsCA &&
+		cert.KeyUsage&x509.KeyUsageDigitalSignature != 0 &&
+		cert.ExtKeyUsage != nil &&
+		cert.NotBefore.Before(time.Now()) &&
+		cert.NotAfter.After(time.Now())
+}
+
+// Verify attempts to verify the provided certificate chain. It returns
+// the leaf certificate, any intermediates and the root certificate
+// found in the chain. It returns an error if verification fails. The
+// first certificate in the certs provided is assumed to be the leaf
+// certificate. The order of the remaining certificates does not matter.
+func Verify(cert ...*x509.Certificate) (leaf *x509.Certificate, intermediates []*x509.Certificate, root *x509.Certificate, err error) {
+	log.Debug().Msgf("verifying %d certificates", len(cert))
+
+	for _, c := range cert {
+		switch {
+		case ValidLeafCert(c):
+			log.Debug().Msgf("found valid leaf certificate: %s", c.Subject.CommonName)
+			if leaf != nil {
+				err = errors.New("multiple leaf certificates found")
+				return
+			}
+			leaf = c
+		case ValidRootCA(c):
+			log.Debug().Msgf("found valid root CA certificate: %s", c.Subject.CommonName)
+			if root != nil {
+				err = errors.New("multiple root certificates found")
+				return
+			}
+			root = c
+		case ValidSigningCA(c):
+			log.Debug().Msgf("found valid intermediate CA certificate: %s", c.Subject.CommonName)
+			intermediates = append(intermediates, c)
+		default:
+			err = fmt.Errorf("certificate %q is not valid", c.Subject.CommonName)
+			return
+		}
+	}
+
+	if leaf == nil {
+		err = errors.New("no valid leaf certificate found")
+		return
+	}
+
+	opts := x509.VerifyOptions{}
+	if root != nil {
+		opts.Roots = x509.NewCertPool()
+		opts.Roots.AddCert(root)
+	}
+	if len(intermediates) > 0 {
+		opts.Intermediates = x509.NewCertPool()
+		for _, ic := range intermediates {
+			opts.Intermediates.AddCert(ic)
+		}
+	}
+
+	chains, err := leaf.Verify(opts)
+	if err != nil {
+		log.Debug().Msgf("certificate verification failed: %v", err)
+		return
+	}
+	if len(chains) == 0 || len(chains[0]) == 0 {
+		err = errors.New("no valid certificate chain found")
+		return
+	}
+	leaf = chains[0][0]
+	if len(chains[0]) > 2 {
+		intermediates = chains[0][1 : len(chains[0])-1]
+	} else {
+		intermediates = nil
+	}
+	if len(chains[0]) >= 2 {
+		root = chains[0][len(chains[0])-1]
+	} else {
+		root = nil
+	}
+	return
 }

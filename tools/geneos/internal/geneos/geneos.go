@@ -22,7 +22,6 @@ package geneos
 
 import (
 	"errors"
-	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial"
@@ -120,7 +119,7 @@ func Initialise(h *Host, options ...PackageOptions) (err error) {
 func Init(app string) {
 	SigningCertBasename = cordial.ExecutableName()
 	ChainCertFile = cordial.ExecutableName() + "-chain.pem"
-	TrustedCertsFile = filepath.Join(config.AppConfigDir(), app, "trusted-roots.pem")
+	// TrustedRootsPath = filepath.Join(config.AppConfigDir(), TrustedRootsFilename)
 	RootComponent.Register(nil)
 }
 

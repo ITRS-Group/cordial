@@ -23,7 +23,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path"
 
@@ -49,10 +48,17 @@ var SigningCertBasename string
 // verify instance certificates
 var ChainCertFile string
 
-// TrustedCertsFile is the path to the root certificates file used by
-// instance when a more specific one is not given and `tls::verify` is
-// true. This is normally located in the user's app config directory.
-var TrustedCertsFile string
+const (
+	// TrustedRootsFilename is the file name for the trusted roots file
+	// used by Geneos components to verify peer certificates. This file
+	// is located in the geneos home directory on each hoist under
+	// `tls/`
+	TrustedRootsFilename = "trusted-roots.pem"
+)
+
+func TrustedRootsPath(h *Host) string {
+	return h.PathTo("tls", TrustedRootsFilename)
+}
 
 // ReadRootCertificate reads the root certificate from the user's app
 // config directory. It "promotes" old cert and key files from the
@@ -65,6 +71,7 @@ func ReadRootCertificate() (root *x509.Certificate, file string, err error) {
 		err = config.ErrNoUserConfigDir
 		return
 	}
+
 	// move the root certificate to the user app config directory
 	log.Debug().Msgf("migrating root certificate from %s to %s", LOCAL.PathTo("tls", RootCABasename+".pem"), confDir)
 	file = config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", RootCABasename+".pem"))
@@ -278,13 +285,13 @@ func DecomposePEM(data ...string) (cert *x509.Certificate, key *memguard.Enclave
 
 	// match key if we have a leaf cert
 	if cert != nil {
-		if i := certs.IndexKey(keys, cert); i != -1 {
+		if i := certs.IndexPrivateKey(keys, cert); i != -1 {
 			key = keys[i]
 		}
 	} else {
 		// no leaf, try to match first cert in chain
 		for _, c := range chain {
-			if i := certs.IndexKey(keys, c); i != -1 {
+			if i := certs.IndexPrivateKey(keys, c); i != -1 {
 				key = keys[i]
 				break
 			}
@@ -419,41 +426,39 @@ func TLSInit(overwrite bool, keytype certs.KeyType) (err error) {
 
 	confDir := config.AppConfigDir()
 	if confDir == "" {
-		err = config.ErrNoUserConfigDir
-		return
+		return config.ErrNoUserConfigDir
 	}
+
 	// directory permissions do not need to be restrictive
-	err = LOCAL.MkdirAll(confDir, 0775)
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
+	if err = LOCAL.MkdirAll(confDir, 0775); err != nil {
+		return err
 	}
 
 	if err := certs.CreateRootCert(
-		LOCAL,
 		path.Join(confDir, RootCABasename),
 		cordial.ExecutableName()+" root certificate",
 		keytype); err != nil {
-		if !errors.Is(err, os.ErrExist) {
-			return err
-		}
-		fmt.Printf("root certificate already exists in %s, skipping\n", path.Join(confDir, RootCABasename)+".pem")
-	} else {
-		fmt.Printf("CA certificate created for %s\n", RootCABasename)
+		return err
+	}
+	fmt.Printf("CA certificate created for %s\n", RootCABasename)
+
+	rootCert, _, err := ReadRootCertificate()
+	if err != nil {
+		return err
+	}
+	_, err = certs.UpdateRootCertsFile(LOCAL, TrustedRootsPath(LOCAL), rootCert)
+	if err != nil {
+		return err
 	}
 
 	if err := certs.CreateSigningCert(
-		LOCAL,
 		path.Join(confDir, SigningCertBasename),
 		path.Join(confDir, RootCABasename),
 		cordial.ExecutableName()+" intermediate certificate",
 	); err != nil {
-		if !errors.Is(err, os.ErrExist) {
-			return err
-		}
-		fmt.Printf("signing certificate already exists in %s, skipping\n", path.Join(confDir, SigningCertBasename)+".pem")
-	} else {
-		fmt.Printf("Signing certificate created for %s\n", SigningCertBasename)
+		return err
 	}
+	fmt.Printf("Signing certificate created for %s\n", SigningCertBasename)
 
 	// sync if geneos root exists
 	if d, err := os.Stat(LocalRoot()); err == nil && d.IsDir() {
@@ -462,44 +467,27 @@ func TLSInit(overwrite bool, keytype certs.KeyType) (err error) {
 	return nil
 }
 
-// TLSSync creates and copies a certificate chain file to all remote
-// hosts
-//
-// If a signing cert and/or a root cert exist, refresh the chain file
-// from it, otherwise copy the chain file (using the configured name) to
-// all remotes.
+// TLSSync merges and updates the `TrustedRootsFilename` file on all remote hosts.
 func TLSSync() (err error) {
-	rootCert, _, err := ReadRootCertificate()
-	if err != nil {
-		rootCert = nil
-	}
-	geneosCert, _, err := ReadSigningCertificate()
-	if err != nil {
-		return os.ErrNotExist
+	allRoots := []*x509.Certificate{}
+	allHosts := append([]*Host{LOCAL}, RemoteHosts(false)...)
+	for _, h := range allHosts {
+		if certSlice, err := certs.ReadCertificates(h, h.PathTo("tls", TrustedRootsFilename)); err == nil {
+			allRoots = append(allRoots, certSlice...)
+		}
 	}
 
-	if rootCert == nil && geneosCert == nil {
-		tlsPath := LOCAL.PathTo("tls")
-		chainpath := path.Join(tlsPath, ChainCertFile)
-		if s, err := LOCAL.Stat(chainpath); err != nil && (s.Mode().IsRegular() || (s.Mode()&fs.ModeSymlink != 0)) {
-			for _, r := range RemoteHosts(false) {
-				host.CopyFile(LOCAL, tlsPath, r, r.PathTo("tls"))
-			}
+	for _, h := range allHosts {
+		hostname := h.Hostname()
+		updated, err := certs.UpdateRootCertsFile(h, h.PathTo("tls", TrustedRootsFilename), allRoots...)
+		if err != nil {
+			log.Error().Err(err).Msgf("failed to update trusted roots on host %s", hostname)
+			continue
 		}
-		return
+		if updated {
+			fmt.Printf("trusted roots updated on host %s\n", hostname)
+		}
 	}
 
-	for r := range ALL.OrList() {
-		tlsPath := r.PathTo("tls")
-		if err = r.MkdirAll(tlsPath, 0775); err != nil {
-			return
-		}
-		chainpath := path.Join(tlsPath, ChainCertFile)
-		if err = certs.WriteCertificates(r, chainpath, geneosCert, rootCert); err != nil {
-			return
-		}
-
-		fmt.Printf("Updated certificate chain %s pem on %s\n", chainpath, r.String())
-	}
 	return
 }

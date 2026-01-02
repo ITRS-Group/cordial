@@ -6,6 +6,8 @@ import (
 	"crypto/x509/pkix"
 	"net"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Template creates a basic x509 certificate template with the given
@@ -23,10 +25,10 @@ func Template(cn string, options ...TemplateOption) (template *x509.Certificate)
 	if opts.duration == 0 {
 		opts.duration = 365 * 24 * time.Hour
 	}
-	if opts.keyUsage == 0 {
+	if opts.keyUsage == -1 {
 		opts.keyUsage = x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature
 	}
-	if len(opts.extKeyUsage) == 0 {
+	if len(opts.extKeyUsage) == 1 && opts.extKeyUsage[0] == -1 {
 		opts.extKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth}
 	}
 
@@ -36,15 +38,18 @@ func Template(cn string, options ...TemplateOption) (template *x509.Certificate)
 		Subject: pkix.Name{
 			CommonName: cn,
 		},
-		NotBefore:      time.Now().Add(-60 * time.Second),
-		NotAfter:       expires,
-		KeyUsage:       opts.keyUsage,
-		ExtKeyUsage:    opts.extKeyUsage,
-		MaxPathLen:     opts.maxPathLen,
-		MaxPathLenZero: opts.maxPathLenZero,
-		DNSNames:       opts.dnsNames,
-		IPAddresses:    opts.ipAddresses,
+		NotBefore:             time.Now().Add(-60 * time.Second),
+		NotAfter:              expires,
+		IsCA:                  opts.isCA,
+		BasicConstraintsValid: opts.basicConstraintsValid,
+		KeyUsage:              opts.keyUsage,
+		ExtKeyUsage:           opts.extKeyUsage,
+		MaxPathLen:            opts.maxPathLen,
+		MaxPathLenZero:        opts.maxPathLenZero,
+		DNSNames:              opts.dnsNames,
+		IPAddresses:           opts.ipAddresses,
 	}
+	log.Debug().Msgf("created template for %s: %#v", cn, template)
 	return
 }
 
@@ -61,6 +66,10 @@ type templateOptions struct {
 }
 
 func evalTemplateOptions(options ...TemplateOption) (opts *templateOptions) {
+	opts = &templateOptions{
+		keyUsage:    -1,
+		extKeyUsage: []x509.ExtKeyUsage{-1},
+	}
 	for _, option := range options {
 		option(opts)
 	}

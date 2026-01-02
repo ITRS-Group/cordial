@@ -35,7 +35,7 @@ geneos add [flags] TYPE NAME [KEY=VALUE...]
   -l, --log                           Follow the logs after starting the instance.
                                       Implies -S to start the instance
   -p, --port uint16                   Override the default port selection
-  -e, --env NAME=VALUE                An environment variable for instance start-up
+  -e, --env NAME=VALUE                Environment variable for instance start-up
                                       (Repeat as required)
   -b, --base string                   Select the base version for the
                                       instance (default "active_prod")
@@ -51,7 +51,7 @@ geneos add [flags] TYPE NAME [KEY=VALUE...]
                                       (Repeat as required, gateway only)
   -g, --gateway HOSTNAME:PORT         A gateway connection in the format HOSTNAME:PORT
                                       (Repeat as required, san and floating only)
-  -a, --attribute NAME=VALUE          An attribute in the format NAME=VALUE
+  -a, --attribute NAME=VALUE          Attribute in the format NAME=VALUE
                                       (Repeat as required, san only)
   -t, --type NAME                     A type NAME
                                       (Repeat as required, san only)

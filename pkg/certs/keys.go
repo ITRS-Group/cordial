@@ -144,14 +144,14 @@ func ReadPrivateKey(h host.Host, file string) (key *memguard.Enclave, err error)
 // WritePrivateKey writes a DER encoded private key as a PKCS#8 encoded
 // PEM file to path on host h. sets file permissions to 0600 (before
 // umask)
-func WritePrivateKey(h host.Host, pt string, key *memguard.Enclave) (err error) {
+func WritePrivateKey(h host.Host, path string, key *memguard.Enclave) (err error) {
 	l, _ := key.Open()
 	defer l.Destroy()
-	pembytes := pem.EncodeToMemory(&pem.Block{
+	data := pem.EncodeToMemory(&pem.Block{
 		Type:  "PRIVATE KEY",
 		Bytes: l.Bytes(),
 	})
-	return h.WriteFile(pt, pembytes, 0600)
+	return h.WriteFile(path, data, 0600)
 }
 
 // PrivateKey parses the DER encoded private key enclave, first as
@@ -192,10 +192,10 @@ func PublicKey(key *memguard.Enclave) (publickey crypto.PublicKey, err error) {
 	return
 }
 
-// IndexKey tests the slice DER encoded private keys against the x509
+// IndexPrivateKey tests the slice DER encoded private keys against the x509
 // cert and returns the index of the first match, or -1 if none of the
 // keys match.
-func IndexKey(keys []*memguard.Enclave, cert *x509.Certificate) int {
+func IndexPrivateKey(keys []*memguard.Enclave, cert *x509.Certificate) int {
 	for i, key := range keys {
 		if pubkey, err := PublicKey(key); err == nil { // if ok then compare
 			// ensure we have an Equal() method on the opaque key

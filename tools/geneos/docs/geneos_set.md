@@ -40,14 +40,14 @@ geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
   -k, --keyfile KEYFILE               keyfile to use for encoding secrets
                                       default is instance configured keyfile
   -s, --secure NAME[=VALUE]           encode a secret for NAME, prompt if VALUE not supplied, using a keyfile
-  -e, --env NAME=VALUE                An environment variable for instance start-up
+  -e, --env NAME=VALUE                Environment variable for instance start-up
                                       (Repeat as required)
   -E, --secureenv NAME[=VALUE]        encode a secret for env var NAME, prompt if VALUE not supplied, using a keyfile
   -i, --include PRIORITY:[PATH|URL]   An include file in the format PRIORITY:[PATH|URL]
                                       (Repeat as required, gateway only)
   -g, --gateway HOSTNAME:PORT         A gateway connection in the format HOSTNAME:PORT
                                       (Repeat as required, san and floating only)
-  -a, --attribute NAME=VALUE          An attribute in the format NAME=VALUE
+  -a, --attribute NAME=VALUE          Attribute in the format NAME=VALUE
                                       (Repeat as required, san only)
   -t, --type NAME                     A type NAME
                                       (Repeat as required, san only)

@@ -20,6 +20,7 @@ package tlscmd
 import (
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/x509"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -85,6 +86,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	var err error
 
 	resp = instance.NewResponse(i)
+	cf := i.Config()
 
 	confDir := config.AppConfigDir()
 	if confDir == "" {
@@ -94,7 +96,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 
 	switch {
 	case renewCmdRoll:
-		if err = instance.RollFiles(i, newFileSuffix, oldFileSuffix, "certificate", "privatekey"); err != nil {
+		if err = instance.RollFiles(i, newFileSuffix, oldFileSuffix, cf.Join("tls", "certificate"), cf.Join("tls", "privatekey")); err != nil {
 			resp.Err = err
 			return
 		}
@@ -103,7 +105,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		return
 
 	case renewCmdUnroll:
-		if err = instance.RollFiles(i, oldFileSuffix, newFileSuffix, "certificate", "privatekey"); err != nil {
+		if err = instance.RollFiles(i, oldFileSuffix, newFileSuffix, cf.Join("tls", "certificate"), cf.Join("tls", "privatekey")); err != nil {
 			resp.Err = err
 			return
 		}
@@ -113,7 +115,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 
 	default:
 		// check instance for existing cert, and do nothing if none
-		cert, _, _, err := instance.ReadCertificate(i)
+		cert, err := instance.ReadCertificate(i)
 		if cert == nil && errors.Is(err, os.ErrNotExist) {
 			return
 		}
@@ -148,7 +150,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 				return
 			}
 
-			if err = instance.WriteKey(i, key, newFileSuffix); err != nil {
+			if err = certs.WritePrivateKey(i.Host(), instance.ComponentFilepath(i, "key", newFileSuffix), key); err != nil {
 				return
 			}
 
@@ -156,35 +158,35 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			return
 		}
 
-		if resp.Err = certs.WriteCertificates(i.Host(), instance.ComponentFilepath(i, "pem"), cert, signingCert); resp.Err != nil {
+		if resp.Err = instance.WriteCertificates(i, []*x509.Certificate{cert, signingCert}); resp.Err != nil {
 			return
 		}
 
-		if resp.Err = instance.WriteKey(i, key); resp.Err != nil {
+		if resp.Err = instance.WritePrivateKey(i, key); resp.Err != nil {
 			return
 		}
 
 		// root cert optional to create instance specific chain file
-		rootCert, _, _ := geneos.ReadRootCertificate()
-		if rootCert == nil {
-			i.Config().SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
-		} else {
-			chainfile := instance.PathTo(i, "certchain")
-			if chainfile == "" {
-				chainfile = path.Join(i.Home(), "chain.pem")
-				i.Config().SetString("certchain", chainfile, config.Replace("home"))
-			}
+		// rootCert, _, _ := geneos.ReadRootCertificate()
+		// if rootCert == nil {
+		// 	i.Config().SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
+		// } else {
+		// 	chainfile := instance.PathTo(i, "certchain")
+		// 	if chainfile == "" {
+		// 		chainfile = path.Join(i.Home(), "chain.pem")
+		// 		i.Config().SetString("certchain", chainfile, config.Replace("home"))
+		// 	}
 
-			chainUpdateMutex.Lock()
-			if updated, err := certs.UpdateCACertsFile(i.Host(), chainfile, signingCert, rootCert); err != nil {
-				resp.Err = err
-				chainUpdateMutex.Unlock()
-				return
-			} else if updated {
-				resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate chain %q updated", i, chainfile))
-			}
-			chainUpdateMutex.Unlock()
-		}
+		// 	chainUpdateMutex.Lock()
+		// 	if updated, err := certs.UpdateCACertsFile(i.Host(), chainfile, signingCert, rootCert); err != nil {
+		// 		resp.Err = err
+		// 		chainUpdateMutex.Unlock()
+		// 		return
+		// 	} else if updated {
+		// 		resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate chain %q updated", i, chainfile))
+		// 	}
+		// 	chainUpdateMutex.Unlock()
+		// }
 
 		if resp.Err = instance.SaveConfig(i); resp.Err != nil {
 			return

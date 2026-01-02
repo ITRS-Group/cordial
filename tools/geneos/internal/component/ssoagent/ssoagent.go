@@ -246,7 +246,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		trustStore := instance.Abs(s, ssoconf.GetString(config.Join("server", "trust_store", "location")))
 		trustStorePassword := ssoconf.GetPassword(config.Join("server", "trust_store", "password"), config.Default("changeit"))
 		log.Debug().Msgf("%s: rebuilding truststore: %q", s.String(), trustStore)
-		certSlice := certs.ReadCertificates(s.Host(), cf.GetString("certchain"))
+		certSlice, _ := certs.ReadCertificates(s.Host(), cf.GetString("certchain"))
 		k, err := certs.ReadKeystore(s.Host(),
 			trustStore,
 			trustStorePassword,
@@ -314,10 +314,10 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 			if err != nil {
 				return err
 			}
+			certSlice, _ := certs.ReadCertificates(s.Host(), cf.GetString("certchain"))
 			alias := geneos.ALL.Hostname()
 			ks.DeleteEntry(alias)
-			ks.AddKeystoreKey(alias, key, ksPassword, append([]*x509.Certificate{cert},
-				certs.ReadCertificates(s.Host(), cf.GetString("certchain"))...)...)
+			ks.AddKeystoreKey(alias, key, ksPassword, append([]*x509.Certificate{cert}, certSlice...)...)
 			changed = true
 		}
 

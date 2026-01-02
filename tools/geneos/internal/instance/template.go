@@ -86,6 +86,7 @@ func ExecuteTemplate(i geneos.Instance, p string, name string, defaultTemplate [
 	}
 	defer out.Close()
 	m := cf.ExpandAllSettings(config.NoDecode(true))
+	log.Debug().Msgf("template data before adjustments: %#v", m)
 	// viper insists this is a float64, manually override
 	m["port"] = uint16(cf.GetUint("port"))
 	// set high level defaults
@@ -98,7 +99,20 @@ func ExecuteTemplate(i geneos.Instance, p string, name string, defaultTemplate [
 			delete(m, k)
 		}
 	}
-	// log.Debug().Msgf("template data: %#v", m)
+
+	// tls migration, pull in new settings to old``
+	if m["certificate"] == nil && m["privatekey"] == nil {
+		if t, ok := m["tls"]; ok {
+			if ts, ok := t.(map[string]any); ok {
+				if ts["certificate"] != nil && ts["privatekey"] != nil {
+					m["certificate"] = ts["certificate"]
+					m["privatekey"] = ts["privatekey"]
+				}
+			}
+		}
+	}
+
+	log.Debug().Msgf("template data: %#v", m)
 
 	if err = t.ExecuteTemplate(out, name, m); err != nil {
 		log.Error().Err(err).Msg("Cannot create configuration from template(s)")

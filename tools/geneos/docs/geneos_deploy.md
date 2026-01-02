@@ -73,8 +73,7 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       Use this option for bootstrapping instances, such as with Centralised Config
   -p, --port port                     Override the default port selection
   -n, --nosave                        Do not save a local copy of any downloads
-  -T, --tls                           Initialise TLS subsystem if required.
-                                      Use options below to import existing certificate bundles
+      --insecure                      Do not initialise TLS subsystem
   -C, --signing-bundle PEM            Signing certificate bundle file, in PEM format.
                                       Use a dash (`-`) to be prompted for PEM from console
   -c, --instance-bundle PEM           Instance certificate bundle file, in PEM format.
@@ -103,19 +102,19 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       name of the import source or if given it must be
                                       relative to and below the instance directory
                                       (Repeat as required)
-  -e, --env NAME=VALUE                An environment variable for instance start-up
+  -e, --env NAME=VALUE                Environment variable for instance start-up
                                       (Repeat as required)
   -i, --include PRIORITY:[PATH|URL]   An include file in the format PRIORITY:[PATH|URL]
                                       (Repeat as required, gateway only)
   -g, --gateway HOSTNAME:PORT         A gateway connection in the format HOSTNAME:PORT
                                       (Repeat as required, san and floating only)
-  -a, --attribute NAME=VALUE          An attribute in the format NAME=VALUE
+  -a, --attribute NAME=VALUE          Attribute in the format NAME=VALUE
                                       (Repeat as required, san only)
   -t, --type NAME                     A type NAME
                                       (Repeat as required, san only)
   -v, --variable [TYPE:]NAME=VALUE    A variable in the format [TYPE:]NAME=VALUE
                                       (Repeat as required, san only)
-      --header NAME=VALUE             An HTTP header in the format NAME=VALUE
+      --header NAME=VALUE             HTTP header in the format NAME=VALUE
                                       (Repeat as required)
 ```
 

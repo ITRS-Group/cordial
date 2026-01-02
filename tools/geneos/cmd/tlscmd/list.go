@@ -18,7 +18,6 @@ limitations under the License.
 package tlscmd
 
 import (
-	"bytes"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/x509"
@@ -33,13 +32,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 type listCertType struct {
@@ -590,7 +590,16 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	cert, valid, chainfile, err := instance.ReadCertificate(i)
+	certChain, err := instance.ReadCertificates(i)
+	if err != nil {
+		return
+	}
+	log.Debug().Err(err).Msgf("read certs for %s", i)
+	cert := certChain[0]
+	valid := certs.ValidLeafCert(cert) && verifyCert(certChain...)
+	log.Debug().Msgf("cert valid=%v (%v / %v) for %s", valid, certs.ValidLeafCert(certChain[0]), verifyCert(certChain...), i)
+	chainfile := i.Config().GetString("chainfile")
+
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -621,7 +630,13 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) 
 func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	cert, valid, chainfile, err := instance.ReadCertificate(i)
+	certChain, err := instance.ReadCertificates(i)
+	if err != nil {
+		return
+	}
+	cert := certChain[0]
+	valid := certs.ValidLeafCert(cert) && verifyCert(certChain...)
+	chainfile := i.Config().GetString("chainfile")
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -652,7 +667,13 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *instance.Respons
 func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	cert, valid, chainfile, err := instance.ReadCertificate(i)
+	certChain, err := instance.ReadCertificates(i)
+	if err != nil {
+		return
+	}
+	cert := certChain[0]
+	valid := certs.ValidLeafCert(cert) && verifyCert(certChain...)
+	chainfile := i.Config().GetString("chainfile")
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -703,7 +724,13 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *instance.Res
 func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	resp = instance.NewResponse(i)
 
-	cert, valid, chainfile, err := instance.ReadCertificate(i)
+	certChain, err := instance.ReadCertificates(i)
+	if err != nil {
+		return
+	}
+	cert := certChain[0]
+	valid := certs.ValidLeafCert(cert) && verifyCert(certChain...)
+	chainfile := i.Config().GetString("chainfile")
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -749,44 +776,30 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *instance.Respon
 // (initialised in the main RunE()) and if that fails then against
 // system certs. It also loads the Geneos global chain file and adds the
 // certs to the verification pools after some basic validation.
-func verifyCert(cert *x509.Certificate) bool {
-	var rootCertPool, geneosCertPool *x509.CertPool
+func verifyCert(certChain ...*x509.Certificate) bool {
+	roots, n := certs.ReadTrustedCertificates(geneos.TrustedRootsPath(geneos.LOCAL))
+	subjects := roots.Subjects()
+	var subj []string
+	for _, s := range subjects {
+		subj = append(subj, string(s))
+	}
+	log.Debug().Msgf("loaded %d trusted root certificates: %v", n, subj)
 
-	if rootCert != nil {
-		rootCertPool = x509.NewCertPool()
-		rootCertPool.AddCert(rootCert)
-	} else {
-		rootCertPool, _ = x509.SystemCertPool()
+	if n == 0 {
+		return false
 	}
 
-	if geneosCert != nil {
-		geneosCertPool = x509.NewCertPool()
-		geneosCertPool.AddCert(geneosCert)
-	}
-
-	// load chain, split into root and other
-	certSlice := certs.ReadCertificates(geneos.LOCAL, geneos.LOCAL.PathTo("tls", geneos.ChainCertFile))
-	for _, cert := range certSlice {
-		if bytes.Equal(cert.RawIssuer, cert.RawSubject) && cert.IsCA {
-			// check root validity against itself
-			selfRootPool := x509.NewCertPool()
-			selfRootPool.AddCert(cert)
-			if _, err := cert.Verify(x509.VerifyOptions{Roots: selfRootPool}); err != nil {
-				log.Error().Err(err).Msg("root cert not valid")
-				return false
-			}
-			rootCertPool.AddCert(cert)
-		} else {
-			if !cert.BasicConstraintsValid {
-				continue
-			}
-			geneosCertPool.AddCert(cert)
+	cert := certChain[0]
+	chain := x509.NewCertPool()
+	if len(certChain) > 1 {
+		for _, c := range certChain[1:] {
+			chain.AddCert(c)
 		}
 	}
 
 	opts := x509.VerifyOptions{
-		Roots:         rootCertPool,
-		Intermediates: geneosCertPool,
+		Roots:         roots,
+		Intermediates: chain,
 	}
 
 	chains, err := cert.Verify(opts)
@@ -800,17 +813,5 @@ func verifyCert(cert *x509.Certificate) bool {
 		return true
 	}
 
-	// if failed against internal certs, try system ones
-	chains, err = cert.Verify(x509.VerifyOptions{})
-	if err != nil {
-		log.Debug().Err(err).Msg("")
-		return false
-	}
-	if len(chains) > 0 {
-		log.Debug().Msgf("cert %q verified", cert.Subject.CommonName)
-		return true
-	}
-
-	log.Debug().Msgf("cert %q NOT verified", cert.Subject.CommonName)
 	return false
 }

@@ -18,11 +18,14 @@ limitations under the License.
 package tlscmd
 
 import (
+	"crypto/x509"
 	_ "embed"
 	"os"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -60,7 +63,85 @@ var migrateCmd = &cobra.Command{
 	},
 }
 
+// migrate instance certificates from old layout to new layout:
+//
+// * use certchain to create a full chain in certificate file (without root)
+// * update params from certificate/privatekey/certchain to tls::certificate etc.
+// * update trusted-roots with new roots found in certchain
 func migrateInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
+	resp = instance.NewResponse(i)
+
+	cf := i.Config()
+	h := i.Host()
+
+	// first check if already migrated
+	if cf.IsSet(cf.Join("tls", "certificate")) {
+		return
+	}
+
+	certChain, err := instance.ReadCertificates(i)
+	if err != nil && !os.IsNotExist(err) {
+		resp.Err = err
+		return
+	}
+	if len(certChain) == 0 {
+		resp.Err = nil
+		return
+	}
+
+	var chain []*x509.Certificate
+	if cf.IsSet("certchain") {
+		log.Debug().Msgf("reading certchain %s", cf.GetString("certchain"))
+		chain, err = certs.ReadCertificates(h, cf.GetString("certchain"))
+		if err != nil && !os.IsNotExist(err) {
+			resp.Err = err
+			return
+		}
+	}
+	certChain = append(certChain, chain...)
+
+	leaf, intermediates, root, err := certs.Verify(certChain...)
+	if err != nil {
+		resp.Err = err
+		return
+	}
+
+	// update trusted-roots file
+	updated, err := certs.UpdateRootCertsFile(h, geneos.TrustedRootsPath(h), root)
+	if err != nil {
+		resp.Err = err
+		return
+	}
+	if updated {
+		resp.Completed = append(resp.Completed, "updated trusted roots")
+	}
+	// write fullchain to certificate file - this updates instance parameters for certificate
+	err = instance.WriteCertificates(i, append([]*x509.Certificate{leaf}, intermediates...))
+	if err != nil {
+		resp.Err = err
+		return
+	}
+	resp.Completed = append(resp.Completed, "wrote fullchain to certificate file")
+
+	// update instance parameters to new layout
+	cf.Set(cf.Join("tls", "privatekey"), cf.GetString("privatekey"))
+	cf.Set(cf.Join("tls", "trusted-roots"), geneos.TrustedRootsPath(i.Host()))
+
+	if !cf.GetBool("use-chain") {
+		cf.Set(cf.Join("tls", "verify"), false)
+	}
+
+	// "certificate" is cleared by WriteCertificates above
+	cf.Set("privatekey", "")
+	cf.Set("certchain", "")
+	cf.Set("use-chain", "")
+
+	if err = instance.SaveConfig(i); err != nil {
+		resp.Err = err
+		return
+	}
+	resp.Completed = append(resp.Completed, "updated instance configuration")
+
 	return
 }
 

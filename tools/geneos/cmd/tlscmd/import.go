@@ -209,7 +209,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response
 	}
 	resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate written", i))
 
-	if resp.Err = instance.WriteKey(i, key); resp.Err != nil {
+	if resp.Err = instance.WritePrivateKey(i, key); resp.Err != nil {
 		return
 	}
 	resp.Lines = append(resp.Lines, fmt.Sprintf("%s private key written", i))
