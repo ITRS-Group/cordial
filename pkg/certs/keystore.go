@@ -8,6 +8,7 @@ import (
 
 	"github.com/awnumar/memguard"
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
+	"github.com/rs/zerolog/log"
 	"github.com/square/certigo/jceks"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -19,6 +20,56 @@ import (
 
 type KeyStore struct {
 	keystore.KeyStore
+}
+
+func CertsToKeyStore(h host.Host, certsPath, privatekeyPath, keystorePath, alias string, password *config.Plaintext) error {
+	certChain, err := ReadCertificates(h, certsPath)
+	if err != nil {
+		return err
+	}
+	key, err := ReadPrivateKey(h, privatekeyPath)
+	if err != nil {
+		return err
+	}
+	k, err := ReadKeystore(h, keystorePath, password)
+	if err != nil {
+		// new, empty keystore
+		k = &KeyStore{
+			KeyStore: keystore.New(),
+		}
+	}
+	k.DeleteEntry(alias)
+	k.AddKeystoreKey(alias, key, password, certChain...)
+	return k.WriteKeystore(h, keystorePath, password)
+}
+
+func RootsToTrustStore(h host.Host, rootsPath string, trustPath string, password *config.Plaintext) error {
+	roots, _ := ReadCertificates(h, rootsPath)
+	k, err := ReadKeystore(h,
+		trustPath,
+		password,
+	)
+	if err != nil {
+		log.Debug().Err(err).Msg("")
+		k = &KeyStore{
+			KeyStore: keystore.New(),
+		}
+	}
+
+	for _, cert := range roots {
+		alias := cert.Subject.CommonName
+		k.DeleteEntry(alias)
+		if err = k.AddKeystoreCertificate(alias, cert); err != nil {
+			return err
+		}
+	}
+
+	// TODO: temp file dance, after testing
+	if err = k.WriteKeystore(h, trustPath, password); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ReadKeystore returns a keystore.
@@ -102,10 +153,10 @@ func (k *KeyStore) AddKeystoreKey(alias string, key *memguard.Enclave, password 
 		return os.ErrInvalid
 	}
 
-	for _, c := range certs {
+	for _, cert := range certs {
 		ch = append(ch, keystore.Certificate{
 			Type:    "X509",
-			Content: c.Raw,
+			Content: cert.Raw,
 		})
 	}
 

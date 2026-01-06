@@ -18,7 +18,6 @@ limitations under the License.
 package webserver
 
 import (
-	"crypto/x509"
 	"fmt"
 	"os"
 	"path"
@@ -26,7 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/certs"
@@ -91,8 +89,6 @@ var Webserver = geneos.Component{
 		`libpaths={{join "${config:install}" "${config:version}" "JRE/lib"}}:{{join "${config:install}" "${config:version}" "lib64"}}`,
 		`maxmem=1024m`,
 		`autostart=true`,
-		// customised cacerts - can be to a shared one if required
-		`truststore={{join "${config:home}" "cacerts"}}`,
 	},
 
 	Directories: []string{
@@ -152,7 +148,6 @@ func factory(name string) (webserver geneos.Instance) {
 var initialFiles = []string{
 	"config",
 	"config/config.xml=config/config.xml.min.tmpl",
-	"JRE/lib/security/cacerts",
 }
 
 // interface method set
@@ -218,7 +213,7 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	// create certs, report success only
 	resp := instance.NewCertificate(w, 0)
 	if resp.Err == nil {
-		fmt.Println(resp.Line)
+		fmt.Println(resp.Lines)
 	}
 
 	// copy default configs
@@ -240,81 +235,45 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 }
 
 func (w *Webservers) Rebuild(initial bool) (err error) {
+	cf := w.Config()
+	h := w.Host()
+
+	spPath := instance.Abs(w, "config/security.properties")
+
 	// load the security.properties file, update the port and use the keystore values later
-	sp, err := instance.ReadKVConfig(w.Host(), path.Join(w.Home(), "config/security.properties"))
+	sp, err := instance.ReadKVConfig(h, spPath)
 	if err != nil {
 		return nil
 	}
-	sp["port"] = w.Config().GetString("port")
-	if err = instance.WriteKVConfig(w.Host(), path.Join(w.Home(), "config/security.properties"), sp); err != nil {
-		panic(err)
+	sp["port"] = cf.GetString("port")
+	if err = instance.WriteKVConfig(h, spPath, sp); err != nil {
+		return
 	}
 
-	// rebuild the truststore (local cacerts) if we have a `truststore`
-	// and `certchain` defined. This is used for client connection *to*
-	// other components, such as secure gateways and SSO agent.
-	cf := w.Config()
-	if cf.IsSet("truststore") && cf.IsSet("certchain") {
-		log.Debug().Msgf("%s: rebuilding truststore: %q", w.String(), cf.GetString("truststore"))
-		certSlice, _ := certs.ReadCertificates(w.Host(), cf.GetString("certchain"))
-		k, err := certs.ReadKeystore(w.Host(),
-			cf.GetString("truststore"),
-			cf.GetPassword("truststore-password", config.Default("changeit")),
-		)
-		if err != nil {
-			return err
-		}
-		for _, cert := range certSlice {
-			alias := cert.Subject.CommonName
-			log.Debug().Msgf("%s: replacing entry for %q", w.String(), alias)
-			k.DeleteEntry(alias)
-			if err = k.AddKeystoreCertificate(alias, cert); err != nil {
-				return err
-			}
-		}
-		// TODO: temp file dance, after testing
-		log.Debug().Msgf("%s: writing new truststore to %q", w.String(), cf.GetString("truststore"))
-		if err = k.WriteKeystore(w.Host(),
-			cf.GetString("truststore"),
-			cf.GetPassword("truststore-password", config.Default("changeit")),
-		); err != nil {
+	// create truststore from trusted-roots
+	trustedRoots := cf.GetString(cf.Join("tls", "trusted-roots"), config.Default(cf.GetString("certchain")))
+	truststorePath := sp["trustStore"]
+	truststorePassword := cf.ExpandToPassword(sp["trustStorePassword"])
+
+	if trustedRoots != "" && truststorePath != "" {
+		truststorePath = instance.Abs(w, truststorePath)
+		if err = certs.RootsToTrustStore(h, trustedRoots, truststorePath, truststorePassword); err != nil {
 			return err
 		}
 	}
 
-	// rebuild the keystore (config/keystore.db) if certificate and
-	// privatekey are defined. This is for client connections to the web
-	// dashboard and will typically be a real certificate.
-	if cf.IsSet("certificate") && cf.IsSet("privatekey") {
-		cert, err := certs.ReadCertificate(w.Host(), cf.GetString("certificate"))
-		if err != nil {
-			return err
-		}
-		key, err := certs.ReadPrivateKey(w.Host(), cf.GetString("privatekey"))
-		if err != nil {
-			return err
-		}
-		keyStore, ok := sp["keyStore"]
-		if !ok {
-			return fmt.Errorf("keyStore not defined in security.properties")
-		}
-		if _, ok = sp["keyStorePassword"]; !ok {
-			return fmt.Errorf("keyStorePassword not defined in security.properties")
-		}
-		keyStorePassword := cf.ExpandToPassword(sp["keyStorePassword"])
-		k, err := certs.ReadKeystore(w.Host(), path.Join(w.Home(), keyStore), keyStorePassword)
-		if err != nil {
-			// new, empty keystore
-			k = &certs.KeyStore{
-				KeyStore: keystore.New(),
-			}
-		}
-		certSlice, _ := certs.ReadCertificates(w.Host(), cf.GetString("certchain"))
-		alias := geneos.ALL.Hostname()
-		k.DeleteEntry(alias)
-		k.AddKeystoreKey(alias, key, keyStorePassword, append([]*x509.Certificate{cert}, certSlice...)...)
-		return k.WriteKeystore(w.Host(), path.Join(w.Home(), keyStore), keyStorePassword)
+	// create keystore from certificate and private key
+	keyStore := sp["keyStore"]
+	ksPassword := cf.ExpandToPassword(sp["keyStorePassword"])
+	alias := geneos.ALL.Hostname()
+	certPath := cf.GetString(cf.Join("tls", "certificate"), config.Default(cf.GetString("certificate")))
+	keyPath := cf.GetString(cf.Join("tls", "privatekey"), config.Default(cf.GetString("privatekey")))
+
+	if certPath != "" && keyPath != "" {
+		keyStore = instance.Abs(w, keyStore)
+		certs.CertsToKeyStore(h, certPath, keyPath, keyStore, alias, ksPassword)
 	}
+
 	return
 }
 
@@ -369,18 +328,28 @@ func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home strin
 	javaopts := strings.Fields(cf.GetString("java-options"))
 	args = append(args, javaopts...)
 
-	if truststorePath := cf.GetString("truststore"); truststorePath != "" {
-		args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
-		checks = append(checks, truststorePath)
+	// add trusted roots if set
+
+	// truststore is in security.properties, use that and not instance params
+	sp, err := instance.ReadKVConfig(i.Host(), instance.Abs(i, "config/security.properties"))
+	if err != nil {
+		return
 	}
 
-	// fetch password as string as it has to be exposed on the command line anyway
-	if truststorePassword := cf.GetString("truststore-password"); truststorePassword != "" {
-		args = append(args, "-Djavax.net.ssl.trustStorePassword="+truststorePassword)
+	if truststorePath, ok := sp["trustStore"]; ok && truststorePath != "" {
+		truststorePath = instance.Abs(i, truststorePath)
+		// check for file, as defaults in security.properties may point to non-existent file
+		if _, err = i.Host().Stat(truststorePath); err == nil {
+			args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
+			if truststorePassword, ok := sp["trustStorePassword"]; ok && truststorePassword != "" {
+				args = append(args, "-Djavax.net.ssl.trustStorePassword="+truststorePassword)
+			}
+			checks = append(checks, truststorePath)
+		}
 	}
 
-	// -jar must appear after all options are set otherwise they are
-	// seen as arguments to the application
+	// `-jar` must appear after all options are set, otherwise they are
+	// seen as arguments to the application (as are `-dir` etc.)
 	args = append(args,
 		"-jar", base+"/geneos-web-server.jar",
 		"-dir", base+"/webapps",
@@ -388,14 +357,13 @@ func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home strin
 		"-maxThreads", "254",
 	)
 
-	tlsFiles := instance.PathsTo(i, "certificate", "privatekey")
-	if len(tlsFiles) == 0 || tlsFiles[0] == "" {
-		return
-	}
-	cert, privkey := tlsFiles[0], tlsFiles[1]
-	if cert != "" && privkey != "" {
-		// the instance specific truststore should have been created by `rebuild`
-		args = append(args, "-ssl", "true")
+	// if keystore exists, enable SSL
+	if keystorePath, ok := sp["keyStore"]; ok && keystorePath != "" {
+		keystorePath = instance.Abs(i, keystorePath)
+		if _, err = i.Host().Stat(keystorePath); err == nil {
+			args = append(args, "-ssl", "true")
+		}
+		checks = append(checks, keystorePath)
 	}
 
 	if skipFileCheck {

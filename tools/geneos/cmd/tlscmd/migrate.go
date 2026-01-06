@@ -135,6 +135,8 @@ func migrateInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) 
 	cf.Set("privatekey", "")
 	cf.Set("certchain", "")
 	cf.Set("use-chain", "")
+	cf.Set("truststore", "")
+	cf.Set("truststore-password", "")
 
 	if err = instance.SaveConfig(i); err != nil {
 		resp.Err = err

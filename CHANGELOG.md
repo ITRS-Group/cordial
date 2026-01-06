@@ -1,5 +1,31 @@
 # Change Log
 
+## Version v1.26.0
+
+>[!WARNING]
+>**BREAKING CHANGES**
+>* `tools/geneos` has potentially breaking changes to how TLS certificates are managed.
+>
+>  To more correctly support secure connections between Geneos components using TLS (and also for extrenal connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
+>
+>  The release version has also skipped v1.25.x to highlight these breaking changes.
+
+> [!NOTE]
+> **Released 2026-01-02** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v1.26.0 Changes
+
+* `tools/geneos`
+
+  * Major changes to the TLS certificate management subsystem to better support secure connections between Geneos components using TLS as well as external connections to and from other systems. See the updated [TLS documentation](tools/geneos/TLS.md) for full details.
+  * TLS is now enabled by default for all new installations created with `geneos init` and `geneos deploy` unless explicitly disabled.
+  * Added a `geneos tls migrate` command to help you update existing instance configurations to use the new TLS features. This command is not reversible so please back up your instance configurations before running this command.
+  * Added support for specifying custom certificate trust chains for Geneos components using TLS. This allows you to use self-signed certificates or those signed by a private CA.
+  * Private keys are always replaced with new ones when running `geneos tls renew` to improve security.
+
+
+---
+
 ## Version v1.24.3
 
 > [!NOTE]

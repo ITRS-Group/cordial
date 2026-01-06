@@ -31,6 +31,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alecthomas/units"
@@ -394,6 +395,8 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *instance.Resp
 	return
 }
 
+var contentsMutex sync.Mutex
+
 func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDirs, ignoreFiles []string) error {
 	return h.WalkDir(dir, func(file string, di fs.DirEntry, err error) error {
 		if err != nil {
@@ -413,6 +416,8 @@ func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDir
 					}
 				}
 			}
+			contentsMutex.Lock()
+			defer contentsMutex.Unlock()
 			*contents = append(*contents, filepath.Join(relative, file)+"/")
 			return nil
 		case fi.Mode()&fs.ModeSymlink != 0:
@@ -429,6 +434,8 @@ func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDir
 					return nil
 				}
 			}
+			contentsMutex.Lock()
+			defer contentsMutex.Unlock()
 			*contents = append(*contents, filepath.Join(relative, file))
 			return nil
 		}

@@ -100,7 +100,7 @@ func ExecuteTemplate(i geneos.Instance, p string, name string, defaultTemplate [
 		}
 	}
 
-	// tls migration, pull in new settings to old``
+	// tls migration, pull in new settings to old
 	if m["certificate"] == nil && m["privatekey"] == nil {
 		if t, ok := m["tls"]; ok {
 			if ts, ok := t.(map[string]any); ok {

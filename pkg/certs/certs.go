@@ -21,7 +21,9 @@ package certs
 import (
 	"crypto"
 	"crypto/rand"
+	"crypto/sha1"
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -279,6 +281,25 @@ func CreateCertificateAndKey(template, parent *x509.Certificate, signerKey *memg
 	if err != nil {
 		key = nil
 		return
+	}
+
+	// add a subject key identifier if missing. this is optional but
+	// considered good practise for leaf certs
+	// (https://www.rfc-editor.org/rfc/rfc5280.html#section-4.2.1.2)
+	if !template.IsCA && template.SubjectKeyId == nil {
+		var skid struct {
+			Identifier []byte `asn1:"ia5"`
+		}
+		pubBytes, err := x509.MarshalPKIXPublicKey(pub)
+		if err != nil {
+			// handle error
+		}
+		_, err = asn1.Unmarshal(pubBytes, &skid)
+		if err != nil {
+			// handle error
+		}
+		hash := sha1.Sum(skid.Identifier)
+		template.SubjectKeyId = hash[:]
 	}
 
 	if certBytes, err = x509.CreateCertificate(rand.Reader, template, parent, pub, priv); err != nil {

@@ -203,7 +203,7 @@ COPY --from=build /app/cordial/tools/san-config/san-config /cordial/bin/
 COPY --from=build /app/cordial/tools/san-config/cmd/san-config.defaults.yaml /cordial/etc/geneos/
 
 # docs
-COPY --from=cordial-docs /app/cordial/doc-output /cordial/docs/
+# COPY --from=cordial-docs /app/cordial/doc-output /cordial/docs/
 
 # servicenow
 COPY --from=build /app/cordial/integrations/servicenow/servicenow /cordial/bin/

@@ -29,6 +29,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/awnumar/memguard"
@@ -139,20 +142,27 @@ var infoCmd = &cobra.Command{
 
 		for i := range certInfos {
 			for n, c := range certInfos[i].Contents.Certificates {
+				var fileandindex string
+				if len(certInfos[i].Contents.Alias) > n && certInfos[i].Contents.Alias[n] != "" {
+					fileandindex = fmt.Sprintf("%s:%s", path.Base(certInfos[i].Path), certInfos[i].Contents.Alias[n])
+				} else {
+					fileandindex = fmt.Sprintf("%s:%d", path.Base(certInfos[i].Path), n)
+				}
+
 				if !infoCmdLong {
 					lines = append(lines, []string{
-						fmt.Sprintf("%s:%d", path.Base(certInfos[i].Path), n),
+						fileandindex,
 						c.Subject.CommonName,
 						c.Issuer.CommonName,
 						c.NotAfter.UTC().Format(time.RFC3339),
-						fmt.Sprintf("%v", c.IsCA),
+						strconv.FormatBool(c.IsCA),
 						fmt.Sprintf("%v", extKeyUsageToString(c.ExtKeyUsage)),
 						fmt.Sprintf("%v", c.DNSNames),
 						fmt.Sprintf("%v", infoMap(c.IPAddresses, func(ip net.IP) string { return ip.String() })),
 					})
 				} else {
 					lines = append(lines, []string{
-						fmt.Sprintf("%s:%d", certInfos[i].Path, n),
+						fileandindex,
 						c.Subject.CommonName,
 						c.Issuer.CommonName,
 						fmt.Sprintf("%X", c.SerialNumber),
@@ -160,7 +170,7 @@ var infoCmd = &cobra.Command{
 						fmt.Sprintf("%X", c.AuthorityKeyId),
 						c.NotBefore.UTC().Format(time.RFC3339),
 						c.NotAfter.UTC().Format(time.RFC3339),
-						fmt.Sprintf("%v", c.IsCA),
+						strconv.FormatBool(c.IsCA),
 						fmt.Sprintf("%v", keyUsageToString(c.KeyUsage)),
 						fmt.Sprintf("%v", extKeyUsageToString(c.ExtKeyUsage)),
 						fmt.Sprintf("%v", c.DNSNames),
@@ -212,6 +222,8 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 			continue
 		}
 
+		ext := strings.ToLower(path.Ext(p))
+
 		if path.Base(p) == "cacerts" {
 			k, err := certs.ReadKeystore(geneos.LOCAL, p, config.NewPlaintext([]byte("changeit")))
 			if err != nil {
@@ -236,8 +248,62 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 			continue
 		}
 
-		if path.Ext(p) == ".pfx" || path.Ext(p) == ".p12" {
-			log.Debug().Msgf("password: %s", infoCmdPassword.String())
+		if ext == ".db" {
+			if infoCmdPassword.String() == "" {
+				infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password (for file "+p+")")
+				if err != nil {
+					log.Fatal().Err(err).Msg("Failed to read password")
+					// return err
+				}
+			}
+			k, err := certs.ReadKeystore(geneos.LOCAL, p, infoCmdPassword)
+			if err != nil {
+				log.Error().Err(err).Str("file", p).Msg("unable to read Java keystore")
+				continue
+			}
+			for _, alias := range k.Aliases() {
+				switch {
+				case k.IsPrivateKeyEntry(alias):
+					chain, err := k.GetPrivateKeyEntryCertificateChain(alias)
+					if err != nil {
+						log.Error().Err(err).Str("alias", alias).Msgf("unable to get private certificate chain %q from Java keystore", alias)
+						continue
+					}
+					for n, cert := range chain {
+						parsedCert, err := x509.ParseCertificate(cert.Content)
+						if err != nil {
+							log.Error().Err(err).Str("alias", alias).Int("cert", n).Msg("unable to parse certificate from Java keystore")
+							continue
+						}
+						certInfos[i].Contents.Alias = append(certInfos[i].Contents.Alias, alias+"["+strconv.Itoa(n)+"]")
+						certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, parsedCert)
+					}
+				case k.IsTrustedCertificateEntry(alias):
+					entry, err := k.GetTrustedCertificateEntry(alias)
+					if err != nil {
+						log.Error().Err(err).Str("alias", alias).Msgf("unable to get trusted certificate entry %q from Java keystore", alias)
+						continue
+					}
+					cert, err := x509.ParseCertificate(entry.Certificate.Content)
+					if err != nil {
+						log.Error().Err(err).Str("alias", alias).Msg("unable to parse certificate from Java keystore")
+						continue
+					}
+					log.Debug().Str("file", p).Str("alias", alias).Str("cn", cert.Subject.CommonName).Msg("found certificate in Java keystore")
+					if slices.Contains(certInfos[i].Contents.Alias, alias) {
+						log.Debug().Str("file", p).Str("alias", alias).Msg("duplicate certificate alias in Java keystore, skipping")
+						continue
+					}
+					certInfos[i].Contents.Alias = append(certInfos[i].Contents.Alias, alias)
+					certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, cert)
+				default:
+					continue
+				}
+			}
+			continue
+		}
+
+		if ext == ".pfx" || ext == ".p12" {
 			if infoCmdPassword.String() == "" {
 				infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password (for file "+p+")")
 				if err != nil {
